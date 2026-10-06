@@ -37,12 +37,14 @@
 
 ## 設計資源登記
 
-正式設計檔位於 Wowgo 團隊的 [Design system](https://www.figma.com/files/team/963068133549518258/project/28668795)。引用專案須另外登記自己的品牌 Library 與業務畫面檔。
+正式設計檔位於 Wowgo 團隊的 [Design system](https://www.figma.com/files/team/963068133549518258/project/28668795)。引用專案須另外登記自己的品牌 Library 與業務畫面檔;scratch-lot 的兩個檔登記於下表。
 
-| 檔案                                                                            | fileKey                  | 目前用途                                                     |
-| ------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------ |
-| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5) | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;51 組元件與 15 頁治理及示範參考畫面 |
-| [CookHome Design System](https://www.figma.com/design/SvnBvi8Opfj8daJAclOnWW)   | `SvnBvi8Opfj8daJAclOnWW` | CookHome 品牌與業務畫面;共用元件引用 wowgo-base Library      |
+| 檔案                                                                             | fileKey                  | 目前用途                                                                                                                                       |
+| -------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5)  | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;51 組元件與 15 頁治理及示範參考畫面                                                                                   |
+| [CookHome Design System](https://www.figma.com/design/SvnBvi8Opfj8daJAclOnWW)    | `SvnBvi8Opfj8daJAclOnWW` | CookHome 品牌與業務畫面;共用元件引用 wowgo-base Library                                                                                        |
+| [scratch-lot Brand Library](https://www.figma.com/design/vR4pASiPSzHnxC1y778zAx) | `vR4pASiPSzHnxC1y778zAx` | scratch-lot 品牌 Library(`Brand` → `Color`,Light);值由品牌同步工具依 `projectPublic.brand` 生成;維護者 taiwanhua;Wowgo 團隊 Design system 專案 |
+| [scratch-lot Screens](https://www.figma.com/design/sXOJkIX53eBMUyDE8yYUJm)       | `sXOJkIX53eBMUyDE8yYUJm` | scratch-lot 業務畫面;共用元件引用 wowgo-base Library、品牌引用 scratch-lot Brand Library;維護者 taiwanhua                                      |
 
 底座維護共用元件、字型、固定語意色、圓角、陰影與後台參考畫面。共用元件位於 27 頁,共 51 組、210 個 component;15 頁治理及示範參考畫面保留完整後台藍本。CookHome 保留自己的畫面與業務內容,共用元件以實例引用本庫。
 
