@@ -21,7 +21,8 @@ export const projectPublic = {
         description: "ScratchLot 刮刮樂智慧管理系統",
       },
       en: {
-        title: "scratch-lot — ScratchLot Smart Scratch-off Lottery Management System",
+        title:
+          "scratch-lot — ScratchLot Smart Scratch-off Lottery Management System",
         titleTemplate: "%s | scratch-lot",
         description: "ScratchLot Smart Scratch-off Lottery Management System",
       },
