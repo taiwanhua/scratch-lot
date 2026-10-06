@@ -5,25 +5,25 @@ import type { ProjectPublicConfig } from "../base/public-config";
  * `slug` 是建立專案時定下的穩定識別,品牌更名不跟著改 —— 改了等於換一組瀏覽器儲存鍵。
  */
 export const projectPublic = {
-  slug: "wowgo-base",
+  slug: "scratch-lot",
   brand: {
-    name: "wowgo-base",
-    primary: "#FB7B10",
+    name: "scratch-lot",
+    primary: "#FFD700",
   },
   admin: {
-    documentTitle: "wowgo-base 後台管理",
+    documentTitle: "scratch-lot 後台管理",
   },
   front: {
     metadata: {
       "zh-TW": {
-        title: "wowgo-base — 多租戶應用底座",
-        titleTemplate: "%s | wowgo-base",
-        description: "多租戶應用底座",
+        title: "scratch-lot — ScratchLot 刮刮樂智慧管理系統",
+        titleTemplate: "%s | scratch-lot",
+        description: "ScratchLot 刮刮樂智慧管理系統",
       },
       en: {
-        title: "wowgo-base — Multi-tenant Application Base",
-        titleTemplate: "%s | wowgo-base",
-        description: "Multi-tenant Application Base",
+        title: "scratch-lot — ScratchLot Smart Scratch-off Lottery Management System",
+        titleTemplate: "%s | scratch-lot",
+        description: "ScratchLot Smart Scratch-off Lottery Management System",
       },
     },
   },

@@ -9,7 +9,7 @@ import type { ProjectSeedSettings } from "../base/seed-source";
  */
 export const projectSeedSettings: ProjectSeedSettings = {
   rootOrg: {
-    name: "wowgo-base",
+    name: "scratch-lot",
     description: "平台營運者(根組織)",
     settings: {},
   },

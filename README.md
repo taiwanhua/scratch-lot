@@ -1,10 +1,10 @@
-# wowgo-base
+# scratch-lot
 
-多租戶應用底座,提供完整前台、後台、API、RBAC、租戶隔離、動態表單與審核流程。各引用專案在獨立 repo 維護品牌、業務和部署設定。
+ScratchLot 刮刮樂智慧管理系統。建立在多租戶應用底座 [wowgo-base](https://github.com/taiwanhua/wowgo-base) 上,沿用其前台、後台、API、RBAC、租戶隔離、動態表單與審核流程;本 repo 維護自己的品牌、業務和部署設定。
 
-## 建立新專案
+## 底座版本
 
-使用 `project-bootstrap` skill,依[共用初始化操作](docs/agents/project-bootstrap.md)從正式 tag 建立完整 Git 歷史,再設定品牌、資料庫、開發工具與外部資源。底座預設停用雲端與看板,沒有預先配置的線上環境;設定來源見[初始化索引](docs/project-initialization.md)。
+採用的底座版本記在根 `package.json` 的 `wowgoBase`;設定來源見[初始化索引](docs/project-initialization.md),升級與回收見 [deployment](docs/deployment.md#底座首次接軌與版本升級)。
 
 ## 專案結構
 

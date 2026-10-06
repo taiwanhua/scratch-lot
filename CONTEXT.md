@@ -1,6 +1,6 @@
-# wowgo-base
+# scratch-lot
 
-多租戶應用底座,固定包含 front、admin、api,由各引用專案維護自己的品牌與業務。本檔是詞彙表 — 只定義語言,不含實作細節。
+ScratchLot 刮刮樂智慧管理系統(front、admin、api),建立在多租戶應用底座 wowgo-base 上,由本專案維護自己的品牌與業務。本檔是詞彙表 — 只定義語言,不含實作細節。
 
 ## Language
 
@@ -10,7 +10,7 @@
 
 **底座(Platform Base)**:
 
-名稱為 `wowgo-base`,使用獨立 repo。CookHome 是引用專案,保留自己的品牌與業務。
+名稱為 `wowgo-base`,使用獨立 repo。scratch-lot 是引用專案,保留自己的品牌與業務。
 
 可供多個專案共用的應用基礎:完整 front/admin/api 骨架、治理模組、認證、權限與租戶隔離、表單引擎、審核流程及申請中心。與各專案的業務域(如食譜)相對;前台畫面與風格由各專案設計。
 _Avoid_: 框架、共用系統

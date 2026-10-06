@@ -1,4 +1,4 @@
-# wowgo-base
+# scratch-lot
 
 ## 專案文件主入口
 
