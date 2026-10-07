@@ -1,4 +1,4 @@
-# wowgo-base
+# scratch-lot
 
 ## Git 工作流程(分支 ↔ 環境)
 
