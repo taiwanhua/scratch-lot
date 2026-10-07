@@ -193,6 +193,9 @@ jobs:
       - name: 品牌投影 / core / runtime / CLI 測試
         run: node --test scripts/figma-sync/*.test.mjs
 
+      - name: 本機 Figma 外掛測試
+        run: node --test scripts/figma-local/*.test.mjs
+
   # prettier 不經 turbo lint(各 workspace 的 lint 只跑 eslint,且根目錄 docs/ 不屬於任何 workspace),
   # 範圍是全 repo 的 md + ts/tsx/js/json/yaml(STRUCT-09),所以不看受影響清單、每次都跑。
   # codegen 一致性檢查(GQL-05)要起一次完整 AppModule,放在這個與其他 job 並行的 job,不壓在 prepare 的關鍵路徑上。

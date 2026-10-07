@@ -167,11 +167,15 @@ jobs:
           JWT_SECRET_NAME: ${{ steps.cfg.outputs.jwt_secret }}
           RESEND_SECRET_NAME: ${{ steps.cfg.outputs.resend_secret }}
         run: |
+          SECRETS="MONGODB_URI=$MONGODB_SECRET_NAME:latest,FIELD_ENCRYPTION_KEY=$ENC_SECRET_NAME:latest,JWT_SECRET=$JWT_SECRET_NAME:latest"
+          if [ -n "$RESEND_SECRET_NAME" ]; then
+            SECRETS="$SECRETS,RESEND_API_KEY=$RESEND_SECRET_NAME:latest"
+          fi
           gcloud run deploy "$API_SERVICE" --region="$REGION" \
             --image="$REGISTRY/api:$SHA" \
             --port=5001 --allow-unauthenticated --min-instances=0 --max-instances=2 \
             --env-vars-file="deploy/env/$ENVIRONMENT.yaml" \
-            --set-secrets="MONGODB_URI=$MONGODB_SECRET_NAME:latest,FIELD_ENCRYPTION_KEY=$ENC_SECRET_NAME:latest,JWT_SECRET=$JWT_SECRET_NAME:latest,RESEND_API_KEY=$RESEND_SECRET_NAME:latest" \
+            --set-secrets="$SECRETS" \
             --quiet
 
       - name: deploy admin
