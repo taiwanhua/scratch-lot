@@ -1,7 +1,21 @@
 {
   "schemaVersion": 1,
-  "expectedRepository": "taiwanhua/wowgo-base",
+  "expectedRepository": "taiwanhua/scratch-lot",
   "projectStatus": {
-    "enabled": false
+    "enabled": true,
+    "projectId": "PVT_kwHOAeiiKc4Bl7Aq",
+    "statusFieldId": "PVTSSF_lAHOAeiiKc4Bl7Aqzhkl9Fk",
+    "options": {
+      "backlog": "2882aeb7",
+      "ready": "e053bab2",
+      "inProgress": "5adedc57",
+      "review": "43e18a1a",
+      "devVerify": "0eaa8179",
+      "devPassed": "cc87d3d5",
+      "stagingVerify": "e94980d1",
+      "stagingPassed": "45c49925",
+      "released": "e3445e43",
+      "wontDo": "b6b968cd"
+    }
   }
 }

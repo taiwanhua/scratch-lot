@@ -1,4 +1,60 @@
 {
   "schemaVersion": 1,
-  "enabled": false
+  "gcp": {
+    "projectId": "scratch-lot-online",
+    "region": "asia-east1",
+    "artifactRegistry": "asia-east1-docker.pkg.dev/scratch-lot-online/scratch-lot",
+    "workloadIdentityProvider": "projects/577402201071/locations/global/workloadIdentityPools/github/providers/github-oidc",
+    "deployServiceAccount": "github-deployer@scratch-lot-online.iam.gserviceaccount.com"
+  },
+  "environments": {
+    "dev": {
+      "apiService": "scratch-lot-api-dev",
+      "adminService": "scratch-lot-admin-dev",
+      "apiUrl": "https://api-dev.scratch-lot.com",
+      "rootAdmin": {
+        "account": "root",
+        "email": "admin@scratch-lot.com"
+      },
+      "secrets": {
+        "mongodbUri": "mongodb-uri-dev",
+        "fieldEncryptionKey": "field-encryption-key-dev",
+        "rootAdminPassword": "root-admin-password-dev",
+        "jwtSecret": "jwt-secret-dev",
+        "resendApiKey": "resend-api-key-dev"
+      }
+    },
+    "staging": {
+      "apiService": "scratch-lot-api-staging",
+      "adminService": "scratch-lot-admin-staging",
+      "apiUrl": "https://api-staging.scratch-lot.com",
+      "rootAdmin": {
+        "account": "root",
+        "email": "admin@scratch-lot.com"
+      },
+      "secrets": {
+        "mongodbUri": "mongodb-uri-staging",
+        "fieldEncryptionKey": "field-encryption-key-staging",
+        "rootAdminPassword": "root-admin-password-staging",
+        "jwtSecret": "jwt-secret-staging",
+        "resendApiKey": "resend-api-key-staging"
+      }
+    },
+    "production": {
+      "apiService": "scratch-lot-api",
+      "adminService": "scratch-lot-admin",
+      "apiUrl": "https://api.scratch-lot.com",
+      "rootAdmin": {
+        "account": "root",
+        "email": "admin@scratch-lot.com"
+      },
+      "secrets": {
+        "mongodbUri": "mongodb-uri",
+        "fieldEncryptionKey": "field-encryption-key",
+        "rootAdminPassword": "root-admin-password",
+        "jwtSecret": "jwt-secret",
+        "resendApiKey": "resend-api-key"
+      }
+    }
+  }
 }

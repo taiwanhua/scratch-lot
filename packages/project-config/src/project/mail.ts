@@ -7,6 +7,6 @@ import { projectPublic } from "./public";
  */
 export const projectMail = {
   brandName: projectPublic.brand.name,
-  senderEmail: "no-reply@example.invalid",
+  senderEmail: "no-reply@scratch-lot.com",
   signature: `${projectPublic.brand.name} 後台管理系統`,
 } satisfies ProjectMailConfig;

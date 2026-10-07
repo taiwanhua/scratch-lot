@@ -5,15 +5,15 @@
 # 值一律加引號(gcloud 只收字串)。NODE_ENV=production 已烘在 apps/api/Dockerfile。
 
 # 信件連結的後台網址(連結 = <ADMIN_APP_URL>/set-password?token=…)
-# 底座未啟用雲端(deploy/project/cloud.json),以下是 localhost 示例;啟用前由專案初始化填入自己的值
-ADMIN_APP_URL: "http://localhost:3001"
+ADMIN_APP_URL: "https://erp-staging.scratch-lot.com"
 # COOKIE_DOMAIN 不寫 = refresh cookie 不帶 Domain;api 與後台同屬一個網域時填該網域(如 ".example.com")
+COOKIE_DOMAIN: ".scratch-lot.com"
 # MAIL_ALLOWLIST 不寫 = 不限收件人(三環境一致,使用者裁決)
 # GRAPHQL_SANDBOX 不寫 = Sandbox 關(只有 dev 開)
 # 檔案儲存的 GCS bucket(ADR-0010;GCS_BUCKET_PRIVATE 空值 = 改用記錄用 adapter,不會真的上傳)
-GCS_BUCKET_PRIVATE: ""
+GCS_BUCKET_PRIVATE: "scratch-lot-assets-staging"
 # 公開讀 bucket(ADR-0010):目前的呼叫端是示範模組1 的封面;用途與未設時的行為見 docs/env-registry.md
-GCS_BUCKET_PUBLIC: ""
+GCS_BUCKET_PUBLIC: "scratch-lot-public-staging"
 
 # 以下皆有內建預設值,需要調整時再打開(格式:15m / 30d 等;見 apps/api/src/auth/duration.ts)
 # ACCESS_TOKEN_TTL: "15m"
