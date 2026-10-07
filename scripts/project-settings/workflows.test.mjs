@@ -217,6 +217,24 @@ for (const environment of Object.keys(ORIGINAL_DEPLOY)) {
   });
 }
 
+test("deploy:Resend 未啟用時不掛不存在的 secret,其餘三個 API secret 仍交付", async () => {
+  const cloud = sampleCloud();
+  cloud.environments.dev.secrets.resendApiKey = null;
+  const job = await runDeploy("dev", {
+    repository: "acme/widgets",
+    cwd: installScripts(makeProjectRoot({ cloud })),
+  });
+  assert.equal(job.failed, null, job.failed?.stderr);
+  const deploy = commands(job.calls, "gcloud").find((call) =>
+    call.startsWith("gcloud run deploy widgets-api-dev "),
+  );
+  assert.ok(deploy);
+  assert.match(deploy, /MONGODB_URI=db-uri-dev:latest/);
+  assert.match(deploy, /FIELD_ENCRYPTION_KEY=enc-key-dev:latest/);
+  assert.match(deploy, /JWT_SECRET=jwt-dev:latest/);
+  assert.doesNotMatch(deploy, /RESEND_API_KEY/);
+});
+
 test("deploy:分支與環境不對應時在 checkout 前失敗", async () => {
   const pairs = [
     ["dev", "main"],

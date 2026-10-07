@@ -88,7 +88,7 @@
 | `Button` Color=Success                      | 2001:111(Button 頁 8:2);Success 變體 2001:184–2001:218                                                                         | `@repo/ui/button` 的 `color="success"`(使用者管理「啟用」):contained 底 `success/main`、字 `success/contrastText`;outlined 框與字、text 字皆 `success/main`。語意色,換品牌主色不受影響                                                                                                                                                     |
 | `Draft/Avatar`                              | 2001:497(Avatar 頁 311:5814)                                                                                                   | `@repo/ui/avatar`:`primary/lighter` 底 + `primary/dark` 字(頭像選單的使用者首字);隨主色衍生                                                                                                                                                                                                                                                |
 
-六個主色角色與 `Shadow/Primary` 由既有品牌輸入及 `@repo/ui` 推導。日常同步只補套明確登記的品牌綁定,保留文字、商標、組織識別、私人色與其他專案覆寫。資產登記在各 repo 的本表,機器驗證狀態在各專案的 `deploy/project/figma/receipts/`;操作見 [Figma 品牌同步](agents/toolbox.md#figma-品牌同步)。
+六個主色角色與 `Shadow/Primary` 由既有品牌輸入及 `@repo/ui` 推導。日常同步只補套明確登記的品牌綁定,保留文字、商標、組織識別、私人色與其他專案覆寫。資產登記在各 repo 的本表,操作結果記在初始化或升級 PR;操作見 [Figma 品牌同步](agents/toolbox.md#figma-品牌同步)。
 
 ## 隔離品牌相容性測試
 
@@ -111,6 +111,8 @@ A、B 的品牌六色與 `Shadow/Primary` 分別由既有 `createBrandFromPrimar
 | 全元件與參考畫面副本   | [A Full Coverage](https://www.figma.com/design/JNKv4VNPRQm80m6XeimEoN) | [B Full Coverage](https://www.figma.com/design/AvDWlskqqRupYNBKUABw8M) |
 
 [更新情境來源庫](https://www.figma.com/design/QTGmn0zLp2FoJmcWkdOCJM)提供隔離的元件、alias 與隱藏圖層更新。這些 TEST 檔案不充作正式底座或專案 Library。
+
+本機外掛的隔離檔是 [TEST — scratch-lot Brand Library](https://www.figma.com/design/ZX7IkFkgkbMJ1e6tYZgOp5) 與 [TEST — Local Screens Sync](https://www.figma.com/design/cuXz54wNCRVdr3UiwxyVXv)。Brand Library 先以底座橘色、再以 scratch-lot `#FFD700` 套用,重預覽皆為 0 待處理;Screens 的 Button、巢狀側欄與代表畫面補綁 40 處專案色,回讀 137 個節點、41 個遠端實例,沒有剩餘底座主色綁定。專案名稱及 Button 陰影樣式分別以 Figma 原生操作改為 scratch-lot 與專案 `Shadow/Primary`。在同一 Screens 的獨立測試卡接受來源 Library 尺寸更新(157×48→173×56)後,遠端元件連結與專案金色綁定均保留。這些 TEST 檔案不屬正式專案資源。
 
 | 驗證範圍            | 可確認的行為與限制                                                                                                                                                           |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

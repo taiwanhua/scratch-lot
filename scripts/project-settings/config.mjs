@@ -267,7 +267,8 @@ function validateEnvironment(environments, name) {
     enc_secret: secret("fieldEncryptionKey"),
     root_secret: secret("rootAdminPassword"),
     jwt_secret: secret("jwtSecret"),
-    resend_secret: secret("resendApiKey"),
+    // null means this project has not enabled transactional email yet.
+    resend_secret: secrets.resendApiKey === null ? "" : secret("resendApiKey"),
     // 帳號是自由文字(只擋控制字元);workflow 以 env 傳遞,不進 shell 程式文本
     root_account: text(
       CLOUD_FILE,

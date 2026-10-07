@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>wowgo-base Brand Sync</title>
+    <style>
+      body {
+        font:
+          13px/1.5 system-ui,
+          sans-serif;
+        margin: 18px;
+        color: #242424;
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0 0 10px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 18px 0 5px;
+      }
+      label {
+        display: block;
+        margin: 8px 0;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+      }
+      select,
+      input[type="file"] {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 7px 10px;
+        margin: 7px 7px 0 0;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        max-height: 185px;
+        overflow: auto;
+        background: #f5f5f5;
+        padding: 9px;
+      }
+      .error {
+        color: #a11515;
+      }
+      .muted {
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>wowgo-base Brand Sync</h1>
+    <div id="fileName" class="muted">正在讀取檔案…</div>
+    <h2>品牌 Library</h2>
+    <label
+      >從專案設定產生的品牌檔
+      <input id="brandFile" type="file" accept="application/json,.json"
+    /></label>
+    <button id="previewBrand">預覽品牌變更</button
+    ><button id="applyBrand" disabled>套用品牌</button>
+    <h2>專案 Screens</h2>
+    <label
+      >預期 Screens file key（設計稿網址中 /design/ 後的一段）
+      <input id="screensFileKey" type="text" autocomplete="off"
+    /></label>
+    <label
+      >底座 Library
+      <select id="source"></select
+    ></label>
+    <label
+      >專案 Brand Library
+      <select id="target"></select
+    ></label>
+    <label
+      >檢查範圍
+      <select id="scope">
+        <option value="selection">目前選取</option>
+        <option value="page" selected>目前頁面</option>
+        <option value="all">全部頁面</option>
+      </select></label
+    >
+    <button id="previewScreens">檢查綁定</button
+    ><button id="applyScreens" disabled>補綁專案色</button>
+    <p class="muted">
+      先在 Figma 接受底座 Library 更新。外掛只處理六個 primary 角色的
+      fill/stroke；陰影樣式使用 Figma「Swap libraries」。
+    </p>
+    <pre id="status">等待檔案資訊…</pre>
+    <button id="close">關閉</button>
+    <script>
+      const byId = (id) => document.getElementById(id);
+      const state = { input: null, options: null, fileKey: null, busy: false };
+      const post = (type, value = {}) =>
+        parent.postMessage({ pluginMessage: { type, ...value } }, "*");
+      function status(message, isError = false) {
+        byId("status").textContent = message;
+        byId("status").className = isError ? "error" : "";
+      }
+      function busy(value) {
+        state.busy = value;
+        for (const id of ["previewBrand", "previewScreens"])
+          byId(id).disabled = value;
+        if (value)
+          for (const id of ["applyBrand", "applyScreens"])
+            byId(id).disabled = true;
+      }
+      function options() {
+        return {
+          fileKey: byId("screensFileKey").value.trim(),
+          source: byId("source").value,
+          target: byId("target").value,
+          scope: byId("scope").value,
+        };
+      }
+      byId("previewBrand").onclick = async () => {
+        const file = byId("brandFile").files[0];
+        if (!file) return status("請先選擇由專案設定產生的 JSON 檔。", true);
+        try {
+          state.input = JSON.parse(await file.text());
+          busy(true);
+          status("正在檢查品牌庫…");
+          post("preview-brand", { input: state.input });
+        } catch (error) {
+          busy(false);
+          status(`品牌檔無法讀取：${error.message}`, true);
+        }
+      };
+      byId("applyBrand").onclick = () => {
+        busy(true);
+        status("正在套用品牌…");
+        post("apply-brand", { input: state.input });
+      };
+      byId("previewScreens").onclick = () => {
+        state.options = options();
+        if (
+          !state.options.fileKey ||
+          state.options.fileKey !== state.fileKey ||
+          !state.options.source ||
+          !state.options.target ||
+          state.options.source === state.options.target
+        ) {
+          return status(
+            "請確認 Screens file key 與底座、專案 Library 選擇。",
+            true,
+          );
+        }
+        busy(true);
+        status("正在檢查畫面綁定…");
+        post("preview-screens", { options: state.options });
+      };
+      byId("applyScreens").onclick = () => {
+        busy(true);
+        status("正在補綁專案變數…");
+        post("apply-screens", { options: state.options });
+      };
+      byId("close").onclick = () => post("close");
+      window.onmessage = (event) => {
+        const message = event.data && event.data.pluginMessage;
+        if (!message) return;
+        if (message.type === "ready") {
+          state.fileKey = message.fileKey;
+          byId("fileName").textContent =
+            `目前檔案 key：${message.fileKey || "無法取得；請使用雲端檔案"}`;
+          for (const id of ["source", "target"]) {
+            byId(id).replaceChildren();
+            for (const name of message.libraries) {
+              const option = document.createElement("option");
+              option.value = name;
+              option.textContent = name;
+              byId(id).append(option);
+            }
+          }
+          byId("target").selectedIndex = message.libraries.length > 1 ? 1 : 0;
+          status("請選擇品牌檔或 Library，先預覽再套用。");
+        } else if (message.type === "preview") {
+          busy(false);
+          const issueText = message.issueCount
+            ? `\n例外 ${message.issueCount}：${JSON.stringify(message.issues)}`
+            : "";
+          status(
+            `${message.kind === "brand" ? "品牌" : "畫面"}：待處理 ${message.count} 項${message.inspected === undefined ? "" : `；掃描 ${message.inspected} 個節點；已使用專案色 ${message.alreadyProject} 項；遠端元件實例 ${message.remoteInstances} 個`}${issueText}${message.details ? `\n${message.details.join("、")}` : ""}`,
+          );
+          byId(
+            message.kind === "brand" ? "applyBrand" : "applyScreens",
+          ).disabled = !!message.issueCount;
+        } else if (message.type === "done") {
+          busy(false);
+          status(
+            `${message.kind === "brand" ? "品牌" : "畫面"}已完成回讀：${JSON.stringify(message.result)}`,
+          );
+        } else if (message.type === "error") {
+          busy(false);
+          const advice =
+            message.code === "SELECTION_EMPTY"
+              ? "請在「檢查範圍」選「目前頁面」，或先在畫布選物件。"
+              : "請重新預覽目前狀態後再操作。";
+          status(`已停止：${message.code}。${advice}`, true);
+        }
+      };
+      post("init");
+    </script>
+  </body>
+</html>

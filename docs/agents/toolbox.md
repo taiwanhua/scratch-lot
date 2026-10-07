@@ -91,6 +91,8 @@
 | help.md 有沒有被打包          | `pnpm --filter @repo/admin build` → `pnpm --filter @repo/admin check:help-bundle`                                                          | 新增 / 改 help.md 的票交件前跑;Dockerfile 也跑這一步                                                           |
 | 查套件最新版                  | `npm view <pkg> version`                                                                                                                   | 不照記憶寫版本號                                                                                               |
 
+新專案初始化驗證依賴順序分開跑:先建置共用套件,再對改到的 package 各跑 lint、型別、測試與 build。不要在本機以 `turbo run lint check-types test build --force` 同時重建與讀取同一份 `dist`:大量平行任務可能讀到建置中的產物或造成測試逾時。需跑全 repo 時按任務分階段,資源有限可用 `--concurrency=1`;正式 CI 的 job 與快取仍依其 workflow 執行。
+
 只跑一個測試檔一律用上表「單檔測試」的 `pnpm --filter <pkg> exec …` 寫法(本段是全 repo 的正本,其他文件指回這裡)。三個不要:
 
 - **不要 `pnpm run test -- <旗標> <路徑片段>`、`pnpm --filter <pkg> test -- …`**:pnpm 會把 `--` 原樣傳給 script,jest 把 `--` 之後的東西全當成路徑 pattern,旗標沒生效(輸出是 `Ran all test suites matching --maxWorkers=2|<路徑片段>`);api 會因此跑整包、十幾分鐘沒輸出像卡住。
@@ -148,90 +150,28 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 
 ## Figma 品牌同步
 
-本節是操作正本。工具以 `projectPublic.brand` 為唯一人工品牌輸入,沿用 `@repo/ui` 的色盤及陰影推導,處理六個主色角色的 fill/stroke 與 `Shadow/Primary`。一般文字樣式、圓角、其他變數與首次移檔不由品牌補套代辦。實際檔案用途、引用權限與正式 Library 狀態見[品牌註冊表](../branding.md),維護規則見 [Figma 規範](../standards/general/figma.md);TEST 成功不能當成正式拆分完成。
+專案各有自己的 Brand Library 與 Screens；共用元件由 [wowgo-base Design System](../branding.md#設計資源登記) 發布，Screens 使用它的遠端實例。品牌值的唯一維護來源是 `packages/project-config/src/project/public.ts` 的 `projectPublic.brand`；本機外掛沿用 `@repo/ui` 推導六個 primary 色階及 `Shadow/Primary`。程式碼版本用正式 Git tag 與 `base-sync upgrade` PR 採用，Figma Library 則由 Figma 發布、加入檔案並接受更新；兩者的版本連結記在升級 PR。
 
-日常驗證依受影響的元件、品牌角色與使用範圍選取 scope,並檢查代表畫面;共用結構或全域 tokens 變更時再擴大範圍。未受影響且仍適用的既有證據可沿用,不每次重跑首次全檔盤點或隔離 TEST 全套,也不將未重掃的範圍標成當次已驗。每次實際寫入仍須通過原有前置檢查及完整回讀、`record` 驗證;縮小範圍不省略保護檢查。
+### 第一次建立與換品牌
 
-### 前置與命令
+1. 將專案的品牌名稱和 `#RRGGBB` 主色寫入 `projectPublic.brand`，另建 `<專案> Brand Library` Figma 檔並取得網址 `/design/` 後的 file key。在專案 repo 建置後，產生可丟棄的小型輸入檔：
 
-在目前專案 repo 根執行,先安裝依賴並建置品牌來源:
+   ```bash
+   pnpm exec turbo run build --filter=@repo/ui --filter=@repo/project-config
+   node scripts/figma-local/export-brand.mjs --file-key <brand-file-key> --out .artifacts/figma-local/brand.json
+   ```
 
-```bash
-pnpm exec turbo run build --filter=@repo/ui --filter=@repo/project-config
-```
+2. 在 Figma **桌面版**的 `Plugins → Development → Import new plugin from manifest…` 選 `scripts/figma-local/manifest.json`。在 Brand Library 開啟 `wowgo-base Brand Sync`，選上一步 JSON，預覽核對 file key 與待變更數，再套用並重預覽至待處理 0。外掛建立或更新 `Brand`、`Color` 兩個 Light 集合，各六個 `primary/*`；`Color` 指向 `Brand`，另建立或更新 `Shadow/Primary`。在 Figma 原生介面發布此 Brand Library。換電腦時從 repo 重新匯入 manifest；外掛不需要 token、本機服務或 MCP 傳送生成程式。
+3. 專案 Screens 使用獨立檔案，從**已連結遠端底座元件**的 Screens 範本複製，或從已發布的底座 Library 插入實例組成畫面。直接複製底座 Design System 檔會把主元件留在本檔，不能當作可升級的 Screens。到 Screens 的 `Assets → Libraries` 加入底座與本專案 Brand Library，並接受可用更新。在 Screens 開外掛，輸入當前檔案 key，選底座與專案 Library、檢查範圍，先「檢查綁定」再「補綁專案色」；重檢待處理應為 0、例外為 0。初建可選「全部頁面」，日常選受影響頁面。
+4. 在 Screens 用 Figma 原生 **Swap libraries** 將底座 `Shadow/Primary` 換成本專案樣式，並覆寫品牌示例文字、商標及業務內容。這些不是六色變數；外掛刻意不改文字、私人色、圖、排版或元件實例。核對一個 Primary Button、巢狀側欄與一張代表畫面：主色、陰影、文字、布局，以及遠端底座主元件連結。新專案的檔案 key、Library 權限和維護者登記在[品牌註冊表](../branding.md)。
 
-核對 `deploy/project/github.json` 的 repo 身分、專案 slug、目標 fileKey 與操作權限。每次掃描明示同一 page 的 roots,包含隱藏後代;不把局部範圍的結果報成全檔升級。CLI 不讀 token、不直接呼叫 Figma;`scan`、`apply` 只產生 request 與 JavaScript,由現有 Figma 執行工具執行。
+### 底座升級與共用改良回收
 
-`--roots` 的整個值加引號,例如 `--roots '12:3,I12:4;5:6'`;巢狀實例 ID 中的分號也是 ID 的一部分,不能讓 shell 當成指令分隔符。
+底座發布 Library 更新後，引用專案在相應的 `base-sync upgrade` PR 中先審查程式碼合併，再於 Screens 接受 Figma Library 更新。對受影響頁面重跑外掛預覽；新增或回到底座主色的 fill/stroke 會列為待補綁，已有專案色及私人覆寫保留。補綁後重檢並看受影響的 Button、側欄或其他代表元件；元件身分相同不代表已接受某次發布。將 Git tag、底座與專案 file key、Figma 發布版本、接受範圍及代表畫面結果記在升級 PR。純程式碼更新且 Figma 來源與範圍未變時，沿用仍有效的設計驗證，不重跑全檔。
 
-入口是 `node scripts/figma-sync/prepare.mjs <命令>`。以下列必填參數,`<…>` 須換成當次實際值:
+專案新增可共用元件時，先確認不含專案品牌或業務依賴；程式碼用 `base-sync inspect` / `contribute` 提交到底座，Figma 主元件則經審查移入底座 Library、發布並登記版本。其他專案只透過正式底座版本及 Library 更新採用，專案 Screens 不整份回收。
 
-| 命令         | 必填參數                                                                                                                                                         | 用途與可選參數                                                                                                                                             |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scan`       | `--kind <base-library\|brand-library\|consumer> --file-key <key> --roots <逗號分隔IDs> --run-id <新runId>`                                                       | 產生唯讀掃描;每次使用未存在的 runId。                                                                                                                      |
-| `review`     | `--base <inventory> --brand <inventory> --selections-json <JSON陣列> --review-evidence-url <https網址>`                                                          | 核對精確 file/key/type/role;可加 `--consumer <inventory> --resolutions-json <JSON陣列>` 審查現值衝突。                                                     |
-| `plan-brand` | `--brand <inventory>`                                                                                                                                            | 建立或更新本專案 Light 品牌庫;恢復可加 `--resume <原plan.json>`。                                                                                          |
-| `plan`       | `--base <inventory> --brand <inventory> --consumer <inventory> --identity-review <identity-review.json> --verification-target <brand-bindings\|library-upgrade>` | 消費端補套;可加 `--resume <原plan.json>`。`library-upgrade` 必須另給 `--publication-evidence-json <JSON物件>` 與 `--acceptance-evidence-json <JSON物件>`。 |
-| `apply`      | `--plan <plan.json>`                                                                                                                                             | 產生 `request-apply.json` 與 `execute.js`;`blocked` plan 不可執行。                                                                                        |
-| `record`     | `--request <request.json>` 及 `--result <原協定JSON檔>` / `--transport-result <envelope檔>` 擇一                                                                 | 封存掃描或執行結果;傳輸收齊後驗證,只有 `verified` 才更新成功 receipt。                                                                                     |
-
-`--*-json` 收的是單一 JSON 字串,不是檔名。審查項目取自當次 inventories,不能按名稱或 HEX 猜 key;`selections` 的形狀與 `adopt-source` / `preserve-project` 的 resolution 欄位見 `core-contract-review.mjs`,發布/接受證據形狀見 `core-contract-schema.mjs`。同一 scope 混合 Base 與 consumer 本地舊品牌時,可在同一輪明示兩側來源 selections:Base 來源由 `--base` 核對,不同檔的本地來源由 `--consumer` 核對,遠端未知 fileKey 不算來源證據。既有 receipt 仍能在兩側精確對上的 selections 會帶入;新增或重建的來源仍須明示審查,不能用空陣列跳過。
-
-成功命令回傳一行 `{runId,status,artifacts,counts}`;後續一律使用 `artifacts[].path`。退出碼 0 只表示命令完成,`blocked`、`transport-pending`、`apply-requested` 都不表示同步成功。
-
-### 執行與完整回讀
-
-呼叫端讀取生成 JS,使用 `prepare.mjs` 匯出的 `buildFigmaToolArguments({fileKey,source})` 產生 `use_figma` 的完整參數,原樣交給工具。不要手改、裁切、重新 escape 或拼接生成碼。回傳的 envelope 原樣保存成 JSON,交給同一 request 的 `record --transport-result`。
-
-若回 `transport-pending`,執行它列出的下一支唯讀 JS,將該次完整 envelope 再交給同一 `record`;直到掃描回 `recorded` 或寫入驗證回 `verified`。不能手拼 chunks、只存摘要,也不能重跑 apply 來補取遺失的回應。工具會驗完整 digest、長度、順序與來源;有變動或缺塊即停止成功流程。
-
-| 檢查                     | 上限                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| 生成 `code`              | 50,000 字元,以 JavaScript `string.length` 計                                   |
-| 完整 tool arguments JSON | 128 KiB UTF-8 bytes,含 code escaping 與其他參數                                |
-| 每次完整回傳 envelope    | 18,000 UTF-8 bytes                                                             |
-| 單一 payload             | 未壓縮 canonical JSON 16 MiB,最多 32 chunks;每塊 base64 最多 12,288 ASCII 字元 |
-
-字元與 bytes 分別檢查;生成碼可包含非 ASCII 資料 literal,不以「檔案 bytes 小於 50,000」代替 code 字元檢查。超量不裁切內容或移除驗證;consumer 範圍過大時改用較小的同頁 roots 重掃與產生完整 plan,不手拆 actions。`TRANSPORT_TRACE_TOO_LARGE` 表示寫前回讀預算不足,該次不執行 mutation。
-
-### 最小操作順序
-
-新品牌庫先在已授權的獨立檔案操作。下例指令在 Bash / PowerShell 相同,所有佔位值與檔案路徑均替換為當次輸出;JSON 回傳由 Figma 工具保存,不是人工填結果:
-
-```bash
-node scripts/figma-sync/prepare.mjs scan --kind brand-library --file-key '<brand-file-key>' --roots '<page-or-root-id>' --run-id brand-scan-1
-# 執行 artifacts 中的 scan-brand-library.js,將回傳存為 <scan-envelope.json>
-node scripts/figma-sync/prepare.mjs record --request '.artifacts/figma-sync/brand-scan-1/request-brand-library-scan.json' --transport-result '<scan-envelope.json>'
-# 若仍 transport-pending,先依上節取齊;recorded 後使用產出的 inventory
-node scripts/figma-sync/prepare.mjs plan-brand --brand '<inventory-brand-library.json>'
-node scripts/figma-sync/prepare.mjs apply --plan '<plan.json>'
-# 執行 artifacts 中的 execute.js,將回傳存為 <apply-envelope.json>
-node scripts/figma-sync/prepare.mjs record --request '<request-apply.json>' --transport-result '<apply-envelope.json>'
-```
-
-品牌庫 `verified` 後,在 Figma 原生介面發布。消費端接軌或升級時,先完成所需的 Library 發布與接受,再分別以 `base-library`、`brand-library`、`consumer` 掃描三側,各自 `record` 收齊 inventory。依序執行 `review → plan → apply → 執行生成JS → record`,使用上表的精確參數。
-
-`brand-bindings` 只驗品牌綁定;`library-upgrade` 另驗發布與實際接受的資產/範圍、來源語意及當次完整 scope。每次都保留文字、圖片、組織識別、可見性、swap 與私人覆寫;同一 component key 不能證明已採用某次發布。`noop` plan 仍要走 apply/readback/record,才能取得當次驗證結果。零 action 本身不是成功證據。
-
-### 紀錄與恢復
-
-當次資料在 `.artifacts/figma-sync/<runId>/`,既有 snapshot、plan、attempt 不覆寫。成功 receipt 在 `deploy/project/figma/receipts/<fileKey>.json`,綁定 repo、slug 與 fileKey,累積仍可證明的受管狀態及各範圍驗證結果;隨正常 PR 提交,底座升級保留。Git 衝突以目前 Figma 重掃及驗證後重新生成,不整份選 ours/theirs。失敗結果不取代前次成功紀錄,相同 record 可重送但不重做 Figma mutation。
-
-consumer plan 只攜帶本次範圍的管理與釋出紀錄。`record` 核對前次 receipt 並完成驗證後,將範圍外紀錄原樣合回,保留其原驗證時間與身分證據。分批不會清掉歷史,也不會將未掃描的範圍標成這次已驗;已釋出的專案覆寫只有明示採來源才能重新納管。
-
-| 情況                                          | 處理                                                                                                                                                                                                                         |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 來源、角色、key、品牌輸入、工具或受管現值改變 | 重新 scan/review/plan;依 ownership 審查現值,不按同名或同色認養。                                                                                                                                                             |
-| 執行中斷或回應遺失                            | 先保存能取得的完整結果與 attempt,重新掃描,以 `plan` / `plan-brand --resume <原plan.json>` 產生新 run。工具核對現值與 readBack;不能按 action 次序猜完成度,不自動 rollback。新建資產的 exact 身分不明時停下核對,不能再建一次。 |
-| after inventory 無法傳輸                      | 保存含真實 trace 的失敗 attempt,不產成功 receipt;重新掃描後沿上述 resume 處理。                                                                                                                                              |
-| 品牌庫的受管值被手改                          | 此版沒有品牌庫 resolution;確認後把同一 exact key 的值還原至 receipt 的 `lastWrittenValue`,再 scan/plan-brand。換品牌改 `projectPublic.brand`,不刪 receipt 或使用 force。                                                     |
-| `RECEIPT_CHANGED` / `RECEIPT_BUSY`            | 核對目前紀錄與其他 writer,不強制覆蓋。殘留鎖須先確認 writer 已停止、核對 receipt 與 pending attempt,再由操作者移除並重送相同 record。                                                                                        |
-
-跨人接手的必要 plan/inventory/attempt 依既有 issue/PR 保存於可取得的位置,不以個人的 `.codex` 或 session 作唯一來源。掃描資料可能包含專案畫面內容,依專案可見性保存,不要因底座 repo 公開就把私人設計資料貼上去。
-
-離線測試:先完成本節建置,Bash 跑 `node --test scripts/figma-sync/*.test.mjs`;PowerShell 跑 `node --test (Get-ChildItem scripts/figma-sync -Filter '*.test.mjs').FullName`。CI 的 `figma-sync` job 跑同套測試,不讀 Figma token、不操作正式檔;實際發布、接受與當次 Figma 驗收另留 issue/PR 證據。
-
-正本:本節操作;`scripts/figma-sync/prepare-arguments.mjs`(六命令)、`execution-source.mjs`(完整工具參數)、`core-contract*.mjs`(協定欄位)、`artifacts.mjs`(run/receipt)、`.github/workflows/ci.yml`(離線驗證)。
+外掛中斷或預覽狀態改變時，重新預覽當前檔案再套用；它依現值只列待變更位置，不靠上次操作序號。`SELECTION_EMPTY` 時改選「目前頁面」或先選取畫布物件。離線測試是 `node --test scripts/figma-local/code.test.mjs scripts/figma-local/export-brand.test.mjs`；Figma 實際發布與接受不由 CI 代辦。舊 `scripts/figma-sync/prepare.mjs` 與既有 `deploy/project/figma/receipts/` 只保留歷史用途；**新流程不建立或要求 receipt**。外掛限制與範例見 [figma-local README](../../scripts/figma-local/README.md)，設計規範見 [Figma 規範](../standards/general/figma.md)。
 
 ## 第三方依賴
 
@@ -252,7 +192,7 @@ consumer plan 只攜帶本次範圍的管理與釋出紀錄。`record` 核對前
 
 `project-bootstrap` 在 `.claude/skills/` 與 `.agents/skills/` 都有版控入口,共用 [project-bootstrap.md](project-bootstrap.md) 的步驟;Claude 與 Codex 可各自接手新專案初始化,不依賴本機記憶或另一個工具。
 
-「用哪個」欄是在 Claude Code 裡的呼叫名稱。repo 自帶的三個 skill 放在 `.agents/skills/`(版本鎖在 `skills-lock.json`);repo 自製的 skill 放在 `.claude/skills/<名稱>/`。
+「用哪個」欄是在 Claude Code 裡的呼叫名稱。三個外部 skill 的版控來源在 `.agents/skills/`(版本鎖在 `skills-lock.json`),Claude 入口 `.claude/skills/<名稱>/` 是未版控的連結。新 clone、底座升級後與初始化重跑均在 repo 根執行 `node scripts/project-settings/restore-claude-skills.mjs`;Windows 建 junction,其他系統建目錄 symlink。重跑會檢查既有連結,遇到同名但來源不同的內容會停止,不覆寫。repo 自製的 Claude skill 放在 `.claude/skills/<名稱>/`;Codex 的 `module-scaffold` 入口另在 `.agents/skills/module-scaffold/` 指向共同操作文件。
 
 | 情境                                                 | 用哪個                                                        | 一句提醒                                                                                                     |
 | ---------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |

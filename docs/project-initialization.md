@@ -43,22 +43,22 @@ GraphQL 的 `generate` 在寫產物前檢查兩份文件來源,負例驗證使�
 
 ## 部署與工具識別
 
-| 項目                                                 | 現有正本                                                                                   | 初始化驗證                                                                                  |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| Repo 與看板識別                                      | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                        | 讀取器 github scope 以新 repo 身分解析成功;不用看板時 `projectStatus.enabled` 設為 `false`  |
-| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                     | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                          |
-| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                    | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對             |
-| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                | 每環境都有適合的網域、bucket、開關及其他必要值                                              |
-| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                | 透過既有機制建立與驗證,值不回寫文件、repo 或公開設定                                        |
-| Vercel front/Storybook                               | `docs/deployment.md`                                                                       | 專案、root directory、build 與各環境 endpoint 均已設好                                      |
-| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                               | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                    |
-| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功 |
+| 項目                                                 | 現有正本                                                                                   | 初始化驗證                                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Repo、Actions 與看板識別                             | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                        | 讀取器 github scope 以新 repo 身分解析成功;新 repo 有實際 CI run;不用看板時 `projectStatus.enabled` 設為 `false` |
+| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                     | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                                               |
+| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                    | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對                                  |
+| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                | 每環境都有適合的網域、bucket、開關及其他必要值                                                                   |
+| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                | 啟用雲端的四類必需 Secret 各有可讀版本;寄信未啟用時 `resendApiKey: null`;值不回寫文件、repo 或公開設定           |
+| Vercel front/Storybook                               | `docs/deployment.md`                                                                       | 專案、root directory、build 與各環境 endpoint 均已設好                                                           |
+| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                               | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                                         |
+| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功                      |
 
 本節每一項要分三種狀態記錄,互不代替:
 
 - **已提供**:兩份 JSON 填的是新專案的值(repo、GCP 專案、服務名、網址、Secret 名稱、看板 ID),讀取器解析成功。這只證明檔案內容完整、格式正確。
-- **已建立**:GCP 專案、Artifact Registry、WIF pool / provider、部署用 service account 與 IAM、Cloud Run 服務與網域對應、Secret Manager 的各個 secret、GitHub 看板與 `GH_PROJECT_TOKEN`、預設分支,都由初始化工作在外部建立;設定檔不會建立任何資源。
-- **已驗證**:以新專案實際跑過 Deploy(認證、build、部署、update)與看板移卡。讀取器與離線測試通過不算這一項。
+- **已建立**:GCP 專案、Artifact Registry、WIF pool / provider、部署用 service account 與 IAM、Cloud Run 服務與網域對應、Secret Manager 的各個 secret、GitHub 看板與 `GH_PROJECT_TOKEN`、預設分支,都由初始化工作在外部建立;設定檔不會建立任何資源。Cloud Run 服務與網域對應可在首次部署後建立,未建立時照實記錄。
+- **已驗證**:新 repo 有實際 Actions CI run;啟用的環境先核對 preflight,再以新專案實際跑過 Deploy(認證、build、部署、update)與看板移卡。首次空環境的 `CLOUD_STATUS_UNAVAILABLE` / `DATA_BASELINE_MISSING` 要核實原因並記錄,不直接當成部署失敗。讀取器與離線測試通過不算部署已驗證。
 
 新專案複製 repo 後,`expectedRepository` 不符會使 workflow 在認證前失敗。外部資源須另行建立;新專案使用自己的密鑰,不可沿用來源專案的值。不使用的整合須明確停用或移除專案引用,避免讀寫原專案目標。尚未啟用雲端時,`cloud.json` 只保留 `schemaVersion: 1` 與 `enabled: false`;CI 可驗設定,Deploy/Reset 在認證前停止。這表示停用狀態已驗證,不代表雲端資源已建立。格式與啟用方式見 [deployment](deployment.md#專案部署設定deployproject)。
 
@@ -87,6 +87,7 @@ ROOT_ADMIN 輸入與欄位政策見[種子資料與遷移](concepts/data-layer-a
 
 ## 設計與開發工具
 
-- Figma 啟用時提供底座來源、本專案 Brand Library 與 Screens 的 fileKey、權限及維護者,登記見[品牌註冊表](branding.md);品牌值沿用 `projectPublic.brand`。操作見 [toolbox](agents/toolbox.md#figma-品牌同步),成功狀態在本專案 `deploy/project/figma/receipts/`。資源存在只算已建立,實際補套與連結驗證通過才是已驗證;來源 repo 的 receipt 不算本專案結果。未提供、停用與已驗證分開記錄。
+- Figma 啟用時提供底座來源、本專案 Brand Library 與 Screens 的 fileKey、權限及維護者,登記見[品牌註冊表](branding.md);品牌值沿用 `projectPublic.brand`。操作見 [toolbox](agents/toolbox.md#figma-品牌同步):用本機外掛套用品牌庫與 Screens 主色,原生發布/接受 Library,另處理陰影與品牌示例文字。資源存在只算已建立,本專案的代表畫面與元件連結驗證通過才是已驗證;不靠來源 repo 或舊 receipt 冒認結果。未提供、停用與已驗證分開記錄。
+- `skills-lock.json` 的三個外部 skill 原檔在 `.agents/skills/`,Claude Code 的入口須由 `node scripts/project-settings/restore-claude-skills.mjs` 還原到 `.claude/skills/`;Windows 會建立 junction。新 clone、升級後與重跑初始化均執行並核對可讀,不以來源檔已版控代替 Claude 實際可用。
 - agent 入口為 `CLAUDE.md`,共同接手規則見 `docs/agents/collaboration.md`;必要設定不得僅存在某工具私有記憶。
 - skills、共用文件與專案文案的分離隨對應工作包維護。初始化 skill 指向[共同操作文件](agents/project-bootstrap.md),不能用「檔案都改完」取代完整建立/驗證紀錄。
