@@ -47,6 +47,27 @@ test("cloud:把讀取器的 JSON 映射成固定十六個 key=value,附加在既
   assert.ok(lines.includes("api_url=https://api-staging.widgets.example"));
 });
 
+test("cloud:Resend 停用時只允許 resend_secret 為空輸出", () => {
+  const full = JSON.parse(
+    resolved([
+      "--scope",
+      "cloud",
+      "--environment",
+      "dev",
+      "--repository",
+      REPO,
+    ]),
+  );
+  full.resend_secret = "";
+  const result = write("cloud", JSON.stringify(full));
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(result.written.includes("resend_secret=\n"));
+  full.jwt_secret = "";
+  const invalid = write("cloud", JSON.stringify(full));
+  assert.notEqual(invalid.status, 0);
+  assert.equal(invalid.written, "");
+});
+
 test("github 啟用:enabled / project_id / status_field_id 與單行 JSON 的 options", () => {
   const result = write(
     "github",

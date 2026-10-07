@@ -1,7 +1,8 @@
 name: Project Status
 
 # 看板移卡自動化(規則正本:docs/agents/issue-tracker.md「票的生命週期」)
-# 需要 repo secret GH_PROJECT_TOKEN:PAT(classic),僅勾 project scope —
+# 需要 repo secret GH_PROJECT_TOKEN:PAT(classic);公開 repo 勾 project scope,
+# 私有 repo 因腳本讀 issue 另加 repo scope —
 # 內建 GITHUB_TOKEN 無權編輯使用者名下的 Projects v2。
 #
 # 規則(實作在 scripts/project-settings/project-status.mjs):

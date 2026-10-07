@@ -60,8 +60,10 @@ function cloudLines(config) {
     );
   }
   exactKeys(config, CLOUD_OUTPUT_KEYS, "cloud 設定");
-  return CLOUD_OUTPUT_KEYS.map(
-    (key) => `${key}=${plainText(config[key], key)}`,
+  return CLOUD_OUTPUT_KEYS.map((key) =>
+    key === "resend_secret" && config[key] === ""
+      ? "resend_secret="
+      : `${key}=${plainText(config[key], key)}`,
   );
 }
 

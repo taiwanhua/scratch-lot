@@ -8,7 +8,7 @@
 
 - **適用**:建立新的引用專案,或接續一次尚未完成的初始化。
 - **不適用**:替既有專案換品牌、升級底座版本、還原資料庫。升級見 [deployment](../deployment.md#底座首次接軌與版本升級),還原見 [deployment](../deployment.md#資料庫還原reset)。初始化不會靜默更換既有專案的 slug、資料庫、volume 或上游版本。
-- **沿用既有設定來源**:專案值寫入現有 TypeScript / JSON / YAML / env,不另建初始化 manifest 或 wizard。採用版本記在根 `package.json` 的 `wowgoBase`(見第 3 節);Figma 成功 receipt 是工具生成的驗證狀態,不是第二份人工品牌設定。
+- **沿用既有設定來源**:專案值寫入現有 TypeScript / JSON / YAML / env,不另建初始化 manifest 或 wizard。採用版本記在根 `package.json` 的 `wowgoBase`(見第 3 節);Figma 檔案身分記在[品牌註冊表](../branding.md),操作結果記在初始化 PR。
 - **授權沿用現況**:建 repo、雲端、看板、DNS、部署等外部操作,依使用者已授權的範圍與實際提供的輸入執行;本流程不擴大授權,也不對已授權的範圍逐步重問。E2E 仍依 [issue tracker](issue-tracker.md) 由使用者決定是否觸發。
 - **機密不落檔**:密碼、金鑰、連線字串不寫進版控檔、issue、PR 或回報;建立方式見 [deployment](../deployment.md#新增一個-secret-manager-機密的標準步驟)。文件與範例裡的值都是示意,不是可用的憑證。
 
@@ -50,6 +50,7 @@ git switch -C main <完整 commit>
 - `cat-file -t` 必須印出 `tag`(annotated);`rev-parse` 的 40 位 commit 必須與該版 GitHub Release 記載的一致;`--is-shallow-repository` 必須是 `false`。任何一項不符就停止。
 - `--no-tags` 讓底座 tag 留在 `refs/base/releases/`,不進專案自己的 `refs/tags/`;新 clone 的 `git tag -l` 應為空。此 ref 不放在 `refs/remotes/upstream/`,避免一般 `fetch --prune upstream` 清理遠端分支時刪掉版本參照。
 - `switch -C` 只用於上面剛建立、沒有本機修改的新 clone:clone 可能已建好 main,此步讓它指向選定版本並建立工作檔。接續既有初始化時走「重跑」,不能用這段命令重設原工作樹。不要複製來源 repo 的 `.env` 或未追蹤工具設定。
+- checkout 後執行 `node scripts/project-settings/restore-claude-skills.mjs`:把 `skills-lock.json` 的三個版控 skill 連到 `.claude/skills/`。Windows 使用 junction,不需開發者模式;重跑會保留正確連結,同名但來源不同則停止,不覆寫。Codex 的 `module-scaffold` 入口已版控於 `.agents/skills/`。
 
 建立空的新 repo(不帶 README、不用 template)後接上 `origin`,只推明確指定的分支:
 
@@ -62,6 +63,8 @@ git branch --set-upstream-to=origin/main main
 三條分支的起點都是已核對的底座 commit,這是唯一一次直接寫入 `main`。之後的所有專案變更(含本次初始化)從 `main` 切 feat 分支,依 `CLAUDE.md` 的分支流程走 PR,不直接提交 `main`。
 
 確認新 repo 的預設分支為 `main`。起點中的 `expectedRepository` 仍是底座身分,首次 push 的設定檢查及看板自動化會因此停止;初始化分支改成新 repo 後須通過 CI。看板只讀預設分支,初始化發布前只在已建立並啟用的新看板手動維護狀態;停用時在 issue / PR 記進度即可。操作 `gh` 明確指定新 repo,看板 ID 讀新專案設定,不照抄來源文件中的 repo、看板範例或 token。雲端停用的專案以本機/CI 驗收程式版本,啟用資源後再驗部署,不能把停用的 Deploy 記成成功。
+
+新 repo 還須核對 **Actions 有真的產生 run**:初次 push 後查 `gh run list --repo <owner/repo> --limit 5`;若網頁提示未啟用或沒有任何 run,僅看 `gh api repos/<owner>/<repo>/actions/permissions --jq .enabled` 的 `true` 不足以判定可用。以 repo 管理權執行 `gh api --method PUT repos/<owner>/<repo>/actions/permissions -F enabled=true`,再由初始化分支的 push/PR 產生新事件,確認 CI run 出現。首次 release 前預設分支的 `expectedRepository` 還是底座值,**Project Status 的 `move-card` 可能持續失敗**;在新看板手動移卡並以初始化 PR 記錄,發布後再驗自動化。
 
 ## 3. 寫入專案值
 
@@ -92,9 +95,9 @@ git branch --set-upstream-to=origin/main main
 
 ## 4. 外部資源
 
-依輸入與授權建立,步驟以 [deployment](../deployment.md) 為準(Secret、GCS bucket 與 IAM、Vercel、網域),看板與 `GH_PROJECT_TOKEN` 見 [issue tracker](issue-tracker.md)。新專案使用自己的資源與密鑰。
+依輸入與授權建立,步驟以 [deployment](../deployment.md) 為準(GCP 基礎資源、WIF、Secret、GCS bucket 與 IAM、Vercel、網域),看板與 `GH_PROJECT_TOKEN` 見 [issue tracker](issue-tracker.md)。新專案使用自己的資源與密鑰。
 
-啟用 Figma 時,核對底座來源、專案 Brand Library 與 Screens 的 fileKey、引用權限及維護者,登記於[品牌註冊表](../branding.md),操作見 [toolbox](toolbox.md#figma-品牌同步)。新專案繼承工具,不承接來源 repo 的成功 receipt;須以自己的 repo、slug 與實際 fileKey 建立驗證紀錄。資源未知就記缺項,停用就記停用,不自動沿用來源檔案。
+啟用 Figma 時,核對底座來源、專案 Brand Library 與 Screens 的 fileKey、引用權限及維護者,登記於[品牌註冊表](../branding.md)。依 [toolbox](toolbox.md#figma-品牌同步) 從本專案 `projectPublic.brand` 產生品牌輸入、在獨立 Brand Library 用本機外掛套用並發布;Screens 使用遠端底座元件,加入兩個 Library、補綁專案色,再處理陰影樣式與品牌示例文字。只用本專案檔案及代表畫面驗收,在初始化 PR 記錄結果;不沿用來源專案的 Figma 檔或舊 receipt。資源未知就記缺項,停用就記停用。
 
 對外部資源這個項目,設定檔填好識別只算**已提供**;資源實際存在才是**已建立**;以新專案跑過實際連線、部署或移卡才是**已驗證**。本機檔案則依初始化索引,檔案存在即可記該檔案項目已建立,不代表它引用的外部資源存在。停用的整合記為「已停用」,不記成已建立。
 
@@ -103,11 +106,14 @@ git branch --set-upstream-to=origin/main main
 指令的寫法與注意事項以 [toolbox](toolbox.md) 為準。
 
 - **Git**:`git remote -v`(`origin` 是新 repo、`upstream` 是底座)、`git merge-base --is-ancestor <wowgoBase.commit> HEAD`、`git rev-parse --is-shallow-repository` 為 `false`、`git tag -l` 沒有底座 tag。
+- **Agent skills**:`node scripts/project-settings/restore-claude-skills.mjs` 可重跑;逐一確認三個 `.claude/skills/<名稱>/SKILL.md` 可讀且指向 `.agents/skills/<名稱>/`,以及 `.agents/skills/module-scaffold/SKILL.md` 可讀。新電腦 clone 也做同樣核對。
+- **Actions**:新 repo 的初始化 PR 至少有一筆 CI run,必要 job 狀態通過;首次 release 前看板 `move-card` 失敗依第 2 節手動維護。沒有 run 時先修 Actions 啟用,不能記為已驗證。
 - **設定讀取器**:Bash 用 `node --test scripts/project-settings/*.test.mjs`;PowerShell 先展開檔名:`node --test (Get-ChildItem scripts/project-settings -Filter '*.test.mjs').FullName`。再以新 repo 身分跑 `read-config.mjs` 的 github scope 與三個環境的 cloud scope(指令見 [deployment](../deployment.md#專案部署設定deployproject))。雲端停用時輸出是 `{"enabled":false}`,這只證明停用狀態有效。
 - **程式**:`pnpm exec turbo run test --filter=@repo/project-config`,再對改到的 package 跑 lint、型別、測試與 build;最後 `pnpm run format:check`。
 - **初始資料**:在明確建立的拋棄式空資料庫,依 [deployment](../deployment.md#設定與資料更新)建置同一 checkout 的 CLI,使用獨立 URI 與測試用 `ROOT_ADMIN_*` 執行 `update` 並原樣重跑一次;再對第二個空庫做同樣的事,確認受管定義內容一致,而組織、帳號、ID 與分派各自獨立。不要求正式密碼來驗拋棄式庫,也不以正式 URI 執行此步。
 - **本機隔離**:`docker compose config` 只核對渲染結果。兩個專案同時啟動、停一邊不影響另一邊,要實際操作過才算驗證。
-- **Figma**:啟用時依 toolbox 完成品牌補套及元件連結驗證,再重跑確認無待寫 action 且驗證通過;Library 升級另核對發布與實際接受證據。只有本專案的成功 receipt 能列為已驗證,檔案存在或來源專案的結果都不能代替。
+- **首次雲端部署**:啟用的每個環境在手動 Deploy 前,從該環境欲部署的完整 commit 跑[發布前核對](../deployment.md#發布前環境與資料核對),讀取 issues 後再部署;新建空環境尚無 Cloud Run 服務及 DB 更新基準時,`CLOUD_STATUS_UNAVAILABLE` / `DATA_BASELINE_MISSING` 是預期觀察,須核實確為首次建立並記入 PR,其他未核對事項仍要處理。Deploy 後再核對 revision、資料更新與 smoke;只填 `cloud.json` 或只跑 preflight 不算已驗證。
+- **Figma**:啟用時依 toolbox 完成品牌庫與 Screens 的預覽、套用、回讀,重檢待處理與例外均為 0;核對 Button、巢狀側欄及代表畫面的主色、陰影、文字與遠端元件連結。Library 升級另核對實際發布與接受。只將本專案的操作結果列為已驗證,檔案存在或來源專案的結果不能代替。
 - **E2E**:只提建議與理由,不自行觸發。
 
 沒跑的項目照實列為未驗證,並寫明原因(缺輸入、缺授權、外部資源不存在、底座版本缺機制)。
@@ -120,9 +126,11 @@ git branch --set-upstream-to=origin/main main
 
 從新電腦 clone 專案時,`upstream` 與 `refs/base/releases/` 不會一起複製。依已提交的 `wowgoBase.repository` 補上缺少的 upstream,設定 `git config remote.upstream.tagOpt --no-tags`,再以第 2 節的明確 refspec fetch 已記錄的 tag,核對完整 commit 與 ancestry。已有 upstream 卻指向不同 repo 時先查明,不靜默覆寫;自己的 tags 不刪除。
 
+新電腦或重跑也執行 `node scripts/project-settings/restore-claude-skills.mjs`,核對版控來源與 Claude 連結;既有同名內容不同時先查明,不要強制重建。
+
 - 只補缺項,或改使用者這次明確要求變更的欄位。
 - 不覆寫已客製的來源、已存在的 `.env`、業務內容與資料。
-- 保留身分相符的 Figma receipt;repo、slug 或 fileKey 不符先查明,不手改 receipt 冒認成功。既有同步中斷依 toolbox 的恢復步驟處理。
+- 保留已建立且身分相符的 Figma Brand Library 與 Screens,核對 fileKey 後重新預覽當前狀態;中斷時依 toolbox 的恢復步驟接續,不另複製一份覆蓋專案客製。
 - 修改 `expectedRepository` 前,一起核對 cloud 與看板的引用:已是新專案值或明確停用才可接線;若還留來源資源,先依已有輸入改成新值或停用,缺少決定時只暫停這項接線並詢問,不能只換 repo 身分就放行來源資源。
 - slug、資料庫名、Compose 專案名與 volume、底座版本一旦定下,初始化不更動;要換底座版本走升級流程。
 - 現值與 issue 記錄不一致時,列出差異請使用者裁決。

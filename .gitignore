@@ -30,6 +30,9 @@ storybook-static
 # 原本只靠使用者層的 global gitignore 擋住,換機器就會誤入版控 — #195 → #160)
 .claude/settings.local.json
 
+# Codex 本機設定與交接；正式決策留在版控文件及 issue/PR
+.codex/
+
 # 從 repo 根跑 api 時 NestJS 會在根目錄誤生一份 schema.gql(正本在 apps/api/schema.gql)
 /schema.gql
 
@@ -40,3 +43,6 @@ apps/e2e/test-results
 
 # figma-sync 的暫存 run(request / inventory / plan / attempt 與生成 JS);成功狀態另存 deploy/project/figma/receipts/、要 commit
 .artifacts/figma-sync/
+
+# 本機 Figma 外掛的可丟棄品牌 JSON 與測試截圖
+.artifacts/figma-local/

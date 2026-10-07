@@ -345,7 +345,6 @@ test("cloud 的每個必要欄位缺少時都拒絕,並指出欄位路徑", () =
     ["environments", "dev", "secrets", "fieldEncryptionKey"],
     ["environments", "dev", "secrets", "rootAdminPassword"],
     ["environments", "dev", "secrets", "jwtSecret"],
-    ["environments", "dev", "secrets", "resendApiKey"],
   ];
   for (const segments of paths) {
     for (const mutate of [
@@ -368,6 +367,32 @@ test("cloud 的每個必要欄位缺少時都拒絕,並指出欄位路徑", () =
         new RegExp(segments.join("\\.")),
       );
     }
+  }
+});
+
+test("Resend 未啟用時仍能解析 cloud 設定,其他 secret 仍必填", () => {
+  const cloud = sampleCloud();
+  cloud.environments.dev.secrets.resendApiKey = null;
+  const resolved = resolveCloudConfig({
+    rootDir: makeProjectRoot({ cloud }),
+    environment: "dev",
+    repository: REPO,
+  });
+  assert.equal(resolved.resend_secret, "");
+  for (const invalid of [undefined, "", 42]) {
+    const changed = sampleCloud();
+    if (invalid === undefined)
+      delete changed.environments.dev.secrets.resendApiKey;
+    else changed.environments.dev.secrets.resendApiKey = invalid;
+    expectError(
+      () =>
+        resolveCloudConfig({
+          rootDir: makeProjectRoot({ cloud: changed }),
+          environment: "dev",
+          repository: REPO,
+        }),
+      /environments\.dev\.secrets\.resendApiKey/,
+    );
   }
 });
 

@@ -69,13 +69,13 @@
 | 稽核、儲存與寄信     | 服務機制及共用模板                                  | bucket、網址、寄件識別與外部資源                            |
 | 功能與資料           | 組裝、repository 基礎、組織資料檢查、示範藍本       | project 來源中的頁面、API、schema、repository、GraphQL 文件 |
 | 工具與部署           | 共用規範、測試工具、設定讀取器及 workflow           | 依賴擴充、專案測試、repo／看板／雲端／環境設定              |
-| Figma 同步           | 品牌投影、身分審查、補套與驗證工具及契約            | 品牌值、Brand Library、Screens、客製內容與成功 receipt      |
+| Figma 同步           | 品牌投影、本機外掛與底座共用 Library                | 品牌值、Brand Library、Screens 與客製內容                   |
 
 上表是 repo 內容的維護歸屬;人員、角色授權、租戶分派、綁定與業務資料由各環境管理。專案值的正本見[初始化索引](project-initialization.md)。`project-config` 是 build 輸入,不讀 `process.env`、瀏覽器全域或遠端服務;公開欄位的型別與驗證在 `packages/project-config/src/base/public-config.ts`。前台自行設計版型與風格,可選用共用 UI,不要求接後台主題。示範程式是底座藍本,專案業務另建模組。
 
 底座以正式 annotated tag 與 GitHub Release 交付,引用專案的採用版本記在 `package.json.wowgoBase`。`scripts/base-sync/` 準備隔離升級/回收分支與差異報告,不改變上述歸屬或自動接受內容。向下升級保留共同祖先,向上回收只移植經審查的共用改良;操作與驗收見 [deployment](deployment.md#底座首次接軌與版本升級)。發布前讀取實際應用/資料狀態,不另存人工環境版本帳。
 
-Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `projectPublic.brand`,沿用 `@repo/ui` 的色盤與陰影函式,不另填六色色票。Node CLI 產生掃描、審查與執行資料,由 Figma 工具執行生成的 JavaScript;完整回讀驗證成功後,才更新 `deploy/project/figma/receipts/` 的專案狀態。底座升級保留專案資源、客製及 receipt;操作見 [toolbox](agents/toolbox.md#figma-品牌同步),實際 Library 是否已建立與發布見[品牌註冊表](branding.md)。
+Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `projectPublic.brand`,沿用 `@repo/ui` 的色盤與陰影函式,不另填六色色票。本機 Figma 外掛在專案 Brand Library 建立六色與陰影,在獨立 Screens 檔補綁底座主色變數;畫面使用遠端底座元件,文字、商標與私人覆寫留給專案。Library 的發布、接受與陰影樣式換庫由 Figma 原生介面完成,結果記於初始化或升級 PR,不生成 receipt。底座升級保留專案 Figma 資源與客製;操作見 [toolbox](agents/toolbox.md#figma-品牌同步),資產身分見[品牌註冊表](branding.md)。
 
 ### 功能來源與組裝
 
