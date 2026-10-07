@@ -501,12 +501,7 @@ async function applyScreens(options) {
 figma.ui.onmessage = async (message) => {
   try {
     if (message.type === "init") {
-      let libraries = [];
-      try {
-        libraries = await libraryChoices();
-      } catch (_) {
-        /* Brand Library need not subscribe to other libraries. */
-      }
+      const libraries = await libraryChoices();
       send("ready", { fileKey: figma.fileKey || null, libraries });
       return;
     }
