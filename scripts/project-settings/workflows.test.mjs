@@ -32,6 +32,8 @@ import {
 const COOKHOME = LEGACY_COOKHOME_REPOSITORY;
 const legacyRoot = makeLegacyCookhomeRoot();
 const REGISTRY = "asia-east1-docker.pkg.dev/cookhome-online/cookhome";
+const HEAD = `abc1234${"0".repeat(33)}`;
+const RUN_ID = "123456789";
 const WORKFLOWS = ["deploy.yml", "reset-db.yml", "project-status.yml"];
 
 const isAuth = (entry) =>
@@ -107,10 +109,11 @@ const ORIGINAL_DEPLOY = {
 
 /**
  * deploy.yml 在「api / admin / update 全部受影響」時依序打出的命令(逐字手抄)。
- * 部署 image 的部分與抽設定前逐字相同;資料更新是一次 update:連 api 一起安裝、建置受管定義 CLI、確認它啟動得起來,再執行。
+ * image 使用每次 build 獨立的完整 SHA tag;資料更新是一次 update。
  */
 function originalDeployCommands(environment) {
   const { suffix, api } = ORIGINAL_DEPLOY[environment];
+  const tag = `${HEAD}-${environment}-${RUN_ID}-1`;
   const describe = (service) =>
     `gcloud run services describe ${service} --region=asia-east1 --format=value(spec.template.spec.containers[0].image)`;
   return [
@@ -118,12 +121,12 @@ function originalDeployCommands(environment) {
     describe(`cookhome-api${suffix}`),
     describe(`cookhome-admin${suffix}`),
     describe(`cookhome-api${suffix}`),
-    `docker build -f apps/api/Dockerfile -t ${REGISTRY}/api:abc1234 .`,
-    `docker push ${REGISTRY}/api:abc1234`,
-    `docker build -f apps/admin/Dockerfile -t ${REGISTRY}/admin:abc1234${suffix} --build-arg VITE_GRAPHQL_ENDPOINT=${api}/graphql .`,
-    `docker push ${REGISTRY}/admin:abc1234${suffix}`,
-    `gcloud run deploy cookhome-api${suffix} --region=asia-east1 --image=${REGISTRY}/api:abc1234 --port=5001 --allow-unauthenticated --min-instances=0 --max-instances=2 --env-vars-file=deploy/env/${environment}.yaml --set-secrets=MONGODB_URI=mongodb-uri${suffix}:latest,FIELD_ENCRYPTION_KEY=field-encryption-key${suffix}:latest,JWT_SECRET=jwt-secret${suffix}:latest,RESEND_API_KEY=resend-api-key${suffix}:latest --quiet`,
-    `gcloud run deploy cookhome-admin${suffix} --region=asia-east1 --image=${REGISTRY}/admin:abc1234${suffix} --port=8080 --allow-unauthenticated --min-instances=0 --max-instances=2 --quiet`,
+    `docker build -f apps/api/Dockerfile -t ${REGISTRY}/api:${tag} .`,
+    `docker push ${REGISTRY}/api:${tag}`,
+    `docker build -f apps/admin/Dockerfile -t ${REGISTRY}/admin:${tag} --build-arg VITE_GRAPHQL_ENDPOINT=${api}/graphql .`,
+    `docker push ${REGISTRY}/admin:${tag}`,
+    `gcloud run deploy cookhome-api${suffix} --region=asia-east1 --image=${REGISTRY}/api:${tag} --port=5001 --allow-unauthenticated --min-instances=0 --max-instances=2 --env-vars-file=deploy/env/${environment}.yaml --set-secrets=MONGODB_URI=mongodb-uri${suffix}:latest,FIELD_ENCRYPTION_KEY=field-encryption-key${suffix}:latest,JWT_SECRET=jwt-secret${suffix}:latest,RESEND_API_KEY=resend-api-key${suffix}:latest --quiet`,
+    `gcloud run deploy cookhome-admin${suffix} --region=asia-east1 --image=${REGISTRY}/admin:${tag} --port=8080 --allow-unauthenticated --min-instances=0 --max-instances=2 --quiet`,
     "pnpm install --frozen-lockfile --filter @repo/db-migrator... --filter @repo/api...",
     "pnpm --filter @repo/api... run build",
     "pnpm --filter @repo/db-migrator run update --check-cli",
@@ -134,10 +137,13 @@ function originalDeployCommands(environment) {
 }
 
 const deployEnv = (overrides = {}) => ({
-  FAKE_HEAD: "abc1234",
+  FAKE_HEAD: HEAD,
+  FAKE_SHORT_HEAD: "abc1234",
+  GITHUB_RUN_ID: RUN_ID,
+  GITHUB_RUN_ATTEMPT: "1",
   FAKE_BASE_IN_HISTORY: "1",
-  FAKE_API_IMAGE: "registry.example/app/api:0ld5ha1",
-  FAKE_ADMIN_IMAGE: "registry.example/app/admin:0ld5ha1-dev",
+  FAKE_API_IMAGE: "registry.example/app/api:0dd5aa1",
+  FAKE_ADMIN_IMAGE: "registry.example/app/admin:0dd5aa1-dev",
   FAKE_DIFF: "apps/api/src/main.ts\n",
   FAKE_TURBO_AFFECTED: "@repo/api @repo/admin @repo/db-migrator",
   FAKE_MONGODB_URI: "mongodb://fake-host/fake-db",
@@ -192,7 +198,7 @@ test("deploy:讀設定在 checkout 之後、雲端認證之前;認證參數全�
 });
 
 for (const environment of Object.keys(ORIGINAL_DEPLOY)) {
-  test(`deploy ${environment}:命令逐字相同(SHA image tag;先部署 api,再建置受管定義 CLI 並執行一次 update)`, async () => {
+  test(`deploy ${environment}:獨立 image tag;先部署 api,再建置受管定義 CLI 並執行一次 update`, async () => {
     const job = await runDeploy(environment);
     assert.equal(job.failed, null, job.failed?.stderr);
     assert.deepEqual(
@@ -216,6 +222,22 @@ for (const environment of Object.keys(ORIGINAL_DEPLOY)) {
     });
   });
 }
+
+test("deploy:同 commit 跨環境及同環境重跑會使用不同 image tag", async () => {
+  const first = await runDeploy("dev");
+  const rerun = await runDeploy("dev", {
+    env: { GITHUB_RUN_ATTEMPT: "2" },
+  });
+  const staging = await runDeploy("staging");
+  for (const job of [first, rerun, staging]) {
+    assert.equal(job.failed, null, job.failed?.stderr);
+  }
+  const apiTag = (job) =>
+    commands(job.calls, "docker").find(
+      (cmd) => cmd.startsWith("docker push ") && cmd.includes("/api:"),
+    );
+  assert.equal(new Set([first, rerun, staging].map(apiTag)).size, 3);
+});
 
 test("deploy:Resend 未啟用時不掛不存在的 secret,其餘三個 API secret 仍交付", async () => {
   const cloud = sampleCloud();
@@ -357,7 +379,9 @@ test("deploy:換專案設定後,所有命令都指向新專案,沒有任何 Cook
   assert.match(all, /widgets-api-staging/);
   assert.match(
     all,
-    /europe-west1-docker\.pkg\.dev\/acme-widgets\/widgets\/admin:abc1234-staging/,
+    new RegExp(
+      `europe-west1-docker\\.pkg\\.dev/acme-widgets/widgets/admin:${HEAD}-staging-${RUN_ID}-1`,
+    ),
   );
   assert.equal(exported(job.calls).ROOT_ADMIN_EMAIL, "owner@widgets.example");
 });
@@ -506,12 +530,12 @@ test("deploy:資料更新只呼叫一次 update,而且寫成 pnpm … run update
   assert.equal(step.if, "steps.affected.outputs.update == 'true'");
 });
 
-test("affected:以目前部署的 image tag(去掉環境後綴)當 base 比對", () => {
+test("affected:以目前部署的 image tag 的 SHA 當 base 比對", () => {
   const result = affected({ FAKE_DIFF: "docs/x.md\n" });
   assert.deepEqual(commands(result.calls, "git"), [
-    "git diff --name-only 0ld5ha1...HEAD",
-    "git diff --name-only 0ld5ha1...HEAD",
-    "git diff --name-only 0ld5ha1...HEAD",
+    "git diff --name-only 0dd5aa1...HEAD",
+    "git diff --name-only 0dd5aa1...HEAD",
+    "git diff --name-only 0dd5aa1...HEAD",
   ]);
 });
 
@@ -529,6 +553,15 @@ test("affected:force、首次部署(讀不到 tag)、base 不在歷史 → 全�
         FAKE_API_IMAGE: "r/api:abc1234",
         FAKE_ADMIN_IMAGE: "r/admin:abc1234-dev",
         FAKE_DIFF: "deploy/project/cloud.json\n",
+      }),
+    ),
+    { api: "false", admin: "false", update: "false" },
+  );
+  assert.deepEqual(
+    flags(
+      affected({
+        FAKE_API_IMAGE: `r/api:${HEAD}-staging-12-1`,
+        FAKE_ADMIN_IMAGE: `r/admin:${HEAD}-staging-12-1`,
       }),
     ),
     { api: "false", admin: "false", update: "false" },

@@ -39,16 +39,17 @@
 
 正式設計檔位於 Wowgo 團隊的 [Design system](https://www.figma.com/files/team/963068133549518258/project/28668795)。引用專案須另外登記自己的品牌 Library 與業務畫面檔;scratch-lot 的兩個檔登記於下表。
 
-| 檔案                                                                             | fileKey                  | 目前用途                                                                                                                                       |
-| -------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5)  | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;51 組元件與 15 頁治理及示範參考畫面                                                                                   |
-| [CookHome Design System](https://www.figma.com/design/SvnBvi8Opfj8daJAclOnWW)    | `SvnBvi8Opfj8daJAclOnWW` | CookHome 品牌與業務畫面;共用元件引用 wowgo-base Library                                                                                        |
-| [scratch-lot Brand Library](https://www.figma.com/design/vR4pASiPSzHnxC1y778zAx) | `vR4pASiPSzHnxC1y778zAx` | scratch-lot 品牌 Library(`Brand` → `Color`,Light);值由品牌同步工具依 `projectPublic.brand` 生成;維護者 taiwanhua;Wowgo 團隊 Design system 專案 |
-| [scratch-lot Screens](https://www.figma.com/design/sXOJkIX53eBMUyDE8yYUJm)       | `sXOJkIX53eBMUyDE8yYUJm` | scratch-lot 業務畫面;共用元件引用 wowgo-base Library、品牌引用 scratch-lot Brand Library;維護者 taiwanhua                                      |
+| 檔案                                                                              | fileKey                  | 目前用途                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5)   | `XKQ18kf6SkfAQYk7GmBkk5` | 共用元件與後台殼 Library;51 組元件與 15 頁治理及示範參考畫面                                                                                                            |
+| [wowgo-base Screens Starter](https://www.figma.com/design/t80RWevFt8yezd0Bue9aGJ) | `t80RWevFt8yezd0Bue9aGJ` | 新專案取用的中性後台 Screens;15 頁、96 張參考畫面，共用元件維持遠端 Library 實例                                                                                        |
+| [CookHome Design System](https://www.figma.com/design/SvnBvi8Opfj8daJAclOnWW)     | `SvnBvi8Opfj8daJAclOnWW` | CookHome 品牌與業務畫面;共用元件引用 wowgo-base Library                                                                                                                 |
+| [scratch-lot Brand Library](https://www.figma.com/design/vR4pASiPSzHnxC1y778zAx)  | `vR4pASiPSzHnxC1y778zAx` | scratch-lot 品牌 Library(`Brand` → `Color`,Light);由本機外掛 `wowgo-base Brand Sync` 依 `projectPublic.brand` 套用並發布;維護者 taiwanhua;Wowgo 團隊 Design system 專案 |
+| [scratch-lot Screens](https://www.figma.com/design/sXOJkIX53eBMUyDE8yYUJm)        | `sXOJkIX53eBMUyDE8yYUJm` | scratch-lot 後台與業務畫面;取自 Screens Starter,共用元件為 wowgo-base Library 遠端實例、品牌引用 scratch-lot Brand Library;維護者 taiwanhua                             |
 
-底座維護共用元件、字型、固定語意色、圓角、陰影與後台參考畫面。共用元件位於 27 頁,共 51 組、210 個 component;15 頁治理及示範參考畫面保留完整後台藍本。CookHome 保留自己的畫面與業務內容,共用元件以實例引用本庫。
+底座維護共用元件、字型、固定語意色、圓角、陰影與後台參考畫面。共用元件位於 27 頁,共 51 組、210 個 component;15 頁治理及示範參考畫面保留完整後台藍本。Screens Starter 只含後台畫面，以中性文字、底座變數與底座陰影樣式展示；它只啟用底座 Library，共用元件維持遠端實例。新專案在自己的空白 Screens 檔逐頁複製 Starter 的畫面內容，再加入自己的 Brand Library、套色及客製。底座參考畫面變更時，由底座維護者同步更新 Starter 對應頁面，核對遠端元件與底座變數、陰影樣式。CookHome 保留自己的畫面與業務內容,共用元件以實例引用本庫。
 
-本庫目前的[中性內容發布](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5/wowgo-base-Design-System?version-id=2406587150460058202)對應 [wowgo-base v0.2.0](https://github.com/taiwanhua/wowgo-base/releases/tag/v0.2.0)。CookHome 已接受 Library 更新並完成首次盤點範圍的品牌補套;受管與明示保留項目以專案的生成 receipt 為準。
+底座 Library 的 Figma 發布版本與 Git tag 在 GitHub Release 互相指向；專案接受 Library 更新的範圍與代表畫面結果記在升級 PR，不另產生 receipt。
 
 引用專案使用自己的畫面檔與 Brand Library,品牌 Library 不占用底座的 mode。底座 Brand 集合的 mode 是 `Default`(`6:0`),Color 的 Light/Dark 與原有 variable key/value 保留。畫面統一設計 Light,不修改應用的亮暗切換。
 

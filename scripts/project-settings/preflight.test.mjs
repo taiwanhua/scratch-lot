@@ -251,6 +251,38 @@ test("digest 對應 commit 須能被證明:image / version 不符、多個 tag �
   }
 });
 
+test("同 commit 跨環境與同環境重建後,舊 digest 的獨立 tag 仍能證明來源", async () => {
+  const checkout = createTargetCheckout();
+  const { commits } = checkout;
+  const first = digestOf("a");
+  const rebuilt = digestOf("b");
+  const cloud = defaultCloud(checkout);
+  cloud.tags[first] = [arTag("api", `${commits.k1}-dev-123-1`, first)];
+  cloud.tags[rebuilt] = [
+    arTag("api", `${commits.k1}-dev-124-1`, rebuilt),
+    arTag("api", `${commits.k1}-staging-125-1`, rebuilt),
+  ];
+  const report = parseReport(await preflight(checkout, cloud));
+  assert.deepEqual(
+    appOf(report, "api").revisions.map(({ commit }) => commit),
+    [commits.k1, commits.k1],
+  );
+  assert.equal(
+    report.issues.some((issue) => issue.code === "REVISION_UNRESOLVED"),
+    false,
+  );
+
+  cloud.tags[first] = [arTag("api", `${commits.k1}-staging-125-1`, first)];
+  const wrongEnvironment = parseReport(await preflight(checkout, cloud));
+  assert.equal(appOf(wrongEnvironment, "api").revisions[0].commit, null);
+  assert.equal(
+    wrongEnvironment.issues.some(
+      (issue) => issue.code === "REVISION_UNRESOLVED",
+    ),
+    true,
+  );
+});
+
 test("DB 狀態未知或不完整不得當成沒有待部署差異", async () => {
   const checkout = createTargetCheckout();
   const { commits } = checkout;
