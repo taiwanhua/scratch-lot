@@ -365,7 +365,7 @@ pnpm() {
 }
 git() {
   case "$1" in
-    rev-parse) printf '%s\n' "$FAKE_HEAD" ;;
+    rev-parse) if [ "$2" = --short ] && [ -n "$FAKE_SHORT_HEAD" ]; then printf '%s\n' "$FAKE_SHORT_HEAD"; else printf '%s\n' "$FAKE_HEAD"; fi ;;
     cat-file) [ "$FAKE_BASE_IN_HISTORY" = 1 ] ;;
     diff) record git "$@"; printf '%s' "$FAKE_DIFF" ;;
   esac

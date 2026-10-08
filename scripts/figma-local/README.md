@@ -14,9 +14,9 @@
 
 ## 專案 Screens
 
-Screens 必須是**另一個檔案**，共用畫面引用底座已發布的遠端元件實例。直接複製底座 Design System 檔會得到本地元件，不能當作可升級的 Screens。第一次建立時，從已有遠端 Base 實例的 Screens 範本複製；若尚無範本，先從啟用的底座 Library 插入元件實例組成畫面，再保存為專案 Screens。專案專有畫面、文案和覆寫保存在這個檔案。
+Screens 必須是**另一個檔案**。第一次建立時新建空白專案 Screens，逐頁複製[正式 Screens Starter](../../docs/branding.md#設計資源登記)的畫面內容；其中的共用元件已是底座已發布的遠端實例。不要整檔 Duplicate Starter：目前實測複製檔會讓外掛讀不到 Library 變數集合。直接複製底座 Design System 檔則會得到本地主元件。專案專有畫面、文案和覆寫保存在專案 Screens。
 
-1. 在 Screens 的 Figma Library 面板啟用底座與本專案 Brand Library，先接受可用的 Library 更新。Plugin API 無法代替這個 UI 步驟。
+1. 在新 Screens 的 `Assets → Libraries → Add more libraries` 加入 `wowgo-base Design System` 與本專案 Brand Library，逐頁貼入 Starter 畫面，先接受可用的 Library 更新，再開啟外掛讀取清單。Plugin API 無法代替這個 UI 步驟。
 2. 開外掛，貼 Screens 網址中的 file key，選底座與專案 Library。先選一張代表畫面或目前頁面，按「檢查綁定」；確認例外為 0、遠端元件實例數與待處理數合理，再「補綁專案色」。完成後再檢查，待處理應為 0。
 3. 其餘需要套色的頁面同樣處理；初建可選「全部頁面」。外掛只處理**直接綁定**底座 `Brand`/`Color` 六個 primary 角色的 fill/stroke，保留私人變數、文字、圖、布局和元件實例關係。`Shadow/Primary` 在 Screens 用 Figma 原生 **Swap libraries** 換成專案品牌樣式。
 4. 初建時另外覆寫品牌示例文字、商標與業務內容。核對一個 Primary Button、巢狀側欄和一張代表畫面：專案色與陰影、文字、變體、布局及遠端 Base 主元件連結。這是有變更時的代表性驗收；新/變更的角色或共用元件另選對應樣本，不必每次重掃全部畫面。

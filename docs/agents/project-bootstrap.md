@@ -97,7 +97,7 @@ git branch --set-upstream-to=origin/main main
 
 依輸入與授權建立,步驟以 [deployment](../deployment.md) 為準(GCP 基礎資源、WIF、Secret、GCS bucket 與 IAM、Vercel、網域),看板與 `GH_PROJECT_TOKEN` 見 [issue tracker](issue-tracker.md)。新專案使用自己的資源與密鑰。
 
-啟用 Figma 時,核對底座來源、專案 Brand Library 與 Screens 的 fileKey、引用權限及維護者,登記於[品牌註冊表](../branding.md)。依 [toolbox](toolbox.md#figma-品牌同步) 從本專案 `projectPublic.brand` 產生品牌輸入、在獨立 Brand Library 用本機外掛套用並發布;Screens 使用遠端底座元件,加入兩個 Library、補綁專案色,再處理陰影樣式與品牌示例文字。只用本專案檔案及代表畫面驗收,在初始化 PR 記錄結果;不沿用來源專案的 Figma 檔或舊 receipt。資源未知就記缺項,停用就記停用。
+啟用 Figma 時,核對底座來源、專案 Brand Library 與 Screens 的 fileKey、引用權限及維護者,登記於[品牌註冊表](../branding.md)。依 [toolbox](toolbox.md#figma-品牌同步) 從本專案 `projectPublic.brand` 產生品牌輸入、在獨立 Brand Library 用本機外掛套用並發布;另建空白專案 Screens 檔,逐頁複製正式 Screens Starter 的畫面內容,加入底座與專案 Brand Library,重新開啟外掛補綁專案色,再處理陰影樣式與品牌示例文字。只用本專案檔案及代表畫面驗收,在初始化 PR 記錄結果;不沿用來源專案的 Figma 檔或舊 receipt。資源未知就記缺項,停用就記停用。
 
 對外部資源這個項目,設定檔填好識別只算**已提供**;資源實際存在才是**已建立**;以新專案跑過實際連線、部署或移卡才是**已驗證**。本機檔案則依初始化索引,檔案存在即可記該檔案項目已建立,不代表它引用的外部資源存在。停用的整合記為「已停用」,不記成已建立。
 

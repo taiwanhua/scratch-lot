@@ -56,7 +56,7 @@ jobs:
       # 讀 deploy/project/*.json 並核對專案身分:repository 取自受信任的 github context,
       # 與設定檔的 expectedRepository 不符、環境未知或缺值時在這裡失敗,後面的雲端認證不會執行。
       # 讀取器只用 Node 內建模組(runner 內建的 node 即可,不需先 pnpm install),輸出只有非機密設定與 Secret 名稱。
-      # image_suffix 是 admin image tag 的環境後綴(admin 每環境各建一顆),屬於本 workflow 的 tag 慣例,不是專案設定。
+      # 每次 build 使用獨立 tag,即使同一 commit 跨環境或重跑也不會移走舊 revision 的 tag。
       - name: 專案設定(核對 repo 與環境)
         id: cfg
         env:
@@ -65,12 +65,7 @@ jobs:
         run: |
           node scripts/project-settings/read-config.mjs --scope cloud --environment "$ENVIRONMENT" --repository "$REPOSITORY" > "$RUNNER_TEMP/project-cloud.json"
           node scripts/project-settings/write-github-output.mjs --scope cloud < "$RUNNER_TEMP/project-cloud.json"
-          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-          case "$ENVIRONMENT" in
-            dev)        echo "image_suffix=-dev" >> "$GITHUB_OUTPUT" ;;
-            staging)    echo "image_suffix=-staging" >> "$GITHUB_OUTPUT" ;;
-            production) echo "image_suffix=" >> "$GITHUB_OUTPUT" ;;
-          esac
+          echo "image_tag=$(git rev-parse HEAD)-$ENVIRONMENT-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
 
       - uses: google-github-actions/auth@v2
         with:
@@ -85,7 +80,7 @@ jobs:
           REGISTRY_HOST: ${{ steps.cfg.outputs.registry_host }}
         run: gcloud auth configure-docker "$REGISTRY_HOST" --quiet
 
-      # 只部署改到的 app:image tag = git SHA,所以 Cloud Run 上目前跑的 image 就是「上次部署的 commit」。
+      # image tag 以完整 Git SHA 開頭,後面是環境與執行識別;舊版短 SHA tag 也可讀。
       # 以它為 base 跑 turbo ls --affected(依 workspace 依賴圖:改 packages/ui 會讓 admin 受影響、改 @repo/domain 會讓 api 受影響)。
       # 讀不到 tag(第一次部署)、base 不在歷史裡(force push)、或 inputs.force 時 → 全部部署。
       - name: 受影響的 app(比對該環境目前部署的 SHA)
@@ -99,9 +94,10 @@ jobs:
           decide() { # $1=服務名 $2=package 名 → 印 true/false
             local img base
             img=$(gcloud run services describe "$1" --region="$REGION" --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true)
-            base=${img##*:}; base=${base%-*}
+            base=${img##*:}; base=${base%%-*}
+            if [[ ! "$base" =~ ^[0-9a-f]{7,40}$ ]]; then echo true; return; fi
             if [ "$FORCE" = "true" ] || [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then echo true; return; fi
-            if [ "$base" = "$(git rev-parse --short HEAD)" ]; then echo false; return; fi
+            if [ "$base" = "$(git rev-parse --short HEAD)" ] || [ "$base" = "$(git rev-parse HEAD)" ]; then echo false; return; fi
             # 部署設定不屬於任何 package,turbo 看不到,由 deploy-affected.mjs 判斷:
             #   deploy/project/ 或 scripts/project-settings/ 有變 → api 與 admin 都重建(API 網址烘在 admin image)
             #   deploy/env/ 或本 workflow 有變 → 只有 api(admin 不吃 runtime env 檔)
@@ -126,29 +122,28 @@ jobs:
           echo "update=$update" >> "$GITHUB_OUTPUT"
           echo "::notice::部署判斷:api=$api admin=$admin update=$update(force=$FORCE)"
 
-      # image tag = 分支 HEAD 的 git SHA;admin 是 Vite,VITE_* build 時烘入 → 每環境各一顆
+      # image tag = 完整 Git SHA-環境-run ID-attempt;admin 的 VITE_* build 時烘入 → 每環境各一顆
       - name: build + push api
         if: steps.affected.outputs.api == 'true'
         env:
           REGISTRY: ${{ steps.cfg.outputs.registry }}
-          SHA: ${{ steps.cfg.outputs.sha }}
+          IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
         run: |
-          docker build -f apps/api/Dockerfile -t "$REGISTRY/api:$SHA" .
-          docker push "$REGISTRY/api:$SHA"
+          docker build -f apps/api/Dockerfile -t "$REGISTRY/api:$IMAGE_TAG" .
+          docker push "$REGISTRY/api:$IMAGE_TAG"
 
       # admin 打的 API 端點由設定的 apiUrl 組出(不另存第二份 endpoint)
       - name: build + push admin
         if: steps.affected.outputs.admin == 'true'
         env:
           REGISTRY: ${{ steps.cfg.outputs.registry }}
-          SHA: ${{ steps.cfg.outputs.sha }}
-          IMAGE_SUFFIX: ${{ steps.cfg.outputs.image_suffix }}
+          IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
           API_URL: ${{ steps.cfg.outputs.api_url }}
         run: |
           docker build -f apps/admin/Dockerfile \
-            -t "$REGISTRY/admin:$SHA$IMAGE_SUFFIX" \
+            -t "$REGISTRY/admin:$IMAGE_TAG" \
             --build-arg "VITE_GRAPHQL_ENDPOINT=$API_URL/graphql" .
-          docker push "$REGISTRY/admin:$SHA$IMAGE_SUFFIX"
+          docker push "$REGISTRY/admin:$IMAGE_TAG"
 
       # api 的環境變數兩個來源(docs/deployment.md「四、環境變數管理」):
       #   非機密 → deploy/env/<環境>.yaml(--env-vars-file 整包取代既有明文變數;GRAPHQL_SANDBOX 也在檔內)
@@ -160,7 +155,7 @@ jobs:
           API_SERVICE: ${{ steps.cfg.outputs.api_service }}
           REGION: ${{ steps.cfg.outputs.region }}
           REGISTRY: ${{ steps.cfg.outputs.registry }}
-          SHA: ${{ steps.cfg.outputs.sha }}
+          IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
           ENVIRONMENT: ${{ inputs.environment }}
           MONGODB_SECRET_NAME: ${{ steps.cfg.outputs.mongodb_secret }}
           ENC_SECRET_NAME: ${{ steps.cfg.outputs.enc_secret }}
@@ -172,7 +167,7 @@ jobs:
             SECRETS="$SECRETS,RESEND_API_KEY=$RESEND_SECRET_NAME:latest"
           fi
           gcloud run deploy "$API_SERVICE" --region="$REGION" \
-            --image="$REGISTRY/api:$SHA" \
+            --image="$REGISTRY/api:$IMAGE_TAG" \
             --port=5001 --allow-unauthenticated --min-instances=0 --max-instances=2 \
             --env-vars-file="deploy/env/$ENVIRONMENT.yaml" \
             --set-secrets="$SECRETS" \
@@ -184,11 +179,10 @@ jobs:
           ADMIN_SERVICE: ${{ steps.cfg.outputs.admin_service }}
           REGION: ${{ steps.cfg.outputs.region }}
           REGISTRY: ${{ steps.cfg.outputs.registry }}
-          SHA: ${{ steps.cfg.outputs.sha }}
-          IMAGE_SUFFIX: ${{ steps.cfg.outputs.image_suffix }}
+          IMAGE_TAG: ${{ steps.cfg.outputs.image_tag }}
         run: |
           gcloud run deploy "$ADMIN_SERVICE" --region="$REGION" \
-            --image="$REGISTRY/admin:$SHA$IMAGE_SUFFIX" \
+            --image="$REGISTRY/admin:$IMAGE_TAG" \
             --port=8080 --allow-unauthenticated --min-instances=0 --max-instances=2 --quiet
 
       # 部署成功後對該環境資料庫跑一次 update:migration → 普通種子 → 受管定義 → 核對

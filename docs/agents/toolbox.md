@@ -162,7 +162,7 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
    ```
 
 2. 在 Figma **桌面版**的 `Plugins → Development → Import new plugin from manifest…` 選 `scripts/figma-local/manifest.json`。在 Brand Library 開啟 `wowgo-base Brand Sync`，選上一步 JSON，預覽核對 file key 與待變更數，再套用並重預覽至待處理 0。外掛建立或更新 `Brand`、`Color` 兩個 Light 集合，各六個 `primary/*`；`Color` 指向 `Brand`，另建立或更新 `Shadow/Primary`。在 Figma 原生介面發布此 Brand Library。換電腦時從 repo 重新匯入 manifest；外掛不需要 token、本機服務或 MCP 傳送生成程式。
-3. 專案 Screens 使用獨立檔案，從**已連結遠端底座元件**的 Screens 範本複製，或從已發布的底座 Library 插入實例組成畫面。直接複製底座 Design System 檔會把主元件留在本檔，不能當作可升級的 Screens。到 Screens 的 `Assets → Libraries` 加入底座與本專案 Brand Library，並接受可用更新。在 Screens 開外掛，輸入當前檔案 key，選底座與專案 Library、檢查範圍，先「檢查綁定」再「補綁專案色」；重檢待處理應為 0、例外為 0。初建可選「全部頁面」，日常選受影響頁面。
+3. 專案 Screens 使用獨立檔案：在 Wowgo 團隊建立空白 `<專案> Screens`，到 `Assets → Libraries → Add more libraries` 加入 `wowgo-base Design System` 與本專案 Brand Library；開啟[正式 Screens Starter](../branding.md#設計資源登記)，逐頁選取畫面內容並複製貼到新檔的同名頁面。Starter 有完整中性後台畫面與遠端底座元件實例。不要整檔 Duplicate：目前實測複製檔即使重新加入 Library，外掛仍無法列出可用的變數集合；直接複製底座 Design System 則會把主元件留在本檔。先接受可用的 Library 更新，**重新開啟外掛**讀取 Library 清單，輸入新 Screens 的 file key，選底座與專案 Library、檢查範圍，先「檢查綁定」再「補綁專案色」；重檢待處理及例外都應為 0。初建可選「全部頁面」，日常選受影響頁面。
 4. 在 Screens 用 Figma 原生 **Swap libraries** 將底座 `Shadow/Primary` 換成本專案樣式，並覆寫品牌示例文字、商標及業務內容。這些不是六色變數；外掛刻意不改文字、私人色、圖、排版或元件實例。核對一個 Primary Button、巢狀側欄與一張代表畫面：主色、陰影、文字、布局，以及遠端底座主元件連結。新專案的檔案 key、Library 權限和維護者登記在[品牌註冊表](../branding.md)。
 
 ### 底座升級與共用改良回收

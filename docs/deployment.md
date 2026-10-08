@@ -119,7 +119,7 @@ node scripts/project-settings/preflight.mjs --environment <dev|staging|productio
 
 preflight 要求工作目錄乾淨且 HEAD 等於 `--target`。若日常 checkout 有未追蹤工具檔,另用短路徑的 detached worktree 檢查完整 commit,不清掉原目錄的檔案。資料狀態讀取器會從同一 checkout 的 `apps/db-migrator` 解析 `tsx`,所以檢查工作樹須 `pnpm install --frozen-lockfile`；不需執行整個 repo build。Windows 建立工作樹前可在本 repo 設 `git config core.longpaths true`,工作樹路徑也要短,避免 `node_modules` 長路徑;移除時若檔案仍被程序使用,先關閉持有檔案的程序再處理,不要強制清掉原工作樹。跨工具本機狀態 `.codex/` 已排除追蹤,外部 skill 的 Claude 連結由還原指令建立;仍須檢查 `git status --short` 的實際結果。
 
-讀取器沿既有 `deploy/project` 設定、gcloud 登入與 DB 存取,分別讀 API/admin 真正承接流量的 revisions。Cloud Run 的 digest 由 Artifact Registry 相同 image/digest 的 tag 對回 Git;短 SHA 必須在此 repo 唯一解析。混合流量保留每個基準,無法解析或多個不同 commit 明列未核對。
+讀取器沿既有 `deploy/project` 設定、gcloud 登入與 DB 存取,分別讀 API/admin 真正承接流量的 revisions。Cloud Run 的 digest 由 Artifact Registry 相同 image/digest 的 tag 對回 Git。新 tag 含完整 commit、環境與執行識別;舊版短 SHA 仍須在此 repo 唯一解析。混合流量保留每個基準,無法解析或多個不同 commit 明列未核對。
 
 報告包含各基準到目標的全部累積差異,以及同 checkout 的 migrator JSON 狀態。API image 版本不是 DB 設定版本;資料更新可能在沒有部署 API 時執行,也可能部分失敗。agent 必須連同最後成功更新、後續嘗試、changelog、pending/open migration、未完成定義安裝與鎖閱讀,再列資料修改/刪除範圍、恢復限制與待人員判斷事項,不能只看本次 PR。
 
@@ -164,8 +164,8 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - CLI:`gh workflow run Deploy --ref dev -f environment=dev`(staging 同理;production 的 ref 是 `main`)。
 - **防呆**:分支與環境不對應直接失敗(dev ← `dev`、staging ← `staging`、production ← `main`)。
 - **部署目標讀專案設定**:checkout 之後、雲端認證之前,先以讀取器解析 `deploy/project/*.json` 並核對 repo 身分;不符或缺值就停在這一步(見下方「專案部署設定」)。
-- **只部署改到的 app**:讀 Cloud Run 上目前跑的 image tag(= 上次部署的 git SHA)當 base,`turbo ls --affected` 判斷 api / admin / db-migrator 有沒有受影響,沒受影響的步驟整個跳過。turbo 看不到的部署設定另外判斷(`scripts/project-settings/deploy-affected.mjs`):`deploy/project/` 或 `scripts/project-settings/` 有改時 api 與 admin 都重建(API 網址烘在 admin image,只改網址也要重建);`deploy/env/` 或 `deploy.yml` 本身有改時只有 api 視為受影響。判斷結果印在 run 的 notice。要全部重部署加 `-f force=true`;讀不到 tag(第一次部署)或 base 不在歷史裡(force push 過)時自動全部部署。
-- **image**:tag = 該分支 HEAD 的 git SHA;admin 每環境各建一顆(`VITE_GRAPHQL_ENDPOINT` = 設定的 `apiUrl` 加 `/graphql`,以 `--build-arg` 烘入)。
+- **只部署改到的 app**:讀 Cloud Run 上目前跑的 image tag 前段 Git SHA 當 base,`turbo ls --affected` 判斷 api / admin / db-migrator 有沒有受影響,沒受影響的步驟整個跳過。turbo 看不到的部署設定另外判斷(`scripts/project-settings/deploy-affected.mjs`):`deploy/project/` 或 `scripts/project-settings/` 有改時 api 與 admin 都重建(API 網址烘在 admin image,只改網址也要重建);`deploy/env/` 或 `deploy.yml` 本身有改時只有 api 視為受影響。判斷結果印在 run 的 notice。要全部重部署加 `-f force=true`;讀不到 tag(第一次部署)或 base 不在歷史裡(force push 過)時自動全部部署。
+- **image**:tag = `<完整 Git SHA>-<環境>-<Actions run ID>-<attempt>`,每次 build 使用新 tag,不會移走其他環境或先前重跑所用 digest 的 tag。admin 的 `VITE_GRAPHQL_ENDPOINT` 由設定的 `apiUrl` 加 `/graphql`,以 `--build-arg` 烘入。舊版短 SHA tag 可由 preflight 解析,但已因重建失去 tag 的舊 digest 仍須人工查證,不可視為已核對。
 - **api 的環境變數**:非機密整包來自 `deploy/env/<環境>.yaml`(`--env-vars-file`),機密來自 Secret Manager(`--set-secrets`);見四、。
 - **部署成功後執行一次 `update`**:api 或 db-migrator 任一受影響就執行,只改專案 seed、快照或 migration 也會更新資料。runner 安裝 db-migrator、API 與其依賴,建置同一 checkout 的 API CLI 並確認可啟動,再讀該環境的資料庫與 root 初始密碼 Secret,執行 `pnpm --filter @repo/db-migrator run update`。完整順序、結果與失敗處理見下方「設定與資料更新」。
 - **front 不走 deploy.yml**:Vercel 在分支 push 時自動建置(`main` → production、`staging` / `dev` → 各自的分支網域);要不靠 commit 重建用 Deploy Hook(見四、「Vercel 補充設定」)。
@@ -277,9 +277,10 @@ docker compose --profile full up -d   # 部署前驗證:mongo + api + admin 整�
 **照 `.github/workflows/deploy.yml` 的「deploy api」步驟打,不要憑記憶**:`gcloud run deploy` 必須同時帶 `--env-vars-file=deploy/env/<環境>.yaml`(非機密變數,整包取代)與完整的 `--set-secrets=MONGODB_URI=…,FIELD_ENCRYPTION_KEY=…,JWT_SECRET=…,RESEND_API_KEY=…`(服務名、registry 與 secret 名稱以 `node scripts/project-settings/read-config.mjs --scope cloud --environment <環境> --repository <owner/repo>` 的輸出為準)。`--set-secrets` 是整組取代,少列一個就等於把那個 secret 從服務拿掉。build / push 的部分:
 
 ```bash
-SHA=$(git rev-parse --short HEAD)
+ENVIRONMENT=<dev|staging|production> # 換成此次手動部署的環境
+IMAGE_TAG="$(git rev-parse HEAD)-$ENVIRONMENT-$(date +%s)-1"
 REG="<讀取器輸出的registry>"
-docker build -f apps/api/Dockerfile -t $REG/api:$SHA . && docker push $REG/api:$SHA
+docker build -f apps/api/Dockerfile -t "$REG/api:$IMAGE_TAG" . && docker push "$REG/api:$IMAGE_TAG"
 # 接著複製 deploy.yml「deploy api」步驟裡的 gcloud run deploy 指令,把 $VAR 換成讀取器輸出的該環境值
 ```
 
