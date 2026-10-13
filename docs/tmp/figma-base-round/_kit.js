@@ -343,9 +343,10 @@ async function table(cols, rows, o = {}) {
       b.primaryAxisSizingMode = "FIXED";
       b.counterAxisSizingMode = "AUTO";
       if (o.right && o.right.includes(k)) b.primaryAxisAlignItems = "MAX";
-      for (const x of Array.isArray(cells[k]) ? cells[k] : [cells[k]]) {
+      const xs = Array.isArray(cells[k]) ? cells[k] : [cells[k]];
+      for (const x of xs) {
         if (x == null || x === "") continue;
-        add(
+        const n = add(
           b,
           typeof x === "string"
             ? await T(
@@ -355,6 +356,12 @@ async function table(cols, rows, o = {}) {
               )
             : x,
         );
+        // 單一文字的儲存格:撐滿欄寬、太長換行(不超出欄位)
+        if (n.type === "TEXT" && xs.length === 1) {
+          n.layoutSizingHorizontal = "FILL";
+          n.textAutoResize = "HEIGHT";
+          if (o.right && o.right.includes(k)) n.textAlignHorizontal = "RIGHT";
+        }
       }
       add(r, b);
     }
