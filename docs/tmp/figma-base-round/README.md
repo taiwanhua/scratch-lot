@@ -11,7 +11,10 @@
 
 1. 在 wowgo-base Design System 開一頁(例:「Draft / 本輪」),把 `_resolve.js` 的 `MODE` 改成 `'base'`,依序貼上「檔頭 + 元件腳本」執行:
    `ActionIcon+.js` → `Section.js` → `AudiencePicker.js` → `DataScopeRuleCard.js` → `OrgTreeSelect.js` → `MonthCalendar.js` → `RosterGrid.js` → `Notification.js` → `Print.js` → `Screens.js`。
-   第二輪追加:`Stepper.js` → `Round2-base.js`(RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Screens2-base.js`(底座規格 13 的 BS-03~~07、BS-11~~16;用 `_kit.js` 工具組)。`Section.js` 已改成內容區是 SLOT。`_compact.js`、`_kit.js` 是第二輪起的精簡檔頭(同一組 key)。
+   第二輪起追加:`Stepper.js` → `Round2-base.js`(前置 `_compact.js`;RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Screens2-base.js` 的 PART 1、2、3、4(前置 `const PROJECT = false;` + `_kit.js`;BS-03~~07、BS-11~~16,PART 4 = 第三輪的 BS-17~~20 印表機管理)。`Section.js` 的內容區是 SLOT;`OrgTreeSelect.js` 是浮動標籤(高 56)。
+   - **三份檔頭都要設 `MODE = 'base'`**:`_resolve.js`(元件腳本)、`_compact.js`(Round2-base)、`_kit.js`(Screens2-base)。base 模式下變數 / 樣式依 key 找本檔 local,底座既有元件依節點 id(`_resolve.js` 的 `K.comp[*].baseNode`、`_kit.js` 的 `BASE_NODE`),本輪草稿元件依名稱在草稿頁「Draft / 本輪」找(`_compact.js` / `_kit.js` 的 `DRAFT_PAGE`、`draft()`、`node()`)。腳本裡沒有寫死 scratch-lot 的節點 id。
+   - 三份檔頭的 `al()` 都預設不裁切內容(浮動標籤、陰影);表格、殼、Overlay 另外設定裁切。
+   - `_kit.js` 的 `BASE_NODE` 還沒填的(Checkbox、Radio、TextField、Link、StatCard、AdminRouteTabs)和 `_resolve.js` 一樣,重建前要先在底座檔查到節點 id 補上;未填時腳本會直接報錯,不會靜默改用 Library。
    - 有依賴的要照順序(後面的會在目前頁找前面的草稿元件)。
    - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 裡還沒填 `baseNode` 的元件(Draft/Select、Draft/SelectField、TextField、Draft/Checkbox、Link、Draft/Radio、Draft/Snackbar、Draft/Popover、Draft/AdminRouteTabs、Draft/ConfirmDialog),重建前要先在底座檔查到節點 id 補上。
 2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 17 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。

@@ -345,7 +345,7 @@ async function actions(dlg, labels) {
   add(dl, btns);
   add(content, dl, "FILL");
   const tc = await card("agents");
-  const W = [200, 140, 120, 140, 170, 240];
+  const W = [190, 130, 110, 130, 160, 220]; // 總寬要放得進卡片(audit overflowNodes)
   const tb = al("VERTICAL", { name: "table" });
   add(tc, tb, "FILL");
   add(

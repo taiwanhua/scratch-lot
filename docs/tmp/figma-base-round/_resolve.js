@@ -301,6 +301,7 @@ async function radius(node, name) {
 function al(dir, props = {}) {
   const f = figma.createAutoLayout(dir, props);
   f.fills = [];
+  f.clipsContent = false; // 浮動標籤、陰影不被裁切(畫圖檢查清單 2);需要裁切的另外設定
   return f;
 }
 function add(parent, child, h, v) {

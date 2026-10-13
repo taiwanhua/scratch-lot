@@ -1,6 +1,7 @@
 // 第二輪底座參考畫面(底座規格 13 畫面清單 BS-03~07、BS-11~16)。中性示範資料。
-// 前置:`const PROJECT = false; const PART = 1 | 2 | 3;` + _kit.js(工具組 API:T / H / V / add / put / btn / field / table / shell / overlay / done …)。在 Base Draft 頁(41:5914)執行,一次一段。
-await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("41:5914"));
+// 前置:`const PROJECT = false; const PART = 1 | 2 | 3 | 4;` + _kit.js(MODE 改成 base 時在 wowgo-base 本檔執行)。畫在草稿頁(DRAFT_PAGE),一次一段。
+// PART 4 = 底座規格 13 的 BS-17~20(印表機管理:新增 / 編輯、測試列印結果、代理程式下載區、列印紀錄)。
+await toDraftPage();
 const Y = await rowY("第二輪底座參考畫面(BS-03~07、BS-11~16)");
 const orgChip = async (s) => {
   const c = H(4, {
@@ -497,7 +498,7 @@ if (PART === 3) {
       b,
       H(24, { name: "receipts", counterAxisAlignItems: "MIN" }),
     );
-    add(rr, (await figma.getNodeByIdAsync("51:633")).createInstance());
+    add(rr, (await node("Receipt58")).createInstance());
     const legend = add(rr, V(8, { name: "parts" }));
     for (const s of [
       "Receipt58Header:Org / Title / No / Time / Reprint",
@@ -754,5 +755,240 @@ if (PART === 3) {
     add(b, await dinst("Stepper", { Width: "Narrow" }));
     done(b, Y);
   }
+}
+if (PART === 4) {
+  // ---- BS-17~20 印表機管理(第三輪) ----
+  const Y4 = await rowY("第三輪:印表機管理(BS-17~20)");
+  // 一個遮罩裡並排多個對話框
+  const ovRow = (name) => {
+    const ov = figma.createFrame();
+    ov.name = name;
+    ov.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];
+    ov.clipsContent = true; // FIGMA-06 Overlay 慣例
+    const row = H(24, {
+      name: "dialogs",
+      counterAxisAlignItems: "MIN",
+      paddingLeft: 64,
+      paddingRight: 64,
+      paddingTop: 64,
+      paddingBottom: 64,
+    });
+    ov.appendChild(row);
+    return {
+      ov,
+      row,
+      fin: () => {
+        ov.resize(Math.max(1440, row.width), Math.max(900, row.height));
+        row.x = 0;
+        row.y = 0;
+      },
+    };
+  };
+  const dcard = async (row, title, w) => {
+    const d = V(14, {
+      name: "dialog:" + title,
+      paddingLeft: 24,
+      paddingRight: 24,
+      paddingTop: 20,
+      paddingBottom: 20,
+    });
+    d.fills = [await paint("bg/paper")];
+    d.effectStyleId = (await sty("Shadow/Dialog")).id;
+    await rad(d);
+    add(row, d);
+    d.counterAxisSizingMode = "FIXED";
+    d.resize(w, 100);
+    d.primaryAxisSizingMode = "AUTO";
+    await dhead(d, title);
+    return d;
+  };
+  // 表格欄寬總和超過卡片時等比例縮小
+  const fitTables = (root) => {
+    for (const r of root.findAll(
+      (n) => n.type === "FRAME" && (n.name === "tr" || n.name === "thead"),
+    )) {
+      const avail =
+        r.width -
+        r.paddingLeft -
+        r.paddingRight -
+        r.itemSpacing * (r.children.length - 1);
+      const total = r.children.reduce((m, c) => m + c.width, 0);
+      if (total <= avail + 1) continue;
+      const k = avail / total;
+      for (const c of r.children) c.resize(Math.floor(c.width * k), c.height);
+    }
+  };
+  // BS-17 新增 / 編輯印表機
+  let o = ovRow(
+    "BS-17 Overlay / 印表機管理:新增 / 編輯印表機(IP、port、分店預設)",
+  );
+  let d = await dcard(o.row, "新增印表機", 480);
+  const org = await dinst("OrgTreeSelect", { State: "Closed", Mode: "Single" });
+  await setText(org, "組織", "所屬組織");
+  await setText(org, "A 店", "示範分店 A");
+  add(d, org, "FILL");
+  add(d, await field("名稱", "櫃台收據機"), "FILL");
+  add(
+    d,
+    await grid(
+      [await field("IP 位址", "192.168.1.50"), await field("Port", "9100")],
+      2,
+    ),
+    "FILL",
+  );
+  add(d, await select("代理程式", "櫃台電腦 · 已連線"), "FILL");
+  add(d, await select("紙寬", "58mm"), "FILL");
+  add(d, await check("設為這個組織的預設印表機", true), "FILL");
+  add(d, await sw("啟用", true));
+  await cap(
+    d,
+    "建議在路由器保留 IP(把收據機 MAC 綁定固定 IP);設定步驟收據機到貨後補上。",
+  );
+  add(
+    d,
+    await actions([await btn("儲存")], [await btn("取消", "Text")]),
+    "FILL",
+  );
+  o.fin();
+  done(o.ov, Y4);
+  // BS-18 測試列印結果
+  o = ovRow("BS-18 Overlay / 印表機管理:測試列印結果(成功 / 缺紙 / 離線)");
+  for (const [sev, msg] of [
+    ["Success", "✓ 已印出:中文、QR code、切紙都正常。"],
+    ["Warning", "✗ 失敗:缺紙。補紙後再按一次 [測試列印]。"],
+    ["Error", "✗ 失敗:代理程式離線(最後連線 10/16 21:40)。"],
+  ]) {
+    d = await dcard(o.row, "測試列印 · 櫃台收據機", 380);
+    add(d, await alert(msg, sev), "FILL");
+    add(
+      d,
+      await actions([await btn(sev === "Success" ? "關閉" : "重試")]),
+      "FILL",
+    );
+  }
+  o.fin();
+  done(o.ov, Y4);
+  // BS-19 代理程式分頁下載區
+  let sh = await shell(
+    "BS-19 印表機管理:代理程式分頁下載區(最新版本、四個平台、反白建議)",
+    "印表機管理",
+    "印表機管理",
+    "印表機管理",
+  );
+  add(
+    sh.content,
+    await tabs(["印表機", "代理程式", "列印紀錄"], "代理程式"),
+    "FILL",
+  );
+  const dl = add(sh.content, await card("下載", 12), "FILL");
+  const dh = add(dl, H(8), "FILL");
+  add(dh, await T("列印代理程式 · 最新版本 1.2.0", "Subtitle/1"));
+  spacer(dh);
+  add(dh, await btn("+ 新增代理程式(配對碼)", "Outlined"));
+  const pr = add(dl, H(12), "FILL");
+  for (const [p, sug] of [
+    ["Windows x64", true],
+    ["Linux x64", false],
+    ["Linux arm64", false],
+    ["macOS arm64", false],
+  ])
+    add(pr, await btn("下載 " + p, sug ? "Contained" : "Outlined"));
+  await cap(
+    dl,
+    "依瀏覽器偵測的系統反白建議的那個;按下時產生 1 小時有效的簽名網址。解壓縮後執行安裝,輸入伺服器網址與配對碼。更新時再安裝一次,會保留金鑰。",
+  );
+  add(
+    sh.content,
+    await table(
+      [
+        ["代理程式", 200],
+        ["狀態", 100],
+        ["最後連線", 160],
+        ["版本", 140],
+        ["", 220],
+      ],
+      [
+        [
+          "櫃台電腦",
+          await tag("已連線", "Success"),
+          "10/16 22:01",
+          "1.2.0",
+          [await sbtn("重新配對", "Text"), await sbtn("停用", "Text", "Error")],
+        ],
+        [
+          "倉庫電腦",
+          await tag("離線", "Grey"),
+          "10/12 18:30",
+          [await T("1.1.0"), await tag("請更新", "Warning")],
+          [await sbtn("重新配對", "Text"), await sbtn("停用", "Text", "Error")],
+        ],
+      ],
+    ),
+    "FILL",
+  );
+  done(sh, Y4);
+  // BS-20 列印紀錄分頁
+  sh = await shell(
+    "BS-20 印表機管理:列印紀錄分頁",
+    "印表機管理",
+    "印表機管理",
+    "印表機管理",
+  );
+  add(
+    sh.content,
+    await tabs(["印表機", "代理程式", "列印紀錄"], "列印紀錄"),
+    "FILL",
+  );
+  add(
+    sh.content,
+    await filters([
+      await select("印表機", "全部", 200),
+      await select("結果", "全部", 160),
+      await field("期間", "10/10 ~ 10/16", { w: 220 }),
+    ]),
+    "FILL",
+  );
+  add(
+    sh.content,
+    await table(
+      [
+        ["時間", 120],
+        ["單據", 220],
+        ["印表機", 160],
+        ["次數", 80],
+        ["結果", 140],
+        ["操作者", 120],
+      ],
+      [
+        [
+          "10/16 22:02",
+          "示範單據 #D-0031",
+          "櫃台收據機",
+          "第 1 次",
+          await tag("已印出", "Success"),
+          "示範使用者",
+        ],
+        [
+          "10/16 21:58",
+          "示範單據 #D-0030",
+          "櫃台收據機",
+          "補印 第 2 次",
+          await tag("已印出", "Success"),
+          "示範使用者",
+        ],
+        [
+          "10/16 21:40",
+          "示範單據 #D-0029",
+          "倉庫收據機",
+          "第 1 次",
+          await tag("失敗:離線", "Error"),
+          "示範使用者",
+        ],
+      ],
+    ),
+    "FILL",
+  );
+  done(sh, Y4);
+  for (const [, id] of made) fitTables(await figma.getNodeByIdAsync(id));
 }
 return { made };

@@ -1,13 +1,14 @@
-// 第二輪底座草稿修改(Base Draft 頁 41:5914)。前置:_compact.js。
+// 第二輪底座草稿修改(草稿頁:scratch「Base Draft / 本輪底座元件」、base「Draft / 本輪」)。前置:_compact.js(MODE 同 _resolve.js)。
+// 依賴:RosterGrid.js、Print.js(Receipt58 / Row / Signature)已在草稿頁執行過。
 // 1. Draft/RosterGrid 加表頭彙總列(BOOLEAN Summary)
 // 2. 58mm 版面零件:Draft/Receipt58Header / TableRow / Range / Total / Divider / QR;Draft/Receipt58 改成用零件組成的示範
 // (Section 的 slot 見 Section.js;Stepper 見 Stepper.js)
-await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("41:5914"));
+await toDraftPage();
 const out = {};
 
 // ---- 1. RosterGrid 表頭彙總列 ----
 {
-  const g = await figma.getNodeByIdAsync("49:494");
+  const g = draft("Draft/RosterGrid");
   const hr = g.findChild((n) => n.name === "header-row");
   const sr = al("HORIZONTAL", { name: "summary-row" });
   const cell = async (t, w, tone, frozen) => {
@@ -260,12 +261,12 @@ for (const p of parts) {
 }
 
 // ---- Receipt58 改成用零件組成 ----
-const R = await figma.getNodeByIdAsync("51:633");
+const R = draft("Draft/Receipt58");
 for (const k of Object.keys(R.componentPropertyDefinitions))
   R.deleteComponentProperty(k);
 for (const ch of [...R.children]) ch.remove();
-const row = await figma.getNodeByIdAsync("51:626");
-const sign = await figma.getNodeByIdAsync("51:630");
+const row = draft("Draft/Receipt58Row");
+const sign = draft("Draft/Receipt58Signature");
 const v = (set, kind) => set.children.find((c) => c.name === "Kind=" + kind);
 const put = async (comp, props) => {
   const i = comp.createInstance();

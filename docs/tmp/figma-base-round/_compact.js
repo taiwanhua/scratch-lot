@@ -1,4 +1,6 @@
-// ==== 精簡檔頭(第二輪起的腳本用;scratch 模式)====
+// ==== 精簡檔頭(第二輪起的腳本用)====
+// MODE = 'scratch':在 scratch-lot Screens 執行,依 key 從 wowgo-base Library 匯入;
+// MODE = 'base'   :在 wowgo-base Design System 本檔執行,依同一個 key 找本檔 local 變數 / 樣式。
 // 與 _resolve.js 同一組 key,只留常用的 API:tok / style / paint / txt / al / add / setProps / radius。
 // 底座草稿腳本(Base Draft 頁)用 BASE 色;專案腳本另外在 project/_compact.js 覆蓋 primary/* 為專案色。
 const K = {
@@ -37,12 +39,35 @@ const K = {
     "Shadow/Dialog": "b1c64e5a1440659a32fb283906757a36ba9bc343",
   },
 };
+const MODE = "scratch";
+// 本輪草稿元件所在頁(兩種模式都在這一頁依名稱找草稿元件)
+const DRAFT_PAGE =
+  MODE === "base" ? "Draft / 本輪" : "Base Draft / 本輪底座元件";
 const _c = {};
-const tok = async (n) =>
-  (_c["v" + n] ||= await figma.variables.importVariableByKeyAsync(K.var[n]));
+async function tok(n) {
+  if (_c["v" + n]) return _c["v" + n];
+  const key = K.var[n];
+  if (!key) throw new Error("未登記的 token " + n);
+  const v =
+    MODE === "base"
+      ? (await figma.variables.getLocalVariablesAsync()).find(
+          (x) => x.key === key,
+        )
+      : await figma.variables.importVariableByKeyAsync(key);
+  if (!v) throw new Error("找不到 token " + n);
+  return (_c["v" + n] = v);
+}
 async function style(n) {
   if (_c["s" + n]) return _c["s" + n];
-  const s = await figma.importStyleByKeyAsync(K.style[n]);
+  const key = K.style[n];
+  const s =
+    MODE === "base"
+      ? [
+          ...(await figma.getLocalTextStylesAsync()),
+          ...(await figma.getLocalEffectStylesAsync()),
+        ].find((x) => x.key === key)
+      : await figma.importStyleByKeyAsync(key);
+  if (!s) throw new Error("找不到 style " + n);
   if (s.type === "TEXT") await figma.loadFontAsync(s.fontName);
   return (_c["s" + n] = s);
 }
@@ -63,7 +88,23 @@ async function txt(chars, s, color = "text/primary", name) {
 function al(dir, props = {}) {
   const f = figma.createAutoLayout(dir, props);
   f.fills = [];
+  f.clipsContent = false;
   return f;
+}
+// 切到草稿頁(use_figma 每次呼叫都回到第一頁)
+async function toDraftPage() {
+  const p = figma.root.children.find((x) => x.name === DRAFT_PAGE);
+  if (!p) throw new Error("找不到草稿頁 " + DRAFT_PAGE);
+  await figma.setCurrentPageAsync(p);
+  return p;
+}
+function draft(name) {
+  const n = figma.currentPage.findOne(
+    (x) =>
+      (x.type === "COMPONENT_SET" || x.type === "COMPONENT") && x.name === name,
+  );
+  if (!n) throw new Error("目前頁沒有草稿元件 " + name);
+  return n;
 }
 function add(p, c, h, v) {
   p.appendChild(c);

@@ -30,9 +30,23 @@ async function input(multiple) {
   else add(box, await txt("A 店", "Body/2", "text/primary", "value"));
   spacer(box);
   add(box, icon("arrow-drop-down"));
-  const w = al("VERTICAL", { name: "field", itemSpacing: 4 });
-  add(w, await txt("組織", "Caption", "text/secondary", "label"));
+  // 浮動標籤(和 TextField / SelectField 一致):輸入框高 40,標籤壓在上框線(10, −8),底部留 16 給說明文字,總高 56
+  const w = al("VERTICAL", { name: "field", paddingBottom: 16 });
+  w.clipsContent = false;
   add(w, box, "FILL");
+  box.layoutSizingVertical = "FIXED";
+  box.resize(box.width, 40);
+  const lw = al("HORIZONTAL", {
+    name: "labelWrap",
+    paddingLeft: 4,
+    paddingRight: 4,
+  });
+  lw.fills = [await paint("bg/paper")];
+  add(w, lw);
+  lw.layoutPositioning = "ABSOLUTE";
+  lw.x = 10;
+  lw.y = -8;
+  add(lw, await txt("組織", "Caption", "text/secondary", "label"));
   return w;
 }
 async function treeRow(level, label, state, multiple, checked) {

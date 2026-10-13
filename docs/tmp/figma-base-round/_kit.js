@@ -2,6 +2,12 @@
 // 用法:先宣告 `const PROJECT = true | false;`(true = 專案畫面:主色綁 scratch-lot Brand Library、側欄用 Draft/ScratchLotSideNav;
 // false = 底座參考畫面:主色綁 wowgo-base、側欄用 Draft/AdminSideNav),再貼本檔,最後貼畫面腳本。
 // 底座元件一律用 wowgo-base Library 遠端實例;本輪底座草稿與專案元件依節點 id 取(nodes.md)。
+// MODE = 'scratch'(預設):在 scratch-lot Screens 執行,依 key 從 Library 匯入;
+// MODE = 'base':在 wowgo-base Design System 本檔執行(只用於底座參考畫面,PROJECT = false),
+//   變數 / 樣式依同一個 key 找本檔 local,元件依 BASE_NODE(FIGMA-09 節點 id),草稿元件依名稱在草稿頁找。
+const MODE = "scratch";
+const DRAFT_PAGE =
+  MODE === "base" ? "Draft / 本輪" : "Base Draft / 本輪底座元件";
 figma.skipInvisibleInstanceChildren = false;
 const KV = {
   "bg/paper": "7875005cdf746478c3e17c225db9fce44ab90451",
@@ -65,7 +71,48 @@ const KC = {
   AdminAppBar: "=471aba0f2558d59a459b88b25dcf531be908e940",
   AdminRouteTabs: "=14eb1d7575fe6f6cc39fe28163e6bbadcbb07bda",
 };
+// 底座既有元件在 wowgo-base 本檔的節點 id(FIGMA-09);空字串 = 重建前要先查到補上
+const BASE_NODE = {
+  Button: "2001:111",
+  Tag: "2001:463",
+  Checkbox: "",
+  Radio: "",
+  Switch: "2001:369",
+  SelectField: "2001:432",
+  TextField: "",
+  Alert: "2001:942",
+  Tab: "2001:599",
+  Link: "",
+  Badge: "2001:478",
+  StatCard: "",
+  AdminSideNav: "2001:1214",
+  AdminAppBar: "2001:1248",
+  AdminRouteTabs: "",
+};
+// 本輪草稿元件:scratch 依 scratch-lot 節點 id,base 依名稱在草稿頁找(專案元件只在 scratch 有)
+const ND_NAME = {
+  Section: "Draft/Section",
+  AudiencePicker: "Draft/AudiencePicker",
+  OrgTreeSelect: "Draft/OrgTreeSelect",
+  MonthCalendar: "Draft/MonthCalendar",
+  RosterGrid: "Draft/RosterGrid",
+  RosterCell: "Draft/RosterCell",
+  Bell: "Draft/NotificationBell",
+  PrintButton: "Draft/PrintButton",
+  StepperStep: "Draft/StepperStep",
+  Stepper: "Draft/Stepper",
+  RcRow: "Draft/Receipt58Row",
+  RcSign: "Draft/Receipt58Signature",
+  RcHeader: "Draft/Receipt58Header",
+  RcTable: "Draft/Receipt58TableRow",
+  RcRange: "Draft/Receipt58Range",
+  RcTotal: "Draft/Receipt58Total",
+  RcDivider: "Draft/Receipt58Divider",
+  RcQR: "Draft/Receipt58QR",
+  Receipt58: "Draft/Receipt58",
+};
 const ND = {
+  Receipt58: "51:633",
   Section: "41:5932",
   AudiencePicker: "45:248",
   OrgTreeSelect: "47:409",
@@ -92,23 +139,70 @@ const ND = {
   BookCard: "64:558",
 };
 const _c = {};
-const tok = async (n) =>
-  (_c["v" + n] ||= await figma.variables.importVariableByKeyAsync(KV[n]));
+async function tok(n) {
+  if (_c["v" + n]) return _c["v" + n];
+  const v =
+    MODE === "base"
+      ? (await figma.variables.getLocalVariablesAsync()).find(
+          (x) => x.key === KV[n],
+        )
+      : await figma.variables.importVariableByKeyAsync(KV[n]);
+  if (!v) throw new Error("找不到 token " + n);
+  return (_c["v" + n] = v);
+}
 async function sty(n) {
   if (_c["s" + n]) return _c["s" + n];
-  const s = await figma.importStyleByKeyAsync(KS[n]);
+  const s =
+    MODE === "base"
+      ? [
+          ...(await figma.getLocalTextStylesAsync()),
+          ...(await figma.getLocalEffectStylesAsync()),
+        ].find((x) => x.key === KS[n])
+      : await figma.importStyleByKeyAsync(KS[n]);
+  if (!s) throw new Error("找不到 style " + n);
   if (s.type === "TEXT") await figma.loadFontAsync(s.fontName);
   return (_c["s" + n] = s);
 }
 async function comp(n) {
   if (_c["c" + n]) return _c["c" + n];
-  const k = KC[n];
-  return (_c["c" + n] =
-    k[0] === "="
-      ? await figma.importComponentByKeyAsync(k.slice(1))
-      : await figma.importComponentSetByKeyAsync(k));
+  let c;
+  if (MODE === "base") {
+    if (!BASE_NODE[n]) throw new Error("BASE_NODE 未填:" + n);
+    c = await figma.getNodeByIdAsync(BASE_NODE[n]);
+  } else {
+    const k = KC[n];
+    c =
+      k[0] === "="
+        ? await figma.importComponentByKeyAsync(k.slice(1))
+        : await figma.importComponentSetByKeyAsync(k);
+  }
+  if (!c) throw new Error("找不到元件 " + n);
+  return (_c["c" + n] = c);
 }
-const node = async (n) => (_c["n" + n] ||= await figma.getNodeByIdAsync(ND[n]));
+async function node(n) {
+  if (_c["n" + n]) return _c["n" + n];
+  let x;
+  if (MODE === "base") {
+    const p = figma.root.children.find((pg) => pg.name === DRAFT_PAGE);
+    if (p) await p.loadAsync();
+    x = p
+      ? p.findOne(
+          (y) =>
+            (y.type === "COMPONENT_SET" || y.type === "COMPONENT") &&
+            y.name === ND_NAME[n],
+        )
+      : null;
+  } else x = await figma.getNodeByIdAsync(ND[n]);
+  if (!x) throw new Error("找不到草稿元件 " + n);
+  return (_c["n" + n] = x);
+}
+// 切到草稿頁(底座參考畫面畫在這一頁)
+async function toDraftPage() {
+  const p = figma.root.children.find((x) => x.name === DRAFT_PAGE);
+  if (!p) throw new Error("找不到草稿頁 " + DRAFT_PAGE);
+  await figma.setCurrentPageAsync(p);
+  return p;
+}
 const paint = async (n) =>
   figma.variables.setBoundVariableForPaint(
     { type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } },
