@@ -111,3 +111,6 @@
 - **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」,另有「58mm 單據」Section 接在最後(店面管理頁)。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」;`project/_r3.js` 的 `relayoutSizes()` 依編號排序。
 - **腳本**:`const PROJECT = true;` + `_kit.js` + `project/_r3.js` + 畫面腳本(`project/r3-*.js`)。`_r3.js` 有平板 / 手機殼 `dev()`、手機全螢幕彈窗 `devDialog()`、卡片列表 `cardList()`、張數格子 `ticketGrid()`(張號從 001 起)、結算區塊 `settlement()`(金額列 + 收付歷程)。
 - 執行時為了不讓每次呼叫都重送工具組,工具組原文暫存在檔內一頁「_tooling(AI 暫存腳本,完工後刪除)」的文字節點,呼叫時讀出來 `eval`;完工後刪除該頁。正本仍是本資料夾的檔案。
+- **畫完的基準(2026-10-14)**:`audit-layout.js` 全部專案頁與 Base Draft 頁 `clippedText` / `misalignedRows` / `overflowNodes` / `basePrimaryBindings` 都是 0。
+- **截圖注意**:伺服器端截圖(get_screenshot)對 Section 的 SLOT 內容有時顯示舊寬度(欄位看起來比實際窄);以外掛端 `node.screenshot()` 或 Figma 畫面為準。
+- 暫存工具頁「_tooling」已刪除。

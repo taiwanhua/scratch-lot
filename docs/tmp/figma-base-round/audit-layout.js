@@ -1,8 +1,9 @@
-// 版面稽核(畫圖檢查清單 1、2、6):clippedText、misalignedRows、basePrimaryBindings,三項都要是 0 才算畫完。
+// 版面稽核(畫圖檢查清單 1~3、6):每頁 clippedText、misalignedRows、overflowNodes、basePrimaryBindings 都要是 0 才算畫完。
 // 一次一頁:把 PAGE_ID 換成要查的頁,所有頁平行各跑一次。畫面可以直接放在頁上或放在尺寸 Section 裡。
-//   clippedText    文字被裁切:設了截斷、固定高度放不下一行,或文字框超出任何一層 clipsContent 的祖先(容許 1px)。
+//   clippedText    文字或元件實例被裁切:設了截斷、固定高度放不下一行,或超出任何一層 clipsContent 的祖先(容許 1px)。
 //   misalignedRows 同一個水平 auto layout 列裡,各欄的「欄位」(TextField / SelectField / Select / Autocomplete /
-//                  OrgTreeSelect / DatePicker 實例,自己或兩層內)上緣或高度不一致(容許 1px);並排彈窗的列(dialogs)不算。
+//                  OrgTreeSelect / DatePicker 實例本身,或以欄位開頭的包裝框)上緣或高度不一致(容許 1px);並排彈窗的列不算。
+//   overflowNodes  auto layout 的子節點左右超出父框(例:張數格子比對話框寬、表格欄寬總和超過卡片)。
 //   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
@@ -34,6 +35,21 @@ const top = (n) => {
     x = x.parent;
   return x;
 };
+const inInstance = (n, root) => {
+  for (let a = n.parent; a && a !== root; a = a.parent)
+    if (a.type === "INSTANCE") return true;
+  return false;
+};
+const clipAncestor = (n, b) => {
+  for (
+    let a = n.parent;
+    a && a.type !== "PAGE" && a.type !== "SECTION";
+    a = a.parent
+  )
+    if ("clipsContent" in a && a.clipsContent && box(a) && !inside(b, box(a)))
+      return a;
+  return null;
+};
 const clipped = [];
 for (const s of screens) {
   if (!("findAllWithCriteria" in s)) continue;
@@ -41,38 +57,57 @@ for (const s of screens) {
     if (!t.characters.trim() || !visibleChain(t)) continue;
     const b = box(t);
     if (!b) continue;
-    let why = null,
-      by = null;
+    let why = null;
     if (t.textTruncation === "ENDING") why = "truncation";
     else if (t.textAutoResize === "NONE" || t.textAutoResize === "TRUNCATE") {
       const lh = typeof t.fontSize === "number" ? t.fontSize * 1.2 : 12;
       if (t.height + 1 < lh) why = "fixed-height";
     }
-    if (!why)
-      for (
-        let a = t.parent;
-        a && a.type !== "PAGE" && a.type !== "SECTION";
-        a = a.parent
-      ) {
-        if (
-          "clipsContent" in a &&
-          a.clipsContent &&
-          box(a) &&
-          !inside(b, box(a))
-        ) {
-          why = "clipped";
-          by = a;
-          break;
-        }
-      }
+    const by = why ? null : clipAncestor(t, b);
+    if (by) why = "clipped";
     if (why)
       clipped.push({
-        screen: top(t).name,
+        screen: top(t).name.slice(0, 30),
         id: t.id,
         text: t.characters.slice(0, 16),
         why,
-        by: by ? by.id + " " + by.type + " " + by.name : null,
+        by: by && by.name,
       });
+  }
+  // 元件實例(例:按鈕)整個被外框切到
+  for (const i of s.findAllWithCriteria({ types: ["INSTANCE"] })) {
+    if (!visibleChain(i) || inInstance(i, s)) continue;
+    const b = box(i);
+    const by = b && clipAncestor(i, b);
+    if (by)
+      clipped.push({
+        screen: top(i).name.slice(0, 30),
+        id: i.id,
+        text: "[instance] " + i.name,
+        why: "clipped",
+        by: by.name,
+      });
+  }
+}
+const overflow = [];
+for (const s of screens) {
+  if (!("findAllWithCriteria" in s)) continue;
+  for (const f of s.findAllWithCriteria({ types: ["FRAME"] })) {
+    if (f.layoutMode === "NONE" || !visibleChain(f) || inInstance(f, s))
+      continue;
+    const fb = box(f);
+    if (!fb) continue;
+    for (const ch of f.children) {
+      if (!ch.visible || ch.layoutPositioning === "ABSOLUTE") continue;
+      const cb = box(ch);
+      if (cb && (cb.x < fb.x - 1 || cb.x + cb.width > fb.x + fb.width + 1))
+        overflow.push({
+          screen: top(f).name.slice(0, 30),
+          id: ch.id,
+          name: ch.name,
+          parent: f.name,
+        });
+    }
   }
 }
 const mcName = new Map();
@@ -87,14 +122,13 @@ async function fieldName(i) {
   mcName.set(i.id, nm);
   return nm;
 }
+// 欄位本身,或以欄位開頭的包裝框;卡片(以標題開頭)不算
 async function anchor(ch) {
   if (ch.type === "INSTANCE" && FIELD.test(await fieldName(ch))) return ch;
-  if (!("findAllWithCriteria" in ch) || ch.type === "INSTANCE") return null;
-  for (const i of ch.findAllWithCriteria({ types: ["INSTANCE"] })) {
-    let d = 0;
-    for (let x = i.parent; x && x !== ch; x = x.parent) d++;
-    if (d <= 2 && FIELD.test(await fieldName(i))) return i;
-  }
+  if (!("children" in ch) || ch.type === "INSTANCE") return null;
+  const first = ch.children.find((x) => x.visible);
+  if (first && first.type === "INSTANCE" && FIELD.test(await fieldName(first)))
+    return first;
   return null;
 }
 const misaligned = [];
@@ -162,18 +196,14 @@ if (!page.name.startsWith("Base Draft")) {
       }
     }
 }
-const byBy = {};
-for (const c of clipped) {
-  const k = c.why + " " + (c.by ? c.by.replace(/^\S+ /, "") : "");
-  byBy[k] = (byBy[k] || 0) + 1;
-}
 return {
   page: page.name,
   screens: screens.length,
   clippedText: clipped.length,
-  byBy,
   misalignedRows: misaligned.length,
+  overflowNodes: overflow.length,
   basePrimaryBindings,
   clippedSample: clipped.slice(0, 8),
-  misalignedSample: misaligned.slice(0, 12),
+  misalignedSample: misaligned.slice(0, 8),
+  overflowSample: overflow.slice(0, 8),
 };
