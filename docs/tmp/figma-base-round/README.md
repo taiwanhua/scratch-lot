@@ -101,3 +101,13 @@
 - 腳本在 `project/`:執行時依序貼上 `project/_header.js`、`project/_screen-helpers.js`,再貼 `components.js` / `store.js` / `store-wizards.js` / `purchasing.js` / `schedule.js`。專案腳本只有 scratch 模式,不會在底座執行。
 - 專案元件 description 開頭固定「【專案・scratch-lot 專屬,不回收底座】」,`audit.js` 不把它們算進底座草稿。
 - 專案畫面使用的底座草稿實例:基準值(2026-10-13)Screen / 店面管理 32、Screen / 叫貨與進貨 9、Screen / 班表管理 75、Project Draft 0。底座 Library 發布後,這些都要跟著用 `swapComponent` 換成 Library 元件。
+
+## 第三輪(三種尺寸)
+
+- **版面稽核 `audit-layout.js`**:`clippedText`、`misalignedRows`、`basePrimaryBindings` 三項,每頁都要 0。第一次跑(2026-10-14,修正前):叫貨與進貨 7 / 1、班表管理 5 / 2、經銷商管理 2 / 1、Base Draft 67 / 0、其餘頁 0 / 0(clippedText / misalignedRows)。原因有三:
+  1. 畫面工具 `al()` 建的 auto layout 預設會裁切內容,TextField 的浮動標籤(在欄位上緣上方 8px)被所在的列切掉一半 → `al()` 改成預設不裁切,既有畫面的巢狀 auto layout 一併關閉裁切(表格、殼、`input` 保留)。
+  2. 底座草稿 `Draft/OrgTreeSelect`(47:409)的標籤放在欄位上方(高 64),和 TextField / SelectField 的浮動標籤(高 56)並排時上下不齊 → 四個變體都改成浮動標籤(`labelWrap` 絕對定位 10, −8),高度 56。
+  3. 畫面高度沒有跟著內容撐高,底部按鈕被畫面外框切掉(DE-03)→ 重新撐高。
+- **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」,另有「58mm 單據」Section 接在最後(店面管理頁)。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」;`project/_r3.js` 的 `relayoutSizes()` 依編號排序。
+- **腳本**:`const PROJECT = true;` + `_kit.js` + `project/_r3.js` + 畫面腳本(`project/r3-*.js`)。`_r3.js` 有平板 / 手機殼 `dev()`、手機全螢幕彈窗 `devDialog()`、卡片列表 `cardList()`、張數格子 `ticketGrid()`(張號從 001 起)、結算區塊 `settlement()`(金額列 + 收付歷程)。
+- 執行時為了不讓每次呼叫都重送工具組,工具組原文暫存在檔內一頁「_tooling(AI 暫存腳本,完工後刪除)」的文字節點,呼叫時讀出來 `eval`;完工後刪除該頁。正本仍是本資料夾的檔案。

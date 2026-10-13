@@ -126,6 +126,7 @@ async function T(chars, s = "Body/2", color = "text/primary", name) {
 function al(dir, p = {}) {
   const f = figma.createAutoLayout(dir, p);
   f.fills = [];
+  f.clipsContent = false; // 浮動標籤與陰影不被裁切(畫圖檢查清單 2);需要裁切的(表格、殼)另外設定
   return f;
 }
 const H = (gap = 8, p = {}) =>
