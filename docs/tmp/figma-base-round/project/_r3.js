@@ -181,6 +181,8 @@ async function dev(name, key, title, o = {}) {
         0;
     main.appendChild(bottom);
     bottom.layoutPositioning = "ABSOLUTE";
+    bottom.primaryAxisSizingMode = "FIXED";
+    bottom.primaryAxisAlignItems = "SPACE_BETWEEN"; // 左右兩端:次要動作在左、主要動作在右
     for (const x of o.bottomBar) add(bottom, x);
   }
   return { s, main, content, bar, bottom, dev: true, h };
