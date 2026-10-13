@@ -3,6 +3,7 @@
 // 只把綁在 wowgo-base `Brand` / `Color` 的 primary/* 換成 scratch-lot Brand Library 同名變數;中性色、error / success 等語意色、
 // 文字、圖片、實例連結都不動。實例內的節點以覆寫方式補綁(遠端元件連結保留)。
 // 「Base Draft / 本輪底座元件」頁不要跑:那頁的草稿要搬回底座,必須維持綁 wowgo-base。
+figma.skipInvisibleInstanceChildren = false; // 實例裡隱藏的子節點(例:側欄 Badge)也要補綁
 const PAGE_ID = "65:14"; // 換成要補綁的頁
 const DRY = false; // true = 只預覽待補綁數
 const SOURCE = "wowgo-base Design System";

@@ -35,7 +35,9 @@
 | `nonBaseBindingsInBaseDrafts` | 底座草稿裡綁到非 wowgo-base 變數的節點                                      | 任何時候都是 0 |
 | `basePrimaryBindings`         | Base Draft 以外的頁綁到 wowgo-base primary/* 的 fill / stroke(要補綁專案色) | 任何時候都是 0 |
 
-基準值(2026-10-13):Base Draft 頁 17 / 108 / 17 / 0;Screen / Admin 資料範圍頁 0 / 4 / 0 / —。專案元件(description 開頭「【專案・scratch-lot 專屬】」)不計入,也不回收。
+基準值(2026-10-14,第二輪畫完):Base Draft 頁 25 / 175 / 25 / 0;各專案頁 `basePrimaryBindings` 皆為 0,底座草稿實例數:Project Draft 0、店面管理 186、叫貨與進貨 25、班表管理 133、庫存管理 8、帳戶管理 12、輸出報表 6、經銷商管理 42、檔案管理 14。
+
+舊基準值(2026-10-13):Base Draft 頁 17 / 108 / 17 / 0;Screen / Admin 資料範圍頁 0 / 4 / 0 / —。專案元件(description 開頭「【專案・scratch-lot 專屬】」)不計入,也不回收。
 
 ## 屬性名(換實例時要對得上)
 

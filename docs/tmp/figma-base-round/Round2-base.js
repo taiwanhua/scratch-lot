@@ -89,7 +89,9 @@ const hMeta = add(
   "FILL",
 );
 const hNo = add(hMeta, await txt("單號 C-0031", "Body/2", "grey/900", "no"));
-add(hMeta, al("HORIZONTAL", { name: "spacer" }), "FILL");
+const hSp = add(hMeta, al("HORIZONTAL", { name: "spacer" }), "FILL");
+hSp.layoutSizingVertical = "FIXED";
+hSp.resize(hSp.width, 1);
 const hTime = add(
   hMeta,
   await txt("2026-10-13 15:02", "Body/2", "grey/900", "time"),
@@ -192,7 +194,9 @@ TT.resize(W, 10);
 TT.primaryAxisSizingMode = "FIXED";
 TT.counterAxisSizingMode = "AUTO";
 const ttL = add(TT, await txt("合計", "Subtitle/1", "grey/900", "label"));
-add(TT, al("HORIZONTAL", { name: "spacer" }), "FILL");
+const tSp = add(TT, al("HORIZONTAL", { name: "spacer" }), "FILL");
+tSp.layoutSizingVertical = "FIXED";
+tSp.resize(tSp.width, 1);
 const ttV = add(TT, await txt("3,400", "Subtitle/1", "grey/900", "value"));
 ttL.componentPropertyReferences = {
   characters: TT.addComponentProperty("Label", "TEXT", "合計"),
