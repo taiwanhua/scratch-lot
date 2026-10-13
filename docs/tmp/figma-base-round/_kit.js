@@ -276,17 +276,19 @@ async function card(name = "card", gap = 12, pad = 20) {
 async function kv(l, v, o = {}) {
   const r = H(12, { name: "kv" });
   add(r, await T(l, "Body/2", "text/secondary"));
-  spacer(r);
-  add(
-    r,
-    typeof v === "string"
-      ? await T(
-          v,
-          o.strong ? "Subtitle/1" : "Body/1",
-          o.color || "text/primary",
-        )
-      : v,
-  );
+  if (typeof v === "string") {
+    // 值撐滿剩下的寬度、靠右、太長就換行(手機不超出)
+    const t = add(
+      r,
+      await T(v, o.strong ? "Subtitle/1" : "Body/1", o.color || "text/primary"),
+      "FILL",
+    );
+    t.textAutoResize = "HEIGHT";
+    t.textAlignHorizontal = "RIGHT";
+  } else {
+    spacer(r);
+    add(r, v);
+  }
   return r;
 }
 async function grid(items, n = 3, gap = 16) {
