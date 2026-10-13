@@ -18,6 +18,7 @@
 4. **底座既有元件與畫面的修改**(scratch-lot 不能改底座元件,所以留到這一步在底座檔直接改):
    - `Draft/AdminAppBar`(2001:1248)加 BOOLEAN `Notifications`,右側放 `Draft/NotificationBell` 實例(使用者已同意)。重建後,參考畫面上以絕對定位疊加的鈴(圖層名 `notification-bell(待 AppBar 加槽)`)改用這個屬性並刪除疊加層;旁邊的說明卡「說明 / 通知鈴暫時疊加」(scratch-lot 59:1524、59:1528)一併刪除。
    - `Draft/AdminSideNav`(2001:1214)系統管理群組加「通知設定」「印表機管理」兩列(先用備用槽 spare-1~4;不夠再新增)。
+   - `Draft/AdminSideNav` 的**頂層備用槽加到 8 個**(現在只有 2 個,放不下專案的 8 個頂層模組);加完後 scratch-lot 的 `Draft/ScratchLotSideNav` 改用底座側欄實例。
    - 底座參考畫面「Screen / Admin 資料範圍」的兩張舊規則卡換成 `Draft/DataScopeRuleCard` 實例(scratch-lot 7:10 已先換,實例 59:1847 / 59:2033),旁邊的註記卡「合成規則與資料影響」依新卡內容改寫。
 5. 在 scratch-lot Screens 接受 Library 更新,把畫面上本地草稿元件的實例用 `swapComponent` 換成 Library 同名元件(屬性名相同,覆寫會保留),最後刪除「Base Draft / 本輪底座元件」頁的本地草稿。
 
