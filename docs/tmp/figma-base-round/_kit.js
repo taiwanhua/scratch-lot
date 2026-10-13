@@ -662,7 +662,7 @@ const done = (x, y) => {
 };
 // ==== 工具組結束 ====
 // 整頁補綁專案色(同 project/brand-rebind.js;只在專案頁用)
-async function rebindPage() {
+async function rebindPage(roots) {
   const cols =
     await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
   const map = new Map();
@@ -688,7 +688,10 @@ async function rebindPage() {
   const vc = new Map(),
     im = new Map();
   let changed = 0;
-  for (const nd of figma.currentPage.findAll(() => true))
+  const all = roots
+    ? roots.flatMap((r) => [r, ...r.findAll(() => true)])
+    : figma.currentPage.findAll(() => true);
+  for (const nd of all)
     for (const prop of ["fills", "strokes"]) {
       if (!(prop in nd) || !Array.isArray(nd[prop]) || !nd[prop].length)
         continue;

@@ -552,4 +552,29 @@ async function legend(items) {
   }
   return r;
 }
+// 收尾:新畫面補綁專案色、重新排列尺寸區塊
+// 表格欄寬總和超過可用寬度時等比例縮小(避免欄位超出卡片)
+function fitTables(root) {
+  for (const r of root.findAll(
+    (n) => n.type === "FRAME" && (n.name === "tr" || n.name === "thead"),
+  )) {
+    const avail =
+      r.width -
+      r.paddingLeft -
+      r.paddingRight -
+      r.itemSpacing * (r.children.length - 1);
+    const total = r.children.reduce((m, c) => m + c.width, 0);
+    if (total <= avail + 1) continue;
+    const k = avail / total;
+    for (const c of r.children) c.resize(Math.floor(c.width * k), c.height);
+  }
+}
+async function finish() {
+  const nodes = [];
+  for (const [, id] of made) nodes.push(await figma.getNodeByIdAsync(id));
+  for (const n of nodes) fitTables(n);
+  const rebound = await rebindPage(nodes);
+  relayoutSizes();
+  return { made, rebound };
+}
 // ==== 第三輪工具結束 ====
