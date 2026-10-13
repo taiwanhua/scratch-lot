@@ -26,12 +26,13 @@
 
 在 scratch-lot Screens 逐頁執行(一次一頁,把 `PAGE_ID` 換成要查的頁,所有頁平行各跑一次再加總)。
 
-| 指標                          | 意義                                           | 回收完成時     |
-| ----------------------------- | ---------------------------------------------- | -------------- |
-| `baseDraftComponents`         | 本地的底座草稿元件(description 含「本輪草稿」) | 0              |
-| `instancesOfBaseDrafts`       | 指向本地底座草稿的實例                         | 0              |
-| `nodesWithDraftMarker`        | description 含「本輪草稿」的元件節點           | 0              |
-| `nonBaseBindingsInBaseDrafts` | 底座草稿裡綁到非 wowgo-base 變數的節點         | 任何時候都是 0 |
+| 指標                          | 意義                                                                        | 回收完成時     |
+| ----------------------------- | --------------------------------------------------------------------------- | -------------- |
+| `baseDraftComponents`         | 本地的底座草稿元件(description 含「本輪草稿」)                              | 0              |
+| `instancesOfBaseDrafts`       | 指向本地底座草稿的實例                                                      | 0              |
+| `nodesWithDraftMarker`        | description 含「本輪草稿」的元件節點                                        | 0              |
+| `nonBaseBindingsInBaseDrafts` | 底座草稿裡綁到非 wowgo-base 變數的節點                                      | 任何時候都是 0 |
+| `basePrimaryBindings`         | Base Draft 以外的頁綁到 wowgo-base primary/* 的 fill / stroke(要補綁專案色) | 任何時候都是 0 |
 
 基準值(2026-10-13):Base Draft 頁 17 / 108 / 17 / 0;Screen / Admin 資料範圍頁 0 / 4 / 0 / —。專案元件(description 開頭「【專案・scratch-lot 專屬】」)不計入,也不回收。
 

@@ -2,6 +2,7 @@
 // 一次只稽核一頁(use_figma 一次只切一次頁):把 PAGE_ID 換成要查的頁,所有頁平行各跑一次再加總。
 // 回收完成時 baseDraftComponents、instancesOfBaseDrafts、nodesWithDraftMarker 三項加總都應為 0。
 // nonBaseBindingsInBaseDrafts 任何時候都應為 0(底座草稿只能綁 wowgo-base 的變數)。
+// basePrimaryBindings(Base Draft 以外的頁)任何時候都應為 0(專案頁的主色要綁 scratch-lot Brand Library)。
 const PAGE_ID = "41:5914";
 const MARKER = "本輪草稿"; // 底座草稿 description 的固定前綴「【底座・本輪草稿,…】」
 // wowgo-base Design System 的變數集合 key(Color / Radius / Primitives / Brand)
@@ -78,8 +79,34 @@ for (const d of baseDrafts) {
   }
 }
 
+// 專案頁(Base Draft 以外)不得留下 wowgo-base 的 primary/* 綁定:要補綁 scratch-lot Brand Library(project/brand-rebind.js)
+const BASE_PRIMARY_COLLECTIONS = [BASE_COLLECTIONS[0], BASE_COLLECTIONS[3]];
+let basePrimaryBindings = null;
+if (!page.name.startsWith("Base Draft")) {
+  basePrimaryBindings = 0;
+  const varCache = {};
+  for (const n of page.findAll(() => true)) {
+    for (const p of ["fills", "strokes"]) {
+      if (!(p in n) || !Array.isArray(n[p])) continue;
+      for (const paint of n[p]) {
+        const id = paint.boundVariables?.color?.id;
+        if (!id) continue;
+        if (!(id in varCache)) {
+          const v = await figma.variables.getVariableByIdAsync(id);
+          varCache[id] =
+            !!v &&
+            v.name.startsWith("primary/") &&
+            BASE_PRIMARY_COLLECTIONS.includes(await collectionKeyOf(id));
+        }
+        if (varCache[id]) basePrimaryBindings++;
+      }
+    }
+  }
+}
+
 return {
   page: page.name,
+  basePrimaryBindings,
   baseDraftComponents: baseDrafts.length,
   instancesOfBaseDrafts,
   nodesWithDraftMarker: comps.filter((c) =>

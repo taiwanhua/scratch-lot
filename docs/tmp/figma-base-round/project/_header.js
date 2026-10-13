@@ -3,6 +3,7 @@
 // 底座元件一律用 wowgo-base Library 遠端實例;本輪底座草稿用 baseDraft()(在「Base Draft / 本輪底座元件」頁依 id 取);專案元件用 projDraft()(在「Project Draft / 刮刮樂元件」頁依名稱取)。
 figma.skipInvisibleInstanceChildren = false;
 const K = {
+  // primary/* 綁 scratch-lot Brand Library 的 `Color`(專案色);其餘是 wowgo-base 的中性 / 語意色
   var: {
     "bg/paper": "7875005cdf746478c3e17c225db9fce44ab90451",
     "bg/default": "f3cf90e5f836dd44d0124f96199feb7ce961d9fc",
@@ -10,10 +11,10 @@ const K = {
     "text/primary": "d55b27457c6f95c898e614be4c16cef386fe1f65",
     "text/secondary": "c11ac6a81b471a6a46f85602d056355c19fd4166",
     "text/disabled": "b8f6a2814dee4ecdbc02bb973690b11f2e43dc40",
-    "primary/main": "3666ac0c6b3d12e8e38f6be8270287eb55a5cce1",
-    "primary/lighter": "910cd62c36bae23991a84c291f8b3a546df84384",
-    "primary/dark": "c4d9e8d337cf252393a3cb8ec36da76e173ee699",
-    "primary/contrast": "60e87705d77a858288a3c26b19399b632f333155",
+    "primary/main": "19ff85b8d50ac8532f0a2655b6f8f5ad4d01d1ed",
+    "primary/lighter": "1303b01c541b1d24d104d836b0d64ee3c188c7a3",
+    "primary/dark": "5e53a5328ebcc6c3e9e9be382460451c0b06e1f6",
+    "primary/contrast": "29bd81f2011a58c4eb6acf2741f5c5a383913fd8",
     "error/main": "0d2b086b0de059122075ae1efcdf53c86d10497d",
     "success/main": "6e398ee88e62c802e89a1f46853dfda221b9d453",
     "warning/main": "c4795bb776010891dbb7e03790c05d403ac4c75a",
