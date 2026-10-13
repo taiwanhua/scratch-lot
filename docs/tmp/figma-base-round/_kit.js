@@ -268,6 +268,7 @@ async function card(name = "card", gap = 12, pad = 20) {
     paddingBottom: Math.max(0, pad - 4),
   });
   c.fills = [await paint("bg/paper")];
+  c.clipsContent = false; // 浮動標籤(TextField / SelectField)不被裁切;表格另設 true
   await rad(c);
   return c;
 }
@@ -659,3 +660,61 @@ const done = (x, y) => {
   return n;
 };
 // ==== 工具組結束 ====
+// 整頁補綁專案色(同 project/brand-rebind.js;只在專案頁用)
+async function rebindPage() {
+  const cols =
+    await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+  const map = new Map();
+  for (const side of ["Brand", "Color"]) {
+    const s = cols.find(
+      (c) => c.libraryName === "wowgo-base Design System" && c.name === side,
+    );
+    const t = cols.find(
+      (c) => c.libraryName === "scratch-lot Brand Library" && c.name === side,
+    );
+    const sv = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(
+      s.key,
+    );
+    const tv = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(
+      t.key,
+    );
+    for (const r of ["lighter", "light", "main", "dark", "darker", "contrast"])
+      map.set(
+        sv.find((v) => v.name === "primary/" + r).key,
+        tv.find((v) => v.name === "primary/" + r).key,
+      );
+  }
+  const vc = new Map(),
+    im = new Map();
+  let changed = 0;
+  for (const nd of figma.currentPage.findAll(() => true))
+    for (const prop of ["fills", "strokes"]) {
+      if (!(prop in nd) || !Array.isArray(nd[prop]) || !nd[prop].length)
+        continue;
+      let dirty = false;
+      const next = [];
+      for (const p of nd[prop]) {
+        const id = p.boundVariables?.color?.id;
+        if (id && !vc.has(id))
+          vc.set(id, await figma.variables.getVariableByIdAsync(id));
+        const v = id ? vc.get(id) : null;
+        if (!v || !map.has(v.key)) {
+          next.push(p);
+          continue;
+        }
+        const k = map.get(v.key);
+        if (!im.has(k))
+          im.set(k, await figma.variables.importVariableByKeyAsync(k));
+        next.push(
+          figma.variables.setBoundVariableForPaint(p, "color", im.get(k)),
+        );
+        dirty = true;
+        changed++;
+      }
+      if (dirty) {
+        if (nd.type === "TEXT") await fonts({ findAll: () => [nd] });
+        nd[prop] = next;
+      }
+    }
+  return changed;
+}
