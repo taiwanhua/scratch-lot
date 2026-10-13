@@ -1,0 +1,83 @@
+# 本輪底座草稿節點(scratch-lot Screens)
+
+檔案:[scratch-lot Screens](https://www.figma.com/design/sXOJkIX53eBMUyDE8yYUJm)(`sXOJkIX53eBMUyDE8yYUJm`)。格式照 FIGMA-09;搬回 wowgo-base Design System 重建後,改登記底座檔的新節點 id,再搬進 `docs/standards/general/figma.md`。
+
+### 底座共用元件(本輪草稿)
+
+| 頁(頁 id)                          | 節點                     | 節點 id | 內容                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------- | ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Base Draft / 本輪底座元件(41:5914) | Draft/ActionIcon+        | 43:66   | 17 個 `key=<name>` 變體(expand-more 43:17、expand-less 43:20、chevron-left 43:23、chevron-right 43:26、arrow-drop-down 43:29、search 43:32、notifications 43:35、print 43:38、download 43:41、copy 43:44、link 43:47、close 43:50、check 43:53、check-circle 43:56、error-outline 43:59、account-tree 43:62、more-vert 43:65);搬回時併入 Draft/ActionIcon(2001:68) |
+| Base Draft / 本輪底座元件(41:5914) | Draft/Section            | 41:5932 | State=Expanded 41:5916 / Collapsed 41:5925;TEXT Title、Summary;收合鈕 = Draft/IconButton + ActionIcon+ expand-less / expand-more                                                                                                                                                                                                                                   |
+| Base Draft / 本輪底座元件(41:5914) | Draft/AudiencePicker     | 45:248  | AllowEveryone=True, Value=Everyone 45:18 / AllowEveryone=True, Value=Conditions 45:29 / AllowEveryone=False, Value=Conditions 45:142;條件樹(根群組 bg/default、巢狀群組 bg/paper + divider)                                                                                                                                                                        |
+| Base Draft / 本輪底座元件(41:5914) | Draft/DataScopeRuleCard  | 46:156  | 上半「套用對象」(AudiencePicker 實例)、下半「條件組合」;TEXT Title                                                                                                                                                                                                                                                                                                 |
+| Base Draft / 本輪底座元件(41:5914) | Draft/OrgTreeSelect      | 47:409  | State=Closed / Open × Mode=Single / Multiple(47:315 / 47:323 / 47:334 / 47:365)                                                                                                                                                                                                                                                                                    |
+| Base Draft / 本輪底座元件(41:5914) | Draft/MonthCalendarCell  | 48:359  | State=Default / Today / Selected / Outside;TEXT Day、BOOLEAN Show tag、Show slot                                                                                                                                                                                                                                                                                   |
+| Base Draft / 本輪底座元件(41:5914) | Draft/MonthCalendar      | 48:360  | 2026 年 10 月示範,週日開頭;工具列 上月 / 下月 / 今天                                                                                                                                                                                                                                                                                                               |
+| Base Draft / 本輪底座元件(41:5914) | Draft/RosterCell         | 49:493  | State=Empty / Filled / Selected                                                                                                                                                                                                                                                                                                                                    |
+| Base Draft / 本輪底座元件(41:5914) | Draft/RosterGrid         | 49:494  | 人 × 日期矩陣,凍結第一欄                                                                                                                                                                                                                                                                                                                                           |
+| Base Draft / 本輪底座元件(41:5914) | Draft/NotificationBell   | 50:567  | Unread=True / False                                                                                                                                                                                                                                                                                                                                                |
+| Base Draft / 本輪底座元件(41:5914) | Draft/NotificationItem   | 50:582  | Read=False / True;TEXT Title、Body、Time                                                                                                                                                                                                                                                                                                                           |
+| Base Draft / 本輪底座元件(41:5914) | Draft/NotificationPanel  | 50:620  | State=List / Empty                                                                                                                                                                                                                                                                                                                                                 |
+| Base Draft / 本輪底座元件(41:5914) | Draft/NotificationToast  | 50:621  | TEXT Title、Body                                                                                                                                                                                                                                                                                                                                                   |
+| Base Draft / 本輪底座元件(41:5914) | Draft/PrintButton        | 51:625  | State=Default / Sending / Printed / Failed / Reprint / Disabled                                                                                                                                                                                                                                                                                                    |
+| Base Draft / 本輪底座元件(41:5914) | Draft/Receipt58Row       | 51:626  | TEXT Label、Value                                                                                                                                                                                                                                                                                                                                                  |
+| Base Draft / 本輪底座元件(41:5914) | Draft/Receipt58Signature | 51:630  | TEXT Role                                                                                                                                                                                                                                                                                                                                                          |
+| Base Draft / 本輪底座元件(41:5914) | Draft/Receipt58          | 51:633  | 58mm 示範組合;TEXT Org、Title、BOOLEAN Reprint                                                                                                                                                                                                                                                                                                                     |
+
+### 底座參考畫面(本輪草稿)
+
+| 頁(頁 id)                          | 畫面或說明                                         | 節點 id | 用途                       |
+| ---------------------------------- | -------------------------------------------------- | ------- | -------------------------- |
+| Base Draft / 本輪底座元件(41:5914) | 通知設定(system.notification-settings)             | 54:610  | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | Overlay / 編輯收件人                               | 54:1002 | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | 印表機管理(system.printers,代理程式分頁)           | 55:1116 | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | Overlay / 新增代理程式(配對碼)                     | 55:1424 | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | 流程設計器 審核者來源(客製流程)                    | 56:1089 | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | 流程設計器 審核者來源(共用流程,AUDIENCE_IN_SHARED) | 56:1496 | 參考畫面                   |
+| Base Draft / 本輪底座元件(41:5914) | 說明 / 通知鈴暫時疊加(通知設定旁)                  | 59:1524 | 頁面說明;AppBar 加槽後刪除 |
+| Base Draft / 本輪底座元件(41:5914) | 說明 / 通知鈴暫時疊加(印表機管理旁)                | 59:1528 | 頁面說明;AppBar 加槽後刪除 |
+
+### 既有參考畫面的替換(scratch-lot)
+
+| 頁(頁 id)                     | 節點                                 | 節點 id | 內容                 |
+| ----------------------------- | ------------------------------------ | ------- | -------------------- |
+| Screen / Admin 資料範圍(7:10) | 規則 1(Draft/DataScopeRuleCard 實例) | 59:1847 | 取代舊規則卡 14:4064 |
+| Screen / Admin 資料範圍(7:10) | 規則 2(Draft/DataScopeRuleCard 實例) | 59:2033 | 取代舊規則卡 14:4082 |
+
+## scratch-lot 專案畫面
+
+專案專屬,**不回收底座**;畫面上的底座草稿實例(OrgTreeSelect、PrintButton、NotificationBell、RosterGrid、MonthCalendar、Receipt58Row / Signature)在底座重建、發布後要一起換成 Library 元件(底座規格 0.3a)。腳本在 `figma/project/`。
+
+### 專案元件
+
+| 頁(頁 id)                         | 節點                    | 節點 id | 內容                                                                                                        |
+| --------------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
+| Project Draft / 刮刮樂元件(64:14) | Draft/ScratchLotSideNav | 64:15   | 專案側欄(專案規格 3.1),由底座 NavItem / NavGroup 實例組成;底座 AdminSideNav 的頂層備用槽不夠放 8 個頂層模組 |
+| Project Draft / 刮刮樂元件(64:14) | Draft/TicketCell        | 64:132  | 張數格子的一格:State=Available / Selected / Unavailable;TEXT No                                             |
+| Project Draft / 刮刮樂元件(64:14) | Draft/TicketGrid        | 64:133  | 張數格子(7.5):每列 10 格、連號快選、區段顯示                                                                |
+| Project Draft / 刮刮樂元件(64:14) | Draft/DenominationCount | 64:366  | 依面額清點表(交班 ③、日結 ③)                                                                                |
+| Project Draft / 刮刮樂元件(64:14) | Draft/WizardStep        | 64:477  | 精靈步驟 State=Done / Current / Todo;TEXT Index、Label                                                      |
+| Project Draft / 刮刮樂元件(64:14) | Draft/CashPointHeader   | 64:512  | 看板的收銀點列 State=Open / Closed                                                                          |
+| Project Draft / 刮刮樂元件(64:14) | Draft/BoardBookCard     | 64:558  | 看板卡片 State=Normal / LowStock / Attention                                                                |
+
+### 專案畫面
+
+| 頁(頁 id)                  | 畫面                                                 | 節點 id | 規格        |
+| -------------------------- | ---------------------------------------------------- | ------- | ----------- |
+| Screen / 店面管理(65:14)   | 店面管理 / 看板                                      | 65:15   | 6.1、6.2    |
+| Screen / 店面管理(65:14)   | [日結] 停用時的提示                                  | 65:741  | 6.10        |
+| Screen / 店面管理(65:14)   | 交班結帳 ① 盤點 · ② 兌獎                             | 67:1212 | 6.9         |
+| Screen / 店面管理(65:14)   | 交班結帳 ③ 抽屜                                      | 67:420  | 6.9         |
+| Screen / 店面管理(65:14)   | 交班結帳 ④ 確認                                      | 67:972  | 6.9、8.7    |
+| Screen / 店面管理(65:14)   | 日結 ② 期間內各班                                    | 68:867  | 6.10        |
+| Screen / 店面管理(65:14)   | 日結 ③ 小金庫                                        | 68:1334 | 6.10        |
+| Screen / 店面管理(65:14)   | 日結 ④ 存入銀行 · ⑤ 確認                             | 68:1686 | 6.10        |
+| Screen / 店面管理(65:14)   | Overlay / 存銀行                                     | 68:1736 | 6.11        |
+| Screen / 店面管理(65:14)   | Overlay / 存銀行(錯誤:超過小金庫應有;本店沒有印表機) | 68:1766 | 6.11、12    |
+| Screen / 店面管理(65:14)   | 58mm / 交班結帳單                                    | 68:1809 | 12          |
+| Screen / 店面管理(65:14)   | 58mm / 存款單                                        | 68:1858 | 12          |
+| Screen / 叫貨與進貨(69:14) | 叫貨單 新增(替換新增頁)                              | 69:15   | 8.1         |
+| Screen / 叫貨與進貨(69:14) | 進貨單 點收(替換檢視頁)                              | 69:651  | 8.2、8.3、9 |
+| Screen / 叫貨與進貨(69:14) | 調貨單 新增(選張)                                    | 69:1099 | 8.4、7.5    |
+| Screen / 班表管理(70:14)   | 排班作業(排班表)                                     | 70:15   | 14.5        |
+| Screen / 班表管理(70:14)   | 排班作業(行事曆)                                     | 70:817  | 14.5、14.1  |
