@@ -279,8 +279,8 @@ async function steps(labels, current) {
   for (let i = 0; i < labels.length; i++)
     add(
       r,
-      await pinst(
-        "Draft/WizardStep",
+      await binst(
+        "Draft/StepperStep", // 第二輪:專案 WizardStep 升格為底座 Draft/StepperStep(79:1325)
         { State: i < current ? "Done" : i === current ? "Current" : "Todo" },
         { Index: String(i + 1), Label: labels[i] },
       ),

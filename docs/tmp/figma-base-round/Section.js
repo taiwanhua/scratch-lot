@@ -1,5 +1,5 @@
 // Draft/Section:可收合區塊(底座規格 10.3)。前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
-// 屬性:Title(TEXT)、Summary(TEXT)、State=Expanded / Collapsed。
+// 屬性:Title(TEXT)、Summary(TEXT)、Content(SLOT,只在 Expanded)、State=Expanded / Collapsed。
 const icons = draft("Draft/ActionIcon+");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
 
@@ -51,25 +51,21 @@ async function variant(expanded) {
   add(head, btn);
 
   if (expanded) {
-    const body = add(
-      c,
-      al("VERTICAL", {
-        name: "content",
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingTop: 4,
-        paddingBottom: 16,
-        itemSpacing: 8,
-      }),
-      "FILL",
-    );
-    const slot = figma.createFrame();
-    slot.name = "slot(內容由使用處放入)";
+    // 內容區是 SLOT(屬性 Content):使用處直接放入欄位、表格等任何內容(程式對應 children)
+    const slot = c.createSlot();
+    slot.name = "Content";
+    slot.layoutMode = "VERTICAL";
+    slot.paddingLeft = slot.paddingRight = 16;
+    slot.paddingTop = 4;
+    slot.paddingBottom = 16;
+    slot.itemSpacing = 8;
     slot.fills = [];
-    slot.strokes = [await paint("divider")];
-    slot.dashPattern = [4, 4];
-    add(body, slot, "FILL");
-    slot.resize(slot.width, 96);
+    slot.layoutSizingHorizontal = "FILL";
+    slot.primaryAxisSizingMode = "AUTO";
+    add(
+      slot,
+      await txt("放入欄位、表格或任何內容", "Body/2", "text/secondary"),
+    );
   }
   return c;
 }
@@ -96,5 +92,5 @@ for (const v of set.children) {
 }
 set.description =
   DESC_PREFIX +
-  "@repo/ui Section 可收合區塊(底座規格 10.3):一般頁面 <Section id title summary defaultCollapsed> 與表單版面區塊共用。State=Expanded 顯示內容槽;Collapsed 隱藏內容、標題列顯示 Summary。收合狀態存 localStorage `<slug>-admin-sections:<userId>`,表單有錯時自動展開並捲到第一個錯誤。收合鈕 = Draft/IconButton(Plain / Small)實例,Icon 換 Draft/ActionIcon+ key=expand-less(展開時)/ expand-more(收合時);搬回底座後改指 Draft/ActionIcon 同名變體。屬性:Title(TEXT)、Summary(TEXT,只在 Collapsed 顯示)、State=Expanded / Collapsed(對應 defaultCollapsed 與目前狀態)。只綁 wowgo-base 變數與文字樣式,不得綁 scratch-lot Brand。";
+  "@repo/ui Section 可收合區塊(底座規格 10.3):一般頁面 <Section id title summary defaultCollapsed> 與表單版面區塊共用。State=Expanded 顯示內容 slot(SLOT 屬性 Content,使用處直接放入欄位、表格等任何內容;程式對應 children);Collapsed 隱藏內容、標題列顯示 Summary。收合狀態存 localStorage `<slug>-admin-sections:<userId>`,表單有錯時自動展開並捲到第一個錯誤。收合鈕 = Draft/IconButton(Plain / Small)實例,Icon 換 Draft/ActionIcon+ key=expand-less(展開時)/ expand-more(收合時);搬回底座後改指 Draft/ActionIcon 同名變體。屬性:Title(TEXT)、Summary(TEXT,只在 Collapsed 顯示)、State=Expanded / Collapsed(對應 defaultCollapsed 與目前狀態)。只綁 wowgo-base 變數與文字樣式,不得綁 scratch-lot Brand。";
 return { setId: set.id, variants: set.children.map((v) => v.id) };

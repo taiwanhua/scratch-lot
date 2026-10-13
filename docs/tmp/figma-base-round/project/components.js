@@ -339,6 +339,7 @@ const created = {};
 }
 
 // ---------- 4. Draft/WizardStep:精靈步驟(交班 / 日結共用)----------
+// 第二輪已升格為底座 Draft/StepperStep(Stepper.js),本段只留作紀錄,不要再執行;專案草稿已刪除。
 {
   const mk = async (state) => {
     const c = figma.createComponent();

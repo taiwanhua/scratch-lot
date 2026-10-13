@@ -78,6 +78,7 @@ const BASE_DRAFT = {
   "Draft/Receipt58": "51:633",
   "Draft/Receipt58Row": "51:626",
   "Draft/Receipt58Signature": "51:630",
+  "Draft/StepperStep": "79:1325",
 };
 const _c = {};
 async function tok(n) {
