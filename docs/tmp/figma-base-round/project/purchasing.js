@@ -118,10 +118,6 @@ const head = async (content, title, extra = []) => {
       "FILL",
     );
   }
-  await wrapCaption(
-    c,
-    "上市 30 天內的新遊戲排最上面並標「新」;其他依近 30 天賣出由多到少。新遊戲的銷售欄顯示「—」(還沒賣過)。目前庫存 = 未拆的本 + 檯面上的張數;在途 = 待購買的叫貨 + 已建立但還沒點收完成的進貨單 / 調貨單。叫幾本填 0 的列不會寫入;超過預計要給本數只提醒。",
-  );
   const ft = add(
     content,
     al("HORIZONTAL", {

@@ -143,7 +143,11 @@ const x0 = 1560 + 900;
   for (const [st, l, d] of [
     ["Selected", "沿用 30 分鐘內的盤點", "10:32 · 店內櫃台 · 差異 0"],
     ["Default", "現在盤點", "只盤這個收銀點;被拆開的本只能點格子或掃描"],
-    ["Default", "跳過盤點", "需要權限;原因必填;報表永久標示「未盤點」"],
+    [
+      "Default",
+      "跳過盤點",
+      "需要有跳過盤點的權限;原因必填,報表會標示「未盤點」。",
+    ],
   ]) {
     const r = add(a, al("HORIZONTAL", { name: "opt", itemSpacing: 8 }), "FILL");
     add(r, await inst("Draft/Radio", { State: st }));
@@ -190,7 +194,7 @@ const period = async (content) =>
       { Severity: "Warning" },
       {
         Message:
-          "涵蓋期間 10/14 ~ 10/16,共 3 個營業日;10/14、10/15 未日結。不能補日結,這一次會一起涵蓋。",
+          "涵蓋計算期間 10/14 09:02 ~ 現在(10/14、10/15 沒有日結)。不能補日結,這一次會一起涵蓋計算。",
         Action: false,
       },
     ),
@@ -371,8 +375,8 @@ const period = async (content) =>
   b.layoutSizingVertical = "HUG";
   add(b, await txt("⑤ 確認", "Subtitle/1"));
   await kvRows(b, [
-    ["涵蓋營業日", "10/14、10/15、10/16"],
-    ["全店盤點", "現在盤點 · 推定售出 6 張"],
+    ["涵蓋計算期間", "10/14 09:02 ~ 現在"],
+    ["全店盤點", "現在盤點 · 補登售出 2 張"],
     ["各班差額合計", "− 300", "error/main"],
     ["小金庫差額", "0"],
     ["存入銀行", "20,000 → 台灣銀行 ****12345"],

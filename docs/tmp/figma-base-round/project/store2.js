@@ -246,83 +246,7 @@ if (PART === "A") {
     fin();
     done({ ov }, Y);
   }
-  // ST-05 刷到票的各種情況
-  {
-    const { ov, row, fin } = await ovRow(
-      "ST-05 Overlay / 刷到票:店外攤位確認、選遊戲、未拆詢問拆本、擋下、尋回",
-    );
-    const a = await dcard(row, "在別的收銀點", 360);
-    add(
-      a,
-      await ticketInfo("5164 發大財", "200 元", "056527", "012", "店外攤位"),
-      "FILL",
-    );
-    await para(a, "這張票在店外攤位,確定在店內櫃台售出?");
-    await cap(a, "確認後寫「移櫃」+「售出」,錢算在本機收銀點這一班。");
-    add(
-      a,
-      await actions([await btn("取消", "Text"), await btn("確定售出")]),
-      "FILL",
-    );
-    const b = await dcard(row, "選擇遊戲", 360);
-    await para(b, "本號 056527 在本店對到兩款遊戲:");
-    add(b, await radio("5164 發大財 · 200 元", true));
-    add(b, await radio("5201 金好運 · 200 元"));
-    add(
-      b,
-      await actions([await btn("取消", "Text"), await btn("售出")]),
-      "FILL",
-    );
-    const c = await dcard(row, "這本還沒拆", 360);
-    add(
-      c,
-      await ticketInfo(
-        "5133 招財貓",
-        "1,000 元",
-        "071204",
-        "003",
-        "庫存 · 未拆",
-      ),
-      "FILL",
-    );
-    await para(c, "要拆本並售出這一張嗎?");
-    add(c, await select("拆到哪個收銀點", "店內櫃台(本機)", null), "FILL");
-    add(
-      c,
-      await actions([await btn("取消", "Text"), await btn("拆本並售出")]),
-      "FILL",
-    );
-    const d = await dcard(row, "不能售出", 360);
-    add(d, await ticketInfo("5164 發大財", "200 元", "056527", "020"), "FILL");
-    add(d, await alert("這張已售出(10/14 15:22 店內櫃台)", "Error"), "FILL");
-    await cap(
-      d,
-      "其他擋下原因:不是本店的票、瑕疵、報廢、被調貨單 #T-0008 鎖定。",
-    );
-    add(d, await actions([await btn("知道了")]), "FILL");
-    const e = await dcard(row, "這本在待查", 360);
-    add(
-      e,
-      await ticketInfo(
-        "5198 鼠來寶",
-        "100 元",
-        "088102",
-        "045",
-        "待查(10/12 調貨在途刪除)",
-      ),
-      "FILL",
-    );
-    await para(e, "要尋回這一本嗎?尋回後回到中山店的庫存。");
-    add(e, await select("尋回原因", "調貨時夾在別的本裡", null), "FILL");
-    await cap(e, "尋回需要有權限;原因必填。");
-    add(
-      e,
-      await actions([await btn("取消", "Text"), await btn("尋回")]),
-      "FILL",
-    );
-    fin();
-    done({ ov }, Y);
-  }
+  // ST-05 刷到票:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
   // ST-06 快速銷售
   {
     const { ov, dlg } = await overlay(
@@ -353,27 +277,7 @@ if (PART === "A") {
     );
     done({ ov }, Y);
   }
-  // ST-07 手動標記售出
-  {
-    const { ov, dlg } = await overlay(
-      "ST-07 Overlay / 手動標記售出(點格子)",
-      560,
-    );
-    await dhead(dlg, "標記售出", "5164 發大財 · 本號 056527");
-    add(dlg, (await node("TicketGrid")).createInstance(), "FILL");
-    add(
-      dlg,
-      await kv("已選", "#012~016、#020(6 張) · 1,200 元", { strong: true }),
-      "FILL",
-    );
-    add(
-      dlg,
-      await actions([await btn("取消", "Text"), await btn("確認售出")]),
-      "FILL",
-    );
-    fitOv(ov, dlg);
-    done({ ov }, Y);
-  }
+  // ST-07 手動標記售出確認:第六輪改成確認視窗,見 r4-store.js。
   // ST-08 當下撤銷
   {
     const { ov, dlg } = await overlay(
@@ -427,54 +331,7 @@ if (PART === "A") {
     );
     done({ ov }, Y);
   }
-  // ST-09 拆本
-  {
-    const { ov, dlg } = await overlay(
-      "ST-09 Overlay / 拆本(選收銀點、標註瑕疵)",
-      560,
-    );
-    await dhead(dlg, "拆本");
-    add(dlg, await scanField("刷條碼或輸入本號", "5133-071204"), "FILL");
-    add(
-      dlg,
-      await ticketInfo(
-        "5133 招財貓",
-        "1,000 元",
-        "071204",
-        "001~025",
-        "庫存 · 未拆 · 25 張",
-      ),
-      "FILL",
-    );
-    add(dlg, await T("放到哪個收銀點(可以分放)", "Subtitle/2"));
-    await put(add(dlg, H(12), "FILL"), [
-      await select("收銀點", "店內櫃台(本機)", 220),
-      await field("張數", "15", { w: 100 }),
-      await T("#001~015"),
-    ]);
-    await put(add(dlg, H(12), "FILL"), [
-      await select("收銀點", "店外攤位", 220),
-      await field("張數", "10", { w: 100 }),
-      await T("#016~025"),
-    ]);
-    add(
-      dlg,
-      await btn("+ 分到其他收銀點", "Text", "Primary", "Default", "Small"),
-    );
-    add(
-      dlg,
-      await field("標註瑕疵張號(選填)", "#018", {
-        helper: "瑕疵的張不能賣",
-      }),
-      "FILL",
-    );
-    add(
-      dlg,
-      await actions([await btn("取消", "Text"), await btn("拆本")]),
-      "FILL",
-    );
-    done({ ov }, Y);
-  }
+  // ST-09 拆本:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
   // ST-10 收回、移櫃
   {
     const { ov, row, fin } = await ovRow("ST-10 Overlay / 收回、移櫃");
@@ -492,7 +349,6 @@ if (PART === "A") {
     );
     add(a, await radio("整本收回(35 張)", true));
     add(a, await radio("只收回部分張數(點格子)"));
-    await cap(a, "寫「收回」事件,不需要審核。");
     add(
       a,
       await actions([await btn("取消", "Text"), await btn("收回")]),
@@ -513,7 +369,6 @@ if (PART === "A") {
     add(b, await select("移到", "店外攤位", null), "FILL");
     add(b, await radio("全部 35 張", true));
     add(b, await radio("部分張數(點格子)"));
-    await cap(b, "寫「移櫃」事件,不需要審核。");
     add(
       b,
       await actions([await btn("取消", "Text"), await btn("移櫃")]),

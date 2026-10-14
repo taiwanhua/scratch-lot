@@ -63,6 +63,11 @@ async function toolbar(content) {
   );
   // 每日需求列:對齊 RosterGrid 的日期欄(RosterGrid 沒有每日彙總列,先在外面畫;見回報)
   const rg = await binst("Draft/RosterGrid");
+  // 底座 RosterCell 的示範文字是中性的(櫃台 A),專案畫面改成「崗位 · 職責」
+  for (const t of rg.findAll((x) => x.type === "TEXT" && x.name === "line-2")) {
+    await figma.loadFontAsync(t.fontName);
+    t.characters = "店內櫃台 · 負責人";
+  }
   const hdr = rg.children.find((c) => c.name === "header-row");
   const strip = add(
     content,

@@ -131,10 +131,6 @@ if (PART === "SC1") {
     );
     add(dlg, await select("異動原因(已發布,必填)", "人員請假", null), "FILL");
     add(dlg, await field("說明", "原排的人臨時請假"), "FILL");
-    await cap(
-      dlg,
-      "發布後的異動寫入異動紀錄並通知當事人。畫休、店休、擋下的規則不能存。",
-    );
     add(
       dlg,
       await actions(
@@ -695,10 +691,6 @@ if (PART === "SC2") {
         2,
       ),
       "FILL",
-    );
-    await cap(
-      c,
-      "從出勤紀錄某一列按 [補打卡] 會自動帶入日期。流程:一關,店長限定「分店」;完成時寫入打卡(來源 = 補打卡)。",
     );
     add(
       sh.content,

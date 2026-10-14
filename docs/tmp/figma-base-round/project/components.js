@@ -119,8 +119,8 @@ const created = {};
       c.strokes = [await paint("divider")];
       c.strokeWeight = 1;
     } else if (state === "Selected") {
-      c.fills = [await paint("info/main")];
-      t.fills = [await paint("info/contrast")];
+      c.fills = [await paint("primary/main")];
+      t.fills = [await paint("primary/contrast")];
     } else {
       c.fills = [await paint("action/disabledBackground")];
       t.fills = [await paint("text/disabled")];
@@ -144,7 +144,7 @@ const created = {};
     };
   set.description =
     DESC_PROJECT +
-    "張數格子的一格(專案規格 7.5)。Available = 可選;Selected = 已選(規格寫「藍色」,用 info/main);Unavailable = 不能選(已售、瑕疵、報廢、被其他單據鎖定),灰底。";
+    "張數格子的一格(專案規格 7.5)。Available = 可選;Selected = 已選(主色,字用主色的對比色);Unavailable = 不能選(已售、跳號、報廢、被其他單據鎖定),灰底。";
   set.x = 300;
   set.y = 0;
   created.ticketCell = set.id;
@@ -224,7 +224,7 @@ const created = {};
   );
   const cellSet = await figma.getNodeByIdAsync(created.ticketCell);
   const sel = new Set([12, 13, 14, 15, 16, 20]);
-  const off = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 31, 47]);
+  const off = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 31, 47]);
   const grid = add(g, al("VERTICAL", { name: "grid", itemSpacing: 4 }));
   for (let r = 0; r < 10; r++) {
     const row = add(
@@ -232,7 +232,7 @@ const created = {};
       al("HORIZONTAL", { name: "row-" + r, itemSpacing: 4 }),
     );
     for (let k = 0; k < 10; k++) {
-      const n = r * 10 + k;
+      const n = r * 10 + k + 1; // 張號從 001 起;
       const state = sel.has(n)
         ? "Selected"
         : off.has(n)
@@ -259,7 +259,7 @@ const created = {};
   );
   g.description =
     DESC_PROJECT +
-    "張數格子(專案規格 7.5):調貨選張、標註瑕疵、盤點共用。每列 10 格;灰 = 不能選、已選 = info/main;Shift 連選;連號快選 從 / 到;已選以區段顯示。";
+    "張數格子(專案規格 7.5):調貨選張、拆本標註跳號、更正跳號、盤點、本的詳情頁、看板展開卡片共用。每列 10 格;灰 = 不能選、已選 = 主色;Shift 連選;連號快選 從 / 到;已選以區段顯示。";
   page.appendChild(g);
   g.x = 300;
   g.y = 120;
@@ -403,10 +403,19 @@ const created = {};
 }
 
 // ---------- 5. Draft/CashPointHeader:看板的收銀點列 ----------
+// State=Open(本機收銀點、開班中)/ Closed(未開班)/ Other(其他收銀點、開班中,只顯示狀態);
+// BOOLEAN Mine:Other 時那一班是自己開的 → 顯示 [切換到這個收銀點]。
 {
-  const mk = async (open) => {
+  const btnI = (l, v) =>
+    inst(
+      "Button",
+      { Variant: v, Size: "Small", State: "Default", Color: "Primary" },
+      { Label: l },
+    );
+  const mk = async (state) => {
+    const open = state !== "Closed";
     const c = figma.createComponent();
-    c.name = "State=" + (open ? "Open" : "Closed");
+    c.name = "State=" + state;
     c.layoutMode = "HORIZONTAL";
     c.resize(1100, 64);
     c.primaryAxisSizingMode = "FIXED";
@@ -427,7 +436,8 @@ const created = {};
       }),
     );
     add(l1, await txt("店內櫃台", "Subtitle/1", "text/primary", "name"));
-    add(l1, await inst("Draft/Tag", { Tone: "Primary" }, { Label: "本機" }));
+    if (state !== "Other")
+      add(l1, await inst("Draft/Tag", { Tone: "Primary" }, { Label: "本機" }));
     add(
       l1,
       await inst(
@@ -448,52 +458,43 @@ const created = {};
       ),
     );
     spacer(c);
+    let mine = null;
     if (open) {
-      for (const [k, v] of [
-        ["本班售出", "42 張 / 8,400"],
-        ["應有現金", "12,350"],
-      ]) {
+      const stat = async (k, v) => {
         const s = add(c, al("VERTICAL", { name: "stat", itemSpacing: 0 }));
         add(s, await txt(k, "Caption", "text/secondary"));
         add(s, await txt(v, "Subtitle/1", "text/primary"));
-      }
-      for (const [l, v] of [
-        ["投庫", "Outlined"],
-        ["出庫", "Outlined"],
-        ["交班結帳", "Contained"],
-      ])
-        add(
-          c,
-          await inst(
-            "Button",
-            { Variant: v, Size: "Small", State: "Default", Color: "Primary" },
-            { Label: l },
-          ),
-        );
-    } else
-      add(
-        c,
-        await inst(
-          "Button",
-          {
-            Variant: "Contained",
-            Size: "Small",
-            State: "Default",
-            Color: "Primary",
-          },
-          { Label: "開班" },
-        ),
-      );
-    return c;
+      };
+      await stat("本班售出", "42 張 / 8,400");
+      if (state === "Open") add(c, await btnI("最近售出", "Text"));
+      await stat("應有現金", "12,350");
+      if (state === "Open")
+        for (const [l, v] of [
+          ["兌獎", "Outlined"],
+          ["投庫", "Outlined"],
+          ["出庫", "Outlined"],
+          ["拆本", "Outlined"],
+          ["交班結帳", "Contained"],
+        ])
+          add(c, await btnI(l, v));
+      else mine = add(c, await btnI("切換到這個收銀點", "Outlined"));
+    } else add(c, await btnI("開班", "Contained"));
+    return { c, mine };
   };
-  const set = figma.combineAsVariants([await mk(true), await mk(false)], page);
+  const vs = [await mk("Open"), await mk("Closed"), await mk("Other")];
+  const set = figma.combineAsVariants(
+    vs.map((v) => v.c),
+    page,
+  );
   set.name = "Draft/CashPointHeader";
   set.layoutMode = "VERTICAL";
   set.itemSpacing = 16;
   set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
+  const pMine = set.addComponentProperty("Mine", "BOOLEAN", false);
+  vs[2].mine.componentPropertyReferences = { visible: pMine };
   set.description =
     DESC_PROJECT +
-    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open:負責人、協同(來自排班)、本班統計「只顯示本班」、應有現金、[投庫] [出庫] [交班結帳];Closed:上一班留在抽屜的金額、[開班]。「本機」= 這台裝置設定的本機收銀點。";
+    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open = 本機收銀點開班中:負責人、協同(來自排班)、本班售出、[最近售出]、應有現金、[兌獎] [投庫] [出庫] [拆本] [交班結帳];Closed:上一班留在抽屜的金額、[開班];Other = 其他收銀點開班中:只顯示狀態,Mine = 那一班是自己開的 → [切換到這個收銀點]。";
   set.x = 0;
   set.y = 1000;
   created.cashPointHeader = set.id;

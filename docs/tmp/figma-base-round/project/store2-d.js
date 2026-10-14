@@ -113,7 +113,7 @@ async function review(sh, steps, btns) {
 // ST-28 結帳確認申請 檢視頁(交班)
 {
   const sh = await shell(
-    "ST-28 結帳確認申請 檢視頁(交班)",
+    "ST-28a 結帳確認申請 檢視頁(交班)",
     "店面管理",
     "店面管理",
     "C-0042 結帳確認申請",
@@ -147,8 +147,23 @@ async function review(sh, steps, btns) {
   add(l, await kv("實點", "6,400", { strong: true }), "FILL");
   add(l, await kv("差額", "−100 · 找錯錢", { color: "error/main" }), "FILL");
   add(l, await kv("留給下一班 / 接班人", "0 / (沒有接班人)"), "FILL");
-  await cap(l, "每一項可點回原本的單據或事件。");
+  await cap(l, "每一項可以點開原本的單據。");
   const r = add(body, (await node("Denomination")).createInstance());
+  // 面額清點對上實點 6,400
+  {
+    const D = [1000, 500, 100, 50, 10, 5, 1];
+    const cnt = [5, 2, 3, 1, 4, 2, 0];
+    await fonts(r);
+    const ts = r.findAll((x) => x.type === "TEXT");
+    let k = 0;
+    for (let i = 0; i < ts.length; i++)
+      if (ts[i].name === "value") {
+        ts[i].characters = String(cnt[k]);
+        ts[i + 2].characters = (D[k] * cnt[k]).toLocaleString("en-US");
+        k++;
+      }
+    ts[ts.length - 1].characters = "6,400";
+  }
   await review(
     sh,
     [
@@ -179,7 +194,7 @@ async function review(sh, steps, btns) {
         ["單號", 100],
         ["類型", 70],
         ["盤點時間", 140],
-        ["推定售出", 110],
+        ["補登售出", 110],
         ["新增待查", 90],
         ["確認遺失", 90],
         ["狀態", 110],
@@ -189,7 +204,7 @@ async function review(sh, steps, btns) {
           "S-0032",
           "臨時",
           "10/16 21:40",
-          "3 張 · 600",
+          "2 張 · 300",
           "1",
           "1",
           await tag("待核准", "Warning"),
@@ -245,28 +260,36 @@ async function review(sh, steps, btns) {
         ["方式", 80],
         ["系統", 60],
         ["實盤", 60],
-        ["推定售出", 90],
+        ["差異張號", 90],
         ["處理", 160],
       ],
       [
-        ["5198 鼠來寶 · 088102", "店內櫃台", "數量", "6", "5", "1", "視為售出"],
+        [
+          "5198 鼠來寶 · 088102",
+          "店內櫃台",
+          "點格子",
+          "35",
+          "33",
+          "#071、#088",
+          "補登售出 1、待查 1",
+        ],
+        [
+          "5164 發大財 · 056528",
+          "店外攤位",
+          "掃描",
+          "35",
+          "34",
+          "#090",
+          "補登售出(事後更正)",
+        ],
         [
           "5201 金好運 · 060112",
           "店內櫃台",
           "點格子",
           "35",
-          "33",
-          "2",
-          "視為售出",
-        ],
-        [
-          "5133 招財貓 · 071204",
-          "店外攤位",
-          "掃描",
-          "10",
-          "11",
-          "—",
-          await tag("異常", "Error"),
+          "36",
+          "#045",
+          await tag("標記異常", "Error"),
         ],
       ],
       { right: [3, 4, 5] },
@@ -275,10 +298,10 @@ async function review(sh, steps, btns) {
   );
   const s = add(sh.content, await card("summary", 6), "FILL");
   for (const [l, v] of [
-    ["推定售出", "3 張 · 600 元"],
-    ["號碼不明", "2 張"],
-    ["新增待查", "1 本(088103)"],
-    ["確認遺失", "1 本 · 批購成本 4,600"],
+    ["補登售出", "2 張 · 300 元"],
+    ["新增待查", "1 張(#088)+ 1 本(088103)"],
+    ["標記異常", "1 張(#045)"],
+    ["確認遺失", "1 張 · 批購成本 184"],
   ])
     add(s, await kv(l, v), "FILL");
   await review(
@@ -288,10 +311,6 @@ async function review(sh, steps, btns) {
       ["待審核", "店長限定「中山店」;申請人是審核者時自動通過", "Warning"],
     ],
     [await btn("退回", "Outlined", "Error"), await btn("核准")],
-  );
-  await cap(
-    sh.content,
-    "核准時套用推定售出、號碼不明、新增待查、尋回、遺失。作廢一律擋下。",
   );
   done(sh, Y);
 }

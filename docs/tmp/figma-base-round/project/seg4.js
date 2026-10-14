@@ -228,97 +228,8 @@ if (PART === "IN") {
     );
     done({ ov }, Y);
   }
-  // IN-03 本的詳情頁
-  {
-    const sh = await shell(
-      "IN-03 本的詳情頁(張數格子、事件時間軸、來源、成本)",
-      "庫存管理",
-      "庫存管理",
-      "056527",
-    );
-    await docHead(
-      sh,
-      "5164 發大財 · 本號 056527",
-      "檯面中",
-      "Primary",
-      "200 元 × 100 張 · 張號 000~099",
-      [
-        await btn("標註瑕疵", "Outlined"),
-        await btn("報廢", "Outlined", "Error"),
-        await btn("尋回", "Outlined", "Primary", "Disabled"),
-      ],
-    );
-    const body = add(
-      sh.content,
-      H(16, { name: "body", counterAxisAlignItems: "MIN" }),
-      "FILL",
-    );
-    const l = add(body, V(16, { name: "left" }));
-    add(l, (await node("TicketGrid")).createInstance());
-    const info = add(l, await card("source", 6), "FILL");
-    add(info, await T("來源與成本", "Subtitle/1"));
-    for (const [k, v] of [
-      ["進貨單", "P-0031(10/12 點收)"],
-      ["批購甲類", "陳志明 #12345678 · 本人批購"],
-      ["批購金額率", "92%"],
-      ["批購成本", "18,400"],
-    ])
-      add(info, await kv(k, v), "FILL");
-    const tl = add(body, await card("timeline(事件時間軸)", 8), "FILL");
-    add(tl, await T("事件時間軸", "Subtitle/1"));
-    for (const [d, e, who] of [
-      ["10/12 14:05", "進貨(點收) · 中山店", "王小明"],
-      ["10/12 14:20", "拆本 → 店內櫃台 #000~099", "王小明"],
-      ["10/13~10/16", "售出 62 張(#000~061)", "多人"],
-      ["10/14 09:10", "標註瑕疵 #047", "李小華"],
-      ["10/16 18:30", "調出 #090~099 → 新竹店(T-0008,在途)", "王小明"],
-    ]) {
-      const r = add(tl, H(12, { counterAxisAlignItems: "MIN" }), "FILL");
-      const t1 = add(r, await T(d, "Body/2", "text/secondary"));
-      t1.resize(100, t1.height);
-      t1.textAutoResize = "HEIGHT";
-      add(r, await T(e), "FILL").textAutoResize = "HEIGHT";
-      add(r, await T(who, "Caption", "text/secondary"));
-    }
-    done(sh, Y);
-  }
-  // IN-04 標註瑕疵、尋回、報廢
-  {
-    const { ov, row, fin } = await ovRow(
-      "IN-04 Overlay / 標註瑕疵、尋回、報廢",
-    );
-    const a = await dcard(row, "標註瑕疵", 400);
-    add(a, await field("瑕疵張號", "#047、#078"), "FILL");
-    await cap(a, "印刷瑕疵的張不能賣。");
-    add(
-      a,
-      await actions([await btn("取消", "Text"), await btn("標註")]),
-      "FILL",
-    );
-    const b = await dcard(row, "尋回", 400);
-    add(b, await T("088103 · 5198 鼠來寶(待查)"));
-    add(b, await select("尋回原因", "盤點時夾在別的本裡", null), "FILL");
-    await cap(b, "回到刷到的那家店的庫存,原因必填。");
-    add(
-      b,
-      await actions([await btn("取消", "Text"), await btn("尋回")]),
-      "FILL",
-    );
-    const c = await dcard(row, "報廢", 400);
-    add(c, await field("報廢張號", "#060~064"), "FILL");
-    add(c, await select("原因", "受潮", null), "FILL");
-    await cap(c, "破損、污損、受潮;報表以批購成本計損失。");
-    add(
-      c,
-      await actions([
-        await btn("取消", "Text"),
-        await btn("報廢", "Contained", "Error"),
-      ]),
-      "FILL",
-    );
-    fin();
-    done({ ov }, Y);
-  }
+  // IN-03 本的詳情頁:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
+  // IN-04 更正跳號、尋回、報廢:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
   // IN-05 待查·遺失
   {
     const sh = await shell(
@@ -669,246 +580,8 @@ if (PART === "PU") {
     );
     done(sh, Y);
   }
-  // PU-05 進貨單 新增頁
-  {
-    const sh = await shell(
-      "PU-05 進貨單 新增頁(刷條碼、依遊戲分組、兌獎金額 / 折抵 / 扣款)",
-      "進貨單",
-      "進貨單",
-      "新增進貨單",
-    );
-    const head = add(sh.content, await card("header", 12), "FILL");
-    add(
-      head,
-      await grid(
-        [
-          await select("進貨分店", "中山店", null),
-          await select("叫貨單", "R-0023(叫貨 5,已刷 4)", null),
-          await select("批購甲類", "陳志明 #12345678", null),
-          await select("扣款帳戶", "中山店營業戶 · 末 34521", null),
-        ],
-        4,
-      ),
-      "FILL",
-    );
-    const r2 = add(head, H(16, { counterAxisAlignItems: "MAX" }), "FILL");
-    await put(r2, [
-      await T("本人批購"),
-      await radio("是"),
-      await radio("否", true),
-      await select("批購受託人", "陳小芳", 200),
-      await field("批購日期", "2026-10-16", { w: 160 }),
-      await field("兌獎金額", "100,000", { w: 160 }),
-    ]);
-    add(sh.content, await field("刷條碼加入", "5201-1-060113-000-0-2"), "FILL");
-    const det = add(
-      sh.content,
-      await card("details(依遊戲分組)", 0, 0),
-      "FILL",
-    );
-    const grp = async (title, rateField, sub) => {
-      const g = add(
-        det,
-        H(12, {
-          name: "group",
-          paddingLeft: 16,
-          paddingRight: 16,
-          paddingTop: 10,
-          paddingBottom: 10,
-        }),
-        "FILL",
-      );
-      g.fills = [await paint("bg/default")];
-      add(g, await T(title, "Subtitle/2"));
-      spacer(g);
-      add(g, await T("整組批購金額率", "Caption", "text/secondary"));
-      add(g, rateField);
-      add(g, await T(sub, "Subtitle/2"));
-    };
-    await grp(
-      "5201 金好運 · 200 元 × 100 張",
-      await field("", "92", { w: 70 }),
-      "小計 55,200",
-    );
-    add(
-      det,
-      await table(
-        [
-          ["本號", 140],
-          ["最後張號", 90],
-          ["張數", 70],
-          ["整本金額", 100],
-          ["批購金額率", 130],
-          ["批購金額", 110],
-        ],
-        [
-          [
-            "060113",
-            "099",
-            "100",
-            "20,000",
-            await field("", "92", { w: 70 }),
-            "18,400",
-          ],
-          [
-            "060114",
-            "099",
-            "100",
-            "20,000",
-            await field("", "92", { w: 70 }),
-            "18,400",
-          ],
-          [
-            "060115",
-            "100(跳號)",
-            "101",
-            "20,000",
-            [await field("", "92", { w: 70 }), await warn("改過")],
-            "18,400",
-          ],
-        ],
-        { right: [2, 3, 5] },
-      ),
-      "FILL",
-    );
-    await grp(
-      "5164 發大財 · 200 元 × 100 張",
-      await field("", "92", { w: 70 }),
-      "小計 4,800",
-    );
-    add(
-      det,
-      await table(
-        [
-          ["本號", 140],
-          ["最後張號", 90],
-          ["張數", 70],
-          ["整本金額", 100],
-          ["批購金額率", 130],
-          ["批購金額", 110],
-        ],
-        [
-          [
-            "056529",
-            "099",
-            "100",
-            "20,000",
-            await field("", "24", { w: 70 }),
-            "4,800",
-          ],
-        ],
-        { right: [2, 3, 5] },
-      ),
-      "FILL",
-    );
-    const sum = add(sh.content, await card("totals(系統計算)", 6), "FILL");
-    for (const [k, v, o] of [
-      ["批購合計", "60,000"],
-      ["兌獎金額", "100,000"],
-      ["兌獎折抵(兌獎金額與批購合計取較小者)", "60,000"],
-      ["扣款金額(記「批貨支出」)", "0", { strong: true }],
-      [
-        "兌獎剩餘(記銀行「兌獎入帳」,不算待結清)",
-        "40,000",
-        { strong: true, color: "success/main" },
-      ],
-    ])
-      add(sum, await kv(k, v, o), "FILL");
-    add(
-      sh.content,
-      await actions(
-        [await btn("送出")],
-        [await btn("取消", "Text"), await muted("超過預計要給本數只警告")],
-      ),
-      "FILL",
-    );
-    done(sh, Y);
-  }
-  // PU-07 進貨單 檢視頁:結算 + 送錯分店
-  {
-    const sh = await shell(
-      "PU-07 進貨單 檢視頁:點收進度、結算區塊",
-      "進貨單",
-      "進貨單",
-      "P-0031",
-    );
-    await docHead(
-      sh,
-      "進貨單 P-0031",
-      "審核中",
-      "Warning",
-      "中山店 · 陳志明 #12345678 · 批購 10/12 · 點收 8 / 10",
-      [await btn("列印進貨點收單", "Outlined")],
-    );
-    await settlement(sh.content, {
-      buttons: [
-        await btn("付款", "Outlined", "Primary", "Default", "Small"),
-        await btn("收到退款", "Outlined", "Primary", "Default", "Small"),
-      ],
-      sums: [
-        ["應付(批購合計 − 兌獎折抵)", "16,400"],
-        ["已付淨額", "18,400"],
-        ["差額", "待退 2,000", "warning/main"],
-      ],
-      rows: [
-        [
-          "10/12 14:00",
-          "批貨支出",
-          "18,400",
-          "總部營業戶 · 末 34521",
-          "系統",
-          "",
-        ],
-        [
-          "10/12 14:00",
-          "兌獎入帳",
-          "40,000",
-          "總部營業戶 · 末 34521",
-          "系統",
-          await muted("不算待結清"),
-        ],
-      ],
-    });
-    await review(
-      sh,
-      [
-        ["已送出", "王小明 10/12 14:00"],
-        [
-          "點收中",
-          "店長限定「中山店」:8 / 10 本已點收;還有沒點收的列時不能核准",
-          "Warning",
-        ],
-      ],
-      [
-        await btn("退回", "Outlined", "Error"),
-        await btn("核准", "Contained", "Primary", "Disabled"),
-      ],
-    );
-    done(sh, Y);
-    const { ov, dlg } = await overlay(
-      "PU-07 Overlay / 刷到別家分店的進貨單",
-      480,
-    );
-    await dhead(dlg, "這本不是送到這家店");
-    add(
-      dlg,
-      await alert(
-        "060116 在進貨單 P-0033 上屬於「新竹店」,不能直接入庫到中山店。",
-        "Warning",
-      ),
-      "FILL",
-    );
-    add(
-      dlg,
-      await actions([
-        await btn("通知總部更正", "Outlined"),
-        await btn("不入庫,轉送新竹店"),
-      ]),
-      "FILL",
-    );
-    await cap(dlg, "通知總部更正 = 通知這張進貨單的建立者(底座 B7)。");
-    done({ ov }, Y);
-  }
+  // PU-05 進貨單 新增頁:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
+  // PU-07 結算區塊、PU-11 點收刷到別家店的書:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
   // PU-08 調貨單 列表
   {
     const sh = await shell("PU-08 調貨單 列表", "調貨單", "調貨單", "調貨單");
@@ -1002,10 +675,6 @@ if (PART === "PU") {
       ),
       "FILL",
     );
-    await cap(
-      sh.content,
-      "出貨店的人送出時自動跳過這一關。通過後:這些張改為「在途」、寫「調出」事件、列印調貨出貨單(出貨人、送貨人、收貨人簽名),通知收貨店店長。",
-    );
     await settlement(sh.content, {
       buttons: [
         await btn("收款", "Outlined", "Primary", "Default", "Small"),
@@ -1027,72 +696,7 @@ if (PART === "PU") {
       [await btn("退回", "Outlined", "Error"), await btn("確認出貨")],
     );
     done(sh, Y);
-    const s2 = await shell(
-      "PU-10b 調貨單 檢視頁:第二關 點收 + 結算(收貨店)",
-      "調貨單",
-      "調貨單",
-      "T-0008",
-    );
-    await docHead(
-      s2,
-      "調貨單 T-0008",
-      "第二關 點收",
-      "Warning",
-      "中山店 → 新竹店 · 在途 · 點收 0 / 1",
-    );
-    add(s2.content, await field("刷條碼點收", "5164-1-056527-090-0-3"), "FILL");
-    add(
-      s2.content,
-      await table(
-        [
-          ["本", 120],
-          ["張號", 140],
-          ["張數", 70],
-          ["批購金額", 100],
-          ["點收", 160],
-        ],
-        [["056527", "#090~099", "10", "1,840", await tag("待點收")]],
-        { right: [2, 3] },
-      ),
-      "FILL",
-    );
-    await settlement(s2.content, {
-      buttons: [
-        await btn("付款", "Contained", "Primary", "Default", "Small"),
-        await btn("收到退款", "Outlined", "Primary", "Default", "Small"),
-      ],
-      sums: [
-        ["調貨金額", "1,840"],
-        ["已付淨額", "1,840"],
-        ["其中對方已付", "現金 1,840,10/16 交給王小明,出貨店尚未入帳"],
-      ],
-      rows: [
-        [
-          "10/16 19:05",
-          "調貨支出",
-          "1,840",
-          "現金 · 店內櫃台抽屜(開班中)",
-          "陳美玲",
-          await btn("沖正", "Text", "Error", "Default", "Small"),
-        ],
-      ],
-    });
-    await review(
-      s2,
-      [
-        ["第一關", "已確認出貨 10/16 18:30"],
-        [
-          "待審核",
-          "店長限定「新竹店」:全部點收且已付淨額 = 調貨金額才能核准",
-          "Warning",
-        ],
-      ],
-      [
-        await btn("退回", "Outlined", "Error"),
-        await btn("核准", "Contained", "Primary", "Disabled"),
-      ],
-    );
-    done(s2, Y);
+    // PU-10b 第二關點收 + 結算:第三輪重畫,現況以 Figma 為準(README「以 Figma 為準的畫面」)。
   }
 }
 
@@ -1449,7 +1053,7 @@ if (PART === "AC") {
             "0",
             [
               await btn("收款", "Outlined", "Primary", "Default", "Small"),
-              await muted("對方已付現"),
+              await muted("收貨店已付現"),
             ],
           ],
           [
@@ -1466,10 +1070,6 @@ if (PART === "AC") {
         { right: [3, 4, 6] },
       ),
       "FILL",
-    );
-    await cap(
-      sh.content,
-      "進貨與調貨同一頁;按鈕打開與單據檢視頁相同的結算視窗,權限沿用單據的 settle / pay / receive。「兌獎入帳」不算待結清。",
     );
     done(sh, Y);
   }

@@ -112,9 +112,34 @@
   1. 畫面工具 `al()` 建的 auto layout 預設會裁切內容,TextField 的浮動標籤(在欄位上緣上方 8px)被所在的列切掉一半 → `al()` 改成預設不裁切,既有畫面的巢狀 auto layout 一併關閉裁切(表格、殼、`input` 保留)。
   2. 底座草稿 `Draft/OrgTreeSelect`(47:409)的標籤放在欄位上方(高 64),和 TextField / SelectField 的浮動標籤(高 56)並排時上下不齊 → 四個變體都改成浮動標籤(`labelWrap` 絕對定位 10, −8),高度 56。
   3. 畫面高度沒有跟著內容撐高,底部按鈕被畫面外框切掉(DE-03)→ 重新撐高。
-- **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」,另有「58mm 單據」Section 接在最後(店面管理頁)。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」;`project/_r3.js` 的 `relayoutSizes()` 依編號排序。
+- **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」,另有「58mm 單據」Section 接在最後(店面管理頁)。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」。第七輪起改成依操作流程分列,排列以 `project/r4-layout.js` 為準(見下方「腳本與 Figma 的對應」);`_r3.js` 的 `relayoutSizes()` 不再使用。
 - **腳本**:`const PROJECT = true;` + `_kit.js` + `project/_r3.js` + 畫面腳本(`project/r3-*.js`)。`_r3.js` 有平板 / 手機殼 `dev()`、手機全螢幕彈窗 `devDialog()`、卡片列表 `cardList()`、張數格子 `ticketGrid()`(張號從 001 起)、結算區塊 `settlement()`(金額列 + 收付歷程)。
 - 執行時為了不讓每次呼叫都重送工具組,工具組原文暫存在檔內一頁「_tooling(AI 暫存腳本,完工後刪除)」的文字節點,呼叫時讀出來 `eval`;完工後刪除該頁。正本仍是本資料夾的檔案。
 - **畫完的基準(2026-10-14)**:`audit-layout.js` 全部專案頁與 Base Draft 頁 `clippedText` / `misalignedRows` / `overflowNodes` / `basePrimaryBindings` 都是 0。
 - **截圖注意**:伺服器端截圖(get_screenshot)對 Section 的 SLOT 內容有時顯示舊寬度(欄位看起來比實際窄);以外掛端 `node.screenshot()` 或 Figma 畫面為準。
 - 暫存工具頁「_tooling」已刪除。
+
+## 腳本與 Figma 的對應(第七輪整理,2026-10-14)
+
+目標:照腳本重跑能得到跟現在 Figma 一致的結果。腳本裡已經沒有拿掉的舊做法(瑕疵、拆本時略過跳號、盤點推定、營業日、號碼不明、對方已付、卡片 ⋮ 選單、看板卡片「待標註」);被後來重畫取代的段落已從舊腳本刪除,改成一行註解指向現行來源。
+
+### 執行順序(專案頁,scratch 模式)
+
+1. 元件:`project/_header.js` + `project/_screen-helpers.js` + `components.js`(TicketCell 主色、張號 001 起、CashPointHeader Open / Closed / Other + Mine、BoardBookCard Normal / LowStock)。
+2. 第一、二輪畫面:`const PROJECT = true;` + `../_kit.js` + `store.js`、`store-wizards.js`、`purchasing.js`、`schedule.js`、`store2.js`、`store2-bc.js`、`store2-d.js`、`seg4.js`、`seg5.js`、`seg6.js`(各檔頭註明 PART)。
+3. 第三輪:`../_kit.js` + `_r3.js` + `r3-store.js`(ST-13 / 14 / 15)。
+4. 第四~六輪:`r4-lib.js` + `r4-store.js`(PART 36、36m、37、07、28b)、`r4-reports.js`(RE-04 平板 / 手機);之後跑 `brand-rebind.js`。
+5. 排列:`r4-layout.js`(每頁一次,含畫面高度貼合內容)。
+6. 稽核:`audit.js`、`audit-layout.js`,全部要是 0。
+
+### 以 Figma 為準的畫面(腳本無法重現)
+
+| 畫面                                                                                                                                                                  | 原因                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 全部的平板 / 手機畫面(ST、IN、PU、SC、RW;r4 腳本畫的 ST-07、ST-28b、ST-36、ST-37、RE-04 除外)                                                                         | 第三輪用暫存工具頁直接在 Figma 執行(`dev()`、`devDialog()` 等工具在 `_r3.js`),各畫面的腳本當時沒有存檔             |
+| ST-01 電腦版(65:15)、IN-01(91:17)、AC-02(93:400)                                                                                                                      | 第三輪就地修改既有畫面(收銀點標題列換成 CashPointHeader Other + Mine、加分店選擇器、加帳戶設定),沒有存成腳本       |
+| ST-05、ST-09、ST-34、ST-35 電腦版;IN-03、IN-04;PU-05、PU-07、PU-10b、PU-11;RE-03、RE-04 電腦版、RE-05;SC-15~31                                                        | 第三輪重畫或新增,腳本沒有存檔(`r3-store.js` 只有 ST-13~15 的程式,其餘段落是註解)                                   |
+| 第四~六輪在上述畫面上的就地修改:ST-09 拿掉 [略過]、IN-03 頁首 [更正跳號]、IN-04 更正跳號視窗、看板卡片示範資料、RE-02 / RE-04 的舊名詞、ST-24 / 25 / 29 / 30 的舊名詞 | 用一次性的修改腳本直接改節點;已同步改進仍存在的舊腳本(store-wizards、store2-d、seg5 等),但上一列的畫面本身沒有腳本 |
+| 框外註解「<畫面名> · 註解」                                                                                                                                           | 第六輪把畫面裡的開發用說明搬出來時建立;內容是原本畫面上的文字                                                      |
+
+其他畫面(上表以外的電腦版)照「執行順序」重跑會得到相同內容;位置以 `r4-layout.js` 排完為準。
