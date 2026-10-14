@@ -10,27 +10,27 @@
 ## 搬回底座的方法(重建,不跨檔搬移)
 
 1. 在 wowgo-base Design System 開一頁(例:「Draft / 本輪」),把 `_resolve.js` 的 `MODE` 改成 `'base'`,依序貼上「檔頭 + 元件腳本」執行:
-   `ActionIcon+.js` → `Section.js` → `AudiencePicker.js` → `DataScopeRuleCard.js` → `OrgTreeSelect.js` → `MonthCalendar.js` → `RosterGrid.js` → `Notification.js` → `Print.js` → `Screens.js`。
-   第二輪起追加:`Stepper.js` → `Round2-base.js`(前置 `_compact.js`;RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Screens2-base.js` 的 PART 1、2、3、4(前置 `const PROJECT = false;` + `_kit.js`;BS-03~~07、BS-11~~16,PART 4 = 第三輪的 BS-17~~20 印表機管理)。`Section.js` 的內容區是 SLOT;`OrgTreeSelect.js` 是浮動標籤(高 56)。
+   `ActionIcon+.js` → `Section.js` → `AudiencePicker.js` → `DataScopeRuleCard.js` → `OrgTreeSelect.js` → `MonthCalendar.js` → `RosterGrid.js` → `Notification.js` → `Print.js`。(`Screens.js` 第十九輪刪除:它自己組了一套殼與版面,畫面改由 `Screens2-base.js` 以現有畫面為底重畫。)
+   第二輪起追加:`Stepper.js` → `Round2-base.js`(前置 `_compact.js`;RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Screens2-base.js` 的 PART 1~~5(前置 `const PROJECT = false;` + `_kit.js` + `Base-ref.js`)。**第十九輪起參考畫面一律以現有畫面為底**:`Base-ref.js` 依名稱在本檔 `Screen / Admin …` 各頁找現有畫面複製(`refShell`),把非底座變數換回底座同名變數(`rebase`),再套本輪改動;對話框沿用現有對話框樣式、背景是打開它的畫面(`refOverlay`);框外註解寫「對應現有畫面 + 本輪改動」(`refNote`)。在 wowgo-base 重建前,先確認本檔參考畫面頁的名稱前綴(`REF_PAGE_PREFIX`)與框名和 scratch-lot 相同。PART 1 = BS-01~~03、2 = BS-04~~07、3 = BS-08、09、12、13、21、4 = BS-10、17~~20、5 = BS-11、14、15、16。`Section.js` 的內容區是 SLOT;`OrgTreeSelect.js` 是浮動標籤(高 56),下拉的列用現有 `Draft/OrgTreeItem`。
    - **三份檔頭都要設 `MODE = 'base'`**:`_resolve.js`(元件腳本)、`_compact.js`(Round2-base)、`_kit.js`(Screens2-base)。base 模式下變數 / 樣式依 key 找本檔 local,底座既有元件依節點 id(`_resolve.js` 的 `K.comp[*].baseNode`、`_kit.js` 的 `BASE_NODE`),本輪草稿元件依名稱在草稿頁「Draft / 本輪」找(`_compact.js` / `_kit.js` 的 `DRAFT_PAGE`、`draft()`、`node()`)。腳本裡沒有寫死 scratch-lot 的節點 id。
    - 三份檔頭的 `al()` 都預設不裁切內容(浮動標籤、陰影);表格、殼、Overlay 另外設定裁切。
    - `_kit.js` 的 `BASE_NODE` 還沒填的(Checkbox、Radio、TextField、Link、StatCard、AdminRouteTabs)和 `_resolve.js` 一樣,重建前要先在底座檔查到節點 id 補上;未填時腳本會直接報錯,不會靜默改用 Library。
    - 有依賴的要照順序(後面的會在目前頁找前面的草稿元件)。
-   - 全部跑完後跑 `project/r4-layout.js`(`PAGE_ID` 設成草稿頁):頁名含「本輪」時用 `ROWS.base` 依名稱分列。兩張「說明 / 通知鈴暫時疊加」是 scratch-lot 專用的註解卡(步驟 4 AppBar 加槽後刪除),不在腳本裡。
+   - 全部跑完後跑 `project/r4-layout.js`(`PAGE_ID` 設成草稿頁):頁名含「本輪」時用 `ROWS.base` 依名稱分列。
    - 第七、八輪核對過:Base Draft 上的文字(數字除外)都能在底座腳本裡找到(上面的註解卡除外),示範文字是中性內容。
    - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 裡還沒填 `baseNode` 的元件(Draft/Select、Draft/SelectField、TextField、Draft/Checkbox、Link、Draft/Radio、Draft/Snackbar、Draft/Popover、Draft/AdminRouteTabs、Draft/ConfirmDialog),重建前要先在底座檔查到節點 id 補上。
 2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 17 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。
 3. 底座 Library 依 `docs/deployment.md` 的 Release 步驟發布(Library 版本與 Git tag 互相指向)。
 4. **底座既有元件與畫面的修改**(scratch-lot 不能改底座元件,所以留到這一步在底座檔直接改):
-   - `Draft/AdminAppBar`(2001:1248)加 BOOLEAN `Notifications`,右側放 `Draft/NotificationBell` 實例(使用者已同意)。重建後,參考畫面上以絕對定位疊加的鈴(圖層名 `notification-bell(待 AppBar 加槽)`)改用這個屬性並刪除疊加層;旁邊的說明卡「說明 / 通知鈴暫時疊加」(scratch-lot 59:1524、59:1528)一併刪除。
-   - `Draft/AdminSideNav`(2001:1214)系統管理群組加「通知設定」「印表機管理」兩列(先用備用槽 spare-1~4;不夠再新增)。
+   - `Draft/AdminAppBar`(2001:1248)加 BOOLEAN `Notifications`,右側放 `Draft/NotificationBell` 實例(使用者已同意)。重建後,參考畫面上以絕對定位疊加的鈴(圖層名 `notification-bell(待 AppBar 加槽)`)改用這個屬性並刪除疊加層;(鈴只疊在 BS-08,說明寫在它的框外註解。)
+   - `Draft/AdminSideNav`(2001:1214)系統管理群組在現有 8 項(組織管理…流程管理)之後依序加「通知設定」「印表機管理」:現有備用槽只剩 spare-4(參考畫面先用它放「通知設定」),**要再加一個槽給「印表機管理」**;圖示用 `notifications`、`print`。
    - `Draft/AdminSideNav` 的**頂層備用槽加到 8 個**(現在只有 2 個,放不下專案的 8 個頂層模組);加完後 scratch-lot 的 `Draft/ScratchLotSideNav` 改用底座側欄實例。
    - 底座參考畫面「Screen / Admin 資料範圍」的兩張舊規則卡換成 `Draft/DataScopeRuleCard` 實例(scratch-lot 7:10 已先換,實例 59:1847 / 59:2033),旁邊的註記卡「合成規則與資料影響」依新卡內容改寫。
 5. 在 scratch-lot Screens 接受 Library 更新,把畫面上本地草稿元件的實例用 `swapComponent` 換成 Library 同名元件(屬性名相同,覆寫會保留),最後刪除「Base Draft / 本輪底座元件」頁的本地草稿。
 
 ## 每次改圖的固定流程(每次派工都附上)
 
-**改之前**:列出影響範圍——規格章節、三種尺寸的畫面、元件、入口對照、畫面清單、腳本;共用區塊先改元件,不在單張畫面手改(標題列、頂部列、側欄、app-bar、看板卡片、張數格子、Stepper)。
+**改之前**:**先找現有畫面 / 元件並截圖對照**——底座畫面在本檔 `Screen / Admin …` 各頁、元件在 wowgo-base Library;設計以現有為底,只畫差異(底座參考畫面用 `Base-ref.js` 複製現有畫面再改;專案頁的外殼、列表、表單也要和底座現有樣式一致,不另組一套)。再列出影響範圍——規格章節、三種尺寸的畫面、元件、入口對照、畫面清單、腳本;共用區塊先改元件,不在單張畫面手改(標題列、頂部列、側欄、app-bar、看板卡片、張數格子、Stepper)。
 
 **改之後**(全部通過才能回報):
 
@@ -60,6 +60,7 @@
 14. **對話框背景是打開它的頁面**:遮罩 + 對話框 / 抽屜 / 底部面板的畫面,背景放入口畫面(依入口對照,同分店、同班、同示範資料)的副本(圖層名「背景:<入口畫面>」,鎖定)再蓋 scrim(黑、不透明度 50%),不能只有灰底。`audit-sync.js` 的 `overlayNoPage` 要是 0;背景頁裡的標題列不算進三尺寸按鈕比對。
 15. **權限差異**:只有畫面差很多的才另外畫「權限不足」版本;其他畫面在框外註解寫「- 權限:沒有 `<權限>` 權限時看不到 [按鈕]」,和規格對應章節同一句。
 16. **放不下的分頁列**:單列橫向捲動,有更多分頁的那一側放漸層 + ‹ / ›(圖層名 `scroll-edge:start` / `scroll-edge:end`),選到的分頁捲進可視範圍;外框命名「PageTabs(可捲動)」,裡面超出的分頁不算裁切(`audit-layout.js`)。
+17. **以現有為底**:每張底座參考畫面先複製現有的 `Screen / Admin …` 畫面(側欄、頁首、分頁、卡片、表格、欄位、按鈕、對話框樣式都沿用),只畫本輪改動;框外註解第一行寫「對應現有畫面:<框名>」。新元件先對照 Library 有沒有同功能的元件(例:組織樹列用現有 `Draft/OrgTreeItem`、搜尋框用現有 TextField),有就沿用;用詞也沿用現有畫面(例:表單設計器叫「分區」)。`audit.js` 的 `baseScreensNotFromRef`(沒有對應註解或頁首不是 Library AppBar)與 `nonBaseInBaseScreens`(Base Draft 畫面綁到非底座變數)要是 0。
 
 ## 驗收稽核 `audit.js`
 
@@ -112,13 +113,16 @@
 
 1. **ActionIcon+ 併入既有 set**:變體移入後,scratch-lot 內 ActionIcon+ 的實例要 swap 到 Draft/ActionIcon 的同名變體;Section、OrgTreeSelect、MonthCalendar、Notification、Print 內部的實例在底座重建時已直接用 Draft/ActionIcon,不受影響。
 2. **中文字型**:沿用底座文字樣式(Public Sans);中文靠字型備援顯示,要在發布後於 scratch-lot 代表畫面核對中文、符號與排版(FIGMA-02)。
-3. **通知鈴的位置**:底座 Draft/AdminAppBar 目前沒有通知鈴的槽;參考畫面暫以絕對定位疊在 AppBar 右側(旁邊有說明卡)。搬回底座時在 AppBar 加 BOOLEAN `Notifications`(見步驟 4)。
-4. **側欄內容**:參考畫面的 Draft/AdminSideNav 沿用底座預設選單(含食譜示範),沒有「通知設定」「印表機管理」;搬回底座時補上(見步驟 4)。
+3. **通知鈴的位置**:底座 Draft/AdminAppBar 目前沒有通知鈴的槽;BS-08 暫以絕對定位疊在 AppBar 右側(說明在框外註解)。搬回底座時在 AppBar 加 BOOLEAN `Notifications`(見步驟 4)。
+4. **側欄內容**:第十九輪起參考畫面的側欄是現有畫面的副本(現有選單,不是元件預設的食譜示範);「通知設定」先放在 spare-4,「印表機管理」等底座側欄元件加槽(見步驟 4)。
 5. **資料範圍參考畫面**:舊規則卡已換成新卡,但兩張卡內容相同(元件預設內容),旁邊舊的註記卡仍描述舊範例(規則 1 = 客服、規則 2 = 租戶 A),底座重建時一併改寫。
 6. **通知設定頁示範資料**:已改為中性的底座情境(示範表單到期提醒、印表機離線、Email 寄送失敗);刮刮樂的提醒類型只出現在專案畫面。
-7. **Overlay 遮罩**:半透黑遮罩依 FIGMA-06 慣例用固定色(黑 50%),不是變數綁定;與底座既有 Overlay 畫面一致。
+7. **Overlay 遮罩**:半透黑遮罩依 FIGMA-06 慣例用固定色(黑 50%),不是變數綁定。現有底座 Overlay 畫面是灰底、沒有背後的頁面;本輪參考畫面依檢查清單 14 改成「背景是打開它的畫面」,現有的 Overlay 畫面要不要一起改,待使用者決定。
 8. **Brand 補綁**:草稿元件在 scratch-lot 顯示底座橘色(只綁底座變數);scratch-lot 品牌色由 Brand Sync 外掛在畫面層補綁,草稿元件本身不補。
 9. **Receipt58 字色**:收據只用 grey/900 與 common/white(熱感紙只有黑),不跟深色模式。
+
+10. **PageTabs 捲動邊緣的漸層**:BS-15b 的漸層暫用白色(漸層停點不能綁變數),搬回底座時改用 bg/paper 的色值。
+11. **ScheduleTimeline**(另一輪加的)示範文字含專案用語(店內櫃台),要改成中性內容。
 
 ## 專案畫面(scratch-lot 專屬):正本是 Figma
 

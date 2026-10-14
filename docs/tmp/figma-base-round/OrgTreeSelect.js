@@ -49,34 +49,24 @@ async function input(multiple) {
   add(lw, await txt("組織", "Caption", "text/secondary", "label"));
   return w;
 }
-async function treeRow(level, label, state, multiple, checked) {
-  const r = al("HORIZONTAL", {
-    name: "tree-row",
-    itemSpacing: 4,
-    paddingLeft: 8 + level * 20,
-    paddingRight: 8,
-    paddingTop: 4,
-    paddingBottom: 4,
-    counterAxisAlignItems: "CENTER",
-  });
-  if (state === "leaf") {
-    const sp = figma.createFrame();
-    sp.name = "indent";
-    sp.fills = [];
-    sp.resize(24, 24);
-    add(r, sp);
-  } else add(r, icon(state === "open" ? "expand-more" : "chevron-right"));
-  if (multiple)
-    add(
-      r,
-      await inst("Draft/Checkbox", {
-        State: checked ? "Checked" : "Unchecked",
-        Enabled: "True",
-      }),
+// 樹的每一列沿用現有的 Draft/OrgTreeItem(與「選擇所屬組織」對話框同一個元件):深度、選取、勾選框都是它的屬性;
+// 現有的組織樹不收合,所以這裡也不畫展開箭頭(第十九輪改,原本自畫列 + 箭頭)
+async function treeRow(level, label, multiple, checked) {
+  // 單選:選到的列 State=Selected(反白);多選:列維持 Default,裡面的勾選框改 Checked(和現有對話框一樣)
+  const r = await inst(
+    "Draft/OrgTreeItem",
+    {
+      State: checked && !multiple ? "Selected" : "Default",
+      Depth: String(Math.min(level, 3)),
+    },
+    { Label: label, ShowCheckbox: multiple, ShowTag: false },
+  );
+  if (multiple && checked) {
+    const cb = r.findOne(
+      (n) => n.type === "INSTANCE" && /Checkbox/.test(n.name),
     );
-  add(r, await txt(label, "Body/2", "text/primary", "label"));
-  if (!multiple && checked) r.fills = [await paint("action/selected")];
-  await radius(r, "radius/sm");
+    await setProps(cb, { State: "Checked" });
+  }
   return r;
 }
 async function panel(multiple) {
@@ -92,30 +82,22 @@ async function panel(multiple) {
   p.effectStyleId = (await style("Shadow/Dropdown")).id;
   await radius(p, "radius/md");
   p.clipsContent = false;
-  const s = al("HORIZONTAL", {
-    name: "search",
-    itemSpacing: 6,
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 6,
-    paddingBottom: 6,
-    counterAxisAlignItems: "CENTER",
-  });
-  s.strokes = [await paint("divider")];
-  s.strokeWeight = 1;
-  await radius(s, "radius/sm");
-  add(s, icon("search"));
-  add(s, await txt("搜尋組織", "Body/2", "text/secondary", "placeholder"));
+  // 搜尋框沿用現有 TextField(與「選擇所屬組織」對話框相同)
+  const s = await inst(
+    "TextField",
+    { Size: "Small", State: "Default" },
+    { Label: "搜尋組織", Value: "" },
+  );
   add(p, s, "FILL");
   const rows = [
-    [0, "示範公司(最上層組織)", "open", false],
-    [1, "北區", "open", false],
-    [2, "A 店", "leaf", true],
-    [2, "B 店", "leaf", multiple],
-    [1, "南區", "closed", false],
+    [0, "示範公司(最上層組織)", false],
+    [1, "北區", false],
+    [2, "A 店", true],
+    [2, "B 店", multiple],
+    [1, "南區", false],
   ];
-  for (const [l, t, st, ck] of rows)
-    add(p, await treeRow(l, t, st, multiple, ck), "FILL");
+  for (const [l, t, ck] of rows)
+    add(p, await treeRow(l, t, multiple, ck), "FILL");
   if (multiple)
     add(p, await txt("已選 2 / 上限 5", "Caption", "text/secondary", "count"));
   return p;

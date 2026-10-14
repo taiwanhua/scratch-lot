@@ -85,7 +85,7 @@ const ROWS = {
     ["出勤紀錄", ["SC-11", "SC-12", "SC-29"]],
     ["補打卡申請", ["SC-13", "SC-30"]],
   ],
-  // Base Draft:依名稱分列(在 wowgo-base 重建時也能用);「*」結尾是名稱開頭比對;兩張「說明 / 通知鈴暫時疊加」是 scratch-lot 專用的註解卡,用節點 id
+  // Base Draft:依名稱分列(在 wowgo-base 重建時也能用);「*」結尾是名稱開頭比對
   base: [
     [
       "元件:區塊、圖示、受眾、資料範圍、組織選單",
@@ -104,6 +104,7 @@ const ROWS = {
         "Draft/MonthCalendar",
         "Draft/RosterCell",
         "Draft/RosterGrid",
+        "BS-23",
       ],
     ],
     [
@@ -131,27 +132,22 @@ const ROWS = {
       ],
     ],
     ["元件:Stepper", ["Draft/StepperStep", "Draft/Stepper"]],
-    ["通知設定", ["Base Draft / 通知設定*", "59:1524", "Overlay / 編輯收件人"]],
+    [
+      "元件:時間軸(ScheduleTimeline)",
+      ["Draft/ScheduleTimelineBlock", "Draft/ScheduleTimeline", "BS-22"],
+    ],
+    // 參考畫面:每張都以現有底座畫面為底(Screens2-base.js + Base-ref.js)
+    ["資料範圍", ["BS-01"]],
+    ["流程設計器", ["BS-02", "BS-03"]],
+    ["表單模組與表單設計器", ["BS-04", "BS-12", "BS-21"]],
+    ["個人設定", ["BS-05", "BS-06"]],
+    ["申請中心與頁內分頁", ["BS-07", "BS-15"]],
+    ["通知", ["BS-08", "BS-09"]],
     [
       "印表機管理與列印",
-      [
-        "Base Draft / 印表機管理*",
-        "59:1528",
-        "Overlay / 新增代理程式*",
-        "BS-17",
-        "BS-18",
-        "BS-19",
-        "BS-20",
-        "BS-11",
-      ],
+      ["BS-10", "BS-17", "BS-18", "BS-19", "BS-20", "BS-11"],
     ],
-    ["流程設計器", ["Base Draft / 流程設計器*", "BS-03"]],
-    ["表單、表單設計器與申請中心", ["BS-04", "BS-12", "BS-07"]],
-    ["個人設定", ["BS-05", "BS-06"]],
-    [
-      "欄位管理、側欄、頁內分頁、Stepper 示範",
-      ["BS-13", "BS-14", "BS-15", "BS-16"],
-    ],
+    ["欄位管理、側欄計數、Stepper", ["BS-13", "BS-14", "BS-16"]],
   ],
 };
 const SIZE = ["電腦 1440", "平板 1024", "手機 390"];
@@ -171,6 +167,7 @@ let labelSrc = pageLabel
 if (pageLabel) {
   page.appendChild(labelSrc);
   labelSrc.visible = false;
+  labelSrc.name = "_label-template"; // 不能叫「列標題 / 」:Base Draft 的列標題直接在頁上,排列前會被清掉
 }
 async function fnt(t) {
   for (const f of t.getRangeAllFontNames(0, Math.max(1, t.characters.length)))

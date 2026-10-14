@@ -3,6 +3,7 @@
 // 回收完成時 baseDraftComponents、instancesOfBaseDrafts、nodesWithDraftMarker 三項加總都應為 0。
 // nonBaseBindingsInBaseDrafts 任何時候都應為 0(底座草稿只能綁 wowgo-base 的變數)。
 // basePrimaryBindings(Base Draft 以外的頁)任何時候都應為 0(專案頁的主色要綁 scratch-lot Brand Library)。
+// baseScreensNotFromRef、nonBaseInBaseScreens(Base Draft 頁)任何時候都應為 0:參考畫面以現有底座畫面為底、只綁底座變數。
 // devTextInScreens 任何時候都應為 0:畫面框內不能有設計稿編號、規格章節號、開發用說明(畫圖檢查清單 9);註解放在畫面框外。
 const PAGE_ID = "41:5914";
 const MARKER = "本輪草稿"; // 底座草稿 description 的固定前綴「【底座・本輪草稿,…】」
@@ -127,8 +128,49 @@ for (const s of screenNodes)
       });
   }
 
+// Base Draft 的參考畫面要以現有底座畫面為底(畫圖檢查清單 17):
+// 寬 1440 的 BS 畫面要有框外註解寫「對應現有畫面」、頁首用 Library 的 AdminAppBar 實例(不是自畫的框),
+// 畫面裡的顏色只綁底座變數(現有畫面在 scratch-lot 帶專案品牌色,複製後要 rebase)。
+const baseScreensNotFromRef = [];
+let nonBaseInBaseScreens = 0;
+if (page.name.startsWith("Base Draft")) {
+  const notes = new Set(
+    page.children
+      .filter((n) => n.type === "TEXT" && n.characters.includes("對應現有畫面"))
+      .map((n) => n.name.replace(/ · 註解$/, "")),
+  );
+  for (const f of page.children.filter(
+    (n) => n.type === "FRAME" && /^BS-/.test(n.name) && n.width === 1440,
+  )) {
+    const why = [];
+    if (!notes.has(f.name)) why.push("沒有「對應現有畫面」註解");
+    let bar = false;
+    for (const i of f.findAll(
+      (n) => n.type === "INSTANCE" && /AdminAppBar/.test(n.name),
+    )) {
+      const mc = await i.getMainComponentAsync();
+      if (mc && mc.remote) bar = true;
+    }
+    if (!bar) why.push("頁首不是 Library 的 AdminAppBar");
+    if (why.length)
+      baseScreensNotFromRef.push(f.name.slice(0, 30) + ":" + why.join("、"));
+    for (const n of [f, ...f.findAll(() => true)])
+      for (const p of ["fills", "strokes"]) {
+        if (!(p in n) || !Array.isArray(n[p])) continue;
+        for (const paint of n[p]) {
+          const id = paint.boundVariables?.color?.id;
+          if (id && !BASE_COLLECTIONS.includes(await collectionKeyOf(id)))
+            nonBaseInBaseScreens++;
+        }
+      }
+  }
+}
+
 return {
   page: page.name,
+  baseScreensNotFromRef: baseScreensNotFromRef.length,
+  baseScreensSample: baseScreensNotFromRef.slice(0, 10),
+  nonBaseInBaseScreens,
   basePrimaryBindings,
   baseDraftComponents: baseDrafts.length,
   instancesOfBaseDrafts,

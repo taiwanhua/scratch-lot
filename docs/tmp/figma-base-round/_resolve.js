@@ -88,6 +88,11 @@ const K = {
       set: true,
     },
     TextField: { key: "700a2b66cbc9de512532d2fd163b7c1e98823816", set: true },
+    // 現有組織樹列(選擇所屬組織等對話框用的那個);OrgTreeSelect 的樹沿用它(第十九輪)
+    "Draft/OrgTreeItem": {
+      key: "abfc25a6adf89900f5855cec32278badeeb2c6b4",
+      set: true,
+    },
     "Draft/Autocomplete": {
       key: "5c38eec3f628b810495609e04fb1e9830726c2c1",
       set: true,
