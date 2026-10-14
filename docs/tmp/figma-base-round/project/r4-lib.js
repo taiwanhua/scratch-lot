@@ -3,7 +3,7 @@
 // 做法:從現有畫面「複製樣板節點」組新畫面,所以字型樣式、顏色綁定(scratch-lot 品牌色 / 底座語意色)都沿用樣板。
 // 樣板節點(都在 scratch-lot Screens,刪改前先換掉這裡的 id):
 //   sub2 / body2 / body1 / cap / h6:庫存管理 IN-03 / IN-04 的文字;btn:IN-04 的 Button(用 setProperties 換變體);
-//   card:店面管理 ST-01 平板的收銀點卡片;dlg:IN-04 的對話框;bar:IN-03 的選張操作列;
+//   card:Draft/CashPointHeader 的 Size=Tablet, State=Open 變體(卡片底色與圓角);dlg:IN-04 的對話框;bar:IN-03 的選張操作列;
 //   cellSet:Draft/TicketCell;tf:IN-04 的 TextField;sel:IN-04 的 Draft/SelectField。
 // 注意:複製的 Button 換變體後會帶回底座主色,畫完要跑 brand-rebind.js(或 r4-store.js 結尾的 rebindPage())。
 const S = {
@@ -13,7 +13,7 @@ const S = {
   cap: "125:2104",
   h6: "125:2093",
   btn: "125:2105",
-  card: "124:5628",
+  card: "190:24789",
   dlg: "125:2091",
   bar: "125:1391",
   cellSet: "64:132",

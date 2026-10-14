@@ -341,8 +341,9 @@ const created = {};
 // ---------- 4.(已移除)Draft/WizardStep:第二輪升格為底座 Draft/StepperStep(Stepper.js)----------
 
 // ---------- 5. Draft/CashPointHeader:看板的收銀點列 ----------
-// State=Open(本機收銀點、開班中)/ Closed(未開班)/ Other(其他收銀點、開班中,只顯示狀態);
-// BOOLEAN Mine:Other 時那一班是自己開的 → 顯示 [切換到這個收銀點]。
+// Size=Desktop(一列)/ Tablet / Mobile(直排:名稱 → 負責人 → 統計 + [最近售出] [最近兌獎] → 操作按鈕,按鈕會換行);
+// State=Open(本機收銀點、自己開的班開班中)/ Closed(未開班)/ Other(其他收銀點、開班中,只顯示狀態);
+// BOOLEAN Mine:Other 時那一班是自己開的 → 顯示 [切換到這個收銀點]。[最近售出] [最近兌獎] 只在 Open(專案規格 6.2)。
 {
   const btnI = (l, v) =>
     inst(
@@ -353,7 +354,7 @@ const created = {};
   const mk = async (state) => {
     const open = state !== "Closed";
     const c = figma.createComponent();
-    c.name = "State=" + state;
+    c.name = "Size=Desktop, State=" + state;
     c.layoutMode = "HORIZONTAL";
     c.resize(1100, 64);
     c.primaryAxisSizingMode = "FIXED";
@@ -403,7 +404,7 @@ const created = {};
         add(s, await txt(k, "Caption", "text/secondary"));
         add(s, await txt(v, "Subtitle/1", "text/primary"));
       };
-      await stat("本班售出", "42 張 / 8,400");
+      await stat("本班已售", "42 張 / 8,400");
       if (state === "Open") {
         add(c, await btnI("最近售出", "Text"));
         add(c, await btnI("最近兌獎", "Text"));
@@ -422,7 +423,105 @@ const created = {};
     } else add(c, await btnI("開班", "Contained"));
     return { c, mine };
   };
+  // 平板 / 手機:同樣的內容直排,寬度跟著畫面(實例設 FILL)
+  const mkN = async (size, state) => {
+    const open = state !== "Closed";
+    const c = figma.createComponent();
+    c.name = `Size=${size}, State=${state}`;
+    c.layoutMode = "VERTICAL";
+    c.resize(size === "Tablet" ? 926 : 358, 120);
+    c.primaryAxisSizingMode = "AUTO";
+    c.counterAxisSizingMode = "FIXED";
+    c.paddingLeft = c.paddingRight = 14;
+    c.paddingTop = c.paddingBottom = 10;
+    c.itemSpacing = 8;
+    c.fills = [await paint("bg/paper")];
+    await radius(c, "radius/md");
+    const row = (name, wrap, gap = 8) =>
+      add(
+        c,
+        al("HORIZONTAL", {
+          name,
+          itemSpacing: gap,
+          counterAxisAlignItems: "CENTER",
+          layoutWrap: wrap ? "WRAP" : "NO_WRAP",
+          counterAxisSpacing: wrap ? 8 : 0,
+        }),
+        "FILL",
+      );
+    const l1 = row("line1", true);
+    add(
+      l1,
+      await txt(
+        { Open: "店內櫃台", Other: "店外攤位", Closed: "彩券機旁" }[state],
+        "Subtitle/1",
+        "text/primary",
+        "name",
+      ),
+    );
+    if (state === "Open")
+      add(l1, await inst("Draft/Tag", { Tone: "Warning" }, { Label: "本機" }));
+    add(
+      l1,
+      await inst(
+        "Draft/Tag",
+        { Tone: open ? "Success" : "Grey" },
+        { Label: open ? "開班中" : "未開班" },
+      ),
+    );
+    add(
+      c,
+      await txt(
+        {
+          Open: "負責人 王小明 · 08:02 開班 · 協同 李小華",
+          Other: "負責人 王小明 · 13:00 開班",
+          Closed: "上一班 18:05 交班,留在抽屜 3,000",
+        }[state],
+        "Caption",
+        "text/secondary",
+        "who",
+      ),
+    );
+    if (open) {
+      const st = row("stats", false, 16);
+      const stat = async (k, v) => {
+        const s = add(st, al("VERTICAL", { name: "stat", itemSpacing: 0 }));
+        add(s, await txt(k, "Caption", "text/secondary"));
+        add(s, await txt(v, "Subtitle/1", "text/primary"));
+      };
+      await stat(
+        "本班已售",
+        state === "Open" ? "42 張 / 8,400" : "18 張 / 3,600",
+      );
+      await stat("應有現金", state === "Open" ? "12,350" : "7,200");
+      // 平板:[最近售出] [最近兌獎] 靠右跟統計同一列;手機寬度不夠,另起一列
+      if (size === "Tablet") spacer(st);
+      if (state === "Open") {
+        const rr = size === "Tablet" ? st : row("recent", false);
+        add(rr, await btnI("最近售出", "Text"));
+        add(rr, await btnI("最近兌獎", "Text"));
+      }
+    }
+    const chips = row("chips", true);
+    let mine = null;
+    if (state === "Open")
+      for (const [l, v] of [
+        ["兌獎", "Outlined"],
+        ["投庫", "Outlined"],
+        ["出庫", "Outlined"],
+        ["拆本", "Outlined"],
+        ["交班結帳", "Contained"],
+      ])
+        add(chips, await btnI(l, v));
+    else if (state === "Other")
+      mine = add(chips, await btnI("切換到這個收銀點", "Outlined"));
+    else add(chips, await btnI("開班", "Outlined"));
+    return { c, mine };
+  };
   const vs = [await mk("Open"), await mk("Closed"), await mk("Other")];
+  for (const size of ["Tablet", "Mobile"])
+    for (const state of ["Open", "Other", "Closed"])
+      vs.push(await mkN(size, state));
   const set = figma.combineAsVariants(
     vs.map((v) => v.c),
     page,
@@ -432,10 +531,11 @@ const created = {};
   set.itemSpacing = 16;
   set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
   const pMine = set.addComponentProperty("Mine", "BOOLEAN", false);
-  vs[2].mine.componentPropertyReferences = { visible: pMine };
+  for (const v of vs)
+    if (v.mine) v.mine.componentPropertyReferences = { visible: pMine };
   set.description =
     DESC_PROJECT +
-    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open = 本機收銀點開班中:負責人、協同(來自排班)、本班售出、[最近售出] [最近兌獎]、應有現金、[兌獎] [投庫] [出庫] [拆本] [交班結帳];Closed:上一班留在抽屜的金額、[開班];Other = 其他收銀點開班中:只顯示狀態,Mine = 那一班是自己開的 → [切換到這個收銀點]。";
+    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open = 本機收銀點、自己開的班:負責人、協同(來自排班)、本班已售、[最近售出] [最近兌獎]、應有現金、[兌獎] [投庫] [出庫] [拆本] [交班結帳];Closed:上一班留在抽屜的金額、[開班];Other = 其他收銀點開班中:只顯示狀態,Mine = 那一班是自己開的 → [切換到這個收銀點]([最近售出] [最近兌獎] 要切換過去才有)。Size = 電腦 / 平板 / 手機,三種尺寸的按鈕一樣(平板 / 手機直排、按鈕換行)。";
   set.x = 0;
   set.y = 1000;
   created.cashPointHeader = set.id;
@@ -706,6 +806,146 @@ for (const id of [
   li.layoutSizingHorizontal = "FILL";
 }
 
+// ---------- 9. Draft/StoreTopBar:店面管理看板頂部列 ----------
+// 分店(電腦)、本機收銀點、你開著的班、即時(電腦)、上次日結、[盤點] [存銀行] [日結]。
+// Size=Desktop(一列)/ Tablet / Mobile(卡片直排,三個按鈕均分);BOOLEAN MyShifts:這台裝置有自己開著的班才顯示「你開著的班:…」。
+{
+  const btnI = (l, v, sz) =>
+    inst(
+      "Button",
+      { Variant: v, Size: sz, State: "Default", Color: "Primary" },
+      { Label: l },
+    );
+  const sel = async () => {
+    const s = await inst("Draft/SelectField", { State: "Default" });
+    await setText(s, "label", "本機收銀點");
+    await setText(s, "value", "店內櫃台");
+    return s;
+  };
+  const vs = [];
+  {
+    const c = figma.createComponent();
+    c.name = "Size=Desktop";
+    c.layoutMode = "HORIZONTAL";
+    c.resize(1100, 56);
+    c.primaryAxisSizingMode = "FIXED";
+    c.counterAxisSizingMode = "AUTO";
+    c.itemSpacing = 12;
+    c.counterAxisAlignItems = "CENTER";
+    c.fills = [];
+    add(
+      c,
+      await binst("Draft/OrgTreeSelect", { State: "Closed", Mode: "Single" }),
+    );
+    add(c, await sel());
+    const shift = add(
+      c,
+      await txt("你開著的班:店內櫃台 · 店外攤位", "Body/2", "primary/dark"),
+    );
+    const rt = add(
+      c,
+      al("HORIZONTAL", {
+        name: "realtime",
+        itemSpacing: 6,
+        counterAxisAlignItems: "CENTER",
+      }),
+    );
+    const dot = figma.createEllipse();
+    dot.resize(8, 8);
+    dot.fills = [await paint("success/main")];
+    add(rt, dot);
+    add(rt, await txt("即時", "Caption", "text/secondary"));
+    spacer(c);
+    add(c, await txt("上次日結:10/13(已 3 天)", "Body/2", "warning/main"));
+    add(c, await btnI("盤點", "Outlined", "Medium"));
+    add(c, await btnI("存銀行", "Outlined", "Medium"));
+    add(c, await btnI("日結", "Contained", "Medium"));
+    vs.push({ c, shift });
+  }
+  for (const [size, w] of [
+    ["Tablet", 926],
+    ["Mobile", 358],
+  ]) {
+    const c = figma.createComponent();
+    c.name = "Size=" + size;
+    c.layoutMode = "VERTICAL";
+    c.resize(w, 120);
+    c.primaryAxisSizingMode = "AUTO";
+    c.counterAxisSizingMode = "FIXED";
+    c.paddingLeft = c.paddingRight = 12;
+    c.paddingTop = c.paddingBottom = 8;
+    c.itemSpacing = 8;
+    c.fills = [await paint("bg/paper")];
+    await radius(c, "radius/md");
+    const row = () =>
+      add(
+        c,
+        al("HORIZONTAL", { itemSpacing: 8, counterAxisAlignItems: "CENTER" }),
+        "FILL",
+      );
+    add(row(), await sel(), "FILL");
+    const r2 = row();
+    const shift = add(
+      r2,
+      await txt("你開著的班:店內櫃台 · 店外攤位", "Caption", "primary/dark"),
+    );
+    add(r2, await txt("上次日結:10/13(已 3 天)", "Caption", "warning/main"));
+    const r3 = row();
+    add(r3, await btnI("盤點", "Outlined", "Small"), "FILL");
+    add(r3, await btnI("存銀行", "Outlined", "Small"), "FILL");
+    add(r3, await btnI("日結", "Contained", "Small"), "FILL");
+    vs.push({ c, shift });
+  }
+  const set = figma.combineAsVariants(
+    vs.map((v) => v.c),
+    page,
+  );
+  set.name = "Draft/StoreTopBar";
+  set.layoutMode = "HORIZONTAL";
+  set.itemSpacing = 40;
+  set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 24;
+  const pMy = set.addComponentProperty("MyShifts", "BOOLEAN", true);
+  for (const v of vs) v.shift.componentPropertyReferences = { visible: pMy };
+  set.description =
+    DESC_PROJECT +
+    "店面管理看板頂部列(專案規格 6.1 / 6.2)。三種尺寸按鈕一樣;MyShifts = 這台裝置有自己開著的班。";
+  created.storeTopBar = set.id;
+}
+
+// ---------- 10. Draft/ScratchLotNavRail:平板的收合側欄(電腦用 ScratchLotSideNav,手機收進 app-bar 的 ☰)----------
+{
+  const c = figma.createComponent();
+  c.name = "Draft/ScratchLotNavRail";
+  c.layoutMode = "VERTICAL";
+  c.resize(66, 768);
+  c.primaryAxisSizingMode = "FIXED";
+  c.counterAxisSizingMode = "AUTO";
+  c.paddingLeft = c.paddingRight = 12;
+  c.paddingTop = 16;
+  c.itemSpacing = 4;
+  c.fills = [await paint("bg/paper")];
+  c.strokes = [await paint("divider")];
+  c.strokeLeftWeight = c.strokeTopWeight = c.strokeBottomWeight = 0;
+  c.strokeRightWeight = 1;
+  for (const g of ["≡", "◧", "▤", "⇄", "$", "▦", "☰"]) {
+    const it = add(
+      c,
+      al("HORIZONTAL", {
+        name: "rail-item",
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 10,
+        paddingBottom: 10,
+        counterAxisAlignItems: "CENTER",
+      }),
+    );
+    add(it, await txt(g, "Subtitle/1", "text/secondary"));
+  }
+  c.description =
+    DESC_PROJECT + "平板(1024)的收合側欄:只有圖示。實例在畫面殼裡設高度 FILL。";
+  created.navRail = c.id;
+}
+
 // 版面:側欄在左,其他元件在右邊直向排列(間距 120),避免變體增加後互相重疊
 {
   const side = await figma.getNodeByIdAsync(created.sideNav || "");
@@ -716,6 +956,8 @@ for (const id of [
     created.denom,
     created.cashPointHeader,
     created.bookCard,
+    created.storeTopBar,
+    created.navRail,
   ];
   let x = side ? side.x + side.width + 160 : 600,
     y = 0;

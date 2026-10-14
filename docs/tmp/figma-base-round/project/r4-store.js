@@ -1163,7 +1163,7 @@ if (PART === "13") {
   }
   const cpRow = async (name, on) => {
     const v = AL("VERTICAL", {
-      name: "cash-point:" + name,
+      name: "補登兌獎:" + name,
       itemSpacing: 2,
       paddingTop: 6,
       paddingBottom: 6,

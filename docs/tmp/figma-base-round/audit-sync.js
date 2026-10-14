@@ -1,0 +1,145 @@
+// 三尺寸同步檢查(scratch-lot Screens,一次跑全部專案頁;不改任何節點)。用法:整段貼進 use_figma 執行。
+// 1. 標題列按鈕一致(syncDiffs):同一個畫面編號(例 ST-38,含 a / b / c)在「電腦 1440 / 平板 1024 / 手機 390」三個 Section 中,
+//    標題列 / 頂部列的按鈕文字集合要一樣,差異要是 0。
+//    標題列 = CashPointHeader / StoreTopBar 實例,以及名稱是 store-top、toolbar、title、doc-head 的框,平板 / 手機再加 app-bar
+//    (app-bar 開頭是 ✕ 的是全螢幕對話框,它的按鈕是對話框按鈕,不算)。按鈕 = 有文字的實例(Tag、欄位、格子等不算);
+//    手機收進「更多」選單的,選單裡的文字也算有。該編號只有一個尺寸有畫的不比。
+//    版面本來就不同的列在 EXEMPT(要寫理由,回報時照列)。
+// 2. 共用區塊非元件數(sharedHandDrawn):三尺寸都出現的共用區塊,只要在任何尺寸是手畫框而不是元件實例就列出來,數量要是 0。
+//    收銀點標題列(cash-point*)→ Draft/CashPointHeader;看板頂部列(店面管理的 store-top / toolbar)→ Draft/StoreTopBar;
+//    平板側欄(nav-rail*)→ Draft/ScratchLotNavRail;電腦側欄(side-nav*)→ Draft/ScratchLotSideNav;
+//    看板卡片(cards 裡的框)→ Draft/BoardBookCard;張數格子(grid+legend / ticket-grid)要由 Draft/TicketCell 組成、圖例用 Draft/TicketGridLegend;
+//    Stepper(Stepper / stepper / steps)要由 Draft/StepperStep 組成。由元件實例組成的容器(格子、Stepper、PageTabs)算元件化。
+figma.skipInvisibleInstanceChildren = false;
+const PAGES = [
+  "65:14",
+  "91:14",
+  "69:14",
+  "70:14",
+  "93:14",
+  "94:14",
+  "95:14",
+  "97:14",
+];
+const SIZE = { "電腦 1440": "D", "平板 1024": "T", "手機 390": "M" };
+const EXEMPT = {
+  "ST-36|開班|M":
+    "手機的卡片展開是底部面板,蓋住下面其他收銀點的標題列(電腦 / 平板原地展開,看得到)",
+  "PU-10|列印調貨出貨單|T":
+    "平板 / 手機只畫第二關(PU-10b);第一關出貨確認(PU-10a,[列印調貨出貨單] 在那一張)照共用規則不另畫",
+  "PU-10|列印調貨出貨單|M":
+    "平板 / 手機只畫第二關(PU-10b);第一關出貨確認(PU-10a,[列印調貨出貨單] 在那一張)照共用規則不另畫",
+};
+const NONBTN =
+  /Tag|Badge|Select|TextField|Radio|Checkbox|Alert|Ticket|Legend|Stepper|Avatar|Icon|OrgTree|Switch|Tab$|Draft\/Tab|SideNav|NavRail|AppBar|BookCard|TableCell/;
+const isBtn = (n) =>
+  n.type === "INSTANCE" &&
+  !NONBTN.test(n.name) &&
+  !!n.findOne((x) => x.type === "TEXT" && x.characters.trim());
+const label = (b) =>
+  b.findOne((x) => x.type === "TEXT" && x.characters.trim()).characters.trim();
+const inInstance = (n) => {
+  for (let a = n.parent; a; a = a.parent)
+    if (a.type === "INSTANCE") return true;
+  return false;
+};
+// 元件內部的列(例:月曆自己的「今天」列)不算頁面標題列
+const isHead = (n, sz) =>
+  (n.type === "INSTANCE" && /CashPointHeader|StoreTopBar/.test(n.name)) ||
+  (n.type === "FRAME" &&
+    !inInstance(n) &&
+    (/^(store-top|toolbar|title|doc-head)$/.test(n.name) ||
+      (sz !== "D" &&
+        n.name === "app-bar" &&
+        !(
+          n.children[0] &&
+          n.children[0].type === "TEXT" &&
+          n.children[0].characters === "✕"
+        ))));
+const syncDiffs = [],
+  exempted = [],
+  sharedHandDrawn = [];
+const counts = {};
+for (const pid of PAGES) {
+  const page = await figma.getNodeByIdAsync(pid);
+  await page.loadAsync();
+  const groups = {};
+  for (const s of page.children.filter(
+    (n) => n.type === "SECTION" && SIZE[n.name],
+  ))
+    for (const f of s.children) {
+      if (!("findAll" in f)) continue;
+      const m = /^([A-Z]{2}-\d\d)/.exec(f.name);
+      if (!m) continue;
+      const sz = SIZE[s.name];
+      const g =
+        groups[m[1]] ||
+        (groups[m[1]] = { D: new Set(), T: new Set(), M: new Set(), has: {} });
+      g.has[sz] = true;
+      const heads = f
+        .findAll((h) => isHead(h, sz))
+        .filter((h) => {
+          for (let a = h.parent; a && a !== f; a = a.parent)
+            if (isHead(a, sz)) return false;
+          return true;
+        });
+      for (const h of heads)
+        for (const b of h.findAll(isBtn)) g[sz].add(label(b));
+    }
+  for (const [k, g] of Object.entries(groups)) {
+    const sizes = ["D", "T", "M"].filter((x) => g.has[x]);
+    if (sizes.length < 2) continue;
+    const all = new Set(sizes.flatMap((x) => [...g[x]]));
+    for (const l of all)
+      for (const x of sizes.filter((x) => !g[x].has(l))) {
+        const key = `${k}|${l}|${x}`;
+        if (EXEMPT[key]) exempted.push(key + ":" + EXEMPT[key]);
+        else syncDiffs.push(`${page.name.slice(9)} ${k}「${l}」缺 ${x}`);
+      }
+  }
+  // 共用區塊非元件
+  const topOf = (n) => {
+    let f = n;
+    while (f.parent && f.parent.type !== "SECTION") f = f.parent;
+    return f;
+  };
+  const hit = (n, why) =>
+    sharedHandDrawn.push(
+      `${page.name.slice(9)} ${topOf(n).name.slice(0, 24)}:${n.name}(${why})`,
+    );
+  for (const n of page.findAll((x) => x.type === "FRAME" && !inInstance(x))) {
+    if (/^cash-point(:|$)/.test(n.name)) hit(n, "要用 CashPointHeader");
+    else if (pid === "65:14" && /^(store-top|toolbar)$/.test(n.name))
+      hit(n, "要用 StoreTopBar");
+    else if (/^nav-rail/.test(n.name)) hit(n, "要用 ScratchLotNavRail");
+    else if (/^side-?nav/i.test(n.name)) hit(n, "要用 ScratchLotSideNav");
+    else if (n.name === "cards") {
+      for (const c of n.children)
+        if (c.type !== "INSTANCE") hit(c, "看板卡片要用 BoardBookCard");
+    } else if (/^(grid\+legend|ticket-grid)$/.test(n.name)) {
+      if (!n.findOne((x) => x.type === "INSTANCE" && /TicketCell/.test(x.name)))
+        hit(n, "格子要用 TicketCell");
+      if (
+        n.name === "grid+legend" &&
+        !n.findOne(
+          (x) => x.type === "INSTANCE" && /TicketGridLegend/.test(x.name),
+        )
+      )
+        hit(n, "圖例要用 TicketGridLegend");
+    } else if (/^(Stepper|stepper|steps)$/.test(n.name)) {
+      if (
+        !n.findOne((x) => x.type === "INSTANCE" && /StepperStep/.test(x.name))
+      )
+        hit(n, "要用 StepperStep");
+    }
+  }
+  counts[page.name.slice(9)] = Object.keys(groups).length;
+}
+return {
+  syncDiffs: syncDiffs.length,
+  sharedHandDrawn: sharedHandDrawn.length,
+  exempted,
+  groupsPerPage: counts,
+  syncList: syncDiffs,
+  sharedList: sharedHandDrawn,
+};
