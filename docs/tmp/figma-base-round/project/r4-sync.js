@@ -856,3 +856,97 @@ if (PART === "17") {
   // RW-01b 篩選抽屜:平板右側(寬 360、滿高)、手機底部(可拉成全螢幕),欄位見簽狀態 / 距上次批購 / 證照 + [清除] [套用];DE-01 電腦補同一組篩選列。
   // 節點 id 見 nodes.md 第十七輪。
 }
+
+if (PART === "19") {
+  // 第十九輪:遮罩畫面的背景放打開它的頁面(同尺寸 Section 的入口畫面副本,鎖定),再蓋 scrim(黑、不透明度 50%);
+  // 畫面高度至少是背景頁的高度;畫面底色換成背景頁的底色。入口依 16.10 入口對照。各頁跑一次。
+  const MAP = {
+    "ST-03": "ST-02",
+    "ST-04": "ST-01",
+    "ST-05": "ST-01",
+    "ST-06": "ST-40",
+    "ST-07": "ST-36a",
+    "ST-08": "ST-35",
+    "ST-09": "ST-01",
+    "ST-37": "ST-01",
+    "ST-10": "ST-36a",
+    "ST-11": "ST-01",
+    "ST-12": "ST-01",
+    "ST-15": "ST-14",
+    "ST-16": "ST-01",
+    "ST-26": "ST-01",
+    "ST-34": "ST-01",
+    "ST-39": "ST-40",
+    "ST-41": "ST-38b",
+    "IN-02": "IN-01",
+    "IN-04": "IN-03",
+    "PU-11": "PU-06",
+    "SC-04": "SC-03",
+    "SC-15": "SC-03",
+    "SC-16": "SC-03",
+    "SC-17": "SC-03",
+    "SC-19": "SC-15b",
+    "SC-20": "SC-03",
+    "SC-21": "SC-03",
+    "SC-34": "SC-03",
+    "SC-36": "SC-20b",
+    "SC-37": "SC-20b",
+    "SC-22": "SC-09",
+    "SC-24": "SC-06",
+    "SC-26": "SC-08",
+    "SC-27": "SC-10",
+    "SC-28": "SC-07",
+    "SC-29": "SC-11",
+    "AC-07": "AC-06",
+    "DE-06": "DE-04",
+    "RW-04": "RW-03",
+    "MD-05": "MD-05",
+  };
+  const AC03 = { a: "AC-01", b: "AC-02", c: "AC-02" };
+  const isMask = (f) =>
+    Array.isArray(f.fills) &&
+    f.fills.some(
+      (p) => p.type === "SOLID" && (p.opacity ?? 1) < 0.9 && p.color.r < 0.2,
+    );
+  const keyOf = (n) => {
+    const m = /^([A-Z]{2}-\d\d)([a-f]?)/.exec(n.name);
+    return m ? [m[1], m[2]] : [null, null];
+  };
+  for (const s of figma.currentPage.children.filter(
+    (n) => n.type === "SECTION",
+  )) {
+    const frames = s.children.filter((f) => f.type === "FRAME");
+    const entryOf = (key) =>
+      frames.find((f) => {
+        const [c, suf] = keyOf(f);
+        return (
+          c === key.slice(0, 5) &&
+          (suf || "") === key.slice(5) &&
+          !isMask(f) &&
+          !f.children.some((k) => k.name.startsWith("背景:")) &&
+          !/Overlay/.test(f.name)
+        );
+      });
+    for (const f of frames) {
+      if (!isMask(f) || f.children.some((k) => k.name.startsWith("背景:")))
+        continue;
+      const [c, suf] = keyOf(f);
+      const e = entryOf(c === "AC-03" ? AC03[suf] : MAP[c] || "");
+      if (!e) continue; // 入口畫面沒有這個尺寸:留給人判斷
+      const bg = e.clone();
+      f.insertChild(0, bg);
+      bg.x = bg.y = 0;
+      bg.name = "背景:" + e.name;
+      bg.locked = true;
+      const sc = figma.createRectangle();
+      sc.name = "scrim";
+      f.insertChild(1, sc);
+      sc.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 1 }];
+      sc.opacity = 0.5;
+      const H = Math.max(f.height, bg.height);
+      f.resize(f.width, H);
+      sc.resize(f.width, H);
+      f.fills = e.fills;
+    }
+  }
+}

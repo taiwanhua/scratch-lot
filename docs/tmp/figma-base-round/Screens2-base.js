@@ -750,12 +750,27 @@ if (PART === 3) {
 if (PART === 4) {
   // ---- BS-17~20 印表機管理(第三輪) ----
   const Y4 = await rowY("第三輪:印表機管理(BS-17~20)");
-  // 一個遮罩裡並排多個對話框
+  // 一張畫面一個對話框:背景放打開它的頁面(印表機管理)再蓋遮罩,對話框水平置中
+  const bgPage = figma.currentPage.findOne(
+    (n) => n.type === "FRAME" && n.name.startsWith("Base Draft / 印表機管理"),
+  );
   const ovRow = (name) => {
     const ov = figma.createFrame();
     ov.name = name;
-    ov.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0.5 }];
     ov.clipsContent = true; // FIGMA-06 Overlay 慣例
+    const bg = bgPage.clone();
+    bg.name = "背景:" + bgPage.name;
+    ov.appendChild(bg);
+    bg.x = 0;
+    bg.y = 0;
+    bg.locked = true;
+    ov.fills = bgPage.fills;
+    const scrim = figma.createRectangle();
+    scrim.name = "scrim";
+    scrim.fills = [
+      { type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0.5 },
+    ];
+    ov.appendChild(scrim);
     const row = H(24, {
       name: "dialogs",
       counterAxisAlignItems: "MIN",
@@ -769,8 +784,9 @@ if (PART === 4) {
       ov,
       row,
       fin: () => {
-        ov.resize(Math.max(1440, row.width), Math.max(900, row.height));
-        row.x = 0;
+        ov.resize(1440, Math.max(900, row.height, bg.height));
+        scrim.resize(ov.width, ov.height);
+        row.x = Math.round((1440 - row.width) / 2);
         row.y = 0;
       },
     };
@@ -843,13 +859,13 @@ if (PART === 4) {
   );
   o.fin();
   done(o.ov, Y4);
-  // BS-18 測試列印結果
-  o = ovRow("BS-18 Overlay / 印表機管理:測試列印結果(成功 / 缺紙 / 離線)");
-  for (const [sev, msg] of [
-    ["Success", "✓ 已印出:中文、QR code、切紙都正常。"],
-    ["Warning", "✗ 失敗:缺紙。補紙後再按一次 [測試列印]。"],
-    ["Error", "✗ 失敗:代理程式離線(最後連線 10/16 21:40)。"],
+  // BS-18 測試列印結果:a 成功 / b 缺紙 / c 離線,各一張
+  for (const [sev, msg, k, lab] of [
+    ["Success", "✓ 已印出:中文、QR code、切紙都正常。", "a", "成功"],
+    ["Warning", "✗ 失敗:缺紙。補紙後再按一次 [測試列印]。", "b", "缺紙"],
+    ["Error", "✗ 失敗:代理程式離線(最後連線 10/16 21:40)。", "c", "離線"],
   ]) {
+    o = ovRow(`BS-18${k} Overlay / 印表機管理:測試列印結果(${lab})`);
     d = await dcard(o.row, "測試列印 · 櫃台收據機", 380);
     add(d, await alert(msg, sev), "FILL");
     add(
@@ -857,9 +873,9 @@ if (PART === 4) {
       await actions([await btn(sev === "Success" ? "關閉" : "重試")]),
       "FILL",
     );
+    o.fin();
+    done(o.ov, Y4);
   }
-  o.fin();
-  done(o.ov, Y4);
   // BS-19 代理程式分頁下載區
   let sh = await shell(
     "BS-19 印表機管理:代理程式分頁下載區(最新版本、四個平台、反白建議)",

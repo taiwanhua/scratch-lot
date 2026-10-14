@@ -14,6 +14,9 @@
 //    名稱含「 · 平板 / · 手機」的要在對應 Section。多個對話框並排、精靈步驟並排的都算不符。58mm 單據 Section 不檢查。數量要是 0。
 // 4. 篩選抽屜(filterDrawerMissing):平板 / 手機畫面有 [篩選…] 按鈕,就要有同編號的篩選抽屜畫面(名稱含「篩選」),
 //    或它的框外註解寫明照 RW-01。數量要是 0。
+// 5. 遮罩畫面要有頁面背景(overlayNoPage):有遮罩(半透明黑底或 scrim)的畫面,除了對話框 / 抽屜 / 底部面板外,
+//    要放打開它的那個頁面(子節點「背景:<入口畫面>」或畫面本身的 main / 側欄)。全部專案頁 + Base Draft 都查,數量要是 0。
+//    背景頁裡的標題列不算進第 1 項的按鈕比對。
 figma.skipInvisibleInstanceChildren = false;
 const PAGES = [
   "65:14",
@@ -63,6 +66,33 @@ const isHead = (n, sz) =>
 const sectionMismatch = [],
   filterDrawerMissing = [];
 const W = { "電腦 1440": 1440, "平板 1024": 1024, "手機 390": 390 };
+const overlayNoPage = [];
+const inBg = (n) => {
+  for (let a = n.parent; a; a = a.parent)
+    if (a.name && a.name.startsWith("背景:")) return true;
+  return false;
+};
+const isMask = (f) =>
+  Array.isArray(f.fills) &&
+  f.fills.some(
+    (p) =>
+      p.type === "SOLID" &&
+      p.visible !== false &&
+      (p.opacity ?? 1) < 0.9 &&
+      p.color.r < 0.2,
+  );
+const checkOverlay = (pageName, f) => {
+  if (f.type !== "FRAME") return;
+  const scrim = f.children.some((k) => k.name === "scrim");
+  if (!isMask(f) && !scrim) return;
+  const page = f.children.some(
+    (k) =>
+      k.name.startsWith("背景:") ||
+      k.name === "main" ||
+      /SideNav|NavRail/.test(k.name),
+  );
+  if (!page) overlayNoPage.push(`${pageName} ${f.name}`);
+};
 const syncDiffs = [],
   exempted = [],
   sharedHandDrawn = [];
@@ -86,6 +116,7 @@ for (const pid of PAGES) {
       const heads = f
         .findAll((h) => isHead(h, sz))
         .filter((h) => {
+          if (inBg(h)) return false;
           for (let a = h.parent; a && a !== f; a = a.parent)
             if (isHead(a, sz)) return false;
           return true;
@@ -147,6 +178,7 @@ for (const pid of PAGES) {
   ))
     for (const f of s.children) {
       if (f.type === "TEXT") continue;
+      checkOverlay(page.name.slice(9), f);
       const tag = / · 平板/.test(f.name)
         ? "平板 1024"
         : / · 手機/.test(f.name)
@@ -161,6 +193,7 @@ for (const pid of PAGES) {
         (b) =>
           b.type === "INSTANCE" &&
           b.visible &&
+          !inBg(b) &&
           !!b.findOne((t) => t.type === "TEXT" && /^篩選/.test(t.characters)),
       );
       if (!hasFilter) continue;
@@ -180,7 +213,14 @@ for (const pid of PAGES) {
     }
   counts[page.name.slice(9)] = Object.keys(groups).length;
 }
+{
+  const base = await figma.getNodeByIdAsync("41:5914"); // Base Draft / 本輪底座元件(沒有尺寸 Section)
+  await base.loadAsync();
+  for (const f of base.children) checkOverlay("Base Draft", f);
+}
 return {
+  overlayNoPage: overlayNoPage.length,
+  overlayList: overlayNoPage,
   syncDiffs: syncDiffs.length,
   sharedHandDrawn: sharedHandDrawn.length,
   sectionMismatch: sectionMismatch.length,
