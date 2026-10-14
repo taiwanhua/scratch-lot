@@ -72,14 +72,14 @@
 
 ### 專案元件
 
-| 頁(頁 id)                         | 節點                    | 節點 id | 內容                                                                                                        |
-| --------------------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
-| Project Draft / 刮刮樂元件(64:14) | Draft/ScratchLotSideNav | 64:15   | 專案側欄(專案規格 3.1),由底座 NavItem / NavGroup 實例組成;底座 AdminSideNav 的頂層備用槽不夠放 8 個頂層模組 |
-| Project Draft / 刮刮樂元件(64:14) | Draft/TicketCell        | 64:132  | 張數格子的一格:State=Available / Selected / Unavailable;TEXT No                                             |
-| Project Draft / 刮刮樂元件(64:14) | Draft/TicketGrid        | 64:133  | 張數格子(7.5):每列 10 格、連號快選、區段顯示                                                                |
-| Project Draft / 刮刮樂元件(64:14) | Draft/DenominationCount | 64:366  | 依面額清點表(交班 ③、日結 ③)                                                                                |
-| Project Draft / 刮刮樂元件(64:14) | Draft/CashPointHeader   | 64:512  | 看板的收銀點列 State=Open / Closed                                                                          |
-| Project Draft / 刮刮樂元件(64:14) | Draft/BoardBookCard     | 64:558  | 看板卡片 State=Normal / LowStock;點卡片原地展開(ST-36)                                                      |
+| 頁(頁 id)                         | 節點                    | 節點 id | 內容                                                                                                                   |
+| --------------------------------- | ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Project Draft / 刮刮樂元件(64:14) | Draft/ScratchLotSideNav | 64:15   | 專案側欄(專案規格 3.1),由底座 NavItem / NavGroup 實例組成;底座 AdminSideNav 的頂層備用槽不夠放 8 個頂層模組            |
+| Project Draft / 刮刮樂元件(64:14) | Draft/TicketCell        | 64:132  | 張數格子的一格:State=Available / Selected / Unavailable / Shift / Skipped / Scrapped / Lost / Assigned / Other;TEXT No |
+| Project Draft / 刮刮樂元件(64:14) | Draft/TicketGrid        | 64:133  | 張數格子(7.5):每列 10 格、連號快選、區段顯示                                                                           |
+| Project Draft / 刮刮樂元件(64:14) | Draft/DenominationCount | 64:366  | 依面額清點表(交班 ③、日結 ③)                                                                                           |
+| Project Draft / 刮刮樂元件(64:14) | Draft/CashPointHeader   | 64:512  | 看板的收銀點列 State=Open / Closed                                                                                     |
+| Project Draft / 刮刮樂元件(64:14) | Draft/BoardBookCard     | 64:558  | 看板卡片 State=Normal / LowStock;點卡片原地展開(ST-36)                                                                 |
 
 ### 專案畫面
 
@@ -329,3 +329,9 @@
 - 專案畫面以 Figma 為正本:刪除重跑會得到舊畫面的專案畫面腳本(seg4 / 5 / 6、store*、purchasing、schedule、r3-store、_r3、_screen-helpers;git 歷史可查),保留 `_header.js`、`components.js`、`brand-rebind.js`、`r4-*.js`。`components.js` 拿掉已不存在的 WizardStep,最後直向排列(和 Figma 一致)。
 - 說明型小字逐一分類(專案頁 8 頁 + Base Draft):91 種文字判定為開發說明 → 61 種整句搬到框外註解、30 種改寫成使用者語言並把原句放框外(三種尺寸共 108 處);約 90 種使用者提示留在畫面裡。底座腳本同步:`_kit.js` / `_resolve.js` 新增 `noteOut()`,Screens.js / Screens2-base.js 的說明改用它寫到框外。
 - 移走文字後畫面變矮,有幾張平板 / 手機畫面的「固定在底部」操作列跑出外框;`r4-layout.js` 的 `fit()` 改成重新貼齊底部。
+
+## 第十輪:張數格子共用圖例(2026-10-14)
+
+- `Draft/TicketCell`(64:132)新增狀態變體:Shift 174:248、Skipped 174:250、Scrapped 174:252、Lost 174:254、Assigned 174:256、Other 174:258(在別的收銀點:淺灰底 + 斜線、次要文字色虛線框)。
+- 新元件 `Draft/TicketGridLegend`(174:264):每個狀態一個開關 + 文字;`Draft/TicketGrid`(64:133)格子上方也放了圖例。
+- 有格子的畫面都換成變體、每列 10 格、格子上方放圖例、拿掉文字圖例:ST-36 a / b / c、ST-09 a / c、ST-13、IN-03、IN-04、PU-09(平板 / 手機;電腦版與 ST-31b 用 TicketGrid 元件)。ST-36a 電腦版的 tooltip 重新對齊 #045。

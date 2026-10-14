@@ -16,6 +16,7 @@ const cardsIn = async (f) => {
   return r;
 };
 const metaOf = (k) => k.findOne((n) => n.name === "meta").characters;
+const ST36_LEGEND = ["未售", "已售", "本班售出", "在別的收銀點", "已選"];
 // 看板上 5164 056527 這本:001~040 已售、041~065 在店外攤位、066~077 本班售出、078~100 未售(剩 23)
 const MODES = {
   a: {
@@ -132,15 +133,12 @@ if (PART === "36") {
       add(h, await B("本的詳情"));
       add(h, await B("收合", "Text"));
       add(p, await selBar(M.bar, await M.btns()), "FILL");
-      add(p, await grid(100, stOf(m), 10, suffix ? 36 : 40));
       add(
         p,
-        await TW(
-          "cap",
-          "灰 = 已售或不能選;主色框 = 本班售出;虛線淡灰 = 在別的收銀點(滑過看名稱);主色底 = 已選。",
-          p.width - 32,
+        await withLegend(
+          await grid(100, stOf(m), 10, suffix ? 36 : 40),
+          ST36_LEGEND,
         ),
-        "FILL",
       );
       fitShell(f, f.height);
       if (m === "a" && !suffix) {
@@ -244,14 +242,9 @@ if (PART === "36m") {
       await selBar(m === "b" ? "已選 2 張(本班售出)" : M.bar, await M.btns()),
       "FILL",
     );
-    add(sh, await grid(100, stOf(m), 10, 31));
     add(
       sh,
-      await TW(
-        "cap",
-        "灰 = 已售;主色框 = 本班售出;虛線淡灰 = 在別的收銀點(長按看名稱)。",
-        358,
-      ),
+      await withLegend(await grid(100, stOf(m), 10, 31), ST36_LEGEND),
       "FILL",
     );
     sh.x = 0;
@@ -666,11 +659,14 @@ if (PART === "09") {
       );
       add(
         host,
-        await grid(
-          102,
-          (no) => (["037", "064"].includes(no) ? "sel" : null),
-          10,
-          cell,
+        await withLegend(
+          await grid(
+            102,
+            (no) => (["037", "064"].includes(no) ? "sel" : null),
+            10,
+            cell,
+          ),
+          ["未售", "已選"],
         ),
       );
       add(host, await kv("已選", "2 / 2:#037、#064"), "FILL");
@@ -703,28 +699,22 @@ if (PART === "09") {
       add(host, await T("sub2", "已選 10 張 #051~060"));
       add(
         host,
-        await grid(
-          102,
-          (no) =>
-            ["037", "064"].includes(no)
-              ? "off"
-              : +no <= 50
-                ? "other"
-                : +no <= 60
-                  ? "sel"
-                  : null,
-          10,
-          cell,
+        await withLegend(
+          await grid(
+            102,
+            (no) =>
+              ["037", "064"].includes(no)
+                ? "skip"
+                : +no <= 50
+                  ? "assigned"
+                  : +no <= 60
+                    ? "sel"
+                    : null,
+            10,
+            cell,
+          ),
+          ["未分配", "跳號", "已選", "已分配"],
         ),
-      );
-      add(
-        host,
-        await TW(
-          "cap",
-          "灰 = 跳號(不能選);虛線淡灰 = 已分配;主色底 = 已選。",
-          W,
-        ),
-        "FILL",
       );
       await table(host);
       add(

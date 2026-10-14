@@ -564,12 +564,152 @@ for (const id of [
     f.counterAxisAlignItems = "CENTER";
   }
 }
+// ---------- 7. TicketCell 的其他狀態 + Draft/TicketGridLegend(共用圖例,規格 7.5)----------
+// 狀態變體:Shift 本班售出、Skipped 跳號、Scrapped 報廢、Lost 待查 / 遺失、Assigned 已分配、Other 在別的收銀點。
+// 圖例的色塊直接用這些變體,格子改色圖例跟著變;每個狀態一個 BOOLEAN 開關 + 一個 TEXT(文字可覆寫)。
+{
+  const set = await figma.getNodeByIdAsync(created.ticketCell);
+  const V = (n) => set.children.find((v) => v.name === "State=" + n);
+  const mk = async (name, base, fn) => {
+    const old = V(name);
+    if (old) old.remove();
+    const v = V(base).clone();
+    set.appendChild(v);
+    v.name = "State=" + name;
+    await fn(
+      v,
+      v.findOne((n) => n.type === "TEXT"),
+    );
+  };
+  await mk("Shift", "Unavailable", async (v) => {
+    v.strokes = [await paint("primary/main")];
+    v.strokeWeight = 2;
+  });
+  await mk("Skipped", "Unavailable", async (v) => {
+    v.strokes = [await paint("error/main")];
+    v.strokeWeight = 2;
+    v.dashPattern = [4, 3];
+  });
+  await mk("Scrapped", "Unavailable", async (v) => {
+    v.strokes = [await paint("error/main")];
+    v.strokeWeight = 1.5;
+  });
+  await mk("Lost", "Unavailable", async (v) => {
+    v.strokes = [await paint("warning/main")];
+    v.strokeWeight = 2;
+  });
+  await mk("Assigned", "Available", async (v, t) => {
+    v.fills = [await paint("primary/lighter")];
+    v.strokes = [];
+    t.fills = [await paint("text/secondary")];
+  });
+  // 在別的收銀點:淺灰底 + 細斜線底紋、次要文字色虛線框、號碼字色比未售淡
+  await mk("Other", "Available", async (v, t) => {
+    v.fills = [await paint("bg/default")];
+    v.strokes = [await paint("text/secondary")];
+    v.strokeWeight = 1;
+    v.dashPattern = [3, 2];
+    t.fills = [await paint("text/secondary")];
+    v.clipsContent = true;
+    for (let i = 0; i < 4; i++) {
+      const l = figma.createRectangle();
+      l.name = "hatch";
+      l.resize(1, 80);
+      l.fills = [await paint("divider")];
+      v.appendChild(l);
+      l.layoutPositioning = "ABSOLUTE";
+      l.rotation = 45;
+      l.x = -10 + i * 14;
+      l.y = 0;
+      v.insertChild(0, l);
+    }
+  });
+  let x = 16;
+  for (const v of set.children) {
+    v.x = x;
+    v.y = 16;
+    x += v.width + 12;
+  }
+  set.resizeWithoutConstraints(x + 4, 60);
+  set.description =
+    DESC_PROJECT +
+    "張數格子的一格(專案規格 7.5)。Available = 未售 / 未分配;Selected = 已選;Unavailable = 已售或不能選;Shift = 本班售出(可選來撤銷);Other = 在別的收銀點(淺灰底 + 斜線、次要文字色虛線框,不能選,tooltip 顯示收銀點);Assigned = 已分配到某個收銀點(拆本分放);Skipped = 跳號;Scrapped = 報廢;Lost = 待查 / 遺失。";
+
+  const lg = figma.createComponent();
+  lg.name = "Draft/TicketGridLegend";
+  page.appendChild(lg);
+  lg.layoutMode = "HORIZONTAL";
+  lg.layoutWrap = "WRAP";
+  lg.itemSpacing = 12;
+  lg.counterAxisSpacing = 6;
+  lg.primaryAxisAlignItems = "MAX";
+  lg.counterAxisAlignItems = "CENTER";
+  lg.resize(436, 20);
+  lg.primaryAxisSizingMode = "FIXED";
+  lg.counterAxisSizingMode = "AUTO";
+  lg.fills = [];
+  for (const [label, state, on] of [
+    ["未售", "Available", true],
+    ["未分配", "Available", false],
+    ["已售", "Unavailable", true],
+    ["本班售出", "Shift", false],
+    ["在別的收銀點", "Other", false],
+    ["已分配", "Assigned", false],
+    ["跳號", "Skipped", false],
+    ["報廢", "Scrapped", false],
+    ["待查·遺失", "Lost", false],
+    ["已選", "Selected", true],
+  ]) {
+    const it = add(
+      lg,
+      al("HORIZONTAL", {
+        name: "item:" + label,
+        itemSpacing: 6,
+        counterAxisAlignItems: "CENTER",
+      }),
+    );
+    const sw = V(state).createInstance();
+    sw.name = "swatch";
+    await setText(sw, "no", "");
+    sw.resize(16, 16);
+    for (const k of [
+      "topLeftRadius",
+      "topRightRadius",
+      "bottomLeftRadius",
+      "bottomRightRadius",
+    ])
+      sw[k] = 3;
+    add(it, sw);
+    const t = add(it, await txt(label, "Caption", "text/secondary", "label"));
+    it.componentPropertyReferences = {
+      visible: lg.addComponentProperty(label, "BOOLEAN", on),
+    };
+    t.componentPropertyReferences = {
+      characters: lg.addComponentProperty(label + " 文字", "TEXT", label),
+    };
+  }
+  lg.description =
+    DESC_PROJECT +
+    "張數格子的共用圖例(專案規格 7.5)。放在格子正上方靠右,寬度跟格子一樣,窄螢幕自動換行。每個狀態一個開關,只打開畫面用得到的;色塊是 Draft/TicketCell 的變體本身,格子改色圖例跟著變。文字可覆寫(例:盤點把「已選」改成「在(已點)」)。";
+  created.legend = lg.id;
+  // TicketGrid 也放圖例(格子正上方)
+  const tg = await figma.getNodeByIdAsync(created.ticketGrid);
+  const li = lg.createInstance();
+  li.name = "legend(TicketGridLegend)";
+  tg.insertChild(
+    tg.children.findIndex((n) => n.name === "grid"),
+    li,
+  );
+  li.layoutSizingHorizontal = "FILL";
+}
+
 // 版面:側欄在左,其他元件在右邊直向排列(間距 120),避免變體增加後互相重疊
 {
   const side = await figma.getNodeByIdAsync(created.sideNav || "");
   const order = [
     created.ticketCell,
     created.ticketGrid,
+    created.legend,
     created.denom,
     created.cashPointHeader,
     created.bookCard,

@@ -145,41 +145,52 @@ async function selBar(text, btns) {
   for (const x of btns) add(b, x);
   return b;
 }
-// 張數格子:st(no) 回傳 "sel" 已選 / "off" 已售或不能選 / "shift" 本班售出(可選)/ "other" 在別的收銀點(虛線淺灰)/ null 未售
+// 張數格子(每列 10 格):st(no) 回傳 "sel" 已選 / "off" 已售或不能選 / "shift" 本班售出 / "other" 在別的收銀點 /
+// "assigned" 已分配 / "skip" 跳號 / "scrap" 報廢 / "lost" 待查·遺失 / null 未售;每種狀態都是 Draft/TicketCell 的變體
+const CELL_STATE = {
+  sel: "Selected",
+  off: "Unavailable",
+  shift: "Shift",
+  other: "Other",
+  assigned: "Assigned",
+  skip: "Skipped",
+  scrap: "Scrapped",
+  lost: "Lost",
+};
 async function grid(total, st, cols = 10, cell = 40) {
   const g = AL("VERTICAL", { name: "ticket-grid", itemSpacing: 4 });
   for (let i = 1; i <= total; i += cols) {
     const r = add(g, AL("HORIZONTAL", { name: "grid-row", itemSpacing: 4 }));
     for (let k = i; k < Math.min(i + cols, total + 1); k++) {
       const no = String(k).padStart(3, "0");
-      const s = st(no);
-      const c =
-        cellV[
-          s === "sel"
-            ? "Selected"
-            : s === "off" || s === "other" || s === "shift"
-              ? "Unavailable"
-              : "Available"
-        ].createInstance();
+      const c = cellV[CELL_STATE[st(no)] || "Available"].createInstance();
       await setT(
         c.findOne((x) => x.type === "TEXT"),
         no,
       );
       c.resize(cell, cell);
-      if (s === "shift") {
-        c.strokes = [primaryPaint];
-        c.strokeWeight = 2;
-      }
-      if (s === "other") {
-        c.strokes = [cellV.Available.strokes[0]];
-        c.dashPattern = [3, 3];
-        c.strokeWeight = 1.5;
-        c.opacity = 0.6;
-      }
       add(r, c);
     }
   }
   return g;
+}
+// 共用圖例:格子正上方靠右,寬度跟格子一樣;on = 要打開的狀態(圖例上的文字),rename = 覆寫文字
+const LEGEND_ID = "174:264"; // Draft/TicketGridLegend
+async function withLegend(g, on, rename = {}) {
+  const w = AL("VERTICAL", { name: "grid+legend", itemSpacing: 8 });
+  w.appendChild(g);
+  const L = (await figma.getNodeByIdAsync(LEGEND_ID)).createInstance();
+  w.insertChild(0, L);
+  L.layoutSizingHorizontal = "FILL";
+  const props = {};
+  for (const [k, d] of Object.entries(L.componentProperties)) {
+    const lab = k.split("#")[0];
+    if (d.type === "BOOLEAN") props[k] = on.includes(lab);
+    if (d.type === "TEXT" && rename[lab.replace(" 文字", "")])
+      props[k] = rename[lab.replace(" 文字", "")];
+  }
+  L.setProperties(props);
+  return w;
 }
 async function kv(l, v, vk = "body1") {
   const r = AL("HORIZONTAL", {
