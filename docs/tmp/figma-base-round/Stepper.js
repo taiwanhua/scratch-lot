@@ -30,7 +30,10 @@ async function step(state) {
     dot,
     await txt("1", "Caption/SemiBold", "primary/contrast", "n"),
   );
-  const l = add(c, await txt("盤點", "Subtitle/2", "text/primary", "label"));
+  const l = add(
+    c,
+    await txt("基本資料", "Subtitle/2", "text/primary", "label"),
+  );
   if (state === "Done") {
     dot.fills = [await paint("primary/main")];
     n.visible = false;
@@ -70,7 +73,7 @@ ss.paddingLeft = ss.paddingRight = ss.paddingTop = ss.paddingBottom = 16;
 ss.primaryAxisSizingMode = "AUTO";
 ss.counterAxisSizingMode = "AUTO";
 const pi = ss.addComponentProperty("Index", "TEXT", "1");
-const pl = ss.addComponentProperty("Label", "TEXT", "盤點");
+const pl = ss.addComponentProperty("Label", "TEXT", "基本資料");
 for (const v of ss.children) {
   const n = v.findOne((x) => x.name === "n");
   if (v.name !== "State=Error")
@@ -83,7 +86,7 @@ ss.description =
   DESC_PREFIX +
   "Stepper 的一步(@repo/ui,底座規格 10.8)。Done = 已完成(主色底 + 勾,可點回)、Current = 進行中(主色底 + 編號)、Todo = 未開始(停用底)、Error = 有錯(error 底 + !,名稱 error 色)。屬性 Index、Label。";
 
-const LABELS = ["各班結帳", "全店盤點", "小金庫", "存入銀行", "確認"];
+const LABELS = ["基本資料", "明細", "附件", "審核人", "確認"];
 async function stepper(width) {
   const c = figma.createComponent();
   c.name = "Width=" + width;
@@ -120,12 +123,7 @@ async function stepper(width) {
     c.primaryAxisSizingMode = "AUTO";
     add(
       c,
-      await txt(
-        "第 2 / 5 步 · 全店盤點",
-        "Subtitle/2",
-        "text/primary",
-        "summary",
-      ),
+      await txt("第 2 / 5 步 · 明細", "Subtitle/2", "text/primary", "summary"),
     );
     const bar = add(
       c,

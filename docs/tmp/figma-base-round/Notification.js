@@ -86,7 +86,7 @@ async function item(read) {
   add(
     col,
     await txt(
-      "待你審核:叫貨單 #R-0012",
+      "待你審核:示範表單 #F-0012",
       "Subtitle/2",
       read ? "text/secondary" : "text/primary",
       "title",
@@ -94,7 +94,7 @@ async function item(read) {
     "FILL",
   );
   const body = await txt(
-    "中山店 王小明 送出叫貨單,共 5 本。",
+    "王小明 送出示範表單,共 5 筆明細。",
     "Body/2",
     "text/secondary",
     "body",
@@ -115,12 +115,12 @@ hugSet(itemSet, "VERTICAL");
 const pT = itemSet.addComponentProperty(
   "Title",
   "TEXT",
-  "待你審核:叫貨單 #R-0012",
+  "待你審核:示範表單 #F-0012",
 );
 const pB = itemSet.addComponentProperty(
   "Body",
   "TEXT",
-  "中山店 王小明 送出叫貨單,共 5 本。",
+  "王小明 送出示範表單,共 5 筆明細。",
 );
 const pTm = itemSet.addComponentProperty("Time", "TEXT", "10 分鐘前");
 for (const v of itemSet.children) {
@@ -172,20 +172,15 @@ async function panel(state) {
     const data = [
       [
         false,
-        "待你審核:叫貨單 #R-0012",
-        "中山店 王小明 送出叫貨單,共 5 本。",
+        "待你審核:示範表單 #F-0012",
+        "王小明 送出示範表單,共 5 筆明細。",
         "10 分鐘前",
       ],
-      [
-        false,
-        "證照到期提醒",
-        "乙類 好運 001 的證照將於 11/12 到期。",
-        "1 小時前",
-      ],
+      [false, "證照到期提醒", "示範資料 A 將於 11/12 到期。", "1 小時前"],
       [
         true,
         "列印失敗:缺紙",
-        "結帳單 #C-0031 未印出,請補紙後補印。",
+        "收據 #P-0031 未印出,請補紙後補印。",
         "昨天 21:04",
       ],
     ];
@@ -242,10 +237,10 @@ add(t, ic);
 const tc = al("VERTICAL", { name: "content", itemSpacing: 2 });
 const tt = add(
   tc,
-  await txt("待你審核:叫貨單 #R-0012", "Subtitle/2", "text/primary", "title"),
+  await txt("待你審核:示範表單 #F-0012", "Subtitle/2", "text/primary", "title"),
 );
 const tb = await txt(
-  "中山店 王小明 送出叫貨單,共 5 本。",
+  "王小明 送出示範表單,共 5 筆明細。",
   "Body/2",
   "text/secondary",
   "body",
@@ -259,14 +254,14 @@ tt.componentPropertyReferences = {
   characters: t.addComponentProperty(
     "Title",
     "TEXT",
-    "待你審核:叫貨單 #R-0012",
+    "待你審核:示範表單 #F-0012",
   ),
 };
 tb.componentPropertyReferences = {
   characters: t.addComponentProperty(
     "Body",
     "TEXT",
-    "中山店 王小明 送出叫貨單,共 5 本。",
+    "王小明 送出示範表單,共 5 筆明細。",
   ),
 };
 t.description =

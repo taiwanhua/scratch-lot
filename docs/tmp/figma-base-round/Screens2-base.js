@@ -77,7 +77,7 @@ if (PART === 1) {
     add(skip, await T("申請人屬於下列組織時,跳過這一關:", "Body/2"));
     await put(add(skip, H(6, { name: "orgs" })), [
       await orgChip("最上層組織"),
-      await orgChip("台北總店"),
+      await orgChip("示範分店 A"),
       await btn("+ 選擇組織", "Text", "Primary", "Default", "Small"),
     ]);
     add(skip, await check("包含下層組織"));
@@ -672,7 +672,7 @@ if (PART === 3) {
     add(b, nav);
     await cap(
       b,
-      "例:申請中心「待我處理 3」、其他模組各自登記(專案例:經銷商「逾期 2」)。收合時圖示列顯示小圓點。數字由 API 一次回傳使用者看得到的模組。",
+      "例:申請中心「待我處理 3」、其他模組各自登記(例:示範模組「逾期 2」)。收合時圖示列顯示小圓點。數字由 API 一次回傳使用者看得到的模組。",
     );
     b.resize(560, b.height);
     done(b, Y);
@@ -745,10 +745,7 @@ if (PART === 3) {
   {
     const b = await card("BS-16 Stepper 各狀態(寬 / 窄)", 16, 24);
     add(b, await T("寬螢幕", "Subtitle/1"));
-    add(
-      b,
-      await stepper(["各班結帳", "全店盤點", "小金庫", "存入銀行", "確認"], 2),
-    );
+    add(b, await stepper(["基本資料", "明細", "附件", "審核人", "確認"], 2));
     add(b, await T("有錯的步驟", "Subtitle/1"));
     add(b, await stepper(["基本資料", "明細", "確認"], 2, 1));
     add(b, await T("窄螢幕", "Subtitle/1"));

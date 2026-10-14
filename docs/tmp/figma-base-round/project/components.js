@@ -510,9 +510,7 @@ const created = {};
     c.counterAxisSizingMode = "AUTO";
     c.itemSpacing = 0;
     c.fills = [await paint("bg/paper")];
-    c.strokes = [
-      await paint(state === "Attention" ? "warning/main" : "divider"),
-    ];
+    c.strokes = [await paint("divider")];
     c.strokeWeight = 1;
     c.clipsContent = true;
     await radius(c, "radius/md");
@@ -545,6 +543,14 @@ const created = {};
     add(t, await txt("5164 發大財", "Subtitle/2", "text/primary", "game"));
     spacer(t);
     add(t, await txt("200 元", "Caption", "text/secondary", "price"));
+    // 卡片選單(專案規格 6.2:[本的詳情])
+    const menu = add(
+      t,
+      (await baseDraft("Draft/ActionIcon+")).children
+        .find((v) => v.name === "key=more-vert")
+        .createInstance(),
+    );
+    menu.name = "card-menu(卡片選單)";
     add(
       b,
       await txt(
@@ -588,20 +594,10 @@ const created = {};
     spacer(r);
     if (state === "LowStock")
       add(r, await inst("Draft/Tag", { Tone: "Error" }, { Label: "剩很少" }));
-    if (state === "Attention") {
-      add(
-        r,
-        await inst("Draft/Tag", { Tone: "Warning" }, { Label: "待標註 3" }),
-      );
-      add(
-        r,
-        await inst("Draft/Tag", { Tone: "Warning" }, { Label: "號碼不明 2" }),
-      );
-    }
     return c;
   };
   const set = figma.combineAsVariants(
-    [await mk("Normal"), await mk("LowStock"), await mk("Attention")],
+    [await mk("Normal"), await mk("LowStock")],
     page,
   );
   set.name = "Draft/BoardBookCard";
@@ -610,7 +606,7 @@ const created = {};
   set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
   set.description =
     DESC_PROJECT +
-    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱(左側色條 = 遊戲顏色,欄位管理 tagPalettes)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少、Attention = 待標註 / 號碼不明。點卡片可手動標記售出(張數格子)。";
+    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱(左側色條 = 遊戲顏色,欄位管理 tagPalettes)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少。右上 ⋮ = 卡片選單([本的詳情])。點其他收銀點檯面上的卡片:只能 [移櫃] 或 [移櫃並售出]。";
   set.x = 0;
   set.y = 1400;
   created.bookCard = set.id;

@@ -29,7 +29,7 @@ async function variant(expanded) {
     }),
     "FILL",
   );
-  add(head, await txt("經銷商資訊", "Subtitle/1", "text/primary", "title"));
+  add(head, await txt("基本資料", "Subtitle/1", "text/primary", "title"));
   const summary = add(
     head,
     await txt("甲類 · 營業中", "Body/2", "text/secondary", "summary"),
@@ -80,7 +80,7 @@ set.itemSpacing = 24;
 set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 24;
 set.primaryAxisSizingMode = "AUTO";
 set.counterAxisSizingMode = "AUTO";
-const tP = set.addComponentProperty("Title", "TEXT", "經銷商資訊");
+const tP = set.addComponentProperty("Title", "TEXT", "基本資料");
 const sP = set.addComponentProperty("Summary", "TEXT", "甲類 · 營業中");
 for (const v of set.children) {
   v.findOne((n) => n.name === "title").componentPropertyReferences = {

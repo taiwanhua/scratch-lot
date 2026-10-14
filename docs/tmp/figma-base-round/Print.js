@@ -105,15 +105,15 @@ rr.resize(352, 10);
 rr.primaryAxisSizingMode = "FIXED";
 rr.counterAxisSizingMode = "AUTO";
 rr.fills = [];
-const rl = add(rr, await txt("收銀點", "Body/2", "grey/900", "label"));
+const rl = add(rr, await txt("櫃台", "Body/2", "grey/900", "label"));
 const rsp = add(rr, al("HORIZONTAL", { name: "spacer" }), "FILL");
 rsp.resize(rsp.width, 1);
-const rv = add(rr, await txt("收銀 1", "Body/2", "grey/900", "value"));
+const rv = add(rr, await txt("1 號櫃台", "Body/2", "grey/900", "value"));
 rl.componentPropertyReferences = {
-  characters: rr.addComponentProperty("Label", "TEXT", "收銀點"),
+  characters: rr.addComponentProperty("Label", "TEXT", "櫃台"),
 };
 rv.componentPropertyReferences = {
-  characters: rr.addComponentProperty("Value", "TEXT", "收銀 1"),
+  characters: rr.addComponentProperty("Value", "TEXT", "1 號櫃台"),
 };
 rr.description =
   DESC_PREFIX +
@@ -128,18 +128,18 @@ sg.resize(352, 10);
 sg.primaryAxisSizingMode = "AUTO";
 sg.counterAxisSizingMode = "FIXED";
 sg.fills = [];
-const sl = add(sg, await txt("交班人簽名", "Body/2", "grey/900", "role"));
+const sl = add(sg, await txt("經手人簽名", "Body/2", "grey/900", "role"));
 const line = figma.createRectangle();
 line.name = "sign-line";
 line.resize(352, 1);
 line.fills = [await paint("grey/900")];
 add(sg, line, "FILL");
 sl.componentPropertyReferences = {
-  characters: sg.addComponentProperty("Role", "TEXT", "交班人簽名"),
+  characters: sg.addComponentProperty("Role", "TEXT", "經手人簽名"),
 };
 sg.description =
   DESC_PREFIX +
-  "58mm 單據簽名欄(底座規格 B8)。屬性 Role(例:交班人簽名 / 接班人簽名 / 經手人簽名 / 店長簽名)。";
+  "58mm 單據簽名欄(底座規格 B8)。屬性 Role(例:經手人簽名 / 收件人簽名 / 主管簽名)。";
 
 // ---- Receipt58(示範組合)----
 const R = figma.createComponent();
@@ -155,11 +155,8 @@ R.counterAxisAlignItems = "CENTER";
 R.fills = [await paint("common/white")];
 R.effectStyleId = (await style("Shadow/Card")).id;
 R.clipsContent = false;
-const org = add(R, await txt("好運彩券行", "Subtitle/1", "grey/900", "org"));
-const title = add(
-  R,
-  await txt("交班結帳單", "Subtitle/2", "grey/900", "title"),
-);
+const org = add(R, await txt("示範商店", "Subtitle/1", "grey/900", "org"));
+const title = add(R, await txt("收據", "Subtitle/2", "grey/900", "title"));
 const rp = al("HORIZONTAL", {
   name: "reprint",
   paddingLeft: 8,
@@ -189,17 +186,17 @@ async function rows(list) {
 }
 await dash();
 await rows([
-  ["分店", "中山店"],
-  ["收銀點", "收銀 1"],
-  ["交班時間", "2026-10-13 15:02"],
+  ["分店", "示範分店 A"],
+  ["櫃台", "1 號櫃台"],
+  ["時間", "2026-10-13 15:02"],
   ["單號", "C-0031"],
 ]);
 await dash();
 const tbl = al("VERTICAL", { name: "table(最多 3 欄)", itemSpacing: 2 });
 for (const [a, b, c2, bold] of [
-  ["遊戲", "張數", "金額", true],
-  ["5164 發大財", "12", "2,400", false],
-  ["5201 金好運", "5", "1,000", false],
+  ["品項", "數量", "金額", true],
+  ["A 商品", "12", "2,400", false],
+  ["B 商品", "5", "1,000", false],
 ]) {
   const st = bold ? "Caption/SemiBold" : "Body/2";
   const r = al("HORIZONTAL", { name: "tr", itemSpacing: 8 });
@@ -217,7 +214,7 @@ for (const [a, b, c2, bold] of [
 add(R, tbl, "FILL");
 const rng = add(
   R,
-  await txt("號碼:#012~016、#020(6 張)", "Body/2", "grey/900", "ranges"),
+  await txt("序號:#012~016、#020(6 筆)", "Body/2", "grey/900", "ranges"),
   "FILL",
 );
 rng.textAutoResize = "HEIGHT";
@@ -239,16 +236,16 @@ qr.appendChild(qt);
 qt.x = 38;
 qt.y = 40;
 add(R, qr);
-for (const role of ["交班人簽名", "接班人簽名"]) {
+for (const role of ["經手人簽名", "收件人簽名"]) {
   const i = sg.createInstance();
   await setProps(i, { Role: role });
   add(R, i, "FILL");
 }
 org.componentPropertyReferences = {
-  characters: R.addComponentProperty("Org", "TEXT", "好運彩券行"),
+  characters: R.addComponentProperty("Org", "TEXT", "示範商店"),
 };
 title.componentPropertyReferences = {
-  characters: R.addComponentProperty("Title", "TEXT", "交班結帳單"),
+  characters: R.addComponentProperty("Title", "TEXT", "收據"),
 };
 rp.componentPropertyReferences = {
   visible: R.addComponentProperty("Reprint", "BOOLEAN", true),

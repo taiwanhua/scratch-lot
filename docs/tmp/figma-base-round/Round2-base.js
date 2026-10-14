@@ -68,7 +68,7 @@ H.counterAxisAlignItems = "CENTER";
 H.resize(W, 10);
 H.counterAxisSizingMode = "FIXED";
 H.primaryAxisSizingMode = "AUTO";
-const hOrg = add(H, await txt("好運商行", "Subtitle/1", "grey/900", "org"));
+const hOrg = add(H, await txt("示範商店", "Subtitle/1", "grey/900", "org"));
 const hTitle = add(H, await txt("收據", "Subtitle/2", "grey/900", "title"));
 const hRp = al("HORIZONTAL", {
   name: "reprint",
@@ -98,7 +98,7 @@ const hTime = add(
   await txt("2026-10-13 15:02", "Body/2", "grey/900", "time"),
 );
 for (const [n, d, node] of [
-  ["Org", "好運商行", hOrg],
+  ["Org", "示範商店", hOrg],
   ["Title", "收據", hTitle],
   ["No", "單號 C-0031", hNo],
   ["Time", "2026-10-13 15:02", hTime],
@@ -277,7 +277,7 @@ const put = async (comp, props) => {
 await put(H, { Reprint: true });
 await put(DV);
 for (const [l, val] of [
-  ["分店", "中山店"],
+  ["分店", "示範分店 A"],
   ["櫃台", "1 號櫃台"],
 ])
   await put(row, { Label: l, Value: val });

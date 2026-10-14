@@ -31,10 +31,7 @@ async function rcell(state) {
       slot,
       await txt("09:00–17:00", "Caption/SemiBold", "text/primary", "line-1"),
     );
-    add(
-      slot,
-      await txt("收銀 1 · 負責人", "Caption", "text/secondary", "line-2"),
-    );
+    add(slot, await txt("櫃台 A", "Caption", "text/secondary", "line-2"));
   }
   add(c, slot, "FILL", state === "Empty" ? "FILL" : "HUG");
   return c;

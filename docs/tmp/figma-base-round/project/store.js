@@ -115,7 +115,7 @@ const out = {};
   };
   await lane("店內櫃台", true, true, null, [
     ["Normal"],
-    ["Attention", "5201 金好運", "100 元"],
+    ["Normal", "5201 金好運", "100 元"],
     ["LowStock", "5198 鼠來寶", "100 元"],
     ["Normal", "5150 好運旺旺", "500 元"],
   ]);

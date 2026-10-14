@@ -108,7 +108,7 @@ async function panel(multiple) {
   add(s, await txt("搜尋組織", "Body/2", "text/secondary", "placeholder"));
   add(p, s, "FILL");
   const rows = [
-    [0, "好運彩券(最上層組織)", "open", false],
+    [0, "示範公司(最上層組織)", "open", false],
     [1, "北區", "open", false],
     [2, "A 店", "leaf", true],
     [2, "B 店", "leaf", multiple],

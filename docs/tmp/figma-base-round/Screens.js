@@ -357,8 +357,8 @@ async function actions(dlg, labels) {
     tb,
     await tableRow(
       [
-        await cellT("中山店收銀電腦", true),
-        "中山店",
+        await cellT("示範分店 A 櫃台電腦", true),
+        "示範分店 A",
         await inst("Draft/Tag", { Tone: "Success" }, { Label: "已連線" }),
         "1 分鐘前",
         "1.0.0",
@@ -396,7 +396,7 @@ async function actions(dlg, labels) {
   for (const t of f1.findAll((x) => x.type === "TEXT")) {
     await figma.loadFontAsync(t.fontName);
     if (t.name === "label") t.characters = "分店";
-    if (t.name === "value") t.characters = "中山店";
+    if (t.name === "value") t.characters = "示範分店 A";
     if (t.name === "chevron") t.characters = "▾";
   }
   add(dlg, f1, "FILL");
@@ -405,7 +405,7 @@ async function actions(dlg, labels) {
     await inst(
       "TextField",
       { Size: "Small", State: "Default" },
-      { Label: "名稱", Value: "中山店收銀電腦" },
+      { Label: "名稱", Value: "示範分店 A 櫃台電腦" },
     ),
     "FILL",
   );
