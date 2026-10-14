@@ -32,7 +32,7 @@ async function variant(expanded) {
   add(head, await txt("基本資料", "Subtitle/1", "text/primary", "title"));
   const summary = add(
     head,
-    await txt("甲類 · 營業中", "Body/2", "text/secondary", "summary"),
+    await txt("示範摘要", "Body/2", "text/secondary", "summary"),
   );
   summary.visible = !expanded;
   const sp = add(head, al("HORIZONTAL", { name: "spacer" }), "FILL");
@@ -81,7 +81,7 @@ set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 24;
 set.primaryAxisSizingMode = "AUTO";
 set.counterAxisSizingMode = "AUTO";
 const tP = set.addComponentProperty("Title", "TEXT", "基本資料");
-const sP = set.addComponentProperty("Summary", "TEXT", "甲類 · 營業中");
+const sP = set.addComponentProperty("Summary", "TEXT", "示範摘要");
 for (const v of set.children) {
   v.findOne((n) => n.name === "title").componentPropertyReferences = {
     characters: tP,

@@ -47,9 +47,15 @@ async function TW(k, s, w, colorK) {
   t.resize(w, t.height);
   return t;
 }
-async function B(l, v = "Outlined", sz = "Small", c = "Primary") {
+async function B(
+  l,
+  v = "Outlined",
+  sz = "Small",
+  c = "Primary",
+  st = "Default",
+) {
   const b = N.btn.clone();
-  b.setProperties({ Variant: v, Size: sz, Color: c, State: "Default" });
+  b.setProperties({ Variant: v, Size: sz, Color: c, State: st });
   await setT(
     b.findOne((x) => x.type === "TEXT"),
     l,

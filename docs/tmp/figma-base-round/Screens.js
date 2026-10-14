@@ -368,8 +368,8 @@ async function actions(dlg, labels) {
     tb,
     await tableRow(
       [
-        await cellT("信義店小主機", true),
-        "信義店",
+        await cellT("示範分店 B 小主機", true),
+        "示範分店 B",
         await inst("Draft/Tag", { Tone: "Grey" }, { Label: "離線" }),
         "3 天前",
         [
@@ -415,7 +415,7 @@ async function actions(dlg, labels) {
   box.fills = [await paint("bg/default")];
   await radius(box, "radius/sm");
   for (const [label, value, st] of [
-    ["伺服器網址", "https://api.scratch-lot.example", "Body/2"],
+    ["伺服器網址", "https://api.example.com", "Body/2"],
     ["配對碼", "8K3M-Q7PZ", "Heading/H6"],
   ]) {
     const r = al("HORIZONTAL", {

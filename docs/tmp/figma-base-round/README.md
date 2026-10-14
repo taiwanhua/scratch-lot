@@ -128,7 +128,7 @@
 1. 元件:`project/_header.js` + `project/_screen-helpers.js` + `components.js`(TicketCell 主色、張號 001 起、CashPointHeader Open / Closed / Other + Mine、BoardBookCard Normal / LowStock)。
 2. 第一、二輪畫面:`const PROJECT = true;` + `../_kit.js` + `store.js`、`store-wizards.js`、`purchasing.js`、`schedule.js`、`store2.js`、`store2-bc.js`、`store2-d.js`、`seg4.js`、`seg5.js`、`seg6.js`(各檔頭註明 PART)。
 3. 第三輪:`../_kit.js` + `_r3.js` + `r3-store.js`(ST-13 / 14 / 15)。
-4. 第四~六輪:`r4-lib.js` + `r4-store.js`(PART 36、36m、37、07、28b)、`r4-reports.js`(RE-04 平板 / 手機);之後跑 `brand-rebind.js`。
+4. 第四~八輪:`r4-lib.js` + `r4-store.js`(PART 36、36m、37、07、28b、09、18)、`r4-reports.js`(RE-04 平板 / 手機);之後跑 `brand-rebind.js`。
 5. 排列:`r4-layout.js`(每頁一次,含畫面高度貼合內容)。
 6. 稽核:`audit.js`、`audit-layout.js`,全部要是 0。
 

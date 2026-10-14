@@ -1,5 +1,5 @@
 // 第四~六輪「Screen / 店面管理」(65:14):卡片原地展開 ST-36、拆本選本 ST-37、手動標記確認 ST-07、日結版結帳確認申請 ST-28b。
-// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
+// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
 // 畫完跑 brand-rebind.js(複製的 Button 換變體會帶回底座主色),最後跑 r4-layout.js 排列。
 await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("65:14"));
 const cardsIn = async (f) => {
@@ -539,5 +539,284 @@ if (PART === "28b") {
         await setT(t, "20,000(台銀 ·····12345)");
     }
     fitShell(s, minH);
+  }
+}
+
+if (PART === "09") {
+  // 拆本兩步(第八輪):a ① 標跳號、b ② 全部放到本機收銀點(預設)、c ② 分放到多個收銀點(分配到一半 + 表格)。
+  // 從 ST-37 的三種尺寸複製(電腦 / 平板是遮罩 + 對話框,手機全螢幕);格子每列 10 格。
+  const stepSet = await figma.getNodeByIdAsync("79:1325");
+  const narrowV = (await figma.getNodeByIdAsync("79:1361")).children.find(
+    (v) => v.name === "Width=Narrow",
+  );
+  const rSel = await figma.getNodeByIdAsync("87:2479"),
+    rDef = await figma.getNodeByIdAsync("87:2482");
+  const stepper = async (cur, narrow) => {
+    if (narrow) {
+      const n = narrowV.createInstance();
+      for (const t of n.findAll((x) => x.type === "TEXT"))
+        await setT(
+          t,
+          cur === 1 ? "第 1 / 2 步 · 標跳號" : "第 2 / 2 步 · 放到哪個收銀點",
+        );
+      return n;
+    }
+    const r = AL("HORIZONTAL", {
+      name: "stepper",
+      itemSpacing: 12,
+      counterAxisAlignItems: "CENTER",
+    });
+    for (const [i, l] of [
+      [1, "標跳號"],
+      [2, "放到哪個收銀點"],
+    ]) {
+      if (i === 2) {
+        const ln = figma.createRectangle();
+        ln.name = "connector";
+        ln.resize(48, 2);
+        ln.fills = [cellV.Available.strokes[0]];
+        r.appendChild(ln);
+      }
+      const s = stepSet.children
+        .find(
+          (v) =>
+            v.name ===
+            "State=" + (i < cur ? "Done" : i === cur ? "Current" : "Todo"),
+        )
+        .createInstance();
+      s.setProperties({ "Index#79:0": String(i), "Label#79:5": l });
+      r.appendChild(s);
+    }
+    return r;
+  };
+  const radioRow = async (host, on, label) => {
+    const r = add(
+      host,
+      AL("HORIZONTAL", {
+        name: "option",
+        itemSpacing: 10,
+        counterAxisAlignItems: "CENTER",
+      }),
+      "FILL",
+    );
+    add(r, (on ? rSel : rDef).clone());
+    add(r, await T("body1", label));
+    return r;
+  };
+  const table = async (host) => {
+    const t = add(
+      host,
+      AL("VERTICAL", { name: "table", itemSpacing: 0 }),
+      "FILL",
+    );
+    for (const [a, b, c, h] of [
+      ["收銀點", "張號", "張數", true],
+      ["店外攤位", "#001~050(不含跳號 #037)", "49"],
+      ["未分配", "#051~102(不含跳號 #064)", "51"],
+    ]) {
+      const r = add(
+        t,
+        AL("HORIZONTAL", {
+          name: h ? "thead" : "tr",
+          itemSpacing: 12,
+          paddingTop: 8,
+          paddingBottom: 8,
+          counterAxisAlignItems: "CENTER",
+        }),
+        "FILL",
+      );
+      add(r, await TW(h ? "body2" : "body1", a, 100));
+      const m = add(r, await T(h ? "body2" : "body1", b), "FILL");
+      m.textAutoResize = "HEIGHT";
+      const z = await TW(h ? "body2" : "body1", c, 48);
+      z.textAlignHorizontal = "RIGHT";
+      add(r, z);
+      if (h) r.fills = N.bar.fills;
+    }
+  };
+  const body = async (host, step, W, cell, mobile) => {
+    if (!mobile) {
+      const h = add(
+        host,
+        AL("HORIZONTAL", {
+          name: "head",
+          itemSpacing: 8,
+          counterAxisAlignItems: "CENTER",
+        }),
+        "FILL",
+      );
+      add(h, await T("h6", "拆本 · 5201 金好運 · 本號 060116"));
+      sp(h);
+      add(h, await T("body2", "100 元 · 張號 001~102"));
+    } else add(host, await T("body2", "本號 060116 · 100 元 · 張號 001~102"));
+    add(
+      host,
+      await stepper(step === "a" ? 1 : 2, mobile),
+      mobile ? "FILL" : null,
+    );
+    if (step === "a") {
+      add(
+        host,
+        await TW(
+          "body2",
+          "迄號 102 比標準張數多 2 張,有 2 個號碼不存在。點出不存在的號碼:",
+          W,
+        ),
+        "FILL",
+      );
+      add(
+        host,
+        await grid(
+          102,
+          (no) => (["037", "064"].includes(no) ? "sel" : null),
+          10,
+          cell,
+        ),
+      );
+      add(host, await kv("已選", "2 / 2:#037、#064"), "FILL");
+    } else if (step === "b") {
+      const s = N.sel.clone();
+      for (const t of s.findAll((x) => x.type === "TEXT")) {
+        if (t.name === "label") await setT(t, "收銀點");
+        if (t.name === "value") await setT(t, "店內櫃台(本機)");
+      }
+      add(await radioRow(host, true, "全部放到"), s, "FILL");
+      await radioRow(host, false, "分放到多個收銀點");
+      add(host, await kv("張數", "100 張(不含跳號 #037、#064)"), "FILL");
+    } else {
+      await radioRow(host, false, "全部放到店內櫃台(本機)");
+      await radioRow(host, true, "分放到多個收銀點");
+      add(host, await TW("body2", "在格子選張,再點要放的收銀點:", W), "FILL");
+      const ch = add(
+        host,
+        AL("HORIZONTAL", {
+          name: "cash-points",
+          itemSpacing: 8,
+          layoutWrap: "WRAP",
+          counterAxisSpacing: 8,
+        }),
+        "FILL",
+      );
+      add(ch, await B("店內櫃台(本機)"));
+      add(ch, await B("店外攤位", "Contained"));
+      add(ch, await B("彩券機旁"));
+      add(host, await T("sub2", "已選 10 張 #051~060"));
+      add(
+        host,
+        await grid(
+          102,
+          (no) =>
+            ["037", "064"].includes(no)
+              ? "off"
+              : +no <= 50
+                ? "other"
+                : +no <= 60
+                  ? "sel"
+                  : null,
+          10,
+          cell,
+        ),
+      );
+      add(
+        host,
+        await TW(
+          "cap",
+          "灰 = 跳號(不能選);虛線淡灰 = 已分配;主色底 = 已選。",
+          W,
+        ),
+        "FILL",
+      );
+      await table(host);
+      add(
+        host,
+        await TW("body2", "還有 51 張沒分配,全部分配完才能確認拆本。", W),
+        "FILL",
+      );
+    }
+    const a = add(
+      host,
+      AL("HORIZONTAL", {
+        name: "actions",
+        itemSpacing: 8,
+        counterAxisAlignItems: "CENTER",
+      }),
+      "FILL",
+    );
+    add(a, await B(step === "a" ? "取消" : "上一步", "Text", "Medium"));
+    sp(a);
+    add(
+      a,
+      await B(
+        step === "a" ? "下一步" : "確認拆本",
+        "Contained",
+        "Medium",
+        "Primary",
+        step === "c" ? "Disabled" : "Default",
+      ),
+    );
+  };
+  const NAMES = {
+    a: "① 標跳號",
+    b: "② 全部放到本機收銀點",
+    c: "② 分放到多個收銀點",
+  };
+  for (const st of ["a", "b", "c"]) {
+    {
+      const f = (await figma.getNodeByIdAsync("143:33884")).clone(); // ST-37 電腦
+      f.name = `ST-09${st} Overlay / 拆本 ${NAMES[st]}`;
+      fileIn("電腦 1440", f);
+      const d = f.findOne((n) => n.name.startsWith("dialog:"));
+      d.name = "dialog:拆本";
+      for (const k of [...d.children]) k.remove();
+      d.resize(560, d.height);
+      await body(d, st, 512, 40, false);
+      f.resize(Math.max(1440, f.width), Math.max(900, d.height + 128));
+    }
+    {
+      const f = (await figma.getNodeByIdAsync("143:34208")).clone(); // ST-37 平板
+      f.name = `ST-09${st} · 平板 拆本 ${NAMES[st]}`;
+      fileIn("平板 1024", f);
+      const d = f.findOne((n) => n.name === "dialog");
+      for (const k of [...d.children]) k.remove();
+      await body(d, st, d.width - 48, 40, false);
+      f.resize(f.width, Math.max(768, d.y + d.height + 48));
+    }
+    {
+      const f = (await figma.getNodeByIdAsync("143:34382")).clone(); // ST-37 手機
+      f.name = `ST-09${st} · 手機 拆本 ${NAMES[st]}`;
+      fileIn("手機 390", f);
+      const c = f.findOne((n) => n.name === "content" && n.type === "FRAME");
+      for (const k of [...c.children]) k.remove();
+      const bar = f.findOne((n) => n.name === "app-bar");
+      await setT(
+        bar.children.find(
+          (x) => x.type === "TEXT" && x.characters.startsWith("拆本"),
+        ),
+        "拆本 · 5201 金好運",
+      );
+      const ob = bar.children.find((x) => x.type === "INSTANCE");
+      if (ob) ob.remove();
+      await body(c, st, 358, 31, true);
+      fitShell(f, 844);
+    }
+  }
+}
+
+if (PART === "18") {
+  // ST-18 交班結帳 ③ 平板 / 手機:面額清點合計對上實點 4,800(1,000×4、500×1、100×2、50×1、10×4、5×2)
+  const D = [1000, 500, 100, 50, 10, 5, 1];
+  const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  for (const id of ["124:26174", "124:26507"]) {
+    const inst = await figma.getNodeByIdAsync(id);
+    const cnt = [4, 1, 2, 1, 4, 2, 0];
+    const ts = inst.findAll((t) => t.type === "TEXT");
+    let k = 0;
+    for (let i = 0; i < ts.length; i++)
+      if (ts[i].name === "value") {
+        await setT(ts[i], String(cnt[k]));
+        await setT(ts[i + 2], fmt(D[k] * cnt[k]));
+        k++;
+      }
+    await setT(ts[ts.length - 1], "4,800");
   }
 }

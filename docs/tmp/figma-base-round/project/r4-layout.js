@@ -76,53 +76,72 @@ const ROWS = {
     ["出勤紀錄與補打卡", ["SC-11", "SC-12", "SC-29", "SC-13", "SC-30"]],
     ["支援需求單", ["SC-14", "SC-31"]],
   ],
-  // Base Draft:依節點 id 分列
-  "41:5914": [
+  // Base Draft:依名稱分列(在 wowgo-base 重建時也能用);「*」結尾是名稱開頭比對;兩張「說明 / 通知鈴暫時疊加」是 scratch-lot 專用的註解卡,用節點 id
+  base: [
     [
       "元件:區塊、圖示、受眾、資料範圍、組織選單",
-      ["41:5932", "43:66", "45:248", "46:156", "47:409"],
+      [
+        "Draft/Section",
+        "Draft/ActionIcon+",
+        "Draft/AudiencePicker",
+        "Draft/DataScopeRuleCard",
+        "Draft/OrgTreeSelect",
+      ],
     ],
-    ["元件:月曆、排班格", ["48:359", "48:360", "49:493", "49:494"]],
-    ["元件:通知", ["50:567", "50:582", "50:620", "50:621"]],
+    [
+      "元件:月曆、排班格",
+      [
+        "Draft/MonthCalendarCell",
+        "Draft/MonthCalendar",
+        "Draft/RosterCell",
+        "Draft/RosterGrid",
+      ],
+    ],
+    [
+      "元件:通知",
+      [
+        "Draft/NotificationBell",
+        "Draft/NotificationItem",
+        "Draft/NotificationPanel",
+        "Draft/NotificationToast",
+      ],
+    ],
     [
       "元件:列印按鈕與 58mm 單據",
       [
-        "51:625",
-        "51:626",
-        "51:630",
-        "51:633",
-        "80:1491",
-        "80:1508",
-        "80:1509",
-        "80:1511",
-        "80:1515",
-        "80:1517",
+        "Draft/PrintButton",
+        "Draft/Receipt58Row",
+        "Draft/Receipt58Signature",
+        "Draft/Receipt58",
+        "Draft/Receipt58Header",
+        "Draft/Receipt58TableRow",
+        "Draft/Receipt58Range",
+        "Draft/Receipt58Total",
+        "Draft/Receipt58Divider",
+        "Draft/Receipt58QR",
       ],
     ],
-    ["元件:Stepper", ["79:1325", "79:1361"]],
-    ["通知設定", ["54:610", "59:1524", "54:1002"]],
+    ["元件:Stepper", ["Draft/StepperStep", "Draft/Stepper"]],
+    ["通知設定", ["Base Draft / 通知設定*", "59:1524", "Overlay / 編輯收件人"]],
     [
       "印表機管理與列印",
       [
-        "55:1116",
+        "Base Draft / 印表機管理*",
         "59:1528",
-        "55:1424",
-        "131:28357",
-        "131:28422",
-        "131:28474",
-        "131:28825",
-        "85:2052",
+        "Overlay / 新增代理程式*",
+        "BS-17",
+        "BS-18",
+        "BS-19",
+        "BS-20",
+        "BS-11",
       ],
     ],
-    ["流程設計器", ["56:1089", "56:1496", "82:1338"]],
-    [
-      "表單、表單設計器與申請中心",
-      ["82:1829", "82:2077", "85:2158", "83:2264", "83:2559"],
-    ],
-    ["個人設定", ["83:1609", "83:1959", "83:2226"]],
+    ["流程設計器", ["Base Draft / 流程設計器*", "BS-03"]],
+    ["表單、表單設計器與申請中心", ["BS-04", "BS-12", "BS-07"]],
+    ["個人設定", ["BS-05", "BS-06"]],
     [
       "欄位管理、側欄、頁內分頁、Stepper 示範",
-      ["85:2497", "85:2784", "85:2921", "85:3187"],
+      ["BS-13", "BS-14", "BS-15", "BS-16"],
     ],
   ],
 };
@@ -133,13 +152,20 @@ const GAP = 80,
   X0 = 120;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
-const labelSrc = await figma.getNodeByIdAsync("125:2093"); // Heading/H6,綁 text/primary
+const labelSrc = await figma.getNodeByIdAsync("125:2093"); // Heading/H6,綁 text/primary;在底座檔找不到時改用 Inter
 async function fnt(t) {
   for (const f of t.getRangeAllFontNames(0, Math.max(1, t.characters.length)))
     await figma.loadFontAsync(f);
 }
 async function label(parent, text) {
-  const t = labelSrc.clone();
+  let t;
+  if (labelSrc) t = labelSrc.clone();
+  else {
+    await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
+    t = figma.createText();
+    t.fontName = { family: "Inter", style: "Semi Bold" };
+    t.fontSize = 20;
+  }
   parent.appendChild(t);
   await fnt(t);
   t.characters = text;
@@ -192,7 +218,14 @@ async function arrange(container, nodes, rows, emptyNote) {
     const list = [];
     for (const k of keys)
       for (const f of frames
-        .filter((f) => !used.has(f) && (codeKey(f) === k || f.id === k))
+        .filter(
+          (f) =>
+            !used.has(f) &&
+            (codeKey(f) === k ||
+              f.id === k ||
+              f.name === k ||
+              (k.endsWith("*") && f.name.startsWith(k.slice(0, -1)))),
+        )
         .sort((a, b) => (a.name < b.name ? -1 : 1))) {
         list.push(f);
         used.add(f);
@@ -231,9 +264,9 @@ async function arrange(container, nodes, rows, emptyNote) {
   }
   return { w: maxX + X0, h: y };
 }
-const rows = ROWS[PAGE_ID];
+const rows = ROWS[PAGE_ID] || (/本輪/.test(page.name) ? ROWS.base : null);
 const out = [];
-if (PAGE_ID === "41:5914") {
+if (/本輪/.test(page.name)) {
   const r = await arrange(
     page,
     [...page.children].filter(
