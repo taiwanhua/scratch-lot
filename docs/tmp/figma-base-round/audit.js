@@ -3,6 +3,7 @@
 // 回收完成時 baseDraftComponents、instancesOfBaseDrafts、nodesWithDraftMarker 三項加總都應為 0。
 // nonBaseBindingsInBaseDrafts 任何時候都應為 0(底座草稿只能綁 wowgo-base 的變數)。
 // basePrimaryBindings(Base Draft 以外的頁)任何時候都應為 0(專案頁的主色要綁 scratch-lot Brand Library)。
+// devTextInScreens 任何時候都應為 0:畫面框內不能有設計稿編號、規格章節號、開發用說明(畫圖檢查清單 9);註解放在畫面框外。
 const PAGE_ID = "41:5914";
 const MARKER = "本輪草稿"; // 底座草稿 description 的固定前綴「【底座・本輪草稿,…】」
 // wowgo-base Design System 的變數集合 key(Color / Radius / Primitives / Brand)
@@ -104,6 +105,28 @@ if (!page.name.startsWith("Base Draft")) {
   }
 }
 
+// 畫面框內的開發用文字(畫圖檢查清單 9)。頁上或尺寸 Section 內的頂層節點算畫面;名稱以「說明」開頭的註解卡與框外的註解文字不算。
+const RE_CODE = /\b(ST|IN|PU|AC|RE|DE|MD|SC|RC|RW|BS)-\d{2}[a-c]?\b/;
+const RE_SEC = /第 ?\d+(\.\d+)* ?(節|章)|規格/;
+const RE_DEV =
+  /RANGE_TOO_LARGE|show-cost|\b(store|inventory|purchasing|accounts|reports|dealers|games|schedule|system|master-data)\.[a-z][a-z-]+|swapComponent|Draft\/|PageTabs|SLOT/;
+const screenNodes = page.children
+  .flatMap((n) => (n.type === "SECTION" ? [...n.children] : [n]))
+  .filter(
+    (n) => n.type !== "TEXT" && !n.name.startsWith("說明") && "findAll" in n,
+  );
+const devText = [];
+for (const s of screenNodes)
+  for (const t of s.findAll((x) => x.type === "TEXT")) {
+    const c = t.characters;
+    if (RE_CODE.test(c) || RE_SEC.test(c) || RE_DEV.test(c))
+      devText.push({
+        screen: s.name.slice(0, 30),
+        id: t.id,
+        text: c.slice(0, 30),
+      });
+  }
+
 return {
   page: page.name,
   basePrimaryBindings,
@@ -114,4 +137,6 @@ return {
   ).length,
   nonBaseBindingsInBaseDrafts: nonBase.length,
   nonBaseSample: nonBase.slice(0, 10),
+  devTextInScreens: devText.length,
+  devTextSample: devText.slice(0, 10),
 };

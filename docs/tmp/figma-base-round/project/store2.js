@@ -314,7 +314,7 @@ if (PART === "A") {
     );
     await para(e, "要尋回這一本嗎?尋回後回到中山店的庫存。");
     add(e, await select("尋回原因", "調貨時夾在別的本裡", null), "FILL");
-    await cap(e, "需要權限 inventory.recover;原因必填。");
+    await cap(e, "尋回需要有權限;原因必填。");
     add(
       e,
       await actions([await btn("取消", "Text"), await btn("尋回")]),
@@ -464,7 +464,7 @@ if (PART === "A") {
     add(
       dlg,
       await field("標註瑕疵張號(選填)", "#018", {
-        helper: "需要權限 inventory.void-tickets;瑕疵的張不能賣",
+        helper: "瑕疵的張不能賣",
       }),
       "FILL",
     );

@@ -80,7 +80,7 @@ if (PART === "SC1") {
     );
     await cap(
       r,
-      "符合規則才存,不需要核准;截止後由有 schedule.manage.edit-day-offs 的人代改,原因必填。日曆格顯示每天已有幾人畫休。",
+      "符合規則才存,不需要核准;截止後由有代改權限的人代改,原因必填。日曆格顯示每天已有幾人畫休。",
     );
     add(r, await actions([await btn("儲存")]), "FILL");
     done(sh, Y);
@@ -285,10 +285,7 @@ if (PART === "SC1") {
       ),
       "FILL",
     );
-    await cap(
-      sh.content,
-      "截止後由有 schedule.manage.edit-day-offs 的人點格子代改,原因必填。",
-    );
+    await cap(sh.content, "截止後由有代改權限的人點格子代改,原因必填。");
     done(sh, Y);
   }
 }

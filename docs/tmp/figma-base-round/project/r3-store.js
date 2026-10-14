@@ -167,10 +167,7 @@ async function deskST13() {
     ),
     "FILL",
   );
-  await cap(
-    lo,
-    "確認遺失需要權限 store.confirm-lost,原因必填;也可以「繼續待查」。",
-  );
+  await cap(lo, "確認遺失需要有權限,原因必填;也可以「繼續待查」。");
   add(
     c,
     await actions(

@@ -116,7 +116,7 @@ async function tree() {
     await row([
       await sel("欄位", "權限", 140),
       await sel("條件", "持有", 96),
-      await chips(["accounts.close-period"]),
+      await chips(["示範模組 · 編輯"]),
     ]),
   );
   put(g, 2, n);

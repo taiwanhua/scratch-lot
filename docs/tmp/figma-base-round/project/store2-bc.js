@@ -179,10 +179,7 @@ if (PART === "B") {
       ),
       "FILL",
     );
-    await cap(
-      lost,
-      "確認遺失需要權限 store.confirm-lost,原因必填;也可以「繼續待查」。",
-    );
+    await cap(lost, "確認遺失需要有權限,原因必填;也可以「繼續待查」。");
     add(
       sh.content,
       await actions(
@@ -533,7 +530,7 @@ if (PART === "C") {
     add(c, await radio("跳過盤點"));
     const sk = add(c, V(8, { name: "skip", paddingLeft: 28 }), "FILL");
     add(sk, await select("跳過原因(必填)", "人力不足", 280, "Disabled"));
-    await cap(sk, "需要權限 store.skip-stocktake;報表永久標示「未盤點」。");
+    await cap(sk, "需要有跳過盤點的權限;原因必填,報表會標示「未盤點」。");
     add(
       sh.content,
       await actions([await btn("下一步")], [await btn("上一步", "Text")]),

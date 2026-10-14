@@ -28,7 +28,7 @@
 
 ## 畫圖檢查清單(每次派工都附上)
 
-畫之前讀一次,畫完逐張對照;audit 的 `clippedText`、`misalignedRows` 要是 0 才算畫完。
+畫之前讀一次,畫完逐張對照;audit 的 `clippedText`、`misalignedRows`、`devTextInScreens` 要是 0 才算畫完。
 
 1. **對齊**:同一列的欄位上緣、高度一致(例:叫貨分店與期望到貨日);同一欄的標籤寬度一致;區塊之間的間距用同一組 token。
 2. **不裁切**:標籤、按鈕、表頭、Chip 的文字不能被外框裁掉或遮住;文字層用 auto width 或 fill,不要固定寬度又關掉換行;外框不要靠 clip content 藏住超出的內容。
@@ -38,6 +38,7 @@
 6. **顏色**:專案頁只綁 scratch-lot Brand Library 的品牌色與底座語意色,不留底座主色;Base Draft 頁只綁底座。
 7. **元件**:用底座 Library / 草稿元件的實例,不 detach;新元件先確認底座沒有。
 8. **規格對照**:每張畫面列出它對應的規格章節,畫完逐項核對欄位、按鈕、權限、錯誤狀態。
+9. **畫面內只放使用者看得到的內容**:畫面框內不能出現設計稿編號(ST- / IN- / PU- / AC- / RE- / DE- / MD- / SC- / RC- / RW- / BS-)、規格章節號、權限 key、錯誤碼或開發用說明(例「→ ST-07」「需要 show-cost」「RANGE_TOO_LARGE」);這些寫在畫面框外的註解文字(名稱「<畫面名> · 註解」)。權限提示要寫成使用者看得懂的話。`audit.js` 的 `devTextInScreens` 要是 0。
 
 ## 驗收稽核 `audit.js`
 

@@ -261,7 +261,7 @@ if (PART === "IN") {
       ["進貨單", "P-0031(10/12 點收)"],
       ["批購甲類", "陳志明 #12345678 · 本人批購"],
       ["批購金額率", "92%"],
-      ["批購成本", "18,400(需要 show-cost)"],
+      ["批購成本", "18,400"],
     ])
       add(info, await kv(k, v), "FILL");
     const tl = add(body, await card("timeline(事件時間軸)", 8), "FILL");
@@ -289,7 +289,7 @@ if (PART === "IN") {
     );
     const a = await dcard(row, "標註瑕疵", 400);
     add(a, await field("瑕疵張號", "#047、#078"), "FILL");
-    await cap(a, "印刷瑕疵的張不能賣;需要 inventory.void-tickets。");
+    await cap(a, "印刷瑕疵的張不能賣。");
     add(
       a,
       await actions([await btn("取消", "Text"), await btn("標註")]),
@@ -298,7 +298,7 @@ if (PART === "IN") {
     const b = await dcard(row, "尋回", 400);
     add(b, await T("088103 · 5198 鼠來寶(待查)"));
     add(b, await select("尋回原因", "盤點時夾在別的本裡", null), "FILL");
-    await cap(b, "回到刷到的那家店的庫存;需要 inventory.recover,原因必填。");
+    await cap(b, "回到刷到的那家店的庫存,原因必填。");
     add(
       b,
       await actions([await btn("取消", "Text"), await btn("尋回")]),
@@ -307,10 +307,7 @@ if (PART === "IN") {
     const c = await dcard(row, "報廢", 400);
     add(c, await field("報廢張號", "#060~064"), "FILL");
     add(c, await select("原因", "受潮", null), "FILL");
-    await cap(
-      c,
-      "破損、污損、受潮;報表以批購成本計損失。需要 inventory.scrap。",
-    );
+    await cap(c, "破損、污損、受潮;報表以批購成本計損失。");
     add(
       c,
       await actions([
@@ -393,7 +390,7 @@ if (PART === "IN") {
     add(sh.content, await tabs(tabsIN, "預計要給本數"), "FILL");
     await cap(
       sh.content,
-      "每格「已給 / 預計」;已給 = 進貨 + 調入 − 調出(累計,售出不扣);零碎張數顯示「+N 張」。點格子修改預計(需要 inventory.edit-allocations)。超過只警告。",
+      "每格「已給 / 預計」;已給 = 進貨 + 調入 − 調出(累計,售出不扣);零碎張數顯示「+N 張」。點格子修改預計。超過只警告。",
     );
     add(
       sh.content,
@@ -528,7 +525,7 @@ if (PART === "PU") {
     add(sh.content, await tabs(["叫貨單", "採購清單"], "採購清單"), "FILL");
     await cap(
       sh.content,
-      "只列待購買的叫貨單(未作廢、未被進貨單或調貨單引用),依遊戲 × 分店加總;需要 purchasing.requisition.purchase-list。",
+      "只列待購買的叫貨單(未作廢、未被進貨單或調貨單引用),依遊戲 × 分店加總。",
     );
     add(
       sh.content,

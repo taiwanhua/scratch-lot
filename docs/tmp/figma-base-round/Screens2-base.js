@@ -476,7 +476,7 @@ if (PART === 3) {
   // ---- BS-11 列印按鈕各狀態、58mm 版面零件示範 ----
   {
     const b = await card("BS-11 列印按鈕各狀態、58mm 版面零件示範", 16, 24);
-    add(b, await T("列印按鈕(Draft/PrintButton)", "Heading/H6"));
+    add(b, await T("列印按鈕", "Heading/H6"));
     const r = add(b, H(16, { name: "states" }));
     for (const st of [
       "Default",
@@ -487,13 +487,7 @@ if (PART === 3) {
       "Disabled",
     ])
       add(r, await dinst("PrintButton", { State: st }));
-    add(
-      b,
-      await T(
-        "58mm 單據:用版面零件組成(Draft/Receipt58 只是示範)",
-        "Heading/H6",
-      ),
-    );
+    add(b, await T("58mm 單據(用版面零件組成)", "Heading/H6"));
     const rr = add(
       b,
       H(24, { name: "receipts", counterAxisAlignItems: "MIN" }),

@@ -191,14 +191,9 @@ async function actions(dlg, labels) {
       "印表機離線",
       ["站內"],
       "印表機所在組織含上層",
-      "角色 主管 且 持有 system.printers.edit",
+      "角色 主管 且 持有「印表機管理 · 編輯」",
     ],
-    [
-      "Email 寄送失敗",
-      ["站內"],
-      "最上層組織",
-      "持有 system.notification-settings.edit",
-    ],
+    ["Email 寄送失敗", ["站內"], "最上層組織", "持有「通知設定 · 編輯」"],
   ];
   for (const [t, ch, o, a] of data) {
     const tags = [];
@@ -539,7 +534,7 @@ async function approverPanel(shared) {
     };
     await setSel(rows[0], 0, "權限");
     await setSel(rows[0], 1, "持有");
-    await setChip(rows[0], "purchasing.purchase.settle");
+    await setChip(rows[0], "示範模組 · 核准");
     await setSel(rows[1], 2, "【單據所屬組織】");
     await setSel(rows[1], 3, "本身");
     await setSel(rows[2], 0, "所屬組織");
