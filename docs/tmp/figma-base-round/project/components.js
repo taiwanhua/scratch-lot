@@ -543,14 +543,6 @@ const created = {};
     add(t, await txt("5164 發大財", "Subtitle/2", "text/primary", "game"));
     spacer(t);
     add(t, await txt("200 元", "Caption", "text/secondary", "price"));
-    // 卡片選單(專案規格 6.2:[本的詳情])
-    const menu = add(
-      t,
-      (await baseDraft("Draft/ActionIcon+")).children
-        .find((v) => v.name === "key=more-vert")
-        .createInstance(),
-    );
-    menu.name = "card-menu(卡片選單)";
     add(
       b,
       await txt(
@@ -606,7 +598,7 @@ const created = {};
   set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
   set.description =
     DESC_PROJECT +
-    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱(左側色條 = 遊戲顏色,欄位管理 tagPalettes)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少。右上 ⋮ = 卡片選單([本的詳情])。點其他收銀點檯面上的卡片:只能 [移櫃] 或 [移櫃並售出]。";
+    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱(左側色條 = 遊戲顏色,欄位管理 tagPalettes)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少。點卡片在原位置往下展開張數格子(電腦 / 平板占滿整列;手機用底部面板),一次只展開一張;展開中的卡片用主色框。";
   set.x = 0;
   set.y = 1400;
   created.bookCard = set.id;
