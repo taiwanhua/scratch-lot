@@ -804,3 +804,55 @@ if (PART === "16") {
     }
   }
 }
+
+if (PART === "17") {
+  // 第十七輪:每張畫面 = 一個視窗尺寸。並排多個對話框的電腦畫面拆成 a / b / c(遮罩 + 一個對話框,置中),原框刪除(刪前截圖);
+  // 精靈步驟並排的 ST-17 / ST-25 拆成完整的精靈畫面;ST-34c 改成完整看板。(班表管理頁的 SC-05 / 15 / 17 / 22 / 01 也在這一輪拆過,
+  // 之後整頁交由另一個 agent 重做,這裡不再處理。)
+  const L = "abcdefgh";
+  const split = async (id) => {
+    const src = await figma.getNodeByIdAsync(id);
+    const code = /^([A-Z]{2}-\d\d)/.exec(src.name)[1];
+    const row = src.children.find((k) => k.name === "dialogs");
+    const sec = src.parent;
+    const cap = sec.children.find(
+      (k) => k.type === "TEXT" && k.name === src.name + " · 註解",
+    );
+    for (let i = 0; i < row.children.length; i++) {
+      const d = row.children[i];
+      const f = src.clone();
+      sec.appendChild(f);
+      const r = f.children.find((k) => k.name === "dialogs");
+      r.children.filter((k, j) => j !== i).forEach((k) => k.remove());
+      f.name = `${code}${L[i]} Overlay / ${d.name.replace(/^dialog:/, "")}`;
+      f.resize(1440, Math.max(900, Math.ceil(r.height) + 128));
+      r.x = Math.round((1440 - r.width) / 2);
+      r.y = 64;
+      if (i === 0 && cap) cap.name = f.name + " · 註解";
+    }
+    src.remove();
+  };
+  for (const [pid, ids] of Object.entries({
+    "65:14": [
+      "87:1777",
+      "123:5106",
+      "87:2466",
+      "87:2521",
+      "87:2592",
+      "123:23114",
+      "186:23075",
+      "209:27764",
+    ],
+    "91:14": ["125:2089"],
+    "93:14": ["93:693"],
+    "95:14": ["96:1240"],
+  })) {
+    await figma.setCurrentPageAsync(await figma.getNodeByIdAsync(pid));
+    for (const id of ids) await split(id);
+  }
+  // 拆完後:ST-34c(切換後的看板)從 ST-01 電腦複製,只留頂部列與分頁,放兩條收銀點標題列;
+  // ST-17 / ST-25 的步驟面板各自放進 ST-18 / ST-24 電腦精靈(換掉 cols、Stepper 狀態、第一步 [上一步] 停用、最後一步 [送出結帳確認申請]),
+  // 面板裡原本的按鈕刪除;ST-17 / ST-25 平板 / 手機 app-bar 顯示 [取消]。
+  // RW-01b 篩選抽屜:平板右側(寬 360、滿高)、手機底部(可拉成全螢幕),欄位見簽狀態 / 距上次批購 / 證照 + [清除] [套用];DE-01 電腦補同一組篩選列。
+  // 節點 id 見 nodes.md 第十七輪。
+}

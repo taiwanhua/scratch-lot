@@ -10,10 +10,10 @@
 //    平板側欄(nav-rail*)→ Draft/ScratchLotNavRail;平板 / 手機最上面的標題列(app-bar)→ Draft/ScratchLotAppBar;電腦側欄(side-nav*)→ Draft/ScratchLotSideNav;
 //    看板卡片(cards 裡的框)→ Draft/BoardBookCard;張數格子(grid+legend / ticket-grid)要由 Draft/TicketCell 組成、圖例用 Draft/TicketGridLegend;
 //    Stepper(Stepper / stepper / steps)要由 Draft/StepperStep 組成。由元件實例組成的容器(格子、Stepper、PageTabs)算元件化。
-// 3. 放錯尺寸(sectionMismatch):名稱含「 · 平板 / · 手機」的畫面要在對應的 Section,寬度相符(Overlay 不比寬度);
-//    電腦 Section 裡不能有平板(1024)/ 手機(390)寬度的畫面。數量要是 0。
-// 4. 篩選抽屜(filterDrawerMissing,先只回報):平板 / 手機畫面有 [篩選…] 按鈕,就要有同編號的篩選抽屜畫面(名稱含「篩選」),
-//    或它的框外註解寫明照 RW-01 共用規則。
+// 3. 寬度不符(sectionMismatch):每張畫面 = 一個視窗尺寸。尺寸 Section 裡每張畫面的寬度要等於該 Section 的寬度(電腦 1440 / 平板 1024 / 手機 390),
+//    名稱含「 · 平板 / · 手機」的要在對應 Section。多個對話框並排、精靈步驟並排的都算不符。58mm 單據 Section 不檢查。數量要是 0。
+// 4. 篩選抽屜(filterDrawerMissing):平板 / 手機畫面有 [篩選…] 按鈕,就要有同編號的篩選抽屜畫面(名稱含「篩選」),
+//    或它的框外註解寫明照 RW-01。數量要是 0。
 figma.skipInvisibleInstanceChildren = false;
 const PAGES = [
   "65:14",
@@ -153,14 +153,10 @@ for (const pid of PAGES) {
           ? "手機 390"
           : null;
       const w = Math.round(f.width);
-      if (
-        (tag && tag !== s.name) ||
-        (tag && !/Overlay/.test(f.name) && Math.abs(w - W[tag]) > 2) ||
-        (s.name === "電腦 1440" &&
-          (Math.abs(w - 1024) <= 2 || Math.abs(w - 390) <= 2))
-      )
+      if ((tag && tag !== s.name) || Math.abs(w - W[s.name]) > 2)
         sectionMismatch.push(`${page.name.slice(9)} ${s.name}:${f.name} w${w}`);
-      if (s.name === "電腦 1440" || !("findAll" in f)) continue;
+      if (s.name === "電腦 1440" || !("findAll" in f) || /篩選/.test(f.name))
+        continue; // 抽屜畫面本身不算
       const hasFilter = f.findOne(
         (b) =>
           b.type === "INSTANCE" &&

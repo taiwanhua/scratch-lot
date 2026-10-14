@@ -2,23 +2,24 @@
 // 用法:貼在 r4-*.js 前面一起執行(或存在暫存頁的文字節點裡,用 AsyncFunction 讀出來執行)。
 // 做法:從現有畫面「複製樣板節點」組新畫面,所以字型樣式、顏色綁定(scratch-lot 品牌色 / 底座語意色)都沿用樣板。
 // 樣板節點(都在 scratch-lot Screens,刪改前先換掉這裡的 id):
-//   sub2 / body2 / body1 / cap / h6:庫存管理 IN-03 / IN-04 的文字;btn:IN-04 的 Button(用 setProperties 換變體);
+//   sub2:庫存管理 IN-03 的文字;body2 / body1 / cap / h6 / btn / dlg / tf:IN-04a(更正跳號)對話框裡的節點;sel:IN-04c(報廢)的 SelectField;
+//   (第十七輪 IN-04 拆成 a / b / c 後換成新 id;btn 用 setProperties 換變體)
 //   card:Draft/CashPointHeader 的 Size=Tablet, State=Open 變體(卡片底色與圓角);dlg:IN-04 的對話框;bar:IN-03 的選張操作列;
 //   cellSet:Draft/TicketCell;tf:IN-04 的 TextField;sel:IN-04 的 Draft/SelectField。
 // 注意:複製的 Button 換變體後會帶回底座主色,畫完要跑 brand-rebind.js(或 r4-store.js 結尾的 rebindPage())。
 const S = {
   sub2: "125:1392",
-  body2: "125:2097",
-  body1: "125:2099",
-  cap: "125:2104",
-  h6: "125:2093",
-  btn: "125:2105",
+  body2: "222:16951",
+  body1: "222:16955",
+  cap: "222:17081",
+  h6: "222:16949",
+  btn: "222:17083",
   card: "190:24789",
-  dlg: "125:2091",
+  dlg: "222:16947",
   bar: "125:1391",
   cellSet: "64:132",
-  tf: "125:2116",
-  sel: "125:2138",
+  tf: "222:17080",
+  sel: "222:17448",
 };
 const N = {};
 for (const k in S) N[k] = await figma.getNodeByIdAsync(S[k]);

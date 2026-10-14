@@ -155,7 +155,7 @@ const GAP = 80,
   X0 = 120;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
-const labelSrc = await figma.getNodeByIdAsync("125:2093"); // Heading/H6,綁 text/primary;在底座檔找不到時改用 Inter
+const labelSrc = await figma.getNodeByIdAsync("222:16949"); // Heading/H6,綁 text/primary;在底座檔找不到時改用 Inter
 async function fnt(t) {
   for (const f of t.getRangeAllFontNames(0, Math.max(1, t.characters.length)))
     await figma.loadFontAsync(f);
