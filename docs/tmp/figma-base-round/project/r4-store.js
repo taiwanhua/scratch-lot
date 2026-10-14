@@ -1,5 +1,5 @@
 // 第四~六輪「Screen / 店面管理」(65:14):卡片原地展開 ST-36、拆本選本 ST-37、手動標記確認 ST-07、日結版結帳確認申請 ST-28b。
-// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18" | "IN04" | "38" | "39")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
+// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18" | "IN04" | "38" | "39" | "13" | "40")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
 // 畫完跑 brand-rebind.js(複製的 Button 換變體會帶回底座主色),最後跑 r4-layout.js 排列。
 await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("65:14"));
 const cardsIn = async (f) => {
@@ -1122,5 +1122,340 @@ if (PART === "39") {
       if (ob) ob.remove();
       await body(c, st, true);
     }
+  }
+}
+
+if (PART === "13") {
+  // 盤點不鎖、補登兌獎(第十三輪):拿掉「盤點中」標籤與送出前的盤點單號;各收銀點加 [補登兌獎] + 應有現金(立即生效)
+  const topInst = (t) => {
+    let inst = null;
+    for (let p = t.parent; p; p = p.parent) if (p.type === "INSTANCE") inst = p;
+    return inst;
+  };
+  for (const id of [
+    "I122:5231;2001:471",
+    "I124:25143;2001:471",
+    "I124:25602;2001:471",
+    "I122:23183;2001:471",
+  ]) {
+    const t = await figma.getNodeByIdAsync(id);
+    if (t) (topInst(t) || t).remove();
+  }
+  for (const [id, s] of [
+    ["I122:5163;2001:1262;2001:1207", "盤點"],
+    ["I122:23139;2001:1262;2001:1207", "盤點"],
+    ["122:5237", "10/16 21:40 開始 · 王小明"],
+    ["122:23187", "臨時盤點 · 全店"],
+    ["122:23364", "臨時盤點 · 全店"],
+    ["I122:5233;2001:177", "取消(不保留)"],
+    ["I122:5263;2001:465", "目前這本"],
+    ["I124:25183;2001:465", "目前這本"],
+    ["I124:25615;2001:435", "店內櫃台 · 5198 鼠來寶 088102(目前這本)"],
+  ])
+    await setT(await figma.getNodeByIdAsync(id), s);
+  for (const id of [
+    "I122:23189;2001:948",
+    "I124:25499;2001:948",
+    "I124:25913;2001:948",
+  ]) {
+    const t = await figma.getNodeByIdAsync(id);
+    await setT(t, t.characters.replace("當場生效", "立即生效"));
+  }
+  const cpRow = async (name, on) => {
+    const v = AL("VERTICAL", {
+      name: "cash-point:" + name,
+      itemSpacing: 2,
+      paddingTop: 6,
+      paddingBottom: 6,
+    });
+    const h = add(
+      v,
+      AL("HORIZONTAL", {
+        name: "row",
+        itemSpacing: 8,
+        counterAxisAlignItems: "CENTER",
+      }),
+      "FILL",
+    );
+    add(h, await T("sub2", name));
+    sp(h);
+    add(
+      h,
+      await B(
+        "補登兌獎",
+        "Outlined",
+        "Small",
+        "Primary",
+        on ? "Default" : "Disabled",
+      ),
+    );
+    const c = add(
+      v,
+      await T(
+        "body2",
+        on ? "應有現金 12,350 · 補登兌獎立即生效" : "這個收銀點沒有開著的班",
+      ),
+      "FILL",
+    );
+    c.textAutoResize = "HEIGHT";
+    return v;
+  };
+  // 電腦:本清單的收銀點標題換成「收銀點 + [補登兌獎] + 應有現金」
+  for (const [id, name, on] of [
+    ["122:5246", "店內櫃台", true],
+    ["122:5271", "店外攤位", false],
+  ]) {
+    const t = await figma.getNodeByIdAsync(id);
+    const p = t.parent;
+    const r = await cpRow(name, on);
+    p.insertChild(p.children.indexOf(t), r);
+    r.layoutSizingHorizontal = "FILL";
+    t.remove();
+  }
+  // 平板 / 手機:進度列下面放一個「收銀點」區塊
+  const card = await figma.getNodeByIdAsync("122:5245");
+  for (const fid of ["124:25145", "124:25604"]) {
+    const f = await figma.getNodeByIdAsync(fid);
+    const c = f.findOne((n) => n.name === "content" && n.type === "FRAME");
+    const box = AL("VERTICAL", {
+      name: "收銀點(補登兌獎)",
+      itemSpacing: 4,
+      paddingLeft: 12,
+      paddingRight: 12,
+      paddingTop: 8,
+      paddingBottom: 8,
+    });
+    box.fills = card.fills;
+    box.strokes = card.strokes;
+    box.strokeWeight = card.strokeWeight;
+    box.cornerRadius = card.cornerRadius;
+    c.insertChild(1, box);
+    box.layoutSizingHorizontal = "FILL";
+    for (const [name, on] of [
+      ["店內櫃台", true],
+      ["店外攤位", false],
+    ])
+      add(box, await cpRow(name, on), "FILL");
+    fitShell(f, f.width > 1000 ? 768 : 844);
+  }
+}
+
+if (PART === "40") {
+  // 兌獎紀錄分頁(第十三輪):各畫面的 PageTabs 在 [現金更正] 後面加「兌獎紀錄」;ST-40 電腦從 ST-32a(90:5066)複製,平板 / 手機用卡片
+  for (const pt of figma.currentPage.findAll(
+    (n) => n.type === "FRAME" && n.name.startsWith("PageTabs"),
+  )) {
+    const labs = pt.children
+      .map((t) => t.findOne && t.findOne((x) => x.type === "TEXT"))
+      .map((t) => t && t.characters);
+    const i = labs.indexOf("現金更正");
+    if (i < 0 || labs.includes("兌獎紀錄")) continue;
+    const nt = pt.children[i].clone();
+    pt.insertChild(i + 1, nt);
+    nt.setProperties({ State: "Default" });
+    await setT(
+      nt.findOne((x) => x.type === "TEXT"),
+      "兌獎紀錄",
+    );
+  }
+  const ROWS = [
+    [
+      "10/16 21:50",
+      "店內櫃台",
+      "王小明 08:02",
+      "5164-056527-031",
+      "500",
+      ["店內持有", "Info"],
+      "王小明",
+      "—",
+    ],
+    [
+      "10/16 21:31",
+      "店內櫃台",
+      "王小明 08:02",
+      "5201-060112-044",
+      "200",
+      ["已撤銷", "Grey"],
+      "王小明",
+      "—",
+    ],
+    [
+      "10/15 18:40",
+      "店外攤位",
+      "陳美玲 13:00",
+      "5150-042210-083",
+      "1,000",
+      ["已送兌", "Success"],
+      "陳美玲",
+      "P-0034",
+    ],
+    [
+      "10/15 14:05",
+      "店內櫃台",
+      "李小華 09:00",
+      "5198-088102-017",
+      "100",
+      ["已送兌", "Success"],
+      "李小華",
+      "P-0034",
+    ],
+  ];
+  {
+    const src = await figma.getNodeByIdAsync("90:5066");
+    const f = src.clone();
+    f.name = "ST-40 分頁:兌獎紀錄(列表、篩選)";
+    fileIn("電腦 1440", f);
+    const c = f.findOne((n) => n.name === "content" && n.type === "FRAME");
+    for (const t of c.findOne((n) => n.name.startsWith("PageTabs")).children)
+      t.setProperties({
+        State:
+          t.findOne((x) => x.type === "TEXT").characters === "兌獎紀錄"
+            ? "Active"
+            : "Default",
+      });
+    const title = c.findOne((n) => n.name === "title");
+    await setT(
+      title.findOne((x) => x.type === "TEXT"),
+      "兌獎紀錄",
+    );
+    for (const k of [...title.children]) if (k.type === "INSTANCE") k.remove();
+    const fl = (await figma.getNodeByIdAsync("92:1017"))
+      .findOne((n) => n.name === "filters")
+      .clone(); // 叫貨單列表的篩選列
+    c.insertChild(c.children.indexOf(title) + 1, fl);
+    fl.layoutSizingHorizontal = "FILL";
+    fl.insertChild(2, fl.children[1].clone());
+    const labs = ["收銀點", "狀態", "登記人", "期間"],
+      vals = ["全部", "全部", "全部", "10/01 ~ 10/16"];
+    for (let i = 0; i < fl.children.length; i++)
+      for (const t of fl.children[i].findAll((x) => x.type === "TEXT")) {
+        if (t.name === "label") await setT(t, labs[i]);
+        if (t.name === "value") await setT(t, vals[i]);
+      }
+    const tbl = c.findOne((n) => n.name === "table");
+    const head = tbl.children[0],
+      tr = tbl.children[1];
+    const tagSrc = tr.findOne(
+      (n) => n.type === "INSTANCE" && /Tag/.test(n.name),
+    );
+    const cellText = (cell) =>
+      cell.type === "TEXT" ? cell : cell.findOne((x) => x.type === "TEXT");
+    const fill = async (r, vals) => {
+      while (r.children.length < 8) r.appendChild(r.children[1].clone()); // 新欄位用「收銀點」那一欄的樣式
+      for (let i = 0; i < 8; i++) {
+        const cell = r.children[i],
+          v = vals[i];
+        const tg =
+          cell.findOne &&
+          cell.findOne((n) => n.type === "INSTANCE" && /Tag/.test(n.name));
+        if (Array.isArray(v)) {
+          let t = tg;
+          if (!t) {
+            for (const k of [...cell.children]) k.remove();
+            t = tagSrc.clone();
+            cell.appendChild(t);
+          }
+          t.setProperties({ Tone: v[1] });
+          await setT(
+            t.findOne((x) => x.type === "TEXT"),
+            v[0],
+          );
+        } else {
+          if (tg) {
+            const tx = cellText(r.children[1]).clone();
+            cell.appendChild(tx);
+            tg.remove();
+          }
+          await setT(cellText(cell), v);
+        }
+      }
+      r.children[2].primaryAxisAlignItems = r.children[1].primaryAxisAlignItems;
+    };
+    await fill(head, [
+      "時間",
+      "收銀點",
+      "班次",
+      "刮刮樂",
+      "金額",
+      "狀態",
+      "登記人",
+      "進貨單",
+    ]);
+    const old = tbl.children.filter((r) => r.name === "tr");
+    for (let i = 0; i < ROWS.length; i++) {
+      const r = tr.clone();
+      tbl.insertChild(1 + i, r);
+      await fill(r, ROWS[i]);
+    }
+    for (const r of old) r.remove();
+    fitShell(f, 900);
+  }
+  for (const [srcId, label, suffix, minH] of [
+    ["124:5578", "平板 1024", " · 平板", 768],
+    ["124:5927", "手機 390", " · 手機", 844],
+  ]) {
+    const { f: s, c } = await shellOf(
+      srcId,
+      "ST-40" + suffix + " 兌獎紀錄(卡片列表)",
+      "店面管理",
+    );
+    fileIn(label, s);
+    const tagSrc = (await figma.getNodeByIdAsync("90:5066")).findOne(
+      (n) => n.type === "INSTANCE" && /Tag/.test(n.name),
+    );
+    const h = add(
+      c,
+      AL("HORIZONTAL", {
+        name: "title",
+        itemSpacing: 8,
+        counterAxisAlignItems: "CENTER",
+      }),
+      "FILL",
+    );
+    add(h, await T("h6", "兌獎紀錄"));
+    sp(h);
+    add(h, await B("篩選(1)", "Outlined", "Small"));
+    add(c, await T("body2", "期間 10/01 ~ 10/16 · 共 4 筆"));
+    for (const r of ROWS) {
+      const card = add(
+        c,
+        AL("VERTICAL", {
+          name: "card",
+          itemSpacing: 4,
+          paddingLeft: 14,
+          paddingRight: 14,
+          paddingTop: 12,
+          paddingBottom: 12,
+        }),
+        "FILL",
+      );
+      card.fills = N.card.fills;
+      card.cornerRadius = 8;
+      const l1 = add(
+        card,
+        AL("HORIZONTAL", {
+          name: "line1",
+          itemSpacing: 8,
+          counterAxisAlignItems: "CENTER",
+        }),
+        "FILL",
+      );
+      add(l1, await T("body1", r[3] + " · " + r[4] + " 元"));
+      sp(l1);
+      const tg = add(l1, tagSrc.clone());
+      tg.setProperties({ Tone: r[5][1] });
+      await setT(
+        tg.findOne((x) => x.type === "TEXT"),
+        r[5][0],
+      );
+      const a = add(
+        card,
+        await T("body2", r[1] + " · " + r[2] + " · " + r[0]),
+        "FILL",
+      );
+      a.textAutoResize = "HEIGHT";
+      add(card, await T("body2", "登記 " + r[6] + " · 進貨單 " + r[7]), "FILL");
+    }
+    fitShell(s, minH);
   }
 }
