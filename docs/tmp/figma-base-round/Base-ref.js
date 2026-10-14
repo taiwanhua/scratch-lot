@@ -110,6 +110,7 @@ async function refShell(refName, name) {
   s.y = 0;
   await rebase(s);
   const main = s.findOne((n) => n.name === "main");
+  await sysNav({ s });
   const content = main && main.findOne((n) => n.name === "content");
   return { s, main, content, src: refName };
 }
@@ -139,8 +140,9 @@ async function retitle(sh, from, to) {
 }
 // 側欄目前頁的反白:現有畫面用覆寫的底色與字色表示;label = null 時全部不反白(例:個人設定不在側欄)
 async function navActive(sh, label) {
+  figma.skipInvisibleInstanceChildren = false;
   const nav = sh.s.findOne(
-    (n) => n.type === "INSTANCE" && /^Draft\/AdminSideNav/.test(n.name),
+    (n) => n.type === "INSTANCE" && /^Draft\/AdminSideNav\+?$/.test(n.name),
   );
   if (!nav) return;
   const items = nav.findAll(
@@ -230,27 +232,45 @@ async function refNote(sh, changes) {
   await noteOut(f, "對應現有畫面:" + (sh.src || "—"));
   return noteOut(f, "本輪改動:" + changes);
 }
-// 側欄:「系統管理」群組現有 8 項之後依序加「通知設定」「印表機管理」(底座規格 5、6)。
-// 現有側欄元件只剩 1 個備用槽(spare-4)→ 先放「通知設定」;「印表機管理」要等底座側欄元件加槽(README 步驟 4)。
-async function sysNav(sh, extra = ["通知設定", "印表機管理"]) {
-  const nav = sh.s.findOne(
-    (n) => n.type === "INSTANCE" && /^Draft\/AdminSideNav/.test(n.name),
-  );
-  if (!nav) return [];
-  const free = nav
-    .findAll((n) => n.type === "INSTANCE" && /^spare-\d$/.test(n.name))
-    .filter((n) => !n.visible);
+// 側欄:「系統管理」群組 = 現有 8 項(組織管理、使用者管理、角色管理、模組與權限、欄位管理、資料範圍、表單管理、流程管理)
+// → 通知設定 → 印表機管理(底座規格 5、6)。現有 Draft/AdminSideNav 只有 4 個群組備用槽,第 5 個槽先做在草稿元件
+// Draft/AdminSideNav+(AdminSideNav+.js);在 scratch-lot 把側欄換成它,在 wowgo-base 重建時直接在 Draft/AdminSideNav 加 spare-5(README 步驟 4)。
+// 參考畫面的側欄是不同時期畫的,備用槽的文字不一致,這裡一律重設成上面的順序;目前頁的反白不動(用 navActive 改)。
+const SYS_SPARES = {
+  "spare-1": "資料範圍",
+  "spare-2": "表單管理",
+  "spare-3": "流程管理",
+  "spare-4": "通知設定",
+  "spare-5": "印表機管理",
+};
+async function sysNav(sh) {
+  const prev = figma.skipInvisibleInstanceChildren;
+  figma.skipInvisibleInstanceChildren = false;
   const missing = [];
-  for (const l of extra) {
-    const slot = free.shift();
-    if (!slot) {
-      missing.push(l);
-      continue;
+  for (const nav of sh.s.findAll(
+    (n) => n.type === "INSTANCE" && /^Draft\/AdminSideNav\+?$/.test(n.name),
+  )) {
+    if (!nav.findOne((n) => n.name === "spare-5")) {
+      const plus = figma.root.children.find((p) => p.name === DRAFT_PAGE);
+      const c = plus && plus.findChild((n) => n.name === "Draft/AdminSideNav+");
+      if (c) {
+        nav.swapComponent(c);
+        nav.name = "Draft/AdminSideNav+";
+      }
     }
-    slot.visible = true;
-    await setProps(slot, { Label: l });
+    const gc = nav.findOne((n) => n.name === "group-children");
+    for (const [k, l] of Object.entries(SYS_SPARES)) {
+      const slot = gc && gc.findOne((n) => n.name === k);
+      if (!slot) {
+        missing.push(l);
+        continue;
+      }
+      slot.visible = true;
+      await setProps(slot, { Label: l });
+    }
   }
-  return missing;
+  figma.skipInvisibleInstanceChildren = prev;
+  return [...new Set(missing)];
 }
 // 依現有表格的列樣式重建表格(表頭 = Draft/TableHeaderCell、儲存格 = Draft/TableCell;其他內容放在和現有一樣的包裝框)
 // list:表格所在的容器(第 1 個子節點是表頭列、第 2 個是資料列、最後一個是頁尾)

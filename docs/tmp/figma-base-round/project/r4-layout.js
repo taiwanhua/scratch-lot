@@ -95,6 +95,7 @@ const ROWS = {
         "Draft/AudiencePicker",
         "Draft/DataScopeRuleCard",
         "Draft/OrgTreeSelect",
+        "Draft/AdminSideNav+",
       ],
     ],
     [

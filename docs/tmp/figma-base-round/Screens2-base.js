@@ -1308,6 +1308,7 @@ if (PART === 5) {
       .clone();
     add(row, ex);
     await rebase(ex);
+    await sysNav({ s: b }); // 系統管理群組:現有 8 項 → 通知設定 → 印表機管理
     for (const it of ex.findAll(
       (n) =>
         n.type === "INSTANCE" && /NavItem|^spare-/.test(n.name) && n.visible,
@@ -1325,7 +1326,7 @@ if (PART === 5) {
     await rebase(col);
     for (const n of row.children) {
       n.layoutSizingVertical = "FIXED";
-      n.resize(n.width, 720);
+      n.resize(n.width, 820);
     }
     await noteOut(
       b,

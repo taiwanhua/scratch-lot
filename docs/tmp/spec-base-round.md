@@ -124,6 +124,11 @@ S2 測試案例(這三項從底座階段移到**專案階段**實作):
    - **指向專案名詞或專案待辦的** → 改指 `CONTEXT-PROJECT.md` / `docs/tmp/project-dis.md`。
 6. **規格退場**:本文件與專案規格完成後從 `docs/tmp/` 移除(歷史查 git);現況寫在各正本(見 0.3)。
 
+**回收到 wowgo-base 之後的待辦(本輪產生的)**
+
+- **現有 Overlay 畫面的背景**:本輪回收到 wowgo-base 後,在 wowgo-base 依新規則(畫圖檢查清單 14:對話框背景是打開它的頁面)把現有所有 Overlay 畫面(`Screen / Admin …` 各頁的 `Overlay / …`)的背景改成打開它的頁面,release 新版後再同步回各專案。本輪 scratch-lot 的 15 頁參考畫面不改。
+- **側欄第 5 個備用槽**:Draft/AdminSideNav 的系統管理群組加 spare-5(放「印表機管理」),scratch-lot 的過渡草稿 Draft/AdminSideNav+ 換回 Draft/AdminSideNav(README 步驟 4)。
+
 ### 0.3 要同步更新的文件
 
 | 文件                                                            | 改什麼                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -1220,6 +1225,7 @@ registerReport({
 | 依另一欄位篩選以外的動態 lookup(例如依目前時間)                                                                             | 無需求                             |
 | 通知管道:手機推播、LINE                                                                                                     | B7 已可登記管道;有需求時加轉接器   |
 | 聯絡對象 API:用人員條件查出可處理的人名(模組在後端登記條件,前端只能指定名稱;只回顯示名稱、最多 5 人;權限限能使用該功能的人) | 有模組要在提示裡顯示「找誰處理」時 |
+| 現有 Overlay 參考畫面的背景改成打開它的頁面(畫圖檢查清單 14;本輪回收到 wowgo-base 後改,release 後同步回各專案)              | 本輪回收完成後                     |
 
 **B. 已決定不做 → 寫進對應正本,成為規則**(不進 dis.md,避免看起來像沒做完)
 
