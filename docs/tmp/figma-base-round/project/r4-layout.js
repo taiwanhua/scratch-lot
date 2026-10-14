@@ -67,17 +67,23 @@ const ROWS = {
     ["收銀點", ["MD-05"]],
   ],
   "70:14": [
-    ["我的班表、畫休與打卡", ["SC-01", "SC-25", "SC-02", "SC-23"]],
+    ["我的班表 · 班表與打卡", ["SC-01", "SC-25", "SC-32"]],
+    ["我的班表 · 我的畫休", ["SC-02", "SC-23"]],
     [
-      "排班表",
-      ["SC-03", "SC-04", "SC-16", "SC-17", "SC-15", "SC-19", "SC-18", "SC-21"],
+      "排班作業 · 排班表(手動排班)",
+      ["SC-03", "SC-04", "SC-34", "SC-16", "SC-17", "SC-21", "SC-18"],
     ],
-    ["自動排班", ["SC-05", "SC-20"]],
-    ["畫休總覽", ["SC-06", "SC-24"]],
-    ["行事曆", ["SC-07", "SC-28"]],
-    ["排班設定", ["SC-08", "SC-26", "SC-09", "SC-22", "SC-10", "SC-27"]],
-    ["出勤紀錄與補打卡", ["SC-11", "SC-12", "SC-29", "SC-13", "SC-30"]],
-    ["支援需求單", ["SC-14", "SC-31"]],
+    ["排班作業 · 排班表的其他狀態", ["SC-35", "SC-33"]],
+    ["排班作業 · 自動排班", ["SC-20", "SC-36", "SC-37"]],
+    ["排班作業 · 發布與發布後異動", ["SC-15", "SC-19"]],
+    ["排班作業 · 畫休總覽與代改", ["SC-06", "SC-24"]],
+    ["排班作業 · 行事曆", ["SC-07", "SC-28"]],
+    ["排班作業 · 支援需求單", ["SC-31", "SC-14"]],
+    ["排班設定 · 排班人員", ["SC-08", "SC-26"]],
+    ["排班設定 · 人力需求範本", ["SC-09", "SC-22"]],
+    ["排班設定 · 規則", ["SC-10", "SC-27"]],
+    ["出勤紀錄", ["SC-11", "SC-12", "SC-29"]],
+    ["補打卡申請", ["SC-13", "SC-30"]],
   ],
   // Base Draft:依名稱分列(在 wowgo-base 重建時也能用);「*」結尾是名稱開頭比對;兩張「說明 / 通知鈴暫時疊加」是 scratch-lot 專用的註解卡,用節點 id
   base: [
@@ -155,15 +161,27 @@ const GAP = 80,
   X0 = 120;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
-const labelSrc = await figma.getNodeByIdAsync("222:16949"); // Heading/H6,綁 text/primary;在底座檔找不到時改用 Inter
+// 列標題樣式:沿用頁上既有的列標題(Heading/H6,綁 text/primary);頁上沒有時用 222:16949,再沒有就用 Inter
+const pageLabel = page.findOne(
+  (n) => n.type === "TEXT" && n.name.startsWith("列標題 / "),
+);
+let labelSrc = pageLabel
+  ? pageLabel.clone()
+  : await figma.getNodeByIdAsync("222:16949");
+if (pageLabel) {
+  page.appendChild(labelSrc);
+  labelSrc.visible = false;
+}
 async function fnt(t) {
   for (const f of t.getRangeAllFontNames(0, Math.max(1, t.characters.length)))
     await figma.loadFontAsync(f);
 }
 async function label(parent, text) {
   let t;
-  if (labelSrc) t = labelSrc.clone();
-  else {
+  if (labelSrc) {
+    t = labelSrc.clone();
+    t.visible = true;
+  } else {
     await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
     t = figma.createText();
     t.fontName = { family: "Inter", style: "Semi Bold" };
@@ -207,7 +225,7 @@ const codeKey = (n) => {
   const m = /^([A-Z]{2}-\d\d)([a-c]?)/.exec(n.name);
   return m ? m[1] : null;
 };
-async function arrange(container, nodes, rows, emptyNote) {
+async function arrange(container, nodes, rows, deskRows) {
   for (const n of [...container.children])
     if (
       n.type === "TEXT" &&
@@ -244,9 +262,17 @@ async function arrange(container, nodes, rows, emptyNote) {
   let y = 160,
     maxX = 0;
   for (const [title, list] of byRow) {
+    // 這個尺寸少了電腦版有的畫面 → 列標題註明其餘照共用規則
+    const have = new Set(list.map((f) => codeKey(f)));
+    const desk = deskRows ? deskRows.get(title) : null;
+    const partial = desk && [...desk].some((c) => !have.has(c));
     const lb = await label(
       container,
-      list.length ? title : title + "\n(這個尺寸照共用規則,不另畫)",
+      !list.length
+        ? title + "\n(這個尺寸照共用規則,不另畫)"
+        : partial
+          ? title + "\n(其餘畫面照共用規則,不另畫)"
+          : title,
     );
     lb.x = X0;
     lb.y = y;
@@ -269,6 +295,9 @@ async function arrange(container, nodes, rows, emptyNote) {
     maxX = Math.max(maxX, x);
     y += h + ROW_GAP;
   }
+  arrange.lastRows = new Map(
+    byRow.map(([t, l]) => [t, new Set(l.map((f) => codeKey(f)))]),
+  );
   return { w: maxX + X0, h: y };
 }
 const rows = ROWS[PAGE_ID] || (/本輪/.test(page.name) ? ROWS.base : null);
@@ -294,11 +323,18 @@ if (/本輪/.test(page.name)) {
       ns.name = l;
       ns.resizeWithoutConstraints(2000, 400);
     }
-  let y0 = 0;
+  let y0 = 0,
+    deskRows = null;
   for (const s of SIZE.map((l) =>
     page.children.find((n) => n.type === "SECTION" && n.name === l),
   ).filter(Boolean)) {
-    const r = await arrange(s, [...s.children], rows);
+    const r = await arrange(
+      s,
+      [...s.children],
+      rows,
+      s.name === SIZE[0] ? null : deskRows,
+    );
+    if (s.name === SIZE[0]) deskRows = arrange.lastRows;
     s.x = 0;
     s.y = y0;
     s.resizeWithoutConstraints(Math.max(r.w, 2000), r.h);
@@ -313,4 +349,5 @@ if (/本輪/.test(page.name)) {
     y0 += s.height + 400;
   }
 }
+if (pageLabel) labelSrc.remove();
 return out;
