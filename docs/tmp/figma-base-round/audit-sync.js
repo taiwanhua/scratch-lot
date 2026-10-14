@@ -10,6 +10,10 @@
 //    平板側欄(nav-rail*)→ Draft/ScratchLotNavRail;平板 / 手機最上面的標題列(app-bar)→ Draft/ScratchLotAppBar;電腦側欄(side-nav*)→ Draft/ScratchLotSideNav;
 //    看板卡片(cards 裡的框)→ Draft/BoardBookCard;張數格子(grid+legend / ticket-grid)要由 Draft/TicketCell 組成、圖例用 Draft/TicketGridLegend;
 //    Stepper(Stepper / stepper / steps)要由 Draft/StepperStep 組成。由元件實例組成的容器(格子、Stepper、PageTabs)算元件化。
+// 3. 放錯尺寸(sectionMismatch):名稱含「 · 平板 / · 手機」的畫面要在對應的 Section,寬度相符(Overlay 不比寬度);
+//    電腦 Section 裡不能有平板(1024)/ 手機(390)寬度的畫面。數量要是 0。
+// 4. 篩選抽屜(filterDrawerMissing,先只回報):平板 / 手機畫面有 [篩選…] 按鈕,就要有同編號的篩選抽屜畫面(名稱含「篩選」),
+//    或它的框外註解寫明照 RW-01 共用規則。
 figma.skipInvisibleInstanceChildren = false;
 const PAGES = [
   "65:14",
@@ -23,6 +27,8 @@ const PAGES = [
 ];
 const SIZE = { "電腦 1440": "D", "平板 1024": "T", "手機 390": "M" };
 const EXEMPT = {
+  "ST-40|篩選(1)|D":
+    "電腦把篩選條件攤在列表上方(篩選列);平板 / 手機照 RW-01 收成 [篩選] 按鈕 + 抽屜",
   "ST-36|開班|M":
     "手機的卡片展開是底部面板,蓋住下面其他收銀點的標題列(電腦 / 平板原地展開,看得到)",
   "PU-10|列印調貨出貨單|T":
@@ -54,6 +60,9 @@ const isHead = (n, sz) =>
   (n.type === "FRAME" &&
     !inInstance(n) &&
     /^(store-top|toolbar|title|doc-head)$/.test(n.name));
+const sectionMismatch = [],
+  filterDrawerMissing = [];
+const W = { "電腦 1440": 1440, "平板 1024": 1024, "手機 390": 390 };
 const syncDiffs = [],
   exempted = [],
   sharedHandDrawn = [];
@@ -132,13 +141,58 @@ for (const pid of PAGES) {
         hit(n, "要用 StepperStep");
     }
   }
+  // 放錯尺寸 / 篩選抽屜
+  for (const s of page.children.filter(
+    (n) => n.type === "SECTION" && W[n.name],
+  ))
+    for (const f of s.children) {
+      if (f.type === "TEXT") continue;
+      const tag = / · 平板/.test(f.name)
+        ? "平板 1024"
+        : / · 手機/.test(f.name)
+          ? "手機 390"
+          : null;
+      const w = Math.round(f.width);
+      if (
+        (tag && tag !== s.name) ||
+        (tag && !/Overlay/.test(f.name) && Math.abs(w - W[tag]) > 2) ||
+        (s.name === "電腦 1440" &&
+          (Math.abs(w - 1024) <= 2 || Math.abs(w - 390) <= 2))
+      )
+        sectionMismatch.push(`${page.name.slice(9)} ${s.name}:${f.name} w${w}`);
+      if (s.name === "電腦 1440" || !("findAll" in f)) continue;
+      const hasFilter = f.findOne(
+        (b) =>
+          b.type === "INSTANCE" &&
+          b.visible &&
+          !!b.findOne((t) => t.type === "TEXT" && /^篩選/.test(t.characters)),
+      );
+      if (!hasFilter) continue;
+      const code = (/^([A-Z]{2}-\d\d)/.exec(f.name) || [])[1];
+      const drawer = s.children.some(
+        (x) =>
+          x !== f &&
+          x.type !== "TEXT" &&
+          x.name.startsWith(code) &&
+          /篩選/.test(x.name),
+      );
+      const cap = s.children.find(
+        (x) => x.type === "TEXT" && x.name === f.name + " · 註解",
+      );
+      if (!drawer && !(cap && /RW-01/.test(cap.characters)))
+        filterDrawerMissing.push(`${page.name.slice(9)} ${f.name}`);
+    }
   counts[page.name.slice(9)] = Object.keys(groups).length;
 }
 return {
   syncDiffs: syncDiffs.length,
   sharedHandDrawn: sharedHandDrawn.length,
+  sectionMismatch: sectionMismatch.length,
+  filterDrawerMissing: filterDrawerMissing.length,
   exempted,
   groupsPerPage: counts,
   syncList: syncDiffs,
   sharedList: sharedHandDrawn,
+  sectionList: sectionMismatch,
+  filterList: filterDrawerMissing,
 };

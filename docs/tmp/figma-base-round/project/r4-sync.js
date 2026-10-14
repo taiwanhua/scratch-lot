@@ -708,3 +708,99 @@ if (PART === "mdlg") {
     m.remove();
   }
 }
+
+if (PART === "16") {
+  // 第十六輪:撤銷兌獎改兩層(自己登記且班還開著不限時間;已結帳或別人登記要 store.undo-redeem + 原因),都不用審核。
+  const g = (id) => figma.getNodeByIdAsync(id);
+  const undoBtnIn = (root) =>
+    root.findOne(
+      (x) =>
+        x.type === "INSTANCE" &&
+        !!x.findOne((y) => y.type === "TEXT" && y.characters === "撤銷"),
+    );
+  // ST-38b 電腦 drawer:說明改寫、超過 30 分鐘那列改成 [撤銷]、拿掉「請店長」的 Alert 與和 ST-40 衝突的 #083 示範列
+  await setT(await g("186:11232"), "自己在這一班登記、還在店內持有的兌獎。");
+  {
+    const t = await g("186:11277");
+    const tbl = t.parent.parent.parent;
+    t.parent.insertChild(
+      t.parent.children.indexOf(t),
+      undoBtnIn(
+        tbl.children.find((r) => r !== t.parent.parent && undoBtnIn(r)),
+      ).clone(),
+    );
+    t.remove();
+    const dr = (await g("186:11194")).findOne((n) =>
+      n.name.startsWith("drawer:"),
+    );
+    for (const a of dr.findAll(
+      (n) => n.type === "INSTANCE" && /Alert/.test(n.name),
+    ))
+      a.remove();
+    let row = dr.findOne(
+      (x) => x.type === "TEXT" && x.characters === "5150 · 042210 · #083",
+    );
+    while (row.parent.name !== "table") row = row.parent;
+    row.remove();
+  }
+  // ST-38b 平板 / 手機:標題、每列 [撤銷]、拿掉「請店長」那行
+  for (const [head, lab, foot] of [
+    ["186:11561", "186:11576", "186:23074"],
+    ["186:11612", "186:11627", "186:11628"],
+  ]) {
+    await setT(await g(head), "最近兌獎 · 店內櫃台(自己在這一班登記的)");
+    const t = await g(lab);
+    t.parent.insertChild(
+      t.parent.children.indexOf(t),
+      undoBtnIn((await g(head)).parent).clone(),
+    );
+    t.remove();
+    (await g(foot)).remove();
+  }
+  // ST-39:拿掉「由店長撤銷」、改名
+  for (const id of ["186:23170", "186:23374", "186:23441"])
+    (await g(id)).remove();
+  for (const id of ["186:23450", "186:23518"]) {
+    const f = await g(id);
+    f.name = f.name.replace(
+      "店長撤銷兌獎(原因、撤銷並重新登記)",
+      "撤銷兌獎(已結帳或別人登記:原因、撤銷並重新登記)",
+    );
+  }
+  (await g("186:23075")).name =
+    "ST-39 Overlay / 兌獎紀錄:詳情、撤銷兌獎(已結帳或別人登記)、已送兌不能撤銷";
+  // ST-41:拿掉 b(已超過 30 分鐘)三尺寸,a 改名 ST-41
+  {
+    const f = await g("200:13351");
+    f.findOne((n) => n.name === "dialog:已超過 30 分鐘").remove();
+    f.name = "ST-41 Overlay / 撤銷兌獎確認(自己登記、班還開著)";
+    centerDialogs(f);
+  }
+  for (const id of ["200:13566", "209:27756"]) (await g(id)).remove();
+  for (const id of ["200:13477", "209:27747"]) {
+    const f = await g(id);
+    f.name = f.name.replace("ST-41a", "ST-41");
+  }
+  // ST-40 平板 / 手機:移到對應 Section,補頂部列與分頁列(手機分頁換行)
+  const tabsD = (await g("189:11585")).findOne((n) =>
+    n.name.startsWith("PageTabs"),
+  );
+  for (const [id, src, label] of [
+    ["189:17101", "124:5578", "平板 1024"],
+    ["189:17232", "124:5927", "手機 390"],
+  ]) {
+    const f = await g(id);
+    sec(label).appendChild(f);
+    const c = contentOf(f);
+    const bar = topBar(contentOf(await g(src))).clone();
+    c.insertChild(0, bar);
+    bar.layoutSizingHorizontal = "FILL";
+    const tabs = tabsD.clone();
+    c.insertChild(1, tabs);
+    tabs.layoutSizingHorizontal = "FILL";
+    if (label === "手機 390") {
+      tabs.layoutWrap = "WRAP";
+      tabs.counterAxisSpacing = 4;
+    }
+  }
+}
