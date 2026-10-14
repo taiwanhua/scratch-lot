@@ -195,6 +195,10 @@ function fit(f) {
   main.layoutSizingVertical = "HUG";
   f.resize(f.width, Math.max(minH, Math.ceil(main.height)));
   main.layoutSizingVertical = "FILL";
+  // 固定在底部的操作列(絕對定位)跟著新的高度貼齊底部
+  for (const k of main.children)
+    if (k.layoutPositioning === "ABSOLUTE" && /^bottom-bar/.test(k.name))
+      k.y = main.height - k.height;
 }
 const codeKey = (n) => {
   const m = /^([A-Z]{2}-\d\d)([a-c]?)/.exec(n.name);

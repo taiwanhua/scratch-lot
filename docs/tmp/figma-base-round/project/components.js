@@ -338,69 +338,7 @@ const created = {};
   created.denom = c.id;
 }
 
-// ---------- 4. Draft/WizardStep:精靈步驟(交班 / 日結共用)----------
-// 第二輪已升格為底座 Draft/StepperStep(Stepper.js),本段只留作紀錄,不要再執行;專案草稿已刪除。
-{
-  const mk = async (state) => {
-    const c = figma.createComponent();
-    c.name = "State=" + state;
-    c.layoutMode = "HORIZONTAL";
-    c.itemSpacing = 8;
-    c.counterAxisAlignItems = "CENTER";
-    c.primaryAxisSizingMode = "AUTO";
-    c.counterAxisSizingMode = "AUTO";
-    c.fills = [];
-    const dot = add(
-      c,
-      al("HORIZONTAL", {
-        name: "index",
-        primaryAxisAlignItems: "CENTER",
-        counterAxisAlignItems: "CENTER",
-      }),
-    );
-    dot.resize(24, 24);
-    dot.primaryAxisSizingMode = "FIXED";
-    dot.counterAxisSizingMode = "FIXED";
-    dot.cornerRadius = 12;
-    const n = add(
-      dot,
-      await txt("1", "Caption/SemiBold", "primary/contrast", "n"),
-    );
-    const l = add(c, await txt("盤點", "Subtitle/2", "text/primary", "label"));
-    if (state === "Done") dot.fills = [await paint("success/main")];
-    else if (state === "Current") dot.fills = [await paint("primary/main")];
-    else {
-      dot.fills = [await paint("action/disabledBackground")];
-      n.fills = [await paint("text/secondary")];
-      l.fills = [await paint("text/secondary")];
-    }
-    return c;
-  };
-  const set = figma.combineAsVariants(
-    [await mk("Done"), await mk("Current"), await mk("Todo")],
-    page,
-  );
-  set.name = "Draft/WizardStep";
-  set.layoutMode = "HORIZONTAL";
-  set.itemSpacing = 24;
-  set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
-  const pi = set.addComponentProperty("Index", "TEXT", "1");
-  const pl = set.addComponentProperty("Label", "TEXT", "盤點");
-  for (const v of set.children) {
-    v.findOne((n) => n.name === "n").componentPropertyReferences = {
-      characters: pi,
-    };
-    v.findOne((n) => n.name === "label").componentPropertyReferences = {
-      characters: pl,
-    };
-  }
-  set.description =
-    DESC_PROJECT +
-    "結帳精靈的步驟指示(交班 4 步、日結 5 步)。Done = 已完成(success)、Current = 目前、Todo = 未到。⚠ 這是通用元件,底座目前沒有 Stepper;若其他專案也需要,下一輪考慮升級為底座元件。";
-  set.x = 860;
-  set.y = 520;
-  created.wizardStep = set.id;
-}
+// ---------- 4.(已移除)Draft/WizardStep:第二輪升格為底座 Draft/StepperStep(Stepper.js)----------
 
 // ---------- 5. Draft/CashPointHeader:看板的收銀點列 ----------
 // State=Open(本機收銀點、開班中)/ Closed(未開班)/ Other(其他收銀點、開班中,只顯示狀態);
@@ -624,6 +562,26 @@ for (const id of [
   )) {
     f.counterAxisSizingMode = "AUTO";
     f.counterAxisAlignItems = "CENTER";
+  }
+}
+// 版面:側欄在左,其他元件在右邊直向排列(間距 120),避免變體增加後互相重疊
+{
+  const side = await figma.getNodeByIdAsync(created.sideNav || "");
+  const order = [
+    created.ticketCell,
+    created.ticketGrid,
+    created.denom,
+    created.cashPointHeader,
+    created.bookCard,
+  ];
+  let x = side ? side.x + side.width + 160 : 600,
+    y = 0;
+  for (const id of order) {
+    const n = id && (await figma.getNodeByIdAsync(id));
+    if (!n) continue;
+    n.x = x;
+    n.y = y;
+    y += n.height + 120;
   }
 }
 return created;

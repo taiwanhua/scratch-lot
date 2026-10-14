@@ -68,7 +68,7 @@
 
 ## scratch-lot 專案畫面
 
-專案專屬,**不回收底座**;畫面上的底座草稿實例(OrgTreeSelect、PrintButton、NotificationBell、RosterGrid、MonthCalendar、Receipt58Row / Signature)在底座重建、發布後要一起換成 Library 元件(底座規格 0.3a)。腳本在 `figma/project/`。
+專案專屬,**不回收底座**;畫面上的底座草稿實例(OrgTreeSelect、PrintButton、NotificationBell、RosterGrid、MonthCalendar、Receipt58Row / Signature)在底座重建、發布後要一起換成 Library 元件(底座規格 0.3a)。專案畫面正本是 Figma;仍有效的腳本見 README「專案畫面:正本是 Figma」。
 
 ### 專案元件
 
@@ -323,3 +323,9 @@
 - ST-09 改成兩步精靈(`r4-store.js` PART "09"):a ① 標跳號、b ② 全部放到本機收銀點(預設)、c ② 分放到多個收銀點(分配到一半 + 表格);電腦 / 平板是遮罩 + 對話框,手機全螢幕、Stepper 窄版。舊 ST-09(123:5225、124:24322、124:24739)刪除前已截圖。
 - ST-18 交班結帳 ③ 平板 / 手機的面額清點合計改成 4,800,和上方實點一致(PART "18");電腦版本來就一致(12,050)。
 - Base Draft 還留著的專案示範文字改成中性:Section 摘要「示範摘要」、代理程式「示範分店 B」、伺服器網址 `https://api.example.com`。
+
+## 第九輪:腳本整理 A(2026-10-14)
+
+- 專案畫面以 Figma 為正本:刪除重跑會得到舊畫面的專案畫面腳本(seg4 / 5 / 6、store*、purchasing、schedule、r3-store、_r3、_screen-helpers;git 歷史可查),保留 `_header.js`、`components.js`、`brand-rebind.js`、`r4-*.js`。`components.js` 拿掉已不存在的 WizardStep,最後直向排列(和 Figma 一致)。
+- 說明型小字逐一分類(專案頁 8 頁 + Base Draft):91 種文字判定為開發說明 → 61 種整句搬到框外註解、30 種改寫成使用者語言並把原句放框外(三種尺寸共 108 處);約 90 種使用者提示留在畫面裡。底座腳本同步:`_kit.js` / `_resolve.js` 新增 `noteOut()`,Screens.js / Screens2-base.js 的說明改用它寫到框外。
+- 移走文字後畫面變矮,有幾張平板 / 手機畫面的「固定在底部」操作列跑出外框;`r4-layout.js` 的 `fit()` 改成重新貼齊底部。

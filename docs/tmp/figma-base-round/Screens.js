@@ -500,10 +500,15 @@ async function approverPanel(shared) {
         { Severity: "Warning" },
         {
           Message:
-            "共用流程:各租戶的使用者與角色不同,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。用到使用者或角色會擋下(AUDIENCE_IN_SHARED)。",
+            "共用流程:各租戶的使用者與角色不同,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。",
         },
       ),
       "FILL",
+    );
+  if (shared)
+    await noteOut(
+      p,
+      "共用流程:各租戶的使用者與角色不同,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。用到使用者或角色會擋下(AUDIENCE_IN_SHARED)。",
     );
   const ap = draft("Draft/AudiencePicker")
     .children.find((v) => v.name === "AllowEveryone=False, Value=Conditions")

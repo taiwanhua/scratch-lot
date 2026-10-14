@@ -495,6 +495,27 @@ async function cap(p, s) {
   t.textAutoResize = "HEIGHT";
   return t;
 }
+
+// 框外註解(畫圖檢查清單 9):開發用說明不放在畫面裡,寫成畫面右邊的「<畫面名> · 註解」;位置由 project/r4-layout.js 排
+async function noteOut(node, s) {
+  let f = node;
+  while (f.parent && f.parent.type !== "PAGE" && f.parent.type !== "SECTION")
+    f = f.parent;
+  const nm = f.name + " · 註解";
+  let c = f.parent.children.find((n) => n.type === "TEXT" && n.name === nm);
+  if (!c) {
+    c = await T("註解(不在畫面內)", "Caption", "text/secondary");
+    f.parent.appendChild(c);
+    c.name = nm;
+    c.textAutoResize = "HEIGHT";
+    c.resize(320, c.height);
+    c.x = f.x + f.width + 24;
+    c.y = f.y;
+  }
+  await figma.loadFontAsync(c.fontName);
+  c.characters = c.characters + "\n- " + s;
+  return c;
+}
 async function para(p, s, st = "Body/2", c = "text/primary") {
   const t = add(p, await T(s, st, c), "FILL");
   t.textAutoResize = "HEIGHT";

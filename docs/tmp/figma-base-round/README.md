@@ -16,6 +16,8 @@
    - 三份檔頭的 `al()` 都預設不裁切內容(浮動標籤、陰影);表格、殼、Overlay 另外設定裁切。
    - `_kit.js` 的 `BASE_NODE` 還沒填的(Checkbox、Radio、TextField、Link、StatCard、AdminRouteTabs)和 `_resolve.js` 一樣,重建前要先在底座檔查到節點 id 補上;未填時腳本會直接報錯,不會靜默改用 Library。
    - 有依賴的要照順序(後面的會在目前頁找前面的草稿元件)。
+   - 全部跑完後跑 `project/r4-layout.js`(`PAGE_ID` 設成草稿頁):頁名含「本輪」時用 `ROWS.base` 依名稱分列。兩張「說明 / 通知鈴暫時疊加」是 scratch-lot 專用的註解卡(步驟 4 AppBar 加槽後刪除),不在腳本裡。
+   - 第七、八輪核對過:Base Draft 上的文字(數字除外)都能在底座腳本裡找到(上面的註解卡除外),示範文字是中性內容。
    - `base` 模式:變數 / 樣式依同一個 key 找本檔 local;底座既有元件依 `K.comp[*].baseNode`(FIGMA-09 節點 id)。`K.comp` 裡還沒填 `baseNode` 的元件(Draft/Select、Draft/SelectField、TextField、Draft/Checkbox、Link、Draft/Radio、Draft/Snackbar、Draft/Popover、Draft/AdminRouteTabs、Draft/ConfirmDialog),重建前要先在底座檔查到節點 id 補上。
 2. **ActionIcon+ 併入 Draft/ActionIcon**:在底座檔把 `Draft/ActionIcon+` 的 17 個變體移進既有 set `Draft/ActionIcon`(2001:68)成為新的 `key=` 變體,刪除空的 ActionIcon+ set;重建其他元件前把腳本裡的 `draft('Draft/ActionIcon+')` 改為 `comp('Draft/ActionIcon')`(兩者變體名相同)。
 3. 底座 Library 依 `docs/deployment.md` 的 Release 步驟發布(Library 版本與 Git tag 互相指向)。
@@ -38,7 +40,7 @@
 6. **顏色**:專案頁只綁 scratch-lot Brand Library 的品牌色與底座語意色,不留底座主色;Base Draft 頁只綁底座。
 7. **元件**:用底座 Library / 草稿元件的實例,不 detach;新元件先確認底座沒有。
 8. **規格對照**:每張畫面列出它對應的規格章節,畫完逐項核對欄位、按鈕、權限、錯誤狀態。
-9. **畫面內只放使用者看得到的內容**:畫面框內不能出現設計稿編號(ST- / IN- / PU- / AC- / RE- / DE- / MD- / SC- / RC- / RW- / BS-)、規格章節號、權限 key、錯誤碼或開發用說明(例「→ ST-07」「需要 show-cost」「RANGE_TOO_LARGE」);這些寫在畫面框外的註解文字(名稱「<畫面名> · 註解」)。權限提示要寫成使用者看得懂的話。`audit.js` 的 `devTextInScreens` 要是 0。
+9. **畫面內只放使用者看得到的內容**:畫面框內不能出現設計稿編號(ST- / IN- / PU- / AC- / RE- / DE- / MD- / SC- / RC- / RW- / BS-)、規格章節號、權限 key、錯誤碼或開發用說明(例「→ ST-07」「需要 show-cost」「RANGE_TOO_LARGE」);這些寫在畫面框外的註解文字(名稱「<畫面名> · 註解」)。權限提示要寫成使用者看得懂的話。`audit.js` 的 `devTextInScreens` 要是 0。 說明型小字也一樣:**留在畫面裡**的是使用者操作時需要的提示(例「錢從這一班的抽屜付出;同一張不能兌兩次」「超過 30 分鐘或這一班已交班 → 改送撤銷售出申請」「Enter 確認、Esc 取消」);**搬到框外**的是系統規則與實作說明(例「篩選條件存在網址」「從精靈送出,列表沒有 [+ 新增]」「駁回、作廢一律擋下,只能退回」「同一家店同時只能有一張盤點中」「平板:表格欄位依寬度保留重要欄」「找不到排班時報表標示未對應排班」)。一句裡兩種都有時,畫面留使用者那一半、整句原文放框外。
 
 ## 驗收稽核 `audit.js`
 
@@ -99,47 +101,23 @@
 8. **Brand 補綁**:草稿元件在 scratch-lot 顯示底座橘色(只綁底座變數);scratch-lot 品牌色由 Brand Sync 外掛在畫面層補綁,草稿元件本身不補。
 9. **Receipt58 字色**:收據只用 grey/900 與 common/white(熱感紙只有黑),不跟深色模式。
 
-## 專案畫面(scratch-lot 專屬)
+## 專案畫面(scratch-lot 專屬):正本是 Figma
 
-- 放在 scratch-lot Screens 的 `Project Draft / 刮刮樂元件`(64:14)與 `Screen / 店面管理`、`Screen / 叫貨與進貨`、`Screen / 班表管理`。節點見 `nodes.md`「scratch-lot 專案畫面」。
-- 腳本在 `project/`:執行時依序貼上 `project/_header.js`、`project/_screen-helpers.js`,再貼 `components.js` / `store.js` / `store-wizards.js` / `purchasing.js` / `schedule.js`。專案腳本只有 scratch 模式,不會在底座執行。
-- 專案元件 description 開頭固定「【專案・scratch-lot 專屬,不回收底座】」,`audit.js` 不把它們算進底座草稿。
-- 專案畫面使用的底座草稿實例:基準值(2026-10-13)Screen / 店面管理 32、Screen / 叫貨與進貨 9、Screen / 班表管理 75、Project Draft 0。底座 Library 發布後,這些都要跟著用 `swapComponent` 換成 Library 元件。
+- **正本**:scratch-lot Screens 的 `Screen / *` 各頁與 `Project Draft / 刮刮樂元件`(64:14)。節點見 `nodes.md`。專案畫面不回收底座,以 Figma 為準;不維護「重跑就能畫出全部畫面」的腳本。
+- **仍有效的腳本**(`project/`,都在 scratch 模式執行):
 
-## 第三輪(三種尺寸)
+  | 腳本                           | 做什麼                                                                                                                                                                                 | 前置                                                                                                       |
+  | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+  | `_header.js` + `components.js` | 專案元件:ScratchLotSideNav、TicketCell(主色、張號 001 起)、TicketGrid、DenominationCount、CashPointHeader(Open / Closed / Other + Mine)、BoardBookCard(Normal / LowStock),最後直向排列 | 底座草稿元件已在 Base Draft 頁                                                                             |
+  | `r4-lib.js` + `r4-store.js`    | 店面管理:ST-36 卡片展開(PART 36、36m)、ST-37 拆本選本、ST-07 手動標記確認、ST-28b 日結版結帳確認申請、ST-09 拆本精靈、ST-18 示範金額修正                                               | 從現有畫面複製再改,需要 Figma 上的樣板畫面(ST-01、ST-37、ST-28a、IN-04 等,節點 id 寫在 `r4-lib.js` 與各段) |
+  | `r4-lib.js` + `r4-reports.js`  | 營運報表 RE-04 平板 / 手機                                                                                                                                                             | 同上                                                                                                       |
+  | `brand-rebind.js`              | 專案頁殘留的底座主色改綁 scratch-lot 品牌色(複製的 Button 換變體後要跑)                                                                                                                | —                                                                                                          |
+  | `r4-layout.js`                 | 每頁依操作流程分列 + 畫面高度貼合內容(也用於 Base Draft)                                                                                                                               | —                                                                                                          |
 
-- **版面稽核 `audit-layout.js`**:`clippedText`、`misalignedRows`、`basePrimaryBindings` 三項,每頁都要 0。第一次跑(2026-10-14,修正前):叫貨與進貨 7 / 1、班表管理 5 / 2、經銷商管理 2 / 1、Base Draft 67 / 0、其餘頁 0 / 0(clippedText / misalignedRows)。原因有三:
-  1. 畫面工具 `al()` 建的 auto layout 預設會裁切內容,TextField 的浮動標籤(在欄位上緣上方 8px)被所在的列切掉一半 → `al()` 改成預設不裁切,既有畫面的巢狀 auto layout 一併關閉裁切(表格、殼、`input` 保留)。
-  2. 底座草稿 `Draft/OrgTreeSelect`(47:409)的標籤放在欄位上方(高 64),和 TextField / SelectField 的浮動標籤(高 56)並排時上下不齊 → 四個變體都改成浮動標籤(`labelWrap` 絕對定位 10, −8),高度 56。
-  3. 畫面高度沒有跟著內容撐高,底部按鈕被畫面外框切掉(DE-03)→ 重新撐高。
-- **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」,另有「58mm 單據」Section 接在最後(店面管理頁)。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」。第七輪起改成依操作流程分列,排列以 `project/r4-layout.js` 為準(見下方「腳本與 Figma 的對應」);`_r3.js` 的 `relayoutSizes()` 不再使用。
-- **腳本**:`const PROJECT = true;` + `_kit.js` + `project/_r3.js` + 畫面腳本(`project/r3-*.js`)。`_r3.js` 有平板 / 手機殼 `dev()`、手機全螢幕彈窗 `devDialog()`、卡片列表 `cardList()`、張數格子 `ticketGrid()`(張號從 001 起)、結算區塊 `settlement()`(金額列 + 收付歷程)。
-- 執行時為了不讓每次呼叫都重送工具組,工具組原文暫存在檔內一頁「_tooling(AI 暫存腳本,完工後刪除)」的文字節點,呼叫時讀出來 `eval`;完工後刪除該頁。正本仍是本資料夾的檔案。
-- **畫完的基準(2026-10-14)**:`audit-layout.js` 全部專案頁與 Base Draft 頁 `clippedText` / `misalignedRows` / `overflowNodes` / `basePrimaryBindings` 都是 0。
-- **截圖注意**:伺服器端截圖(get_screenshot)對 Section 的 SLOT 內容有時顯示舊寬度(欄位看起來比實際窄);以外掛端 `node.screenshot()` 或 Figma 畫面為準。
-- 暫存工具頁「_tooling」已刪除。
-
-## 腳本與 Figma 的對應(第七輪整理,2026-10-14)
-
-目標:照腳本重跑能得到跟現在 Figma 一致的結果。腳本裡已經沒有拿掉的舊做法(瑕疵、拆本時略過跳號、盤點推定、營業日、號碼不明、對方已付、卡片 ⋮ 選單、看板卡片「待標註」);被後來重畫取代的段落已從舊腳本刪除,改成一行註解指向現行來源。
-
-### 執行順序(專案頁,scratch 模式)
-
-1. 元件:`project/_header.js` + `project/_screen-helpers.js` + `components.js`(TicketCell 主色、張號 001 起、CashPointHeader Open / Closed / Other + Mine、BoardBookCard Normal / LowStock)。
-2. 第一、二輪畫面:`const PROJECT = true;` + `../_kit.js` + `store.js`、`store-wizards.js`、`purchasing.js`、`schedule.js`、`store2.js`、`store2-bc.js`、`store2-d.js`、`seg4.js`、`seg5.js`、`seg6.js`(各檔頭註明 PART)。
-3. 第三輪:`../_kit.js` + `_r3.js` + `r3-store.js`(ST-13 / 14 / 15)。
-4. 第四~八輪:`r4-lib.js` + `r4-store.js`(PART 36、36m、37、07、28b、09、18)、`r4-reports.js`(RE-04 平板 / 手機);之後跑 `brand-rebind.js`。
-5. 排列:`r4-layout.js`(每頁一次,含畫面高度貼合內容)。
-6. 稽核:`audit.js`、`audit-layout.js`,全部要是 0。
-
-### 以 Figma 為準的畫面(腳本無法重現)
-
-| 畫面                                                                                                                                                                  | 原因                                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| 全部的平板 / 手機畫面(ST、IN、PU、SC、RW;r4 腳本畫的 ST-07、ST-28b、ST-36、ST-37、RE-04 除外)                                                                         | 第三輪用暫存工具頁直接在 Figma 執行(`dev()`、`devDialog()` 等工具在 `_r3.js`),各畫面的腳本當時沒有存檔             |
-| ST-01 電腦版(65:15)、IN-01(91:17)、AC-02(93:400)                                                                                                                      | 第三輪就地修改既有畫面(收銀點標題列換成 CashPointHeader Other + Mine、加分店選擇器、加帳戶設定),沒有存成腳本       |
-| ST-05、ST-09、ST-34、ST-35 電腦版;IN-03、IN-04;PU-05、PU-07、PU-10b、PU-11;RE-03、RE-04 電腦版、RE-05;SC-15~31                                                        | 第三輪重畫或新增,腳本沒有存檔(`r3-store.js` 只有 ST-13~15 的程式,其餘段落是註解)                                   |
-| 第四~六輪在上述畫面上的就地修改:ST-09 拿掉 [略過]、IN-03 頁首 [更正跳號]、IN-04 更正跳號視窗、看板卡片示範資料、RE-02 / RE-04 的舊名詞、ST-24 / 25 / 29 / 30 的舊名詞 | 用一次性的修改腳本直接改節點;已同步改進仍存在的舊腳本(store-wizards、store2-d、seg5 等),但上一列的畫面本身沒有腳本 |
-| 框外註解「<畫面名> · 註解」                                                                                                                                           | 第六輪把畫面裡的開發用說明搬出來時建立;內容是原本畫面上的文字                                                      |
-
-其他畫面(上表以外的電腦版)照「執行順序」重跑會得到相同內容;位置以 `r4-layout.js` 排完為準。
+- **已刪除的腳本**(git 歷史可查,最後一版在 commit `aa44333`):`_screen-helpers.js`、`_r3.js`、`r3-store.js`、`store.js`、`store-wizards.js`、`purchasing.js`、`schedule.js`、`store2.js`、`store2-bc.js`、`store2-d.js`、`seg4.js`、`seg5.js`、`seg6.js`。原因:這些畫面之後多次直接在 Figma 修改或重畫(平板 / 手機全部在暫存工具頁畫、第三輪重畫、第四~八輪就地修改),重跑只會得到舊畫面。
+- **版面**:每個模組頁由上到下三個 Section「電腦 1440」「平板 1024」「手機 390」(店面管理另有「58mm 單據」接在最後)。Section 內依操作流程分列(`r4-layout.js` 的 `ROWS`),入口畫面後面接它打開的畫面;列左邊是框外列標題「列標題 / <名稱>」;三個 Section 的列相同,沒有該尺寸畫面的列只留標題並註明照共用規則。框名以畫面編號開頭,平板 / 手機加「 · 平板」「 · 手機」;框外註解「<畫面名> · 註解」跟在畫面右邊。
+- **畫面高度**:有殼的畫面(main > content)高度 = 內容高度,至少一個視窗高(電腦 900、平板 768、手機 844);遮罩彈窗與手機底部面板不動。
+- 專案元件 description 開頭固定「【專案・scratch-lot 專屬,不回收底座】」,`audit.js` 不把它們算進底座草稿。專案畫面上的底座草稿實例在底座 Library 發布後,要用 `swapComponent` 換成 Library 元件。
+- **稽核**:`audit.js`(含 `devTextInScreens`)、`audit-layout.js` 每頁都要是 0。第三輪曾因 `al()` 預設裁切、OrgTreeSelect 標籤在框外、畫面沒撐高而有裁切與對齊問題,已修正並改成預設不裁切。
+- **截圖注意**:伺服器端截圖(get_screenshot)對 Section 的 SLOT 內容有時顯示舊寬度;以外掛端 `node.screenshot()` 或 Figma 畫面為準。
+- 執行時為了不重送工具組,可把腳本原文暫存在檔內一頁「_tooling(AI 暫存腳本,完工後刪除)」的文字節點再讀出來執行;完工後刪除該頁。正本仍是本資料夾的檔案。

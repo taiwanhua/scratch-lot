@@ -81,7 +81,7 @@ if (PART === 1) {
       await btn("+ 選擇組織", "Text", "Primary", "Default", "Small"),
     ]);
     add(skip, await check("包含下層組織"));
-    await cap(
+    await noteOut(
       skip,
       "判斷申請人所屬的組織(全部);與既有跳過條件任一成立就跳過;被跳過的關卡不執行 beforeApprove。",
     );
@@ -544,7 +544,7 @@ if (PART === 3) {
       await orgChip("檔案數"),
       await btn("+ 欄位", "Text", "Primary", "Default", "Small"),
     ]);
-    await cap(
+    await noteOut(
       panel,
       "使用者展開 / 收合後的狀態存在這台瀏覽器,只記與預設不同的;表單有錯時自動展開並捲到第一個錯誤。",
     );
@@ -664,7 +664,7 @@ if (PART === 3) {
       n++;
     }
     add(b, nav);
-    await cap(
+    await noteOut(
       b,
       "例:申請中心「待我處理 3」;其他模組各自登記(例:示範模組「逾期 2」)。收合時圖示列顯示小圓點。數字由 API 一次回傳使用者看得到的模組。",
     );
@@ -729,7 +729,7 @@ if (PART === 3) {
       ),
       "FILL",
     );
-    await cap(
+    await noteOut(
       sh.content,
       "分頁、篩選、頁碼存在網址(useUrlState:一個 key 一包 JSON);重新整理或分享網址後狀態相同。只有一個分頁時不顯示分頁籤;沒有權限的分頁不顯示。",
     );
@@ -831,7 +831,8 @@ if (PART === 4) {
   add(d, await select("紙寬", "58mm"), "FILL");
   add(d, await check("設為這個組織的預設印表機", true), "FILL");
   add(d, await sw("啟用", true));
-  await cap(
+  await cap(d, "建議在路由器保留 IP(把收據機 MAC 綁定固定 IP)。");
+  await noteOut(
     d,
     "建議在路由器保留 IP(把收據機 MAC 綁定固定 IP);設定步驟收據機到貨後補上。",
   );
@@ -884,7 +885,7 @@ if (PART === 4) {
     ["macOS arm64", false],
   ])
     add(pr, await btn("下載 " + p, sug ? "Contained" : "Outlined"));
-  await cap(
+  await noteOut(
     dl,
     "依瀏覽器偵測的系統反白建議的那個;按下時產生 1 小時有效的簽名網址。解壓縮後執行安裝,輸入伺服器網址與配對碼。更新時再安裝一次,會保留金鑰。",
   );
