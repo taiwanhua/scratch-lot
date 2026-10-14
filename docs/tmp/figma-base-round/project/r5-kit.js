@@ -2,8 +2,8 @@
 // 用法:整段貼在 r5-schedule.js 某一段(PART)前面一起執行。只綁底座語意色;按鈕 / 標籤的 primary 由 brand-rebind.js 補綁專案色。
 // 元件都用實例(Button、Tag、SelectField、TextField、Checkbox、Radio、Switch、Tab、Alert、IconButton、Section、
 // RosterCell、MonthCalendarCell 版面、ScheduleTimelineBlock、ScratchLotSideNav / NavRail / AppBar、AdminAppBar / RouteTabs)。
-// 殼(側欄 + 頁首)從既有畫面複製:我的班表 223:4466 / 130:28360 / 130:28804、排班作業 70:15 / 130:29192 / 130:29593、
-// 排班設定 102:1621、出勤紀錄 102:2552(平板 / 手機沿用我的班表的殼,只改標題)。
+// 殼(側欄 + 頁首)從既有畫面複製(第十九輪第一次跑時用舊畫面,舊畫面刪除後改成本輪新畫面):
+// 我的班表 SC-01、排班作業 SC-03、排班設定 SC-08、出勤紀錄 SC-11 / SC-12(各尺寸)。
 const PAGE = await figma.getNodeByIdAsync("70:14");
 await figma.setCurrentPageAsync(PAGE);
 const VID = {
@@ -374,15 +374,15 @@ async function table(cols, rows, name = "table") {
 }
 // ---- 殼 ----
 const SHELL = {
-  my: { D: "223:4466", T: "130:28360", M: "130:28804", title: "我的班表" },
-  manage: { D: "70:15", T: "130:29192", M: "130:29593", title: "排班作業" },
+  my: { D: "263:14824", T: "265:17214", M: "265:19263", title: "我的班表" },
+  manage: { D: "272:72792", T: "272:76849", M: "272:79014", title: "排班作業" },
   settings: {
-    D: "102:1621",
-    T: "130:28360",
-    M: "130:28804",
+    D: "275:32624",
+    T: "275:34439",
+    M: "275:36003",
     title: "排班設定",
   },
-  att: { D: "102:2552", T: "130:28360", M: "130:28804", title: "出勤紀錄" },
+  att: { D: "276:34809", T: "276:35606", M: "276:35972", title: "出勤紀錄" },
 };
 const W = { D: 1440, T: 1024, M: 390 };
 const H = { D: 900, T: 768, M: 844 };
