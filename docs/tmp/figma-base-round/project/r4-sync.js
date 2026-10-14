@@ -1,6 +1,6 @@
 // 第十四輪「Screen / 店面管理」(65:14):三尺寸同步、最近兌獎規則、撤銷兌獎確認。前置:r4-lib.js + `const PART = "…";` + 本檔。
 // 元件化(StoreTopBar / NavRail / CashPointHeader 的 Size 變體)見 components.js 第 5、9、10 節;手畫框換實例用 PART "swap"。
-// 依序:swap → 34 → 35 → 38 → 41 → 20 → wiz → fix,最後跑 brand-rebind.js、r4-layout.js、audit.js、audit-sync.js。
+// 依序:swap → 34 → 35 → 38 → 41 → 20 → wiz → fix;第十五輪 appbar → mdlg → 08,最後跑 brand-rebind.js、r4-layout.js、audit.js、audit-sync.js。
 const CPH = {
   // 平板 / 手機的 CashPointHeader 實例樣板(ST-36a / ST-36c 裡的):Open = 店內櫃台(本機),Other = 店外攤位(Mine)
   T: { open: "190:25019", other: "190:25050" },
@@ -55,6 +55,41 @@ async function note(f, s) {
   n.name = f.name + " · 註解";
   await setT(n, s);
   return n;
+}
+
+// 對話框置中(電腦的 dialogs 列、平板的 dialog)
+function centerDialogs(f) {
+  const row = f.findOne((n) => n.name === "dialogs" || n.name === "dialog");
+  row.x = Math.round((f.width - row.width) / 2);
+  row.y = 64;
+}
+// 手機置中小視窗:從平板的遮罩 + 對話框複製,寬 342、垂直置中,超寬的文字改換行(專案規格 16.0)
+function mobileDialog(fromT, name) {
+  const f = fromT.clone();
+  f.name = name;
+  fileIn("手機 390", f);
+  f.resize(390, 844);
+  const d = f.findOne((n) => n.name === "dialog");
+  d.resize(342, d.height);
+  for (const fr of d.findAll(
+    (n) => n.type === "FRAME" && n.layoutMode === "HORIZONTAL",
+  )) {
+    fr.layoutWrap = "WRAP";
+    fr.counterAxisSpacing = 8;
+  }
+  for (const t of d.findAll((n) => n.type === "TEXT")) {
+    const p = t.parent,
+      pb = p.absoluteBoundingBox,
+      tb = t.absoluteBoundingBox;
+    if (p.layoutMode === "NONE" || tb.x + tb.width <= pb.x + pb.width + 1)
+      continue;
+    if (p.layoutMode === "VERTICAL") t.layoutSizingHorizontal = "FILL";
+    else t.layoutGrow = 1;
+    t.textAutoResize = "HEIGHT";
+  }
+  d.x = 24;
+  d.y = Math.round((844 - d.height) / 2);
+  return f;
 }
 
 if (PART === "swap") {
@@ -498,5 +533,178 @@ if (PART === "fix") {
     c7.insertChild(1, b);
     a.layoutSizingHorizontal = "FILL";
     b.layoutSizingHorizontal = "FILL";
+  }
+}
+
+if (PART === "appbar") {
+  // 第十五輪:平板 / 手機手畫的 app-bar(116 個,各頁)換成 Draft/ScratchLotAppBar 實例。
+  // Kind 依開頭符號(✕ Dialog、← Back、其他 Page);spacer 之前的文字是 Title、之後的是 Org;右側按鈕的屬性(Label / Variant / Color…)照抄。
+  const set = (await figma.getNodeByIdAsync("64:14")).findOne(
+    (n) => n.name === "Draft/ScratchLotAppBar",
+  );
+  const V = {};
+  for (const v of set.children) V[v.name] = v;
+  const key = (p) =>
+    Object.keys(set.componentPropertyDefinitions).find((k) => k.startsWith(p));
+  const inI = (n) => {
+    for (let a = n.parent; a; a = a.parent)
+      if (a.type === "INSTANCE") return true;
+    return false;
+  };
+  const top = (n) => {
+    let f = n;
+    while (f.parent && f.parent.type !== "SECTION") f = f.parent;
+    return f;
+  };
+  for (const pid of [
+    "65:14",
+    "91:14",
+    "69:14",
+    "70:14",
+    "93:14",
+    "94:14",
+    "95:14",
+    "97:14",
+  ]) {
+    const p = await figma.getNodeByIdAsync(pid);
+    await figma.setCurrentPageAsync(p);
+    for (const b of p.findAll(
+      (x) => x.type === "FRAME" && x.name === "app-bar" && !inI(x),
+    )) {
+      const size = top(b).width >= 1000 ? "Tablet" : "Mobile";
+      const kids = b.children;
+      const g =
+        kids[0] &&
+        kids[0].type === "TEXT" &&
+        /^[✕←☰]$/.test(kids[0].characters)
+          ? kids[0].characters
+          : null;
+      const kind = g === "✕" ? "Dialog" : g === "←" ? "Back" : "Page";
+      const sp = kids.findIndex((k) => k.name === "spacer");
+      const texts = kids.filter(
+        (k) => k.type === "TEXT" && !/^[✕←☰]$/.test(k.characters),
+      );
+      const title = texts.find((t) => sp < 0 || kids.indexOf(t) < sp);
+      const org = texts.find((t) => sp >= 0 && kids.indexOf(t) > sp);
+      const btn = kids.find((k) => k.type === "INSTANCE");
+      const i = V[`Size=${size}, Kind=${kind}`].createInstance();
+      for (const t of i.findAll((x) => x.type === "TEXT")) await fnt(t);
+      i.setProperties({
+        [key("Title")]: title ? title.characters : "",
+        [key("Org")]: !!org,
+        [key("Action")]: !!btn,
+      });
+      if (org)
+        await setT(
+          i.findOne((x) => x.name === "org"),
+          org.characters,
+        );
+      if (btn) {
+        const pr = {};
+        for (const [k, v] of Object.entries(btn.componentProperties))
+          pr[k] = v.value;
+        i.findOne((x) => x.name === "action").setProperties(pr);
+      }
+      b.parent.insertChild(b.parent.children.indexOf(b), i);
+      i.layoutSizingHorizontal = "FILL";
+      b.remove();
+    }
+  }
+}
+
+if (PART === "08") {
+  // 第十五輪:ST-08 撤銷售出改成單張確認視窗(比照 ST-41):a 確認;b 超過 30 分鐘或之後有異動 → [送撤銷售出申請]。
+  // 電腦一張兩個對話框(從 ST-41 複製),平板 / 手機各兩張;手機是置中小視窗(專案規格 16.0)。舊的清單版 ST-08 刪除(清單是 ST-35 的 [最近售出])。
+  const A = [
+    "撤銷這張售出?",
+    "5164-056527-012 · 200 元 · 21:52 售出",
+    "撤銷後 200 元從店內櫃台的抽屜應有金額扣除。",
+  ];
+  const Bt = [
+    "不能當下撤銷",
+    "5201-060112-044 · 100 元 · 21:12 售出",
+    "已超過 30 分鐘(或之後有異動),請改送撤銷售出申請。",
+  ];
+  const fillDlg = async (d, [h, l1, l2], b) => {
+    const ts = d.children.filter((k) => k.type === "TEXT");
+    await setT(ts[0], h);
+    await setT(ts[1], l1);
+    await setT(ts[2], l2);
+    if (!b) return;
+    const a = d.findOne((n) => n.name === "actions");
+    const last = a.children[a.children.length - 1];
+    await setT(
+      last.findOne((x) => x.type === "TEXT"),
+      "送撤銷售出申請",
+    );
+    a.insertChild(a.children.indexOf(last), await B("取消", "Text", "Medium"));
+  };
+  for (const id of ["87:2346", "124:23951", "124:24300"]) {
+    const n = await figma.getNodeByIdAsync(id);
+    if (!n) continue;
+    const cap = n.parent.children.find(
+      (k) => k.type === "TEXT" && k.name === n.name + " · 註解",
+    );
+    if (cap) cap.remove();
+    n.remove();
+  }
+  {
+    const f = (await figma.getNodeByIdAsync("200:13351")).clone(); // ST-41 電腦
+    f.name = "ST-08 Overlay / 撤銷售出確認(a 確認;b 超過條件改送撤銷售出申請)";
+    fileIn("電腦 1440", f);
+    const ds = f.findOne((n) => n.name === "dialogs").children;
+    ds[0].name = "dialog:撤銷這張售出?";
+    ds[1].name = "dialog:不能當下撤銷";
+    await fillDlg(ds[0], A, false);
+    await fillDlg(ds[1], Bt, true);
+    centerDialogs(f);
+  }
+  for (const [st, src, txt, isB] of [
+    ["a", "200:13477", A, false],
+    ["b", "200:13566", Bt, true],
+  ]) {
+    const name = st === "a" ? "撤銷這張售出?" : "超過條件改送申請";
+    const f = (await figma.getNodeByIdAsync(src)).clone(); // ST-41a / b 平板
+    f.name = `ST-08${st} · 平板 ${name}`;
+    fileIn("平板 1024", f);
+    await fillDlg(
+      f.findOne((n) => n.name === "dialog"),
+      txt,
+      isB,
+    );
+    centerDialogs(f);
+    mobileDialog(f, `ST-08${st} · 手機 ${name}`);
+  }
+}
+
+if (PART === "mdlg") {
+  // 第十五輪:只有一兩句話、沒有表單欄位的確認,手機改成置中小視窗(從平板版複製,寬 342)。
+  // ST-41 手機重畫;ST-05、ST-06、PU-11、SC-15 手機由全螢幕改小視窗。ST-15(明細清單)、ST-39a / c(詳情)維持全螢幕。
+  for (const id of ["200:13351", "200:13477", "200:13566"])
+    centerDialogs(await figma.getNodeByIdAsync(id));
+  for (const id of ["200:13526", "200:13611"]) {
+    const n = await figma.getNodeByIdAsync(id);
+    if (n) n.remove();
+  }
+  mobileDialog(
+    await figma.getNodeByIdAsync("200:13477"),
+    "ST-41a · 手機 撤銷兌獎?",
+  );
+  mobileDialog(
+    await figma.getNodeByIdAsync("200:13566"),
+    "ST-41b · 手機 已超過 30 分鐘",
+  );
+  for (const [pid, tid, mid] of [
+    ["65:14", "124:23673", "124:24027"], // ST-05
+    ["65:14", "124:23701", "124:24052"], // ST-06
+    ["69:14", "127:26671", "127:26937"], // PU-11
+    ["70:14", "130:29502", "130:29827"], // SC-15
+  ]) {
+    await figma.setCurrentPageAsync(await figma.getNodeByIdAsync(pid));
+    const m = await figma.getNodeByIdAsync(mid);
+    const f = mobileDialog(await figma.getNodeByIdAsync(tid), m.name);
+    f.x = m.x;
+    f.y = m.y;
+    m.remove();
   }
 }

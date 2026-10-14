@@ -1,13 +1,13 @@
 // 三尺寸同步檢查(scratch-lot Screens,一次跑全部專案頁;不改任何節點)。用法:整段貼進 use_figma 執行。
 // 1. 標題列按鈕一致(syncDiffs):同一個畫面編號(例 ST-38,含 a / b / c)在「電腦 1440 / 平板 1024 / 手機 390」三個 Section 中,
 //    標題列 / 頂部列的按鈕文字集合要一樣,差異要是 0。
-//    標題列 = CashPointHeader / StoreTopBar 實例,以及名稱是 store-top、toolbar、title、doc-head 的框,平板 / 手機再加 app-bar
-//    (app-bar 開頭是 ✕ 的是全螢幕對話框,它的按鈕是對話框按鈕,不算)。按鈕 = 有文字的實例(Tag、欄位、格子等不算);
+//    標題列 = CashPointHeader / StoreTopBar 實例,以及名稱是 store-top、toolbar、title、doc-head 的框,平板 / 手機再加 ScratchLotAppBar
+//    (Kind=Dialog 是全螢幕對話框,它的按鈕是對話框按鈕,不算)。按鈕 = 有文字的實例(Tag、欄位、格子等不算);
 //    手機收進「更多」選單的,選單裡的文字也算有。該編號只有一個尺寸有畫的不比。
 //    版面本來就不同的列在 EXEMPT(要寫理由,回報時照列)。
 // 2. 共用區塊非元件數(sharedHandDrawn):三尺寸都出現的共用區塊,只要在任何尺寸是手畫框而不是元件實例就列出來,數量要是 0。
 //    收銀點標題列(cash-point*)→ Draft/CashPointHeader;看板頂部列(店面管理的 store-top / toolbar)→ Draft/StoreTopBar;
-//    平板側欄(nav-rail*)→ Draft/ScratchLotNavRail;電腦側欄(side-nav*)→ Draft/ScratchLotSideNav;
+//    平板側欄(nav-rail*)→ Draft/ScratchLotNavRail;平板 / 手機最上面的標題列(app-bar)→ Draft/ScratchLotAppBar;電腦側欄(side-nav*)→ Draft/ScratchLotSideNav;
 //    看板卡片(cards 裡的框)→ Draft/BoardBookCard;張數格子(grid+legend / ticket-grid)要由 Draft/TicketCell 組成、圖例用 Draft/TicketGridLegend;
 //    Stepper(Stepper / stepper / steps)要由 Draft/StepperStep 組成。由元件實例組成的容器(格子、Stepper、PageTabs)算元件化。
 figma.skipInvisibleInstanceChildren = false;
@@ -34,6 +34,7 @@ const NONBTN =
   /Tag|Badge|Select|TextField|Radio|Checkbox|Alert|Ticket|Legend|Stepper|Avatar|Icon|OrgTree|Switch|Tab$|Draft\/Tab|SideNav|NavRail|AppBar|BookCard|TableCell/;
 const isBtn = (n) =>
   n.type === "INSTANCE" &&
+  n.visible &&
   !NONBTN.test(n.name) &&
   !!n.findOne((x) => x.type === "TEXT" && x.characters.trim());
 const label = (b) =>
@@ -46,16 +47,13 @@ const inInstance = (n) => {
 // 元件內部的列(例:月曆自己的「今天」列)不算頁面標題列
 const isHead = (n, sz) =>
   (n.type === "INSTANCE" && /CashPointHeader|StoreTopBar/.test(n.name)) ||
+  (sz !== "D" &&
+    n.type === "INSTANCE" &&
+    /ScratchLotAppBar/.test(n.name) &&
+    n.componentProperties.Kind.value !== "Dialog") ||
   (n.type === "FRAME" &&
     !inInstance(n) &&
-    (/^(store-top|toolbar|title|doc-head)$/.test(n.name) ||
-      (sz !== "D" &&
-        n.name === "app-bar" &&
-        !(
-          n.children[0] &&
-          n.children[0].type === "TEXT" &&
-          n.children[0].characters === "✕"
-        ))));
+    /^(store-top|toolbar|title|doc-head)$/.test(n.name));
 const syncDiffs = [],
   exempted = [],
   sharedHandDrawn = [];
@@ -112,6 +110,7 @@ for (const pid of PAGES) {
     else if (pid === "65:14" && /^(store-top|toolbar)$/.test(n.name))
       hit(n, "要用 StoreTopBar");
     else if (/^nav-rail/.test(n.name)) hit(n, "要用 ScratchLotNavRail");
+    else if (n.name === "app-bar") hit(n, "要用 ScratchLotAppBar");
     else if (/^side-?nav/i.test(n.name)) hit(n, "要用 ScratchLotSideNav");
     else if (n.name === "cards") {
       for (const c of n.children)

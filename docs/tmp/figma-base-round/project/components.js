@@ -946,6 +946,87 @@ for (const id of [
   created.navRail = c.id;
 }
 
+// ---------- 11. Draft/ScratchLotAppBar:平板 / 手機最上面的標題列 ----------
+// Size=Tablet / Mobile × Kind=Page(一般頁;手機左邊 ☰,平板側欄常駐所以沒有)/ Back(← 返回)/ Dialog(✕ 關閉,手機全螢幕對話框);
+// TEXT Title;BOOLEAN Org(右上分店切換,文字可覆寫);BOOLEAN Action(右側按鈕,Label / 樣式在實例上改)。
+{
+  const vs = [];
+  for (const [size, w] of [
+    ["Tablet", 958],
+    ["Mobile", 390],
+  ])
+    for (const kind of ["Page", "Back", "Dialog"]) {
+      const c = figma.createComponent();
+      c.name = `Size=${size}, Kind=${kind}`;
+      c.layoutMode = "HORIZONTAL";
+      c.resize(w, 49);
+      c.primaryAxisSizingMode = "FIXED";
+      c.counterAxisSizingMode = "AUTO";
+      c.paddingLeft = c.paddingRight = 16;
+      c.paddingTop = c.paddingBottom = 12;
+      c.itemSpacing = 8;
+      c.counterAxisAlignItems = "CENTER";
+      c.fills = [await paint("bg/paper")];
+      c.strokes = [await paint("divider")];
+      c.strokeTopWeight = c.strokeLeftWeight = c.strokeRightWeight = 0;
+      c.strokeBottomWeight = 1;
+      if (!(size === "Tablet" && kind === "Page"))
+        add(
+          c,
+          await txt(
+            { Page: "☰", Back: "←", Dialog: "✕" }[kind],
+            "Subtitle/1",
+            "text/primary",
+            "lead",
+          ),
+        );
+      const title = add(
+        c,
+        await txt("店面管理", "Subtitle/1", "text/primary", "title"),
+      );
+      spacer(c);
+      const org = add(
+        c,
+        await txt("中山店 ▾", "Body/2", "text/secondary", "org"),
+      );
+      const action = add(
+        c,
+        await inst(
+          "Button",
+          {
+            Variant: "Text",
+            Size: "Medium",
+            State: "Default",
+            Color: "Primary",
+          },
+          { Label: "確定" },
+        ),
+      );
+      action.name = "action";
+      vs.push({ c, title, org, action });
+    }
+  const set = figma.combineAsVariants(
+    vs.map((v) => v.c),
+    page,
+  );
+  set.name = "Draft/ScratchLotAppBar";
+  set.layoutMode = "VERTICAL";
+  set.itemSpacing = 24;
+  set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 24;
+  const pT = set.addComponentProperty("Title", "TEXT", "店面管理");
+  const pO = set.addComponentProperty("Org", "BOOLEAN", false);
+  const pA = set.addComponentProperty("Action", "BOOLEAN", false);
+  for (const v of vs) {
+    v.title.componentPropertyReferences = { characters: pT };
+    v.org.componentPropertyReferences = { visible: pO };
+    v.action.componentPropertyReferences = { visible: pA };
+  }
+  set.description =
+    DESC_PROJECT +
+    "平板 / 手機畫面最上面的標題列。Kind:Page(一般頁;手機左邊 ☰,平板側欄常駐所以沒有)/ Back(← 返回,精靈與詳情)/ Dialog(✕ 關閉,手機全螢幕對話框;只有一兩句話的確認不用全螢幕,見專案規格 16.0)。Title 標題;Org 顯示右上的分店切換;Action 顯示右側按鈕。";
+  created.appBar = set.id;
+}
+
 // 版面:側欄在左,其他元件在右邊直向排列(間距 120),避免變體增加後互相重疊
 {
   const side = await figma.getNodeByIdAsync(created.sideNav || "");
@@ -958,6 +1039,7 @@ for (const id of [
     created.bookCard,
     created.storeTopBar,
     created.navRail,
+    created.appBar,
   ];
   let x = side ? side.x + side.width + 160 : 600,
     y = 0;
