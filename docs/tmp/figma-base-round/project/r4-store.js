@@ -1,5 +1,5 @@
 // 第四~六輪「Screen / 店面管理」(65:14):卡片原地展開 ST-36、拆本選本 ST-37、手動標記確認 ST-07、日結版結帳確認申請 ST-28b。
-// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
+// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18" | "IN04")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
 // 畫完跑 brand-rebind.js(複製的 Button 換變體會帶回底座主色),最後跑 r4-layout.js 排列。
 await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("65:14"));
 const cardsIn = async (f) => {
@@ -808,5 +808,80 @@ if (PART === "18") {
         k++;
       }
     await setT(ts[ts.length - 1], "4,800");
+  }
+}
+
+if (PART === "IN04") {
+  // 庫存管理 IN-04 更正跳號的平板 / 手機(第十一輪):從電腦版對話框(125:2091)複製內容;
+  // 平板放進「尋回 1 張」平板殼的對話框(126:26287 複製),手機全螢幕(126:26692 複製)。格子:平板 40、手機 31。
+  await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("91:14"));
+  const desk = await figma.getNodeByIdAsync("125:2091");
+  const placeAfter = (src, n) => {
+    const s = src.parent;
+    const right = s.children
+      .filter((k) => k !== n && Math.abs(k.y - src.y) < 1)
+      .reduce((m, k) => Math.max(m, k.x + k.width), 0);
+    s.appendChild(n);
+    n.x = right + 80;
+    n.y = src.y;
+  };
+  const sizeCells = (f, sz) => {
+    const g = f
+      .findOne((n) => n.name === "grid+legend")
+      .children.find((n) => n.type === "FRAME");
+    for (const r of g.children) for (const c of r.children) c.resize(sz, sz);
+  };
+  {
+    const src = await figma.getNodeByIdAsync("126:26287");
+    const f = src.clone();
+    f.name = "IN-04 · 平板 更正跳號";
+    placeAfter(src, f);
+    const d = f.children.find((n) => n.name === "dialog");
+    for (const k of [...d.children]) k.remove();
+    for (const k of desk.children) {
+      const c = k.clone();
+      d.appendChild(c);
+      c.layoutSizingHorizontal = k.name === "grid+legend" ? "HUG" : "FILL";
+    }
+    sizeCells(f, 40);
+    f.resize(f.width, Math.max(768, d.y + d.height + 48));
+  }
+  {
+    const src = await figma.getNodeByIdAsync("126:26692");
+    const f = src.clone();
+    f.name = "IN-04 · 手機 更正跳號";
+    placeAfter(src, f);
+    const bar = f.findOne((n) => n.name === "app-bar");
+    await setT(
+      bar.children.find(
+        (x) => x.type === "TEXT" && x.characters.startsWith("尋回"),
+      ),
+      "更正跳號",
+    );
+    const ob = bar.children.find((x) => x.type === "INSTANCE");
+    bar.insertChild(
+      bar.children.indexOf(ob),
+      await B("更正", "Text", "Medium"),
+    );
+    ob.remove();
+    const c = f.findOne((n) => n.name === "content" && n.type === "FRAME");
+    for (const k of [...c.children]) k.remove();
+    c.itemSpacing = 12;
+    c.appendChild(
+      desk
+        .findOne((n) => n.name === "head")
+        .findAll((x) => x.type === "TEXT")
+        .pop()
+        .clone(),
+    );
+    for (const k of desk.children) {
+      if (k.name === "head" || k.name === "actions") continue;
+      const cl = k.clone();
+      c.appendChild(cl);
+      cl.layoutSizingHorizontal = k.name === "grid+legend" ? "HUG" : "FILL";
+      if (cl.type === "TEXT") cl.textAutoResize = "HEIGHT";
+    }
+    sizeCells(f, 31);
+    fitShell(f, 844);
   }
 }
