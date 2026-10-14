@@ -1102,6 +1102,7 @@ registerReport({
 - 目前分頁以 useUrlState 記在網址;每個分頁可設定需要的權限,沒有權限就不顯示;只有一個分頁時不顯示分頁籤。
 - **建立在既有 `@repo/ui/tabs` 上**(Figma 既有 Draft/Tabs 就是它,不另畫新元件);PageTabs 只多了網址同步與分頁權限。
 - 與既有頁籤 `RouteTabs`(`apps/admin/src/stores/useRouteTabsStore.ts`)無關。
+- **放不下時橫向捲動**:分頁籤維持單列、可左右捲動;還有分頁的那一側固定顯示漸層淡出 + ‹ / › 按鈕(點了捲一段),捲到底那一側的漸層與按鈕消失;選到的分頁(含從網址打開)自動捲進可視範圍。Figma 在 BS-15 補這個狀態。
 
 ### 10.2 OrgTreeSelect(第 20 項)
 

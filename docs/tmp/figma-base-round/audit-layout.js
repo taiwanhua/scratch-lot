@@ -1,6 +1,7 @@
 // 版面稽核(畫圖檢查清單 1~3、6):每頁 clippedText、misalignedRows、overflowNodes、basePrimaryBindings 都要是 0 才算畫完。
 // 一次一頁:把 PAGE_ID 換成要查的頁,所有頁平行各跑一次。畫面可以直接放在頁上或放在尺寸 Section 裡。
-//   clippedText    文字或元件實例被裁切:設了截斷、固定高度放不下一行,或超出任何一層 clipsContent 的祖先(容許 1px)。
+//   clippedText    文字或元件實例被裁切:設了截斷、固定高度放不下一行,或超出任何一層 clipsContent 的祖先(容許 1px);
+//                  名稱含「可捲動」的框(例:PageTabs(可捲動))裡超出的內容是捲動內容,不算。
 //   misalignedRows 同一個水平 auto layout 列裡,各欄的「欄位」(TextField / SelectField / Select / Autocomplete /
 //                  OrgTreeSelect / DatePicker 實例本身,或以欄位開頭的包裝框)上緣或高度不一致(容許 1px);並排彈窗的列不算。
 //   overflowNodes  auto layout 的子節點左右超出父框(例:張數格子比對話框寬、表格欄寬總和超過卡片)。
@@ -45,9 +46,11 @@ const clipAncestor = (n, b) => {
     let a = n.parent;
     a && a.type !== "PAGE" && a.type !== "SECTION";
     a = a.parent
-  )
+  ) {
+    if (/可捲動/.test(a.name)) return null; // 可捲動的分頁列:超出的分頁是捲動內容,不算裁切
     if ("clipsContent" in a && a.clipsContent && box(a) && !inside(b, box(a)))
       return a;
+  }
   return null;
 };
 const clipped = [];
