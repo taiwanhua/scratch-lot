@@ -4,7 +4,7 @@ const PEOPLE = [
   { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "120h", "2"] },
   { n: "李小華", t: "正職", s: ["18", "4", "108h", "3"] },
   { n: "陳大文", t: "正職 · 可負責", s: ["19", "10", "114h", "1"] },
-  { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "102h", "4"] },
+  { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "102h", "5"] },
   { n: "張小芳", t: "兼職", s: ["9", "0", "36h", "0"] },
 ];
 const WEEK = [
@@ -22,18 +22,18 @@ const GRID = [
     ["f", "早 ★", "08:30–14:30"],
     ["f", "早 ★", "08:30–14:30"],
     ["s"],
-    ["a", "晚 ★", "14:30–22:00 · 自動"],
+    ["a", "晚 ★ 自動", "14:30–22:00"],
     ["f", "早 ★", "08:30–14:30"],
     ["h", "休", "畫休"],
     ["f", "早 ★", "08:30–14:30"],
   ],
   [
     ["f", "早", "08:30–14:30"],
-    ["a", "晚", "14:30–22:00 · 自動"],
+    ["a", "晚 自動", "14:30–22:00"],
     ["s"],
     ["f", "早 ★", "08:30–14:30"],
     ["f", "晚", "14:30–22:00"],
-    ["a", "早", "08:30–14:30 · 自動"],
+    ["a", "早 自動", "08:30–14:30"],
     ["e"],
   ],
   [
@@ -42,7 +42,7 @@ const GRID = [
     ["s"],
     ["e"],
     ["f", "晚 ★", "14:30–22:00"],
-    ["a", "晚 ★", "14:30–22:00 · 自動"],
+    ["a", "晚 ★ 自動", "14:30–22:00"],
     ["f", "晚 ★", "14:30–22:00"],
   ],
   [
@@ -106,7 +106,14 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
   const sr = row(0, "summary-row", "MIN");
   add(
     sr,
-    await headCell("人力需求 / 已排", null, frozenW, "capSB", "ts", "def"),
+    await headCell(
+      frozenW < 100 ? "需求 / 已排" : "人力需求 / 已排",
+      null,
+      frozenW,
+      "capSB",
+      "ts",
+      "def",
+    ),
   );
   for (let d = 0; d < days; d++) {
     const [t, k] = SUMMARY[d];
@@ -153,7 +160,7 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
       else if (opts.sel && p === 1 && d === 3)
         c = await rcell("Selected", l1, l2);
       else if (opts.published && k === "a")
-        c = await rcell("Filled", l1, l2.replace(" · 自動", ""));
+        c = await rcell("Filled", l1.replace(" 自動", ""), l2);
       else c = await rcell("Filled", l1, l2);
       add(r, c);
       c.layoutSizingHorizontal = "FIXED";
@@ -163,7 +170,7 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
       for (const s of PEOPLE[p].s)
         add(
           r,
-          await headCell(s, null, 64, "body2", s === "4" ? "wd" : "tp"),
+          await headCell(s, null, 64, "body2", s === "5" ? "ed" : "tp"),
           null,
           "FILL",
         );
@@ -182,56 +189,71 @@ const VIEWS = ["月", "週", "日", "班表"];
 // 工具列:兩列(第一列分店 + 狀態 + 動作;第二列檢視 + 月份 + 顯示欄位 + 檢核)
 async function toolbar(sz, o = {}) {
   const wrap = col(sz === "M" ? 8 : 12, "toolbar");
-  const r1 = row(8, "toolbar-1");
-  r1.layoutWrap = sz === "D" ? "NO_WRAP" : "WRAP";
-  r1.counterAxisSpacing = 8;
   const org = await selF("分店", "中山店");
-  add(r1, org);
-  org.layoutSizingHorizontal = "FIXED";
-  org.resize(sz === "M" ? 160 : 220, org.height);
-  add(
-    r1,
-    await tag(
-      o.published
-        ? "已發布 · 10/28 李店長"
-        : o.running
-          ? "自動排班執行中"
-          : "草稿",
-      o.published ? "Success" : "Warning",
-    ),
+  const st = await tag(
+    o.published
+      ? "已發布 · 10/28 李店長"
+      : o.running
+        ? "自動排班執行中"
+        : "草稿",
+    o.published ? "Success" : "Warning",
   );
-  if (sz !== "M") sp(r1);
+  const acts = [];
   if (!o.readonly) {
-    const acts = [];
-    if (sz !== "M") {
-      acts.push(await btn("+ 人力需求", "Outlined", "Small"));
-      acts.push(await btn("+ 新增排班", "Outlined", "Small"));
-    }
+    acts.push(await btn("+ 人力需求", "Outlined", "Small"));
+    acts.push(await btn("+ 新增排班", "Outlined", "Small"));
     acts.push(await btn("套用範本", "Outlined", "Small"));
     if (!o.published) {
       acts.push(await btn("自動排班", "Outlined", "Small"));
       acts.push(await btn("發布", "Contained", "Small"));
     }
-    for (const a of acts) add(r1, a);
   }
+  const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
+  const pg = await pager(o.period || "2026 年 11 月", "sub2");
+  const chk = await btn(
+    o.checkLabel || "檢核 ⛔ 1 · ⚠ 3",
+    o.panel ? "Contained" : "Outlined",
+    "Small",
+    o.checkOk ? "Success" : "Error",
+  );
+  const colsBtn =
+    (o.view || "班表") === "班表" && sz !== "M"
+      ? await btn("⚙ 顯示欄位", "Text", "Small")
+      : null;
+  if (sz === "M") {
+    const r1 = row(8, "toolbar-1");
+    add(r1, org, "FILL");
+    add(r1, st);
+    add(wrap, r1, "FILL");
+    if (acts.length) {
+      const r2 = row(8, "toolbar-actions");
+      r2.layoutWrap = "WRAP";
+      r2.counterAxisSpacing = 8;
+      for (const a of acts) add(r2, a);
+      add(wrap, r2, "FILL");
+    }
+    const r3 = row(8, "toolbar-2");
+    add(r3, view);
+    sp(r3);
+    add(r3, chk);
+    add(wrap, r3, "FILL");
+    add(wrap, pg);
+    return wrap;
+  }
+  const r1 = row(8, "toolbar-1");
+  add(r1, org);
+  org.layoutSizingHorizontal = "FIXED";
+  org.resize(220, org.height);
+  add(r1, st);
+  sp(r1);
+  for (const a of acts) add(r1, a);
   add(wrap, r1, "FILL");
   const r2 = row(8, "toolbar-2");
-  r2.layoutWrap = sz === "M" ? "WRAP" : "NO_WRAP";
-  r2.counterAxisSpacing = 8;
-  add(r2, await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換"));
-  add(r2, await pager(o.period || "2026 年 11 月", "sub2"));
-  if (sz !== "M") sp(r2);
-  if ((o.view || "班表") === "班表" && sz !== "M")
-    add(r2, await btn("⚙ 顯示欄位", "Text", "Small"));
-  add(
-    r2,
-    await btn(
-      o.checkLabel || "檢核 ⛔ 1 · ⚠ 3",
-      o.panel ? "Contained" : "Outlined",
-      "Small",
-      o.checkOk ? "Success" : "Error",
-    ),
-  );
+  add(r2, view);
+  add(r2, pg);
+  sp(r2);
+  if (colsBtn) add(r2, colsBtn);
+  add(r2, chk);
   add(wrap, r2, "FILL");
   return wrap;
 }
@@ -246,7 +268,9 @@ async function checkPanelBody(p, o = {}) {
         "body2",
         "idk",
       ),
+      "FILL",
     );
+    s.children[0].textAutoResize = "HEIGHT";
     add(s, await btn("清除自動排入的人", "Text", "Small"));
     add(p, s, "FILL");
   }

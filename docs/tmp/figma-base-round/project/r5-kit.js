@@ -350,7 +350,13 @@ async function table(cols, rows, name = "table") {
     for (let i = 0; i < cols.length; i++) {
       let c = r[i];
       if (c === undefined || c === null) c = "";
-      const node = typeof c === "string" ? await T(c, "body2") : c;
+      let node = typeof c === "string" ? await T(c, "body2") : c;
+      // 元件(勾選框、標籤、圓點)包一層固定寬的格子,元件本身維持原尺寸
+      if (node.type !== "TEXT" && !/^Button/.test(node.name)) {
+        const wr = row(0, "cell");
+        add(wr, node);
+        node = wr;
+      }
       add(tr, node);
       if (cols[i].w) {
         if (node.type === "TEXT") {
