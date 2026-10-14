@@ -140,7 +140,7 @@ S2 測試案例(這三項從底座階段移到**專案階段**實作):
 | `docs/standards/general/figma.md`                               | 新增畫圖檢查清單規則(對齊、不裁切、撐滿、多尺寸、示範資料、顏色綁定),正本取自 `docs/tmp/figma-base-round/README.md`;audit 的對齊與裁切檢查                                                    |
 | `docs/concepts/frontend-architecture.md`                        | PageTabs、useUrlState(含既有頁面改用的盤點)、側欄計數登記制、全域掃描監聽                                                                                                                     |
 | `docs/branding.md`                                              | 網域 `rt.*` / `rt-dev.*` / `rt-staging.*`、新的 storage key、`tagPalettes` 色票                                                                                                               |
-| `docs/env-registry.md`                                          | 發布密鑰、訂閱票簽章密鑰、Cloudflare 部署 token、Cloud Scheduler 呼叫身分                                                                                                                     |
+| `docs/env-registry.md`                                          | 發布密鑰、訂閱憑證簽章密鑰、Cloudflare 部署 token、Cloud Scheduler 呼叫身分                                                                                                                   |
 | `docs/deployment.md`                                            | wrangler 部署步驟、Cloud Scheduler;print-agent 發布流程(`print-agent-release.yml` 手動觸發、上傳 bucket 路徑、`manifest.json`、發布順序、runner 費用)、deploy SA 對 `print-agent/` 的寫入權限 |
 | `docs/data-model.md`                                            | 新資料表                                                                                                                                                                                      |
 | `apps/print-agent/README.md`(新)                                | 開發(模擬模式、假 9100 伺服器)、四平台打包、安裝說明(含共用收銀電腦、關閉睡眠、macOS 隔離標記)、固定 IP 設定步驟(收據機到貨後)                                                                |
@@ -163,11 +163,11 @@ S2 測試案例(這三項從底座階段移到**專案階段**實作):
 | 頁籤              | 殼層上方「開過的頁面」分頁,既有 `RouteTabs`                      | —                    |
 | 頁內分頁          | 頁面裡面的分頁,新元件 `PageTabs`                                 | RouteTabs            |
 | 即時通道          | 整個 Cloudflare Durable Objects 服務,程式在 `apps/realtime`      | WebSocket 伺服器     |
-| Cloudflare Worker | 即時通道的入口,驗證訂閱票、轉送                                  | 閘道、大門           |
+| Cloudflare Worker | 即時通道的入口,驗證訂閱憑證、轉送                                | 閘道、大門           |
 | Durable Object    | 每個租戶一個,名稱 `hub:<租戶 id>`,保存連線並推送                 | 集線器、房間         |
 | 連線              | 一個瀏覽器分頁或一個代理程式與 Durable Object 之間的 WebSocket   | —                    |
 | 頻道              | Durable Object 內的分類標籤,例如 `user:<id>`                     | 主題(專指外觀 theme) |
-| 訂閱票            | API 簽發的短期通行證(預設 10 分鐘)                               | token                |
+| 訂閱憑證          | API 簽發的短期通行證(預設 10 分鐘)                               | token                |
 | 信號              | 即時通道上傳的訊息,只有類型與編號,不帶資料、不保存               | 推播、通知           |
 | 發布              | API 把信號送進即時通道                                           | —                    |
 | 通知              | 存在 `notifications` 的一封信,有標題、內容、已讀狀態             | 信號                 |
@@ -687,7 +687,7 @@ registerFormLifecycle({
 
 ```
 瀏覽器(admin)─ wss ─┐
-代理程式     ─ wss ─┤→ Cloudflare Worker(rt.<網域>)── 驗訂閱票 → Durable Object hub:<租戶 id>
+代理程式     ─ wss ─┤→ Cloudflare Worker(rt.<網域>)── 驗證訂閱憑證 → Durable Object hub:<租戶 id>
                      │                                         └ 保存連線、各連線訂閱的頻道
 API(Cloud Run)── HTTPS POST /publish(發布密鑰簽章)──┘          收到發布 → 推給有訂閱的連線
 瀏覽器 / 代理程式 收到信號 ─ 向 API 拿資料(用自己的身分)
@@ -695,7 +695,7 @@ API(Cloud Run)── HTTPS POST /publish(發布密鑰簽章)──┘          �
 
 - **只傳信號、資料一律向 API 拿**;權限與可見範圍仍由 API 判斷;Cloudflare 不留業務資料。
 
-### 訂閱票
+### 訂閱憑證
 
 ```
 { tenantId, userId | agentId, exp(10 分鐘), topics: ["user:123", "board:<分店 id>", ...] } + HMAC 簽章
@@ -706,10 +706,10 @@ API(Cloud Run)── HTTPS POST /publish(發布密鑰簽章)──┘          �
 
 ### 四個流程
 
-1. **建立連線**:拿票 → `wss://rt.<網域>/connect?ticket=` → Worker 驗票 → `idFromName("hub:" + tenantId)` → Durable Object 接下連線,在連線上記使用者、可訂閱頻道、到期時間;初始訂閱 `user:<自己>`。
-2. **換票**:到期前 1 分鐘,前端在**原連線上**送新票;Durable Object 驗證後更新到期時間(不重新連線)。
-3. **訂閱 / 取消訂閱**:頁面在連線上送 `subscribe board:<分店 id>`;Durable Object 檢查是否在票的可訂閱頻道內才加入;離開頁面送 `unsubscribe`。
-4. **發布**:API → Worker `/publish { tenantId, topic, signal }` → Durable Object 找出目前訂閱該頻道的連線推送。推送前若發現連線的票已過期 → 關閉該連線、不推送(停用的人最多 10 分鐘後收不到任何信號)。
+1. **建立連線**:取得訂閱憑證 → `wss://rt.<網域>/connect?ticket=` → Worker 驗證訂閱憑證 → `idFromName("hub:" + tenantId)` → Durable Object 接下連線,在連線上記使用者、可訂閱頻道、到期時間;初始訂閱 `user:<自己>`。
+2. **換發憑證**:到期前 1 分鐘,前端在**原連線上**送新的訂閱憑證;Durable Object 驗證後更新到期時間(不重新連線)。
+3. **訂閱 / 取消訂閱**:頁面在連線上送 `subscribe board:<分店 id>`;Durable Object 檢查是否在訂閱憑證的可訂閱頻道內才加入;離開頁面送 `unsubscribe`。
+4. **發布**:API → Worker `/publish { tenantId, topic, signal }` → Durable Object 找出目前訂閱該頻道的連線推送。推送前若發現連線的訂閱憑證已過期 → 關閉該連線、不推送(停用的人最多 10 分鐘後收不到任何信號)。
 
 ### 頻道
 
@@ -740,12 +740,12 @@ API(Cloud Run)── HTTPS POST /publish(發布密鑰簽章)──┘          �
 | 超過     | 那一種操作失敗,到 UTC 00:00(台灣 08:00)恢復 → 系統降級為 60 秒輪詢   | 同左                          |
 | 付費方案 | 整個帳號 US$5/月:Worker 每月 1,000 萬次;Durable Object 每月 100 萬次 | —                             |
 
-| 動作                 | Worker | Durable Object      |
-| -------------------- | ------ | ------------------- |
-| 建立連線             | 1      | 1                   |
-| 發布一個信號         | 1      | 1                   |
-| 訂閱 / 取消 / 換票   | —      | 每 20 則訊息算 1 次 |
-| 推送給連線、閒置連線 | 不計   | 不計                |
+| 動作                   | Worker | Durable Object      |
+| ---------------------- | ------ | ------------------- |
+| 建立連線               | 1      | 1                   |
+| 發布一個信號           | 1      | 1                   |
+| 訂閱 / 取消 / 換發憑證 | —      | 每 20 則訊息算 1 次 |
+| 推送給連線、閒置連線   | 不計   | 不計                |
 
 | 官方限制                     | 數字           | 影響              |
 | ---------------------------- | -------------- | ----------------- |
@@ -758,21 +758,21 @@ API(Cloud Run)── HTTPS POST /publish(發布密鑰簽章)──┘          �
 
 ### 工程與部署
 
-| 項目            | 內容                                                                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `apps/realtime` | TypeScript;Worker + Durable Object 類別 `TenantHub`;加入 pnpm workspace;共用 `packages/` 裡不依賴 Node 的程式(訂閱票型別與簽章)            |
-| 開發依賴        | `wrangler`、Cloudflare 型別與測試套件(實作時查 registry 版本)                                                                              |
-| turbo           | `dev` = `wrangler dev`(本機模擬)、`test`、`lint`                                                                                           |
-| 執行環境        | V8(不是 Node):只用 fetch、WebSocket、WebCrypto                                                                                             |
-| 部署            | `deploy.yml` 加 `wrangler deploy` 步驟;三個環境各一個 Worker                                                                               |
-| 網域            | `rt.<網域>`、`rt-dev.<網域>`、`rt-staging.<網域>`(Cloudflare DNS 既有帳號);實作時登記 `docs/branding.md`                                   |
-| 密鑰            | 發布密鑰(API → Worker)、訂閱票簽章密鑰(API 簽、Worker 驗);API 放 Secret Manager、Worker 放 Wrangler secret;GitHub 加 Cloudflare 部署 token |
-| API             | `RealtimePublisher.publish(tenantId, topic, signal)`(交易後執行、盡力而為)、`realtimeTicket`                                               |
-| admin           | `RealtimeProvider`(殼層):登入後連線、換票、重連退避、降級輪詢                                                                              |
+| 項目            | 內容                                                                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/realtime` | TypeScript;Worker + Durable Object 類別 `TenantHub`;加入 pnpm workspace;共用 `packages/` 裡不依賴 Node 的程式(訂閱憑證型別與簽章)            |
+| 開發依賴        | `wrangler`、Cloudflare 型別與測試套件(實作時查 registry 版本)                                                                                |
+| turbo           | `dev` = `wrangler dev`(本機模擬)、`test`、`lint`                                                                                             |
+| 執行環境        | V8(不是 Node):只用 fetch、WebSocket、WebCrypto                                                                                               |
+| 部署            | `deploy.yml` 加 `wrangler deploy` 步驟;三個環境各一個 Worker                                                                                 |
+| 網域            | `rt.<網域>`、`rt-dev.<網域>`、`rt-staging.<網域>`(Cloudflare DNS 既有帳號);實作時登記 `docs/branding.md`                                     |
+| 密鑰            | 發布密鑰(API → Worker)、訂閱憑證簽章密鑰(API 簽、Worker 驗);API 放 Secret Manager、Worker 放 Wrangler secret;GitHub 加 Cloudflare 部署 token |
+| API             | `RealtimePublisher.publish(tenantId, topic, signal)`(交易後執行、盡力而為)、`realtimeTicket`                                                 |
+| admin           | `RealtimeProvider`(殼層):登入後連線、換發憑證、重連退避、降級輪詢                                                                            |
 
 ### 驗收重點
 
-- 租戶 A 的票無法訂閱租戶 B 或別人的 `user:` 頻道。
+- 租戶 A 的訂閱憑證無法訂閱租戶 B 或別人的 `user:` 頻道。
 - 斷線期間的變動在重連後補抓到。
 - 關掉 Worker → 系統以 60 秒輪詢正常運作。
 
@@ -898,7 +898,7 @@ monorepo 的新 app;TypeScript + Node.js,與 api 同一套工具鏈。
 | 模組         | 做什麼                                                                                                     |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
 | `pairing`    | 伺服器網址 + 配對碼 → 換長期金鑰 → 寫入本機設定檔                                                          |
-| `api-client` | 用金鑰呼叫 API:拿工作、認領、回報結果、換即時通道訂閱票                                                    |
+| `api-client` | 用金鑰呼叫 API:拿工作、認領、回報結果、換即時通道訂閱憑證                                                  |
 | `realtime`   | WebSocket 連即時通道,收 `print-agent:<id>` 信號;斷線退避重連;故障降級每 60 秒輪詢;啟動時先拿一次未完成工作 |
 | `job-runner` | 佇列;同一台印表機一次一張、依序印                                                                          |
 | `escpos`     | PNG 解碼 → `GS v 0` 點陣指令分段送出 → 切紙;`DLE EOT` 讀狀態(缺紙等);TCP 9100 連線與逾時                   |
