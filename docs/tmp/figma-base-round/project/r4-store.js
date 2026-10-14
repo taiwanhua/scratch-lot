@@ -1,5 +1,5 @@
 // 第四~六輪「Screen / 店面管理」(65:14):卡片原地展開 ST-36、拆本選本 ST-37、手動標記確認 ST-07、日結版結帳確認申請 ST-28b。
-// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18" | "IN04")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
+// 前置:r4-lib.js + 本檔,一次跑一段(PART = "36" | "36m" | "37" | "07" | "28b" | "09" | "18" | "IN04" | "38" | "39")。各段都從現有畫面複製(ST-01、ST-09、ST-28a)再改內容。
 // 畫完跑 brand-rebind.js(複製的 Button 換變體會帶回底座主色),最後跑 r4-layout.js 排列。
 await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("65:14"));
 const cardsIn = async (f) => {
@@ -883,5 +883,244 @@ if (PART === "IN04") {
     }
     sizeCells(f, 31);
     fitShell(f, 844);
+  }
+}
+
+if (PART === "38") {
+  // 當下撤銷兌獎(第十二輪):從 ST-35(售出提示 + 最近售出)三種尺寸複製,改成兌獎提示 + [最近兌獎] 清單
+  const DESK = [
+    "最近兌獎 · 店內櫃台",
+    "自己在這一班 30 分鐘內登記、還在店內持有的兌獎;之後沒有其他異動才能撤銷。",
+    "時間",
+    "刮刮樂",
+    "獎金",
+    "21:50",
+    "5164 · 056527 · #031",
+    "500",
+    "撤銷",
+    "21:31",
+    "5201 · 060112 · #044",
+    "200",
+    "撤銷",
+    "21:28",
+    "5150 · 042210 · #083",
+    "1,000",
+    "撤銷",
+    "21:05",
+    "5198 · 088102 · #017",
+    "100",
+    "超過 30 分鐘",
+    "超過 30 分鐘或這一班已交班 → 請店長在兌獎紀錄上 [撤銷兌獎]。",
+  ];
+  const LIST = [
+    "最近兌獎 · 店內櫃台(30 分鐘內、自己登記的)",
+    "5164 · 056527 · #031",
+    "21:50 · 500 元",
+    "撤銷",
+    "5201 · 060112 · #044",
+    "21:31 · 200 元",
+    "撤銷",
+    "5198 · 088102 · #017",
+    "21:05 · 100 元",
+    "超過 30 分鐘",
+    "超過 30 分鐘或這一班已交班 → 請店長在兌獎紀錄上 [撤銷兌獎]。",
+  ];
+  for (const [id, name, list, from, to] of [
+    [
+      "123:23204",
+      "ST-38 看板:兌獎提示 [撤銷]、標題列 [最近兌獎] 清單(當下撤銷兌獎)",
+      DESK,
+      "已售出 5164-056527-012 · 200 元 · 店內櫃台",
+      "已兌獎 5164-056527-031 · 500 元 · 店內櫃台",
+    ],
+    [
+      "124:5862",
+      "ST-38 · 平板 兌獎提示與最近兌獎",
+      LIST,
+      "已售出 5164-056527-012 · 200 元",
+      "已兌獎 5164-056527-031 · 500 元",
+    ],
+    [
+      "124:6180",
+      "ST-38 · 手機 兌獎提示與最近兌獎",
+      LIST,
+      "已售出 5164-056527-012 · 200 元",
+      "已兌獎 5164-056527-031 · 500 元",
+    ],
+  ]) {
+    const src = await figma.getNodeByIdAsync(id);
+    const f = src.clone();
+    f.name = name;
+    src.parent.appendChild(f);
+    await setT(
+      f.findAll((t) => t.type === "TEXT" && t.characters === from)[0],
+      to,
+    );
+    const anchor = f.findAll(
+      (t) => t.type === "TEXT" && t.characters.startsWith("最近售出 · "),
+    )[0];
+    const box =
+      id === "123:23204"
+        ? f.findOne((n) => n.name.startsWith("drawer:"))
+        : anchor.parent;
+    box.name = box.name.startsWith("drawer:")
+      ? "drawer:最近兌獎 · 店內櫃台"
+      : "最近兌獎";
+    const ts = box.findAll((t) => t.type === "TEXT");
+    for (let i = 0; i < Math.min(ts.length, list.length); i++)
+      await setT(ts[i], list[i]);
+  }
+}
+
+if (PART === "39") {
+  // 兌獎紀錄詳情與店長撤銷(第十二輪):a 詳情(店內持有)、b 撤銷兌獎(原因、撤銷並重新登記)、c 已送兌不能撤銷。
+  // 電腦:一個遮罩畫面放三個對話框(從 ST-37 電腦複製);平板 / 手機各三張(從 ST-37 平板 / 手機複製)。
+  const warnPaint = (await figma.getNodeByIdAsync("125:1545")).strokes[0];
+  const para = async (host, s) => {
+    const t = add(host, await T("body2", s), "FILL");
+    t.textAutoResize = "HEIGHT";
+    return t;
+  };
+  const body = async (host, st, mobile) => {
+    const head = async (title, sub) => {
+      if (mobile) return add(host, await T("body2", sub));
+      const h = add(
+        host,
+        AL("HORIZONTAL", {
+          name: "head",
+          itemSpacing: 8,
+          counterAxisAlignItems: "CENTER",
+        }),
+        "FILL",
+      );
+      add(h, await T("h6", title));
+      sp(h);
+      add(h, await T("body2", sub));
+    };
+    if (st === "a") {
+      await head("兌獎紀錄", "RD-0218");
+      for (const [k, v] of [
+        ["刮刮樂", "5164 發大財 · 056527 · #031"],
+        ["獎金", "500 元"],
+        ["收銀點 / 班", "店內櫃台 · 王小明 08:02(已交班)"],
+        ["登記", "王小明 · 10/16 10:12"],
+        ["狀態", "店內持有"],
+      ])
+        add(host, await kv(k, v), "FILL");
+      await para(host, "超過 30 分鐘或已交班的兌獎,由店長撤銷。");
+    } else if (st === "b") {
+      await head("撤銷兌獎", "RD-0218 · 500 元");
+      const s = add(host, N.sel.clone(), "FILL");
+      for (const t of s.findAll((x) => x.type === "TEXT")) {
+        if (t.name === "label") await setT(t, "撤銷原因(必填)");
+        if (t.name === "value") await setT(t, "登記錯誤");
+      }
+      const tf = add(host, N.tf.clone(), "FILL");
+      for (const t of tf.findAll((x) => x.type === "TEXT")) {
+        if (t.name === "label") await setT(t, "說明");
+        if (t.name === "value") await setT(t, "中獎的是 #032,刷成 #031");
+      }
+      await para(
+        host,
+        "這一班已結帳:撤銷後記成那一班的事後更正,應有現金 +500。",
+      );
+      await para(
+        host,
+        "[撤銷並重新登記]:撤銷後直接開兌獎視窗登記正確的那筆,算在同一班。",
+      );
+    } else {
+      await head("兌獎紀錄", "RD-0201");
+      for (const [k, v] of [
+        ["刮刮樂", "5150 好運旺旺 · 042210 · #083"],
+        ["獎金", "1,000 元"],
+        ["收銀點 / 班", "店外攤位 · 王小明 13:00(已交班)"],
+        ["狀態", "已送兌(進貨單 P-0034)"],
+      ])
+        add(host, await kv(k, v), "FILL");
+      (
+        await para(host, "已送兌,不能撤銷;要先撤回或退回進貨單 P-0034。")
+      ).fills = [warnPaint];
+    }
+    const a = add(
+      host,
+      AL("HORIZONTAL", {
+        name: "actions",
+        itemSpacing: 8,
+        counterAxisAlignItems: "CENTER",
+        layoutWrap: "WRAP",
+        counterAxisSpacing: 8,
+      }),
+      "FILL",
+    );
+    if (st === "b") {
+      add(a, await B("取消", "Text", "Medium"));
+      sp(a);
+      add(a, await B("撤銷並重新登記", "Outlined", "Medium"));
+      add(a, await B("撤銷兌獎", "Contained", "Medium", "Error"));
+    } else {
+      add(a, await B("關閉", "Text", "Medium"));
+      sp(a);
+      add(
+        a,
+        await B(
+          "撤銷兌獎",
+          "Outlined",
+          "Medium",
+          "Error",
+          st === "c" ? "Disabled" : "Default",
+        ),
+      );
+    }
+  };
+  const NAMES = {
+    a: "兌獎紀錄 詳情(店內持有)",
+    b: "店長撤銷兌獎(原因、撤銷並重新登記)",
+    c: "兌獎紀錄 已送兌(不能撤銷)",
+  };
+  {
+    const f = (await figma.getNodeByIdAsync("143:33884")).clone();
+    f.name = "ST-39 Overlay / 兌獎紀錄:詳情、店長撤銷兌獎、已送兌不能撤銷";
+    fileIn("電腦 1440", f);
+    const row = f.findOne((n) => n.name === "dialogs");
+    const d0 = row.children[0];
+    for (const st of ["a", "b", "c"]) {
+      const d = d0.clone();
+      row.appendChild(d);
+      d.name = "dialog:" + NAMES[st];
+      for (const k of [...d.children]) k.remove();
+      d.resize(440, d.height);
+      await body(d, st, false);
+    }
+    d0.remove();
+    f.resize(Math.max(1440, row.width), Math.max(900, row.height));
+  }
+  for (const st of ["a", "b", "c"]) {
+    {
+      const f = (await figma.getNodeByIdAsync("143:34208")).clone();
+      f.name = `ST-39${st} · 平板 ${NAMES[st]}`;
+      fileIn("平板 1024", f);
+      const d = f.findOne((n) => n.name === "dialog");
+      for (const k of [...d.children]) k.remove();
+      await body(d, st, false);
+      f.resize(f.width, Math.max(768, d.y + d.height + 48));
+    }
+    {
+      const f = (await figma.getNodeByIdAsync("143:34382")).clone();
+      f.name = `ST-39${st} · 手機 ${NAMES[st]}`;
+      fileIn("手機 390", f);
+      const c = f.findOne((n) => n.name === "content" && n.type === "FRAME");
+      for (const k of [...c.children]) k.remove();
+      c.itemSpacing = 12;
+      const bar = f.findOne((n) => n.name === "app-bar");
+      await setT(
+        bar.children.find(
+          (x) => x.type === "TEXT" && x.characters.startsWith("拆本"),
+        ),
+        st === "b" ? "撤銷兌獎" : "兌獎紀錄",
+      );
+      const ob = bar.children.find((x) => x.type === "INSTANCE");
+      if (ob) ob.remove();
+      await body(c, st, true);
+    }
   }
 }

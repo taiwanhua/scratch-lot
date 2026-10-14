@@ -404,7 +404,10 @@ const created = {};
         add(s, await txt(v, "Subtitle/1", "text/primary"));
       };
       await stat("本班售出", "42 張 / 8,400");
-      if (state === "Open") add(c, await btnI("最近售出", "Text"));
+      if (state === "Open") {
+        add(c, await btnI("最近售出", "Text"));
+        add(c, await btnI("最近兌獎", "Text"));
+      }
       await stat("應有現金", "12,350");
       if (state === "Open")
         for (const [l, v] of [
@@ -432,7 +435,7 @@ const created = {};
   vs[2].mine.componentPropertyReferences = { visible: pMine };
   set.description =
     DESC_PROJECT +
-    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open = 本機收銀點開班中:負責人、協同(來自排班)、本班售出、[最近售出]、應有現金、[兌獎] [投庫] [出庫] [拆本] [交班結帳];Closed:上一班留在抽屜的金額、[開班];Other = 其他收銀點開班中:只顯示狀態,Mine = 那一班是自己開的 → [切換到這個收銀點]。";
+    "店面管理看板上每個收銀點的標題列(專案規格 6.1 / 6.2 / 6.6 / 6.7 / 6.9)。Open = 本機收銀點開班中:負責人、協同(來自排班)、本班售出、[最近售出] [最近兌獎]、應有現金、[兌獎] [投庫] [出庫] [拆本] [交班結帳];Closed:上一班留在抽屜的金額、[開班];Other = 其他收銀點開班中:只顯示狀態,Mine = 那一班是自己開的 → [切換到這個收銀點]。";
   set.x = 0;
   set.y = 1000;
   created.cashPointHeader = set.id;
