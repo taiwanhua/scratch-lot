@@ -5,6 +5,7 @@
 //   misalignedRows 同一個水平 auto layout 列裡,各欄的「欄位」(TextField / SelectField / Select / Autocomplete /
 //                  OrgTreeSelect / DatePicker 實例本身,或以欄位開頭的包裝框)上緣或高度不一致(容許 1px);並排彈窗的列不算。
 //   overflowNodes  auto layout 的子節點左右超出父框(例:張數格子比對話框寬、表格欄寬總和超過卡片)。
+//   overlapText    絕對定位(或放在非 auto layout 框裡)的元件實例,疊在同一個父層裡較早的節點上,蓋到那些節點的文字(容許 1px)。
 //   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
@@ -113,6 +114,47 @@ for (const s of screens) {
     }
   }
 }
+// 疊在上面的元件實例蓋到文字(例:格子角落的圖示蓋到時間)
+const overlapText = [];
+const hit = (a, b) =>
+  a.x < b.x + b.width - 1 &&
+  b.x < a.x + a.width - 1 &&
+  a.y < b.y + b.height - 1 &&
+  b.y < a.y + a.height - 1;
+for (const s of screens) {
+  if (!("findAllWithCriteria" in s)) continue;
+  for (const i of s.findAllWithCriteria({ types: ["INSTANCE"] })) {
+    if (!visibleChain(i) || inInstance(i, s)) continue;
+    const par = i.parent;
+    if (!par || !("layoutMode" in par)) continue;
+    if (!(i.layoutPositioning === "ABSOLUTE" || par.layoutMode === "NONE"))
+      continue;
+    const ib = box(i);
+    if (!ib) continue;
+    const below = par.children.slice(0, par.children.indexOf(i));
+    for (const sib of below) {
+      if (!sib.visible) continue;
+      const texts =
+        sib.type === "TEXT"
+          ? [sib]
+          : "findAll" in sib
+            ? sib.findAll(
+                (n) => n.type === "TEXT" && n.visible && n.characters.trim(),
+              )
+            : [];
+      const t = texts.find((x) => box(x) && hit(ib, box(x)));
+      if (t) {
+        overlapText.push({
+          screen: top(i).name.slice(0, 30),
+          id: i.id,
+          name: i.name,
+          text: t.characters.slice(0, 16),
+        });
+        break;
+      }
+    }
+  }
+}
 const mcName = new Map();
 async function fieldName(i) {
   if (mcName.has(i.id)) return mcName.get(i.id);
@@ -205,8 +247,10 @@ return {
   clippedText: clipped.length,
   misalignedRows: misaligned.length,
   overflowNodes: overflow.length,
+  overlapText: overlapText.length,
   basePrimaryBindings,
   clippedSample: clipped.slice(0, 8),
   misalignedSample: misaligned.slice(0, 8),
   overflowSample: overflow.slice(0, 8),
+  overlapSample: overlapText.slice(0, 8),
 };

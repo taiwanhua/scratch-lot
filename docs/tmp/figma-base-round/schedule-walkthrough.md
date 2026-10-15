@@ -42,18 +42,26 @@
 | 22  | 出勤紀錄 / Excel             | SC-11 / SC-12 [匯出 Excel]                                                                            | **已補**:「排班外打卡」→「未對應排班的打卡」;[修改歸屬] / [歸到班別] → [改對應排班];SC-29 標題「修改這張打卡對應的排班」                                           |
 | 23  | 支援需求單                   | 排班作業 → 支援需求單 SC-31 → SC-14                                                                   | **已補**:「總部在排班作業…」→「上層組織(好運彩券行)在排班作業…」                                                                                                   |
 
+## 截圖核對後的修正(coordinator 回饋)
+
+- 未對應打卡徽章蓋住格子時間:格子加高、上方留空,自動排入圖示與打卡徽章都放右上角(並排);audit-layout 新增 overlapText 檢查。**已補**
+- 週檢視電腦版並排容器人名斷行:並排時只寫人名(不加 ★、不放自動排入圖示)。**已補**
+- 畫面內的規則說明移到框外註解(清單第 9 條),操作需要的短提示保留。**已補**
+- [統計 ▸] 窄欄加寬到 52、字改深色。**已補**
+- 「三個 MonthCalendar 互相遮擋」:找到頁面最上層殘留的 3 個「月曆」框疊在左上角(274:31619、274:33874、274:34832),已刪除。**已補**
+
 ## 自動檢查(班表頁 70:14,本輪最後一次)
 
-- audit:basePrimaryBindings 0、devTextInScreens 0、nonBaseBindingsInBaseDrafts 0
-- audit-layout:clippedText 0、misalignedRows 0、overflowNodes 0、basePrimaryBindings 0(Base Draft、刮刮樂元件頁 clippedText / overflowNodes 也是 0)
-- audit-sync:overlayNoPage 0、syncDiffs 0、sharedHandDrawn 0、sectionMismatch 0、filterDrawerMissing 0(拿掉 6 條 ⚙ 顯示欄位例外後)
+- audit:basePrimaryBindings 0、devTextInScreens 0
+- audit-layout:clippedText 0、misalignedRows 0、overflowNodes 0、overlapText 0、basePrimaryBindings 0
+- audit-sync:overlayNoPage 0、syncDiffs 0、sharedHandDrawn 0、sectionMismatch 0
+- Base Draft:clippedText 0、overflowNodes 0;新的 overlapText 抓到 3 處(BS-15b 分頁列捲動按鈕 2、BS-08 通知清單 1),屬底座 agent 範圍,已回報
 
 ## 待使用者決定
 
-1. **平板週檢視並排幾個**:平板每天一欄只有 131px,並排 2 個會擠到人名斷行;目前平板並排 1 個、其餘「+N」(電腦照規格並排 2 個)。建議維持平板 1 個。
-2. **週 / 日檢視的未對應打卡標示**:時間軸是人力需求容器,沒有「那人的列」可以畫打卡刻度;目前在日期旁放同一個時鐘 + 張數圖示。建議維持(四種檢視同一個圖示)。
-3. **週檢視並排的窄容器標題**:並排時標題只寫「早 1/2」,開始結束時間看縱軸。建議維持。
-4. **SC-21 預覽的缺人時段文字**:依畫面資料(11/2 晚班 14:30–22:00 缺協同 1)寫「14:30–22:00 缺 1(協同)」,不是指派單上的「14:00–16:00 缺 1」。
-5. **SC-20b 檢核面板「填不滿」**:不算在 [全部 7] / [限制] / [提醒] 的數字裡。要不要另外算一類?建議另成「填不滿 N」篩選。
+1. **平板週檢視並排幾個**:平板每天一欄只有 131px;目前平板並排 1 個、其餘「+N」(電腦並排 2 個)。建議維持。
+2. **週 / 日檢視的未對應打卡標示**:時間軸是人力需求容器,沒有「那人的列」可以畫打卡刻度;目前在日期下方放同一個時鐘 + 張數圖示。建議維持。
+3. **週檢視並排的窄容器**:標題只寫「早 1/2」(時間看縱軸)、人名不加 ★(負責人排第一個)。建議維持。
+4. **SC-21 預覽的缺人時段文字**:依畫面資料寫「14:30–22:00 缺 1(協同)」,不是指派單上的「14:00–16:00 缺 1」。
+5. **SC-20b 檢核面板「填不滿」**:不算在 [全部 7] / [限制] / [提醒] 的數字裡。建議另成「填不滿 N」篩選。
 6. **手機班表檢視只放 2 天**(11/2–11/3):3 天時時間文字會被切。建議維持 2 天、左右捲動。
-7. **第 14 項「三個 MonthCalendar 互相遮擋」**:Base Draft 頂層、班表頁各畫面、全檔 MonthCalendar 元件 / 實例都查不到互相重疊;請指出是哪一頁哪一張。

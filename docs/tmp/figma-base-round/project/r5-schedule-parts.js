@@ -423,15 +423,7 @@ if (PART === "roster") {
         });
         const left = col(8, "roster");
         add(left, g);
-        add(
-          left,
-          await T(
-            "人員欄、統計欄固定;← 左右捲動看整個月 →",
-            "cap",
-            "ts",
-            "scroll-hint",
-          ),
-        );
+        // 「人員欄、統計欄固定、左右捲動」寫在框外註解,不放畫面裡
         add(left, await legendRow(ROSTER_LEGEND), "FILL");
         if (o.panel) {
           const b = row(16, "body", "MIN");

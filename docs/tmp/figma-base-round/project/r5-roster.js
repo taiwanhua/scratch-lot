@@ -17,7 +17,7 @@ const STATS = [
   ["畫休", 72],
 ];
 const STATS_W = STATS.reduce((s, x) => s + x[1], 0);
-const NARROW_W = 40;
+const NARROW_W = 52; // [統計 ▸] 要完整可讀
 const WEEK = [
   ["11/1", "日"],
   ["11/2", "一"],
@@ -118,7 +118,7 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     for (const [s, w] of STATS)
       add(hr, await headCell(s, null, w, "capSB", "ts", "def"), null, "FILL");
   if (stats === "narrow") {
-    const n = await headCell("統計 ▸", null, NARROW_W, "capSB", "pm", "def");
+    const n = await headCell("統計 ▸", null, NARROW_W, "capSB", "tp", "def");
     n.name = "stats-narrow";
     n.children[0].textAutoResize = "HEIGHT";
     n.children[0].textAlignHorizontal = "CENTER";
@@ -197,7 +197,9 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
       else c = await rcell("Filled", l1, l2);
       add(r, c);
       c.layoutSizingHorizontal = "FIXED";
-      c.resize(colW, 56);
+      c.resize(colW, 72);
+      // 上方留 22px 給右上角的圖示(自動排入、未對應打卡),不蓋到文字
+      if (k !== "e") c.children[0].paddingTop = 22;
       if (PUNCH[p + "-" + (d + D0)] && !opts.published)
         punches.push([
           r,
@@ -239,13 +241,13 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     m.x = right - m.width - 4;
     m.y = 4;
   }
-  // 未對應排班的打卡:格子右下角(右上角留給自動排入圖示,避免壓到文字)
+  // 未對應排班的打卡:也放格子右上角,有自動排入圖示時排在它左邊(格子上方留了 22px,不蓋文字)
   for (const [r, right, n, hasAuto] of punches) {
     const m = await punchMark(n);
     r.appendChild(m);
     m.layoutPositioning = "ABSOLUTE";
-    m.x = right - m.width - 4;
-    m.y = 56 - m.height - 3;
+    m.x = right - m.width - 4 - (hasAuto ? 18 : 0);
+    m.y = 4;
   }
   return g;
 }
