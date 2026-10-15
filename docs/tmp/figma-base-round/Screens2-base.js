@@ -717,10 +717,18 @@ if (PART === 3) {
         : c.createInstance();
     };
     const panel = await one("Draft/NotificationPanel");
-    sh.main.appendChild(panel);
-    panel.layoutPositioning = "ABSOLUTE";
-    panel.x = Math.round(bell.x + bell.width - panel.width);
-    panel.y = 60;
+    // 點開的通知清單是浮層:放在獨立的浮層框(蓋在頁面上是預期的,不算元件蓋到文字)
+    const layer = figma.createFrame();
+    layer.name = "popover-layer(浮層)";
+    layer.fills = [];
+    layer.clipsContent = false;
+    sh.main.appendChild(layer);
+    layer.layoutPositioning = "ABSOLUTE";
+    layer.appendChild(panel);
+    layer.resize(panel.width, panel.height);
+    layer.x = Math.round(bell.x + bell.width - panel.width);
+    layer.y = 60;
+    panel.x = panel.y = 0;
     // 新通知提示 = 統一的 Snackbar(底座規格 10.12):Info、有標題、沒有動作;電腦右下(距邊 24)
     const toast = await dvar("Draft/Snackbar+", "Severity=Info");
     await setProps(toast, {
@@ -1455,16 +1463,29 @@ if (PART === 5) {
       "修訂紀錄",
       "系統資訊",
     ];
+    // ‹ / › 按鈕放在捲動區兩側(不疊在分頁文字上);漸層疊在捲動區邊緣
     const strip = async (title, offset, left, right) => {
       add(b, await T(title, "Body/2", "text/secondary"));
-      const vp = figma.createFrame();
-      vp.name = "PageTabs(可捲動)";
-      vp.resize(472, 41);
-      vp.fills = [];
-      vp.clipsContent = true;
+      const vp = H(0, { name: "PageTabs(可捲動)" });
       add(b, vp);
+      vp.resize(472, 41);
+      vp.layoutSizingHorizontal = "FIXED";
+      const arrow = async (side) =>
+        add(
+          vp,
+          await iconBtn(side === "right" ? "chevron-right" : "chevron-left"),
+        );
+      if (left) await arrow("left");
+      const area = figma.createFrame();
+      area.name = "scroll-area(可捲動)";
+      area.fills = [];
+      area.clipsContent = true;
+      vp.appendChild(area);
+      area.layoutSizingHorizontal = "FILL";
+      area.resize(area.width, 41);
+      if (right) await arrow("right");
       const tabs = H(16, { name: "tabs" });
-      vp.appendChild(tabs);
+      area.appendChild(tabs);
       for (const [i, l] of labels.entries())
         add(
           tabs,
@@ -1476,10 +1497,10 @@ if (PART === 5) {
         );
       tabs.x = left ? -120 * offset : 0;
       tabs.y = 0;
-      const fade = async (side) => {
+      const fade = (side) => {
         const g = figma.createRectangle();
         g.name = side === "right" ? "scroll-edge:end" : "scroll-edge:start";
-        g.resize(72, 40);
+        g.resize(48, 40);
         const w = { r: 1, g: 1, b: 1 };
         g.fills = [
           {
@@ -1496,28 +1517,22 @@ if (PART === 5) {
                   ],
             gradientStops: [
               { position: 0, color: { ...w, a: 0 } },
-              { position: 0.6, color: { ...w, a: 1 } },
+              { position: 1, color: { ...w, a: 1 } },
             ],
           },
         ];
-        vp.appendChild(g);
-        g.x = side === "right" ? 472 - 72 : 0;
+        area.appendChild(g);
+        g.x = side === "right" ? area.width - 48 : 0;
         g.y = 0;
-        const ib = await iconBtn(
-          side === "right" ? "chevron-right" : "chevron-left",
-        );
-        vp.appendChild(ib);
-        ib.x = side === "right" ? 472 - ib.width : 0;
-        ib.y = Math.round((40 - ib.height) / 2);
       };
-      if (left) await fade("left");
-      if (right) await fade("right");
+      if (left) fade("left");
+      if (right) fade("right");
     };
     await strip("一開始(右邊還有)", 0, false, true);
     await strip("捲到中間(兩邊都有)", 2, true, true);
     await noteOut(
       b,
-      "放不下時單列橫向捲動;有更多分頁的那一側固定顯示漸層與 ‹ / › 按鈕(點了捲一段),捲到底那一側消失;選到的分頁(含從網址打開)自動捲進可視範圍。以現有 Draft/Tab 組成,不另做元件。漸層暫用白色,搬回底座時綁 bg/paper。",
+      "放不下時單列橫向捲動;有更多分頁的那一側在捲動區邊緣顯示漸層,旁邊放 ‹ / › 按鈕(點了捲一段,按鈕不疊在分頁上),捲到底那一側消失;選到的分頁(含從網址打開)自動捲進可視範圍。以現有 Draft/Tab 組成,不另做元件。漸層暫用白色,搬回底座時綁 bg/paper。",
     );
     fin(b);
   }
