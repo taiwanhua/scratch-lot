@@ -124,15 +124,14 @@ if (PART === "my") {
     add(c, hd, "FILL");
     const cw = Math.floor((w - (sz === "M" ? 24 : 32)) / 7);
     const ds = days(sz, noToday);
+    // 缺卡:三尺寸都在日期右上角放紅點(error/main),圖例「● 缺卡」;點那一天打開 SC-39 當天詳情
     for (const x of ds)
       if ((x.d === "2" || x.d === "4") && !x.out) {
-        x.badge = await pill(
-          sz === "D" ? "缺卡" : sz === "T" ? "缺下班卡" : "缺",
-        );
-        if (sz === "M") {
-          x.badge.paddingLeft = 2;
-          x.badge.paddingRight = 2;
-        }
+        const e = figma.createEllipse();
+        e.resize(sz === "M" ? 6 : 8, sz === "M" ? 6 : 8);
+        e.fills = [await K.P("em")];
+        e.name = "dot-missed";
+        x.badge = e;
       }
     add(
       c,
@@ -150,18 +149,26 @@ if (PART === "my") {
             "★ 負責人",
             "休 = 畫休",
             "● 有異動",
-            "缺 = 打卡不完整",
-            "點一天看打卡紀錄",
+            "● 缺卡",
+            "點一天看當天詳細資料",
           ]
         : [
             "★ 負責人",
             "休 = 畫休",
             "08:55 / 17:03 = 上班 / 下班打卡",
             "● 有異動",
-            "缺卡 = 打卡不完整",
+            "● 缺卡",
             "底色 = 特殊日",
           ];
-    for (const s of L) add(lg, await T(s, "cap", "ts"));
+    for (const s of L)
+      add(
+        lg,
+        await T(
+          s,
+          "cap",
+          s === "● 缺卡" ? "em" : s === "● 有異動" ? "pm" : "ts",
+        ),
+      );
     add(c, lg, "FILL");
     return c;
   }
