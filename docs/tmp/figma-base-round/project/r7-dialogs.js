@@ -175,8 +175,9 @@ async function menuUnder(f, selName, items) {
 // ② 疊開共用的人力需求對話框(新增模式,同 SC-21a):日期鎖定為排班那天,開始 / 結束帶入排班的上下班時間(可改)
 // ③ [新增] 成功 → 回到排班對話框,新的人力需求自動加一列(依規則填第一個空的任務);人力需求已獨立存檔,Snackbar 提示
 const SC04E_TITLE = "新增排班 · 林美麗 11/1(日)";
+// 上下班時間是店長自己輸入的 09:00–15:00(沒勾「改用打卡時間」),刻意和打卡 09:02 / 15:10 不同,免得看起來像自動帶入
 async function sc04eTop(p, sz) {
-  for (const x of await fieldsTime(sz, "09:00", "15:10", "30"))
+  for (const x of await fieldsTime(sz, "09:00", "15:00", "30"))
     add(p, x, "FILL");
   add(
     p,
@@ -236,7 +237,7 @@ async function sc04eFlow() {
         ),
         "FILL",
       );
-      add(p, r2(await tf("開始", "09:00"), await tf("結束", "15:10")), "FILL");
+      add(p, r2(await tf("開始", "09:00"), await tf("結束", "15:00")), "FILL");
       add(p, await head("負責人", "0~1 筆"), "FILL");
       add(p, await taskRow(sz, "店內事務與帳目負責", null), "FILL");
       add(p, await btn("+ 負責人", "Text", "Small", "Primary", "Disabled"));
@@ -257,7 +258,7 @@ async function sc04eFlow() {
         p,
         await demandRow(
           sz,
-          "臨 09:00–15:10 · 店內櫃台",
+          "臨 09:00–15:00 · 店內櫃台",
           "負責 · 店內事務與帳目負責",
         ),
         "FILL",
@@ -266,7 +267,7 @@ async function sc04eFlow() {
     },
     {
       after: (f, sz) =>
-        snackbar(f, sz, "已新增人力需求 臨 09:00–15:10 · 店內櫃台"),
+        snackbar(f, sz, "已新增人力需求 臨 09:00–15:00 · 店內櫃台"),
     },
   );
 }
