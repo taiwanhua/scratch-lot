@@ -145,7 +145,7 @@ const ROWS = {
         "Draft/NotificationBell",
         "Draft/NotificationItem",
         "Draft/NotificationPanel",
-        "Draft/NotificationToast",
+        "Draft/Snackbar+",
       ],
     ],
     [
@@ -161,6 +161,9 @@ const ROWS = {
         "Draft/Receipt58Total",
         "Draft/Receipt58Divider",
         "Draft/Receipt58QR",
+        "Draft/Receipt58Text",
+        "Draft/Receipt58Barcode",
+        "Draft/Receipt58Cut",
       ],
     ],
     ["元件:Stepper", ["Draft/StepperStep", "Draft/Stepper"]],

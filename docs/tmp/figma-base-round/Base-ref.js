@@ -99,6 +99,29 @@ async function rebase(root) {
   }
   return n;
 }
+// 現有畫面裡放不下的橫列(例:表單版本的操作欄 4 顆按鈕)改成換行,不超出外框(audit-layout 的 overflowNodes)
+function wrapOverflow(root) {
+  for (const f of root.findAll(
+    (n) =>
+      n.type === "FRAME" &&
+      n.layoutMode === "HORIZONTAL" &&
+      n.layoutSizingHorizontal === "FIXED" &&
+      n.layoutWrap !== "WRAP",
+  )) {
+    const kids = f.children.filter(
+      (c) => c.visible && c.layoutPositioning !== "ABSOLUTE",
+    );
+    const need =
+      kids.reduce((m, c) => m + c.width, 0) +
+      f.itemSpacing * Math.max(0, kids.length - 1) +
+      f.paddingLeft +
+      f.paddingRight;
+    if (kids.length > 1 && need > f.width + 1) {
+      f.layoutWrap = "WRAP";
+      f.counterAxisSpacing = f.itemSpacing;
+    }
+  }
+}
 // 複製現有畫面成新的 BS 畫面(放在草稿頁、y 列)
 async function refShell(refName, name) {
   const src = await refFrame(refName);
@@ -111,6 +134,7 @@ async function refShell(refName, name) {
   await rebase(s);
   const main = s.findOne((n) => n.name === "main");
   await sysNav({ s });
+  wrapOverflow(s);
   const content = main && main.findOne((n) => n.name === "content");
   return { s, main, content, src: refName };
 }
@@ -165,15 +189,66 @@ async function navActive(sh, label) {
   t.fills = on.fills;
   await fonts({ findAll: () => [lab(t)] });
   lab(t).fills = on.text;
+  await rebase(nav);
 }
 // 清空一個容器的內容(保留容器本身的樣式與 auto layout)
 function clear(node) {
   for (const c of [...node.children]) c.remove();
   return node;
 }
+// 左右兩欄的頁面(列表 + 詳情、類別 + 選項、目標 + 規則):兩欄都填滿畫面高度(第二十三輪)。
+// 先讓畫面依內容撐高(最少 900),再把同一列的兩欄設成同高 = max(兩欄內容高, 到畫面底部的可用高度)。
+// 兩欄固定高度後,r4-layout 的 fit() 量出來的高度不變。
+function fillColumns(frame) {
+  if (!frame || frame.type !== "FRAME") return 0;
+  const main = frame.findChild((n) => n.name === "main" && n.type === "FRAME");
+  const content = main && main.findChild((n) => n.name === "content");
+  if (!content) return 0;
+  // 面板裡的工作區(流程設計器的畫布 + 關卡面板、表單設計器的元件 + 版面 + 屬性面板):各欄撐到最高那一欄
+  for (const ws of content.findAll(
+    (n) =>
+      n.type === "FRAME" &&
+      n.layoutMode === "HORIZONTAL" &&
+      /Workspace$/.test(n.name),
+  ))
+    for (const c of ws.children)
+      if (c.type === "FRAME" && c.layoutPositioning !== "ABSOLUTE")
+        c.layoutSizingVertical = "FILL";
+  const isPanel = (n) =>
+    n.type === "FRAME" &&
+    n.visible &&
+    n.fills.length > 0 &&
+    n.children.length > 0;
+  const rows = [content, ...content.findAll((n) => n.type === "FRAME")].filter(
+    (n) =>
+      n.layoutMode === "HORIZONTAL" && n.children.filter(isPanel).length >= 2,
+  );
+  if (!rows.length) return 0;
+  const row = rows[0];
+  const cols = row.children.filter(isPanel);
+  for (const c of cols) c.layoutSizingVertical = "HUG";
+  if (row !== content) row.layoutSizingVertical = "HUG";
+  content.layoutSizingVertical = "HUG";
+  main.layoutSizingVertical = "HUG";
+  frame.resize(
+    frame.width,
+    Math.max(frame.width >= 1440 ? 900 : 768, Math.ceil(main.height)),
+  );
+  main.layoutSizingVertical = "FILL";
+  const top = row.absoluteBoundingBox.y - frame.absoluteBoundingBox.y;
+  const offset = row === content ? content.paddingTop : 0;
+  const avail = frame.height - top - offset - content.paddingBottom;
+  const h = Math.max(avail, ...cols.map((c) => c.height));
+  for (const c of cols) {
+    c.layoutSizingVertical = "FIXED";
+    c.resize(c.width, h);
+  }
+  return cols.length;
+}
 // 遮罩 + 對話框:背景是入口畫面的副本(鎖定),上面蓋 50% 黑;對話框置中
 async function refOverlay(bgShell, name, width) {
-  const bgSrc = bgShell.s || bgShell;
+  const bgSrc = typeof bgShell.type === "string" ? bgShell : bgShell.s; // 節點沒有 .s(存取會丟錯)
+  fillColumns(bgSrc);
   const s = figma.createFrame();
   s.name = name;
   s.resize(bgSrc.width, bgSrc.height);

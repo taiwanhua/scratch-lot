@@ -47,6 +47,7 @@ const K = {
     "Shadow/Dropdown": "5f6fb8fd430e5a57b2fe73bd4f77fda6914fe14a",
     "Shadow/Card": "50423901064568bafe3107fcdb477d2b3bea2e90",
     "Shadow/Dialog": "b1c64e5a1440659a32fb283906757a36ba9bc343",
+    "Shadow/z8": "7a21f8ab0c82ae53c891318c990dd7489ffcbaf4",
   },
   // component set(set: true)或單一 component
   comp: {

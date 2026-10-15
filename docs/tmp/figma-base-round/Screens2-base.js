@@ -24,6 +24,7 @@ const orgChip = async (s) => {
 };
 const fin = (sh) => {
   const n = typeof sh.type === "string" ? sh : sh.s; // 節點本身沒有 .s(存取會丟錯)
+  fillColumns(n); // 左右兩欄填滿畫面高度
   place(n, Y);
   made.push([n.name, n.id]);
   return n;
@@ -54,7 +55,42 @@ async function approverBox(label, text) {
   add(box, await btn("編輯條件", "Outlined", "Primary", "Default", "Small"));
   return box;
 }
-// 流程設計器:關卡面板的「審核者來源 / 角色」換成人員條件
+// 跳過這一關(底座規格 3.4):既有「跳過條件」(公式)與新的「指定組織跳過」合成一個區塊,符合任一項就跳過
+async function skipBlock(formula, orgOn, formulaOn) {
+  const box = V(8, {
+    name: "skip(跳過這一關)",
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
+  });
+  box.fills = [await paint("bg/default")];
+  await rad(box, "radius/sm");
+  add(box, await T("跳過這一關(符合任一項就跳過)", "Subtitle/2"));
+  add(box, await check("申請人屬於這些組織", orgOn));
+  const orgs = add(
+    box,
+    H(6, {
+      name: "orgs",
+      layoutWrap: "WRAP",
+      counterAxisSpacing: 6,
+      paddingLeft: 26,
+    }),
+    "FILL",
+  );
+  await put(orgs, [
+    await orgChip("最上層組織"),
+    await btn("+ 選擇組織", "Text", "Primary", "Default", "Small"),
+    await check("包含下層"),
+  ]);
+  add(box, await check("符合條件", formulaOn));
+  const f = add(box, H(8, { name: "formula", paddingLeft: 26 }), "FILL");
+  add(f, await T(formula, "Body/2", "text/secondary"), "FILL").textAutoResize =
+    "HEIGHT";
+  add(f, await btn("編輯公式", "Text", "Primary", "Default", "Small"));
+  return box;
+}
+// 流程設計器:關卡面板的「審核者來源 / 角色」換成人員條件;「跳過條件」欄位換成合併後的跳過區塊
 async function flowDesigner(name, shared) {
   const sh = await refShell("Admin 流程管理 — 流程設計(側欄收合)", name);
   const se = q(sh.s, "StepEditor");
@@ -70,6 +106,19 @@ async function flowDesigner(name, shared) {
   se.insertChild(role ? se.children.indexOf(role) : 6, box);
   box.layoutSizingHorizontal = "FILL";
   if (role) role.remove();
+  const sk = fieldBy(se, "跳過條件");
+  if (sk) {
+    const v = sk.findOne((n) => n.type === "TEXT" && n.name === "value");
+    const blk = await skipBlock(
+      v ? v.characters : "當「請假天數」< 3",
+      true,
+      true,
+    );
+    se.insertChild(se.children.indexOf(sk), blk);
+    blk.layoutSizingHorizontal = "FILL";
+    sk.remove();
+    wrapText(blk);
+  }
   // 畫布上的關卡卡片與問題清單:「角色」改成審核者(人員條件)
   for (const [a, b] of [
     ["角色:財務", "審核者:人員條件"],
@@ -131,7 +180,7 @@ if (PART === 1) {
     );
     await refNote(
       a.sh,
-      "關卡面板的「審核者來源」多了「人員條件」(取代指定使用者與角色),下方顯示條件摘要,[編輯條件] 開啟條件對話框;表單欄位、主管兩種來源不變。",
+      "關卡面板的「審核者來源」多了「人員條件」(取代指定使用者與角色),下方顯示條件摘要,[編輯條件] 開啟條件對話框;表單欄位、主管兩種來源不變。原本的「跳過條件」欄位改成「跳過這一關」區塊:指定組織(B4)與既有公式並存,符合任一項就跳過。",
     );
     fin(a.sh);
     const ov = await refOverlay(
@@ -222,25 +271,6 @@ if (PART === 1) {
     );
     const at = se.children.indexOf(q(se, "actions-1"));
     const parts = [];
-    const skip = V(8, { name: "B4 指定組織跳過" });
-    add(skip, await T("跳過", "Subtitle/2"));
-    add(
-      skip,
-      await T("申請人屬於下列組織時,跳過這一關:", "Body/2"),
-      "FILL",
-    ).textAutoResize = "HEIGHT";
-    const orgs = add(
-      skip,
-      H(6, { name: "orgs", layoutWrap: "WRAP", counterAxisSpacing: 6 }),
-      "FILL",
-    );
-    await put(orgs, [
-      await orgChip("最上層組織"),
-      await orgChip("示範分店 A"),
-      await btn("+ 選擇組織", "Text", "Primary", "Default", "Small"),
-    ]);
-    add(skip, await check("包含下層組織"));
-    parts.push(skip);
     const auto = V(8, { name: "B5 自動通過" });
     add(auto, await T("自動通過", "Subtitle/2"));
     add(auto, await T("申請人是這一關的審核者時", "Body/2", "text/secondary"));
@@ -294,11 +324,11 @@ if (PART === 1) {
     );
     await noteOut(
       sh.s,
-      "跳過:判斷申請人所屬的組織(全部);與既有跳過條件任一成立就跳過;被跳過的關卡不執行 beforeApprove。",
+      "跳過這一關:指定組織判斷申請人所屬的組織(全部);與既有公式並存,任一成立就跳過;被跳過的關卡不執行 beforeApprove。",
     );
     await refNote(
       sh,
-      "關卡面板加四個區塊:跳過(B4 指定組織)、自動通過(B5)、逾時提醒(B16,通知對象用人員條件)、知會(B17);既有欄位(名稱、key、審核者、會簽、允許退回、跳過條件)不變。",
+      "「跳過條件」欄位改成「跳過這一關」區塊(指定組織 B4 + 既有公式,符合任一項就跳過);另加三個區塊:自動通過(B5)、逾時提醒(B16,通知對象用人員條件)、知會(B17);其他既有欄位不變。",
     );
     fin(sh);
   }
@@ -338,6 +368,16 @@ if (PART === 2) {
       "Admin 表單管理 — 表單版本",
       "BS-04b 表單版本(背景)",
     );
+    // 現有「表單版本」表格的操作欄放不下最寬的按鈕(與上一版差異…):操作欄加寬 50,從前一欄(發布)借
+    {
+      const vt = q(ver.s, "VersionTable");
+      for (const r of vt.children) {
+        const a = r.children[r.children.length - 2],
+          b = r.children[r.children.length - 1];
+        a.resize(a.width - 50, a.height);
+        b.resize(b.width + 50, b.height);
+      }
+    }
     const ov2 = await refOverlay(
       ver,
       "BS-04b Overlay / 表單發布成功:提示授予新增權限",
@@ -561,7 +601,7 @@ if (PART === 2) {
         await table(
           [
             ["單號", 120],
-            ["結果", 400],
+            ["結果", 388],
           ],
           [
             ["F-0031", await okc("已核准")],
@@ -661,14 +701,20 @@ if (PART === 3) {
     panel.layoutPositioning = "ABSOLUTE";
     panel.x = Math.round(bell.x + bell.width - panel.width);
     panel.y = 60;
-    const toast = await one("Draft/NotificationToast");
+    // 新通知提示 = 統一的 Snackbar(底座規格 10.12):Info、有標題、沒有動作;電腦右下(距邊 24)
+    const toast = await dvar("Draft/Snackbar+", "Severity=Info");
+    await setProps(toast, {
+      Title: "待你審核:示範表單 #F-0012",
+      Message: "王小明 送出示範表單,共 5 筆明細。",
+      ShowAction: false,
+    });
     sh.main.appendChild(toast);
     toast.layoutPositioning = "ABSOLUTE";
     toast.x = sh.main.width - toast.width - 24;
     toast.y = sh.s.height - toast.height - 24;
     await refNote(
       sh,
-      "AppBar 加通知鈴(未讀數),點開通知清單;新通知在右下角提示。現有 AppBar 還沒有鈴的槽,先疊在上面,搬回底座時 AppBar 加 Notifications 屬性。",
+      "AppBar 加通知鈴(未讀數),點開通知清單;新通知在右下角提示(統一的 Snackbar,Info)。現有 AppBar 還沒有鈴的槽,先疊在上面,搬回底座時 AppBar 加 Notifications 屬性。",
     );
     fin(sh);
   }
@@ -1008,7 +1054,12 @@ if (PART === 4) {
   }
   // ---- BS-18a/b/c 測試列印結果 ----
   for (const [sev, msg, k, lab] of [
-    ["Success", "已印出:中文、QR code、切紙都正常。", "a", "成功"],
+    [
+      "Success",
+      "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
+      "a",
+      "成功",
+    ],
     ["Warning", "失敗:缺紙。補紙後再按一次 [測試列印]。", "b", "缺紙"],
     ["Error", "失敗:代理程式離線(最後連線 10/16 21:40)。", "c", "離線"],
   ]) {

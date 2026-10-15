@@ -1,4 +1,4 @@
-// Draft/NotificationBell、Draft/NotificationItem、Draft/NotificationPanel、Draft/NotificationToast(底座規格 B7)。
+// Draft/NotificationBell、Draft/NotificationItem、Draft/NotificationPanel(底座規格 B7;新通知提示用 Draft/Snackbar+)。
 // 前置:貼上 _resolve.js;目標頁已有 Draft/ActionIcon+。
 const icons = draft("Draft/ActionIcon+");
 const glyph = (k) => icons.children.find((c) => c.name === "key=" + k);
@@ -215,56 +215,5 @@ panelSet.description =
   DESC_PREFIX +
   "通知清單彈出層(底座規格 B7;點通知鈴開啟)。bg/paper、radius/md、Shadow/Dropdown、寬 360。標題列「通知」+ Link「全部標為已讀」;內容為 Draft/NotificationItem 實例(新到舊);State=Empty 顯示「目前沒有通知」。通知保存 90 天(TTL)。";
 
-// ---- Toast ----
-const t = figma.createComponent();
-t.name = "Draft/NotificationToast";
-t.layoutMode = "HORIZONTAL";
-t.itemSpacing = 12;
-t.paddingLeft = 16;
-t.paddingRight = 8;
-t.paddingTop = t.paddingBottom = 12;
-t.counterAxisAlignItems = "MIN";
-t.resize(360, 10);
-t.primaryAxisSizingMode = "FIXED";
-t.counterAxisSizingMode = "AUTO";
-t.fills = [await paint("bg/paper")];
-t.effectStyleId = (await style("Shadow/Dialog")).id;
-await radius(t, "radius/md");
-t.clipsContent = false;
-const ic = glyph("notifications").createInstance();
-ic.name = "icon";
-add(t, ic);
-const tc = al("VERTICAL", { name: "content", itemSpacing: 2 });
-const tt = add(
-  tc,
-  await txt("待你審核:示範表單 #F-0012", "Subtitle/2", "text/primary", "title"),
-);
-const tb = await txt(
-  "王小明 送出示範表單,共 5 筆明細。",
-  "Body/2",
-  "text/secondary",
-  "body",
-);
-add(tc, tb);
-tb.textAutoResize = "HEIGHT";
-tb.layoutSizingHorizontal = "FILL";
-add(t, tc, "FILL");
-add(t, await iconBtn("close", "Plain", "Small"));
-tt.componentPropertyReferences = {
-  characters: t.addComponentProperty(
-    "Title",
-    "TEXT",
-    "待你審核:示範表單 #F-0012",
-  ),
-};
-tb.componentPropertyReferences = {
-  characters: t.addComponentProperty(
-    "Body",
-    "TEXT",
-    "王小明 送出示範表單,共 5 筆明細。",
-  ),
-};
-t.description =
-  DESC_PREFIX +
-  "新通知提示(底座規格 B7「UI」):固定右下角、數秒後自動消失、可按 × 關閉;點內容開連結。與 Draft/Snackbar(右上、mutation 成功 / 失敗)不同用途。icon = Draft/ActionIcon+ key=notifications;屬性 Title / Body(TEXT)。";
-return { bell: bellSet.id, item: itemSet.id, panel: panelSet.id, toast: t.id };
+// 新通知提示不另做元件:第二十三輪起統一用 Draft/Snackbar+(Snackbar.js,Severity=Info + Title),見底座規格 10.12。
+return { bell: bellSet.id, item: itemSet.id, panel: panelSet.id };

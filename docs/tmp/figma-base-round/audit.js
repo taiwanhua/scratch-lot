@@ -152,6 +152,32 @@ if (page.name.startsWith("Base Draft")) {
       if (mc && mc.remote) bar = true;
     }
     if (!bar) why.push("頁首不是 Library 的 AdminAppBar");
+    // 左右兩欄要填滿畫面高度(畫圖檢查清單 18;Base-ref.js 的 fillColumns)
+    const main = f.findChild((n) => n.name === "main");
+    const content = main && main.findChild((n) => n.name === "content");
+    if (content) {
+      const isPanel = (n) =>
+        n.type === "FRAME" &&
+        n.visible &&
+        n.fills.length > 0 &&
+        n.children.length > 0;
+      const row = [content, ...content.findAll((n) => n.type === "FRAME")].find(
+        (n) =>
+          n.layoutMode === "HORIZONTAL" &&
+          n.children.filter(isPanel).length >= 2,
+      );
+      if (row) {
+        const cols = row.children.filter(isPanel);
+        const bottom =
+          f.absoluteBoundingBox.y + f.height - content.paddingBottom;
+        if (
+          cols.some(
+            (c) => Math.abs(c.absoluteBoundingBox.y + c.height - bottom) > 2,
+          )
+        )
+          why.push("左右兩欄沒有填滿畫面高度");
+      }
+    }
     if (why.length)
       baseScreensNotFromRef.push(f.name.slice(0, 30) + ":" + why.join("、"));
     for (const n of [f, ...f.findAll(() => true)])

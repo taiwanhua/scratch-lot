@@ -10,8 +10,8 @@
 ## 搬回底座的方法(重建,不跨檔搬移)
 
 1. 在 wowgo-base Design System 開一頁(例:「Draft / 本輪」),把 `_resolve.js` 的 `MODE` 改成 `'base'`,依序貼上「檔頭 + 元件腳本」執行:
-   `ActionIcon+.js` →(只在 scratch 模式:`AdminSideNav+.js`)→ `Section.js` → `AudiencePicker.js` → `DataScopeRuleCard.js` → `OrgTreeSelect.js` → `MonthCalendar.js` → `RosterGrid.js` → `Notification.js` → `Print.js`。(`Screens.js` 第十九輪刪除:它自己組了一套殼與版面,畫面改由 `Screens2-base.js` 以現有畫面為底重畫。)
-   第二輪起追加:`Stepper.js` → `Round2-base.js`(前置 `_compact.js`;RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Screens2-base.js` 的 PART 1~~5(前置 `const PROJECT = false;` + `_kit.js` + `Base-ref.js`)。**第十九輪起參考畫面一律以現有畫面為底**:`Base-ref.js` 依名稱在本檔 `Screen / Admin …` 各頁找現有畫面複製(`refShell`),把非底座變數換回底座同名變數(`rebase`),再套本輪改動;對話框沿用現有對話框樣式、背景是打開它的畫面(`refOverlay`);框外註解寫「對應現有畫面 + 本輪改動」(`refNote`)。在 wowgo-base 重建前,先確認本檔參考畫面頁的名稱前綴(`REF_PAGE_PREFIX`)與框名和 scratch-lot 相同。PART 1 = BS-01~~03、2 = BS-04~~07、3 = BS-08、09、12、13、21、4 = BS-10、17~~20、5 = BS-11、14、15、16。`Section.js` 的內容區是 SLOT;`OrgTreeSelect.js` 是浮動標籤(高 56),下拉的列用現有 `Draft/OrgTreeItem`。
+   `ActionIcon+.js` →(只在 scratch 模式:`AdminSideNav+.js`)→ `Section.js` → `AudiencePicker.js` → `DataScopeRuleCard.js` → `OrgTreeSelect.js` → `MonthCalendar.js` → `RosterGrid.js` → `Notification.js` → `Snackbar.js` → `Print.js`。(`Screens.js` 第十九輪刪除:它自己組了一套殼與版面,畫面改由 `Screens2-base.js` 以現有畫面為底重畫。)
+   第二輪起追加:`Stepper.js` → `Round2-base.js`(前置 `_compact.js`;RosterGrid 表頭彙總列、58mm 版面零件、Receipt58 改成零件組成)→ `Receipt58Test.js`(前置 `_compact.js`;58mm 文字列 / 一維條碼 / 切紙零件與 BS-18d 測試頁)→ `Screens2-base.js` 的 PART 1~~5(前置 `const PROJECT = false;` + `_kit.js` + `Base-ref.js`)。**第十九輪起參考畫面一律以現有畫面為底**:`Base-ref.js` 依名稱在本檔 `Screen / Admin …` 各頁找現有畫面複製(`refShell`),把非底座變數換回底座同名變數(`rebase`),再套本輪改動;對話框沿用現有對話框樣式、背景是打開它的畫面(`refOverlay`);框外註解寫「對應現有畫面 + 本輪改動」(`refNote`)。在 wowgo-base 重建前,先確認本檔參考畫面頁的名稱前綴(`REF_PAGE_PREFIX`)與框名和 scratch-lot 相同。PART 1 = BS-01~~03、2 = BS-04~~07、3 = BS-08、09、12、13、21、4 = BS-10、17~~20、5 = BS-11、14、15、16。`Section.js` 的內容區是 SLOT;`OrgTreeSelect.js` 是浮動標籤(高 56),下拉的列用現有 `Draft/OrgTreeItem`。
    - **三份檔頭都要設 `MODE = 'base'`**:`_resolve.js`(元件腳本)、`_compact.js`(Round2-base)、`_kit.js`(Screens2-base)。base 模式下變數 / 樣式依 key 找本檔 local,底座既有元件依節點 id(`_resolve.js` 的 `K.comp[*].baseNode`、`_kit.js` 的 `BASE_NODE`),本輪草稿元件依名稱在草稿頁「Draft / 本輪」找(`_compact.js` / `_kit.js` 的 `DRAFT_PAGE`、`draft()`、`node()`)。腳本裡沒有寫死 scratch-lot 的節點 id。
    - 三份檔頭的 `al()` 都預設不裁切內容(浮動標籤、陰影);表格、殼、Overlay 另外設定裁切。
    - `_kit.js` 的 `BASE_NODE` 還沒填的(Checkbox、Radio、TextField、Link、StatCard、AdminRouteTabs)和 `_resolve.js` 一樣,重建前要先在底座檔查到節點 id 補上;未填時腳本會直接報錯,不會靜默改用 Library。
@@ -61,6 +61,8 @@
 15. **權限差異**:只有畫面差很多的才另外畫「權限不足」版本;其他畫面在框外註解寫「- 權限:沒有 `<權限>` 權限時看不到 [按鈕]」,和規格對應章節同一句。
 16. **放不下的分頁列**:單列橫向捲動,有更多分頁的那一側放漸層 + ‹ / ›(圖層名 `scroll-edge:start` / `scroll-edge:end`),選到的分頁捲進可視範圍;外框命名「PageTabs(可捲動)」,裡面超出的分頁不算裁切(`audit-layout.js`)。
 17. **以現有為底**:每張底座參考畫面先複製現有的 `Screen / Admin …` 畫面(側欄、頁首、分頁、卡片、表格、欄位、按鈕、對話框樣式都沿用),只畫本輪改動;框外註解第一行寫「對應現有畫面:<框名>」。新元件先對照 Library 有沒有同功能的元件(例:組織樹列用現有 `Draft/OrgTreeItem`、搜尋框用現有 TextField),有就沿用;用詞也沿用現有畫面(例:表單設計器叫「分區」)。`audit.js` 的 `baseScreensNotFromRef`(沒有對應註解或頁首不是 Library AppBar)與 `nonBaseInBaseScreens`(Base Draft 畫面綁到非底座變數)要是 0。
+18. **左右兩欄填滿畫面高度**:列表 + 詳情、類別 + 選項、目標 + 規則這類兩欄的頁面,兩欄都撐到畫面底部(等高);面板裡的工作區(畫布 + 屬性面板)各欄撐到最高那一欄。腳本用 `Base-ref.js` 的 `fillColumns()`;`audit.js` 的 `baseScreensNotFromRef` 會列出「左右兩欄沒有填滿畫面高度」。
+19. **提示一律用 Snackbar**:操作結果、可撤銷的動作、新通知提示都用 `Draft/Snackbar+`(底座規格 10.12):電腦 / 平板右下角、手機底部滿寬,不畫頂部黑底提示。
 
 ## 驗收稽核 `audit.js`
 
