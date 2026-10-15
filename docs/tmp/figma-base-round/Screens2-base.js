@@ -717,18 +717,12 @@ if (PART === 3) {
         : c.createInstance();
     };
     const panel = await one("Draft/NotificationPanel");
-    // 點開的通知清單是浮層:放在獨立的浮層框(蓋在頁面上是預期的,不算元件蓋到文字)
-    const layer = figma.createFrame();
-    layer.name = "popover-layer(浮層)";
-    layer.fills = [];
-    layer.clipsContent = false;
-    sh.main.appendChild(layer);
-    layer.layoutPositioning = "ABSOLUTE";
-    layer.appendChild(panel);
-    layer.resize(panel.width, panel.height);
-    layer.x = Math.round(bell.x + bell.width - panel.width);
-    layer.y = 60;
-    panel.x = panel.y = 0;
+    // 點開的通知清單是浮層:名稱含「浮層」,蓋在頁面上不算 overlapText(audit-layout 檔頭的例外)
+    panel.name = "通知清單(浮層)";
+    sh.main.appendChild(panel);
+    panel.layoutPositioning = "ABSOLUTE";
+    panel.x = Math.round(bell.x + bell.width - panel.width);
+    panel.y = 60;
     // 新通知提示 = 統一的 Snackbar(底座規格 10.12):Info、有標題、沒有動作;電腦右下(距邊 24)
     const toast = await dvar("Draft/Snackbar+", "Severity=Info");
     await setProps(toast, {

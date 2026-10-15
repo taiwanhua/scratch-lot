@@ -6,6 +6,8 @@
 //                  OrgTreeSelect / DatePicker 實例本身,或以欄位開頭的包裝框)上緣或高度不一致(容許 1px);並排彈窗的列不算。
 //   overflowNodes  auto layout 的子節點左右超出父框(例:張數格子比對話框寬、表格欄寬總和超過卡片)。
 //   overlapText    絕對定位(或放在非 auto layout 框裡)的元件實例,疊在同一個父層裡較早的節點上,蓋到那些節點的文字(容許 1px)。
+//                  例外:名稱含「浮層」的節點(彈出選單、通知清單這類本來就蓋在頁面上的浮層)本身蓋到下層文字不算;
+//                  浮層「裡面」的元件蓋到浮層內的文字照樣檢查(同「可捲動」的寫法,要用名稱明寫)。
 //   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
@@ -125,6 +127,7 @@ for (const s of screens) {
   if (!("findAllWithCriteria" in s)) continue;
   for (const i of s.findAllWithCriteria({ types: ["INSTANCE"] })) {
     if (!visibleChain(i) || inInstance(i, s)) continue;
+    if (/浮層/.test(i.name)) continue; // 浮層本身蓋在頁面上是預期的(見檔頭)
     const par = i.parent;
     if (!par || !("layoutMode" in par)) continue;
     if (!(i.layoutPositioning === "ABSOLUTE" || par.layoutMode === "NONE"))
