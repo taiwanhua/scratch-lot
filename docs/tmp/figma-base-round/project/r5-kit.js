@@ -167,12 +167,45 @@ async function box(name, k, pad = 8, gap = 6, r = "sm") {
 }
 // ---- 元件實例 ----
 const _m = {};
-async function main(instId) {
-  if (!_m[instId])
-    _m[instId] = await (
-      await figma.getNodeByIdAsync(instId)
-    ).getMainComponentAsync();
-  return _m[instId];
+// 第二十三輪起傳主元件 id(舊畫面的實例已刪除);仍相容實例 id 與元件集合 id
+async function main(id) {
+  if (!_m[id]) {
+    const n = await figma.getNodeByIdAsync(id);
+    _m[id] =
+      n.type === "INSTANCE"
+        ? await n.getMainComponentAsync()
+        : n.type === "COMPONENT_SET"
+          ? n.defaultVariant
+          : n;
+  }
+  return _m[id];
+}
+// 圖例項目:專案元件 Draft/LegendItem(64:14 頁,289:88348)
+async function legend(kind, tone, label, symbol) {
+  const set = await figma.getNodeByIdAsync("289:88348");
+  const v = set.children.find((c) => c.name === `Kind=${kind}, Tone=${tone}`);
+  const i = v.createInstance();
+  const p = { "Label#289:0": label };
+  if (symbol) p["Symbol#289:32"] = symbol;
+  i.setProperties(p);
+  i.name = "Draft/LegendItem";
+  return i;
+}
+// 未對應排班的打卡:Draft/UnmatchedPunchMark(64:14 頁,290:97643),時鐘 + 張數
+async function punchMark(count) {
+  const i = (await figma.getNodeByIdAsync("290:97643")).createInstance();
+  i.setProperties({ "Count#290:0": String(count) });
+  i.name = "punch-mark";
+  return i;
+}
+// 自動排入圖示:底座草稿 Draft/ScheduleAutoMark(286:77901)
+async function autoMark() {
+  const m = await figma.getNodeByIdAsync("286:77901");
+  const i = (
+    m.type === "COMPONENT_SET" ? m.defaultVariant : m
+  ).createInstance();
+  i.name = "auto-mark";
+  return i;
 }
 async function inst(instId, props = {}) {
   const i = (await main(instId)).createInstance();
@@ -186,7 +219,7 @@ async function btn(
   color = "Primary",
   st = "Default",
 ) {
-  const b = await inst("70:486", {
+  const b = await inst("15:40", {
     Variant: v,
     Size: size,
     Color: color,
@@ -197,7 +230,7 @@ async function btn(
   return b;
 }
 async function tag(label, tone = "Default") {
-  const t = await inst("70:483");
+  const t = await inst("20:7");
   try {
     t.setProperties({ Tone: tone });
   } catch (e) {}
@@ -212,14 +245,14 @@ async function setTxt(n, name, s) {
   t.characters = s;
 }
 async function selF(label, value, state = "Default") {
-  const s = await inst("70:476", { State: state });
+  const s = await inst("65:370", { State: state });
   await setTxt(s, "label", label);
   await setTxt(s, "value", value);
   s.name = "SelectField " + label;
   return s;
 }
 async function tf(label, value, helper = "", size = "Medium", st = "Default") {
-  const t = await inst("99:1612", { Size: size, State: st });
+  const t = await inst("15:132", { Size: size, State: st });
   t.setProperties({
     "Label#11:0": label,
     "Value#11:9": value,
@@ -230,24 +263,24 @@ async function tf(label, value, helper = "", size = "Medium", st = "Default") {
 }
 async function cb(checked, label, k = "body2") {
   const r = row(8, "checkbox");
-  add(r, await inst("102:1874", { State: checked ? "Checked" : "Unchecked" }));
+  add(r, await inst("14:525", { State: checked ? "Checked" : "Unchecked" }));
   if (label) add(r, await T(label, k));
   return r;
 }
 async function rd(on, label, k = "body2") {
   const r = row(8, "radio");
-  add(r, await inst("102:3316", { State: on ? "Selected" : "Default" }));
+  add(r, await inst("14:1328", { State: on ? "Selected" : "Default" }));
   if (label) add(r, await T(label, k));
   return r;
 }
 async function swi(on, label) {
   const r = row(8, "switch");
-  add(r, await inst("130:3644", { State: on ? "On" : "Off" }));
+  add(r, await inst("14:574", { State: on ? "On" : "Off" }));
   if (label) add(r, await T(label));
   return r;
 }
 async function tab(label, active, badge = false) {
-  const t = await inst("70:493", { State: active ? "Active" : "Default" });
+  const t = await inst("14:537", { State: active ? "Active" : "Default" });
   t.setProperties({ "Label#69:0": label, "Badge#288:0": badge });
   return t;
 }
@@ -258,12 +291,12 @@ async function tabs(labels, ai = 0, name = "PageTabs") {
   return r;
 }
 async function alert(msg, sev = "Info", action = false) {
-  const a = await inst("70:513", { Severity: sev });
+  const a = await inst("22:434", { Severity: sev });
   a.setProperties({ "Message#289:0": msg, "Action#311:0": action });
   return a;
 }
 async function section(title, summary, st = "Collapsed") {
-  const s = await inst("223:4865", { State: st });
+  const s = await inst("41:5925", { State: st });
   s.setProperties({ "Title#41:0": title, "Summary#41:3": summary });
   return s;
 }
@@ -375,7 +408,7 @@ async function table(cols, rows, name = "table") {
 // ---- 殼 ----
 const SHELL = {
   my: { D: "263:14824", T: "265:17214", M: "265:19263", title: "我的班表" },
-  manage: { D: "272:72792", T: "272:76849", M: "272:79014", title: "排班作業" },
+  manage: { D: "290:83686", T: "290:87689", M: "290:90336", title: "排班作業" },
   settings: {
     D: "275:32624",
     T: "275:34439",
@@ -567,7 +600,7 @@ async function fullDlg(title, action) {
   f.counterAxisSizingMode = "FIXED";
   f.resize(390, 844);
   f.primaryAxisSizingMode = "FIXED";
-  const ab = await inst("209:27207", { Size: "Mobile", Kind: "Dialog" });
+  const ab = await inst("209:366", { Size: "Mobile", Kind: "Dialog" });
   const pr = ab.componentProperties;
   const p = {};
   for (const k of Object.keys(pr)) {
@@ -630,7 +663,7 @@ async function monthGrid(days, cellW, cellH, opts = {}) {
       s.counterAxisAlignItems = "CENTER";
       add(
         s,
-        await inst("102:1874", {
+        await inst("14:525", {
           State: opts.weekCheck[i / 7] ? "Checked" : "Unchecked",
         }),
       );
@@ -712,12 +745,17 @@ function oct(f = () => ({})) {
 }
 // ---- 排班格(班表檢視):用 Draft/RosterCell 實例 ----
 async function rcell(state, l1, l2, opts = {}) {
-  const c = await inst("49:523", { State: state });
+  const c = await inst("49:484", { State: state });
   if (state !== "Empty") {
     await setTxt(c, "line-1", l1 || "");
     await setTxt(c, "line-2", l2 || "");
   }
-  if (opts.bg) c.fills = [await P(opts.bg, opts.op || 1)];
+  if (opts.bg) {
+    c.fills = [await P(opts.bg, opts.op || 1)];
+    // 格子內容底色一起換(店休 / 其他分店 / 不可排灰、畫休淡藍)
+    const slot = c.findOne((n) => n.name.startsWith("slot"));
+    if (slot) slot.fills = [await P(opts.bg, opts.op || 1)];
+  }
   return c;
 }
 async function headCell(t1, t2, w, k = "capSB", c = "ts", bg) {

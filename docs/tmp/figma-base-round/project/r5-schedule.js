@@ -18,8 +18,10 @@ async function load(withRoster) {
     KIT +
       "\n" +
       RO +
-      "\nreturn {PAGE,P,fill,stroke,rad,T,TW,AL,add,sp,row,col,card,box,inst,btn,tag,setTxt,selF,tf,cb,rd,swi,tab,tabs,alert,section,chevron,pager,seg,pill,dot,divider,table,shell,fitShell,overlay,dlg,actions,drawerBox,sheetBox,fullDlg,monthGrid,nov,oct,rcell,headCell,tlBlock,sec,put,note,byName,del,W,H" +
-      (withRoster ? ",rosterGrid,legendRow,toolbar,checkPanelBody" : "") +
+      "\nreturn {PAGE,P,fill,stroke,rad,T,TW,AL,add,sp,row,col,card,box,inst,btn,tag,setTxt,selF,tf,cb,rd,swi,tab,tabs,alert,section,chevron,pager,seg,pill,dot,divider,table,shell,fitShell,overlay,dlg,actions,drawerBox,sheetBox,fullDlg,monthGrid,nov,oct,rcell,headCell,tlBlock,sec,put,note,byName,del,W,H,legend,autoMark,punchMark" +
+      (withRoster
+        ? ",rosterGrid,legendRow,toolbar,checkPanelBody,ROSTER_LEGEND,STATS_W,NARROW_W"
+        : "") +
       "};",
   )();
 }

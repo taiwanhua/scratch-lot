@@ -1,12 +1,23 @@
 // ==== 第十九輪:排班作業(排班表)共用的組件函式。貼在 r5-kit.js 後面一起執行 ====
+// 第二十三輪:人員欄固定在左、統計欄固定在右(班數、負責班數、總工時、畫休);格子寫「休 30」;
+// 自動排入改用 Draft/ScheduleAutoMark 圖示;圖例改用 Draft/LegendItem;⚙ 顯示欄位三尺寸都有;檢核「限制 / 提醒」。
 // 示範資料:中山店 2026 年 11 月(草稿);11/3(二)店休;11/11 特殊日「店慶」。
 const PEOPLE = [
-  { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "120h", "2"] },
-  { n: "李小華", t: "正職", s: ["18", "4", "108h", "3"] },
-  { n: "陳大文", t: "正職 · 可負責", s: ["19", "10", "114h", "1"] },
-  { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "102h", "5"] },
-  { n: "張小芳", t: "兼職", s: ["9", "0", "36h", "0"] },
+  { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "128:30", "2 天"] },
+  { n: "李小華", t: "正職", s: ["18", "4", "115:30", "3 天"] },
+  { n: "陳大文", t: "正職 · 可負責", s: ["19", "10", "152:30", "1 天"] },
+  { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "109:00", "5 天"] },
+  { n: "張小芳", t: "兼職", s: ["9", "0", "36:00", "0 天"] },
 ];
+// 統計欄(固定在右):標題、寬度;畫休超過上限變紅(林美麗)
+const STATS = [
+  ["班數", 56],
+  ["負責班數", 72],
+  ["總工時", 72],
+  ["畫休", 72],
+];
+const STATS_W = STATS.reduce((s, x) => s + x[1], 0);
+const NARROW_W = 40;
 const WEEK = [
   ["11/1", "日"],
   ["11/2", "一"],
@@ -16,54 +27,56 @@ const WEEK = [
   ["11/6", "五"],
   ["11/7", "六"],
 ];
-// 每人每天:[種類, line1, line2];種類 f=有班 a=自動排入 o=其他分店 x=時段不可排 h=畫休 e=空
+// 每人每天:[種類, line1, line2];種類 f=有班 a=自動排入 o=其他分店 x=時段不可排 h=畫休 s=店休 e=空
 const GRID = [
   [
-    ["f", "早 ★", "08:30–14:30"],
-    ["f", "早 ★", "08:30–14:30"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
     ["s"],
-    ["a", "晚 ★ 自動", "14:30–22:00"],
-    ["f", "早 ★", "08:30–14:30"],
+    ["a", "晚 ★ · 休 30", "14:30–22:00"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
     ["h", "休", "畫休"],
-    ["f", "早 ★", "08:30–14:30"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
   ],
   [
-    ["f", "早", "08:30–14:30"],
-    ["a", "晚 自動", "14:30–22:00"],
+    ["f", "早 · 休 30", "08:30–14:30"],
+    ["a", "晚 · 休 30", "14:30–22:00"],
     ["s"],
-    ["f", "早 ★", "08:30–14:30"],
-    ["f", "晚", "14:30–22:00"],
-    ["a", "早 自動", "08:30–14:30"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
+    ["f", "晚 · 休 30", "14:30–22:00"],
+    ["a", "早 · 休 30", "08:30–14:30"],
     ["e"],
   ],
   [
-    ["f", "晚 ★", "14:30–22:00"],
+    ["f", "晚 ★ · 休 30", "14:30–22:00"],
     ["o", "已排於新竹店", "14:00–22:00"],
     ["s"],
     ["e"],
-    ["f", "晚 ★", "14:30–22:00"],
-    ["a", "晚 ★ 自動", "14:30–22:00"],
-    ["f", "晚 ★", "14:30–22:00"],
+    ["f", "晚 ★ · 休 30", "14:30–22:00"],
+    ["a", "晚 ★ · 休 30", "14:30–22:00"],
+    ["f", "晚 ★ · 休 30", "14:30–22:00"],
   ],
   [
     ["e"],
-    ["f", "早", "08:30–14:30"],
+    ["f", "早 · 休 30", "08:30–14:30"],
     ["s"],
-    ["f", "早", "08:30–14:30"],
+    ["f", "早 · 休 30", "08:30–14:30"],
     ["f", "補", "13:00–17:00"],
-    ["f", "早 ★", "08:30–14:30"],
-    ["f", "晚", "14:30–22:00"],
+    ["f", "早 ★ · 休 30", "08:30–14:30"],
+    ["f", "晚 · 休 30", "14:30–22:00"],
   ],
   [
     ["f", "補", "13:00–17:00"],
     ["x", "不可排", "09:00–13:00"],
     ["s"],
     ["f", "補 臨", "13:00–17:00"],
-    ["f", "早", "08:30–14:30"],
+    ["f", "早 · 休 30", "08:30–14:30"],
     ["e"],
-    ["f", "早", "08:30–14:30"],
+    ["f", "早 · 休 30", "08:30–14:30"],
   ],
 ];
+// 未對應排班的打卡(人-天 → 張數):王小明 11/5 有班但 3 張打卡沒對應;林美麗 11/1 沒排班臨時來(2 張);張小芳 11/4 排補貨 13:00–17:00,09:02 / 15:10 兩張超出容許範圍(出勤紀錄 SC-12 同一筆)
+const PUNCH = { "0-4": 3, "3-0": 2, "4-3": 2 };
 const SUMMARY = [
   ["需 5 · 已排 5", "ok"],
   ["需 5 · 已排 4", "warn"],
@@ -73,22 +86,24 @@ const SUMMARY = [
   ["需 4 · 已排 4", "ok"],
   ["需 4 · 已排 4", "ok"],
 ];
-async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
+// stats:"full" 四欄、"narrow" 收成一個窄欄 [統計 ▸](檢核面板開著、手機)、"none"
+async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
+  const D0 = opts.from || 0; // 從第幾天開始畫(手機從 11/2)
   const g = AL("VERTICAL", { name: "RosterGrid(組成)", itemSpacing: 0 });
   await fill(g, "paper");
   await stroke(g, "divider");
   const hr = row(0, "header-row", "MIN");
-  add(hr, await headCell("人員", null, frozenW, "sub2", "ts"));
+  add(hr, await headCell("人員", null, frozenW, "sub2", "ts"), null, "FILL");
   for (let d = 0; d < days; d++) {
     const h = await headCell(
-      WEEK[d][0] + " " + WEEK[d][1],
-      d === 2 ? "店休" : null,
+      WEEK[d + D0][0] + " " + WEEK[d + D0][1],
+      d + D0 === 2 ? "店休" : null,
       colW,
       "capSB",
-      d === 2 ? "tdis" : "tp",
-      d === 2 ? "dis" : null,
+      d + D0 === 2 ? "tdis" : "tp",
+      d + D0 === 2 ? "g200" : null,
     );
-    if (opts.dayMenu && d === 1) {
+    if (opts.dayMenu && d + D0 === 1) {
       const r = row(4, "head-top");
       for (const k of [...h.children]) {
         add(r, k);
@@ -99,9 +114,18 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
     }
     add(hr, h, null, "FILL");
   }
-  if (stats)
-    for (const s of ["班數", "負責", "工時", "畫休"])
-      add(hr, await headCell(s, null, 64, "capSB", "ts", "def"), null, "FILL");
+  if (stats === "full")
+    for (const [s, w] of STATS)
+      add(hr, await headCell(s, null, w, "capSB", "ts", "def"), null, "FILL");
+  if (stats === "narrow") {
+    const n = await headCell("統計 ▸", null, NARROW_W, "capSB", "pm", "def");
+    n.name = "stats-narrow";
+    n.children[0].textAutoResize = "HEIGHT";
+    n.children[0].textAlignHorizontal = "CENTER";
+    n.children[0].layoutSizingHorizontal = "FILL";
+    n.paddingLeft = n.paddingRight = 4;
+    add(hr, n, null, "FILL");
+  }
   add(g, hr);
   const sr = row(0, "summary-row", "MIN");
   add(
@@ -114,9 +138,11 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
       "ts",
       "def",
     ),
+    null,
+    "FILL",
   );
   for (let d = 0; d < days; d++) {
-    const [t, k] = SUMMARY[d];
+    const [t, k] = SUMMARY[d + D0];
     const c = {
       ok: "ts",
       warn: "wd",
@@ -131,16 +157,25 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
         colW,
         "capSB",
         c,
-        k === "warn" ? "wl" : k === "off" ? "dis" : "def",
+        k === "warn" ? "wl" : k === "off" ? "g200" : "def",
       ),
       null,
       "FILL",
     );
   }
-  if (stats)
-    for (let i = 0; i < 4; i++)
-      add(sr, await headCell(" ", null, 64, "cap", "ts", "def"), null, "FILL");
+  if (stats === "full")
+    for (const [, w] of STATS)
+      add(sr, await headCell(" ", null, w, "cap", "ts", "def"), null, "FILL");
+  if (stats === "narrow")
+    add(
+      sr,
+      await headCell(" ", null, NARROW_W, "cap", "ts", "def"),
+      null,
+      "FILL",
+    );
   add(g, sr);
+  const marks = [];
+  const punches = [];
   for (let p = 0; p < PEOPLE.length; p++) {
     const r = row(0, "row-" + (p + 1), "MIN");
     add(
@@ -150,41 +185,89 @@ async function rosterGrid(colW, frozenW, days = 7, stats = true, opts = {}) {
       "FILL",
     );
     for (let d = 0; d < days; d++) {
-      const [k, l1, l2] = GRID[p][d];
+      const [k, l1, l2] = GRID[p][d + D0];
       let c;
       if (k === "e") c = await rcell("Empty");
-      else if (k === "s") c = await rcell("Filled", "店休", "", { bg: "dis" });
+      else if (k === "s") c = await rcell("Filled", "店休", "", { bg: "g200" });
       else if (k === "o") c = await rcell("Filled", l1, l2, { bg: "g200" });
-      else if (k === "x") c = await rcell("Filled", l1, l2, { bg: "dis" });
+      else if (k === "x") c = await rcell("Filled", l1, l2, { bg: "g200" });
       else if (k === "h") c = await rcell("Filled", l1, l2, { bg: "il" });
-      else if (opts.sel && p === 1 && d === 3)
+      else if (opts.sel && p === 1 && d + D0 === 3)
         c = await rcell("Selected", l1, l2);
-      else if (opts.published && k === "a")
-        c = await rcell("Filled", l1.replace(" 自動", ""), l2);
       else c = await rcell("Filled", l1, l2);
       add(r, c);
       c.layoutSizingHorizontal = "FIXED";
       c.resize(colW, 56);
-    }
-    if (stats)
-      for (const s of PEOPLE[p].s)
-        add(
+      if (PUNCH[p + "-" + (d + D0)] && !opts.published)
+        punches.push([
           r,
-          await headCell(s, null, 64, "body2", s === "5" ? "ed" : "tp"),
+          frozenW + d * colW + colW,
+          PUNCH[p + "-" + (d + D0)],
+          k === "a",
+        ]);
+      if (k === "a" && !opts.published)
+        marks.push([r, frozenW + d * colW + colW]);
+    }
+    if (stats === "full")
+      for (let i = 0; i < STATS.length; i++) {
+        const s = PEOPLE[p].s[i];
+        const over = i === 3 && s === "5 天";
+        const h = await headCell(
+          s,
           null,
-          "FILL",
+          STATS[i][1],
+          "body2",
+          over ? "ed" : "tp",
         );
+        if (over) h.name = "head-cell 畫休超過上限";
+        add(r, h, null, "FILL");
+      }
+    if (stats === "narrow")
+      add(
+        r,
+        await headCell(" ", null, NARROW_W, "cap", "ts", "def"),
+        null,
+        "FILL",
+      );
     add(g, r);
+  }
+  // 自動排入圖示:格子右上角(四種檢視同一個圖示)
+  for (const [r, right] of marks) {
+    const m = await autoMark();
+    r.appendChild(m);
+    m.layoutPositioning = "ABSOLUTE";
+    m.x = right - m.width - 4;
+    m.y = 4;
+  }
+  // 未對應排班的打卡:格子右下角(右上角留給自動排入圖示,避免壓到文字)
+  for (const [r, right, n, hasAuto] of punches) {
+    const m = await punchMark(n);
+    r.appendChild(m);
+    m.layoutPositioning = "ABSOLUTE";
+    m.x = right - m.width - 4;
+    m.y = 56 - m.height - 3;
   }
   return g;
 }
+// 圖例:items = [[kind, tone, label, symbol?]],用 Draft/LegendItem
 async function legendRow(items) {
   const lg = row(12, "legend");
   lg.layoutWrap = "WRAP";
-  lg.counterAxisSpacing = 4;
-  for (const s of items) add(lg, await T(s, "cap", "ts"));
+  lg.counterAxisSpacing = 8;
+  for (const [k, t, l, s] of items) add(lg, await legend(k, t, l, s));
   return lg;
 }
+const ROSTER_LEGEND = [
+  ["Symbol", "Primary", "負責人", "★"],
+  ["Symbol", "Primary", "沒有套用範本的人力需求", "臨"],
+  ["Auto", "Primary", "自動排入(手動改過就消失)"],
+  ["Square", "Neutral", "店休 / 已排在其他分店 / 時段不可排"],
+  ["Square", "Info", "畫休"],
+  ["Symbol", "Info", "超過人力需求", "+1"],
+  ["Bar", "Error", "違反限制"],
+  ["Bar", "Warning", "提醒"],
+  ["Punch", "Warning", "未對應排班的打卡(張數)"],
+];
 const VIEWS = ["月", "週", "日", "班表"];
 // 工具列:兩列(第一列分店 + 狀態 + 動作;第二列檢視 + 月份 + 顯示欄位 + 檢核)
 async function toolbar(sz, o = {}) {
@@ -211,13 +294,14 @@ async function toolbar(sz, o = {}) {
   const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
   const pg = await pager(o.period || "2026 年 11 月", "sub2");
   const chk = await btn(
-    o.checkLabel || "檢核 ⛔ 1 · ⚠ 3",
+    o.checkLabel || "限制 1 · 提醒 6",
     o.panel ? "Contained" : "Outlined",
     "Small",
-    o.checkOk ? "Success" : "Error",
+    o.checkColor || (o.checkOk ? "Success" : "Error"),
   );
+  // ⚙ 顯示欄位:只在班表檢視,三尺寸都有
   const colsBtn =
-    (o.view || "班表") === "班表" && sz !== "M"
+    (o.view || "班表") === "班表"
       ? await btn("⚙ 顯示欄位", "Text", "Small")
       : null;
   if (sz === "M") {
@@ -235,9 +319,13 @@ async function toolbar(sz, o = {}) {
     const r3 = row(8, "toolbar-2");
     add(r3, view);
     sp(r3);
-    add(r3, chk);
+    if (colsBtn) add(r3, colsBtn);
     add(wrap, r3, "FILL");
-    add(wrap, pg);
+    const r4 = row(8, "toolbar-3");
+    add(r4, pg);
+    sp(r4);
+    add(r4, chk);
+    add(wrap, r4, "FILL");
     return wrap;
   }
   const r1 = row(8, "toolbar-1");
@@ -257,14 +345,14 @@ async function toolbar(sz, o = {}) {
   add(wrap, r2, "FILL");
   return wrap;
 }
-// 檢核面板內容
+// 檢核面板內容:限制在前、各自依規則排序;每項 [查看](捲到那一格並閃爍)
 async function checkPanelBody(p, o = {}) {
   if (o.auto) {
     const s = await box("最近一次自動排班", "il", 12, 6, "md");
     add(
       s,
       await T(
-        "11/1 14:20 自動排班:填入 112 人次 · 補上 18 天的人力需求",
+        "11/9 14:20 填入 112 人次 · 補上 18 天的人力需求",
         "body2",
         "idk",
       ),
@@ -274,17 +362,23 @@ async function checkPanelBody(p, o = {}) {
     add(s, await btn("清除自動排入的人", "Text", "Small"));
     add(p, s, "FILL");
   }
-  add(p, await seg(["全部 4", "擋下 1", "警告 3"], 0, "篩選"));
+  add(p, await seg(["全部 7", "限制 1", "提醒 6"], 0, "篩選"));
   const items = [
-    ["擋下", "Error", "林美麗 本月整天畫休 5 天,超過上限 4 天"],
-    ["警告", "Warning", "人力不足:11/2 晚班 店內櫃台 缺 1 人(可排 2 人)"],
-    ["警告", "Warning", "陳大文 11/6–11/12 連續上班 7 天(最多 6 天)"],
+    ["限制", "Error", "林美麗 本月畫休 5 天,超過上限 4 天"],
+    ["提醒", "Warning", "人力不足:11/2 晚班 店內櫃台 缺 1 人(可排 2 人)"],
+    ["提醒", "Warning", "陳大文 11/6–11/12 連續上班 7 天(最多 6 天)"],
     [
-      "警告",
+      "提醒",
       "Warning",
       "王小明 11/4 晚班到 11/5 早班只休息 10.5 小時(最少 11 小時)",
     ],
   ];
+  // 未對應排班的打卡:等級提醒,不影響發布
+  items.push(
+    ["提醒", "Warning", "未對應排班的打卡:王小明 11/5 · 3 張"],
+    ["提醒", "Warning", "未對應排班的打卡:林美麗 11/1 · 2 張"],
+    ["提醒", "Warning", "未對應排班的打卡:張小芳 11/4 · 2 張"],
+  );
   if (o.auto)
     items.push([
       "填不滿",
@@ -297,7 +391,7 @@ async function checkPanelBody(p, o = {}) {
     const x = await T(t, "body2");
     add(r, x, "FILL");
     x.textAutoResize = "HEIGHT";
+    add(r, await btn("查看", "Text", "Small"));
     add(p, r, "FILL");
   }
-  add(p, await T("點一項,排班表會捲到那一格", "cap", "ts"));
 }

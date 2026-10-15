@@ -13,8 +13,10 @@ async function load(withRoster) {
     KIT +
       "\n" +
       RO +
-      "\nreturn {PAGE,P,fill,stroke,rad,T,TW,AL,add,sp,row,col,card,box,inst,btn,tag,setTxt,selF,tf,cb,rd,swi,tab,tabs,alert,section,chevron,pager,seg,pill,dot,divider,table,shell,fitShell,overlay,dlg,actions,drawerBox,sheetBox,fullDlg,monthGrid,nov,oct,rcell,headCell,tlBlock,sec,put,note,byName,del,W,H" +
-      (withRoster ? ",rosterGrid,legendRow,toolbar,checkPanelBody" : "") +
+      "\nreturn {PAGE,P,fill,stroke,rad,T,TW,AL,add,sp,row,col,card,box,inst,btn,tag,setTxt,selF,tf,cb,rd,swi,tab,tabs,alert,section,chevron,pager,seg,pill,dot,divider,table,shell,fitShell,overlay,dlg,actions,drawerBox,sheetBox,fullDlg,monthGrid,nov,oct,rcell,headCell,tlBlock,sec,put,note,byName,del,W,H,legend,autoMark,punchMark" +
+      (withRoster
+        ? ",rosterGrid,legendRow,toolbar,checkPanelBody,ROSTER_LEGEND,STATS_W,NARROW_W"
+        : "") +
       "};",
   )();
 }
@@ -295,9 +297,11 @@ if (PART === "dayoff") {
 
 // ---------------------------------------------------------------------------
 // PART roster:排班表頁(SC-03 班表檢視、SC-18 檢核面板、SC-33 只能檢視、SC-35 沒有人力需求、SC-15b 已發布、SC-20b 自動排班完成)
-// 電腦凍結欄 138、7 天 × 108 + 統計欄 4 × 64;檢核面板開著時只放 6 天(× 106),面板寬 360。
-// 平板凍結欄 112、7 天 × 116(面板開著時 4 天);手機凍結欄 80(顯示「需求 / 已排」)、3 天 × 92,左右捲動。
-// 手機的檢核面板是不遮擋的底部面板,直接疊在班表檢視上(SC-18 / SC-20b · 手機 …(底部面板,不遮擋))。
+// 第二十三輪:人員欄固定在左、統計欄固定在右(班數、負責班數、總工時、畫休),日期區左右捲動;
+// 檢核面板開著時電腦側欄收成圖示列(NavRail,從平板殼複製)、統計欄收成窄欄 [統計 ▸];手機統計欄一律是窄欄。
+// 電腦凍結欄 138、平板 112、手機 80;日期欄寬依剩下的寬度平均分(電腦 7 天,其餘放得下幾天就幾天)。
+// SC-03 電腦示範畫休欄 hover 明細。手機的檢核面板是不遮擋的底部面板,直接疊在班表檢視上。
+// 畫好後依名稱換掉舊畫面(同位置),回傳被刪除的舊畫面 id。
 if (PART === "roster") {
   const K = await load(true);
   const {
@@ -317,30 +321,39 @@ if (PART === "roster") {
     legendRow,
     toolbar,
     checkPanelBody,
+    ROSTER_LEGEND,
+    STATS_W,
+    NARROW_W,
+    fill,
+    AL,
   } = K;
   const TABS = ["排班表", "畫休總覽", "行事曆", "支援需求單"];
-  const LEG = [
-    "★ 負責人",
-    "臨 = 一次性的人力需求",
-    "自動 = 自動排入(手動改過就消失)",
-    "灰底 = 店休 / 已排於其他分店 / 時段不可排",
-    "藍字 +1 = 超過人力需求",
-    "淡藍底 = 畫休",
-  ];
   const V = {
-    "SC-03": { t: "排班表:班表檢視(草稿)", o: {} },
+    "SC-03": { t: "排班表:班表檢視(草稿)", o: { hover: true } },
     "SC-18": { t: "排班表:檢核面板展開", o: { panel: true } },
     "SC-33": { t: "排班表:只能檢視(沒有編輯權限)", o: { readonly: true } },
     "SC-35": {
       t: "排班表:這個月還沒有人力需求",
       o: { empty: true, checkLabel: "檢核 ✓", checkOk: true },
     },
-    "SC-15b": { t: "排班表:已發布", o: { published: true } },
+    // 已發布:發布時不能有限制,只剩提醒
+    "SC-15b": {
+      t: "排班表:已發布",
+      o: {
+        published: true,
+        checkLabel: "限制 0 · 提醒 2",
+        checkColor: "Primary",
+      },
+    },
     "SC-20b": {
       t: "自動排班完成:檢核面板自動展開",
       o: { panel: true, auto: true },
     },
   };
+  const rail = (await figma.getNodeByIdAsync("290:87689")).children.find((n) =>
+    /NavRail/.test(n.name),
+  );
+  const made = [];
   let mob03 = null;
   for (const sz of ["D", "T", "M"])
     for (const [code, v] of Object.entries(V)) {
@@ -349,7 +362,7 @@ if (PART === "roster") {
         const f = mob03.clone();
         f.name = `${code} · 手機 ${o.auto ? "自動排班完成:檢核面板(底部面板,不遮擋)" : "檢核面板(底部面板,不遮擋)"}`;
         for (const b of f.findAll(
-          (n) => n.type === "INSTANCE" && n.name.startsWith("Button 檢核"),
+          (n) => n.type === "INSTANCE" && n.name.startsWith("Button 限制"),
         ))
           b.setProperties({ Variant: "Contained" });
         const s = await sheetBox(o.auto ? "檢核(自動排班完成)" : "檢核");
@@ -360,6 +373,7 @@ if (PART === "roster") {
         s.y = Math.max(240, f.height - s.height);
         s.resize(390, f.height - s.y);
         put("M", f);
+        made.push(f);
         continue;
       }
       const nm =
@@ -367,8 +381,17 @@ if (PART === "roster") {
           ? `${code} 排班作業:${v.t}`
           : `${code} · ${SZN[sz]} 排班作業:${v.t}`;
       const { f, c } = await shell("manage", sz, nm);
+      // 檢核面板開著:電腦側欄收成圖示列
+      if (sz === "D" && o.panel) {
+        const nav = f.children.find((n) => /SideNav/.test(n.name));
+        const r = rail.clone();
+        f.insertChild(f.children.indexOf(nav), r);
+        nav.remove();
+        r.layoutSizingVertical = "FILL";
+      }
       add(c, await K.tabs(TABS, 0), "FILL");
       add(c, await toolbar(sz, o), "FILL");
+      const avail = c.width - c.paddingLeft - c.paddingRight;
       let mainEl;
       if (o.empty) {
         mainEl = await card("沒有人力需求", 32, 12);
@@ -385,31 +408,31 @@ if (PART === "roster") {
         );
         add(mainEl, await btn("套用範本", "Contained", "Medium"));
       } else {
-        let frozen, colW, days, stats;
-        if (sz === "D") {
-          frozen = 138;
-          stats = !o.panel;
-          days = o.panel ? 6 : 7;
-          colW = o.panel ? 106 : 108;
-        } else if (sz === "T") {
-          frozen = 112;
-          stats = false;
-          days = o.panel ? 4 : 7;
-          colW = o.panel ? 119 : 116;
-        } else {
-          frozen = 80;
-          stats = false;
-          days = 3;
-          colW = 92;
-        }
+        const panelW = o.panel ? (sz === "D" ? 360 : 320) : 0;
+        const gridW = avail - (o.panel ? panelW + 16 : 0);
+        const frozen = { D: 138, T: 112, M: 80 }[sz];
+        const stats = sz === "M" || o.panel ? "narrow" : "full";
+        const sw = stats === "full" ? STATS_W : NARROW_W;
+        const rest = gridW - frozen - sw;
+        // 手機放 2 天(11/2–11/3,含店休),其餘放得下幾天就幾天
+        const days = sz === "M" ? 2 : Math.min(7, Math.floor(rest / 100));
+        const colW = Math.floor(rest / days) - (sz === "M" ? 1 : 0);
         const g = await rosterGrid(colW, frozen, days, stats, {
           published: o.published,
+          from: sz === "M" ? 1 : 0,
         });
         const left = col(8, "roster");
         add(left, g);
-        if (sz !== "D" || o.panel)
-          add(left, await T("← 左右捲動看整個月 →", "cap", "ts"));
-        add(left, await legendRow(sz === "M" ? LEG.slice(0, 4) : LEG), "FILL");
+        add(
+          left,
+          await T(
+            "人員欄、統計欄固定;← 左右捲動看整個月 →",
+            "cap",
+            "ts",
+            "scroll-hint",
+          ),
+        );
+        add(left, await legendRow(ROSTER_LEGEND), "FILL");
         if (o.panel) {
           const b = row(16, "body", "MIN");
           add(b, left, "FILL");
@@ -422,13 +445,52 @@ if (PART === "roster") {
           await checkPanelBody(p, { auto: o.auto });
           add(b, p);
           p.layoutSizingHorizontal = "FIXED";
-          p.resize(sz === "D" ? 360 : 320, p.height);
+          p.resize(panelW, p.height);
           mainEl = b;
         } else mainEl = left;
       }
       add(c, mainEl, "FILL");
       fitShell(f, K.H[sz]);
       put(sz, f);
+      made.push(f);
+      // 畫休欄 hover 明細(電腦 SC-03 示範)
+      if (sz === "D" && o.hover) {
+        const cell = f.findOne((n) => n.name === "head-cell 畫休超過上限");
+        const tip = AL("VERTICAL", {
+          name: "tooltip 畫休明細",
+          itemSpacing: 2,
+          paddingLeft: 8,
+          paddingRight: 8,
+          paddingTop: 6,
+          paddingBottom: 6,
+        });
+        await fill(tip, "g700");
+        tip.cornerRadius = 4;
+        add(tip, await T("整天畫休 3 天 · 時段不可排 2 天", "cap", "paper"));
+        add(
+          tip,
+          await T("(11/5 09:00–13:00、11/12 18:00–22:00)", "cap", "paper"),
+        );
+        f.appendChild(tip);
+        tip.layoutPositioning = "ABSOLUTE";
+        const cb = cell.absoluteBoundingBox;
+        const fb = f.absoluteBoundingBox;
+        tip.x = cb.x - fb.x + cb.width - tip.width;
+        tip.y = cb.y - fb.y + cb.height + 4;
+      }
       if (sz === "M" && code === "SC-03") mob03 = f;
     }
+  // 依名稱換掉舊畫面(同位置)
+  const removed = [];
+  for (const f of made) {
+    const s = f.parent;
+    const old = s.children.find((n) => n !== f && n.name === f.name);
+    if (old) {
+      f.x = old.x;
+      f.y = old.y;
+      removed.push(old.id + " " + old.name);
+      old.remove();
+    }
+  }
+  return { made: made.map((f) => f.id + " " + f.name), removed };
 }
