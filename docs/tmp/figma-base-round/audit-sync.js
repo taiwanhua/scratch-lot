@@ -29,6 +29,11 @@ const PAGES = [
   "97:14",
 ];
 const SIZE = { "電腦 1440": "D", "平板 1024": "T", "手機 390": "M" };
+// 手機收進選單的按鈕:[選單按鈕, 收起來的按鈕](已發布時 [⋯] 只有套用範本)
+const MERGED = [
+  ["+ 新增 ▾", ["+ 人力需求", "+ 新增排班"]],
+  ["⋯", ["套用範本", "自動排班"]],
+];
 const EXEMPT = {
   "ST-40|篩選(1)|D":
     "電腦把篩選條件攤在列表上方(篩選列);平板 / 手機照 RW-01 收成 [篩選] 按鈕 + 抽屜",
@@ -125,6 +130,13 @@ for (const pid of PAGES) {
         for (const b of h.findAll(isBtn)) g[sz].add(label(b));
     }
   for (const [k, g] of Object.entries(groups)) {
+    // 手機把幾顆按鈕收進一個選單(班表的 [+ 新增 ▾]、[⋯]):選單和它收起來的按鈕視為同一組
+    const wide = new Set([...g.D, ...g.T]);
+    for (const [menu, items] of MERGED) {
+      if (g.M.has(menu)) for (const it of items) if (wide.has(it)) g.M.add(it);
+      for (const x of ["D", "T"])
+        if (items.some((it) => g[x].has(it))) g[x].add(menu);
+    }
     const sizes = ["D", "T", "M"].filter((x) => g.has[x]);
     if (sizes.length < 2) continue;
     const all = new Set(sizes.flatMap((x) => [...g[x]]));

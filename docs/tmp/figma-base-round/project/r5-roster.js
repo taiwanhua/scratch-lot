@@ -77,9 +77,10 @@ const GRID = [
 ];
 // 未對應排班的打卡(人-天 → 張數):王小明 11/5 有班但 3 張打卡沒對應;林美麗 11/1 沒排班臨時來(2 張);張小芳 11/4 排補貨 13:00–17:00,09:02 / 15:10 兩張超出容許範圍(出勤紀錄 SC-12 同一筆)
 const PUNCH = { "0-4": 3, "3-0": 2, "4-3": 2 };
+// 11/1:早班 2/2、補貨 1/1、晚班 1/2(缺協同)— 和月 / 週檢視同一份資料
 const SUMMARY = [
-  ["需 5 · 已排 5", "ok"],
-  ["需 5 · 已排 4", "warn"],
+  ["需 5 · 已排 4", "warn", "缺 1 · 可排 1"],
+  ["需 5 · 已排 4", "warn", "缺 1 · 可排 2"],
   ["店休", "off"],
   ["需 4 · 已排 4", "ok"],
   ["需 5 · 已排 5 +1", "over"],
@@ -142,18 +143,18 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     "FILL",
   );
   for (let d = 0; d < days; d++) {
-    const [t, k] = SUMMARY[d + D0];
+    const [t, k, sub] = SUMMARY[d + D0];
     const c = {
       ok: "ts",
       warn: "wd",
       off: "tdis",
-      over: "idk",
+      over: "im",
     }[k];
     add(
       sr,
       await headCell(
         t,
-        k === "warn" ? "缺 1 · 可排 2" : null,
+        k === "warn" ? sub : null,
         colW,
         "capSB",
         c,
@@ -176,6 +177,7 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
   add(g, sr);
   const marks = [];
   const punches = [];
+  const hatches = [];
   for (let p = 0; p < PEOPLE.length; p++) {
     const r = row(0, "row-" + (p + 1), "MIN");
     add(
@@ -191,15 +193,27 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
       else if (k === "s") c = await rcell("Filled", "店休", "", { bg: "g200" });
       else if (k === "o") c = await rcell("Filled", l1, l2, { bg: "g200" });
       else if (k === "x") c = await rcell("Filled", l1, l2, { bg: "g200" });
-      else if (k === "h") c = await rcell("Filled", l1, l2, { bg: "il" });
+      else if (k === "h") c = await rcell("Filled", l1, l2);
       else if (opts.sel && p === 1 && d + D0 === 3)
         c = await rcell("Selected", l1, l2);
       else c = await rcell("Filled", l1, l2);
+      // 第二十四輪:負責人不用 ★,班別簡稱套綠色標籤(RosterCell 的 Lead / LeadText)
+      const lead = /^(\S+) ★\s*(?:·\s*)?(.*)$/.exec(l1 || "");
+      if (lead && k !== "o") {
+        c.setProperties({ "Lead#319:24": true, "LeadText#319:28": lead[1] });
+        await setTxt(c, "line-1", lead[2]);
+      }
       add(r, c);
       c.layoutSizingHorizontal = "FIXED";
       c.resize(colW, 72);
       // 上方留 22px 給右上角的圖示(自動排入、未對應打卡),不蓋到文字
       if (k !== "e") c.children[0].paddingTop = 22;
+      // 畫休:格子透明,底下放灰色斜線底 Draft/HatchBg(和店休 / 不可排的實心灰區分)
+      if (k === "h") {
+        c.fills = [];
+        c.children[0].fills = [];
+        hatches.push([r, c]);
+      }
       if (PUNCH[p + "-" + (d + D0)] && !opts.published)
         punches.push([
           r,
@@ -249,6 +263,15 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     m.x = right - m.width - 4 - (hasAuto ? 18 : 0);
     m.y = 4;
   }
+  for (const [r, c] of hatches) {
+    const h = (await figma.getNodeByIdAsync("319:553")).createInstance();
+    h.name = "hatch-bg 畫休";
+    r.insertChild(0, h);
+    h.layoutPositioning = "ABSOLUTE";
+    h.resize(c.width, c.height);
+    h.x = c.x;
+    h.y = c.y;
+  }
   return g;
 }
 // 圖例:items = [[kind, tone, label, symbol?]],用 Draft/LegendItem
@@ -259,16 +282,17 @@ async function legendRow(items) {
   for (const [k, t, l, s] of items) add(lg, await legend(k, t, l, s));
   return lg;
 }
+// 圖例:畫面上有的標示才放(電腦 7 天全部;平板 / 手機看不到的日子裡才有的標示會拿掉,見 audit-legend.js)
 const ROSTER_LEGEND = [
-  ["Symbol", "Primary", "負責人", "★"],
+  ["Lead", "Success", "負責人(名字或班別套綠底)"],
+  ["Solid", "Primary", "已排的班"],
   ["Symbol", "Primary", "沒有套用範本的人力需求", "臨"],
   ["Auto", "Primary", "自動排入(手動改過就消失)"],
-  ["Square", "Neutral", "店休 / 已排在其他分店 / 時段不可排"],
-  ["Square", "Info", "畫休"],
-  ["Symbol", "Info", "超過人力需求", "+1"],
-  ["Bar", "Error", "違反限制"],
-  ["Bar", "Warning", "提醒"],
   ["Punch", "Warning", "未對應排班的打卡(張數)"],
+  ["Square", "Neutral", "店休 / 已排在其他分店 / 時段不可排"],
+  ["Hatch", "Neutral", "畫休(斜線)"],
+  ["Solid", "Warning", "人力不足的日子"],
+  ["Symbol", "Info", "超過人力需求", "+1"],
 ];
 const VIEWS = ["月", "週", "日", "班表"];
 // 工具列:兩列(第一列分店 + 狀態 + 動作;第二列檢視 + 月份 + 顯示欄位 + 檢核)
@@ -296,7 +320,7 @@ async function toolbar(sz, o = {}) {
   const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
   const pg = await pager(o.period || "2026 年 11 月", "sub2");
   const chk = await btn(
-    o.checkLabel || "限制 1 · 提醒 6",
+    o.checkLabel || "限制 1 · 提醒 7",
     o.panel ? "Contained" : "Outlined",
     "Small",
     o.checkColor || (o.checkOk ? "Success" : "Error"),
@@ -311,11 +335,14 @@ async function toolbar(sz, o = {}) {
     add(r1, org, "FILL");
     add(r1, st);
     add(wrap, r1, "FILL");
+    // 第二十四輪:手機操作列一行 [草稿] … [+ 新增 ▾](人力需求 / 排班)[⋯](套用範本 / 自動排班)[發布];選單 SC-55 / SC-56
     if (acts.length) {
       const r2 = row(8, "toolbar-actions");
-      r2.layoutWrap = "WRAP";
-      r2.counterAxisSpacing = 8;
-      for (const a of acts) add(r2, a);
+      add(r2, st);
+      sp(r2);
+      add(r2, await btn("+ 新增 ▾", "Outlined", "Small"));
+      add(r2, await btn("⋯", "Outlined", "Small"));
+      if (!o.published) add(r2, await btn("發布", "Contained", "Small"));
       add(wrap, r2, "FILL");
     }
     const r3 = row(8, "toolbar-2");
@@ -350,24 +377,33 @@ async function toolbar(sz, o = {}) {
 // 檢核面板內容:限制在前、各自依規則排序;每項 [查看](捲到那一格並閃爍)
 async function checkPanelBody(p, o = {}) {
   if (o.auto) {
-    const s = await box("最近一次自動排班", "il", 12, 6, "md");
+    const s = await box("最近一次自動排班", "def", 12, 6, "md");
     add(
       s,
-      await T(
-        "11/9 14:20 填入 112 人次 · 補上 18 天的人力需求",
-        "body2",
-        "idk",
-      ),
+      await T("11/9 14:20 填入 112 人次 · 補上 18 天的人力需求", "body2", "tp"),
       "FILL",
     );
     s.children[0].textAutoResize = "HEIGHT";
     add(s, await btn("清除自動排入的人", "Text", "Small"));
     add(p, s, "FILL");
   }
-  add(p, await seg(["全部 7", "限制 1", "提醒 6"], 0, "篩選"));
+  // 自動排班完成時多一筆「人力不足」(11/24 補貨),數字要和清單筆數對得上
+  add(
+    p,
+    await seg(
+      o.auto ? ["全部 9", "限制 1", "提醒 8"] : ["全部 8", "限制 1", "提醒 7"],
+      0,
+      "篩選",
+    ),
+  );
   const items = [
     ["限制", "Error", "林美麗 本月畫休 5 天,超過上限 4 天"],
     ["提醒", "Warning", "人力不足:11/2 晚班 店內櫃台 缺 1 人(可排 2 人)"],
+    [
+      "提醒",
+      "Warning",
+      "人力不足:11/11 店慶加開 櫃台 B 13:00–18:00 缺 1 人(負責):可負責的人都已排班",
+    ],
     ["提醒", "Warning", "陳大文 11/6–11/12 連續上班 7 天(最多 6 天)"],
     [
       "提醒",
@@ -383,9 +419,9 @@ async function checkPanelBody(p, o = {}) {
   );
   if (o.auto)
     items.push([
-      "填不滿",
-      "Default",
-      "11/24 補貨 13:00–17:00:沒有可排的人(2 人畫休、1 人時段不可排)",
+      "提醒",
+      "Warning",
+      "人力不足:11/24 補貨 13:00–17:00 缺 1 人(協同):沒有可排的人(2 人畫休、1 人時段不可排)",
     ]);
   for (const [lv, tone, t] of items) {
     const r = row(8, "item", "MIN");

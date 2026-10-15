@@ -1052,3 +1052,81 @@ for (const id of [
   }
 }
 return created;
+
+// ---------- 12~15. 班表用的專案元件(第二十三、二十四輪)----------
+// 只綁共用色票(wowgo-base Primitives / Color、scratch-lot Brand Library 的 primary/*),不寫死顏色。
+// 12. Draft/LegendItem(289:88348):班表所有圖例都用它。Kind × Tone:
+//     Dot 小圓點、Square 底色(外框只為了看得清楚)、Bar 色帶、Dashed 虛線空位、Symbol 文字符號(Symbol 屬性)、
+//     Auto 自動排入圖示、Punch 未對應打卡徽章、Lead 負責人綠標籤、Hatch 畫休斜線、Solid 實心色塊(月檢視人力需求三態)、
+//     More「+N 需求」(外框色 = 收起的需求裡最嚴重的狀態)。屬性 Label、Symbol。
+// 13. Draft/UnmatchedPunchMark(290:97643):時鐘 + 張數(warning/lighter 底、warning/main 框、warning/darker 字),屬性 Count。
+// 14. Draft/LeadTag(319:510):負責人標籤 Size=Small / Medium,success/lighter 底 + success/darker 字,屬性 Label。
+// 15. Draft/HatchBg(319:553):畫休的斜線底(grey/100 底 + grey/300 斜線),放在格子下面,格子設透明。
+{
+  const V = (id) => figma.variables.getVariableByIdAsync(id);
+  const P = async (id) =>
+    figma.variables.setBoundVariableForPaint(
+      { type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } },
+      "color",
+      await V(id),
+    );
+  const C = {
+    successLighter: "VariableID:ac46db2e85d7432f8264076a65ac59b30d3c3df5/6:95",
+    successDarker: "VariableID:ac8c30c7ab66719184ca649b28ae7a18bf1a4303/6:111",
+    grey100: "VariableID:6a1782058955b5f1b570298844375dfdede51f73/6:39",
+    grey300: "VariableID:cc21f0a1f04bee50925591b9ed0af62b06dfbf44/6:47",
+  };
+  // 14. LeadTag
+  const capSB = await figma.getStyleByIdAsync(
+    "S:7cfa2be1b685e1bf7c2d32270742cbf2e41d61d2,286:5",
+  );
+  const sub2 = await figma.getStyleByIdAsync(
+    "S:10d300c90c1c0adee2e8665d86ade62c9d3a0d38,6:398",
+  );
+  const tags = [];
+  for (const [size, st] of [
+    ["Small", capSB],
+    ["Medium", sub2],
+  ]) {
+    await figma.loadFontAsync(st.fontName);
+    const c = figma.createComponent();
+    c.name = "Size=" + size;
+    c.layoutMode = "HORIZONTAL";
+    c.primaryAxisSizingMode = c.counterAxisSizingMode = "AUTO";
+    c.paddingLeft = c.paddingRight = size === "Small" ? 4 : 6;
+    c.paddingTop = c.paddingBottom = size === "Small" ? 0 : 1;
+    c.cornerRadius = 4;
+    c.fills = [await P(C.successLighter)];
+    const t = figma.createText();
+    t.fontName = st.fontName;
+    await t.setTextStyleIdAsync(st.id);
+    t.characters = "王小明";
+    t.fills = [await P(C.successDarker)];
+    t.name = "label";
+    c.appendChild(t);
+    tags.push(c);
+  }
+  const lead = figma.combineAsVariants(tags, page);
+  lead.name = "Draft/LeadTag";
+  const lp = lead.addComponentProperty("Label", "TEXT", "王小明");
+  for (const v of lead.children)
+    v.children[0].componentPropertyReferences = { characters: lp };
+  created.LeadTag = lead.id;
+  // 15. HatchBg
+  const hb = figma.createComponent();
+  hb.name = "Draft/HatchBg";
+  hb.resize(200, 120);
+  hb.clipsContent = true;
+  hb.fills = [await P(C.grey100)];
+  for (let i = -120; i < 200; i += 8) {
+    const l = figma.createRectangle();
+    l.name = "hatch";
+    l.resize(1.5, 240);
+    l.fills = [await P(C.grey300)];
+    l.rotation = -45;
+    l.x = i;
+    hb.appendChild(l);
+  }
+  created.HatchBg = hb.id;
+  // 12 / 13:LegendItem 與 UnmatchedPunchMark 的建法見 nodes.md 第二十三、二十四輪(以 Figma 為準)。
+}

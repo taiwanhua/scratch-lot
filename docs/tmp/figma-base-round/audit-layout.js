@@ -8,7 +8,7 @@
 //   overlapText    絕對定位(或放在非 auto layout 框裡)的元件實例,疊在同一個父層裡較早的節點上,蓋到那些節點的文字(容許 1px)。
 //                  例外:名稱含「浮層」的節點(彈出選單、通知清單這類本來就蓋在頁面上的浮層)本身蓋到下層文字不算;
 //                  浮層「裡面」的元件蓋到浮層內的文字照樣檢查(同「可捲動」的寫法,要用名稱明寫)。
-//   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定(Base Draft 頁不檢查)。
+//   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定,含元件實例內部實際生效的綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
   /TextField|SelectField|^Draft\/Select$|Autocomplete|OrgTreeSelect|DatePicker/;
@@ -221,6 +221,8 @@ for (const s of screens) {
 let basePrimaryBindings = null;
 if (!page.name.startsWith("Base Draft")) {
   basePrimaryBindings = 0;
+  // 連元件實例內部(含隱藏的子節點)一起算:實例沒被品牌覆寫、仍綁底座 primary 的節點也是錯的
+  figma.skipInvisibleInstanceChildren = false;
   const vc = {};
   for (const n of page.findAll(() => true))
     for (const p of ["fills", "strokes"]) {

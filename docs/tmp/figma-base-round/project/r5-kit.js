@@ -229,7 +229,7 @@ async function btn(
   b.name = "Button " + label;
   return b;
 }
-async function tag(label, tone = "Default") {
+async function tag(label, tone = "Grey") {
   const t = await inst("20:7");
   try {
     t.setProperties({ Tone: tone });
