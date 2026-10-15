@@ -73,13 +73,15 @@ for (const node of page.findAll(() => true)) {
         next.push(p);
         continue;
       }
-      next.push(
-        figma.variables.setBoundVariableForPaint(
+      // 換綁變數會把 paint 的不透明度重設成 1(互動狀態的疊色是 8% / 16%),要保留原值
+      next.push({
+        ...figma.variables.setBoundVariableForPaint(
           p,
           "color",
           await importVar(map.get(v.key)),
         ),
-      );
+        opacity: p.opacity ?? 1,
+      });
       dirty = true;
       changed++;
     }

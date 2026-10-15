@@ -8,6 +8,10 @@
 //   overlapText    絕對定位(或放在非 auto layout 框裡)的元件實例,疊在同一個父層裡較早的節點上,蓋到那些節點的文字(容許 1px)。
 //                  例外:名稱含「浮層」的節點(彈出選單、通知清單這類本來就蓋在頁面上的浮層)本身蓋到下層文字不算;
 //                  浮層「裡面」的元件蓋到浮層內的文字照樣檢查(同「可捲動」的寫法,要用名稱明寫)。
+//   overflowTextInInstance 元件實例(含主元件本身)內可見的文字,範圍超出它所在的最近一層「有填色或框線」的父框(容許 1px)。
+//                  直屬父框是 auto layout 時,文字也要在它的內距範圍內(容許 1px;放不下才會被擠出內距)。
+//                  例:圖例樣本小框裡的「+N」貼框底溢出、窄長條裡的人名超出長條。往上找父框時遇到名稱含「可捲動」的框就不算(捲動內容);
+//                  浮層照舊(浮層本身蓋在頁面上不算,浮層裡面的文字照樣檢查)。overflowNodes / clippedText 不看實例內部,這項補上。
 //   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定,含元件實例內部實際生效的綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
@@ -158,6 +162,60 @@ for (const s of screens) {
     }
   }
 }
+// 元件實例(含主元件本身)內的文字超出最近一層有填色或框線的父框(見檔頭)
+const painted = (n) =>
+  ["fills", "strokes"].some(
+    (k) =>
+      k in n &&
+      Array.isArray(n[k]) &&
+      n[k].some((p) => p.visible !== false && (p.opacity ?? 1) > 0),
+  );
+const inComp = (n) => {
+  for (let a = n.parent; a && a.type !== "PAGE"; a = a.parent)
+    if (a.type === "INSTANCE" || a.type === "COMPONENT") return true;
+  return false;
+};
+const overflowInInst = [];
+for (const s of screens) {
+  if (!("findAllWithCriteria" in s)) continue;
+  for (const t of s.findAllWithCriteria({ types: ["TEXT"] })) {
+    if (!t.characters.trim() || !visibleChain(t) || !inComp(t)) continue;
+    let a = t.parent,
+      skip = false;
+    for (; a && a.type !== "PAGE" && a.type !== "SECTION"; a = a.parent) {
+      if (/可捲動/.test(a.name)) {
+        skip = true;
+        break;
+      }
+      if (painted(a)) break;
+    }
+    if (skip || !a || a.type === "PAGE" || a.type === "SECTION") continue;
+    const tb = box(t),
+      ab = box(a);
+    // 直屬父框是 auto layout 時,文字也要在它的內距範圍內(放不下才會被擠出內距,例:固定尺寸的小框)
+    const par = t.parent,
+      pb = box(par);
+    const padded =
+      pb &&
+      "layoutMode" in par &&
+      par.layoutMode !== "NONE" &&
+      t.layoutPositioning !== "ABSOLUTE"
+        ? {
+            x: pb.x + par.paddingLeft,
+            y: pb.y + par.paddingTop,
+            width: pb.width - par.paddingLeft - par.paddingRight,
+            height: pb.height - par.paddingTop - par.paddingBottom,
+          }
+        : null;
+    if (tb && ab && (!inside(tb, ab) || (padded && !inside(tb, padded))))
+      overflowInInst.push({
+        screen: top(t).name.slice(0, 30),
+        id: t.id,
+        text: t.characters.slice(0, 16),
+        parent: a.name,
+      });
+  }
+}
 const mcName = new Map();
 async function fieldName(i) {
   if (mcName.has(i.id)) return mcName.get(i.id);
@@ -253,9 +311,11 @@ return {
   misalignedRows: misaligned.length,
   overflowNodes: overflow.length,
   overlapText: overlapText.length,
+  overflowTextInInstance: overflowInInst.length,
   basePrimaryBindings,
   clippedSample: clipped.slice(0, 8),
   misalignedSample: misaligned.slice(0, 8),
   overflowSample: overflow.slice(0, 8),
   overlapSample: overlapText.slice(0, 8),
+  overflowInInstanceSample: overflowInInst.slice(0, 12),
 };

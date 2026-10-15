@@ -443,7 +443,7 @@ const CASES = [
     ],
     tip: "李小華 · 08:30–14:30 · ☕ 30 分 · 協同 · 店內櫃台",
     exp: { 157: "早 0–76", 125: "早 0–76" },
-    note: "滑過長條:底色換深一階(primary/lighter → primary/light)、框 primary/dark,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 崗位);已選取:滑過的底色 primary/light + 2px primary/dark 框(框不佔版面);鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深。",
+    note: "滑過長條:原底色上疊 primary/main × 8%、框 primary/main,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 崗位);已選取:疊 primary/main × 16% + 1px primary/main 框;鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深。",
   },
   {
     t: "T-16 滑過留白處",
@@ -563,7 +563,11 @@ async function week(cs, CW, closed, special) {
     }
     // 週檢視長條不放休息(太窄;休息看日檢視、班表格子)
     i.setProperties(pr);
-    if (p.auto) i.setProperties({ Auto: "True" });
+    if (p.auto) {
+      // 自動排入標記(ScheduleAutoMark)在右上角:窄長條把名字往下推,寬長條右側留位
+      i.setProperties({ Auto: "True" });
+      if (w < 40) i.paddingTop = 20;
+    }
     if (p.ix) {
       // 互動狀態的底色 / 框色以變體為準(實例覆寫的品牌色要換掉,之後 brand-rebind 再補綁)
       i.setProperties({ Interaction: p.ix });
@@ -572,8 +576,7 @@ async function week(cs, CW, closed, special) {
       );
       i.fills = m.fills;
       i.strokes = m.strokes;
-      // 已選取的 2px 框不佔版面,窄長條的負責人標籤才不會被切掉
-      if (p.ix === "Selected") i.strokesIncludedInLayout = false;
+      if (p.ix === "Selected") i.strokesIncludedInLayout = false; // 已選取的框不佔版面
     }
     i.resize(w, Yw(b) - Yw(a) - 2);
     i.x = x;

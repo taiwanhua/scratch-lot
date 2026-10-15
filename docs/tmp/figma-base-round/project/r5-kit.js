@@ -517,6 +517,23 @@ async function overlay(bg, name, panel, kind = "dialog", sz = "D") {
   }
   return f;
 }
+// 背景頁之後變高(例:班表加人)時,遮罩 / 全螢幕對話框 / 抽屜要跟著蓋滿,底部面板貼齊底部(audit-sync 的 overlayNotCovering)
+function coverOverlay(f) {
+  const bg = f.children.find((k) => k.name.startsWith("背景:"));
+  if (bg && bg.height > f.height) f.resize(f.width, bg.height);
+  const h = f.height;
+  for (const k of f.children) {
+    if (/bottom-sheet|底部面板/.test(k.name)) k.y = h - k.height;
+    else if (
+      k.name === "scrim" ||
+      k.name.startsWith("背景:") ||
+      /^(full-dialog|drawer)|全螢幕|抽屜/.test(k.name)
+    ) {
+      k.y = 0;
+      k.resize(k.width, h);
+    }
+  }
+}
 async function dlg(title, w, gap = 16) {
   const d = AL("VERTICAL", {
     name: "dialog",

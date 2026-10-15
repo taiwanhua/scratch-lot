@@ -1,7 +1,7 @@
 // Draft/ScheduleTimelineMore + Draft/StatusChip(底座規格 10.11 / 10.5)。在 scratch-lot Screens 的 Base Draft 頁(41:5914)執行,只綁 wowgo-base 變數。
 // ScheduleTimelineMore(408:8012):週模式的「+N」長條(底座規格 10.11 週模式排版):有容器被收起時,當天欄最右邊一條,
 //   寬 20、高度佔滿時間軸(實例依位置改高度);Label「+收起筆數」。底 grey/100;Tone = Neutral(divider 框)/ Warning / Error
-//   × State = Default / Hover(底 grey/200、框換同色系 dark)/ Selected(grey/200 + 2px 同色系 dark 框)。
+//   × State = Default / Hover(疊同色系 main × 8%、框 main)/ Selected(疊 main × 16% + 1px main 框)。
 //   第二十四輪後續之十三起不再有「+N 人」窄條與長條上的小徽章(Size=Strip / Compact、Tone=Success 已刪除)。
 // StatusChip(408:8040):人數 / 彙總等短文字標籤,寬高 hug;Tone = Neutral(grey/100 + divider 細框)/ Warning / Error × State = Default / Hover / Selected;
 //   屬性 Label、Sub(第二行,text/secondary)、HasSub。RosterGrid 群組列 / 彙總列、MonthCalendar 格子內容、時間軸清單浮層的人數標籤都用它。
@@ -57,28 +57,24 @@ const T = async (s, st, c, name) => {
   t.name = name;
   return t;
 };
-// 互動狀態:Hover = 底色換同色系深一階的共用色票(grey/100 → grey/200、warning/lighter → warning/light、error/lighter → error/light),
-//   框換同色系 dark(不疊 action/hover;只用既有色票)。
-//   Selected = 滑過的底色 + 2px 同色系 dark 框(框不佔版面;不疊 action/selected)
-const HOVER_BG = { g100: "g200", wl: "wlight", el: "elight" };
-const state = (c, st, hoverStroke, bg) => {
-  if (st === "Hover") {
-    c.fills = HOVER_BG[bg] ? [P(V[HOVER_BG[bg]])] : [...c.fills, P(V.hover)];
-    c.strokes = [P(V[hoverStroke])];
+// 互動狀態(照 MUI):Hover = 原底色上疊同色系 main × 8%(paint opacity)、框同色系 main;
+//   Selected = 疊同色系 main × 16% + 1px 同色系 main 框。Neutral 用 grey/500、Warning warning/main、Error error/main。
+const state = (c, st, toneMain) => {
+  if (st === "Hover" || st === "Selected") {
+    c.fills = [
+      c.fills[0],
+      { ...P(V[toneMain]), opacity: st === "Hover" ? 0.08 : 0.16 },
+    ];
+    c.strokes = [P(V[toneMain])];
     c.strokeWeight = 1;
-  }
-  if (st === "Selected") {
-    c.fills = [P(V[HOVER_BG[bg]])];
-    c.strokes = [P(V[hoverStroke])];
-    c.strokeWeight = 2;
-    c.strokesIncludedInLayout = false;
+    if (st === "Selected") c.strokesIncludedInLayout = false;
   }
 };
-// 1. ScheduleTimelineMore:[框, 字, Hover 框(同色系 dark)]
+// 1. ScheduleTimelineMore:[框, 字, 互動狀態的同色系 main]
 const TM = {
   Neutral: ["divider", "ts", "g500"],
-  Warning: ["wm", "wd", "wdk"],
-  Error: ["em", "ed", "edk"],
+  Warning: ["wm", "wd", "wm"],
+  Error: ["em", "ed", "em"],
 };
 const mores = [];
 for (const tone of Object.keys(TM))
@@ -98,7 +94,7 @@ for (const tone of Object.keys(TM))
     c.primaryAxisSizingMode = c.counterAxisSizingMode = "FIXED";
     c.resize(20, 120);
     c.appendChild(await T("+1", capSB, tc, "label"));
-    state(c, st, hs, "g100");
+    state(c, st, hs);
     page.appendChild(c);
     mores.push(c);
   }
@@ -111,12 +107,12 @@ for (const v of ms.children)
   };
 ms.description =
   PREFIX +
-  "ScheduleTimeline 週模式的「+N」長條(底座規格 10.11 週模式排版):有容器被收起時,當天欄最右邊一條,寬 20、高度佔滿時間軸 00:00~24:00(實例依位置改高度);Label 寫「+收起筆數」。底 grey/100;Tone 由模組依被收起內容決定:Neutral(divider 框)/ Warning(warning/main 框,收起的有缺協同)/ Error(error/main 框,收起的有缺負責)。State:Default / Hover(底換深一階 grey/200、框換同色系 dark:grey/500 / warning/dark / error/dark)/ Selected(grey/200 + 2px 同色系 dark 框,框不佔版面)。點了回呼模組(例:清單浮層)。";
+  "ScheduleTimeline 週模式的「+N」長條(底座規格 10.11 週模式排版):有容器被收起時,當天欄最右邊一條,寬 20、高度佔滿時間軸 00:00~24:00(實例依位置改高度);Label 寫「+收起筆數」。底 grey/100;Tone 由模組依被收起內容決定:Neutral(divider 框)/ Warning(warning/main 框,收起的有缺協同)/ Error(error/main 框,收起的有缺負責)。State:Default / Hover(grey/100 上疊同色系 main × 8%:Neutral grey/500、Warning warning/main、Error error/main;框同色系 main)/ Selected(疊同色系 main × 16% + 1px 同色系 main 框)。點了回呼模組(例:清單浮層)。";
 // 2. StatusChip:[底, 字, 框, 框加深]
 const TS = {
   Neutral: ["g100", "tp", "divider", "g500"],
-  Warning: ["wl", "wd", null, "wdk"],
-  Error: ["el", "ed", null, "edk"],
+  Warning: ["wl", "wd", null, "wm"],
+  Error: ["el", "ed", null, "em"],
 };
 const chips = [];
 for (const tone of Object.keys(TS))
@@ -138,7 +134,7 @@ for (const tone of Object.keys(TS))
     c.strokesIncludedInLayout = false;
     c.appendChild(await T("負1/1 協1/1", capSB, tc, "label"));
     c.appendChild(await T("缺 1 · 可排 2", cap, "ts", "sub"));
-    state(c, st, hs, bg);
+    state(c, st, hs);
     page.appendChild(c);
     chips.push(c);
   }

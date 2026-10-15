@@ -68,6 +68,11 @@
 20. **浮層**:彈出選單、通知清單這類本來就蓋在頁面上的浮層,節點名稱要含「浮層」(例「通知清單(浮層)」);`audit-layout.js` 的 `overlapText` 不算浮層本身蓋到下層文字,但浮層裡面的元件蓋到浮層內的文字照樣算。不要用改父層的方式躲過檢查。
 21. **圖例和標示一一對應、顏色只用共用色票**:(1)畫面上每個顏色、圖示、符號、線型(實線 / 虛線)都要在同一張畫面的圖例找到外觀一樣的項目;(2)圖例的每一項在這個檢視都會出現;(3)同一個顏色或符號在整個模組只有一個意思;(4)顏色一律綁共用色票變數(wowgo-base Design System、專案 Brand Library),不自創顏色。圖例用 `Draft/LegendItem`,樣本和畫面上的標示同一外觀(實心就實心、虛線就虛線)。`audit-legend.js` 的 `unboundColors`、`legendMismatch` 要是 0;(1)(3)要看意思,每次截圖逐張對。例外:同一個元件狀態用在不同畫面時,圖例文字可以依那個畫面的意思改寫(例:TicketGridLegend 在盤點把「已選」寫成「在(已點)」),顏色和狀態仍一對一;設計這類元件時先盤點所有使用處再定 props。
 
+22. **元件裡的文字不能溢出**:元件實例(含主元件本身)裡的文字要在它所在、最近一層有填色或框線的父框裡;直屬父框是 auto layout 時,也要在內距範圍內(容許 1px)。固定尺寸的小框(圖例樣本、窄長條、狀態標籤、表頭格)放不下時,改內距 / 尺寸或讓文字換行(文字 fill + 固定寬換行,父框 hug 高度),不要靠擠出內距。`audit-layout.js` 的 `overflowTextInInstance` 要是 0(`clippedText` / `overflowNodes` 不看實例內部,這項補上)。
+
+23. **遮罩與全螢幕對話框蓋滿畫面**:有「背景:…」或 scrim 的畫面,scrim、全螢幕對話框(full-dialog)、背景要從頂到底、左到右蓋滿畫面框;抽屜(drawer)從頂到底;底部面板(bottom-sheet)貼齊畫面底部。背景頁之後變高(例:班表加人)時要跟著撐滿(`r5-kit.js` 的 `coverOverlay()`),不能露出背景內容。`audit-sync.js` 的 `overlayNotCovering` 要是 0。
+24. **互動狀態照 MUI**:滑過 = 原底色上疊同色系 main × 8%(同一節點第二層填色、綁變數 + paint opacity),框換同色系 main;已選取 = 疊 main × 16% + 1px main 框(框不佔版面)。長條 primary、白底與 grey 底 grey/500、Warning warning/main、Error error/main;不新增變數、不寫死色碼。`brand-rebind.js` 換綁時保留 paint 不透明度。
+
 ## 驗收稽核 `audit.js`
 
 在 scratch-lot Screens 逐頁執行(一次一頁,把 `PAGE_ID` 換成要查的頁,所有頁平行各跑一次再加總)。

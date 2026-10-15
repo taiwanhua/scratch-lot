@@ -732,3 +732,21 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - `audit-roster.js`:互動狀態(Hover / Focus)的格子底色不比(滑過 grey/100 不是資料差異)。
 - 稽核(全部 0):audit-layout 70:14(197)/ 401:805(17)/ 41:5914(71);audit-legend 70:14 / 401:805;audit-sync;audit-roster 89 格;audit.js 41:5914(baseDraftComponents 36、nonBaseBindingsInBaseDrafts 0)/ 64:14(basePrimaryBindings 0)。
 - **圖例「+N」樣本跑版修正**:`Draft/LegendItem` Kind=More(Neutral 319:655 / Warning 319:659 / Error 319:663)的樣本(ScheduleTimelineMore 實例)原本 20×24、上內距 6,「+N」字溢出框底;改成 24×28、上下 4 左右 3 內距,「+N」在框內貼頂部,和畫面上的「+N」長條同一套 auto layout。班表頁 24 個圖例實例(SC-44 / 60 / 60b / 62 三尺寸)跟著主元件更新,無覆寫尺寸;規則頁沒有圖例。audit-layout 70:14 全 0、audit-legend 70:14 / 401:805 全 0。
+
+### 第二十四輪後續之十五:audit-layout 補「元件內文字溢出」(2026-10-16)
+
+- `audit-layout.js` 新增 `overflowTextInInstance`:元件實例(含主元件本身)內可見的文字,超出最近一層有填色或框線的父框,或超出直屬 auto layout 父框的內距範圍(容許 1px);遇到名稱含「可捲動」的框不算,浮層照舊。只看外框時圖例樣本的舊版(20×24、上內距 6)剛好在 1px 容許內抓不到,加上內距判斷才抓得到(已用舊尺寸驗證)。
+- 第一次跑的數字與修正:
+  - 70:14:61 → 0。月檢視(SC-43 電腦)57 個狀態標籤文字比標籤寬(「早 08:30–14:30 負1/1 協1/1」)→ 標籤文字改 fill + 換行,內容改成「時段」換行「人數」兩行;SC-21 / SC-49a / SC-53 手機對話框職責列的 cell 固定高 24 被「☕ 分」擠出 → hug;SC-49a 手機確認視窗按鈕區固定高 1 → hug(對話框變高到 280)。改完重跑 `r4-layout.js` 貼合畫面高度。
+  - 401:805:0。64:14:0。
+  - 41:5914:32 → 0。`Draft/RosterGrid` 三個變體日期表頭(21 格)上下內距 6 → 3;BS-02a~~d / BS-03 / BS-04b / BS-12 / BS-21 的 `Draft/SelectField` 說明文字超出欄位高 → 實例改 hug;BS-02 / BS-03 的關卡面板(StepEditor)、詳情面板改 hug,列表面板等高,畫面與 Overlay 背景跟著加高 30(兩欄填滿檢查 0);`Draft/ScheduleTimelineBlock` State=Short 兩個變體副標換行被切 → 高度 hug(80 / 98,沒有實例受影響)。
+- 另外看到 Base Draft 頁上幾個元件組彼此重疊(ScheduleTimelineBlock 與 ScheduleTimelineDemand、ScheduleAutoMark 與 BreakMark、ScheduleTimelineDemand 與 ScheduleTimeline、BS-22 與 RosterGrid),是頁面擺放問題(不是本輪改動造成),未處理。
+
+### 第二十四輪後續之十六:互動狀態照 MUI、自動排入標記、日期選擇月曆、遮罩蓋滿(2026-10-16)
+
+- **互動狀態照 MUI**(取代後續之十二 / 十四的「深一階」):滑過 = 原底色上疊同色系 main × 8%(第二層填色,綁變數 + paint opacity)、框同色系 main;已選取 = 疊 main × 16% + 1px main 框(框不佔版面)。ScheduleTimelineBlock(primary/main)、ScheduleTimelineDemand 與 RosterCell(白底,grey/500)、StatusChip / ScheduleTimelineMore(Neutral grey/500、Warning warning/main、Error error/main)的 Hover / Selected 變體共 18 個,使用處實例(班表頁 6、規則頁 6、Base Draft 9)同步;元件說明、SC-60 / SC-61 / T-15 註解改寫;`Interaction-states.js`、`TimelineMore-StatusChip.js`、`r6-timeline-cases.js` 同步。
+  - 發現 `brand-rebind.js` 換綁變數時會把 paint 不透明度重設成 1(疊色變實色,SC-62「+N」選取變整條紅);腳本改成保留原不透明度,所有互動狀態的疊色已重設回 8% / 16%。
+- **自動排入標記**:`Draft/ScheduleTimelineBlock` Auto=True 四個變體的 auto-mark(ScheduleAutoMark 實例)改成絕對定位在右上角(距右 4、距上 4),長條右側留 22 內距;實例的標記覆寫重設(✦ 回來,班表頁 8、規則頁 3、Base Draft 8)。SC-45 晚班李小華長條原本多了一行空白副標(高 44)→ 所有長條實例的空白副標隱藏(班表頁 12、規則頁 14、Base Draft 4),高度回到 26。窄長條(週檢視)的自動排入把名字往下推 20。
+- **日期選擇月曆**(SC-17a / 17b 三尺寸的「MonthCalendar(多選)」、SC-46 手機選日期):特殊日改成 `Draft/Tag` 實例、填色覆寫成 tagPalettes cyan/bg + cyan/text(「店慶」,和行事曆 / 月檢視同一套;選取的淡黃底不變),店休維持灰;格子高度統一(50 / 49),日期數字與標籤左對齊。SC-46 補圖例「特殊日」、底部面板貼齊畫面底部。SC-17 的「將產生 … 個時段」改成無底框的一般文字,和其他內容同一條左邊界。
+- **遮罩蓋滿**:`audit-sync.js` 新增 `overlayNotCovering`(第一次 84 → 0):班表頁桌面 / 平板 Overlay 的 scrim、手機全螢幕對話框、抽屜在背景班表加人變高後沒跟著撐滿 → 全部撐滿;店面管理 ST-09c 背景、ST-36a~~c 底部面板、經銷商 RW-01b 抽屜、Base Draft BS-02b / 02d scrim 一起修。`r5-kit.js` 加 `coverOverlay()`。
+- 稽核(全部 0):audit-layout 70:14(197)/ 401:805(17)/ 41:5914(71)/ 64:14(clippedText、misalignedRows、overflowNodes、overlapText、overflowTextInInstance、basePrimaryBindings);audit-legend 70:14 / 401:805;audit-sync(含 overlayNotCovering);audit-roster 89 格;audit.js 41:5914 / 64:14。

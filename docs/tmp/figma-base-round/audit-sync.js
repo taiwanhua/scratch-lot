@@ -17,6 +17,9 @@
 // 5. 遮罩畫面要有頁面背景(overlayNoPage):有遮罩(半透明黑底或 scrim)的畫面,除了對話框 / 抽屜 / 底部面板外,
 //    要放打開它的那個頁面(子節點「背景:<入口畫面>」或畫面本身的 main / 側欄)。全部專案頁 + Base Draft 都查,數量要是 0。
 //    背景頁裡的標題列不算進第 1 項的按鈕比對。
+// 6. 遮罩 / 全螢幕對話框蓋滿畫面(overlayNotCovering):有「背景:…」或 scrim 的畫面,直屬子節點裡的
+//    scrim、full-dialog(或名稱含「全螢幕」)、背景:… 要從頂到底、左到右蓋滿畫面框;drawer(或含「抽屜」)要從頂到底;
+//    bottom-sheet(或含「底部面板」)要貼齊畫面底部(容許 1px)。背景變高之後遮罩沒跟著撐滿、底下露出背景內容就算。數量要是 0。
 figma.skipInvisibleInstanceChildren = false;
 const PAGES = [
   "65:14",
@@ -97,6 +100,34 @@ const checkOverlay = (pageName, f) => {
       /SideNav|NavRail/.test(k.name),
   );
   if (!page) overlayNoPage.push(`${pageName} ${f.name}`);
+};
+const overlayNotCovering = [];
+const checkCover = (pageName, f) => {
+  if (f.type !== "FRAME" || !f.visible) return;
+  if (!f.children.some((k) => k.name.startsWith("背景:") || k.name === "scrim"))
+    return;
+  for (const c of f.children) {
+    if (!c.visible) continue;
+    const sheet = /bottom-sheet|底部面板/.test(c.name);
+    const drawer = /^drawer|抽屜/.test(c.name);
+    const full =
+      !sheet &&
+      !drawer &&
+      (c.name === "scrim" ||
+        /^full-dialog|全螢幕/.test(c.name) ||
+        c.name.startsWith("背景:"));
+    if (!sheet && !drawer && !full) continue;
+    const bottom = c.y + c.height >= f.height - 1;
+    const ok = sheet
+      ? bottom
+      : c.y <= 1 &&
+        bottom &&
+        (drawer || (c.x <= 1 && c.x + c.width >= f.width - 1));
+    if (!ok)
+      overlayNotCovering.push(
+        `${pageName} ${f.name}:${c.name}(y ${Math.round(c.y)} 高 ${Math.round(c.height)} / 畫面高 ${Math.round(f.height)})`,
+      );
+  }
 };
 const syncDiffs = [],
   exempted = [],
@@ -191,6 +222,7 @@ for (const pid of PAGES) {
     for (const f of s.children) {
       if (f.type === "TEXT") continue;
       checkOverlay(page.name.slice(9), f);
+      checkCover(page.name.slice(9), f);
       const tag = / · 平板/.test(f.name)
         ? "平板 1024"
         : / · 手機/.test(f.name)
@@ -228,10 +260,15 @@ for (const pid of PAGES) {
 {
   const base = await figma.getNodeByIdAsync("41:5914"); // Base Draft / 本輪底座元件(沒有尺寸 Section)
   await base.loadAsync();
-  for (const f of base.children) checkOverlay("Base Draft", f);
+  for (const f of base.children) {
+    checkOverlay("Base Draft", f);
+    checkCover("Base Draft", f);
+  }
 }
 return {
   overlayNoPage: overlayNoPage.length,
+  overlayNotCovering: overlayNotCovering.length,
+  overlayNotCoveringList: overlayNotCovering.slice(0, 20),
   overlayList: overlayNoPage,
   syncDiffs: syncDiffs.length,
   sharedHandDrawn: sharedHandDrawn.length,
