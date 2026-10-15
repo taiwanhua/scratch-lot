@@ -23,4 +23,16 @@ s5.visible = false;
 const k = c.addComponentProperty("ShowLogo", "BOOLEAN", false);
 const logo = c.findChild((n) => n.name === "logoImg");
 if (logo) logo.componentPropertyReferences = { visible: k };
+// Library 側欄的收合鈕沒綁變數(框 #939ea9、« #374151):框改綁 divider(同側欄右框,透明度 0.24),« 改綁 text/secondary
+const tg = c.findOne((n) => n.name === "collapse-toggle");
+if (tg)
+  tg.strokes = [
+    figma.variables.setBoundVariableForPaint(
+      { type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0.24 },
+      "color",
+      await tok("divider"),
+    ),
+  ];
+const chev = tg && tg.findOne((n) => n.type === "TEXT");
+if (chev) chev.fills = [await paint("text/secondary")];
 return { id: c.id };

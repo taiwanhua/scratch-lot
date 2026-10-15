@@ -1,5 +1,5 @@
 // Draft/RosterCell + Draft/RosterGrid(底座規格 10.5)。前置:貼上 _resolve.js。
-// Cell 屬性:State=Empty / Filled / Selected。
+// Cell 屬性:State=Empty / Filled / Selected;Lead(BOOLEAN)+ LeadText(TEXT):時間前面的負責人小標(success/lighter 底、success/darker 字)。
 async function rcell(state) {
   const c = figma.createComponent();
   c.name = "State=" + state;
@@ -27,9 +27,28 @@ async function rcell(state) {
   if (state !== "Empty") {
     slot.fills = [await paint("primary/lighter")];
     await radius(slot, "radius/sm");
+    const row = al("HORIZONTAL", {
+      name: "line-1-row",
+      itemSpacing: 4,
+      counterAxisAlignItems: "CENTER",
+    });
+    add(slot, row, "FILL");
+    const chip = al("HORIZONTAL", {
+      name: "lead-chip",
+      paddingLeft: 4,
+      paddingRight: 4,
+    });
+    chip.fills = [await paint("success/lighter")];
+    chip.cornerRadius = 4;
     add(
-      slot,
+      chip,
+      await txt("早", "Caption/SemiBold", "success/darker", "lead-text"),
+    );
+    add(row, chip);
+    add(
+      row,
       await txt("09:00–17:00", "Caption/SemiBold", "text/primary", "line-1"),
+      "FILL",
     );
     add(slot, await txt("櫃台 A", "Caption", "text/secondary", "line-2"));
   }
@@ -41,6 +60,18 @@ const rs = figma.combineAsVariants(
   figma.currentPage,
 );
 rs.name = "Draft/RosterCell";
+{
+  const kL = rs.addComponentProperty("Lead", "BOOLEAN", false);
+  const kT = rs.addComponentProperty("LeadText", "TEXT", "早");
+  for (const v of rs.children) {
+    const chip = v.findOne((n) => n.name === "lead-chip");
+    if (!chip) continue;
+    chip.componentPropertyReferences = { visible: kL };
+    v.findOne((n) => n.name === "lead-text").componentPropertyReferences = {
+      characters: kT,
+    };
+  }
+}
 rs.layoutMode = "HORIZONTAL";
 rs.itemSpacing = 16;
 rs.paddingLeft = rs.paddingRight = rs.paddingTop = rs.paddingBottom = 16;

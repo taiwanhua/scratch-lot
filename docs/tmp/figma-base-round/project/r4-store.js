@@ -153,7 +153,7 @@ if (PART === "36") {
             n.findOne((t) => t.type === "TEXT" && t.characters === "045"),
         );
         const tip = set.defaultVariant.createInstance();
-        tip.name = "tooltip(滑過虛線格子)";
+        tip.name = "tooltip(滑過虛線格子,浮層)"; // 浮層:蓋在格子上是預期的(README 第 20 條)
         for (const t of tip.findAll((x) => x.type === "TEXT"))
           await setT(t, "在店外攤位");
         f.appendChild(tip);

@@ -27,6 +27,8 @@
    - `Draft/AdminSideNav` 的**頂層備用槽加到 8 個**(現在只有 2 個,放不下專案的 8 個頂層模組);加完後 scratch-lot 的 `Draft/ScratchLotSideNav` 改用底座側欄實例。
    - 底座參考畫面「Screen / Admin 資料範圍」的兩張舊規則卡換成 `Draft/DataScopeRuleCard` 實例(scratch-lot 7:10 已先換,實例 59:1847 / 59:2033),旁邊的註記卡「合成規則與資料影響」依新卡內容改寫。
 5. 在 scratch-lot Screens 接受 Library 更新,把畫面上本地草稿元件的實例用 `swapComponent` 換成 Library 同名元件(屬性名相同,覆寫會保留),最後刪除「Base Draft / 本輪底座元件」頁的本地草稿。
+6. **標籤色票變數 tagPalettes**(底座規格 10.7):在 wowgo-base Design System Library 新增變數集合 `tagPalettes`,和 scratch-lot 本機的 `Draft/tagPalettes` **同名同結構**(10 組 `blue / cyan / green / lime / yellow / orange / red / pink / purple / grey` × `bg / text`;mode `Light` / `Dark`;bg scopes `FRAME_FILL` + `SHAPE_FILL`、text scopes `TEXT_FILL`;色值見 `Base-ref.js` 的 `TAG_PALETTES`,深色組文字對底色都達 WCAG AA)。base 模式重建時 `tagPalettes()` 直接建在本檔。發布後,在 scratch-lot 把 Base Draft 與專案頁**所有綁 `Draft/tagPalettes` 的節點改綁 Library 的 `tagPalettes` 同名變數**,再刪掉本機的 `Draft/tagPalettes`。
+   - **回收驗收**:`audit.js` 每一頁的 `draftTokenBindings` 都是 0(沒有節點還綁著 `Draft/` 開頭的本機集合),且本機已沒有 `Draft/tagPalettes`。
 
 ## 每次改圖的固定流程(每次派工都附上)
 
@@ -127,6 +129,7 @@
 
 10. **PageTabs 捲動邊緣的漸層**:BS-15b 的漸層暫用白色(漸層停點不能綁變數),搬回底座時改用 bg/paper 的色值。
 11. **ScheduleTimeline**:示範文字已改成中性內容(櫃台 A、早班),表頭改用現有 Draft/TableHeaderCell,區塊文字不截斷(第二十二輪)。
+12. **標籤色票先用本機變數**:Library 還沒有 tagPalettes,BS-13 的色票先綁 scratch-lot 本機集合 `Draft/tagPalettes`(過渡用,`audit.js` 的 `draftTokenBindings` 會列出這些節點,現階段只回報、不算錯)。回收時照「搬回底座的方法」第 6 步在 Library 新增同名集合、改綁、刪本機集合;回收後 `draftTokenBindings` 必須是 0。
 
 ## 專案畫面(scratch-lot 專屬):正本是 Figma
 

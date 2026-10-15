@@ -4,6 +4,8 @@
 // nonBaseBindingsInBaseDrafts 任何時候都應為 0(底座草稿只能綁 wowgo-base 的變數)。
 // basePrimaryBindings(Base Draft 以外的頁)任何時候都應為 0(專案頁的主色要綁 scratch-lot Brand Library)。
 // baseScreensNotFromRef、nonBaseInBaseScreens(Base Draft 頁)任何時候都應為 0:參考畫面以現有底座畫面為底、只綁底座變數。
+// draftTokenBindings:綁到本機「Draft/」開頭變數集合(例 Draft/tagPalettes,Library 還沒有的過渡變數)的節點數。
+//   現階段只回報、不算錯(上面兩項 nonBase* 也不把它算進去);回收到 wowgo-base 後改綁 Library 的同名集合,這一項必須是 0。
 // devTextInScreens 任何時候都應為 0:畫面框內不能有設計稿編號、規格章節號、開發用說明(畫圖檢查清單 9);註解放在畫面框外。
 const PAGE_ID = "41:5914";
 const MARKER = "本輪草稿"; // 底座草稿 description 的固定前綴「【底座・本輪草稿,…】」
@@ -39,6 +41,18 @@ for (const i of instances) {
 
 // 底座草稿內的變數綁定都要來自 wowgo-base
 const collectionKeyCache = {};
+const draftCol = {}; // 變數 id → 是否屬於本機 Draft/ 集合
+async function isDraftVar(varId) {
+  if (varId in draftCol) return draftCol[varId];
+  const v = await figma.variables.getVariableByIdAsync(varId);
+  const col =
+    v &&
+    (await figma.variables.getVariableCollectionByIdAsync(
+      v.variableCollectionId,
+    ));
+  return (draftCol[varId] =
+    !!col && !col.remote && col.name.startsWith("Draft/"));
+}
 async function collectionKeyOf(varId) {
   if (collectionKeyCache[varId] !== undefined) return collectionKeyCache[varId];
   const v = await figma.variables.getVariableByIdAsync(varId);
@@ -75,7 +89,7 @@ for (const d of baseDrafts) {
     }
     for (const id of ids) {
       const key = await collectionKeyOf(id);
-      if (!BASE_COLLECTIONS.includes(key))
+      if (!BASE_COLLECTIONS.includes(key) && !(await isDraftVar(id)))
         nonBase.push({ node: n.id, name: n.name, var: id, collection: key });
     }
   }
@@ -185,15 +199,34 @@ if (page.name.startsWith("Base Draft")) {
         if (!(p in n) || !Array.isArray(n[p])) continue;
         for (const paint of n[p]) {
           const id = paint.boundVariables?.color?.id;
-          if (id && !BASE_COLLECTIONS.includes(await collectionKeyOf(id)))
+          if (
+            id &&
+            !BASE_COLLECTIONS.includes(await collectionKeyOf(id)) &&
+            !(await isDraftVar(id))
+          )
             nonBaseInBaseScreens++;
         }
       }
   }
 }
 
+// 綁到本機 Draft/ 變數集合的節點(過渡用,回收後要是 0)
+let draftTokenBindings = 0;
+for (const n of page.findAll(() => true)) {
+  let hit = false;
+  for (const p of ["fills", "strokes"]) {
+    if (!(p in n) || !Array.isArray(n[p])) continue;
+    for (const paint of n[p]) {
+      const id = paint.boundVariables?.color?.id;
+      if (id && (await isDraftVar(id))) hit = true;
+    }
+  }
+  if (hit) draftTokenBindings++;
+}
+
 return {
   page: page.name,
+  draftTokenBindings,
   baseScreensNotFromRef: baseScreensNotFromRef.length,
   baseScreensSample: baseScreensNotFromRef.slice(0, 10),
   nonBaseInBaseScreens,

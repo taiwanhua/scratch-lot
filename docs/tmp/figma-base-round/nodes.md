@@ -591,3 +591,4 @@
 - 時間軸長條顏色:新畫的 ScheduleTimelineBlock 等底座草稿實例內部仍綁 wowgo-base primary(顯示橘桃色),重跑 brand-rebind(班表頁 116 處,含背景複本)改成 scratch-lot Brand Library primary。
 - `audit-legend.js` 改用解析後的實際色值比對(同名變數在底座與品牌 Library 顏色不同);MARK 判斷改用「色值 | 變數名稱」對,同色值的 bg/default 不算標示。`audit-layout.js` 的 basePrimaryBindings 連隱藏的實例子節點一起算。
 - 週檢視「+N 需求」改放在當天日期表頭右邊(點了切到那天的日檢視);平板 11/11 表頭縮成「11/11 三」,店慶名稱寫在那一欄頂端。11/11 那一欄加特殊日底色(info/lighter),圖例加「特殊日」;這週沒有自動排入,圖例拿掉「自動排入」。
+- 補(色票):收合側欄右框(BS-02a / c、BS-03、BS-12、BS-21、BS-14 與 BS-02b / d 背景)改綁 divider;`Draft/AdminSideNav+`(272:7145)收合鈕框綁 divider、« 綁 text/secondary。BS-13 色票 26 處改綁本機變數集合 `Draft/tagPalettes`(VariableCollectionId:341:97598,20 個變數,Light / Dark)。

@@ -619,25 +619,22 @@ if (PART === 2) {
 }
 
 // 色票(底座規格 10.7):草稿暫用色碼,重建時新增 tagPalettes 變數
+// 標籤色票(底座規格 10.7):綁變數集合 tagPalettes(scratch-lot 先用本機 Draft/tagPalettes,見 Base-ref.js 的 tagPalettes())
 const PAL = [
-  ["藍", "#E3F2FD", "#0D47A1"],
-  ["青", "#E0F7FA", "#006064"],
-  ["綠", "#E8F5E9", "#1B5E20"],
-  ["萊姆", "#F1F8E9", "#33691E"],
-  ["黃", "#FFF8E1", "#7A5B00"],
-  ["橘", "#FFF3E0", "#9A3B00"],
-  ["紅", "#FFEBEE", "#B71C1C"],
-  ["粉", "#FCE4EC", "#880E4F"],
-  ["紫", "#F3E5F5", "#4A148C"],
-  ["灰", "#F5F5F5", "#424242"],
+  ["藍", "blue"],
+  ["青", "cyan"],
+  ["綠", "green"],
+  ["萊姆", "lime"],
+  ["黃", "yellow"],
+  ["橘", "orange"],
+  ["紅", "red"],
+  ["粉", "pink"],
+  ["紫", "purple"],
+  ["灰", "grey"],
 ];
-const hex = (h) => ({
-  r: parseInt(h.slice(1, 3), 16) / 255,
-  g: parseInt(h.slice(3, 5), 16) / 255,
-  b: parseInt(h.slice(5, 7), 16) / 255,
-});
 async function palChip(name) {
-  const p = PAL.find((x) => x[0] === name);
+  const key = PAL.find((x) => x[0] === name)[1];
+  const tv = await tagPalettes();
   const c = H(0, {
     name: "tag:" + name,
     paddingLeft: 8,
@@ -645,10 +642,15 @@ async function palChip(name) {
     paddingTop: 2,
     paddingBottom: 2,
   });
-  c.fills = [{ type: "SOLID", color: hex(p[1]) }];
+  const solid = { type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } };
+  c.fills = [
+    figma.variables.setBoundVariableForPaint(solid, "color", tv[key + "/bg"]),
+  ];
   c.cornerRadius = 4;
   const t = await T(name, "Caption/SemiBold");
-  t.fills = [{ type: "SOLID", color: hex(p[2]) }];
+  t.fills = [
+    figma.variables.setBoundVariableForPaint(solid, "color", tv[key + "/text"]),
+  ];
   add(c, t);
   return c;
 }
@@ -949,7 +951,7 @@ if (PART === 3) {
     );
     await noteOut(
       sh.s,
-      "色票 10 組,每組有淺色 / 深色模式的底色與文字色;只能從色票選,不能輸入色碼。草稿暫用色碼,搬回底座時新增 tagPalettes 變數。",
+      "色票 10 組,每組有淺色 / 深色模式的底色與文字色;只能從色票選,不能輸入色碼。色票綁變數集合 tagPalettes(草稿階段是本機的 Draft/tagPalettes,回收時改綁 Library)。",
     );
     await refNote(sh, "選項表格加「顏色」欄(選填,色票代號);點顏色開色票選單。");
     fin(sh);

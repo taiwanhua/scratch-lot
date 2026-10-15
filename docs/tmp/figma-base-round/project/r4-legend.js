@@ -35,9 +35,13 @@ const LABEL = {
   Lost: "待查·遺失",
   Selected: "已選",
 };
+// 圖例每一項都要在這張畫面出現(README 第 21 條):ST-36c(其他收銀點)沒有本班售出 / 在別的收銀點的格子;
+// IN-03 示範的本沒有報廢的張;IN-03 整本待查時只有待查·遺失。
 const FIXED = [
+  [/^ST-36c/, ["未售", "已售", "已選"]],
   [/^ST-36/, ["未售", "已售", "本班售出", "在別的收銀點", "已選"]],
-  [/^IN-03/, ["未售", "已售", "跳號", "報廢", "待查·遺失", "已選"]],
+  [/^IN-03 本的詳情頁\(整本待查/, ["待查·遺失"]],
+  [/^IN-03/, ["未售", "已售", "跳號", "待查·遺失", "已選"]],
   [/^ST-09a/, ["未售", "已選"]],
   [/^ST-09c/, ["未分配", "跳號", "已選", "已分配"]],
 ];
@@ -115,7 +119,8 @@ for (const s of screens) {
       for (const r of rows) r.remove();
     }
     let on = new Set([...present].map((x) => LABEL[x]));
-    for (const [re, list] of FIXED) if (re.test(s.name)) on = new Set(list);
+    const fx = FIXED.find(([re]) => re.test(s.name)); // 第一個符合的規則為準
+    if (fx) on = new Set(fx[1]);
     // 拿掉文字圖例
     const P = g.parent;
     for (const sib of [...P.children])

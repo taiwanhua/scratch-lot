@@ -99,6 +99,58 @@ async function rebase(root) {
   }
   return n;
 }
+// 現有畫面(與 Library 側欄收合版)裡沒綁變數的顏色,依實際色值換成語意對的底座變數(audit-legend 的 unboundColors)。
+// 只收錄確定的對應;找不到語意對應的色值不硬套,留給 audit 列出。
+const KNOWN_COLORS = [
+  // 收合側欄右框:和展開側欄同一個 divider(paint 透明度 0.24)
+  { hex: "#939ea9", prop: "strokes", token: "divider", opacity: 0.24 },
+];
+async function bindKnownColors(root) {
+  const hex = (c) =>
+    "#" +
+    [c.r, c.g, c.b]
+      .map((x) =>
+        Math.round(x * 255)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("");
+  let n = 0;
+  for (const x of [root, ...root.findAll(() => true)]) {
+    for (const k of KNOWN_COLORS) {
+      if (!(k.prop in x) || !Array.isArray(x[k.prop])) continue;
+      const ps = x[k.prop];
+      if (
+        !ps.some(
+          (p) =>
+            p.type === "SOLID" &&
+            !p.boundVariables?.color &&
+            hex(p.color) === k.hex,
+        )
+      )
+        continue;
+      const v = await baseVar(k.token);
+      if (!v) continue;
+      try {
+        x[k.prop] = ps.map((p) =>
+          p.type === "SOLID" &&
+          !p.boundVariables?.color &&
+          hex(p.color) === k.hex
+            ? figma.variables.setBoundVariableForPaint(
+                { ...p, opacity: k.opacity ?? p.opacity },
+                "color",
+                v,
+              )
+            : p,
+        );
+        n++;
+      } catch (e) {
+        /* 實例內部不可改的略過 */
+      }
+    }
+  }
+  return n;
+}
 // 現有畫面裡放不下的橫列(例:表單版本的操作欄 4 顆按鈕)改成換行,不超出外框(audit-layout 的 overflowNodes)
 function wrapOverflow(root) {
   for (const f of root.findAll(
@@ -135,6 +187,7 @@ async function refShell(refName, name) {
   const main = s.findOne((n) => n.name === "main");
   await sysNav({ s });
   wrapOverflow(s);
+  await bindKnownColors(s);
   const content = main && main.findOne((n) => n.name === "content");
   return { s, main, content, src: refName };
 }
@@ -539,4 +592,60 @@ async function cardTabs(tabsFrame, labels, active) {
       State: labels[i] === active ? "Active" : "Default",
     });
   }
+}
+
+// 標籤色票變數(底座規格 10.7):10 組 × bg / text,兩個 mode Light / Dark;文字對底色都達 WCAG AA(4.5:1 以上)。
+// scratch 模式:本機集合「Draft/tagPalettes」(沒有就建立);base 模式:wowgo-base 本檔的「tagPalettes」(同名同結構,回收時新增進 Library)。
+// 回傳 { "blue/bg": Variable, "blue/text": Variable, … }。
+const TAG_PALETTES = {
+  // 名稱: [Light bg, Light text, Dark bg, Dark text](對比 Light / Dark)
+  blue: ["#E3F2FD", "#0D47A1", "#0B2A4A", "#90CAF9"], // 7.56 / 8.31
+  cyan: ["#E0F7FA", "#006064", "#04363B", "#80DEEA"], // 6.60 / 8.49
+  green: ["#E8F5E9", "#1B5E20", "#11331A", "#A5D6A7"], // 7.00 / 8.45
+  lime: ["#F1F8E9", "#33691E", "#26330F", "#C5E1A5"], // 6.08 / 9.40
+  yellow: ["#FFF8E1", "#7A5B00", "#3A2F05", "#FFE082"], // 5.95 / 10.22
+  orange: ["#FFF3E0", "#9A3B00", "#3D2306", "#FFCC80"], // 6.38 / 9.85
+  red: ["#FFEBEE", "#B71C1C", "#3E1214", "#EF9A9A"], // 5.75 / 7.50
+  pink: ["#FCE4EC", "#880E4F", "#3D1028", "#F48FB1"], // 7.85 / 7.22
+  purple: ["#F3E5F5", "#4A148C", "#2A1238", "#CE93D8"], // 9.80 / 7.08
+  grey: ["#F5F5F5", "#424242", "#2E2E2E", "#E0E0E0"], // 9.22 / 10.29
+};
+let _tagVars = null;
+async function tagPalettes() {
+  if (_tagVars) return _tagVars;
+  const name = MODE === "base" ? "tagPalettes" : "Draft/tagPalettes";
+  const rgb = (h) => ({
+    r: parseInt(h.slice(1, 3), 16) / 255,
+    g: parseInt(h.slice(3, 5), 16) / 255,
+    b: parseInt(h.slice(5, 7), 16) / 255,
+  });
+  let col = (await figma.variables.getLocalVariableCollectionsAsync()).find(
+    (c) => c.name === name,
+  );
+  if (!col) {
+    col = figma.variables.createVariableCollection(name);
+    col.renameMode(col.modes[0].modeId, "Light");
+    col.addMode("Dark");
+  }
+  const light = col.modes.find((m) => m.name === "Light").modeId;
+  const dark = col.modes.find((m) => m.name === "Dark").modeId;
+  const have = {};
+  for (const id of col.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(id);
+    have[v.name] = v;
+  }
+  _tagVars = {};
+  for (const [k, [lb, lt, db, dt]] of Object.entries(TAG_PALETTES))
+    for (const [part, lv, dv, scopes] of [
+      ["bg", lb, db, ["FRAME_FILL", "SHAPE_FILL"]],
+      ["text", lt, dt, ["TEXT_FILL"]],
+    ]) {
+      const vn = k + "/" + part;
+      const v = have[vn] || figma.variables.createVariable(vn, col, "COLOR");
+      v.setValueForMode(light, rgb(lv));
+      v.setValueForMode(dark, rgb(dv));
+      v.scopes = scopes;
+      _tagVars[vn] = v;
+    }
+  return _tagVars;
 }

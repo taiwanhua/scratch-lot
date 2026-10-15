@@ -23,6 +23,8 @@ const K = {
     "success/main": "6e398ee88e62c802e89a1f46853dfda221b9d453",
     "warning/main": "c4795bb776010891dbb7e03790c05d403ac4c75a",
     "info/main": "54b394efe9085b0dbab1f981e282b66d1a5724cf",
+    "success/lighter": "ac46db2e85d7432f8264076a65ac59b30d3c3df5",
+    "success/darker": "ac8c30c7ab66719184ca649b28ae7a18bf1a4303",
     "action/hover": "9d069b9ff19a0e0bb8e82e1205e9b20fa27eea47",
     "action/selected": "37f80e5dfc92ba565ff5e53f7dd2c91ea8e4a323",
     "action/disabled": "0a2d364f0914dc6806f251b04b3fee8dbeb9f830",
