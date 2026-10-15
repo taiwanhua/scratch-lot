@@ -204,16 +204,25 @@ function fillColumns(frame) {
   const main = frame.findChild((n) => n.name === "main" && n.type === "FRAME");
   const content = main && main.findChild((n) => n.name === "content");
   if (!content) return 0;
-  // 面板裡的工作區(流程設計器的畫布 + 關卡面板、表單設計器的元件 + 版面 + 屬性面板):各欄撐到最高那一欄
-  for (const ws of content.findAll(
+  // 面板裡的工作區(流程設計器的畫布 + 關卡面板、表單設計器的元件 + 版面 + 屬性面板):先依內容量高度
+  const hug = (x) =>
+    (x.layoutSizingVertical =
+      x.layoutMode && x.layoutMode !== "NONE" ? "HUG" : "FIXED");
+  const wss = content.findAll(
     (n) =>
       n.type === "FRAME" &&
       n.layoutMode === "HORIZONTAL" &&
       /Workspace$/.test(n.name),
-  ))
+  );
+  for (const ws of wss) {
+    ws.layoutSizingVertical = "HUG";
     for (const c of ws.children)
-      if (c.type === "FRAME" && c.layoutPositioning !== "ABSOLUTE")
-        c.layoutSizingVertical = "FILL";
+      if (c.type === "FRAME" && c.layoutPositioning !== "ABSOLUTE") {
+        if (c.name === "canvas-col")
+          for (const k of c.children) if (k.type === "FRAME") hug(k);
+        hug(c);
+      }
+  }
   const isPanel = (n) =>
     n.type === "FRAME" &&
     n.visible &&
@@ -242,6 +251,18 @@ function fillColumns(frame) {
   for (const c of cols) {
     c.layoutSizingVertical = "FIXED";
     c.resize(c.width, h);
+  }
+  // 工作區是面板最後一塊時撐滿面板剩下的高度;工作區各欄撐滿工作區(右側屬性面板 / 關卡面板到畫面底部)
+  for (const ws of wss) {
+    if (
+      ws.parent.layoutMode === "VERTICAL" &&
+      cols.includes(ws.parent) &&
+      ws.parent.children[ws.parent.children.length - 1] === ws
+    )
+      ws.layoutSizingVertical = "FILL";
+    for (const c of ws.children)
+      if (c.type === "FRAME" && c.layoutPositioning !== "ABSOLUTE")
+        c.layoutSizingVertical = "FILL";
   }
   return cols.length;
 }

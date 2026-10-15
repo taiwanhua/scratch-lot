@@ -674,6 +674,26 @@ async function listPage(name, title, cols, rows, o = {}) {
   return { sh, cardF, bar, missing };
 }
 
+// 表單設計器:檢查結果原本在工作區下方(整列),改放進左側版面那一欄的底部(同流程設計器的 canvas-col + FlowIssueList),
+// 工作區才能撐到面板底部,右側屬性面板滿版(第二十三輪)
+async function designerIssuesLeft(root) {
+  const ws = root.findOne((n) => n.name === "DesignerWorkspace");
+  const issues = root.findOne((n) => n.name === "IssueList");
+  const canvas = ws && ws.findChild((n) => n.name === "DesignerCanvas");
+  if (!ws || !issues || !canvas) return;
+  const col = V(12, { name: "canvas-col" });
+  ws.insertChild(ws.children.indexOf(canvas), col);
+  col.resize(canvas.width, col.height);
+  col.layoutSizingHorizontal = "FIXED";
+  add(col, canvas, "FILL");
+  add(col, issues, "FILL");
+  await fonts(issues);
+  for (const t of issues.findAll(
+    (n) => n.type === "TEXT" && n.layoutSizingHorizontal === "FILL",
+  ))
+    t.textAutoResize = "HEIGHT";
+}
+
 if (PART === 3) {
   // ---- BS-08 通知鈴、通知清單、通知提示(總覽頁)----
   {
@@ -799,6 +819,7 @@ if (PART === 3) {
   // ---- BS-12 表單設計器:版面區塊收合設定 / BS-21 允許存草稿 ----
   const designer = async (name) => {
     const sh = await refShell("Admin 表單管理 — 表單設計(畫稿隱藏側欄)", name);
+    await designerIssuesLeft(sh.s);
     return {
       sh,
       panel: q(sh.s, "FieldPropertyPanel"),
