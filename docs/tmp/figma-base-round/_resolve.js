@@ -35,6 +35,7 @@ const K = {
     "grey/700": "038b0dd75cf6a8e57d9dcd959b7a8c61d6779f15",
     "grey/300": "cc21f0a1f04bee50925591b9ed0af62b06dfbf44",
     "grey/100": "6a1782058955b5f1b570298844375dfdede51f73",
+    "grey/200": "ff65fc9dfea7c90e278a7909f54de2fea8d50137",
     "warning/lighter": "15f96b616735c06dd4034cd95ca8dc525c66977a",
     "warning/darker": "39797cd1b142124ac07aa6fee4d0d09437d1f01e",
     "error/lighter": "bf0c706be97615148e026899f796626275e5d07a",

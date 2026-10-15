@@ -6,7 +6,7 @@
 //   legendMismatch 只查有圖例(名為 legend 的框)的畫面:
 //                  (1) 圖例樣本(Draft/LegendItem 的 marker / symbol)用的顏色(Square 只看填色),同畫面(不含圖例與背景複本)沒有任何節點用到;
 //                  (2) 同畫面用到的「標示用」顏色(MARK)在圖例找不到同色樣本。標示用節點只算非實例節點,
-//                      以及 MARKERS 元件(時間軸長條 / 容器、班表格子、負責人標籤、斜線底、自動排入 / 未對應打卡圖示)的實例內部。
+//                      以及 MARKERS 元件(時間軸長條 / 容器、班表格子、負責人標籤、斜線底、自動排入 / 未對應打卡圖示、收起窄條 ScheduleTimelineMore、狀態標籤 StatusChip)的實例內部。
 //                  顏色以「解析後的實際色值」比對(同名 primary/lighter 在底座與品牌 Library 是不同顏色,不能只比名稱);
 //                  MARK 以變數名稱判斷是不是標示用顏色。
 const PAGE_ID = "70:14";
@@ -22,7 +22,7 @@ const MARK = [
   "grey/100",
 ];
 const MARKERS =
-  /^Draft\/(ScheduleTimelineBlock|ScheduleTimelineDemand|RosterCell|LeadTag|HatchBg|ScheduleAutoMark|UnmatchedPunchMark)$/;
+  /^Draft\/(ScheduleTimelineBlock|ScheduleTimelineDemand|ScheduleTimelineMore|StatusChip|RosterCell|LeadTag|HatchBg|ScheduleAutoMark|UnmatchedPunchMark)$/;
 figma.skipInvisibleInstanceChildren = true;
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);

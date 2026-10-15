@@ -1079,6 +1079,9 @@ return created;
 //     Auto 自動排入圖示、Punch 未對應打卡徽章、Lead 負責人綠標籤、Hatch 畫休斜線、Solid 實心色塊(月檢視人力需求三態)、
 //     More「+N 需求」(外框色 = 收起的需求裡最嚴重的狀態)、Break 休息。Square Tone=Special = 特殊日(Draft/tagPalettes cyan/bg 底 + cyan/text 框,
 //     行事曆設定的顏色);Solid Tone=Neutral(人力需求已滿)= grey/100 底 + divider 細框。屬性 Label、Symbol。
+//     Kind=More 的樣本是底座 Draft/ScheduleTimelineMore 實例(408:8012;Tone Neutral / Success / Warning / Error);Kind=Dashed Tone=Primary「超出人力需求的時間」
+//     樣本是實線段接虛線段(和長條延伸外觀相同)。
+// 12b.(已刪除)專案的 Draft/MoreStrip 改成底座 Draft/ScheduleTimelineMore(Base Draft 408:8012),所有實例已換過去。
 // 13. Draft/UnmatchedPunchMark(290:97643):時鐘 + 張數(warning/lighter 底、warning/main 框、warning/darker 字),屬性 Count。
 // 14. Draft/LeadTag(319:510):負責人標籤 Size=Small / Medium,success/lighter 底 + success/darker 字,屬性 Label。
 // 15. Draft/HatchBg(319:553):畫休的斜線底(grey/100 底 + grey/300 斜線),放在格子下面,格子設透明。

@@ -347,7 +347,7 @@ if (PART === "roster") {
     },
     "SC-20b": {
       t: "自動排班完成:檢核面板自動展開",
-      o: { panel: true, auto: true, checkLabel: "限制 1 · 提醒 12" },
+      o: { panel: true, auto: true, checkLabel: "限制 1 · 提醒 13" },
     },
   };
   const rail = (await figma.getNodeByIdAsync("290:87689")).children.find((n) =>

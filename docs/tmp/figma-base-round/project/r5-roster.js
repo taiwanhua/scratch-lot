@@ -5,9 +5,13 @@
 const PEOPLE = [
   { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "129:00", "2 天"] },
   { n: "李小華", t: "正職 · 可負責", s: ["19", "4", "120:00", "3 天"] },
-  { n: "陳大文", t: "正職 · 可負責", s: ["19", "10", "152:30", "1 天"] },
+  { n: "陳大文", t: "正職 · 可負責", s: ["20", "10", "159:30", "1 天"] },
   { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "109:00", "5 天"] },
-  { n: "張小芳", t: "兼職", s: ["9", "0", "36:00", "0 天"] },
+  { n: "張小芳", t: "兼職", s: ["11", "0", "48:00", "0 天"] },
+  // 第二十四輪後續之九:11/10 早班 5 人 + 補貨 1 人的示範,新增 3 位兼職(11/1–11/7 沒有排班)
+  { n: "黃志明", t: "兼職", s: ["8", "0", "44:00", "0 天"] },
+  { n: "吳佳玲", t: "兼職", s: ["8", "0", "44:00", "0 天"] },
+  { n: "周家豪", t: "兼職", s: ["8", "0", "44:00", "0 天"] },
 ];
 // 統計欄(固定在右):標題、寬度;畫休超過上限變紅(林美麗)
 const STATS = [
@@ -72,8 +76,10 @@ const GRID = [
     ["f", "臨", "13:00–17:00"],
     ["f", "早 · 休 30", "08:30–14:30"],
     ["x", "不可排", "09:00–13:00"],
-    ["f", "早 · 休 30", "08:30–14:30"],
+    // 11/7 同日兩段:早 08:30–14:30(☕ 30)+ 晚 17:00–22:00 → 10.5 小時,超過「每天最多上班時數」8 小時(提醒)
+    ["f", "早 + 晚 · 休 30", "08:30–14:30\n17:00–22:00"],
   ],
+  ...[0, 1, 2].map(() => [["e"], ["e"], ["s"], ["e"], ["e"], ["e"], ["e"]]),
 ];
 // 未對應排班的打卡(人-天 → 張數):王小明 11/5 有班但 3 張打卡沒對應;林美麗 11/1 沒排班臨時來(2 張);張小芳 11/4 排補貨 13:00–17:00,09:02 / 15:10 兩張超出容許範圍(出勤紀錄 SC-12 同一筆)
 const PUNCH = { "0-4": 3, "3-0": 2, "4-3": 2 };
@@ -104,7 +110,7 @@ const DEMAND = [
       "負1/1 協0/1",
       "負1/1 協1/1",
       "負1/1 協0/1",
-      "負1/1 協1/1",
+      "負1/1 協2/2",
     ],
   ],
   ["臨", [null, null, 0, "協1/1", null, null, null]],
@@ -120,22 +126,20 @@ const SUMMARY = [
   ["需 4 · 已排 4", "full"],
 ];
 // 格子內的小標籤:full 灰(grey/100 + divider 細框,白底上看得見;圖例「人力需求已滿」同外觀)、warn 橘(缺協同)、short 紅(缺負責)
+// 第二十四輪後續之十:改用底座 Draft/StatusChip(408:8040;Tone Neutral = grey/100 + divider 細框 / Warning / Error)
 async function demandChip(lines, tone) {
-  const [bg, c] = {
-    full: ["g100", "tp"],
-    warn: ["wl", "wd"],
-    short: ["el", "ed"],
-  }[tone];
-  const b = await box("demand-chip " + tone, bg, 0, 0);
-  b.paddingLeft = b.paddingRight = 6;
-  b.paddingTop = b.paddingBottom = 2;
-  if (tone === "full") {
-    await stroke(b, "divider");
-    b.strokesIncludedInLayout = false;
-  }
-  add(b, await T(lines[0], "capSB", c));
-  if (lines[1]) add(b, await T(lines[1], "cap", "ts"));
-  return b;
+  const set = await figma.getNodeByIdAsync("408:8040");
+  const t = { full: "Neutral", warn: "Warning", short: "Error" }[tone];
+  const c = set.children
+    .find((v) => v.name === `Tone=${t}, State=Default`)
+    .createInstance();
+  c.setProperties({
+    "Label#408:13": lines[0],
+    "Sub#408:23": lines[1] || " ",
+    "HasSub#408:33": !!lines[1],
+  });
+  c.name = "status-chip";
+  return c;
 }
 // 已排超過需要的人數:標籤旁灰字「+N」
 const overBy = (s) =>
@@ -253,7 +257,15 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     for (let d = 0; d < days; d++)
       add(
         ah,
-        await headCell(" ", null, colW, "cap", "ts", "def"),
+        // 店休整欄灰:人力需求區每一列(含群組標題列)和人員列店休格同一個色票 g200
+        await headCell(
+          " ",
+          null,
+          colW,
+          "cap",
+          "ts",
+          d + D0 === 2 ? "g200" : "def",
+        ),
         null,
         "FILL",
       );
@@ -322,21 +334,23 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
       c.resize(colW, 72);
       // 上方留 22px 給右上角的圖示(自動排入、未對應打卡),不蓋到文字
       if (k !== "e") c.children[0].paddingTop = 22;
+      // 同日兩段(時間兩行)沒有右上角圖示,上方不留空
+      if ((l2 || "").includes("\n")) c.children[0].paddingTop = 6;
       // 畫休:格子透明,底下放灰色斜線底 Draft/HatchBg(和店休 / 不可排的實心灰區分)
       if (k === "h") {
         c.fills = [];
         c.children[0].fills = [];
         hatches.push([r, c]);
       }
-      if (PUNCH[p + "-" + (d + D0)] && !opts.published)
+      // 已發布也一樣顯示(只有狀態與工具列不同;audit-roster.js 逐格比對 SC-03)
+      if (PUNCH[p + "-" + (d + D0)])
         punches.push([
           r,
           frozenW + d * colW + colW,
           PUNCH[p + "-" + (d + D0)],
           k === "a",
         ]);
-      if (k === "a" && !opts.published)
-        marks.push([r, frozenW + d * colW + colW]);
+      if (k === "a") marks.push([r, frozenW + d * colW + colW]);
     }
     if (stats === "full")
       for (let i = 0; i < STATS.length; i++) {
@@ -437,7 +451,7 @@ async function toolbar(sz, o = {}) {
   const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
   const pg = await pager(o.period || "2026 年 11 月", "sub2");
   const chk = await btn(
-    o.checkLabel || "限制 1 · 提醒 11",
+    o.checkLabel || "限制 1 · 提醒 12",
     o.panel ? "Contained" : "Outlined",
     "Small",
     o.checkColor || (o.checkOk ? "Success" : "Error"),
@@ -509,8 +523,8 @@ async function checkPanelBody(p, o = {}) {
     p,
     await seg(
       o.auto
-        ? ["全部 13", "限制 1", "提醒 12"]
-        : ["全部 12", "限制 1", "提醒 11"],
+        ? ["全部 14", "限制 1", "提醒 13"]
+        : ["全部 13", "限制 1", "提醒 12"],
       0,
       "篩選",
     ),
@@ -536,6 +550,12 @@ async function checkPanelBody(p, o = {}) {
       "提醒",
       "Warning",
       "王小明 11/4 晚班到 11/5 早班只休息 10.5 小時(最少 11 小時)",
+    ],
+    // 每天最多上班時數(預設 8 小時、提醒):同一天所有排班加總(扣休息);只有張小芳 11/7 超過
+    [
+      "提醒",
+      "Warning",
+      "每天最多上班時數:張小芳 11/7 排 10.5 小時(最多 8 小時)",
     ],
   ];
   // 未對應排班的打卡:等級提醒,不影響發布

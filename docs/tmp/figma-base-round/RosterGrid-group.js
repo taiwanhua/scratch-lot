@@ -1,4 +1,4 @@
-// Draft/RosterGrid 頂部固定群組(底座規格 10.5)。前置:貼上 _resolve.js;在 Base Draft 頁(41:5914)執行。
+// Draft/RosterGrid 頂部固定群組(底座規格 10.5)。前置:貼上 _resolve.js、先跑 TimelineMore-StatusChip.js;在 Base Draft 頁(41:5914)執行。
 // 取代 Round2-base.js 的表頭彙總列(BOOLEAN Summary):Draft/RosterGrid 改成元件集合,變體 Group=None / Expanded / Collapsed。
 // - Expanded:日期表頭下方、人員列上方的群組(群組標題列「▾ 標題」+ 群組列,每格一個狀態標籤)。
 // - Collapsed:群組收合成一列彙總(「▸ 標題」+ 每天一格,主行 + 副行)。
@@ -37,28 +37,23 @@ async function cell(w, name, bg = "bg/default") {
   return c;
 }
 // 狀態標籤:full 灰底 + divider 細框(白底上看得見)、warn、short
+// 狀態標籤:底座 Draft/StatusChip(TimelineMore-StatusChip.js 先建好;full = Neutral,grey/100 + divider 細框)
 async function chip(lines, tone) {
-  const [bg, fg] = {
-    full: ["grey/100", "text/primary"],
-    warn: ["warning/lighter", "warning/darker"],
-    short: ["error/lighter", "error/darker"],
-  }[tone];
-  const c = al("VERTICAL", {
-    name: "status-chip " + tone,
-    paddingLeft: 6,
-    paddingRight: 6,
-    paddingTop: 2,
-    paddingBottom: 2,
+  const set = figma.currentPage.findOne(
+    (n) => n.type === "COMPONENT_SET" && n.name === "Draft/StatusChip",
+  );
+  const t = { full: "Neutral", warn: "Warning", short: "Error" }[tone];
+  const c = set.children
+    .find((v) => v.name === `Tone=${t}, State=Default`)
+    .createInstance();
+  const k = (p) =>
+    Object.keys(c.componentProperties).find((x) => x.startsWith(p + "#"));
+  c.setProperties({
+    [k("Label")]: lines[0],
+    [k("Sub")]: lines[1] || " ",
+    [k("HasSub")]: !!lines[1],
   });
-  c.fills = [await paint(bg)];
-  c.cornerRadius = 4;
-  if (tone === "full") {
-    c.strokes = [await paint("divider")];
-    c.strokeWeight = 1;
-    c.strokeAlign = "INSIDE";
-  }
-  add(c, await txt(lines[0], "Caption/SemiBold", fg));
-  if (lines[1]) add(c, await txt(lines[1], "Caption", "text/secondary"));
+  c.name = "status-chip";
   return c;
 }
 async function groupRow(name, label, cells) {
@@ -107,6 +102,28 @@ col.name = "Group=Collapsed";
     i + 1,
     await groupRow("group-summary", "▸ 人力需求", [F, W, F, W, S, F, F]),
   );
+}
+// 停用欄(例:店休)整欄同一底色 grey/200:日期表頭、群組列 / 彙總列、人員列都用同一個來源(欄位 disabled 狀態)
+for (const v of [g, exp, col]) {
+  const hrow = v.children.find((r) => r.name === "header-row");
+  const off = hrow.children.find((c) =>
+    c.findOne((t) => t.type === "TEXT" && t.characters === "10/13"),
+  );
+  const sub = off.findAll((t) => t.type === "TEXT")[1];
+  if (sub) sub.characters = "二 · 店休";
+  off.fills = [await paint("grey/200")];
+  for (const r of v.children.filter((r) => r !== hrow)) {
+    const c = r.children.find((x) => Math.abs(x.x - off.x) < 2);
+    if (!c) continue;
+    if (c.type === "INSTANCE") {
+      const wh = [c.width, c.height];
+      c.setProperties({ State: "Empty" });
+      c.resize(...wh);
+    } else
+      for (const k of [...c.children])
+        if (/^status-chip/.test(k.name)) k.remove();
+    c.fills = [await paint("grey/200")];
+  }
 }
 const set = figma.combineAsVariants([g, exp, col], g.parent);
 set.name = "Draft/RosterGrid";
