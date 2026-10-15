@@ -238,10 +238,10 @@ async function sc04eFlow() {
         "FILL",
       );
       add(p, r2(await tf("開始", "09:00"), await tf("結束", "15:00")), "FILL");
-      add(p, await head("負責人", "0~1 筆"), "FILL");
+      add(p, await head("負責人", "0–1 筆"), "FILL");
       add(p, await taskRow(sz, "店內事務與帳目負責", null), "FILL");
       add(p, await btn("+ 負責人", "Text", "Small", "Primary", "Disabled"));
-      add(p, await head("協同", "0~10 筆"), "FILL");
+      add(p, await head("協同", "0–10 筆"), "FILL");
       add(p, await T("沒有協同", "body2", "ts", "empty"));
       add(p, await btn("+ 協同", "Text", "Small"));
       add(p, await cb(false, "同時存成人力需求範本"));
@@ -285,10 +285,10 @@ if (PART === "demand") {
       "FILL",
     );
     add(p, r2(await tf("開始", "13:00"), await tf("結束", "17:00")), "FILL");
-    add(p, await head("負責人", "0~1 筆"), "FILL");
+    add(p, await head("負責人", "0–1 筆"), "FILL");
     add(p, await T("沒有負責人", "body2", "ts", "empty"));
     add(p, await btn("+ 負責人", "Text", "Small"));
-    add(p, await head("協同", "0~10 筆"), "FILL");
+    add(p, await head("協同", "0–10 筆"), "FILL");
     add(p, await taskRow(sz, "店內事務", null), "FILL");
     add(p, await btn("+ 協同", "Text", "Small"));
     // 同時存成人力需求範本:只在新增時出現、預設不勾;勾了的樣子見 SC-21d(r7-sc21d.js)
@@ -307,10 +307,10 @@ if (PART === "demand") {
         "FILL",
       );
       add(p, r2(await tf("開始", "14:30"), await tf("結束", "22:00")), "FILL");
-      add(p, await head("負責人", "0~1 筆"), "FILL");
+      add(p, await head("負責人", "0–1 筆"), "FILL");
       add(p, await taskRow(sz, "店內事務與帳目負責", "李小華 填進"), "FILL");
       add(p, await btn("+ 負責人", "Text", "Small", "Primary", "Disabled"));
-      add(p, await head("協同", "0~10 筆"), "FILL");
+      add(p, await head("協同", "0–10 筆"), "FILL");
       add(p, await taskRow(sz, "店內事務", "還沒有人填", "wd"), "FILL");
       add(p, await btn("+ 協同", "Text", "Small"));
     },

@@ -1,6 +1,6 @@
 // 第二十五輪:設定類畫面(班表頁 70:14,三尺寸)跟著執行任務模型改,沿用畫面裡現有的節點複製改字,不另畫:
 // - SC-20a 自動排班:條件清單最後加「允許同一人同時段填進多筆人力需求(兼多個崗位)」(預設不勾,可拖拉排序)。
-// - SC-22a 人力需求範本 · 補貨:拿掉「預設休息」「負責人數 / 協同人數」,改成負責人 0~1、協同 0~10 兩塊執行任務(補貨:沒有負責人、協同 1 筆「店內事務」)。
+// - SC-22a 人力需求範本 · 補貨:拿掉「預設休息」「負責人數 / 協同人數」,改成負責人 0–1、協同 0–10 兩塊執行任務(補貨:沒有負責人、協同 1 筆「店內事務」)。
 // - SC-10 規則:加「同一時段兼多個崗位」(提醒,預設關閉)、「預設休息」(滿 4 小時 30 分、滿 8 小時 60 分)、「負責人 / 協同預設任務」。
 figma.skipInvisibleInstanceChildren = false;
 const page = await figma.getNodeByIdAsync("70:14");
@@ -94,12 +94,12 @@ for (const f of screens(/^SC-22a /)) {
     b.setProperties({ Size: "Small" });
     return b;
   };
-  nodes.push(await head("負責人(0~1 筆)"));
+  nodes.push(await head("負責人(0–1 筆)"));
   const none = label.clone();
   await setT(none, "沒有負責人");
   nodes.push(none);
   nodes.push(await button("+ 負責人"));
-  nodes.push(await head("協同(0~10 筆)"));
+  nodes.push(await head("協同(0–10 筆)"));
   const tr = figma.createAutoLayout("HORIZONTAL", {
     name: "task-row",
     itemSpacing: 8,

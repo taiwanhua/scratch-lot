@@ -1000,3 +1000,100 @@ if (PART === "21") {
     for (const a of locked) a.locked = true;
   }
 }
+
+if (PART === "22") {
+  // 三尺寸補齊(店面 65:14 / 庫存 91:14 / 叫貨 69:14,2026-10-16)。
+  // 平板 / 手機缺的畫面:複製同頁現有的平板 / 手機畫面當殼,content 換成電腦版的區塊複本,再修寬度與換行。
+  // 對話框:平板 = 遮罩 + 置中對話框(背景是打開它的畫面);手機有表單欄位 → 全螢幕(ScratchLotAppBar Kind=Dialog),
+  // 只有一兩句話的確認 → 置中小視窗(16.0 共用規則)。精靈拆成每步一張,Stepper 在窄螢幕寫「第 N / M 步 · 名稱」。
+  // 用法:改下面 JOBS([來源殼, 新名稱, 電腦版 content 的區塊名稱…, 電腦版畫面, 寬度上限])後執行;跑完接 r4-layout.js、brand-rebind.js。
+  const JOBS = [
+    // 例:ST-28a(交班)用 ST-28b 的平板 / 手機當殼
+    [
+      "143:35619",
+      "ST-28a · 平板 結帳確認申請(交班)",
+      "90:3362",
+      900,
+      ["doc-head", "body", "review(審核區塊)"],
+    ],
+    [
+      "143:35879",
+      "ST-28a · 手機 結帳確認申請(交班)",
+      "90:3362",
+      330,
+      ["doc-head", "body", "review(審核區塊)"],
+    ],
+  ];
+  const C = (f) => f.findOne((n) => n.name === "content" && n.type === "FRAME");
+  const underInst = (n, root) => {
+    for (let a = n.parent; a && a !== root; a = a.parent)
+      if (a.type === "INSTANCE") return true;
+    return false;
+  };
+  // 橫排改成可換行;比上限寬的固定寬框改 FILL;比上限寬的文字改填滿 + 自動長高
+  async function wrapFix(root, limit) {
+    for (const fr of root.findAll(
+      (n) => n.type === "FRAME" && n.layoutMode === "HORIZONTAL",
+    )) {
+      if (underInst(fr, root)) continue;
+      fr.layoutWrap = "WRAP";
+      fr.counterAxisSpacing = 8;
+    }
+    for (const t of root.findAll((n) => n.type === "TEXT")) {
+      const p = t.parent;
+      if (!p || p.layoutMode === "NONE" || underInst(t, root)) continue;
+      if (t.width <= limit) continue;
+      await fnt(t);
+      if (p.layoutMode === "VERTICAL") t.layoutSizingHorizontal = "FILL";
+      else t.layoutGrow = 1;
+      t.textAutoResize = "HEIGHT";
+    }
+  }
+  for (const [src, name, desk, limit, parts] of JOBS) {
+    const s = await figma.getNodeByIdAsync(src);
+    const f = s.clone();
+    s.parent.appendChild(f); // 留在來源的尺寸 Section 裡
+    f.name = name;
+    const c = C(f);
+    for (const k of [...c.children]) k.remove();
+    const D = C(await figma.getNodeByIdAsync(desk));
+    for (const nm of parts) {
+      const x = D.children.find((k) => k.name === nm).clone();
+      c.appendChild(x);
+      x.layoutSizingHorizontal = "FILL";
+    }
+    await wrapFix(c, limit);
+  }
+  // 手機版左右並排的區塊(例 ST-28a 結帳單 + 點鈔)改直排,子節點高度要改回 HUG,不然會互相蓋到。
+  // 欄位實例(TextField / SelectField)有錯誤說明時高度改 HUG(固定 56 會讓說明文字超出,audit-layout 的 overflowTextInInstance)。
+  for (const i of figma.currentPage.findAll(
+    (n) =>
+      n.type === "INSTANCE" && /^(TextField|Draft\/SelectField)$/.test(n.name),
+  )) {
+    const b = i.absoluteBoundingBox;
+    if (
+      b &&
+      i.findOne(
+        (t) =>
+          t.type === "TEXT" &&
+          t.visible &&
+          t.absoluteBoundingBox &&
+          t.absoluteBoundingBox.y + t.absoluteBoundingBox.height >
+            b.y + b.height + 1,
+      )
+    )
+      i.layoutSizingVertical = "HUG";
+  }
+  // Draft/TicketCell 的 Shift / Skipped / Scrapped / Lost / Assigned / Other 變體原本文字沒有綁 No 屬性(換變體後格號變回 012);
+  // 元件已修(九個變體都綁 No)。下面保留為檢查:格子文字和 No 不同時寫回 No。
+  for (const cell of figma.currentPage.findAll(
+    (n) => n.type === "INSTANCE" && n.name === "Draft/TicketCell",
+  )) {
+    const t = cell.findOne((x) => x.type === "TEXT");
+    const v = cell.componentProperties["No#64:0"].value;
+    if (t && t.characters !== v) {
+      await figma.loadFontAsync(t.fontName);
+      t.characters = v;
+    }
+  }
+}
