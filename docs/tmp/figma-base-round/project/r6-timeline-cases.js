@@ -1,7 +1,9 @@
-// 規則示範頁「Screen / 班表時間軸 · 各種情況」(規格 14.5「並排與 +N」「滑過提示」;不是產品畫面)。
-// 在 scratch-lot Screens 執行;放在班表頁(70:14)後面。每個情況一列:標題 | 週檢視電腦一天寬(157px)| 週檢視平板一天寬(120px)| 日檢視(橫向)| 規則說明(框外註解樣式)。
-// 全部用正式元件:Draft/ScheduleTimelineBlock / ScheduleTimelineDemand / ScheduleTimelineMore / StatusChip / LeadTag(長條的 Lead)/ BreakMark(長條的 Break)/ ScheduleAutoMark(Auto=True)。
-// 範本實例取自 SC-44 電腦(週)與 SC-45 電腦(日),顏色綁共用色票。週檢視的並排 / 收起規則(含可放條數 = 1 時的 +N 徽章,情況 16)和 r6-week.js 相同。
+// 規則示範頁「Screen / 班表時間軸 · 各種情況」(底座規格 10.11「週模式排版」、專案規格 14.5「週檢視排版」「滑過提示」;不是產品畫面)。
+// 前置:先貼上 `_timeline-layout.js`(layoutTimeline;和 r6-week.js 同一個函式算位置,不手填座標)。
+// 在 scratch-lot Screens 執行;放在班表頁(70:14)後面。每列一個測試案例 T-xx:週檢視電腦一天寬 157 | 週檢視平板一天寬 125 | 日檢視(橫向,每人一列不收起)| 輸入、預期輸出與規則(框外註解樣式)。
+// 每個案例寫死預期輸出(exp),腳本用 layoutTimeline 算出實際結果並比對,不一致的列在回傳的 mismatch(要回報,不要改 exp 湊答案)。
+// 全部用正式元件:Draft/ScheduleTimelineBlock / ScheduleTimelineDemand / ScheduleTimelineMore / StatusChip / LeadTag / BreakMark / ScheduleAutoMark。
+// 範本實例取自 SC-44 電腦(週)與 SC-45 電腦(日),顏色綁共用色票;畫完跑 brand-rebind.js(PAGE_ID = 本頁)。
 const PAGE_NAME = "Screen / 班表時間軸 · 各種情況";
 const WEEK_SRC = "272:86970",
   DAY_SRC = "272:87899",
@@ -66,15 +68,9 @@ const pk = (i, p) =>
   Object.keys(i.componentProperties).find((k) => k.startsWith(p + "#"));
 const vert = (s) => s.split("").join("\n");
 // ---- 元件與範本 ----
-const strips = await figma.getNodeByIdAsync("408:8012"); // Draft/ScheduleTimelineMore(底座)
-const ST = (t) =>
-  strips.children.find(
-    (c) => c.name === `Tone=${t}, State=Default, Size=Strip`,
-  );
-const STC = (t) =>
-  strips.children.find(
-    (c) => c.name === `Tone=${t}, State=Default, Size=Compact`,
-  );
+const more = await figma.getNodeByIdAsync("408:8012"); // Draft/ScheduleTimelineMore(底座)「+N」長條
+const MORE = (t) =>
+  more.children.find((c) => c.name === `Tone=${t}, State=Default`);
 const tlb = await figma.getNodeByIdAsync("259:4770");
 const BV = (s) =>
   tlb.children.find(
@@ -121,11 +117,23 @@ const D = {
 await figma.loadFontAsync(W.lab.fontName);
 const tipSrc = await figma.getNodeByIdAsync(TIP_SRC);
 // ---- 資料 ----
-// C:人力需求(簡稱 s、名稱 nm、開始 a、結束 b、人數標籤 lab、人 items、Tone、lead / help 需要人數)
+// C:人力需求(id、簡稱 s、名稱 nm、開始 a、結束 b、人數標籤 lab「已排/需求」、人 items、Tone、崗位排序 ord、範本排序 tmpl)
 const P = (n, lead, o = {}) => ({ n, lead, ...o }); // o:s 提早、e 延後、a/b 只上一段、auto、brk(休息分)、ix 互動狀態
 const Vc = (k) => ({ vac: k }); // warn 缺協同 / err 缺負責
-const Dis = (n, label, a, b) => ({ dis: true, n, label, a, b }); // 已排於其他分店 / 時段不可排
-const C = (s, nm, a, b, lab, items, tone = "Normal") => ({
+const Dis = (n, label, a, b) => ({ dis: true, n, label, a, b }); // 已排於其他分店 / 時段不可排(只在日檢視列出)
+const C = (
+  id,
+  s,
+  nm,
+  a,
+  b,
+  lab,
+  items,
+  tone = "Normal",
+  ord = 1,
+  tmpl = 1,
+) => ({
+  id,
   s,
   nm,
   a,
@@ -133,73 +141,33 @@ const C = (s, nm, a, b, lab, items, tone = "Normal") => ({
   lab,
   items,
   tone,
+  ord,
+  tmpl,
+  slots: items.length, // max(需求人數, 已排人數):items 含缺額空位
 });
 const hm = (t) =>
   `${String(Math.floor(t)).padStart(2, "0")}:${t % 1 ? "30" : "00"}`;
 const CASES = [
   {
-    t: "1 一筆需求剛好(早 2/2)",
-    L: [C("早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")])],
-    note: "需求容器高度 = 人力需求時間;每位排班一條長條,寬度平均分配。負責人姓名套綠色標籤。\n點容器 / 長條 → 那筆人力需求對話框;點空白時段 → 新增人力需求。",
+    t: "T-01 剛好放下",
+    G: [C(1, "早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")])],
+    exp: { 157: "早 0–76", 125: "早 0–76" },
+    note: "容器寬 = 20 + 28 × 條數(2 條 = 76);長條寬 26、間隔 2,負責人姓名綠底。",
   },
   {
-    t: "2 一筆需求人多(早 5/5):放不下 → 最後一條「+N 人」",
-    L: [
-      C("早", "早班", 8.5, 14.5, "5/5", [
-        P("陳大文", 1),
-        P("李小華"),
-        P("王小明"),
-        P("黃志明"),
-        P("吳佳玲"),
-      ]),
+    t: "T-02 共用位置(早接晚)",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")]),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [P("陳大文", 1), P("林美麗")]),
     ],
-    note: "每條至少約 28px(名字直排)。電腦一天約 157px 放 4 條、平板約 120px 放 3 條;放不下時,容器最後一條改成「+N 人」窄條(同寬、高度同容器)。\n點「+N 人」= 點容器 → 那筆人力需求對話框(列出全部的人)。",
+    exp: { 157: "早 0–76、晚 0–76", 125: "早 0–76、晚 0–76" },
+    note: "時間不重疊(早班 14:30 結束、晚班 14:30 開始)的容器共用同一位置。",
   },
   {
-    t: "3 兩筆重疊(早 + 補):寬度依人數分配",
-    L: [C("早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")])],
-    R: [C("補", "補貨", 13, 17, "1/1", [P("張小芳")])],
-    note: "同時段有兩筆需求時並排,容器寬度依各自需要的條數分配(每個至少 1 條寬)。",
-  },
-  {
-    t: "4 11/10:早 5/5 + 補 1/1 + 晚 2/2(晚接在早同一欄)",
-    L: [
-      C("早", "早班", 8.5, 14.5, "5/5", [
-        P("陳大文", 1),
-        P("李小華"),
-        P("王小明"),
-        P("黃志明"),
-        P("吳佳玲"),
-      ]),
-      C("晚", "晚班", 14.5, 22, "2/2", [P("林美麗", 1), P("張小芳")]),
-    ],
-    R: [C("補", "補貨", 13, 17, "1/1", [P("周家豪")])],
-    note: "不重疊的需求(早、晚)排在同一欄;只有 2 筆重疊時一律並排(補貨 1 條寬),寬度先補給需要更多條的容器。放不下的容器畫(條數 − 1)人 +「+N 人」(和長條同寬);平板較窄、只放得下 1 條時,畫 1 條長條(負責人優先)+ 小「+N」徽章(見情況 16)。",
-  },
-  {
-    t: "5 三筆同時重疊(11/11 店慶):第 3 筆 → 右側「+N 需求」",
-    L: [
-      C("早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")]),
-      C("晚", "晚班", 14.5, 22, "2/2", [P("陳大文", 1), P("林美麗")]),
-    ],
-    R: [C("補", "補貨", 13, 17, "1/1", [P("張小芳", 0, { e: 18 })])],
-    X: [
+    t: "T-03 缺額佔條",
+    G: [
       C(
-        "臨",
-        "店慶加開",
-        13,
-        18,
-        "負0/1 協1/1",
-        [Vc("err"), P("張小芳")],
-        "Error",
-      ),
-    ],
-    note: "同一時段最多並排兩排容器,第 3 筆起收進當天欄最右邊的「+N 需求」窄條,高度對齊被收起需求的時間;框色取最嚴重(缺負責 = 紅)。\n點「+N 需求」→ 清單浮層(見情況 15);日檢視全部展開。",
-  },
-  {
-    t: "6 缺協同、缺負責:缺額佔一條",
-    L: [
-      C(
+        1,
         "早",
         "早班",
         8.5,
@@ -208,111 +176,147 @@ const CASES = [
         [P("王小明", 1), P("李小華"), Vc("warn")],
         "Warning",
       ),
-      C("晚", "晚班", 14.5, 22, "1/2", [Vc("err"), P("林美麗")], "Error"),
+      C(2, "晚", "晚班", 14.5, 22, "1/2", [Vc("err"), P("林美麗")], "Error"),
     ],
-    note: "缺額也佔一條虛線空位:缺協同 = 橘、缺負責 = 紅;容器框色同。日檢視每個缺額一列。",
+    exp: { 157: "早 0–104、晚 0–76", 125: "早 0–104、晚 0–76" },
+    note: "條數 = max(需求人數, 已排人數):缺額佔一條虛線空位(缺協同橘、缺負責紅),容器框色同;長條順序 負責 → 協同 → 缺額。",
   },
   {
-    t: "7 收起的人含缺額 / 含負責人",
-    L: [
-      C(
-        "早",
-        "早班",
-        8.5,
-        14.5,
-        "4/5",
-        [P("王小明", 1), P("李小華"), P("林美麗"), P("張小芳"), Vc("warn")],
-        "Warning",
-      ),
-      C("晚", "晚班(負責 3)", 14.5, 22, "5/5", [
-        P("陳大文", 1),
-        P("林美麗", 1),
+    t: "T-04 多排(已排 > 需求)",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "3/2", [
         P("王小明", 1),
         P("李小華"),
         P("張小芳"),
       ]),
     ],
-    note: "順序:負責人 → 協同 → 缺額。收起的部分含缺額時「+N 人」框橘(缺負責紅),只含人但有負責人時標綠,其他灰。",
+    exp: { 157: "早 0–104", 125: "早 0–104" },
+    note: "已排 3 人多於需求 2 人時條數取 3(104 寬),人數標籤寫「3/2」,不列入檢核。",
   },
   {
-    t: "8 早到 / 晚走:同一條長條延伸出容器",
-    L: [
-      C("早", "早班", 8.5, 14.5, "2/2", [
-        P("林美麗", 1, { s: 8 }),
-        P("張小芳", 0, { e: 15.5 }),
+    t: "T-05 單筆太寬收起",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "5/5", [
+        P("陳大文", 1),
+        P("李小華"),
+        P("王小明"),
+        P("黃志明"),
+        P("吳佳玲"),
       ]),
     ],
-    note: "超出人力需求的時間由同一條長條直接延伸出容器:淡色底 + 虛線框,和實線段相接(相接側不畫框、不圓角),長度對齊實際時間;容器大小不變。延伸段不可蓋到相鄰容器的文字或長條。",
+    exp: {
+      157: "(無);收起 早 →「+1」灰",
+      125: "(無);收起 早 →「+1」灰",
+    },
+    note: "5 條需 160 寬,比一天欄寬還寬 → 整筆收起(排班長條不單獨收起);當天欄最右邊一條佔滿時間軸的「+N」長條。",
   },
   {
-    t: "9 只上一段(10:00–14:30):長條比容器短",
-    L: [
-      C("早", "早班", 8.5, 14.5, "2/2", [
-        P("王小明", 1),
-        P("李小華", 0, { a: 10, b: 14.5 }),
-      ]),
-    ],
-    note: "只上部分時段時,長條上下(日檢視左右)對齊實際上下班時間,容器其餘時段留白。",
-  },
-  {
-    t: "10 一人一筆排班掛兩筆需求",
-    L: [C("補", "補貨", 13, 17, "1/1", [P("張小芳", 0, { e: 18 })])],
-    R: [C("臨", "店慶加開", 15, 18, "協1/1", [P("張小芳", 0, { s: 13 })])],
-    note: "一筆排班(張小芳 13:00–18:00)同時算進兩筆需求:兩個容器都有她,各自超出容器的時段用延伸段畫出。",
-  },
-  {
-    t: "11 同一天兩段排班(早 + 晚)",
-    L: [
-      C("早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("張小芳")]),
-      C("晚", "晚班", 14.5, 22, "2/2", [
-        P("林美麗", 1),
-        P("張小芳", 0, { a: 17, b: 22 }),
-      ]),
-    ],
-    note: "同一人同一天可有多段排班,各自畫在所屬容器。張小芳 08:30–14:30(☕ 30)+ 17:00–22:00 = 10.5 小時,超過「每天最多上班時數」8 小時 → 檢核面板提醒(時間軸本身不另外標示)。",
-  },
-  {
-    t: "12 ☕ 90 分、負責人綠底、自動排入、臨",
-    L: [C("晚", "晚班", 14.5, 22, "1/1", [P("李小華", 1, { brk: 90 })])],
-    R: [C("臨", "店慶加開", 13, 18, "協1/1", [P("張小芳", 0, { auto: true })])],
-    note: "休息寫「☕ 分鐘」(BreakMark);負責人綠色標籤;自動排入在長條右上角(ScheduleAutoMark,手動改過就消失);沒有套用範本的人力需求簡稱寫「臨」。",
-  },
-  {
-    t: "13 店休、特殊日、已排於其他分店、時段不可排",
-    special: "店慶",
-    L: [
+    t: "T-06 中途放不下收起(11/11)",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("李小華")]),
       C(
-        "早",
-        "早班",
-        8.5,
-        14.5,
-        "1/2",
-        [P("王小明", 1), Dis("陳大文", "已排於新竹店", 8.5, 14.5)],
-        "Warning",
+        3,
+        "補",
+        "補貨",
+        13,
+        17,
+        "1/1",
+        [P("張小芳", 0, { e: 18 })],
+        "Normal",
+        2,
+      ),
+      C(
+        4,
+        "臨",
+        "店慶加開",
+        13,
+        18,
+        "負0/1 協1/1",
+        [Vc("err"), P("張小芳")],
+        "Error",
+        3,
+        99,
+      ),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [P("陳大文", 1), P("林美麗")]),
+    ],
+    exp: {
+      157: "早 0–76、補 76–124、晚 0–76;收起 臨 →「+1」紅",
+      125: "早 0–76、晚 0–76;收起 補、臨 →「+2」紅",
+    },
+    note: "依排序逐一放:早、補放好後,店慶加開在 13:00–18:00 找不到空得下 76 的位置 → 收起;有收起時保留最右邊 24px 重排(電腦可用 133、平板 101),平板補貨也放不下。晚班接在早班同一欄。收起的有缺負責 →「+N」紅框。",
+  },
+  {
+    t: "T-07 後續也放不下(平板 11/10)",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "5/5", [
+        P("陳大文", 1),
+        P("李小華"),
+        P("王小明"),
+        P("黃志明"),
+        P("吳佳玲"),
+      ]),
+      C(3, "補", "補貨", 13, 17, "1/1", [P("周家豪")], "Normal", 2),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [P("林美麗", 1), P("張小芳")]),
+    ],
+    exp: {
+      157: "補 0–48、晚 48–124;收起 早 →「+1」灰",
+      125: "補 0–48;收起 早、晚 →「+2」灰",
+    },
+    note: "已放好的不移動:補貨在 0–48,晚班和補貨重疊只能放 48 起;平板保留 24px 後只剩 101,晚班從 48 起需到 124 放不下 → 也收起。留白落在容器與「+N」長條之間。",
+  },
+  {
+    t: "T-08 同時開始的平手排序",
+    G: [
+      C(
+        3,
+        "盤",
+        "盤點",
+        9,
+        12,
+        "2/2",
+        [P("林美麗", 1), P("黃志明")],
+        "Normal",
+        2,
+        2,
+      ),
+      C(2, "補", "補貨", 9, 13, "1/1", [P("張小芳")], "Normal", 2, 1),
+      C(
+        1,
+        "櫃",
+        "店內櫃台",
+        9,
+        13,
+        "2/2",
+        [P("王小明", 1), P("李小華")],
+        "Normal",
+        1,
+        1,
       ),
     ],
-    closedTablet: true,
-    note: "電腦欄示範特殊日(行事曆設定的顏色,示範 cyan,整欄);平板欄示範店休(整欄 grey/200,不能排班)。日檢視列出不能排的人:已排於其他分店、時段不可排(灰色停用條,點了看原因)。",
-    dayExtra: [Dis("張小芳", "時段不可排", 9, 13)],
+    exp: {
+      157: "櫃 0–76、補 76–124;收起 盤 →「+1」灰",
+      125: "櫃 0–76;收起 補、盤 →「+2」灰",
+    },
+    note: "三筆都 09:00 開始:依崗位排序(櫃台 1 → 補貨 / 盤點 2),同崗位再依範本排序(補貨 1 → 盤點 2),再依建立時間、id;輸入順序打亂結果相同。",
   },
   {
-    t: "14 滑過 / 已選取 + 提示框",
-    L: [
-      C("早", "早班", 8.5, 14.5, "2/2", [
-        P("王小明", 1, { ix: "Selected" }),
-        P("李小華", 0, { ix: "Hover" }),
-      ]),
-    ],
-    tip: "李小華 · 08:30–14:30 · ☕ 30 分 · 協同 · 店內櫃台",
-    note: "電腦 / 平板滑過長條:底疊 action/hover、框加深,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 崗位);已選取:action/selected + 加粗框;鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深,內容看對話框。",
-  },
-  {
-    t: "15 同一時段 7 筆需求:兩個容器 + 「+5 需求」+ 清單浮層",
-    L: [C("櫃", "店內櫃台", 9, 17, "2/2", [P("王小明", 1), P("李小華")])],
-    R: [C("補", "補貨", 9, 13, "1/1", [P("張小芳")])],
-    X: [
-      C("盤", "盤點", 10, 12, "協1/1", [P("林美麗")]),
+    t: "T-09 同一天 7 筆需求 + 清單浮層",
+    G: [
       C(
+        1,
+        "櫃",
+        "店內櫃台",
+        9,
+        17,
+        "2/2",
+        [P("王小明", 1), P("李小華")],
+        "Normal",
+        1,
+      ),
+      C(2, "補", "補貨", 9, 13, "1/1", [P("張小芳")], "Normal", 2),
+      C(3, "盤", "盤點", 10, 12, "協1/1", [P("林美麗")], "Normal", 3),
+      C(
+        4,
         "促",
         "促銷攤位",
         11,
@@ -320,68 +324,180 @@ const CASES = [
         "協1/2",
         [P("陳大文"), Vc("warn")],
         "Warning",
+        4,
       ),
-      C("臨", "店慶加開", 13, 18, "負0/1", [Vc("err")], "Error"),
-      C("清", "清潔", 14, 15, "協1/1", [P("黃志明")]),
-      C("教", "新人教育", 15, 17, "協1/1", [P("吳佳玲")]),
+      C(5, "臨", "店慶加開", 13, 18, "負0/1", [Vc("err")], "Error", 5, 99),
+      C(6, "清", "清潔", 14, 15, "協1/1", [P("黃志明")], "Normal", 6),
+      C(7, "教", "新人教育", 15, 17, "協1/1", [P("吳佳玲")], "Normal", 7),
     ],
     list: true,
-    note: "第 3 筆起全部收進「+N 需求」(高度涵蓋被收起需求的最早開始到最晚結束)。點了跳出清單浮層:依開始時間列出(簡稱、名稱、時間、人數,三態顏色);點一列 → 那筆人力需求對話框;底部 [看整天(日檢視) ›];需求多時浮層內捲動。",
+    exp: {
+      157: "櫃 0–76、補 76–124、臨 76–124;收起 盤、促、清、教 →「+4」橘",
+      125: "櫃 0–76;收起 補、盤、促、臨、清、教 →「+6」紅",
+    },
+    note: "店慶加開 13:00 開始時補貨已結束 → 放在補貨的位置。點「+N」→ 清單浮層:依開始時間列出被收起的需求(簡稱、名稱、時間、人數三態顏色);點一列 → 那筆人力需求對話框;底部 [看整天(日檢視) ›];需求多時浮層內捲動。",
   },
   {
-    t: "16 只放得下 1 條:1 條長條 + 小「+N」徽章",
-    L: [
-      C("早", "早班", 8.5, 14.5, "3/3", [
-        P("林美麗", 1),
-        P("李小華"),
-        P("王小明", 0, { a: 9, b: 14.5 }),
+    t: "T-10 早到晚走:長條延伸出容器",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [
+        P("林美麗", 1, { s: 8 }),
+        P("張小芳", 0, { e: 15.5 }),
       ]),
     ],
-    R: [C("補", "補貨", 13, 17, "1/1", [P("張小芳")])],
-    X: [C("臨", "店慶加開", 13, 18, "協1/1", [P("周家豪")])],
-    note: "容器只放得下 1 條(可放條數 = 1)而人數 > 1 時:畫 1 條長條(負責人優先,否則開始時間最早的人),這條長條底部內側放小「+N」徽章(ScheduleTimelineMore Size=Compact,顏色規則同窄條:含缺額橘 / 紅、含負責人綠、其他灰)。點徽章 = 打開那筆人力需求對話框(同窄條)。可放條數 ≥ 2 時照「條數 − 1 人 +「+N 人」窄條」。",
+    exp: { 157: "早 0–76", 125: "早 0–76" },
+    note: "超出人力需求的時間由同一條長條延伸出容器:淡色底 + 虛線框,和實線段相接(相接側不畫框、不圓角);容器大小與排版不變。",
+  },
+  {
+    t: "T-11 一人一筆排班掛兩筆需求",
+    G: [
+      C(
+        1,
+        "補",
+        "補貨",
+        13,
+        17,
+        "1/1",
+        [P("張小芳", 0, { e: 18 })],
+        "Normal",
+        2,
+      ),
+      C(
+        2,
+        "臨",
+        "店慶加開",
+        15,
+        18,
+        "協1/1",
+        [P("張小芳", 0, { s: 13 })],
+        "Normal",
+        3,
+        99,
+      ),
+    ],
+    exp: { 157: "補 0–48、臨 48–96", 125: "補 0–48、臨 48–96" },
+    note: "一筆排班(張小芳 13:00–18:00)同時算進兩筆需求:兩個容器都有她,各自超出容器的時段用延伸段畫出。",
+  },
+  {
+    t: "T-12 同一天兩段排班",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [P("王小明", 1), P("張小芳")]),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [
+        P("林美麗", 1),
+        P("張小芳", 0, { a: 17, b: 22 }),
+      ]),
+    ],
+    exp: { 157: "早 0–76、晚 0–76", 125: "早 0–76、晚 0–76" },
+    note: "同一人同一天兩段排班各自畫在所屬容器。張小芳 08:30–14:30(☕ 30)+ 17:00–22:00 = 10.5 小時,超過「每天最多上班時數」8 小時 → 檢核面板提醒(時間軸不另外標示)。",
+  },
+  {
+    t: "T-13 休息、負責人、自動排入、臨",
+    G: [
+      C(1, "晚", "晚班", 14.5, 22, "1/1", [P("李小華", 1, { brk: 90 })]),
+      C(
+        2,
+        "臨",
+        "店慶加開",
+        13,
+        18,
+        "協1/1",
+        [P("張小芳", 0, { auto: true })],
+        "Normal",
+        3,
+        99,
+      ),
+    ],
+    exp: { 157: "臨 0–48、晚 48–96", 125: "臨 0–48、晚 48–96" },
+    note: "休息寫「☕ 分鐘」;負責人綠色標籤;自動排入在長條右上角(手動改過就消失);沒有套用範本的人力需求簡稱「臨」,範本排序排最後。",
+  },
+  {
+    t: "T-14 店休、特殊日、已排於其他分店、時段不可排",
+    special: "店慶",
+    closedTablet: true,
+    G: [
+      C(
+        1,
+        "早",
+        "早班",
+        8.5,
+        14.5,
+        "1/2",
+        [P("王小明", 1), Vc("warn")],
+        "Warning",
+      ),
+    ],
+    dayExtra: [
+      Dis("陳大文", "已排於新竹店", 8.5, 14.5),
+      Dis("張小芳", "時段不可排", 9, 13),
+    ],
+    exp: { 157: "早 0–76", 125: "店休" },
+    note: "電腦欄示範特殊日(行事曆設定的顏色,示範 cyan,整欄);平板欄示範店休(整欄 grey/200,不能排班、不排容器)。日檢視列出不能排的人:已排於其他分店、時段不可排(灰色停用條,點了看原因)。",
+  },
+  {
+    t: "T-15 滑過 / 已選取 + 提示框",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [
+        P("王小明", 1, { ix: "Selected" }),
+        P("李小華", 0, { ix: "Hover" }),
+      ]),
+    ],
+    tip: "李小華 · 08:30–14:30 · ☕ 30 分 · 協同 · 店內櫃台",
+    exp: { 157: "早 0–76", 125: "早 0–76" },
+    note: "滑過長條:底色換深一階(primary/lighter → primary/light)、框 primary/dark,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 崗位);已選取:滑過的底色 primary/light + 2px primary/dark 框(框不佔版面);鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深。",
+  },
+  {
+    t: "T-16 滑過留白處",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "5/5", [
+        P("陳大文", 1),
+        P("李小華"),
+        P("王小明"),
+        P("黃志明"),
+        P("吳佳玲"),
+      ]),
+      C(3, "補", "補貨", 13, 17, "1/1", [P("周家豪")], "Normal", 2),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [P("林美麗", 1), P("張小芳")]),
+    ],
+    emptyHover: [9, 10],
+    exp: {
+      157: "補 0–48、晚 48–124;收起 早 →「+1」灰",
+      125: "補 0–48;收起 早、晚 →「+2」灰",
+    },
+    note: "收起後留下的空白(容器與「+N」長條之間、或收起的需求原本的時段)照一般空白處處理:滑過的那一格顯示淡色「+ 人力需求」,點了新增人力需求。",
+  },
+  {
+    t: "T-17 邊界:124 寬剛好放進平板 125(11/13)",
+    G: [
+      C(1, "早", "早班", 8.5, 14.5, "2/2", [P("陳大文", 1), P("李小華")]),
+      C(3, "補", "補貨", 13, 17, "1/1", [P("張小芳")], "Normal", 2),
+      C(2, "晚", "晚班", 14.5, 22, "2/2", [P("林美麗", 1), P("王小明")]),
+    ],
+    exp: {
+      157: "早 0–76、補 76–124、晚 0–76",
+      125: "早 0–76、補 76–124、晚 0–76",
+    },
+    note: "早班 76 + 補貨 48 = 124 ≤ 平板一天 125 → 全部放得下,不保留 24px、沒有「+N」。欄寬只有跨過整數條時排法才改變(例:平板若是 120,補貨就會收起)。",
   },
 ];
-// ---- 週檢視(一天寬)----
-const MIN = 28,
-  LBL = 23,
-  STRIP = 20,
-  WS = 24; // 週檢視 24px / 小時
+const WS = 24; // 週檢視每小時 24px(08:00–22:00)
 const Yw = (t) => 22 + (t - 8) * WS;
-const toneOf = (items) =>
-  items.some((h) => h.vac === "err")
-    ? "Error"
-    : items.some((h) => h.vac)
-      ? "Warning"
-      : items.some((h) => h.lead)
-        ? "Success"
-        : "Neutral";
-// 並排寬度依長條數分配(和 r6-week.js 同一套):每排先給 1 條寬,剩下的先補給需要更多條的排,再依人數比例分;
-// 只有第 3 筆起同時重疊的需求(X)收進「+N 需求」,2 筆重疊一律並排
-function plan(cs, CW) {
-  const lanes = [cs.L, ...(cs.R ? [cs.R] : [])];
-  const H = [...(cs.X || [])];
-  const A = CW - 2 - (H.length ? STRIP + 2 : 0) - (lanes.length - 1) * 2;
-  const n = lanes.map((ln) => Math.max(...ln.map((c) => c.items.length)));
-  const base = 20 + MIN;
-  const W = lanes.map(() => base);
-  let extra = A - base * lanes.length;
-  const need = n.map((x) => (x - 1) * (MIN + 2));
-  const tot = need.reduce((a, b) => a + b, 0);
-  if (extra > 0 && tot > 0) {
-    const give = Math.min(extra, tot);
-    need.forEach((x, i) => (W[i] += (give * x) / tot));
-    extra -= give;
-  }
-  if (extra > 0) {
-    const s = n.reduce((a, b) => a + b, 0);
-    n.forEach((x, i) => (W[i] += (extra * x) / s));
-  }
-  return { H, lanes: lanes.map((ln, i) => ({ ln, W: W[i] })) };
-}
-// 容器可放的條數 = floor((容器寬 − 標題直排寬 20)/ 28);人數超過時畫(條數 − 1)人 +「+N 人」(和長條同寬)
-const slotsOf = (w) => Math.max(1, Math.floor((w - 20) / MIN));
 const TONE = { Normal: "Normal", Warning: "Warning", Error: "Error" };
+const TONE_ZH = { Neutral: "灰", Warning: "橘", Error: "紅" };
+const fmtLayout = (r) =>
+  (r.placed.length
+    ? r.placed.map((p) => `${p.g.s} ${p.x}–${p.x + p.w}`).join("、")
+    : "(無)") +
+  (r.hidden.length
+    ? `;收起 ${r.hidden.map((g) => g.s).join("、")} →「+${r.hidden.length}」${TONE_ZH[tlMoreTone(r.hidden)]}`
+    : "");
+// 容器左側直排的人數:多組「已排/需求」(例:負0/1 協1/1)加總成一組
+const labSum = (lab) => {
+  const m = [...lab.matchAll(/(\d+)\/(\d+)/g)];
+  return `${m.reduce((t, x) => t + +x[1], 0)}/${m.reduce((t, x) => t + +x[2], 0)}`;
+};
+const hoverSrc = (await figma.getNodeByIdAsync("426:51988")).findOne(
+  (n) => n.name === "empty-hover + 人力需求",
+); // SC-60b 的淡色「+ 人力需求」格子
 async function week(cs, CW, closed, special) {
   const f = figma.createFrame();
   f.name = `週 ${CW}px`;
@@ -415,7 +531,7 @@ async function week(cs, CW, closed, special) {
     f.appendChild(t);
     t.x = 40 + CW / 2 - 12;
     t.y = Yw(12);
-    return { f, strip: null, H: [] };
+    return { f, strip: null, hidden: [], res: "店休" };
   }
   if (special) {
     const r = rect(
@@ -430,7 +546,7 @@ async function week(cs, CW, closed, special) {
     r.fills = [Pt(V.cyan)];
     f.insertChild(0, r);
   }
-  const pl = plan(cs, CW);
+  const r = layoutTimeline(cs.G, CW);
   const bar = (p, x, w, a, b) => {
     const src = p.dis ? null : p.lead ? W.lead : W.bar;
     const i = src ? src.clone() : BV("Disabled").createInstance();
@@ -448,7 +564,17 @@ async function week(cs, CW, closed, special) {
     // 週檢視長條不放休息(太窄;休息看日檢視、班表格子)
     i.setProperties(pr);
     if (p.auto) i.setProperties({ Auto: "True" });
-    if (p.ix) i.setProperties({ Interaction: p.ix });
+    if (p.ix) {
+      // 互動狀態的底色 / 框色以變體為準(實例覆寫的品牌色要換掉,之後 brand-rebind 再補綁)
+      i.setProperties({ Interaction: p.ix });
+      const m = tlb.children.find(
+        (c) => c.name === `State=Normal, Auto=False, Interaction=${p.ix}`,
+      );
+      i.fills = m.fills;
+      i.strokes = m.strokes;
+      // 已選取的 2px 框不佔版面,窄長條的負責人標籤才不會被切掉
+      if (p.ix === "Selected") i.strokesIncludedInLayout = false;
+    }
     i.resize(w, Yw(b) - Yw(a) - 2);
     i.x = x;
     i.y = Yw(a) + 1;
@@ -485,8 +611,10 @@ async function week(cs, CW, closed, special) {
       e.strokeTopWeight = 0;
     }
   };
+  // 容器:位置與寬度由 layoutTimeline 算(容器寬 20 + 28 × 條數;長條寬 26、間隔 2)
   const cont = (c, x, w) => {
-    const k = slotsOf(w);
+    const n = c.slots;
+    const sw = (w - 22 - 2 * (n - 1)) / n;
     const d = W.dem.clone();
     f.appendChild(d);
     d.setProperties({ Tone: TONE[c.tone] });
@@ -496,37 +624,10 @@ async function week(cs, CW, closed, special) {
     d.y = Yw(c.a);
     const l = W.lab.clone();
     f.appendChild(l);
-    // 週檢視容器左欄只寫「簡稱 / 已排/需要」(停用的人不算)
-    l.characters =
-      c.s +
-      "\n" +
-      `${c.items.filter((p) => !p.vac && !p.dis).length}/${c.items.filter((p) => !p.dis).length}`;
+    l.characters = c.s + "\n" + labSum(c.lab);
     l.x = x + 1;
     l.y = d.y + 3;
-    const kc = Math.min(c.items.length, k);
-    const sw = (w - 22 - 2 * (kc - 1)) / kc;
-    let shown = c.items,
-      hidden = [],
-      compact = false;
-    if (c.items.length > k) {
-      if (k === 1) {
-        // 只放得下 1 條:畫 1 條長條(負責人優先,否則開始時間最早),長條底部內側放小「+N」徽章(Size=Compact)
-        const people = c.items.filter(
-          (p) => !p.vac && !p.dis && !Array.isArray(p),
-        );
-        const pick =
-          people.find((p) => p.lead) ||
-          [...people].sort((a, b) => (a.a ?? c.a) - (b.a ?? c.a))[0] ||
-          c.items[0];
-        shown = [pick];
-        hidden = c.items.filter((p) => p !== pick);
-        compact = true;
-      } else {
-        shown = c.items.slice(0, k - 1);
-        hidden = c.items.slice(k - 1);
-      }
-    }
-    shown.forEach((p, i) => {
+    tlOrder(c.items).forEach((p, i) => {
       const x0 = x + 22 + i * (sw + 2);
       if (p.vac) {
         const v = BV(
@@ -549,51 +650,32 @@ async function week(cs, CW, closed, special) {
       if (p.s !== undefined) ext(b, true, Yw(p.s), b.y);
       if (p.e !== undefined) ext(b, false, b.y + b.height, Yw(p.e));
     });
-    if (hidden.length && compact) {
-      const bar = [...f.children]
-        .reverse()
-        .find((n) => /^(bar |vacancy)/.test(n.name));
-      const s = STC(toneOf(hidden)).createInstance();
-      f.appendChild(s);
-      s.name = `more-people +${hidden.length}(徽章)`;
-      s.setProperties({ "Label#408:0": "+" + hidden.length });
-      s.x = bar.x + (bar.width - s.width) / 2;
-      s.y = bar.y + bar.height - s.height - 4;
-    } else if (hidden.length) {
-      const s = ST(toneOf(hidden)).createInstance();
-      f.appendChild(s);
-      s.name = `more-people +${hidden.length}`;
-      s.setProperties({ "Label#408:0": "+" + hidden.length });
-      s.resize(sw, d.height - 2);
-      s.x = x + 22 + shown.length * (sw + 2);
-      s.y = d.y + 1;
-    }
   };
-  let x = 41;
-  for (const ln of pl.lanes) {
-    for (const c of ln.ln) cont(c, x, ln.W);
-    x += ln.W + 2;
-  }
+  for (const p of r.placed) cont(p.g, 41 + p.x, p.w);
   let strip = null;
-  if (pl.H.length) {
-    const a = Math.min(...pl.H.map((h) => h.a)),
-      b = Math.max(...pl.H.map((h) => h.b));
-    const tone = pl.H.some((h) => h.tone === "Error")
-      ? "Error"
-      : pl.H.some((h) => h.tone === "Warning")
-        ? "Warning"
-        : "Neutral";
-    strip = ST(tone).createInstance();
+  if (r.hidden.length) {
+    // 當天欄最右邊一條「+N」長條,高度佔滿時間軸
+    strip = MORE(tlMoreTone(r.hidden)).createInstance();
     f.appendChild(strip);
-    strip.name = "more-demand +" + pl.H.length;
-    strip.setProperties({ "Label#408:0": "+" + pl.H.length });
-    strip.resize(STRIP, Yw(b) - Yw(a));
-    strip.x = 40 + CW - 1 - STRIP;
-    strip.y = Yw(a);
+    strip.name = "more +" + r.hidden.length;
+    strip.setProperties({ "Label#408:0": "+" + r.hidden.length });
+    strip.resize(20, f.height - 24);
+    strip.x = 41 + CW - TL_MORE + 2;
+    strip.y = 23;
   }
-  return { f, strip, H: pl.H };
+  if (cs.emptyHover) {
+    // 留白處滑過:淡色「+ 人力需求」格子(「+N」長條左邊的可用寬度)
+    const e = hoverSrc.clone();
+    f.appendChild(e);
+    e.x = 43;
+    e.y = Yw(cs.emptyHover[0]) + 1;
+    e.resize(
+      CW - (r.hidden.length ? TL_MORE : 0) - 4,
+      Yw(cs.emptyHover[1]) - Yw(cs.emptyHover[0]) - 2,
+    );
+  }
+  return { f, strip, hidden: r.hidden, res: fmtLayout(r) };
 }
-// ---- 日檢視(橫向,每人一列,不收起)----
 const DS = 64; // 日檢視 44px / 小時
 const Xd = (t) => 40 + (t - 8) * DS;
 async function day(cs) {
@@ -603,15 +685,13 @@ async function day(cs) {
   f.strokes = [Pt(V.divider)];
   f.strokeWeight = 1;
   f.clipsContent = false;
-  const all = [...cs.L, ...(cs.R || []), ...(cs.X || [])].sort(
-    (a, b) => a.a - b.a,
-  );
+  const all = [...cs.G].sort(tlCmp);
   // 重疊的往下排:每筆需求放在第一個放得下的軌道
   const tracks = [];
   const place = [];
   for (const c of all) {
     const rows =
-      c.items.length + (cs.dayExtra && c === cs.L[0] ? cs.dayExtra.length : 0);
+      c.items.length + (cs.dayExtra && c === cs.G[0] ? cs.dayExtra.length : 0);
     const h = 26 + rows * 30 + 2;
     let t = tracks.findIndex((tr) => tr.end <= c.a);
     if (t < 0) {
@@ -656,7 +736,7 @@ async function day(cs) {
     d.y = ty[t];
     const items = [
       ...c.items,
-      ...(cs.dayExtra && c === cs.L[0] ? cs.dayExtra : []),
+      ...(cs.dayExtra && c === cs.G[0] ? cs.dayExtra : []),
     ];
     items.forEach((p, i) => {
       const yy = d.y + 26 + i * 30;
@@ -762,7 +842,7 @@ const title = await T(
 );
 page.appendChild(title);
 const sub = await T(
-  "每列一個情況:週檢視電腦一天寬(157px)/ 平板一天寬(120px)/ 日檢視(橫向,每人一列不收起)/ 規則與點擊行為。規格:排班 14.5「並排與 +N」「滑過提示」;底座 10.11。",
+  "每列一個測試案例 T-xx(排版函式 layoutTimeline 的固定輸入 / 預期輸出):週檢視電腦一天寬 157 / 平板一天寬 125 / 日檢視(橫向,每人一列不收起)/ 輸入、預期輸出與規則。規格:底座 10.11「週模式排版」、排班 14.5「週檢視排版」「滑過提示」。",
   "b2",
   "ts",
   "page-sub",
@@ -770,10 +850,11 @@ const sub = await T(
 page.appendChild(sub);
 sub.y = 40;
 let Y0 = 100;
-const ids = [];
+const ids = [],
+  mismatch = [];
 for (const cs of CASES) {
   const sec = figma.createFrame();
-  sec.name = "情況 " + cs.t;
+  sec.name = cs.t;
   sec.fills = [];
   sec.clipsContent = false;
   page.appendChild(sec);
@@ -786,7 +867,7 @@ for (const cs of CASES) {
   const wd = await week(cs, 157, false, cs.special);
   const wt = await week(
     cs,
-    120,
+    125,
     !!cs.closedTablet,
     cs.closedTablet ? null : cs.special,
   );
@@ -799,7 +880,7 @@ for (const cs of CASES) {
     p.y = 32;
     x += p.width + 32;
   }
-  // 提示框(情況 14)
+  // 提示框(T-15)
   if (cs.tip) {
     for (const fr of [wd.f, dv]) {
       const hov = fr.findOne(
@@ -815,12 +896,24 @@ for (const cs of CASES) {
       await figma.loadFontAsync(tt.fontName);
       tt.characters = cs.tip;
       t.name = "浮層 Tooltip 滑過";
-      t.x = Math.max(0, hov.x + hov.width / 2 - t.width / 2);
+      // 週檢視不蓋到左側時間欄(40px)
+      t.x = Math.max(
+        fr.name === "日檢視" ? 0 : 42,
+        hov.x + hov.width / 2 - t.width / 2,
+      );
       t.y = hov.y + Math.min(hov.height, 80) + 2;
+      // 提示框超出電腦欄時,平板欄與日檢視往右讓出位置
+      const shift = fr === wd.f ? wd.f.x + t.x + t.width + 16 - wt.f.x : 0;
+      if (shift > 0) {
+        wt.f.x += shift;
+        dv.x += shift;
+        x += shift;
+      }
     }
   }
-  // 清單浮層(情況 15)
+  // 清單浮層(T-09)
   if (cs.list && wd.strip) {
+    const H = [...wd.hidden].sort(tlCmp);
     const card = figma.createFrame();
     card.name = "浮層 +N 需求清單";
     card.layoutMode = "VERTICAL";
@@ -838,8 +931,10 @@ for (const cs of CASES) {
     card.resize(280, 10);
     card.primaryAxisSizingMode = "AUTO";
     card.counterAxisSizingMode = "FIXED";
-    card.appendChild(await T("11/×(×)收起的人力需求(5)", "s2", "tp", "title"));
-    for (const c of [...wd.H].sort((a, b) => a.a - b.a)) {
+    card.appendChild(
+      await T(`11/×(×)收起的人力需求(${H.length})`, "s2", "tp", "title"),
+    );
+    for (const c of H) {
       const r = figma.createFrame();
       r.name = "row " + c.nm;
       r.layoutMode = "HORIZONTAL";
@@ -884,12 +979,36 @@ for (const cs of CASES) {
       x += shift;
     }
   }
+  // 輸入 / 預期 / 實際:預期寫死在 exp,實際由 layoutTimeline 算;不一致列進 mismatch
+  const nums = (lab) =>
+    [...lab.matchAll(/(\d+)\/(\d+)/g)].reduce(
+      (t, m) => [t[0] + +m[1], t[1] + +m[2]],
+      [0, 0],
+    );
+  const input = cs.G.map((c) => {
+    const [asg, need] = nums(c.lab);
+    return `${c.s} ${c.nm} ${hm(c.a)}–${hm(c.b)} 需求 ${need} · 已排 ${asg}(${c.slots} 條)`;
+  }).join("\n");
+  for (const [k, got] of [
+    [157, wd.res],
+    [125, wt.res],
+  ])
+    if (got !== cs.exp[k])
+      mismatch.push(
+        `${cs.t.split(" ")[0]} ${k}:預期 ${cs.exp[k]} / 實際 ${got}`,
+      );
   const note = await T(
     cs.note +
-      "\n點擊:容器 / 長條 / 「+N 人」→ 人力需求對話框;「+N 需求」→ 清單浮層;空白時段 → 新增人力需求。",
+      "\n輸入(排序鍵:開始 → 崗位排序 → 範本排序 → 建立時間 → id):\n" +
+      input +
+      "\n預期輸出(電腦 157):" +
+      cs.exp[157] +
+      "\n預期輸出(平板 125):" +
+      cs.exp[125] +
+      "\n點擊:容器 / 長條 → 人力需求對話框;「+N」→ 清單浮層;空白處 → 新增人力需求。",
     "cap",
     "ts",
-    "情況 " + cs.t.split(" ")[0] + " · 註解",
+    cs.t.split(" ")[0] + " · 註解",
   );
   sec.appendChild(note);
   note.textAutoResize = "HEIGHT";
@@ -900,4 +1019,19 @@ for (const cs of CASES) {
   ids.push(sec.name + " " + sec.id);
   Y0 += sec.height + 64;
 }
-return { page: page.id, ids };
+// 中文字重新排版:新頁上用元件屬性 / 複製文字改出來的中文,沒先載入字型時截圖會漏字;載入後重設一次文字
+const loadedFonts = new Set();
+for (const t of page.findAllWithCriteria({ types: ["TEXT"] })) {
+  if (!/[一-鿿]/.test(t.characters)) continue;
+  for (const fn of t.getRangeAllFontNames(0, t.characters.length)) {
+    const k = JSON.stringify(fn);
+    if (!loadedFonts.has(k)) {
+      await figma.loadFontAsync(fn);
+      loadedFonts.add(k);
+    }
+  }
+  const c = t.characters;
+  t.characters = c + " ";
+  t.characters = c;
+}
+return { page: page.id, ids, mismatch };

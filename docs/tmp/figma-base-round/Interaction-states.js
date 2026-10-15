@@ -2,8 +2,10 @@
 // Draft/ScheduleTimelineBlock(259:4770)、Draft/ScheduleTimelineDemand(286:77949)加變體屬性 Interaction = Default / Hover / Selected / Focus
 // (只做 State=Normal、Tone=Normal 一組,其他狀態沿用同規則);Draft/RosterCell(49:493)的 State 加 Hover / Focus(Selected 原本就有);
 // (專案 Draft/MoreStrip 的 Interaction 已隨元件移到底座 Draft/ScheduleTimelineMore 的 State,見 TimelineMore-StatusChip.js。)
-//   Hover    = 原底色上疊 action/hover,框加深(primary/* → primary/dark、divider → grey/500)
-//   Selected = 原底色上疊 action/selected,2px primary/main 框
+//   Hover    = 底色換同色系深一階的共用色票(primary/lighter → primary/light、warning/lighter → warning/light、
+//              error/lighter → error/light、grey/100 → grey/200),框換同色系 dark(primary/dark、warning/dark、error/dark;divider → grey/500)。
+//              不再疊 action/hover(灰 8% 疊在黃色上會變髒);只能用既有色票;白底(bg/default、bg/paper)滑過 → grey/100、框 grey/500。
+//   Selected = 滑過的底色 + 2px 同色系 dark 框(框不佔版面);不疊 action/selected
 //   Focus    = action/focus 2px 外框(鍵盤焦點;畫面不用每張畫)
 // 手機沒有滑過:按下時底色加深(同 Hover 外觀),內容看對話框。Base Draft 的 BS-22 加一列「互動狀態」示範。
 const KEY = {
@@ -35,28 +37,66 @@ const copyRefs = (a, b) => {
       } catch (e) {}
   }
 };
+// Hover 用的「深一階」與「框 dark」:依變數名稱到 wowgo-base Library 查(Color 優先,其次 Primitives),只用既有色票
+const STEP = {
+  "bg/default": "grey/100",
+  "bg/paper": "grey/100",
+  "primary/lighter": "primary/light",
+  "warning/lighter": "warning/light",
+  "error/lighter": "error/light",
+  "grey/100": "grey/200",
+};
+const DARK = {
+  primary: "primary/dark",
+  warning: "warning/dark",
+  error: "error/dark",
+  success: "success/dark",
+  divider: "grey/500",
+};
+const libCols = (
+  await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync()
+).filter((c) => c.libraryName === "wowgo-base Design System");
+const libVar = async (name) => {
+  for (const cn of ["Color", "Primitives"]) {
+    const c = libCols.find((x) => x.name === cn);
+    const v = (
+      await figma.teamLibrary.getVariablesInLibraryCollectionAsync(c.key)
+    ).find((x) => x.name === name);
+    if (v) return figma.variables.importVariableByKeyAsync(v.key);
+  }
+  throw new Error("沒有共用色票 " + name + ",回報不要自創");
+};
+const varName = async (p) =>
+  p?.boundVariables?.color
+    ? (await figma.variables.getVariableByIdAsync(p.boundVariables.color.id))
+        .name
+    : null;
 const darker = async (n) => {
-  const s = n.strokes?.[0];
-  if (!s) return;
-  const v = await figma.variables.getVariableByIdAsync(
-    s.boundVariables.color.id,
-  );
-  n.strokes = [
-    Pt(/primary/.test(v.name) ? V.pdark : /divider/.test(v.name) ? V.g500 : v),
-  ];
+  const nm = await varName(n.strokes?.[0]);
+  if (!nm) return;
+  const fam = nm.split("/")[0];
+  if (DARK[fam]) n.strokes = [Pt(await libVar(DARK[fam]))];
 };
 const make = async (base, mode) => {
   const c = base.clone();
   base.parent.appendChild(c);
   copyRefs(base, c);
   if (mode === "Hover") {
-    c.fills = [...c.fills, Pt(V.hover)];
+    const nm = await varName(c.fills[0]);
+    if (!STEP[nm])
+      throw new Error("沒有深一階的共用色票:" + nm + ",回報不要自創");
+    c.fills = [Pt(await libVar(STEP[nm]))];
     await darker(c);
   }
   if (mode === "Selected") {
-    c.fills = [...c.fills, Pt(V.sel)];
-    c.strokes = [Pt(V.pmain)];
+    // 滑過的底色 + 2px 同色系 dark 框(框不佔版面)
+    const nm = await varName(c.fills[0]);
+    if (!STEP[nm])
+      throw new Error("沒有深一階的共用色票:" + nm + ",回報不要自創");
+    c.fills = [Pt(await libVar(STEP[nm]))];
+    await darker(c);
     c.strokeWeight = 2;
+    if (c.layoutMode !== "NONE") c.strokesIncludedInLayout = false;
   }
   if (mode === "Focus") {
     c.strokes = [Pt(V.focus)];

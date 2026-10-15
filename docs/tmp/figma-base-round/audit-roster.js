@@ -47,7 +47,13 @@ const sig = (g) => {
             txt,
           ].join("|");
         } else v = txt;
-        v += "|fill:" + (cell.fills?.[0]?.boundVariables?.color?.id || "");
+        // 互動狀態的底色(滑過 grey/100)也不是資料差異
+        const ix =
+          cell.type === "INSTANCE" &&
+          /^(Hover|Focus)$/.test(cell.componentProperties.State.value);
+        v +=
+          "|fill:" +
+          (ix ? "*" : cell.fills?.[0]?.boundVariables?.color?.id || "");
       }
       const marks = r.children
         .filter(
@@ -104,7 +110,10 @@ for (const g of pg.findAll((n) => n.name === "RosterGrid(組成)")) {
     // 統計欄收成窄欄時欄數不同,不比
     if (k.endsWith("@stats") && v.split(",").length !== R[k].split(",").length)
       continue;
-    if (R[k] !== v) diffs.push(`${k}: ${v} ≠ ${R[k]}`);
+    // 「fill:*」= 互動狀態的格子,底色不比
+    const strip = (x) => x.replace(/\|fill:[^#]*/, "");
+    const same = v.includes("|fill:*") ? strip(v) === strip(R[k]) : R[k] === v;
+    if (!same) diffs.push(`${k}: ${v} ≠ ${R[k]}`);
   }
   total += diffs.length;
   if (diffs.length)

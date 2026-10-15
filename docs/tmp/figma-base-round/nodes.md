@@ -695,10 +695,39 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **`Draft/StatusChip`(Base Draft 408:8040)**:Tone Neutral(grey/100 + divider 細框)/ Warning / Error × State Default / Hover / Selected,屬性 Label / Sub / HasSub。專案畫面所有人數標籤換成實例:班表人力需求區與手機收合彙總 836、月檢視 138(撐滿格寬)、手機週清單 18、清單浮層 8;`Draft/RosterGrid` 三個群組變體 18 個;MonthCalendar / MonthCalendarCell 說明註明內容槽的狀態標籤用它(行事曆標示仍是 Draft/Tag)。手機週清單的圖例改成 Solid 人力需求已滿 / 缺協同 / 缺負責。
 - 腳本:新增 `TimelineMore-StatusChip.js`(底座);`r5-roster.js` 的 demandChip 改用 StatusChip;`audit-legend.js` 的 MARKERS 加 ScheduleTimelineMore、StatusChip;`audit-roster.js` 的統計欄比對排除日期欄。
 
-### 第二十四輪後續之十一:只放得下 1 條時的「+N」徽章(2026-10-15)
+### 第二十四輪後續之十一:只放得下 1 條時的「+N」徽章(2026-10-15;已被後續之十三取代)
 
 - **規則**:容器可放條數 = 1(門檻 28px)而人數 > 1 時,畫 1 條長條(負責人優先,否則開始時間最早的人),長條底部內側(距底 4px、水平置中)放小「+N」徽章,點了 = 那筆人力需求對話框;顏色同窄條(含缺負責紅、含缺協同橘、含負責人綠、其他灰)。可放條數 ≥ 2 照原規則(條數 − 1 人 +「+N 人」窄條)。`project/r6-week.js`、`project/r6-timeline-cases.js` 同一套。
 - **`Draft/ScheduleTimelineMore`(408:8012)加 Size 變體**:Size=Strip(原窄條)/ Compact(小徽章:水平 auto layout、寬高 hug、上下 1 左右 5、圓角 9,Default 24×22),共 24 個變體;說明同步。`TimelineMore-StatusChip.js` 補建法。Base Draft `Draft/ScheduleTimeline` 週模式加徽章示範(416:102915,在長條 296:401 上);BS-22 週模式說明同步。
 - **SC-44 平板(272:87566)結果**:11/10 早陳大文 + 徽章「+4」(綠)、晚林美麗 +「+1」;11/11 早王小明 +「+1」、晚陳大文 +「+1」;11/13 早陳大文 +「+1」、晚林美麗 +「+1」。電腦版不變。SC-60 / SC-62 的時間軸從 SC-44 重新複製;圖例 Neutral 樣本文字改「收起的人 / 需求(+N 窄條,或長條上的 +N 徽章)」。
 - **規則示範頁(401:805)重畫,加情況 16**「只放得下 1 條:1 條長條 + 小「+N」徽章」(早 3/3 林美麗★、李小華、王小明 09:00–14:30 + 補貨 1/1 + 店慶加開收成「+1 需求」;電腦林美麗 +「+2」窄條、平板林美麗 + 徽章「+2」);情況 4 註解改成「平板較窄、只放得下 1 條時……(見情況 16)」。情況 1 419:2407、2 419:2575、3 419:2791、4 419:3000、5 419:3318、6 419:3661、7 419:3969、8 419:4328、9 419:4538、10 419:4706、11 419:4933、12 419:5184、13 419:5405、14 419:5569、15 419:5805、16 419:6160。
 - 稽核(全部 0):audit-layout 70:14 / 401:805 / 41:5914;audit-legend 70:14 / 401:805;audit-sync;audit-roster 89 格;audit.js 41:5914(baseDraftComponents 36、nonBaseBindingsInBaseDrafts 0)/ 64:14(basePrimaryBindings 0)。
+
+### 第二十四輪後續之十二:滑過顏色與 SC-60 拆兩張(2026-10-16)
+
+- **滑過 = 同色系深一階的共用色票**(底座規格 10.11 互動狀態;不再疊 action/hover):`Draft/ScheduleTimelineBlock` Interaction=Hover(390:16)primary/lighter → primary/light、框 primary/dark;`Draft/StatusChip` Hover:Neutral grey/100 → grey/200(框 grey/500)、Warning warning/lighter → warning/light(框 warning/dark)、Error error/lighter → error/light(框 error/dark);`Draft/ScheduleTimelineMore` Hover 見後續之十三。使用處的實例(班表頁 2、規則頁 3、Base Draft 1)底色 / 框色同步;元件說明、SC-60 註解、規則頁 T-15 註解改寫。`Interaction-states.js`、`TimelineMore-StatusChip.js` 改成依名稱查深一階色票,沒有對應色票時丟錯(不自創)。
+- **沒有深一階色票、仍疊 action/hover 的**:`Draft/ScheduleTimelineDemand` Hover(底 bg/default)、`Draft/RosterCell` State=Hover(底 bg/paper)— 後續之十四已決定(白底 → grey/100)。Selected 的疊色問題同見後續之十四。
+- **SC-60 拆兩張**(`project/r6-sc60b.js`):SC-60(電腦 390:101986 / 平板 390:102620)只示範滑過長條(11/9 張小芳早班 Hover + 提示框,避開時間欄);**SC-60b 週檢視:滑過空白時段**(電腦 426:51988 / 平板 426:52658):時間軸框名加「可捲動」,捲到 07:00 起,11/10 07:00–08:00 淡色「+ 人力需求」格子(電腦 426:52138 / 平板 426:52806),註解寫時間軸 00:00–24:00 可捲動、進入時捲到最早排班前 1 小時。SC-44 / SC-45 三尺寸註解補同一句;SC-45 註解「最多 4 列,其餘收成 +N 人」改成「全部展開,不收起」。
+- `r4-layout.js` 的高度貼合改成也要放得下絕對定位的底部面板(SC-20b 手機檢核面板原本被切 6 處,已修)。
+
+### 第二十四輪後續之十三:週模式排版改版——收起單位是整筆人力需求(2026-10-16)
+
+- **規則**(底座規格 10.11「週模式排版」、專案 14.5「週檢視排版」):每筆佔條數 = max(需求人數, 已排人數),容器寬 = 20 + 28 × 條數;排序 開始時間 → 崗位排序 → 範本排序 → 建立時間 → id;逐一放在最左邊整段時間都空得下的位置,找不到就整筆收起(排班長條不單獨收起);已放好的不動、時間不重疊的共用位置;只要有收起,保留最右邊 24px 從頭重排。有收起時當天欄最右邊一條「+N」長條(寬 20、高度佔滿可見時間軸;收起的有缺負責紅、缺協同橘、否則灰),點了 → 清單浮層(SC-62)。長條順序 負責 → 協同 → 缺額。
+- **排版函式**:`project/_timeline-layout.js` 的 `layoutTimeline(groups, dayWidth)`(純函式),`r6-week.js` 與 `r6-timeline-cases.js` 都先貼它再算位置,不手填座標。
+- **`Draft/ScheduleTimelineMore`(408:8012)簡化成一種「+N」長條**:刪掉 Size=Compact 12 個、Tone=Success 3 個變體與 Size 屬性,剩 Tone Neutral / Warning / Error × State Default / Hover / Selected(9 個);底 grey/100,Hover grey/200 + 框 grey/500 / warning/dark / error/dark。刪變體前先移除 31 個舊實例(班表頁 / 規則頁會重畫);`Draft/LegendItem` Kind=More Tone=Success(388:23)刪除。班表頁圖例 More 三項改字:「+N 收起的人力需求(點了看清單)」「缺協同(橘框:人力需求、+N 裡有缺協同)」「+N 裡有缺負責(紅框;點了看清單)」。
+- **Base Draft**:`Draft/ScheduleTimeline` 週模式示範第一天改成早(2 條 76)+ 補(1 條 48)並排,第三筆收起 →「+1」長條佔滿時間軸(408:8119);徽章示範 416:102915 刪除;容器標題縮短(B 0/1、晚 2/2)避免蓋到長條;元件說明與 BS-22 週模式說明、框名(「週模式(依寬度放容器、放不下收進 +N)」)同步。
+- **SC-44 結果**(電腦一天 157 / 平板實際欄寬 125):
+  - 電腦:11/8、11/9、11/12 早 0–76、晚 0–76;11/10 早 5/5 收起、補 0–48、晚 48–124、「+1」灰;11/11 早 0–76、補 76–124、晚 0–76、店慶加開收起「+1」紅;11/13 早 0–76、補 76–124、晚 0–76;11/14 早 0–76、晚 0–132。
+  - 平板:11/10 補 0–48,早、晚收起「+2」灰;11/11 早 0–76、晚 0–76,補、店慶加開收起「+2」紅;11/13 三筆都放得下(若欄寬 120,補貨會收起);11/14 早 0–76、晚收起「+1」橘。
+  - SC-60 / SC-60b / SC-62 的時間軸從 SC-44 重新複製;SC-62(電腦 398:14、平板 398:726)11/11「+N」長條 State=Selected,清單浮層電腦 1 列(臨 店慶加開)、平板 2 列(補 補貨、臨 店慶加開),浮層對齊 13:00。SC-44 / SC-62 註解改寫成新規則。
+- **規則示範頁(401:805)改成測試案例 T-01~~T-16**(每格寫輸入與預期輸出,電腦 157 / 平板 120,後續之十四改 125;腳本比對結果 mismatch 0):T-01 剛好放下 435:2834、T-02 共用位置 435:3002、T-03 缺額佔條 435:3253、T-04 多排 435:3561、T-05 單筆太寬收起 435:3762、T-06 中途放不下(11/11)435:3913、T-07 後續也放不下(平板 11/10)435:4251、T-08 同時開始的平手排序 435:4508、T-09 7 筆需求 + 清單浮層 435:4743、T-10 早到晚走 435:5105、T-11 一人掛兩筆 435:5315、T-12 同天兩段 435:5542、T-13 休息 / 負責人 / 自動 / 臨 435:5793、T-14 店休 / 特殊日 / 不可排 435:6014、T-15 滑過 / 已選取 435:6189、T-16 滑過留白處 435:6425。
+- 截圖注意:新頁上用元件屬性改出來的中文,沒先載入字型時截圖會漏字(資料是對的);`r6-timeline-cases.js` 最後會載入字型重設一次文字。
+- 稽核(全部 0):audit-layout 70:14(197 畫面)/ 401:805(16)/ 41:5914(71);audit-legend 70:14 / 401:805;audit-sync;audit-roster 89 格;audit.js 41:5914(baseDraftComponents 36、nonBaseBindingsInBaseDrafts 0)/ 64:14(basePrimaryBindings 0)。
+
+### 第二十四輪後續之十四:白底滑過、已選取不疊色、平板測試寬 125(2026-10-16)
+
+- **白底元件滑過**:`Draft/ScheduleTimelineDemand` Tone=Normal Interaction=Hover(390:49)與 `Draft/RosterCell` State=Hover → 底 grey/100、框 grey/500,不疊 action/hover。
+- **已選取 = 滑過的底色 + 2px 同色系 dark 框(框不佔版面),所有元件都不疊 action/selected**:ScheduleTimelineBlock Interaction=Selected(390:27)primary/light + primary/dark;ScheduleTimelineDemand Selected(390:56)與 RosterCell Selected(49:489)grey/100 + grey/500;StatusChip Selected Neutral grey/200 + grey/500、Warning warning/light + warning/dark、Error error/light + error/dark;ScheduleTimelineMore Selected grey/200 + grey/500 / warning/dark / error/dark。使用處實例(班表頁 6、規則頁 6、Base Draft 9)底色 / 框色 / 框粗同步;元件說明與 SC-61 註解改寫。`Interaction-states.js`、`TimelineMore-StatusChip.js` 同步(找不到深一階色票就丟錯,不自創)。
+- **平板測試寬改 125**(設計稿實際欄寬;SC-44 平板維持 125):規則頁 T-01~~T-16 的平板預期輸出重算(和 120 結果相同),新增 **T-17 邊界:124 寬剛好放進平板 125(11/13)**;腳本比對 mismatch 0。重畫後 id:T-01 443:2768、T-02 443:2936、T-03 443:3187、T-04 443:3495、T-05 443:3696、T-06 443:3847、T-07 443:4185、T-08 443:4442、T-09 443:4677、T-10 443:5039、T-11 443:5249、T-12 443:5476、T-13 443:5727、T-14 443:5948、T-15 443:6123、T-16 443:6359、T-17 443:6620。T-15 提示框不再蓋到時間欄(超出電腦欄時平板欄與日檢視往右讓)。
+- `audit-roster.js`:互動狀態(Hover / Focus)的格子底色不比(滑過 grey/100 不是資料差異)。
+- 稽核(全部 0):audit-layout 70:14(197)/ 401:805(17)/ 41:5914(71);audit-legend 70:14 / 401:805;audit-sync;audit-roster 89 格;audit.js 41:5914(baseDraftComponents 36、nonBaseBindingsInBaseDrafts 0)/ 64:14(basePrimaryBindings 0)。

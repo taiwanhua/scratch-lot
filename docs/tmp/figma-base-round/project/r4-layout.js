@@ -268,7 +268,14 @@ function fit(f) {
       k.layoutSizingVertical = "FILL";
   c.layoutSizingVertical = "HUG";
   main.layoutSizingVertical = "HUG";
-  f.resize(f.width, Math.max(minH, Math.ceil(main.height)));
+  // 絕對定位的底部面板(例:SC-20b 手機檢核面板)也要放得下,不然會被畫面切掉
+  const absBottom = Math.max(
+    0,
+    ...f.children
+      .filter((k) => k !== main && k.layoutPositioning === "ABSOLUTE")
+      .map((k) => Math.ceil(k.y + k.height)),
+  );
+  f.resize(f.width, Math.max(minH, Math.ceil(main.height), absBottom));
   main.layoutSizingVertical = "FILL";
   // 固定在底部的操作列(絕對定位)跟著新的高度貼齊底部
   for (const k of main.children)
