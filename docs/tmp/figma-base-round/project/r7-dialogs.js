@@ -194,6 +194,7 @@ if (PART === "demand") {
     add(p, await head("協同", "0~10 筆"), "FILL");
     add(p, await taskRow(sz, "店內事務", null), "FILL");
     add(p, await btn("+ 協同", "Text", "Small"));
+    // 同時存成人力需求範本:只在新增時出現、預設不勾;勾了的樣子見 SC-21d(r7-sc21d.js)
     add(p, await cb(false, "同時存成人力需求範本"));
   });
   // SC-21b 編輯人力需求(從日檢視點晚班容器標題)

@@ -21,6 +21,7 @@ const K = {
   wl: "15f96b616735c06dd4034cd95ca8dc525c66977a",
   wd: "39797cd1b142124ac07aa6fee4d0d09437d1f01e",
   pm: "3666ac0c6b3d12e8e38f6be8270287eb55a5cce1",
+  g500: "c84c76fe3426c8a7433557941dff0bed92c7d2bb",
 };
 const SK = {
   h6: "1be1d72d4db6f0630bc69d0fb1271637413e60f5",
@@ -121,13 +122,22 @@ const TAG_GREY = (await figma.getNodeByIdAsync("14:529")).children.find(
   (v) => v.name === "Tone=Grey",
 );
 await figma.loadFontAsync(TAG_GREY.findOne((n) => n.type === "TEXT").fontName);
-const sameMark = (fr, b, week) => {
+// 位置:長條右上角,和自動排入標記(右上角 14px)並排不重疊;週檢視長條窄,改成依序往下排(自動排入在上、×2 在下,名字往下推)
+const sameMark = (fr, b, week, auto = false) => {
   const t = TAG_GREY.createInstance();
   t.setProperties({ "Label#76:8": "×2" });
   fr.appendChild(t);
   t.name = "同一筆排班 ×2";
-  t.x = b.x + (b.width - t.width) / 2;
-  t.y = week ? b.y + b.height - t.height - 4 : b.y + (b.height - t.height) / 2;
+  if (week) {
+    t.x = b.x + (b.width - t.width) / 2;
+    t.y = b.y + 4 + (auto ? 18 : 0);
+    b.paddingTop = 4 + (auto ? 18 : 0) + t.height + 4;
+  } else {
+    t.x = b.x + b.width - t.width - 4 - (auto ? 18 : 0);
+    t.y = b.y + (b.height - t.height) / 2;
+    // 長條右側(☕ 休息)讓出徽章的位置
+    b.paddingRight = (b.paddingRight || 6) + t.width + 4;
+  }
   return t;
 };
 // ---- 資料 ----
@@ -157,7 +167,7 @@ const C = (
   tone,
   ord,
   tmpl,
-  slots: items.length, // max(需求人數, 已排人數):items 含缺額空位
+  slots: items.length, // 執行任務筆數(一筆只填一人):items 含空的任務(缺額空位)
 });
 const hm = (t) =>
   `${String(Math.floor(t)).padStart(2, "0")}:${t % 1 ? "30" : "00"}`;
@@ -193,19 +203,19 @@ const CASES = [
       C(2, "晚", "晚班", 14.5, 22, "1/2", [Vc("err"), P("林美麗")], "Error"),
     ],
     exp: { 157: "早 0–104、晚 0–76", 125: "早 0–104、晚 0–76" },
-    note: "條數 = max(需求人數, 已排人數):缺額一人一條虛線空位、每條寫「缺負責 1」/「缺協同 1」(缺負責紅、缺協同橘),容器框色同;長條依職責排、同職責先人後缺額:負責 → 缺負責 → 協同 → 缺協同(晚班沒有負責人,缺負責排最前面)。",
+    note: "條數 = 執行任務筆數(一筆只填一人):空的任務一條虛線空位、每條寫「缺負責 1」/「缺協同 1」(缺負責紅、缺協同橘),容器框色同;長條依職責排、同職責先人後缺額:負責 → 缺負責 → 協同 → 缺協同(晚班沒有負責人,缺負責排最前面)。",
   },
   {
-    t: "T-04 多排(已排 > 需求)",
+    t: "T-04 加一筆協同任務(要多一人)",
     G: [
-      C(1, "早", "早班", 8.5, 14.5, "3/2", [
+      C(1, "早", "早班", 8.5, 14.5, "負1/1 協2/2", [
         P("王小明", 1),
         P("李小華"),
         P("張小芳"),
       ]),
     ],
     exp: { 157: "早 0–104", 125: "早 0–104" },
-    note: "已排 3 人多於需求 2 人時條數取 3(104 寬),人數標籤寫「3/2」,不列入檢核。",
+    note: "要多排一個人 = 在人力需求加一筆協同任務(一筆執行任務只填一人,不會超過需求;拿掉「+1 超過人力需求」):早班 3 筆任務(負責 1、協同 2)都填滿,條數 3(104 寬),人數「負1/1 協2/2」。",
   },
   {
     t: "T-05 單筆太寬收起",
@@ -455,9 +465,9 @@ const CASES = [
         P("李小華", 0, { ix: "Hover" }),
       ]),
     ],
-    tip: "李小華 · 08:30–14:30 · ☕ 30 分 · 協同 · 店內櫃台",
+    tip: "李小華 · 08:30–14:30 · ☕ 30 分 · 協同 · 店內事務 · 店內櫃台",
     exp: { 157: "早 0–76", 125: "早 0–76" },
-    note: "滑過長條:原底色上疊 primary/main × 8%、框 primary/main,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 崗位);已選取:疊 primary/main × 16% + 1px primary/main 框;鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深。",
+    note: "滑過長條:原底色上疊 primary/main × 8%、框 primary/main,旁邊提示框(姓名 · 時間 · ☕ 休息 · 職責 · 任務內容 · 崗位);已選取:疊 primary/main × 16% + 1px primary/main 框;鍵盤焦點:action/focus 外框。手機沒有滑過,按下時底色加深。",
   },
   {
     t: "T-16 滑過留白處",
@@ -509,9 +519,9 @@ const CASES = [
         2,
       ),
     ],
-    tip: "王小明 14:00–22:00 · 同一筆排班 · 櫃台 A、櫃台 B 負責",
+    tip: "王小明 · 14:00–22:00 · 同一筆排班 · 櫃台 A、櫃台 B 都是負責 · 店內事務與帳目負責",
     exp: { 157: "A 0–48、B 48–96", 125: "A 0–48、B 48–96" },
-    note: "王小明一筆排班 14:00–22:00、兩筆職責(櫃台 A、櫃台 B 都是負責):兩個容器都畫他的完整長條(不是延伸段),長條上小標籤「×2」表示是同一筆排班;滑過提示寫「同一筆排班 · 櫃台 A、櫃台 B 負責」。兩個收銀點各自開班都選這一筆排班,打卡只有一組;班數算 1 班、工時算一次。",
+    note: "王小明一筆排班 14:00–22:00、兩筆職責(櫃台 A、櫃台 B 都是負責):兩個容器都畫他的完整長條(不是延伸段),長條右上角小徽章「×2」(和自動排入標記並排不重疊;週檢視窄長條依序往下排)表示是同一筆排班;滑過提示列出各台的職責與任務內容。兩個收銀點各自開班都選這一筆排班,打卡只有一組;班數算 1 班、工時算一次。",
   },
 ];
 const WS = 24; // 週檢視每小時 24px(08:00–22:00)
@@ -684,7 +694,7 @@ async function week(cs, CW, closed, special) {
       const a = p.a ?? c.a,
         bb = p.b ?? c.b;
       const b = bar(p, x0, sw, a, bb);
-      if (p.same) sameMark(f, b, true);
+      if (p.same) sameMark(f, b, true, !!p.auto);
       if (p.s !== undefined) ext(b, true, Yw(p.s), b.y);
       if (p.e !== undefined) ext(b, false, b.y + b.height, Yw(p.e));
     });
@@ -835,7 +845,7 @@ async function day(cs) {
       b.x = Xd(a);
       b.y = yy;
       b.name = "bar " + p.n;
-      if (p.same) sameMark(f, b, false);
+      if (p.same) sameMark(f, b, false, !!p.auto);
       const ex = (x0, x1, before) => {
         const e = D.ext.clone();
         f.insertChild(f.children.indexOf(b) + 1, e);
@@ -869,6 +879,169 @@ async function day(cs) {
   }
   return f;
 }
+
+// ---- 手機:日檢視卡片清單(和班表頁 SC-45 手機同一套零件,依開始時間排序,全部列出不收起)----
+// 點卡片標題 → 人力需求對話框、點人 → 編輯排班、點缺額 → 新增排班、最後一列虛線「+ 人力需求」→ 新增人力需求;
+// 手機沒有滑過:滑過的案例(T-15、T-16、T-18)畫成按下(底色加深)。
+const M45 = await figma.getNodeByIdAsync("272:88762");
+const MT = {
+  card: M45.findOne((n) => n.type === "FRAME" && /^早班 /.test(n.name)),
+  lead: await figma.getNodeByIdAsync("272:88920"),
+  helper: await figma.getNodeByIdAsync("272:88927"),
+  date: M45.findOne((n) => n.name === "日期"),
+  add: M45.findOne((n) => n.name === "add-demand"),
+  auto: M45.findOne((n) => n.type === "INSTANCE" && n.name === "auto-mark"),
+};
+const mfont = new Set();
+const mtext = async (t, s) => {
+  for (const f of t.getRangeAllFontNames(0, Math.max(1, t.characters.length))) {
+    const k = JSON.stringify(f);
+    if (!mfont.has(k)) {
+      await figma.loadFontAsync(f);
+      mfont.add(k);
+    }
+  }
+  t.characters = s;
+};
+const press = (target) => {
+  const r = figma.createRectangle();
+  r.name = "state-layer 按下";
+  r.fills = [Pt(V.g500)];
+  r.opacity = 0.08;
+  target.appendChild(r);
+  if (target.layoutMode && target.layoutMode !== "NONE")
+    r.layoutPositioning = "ABSOLUTE";
+  r.resize(target.width, target.height);
+  r.x = 0;
+  r.y = 0;
+  r.cornerRadius =
+    typeof target.cornerRadius === "number" ? target.cornerRadius : 0;
+};
+async function mob(cs) {
+  const f = figma.createAutoLayout("VERTICAL", {
+    name: "手機",
+    itemSpacing: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
+  });
+  f.fills = [Pt(V.bgdef)];
+  f.strokes = [Pt(V.divider)];
+  f.strokeWeight = 1;
+  f.clipsContent = false;
+  f.counterAxisSizingMode = "FIXED";
+  f.resize(382, 10);
+  f.primaryAxisSizingMode = "AUTO";
+  const d = MT.date.clone();
+  f.appendChild(d);
+  await mtext(
+    d.findOne((n) => n.type === "TEXT"),
+    cs.special ? "11/11(三)店慶 ▾" : "11/×(×)▾",
+  );
+  for (const c of [...cs.G].sort(tlCmp)) {
+    const card = MT.card.clone();
+    f.appendChild(card);
+    card.layoutSizingHorizontal = "FILL";
+    for (const k of [...card.children]) if (k.name !== "head") k.remove();
+    const items = tlOrder(c.items).flat();
+    const lead = items.filter((p) => !p.vac && !p.dis && p.lead).length;
+    const leadNeed = lead + items.filter((p) => p.vac === "err").length;
+    const help = items.filter((p) => !p.vac && !p.dis && !p.lead).length;
+    const helpNeed = help + items.filter((p) => p.vac === "warn").length;
+    const parts = [];
+    if (leadNeed) parts.push(`負責 ${lead}/${leadNeed}`);
+    if (helpNeed) parts.push(`協同 ${help}/${helpNeed}`);
+    const ts = card
+      .findOne((n) => n.name === "title-col")
+      .findAll((n) => n.type === "TEXT");
+    await mtext(ts[0], `${c.nm} ${hm(c.a)}–${hm(c.b)}`);
+    await mtext(ts[1], parts.join(" · "));
+    const tag = card.findOne(
+      (n) => n.type === "INSTANCE" && /Tag/.test(n.name),
+    );
+    const vac = items.filter((p) => p.vac).length;
+    const filled = lead + help;
+    tag.setProperties({
+      "Label#76:8": `${filled}/${filled + vac}` + (vac ? ` 缺 ${vac}` : ""),
+      Tone: items.some((p) => p.vac === "err")
+        ? "Error"
+        : vac
+          ? "Warning"
+          : "Grey",
+    });
+    for (const p of [
+      ...items,
+      ...(cs.dayExtra && c === cs.G[0] ? cs.dayExtra : []),
+    ]) {
+      if (p.vac || p.dis) {
+        const st = p.dis
+          ? "Disabled"
+          : p.vac === "err"
+            ? "MissingLead"
+            : "MissingHelper";
+        const i = tlb.children
+          .find(
+            (x) => x.name === `State=${st}, Auto=False, Interaction=Default`,
+          )
+          .createInstance();
+        card.appendChild(i);
+        i.setProperties({
+          [pk(i, "Title")]: p.dis
+            ? `${p.n} · ${p.label} ${hm(p.a)}–${hm(p.b)}`
+            : p.vac === "err"
+              ? "缺負責 1"
+              : "缺協同 1",
+          [pk(i, "Subtitle")]: "",
+        });
+        i.layoutSizingHorizontal = "FILL";
+        i.resize(i.width, 28);
+        continue;
+      }
+      const row = (p.lead ? MT.lead : MT.helper).clone();
+      card.appendChild(row);
+      row.layoutSizingHorizontal = "FILL";
+      const nameRow = row.findOne((n) => n.name === "name-row");
+      if (p.lead) {
+        const lt = nameRow.findOne((n) => n.type === "INSTANCE");
+        await mtext(
+          lt.findOne((n) => n.type === "TEXT"),
+          p.n,
+        );
+      } else
+        await mtext(
+          nameRow.findOne((n) => n.type === "TEXT"),
+          p.n,
+        );
+      const a = p.s ?? p.a ?? c.a,
+        b = p.e ?? p.b ?? c.b;
+      const tr = row.findOne((n) => n.name === "time-row");
+      const tts = tr.findAll((n) => n.type === "TEXT");
+      await mtext(tts[0], `${hm(a)}–${hm(b)}`);
+      for (const x of tts.slice(1)) x.remove();
+      const bm = tr.findOne((n) => n.type === "INSTANCE");
+      const showBreak = ((b - a) * 64 >= 140 && !(p.a || p.b)) || !!p.brk;
+      if (bm) {
+        if (showBreak)
+          bm.setProperties({ [pk(bm, "Minutes")]: `${p.brk || 30} 分` });
+        else bm.remove();
+      }
+      if (p.auto) nameRow.appendChild(MT.auto.clone());
+      if (p.same) {
+        const t = TAG_GREY.createInstance();
+        t.setProperties({ "Label#76:8": "×2" });
+        t.name = "同一筆排班 ×2";
+        nameRow.appendChild(t);
+      }
+      if (p.ix === "Hover") press(row);
+    }
+  }
+  const add = MT.add.clone();
+  f.appendChild(add);
+  add.layoutSizingHorizontal = "FILL";
+  if (cs.emptyHover) press(add);
+  return f;
+}
 // ---- 頁面 ----
 let page = figma.root.children.find((p) => p.name === PAGE_NAME);
 if (!page) {
@@ -887,7 +1060,7 @@ const title = await T(
 );
 page.appendChild(title);
 const sub = await T(
-  "每列一個測試案例 T-xx(排版函式 layoutTimeline 的固定輸入 / 預期輸出):週檢視電腦一天寬 157 / 平板一天寬 125 / 日檢視(橫向,每人一列不收起)/ 輸入、預期輸出與規則。規格:底座 10.11「週模式排版」、排班 14.5「週檢視排版」「滑過提示」。",
+  "每列一個測試案例 T-xx(排版函式 layoutTimeline 的固定輸入 / 預期輸出):週檢視電腦一天寬 157 / 平板一天寬 125 / 日檢視(橫向,每人一列不收起)/ 手機(日檢視卡片清單)/ 輸入、預期輸出與規則。規格:底座 10.11「週模式排版」、排班 14.5「週檢視排版」「滑過提示」。",
   "b2",
   "ts",
   "page-sub",
@@ -917,7 +1090,8 @@ for (const cs of CASES) {
     cs.closedTablet ? null : cs.special,
   );
   const dv = await day(cs);
-  const parts = [wd.f, wt.f, dv];
+  const mv = await mob(cs);
+  const parts = [wd.f, wt.f, dv, mv];
   let x = 0;
   for (const p of parts) {
     sec.appendChild(p);
@@ -952,6 +1126,7 @@ for (const cs of CASES) {
       if (shift > 0) {
         wt.f.x += shift;
         dv.x += shift;
+        mv.x += shift;
         x += shift;
       }
     }
@@ -1021,6 +1196,7 @@ for (const cs of CASES) {
     if (shift > 0) {
       wt.f.x += shift;
       dv.x += shift;
+      mv.x += shift;
       x += shift;
     }
   }
@@ -1050,7 +1226,7 @@ for (const cs of CASES) {
       cs.exp[157] +
       "\n預期輸出(平板 125):" +
       cs.exp[125] +
-      "\n點擊:容器 / 長條 → 人力需求對話框;「+N」→ 清單浮層;空白處 → 新增人力需求。",
+      "\n點擊:容器標題 → 人力需求對話框;長條 → 編輯排班;缺額空位 → 新增排班;「+N」→ 清單浮層;空白處 → 新增人力需求。\n手機(右欄):同一天的人力需求卡片清單,依開始時間全部列出、不收起;沒有滑過,滑過的案例畫成按下。",
     "cap",
     "ts",
     cs.t.split(" ")[0] + " · 註解",
