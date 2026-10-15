@@ -2,10 +2,10 @@
 // Draft/ScheduleTimelineBlock(259:4770)、Draft/ScheduleTimelineDemand(286:77949)加變體屬性 Interaction = Default / Hover / Selected / Focus
 // (只做 State=Normal、Tone=Normal 一組,其他狀態沿用同規則);Draft/RosterCell(49:493)的 State 加 Hover / Focus(Selected 原本就有);
 // (專案 Draft/MoreStrip 的 Interaction 已隨元件移到底座 Draft/ScheduleTimelineMore 的 State,見 TimelineMore-StatusChip.js。)
-//   Hover    = 照 MUI:原底色上疊一層同色系 main(綁變數)、paint opacity 8%(action.hoverOpacity),邊框換同色系 main。
+//   Hover    = 照 MUI:原底色上疊一層同色系 main(綁變數)× 8%(action.hoverOpacity),邊框換同色系 main。
 //   Selected = 疊同色系 main × 16%(action.selectedOpacity)+ 1px 同色系 main 邊框。
 //              色系:長條 primary/main;白底(bg/default、bg/paper)與 grey 底 grey/500;warning/* → warning/main;error/* → error/main。
-//              疊加用同一個節點的第二層填色(變數綁定 + paint opacity),不新增變數、不寫死色碼。
+//              疊色用 state layer 圖層(最底層 `state-layer` 矩形,圖層不透明度;見 StateLayer.js),不新增變數、不寫死色碼。
 //   Focus    = action/focus 2px 外框(鍵盤焦點;畫面不用每張畫)
 // 手機沒有滑過:按下時底色加深(同 Hover 外觀),內容看對話框。Base Draft 的 BS-22 加一列「互動狀態」示範。
 const KEY = {
@@ -75,19 +75,19 @@ const make = async (base, mode) => {
     const tone = TONE(nm);
     if (!tone) throw new Error("沒有對應色系:" + nm + ",回報不要自創");
     const v = await libVar(tone);
-    c.fills = [
-      c.fills[0],
-      { ...Pt(v), opacity: mode === "Hover" ? 0.08 : 0.16 },
-    ];
-    // 綁變數後的新 paint 有時寫入會把不透明度變回 1:用寫入後的 paint 再設一次
-    {
-      const f = [...c.fills];
-      f[f.length - 1] = {
-        ...f[f.length - 1],
-        opacity: mode === "Hover" ? 0.08 : 0.16,
-      };
-      c.fills = f;
-    }
+    const r = figma.createRectangle();
+    r.name = "state-layer";
+    c.insertChild(0, r);
+    if (c.layoutMode !== "NONE") r.layoutPositioning = "ABSOLUTE";
+    r.x = r.y = 0;
+    r.resize(c.width, c.height);
+    r.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+    r.topLeftRadius = c.topLeftRadius;
+    r.topRightRadius = c.topRightRadius;
+    r.bottomLeftRadius = c.bottomLeftRadius;
+    r.bottomRightRadius = c.bottomRightRadius;
+    r.fills = [Pt(v)];
+    r.opacity = mode === "Hover" ? 0.08 : 0.16;
     c.strokes = [Pt(v)];
     if (mode === "Selected") {
       c.strokeWeight = 1;

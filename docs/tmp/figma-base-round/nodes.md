@@ -771,3 +771,22 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
   - **疊色改用圖層**:Hover / Selected 的疊色是最底層的 `state-layer` 矩形(同色系 main,圖層不透明度 8% / 16%),不用第二層 paint。實測綁變數的 paint 不透明度在主元件上正常,但新建的實例會畫成 100%(整顆實心紅),resetOverrides 也救不回來;圖層不透明度沒有這個問題。**其他用 paint 不透明度做疊色的元件(ScheduleTimelineBlock / Demand / More、StatusChip、RosterCell 的 Hover / Selected)新建實例可能有同樣問題**,目前使用處是腳本在實例上照主元件補回不透明度,未改結構。
   - 班表頁 117 顆檢核按鈕換成 ToggleButton 實例(`project/r6-check-toggle.js`,一次性):Error / Default 94、Error / Selected 8(面板展開)、Warning / Default 12、Neutral / Default 3;沒有被跳過的(都不在別的實例裡)、顏色和原本一致;實例沒有填色覆寫。`r5-roster.js` 檢核按鈕改建 ToggleButton 實例(不覆寫顏色),`r5-schedule-parts.js` 手機面板展開改設 State=Selected(原本是切 Contained)。
   - 稽核(全部 0):audit-layout 70:14(電腦 69 / 平板 64 / 手機 64,分 Section 跑)、41:5914(72)、64:14(14)、401:805(18,T-18 後未再改動);audit-legend 70:14 / 401:805;audit-sync(含 overlayNotCovering);audit-roster 89 格;audit.js 41:5914 canvasOverlap 0、baseDraftComponents 36 → 37、nonBaseBindingsInBaseDrafts 0;70:14 canvasOverlap 0、basePrimaryBindings 0、instancesOfBaseDrafts 5706 → 5823(+117);64:14 canvasOverlap 0、basePrimaryBindings 0。
+
+### 第二十四輪後續之十九:互動疊色統一用 state layer 圖層、ToggleButton 進 Base-layout(2026-10-16)
+
+- **疊色改 state layer**(`StateLayer.js`,可重跑):ScheduleTimelineBlock(Hover / Selected)、ScheduleTimelineDemand(Hover / Selected)、ScheduleTimelineMore(3 Tone × Hover / Selected)、StatusChip(3 Tone × Hover / Selected)、RosterCell(Hover / Selected)共 18 個變體,把「第二層填色 + paint 不透明度」換成最底層 `state-layer` 矩形(絕對定位、四邊 STRETCH、圓角同元件,填色綁同色系 main,圖層不透明度 8% / 16%),元件本身只留原底色。ToggleButton 建立時就是這個結構。`Interaction-states.js`、`TimelineMore-StatusChip.js` 的建立程式同步改成 state layer。
+- **實例覆寫清掉**(`project/r6-state-layer-clear.js`,一頁一次):Figma 的覆寫旗標在值和主元件相同時也不會消失,只能 resetOverrides,所以先記下其他覆寫(元件屬性、尺寸、名稱、內距、圓角、子節點顯示 / 填色 / 內距 / 文字)、reset 後補回,只有實例本身的 fills / strokes 不補。清掉 Base Draft 9、班表頁 6、規則頁 9 個實例;之後 brand-rebind 70:14(changed 6)、401:805(changed 27)把長條底色 / 框色與 state-layer 補綁專案色。
+- **新拖實例實測**:24 個 Hover / Selected 變體(含 ToggleButton 6)各建一個新實例,state-layer 圖層 8% / 16%、畫面正確(截圖確認後刪掉測試框)。
+- 腳本:`r6-timeline-cases.js`、`r6-sc60b.js` 不再把變體填色複製到實例(只複製框色);`brand-rebind.js` 保留 paint 不透明度的處理(頁上還有 divider 24% 等帶 paint 不透明度的綁定),註解改寫,不再提互動疊色。
+- **Base-layout**:`Draft/ToggleButton` 加到「按鈕(ToggleButton、列印)與 58mm 單據零件」列(原「列印按鈕與 58mm 單據零件」),跑完沒有「其他」列。
+- 稽核(全部 0):audit-layout 41:5914(72)、401:805(18)、70:14(電腦 69 / 平板 64 / 手機 64,分 Section 跑);64:14 本次未動(沿用 14 畫面全 0);audit-legend 70:14 / 401:805;audit-sync(含 overlayNotCovering);audit-roster 89 格;audit.js 41:5914 canvasOverlap 0、baseDraftComponents 37、nonBaseBindingsInBaseDrafts 0 / 70:14 canvasOverlap 0、basePrimaryBindings 0 / 401:805 canvasOverlap 0、basePrimaryBindings 0 / 64:14 canvasOverlap 0、basePrimaryBindings 0。
+
+### 第二十五輪(執行任務模型)進度(2026-10-16,未完成:use_figma 中途全部失敗)
+
+- **已完成(班表頁 70:14)**:
+  - 資料:11/7 早班「協2/1 +1」→「協2/2」(29 格),圖例「超過人力需求」刪除(29);11/5 晚班改成櫃台 A / B 兩筆(55 個班表),同格上下兩組「崗位名稱(cap、text/secondary)+ 人數標籤」(`project/r7-roster-data.js`、`r7-pos-label.js`);陳大文 11/5「晚 ×2」(55),圖例加「×2 同一筆排班顧多台」(`r7-legend-x2.js`,55);晚班列加高後殼與 Overlay 重算(`r7-fit.js`)。月檢視 SC-43 三尺寸 11/5 兩個標籤上方加崗位名稱、手機多一顆點(`r7-month.js`),平板 11/7「早 3/2」→「早 3/3」。`r5-roster.js` 資料同步(DEMAND 11/5「崗位|人數」、GRID 陳大文「晚 ×2」、SUMMARY 11/5、圖例)。
+  - 小改(`r7-fixes.js`):SC-60 / SC-61 提示框加任務內容;手機日檢視卡片拿掉 [移除] / [+ 加人]、最後加虛線「+ 人力需求」;卡片標題拿掉休息(BreakMark 10 個);時間軸容器 Break 關閉(16 個)。
+  - 新畫面(`r7-states.js`、`r7-dialogs.js`,三尺寸):SC-63(530:52706 / 530:53716 / 530:54788)、SC-46 電腦 / 平板(530:55304 / 530:55725)、手機按下 SC-60(530:56037)/ SC-60b(530:56182)/ SC-61(530:56338)/ SC-62(530:56535);SC-21a(533:54942 / 533:55404 / 533:55826)、SC-21b(533:56084 / 533:56265 / 533:56449)、SC-21c(533:56558 / 533:56662 / 533:56764);SC-04a(534:57466 / 534:57901 / 534:58227)、SC-04b(534:58475 / 534:58919 / 534:59318)、SC-04c(534:59526 / 534:59975 / 534:60379)、SC-04d(534:60601 / 534:61064 / 534:61482)、SC-04e(534:61727 / 534:62213 / 534:62653)、SC-04f(534:62874 / 534:63336 / 534:63754)、SC-19(534:63964 / 534:64410 / 534:64814)。
+  - 刪除舊畫面與註解 66 個:SC-21、SC-48、SC-04、SC-16、SC-49a / b、SC-52a / b、SC-53、SC-54、舊 SC-19(三尺寸);SC-34a / b 背景換成新 SC-04b,文字改「填進的人力需求會一起解除」。
+  - 設定(`r7-settings.js`,三尺寸):SC-20a 條件加「允許同一人同時段填進多筆人力需求」;SC-22a 改負責人 / 協同執行任務、拿掉預設休息與人數;SC-10 加三條規則(電腦 / 平板 value 欄已改,手機只改到「同一時段兼多個崗位」)。
+- **未完成(use_figma 失敗後中斷)**:SC-10 手機「預設休息」「負責人 / 協同預設任務」副標的值;SC-09a 電腦列表拿掉休息欄;新畫面框外註解與舊註解的文字(SC-21 / SC-48 等編號、「條數 = max(…)」、「可以在卡片裡加人、移除人」);規則頁 T-04 改題、T-18「×2」重新設計(長條右上角徽章)、T-01~T-18 手機呈現;brand-rebind(新畫面與重建的班表還是底座橘色)、r4-layout 排版(新畫面放在 x=100000)、完整 audit、2880 截圖核對。

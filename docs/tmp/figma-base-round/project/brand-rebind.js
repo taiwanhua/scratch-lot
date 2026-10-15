@@ -73,7 +73,7 @@ for (const node of page.findAll(() => true)) {
         next.push(p);
         continue;
       }
-      // 換綁變數會把 paint 的不透明度重設成 1(互動狀態的疊色是 8% / 16%),要保留原值
+      // 換綁變數會把 paint 的不透明度重設成 1,要保留原值(互動狀態的疊色已改成 state-layer 圖層不透明度,不經過這裡;這裡保護其他帶 paint 不透明度的 primary 色)
       next.push({
         ...figma.variables.setBoundVariableForPaint(
           p,

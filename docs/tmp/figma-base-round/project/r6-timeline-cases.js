@@ -604,12 +604,11 @@ async function week(cs, CW, closed, special) {
       if (w < 40) i.paddingTop = 20;
     }
     if (p.ix) {
-      // 互動狀態的底色 / 框色以變體為準(實例覆寫的品牌色要換掉,之後 brand-rebind 再補綁)
+      // 疊色在變體的 state-layer 圖層(實例直接繼承);框色以變體為準(範本實例的框色覆寫要換掉,之後 brand-rebind 再補綁)
       i.setProperties({ Interaction: p.ix });
       const m = tlb.children.find(
         (c) => c.name === `State=Normal, Auto=False, Interaction=${p.ix}`,
       );
-      i.fills = m.fills;
       i.strokes = m.strokes;
       if (p.ix === "Selected") i.strokesIncludedInLayout = false; // 已選取的框不佔版面
     }
@@ -828,8 +827,7 @@ async function day(cs) {
         const m = tlb.children.find(
           (v) => v.name === `State=Normal, Auto=False, Interaction=${p.ix}`,
         );
-        b.fills = m.fills;
-        b.strokes = m.strokes;
+        b.strokes = m.strokes; // 疊色在變體的 state-layer 圖層,框色以變體為準
       }
       const a = p.a ?? c.a,
         bb = p.b ?? c.b;

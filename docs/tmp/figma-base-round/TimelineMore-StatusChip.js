@@ -57,23 +57,22 @@ const T = async (s, st, c, name) => {
   t.name = name;
   return t;
 };
-// 互動狀態(照 MUI):Hover = 原底色上疊同色系 main × 8%(paint opacity)、框同色系 main;
+// 互動狀態(照 MUI):Hover = 原底色上疊同色系 main × 8%、框同色系 main;
 //   Selected = 疊同色系 main × 16% + 1px 同色系 main 框。Neutral 用 grey/500、Warning warning/main、Error error/main。
+//   疊色用 state layer 圖層:最底層 `state-layer` 矩形(絕對定位、四邊 STRETCH),填色綁同色系 main、圖層不透明度 8% / 16%
+//   (不用 paint 不透明度:新建的實例會畫成 100%,見 StateLayer.js)。
 const state = (c, st, toneMain) => {
   if (st === "Hover" || st === "Selected") {
-    c.fills = [
-      c.fills[0],
-      { ...P(V[toneMain]), opacity: st === "Hover" ? 0.08 : 0.16 },
-    ];
-    // 綁變數後的新 paint 有時寫入會把不透明度變回 1:用寫入後的 paint 再設一次
-    {
-      const f = [...c.fills];
-      f[f.length - 1] = {
-        ...f[f.length - 1],
-        opacity: st === "Hover" ? 0.08 : 0.16,
-      };
-      c.fills = f;
-    }
+    const r = figma.createRectangle();
+    r.name = "state-layer";
+    c.insertChild(0, r);
+    r.layoutPositioning = "ABSOLUTE";
+    r.x = r.y = 0;
+    r.resize(c.width, c.height);
+    r.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+    r.cornerRadius = c.cornerRadius;
+    r.fills = [P(V[toneMain])];
+    r.opacity = st === "Hover" ? 0.08 : 0.16;
     c.strokes = [P(V[toneMain])];
     c.strokeWeight = 1;
     if (st === "Selected") c.strokesIncludedInLayout = false;

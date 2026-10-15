@@ -56,7 +56,8 @@ const GRID = [
     ["o", "已排於新竹店", "14:00–22:00"],
     ["s"],
     ["e"],
-    ["f", "晚 ★ · 休 30", "14:30–22:00"],
+    // 第二十五輪:11/5 一人顧兩台(同一筆排班 14:30–22:00 填進晚班櫃台 A、櫃台 B,都是負責)
+    ["f", "晚 ×2 ★ · 休 30", "14:30–22:00"],
     ["a", "晚 ★ · 休 30", "14:30–22:00"],
     ["f", "晚 ★ · 休 30", "14:30–22:00"],
   ],
@@ -86,7 +87,9 @@ const PUNCH = { "0-4": 3, "3-0": 2, "4-3": 2 };
 // 人力需求區(頂部固定群組列「▾ 人力需求」,取代舊的 summary-row):每個人力需求一列,格子寫「負 已排/需 協 已排/需」;
 // 滿 = 灰(grey/100)、缺協同 = 橘(warning)、缺負責 = 紅(error);店休灰底。和月 / 週 / 日檢視、檢核面板同一份資料:
 // 11/1、11/2、11/4、11/6 晚班缺協同;11/4 張小芳排「臨」(沒有套用範本的人力需求);
-// 11/7 早班多排李小華 → 協2/1,標籤旁灰字「+1」(超過人力需求;月檢視寫「協2/1」/「早 3/2」)
+// 11/7 早班有兩筆協同任務(協2/2;第二十五輪拿掉「+1 超過人力需求」:要多一人 = 多一筆協同任務);
+// 11/5 晚班兩筆(櫃台 A、櫃台 B),同一格上下兩個標籤(陣列 = 同一格多筆;「崗位|人數」= 上行崗位名稱小字次要色、下行人數標籤;
+// 崗位不加簡稱)
 const DEMAND = [
   [
     "早班",
@@ -97,7 +100,7 @@ const DEMAND = [
       "負1/1 協1/1",
       "負1/1 協1/1",
       "負1/1 協1/1",
-      "負1/1 協2/1",
+      "負1/1 協2/2",
     ],
   ],
   ["補貨", ["協1/1", "協1/1", 0, null, "協1/1", null, null]],
@@ -108,7 +111,7 @@ const DEMAND = [
       "負1/1 協0/1",
       0,
       "負1/1 協0/1",
-      "負1/1 協1/1",
+      ["櫃台 A|負1/1 協1/1", "櫃台 B|負1/1"],
       "負1/1 協0/1",
       "負1/1 協2/2",
     ],
@@ -121,7 +124,7 @@ const SUMMARY = [
   ["需 5 · 已排 4", "warn", "缺 1 · 可排 2"],
   ["店休", "off"],
   ["需 5 · 已排 4", "warn", "缺 1 · 可排 1"],
-  ["需 5 · 已排 5", "full"],
+  ["需 6 · 已排 6", "full"],
   ["需 4 · 已排 3", "warn", "缺 1 · 可排 1"],
   ["需 4 · 已排 4", "full"],
 ];
@@ -141,24 +144,27 @@ async function demandChip(lines, tone) {
   c.name = "status-chip";
   return c;
 }
-// 已排超過需要的人數:標籤旁灰字「+N」
-const overBy = (s) =>
-  [...(s || "").matchAll(/(\d+)\/(\d+)/g)].reduce(
-    (n, m) => n + Math.max(0, +m[1] - +m[2]),
-    0,
-  );
-async function demandCell(lines, tone, w) {
+// 一格多筆(同一天同一班別多筆)時上下排,間距 4;每筆「崗位|人數」→ 上行崗位名稱(cap、text/secondary)、下行人數標籤
+async function demandCell(lines, tone, w, more = []) {
   const h = await headCell(" ", null, w, "cap", "ts", "def");
   if (lines) {
     h.children[0].remove();
-    const chip = await demandChip(lines, tone);
-    const over = overBy(lines[0]);
-    if (over) {
-      const r = row(4, "demand-over");
-      add(r, chip);
-      add(r, await T("+" + over, "capSB", "ts", "+1 超過"));
-      add(h, r);
-    } else add(h, chip);
+    for (const s of [lines[0], ...more]) {
+      const [pos, lab] = s.includes("|") ? s.split("|") : [null, s];
+      const chip = await demandChip(
+        [lab, lines[1]],
+        pos ? demandTone(lab) : tone,
+      );
+      if (!pos) {
+        add(h, chip);
+        continue;
+      }
+      const g = col(2, "demand-group");
+      add(g, await T(pos, "cap", "ts", "position"));
+      add(g, chip);
+      add(h, g, "FILL");
+    }
+    h.itemSpacing = 4;
   }
   return h;
 }
@@ -280,17 +286,21 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
         "FILL",
       );
       for (let d = 0; d < days; d++) {
-        const s = cells[d + D0];
+        const v = cells[d + D0];
+        const [s, ...more] = Array.isArray(v) ? v : [v];
         add(
           dr,
           s === 0
             ? await headCell(" ", null, colW, "cap", "ts", "g200")
-            : await demandCell(s && [s], s && demandTone(s), colW),
+            : await demandCell(s && [s], s && demandTone(s), colW, more),
           null,
           "FILL",
         );
       }
       await statCells(dr);
+      // 一格有兩個標籤時整列一樣高
+      const hMax = Math.max(...dr.children.map((c) => c.height));
+      for (const c of dr.children) c.resize(c.width, hMax);
       add(g, dr);
     }
   }
@@ -317,7 +327,7 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
         c = await rcell("Selected", l1, l2);
       else c = await rcell("Filled", l1, l2);
       // 第二十四輪:負責人不用 ★,班別簡稱套綠色標籤(RosterCell 的 Lead / LeadText)
-      const lead = /^(\S+) ★\s*(?:·\s*)?(.*)$/.exec(l1 || "");
+      const lead = /^(.+?) ★\s*(?:·\s*)?(.*)$/.exec(l1 || "");
       if (lead && k !== "o") {
         c.setProperties({ "Lead#319:24": true, "LeadText#319:28": lead[1] });
         await setTxt(c, "line-1", lead[2]);
@@ -422,7 +432,8 @@ const ROSTER_LEGEND = [
   ["Solid", "Warning", "缺協同"],
   ["Break", "Neutral", "休息(分鐘)"],
   ["Solid", "Neutral", "人力需求已滿"],
-  ["Symbol", "Neutral", "超過人力需求", "+1"],
+  // 第二十五輪:拿掉「+1 超過人力需求」;11/5 有「晚 ×2」的畫面才放(手機看不到 11/5,不放)
+  ["Symbol", "Neutral", "同一筆排班顧多台", "×2"],
 ];
 const VIEWS = ["月", "週", "日", "班表"];
 // 工具列:兩列(第一列分店 + 狀態 + 動作;第二列檢視 + 月份 + 顯示欄位 + 檢核)

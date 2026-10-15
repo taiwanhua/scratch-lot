@@ -49,8 +49,9 @@ const ROWS = {
       ],
     ],
     [
-      "列印按鈕與 58mm 單據零件",
+      "按鈕(ToggleButton、列印)與 58mm 單據零件",
       [
+        "Draft/ToggleButton",
         "Draft/PrintButton",
         "Draft/Receipt58",
         "Draft/Receipt58Header",

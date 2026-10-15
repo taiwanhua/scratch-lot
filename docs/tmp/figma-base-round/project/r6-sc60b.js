@@ -38,8 +38,7 @@ for (const id of ["390:101986", "390:102620"]) {
       n.componentProperties?.Interaction?.value === "Hover",
   )) {
     i.setProperties({ Interaction: "Default" });
-    i.fills = defMain.fills;
-    i.strokes = defMain.strokes;
+    i.strokes = defMain.strokes; // 疊色在 Hover 變體的 state-layer 圖層,回到 Default 就沒有了
   }
   const tl = c.findOne((n) => n.name === "ScheduleTimeline(週模式,容器)");
   tl.name = "ScheduleTimeline(週模式,容器,可捲動)";
