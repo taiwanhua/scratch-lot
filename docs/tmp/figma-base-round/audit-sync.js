@@ -37,6 +37,9 @@ const MERGED = [
   ["+ 新增 ▾", ["+ 人力需求", "+ 新增排班"]],
   ["⋯", ["套用範本", "自動排班"]],
 ];
+// SC-46 結構不同:電腦 / 平板是整頁(工具列在畫面裡)加日期浮層;手機是 SC-45 當背景加底部月曆,工具列在背景裡(背景不計),所以手機看起來「缺」工具列按鈕
+const SC46_WHY =
+  "電腦 / 平板是整頁加日期浮層;手機是 SC-45 背景加底部月曆,工具列在背景裡不計(結構不同)";
 const EXEMPT = {
   "ST-40|篩選(1)|D":
     "電腦把篩選條件攤在列表上方(篩選列);平板 / 手機照 RW-01 收成 [篩選] 按鈕 + 抽屜",
@@ -46,6 +49,18 @@ const EXEMPT = {
     "平板 / 手機只畫第二關(PU-10b);第一關出貨確認(PU-10a,[列印調貨出貨單] 在那一張)照共用規則不另畫",
   "PU-10|列印調貨出貨單|M":
     "平板 / 手機只畫第二關(PU-10b);第一關出貨確認(PU-10a,[列印調貨出貨單] 在那一張)照共用規則不另畫",
+  "SC-46|+ 人力需求|M": SC46_WHY,
+  "SC-46|+ 新增排班|M": SC46_WHY,
+  "SC-46|套用範本|M": SC46_WHY,
+  "SC-46|自動排班|M": SC46_WHY,
+  "SC-46|發布|M": SC46_WHY,
+  "SC-46|月|M": SC46_WHY,
+  "SC-46|週|M": SC46_WHY,
+  "SC-46|日|M": SC46_WHY,
+  "SC-46|班表|M": SC46_WHY,
+  "SC-46|限制 1 · 提醒 12|M": SC46_WHY,
+  "SC-46|+ 新增 ▾|M": SC46_WHY,
+  "SC-46|⋯|M": SC46_WHY,
 };
 const NONBTN =
   /Tag|Badge|Select|TextField|Radio|Checkbox|Alert|Ticket|Legend|Stepper|Avatar|Icon|OrgTree|Switch|Tab$|Draft\/Tab|SideNav|NavRail|AppBar|BookCard|TableCell/;

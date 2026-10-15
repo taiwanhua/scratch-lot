@@ -113,7 +113,12 @@ for (const g of pg.findAll((n) => n.name === "RosterGrid(組成)")) {
     // 「fill:*」= 互動狀態的格子,底色不比
     const strip = (x) => x.replace(/\|fill:[^#]*/, "");
     const same = v.includes("|fill:*") ? strip(v) === strip(R[k]) : R[k] === v;
-    if (!same) diffs.push(`${k}: ${v} ≠ ${R[k]}`);
+    // 刻意例外:SC-63 / SC-21a 滑過人力需求區空白格,格子多一個淡色「+ 人力需求」
+    const hoverAdd =
+      k.startsWith("demand-row") &&
+      /^SC-(63|21a)/.test(top.name) &&
+      v.replace("/+ 人力需求", "") === R[k];
+    if (!same && !hoverAdd) diffs.push(`${k}: ${v} ≠ ${R[k]}`);
   }
   total += diffs.length;
   if (diffs.length)

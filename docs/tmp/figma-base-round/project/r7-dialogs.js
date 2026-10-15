@@ -79,26 +79,22 @@ async function demandRow(sz, demand, roleTask) {
   add(c, r, "FILL");
   return c;
 }
-// 「加入這天的人力需求」清單底部:從當天已有的挑 / 就地新增一筆(沒有套用範本,顯示「臨」)
+// 「加入這天的人力需求」清單最下面:[+ 加入人力需求] = 從這天已有的人力需求加一列
 async function listActions() {
   const r = row(8, "list-actions");
   add(r, await btn("+ 加入人力需求", "Text", "Small"));
-  add(r, await btn("新增一筆人力需求", "Text", "Small"));
   return r;
 }
-// 就地新增的人力需求(臨時代班):時間預設 = 排班時間、崗位必選、自動建一筆任務給這個人並填進
-async function newDemandBlock(sz, a, b, roleTask) {
-  const c = await card("新增一筆人力需求", 12, 8);
-  const hd = row(8, "head");
-  add(hd, await T("新增一筆人力需求", "sub2"));
-  add(hd, await tag("臨", "Primary"));
-  sp(hd);
-  add(hd, await btn("移除", "Text", "Small", "Error"));
-  add(c, hd, "FILL");
-  add(c, await selF("崗位 *", "店內櫃台"), "FILL");
-  add(c, r2(await tf("開始", a), await tf("結束", b)), "FILL");
-  add(c, await selF("職責 · 執行任務", roleTask), "FILL");
-  return c;
+// 「加入這天的人力需求」區塊標題列:新增人力需求的入口在標題那一行最右邊,文字按鈕 [新增一筆人力需求]
+// (疊開共用的人力需求對話框,新增模式,同 SC-21a;流程見 SC-04e ①②③)。三尺寸同一位置,手機放不下時標題換行、按鈕維持右側。
+async function demandHead() {
+  const r = row(8, "section-head");
+  const t = await T("加入這天的人力需求", "sub2");
+  add(r, t);
+  t.layoutSizingHorizontal = "FILL";
+  t.textAutoResize = "HEIGHT";
+  add(r, await btn("新增一筆人力需求", "Text", "Small"));
+  return r;
 }
 // 未對應排班的打卡區塊
 async function punchBlock(sz, title, items, usePunch) {
@@ -174,6 +170,106 @@ async function menuUnder(f, selName, items) {
   m.y = sb.y - fb.y + sb.height + 4;
 }
 
+// SC-04e 臨時代班與 [新增一筆人力需求] 的流程(三步,各三尺寸):
+// ① 那天沒有排班,從班表格子的時鐘圖示打開新增排班;當天沒有合適的人力需求 → 清單位置顯示「這天沒有合適的人力需求」,入口仍在標題右邊
+// ② 疊開共用的人力需求對話框(新增模式,同 SC-21a):日期鎖定為排班那天,開始 / 結束帶入排班的上下班時間(可改)
+// ③ [新增] 成功 → 回到排班對話框,新的人力需求自動加一列(依規則填第一個空的任務);人力需求已獨立存檔,Snackbar 提示
+const SC04E_TITLE = "新增排班 · 林美麗 11/1(日)";
+async function sc04eTop(p, sz) {
+  for (const x of await fieldsTime(sz, "09:00", "15:10", "30"))
+    add(p, x, "FILL");
+  add(
+    p,
+    await punchBlock(
+      sz,
+      "林美麗 11/1 有 2 張未對應排班的打卡",
+      [
+        [true, "09:02 上班"],
+        [true, "15:10 下班"],
+      ],
+      false,
+    ),
+    "FILL",
+  );
+  add(p, await demandHead(), "FILL");
+}
+async function snackbar(f, sz, message) {
+  const bd = await figma.getNodeByIdAsync("41:5914");
+  await bd.loadAsync();
+  const set = bd.findOne(
+    (n) => n.type === "COMPONENT_SET" && n.name === "Draft/Snackbar+",
+  );
+  const s = set.children
+    .find((c) => c.name === "Severity=Success")
+    .createInstance();
+  const pr = {};
+  for (const k of Object.keys(s.componentProperties)) {
+    if (k.startsWith("Message#")) pr[k] = message;
+    if (k.startsWith("ShowTitle#") || k.startsWith("ShowAction#"))
+      pr[k] = false;
+  }
+  s.setProperties(pr);
+  // 浮層:蓋在背景上不算 overlapText(audit-layout 的例外)
+  s.name = "Snackbar 已新增人力需求(浮層)";
+  f.appendChild(s);
+  const h = Math.min(f.height, H[sz]);
+  s.x =
+    sz === "M" ? Math.round((f.width - s.width) / 2) : f.width - s.width - 24;
+  s.y = h - s.height - (sz === "M" ? 16 : 24);
+}
+async function sc04eFlow() {
+  await screen("SC-04e ①", SC04E_TITLE, "SC-03", "新增", async (p, sz) => {
+    await sc04eTop(p, sz);
+    add(p, await T("這天沒有合適的人力需求", "body2", "ts", "empty"));
+  });
+  await screen(
+    "SC-04e ②",
+    "新增人力需求",
+    "SC-04e ①",
+    "新增",
+    async (p, sz) => {
+      add(
+        p,
+        r2(
+          await tf("日期", "11/1(日)", "這筆排班那天", "Medium", "Disabled"),
+          await selF("崗位", "店內櫃台"),
+        ),
+        "FILL",
+      );
+      add(p, r2(await tf("開始", "09:00"), await tf("結束", "15:10")), "FILL");
+      add(p, await head("負責人", "0~1 筆"), "FILL");
+      add(p, await taskRow(sz, "店內事務與帳目負責", null), "FILL");
+      add(p, await btn("+ 負責人", "Text", "Small", "Primary", "Disabled"));
+      add(p, await head("協同", "0~10 筆"), "FILL");
+      add(p, await T("沒有協同", "body2", "ts", "empty"));
+      add(p, await btn("+ 協同", "Text", "Small"));
+      add(p, await cb(false, "同時存成人力需求範本"));
+    },
+  );
+  await screen(
+    "SC-04e ③",
+    SC04E_TITLE,
+    "SC-03",
+    "新增",
+    async (p, sz) => {
+      await sc04eTop(p, sz);
+      add(
+        p,
+        await demandRow(
+          sz,
+          "臨 09:00–15:10 · 店內櫃台",
+          "負責 · 店內事務與帳目負責",
+        ),
+        "FILL",
+      );
+      add(p, await listActions(), "FILL");
+    },
+    {
+      after: (f, sz) =>
+        snackbar(f, sz, "已新增人力需求 臨 09:00–15:10 · 店內櫃台"),
+    },
+  );
+}
 if (PART === "demand") {
   // SC-21a 新增人力需求(從班表人力需求區點「補貨」列 11/6 空白格,帶入補貨範本)
   await screen("SC-21a", "新增人力需求", "SC-63", "新增", async (p, sz) => {
@@ -261,7 +357,7 @@ if (PART === "entry") {
         "預設休息:滿 4 小時 30 分",
       ))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(sz, "晚班 14:30–22:00 · 店內櫃台", "協同 · 店內事務"),
@@ -286,7 +382,7 @@ if (PART === "entry") {
     async (p, sz) => {
       for (const x of await fieldsTime(sz, "08:30", "14:30", "30"))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(
@@ -309,7 +405,7 @@ if (PART === "entry") {
     async (p, sz) => {
       for (const x of await fieldsTime(sz, "14:30", "18:00", "30"))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(
@@ -337,7 +433,7 @@ if (PART === "entry") {
     async (p, sz) => {
       for (const x of await fieldsTime(sz, "08:30", "14:30", "30"))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(
@@ -365,38 +461,7 @@ if (PART === "entry") {
     },
     { danger: "刪除這筆排班" },
   );
-  // SC-04e 臨時代班:那天沒有排班,從格子的時鐘圖示打開;上下班自己填(勾「改用打卡時間」才帶入),
-  // 當天沒有合適的人力需求 → 清單底部 [新增一筆人力需求] 就地建一筆「臨」並填進
-  await screen(
-    "SC-04e",
-    "新增排班 · 林美麗 11/1(日)",
-    "SC-03",
-    "新增",
-    async (p, sz) => {
-      for (const x of await fieldsTime(sz, "09:00", "15:10", "30"))
-        add(p, x, "FILL");
-      add(
-        p,
-        await punchBlock(
-          sz,
-          "林美麗 11/1 有 2 張未對應排班的打卡",
-          [
-            [true, "09:02 上班"],
-            [true, "15:10 下班"],
-          ],
-          false,
-        ),
-        "FILL",
-      );
-      add(p, await head("加入這天的人力需求"), "FILL");
-      add(
-        p,
-        await newDemandBlock(sz, "09:00", "15:10", "負責 · 店內事務與帳目負責"),
-        "FILL",
-      );
-      add(p, await listActions(), "FILL");
-    },
-  );
+  await sc04eFlow();
   // SC-04f 一人顧兩台
   await screen(
     "SC-04f",
@@ -406,7 +471,7 @@ if (PART === "entry") {
     async (p, sz) => {
       for (const x of await fieldsTime(sz, "14:30", "22:00", "30"))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(
@@ -438,7 +503,7 @@ if (PART === "entry") {
     async (p, sz) => {
       for (const x of await fieldsTime(sz, "08:30", "14:30", "30"))
         add(p, x, "FILL");
-      add(p, await head("加入這天的人力需求"), "FILL");
+      add(p, await demandHead(), "FILL");
       add(
         p,
         await demandRow(
