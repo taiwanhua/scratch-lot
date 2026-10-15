@@ -342,7 +342,6 @@ if (PART === "roster") {
       o: {
         published: true,
         checkLabel: "限制 0 · 提醒 2",
-        checkColor: "Primary",
       },
     },
     "SC-20b": {
@@ -361,10 +360,14 @@ if (PART === "roster") {
       if (sz === "M" && o.panel) {
         const f = mob03.clone();
         f.name = `${code} · 手機 ${o.auto ? "自動排班完成:檢核面板(底部面板,不遮擋)" : "檢核面板(底部面板,不遮擋)"}`;
+        // 面板展開:檢核按鈕(Draft/ToggleButton)State=Selected
         for (const b of f.findAll(
-          (n) => n.type === "INSTANCE" && n.name.startsWith("Button 限制"),
-        ))
-          b.setProperties({ Variant: "Contained" });
+          (n) =>
+            n.type === "INSTANCE" && n.name.startsWith("ToggleButton 限制"),
+        )) {
+          b.setProperties({ State: "Selected" });
+          b.name += "(已選取:面板展開)";
+        }
         const s = await sheetBox(o.auto ? "檢核(自動排班完成)" : "檢核");
         await checkPanelBody(s, { auto: o.auto });
         f.appendChild(s);

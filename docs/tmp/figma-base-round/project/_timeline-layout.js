@@ -47,11 +47,12 @@ const tlMoreTone = (hidden) =>
     : hidden.some((g) => g.items.some((p) => p.vac))
       ? "Warning"
       : "Neutral";
-// 容器內長條順序:負責 → 協同 → 缺額(同類維持資料順序)
+// 容器內長條順序:依職責排、同職責先人後缺額 —— 負責(人)→ 負責缺額 → 協同(人)→ 協同缺額(同類維持資料順序)。
+// 缺額一條一人(條數 = 缺的人數),每條寫「缺負責 1」/「缺協同 1」。
 const tlOrder = (items) =>
   items
     .map((p, i) => [
-      Array.isArray(p) ? 1 : p.vac ? 2 : p.dis ? 1 : p.lead ? 0 : 1,
+      Array.isArray(p) ? 2 : p.vac === "err" ? 1 : p.vac ? 3 : p.lead ? 0 : 2,
       i,
       p,
     ])

@@ -450,12 +450,23 @@ async function toolbar(sz, o = {}) {
   }
   const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
   const pg = await pager(o.period || "2026 年 11 月", "sub2");
-  const chk = await btn(
-    o.checkLabel || "限制 1 · 提醒 12",
-    o.panel ? "Contained" : "Outlined",
-    "Small",
-    o.checkColor || (o.checkOk ? "Success" : "Error"),
-  );
+  // 檢核按鈕 = 底座 Draft/ToggleButton(Base Draft 497:8040,MUI ToggleButton):有限制 Error、只有提醒 Warning、沒有問題 Neutral;
+  // 面板展開 = State=Selected。不在實例上覆寫顏色。
+  const chkLabel = o.checkLabel || "限制 1 · 提醒 12";
+  const chkColor = o.checkOk
+    ? "Neutral"
+    : /^限制 0/.test(chkLabel)
+      ? "Warning"
+      : "Error";
+  const chkState = o.panel ? "Selected" : "Default";
+  const chk = (await figma.getNodeByIdAsync("497:8040")).children
+    .find((v) => v.name === `Color=${chkColor}, State=${chkState}`)
+    .createInstance();
+  chk.setProperties({
+    [Object.keys(chk.componentProperties).find((k) => k.startsWith("Label#"))]:
+      chkLabel,
+  });
+  chk.name = `ToggleButton ${chkLabel}` + (o.panel ? "(已選取:面板展開)" : "");
   // ⚙ 顯示欄位:只在班表檢視,三尺寸都有
   const colsBtn =
     (o.view || "班表") === "班表"

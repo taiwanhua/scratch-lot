@@ -2,7 +2,7 @@
 // 前置:先貼上 `_timeline-layout.js`(layoutTimeline;和 r6-week.js 同一個函式算位置,不手填座標)。
 // 在 scratch-lot Screens 執行;放在班表頁(70:14)後面。每列一個測試案例 T-xx:週檢視電腦一天寬 157 | 週檢視平板一天寬 125 | 日檢視(橫向,每人一列不收起)| 輸入、預期輸出與規則(框外註解樣式)。
 // 每個案例寫死預期輸出(exp),腳本用 layoutTimeline 算出實際結果並比對,不一致的列在回傳的 mismatch(要回報,不要改 exp 湊答案)。
-// 全部用正式元件:Draft/ScheduleTimelineBlock / ScheduleTimelineDemand / ScheduleTimelineMore / StatusChip / LeadTag / BreakMark / ScheduleAutoMark。
+// 全部用正式元件:Draft/ScheduleTimelineBlock / ScheduleTimelineDemand / ScheduleTimelineMore / StatusChip / LeadTag / BreakMark / ScheduleAutoMark,以及底座 Draft/Tag(同一筆排班「×2」)。
 // 範本實例取自 SC-44 電腦(週)與 SC-45 電腦(日),顏色綁共用色票;畫完跑 brand-rebind.js(PAGE_ID = 本頁)。
 const PAGE_NAME = "Screen / 班表時間軸 · 各種情況";
 const WEEK_SRC = "272:86970",
@@ -116,6 +116,20 @@ const D = {
 };
 await figma.loadFontAsync(W.lab.fontName);
 const tipSrc = await figma.getNodeByIdAsync(TIP_SRC);
+// 同一筆排班掛兩筆職責(一人顧兩個收銀點)的標記:底座 Draft/Tag(Library,14:529)Tone=Grey「×2」,不自畫
+const TAG_GREY = (await figma.getNodeByIdAsync("14:529")).children.find(
+  (v) => v.name === "Tone=Grey",
+);
+await figma.loadFontAsync(TAG_GREY.findOne((n) => n.type === "TEXT").fontName);
+const sameMark = (fr, b, week) => {
+  const t = TAG_GREY.createInstance();
+  t.setProperties({ "Label#76:8": "×2" });
+  fr.appendChild(t);
+  t.name = "同一筆排班 ×2";
+  t.x = b.x + (b.width - t.width) / 2;
+  t.y = week ? b.y + b.height - t.height - 4 : b.y + (b.height - t.height) / 2;
+  return t;
+};
 // ---- 資料 ----
 // C:人力需求(id、簡稱 s、名稱 nm、開始 a、結束 b、人數標籤 lab「已排/需求」、人 items、Tone、崗位排序 ord、範本排序 tmpl)
 const P = (n, lead, o = {}) => ({ n, lead, ...o }); // o:s 提早、e 延後、a/b 只上一段、auto、brk(休息分)、ix 互動狀態
@@ -179,7 +193,7 @@ const CASES = [
       C(2, "晚", "晚班", 14.5, 22, "1/2", [Vc("err"), P("林美麗")], "Error"),
     ],
     exp: { 157: "早 0–104、晚 0–76", 125: "早 0–104、晚 0–76" },
-    note: "條數 = max(需求人數, 已排人數):缺額佔一條虛線空位(缺協同橘、缺負責紅),容器框色同;長條順序 負責 → 協同 → 缺額。",
+    note: "條數 = max(需求人數, 已排人數):缺額一人一條虛線空位、每條寫「缺負責 1」/「缺協同 1」(缺負責紅、缺協同橘),容器框色同;長條依職責排、同職責先人後缺額:負責 → 缺負責 → 協同 → 缺協同(晚班沒有負責人,缺負責排最前面)。",
   },
   {
     t: "T-04 多排(已排 > 需求)",
@@ -478,6 +492,27 @@ const CASES = [
     },
     note: "早班 76 + 補貨 48 = 124 ≤ 平板一天 125 → 全部放得下,不保留 24px、沒有「+N」。欄寬只有跨過整數條時排法才改變(例:平板若是 120,補貨就會收起)。",
   },
+  {
+    t: "T-18 一人顧兩個收銀點(同一筆排班、兩筆職責)",
+    G: [
+      C(1, "A", "櫃台 A", 14, 22, "負1/1", [P("王小明", 1, { same: true })]),
+      // 滑過放在櫃台 B(最後一列),日檢視的提示框才不會蓋到櫃台 B 的標題
+      C(
+        2,
+        "B",
+        "櫃台 B",
+        14,
+        22,
+        "負1/1",
+        [P("王小明", 1, { same: true, ix: "Hover" })],
+        "Normal",
+        2,
+      ),
+    ],
+    tip: "王小明 14:00–22:00 · 同一筆排班 · 櫃台 A、櫃台 B 負責",
+    exp: { 157: "A 0–48、B 48–96", 125: "A 0–48、B 48–96" },
+    note: "王小明一筆排班 14:00–22:00、兩筆職責(櫃台 A、櫃台 B 都是負責):兩個容器都畫他的完整長條(不是延伸段),長條上小標籤「×2」表示是同一筆排班;滑過提示寫「同一筆排班 · 櫃台 A、櫃台 B 負責」。兩個收銀點各自開班都選這一筆排班,打卡只有一組;班數算 1 班、工時算一次。",
+  },
 ];
 const WS = 24; // 週檢視每小時 24px(08:00–22:00)
 const Yw = (t) => 22 + (t - 8) * WS;
@@ -639,7 +674,7 @@ async function week(cs, CW, closed, special) {
         f.appendChild(v);
         v.name = p.vac === "err" ? "vacancy 缺負責" : "vacancy 缺協同";
         v.setProperties({
-          [pk(v, "Title")]: p.vac === "err" ? "缺\n負\n責" : "缺\n協\n同",
+          [pk(v, "Title")]: p.vac === "err" ? "缺\n負\n責\n1" : "缺\n協\n同\n1",
           [pk(v, "Subtitle")]: "",
         });
         v.resize(sw, d.height - 2);
@@ -650,6 +685,7 @@ async function week(cs, CW, closed, special) {
       const a = p.a ?? c.a,
         bb = p.b ?? c.b;
       const b = bar(p, x0, sw, a, bb);
+      if (p.same) sameMark(f, b, true);
       if (p.s !== undefined) ext(b, true, Yw(p.s), b.y);
       if (p.e !== undefined) ext(b, false, b.y + b.height, Yw(p.e));
     });
@@ -738,7 +774,7 @@ async function day(cs) {
     d.x = Xd(c.a);
     d.y = ty[t];
     const items = [
-      ...c.items,
+      ...tlOrder(c.items),
       ...(cs.dayExtra && c === cs.G[0] ? cs.dayExtra : []),
     ];
     items.forEach((p, i) => {
@@ -787,13 +823,21 @@ async function day(cs) {
       pr[pk(b, "BreakText")] = (p.brk || 30) + " 分";
       b.setProperties(pr);
       b.setProperties({ Auto: p.auto ? "True" : "False" });
-      if (p.ix) b.setProperties({ Interaction: p.ix });
+      if (p.ix) {
+        b.setProperties({ Interaction: p.ix });
+        const m = tlb.children.find(
+          (v) => v.name === `State=Normal, Auto=False, Interaction=${p.ix}`,
+        );
+        b.fills = m.fills;
+        b.strokes = m.strokes;
+      }
       const a = p.a ?? c.a,
         bb = p.b ?? c.b;
       b.resize(Xd(bb) - Xd(a), 26);
       b.x = Xd(a);
       b.y = yy;
       b.name = "bar " + p.n;
+      if (p.same) sameMark(f, b, false);
       const ex = (x0, x1, before) => {
         const e = D.ext.clone();
         f.insertChild(f.children.indexOf(b) + 1, e);

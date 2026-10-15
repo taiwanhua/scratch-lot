@@ -4,7 +4,7 @@
 // - 收起的單位是整筆人力需求(排班長條不單獨收起);每筆佔條數 = max(需求人數, 已排人數),容器寬 = 20 + 28 × 條數。
 // - 有收起時當天欄最右邊一條「+N」長條(底座 Draft/ScheduleTimelineMore,寬 20、高度佔滿可見時間軸),
 //   Tone:收起的有缺負責 Error、有缺協同 Warning、否則 Neutral;點了 → 清單浮層(SC-62)。
-// - 長條順序 負責 → 協同 → 缺額(虛線空位:Draft/ScheduleTimelineBlock State=MissingHelper / MissingLead)。
+// - 長條依職責排、同職責先人後缺額:負責 → 缺負責 → 協同 → 缺協同;缺額一人一條、每條寫「缺負責 1」/「缺協同 1」(MissingLead / MissingHelper)。
 // - 超出人力需求的時間:同一條長條延伸出容器(Extension 段接在長條前 / 後,相接側不畫框、不圓角)。
 // 結果(電腦 157 / 平板實際欄寬 125):11/10 電腦 早 5/5 收起、補 0–48、晚 48–124、「+1」灰;平板 補 0–48,早、晚收起「+2」灰;
 // 11/11 電腦 早 0–76、補 76–124、晚 0–76、店慶加開收起「+1」紅;平板 補、店慶加開收起「+2」紅;
@@ -210,7 +210,8 @@ for (const [tlid, CW] of [
           tl.appendChild(v);
           v.name = p.vac === "err" ? "vacancy 缺負責" : "vacancy 缺協同";
           v.setProperties({
-            [pk(v, "Title")]: p.vac === "err" ? "缺\n負\n責" : "缺\n協\n同",
+            [pk(v, "Title")]:
+              p.vac === "err" ? "缺\n負\n責\n1" : "缺\n協\n同\n1",
             [pk(v, "Subtitle")]: "",
           });
           v.resize(sw, h - 2);

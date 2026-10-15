@@ -79,6 +79,15 @@ const make = async (base, mode) => {
       c.fills[0],
       { ...Pt(v), opacity: mode === "Hover" ? 0.08 : 0.16 },
     ];
+    // 綁變數後的新 paint 有時寫入會把不透明度變回 1:用寫入後的 paint 再設一次
+    {
+      const f = [...c.fills];
+      f[f.length - 1] = {
+        ...f[f.length - 1],
+        opacity: mode === "Hover" ? 0.08 : 0.16,
+      };
+      c.fills = f;
+    }
     c.strokes = [Pt(v)];
     if (mode === "Selected") {
       c.strokeWeight = 1;

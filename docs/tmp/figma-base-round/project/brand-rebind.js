@@ -96,6 +96,14 @@ for (const node of page.findAll(() => true)) {
       }
     }
     node[prop] = next;
+    // 寫入後再確認一次:新綁的 paint 寫入時不透明度有時被重設成 1,用寫入後的 paint 再設回去
+    const after = node[prop];
+    if (
+      after.some(
+        (q, i) => Math.abs((q.opacity ?? 1) - (next[i].opacity ?? 1)) > 0.001,
+      )
+    )
+      node[prop] = after.map((q, i) => ({ ...q, opacity: next[i].opacity }));
   }
 }
 return { page: page.name, dry: DRY, changed, already, issues };

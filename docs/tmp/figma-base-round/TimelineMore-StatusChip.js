@@ -65,6 +65,15 @@ const state = (c, st, toneMain) => {
       c.fills[0],
       { ...P(V[toneMain]), opacity: st === "Hover" ? 0.08 : 0.16 },
     ];
+    // 綁變數後的新 paint 有時寫入會把不透明度變回 1:用寫入後的 paint 再設一次
+    {
+      const f = [...c.fills];
+      f[f.length - 1] = {
+        ...f[f.length - 1],
+        opacity: st === "Hover" ? 0.08 : 0.16,
+      };
+      c.fills = f;
+    }
     c.strokes = [P(V[toneMain])];
     c.strokeWeight = 1;
     if (st === "Selected") c.strokesIncludedInLayout = false;
