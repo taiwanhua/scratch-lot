@@ -960,3 +960,43 @@ if (PART === "20") {
   //    分頁列單列 NO_WRAP,往左移到選到的分頁可見;有更多分頁的一側放 scroll-edge:start / end(漸層 + ‹ / ›)。
   // 3. 權限:全部專案頁(班表管理除外)掃按鈕,在畫面的框外註解加「- 權限:沒有 `<權限>` 權限時看不到 [按鈕]」。
 }
+
+if (PART === "21") {
+  // 看板本卡片左側色條 = 遊戲設定的顏色(檔案管理 MD-01 遊戲列表為準;鼠來寶、好運旺旺補進 MD-01)。
+  // 色條綁本機 Draft/tagPalettes 的 */text;背景複本一起改(先解鎖再鎖回)。
+  const GAME = {
+    "5164 發大財": "red",
+    "5201 金好運": "yellow",
+    "5133 招財貓": "purple",
+    "5198 鼠來寶": "blue",
+    "5150 好運旺旺": "green",
+  };
+  const col = (await figma.variables.getLocalVariableCollectionsAsync()).find(
+    (c) => c.name === "Draft/tagPalettes",
+  );
+  const V = {};
+  for (const id of col.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(id);
+    V[v.name] = v;
+  }
+  const paintOf = (k) =>
+    figma.variables.setBoundVariableForPaint(
+      { type: "SOLID", color: { r: 0, g: 0, b: 0 } },
+      "color",
+      V[k + "/text"],
+    );
+  for (const i of figma.currentPage.findAll(
+    (n) => n.type === "INSTANCE" && n.name === "Draft/BoardBookCard",
+  )) {
+    const k = GAME[i.findOne((n) => n.name === "game").characters];
+    if (!k) continue;
+    const locked = [];
+    for (let a = i; a && a.type !== "SECTION"; a = a.parent)
+      if (a.locked) {
+        a.locked = false;
+        locked.push(a);
+      }
+    i.findOne((n) => n.name === "game-color").fills = [paintOf(k)];
+    for (const a of locked) a.locked = true;
+  }
+}

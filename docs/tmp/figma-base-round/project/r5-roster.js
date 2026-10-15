@@ -1,10 +1,10 @@
 // ==== 第十九輪:排班作業(排班表)共用的組件函式。貼在 r5-kit.js 後面一起執行 ====
 // 第二十三輪:人員欄固定在左、統計欄固定在右(班數、負責班數、總工時、畫休);格子寫「休 30」;
 // 自動排入改用 Draft/ScheduleAutoMark 圖示;圖例改用 Draft/LegendItem;⚙ 顯示欄位三尺寸都有;檢核「限制 / 提醒」。
-// 示範資料:中山店 2026 年 11 月(草稿);11/3(二)店休;11/11 特殊日「店慶」。
+// 示範資料:中山店 2026 年 11 月(未發布);11/3(二)店休;11/11 特殊日「店慶」。
 const PEOPLE = [
-  { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "128:30", "2 天"] },
-  { n: "李小華", t: "正職", s: ["18", "4", "115:30", "3 天"] },
+  { n: "王小明", t: "正職 · 可負責", s: ["20", "12", "129:00", "2 天"] },
+  { n: "李小華", t: "正職 · 可負責", s: ["19", "4", "120:00", "3 天"] },
   { n: "陳大文", t: "正職 · 可負責", s: ["19", "10", "152:30", "1 天"] },
   { n: "林美麗", t: "正職 · 可負責", s: ["17", "2", "109:00", "5 天"] },
   { n: "張小芳", t: "兼職", s: ["9", "0", "36:00", "0 天"] },
@@ -31,21 +31,21 @@ const WEEK = [
 const GRID = [
   [
     ["f", "早 ★ · 休 30", "08:30–14:30"],
-    ["f", "早 ★ · 休 30", "08:30–14:30"],
+    ["f", "早 ★ · 休 30", "08:00–14:30"],
     ["s"],
     ["a", "晚 ★ · 休 30", "14:30–22:00"],
     ["f", "早 ★ · 休 30", "08:30–14:30"],
-    ["h", "休", "畫休"],
+    ["h", "畫休", ""],
     ["f", "早 ★ · 休 30", "08:30–14:30"],
   ],
   [
     ["f", "早 · 休 30", "08:30–14:30"],
-    ["a", "晚 · 休 30", "14:30–22:00"],
+    ["a", "晚 ★ · 休 90", "14:30–22:00"],
     ["s"],
     ["f", "早 ★ · 休 30", "08:30–14:30"],
     ["f", "晚 · 休 30", "14:30–22:00"],
     ["a", "早 · 休 30", "08:30–14:30"],
-    ["e"],
+    ["f", "早 · 休 30", "08:30–14:30"],
   ],
   [
     ["f", "晚 ★ · 休 30", "14:30–22:00"],
@@ -67,26 +67,105 @@ const GRID = [
   ],
   [
     ["f", "補", "13:00–17:00"],
-    ["x", "不可排", "09:00–13:00"],
+    ["f", "補", "13:00–17:00"],
     ["s"],
-    ["f", "補 臨", "13:00–17:00"],
+    ["f", "臨", "13:00–17:00"],
     ["f", "早 · 休 30", "08:30–14:30"],
-    ["e"],
+    ["x", "不可排", "09:00–13:00"],
     ["f", "早 · 休 30", "08:30–14:30"],
   ],
 ];
 // 未對應排班的打卡(人-天 → 張數):王小明 11/5 有班但 3 張打卡沒對應;林美麗 11/1 沒排班臨時來(2 張);張小芳 11/4 排補貨 13:00–17:00,09:02 / 15:10 兩張超出容許範圍(出勤紀錄 SC-12 同一筆)
 const PUNCH = { "0-4": 3, "3-0": 2, "4-3": 2 };
-// 11/1:早班 2/2、補貨 1/1、晚班 1/2(缺協同)— 和月 / 週檢視同一份資料
+// 人力需求區(頂部固定群組列「▾ 人力需求」,取代舊的 summary-row):每個人力需求一列,格子寫「負 已排/需 協 已排/需」;
+// 滿 = 灰(grey/100)、缺協同 = 橘(warning)、缺負責 = 紅(error);店休灰底。和月 / 週 / 日檢視、檢核面板同一份資料:
+// 11/1、11/2、11/4、11/6 晚班缺協同;11/4 張小芳排「臨」(沒有套用範本的人力需求);
+// 11/7 早班多排李小華 → 協2/1,標籤旁灰字「+1」(超過人力需求;月檢視寫「協2/1」/「早 3/2」)
+const DEMAND = [
+  [
+    "早班",
+    [
+      "負1/1 協1/1",
+      "負1/1 協1/1",
+      0,
+      "負1/1 協1/1",
+      "負1/1 協1/1",
+      "負1/1 協1/1",
+      "負1/1 協2/1",
+    ],
+  ],
+  ["補貨", ["協1/1", "協1/1", 0, null, "協1/1", null, null]],
+  [
+    "晚班",
+    [
+      "負1/1 協0/1",
+      "負1/1 協0/1",
+      0,
+      "負1/1 協0/1",
+      "負1/1 協1/1",
+      "負1/1 協0/1",
+      "負1/1 協1/1",
+    ],
+  ],
+  ["臨", [null, null, 0, "協1/1", null, null, null]],
+];
+// 手機收合成一列彙總(「▸ 人力需求」,點了展開成 SC-59)
 const SUMMARY = [
   ["需 5 · 已排 4", "warn", "缺 1 · 可排 1"],
   ["需 5 · 已排 4", "warn", "缺 1 · 可排 2"],
   ["店休", "off"],
-  ["需 4 · 已排 4", "ok"],
-  ["需 5 · 已排 5 +1", "over"],
-  ["需 4 · 已排 4", "ok"],
-  ["需 4 · 已排 4", "ok"],
+  ["需 5 · 已排 4", "warn", "缺 1 · 可排 1"],
+  ["需 5 · 已排 5", "full"],
+  ["需 4 · 已排 3", "warn", "缺 1 · 可排 1"],
+  ["需 4 · 已排 4", "full"],
 ];
+// 格子內的小標籤:full 灰(grey/100 + divider 細框,白底上看得見;圖例「人力需求已滿」同外觀)、warn 橘(缺協同)、short 紅(缺負責)
+async function demandChip(lines, tone) {
+  const [bg, c] = {
+    full: ["g100", "tp"],
+    warn: ["wl", "wd"],
+    short: ["el", "ed"],
+  }[tone];
+  const b = await box("demand-chip " + tone, bg, 0, 0);
+  b.paddingLeft = b.paddingRight = 6;
+  b.paddingTop = b.paddingBottom = 2;
+  if (tone === "full") {
+    await stroke(b, "divider");
+    b.strokesIncludedInLayout = false;
+  }
+  add(b, await T(lines[0], "capSB", c));
+  if (lines[1]) add(b, await T(lines[1], "cap", "ts"));
+  return b;
+}
+// 已排超過需要的人數:標籤旁灰字「+N」
+const overBy = (s) =>
+  [...(s || "").matchAll(/(\d+)\/(\d+)/g)].reduce(
+    (n, m) => n + Math.max(0, +m[1] - +m[2]),
+    0,
+  );
+async function demandCell(lines, tone, w) {
+  const h = await headCell(" ", null, w, "cap", "ts", "def");
+  if (lines) {
+    h.children[0].remove();
+    const chip = await demandChip(lines, tone);
+    const over = overBy(lines[0]);
+    if (over) {
+      const r = row(4, "demand-over");
+      add(r, chip);
+      add(r, await T("+" + over, "capSB", "ts", "+1 超過"));
+      add(h, r);
+    } else add(h, chip);
+  }
+  return h;
+}
+// 負責沒排滿 → 紅;協同沒排滿 → 橘;都滿 → 灰
+const demandTone = (s) => {
+  const lack = (k) => {
+    const m = new RegExp(k + "(\\d+)/(\\d+)").exec(s);
+    return m && +m[1] < +m[2];
+  };
+  return lack("負") ? "short" : lack("協") ? "warn" : "full";
+};
 // stats:"full" 四欄、"narrow" 收成一個窄欄 [統計 ▸](檢核面板開著、手機)、"none"
 async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
   const D0 = opts.from || 0; // 從第幾天開始畫(手機從 11/2)
@@ -128,53 +207,81 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
     add(hr, n, null, "FILL");
   }
   add(g, hr);
-  const sr = row(0, "summary-row", "MIN");
-  add(
-    sr,
-    await headCell(
-      frozenW < 100 ? "需求 / 已排" : "人力需求 / 已排",
-      null,
-      frozenW,
-      "capSB",
-      "ts",
-      "def",
-    ),
-    null,
-    "FILL",
-  );
-  for (let d = 0; d < days; d++) {
-    const [t, k, sub] = SUMMARY[d + D0];
-    const c = {
-      ok: "ts",
-      warn: "wd",
-      off: "tdis",
-      over: "im",
-    }[k];
+  // 人力需求區:電腦 / 平板展開(群組列 + 每個人力需求一列);手機預設收合成一列彙總,opts.demandOpen 展開(SC-59)
+  const statCells = async (r) => {
+    if (stats === "full")
+      for (const [, w] of STATS)
+        add(r, await headCell(" ", null, w, "cap", "ts", "def"), null, "FILL");
+    if (stats === "narrow")
+      add(
+        r,
+        await headCell(" ", null, NARROW_W, "cap", "ts", "def"),
+        null,
+        "FILL",
+      );
+  };
+  const collapsed = frozenW < 100 && !opts.demandOpen;
+  if (collapsed) {
+    const sr = row(0, "demand-area-collapsed", "MIN");
     add(
       sr,
-      await headCell(
-        t,
-        k === "warn" ? sub : null,
-        colW,
-        "capSB",
-        c,
-        k === "warn" ? "wl" : k === "off" ? "g200" : "def",
-      ),
+      await headCell("▸ 人力需求", null, frozenW, "capSB", "ts", "def"),
       null,
       "FILL",
     );
+    for (let d = 0; d < days; d++) {
+      const [t, k, sub] = SUMMARY[d + D0];
+      add(
+        sr,
+        k === "off"
+          ? await headCell(t, null, colW, "cap", "ts", "g200")
+          : await demandCell([t, sub], k, colW),
+        null,
+        "FILL",
+      );
+    }
+    await statCells(sr);
+    add(g, sr);
+  } else {
+    const ah = row(0, "demand-area-header", "MIN");
+    add(
+      ah,
+      await headCell("▾ 人力需求", null, frozenW, "capSB", "ts", "def"),
+      null,
+      "FILL",
+    );
+    for (let d = 0; d < days; d++)
+      add(
+        ah,
+        await headCell(" ", null, colW, "cap", "ts", "def"),
+        null,
+        "FILL",
+      );
+    await statCells(ah);
+    add(g, ah);
+    for (const [name, cells] of DEMAND) {
+      const dr = row(0, "demand-row " + name, "MIN");
+      add(
+        dr,
+        await headCell(name, null, frozenW, "capSB", "ts", "def"),
+        null,
+        "FILL",
+      );
+      for (let d = 0; d < days; d++) {
+        const s = cells[d + D0];
+        add(
+          dr,
+          s === 0
+            ? await headCell(" ", null, colW, "cap", "ts", "g200")
+            : await demandCell(s && [s], s && demandTone(s), colW),
+          null,
+          "FILL",
+        );
+      }
+      await statCells(dr);
+      add(g, dr);
+    }
   }
-  if (stats === "full")
-    for (const [, w] of STATS)
-      add(sr, await headCell(" ", null, w, "cap", "ts", "def"), null, "FILL");
-  if (stats === "narrow")
-    add(
-      sr,
-      await headCell(" ", null, NARROW_W, "cap", "ts", "def"),
-      null,
-      "FILL",
-    );
-  add(g, sr);
   const marks = [];
   const punches = [];
   const hatches = [];
@@ -202,6 +309,13 @@ async function rosterGrid(colW, frozenW, days = 7, stats = "full", opts = {}) {
       if (lead && k !== "o") {
         c.setProperties({ "Lead#319:24": true, "LeadText#319:28": lead[1] });
         await setTxt(c, "line-1", lead[2]);
+      }
+      // 休息:「☕ 分鐘」(RosterCell 的 Break / BreakText),不寫「休 30」;11/2 晚班李小華休 90 分
+      const line1 = lead ? lead[2] : l1 || "";
+      const br = /^(.*?)\s*(?:·\s*)?休 (\d+)$/.exec(line1);
+      if (br) {
+        await setTxt(c, "line-1", br[1]);
+        c.setProperties({ "Break#350:27": true, "BreakText#350:31": br[2] });
       }
       add(r, c);
       c.layoutSizingHorizontal = "FIXED";
@@ -291,8 +405,10 @@ const ROSTER_LEGEND = [
   ["Punch", "Warning", "未對應排班的打卡(張數)"],
   ["Square", "Neutral", "店休 / 已排在其他分店 / 時段不可排"],
   ["Hatch", "Neutral", "畫休(斜線)"],
-  ["Solid", "Warning", "人力不足的日子"],
-  ["Symbol", "Info", "超過人力需求", "+1"],
+  ["Solid", "Warning", "缺協同"],
+  ["Break", "Neutral", "休息(分鐘)"],
+  ["Solid", "Neutral", "人力需求已滿"],
+  ["Symbol", "Neutral", "超過人力需求", "+1"],
 ];
 const VIEWS = ["月", "週", "日", "班表"];
 // 工具列:兩列(第一列分店 + 狀態 + 動作;第二列檢視 + 月份 + 顯示欄位 + 檢核)
@@ -304,8 +420,9 @@ async function toolbar(sz, o = {}) {
       ? "已發布 · 10/28 李店長"
       : o.running
         ? "自動排班執行中"
-        : "草稿",
-    o.published ? "Success" : "Warning",
+        : "未發布",
+    // 月份狀態:未發布(灰色)/ 已發布(和流程單據的草稿不同,不叫草稿)
+    o.published ? "Success" : o.running ? "Warning" : "Grey",
   );
   const acts = [];
   if (!o.readonly) {
@@ -320,7 +437,7 @@ async function toolbar(sz, o = {}) {
   const view = await seg(VIEWS, VIEWS.indexOf(o.view || "班表"), "檢視切換");
   const pg = await pager(o.period || "2026 年 11 月", "sub2");
   const chk = await btn(
-    o.checkLabel || "限制 1 · 提醒 7",
+    o.checkLabel || "限制 1 · 提醒 11",
     o.panel ? "Contained" : "Outlined",
     "Small",
     o.checkColor || (o.checkOk ? "Success" : "Error"),
@@ -335,7 +452,7 @@ async function toolbar(sz, o = {}) {
     add(r1, org, "FILL");
     add(r1, st);
     add(wrap, r1, "FILL");
-    // 第二十四輪:手機操作列一行 [草稿] … [+ 新增 ▾](人力需求 / 排班)[⋯](套用範本 / 自動排班)[發布];選單 SC-55 / SC-56
+    // 第二十四輪:手機操作列一行 [未發布] … [+ 新增 ▾](人力需求 / 排班)[⋯](套用範本 / 自動排班)[發布];選單 SC-55 / SC-56
     if (acts.length) {
       const r2 = row(8, "toolbar-actions");
       add(r2, st);
@@ -391,18 +508,28 @@ async function checkPanelBody(p, o = {}) {
   add(
     p,
     await seg(
-      o.auto ? ["全部 9", "限制 1", "提醒 8"] : ["全部 8", "限制 1", "提醒 7"],
+      o.auto
+        ? ["全部 13", "限制 1", "提醒 12"]
+        : ["全部 12", "限制 1", "提醒 11"],
       0,
       "篩選",
     ),
   );
   const items = [
     ["限制", "Error", "林美麗 本月畫休 5 天,超過上限 4 天"],
+    ["提醒", "Warning", "人力不足:11/1 晚班 店內櫃台 缺 1 人(可排 1 人)"],
     ["提醒", "Warning", "人力不足:11/2 晚班 店內櫃台 缺 1 人(可排 2 人)"],
+    ["提醒", "Warning", "人力不足:11/4 晚班 店內櫃台 缺 1 人(可排 1 人)"],
+    ["提醒", "Warning", "人力不足:11/6 晚班 店內櫃台 缺 1 人(可排 1 人)"],
     [
       "提醒",
       "Warning",
       "人力不足:11/11 店慶加開 櫃台 B 13:00–18:00 缺 1 人(負責):可負責的人都已排班",
+    ],
+    [
+      "提醒",
+      "Warning",
+      "人力不足:11/14 晚班 店內櫃台 14:30–22:00 缺 1 人(協同)",
     ],
     ["提醒", "Warning", "陳大文 11/6–11/12 連續上班 7 天(最多 6 天)"],
     [

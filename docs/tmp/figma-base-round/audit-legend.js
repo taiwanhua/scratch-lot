@@ -17,6 +17,7 @@ const MARK = [
   "error/main",
   "success/lighter",
   "info/lighter",
+  "cyan/bg", // 特殊日底色(Draft/tagPalettes,行事曆設定的顏色;示範 cyan)
   "primary/lighter",
   "grey/100",
 ];
@@ -125,9 +126,9 @@ for (const s of screens) {
   if (!legends.length) continue;
   const sample = new Map(); // 顏色 → 圖例項目
   for (const lg of legends)
-    for (const li of lg.findAll(
-      (n) => n.type === "INSTANCE" && n.name === "Draft/LegendItem",
-    )) {
+    for (const li of lg.findAll((n) => n.type === "INSTANCE")) {
+      // 用主元件名稱判斷是不是圖例項目,不依賴實例名稱
+      if ((await compName(li)) !== "Draft/LegendItem") continue;
       const set = new Set();
       for (const k of li.findAll(
         (n) => n.name === "marker" || n.name === "symbol",

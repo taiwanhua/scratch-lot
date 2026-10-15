@@ -112,7 +112,7 @@ if (PART === "my") {
       if (PUNCH[d] && sz !== "M") o.lines.push(PUNCH[d]);
       if (d === 8 || d === 12) o.dot = "pm";
       if (d === 11) {
-        o.bg = "il";
+        o.bg = "sday"; // 特殊日:行事曆設定的顏色(tagPalettes cyan)
         if (sz !== "M") o.lines.push("店慶");
       }
       return o;

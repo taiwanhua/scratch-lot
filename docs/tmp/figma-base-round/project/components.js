@@ -542,6 +542,22 @@ const created = {};
 }
 
 // ---------- 6. Draft/BoardBookCard:看板上的一本(某本 × 某收銀點的檯面)----------
+// 本機 Draft/tagPalettes(底座 tagPalettes 回收到 Library 前的過渡變數集合)
+async function tagPaint(name) {
+  const col = (await figma.variables.getLocalVariableCollectionsAsync()).find(
+    (c) => c.name === "Draft/tagPalettes",
+  );
+  for (const id of col.variableIds) {
+    const v = await figma.variables.getVariableByIdAsync(id);
+    if (v.name === name)
+      return figma.variables.setBoundVariableForPaint(
+        { type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } },
+        "color",
+        v,
+      );
+  }
+  throw new Error("Draft/tagPalettes 沒有 " + name);
+}
 {
   const mk = async (state) => {
     const c = figma.createComponent();
@@ -560,7 +576,9 @@ const created = {};
     strip.name = "game-color";
     strip.resize(6, 100);
     strip.layoutSizingVertical = "FILL";
-    strip.fills = [await paint("info/main")];
+    // 色條 = 遊戲設定的顏色:綁本機 Draft/tagPalettes 的 */text(較深,在白底卡片上看得清楚;*/bg 太淡),
+    // 預設 blue,畫面上依遊戲在實例覆寫 game-color 的填色(見 r4-sync.js PART "21")
+    strip.fills = [await tagPaint("blue/text")];
     const b = add(
       c,
       al("VERTICAL", {
@@ -640,7 +658,7 @@ const created = {};
   set.paddingLeft = set.paddingRight = set.paddingTop = set.paddingBottom = 16;
   set.description =
     DESC_PROJECT +
-    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱(左側色條 = 遊戲顏色,欄位管理 tagPalettes)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少。點卡片在原位置往下展開張數格子(電腦 / 平板占滿整列;手機用底部面板),一次只展開一張;展開中的卡片用主色框。";
+    "店面管理看板的卡片 = 某本 × 某收銀點的檯面(專案規格 6.2):遊戲名稱、左側色條用遊戲設定的顏色(檔案管理 → 遊戲的顏色,色條綁 Draft/tagPalettes 的 */text;在實例上覆寫 game-color 的填色,預設 blue)、面額、本號、剩餘 / 總張數、今日售出;LowStock = 剩很少。點卡片在原位置往下展開張數格子(電腦 / 平板占滿整列;手機用底部面板),一次只展開一張;展開中的卡片用主色框。";
   set.x = 0;
   set.y = 1400;
   created.bookCard = set.id;
@@ -1054,11 +1072,13 @@ for (const id of [
 return created;
 
 // ---------- 12~15. 班表用的專案元件(第二十三、二十四輪)----------
+// 描述開頭一律「【專案・scratch-lot 專屬,不回收底座】」(和其他專案元件一致;不能寫「本輪草稿」,那是底座草稿的標記)。
 // 只綁共用色票(wowgo-base Primitives / Color、scratch-lot Brand Library 的 primary/*),不寫死顏色。
 // 12. Draft/LegendItem(289:88348):班表所有圖例都用它。Kind × Tone:
 //     Dot 小圓點、Square 底色(外框只為了看得清楚)、Bar 色帶、Dashed 虛線空位、Symbol 文字符號(Symbol 屬性)、
 //     Auto 自動排入圖示、Punch 未對應打卡徽章、Lead 負責人綠標籤、Hatch 畫休斜線、Solid 實心色塊(月檢視人力需求三態)、
-//     More「+N 需求」(外框色 = 收起的需求裡最嚴重的狀態)。屬性 Label、Symbol。
+//     More「+N 需求」(外框色 = 收起的需求裡最嚴重的狀態)、Break 休息。Square Tone=Special = 特殊日(Draft/tagPalettes cyan/bg 底 + cyan/text 框,
+//     行事曆設定的顏色);Solid Tone=Neutral(人力需求已滿)= grey/100 底 + divider 細框。屬性 Label、Symbol。
 // 13. Draft/UnmatchedPunchMark(290:97643):時鐘 + 張數(warning/lighter 底、warning/main 框、warning/darker 字),屬性 Count。
 // 14. Draft/LeadTag(319:510):負責人標籤 Size=Small / Medium,success/lighter 底 + success/darker 字,屬性 Label。
 // 15. Draft/HatchBg(319:553):畫休的斜線底(grey/100 底 + grey/300 斜線),放在格子下面,格子設透明。
@@ -1111,6 +1131,8 @@ return created;
   const lp = lead.addComponentProperty("Label", "TEXT", "王小明");
   for (const v of lead.children)
     v.children[0].componentPropertyReferences = { characters: lp };
+  lead.description =
+    "【專案・scratch-lot 專屬,不回收底座】負責人標籤:success/lighter 底 + success/darker 字。";
   created.LeadTag = lead.id;
   // 15. HatchBg
   const hb = figma.createComponent();
@@ -1127,6 +1149,8 @@ return created;
     l.x = i;
     hb.appendChild(l);
   }
+  hb.description =
+    "【專案・scratch-lot 專屬,不回收底座】畫休的灰色斜線底(grey/100 底 + grey/300 斜線)。";
   created.HatchBg = hb.id;
   // 12 / 13:LegendItem 與 UnmatchedPunchMark 的建法見 nodes.md 第二十三、二十四輪(以 Figma 為準)。
 }

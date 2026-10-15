@@ -1,4 +1,4 @@
-// Draft/RosterCell + Draft/RosterGrid(底座規格 10.5)。前置:貼上 _resolve.js。
+// Draft/RosterCell + Draft/RosterGrid(底座規格 10.5)。前置:貼上 _resolve.js。頂部固定群組 / 收合彙總見 RosterGrid-group.js(之後執行)。
 // Cell 屬性:State=Empty / Filled / Selected;Lead(BOOLEAN)+ LeadText(TEXT):時間前面的負責人小標(success/lighter 底、success/darker 字)。
 async function rcell(state) {
   const c = figma.createComponent();

@@ -1,7 +1,7 @@
 // ==== 第十九輪:班表管理頁重做的其餘段落(接 r5-schedule.js 的 load())====
 // PART:dayoff → roster。其餘段落以 Figma 為準(見 r5-schedule.js 結尾)。
 // 每段開頭的 load() 同 r5-schedule.js;roster / views / dialogs / auto 需要 r5-roster.js(load(true))。
-// 示範資料:我的班表 11 月(今天 11/5)、我的畫休 12 月(開放 11/15–11/25)、排班作業中山店 11 月草稿(11/3、11/17 店休,11/11 特殊日)。
+// 示範資料:我的班表 11 月(今天 11/5)、我的畫休 12 月(開放 11/15–11/25)、排班作業中山店 11 月未發布(11/3、11/17 店休,11/11 特殊日)。
 const PART = "dayoff";
 const AF = Object.getPrototypeOf(async function () {}).constructor;
 async function load(withRoster) {
@@ -102,7 +102,7 @@ if (PART === "dayoff") {
       if (COUNT[d]) o.cnt = COUNT[d];
       if (d >= 13 && d <= 18) o.bandK = "wm";
       if (d === 24) o.bandK = "em";
-      if (d === 25) o.bg = "il";
+      if (d === 25) o.bg = "sday"; // 特殊日:行事曆設定的顏色(tagPalettes cyan)
       return o;
     });
     for (const x of ds)
@@ -329,7 +329,7 @@ if (PART === "roster") {
   } = K;
   const TABS = ["排班表", "畫休總覽", "行事曆", "支援需求單"];
   const V = {
-    "SC-03": { t: "排班表:班表檢視(草稿)", o: { hover: true } },
+    "SC-03": { t: "排班表:班表檢視(未發布)", o: { hover: true } },
     "SC-18": { t: "排班表:檢核面板展開", o: { panel: true } },
     "SC-33": { t: "排班表:只能檢視(沒有編輯權限)", o: { readonly: true } },
     "SC-35": {
@@ -347,7 +347,7 @@ if (PART === "roster") {
     },
     "SC-20b": {
       t: "自動排班完成:檢核面板自動展開",
-      o: { panel: true, auto: true, checkLabel: "限制 1 · 提醒 8" },
+      o: { panel: true, auto: true, checkLabel: "限制 1 · 提醒 12" },
     },
   };
   const rail = (await figma.getNodeByIdAsync("290:87689")).children.find((n) =>

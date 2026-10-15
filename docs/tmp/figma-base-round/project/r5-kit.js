@@ -28,6 +28,10 @@ const VID = {
   idk: "VariableID:3866235bc61eafb29708a06128ef7a7506b8b170/6:91",
   sl: "VariableID:ac46db2e85d7432f8264076a65ac59b30d3c3df5/6:95",
   sm: "VariableID:6e398ee88e62c802e89a1f46853dfda221b9d453/6:254",
+  g100: "VariableID:6a1782058955b5f1b570298844375dfdede51f73/6:39",
+  // 特殊日底色 / 文字:行事曆設定的顏色(Draft/tagPalettes,示範 cyan;回收底座後改綁 Library 同名變數)
+  sday: "VariableID:341:97601",
+  sdayT: "VariableID:341:97602",
   g200: "VariableID:ff65fc9dfea7c90e278a7909f54de2fea8d50137/6:43",
   g300: "VariableID:cc21f0a1f04bee50925591b9ed0af62b06dfbf44/6:47",
   g700: "VariableID:038b0dd75cf6a8e57d9dcd959b7a8c61d6779f15/6:63",
