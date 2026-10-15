@@ -12,6 +12,8 @@
 //                  直屬父框是 auto layout 時,文字也要在它的內距範圍內(容許 1px;放不下才會被擠出內距)。
 //                  例:圖例樣本小框裡的「+N」貼框底溢出、窄長條裡的人名超出長條。往上找父框時遇到名稱含「可捲動」的框就不算(捲動內容);
 //                  浮層照舊(浮層本身蓋在頁面上不算,浮層裡面的文字照樣檢查)。overflowNodes / clippedText 不看實例內部,這項補上。
+//   rowGapInContainer 時間軸容器(Draft/ScheduleTimelineDemand)裡上下堆疊的各列(長條、缺額空位、停用條)間距要一致為 4px(容許 1px);
+//                  長條變矮(例:隱藏空白副標)後沒重排、留下大空隙就算。只看寬度 ≥ 容器 60% 的列,週模式的直排窄長條不比。
 //   basePrimaryBindings 專案頁殘留 wowgo-base 的 primary/* 綁定,含元件實例內部實際生效的綁定(Base Draft 頁不檢查)。
 const PAGE_ID = "65:14";
 const FIELD =
@@ -216,6 +218,48 @@ for (const s of screens) {
       });
   }
 }
+// 時間軸容器內上下堆疊的列距(見檔頭)
+const rowGapBad = [];
+for (const s of screens) {
+  if (!("findAllWithCriteria" in s)) continue;
+  for (const d of s.findAllWithCriteria({ types: ["INSTANCE"] })) {
+    if (!/ScheduleTimelineDemand|^demand /.test(d.name) || !visibleChain(d))
+      continue;
+    const par = d.parent;
+    if (!par || !("children" in par) || par.type === "INSTANCE") continue;
+    const rows = par.children.filter(
+      (c) =>
+        c !== d &&
+        c.visible &&
+        c.type === "INSTANCE" &&
+        /ScheduleTimelineBlock|^bar |^vacancy|^disabled/.test(c.name) &&
+        c.y >= d.y - 1 &&
+        c.y + c.height <= d.y + d.height + 1 &&
+        c.x + c.width > d.x &&
+        c.x < d.x + d.width &&
+        c.width >= d.width * 0.6, // 只看橫向撐滿的列(日模式);週模式的直排窄長條不比
+    );
+    const ys = [...new Set(rows.map((r) => Math.round(r.y)))].sort(
+      (m, n) => m - n,
+    );
+    if (ys.length < 2 || ys.length < rows.length / 2) continue; // 左右並排(週模式)不比
+    const groups = ys.map((y) => rows.filter((r) => Math.round(r.y) === y));
+    const gaps = [];
+    for (let i = 1; i < groups.length; i++)
+      gaps.push(
+        Math.round(
+          groups[i][0].y -
+            Math.max(...groups[i - 1].map((r) => r.y + r.height)),
+        ),
+      );
+    if (gaps.some((g) => Math.abs(g - 4) > 1))
+      rowGapBad.push({
+        screen: top(d).name.slice(0, 30),
+        id: d.id,
+        gaps: gaps.join(","),
+      });
+  }
+}
 const mcName = new Map();
 async function fieldName(i) {
   if (mcName.has(i.id)) return mcName.get(i.id);
@@ -312,10 +356,12 @@ return {
   overflowNodes: overflow.length,
   overlapText: overlapText.length,
   overflowTextInInstance: overflowInInst.length,
+  rowGapInContainer: rowGapBad.length,
   basePrimaryBindings,
   clippedSample: clipped.slice(0, 8),
   misalignedSample: misaligned.slice(0, 8),
   overflowSample: overflow.slice(0, 8),
   overlapSample: overlapText.slice(0, 8),
   overflowInInstanceSample: overflowInInst.slice(0, 12),
+  rowGapSample: rowGapBad.slice(0, 8),
 };

@@ -750,3 +750,11 @@ Figma 限制:實例裡的子圖層不能改位置 / 尺寸,所以「長條 + 前
 - **日期選擇月曆**(SC-17a / 17b 三尺寸的「MonthCalendar(多選)」、SC-46 手機選日期):特殊日改成 `Draft/Tag` 實例、填色覆寫成 tagPalettes cyan/bg + cyan/text(「店慶」,和行事曆 / 月檢視同一套;選取的淡黃底不變),店休維持灰;格子高度統一(50 / 49),日期數字與標籤左對齊。SC-46 補圖例「特殊日」、底部面板貼齊畫面底部。SC-17 的「將產生 … 個時段」改成無底框的一般文字,和其他內容同一條左邊界。
 - **遮罩蓋滿**:`audit-sync.js` 新增 `overlayNotCovering`(第一次 84 → 0):班表頁桌面 / 平板 Overlay 的 scrim、手機全螢幕對話框、抽屜在背景班表加人變高後沒跟著撐滿 → 全部撐滿;店面管理 ST-09c 背景、ST-36a~~c 底部面板、經銷商 RW-01b 抽屜、Base Draft BS-02b / 02d scrim 一起修。`r5-kit.js` 加 `coverOverlay()`。
 - 稽核(全部 0):audit-layout 70:14(197)/ 401:805(17)/ 41:5914(71)/ 64:14(clippedText、misalignedRows、overflowNodes、overlapText、overflowTextInInstance、basePrimaryBindings);audit-legend 70:14 / 401:805;audit-sync(含 overlayNotCovering);audit-roster 89 格;audit.js 41:5914 / 64:14。
+- 補(畫布排版):Base Draft 整頁用 `Base-layout.js` 重排(元件區 / 畫面區、同類一列),節點位置以 Figma 為準,本檔不記座標;`audit.js` 新增 `canvasOverlap`。
+
+### 第二十四輪後續之十七:時間軸容器列距、畫布重疊(2026-10-16)
+
+- **容器內列距一致為 4**:長條隱藏空白副標變矮後,容器內下一列(缺額空位等)沒跟著上移,留下 22px 空隙。SC-45 / SC-21 / SC-49a / SC-53 電腦與平板的晚班容器(8 個)、Base Draft `Draft/ScheduleTimeline` Mode=Day(296:67)與 Mode=Week 示範(296:387、296:453)重排成列距 4,容器高度跟著縮(108 → 90 等)。規則頁日檢視本來就是 4。
+- `audit-layout.js` 新增 `rowGapInContainer`:時間軸容器(ScheduleTimelineDemand)裡寬度 ≥ 容器 60% 的上下堆疊列,間距不是 4(容許 1px)就算;週模式直排窄長條不比。修前 70:14 抓到 8(含 41:5914 的 3 共 11),修後全部 0。README 檢查清單補第 25 條。
+- **canvasOverlap**(底座 agent 新增於 `audit.js`):70:14 的 1 處是頁面頂層一個多出來的文字節點「SC-44」(339:158315,不是框外註解,落在「電腦 1440」Section 範圍內)→ 刪除。`r4-layout.js` 排版時本來就會依畫面高度重新撐開三個尺寸 Section,不需改。70:14 / 401:805 / 41:5914 / 64:14 都是 0。
+- ST-36a~~c 手機底部面板原本是 hug 高度,字型載入狀態不同時量到的高度不同(594 / 570),`overlayNotCovering` 會時有時無 → 改成固定高度貼齊畫面底部。

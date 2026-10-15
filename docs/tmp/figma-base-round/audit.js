@@ -6,6 +6,8 @@
 // baseScreensNotFromRef、nonBaseInBaseScreens(Base Draft 頁)任何時候都應為 0:參考畫面以現有底座畫面為底、只綁底座變數。
 // draftTokenBindings:綁到本機「Draft/」開頭變數集合(例 Draft/tagPalettes,Library 還沒有的過渡變數)的節點數。
 //   現階段只回報、不算錯(上面兩項 nonBase* 也不把它算進去);回收到 wowgo-base 後改綁 Library 的同名集合,這一項必須是 0。
+// canvasOverlap 任何時候都應為 0:畫布上頁面頂層節點彼此、尺寸 Section 內的子節點彼此,範圍(外框)不能重疊。
+//   例外:框外註解卡(名稱「<畫面名> · 註解」的文字)不算;隱藏的節點不算。Base Draft 用 Base-layout.js 排版,專案頁用 project/r4-layout.js。
 // devTextInScreens 任何時候都應為 0:畫面框內不能有設計稿編號、規格章節號、開發用說明(畫圖檢查清單 9);註解放在畫面框外。
 const PAGE_ID = "41:5914";
 const MARKER = "本輪草稿"; // 底座草稿 description 的固定前綴「【底座・本輪草稿,…】」
@@ -224,8 +226,37 @@ for (const n of page.findAll(() => true)) {
   if (hit) draftTokenBindings++;
 }
 
+// 畫布重疊:頁面頂層、每個 Section 的子節點,兩兩比外框
+const canvasOverlaps = [];
+{
+  const hitBox = (a, b) =>
+    a.x < b.x + b.width - 1 &&
+    b.x < a.x + a.width - 1 &&
+    a.y < b.y + b.height - 1 &&
+    b.y < a.y + a.height - 1;
+  const groups = [
+    page.children,
+    ...page.children
+      .filter((n) => n.type === "SECTION")
+      .map((sec) => sec.children),
+  ];
+  for (const g of groups) {
+    const ns = g.filter(
+      (n) => n.visible && !(n.type === "TEXT" && n.name.endsWith(" · 註解")),
+    );
+    for (let i = 0; i < ns.length; i++)
+      for (let j = i + 1; j < ns.length; j++)
+        if (hitBox(ns[i], ns[j]))
+          canvasOverlaps.push(
+            ns[i].name.slice(0, 30) + " × " + ns[j].name.slice(0, 30),
+          );
+  }
+}
+
 return {
   page: page.name,
+  canvasOverlap: canvasOverlaps.length,
+  canvasOverlapSample: canvasOverlaps.slice(0, 10),
   draftTokenBindings,
   baseScreensNotFromRef: baseScreensNotFromRef.length,
   baseScreensSample: baseScreensNotFromRef.slice(0, 10),
