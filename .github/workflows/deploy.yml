@@ -195,7 +195,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.affected.outputs.update == 'true'
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安裝 db-migrator 與 api 的依賴

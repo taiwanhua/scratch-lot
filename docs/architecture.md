@@ -12,7 +12,7 @@
 | `@repo/storybook`   | Storybook(react-vite)                                             | 設計系統目錄 + Palette Lab;元件的 stories 住在 `packages/ui`                                                                                                    | 6006              |
 | `@repo/db-migrator` | migrate-mongo + update / reset runner                             | 資料庫遷移、種子、還原工具;不部署、不常駐,CI 在部署 api 後呼叫(ADR-0002)                                                                                        | —                 |
 | `@repo/e2e`         | Playwright(只裝 chromium)                                         | 權限劇本的 E2E(`docs/testing/permission-scenarios.md`);不部署,**只手動觸發**(`pnpm e2e` / `e2e.yml`,TEST-05);harness 自己起 Mongo → update → api → admin 靜態檔 | 5101 / 4301(可改) |
-| `@repo/realtime`    | Cloudflare Workers + Durable Objects                              | 即時通道:Worker 驗證訂閱憑證(`/connect`)與送出信號簽章(`/publish`);每租戶一個 Durable Object `TenantHub` 保存連線並推送信號。本機 `wrangler dev` 需 Node 22     | 8787              |
+| `@repo/realtime`    | Cloudflare Workers + Durable Objects                              | 即時通道:Worker 驗證訂閱憑證(`/connect`)與送出信號簽章(`/publish`);每租戶一個 Durable Object `TenantHub` 保存連線並推送信號                                     | 8787              |
 
 ### 技術棧版本
 
@@ -20,7 +20,7 @@
 
 | 類別     | 套件                                                                                                                                   |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 執行環境 | Node 22(CI / 部署;`engines` 下限 20)、pnpm 10、Turborepo 2、TypeScript 5.9                                                             |
+| 執行環境 | Node 24 LTS(本機 / CI / Docker 統一;`engines` 下限 24、`.nvmrc`)、pnpm 10、Turborepo 2、TypeScript 5.9                                 |
 | 後端     | NestJS 11、`@nestjs/graphql` 13、Apollo Server 5、graphql 16、Mongoose 9、migrate-mongo 14                                             |
 | 前端     | React 19、MUI 9、Vite 8、Next.js 16、React Router 8、TanStack Query 5、TanStack Table 9、graphql-request 7、`use-intl` / `next-intl` 4 |
 | 工具     | Storybook 10、Jest 30、Playwright 1、ESLint 9、Prettier 3、bunchee 6                                                                   |
@@ -112,5 +112,5 @@ pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
 - **程式碼是設計的唯一真實來源**:設計系統先存在於 `@repo/ui`(tokens + MUI theme + 元件),Figma 是它的投影。品牌同步沿用程式的品牌推導,共用元件的原生發布與接受另行驗證;不買現成 Figma kit 或模板。
 - **設計風格走 Minimal 方向**:以 MUI theme 客製(柔和陰影、大圓角、冷灰階)重現,不購買模板。
 - **版本統一**:同一套件全 repo 同一版本(見上面「技術棧版本」);已知例外 `eslint-plugin-unicorn` 釘 65(最後支援 ESLint 9 的版本)。
-- **TS 編譯目標統一**:`@repo/typescript-config` 各範本一律 `lib` ES2024、`target` ES2022(執行環境 Node 22 與現代瀏覽器都支援;不用 `ESNext`,因為它隨 TS 版本變動),各 app / package 不自訂這兩項,只補 `DOM` 之類的環境差異。
+- **TS 編譯目標統一**:`@repo/typescript-config` 各範本一律 `lib` ES2024、`target` ES2022(執行環境 Node 24 與現代瀏覽器都支援;不用 `ESNext`,因為它隨 TS 版本變動),各 app / package 不自訂這兩項,只補 `DOM` 之類的環境差異。
 - **apps 不直接 import MUI / Emotion,一律經 `@repo/ui`**:由 `@repo/eslint-config` 的 `designSystemWall`(`no-restricted-imports`)在 vite / next 設定裡強制(STYLE-05);缺的元件先到 `packages/ui` 包一層。

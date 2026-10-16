@@ -13,7 +13,7 @@
     "@playwright/test": "^1.63.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.15.3",
+    "@types/node": "^24.19.2",
     "eslint": "^9.39.0",
     "mongodb-memory-server": "^11.2.0",
     "typescript": "5.9.3",

@@ -150,7 +150,7 @@ const withCookhome = <T>(
 
 /**
  * `ACTION.expiresAt` 經模板的 `Intl.DateTimeFormat("zh-TW")` 排出來的到期時間。日期與時間之間的那一個空白
- * 由執行環境的 ICU 決定:Node 20 是一般空白(U+0020,快照裡的就是它),Node 22 是窄空白(U+2009)。
+ * 由執行環境的 ICU 決定:快照是早期 Node 20(ICU 77)產生的一般空白(U+0020);現行 Node 24(ICU 78)排出窄空白(U+2009)。
  * 只比對這一段固定字面值、只認窄空白這一種寫法。
  */
 const ACTION_EXPIRY_WITH_THIN_SPACE = "2026/09/25 16:00";
