@@ -50,8 +50,8 @@
 | 表單動態權限 | 欄位級 `show-<formKey>-<fieldKey>` / `edit-<formKey>-<fieldKey>`;依表單新增 `create-<formKey>` | 執行期產生(`permissions.source = "dynamic"`),欄位級的在表單發布第 3 步建立          |
 
 - 頁內權限的動作不能和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀,宣告時就擋下。
-- 表單動態權限的 key 拆得出 formKey(`parseFormPermissionKey`)。只處理欄位的地方(發布同步、退役權限清理)改用 `parseFieldPermissionKey`,它不認 `create-`:依表單新增權限不會被當成欄位級權限列出或刪除。
-- **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key(`holdsPermission`)。
+- 表單動態權限的 key 拆得出 formKey(`parseFormPermissionKey`)。退役權限清理用 `parseFieldPermissionKey`(不認 `create-`);發布同步只比對 `show-` / `edit-<formKey>-` 前綴。依表單新增權限因此不會被當成欄位級權限列出、退役或刪除。
+- **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key:api 端的權限判斷一律用 `holdsPermission`(不直接呼叫 `hasPermission`);前端拿到的 `me.modules` 已過濾,照用 `hasPermission`。
 - 只有權限集裡有動態權限(持表單模組 `*`,或被授了動態權限)才查 `forms`;只持固定權限的操作者不多一次查詢。
 
 正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」

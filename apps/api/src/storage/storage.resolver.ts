@@ -1,11 +1,12 @@
 import { Args, Mutation, Resolver } from "@nestjs/graphql";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import { authError } from "../auth/auth-error";
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import {
   CreateUploadUrlInput,
   UploadUrlPayload,
@@ -62,21 +63,21 @@ export class StorageResolver {
       // 防呆:全域 guard 已擋掉未登入,這裡只是讓型別與 PermissionGuard 一致
       throw authError("UNAUTHENTICATED", "Upload requires a login");
     }
-    const { permissionKeys, modules } = await this.permissions.resolve(
+    const resolution = await this.permissions.resolve(
       operator.actorId,
       operator.currentOrgId,
     );
     const isFormWriter =
       purpose === UploadPurpose.FORM_ATTACHMENT &&
-      modules.some(
+      resolution.modules.some(
         (module) =>
           module.engine === "form" &&
-          (hasPermission(permissionKeys, `${module.key}.create`) ||
-            hasPermission(permissionKeys, `${module.key}.edit`)),
+          (holdsPermission(resolution, `${module.key}.create`) ||
+            holdsPermission(resolution, `${module.key}.edit`)),
       );
     if (
       !isFormWriter &&
-      !allowed.some((key) => hasPermission(permissionKeys, key))
+      !allowed.some((key) => holdsPermission(resolution, key))
     ) {
       throw authError(
         "FORBIDDEN",

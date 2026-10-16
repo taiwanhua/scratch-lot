@@ -53,15 +53,25 @@ export interface PermissionResolution {
   foreignPermissionKeys: ReadonlySet<string>;
 }
 
+/** 判斷持有權限需要的兩個集合(`PermissionResolution` 的子集)。 */
+export type PermissionHolding = Pick<
+  PermissionResolution,
+  "permissionKeys" | "foreignPermissionKeys"
+>;
+
 /**
- * 持有某權限(含同層 wildcard 回退,`@repo/domain/permission` 的 `hasPermission`);
- * 別租戶表單的動態權限一律不持有 —— 即使持有該模組的 `*`。
+ * **api 端唯一的權限判斷**:持有某權限(含同層 wildcard 回退,`@repo/domain/permission` 的
+ * `hasPermission`),但別租戶表單的動態權限一律不持有 —— 即使持有該模組的 `*`。
+ * api 端不要直接呼叫 `hasPermission`(會被 `*` 回退繞過);前端只拿得到過濾後的 `me.modules`,照用 `hasPermission`。
+ *
+ * 已知縫:`foreignPermissionKeys` 只收「展開時讀得到」的權限列(enabled、存在),所以
+ * **停用或不存在**的別租戶動態權限 key 不在裡面,持 `*` 時 `hasPermission` 的回退仍會回 true。
+ * 這不構成漏洞:沒有任何端點以 `@RequirePermission` 或 `holdsPermission` 要求別租戶的動態權限 key;
+ * 欄位級權限的閘門(`forms/field-permission-gate.ts`)只認集合裡的具體 key、不走回退;
+ * 別租戶客製表單本身在執行端一律當不存在(`FormAccessService.findRuntimeForm`),拿得到 key 也讀不到資料。
  */
 export function holdsPermission(
-  resolution: Pick<
-    PermissionResolution,
-    "permissionKeys" | "foreignPermissionKeys"
-  >,
+  resolution: PermissionHolding,
   key: string,
 ): boolean {
   return (

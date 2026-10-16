@@ -20,7 +20,10 @@ import {
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
 import { OwnerProtectionService } from "../orgs/owner-protection.service";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import { AssigneeInvalidationService } from "../workflows/workflow-engine/assignee-invalidation.service";
 import type { AssignUserRolesInput } from "./dto/assign-user-roles.input";
 import type { CopyUserOrgRolesInput } from "./dto/copy-user-org-roles.input";
@@ -1282,11 +1285,10 @@ export class UsersService {
     if (!operator.actorId) {
       return false;
     }
-    const { permissionKeys } = await this.permissions.resolve(
-      operator.actorId,
-      operator.currentOrgId,
+    return holdsPermission(
+      await this.permissions.resolve(operator.actorId, operator.currentOrgId),
+      key,
     );
-    return hasEffectivePermission(permissionKeys, key);
   }
 
   /** 帳號與 Email 各自在 `users` 內唯一(ADR-0003);重複回 `VALIDATION_FAILED` 並列出欄位。 */
@@ -1334,18 +1336,6 @@ export class UsersService {
     }
     return hash(randomBytes(32).toString("hex"));
   }
-}
-
-/** 與 PermissionGuard 同一判斷語意(含同層 wildcard,ADR-0004)。 */
-function hasEffectivePermission(
-  permissionKeys: ReadonlySet<string>,
-  key: string,
-): boolean {
-  if (permissionKeys.has(key)) {
-    return true;
-  }
-  const lastDot = key.lastIndexOf(".");
-  return lastDot > 0 && permissionKeys.has(`${key.slice(0, lastDot)}.*`);
 }
 
 function uniqueObjectIds(ids: Types.ObjectId[]): Types.ObjectId[] {
