@@ -32,6 +32,7 @@
 | 模組說明     | `apps/admin/src/md/module-help/project/additions/`、`project/replacements/`   | 新增與替換分開,無替換則沿用底座;重複/未知/空白替換拒絕,三區真 build 與 help bundle check 通過                    |
 | API 功能     | `apps/api/src/project/api-modules.ts`、`project.module.ts`、`project/<業務>/` | 真 AppModule 掛入普通 ProjectModule;feature key/module identity 不撞底座,核心 guards 不變                        |
 | API 資料     | `apps/api/src/project/database/registrations.ts` 及該目錄的 schema/repository | 新租戶 model 的 schema、repository、org check 一起登記;驗 plugin、識別與實際綁定,資料不能漏掉刪組織/撤銷開通檢查 |
+| 詞彙與待辦   | `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md`                               | 初始化時建空檔(底座不帶內容);只新增專案名詞與專案待辦,不重新定義 `CONTEXT.md` 的底座名詞                         |
 | GraphQL 文件 | `packages/graphql/src/documents/project/`                                     | 與 base 文件生成同一份型別/hooks;operation 名稱與 fragment 名稱各自全域唯一,拒絕匿名、根目錄散檔及 symlink       |
 | 前台業務     | `apps/front/src/app/`、`components/` 及專案前台文案                           | 依專案設計完整畫面與風格;新增或替換業務內容時,一併核對 API 與 documents                                          |
 

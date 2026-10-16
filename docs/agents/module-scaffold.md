@@ -23,9 +23,9 @@
 | 3 api 模組  | `apps/api/src/project/<feature>/`(新)、`project/api-modules.ts`                                                 | `demo-items-two/`、STRUCT-01、GQL-02 / 03 / 04                                                 |
 | 4 documents | `packages/graphql/src/documents/project/<feature>.graphql`(新)+ 兩份產物                                        | GQL-05、[GraphQL 文件來源](../standards/api/graphql-schema.md)                                 |
 | 5 admin     | `apps/admin/src/pages/project/<域>/` 的設定與薄頁面、`app/project/module-pages.ts`、i18n namespace              | `components/base/crud/demo-module-config.ts`、ADR-0012、I18N-02                                |
-| 6 help      | `apps/admin/src/md/module-help/project/additions/<模組key>.help.md`(新)                                         | FIGMA-04、CONTEXT.md 詞彙表                                                                    |
+| 6 help      | `apps/admin/src/md/module-help/project/additions/<模組key>.help.md`(新)                                         | FIGMA-04、CONTEXT.md + CONTEXT-PROJECT.md 詞彙表                                               |
 | 7 測試      | `apps/api/src/project/<feature>/*.test.ts`、`apps/admin/src/pages/project/<域>/**/*.test.tsx`、專案 MSW fixture | TEST-07、TEST-08                                                                               |
-| 8 文件回寫  | `docs/modules/<模組key>.md` 補齊、`docs/data-model.md`、`CONTEXT.md`(有新詞才動)                                | CLAUDE.md「Domain docs」                                                                       |
+| 8 文件回寫  | `docs/modules/<模組key>.md` 補齊、`docs/data-model.md`、`CONTEXT-PROJECT.md`(有新詞才動)                        | CLAUDE.md「Domain docs」                                                                       |
 
 **新 worktree 開工先**依 [toolbox.md](./toolbox.md) 的「pnpm / turbo:建置、測試、格式」準備依賴及共用套件產物。頁面登記與替換見[前端架構](../concepts/frontend-architecture.md),API 登記見[資料層組裝](../concepts/data-layer-and-isolation.md#底座與專案資料的組裝);本文指向新增專案功能的來源,不要求修改底座固定組裝入口。
 
@@ -191,7 +191,7 @@ pnpm --filter @repo/graphql generate
 新增 `apps/admin/src/md/module-help/project/additions/<模組key>.help.md`,**檔名必須等於模組 key**。要替換底座說明則放 `project/replacements/`,目標必須已存在於 base;不能以 additions 撞 key 覆蓋。`lib/base/help-registry.ts` 的三份 glob 在 build 時內嵌內容,`lib/base/module-help.ts` 驗證及選取。表單模組沒有專屬檔時退回底座 `form-module.help.md`;只替換畫面而未提供說明時仍使用底座說明。
 
 - 結構沿用既有的說明檔:`# <模組名>` → `## 這個模組做什麼` → `## 常用操作` → `## 重要規則`。
-- **讀者是租戶使用者**:守 `CONTEXT.md` 詞彙表、**不得出現平台視角詞彙**(根組織 / 租戶 / 開通 / 跨租戶 / 平台);聯絡窗口一律寫「系統管理員」;「租戶管理員副本」在 UI 與 help 裡叫「預設角色」(FIGMA-04)。
+- **讀者是租戶使用者**:守 `CONTEXT.md` 與 `CONTEXT-PROJECT.md` 詞彙表、**不得出現平台視角詞彙**(根組織 / 租戶 / 開通 / 跨租戶 / 平台);聯絡窗口一律寫「系統管理員」;「租戶管理員副本」在 UI 與 help 裡叫「預設角色」(FIGMA-04)。
 - 對人的提示不用內部術語(「子樹」→「或其下層組織」)。
 - 寫**使用者做得到的事與看得到的差異**,不寫實作(不出現 collection 名、權限 key、GraphQL 端點)。
 - 交件前先 `pnpm --filter @repo/admin build` 再跑 `pnpm --filter @repo/admin check:help-bundle`(Dockerfile 也跑這一步):它驗每份 help.md 真的被打包進 `dist/assets`。理由:根目錄 `.dockerignore` 排除 `**/*.md`,help.md 靠一條例外才進得了 build context;例外一失效,本機 build 正常、image 裡的說明卻全是空的,沒有任何一步會失敗。
@@ -213,10 +213,10 @@ pnpm --filter @repo/graphql generate
 
 - `docs/modules/<模組key>.md` 照固定章節補齊,尤其「api 介面」(GQL-06 / GQL-07 的正本寫在這裡)、「admin 頁面」、「錯誤碼」、「稽核」、「測試」;每節結尾附「正本:`<路徑>`」。
 - `docs/data-model.md` 加該 collection 一列(欄位細節指向 schema 檔,不在地圖裡重抄)。
-- `CONTEXT.md` 只在**真的長出新詞**時加;新詞要連 `_Avoid_` 一起寫。
-- 模組文件與 help.md 是**實作票必然連動的兩處**;ADR、`docs/standards/`、CONTEXT 這類規則本文由文件票寫,實作發現寫錯**寫進 PR 的「規則回饋」**,不要就地改。
+- 專案模組的新詞寫進 `CONTEXT-PROJECT.md`,只在**真的長出新詞**時加;新詞要連 `_Avoid_` 一起寫,不重新定義 `CONTEXT.md` 的底座名詞。
+- 模組文件與 help.md 是**實作票必然連動的兩處**;ADR、`docs/standards/`、底座 `CONTEXT.md` 這類規則本文由文件票寫,實作發現寫錯**寫進 PR 的「規則回饋」**,不要就地改。
 
-正本:`docs/agents/issue-tracker.md`「文件的歸屬」、`docs/data-model.md`、`CONTEXT.md`
+正本:`docs/agents/issue-tracker.md`「文件的歸屬」、`docs/data-model.md`、`docs/agents/domain.md`(兩份詞彙表的分工)
 
 ## 示範模組 1 vs 2 差異對照表(哪些是選配)
 

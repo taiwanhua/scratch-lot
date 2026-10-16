@@ -10,7 +10,7 @@
 
 每次上下文壓縮、從摘要恢復或接續中斷任務後,在繼續分析、修改或派工前,**必須重新讀取檔案**,即使摘要說之前已讀過:
 
-1. **先讀 `CLAUDE.md`**,再讀本檔、`docs/README.md`、`docs/agents/toolbox.md`、`CONTEXT.md`、`docs/architecture.md`、`docs/standards/README.md`、`docs/tmp/dis.md`。
+1. **先讀 `CLAUDE.md`**,再讀本檔、`docs/README.md`、`docs/agents/toolbox.md`、`CONTEXT.md`、`CONTEXT-PROJECT.md`、`docs/architecture.md`、`docs/standards/README.md`、`docs/tmp/dis.md`、`docs/tmp/project-dis.md`。
 2. `.codex/handoffs/` 中與目前任務對應的交接紀錄,以及紀錄指向的最新規格。沒有交接紀錄時,先依可見對話建立,無法確認的事項標成待確認。
 3. 當前任務相關的模組技術文件、使用者 help、規範檔與 ADR;涉及資料或部署時再讀對應資料模型或部署文件。
 
@@ -54,11 +54,11 @@ Issues 追蹤在目前 repo 的 GitHub Issues,透過 `gh` CLI 操作;repo 身分
 
 ### Domain docs
 
-單一 context:repo 根目錄的 `CONTEXT.md` + `docs/adr/`(由 `/domain-modeling` 惰性建立)。見 `docs/agents/domain.md`。
+單一 context:repo 根目錄的 `CONTEXT.md`(底座詞彙)+ `CONTEXT-PROJECT.md`(專案詞彙,只新增、不重新定義底座名詞)+ `docs/adr/`(由 `/domain-modeling` 惰性建立)。見 `docs/agents/domain.md`。
 
 - **新增**一個後台 CRUD 模組 → `docs/agents/module-scaffold.md`(檔案清單 + 步驟 + 每步的正本;藍本是示範模組 1 / 2)
 - 開發/修改後台模組 → 先讀 `docs/modules/<key>.md`(內部技術文件)+ `apps/admin/src/md/module-help/{base,project/additions,project/replacements}/<key>.help.md`(租戶使用者說明:守詞彙表、不得出現平台視角詞彙;build 時打包進說明彈窗)
 - 設計稿與 Library → `docs/branding.md` 的設計資源登記;規範見 `docs/standards/general/figma.md`
-- 進行中討論與待辦 → `docs/tmp/dis.md`
+- 進行中討論與待辦 → 底座的在 `docs/tmp/dis.md`,專案的在 `docs/tmp/project-dis.md`
 - 資料模型地圖 → `docs/data-model.md`;欄位/索引細節見 `apps/api/src/database/schemas/*.schema.ts`(逐欄有註解)
 - 環境變數 → `docs/env-registry.md`(用途/是否機密/放哪)

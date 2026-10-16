@@ -87,7 +87,7 @@ git branch --set-upstream-to=origin/main main
 4. **Repo 與看板**:`deploy/project/github.json` 的 `expectedRepository` 改為新 repo;不用看板時 `projectStatus.enabled` 設 `false`,要用就填新看板自己的 ID。
 5. **雲端**:尚未啟用時 `deploy/project/cloud.json` 只留 `{"schemaVersion":1,"enabled":false}`;啟用時填新專案完整的三環境設定。`deploy/env/<環境>.yaml` 不留來源專案的網域或 bucket,尚無值的鍵依[環境變數登記](../env-registry.md)所列的未設行為省略。
 6. **本機**:根與各 app 的 `.env.example` 改為專案的範例值;未追蹤的 `.env` 只在不存在時建立。Compose 專案名、DB 名與 port 要與同機其他專案錯開(規則見初始化索引「本機與測試環境」)。
-7. **業務、前台與文件**:依輸入處理來源業務內容、前台文案與風格、favicon;`CLAUDE.md`、`CONTEXT.md` 等入口的專案識別改為新專案。
+7. **業務、前台與文件**:依輸入處理來源業務內容、前台文案與風格、favicon;`CLAUDE.md` 等入口的專案識別改為新專案。建立兩個專案空檔:`CONTEXT-PROJECT.md`(專案詞彙表,只新增專案名詞,不重新定義 `CONTEXT.md` 的底座名詞)與 `docs/tmp/project-dis.md`(專案待辦);底座不帶這兩份的內容,`CONTEXT.md`、`docs/tmp/dis.md` 是底座檔,不寫專案識別。
 
 不對 repo 做全域取代。已發布的 migration、seed 歷史快照、相容夾具裡的來源品牌字串維持原樣;要檢查的是實際執行與部署的目標是否還指向來源專案。
 
