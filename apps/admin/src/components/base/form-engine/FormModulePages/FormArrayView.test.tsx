@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, within } from "@testing-library/react";
 
 import { DEMO_FORM_ROUTES } from "@/test/msw/form-fixtures";
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import {
   ROW_A,
@@ -9,8 +10,6 @@ import {
   arrayRuntimeOptions,
   arraySubmission,
   lineRow,
-  restoreViewportAfterEach,
-  setMobileViewport,
 } from "./form-array-test-support";
 import { renderShopping } from "./form-module-test-support";
 
