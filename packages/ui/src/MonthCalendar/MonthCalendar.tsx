@@ -59,7 +59,10 @@ export interface MonthCalendarProps {
   onSelectedDatesChange?: (dates: string[]) => void;
   /** 各日期的設定(停用、註記、角標、自訂內容),key 是 `YYYY-MM-DD` */
   days?: Readonly<Partial<Record<string, MonthCalendarDayInfo>>>;
-  /** 今天(`YYYY-MM-DD`,畫圓底標示);預設取瀏覽器當地日期 */
+  /**
+   * 今天(`YYYY-MM-DD`,畫圓底標示)。使用處要傳**租戶時區**的今天(瀏覽器時區可能和租戶不同);
+   * 沒給時退回瀏覽器當地日期,只適合 story / 測試
+   */
   today?: string;
   /** 星期列文字,從星期日開始的 7 個 */
   weekdayLabels?: readonly string[];
