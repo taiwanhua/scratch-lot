@@ -124,6 +124,7 @@ const scrollButtons = (container: HTMLElement) => [
 describe("Tabs scrollable", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "IntersectionObserver");
+    Reflect.deleteProperty(globalThis, "ResizeObserver");
   });
 
   it("預設不捲動:既有呼叫端的版面不變", () => {
@@ -207,7 +208,6 @@ describe("Tabs scrollable", () => {
 
     expect(scrollLeft).toBe(388);
     expect(selected.getBoundingClientRect().right).toBe(212);
-    Reflect.deleteProperty(globalThis, "ResizeObserver");
   });
 
   it("全部放得下:不出現按鈕", () => {
