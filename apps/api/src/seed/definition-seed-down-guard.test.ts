@@ -84,7 +84,7 @@ describe("migrate:down 不越過中斷的受管定義安裝", () => {
 
     // 之後以沒有登記這張表單的 registry(空專案來源的夾具)跑 update:成功,成為最近一次執行
     await releaseSeedLock(app.connection);
-    const updated = app.api.runUpdate([]);
+    const updated = await app.api.runUpdate([]);
     expect(updated.stderr).toBe("");
     expect(updated.status).toBe(0);
     expect(await installationOf(app.connection, seed)).toMatchObject({
@@ -93,7 +93,7 @@ describe("migrate:down 不越過中斷的受管定義安裝", () => {
     const changelog = await changelogFileNames();
     expect(changelog.at(-1)).toBe(LAST_MIGRATION);
 
-    const down = app.api.runUpdate(["--down"]);
+    const down = await app.api.runUpdate(["--down"]);
     expect(down.status).toBe(1);
     expect(down.stderr).toContain("有未完成的受管定義安裝");
     expect(down.stderr).toContain("form-definition:down_guard_form@r1");
@@ -114,7 +114,7 @@ describe("migrate:down 不越過中斷的受管定義安裝", () => {
     await releaseSeedLock(app.connection);
 
     // 已完成的安裝紀錄留著也不再擋
-    const allowed = app.api.runUpdate(["--down"]);
+    const allowed = await app.api.runUpdate(["--down"]);
     expect(allowed.stderr).toBe("");
     expect(allowed.status).toBe(0);
     expect(allowed.stdout).toContain(`已還原 ${LAST_MIGRATION}`);
