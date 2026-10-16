@@ -113,7 +113,7 @@ export async function expectDemoItems(
 /**
  * 頁面區域(`AdminShell/ShellLayout` 的 `<main>`)。
  *
- * **右上角的 Snackbar 不在這裡面** —— 它掛在 `app/providers/SnackbarProvider` 上、是整個
+ * **右下角的 Snackbar 不在這裡面** —— 它掛在 `app/providers/SnackbarProvider` 上、是整個
  * app 根層的兄弟節點。自 #376 起同一句錯誤文案會**同時**出現在頁內橫幅與 Snackbar 兩處
  * (前者說明脈絡、後者是全站回饋,兩個都要留),所以驗頁內文案時一律從這個範圍往下找,
  * 否則 `getByText` 會撞上 strict mode。
