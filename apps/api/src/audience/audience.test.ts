@@ -30,6 +30,8 @@ const TWO_EDIT = "demo.sample-two.edit";
 /** 本租戶 / 別租戶客製表單的欄位級動態權限(掛在示範模組1 下,持 `模組.*` 的人展開得到兩筆)。 */
 const OWN_FORM_SHOW = `${SAMPLE_ONE}.show-aud_own-secret`;
 const OTHER_FORM_SHOW = `${SAMPLE_ONE}.show-aud_other-secret`;
+/** 示範模組1 底下一筆已停用的權限:持 `模組.*` 也不算持有(不走 `*` 同層回退)。 */
+const DISABLED_IN_SAMPLE_ONE = `${SAMPLE_ONE}.archived`;
 
 const LOGIN = /* GraphQL */ `
   mutation Login($input: LoginInput!) {
@@ -342,14 +344,14 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
       },
     ]);
     await api.connection.collection("permissions").insertMany(
-      [OWN_FORM_SHOW, OTHER_FORM_SHOW].map((key) => ({
+      [OWN_FORM_SHOW, OTHER_FORM_SHOW, DISABLED_IN_SAMPLE_ONE].map((key) => ({
         key,
         moduleId: sampleOne._id,
         name: key,
-        enabled: true,
+        enabled: key !== DISABLED_IN_SAMPLE_ONE,
         isSystem: false,
         settings: {},
-        source: "dynamic",
+        source: key === DISABLED_IN_SAMPLE_ONE ? "seed" : "dynamic",
         retiredAt: null,
         ...base,
       })),
@@ -435,6 +437,11 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
     ],
     ["權限:停用的權限", () => match(leaf("permission", [TWO_EDIT])), {}],
     [
+      "權限:持 模組.*、底下那筆已停用 → 不算",
+      () => match(leaf("permission", [DISABLED_IN_SAMPLE_ONE])),
+      {},
+    ],
+    [
       "權限:本租戶客製表單的動態權限(經 模組.* 展開)",
       () => match(leaf("permission", [OWN_FORM_SHOW])),
       {},
@@ -517,6 +524,15 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
       "wildcardA1",
     ]);
     expect(await list(match(leaf("permission", [TWO_EDIT])))).toEqual([]);
+    expect(
+      await list(match(leaf("permission", [DISABLED_IN_SAMPLE_ONE]))),
+    ).toEqual([]);
+    expect(
+      await matches(
+        "wildcardA1",
+        match(leaf("permission", [DISABLED_IN_SAMPLE_ONE])),
+      ),
+    ).toBe(false);
     expect(await list(match(leaf("permission", [OWN_FORM_SHOW])))).toEqual([
       "wildcardA1",
     ]);
