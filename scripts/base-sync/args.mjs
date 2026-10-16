@@ -15,13 +15,14 @@ const COMMANDS = {
     "--worktree-root": "worktreeRoot",
     "--accept-mixed": "acceptMixed",
   },
+  verify: { "--project": "project", "--tag": "tag", "--out": "out" },
 };
 
 /** 可重複的參數(輸出成陣列)。 */
 const REPEATABLE = new Set(["projects", "acceptMixed"]);
 
 /** 可省略的參數;其餘都必填。 */
-const OPTIONAL = new Set(["acceptMixed"]);
+const OPTIONAL = new Set(["acceptMixed", "out"]);
 
 const HELP_FLAGS = new Set(["--help", "-h"]);
 
@@ -42,17 +43,24 @@ const SUMMARIES = {
     "--project 是來源專案根目錄、--commit 是完整 40 位 commit SHA、--base 是底座 repo 根目錄;工作樹建在已存在的 --worktree-root 目錄之下。",
     "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕。",
   ],
+  verify: [
+    "唯讀:升級 merge 提交後,核對專案的改動是否已被新底座包含,輸出 Markdown 報告:共用路徑與底座 --tag 仍不同的檔案、客製替換登記、底座與專案 seed 同 key、專案路徑與底座同名或同匯出名稱的檔案。",
+    "--project 是專案 repo(或升級工作樹)根目錄;--tag 須已由 upgrade 存進 refs/base/releases/ 且被 HEAD 包含;--out 可省略,另把報告寫到該檔。不 fetch、不寫任何 ref。",
+    "四節皆為 0 才 exit 0(已去除重複);任一節有項目 exit 1,人只判讀例外。Figma 稽核與 CI 不在本指令內。",
+  ],
 };
 
 const FOOTER = [
-  "輸出:一般命令成功時 stdout 一個 JSON 物件、exit 0;失敗時 stdout 為空、stderr 一行摘要、exit 1。說明輸出純文字、exit 0。",
+  "輸出:一般命令成功時 stdout 一個 JSON 物件、exit 0;verify 的 stdout 是 Markdown 報告(有待判讀項目時 exit 1、stderr 為空);失敗時 stdout 為空、stderr 一行摘要、exit 1。說明輸出純文字、exit 0。",
   "限制:upgrade / contribute 只準備隔離的 feature 工作樹;所有命令都不合併環境分支、不 push、不開 PR、不部署、不重置資料庫,也不 stash、reset 或清除既有工作樹。",
 ];
 
 function synopsis(command) {
   const options = Object.entries(COMMANDS[command]).map(([name, key]) => {
     const option = `${name} <${name.slice(2)}>`;
-    if (OPTIONAL.has(key)) return `[${option} ...]`;
+    if (OPTIONAL.has(key)) {
+      return REPEATABLE.has(key) ? `[${option} ...]` : `[${option}]`;
+    }
     return REPEATABLE.has(key) ? `${option} [${option} ...]` : option;
   });
   return `${command} ${options.join(" ")}`;
