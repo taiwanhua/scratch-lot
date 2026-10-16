@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { Stack } from "../Stack/Stack";
 import { TextField } from "../TextField/TextField";
 import { Typography } from "../Typography/Typography";
+import { CloseIcon } from "../icons/CloseIcon";
 
 /**
  * 受控值的形狀。刻意直接借 MUI 的條件型別(而不是自己寫一份
@@ -71,6 +72,11 @@ export interface AutocompleteProps<
   loading?: boolean;
   loadingText?: ReactNode;
   noOptionsText?: ReactNode;
+  /**
+   * 多選 chip 的刪除鈕:`cancel`(預設,MUI 的實心圓 ×)或 `close`(小 ×,同 `@repo/ui/tag` 的 `onDelete`)。
+   * 同一列旁邊並排的是可關閉的 Tag 時用 `close`,兩種標籤的 × 才一致(人員條件的條件列)。
+   */
+  chipDeleteIcon?: "cancel" | "close";
   /* 以下沿用 MUI / `TextField` 的名字而不自創(STYLE-05 / FIGMA-01) */
   size?: "small" | "medium";
   disabled?: boolean;
@@ -145,6 +151,7 @@ export const Autocomplete = <
   loading,
   loadingText,
   noOptionsText,
+  chipDeleteIcon = "cancel",
   size = "small",
   disabled,
   required,
@@ -173,6 +180,15 @@ export const Autocomplete = <
       getOptionLabel={getOptionLabel}
       getOptionKey={keyOf}
       getOptionDisabled={getOptionDisabled}
+      {...(chipDeleteIcon === "close" && {
+        slotProps: {
+          chip: {
+            deleteIcon: <CloseIcon />,
+            // 尺寸同 Tag 的關閉圖示(12px)
+            sx: { "& .MuiChip-deleteIcon": { fontSize: "0.75rem" } },
+          },
+        },
+      })}
       isOptionEqualToValue={(option, other) => keyOf(option) === keyOf(other)}
       // 呼叫端自己拿 keyword 去查(`onInputChange`)時,前端不要再過濾一次
       filterOptions={

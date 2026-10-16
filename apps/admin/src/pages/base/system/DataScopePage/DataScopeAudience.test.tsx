@@ -2,10 +2,12 @@ import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 
 import { checkboxOf } from "@/components/base/OrgTreeSelect/org-tree-select-test-support";
+import { savedRule } from "@/test/msw/data-scope-fixtures";
 
 import {
   audienceRegion,
   autocompleteGroupLabels,
+  autocompleteOptions,
   chooseOption,
   conditionsRegion,
   pickAutocomplete,
@@ -92,6 +94,104 @@ describe("套用對象(AudiencePicker)", () => {
     ]);
   });
 
+  it("同名角色:在值欄輸入即收斂,同名的兩筆都留著、靠次文字(擁有組織)分辨", async () => {
+    const { user: actor } = renderPage();
+    await startMatchRule(actor);
+    await chooseOption(actor, audienceCombobox("欄位"), "角色");
+
+    await actor.type(audienceCombobox("值"), "租戶管理員");
+
+    expect(autocompleteOptions()).toEqual([
+      "租戶管理員租戶 A",
+      "租戶管理員租戶 B",
+    ]);
+  });
+
+  it("已存的角色不在候選清單裡:照樣列成標籤,改別的值時原樣送回", async () => {
+    const [entry] = savedRule.rules;
+    const { user: actor, fake } = renderPage({
+      world: {
+        rules: [
+          {
+            ...savedRule,
+            rules: [
+              {
+                ...entry,
+                audience: {
+                  mode: "match",
+                  filter: {
+                    op: "AND",
+                    children: [
+                      {
+                        field: "role",
+                        cond: "in",
+                        value: {
+                          kind: "static",
+                          values: ["role-gone", "role-support"],
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    await waitForEditor("示範模組1(demo_items_one)");
+
+    expect(
+      await within(audienceRegion()).findByText("客服"),
+    ).toBeInTheDocument();
+    expect(
+      within(audienceRegion()).getByText("不在候選清單中"),
+    ).toBeInTheDocument();
+
+    await pickAutocomplete(actor, audienceCombobox("值"), "編輯");
+    await actor.keyboard("{Escape}");
+    await actor.click(screen.getByRole("button", { name: "儲存" }));
+
+    await waitFor(() => {
+      expect(fake.inputs.saveDataScopeRule).toHaveLength(1);
+    });
+    expect(fake.inputs.saveDataScopeRule[0]?.rules[0]?.audience).toEqual({
+      mode: "match",
+      filter: {
+        op: "AND",
+        children: [
+          {
+            field: "role",
+            cond: "in",
+            value: {
+              kind: "static",
+              values: ["role-gone", "role-support", "role-editor"],
+            },
+          },
+        ],
+      },
+    });
+  });
+
+  it("條件列沒挑值:按儲存不送出,錯誤標在那一列(本地文案)", async () => {
+    const { user: actor, fake } = renderPage();
+    await startMatchRule(actor);
+    await chooseOption(
+      actor,
+      within(conditionsRegion()).getByRole("combobox", { name: "值" }),
+      "草稿",
+    );
+    await actor.keyboard("{Escape}");
+
+    await actor.click(screen.getByRole("button", { name: "儲存" }));
+
+    expect(
+      await within(audienceRegion()).findByText("請選擇值。"),
+    ).toBeInTheDocument();
+    expect(audienceCombobox("值")).toHaveAttribute("aria-invalid", "true");
+    expect(fake.inputs.saveDataScopeRule).toHaveLength(0);
+  });
+
   it("巢狀最多三層:第三層的群組沒有 [+ 群組]", async () => {
     const { user: actor } = renderPage();
     await startMatchRule(actor);
@@ -163,7 +263,8 @@ describe("套用對象(AudiencePicker)", () => {
     await waitFor(() => {
       expect(fake.inputs.saveDataScopeRule).toHaveLength(1);
     });
-    const message = "請把套用對象的條件填完整(每一列都要選值)。";
+    // api 回的 AUDIENCE_INVALID 原因不只一種,用通用說法
+    const message = "套用對象的這個條件不正確。";
     expect(
       await within(audienceRegion()).findByText(message),
     ).toBeInTheDocument();
