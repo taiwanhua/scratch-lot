@@ -4,6 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
 import {
+  cssRulesMatching,
+  declaredValue,
+  emotionClassOf,
+} from "../test/css-rules";
+import {
   type StepStatus,
   Stepper,
   type StepperProgress,
@@ -144,7 +149,34 @@ describe("Stepper:規格 10.8 的操作表", () => {
     expect(screen.getByRole("textbox", { name: "明細備註" })).toHaveValue("乙");
   });
 
-  it("只有已完成的步驟可點:未開始、進行中、有錯的都不是按鈕,也不回報", async () => {
+  it("只有已完成的步驟可點:未開始、進行中、目前這一步本身有錯的都不是按鈕,也不回報", async () => {
+    const user = userEvent.setup();
+    const onStepClick = jest.fn();
+    // 第 3 步驗證失敗、還停在這一步(沒有進行中的步驟 → 目前那一步就是有錯的這一步)
+    render(
+      <Stepper
+        variant="wide"
+        steps={stepsOf("done", "done", "error", "todo", "todo")}
+        progressText={progressText}
+        onStepClick={onStepClick}
+      />,
+    );
+
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    for (const name of ["附件", "審核人", "確認"]) {
+      await user.click(screen.getByText(name));
+    }
+    expect(onStepClick).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "基本資料" }));
+    expect(onStepClick).toHaveBeenCalledTimes(1);
+    expect(onStepClick).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "s1" }),
+      0,
+    );
+  });
+
+  it("點排在目前步驟之前的有錯步驟:可以點回(它原本已完成過,送出時才發現錯)", async () => {
     const user = userEvent.setup();
     const onStepClick = jest.fn();
     render(
@@ -156,18 +188,14 @@ describe("Stepper:規格 10.8 的操作表", () => {
       />,
     );
 
-    expect(screen.getAllByRole("button")).toHaveLength(1);
-    for (const name of ["明細", "附件", "審核人", "確認"]) {
-      await user.click(screen.getByText(name));
-    }
-    expect(onStepClick).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "基本資料" }));
-    expect(onStepClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "明細" }));
     expect(onStepClick).toHaveBeenCalledWith(
-      expect.objectContaining({ key: "s1" }),
-      0,
+      expect.objectContaining({ key: "s2" }),
+      1,
     );
+    // 進行中與未開始仍不能點
+    expect(screen.queryByRole("button", { name: "附件" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "確認" })).toBeNull();
   });
 
   it("某步驟驗證失敗:那一步標「有錯」(驚嘆號、仍停在這一步)", async () => {
@@ -244,6 +272,76 @@ describe("Stepper:規格 10.8 的操作表", () => {
     );
 
     expect(screen.getByText("第 3 / 5 步 · 附件")).toBeInTheDocument();
+  });
+});
+
+/** 元素自己的 emotion 規則宣告的底色。 */
+const colorOf = (element: Element) =>
+  declaredValue(cssRulesMatching(emotionClassOf(element)), "background-color");
+
+describe("Stepper:結構與樣式", () => {
+  it("<ol> 底下只有 <li>(連線畫在 <li> 裡)", () => {
+    render(
+      <Stepper
+        variant="wide"
+        aria-label="申請步驟"
+        steps={stepsOf("done", "current", "todo")}
+        progressText={progressText}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "申請步驟" });
+    expect([...list.children].every((child) => child.tagName === "LI")).toBe(
+      true,
+    );
+    expect(list.children).toHaveLength(3);
+  });
+
+  it("可點回的步驟鍵盤聚焦時有外框(focus-visible)", () => {
+    render(
+      <Stepper
+        variant="wide"
+        steps={stepsOf("done", "current")}
+        progressText={progressText}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "基本資料" });
+    const rules = cssRulesMatching(emotionClassOf(button), "Mui-focusVisible");
+    expect(declaredValue(rules, "outline")).toMatch(/^2px solid/);
+  });
+
+  it("連線:進到的那一步不是「未開始」就是 primary(含有錯的前後);窄版有錯那段是 error 色", () => {
+    const { container, rerender } = render(
+      <Stepper
+        variant="wide"
+        steps={stepsOf("done", "error", "current", "todo")}
+        progressText={progressText}
+      />,
+    );
+    const connectors = [
+      ...container.querySelectorAll("li > span[aria-hidden]"),
+    ];
+    const [toError, toCurrent, toTodo] = connectors.map((element) =>
+      colorOf(element),
+    );
+    expect(toError).toBe(toCurrent);
+    expect(toTodo).not.toBe(toCurrent);
+
+    rerender(
+      <Stepper
+        variant="narrow"
+        steps={stepsOf("done", "error", "current", "todo")}
+        progressText={progressText}
+      />,
+    );
+    const segments = [
+      ...container.querySelectorAll("nav span[aria-hidden] > span"),
+    ].map((element) => colorOf(element));
+    expect(segments[1]).not.toBe(segments[0]);
+    expect(segments[2]).toBe(segments[0]);
+    expect(segments[3]).not.toBe(segments[0]);
+    expect(segments[3]).not.toBe(segments[1]);
   });
 });
 

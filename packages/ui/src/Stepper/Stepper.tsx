@@ -1,10 +1,10 @@
 "use client";
 
-import ButtonBase from "@mui/material/ButtonBase";
+import ButtonBase, { buttonBaseClasses } from "@mui/material/ButtonBase";
 import MuiTypography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { styled } from "@mui/material/styles";
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { CheckIcon } from "../icons/CheckIcon";
 import { mergeSx } from "../theme/sx";
@@ -30,7 +30,10 @@ export interface StepperProgress {
 
 export interface StepperProps {
   steps: readonly StepperStep[];
-  /** 點了某一步:**只有已完成的步驟會回報**(未開始、進行中、有錯的點了沒反應) */
+  /**
+   * 點了某一步:**只有可以點回的步驟會回報** —— 已完成的,與排在目前步驟之前的有錯步驟(`isStepClickable`);
+   * 未開始、進行中、目前這一步本身有錯的點了沒反應
+   */
   onStepClick?: (step: StepperStep, index: number) => void;
   /** 窄螢幕那一行的文字(必填:窄螢幕只顯示這一行 + 進度條) */
   progressText: (progress: StepperProgress) => ReactNode;
@@ -48,8 +51,8 @@ export interface StepperProps {
  * 幾何照 Figma `Draft/Stepper` 79:1361(Wide 79:1326 / Narrow 79:1353)與 `Draft/StepperStep` 79:1325:
  * 編號圓 24、內字 12 半粗;圓與名稱間距 8;步驟之間的連線寬 32、2px,與兩側間距 12;
  * 已完成 / 進行中 = primary 實心白字(已完成畫勾),未開始 = grey.200 底 + 次要字,有錯 = error 實心「!」;
- * 已完成那一步之後的連線是 primary,其餘 divider。
- * 窄:文字 subtitle2,下方分段進度條每段高 4、段距 4、圓角 2,到目前那一步(含)為 primary。
+ * 進到某一步的連線:那一步不是「未開始」就是 primary(含有錯的前後),否則 divider。
+ * 窄:文字 subtitle2,下方分段進度條每段高 4、段距 4、圓角 2,到目前那一步(含)為 primary、有錯的那一段為 error。
  * 圓 24、連線 32、進度條 4 只有這個元件用到,依 STYLE-06 直寫。
  */
 const DOT_SIZE = 24;
@@ -102,26 +105,67 @@ const Connector = styled("span", {
   };
 });
 
+/** 編號圓 + 名稱;已完成(與排在目前步驟之前的有錯)步驟是按鈕,其餘是純文字。 */
+const StepBody = styled("span")(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing(1),
+}));
+
+/** 鍵盤聚焦時的外框(ButtonBase 沒有預設外框)。 */
 const StepButton = styled(ButtonBase)(({ theme }) => ({
   gap: theme.spacing(1),
   borderRadius: theme.shape.borderRadius,
   padding: 0,
+  [`&.${buttonBaseClasses.focusVisible}`]: {
+    outline: `2px solid ${paletteOf(theme).primary.main}`,
+    outlineOffset: 2,
+  },
 }));
 
 const Bar = styled("span")({ display: "flex", gap: BAR_HEIGHT });
 
+/** 進度條一段:到目前那一步(含)是 primary,有錯的那一步是 error,其餘 divider。 */
+type SegmentTone = "filled" | "error" | "empty";
+
 const Segment = styled("span", {
-  shouldForwardProp: (prop) => prop !== "isFilled",
-})<{ isFilled: boolean }>(({ theme, isFilled }) => {
+  shouldForwardProp: (prop) => prop !== "tone",
+})<{ tone: SegmentTone }>(({ theme, tone }) => {
   const palette = paletteOf(theme);
   return {
     flex: 1,
     maxWidth: BAR_MAX_WIDTH,
     height: BAR_HEIGHT,
     borderRadius: BAR_HEIGHT / 2,
-    backgroundColor: isFilled ? palette.primary.main : palette.divider,
+    backgroundColor: {
+      filled: palette.primary.main,
+      error: palette.error.main,
+      empty: palette.divider,
+    }[tone],
   };
 });
+
+const segmentToneOf = (
+  step: StepperStep,
+  index: number,
+  active: number,
+): SegmentTone => {
+  if (step.status === "error") {
+    return "error";
+  }
+  return index <= active ? "filled" : "empty";
+};
+
+/**
+ * 可以點回的步驟:已完成的,以及**排在目前步驟之前**、狀態為「有錯」的(它原本已完成過,送出時才發現錯)。
+ * 未開始、進行中、目前這一步本身有錯的點了沒反應。
+ */
+export const isStepClickable = (
+  step: StepperStep,
+  index: number,
+  active: number,
+): boolean =>
+  step.status === "done" || (step.status === "error" && index < active);
 
 const labelColor = (status: StepStatus): string => {
   switch (status) {
@@ -149,10 +193,10 @@ export const activeStepIndex = (steps: readonly StepperStep[]): number => {
 
 /**
  * 精靈步驟(底座 10.8):每一步 編號、名稱、狀態(已完成 / 進行中 / 未開始 / 有錯)。
- * 元件只畫狀態與回報點擊:**已完成的步驟可點回**(`onStepClick`),其餘點了沒反應;
+ * 元件只畫狀態與回報點擊:**已完成的步驟可點回**(`onStepClick`;排在目前步驟之前的有錯步驟也可以),其餘點了沒反應;
  * 步驟內容、上一步 / 下一步的條件與目前步驟都由使用處決定(狀態只放畫面 state,不進網址、不存)。
  *
- * 無障礙:寬版是 `<ol>`,目前那一步標 `aria-current="step"`;已完成的步驟是按鈕,其餘是純文字。
+ * 無障礙:寬版是 `<ol>`(連線畫在各 `<li>` 裡),目前那一步標 `aria-current="step"`;可點回的步驟是按鈕,其餘是純文字。
  */
 export const Stepper = ({
   steps,
@@ -184,7 +228,7 @@ export const Stepper = ({
         </MuiTypography>
         <Bar aria-hidden>
           {steps.map((item, index) => (
-            <Segment key={item.key} isFilled={index <= active} />
+            <Segment key={item.key} tone={segmentToneOf(item, index, active)} />
           ))}
         </Bar>
       </MuiTypography>
@@ -228,31 +272,28 @@ export const Stepper = ({
           </>
         );
         return (
-          <Fragment key={step.key}>
+          <MuiTypography
+            key={step.key}
+            component="li"
+            aria-current={index === active ? "step" : undefined}
+            sx={{ display: "inline-flex", alignItems: "center", gap: 1.5 }}
+          >
+            {/* 連線放在 <li> 裡(<ol> 只放 <li>);進到這一步的連線:這一步不是「未開始」就是 primary */}
             {index > 0 && (
-              <Connector
-                aria-hidden
-                isPassed={steps[index - 1]?.status === "done"}
-              />
+              <Connector aria-hidden isPassed={step.status !== "todo"} />
             )}
-            <MuiTypography
-              component="li"
-              aria-current={index === active ? "step" : undefined}
-              sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}
-            >
-              {step.status === "done" ? (
-                <StepButton
-                  onClick={() => {
-                    onStepClick?.(step, index);
-                  }}
-                >
-                  {content}
-                </StepButton>
-              ) : (
-                content
-              )}
-            </MuiTypography>
-          </Fragment>
+            {isStepClickable(step, index, active) ? (
+              <StepButton
+                onClick={() => {
+                  onStepClick?.(step, index);
+                }}
+              >
+                {content}
+              </StepButton>
+            ) : (
+              <StepBody>{content}</StepBody>
+            )}
+          </MuiTypography>
         );
       })}
     </MuiTypography>
