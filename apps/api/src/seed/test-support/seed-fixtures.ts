@@ -151,9 +151,30 @@ export function managerStep(key: string): StepDef {
   return reviewStep(key, { kind: "manager", level: 1 });
 }
 
-/** 共用流程的角色佔位關卡(租戶 fork 後才填本租戶的角色)。 */
-export function placeholderStep(key: string, placeholder: string): StepDef {
-  return reviewStep(key, { kind: "role", roleId: null, placeholder });
+/** 共用流程可用的人員條件關卡:持有某權限、且屬於單據所屬組織的人。 */
+export function permissionStep(key: string, permissionKey: string): StepDef {
+  return reviewStep(key, {
+    kind: "audience",
+    audience: {
+      mode: "match",
+      filter: {
+        op: "AND",
+        children: [
+          {
+            field: "permission",
+            cond: "in",
+            value: { kind: "static", values: [permissionKey] },
+          },
+          {
+            field: "org",
+            cond: "in",
+            value: { kind: "dynamic", ref: "submission-org" },
+            range: "self",
+          },
+        ],
+      },
+    },
+  });
 }
 
 export function workflowSeed(

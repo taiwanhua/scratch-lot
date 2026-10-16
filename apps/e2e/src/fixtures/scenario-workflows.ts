@@ -252,8 +252,32 @@ export function reviewStep(
   };
 }
 
+/** 審核者來源「人員條件」:條件列全部 AND。 */
+function audienceOf(
+  ...rows: Record<string, unknown>[]
+): Record<string, unknown> {
+  return {
+    kind: "audience",
+    audience: { mode: "match", filter: { op: "AND", children: rows } },
+  };
+}
+
+/** 指定這幾個人(人員條件的使用者條件列)。 */
 export function usersOf(...people: WorkflowPerson[]): Record<string, unknown> {
-  return { kind: "users", userIds: people.map((person) => person.userId) };
+  return audienceOf({
+    field: "user",
+    cond: "in",
+    value: { kind: "static", values: people.map((person) => person.userId) },
+  });
+}
+
+/** 持有這個角色的人(人員條件的角色條件列)。 */
+export function roleOf(roleId: string): Record<string, unknown> {
+  return audienceOf({
+    field: "role",
+    cond: "in",
+    value: { kind: "static", values: [roleId] },
+  });
 }
 
 /* ---- 畫面 ---- */

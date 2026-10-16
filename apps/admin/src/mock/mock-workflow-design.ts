@@ -1,3 +1,4 @@
+import type { WorkflowDefinition } from "@repo/domain/workflow";
 import { WorkflowVersionStatus } from "@repo/graphql";
 
 import { SHOPPING_FORM_KEY } from "@/test/msw/form-fixtures";
@@ -9,6 +10,49 @@ import {
   workflowFragment,
   workflowVersionFragment,
 } from "@/test/msw/workflow-fixtures";
+
+/**
+ * 共用流程的「財務部審核」:人員條件只能用權限與非指定的組織來源(BS-02c)——
+ * 持有「示範模組1 · 檢視」且屬於單據所屬組織。
+ */
+const sharedPurchaseDefinition = (): WorkflowDefinition => {
+  const definition = purchaseWorkflowDefinition();
+  return {
+    ...definition,
+    steps: definition.steps.map((step) =>
+      step.key === "finance"
+        ? {
+            ...step,
+            assignee: {
+              kind: "audience",
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "permission",
+                      cond: "in",
+                      value: {
+                        kind: "static",
+                        values: ["demo.sub.sample-one.view"],
+                      },
+                    },
+                    {
+                      field: "org",
+                      cond: "in",
+                      value: { kind: "dynamic", ref: "submission-org" },
+                      range: "self",
+                    },
+                  ],
+                },
+              },
+            },
+          }
+        : step,
+    ),
+  };
+};
 
 /**
  * mock 開發模式的流程管理假資料:直線的「病假審核」(客製,綁了病假單)與平行的「採購審核」
@@ -32,7 +76,9 @@ export const mockWorkflowDesign = (): WorkflowDesignWorldOptions => ({
   ],
   versions: {
     leave_review: [
-      workflowVersionFragment(leaveWorkflowDefinition(), { baseVersion: 1 }),
+      workflowVersionFragment(leaveWorkflowDefinition(), {
+        baseVersion: 1,
+      }),
       workflowVersionFragment(leaveWorkflowDefinition(), {
         id: "wv-leave-1",
         version: 1,
@@ -41,12 +87,12 @@ export const mockWorkflowDesign = (): WorkflowDesignWorldOptions => ({
       }),
     ],
     purchase_review: [
-      workflowVersionFragment(purchaseWorkflowDefinition(), {
+      workflowVersionFragment(sharedPurchaseDefinition(), {
         id: "wv-purchase-draft",
         workflowKey: "purchase_review",
         baseVersion: 1,
       }),
-      workflowVersionFragment(purchaseWorkflowDefinition(), {
+      workflowVersionFragment(sharedPurchaseDefinition(), {
         id: "wv-purchase-1",
         workflowKey: "purchase_review",
         version: 1,
@@ -73,8 +119,8 @@ export const mockWorkflowDesign = (): WorkflowDesignWorldOptions => ({
           {
             stepKey: "finance",
             stepNumber: 2,
-            problem: "ROLE_IN_SHARED",
-            detail: "角色佔位",
+            problem: "AUDIENCE_IN_SHARED",
+            detail: "審核者條件用了角色",
           },
         ],
       },

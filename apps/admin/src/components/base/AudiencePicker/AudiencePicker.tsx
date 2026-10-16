@@ -27,6 +27,8 @@ const NO_ISSUES: ReadonlyMap<string, string> = new Map();
 export interface AudiencePickerProps {
   /** 依用途命名:套用對象 / 審核者 / 知會對象 / 通知對象 / 收件人 */
   title: string;
+  /** 外框已經標了用途(例:對話框標題「審核者條件」)時不再顯示標題;仍當區塊的無障礙名稱 */
+  isTitleHidden?: boolean;
   value: AudienceDraft;
   onChange: (next: AudienceDraft) => void;
   /** 能不能選「所有人」(只有資料範圍可以;其餘使用處一定要設條件) */
@@ -51,6 +53,7 @@ export interface AudiencePickerProps {
  */
 export const AudiencePicker = ({
   title,
+  isTitleHidden = false,
   value,
   onChange,
   allowAll,
@@ -79,9 +82,11 @@ export const AudiencePicker = ({
 
   return (
     <Stack component="section" aria-label={title} spacing={1}>
-      <Typography variant="subtitle2" color="text.secondary">
-        {title}
-      </Typography>
+      {!isTitleHidden && (
+        <Typography variant="subtitle2" color="text.secondary">
+          {title}
+        </Typography>
+      )}
       {allowAll && (
         <RadioGroup
           row

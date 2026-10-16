@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import { isValidFormKey } from "@repo/domain/form";
-import { isReviewStep } from "@repo/domain/workflow";
 
 import { AuditService } from "../../audit/audit.service";
 import { BusinessRelationshipsRepository } from "../../database/business-relationships.repository";
@@ -377,7 +376,7 @@ export class WorkflowsService {
     workflow: WorkflowRecord,
   ): Promise<WorkflowModel> {
     const operator = facts.operator;
-    const [owner, draft, current] = await Promise.all([
+    const [owner, draft] = await Promise.all([
       workflow.ownerOrgId
         ? this.orgs.findById(orgReader(operator), workflow.ownerOrgId)
         : null,
@@ -385,12 +384,6 @@ export class WorkflowsService {
         workflowKey: workflow.key,
         status: "draft",
       }),
-      workflow.currentVersion === null
-        ? null
-        : this.versions.findOne(operator, {
-            workflowKey: workflow.key,
-            version: workflow.currentVersion,
-          }),
     ]);
     const canWrite = this.access.canWrite(facts, workflow);
     return {
@@ -403,13 +396,6 @@ export class WorkflowsService {
       forkedFrom: workflow.forkedFrom,
       currentVersion: workflow.currentVersion,
       hasDraft: draft !== null,
-      hasRolePlaceholder:
-        current?.steps.some(
-          (step) =>
-            isReviewStep(step) &&
-            step.assignee.kind === "role" &&
-            (step.assignee.roleId ?? "") === "",
-        ) ?? false,
       assignments:
         facts.isRoot && workflow.tenantId === null
           ? await this.assignmentsOf(operator, workflow)

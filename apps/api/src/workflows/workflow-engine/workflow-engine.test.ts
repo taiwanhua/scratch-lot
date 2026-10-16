@@ -35,6 +35,7 @@ import {
   rawTasks,
   retryAdvance,
   reviewStep,
+  roleSource,
   setupWorld,
   stepOfRow,
   submission,
@@ -103,11 +104,9 @@ describe("審核流程引擎", () => {
     await useWorkflow(world, nextKey("boss_hr"), {
       steps: [
         reviewStep("boss", { kind: "manager", level: 1 }),
-        reviewStep(
-          "hr",
-          { kind: "role", roleId: String(world.hrRoleId), placeholder: null },
-          { skipWhen: { "<=": [{ var: "days" }, 1] } },
-        ),
+        reviewStep("hr", roleSource(world.hrRoleId), {
+          skipWhen: { "<=": [{ var: "days" }, 1] },
+        }),
       ],
     });
   }
@@ -700,13 +699,7 @@ describe("審核流程引擎", () => {
 
     it("任務投影被弄亂(人工造出)→ 重試推進補回;角色名單變了也依原計畫補建(不重新解析)", async () => {
       await useWorkflow(world, nextKey("recover_tasks"), {
-        steps: [
-          reviewStep("hr", {
-            kind: "role",
-            roleId: String(world.hrRoleId),
-            placeholder: null,
-          }),
-        ],
+        steps: [reviewStep("hr", roleSource(world.hrRoleId))],
       });
       const row = await createDraft(api, world.applicant.token, FORM_KEY, {
         title: "一半",

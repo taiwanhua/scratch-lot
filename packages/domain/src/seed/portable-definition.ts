@@ -10,7 +10,7 @@
  * | reference / upload 固定值 | 缺席、null、空集合;reference 的 `ctx.user.id` / `ctx.user.orgId` 預設表達式 | 非空的 constant / default |
  * | lookup 選項的固定預設 | 缺席、null、空集合(選項在執行期查) | 任何非空固定值(改用 account / slug 當值也一樣),多選逐項驗 |
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
- * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、`roleId = null` 且有 placeholder 的 `role` | `users`、非空 `roleId`、指向租戶客製表單 |
+ * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、只用權限與非指定組織來源的人員條件 | 人員條件的使用者 / 角色 / 指定組織、指向租戶客製表單 |
  *
  * 表達式(default、computed、rules.custom、visibleWhen、readonlyWhen、skipWhen)另驗 ID 語意,見
  * `portable-expression.ts`:ID 只能與另一個動態 ID 或 null 比較、`in` 只能對動態 ID 集合或空陣列、
@@ -122,12 +122,11 @@ const REFERENCE_DEFAULT_PATHS: ReadonlySet<string> = new Set([
 
 /** 共用流程不可攜的審核者來源(既有檢查器的錯誤碼)。 */
 const ASSIGNEE_CODES: ReadonlySet<string> = new Set([
-  "USERS_IN_SHARED",
-  "ROLE_ID_IN_SHARED",
-  "ROLE_PLACEHOLDER_MISSING",
+  "AUDIENCE_IN_SHARED",
   "FIELD_FORM_MISSING",
   "FIELD_MISSING",
   "FIELD_NOT_USER_REFERENCE",
+  "FIELD_NOT_ORG_REFERENCE",
 ]);
 
 class PortableCollector {

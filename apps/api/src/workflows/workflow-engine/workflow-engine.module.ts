@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AudienceCoreModule } from "../../audience/audience-core.module";
 import { OperatorContextService } from "../../auth/operator-context.service";
 import { DatabaseModule } from "../../database/database.module";
 import { FormsCoreModule } from "../../forms/forms-core.module";
@@ -8,6 +9,7 @@ import { OrgsModule } from "../../orgs/orgs.module";
 import { RealtimeModule } from "../../realtime/realtime.module";
 import { WorkflowsCoreModule } from "../workflows-core.module";
 import { AssigneeInvalidationService } from "./assignee-invalidation.service";
+import { AudienceSourceService } from "./audience-source.service";
 import { BlockedInstancesService } from "./blocked-instances.service";
 import { InstanceWithdrawService } from "./instance-withdraw.service";
 import { FormLifecycleService } from "./lifecycle/form-lifecycle.service";
@@ -35,6 +37,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
 @Module({
   imports: [
     DatabaseModule,
+    AudienceCoreModule,
     FormsCoreModule,
     WorkflowsCoreModule,
     OrgsModule,
@@ -47,6 +50,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     WorkflowEngineHooks,
     WorkflowEngineService,
     StepEntryService,
+    AudienceSourceService,
     WorkflowNotifier,
     WorkflowSubmitService,
     SubmissionReadAccess,
@@ -58,6 +62,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     WorkflowOperationsResolver,
   ],
   exports: [
+    AudienceSourceService,
     FormLifecycleService,
     WorkflowEngineService,
     WorkflowSubmitService,

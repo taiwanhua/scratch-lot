@@ -17,6 +17,7 @@ import {
 
 import type { TestModule } from "./auth-handlers";
 import { field } from "./form-fixtures";
+import { HR_ROLE_ID, roleInSubmissionOrg } from "./workflow-audience-fixtures";
 
 /**
  * 審核流程的測試夾具(形狀以 api 的回傳為準:`apps/api/src/workflows/**\/*.test.ts` 的斷言、
@@ -201,13 +202,13 @@ export const reviewStep = (
   ...overrides,
 });
 
-/** 病假審核(直線):主管 → 人資(角色佔位)。 */
-export const leaveWorkflowDefinition = (): WorkflowDefinition => ({
+/** 病假審核(直線):主管 → 人資(人員條件:角色 + 單據所屬組織)。 */
+export const leaveWorkflowDefinition = (
+  hrRoleId = HR_ROLE_ID,
+): WorkflowDefinition => ({
   steps: [
     reviewStep("manager", "直屬主管"),
-    reviewStep("hr", "人資", {
-      assignee: { kind: "role", roleId: null, placeholder: "人資" },
-    }),
+    reviewStep("hr", "人資", { assignee: roleInSubmissionOrg(hrRoleId) }),
   ],
   edges: null,
 });
@@ -245,7 +246,6 @@ export const workflowFragment = (
   forkedFrom: null,
   currentVersion: 1,
   hasDraft: true,
-  hasRolePlaceholder: false,
   assignments: [],
   boundForms: [],
   abilities: {

@@ -196,7 +196,22 @@ describe("serializeSeedSet", () => {
           steps: [
             review("boss", { skipWhen: { "<": [{ var: "amount" }, 1000] } }),
             review("hr", {
-              assignee: { kind: "role", roleId: null, placeholder: "人資" },
+              assignee: {
+                kind: "audience",
+                audience: {
+                  mode: "match",
+                  filter: {
+                    op: "AND",
+                    children: [
+                      {
+                        field: "permission",
+                        cond: "in",
+                        value: { kind: "static", values: ["hr.approve"] },
+                      },
+                    ],
+                  },
+                },
+              },
               mode: "all",
             }),
           ],

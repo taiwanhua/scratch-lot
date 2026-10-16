@@ -1957,13 +1957,14 @@
       "createCustom": "Create a custom workflow",
       "issue": "Step {step}: {problem}",
       "problems": {
-        "ROLE_IN_SHARED": "The reviewer is a role placeholder; create a custom workflow based on it and point it to your organization's role",
-        "USERS_IN_SHARED": "Shared workflows cannot name specific users",
+        "AUDIENCE_IN_SHARED": "The reviewer condition uses users, roles or specific organizations; create a custom workflow based on it",
         "USER_NOT_IN_TENANT": "A named user is not in your organization",
         "ROLE_NOT_IN_TENANT": "The role is not one of your organization's roles",
+        "ORG_NOT_IN_TENANT": "An organization in the reviewer condition is not in your organization",
         "FIELD_FORM_MISMATCH": "The reviewer comes from a field of another form",
         "FIELD_MISSING": "The reviewer field does not exist in the current version of this form",
-        "FIELD_NOT_USER_REFERENCE": "The reviewer field is not a user reference"
+        "FIELD_NOT_USER_REFERENCE": "The reviewer field is not a user reference",
+        "FIELD_NOT_ORG_REFERENCE": "The field used by the reviewer condition is not an \"Organization\" reference field"
       },
       "unbindDialog": {
         "title": "Remove workflow binding",
@@ -2308,7 +2309,6 @@
       "edit": "Rename",
       "fork": "Create based on this",
       "assign": "Assign",
-      "placeholderHint": "The role steps of this workflow only store placeholders, so forms cannot be bound to it directly; create a custom workflow based on it.",
       "assignedTo": "Assigned to: {tenants}",
       "boundForms": "Bound forms: {forms}",
       "tabs": "Workflow",
@@ -2328,7 +2328,6 @@
     },
     "fork": {
       "title": "Create a workflow based on \"{name}\"",
-      "placeholderHint": "After creating it, point the role steps to your organization's roles before publishing and binding.",
       "baseVersion": "Base version",
       "versionOption": "Version {version}",
       "key": "New workflow key",
@@ -2447,8 +2446,7 @@
       "LAST_STEP": "A workflow needs at least one step."
     },
     "node": {
-      "users": "{count} named users",
-      "role": "Role: {name}",
+      "audience": "Reviewers: people condition",
       "field": "Form field: {form} · {field}",
       "manager": "Manager level {level}",
       "unset": "Not set",
@@ -2517,19 +2515,11 @@
       "region": "Reviewers",
       "kind": "Reviewer source",
       "kinds": {
-        "users": "Named users",
-        "role": "Role",
+        "audience": "People condition",
         "field": "Form field",
         "manager": "Manager"
       },
-      "sharedHint": "Shared workflows cannot name users; roles are placeholders only.",
-      "users": "Users",
-      "usersHint": "On submit, the enabled users still in the organization receive tasks.",
-      "placeholder": "Role placeholder",
-      "placeholderHint": "e.g. \"HR\": each organization points it to its own role after creating a custom workflow.",
-      "placeholderFrom": "Placeholder from the source: {placeholder}",
-      "role": "Role",
-      "roleUnset": "Not selected",
+      "sharedHint": "Shared workflows are used by every tenant, so conditions can only use \"Permission\" and organization sources (the document's organization, an organization field on the form, the top-level organization).",
       "field": "Field",
       "fieldUnset": "Not selected",
       "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the reviewer is whoever that field selects on submission.",
@@ -2540,7 +2530,18 @@
       "fieldCurrent": "Current: {form} / {field}",
       "fieldNoChoices": "The check form has no “Reference (user)” field. Add a reference field whose data source is Users in the form designer, then publish it.",
       "fieldOtherForm": "This step points to the form “{form}”; choosing a field switches it to the check form's field.",
-      "noCheckFormReadonly": "This version has no check form"
+      "noCheckFormReadonly": "This version has no check form",
+      "audienceTitle": "Reviewers",
+      "audienceRegion": "Reviewer condition",
+      "audienceEmpty": "No condition yet",
+      "audienceEdit": "Edit condition",
+      "dialogTitle": "Reviewer condition · {step}",
+      "dialogTitleShared": "Reviewer condition · {step} (shared workflow)",
+      "dialogCancel": "Cancel",
+      "dialogApply": "Apply",
+      "orgSubmission": "Document's organization",
+      "orgTenant": "Top-level organization",
+      "orgFormField": "Form field: {field}"
     },
     "blocked": {
       "title": "Blocked list",
@@ -2699,6 +2700,9 @@
     "permissionLoadFailed": "Failed to load permissions. Please try again later.",
     "permissionConfirm": "Done",
     "outOfList": "Not in the candidate list",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "summaryAnd": "and",
+    "summaryOr": "or",
+    "summaryUnset": "(not selected)"
   }
 }

@@ -86,7 +86,6 @@ export const WorkflowDesigner = ({
     currentDefinition ?? { steps: [] },
     NO_ISSUES,
     [],
-    [],
   );
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,

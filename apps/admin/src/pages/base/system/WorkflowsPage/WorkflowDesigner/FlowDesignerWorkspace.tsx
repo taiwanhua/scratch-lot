@@ -95,12 +95,7 @@ export const FlowDesignerWorkspace = ({
   );
   const check = useFlowCheck(workflow.key);
   const actions = useFlowActions(state);
-  const dataOf = useFlowNodeData(
-    definition,
-    report.errors,
-    catalog.forms,
-    catalog.roles,
-  );
+  const dataOf = useFlowNodeData(definition, report.errors, catalog.forms);
   const [forkingKey, setForkingKey] = useState<string | null>(null);
   const isEditable = state.flow !== null;
   const selected =
@@ -155,7 +150,6 @@ export const FlowDesignerWorkspace = ({
         isKeyLocked={lockedKeys.has(selected.key)}
         isShared={workflow.isShared}
         forms={catalog.forms}
-        roles={catalog.roles}
         checkFormKey={checkFormKey}
         checkFormFields={checkFormFields}
         issues={issuesOf(selected.key)}

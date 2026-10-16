@@ -8,7 +8,7 @@ import {
 } from "@repo/domain/workflow";
 
 import type { JoinNodeData, ReviewNodeData } from "./flow-nodes";
-import type { CatalogForm, CatalogRole } from "./useDesignerCatalog";
+import type { CatalogForm } from "./useDesignerCatalog";
 
 /**
  * 流程圖節點要顯示的文字(React Flow 的 `node.data`):審核關卡卡片的來源 / 會簽 / 跳過條件 / 退回,
@@ -18,21 +18,14 @@ export const useFlowNodeData = (
   definition: WorkflowDefinition,
   errors: readonly WorkflowIssue[],
   forms: readonly CatalogForm[],
-  roles: readonly CatalogRole[],
 ): ((stepKey: string) => ReviewNodeData | JoinNodeData) => {
   const t = useTranslations("admin.workflows.node");
   const tMode = useTranslations("admin.workflows.step.modes");
 
   const sourceLine = (source: AssigneeSource): string => {
     switch (source.kind) {
-      case "users": {
-        return t("users", { count: source.userIds.length });
-      }
-      case "role": {
-        const role = roles.find((item) => item.id === source.roleId);
-        return t("role", {
-          name: role?.name ?? source.placeholder ?? t("unset"),
-        });
+      case "audience": {
+        return t("audience");
       }
       case "field": {
         const form = forms.find((item) => item.key === source.formKey);

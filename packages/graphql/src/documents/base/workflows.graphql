@@ -20,8 +20,6 @@ fragment WorkflowFields on WorkflowModel {
   }
   currentVersion
   hasDraft
-  # 目前發布版含角色佔位(共用流程):租戶不能直接綁,要以它為基底建客製流程
-  hasRolePlaceholder
   # 只有 root 視角的共用流程有;其餘為空陣列
   assignments {
     tenantOrgId

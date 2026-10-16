@@ -47,10 +47,14 @@ import {
   RETIRE_WORKFLOW,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
+  audienceRow,
+  audienceSource,
   person,
   publishWorkflow,
   publishWorkflowDraft,
+  roleSource,
   setupWorld,
+  usersSource,
 } from "../test-support/workflow-fixtures";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
@@ -85,7 +89,10 @@ function portableSteps(): StepDef[] {
     {
       key: "hr",
       name: "人資",
-      assignee: { kind: "role", roleId: null, placeholder: "人資" },
+      assignee: audienceSource(
+        audienceRow("permission", ["hr.approve"]),
+        audienceRow("org", { kind: "dynamic", ref: "submission-org" }),
+      ),
       mode: "all",
     },
     {
@@ -426,17 +433,13 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
         {
           key: "named",
           name: "指名",
-          assignee: { kind: "users", userIds: [String(world.manager.userId)] },
+          assignee: usersSource([world.manager]),
           mode: "any",
         },
         {
           key: "fixed_role",
           name: "寫死角色",
-          assignee: {
-            kind: "role",
-            roleId: String(world.hrRoleId),
-            placeholder: null,
-          },
+          assignee: roleSource(world.hrRoleId),
           mode: "any",
         },
         {
@@ -481,9 +484,8 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
           .map(({ code, path }) => `${path} ${code}`)
           .toSorted(byText),
       ).toEqual([
-        "definition.steps.0.assignee.userIds ASSIGNEE_NOT_PORTABLE",
-        "definition.steps.1.assignee.placeholder ASSIGNEE_NOT_PORTABLE",
-        "definition.steps.1.assignee.roleId ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.0.assignee.audience.filter.children[0] ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.1.assignee.audience.filter.children[0] ASSIGNEE_NOT_PORTABLE",
         "definition.steps.2.assignee.formKey ASSIGNEE_NOT_PORTABLE",
         // 位置指到表達式裡寫死的那個運算元
         "definition.steps.3.skipWhen.==.1 ID_COMPARISON",

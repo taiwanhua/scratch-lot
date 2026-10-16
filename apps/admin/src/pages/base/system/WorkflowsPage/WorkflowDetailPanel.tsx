@@ -108,11 +108,6 @@ export const WorkflowDetailPanel = ({
             </Button>
           )}
         </Stack>
-        {workflow.hasRolePlaceholder && !workflow.abilities.canAssign && (
-          <Typography variant="body2" color="warning.main">
-            {t("placeholderHint")}
-          </Typography>
-        )}
         {workflow.assignments.length > 0 && (
           <Typography variant="body2" color="text.secondary">
             {t("assignedTo", {

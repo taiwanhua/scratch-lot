@@ -105,14 +105,40 @@
 - **定義**以 `definition: { steps, edges?, checkFormKey? }` 進出:`steps` 是 `StepDef` 的 JSON(含 `kind: review | join`),`edges` 缺席 / `null` / 空陣列都存 `null`(= 直線)。`workflow-definition-input.ts` 只做型別整形、不判對錯(保留會被檢查器指出的東西);草稿讀寫、fork、發布快照、版本讀取原樣保留節點 `kind` 與連線。
 - **檢查用表單**(`workflow_versions.checkFormKey`,選填):設計器對照的表單,存草稿一併存、發布快照保留、以某版開草稿與 fork 帶過去、版本讀取回傳。草稿的檢查結果、`validateWorkflowVersion`(外層 `checkFormKey` 沒給時)與發布前的檢查器都以它的目前版本驗 `skipWhen`;沒選時用第一個 `field` 來源的表單。選了但對不到可用的表單(不存在、看不到、沒有目前版本)→ `CHECK_FORM_UNAVAILABLE`(錯誤、擋發布),跳過條件只驗形狀,不拿別張表單硬比。它只影響設計時的檢查 —— 送出與綁定時檢查以綁定的表單為準。
 - **刪除草稿**(`deleteWorkflowVersionDraft`):帶 `expectedDraftRevision`;草稿同時被發布掉了 → `CONFLICT`(`DRAFT_MISSING`)。**硬刪**那筆草稿(`BaseRepository.hardDeleteDraft`,ADR-0007 的草稿硬刪;條件與刪除同一次寫入):草稿從未發布,沒有實例 / 任務引用它;軟刪除會佔住「一個流程至多一份草稿」的部分唯一索引,改成 `retired` 又會把「發布過」的語意弄髒。刪前的整份內容(`steps`、`edges`、`checkFormKey`、`draftRevision`、`baseVersion`)寫進稽核 `workflow-version.delete-draft` 的 `before`。已發布 / 退役的版本不受影響。
-- **檢查器**(`workflow-definition-checker.ts`)組好 `validateWorkflowDefinition` 要的目錄:共用 / 客製、本租戶的角色與使用者、`field` 來源表單與檢查用表單的**目前版本**欄位(共用流程只認共用表單;客製流程認共用表單與自己租戶的客製表單)。存草稿照收(錯誤隨 `validation` 回),發布有錯 → `VALIDATION_FAILED` + `issues`。共用流程含 `users` → `USERS_IN_SHARED`;客製流程的 `role` 沒填 / 不是本租戶的角色 → `ROLE_ID_MISSING` / `ROLE_NOT_IN_TENANT`。
+- **檢查器**(`workflow-definition-checker.ts`)組好 `validateWorkflowDefinition` 要的目錄:共用 / 客製、本租戶的角色 / 組織與使用者、`field` 來源表單與檢查用表單的**目前版本**欄位(共用流程只認共用表單;客製流程認共用表單與自己租戶的客製表單)。存草稿照收(錯誤隨 `validation` 回),發布有錯 → `VALIDATION_FAILED` + `issues`。審核者來源的錯誤碼見下方「審核者來源」。
 - **退役目前版本 / 改版 / 收回分派**:進行中的實例照常走完(實例記自己的 `(workflowKey, workflowVersion)`),只影響新送出。
+
+## 審核者來源
+
+三種(`@repo/domain/workflow` 的 `AssigneeSource`):
+
+| `kind`     | 存什麼                                                                     | 進關時算出誰                                                              |
+| ---------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `audience` | `audience`:人員條件(`@repo/domain/audience`,一定是 `match`,不能「所有人」) | `AudienceService.listAudience`;動態組織來源依單據代入                     |
+| `field`    | `formKey` + `fieldKey`(使用者引用欄)                                       | 該修訂 `values[fieldKey]` 指到的人                                        |
+| `manager`  | `level`(1 起)                                                              | 從提交所屬組織往上第 `level` 組主管(`OrgManagersService.resolveManagers`) |
+
+- 人員條件的使用處選項在 `approver-audience.ts`:客製流程 = 使用者 / 角色 / 所屬組織 / 權限,所屬組織可選指定組織、`submission-org`(單據所屬組織 = 提交的 `orgId`)、`form-field:<欄位 key>`(表單的組織欄位)、`tenant`(租戶,畫面「最上層組織」);共用流程只有權限與三種非指定的組織來源。
+- 解析在 `workflow-engine/audience-source.service.ts` 的 `resolveAudienceSource(source, submissionCtx)`(`submissionCtx` = 租戶、單據所屬組織、申請人、該修訂的值),三種來源都回**啟用中且仍在本租戶**的人;剔除申請人在 domain `buildPlan`。名單為空 → 該關阻擋,可「新增審核者」。依單據找人的其他使用處直接呼叫它。表單的組織欄位沒填 → 那個條件列沒有人符合。
+- 解析的讀取依序 `await`(TX-02,推進在交易內):`AudienceService.listNode` 與 `PermissionResolver.resolveRoles` 都不平行讀。
+
+**錯誤碼**(檢查器 = 存草稿 / 發布前;綁定 = `BindingIssue.problem`;送出 = `SubmitCheckIssue.problem`):
+
+| 碼                                                                                         | 什麼時候                                                                                          | 檢查器       | 綁定       | 送出           |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------ | ---------- | -------------- |
+| `AUDIENCE_INVALID`                                                                         | 人員條件格式不對(`mode` 不是 `match`、沒有條件列、值不合法…),`location.property` 指到出錯的條件列 | 錯誤         | —          | —              |
+| `AUDIENCE_IN_SHARED`                                                                       | 共用流程的條件用了使用者、角色或指定組織(每列一筆)                                                | 錯誤         | 擋         | —              |
+| `ROLE_NOT_IN_TENANT` / `ORG_NOT_IN_TENANT`                                                 | 客製流程條件裡的角色 / 指定組織不屬本租戶                                                         | 錯誤         | 擋         | —              |
+| `USER_INVALID`(警告)/ `USER_NOT_IN_TENANT`(綁定)                                           | 條件裡指定的使用者不存在、停用或不在本租戶                                                        | 警告         | 擋         | —              |
+| `FIELD_MISSING` / `FIELD_NOT_ORG_REFERENCE`                                                | 條件用的表單組織欄位不在那一版 / 不是組織引用欄                                                   | 對檢查用表單 | 對目前版本 | 對提交綁的版本 |
+| `FIELD_FORM_MISSING` / `FIELD_MISSING` / `FIELD_NOT_USER_REFERENCE`、`FIELD_FORM_MISMATCH` | `field` 來源的表單 / 欄位不對                                                                     | 錯誤         | 擋         | 擋             |
+| `MANAGER_LEVEL_INVALID`                                                                    | 主管層級不是正整數                                                                                | 錯誤         | —          | —              |
 
 ## 匯出專案設定
 
 先以已發布版本完成流程驗證。根組織操作者具備 `system.workflows.view` 與 `system.workflows.publish` 時,可在共用流程的版本面板選定目前已發布且完成切換的版本,按「匯出專案設定」。填入定義發布識別 `revision` 與發布說明後,下載 `<key>.<revision>.seed.ts`;草稿、發布中的版本、退役版與租戶客製流程不提供匯出。
 
-檔案使用同一套 `SeedSet` 契約,保留所選版本的關卡、連線、條件與檢查用表單 key。指定使用者、實際角色 ID 或其他環境資料引用會被可攜性檢查拒絕,畫面顯示問題位置與原因。匯出不改來源資料,不包含分派、表單綁定、實例或任務;租戶客製流程的角色仍由人員設定。
+檔案使用同一套 `SeedSet` 契約,保留所選版本的關卡、連線、條件與檢查用表單 key。人員條件裡的使用者、角色、指定組織或其他環境資料引用會被可攜性檢查拒絕,畫面顯示問題位置與原因。匯出不改來源資料,不包含分派、表單綁定、實例或任務;租戶客製流程的角色仍由人員設定。
 
 下載檔的登記、必要 migration 與驗證見[表單模組路線](../agents/module-scaffold.md#表單模組路線)的跨環境交付步驟;各環境的版本映射、發布與衝突處理見[受管定義機制](../concepts/data-layer-and-isolation.md#受管表單與流程)。
 
@@ -124,12 +150,11 @@
 
 **綁定時檢查**(設計輔助,不取代送出時檢查;不過 → `VALIDATION_FAILED` + `issues[{ stepKey, stepNumber, problem, detail }]`):
 
-| 流程的關卡來源 | 共用流程                                                                                                                 | 客製流程                                      |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
-| `manager`      | 可                                                                                                                       | 可                                            |
-| `field`        | 屬於被綁的表單、欄位在它的目前版本且是使用者引用欄(`FIELD_FORM_MISMATCH` / `FIELD_MISSING` / `FIELD_NOT_USER_REFERENCE`) | 同左                                          |
-| `role`         | 不可(`ROLE_IN_SHARED`,建客製流程)                                                                                        | `roleId` 要是本租戶角色(`ROLE_NOT_IN_TENANT`) |
-| `users`        | 不可(`USERS_IN_SHARED`)                                                                                                  | 人要在本租戶(`USER_NOT_IN_TENANT`)            |
+| 流程的關卡來源 | 共用流程                                                                                                                                                 | 客製流程                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `manager`      | 可                                                                                                                                                       | 可                                                                                                                       |
+| `field`        | 屬於被綁的表單、欄位在它的目前版本且是使用者引用欄(`FIELD_FORM_MISMATCH` / `FIELD_MISSING` / `FIELD_NOT_USER_REFERENCE`)                                 | 同左                                                                                                                     |
+| `audience`     | 只能用權限與非指定的組織來源(否則 `AUDIENCE_IN_SHARED`,建客製流程);表單的組織欄位要在目前版本且是組織引用欄(`FIELD_MISSING` / `FIELD_NOT_ORG_REFERENCE`) | 角色 / 指定組織 / 使用者要屬本租戶(`ROLE_NOT_IN_TENANT` / `ORG_NOT_IN_TENANT` / `USER_NOT_IN_TENANT`);表單的組織欄位同左 |
 
 另外流程要本租戶看得到且**已發布**(沒有發布版 → `FORBIDDEN` `WORKFLOW_UNPUBLISHED`,不給綁)。`FormModel.workflowBinding` 回綁到哪個流程與 `isValid`(流程已收回分派 / 讀不到 / 沒有發布版 = 失效,送出一律擋);`formWorkflowOptions(formKey)` 列可選流程與各自的檢查結果。
 
@@ -151,7 +176,7 @@
 
 `workflow-engine/workflow-engine.service.ts`。判斷表本體與**執行合約**在 `@repo/domain/workflow` 的 `advance.ts` 檔頭,這裡只執行:
 
-1. 讀實例(權威)、它的全部任務、對應的提交 → `advance`;列 5 需要時先解析進關結果(`step-entry.service.ts`:跳過條件用**該修訂**的值與送出當時的 `ctx`;審核者四種來源只算啟用中且仍在本租戶的人;`manager` 用 `OrgManagersService.resolveManagers`,名單規則在 `@repo/domain/workflow` 的 `managers.ts`)再呼叫一次(兩段式)。
+1. 讀實例(權威)、它的全部任務、對應的提交 → `advance`;列 5 需要時先解析進關結果(`step-entry.service.ts`:跳過條件用**該修訂**的值與送出當時的 `ctx`;審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算,只算啟用中且仍在本租戶的人,見「審核者來源」;`manager` 的名單規則在 `@repo/domain/workflow` 的 `managers.ts`)再呼叫一次(兩段式)。
 2. 依序執行動作。實例的條件翻成 Mongo(`instance-writes.ts`):`editVersion` CAS、狀態、`outcome` / `finishedAt` 為 null、節點狀態以 `$elemMatch` 對陣列元素下條件、`activeStepKeys` 的 `$nin`;節點欄位以 `arrayFilters` 指到 `stepKey`(`BaseRepository.findOneAndUpdate` 的 `options.arrayFilters`)。任務先查 `(instanceId, taskKey)` 再建(交易內不吞重複鍵錯誤,TX-04)、投影同步帶讀到的狀態;提交用同步資格條件;`appendHistoryOnce` 以 `history` 沒有同種類 + 同 `taskKey` / `result` 的事件為條件。
 3. `updateInstance` 的條件不成立就結束本輪、重讀再判斷;其他動作條件不成立 = 已做過。`invalidState` 不寫、停下、記 log(會一直出現在「需要推進」)。
 4. 重複到沒事可做(上限 60 輪,超過記 log 停下,重試推進可接續)。
@@ -169,7 +194,7 @@
 - **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。
 - **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);條件更新追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋(一個交易)。
 - **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。**每個實例一個交易**(標失效 + 推進),對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目條件更新 `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
-- **角色來源派單後被移除角色的人仍可審**(計畫固定);被停用 / 移出租戶走失效。
+- **人員條件派單後不再符合的人(例如被移除角色)仍可審**(計畫固定);被停用 / 移出租戶走失效。
 
 ## 再送出、作廢、複製為新單
 
@@ -249,7 +274,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 | 畫面                 | 做什麼                                                                                                                                                                                                                                    |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 流程清單             | 搜尋;每列名稱、key、共用 / 客製、目前版本或「未發布」、分派了幾個租戶(root 視角)、有草稿、綁定的表單(租戶視角);「建立流程」看 `system.workflows.create`(站在根組織 = 共用、租戶內 = 客製)                                                 |
-| 右側標頭             | 改名稱(`abilities.canEdit`)、以此為基底建流程(`canFork`)、分派(`canAssign`);分派來、含角色佔位的共用流程提示「以它為基底建客製流程」                                                                                                      |
+| 右側標頭             | 改名稱(`abilities.canEdit`)、以此為基底建流程(`canFork`)、分派(`canAssign`)                                                                                                                                                               |
 | 流程設計(頁籤)       | 見下方「設計器」                                                                                                                                                                                                                          |
 | 流程版本(頁籤)       | 草稿與各版本、發布(changelog 必填,`canPublish`)、退役目前版本、與上一版差異(以關卡 key 比:新增 / 移除 / 變更 + 分流結構有沒有變)、以任一版本為基底開新草稿、檢視某一版(唯讀)、刪除草稿(確認跳窗;設計器有未存變更時提醒一起丟掉;`canEdit`) |
 | 分派跳窗             | 勾租戶 = 分派、取消勾 = 收回(只有平台)                                                                                                                                                                                                    |
@@ -264,9 +289,10 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **流程圖**用 React Flow(`@xyflow/react`)畫,節點位置由 `@dagrejs/dagre` 自動直式排版(`lib/base/workflow/flow-layout.ts`),使用者不手擺、**不開放自由拉線**。兩種節點:審核關卡卡片(名稱、來源、會簽、跳過條件、不可退回;有錯標紅)與匯合節點菱形(系統節點)。
 - **操作**:在後面加一關、從此關分流(選分支數,只有主線上還沒分流的關卡可以)、加一條分支、在匯合後加一關、刪除此關(連線自動接上;刪掉分支最後一關 = 刪那條分支,剩一條時收成直線)、刪除整組分流(連同匯合節點)。**移動**:拖審核關卡放開,依放開位置找最近的節點插在它前 / 後或匯合之後(`lib/base/workflow/flow-drop.ts`);鍵盤也做得到:屬性面板的「上移 / 下移 / 移到分支」。分流來源不能移、會留下空分支的移動被拒。
 - **檢查用表單**(`CheckFormField`):設計時對照的表單 —— 列出可選的欄位、驗證審核者欄位與跳過條件;實際送出以綁定的表單為準,綁定時會再驗一次(這句說明就放在欄位旁)。隨草稿存(`checkFormKey`,換掉也算未存變更);新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值(存了 null = 明確不指定)。
-- **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源四種(指定使用者 / 角色 / 表單欄位 / 主管;共用流程不能指定使用者、角色只填佔位)、會簽、允許退回、跳過條件(表單引擎的結構化表達式選擇器)。
+- **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回、跳過條件(表單引擎的結構化表達式選擇器)。
   - 「表單欄位」來源與跳過條件的欄位都從檢查用表單的目前版本列(非受保護欄位;來源另限使用者型引用欄)。沒選檢查用表單時兩處欄位下拉顯示「請先選檢查用表單」;載入中、或選了但沒有可用欄位(「此表單沒有可用欄位」)也說明原因,已設的欄位值照樣顯示。檢查用表單沒有使用者引用欄時,「表單欄位」來源下方說明要先在表單設計器加一個資料來源為使用者的引用欄位並發布(唯讀檢視不提示)。
-  - 候選借既有查詢:角色 `roles`、使用者 `users`、表單 `forms` / `formVersion`,拿不到就是空清單,存草稿時 api 的檢查器照樣把關。
+  - **人員條件**(`AudienceSourceSummary.tsx`、`AudienceConditionDialog.tsx`;Figma BS-02a–d):面板只放一行白話摘要(「角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)」,`lib/base/audience-summary.ts`)與 [編輯條件];條件在對話框用 `AudiencePicker` 編輯,[套用] 前本地驗證空群組 / 沒挑值。所屬組織的來源:客製 = 指定組織 / 單據所屬組織 / 表單的組織欄位(檢查用表單的組織引用欄)/ 最上層組織;共用流程沒有指定組織、欄位只有權限與所屬組織,對話框頂端說明原因。換成人員條件時直接開對話框。流程圖卡片顯示「審核者:人員條件」。
+  - 候選借既有查詢:角色 `roles`、使用者 `users`、組織 `orgTree`、權限樹 `audiencePermissionOptions`、表單 `forms` / `formVersion`,拿不到就是空清單(摘要顯示「不在候選清單中」),存草稿時 api 的檢查器照樣把關。
 - **即時檢查**:跑 `@repo/domain/workflow` 的 `validateWorkflowDefinition`(與 api 同一份;跳過條件與「表單欄位」來源對檢查用表單驗,`useLocalFlowReport.ts`),再併上次存草稿時 api 回的結果(api 有完整目錄;改過之後以即時為準,`lib/base/workflow/validation.ts`);每筆定位到關卡,點一下選中它。
 - **「檢查」鈕**(`useFlowCheck.ts`、`FlowCheckPanel.tsx`):把目前的定義與檢查用表單送 `validateWorkflowVersion`,併入即時檢查後依關卡列出錯誤 / 警告,點一筆選中那一關並打開屬性面板;之後又改過就提示重新檢查。沒選檢查用表單時提示:跳過條件沒有對照表單時只做結構檢查,審核者的表單欄位來源仍以各自的表單驗。api 失敗時降級只列即時結果並說明。
 - **唯讀檢視某一版**(`FlowVersionViewer.tsx`):版本面板「檢視 vN」時換成它,草稿的設計器照樣掛著。讀 `workflowVersion(workflowKey, version)`;節點可選、屬性面板可看不可改(`StepEditor` / `JoinPanel` 的 `isReadonly`)、不能拖、沒有存草稿;即時檢查與「檢查」鈕照樣可用(檢查用表單用那一版存的);「以 vN 為基底開新草稿」只在改得動、沒有草稿時出現,已有草稿只提示。
@@ -325,7 +351,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 - 守門:端點擋 `system.workflows.view`,其餘在 `workflow-design/workflow-seed-export.service.ts` —— `view` + `publish`(缺任一 → `FORBIDDEN`)、站在根組織(否則 `FORBIDDEN` + `ROOT_ONLY`)、共用流程(`ownerOrgId = null` 且 `tenantId = null`,兩個都驗;租戶的客製流程在根組織視角一律 `NOT_FOUND`)。
 - `version`:必須是已發布的那一版,不以目前版本代替。不存在 → `NOT_FOUND`;已退役 → `VALIDATION_FAILED` + `fields: ["version"]`。`revision` / `changelog` 同表單。
 - 內容:`key`、身分上目前的 `name`、該版的 `checkFormKey`(沒選 = `null`)與 `definition: { steps, edges }`(`edges` 為 `null` = 直線),`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
-- 可攜性:共用流程不可帶指名使用者、寫死的角色 id、指向租戶客製表單的欄位;`checkFormKey` 與 `field` 來源的表單要是有目前版本的共用表單;跳過條件另驗 ID 語意。不過就整份不輸出 → `VALIDATION_FAILED` + `fields: ["definition"]` + `issues`(`{ code, message, path }`,如 `definition.steps.0.assignee.userIds`)。
+- 可攜性:共用流程的人員條件不可帶使用者、角色、指定組織,不可指向租戶客製表單的欄位;`checkFormKey` 與 `field` 來源的表單要是有目前版本的共用表單;跳過條件另驗 ID 語意。不過就整份不輸出 → `VALIDATION_FAILED` + `fields: ["definition"]` + `issues`(`{ code, message, path }`,如 `definition.steps.0.assignee.audience.filter.children[0]`)。
 - 前端的顯示條件(守門仍以 api 為準):`WorkflowModel.isShared && abilities.canPublish`,且只在目前發布的那一版顯示。
 
 **綁定**(`system.forms.edit`、站在租戶內):`bindFormWorkflow`、`unbindFormWorkflow`(回 `FormPayload`)、`formWorkflowOptions(formKey)`、`FormModel.workflowBinding`。
@@ -358,7 +384,7 @@ input 欄位的缺席 / `null`:
 - `WorkflowPlanItemModel.taskId`:這一項對應的任務 id,**只給流程管理者**(`abilities.canManage`)—— 阻擋清單要對別人的任務改派(`reassignTask` 收 taskId);其他讀者一律 null,任務還沒建出來也是 null。
 - `WorkflowInstanceStepModel.allowReturn`:這一關可否退回修改(版本定義的 `allowReturn`,省略 = true;匯合節點 false)—— 審核區塊依它決定出不出現「退回修改」鈕;`decideTask` 仍照驗(不允許 → `VALIDATION_FAILED`)。
 - `WorkflowVersionModel.checkFormKey`:設計器的檢查用表單(表單 key);沒選 = null。
-- `WorkflowModel.hasRolePlaceholder`:目前發布版含角色佔位(共用流程),租戶不能直接綁。`boundForms` 只有租戶視角有(本租戶的綁定);`assignments` 只有 root 視角的共用流程有。
+- `WorkflowModel.boundForms` 只有租戶視角有(本租戶的綁定);`assignments` 只有 root 視角的共用流程有。
 - **`abilities` 含權限**(業務模組那一種,前端直接用):`WorkflowAbilities`、`WorkflowInstanceAbilities`、`FormSubmissionAbilities` 的 `canWithdraw` / `canVoid` / `canCopy`(見 `docs/modules/forms.md`「api 介面」)。
 - `FormSubmissionModel.clearedFields`:只有 `copySubmissionToDraft` 的回傳有值。
 - `ApplyCenterCounts`:`{ myTasks, myApplications }`,條件見「計數」。

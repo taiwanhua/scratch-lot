@@ -1,3 +1,4 @@
+import type { Audience } from "@repo/domain/audience";
 import type { Expression } from "@repo/domain/form";
 import type {
   AssigneeSource,
@@ -25,28 +26,16 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function nullableText(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
-}
-
 function assigneeOf(raw: unknown): AssigneeSource {
   if (!isObject(raw)) {
     return { kind: "" } as unknown as AssigneeSource;
   }
   switch (raw.kind) {
-    case "users": {
+    case "audience": {
+      // 人員條件原樣保留(格式交給檢查器的 `AUDIENCE_INVALID`)
       return {
-        kind: "users",
-        userIds: Array.isArray(raw.userIds)
-          ? raw.userIds.filter((id): id is string => typeof id === "string")
-          : [],
-      };
-    }
-    case "role": {
-      return {
-        kind: "role",
-        roleId: nullableText(raw.roleId),
-        placeholder: nullableText(raw.placeholder),
+        kind: "audience",
+        audience: raw.audience as Audience,
       };
     }
     case "field": {

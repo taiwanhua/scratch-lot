@@ -4,6 +4,7 @@
  *
  * id 一律是字串(domain 不認得 ObjectId);api 讀出文件後轉成字串再交給本套件的函式。
  */
+import type { Audience } from "../audience/types";
 import type { Expression } from "../form/types";
 
 // ---- 版本定義(`workflow_versions.steps[]` / `edges[]`) ----
@@ -18,17 +19,18 @@ export const APPROVAL_MODES = ["any", "all"] as const;
 
 export type ApprovalMode = (typeof APPROVAL_MODES)[number];
 
-/** 審核者來源的四種(Spec §5「審核者來源」)。 */
-export const ASSIGNEE_KINDS = ["users", "role", "field", "manager"] as const;
+/** 審核者來源的三種(《底座規格》3.3):人員條件 / 表單欄位 / 主管。 */
+export const ASSIGNEE_KINDS = ["audience", "field", "manager"] as const;
 
 export type AssigneeKind = (typeof ASSIGNEE_KINDS)[number];
 
 /** 審核者來源;進到該關時解析一次,寫進派任計畫後不再重算。 */
 export type AssigneeSource =
-  /** 指定使用者(共用流程不可用) */
-  | { kind: "users"; userIds: string[] }
-  /** 角色:共用版只填 `placeholder`,客製版填本租戶的 `roleId` */
-  | { kind: "role"; roleId: string | null; placeholder: string | null }
+  /**
+   * 人員條件(取代原本的「指定使用者」與「角色」;格式正本 `@repo/domain/audience`,
+   * 一定是 `match`):使用處的選項見 `approver-audience.ts`
+   */
+  | { kind: "audience"; audience: Audience }
   /** 表單欄位:提交該修訂 `values[fieldKey]`(`reference(user)`)指到的人 */
   | { kind: "field"; formKey: string; fieldKey: string }
   /** 主管:從提交所屬組織往上第 `level` 組主管(1 起) */

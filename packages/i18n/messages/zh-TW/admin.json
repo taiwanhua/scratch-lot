@@ -1957,13 +1957,14 @@
       "createCustom": "建客製流程",
       "issue": "第 {step} 關:{problem}",
       "problems": {
-        "ROLE_IN_SHARED": "審核者是角色佔位,要以它為基底建客製流程、指到本組織的角色",
-        "USERS_IN_SHARED": "共用流程不能指定使用者",
+        "AUDIENCE_IN_SHARED": "審核者條件用了使用者、角色或指定組織,要以它為基底建客製流程",
         "USER_NOT_IN_TENANT": "指定的使用者不在本組織",
         "ROLE_NOT_IN_TENANT": "指定的角色不是本組織的角色",
+        "ORG_NOT_IN_TENANT": "審核者條件指定的組織不在本組織",
         "FIELD_FORM_MISMATCH": "審核者來自別張表單的欄位",
         "FIELD_MISSING": "審核者欄位在這張表單的目前版本不存在",
-        "FIELD_NOT_USER_REFERENCE": "審核者欄位不是「使用者」引用欄"
+        "FIELD_NOT_USER_REFERENCE": "審核者欄位不是「使用者」引用欄",
+        "FIELD_NOT_ORG_REFERENCE": "審核者條件用的欄位不是「組織」引用欄"
       },
       "unbindDialog": {
         "title": "解除流程綁定",
@@ -2308,7 +2309,6 @@
       "edit": "改名稱",
       "fork": "以此為基底建流程",
       "assign": "分派",
-      "placeholderHint": "這個流程的角色關卡只存佔位,不能直接綁表單;請以它為基底建客製流程。",
       "assignedTo": "已分派給:{tenants}",
       "boundForms": "綁定的表單:{forms}",
       "tabs": "流程內容",
@@ -2328,7 +2328,6 @@
     },
     "fork": {
       "title": "以「{name}」為基底建流程",
-      "placeholderHint": "建好後,把角色關卡指到本組織的角色,才能發布與綁定。",
       "baseVersion": "基底版本",
       "versionOption": "第 {version} 版",
       "key": "新流程 key",
@@ -2447,8 +2446,7 @@
       "LAST_STEP": "流程至少要有一關。"
     },
     "node": {
-      "users": "指定使用者 {count} 人",
-      "role": "角色:{name}",
+      "audience": "審核者:人員條件",
       "field": "表單欄位:{form} · {field}",
       "manager": "主管第 {level} 層",
       "unset": "未設定",
@@ -2517,19 +2515,11 @@
       "region": "審核者",
       "kind": "審核者來源",
       "kinds": {
-        "users": "指定使用者",
-        "role": "角色",
+        "audience": "人員條件",
         "field": "表單欄位",
         "manager": "主管"
       },
-      "sharedHint": "共用流程不能指定使用者;角色只能填佔位。",
-      "users": "使用者",
-      "usersHint": "送出時這些人裡啟用中、仍在本組織的會收到任務。",
-      "placeholder": "角色佔位",
-      "placeholderHint": "例如「人資」:各組織以此為基底建客製流程後,再指到自己的角色。",
-      "placeholderFrom": "來源的佔位:{placeholder}",
-      "role": "角色",
-      "roleUnset": "未選擇",
+      "sharedHint": "共用流程給所有租戶用,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。",
       "field": "欄位",
       "fieldUnset": "未選擇",
       "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);審核者 = 送出時這個欄位選的人。",
@@ -2540,7 +2530,18 @@
       "fieldCurrent": "目前:{form} / {field}",
       "fieldNoChoices": "檢查用表單沒有「引用(使用者)」欄位;請先在表單設計器加一個資料來源為使用者的引用欄位並發布。",
       "fieldOtherForm": "這一關原本指向表單「{form}」;改選欄位會換成檢查用表單的欄位。",
-      "noCheckFormReadonly": "這一版沒有指定檢查用表單"
+      "noCheckFormReadonly": "這一版沒有指定檢查用表單",
+      "audienceTitle": "審核者",
+      "audienceRegion": "審核者條件",
+      "audienceEmpty": "尚未設定條件",
+      "audienceEdit": "編輯條件",
+      "dialogTitle": "審核者條件 · {step}",
+      "dialogTitleShared": "審核者條件 · {step}(共用流程)",
+      "dialogCancel": "取消",
+      "dialogApply": "套用",
+      "orgSubmission": "單據所屬組織",
+      "orgTenant": "最上層組織",
+      "orgFormField": "表單欄位:{field}"
     },
     "blocked": {
       "title": "阻擋清單",
@@ -2699,6 +2700,9 @@
     "permissionLoadFailed": "權限清單載入失敗,請稍後再試。",
     "permissionConfirm": "確定",
     "outOfList": "不在候選清單中",
-    "loading": "載入中…"
+    "loading": "載入中…",
+    "summaryAnd": "且",
+    "summaryOr": "或",
+    "summaryUnset": "(未選)"
   }
 }

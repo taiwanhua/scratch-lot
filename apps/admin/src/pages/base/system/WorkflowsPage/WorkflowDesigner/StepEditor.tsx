@@ -20,7 +20,7 @@ import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
 import type { DropTarget } from "@/lib/base/workflow/flow-ops";
 
 import { AssigneeSourcePicker } from "./AssigneeSourcePicker";
-import type { CatalogForm, CatalogRole } from "./useDesignerCatalog";
+import type { CatalogForm } from "./useDesignerCatalog";
 
 export interface MoveOption {
   value: string;
@@ -35,7 +35,6 @@ export interface StepEditorProps {
   isKeyLocked: boolean;
   isShared: boolean;
   forms: readonly CatalogForm[];
-  roles: readonly CatalogRole[];
   /** 「檢查用表單」與它目前版本的欄位;跳過條件與「表單欄位」來源的欄位選項來自它 */
   checkFormKey: string | null;
   checkFormFields: readonly FieldDef[] | null;
@@ -57,7 +56,7 @@ export interface StepEditorProps {
 }
 
 /**
- * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`):名稱、key、審核者來源(四種)、會簽、
+ * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`):名稱、key、審核者來源(三種)、會簽、
  * 跳過條件(6a 表達式選擇器,欄位來自「檢查用表單」)、允許退回;以及加關卡 / 從此關分流 / 移動 / 刪除。
  * 移動也有按鈕版(上移、下移、移到某條分支),拖拉之外鍵盤也做得到。
  */
@@ -82,7 +81,6 @@ export const StepEditor = ({
   isKeyLocked,
   isShared,
   forms,
-  roles,
   checkFormKey,
   checkFormFields,
   isReadonly = false,
@@ -139,9 +137,9 @@ export const StepEditor = ({
         onChange={(assignee) => {
           onChange({ ...step, assignee });
         }}
+        stepName={step.name}
         isShared={isShared}
         forms={forms}
-        roles={roles}
         checkFormKey={checkFormKey}
         checkFormFields={checkFormFields}
         isDisabled={isReadonly}

@@ -1,11 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import type { Audience } from "@repo/domain/audience";
+import { validateAudience } from "@repo/domain/audience";
 import type { FieldDef } from "@repo/domain/form";
 import {
+  APPROVER_AUDIENCE_OPTIONS,
   type ReviewStepDef,
   assigneeFieldProblem,
+  audienceFormFieldRefsOf,
+  audienceOrgFieldProblem,
+  audienceStaticIdsOf,
   isReviewStep,
+  sharedAudienceViolations,
 } from "@repo/domain/workflow";
 
 import { AuditService } from "../../audit/audit.service";
@@ -59,9 +66,11 @@ export interface BindableWorkflow {
  * (`tenantId` = `firstId` = 租戶頂層、`secondId` = 表單、`thirdId` = 流程)。
  * 唯一鍵 `(tenantId, type, firstId, secondId)` = 一張表單最多綁一個流程;多張表單可綁同一個流程。
  *
- * **綁定時檢查**只是設計輔助(不取代送出時檢查):共用流程不能直接綁含 `role`(只是佔位)或 `users` 的;
- * `field` 來源要屬於被綁的表單且欄位在它的目前版本是使用者型引用欄;客製流程的 `role` / `users`
- * 要屬本租戶。另外流程要本租戶看得到且已發布(沒有發布版的流程不給綁)。
+ * **綁定時檢查**只是設計輔助(不取代送出時檢查):共用流程的人員條件不能用使用者 / 角色 / 指定組織
+ * (`AUDIENCE_IN_SHARED`);客製流程人員條件裡的使用者 / 角色 / 指定組織要屬本租戶;人員條件用的
+ * 表單組織欄位要在被綁表單的目前版本且是組織引用欄(`FIELD_NOT_ORG_REFERENCE`,與送出時同一份檢查);
+ * `field` 來源要屬於被綁的表單且欄位在它的目前版本是使用者型引用欄。另外流程要本租戶看得到且已發布
+ * (沒有發布版的流程不給綁)。
  */
 @Injectable()
 export class WorkflowBindingsService {
@@ -279,6 +288,9 @@ export class WorkflowBindingsService {
     const tenantRoles = isShared
       ? new Set<string>()
       : await this.directory.tenantRoleIds(tenantId);
+    const tenantOrgs = isShared
+      ? new Set<string>()
+      : await this.directory.tenantOrgIdSet(tenantId);
     const issues: BindingIssue[] = [];
     for (const [index, step] of version.steps.entries()) {
       if (!isReviewStep(step)) {
@@ -289,6 +301,7 @@ export class WorkflowBindingsService {
         formKey: form.key,
         fields,
         tenantRoles,
+        tenantOrgs,
       });
       if (issue !== null) {
         issues.push(issue);
@@ -310,36 +323,115 @@ export class WorkflowBindingsService {
       case "manager": {
         return null;
       }
-      case "role": {
-        return roleIssue(base, label, assignee.roleId, context);
-      }
-      case "users": {
-        if (context.isShared) {
-          return {
-            ...base,
-            problem: "USERS_IN_SHARED",
-            detail: `${label}在共用流程指定了使用者`,
-          };
-        }
-        const eligible = await this.directory.userFacts(
+      case "audience": {
+        return this.audienceIssue(
           tenantId,
-          assignee.userIds,
+          base,
+          label,
+          assignee.audience,
+          context,
         );
-        const isAllInTenant =
-          assignee.userIds.length > 0 &&
-          objectIdsOf(assignee.userIds).every((id) => eligible.has(String(id)));
-        return isAllInTenant
-          ? null
-          : {
-              ...base,
-              problem: "USER_NOT_IN_TENANT",
-              detail: `${label}指定的使用者不在本租戶`,
-            };
       }
       case "field": {
         return fieldIssue(base, label, assignee, context);
       }
     }
+  }
+
+  /**
+   * 人員條件:共用流程不能用使用者 / 角色 / 指定組織;客製流程裡寫死的使用者 / 角色 / 組織要屬本租戶;
+   * 表單組織欄位要在被綁表單的目前版本且是組織引用欄。格式錯的條件發布前已擋,這裡不重複報。
+   */
+  private async audienceIssue(
+    tenantId: Types.ObjectId,
+    base: IssueBase,
+    label: string,
+    raw: Audience,
+    context: BindingContext,
+  ): Promise<BindingIssue | null> {
+    const validation = validateAudience(raw, APPROVER_AUDIENCE_OPTIONS);
+    if (!validation.ok) {
+      return null;
+    }
+    const audience = validation.audience;
+    if (context.isShared) {
+      if (sharedAudienceViolations(audience).length > 0) {
+        return {
+          ...base,
+          problem: "AUDIENCE_IN_SHARED",
+          detail: `${label}的審核者條件用了使用者、角色或指定組織,共用流程不能用;請以此流程為基底建客製流程`,
+        };
+      }
+    } else {
+      const tenantIssue = await this.audienceTenantIssue(
+        tenantId,
+        base,
+        label,
+        audience,
+        context,
+      );
+      if (tenantIssue !== null) {
+        return tenantIssue;
+      }
+    }
+    for (const { fieldKey } of audienceFormFieldRefsOf(audience)) {
+      const problem = audienceOrgFieldProblem(context.fields, fieldKey);
+      if (problem !== null) {
+        return {
+          ...base,
+          problem,
+          detail:
+            problem === "FIELD_MISSING"
+              ? `${label}的審核者條件用的組織欄位 ${fieldKey} 不在表單目前版本`
+              : `${label}的審核者條件用的欄位 ${fieldKey} 不是組織引用欄`,
+        };
+      }
+    }
+    return null;
+  }
+
+  /** 客製流程:人員條件裡寫死的角色 / 組織 / 使用者要屬本租戶。 */
+  private async audienceTenantIssue(
+    tenantId: Types.ObjectId,
+    base: IssueBase,
+    label: string,
+    audience: Audience,
+    context: BindingContext,
+  ): Promise<BindingIssue | null> {
+    if (
+      audienceStaticIdsOf(audience, "role").some(
+        (id) => !context.tenantRoles.has(id),
+      )
+    ) {
+      return {
+        ...base,
+        problem: "ROLE_NOT_IN_TENANT",
+        detail: `${label}的審核者條件選的角色不是本租戶的角色`,
+      };
+    }
+    if (
+      audienceStaticIdsOf(audience, "org").some(
+        (id) => !context.tenantOrgs.has(id),
+      )
+    ) {
+      return {
+        ...base,
+        problem: "ORG_NOT_IN_TENANT",
+        detail: `${label}的審核者條件選的組織不在本租戶`,
+      };
+    }
+    const userIds = audienceStaticIdsOf(audience, "user");
+    if (userIds.length === 0) {
+      return null;
+    }
+    const inTenant = await this.directory.userFacts(tenantId, userIds);
+    return objectIdsOf(userIds).every((id) => inTenant.has(String(id)))
+      ? null
+      : {
+          ...base,
+          problem: "USER_NOT_IN_TENANT",
+          detail: `${label}的審核者條件指定的使用者不在本租戶`,
+        };
   }
 
   private async currentFieldsOf(
@@ -361,32 +453,10 @@ interface BindingContext {
   formKey: string;
   fields: readonly FieldDef[];
   tenantRoles: ReadonlySet<string>;
+  tenantOrgs: ReadonlySet<string>;
 }
 
 type IssueBase = Pick<BindingIssue, "stepKey" | "stepNumber">;
-
-/** `role` 來源:共用流程只是佔位(要建客製流程);客製流程要指到本租戶的角色。 */
-function roleIssue(
-  base: IssueBase,
-  label: string,
-  roleId: string | null,
-  context: BindingContext,
-): BindingIssue | null {
-  if (context.isShared) {
-    return {
-      ...base,
-      problem: "ROLE_IN_SHARED",
-      detail: `${label}的角色是共用流程的佔位,請以此流程為基底建客製流程`,
-    };
-  }
-  return context.tenantRoles.has(roleId ?? "")
-    ? null
-    : {
-        ...base,
-        problem: "ROLE_NOT_IN_TENANT",
-        detail: `${label}的角色不是本租戶的角色`,
-      };
-}
 
 /** `field` 來源:要屬於被綁的表單,欄位在它的目前版本且是使用者型引用欄。 */
 function fieldIssue(
