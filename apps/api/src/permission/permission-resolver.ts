@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { isWildcardKey } from "@repo/domain/permission";
+import { hasPermission, isWildcardKey } from "@repo/domain/permission";
 
 import type { Persisted } from "../database/base.repository";
 import {
@@ -17,6 +17,7 @@ import type {
   ModuleEngine,
   ModuleSidebarType,
 } from "../database/schemas/module.schema";
+import { ForeignFormPermissions } from "./foreign-form-permissions";
 
 /** 超級管理員種子角色 key(apps/db-migrator/seeds/base/roles.ts;isSystem,解析時 bypass,ADR-0004)。 */
 export const SUPER_ADMIN_ROLE_KEY = "super-admin";
@@ -45,7 +46,36 @@ export interface PermissionResolution {
   modules: ResolvedModule[];
   /** 有效權限 key 的集合(= 模組陣列內全部 permissions 的聯集),供 @RequirePermission 守門一次查表。 */
   permissionKeys: ReadonlySet<string>;
+  /**
+   * 被濾掉的別租戶(或不存在)表單動態權限 key(`ForeignFormPermissions`)。不送前端;
+   * `holdsPermission` 靠它讓 `<模組>.*` 的同層回退也蓋不到這些 key。
+   */
+  foreignPermissionKeys: ReadonlySet<string>;
 }
+
+/**
+ * 持有某權限(含同層 wildcard 回退,`@repo/domain/permission` 的 `hasPermission`);
+ * 別租戶表單的動態權限一律不持有 —— 即使持有該模組的 `*`。
+ */
+export function holdsPermission(
+  resolution: Pick<
+    PermissionResolution,
+    "permissionKeys" | "foreignPermissionKeys"
+  >,
+  key: string,
+): boolean {
+  return (
+    !resolution.foreignPermissionKeys.has(key) &&
+    hasPermission(resolution.permissionKeys, key)
+  );
+}
+
+const EMPTY_RESOLUTION: PermissionResolution = {
+  isSuperAdmin: false,
+  modules: [],
+  permissionKeys: new Set(),
+  foreignPermissionKeys: new Set(),
+};
 
 type ModuleRecord = Persisted<ModuleDocument>;
 type PermissionRecord = Persisted<PermissionDocument>;
@@ -82,7 +112,10 @@ function idsOf(records: { _id: Types.ObjectId }[]): Types.ObjectId[] {
  * 5. wildcard 展開:`X.*` → moduleId = X 的全部 enabled 權限(同層,不含子模組)
  * 6. 查 modules(enabled=false 者連子樹剔除),每個模組塞 moduleId 等於它的有效權限
  * 7. 回模組陣列(route 由父段累加成完整路徑)
- * 當前組織不參與計算(ADR-0003),參數保留以符合單一入口的簽章。
+ *
+ * 當前組織不參與角色與權限的計算(ADR-0003);只用來判斷「哪些表單動態權限屬於別租戶」:
+ * 步驟 5 之後剔除別租戶客製表單的動態權限(`ForeignFormPermissions`,超級管理員同樣剔除),
+ * `me.modules`、`@RequirePermission`、權限矩陣因此看到同一份權限集。
  */
 @Injectable()
 export class PermissionResolver {
@@ -91,6 +124,7 @@ export class PermissionResolver {
     private readonly roles: RolesRepository,
     private readonly modules: ModulesRepository,
     private readonly permissions: PermissionsRepository,
+    private readonly foreignForms: ForeignFormPermissions,
   ) {}
 
   async resolve(
@@ -100,7 +134,7 @@ export class PermissionResolver {
     const reader = readerOf(userId, currentOrgId);
     const roleIds = await this.relations.listRoleIdsOfUser(userId);
     if (roleIds.length === 0) {
-      return { isSuperAdmin: false, modules: [], permissionKeys: new Set() };
+      return EMPTY_RESOLUTION;
     }
     // 停用的角色不計(roles.enabled 是「停用這個角色」的開關,授予仍在但不生效)
     const roles = await this.roles.findMany(reader, {
@@ -108,7 +142,7 @@ export class PermissionResolver {
       enabled: true,
     });
     if (roles.length === 0) {
-      return { isSuperAdmin: false, modules: [], permissionKeys: new Set() };
+      return EMPTY_RESOLUTION;
     }
     const isSuperAdmin = roles.some(
       (role) => role.isSystem && role.key === SUPER_ADMIN_ROLE_KEY,
@@ -129,9 +163,15 @@ export class PermissionResolver {
       moduleId: { $in: idsOf(visibleModules) },
       enabled: true,
     });
+    const foreign = await this.foreignForms.keysOf(reader, permissions);
     return {
       isSuperAdmin: true,
-      ...assemble(visibleModules, allModules, permissions),
+      ...assemble(
+        visibleModules,
+        allModules,
+        withoutKeys(permissions, foreign),
+      ),
+      foreignPermissionKeys: foreign,
     };
   }
 
@@ -161,7 +201,10 @@ export class PermissionResolver {
             moduleId: { $in: wildcardModuleIds },
             enabled: true,
           });
-    const effective = uniqueById([...granted, ...expanded]);
+    const unfiltered = uniqueById([...granted, ...expanded]);
+    // 別租戶客製表單的動態權限:沒有動態權限(沒持表單模組 `*`、也沒被授動態權限)就不查 forms
+    const foreign = await this.foreignForms.keysOf(reader, unfiltered);
+    const effective = withoutKeys(unfiltered, foreign);
 
     // 步驟 6:綁定的模組 + 祖先(算 enabled 連動與完整路由要看祖先;樹完整時祖先已在集合內)
     const boundModules = await this.modules.findMany(reader, {
@@ -172,6 +215,7 @@ export class PermissionResolver {
     return {
       isSuperAdmin: false,
       ...assemble(visibleModules, knownModules, effective),
+      foreignPermissionKeys: foreign,
     };
   }
 
@@ -199,6 +243,15 @@ export class PermissionResolver {
     });
     return [...modules, ...ancestors];
   }
+}
+
+function withoutKeys<T extends { key: string }>(
+  records: T[],
+  keys: ReadonlySet<string>,
+): T[] {
+  return keys.size === 0
+    ? records
+    : records.filter((record) => !keys.has(record.key));
 }
 
 function uniqueById<T extends { _id: Types.ObjectId }>(records: T[]): T[] {

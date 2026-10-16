@@ -40,6 +40,22 @@
 
 正本:`docs/modules/demo.sub.sample-one.md`「權限表」、`apps/api/src/demo-items-one/demo-item-one-mapper.ts`、`apps/db-migrator/seeds/base/modules/api.ts`
 
+## 表單模組的權限
+
+表單模組(`engine: "form"`)的權限分兩種來源:
+
+| 來源         | 權限                                                                                           | 怎麼來                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| seed 宣告    | 固定四條 `view` / `create` / `edit` / `delete` + 宣告的頁內權限(如 `store.sell`)               | `formModuleDeclaration` 的選填 `permissions: [{ action, name }]`,和固定四條一起產生 |
+| 表單動態權限 | 欄位級 `show-<formKey>-<fieldKey>` / `edit-<formKey>-<fieldKey>`;依表單新增 `create-<formKey>` | 執行期產生(`permissions.source = "dynamic"`),欄位級的在表單發布第 3 步建立          |
+
+- 頁內權限的動作不能和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀,宣告時就擋下。
+- 表單動態權限的 key 拆得出 formKey(`parseFormPermissionKey`)。只處理欄位的地方(發布同步、退役權限清理)改用 `parseFieldPermissionKey`,它不認 `create-`:依表單新增權限不會被當成欄位級權限列出或刪除。
+- **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key(`holdsPermission`)。
+- 只有權限集裡有動態權限(持表單模組 `*`,或被授了動態權限)才查 `forms`;只持固定權限的操作者不多一次查詢。
+
+正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
+
 ## Wildcard(同層語意)
 
 - 每個模組固定有一筆 `<模組 key>.*`(群組、隱藏頁、`api` 樹都有;seed 自動產生)。
@@ -59,13 +75,14 @@ token → userId
   → role_module:moduleIds
   → role_permission:權限(停用的不算)
   → 展開 `X.*`:moduleId = X 的全部 enabled 權限
+  → 剔除別租戶的表單動態權限(看當前組織的租戶)
   → 查模組(自己或祖先停用 → 剔除),每個模組掛自己的有效權限
   → me.modules
 ```
 
 - 單一入口 `PermissionResolver.resolve`。`@RequirePermission` 守門與 `me.modules` 吃同一份結果,兩邊永遠一致。
 - 不快取。權限變更下一個請求就生效。
-- 當前組織不參與計算。
+- 當前組織不參與角色與權限的計算;只用來判斷哪些表單動態權限屬於別租戶(見「表單模組的權限」)。
 - `me.modules` 每筆:`id`、`key`、`name`、`parentId`、`sidebarType`、`order`、`route`、`icon`、`engine`(`FORM` = 表單模組,admin 依它掛表單引擎的預設組裝)、`permissions`。
 - `route` 是完整路徑(父段累加,如 `/demo/sub/sample-one`);權限容器為 `null`。
 - `permissions` 只放 moduleId 等於該模組的 key;持 `X.*` 時含 `X.*` 本身與展開後各筆。
@@ -75,12 +92,12 @@ token → userId
 
 ## 兩道防守
 
-| 在哪 | 做什麼                                                                                                  |
-| ---- | ------------------------------------------------------------------------------------------------------- |
-| api  | resolver 標 `@RequirePermission(key)`;判斷「key 在集合中,或擁有模組的 `*` 在集合中」;無權 → `FORBIDDEN` |
-| api  | 資料查詢一律經 BaseRepository(租戶保底 + 資料範圍規則)                                                  |
-| 前端 | 路由防守:可進 = 有那個模組路由(見 `docs/concepts/frontend-architecture.md`「路由與導向」)               |
-| 前端 | 頁內功能:`usePermissions().hasPermission(key)`,同一個判斷函式                                           |
+| 在哪 | 做什麼                                                                                                                                |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| api  | resolver 標 `@RequirePermission(key)`;判斷「key 在集合中,或擁有模組的 `*` 在集合中」(別租戶的表單動態權限一律不算);無權 → `FORBIDDEN` |
+| api  | 資料查詢一律經 BaseRepository(租戶保底 + 資料範圍規則)                                                                                |
+| 前端 | 路由防守:可進 = 有那個模組路由(見 `docs/concepts/frontend-architecture.md`「路由與導向」)                                             |
+| 前端 | 頁內功能:`usePermissions().hasPermission(key)`,同一個判斷函式                                                                         |
 
 - `@RequirePermission` 是單一 key。多選一(如上傳用途)由 resolver 自己查有效權限集合。
 

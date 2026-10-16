@@ -28,10 +28,24 @@
 | `system.forms.set-enabled`                        | 表單管理      | 租戶內開關分派來的或自己的表單                                                      |
 | `system.module-manager.delete-retired-permission` | 模組與權限    | 刪除已退役的欄位級權限(三層檢查;根組織專屬模組)                                     |
 | `<moduleKey>.view / create / edit / delete`       | 各表單模組    | 列表與單筆 / 新增 / 修改已完成 / 刪除已完成(seed 宣告,端點在執行期判)               |
+| `<moduleKey>.<action>`                            | 各表單模組    | 宣告的頁內權限(如 `store.sell`;見下方「表單模組宣告」)                              |
 | `<moduleKey>.show-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:讀受保護欄位(`source: dynamic`,發布時建)                                     |
 | `<moduleKey>.edit-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:改設了 `permission.edit` 的欄位(同上)                                        |
+| `<moduleKey>.create-<formKey>`                    | 各表單模組    | 依表單新增(`source: dynamic`);解析認得,尚無建立流程                                 |
+
+`show-` / `edit-` / `create-` 三種合稱表單動態權限;別租戶客製表單的那幾筆在權限解析就被剔除(見[授權](../concepts/authorization.md#表單模組的權限))。
 
 正本:`apps/db-migrator/seeds/base/modules/system.ts`、`apps/api/src/forms/form-permission-keys.ts`
+
+### 表單模組宣告
+
+`formModuleDeclaration({ key, name, parentKey, route, order, icon, description, settings?, permissions? })` 產出整份骨架:列表節點(`engine: "form"`、`sidebarType: link`)、三個隱藏頁、固定四條權限、`form_submissions` 的資料範圍目標。
+
+- `permissions: [{ action, name, description? }]`(選填):頁內額外權限,掛在模組主節點,和固定四條一起產生 `<moduleKey>.<action>`。例:`permissions: [{ action: "sell", name: "銷售" }]` → `store.sell`。
+- `action` 和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀 → 宣告時丟錯。
+- `<moduleKey>.*` 照常由組裝器自動產生,自然涵蓋宣告的頁內權限。
+
+正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`
 
 ## 資料
 
@@ -297,7 +311,8 @@
 - 刪的順序:先寫稽核 → 刪權限列 → 解除全部 `role_permission` 綁定(硬刪:權限 key 唯一,軟刪的殭屍會擋住日後同一欄位重新發布時建回同一個 key);每一步重做都無害,中途失敗殘留的綁定指向不存在的權限列、不生效。
 - **檢查使用量到真的刪之間沒有鎖**:這段時間有人新建草稿綁到宣告該欄位的版本,那筆草稿的該欄位之後只有超級管理員看得到。
 - 權限矩陣與模組樹不列退役的權限;角色對退役權限的既有綁定保留(矩陣只認得它列出的 key,不會因此被清掉)。
-- **權限矩陣的租戶邊界**(`roles/role-matrix.service.ts`):欄位級權限依 key 拆出 formKey,只列共用表單與操作者自己租戶的客製表單的那幾筆(根組織操作者只看得到共用表單的);存檔時送了別租戶(或已不存在的)表單的欄位級權限 → `ROLE_OUT_OF_REACH`。持模組 `*` 的角色在解析時仍涵蓋該模組全部權限(含別租戶的),但那些欄位所在的提交本來就在別的租戶,讀不到。
+- **權限矩陣的租戶邊界**(`roles/role-matrix.service.ts`,判斷沿用 `permission/foreign-form-permissions.ts`):表單動態權限依 key 拆出 formKey,只列共用表單與操作者自己租戶的客製表單的那幾筆(根組織操作者只看得到共用表單的);存檔時送了別租戶(或已不存在的)表單的動態權限 → `ROLE_OUT_OF_REACH`。持模組 `*` 的角色在解析時同樣剔除別租戶的那幾筆,`me.modules` 不會帶出別租戶的 formKey 與欄位 key。
+- 清理只認欄位級權限(`parseFieldPermissionKey`):依表單新增權限 `create-<formKey>` 不列出;對它呼叫 `deleteRetiredPermission` → `NOT_DYNAMIC`。
 
 ## admin 頁面
 
