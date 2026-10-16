@@ -3,7 +3,7 @@
 // 1. 標題列按鈕一致(syncDiffs):同一個畫面編號(sync.screenCode,含 a / b / c)在各尺寸 Section(sync.sizes)中,
 //    標題列 / 頂部列的按鈕文字集合要一樣,差異要是 0。
 //    標題列 = sync.headInstance 的實例、名稱符合 sync.headFrame 的框,電腦以外再加 sync.appBar 的實例
-//    (Kind=skipKind 是全螢幕對話框,它的按鈕是對話框按鈕,不算)。按鈕 = 有文字的實例(sync.nonButton 不算);
+//    (kindProp=skipKind 是全螢幕對話框,它的按鈕是對話框按鈕,不算)。按鈕 = 有文字的實例(sync.nonButton 不算);
 //    手機收進「更多」選單的(sync.merged),選單裡的文字也算有。該編號只有一個尺寸有畫的不比。
 //    版面本來就不同的列在 sync.exempt(要寫理由,回報時照列)。
 // 2. 共用區塊非元件數(sharedHandDrawn):三尺寸都出現的共用區塊,只要在任何尺寸是手畫框而不是元件實例就列出來,數量要是 0。
@@ -48,7 +48,7 @@ const isHead = (n, sz) =>
   (sz !== "D" &&
     n.type === "INSTANCE" &&
     C.appBar.name.test(n.name) &&
-    n.componentProperties.Kind.value !== C.appBar.skipKind) ||
+    n.componentProperties?.[C.appBar.kindProp]?.value !== C.appBar.skipKind) ||
   (n.type === "FRAME" && !inInstance(n) && C.headFrame.test(n.name));
 const sectionMismatch = [],
   filterDrawerMissing = [];

@@ -149,6 +149,7 @@ jobs:
   # turbo 的受影響清單看不到,所以不掛在 prepare 後面、每次都跑。
   # 只用 Node 內建模組:不需 pnpm install,也不碰雲端、Secret 或看板(測試用假命令與假 GitHub client)。
   # 同一 job 也跑底座同步 CLI(scripts/base-sync/)的測試:真 Git 隔離夾具,gh 是假實作,不碰真 repo 或 GitHub。
+  # 以及 Figma 稽核腳本(scripts/figma-audit/)的測試:fake Figma 上跑各項檢查,並確認共用腳本不含專案名詞與寫死的節點 id;不碰真 Figma 檔。
   project-settings:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -165,6 +166,9 @@ jobs:
 
       - name: 底座同步 CLI 測試(inspect / upgrade / contribute)
         run: node --test scripts/base-sync/*.test.mjs
+
+      - name: Figma 稽核腳本測試
+        run: node --test scripts/figma-audit/*.test.mjs
 
       # 以本 repo 的身分實際解析正式設定:三個環境與看板各一次(只印非機密設定與 Secret 名稱)
       - name: 正式設定 dry-run
@@ -207,10 +211,6 @@ jobs:
 
       - name: 本機 Figma 外掛測試
         run: node --test scripts/figma-local/*.test.mjs
-
-      # 共用腳本不含專案名詞與寫死的節點 id;各項檢查在 fake Figma 上跑
-      - name: Figma 稽核腳本測試
-        run: node --test scripts/figma-audit/*.test.mjs
 
   # prettier 不經 turbo lint(各 workspace 的 lint 只跑 eslint,且根目錄 docs/ 不屬於任何 workspace),
   # 範圍是全 repo 的 md + ts/tsx/js/json/yaml(STRUCT-09),所以不看受影響清單、每次都跑。
