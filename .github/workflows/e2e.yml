@@ -6,7 +6,8 @@ name: E2E
 #   UI :GitHub → Actions → E2E → Run workflow → 選分支(+ 可填 grep)
 #   CLI:gh workflow run e2e.yml --ref <分支> -f grep="劇本 7"
 #
-# 這個 workflow **不碰任何真實環境**:資料庫是 job 自己的 service container(拋棄式),
+# 這個 workflow **不碰任何真實環境**:資料庫由 harness 自起單一成員 replica set(MongoMemoryReplSet,
+# 拋棄式;api 的交易需要 replica set,而 service container 不能帶 --replSet 啟動參數),
 # 帳密用 apps/e2e/.env.example 的測試值,一個 Secret 都不讀。
 #
 # 檔案儲存(劇本 11 / 15,#402)走 fake GCS 容器(fsouza/fake-gcs-server),**不寫成下面的 `services:`**:
@@ -31,12 +32,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v4
 
@@ -47,11 +42,18 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      # 資料庫走上面的 service container,所以不必下載測試用的 mongod 二進位檔
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
+      # postinstall 下載 harness 自起 replica set 用的 mongod(快取命中就跳過下載)
       - name: 安裝依賴
         run: pnpm install --frozen-lockfile
-        env:
-          MONGOMS_DISABLE_POSTINSTALL: "1"
 
       - name: 快取 Playwright 瀏覽器
         uses: actions/cache@v4
@@ -67,7 +69,6 @@ jobs:
       - name: 跑劇本
         run: pnpm e2e
         env:
-          E2E_MONGODB_URI: mongodb://127.0.0.1:27017/wowgo_base_e2e
           E2E_GREP: ${{ inputs.grep }}
           # fake GCS 起不來就整個失敗:本機沒有 Docker 時劇本 11 / 15 會 skip,CI 不允許這種「看起來綠」
           E2E_GCS_REQUIRED: "1"

@@ -112,16 +112,18 @@ service 呼叫 BaseRepository.xxx(operator, …)
 
 ```
 service 呼叫 TransactionService.withTransaction(async (session) => …)
-  → session.withTransaction:寫入衝突自動整個重跑,上限 60 秒
+  → Mongoose connection.transaction(driver 的 session.withTransaction):寫入衝突自動整個重跑,上限 60 秒
   → fn 內:repository.xxx(operator, …, { session })   ← 租戶保底、資料範圍照套
            afterCommit(() => 外部動作)                 ← 只登記,不執行
   → 提交成功 → 依序執行 afterCommit(失敗只記 log)
     回復     → 丟棄 afterCommit
 ```
 
-- **session 傳遞**:`BaseRepository` 的讀寫方法都接受選填 `{ session }`;沒帶時自動用目前交易的 session(以 AsyncLocalStorage 追蹤)。專屬 repository 與原生 collection 存取不會自動加入,要明確傳。帶不帶 session,租戶保底與資料範圍規則都一樣套。
-- **巢狀呼叫**:已在交易內再呼叫 `withTransaction` → 加入同一個交易,內層失敗整個回復。
-- **交易內不得有外部動作**(寄信、HTTP、GCS 寫入、Cloudflare):自動重試會重複執行、回復也收不回。改用 `afterCommit` 排到提交之後;對外 adapter 的入口(`MailService` 寄信、`StorageService` 的刪除 / 複製)以 `assertOutsideTransaction` 在交易內被呼叫時拋錯。資料庫寫入(如通知)留在交易內。
+- **session 傳遞**:`BaseRepository` 的讀寫方法都接受選填 `{ session }`;沒帶時用目前進行中交易的 session,明給 `null` = 刻意在交易外(共用快取的載入)。Mongoose 開了 `transactionAsyncLocalStorage`,交易內沒帶 session 的 Mongoose 操作(專屬 repository 的 query、`save()`、`insertMany`)也自動加入;原生 driver 的 `collection(...)` 存取不會,要明確傳。帶不帶 session,租戶保底與資料範圍規則都一樣套。
+- **交易結束即關閉**:提交或回復之後,`fn` 裡排出去、晚到的非同步工作不再算在交易內(`currentSession()` 回 undefined、`afterCommit` 拋錯),`BaseRepository` 也不會沿用已結束的 session。
+- **巢狀呼叫**:已在交易內再呼叫 `withTransaction` → 直接在同一個交易裡執行,沒有獨立的回復點。內層的錯誤往外拋時整個交易回復;被外層接住後繼續,內層已做的寫入會隨外層一起提交。
+- **交易內不得有外部動作或行程內的非冪等副作用**(寄信、HTTP、GCS 寫入、Cloudflare、快取作廢):自動重試會重複執行、回復也收不回。改用 `afterCommit` 排到提交之後(會算進回應時間);對外 adapter 的入口(`MailService` 寄信、`StorageService` 的刪除 / 複製)以 `assertOutsideTransaction` 在交易內被呼叫時拋錯。資料庫寫入(如通知)留在交易內。
+- **交易內不吞資料庫錯誤**:寫入出錯只能回復,不能 `catch` 後繼續;冪等改用先查或 upsert。
 - **不取代樂觀鎖**:`editVersion` / `version` 的條件更新照舊。db-migrator 的大批次遷移不包成單一交易,每批一個交易 + 檢查點續跑(ADR-0002)。
 
 寫法見 `docs/standards/api/transactions.md`(TX)。正本:`apps/api/src/database/transaction.ts`、`apps/api/src/database/base.repository.ts`

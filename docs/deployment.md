@@ -154,10 +154,10 @@ project-settings             專案設定、發布前核對與底座同步 CLI �
 figma-sync                   建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
 prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
          ├─ lint-typecheck   turbo run lint check-types
-         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自一個 MongoDB service container
+         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自由 jest globalSetup 起單一成員 replica set
          ├─ test-admin-1 / 2 admin 的 jest 同樣分兩片(先 turbo build admin 的依賴)
          ├─ test-others      api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
-         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打)
+         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
 以上全部 ─→ verify           總結:任一 job failure / cancelled 就紅,skipped 算過
 ```
 
@@ -169,6 +169,7 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **Figma 同步**:`figma-sync` 獨立於 `prepare`,先建置 `@repo/ui` 與 `@repo/project-config`,再跑本機外掛與舊工具的離線測試(`scripts/figma-local/*.test.mjs`、`scripts/figma-sync/*.test.mjs`);結果納入 `verify`。CI 不讀 Figma token、不操作設計檔;離線通過不代表 Library 已發布或專案已接受更新。實際操作見 [toolbox](agents/toolbox.md#figma-品牌同步)。
 - **逾時**:`prepare` 10 分、`project-settings` / `verify` 5 分、`figma-sync` 15 分、`test-others` 30 分,其餘 20 分。
 - `build` job 起 api 時給假的 `JWT_SECRET`(api 缺它就啟動失敗)。
+- **MongoDB 一律是 replica set**(交易需要,ADR-0013):api / db-migrator 的測試由 jest globalSetup 起單一成員 `MongoMemoryReplSet`;`build` job 以 `docker run mongo:8 --replSet` 起並等到選出 PRIMARY。GitHub 的 service container 不能帶啟動參數,所以不用它。mongod 二進位以 `actions/cache` 快取 `~/.cache/mongodb-binaries`(key 跟 lockfile)。
 
 ### CD(deploy.yml)
 
@@ -217,12 +218,12 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 
 ### 其他 workflow
 
-| workflow                                 | 觸發                                             | 做什麼                                                                                                                                             |
-| ---------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Reset DB**(`reset-db.yml`)             | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                            |
-| **E2E**(`e2e.yml`)                       | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫是拋棄式 service container,不碰任何環境與 Secret;時機見 TEST-05 |
-| **Docs**(`docs.yml`)                     | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                            |
-| **Project Status**(`project-status.yml`) | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                         |
+| workflow                                 | 觸發                                             | 做什麼                                                                                                                                                              |
+| ---------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Reset DB**(`reset-db.yml`)             | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **E2E**(`e2e.yml`)                       | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
+| **Docs**(`docs.yml`)                     | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
+| **Project Status**(`project-status.yml`) | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
 
 ### Release 步驟
 
@@ -283,6 +284,14 @@ feat 一律從 `main` 切,而 `dev` / `staging` 各自往前走一條線;同一�
 docker compose up -d                  # 日常開發:只起 MongoDB
 docker compose --profile full up -d   # 部署前驗證:mongo + api + admin 整套容器
 ```
+
+本機 mongo 是單一成員 replica set(api 的交易需要,ADR-0013),名稱 = Compose 專案名(`COMPOSE_PROJECT_NAME`,不設 = 資料夾名稱)。第一次起來由 healthcheck 初始化,選出 PRIMARY 才算健康(`docker compose ps` 顯示 `healthy`)。連線字串固定帶 `?directConnection=true&replicaSet=<專案名>`:成員位址登記為容器內的 `localhost:27017`,直接連才不受主機埠影響;`replicaSet` 讓連錯專案的 mongo 直接失敗。
+
+**從單節點升級**(之前起過舊版 compose 的本機環境):
+
+1. `docker compose up -d`:設定變了,Compose 會重建 `mongo` 容器;`mongo-data` volume 保留,資料都在。
+2. 等 `docker compose ps` 顯示 `healthy`(第一次會執行 `rs.initiate`)。
+3. `apps/api/.env` 的 `MONGODB_URI` 補上 `?directConnection=true&replicaSet=<專案名>`(範本見 `apps/api/.env.example`),重啟 api。沒補時交易會失敗,主機埠不是 27017 時還會連到別的容器。
 
 正本:`docker-compose.yml`
 
@@ -368,7 +377,7 @@ gh workflow run "Reset DB" --ref dev -f environment=dev -f mode=data -f confirma
 本機先依[設定與資料更新](#設定與資料更新)完成 CLI 建置並準備 `ROOT_ADMIN_*`,再執行:
 
 ```bash
-RESET_ALLOW_ENV=dev MONGODB_URI=mongodb://127.0.0.1:27017/project-dev \
+RESET_ALLOW_ENV=dev MONGODB_URI="mongodb://127.0.0.1:27017/project-dev?directConnection=true&replicaSet=<專案名>" \
   pnpm --filter @repo/db-migrator run reset --environment=dev --mode=data --confirm=reset:dev:project-dev:data
 ```
 
