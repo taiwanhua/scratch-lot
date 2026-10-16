@@ -139,7 +139,15 @@ export const createAppTheme = (
        */
       MuiFormControlLabel: {
         styleOverrides: {
-          root: { marginLeft: 0 },
+          /*
+           * 開關與標籤之間留 8px:Checkbox / Radio 自帶 9px 內距所以標籤不貼,
+           * 但 `Switch` 為了對齊 Figma 幾何把內距歸零(Draft/Switch 88:216),標籤就貼在軌道上;
+           * 間距照 BS-12 的開關列(`289:86755`)補回來,只套在包了 Switch 的那種。
+           */
+          root: ({ theme }) => ({
+            marginLeft: 0,
+            "&:has(.MuiSwitch-root)": { gap: theme.spacing(1) },
+          }),
         },
       },
       MuiButton: {
