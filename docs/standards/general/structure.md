@@ -19,7 +19,7 @@
   | -------------------------------------------------------------- | --------------------------- |
   | Section、MonthCalendar、RosterGrid、Stepper、58mm 單據版面零件 | `@repo/ui`(有 stories)      |
   | AudiencePicker、OrgTreeSelect、列印按鈕、通知鈴 / 清單         | admin `components/base/`    |
-  | 張數格子、面額清點、看板卡片                                   | admin `components/project/` |
+  | 專案元件(只有專案用到的)                                       | admin `components/project/` |
 
 ## STRUCT-03 app 內分層:`app / pages / components / hooks / stores / lib / test`,import 只能往下
 
