@@ -39,6 +39,7 @@ import type {
   RetryAdvanceInstanceInput,
 } from "./dto/workflow-engine.input";
 import type { InstanceRecord } from "./instance-writes";
+import { FormLifecycleService } from "./lifecycle/form-lifecycle.service";
 import {
   WorkflowEngineHooks,
   WorkflowEngineService,
@@ -67,7 +68,7 @@ export type DecideResult = "accepted" | "stepClosed";
  * (ADR-0013):讀、寫實例與任務、稽核、推進全在同一個交易裡,任一步失敗全部回復。並發的兩個動作寫到同一份
  * 實例 → 後到的寫入衝突、整個交易由 driver 重跑,重讀後依當下狀態判斷(下列語意不變):
  *
- * - `decideTask`:前置檢查後寫實例(`$push decisions` + `$push history` + `$inc editVersion`,
+ * - `decideTask`:前置檢查、掛接點守門(`beforeApprove` / `beforeReject` / `beforeReturn`)後寫實例(`$push decisions` + `$push history` + `$inc editVersion`,
  *   條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 taskKey 還沒有決定」),**不比對** `editVersion`;
  *   條件不成立 → `stepClosed`、任務不動。接受後 `advance`。
  * - `reassignTask` / `addStepAssignee`:`editVersion` 條件更新(條件本身含「該 taskKey 尚無決定」);
@@ -85,6 +86,7 @@ export class TaskActionsService {
     private readonly hooks: WorkflowEngineHooks,
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
+    private readonly lifecycle: FormLifecycleService,
   ) {}
 
   decide(
@@ -168,6 +170,7 @@ export class TaskActionsService {
         ["decision"],
       );
     }
+    await this.guardDecision(facts, decision, task);
     await this.hooks.reached("decide:before-write");
     const at = new Date();
     const accepted = await this.instances.findOneAndUpdate(
@@ -424,6 +427,41 @@ export class TaskActionsService {
   }
 
   // ---- 內部 ----
+
+  /** 決定的守門(寫入之前;擋下 = 整個交易回復,此時還沒有寫入)。核准一律經 `runApproveGuard`。 */
+  private async guardDecision(
+    facts: FormOperatorFacts,
+    decision: Decision,
+    task: WorkflowTaskRecord,
+  ): Promise<void> {
+    const submission = await this.submissions.findById(
+      task.tenantId,
+      task.submissionId,
+    );
+    if (submission === null) {
+      // isDecidable 已確認它存在;同一個交易內讀不到 = 資料不一致
+      throw new Error(`任務 ${String(task._id)} 的提交不存在`);
+    }
+    const input = {
+      operator: facts.operator,
+      submission,
+      stepKey: task.stepKey,
+    };
+    switch (decision) {
+      case "approved": {
+        await this.lifecycle.runApproveGuard(input);
+        return;
+      }
+      case "rejected": {
+        await this.lifecycle.guard("beforeReject", input);
+        return;
+      }
+      case "returned": {
+        await this.lifecycle.guard("beforeReturn", input);
+        return;
+      }
+    }
+  }
 
   /** 任務在操作者的租戶內;否則當不存在。 */
   private async requireTask(

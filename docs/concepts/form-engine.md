@@ -110,6 +110,12 @@
 
 帶入、引用與 lookup 選項共用一張 lookup 登錄表:底座提供使用者、組織、其他表單提交三種來源,專案可以在固定入口登記自己的來源(key 一律加專案前綴,撞名時 api 起不來)。專案來源只交出宣告與一個專案資料登記裡的 `BaseRepository`,查詢由底座組,所以租戶隔離、可見範圍與資料範圍照常套用,專案放寬不了;設計器的來源清單與發布時的檢查器自動包含專案來源。登記方式、宣告欄位與權限規則見 `docs/modules/forms.md`「lookup 登錄表」。
 
+## 掛接點
+
+專案可以登記表單的守門(送出、修改已完成單、刪除、撤回、作廢、核准 / 駁回 / 退回之前,只能讀、可擋下)與事後動作(送出、關卡通過、完成、駁回、退回、撤回、作廢之後,同一個交易內寫入專案資料),固定入口 `apps/api/src/project/form-lifecycles.ts`。沒綁流程的表單送出依序觸發 `submitted`、`completed`;守門擋下時這個動作沒有任何寫入,事後動作失敗整個動作回復。時機、帶入的資料與系統身分見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
+
+正本:`apps/api/src/workflows/workflow-engine/lifecycle/`
+
 ## 顯示名:labelTemplate 與頁籤模板
 
 - **lookup 的顯示模板**(`labelTemplate`,來源描述的選填欄位):選資料、引用與 lookup 選項的顯示名由 api 以模板組好(`{{name}}({{email}})`);模板引用的欄位只要有一個讀者讀不到,整串退回顯示欄 `labelField`。佔位符見 `docs/modules/forms.md`「lookup 登錄表」。

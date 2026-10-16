@@ -5,6 +5,8 @@ import {
   type AdvanceAction,
   type AdvanceInput,
   type AdvancePlan,
+  type InstanceUpdate,
+  type SubmissionStatus,
   type WorkflowDefinition,
   advance,
   isReviewStep,
@@ -33,11 +35,26 @@ import {
   toSubmissionSnapshot,
   toTaskSnapshot,
 } from "./instance-writes";
+import type { FormEffectName } from "./lifecycle/form-lifecycle-registration";
+import {
+  type EffectSubject,
+  FormLifecycleService,
+} from "./lifecycle/form-lifecycle.service";
 import { StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
 
 /** 一輪動作執行的結果。 */
 type RoundResult = "done" | "casFailed" | "invalid";
+
+/** 提交同步成這些狀態 = 觸發對應的事後動作(`submitted` / `voided` 不經推進,由送出 / 作廢觸發)。 */
+const EFFECT_OF_SUBMISSION_STATUS: Partial<
+  Record<SubmissionStatus, FormEffectName>
+> = {
+  completed: "completed",
+  rejected: "rejected",
+  returned: "returned",
+  withdrawn: "withdrawn",
+};
 
 /** 推進的上限輪數(正常一次推進只要個位數輪;超過代表判斷表在來回打架,記 log 停下)。 */
 const MAX_ROUNDS = 60;
@@ -85,6 +102,10 @@ export class WorkflowEngineHooks {
  * 所有寫入一起回復;呼叫端(送出、決定、撤回、改派、新增審核者、失效 hook、重試推進)已在交易內時就併進
  * 呼叫端的交易。並發的另一個交易寫到同一份實例 → 寫入衝突、整個交易由 driver 重跑,重讀後再判斷。
  * 通知信排在交易提交後(`WorkflowNotifier`)。
+ *
+ * **掛接點的事後動作**(`lifecycle/`)也在推進裡觸發、同一個交易:實例的條件更新成功且把審核關卡改成
+ * `completed` / `skipped` → `stepPassed`(跳過帶 `skipped: true`);提交同步成完成 / 駁回 / 退回 / 撤回且
+ * 真的命中 → `completed` / `rejected` / `returned` / `withdrawn`。事後動作拋錯 = 整個推進(與呼叫端的動作)回復。
  */
 @Injectable()
 export class WorkflowEngineService {
@@ -100,6 +121,7 @@ export class WorkflowEngineService {
     private readonly hooks: WorkflowEngineHooks,
     private readonly transactions: TransactionService,
     private readonly realtime: RealtimePublisher,
+    private readonly lifecycle: FormLifecycleService,
   ) {}
 
   /**
@@ -284,10 +306,14 @@ export class WorkflowEngineService {
           update,
           arrayFilters.length > 0 ? { arrayFilters } : {},
         );
-        return updated === null ? "casFailed" : "done";
+        if (updated === null) {
+          return "casFailed";
+        }
+        await this.emitStepPassed(instance, definition, action.update);
+        return "done";
       }
       case "updateSubmission": {
-        await this.submissions.updateOne(
+        const synced = await this.submissions.updateOne(
           tenantId,
           {
             _id: toObjectId(action.condition.submissionId),
@@ -298,6 +324,18 @@ export class WorkflowEngineService {
           { ...action.set },
           null,
         );
+        const event =
+          action.set.status === undefined
+            ? undefined
+            : EFFECT_OF_SUBMISSION_STATUS[action.set.status];
+        if (synced && event !== undefined) {
+          await this.lifecycle.emit(event, effectSubjectOf(instance), {
+            stepKey:
+              event === "returned" || event === "rejected"
+                ? (instance.outcome?.stepKey ?? null)
+                : null,
+          });
+        }
         return "done";
       }
       case "createTask": {
@@ -353,6 +391,28 @@ export class WorkflowEngineService {
     }
   }
 
+  /** 這次更新把哪些審核關卡改成完成 / 跳過 → 各觸發一次 `stepPassed`(匯合節點不是關卡,不觸發)。 */
+  private async emitStepPassed(
+    instance: InstanceRecord,
+    definition: WorkflowDefinition,
+    update: InstanceUpdate,
+  ): Promise<void> {
+    for (const [stepKey, step] of Object.entries(update.steps ?? {})) {
+      const node = stepOf(definition, stepKey);
+      if (
+        (step.status !== "completed" && step.status !== "skipped") ||
+        node === undefined ||
+        !isReviewStep(node)
+      ) {
+        continue;
+      }
+      await this.lifecycle.emit("stepPassed", effectSubjectOf(instance), {
+        stepKey,
+        skipped: step.status === "skipped",
+      });
+    }
+  }
+
   /**
    * 依計畫建任務;`(instanceId, taskKey)` 已存在 = 已建過(推進重跑不重建)。先查再建(TX-04:交易內
    * 撞唯一鍵後不能接著寫)。並發的最終裁決仍是唯一索引:撞到 E11000(不是暫時性錯誤,driver 不會自動重跑)
@@ -386,4 +446,16 @@ export class WorkflowEngineService {
       comment: action.projection.comment,
     });
   }
+}
+
+/** 事後動作的單據資訊:實例抄自提交(修訂號 = 實例的修訂號)。 */
+function effectSubjectOf(instance: InstanceRecord): EffectSubject {
+  return {
+    submissionId: instance.submissionId,
+    tenantId: instance.tenantId,
+    orgId: instance.orgId,
+    moduleKey: instance.moduleKey,
+    formKey: instance.formKey,
+    revision: instance.revision,
+  };
 }
