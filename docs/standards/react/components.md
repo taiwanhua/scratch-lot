@@ -26,7 +26,7 @@
 (決策見 ADR-0012:zustand 是唯一的跨元件狀態容器)
 
 1. 伺服器資料 → TanStack Query(codegen hooks),**不要**複製進 useState 或 store。
-2. URL 能表達的(頁碼、篩選、tab)→ URL(searchParams / router)。**admin 例外**:admin 有路由頁籤,`RouteTabs` 以 pathname 記頁籤、不處理 search,所以頁內篩選(頁碼、關鍵字、選中組織)留在頁面層的 `useState`,不進 URL。
+2. URL 能表達的(頁碼、篩選、排序、頁內分頁、打開的詳情)→ URL。admin 一律經 `useUrlState`,頁內分頁用 `PageTabs`(REACT-14);哪些不進 URL 也見 REACT-14。
 3. 只有單一元件用 → `useState`。
 4. 跨元件的用戶端狀態(登入狀態、語言、路由頁籤…)→ **zustand**:`stores/{base,project}/useXxxStore.ts`,需要跨重新整理保留的用 `persist` middleware(sessionStorage / localStorage 由該狀態的規則決定)。
 5. context **只剩注入用**(theme、QueryClient、Intl provider、`AuthSession` 實例),不承載會變的狀態;redux / 自刻 `useSyncExternalStore` store 不用。注入用的 context 物件**與它的 hook 同檔、放 `hooks/`**(`hooks/base/useSession.ts` 同時匯出 `SessionContext` 與 `useSession`),provider 元件放 `app/providers/`。
@@ -193,3 +193,30 @@ interface CellRenderContext<Row> {
 | 大量資料(上百到上萬列)、需要欄寬拖拉、欄位固定、表頭排序的列表 | `@repo/ui/data-table`       |
 
 `DataTable` 的三件事:①列虛擬捲動,**捲動容器要有確定的高度**(父層是 STYLE-08 的 `flex: 1; minHeight: 0` 欄,或以 `containerSx` 給 `height` / `maxHeight`),高度跟著內容長時等於沒有虛擬化;②排序與欄寬都是「給了就受控(`sort` + `onSortChange`、`columnWidths` + `onColumnWidthsChange`),沒給就內部管」,資料已由 api 排好時加 `isManualSorting`;③儲存格不折行、超出寬度以省略號截斷(列高一致,虛擬捲動才量得準),要完整內容就加寬或在 `render` 裡放 `Tooltip`。
+
+## REACT-14 admin 的頁面狀態放網址:一律用 `useUrlState`,頁內分頁用 `PageTabs`
+
+正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`
+
+重新整理、分享網址、從別的頁籤切回來,頁面都要回到同一個狀態。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
+
+```ts
+✅ const listSchema = z.object({ status: z.enum(["all", "done"]), page: z.number().int().min(1) })
+     .default({ status: "all", page: 1 });          // 模組層常數;預設值就寫在 schema
+   const [list, setList] = useUrlState("list", listSchema);
+   setList((current) => ({ ...current, page: 2 }));  // ?list={"status":"all","page":2}
+❌ const [searchParams, setSearchParams] = useSearchParams();   // 自己解析、自己驗、自己給預設值
+❌ const [page, setPage] = useState(1);                          // 能進網址的篩選留在 useState
+```
+
+- **一個 key 一包值**:同一個區塊的篩選、關鍵字、排序、頁碼放同一個 key(物件寫 JSON);同一頁有兩個互不相干的區塊(對應不同 API)才分兩個 key。字串直接寫(`?tab=mine`)。
+- **schema 必須 `.default(…)`**:網址沒有這個 key、或被手改壞(JSON 壞掉、值不在列舉裡)時回到預設值,不報錯;寫回預設值時 key 自動從網址拿掉。schema 放模組層常數。
+- 寫入是 `replace`(不堆上一頁紀錄),並經 react-router 的 navigate,`useLocation` 讀到的網址與畫面一致。
+- **頁內分頁用 `PageTabs`**,不要自己拿 `Tabs` + `useUrlState` 拼:它把目前分頁記在 `?tab=`、依 `permission` 藏掉沒權限的分頁、只剩一個分頁時不顯示分頁籤、放不下時單列捲動並把選到的分頁捲進可視範圍。純展示、不需要記在網址的切換(設計器的「設計 / 預覽」這類)才直接用 `@repo/ui/tabs`。
+
+| 放進網址                              | 不放進網址                       |
+| ------------------------------------- | -------------------------------- |
+| 列表的篩選、關鍵字、排序、頁碼        | 表單還沒存的輸入內容             |
+| 報表的期間、分店、報表種類            | 敏感資料(身分證字號、金額明細等) |
+| 頁內分頁(`PageTabs`)                  | 大量資料(例如勾選的大量 id)      |
+| 目前打開的詳情或彈窗(例 `?view=<id>`) | 暫時性介面狀態(展開、hover 等)   |
