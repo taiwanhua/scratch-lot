@@ -51,6 +51,13 @@ export interface MonthCalendarProps {
   onMonthChange?: (month: string) => void;
   /** 顯示內建換月表頭;關掉時換月由使用的頁面自己提供。預設 `true` */
   showHeader?: boolean;
+  /**
+   * 換月表頭右側顯示 [今天](只在 `showHeader` 開時出現):點了呼叫 `onMonthChange(今天所在的月份)`,
+   * 顯示的已是當月時停用。預設 `false`
+   */
+  showTodayButton?: boolean;
+  /** [今天] 按鈕文字;預設「今天」 */
+  todayLabel?: ReactNode;
   /** 選取模式;預設 `none` */
   selectionMode?: MonthCalendarSelectionMode;
   /** 已選的日期(`YYYY-MM-DD`,受控) */
@@ -89,6 +96,8 @@ export const MonthCalendar = ({
   month,
   onMonthChange,
   showHeader = true,
+  showTodayButton = false,
+  todayLabel = "今天",
   selectionMode = "none",
   selectedDates = EMPTY_SELECTION,
   onSelectedDatesChange,
@@ -103,6 +112,8 @@ export const MonthCalendar = ({
   "aria-label": ariaLabel,
   sx,
 }: MonthCalendarProps) => {
+  // `today` 是 `YYYY-MM-DD`,前 7 碼就是今天所在的月份 `YYYY-MM`
+  const todayMonth = today.slice(0, 7);
   const weeks = buildMonthWeeks(month);
   const selected = new Set(selectedDates);
   const multiple = selectionMode === "multiple";
@@ -123,6 +134,15 @@ export const MonthCalendar = ({
           nextMonthLabel={nextMonthLabel}
           onPrev={() => onMonthChange?.(shiftMonth(month, -1))}
           onNext={() => onMonthChange?.(shiftMonth(month, 1))}
+          todayButton={
+            showTodayButton
+              ? {
+                  label: todayLabel,
+                  disabled: todayMonth === month,
+                  onClick: () => onMonthChange?.(todayMonth),
+                }
+              : undefined
+          }
         />
       ) : null}
       <Box
