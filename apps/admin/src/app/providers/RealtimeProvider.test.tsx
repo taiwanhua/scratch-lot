@@ -147,16 +147,17 @@ describe("RealtimeProvider", () => {
     expect(onBoard).toHaveBeenCalledWith("board");
   });
 
-  it("收到信號約 2.5 秒後再 invalidate 一次(補送出端 2 秒窗內丟掉的變動);窗內連續信號只補一次", async () => {
+  const badge = {
+    op: "signal",
+    topic: "user:u1",
+    signal: { type: "badge:apply-center" },
+  };
+
+  it("補抓以最後一次信號 + 2.5 秒為準:窗內連續信號只補一次", async () => {
     const { invalidate } = await renderProvider();
     act(() => {
       latest().open();
     });
-    const badge = {
-      op: "signal",
-      topic: "user:u1",
-      signal: { type: "badge:apply-center" },
-    };
     act(() => {
       latest().receive(badge);
     });
@@ -165,12 +166,49 @@ describe("RealtimeProvider", () => {
       latest().receive(badge);
     });
     expect(countsInvalidations(invalidate)).toBe(2);
-    await act(() => timers.advance(REALTIME_FOLLOW_UP_MS - 1000 - 1));
+    // 第一次信號 + 2.5 秒時不補(已被第二次信號重排)
+    await act(() => timers.advance(REALTIME_FOLLOW_UP_MS - 1000));
+    expect(countsInvalidations(invalidate)).toBe(2);
+    // 第二次信號 + 2.5 秒才補
+    await act(() => timers.advance(999));
     expect(countsInvalidations(invalidate)).toBe(2);
     await act(() => timers.advance(1));
     expect(countsInvalidations(invalidate)).toBe(3);
     await act(() => timers.advance(REALTIME_FOLLOW_UP_MS * 2));
     expect(countsInvalidations(invalidate)).toBe(3);
+  });
+
+  it("兩次信號間隔 2.2 秒(送出端第二個窗)→ 補抓在第二次信號 + 2.5 秒,蓋到第二個窗", async () => {
+    const { invalidate } = await renderProvider();
+    act(() => {
+      latest().open();
+    });
+    act(() => {
+      latest().receive(badge);
+    });
+    await act(() => timers.advance(2200));
+    act(() => {
+      latest().receive(badge);
+    });
+    expect(countsInvalidations(invalidate)).toBe(2);
+    await act(() => timers.advance(REALTIME_FOLLOW_UP_MS - 1));
+    expect(countsInvalidations(invalidate)).toBe(2);
+    await act(() => timers.advance(1));
+    expect(countsInvalidations(invalidate)).toBe(3);
+  });
+
+  it("卸載時清掉排著的補抓", async () => {
+    const { view, invalidate } = await renderProvider();
+    act(() => {
+      latest().open();
+    });
+    act(() => {
+      latest().receive(badge);
+    });
+    view.unmount();
+    const before = countsInvalidations(invalidate);
+    await timers.advance(REALTIME_FOLLOW_UP_MS * 2);
+    expect(countsInvalidations(invalidate)).toBe(before);
   });
 
   it("連線中不輪詢", async () => {

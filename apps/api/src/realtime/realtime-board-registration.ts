@@ -16,3 +16,35 @@ export interface RealtimeBoardRegistration {
 
 /** DI token:組裝好的看板頻道登記。 */
 export const REALTIME_BOARDS = Symbol("REALTIME_BOARDS");
+
+/** 看板登記不合契約(key 重複或空白):組裝時拋出,app 起不來。 */
+export class RealtimeBoardRegistrationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RealtimeBoardRegistrationError";
+  }
+}
+
+/**
+ * 驗證並凍結專案的看板登記(由 `database/database.module.ts` 組裝時呼叫):key 必須非空且全域唯一 ——
+ * 換發時以 key 找登記,重複會讓資格判斷看錯權限。
+ */
+export function composeRealtimeBoards(
+  boards: readonly RealtimeBoardRegistration[],
+): readonly RealtimeBoardRegistration[] {
+  const seen = new Set<string>();
+  for (const board of boards) {
+    if (board.key.trim() === "" || board.permission.trim() === "") {
+      throw new RealtimeBoardRegistrationError(
+        `看板登記的 key / permission 不可空白(模組 ${board.moduleKey})`,
+      );
+    }
+    if (seen.has(board.key)) {
+      throw new RealtimeBoardRegistrationError(
+        `看板 key「${board.key}」重複登記`,
+      );
+    }
+    seen.add(board.key);
+  }
+  return Object.freeze([...boards]);
+}
