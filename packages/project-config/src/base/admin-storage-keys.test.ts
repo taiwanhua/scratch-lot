@@ -3,7 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import { createAdminStorageKeys } from "./admin-storage-keys";
 
 describe("createAdminStorageKeys:admin 的瀏覽器儲存鍵由 slug 生成", () => {
-  it("六把鍵的格式都是 `<slug>-admin-<用途>`", () => {
+  it("七把鍵的格式都是 `<slug>-admin-<用途>`", () => {
     expect(createAdminStorageKeys("acme-portal")).toEqual({
       locale: "acme-portal-admin-locale",
       colorMode: "acme-portal-admin-color-mode",
@@ -11,10 +11,11 @@ describe("createAdminStorageKeys:admin 的瀏覽器儲存鍵由 slug 生成", ()
       routeTabsPrefix: "acme-portal-admin-route-tabs",
       sessionChannel: "acme-portal-admin-session",
       sideNav: "acme-portal-admin-sidenav",
+      sectionsPrefix: "acme-portal-admin-sections",
     });
   });
 
-  it("不同 slug 的六把鍵完全不重疊", () => {
+  it("不同 slug 的七把鍵完全不重疊", () => {
     const first = Object.values(createAdminStorageKeys("cookhome"));
     const second = new Set(Object.values(createAdminStorageKeys("acme")));
     expect(first.filter((key) => second.has(key))).toEqual([]);

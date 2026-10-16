@@ -10,7 +10,7 @@ import { useTranslations } from "use-intl";
 
 import type { FieldType } from "@repo/domain/form";
 import { IconButton } from "@repo/ui/icon-button";
-import { DeleteIcon } from "@repo/ui/icons";
+import { DeleteIcon, EditIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Tooltip } from "@repo/ui/tooltip";
@@ -41,6 +41,8 @@ export interface DesignerCanvasProps {
   onAddField: (type: FieldType, target: PlaceTarget) => void;
   onMoveField: (fieldId: string, target: PlaceTarget) => void;
   onRenameSection: (sectionKey: string, title: string) => void;
+  /** 打開分區設定(屬性面板換成「分區設定」:收合相關) */
+  onSelectSection: (sectionKey: string) => void;
   onRemoveSection: (section: DesignSection) => void;
 }
 
@@ -59,6 +61,7 @@ export const DesignerCanvas = ({
   onAddField,
   onMoveField,
   onRenameSection,
+  onSelectSection,
   onRemoveSection,
 }: DesignerCanvasProps) => {
   const t = useTranslations("admin.forms.designer");
@@ -142,6 +145,19 @@ export const DesignerCanvas = ({
                         onRenameSection(section.key, event.target.value);
                       }}
                     />
+                    <Tooltip title={t("sectionSettings")} describeChild={false}>
+                      <IconButton
+                        size="small"
+                        aria-label={t("sectionSettingsOf", {
+                          title: section.title,
+                        })}
+                        onClick={() => {
+                          onSelectSection(section.key);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title={t("removeSection")} describeChild={false}>
                       <IconButton
                         size="small"

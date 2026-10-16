@@ -10,9 +10,8 @@ import {
   type LayoutSection,
   type StoredValues,
   fieldProtections,
+  sectionCollapseOf,
 } from "@repo/domain/form";
-import { Box } from "@repo/ui/box";
-import { Card } from "@repo/ui/card";
 import { Grid } from "@repo/ui/grid";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -34,8 +33,11 @@ import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 import type { WidgetContext } from "../widgets/widget-types";
 import { DesignFieldCell } from "./DesignFieldCell";
 import { FormFieldCell } from "./FormFieldCell";
+import { FormSectionCard } from "./FormSectionCard";
 import { SectionDropZone } from "./SectionDropZone";
 import { SECTION_SPACING, cellSize } from "./layout-grid";
+import { useFormSections } from "./useFormSections";
+import { useSectionSummary } from "./useSectionSummary";
 
 export interface FormRendererDesignProps {
   /** 選中欄位的設計器內部 id(`design-definition.ts`;一般定義沒有 id 時用 key) */
@@ -70,6 +72,8 @@ export interface FormRendererProps {
   design?: FormRendererDesignProps;
 }
 
+const NO_ERRORS: readonly FormFieldErrorLike[] = [];
+
 /** 明細子欄的顯示名:`displayValues` 以 `<明細 key>.<子欄 key>` 回一組。 */
 const columnDisplayOf =
   (
@@ -95,7 +99,7 @@ export const FormRenderer = ({
   expressionContext,
   permissions = OPEN_PERMISSIONS,
   onChange,
-  fieldErrors = [],
+  fieldErrors = NO_ERRORS,
   displayValues = [],
   onDownload,
   serverState = null,
@@ -143,6 +147,43 @@ export const FormRenderer = ({
     [context, mode, tenantTimezone, expressionContext.timezone],
   );
 
+  // 每個分區畫得到的欄位 key(版面順序;看不到的不算):送出有錯時找要展開的分區與第一個錯誤
+  const fieldKeysBySection = useMemo(
+    () =>
+      new Map(
+        version.layout.sections.map((section) => [
+          section.key,
+          section.rows
+            .flatMap((row) => row.cols)
+            .map((col) => byCell.get(designIdOf(col) ?? col.fieldKey))
+            .filter(
+              (field): field is FieldDef =>
+                field !== undefined &&
+                resolved.states.get(field.key)?.visible === true,
+            )
+            .map((field) => field.key),
+        ]),
+      ),
+    [version.layout.sections, byCell, resolved.states],
+  );
+  const {
+    containerRef,
+    isCollapsed: isSectionCollapsed,
+    toggle: toggleSection,
+  } = useFormSections({
+    sections: version.layout.sections,
+    fieldKeysBySection,
+    formKey: context.formKey,
+    mode,
+    fieldErrors,
+  });
+  const summaryOf = useSectionSummary({
+    byKey,
+    resolved,
+    displayValues,
+    timezone: cellContext.timezone,
+  });
+
   const handleChange = (fieldKey: string, value: unknown) => {
     onChange?.({ ...values, [fieldKey]: value });
   };
@@ -150,7 +191,7 @@ export const FormRenderer = ({
   const isDesign = mode === "design";
 
   return (
-    <Stack spacing={3}>
+    <Stack ref={containerRef} spacing={3}>
       {version.layout.sections.map((section) => {
         const cols = section.rows
           .flatMap((row) => row.cols)
@@ -193,6 +234,7 @@ export const FormRenderer = ({
               key={col.cellId}
               size={cellSize(col.span)}
               sx={{ minWidth: 0 }}
+              data-field-key={field.key}
             >
               {isDesign && design !== undefined ? (
                 <DesignFieldCell
@@ -213,36 +255,20 @@ export const FormRenderer = ({
         });
 
         if (!isDesign) {
-          // 填寫 / 預覽 / 唯讀:分區一個有框的卡片 + 標題列,三種模式版面一致(Spec 6a §8 畫面 9 / 11)
+          // 填寫 / 預覽 / 唯讀:分區一個有框的卡片 + 標題列,三種模式版面一致(Spec 6a §8 畫面 9 / 11);
+          // 設定了「可以收合」的分區可展開 / 收合(底座 10.3)
           return (
-            <Card
+            <FormSectionCard
               key={section.key}
-              component="section"
-              variant="outlined"
-              aria-label={section.title}
-            >
-              <Box
-                sx={{
-                  px: 2,
-                  py: 1.25,
-                  borderBottom: 1,
-                  borderColor: "divider",
-                }}
-              >
-                <Typography variant="subtitle1" component="h2">
-                  {section.title}
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                <Grid
-                  container
-                  columns={LAYOUT_COLUMNS}
-                  spacing={SECTION_SPACING}
-                >
-                  {cells}
-                </Grid>
-              </Box>
-            </Card>
+              section={section}
+              cells={cells}
+              collapsible={sectionCollapseOf(section).collapsible}
+              collapsed={isSectionCollapsed(section)}
+              onCollapsedChange={(collapsed) => {
+                toggleSection(section, collapsed);
+              }}
+              summary={summaryOf(section)}
+            />
           );
         }
 

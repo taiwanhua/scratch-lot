@@ -468,6 +468,16 @@
         "types": "./dist/cjs/stepper.d.ts",
         "default": "./dist/cjs/stepper.js"
       }
+    },
+    "./section": {
+      "import": {
+        "types": "./dist/es/section.d.mts",
+        "default": "./dist/es/section.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/section.d.ts",
+        "default": "./dist/cjs/section.js"
+      }
     }
   },
   "scripts": {

@@ -1193,7 +1193,9 @@
       "no": "No",
       "sourceUnavailable": " (source unavailable)",
       "readonlyPermission": "You can see this field but are not allowed to change it.",
-      "readonlyCondition": "This field is read-only right now."
+      "readonlyCondition": "This field is read-only right now.",
+      "summaryItem": "{label}: {value}",
+      "summarySeparator": " · "
     },
     "design": {
       "hasVisibleWhen": "Has visibility condition",
@@ -1588,7 +1590,9 @@
       "copyFailed": "Copy failed.",
       "regexChecking": "Checking patterns…",
       "regexUnavailable": "Pattern safety can't be checked right now; it will be checked when you save the draft.",
-      "newColumn": "Item"
+      "newColumn": "Item",
+      "sectionSettings": "Section settings",
+      "sectionSettingsOf": "Section settings for “{title}”"
     },
     "preview": {
       "region": "Preview",
@@ -2038,6 +2042,16 @@
       "confirm": "Upgrade",
       "close": "Close",
       "success": "Upgrade finished."
+    },
+    "sectionProperty": {
+      "title": "Section settings — {title}",
+      "backToSettings": "← Form settings",
+      "issues": "Issues in this section",
+      "collapsible": "Collapsible",
+      "defaultCollapsed": "Collapsed by default",
+      "summaryFields": "Fields shown in the header when collapsed",
+      "addSummaryField": "+ Field",
+      "summaryNeedsCollapsible": "Turn on “Collapsible” first."
     }
   },
   "approval": {

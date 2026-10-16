@@ -1193,7 +1193,9 @@
       "no": "否",
       "sourceUnavailable": "(來源不可用)",
       "readonlyPermission": "你看得到這個欄位,但沒有修改它的權限。",
-      "readonlyCondition": "此欄位目前為唯讀。"
+      "readonlyCondition": "此欄位目前為唯讀。",
+      "summaryItem": "{label}:{value}",
+      "summarySeparator": " · "
     },
     "design": {
       "hasVisibleWhen": "有顯示條件",
@@ -1588,7 +1590,9 @@
       "copyFailed": "複製失敗。",
       "regexChecking": "正則檢查中…",
       "regexUnavailable": "目前無法即時檢查正則的安全性;存草稿時會再檢查。",
-      "newColumn": "項目"
+      "newColumn": "項目",
+      "sectionSettings": "分區設定",
+      "sectionSettingsOf": "分區設定「{title}」"
     },
     "preview": {
       "region": "預覽",
@@ -2038,6 +2042,16 @@
       "confirm": "開始升級",
       "close": "關閉",
       "success": "升級完成。"
+    },
+    "sectionProperty": {
+      "title": "分區設定 — {title}",
+      "backToSettings": "← 表單設定",
+      "issues": "這個分區的檢查結果",
+      "collapsible": "可以收合",
+      "defaultCollapsed": "預設收合",
+      "summaryFields": "收合時標題列顯示的欄位",
+      "addSummaryField": "+ 欄位",
+      "summaryNeedsCollapsible": "打開「可以收合」後才能設定。"
     }
   },
   "approval": {
