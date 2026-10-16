@@ -18,6 +18,7 @@ export * from "./org.schema";
 export * from "./permission.schema";
 export * from "./refresh-token.schema";
 export * from "./role.schema";
+export * from "./scheduled-job-run.schema";
 export * from "./seed-definition-installation.schema";
 export * from "./seed-lock.schema";
 export * from "./user.schema";

@@ -24,15 +24,16 @@ admin (nginx / Cloud Run) ├─> api (NestJS / Cloud Run) ─> MongoDB
 
 ### 資源清單
 
-| 項目                                             | 識別正本 / 建立位置                                   |
-| ------------------------------------------------ | ----------------------------------------------------- |
-| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用 |
-| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`            |
-| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                             |
-| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                              |
-| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                       |
-| front / Storybook                                | 專案自己的 Vercel 設定與網域                          |
-| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                |
+| 項目                                             | 識別正本 / 建立位置                                                   |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
+| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用                 |
+| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`                            |
+| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                                             |
+| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                                              |
+| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                                       |
+| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)      | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務) |
+| front / Storybook                                | 專案自己的 Vercel 設定與網域                                          |
+| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                                |
 
 值的用途與未設行為見 `docs/env-registry.md`,建立與驗證狀態依[初始化索引](project-initialization.md)記在 issue/PR。下文的 `project`、`example.invalid`、`<...>` 是操作示例,須換成該專案實際輸入。
 
@@ -524,6 +525,47 @@ gcloud storage buckets describe gs://project-assets-dev --format="value(cors_con
 **驗證**(需要 Cloud Run 的執行身分,本地做不到):部署後以 GraphQL 要一張上傳票 → 用該網址 PUT 一張圖 → 讀回簽名網址能開。
 
 正本:`apps/api/src/storage/`、`deploy/env/<環境>.yaml`、ADR-0010
+
+### Cloud Scheduler(排程任務)
+
+api 的排程任務由**每個環境一個** Cloud Scheduler 工作驅動:每 15 分鐘以 OIDC token `POST <api-url>/internal/scheduled-jobs/run`,api 依程式裡的登記判斷哪些工作到期並執行。deploy.yml 不建立或更新這個工作;建一次即可,之後部署不必動它。底座三環境都沒有建立,`SCHEDULER_*` 未設時端點拒絕所有呼叫(403),排程等於關閉。
+
+- **登記工作**:功能模組(底座或專案)匯入 `ScheduledJobsModule`,在 `onModuleInit` 以 `ScheduledJobRegistry.registerScheduledJob({ key, every, handler })` 登記;`every` 是 `"15m"`、`"1h"` 或 `"daily@HH:mm"`。key 全域唯一,重複或頻率寫錯 api 啟動即失敗。
+- **到期判斷**:`15m` / `1h` 以 UTC 對齊區間(:00 / :15 / :30 / :45、整點),同一區間只跑一次,錯過的區間不補。`daily@HH:mm` 依各租戶時區(`orgs.settings.timezone`,未設用預設時區)換算當地 HH:mm;當地時刻過後 6 小時內的呼叫都算到期(錯過幾次呼叫仍補跑一次),超過就等下一天。handler 收到這次要處理的租戶(含根組織 `tenantId = null`,不含停用的租戶),時點相同的租戶併成一次。
+- **冪等**:每個 `(key, scheduledFor)` 在 `scheduled_job_runs` 只能插入一筆,插入成功的那次呼叫才執行(`docs/data-model.md`「排程任務執行紀錄」)。Scheduler 重送或多個 instance 同時收到都不會重複執行;失敗的時點不重跑。個別工作失敗端點仍回 200,結果看回應 body、執行紀錄與 Cloud Run log。
+- **費用**:Cloud Scheduler 的免費額度以帳單帳戶計(目前每個帳單帳戶每月 3 個工作),三環境各一個工作;再多的工作照價計費。每 15 分鐘喚醒 api 一次(`min-instances=0` 時每次可能冷啟動)。
+
+**建立步驟**(每個環境各一次;`<api-url>` 是 `deploy/project/cloud.json` 該環境的 `apiUrl`,`<api-service>` 是該環境的 api 服務名):
+
+```bash
+gcloud services enable cloudscheduler.googleapis.com --project=<gcp-project>
+# 呼叫身分:只用來簽 OIDC token,不需要任何專案層級角色;三環境可共用一個或各建一個
+gcloud iam service-accounts create scheduler-invoker --display-name="Cloud Scheduler invoker" --project=<gcp-project>
+# 建立工作的人(或部署 SA)要能代用這個身分
+gcloud iam service-accounts add-iam-policy-binding <scheduler-sa> --member="user:<operator-email>" --role=roles/iam.serviceAccountUser --project=<gcp-project>
+gcloud scheduler jobs create http <api-service>-scheduled-jobs \
+  --project=<gcp-project> --location=<region> \
+  --schedule="*/15 * * * *" --time-zone="Etc/UTC" \
+  --http-method=POST --uri="<api-url>/internal/scheduled-jobs/run" \
+  --oidc-service-account-email=<scheduler-sa> --oidc-token-audience="<api-url>" \
+  --attempt-deadline=300s
+```
+
+`<scheduler-sa>` 是建立的完整 email。api 服務以 `--allow-unauthenticated` 部署,Cloud Run 不驗呼叫者,身分由 api 自己驗 OIDC token(Google 簽章、issuer、audience、email)。
+
+**接線**(走 PR):`deploy/env/<環境>.yaml` 加 `SCHEDULER_INVOKER_EMAIL: "<scheduler-sa>"` 與 `SCHEDULER_AUDIENCE: "<api-url>"`(與 `--oidc-token-audience` 完全相同,含結尾斜線與否),再手動 Deploy 該環境(改 `deploy/env/` 會讓 api 重新部署)。變數說明見 `docs/env-registry.md`。
+
+**驗證與維運**:
+
+```bash
+gcloud scheduler jobs run <api-service>-scheduled-jobs --project=<gcp-project> --location=<region>
+gcloud scheduler jobs describe <api-service>-scheduled-jobs --project=<gcp-project> --location=<region> --format="value(state,lastAttemptTime,status)"
+gcloud scheduler jobs pause <api-service>-scheduled-jobs --project=<gcp-project> --location=<region>    # 暫停;恢復用 resume
+```
+
+手動執行後在 Cloud Run log 看到該請求回 200 才算接通:401 是 token 無效(audience 與 `SCHEDULER_AUDIENCE` 不同最常見),403 是呼叫身分與 `SCHEDULER_INVOKER_EMAIL` 不同或該環境 YAML 沒填。
+
+正本:`apps/api/src/scheduled-jobs/`、`deploy/env/<環境>.yaml`
 
 ### Vercel 補充設定
 

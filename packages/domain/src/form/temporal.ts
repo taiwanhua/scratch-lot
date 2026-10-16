@@ -223,6 +223,20 @@ export function startOfLocalDay(date: LocalDate, timezone: string): number {
   return first ?? instantOfLocal(wall, timezone);
 }
 
+/**
+ * 當地日期的某個牆上時刻(時、分)在某時區的時點(ms),例如租戶當地「今天 08:00」。
+ * 重複的時刻(夏令時間結束)取較早的一個;不存在的時刻(夏令時間開始)往後推到切換後的第一個時點。
+ * 時區不合法 → 丟 `RangeError`。
+ */
+export function instantOfLocalTime(
+  date: LocalDate,
+  hour: number,
+  minute: number,
+  timezone: string,
+): number {
+  return instantOfLocal({ ...date, hour, minute, second: 0 }, timezone);
+}
+
 /** 值 → 時點;數字直接當 ms。 */
 function instantOfAny(value: unknown): number | null {
   if (typeof value === "number") {
