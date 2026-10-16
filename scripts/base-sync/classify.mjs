@@ -66,6 +66,8 @@ const COMMON = [
   /^packages\//,
   /^apps\/(?:admin|api|db-migrator|e2e|print-agent|realtime|storybook)\//,
   /^scripts\//,
+  // 底座帶的 repo 自製 Claude skill(module-scaffold、project-bootstrap…);專案自己的 skill 日後需要時另立 project/ 規則
+  /^\.claude\/skills\//,
 ];
 
 const isImmutableSource = (file) =>
