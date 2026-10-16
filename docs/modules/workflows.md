@@ -172,6 +172,39 @@
 
 **整個送出(第 2–4 步與稽核)是一個交易**:任一步失敗,實例、任務、提交的變更、稽核都不存在,提交維持送出前的狀態,重送就是重新送一次。檢查點 `submit:instance-created` / `submit:submission-linked` 在 `WorkflowEngineHooks`,測試在那裡(與推進的 `action:*`)注入中斷、驗證全部回復。
 
+## 跳過與自動通過
+
+審核關卡定義(`ReviewStepDef`,`workflow_versions.steps[]` 的 JSON;設計器以 `saveWorkflowVersionDraft` 的 `definition.steps` 傳)多兩個欄位,與既有的 `skipWhen` 並存:
+
+| 欄位          | 形狀                                                | 省略 / `null`  |
+| ------------- | --------------------------------------------------- | -------------- |
+| `skipOrgs`    | `{ orgIds: string[], includeDescendants: boolean }` | 不看組織       |
+| `autoApprove` | `{ applicant?: boolean, priorApprover?: boolean }`  | 兩項都照常審核 |
+
+- `orgIds` 是組織 id 或 `"tenant"`(`SKIP_ORG_TENANT`,租戶,畫面「最上層組織」)。
+- **進關**(`step-entry.service.ts`,判斷表列 5 的查資料庫那一半)依序:
+  1. `skipOrgs`:比對修訂 `ctx.orgIds`(送出當下的所屬組織全部,`org_user` 直接關聯)與名單;`includeDescendants` 時讀那些組織的 `ancestors`。快照沒有 `orgIds`(舊修訂)→ 不成立。
+  2. `skipWhen`:照舊。
+  3. 任一成立 → `{ kind: "skip", reason }`,`step_skipped` 帶 `reason`(`skip_orgs` / `skip_condition`,兩項都成立記 `skip_orgs`);不經 `beforeApprove`,推進照常觸發 `stepPassed(skipped: true)`。
+  4. 否則解析審核者 → domain `autoApprovalCandidates` 列候選 → 逐位以**本人**的操作者上下文(`OperatorContextService.resolve`,單據組織為目前組織)跑 `FormLifecycleService.checkApproveGuard`(同一個 `beforeApprove`,擋下以回傳值表示,不拋)。通過的放進 `autoApprovals`;`any` 一位通過就停。
+- **寫入**(domain `advance` 列 5):進關的同一次 CAS 寫計畫與自動通過的決定(`decisions` 整份 + 每筆 `approved` 事件帶 `reason`:`auto_applicant` / `auto_prior_approver`),接著建那幾位的任務(投影 = `approved`,不寄「有新任務」)。之後照判斷表:`any` 下一輪列 4 完成、`all` 等其他人。
+- `keepsApplicant`:開了 `applicant`,或開了 `priorApprover` 且申請人在上游已有核准 → 申請人留在計畫(`buildPlan` 的 `keepApplicant`);被守門擋下時任務留給他。其餘情況照舊剔除申請人。
+- 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(B5 自動記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
+- 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
+- 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
+- admin 時間軸(`ApprovalTimeline`)依 `history[].reason` 顯示 `admin.approval.timeline.reasons.*`。設計器的關卡面板見 #61(T46)。
+
+**錯誤碼**(檢查器;發布擋):
+
+| 碼                     | 什麼時候                                                            |
+| ---------------------- | ------------------------------------------------------------------- |
+| `SKIP_ORGS_INVALID`    | `skipOrgs` 沒選組織、id 不是非空字串、`includeDescendants` 不是布林 |
+| `SKIP_ORGS_IN_SHARED`  | 共用流程的 `skipOrgs` 選了 `"tenant"` 以外的組織                    |
+| `ORG_NOT_IN_TENANT`    | 客製流程的 `skipOrgs` 選的組織不在本租戶(`property: "skipOrgs"`)    |
+| `AUTO_APPROVE_INVALID` | `autoApprove` 的值不是布林                                          |
+
+匯合節點帶了 `skipOrgs` / `autoApprove` 一樣是 `JOIN_HAS_REVIEW_PROPS`;所有審核關卡都設了 `skipWhen` 或 `skipOrgs` → `ALL_STEPS_SKIPPABLE`(警告)。
+
 ## 推進(`advance` 的執行器)
 
 `workflow-engine/workflow-engine.service.ts`。判斷表本體與**執行合約**在 `@repo/domain/workflow` 的 `advance.ts` 檔頭,這裡只執行:

@@ -66,6 +66,8 @@ const FORMULA_CONTEXTS = new Set<ContextPath>([
   "ctx.now",
   "ctx.user.id",
   "ctx.user.orgId",
+  "ctx.user.orgIds",
+  "ctx.tenant.id",
 ]);
 
 const CONSTANT_TYPES: Readonly<Record<ConstantKind, ExpressionValueType>> = {

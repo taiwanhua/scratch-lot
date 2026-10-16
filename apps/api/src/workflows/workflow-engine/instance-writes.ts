@@ -3,12 +3,14 @@ import { Types } from "mongoose";
 import type {
   AcceptedDecision,
   HistoryEvent,
+  HistoryReason,
   InstanceCondition,
   InstanceSnapshot,
   InstanceUpdate,
   NotifiedResult,
   PlanItem,
   StepState,
+  StepUpdate,
   SubmissionSnapshot,
   TaskProjection,
   TaskSnapshot,
@@ -88,6 +90,7 @@ export function historyEventOf(event: {
   toUserId?: IdLike | null;
   comment?: string | null;
   result?: NotifiedResult | null;
+  reason?: HistoryReason | null;
 }): HistoryEvent {
   return {
     at: event.at,
@@ -98,6 +101,7 @@ export function historyEventOf(event: {
     toUserId: nullableId(event.toUserId),
     comment: event.comment ?? null,
     result: event.result ?? null,
+    reason: event.reason ?? null,
   };
 }
 
@@ -173,6 +177,20 @@ export function historyEventDocument(
     toUserId: event.toUserId ? toObjectId(event.toUserId) : null,
     comment: event.comment ?? null,
     result: event.result ?? null,
+    reason: event.reason ?? null,
+  };
+}
+
+/** 決定落庫形狀(id 轉 ObjectId)。 */
+export function decisionDocument(
+  decision: AcceptedDecision,
+): Record<string, unknown> {
+  return {
+    taskKey: decision.taskKey,
+    userId: toObjectId(decision.userId),
+    decision: decision.decision,
+    comment: decision.comment,
+    at: decision.at,
   };
 }
 
@@ -226,6 +244,26 @@ export function instanceFilterOf(
   return clauses.length === 1 ? (clauses[0] ?? {}) : { $and: clauses };
 }
 
+/** 一個節點要改的欄位 → `$set` 的鍵值(`prefix` = `steps.$[sN]`)。 */
+function stepSetOf(prefix: string, patch: StepUpdate): Record<string, unknown> {
+  const set: Record<string, unknown> = {};
+  if (patch.status !== undefined) {
+    set[`${prefix}.status`] = patch.status;
+  }
+  if (patch.blocked !== undefined) {
+    set[`${prefix}.blocked`] = patch.blocked;
+  }
+  if (patch.plan !== undefined) {
+    set[`${prefix}.plan`] = patch.plan.map((item) => planItemDocument(item));
+  }
+  if (patch.decisions !== undefined) {
+    set[`${prefix}.decisions`] = patch.decisions.map((decision) =>
+      decisionDocument(decision),
+    );
+  }
+  return set;
+}
+
 /** `InstanceUpdate` → Mongo 更新 + `arrayFilters`(每個被改的節點一個識別名 `s0`、`s1`…)。 */
 export function instanceUpdateOf(update: InstanceUpdate): {
   update: Record<string, unknown>;
@@ -250,17 +288,7 @@ export function instanceUpdateOf(update: InstanceUpdate): {
   ).entries()) {
     const name = `s${String(index)}`;
     arrayFilters.push({ [`${name}.stepKey`]: stepKey });
-    if (patch.status !== undefined) {
-      set[`steps.$[${name}].status`] = patch.status;
-    }
-    if (patch.blocked !== undefined) {
-      set[`steps.$[${name}].blocked`] = patch.blocked;
-    }
-    if (patch.plan !== undefined) {
-      set[`steps.$[${name}].plan`] = patch.plan.map((item) =>
-        planItemDocument(item),
-      );
-    }
+    Object.assign(set, stepSetOf(`steps.$[${name}]`, patch));
   }
   const document: Record<string, unknown> = {};
   if (Object.keys(set).length > 0) {

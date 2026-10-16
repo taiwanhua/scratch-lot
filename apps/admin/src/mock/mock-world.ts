@@ -338,6 +338,24 @@ const leaveSubmissions = () => [
   }),
 ];
 
+/** 時間軸的一筆假事件(`reason` = 跳過 / 自動通過的原因)。 */
+const mockEvent = (
+  kind: string,
+  stepKey: string | null,
+  reason: string | null,
+  who: typeof APPLICANT | null = null,
+) => ({
+  at: "2026-09-20T02:00:00.000Z",
+  kind,
+  stepKey,
+  taskKey: who === null || stepKey === null ? null : `${stepKey}-1`,
+  user: who,
+  toUser: null,
+  comment: null,
+  result: null,
+  reason,
+});
+
 /** 申請中心 / 詳情 / 阻擋清單的假資料:一張待小華審核、一張採購單平行分支(採購那條阻擋)。 */
 const mockWorkflowRuntime = () => ({
   instances: [
@@ -379,6 +397,18 @@ const mockWorkflowRuntime = () => ({
           allowReturn: false,
         }),
         instanceStep("confirm", "原部門確認"),
+      ],
+      // 時間軸示範 B4 跳過與 B5 自動通過的原因
+      history: [
+        mockEvent("started", null, null, APPLICANT),
+        mockEvent("step_entered", "review", null),
+        mockEvent("approved", "review", "auto_applicant", APPLICANT),
+        mockEvent("step_completed", "review", null),
+        mockEvent("step_skipped", "finance", "skip_orgs"),
+        mockEvent("step_entered", "legal", null),
+        mockEvent("approved", "legal", "auto_prior_approver", HR),
+        mockEvent("step_entered", "purchase", null),
+        mockEvent("blocked", "purchase", null),
       ],
     }),
   ],

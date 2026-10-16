@@ -51,6 +51,8 @@ query Me {
       timezone
       # 最上層組織名稱(租戶頂層;根組織 = 自己):單據(58mm)上方印的租戶名稱,不印分店名稱
       tenantName
+      # 最上層組織 id(租戶頂層;根組織 = null):填寫中表達式的 ctx.tenant.id
+      tenantId
     }
     orgs {
       id

@@ -55,7 +55,7 @@ export const FIELD_EXPRESSION_TYPES: Readonly<
   array: null,
 };
 
-/** 系統值(畫面上的「系統值」= `ctx.*`)的型別:現在時間 = 日期時間,其餘是文字。 */
+/** 系統值(畫面上的「系統值」= `ctx.*`)的型別:現在時間 = 日期時間、所屬組織(全部)= 清單,其餘是文字。 */
 export const CONTEXT_VAR_TYPES: Readonly<
   Record<(typeof CONTEXT_VAR_PATHS)[number], ExpressionValueType>
 > = {
@@ -63,6 +63,8 @@ export const CONTEXT_VAR_TYPES: Readonly<
   "ctx.timezone": "text",
   "ctx.user.id": "text",
   "ctx.user.orgId": "text",
+  "ctx.user.orgIds": "list",
+  "ctx.tenant.id": "text",
 };
 
 /** `dateDiff` 的第三參數(單位);缺參數 = `days`。 */

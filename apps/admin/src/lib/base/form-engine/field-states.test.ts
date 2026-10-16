@@ -45,7 +45,8 @@ const fields: FieldDef[] = [
 const ctxAt = (now: string) => ({
   now,
   timezone: "Asia/Taipei",
-  user: { id: "user-1", orgId: "org-1" },
+  user: { id: "user-1", orgId: "org-1", orgIds: ["org-1"] },
+  tenant: { id: "tenant-1" },
 });
 
 describe("resolveFormState:FormRenderer 五種 mode 的語意", () => {

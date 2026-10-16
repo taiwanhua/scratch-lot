@@ -488,6 +488,8 @@ export function contextOf(facts: FormOperatorFacts): ExpressionContext {
       orgId: facts.operator.currentOrgId
         ? String(facts.operator.currentOrgId)
         : null,
+      orgIds: facts.operator.memberOrgIds.map(String),
     },
+    tenant: { id: facts.tenantId ? String(facts.tenantId) : null },
   };
 }

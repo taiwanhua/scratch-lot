@@ -1808,7 +1808,11 @@
           "timezone": "時區",
           "user": {
             "id": "填寫者",
-            "orgId": "填寫者的組織"
+            "orgId": "填寫者的目前組織",
+            "orgIds": "填寫者所屬的組織(全部)"
+          },
+          "tenant": {
+            "id": "租戶"
           }
         }
       },
@@ -2146,6 +2150,12 @@
         "withdrawn": "申請人撤回",
         "completed": "審核完成",
         "superseded": "已被再次送出的修訂取代"
+      },
+      "reasons": {
+        "skip_orgs": "「{step}」申請人屬於指定的組織,略過",
+        "skip_condition": "「{step}」符合跳過條件,略過",
+        "auto_applicant": "{user} 在「{step}」核准(申請人是審核者,自動通過)",
+        "auto_prior_approver": "{user} 在「{step}」核准(已在前關核准,自動通過)"
       }
     },
     "decide": {

@@ -307,6 +307,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "`t(`kinds.${event.kind}`)`,kind 是實例 `history` 的事件種類",
   },
   {
+    key: "admin.approval.timeline.reasons.",
+    reason:
+      "`t(`reasons.${event.reason}`)`,reason 取自 `HISTORY_REASONS`(跳過 / 自動通過的原因)",
+  },
+  {
     key: "admin.approval.decide.buttons.",
     reason: "`t(`buttons.${item}`)`,item 是 GraphQL 的 `WorkflowDecision`",
   },

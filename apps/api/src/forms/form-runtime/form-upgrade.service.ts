@@ -43,7 +43,6 @@ import type { UpgradeFormSubmissionsInput } from "./dto/form-runtime.input";
 import {
   SUBMISSION_AUDIT,
   definitionOf,
-  expressionContextOf,
   touchedKeysOf,
 } from "./form-submissions.service";
 import {
@@ -52,6 +51,7 @@ import {
   type FormUpgradePlan,
   type FormUpgradeSkipReason,
 } from "./models/form-upgrade.model";
+import { expressionContextOf } from "./revision-context";
 import { assertSubmissionCapacity } from "./revision-limits";
 
 type SubmissionRecord = Persisted<FormSubmissionDocument>;

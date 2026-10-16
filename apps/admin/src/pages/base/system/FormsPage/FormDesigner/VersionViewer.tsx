@@ -18,7 +18,10 @@ import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRen
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { definitionOf } from "@/lib/base/form-engine/definition";
-import { liveContextOf } from "@/lib/base/form-engine/expression-context";
+import {
+  NO_IDENTITY,
+  liveContextOf,
+} from "@/lib/base/form-engine/expression-context";
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { DesignerPreview } from "./DesignerPreview";
@@ -33,7 +36,7 @@ export interface VersionViewerProps {
   onChanged: () => void;
 }
 
-const DESIGN_CONTEXT = liveContextOf(null, null, new Date(0));
+const DESIGN_CONTEXT = liveContextOf(NO_IDENTITY, new Date(0));
 
 /** 唯讀:畫布的格子不能拖(沒有感測器),點了也不選取。 */
 const NO_SENSORS: never[] = [];

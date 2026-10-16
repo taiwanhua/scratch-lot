@@ -67,7 +67,7 @@ describe("表達式選擇器:根節點依用途過濾(Spec 6a §5 表 B)", () =>
     expect(root.operators).not.toContain("==");
   });
 
-  it("文字欄的公式根可單獨用系統值「填寫者 / 填寫者的組織」,不列時區;日期位置可用現在時間", () => {
+  it("文字欄的公式根可單獨用系統值「填寫者 / 填寫者的目前組織 / 租戶」,不列時區與所屬組織(全部,清單);日期位置可用現在時間", () => {
     const text = positionOptionsOf(
       {
         expected: ["text"],
@@ -78,7 +78,11 @@ describe("表達式選擇器:根節點依用途過濾(Spec 6a §5 表 B)", () =>
       },
       fields,
     );
-    expect(text.contexts).toEqual(["ctx.user.id", "ctx.user.orgId"]);
+    expect(text.contexts).toEqual([
+      "ctx.user.id",
+      "ctx.user.orgId",
+      "ctx.tenant.id",
+    ]);
     const date = positionOptionsOf(
       {
         expected: ["date"],

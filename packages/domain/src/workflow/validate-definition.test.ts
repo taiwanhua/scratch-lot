@@ -313,6 +313,110 @@ describe("validateWorkflowDefinition:基本與審核者來源", () => {
   });
 });
 
+/** 一關、帶「申請人屬於這些組織」。 */
+const withOrgs = (skipOrgs: unknown): WorkflowDefinition => ({
+  steps: [review("hr", { skipOrgs: skipOrgs as never })],
+});
+
+describe("validateWorkflowDefinition:指定組織跳過與自動通過(B4 / B5)", () => {
+  it("共用流程指定特定組織 → SKIP_ORGS_IN_SHARED;只選租戶可以", () => {
+    expect(
+      codesOf(withOrgs({ orgIds: [ORG_ID], includeDescendants: true }), SHARED),
+    ).toEqual(["SKIP_ORGS_IN_SHARED"]);
+    expect(
+      codesOf(
+        withOrgs({ orgIds: ["tenant", ORG_ID], includeDescendants: false }),
+        SHARED,
+      ),
+    ).toEqual(["SKIP_ORGS_IN_SHARED"]);
+    expect(
+      codesOf(
+        withOrgs({ orgIds: ["tenant"], includeDescendants: true }),
+        SHARED,
+      ),
+    ).toEqual([]);
+  });
+
+  it("客製流程:指定組織要在本租戶(ORG_NOT_IN_TENANT,property = skipOrgs)", () => {
+    const options = { isShared: false, tenantOrgIds: new Set([ORG_ID]) };
+    expect(
+      codesOf(
+        withOrgs({ orgIds: [ORG_ID], includeDescendants: false }),
+        options,
+      ),
+    ).toEqual([]);
+    const report = validateWorkflowDefinition(
+      withOrgs({
+        orgIds: ["65a000000000000000000009"],
+        includeDescendants: false,
+      }),
+      options,
+    );
+    expect(report.errors).toEqual([
+      expect.objectContaining({
+        code: "ORG_NOT_IN_TENANT",
+        location: { stepKey: "hr", stepIndex: 0, property: "skipOrgs" },
+      }),
+    ]);
+  });
+
+  it("形狀不對(沒選組織、含下層不是布林)→ SKIP_ORGS_INVALID;沒設 / null = 不看組織", () => {
+    expect(
+      codesOf(withOrgs({ orgIds: [], includeDescendants: false })),
+    ).toEqual(["SKIP_ORGS_INVALID"]);
+    expect(codesOf(withOrgs({ orgIds: [ORG_ID] }))).toEqual([
+      "SKIP_ORGS_INVALID",
+    ]);
+    expect(codesOf(withOrgs(null))).toEqual([]);
+  });
+
+  it("自動通過只能是布林;不認得的值 → AUTO_APPROVE_INVALID", () => {
+    expect(
+      codesOf({
+        steps: [
+          review("hr", {
+            autoApprove: { applicant: true, priorApprover: false },
+          }),
+        ],
+      }),
+    ).toEqual([]);
+    expect(
+      codesOf({
+        steps: [review("hr", { autoApprove: { applicant: "yes" } as never })],
+      }),
+    ).toEqual(["AUTO_APPROVE_INVALID"]);
+  });
+
+  it("匯合節點帶了指定組織跳過 / 自動通過 → JOIN_HAS_REVIEW_PROPS", () => {
+    const definition = graph(
+      [
+        review("a"),
+        review("b"),
+        review("c"),
+        {
+          ...join("j"),
+          autoApprove: { applicant: true },
+        } as unknown as StepDef,
+      ],
+      [edge("a", "b"), edge("a", "c"), edge("b", "j"), edge("c", "j")],
+    );
+    expect(codesOf(definition)).toContain("JOIN_HAS_REVIEW_PROPS");
+  });
+
+  it("所有關卡都可能被跳過(含指定組織跳過)→ 警告", () => {
+    expect(
+      warningsOf({
+        steps: [
+          review("a", { skipWhen: true }),
+          review("b", {
+            skipOrgs: { orgIds: ["tenant"], includeDescendants: true },
+          }),
+        ],
+      }),
+    ).toEqual(["ALL_STEPS_SKIPPABLE"]);
+  });
+});
+
 describe("validateWorkflowDefinition:匯合節點與結構(每種錯誤各一例)", () => {
   it("直線版本只允許審核關卡,且不做結構檢查", () => {
     expect(codesOf({ steps: [review("a"), join("j")] })).toEqual([

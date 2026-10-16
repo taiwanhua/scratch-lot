@@ -1,10 +1,12 @@
 import type { Audience } from "@repo/domain/audience";
 import type { Expression } from "@repo/domain/form";
-import type {
-  AssigneeSource,
-  StepDef,
-  WorkflowDefinition,
-  WorkflowEdge,
+import {
+  type AssigneeSource,
+  REVIEW_STEP_PROPS,
+  type SkipOrgsDef,
+  type StepDef,
+  type WorkflowDefinition,
+  type WorkflowEdge,
 } from "@repo/domain/workflow";
 
 /**
@@ -63,9 +65,9 @@ function stepOf(raw: unknown): StepDef {
   if (step.kind === "join") {
     // 帶了審核屬性照樣保留,讓檢查器指出 `JOIN_HAS_REVIEW_PROPS`
     const extras = Object.fromEntries(
-      ["assignee", "mode", "skipWhen", "allowReturn"]
-        .filter((property) => step[property] !== undefined)
-        .map((property) => [property, step[property]]),
+      REVIEW_STEP_PROPS.filter((property) => step[property] !== undefined).map(
+        (property) => [property, step[property]],
+      ),
     );
     return { ...base, kind: "join", ...extras };
   }
@@ -79,6 +81,13 @@ function stepOf(raw: unknown): StepDef {
     ...(step.skipWhen === undefined || step.skipWhen === null
       ? {}
       : { skipWhen: step.skipWhen as Expression }),
+    // 指定組織跳過、自動通過原樣保留(形狀交給檢查器的 `SKIP_ORGS_INVALID` / `AUTO_APPROVE_INVALID`)
+    ...(step.skipOrgs === undefined || step.skipOrgs === null
+      ? {}
+      : { skipOrgs: step.skipOrgs as SkipOrgsDef }),
+    ...(step.autoApprove === undefined || step.autoApprove === null
+      ? {}
+      : { autoApprove: step.autoApprove }),
     ...(typeof step.allowReturn === "boolean"
       ? { allowReturn: step.allowReturn }
       : {}),

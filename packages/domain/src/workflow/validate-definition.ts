@@ -22,7 +22,9 @@ import {
 import {
   APPROVAL_MODES,
   ASSIGNEE_KINDS,
+  REVIEW_STEP_PROPS,
   type ReviewStepDef,
+  SKIP_ORG_TENANT,
   STEP_KINDS,
   type StepDef,
   type WorkflowDefinition,
@@ -36,11 +38,14 @@ export interface WorkflowUserFact {
 }
 
 export interface ValidateWorkflowOptions {
-  /** 共用流程(`ownerOrgId = null`):人員條件只能用權限與非指定的組織來源(`AUDIENCE_IN_SHARED`)。 */
+  /**
+   * 共用流程(`ownerOrgId = null`):人員條件只能用權限與非指定的組織來源(`AUDIENCE_IN_SHARED`);
+   * 「申請人屬於這些組織」只能用租戶(`SKIP_ORGS_IN_SHARED`)。
+   */
   isShared: boolean;
   /** 本租戶的角色 id;不給就不檢查 `ROLE_NOT_IN_TENANT`。 */
   tenantRoleIds?: ReadonlySet<string>;
-  /** 本租戶子樹的組織 id;不給就不檢查 `ORG_NOT_IN_TENANT`。 */
+  /** 本租戶子樹的組織 id(人員條件與「申請人屬於這些組織」共用);不給就不檢查 `ORG_NOT_IN_TENANT`。 */
   tenantOrgIds?: ReadonlySet<string>;
   /** 本租戶使用者目錄;不給就不出 `USER_INVALID`。 */
   users?: ReadonlyMap<string, WorkflowUserFact>;
@@ -110,13 +115,13 @@ export function validateWorkflowDefinition(
     reviewSteps.every(
       (step) =>
         !isJoinStep(step) &&
-        step.skipWhen !== undefined &&
-        step.skipWhen !== null,
+        ((step.skipWhen !== undefined && step.skipWhen !== null) ||
+          (step.skipOrgs !== undefined && step.skipOrgs !== null)),
     )
   ) {
     collector.warn(
       "ALL_STEPS_SKIPPABLE",
-      "所有關卡都設了跳過條件,可能整張單不經任何人審核就完成",
+      "所有關卡都設了跳過條件或指定組織跳過,可能整張單不經任何人審核就完成",
       {},
     );
   }
@@ -166,7 +171,7 @@ function checkJoin(
       location,
     );
   }
-  const extra = ["assignee", "mode", "skipWhen", "allowReturn"].filter(
+  const extra = REVIEW_STEP_PROPS.filter(
     (property) =>
       property in step &&
       (step as unknown as Record<string, unknown>)[property] !== undefined &&
@@ -209,6 +214,89 @@ function checkReviewStep(
         { ...location, property: "skipWhen", exprPath: problem.path },
       );
     }
+  }
+  checkSkipOrgs(step, options, collector, location);
+  checkAutoApprove(step, collector, location);
+}
+
+/**
+ * 「申請人屬於這些組織」(B4):形狀(`SKIP_ORGS_INVALID`:至少一個組織、id 是非空字串、「包含下層」是布林);
+ * 共用流程只能選租戶(`SKIP_ORGS_IN_SHARED`);客製流程選的組織要在本租戶(`ORG_NOT_IN_TENANT`)。
+ */
+function checkSkipOrgs(
+  step: ReviewStepDef,
+  options: ValidateWorkflowOptions,
+  collector: WorkflowIssueCollector,
+  location: WorkflowIssueLocation,
+): void {
+  const raw: unknown = step.skipOrgs;
+  if (raw === undefined || raw === null) {
+    return;
+  }
+  const at = { ...location, property: "skipOrgs" };
+  const candidate = raw as { orgIds?: unknown; includeDescendants?: unknown };
+  const orgIds = candidate.orgIds;
+  if (
+    typeof raw !== "object" ||
+    !Array.isArray(orgIds) ||
+    orgIds.length === 0 ||
+    !orgIds.every((id) => typeof id === "string" && id !== "") ||
+    typeof candidate.includeDescendants !== "boolean"
+  ) {
+    collector.error(
+      "SKIP_ORGS_INVALID",
+      `關卡 ${step.key} 的「申請人屬於這些組織」要至少選一個組織`,
+      at,
+    );
+    return;
+  }
+  const specific = (orgIds as string[]).filter((id) => id !== SKIP_ORG_TENANT);
+  if (options.isShared) {
+    if (specific.length > 0) {
+      collector.error(
+        "SKIP_ORGS_IN_SHARED",
+        `共用流程的「申請人屬於這些組織」只能選最上層組織(關卡 ${step.key})`,
+        at,
+      );
+    }
+    return;
+  }
+  if (
+    options.tenantOrgIds !== undefined &&
+    specific.some((id) => !options.tenantOrgIds?.has(id))
+  ) {
+    collector.error(
+      "ORG_NOT_IN_TENANT",
+      `關卡 ${step.key} 的「申請人屬於這些組織」選的組織不在本租戶`,
+      at,
+    );
+  }
+}
+
+/** 自動通過(B5):兩項都是布林(省略 = 照常審核)。 */
+function checkAutoApprove(
+  step: ReviewStepDef,
+  collector: WorkflowIssueCollector,
+  location: WorkflowIssueLocation,
+): void {
+  const raw: unknown = step.autoApprove;
+  if (raw === undefined || raw === null) {
+    return;
+  }
+  const candidate = raw as Record<string, unknown>;
+  const isValid =
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    ["applicant", "priorApprover"].every(
+      (key) =>
+        candidate[key] === undefined || typeof candidate[key] === "boolean",
+    );
+  if (!isValid) {
+    collector.error(
+      "AUTO_APPROVE_INVALID",
+      `關卡 ${step.key} 的自動通過設定不對(只能是照常審核或自動通過)`,
+      { ...location, property: "autoApprove" },
+    );
   }
 }
 

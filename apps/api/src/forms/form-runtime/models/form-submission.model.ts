@@ -102,7 +102,10 @@ export class FormDisplayValue {
   items!: FormDisplayItem[];
 }
 
-/** 一次送出 / 修改的上下文(唯讀檢視重算條件用;`at` / `timezone` / `userId` / `orgId`)。 */
+/**
+ * 一次送出 / 修改的上下文(唯讀檢視重算條件用;表達式的 `ctx.*`):`orgId` = 當時的目前組織、
+ * `orgIds` = 當時的所屬組織(全部;舊修訂 = 空陣列)、`tenantId` = 當時的租戶(根組織 / 舊修訂 = null)。
+ */
 @ObjectType()
 export class FormSubmissionContext {
   @Field(() => GraphQLISODateTime)
@@ -116,6 +119,12 @@ export class FormSubmissionContext {
 
   @Field(() => ID, { nullable: true })
   orgId!: string | null;
+
+  @Field(() => [ID])
+  orgIds!: string[];
+
+  @Field(() => ID, { nullable: true })
+  tenantId!: string | null;
 }
 
 /** 修訂紀錄的一筆(值要看時以 `formSubmission(id, revision)` 讀,差異由相鄰兩筆算)。 */

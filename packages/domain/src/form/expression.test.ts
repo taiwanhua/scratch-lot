@@ -80,6 +80,13 @@ describe("@repo/domain/form 表達式:上下文 ctx.* 與擴充函式", () => {
     expect(evaluate({ var: "ctx.timezone" })).toBe("Asia/Taipei");
   });
 
+  it("ctx.user.orgIds(所屬組織全部)/ ctx.tenant.id 走上下文,可用於 in", () => {
+    expect(evaluate({ var: "ctx.user.orgIds" })).toEqual(["org-1"]);
+    expect(evaluate({ var: "ctx.tenant.id" })).toBe("tenant-1");
+    expect(evaluate({ in: ["org-1", { var: "ctx.user.orgIds" }] })).toBe(true);
+    expect(evaluate({ in: ["org-2", { var: "ctx.user.orgIds" }] })).toBe(false);
+  });
+
   it("now 注入:回 ctx.now,不是真正的現在", () => {
     expect(evaluate({ now: [] })).toBe(CTX.now);
   });

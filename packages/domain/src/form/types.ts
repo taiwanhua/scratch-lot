@@ -41,7 +41,13 @@ export interface ExpressionContext {
   now: string;
   /** IANA 時區(租戶時區),`dateDiff` 以它的日曆日計。 */
   timezone: string;
-  user: { id: string | null; orgId: string | null };
+  /**
+   * `id` = 填寫者;`orgId` = 填寫者的**目前組織**;`orgIds` = 填寫者的**所屬組織(全部)**
+   * (`org_user` 的直接關聯,不含下層;讀不到 = 空陣列)。
+   */
+  user: { id: string | null; orgId: string | null; orgIds: string[] };
+  /** 租戶(單據所屬租戶頂層組織的 id;根組織 / 讀不到 = null)。 */
+  tenant: { id: string | null };
 }
 
 /** lookup 來源描述(`options.source`、`prefills[].source`、`reference` 的 `source`)。 */

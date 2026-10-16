@@ -98,10 +98,12 @@ export class OperatorContextService {
         ? currentOrgId
         : (memberOrgs[0]?.id ?? null);
 
-    const [visibleOrgIds, enabledRoles] = await Promise.all([
-      this.visibleOrgIdsOf(reader, memberOrgDocuments),
-      this.enabledRolesOf(reader, userId),
-    ]);
+    // 依序讀(TX-02):B5 自動通過在推進的交易內以審核者本人的身分跑守門,也走這裡
+    const visibleOrgIds = await this.visibleOrgIdsOf(
+      reader,
+      memberOrgDocuments,
+    );
+    const enabledRoles = await this.enabledRolesOf(reader, userId);
     const managedOrgIds = await this.managedOrgIdsOf(reader, enabledRoles);
     return {
       operator: {

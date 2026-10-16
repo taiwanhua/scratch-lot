@@ -115,6 +115,8 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
     }
     comment
     result
+    # 跳過 / 自動通過的原因(skip_orgs / skip_condition / auto_applicant / auto_prior_approver;其他 null)
+    reason
   }
   outcome {
     kind

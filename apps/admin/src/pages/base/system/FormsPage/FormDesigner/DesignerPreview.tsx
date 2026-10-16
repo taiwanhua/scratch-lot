@@ -14,6 +14,7 @@ import { Typography } from "@repo/ui/typography";
 import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
 import { LookupDialog } from "@/components/base/form-engine/LookupDialog/LookupDialog";
 import { useFillValues } from "@/hooks/base/useFillValues";
+import { useLiveIdentity } from "@/hooks/base/useLiveIdentity";
 import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -60,12 +61,8 @@ export const DesignerPreview = ({
   const temporalText = useTemporalText();
   // 摘要槽「日期」對到日期欄印日期,對日期時間欄或沒對(= 送出時間)印到分鐘
   const summaryDateType = summaryDateTypeOf(definition);
-  const expressionContext = liveContextOf(
-    user?.id ?? null,
-    user?.currentOrg?.id ?? null,
-    now,
-    timezone,
-  );
+  const identity = useLiveIdentity();
+  const expressionContext = liveContextOf(identity, now, timezone);
   const fill = useFillValues({
     fields: definition.fields,
     initialValues: {},

@@ -11,6 +11,7 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useIsCurrentFormVersion } from "@/hooks/base/useIsCurrentFormVersion";
+import { useLiveIdentity } from "@/hooks/base/useLiveIdentity";
 import { useMe } from "@/hooks/base/useMe";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
@@ -50,13 +51,12 @@ export const FormEditPage = ({ module, routeParam }: ModulePageProps) => {
   );
   const [now] = useState(() => new Date());
   const user = me.data?.me;
-  const userId = user?.id ?? null;
-  const orgId = user?.currentOrg?.id ?? null;
+  const identity = useLiveIdentity();
   // 權限與 ctx 以 useMemo 保持身分穩定:`FormRenderer` 以它們為 memo 依賴
   const timezone = useTenantTimezone();
   const expressionContext = useMemo(
-    () => liveContextOf(userId, orgId, now, timezone),
-    [userId, orgId, now, timezone],
+    () => liveContextOf(identity, now, timezone),
+    [identity, now, timezone],
   );
   const permissions = useMemo(
     () => (submission === null ? null : permissionsOfSubmission(submission)),
