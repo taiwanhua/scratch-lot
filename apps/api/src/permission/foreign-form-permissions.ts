@@ -50,12 +50,12 @@ export class ForeignFormPermissions {
         parsed.flatMap((entry) => (entry.form ? [entry.form.formKey] : [])),
       ),
     ];
-    const [forms, tenantId] = await Promise.all([
+    // 依序查(TX-02):人員條件的權限欄會在呼叫端的交易內走到這裡,同一個 session 上不平行讀
+    const forms =
       formKeys.length === 0
         ? []
-        : this.forms.findMany(reader, { key: { $in: formKeys } }),
-      this.tenantIdOf(reader),
-    ]);
+        : await this.forms.findMany(reader, { key: { $in: formKeys } });
+    const tenantId = await this.tenantIdOf(reader);
     const allowed = new Set(
       forms
         .filter(

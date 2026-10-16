@@ -82,11 +82,12 @@ export function buildPasswordResetEmail(input: ActionEmailInput): MailMessage {
 export function buildNotificationEmail(
   input: NotificationEmailInput,
 ): MailMessage {
+  const frame = notificationFrameOf(input.locale);
   const paragraphs = [
-    `${input.name} 您好:`,
+    frame.greeting(input.name),
     input.body,
-    ...(input.link === null ? [] : ["請開啟以下連結查看:", input.link]),
-    SIGNATURE,
+    ...(input.link === null ? [] : [frame.linkIntro, input.link]),
+    frame.signature,
   ];
   return {
     kind: "notification",
@@ -97,6 +98,36 @@ export function buildNotificationEmail(
     text: paragraphs.join("\n\n"),
     html: toHtml(paragraphs, input.link),
   };
+}
+
+/** 通知信外框(問候語、連結說明、署名)的語系;內文已由通知類型的範本以同一個語言產生。 */
+interface NotificationFrame {
+  greeting: (name: string) => string;
+  linkIntro: string;
+  signature: string;
+}
+
+const NOTIFICATION_FRAMES: Readonly<Record<"zh-TW" | "en", NotificationFrame>> =
+  {
+    "zh-TW": {
+      greeting: (name) => `${name} 您好:`,
+      linkIntro: "請開啟以下連結查看:",
+      signature: SIGNATURE,
+    },
+    // 專案設定的署名只有一份(繁中),英文外框以品牌名署名
+    en: {
+      greeting: (name) => `Hi ${name},`,
+      linkIntro: "Open the link below for details:",
+      signature: BRAND_NAME,
+    },
+  };
+
+/** 收件人語言 → 外框:英文(`en`、`en-US`…)用英文,其餘一律繁中。 */
+function notificationFrameOf(locale: string | null): NotificationFrame {
+  const [language] = (locale ?? "").split("-", 1);
+  return language === "en"
+    ? NOTIFICATION_FRAMES.en
+    : NOTIFICATION_FRAMES["zh-TW"];
 }
 
 /** 純文字段落轉最簡 HTML:連結那一段做成可點的 <a>,其餘逐段 <p>;內容一律跳脫。 */

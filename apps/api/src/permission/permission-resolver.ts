@@ -228,11 +228,11 @@ export class PermissionResolver {
     reader: OperatorContext,
     roleIds: Types.ObjectId[],
   ): Promise<PermissionResolution> {
-    // 步驟 3、4:兩種關聯各查一次(聯集,ADR-0003)
-    const [moduleIds, permissionIds] = await Promise.all([
-      this.relations.listModuleIdsOfRoles(roleIds),
-      this.relations.listPermissionIdsOfRoles(roleIds),
-    ]);
+    // 步驟 3、4:兩種關聯各查一次(聯集,ADR-0003)。依序查(TX-02):人員條件的「權限」欄會在
+    // 呼叫端的交易內(通知的收件人解析)走到這裡,同一個 session 上不平行讀
+    const moduleIds = await this.relations.listModuleIdsOfRoles(roleIds);
+    const permissionIds =
+      await this.relations.listPermissionIdsOfRoles(roleIds);
     // 停用的權限(permissions.enabled = 全域 kill switch)不算持有,連 `*` 被停用也不展開
     const granted = await this.permissions.findMany(reader, {
       _id: { $in: permissionIds },

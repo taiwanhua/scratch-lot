@@ -8,6 +8,15 @@ import {
   startAuthTestApp,
 } from "../auth/test-support/auth-app";
 import { createOrg } from "../auth/test-support/fixtures";
+import {
+  FormsRepository,
+  ModulesRepository,
+  OrgsRepository,
+  PermissionsRepository,
+  RolesRepository,
+  UsersRepository,
+} from "../database/database.module";
+import { RelationService } from "../database/relation.service";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { TransactionService } from "../database/transaction";
 import {
@@ -176,6 +185,8 @@ interface SettingRow {
   isDefault: boolean;
   defaultAudience?: Record<string, unknown>;
 }
+
+const PRINTERS_EDIT = "system.printers.edit";
 
 const SETTINGS_PERMISSIONS = [
   "system.notification-settings.view",
@@ -684,6 +695,53 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
   });
 
   describe("負責人提醒 × 通知設定", () => {
+    /** 台北店、持有 system.printers.edit(類型宣告的預設條件)的人。 */
+    let printerAdmin: FormOperator;
+    /** 台中店、同樣持有 system.printers.edit:不在台北店事件的組織範圍內。 */
+    let farPrinterAdmin: FormOperator;
+
+    beforeAll(async () => {
+      // 印表機管理的權限由列印的票種下;這裡先補一筆(已存在就沿用),讓預設條件真的找得到人
+      const module = await api.connection
+        .collection("modules")
+        .findOne<{ _id: Types.ObjectId }>({
+          key: "system.notification-settings",
+        });
+      const now = new Date();
+      await api.connection.collection("permissions").updateOne(
+        { key: PRINTERS_EDIT },
+        {
+          $setOnInsert: {
+            key: PRINTERS_EDIT,
+            moduleId: module?._id,
+            name: "編輯",
+            enabled: true,
+            isSystem: true,
+            source: "seed",
+            settings: {},
+            createdAt: now,
+            updatedAt: now,
+            createdBy: null,
+            updatedBy: null,
+            deletedAt: null,
+          },
+        },
+        { upsert: true },
+      );
+      printerAdmin = await createOperator(api, api.connection, {
+        orgId: store,
+        ownerOrgId: tenant,
+        moduleKeys: ["system.notification-settings"],
+        permissionKeys: [PRINTERS_EDIT],
+      });
+      farPrinterAdmin = await createOperator(api, api.connection, {
+        orgId: otherStore,
+        ownerOrgId: tenant,
+        moduleKeys: ["system.notification-settings"],
+        permissionKeys: [PRINTERS_EDIT],
+      });
+    });
+
     it("沒有調整時用類型宣告的預設人員條件(isDefault)", async () => {
       const { notificationSettings } = await ok<{
         notificationSettings: {
@@ -725,7 +783,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       await service.notify(offlineInput(secondKey));
       expect(await recipientsOf(secondKey)).toEqual([String(bob.userId)]);
 
-      // 還原預設 → 回到類型宣告(持有 system.printers.edit;這幾位都沒有)
+      // 還原預設 → 回到類型宣告(持有 system.printers.edit,且在台北店含上層)
       const reset = await ok<{
         resetNotificationSetting: { setting: SettingRow };
       }>(api, admin.token, RESET_SETTING, {
@@ -737,7 +795,99 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       );
       const thirdKey = nextKey("offline");
       await service.notify(offlineInput(thirdKey));
-      expect(await recipientsOf(thirdKey)).toEqual([]);
+      expect(await recipientsOf(thirdKey)).toEqual([
+        String(printerAdmin.userId),
+      ]);
+      expect(await recipientsOf(thirdKey)).not.toContain(
+        String(farPrinterAdmin.userId),
+      );
+    });
+
+    it("TX-02:交易內解析收件人時依序讀(人員條件的群組與權限反推都不平行查)", async () => {
+      await ok(api, admin.token, UPDATE_SETTING, {
+        input: {
+          type: PRINTING_AGENT_OFFLINE,
+          audience: {
+            mode: "match",
+            filter: {
+              op: "OR",
+              children: [
+                {
+                  field: "permission",
+                  cond: "in",
+                  value: { kind: "static", values: [PRINTERS_EDIT] },
+                },
+                {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "user",
+                      cond: "in",
+                      value: { kind: "static", values: [String(bob.userId)] },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      });
+      // 只包最底層、彼此不互相呼叫的讀取(核心關聯與各 repository 的查詢),數同時進行中的查詢
+      let inFlight = 0;
+      let maxInFlight = 0;
+      const restores: (() => void)[] = [];
+      const track = (instance: object, method: string) => {
+        const target = instance as Record<string, unknown>;
+        const original = target[method] as (
+          ...args: unknown[]
+        ) => Promise<unknown>;
+        target[method] = async (...args: unknown[]) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          try {
+            // 讓出事件迴圈:若呼叫端平行發出,下一個查詢會在這段時間進來
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            return await original.apply(instance, args);
+          } finally {
+            inFlight -= 1;
+          }
+        };
+        restores.push(() => Reflect.deleteProperty(target, method));
+      };
+      const relations = api.app.get(RelationService, { strict: false });
+      track(relations, "listLinks");
+      track(relations, "secondIdsOf");
+      for (const repository of [
+        PermissionsRepository,
+        RolesRepository,
+        OrgsRepository,
+        UsersRepository,
+        ModulesRepository,
+        FormsRepository,
+      ]) {
+        const instance = api.app.get(repository, { strict: false });
+        track(instance, "findMany");
+        track(instance, "findOne");
+      }
+      const dedupeKey = nextKey("tx02");
+      try {
+        await transactions.withTransaction(async () => {
+          await service.notify(offlineInput(dedupeKey));
+        });
+      } finally {
+        for (const restore of restores) {
+          restore();
+        }
+      }
+      expect(maxInFlight).toBe(1);
+      expect(await recipientsOf(dedupeKey)).toEqual(
+        [String(printerAdmin.userId), String(bob.userId)].toSorted((a, b) =>
+          a.localeCompare(b),
+        ),
+      );
+      await ok(api, admin.token, RESET_SETTING, {
+        input: { type: PRINTING_AGENT_OFFLINE },
+      });
     });
 
     it("調整與還原都寫稽核", async () => {

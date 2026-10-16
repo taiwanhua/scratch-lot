@@ -30,6 +30,8 @@ export interface NotificationEmailInput {
   title: string;
   body: string;
   link: string | null;
+  /** 收件人的語言(個人偏好 `locale`);決定問候語、連結說明與署名的語系,沒有或認不得 = 繁中 */
+  locale: string | null;
 }
 
 /** 模板產出、交給 adapter 投遞的一封信。 */

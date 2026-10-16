@@ -285,9 +285,11 @@ export class AudienceService {
     if (!isAudienceGroup(node)) {
       return this.listLeaf(node, ctx, tenantId);
     }
-    const sets = await Promise.all(
-      node.children.map((child) => this.listNode(child, ctx, tenantId)),
-    );
+    // 依序查(TX-02):通知的收件人解析在呼叫端的交易內進來,同一個 session 上不平行讀
+    const sets: Set<string>[] = [];
+    for (const child of node.children) {
+      sets.push(await this.listNode(child, ctx, tenantId));
+    }
     return node.op === "AND" ? intersect(sets) : union(sets);
   }
 

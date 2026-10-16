@@ -74,6 +74,8 @@
 
 - key:**`notification_<類型 key 的 . 換成 _>_<管道>`**,例 `workflow.task-created` × `in-app` → `notification_workflow_task-created_in-app`。偏好 key 不能含 `.`;類型與管道 key 都不含 `_`,以 `_` 切開就能還原。
 - 布林、預設 `true`(開)。`canDisable` 為否的管道登記 `allowedValues: [true]`:送 `false` → `VALIDATION_FAILED`(`reason: INVALID_VALUE`);`notify()` 也一律視為開著。
+- 只對類型的 `defaultChannels` 給開關:使用者不能自行打開類型預設沒有的管道(「新增管道後所有類型都能勾選」指的是登記類型時)。
+- `notification_` 前綴保留給推導來源:底座與專案手寫的偏好 key 用這個開頭,app 起不來。
 
 正本:`apps/api/src/notifications/notification-registry.ts`、`notification-registry.module.ts`、`apps/api/src/user-preferences/user-preference-registry.ts`
 
@@ -98,7 +100,9 @@ notify({ type, tenantId, orgId, recipients?, params?, ref?, dedupeKey })
 3. **交易內**依序寫 `notifications`(`(recipientId, dedupeKey)` 已有就整個略過)。呼叫端已在交易內就併進去(動作回復 → 沒有通知、沒有信號、沒有信);不在交易內就自己開一個。
 4. 交易提交後依管道交給轉接器:站內 = 一次 `/publish` 帶所有收件人的 `user:<id>`(信號 `{ type: "notification" }`,不合併);email = 逐封寄出。
 
-**email 總開關** `WORKFLOW_MAIL_ENABLED`(`docs/env-registry.md`):不是 `"true"` 時所有類型的 email 只寫 log、不寄,站內通知照常;每次寄送時讀。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`。寄信失敗只記 log,不影響觸發它的動作。
+**email 總開關** `WORKFLOW_MAIL_ENABLED`(`docs/env-registry.md`):不是 `"true"` 時所有通知類型的 email 只寫 log、不寄,站內通知照常(啟用信、重設密碼信不受它管);每次寄送時讀。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`。寄信失敗只記 log,不影響觸發它的動作。
+
+**通知信的語言**:主旨與內文是通知的標題 / 內容(範本以收件人的語言產生);外框(問候語、連結說明、署名)也依收件人的個人偏好 `locale`:英文(`en`、`en-US`…)用英文、以品牌名署名(專案設定的署名只有繁中一份),其餘一律繁中。正本 `apps/api/src/mail/mail-templates.ts` 的 `buildNotificationEmail`。
 
 正本:`apps/api/src/notifications/notification.service.ts`、`notification-channels.ts`
 

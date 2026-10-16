@@ -30,6 +30,8 @@ export interface NotificationDelivery {
   readonly body: string;
   /** admin 站內路徑(連結登記表找到的);沒有連結 = null */
   readonly path: string | null;
+  /** 收件人的語言(個人偏好 `locale`;沒有設定 = null),email 外框依它 */
+  readonly locale: string | null;
 }
 
 /**
@@ -145,6 +147,7 @@ export class EmailChannelAdapter implements NotificationChannelAdapter {
           title: delivery.title,
           body: delivery.body,
           link: delivery.path === null ? null : this.absoluteUrl(delivery.path),
+          locale: delivery.locale,
         });
       } catch (error) {
         this.logger.warn(

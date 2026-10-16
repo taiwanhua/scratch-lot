@@ -51,6 +51,7 @@ const TASK: NotificationEmailInput = {
   title: "待審核:請假單:九月特休",
   body: "您有一筆待審核的申請「請假單:九月特休」(關卡:主管核准)。",
   link: "https://admin.example.com/apply-center/view-page/1",
+  locale: null,
 };
 
 /** 沒有連結的通知信。 */
@@ -61,6 +62,7 @@ const RESULT: NotificationEmailInput = {
   title: "申請已駁回:請假單",
   body: "您的申請「請假單」已駁回。理由:日期重疊",
   link: null,
+  locale: "zh-TW",
 };
 
 /** 內容帶 HTML 特殊字元:跳脫規則是輸出的一部分,一起固定。 */
@@ -207,6 +209,22 @@ describe("固定的 CookHome 設定:信件輸出與抽設定前逐字相同", ()
     ]);
     expect(linked).toMatchSnapshot();
     expect(unlinked).toMatchSnapshot();
+  });
+
+  it("通知信外框依收件人語言:英文問候語、連結說明,以品牌名署名", async () => {
+    const english = await withCookhome((templates) =>
+      templates.buildNotificationEmail({
+        ...TASK,
+        name: "Ming",
+        title: "Pending review: Leave",
+        body: 'A request "Leave" is waiting for your review (step: Manager).',
+        locale: "en-US",
+      }),
+    );
+    expect(english).toMatchSnapshot();
+    expect(english.text.startsWith("Hi Ming,")).toBe(true);
+    expect(english.text).toContain("Open the link below for details:");
+    expect(english.text.endsWith("\n\nCookHome")).toBe(true);
   });
 
   it("HTML 跳脫:使用者輸入的特殊字元不會變成標籤", async () => {
