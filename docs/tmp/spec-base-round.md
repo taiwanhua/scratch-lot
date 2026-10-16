@@ -489,13 +489,13 @@ registerFormLifecycle({
 
 #### B2a 專案登記 lookup 來源
 
-| 項目            | 設計                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 機制            | NestJS multi-provider token(例 `LOOKUP_PROVIDER`);專案模組提供 `{ declaration, runtime }`,`LookupProvidersService` 啟動時收集 |
-| key             | 底座來源不加前綴;**專案來源一律加專案前綴**(例 `lottery_game`);重複 → 啟動時報錯                                              |
-| 範圍            | runtime 一律經 `BaseRepository` 查詢,租戶隔離與可見範圍自動套用;專案不能自行放寬                                              |
-| declaration     | 可回欄位、各欄位需要的讀取權限、可當篩選的欄位、顯示欄、值欄                                                                  |
-| 設計器 / 檢查器 | 自動列出專案登記的來源;檢查器的登錄表(`LookupProviderRegistry`)含專案來源                                                     |
+| 項目            | 設計                                                                                                                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 機制            | 靜態清單固定入口 `apps/api/src/project/lookup-providers.ts`(同 `project/database/registrations.ts`):每筆 `{ declaration, repositoryToken }`,由 `database.module.ts` 組裝提供(api 與受管定義 CLI 同一份),`LookupProvidersService` 啟動時以 `ModuleRef` 取實例並驗證 |
+| key             | 底座來源不加前綴;**專案來源一律加專案前綴**,前綴 = repository 資料表名第一段(`lottery_game` ↔ `lottery_games`);重複 → 啟動時報錯                                                                                                                                   |
+| 範圍            | `repositoryToken` 必須是專案資料登記的 repository;查詢一律經 `BaseRepository`,租戶隔離與可見範圍自動套用;專案不能自行放寬                                                                                                                                          |
+| declaration     | 可回欄位、各欄位需要的讀取權限、可當篩選的欄位、顯示欄、值欄(非 `id` 時只能是文字欄位)、來源權限(必填,`null` = 在可見範圍內公開)                                                                                                                                   |
+| 設計器 / 檢查器 | 自動列出專案登記的來源;檢查器的登錄表(`LookupProviderRegistry`)含專案來源                                                                                                                                                                                          |
 
 #### B2b 明細子欄支援「引用」
 

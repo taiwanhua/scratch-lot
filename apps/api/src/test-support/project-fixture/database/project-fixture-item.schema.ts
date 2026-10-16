@@ -25,6 +25,18 @@ export class ProjectFixtureItem {
   @Prop({ type: String, required: true })
   name!: string;
 
+  /** 代碼(lookup 夾具的受保護欄位;要 `PROJECT_FIXTURE_PERMISSIONS.delete` 才讀得到)。 */
+  @Prop({ type: String, default: null })
+  code!: string | null;
+
+  /** 排序值(lookup 夾具的數字欄位:不能當值欄)。 */
+  @Prop({ type: Number, default: 0 })
+  rank!: number;
+
+  /** 啟用(lookup 夾具的 `filterFields`)。 */
+  @Prop({ type: Boolean, default: true })
+  enabled!: boolean;
+
   /** 模組 key(由 `tenantScopePlugin({ moduleData: true })` 宣告;本表固定為 `PROJECT_FIXTURE_MODULE_KEY`)。 */
   moduleKey!: string;
 

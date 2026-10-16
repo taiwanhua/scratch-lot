@@ -1,5 +1,5 @@
-import { Injectable, type OnModuleInit } from "@nestjs/common";
-import { DiscoveryService } from "@nestjs/core";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import { Types } from "mongoose";
 
 import {
@@ -28,6 +28,7 @@ import {
   UsersRepository,
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
+import { PROJECT_LOOKUP_SOURCES } from "../database/project-lookup-sources";
 import { RelationService } from "../database/relation.service";
 import { fieldGateOf, requiredShowKeys } from "./field-permission-gate";
 import {
@@ -37,10 +38,10 @@ import {
 } from "./form-access.service";
 import { formModulePermission } from "./form-permission-keys";
 import {
-  LOOKUP_PROVIDER,
   type LookupProviderDeclaration,
   type LookupProviderRegistration,
-  collectLookupRegistrations,
+  type ResolvedLookupSource,
+  resolveLookupRegistrations,
 } from "./lookup-provider-registration";
 
 /**
@@ -48,8 +49,9 @@ import {
  * lookup 選項(`options.kind = "lookup"`)都用這一張。
  *
  * - **底座來源**(`user`、`org`、`form_submission`):宣告在 `LOOKUP_PROVIDERS`,實作在 `providerFor`。
- * - **專案來源**:專案模組以 `LOOKUP_PROVIDER` 登記 `{ declaration, runtime }`(`lookup-provider-registration.ts`),
- *   本服務啟動時收集並驗證(撞名 → 起不來);查詢一律由這裡經 `BaseRepository` 組(`projectProvider`)。
+ * - **專案來源**:專案在固定入口 `project/lookup-providers.ts` 列 `{ declaration, repositoryToken }`
+ *   (契約見 `lookup-provider-registration.ts`),由 `DatabaseModule` 以 `PROJECT_LOOKUP_SOURCES` 提供;
+ *   本服務啟動時驗證(撞名 → 起不來),查詢一律由這裡經 `BaseRepository` 組(`projectProvider`)。
  * - 新增來源後 `docs/modules/forms.md`「lookup 登錄表」補一列。
  *
  * 執行時的查詢一律**以版本定義為準**:前端只帶「哪一版的哪一欄 / 哪一條帶入規則」+ 關鍵字,
@@ -403,9 +405,8 @@ const LABELLED_TYPES: ReadonlySet<FieldType> = new Set([
 
 @Injectable()
 export class LookupProvidersService implements OnModuleInit {
-  /** 專案登記的來源(`LOOKUP_PROVIDER`);啟動時收集一次。 */
-  private projectSources: ReadonlyMap<string, LookupProviderRegistration> =
-    new Map();
+  /** 專案登記的來源(`project/lookup-providers.ts`);啟動時解析一次。 */
+  private projectSources: ReadonlyMap<string, ResolvedLookupSource> = new Map();
 
   constructor(
     private readonly users: UsersRepository,
@@ -414,22 +415,26 @@ export class LookupProvidersService implements OnModuleInit {
     private readonly submissions: FormSubmissionsRepository,
     private readonly versions: FormVersionsRepository,
     private readonly access: FormAccessService,
-    private readonly discovery: DiscoveryService,
+    private readonly moduleRef: ModuleRef,
+    @Inject(PROJECT_LOOKUP_SOURCES)
+    private readonly registrations: readonly LookupProviderRegistration[],
   ) {}
 
   /**
-   * 收集各模組以 `LOOKUP_PROVIDER` 提供的專案來源(Nest 沒有內建 multi-provider:同一個 token 在每個
-   * 模組各有一份,由 DiscoveryService 掃出來)。撞名、格式或宣告不合 → 丟錯,app 起不來。
+   * 解析專案來源:以 `ModuleRef` 取 repository 實例並驗證(撞名、格式、前綴、宣告、`BaseRepository`)。
+   * 不合 → 丟 `LookupProviderRegistrationError`,app(與受管定義 CLI)起不來。
    */
   onModuleInit(): void {
-    const provided = this.discovery
-      .getProviders()
-      .filter((wrapper) => wrapper.token === LOOKUP_PROVIDER)
-      .map((wrapper) => wrapper.instance as unknown);
-    this.projectSources = collectLookupRegistrations(
-      provided,
+    this.projectSources = resolveLookupRegistrations(
+      this.registrations,
       Object.keys(LOOKUP_PROVIDERS),
+      (token) => this.moduleRef.get<unknown>(token, { strict: false }),
     );
+  }
+
+  /** 是不是專案登記的來源(檢查器的專案來源規則用)。 */
+  isProjectSource(key: string): boolean {
+    return this.projectSources.has(key);
   }
 
   /** 設計器的來源清單:底座三種在前,專案來源依 key 排。 */
@@ -536,24 +541,21 @@ export class LookupProvidersService implements OnModuleInit {
         return this.formSubmissionProvider;
       }
       default: {
-        const registration = this.projectSources.get(key);
+        const source = this.projectSources.get(key);
         // 定義檢查器擋掉未登錄的來源;走到這裡是舊資料(或專案拿掉了登記),一律查無(fail-closed)
-        return registration === undefined
+        return source === undefined
           ? EMPTY_PROVIDER
-          : this.projectProvider(registration);
+          : this.projectProvider(source);
       }
     }
   }
 
   // ---- 專案來源:一律經 BaseRepository(租戶隔離、可見範圍、資料範圍由 plugin 套)----
 
-  private projectProvider(
-    registration: LookupProviderRegistration,
-  ): LookupProviderRuntime {
-    const { declaration, runtime } = registration;
-    const repository = runtime.repository as unknown as AnyRepository;
+  private projectProvider(source: ResolvedLookupSource): LookupProviderRuntime {
+    const { declaration, repository } = source;
     const canReadSource = (facts: FormOperatorFacts): boolean =>
-      declaration.permission === undefined ||
+      declaration.permission === null ||
       this.access.has(facts, declaration.permission);
     const canReadField = (
       facts: FormOperatorFacts,
@@ -590,22 +592,25 @@ export class LookupProvidersService implements OnModuleInit {
         const keyword = query.keyword?.trim();
         // 關鍵字只比對讀得到的欄位(不能拿受保護欄位試出值)
         const keywordFields = (
-          runtime.keywordFields ??
+          declaration.keywordFields ??
           (declaration.labelField === "id" ? [] : [declaration.labelField])
         ).filter((field) => canReadField(facts, field, false));
-        const condition =
-          keyword && keywordFields.length > 0
-            ? {
-                $and: [
-                  fixed,
-                  {
-                    $or: keywordFields.map((field) => ({
-                      [field]: { $regex: escapeRegex(keyword), $options: "i" },
-                    })),
-                  },
-                ],
-              }
-            : fixed;
+        // 有關鍵字但沒有可比對的欄位(全受保護或顯示欄是 id)→ 查無,不退回列全部
+        if (keyword && keywordFields.length === 0) {
+          return { items: [], totalCount: 0 };
+        }
+        const condition = keyword
+          ? {
+              $and: [
+                fixed,
+                {
+                  $or: keywordFields.map((field) => ({
+                    [field]: { $regex: escapeRegex(keyword), $options: "i" },
+                  })),
+                },
+              ],
+            }
+          : fixed;
         const sort: Record<string, 1 | -1> =
           declaration.labelField === "id"
             ? { _id: 1 }

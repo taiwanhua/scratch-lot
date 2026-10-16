@@ -189,6 +189,46 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
     });
   });
 
+  it("來源清單查詢失敗:資料來源下方顯示錯誤", async () => {
+    const failed = renderFormsPage({
+      ...defaultDesignOptions(),
+      failures: { FormLookupProviders: { code: "FORBIDDEN" } },
+    });
+    await addField(failed.user, "單選");
+    await pickOption(failed.user, "選項來源", "資料來源");
+    expect(
+      await screen.findByText("你沒有執行這個動作的權限。"),
+    ).toBeInTheDocument();
+  });
+
+  it("專案來源的值欄只列文字欄位(與 api 檢查器同一條規則)", async () => {
+    const { user } = renderFormsPage({
+      ...defaultDesignOptions(),
+      lookupProviders: [
+        ...BASE_LOOKUP_PROVIDERS,
+        {
+          key: "lottery_game",
+          name: "遊戲",
+          isBase: false,
+          labelField: "title",
+          valueField: "id",
+          filterFields: [],
+          fields: [
+            { key: "title", type: "text", label: "遊戲名稱" },
+            { key: "bookAmount", type: "number", label: "訂購金額" },
+          ],
+        },
+      ],
+    });
+    await addField(user, "單選");
+    await pickOption(user, "選項來源", "資料來源");
+    await pickOption(user, "資料來源", "遊戲");
+    expect(await openSelect(user, "值欄")).toEqual([
+      "資料的 id(預設)",
+      "遊戲名稱",
+    ]);
+  });
+
   it("帶入規則照四步排、全部下拉:本表單欄位只列使用者填的,來源欄位只列型別相容的", async () => {
     const { user, world } = renderFormsPage();
     await findDesigner();
