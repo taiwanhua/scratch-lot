@@ -145,7 +145,7 @@ export type FieldDefault =
   | { kind: "constant"; value: unknown }
   | { kind: "expression"; expr: Expression };
 
-/** 明細列子欄可用的型別(第一版的白名單;不支援巢狀 `array`、多行、多選、上傳、引用)。 */
+/** 明細列子欄可用的型別(白名單;不支援巢狀 `array`、多行、多選、上傳)。 */
 export const ARRAY_COLUMN_TYPES = [
   "text",
   "number",
@@ -153,6 +153,7 @@ export const ARRAY_COLUMN_TYPES = [
   "datetime",
   "select",
   "boolean",
+  "reference",
 ] as const;
 
 export type ArrayColumnType = (typeof ARRAY_COLUMN_TYPES)[number];
@@ -161,6 +162,7 @@ export type ArrayColumnType = (typeof ARRAY_COLUMN_TYPES)[number];
  * 明細列的一個子欄(簡化的 FieldDef;結構上可當 `FieldDef` 用,值的正規化與規則驗證共用同一套):
  * - `valueSource` 只有使用者填或列內公式(`{ "var": "row.<子欄 key>" }` 引用同一列的子欄)
  * - 沒有子欄級權限、顯示 / 鎖定條件、預設值(整欄的設定套在明細欄上)
+ * - `reference`:存 `{ id, label }` 快照(同表單層引用欄),只能使用者填;`source` 必填
  * - `width`:表格欄的最小寬(px);手機卡片忽略
  */
 export interface ArrayColumnDef {
@@ -173,6 +175,8 @@ export interface ArrayColumnDef {
   valueSource: { kind: "input" } | { kind: "computed"; expr: Expression };
   /** 只有 select:靜態清單或欄位管理類別(沒有 lookup)。 */
   options?: FieldOptions | null;
+  /** 只有 reference:lookup 來源描述(同表單層引用欄的 `source`)。 */
+  source?: LookupSourceDescriptor | null;
   rules?: FieldRules | null;
   help?: string | null;
   width?: number | null;

@@ -8,7 +8,7 @@ import {
 
 import { field } from "@/test/msw/form-fixtures";
 
-import { propertySectionsOf } from "./property-sections";
+import { columnSectionsOf, propertySectionsOf } from "./property-sections";
 
 const sectionsOf = (target: FieldDef) =>
   propertySectionsOf(
@@ -120,6 +120,18 @@ describe("屬性面板依型別(Spec 6a §5 表 A)", () => {
       defaultValue: false,
       valueSource: false,
       dateRange: false,
+    });
+  });
+
+  it("明細子欄:引用子欄有資料來源設定,其他子欄沒有", () => {
+    expect(columnSectionsOf("reference")).toMatchObject({
+      referenceSource: true,
+      options: false,
+      custom: false,
+    });
+    expect(columnSectionsOf("select")).toMatchObject({
+      referenceSource: false,
+      options: true,
     });
   });
 });

@@ -4,6 +4,7 @@ import {
   type FieldDef,
   type LookupSourceDescriptor,
   type Prefill,
+  arrayColumnsOf,
   lookupLabelFieldsOf,
 } from "@repo/domain/form";
 
@@ -41,6 +42,36 @@ interface ResolvedTarget {
   mappedFields: string[];
 }
 
+/**
+ * 目標欄位 key 的擁有者:一般欄位就是自己;明細引用子欄的路徑 `<明細 key>.<子欄 key>` → 明細欄
+ * (子欄的權限繼承整個明細欄)。
+ */
+function ownerKeyOf(fieldKey: string): string {
+  const dot = fieldKey.indexOf(".");
+  return dot === -1 ? fieldKey : fieldKey.slice(0, dot);
+}
+
+/** 目標欄位:一般欄位照 key 找;`<明細 key>.<子欄 key>` 找明細欄裡的引用子欄。 */
+function targetFieldOf(
+  fields: readonly FieldDef[],
+  fieldKey: string,
+): FieldDef | undefined {
+  const ownerKey = ownerKeyOf(fieldKey);
+  const owner = fields.find((candidate) => candidate.key === ownerKey);
+  if (ownerKey === fieldKey) {
+    return owner;
+  }
+  if (owner?.type !== "array") {
+    return undefined;
+  }
+  const columnKey = fieldKey.slice(ownerKey.length + 1);
+  const column = arrayColumnsOf(owner).find(
+    (candidate) =>
+      candidate.key === columnKey && candidate.type === "reference",
+  );
+  return column ? { ...column, key: fieldKey } : undefined;
+}
+
 function targetOf(
   fields: readonly FieldDef[],
   prefills: readonly Prefill[],
@@ -56,7 +87,7 @@ function targetOf(
     );
   }
   if (hasField) {
-    const field = fields.find((candidate) => candidate.key === target.fieldKey);
+    const field = targetFieldOf(fields, target.fieldKey ?? "");
     if (field?.options?.kind === "lookup") {
       return {
         source: field.options.source,
@@ -89,6 +120,7 @@ function targetOf(
 /**
  * `formLookup` / `formLookupRecord`(Spec 6a §5「lookup 來源」):前端只帶
  * `{ formKey, version, target }` + 關鍵字,**provider 與 `filter` 從版本定義取**,前端改不了;
+ * 目標可以是明細的引用子欄(`fieldKey = "<明細 key>.<子欄 key>"`,權限看整個明細欄);
  * 再套操作者的可見範圍與欄位權限(`lookup-providers.ts`)。
  */
 @Injectable()
@@ -187,19 +219,21 @@ export class FormLookupService {
     }
     const fieldKey = input.target.fieldKey;
     // 讀不到這一欄(受保護沒有 show)的人不給候選資料;先於「有沒有 lookup 來源」判,
-    // 否則能從錯誤碼的差別推出這欄的定義(骨架省略了 `options` / `source`)
+    // 否則能從錯誤碼的差別推出這欄的定義(骨架省略了 `options` / `source`)。
+    // 明細子欄(`<明細 key>.<子欄 key>`)看整個明細欄的權限
+    const ownerKey =
+      fieldKey === undefined || fieldKey === null ? null : ownerKeyOf(fieldKey);
     if (
       !isDraft &&
-      fieldKey !== undefined &&
-      fieldKey !== null &&
-      version.fields.some((candidate) => candidate.key === fieldKey) &&
+      ownerKey !== null &&
+      version.fields.some((candidate) => candidate.key === ownerKey) &&
       !fieldGateOf(facts, form.moduleKey, form.key).canShow(
         version.fields,
-        fieldKey,
+        ownerKey,
       )
     ) {
       throw forbiddenError(
-        `Missing field permission: ${requiredShowKeys(version.fields, fieldKey).join(", ")}`,
+        `Missing field permission: ${requiredShowKeys(version.fields, ownerKey).join(", ")}`,
       );
     }
     return targetOf(version.fields, version.prefills, input.target);

@@ -71,6 +71,10 @@ export function validateDefinition(
       ...(options.fieldCategoryKeys && {
         fieldCategoryKeys: options.fieldCategoryKeys,
       }),
+      // 引用子欄的來源照表單層引用欄對照登錄表
+      ...(options.lookupProviders && {
+        lookupProviders: options.lookupProviders,
+      }),
     },
     collector,
   );

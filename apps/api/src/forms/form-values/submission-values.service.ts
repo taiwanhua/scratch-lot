@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type ArrayColumnDef,
   type ArrayRowValue,
   ComputedCycleError,
   type ExpressionContext,
@@ -430,8 +431,9 @@ export class SubmissionValuesService {
   }
 
   /**
-   * 明細列的新快照:每一列的單選子欄(靜態清單驗啟用中、類別重取 label);與上一個已完成修訂同一列同值的
-   * 保留原快照。錯誤定位到 `rowId` + 子欄。
+   * 明細列的新快照:每一列的單選子欄(靜態清單驗啟用中、類別重取 label)與引用子欄(重驗來源可讀、重取 label);
+   * 與上一個已完成修訂同一列同值的保留原快照。錯誤定位到 `rowId` + 子欄。
+   * 引用子欄**同一子欄的 id 合併成一次查詢**(200 列也只查一次),不逐列查。
    */
   private async snapshotRowsOf(
     field: FieldDef,
@@ -442,13 +444,27 @@ export class SubmissionValuesService {
     const previousRows = new Map(
       arrayRowsOf(previous).map((row) => [row.rowId, row]),
     );
-    const choiceColumns = arrayColumnsOf(field).filter(
-      (column) =>
-        column.type === "select" && column.valueSource.kind === "input",
+    const inputColumns = arrayColumnsOf(field).filter(
+      (column) => column.valueSource.kind === "input",
     );
-    const rows: ArrayRowValue[] = [];
-    for (const row of arrayRowsOf(value)) {
-      const next: ArrayRowValue = { ...row };
+    const choiceColumns = inputColumns.filter(
+      (column) => column.type === "select",
+    );
+    const rows: ArrayRowValue[] = arrayRowsOf(value).map((row) => ({
+      ...row,
+    }));
+    for (const column of inputColumns) {
+      if (column.type === "reference") {
+        await this.snapshotReferenceColumn(
+          field,
+          column,
+          rows,
+          previousRows,
+          context,
+        );
+      }
+    }
+    for (const row of rows) {
       for (const column of choiceColumns) {
         const cell = row[column.key];
         if (cell === null || cell === undefined) {
@@ -456,11 +472,11 @@ export class SubmissionValuesService {
         }
         const before = previousRows.get(row.rowId)?.[column.key];
         if (before !== undefined && isSameStoredValue(column, cell, before)) {
-          next[column.key] = before;
+          row[column.key] = before;
           continue;
         }
         const issues: ValueIssue[] = [];
-        next[column.key] = await this.resolveOption(column, cell, {
+        row[column.key] = await this.resolveOption(column, cell, {
           ...context,
           issues,
         });
@@ -473,9 +489,59 @@ export class SubmissionValuesService {
           })),
         );
       }
-      rows.push(next);
     }
     return rows;
+  }
+
+  /**
+   * 明細的一個引用子欄(就地改 `rows`):與上一個已完成修訂同一列同 id 的保留原快照;其餘的 id 去重後
+   * **一次** `findByValues`(`publicOnly`,同表單層引用欄),讀得到的寫 `{ id, label }` 新快照,
+   * 讀不到(已刪 / 不在可見範圍)的列 → `SOURCE_UNAVAILABLE`,定位到 `rowId` + 子欄。
+   */
+  private async snapshotReferenceColumn(
+    field: FieldDef,
+    column: ArrayColumnDef,
+    rows: ArrayRowValue[],
+    previousRows: ReadonlyMap<string, ArrayRowValue>,
+    context: OptionContext,
+  ): Promise<void> {
+    const pending = pendingReferencesOf(column, rows, previousRows);
+    if (pending.length === 0) {
+      return;
+    }
+    const source = column.source;
+    const ids = [
+      ...new Set(pending.flatMap(({ id }) => (id === null ? [] : [id]))),
+    ];
+    const records =
+      source && ids.length > 0
+        ? await this.lookups.findByValues(
+            context.facts,
+            source,
+            "id",
+            ids,
+            lookupLabelFieldsOf(source),
+            { publicOnly: true },
+          )
+        : [];
+    const found = new Map(records.map((record) => [record.id, record]));
+    for (const { row, id } of pending) {
+      const record = id === null ? undefined : found.get(id);
+      if (!record || !source) {
+        context.issues.push({
+          fieldKey: field.key,
+          rowId: row.rowId,
+          columnKey: column.key,
+          code: "SOURCE_UNAVAILABLE",
+          message: `「${field.label}」的「${column.label}」引用的資料不存在或無權讀取`,
+        });
+        continue;
+      }
+      row[column.key] = {
+        id: record.id,
+        label: lookupDisplayLabelOf(record, source),
+      };
+    }
   }
 
   /** 一欄的新快照:引用重驗來源、選項重取 label(multiSelect 逐項)。 */
@@ -632,6 +698,34 @@ export class SubmissionValuesService {
       );
     }
   }
+}
+
+/**
+ * 明細引用子欄要重驗的格(就地把與上一個已完成修訂同一列同 id 的格換回原快照,其餘回傳待查;
+ * 存值不是 `{ id }` 的 id 為 null,一律讀不到)。
+ */
+function pendingReferencesOf(
+  column: ArrayColumnDef,
+  rows: ArrayRowValue[],
+  previousRows: ReadonlyMap<string, ArrayRowValue>,
+): { row: ArrayRowValue; id: string | null }[] {
+  const pending: { row: ArrayRowValue; id: string | null }[] = [];
+  for (const row of rows) {
+    const cell = row[column.key];
+    if (cell === null || cell === undefined) {
+      continue;
+    }
+    const before = previousRows.get(row.rowId)?.[column.key];
+    if (before !== undefined && isSameStoredValue(column, cell, before)) {
+      row[column.key] = before;
+      continue;
+    }
+    pending.push({
+      row,
+      id: isRecord(cell) && typeof cell.id === "string" ? cell.id : null,
+    });
+  }
+  return pending;
 }
 
 function sameClasses(

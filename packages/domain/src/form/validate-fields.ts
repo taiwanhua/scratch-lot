@@ -82,7 +82,7 @@ export function validateFields(
 }
 
 /**
- * 明細子欄的內容檢查(與表單層欄位同一套判準):小數位數、選項、正則(含 ReDoS)、日期上下限。
+ * 明細子欄的內容檢查(與表單層欄位同一套判準):小數位數、選項、正則(含 ReDoS)、日期上下限、引用來源。
  * 子欄當 `FieldDef` 檢查,定位由呼叫端換成「明細欄 + 子欄」。
  */
 export function validateColumnContent(
@@ -94,6 +94,7 @@ export function validateColumnContent(
   validateOptions(column, context, collector);
   validateRules(column, context.regexSafety, collector);
   validateDateTimeRange(column, collector);
+  validateReference(column, context.lookupProviders, collector);
 }
 
 /** 日期 / 日期時間欄的 `rules.min` / `max` 要是帶時區的 ISO 8601(不合法的上下限等於沒設,設計者會以為有效)。 */

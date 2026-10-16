@@ -880,7 +880,18 @@ function checkColumn(
     );
     return;
   }
-  for (const property of ["default", "source", "columns"]) {
+  // 引用子欄的來源與表單層引用欄同一套可攜性檢查;其他子欄不支援 `source`
+  const isReference = column.type === "reference";
+  if (isReference && !isEmptyFixedValue(column.source)) {
+    checkLookupSource(
+      column.source,
+      joinSeedPath(columnPath, "source"),
+      context,
+    );
+  }
+  for (const property of isReference
+    ? ["default", "columns"]
+    : ["default", "source", "columns"]) {
     if (!isEmptyFixedValue(column[property])) {
       collector.error(
         "FIELD_UNSUPPORTED",

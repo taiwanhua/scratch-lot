@@ -73,7 +73,7 @@ interface DisplayTarget {
 }
 
 /**
- * 一筆提交要解析顯示名的目標:一般欄位照舊;明細欄的類別選項子欄攤成一個 `<明細 key>.<子欄 key>` 的目標,
+ * 一筆提交要解析顯示名的目標:一般欄位照舊;明細欄的單選 / 引用子欄攤成一個 `<明細 key>.<子欄 key>` 的目標,
  * 值 = 各列該子欄的值(去重)。被遮蔽的明細(`"[redacted]"`)沒有列,不解析。
  */
 function displayTargetsOf(entry: DisplayNameEntry): DisplayTarget[] {
@@ -83,7 +83,9 @@ function displayTargetsOf(entry: DisplayNameEntry): DisplayTarget[] {
     }
     const rows = arrayRowsOf(entry.values[field.key]);
     return arrayColumnsOf(field)
-      .filter((column) => column.type === "select")
+      .filter(
+        (column) => column.type === "select" || column.type === "reference",
+      )
       .map((column) => {
         const seen = new Set<string>();
         const cells = rows
@@ -189,7 +191,8 @@ function groupsOf(entries: readonly DisplayNameEntry[]): {
  *
  * **批次**(DataLoader 的做法,不逐列查):先把整頁每一筆、每一欄要解析的值依來源分組,
  * 每個類別 / 每個 lookup 來源只查一次,再分回各筆。靜態選項的 label 從該筆綁的版本定義取,不在這裡。
- * 明細的類別選項子欄以 `fieldKey = "<明細 key>.<子欄 key>"` 回一組(各列的值合在一起)。
+ * 明細的類別 / lookup 選項子欄與引用子欄以 `fieldKey = "<明細 key>.<子欄 key>"` 回一組(各列的值合在一起;
+ * 引用子欄同一來源的 id 一次查完)。
  */
 @Injectable()
 export class DisplayNamesService {

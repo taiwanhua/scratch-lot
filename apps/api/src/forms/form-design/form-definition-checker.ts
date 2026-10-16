@@ -7,6 +7,7 @@ import {
   type LookupProviderRegistry,
   type LookupSourceDescriptor,
   type ValidationReport,
+  arrayColumnsOf,
   hasLabelTemplate,
   lookupTemplateFieldOf,
   templatePlaceholdersOf,
@@ -96,7 +97,27 @@ function isSelfPrefill(
   );
 }
 
-/** 定義裡用到的所有 lookup 來源描述(選項、引用、帶入),附定位。 */
+/** 明細引用子欄的來源描述(定位到明細欄 + 子欄)。 */
+function columnSourcesOf(
+  field: FieldDef,
+): { source: LookupSourceDescriptor; location: Record<string, unknown> }[] {
+  return arrayColumnsOf(field).flatMap((column) =>
+    column.type === "reference" && column.source
+      ? [
+          {
+            source: column.source,
+            location: {
+              fieldKey: field.key,
+              columnKey: column.key,
+              property: "source",
+            },
+          },
+        ]
+      : [],
+  );
+}
+
+/** 定義裡用到的所有 lookup 來源描述(選項、引用、明細引用子欄、帶入),附定位。 */
 function sourcesOf(
   definition: FormDefinition,
 ): { source: LookupSourceDescriptor; location: Record<string, unknown> }[] {
@@ -120,6 +141,7 @@ function sourcesOf(
         location: { fieldKey: field.key, property: "source" },
       });
     }
+    found.push(...columnSourcesOf(field));
   }
   for (const [prefillIndex, prefill] of definition.prefills.entries()) {
     if (isRecord(prefill) && isRecord(prefill.source)) {
