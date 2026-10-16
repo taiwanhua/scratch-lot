@@ -45,6 +45,10 @@ export class PrintJob {
   @Prop({ type: String, required: true })
   refId!: string;
 
+  /** 單據的顯示名稱(通知用,如「訂單 A001 收據」);沒給為 null,通知改用「單據類型 + 編號」。 */
+  @Prop({ type: String, default: null })
+  documentName!: string | null;
+
   /** 內容快照:384 點寬的黑白 PNG(查詢時預設不帶,只有代理程式取圖時讀)。 */
   @Prop({ type: Buffer, required: true, select: false })
   image!: Buffer;

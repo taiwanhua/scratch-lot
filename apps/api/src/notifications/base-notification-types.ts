@@ -1,3 +1,5 @@
+import { PRINT_JOB_ERRORS, type PrintJobError } from "@repo/domain/printing";
+
 import {
   EMAIL_CHANNEL,
   IN_APP_CHANNEL,
@@ -35,6 +37,10 @@ const optional = (
   return value === null ? "" : prefix + value;
 };
 
+/** 有值才接上「前綴 + 值」。 */
+const prefixed = (value: string | null, prefix: string): string =>
+  value === null ? "" : prefix + value;
+
 const RESULT_LABELS: Readonly<Record<string, { "zh-TW": string; en: string }>> =
   {
     approved: { "zh-TW": "已核准", en: "approved" },
@@ -44,6 +50,46 @@ const RESULT_LABELS: Readonly<Record<string, { "zh-TW": string; en: string }>> =
 
 const resultLabel = (params: NotificationParams, locale: "zh-TW" | "en") =>
   RESULT_LABELS[text(params, "result")]?.[locale] ?? text(params, "result");
+
+/** 列印失敗原因(`@repo/domain/printing` 的 `PRINT_JOB_ERRORS`)→ 各語言的一句話;不認得的原樣顯示。 */
+const PRINT_FAILURE_LABELS: Readonly<
+  Record<PrintJobError, { "zh-TW": string; en: string }>
+> = {
+  "agent-offline": { "zh-TW": "代理程式離線", en: "print agent offline" },
+  "agent-disabled": { "zh-TW": "代理程式已停用", en: "print agent disabled" },
+  "no-result": { "zh-TW": "未收到列印結果", en: "no print result received" },
+  "paper-out": { "zh-TW": "缺紙", en: "out of paper" },
+  "printer-offline": { "zh-TW": "連不上印表機", en: "printer unreachable" },
+  other: { "zh-TW": "其他錯誤", en: "other error" },
+};
+
+/** 列印的單據名稱:測試頁依語言組「測試頁 <印表機>」,其餘用 `documentName`。 */
+const printDocument = (
+  params: NotificationParams,
+  locale: "zh-TW" | "en",
+): string => {
+  const printer = params.testPagePrinter ?? null;
+  if (printer === null) {
+    return text(params, "documentName");
+  }
+  return locale === "zh-TW" ? `測試頁 ${printer}` : `Test page ${printer}`;
+};
+
+const isPrintJobError = (value: string): value is PrintJobError =>
+  (PRINT_JOB_ERRORS as readonly string[]).includes(value);
+
+const printFailureLabel = (
+  params: NotificationParams,
+  locale: "zh-TW" | "en",
+): string | null => {
+  const reason = params.reason ?? null;
+  if (reason === null) {
+    return null;
+  }
+  return isPrintJobError(reason)
+    ? PRINT_FAILURE_LABELS[reason][locale]
+    : reason;
+};
 
 /**
  * 底座本輪登記的通知類型(底座規格第 5 章,2026-10-16 定;專案的類型見專案規格,登記在
@@ -55,7 +101,7 @@ const resultLabel = (params: NotificationParams, locale: "zh-TW" | "en") =>
  * | `workflow.result`        | `subject`、`result`(approved / rejected / returned)、`comment`    |
  * | `workflow.overdue`       | `subject`、`stepName`                                             |
  * | `workflow.cc`            | `subject`                                                         |
- * | `printing.job-failed`    | `documentName`、`reason`                                          |
+ * | `printing.job-failed`    | `documentName`、`reason`(失敗原因代碼,範本換成各語言的一句話);測試頁改給 `testPagePrinter` |
  * | `printing.agent-offline` | `agentName`、`orgName`                                            |
  */
 export const BASE_NOTIFICATION_TYPES: readonly NotificationTypeDefinition[] = [
@@ -135,12 +181,12 @@ export const BASE_NOTIFICATION_TYPES: readonly NotificationTypeDefinition[] = [
     category: "party",
     template: {
       "zh-TW": (params) => ({
-        title: `列印失敗:${text(params, "documentName")}`,
-        body: `「${text(params, "documentName")}」列印失敗。${optional(params, "reason", "原因:")}`,
+        title: `列印失敗:${printDocument(params, "zh-TW")}`,
+        body: `「${printDocument(params, "zh-TW")}」列印失敗。${prefixed(printFailureLabel(params, "zh-TW"), "原因:")}`,
       }),
       en: (params) => ({
-        title: `Print failed: ${text(params, "documentName")}`,
-        body: `"${text(params, "documentName")}" failed to print.${optional(params, "reason", " Reason: ")}`,
+        title: `Print failed: ${printDocument(params, "en")}`,
+        body: `"${printDocument(params, "en")}" failed to print.${prefixed(printFailureLabel(params, "en"), " Reason: ")}`,
       }),
     },
   },

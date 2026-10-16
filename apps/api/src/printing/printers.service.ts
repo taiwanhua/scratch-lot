@@ -197,12 +197,14 @@ export class PrintersService {
         message: `paperWidth must be one of ${PRINTER_PAPER_WIDTHS.join(", ")}`,
       });
     }
-    const agent = await this.findAgent(operator, input.agentId);
+    const found = await this.findAgent(operator, input.agentId);
+    // 已停用的代理程式不能再掛印表機(停用後金鑰失效,掛上去也印不出來)
+    const agent = found?.enabled === true ? found : null;
     if (agent === null) {
       errors.push({
         fieldKey: "agentId",
         code: "INVALID",
-        message: "print agent not found",
+        message: "print agent not found or disabled",
       });
     }
     if (errors.length > 0 || agent === null) {

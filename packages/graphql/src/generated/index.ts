@@ -248,6 +248,32 @@ export type CreateFormVersionDraftInput = {
   formKey: Scalars['ID']['input'];
 };
 
+export type CreatePrintAgentInput = {
+  name: Scalars['String']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
+export type CreatePrintJobInput = {
+  documentName?: InputMaybe<Scalars['String']['input']>;
+  documentType: Scalars['String']['input'];
+  image: Scalars['String']['input'];
+  isReprint?: InputMaybe<Scalars['Boolean']['input']>;
+  printerId: Scalars['ID']['input'];
+  refId: Scalars['String']['input'];
+  refType: Scalars['String']['input'];
+  reprintNote?: InputMaybe<Scalars['String']['input']>;
+  reprintReason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreatePrinterInput = {
+  agentId: Scalars['ID']['input'];
+  host: Scalars['String']['input'];
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  paperWidth?: InputMaybe<Scalars['Int']['input']>;
+  port?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type CreateRoleInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -571,6 +597,16 @@ export type DemoItemsTwoPayload = {
   page: Scalars['Int']['output'];
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
+};
+
+export type DocumentPrintCountInput = {
+  refId: Scalars['String']['input'];
+  refType: Scalars['String']['input'];
+};
+
+export type DocumentPrintCountPayload = {
+  __typename?: 'DocumentPrintCountPayload';
+  printedCount: Scalars['Int']['output'];
 };
 
 export type ExportFormSeedInput = {
@@ -1273,6 +1309,9 @@ export type Mutation = {
   createForm: FormPayload;
   createFormDraft: FormSubmissionPayload;
   createFormVersionDraft: FormVersionPayload;
+  createPrintAgent: PrintAgentPairingPayload;
+  createPrintJob: PrintJobPayload;
+  createPrinter: PrinterPayload;
   createRole: RolePayload;
   createUploadUrl: UploadUrlPayload;
   createUser: UserPayload;
@@ -1287,6 +1326,7 @@ export type Mutation = {
   deleteRetiredPermission: DeleteRetiredPermissionPayload;
   deleteRole: DeletePayload;
   deleteWorkflowVersionDraft: WorkflowPayload;
+  disablePrintAgent: PrintAgentPayload;
   forkForm: FormPayload;
   forkWorkflow: WorkflowPayload;
   grantRoleUsers: RoleUsersPayload;
@@ -1296,6 +1336,7 @@ export type Mutation = {
   markAllNotificationsRead: MarkNotificationsReadPayload;
   markNotificationsRead: MarkNotificationsReadPayload;
   moveOrg: OrgPayload;
+  printPrinterTestPage: PrintJobPayload;
   provisionTenant: ProvisionTenantPayload;
   publishFormVersion: FormVersionPayload;
   publishWorkflowVersion: WorkflowVersionPayload;
@@ -1303,6 +1344,7 @@ export type Mutation = {
   refresh: RefreshPayload;
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
+  resetPrintAgentPairing: PrintAgentPairingPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
@@ -1328,6 +1370,7 @@ export type Mutation = {
   setOrgVisibility: OrgPayload;
   setPassword: SetPasswordPayload;
   setPermissionEnabled: PermissionAdminPayload;
+  setPrinterEnabled: PrinterPayload;
   setRoleEnabled: RolePayload;
   setTenantFormEnabled: FormPayload;
   setUserEnabled: UserPayload;
@@ -1345,6 +1388,7 @@ export type Mutation = {
   updateMyPreferences: UpdateMyPreferencesPayload;
   updateNotificationSetting: NotificationSettingPayload;
   updateOrg: OrgPayload;
+  updatePrinter: PrinterPayload;
   updateRole: RolePayload;
   updateUser: UserPayload;
   updateWorkflow: WorkflowPayload;
@@ -1439,6 +1483,21 @@ export type MutationCreateFormVersionDraftArgs = {
 };
 
 
+export type MutationCreatePrintAgentArgs = {
+  input: CreatePrintAgentInput;
+};
+
+
+export type MutationCreatePrintJobArgs = {
+  input: CreatePrintJobInput;
+};
+
+
+export type MutationCreatePrinterArgs = {
+  input: CreatePrinterInput;
+};
+
+
 export type MutationCreateRoleArgs = {
   input: CreateRoleInput;
 };
@@ -1509,6 +1568,11 @@ export type MutationDeleteWorkflowVersionDraftArgs = {
 };
 
 
+export type MutationDisablePrintAgentArgs = {
+  input: PrintAgentIdInput;
+};
+
+
 export type MutationForkFormArgs = {
   input: ForkFormInput;
 };
@@ -1539,6 +1603,11 @@ export type MutationMoveOrgArgs = {
 };
 
 
+export type MutationPrintPrinterTestPageArgs = {
+  input: PrintPrinterTestPageInput;
+};
+
+
 export type MutationProvisionTenantArgs = {
   input: ProvisionTenantInput;
 };
@@ -1566,6 +1635,11 @@ export type MutationRequestPasswordResetArgs = {
 
 export type MutationResetNotificationSettingArgs = {
   input: ResetNotificationSettingInput;
+};
+
+
+export type MutationResetPrintAgentPairingArgs = {
+  input: PrintAgentIdInput;
 };
 
 
@@ -1694,6 +1768,11 @@ export type MutationSetPermissionEnabledArgs = {
 };
 
 
+export type MutationSetPrinterEnabledArgs = {
+  input: SetPrinterEnabledInput;
+};
+
+
 export type MutationSetRoleEnabledArgs = {
   input: SetRoleEnabledInput;
 };
@@ -1776,6 +1855,11 @@ export type MutationUpdateNotificationSettingArgs = {
 
 export type MutationUpdateOrgArgs = {
   input: UpdateOrgInput;
+};
+
+
+export type MutationUpdatePrinterArgs = {
+  input: UpdatePrinterInput;
 };
 
 
@@ -2019,6 +2103,215 @@ export type PreviewFormVersionInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type PrintAgent = {
+  __typename?: 'PrintAgent';
+  createdAt: Scalars['DateTime']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  lastSeenAt?: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  online: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+  paired: Scalars['Boolean']['output'];
+  pairingExpiresAt?: Maybe<Scalars['DateTime']['output']>;
+  updateAvailable: Scalars['Boolean']['output'];
+  version?: Maybe<Scalars['String']['output']>;
+};
+
+export type PrintAgentDownloadUrlInput = {
+  platform: PrintAgentPlatform;
+};
+
+export type PrintAgentDownloadUrlPayload = {
+  __typename?: 'PrintAgentDownloadUrlPayload';
+  expiresAt: Scalars['DateTime']['output'];
+  file: PrintAgentReleaseFile;
+  url: Scalars['String']['output'];
+  version: Scalars['String']['output'];
+};
+
+export type PrintAgentIdInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type PrintAgentPairingPayload = {
+  __typename?: 'PrintAgentPairingPayload';
+  agent: PrintAgent;
+  pairingCode: Scalars['String']['output'];
+  pairingExpiresAt: Scalars['DateTime']['output'];
+};
+
+export type PrintAgentPayload = {
+  __typename?: 'PrintAgentPayload';
+  agent: PrintAgent;
+};
+
+/** 代理程式安裝檔的平台 */
+export enum PrintAgentPlatform {
+  LinuxArm64 = 'LINUX_ARM64',
+  LinuxX64 = 'LINUX_X64',
+  MacosArm64 = 'MACOS_ARM64',
+  WindowsX64 = 'WINDOWS_X64'
+}
+
+export type PrintAgentReleaseFile = {
+  __typename?: 'PrintAgentReleaseFile';
+  name: Scalars['String']['output'];
+  platform: PrintAgentPlatform;
+  sha256: Scalars['String']['output'];
+  size: Scalars['Int']['output'];
+};
+
+export type PrintAgentReleasePayload = {
+  __typename?: 'PrintAgentReleasePayload';
+  files: Array<PrintAgentReleaseFile>;
+  latestVersion?: Maybe<Scalars['String']['output']>;
+};
+
+export type PrintAgentsInput = {
+  includeDisabled?: InputMaybe<Scalars['Boolean']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PrintAgentsPayload = {
+  __typename?: 'PrintAgentsPayload';
+  items: Array<PrintAgent>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type PrintJob = {
+  __typename?: 'PrintJob';
+  createdAt: Scalars['DateTime']['output'];
+  documentName?: Maybe<Scalars['String']['output']>;
+  documentType: Scalars['String']['output'];
+  error?: Maybe<PrintJobError>;
+  id: Scalars['ID']['output'];
+  isReprint: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+  printNo: Scalars['Int']['output'];
+  printedAt?: Maybe<Scalars['DateTime']['output']>;
+  printerId: Scalars['ID']['output'];
+  refId: Scalars['String']['output'];
+  refType: Scalars['String']['output'];
+  reprintNote?: Maybe<Scalars['String']['output']>;
+  reprintReason?: Maybe<Scalars['String']['output']>;
+  requestedBy?: Maybe<PrintJobRequester>;
+  sentAt?: Maybe<Scalars['DateTime']['output']>;
+  status: PrintJobStatus;
+};
+
+/** 失敗原因:代理程式離線(含 2 分鐘沒被認領)/ 代理程式已停用 / 未收到列印結果(已送出 2 分鐘沒回報)/ 缺紙 / 連不上印表機 / 其他 */
+export enum PrintJobError {
+  AgentDisabled = 'AGENT_DISABLED',
+  AgentOffline = 'AGENT_OFFLINE',
+  NoResult = 'NO_RESULT',
+  Other = 'OTHER',
+  PaperOut = 'PAPER_OUT',
+  PrinterOffline = 'PRINTER_OFFLINE'
+}
+
+export type PrintJobPayload = {
+  __typename?: 'PrintJobPayload';
+  job: PrintJob;
+};
+
+export type PrintJobRequester = {
+  __typename?: 'PrintJobRequester';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+/** 列印工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗 */
+export enum PrintJobStatus {
+  Failed = 'FAILED',
+  Pending = 'PENDING',
+  Printed = 'PRINTED',
+  Sent = 'SENT'
+}
+
+export type PrintJobsInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  printerId?: InputMaybe<Scalars['ID']['input']>;
+  refId?: InputMaybe<Scalars['String']['input']>;
+  refType?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<PrintJobStatus>;
+};
+
+export type PrintJobsPayload = {
+  __typename?: 'PrintJobsPayload';
+  items: Array<PrintJob>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type PrintPrinterTestPageInput = {
+  image: Scalars['String']['input'];
+  printerId: Scalars['ID']['input'];
+};
+
+export type PrintablePrintersPayload = {
+  __typename?: 'PrintablePrintersPayload';
+  defaultPrinterId?: Maybe<Scalars['ID']['output']>;
+  items: Array<Printer>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type Printer = {
+  __typename?: 'Printer';
+  agentId: Scalars['ID']['output'];
+  agentOnline: Scalars['Boolean']['output'];
+  available: Scalars['Boolean']['output'];
+  enabled: Scalars['Boolean']['output'];
+  host: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  paperWidth: Scalars['Int']['output'];
+  port: Scalars['Int']['output'];
+  status?: Maybe<PrinterStatus>;
+  statusAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type PrinterPayload = {
+  __typename?: 'PrinterPayload';
+  printer: Printer;
+};
+
+/** 代理程式回報的印表機狀態:正常 / 缺紙 / 離線 */
+export enum PrinterStatus {
+  Offline = 'OFFLINE',
+  Ok = 'OK',
+  PaperOut = 'PAPER_OUT'
+}
+
+export type PrintersInput = {
+  agentId?: InputMaybe<Scalars['ID']['input']>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PrintersPayload = {
+  __typename?: 'PrintersPayload';
+  items: Array<Printer>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
 export type ProvisionTenantInput = {
   adminAccount: Scalars['String']['input'];
   adminEmail: Scalars['String']['input'];
@@ -2063,6 +2356,7 @@ export type Query = {
   demoItemTwo: DemoItemTwoPayload;
   demoItemsOne: DemoItemsOnePayload;
   demoItemsTwo: DemoItemsTwoPayload;
+  documentPrintCount: DocumentPrintCountPayload;
   exportFormSeed: ExportFormSeedPayload;
   exportWorkflowSeed: ExportWorkflowSeedPayload;
   fieldCategories: FieldCategoriesPayload;
@@ -2098,6 +2392,13 @@ export type Query = {
   orgMembers: OrgMembersPayload;
   orgTree: Array<OrgNode>;
   previewFormVersion: FormPreviewPayload;
+  printAgentDownloadUrl: PrintAgentDownloadUrlPayload;
+  printAgentRelease: PrintAgentReleasePayload;
+  printAgents: PrintAgentsPayload;
+  printJob: PrintJobPayload;
+  printJobs: PrintJobsPayload;
+  printablePrinters: PrintablePrintersPayload;
+  printers: PrintersPayload;
   realtimeTicket?: Maybe<RealtimeTicketPayload>;
   retiredFormPermissions: RetiredFormPermissionsPayload;
   role: RolePayload;
@@ -2155,6 +2456,11 @@ export type QueryDemoItemsOneArgs = {
 
 export type QueryDemoItemsTwoArgs = {
   input: DemoItemsTwoInput;
+};
+
+
+export type QueryDocumentPrintCountArgs = {
+  input: DocumentPrintCountInput;
 };
 
 
@@ -2304,6 +2610,36 @@ export type QueryOrgMembersArgs = {
 
 export type QueryPreviewFormVersionArgs = {
   input: PreviewFormVersionInput;
+};
+
+
+export type QueryPrintAgentDownloadUrlArgs = {
+  input: PrintAgentDownloadUrlInput;
+};
+
+
+export type QueryPrintAgentsArgs = {
+  input: PrintAgentsInput;
+};
+
+
+export type QueryPrintJobArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryPrintJobsArgs = {
+  input: PrintJobsInput;
+};
+
+
+export type QueryPrintablePrintersArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryPrintersArgs = {
+  input: PrintersInput;
 };
 
 
@@ -2764,6 +3100,11 @@ export type SetPermissionEnabledInput = {
   id: Scalars['ID']['input'];
 };
 
+export type SetPrinterEnabledInput = {
+  enabled: Scalars['Boolean']['input'];
+  id: Scalars['ID']['input'];
+};
+
 export type SetRoleEnabledInput = {
   enabled: Scalars['Boolean']['input'];
   id: Scalars['ID']['input'];
@@ -2890,6 +3231,15 @@ export type UpdateOrgInput = {
   logoPath?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdatePrinterInput = {
+  agentId?: InputMaybe<Scalars['ID']['input']>;
+  host?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  port?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateRoleInput = {
@@ -4183,6 +4533,122 @@ export type SetOrgManagersMutationVariables = Exact<{
 
 export type SetOrgManagersMutation = { __typename?: 'Mutation', setOrgManagers: { __typename?: 'OrgPayload', org: { __typename?: 'Org', id: string, managers: Array<{ __typename?: 'UserSummary', id: string, name: string, account: string, enabled: boolean }> } } };
 
+export type PrintAgentFieldsFragment = { __typename?: 'PrintAgent', id: string, orgId: string, name: string, paired: boolean, pairingExpiresAt?: string | null, online: boolean, lastSeenAt?: string | null, version?: string | null, updateAvailable: boolean, enabled: boolean, createdAt: string };
+
+export type PrinterFieldsFragment = { __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean };
+
+export type PrintJobFieldsFragment = { __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null };
+
+export type PrintAgentsQueryVariables = Exact<{
+  input: PrintAgentsInput;
+}>;
+
+
+export type PrintAgentsQuery = { __typename?: 'Query', printAgents: { __typename?: 'PrintAgentsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'PrintAgent', id: string, orgId: string, name: string, paired: boolean, pairingExpiresAt?: string | null, online: boolean, lastSeenAt?: string | null, version?: string | null, updateAvailable: boolean, enabled: boolean, createdAt: string }> } };
+
+export type CreatePrintAgentMutationVariables = Exact<{
+  input: CreatePrintAgentInput;
+}>;
+
+
+export type CreatePrintAgentMutation = { __typename?: 'Mutation', createPrintAgent: { __typename?: 'PrintAgentPairingPayload', pairingCode: string, pairingExpiresAt: string, agent: { __typename?: 'PrintAgent', id: string, orgId: string, name: string, paired: boolean, pairingExpiresAt?: string | null, online: boolean, lastSeenAt?: string | null, version?: string | null, updateAvailable: boolean, enabled: boolean, createdAt: string } } };
+
+export type ResetPrintAgentPairingMutationVariables = Exact<{
+  input: PrintAgentIdInput;
+}>;
+
+
+export type ResetPrintAgentPairingMutation = { __typename?: 'Mutation', resetPrintAgentPairing: { __typename?: 'PrintAgentPairingPayload', pairingCode: string, pairingExpiresAt: string, agent: { __typename?: 'PrintAgent', id: string, orgId: string, name: string, paired: boolean, pairingExpiresAt?: string | null, online: boolean, lastSeenAt?: string | null, version?: string | null, updateAvailable: boolean, enabled: boolean, createdAt: string } } };
+
+export type DisablePrintAgentMutationVariables = Exact<{
+  input: PrintAgentIdInput;
+}>;
+
+
+export type DisablePrintAgentMutation = { __typename?: 'Mutation', disablePrintAgent: { __typename?: 'PrintAgentPayload', agent: { __typename?: 'PrintAgent', id: string, orgId: string, name: string, paired: boolean, pairingExpiresAt?: string | null, online: boolean, lastSeenAt?: string | null, version?: string | null, updateAvailable: boolean, enabled: boolean, createdAt: string } } };
+
+export type PrintAgentReleaseQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PrintAgentReleaseQuery = { __typename?: 'Query', printAgentRelease: { __typename?: 'PrintAgentReleasePayload', latestVersion?: string | null, files: Array<{ __typename?: 'PrintAgentReleaseFile', platform: PrintAgentPlatform, name: string, sha256: string, size: number }> } };
+
+export type PrintAgentDownloadUrlQueryVariables = Exact<{
+  input: PrintAgentDownloadUrlInput;
+}>;
+
+
+export type PrintAgentDownloadUrlQuery = { __typename?: 'Query', printAgentDownloadUrl: { __typename?: 'PrintAgentDownloadUrlPayload', url: string, version: string, expiresAt: string, file: { __typename?: 'PrintAgentReleaseFile', platform: PrintAgentPlatform, name: string, sha256: string, size: number } } };
+
+export type PrintersQueryVariables = Exact<{
+  input: PrintersInput;
+}>;
+
+
+export type PrintersQuery = { __typename?: 'Query', printers: { __typename?: 'PrintersPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean }> } };
+
+export type CreatePrinterMutationVariables = Exact<{
+  input: CreatePrinterInput;
+}>;
+
+
+export type CreatePrinterMutation = { __typename?: 'Mutation', createPrinter: { __typename?: 'PrinterPayload', printer: { __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean } } };
+
+export type UpdatePrinterMutationVariables = Exact<{
+  input: UpdatePrinterInput;
+}>;
+
+
+export type UpdatePrinterMutation = { __typename?: 'Mutation', updatePrinter: { __typename?: 'PrinterPayload', printer: { __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean } } };
+
+export type SetPrinterEnabledMutationVariables = Exact<{
+  input: SetPrinterEnabledInput;
+}>;
+
+
+export type SetPrinterEnabledMutation = { __typename?: 'Mutation', setPrinterEnabled: { __typename?: 'PrinterPayload', printer: { __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean } } };
+
+export type PrintPrinterTestPageMutationVariables = Exact<{
+  input: PrintPrinterTestPageInput;
+}>;
+
+
+export type PrintPrinterTestPageMutation = { __typename?: 'Mutation', printPrinterTestPage: { __typename?: 'PrintJobPayload', job: { __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null } } };
+
+export type PrintablePrintersQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type PrintablePrintersQuery = { __typename?: 'Query', printablePrinters: { __typename?: 'PrintablePrintersPayload', totalCount: number, defaultPrinterId?: string | null, items: Array<{ __typename?: 'Printer', id: string, orgId: string, agentId: string, name: string, host: string, port: number, paperWidth: number, isDefault: boolean, enabled: boolean, status?: PrinterStatus | null, statusAt?: string | null, agentOnline: boolean, available: boolean }> } };
+
+export type DocumentPrintCountQueryVariables = Exact<{
+  input: DocumentPrintCountInput;
+}>;
+
+
+export type DocumentPrintCountQuery = { __typename?: 'Query', documentPrintCount: { __typename?: 'DocumentPrintCountPayload', printedCount: number } };
+
+export type CreatePrintJobMutationVariables = Exact<{
+  input: CreatePrintJobInput;
+}>;
+
+
+export type CreatePrintJobMutation = { __typename?: 'Mutation', createPrintJob: { __typename?: 'PrintJobPayload', job: { __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null } } };
+
+export type PrintJobQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type PrintJobQuery = { __typename?: 'Query', printJob: { __typename?: 'PrintJobPayload', job: { __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null } } };
+
+export type PrintJobsQueryVariables = Exact<{
+  input: PrintJobsInput;
+}>;
+
+
+export type PrintJobsQuery = { __typename?: 'Query', printJobs: { __typename?: 'PrintJobsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null }> } };
+
 export type RealtimeTicketQueryVariables = Exact<{
   board?: InputMaybe<RealtimeBoardInput>;
 }>;
@@ -4952,6 +5418,62 @@ export const UserSummaryFieldsFragmentDoc = `
   name
   account
   enabled
+}
+    `;
+export const PrintAgentFieldsFragmentDoc = `
+    fragment PrintAgentFields on PrintAgent {
+  id
+  orgId
+  name
+  paired
+  pairingExpiresAt
+  online
+  lastSeenAt
+  version
+  updateAvailable
+  enabled
+  createdAt
+}
+    `;
+export const PrinterFieldsFragmentDoc = `
+    fragment PrinterFields on Printer {
+  id
+  orgId
+  agentId
+  name
+  host
+  port
+  paperWidth
+  isDefault
+  enabled
+  status
+  statusAt
+  agentOnline
+  available
+}
+    `;
+export const PrintJobFieldsFragmentDoc = `
+    fragment PrintJobFields on PrintJob {
+  id
+  orgId
+  printerId
+  documentType
+  refType
+  refId
+  documentName
+  status
+  error
+  isReprint
+  printNo
+  reprintReason
+  reprintNote
+  requestedBy {
+    id
+    name
+  }
+  createdAt
+  sentAt
+  printedAt
 }
     `;
 export const RoleFieldsFragmentDoc = `
@@ -9032,6 +9554,533 @@ export const useSetOrgManagersMutation = <
 
 
 useSetOrgManagersMutation.fetcher = (client: GraphQLClient, variables: SetOrgManagersMutationVariables, headers?: RequestInit['headers']) => fetcher<SetOrgManagersMutation, SetOrgManagersMutationVariables>(client, SetOrgManagersDocument, variables, headers);
+
+export const PrintAgentsDocument = `
+    query PrintAgents($input: PrintAgentsInput!) {
+  printAgents(input: $input) {
+    items {
+      ...PrintAgentFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${PrintAgentFieldsFragmentDoc}`;
+
+export const usePrintAgentsQuery = <
+      TData = PrintAgentsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintAgentsQueryVariables,
+      options?: Omit<UseQueryOptions<PrintAgentsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintAgentsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintAgentsQuery, TError, TData>(
+      {
+    queryKey: ['PrintAgents', variables],
+    queryFn: fetcher<PrintAgentsQuery, PrintAgentsQueryVariables>(client, PrintAgentsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintAgentsQuery.getKey = (variables: PrintAgentsQueryVariables) => ['PrintAgents', variables];
+
+
+usePrintAgentsQuery.fetcher = (client: GraphQLClient, variables: PrintAgentsQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintAgentsQuery, PrintAgentsQueryVariables>(client, PrintAgentsDocument, variables, headers);
+
+export const CreatePrintAgentDocument = `
+    mutation CreatePrintAgent($input: CreatePrintAgentInput!) {
+  createPrintAgent(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+    pairingCode
+    pairingExpiresAt
+  }
+}
+    ${PrintAgentFieldsFragmentDoc}`;
+
+export const useCreatePrintAgentMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreatePrintAgentMutation, TError, CreatePrintAgentMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreatePrintAgentMutation, TError, CreatePrintAgentMutationVariables, TContext>(
+      {
+    mutationKey: ['CreatePrintAgent'],
+    mutationFn: (variables?: CreatePrintAgentMutationVariables) => fetcher<CreatePrintAgentMutation, CreatePrintAgentMutationVariables>(client, CreatePrintAgentDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreatePrintAgentMutation.fetcher = (client: GraphQLClient, variables: CreatePrintAgentMutationVariables, headers?: RequestInit['headers']) => fetcher<CreatePrintAgentMutation, CreatePrintAgentMutationVariables>(client, CreatePrintAgentDocument, variables, headers);
+
+export const ResetPrintAgentPairingDocument = `
+    mutation ResetPrintAgentPairing($input: PrintAgentIdInput!) {
+  resetPrintAgentPairing(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+    pairingCode
+    pairingExpiresAt
+  }
+}
+    ${PrintAgentFieldsFragmentDoc}`;
+
+export const useResetPrintAgentPairingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ResetPrintAgentPairingMutation, TError, ResetPrintAgentPairingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ResetPrintAgentPairingMutation, TError, ResetPrintAgentPairingMutationVariables, TContext>(
+      {
+    mutationKey: ['ResetPrintAgentPairing'],
+    mutationFn: (variables?: ResetPrintAgentPairingMutationVariables) => fetcher<ResetPrintAgentPairingMutation, ResetPrintAgentPairingMutationVariables>(client, ResetPrintAgentPairingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useResetPrintAgentPairingMutation.fetcher = (client: GraphQLClient, variables: ResetPrintAgentPairingMutationVariables, headers?: RequestInit['headers']) => fetcher<ResetPrintAgentPairingMutation, ResetPrintAgentPairingMutationVariables>(client, ResetPrintAgentPairingDocument, variables, headers);
+
+export const DisablePrintAgentDocument = `
+    mutation DisablePrintAgent($input: PrintAgentIdInput!) {
+  disablePrintAgent(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+  }
+}
+    ${PrintAgentFieldsFragmentDoc}`;
+
+export const useDisablePrintAgentMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DisablePrintAgentMutation, TError, DisablePrintAgentMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DisablePrintAgentMutation, TError, DisablePrintAgentMutationVariables, TContext>(
+      {
+    mutationKey: ['DisablePrintAgent'],
+    mutationFn: (variables?: DisablePrintAgentMutationVariables) => fetcher<DisablePrintAgentMutation, DisablePrintAgentMutationVariables>(client, DisablePrintAgentDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDisablePrintAgentMutation.fetcher = (client: GraphQLClient, variables: DisablePrintAgentMutationVariables, headers?: RequestInit['headers']) => fetcher<DisablePrintAgentMutation, DisablePrintAgentMutationVariables>(client, DisablePrintAgentDocument, variables, headers);
+
+export const PrintAgentReleaseDocument = `
+    query PrintAgentRelease {
+  printAgentRelease {
+    latestVersion
+    files {
+      platform
+      name
+      sha256
+      size
+    }
+  }
+}
+    `;
+
+export const usePrintAgentReleaseQuery = <
+      TData = PrintAgentReleaseQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: PrintAgentReleaseQueryVariables,
+      options?: Omit<UseQueryOptions<PrintAgentReleaseQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintAgentReleaseQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintAgentReleaseQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['PrintAgentRelease'] : ['PrintAgentRelease', variables],
+    queryFn: fetcher<PrintAgentReleaseQuery, PrintAgentReleaseQueryVariables>(client, PrintAgentReleaseDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintAgentReleaseQuery.getKey = (variables?: PrintAgentReleaseQueryVariables) => variables === undefined ? ['PrintAgentRelease'] : ['PrintAgentRelease', variables];
+
+
+usePrintAgentReleaseQuery.fetcher = (client: GraphQLClient, variables?: PrintAgentReleaseQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintAgentReleaseQuery, PrintAgentReleaseQueryVariables>(client, PrintAgentReleaseDocument, variables, headers);
+
+export const PrintAgentDownloadUrlDocument = `
+    query PrintAgentDownloadUrl($input: PrintAgentDownloadUrlInput!) {
+  printAgentDownloadUrl(input: $input) {
+    url
+    version
+    expiresAt
+    file {
+      platform
+      name
+      sha256
+      size
+    }
+  }
+}
+    `;
+
+export const usePrintAgentDownloadUrlQuery = <
+      TData = PrintAgentDownloadUrlQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintAgentDownloadUrlQueryVariables,
+      options?: Omit<UseQueryOptions<PrintAgentDownloadUrlQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintAgentDownloadUrlQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintAgentDownloadUrlQuery, TError, TData>(
+      {
+    queryKey: ['PrintAgentDownloadUrl', variables],
+    queryFn: fetcher<PrintAgentDownloadUrlQuery, PrintAgentDownloadUrlQueryVariables>(client, PrintAgentDownloadUrlDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintAgentDownloadUrlQuery.getKey = (variables: PrintAgentDownloadUrlQueryVariables) => ['PrintAgentDownloadUrl', variables];
+
+
+usePrintAgentDownloadUrlQuery.fetcher = (client: GraphQLClient, variables: PrintAgentDownloadUrlQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintAgentDownloadUrlQuery, PrintAgentDownloadUrlQueryVariables>(client, PrintAgentDownloadUrlDocument, variables, headers);
+
+export const PrintersDocument = `
+    query Printers($input: PrintersInput!) {
+  printers(input: $input) {
+    items {
+      ...PrinterFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${PrinterFieldsFragmentDoc}`;
+
+export const usePrintersQuery = <
+      TData = PrintersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintersQueryVariables,
+      options?: Omit<UseQueryOptions<PrintersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintersQuery, TError, TData>(
+      {
+    queryKey: ['Printers', variables],
+    queryFn: fetcher<PrintersQuery, PrintersQueryVariables>(client, PrintersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintersQuery.getKey = (variables: PrintersQueryVariables) => ['Printers', variables];
+
+
+usePrintersQuery.fetcher = (client: GraphQLClient, variables: PrintersQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintersQuery, PrintersQueryVariables>(client, PrintersDocument, variables, headers);
+
+export const CreatePrinterDocument = `
+    mutation CreatePrinter($input: CreatePrinterInput!) {
+  createPrinter(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+    ${PrinterFieldsFragmentDoc}`;
+
+export const useCreatePrinterMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreatePrinterMutation, TError, CreatePrinterMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreatePrinterMutation, TError, CreatePrinterMutationVariables, TContext>(
+      {
+    mutationKey: ['CreatePrinter'],
+    mutationFn: (variables?: CreatePrinterMutationVariables) => fetcher<CreatePrinterMutation, CreatePrinterMutationVariables>(client, CreatePrinterDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreatePrinterMutation.fetcher = (client: GraphQLClient, variables: CreatePrinterMutationVariables, headers?: RequestInit['headers']) => fetcher<CreatePrinterMutation, CreatePrinterMutationVariables>(client, CreatePrinterDocument, variables, headers);
+
+export const UpdatePrinterDocument = `
+    mutation UpdatePrinter($input: UpdatePrinterInput!) {
+  updatePrinter(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+    ${PrinterFieldsFragmentDoc}`;
+
+export const useUpdatePrinterMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdatePrinterMutation, TError, UpdatePrinterMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdatePrinterMutation, TError, UpdatePrinterMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdatePrinter'],
+    mutationFn: (variables?: UpdatePrinterMutationVariables) => fetcher<UpdatePrinterMutation, UpdatePrinterMutationVariables>(client, UpdatePrinterDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdatePrinterMutation.fetcher = (client: GraphQLClient, variables: UpdatePrinterMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdatePrinterMutation, UpdatePrinterMutationVariables>(client, UpdatePrinterDocument, variables, headers);
+
+export const SetPrinterEnabledDocument = `
+    mutation SetPrinterEnabled($input: SetPrinterEnabledInput!) {
+  setPrinterEnabled(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+    ${PrinterFieldsFragmentDoc}`;
+
+export const useSetPrinterEnabledMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SetPrinterEnabledMutation, TError, SetPrinterEnabledMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SetPrinterEnabledMutation, TError, SetPrinterEnabledMutationVariables, TContext>(
+      {
+    mutationKey: ['SetPrinterEnabled'],
+    mutationFn: (variables?: SetPrinterEnabledMutationVariables) => fetcher<SetPrinterEnabledMutation, SetPrinterEnabledMutationVariables>(client, SetPrinterEnabledDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSetPrinterEnabledMutation.fetcher = (client: GraphQLClient, variables: SetPrinterEnabledMutationVariables, headers?: RequestInit['headers']) => fetcher<SetPrinterEnabledMutation, SetPrinterEnabledMutationVariables>(client, SetPrinterEnabledDocument, variables, headers);
+
+export const PrintPrinterTestPageDocument = `
+    mutation PrintPrinterTestPage($input: PrintPrinterTestPageInput!) {
+  printPrinterTestPage(input: $input) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+    ${PrintJobFieldsFragmentDoc}`;
+
+export const usePrintPrinterTestPageMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<PrintPrinterTestPageMutation, TError, PrintPrinterTestPageMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<PrintPrinterTestPageMutation, TError, PrintPrinterTestPageMutationVariables, TContext>(
+      {
+    mutationKey: ['PrintPrinterTestPage'],
+    mutationFn: (variables?: PrintPrinterTestPageMutationVariables) => fetcher<PrintPrinterTestPageMutation, PrintPrinterTestPageMutationVariables>(client, PrintPrinterTestPageDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+usePrintPrinterTestPageMutation.fetcher = (client: GraphQLClient, variables: PrintPrinterTestPageMutationVariables, headers?: RequestInit['headers']) => fetcher<PrintPrinterTestPageMutation, PrintPrinterTestPageMutationVariables>(client, PrintPrinterTestPageDocument, variables, headers);
+
+export const PrintablePrintersDocument = `
+    query PrintablePrinters($orgId: ID!) {
+  printablePrinters(orgId: $orgId) {
+    items {
+      ...PrinterFields
+    }
+    totalCount
+    defaultPrinterId
+  }
+}
+    ${PrinterFieldsFragmentDoc}`;
+
+export const usePrintablePrintersQuery = <
+      TData = PrintablePrintersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintablePrintersQueryVariables,
+      options?: Omit<UseQueryOptions<PrintablePrintersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintablePrintersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintablePrintersQuery, TError, TData>(
+      {
+    queryKey: ['PrintablePrinters', variables],
+    queryFn: fetcher<PrintablePrintersQuery, PrintablePrintersQueryVariables>(client, PrintablePrintersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintablePrintersQuery.getKey = (variables: PrintablePrintersQueryVariables) => ['PrintablePrinters', variables];
+
+
+usePrintablePrintersQuery.fetcher = (client: GraphQLClient, variables: PrintablePrintersQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintablePrintersQuery, PrintablePrintersQueryVariables>(client, PrintablePrintersDocument, variables, headers);
+
+export const DocumentPrintCountDocument = `
+    query DocumentPrintCount($input: DocumentPrintCountInput!) {
+  documentPrintCount(input: $input) {
+    printedCount
+  }
+}
+    `;
+
+export const useDocumentPrintCountQuery = <
+      TData = DocumentPrintCountQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: DocumentPrintCountQueryVariables,
+      options?: Omit<UseQueryOptions<DocumentPrintCountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<DocumentPrintCountQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<DocumentPrintCountQuery, TError, TData>(
+      {
+    queryKey: ['DocumentPrintCount', variables],
+    queryFn: fetcher<DocumentPrintCountQuery, DocumentPrintCountQueryVariables>(client, DocumentPrintCountDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useDocumentPrintCountQuery.getKey = (variables: DocumentPrintCountQueryVariables) => ['DocumentPrintCount', variables];
+
+
+useDocumentPrintCountQuery.fetcher = (client: GraphQLClient, variables: DocumentPrintCountQueryVariables, headers?: RequestInit['headers']) => fetcher<DocumentPrintCountQuery, DocumentPrintCountQueryVariables>(client, DocumentPrintCountDocument, variables, headers);
+
+export const CreatePrintJobDocument = `
+    mutation CreatePrintJob($input: CreatePrintJobInput!) {
+  createPrintJob(input: $input) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+    ${PrintJobFieldsFragmentDoc}`;
+
+export const useCreatePrintJobMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreatePrintJobMutation, TError, CreatePrintJobMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreatePrintJobMutation, TError, CreatePrintJobMutationVariables, TContext>(
+      {
+    mutationKey: ['CreatePrintJob'],
+    mutationFn: (variables?: CreatePrintJobMutationVariables) => fetcher<CreatePrintJobMutation, CreatePrintJobMutationVariables>(client, CreatePrintJobDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreatePrintJobMutation.fetcher = (client: GraphQLClient, variables: CreatePrintJobMutationVariables, headers?: RequestInit['headers']) => fetcher<CreatePrintJobMutation, CreatePrintJobMutationVariables>(client, CreatePrintJobDocument, variables, headers);
+
+export const PrintJobDocument = `
+    query PrintJob($id: ID!) {
+  printJob(id: $id) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+    ${PrintJobFieldsFragmentDoc}`;
+
+export const usePrintJobQuery = <
+      TData = PrintJobQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintJobQueryVariables,
+      options?: Omit<UseQueryOptions<PrintJobQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintJobQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintJobQuery, TError, TData>(
+      {
+    queryKey: ['PrintJob', variables],
+    queryFn: fetcher<PrintJobQuery, PrintJobQueryVariables>(client, PrintJobDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintJobQuery.getKey = (variables: PrintJobQueryVariables) => ['PrintJob', variables];
+
+
+usePrintJobQuery.fetcher = (client: GraphQLClient, variables: PrintJobQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintJobQuery, PrintJobQueryVariables>(client, PrintJobDocument, variables, headers);
+
+export const PrintJobsDocument = `
+    query PrintJobs($input: PrintJobsInput!) {
+  printJobs(input: $input) {
+    items {
+      ...PrintJobFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${PrintJobFieldsFragmentDoc}`;
+
+export const usePrintJobsQuery = <
+      TData = PrintJobsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: PrintJobsQueryVariables,
+      options?: Omit<UseQueryOptions<PrintJobsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<PrintJobsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<PrintJobsQuery, TError, TData>(
+      {
+    queryKey: ['PrintJobs', variables],
+    queryFn: fetcher<PrintJobsQuery, PrintJobsQueryVariables>(client, PrintJobsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+usePrintJobsQuery.getKey = (variables: PrintJobsQueryVariables) => ['PrintJobs', variables];
+
+
+usePrintJobsQuery.fetcher = (client: GraphQLClient, variables: PrintJobsQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintJobsQuery, PrintJobsQueryVariables>(client, PrintJobsDocument, variables, headers);
 
 export const RealtimeTicketDocument = `
     query RealtimeTicket($board: RealtimeBoardInput) {

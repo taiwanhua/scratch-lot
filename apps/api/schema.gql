@@ -210,6 +210,32 @@ input CreateFormVersionDraftInput {
   formKey: ID!
 }
 
+input CreatePrintAgentInput {
+  name: String!
+  orgId: ID!
+}
+
+input CreatePrintJobInput {
+  documentName: String
+  documentType: String!
+  image: String!
+  isReprint: Boolean
+  printerId: ID!
+  refId: String!
+  refType: String!
+  reprintNote: String
+  reprintReason: String
+}
+
+input CreatePrinterInput {
+  agentId: ID!
+  host: String!
+  isDefault: Boolean
+  name: String!
+  paperWidth: Int
+  port: Int
+}
+
 input CreateRoleInput {
   description: String
   name: String!
@@ -519,6 +545,15 @@ type DemoItemsTwoPayload {
   page: Int!
   pageSize: Int!
   totalCount: Int!
+}
+
+input DocumentPrintCountInput {
+  refId: String!
+  refType: String!
+}
+
+type DocumentPrintCountPayload {
+  printedCount: Int!
 }
 
 input ExportFormSeedInput {
@@ -1164,6 +1199,9 @@ type Mutation {
   createForm(input: CreateFormInput!): FormPayload!
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
   createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
+  createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
+  createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
+  createPrinter(input: CreatePrinterInput!): PrinterPayload!
   createRole(input: CreateRoleInput!): RolePayload!
   createUploadUrl(input: CreateUploadUrlInput!): UploadUrlPayload!
   createUser(input: CreateUserInput!): UserPayload!
@@ -1178,6 +1216,7 @@ type Mutation {
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
+  disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
   grantRoleUsers(input: GrantRoleUsersInput!): RoleUsersPayload!
@@ -1187,6 +1226,7 @@ type Mutation {
   markAllNotificationsRead: MarkNotificationsReadPayload!
   markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
+  printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
@@ -1194,6 +1234,7 @@ type Mutation {
   refresh: RefreshPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
+  resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
   retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
@@ -1219,6 +1260,7 @@ type Mutation {
   setOrgVisibility(input: SetOrgVisibilityInput!): OrgPayload!
   setPassword(input: SetPasswordInput!): SetPasswordPayload!
   setPermissionEnabled(input: SetPermissionEnabledInput!): PermissionAdminPayload!
+  setPrinterEnabled(input: SetPrinterEnabledInput!): PrinterPayload!
   setRoleEnabled(input: SetRoleEnabledInput!): RolePayload!
   setTenantFormEnabled(input: SetTenantFormEnabledInput!): FormPayload!
   setUserEnabled(input: SetUserEnabledInput!): UserPayload!
@@ -1236,6 +1278,7 @@ type Mutation {
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
+  updatePrinter(input: UpdatePrinterInput!): PrinterPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
@@ -1440,6 +1483,205 @@ input PreviewFormVersionInput {
   version: Int
 }
 
+type PrintAgent {
+  createdAt: DateTime!
+  enabled: Boolean!
+  id: ID!
+  lastSeenAt: DateTime
+  name: String!
+  online: Boolean!
+  orgId: ID!
+  paired: Boolean!
+  pairingExpiresAt: DateTime
+  updateAvailable: Boolean!
+  version: String
+}
+
+input PrintAgentDownloadUrlInput {
+  platform: PrintAgentPlatform!
+}
+
+type PrintAgentDownloadUrlPayload {
+  expiresAt: DateTime!
+  file: PrintAgentReleaseFile!
+  url: String!
+  version: String!
+}
+
+input PrintAgentIdInput {
+  id: ID!
+}
+
+type PrintAgentPairingPayload {
+  agent: PrintAgent!
+  pairingCode: String!
+  pairingExpiresAt: DateTime!
+}
+
+type PrintAgentPayload {
+  agent: PrintAgent!
+}
+
+"""代理程式安裝檔的平台"""
+enum PrintAgentPlatform {
+  LINUX_ARM64
+  LINUX_X64
+  MACOS_ARM64
+  WINDOWS_X64
+}
+
+type PrintAgentReleaseFile {
+  name: String!
+  platform: PrintAgentPlatform!
+  sha256: String!
+  size: Int!
+}
+
+type PrintAgentReleasePayload {
+  files: [PrintAgentReleaseFile!]!
+  latestVersion: String
+}
+
+input PrintAgentsInput {
+  includeDisabled: Boolean = false
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type PrintAgentsPayload {
+  items: [PrintAgent!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type PrintJob {
+  createdAt: DateTime!
+  documentName: String
+  documentType: String!
+  error: PrintJobError
+  id: ID!
+  isReprint: Boolean!
+  orgId: ID!
+  printNo: Int!
+  printedAt: DateTime
+  printerId: ID!
+  refId: String!
+  refType: String!
+  reprintNote: String
+  reprintReason: String
+  requestedBy: PrintJobRequester
+  sentAt: DateTime
+  status: PrintJobStatus!
+}
+
+"""
+失敗原因:代理程式離線(含 2 分鐘沒被認領)/ 代理程式已停用 / 未收到列印結果(已送出 2 分鐘沒回報)/ 缺紙 / 連不上印表機 / 其他
+"""
+enum PrintJobError {
+  AGENT_DISABLED
+  AGENT_OFFLINE
+  NO_RESULT
+  OTHER
+  PAPER_OUT
+  PRINTER_OFFLINE
+}
+
+type PrintJobPayload {
+  job: PrintJob!
+}
+
+type PrintJobRequester {
+  id: ID!
+  name: String!
+}
+
+"""列印工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗"""
+enum PrintJobStatus {
+  FAILED
+  PENDING
+  PRINTED
+  SENT
+}
+
+input PrintJobsInput {
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  printerId: ID
+  refId: String
+  refType: String
+  status: PrintJobStatus
+}
+
+type PrintJobsPayload {
+  items: [PrintJob!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+input PrintPrinterTestPageInput {
+  image: String!
+  printerId: ID!
+}
+
+type PrintablePrintersPayload {
+  defaultPrinterId: ID
+  items: [Printer!]!
+  totalCount: Int!
+}
+
+type Printer {
+  agentId: ID!
+  agentOnline: Boolean!
+  available: Boolean!
+  enabled: Boolean!
+  host: String!
+  id: ID!
+  isDefault: Boolean!
+  name: String!
+  orgId: ID!
+  paperWidth: Int!
+  port: Int!
+  status: PrinterStatus
+  statusAt: DateTime
+}
+
+type PrinterPayload {
+  printer: Printer!
+}
+
+"""代理程式回報的印表機狀態:正常 / 缺紙 / 離線"""
+enum PrinterStatus {
+  OFFLINE
+  OK
+  PAPER_OUT
+}
+
+input PrintersInput {
+  agentId: ID
+  enabled: Boolean
+  keyword: String
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type PrintersPayload {
+  items: [Printer!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
 input ProvisionTenantInput {
   adminAccount: String!
   adminEmail: String!
@@ -1482,6 +1724,7 @@ type Query {
   demoItemTwo(id: ID!): DemoItemTwoPayload!
   demoItemsOne(input: DemoItemsOneInput!): DemoItemsOnePayload!
   demoItemsTwo(input: DemoItemsTwoInput!): DemoItemsTwoPayload!
+  documentPrintCount(input: DocumentPrintCountInput!): DocumentPrintCountPayload!
   exportFormSeed(input: ExportFormSeedInput!): ExportFormSeedPayload!
   exportWorkflowSeed(input: ExportWorkflowSeedInput!): ExportWorkflowSeedPayload!
   fieldCategories(input: FieldCategoriesInput): FieldCategoriesPayload!
@@ -1517,6 +1760,13 @@ type Query {
   orgMembers(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgTree: [OrgNode!]!
   previewFormVersion(input: PreviewFormVersionInput!): FormPreviewPayload!
+  printAgentDownloadUrl(input: PrintAgentDownloadUrlInput!): PrintAgentDownloadUrlPayload!
+  printAgentRelease: PrintAgentReleasePayload!
+  printAgents(input: PrintAgentsInput!): PrintAgentsPayload!
+  printJob(id: ID!): PrintJobPayload!
+  printJobs(input: PrintJobsInput!): PrintJobsPayload!
+  printablePrinters(orgId: ID!): PrintablePrintersPayload!
+  printers(input: PrintersInput!): PrintersPayload!
   realtimeTicket(board: RealtimeBoardInput): RealtimeTicketPayload
   retiredFormPermissions: RetiredFormPermissionsPayload!
   role(id: ID!): RolePayload!
@@ -1899,6 +2149,11 @@ input SetPermissionEnabledInput {
   id: ID!
 }
 
+input SetPrinterEnabledInput {
+  enabled: Boolean!
+  id: ID!
+}
+
 input SetRoleEnabledInput {
   enabled: Boolean!
   id: ID!
@@ -2021,6 +2276,15 @@ input UpdateOrgInput {
   logoPath: String
   name: String
   slug: String
+}
+
+input UpdatePrinterInput {
+  agentId: ID
+  host: String
+  id: ID!
+  isDefault: Boolean
+  name: String
+  port: Int
 }
 
 input UpdateRoleInput {

@@ -9,6 +9,9 @@ export const PRINT_AGENT_OFFLINE_AFTER_MS = 2 * 60 * 1000;
 /** 工作逾時:「等待中」超過這段時間沒有被認領 → 標失敗「代理程式離線」。 */
 export const PRINT_JOB_CLAIM_TIMEOUT_MS = 2 * 60 * 1000;
 
+/** 結果逾時:「已送出」(認領後)超過這段時間沒有回報 → 標失敗「未收到列印結果」。 */
+export const PRINT_JOB_RESULT_TIMEOUT_MS = 2 * 60 * 1000;
+
 /**
  * 代理程式回報心跳(`version` 與印表機狀態)的間隔:要小於離線判斷,
  * 連著即時通道、沒有工作進來時也靠它讓 `lastSeenAt` 保持在 2 分鐘內。
@@ -58,7 +61,8 @@ export type PrintJobResult = (typeof PRINT_JOB_RESULTS)[number];
 /**
  * 失敗原因(`print_jobs.error`;前端依它顯示「✗ 失敗:<原因>」):
  * - `agent-offline`:送出時代理程式已離線,或等待中超過 2 分鐘沒有被認領
- * - `agent-disabled`:代理程式被停用時還在等待中的工作
+ * - `agent-disabled`:代理程式被停用時還在等待中或已送出(還沒回報)的工作
+ * - `no-result`:已送出(代理程式已認領)超過 2 分鐘沒有回報結果 —— 可能已經印出來,按鈕要與「代理程式離線」分開說
  * - `paper-out`:缺紙
  * - `printer-offline`:連不上印表機(TCP 9100 連線失敗 / 逾時)
  * - `other`:其他(代理程式回報不認得的原因時也歸這裡)
@@ -66,6 +70,7 @@ export type PrintJobResult = (typeof PRINT_JOB_RESULTS)[number];
 export const PRINT_JOB_ERRORS = [
   "agent-offline",
   "agent-disabled",
+  "no-result",
   "paper-out",
   "printer-offline",
   "other",

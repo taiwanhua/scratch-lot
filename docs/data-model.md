@@ -63,13 +63,13 @@
 
 `print_agents`、`printers`、`print_jobs` 是印表機管理模組(`system.printers`)的模組資料表(`moduleData`,`moduleKey` 固定 `system.printers`),都掛在**分店**(`orgId`)上;印表機的分店 = 它的代理程式的分店,工作的分店 = 印表機的分店。
 
-| collection     | 欄位                                                                                                                                                                                                                                                                                    |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `print_agents` | `orgId`、`name`、`keyHash`(長期金鑰的 SHA-256;沒配對 / 已撤銷為 null)、`pairingCodeHash` + `pairingExpiresAt`(等待中的 8 碼配對碼,10 分鐘,用過即清)、`lastSeenAt`(超過 2 分鐘 = 離線)、`version`、`enabled`;`keyHash`、`pairingCodeHash` 各自唯一(只索引有值的)                         |
-| `printers`     | `orgId`、`agentId`、`name`、`host`、`port`(預設 9100)、`paperWidth`(58)、`isDefault`(同分店至多一台)、`enabled`、`status`(`ok` / `paper-out` / `offline`,代理程式回報)、`statusAt`                                                                                                      |
-| `print_jobs`   | `orgId`、`printerId`、`agentId`(建立時的代理程式快照)、`documentType`、`refType` + `refId`(單據)、`image`(PNG,預設查詢不帶)、`status`(`pending` / `sent` / `printed` / `failed`)、`error`、`isReprint`、`printNo`、`reprintReason`、`reprintNote`、`requestedBy`、`sentAt`、`printedAt` |
+| collection     | 欄位                                                                                                                                                                                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print_agents` | `orgId`、`name`、`keyHash`(長期金鑰的 SHA-256;沒配對 / 已撤銷為 null)、`pairingCodeHash` + `pairingExpiresAt`(等待中的 8 碼配對碼,10 分鐘,用過即清)、`lastSeenAt`(超過 2 分鐘 = 離線)、`version`、`enabled`;`keyHash`、`pairingCodeHash` 各自唯一(只索引有值的)                                                              |
+| `printers`     | `orgId`、`agentId`、`name`、`host`、`port`(預設 9100)、`paperWidth`(58)、`isDefault`(同分店至多一台)、`enabled`、`status`(`ok` / `paper-out` / `offline`,代理程式回報)、`statusAt`                                                                                                                                           |
+| `print_jobs`   | `orgId`、`printerId`、`agentId`(建立時的代理程式快照)、`documentType`、`refType` + `refId`(單據)、`documentName`(單據顯示名稱,通知用)、`image`(PNG,預設查詢不帶)、`status`(`pending` / `sent` / `printed` / `failed`)、`error`、`isReprint`、`printNo`、`reprintReason`、`reprintNote`、`requestedBy`、`sentAt`、`printedAt` |
 
-狀態轉換只用條件更新:認領 `pending → sent`(且 2 分鐘內)、回報 `sent → printed / failed`、逾時與停用 `pending → failed`;同時到的兩個請求只有一個命中。規則與 API 見 `docs/modules/printers.md`。
+狀態轉換只用條件更新:認領 `pending → sent`(且 2 分鐘內)、回報 `sent → printed / failed`(且 2 分鐘內)、等待中逾時 `pending → failed`(`agent-offline`)、已送出逾時 `sent → failed`(`no-result`)、停用 `pending / sent → failed`(`agent-disabled`,已送出的也一起標失敗);同時到的兩個請求只有一個命中。規則與 API 見 `docs/modules/printers.md`。
 
 ### 個人偏好
 

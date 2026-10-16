@@ -5,6 +5,7 @@ import {
   PRINT_IMAGE_MAX_BYTES,
   PRINT_IMAGE_WIDTH_DOTS,
   PRINT_JOB_CLAIM_TIMEOUT_MS,
+  PRINT_JOB_RESULT_TIMEOUT_MS,
   PRINT_SIGNALS,
   PRINT_TEST_PAGE_DOCUMENT_TYPE,
   PRINT_TEST_PAGE_REF_TYPE,
@@ -61,6 +62,7 @@ import {
   pageOf,
   toJobModel,
 } from "./printing-mapper";
+import { PrintingNotifier } from "./printing-notifier";
 
 /** 權限 key(docs/modules/printers.md「權限」)。 */
 export const PRINTING_PERMISSIONS = {
@@ -90,6 +92,7 @@ interface NewJob {
   documentType: string;
   refType: string;
   refId: string;
+  documentName: string | null;
   image: string;
   isReprint: boolean;
   reprintReason: string | null;
@@ -145,6 +148,16 @@ function checkReprintNote(
   }
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** 去頭尾空白;空字串 / 缺席 = null。 */
+function emptyToNull(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  return trimmed === "" ? null : trimmed;
+}
+
 /** 單筆轉換的結果(不會是空的)。 */
 function only<T>(models: readonly T[]): T {
   const [first] = models;
@@ -190,9 +203,11 @@ export function decodePrintImage(raw: string, paperWidth: number): Buffer {
  * - **建立**(列印按鈕 / 測試列印):代理程式已離線 → 仍建立,但直接標失敗 `agent-offline`;
  *   否則等待中,交易提交後送 `print-job` 給 `print-agent:<代理程式>`。
  * - **認領**:條件更新「等待中(且 2 分鐘內)→ 已送出」,信號與輪詢同時到也只有一方成功。
- * - **回報**:已送出 → 已印 / 失敗,送 `print-result` 給 `user:<要求人>`。
- * - **逾時**:等待中超過 2 分鐘 → 失敗 `agent-offline` + `print-result`。讀取時順手判斷
- *   (代理程式拿工作、認領、查單筆 / 清單),排程每 15 分鐘補掃。
+ * - **回報**:已送出(且 2 分鐘內)→ 已印 / 失敗,送 `print-result` 給 `user:<要求人>`。
+ * - **逾時**:等待中超過 2 分鐘沒被認領 → 失敗 `agent-offline`;已送出超過 2 分鐘沒回報 → 失敗
+ *   `no-result`。都送 `print-result` 並通知要求人。讀取時順手判斷(代理程式拿工作、認領、回報、
+ *   查單筆 / 清單),排程每 15 分鐘補掃。
+ * - 每次標失敗都在同一個交易內通知要求人(`printing.job-failed`)。
  */
 @Injectable()
 export class PrintJobsService implements OnModuleInit {
@@ -209,16 +224,32 @@ export class PrintJobsService implements OnModuleInit {
     private readonly transactions: TransactionService,
     private readonly realtime: RealtimePublisher,
     private readonly scheduledJobs: ScheduledJobRegistry,
+    private readonly notifier: PrintingNotifier,
   ) {}
 
   onModuleInit(): void {
     this.scheduledJobs.registerScheduledJob({
       key: EXPIRE_STALE_JOBS_KEY,
       every: "15m",
-      handler: async () => {
-        await this.expireStale(internalReader(), {}, new Date());
-      },
+      handler: () => this.runScheduledSweep(new Date()),
     });
+  }
+
+  /**
+   * 排程補掃(每 15 分鐘):逾時的工作 → 離線的代理程式。兩段各自 try/catch 記 log,
+   * 一段失敗另一段照跑;每段內單筆失敗也只記 log、繼續下一筆(`expireStale` / `sweepOfflineAgents`)。
+   */
+  async runScheduledSweep(now: Date): Promise<void> {
+    try {
+      await this.expireStale(internalReader(), {}, now);
+    } catch (error) {
+      this.logger.error(`逾時工作補掃失敗:${messageOf(error)}`);
+    }
+    try {
+      await this.notifier.sweepOfflineAgents(now);
+    } catch (error) {
+      this.logger.error(`離線代理程式補掃失敗:${messageOf(error)}`);
+    }
   }
 
   // ---- 後台(GraphQL)----
@@ -247,6 +278,7 @@ export class PrintJobsService implements OnModuleInit {
       documentType,
       refType,
       refId,
+      documentName: emptyToNull(input.documentName),
       image: input.image,
       isReprint,
       ...reprint,
@@ -263,6 +295,7 @@ export class PrintJobsService implements OnModuleInit {
       documentType: PRINT_TEST_PAGE_DOCUMENT_TYPE,
       refType: PRINT_TEST_PAGE_REF_TYPE,
       refId: input.printerId,
+      documentName: null,
       image: input.image,
       isReprint: false,
       reprintReason: null,
@@ -288,7 +321,7 @@ export class PrintJobsService implements OnModuleInit {
     return only(await this.toModels(operator, [job]));
   }
 
-  /** 列印紀錄(新到舊);列之前先把範圍內逾時的等待中工作標失敗。 */
+  /** 列印紀錄(新到舊);列之前先把範圍內逾時的工作(等待中沒被認領、已送出沒回報)標失敗。 */
   async list(
     operator: OperatorContext,
     input: PrintJobsInput,
@@ -423,18 +456,42 @@ export class PrintJobsService implements OnModuleInit {
     error: PrintAgentReportableError | null,
     now: Date,
   ): Promise<JobRecord | null> {
-    const updated = await this.jobs.findOneAndUpdate(
-      operator,
-      { _id: jobId, agentId: agent._id, status: "sent" },
-      {
-        $set:
-          result === "printed"
-            ? { status: "printed", printedAt: now, error: null }
-            : { status: "failed", error: error ?? "other" },
-      },
-    );
-    if (updated !== null) {
-      await this.publishResults([updated]);
+    const updated = await this.transactions.withTransaction(async () => {
+      const reported = await this.jobs.findOneAndUpdate(
+        operator,
+        {
+          _id: jobId,
+          agentId: agent._id,
+          status: "sent",
+          // 結果逾時之後的回報一律不收(不管有沒有人先讀過、先標了 no-result)
+          sentAt: {
+            $gte: new Date(now.getTime() - PRINT_JOB_RESULT_TIMEOUT_MS),
+          },
+        },
+        {
+          $set:
+            result === "printed"
+              ? { status: "printed", printedAt: now, error: null }
+              : { status: "failed", error: error ?? "other" },
+        },
+      );
+      if (reported !== null) {
+        if (reported.status === "failed") {
+          await this.notifier.jobFailed(reported);
+        }
+        this.publishResultAfterCommit(reported);
+      }
+      return reported;
+    });
+    if (updated === null) {
+      // 沒命中:已送出但結果逾時的那筆先標 no-result(要求人收到結果與通知),呼叫端再回 409
+      const job = await this.jobs.findOne(operator, {
+        _id: jobId,
+        agentId: agent._id,
+      });
+      if (job !== null) {
+        await this.expireOne(operator, job, now);
+      }
     }
     return updated;
   }
@@ -461,37 +518,36 @@ export class PrintJobsService implements OnModuleInit {
 
   // ---- 停用代理程式時(在呼叫端的交易內)----
 
-  /** 把這個代理程式等待中的工作標失敗 `agent-disabled`;交易提交後各送 `print-result`。 */
+  /**
+   * 把這個代理程式**等待中與已送出(還沒回報)**的工作直接標失敗 `agent-disabled`(同交易通知要求人);
+   * 交易提交後各送 `print-result`。已送出的不等結果逾時:停用後金鑰失效,代理程式也回報不了。
+   */
   async failPendingOfAgent(
     operator: OperatorContext,
     agentId: Types.ObjectId,
   ): Promise<void> {
     const pending = await this.jobs.findMany(operator, {
       agentId,
-      status: "pending",
+      status: { $in: ["pending", "sent"] },
     });
     if (pending.length === 0) {
       return;
     }
-    await this.jobs.updateMany(
-      operator,
-      { _id: { $in: pending.map((job) => job._id) }, status: "pending" },
-      { $set: { status: "failed", error: "agent-disabled" } },
-    );
     for (const job of pending) {
-      this.realtime.publishAfterCommit(
-        job.tenantId,
-        [userTopic(String(job.requestedBy))],
-        { type: PRINT_SIGNALS.result, id: String(job._id) },
-      );
+      const failed = await this.markFailed(operator, job, "agent-disabled");
+      if (failed !== null) {
+        await this.notifier.jobFailed(failed);
+        this.publishResultAfterCommit(failed);
+      }
     }
   }
 
   // ---- 逾時 ----
 
   /**
-   * 把範圍內「等待中超過 2 分鐘」的工作標失敗 `agent-offline`,逐筆送 `print-result`。
-   * 每筆是獨立的條件更新(與認領競爭時只有一方成功);不在交易內呼叫。
+   * 把範圍內逾時的工作標失敗:「等待中」超過 2 分鐘沒被認領 → `agent-offline`;「已送出」超過 2 分鐘
+   * 沒回報 → `no-result`。每筆一個交易(條件更新 + 通知要求人),提交後送 `print-result`。
+   * 條件更新與認領 / 回報競爭時只有一方成功;不在交易內呼叫。
    */
   async expireStale(
     operator: OperatorContext,
@@ -502,22 +558,37 @@ export class PrintJobsService implements OnModuleInit {
       operator,
       {
         ...filter,
-        status: "pending",
-        createdAt: {
-          $lt: new Date(now.getTime() - PRINT_JOB_CLAIM_TIMEOUT_MS),
-        },
+        $or: [
+          {
+            status: "pending",
+            createdAt: {
+              $lt: new Date(now.getTime() - PRINT_JOB_CLAIM_TIMEOUT_MS),
+            },
+          },
+          {
+            status: "sent",
+            sentAt: {
+              $lt: new Date(now.getTime() - PRINT_JOB_RESULT_TIMEOUT_MS),
+            },
+          },
+        ],
       },
       { limit: EXPIRE_BATCH_LIMIT },
     );
-    const expired: JobRecord[] = [];
+    let expired = 0;
     for (const job of stale) {
-      const failed = await this.markFailed(operator, job, "agent-offline");
-      if (failed !== null) {
-        expired.push(failed);
+      try {
+        if ((await this.expireOne(operator, job, now)) !== null) {
+          expired += 1;
+        }
+      } catch (error) {
+        // 單筆失敗不擋後面的筆數(下一輪或下次讀取再判斷)
+        this.logger.error(
+          `逾時工作 ${String(job._id)} 標失敗時出錯:${messageOf(error)}`,
+        );
       }
     }
-    await this.publishResults(expired);
-    return expired.length;
+    return expired;
   }
 
   // ---- 內部 ----
@@ -562,6 +633,7 @@ export class PrintJobsService implements OnModuleInit {
         documentType: input.documentType,
         refType: input.refType,
         refId: input.refId,
+        documentName: input.documentName,
         image,
         // 送出時代理程式已離線:仍建立工作,按鈕立即顯示「✗ 失敗:代理程式離線」
         status: offline ? "failed" : "pending",
@@ -572,7 +644,9 @@ export class PrintJobsService implements OnModuleInit {
         reprintNote: input.isReprint ? input.reprintNote : null,
         requestedBy,
       });
-      if (!offline) {
+      if (offline) {
+        await this.notifier.jobFailed(created);
+      } else {
         this.realtime.publishAfterCommit(
           created.tenantId,
           [printAgentTopic(String(agent._id))],
@@ -581,26 +655,65 @@ export class PrintJobsService implements OnModuleInit {
       }
       return created;
     });
+    if (offline) {
+      // 代理程式離線:順手提醒負責人(同一次離線只一次;失敗不影響已建立的工作)
+      await this.notifyAgentOffline(agent, now);
+    }
     return only(await this.toModels(operator, [job]));
   }
 
-  /** 單筆逾時判斷:等待中且超過 2 分鐘 → 標失敗並送信號,回更新後的文件;否則 null。 */
+  /**
+   * 單筆逾時判斷:等待中超過 2 分鐘 → `agent-offline`;已送出超過 2 分鐘沒回報 → `no-result`。
+   * 逾時就標失敗並送信號,回更新後的文件;否則 null。
+   */
   private async expireOne(
     operator: OperatorContext,
     job: JobRecord,
     now: Date,
   ): Promise<JobRecord | null> {
+    const age = (since: Date | null) =>
+      since === null ? 0 : now.getTime() - since.getTime();
     if (
-      job.status !== "pending" ||
-      now.getTime() - job.createdAt.getTime() <= PRINT_JOB_CLAIM_TIMEOUT_MS
+      job.status === "pending" &&
+      age(job.createdAt) > PRINT_JOB_CLAIM_TIMEOUT_MS
     ) {
-      return null;
+      return this.failInTransaction(operator, job, "agent-offline");
     }
-    const failed = await this.markFailed(operator, job, "agent-offline");
-    if (failed !== null) {
-      await this.publishResults([failed]);
+    if (
+      job.status === "sent" &&
+      age(job.sentAt) > PRINT_JOB_RESULT_TIMEOUT_MS
+    ) {
+      return this.failInTransaction(operator, job, "no-result");
     }
-    return failed;
+    return null;
+  }
+
+  /** 一筆等待中 / 已送出的工作標失敗:條件更新 + 通知要求人同一個交易,提交後送 `print-result`。 */
+  private failInTransaction(
+    operator: OperatorContext,
+    job: JobRecord,
+    error: PrintJobError,
+  ): Promise<JobRecord | null> {
+    return this.transactions.withTransaction(async () => {
+      const failed = await this.markFailed(operator, job, error);
+      if (failed !== null) {
+        await this.notifier.jobFailed(failed);
+        this.publishResultAfterCommit(failed);
+      }
+      return failed;
+    });
+  }
+
+  /** 代理程式離線提醒(盡力而為:失敗只記 log)。 */
+  private async notifyAgentOffline(
+    agent: AgentRecord,
+    now: Date,
+  ): Promise<void> {
+    try {
+      await this.notifier.agentOfflineIfStale(agent, now);
+    } catch (error) {
+      this.logger.warn(`代理程式離線提醒失敗:${messageOf(error)}`);
+    }
   }
 
   private markFailed(
@@ -608,22 +721,21 @@ export class PrintJobsService implements OnModuleInit {
     job: JobRecord,
     error: PrintJobError,
   ): Promise<JobRecord | null> {
+    // 條件 = 讀到時的狀態沒變(等待中 / 已送出):與認領、回報同時發生時只有一方成功
     return this.jobs.findOneAndUpdate(
       operator,
-      { _id: job._id, status: "pending" },
+      { _id: job._id, status: job.status },
       { $set: { status: "failed", error } },
     );
   }
 
-  /** 對要求人送 `print-result`(交易外;盡力而為)。 */
-  private async publishResults(jobs: readonly JobRecord[]): Promise<void> {
-    for (const job of jobs) {
-      await this.realtime.publish(
-        job.tenantId,
-        [userTopic(String(job.requestedBy))],
-        { type: PRINT_SIGNALS.result, id: String(job._id) },
-      );
-    }
+  /** 交易提交後對要求人送 `print-result`(在交易內呼叫)。 */
+  private publishResultAfterCommit(job: JobRecord): void {
+    this.realtime.publishAfterCommit(
+      job.tenantId,
+      [userTopic(String(job.requestedBy))],
+      { type: PRINT_SIGNALS.result, id: String(job._id) },
+    );
   }
 
   /** 補印的原因(必填、須是選項)與說明(「其他」必填);錯誤推進 `errors`。 */

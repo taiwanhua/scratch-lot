@@ -582,7 +582,7 @@ export async function backdate(
   world: World,
   collection: "print_jobs" | "print_agents",
   id: string,
-  field: "createdAt" | "lastSeenAt" | "pairingExpiresAt",
+  field: "createdAt" | "lastSeenAt" | "pairingExpiresAt" | "sentAt",
   msAgo: number,
 ): Promise<void> {
   await world.api.connection
@@ -603,4 +603,38 @@ export function signalsSince(
     .slice(from)
     .filter((publish) => publish.signal.type === type)
     .map((publish) => ({ topics: publish.topics, id: publish.signal.id }));
+}
+
+/** 這張工作的「列印失敗」通知(依 dedupeKey)。 */
+export function failedNoticesOf(world: World, jobId: string) {
+  return world.api.connection
+    .collection("notifications")
+    .find({
+      type: "printing.job-failed",
+      dedupeKey: `printing.job-failed:${jobId}`,
+    })
+    .toArray();
+}
+
+/** 這個代理程式的「離線」提醒(每次離線、每位收件人一筆)。 */
+export function offlineNoticesOf(world: World, agentId: string) {
+  return world.api.connection
+    .collection("notifications")
+    .find({
+      type: "printing.agent-offline",
+      dedupeKey: { $regex: `^printing[.]agent-offline:${agentId}:` },
+    })
+    .toArray();
+}
+
+/** 這張工作恰好一則「列印失敗」通知,給要求人(管理員),內容含失敗原因。 */
+export async function expectFailedNotice(
+  world: World,
+  jobId: string,
+  reason: string,
+): Promise<void> {
+  const notices = await failedNoticesOf(world, jobId);
+  expect(notices).toHaveLength(1);
+  expect(String(notices[0]?.recipientId)).toBe(String(world.admin.userId));
+  expect(notices[0]?.body).toContain(reason);
 }

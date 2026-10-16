@@ -95,6 +95,7 @@ export function toJobModel(
     documentType: job.documentType,
     refType: job.refType,
     refId: job.refId,
+    documentName: job.documentName,
     status: job.status as PrintJobStatusEnum,
     error: job.error as PrintJobErrorEnum | null,
     isReprint: job.isReprint,

@@ -701,43 +701,17 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
     let farPrinterAdmin: FormOperator;
 
     beforeAll(async () => {
-      // 印表機管理的權限由列印的票種下;這裡先補一筆(已存在就沿用),讓預設條件真的找得到人
-      const module = await api.connection
-        .collection("modules")
-        .findOne<{ _id: Types.ObjectId }>({
-          key: "system.notification-settings",
-        });
-      const now = new Date();
-      await api.connection.collection("permissions").updateOne(
-        { key: PRINTERS_EDIT },
-        {
-          $setOnInsert: {
-            key: PRINTERS_EDIT,
-            moduleId: module?._id,
-            name: "編輯",
-            enabled: true,
-            isSystem: true,
-            source: "seed",
-            settings: {},
-            createdAt: now,
-            updatedAt: now,
-            createdBy: null,
-            updatedBy: null,
-            deletedAt: null,
-          },
-        },
-        { upsert: true },
-      );
+      // system.printers.edit 由印表機管理模組種下(seeds/base/modules/system.ts);綁模組才算持有(ADR-0011 步驟 3)
       printerAdmin = await createOperator(api, api.connection, {
         orgId: store,
         ownerOrgId: tenant,
-        moduleKeys: ["system.notification-settings"],
+        moduleKeys: ["system.notification-settings", "system.printers"],
         permissionKeys: [PRINTERS_EDIT],
       });
       farPrinterAdmin = await createOperator(api, api.connection, {
         orgId: otherStore,
         ownerOrgId: tenant,
-        moduleKeys: ["system.notification-settings"],
+        moduleKeys: ["system.notification-settings", "system.printers"],
         permissionKeys: [PRINTERS_EDIT],
       });
     });

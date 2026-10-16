@@ -1,8 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { Types } from "mongoose";
 
 import {
   PRINT_AGENT_OFFLINE_AFTER_MS,
   PRINT_JOB_CLAIM_TIMEOUT_MS,
+  PRINT_JOB_RESULT_TIMEOUT_MS,
   PRINT_PAIRING_CODE_TTL_MS,
 } from "@repo/domain/printing";
 
@@ -10,6 +12,7 @@ import { startAuthTestApp } from "../auth/test-support/auth-app";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { internalReader } from "./print-agent-credentials";
 import { PrintJobsService } from "./print-jobs.service";
+import { PrintingNotifier } from "./printing-notifier";
 import {
   type AgentRow,
   DOCS,
@@ -19,10 +22,14 @@ import {
   addPrinter,
   agentHttp,
   backdate,
+  expectFailedNotice,
+  failedNoticesOf,
   gql,
   newRef,
+  offlineNoticesOf,
   ok,
   pairedAgent,
+  pngBase64,
   printInput,
   setupWorld,
   signalsSince,
@@ -558,5 +565,361 @@ describe("列印代理程式 API", () => {
       connectUrl: null,
       expiresAt: null,
     });
+  });
+
+  describe("列印通知(底座規格第 5 章:printing.job-failed / printing.agent-offline)", () => {
+    let own: { agent: AgentRow; key: string };
+    let printer: PrinterRow;
+
+    beforeAll(async () => {
+      own = await pairedAgent(world, world.storeA, "通知測試");
+      printer = await addPrinter(world, own.agent.id, { name: "通知印表機" });
+    });
+
+    it("代理程式回報失敗 → 通知要求人(原因:缺紙);已印不通知", async () => {
+      const failed = await createJob(printer.id);
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${failed.id}/claim`,
+        own.key,
+      );
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${failed.id}/result`,
+        own.key,
+        {
+          status: "failed",
+          error: "paper-out",
+        },
+      );
+      await expectFailedNotice(world, failed.id, "缺紙");
+
+      const printed = await createJob(printer.id);
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${printed.id}/claim`,
+        own.key,
+      );
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${printed.id}/result`,
+        own.key,
+        {
+          status: "printed",
+        },
+      );
+      expect(await failedNoticesOf(world, printed.id)).toHaveLength(0);
+    });
+
+    it("等待中逾時 → 通知要求人(原因:代理程式離線);重掃不重複通知", async () => {
+      const job = await createJob(printer.id);
+      await backdate(
+        world,
+        "print_jobs",
+        job.id,
+        "createdAt",
+        PRINT_JOB_CLAIM_TIMEOUT_MS + 1000,
+      );
+      const service = world.api.app.get(PrintJobsService);
+      await service.expireStale(internalReader(), {}, new Date());
+      await service.expireStale(internalReader(), {}, new Date());
+      await expectFailedNotice(world, job.id, "代理程式離線");
+    });
+
+    it("送出時代理程式已離線 → 工作失敗並通知要求人", async () => {
+      await backdate(
+        world,
+        "print_agents",
+        own.agent.id,
+        "lastSeenAt",
+        PRINT_AGENT_OFFLINE_AFTER_MS + 1000,
+      );
+      const job = await createJob(printer.id);
+      expect(job.status).toBe("FAILED");
+      await expectFailedNotice(world, job.id, "代理程式離線");
+      await agentHttp(world, "get", "/print-agent/jobs", own.key);
+    });
+
+    it("代理程式離線 → 提醒持有 system.printers.edit 的人;同一次離線只通知一次,重新上線後再離線是新的一次", async () => {
+      const agent = await pairedAgent(world, world.storeB, "離線提醒");
+      const notifier = world.api.app.get(PrintingNotifier);
+      await notifier.sweepOfflineAgents(new Date());
+      expect(await offlineNoticesOf(world, agent.agent.id)).toHaveLength(0);
+
+      await backdate(
+        world,
+        "print_agents",
+        agent.agent.id,
+        "lastSeenAt",
+        PRINT_AGENT_OFFLINE_AFTER_MS + 1000,
+      );
+      await notifier.sweepOfflineAgents(new Date());
+      await notifier.sweepOfflineAgents(new Date());
+      const first = await offlineNoticesOf(world, agent.agent.id);
+      const recipients = first.map((row) => String(row.recipientId));
+      expect(recipients).toContain(String(world.admin.userId));
+      expect(recipients).toContain(String(world.managerNoPrint.userId));
+      expect(recipients).not.toContain(String(world.viewer.userId));
+      expect(new Set(recipients).size).toBe(recipients.length);
+
+      // 重新上線(輪詢)→ 再離線 → 新的一次
+      await agentHttp(world, "get", "/print-agent/jobs", agent.key);
+      await backdate(
+        world,
+        "print_agents",
+        agent.agent.id,
+        "lastSeenAt",
+        PRINT_AGENT_OFFLINE_AFTER_MS + 5000,
+      );
+      await notifier.sweepOfflineAgents(new Date());
+      const second = await offlineNoticesOf(world, agent.agent.id);
+      expect(second).toHaveLength(first.length * 2);
+    });
+
+    it("已送出超過 2 分鐘沒回報 → 標失敗「未收到列印結果」(NO_RESULT),送 print-result 並通知;之後的回報 409", async () => {
+      const job = await createJob(printer.id);
+      const claim = await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${job.id}/claim`,
+        own.key,
+      );
+      expect(claim.status).toBe(200);
+      await backdate(
+        world,
+        "print_jobs",
+        job.id,
+        "sentAt",
+        PRINT_JOB_RESULT_TIMEOUT_MS + 1000,
+      );
+      const from = world.sent.length;
+      expect(await jobOf(job.id)).toMatchObject({
+        status: "FAILED",
+        error: "NO_RESULT",
+      });
+      expect(signalsSince(world, from, "print-result")).toContainEqual({
+        topics: [`user:${String(world.admin.userId)}`],
+        id: job.id,
+      });
+      await expectFailedNotice(world, job.id, "未收到列印結果");
+      const late = await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${job.id}/result`,
+        own.key,
+        {
+          status: "printed",
+        },
+      );
+      expect(late.status).toBe(409);
+    });
+
+    it("排程補掃也處理已送出逾時;還在 2 分鐘內的已送出不動", async () => {
+      const stale = await createJob(printer.id);
+      const fresh = await createJob(printer.id);
+      for (const job of [stale, fresh]) {
+        await agentHttp(
+          world,
+          "post",
+          `/print-agent/jobs/${job.id}/claim`,
+          own.key,
+        );
+      }
+      await backdate(
+        world,
+        "print_jobs",
+        stale.id,
+        "sentAt",
+        PRINT_JOB_RESULT_TIMEOUT_MS + 1000,
+      );
+      await world.api.app
+        .get(PrintJobsService)
+        .expireStale(internalReader(), {}, new Date());
+      const rows = await world.api.connection
+        .collection("print_jobs")
+        .find({
+          _id: { $in: [stale, fresh].map((job) => new Types.ObjectId(job.id)) },
+        })
+        .toArray();
+      const rowOf = (id: string) => rows.find((row) => String(row._id) === id);
+      expect(rowOf(stale.id)).toMatchObject({
+        status: "failed",
+        error: "no-result",
+      });
+      expect(rowOf(fresh.id)).toMatchObject({ status: "sent", error: null });
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${fresh.id}/result`,
+        own.key,
+        {
+          status: "printed",
+        },
+      );
+    });
+
+    it("已送出超過 2 分鐘才回報(之前沒人讀過)→ 409,工作先標 no-result 並通知", async () => {
+      const job = await createJob(printer.id);
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${job.id}/claim`,
+        own.key,
+      );
+      await backdate(
+        world,
+        "print_jobs",
+        job.id,
+        "sentAt",
+        PRINT_JOB_RESULT_TIMEOUT_MS + 1000,
+      );
+      const late = await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${job.id}/result`,
+        own.key,
+        {
+          status: "printed",
+        },
+      );
+      expect(late.status).toBe(409);
+      const row = await world.api.connection
+        .collection("print_jobs")
+        .findOne({ _id: new Types.ObjectId(job.id) });
+      expect(row).toMatchObject({ status: "failed", error: "no-result" });
+      await expectFailedNotice(world, job.id, "未收到列印結果");
+    });
+
+    it("測試頁失敗 → 通知顯示「測試頁 <印表機名稱>」,不出現 ObjectId", async () => {
+      await backdate(
+        world,
+        "print_agents",
+        own.agent.id,
+        "lastSeenAt",
+        PRINT_AGENT_OFFLINE_AFTER_MS + 1000,
+      );
+      const data = await ok<{ printPrinterTestPage: { job: JobRow } }>(
+        world,
+        world.admin,
+        DOCS.testPage,
+        { input: { printerId: printer.id, image: pngBase64() } },
+      );
+      expect(data.printPrinterTestPage.job.status).toBe("FAILED");
+      const [notice] = await failedNoticesOf(
+        world,
+        data.printPrinterTestPage.job.id,
+      );
+      expect(notice?.title).toBe("列印失敗:測試頁 通知印表機");
+      expect(notice?.body).not.toContain(printer.id);
+      await agentHttp(world, "get", "/print-agent/jobs", own.key);
+    });
+
+    it("排程補掃:逾時工作那段失敗,離線代理程式那段照跑;單筆失敗不擋後面的", async () => {
+      const service = world.api.app.get(PrintJobsService);
+      const notifier = world.api.app.get(PrintingNotifier);
+      const expire = jest
+        .spyOn(service, "expireStale")
+        .mockRejectedValueOnce(new Error("mongo down"));
+      const sweep = jest.spyOn(notifier, "sweepOfflineAgents");
+      try {
+        await expect(
+          service.runScheduledSweep(new Date()),
+        ).resolves.toBeUndefined();
+        expect(sweep).toHaveBeenCalledTimes(1);
+      } finally {
+        expire.mockRestore();
+        sweep.mockRestore();
+      }
+
+      const first = await createJob(printer.id);
+      const second = await createJob(printer.id);
+      for (const job of [first, second]) {
+        await backdate(
+          world,
+          "print_jobs",
+          job.id,
+          "createdAt",
+          PRINT_JOB_CLAIM_TIMEOUT_MS + 1000,
+        );
+      }
+      const jobFailed = jest
+        .spyOn(notifier, "jobFailed")
+        .mockRejectedValueOnce(new Error("notify down"));
+      try {
+        const expired = await service.expireStale(
+          internalReader(),
+          {},
+          new Date(),
+        );
+        expect(expired).toBeGreaterThanOrEqual(1);
+      } finally {
+        jobFailed.mockRestore();
+      }
+      const rows = await world.api.connection
+        .collection("print_jobs")
+        .find({
+          _id: {
+            $in: [first, second].map((job) => new Types.ObjectId(job.id)),
+          },
+        })
+        .toArray();
+      // 出錯那筆整個交易回復(仍是等待中,下一輪再處理),另一筆照常標失敗
+      expect(
+        rows
+          .map((row) => String(row.status))
+          .toSorted((a, b) => a.localeCompare(b)),
+      ).toEqual(["failed", "pending"]);
+      await service.expireStale(internalReader(), {}, new Date());
+    });
+
+    it("停用代理程式 → 等待中與已送出(還沒回報)的工作都直接標失敗「代理程式已停用」並通知要求人", async () => {
+      const sentJob = await createJob(printer.id);
+      await agentHttp(
+        world,
+        "post",
+        `/print-agent/jobs/${sentJob.id}/claim`,
+        own.key,
+      );
+      const pendingJob = await createJob(printer.id);
+      await ok(world, world.admin, DOCS.disableAgent, {
+        input: { id: own.agent.id },
+      });
+      await expectFailedNotice(world, sentJob.id, "代理程式已停用");
+      await expectFailedNotice(world, pendingJob.id, "代理程式已停用");
+      expect(await jobOf(sentJob.id)).toMatchObject({
+        status: "FAILED",
+        error: "AGENT_DISABLED",
+      });
+    });
+  });
+
+  it("代理程式清單預設只列啟用中的;includeDisabled: true 連停用的一起列(紀錄不刪)", async () => {
+    const gone = await pairedAgent(world, world.storeA, "清單停用測試");
+    await ok(world, world.admin, DOCS.disableAgent, {
+      input: { id: gone.agent.id },
+    });
+    const listed = await Promise.all(
+      [{}, { includeDisabled: false }, { includeDisabled: true }].map((input) =>
+        ok<{ printAgents: { items: AgentRow[] } }>(
+          world,
+          world.admin,
+          DOCS.agents,
+          {
+            input: { ...input, pageSize: 100 },
+          },
+        ),
+      ),
+    );
+    const [byDefault, explicitFalse, withDisabled] = listed.map((data) =>
+      data.printAgents.items.map((agent) => agent.id),
+    );
+    expect(byDefault).not.toContain(gone.agent.id);
+    expect(byDefault).toContain(agentA.agent.id);
+    expect(explicitFalse).not.toContain(gone.agent.id);
+    expect(withDisabled).toContain(gone.agent.id);
   });
 });
