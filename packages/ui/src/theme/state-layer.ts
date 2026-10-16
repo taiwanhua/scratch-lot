@@ -28,7 +28,8 @@ const layer = (color: string) => `linear-gradient(${color}, ${color})`;
  * - 觸控裝置沒有滑過(只在 `hover: hover` 的裝置套滑過),按下時底色加深(疊 selected 圖層);
  * - 游標手指。停用(不能操作)的元素**不要**套這組:不變色、游標維持箭頭。
  *
- * 顏色一律取主題變數(`theme.vars`,深色模式跟著切),透明度用主題的 opacity,不另做顏色。
+ * 顏色一律取主題變數(`theme.vars`,深色模式跟著切),透明度用主題的 opacity(目前全站一套 8% / 16%,
+ * 見 `create-theme.ts`),不另做顏色。
  * 本檔是 ui 內部用的(同 `sx.ts`),不從 `theme/index.ts` 匯出。
  */
 export const stateLayerSx = (

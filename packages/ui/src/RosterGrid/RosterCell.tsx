@@ -19,7 +19,8 @@ const isActivationKey = (event: KeyboardEvent) =>
 
 /**
  * 班表格子(Figma Draft/RosterCell 49:493):白底,互動狀態照《底座規格》10.11 ——
- * 滑過疊 grey/500 × 8% 並換邊框、已選取疊 16% + 1px 邊框、鍵盤焦點 `action.focus` 外框。
+ * 滑過疊主題的 hover 圖層(grey/500 × `hoverOpacity`)並換邊框、已選取疊 selected 圖層
+ * (grey/500 × `selectedOpacity`)+ 1px 邊框、鍵盤焦點 `action.focus` 外框(`stateLayerSx`)。
  * 內容(班別標籤…)由使用的模組決定。
  */
 export const RosterCell = ({

@@ -36,19 +36,21 @@ export interface CreateAppThemeOptions {
   cssVarPrefix?: string;
 }
 
-/** grey[500] 的 rgb 通道,action 狀態透明度的基底(Minimal 慣用) */
+/** grey[500] 的 rgb 通道,action 狀態與分隔線透明度的基底(Minimal 慣用) */
 const GREY_500_CHANNELS = "147, 158, 169";
 
+/**
+ * 互動狀態(《底座規格》10.11):全站一套,照 Minimal —— grey/500 疊 8% / 16% / 24% / 80% / 24%
+ * (hover / selected / focus / disabled / disabledBackground),亮暗模式相同。
+ * 有色元件的 state layer = 同色系 main × `hoverOpacity` / `selectedOpacity`,與白底元件同一組 8% / 16%。
+ * MUI 亮色預設是 4% / 8%,這裡刻意統一成 8% / 16%。Figma 的 `action/*` 變數是同一組值。
+ */
 const action = {
   hover: `rgba(${GREY_500_CHANNELS}, 0.08)`,
   selected: `rgba(${GREY_500_CHANNELS}, 0.16)`,
   focus: `rgba(${GREY_500_CHANNELS}, 0.24)`,
   disabled: `rgba(${GREY_500_CHANNELS}, 0.80)`,
   disabledBackground: `rgba(${GREY_500_CHANNELS}, 0.24)`,
-  /*
-   * 互動狀態的透明度(《底座規格》10.11):有色元件的 state layer = 同色系 main × 這兩個值,
-   * 與上面 `hover` / `selected` 的 8% / 16% 同一組(MUI 預設亮色是 4% / 8%,暗色才是 8% / 16%)。
-   */
   hoverOpacity: 0.08,
   selectedOpacity: 0.16,
 } as const;
