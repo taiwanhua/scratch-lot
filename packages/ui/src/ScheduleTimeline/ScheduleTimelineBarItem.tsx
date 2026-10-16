@@ -22,8 +22,13 @@ import {
   activationProps,
   isSelected,
   pointerOnlyProps,
+  pressedOf,
 } from "./timeline-interaction";
-import type { BarDayParts, MinuteRange } from "./timeline-model";
+import {
+  type BarDayParts,
+  type MinuteRange,
+  showsSubtitleInBar,
+} from "./timeline-model";
 import { barToneColors } from "./timeline-styles";
 import { type DaySpan, formatTimeRange } from "./timeline-time";
 
@@ -60,6 +65,17 @@ export const ScheduleTimelineBarItem = ({
   actions,
 }: ScheduleTimelineBarItemProps) => {
   const isWeek = orientation === "week";
+  // 長條裡放不下的副標(週模式、較短)移到提示的第一行
+  const movedSubtitle =
+    bar.subtitle !== undefined && !showsSubtitleInBar(orientation, bar);
+  const tooltip = movedSubtitle ? (
+    <Box component="span" sx={{ display: "flex", flexDirection: "column" }}>
+      <span>{bar.subtitle}</span>
+      {bar.tooltip === undefined ? null : <span>{bar.tooltip}</span>}
+    </Box>
+  ) : (
+    bar.tooltip
+  );
   const disabled = bar.state === "disabled";
   const tone = barToneColors(bar.tone ?? "primary");
   const onBarClick = actions.onBarClick;
@@ -146,7 +162,7 @@ export const ScheduleTimelineBarItem = ({
       interactive && isPrimary
         ? activationProps({
             label: bar.ariaLabel ?? formatTimeRange(bar.start, bar.end),
-            selected,
+            selected: pressedOf(actions, selected),
             date,
             range,
             onActivate,
@@ -160,6 +176,7 @@ export const ScheduleTimelineBarItem = ({
       <Box
         key={kind}
         data-timeline-part={kind}
+        data-state={isPrimary ? (bar.state ?? "normal") : undefined}
         data-selected={(isPrimary && selected) || undefined}
         {...buttonProps}
         {...clickProps}
@@ -212,7 +229,7 @@ export const ScheduleTimelineBarItem = ({
       </Box>
     );
     return isPrimary ? (
-      <Tooltip key={kind} title={bar.tooltip}>
+      <Tooltip key={kind} title={tooltip}>
         {element}
       </Tooltip>
     ) : (

@@ -228,13 +228,45 @@ export const DisabledTime: Story = {
           state: "disabled",
           subtitle: "已排於新竹店",
         }),
-        bar("dt-e3", D4, 9, 13, "張小芳", {
+      ]),
+    ],
+  },
+};
+
+/**
+ * 長條狀態:正常(標題 + 副標)/ 較短(只上部分時段;長條放不下副標,副標移到滑過提示)/
+ * 停用(灰色、不可點)。滑過「較短」的張小芳看得到副標。
+ */
+export const BarStates: Story = {
+  args: {
+    mode: "day",
+    containerSx: DAY_SX,
+    dates: [{ date: D4, label: "三" }],
+    onBarClick: () => {
+      // 示範用:可點才有滑過 / 焦點的互動狀態
+    },
+    groups: [
+      group("bs-early", D4, 8.5, 14.5, "早班 · 櫃台 A", "早", [
+        bar("bs-normal", D4, 8.5, 14.5, "王小明", {
+          isLead: true,
+          subtitle: "正常 · 休 30 分",
+        }),
+        bar("bs-short", D4, 9, 12, "張小芳", {
           state: "short",
-          subtitle: "時段 09:00–13:00",
+          subtitle: "較短 · 只上 09:00–12:00",
+        }),
+        bar("bs-disabled", D4, 8.5, 14.5, "陳大文", {
+          state: "disabled",
+          subtitle: "停用 · 已排於新竹店",
         }),
       ]),
     ],
   },
+};
+
+/** 週欄寬不指定:依容器寬自動平分(`floor((寬 − 48) / 7)`,量不到時 157)。 */
+export const WeekAutoWidth: Story = {
+  args: { dayWidth: undefined, groups: groupsWithCollapse },
 };
 
 /** 跨午夜:當天畫到 24:00 標「→ 次日」,次日從 00:00 接續標「前日 →」。 */

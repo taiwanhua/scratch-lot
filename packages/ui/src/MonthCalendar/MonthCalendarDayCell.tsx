@@ -5,6 +5,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 import { Box } from "../Box/Box";
 import { Tooltip } from "../Tooltip/Tooltip";
 import { stateLayerSx } from "../theme/state-layer";
+import { todayMarkSx } from "../theme/today-mark";
 import { MonthCalendarCornerMark } from "./MonthCalendarCornerMark";
 import type { CalendarDay } from "./month-calendar-grid";
 import type { MonthCalendarDayInfo } from "./month-calendar-types";
@@ -82,17 +83,7 @@ export const MonthCalendarDayCell = ({
         component="span"
         sx={(theme) => ({
           typography: "body2",
-          width: theme.spacing(3),
-          height: theme.spacing(3),
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: "50%",
-          ...(isToday && {
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
-            fontWeight: 600,
-          }),
+          ...todayMarkSx(theme, { isToday, shape: "circle" }),
         })}
       >
         {day.day}

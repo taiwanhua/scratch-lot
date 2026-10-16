@@ -8,6 +8,7 @@ import { Box } from "../Box/Box";
 import { mergeSx } from "../theme/sx";
 import { ScheduleTimelineDayView } from "./ScheduleTimelineDayView";
 import { ScheduleTimelineWeekView } from "./ScheduleTimelineWeekView";
+import { layoutTimeline } from "./layout-timeline";
 import type {
   ScheduleTimelineBar,
   ScheduleTimelineDate,
@@ -34,6 +35,7 @@ import {
 import { initialScrollMinute } from "./timeline-time";
 import { useAutoScroll } from "./useAutoScroll";
 import { useElementWidth } from "./useElementWidth";
+import { useEmptyCellCursor } from "./useEmptyCellCursor";
 
 export type * from "./schedule-timeline-types";
 
@@ -52,7 +54,7 @@ export interface ScheduleTimelineProps {
   disabledRanges?: readonly ScheduleTimelineDisabledRange[];
   /** 今天(`YYYY-MM-DD`;預設依瀏覽器時鐘,測試可固定):表頭的日期畫成主色實心圓 */
   today?: string;
-  /** 已選取的東西(受控);`null` = 沒有 */
+  /** 已選取的東西(受控);`null` = 沒有。沒給 = 不追蹤選取,按鈕不標 `aria-pressed` */
   selection?: ScheduleTimelineSelection | null;
   /** 點容器(標題);沒給時容器不可點 */
   onGroupClick?: (
@@ -111,7 +113,7 @@ export const ScheduleTimeline = ({
   groups,
   disabledRanges = NO_RANGES,
   today = dayjs().format("YYYY-MM-DD"),
-  selection = null,
+  selection,
   onGroupClick,
   onBarClick,
   onVacancyClick,
@@ -131,12 +133,27 @@ export const ScheduleTimeline = ({
   const ranges = shown.map((day) =>
     disabledRangesOfDay(disabledRanges, day.date),
   );
-  const startMinutes = startMinutesOf(models);
   const { ref, width } = useElementWidth<HTMLDivElement>();
-  const measuredDayWidth =
-    width > WEEK_TIME_COLUMN_WIDTH
+  const weekDayWidth =
+    dayWidth ??
+    (width > WEEK_TIME_COLUMN_WIDTH
       ? Math.floor((width - WEEK_TIME_COLUMN_WIDTH) / Math.max(shown.length, 1))
-      : DEFAULT_WEEK_DAY_WIDTH;
+      : DEFAULT_WEEK_DAY_WIDTH);
+  // 週模式每天的排版(放好的 / 收進「+N」的);自動捲動只看畫得出來的容器
+  const layouts = models.map((dayModels) =>
+    layoutTimeline(dayModels, weekDayWidth),
+  );
+  const startMinutes = startMinutesOf(
+    mode === "week"
+      ? layouts.map((layout) => layout.placed.map((p) => p.group))
+      : models,
+  );
+  const emptyCursor = useEmptyCellCursor({
+    mode,
+    dates: shown.map((day) => day.date),
+    disabledRanges: ranges,
+    enabled: onEmptyClick !== undefined,
+  });
 
   useAutoScroll(ref, {
     rangeKey: `${mode}:${shown.map((day) => day.date).join(",")}`,
@@ -159,6 +176,7 @@ export const ScheduleTimeline = ({
     formatMoreLabel,
     prevDayLabel,
     nextDayLabel,
+    emptyCursor,
   };
   const firstDay = shown[0];
 
@@ -168,6 +186,7 @@ export const ScheduleTimeline = ({
       role="group"
       aria-label={ariaLabel}
       data-mode={mode}
+      data-timeline-root=""
       sx={mergeSx(
         {
           position: "relative",
@@ -183,9 +202,9 @@ export const ScheduleTimeline = ({
       {mode === "week" ? (
         <ScheduleTimelineWeekView
           dates={shown}
-          models={models}
+          layouts={layouts}
           disabledRanges={ranges}
-          dayWidth={dayWidth ?? measuredDayWidth}
+          dayWidth={weekDayWidth}
           today={today}
           actions={actions}
         />

@@ -11,7 +11,11 @@ import {
   WEEK_MORE_INSET,
   WEEK_MORE_WIDTH,
 } from "./timeline-geometry";
-import type { TimelineActions } from "./timeline-interaction";
+import {
+  type TimelineActions,
+  handleActivationKey,
+  pressedOf,
+} from "./timeline-interaction";
 import { captionStrongSx, moreToneColors } from "./timeline-styles";
 
 export interface ScheduleTimelineMoreProps {
@@ -22,9 +26,6 @@ export interface ScheduleTimelineMoreProps {
   dayWidth: number;
   actions: TimelineActions;
 }
-
-const isActivationKey = (event: KeyboardEvent) =>
-  event.key === "Enter" || event.key === " ";
 
 /**
  * 「+N」長條(Figma Draft/ScheduleTimelineMore 408:8012):週模式有容器被收起時,當天欄最右邊一條,
@@ -39,8 +40,7 @@ export const ScheduleTimelineMore = ({
 }: ScheduleTimelineMoreProps) => {
   const tone = moreToneColors(actions.getMoreTone(collapsed, date));
   const { onMoreClick, selection } = actions;
-  const selected =
-    selection !== null && selection.kind === "more" && selection.date === date;
+  const selected = selection?.kind === "more" && selection.date === date;
   const label = actions.formatMoreLabel(collapsed.length);
   const activate = () => {
     onMoreClick?.(date, collapsed);
@@ -56,12 +56,10 @@ export const ScheduleTimelineMore = ({
             role: "button",
             tabIndex: 0,
             "aria-label": `${date} ${label}`,
-            "aria-pressed": selected,
+            "aria-pressed": pressedOf(actions, selected),
             onClick: activate,
-            onKeyDown: (event: KeyboardEvent) => {
-              if (!isActivationKey(event)) return;
-              event.preventDefault();
-              activate();
+            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+              handleActivationKey(event, activate);
             },
           })}
       sx={(theme) => ({
@@ -75,7 +73,7 @@ export const ScheduleTimelineMore = ({
         display: "flex",
         justifyContent: "center",
         pt: 0.75,
-        bgcolor: "grey.100",
+        bgcolor: "background.default",
         border: 1,
         borderColor: tone.border,
         // Figma 6px(theme 圓角 8 × 0.75)

@@ -3,6 +3,7 @@
 import { Box } from "../Box/Box";
 import { ScheduleTimelineHeaderCell } from "./ScheduleTimelineHeaderCell";
 import { ScheduleTimelineWeekDay } from "./ScheduleTimelineWeekDay";
+import type { TimelineLayout } from "./layout-timeline";
 import type { ScheduleTimelineDate } from "./schedule-timeline-types";
 import {
   WEEK_DAY_HEIGHT,
@@ -15,20 +16,21 @@ import { formatMinute } from "./timeline-time";
 
 export interface ScheduleTimelineWeekViewProps {
   dates: readonly ScheduleTimelineDate[];
-  /** 與 `dates` 同順序:每天的容器 / 不能操作的範圍 */
-  models: readonly (readonly GroupDayModel[])[];
+  /** 與 `dates` 同順序:每天的排版(`layoutTimeline`)/ 不能操作的範圍 */
+  layouts: readonly TimelineLayout<GroupDayModel>[];
   disabledRanges: readonly (readonly DisabledDayRange[])[];
   dayWidth: number;
   today: string;
   actions: TimelineActions;
 }
 
+const NO_LAYOUT: TimelineLayout<GroupDayModel> = { placed: [], collapsed: [] };
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 /** 週模式:7 天各一欄,時間由上往下;表頭(日期)固定在上方、時間欄固定在左邊。 */
 export const ScheduleTimelineWeekView = ({
   dates,
-  models,
+  layouts,
   disabledRanges,
   dayWidth,
   today,
@@ -86,7 +88,7 @@ export const ScheduleTimelineWeekView = ({
         <ScheduleTimelineWeekDay
           key={day.date}
           day={day}
-          models={models[index] ?? []}
+          layout={layouts[index] ?? NO_LAYOUT}
           disabledRanges={disabledRanges[index] ?? []}
           dayWidth={dayWidth}
           actions={actions}
