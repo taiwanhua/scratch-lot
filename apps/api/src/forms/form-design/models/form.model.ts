@@ -101,6 +101,10 @@ export class FormModel {
   @Field(() => String, { nullable: true })
   tabLabelTemplate!: string | null;
 
+  /** 允許存草稿(表單設定);沒設過的舊表單為 true。 */
+  @Field(() => Boolean)
+  allowDraft!: boolean;
+
   /** 有一份草稿(版本面板的「編輯草稿」)。 */
   @Field(() => Boolean)
   hasDraft!: boolean;

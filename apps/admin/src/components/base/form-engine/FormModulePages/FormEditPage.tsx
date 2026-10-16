@@ -141,6 +141,7 @@ export const FormEditPage = ({ module, routeParam }: ModulePageProps) => {
         permissions={permissions ?? permissionsOfSubmission(submission)}
         expressionContext={expressionContext}
         isCompleted={isCompleted}
+        canSaveDraft={submission.abilities.canSaveDraft}
         isPending={state.isPending}
         error={state.error}
         onSaveDraft={(values, touched) => {

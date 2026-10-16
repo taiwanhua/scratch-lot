@@ -43,8 +43,10 @@ export interface FormFillFormProps {
   mode: "create" | "edit";
   permissions: FieldPermissionFacts;
   expressionContext: ExpressionContext;
-  /** 草稿(或還沒建):存草稿 + 送出;已完成:只有「儲存修改」 */
+  /** 未完成(新增、草稿、被退回 / 撤回):[存草稿](`canSaveDraft` 時)+ [送出];已完成:只有「儲存修改」 */
   isCompleted: boolean;
+  /** 顯示 [存草稿](表單設定「允許存草稿」;關掉時只有 [送出]);不給 = true */
+  canSaveDraft?: boolean;
   isPending: boolean;
   error: FormError | null;
   /** `touched` = 使用者碰過的欄位 key(存草稿時一併存,預設值不再覆蓋它們) */
@@ -61,7 +63,7 @@ export interface FormFillFormProps {
 
 /**
  * 新增 / 編輯的表單本體(Spec 6a §8 畫面 9):`FormRenderer` + 「帶入資料」(版本有帶入規則時)+
- * 存草稿 / 送出(一顆「送出」= 建 / 存草稿 + 送出;已完成的單只有「儲存修改」,修訂 +1)。
+ * 存草稿 / 送出(「送出」一個請求完成;表單關了「允許存草稿」時沒有 [存草稿];已完成的單只有「儲存修改」,修訂 +1)。
  *
  * 初始值由外層 gate 後帶進 `useState` 的初始化器(REACT-08);`values` 是整張表單的狀態,
  * 看不到的欄位原樣保留 `"[redacted]"` 送回(api 視為沒動)。預設值與「碰過」旗標在 `useFillValues`:
@@ -82,6 +84,7 @@ export const FormFillForm = ({
   permissions,
   expressionContext,
   isCompleted,
+  canSaveDraft = true,
   isPending,
   error,
   onSaveDraft,
@@ -171,15 +174,17 @@ export const FormFillForm = ({
           </Button>
         ) : (
           <>
-            <Button
-              variant="outlined"
-              disabled={isPending}
-              onClick={() => {
-                onSaveDraft(values, fill.touched);
-              }}
-            >
-              {t("saveDraft")}
-            </Button>
+            {canSaveDraft && (
+              <Button
+                variant="outlined"
+                disabled={isPending}
+                onClick={() => {
+                  onSaveDraft(values, fill.touched);
+                }}
+              >
+                {t("saveDraft")}
+              </Button>
+            )}
             <Button
               disabled={isPending}
               onClick={() => {

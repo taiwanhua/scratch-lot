@@ -94,6 +94,8 @@ export function formContentHash(
     moduleKey: string;
     name: string;
     tabLabelTemplate: string | null;
+    /** 缺席 = 開 */
+    allowDraft?: boolean;
   },
   definition: FormDefinition,
 ): string {

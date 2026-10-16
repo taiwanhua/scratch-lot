@@ -101,6 +101,7 @@ export const FormCreateBody = ({
       permissions={permissions}
       expressionContext={expressionContext}
       isCompleted={false}
+      canSaveDraft={form.allowDraft}
       isPending={draft.isPending}
       error={draft.error}
       onSaveDraft={(values, touched) => {

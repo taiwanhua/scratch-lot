@@ -69,6 +69,34 @@
 - 停用(`org_form.meta.enabled = false`)、收回分派(刪 `org_form`)、退役目前版本都只擋新增;已存在的提交有模組 `view` 就照常看,草稿與已完成的單也照常可存、可修改(`saveFormDraft` / `updateFormSubmission` 不看新增資格)。
 - **沒有刪除整張表單**:表單與已發布 / 已退役的版本一律保留(提交綁著它們顯示);只有未發布的草稿可刪。root 層也沒有另外的「啟用」旗標 —— 停用共用表單 = 退役目前版本或收回分派;租戶層才有 `org_form.meta.enabled` 開關。
 
+## 表單設定
+
+表單層的設定(存在 `forms`,不隨版本、改了不必發布),在表單管理右側標頭以 `updateForm` 改;改得動 = `FormModel.abilities.canEdit`(自己擁有的表單 + `system.forms.edit`),改不動的人看得到目前的值但不能切。
+
+### 允許存草稿
+
+`forms.allowDraft`(`FormModel.allowDraft`、`FormSummary.allowDraft`),預設開;這個設定之前建的表單(欄位缺席)視為開(讀法一律 `allowsDraft()`,`database/schemas/form.schema.ts`)。畫面是表單管理右側標頭「在本組織啟用」下方的開關與說明(`pages/base/system/FormsPage/AllowDraftField.tsx`,Figma BS-21 `289:87151`)。
+
+**直接送出**:新增頁的 [送出] 不論開不開草稿,一律呼叫 `createAndSubmitFormSubmission`(input 同 `CreateFormDraftInput`):一個交易內建立 + `beforeSubmit` 守門 + 送出,走與 `submitFormSubmission` 同一條送出路徑(`form-submissions.service.ts` 的 `submitRecord`:全驗、沒走流程依序觸發 `submitted` / `completed`、綁流程建實例進 `reviewing`)。任一步失敗整個交易回復,資料庫不留任何資料,畫面保留輸入並顯示錯誤。稽核只記 `submission.submit`(`after.direct: true`),沒有 `submission.create-draft`。同 `(建立者, clientRequestId)` 重送回原本那一筆;那一筆若是草稿(先前的存草稿其實成功了、畫面沒拿到回應):還沒被改過(`editVersion = 0`)就以這次的值送出它,已被改過 → `CONFLICT` `EDIT_VERSION_MISMATCH`(TX-05,不蓋掉別處的修改)。只有按 [存草稿] 才建草稿;新增頁存過草稿後的 [送出] 改送那一筆。
+
+**草稿送出**:打開既有草稿(含被退回 / 撤回)後的 [送出] 用 `submitFormSubmission`,`values` 帶畫面上的整張表單狀態,與送出在同一個交易寫入(不先 `saveFormDraft`);`values` 缺席 = 以存的值送出。
+
+| 操作                                                            | 結果                                                                             |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 新增頁按 [送出],守門通過                                        | 一個交易建立並送出;沒有產生草稿                                                  |
+| 新增頁按 [送出],守門擋下或驗證失敗                              | 整個交易回復,資料庫不留任何資料;畫面保留輸入內容並顯示錯誤                       |
+| 新增頁按 [存草稿](允許存草稿開)                                 | 建立草稿;草稿只有建立者看得到,不觸發任何事後動作                                 |
+| 允許存草稿關:新增 / 編輯頁                                      | 不顯示 [存草稿],只有 [送出](`FormSummary.allowDraft` / `abilities.canSaveDraft`) |
+| 允許存草稿關:呼叫 `createFormDraft` / `saveFormDraft`(狀態草稿) | `FORBIDDEN`,reason `DRAFT_DISABLED`                                              |
+| 允許存草稿關:關掉前已經存在的草稿                               | 照樣可以打開、送出、刪除;只是不能再 [存草稿]                                     |
+| 允許存草稿關:被退回 / 撤回的單                                  | 只能修改後重新送出(`submitFormSubmission` 帶 `values`),不顯示 [存草稿]           |
+| 允許存草稿關:複製為新單                                         | 不受影響:複製出來的草稿照常建立                                                  |
+
+- `FormSubmissionAbilities.canSaveDraft` = 草稿 / 被退回 / 撤回、建立者本人 + 模組 `create`,且表單允許存草稿;編輯頁依它顯示 [存草稿]。
+- `UpdateFormInput.allowDraft`:缺席 / `null` = 不動;稽核 `form.update` 記前後值。
+- **受管表單**:seed 宣告寫 `allowDraft: false` 才關,沒寫 = 開。它和名稱、頁籤模板一樣是受管 metadata:只有關掉時才進 `contentHash`(開著的既有宣告 hash 不變)、安裝 / 改版以條件更新寫進表單、現場切過 → `METADATA_DRIFT`;「匯出專案設定」在關著時輸出 `allowDraft: false`(`packages/domain/src/seed/canonical.ts`、`apps/api/src/seed/form-definition.adapter.ts`)。
+- 正本測試:`apps/api/src/forms/form-runtime/form-allow-draft.test.ts`(情境表每列一個)。
+
 ## 表單版本
 
 ### 狀態
@@ -123,7 +151,7 @@
 
 先以已發布版本完成試填驗證。根組織操作者具備 `system.forms.view` 與 `system.forms.edit` 時,可在共用表單的版本面板選定目前已發布且完成切換的版本,按「匯出專案設定」。填入定義發布識別 `revision` 與發布說明後,下載 `<key>.<revision>.seed.ts`;草稿、發布中的版本、退役版與租戶客製表單不提供匯出。
 
-檔案使用同一套 `SeedSet` 契約,包含所選版本的完整欄位、版面、摘要與帶入設定,以及共用表單的名稱、模組 key、頁籤模板。可攜性檢查失敗時顯示問題位置與原因,不產生部分檔案。匯出只讀來源資料,不複製帳號、組織、提交或分派,也不代表已同步到其他環境。
+檔案使用同一套 `SeedSet` 契約,包含所選版本的完整欄位、版面、摘要與帶入設定,以及共用表單的名稱、模組 key、頁籤模板與允許存草稿(關著才寫 `allowDraft: false`)。可攜性檢查失敗時顯示問題位置與原因,不產生部分檔案。匯出只讀來源資料,不複製帳號、組織、提交或分派,也不代表已同步到其他環境。
 
 將下載檔納入專案 seed 後,依[表單模組路線](../agents/module-scaffold.md#表單模組路線)的跨環境交付步驟完成登記、必要 migration 與重建/升級驗證。發布、採納及漂移處理共用[受管定義機制](../concepts/data-layer-and-isolation.md#受管表單與流程)。
 
@@ -158,7 +186,7 @@
 
 ### 預設值與 `touched[]`
 
-- **預設值**(`FieldDef.default`,只有使用者填的欄位):建草稿(`createFormDraft`、`copySubmissionToDraft`)時由後端算一次(`defaults.ts`),只填**沒碰過**(不在 `touched`)、送來 / 複製來的值是空的、操作者**改得動**的欄位;公式引用到操作者讀不到的欄位(含依賴鏈)→ 不算、留空;引用欄的預設值(填寫者 / 填寫者的組織)重驗來源可讀並取 label。複製為新單時複製來的欄位都算碰過(預設值不覆蓋來源值)。預設值填進去之後就是一般的值:照寫入規則走、送出時照 `rules` 驗。
+- **預設值**(`FieldDef.default`,只有使用者填的欄位):建草稿(`createFormDraft`、`copySubmissionToDraft`)與直接送出(`createAndSubmitFormSubmission`,先在交易內建立那一筆)時由後端算一次(`defaults.ts`),只填**沒碰過**(不在 `touched`)、送來 / 複製來的值是空的、操作者**改得動**的欄位;公式引用到操作者讀不到的欄位(含依賴鏈)→ 不算、留空;引用欄的預設值(填寫者 / 填寫者的組織)重驗來源可讀並取 label。複製為新單時複製來的欄位都算碰過(預設值不覆蓋來源值)。預設值填進去之後就是一般的值:照寫入規則走、送出時照 `rules` 驗。
 - **`touched[]`**:使用者碰過的欄位 key。`createFormDraft` / `saveFormDraft` 的 `touched`(缺席 = 保留目前存的;只收這一版使用者填的欄位、去重);admin 填寫時沒碰過的欄位依賴變了就重算預設值,碰過就停(只在還沒送出過的草稿;送出過的單不再動)。
 
 ### 日期與時區
@@ -402,30 +430,31 @@ GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升�
 
 **設計端**(`@RequirePermission` 守端點,「是不是自己的表單 / 站在哪裡」在 service):`forms`、`form`、`formVersion(formKey, version?)`(省略 = 草稿)、`formVersions`、`validateFormVersion`、`previewFormVersion`(兩者是 query,不落庫)、`createForm`、`updateForm`、`forkForm`、`createFormVersionDraft`、`saveFormVersionDraft`、`deleteFormVersionDraft`、`publishFormVersion`、`retireCurrentVersion`、`assignFormToTenants`、`revokeFormFromTenant`、`setTenantFormEnabled`、`retiredFormPermissions`、`deleteRetiredPermission`、`setModuleListColumns`(`system.forms.edit` + 站在根組織)。`moduleListColumns(moduleKey)` 給該模組的使用者讀(有 view / create / edit 任一)。
 
-**執行端**(模組是執行期的,service 依該模組的 `view` / `create` / `edit` / `delete` 判,錯誤與 `@RequirePermission` 同一種):`moduleForms(moduleKey)`、`formRuntimeVersion(formKey, version)`、`formSubmissions`、`formSubmission(id, revision?)`、`formSubmissionAttachmentUrl(id, fieldKey, revision?)`、`createFormDraft`、`saveFormDraft`、`submitFormSubmission`、`updateFormSubmission`、`deleteFormSubmission`、`formLookup`、`formLookupRecord`、`formFieldOptions`、`formUpgradePlan(formKey, targetVersion)` / `upgradeFormSubmissions`(模組 `edit`)。`FormSubmissionModel.revisions` 是 field resolver(只有修訂紀錄跳窗查)。綁了審核流程的表單另有 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(規則見 [workflows](./workflows.md))。
+**執行端**(模組是執行期的,service 依該模組的 `view` / `create` / `edit` / `delete` 判,錯誤與 `@RequirePermission` 同一種):`moduleForms(moduleKey)`、`formRuntimeVersion(formKey, version)`、`formSubmissions`、`formSubmission(id, revision?)`、`formSubmissionAttachmentUrl(id, fieldKey, revision?)`、`createFormDraft`、`createAndSubmitFormSubmission`、`saveFormDraft`、`submitFormSubmission`、`updateFormSubmission`、`deleteFormSubmission`、`formLookup`、`formLookupRecord`、`formFieldOptions`、`formUpgradePlan(formKey, targetVersion)` / `upgradeFormSubmissions`(模組 `edit`)。`FormSubmissionModel.revisions` 是 field resolver(只有修訂紀錄跳窗查)。綁了審核流程的表單另有 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(規則見 [workflows](./workflows.md))。
 
 **匯出專案設定**:`exportFormSeed(input: { formKey, version, revision, changelog })`(query)回 `ExportFormSeedPayload { fileName, source }` —— 把共用表單的指名版本輸出成可直接登記進專案種子的 TypeScript(`@repo/domain/seed` 的 `serializeSeedSet`;檔名 `<formKey>.<revision>.seed.ts`)。唯讀:不寫資料庫、不留稽核、不建安裝紀錄。
 
 - 守門:端點擋 `system.forms.view`,其餘在 `form-design/form-seed-export.service.ts` —— `view` + `edit`(缺任一 → `FORBIDDEN`)、站在根組織(否則 `FORBIDDEN` + `ROOT_ONLY`)、共用表單(租戶的客製表單在根組織視角一律 `NOT_FOUND`)。
 - `version`:必填,必須是**已發布**的那一版,不以目前版本代替。不存在(草稿沒有版號,指不到)→ `NOT_FOUND`;已退役 → `VALIDATION_FAILED` + `fields: ["version"]`。
 - `revision`、`changelog`:都必填,沒有缺席 / `null` 的語意。`revision` 的格式是 `@repo/domain/seed` 的 `DEFINITION_REVISION_PATTERN`;`changelog` 去掉空白後不可為空(內容原樣輸出,不修剪)。不符 → `VALIDATION_FAILED` + `fields`(`revision` / `changelog`)。
-- 內容是設計端的完整版本,不是 `formRuntimeVersion` 依欄位級權限遮過的投影:`key`、`moduleKey`、身分上目前的 `name` 與 `tabLabelTemplate`、該版的 `fields` / `layout` / `summaryMap` / `prefills`,`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
+- 內容是設計端的完整版本,不是 `formRuntimeVersion` 依欄位級權限遮過的投影:`key`、`moduleKey`、身分上目前的 `name`、`tabLabelTemplate` 與 `allowDraft`(只在關著時輸出 `false`)、該版的 `fields` / `layout` / `summaryMap` / `prefills`,`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
 - 可攜性由 `validatePortableDefinition` 檢查(規則正本 `packages/domain/src/seed/portable-definition.ts`),依賴目錄取自這個環境(`form-design/seed-export-catalog.service.ts`):`engine = form` 的模組、seed 宣告的欄位類別與它的全域種子選項、有目前版本的共用表單(內容取目前版本)。有任何一筆不過就整份不輸出 → `VALIDATION_FAILED` + `fields: ["definition"]` + `issues`(`PortableIssue[]`:`{ code, message, path }`;`path` 是宣告內的位置,如 `definition.fields.3.default.value`,`message` 是給設計者看的繁中修正說明)。
 - 前端的顯示條件(守門仍以 api 為準):`FormModel.isShared && abilities.canEdit`,且只在目前發布的那一版顯示 —— 共用表單只有站在根組織的人 `canEdit`,所以不另開一個 ability。
 
 **提交狀態**:`FormSubmissionStatus` 七值(`DRAFT` / `REVIEWING` / `RETURNED` / `WITHDRAWN` / `COMPLETED` / `REJECTED` / `VOIDED`)。
 
-- 綁流程的表單送出不經 `COMPLETED`、直接 `REVIEWING`(送出時檢查擋下回 `FORBIDDEN` + reason);`RETURNED` / `WITHDRAWN` 由申請人以 `saveFormDraft` 改內容、再 `submitFormSubmission`(修訂 +1)。
+- 綁流程的表單送出不經 `COMPLETED`、直接 `REVIEWING`(送出時檢查擋下回 `FORBIDDEN` + reason);`RETURNED` / `WITHDRAWN` 由申請人以 `submitFormSubmission` 直接帶 `values` 改內容並再送出(修訂 +1;允許存草稿時也可先 `saveFormDraft`)。
 - `formSubmissions` 列出草稿以外的所有狀態(草稿只給建立者)。
 - `updateFormSubmission` 只收**沒走過流程**的 `COMPLETED`(走過流程的核准後鎖定、只能作廢 → `CONFLICT` `STATUS_MISMATCH`)。
 - `deleteFormSubmission` 可刪草稿 / `RETURNED` / `WITHDRAWN`(建立者本人,`create`)、沒走過流程的 `COMPLETED` 與 `REJECTED`(`delete`),其他狀態 → `CONFLICT` `STATUS_MISMATCH`。
-- 掛接點(專案登記的守門與事後動作,`docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」):`submitFormSubmission` 呼叫 `beforeSubmit`、`updateFormSubmission` 呼叫 `beforeEditCompleted`、`deleteFormSubmission` 呼叫 `beforeDelete`、`withdrawSubmission` 呼叫 `beforeWithdraw`、`voidSubmission` 呼叫 `beforeVoid`,都在交易內、寫入之前;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼,沒有任何寫入。沒走流程的送出在寫入後依序觸發 `submitted`、`completed`,作廢觸發 `voided`;事後動作拋錯 → 整個動作回復(回傳該錯誤)。
+- 掛接點(專案登記的守門與事後動作,`docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」):`submitFormSubmission` 與 `createAndSubmitFormSubmission` 呼叫 `beforeSubmit`、`updateFormSubmission` 呼叫 `beforeEditCompleted`、`deleteFormSubmission` 呼叫 `beforeDelete`、`withdrawSubmission` 呼叫 `beforeWithdraw`、`voidSubmission` 呼叫 `beforeVoid`,都在交易內、寫入之前;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼,沒有任何寫入。沒走流程的送出在寫入後依序觸發 `submitted`、`completed`,作廢觸發 `voided`;事後動作拋錯 → 整個動作回復(回傳該錯誤)。
 - 單筆讀取與附件的授權是 `canReadSubmissionRevision`:建立者讀全部修訂;任務持有者只讀他審的修訂(`revision` 省略 = 其中最新的一個,摘要改用該修訂實例上的快照);`formRuntimeVersion` 對持有該表單任務的人也開放。
 
 input 欄位的缺席 / `null`:
 
 - `SetModuleListColumnsInput.builtin`:缺席 / `null` = 保留目前存的(沒存過 = 全開);有給就三個開關一起送(`form` / `status` / `createdBy`)。`ModuleListColumnsPayload.builtin` 一定有值(沒存過 = 全 `true`)。
-- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。
+- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。`allowDraft`:缺席或 `null` = 不動。
+- `SubmitFormSubmissionInput.values`:缺席 / `null` = 以存的值送出;有值 = 畫面上的整張表單狀態(語意同 `SaveFormDraftInput.values`),與送出同一個交易寫入。
 - `CreateFormVersionDraftInput.baseVersion`:缺席 / `null` = 空白草稿。
 - `RetireCurrentVersionInput.expectedVersion`:必填,呼叫端當時看到的目前版本號。
 - `PreviewFormVersionInput.version`:缺席 / `null` = 草稿;有值 = 該已發布 / 已退役版本(不存在或是發布中的版號 → `NOT_FOUND`)。
@@ -444,7 +473,7 @@ input 欄位的缺席 / `null`:
 - `FormSubmissionModel.touched`:使用者碰過的欄位 key(草稿填寫時用);一定有值(沒有 = 空陣列)。
 - `me.currentOrg.timezone`(`forms/me-org-timezone.resolver.ts`):讀者當前組織所屬租戶的時區(IANA;租戶頂層 `orgs.settings.timezone`,沒設或不是 `Intl` 認得的時區 = `Asia/Taipei`;根組織讀根組織的設定)。表單引擎日期時間欄輸入與顯示的單一時區來源。
 - `FormModel.tenantEnabled`:站在租戶內時本租戶的開關,root 視角為 `null`;`assignments` 只有 root 視角的共用表單有。
-- **`abilities` 含權限**(業務模組那一種,前端直接用,不再與 `usePermissions` 相乘):`FormAbilities` 已含 `system.forms.*` 權限與「是不是自己的表單 / 站在哪裡」;`FormSubmissionAbilities.canEdit` = 草稿 / 被退回 / 撤回:建立者本人 + `create`、沒走過流程的已完成:`edit`(走過流程的已完成為 false);`canDelete` = 草稿 / 被退回 / 撤回:建立者本人 + `create`、沒走過流程的已完成 / 已駁回:`delete`;`canWithdraw` = 建立者、審核中;`canVoid` = 走過流程的已完成、建立者或 `edit`;`canCopy` = 已作廢 + `create`;`canEditField` = 權限層面改得動的欄位(條件唯讀看 `fieldStates.readonly`)。只審過某修訂的讀者一律 false。
+- **`abilities` 含權限**(業務模組那一種,前端直接用,不再與 `usePermissions` 相乘):`FormAbilities` 已含 `system.forms.*` 權限與「是不是自己的表單 / 站在哪裡」;`FormSubmissionAbilities.canEdit` = 草稿 / 被退回 / 撤回:建立者本人 + `create`、沒走過流程的已完成:`edit`(走過流程的已完成為 false);`canSaveDraft` = 草稿 / 被退回 / 撤回的建立者本人 + `create`,且表單允許存草稿;`canDelete` = 草稿 / 被退回 / 撤回:建立者本人 + `create`、沒走過流程的已完成 / 已駁回:`delete`;`canWithdraw` = 建立者、審核中;`canVoid` = 走過流程的已完成、建立者或 `edit`;`canCopy` = 已作廢 + `create`;`canEditField` = 權限層面改得動的欄位(條件唯讀看 `fieldStates.readonly`)。只審過某修訂的讀者一律 false。
 
 ## 錯誤
 
@@ -459,7 +488,7 @@ input 欄位的缺席 / `null`:
   - 樂觀鎖 / 狀態:`DRAFT_REVISION_MISMATCH`、`DRAFT_EXISTS`、`DRAFT_MISSING`、`NO_CURRENT_VERSION`、`CURRENT_VERSION_CHANGED`、`EDIT_VERSION_MISMATCH`、`REVISION_MISMATCH`、`STATUS_MISMATCH`、`CLIENT_REQUEST_REUSED`、`ALREADY_COPIED`(複製為新單:來源已複製過)。
   - 容量:`REVISION_LIMIT`(綁流程的表單修訂已滿 50 筆;前端文案「修訂次數已達上限,請建立新的申請」)、`DOCUMENT_TOO_LARGE`(更新後文件超過 8MB;「修訂記錄已達容量上限,無法再修改」)。這兩個前端以 Snackbar 顯示,不提示重新載入。
   - 舊版資料升級:`FORM_HAS_WORKFLOW`(本租戶綁了流程)、`VERSION_NOT_PUBLISHED`(目標版不是已發布)。
-- `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`;端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
+- `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`、`DRAFT_DISABLED`(表單關了「允許存草稿」:建草稿、存狀態草稿的單;見[允許存草稿](#允許存草稿));端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
 - `PERMISSION_NOT_DELETABLE` 的 `reasons`:`NOT_DYNAMIC`、`NOT_RETIRED`、`USED_BY_DRAFTS`、`CONFIRM_REQUIRED`。
 - `VALIDATION_FAILED`:定義有錯 → `fields: ["definition"]` + `issues`(檢查器的 `DefinitionIssue[]`,每筆帶定位);值有錯 → `fields`(欄位 key)+ `fieldErrors`(`{ fieldKey, code, message }`,code 見 `@repo/domain/form` 的 `VALUE_ISSUE_CODES`);匯出可攜性錯誤同樣用 `fields: ["definition"]` + `issues`,每筆為共用契約的 `{ code, message, path }`,由彈窗逐項顯示;匯出版本狀態不符使用 `fields: ["version"]`。其他輸入錯誤照一般的 `fields`。
 

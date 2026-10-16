@@ -97,6 +97,14 @@ describe("contentHash / snapshotHash", () => {
     );
   });
 
+  it("允許存草稿:缺席與 true 同一份內容(既有宣告的 hash 不變);false 兩個 hash 都變", () => {
+    const base = hashesOf(formSeed(fields()));
+    expect(hashesOf(formSeed(fields(), { allowDraft: true }))).toEqual(base);
+    const off = hashesOf(formSeed(fields(), { allowDraft: false }));
+    expect(off.contentHash).not.toBe(base.contentHash);
+    expect(off.snapshotHash).not.toBe(base.snapshotHash);
+  });
+
   it("物件鍵的先後不影響 hash", () => {
     const reordered = fields().map(
       (item) =>

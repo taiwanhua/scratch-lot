@@ -373,6 +373,8 @@ function managedMetadataOf(seed: DefinitionSeedSet): PlainRecord {
         name: seed.name,
         moduleKey: seed.moduleKey,
         tabLabelTemplate: seed.tabLabelTemplate,
+        // 允許存草稿:只有關掉才進 hash(缺席 = 開,開著的宣告與這個欄位出現之前的 hash 相同)
+        ...(seed.allowDraft === false ? { allowDraft: false } : {}),
       }
     : { name: seed.name, checkFormKey: seed.checkFormKey };
 }

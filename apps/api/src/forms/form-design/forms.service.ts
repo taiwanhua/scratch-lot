@@ -12,6 +12,7 @@ import {
   OrgsRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
+import { allowsDraft } from "../../database/schemas/form.schema";
 import {
   FormAccessService,
   type FormOperatorFacts,
@@ -66,7 +67,7 @@ export interface CreateFormInternalOptions {
 }
 
 /**
- * 只給內部呼叫端的條件更新(CAS):還是同一筆表單(`definitionId`)、`currentVersion`、名稱與頁籤模板
+ * 只給內部呼叫端的條件更新(CAS):還是同一筆表單(`definitionId`)、`currentVersion`、名稱、頁籤模板與允許存草稿
  * 都還是 `expected` 才寫(條件與寫入在同一次更新裡判斷)。比對之後被別人改名、發布 / 退役了別的版本、
  * 或表單被刪掉重建 → `CONFLICT`(`METADATA_CHANGED`),不蓋掉現場的值。
  */
@@ -76,6 +77,8 @@ export interface UpdateFormInternalOptions {
     currentVersion: number | null;
     name: string;
     tabLabelTemplate: string | null;
+    /** 允許存草稿(缺席的舊資料 = 開) */
+    allowDraft: boolean;
   };
 }
 
@@ -207,6 +210,9 @@ export class FormsService {
       const template = input.tabLabelTemplate?.trim() ?? "";
       set.tabLabelTemplate = template === "" ? null : template;
     }
+    if (input.allowDraft !== undefined && input.allowDraft !== null) {
+      set.allowDraft = input.allowDraft;
+    }
     if (Object.keys(set).length === 0) {
       return this.toModel(facts, form);
     }
@@ -221,6 +227,8 @@ export class FormsService {
             currentVersion: expected.currentVersion,
             name: expected.name,
             tabLabelTemplate: expected.tabLabelTemplate,
+            // 缺席 = 開:預期開時「不是 false」都算
+            allowDraft: expected.allowDraft ? { $ne: false } : false,
           },
       { $set: set },
     );
@@ -228,7 +236,7 @@ export class FormsService {
       throw expected === undefined
         ? notFoundError(`Form not found: ${input.key}`)
         : conflictError(
-            `Form ${input.key} identity, current version, name or tab label template changed`,
+            `Form ${input.key} identity, current version, name, tab label template or allow-draft changed`,
             "METADATA_CHANGED",
           );
     }
@@ -239,6 +247,7 @@ export class FormsService {
       before: {
         name: form.name,
         tabLabelTemplate: form.tabLabelTemplate,
+        ...("allowDraft" in set ? { allowDraft: allowsDraft(form) } : {}),
       },
       after: set,
     });
@@ -505,6 +514,7 @@ export class FormsService {
       forkedFrom: form.forkedFrom,
       currentVersion: form.currentVersion,
       tabLabelTemplate: form.tabLabelTemplate,
+      allowDraft: allowsDraft(form),
       hasDraft: draft !== null,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,

@@ -42,7 +42,7 @@ export const FORM_CONFLICT_REASONS = [
   "FORM_HAS_WORKFLOW",
   /** 舊版資料升級:目標版本不是已發布的版本。 */
   "VERSION_NOT_PUBLISHED",
-  /** 受管定義安裝的條件更新:比對之後表單身分、目前版本或名稱 / 頁籤模板被別人改了(只有內部的安裝流程會帶預期值)。 */
+  /** 受管定義安裝的條件更新:比對之後表單身分、目前版本或名稱 / 頁籤模板 / 允許存草稿被別人改了(只有內部的安裝流程會帶預期值)。 */
   "METADATA_CHANGED",
 ] as const;
 
@@ -58,6 +58,8 @@ export const FORM_FORBIDDEN_REASONS = [
   "NOT_FORM_OWNER",
   /** 只有站在根組織才能做(分派 / 收回、建共用表單)。 */
   "ROOT_ONLY",
+  /** 表單關了「允許存草稿」:不能建草稿、不能存狀態為草稿的單(只能直接送出)。 */
+  "DRAFT_DISABLED",
 ] as const;
 
 export type FormForbiddenReason = (typeof FORM_FORBIDDEN_REASONS)[number];

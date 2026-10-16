@@ -22,6 +22,8 @@ fragment FormFields on FormModel {
   }
   currentVersion
   tabLabelTemplate
+  # 表單設定「允許存草稿」(沒設過 = true)
+  allowDraft
   hasDraft
   # 站在租戶內時本租戶的開關;root 視角為 null
   tenantEnabled
@@ -112,7 +114,8 @@ mutation CreateForm($input: CreateFormInput!) {
   }
 }
 
-# UpdateFormInput: { key, name?, tabLabelTemplate? };tabLabelTemplate 缺席 = 不動、null = 清空
+# UpdateFormInput: { key, name?, tabLabelTemplate?, allowDraft? };tabLabelTemplate 缺席 = 不動、null = 清空;
+# allowDraft 缺席 / null = 不動
 mutation UpdateForm($input: UpdateFormInput!) {
   updateForm(input: $input) {
     form {

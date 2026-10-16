@@ -1320,7 +1320,8 @@
       "REVISION_LIMIT": "This record has reached its revision limit. Please create a new application.",
       "DOCUMENT_TOO_LARGE": "The revision history has reached its size limit and can no longer be edited.",
       "FORM_HAS_WORKFLOW": "This form has an approval workflow in your organization; old data cannot be upgraded to a new version.",
-      "VERSION_NOT_PUBLISHED": "Data can only be upgraded to a published version. Please refresh."
+      "VERSION_NOT_PUBLISHED": "Data can only be upgraded to a published version. Please refresh.",
+      "DRAFT_DISABLED": "This form does not allow drafts. Please submit it directly."
     },
     "array": {
       "addRow": "+ Add row",
@@ -1386,6 +1387,10 @@
       "listColumns": "List columns",
       "tenantEnabled": "Enabled in this organization",
       "enabledOn": "Form enabled in this organization.",
+      "allowDraft": "Allow drafts",
+      "allowDraftHint": "When off, the create and edit pages hide [Save draft]; entries can only be submitted directly.",
+      "allowDraftOn": "Drafts are now allowed.",
+      "allowDraftOff": "Drafts are turned off; entries can only be submitted directly.",
       "enabledOff": "Form disabled in this organization.",
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",

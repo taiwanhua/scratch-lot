@@ -64,6 +64,10 @@ export class FormSummary {
 
   @Field(() => String, { nullable: true })
   tabLabelTemplate!: string | null;
+
+  /** 允許存草稿(表單設定;沒設過 = true):false 時新增頁不顯示 [存草稿]。 */
+  @Field(() => Boolean)
+  allowDraft!: boolean;
 }
 
 /** 顯示名的一項(選項 / 引用):來源還在且讀者有權 → 現名;否則快照 + `available: false`。 */
@@ -144,6 +148,13 @@ export class FormSubmissionAbilities {
   /** 草稿:建立者本人 + 模組 `create`;已完成:模組 `edit`。 */
   @Field(() => Boolean)
   canEdit!: boolean;
+
+  /**
+   * [存草稿]:草稿 / 被退回 / 撤回、建立者本人 + 模組 `create`,且表單允許存草稿(表單設定)。
+   * false 時編輯頁只有 [送出](關掉前已存在的草稿照樣可以送出、刪除)。
+   */
+  @Field(() => Boolean)
+  canSaveDraft!: boolean;
 
   /** 草稿:建立者本人 + 模組 `create`;不綁流程的已完成 / 已駁回:模組 `delete`。 */
   @Field(() => Boolean)

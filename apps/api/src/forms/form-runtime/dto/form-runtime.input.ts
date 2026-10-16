@@ -84,7 +84,17 @@ export class SaveFormDraftInput {
   touched?: string[] | null;
 }
 
-/** 送出草稿(以存的值全驗、重算、寫快照)。 */
+/**
+ * 新增頁的 [送出]:一個交易內建立 + 守門 + 送出,失敗時不留任何資料(不產生草稿)。
+ * 欄位語意同 `CreateFormDraftInput`;同 `(建立者, clientRequestId)` 重試回同一筆。
+ */
+@InputType()
+export class CreateAndSubmitFormSubmissionInput extends CreateFormDraftInput {}
+
+/**
+ * 送出草稿 / 被退回 / 撤回的單(全驗、重算、寫快照)。`values` 缺席 = 以存的值送出;
+ * 有值 = 這次畫面上的整張表單狀態(語意同 `SaveFormDraftInput.values`),與送出在同一個交易寫入。
+ */
 @InputType()
 export class SubmitFormSubmissionInput {
   @Field(() => ID)
@@ -92,6 +102,9 @@ export class SubmitFormSubmissionInput {
 
   @Field(() => Int)
   expectedEditVersion!: number;
+
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  values?: Record<string, unknown> | null;
 }
 
 /** 已完成後修改:修訂 +1 並存完整快照;`values` 語意同 `SaveFormDraftInput`。 */

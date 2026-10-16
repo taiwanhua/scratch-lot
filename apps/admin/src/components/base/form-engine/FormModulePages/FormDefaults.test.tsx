@@ -75,6 +75,7 @@ const defaultsDefinition = (): FormDefinition => ({
 /** 這一版每個使用者填的欄位都改得動(api 的 `abilities.canEditField`)。 */
 const EDITABLE = {
   canEdit: true,
+  canSaveDraft: true,
   canDelete: true,
   canEditField: ["item", "qty", "unit_price", "budget", "deliver_at", "buy_on"],
   canWithdraw: false,

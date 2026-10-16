@@ -157,6 +157,13 @@ type CopyUserOrgRolesRoleDiff {
   removed: [CopyUserOrgRolesRole!]!
 }
 
+input CreateAndSubmitFormSubmissionInput {
+  clientRequestId: String!
+  formKey: ID!
+  touched: [String!]
+  values: JSONObject
+}
+
 input CreateChildOrgInput {
   description: String
   name: String!
@@ -775,6 +782,7 @@ input FormLookupTargetInput {
 
 type FormModel {
   abilities: FormAbilities!
+  allowDraft: Boolean!
   assignments: [FormAssignment!]!
   createdAt: DateTime!
   currentVersion: Int
@@ -810,6 +818,7 @@ type FormSubmissionAbilities {
   canDelete: Boolean!
   canEdit: Boolean!
   canEditField: [String!]!
+  canSaveDraft: Boolean!
   canVoid: Boolean!
   canWithdraw: Boolean!
 }
@@ -916,6 +925,7 @@ type FormSubmissionsPayload {
 }
 
 type FormSummary {
+  allowDraft: Boolean!
   currentVersion: Int!
   key: ID!
   moduleKey: String!
@@ -1191,6 +1201,7 @@ type Mutation {
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
+  createAndSubmitFormSubmission(input: CreateAndSubmitFormSubmissionInput!): FormSubmissionPayload!
   createChildOrg(input: CreateChildOrgInput!): OrgPayload!
   createDemoItemOne(input: CreateDemoItemOneInput!): DemoItemOnePayload!
   createDemoItemTwo(input: CreateDemoItemTwoInput!): DemoItemTwoPayload!
@@ -2195,6 +2206,7 @@ type SidebarBadge {
 input SubmitFormSubmissionInput {
   expectedEditVersion: Int!
   id: ID!
+  values: JSONObject
 }
 
 input SwitchOrgInput {
@@ -2254,6 +2266,7 @@ input UpdateFieldInput {
 }
 
 input UpdateFormInput {
+  allowDraft: Boolean
   key: ID!
   name: String
   tabLabelTemplate: String

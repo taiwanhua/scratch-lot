@@ -47,7 +47,7 @@ describe("表單模組:是 / 否欄位必填 = 必須勾選", () => {
       path: CREATE_PATH,
       world: worldOf({
         failures: {
-          SubmitFormSubmission: {
+          CreateAndSubmitFormSubmission: {
             code: "VALIDATION_FAILED",
             extensions: {
               fieldErrors: [
@@ -83,10 +83,12 @@ describe("表單模組:是 / 否欄位必填 = 必須勾選", () => {
     await user.click(screen.getByRole("button", { name: "送出" }));
 
     await waitFor(() => {
-      expect(world.inputs.submitFormSubmission).toHaveLength(1);
+      expect(world.inputs.createAndSubmitFormSubmission).toHaveLength(1);
     });
-    expect(world.inputs.createFormDraft[0]?.values).toMatchObject({
-      agree: true,
-    });
+    expect(world.inputs.createAndSubmitFormSubmission[0]?.values).toMatchObject(
+      {
+        agree: true,
+      },
+    );
   });
 });

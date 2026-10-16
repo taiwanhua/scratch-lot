@@ -10,6 +10,7 @@ import {
   FormVersionsRepository,
   PermissionsRepository,
 } from "../database/database.module";
+import { allowsDraft } from "../database/schemas/form.schema";
 import type { SeedInstallationMetadata } from "../database/schemas/seed-definition-installation.schema";
 import {
   FormAccessService,
@@ -63,11 +64,15 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
   }
 
   identityMetadataOf(seed: FormDefinitionSeedSet): IdentityMetadata {
-    return { name: seed.name, tabLabelTemplate: seed.tabLabelTemplate };
+    return {
+      name: seed.name,
+      tabLabelTemplate: seed.tabLabelTemplate,
+      allowDraft: seed.allowDraft ?? true,
+    };
   }
 
   initialMetadataOf(seed: FormDefinitionSeedSet): IdentityMetadata {
-    return { name: seed.name, tabLabelTemplate: null };
+    return { name: seed.name, tabLabelTemplate: null, allowDraft: true };
   }
 
   installationMetadataOf(
@@ -77,6 +82,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       name: seed.name,
       moduleKey: seed.moduleKey,
       tabLabelTemplate: seed.tabLabelTemplate,
+      allowDraft: seed.allowDraft ?? true,
     };
   }
 
@@ -95,6 +101,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           metadata: {
             name: form.name,
             tabLabelTemplate: form.tabLabelTemplate,
+            allowDraft: allowsDraft(form),
           },
         };
   }
@@ -177,6 +184,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         key: seed.key,
         name: seed.name,
         tabLabelTemplate: seed.tabLabelTemplate,
+        allowDraft: seed.allowDraft ?? true,
       },
       {
         expected: {
@@ -184,6 +192,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           currentVersion: expected.currentVersion,
           name: expected.metadata.name,
           tabLabelTemplate: expected.metadata.tabLabelTemplate ?? null,
+          allowDraft: expected.metadata.allowDraft ?? true,
         },
       },
     );
@@ -313,6 +322,7 @@ function toSnapshot(
           moduleKey: form.moduleKey,
           name: metadata.name,
           tabLabelTemplate: metadata.tabLabelTemplate ?? null,
+          allowDraft: metadata.allowDraft ?? true,
         },
         {
           fields: record.fields,

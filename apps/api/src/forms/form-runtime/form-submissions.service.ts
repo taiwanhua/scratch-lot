@@ -35,6 +35,7 @@ import {
   type FormSubmissionStatus,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
+import { allowsDraft } from "../../database/schemas/form.schema";
 import { TransactionService, afterCommit } from "../../database/transaction";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
@@ -79,6 +80,7 @@ import { projectFieldsForReader } from "./definition-projection";
 import { DisplayNamesService } from "./display-names.service";
 import {
   type CopySubmissionToDraftInput,
+  type CreateAndSubmitFormSubmissionInput,
   type CreateFormDraftInput,
   DEFAULT_PAGE_SIZE,
   type DeleteFormSubmissionInput,
@@ -267,6 +269,14 @@ function isDeletableRecord(record: {
   );
 }
 
+/** 表單關了「允許存草稿」(Spec 10.10):建草稿、存草稿(狀態草稿)一律擋。 */
+function draftDisabledError(formKey: string): Error {
+  return forbiddenError(
+    `Form ${formKey} does not allow saving drafts`,
+    "DRAFT_DISABLED",
+  );
+}
+
 /** 事後動作的單據資訊(掛接點)。 */
 function effectSubjectOf(record: SubmissionRecord): EffectSubject {
   return {
@@ -374,6 +384,7 @@ export class FormSubmissionsService {
       moduleKey: form.moduleKey,
       currentVersion: form.currentVersion ?? 0,
       tabLabelTemplate: form.tabLabelTemplate,
+      allowDraft: allowsDraft(form),
     }));
   }
 
@@ -555,23 +566,14 @@ export class FormSubmissionsService {
   // ---- 寫 ----
 
   /**
-   * 新增 = 建草稿(一個交易:草稿 + 稽核);同 `(建立者, clientRequestId)` 重試回同一筆
-   * (「新增後直接送出」不會建兩筆)。
+   * 新增頁的 [存草稿] = 建草稿(一個交易:草稿 + 稽核);同 `(建立者, clientRequestId)` 重試回同一筆。
+   * 表單關了「允許存草稿」→ `FORBIDDEN`(`DRAFT_DISABLED`),只能直接送出(`createAndSubmit`)。
    */
   async createDraft(
     facts: FormOperatorFacts,
     input: CreateFormDraftInput,
   ): Promise<FormSubmissionModel> {
-    const operator = facts.operator;
-    const clientRequestId = input.clientRequestId.trim();
-    if (
-      clientRequestId === "" ||
-      clientRequestId.length > MAX_CLIENT_REQUEST_ID_LENGTH
-    ) {
-      throw validationError("clientRequestId must be 1-100 characters", [
-        "clientRequestId",
-      ]);
-    }
+    const clientRequestId = this.requireClientRequestId(input.clientRequestId);
     const retried = await this.findRetried(
       facts,
       input.formKey,
@@ -580,19 +582,12 @@ export class FormSubmissionsService {
     if (retried) {
       return this.single(facts, retried);
     }
-    const form = await this.access.requireAvailableForm(facts, input.formKey);
-    this.access.assertModulePermission(facts, form.moduleKey, "create");
-    const version = await this.versions.findOne(operator, {
-      formKey: form.key,
-      version: form.currentVersion,
-      status: "published",
-    });
-    const boundVersion = version?.version ?? null;
-    if (version === null || boundVersion === null) {
-      throw forbiddenError(
-        `Form ${form.key} has no published version`,
-        "FORM_NOT_AVAILABLE",
-      );
+    const { form, version } = await this.creatableVersionOf(
+      facts,
+      input.formKey,
+    );
+    if (!allowsDraft(form)) {
+      throw draftDisabledError(form.key);
     }
     const created = await this.orRetryWinner(
       facts,
@@ -614,6 +609,94 @@ export class FormSubmissionsService {
   }
 
   /**
+   * 新增頁的 [送出](Spec 10.10「直接送出」,不論表單開不開草稿):**一個交易**內建立 + 守門 + 送出,
+   * 走與 `submit` 同一條送出路徑(`submitRecord`:全驗、`beforeSubmit` 守門、`submitted` / `completed`
+   * 事後動作或進流程)。任一步失敗整個交易回復,資料庫不留任何資料(不產生草稿)。
+   *
+   * 同 `(建立者, clientRequestId)` 重試:已送出的回那一筆;是草稿(同一頁先前的存草稿其實成功了、
+   * 畫面沒拿到回應)→ 還沒被改過(`editVersion = 0`)才以這次的值送出那一筆,否則 409
+   * `EDIT_VERSION_MISMATCH`(TX-05:前端沒有預期版本可比,不蓋掉別處的修改)。
+   */
+  async createAndSubmit(
+    facts: FormOperatorFacts,
+    input: CreateAndSubmitFormSubmissionInput,
+  ): Promise<FormSubmissionModel> {
+    const clientRequestId = this.requireClientRequestId(input.clientRequestId);
+    const retried = await this.findRetried(
+      facts,
+      input.formKey,
+      clientRequestId,
+    );
+    if (retried) {
+      if (retried.status !== "draft") {
+        return this.single(facts, retried);
+      }
+      const submitted = await this.transactions.withTransaction(async () => {
+        const record = await this.requireOwnSubmittable(
+          facts,
+          String(retried._id),
+        );
+        return this.submitRecord(facts, record, 0, {
+          sent: input.values ?? {},
+        });
+      });
+      return this.single(facts, submitted);
+    }
+    const { form, version } = await this.creatableVersionOf(
+      facts,
+      input.formKey,
+    );
+    const submitted = await this.orRetryWinner(
+      facts,
+      clientRequestId,
+      () => form.key,
+      () =>
+        this.transactions.withTransaction(async () => {
+          const created = await this.insertDraft(
+            facts,
+            form,
+            version,
+            clientRequestId,
+            { sent: input.values ?? {}, touched: input.touched ?? [] },
+            null,
+            { skipAudit: true },
+          );
+          // 重讀成完整的一筆(與 `submit` 讀到的同一個形狀),再走同一條送出路徑
+          const record = await this.requireOwnSubmittable(
+            facts,
+            String(created._id),
+          );
+          return this.submitRecord(facts, record, record.editVersion, {
+            sent: null,
+            audit: { direct: true },
+          });
+        }),
+    );
+    return this.single(facts, submitted);
+  }
+
+  /** 新增資格 + 綁定的版本(目前發布版);沒有發布版 → `FORBIDDEN`(`FORM_NOT_AVAILABLE`)。 */
+  private async creatableVersionOf(
+    facts: FormOperatorFacts,
+    formKey: string,
+  ): Promise<{ form: FormRecord; version: FormVersionRecord }> {
+    const form = await this.access.requireAvailableForm(facts, formKey);
+    this.access.assertModulePermission(facts, form.moduleKey, "create");
+    const version = await this.versions.findOne(facts.operator, {
+      formKey: form.key,
+      version: form.currentVersion,
+      status: "published",
+    });
+    if (version === null || (version.version ?? null) === null) {
+      throw forbiddenError(
+        `Form ${form.key} has no published version`,
+        "FORM_NOT_AVAILABLE",
+      );
+    }
+    return { form, version };
+  }
+
+  /**
    * 建一筆草稿(新增 / 複製為新單共用):值照 6a 的寫入規則(草稿放寬完成資料所需的驗證);
    * **預設值**(Spec §5「預設值」)在這裡算一次,只填使用者沒碰過、且送來 / 複製來的值是空的欄位。
    * 在呼叫端的交易內執行;同一次請求的重試同時到、另一個先建好了 → 唯一索引擋下、錯誤往外拋
@@ -626,6 +709,7 @@ export class FormSubmissionsService {
     clientRequestId: string,
     initial: { sent: StoredValues; touched: readonly string[] },
     copiedFrom: Types.ObjectId | null,
+    options: { skipAudit?: boolean } = {},
   ): Promise<SubmissionRecord> {
     const operator = facts.operator;
     const ctx = this.draftContext(facts);
@@ -666,22 +750,26 @@ export class FormSubmissionsService {
       copiedFrom,
       touched,
     });
-    await this.audit.record(operator, {
-      action: SUBMISSION_AUDIT.createDraft,
-      targetType: SUBMISSION_TARGET,
-      targetId: created._id,
-      after: {
-        formKey: form.key,
-        version: version.version,
-        ...(copiedFrom === null ? {} : { copiedFrom: String(copiedFrom) }),
-      },
-    });
+    // 直接送出:這筆在同一個交易內就送出了,稽核只記送出(`direct: true`)
+    if (options.skipAudit !== true) {
+      await this.audit.record(operator, {
+        action: SUBMISSION_AUDIT.createDraft,
+        targetType: SUBMISSION_TARGET,
+        targetId: created._id,
+        after: {
+          formKey: form.key,
+          version: version.version,
+          ...(copiedFrom === null ? {} : { copiedFrom: String(copiedFrom) }),
+        },
+      });
+    }
     return created;
   }
 
   /**
    * 存草稿(一個交易):放寬完成資料所需的驗證,寫入守門照常;`expectedEditVersion` 不符 → 409。
    * 被退回 / 撤回的單也由申請人以此改內容(狀態不變,再送出才進下一個修訂)。
+   * 狀態草稿、且表單關了「允許存草稿」→ `FORBIDDEN`(`DRAFT_DISABLED`;既有草稿只能送出或刪除)。
    */
   async saveDraft(
     facts: FormOperatorFacts,
@@ -689,6 +777,12 @@ export class FormSubmissionsService {
   ): Promise<FormSubmissionModel> {
     return this.transactions.withTransaction(async () => {
       const record = await this.requireOwnEditable(facts, input.id);
+      if (
+        record.status === "draft" &&
+        !(await this.formAllowsDraft(facts, record.formKey))
+      ) {
+        throw draftDisabledError(record.formKey);
+      }
       this.assertEditVersion(record, input.expectedEditVersion);
       const version = await this.versionOf(facts.operator, record);
       const values = await this.values.apply({
@@ -742,16 +836,10 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 送出:以存的值全驗、後端重算 computed、重取選項 / 引用 label、寫摘要,再依送出時檢查分兩條路
-   * (Spec 6b §3、§6):
-   *
-   * - **不走流程**(沒綁、也沒進過審核):6a 行為 —— `completed`、`revision = 1`、`revisions[0]` = 快照 + ctx,
-   *   `values` / `summary` / `revision` / `revisions` / `editVersion` 同一次更新,與稽核同一個交易
-   * - **走流程**:`WorkflowSubmitService` 建實例 → 提交連上並進 `reviewing` → 推進,連同稽核是**一個交易**
-   *   (ADR-0013);送審不經過 `completed`。被退回 / 撤回後再送出 = 修訂 +1、新實例
-   * - 提交已是 `reviewing`(重複送出):對原實例再推進一次(連同稽核一個交易),不驗、不看綁定、不增加修訂
-   *
-   * 版本已退役的既有草稿仍可送出(寬鬆)。
+   * 送出(草稿 / 被退回 / 撤回;`input.values` 有值 = 以畫面上的值送出,與送出同一個交易寫入):
+   * 全驗、後端重算 computed、重取選項 / 引用 label、寫摘要,再依送出時檢查分兩條路(Spec 6b §3、§6;
+   * 本體見 `submitRecord`)。提交已是 `reviewing`(重複送出):對原實例再推進一次(連同稽核一個交易),
+   * 不驗、不看綁定、不增加修訂。版本已退役的既有草稿仍可送出(寬鬆)。
    */
   async submit(
     facts: FormOperatorFacts,
@@ -775,7 +863,32 @@ export class FormSubmissionsService {
       });
       return this.single(facts, await this.reloadOwn(facts, record));
     }
-    this.assertEditVersion(record, input.expectedEditVersion);
+    const submitted = await this.transactions.withTransaction(() =>
+      this.submitRecord(facts, record, input.expectedEditVersion, {
+        sent: input.values ?? null,
+      }),
+    );
+    return this.single(facts, submitted);
+  }
+
+  /**
+   * 送出的本體(`submit` 與 `createAndSubmit` 共用同一條路徑;在呼叫端的交易內執行):
+   *
+   * - **不走流程**(沒綁、也沒進過審核):6a 行為 —— `completed`、`revision = 1`、`revisions[0]` = 快照 + ctx,
+   *   `values` / `summary` / `revision` / `revisions` / `editVersion` 同一次更新,寫入後依序觸發
+   *   `submitted`、`completed` 事後動作,與稽核同一個交易
+   * - **走流程**:`WorkflowSubmitService` 建實例 → 提交連上並進 `reviewing` → 推進(送審不經過 `completed`)。
+   *   被退回 / 撤回後再送出 = 修訂 +1、新實例
+   *
+   * 兩條路都在寫入前呼叫 `beforeSubmit` 守門;`sent` = 這次送來的值(null = 以存的值為準)。
+   */
+  private async submitRecord(
+    facts: FormOperatorFacts,
+    record: SubmissionRecord,
+    expectedEditVersion: number,
+    options: { sent: StoredValues | null; audit?: Record<string, unknown> },
+  ): Promise<SubmissionRecord> {
+    this.assertEditVersion(record, expectedEditVersion);
     const version = await this.versionOf(facts.operator, record);
     const at = new Date();
     const ctx = this.revisionContext(facts, at);
@@ -785,7 +898,7 @@ export class FormSubmissionsService {
       formKey: record.formKey,
       fields: version.fields,
       base: record.values,
-      sent: null,
+      sent: options.sent,
       previous: record.revisions.at(-1)?.values ?? null,
       ctx: expressionContextOf(ctx),
       mode: "complete",
@@ -820,83 +933,76 @@ export class FormSubmissionsService {
           },
       { isWorkflowBound: route.kind === "workflow" },
     );
+    await this.lifecycle.guard("beforeSubmit", {
+      operator: facts.operator,
+      submission: record,
+      values,
+    });
     if (route.kind === "workflow") {
-      await this.transactions.withTransaction(async () => {
-        await this.lifecycle.guard("beforeSubmit", {
-          operator: facts.operator,
-          submission: record,
-          values,
-        });
-        await this.workflowSubmit.submit(
-          facts.operator,
-          record,
-          input.expectedEditVersion,
-          { values, summary, ctx, at },
-          route,
-        );
-        await this.audit.record(facts.operator, {
-          action: SUBMISSION_AUDIT.submit,
-          targetType: SUBMISSION_TARGET,
-          targetId: record._id,
-          after: {
-            revision: record.revision + 1,
-            formKey: record.formKey,
-            version: record.version,
-            workflowKey: route.workflowKey,
-            workflowVersion: route.workflowVersion,
-          },
-        });
-      });
-      return this.single(facts, await this.reloadOwn(facts, record));
-    }
-    // 不走流程:完成、修訂與稽核是一個交易(走流程的寫入由 WorkflowSubmitService 負責)
-    return this.transactions.withTransaction(async () => {
-      await this.lifecycle.guard("beforeSubmit", {
-        operator: facts.operator,
-        submission: record,
-        values,
-      });
-      const updated = await this.submissions.findOwnAndUpdate(
+      await this.workflowSubmit.submit(
         facts.operator,
-        {
-          _id: record._id,
-          status: "draft",
-          editVersion: input.expectedEditVersion,
-        },
-        {
-          $set: {
-            values,
-            summary,
-            status: "completed",
-            revision: 1,
-            revisions: [{ revision: 1, version: record.version, values, ctx }],
-            submittedAt: at,
-          },
-          $inc: { editVersion: 1 },
-        },
+        record,
+        expectedEditVersion,
+        { values, summary, ctx, at },
+        route,
       );
-      if (!updated) {
-        throw conflictError(
-          `Submission ${input.id} was updated by someone else`,
-          "EDIT_VERSION_MISMATCH",
-        );
-      }
-      // 沒走流程的單直接完成:先 submitted 再 completed(掛接點)
-      const subject = effectSubjectOf(updated);
-      await this.lifecycle.emit("submitted", subject);
-      await this.lifecycle.emit("completed", subject);
       await this.audit.record(facts.operator, {
         action: SUBMISSION_AUDIT.submit,
         targetType: SUBMISSION_TARGET,
         targetId: record._id,
         after: {
-          revision: 1,
+          revision: record.revision + 1,
           formKey: record.formKey,
           version: record.version,
+          workflowKey: route.workflowKey,
+          workflowVersion: route.workflowVersion,
+          ...options.audit,
         },
       });
-      return this.single(facts, updated);
+      return this.reloadOwn(facts, record);
+    }
+    // 不走流程:完成、修訂、事後動作與稽核在同一個交易(走流程的寫入由 WorkflowSubmitService 負責)
+    const updated = await this.submissions.findOwnAndUpdate(
+      facts.operator,
+      {
+        _id: record._id,
+        status: "draft",
+        editVersion: expectedEditVersion,
+      },
+      {
+        $set: {
+          values,
+          summary,
+          status: "completed",
+          revision: 1,
+          revisions: [{ revision: 1, version: record.version, values, ctx }],
+          submittedAt: at,
+        },
+        $inc: { editVersion: 1 },
+      },
+    );
+    if (!updated) {
+      throw conflictError(
+        `Submission ${String(record._id)} was updated by someone else`,
+        "EDIT_VERSION_MISMATCH",
+      );
+    }
+    // 沒走流程的單直接完成:先 submitted 再 completed(掛接點)
+    const subject = effectSubjectOf(updated);
+    await this.lifecycle.emit("submitted", subject);
+    await this.lifecycle.emit("completed", subject);
+    await this.audit.record(facts.operator, {
+      action: SUBMISSION_AUDIT.submit,
+      targetType: SUBMISSION_TARGET,
+      targetId: record._id,
+      after: {
+        revision: 1,
+        formKey: record.formKey,
+        version: record.version,
+        ...options.audit,
+      },
     });
+    return updated;
   }
 
   /** 已完成後修改(一個交易):修訂 +1 並存完整快照(需模組 `edit`);兩個預期值任一不符 → 409。 */
@@ -1549,8 +1655,10 @@ export class FormSubmissionsService {
     facts: FormOperatorFacts,
     record: SubmissionRecord,
     isOwner: boolean,
+    allowDraft: boolean,
   ): {
     canEdit: boolean;
+    canSaveDraft: boolean;
     canDelete: boolean;
     canWithdraw: boolean;
     canVoid: boolean;
@@ -1570,6 +1678,7 @@ export class FormSubmissionsService {
         : isDeletableRecord(record) && can("delete");
     return {
       canEdit,
+      canSaveDraft: isApplicantEditable && allowDraft,
       canDelete,
       canWithdraw: isOwner && record.status === "reviewing",
       canVoid:
@@ -1807,6 +1916,15 @@ export class FormSubmissionsService {
     return version;
   }
 
+  /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */
+  private async formAllowsDraft(
+    facts: FormOperatorFacts,
+    formKey: string,
+  ): Promise<boolean> {
+    const form = await this.forms.findOne(facts.operator, { key: formKey });
+    return form === null || allowsDraft(form);
+  }
+
   /** 這筆提交所屬租戶的這張表單綁了流程嗎(修訂次數上限只對綁流程的表單)。 */
   private async isWorkflowBound(
     facts: FormOperatorFacts,
@@ -1897,7 +2015,10 @@ export class FormSubmissionsService {
   ): Promise<FormSubmissionModel[]> {
     const operator = facts.operator;
     const versionCache = new Map<string, FormVersionRecord>();
-    const formNames = new Map<string, string | null>();
+    const formsByKey = new Map<
+      string,
+      { name: string | null; allowDraft: boolean }
+    >();
     for (const record of records) {
       // 目前的版本(能改哪些欄)與這次看的修訂自己的版本(渲染、投影);升級過的提交兩者可能不同
       const versions = new Set([
@@ -1917,11 +2038,14 @@ export class FormSubmissionsService {
           );
         }
       }
-      if (!formNames.has(record.formKey)) {
+      if (!formsByKey.has(record.formKey)) {
         const form = await this.forms.findOne(operator, {
           key: record.formKey,
         });
-        formNames.set(record.formKey, form?.name ?? null);
+        formsByKey.set(record.formKey, {
+          name: form?.name ?? null,
+          allowDraft: form === null || allowsDraft(form),
+        });
       }
     }
     const names = await this.userNames.load(
@@ -1971,9 +2095,15 @@ export class FormSubmissionsService {
         record.createdBy?.equals(facts.operator.actorId) === true;
       const abilities =
         restriction === null
-          ? this.abilitiesOf(facts, record, isOwner)
+          ? this.abilitiesOf(
+              facts,
+              record,
+              isOwner,
+              formsByKey.get(record.formKey)?.allowDraft ?? true,
+            )
           : {
               canEdit: false,
+              canSaveDraft: false,
               canDelete: false,
               canWithdraw: false,
               canVoid: false,
@@ -1983,7 +2113,7 @@ export class FormSubmissionsService {
         id: String(record._id),
         moduleKey: record.moduleKey,
         formKey: record.formKey,
-        formName: formNames.get(record.formKey) ?? null,
+        formName: formsByKey.get(record.formKey)?.name ?? null,
         version: record.version,
         status: submissionStatusOf(record.status),
         revision: record.revision,

@@ -43,6 +43,7 @@ const leaveForm = {
   moduleKey: DEMO_GROUP_FORM_KEY,
   currentVersion: 1,
   tabLabelTemplate: null,
+  allowDraft: true,
 };
 
 const leave = (overrides: Parameters<typeof submissionFragment>[0] = {}) =>
@@ -104,6 +105,7 @@ describe("表單模組 × 審核流程", () => {
             summary: { title: `單 ${String(index)}`, date: null, amount: null },
             abilities: {
               canEdit: false,
+              canSaveDraft: false,
               canDelete: false,
               canEditField: [],
               canWithdraw: false,
@@ -118,6 +120,7 @@ describe("表單模組 × 審核流程", () => {
           summary: { title: "已核准的單", date: null, amount: null },
           abilities: {
             canEdit: false,
+            canSaveDraft: false,
             canDelete: false,
             canEditField: [],
             canWithdraw: false,
@@ -180,6 +183,7 @@ describe("表單模組 × 審核流程", () => {
             status: FormSubmissionStatus.Reviewing,
             abilities: {
               canEdit: false,
+              canSaveDraft: false,
               canDelete: false,
               canEditField: [],
               canWithdraw: true,
@@ -221,6 +225,7 @@ describe("表單模組 × 審核流程", () => {
             voidReason: "日期填錯",
             abilities: {
               canEdit: false,
+              canSaveDraft: false,
               canDelete: false,
               canEditField: [],
               canWithdraw: false,
@@ -252,7 +257,7 @@ describe("表單模組 × 審核流程", () => {
     ).toBeInTheDocument();
   });
 
-  it("被退回的單:編輯頁提示改完再送會重審,以草稿方式存(saveFormDraft)並送出", async () => {
+  it("被退回的單:編輯頁提示改完再送會重審,帶畫面上的值一次送出(不先存草稿)", async () => {
     const { user, forms } = renderLeave(
       `${DEMO_GROUP_FORM_ROUTES.editPage}/sub-leave-1`,
       {
@@ -261,6 +266,7 @@ describe("表單模組 × 審核流程", () => {
             status: FormSubmissionStatus.Returned,
             abilities: {
               canEdit: true,
+              canSaveDraft: true,
               canDelete: true,
               canEditField: ["kind", "days", "reason", "approver"],
               canWithdraw: false,
@@ -282,7 +288,11 @@ describe("表單模組 × 審核流程", () => {
     await waitFor(() => {
       expect(forms.inputs.submitFormSubmission).toHaveLength(1);
     });
-    expect(forms.inputs.saveFormDraft).toHaveLength(1);
+    expect(forms.inputs.submitFormSubmission[0]).toMatchObject({
+      id: "sub-leave-1",
+      values: expect.objectContaining({ kind: "病假" }),
+    });
+    expect(forms.inputs.saveFormDraft).toHaveLength(0);
     expect(forms.inputs.updateFormSubmission).toHaveLength(0);
   });
 });

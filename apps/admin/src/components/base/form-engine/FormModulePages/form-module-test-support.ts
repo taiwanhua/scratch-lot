@@ -30,6 +30,7 @@ export const shoppingForm = {
   moduleKey: DEMO_FORM_KEY,
   currentVersion: 1,
   tabLabelTemplate: null,
+  allowDraft: true,
 };
 
 export const defaultRuntimeOptions = (): FormRuntimeWorldOptions => ({
