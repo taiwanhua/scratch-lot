@@ -23,8 +23,14 @@ const CONFIG: RealtimeConfig = {
   ticketSecret: SECRET,
 };
 const BOARD: RealtimeBoardRegistration = {
+  key: "store-board",
   moduleKey: "store-board",
   permission: "store-board.view",
+};
+const KITCHEN_BOARD: RealtimeBoardRegistration = {
+  key: "kitchen-board",
+  moduleKey: "kitchen",
+  permission: "kitchen.view",
 };
 
 // 組織樹:根 → 租戶 A(→ 分店 A1、A2)、租戶 B(→ 分店 B1)
@@ -91,10 +97,11 @@ async function topicsOf(
   service: RealtimeTicketService,
   who: OperatorContext,
   boardOrgId: Types.ObjectId | string | null = null,
+  boardKey = BOARD.key,
 ) {
   const grant = await service.issue(
     who,
-    boardOrgId === null ? null : String(boardOrgId),
+    boardOrgId === null ? null : { key: boardKey, orgId: String(boardOrgId) },
     NOW,
   );
   if (grant === null) {
@@ -206,5 +213,17 @@ describe("realtimeTicket:只含操作者有權的頻道", () => {
     await expect(
       serviceWith([]).issue({ ...inTenantA, actorId: null }, null),
     ).resolves.toBeNull();
+  });
+
+  it("資格看帶的那個看板登記的權限:有 A 看板的權限不能換到 B 看板的頻道;沒登記的 key 不放", async () => {
+    const service = serviceWith(["store-board.view"], {
+      boards: [BOARD, KITCHEN_BOARD],
+    });
+    const own = await topicsOf(service, inTenantA, storeA1, "store-board");
+    expect(own.ticket.topics).toContain(`board:${String(storeA1)}`);
+    const other = await topicsOf(service, inTenantA, storeA1, "kitchen-board");
+    expect(other.ticket.topics).toEqual([self]);
+    const unknown = await topicsOf(service, inTenantA, storeA1, "nope");
+    expect(unknown.ticket.topics).toEqual([self]);
   });
 });

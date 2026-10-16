@@ -1415,7 +1415,7 @@ type Query {
   orgMembers(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgTree: [OrgNode!]!
   previewFormVersion(input: PreviewFormVersionInput!): FormPreviewPayload!
-  realtimeTicket(boardOrgId: ID): RealtimeTicketPayload
+  realtimeTicket(board: RealtimeBoardInput): RealtimeTicketPayload
   retiredFormPermissions: RetiredFormPermissionsPayload!
   role(id: ID!): RolePayload!
   roleMatrix(roleId: ID!): RoleMatrixPayload!
@@ -1432,6 +1432,14 @@ type Query {
   workflowVersion(version: Int, workflowKey: ID!): WorkflowVersionPayload!
   workflowVersions(workflowKey: ID!): WorkflowVersionsPayload!
   workflows(input: WorkflowsInput!): WorkflowsPayload!
+}
+
+input RealtimeBoardInput {
+  """看板 key(專案登記)"""
+  key: String!
+
+  """看板開著的那家店(組織 id)"""
+  orgId: ID!
 }
 
 type RealtimeTicketPayload {

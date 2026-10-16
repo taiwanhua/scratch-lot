@@ -11,7 +11,13 @@ import { act, render, screen } from "@testing-library/react";
 
 import { useApplyCenterCountsQuery } from "@repo/graphql";
 
-import { useRealtimeSignal, useRealtimeStatus } from "@/hooks/base/useRealtime";
+import {
+  RealtimeContext,
+  type RealtimeContextValue,
+  useRealtimeBoard,
+  useRealtimeSignal,
+  useRealtimeStatus,
+} from "@/hooks/base/useRealtime";
 import { SessionContext } from "@/hooks/base/useSession";
 import { createAuthSession } from "@/lib/base/auth/session";
 import { composeRealtimeSignals } from "@/lib/base/realtime/signal-registry";
@@ -25,6 +31,7 @@ import {
 } from "@/test/realtime";
 
 import {
+  REALTIME_FOLLOW_UP_MS,
   REALTIME_POLL_INTERVAL_MS,
   RealtimeProvider,
 } from "./RealtimeProvider";
@@ -140,6 +147,32 @@ describe("RealtimeProvider", () => {
     expect(onBoard).toHaveBeenCalledWith("board");
   });
 
+  it("收到信號約 2.5 秒後再 invalidate 一次(補送出端 2 秒窗內丟掉的變動);窗內連續信號只補一次", async () => {
+    const { invalidate } = await renderProvider();
+    act(() => {
+      latest().open();
+    });
+    const badge = {
+      op: "signal",
+      topic: "user:u1",
+      signal: { type: "badge:apply-center" },
+    };
+    act(() => {
+      latest().receive(badge);
+    });
+    await act(() => timers.advance(1000));
+    act(() => {
+      latest().receive(badge);
+    });
+    expect(countsInvalidations(invalidate)).toBe(2);
+    await act(() => timers.advance(REALTIME_FOLLOW_UP_MS - 1000 - 1));
+    expect(countsInvalidations(invalidate)).toBe(2);
+    await act(() => timers.advance(1));
+    expect(countsInvalidations(invalidate)).toBe(3);
+    await act(() => timers.advance(REALTIME_FOLLOW_UP_MS * 2));
+    expect(countsInvalidations(invalidate)).toBe(3);
+  });
+
   it("連線中不輪詢", async () => {
     const { invalidate } = await renderProvider();
     act(() => {
@@ -202,5 +235,38 @@ describe("RealtimeProvider", () => {
     expect(countsInvalidations(invalidate)).toBe(1);
     await act(() => timers.advance(REALTIME_POLL_INTERVAL_MS * 2));
     expect(countsInvalidations(invalidate)).toBe(1);
+  });
+});
+
+describe("useRealtimeBoard", () => {
+  const BoardPage = ({ orgId }: { orgId: string | null }) => {
+    useRealtimeBoard("store-board", orgId);
+    return null;
+  };
+
+  it("進入(先沒選店)→ 選 B → 換 C:直接換店、不經過 null;只有卸載時換回 null", () => {
+    const setBoard = jest.fn<RealtimeContextValue["setBoard"]>();
+    const value: RealtimeContextValue = {
+      status: "live",
+      listen: () => () => undefined,
+      setBoard,
+      refresh: () => undefined,
+    };
+    const wrap = (orgId: string | null) => (
+      <RealtimeContext.Provider value={value}>
+        <BoardPage orgId={orgId} />
+      </RealtimeContext.Provider>
+    );
+    const view = render(wrap(null));
+    view.rerender(wrap("B"));
+    view.rerender(wrap("C"));
+    expect(setBoard.mock.calls.map(([board]) => board)).toEqual([
+      null,
+      { key: "store-board", orgId: "B" },
+      { key: "store-board", orgId: "C" },
+    ]);
+    view.unmount();
+    expect(setBoard.mock.calls.at(-1)).toEqual([null]);
+    expect(setBoard).toHaveBeenCalledTimes(4);
   });
 });

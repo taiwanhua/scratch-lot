@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useRef } from "react";
 
 import type { RealtimeSignal } from "@repo/domain/realtime";
 
-import type { RealtimeStatus } from "@/lib/base/realtime/realtime-connection";
+import type {
+  RealtimeBoard,
+  RealtimeStatus,
+} from "@/lib/base/realtime/realtime-connection";
 
 export type RealtimeSignalHandler = (
   signal: RealtimeSignal,
@@ -14,8 +17,10 @@ export interface RealtimeContextValue {
   status: RealtimeStatus;
   /** 收到某類型的信號時呼叫 handler;回傳取消函式。 */
   listen: (type: string, handler: RealtimeSignalHandler) => () => void;
-  /** 看板頁打開哪家店(離開傳 null)。 */
-  setBoard: (orgId: string | null) => void;
+  /** 看板頁打開哪個看板的哪家店(離開傳 null)。 */
+  setBoard: (board: RealtimeBoard | null) => void;
+  /** 立即換發訂閱憑證(切換目前組織後呼叫:跨租戶要換到新租戶的 Durable Object)。 */
+  refresh: () => void;
 }
 
 export const RealtimeContext = createContext<RealtimeContextValue | null>(null);
@@ -54,16 +59,28 @@ export const useRealtimeSignal = (
   );
 };
 
+/** 切換目前組織等需要立即換發訂閱憑證的地方用。 */
+export const useRealtimeRefresh = (): (() => void) =>
+  useRealtimeContext().refresh;
+
 /**
  * 看板頁:開著時在原連線上換發含 `board:<店>` 的憑證並訂閱,切換分店時跟著換,離開時取消並換回。
+ * `boardKey` 是專案在 api `project/realtime-boards.ts` 登記的看板 key,資格看那個看板登記的權限;
  * 沒有權限或店不在可見範圍時 API 不放 `board:`,頁面拿資料仍由 API 判斷。
+ * 切換分店直接換成新的店(不經過 null);**只有卸載時**換回只含自己的憑證。
  */
-export const useRealtimeBoard = (orgId: string | null): void => {
+export const useRealtimeBoard = (
+  boardKey: string,
+  orgId: string | null,
+): void => {
   const { setBoard } = useRealtimeContext();
   useEffect(() => {
-    setBoard(orgId);
-    return () => {
+    setBoard(orgId === null ? null : { key: boardKey, orgId });
+  }, [setBoard, boardKey, orgId]);
+  useEffect(
+    () => () => {
       setBoard(null);
-    };
-  }, [setBoard, orgId]);
+    },
+    [setBoard],
+  );
 };

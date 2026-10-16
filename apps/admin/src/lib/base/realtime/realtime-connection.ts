@@ -1,5 +1,6 @@
 import {
   REALTIME_CLOSE_CODES,
+  REALTIME_TICKET_TTL_SECONDS,
   type RealtimeServerMessage,
   type RealtimeSignal,
   boardTopic,
@@ -41,9 +42,15 @@ export interface RealtimeTimers {
   clear(handle: unknown): void;
 }
 
+/** 看板頁開著的看板:專案登記的看板 key + 那家店的組織 id。 */
+export interface RealtimeBoard {
+  key: string;
+  orgId: string;
+}
+
 export interface RealtimeConnectionOptions {
   /** 向 API 拿訂閱憑證(`realtimeTicket`);停用時回 null。 */
-  fetchTicket(boardOrgId: string | null): Promise<RealtimeGrant | null>;
+  fetchTicket(board: RealtimeBoard | null): Promise<RealtimeGrant | null>;
   onSignal(signal: RealtimeSignal, topic: string): void;
   onStatus(status: RealtimeStatus): void;
   /** 斷線(或停用)一段時間後重新連上:先補抓一次資料。 */
@@ -54,6 +61,16 @@ export interface RealtimeConnectionOptions {
 
 /** 到期前多久在原連線上換發(毫秒)。 */
 export const RENEW_BEFORE_MS = 60_000;
+/** 換發的最小間隔(毫秒):時間異常時也不會連續換發。 */
+export const MIN_RENEW_DELAY_MS = 30_000;
+/**
+ * 收到憑證後多久換發(毫秒):以「收到的時刻 + (效期 − 1 分鐘)」計算,不拿憑證的 `expiresAt` 對使用者電腦的時鐘
+ * (時鐘不準時會太早或太晚換發)。
+ */
+export const RENEW_AFTER_MS = Math.max(
+  MIN_RENEW_DELAY_MS,
+  REALTIME_TICKET_TTL_SECONDS * 1000 - RENEW_BEFORE_MS,
+);
 /** 重連退避(毫秒):依失敗次數取,用完停在最後一個。 */
 export const RECONNECT_BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
 /** 即時通道停用(憑證是 null)時,多久再問一次 API(毫秒)。 */
@@ -83,12 +100,17 @@ const parseMessage = (data: unknown): RealtimeServerMessage | null => {
   }
 };
 
+const sameBoard = (a: RealtimeBoard | null, b: RealtimeBoard | null) =>
+  a === b ||
+  (a !== null && b !== null && a.key === b.key && a.orgId === b.orgId);
+
 /**
  * 一條即時通道連線的生命週期(底座規格第 4 章「四個流程」「降級」;不碰 React,`RealtimeProvider` 持有它):
  *
  * - **建立連線**:拿訂閱憑證(平常只含 `user:<自己>`)→ `wss://…/connect?ticket=`
- * - **換發**:到期前 1 分鐘在**原連線**上送新憑證(`renew`);進出看板頁、換分店時也換發
- *   (帶 `boardOrgId`),換到含 `board:<店>` 才送 `subscribe`,離開先 `unsubscribe` 再換回只含自己的憑證
+ * - **換發**:收到憑證後(效期 − 1 分鐘)在**原連線**上送新憑證(`renew`);進出看板頁、換分店、切換目前組織時也換發。
+ *   **同一時間只跑一個換發**:跑的期間看板又變(或又要求換發)就記下,`renewed` 之後再補一次,
+ *   所以先後兩次拿憑證的回應順序顛倒也不會用到舊的。換到含 `board:<店>` 才送 `subscribe`,離開先 `unsubscribe`
  * - **重連退避**:斷線後依 1 / 2 / 5 / 10 / 30 秒重連;憑證過期被關(4001)立即重拿憑證重連;
  *   換發被拒(切換到別的租戶、憑證無效)→ 關掉重連
  * - **降級與補抓**:不是 `live` 的期間狀態為 `slow`(輪詢由 provider 做);斷線後重新連上先 `onCatchUp`
@@ -103,10 +125,16 @@ export class RealtimeConnection {
   private failures = 0;
   private hadOutage = false;
   private stopped = true;
-  private board: string | null = null;
+  private board: RealtimeBoard | null = null;
+  /** 目前訂閱中的看板店(`board:<orgId>` 的 orgId)。 */
   private subscribedBoard: string | null = null;
-  /** 最後一次送出的換發(收到 `renewed` 時用它排下一次)。 */
-  private pendingRenew: RealtimeGrant | null = null;
+  /** 換發進行中(拿憑證到收到 `renewed` / 被拒為止)。 */
+  private renewing = false;
+  /** 換發進行中又被要求換發:`renewed` 後再補一次。 */
+  private renewAgain = false;
+  /** 已送出、等 `renewed` 的換發。 */
+  private pendingRenew: { grant: RealtimeGrant; receivedAt: number } | null =
+    null;
 
   constructor(private readonly options: RealtimeConnectionOptions) {
     this.createSocket = options.createSocket ?? browserSocket;
@@ -128,27 +156,38 @@ export class RealtimeConnection {
     const socket = this.socket;
     this.socket = null;
     this.isLive = false;
+    this.resetRenew();
     socket?.close(1000, "stop");
   }
 
-  /** 看板頁開著哪家店(離開傳 null):在原連線上換發,符合條件才訂閱 `board:<店>`。 */
-  setBoard(orgId: string | null): void {
-    if (orgId === this.board) {
+  /** 看板頁開著哪個看板的哪家店(離開傳 null):在原連線上換發,符合條件才訂閱 `board:<店>`。 */
+  setBoard(board: RealtimeBoard | null): void {
+    if (sameBoard(board, this.board)) {
       return;
     }
-    this.board = orgId;
+    this.board = board;
     if (!this.isLive) {
       // 連上時用目前的看板拿憑證,開線後再訂閱
       return;
     }
-    if (this.subscribedBoard !== null && this.subscribedBoard !== orgId) {
+    if (
+      this.subscribedBoard !== null &&
+      this.subscribedBoard !== board?.orgId
+    ) {
       this.send({
         op: "unsubscribe",
         topic: boardTopic(this.subscribedBoard),
       });
       this.subscribedBoard = null;
     }
-    void this.renew();
+    this.requestRenew();
+  }
+
+  /** 立即換發(切換目前組織時:跨租戶要換到新租戶的 Durable Object)。 */
+  refresh(): void {
+    if (this.isLive) {
+      this.requestRenew();
+    }
   }
 
   private setStatus(status: RealtimeStatus): void {
@@ -174,6 +213,12 @@ export class RealtimeConnection {
       this.timer = null;
       callback();
     }, delayMs);
+  }
+
+  private resetRenew(): void {
+    this.renewing = false;
+    this.renewAgain = false;
+    this.pendingRenew = null;
   }
 
   private reconnectLater(immediately = false): void {
@@ -207,12 +252,13 @@ export class RealtimeConnection {
       this.schedule(() => void this.open(), DISABLED_RETRY_MS);
       return;
     }
+    const receivedAt = this.timers.now();
     const socket = this.createSocket(
       `${grant.connectUrl}?ticket=${encodeURIComponent(grant.ticket)}`,
     );
     this.socket = socket;
     this.subscribedBoard = null;
-    this.pendingRenew = null;
+    this.resetRenew();
     const opened = grant;
     socket.addEventListener("open", () => {
       if (socket !== this.socket) {
@@ -223,7 +269,7 @@ export class RealtimeConnection {
       const catchUp = this.hadOutage;
       this.hadOutage = false;
       this.setStatus("live");
-      this.scheduleRenew(opened.expiresAt);
+      this.scheduleRenew(receivedAt);
       this.subscribeBoardIfAllowed(opened);
       if (catchUp) {
         this.options.onCatchUp();
@@ -240,6 +286,7 @@ export class RealtimeConnection {
       }
       this.socket = null;
       this.isLive = false;
+      this.resetRenew();
       this.clearTimer();
       this.setStatus("slow");
       this.reconnectLater(event.code === REALTIME_CLOSE_CODES.ticketExpired);
@@ -250,23 +297,38 @@ export class RealtimeConnection {
     this.socket?.send(JSON.stringify(message));
   }
 
-  private scheduleRenew(expiresAt: number): void {
+  /** 以收到憑證的時刻起算(不比對 `expiresAt` 與使用者電腦的時鐘)。 */
+  private scheduleRenew(receivedAt: number): void {
     const delay = Math.max(
-      0,
-      expiresAt * 1000 - this.timers.now() - RENEW_BEFORE_MS,
+      MIN_RENEW_DELAY_MS,
+      receivedAt + RENEW_AFTER_MS - this.timers.now(),
     );
-    this.schedule(() => void this.renew(), delay);
+    this.schedule(() => {
+      this.requestRenew();
+    }, delay);
+  }
+
+  private requestRenew(): void {
+    if (this.renewing) {
+      this.renewAgain = true;
+      return;
+    }
+    void this.renew();
   }
 
   private async renew(): Promise<void> {
     const socket = this.socket;
+    if (socket === null) {
+      return;
+    }
+    this.renewing = true;
     let grant: RealtimeGrant | null = null;
     try {
       grant = await this.options.fetchTicket(this.board);
     } catch {
       grant = null;
     }
-    if (socket === null || socket !== this.socket) {
+    if (socket !== this.socket) {
       return;
     }
     if (grant === null) {
@@ -274,7 +336,7 @@ export class RealtimeConnection {
       this.restart();
       return;
     }
-    this.pendingRenew = grant;
+    this.pendingRenew = { grant, receivedAt: this.timers.now() };
     this.send({ op: "renew", ticket: grant.ticket });
   }
 
@@ -283,19 +345,20 @@ export class RealtimeConnection {
     const socket = this.socket;
     this.socket = null;
     this.isLive = false;
+    this.resetRenew();
     socket?.close(1000, "restart");
     this.setStatus("slow");
     this.reconnectLater(true);
   }
 
   private subscribeBoardIfAllowed(grant: RealtimeGrant): void {
-    const board = this.board;
+    const orgId = this.board?.orgId;
     if (
-      board !== null &&
-      this.subscribedBoard !== board &&
-      grant.topics.includes(boardTopic(board))
+      orgId !== undefined &&
+      this.subscribedBoard !== orgId &&
+      grant.topics.includes(boardTopic(orgId))
     ) {
-      this.send({ op: "subscribe", topic: boardTopic(board) });
+      this.send({ op: "subscribe", topic: boardTopic(orgId) });
     }
   }
 
@@ -309,11 +372,16 @@ export class RealtimeConnection {
         return;
       }
       case "renewed": {
-        const grant = this.pendingRenew;
+        const pending = this.pendingRenew;
         this.pendingRenew = null;
-        this.scheduleRenew(message.exp);
-        if (grant !== null) {
-          this.subscribeBoardIfAllowed(grant);
+        this.renewing = false;
+        if (pending !== null) {
+          this.scheduleRenew(pending.receivedAt);
+          this.subscribeBoardIfAllowed(pending.grant);
+        }
+        if (this.renewAgain) {
+          this.renewAgain = false;
+          this.requestRenew();
         }
         return;
       }
@@ -332,7 +400,6 @@ export class RealtimeConnection {
           (message.reason === "ticket-mismatch" ||
             message.reason === "invalid-ticket")
         ) {
-          this.pendingRenew = null;
           this.restart();
         }
         return;

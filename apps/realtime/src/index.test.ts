@@ -509,3 +509,25 @@ describe("連線資料寫入失敗", () => {
     other.ws.close();
   });
 });
+
+describe("換發與訂閱交錯", () => {
+  it("換發驗章期間送來的 subscribe 不會被換發寫回蓋掉", async () => {
+    const conn = await connect(
+      await issueTicket("tenant-race", { userId: "u1" }, ["board:b1"]),
+    );
+    conn.send({
+      op: "renew",
+      ticket: await issueTicket("tenant-race", { userId: "u1" }, ["board:b1"]),
+    });
+    conn.send({ op: "subscribe", topic: "board:b1" });
+    const replies = [await conn.next(), await conn.next()];
+    expect(replies.map((reply) => reply.op).toSorted()).toEqual([
+      "renewed",
+      "subscribed",
+    ]);
+    await expect(
+      publish("tenant-race", "board:b1", { type: "board" }),
+    ).resolves.toBe(1);
+    conn.ws.close();
+  });
+});

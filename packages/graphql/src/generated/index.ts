@@ -2178,7 +2178,7 @@ export type QueryPreviewFormVersionArgs = {
 
 
 export type QueryRealtimeTicketArgs = {
-  boardOrgId?: InputMaybe<Scalars['ID']['input']>;
+  board?: InputMaybe<RealtimeBoardInput>;
 };
 
 
@@ -2252,6 +2252,13 @@ export type QueryWorkflowVersionsArgs = {
 
 export type QueryWorkflowsArgs = {
   input: WorkflowsInput;
+};
+
+export type RealtimeBoardInput = {
+  /** 看板 key(專案登記) */
+  key: Scalars['String']['input'];
+  /** 看板開著的那家店(組織 id) */
+  orgId: Scalars['ID']['input'];
 };
 
 export type RealtimeTicketPayload = {
@@ -3983,7 +3990,7 @@ export type SetOrgManagersMutationVariables = Exact<{
 export type SetOrgManagersMutation = { __typename?: 'Mutation', setOrgManagers: { __typename?: 'OrgPayload', org: { __typename?: 'Org', id: string, managers: Array<{ __typename?: 'UserSummary', id: string, name: string, account: string, enabled: boolean }> } } };
 
 export type RealtimeTicketQueryVariables = Exact<{
-  boardOrgId?: InputMaybe<Scalars['ID']['input']>;
+  board?: InputMaybe<RealtimeBoardInput>;
 }>;
 
 
@@ -8571,8 +8578,8 @@ export const useSetOrgManagersMutation = <
 useSetOrgManagersMutation.fetcher = (client: GraphQLClient, variables: SetOrgManagersMutationVariables, headers?: RequestInit['headers']) => fetcher<SetOrgManagersMutation, SetOrgManagersMutationVariables>(client, SetOrgManagersDocument, variables, headers);
 
 export const RealtimeTicketDocument = `
-    query RealtimeTicket($boardOrgId: ID) {
-  realtimeTicket(boardOrgId: $boardOrgId) {
+    query RealtimeTicket($board: RealtimeBoardInput) {
+  realtimeTicket(board: $board) {
     ticket
     connectUrl
     expiresAt

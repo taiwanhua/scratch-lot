@@ -236,14 +236,16 @@ export class TenantHub extends DurableObject<RealtimeEnv> {
       send(ws, { op: "rejected", reason: "invalid-ticket" });
       return;
     }
+    // 驗章是 await:期間同一條連線的 subscribe / unsubscribe 可能已改寫 attachment,以最新的為準
+    const current = readAttachment(ws) ?? attachment;
     const next = attachmentFor(result.ticket);
-    if (next.holder !== attachment.holder) {
+    if (next.holder !== current.holder) {
       send(ws, { op: "rejected", reason: "ticket-mismatch" });
       return;
     }
     const written = writeAttachment(ws, {
       ...next,
-      subscribedTopics: attachment.subscribedTopics.filter((topic) =>
+      subscribedTopics: current.subscribedTopics.filter((topic) =>
         next.allowedTopics.includes(topic),
       ),
     });

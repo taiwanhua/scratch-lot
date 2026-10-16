@@ -64,6 +64,8 @@ const PAIRED_PROJECT_SOURCES = new Set([
   "apps/api/src/project/project.module.ts",
   "apps/api/src/project/database/registrations.ts",
   "apps/api/src/project/lookup-providers.ts",
+  "apps/api/src/project/realtime-boards.ts",
+  "apps/admin/src/app/project/realtime-signals.ts",
 ]);
 const NOT_CODE_DUPLICATES = [
   /^packages\/project-config\/src\/project\//,
