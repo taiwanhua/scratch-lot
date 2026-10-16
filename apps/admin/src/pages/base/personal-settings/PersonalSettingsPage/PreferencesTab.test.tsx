@@ -17,10 +17,10 @@ import { findSnackbarAlert } from "@/test/snackbar";
  * 類型與 `canDisable` 照 api `base-notification-types.ts`;寫入走 `updateMyPreferences`,
  * key 由 api 給的 `preferenceKey`(`notification_<類型 . → _>_<管道>`)。
  */
-const renderPreferences = () => {
+const renderPreferences = (locale: string | null = null) => {
   const auth = authWorld({
     hasRefreshCookie: true,
-    preferences: notificationPreferenceDefaults(),
+    preferences: { ...notificationPreferenceDefaults(), locale },
   });
   const notifications = notificationWorld({ preferences: auth.preferences });
   server.use(...notifications.handlers, ...auth.handlers);
@@ -150,5 +150,13 @@ describe("偏好分頁:通知管道開關", () => {
     await user.click(toggle);
 
     expect(screen.getByRole("button", { name: "儲存" })).toBeDisabled();
+  });
+
+  it("英文介面:類型名稱取訊息檔的英文名稱(與通知設定頁同一個取名函式)", async () => {
+    renderPreferences("en");
+
+    expect(await screen.findByText("Awaiting your review")).toBeVisible();
+    expect(screen.getByText("Print agent offline")).toBeVisible();
+    expect(screen.queryByText("待你審核")).toBeNull();
   });
 });
