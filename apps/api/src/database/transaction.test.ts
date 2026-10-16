@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import mongoose, { type HydratedDocument, type Model, Types } from "mongoose";
 
 import { RecordingMailService } from "../mail/recording-mail.service";
@@ -268,6 +268,124 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
       expect(await namesInDatabase()).toEqual(
         expect.arrayContaining(["晚到-交易內", "晚到-交易後"]),
       );
+    });
+
+    it("driver 已提交、withTransaction 還沒返回的空檔裡,晚到的工作已在交易外", async () => {
+      // 模擬慢機器:伺服器提交完成後,driver / Mongoose 收尾再拖 150ms 才讓 withTransaction 返回
+      const committed = deferred();
+      const startSession = database.connection.startSession.bind(
+        database.connection,
+      );
+      const slowCommit = jest
+        .spyOn(database.connection, "startSession")
+        .mockImplementation(async (options?: mongoose.ClientSessionOptions) => {
+          const session = await startSession(options);
+          const commit = session.commitTransaction.bind(session);
+          session.commitTransaction = async (...args) => {
+            await commit(...args);
+            committed.resolve();
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          };
+          return session;
+        });
+
+      const seen: {
+        session: unknown;
+        afterCommitThrows: boolean;
+        assertThrows: boolean;
+        writeError: string | undefined;
+      }[] = [];
+      let late: Promise<void> | undefined;
+      try {
+        await transactions.withTransaction(async (session) => {
+          await items.create(asA, { name: "空檔-交易內" }, { session });
+          late = committed.promise.then(async () => {
+            const entry = {
+              session:
+                currentSession() === undefined
+                  ? undefined
+                  : "仍拿到交易 session",
+              afterCommitThrows: throws(registerNoopAfterCommit),
+              assertThrows: throws(assertMailAllowed),
+              writeError: undefined as string | undefined,
+            };
+            // 交易已提交:BaseRepository 不得沿用已提交的 session
+            await items
+              .create(asA, { name: "空檔-交易後" })
+              .catch((error: unknown) => {
+                entry.writeError =
+                  error instanceof Error ? error.message : String(error);
+              });
+            seen.push(entry);
+          });
+        });
+      } finally {
+        slowCommit.mockRestore();
+      }
+
+      await late;
+      expect(seen).toEqual([
+        {
+          session: undefined,
+          afterCommitThrows: true,
+          assertThrows: false,
+          writeError: undefined,
+        },
+      ]);
+      expect(await namesInDatabase()).toEqual(
+        expect.arrayContaining(["空檔-交易內", "空檔-交易後"]),
+      );
+    });
+
+    it("自動重試的每一輪(含還沒有任何讀寫時)都算在交易內;afterCommit 在交易外執行", async () => {
+      const seen: { attempt: number; inside: boolean; active: boolean }[] = [];
+      let afterCommitSession: unknown = "未執行";
+      let nestedOuterSession: unknown;
+      let attempt = 0;
+      await transactions.withTransaction(async (session) => {
+        attempt += 1;
+        seen.push({
+          attempt,
+          inside: currentSession() === session,
+          active: session.inTransaction(),
+        });
+        await items.create(
+          asA,
+          { name: `每輪-${String(attempt)}` },
+          { session },
+        );
+        seen.push({
+          attempt,
+          inside: currentSession() === session,
+          active: session.inTransaction(),
+        });
+        if (attempt === 1) {
+          throw transientError();
+        }
+        afterCommit(async () => {
+          afterCommitSession = currentSession();
+          // 交易後動作裡開的交易是新的獨立交易,不會加入已提交的那個
+          await transactions.withTransaction(async (next) => {
+            nestedOuterSession = next === session ? "同一個" : "新的";
+            expect(currentSession()).toBe(next);
+            await items.create(asA, { name: "每輪-交易後的新交易" });
+          });
+        });
+      });
+
+      expect(seen).toEqual([
+        { attempt: 1, inside: true, active: true },
+        { attempt: 1, inside: true, active: true },
+        { attempt: 2, inside: true, active: true },
+        { attempt: 2, inside: true, active: true },
+      ]);
+      expect(afterCommitSession).toBeUndefined();
+      expect(nestedOuterSession).toBe("新的");
+      const names = await namesInDatabase();
+      expect(names).toEqual(
+        expect.arrayContaining(["每輪-2", "每輪-交易後的新交易"]),
+      );
+      expect(names).not.toContain("每輪-1");
     });
   });
 
