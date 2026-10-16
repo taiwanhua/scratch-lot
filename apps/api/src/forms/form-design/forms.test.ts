@@ -423,6 +423,13 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
       });
     }, HOOK_TIMEOUT_MS);
 
+    afterAll(async () => {
+      // 測試直接寫入的依表單新增權限(B9b 未實作前沒有流程會建它),不留給後續測試
+      await connection
+        .collection("permissions")
+        .deleteOne({ key: B_FORM_CREATE });
+    }, HOOK_TIMEOUT_MS);
+
     it("me.modules:A 持表單模組 `*` 也拿不到 B 客製表單的動態權限;B 自己拿得到", async () => {
       const ownKeys = await mePermissionKeys(adminB.token);
       expect(ownKeys).toEqual(

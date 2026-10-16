@@ -29,8 +29,25 @@ export interface FormModulePermissionSpec {
   description?: string;
 }
 
-/** 表單模組固定的四條個別權限動作。 */
-const FIXED_ACTIONS = ["view", "create", "edit", "delete"] as const;
+/** 表單模組固定的四條個別權限:動作 → 顯示名與說明。 */
+const FIXED_PERMISSIONS = [
+  { action: "view", name: "檢視", description: "看列表與單筆資料、進入詳情頁" },
+  {
+    action: "create",
+    name: "新增",
+    description: "進入新增頁的按鈕 + 新增 API",
+  },
+  {
+    action: "edit",
+    name: "編輯",
+    description: "進入編輯頁的按鈕 + 編輯 API(綁流程的單核准後只能作廢)",
+  },
+  { action: "delete", name: "刪除", description: "列表的刪除按鈕 + 刪除 API" },
+] as const;
+
+const FIXED_ACTIONS: ReadonlySet<string> = new Set(
+  FIXED_PERMISSIONS.map((permission) => permission.action),
+);
 
 /**
  * 表單動態權限的動作前綴(執行期由表單發布建立:`show-` / `edit-<formKey>-<fieldKey>`、
@@ -41,7 +58,7 @@ const DYNAMIC_ACTION_PREFIXES = ["show-", "edit-", "create-"] as const;
 function assertDeclarableAction(moduleKey: string, action: string): void {
   if (
     action === WILDCARD_ACTION ||
-    (FIXED_ACTIONS as readonly string[]).includes(action) ||
+    FIXED_ACTIONS.has(action) ||
     DYNAMIC_ACTION_PREFIXES.some((prefix) => action.startsWith(prefix))
   ) {
     throw new Error(
@@ -132,30 +149,12 @@ export function formModuleDeclaration(
       },
     ],
     permissions: [
-      {
-        key: permissionKey(key, "view"),
+      ...FIXED_PERMISSIONS.map((permission): PermissionDeclaration => ({
+        key: permissionKey(key, permission.action),
         moduleKey: key,
-        name: "檢視",
-        description: "看列表與單筆資料、進入詳情頁",
-      },
-      {
-        key: permissionKey(key, "create"),
-        moduleKey: key,
-        name: "新增",
-        description: "進入新增頁的按鈕 + 新增 API",
-      },
-      {
-        key: permissionKey(key, "edit"),
-        moduleKey: key,
-        name: "編輯",
-        description: "進入編輯頁的按鈕 + 編輯 API(綁流程的單核准後只能作廢)",
-      },
-      {
-        key: permissionKey(key, "delete"),
-        moduleKey: key,
-        name: "刪除",
-        description: "列表的刪除按鈕 + 刪除 API",
-      },
+        name: permission.name,
+        description: permission.description,
+      })),
       ...extraPermissions,
     ],
     // collection 固定 form_submissions;moduleKey 由 runner 填本模組 key。

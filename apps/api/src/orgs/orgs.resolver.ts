@@ -8,12 +8,13 @@ import {
   Resolver,
 } from "@nestjs/graphql";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import { authError } from "../auth/auth-error";
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import { RequirePermission } from "../permission/require-permission.decorator";
 import { StorageService } from "../storage/storage.service";
 import { CreateChildOrgInput } from "./dto/create-child-org.input";
@@ -205,13 +206,11 @@ export class OrgsResolver {
       // 防呆:全域 guard 已擋掉未登入,這裡只是讓型別與 PermissionGuard 一致
       throw authError("UNAUTHENTICATED", "Reading orgs requires a login");
     }
-    const { permissionKeys } = await this.permissions.resolve(
+    const resolution = await this.permissions.resolve(
       operator.actorId,
       operator.currentOrgId,
     );
-    if (
-      !READ_ORG_PERMISSIONS.some((key) => hasPermission(permissionKeys, key))
-    ) {
+    if (!READ_ORG_PERMISSIONS.some((key) => holdsPermission(resolution, key))) {
       throw authError(
         "FORBIDDEN",
         `Missing permission to read orgs(${READ_ORG_PERMISSIONS.join(" / ")})`,
