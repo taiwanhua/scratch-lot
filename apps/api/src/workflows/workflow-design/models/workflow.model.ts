@@ -107,10 +107,6 @@ export class WorkflowModel {
   @Field(() => Boolean)
   hasDraft!: boolean;
 
-  /** 發布中斷(有 `publishing` 版本,或已發布但還沒切換完):顯示「重試」。 */
-  @Field(() => Boolean)
-  publishInterrupted!: boolean;
-
   /**
    * 目前發布版的關卡含角色佔位(共用流程的 `role` 來源):租戶**不能直接綁**,要以它為基底建客製流程。
    * 沒有發布版為 false。

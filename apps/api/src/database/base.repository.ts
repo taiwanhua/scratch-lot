@@ -94,7 +94,7 @@ export interface UpdateOptions extends SessionOptions {
  * 所有資料存取的共用層(ADR-0005 / ADR-0007 / ADR-0011):
  * 每個公開方法都以操作者上下文開頭 — 租戶過濾、軟刪除排除、基礎欄位填寫全由 plugin 依此自動完成,
  * 個別功能不自己寫、也繞不過(api 內裸 `Model.xxx()` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下)。
- * 刪除一律走 `softDeleteById`(ADR-0007);硬刪除只有 `hardDeleteById`(補償刪除)與
+ * 刪除一律走 `softDeleteById`(ADR-0007);硬刪除只有 `hardDeleteById`(撤銷開通、退役權限清理)與
  * `hardDeleteDraft`(從未對外生效的版本草稿,見該方法)。
  */
 export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
@@ -404,13 +404,14 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
-   * **補償刪除**:把一筆文件從資料庫抹掉,回傳是否真的刪到(ADR-0007 軟刪除的唯一例外)。
+   * **硬刪除**:把一筆文件從資料庫抹掉,回傳是否真的刪到(ADR-0007 軟刪除的例外)。
    *
-   * 為什麼需要它:開通租戶的四步(ADR-0009)還沒改成交易,失敗時以補償刪除回滾。
-   * 這裡軟刪除幫不上忙 — `users` 的 account / email 唯一索引**含已軟刪除的文件**,
-   * 留一筆殭屍會讓同一組帳號 / Email 永遠再也開不了,重試必然再失敗。
+   * 為什麼需要它:撤銷開通(ADR-0009)要把開通建出的組織、角色副本、首任管理員「當作沒發生過」——
+   * 軟刪除幫不上忙,`users` 的 account / email 唯一索引**含已軟刪除的文件**,留一筆殭屍會讓同一組帳號 /
+   * Email 永遠再也開不了;退役權限清理同理(權限 key 全域唯一)。多步驟寫入的失敗回復一律由交易負責
+   * (ADR-0013),不再用它做補償刪除。
    *
-   * **只准用在「本次請求剛建立、尚未對外可見」的文件**:使用者要刪的資料一律 `softDeleteById`。
+   * **只准用在 ADR-0007 列出的用途**:使用者要刪的資料一律 `softDeleteById`。
    * 租戶過濾與 `deletedAt` 一樣由 plugin 套上(`includeDeleted` 讓半途已被標記刪除的也刪得掉)。
    */
   async hardDeleteById(

@@ -13,15 +13,11 @@ import type { WorkflowDefinitionSeedSet } from "@repo/domain/seed";
 
 import type { AuthTestApp } from "../auth/test-support/auth-app";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
-import { FormPublishHooks } from "../forms/form-design/form-publish-hooks";
 import {
   CREATE_DRAFT,
   FORM_TEST_TIMEOUT_MS,
   FORM_VERSION,
-  RETIRE_CURRENT,
   type VersionRow,
-  call,
-  codeOf,
   definitionOf,
   field,
   getForm,
@@ -265,41 +261,6 @@ describe("受管定義:不略過、不覆蓋現場的草稿、版本與 metadata
       const missing = await runSeed(app, seed);
 
       expect(missing.conflict?.code).toBe("PERMISSIONS_INCOMPLETE");
-      expect(await installationsOf(connection, seed.key)).toEqual([]);
-    });
-
-    it("目前版本指向已退役的版本(畫面的退役做到一半):不採納、不照它退役,也不替別人把退役做完", async () => {
-      const seed = formSeed("guard_adopt_retiring", "r1");
-      await publishNewForm(api, app.root, seed.key, seed.definition, seed.name);
-      jest
-        .spyOn(api.app.get(FormPublishHooks), "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "retire-current"
-            ? Promise.reject(new Error("injected failure"))
-            : Promise.resolve(),
-        );
-      const interrupted = await call(api, app.root, RETIRE_CURRENT, {
-        input: { formKey: seed.key, expectedVersion: 1 },
-      });
-      expect(codeOf(interrupted)).toBeDefined();
-      jest.restoreAllMocks();
-      const before = await persistedStateOf(connection, FORM, seed.key);
-      expect(before).toMatchObject({
-        definition: { currentVersion: 1 },
-        versions: [{ version: 1, status: "retired" }],
-      });
-
-      const adopt = await runSeed(app, seed);
-      const retire = await runSeed(
-        app,
-        formSeed(seed.key, "r2", { desiredStatus: "retired" }),
-      );
-
-      expect(adopt.conflict?.code).toBe("CURRENT_VERSION_DRIFT");
-      expect(retire.conflict?.code).toBe("CURRENT_VERSION_DRIFT");
-      expect(await persistedStateOf(connection, FORM, seed.key)).toEqual(
-        before,
-      );
       expect(await installationsOf(connection, seed.key)).toEqual([]);
     });
   });

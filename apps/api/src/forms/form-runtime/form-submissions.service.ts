@@ -109,6 +109,8 @@ export const SUBMISSION_AUDIT = {
   withdraw: "submission.withdraw",
   void: "submission.void",
   copy: "submission.copy",
+  /** 複製為新單提交後,附件在 GCS 複製失敗、清空了那幾欄(交易外補記)。 */
+  copyAttachmentsFailed: "submission.copy-attachments-failed",
   upgrade: "submission.upgrade",
 } as const;
 
@@ -573,17 +575,21 @@ export class FormSubmissionsService {
         "FORM_NOT_AVAILABLE",
       );
     }
-    const created = await this.orRetryWinner(facts, clientRequestId, () =>
-      this.transactions.withTransaction(() =>
-        this.insertDraft(
-          facts,
-          form,
-          version,
-          clientRequestId,
-          { sent: input.values ?? {}, touched: input.touched ?? [] },
-          null,
+    const created = await this.orRetryWinner(
+      facts,
+      clientRequestId,
+      () => form.key,
+      () =>
+        this.transactions.withTransaction(() =>
+          this.insertDraft(
+            facts,
+            form,
+            version,
+            clientRequestId,
+            { sent: input.values ?? {}, touched: input.touched ?? [] },
+            null,
+          ),
         ),
-      ),
     );
     return this.single(facts, created);
   }
@@ -1149,12 +1155,20 @@ export class FormSubmissionsService {
     input: CopySubmissionToDraftInput,
   ): Promise<FormSubmissionModel> {
     const clientRequestId = this.requireClientRequestId(input.clientRequestId);
+    // 目標表單 = 來源的表單;交易內讀到來源後記下,撞重複鍵時在交易外以它核對重試
+    const targetForm: { formKey: string | null } = { formKey: null };
     const outcome = await this.orRetryWinner(
       facts,
       clientRequestId,
+      () => targetForm.formKey,
       () =>
         this.transactions.withTransaction(() =>
-          this.copyToDraftInTransaction(facts, input, clientRequestId),
+          this.copyToDraftInTransaction(
+            facts,
+            input,
+            clientRequestId,
+            targetForm,
+          ),
         ),
       (winner): CopyOutcome => ({ record: winner, cleared: null }),
     );
@@ -1168,15 +1182,18 @@ export class FormSubmissionsService {
   /**
    * 複製為新單的交易本體:新單、來源的 `replacedById`、稽核一起提交。附件只在新單寫上**新路徑**,
    * 真正的 GCS 複製排在交易成功之後(`afterCommit`);複製失敗 → 在交易外把那一欄清空、列進
-   * `clearedFields`(稽核記的 `clearedFields` 只含交易內就判定清空的欄位)。交易回復則一個都不複製。
+   * `clearedFields`,另記一筆稽核 `submission.copy-attachments-failed`(失敗紀錄放在交易外,TX-04)。
+   * 交易回復則一個都不複製。窗口:提交後、複製完成前行程當掉,新單會指向不存在的物件(讀取網址時才發現)。
    */
   private async copyToDraftInTransaction(
     facts: FormOperatorFacts,
     input: CopySubmissionToDraftInput,
     clientRequestId: string,
+    targetForm: { formKey: string | null },
   ): Promise<CopyOutcome> {
     const readable = await this.findReadable(facts, input.id, null);
     const source = readable.record;
+    targetForm.formKey = source.formKey;
     if (readable.restriction !== null) {
       throw forbiddenError(
         `Submission ${input.id} cannot be copied by a reviewer`,
@@ -1268,6 +1285,12 @@ export class FormSubmissionsService {
               },
             )) ?? created;
           cleared.push(...failed);
+          await this.audit.record(facts.operator, {
+            action: SUBMISSION_AUDIT.copyAttachmentsFailed,
+            targetType: SUBMISSION_TARGET,
+            targetId: created._id,
+            after: { clearedFields: failed },
+          });
         }
       });
     }
@@ -1670,6 +1693,7 @@ export class FormSubmissionsService {
   private async orRetryWinner<T = SubmissionRecord>(
     facts: FormOperatorFacts,
     clientRequestId: string,
+    formKeyOf: () => string | null,
     run: () => Promise<T>,
     fromWinner: (winner: SubmissionRecord) => T = (winner) =>
       winner as unknown as T,
@@ -1677,13 +1701,11 @@ export class FormSubmissionsService {
     try {
       return await run();
     } catch (error) {
-      if (isDuplicateKeyError(error)) {
-        const winner = await this.submissions.findOwnOne(
-          facts.operator,
-          { clientRequestId },
-          { includeDeleted: true },
-        );
-        if (winner?.deletedAt === null) {
+      const formKey = formKeyOf();
+      if (isDuplicateKeyError(error) && formKey !== null) {
+        // 與交易內的重試核對同一條契約:不同表單或已刪 → 409 `CLIENT_REQUEST_REUSED`
+        const winner = await this.findRetried(facts, formKey, clientRequestId);
+        if (winner) {
           return fromWinner(winner);
         }
       }

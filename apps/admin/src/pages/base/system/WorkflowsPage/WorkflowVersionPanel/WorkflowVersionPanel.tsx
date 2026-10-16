@@ -7,10 +7,8 @@ import {
   WorkflowVersionStatus,
   useCreateWorkflowVersionDraftMutation,
   useExportWorkflowSeedQuery,
-  useRetryPublishWorkflowVersionMutation,
   useWorkflowVersionsQuery,
 } from "@repo/graphql";
-import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Table } from "@repo/ui/table";
@@ -74,9 +72,8 @@ export const WorkflowVersionPanel = ({
     (item) => item.status === WorkflowVersionStatus.Draft,
   );
   const { canEdit, canPublish } = workflow.abilities;
-  const isLocked = workflow.publishInterrupted;
   // 共用流程只有站在根組織的人發布得了(`canPublish`),所以這兩個條件合起來就是 api 的匯出判準
-  const canExportSeed = workflow.isShared && canPublish && !isLocked;
+  const canExportSeed = workflow.isShared && canPublish;
 
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,
@@ -86,15 +83,6 @@ export const WorkflowVersionPanel = ({
       onSuccess: onChanged,
     }),
   );
-  const retry = useRetryPublishWorkflowVersionMutation(
-    session.client,
-    useMutationFeedback({
-      success: t("retried"),
-      error: (failure) => tErrors(workflowErrorOf(failure).code),
-      onSuccess: onChanged,
-    }),
-  );
-
   const previousOf = (item: VersionRow): VersionRow | undefined =>
     items
       .filter(
@@ -129,7 +117,7 @@ export const WorkflowVersionPanel = ({
             {t("view", { version: item.version })}
           </Button>
         )}
-        {canPublish && !isLocked && isDraft && (
+        {canPublish && isDraft && (
           <Button
             size="small"
             onClick={() => {
@@ -139,7 +127,7 @@ export const WorkflowVersionPanel = ({
             {t("publish")}
           </Button>
         )}
-        {canEdit && !isLocked && isDraft && (
+        {canEdit && isDraft && (
           <Button
             size="small"
             variant="text"
@@ -151,7 +139,7 @@ export const WorkflowVersionPanel = ({
             {t("deleteDraft")}
           </Button>
         )}
-        {canPublish && !isLocked && isCurrent && (
+        {canPublish && isCurrent && (
           <Button
             size="small"
             variant="text"
@@ -163,7 +151,7 @@ export const WorkflowVersionPanel = ({
             {t("retire")}
           </Button>
         )}
-        {canEdit && !isLocked && isBase && draft === undefined && (
+        {canEdit && isBase && draft === undefined && (
           <Button
             size="small"
             variant="text"
@@ -215,27 +203,6 @@ export const WorkflowVersionPanel = ({
 
   return (
     <Stack spacing={2}>
-      {isLocked && (
-        <Alert
-          severity="warning"
-          action={
-            canPublish && (
-              <Button
-                size="small"
-                variant="text"
-                disabled={retry.isPending}
-                onClick={() => {
-                  retry.mutate({ input: { workflowKey: workflow.key } });
-                }}
-              >
-                {t("retry")}
-              </Button>
-            )
-          }
-        >
-          {t("interrupted")}
-        </Alert>
-      )}
       <Table<VersionRow>
         aria-label={t("tableAria")}
         size="small"

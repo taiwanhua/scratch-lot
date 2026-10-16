@@ -329,22 +329,6 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["version"] });
     });
 
-    it("發布還沒切換完(版本已是 published、目前版本還沒指向它):不算已發布,拒絕", async () => {
-      const key = "exp_flow_interrupted";
-      await publishShared(key, bossOnly());
-      await connection
-        .collection("workflows")
-        .updateOne({ key }, { $set: { currentVersion: null } });
-
-      const result = await exportSeed(world.root, inputOf(key, 1));
-
-      expect(result.data).toBeNull();
-      expect(extensionsOf(result)).toMatchObject({
-        code: "CONFLICT",
-        reason: "PUBLISH_IN_PROGRESS",
-      });
-    });
-
     it("租戶邊界是共用、擁有組織卻有值的流程(正常寫入不會產生):不當成共用流程,當不存在", async () => {
       const key = "exp_flow_owner";
       await publishShared(key, bossOnly());

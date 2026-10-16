@@ -9,12 +9,7 @@ import {
   type FormOperatorFacts,
 } from "../form-access.service";
 import { FORMS_PERMISSIONS } from "../form-permission-keys";
-import {
-  conflictError,
-  forbiddenError,
-  notFoundError,
-  validationError,
-} from "../forms-error";
+import { forbiddenError, notFoundError, validationError } from "../forms-error";
 import type { ExportFormSeedInput } from "./dto/form-design.input";
 import type { ExportFormSeedPayload } from "./models/form.model";
 import {
@@ -81,12 +76,6 @@ export class FormSeedExportService {
       throw validationError(
         `Version ${String(input.version)} of ${form.key} is not published`,
         ["version"],
-      );
-    }
-    if (form.currentVersion !== version.version) {
-      throw conflictError(
-        `${form.key} has an unfinished publish (version ${String(version.version)})`,
-        "PUBLISH_IN_PROGRESS",
       );
     }
     const seed: FormDefinitionSeedSet = {

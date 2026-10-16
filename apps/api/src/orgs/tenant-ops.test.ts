@@ -69,6 +69,7 @@ const PROVISION_TENANT = /* GraphQL */ `
       ownerUserId
       roleId
       moduleKeys
+      activationMailSent
     }
   }
 `;
@@ -180,6 +181,7 @@ interface ProvisionTenantData {
     ownerUserId: string;
     roleId: string;
     moduleKeys: string[];
+    activationMailSent: boolean;
   };
 }
 
@@ -755,6 +757,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
 
       expect(result.errors).toBeUndefined();
       const payload = result.data?.provisionTenant;
+      expect(payload?.activationMailSent).toBe(true);
       if (!payload) {
         throw new Error("provisionTenant 沒有回 payload");
       }
@@ -1013,7 +1016,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
       expect(await userRowByAccount(account)).not.toBeNull();
     });
 
-    it("啟用信在交易提交後才寄;寄不出去只記 log,開通照樣成立", async () => {
+    it("啟用信在交易提交後才寄;寄不出去只記 log,開通照樣成立、回 activationMailSent = false", async () => {
       const account = nextAccount("mail-down");
       const passwords = api.app.get(PasswordService);
       let userAtSend: UserRow | null = null;
@@ -1030,6 +1033,8 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
       expect(spy).toHaveBeenCalledTimes(1);
       expect(userAtSend).not.toBeNull();
       const payload = result.data?.provisionTenant;
+      // 回傳告訴畫面信沒寄出(提示首任管理員走「忘記密碼」)
+      expect(payload?.activationMailSent).toBe(false);
       expect(await orgRow(payload?.org.id ?? "")).toMatchObject({
         ownerUserId: new Types.ObjectId(payload?.ownerUserId),
       });

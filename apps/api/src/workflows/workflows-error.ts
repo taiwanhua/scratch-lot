@@ -16,10 +16,6 @@ export const WORKFLOW_CONFLICT_REASONS = [
   "DRAFT_EXISTS",
   /** 要存 / 發布的草稿不存在。 */
   "DRAFT_MISSING",
-  /** 發布進行中或中斷:禁止開草稿 / 退役 / 再發布。 */
-  "PUBLISH_IN_PROGRESS",
-  /** 重試發布時沒有中斷的發布。 */
-  "PUBLISH_NOT_INTERRUPTED",
   /** 退役目前版本時沒有已發布的版本。 */
   "NO_CURRENT_VERSION",
   /** 讀到之後 `currentVersion` 被別人改了。 */

@@ -18,20 +18,20 @@
 
 「表單管理」是治理群組底下的一般模組(**不是**根組織專屬 —— 租戶管理員要管自己的客製表單);分派 / 收回另由 api 以「站在根組織」守。
 
-| 權限 key                                          | moduleId 指向 | 它是哪一頁的什麼                                                                    |
-| ------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------- |
-| `system.forms.*`                                  | 表單管理      | wildcard(同層語意);seed 自動產生                                                    |
-| `system.forms.view`                               | 表單管理      | 表單清單、版本、定義;設計器的檢查器與預覽                                           |
-| `system.forms.create`                             | 表單管理      | 建共用表單(只有根組織)、以某版本為基底建新表單                                      |
-| `system.forms.edit`                               | 表單管理      | 改名稱 / 頁籤模板、開草稿、存草稿、發布(含重試)、退役目前版本(只能動自己擁有的表單) |
-| `system.forms.assign`                             | 表單管理      | 分派 / 收回共用表單(只有站在根組織)                                                 |
-| `system.forms.set-enabled`                        | 表單管理      | 租戶內開關分派來的或自己的表單                                                      |
-| `system.module-manager.delete-retired-permission` | 模組與權限    | 刪除已退役的欄位級權限(三層檢查;根組織專屬模組)                                     |
-| `<moduleKey>.view / create / edit / delete`       | 各表單模組    | 列表與單筆 / 新增 / 修改已完成 / 刪除已完成(seed 宣告,端點在執行期判)               |
-| `<moduleKey>.<action>`                            | 各表單模組    | 宣告的頁內權限(如 `store.sell`;見下方「表單模組宣告」)                              |
-| `<moduleKey>.show-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:讀受保護欄位(`source: dynamic`,發布時建)                                     |
-| `<moduleKey>.edit-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:改設了 `permission.edit` 的欄位(同上)                                        |
-| `<moduleKey>.create-<formKey>`                    | 各表單模組    | 依表單新增(`source: dynamic`);解析認得,尚無建立流程                                 |
+| 權限 key                                          | moduleId 指向 | 它是哪一頁的什麼                                                            |
+| ------------------------------------------------- | ------------- | --------------------------------------------------------------------------- |
+| `system.forms.*`                                  | 表單管理      | wildcard(同層語意);seed 自動產生                                            |
+| `system.forms.view`                               | 表單管理      | 表單清單、版本、定義;設計器的檢查器與預覽                                   |
+| `system.forms.create`                             | 表單管理      | 建共用表單(只有根組織)、以某版本為基底建新表單                              |
+| `system.forms.edit`                               | 表單管理      | 改名稱 / 頁籤模板、開草稿、存草稿、發布、退役目前版本(只能動自己擁有的表單) |
+| `system.forms.assign`                             | 表單管理      | 分派 / 收回共用表單(只有站在根組織)                                         |
+| `system.forms.set-enabled`                        | 表單管理      | 租戶內開關分派來的或自己的表單                                              |
+| `system.module-manager.delete-retired-permission` | 模組與權限    | 刪除已退役的欄位級權限(三層檢查;根組織專屬模組)                             |
+| `<moduleKey>.view / create / edit / delete`       | 各表單模組    | 列表與單筆 / 新增 / 修改已完成 / 刪除已完成(seed 宣告,端點在執行期判)       |
+| `<moduleKey>.<action>`                            | 各表單模組    | 宣告的頁內權限(如 `store.sell`;見下方「表單模組宣告」)                      |
+| `<moduleKey>.show-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:讀受保護欄位(`source: dynamic`,發布時建)                             |
+| `<moduleKey>.edit-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:改設了 `permission.edit` 的欄位(同上)                                |
+| `<moduleKey>.create-<formKey>`                    | 各表單模組    | 依表單新增(`source: dynamic`);解析認得,尚無建立流程                         |
 
 `show-` / `edit-` / `create-` 三種合稱表單動態權限;別租戶客製表單的那幾筆在權限解析就被剔除(見[授權](../concepts/authorization.md#表單模組的權限))。
 
@@ -89,11 +89,11 @@
 3. 欄位級權限:這一版要的缺的建、有 `retiredAt` 的清掉、不再宣告的標 `retiredAt`、`name` 隨表單名與欄位 label 更新(「<表單名> / <欄位 label> 可見 / 可改」)。同 key 欄位沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
 4. 切換三筆:這一版 `publishing → published` → 其餘 `published → retired` → `forms.currentVersion` 指向新版(條件更新,讀到之後被改過 → `CONFLICT`)。對外(填寫、新增資格、版本面板的「目前版本」)一律以 `forms.currentVersion` 為準。
 
-**中斷**:有 `publishing` 版本,或有 `published` 版本但它不是 `currentVersion`,就是發布中斷(`FormModel.publishInterrupted`)。發布改成交易後不會再產生;判定與 `retryPublishFormVersion` 保留給交易之前留下的資料(與受管定義安裝的接續)。重試同樣是一個交易,從步驟 3 起重跑,每個寫入先看「已是目標狀態就跳過」。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。
+**沒有發布中斷**:交易外看不到 `publishing` 或切換到一半的版本,所以沒有「發布中斷」狀態與重試發布(本輪清空重建,沒有交易之前留下的中斷資料)。`publishing` 只是交易內的搶鎖狀態。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。
 
 ### 退役目前版本
 
-`retireCurrentVersion(input: { formKey, expectedVersion })`(`apps/api/src/versioning/version-lifecycle.ts`,與流程共用),版本面板帶打開跳窗時看到的版本號。固定順序兩步條件更新,**冪等**:先 `form_versions { version: expected, status: published } → retired`,再 `forms { currentVersion: expected } → null`。每一步「已是目標狀態」就算完成,所以兩步之間中斷後再呼叫一次會接著做完,同一版重複退役也不報錯。
+`retireCurrentVersion(input: { formKey, expectedVersion })`(`apps/api/src/versioning/version-lifecycle.ts`,與流程共用),版本面板帶打開跳窗時看到的版本號。兩步條件更新與稽核是**一個交易**:先 `form_versions { version: expected, status: published } → retired`,再 `forms { currentVersion: expected } → null`,任一步失敗一起回復。同一版重複退役(已是目標狀態)不報錯、什麼都不改、不寫稽核。
 
 - `currentVersion` 已指向別的版本(期間有人發布了新版)→ `CONFLICT` `CURRENT_VERSION_CHANGED`,新版不受影響;那一版既不是已發布也不是已退役 → `NO_CURRENT_VERSION`。
 - `currentVersion` 的兩處寫入(退役、發布步驟 4 的最後一筆)都是條件更新 `{ currentVersion: 讀到的值 }`,讀到之後被別人改了 → `CONFLICT`(`CURRENT_VERSION_CHANGED`),不蓋掉。
@@ -113,7 +113,7 @@
 
 ### 刪除草稿
 
-`deleteFormVersionDraft(input: { formKey, expectedDraftRevision })`:發布中(有 `publishing` 版本或發布中斷)→ `CONFLICT` `PUBLISH_IN_PROGRESS`;以 `BaseRepository.hardDeleteDraft` **單一條件硬刪** `{ formKey, status: "draft", version: null, draftRevision: 預期 }`。硬刪是 ADR-0007 的第三種硬刪:草稿從未發布、沒有提交綁它;軟刪會佔住 `(formKey, status)` 的部分唯一索引,讓這張表單永遠開不了新草稿。沒刪到再查草稿:有草稿 → `DRAFT_REVISION_MISMATCH`、沒有 → `DRAFT_MISSING`。刪除後寫稽核 `form-version.delete-draft`,`before` 記整份定義與 `draftRevision`。刪掉後可再以任一版本為基底開新草稿。
+`deleteFormVersionDraft(input: { formKey, expectedDraftRevision })`:以 `BaseRepository.hardDeleteDraft` **單一條件硬刪** `{ formKey, status: "draft", version: null, draftRevision: 預期 }`。硬刪是 ADR-0007 的第三種硬刪:草稿從未發布、沒有提交綁它;軟刪會佔住 `(formKey, status)` 的部分唯一索引,讓這張表單永遠開不了新草稿。沒刪到再查草稿:有草稿 → `DRAFT_REVISION_MISMATCH`、沒有 → `DRAFT_MISSING`。刪除後寫稽核 `form-version.delete-draft`,`before` 記整份定義與 `draftRevision`。刪掉後可再以任一版本為基底開新草稿。
 
 ### 設計器預覽
 
@@ -177,6 +177,7 @@
 - **每筆修訂記自己的版本**(`revisions[].version` = 填寫當時綁的版本):提交的 `version` 只有「舊版資料升級」會改綁,歷史修訂仍用自己的版本渲染;讀取一律 `revisions[r].version ?? submission.version`(沒有這個欄位的舊資料由遷移補成整筆的 `version`)。
 - **容量上限**(`form-runtime/revision-limits.ts`):修訂次數只對本租戶綁了流程的表單設上限(`org_form_workflow`;每筆最多 50 筆修訂),沒綁流程的不限次數;所有表單都受**更新後的完整文件**(最新 `values`、全部 `revisions` 與這次要加的快照)BSON 位元組不超過 8MB(Mongo 單筆 16MB 的一半,留給同一次更新的其他欄位)。存草稿、送出(含走流程的再送出)、已完成修改、舊版資料升級在寫入前以 `calculateObjectSize` 估算,搭 `expectedEditVersion` 條件更新(估算後被別人改了,條件更新自然不命中);超過 → `CONFLICT`:筆數 `REVISION_LIMIT`、容量 `DOCUMENT_TOO_LARGE`,什麼都不寫。
 - 「複製為新單」只開放給已作廢的提交(`canCopy`,規則見 [workflows](./workflows.md))。
+- 複製為新單是一個交易:新單、來源的 `replacedById`、稽核一起提交;附件只在新單寫上新路徑,GCS 複製在**交易提交後**才做。複製失敗 → 那一欄清空、列進 `clearedFields`,並補記稽核 `submission.copy-attachments-failed`。窗口:提交之後、複製完成之前行程當掉,新單的那一欄會指向不存在的物件(讀取網址時才發現,使用者重傳即可)。
 
 ## 明細列
 
@@ -214,7 +215,7 @@
 - **不驗證**:升級後不符新版規則的已完成資料,使用者下次編輯送出時才被擋、當場補。
 - **跳過並計數**:條件更新沒命中(`EDIT_CONFLICT`;在交易內被別人同時改會是寫入衝突,整批自動重跑、重讀後照樣升級,所以實際上很少出現)、加上升級修訂後超過容量(`DOCUMENT_TOO_LARGE`)、存值在目標版算不出來(`VALUES_INVALID`)。沒綁流程的表單不限修訂次數,所以不會因次數跳過。
 - **冪等**:已是目標版的不在範圍內,重跑只處理剩下的;守門之後,同一張表單、同 `(操作者, clientRequestId)` 重送回第一次記下的結果(查稽核 `submission.upgrade`,條件 `{ targetType: "form", targetId, action, actorId, after.clientRequestId }` 走 `{ targetType, targetId }` 索引);拿同一個 id 升級這張表單的另一版 → `CONFLICT` `CLIENT_REQUEST_REUSED`。**重送只保證資料不重複處理,結果不保證與當下的資料相同**(第一次之後別人改的、新進的舊版資料不反映;要處理就用新的 id 再升級一次)。
-- **量級**:`upgradeFormSubmissions` 是同步 mutation,整個升級在一次請求裡跑完(逐筆讀寫)。預期是幾百到幾千筆;**上萬筆建議分次做**(例如請操作者重按,已升級的不會重複處理),避免請求逾時。
+- **量級**:`upgradeFormSubmissions` 是同步 mutation,整個升級在一次請求裡跑完(逐筆讀寫,每批一個交易)。批內任一筆被並發修改就是寫入衝突,整批自動重跑;交易外對同一筆的寫入要等該批結束。預期是幾百到幾千筆;**上萬筆建議分次做**(例如請操作者重按,已升級的不會重複處理),避免請求逾時。
 - **回傳**:`upgraded: [{ fromVersion, count }]`、`skipped: [{ reason, count }]`;稽核一筆 `submission.upgrade`(筆數,不逐筆、不記值)。
 
 ## 讀取投影
@@ -338,7 +339,7 @@
 
 | 畫面                   | 做什麼                                                                                                                                                                                                                                                                                                  |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 表單清單               | 搜尋;每列名稱、key、模組、共用 / 客製、目前版本或「無發布版本」、停用、發布中斷、有草稿、綁的流程 / 「綁定的流程已失效」;「+ 建立表單」只在站在根組織 + `system.forms.create` 時出現(建共用表單;api 對租戶回 `ROOT_ONLY`)                                                                               |
+| 表單清單               | 搜尋;每列名稱、key、模組、共用 / 客製、目前版本或「無發布版本」、停用、有草稿、綁的流程 / 「綁定的流程已失效」;「+ 建立表單」只在站在根組織 + `system.forms.create` 時出現(建共用表單;api 對租戶回 `ROOT_ONLY`)                                                                                         |
 | 右側標頭               | 「編輯名稱與標題」(`abilities.canEdit`)、「以此為基底建新表單」(`canFork`)、「分派租戶」(`canAssign`)、「列表欄位配置」(站在根組織 + `system.forms.edit`;與「模組與權限」共用 `pages/base/system/ListColumnsDialog/`,編輯器頂端註明「此設定影響整個模組的列表」)、「在本組織啟用」開關(`canSetEnabled`) |
 | 流程綁定(右側標頭下)   | 租戶視角 + `system.forms.edit`:這張表單送出後走哪個流程(`pages/base/system/FormsPage/WorkflowBinding/`,規則見 [workflows「流程綁定」](./workflows.md))                                                                                                                                                  |
 | 表單設計(頁籤)         | 元件面板 / 畫布 / 屬性面板 / JSON 預覽 / 檢查結果;見下方「設計器」                                                                                                                                                                                                                                      |
@@ -347,7 +348,7 @@
 | 以此為基底建新表單跳窗 | 選基底版本、填 key(建立後不可改)與名稱;建好帶一份以該版本為基底的草稿                                                                                                                                                                                                                                   |
 | 編輯名稱與標題跳窗     | 名稱與頁籤模板;模板下方列出可用佔位符,「插入欄位的值」下拉挑欄位插入 `{{value.<key>}}`(欄位取目前版本,沒發布過取草稿),並即時顯示以範例資料套用的結果(留空以預設模板示範)                                                                                                                                |
 
-**版本面板**:草稿與各版本、發布(changelog 必填)、發布中斷時「重試發布」、退役目前版本、刪除草稿(確認跳窗,帶讀到的 `draftRevision`;發布中不可)、與上一版差異、以任一版本為基底開新草稿、「將舊版資料升級到此版」(已發布的版本;三步跳窗:各舊版本筆數 + 補值 → 確認 → 結果)。已發布 / 已退役版本的「檢視」把設計頁籤換成唯讀設計器(`FormDesigner/VersionViewer.tsx`:`formVersion(formKey, version)`,設計模式照樣標示、不能改不能存,「預覽」只在前端算,旁邊「以此為基底開新草稿」;草稿的設計器照樣掛著)。
+**版本面板**:草稿與各版本、發布(changelog 必填)、退役目前版本、刪除草稿(確認跳窗,帶讀到的 `draftRevision`)、與上一版差異、以任一版本為基底開新草稿、「將舊版資料升級到此版」(已發布的版本;三步跳窗:各舊版本筆數 + 補值 → 確認 → 結果)。已發布 / 已退役版本的「檢視」把設計頁籤換成唯讀設計器(`FormDesigner/VersionViewer.tsx`:`formVersion(formKey, version)`,設計模式照樣標示、不能改不能存,「預覽」只在前端算,旁邊「以此為基底開新草稿」;草稿的設計器照樣掛著)。
 
 目前共用發布版另提供「匯出專案設定」,開啟共用 `SeedExportDialog` 填寫版本識別與發布說明;條件與下載內容見[匯出專案設定](#匯出專案設定)。
 
@@ -399,18 +400,18 @@
 
 GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升級)、`form-submissions.graphql`(執行)。
 
-**設計端**(`@RequirePermission` 守端點,「是不是自己的表單 / 站在哪裡」在 service):`forms`、`form`、`formVersion(formKey, version?)`(省略 = 草稿)、`formVersions`、`validateFormVersion`、`previewFormVersion`(兩者是 query,不落庫)、`createForm`、`updateForm`、`forkForm`、`createFormVersionDraft`、`saveFormVersionDraft`、`deleteFormVersionDraft`、`publishFormVersion`、`retryPublishFormVersion`、`retireCurrentVersion`、`assignFormToTenants`、`revokeFormFromTenant`、`setTenantFormEnabled`、`retiredFormPermissions`、`deleteRetiredPermission`、`setModuleListColumns`(`system.forms.edit` + 站在根組織)。`moduleListColumns(moduleKey)` 給該模組的使用者讀(有 view / create / edit 任一)。
+**設計端**(`@RequirePermission` 守端點,「是不是自己的表單 / 站在哪裡」在 service):`forms`、`form`、`formVersion(formKey, version?)`(省略 = 草稿)、`formVersions`、`validateFormVersion`、`previewFormVersion`(兩者是 query,不落庫)、`createForm`、`updateForm`、`forkForm`、`createFormVersionDraft`、`saveFormVersionDraft`、`deleteFormVersionDraft`、`publishFormVersion`、`retireCurrentVersion`、`assignFormToTenants`、`revokeFormFromTenant`、`setTenantFormEnabled`、`retiredFormPermissions`、`deleteRetiredPermission`、`setModuleListColumns`(`system.forms.edit` + 站在根組織)。`moduleListColumns(moduleKey)` 給該模組的使用者讀(有 view / create / edit 任一)。
 
 **執行端**(模組是執行期的,service 依該模組的 `view` / `create` / `edit` / `delete` 判,錯誤與 `@RequirePermission` 同一種):`moduleForms(moduleKey)`、`formRuntimeVersion(formKey, version)`、`formSubmissions`、`formSubmission(id, revision?)`、`formSubmissionAttachmentUrl(id, fieldKey, revision?)`、`createFormDraft`、`saveFormDraft`、`submitFormSubmission`、`updateFormSubmission`、`deleteFormSubmission`、`formLookup`、`formLookupRecord`、`formFieldOptions`、`formUpgradePlan(formKey, targetVersion)` / `upgradeFormSubmissions`(模組 `edit`)。`FormSubmissionModel.revisions` 是 field resolver(只有修訂紀錄跳窗查)。綁了審核流程的表單另有 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(規則見 [workflows](./workflows.md))。
 
 **匯出專案設定**:`exportFormSeed(input: { formKey, version, revision, changelog })`(query)回 `ExportFormSeedPayload { fileName, source }` —— 把共用表單的指名版本輸出成可直接登記進專案種子的 TypeScript(`@repo/domain/seed` 的 `serializeSeedSet`;檔名 `<formKey>.<revision>.seed.ts`)。唯讀:不寫資料庫、不留稽核、不建安裝紀錄。
 
 - 守門:端點擋 `system.forms.view`,其餘在 `form-design/form-seed-export.service.ts` —— `view` + `edit`(缺任一 → `FORBIDDEN`)、站在根組織(否則 `FORBIDDEN` + `ROOT_ONLY`)、共用表單(租戶的客製表單在根組織視角一律 `NOT_FOUND`)。
-- `version`:必填,必須是**已發布**的那一版,不以目前版本代替。不存在(草稿沒有版號,指不到)→ `NOT_FOUND`;已退役 → `VALIDATION_FAILED` + `fields: ["version"]`;發布還沒切換完(版本已是 `published`、`currentVersion` 還沒指向它)→ `CONFLICT` + `PUBLISH_IN_PROGRESS`。
+- `version`:必填,必須是**已發布**的那一版,不以目前版本代替。不存在(草稿沒有版號,指不到)→ `NOT_FOUND`;已退役 → `VALIDATION_FAILED` + `fields: ["version"]`。
 - `revision`、`changelog`:都必填,沒有缺席 / `null` 的語意。`revision` 的格式是 `@repo/domain/seed` 的 `DEFINITION_REVISION_PATTERN`;`changelog` 去掉空白後不可為空(內容原樣輸出,不修剪)。不符 → `VALIDATION_FAILED` + `fields`(`revision` / `changelog`)。
 - 內容是設計端的完整版本,不是 `formRuntimeVersion` 依欄位級權限遮過的投影:`key`、`moduleKey`、身分上目前的 `name` 與 `tabLabelTemplate`、該版的 `fields` / `layout` / `summaryMap` / `prefills`,`desiredStatus` 固定 `published`。不含資料庫 id、版號、時間、發布者、擁有組織、分派與綁定。
 - 可攜性由 `validatePortableDefinition` 檢查(規則正本 `packages/domain/src/seed/portable-definition.ts`),依賴目錄取自這個環境(`form-design/seed-export-catalog.service.ts`):`engine = form` 的模組、seed 宣告的欄位類別與它的全域種子選項、有目前版本的共用表單(內容取目前版本)。有任何一筆不過就整份不輸出 → `VALIDATION_FAILED` + `fields: ["definition"]` + `issues`(`PortableIssue[]`:`{ code, message, path }`;`path` 是宣告內的位置,如 `definition.fields.3.default.value`,`message` 是給設計者看的繁中修正說明)。
-- 前端的顯示條件(守門仍以 api 為準):`FormModel.isShared && abilities.canEdit`、沒有發布中斷,且只在目前發布的那一版顯示 —— 共用表單只有站在根組織的人 `canEdit`,所以不另開一個 ability。
+- 前端的顯示條件(守門仍以 api 為準):`FormModel.isShared && abilities.canEdit`,且只在目前發布的那一版顯示 —— 共用表單只有站在根組織的人 `canEdit`,所以不另開一個 ability。
 
 **提交狀態**:`FormSubmissionStatus` 七值(`DRAFT` / `REVIEWING` / `RETURNED` / `WITHDRAWN` / `COMPLETED` / `REJECTED` / `VOIDED`)。
 
@@ -448,13 +449,13 @@ input 欄位的缺席 / `null`:
 
 通用碼照 GQL-04;「為什麼」放 `extensions.reason`(正本 `apps/api/src/forms/forms-error.ts`)。本模組另有兩個 code:
 
-| code                       | 什麼情況回它                                              | 前端該做什麼                                           |
-| -------------------------- | --------------------------------------------------------- | ------------------------------------------------------ |
-| `CONFLICT`                 | 樂觀鎖或搶鎖沒搶到,`reason` 見下                          | 提示「已被別人更新,請重新載入」;發布中斷時顯示「重試」 |
-| `PERMISSION_NOT_DELETABLE` | 退役權限清理的前置檢查未過;`extensions.reasons` + `usage` | 依 reasons 顯示原因;`CONFIRM_REQUIRED` 時跳確認再送    |
+| code                       | 什麼情況回它                                              | 前端該做什麼                                        |
+| -------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
+| `CONFLICT`                 | 樂觀鎖或搶鎖沒搶到,`reason` 見下                          | 提示「已被別人更新,請重新載入」                     |
+| `PERMISSION_NOT_DELETABLE` | 退役權限清理的前置檢查未過;`extensions.reasons` + `usage` | 依 reasons 顯示原因;`CONFIRM_REQUIRED` 時跳確認再送 |
 
 - `CONFLICT` 的 `reason`:
-  - 樂觀鎖 / 狀態:`DRAFT_REVISION_MISMATCH`、`DRAFT_EXISTS`、`DRAFT_MISSING`、`PUBLISH_IN_PROGRESS`、`PUBLISH_NOT_INTERRUPTED`、`NO_CURRENT_VERSION`、`CURRENT_VERSION_CHANGED`、`EDIT_VERSION_MISMATCH`、`REVISION_MISMATCH`、`STATUS_MISMATCH`、`CLIENT_REQUEST_REUSED`、`ALREADY_COPIED`(複製為新單:來源已複製過)。
+  - 樂觀鎖 / 狀態:`DRAFT_REVISION_MISMATCH`、`DRAFT_EXISTS`、`DRAFT_MISSING`、`NO_CURRENT_VERSION`、`CURRENT_VERSION_CHANGED`、`EDIT_VERSION_MISMATCH`、`REVISION_MISMATCH`、`STATUS_MISMATCH`、`CLIENT_REQUEST_REUSED`、`ALREADY_COPIED`(複製為新單:來源已複製過)。
   - 容量:`REVISION_LIMIT`(綁流程的表單修訂已滿 50 筆;前端文案「修訂次數已達上限,請建立新的申請」)、`DOCUMENT_TOO_LARGE`(更新後文件超過 8MB;「修訂記錄已達容量上限,無法再修改」)。這兩個前端以 Snackbar 顯示,不提示重新載入。
   - 舊版資料升級:`FORM_HAS_WORKFLOW`(本租戶綁了流程)、`VERSION_NOT_PUBLISHED`(目標版不是已發布)。
 - `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`;端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
@@ -463,11 +464,12 @@ input 欄位的缺席 / `null`:
 
 ## 稽核
 
-| action                                                                                                    | targetType        | 記什麼                                                                                     |
-| --------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------ |
-| `form.create` / `form.update` / `form.fork` / `form.assign` / `form.revoke` / `form.set-enabled`          | `form`            | key、名稱、分派的租戶、開關前後                                                            |
-| `form-version.create-draft` / `.save-draft` / `.publish` / `.retry-publish` / `.retire` / `.delete-draft` | `form_version`    | formKey、版號、draftRevision、changelog;刪除草稿的 `before` 記整份定義                     |
-| `submission.create-draft` / `.save-draft` / `.submit` / `.update` / `.delete`                             | `form_submission` | 修訂號、editVersion(**不記值**:可能含受保護欄位)                                           |
-| `submission.upgrade`                                                                                      | `form`            | formKey、目標版、clientRequestId、各舊版本升級筆數、跳過筆數與原因、補值的欄位 key(不記值) |
-| `permission.delete-retired`                                                                               | `permission`      | key、name、被解除的角色綁定數、已完成的使用筆數                                            |
-| `module.set-list-columns`                                                                                 | `module`          | 配置前後的欄位清單                                                                         |
+| action                                                                                           | targetType        | 記什麼                                                                                     |
+| ------------------------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------ |
+| `form.create` / `form.update` / `form.fork` / `form.assign` / `form.revoke` / `form.set-enabled` | `form`            | key、名稱、分派的租戶、開關前後                                                            |
+| `form-version.create-draft` / `.save-draft` / `.publish` / `.retire` / `.delete-draft`           | `form_version`    | formKey、版號、draftRevision、changelog;刪除草稿的 `before` 記整份定義                     |
+| `submission.create-draft` / `.save-draft` / `.submit` / `.update` / `.delete`                    | `form_submission` | 修訂號、editVersion(**不記值**:可能含受保護欄位)                                           |
+| `submission.copy-attachments-failed`(複製為新單提交後,附件在 GCS 複製失敗;交易外補記)            | `form_submission` | 被清空的欄位 key                                                                           |
+| `submission.upgrade`                                                                             | `form`            | formKey、目標版、clientRequestId、各舊版本升級筆數、跳過筆數與原因、補值的欄位 key(不記值) |
+| `permission.delete-retired`                                                                      | `permission`      | key、name、被解除的角色綁定數、已完成的使用筆數                                            |
+| `module.set-list-columns`                                                                        | `module`          | 配置前後的欄位清單                                                                         |

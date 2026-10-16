@@ -360,6 +360,7 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
               ownerUserId: "user-new-admin",
               roleId: "role-copy",
               moduleKeys: input.moduleKeys,
+              activationMailSent: true,
             },
           },
         })

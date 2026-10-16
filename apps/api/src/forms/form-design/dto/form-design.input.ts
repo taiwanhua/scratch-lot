@@ -143,13 +143,6 @@ export class DeleteFormVersionDraftInput {
   expectedDraftRevision!: number;
 }
 
-/** 只帶表單 key 的動作(重試發布)。 */
-@InputType()
-export class FormKeyInput {
-  @Field(() => ID)
-  formKey!: string;
-}
-
 /** 退役目前版本:帶當時看到的版本號(`currentVersion` 已指向別的版本 → 409)。 */
 @InputType()
 export class RetireCurrentVersionInput {

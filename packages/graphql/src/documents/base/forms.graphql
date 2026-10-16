@@ -4,9 +4,7 @@
 # 1. 定義四塊(fields / layout / summaryMap / prefills)以 JSON 進出,形狀正本是 `@repo/domain/form`;
 #    存草稿與發布都帶 `expectedDraftRevision`(= 讀到的 draftRevision),不符 → CONFLICT
 #    (reason DRAFT_REVISION_MISMATCH),前端提示「已被別人更新,請重新載入」。
-# 2. 發布是四步、不用交易:中斷時 `publishInterrupted` 為 true、版本面板顯示「重試」
-#    (RetryPublishFormVersion,從步驟 3 冪等重跑);中斷期間開草稿 / 退役 / 再發布一律 CONFLICT
-#    (reason PUBLISH_IN_PROGRESS)。
+# 2. 發布四步、退役兩步各是一個交易:任一步失敗全部回到動作前,沒有「發布中斷」與重試。
 # 3. `abilities` 已含權限與「是不是自己的表單」判斷,前端直接用,不要再與 usePermissions 相乘。
 
 fragment FormFields on FormModel {
@@ -25,7 +23,6 @@ fragment FormFields on FormModel {
   currentVersion
   tabLabelTemplate
   hasDraft
-  publishInterrupted
   # 站在租戶內時本租戶的開關;root 視角為 null
   tenantEnabled
   # 只有 root 視角的共用表單有;其餘為空陣列
@@ -210,16 +207,7 @@ mutation PublishFormVersion($input: PublishFormVersionInput!) {
   }
 }
 
-# FormKeyInput: { formKey };沒有中斷的發布 → CONFLICT(PUBLISH_NOT_INTERRUPTED)
-mutation RetryPublishFormVersion($input: FormKeyInput!) {
-  retryPublishFormVersion(input: $input) {
-    formVersion {
-      ...FormVersionFields
-    }
-  }
-}
-
-# RetireCurrentVersionInput: { formKey, expectedVersion };兩步冪等,currentVersion 已換成別版 → CONFLICT;
+# RetireCurrentVersionInput: { formKey, expectedVersion };兩步一個交易、同一版再退役不改任何東西,currentVersion 已換成別版 → CONFLICT;
 # 之後所有租戶都不能新增,再發布新版才恢復
 mutation RetireCurrentVersion($input: RetireCurrentVersionInput!) {
   retireCurrentVersion(input: $input) {

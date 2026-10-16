@@ -74,7 +74,11 @@ export const ProvisionTenantForm = ({
    * 掛上去的話上傳失敗那條路徑就沒有提示。
    */
   const feedback = useMutationFeedback<ProvisionTenantMutation>({
-    success: tFeedback("provisionSuccess"),
+    // 啟用信在交易提交後才寄;沒寄出時開通照樣成立,改提示首任管理員走「忘記密碼」
+    success: (data) =>
+      data.provisionTenant.activationMailSent
+        ? tFeedback("provisionSuccess")
+        : tFeedback("provisionMailNotSent"),
     error: (error) => tErrors(orgManagerErrorOf(error).code),
   });
   const provisionTenant = useProvisionTenantMutation(session.client);

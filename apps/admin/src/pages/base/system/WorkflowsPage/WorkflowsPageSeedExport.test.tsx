@@ -265,7 +265,6 @@ describe("流程管理:版本面板的「匯出專案設定」", () => {
         ownerOrgName: "CookHome",
       }),
     ],
-    ["發布中斷的共用流程", sharedWorkflow({ publishInterrupted: true })],
   ])("不可用:%s 沒有匯出按鈕", async (_title, world) => {
     const { user } = renderWorkflows({ world });
 

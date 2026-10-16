@@ -678,10 +678,6 @@ type FormForkSourceModel {
   version: Int!
 }
 
-input FormKeyInput {
-  formKey: ID!
-}
-
 input FormLookupInput {
   formKey: ID!
   keyword: String
@@ -757,7 +753,6 @@ type FormModel {
   name: String!
   ownerOrgId: ID
   ownerOrgName: String
-  publishInterrupted: Boolean!
   tabLabelTemplate: String
   tenantEnabled: Boolean
   updatedAt: DateTime!
@@ -1191,8 +1186,6 @@ type Mutation {
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
   retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
-  retryPublishFormVersion(input: FormKeyInput!): FormVersionPayload!
-  retryPublishWorkflowVersion(input: WorkflowKeyInput!): WorkflowVersionPayload!
   revokeFormFromTenant(input: RevokeFormFromTenantInput!): FormPayload!
   revokeRoleUsers(input: RevokeRoleUsersInput!): RoleUsersPayload!
   revokeTenantProvision(input: RevokeTenantProvisionInput!): RevokeTenantProvisionPayload!
@@ -1361,6 +1354,7 @@ input ProvisionTenantInput {
 }
 
 type ProvisionTenantPayload {
+  activationMailSent: Boolean!
   moduleKeys: [String!]!
   org: Org!
   ownerUserId: ID!
@@ -2237,7 +2231,6 @@ type WorkflowModel {
   name: String!
   ownerOrgId: ID
   ownerOrgName: String
-  publishInterrupted: Boolean!
   updatedAt: DateTime!
 }
 

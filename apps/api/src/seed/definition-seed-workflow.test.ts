@@ -226,7 +226,6 @@ describe("受管流程:安裝、重跑、採納、改版、退役與在途保護
       isShared: true,
       currentVersion: 1,
       hasDraft: false,
-      publishInterrupted: false,
       hasRolePlaceholder: true,
     });
   });

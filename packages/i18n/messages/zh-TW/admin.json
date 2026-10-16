@@ -288,6 +288,7 @@
       "disableSuccess": "已停用這個組織。",
       "deleteSuccess": "已刪除這個組織。",
       "provisionSuccess": "已開通新租戶。",
+      "provisionMailNotSent": "已開通新租戶,但啟用信沒有寄出;請首任管理員在登入頁用「忘記密碼」設定密碼。",
       "revokeSuccess": "已撤銷這個租戶的開通。"
     },
     "errors": {
@@ -1390,7 +1391,6 @@
       "version": "v{version}",
       "noVersion": "無發布版本",
       "disabled": "停用",
-      "interrupted": "發布中斷",
       "hasDraft": "有草稿",
       "workflow": "流程:{name}",
       "workflowInvalid": "綁定的流程已失效"
@@ -1507,9 +1507,6 @@
       "diffChanged": "變更:{fields}",
       "newDraft": "開新草稿",
       "draftCreated": "已開新草稿。",
-      "interrupted": "上次發布沒有完成。請按「重試發布」完成它;完成前不能開新草稿、退役或再發布。",
-      "retry": "重試發布",
-      "retried": "已完成發布。",
       "publishedLine": "{at} · {user}",
       "upgrade": "將舊版資料升級到此版",
       "upgradeBlockedByWorkflow": "這張表單在本組織綁了審核流程,舊版資料不能升級到新版。"
@@ -2283,7 +2280,6 @@
     "errors": {
       "CONFLICT": "這筆資料已被別人更新,請重新載入。",
       "DRAFT_REVISION_MISMATCH": "草稿已被別人更新,請重新載入。",
-      "PUBLISH_IN_PROGRESS": "上一次發布還沒完成,請先重試發布。",
       "HAS_DECISIONS": "已有審核意見,不能撤回。",
       "ALREADY_DECIDED": "此任務已決定,不能改派。",
       "ALREADY_IN_STEP": "此人已在本關。",
@@ -2314,7 +2310,6 @@
       "noVersion": "未發布",
       "version": "第 {version} 版",
       "assigned": "已分派 {count} 個",
-      "interrupted": "發布中斷",
       "hasDraft": "有草稿",
       "boundForms": "綁定表單:{forms}"
     },
@@ -2388,9 +2383,6 @@
       "diffChanged": "變更:{steps}",
       "diffStructure": "分流 / 匯合的結構有變更",
       "draftCreated": "已開新草稿",
-      "interrupted": "上一次發布中斷了,請重試發布。",
-      "retry": "重試發布",
-      "retried": "已重試發布",
       "statuses": {
         "DRAFT": "草稿",
         "PUBLISHING": "發布中",
@@ -2662,7 +2654,6 @@
       "ROOT_ONLY": "只有系統管理員能匯出專案設定。",
       "NOT_FOUND": "找不到這個版本,請重新載入後再試。",
       "VERSION_NOT_PUBLISHED": "只能匯出已發布的版本。",
-      "PUBLISH_IN_PROGRESS": "這一版的發布還沒完成,請先在版本清單按「重試發布」。",
       "NOT_PORTABLE": "這一版還不能匯出。",
       "VALIDATION_FAILED": "版本識別或發布說明不符合格式,請修正後再試。",
       "UNEXPECTED": "匯出失敗,請稍後再試。"

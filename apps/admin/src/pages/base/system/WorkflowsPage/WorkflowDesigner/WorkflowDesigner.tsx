@@ -124,7 +124,7 @@ export const WorkflowDesigner = ({
           {t("noDraft")}
         </Typography>
         <Button
-          disabled={workflow.publishInterrupted || createDraft.isPending}
+          disabled={createDraft.isPending}
           onClick={() => {
             createDraft.mutate({
               input: {

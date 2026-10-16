@@ -8,7 +8,7 @@
  *
  * - `data`:只刪人建的資料(刪留計畫見 `reset-plan.ts`、`reset-retention.ts`)→ 以同一版來源執行 update 補齊目標。
  *   root 現值、模組初始值、目前 registry 受管定義的歷史版本與權限 id 都保留;有任何做到一半的 migration、
- *   安裝或發布就整次拒絕(`reset-precheck.ts`)
+ *   安裝就整次拒絕(`reset-precheck.ts`)
  * - `full`:逐一 drop 整批鎖以外的每個 collection → 立即重建這次的執行紀錄 → 以同一版來源從空庫執行 update
  *
  * 流程(三個環境相同;production 沒有另外的永久拒絕):

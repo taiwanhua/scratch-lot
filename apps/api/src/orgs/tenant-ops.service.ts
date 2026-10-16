@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { hash } from "@node-rs/argon2";
 import { type ClientSession, Types } from "mongoose";
 
@@ -171,6 +171,8 @@ function selectModules(
  */
 @Injectable()
 export class TenantOpsService {
+  private readonly logger = new Logger(TenantOpsService.name);
+
   constructor(
     private readonly orgs: OrgsRepository,
     private readonly users: UsersRepository,
@@ -230,105 +232,122 @@ export class TenantOpsService {
     const rootOrg = await this.rootOrg(operator);
     // 不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;雜湊在交易外先算好,交易只做寫入
     const passwordHash = await hash(randomBytes(32).toString("hex"));
+    const mail = { sent: false };
 
     try {
-      return await this.transactions.withTransaction(async (session) => {
-        // 1. 租戶 Org:根組織的直接子組織
-        const org = await this.orgs.create(
-          operator,
-          {
-            name,
-            slug,
-            parentId: rootOrg._id,
-            ancestors: [rootOrg._id],
-            enabled: true,
-            isSystem: false,
-            settings: {},
-            ...(logoPath === undefined ? {} : { logoPath }),
-          },
-          { session },
-        );
+      const payload = await this.transactions.withTransaction(
+        async (session) => {
+          // 1. 租戶 Org:根組織的直接子組織
+          const org = await this.orgs.create(
+            operator,
+            {
+              name,
+              slug,
+              parentId: rootOrg._id,
+              ancestors: [rootOrg._id],
+              enabled: true,
+              isSystem: false,
+              settings: {},
+              ...(logoPath === undefined ? {} : { logoPath }),
+            },
+            { session },
+          );
 
-        // 2. 租戶管理員副本:沒有 key(全庫唯一),以 settings.templateKey 標記來源(ADR-0009)
-        const role = await this.roles.create(
-          operator,
-          {
-            name: template.name,
-            ...(template.description === undefined
-              ? {}
-              : { description: template.description }),
-            enabled: true,
-            isSystem: false,
-            settings: { [TEMPLATE_KEY_SETTING]: TENANT_ADMIN_ROLE_KEY },
-          },
-          { session },
-        );
-        await this.relations.linkMany(operator, [
-          { type: "org_role", firstId: org._id, secondId: role._id },
-          ...selected.map((module) => ({
-            type: "role_module" as const,
-            firstId: role._id,
-            secondId: module._id,
-          })),
-          ...permissionIds.map((permissionId) => ({
-            type: "role_permission" as const,
-            firstId: role._id,
-            secondId: permissionId,
-          })),
-        ]);
+          // 2. 租戶管理員副本:沒有 key(全庫唯一),以 settings.templateKey 標記來源(ADR-0009)
+          const role = await this.roles.create(
+            operator,
+            {
+              name: template.name,
+              ...(template.description === undefined
+                ? {}
+                : { description: template.description }),
+              enabled: true,
+              isSystem: false,
+              settings: { [TEMPLATE_KEY_SETTING]: TENANT_ADMIN_ROLE_KEY },
+            },
+            { session },
+          );
+          await this.relations.linkMany(operator, [
+            { type: "org_role", firstId: org._id, secondId: role._id },
+            ...selected.map((module) => ({
+              type: "role_module" as const,
+              firstId: role._id,
+              secondId: module._id,
+            })),
+            ...permissionIds.map((permissionId) => ({
+              type: "role_permission" as const,
+              firstId: role._id,
+              secondId: permissionId,
+            })),
+          ]);
 
-        // 3. 首任租戶管理員
-        const user = await this.users.create(
-          operator,
-          {
-            name: account,
-            account,
-            email,
-            passwordHash,
-            enabled: true,
-            settings: { mustChangePassword: false },
-          },
-          { session },
-        );
-        await this.relations.linkMany(operator, [
-          { type: "org_user", firstId: org._id, secondId: user._id },
-          { type: "user_role", firstId: user._id, secondId: role._id },
-        ]);
+          // 3. 首任租戶管理員
+          const user = await this.users.create(
+            operator,
+            {
+              name: account,
+              account,
+              email,
+              passwordHash,
+              enabled: true,
+              settings: { mustChangePassword: false },
+            },
+            { session },
+          );
+          await this.relations.linkMany(operator, [
+            { type: "org_user", firstId: org._id, secondId: user._id },
+            { type: "user_role", firstId: user._id, secondId: role._id },
+          ]);
 
-        // 4. 租戶擁有者
-        const owned = await this.orgs.updateById(
-          operator,
-          org._id,
-          { $set: { ownerUserId: user._id } },
-          { session },
-        );
+          // 4. 租戶擁有者
+          const owned = await this.orgs.updateById(
+            operator,
+            org._id,
+            { $set: { ownerUserId: user._id } },
+            { session },
+          );
 
-        await this.audit.record(operator, {
-          action: AUDIT_ACTIONS.provision,
-          targetType: AUDIT_TARGET_TYPE,
-          targetId: org._id,
-          after: {
-            name,
-            slug,
-            adminAccount: account,
-            adminEmail: email,
+          await this.audit.record(operator, {
+            action: AUDIT_ACTIONS.provision,
+            targetType: AUDIT_TARGET_TYPE,
+            targetId: org._id,
+            after: {
+              name,
+              slug,
+              adminAccount: account,
+              adminEmail: email,
+              ownerUserId: String(user._id),
+              roleId: String(role._id),
+              moduleKeys: selected.map((module) => module.key),
+              ...(logoPath === undefined ? {} : { logoPath }),
+            },
+          });
+
+          // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄):交易成功之後才寄
+          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」
+          afterCommit(async () => {
+            try {
+              await this.passwords.sendActivationEmail(user._id);
+              mail.sent = true;
+            } catch (error) {
+              this.logger.error(
+                `開通租戶後寄啟用信失敗(開通已成立):user=${String(user._id)}`,
+                error instanceof Error ? error.stack : String(error),
+              );
+            }
+          });
+
+          return {
+            org: toOrg(owned ?? org),
             ownerUserId: String(user._id),
             roleId: String(role._id),
             moduleKeys: selected.map((module) => module.key),
-            ...(logoPath === undefined ? {} : { logoPath }),
-          },
-        });
-
-        // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄):交易成功之後才寄
-        afterCommit(() => this.passwords.sendActivationEmail(user._id));
-
-        return {
-          org: toOrg(owned ?? org),
-          ownerUserId: String(user._id),
-          roleId: String(role._id),
-          moduleKeys: selected.map((module) => module.key),
-        };
-      });
+            activationMailSent: false,
+          };
+        },
+      );
+      // 交易後動作在 withTransaction 回來之前已跑完
+      return { ...payload, activationMailSent: mail.sent };
     } catch (error) {
       // 同時開通同一個短碼:事前查過沒人用,由唯一索引擋下 → 與事前檢查同一個錯誤
       throw slugConflictOr(error);
@@ -353,7 +372,8 @@ export class TenantOpsService {
    * 撤銷的重點就是「同一組帳號可以重新開通」)。
    * 抹除與審計 `org.revoke-provision` 是**一個交易**(ADR-0013):中途失敗什麼都不抹
    * (`audit_logs` 不在抹除範圍,ADR-0004 只增不改)。前置檢查在交易前(它的業務資料查詢是平行讀,
-   * 不放進交易,TX-02)。
+   * 不放進交易,TX-02)。**既有競態**:檢查之後、交易開始之前若有人在這個租戶建了子組織、成員或業務資料,
+   * 抹除照樣進行(硬刪只抹三樣與它們的關聯,新長出來的資料會失去上層);與交易前相同,未另外處理。
    */
   async revokeProvision(
     operator: OperatorContext,

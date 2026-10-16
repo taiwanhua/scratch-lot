@@ -11,33 +11,24 @@ import type { Connection } from "mongoose";
 
 import type { DefinitionSeedSet } from "@repo/domain/seed";
 
-import { AuditService } from "../audit/audit.service";
 import type { AuthTestApp } from "../auth/test-support/auth-app";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
-  CREATE_DRAFT,
   FORM_TEST_TIMEOUT_MS,
   RETIRE_CURRENT,
-  RETRY_PUBLISH,
   UPDATE_FORM,
-  type VersionRow,
   call,
-  definitionOf,
   field,
   getForm,
   ok,
-  saveDefinition,
-  simulateInterruptedPublish,
 } from "../forms/test-support/form-fixtures";
 import {
   CREATE_WORKFLOW_DRAFT,
   PUBLISH_WORKFLOW,
   RETIRE_WORKFLOW,
-  RETRY_PUBLISH_WORKFLOW,
   SAVE_WORKFLOW_DRAFT,
   type WorkflowVersionRow,
 } from "../workflows/test-support/workflow-fixtures";
-import { WorkflowPublishHooks } from "../workflows/workflow-design/workflow-publish.service";
 import type { SeedInstallCheckpoint } from "./seed-install-hooks";
 import {
   type SeedTestApp,
@@ -139,19 +130,6 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
     });
   }
 
-  function failAuditOnce(action: string): void {
-    const audit = api.app.get(AuditService);
-    const record = audit.record.bind(audit);
-    let hasFailed = false;
-    jest.spyOn(audit, "record").mockImplementation((operator, input) => {
-      if (!hasFailed && input.action === action) {
-        hasFailed = true;
-        return Promise.reject(new Error(`injected audit failure: ${action}`));
-      }
-      return record(operator, input);
-    });
-  }
-
   /** 讓一次安裝中斷,留下未完成的安裝紀錄。 */
   async function interruptInstall(
     seed: DefinitionSeedSet,
@@ -197,8 +175,6 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
   }
 
   const nextFields = [field("title", "text"), field("memo", "text")];
-  const uiFields = [field("title", "text"), field("ui_only", "text")];
-
   describe("未完成安裝的每一種續跑狀態:現場漂移在整批第一筆寫入前就拒絕", () => {
     it("表單照既有版本退役(已登記、尚未退役)期間畫面改了名稱:不先退役才報錯", async () => {
       const r1 = formSeed("resume_retire_form", "r1");
@@ -244,53 +220,6 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
 
       const [version] = await versionDocs(connection, FORM, r1.key);
       expect(version).toMatchObject({ version: 1, status: "published" });
-    });
-
-    it("自己的版本已發布、目前版本尚未切換時畫面改了名稱:不先重試發布才報錯", async () => {
-      const r1 = formSeed("resume_switch_form", "r1");
-      await runSeeds(app, [r1]);
-      const r2 = formSeed(r1.key, "r2", { fields: nextFields });
-      // 表單發布是一個交易:安裝停在發布之前,再模擬交易之前留下的「已發布、未切換」
-      await interruptInstall(r2, () =>
-        failCheckpointOnce(app.hooks, "publish"),
-      );
-      await simulateInterruptedPublish(connection, r2.key, "unswitched");
-      await rename(r2, "畫面改的名字");
-
-      await expectRejectedBeforeAnyWrite(r2, "METADATA_DRIFT");
-
-      // 沒有替它重試:目前版本仍是舊版
-      expect(await definitionDoc(connection, FORM, r1.key)).toMatchObject({
-        currentVersion: 1,
-      });
-      expect(
-        await auditCount(connection, {
-          action: "form-version.retry-publish",
-          "after.formKey": r1.key,
-        }),
-      ).toBe(0);
-    });
-
-    it("流程自己的版本停在發布中(版號已配置)時畫面改了名稱:不先重試發布才報錯", async () => {
-      const r1 = workflowSeed("resume_publishing_flow", "r1");
-      await runSeeds(app, [r1]);
-      const r2 = workflowSeed(r1.key, "r2", {
-        steps: [managerStep("boss"), managerStep("second")],
-      });
-      await interruptInstall(r2, () => {
-        failAuditOnce("workflow-version.publish");
-      });
-      await rename(r2, "畫面改的名字");
-
-      await expectRejectedBeforeAnyWrite(r2, "METADATA_DRIFT");
-
-      const versions = await versionDocs(connection, WORKFLOW, r1.key);
-      expect(
-        versions.map(({ version, status }) => ({ version, status })),
-      ).toEqual([
-        { version: 1, status: "published" },
-        { version: 2, status: "publishing" },
-      ]);
     });
 
     it("已切換目前版本、只差記成功時畫面改了名稱:整批預檢就拒絕", async () => {
@@ -351,116 +280,6 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
       },
     });
   }
-
-  describe("重試發布只接續這次安裝的那一版", () => {
-    it("表單:核對之後、重試之前,畫面完成了這一版並讓另一版發布中斷 → 不替另一版繼續發布", async () => {
-      const seed = formSeed("retry_bound_form", "r1");
-      // 表單發布是一個交易、不會再中斷:安裝停在發布之前,再以直接寫入模擬交易之前留下的中斷
-      // (這一版已 published、currentVersion 還沒切),續跑才會走原服務的重試
-      await interruptInstall(seed, () =>
-        failCheckpointOnce(app.hooks, "publish"),
-      );
-      await simulateInterruptedPublish(connection, seed.key, "unswitched");
-      beforeWrite("retry-publish", async () => {
-        await ok(api, app.root, RETRY_PUBLISH, {
-          input: { formKey: seed.key },
-        });
-        const draft = await ok<{
-          createFormVersionDraft: { formVersion: VersionRow };
-        }>(api, app.root, CREATE_DRAFT, {
-          input: { formKey: seed.key, baseVersion: 1 },
-        });
-        const saved = await saveDefinition(
-          api,
-          app.root,
-          seed.key,
-          definitionOf(uiFields),
-          draft.createFormVersionDraft.formVersion.draftRevision,
-        );
-        expect(saved.draftRevision).toBe(
-          draft.createFormVersionDraft.formVersion.draftRevision + 1,
-        );
-        await simulateInterruptedPublish(
-          connection,
-          seed.key,
-          "unswitched",
-          "畫面發布",
-        );
-      });
-
-      const resumed = await runSeeds(app, [seed]);
-      jest.restoreAllMocks();
-
-      expect(resumed.results).toEqual([]);
-      expect(resumed.errors).toMatchObject([{ code: "APPLY_FAILED" }]);
-      // 另一版仍停在畫面自己中斷的地方(它已把前一版標成退役、還沒切換目前版本):安裝沒有替它切換
-      const form = await getForm(api, app.root, seed.key);
-      expect(form).toMatchObject({
-        currentVersion: 1,
-        publishInterrupted: true,
-      });
-      const versions = await versionDocs(connection, FORM, seed.key);
-      expect(
-        versions.map(({ version, status }) => ({ version, status })),
-      ).toEqual([
-        { version: 1, status: "retired" },
-        { version: 2, status: "published" },
-      ]);
-      expect(
-        await auditCount(connection, {
-          action: "form-version.retry-publish",
-          targetId: versions[1]?._id,
-        }),
-      ).toBe(0);
-    });
-
-    it("流程:核對之後、重試之前,畫面完成了這一版並讓另一版發布中斷 → 不替另一版繼續發布", async () => {
-      const seed = workflowSeed("retry_bound_flow", "r1");
-      const flowHooks = api.app.get(WorkflowPublishHooks);
-      await interruptInstall(seed, () =>
-        failCheckpointOnce(flowHooks, "current-version"),
-      );
-      beforeWrite("retry-publish", async () => {
-        await ok(api, app.root, RETRY_PUBLISH_WORKFLOW, {
-          input: { workflowKey: seed.key },
-        });
-        let restore: () => void = doNothing;
-        const published = await publishWorkflowInUi(
-          seed.key,
-          [managerStep("ui_step")],
-          1,
-          () => {
-            restore = failCheckpointOnce(flowHooks, "current-version");
-          },
-        );
-        restore();
-        expect(published.errors).toBeDefined();
-      });
-
-      const resumed = await runSeeds(app, [seed]);
-      jest.restoreAllMocks();
-
-      expect(resumed.results).toEqual([]);
-      expect(resumed.errors).toMatchObject([{ code: "APPLY_FAILED" }]);
-      expect(await definitionDoc(connection, WORKFLOW, seed.key)).toMatchObject(
-        { currentVersion: 1 },
-      );
-      // 同表單:另一版停在畫面自己中斷的地方,安裝沒有替它切換
-      const versions = await versionDocs(connection, WORKFLOW, seed.key);
-      expect(
-        versions.map(({ version, status }) => ({ version, status })),
-      ).toEqual([
-        { version: 1, status: "retired" },
-        { version: 2, status: "published" },
-      ]);
-      expect(
-        await auditCount(connection, {
-          action: "workflow-version.retry-publish",
-          targetId: versions[1]?._id,
-        }),
-      ).toBe(0);
-    });
-  });
 
   describe("發布綁定登記時的目前版本", () => {
     it("表單:草稿存好之後、發布之前,畫面退役了舊的目前版本 → 不把新版照常發布", async () => {

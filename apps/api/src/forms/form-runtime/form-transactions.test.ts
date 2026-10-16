@@ -16,6 +16,7 @@ import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
+import { FormSubmissionsRepository } from "../../database/database.module";
 import { currentSession } from "../../database/transaction";
 import { StorageService } from "../../storage/storage.service";
 import {
@@ -35,10 +36,16 @@ import {
   usersStep,
 } from "../../workflows/test-support/workflow-fixtures";
 import {
+  CREATE_FORM_DRAFT,
   DELETE_SUBMISSION,
   SAVE_FORM_DRAFT,
+  SUBMIT,
+  UPDATE_SUBMISSION,
   call,
+  codeOf,
   createDraft,
+  createSubmitted,
+  extensionsOf,
   ok,
 } from "../test-support/form-fixtures";
 
@@ -79,6 +86,13 @@ describe("表單提交的交易(存草稿、刪除、複製為新單)", () => {
           ? Promise.reject(new Error(`injected failure at ${action}`))
           : record(operator, input),
       );
+  }
+
+  /** 讓交易前的重試核對漏看一次(模擬兩個請求同時通過核對),逼出交易內的重複鍵。 */
+  function missRetryCheckOnce(): void {
+    jest
+      .spyOn(api.app.get(FormSubmissionsRepository), "findOwnOne")
+      .mockResolvedValueOnce(null);
   }
 
   function rawSubmission(id: string) {
@@ -160,6 +174,91 @@ describe("表單提交的交易(存草稿、刪除、複製為新單)", () => {
     expect(kept?.deletedAt).toBeNull();
   });
 
+  it("不走流程的送出中途失敗 → 仍是草稿,修訂與 editVersion 都不變", async () => {
+    const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
+      title: "送出會失敗",
+      days: 1,
+    });
+    failAuditOf("submission.submit");
+    const failed = await call(api, world.applicant.token, SUBMIT, {
+      input: { id: draft.id, expectedEditVersion: draft.editVersion },
+    });
+    expect(failed.errors).toBeDefined();
+    const raw = await rawSubmission(draft.id);
+    expect(raw).toMatchObject({
+      status: "draft",
+      revision: 0,
+      editVersion: draft.editVersion,
+    });
+  });
+
+  it("修改已完成單中途失敗 → 值、修訂與 editVersion 都不變", async () => {
+    const completed = await createSubmitted(
+      api,
+      world.applicant.token,
+      FORM_KEY,
+      { title: "原本", days: 1 },
+    );
+    failAuditOf("submission.update");
+    const failed = await call(api, world.applicant.token, UPDATE_SUBMISSION, {
+      input: {
+        id: completed.id,
+        expectedEditVersion: completed.editVersion,
+        expectedRevision: completed.revision,
+        values: { title: "改過", days: 2 },
+      },
+    });
+    expect(failed.errors).toBeDefined();
+    const raw = await rawSubmission(completed.id);
+    expect(raw).toMatchObject({
+      revision: completed.revision,
+      editVersion: completed.editVersion,
+    });
+    expect(raw?.values.title).toBe("原本");
+  });
+
+  describe("clientRequestId 撞唯一索引(同一次請求的重試同時到)", () => {
+    it("先建好的是同一張表單 → 交易回復後回那一筆", async () => {
+      const clientRequestId = nextKey("race_same");
+      const first = await createDraft(
+        api,
+        world.applicant.token,
+        FORM_KEY,
+        { title: "先到", days: 1 },
+        clientRequestId,
+      );
+      missRetryCheckOnce();
+      const second = await createDraft(
+        api,
+        world.applicant.token,
+        FORM_KEY,
+        { title: "後到", days: 1 },
+        clientRequestId,
+      );
+      expect(second.id).toBe(first.id);
+    });
+
+    it("先建好的那一筆已刪除 → 409 CLIENT_REQUEST_REUSED(與交易前的核對同一條契約)", async () => {
+      const clientRequestId = nextKey("race_deleted");
+      const first = await createDraft(
+        api,
+        world.applicant.token,
+        FORM_KEY,
+        { title: "會刪", days: 1 },
+        clientRequestId,
+      );
+      await ok(api, world.applicant.token, DELETE_SUBMISSION, {
+        input: { id: first.id },
+      });
+      missRetryCheckOnce();
+      const reused = await call(api, world.applicant.token, CREATE_FORM_DRAFT, {
+        input: { formKey: FORM_KEY, clientRequestId, values: {} },
+      });
+      expect(codeOf(reused)).toBe("CONFLICT");
+      expect(extensionsOf(reused).reason).toBe("CLIENT_REQUEST_REUSED");
+    });
+  });
+
   it("複製為新單:GCS 複製在交易提交之後才呼叫,新單帶的就是複製出來的路徑", async () => {
     const source = await voidedWithAttachment();
     const storage = api.app.get(StorageService);
@@ -192,6 +291,29 @@ describe("表單提交的交易(存草稿、刪除、複製為新單)", () => {
     );
     expect((fresh.values.attachment as { path: string }).path).toBe(to);
     expect(fresh.clearedFields).toEqual([]);
+  });
+
+  it("複製為新單提交後附件複製失敗 → 那一欄清空、列進 clearedFields,並在交易外補記一筆稽核", async () => {
+    const source = await voidedWithAttachment();
+    const storage = api.app.get(StorageService);
+    jest
+      .spyOn(storage, "copyPrivateObject")
+      .mockRejectedValue(new Error("模擬供應商失敗"));
+    const data = await ok<{
+      copySubmissionToDraft: { submission: WfSubmissionRow };
+    }>(api, world.applicant.token, COPY, {
+      input: { id: source.id, clientRequestId: nextKey("tx_copy_gcs_fail") },
+    });
+    const fresh = data.copySubmissionToDraft.submission;
+    expect(fresh.clearedFields).toEqual(["attachment"]);
+    expect(fresh.values.attachment ?? null).toBeNull();
+    const audit = await api.connection.collection("audit_logs").findOne<{
+      after: { clearedFields: string[] };
+    }>({
+      action: "submission.copy-attachments-failed",
+      targetId: new Types.ObjectId(fresh.id),
+    });
+    expect(audit?.after.clearedFields).toEqual(["attachment"]);
   });
 
   it("複製為新單交易回復 → 沒有新單、來源沒被標記,GCS 複製一次都沒呼叫", async () => {

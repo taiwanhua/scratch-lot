@@ -119,9 +119,6 @@ export const FormListPanel = ({
                   {form.tenantEnabled === false && (
                     <Tag tone="grey" label={t("disabled")} />
                   )}
-                  {form.publishInterrupted && (
-                    <Tag tone="error" label={t("interrupted")} />
-                  )}
                   {form.hasDraft && <Tag tone="grey" label={t("hasDraft")} />}
                   {form.workflowBinding !== null &&
                     form.workflowBinding !== undefined && (

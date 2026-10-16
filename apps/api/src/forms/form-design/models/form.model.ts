@@ -105,10 +105,6 @@ export class FormModel {
   @Field(() => Boolean)
   hasDraft!: boolean;
 
-  /** 發布中斷(有 `publishing` 版本,或已發布版本號 ≠ `currentVersion`):顯示「重試」。 */
-  @Field(() => Boolean)
-  publishInterrupted!: boolean;
-
   /** 站在租戶內時,本租戶對這張的開關(`org_form.meta.enabled`);root 視角為 null。 */
   @Field(() => Boolean, { nullable: true })
   tenantEnabled!: boolean | null;
