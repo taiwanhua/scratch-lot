@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { recheckRegexSafety } from "../form-regex-safety";
+import { arrayField, column } from "./array-test-support";
 import { fieldProtections } from "./dependencies";
 import { definitionOf, field } from "./form-test-support";
 import type { DefinitionIssueCode } from "./issues";
@@ -430,6 +431,70 @@ describe("validateDefinition:版面", () => {
       "LAYOUT_UNKNOWN_FIELD",
       "LAYOUT_SECTION_DUPLICATE",
       "LAYOUT_MISSING_FIELD",
+    ]);
+  });
+
+  it("分區收合設定:舊定義沒有這三欄、合法的設定都不報錯", () => {
+    const note = field("note", "text");
+    expect(codesOf(definitionOf([title, note]))).toEqual([]);
+    const collapsible = definitionOf([title, note], {
+      layout: {
+        sections: [
+          {
+            key: "basic",
+            title: "基本資料",
+            rows: [
+              { cols: [{ fieldKey: "title", span: 6 }] },
+              { cols: [{ fieldKey: "note", span: 6 }] },
+            ],
+            collapsible: true,
+            defaultCollapsed: true,
+            summaryFieldKeys: ["title", "note"],
+          },
+        ],
+      },
+    });
+    expect(codesOf(collapsible)).toEqual([]);
+  });
+
+  it("分區收合設定:型別不對、摘要欄位不在本分區 / 是明細欄 / 重複", () => {
+    const items = arrayField("items", [column("name", "text")]);
+    const note = field("note", "text");
+    const errors = errorsOf(
+      definitionOf([title, note, items], {
+        layout: {
+          sections: [
+            {
+              key: "basic",
+              title: "基本資料",
+              rows: [
+                { cols: [{ fieldKey: "title", span: 12 }] },
+                { cols: [{ fieldKey: "items", span: 12 }] },
+              ],
+              collapsible: "yes" as unknown as boolean,
+              summaryFieldKeys: ["note", "items", "title", "title"],
+            },
+            {
+              key: "more",
+              title: "其他",
+              rows: [{ cols: [{ fieldKey: "note", span: 12 }] }],
+              defaultCollapsed: true,
+              summaryFieldKeys: "note" as unknown as string[],
+            },
+          ],
+        },
+      }),
+    );
+    expect(
+      errors
+        .filter((issue) => issue.code.startsWith("SECTION_"))
+        .map((issue) => [issue.code, issue.location.property]),
+    ).toEqual([
+      ["SECTION_COLLAPSE_INVALID", "collapsible"],
+      ["SECTION_SUMMARY_FIELD_INVALID", "summaryFieldKeys.0"],
+      ["SECTION_SUMMARY_FIELD_INVALID", "summaryFieldKeys.1"],
+      ["SECTION_SUMMARY_FIELD_INVALID", "summaryFieldKeys.3"],
+      ["SECTION_COLLAPSE_INVALID", "summaryFieldKeys"],
     ]);
   });
 

@@ -3,7 +3,7 @@ import { isProjectSlug } from "./public-config";
 /**
  * admin 的瀏覽器儲存鍵(localStorage / sessionStorage / BroadcastChannel 共用同一套命名)。
  * 格式固定 `<slug>-admin-<用途>`;需要再分把的鍵由消費端自己接後綴:
- * 路由頁籤附加 `:<userId>`,MUI 在 colorScheme 後附加 `-light` / `-dark`。
+ * 路由頁籤與區塊收合附加 `:<userId>`,MUI 在 colorScheme 後附加 `-light` / `-dark`。
  */
 export interface AdminStorageKeys {
   /** localStorage:介面語言 */
@@ -18,6 +18,8 @@ export interface AdminStorageKeys {
   sessionChannel: string;
   /** localStorage:側欄收合狀態 */
   sideNav: string;
+  /** localStorage:頁面可收合區塊(Section)的收合狀態(前綴,每使用者一把 `:<userId>`) */
+  sectionsPrefix: string;
 }
 
 export const createAdminStorageKeys = (slug: string): AdminStorageKeys => {
@@ -34,5 +36,6 @@ export const createAdminStorageKeys = (slug: string): AdminStorageKeys => {
     routeTabsPrefix: `${prefix}-route-tabs`,
     sessionChannel: `${prefix}-session`,
     sideNav: `${prefix}-sidenav`,
+    sectionsPrefix: `${prefix}-sections`,
   };
 };

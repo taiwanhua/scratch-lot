@@ -223,10 +223,20 @@ export interface LayoutRow {
   cols: LayoutCol[];
 }
 
+/**
+ * 版面區塊(分區)。收合三個設定都是選填:舊定義沒有這三欄 = 不可收合、一律展開(照舊渲染);
+ * 收合狀態的記憶不在定義裡,由 admin 依使用者存在瀏覽器(頁面 id `form:<formKey>`、區塊 key = `key`)。
+ */
 export interface LayoutSection {
   key: string;
   title: string;
   rows: LayoutRow[];
+  /** 可以收合(標題列可點);不給 = false */
+  collapsible?: boolean;
+  /** 預設收合(使用者沒改過時的狀態;只在 `collapsible` 時生效);不給 = false */
+  defaultCollapsed?: boolean;
+  /** 收合時標題列顯示的欄位(依序,須是放在本分區的非明細欄位;只在 `collapsible` 時生效);不給 = 不顯示 */
+  summaryFieldKeys?: string[];
 }
 
 export interface Layout {

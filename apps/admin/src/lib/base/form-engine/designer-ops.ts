@@ -8,6 +8,7 @@ import {
   type FieldType,
   LAYOUT_COLUMNS,
   type LayoutCol,
+  type LayoutSection,
   checkFieldKey,
 } from "@repo/domain/form";
 
@@ -371,3 +372,43 @@ export const unplacedFields = (definition: DesignDefinition): DesignField[] => {
     (field) => !placed.has(field._id) && field.valueSource.kind !== "constant",
   );
 };
+
+/** 分區收合設定的一次修改(底座 10.3;設計器的「分區設定」)。 */
+export type SectionCollapsePatch = Partial<
+  Pick<LayoutSection, "collapsible" | "defaultCollapsed" | "summaryFieldKeys">
+>;
+
+/**
+ * 改分區的收合設定。關掉「可以收合」時一併拿掉「預設收合」與標題列欄位(不可收合時兩者不生效,不留在定義裡);
+ * 三個都是預設值時整個欄位不寫,舊定義改過又改回來輸出不變(不會無故變成「有未存的變更」)。
+ */
+export const updateSectionCollapse = (
+  definition: DesignDefinition,
+  sectionKey: string,
+  patch: SectionCollapsePatch,
+): DesignDefinition => ({
+  ...definition,
+  layout: {
+    sections: definition.layout.sections.map((section) => {
+      if (section.key !== sectionKey) {
+        return section;
+      }
+      const merged = { ...section, ...patch };
+      const next: DesignSection = {
+        key: section.key,
+        title: section.title,
+        rows: section.rows,
+      };
+      if (merged.collapsible === true) {
+        next.collapsible = true;
+        if (merged.defaultCollapsed === true) {
+          next.defaultCollapsed = true;
+        }
+        if ((merged.summaryFieldKeys ?? []).length > 0) {
+          next.summaryFieldKeys = merged.summaryFieldKeys;
+        }
+      }
+      return next;
+    }),
+  },
+});

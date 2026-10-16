@@ -10,6 +10,7 @@ import {
   removeField,
   unplacedFields,
   updateField,
+  updateSectionCollapse,
 } from "./designer-ops";
 
 /** 舊草稿:兩個欄位都叫 `qty`(改 key 到一半存下來的那種)。 */
@@ -88,5 +89,57 @@ describe("設計器以內部 id 當欄位身分(key 只是資料)", () => {
     expect(fieldKeyProblemOf(design, item, "qty")).toBe("duplicate");
     expect(fieldKeyProblemOf(design, item, "item")).toBeNull();
     expect(fieldKeyProblemOf(design, item, "item_name")).toBeNull();
+  });
+});
+
+const sectionOf = (definition: FormDefinition) =>
+  definition.layout.sections.at(0);
+
+describe("分區收合設定(updateSectionCollapse)", () => {
+  it("打開可以收合、預設收合、標題列欄位;只改那一個分區", () => {
+    const design = toDesignDefinition(duplicated());
+    const next = toFormDefinition(
+      updateSectionCollapse(
+        updateSectionCollapse(design, "basic", { collapsible: true }),
+        "basic",
+        { defaultCollapsed: true, summaryFieldKeys: ["item"] },
+      ),
+    );
+    expect(sectionOf(next)).toMatchObject({
+      key: "basic",
+      collapsible: true,
+      defaultCollapsed: true,
+      summaryFieldKeys: ["item"],
+    });
+  });
+
+  it("關掉可以收合 → 預設收合與標題列欄位一起拿掉;改回原狀輸出與舊定義相同", () => {
+    const original = duplicated();
+    const design = toDesignDefinition(original);
+    const on = updateSectionCollapse(design, "basic", {
+      collapsible: true,
+      defaultCollapsed: true,
+      summaryFieldKeys: ["item"],
+    });
+    const off = toFormDefinition(
+      updateSectionCollapse(on, "basic", { collapsible: false }),
+    );
+    expect(sectionOf(off)).not.toHaveProperty("collapsible");
+    expect(sectionOf(off)).not.toHaveProperty("defaultCollapsed");
+    expect(sectionOf(off)).not.toHaveProperty("summaryFieldKeys");
+    expect(JSON.stringify(off)).toBe(JSON.stringify(original));
+  });
+
+  it("標題列欄位清空 → 不寫 summaryFieldKeys", () => {
+    const design = updateSectionCollapse(
+      toDesignDefinition(duplicated()),
+      "basic",
+      { collapsible: true, summaryFieldKeys: ["item"] },
+    );
+    const next = toFormDefinition(
+      updateSectionCollapse(design, "basic", { summaryFieldKeys: [] }),
+    );
+    expect(sectionOf(next)).not.toHaveProperty("summaryFieldKeys");
+    expect(sectionOf(next)?.collapsible).toBe(true);
   });
 });

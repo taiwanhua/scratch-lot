@@ -88,6 +88,8 @@ export interface AuthWorldOptions {
   expiredTokens?: string[];
   /** `me.modules`(預設只有總覽) */
   modules?: TestModule[];
+  /** `me.id`(預設 `testUser.id`);換人登入、依使用者分把的儲存鍵用 */
+  userId?: string;
   /** 所屬組織清單(預設只有平台根組織);當前組織預設 = 第一個(#66 組織切換器) */
   orgs?: TestOrg[];
   /** 當前組織的商標網址(側欄有商標就顯示圖、沒有才顯示名稱);預設沒有 */
@@ -144,6 +146,7 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
     refreshedTokens = ["access-2"],
     expiredTokens = [],
     modules = [overviewModule],
+    userId = testUser.id,
     orgs = [testOrg],
     currentOrgLogoUrl = null,
     currentOrgTimezone = "Asia/Taipei",
@@ -179,6 +182,7 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
 
   const me: MeQuery["me"] = {
     ...testUser,
+    id: userId,
     modules,
     orgs,
     currentOrg: toCurrentOrg(orgs[0]),
