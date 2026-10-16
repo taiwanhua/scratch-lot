@@ -1978,6 +1978,7 @@ export type Query = {
   orgMembers: OrgMembersPayload;
   orgTree: Array<OrgNode>;
   previewFormVersion: FormPreviewPayload;
+  realtimeTicket?: Maybe<RealtimeTicketPayload>;
   retiredFormPermissions: RetiredFormPermissionsPayload;
   role: RolePayload;
   roleMatrix: RoleMatrixPayload;
@@ -2176,6 +2177,11 @@ export type QueryPreviewFormVersionArgs = {
 };
 
 
+export type QueryRealtimeTicketArgs = {
+  boardOrgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
 export type QueryRoleArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2246,6 +2252,18 @@ export type QueryWorkflowVersionsArgs = {
 
 export type QueryWorkflowsArgs = {
   input: WorkflowsInput;
+};
+
+export type RealtimeTicketPayload = {
+  __typename?: 'RealtimeTicketPayload';
+  /** 連線網址 `wss://…/connect`,前端加上 `?ticket=` */
+  connectUrl: Scalars['String']['output'];
+  /** 到期時間(Unix 秒) */
+  expiresAt: Scalars['Int']['output'];
+  /** 訂閱憑證(10 分鐘);連線或在原連線上換發時送出 */
+  ticket: Scalars['String']['output'];
+  /** 憑證內的頻道:平常只有 `user:<自己>`,看板頁符合條件時多一個 `board:<店>` */
+  topics: Array<Scalars['String']['output']>;
 };
 
 export type ReassignTaskInput = {
@@ -3963,6 +3981,13 @@ export type SetOrgManagersMutationVariables = Exact<{
 
 
 export type SetOrgManagersMutation = { __typename?: 'Mutation', setOrgManagers: { __typename?: 'OrgPayload', org: { __typename?: 'Org', id: string, managers: Array<{ __typename?: 'UserSummary', id: string, name: string, account: string, enabled: boolean }> } } };
+
+export type RealtimeTicketQueryVariables = Exact<{
+  boardOrgId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type RealtimeTicketQuery = { __typename?: 'Query', realtimeTicket?: { __typename?: 'RealtimeTicketPayload', ticket: string, connectUrl: string, expiresAt: number, topics: Array<string> } | null };
 
 export type RoleFieldsFragment = { __typename?: 'Role', id: string, name: string, description?: string | null, enabled: boolean, kind: RoleKind, isSystem: boolean, isTemplateCopy: boolean, userCount: number, abilities: { __typename?: 'RoleAbilities', canEdit: boolean, canEditMatrix: boolean, canToggleEnabled: boolean, canDelete: boolean }, ownerOrg?: { __typename?: 'RoleOwnerOrg', id: string, name: string, tenantTop?: { __typename?: 'RoleOrgRef', id: string, name: string } | null } | null };
 
@@ -8544,6 +8569,40 @@ export const useSetOrgManagersMutation = <
 
 
 useSetOrgManagersMutation.fetcher = (client: GraphQLClient, variables: SetOrgManagersMutationVariables, headers?: RequestInit['headers']) => fetcher<SetOrgManagersMutation, SetOrgManagersMutationVariables>(client, SetOrgManagersDocument, variables, headers);
+
+export const RealtimeTicketDocument = `
+    query RealtimeTicket($boardOrgId: ID) {
+  realtimeTicket(boardOrgId: $boardOrgId) {
+    ticket
+    connectUrl
+    expiresAt
+    topics
+  }
+}
+    `;
+
+export const useRealtimeTicketQuery = <
+      TData = RealtimeTicketQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: RealtimeTicketQueryVariables,
+      options?: Omit<UseQueryOptions<RealtimeTicketQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<RealtimeTicketQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<RealtimeTicketQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['RealtimeTicket'] : ['RealtimeTicket', variables],
+    queryFn: fetcher<RealtimeTicketQuery, RealtimeTicketQueryVariables>(client, RealtimeTicketDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useRealtimeTicketQuery.getKey = (variables?: RealtimeTicketQueryVariables) => variables === undefined ? ['RealtimeTicket'] : ['RealtimeTicket', variables];
+
+
+useRealtimeTicketQuery.fetcher = (client: GraphQLClient, variables?: RealtimeTicketQueryVariables, headers?: RequestInit['headers']) => fetcher<RealtimeTicketQuery, RealtimeTicketQueryVariables>(client, RealtimeTicketDocument, variables, headers);
 
 export const RolesDocument = `
     query Roles($input: RolesInput!) {

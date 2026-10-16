@@ -10,6 +10,8 @@ import { MongooseModule } from "@nestjs/mongoose";
 // 固定組裝入口:底座檔不得 import 專案來源,只有這裡(與 app.module.ts)例外
 import { PROJECT_DATABASE_REGISTRATIONS } from "../project/database/registrations";
 import { PROJECT_LOOKUP_PROVIDERS } from "../project/lookup-providers";
+import { PROJECT_REALTIME_BOARDS } from "../project/realtime-boards";
+import { REALTIME_BOARDS } from "../realtime/realtime-board-registration";
 import { BASE_DATABASE_REGISTRATIONS } from "./base/registrations";
 import {
   OrgBusinessDataReader,
@@ -117,7 +119,18 @@ const DATABASE = assembleDatabase(
  * 新 collection 不在這裡加:底座的加進 `base/registrations.ts`,專案的加進
  * `project/database/registrations.ts`。
  */
-@Module(DATABASE.metadata)
+/**
+ * 專案的看板頻道登記(`project/realtime-boards.ts`)也經這個組裝入口提供(STRUCT-12 api:底座只有
+ * `app.module.ts` 與本檔能讀專案來源),由即時通道的 `RealtimeTicketService` 注入 `REALTIME_BOARDS`。
+ */
+@Module({
+  ...DATABASE.metadata,
+  providers: [
+    ...(DATABASE.metadata.providers ?? []),
+    { provide: REALTIME_BOARDS, useValue: PROJECT_REALTIME_BOARDS },
+  ],
+  exports: [...(DATABASE.metadata.exports ?? []), REALTIME_BOARDS],
+})
 export class DatabaseModule implements OnModuleInit, OnApplicationBootstrap {
   constructor(private readonly moduleRef: ModuleRef) {}
 

@@ -11,6 +11,7 @@ import { ModuleManagerModule } from "../modules/module-manager.module";
 import { OrgMembersModule } from "../orgs/org-members.module";
 import { OrgsModule } from "../orgs/orgs.module";
 import { PermissionModule } from "../permission/permission.module";
+import { RealtimeModule } from "../realtime/realtime.module";
 import { RolesModule } from "../roles/roles.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
 import { StorageModule } from "../storage/storage.module";
@@ -30,6 +31,7 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "scheduled-jobs", module: ScheduledJobsModule },
   { key: "permission", module: PermissionModule },
   { key: "storage", module: StorageModule },
+  { key: "realtime", module: RealtimeModule },
   { key: "orgs", module: OrgsModule },
   { key: "users", module: UsersModule },
   { key: "org-members", module: OrgMembersModule },

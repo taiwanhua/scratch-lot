@@ -4,6 +4,7 @@ import { DatabaseModule } from "../../database/database.module";
 import { FormsCoreModule } from "../../forms/forms-core.module";
 import { MailModule } from "../../mail/mail.module";
 import { OrgsModule } from "../../orgs/orgs.module";
+import { RealtimeModule } from "../../realtime/realtime.module";
 import { WorkflowsCoreModule } from "../workflows-core.module";
 import { AssigneeInvalidationService } from "./assignee-invalidation.service";
 import { BlockedInstancesService } from "./blocked-instances.service";
@@ -32,6 +33,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     WorkflowsCoreModule,
     OrgsModule,
     MailModule,
+    RealtimeModule,
   ],
   providers: [
     WorkflowEngineHooks,
