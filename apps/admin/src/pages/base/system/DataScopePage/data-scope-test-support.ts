@@ -17,6 +17,7 @@ import {
   dataScopeWorld,
 } from "@/test/msw/data-scope-handlers";
 import { orgUsers, rootTree } from "@/test/msw/org-fixtures";
+import { matrixModules } from "@/test/msw/role-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
@@ -106,6 +107,7 @@ export const renderPage = ({
     roles: dataScopeRoles,
     users: orgUsers,
     orgTree: rootTree,
+    permissionModules: matrixModules,
     ...world,
   });
   server.use(
@@ -182,6 +184,19 @@ export const comboboxes = (label: string) =>
 
 export const comboboxAt = (label: string, index = 0): Element => {
   const found = comboboxes(label);
+  expect(found.length).toBeGreaterThan(index);
+  return found[index];
+};
+
+/** 第 n 條規則的「套用對象」(AudiencePicker)與「條件組合」兩塊。 */
+export const audienceRegion = (index = 0): HTMLElement => {
+  const found = within(editor()).getAllByRole("region", { name: "套用對象" });
+  expect(found.length).toBeGreaterThan(index);
+  return found[index];
+};
+
+export const conditionsRegion = (index = 0): HTMLElement => {
+  const found = within(editor()).getAllByRole("region", { name: "條件組合" });
   expect(found.length).toBeGreaterThan(index);
   return found[index];
 };

@@ -1,10 +1,15 @@
 import { DataScopeFieldType } from "@repo/graphql";
 
 import {
+  type AudienceDraft,
+  type AudienceIssueTarget,
+  audienceIssueFromPath,
+  validateAudienceDraft,
+} from "./audience-draft";
+import {
   CONDITIONS_BY_TYPE,
   type ConditionDraft,
   DYNAMIC_REFS_BY_TYPE,
-  DataScopeAudienceType,
   type DataScopeFieldLike,
   type GroupDraft,
   type RuleEditorDraft,
@@ -16,7 +21,7 @@ import {
  * 所以「送出前先擋」與「送出後標紅」是同一條顯示路徑,元件只認 `RuleIssue`。
  *
  * `reason` 的清單與語意正本:`docs/modules/data-scope.md`「`RULE_INVALID` 的 `extensions`」。
- * 本地只驗**編輯器產得出來的**那幾種(空群組、缺值、型別不符、套用對象沒選對象);
+ * 本地只驗**編輯器產得出來的**那幾種(空群組、缺值、型別不符、套用對象的條件列沒挑值);
  * `MALFORMED_*` 是資料本身壞掉,編輯器做不出來,只可能從 api 回來。
  */
 export const RULE_INVALID_REASONS = [
@@ -32,49 +37,76 @@ export const RULE_INVALID_REASONS = [
 
 export type RuleInvalidReason = (typeof RULE_INVALID_REASONS)[number];
 
-/** 問題標在節點的哪一格;`audience` 與 `group` 的 `childPath` 指的是規則 / 群組本身。 */
-export type RuleIssueTarget = "audience" | "group" | "field" | "cond" | "value";
+/** 條件組合(`filter`)的問題標在節點的哪一格;`group` 的 `childPath` 指的是群組本身。 */
+export type RuleIssueTarget = "group" | "field" | "cond" | "value";
 
-export interface RuleIssue {
-  ruleIndex: number;
-  /** 從規則的根群組往下的 children 索引;根群組與 audience 都是空陣列。 */
-  childPath: readonly number[];
-  target: RuleIssueTarget;
-  reason: RuleInvalidReason;
-}
+/**
+ * 一個問題在哪一棵樹:`filter` = 條件組合,`audience` = 套用對象(人員條件,格子見
+ * `AudienceIssueTarget`;座標也是從它的根群組往下的 `childPath`)。
+ */
+export type RuleIssue =
+  | {
+      tree: "filter";
+      ruleIndex: number;
+      /** 從規則的根群組往下的 children 索引;根群組是空陣列。 */
+      childPath: readonly number[];
+      target: RuleIssueTarget;
+      reason: RuleInvalidReason;
+    }
+  | {
+      tree: "audience";
+      ruleIndex: number;
+      childPath: readonly number[];
+      target: AudienceIssueTarget;
+      reason: RuleInvalidReason;
+    };
 
 export const issueKey = (
   ruleIndex: number,
   childPath: readonly number[],
   target: RuleIssueTarget,
-): string => `${nodeKey(ruleIndex, childPath)}:${target}`;
+): string => `filter:${nodeKey(ruleIndex, childPath)}:${target}`;
 
+/** 條件組合的問題:`issueKey` → 問題(套用對象的問題另走 `audienceIssuesOf`)。 */
 export const issuesByKey = (
   issues: readonly RuleIssue[],
 ): ReadonlyMap<string, RuleIssue> =>
   new Map(
-    issues.map((issue) => [
-      issueKey(issue.ruleIndex, issue.childPath, issue.target),
-      issue,
-    ]),
+    issues.flatMap((issue) =>
+      issue.tree === "filter"
+        ? [
+            [
+              issueKey(issue.ruleIndex, issue.childPath, issue.target),
+              issue,
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+
+/** 某條規則套用對象的問題(交給 AudiencePicker 換成它自己的 `issues` 表)。 */
+export const audienceIssuesOf = (
+  issues: readonly RuleIssue[],
+  ruleIndex: number,
+): Extract<RuleIssue, { tree: "audience" }>[] =>
+  issues.flatMap((issue) =>
+    issue.tree === "audience" && issue.ruleIndex === ruleIndex ? [issue] : [],
   );
 
 // ---- 本地驗證(送出前) ----
 
+/** 套用對象:空群組標 `EMPTY_GROUP`(與條件組合同一句),沒挑值標 `AUDIENCE_INVALID`。 */
 const audienceIssues = (
-  audience: { type: DataScopeAudienceType; ids: readonly string[] },
+  audience: AudienceDraft,
   ruleIndex: number,
 ): RuleIssue[] =>
-  audience.type !== DataScopeAudienceType.All && audience.ids.length === 0
-    ? [
-        {
-          ruleIndex,
-          childPath: [],
-          target: "audience",
-          reason: "AUDIENCE_INVALID",
-        },
-      ]
-    : [];
+  validateAudienceDraft(audience).map((location) => ({
+    tree: "audience",
+    ruleIndex,
+    childPath: location.childPath,
+    target: location.target,
+    reason: location.target === "group" ? "EMPTY_GROUP" : "AUDIENCE_INVALID",
+  }));
 
 const staticValueIssue = (
   condition: ConditionDraft,
@@ -104,7 +136,7 @@ const conditionIssues = (
   const at = (
     target: RuleIssueTarget,
     reason: RuleInvalidReason,
-  ): RuleIssue[] => [{ ruleIndex, childPath, target, reason }];
+  ): RuleIssue[] => [{ tree: "filter", ruleIndex, childPath, target, reason }];
 
   const field = byName.get(condition.field);
   if (field === undefined) {
@@ -130,7 +162,15 @@ const groupIssues = (
   byName: ReadonlyMap<string, DataScopeFieldLike>,
 ): RuleIssue[] => {
   if (group.children.length === 0) {
-    return [{ ruleIndex, childPath, target: "group", reason: "EMPTY_GROUP" }];
+    return [
+      {
+        tree: "filter",
+        ruleIndex,
+        childPath,
+        target: "group",
+        reason: "EMPTY_GROUP",
+      },
+    ];
   }
   return group.children.flatMap((child, index) => {
     const path = [...childPath, index];
@@ -175,12 +215,22 @@ export const issueFromRuleInvalid = (
   const ruleIndex = Number(matched[1]);
   const rest = path.slice(matched[0].length);
   if (rest.startsWith(".audience")) {
-    return { ruleIndex, childPath: [], target: "audience", reason };
+    // 人員條件自己的路徑(`filter.children[1].value`、`mode`)交給 audience-draft 定位
+    const location = audienceIssueFromPath(
+      rest.slice(".audience".length).replace(/^./, ""),
+    );
+    return { tree: "audience", ruleIndex, ...location, reason };
   }
   const childPath = [...rest.matchAll(CHILD_INDEX)].map((child) =>
     Number(child[1]),
   );
-  return { ruleIndex, childPath, target: targetOf(rest), reason };
+  return {
+    tree: "filter",
+    ruleIndex,
+    childPath,
+    target: targetOf(rest),
+    reason,
+  };
 };
 
 const targetOf = (rest: string): RuleIssueTarget => {

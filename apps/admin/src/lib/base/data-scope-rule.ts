@@ -1,4 +1,17 @@
+import { AUDIENCE_FIELDS, type AudienceField } from "@repo/domain/audience";
 import { DataScopeCombineOp, DataScopeFieldType } from "@repo/graphql";
+
+import {
+  type AudienceDraft,
+  newAudienceDraft,
+  toAudienceDraft,
+  toAudienceJson,
+} from "./audience-draft";
+import {
+  type ConditionTreeGroup,
+  type ConditionTreeNode,
+  groupOf,
+} from "./condition-tree";
 
 /**
  * 資料範圍規則編輯器的**純模型**(#210):型別目錄、編輯器狀態 ↔ api JSON、條件樹的增刪改。
@@ -11,11 +24,6 @@ import { DataScopeCombineOp, DataScopeFieldType } from "@repo/graphql";
  * 節點不帶自產的 id:位置(`ruleIndex` + 從規則根群組往下的 `childPath`)就是身分 —
  * 與 api 回的 `path` 同一套座標,錯誤標記不必再配對,也免得在 render 期動模組層計數器(REACT-06)。
  */
-
-/** 條件樹群組節點的運算子(JSON 值,每層可切)。 */
-export type DataScopeGroupOp = "AND" | "OR";
-
-export const DATA_SCOPE_GROUP_OPS: readonly DataScopeGroupOp[] = ["AND", "OR"];
 
 /** 運算子的 wire 值(`docs/modules/data-scope.md` 的表)。 */
 export const DATA_SCOPE_CONDITIONS = [
@@ -77,41 +85,21 @@ export interface ConditionDraft {
   value: DataScopeValueDraft;
 }
 
-export interface GroupDraft {
-  kind: "group";
-  op: DataScopeGroupOp;
-  children: NodeDraft[];
-}
+export type GroupDraft = ConditionTreeGroup<ConditionDraft>;
 
-export type NodeDraft = GroupDraft | ConditionDraft;
+export type NodeDraft = ConditionTreeNode<ConditionDraft>;
 
 /**
- * 畫面上的套用對象種類(全部 / 角色 / 組織 / 使用者,一次一種)。api 已改成人員條件
- * (`{ mode: "all" } | { mode: "match", filter }`,形狀正本 `@repo/domain/audience`);
- * 這一版畫面仍是單選種類,讀寫時在 `toAudienceDraft` / `toAudienceJson` 互轉。
- * AudiencePicker(條件樹)上線後整組換掉。
+ * 套用對象(人員條件)可用的欄位:使用者 / 角色 / 所屬組織 / 權限全開,所屬組織只能指定組織
+ * (《底座規格》3.0「組織來源依使用處」)。編輯器狀態與 JSON 互轉在 `audience-draft.ts`。
  */
-export const DataScopeAudienceType = {
-  All: "ALL",
-  Role: "ROLE",
-  Org: "ORG",
-  User: "USER",
-} as const;
+export const DATA_SCOPE_AUDIENCE_FIELDS: readonly AudienceField[] =
+  AUDIENCE_FIELDS;
 
-export type DataScopeAudienceType =
-  (typeof DataScopeAudienceType)[keyof typeof DataScopeAudienceType];
-
-export interface AudienceDraft {
-  type: DataScopeAudienceType;
-  ids: string[];
-  /**
-   * 存著的人員條件不是這一版畫面表達得出來的(多個條件列、權限、含下層…):原樣保留,
-   * 沒改套用對象就原樣送回,不讓畫面把它改寫成別的意思。
-   */
-  preserved?: Record<string, unknown>;
-}
+const AUDIENCE_FALLBACK_FIELD: AudienceField = DATA_SCOPE_AUDIENCE_FIELDS[0];
 
 export interface RuleDraft {
+  /** 套用對象:「所有人」時條件樹仍留著(畫面收起),切回「符合條件」原樣回來 */
   audience: AudienceDraft;
   /** 規則的根群組 = api 的 `filter`(編輯器一律以群組為根,「條件組合」就是它的 `op`)。 */
   filter: GroupDraft;
@@ -179,79 +167,6 @@ const toFilterDraft = (filter: unknown): GroupDraft => {
     : { kind: "group", op: "AND", children: [node] };
 };
 
-const LEAF_TYPE_BY_FIELD: Record<string, DataScopeAudienceType> = {
-  role: DataScopeAudienceType.Role,
-  org: DataScopeAudienceType.Org,
-  user: DataScopeAudienceType.User,
-};
-
-/** 條件樹只有一個條件列(或只包一個條件列的群組)時取出那一列。 */
-const singleLeafOf = (node: unknown): Record<string, unknown> | undefined => {
-  if (!isRecord(node)) {
-    return undefined;
-  }
-  if (!("children" in node)) {
-    return node;
-  }
-  if (!Array.isArray(node.children) || node.children.length !== 1) {
-    return undefined;
-  }
-  const [only] = node.children as unknown[];
-  return singleLeafOf(only);
-};
-
-/** 人員條件 JSON → 這一版畫面的單選種類;表達不出來的原樣保留(`preserved`)。 */
-export const toAudienceDraft = (audience: unknown): AudienceDraft => {
-  if (isRecord(audience) && audience.mode === "all") {
-    return { type: DataScopeAudienceType.All, ids: [] };
-  }
-  const leaf = isRecord(audience) ? singleLeafOf(audience.filter) : undefined;
-  const type =
-    typeof leaf?.field === "string"
-      ? LEAF_TYPE_BY_FIELD[leaf.field]
-      : undefined;
-  const value = isRecord(leaf?.value) ? leaf.value : undefined;
-  const representable =
-    type !== undefined &&
-    value?.kind === "static" &&
-    Array.isArray(value.values) &&
-    (type !== DataScopeAudienceType.Org || leaf?.range === "self");
-  if (representable && Array.isArray(value.values)) {
-    return { type, ids: value.values.map(String) };
-  }
-  return {
-    type: DataScopeAudienceType.All,
-    ids: [],
-    preserved: isRecord(audience) ? audience : {},
-  };
-};
-
-/** 這一版畫面的單選種類 → 人員條件 JSON(組織 = 所屬組織本身,與改版前「指定組織」同義)。 */
-export const toAudienceJson = (
-  audience: AudienceDraft,
-): Record<string, unknown> => {
-  if (audience.preserved !== undefined) {
-    return audience.preserved;
-  }
-  if (audience.type === DataScopeAudienceType.All) {
-    return { mode: "all" };
-  }
-  const field = {
-    [DataScopeAudienceType.Role]: "role",
-    [DataScopeAudienceType.Org]: "org",
-    [DataScopeAudienceType.User]: "user",
-  }[audience.type];
-  return {
-    mode: "match",
-    filter: {
-      field,
-      cond: "in",
-      value: { kind: "static", values: [...audience.ids] },
-      ...(audience.type === DataScopeAudienceType.Org ? { range: "self" } : {}),
-    },
-  };
-};
-
 /** `dataScopeRule` 的回傳(`rule = null` → 尚無規則)轉成編輯器狀態。 */
 export const toEditorDraft = (
   rule:
@@ -270,7 +185,7 @@ export const toEditorDraft = (
     : {
         combineOp: rule.combineOp,
         rules: rule.rules.map((entry) => ({
-          audience: toAudienceDraft(entry.audience),
+          audience: toAudienceDraft(entry.audience, AUDIENCE_FALLBACK_FIELD),
           filter: toFilterDraft(entry.filter),
         })),
       };
@@ -315,15 +230,12 @@ export const newCondition = (field: DataScopeFieldLike): ConditionDraft => ({
 });
 
 /** 新群組帶一條條件列:空群組不合法(`EMPTY_GROUP`),不讓它先出現在畫面上。 */
-export const newGroup = (field: DataScopeFieldLike): GroupDraft => ({
-  kind: "group",
-  op: "AND",
-  children: [newCondition(field)],
-});
+export const newGroup = (field: DataScopeFieldLike): GroupDraft =>
+  groupOf(newCondition(field));
 
-/** 新規則:套用對象預設「全部」,條件樹是一個 AND 群組加一條條件列。 */
+/** 新規則:套用對象預設「所有人」,條件樹是一個 AND 群組加一條條件列。 */
 export const newRule = (field: DataScopeFieldLike): RuleDraft => ({
-  audience: { type: DataScopeAudienceType.All, ids: [] },
+  audience: newAudienceDraft(AUDIENCE_FALLBACK_FIELD, { allowAll: true }),
   filter: newGroup(field),
 });
 
@@ -350,75 +262,6 @@ export const withCondition = (
       values: Array.from({ length: size }, (_, index) => values[index] ?? ""),
     },
   };
-};
-
-const replaceAt = <T>(items: readonly T[], index: number, next: T): T[] =>
-  items.map((item, position) => (position === index ? next : item));
-
-/** 依 `childPath` 取節點;空路徑就是根群組,路徑走不到回 `undefined`。 */
-export const nodeAt = (
-  group: GroupDraft,
-  childPath: readonly number[],
-): NodeDraft | undefined => {
-  let current: NodeDraft = group;
-  for (const index of childPath) {
-    if (current.kind !== "group" || index >= current.children.length) {
-      return undefined;
-    }
-    current = current.children[index];
-  }
-  return current;
-};
-
-/** 依 `childPath` 換掉一個節點(回傳新的根群組);`next` 為 null 代表刪除該節點。 */
-export const replaceNode = (
-  group: GroupDraft,
-  childPath: readonly number[],
-  next: NodeDraft | null,
-): GroupDraft => {
-  if (childPath.length === 0) {
-    return next !== null && next.kind === "group" ? next : group;
-  }
-  const [index, ...rest] = childPath;
-  if (index >= group.children.length) {
-    return group;
-  }
-  if (rest.length === 0) {
-    return {
-      ...group,
-      children:
-        next === null
-          ? group.children.filter((_, position) => position !== index)
-          : replaceAt(group.children, index, next),
-    };
-  }
-  const child = group.children[index];
-  return child.kind === "group"
-    ? {
-        ...group,
-        children: replaceAt(
-          group.children,
-          index,
-          replaceNode(child, rest, next),
-        ),
-      }
-    : group;
-};
-
-/** 在 `childPath` 指到的群組尾端加一個節點。 */
-export const appendChild = (
-  group: GroupDraft,
-  childPath: readonly number[],
-  node: NodeDraft,
-): GroupDraft => {
-  const target = nodeAt(group, childPath);
-  if (target?.kind !== "group") {
-    return group;
-  }
-  return replaceNode(group, childPath, {
-    ...target,
-    children: [...target.children, node],
-  });
 };
 
 /** 錯誤標記與 React key 共用的座標字串。 */

@@ -123,12 +123,15 @@ export const useRuleEditor = ({
     onDirtyChange(false);
   };
 
+  const ruleIssues = [
+    ...localIssues,
+    ...(serverIssue === null ? [] : [serverIssue]),
+  ];
+
   return {
     draft,
-    issues: issuesByKey([
-      ...localIssues,
-      ...(serverIssue === null ? [] : [serverIssue]),
-    ]),
+    issues: issuesByKey(ruleIssues),
+    ruleIssues,
     error,
     isSaving: save.isPending,
     submit,

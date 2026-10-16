@@ -2,23 +2,19 @@ import { describe, expect, it } from "@jest/globals";
 
 import { DataScopeCombineOp, DataScopeFieldType } from "@repo/graphql";
 
+import { newAudienceDraft } from "./audience-draft";
 import {
   type RuleIssue,
   issueFromRuleInvalid,
   validateEditorDraft,
 } from "./data-scope-issues";
 import {
-  DataScopeAudienceType,
   type DataScopeFieldLike,
   type GroupDraft,
   type RuleEditorDraft,
-  appendChild,
   emptyEditorDraft,
   newCondition,
-  newGroup,
   newRule,
-  nodeAt,
-  replaceNode,
   toEditorDraft,
   toRuleEntryInputs,
   withCondition,
@@ -61,9 +57,20 @@ const SAVED_RULE = {
       audience: {
         mode: "match",
         filter: {
-          field: "role",
-          cond: "in",
-          value: { kind: "static", values: ["role-support"] },
+          op: "AND",
+          children: [
+            {
+              field: "role",
+              cond: "in",
+              value: { kind: "static", values: ["role-support"] },
+            },
+            {
+              field: "org",
+              cond: "in",
+              value: { kind: "static", values: ["org-store"] },
+              range: "descendants",
+            },
+          ],
         },
       },
       filter: {
@@ -140,20 +147,6 @@ describe("條件樹 ↔ api JSON", () => {
       ],
     });
   });
-
-  it("套用對象「全部」送出成人員條件的「所有人」(不帶 ids)", () => {
-    const draft: RuleEditorDraft = {
-      combineOp: DataScopeCombineOp.Or,
-      rules: [
-        {
-          audience: { type: DataScopeAudienceType.All, ids: ["org-a"] },
-          filter: newGroup(fieldOf("status")),
-        },
-      ],
-    };
-
-    expect(toRuleEntryInputs(draft)[0]?.audience).toEqual({ mode: "all" });
-  });
 });
 
 describe("目錄驅動的預設值", () => {
@@ -189,52 +182,15 @@ describe("目錄驅動的預設值", () => {
     ).toEqual({ kind: "static", values: ["2026-01-01"] });
   });
 
-  it("新規則預設套用對象「全部」,條件樹是一個 AND 群組加一條條件列(不會是空群組)", () => {
+  it("新規則預設套用對象「所有人」,條件樹是一個 AND 群組加一條條件列(不會是空群組)", () => {
     const rule = newRule(fieldOf("status"));
 
-    expect(rule.audience).toEqual({ type: DataScopeAudienceType.All, ids: [] });
+    expect(rule.audience.mode).toBe("all");
+    expect(
+      toRuleEntryInputs({ combineOp: DataScopeCombineOp.Or, rules: [rule] })[0]
+        ?.audience,
+    ).toEqual({ mode: "all" });
     expect(rule.filter.children).toHaveLength(1);
-  });
-});
-
-/** 三層:根群組 → 子群組 → 孫群組(UI 的上限)。 */
-const threeLevels = (): GroupDraft => {
-  const root = newGroup(fieldOf("status"));
-  const withGroup = appendChild(root, [], newGroup(fieldOf("orgId")));
-  return appendChild(withGroup, [1], newGroup(fieldOf("createdBy")));
-};
-
-describe("條件樹的增刪改(位置 = 身分)", () => {
-  it("可以往下加到第三層,節點依 childPath 取得", () => {
-    const root = threeLevels();
-
-    expect(nodeAt(root, [1, 1])).toMatchObject({ kind: "group", op: "AND" });
-    expect(nodeAt(root, [1, 1, 0])).toMatchObject({
-      kind: "condition",
-      field: "createdBy",
-    });
-    expect(nodeAt(root, [9])).toBeUndefined();
-  });
-
-  it("replaceNode 帶 null 就是刪掉那一個節點,其他節點不受影響", () => {
-    const root = threeLevels();
-    const next = replaceNode(root, [1, 1], null);
-
-    expect(nodeAt(next, [1])).toMatchObject({ kind: "group" });
-    expect((nodeAt(next, [1]) as GroupDraft).children).toHaveLength(1);
-    expect(nodeAt(root, [1, 1])).toBeDefined();
-  });
-
-  it("換欄位就換掉整條條件列(運算子與值一起重設)", () => {
-    const root = newGroup(fieldOf("createdAt"));
-    const next = replaceNode(root, [0], newCondition(fieldOf("status")));
-
-    expect(nodeAt(next, [0])).toEqual({
-      kind: "condition",
-      field: "status",
-      cond: "in",
-      value: { kind: "static", values: [] },
-    });
   });
 });
 
@@ -243,7 +199,7 @@ const issuesOf = (rules: RuleEditorDraft["rules"]): RuleIssue[] =>
 
 /** 套用對象固定「全部」,只驗條件樹的那一半。 */
 const ruleWith = (filter: GroupDraft): RuleEditorDraft["rules"] => [
-  { audience: { type: DataScopeAudienceType.All, ids: [] }, filter },
+  { audience: newAudienceDraft("role", { allowAll: true }), filter },
 ];
 
 describe("本地驗證", () => {
@@ -257,7 +213,13 @@ describe("本地驗證", () => {
     );
 
     expect(issues).toEqual([
-      { ruleIndex: 0, childPath: [], target: "group", reason: "EMPTY_GROUP" },
+      {
+        tree: "filter",
+        ruleIndex: 0,
+        childPath: [],
+        target: "group",
+        reason: "EMPTY_GROUP",
+      },
     ]);
   });
 
@@ -280,12 +242,14 @@ describe("本地驗證", () => {
 
     expect(issues).toEqual([
       {
+        tree: "filter",
         ruleIndex: 0,
         childPath: [0],
         target: "value",
         reason: "VALUE_INVALID",
       },
       {
+        tree: "filter",
         ruleIndex: 0,
         childPath: [1],
         target: "value",
@@ -338,13 +302,32 @@ describe("本地驗證", () => {
     ]);
   });
 
-  it("套用對象選了角色 / 組織 / 使用者卻沒挑對象", () => {
+  it("套用對象「符合條件」:沒挑值的列標 AUDIENCE_INVALID、空群組標 EMPTY_GROUP", () => {
     const issues = validateEditorDraft(
       {
         combineOp: DataScopeCombineOp.Or,
         rules: [
           {
-            audience: { type: DataScopeAudienceType.Role, ids: [] },
+            audience: {
+              mode: "match",
+              filter: {
+                kind: "group",
+                op: "AND",
+                children: [
+                  {
+                    kind: "condition",
+                    field: "role",
+                    value: { kind: "static", values: ["role-a"] },
+                  },
+                  {
+                    kind: "condition",
+                    field: "user",
+                    value: { kind: "static", values: [] },
+                  },
+                  { kind: "group", op: "OR", children: [] },
+                ],
+              },
+            },
             filter: {
               kind: "group",
               op: "AND",
@@ -365,10 +348,18 @@ describe("本地驗證", () => {
 
     expect(issues).toEqual([
       {
+        tree: "audience",
         ruleIndex: 0,
-        childPath: [],
-        target: "audience",
+        childPath: [1],
+        target: "value",
         reason: "AUDIENCE_INVALID",
+      },
+      {
+        tree: "audience",
+        ruleIndex: 0,
+        childPath: [2],
+        target: "group",
+        reason: "EMPTY_GROUP",
       },
     ]);
   });
@@ -382,23 +373,43 @@ describe("RULE_INVALID 的 path 對回節點", () => {
   it.each([
     [
       "rules[0].filter.children[1].value.values[0]",
-      { ruleIndex: 0, childPath: [1], target: "value" },
+      { tree: "filter", ruleIndex: 0, childPath: [1], target: "value" },
     ],
     [
       "rules[2].filter.children[0].children[3].cond",
-      { ruleIndex: 2, childPath: [0, 3], target: "cond" },
+      { tree: "filter", ruleIndex: 2, childPath: [0, 3], target: "cond" },
     ],
     [
       "rules[1].filter.children[0].field",
-      { ruleIndex: 1, childPath: [0], target: "field" },
+      { tree: "filter", ruleIndex: 1, childPath: [0], target: "field" },
     ],
     [
       "rules[0].filter.children",
-      { ruleIndex: 0, childPath: [], target: "group" },
+      { tree: "filter", ruleIndex: 0, childPath: [], target: "group" },
     ],
     [
-      "rules[3].audience.ids[1]",
-      { ruleIndex: 3, childPath: [], target: "audience" },
+      "rules[3].audience.filter.children[1].value.values[0]",
+      { tree: "audience", ruleIndex: 3, childPath: [1], target: "value" },
+    ],
+    [
+      "rules[0].audience.filter.children[0].children[2].field",
+      { tree: "audience", ruleIndex: 0, childPath: [0, 2], target: "field" },
+    ],
+    [
+      "rules[0].audience.filter.children[1].range",
+      { tree: "audience", ruleIndex: 0, childPath: [1], target: "range" },
+    ],
+    [
+      "rules[1].audience.filter.children",
+      { tree: "audience", ruleIndex: 1, childPath: [], target: "group" },
+    ],
+    [
+      "rules[1].audience.mode",
+      { tree: "audience", ruleIndex: 1, childPath: [], target: "mode" },
+    ],
+    [
+      "rules[1].audience",
+      { tree: "audience", ruleIndex: 1, childPath: [], target: "mode" },
     ],
   ])("%s", (path, expected) => {
     expect(issueFromRuleInvalid(path, "VALUE_INVALID")).toEqual({

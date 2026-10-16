@@ -5,6 +5,8 @@ import { savedRule } from "@/test/msw/data-scope-fixtures";
 
 import { DATA_SCOPE_PERMISSIONS } from "./data-scope-permissions";
 import {
+  audienceRegion,
+  conditionsRegion,
   editor,
   renderPage,
   targetList,
@@ -44,7 +46,7 @@ describe("資料範圍頁(/system/data-scope)", () => {
     ).toBeInTheDocument();
   });
 
-  it("已存在的規則讀回編輯器:頂層合成、套用對象與巢狀群組都還原", async () => {
+  it("已存在的規則讀回編輯器:頂層合成、套用對象與條件組合的巢狀群組都還原", async () => {
     renderPage({ world: { rules: [savedRule] } });
 
     await waitForEditor("示範模組1(demo_items_one)");
@@ -52,23 +54,42 @@ describe("資料範圍頁(/system/data-scope)", () => {
     expect(
       within(editor()).getByRole("combobox", { name: "規則合成" }),
     ).toHaveTextContent("OR — 命中任一規則即可(資料變多)");
+    // 套用對象:客服 AND(A-2 台北分店含下層 OR 持有「示範模組1 · 編輯」)
+    const audience = audienceRegion();
     expect(
-      within(editor()).getByRole("combobox", { name: "套用對象" }),
-    ).toHaveTextContent("角色");
-    // 改用 Autocomplete 後,選中的對象是輸入框**外**的 chip,不在 combobox 的文字裡(#307)
+      within(audience).getByRole("radio", { name: "符合條件" }),
+    ).toBeChecked();
     expect(
-      within(editor()).getByRole("combobox", { name: "對象" }),
-    ).toBeInTheDocument();
-    expect(within(editor()).getByText("客服")).toBeInTheDocument();
-    // 規則 1 的條件樹:根群組 AND + 一個 OR 子群組
-    expect(
-      within(editor()).getByRole("combobox", { name: "條件組合" }),
+      within(audience).getByRole("combobox", { name: "組合" }),
     ).toHaveTextContent("AND — 全部成立才放行");
     expect(
-      within(editor()).getByRole("combobox", { name: "群組組合" }),
+      within(audience).getByRole("combobox", { name: "群組組合" }),
     ).toHaveTextContent("OR — 其中一個成立即可");
     expect(
-      within(editor()).getByText("整個群組視為上一層的一個條件"),
+      within(audience)
+        .getAllByRole("combobox", { name: "欄位" })
+        .map((field) => field.textContent),
+    ).toEqual(["角色", "所屬組織", "權限"]);
+    expect(await within(audience).findByText("客服")).toBeInTheDocument();
+    expect(
+      await within(audience).findByText("A-2 台北分店"),
+    ).toBeInTheDocument();
+    expect(
+      within(audience).getByRole("combobox", { name: "範圍" }),
+    ).toHaveTextContent("含下層");
+    expect(
+      await within(audience).findByText("示範模組1 · 編輯"),
+    ).toBeInTheDocument();
+    // 條件組合:根群組 AND + 一個 OR 子群組(根層下拉同樣叫「組合」)
+    const conditions = conditionsRegion();
+    expect(
+      within(conditions).getByRole("combobox", { name: "組合" }),
+    ).toHaveTextContent("AND — 全部成立才放行");
+    expect(
+      within(conditions).getByRole("combobox", { name: "群組組合" }),
+    ).toHaveTextContent("OR — 其中一個成立即可");
+    expect(
+      within(conditions).getByText("整個群組視為上一層的一個條件"),
     ).toBeInTheDocument();
   });
 
@@ -82,7 +103,7 @@ describe("資料範圍頁(/system/data-scope)", () => {
 
     await waitForEditor("示範表單(頂層)(form_submissions)");
     expect(
-      within(editor()).queryByRole("combobox", { name: "套用對象" }),
+      within(editor()).queryByRole("region", { name: "套用對象" }),
     ).not.toBeInTheDocument();
   });
 
