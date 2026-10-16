@@ -181,14 +181,27 @@ describe("申請中心與讀取授權", () => {
    * 明細列的複製為新單:建一張有明細的表單、送出、核准、作廢;`nextColumns` 給了就先發布新版(子欄改了)
    * 再複製。回複製出的新單的列與原本的列。
    */
+  /**
+   * 建一張有明細的單、核准後作廢,再複製為新單。`setup` 可換子欄與列,`beforeCopy` 在複製前跑
+   * (例:刪掉被引用的人)。
+   */
   async function copyArraySubmission(
     nextColumns: ReturnType<typeof column>[] | null,
+    setup: {
+      columns?: ReturnType<typeof column>[];
+      rows?: ({ rowId: string } & Record<string, unknown>)[];
+      beforeCopy?: () => Promise<void>;
+    } = {},
   ): Promise<{
     rows: { rowId: string }[];
     copied: Record<string, unknown>[];
+    clearedFields: string[];
   }> {
     const formKey = nextKey("copy_array");
-    const columns = [column("name", "text"), column("qty", "number")];
+    const columns = setup.columns ?? [
+      column("name", "text"),
+      column("qty", "number"),
+    ];
     await ok(api, world.root, CREATE_FORM, {
       input: { key: formKey, moduleKey: WORKFLOW_MODULE, name: "明細複製" },
     });
@@ -209,7 +222,7 @@ describe("申請中心與讀取授權", () => {
     const reviewer = await reviewerOnly();
     await useWorkflow(world, key, { steps: [usersStep("one", [reviewer])] });
     await bindForm(world, key, formKey);
-    const rows = [
+    const rows = setup.rows ?? [
       { rowId: randomUUID(), name: "甲", qty: 1 },
       { rowId: randomUUID(), name: "乙", qty: 2 },
     ];
@@ -239,6 +252,7 @@ describe("申請中心與讀取授權", () => {
         1,
       );
     }
+    await setup.beforeCopy?.();
     const copied = await ok<{
       copySubmissionToDraft: { submission: WfSubmissionRow };
     }>(api, world.applicant.token, COPY, {
@@ -251,6 +265,7 @@ describe("申請中心與讀取授權", () => {
         string,
         unknown
       >[],
+      clearedFields: copied.copySubmissionToDraft.submission.clearedFields,
     };
   }
 
@@ -746,6 +761,44 @@ describe("申請中心與讀取授權", () => {
           rows.some((source) => source.rowId === row.rowId),
         ),
       ).toEqual([]);
+    });
+
+    it("複製為新單:明細的引用子欄重驗來源,讀不到的格清空、明細欄列進 clearedFields,其他格照原值", async () => {
+      const [kept, gone] = await Promise.all([
+        person(api, world.connection, world.kitchen, world.tenant),
+        person(api, world.connection, world.kitchen, world.tenant),
+      ]);
+      const who = column("who", "reference", {
+        source: { provider: "user", labelField: "name" },
+      });
+      const { copied, clearedFields } = await copyArraySubmission(null, {
+        columns: [column("name", "text"), who],
+        rows: [
+          {
+            rowId: randomUUID(),
+            name: "甲",
+            who: { id: String(kept.userId), label: null },
+          },
+          {
+            rowId: randomUUID(),
+            name: "乙",
+            who: { id: String(gone.userId), label: null },
+          },
+        ],
+        beforeCopy: async () => {
+          await world.connection
+            .collection("users")
+            .updateOne(
+              { _id: gone.userId },
+              { $set: { deletedAt: new Date() } },
+            );
+        },
+      });
+      expect(clearedFields).toEqual(["items"]);
+      expect(copied.map((row) => [row.name, row.who])).toEqual([
+        ["甲", expect.objectContaining({ id: String(kept.userId) })],
+        ["乙", null],
+      ]);
     });
 
     it("複製為新單:明細只留目標版本仍有且型別相同的子欄", async () => {

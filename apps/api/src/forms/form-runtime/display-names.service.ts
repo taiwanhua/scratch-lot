@@ -91,7 +91,11 @@ function displayTargetsOf(entry: DisplayNameEntry): DisplayTarget[] {
         const cells = rows
           .map((row) => row[column.key])
           .filter((cell) => {
-            const identity = JSON.stringify(cell ?? null);
+            // 引用比 id(label 快照不同的同一筆只解析一次);選項比整個存值
+            const identity =
+              column.type === "reference" && isRecord(cell)
+                ? String(cell.id)
+                : JSON.stringify(cell ?? null);
             if (cell === null || cell === undefined || seen.has(identity)) {
               return false;
             }
