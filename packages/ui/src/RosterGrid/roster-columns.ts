@@ -1,6 +1,6 @@
 import type { Theme } from "@mui/material/styles";
 import type { RowData } from "@tanstack/react-table";
-import type { ReactNode } from "react";
+import { type ReactNode, createElement } from "react";
 
 import { Box } from "../Box/Box";
 import type { DataTableColumn } from "../DataTable/data-table-column";
@@ -30,7 +30,7 @@ const disabledLayerSx = {
 /** 收合窄欄的寬度 */
 const COLLAPSED_GROUP_WIDTH = 88;
 
-export interface UseRosterColumnsOptions<Person> {
+export interface BuildRosterColumnsOptions<Person> {
   leadingColumns: readonly DataTableColumn<Person>[];
   trailingColumns: readonly DataTableColumn<Person>[];
   dates: readonly RosterDate[];
@@ -38,62 +38,66 @@ export interface UseRosterColumnsOptions<Person> {
   renderDateCell: (ctx: RosterCellContext<Person>) => ReactNode;
   columnGroups: readonly RosterColumnGroup[];
   collapsedColumnGroups: readonly string[];
+  /** 欄位顯示狀態:被隱藏的欄不當群組的第一欄 */
+  columnVisibility: Readonly<Record<string, boolean>> | undefined;
   onToggleGroup: (groupId: string) => void;
 }
 
 /** 欄位群組展開時,收合鈕(只有 ▾,名稱是群組名)疊在該組第一欄的表頭前面,不多佔欄寬。 */
-const withExpandedToggle = <Person,>(
+const withExpandedToggle = <Person>(
   column: DataTableColumn<Person>,
   group: RosterColumnGroup,
   onToggle: () => void,
 ): DataTableColumn<Person> => ({
   ...column,
-  header: (
-    <Box component="span" sx={{ display: "inline-flex", gap: 0.5 }}>
-      <RosterGroupToggle
-        label={group.label}
-        hideLabel
-        expanded
-        onToggle={onToggle}
-      />
-      {column.header}
-    </Box>
+  header: createElement(
+    Box,
+    { component: "span", sx: { display: "inline-flex", gap: 0.5 } },
+    createElement(RosterGroupToggle, {
+      label: group.label,
+      hideLabel: true,
+      expanded: true,
+      onToggle,
+    }),
+    column.header,
   ),
 });
 
 /** 一組欄位收合成的窄欄:表頭是 [label ▸],格子空白。 */
-const collapsedGroupColumn = <Person,>(
+const collapsedGroupColumn = <Person>(
   group: RosterColumnGroup,
   pinned: DataTableColumn<Person>["pinned"],
   onToggle: () => void,
 ): DataTableColumn<Person> => ({
   key: `${COLLAPSED_GROUP_KEY_PREFIX}${group.id}`,
-  header: (
-    <RosterGroupToggle
-      label={group.label}
-      expanded={false}
-      iconPosition="end"
-      onToggle={onToggle}
-    />
-  ),
+  header: createElement(RosterGroupToggle, {
+    label: group.label,
+    expanded: false,
+    iconPosition: "end",
+    onToggle,
+  }),
   width: COLLAPSED_GROUP_WIDTH,
   minWidth: COLLAPSED_GROUP_WIDTH,
   pinned,
 });
 
-/** 套用欄位群組的收合:收合的那組換成一個窄欄(放在該組第一欄的位置),展開的那組第一欄表頭加 ▾。 */
-const applyGroups = <Person,>(
+/**
+ * 套用欄位群組的收合:收合的那組換成一個窄欄(放在該組第一個**看得到**的欄的位置),
+ * 展開的那組在第一個看得到的欄的表頭加 ▾。被隱藏的欄跳過,不然收合鈕會跟著被藏起來。
+ */
+const applyGroups = <Person>(
   columns: readonly DataTableColumn<Person>[],
   groups: readonly RosterColumnGroup[],
   collapsed: ReadonlySet<string>,
+  isVisible: (columnKey: string) => boolean,
   onToggleGroup: (groupId: string) => void,
 ): DataTableColumn<Person>[] =>
   columns.flatMap((column) => {
     const group = groups.find((g) => g.columnKeys.includes(column.key));
     if (group === undefined) return [column];
-    const isFirst = group.columnKeys.find((key) =>
-      columns.some((c) => c.key === key),
-    );
+    const isFirst = columns.find(
+      (c) => group.columnKeys.includes(c.key) && isVisible(c.key),
+    )?.key;
     const toggle = () => {
       onToggleGroup(group.id);
     };
@@ -108,10 +112,10 @@ const applyGroups = <Person,>(
   });
 
 /**
- * 把班表的三段欄位組成(每次 render 重算,不存狀態) `DataTable` 的欄位:左固定(人員)→ 日期(中間捲動)→ 右固定(統計)。
- * 固定方向由所在段決定,模組不必自己標 `pinned`。
+ * 把班表的三段欄位組成 `DataTable` 的欄位:左固定(人員)→ 日期(中間捲動)→ 右固定(統計)。
+ * 固定方向由所在段決定,模組不必自己標 `pinned`。純函式,每次 render 重算。
  */
-export const useRosterColumns = <Person extends RowData>({
+export const buildRosterColumns = <Person extends RowData>({
   leadingColumns,
   trailingColumns,
   dates,
@@ -119,8 +123,9 @@ export const useRosterColumns = <Person extends RowData>({
   renderDateCell,
   columnGroups,
   collapsedColumnGroups,
+  columnVisibility,
   onToggleGroup,
-}: UseRosterColumnsOptions<Person>): DataTableColumn<Person>[] => {
+}: BuildRosterColumnsOptions<Person>): DataTableColumn<Person>[] => {
   const collapsed = new Set(collapsedColumnGroups);
   const leading = leadingColumns.map((c) => ({
     ...c,
@@ -152,6 +157,7 @@ export const useRosterColumns = <Person extends RowData>({
     [...leading, ...dateColumns, ...trailing],
     columnGroups,
     collapsed,
+    (key) => columnVisibility?.[key] !== false,
     onToggleGroup,
   );
 };

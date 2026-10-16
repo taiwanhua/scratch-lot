@@ -2,7 +2,6 @@ import {
   type ColumnDef,
   type ColumnPinningState,
   type ColumnSizingState,
-  type ColumnVisibilityState,
   type RowData,
   type SortingState,
   type Updater,
@@ -51,8 +50,10 @@ export interface UseDataTableOptions<Row extends RowData> {
   columnWidths?: DataTableColumnWidths;
   onColumnWidthsChange?: (widths: DataTableColumnWidths) => void;
   columnVisibility?: DataTableColumnVisibility;
-  onColumnVisibilityChange?: (visibility: DataTableColumnVisibility) => void;
 }
+
+/** 沒給欄位顯示時:全部顯示 */
+const NO_HIDDEN_COLUMNS: DataTableColumnVisibility = {};
 
 const resolve = <Value>(updater: Updater<Value>, previous: Value): Value =>
   typeof updater === "function"
@@ -71,7 +72,7 @@ const fromSorting = (sorting: SortingState): DataTableSort | null => {
 
 /**
  * 把 `DataTable` 的 props 接到 TanStack Table:欄位宣告 → column defs、
- * 排序、欄寬與欄位顯示「給了就受控、沒給就內部管」、`pinned` → column pinning 狀態。
+ * 排序與欄寬「給了就受控、沒給就內部管」、欄位顯示只收受控值、`pinned` → column pinning 狀態。
  */
 export const useDataTable = <Row extends RowData>({
   columns,
@@ -83,16 +84,12 @@ export const useDataTable = <Row extends RowData>({
   isManualSorting = false,
   columnWidths: controlledWidths,
   onColumnWidthsChange,
-  columnVisibility: controlledVisibility,
-  onColumnVisibilityChange,
+  columnVisibility = NO_HIDDEN_COLUMNS,
 }: UseDataTableOptions<Row>) => {
   const [innerSort, setInnerSort] = useState(defaultSort);
   const [innerWidths, setInnerWidths] = useState<DataTableColumnWidths>({});
   const sort = controlledSort === undefined ? innerSort : controlledSort;
   const widths = controlledWidths ?? innerWidths;
-  const [innerVisibility, setInnerVisibility] =
-    useState<DataTableColumnVisibility>({});
-  const visibility = controlledVisibility ?? innerVisibility;
 
   const columnDefs = useMemo(
     () =>
@@ -128,7 +125,7 @@ export const useDataTable = <Row extends RowData>({
       sorting,
       columnSizing: widths,
       columnPinning,
-      columnVisibility: visibility,
+      columnVisibility: columnVisibility,
     },
     manualSorting: isManualSorting,
     enableMultiSort: false,
@@ -144,11 +141,6 @@ export const useDataTable = <Row extends RowData>({
       const next = resolve(updater, widths as ColumnSizingState);
       setInnerWidths(next);
       onColumnWidthsChange?.(next);
-    },
-    onColumnVisibilityChange: (updater) => {
-      const next = resolve(updater, visibility as ColumnVisibilityState);
-      setInnerVisibility(next);
-      onColumnVisibilityChange?.(next);
     },
   });
 };

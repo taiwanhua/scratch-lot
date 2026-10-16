@@ -177,6 +177,31 @@ describe("RosterGrid 欄位群組收合成窄欄(受控)", () => {
     await userEvent.click(screen.getByRole("button", { name: "統計" }));
     expect(onChange).toHaveBeenCalledWith(["stats"]);
   });
+
+  it("群組第一欄被隱藏時,收合鈕改放在下一個看得到的欄", () => {
+    renderRoster({
+      columnGroups: groups,
+      collapsedColumnGroups: [],
+      columnVisibility: { hours: false },
+    });
+
+    const toggle = screen.getByRole("button", { name: "統計" });
+    expect(toggle.closest("th")?.textContent).toBe("班數");
+  });
+
+  it("群組第一欄被隱藏、群組收合時,窄欄照樣出現", () => {
+    renderRoster({
+      columnGroups: groups,
+      collapsedColumnGroups: ["stats"],
+      columnVisibility: { hours: false },
+    });
+
+    expect(screen.getByRole("button", { name: "統計" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(headerTexts()).not.toContain("班數");
+  });
 });
 
 /** 頂部群組的預設內容(早班一列,10/1 有標籤)。 */
