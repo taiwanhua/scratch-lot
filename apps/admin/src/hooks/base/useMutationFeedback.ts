@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 
 import { useSnackbarStore } from "@/stores/base/useSnackbarStore";
 
-/** 送一則提示出去(少數自己控制時機的流程用;mutation 一律走 `useMutationFeedback`)。 */
+/**
+ * 送一則提示出去:`show(severity, message, { title?, action? })`。給少數自己控制時機的流程、
+ * 可撤銷的動作(Success + [撤銷])、新通知提示(Info + 標題、沒有動作)用;mutation 一律走
+ * `useMutationFeedback`。各模組不另寫提示元件(底座規格 10.12)。
+ */
 export const useSnackbar = () => useSnackbarStore((state) => state.show);
 
 export interface UseMutationFeedbackOptions<TData, TVariables> {
@@ -71,8 +75,8 @@ export interface MutationFeedback<TData, TVariables> {
  * 組成一次「儲存」)不要把 feedback 交給每一支 —— 那會一次跳好幾則。做法是整段
  * try / catch 完成後自己呼叫 `feedback.onSuccess()` / `feedback.onError(error)`。
  *
- * 排隊策略(長度 1 的佇列、只顯示最新的一則)寫在 `stores/base/useSnackbarStore.ts`
- * 與 `@repo/ui/snackbar` 的 JSDoc。
+ * 堆疊規則(往上疊、新的在下、最多 3 則,第 4 則出現時最舊的消失)寫在
+ * `stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc。
  */
 export const useMutationFeedback = <TData = void, TVariables = unknown>({
   success,

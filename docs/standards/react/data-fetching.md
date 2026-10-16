@@ -120,10 +120,12 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   `error` 也回 `null`(使用者不知道有這件事,下次會再補)。先例:頭像選單切語言(`useChangeLocale`)與
   登入後把本機語言寫回帳號(`useAccountLocaleSync`),都在 `apps/admin/src/hooks/base/useAccountLocale.ts`。
 
-排隊策略是**長度 1 的佇列:只顯示最新的一則,舊的直接被取代**(正本寫在
-`apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc)——
-這是操作回饋不是通知中心,連續送出時使用者要看的是最後那一次的結果。
-全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`。
+位置與堆疊:電腦 / 平板右下角距邊 24,手機底部左右 16 滿寬(有底部導覽時放在它上面);
+**所有提示(操作結果、可撤銷、新通知)一律往上疊,新的在下面;最多 3 則,第 4 則出現時最舊的那則消失**。
+一般 4 秒、有動作(例 [撤銷])8 秒自動消失,滑鼠移上去暫停。正本寫在
+`apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar`(`Snackbar`、`SnackbarStack`、
+`enqueueSnackbar`)的 JSDoc。全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`;
+mutation 以外的提示(可撤銷、新通知、自己控制時機的流程)經 `useSnackbar()` 送出,各模組不另寫提示元件。
 
-測試:`apps/admin/src/test/snackbar.ts` 的 `findSnackbarAlert()`。**不要只用 `findByText` 斷言** ——
+測試:`apps/admin/src/test/snackbar.ts` 的 `findSnackbarAlert()`(取最新、最下面那一則)。**不要只用 `findByText` 斷言** ——
 失敗提示與頁面上那一條錯誤是同一份文案,只比文字同時抓到兩個節點,也證明不了提示真的跳了。
