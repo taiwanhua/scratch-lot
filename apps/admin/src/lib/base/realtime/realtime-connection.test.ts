@@ -9,11 +9,15 @@ import {
 
 import {
   DISABLED_RETRY_MS,
+  MIN_RENEW_DELAY_MS,
   RECONNECT_BACKOFF_MS,
+  RENEW_AFTER_MS,
   RealtimeConnection,
   type RealtimeGrant,
   type RealtimeStatus,
 } from "./realtime-connection";
+
+const board = (orgId: string) => ({ key: "store-board", orgId });
 
 describe("RealtimeConnection", () => {
   let timers: ManualTimers;
@@ -23,6 +27,8 @@ describe("RealtimeConnection", () => {
   let signals: { type: string; topic: string }[];
   let ticketCalls: (string | null)[];
   let nextGrant: (board: string | null) => RealtimeGrant | null;
+  let fetchOverride:
+    ((board: string | null) => Promise<RealtimeGrant | null>) | null;
 
   const latest = (): FakeSocket => {
     const socket = sockets.at(-1);
@@ -35,8 +41,10 @@ describe("RealtimeConnection", () => {
   const connection = () =>
     new RealtimeConnection({
       fetchTicket: (board) => {
-        ticketCalls.push(board);
-        return Promise.resolve(nextGrant(board));
+        ticketCalls.push(board?.orgId ?? null);
+        return fetchOverride === null
+          ? Promise.resolve(nextGrant(board?.orgId ?? null))
+          : fetchOverride(board?.orgId ?? null);
       },
       onSignal: (signal, topic) => signals.push({ type: signal.type, topic }),
       onStatus: (status) => statuses.push(status),
@@ -66,6 +74,7 @@ describe("RealtimeConnection", () => {
     catchUps = 0;
     signals = [];
     ticketCalls = [];
+    fetchOverride = null;
     nextGrant = (board) =>
       grantOf(
         timers,
@@ -86,6 +95,70 @@ describe("RealtimeConnection", () => {
     });
     expect(signals).toEqual([{ type: "badge:apply-center", topic: "user:u1" }]);
     expect(catchUps).toBe(0);
+  });
+
+  it("使用者電腦時鐘不準(比伺服器快 1 小時 / 慢 1 小時)→ 仍在收到憑證後 9 分鐘換發", async () => {
+    for (const skewSeconds of [3600, -3600]) {
+      timers = new ManualTimers();
+      sockets = [];
+      nextGrant = () => ({
+        ...grantOf(timers),
+        // 憑證的 exp 用伺服器時間,對使用者電腦看起來早已過期 / 很久以後才到期
+        expiresAt: Math.floor(timers.now() / 1000) - skewSeconds + 600,
+      });
+      const instance = await started();
+      await timers.advance(RENEW_AFTER_MS - 1);
+      expect(latest().sent).toEqual([]);
+      await timers.advance(1);
+      expect(latest().sent).toHaveLength(1);
+      instance.stop();
+    }
+  });
+
+  it("換發間隔最少 30 秒", () => {
+    expect(MIN_RENEW_DELAY_MS).toBe(30_000);
+    expect(RENEW_AFTER_MS).toBe(540_000);
+  });
+
+  it("換發一次只跑一個:拿憑證期間又換分店 → renewed 後補一次;回應順序顛倒也不會用到舊的", async () => {
+    const instance = await started();
+    const pending: ((grant: RealtimeGrant) => void)[] = [];
+    fetchOverride = () =>
+      new Promise((resolve) => {
+        pending.push(resolve);
+      });
+    instance.setBoard(board("A"));
+    instance.setBoard(board("B"));
+    await flushPromises();
+    // 第二次換發等第一次跑完才開始
+    expect(ticketCalls.slice(1)).toEqual(["A"]);
+    pending[0]?.(grantOf(timers, ["user:u1", "board:A"], "ticket-A"));
+    await flushPromises();
+    expect(latest().sent).toEqual([{ op: "renew", ticket: "ticket-A" }]);
+    latest().receive({ op: "renewed", exp: 1 });
+    await flushPromises();
+    // A 的憑證回來時看板已是 B:不訂閱 A,接著補換發 B
+    expect(
+      latest().sent.some((m) => JSON.stringify(m).includes("subscribe")),
+    ).toBe(false);
+    expect(ticketCalls.slice(1)).toEqual(["A", "B"]);
+    pending[1]?.(grantOf(timers, ["user:u1", "board:B"], "ticket-B"));
+    await flushPromises();
+    latest().receive({ op: "renewed", exp: 1 });
+    expect(latest().sent.slice(-2)).toEqual([
+      { op: "renew", ticket: "ticket-B" },
+      { op: "subscribe", topic: "board:B" },
+    ]);
+  });
+
+  it("refresh(切換目前組織)→ 立即在原連線換發;換到別的租戶被拒 → 重新連線", async () => {
+    const instance = await started();
+    instance.refresh();
+    await flushPromises();
+    expect(latest().sent).toEqual([{ op: "renew", ticket: "ticket-2" }]);
+    latest().receive({ op: "rejected", reason: "ticket-mismatch" });
+    await timers.advance(0);
+    expect(sockets).toHaveLength(2);
   });
 
   it("到期前 1 分鐘在原連線上換發(不重新連線)", async () => {
@@ -157,7 +230,7 @@ describe("RealtimeConnection", () => {
 
   it("進入看板頁:原連線換發含 board:A 再訂閱;切到 B 先取消 A;離開取消並換回只含自己", async () => {
     const instance = await started();
-    instance.setBoard("A");
+    instance.setBoard(board("A"));
     await flushPromises();
     expect(ticketCalls.at(-1)).toBe("A");
     expect(latest().sent).toEqual([{ op: "renew", ticket: "ticket-2" }]);
@@ -165,7 +238,7 @@ describe("RealtimeConnection", () => {
     expect(latest().sent.at(-1)).toEqual({ op: "subscribe", topic: "board:A" });
     latest().receive({ op: "subscribed", topic: "board:A" });
 
-    instance.setBoard("B");
+    instance.setBoard(board("B"));
     await flushPromises();
     expect(latest().sent.slice(-2)).toEqual([
       { op: "unsubscribe", topic: "board:A" },
@@ -188,7 +261,7 @@ describe("RealtimeConnection", () => {
   it("沒有看板權限(換發的憑證不含 board:)→ 不送 subscribe", async () => {
     nextGrant = () => grantOf(timers, ["user:u1"]);
     const instance = await started();
-    instance.setBoard("A");
+    instance.setBoard(board("A"));
     await flushPromises();
     latest().receive({ op: "renewed", exp: 1 });
     expect(latest().sent).toEqual([{ op: "renew", ticket: "t1" }]);

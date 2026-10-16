@@ -22,6 +22,12 @@ import {
 import { realtimeHubOf } from "./realtime-publisher.service";
 import { REALTIME_CONFIG, type RealtimeConfig } from "./realtime.config";
 
+/** 看板頁換發時帶的看板:登記的 key + 那家店的組織 id。 */
+export interface RealtimeBoardRequest {
+  key: string;
+  orgId: string;
+}
+
 /** 簽發結果:前端拿 `ticket` 連 `connectUrl?ticket=`,或在原連線上換發。 */
 export interface RealtimeTicketGrant {
   ticket: string;
@@ -56,11 +62,11 @@ function isVisible(operator: OperatorContext, orgId: Types.ObjectId): boolean {
  * 訂閱憑證的簽發(底座規格第 4 章「訂閱憑證」):
  *
  * - **平常只放自己的頻道** `user:<操作者>`;通知、計數、列印結果都走它,與目前組織無關。
- * - **看板頻道按需換發**:帶 `boardOrgId` 時,兩件事都成立才多放 `board:<那家店>`:
- *   ① 持有專案登記的任一看板檢視權限(`project/realtime-boards.ts`);② 那家店在操作者的可見範圍內,
+ * - **看板頻道按需換發**:帶 `board: { key, orgId }` 時,兩件事都成立才多放 `board:<那家店>`:
+ *   ① 持有**該看板 key** 在 `project/realtime-boards.ts` 登記的檢視權限;② 那家店在操作者的可見範圍內,
  *   且與憑證同一個租戶。不成立就只放 `user:<自己>`,不報錯(Durable Object 會拒絕訂閱)。
- * - 憑證對應的 Durable Object 是**目前組織所屬的租戶**(根組織 = 平台);切換到別的租戶後,
- *   下一次換發的憑證持有者不同,Durable Object 回 `ticket-mismatch`,前端改為重新連線。
+ * - 憑證對應的 Durable Object 是**目前組織所屬的租戶**(根組織 = 平台);切換目前組織後前端立即換發,
+ *   換到別的租戶時持有者不同,Durable Object 回 `ticket-mismatch`,前端改為重新連線。
  * - 效期 10 分鐘;不存資料庫。即時通道停用(未設定)或沒有登入主體時回 null,前端改 60 秒輪詢。
  */
 @Injectable()
@@ -75,7 +81,7 @@ export class RealtimeTicketService {
 
   async issue(
     operator: OperatorContext,
-    boardOrgId: string | null,
+    board: RealtimeBoardRequest | null,
     nowSeconds = Math.floor(Date.now() / 1000),
   ): Promise<RealtimeTicketGrant | null> {
     if (!this.config.enabled || operator.actorId === null) {
@@ -84,11 +90,8 @@ export class RealtimeTicketService {
     const tenantId = await this.tenantOf(operator, operator.currentOrgId);
     const hub = realtimeHubOf(tenantId);
     const topics = [userTopic(String(operator.actorId))];
-    if (
-      boardOrgId !== null &&
-      (await this.canWatchBoard(operator, hub, boardOrgId))
-    ) {
-      topics.push(boardTopic(boardOrgId));
+    if (board !== null && (await this.canWatchBoard(operator, hub, board))) {
+      topics.push(boardTopic(board.orgId));
     }
     const expiresAt = nowSeconds + REALTIME_TICKET_TTL_SECONDS;
     const ticket = await signRealtimeTicket(
@@ -108,16 +111,17 @@ export class RealtimeTicketService {
   private async canWatchBoard(
     operator: OperatorContext,
     hub: string,
-    boardOrgId: string,
+    board: RealtimeBoardRequest,
   ): Promise<boolean> {
+    const registration = this.boards.find((entry) => entry.key === board.key);
     if (
-      this.boards.length === 0 ||
+      registration === undefined ||
       operator.actorId === null ||
-      !Types.ObjectId.isValid(boardOrgId)
+      !Types.ObjectId.isValid(board.orgId)
     ) {
       return false;
     }
-    const orgId = new Types.ObjectId(boardOrgId);
+    const orgId = new Types.ObjectId(board.orgId);
     if (!isVisible(operator, orgId)) {
       return false;
     }
@@ -125,11 +129,7 @@ export class RealtimeTicketService {
       operator.actorId,
       operator.currentOrgId,
     );
-    if (
-      !this.boards.some((board) =>
-        holdsPermission(resolution, board.permission),
-      )
-    ) {
+    if (!holdsPermission(resolution, registration.permission)) {
       return false;
     }
     // 可見範圍是 "all"(根組織)時也只放同一個租戶的店:別的租戶的信號不會送進這個 Durable Object

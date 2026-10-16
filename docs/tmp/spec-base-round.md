@@ -791,15 +791,15 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 ```
 
 - 由 API `realtimeTicket` 簽發。**平常只放自己的頻道**:瀏覽器 `user:<自己>`,代理程式 `print-agent:<id>`(2026-10-16 定)。
-- **看板頻道按需換發**:打開某家店的看板頁時,前端在同一條連線上換發一張含 `board:<那家店>` 的憑證(`realtimeTicket(boardOrgId)`);API 只檢查兩件事:① 操作者能打開該頁面,也就是持有看板所在模組的檢視權限(專案在 API 登記看板頻道對應哪個模組、哪個權限 key);② 那家店在操作者的可見範圍內。兩者都符合才放進 `board:<那家店>`,不符就只放 `user:<自己>`(2026-10-16 定)。沒有檢視權限的人進不了看板頁,不會走到換發。離開看板頁換回只含 `user:<自己>` 的憑證。一張憑證最多一個 `board:` 頻道;總部**不再**把所有分店的看板頻道放進憑證。專案規格裡其他訂閱 `board:<分店>` 的頁面(例:日結精靈)照同一做法。
-- 通知、計數、列印結果都走 `user:<自己>`,與目前組織無關,切換目前組織不用換發、不會漏。
+- **看板頻道按需換發**:打開某家店的看板頁時,前端在同一條連線上換發一張含 `board:<那家店>` 的憑證(`realtimeTicket(board: { key, orgId })`,`key` 是專案登記的看板 key);API 只檢查兩件事:① 操作者能打開該頁面,也就是持有**那個看板**登記的檢視權限(專案在 API 登記看板 key 對應哪個模組、哪個權限 key;資格只看帶來的那個看板,不看其他看板的權限);② 那家店在操作者的可見範圍內。兩者都符合才放進 `board:<那家店>`,不符就只放 `user:<自己>`(2026-10-16 定)。沒有檢視權限的人進不了看板頁,不會走到換發。離開看板頁換回只含 `user:<自己>` 的憑證。一張憑證最多一個 `board:` 頻道;總部**不再**把所有分店的看板頻道放進憑證。專案規格裡其他訂閱 `board:<分店>` 的頁面(例:日結精靈)照同一做法。
+- 通知、計數、列印結果都走 `user:<自己>`,與目前組織無關。**切換目前組織時前端立即換發**(2026-10-17 定):憑證對應的 Durable Object 是目前組織所屬的租戶,換到別的租戶時若等到期前的換發,最多 10 分鐘收不到新租戶的信號;立即換發時同租戶照常續用,跨租戶由 Durable Object 回 `ticket-mismatch`,前端改連新租戶。
 - **不設頻道數量上限**(2026-10-16 定):憑證平常只有 `user:<自己>`,看板頁才多一個 `board:<分店>`。現行 RT-03 規則與 `REALTIME_TICKET_MAX_TOPICS`(50)由 #40 拿掉。唯一的保護在 Durable Object:寫入連線資料(attachment,Cloudflare 上限 16 KB)失敗時關閉該連線,用明確的關閉代碼並記 log,不變成 500(見「Durable Object 規範」)。
 - 不存資料庫。Worker 只驗簽章與到期,不查資料庫。
 
 ### 四個流程
 
 1. **建立連線**:取得訂閱憑證(只含自己的頻道)→ `wss://rt.<網域>/connect?ticket=` → Worker 驗證訂閱憑證 → `idFromName("hub:" + tenantId)` → Durable Object 接下連線,在連線上記使用者、可訂閱頻道、到期時間;初始訂閱 `user:<自己>`(代理程式是 `print-agent:<id>`)。
-2. **換發憑證**:到期前 1 分鐘,以及進入 / 離開看板頁、看板頁切換分店時,前端在**原連線上**送新的訂閱憑證;Durable Object 驗證後以新憑證的頻道取代可訂閱頻道、更新到期時間(不重新連線);已訂閱但不在新憑證裡的頻道自動取消訂閱。看板頁開著時,到期前的換發照樣帶 `boardOrgId`。
+2. **換發憑證**:到期前 1 分鐘(以**收到憑證的時刻 +(效期 − 1 分鐘)**計算,不拿 `exp` 對使用者電腦的時鐘;最少間隔 30 秒),以及進入 / 離開看板頁、看板頁切換分店、切換目前組織時,前端在**原連線上**送新的訂閱憑證;同一時間只跑一個換發,進行中又有變化就在完成後補一次;Durable Object 驗證後以新憑證的頻道取代可訂閱頻道、更新到期時間(不重新連線);已訂閱但不在新憑證裡的頻道自動取消訂閱。看板頁開著時,到期前的換發照樣帶看板(`board`)。
 3. **訂閱 / 取消訂閱**:看板頁換發到含 `board:<分店 id>` 的憑證後,在連線上送 `subscribe board:<分店 id>`;Durable Object 檢查是否在訂閱憑證的可訂閱頻道內才加入;離開頁面送 `unsubscribe`,再換發只含 `user:<自己>` 的憑證。
 4. **送出信號**:API → Worker `/publish { tenantId, topics: string[], signal }`(一次可帶多個頻道,一次送出算 1 次用量)→ Durable Object 找出目前訂閱其中任一頻道的連線推送,同一條連線只推一次。推送前若發現連線的訂閱憑證已過期 → 關閉該連線、不推送(停用的人最多 10 分鐘後收不到任何信號)。
 
@@ -813,7 +813,7 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 | 看板頁開著,模組檢視權限被拔                                | 下一次換發(最晚 10 分鐘)API 不再放 `board:B`;Durable Object 取消該訂閱;頁面拿資料時由 API 判斷權限 |
 | 看板頁開著,分店 B 變成看不到(可見範圍改變)                 | 同上:下一次換發不再含 `board:B`                                                                    |
 | 換發時帶的分店不在可見範圍                                 | 憑證只含 `user:<自己>`;`subscribe board:<該店>` 被 Durable Object 拒絕                             |
-| 切換目前組織                                               | 憑證不變、不換發;通知、計數、列印結果照常走 `user:<自己>`                                          |
+| 切換目前組織                                               | 立即換發;同租戶照常續用,換到別的租戶時 Durable Object 回 `ticket-mismatch`,前端重新連到新租戶      |
 | API 一次送出到 3 個 `user:` 頻道                           | 一次 `/publish`,算 1 次 Worker + 1 次 Durable Object 請求;3 人各收到一次                           |
 | 同一條連線訂閱了一次送出裡的多個頻道                       | 只推一次                                                                                           |
 | Durable Object 寫入連線資料(attachment)失敗(例:超過 16 KB) | 關閉該連線,用明確的關閉代碼並記 log;不回 500。前端照斷線處理(降級輪詢、重連)                       |
@@ -829,7 +829,7 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 | `board:<分店 id>`  | 開著看板的頁面(憑證按需換發,見「訂閱憑證」) | `board`(專案用,見專案規格)                                                                              |
 
 - 信號類型採登記制(前端信號類型登記表):每種信號對應要 invalidate 的 TanStack Query key;頁面用 `useRealtimeSignal(type, handler)`。
-- 高頻信號(看板)由送出端合併:同一頻道同一類型**每 2 秒最多發一次**。
+- 高頻信號(看板,類型 `board`)由送出端合併:同一頻道**每 2 秒最多發一次**,前緣立即送、窗內的丟棄;伺服器不排計時器補送(Cloud Run 請求外 CPU 會被節流)。前端收到任何信號後約 2.5 秒再重抓一次同一批資料,補上窗內被丟掉的最後一次變動。`badge:*`、`notification` 等其他類型不合併(2026-10-17 定)。
 
 ### 降級
 
@@ -868,17 +868,17 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 
 ### 工程與部署
 
-| 項目            | 內容                                                                                                                                                                                            |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/realtime` | TypeScript;Worker + Durable Object 類別 `TenantHub`;加入 pnpm workspace;共用 `packages/` 裡不依賴 Node 的程式(訂閱憑證型別與簽章)                                                               |
-| 開發依賴        | `wrangler`、Cloudflare 型別與測試套件(實作時查 registry 版本)                                                                                                                                   |
-| turbo           | `dev` = `wrangler dev`(本機模擬)、`test`、`lint`                                                                                                                                                |
-| 執行環境        | V8(不是 Node):只用 fetch、WebSocket、WebCrypto                                                                                                                                                  |
-| 部署            | `deploy.yml` 加 `wrangler deploy` 步驟;三個環境各一個 Worker                                                                                                                                    |
-| 網域            | `rt.<網域>`、`rt-dev.<網域>`、`rt-staging.<網域>`(Cloudflare DNS 既有帳號);實作時登記 `docs/branding.md`                                                                                        |
-| 密鑰            | 送出信號密鑰(API → Worker)、訂閱憑證簽章密鑰(API 簽、Worker 驗);API 放 Secret Manager、Worker 放 Wrangler secret;GitHub 加 Cloudflare 部署 token                                                |
-| API             | `RealtimePublisher.publish(tenantId, topics: string[], signal)`(交易後執行、盡力而為;一次送出多個頻道)、`publishBadge(moduleKey, userIds)`(10.4)、`realtimeTicket(boardOrgId?)`(見「訂閱憑證」) |
-| admin           | `RealtimeProvider`(殼層):登入後連線、換發憑證(含進出看板頁時)、重連退避、降級輪詢                                                                                                               |
+| 項目            | 內容                                                                                                                                                                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/realtime` | TypeScript;Worker + Durable Object 類別 `TenantHub`;加入 pnpm workspace;共用 `packages/` 裡不依賴 Node 的程式(訂閱憑證型別與簽章)                                                                          |
+| 開發依賴        | `wrangler`、Cloudflare 型別與測試套件(實作時查 registry 版本)                                                                                                                                              |
+| turbo           | `dev` = `wrangler dev`(本機模擬)、`test`、`lint`                                                                                                                                                           |
+| 執行環境        | V8(不是 Node):只用 fetch、WebSocket、WebCrypto                                                                                                                                                             |
+| 部署            | `deploy.yml` 加 `wrangler deploy` 步驟;三個環境各一個 Worker                                                                                                                                               |
+| 網域            | `rt.<網域>`、`rt-dev.<網域>`、`rt-staging.<網域>`(Cloudflare DNS 既有帳號);實作時登記 `docs/branding.md`                                                                                                   |
+| 密鑰            | 送出信號密鑰(API → Worker)、訂閱憑證簽章密鑰(API 簽、Worker 驗);API 放 Secret Manager、Worker 放 Wrangler secret;GitHub 加 Cloudflare 部署 token                                                           |
+| API             | `RealtimePublisher.publish(tenantId, topics: string[], signal)`(交易後執行、盡力而為;一次送出多個頻道)、`publishBadge(moduleKey, userIds)`(10.4)、`realtimeTicket(board?: { key, orgId })`(見「訂閱憑證」) |
+| admin           | `RealtimeProvider`(殼層):登入後連線、換發憑證(含進出看板頁時)、重連退避、降級輪詢                                                                                                                          |
 
 ### 驗收重點
 

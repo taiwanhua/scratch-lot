@@ -75,19 +75,15 @@ export function chunkTopics(
  *   交易內一律用 `publishAfterCommit`(掛 `afterCommit`,交易回復就不送)。
  * - **盡力而為**:Worker 連不上、逾時、回非 2xx 都只記 log,不拋錯、不影響已提交的資料;
  *   前端斷線時改 60 秒輪詢,重連後補抓,所以漏一次信號不會讓畫面停在舊資料。
- * - **合併**:同一頻道同一類型每 2 秒最多送一次(`SignalCoalescer`)。
+ * - **合併**:只有看板(`board`)同一頻道每 2 秒最多送一次,窗內丟棄(`SignalCoalescer`);其他類型照送。
  * - 信號只有類型與編號(RT-02),格式不對直接拒絕(程式錯誤,拋錯)。
  */
 @Injectable()
 export class RealtimePublisher {
   private readonly logger = new Logger(RealtimePublisher.name);
-  private readonly coalescer: SignalCoalescer;
+  private readonly coalescer = new SignalCoalescer();
 
-  constructor(private readonly transport: RealtimeTransport) {
-    this.coalescer = new SignalCoalescer((hub, topics, signal) =>
-      this.send(hub, topics, signal),
-    );
-  }
+  constructor(private readonly transport: RealtimeTransport) {}
 
   /** 立即送出(不在交易內)。`tenantId` 為 null = 根組織(平台)。 */
   async publish(
@@ -106,10 +102,12 @@ export class RealtimePublisher {
     if (invalid.length > 0) {
       throw new Error(`頻道格式錯誤:${invalid.join(",")}`);
     }
-    if (unique.length === 0) {
+    const hub = realtimeHubOf(tenantId);
+    const selected = this.coalescer.select(hub, unique, signal);
+    if (selected.length === 0) {
       return;
     }
-    await this.coalescer.submit(realtimeHubOf(tenantId), unique, signal);
+    await this.send(hub, selected, signal);
   }
 
   /** 在目前交易登記「提交後送出」;不在交易內呼叫即拋錯(同 `afterCommit`)。 */

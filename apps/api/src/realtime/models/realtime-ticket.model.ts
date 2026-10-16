@@ -1,4 +1,14 @@
-import { Field, Int, ObjectType } from "@nestjs/graphql";
+import { Field, ID, InputType, Int, ObjectType } from "@nestjs/graphql";
+
+/** 看板頁換發時帶的看板(`project/realtime-boards.ts` 登記的 key + 那家店)。 */
+@InputType()
+export class RealtimeBoardInput {
+  @Field({ description: "看板 key(專案登記)" })
+  key!: string;
+
+  @Field(() => ID, { description: "看板開著的那家店(組織 id)" })
+  orgId!: string;
+}
 
 /** `realtimeTicket` 的回傳(GQL-02 帶前綴的 payload)。 */
 @ObjectType()
