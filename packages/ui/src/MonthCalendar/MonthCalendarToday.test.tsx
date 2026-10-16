@@ -47,6 +47,22 @@ describe("MonthCalendar [今天] 按鈕", () => {
     expect(onMonthChange).toHaveBeenCalledWith("2026-10");
   });
 
+  it("[今天] 和 ◀ ▶ 同一種外觀:灰框、一般文字色,不是主色", () => {
+    renderCalendar({ month: "2027-02", showTodayButton: true });
+
+    const button = todayButton();
+    if (button === null) throw new Error("沒有 [今天]");
+    expect(button).toHaveClass("MuiButton-outlined", "MuiButton-colorInherit");
+    expect(button).not.toHaveClass("MuiButton-colorPrimary");
+    // 只看按鈕本身的規則(不含 :hover、子元素等延伸選擇器)
+    const own = `.${emotionClassOf(button)}`;
+    const rules = cssRulesMatching(own).filter(
+      (rule) => rule.selectorText === own,
+    );
+    expect(declaredValue(rules, "border-color")).toContain("divider");
+    expect(declaredValue(rules, "color")).toContain("text-primary");
+  });
+
   it("showTodayButton 開,顯示的已是當月:[今天] 停用", () => {
     renderCalendar({ showTodayButton: true });
 

@@ -55,11 +55,13 @@ export const MonthCalendarHeader = ({
     </IconButton>
     {todayButton === undefined ? null : (
       <Button
+        // 和 ◀ ▶(IconButton outlined)同一種外觀:灰框(divider)、一般文字色,不用主色
         variant="outlined"
+        color="inherit"
         size="small"
         disabled={todayButton.disabled}
         onClick={todayButton.onClick}
-        sx={{ ml: "auto" }}
+        sx={{ ml: "auto", borderColor: "divider", color: "text.primary" }}
       >
         {todayButton.label}
       </Button>
