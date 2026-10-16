@@ -503,4 +503,19 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
       expect(result.errors?.[0]?.extensions?.code).toBe("UNAUTHENTICATED");
     });
   });
+
+  // 放最後:停用示範模組1 的上層會影響本檔其他測試
+  it("祖先模組停用:底下模組的權限不算(列出與逐人判斷一致)", async () => {
+    await setModuleEnabled(api.connection, "demo.sub", false);
+    const target = match(leaf("permission", [EDIT, VIEW]));
+    expect(await list(target)).toEqual([]);
+    expect(await matches("managerA", target)).toBe(false);
+    expect(await list(target)).toEqual(await matchingByEach(target));
+    await setModuleEnabled(api.connection, "demo.sub", true);
+    expect(await list(match(leaf("permission", [EDIT])))).toEqual([
+      "managerA",
+      "managerB",
+      "wildcardA1",
+    ]);
+  });
 });

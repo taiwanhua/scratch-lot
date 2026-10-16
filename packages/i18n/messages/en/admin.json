@@ -832,6 +832,7 @@
       "audienceUser": "Users",
       "remove": "Delete rule",
       "audienceEmpty": "No matching targets",
+      "audiencePreserved": "Advanced conditions; this version of the page cannot edit them",
       "audienceNoOwnerOrg": "No owning organization"
     },
     "group": {

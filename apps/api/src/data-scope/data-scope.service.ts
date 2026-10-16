@@ -81,7 +81,15 @@ interface CachedRule {
   catalog: DataScopeField[];
   /** 有日期條件:查詢時要先讀規則作者(根組織)與操作者所在租戶的時區(沒有就不讀)。 */
   hasDateCondition: boolean;
+  /**
+   * 有規則的套用對象不是人員條件格式(改格式前存的舊資料、壞資料):判斷不了套用到誰,
+   * 這個目標對**所有人**命中不到任何資料(fail-closed;跳過那條會變成多看)。
+   */
+  hasInvalidAudience: boolean;
 }
+
+/** 命中不到任何文件的條件(fail-closed 用)。 */
+const MATCH_NOTHING = { _id: { $in: [] } };
 
 /** 一個 collection 的快取:moduleKey → 該模組的規則;空 Map = 這張表沒有任何模組設了規則。 */
 type CollectionRules = Map<string, CachedRule>;
@@ -161,6 +169,10 @@ export class DataScopeService
       : { rule: DEFAULT_TENANT_TIMEZONE, operator: DEFAULT_TENANT_TIMEZONE };
     const conditions: ModuleCondition[] = [];
     for (const [moduleKey, cached] of byModule) {
+      if (cached.hasInvalidAudience) {
+        conditions.push({ moduleKey, condition: MATCH_NOTHING });
+        continue;
+      }
       const matched = await this.matchedRules(cached.rules, operator);
       if (matched.length === 0) {
         continue;
@@ -245,11 +257,12 @@ export class DataScopeService
       ) {
         continue;
       }
-      // 套用對象不是人員條件格式的規則(改格式前存的舊資料;環境清空重建、不寫遷移)判斷不了套用到誰:
-      // 跳過,不讓舊形狀走進判斷程式
-      const rules = (document.rules as unknown as DataScopeRuleEntry[]).filter(
+      const rules = document.rules as unknown as DataScopeRuleEntry[];
+      // 套用對象不是人員條件格式(改格式前存的舊資料;環境清空重建、不寫遷移)→ 整個目標 fail-closed,
+      // 舊形狀也不會走進判斷程式
+      const hasInvalidAudience = rules.some(
         (rule) =>
-          validateAudienceShape(rule.audience, DATA_SCOPE_AUDIENCE_OPTIONS).ok,
+          !validateAudienceShape(rule.audience, DATA_SCOPE_AUDIENCE_OPTIONS).ok,
       );
       const catalog = fieldCatalogOf(
         declaredFieldsOf(targetByModule.get(document.moduleKey) ?? null),
@@ -258,7 +271,9 @@ export class DataScopeService
         combineOp: document.combineOp,
         rules,
         catalog,
-        hasDateCondition: hasDateCondition(rules, catalog),
+        hasDateCondition:
+          !hasInvalidAudience && hasDateCondition(rules, catalog),
+        hasInvalidAudience,
       });
     }
     return loaded;
