@@ -115,6 +115,10 @@ const setOrgEnabled = useSetOrgEnabledMutation(
 - **`error` 回 `null` = 失敗不跳提示**(DATA-06 唯一的例外),只給「錯誤已就地顯示在使用者正盯著的彈窗裡、
   且彈窗不會關」的流程用,避免同一句話出現兩次。先例是複製組織與角色的彈窗:預覽與送出的失敗都寫在彈窗裡,
   兩支的 `error` 都回 `null`;送出成功仍照跳。
+- **立即生效的切換、背景寫回**:畫面在送出前就已經換好、寫入只是把它存起來的操作,`success: null`(畫面就是成功的回饋);
+  使用者親手做的切換,失敗照跳(畫面與存下來的不一致,要讓他知道);沒有使用者操作、系統自己補寫的背景寫回,
+  `error` 也回 `null`(使用者不知道有這件事,下次會再補)。先例:頭像選單切語言(`useChangeLocale`)與
+  登入後把本機語言寫回帳號(`useAccountLocaleSync`),都在 `apps/admin/src/hooks/base/useAccountLocale.ts`。
 
 排隊策略是**長度 1 的佇列:只顯示最新的一則,舊的直接被取代**(正本寫在
 `apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc)——

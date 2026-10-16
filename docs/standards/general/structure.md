@@ -232,6 +232,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 - 資料來源為 `database/base/registrations.ts` 與 `project/database/registrations.ts`,只由 `database/database.module.ts` 組裝。業務服務使用 repository,不自行以 Mongoose 注入或註冊 Model。
 - 專案 lookup 來源為 `project/lookup-providers.ts`(`{ declaration, repositoryToken }` 清單),同樣只由 `database/database.module.ts` 組裝:`repositoryToken` 必須是專案資料登記的 repository,清單以 `PROJECT_LOOKUP_SOURCES` 提供給 api 與受管定義 CLI;規則見 [forms](../../modules/forms.md#專案登記的來源)。
 - 專案看板頻道為 `project/realtime-boards.ts`(`{ key, moduleKey, permission }` 清單;換發時前端帶看板 key,資格只看那一筆的權限),同樣只由 `database/database.module.ts` 組裝(key 重複或空白載入即拋錯、app 起不來),以 `REALTIME_BOARDS` 提供給即時通道的 `RealtimeTicketService`(訂閱憑證要不要放 `board:<分店>`);規則見[部署](../../deployment.md#即時通道cloudflare-worker)與底座規格第 4 章。
+- 專案個人偏好為 `project/user-preferences.ts`(`{ key, type, defaultValue }` 清單),只由 `app.module.ts` 經 `UserPreferenceRegistryModule.forRoot` 與底座登記合成,key 不可與底座重複;規則見 [資料模型](../../data-model.md#個人偏好)。
 - repository providers 與 Nest exports 由登記導出,不匯出 Model provider 或整個 MongooseModule。底座 repository 實作放 `database/base/` 等 leaf 檔,不回指組裝入口;`database.module.ts` 保留既有 repository 的 TypeScript re-export 相容出口。
 - 新專案租戶資料沿用 BaseRepository 與隔離 plugins,同時登記組織歸屬檢查;刪組織與撤銷開通共用 `OrgBusinessDataReader`,不能新增可繞過檢查的 callback。專案資料登記不提供略過隔離的開關。
 - 測試 fixture 只豁免所有權方向,不新增 raw query 或 Mongoose 任意注入的例外;正式來源不得引用 fixture。驗收入口見 TEST-07 / TEST-08。

@@ -1,11 +1,14 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, delay } from "msw";
+
+import type { UpdateMyPreferencesMutationVariables } from "@repo/graphql";
 
 import { COLOR_MODE_STORAGE_KEY } from "@/lib/base/color-mode";
 import { LOCALE_STORAGE_KEY } from "@/lib/base/locale";
 import { useLocaleStore } from "@/stores/base/useLocaleStore";
 import { type AuthWorldOptions, authWorld } from "@/test/msw/auth-handlers";
-import { server } from "@/test/msw/server";
+import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
 
@@ -26,6 +29,46 @@ const signedIn = (options: AuthWorldOptions = {}) => {
   const world = authWorld({ hasRefreshCookie: true, ...options });
   server.use(...world.handlers);
   return world;
+};
+
+/**
+ * 記下 DOM 上出現過的每一個側欄名稱(第一次掛載用哪個語言,不能只看最後的狀態):
+ * 屬性被改掉時從 `oldValue` 取回改之前的名稱。
+ */
+const recordNavLabels = () => {
+  const seen = new Set<string>();
+  const collect = () => {
+    for (const nav of document.querySelectorAll("nav[aria-label]")) {
+      seen.add(nav.getAttribute("aria-label") ?? "");
+    }
+  };
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (
+        record.type === "attributes" &&
+        record.target instanceof HTMLElement &&
+        record.target.tagName === "NAV" &&
+        record.oldValue !== null
+      ) {
+        seen.add(record.oldValue);
+      }
+    }
+    collect();
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeOldValue: true,
+    attributeFilter: ["aria-label"],
+  });
+  return {
+    seen,
+    stop: () => {
+      collect();
+      observer.disconnect();
+    },
+  };
 };
 
 const openUserMenu = async (
@@ -91,17 +134,19 @@ describe("語言跟著帳號(規格 10.6)", () => {
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
   });
 
-  it("登入,帳號有語言設定:用帳號的語言,並覆寫本機快取(殼一出來就是帳號的語言)", async () => {
+  it("登入,帳號有語言設定:用帳號的語言,並覆寫本機快取(殼第一次掛載就是帳號的語言)", async () => {
     await cacheLocale("zh-TW");
     const world = signedIn({ preferences: { locale: "en" } });
+    const labels = recordNavLabels();
 
     renderApp({ path: "/overview" });
 
     expect(
       await screen.findByRole("navigation", { name: "Main navigation" }),
     ).toBeInTheDocument();
-    // 不先閃一次快取的語言:殼從頭到尾沒有出現過中文的側欄
-    expect(screen.queryByRole("navigation", { name: "主選單" })).toBeNull();
+    labels.stop();
+    // 不先提交一次快取的語言:DOM 上從沒出現過中文的側欄
+    expect([...labels.seen]).toEqual(["Main navigation"]);
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
     expect(world.calls.updateMyPreferences).toBe(0);
   });
@@ -200,5 +245,47 @@ describe("語言跟著帳號(規格 10.6)", () => {
       within(menu).getByRole("button", { name: "English" }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
+  });
+
+  it("連續快速切語言:寫入依序送出,帳號最後存的語言與畫面一致", async () => {
+    const world = signedIn({ preferences: { locale: "zh-TW" } });
+    let writes = 0;
+    let completed = 0;
+    // 第一次寫入(English)故意慢;沒有依序送出的話,它會比後送的「繁體中文」晚到、蓋掉帳號
+    server.use(
+      api.mutation("UpdateMyPreferences", async ({ variables }) => {
+        writes += 1;
+        if (writes === 1) {
+          await delay(300);
+        }
+        const { settings } = (variables as UpdateMyPreferencesMutationVariables)
+          .input;
+        Object.assign(world.preferences, settings);
+        completed += 1;
+        return HttpResponse.json({
+          data: { updateMyPreferences: { settings: { ...world.preferences } } },
+        });
+      }),
+    );
+
+    const { user } = renderApp({ path: "/overview" });
+    await openUserMenu(user);
+    await user.click(screen.getByRole("button", { name: "English" }));
+    await user.click(
+      within(screen.getByRole("dialog", { name: "User menu" })).getByRole(
+        "button",
+        { name: "繁體中文" },
+      ),
+    );
+
+    // 兩筆寫入都落地之後才看帳號(只等第二筆送出不夠:先送的那筆可能還在路上)
+    await waitFor(() => {
+      expect(completed).toBe(2);
+    });
+    expect(world.preferences.locale).toBe("zh-TW");
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("zh-TW");
+    expect(
+      screen.getByRole("dialog", { name: "使用者選單" }),
+    ).toBeInTheDocument();
   });
 });
