@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import type { Audience } from "@repo/domain/audience";
 import type { FieldDef } from "@repo/domain/form";
 import {
   ASSIGNEE_KINDS,
@@ -13,27 +14,23 @@ import { Stack } from "@repo/ui/stack";
 
 import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
 
+import { AudienceConditionDialog } from "./AudienceConditionDialog";
 import { AudienceSourceSummary } from "./AudienceSourceSummary";
 import { FieldSourceSelect } from "./FieldSourceSelect";
+import { useApproverAudienceSetup } from "./useApproverAudienceSetup";
 import type { CatalogForm } from "./useDesignerCatalog";
 
 const MANAGER_LEVELS = [1, 2, 3, 4, 5] as const;
 
 /**
- * 換來源種類時的起點(各自的必要欄位先給空值,檢查器會指出還沒填的);
- * 「表單欄位」的表單固定是檢查用表單;「人員條件」先給一個空的 AND 群組,由對話框填條件。
+ * 換成「表單欄位 / 主管」時的起點(必要欄位先給空值,檢查器會指出還沒填的);
+ * 「表單欄位」的表單固定是檢查用表單。換成「人員條件」不走這裡:先開條件對話框,[套用] 才換。
  */
 const defaultSourceOf = (
-  kind: AssigneeKind,
+  kind: Exclude<AssigneeKind, "audience">,
   checkFormKey: string | null,
 ): AssigneeSource => {
   switch (kind) {
-    case "audience": {
-      return {
-        kind,
-        audience: { mode: "match", filter: { op: "AND", children: [] } },
-      };
-    }
     case "field": {
       return { kind, formKey: checkFormKey ?? "", fieldKey: "" };
     }
@@ -67,7 +64,8 @@ const assigneeFieldsOf = (fields: readonly FieldDef[] | null): FieldDef[] =>
 /**
  * 審核者來源的三種(《底座規格》3.3;Figma BS-02a / c):人員條件 / 表單欄位 / 主管。
  * 「人員條件」取代原本的「指定使用者」與「角色」:面板只放條件摘要與 [編輯條件],
- * 條件在對話框用 `AudiencePicker` 編輯(面板寬度放不下條件列);
+ * 條件在對話框用 `AudiencePicker` 編輯(面板寬度放不下條件列)。從別的來源換成人員條件時
+ * 先開對話框,**按 [套用] 才換**;[取消] 保留原本的來源與設定;
  * 「表單欄位」從「檢查用表單」目前版本的使用者型引用欄選(沒選檢查用表單時提示先選);
  * 「主管」從申請所屬組織往上找第幾層。
  */
@@ -82,7 +80,9 @@ export const AssigneeSourcePicker = ({
   isDisabled,
 }: AssigneeSourcePickerProps) => {
   const t = useTranslations("admin.workflows.assignee");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  /** 從別的來源換成人員條件、還沒按 [套用] */
+  const [isSwitching, setIsSwitching] = useState(false);
+  const setup = useApproverAudienceSetup(isShared, checkFormFields);
   const formNameOf = (formKey: string): string =>
     forms.find((form) => form.key === formKey)?.name ?? formKey;
 
@@ -98,11 +98,14 @@ export const AssigneeSourcePicker = ({
           label: t(`kinds.${kind}`),
         }))}
         onChange={(kind) => {
-          if (kind !== value.kind) {
-            onChange(defaultSourceOf(kind, checkFormKey));
-            // 換成人員條件:直接開對話框填條件(空條件不能發布)
-            setIsDialogOpen(kind === "audience");
+          if (kind === value.kind) {
+            return;
           }
+          if (kind === "audience") {
+            setIsSwitching(true);
+            return;
+          }
+          onChange(defaultSourceOf(kind, checkFormKey));
         }}
       />
       {value.kind === "audience" && (
@@ -110,12 +113,29 @@ export const AssigneeSourcePicker = ({
           audience={value.audience}
           stepName={stepName}
           isShared={isShared}
-          checkFormFields={checkFormFields}
+          setup={setup}
           isDisabled={isDisabled}
-          isDialogOpen={isDialogOpen}
-          onDialogOpenChange={setIsDialogOpen}
           onChange={(audience) => {
             onChange({ kind: "audience", audience });
+          }}
+        />
+      )}
+      {isSwitching && (
+        <AudienceConditionDialog
+          stepName={stepName}
+          isShared={isShared}
+          initial={setup.initialDraftOf(null)}
+          fields={setup.fields}
+          orgSources={setup.orgSources}
+          onCancel={() => {
+            setIsSwitching(false);
+          }}
+          onApply={(audience) => {
+            onChange({
+              kind: "audience",
+              audience: audience as unknown as Audience,
+            });
+            setIsSwitching(false);
           }}
         />
       )}

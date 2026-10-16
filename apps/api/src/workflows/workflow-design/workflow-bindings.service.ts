@@ -38,6 +38,7 @@ import {
 import { WorkflowAccessService } from "../workflow-access.service";
 import {
   type BindingIssue,
+  assigneeKindUnknownError,
   bindingInvalidError,
   isDuplicateKey,
   workflowForbiddenError,
@@ -334,6 +335,10 @@ export class WorkflowBindingsService {
       }
       case "field": {
         return fieldIssue(base, label, assignee, context);
+      }
+      default: {
+        // 型別上不會到這裡;落盤的舊資料(`users` / `role`)才會
+        throw assigneeKindUnknownError((assignee as { kind?: unknown }).kind);
       }
     }
   }

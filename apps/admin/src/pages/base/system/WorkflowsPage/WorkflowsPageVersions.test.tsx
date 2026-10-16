@@ -49,9 +49,12 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
               fields: ["definition"],
               issues: [
                 {
-                  code: "ROLE_ID_MISSING",
-                  message: "關卡「人資」的角色還沒選",
-                  location: { stepKey: "hr" },
+                  code: "AUDIENCE_INVALID",
+                  message: "關卡 hr 的審核者條件不完整或格式不對",
+                  location: {
+                    stepKey: "hr",
+                    property: "assignee.audience.filter.children",
+                  },
                 },
               ],
             },
@@ -71,7 +74,7 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
     await user.click(within(dialog).getByRole("button", { name: "發布" }));
 
     expect(
-      await within(dialog).findByText("關卡「人資」的角色還沒選"),
+      await within(dialog).findByText("關卡 hr 的審核者條件不完整或格式不對"),
     ).toBeInTheDocument();
   });
 

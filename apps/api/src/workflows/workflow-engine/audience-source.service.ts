@@ -10,6 +10,7 @@ import type { AssigneeSource } from "@repo/domain/workflow";
 import { AudienceService } from "../../audience/audience.service";
 import { OrgManagersService } from "../../orgs/org-managers.service";
 import { TenantDirectoryService } from "../tenant-directory.service";
+import { assigneeKindUnknownError } from "../workflows-error";
 
 /**
  * 依「這張單據」算人時要的上下文(審核者、知會對象共用)。
@@ -96,6 +97,10 @@ export class AudienceSourceService {
           ctx.tenantId,
           source.level,
         );
+      }
+      default: {
+        // 型別上不會到這裡;落盤的舊資料(`users` / `role`)才會
+        throw assigneeKindUnknownError((source as { kind?: unknown }).kind);
       }
     }
   }
