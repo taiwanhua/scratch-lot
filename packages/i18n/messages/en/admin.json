@@ -828,33 +828,14 @@
     "rule": {
       "title": "Rule {index}",
       "audience": "Applies to",
-      "audienceTargets": "Targets",
-      "audienceAll": "Everyone",
-      "audienceRole": "Roles",
-      "audienceOrg": "Organizations",
-      "audienceUser": "Users",
-      "remove": "Delete rule",
-      "audienceEmpty": "No matching targets",
-      "audiencePreserved": "Advanced conditions; this version of the page cannot edit them",
-      "audienceNoOwnerOrg": "No owning organization"
-    },
-    "group": {
-      "rootOp": "Combine conditions",
-      "nestedOp": "Combine group",
-      "nestedHint": "The whole group counts as one condition of the level above",
-      "opAnd": "AND — all must hold",
-      "opOr": "OR — any one is enough",
-      "addCondition": "+ Condition",
-      "addGroup": "+ Group",
-      "remove": "Delete group"
+      "conditions": "Conditions",
+      "remove": "Delete rule"
     },
     "condition": {
-      "field": "Field",
       "cond": "Comparison",
       "value": "Value",
       "valueFrom": "From",
-      "valueTo": "To",
-      "remove": "Delete"
+      "valueTo": "To"
     },
     "conditions": {
       "in": "is one of",
@@ -881,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "This comparison does not apply to the field's type.",
       "VALUE_SOURCE_NOT_ALLOWED": "This value source does not apply to the field's type.",
       "VALUE_INVALID": "Please provide a valid value.",
-      "AUDIENCE_INVALID": "Please choose who this rule applies to."
+      "AUDIENCE_INVALID": "Please complete the applies-to conditions (every row needs a value)."
     },
     "feedback": {
       "saveSuccess": "Data scope rule saved."
@@ -2668,5 +2649,49 @@
     "tabs": "Personal settings tabs",
     "tabPreferences": "Preferences",
     "preferencesEmpty": "There are no preferences to adjust yet. Switch appearance and language from the avatar menu at the top right."
+  },
+  "conditionTree": {
+    "rootOp": "Combine",
+    "nestedOp": "Combine group",
+    "nestedHint": "The whole group counts as one condition of the level above",
+    "opAnd": "AND — all must hold",
+    "opOr": "OR — any one is enough",
+    "addCondition": "+ Condition",
+    "addGroup": "+ Group",
+    "removeGroup": "Delete group",
+    "field": "Field",
+    "remove": "Delete"
+  },
+  "audiencePicker": {
+    "modeAll": "Everyone",
+    "modeMatch": "Matching conditions",
+    "fields": {
+      "user": "User",
+      "role": "Role",
+      "org": "Organization",
+      "permission": "Permission"
+    },
+    "cond": "Comparison",
+    "condIn": "is in",
+    "condHold": "holds",
+    "value": "Value",
+    "range": "Range",
+    "ranges": {
+      "self": "Itself",
+      "descendants": "Including children",
+      "ancestors": "Including parents"
+    },
+    "orgSource": "Value",
+    "orgStatic": "Specific organizations",
+    "orgPick": "Organizations",
+    "empty": "No matching targets",
+    "noOwnerOrg": "No owning organization",
+    "emptyGroup": "A group needs at least one condition.",
+    "emptyValue": "Please choose a value.",
+    "permissionSearch": "Search permissions",
+    "permissionEmpty": "No matching permissions",
+    "permissionWildcard": "All",
+    "permissionLoadFailed": "Failed to load permissions. Please try again later.",
+    "permissionConfirm": "Done"
   }
 }

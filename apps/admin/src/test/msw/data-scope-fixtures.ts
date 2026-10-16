@@ -227,12 +227,37 @@ export const savedRule: TestDataScopeRule = {
   updatedAt: "2026-09-20T02:00:00.000Z",
   rules: [
     {
+      // 套用對象 = 客服 AND(A-2 台北分店含下層 OR 持有「示範模組1 · 編輯」)(Figma BS-01 的那一份)
       audience: {
         mode: "match",
         filter: {
-          field: "role",
-          cond: "in",
-          value: { kind: "static", values: ["role-support"] },
+          op: "AND",
+          children: [
+            {
+              field: "role",
+              cond: "in",
+              value: { kind: "static", values: ["role-support"] },
+            },
+            {
+              op: "OR",
+              children: [
+                {
+                  field: "org",
+                  cond: "in",
+                  value: { kind: "static", values: ["org-store"] },
+                  range: "descendants",
+                },
+                {
+                  field: "permission",
+                  cond: "in",
+                  value: {
+                    kind: "static",
+                    values: ["demo.sub.sample-one.edit"],
+                  },
+                },
+              ],
+            },
+          ],
         },
       },
       filter: {

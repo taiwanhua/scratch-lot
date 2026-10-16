@@ -828,33 +828,14 @@
     "rule": {
       "title": "規則 {index}",
       "audience": "套用對象",
-      "audienceTargets": "對象",
-      "audienceAll": "全部",
-      "audienceRole": "角色",
-      "audienceOrg": "組織",
-      "audienceUser": "使用者",
-      "remove": "刪除規則",
-      "audienceEmpty": "沒有符合的對象",
-      "audiencePreserved": "進階條件,這一版畫面無法編輯",
-      "audienceNoOwnerOrg": "無擁有組織"
-    },
-    "group": {
-      "rootOp": "條件組合",
-      "nestedOp": "群組組合",
-      "nestedHint": "整個群組視為上一層的一個條件",
-      "opAnd": "AND — 全部成立才放行",
-      "opOr": "OR — 其中一個成立即可",
-      "addCondition": "+ 條件",
-      "addGroup": "+ 群組",
-      "remove": "刪除群組"
+      "conditions": "條件組合",
+      "remove": "刪除規則"
     },
     "condition": {
-      "field": "欄位",
       "cond": "條件",
       "value": "值",
       "valueFrom": "起日",
-      "valueTo": "迄日",
-      "remove": "刪除"
+      "valueTo": "迄日"
     },
     "conditions": {
       "in": "屬於",
@@ -881,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "這個比較方式不適用於該欄位的型別。",
       "VALUE_SOURCE_NOT_ALLOWED": "這個值來源不適用於該欄位的型別。",
       "VALUE_INVALID": "請填一個有效的值。",
-      "AUDIENCE_INVALID": "請選擇這條規則要套用給誰。"
+      "AUDIENCE_INVALID": "請把套用對象的條件填完整(每一列都要選值)。"
     },
     "feedback": {
       "saveSuccess": "已儲存資料範圍規則。"
@@ -2668,5 +2649,49 @@
     "tabs": "個人設定分頁",
     "tabPreferences": "偏好",
     "preferencesEmpty": "目前沒有可以調整的偏好。外觀與語言在右上角的頭像選單切換。"
+  },
+  "conditionTree": {
+    "rootOp": "組合",
+    "nestedOp": "群組組合",
+    "nestedHint": "整個群組視為上一層的一個條件",
+    "opAnd": "AND — 全部成立才放行",
+    "opOr": "OR — 其中一個成立即可",
+    "addCondition": "+ 條件",
+    "addGroup": "+ 群組",
+    "removeGroup": "刪除群組",
+    "field": "欄位",
+    "remove": "刪除"
+  },
+  "audiencePicker": {
+    "modeAll": "所有人",
+    "modeMatch": "符合條件",
+    "fields": {
+      "user": "使用者",
+      "role": "角色",
+      "org": "所屬組織",
+      "permission": "權限"
+    },
+    "cond": "條件",
+    "condIn": "屬於",
+    "condHold": "持有",
+    "value": "值",
+    "range": "範圍",
+    "ranges": {
+      "self": "本身",
+      "descendants": "含下層",
+      "ancestors": "含上層"
+    },
+    "orgSource": "值",
+    "orgStatic": "指定組織",
+    "orgPick": "組織",
+    "empty": "沒有符合的對象",
+    "noOwnerOrg": "無擁有組織",
+    "emptyGroup": "群組至少要有一個條件。",
+    "emptyValue": "請選擇值。",
+    "permissionSearch": "搜尋權限",
+    "permissionEmpty": "沒有符合的權限",
+    "permissionWildcard": "全部",
+    "permissionLoadFailed": "權限清單載入失敗,請稍後再試。",
+    "permissionConfirm": "確定"
   }
 }

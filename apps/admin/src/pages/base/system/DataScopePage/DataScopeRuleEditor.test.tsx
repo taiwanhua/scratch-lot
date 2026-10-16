@@ -4,12 +4,9 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { savedRule } from "@/test/msw/data-scope-fixtures";
 
 import {
-  autocompleteGroupLabels,
-  autocompleteOptions,
   chooseOption,
   comboboxAt,
   editor,
-  pickAutocomplete,
   renderPage,
   waitForEditor,
 } from "./data-scope-test-support";
@@ -78,82 +75,10 @@ describe("條件樹編輯器(資料範圍)", () => {
     ).toContain("【操作者本人】");
   });
 
-  it("套用對象:角色與使用者是 Autocomplete 多選,組織用組織樹", async () => {
-    const { user: actor } = renderPage();
-    await startRule(actor);
-
-    await chooseOption(actor, comboboxAt("套用對象"), "角色");
-    await actor.click(comboboxAt("對象"));
-    // 每列主文字角色名、次文字擁有組織(Figma Draft/Autocomplete 253:39);
-    // 兩個租戶各有一個同名的「租戶管理員」,靠次文字與分組標題才分得出來(#261 的 8)。
-    // 夾具給的順序是亂的,清單先依「擁有組織 → 角色名」排過(#372)
-    expect(autocompleteOptions()).toEqual([
-      "客服租戶 A",
-      "租戶管理員租戶 A",
-      "編輯租戶 A",
-      "稽核租戶 A 業務部",
-      "租戶管理員租戶 B",
-    ]);
-    // 分組標題是 listbox 的標題、不是可選的選項(換掉 Select 前它是一個 disabled 的 option);
-    // 連文字順序一起驗,才看得出每個標題底下掛的是哪幾列
-    expect(screen.getByRole("listbox").textContent).toBe(
-      [
-        "租戶 A客服租戶 A租戶管理員租戶 A編輯租戶 A",
-        "租戶 A 業務部稽核租戶 A 業務部",
-        "租戶 B租戶管理員租戶 B",
-      ].join(""),
-    );
-    await actor.keyboard("{Escape}");
-
-    await chooseOption(actor, comboboxAt("套用對象"), "組織");
-    expect(
-      await within(editor()).findByRole("tree", { name: "組織" }),
-    ).toBeInTheDocument();
-  });
-
-  // #372:同一個擁有組織的角色被 api 回的順序隔開時,MUI 的 `groupBy` 只合併相鄰的同值,
-  // 於是「租戶 A」會出現兩次。分組改以**擁有組織**為準(租戶頂層底下可以有很多個),
-  // 清單先排序讓同組織的角色相鄰。
-  it("套用對象「指定角色」:依擁有組織分組,每個組織的標題只出現一次", async () => {
-    const { user: actor } = renderPage();
-    await startRule(actor);
-
-    await chooseOption(actor, comboboxAt("套用對象"), "角色");
-    await actor.click(comboboxAt("對象"));
-
-    expect(autocompleteGroupLabels()).toEqual([
-      "租戶 A",
-      "租戶 A 業務部",
-      "租戶 B",
-    ]);
-    // 「租戶 A 業務部」的租戶頂層是「租戶 A」—— 標題是擁有組織,不是租戶頂層
-    expect(autocompleteGroupLabels()).not.toContain("共用");
-  });
-
-  it("套用對象「指定角色」:在選單內輸入即收斂(不再有選單外的搜尋框)", async () => {
-    const { user: actor } = renderPage();
-    await startRule(actor);
-
-    await chooseOption(actor, comboboxAt("套用對象"), "角色");
-    // #307:搜尋回到選單內,選單外那個獨立的「搜尋角色」欄位已移除
-    expect(within(editor()).queryByLabelText("搜尋角色")).toBeNull();
-
-    await actor.type(comboboxAt("對象"), "租戶管理員");
-
-    // 同名的兩筆都留著,靠次文字分辨
-    expect(autocompleteOptions()).toEqual([
-      "租戶管理員租戶 A",
-      "租戶管理員租戶 B",
-    ]);
-  });
-
   it("動態值【操作者本人】存成佔位符,送出的 payload 與正本形狀一致", async () => {
     const { user: actor, fake } = renderPage();
     await startRule(actor);
 
-    await chooseOption(actor, comboboxAt("套用對象"), "角色");
-    await pickAutocomplete(actor, comboboxAt("對象"), "客服");
-    await actor.keyboard("{Escape}");
     await chooseOption(actor, comboboxAt("欄位"), "建立者");
     await chooseOption(actor, comboboxAt("值"), "【操作者本人】");
     await actor.keyboard("{Escape}");
@@ -167,14 +92,7 @@ describe("條件樹編輯器(資料範圍)", () => {
       combineOp: "OR",
       rules: [
         {
-          audience: {
-            mode: "match",
-            filter: {
-              field: "role",
-              cond: "in",
-              value: { kind: "static", values: ["role-support"] },
-            },
-          },
+          audience: { mode: "all" },
           filter: {
             op: "AND",
             children: [
@@ -188,47 +106,6 @@ describe("條件樹編輯器(資料範圍)", () => {
         },
       ],
     });
-  });
-
-  it("這一版畫面表達不出來的套用對象(多條件列):顯示唯讀提示,不假裝成「所有人」", async () => {
-    renderPage({
-      world: {
-        rules: [
-          {
-            ...savedRule,
-            rules: savedRule.rules.map((rule) => ({
-              ...rule,
-              audience: {
-                mode: "match",
-                filter: {
-                  op: "AND",
-                  children: [
-                    {
-                      field: "role",
-                      cond: "in",
-                      value: { kind: "static", values: ["role-support"] },
-                    },
-                    {
-                      field: "permission",
-                      cond: "in",
-                      value: { kind: "static", values: ["demo.view-all"] },
-                    },
-                  ],
-                },
-              },
-            })),
-          },
-        ],
-      },
-    });
-    await waitForEditor("示範模組1(demo_items_one)");
-
-    expect(
-      await within(editor()).findByText("套用對象:進階條件,這一版畫面無法編輯"),
-    ).toBeInTheDocument();
-    expect(
-      within(editor()).queryByRole("combobox", { name: "套用對象" }),
-    ).not.toBeInTheDocument();
   });
 
   it("日期條件:存的時點以租戶時區回顯成日期,改選的那天送出台北 00:00 的時點", async () => {

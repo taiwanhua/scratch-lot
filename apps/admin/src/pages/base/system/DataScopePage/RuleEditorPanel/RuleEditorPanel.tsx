@@ -9,7 +9,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { OrgNodeLike, OrgOption } from "@/lib/base/org-tree";
+import type { OrgOption } from "@/lib/base/org-tree";
 
 import type {
   DataScopeRuleData,
@@ -24,9 +24,7 @@ export interface RuleEditorPanelProps {
   /** 這個目標目前存著的規則(`null` = 尚無規則) */
   rule: DataScopeRuleData | null;
   canEdit: boolean;
-  roleOptions: readonly PickerOption[];
   userOptions: readonly PickerOption[];
-  orgNodes: readonly OrgNodeLike[];
   orgOptions: readonly OrgOption[];
   /** 儲存成功後失效相關查詢(帶目標 id) */
   onSaved: (targetId: string) => void;
@@ -43,9 +41,7 @@ export const RuleEditorPanel = ({
   target,
   rule,
   canEdit,
-  roleOptions,
   userOptions,
-  orgNodes,
   orgOptions,
   onSaved,
   onDirtyChange,
@@ -56,11 +52,10 @@ export const RuleEditorPanel = ({
 
   const env = {
     fields: target.fields,
-    orgNodes,
     orgOptions,
-    roleOptions,
     userOptions,
     issues: editor.issues,
+    ruleIssues: editor.ruleIssues,
     isReadOnly: !canEdit,
   };
 

@@ -5,11 +5,19 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { RuleDraft } from "@/lib/base/data-scope-rule";
+import { AudiencePicker } from "@/components/base/AudiencePicker/AudiencePicker";
+import { ConditionGroup } from "@/components/base/condition-tree/ConditionGroup";
+import { audienceIssueKey } from "@/lib/base/audience-draft";
+import { audienceIssuesOf, issueKey } from "@/lib/base/data-scope-issues";
+import {
+  type ConditionDraft,
+  DATA_SCOPE_AUDIENCE_FIELDS,
+  type RuleDraft,
+  newCondition,
+} from "@/lib/base/data-scope-rule";
 
 import type { DataScopeEditorEnv } from "../data-scope-types";
-import { ConditionGroup } from "./ConditionGroup";
-import { RuleAudience } from "./RuleAudience";
+import { DataScopeConditionRow } from "./DataScopeConditionRow";
 
 export interface RuleCardProps {
   rule: RuleDraft;
@@ -21,8 +29,10 @@ export interface RuleCardProps {
 }
 
 /**
- * 一條規則(Figma 167:1718 / 167:1776):套用對象 + 條件樹。
- * 條件樹的根就是 api 的 `filter`,所以這裡的 `childPath` 從空陣列開始。
+ * 一條規則(Figma `Draft/DataScopeRuleCard` 46:156,BS-01 289:82815):上下兩塊 ——
+ * 「套用對象」(AudiencePicker:這條規則套用到誰,選所有人時條件樹收起)與
+ * 「條件組合」(套用到的人看得到哪些資料)。兩棵樹共用 `ConditionGroup`,根層下拉都叫「組合」。
+ * 條件組合的根就是 api 的 `filter`,所以 `childPath` 從空陣列開始。
  */
 export const RuleCard = ({
   rule,
@@ -32,6 +42,15 @@ export const RuleCard = ({
   onRemove,
 }: RuleCardProps) => {
   const t = useTranslations("admin.dataScope.rule");
+  const tReasons = useTranslations("admin.dataScope.reasons");
+
+  const audienceIssues = new Map(
+    audienceIssuesOf(env.ruleIssues, index).map((issue) => [
+      audienceIssueKey(issue.childPath, issue.target),
+      tReasons(issue.reason),
+    ]),
+  );
+  const firstField = env.fields.at(0);
 
   return (
     <Stack
@@ -44,18 +63,10 @@ export const RuleCard = ({
         py: 1.75,
       }}
     >
-      <Stack direction="row" spacing={1.25} sx={{ alignItems: "flex-start" }}>
-        <Typography variant="subtitle2" sx={{ pt: 1.25 }}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
+        <Typography variant="subtitle2">
           {t("title", { index: index + 1 })}
         </Typography>
-        <RuleAudience
-          audience={rule.audience}
-          ruleIndex={index}
-          env={env}
-          onChange={(audience) => {
-            onChange({ ...rule, audience });
-          }}
-        />
         <Box sx={{ flex: 1 }} />
         {!env.isReadOnly && (
           <Button variant="text" size="small" onClick={onRemove}>
@@ -64,15 +75,55 @@ export const RuleCard = ({
         )}
       </Stack>
 
-      <ConditionGroup
-        group={rule.filter}
-        ruleIndex={index}
-        childPath={[]}
-        env={env}
-        onChange={(filter) => {
-          onChange({ ...rule, filter });
+      <AudiencePicker
+        title={t("audience")}
+        value={rule.audience}
+        allowAll
+        fields={DATA_SCOPE_AUDIENCE_FIELDS}
+        issues={audienceIssues}
+        isReadOnly={env.isReadOnly}
+        onChange={(audience) => {
+          onChange({ ...rule, audience });
         }}
       />
+
+      <Stack
+        component="section"
+        aria-label={t("conditions")}
+        spacing={1}
+        sx={{ borderTop: 1, borderColor: "divider", pt: 1.5 }}
+      >
+        <Typography variant="subtitle2" color="text.secondary">
+          {t("conditions")}
+        </Typography>
+        <ConditionGroup<ConditionDraft>
+          group={rule.filter}
+          childPath={[]}
+          isReadOnly={env.isReadOnly}
+          createCondition={
+            firstField === undefined
+              ? undefined
+              : () => newCondition(firstField)
+          }
+          errorOf={(childPath) => {
+            const issue = env.issues.get(issueKey(index, childPath, "group"));
+            return issue === undefined ? undefined : tReasons(issue.reason);
+          }}
+          renderCondition={(condition, childPath, handlers) => (
+            <DataScopeConditionRow
+              condition={condition}
+              ruleIndex={index}
+              childPath={childPath}
+              env={env}
+              onChange={handlers.onChange}
+              onRemove={handlers.onRemove}
+            />
+          )}
+          onChange={(filter) => {
+            onChange({ ...rule, filter });
+          }}
+        />
+      </Stack>
     </Stack>
   );
 };

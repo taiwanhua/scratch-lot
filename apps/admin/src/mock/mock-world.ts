@@ -177,8 +177,11 @@ export const mockHandlers = ({
     ...moduleAdminWorld({ tree: moduleAdminTree }).handlers,
     // 資料範圍(#205 / #246):`savedRule` 讓左清單一開始就有一筆「已設規則」
     ...withoutOperations(
-      dataScopeWorld({ targets: dataScopeTargets, rules: [savedRule] })
-        .handlers,
+      dataScopeWorld({
+        targets: dataScopeTargets,
+        rules: [savedRule],
+        permissionModules: matrixModules,
+      }).handlers,
       ["Roles", "Users", "OrgTree"],
     ),
     // 欄位管理(#206 / #264):`currentOrg` 只決定新增選項的擁有組織標籤
