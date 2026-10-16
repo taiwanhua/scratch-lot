@@ -48,6 +48,6 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 ## 5. 目前進度(2026-10-16)
 
-- 兩份規格已定稿(總核對必修 22 / 建議 22 條全部處理);下一步規格開 PR(`feat/round-spec` → dev → staging → main)。
-- 下一步:底座票相依關係圖 → 使用者確認 → 開票 → 開 `feat/base-round` 派工。
+- 兩份規格已定稿並進 main(PR #12 → #13 → #14,2026-10-16)。
+- 底座票 46 張、7 批,相依關係使用者 2026-10-16 確認;整合分支 `feat/base-round`(worktree `C:projectsl-base-round`)。票號與進度見 Spec issue。同時最多 5 個 agent。
 - 回收階段待辦:Draft 元件搬進 Library、`Draft/tagPalettes` 改綁 Library、Snackbar+ 取代 Snackbar、15 頁 Overlay 背景、spare-5;底座規格 10.13 的規則與腳本搬進 wowgo-base。
