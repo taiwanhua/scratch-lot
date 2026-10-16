@@ -38,12 +38,18 @@ const staticValues = (value: AudienceValueDraft): string[] =>
  * 候選清單裡找不到的 id(超出一次取回的筆數、看不到的租戶、已刪除…)**不丟掉**:
  * 補一個佔位選項(`missing` 產生,文字「不在候選清單中」),照樣列成可取消的標籤,
  * 改別的值時原樣送回(同組織 / 權限欄位的做法)。佔位選項也放進 `options`,受控值才對得上。
+ * **清單載入完成才判定**:還在載入時欄位停用、標籤先不出現(Autocomplete 的 loading),
+ * 免得每個已存的值都先閃一下「不在候選清單中」;停用期間改不到值,狀態不會被清掉。
  */
 const withMissing = <T extends { id: string }>(
   candidates: readonly T[],
   ids: readonly string[],
+  isLoading: boolean,
   missing: (id: string) => T,
 ): { options: T[]; selected: T[] } => {
+  if (isLoading) {
+    return { options: [], selected: [] };
+  }
   const extra = ids
     .filter((id) => !candidates.some((option) => option.id === id))
     .map((id) => missing(id));
@@ -77,7 +83,8 @@ export const AudienceValueField = ({
   };
 
   if (condition.field === "user") {
-    const users = withMissing(env.options.users, ids, (id) => ({
+    const isLoading = env.options.isUsersLoading;
+    const users = withMissing(env.options.users, ids, isLoading, (id) => ({
       id,
       label: t("outOfList"),
     }));
@@ -90,7 +97,9 @@ export const AudienceValueField = ({
         value={users.selected}
         chipDeleteIcon="close"
         error={hasError}
-        disabled={env.isReadOnly}
+        disabled={env.isReadOnly || isLoading}
+        loading={isLoading}
+        loadingText={t("loading")}
         noOptionsText={t("empty")}
         sx={{ width: 300 }}
         getOptionKey={(option) => option.id}
@@ -103,7 +112,8 @@ export const AudienceValueField = ({
   }
 
   if (condition.field === "role") {
-    const roles = withMissing(env.options.roles, ids, (id) => ({
+    const isLoading = env.options.isRolesLoading;
+    const roles = withMissing(env.options.roles, ids, isLoading, (id) => ({
       id,
       name: t("outOfList"),
       label: t("outOfList"),
@@ -125,7 +135,9 @@ export const AudienceValueField = ({
         value={roles.selected}
         chipDeleteIcon="close"
         error={hasError}
-        disabled={env.isReadOnly}
+        disabled={env.isReadOnly || isLoading}
+        loading={isLoading}
+        loadingText={t("loading")}
         noOptionsText={t("empty")}
         sx={{ width: 300 }}
         groupBy={groupBy}
