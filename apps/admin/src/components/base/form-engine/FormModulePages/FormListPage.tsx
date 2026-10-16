@@ -222,7 +222,7 @@ export const FormListPage = ({ module }: ModulePageProps) => {
         <DeleteSubmissionDialog
           label={labelOf(deleteTarget)}
           isSubmitting={deletion.isPending}
-          errorCode={deleteError?.code ?? null}
+          error={deleteError}
           onCancel={() => {
             setDeleteError(null);
             setDeleteTarget(null);

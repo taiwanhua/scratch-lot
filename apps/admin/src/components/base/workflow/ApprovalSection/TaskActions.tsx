@@ -14,6 +14,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
@@ -45,7 +46,7 @@ export const TaskActions = ({
   onDecided,
 }: TaskActionsProps) => {
   const t = useTranslations("admin.approval.decide");
-  const tErrors = useTranslations("admin.workflows.errors");
+  const errorText = useAdminErrorText("admin.workflows.errors");
   const { session } = useSession();
   const [decision, setDecision] = useState<WorkflowDecision | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,7 +58,7 @@ export const TaskActions = ({
         payload.decideTask.result === WorkflowDecideResult.StepClosed
           ? t("stepClosed")
           : t(`feedback.${variables.input.decision}`),
-      error: (failure) => tErrors(workflowErrorOf(failure).code),
+      error: (failure) => errorText(workflowErrorOf(failure)),
       onSuccess: (payload) => {
         setDecision(null);
         onDecided(
@@ -65,7 +66,7 @@ export const TaskActions = ({
         );
       },
       onError: (failure) => {
-        setErrorMessage(tErrors(workflowErrorOf(failure).code));
+        setErrorMessage(errorText(workflowErrorOf(failure)));
       },
     }),
   );

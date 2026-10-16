@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import { ClientError } from "@repo/graphql";
 
-import { parseAdminError } from "./errors";
+import { adminErrorText, parseAdminError } from "./errors";
 
 const clientErrorOf = (
   errors: { message?: string; extensions?: Record<string, unknown> }[],
@@ -90,5 +90,79 @@ describe("parseAdminError", () => {
     ]);
 
     expect(parseAdminError(error, SPEC)).toEqual({ code: "UNEXPECTED" });
+  });
+});
+
+const forbidden = (reason: unknown) =>
+  clientErrorOf([
+    { message: "blocked", extensions: { code: "FORBIDDEN", reason } },
+  ]);
+
+const translator = (dictionary: Record<string, string>) =>
+  Object.assign((key: string) => dictionary[key] ?? key, {
+    has: (key: string) => key in dictionary,
+  });
+
+const tErrors = (code: string) => `errors.${code}`;
+
+/** 專案登記的守門擋下:`FORBIDDEN` + 專案錯誤碼(`docs/concepts/workflow-engine.md`「掛接點」)。 */
+describe("專案錯誤碼(projectReason / adminErrorText)", () => {
+  const FORBIDDEN_SPEC = {
+    codes: ["FORBIDDEN", "NOT_FOUND"] as const,
+    refine: (code: string, reason: unknown) =>
+      code === "FORBIDDEN" && reason === "ROOT_ONLY"
+        ? ("NOT_FOUND" as const)
+        : undefined,
+  };
+
+  it("FORBIDDEN 帶本頁不認得、格式合格的 reason → projectReason", () => {
+    expect(
+      parseAdminError(forbidden("PURCHASE_UNRECEIVED_ROWS"), FORBIDDEN_SPEC),
+    ).toEqual({
+      code: "FORBIDDEN",
+      projectReason: "PURCHASE_UNRECEIVED_ROWS",
+      message: "blocked",
+    });
+  });
+
+  it("被細分的 reason、格式不合的 reason、其他碼 → 沒有 projectReason", () => {
+    expect(
+      parseAdminError(forbidden("ROOT_ONLY"), FORBIDDEN_SPEC).projectReason,
+    ).toBeUndefined();
+    expect(
+      parseAdminError(forbidden("not-a-code"), FORBIDDEN_SPEC).projectReason,
+    ).toBeUndefined();
+    const notFound = clientErrorOf([
+      { extensions: { code: "NOT_FOUND", reason: "SOME_REASON" } },
+    ]);
+    expect(
+      parseAdminError(notFound, FORBIDDEN_SPEC).projectReason,
+    ).toBeUndefined();
+  });
+
+  it("專案字典有 admin.lifecycle.<碼> → 顯示專案文案", () => {
+    const t = translator({
+      "admin.lifecycle.PURCHASE_UNRECEIVED_ROWS": "還有明細沒有點收",
+    });
+    expect(
+      adminErrorText(
+        { code: "FORBIDDEN", projectReason: "PURCHASE_UNRECEIVED_ROWS" },
+        tErrors,
+        t,
+      ),
+    ).toBe("還有明細沒有點收");
+  });
+
+  it("專案字典沒有這個 key → 退回通用的 <ns>.errors.FORBIDDEN", () => {
+    expect(
+      adminErrorText(
+        { code: "FORBIDDEN", projectReason: "PURCHASE_UNRECEIVED_ROWS" },
+        tErrors,
+        translator({}),
+      ),
+    ).toBe("errors.FORBIDDEN");
+    expect(adminErrorText({ code: "NOT_FOUND" }, tErrors, translator({}))).toBe(
+      "errors.NOT_FOUND",
+    );
   });
 });

@@ -25,6 +25,12 @@ export interface AdminError<
   /** `extensions.path`:資料範圍 `RULE_INVALID` 指到條件樹裡出問題的位置 */
   path?: string;
   /**
+   * 專案錯誤碼:`FORBIDDEN` 帶了本頁不認得的 `reason`(大寫英數與底線)—— 專案登記的守門擋下
+   * (`docs/concepts/workflow-engine.md`「掛接點」)。顯示走 `adminErrorText`:專案字典有
+   * `admin.lifecycle.<reason>` 就用它,沒有退回 `<ns>.errors.FORBIDDEN`。
+   */
+  projectReason?: string;
+  /**
    * api 回的原始 `message`。**不拿來顯示**(文案一律走 `tErrors(code)`,I18N-01),
    * 只給除錯 / 記錄用。
    */
@@ -68,6 +74,15 @@ const stringsOf = (value: unknown): string[] =>
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 
+/** 專案錯誤碼的格式(同 api 掛接點守門的檢查)。 */
+const PROJECT_REASON_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+
+/** 專案錯誤碼的文案 namespace:專案在 `admin.json` 加 `lifecycle` namespace,key = 錯誤碼。 */
+export const PROJECT_REASON_NAMESPACE = "admin.lifecycle";
+
+export const projectReasonKey = (reason: string): string =>
+  `${PROJECT_REASON_NAMESPACE}.${reason}`;
+
 const isOneOf = <T extends string>(
   list: readonly T[],
   value: unknown,
@@ -98,8 +113,14 @@ export const parseAdminError = <Code extends string, Reason extends string>(
       isOneOf(known, value),
     );
     const fieldNames = stringsOf(fields);
+    const isProjectReason =
+      matched === "FORBIDDEN" &&
+      typeof reason === "string" &&
+      PROJECT_REASON_PATTERN.test(reason) &&
+      !isOneOf(known, reason);
     return {
       code: matched,
+      ...(isProjectReason && { projectReason: reason }),
       ...(isOneOf(known, reason) && { reason }),
       ...(knownReasons.length > 0 && { reasons: knownReasons }),
       ...(fieldNames.length > 0 && { fields: fieldNames }),
@@ -108,4 +129,28 @@ export const parseAdminError = <Code extends string, Reason extends string>(
     };
   }
   return { code: "UNEXPECTED" };
+};
+
+/** 根層翻譯函式要用到的兩個能力(use-intl 的 `useTranslations()` 回傳值即符合)。 */
+export interface RootTranslator {
+  (key: string): string;
+  has: (key: string) => boolean;
+}
+
+/**
+ * 錯誤的顯示文案:專案錯誤碼(`projectReason`)在字典裡有 `admin.lifecycle.<碼>` 就用它,
+ * 否則照舊 `tErrors(code)`(沒有專案文案的專案錯誤碼 → 通用的「沒有權限」)。
+ */
+export const adminErrorText = <Code extends string>(
+  error: Pick<AdminError<Code>, "code" | "projectReason">,
+  tErrors: (code: Code) => string,
+  t: RootTranslator,
+): string => {
+  if (error.projectReason !== undefined) {
+    const key = projectReasonKey(error.projectReason);
+    if (t.has(key)) {
+      return t(key);
+    }
+  }
+  return tErrors(error.code);
 };

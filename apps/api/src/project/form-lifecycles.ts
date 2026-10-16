@@ -8,6 +8,8 @@ import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lif
  * registerFormLifecycle({
  *   moduleKey: "purchasing.purchase",
  *   formKey: "purchase", // 省略 = 這個模組的所有表單
+ *   // handler 的 get 只拿得到這裡列的 provider;啟動時找不到 → app 起不來
+ *   inject: [PurchaseRowsRepository, StockRepository],
  *   guards: {
  *     // 只能讀;回 null = 通過,回 { code, message } = 擋下(FORBIDDEN + reason = code)
  *     beforeApprove: async ({ submission, get }) =>

@@ -58,7 +58,10 @@ export interface LifecycleSubmission {
   readonly values: StoredValues;
 }
 
-/** 從容器取專案的 repository / service(Nest `ModuleRef.get`,不限模組)。 */
+/**
+ * 取這筆登記在 `inject` 宣告過的 repository / service;沒宣告的 token → 拋錯
+ * (實例在啟動時解析好,見 `resolveLifecycleInjections`)。
+ */
 export type LifecycleResolver = <T>(token: InjectionToken<T>) => T;
 
 export interface FormGuardContext {
@@ -140,8 +143,13 @@ export type FormEffect = (context: FormEffectContext) => Promise<void> | void;
 export interface FormLifecycleRegistration {
   /** 業務模組 key(例 `purchasing.purchase`)。 */
   moduleKey: string;
-  /** 表單 key;省略 = 這個模組的所有表單。 */
+  /** 表單 key;省略 = 這個模組的所有表單(不可寫 `"*"`)。 */
   formKey?: string;
+  /**
+   * 守門與事後動作要用的 repository / service(Nest 的 provider token)。啟動時逐一解析,
+   * 找不到 → app 起不來;handler 的 `get` 只拿得到這裡列的。
+   */
+  inject?: readonly InjectionToken[];
   guards?: Partial<Record<FormGuardName, FormGuard>>;
   effects?: Partial<Record<FormEffectName, FormEffect>>;
 }
@@ -155,6 +163,8 @@ export function registerFormLifecycle(
 
 /** 組裝好的登記:依 (moduleKey, formKey) 查。 */
 export interface FormLifecycles {
+  /** 全部登記(啟動時解析 `inject` 用)。 */
+  readonly registrations: readonly FormLifecycleRegistration[];
   /** 這張表單適用的那一筆(先找指定表單、再找整個模組);沒有 → null。 */
   lookup(moduleKey: string, formKey: string): FormLifecycleRegistration | null;
 }
@@ -196,6 +206,28 @@ function checkHandlers(
   }
 }
 
+function tokenLabel(token: InjectionToken): string {
+  return typeof token === "function" ? token.name : String(token);
+}
+
+function checkInject(registration: FormLifecycleRegistration): void {
+  const tokens = registration.inject ?? [];
+  const seen = new Set<InjectionToken>();
+  for (const token of tokens) {
+    if ((token as unknown) === undefined || (token as unknown) === null) {
+      throw new FormLifecycleRegistrationError(
+        `掛接點 ${labelOf(registration)}:inject 有空的 token(多半是循環 import)`,
+      );
+    }
+    if (seen.has(token)) {
+      throw new FormLifecycleRegistrationError(
+        `掛接點 ${labelOf(registration)}:inject 重複列了 ${tokenLabel(token)}`,
+      );
+    }
+    seen.add(token);
+  }
+}
+
 /** 整個模組那一筆的查詢 key。 */
 const MODULE_WIDE = "*";
 
@@ -207,7 +239,8 @@ function keyOf(moduleKey: string, formKey: string): string {
  * 驗證並組裝專案的掛接點登記(由 `database/database.module.ts` 組裝時呼叫):
  * - 同一個 (moduleKey, formKey) 只能登記一次;重複 → 拋錯
  * - 同一個模組不能同時有「整個模組」與「指定表單」的登記(兩筆都適用同一張表單時,誰先誰後沒有定義)
- * - moduleKey / formKey 不可空白;守門與事後動作的名字要是已知的、值要是函式
+ * - moduleKey / formKey 不可空白,formKey 不可是 `"*"`(內部代表整個模組);守門與事後動作的名字要是
+ *   已知的、值要是函式;`inject` 的 token 不可空、不可重複(是否存在在啟動時由 `resolveLifecycleInjections` 驗)
  */
 export function composeFormLifecycles(
   registrations: readonly FormLifecycleRegistration[],
@@ -221,6 +254,12 @@ export function composeFormLifecycles(
         `掛接點的 moduleKey / formKey 不可空白(${labelOf(registration)})`,
       );
     }
+    if (formKey === MODULE_WIDE) {
+      throw new FormLifecycleRegistrationError(
+        `掛接點 ${moduleKey}:formKey 不可是 "${MODULE_WIDE}"(整個模組請省略 formKey)`,
+      );
+    }
+    checkInject(registration);
     checkHandlers(registration, "守門", registration.guards, FORM_GUARD_NAMES);
     checkHandlers(
       registration,
@@ -245,6 +284,7 @@ export function composeFormLifecycles(
     byKey.set(key, registration);
   }
   return {
+    registrations: [...registrations],
     lookup(moduleKey, formKey) {
       return (
         byKey.get(keyOf(moduleKey, formKey)) ??
@@ -253,4 +293,39 @@ export function composeFormLifecycles(
       );
     },
   };
+}
+
+/**
+ * 啟動時解析每筆登記的 `inject`(`resolve` 正式為 `ModuleRef.get(token, { strict: false })`),回每筆登記
+ * 專屬的 `get`:只拿得到自己宣告的 token。宣告的 token 找不到 → `FormLifecycleRegistrationError`(app 起不來)。
+ */
+export function resolveLifecycleInjections(
+  registrations: readonly FormLifecycleRegistration[],
+  resolve: (token: InjectionToken) => unknown,
+): ReadonlyMap<FormLifecycleRegistration, LifecycleResolver> {
+  const resolvers = new Map<FormLifecycleRegistration, LifecycleResolver>();
+  for (const registration of registrations) {
+    const instances = new Map<InjectionToken, unknown>();
+    for (const token of registration.inject ?? []) {
+      let instance: unknown;
+      try {
+        instance = resolve(token);
+      } catch (error) {
+        throw new FormLifecycleRegistrationError(
+          `掛接點 ${labelOf(registration)}:inject 的 ${tokenLabel(token)} 找不到(${error instanceof Error ? error.message : String(error)})`,
+        );
+      }
+      instances.set(token, instance);
+    }
+    const label = labelOf(registration);
+    resolvers.set(registration, <T>(token: InjectionToken<T>): T => {
+      if (!instances.has(token)) {
+        throw new Error(
+          `掛接點 ${label} 沒有在 inject 宣告 ${tokenLabel(token)},取不到`,
+        );
+      }
+      return instances.get(token) as T;
+    });
+  }
+  return resolvers;
 }

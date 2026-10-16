@@ -1,3 +1,4 @@
+import { TransactionService } from "../../database/transaction";
 import {
   FORM_EFFECT_NAMES,
   FORM_GUARD_NAMES,
@@ -34,12 +35,15 @@ export const lifecycleProbe: {
   effects: EffectCall[];
   effectContexts: FormEffectContext[];
   blockOn: FormGuardName | null;
+  /** 擋下時回的錯誤碼(預設 `LIFECYCLE_BLOCKED_CODE`;測不合格的碼時換掉)。 */
+  blockCode: string;
   onEffect: ((context: FormEffectContext) => Promise<void>) | null;
 } = {
   guards: [],
   effects: [],
   effectContexts: [],
   blockOn: null,
+  blockCode: LIFECYCLE_BLOCKED_CODE,
   onEffect: null,
 };
 
@@ -49,13 +53,14 @@ export function resetLifecycleProbe(): void {
   lifecycleProbe.effects = [];
   lifecycleProbe.effectContexts = [];
   lifecycleProbe.blockOn = null;
+  lifecycleProbe.blockCode = LIFECYCLE_BLOCKED_CODE;
   lifecycleProbe.onEffect = null;
 }
 
 const guard: FormGuard = (context) => {
   lifecycleProbe.guards.push({ guard: context.guard, context });
   return lifecycleProbe.blockOn === context.guard
-    ? { code: LIFECYCLE_BLOCKED_CODE, message: `blocked by ${context.guard}` }
+    ? { code: lifecycleProbe.blockCode, message: `blocked by ${context.guard}` }
     : null;
 };
 
@@ -77,6 +82,8 @@ export const LIFECYCLE_FIXTURE_REGISTRATIONS: readonly FormLifecycleRegistration
     registerFormLifecycle({
       moduleKey: WORKFLOW_MODULE,
       formKey: FORM_KEY,
+      // handler 的 get 只拿得到這一個(測試驗「宣告的拿得到、沒宣告的拋錯」)
+      inject: [TransactionService],
       guards: Object.fromEntries(FORM_GUARD_NAMES.map((name) => [name, guard])),
       effects: Object.fromEntries(
         FORM_EFFECT_NAMES.map((name) => [name, effect]),
