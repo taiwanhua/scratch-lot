@@ -1,6 +1,8 @@
 import { generateKeyPairSync } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { ServiceUnavailableException } from "@nestjs/common";
+import type { ExecutionContext } from "@nestjs/common";
 import { sign } from "jsonwebtoken";
 import type { Types } from "mongoose";
 import request from "supertest";
@@ -11,13 +13,16 @@ import {
   startAuthTestApp,
 } from "../auth/test-support/auth-app";
 import { createOrg, findRootOrgId } from "../auth/test-support/fixtures";
+import { ScheduledJobRunsStore } from "../database/scheduled-job-runs.store";
 import {
   type ScheduledJobOutcome,
   ScheduledJobRunner,
 } from "./scheduled-job-runner.service";
 import { SCHEDULED_JOBS_RUN_PATH } from "./scheduled-jobs.controller";
 import {
+  CERTS_FETCH_TIMEOUT_MS,
   GOOGLE_OIDC_CERTS_URL,
+  SchedulerAuthGuard,
   SchedulerIdentityVerifier,
 } from "./scheduler-identity";
 import {
@@ -25,10 +30,14 @@ import {
   ScheduledJobProbe,
   ScheduledJobProbeModule,
 } from "./test-support/scheduled-job-probe";
+import { createTestCertificate } from "./test-support/x509-certificate";
 
 const INVOKER_EMAIL = "scheduler@test-project.iam.gserviceaccount.com";
 const AUDIENCE = "https://api.example.test";
 const KID = "test-kid";
+const X509_KID = "test-x509-kid";
+/** 現產的 X.509 自簽憑證(不入 repo),扮演 Google 以憑證 PEM 公布的公鑰。 */
+const x509 = createTestCertificate();
 
 const googleKey = generateKeyPairSync("rsa", { modulusLength: 2048 });
 const strangerKey = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -41,6 +50,9 @@ interface TokenOptions {
   audience?: string;
   issuer?: string;
   key?: typeof googleKey;
+  /** 直接給私鑰 PEM(X.509 夾具用);給了就不看 `key`。 */
+  privateKey?: string;
+  kid?: string;
   expiresIn?: number;
 }
 
@@ -51,10 +63,10 @@ function oidcToken(options: TokenOptions = {}): string {
       email: options.email ?? INVOKER_EMAIL,
       email_verified: options.emailVerified ?? true,
     },
-    privatePem(options.key ?? googleKey),
+    options.privateKey ?? privatePem(options.key ?? googleKey),
     {
       algorithm: "RS256",
-      keyid: KID,
+      keyid: options.kid ?? KID,
       audience: options.audience ?? AUDIENCE,
       issuer: options.issuer ?? "https://accounts.google.com",
       expiresIn: options.expiresIn ?? 300,
@@ -76,6 +88,8 @@ function mockGoogleCerts(): void {
         [KID]: googleKey.publicKey
           .export({ type: "spki", format: "pem" })
           .toString(),
+        // Google v1 certs 端點實際的格式:X.509 憑證 PEM
+        [X509_KID]: x509.certificatePem,
       };
       return Promise.resolve(
         Response.json(certs, {
@@ -117,6 +131,15 @@ describe("排程任務(Cloud Scheduler 內部端點)", () => {
       .toArray();
   const callsSince = (key: string, before: number) =>
     probe().callsOf(key).slice(before);
+  const insertRunning = (scheduledFor: string, startedAgoMs: number) =>
+    api.connection.collection("scheduled_job_runs").insertOne({
+      key: PROBE_JOB_KEYS.every15m,
+      scheduledFor: new Date(scheduledFor),
+      status: "running",
+      startedAt: new Date(Date.now() - startedAgoMs),
+      finishedAt: null,
+      error: null,
+    });
 
   beforeAll(async () => {
     mockGoogleCerts();
@@ -172,6 +195,45 @@ describe("排程任務(Cloud Scheduler 內部端點)", () => {
         audience: undefined,
       });
       expect(await verifier.verify(oidcToken())).toBe("forbidden");
+    });
+
+    it("Google 以 X.509 憑證 PEM 公布的公鑰(v1 certs 端點的格式)也驗得過", async () => {
+      const token = oidcToken({
+        privateKey: x509.privateKeyPem,
+        kid: X509_KID,
+      });
+      // 直接問 app 裡的驗證器:打端點會先吃掉本區間的執行權,影響下一個測試的 200 斷言
+      expect(await api.app.get(SchedulerIdentityVerifier).verify(token)).toBe(
+        "ok",
+      );
+    });
+
+    it("取 Google 公鑰帶 5 秒逾時;取不到且沒有舊公鑰 → unavailable,端點回 503", async () => {
+      const fetchSpy = jest
+        .spyOn(globalThis, "fetch")
+        .mockRejectedValueOnce(new Error("network down"));
+      const verifier = new SchedulerIdentityVerifier({
+        invokerEmail: INVOKER_EMAIL,
+        audience: AUDIENCE,
+      });
+      expect(await verifier.verify(oidcToken())).toBe("unavailable");
+      const init = fetchSpy.mock.calls.at(-1)?.[1];
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      expect(CERTS_FETCH_TIMEOUT_MS).toBe(5000);
+
+      const guard = new SchedulerAuthGuard({
+        verify: () => Promise.resolve("unavailable"),
+      } as unknown as SchedulerIdentityVerifier);
+      const context = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            headers: { authorization: `Bearer ${oidcToken()}` },
+          }),
+        }),
+      } as unknown as ExecutionContext;
+      await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+        ServiceUnavailableException,
+      );
     });
 
     it("Scheduler 的 token → 200,依登記執行到期工作", async () => {
@@ -267,6 +329,73 @@ describe("排程任務(Cloud Scheduler 內部端點)", () => {
         status: "failed",
         error: "probe failure",
       });
+    });
+  });
+
+  describe("卡住的 running 與資料庫錯誤的隔離", () => {
+    it("running 未超過 15 分鐘 → 視為還在跑,skipped", async () => {
+      await insertRunning("2030-05-01T10:00:00.000Z", 5 * 60_000);
+      const outcomes = await runAt("2030-05-01T10:05:00.000Z");
+      expect(statusOf(outcomes, PROBE_JOB_KEYS.every15m)).toBe("skipped");
+    });
+
+    it("running 超過 15 分鐘 → 可重新取得;同時搶只有一個取得", async () => {
+      await insertRunning("2030-05-01T11:00:00.000Z", 20 * 60_000);
+      const before = probe().callsOf(PROBE_JOB_KEYS.every15m).length;
+      const outcomes = await Promise.all([
+        runAt("2030-05-01T11:01:00.000Z"),
+        runAt("2030-05-01T11:02:00.000Z"),
+        runAt("2030-05-01T11:03:00.000Z"),
+      ]);
+      const statuses = outcomes.map((list) =>
+        statusOf(list, PROBE_JOB_KEYS.every15m),
+      );
+      expect(statuses.filter((status) => status === "succeeded")).toHaveLength(
+        1,
+      );
+      expect(statuses.filter((status) => status === "skipped")).toHaveLength(2);
+      expect(callsSince(PROBE_JOB_KEYS.every15m, before)).toHaveLength(1);
+      const runs = await runsAt(
+        PROBE_JOB_KEYS.every15m,
+        "2030-05-01T11:00:00.000Z",
+      );
+      expect(runs).toHaveLength(1);
+      expect(runs[0]).toMatchObject({ status: "succeeded" });
+    });
+
+    it("某個工作取執行權時資料庫出錯 → 該工作 error,同一輪其他工作照跑,不拋錯", async () => {
+      const store = api.app.get(ScheduledJobRunsStore);
+      const claim = jest
+        .spyOn(store, "claim")
+        .mockRejectedValueOnce(new Error("mongo down"));
+      try {
+        const outcomes = await runAt("2030-06-01T10:00:00.000Z");
+        expect(statusOf(outcomes, PROBE_JOB_KEYS.every15m)).toBe("error");
+        expect(statusOf(outcomes, PROBE_JOB_KEYS.failing)).toBe("failed");
+      } finally {
+        claim.mockRestore();
+      }
+      // 沒寫入紀錄,下一次呼叫再試就會跑
+      const retry = await runAt("2030-06-01T10:05:00.000Z");
+      expect(statusOf(retry, PROBE_JOB_KEYS.every15m)).toBe("succeeded");
+    });
+
+    it("寫入執行結果失敗 → 只記 log,結果照回,紀錄停在 running", async () => {
+      const store = api.app.get(ScheduledJobRunsStore);
+      const finish = jest
+        .spyOn(store, "finish")
+        .mockRejectedValueOnce(new Error("mongo down"));
+      try {
+        const outcomes = await runAt("2030-06-01T11:00:00.000Z");
+        expect(statusOf(outcomes, PROBE_JOB_KEYS.every15m)).toBe("succeeded");
+      } finally {
+        finish.mockRestore();
+      }
+      const runs = await runsAt(
+        PROBE_JOB_KEYS.every15m,
+        "2030-06-01T11:00:00.000Z",
+      );
+      expect(runs[0]).toMatchObject({ status: "running" });
     });
   });
 

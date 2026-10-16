@@ -532,8 +532,9 @@ api 的排程任務由**每個環境一個** Cloud Scheduler 工作驅動:每 15
 
 - **登記工作**:功能模組(底座或專案)匯入 `ScheduledJobsModule`,在 `onModuleInit` 以 `ScheduledJobRegistry.registerScheduledJob({ key, every, handler })` 登記;`every` 是 `"15m"`、`"1h"` 或 `"daily@HH:mm"`。key 全域唯一,重複或頻率寫錯 api 啟動即失敗。
 - **到期判斷**:`15m` / `1h` 以 UTC 對齊區間(:00 / :15 / :30 / :45、整點),同一區間只跑一次,錯過的區間不補。`daily@HH:mm` 依各租戶時區(`orgs.settings.timezone`,未設用預設時區)換算當地 HH:mm;當地時刻過後 6 小時內的呼叫都算到期(錯過幾次呼叫仍補跑一次),超過就等下一天。handler 收到這次要處理的租戶(含根組織 `tenantId = null`,不含停用的租戶),時點相同的租戶併成一次。
-- **冪等**:每個 `(key, scheduledFor)` 在 `scheduled_job_runs` 只能插入一筆,插入成功的那次呼叫才執行(`docs/data-model.md`「排程任務執行紀錄」)。Scheduler 重送或多個 instance 同時收到都不會重複執行;失敗的時點不重跑。個別工作失敗端點仍回 200,結果看回應 body、執行紀錄與 Cloud Run log。
-- **費用**:Cloud Scheduler 的免費額度以帳單帳戶計(目前每個帳單帳戶每月 3 個工作),三環境各一個工作;再多的工作照價計費。每 15 分鐘喚醒 api 一次(`min-instances=0` 時每次可能冷啟動)。
+- **冪等**:每個 `(key, scheduledFor)` 在 `scheduled_job_runs` 只能插入一筆,插入成功的那次呼叫才執行(`docs/data-model.md`「排程任務執行紀錄」)。Scheduler 重送或多個 instance 同時收到都不會重複執行;失敗的時點不重跑。個別工作失敗、或某個工作讀寫執行紀錄時資料庫出錯,端點仍回 200,同一輪其他工作照跑,結果看回應 body、執行紀錄與 Cloud Run log。
+- **執行時間**:一次呼叫依序跑完所有到期工作,受 Cloud Run 300 秒請求逾時與 Scheduler 的 `--attempt-deadline=300s` 限制,**所有到期 handler 合計須遠小於 300 秒**;量大的工作分批處理,下一次呼叫再接續。被逾時中止或 instance 當掉時紀錄停在 `running`,`startedAt` 超過 15 分鐘後由之後的呼叫重新取得(原子更新,同時只有一個呼叫取得)。
+- **費用**:Cloud Scheduler 的免費額度以帳單帳戶計(目前每個帳單帳戶每月 3 個工作),同一帳單帳戶下所有專案共用,不同專案若在不同帳單帳戶則各自計算;超出照價計費。每個環境一個工作,不需要排程的環境可以不建。每 15 分鐘喚醒 api 一次(`min-instances=0` 時每次可能冷啟動)。
 
 **建立步驟**(每個環境各一次;`<api-url>` 是 `deploy/project/cloud.json` 該環境的 `apiUrl`,`<api-service>` 是該環境的 api 服務名):
 
@@ -563,7 +564,24 @@ gcloud scheduler jobs describe <api-service>-scheduled-jobs --project=<gcp-proje
 gcloud scheduler jobs pause <api-service>-scheduled-jobs --project=<gcp-project> --location=<region>    # 暫停;恢復用 resume
 ```
 
-手動執行後在 Cloud Run log 看到該請求回 200 才算接通:401 是 token 無效(audience 與 `SCHEDULER_AUDIENCE` 不同最常見),403 是呼叫身分與 `SCHEDULER_INVOKER_EMAIL` 不同或該環境 YAML 沒填。
+手動執行後在 Cloud Run log 看到該請求回 200 才算接通:401 是 token 無效(audience 與 `SCHEDULER_AUDIENCE` 不同最常見),403 是呼叫身分與 `SCHEDULER_INVOKER_EMAIL` 不同或該環境 YAML 沒填,503 是 api 取不到 Google 公鑰(5 秒逾時,Scheduler 下一次呼叫再試)。
+
+查卡住或失敗的執行紀錄(以該環境資料庫的 `mongosh` 連線執行):
+
+```js
+db.scheduled_job_runs
+  .find({
+    status: "running",
+    startedAt: { $lt: new Date(Date.now() - 15 * 60 * 1000) },
+  })
+  .sort({ startedAt: -1 });
+db.scheduled_job_runs
+  .find({ status: "failed" })
+  .sort({ scheduledFor: -1 })
+  .limit(20);
+```
+
+卡住的紀錄會在下一次呼叫被重新取得,通常不必手動處理;反覆卡住表示 handler 太慢,先看 Cloud Run log 的逾時紀錄。
 
 正本:`apps/api/src/scheduled-jobs/`、`deploy/env/<環境>.yaml`
 

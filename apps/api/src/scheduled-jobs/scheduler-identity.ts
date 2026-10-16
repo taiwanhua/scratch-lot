@@ -6,6 +6,7 @@ import {
   Injectable,
   Logger,
   type Provider,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -57,8 +58,15 @@ const DEFAULT_CERTS_TTL_MS = 60 * 60 * 1000;
 /** 遇到沒見過的 `kid` 時重抓公鑰的最短間隔(不讓亂填 kid 的請求每次都打到 Google)。 */
 const MIN_REFETCH_INTERVAL_MS = 60 * 1000;
 
-/** 驗證結果:`unauthenticated` → 401(沒有或無效的 token)、`forbidden` → 403(token 有效但不是排程身分,或未設定)。 */
-export type SchedulerIdentityResult = "ok" | "unauthenticated" | "forbidden";
+/** 取 Google 公鑰的逾時:Google 沒回應時不讓請求一直掛著。 */
+export const CERTS_FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * 驗證結果:`unauthenticated` → 401(沒有或無效的 token)、`forbidden` → 403(token 有效但不是排程身分,或未設定)、
+ * `unavailable` → 503(取不到 Google 公鑰、手上也沒有可用的舊公鑰,無法判斷身分;不是呼叫者的錯,所以不回 401)。
+ */
+export type SchedulerIdentityResult =
+  "ok" | "unauthenticated" | "forbidden" | "unavailable";
 
 interface CachedCerts {
   certs: Record<string, string>;
@@ -95,7 +103,12 @@ export class SchedulerIdentityVerifier {
     if (decoded === null || kid === undefined) {
       return "unauthenticated";
     }
-    const cert = await this.certFor(kid);
+    let cert: string | undefined;
+    try {
+      cert = await this.certFor(kid);
+    } catch {
+      return "unavailable";
+    }
     if (cert === undefined) {
       return "unauthenticated";
     }
@@ -126,14 +139,24 @@ export class SchedulerIdentityVerifier {
     }
     // 過期 → 重抓;沒見過的 kid(Google 換鑰)→ 限速重抓
     if (!isFresh || now - cached.fetchedAt >= MIN_REFETCH_INTERVAL_MS) {
-      this.cached = await fetchGoogleCerts(now);
+      try {
+        this.cached = await fetchGoogleCerts(now);
+      } catch (error) {
+        // 重抓失敗但手上的舊公鑰有這個 kid:先用舊的(Google 新舊公鑰會並存一段時間);否則往外拋 → 503
+        if (cached !== undefined && kid in cached.certs) {
+          return cached.certs[kid];
+        }
+        throw error;
+      }
     }
     return this.cached?.certs[kid];
   }
 }
 
 async function fetchGoogleCerts(now: number): Promise<CachedCerts> {
-  const response = await fetch(GOOGLE_OIDC_CERTS_URL);
+  const response = await fetch(GOOGLE_OIDC_CERTS_URL, {
+    signal: AbortSignal.timeout(CERTS_FETCH_TIMEOUT_MS),
+  });
   if (!response.ok) {
     throw new Error(`取 Google OIDC 公鑰失敗:HTTP ${String(response.status)}`);
   }
@@ -174,6 +197,10 @@ export class SchedulerAuthGuard implements CanActivate {
     if (result === "forbidden") {
       this.logger.warn("排程端點收到非排程身分的呼叫(或呼叫身分未設定)");
       throw new ForbiddenException("Caller is not the scheduler");
+    }
+    if (result === "unavailable") {
+      this.logger.error("排程端點取不到 Google OIDC 公鑰,無法驗證呼叫身分");
+      throw new ServiceUnavailableException("Cannot verify scheduler identity");
     }
     return true;
   }
