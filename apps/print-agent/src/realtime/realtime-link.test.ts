@@ -1,13 +1,16 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { REALTIME_CLOSE_CODES } from "@repo/domain/realtime";
+import {
+  REALTIME_CLOSE_CODES,
+  RECONNECT_BACKOFF_MS,
+} from "@repo/domain/realtime";
 
 import { FakeSocket, ManualTimers, freshSecret } from "../test-support/fakes";
 import {
   type AgentTicket,
   DISABLED_RETRY_MS,
-  RECONNECT_BACKOFF_MS,
   RENEW_AFTER_MS,
+  RENEW_RESPONSE_TIMEOUT_MS,
   RealtimeLink,
   type RealtimeLinkStatus,
 } from "./realtime-link";
@@ -145,6 +148,36 @@ describe("代理程式的即時通道連線", () => {
     expect(sockets[0]?.closed).not.toBeNull();
     await timers.advance(0);
     expect(sockets).toHaveLength(2);
+    link.stop();
+  });
+
+  it("換發送出後 15 秒沒有 renewed / rejected → 關掉重連(down → 重連)", async () => {
+    const { link, timers, sockets, last, statuses } = setup();
+    link.start();
+    await timers.advance(0);
+    last().open();
+    await timers.advance(RENEW_AFTER_MS);
+    expect(last().sent).toHaveLength(1);
+    await timers.advance(RENEW_RESPONSE_TIMEOUT_MS - 1);
+    expect(sockets[0]?.closed).toBeNull();
+    await timers.advance(1);
+    expect(sockets[0]?.closed).not.toBeNull();
+    expect(statuses).toEqual(["live", "down"]);
+    await timers.advance(0);
+    expect(sockets).toHaveLength(2);
+    link.stop();
+  });
+
+  it("換發有回應(renewed)就不會因逾時重連", async () => {
+    const { link, timers, sockets, last } = setup();
+    link.start();
+    await timers.advance(0);
+    last().open();
+    await timers.advance(RENEW_AFTER_MS);
+    last().message({ op: "renewed", exp: 0 });
+    await timers.advance(RENEW_RESPONSE_TIMEOUT_MS * 2);
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0]?.closed).toBeNull();
     link.stop();
   });
 

@@ -2,6 +2,7 @@ import { type Socket, createConnection } from "node:net";
 
 import type { PrintAgentPrinter, PrinterStatus } from "@repo/domain/printing";
 
+import type { Logger } from "../logging/logger";
 import {
   PAPER_STATUS_REQUEST,
   type PaperStatus,
@@ -13,19 +14,23 @@ import type { PrintOutcome, PrinterTransport } from "./transport";
  * TCP 9100(RAW)送 ESC/POS 指令(底座規格第 6 章 `escpos`:TCP 9100 連線與逾時;`DLE EOT` 讀狀態)。
  *
  * 一張單據一條連線:連線 → `DLE EOT 4` 查紙(缺紙就不送、回報 `paper-out`)→ 依序寫出各段 → 關閉。
- * 查紙沒有回應(有些機型關掉了即時狀態回傳)時照常列印,不當成錯誤。
+ * 查紙沒有回應(有些機型關掉了即時狀態回傳)時照常列印,不當成錯誤;每台第一次遇到時記一次 warn。
+ *
+ * **總期限**:連線、查紙、寫入到關閉共用一個期限(`jobTimeoutMs`)。收據機接受連線卻不收資料(卡紙、
+ * 韌體當掉)時,寫入會一直等;期限到就 destroy 連線、回報 `other`,佇列裡的下一張照常進行。
  */
 export interface TcpPrinterOptions {
   connectTimeoutMs?: number;
   /** 等 `DLE EOT` 回應多久。 */
   statusTimeoutMs?: number;
-  /** 整張單據寫完(含收據機收下)的上限。 */
-  writeTimeoutMs?: number;
+  /** 一張單據從連線到關閉的總期限。 */
+  jobTimeoutMs?: number;
+  logger?: Logger;
 }
 
 export const CONNECT_TIMEOUT_MS = 5000;
 export const STATUS_TIMEOUT_MS = 1500;
-export const WRITE_TIMEOUT_MS = 30_000;
+export const JOB_TIMEOUT_MS = 30_000;
 
 class PrinterConnection {
   private readonly received: number[] = [];
@@ -99,6 +104,7 @@ class PrinterConnection {
     return this.received.shift() ?? null;
   }
 
+  /** 寫一段;對方不收資料時 callback 不會回來(由呼叫端的總期限收尾)。 */
   write(chunk: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.failure !== null) {
@@ -115,15 +121,13 @@ class PrinterConnection {
     });
   }
 
-  /** 寫完後半關閉,等對方收下(對方關閉或 socket 排空)。 */
-  finish(timeoutMs: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.socket.destroy();
-        reject(new Error(`送出逾時(${String(timeoutMs)}ms)`));
-      }, timeoutMs);
+  /**
+   * 寫完後半關閉(FIN)。`end` 的 callback 在資料都交給作業系統送出時(`finish`)就回來,
+   * **不代表收據機已經收下或印完**;ESC/POS 的 RAW 埠沒有「已印」的確認,能確認的只到這裡。
+   */
+  finish(): Promise<void> {
+    return new Promise((resolve) => {
       this.socket.end(() => {
-        clearTimeout(timer);
         this.socket.destroy();
         resolve();
       });
@@ -141,42 +145,40 @@ const describe = (error: unknown) =>
 export class TcpPrinterTransport implements PrinterTransport {
   private readonly connectTimeoutMs: number;
   private readonly statusTimeoutMs: number;
-  private readonly writeTimeoutMs: number;
+  private readonly jobTimeoutMs: number;
+  /** 已經記過「沒回 DLE EOT」的印表機(每台只記一次)。 */
+  private readonly silentStatus = new Set<string>();
 
-  constructor(options: TcpPrinterOptions = {}) {
+  constructor(private readonly options: TcpPrinterOptions = {}) {
     this.connectTimeoutMs = options.connectTimeoutMs ?? CONNECT_TIMEOUT_MS;
     this.statusTimeoutMs = options.statusTimeoutMs ?? STATUS_TIMEOUT_MS;
-    this.writeTimeoutMs = options.writeTimeoutMs ?? WRITE_TIMEOUT_MS;
+    this.jobTimeoutMs = options.jobTimeoutMs ?? JOB_TIMEOUT_MS;
   }
 
   async print(
     printer: PrintAgentPrinter,
     chunks: readonly Uint8Array[],
   ): Promise<PrintOutcome> {
-    let connection: PrinterConnection;
+    const state: { connection: PrinterConnection | null; expired: boolean } = {
+      connection: null,
+      expired: false,
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<PrintOutcome>((resolve) => {
+      timer = setTimeout(() => {
+        state.expired = true;
+        state.connection?.destroy();
+        resolve({
+          ok: false,
+          error: "other",
+          detail: `列印逾時(${String(this.jobTimeoutMs)}ms):收據機沒有收下資料`,
+        });
+      }, this.jobTimeoutMs);
+    });
     try {
-      connection = await PrinterConnection.open(
-        printer.host,
-        printer.port,
-        this.connectTimeoutMs,
-      );
-    } catch (error) {
-      return { ok: false, error: "printer-offline", detail: describe(error) };
-    }
-    try {
-      const paper = await this.queryPaper(connection);
-      if (paper === "paper-out") {
-        connection.destroy();
-        return { ok: false, error: "paper-out", detail: "缺紙" };
-      }
-      for (const chunk of chunks) {
-        await connection.write(chunk);
-      }
-      await connection.finish(this.writeTimeoutMs);
-      return { ok: true };
-    } catch (error) {
-      connection.destroy();
-      return { ok: false, error: "other", detail: describe(error) };
+      return await Promise.race([this.send(printer, chunks, state), deadline]);
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -192,7 +194,7 @@ export class TcpPrinterTransport implements PrinterTransport {
       return "offline";
     }
     try {
-      const paper = await this.queryPaper(connection);
+      const paper = await this.queryPaper(printer, connection);
       return paper === "paper-out" ? "paper-out" : "ok";
     } catch {
       return "ok";
@@ -201,11 +203,57 @@ export class TcpPrinterTransport implements PrinterTransport {
     }
   }
 
+  private async send(
+    printer: PrintAgentPrinter,
+    chunks: readonly Uint8Array[],
+    state: { connection: PrinterConnection | null; expired: boolean },
+  ): Promise<PrintOutcome> {
+    let connection: PrinterConnection;
+    try {
+      connection = await PrinterConnection.open(
+        printer.host,
+        printer.port,
+        Math.min(this.connectTimeoutMs, this.jobTimeoutMs),
+      );
+    } catch (error) {
+      return { ok: false, error: "printer-offline", detail: describe(error) };
+    }
+    state.connection = connection;
+    if (state.expired) {
+      // 期限已過才連上:不送了(結果已由期限回報)
+      connection.destroy();
+      return { ok: false, error: "other", detail: "列印逾時" };
+    }
+    try {
+      const paper = await this.queryPaper(printer, connection);
+      if (paper === "paper-out") {
+        connection.destroy();
+        return { ok: false, error: "paper-out", detail: "缺紙" };
+      }
+      for (const chunk of chunks) {
+        await connection.write(chunk);
+      }
+      await connection.finish();
+      return { ok: true };
+    } catch (error) {
+      connection.destroy();
+      return { ok: false, error: "other", detail: describe(error) };
+    }
+  }
+
   private async queryPaper(
+    printer: PrintAgentPrinter,
     connection: PrinterConnection,
   ): Promise<PaperStatus> {
     await connection.write(PAPER_STATUS_REQUEST);
     const byte = await connection.readByte(this.statusTimeoutMs);
+    if (byte === null && !this.silentStatus.has(printer.id)) {
+      this.silentStatus.add(printer.id);
+      this.options.logger?.warn(
+        "收據機沒有回應 DLE EOT 4(查不到缺紙狀態):照常列印;請確認機型是否開啟即時狀態回傳",
+        { printerId: printer.id, host: printer.host },
+      );
+    }
     return byte === null ? "unknown" : parsePaperStatus(byte);
   }
 }

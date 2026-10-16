@@ -110,4 +110,14 @@ describe("print-agent-release.yml", () => {
     expect(workflow).toMatch(/WINSW_SHA256: [\da-f]{64}\n/);
     expect(workflow).toContain('if [ "$actual" != "$WINSW_SHA256" ]');
   });
+
+  it("checkout 不留 git 認證(persist-credentials: false)", () => {
+    const checkouts = workflow.split("uses: actions/checkout@v4").length - 1;
+    const safe =
+      workflow.split(
+        "uses: actions/checkout@v4\n        with:\n          persist-credentials: false",
+      ).length - 1;
+    expect(checkouts).toBe(2);
+    expect(safe).toBe(2);
+  });
 });

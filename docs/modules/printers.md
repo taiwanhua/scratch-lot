@@ -102,7 +102,7 @@
 
 - `documentName`(選填):單據的顯示名稱,只用在列印失敗通知;沒給時通知顯示「單據類型 + 編號」。測試頁不存,通知依收件人語言顯示「測試頁 <印表機名稱>」。
 
-- 圖片:PNG、寬度 = 紙寬點數(58mm = 384 點)、上限 512KB(`PRINT_IMAGE_MAX_BYTES`);base64 放在 GraphQL input(可帶 `data:image/png;base64,` 前綴)。api 的 JSON body 上限因此調為 1MB(`apps/api/src/main.ts`)。
+- 圖片:PNG、寬度 = 紙寬點數(58mm = 384 點)、高度 1–8000 點(`PRINT_IMAGE_MAX_HEIGHT_DOTS`,約 1 公尺紙長;代理程式開印前也檢查)、上限 512KB(`PRINT_IMAGE_MAX_BYTES`);base64 放在 GraphQL input(可帶 `data:image/png;base64,` 前綴)。api 的 JSON body 上限因此調為 1MB(`apps/api/src/main.ts`)。
 - `printNo` = 建立當下這張單據(`refType` + `refId`)**已印**的次數 + 1;失敗、等待中不算。
 - 補印:`reprintReason` 必填且須是 `reprint-reason` 類別裡看得到的啟用選項;選 `other` 時 `reprintNote` 必填。非補印時兩欄一律寫 null(送了也忽略)。
 - 測試列印(`printPrinterTestPage`):`documentType = printer-test-page`、`refType = printer`、`refId` = 印表機 id;守 `system.printers.edit`,不要 `api.printing.print`。

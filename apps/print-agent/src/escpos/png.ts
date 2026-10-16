@@ -1,5 +1,10 @@
 import { PNG } from "pngjs";
 
+import {
+  PRINT_IMAGE_MAX_HEIGHT_DOTS,
+  readPngDimensions,
+} from "@repo/domain/printing";
+
 import type { MonoBitmap } from "./commands";
 
 /**
@@ -18,6 +23,31 @@ export interface RgbaImage {
   height: number;
   /** RGBA,每像素 4 bytes。 */
   rgba: Uint8Array;
+}
+
+/**
+ * 列印影像 → 單色點陣:**先只讀 IHDR** 檢查寬高(寬 ≤ 紙寬點數、高 ≤ `PRINT_IMAGE_MAX_HEIGHT_DOTS`),
+ * 通過才解碼,不讓一張異常的大圖吃光記憶體。
+ */
+export function decodePrintImage(
+  buffer: Uint8Array,
+  maxWidth: number,
+): MonoBitmap {
+  const size = readPngDimensions(buffer);
+  if (size === null) {
+    throw new PrintImageError("圖片不是 PNG");
+  }
+  if (size.width > maxWidth) {
+    throw new PrintImageError(
+      `圖片寬 ${String(size.width)} 點,超過紙寬 ${String(maxWidth)} 點`,
+    );
+  }
+  if (size.height > PRINT_IMAGE_MAX_HEIGHT_DOTS) {
+    throw new PrintImageError(
+      `圖片高 ${String(size.height)} 點,超過上限 ${String(PRINT_IMAGE_MAX_HEIGHT_DOTS)} 點`,
+    );
+  }
+  return toMonoBitmap(decodePng(buffer), maxWidth);
 }
 
 export function decodePng(buffer: Uint8Array): RgbaImage {

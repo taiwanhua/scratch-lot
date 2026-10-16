@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 import {
   PRINT_IMAGE_MAX_BYTES,
+  PRINT_IMAGE_MAX_HEIGHT_DOTS,
   PRINT_IMAGE_WIDTH_DOTS,
   PRINT_JOB_CLAIM_TIMEOUT_MS,
   PRINT_JOB_RESULT_TIMEOUT_MS,
@@ -167,7 +168,7 @@ function only<T>(models: readonly T[]): T {
   return first;
 }
 
-/** base64 PNG → Buffer;驗簽章、IHDR 寬度與大小上限。 */
+/** base64 PNG → Buffer;驗簽章、IHDR 寬度與高度、大小上限。 */
 export function decodePrintImage(raw: string, paperWidth: number): Buffer {
   const text = raw.trim().replace(DATA_URL_PREFIX, "");
   const expectedWidth =
@@ -192,6 +193,12 @@ export function decodePrintImage(raw: string, paperWidth: number): Buffer {
   if (width !== expectedWidth) {
     throw invalidImage(
       `image width must be ${String(expectedWidth)} dots for ${String(paperWidth)}mm paper (got ${String(width)})`,
+    );
+  }
+  const height = bytes.readUInt32BE(20);
+  if (height === 0 || height > PRINT_IMAGE_MAX_HEIGHT_DOTS) {
+    throw invalidImage(
+      `image height must be 1–${String(PRINT_IMAGE_MAX_HEIGHT_DOTS)} dots (got ${String(height)})`,
     );
   }
   return bytes;

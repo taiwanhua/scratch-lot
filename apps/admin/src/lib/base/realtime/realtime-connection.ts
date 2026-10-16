@@ -1,6 +1,9 @@
 import {
+  MIN_RENEW_DELAY_MS,
   REALTIME_CLOSE_CODES,
   REALTIME_TICKET_TTL_SECONDS,
+  RECONNECT_BACKOFF_MS,
+  RENEW_BEFORE_MS,
   type RealtimeServerMessage,
   type RealtimeSignal,
   boardTopic,
@@ -59,10 +62,6 @@ export interface RealtimeConnectionOptions {
   timers?: RealtimeTimers;
 }
 
-/** 到期前多久在原連線上換發(毫秒)。 */
-export const RENEW_BEFORE_MS = 60_000;
-/** 換發的最小間隔(毫秒):時間異常時也不會連續換發。 */
-export const MIN_RENEW_DELAY_MS = 30_000;
 /**
  * 收到憑證後多久換發(毫秒):以「收到的時刻 + (效期 − 1 分鐘)」計算,不拿憑證的 `expiresAt` 對使用者電腦的時鐘
  * (時鐘不準時會太早或太晚換發)。
@@ -71,8 +70,6 @@ export const RENEW_AFTER_MS = Math.max(
   MIN_RENEW_DELAY_MS,
   REALTIME_TICKET_TTL_SECONDS * 1000 - RENEW_BEFORE_MS,
 );
-/** 重連退避(毫秒):依失敗次數取,用完停在最後一個。 */
-export const RECONNECT_BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
 /** 即時通道停用(憑證是 null)時,多久再問一次 API(毫秒)。 */
 export const DISABLED_RETRY_MS = 60_000;
 

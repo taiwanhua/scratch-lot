@@ -64,6 +64,8 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 後續步驟不需要 git 認證,不留 token 在工作目錄
 
       - uses: pnpm/action-setup@v4 # 版本讀 package.json 的 packageManager 欄位
 
@@ -116,6 +118,8 @@ jobs:
       id-token: write # Workload Identity Federation 免金鑰認證
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 後續步驟不需要 git 認證,不留 token 在工作目錄
 
       # 同 Deploy:讀 deploy/project/*.json 並核對專案身分,repo 或環境不符時在雲端認證前失敗
       - name: 專案設定(核對 repo 與環境)

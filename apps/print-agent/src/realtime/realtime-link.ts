@@ -1,6 +1,9 @@
 import {
+  MIN_RENEW_DELAY_MS,
   REALTIME_CLOSE_CODES,
   REALTIME_TICKET_TTL_SECONDS,
+  RECONNECT_BACKOFF_MS,
+  RENEW_BEFORE_MS,
   type RealtimeServerMessage,
   type RealtimeSignal,
 } from "@repo/domain/realtime";
@@ -14,6 +17,7 @@ import { type Timers, systemTimers } from "../timers";
  * - **建立連線**:`POST /print-agent/realtime-ticket` 拿訂閱憑證(只含 `print-agent:<自己>`)→
  *   `wss://…/connect?ticket=`;Durable Object 初始訂閱 `print-agent:<自己>`,不必再送 `subscribe`。
  * - **換發**:收到憑證後(效期 − 1 分鐘,最少 30 秒)在**原連線**上送 `renew`;不拿 `expiresAt` 對本機時鐘。
+ *   送出後 15 秒沒有回應(`renewed` / `rejected`)就關掉重連。時間常數與 admin 共用 `@repo/domain/realtime`。
  * - **重連退避**:斷線後依 1 / 2 / 5 / 10 / 30 秒重連;憑證過期被關(4001)立即重拿憑證;換發被拒 → 關掉重連。
  * - **停用**:API 回的憑證是 null(該環境沒有即時通道)→ 狀態 `down`,60 秒後再問。
  *
@@ -53,17 +57,13 @@ export interface RealtimeLinkOptions {
   timers?: Timers;
 }
 
-/** 到期前多久換發(毫秒)。 */
-export const RENEW_BEFORE_MS = 60_000;
-/** 換發的最小間隔(毫秒)。 */
-export const MIN_RENEW_DELAY_MS = 30_000;
 /** 收到憑證後多久換發(毫秒)。 */
 export const RENEW_AFTER_MS = Math.max(
   MIN_RENEW_DELAY_MS,
   REALTIME_TICKET_TTL_SECONDS * 1000 - RENEW_BEFORE_MS,
 );
-/** 重連退避(毫秒):依連續失敗次數取,用完停在最後一個(與 admin 相同)。 */
-export const RECONNECT_BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
+/** 送出換發後多久沒收到 `renewed` / `rejected` 就當連線壞了,關掉重連(毫秒)。 */
+export const RENEW_RESPONSE_TIMEOUT_MS = 15_000;
 /** 即時通道停用(憑證是 null)時多久再問(毫秒)。 */
 export const DISABLED_RETRY_MS = 60_000;
 
@@ -253,6 +253,13 @@ export class RealtimeLink {
     }
     this.pendingRenewAt = this.timers.now();
     socket.send(JSON.stringify({ op: "renew", ticket: grant.ticket }));
+    // 沒有回應(連線半死、訊息丟失):關掉重連;收到 renewed 時由 scheduleRenew 取代這個計時
+    this.schedule(() => {
+      if (socket === this.socket && this.pendingRenewAt !== null) {
+        this.options.logger?.warn("換發沒有回應:重新連線");
+        this.restart();
+      }
+    }, RENEW_RESPONSE_TIMEOUT_MS);
   }
 
   /** 關掉目前連線並重新連(換發被拒、拿不到新憑證)。 */
@@ -283,11 +290,8 @@ export class RealtimeLink {
         return;
       }
       case "rejected": {
-        if (
-          this.pendingRenewAt !== null &&
-          (message.reason === "ticket-mismatch" ||
-            message.reason === "invalid-ticket")
-        ) {
+        // 代理程式只送 renew(不送 subscribe):換發中收到任何拒絕都是換發失敗,關掉重連
+        if (this.pendingRenewAt !== null) {
           this.restart();
         }
         return;

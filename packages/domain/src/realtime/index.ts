@@ -40,3 +40,8 @@ export {
   signRealtimePublish,
   verifyRealtimePublish,
 } from "./protocol";
+export {
+  MIN_RENEW_DELAY_MS,
+  RECONNECT_BACKOFF_MS,
+  RENEW_BEFORE_MS,
+} from "./timing";
