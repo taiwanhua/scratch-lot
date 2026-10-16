@@ -19,11 +19,13 @@ import {
   type RetiredFormPermissionsQuery,
   type SaveFormVersionDraftMutationVariables,
   type SetModuleListColumnsMutationVariables,
+  type UpdateFormMutationVariables,
 } from "@repo/graphql";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import { fieldCategories } from "./field-fixtures";
 import type { FormFailure } from "./form-runtime-handlers";
+import { formUpdateHandler } from "./form-update-handler";
 import {
   BASE_LOOKUP_PROVIDERS,
   type LookupProviderFixture,
@@ -38,6 +40,7 @@ export type FormDesignOperation =
   | "DeleteRetiredPermission"
   | "DeleteFormVersionDraft"
   | "SetModuleListColumns"
+  | "UpdateForm"
   | "ExportFormSeed"
   | "FormLookupProviders";
 
@@ -69,6 +72,7 @@ export interface FormDesignWorld {
     setModuleListColumns: SetModuleListColumnsMutationVariables["input"][];
     previewFormVersion: PreviewFormVersionQueryVariables["input"][];
     exportFormSeed: ExportFormSeedQueryVariables["input"][];
+    updateForm: UpdateFormMutationVariables["input"][];
   };
 }
 
@@ -95,6 +99,7 @@ export const formDesignWorld = (
     setModuleListColumns: [],
     previewFormVersion: [],
     exportFormSeed: [],
+    updateForm: [],
   };
 
   const fail = (operation: FormDesignOperation) => {
@@ -172,6 +177,11 @@ export const formDesignWorld = (
         },
       }),
     ),
+    formUpdateHandler({
+      findForm: (formKey) => forms.find((item) => item.key === formKey),
+      fail,
+      inputs,
+    }),
     api.query("FormVersions", ({ variables }) => {
       const { formKey } = variables as { formKey: string };
       const items = versionsOf(formKey);

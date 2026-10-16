@@ -130,12 +130,14 @@ describe("表單的類別選項欄與投影過的定義", () => {
     await user.click(screen.getByRole("button", { name: "送出" }));
 
     await waitFor(() => {
-      expect(world.inputs.submitFormSubmission).toHaveLength(1);
+      expect(world.inputs.createAndSubmitFormSubmission).toHaveLength(1);
     });
-    expect(world.inputs.createFormDraft[0]?.values).toMatchObject({
-      item: "茶",
-      kind: { value: "drink", label: "飲品" },
-    });
+    expect(world.inputs.createAndSubmitFormSubmission[0]?.values).toMatchObject(
+      {
+        item: "茶",
+        kind: { value: "drink", label: "飲品" },
+      },
+    );
     // 只帶「哪一版的哪一個欄位」,類別 key 由 api 從定義取
     expect(world.inputs.formFieldOptions[0]).toMatchObject({
       formKey: SHOPPING_FORM_KEY,

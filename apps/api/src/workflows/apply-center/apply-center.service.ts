@@ -9,6 +9,7 @@ import {
   FormsRepository,
   ModulesRepository,
 } from "../../database/database.module";
+import { allowsDraft } from "../../database/schemas/form.schema";
 import {
   type SubmissionFilter,
   type SubmissionSnapshotRecord,
@@ -188,6 +189,7 @@ export class ApplyCenterService {
           moduleKey: form.moduleKey,
           currentVersion: form.currentVersion ?? 0,
           tabLabelTemplate: form.tabLabelTemplate,
+          allowDraft: allowsDraft(form),
         }));
       if (forms.length > 0) {
         groups.push({ moduleKey: module.key, moduleName: module.name, forms });

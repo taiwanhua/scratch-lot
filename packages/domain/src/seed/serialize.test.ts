@@ -189,7 +189,7 @@ describe("serializeSeedSet", () => {
             ],
           }),
         ],
-        { tabLabelTemplate: "{{title}} - {{applicant}}" },
+        { tabLabelTemplate: "{{title}} - {{applicant}}", allowDraft: false },
       ),
       workflowSeed(
         {

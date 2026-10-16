@@ -58,10 +58,12 @@ export const SEED_CONFLICT_CODES = [
 
 export type SeedConflictCode = (typeof SEED_CONFLICT_CODES)[number];
 
-/** 身分(表單 / 流程)上可改的受管 metadata;`tabLabelTemplate` 只有表單有。 */
+/** 身分(表單 / 流程)上可改的受管 metadata;`tabLabelTemplate`、`allowDraft` 只有表單有。 */
 export interface IdentityMetadata {
   name: string;
   tabLabelTemplate?: string | null;
+  /** 允許存草稿;缺席 = 開(流程、這個欄位之前的安裝快照)。 */
+  allowDraft?: boolean;
 }
 
 /** 條件更新 metadata 的前置狀態:哪一筆定義、當時的目前版本與 metadata。 */
@@ -77,7 +79,8 @@ export function isSameIdentityMetadata(
 ): boolean {
   return (
     left.name === right.name &&
-    (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null)
+    (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null) &&
+    (left.allowDraft ?? true) === (right.allowDraft ?? true)
   );
 }
 

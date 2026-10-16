@@ -15,6 +15,7 @@ import { FormAccessService } from "../form-access.service";
 import { FormVersionPayload } from "../models/form-common.model";
 import {
   CopySubmissionToDraftInput,
+  CreateAndSubmitFormSubmissionInput,
   CreateFormDraftInput,
   DeleteFormSubmissionInput,
   FormFieldOptionsInput,
@@ -151,6 +152,20 @@ export class FormSubmissionsResolver {
   ): Promise<FormSubmissionPayload> {
     return {
       submission: await this.service.createDraft(
+        await this.access.factsOf(operator),
+        input,
+      ),
+    };
+  }
+
+  /** 新增頁的 [送出]:一個交易內建立 + 守門 + 送出;失敗不留任何資料。 */
+  @Mutation(() => FormSubmissionPayload)
+  async createAndSubmitFormSubmission(
+    @Args("input") input: CreateAndSubmitFormSubmissionInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<FormSubmissionPayload> {
+    return {
+      submission: await this.service.createAndSubmit(
         await this.access.factsOf(operator),
         input,
       ),

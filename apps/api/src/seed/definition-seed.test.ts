@@ -350,7 +350,7 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       expect(installations[1]?.expected).toEqual({
         definitionExists: true,
         currentVersion: 1,
-        metadata: { name: r1.name, tabLabelTemplate: null },
+        metadata: { name: r1.name, tabLabelTemplate: null, allowDraft: true },
       });
       const rerun = await runSeed(app, r2);
       expect(rerun.outcome).toBe("unchanged");
@@ -484,6 +484,51 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       const form = await getForm(api, app.root, "seed_meta");
       expect(form.name).toBe("現場改的名字");
       expect(await versionDocs(connection, FORM, "seed_meta")).toHaveLength(1);
+    });
+
+    it("允許存草稿:宣告關掉 → 安裝出來的表單是關的,快照記下;重跑未變;現場切回開 → METADATA_DRIFT", async () => {
+      const r1 = formSeed("seed_allow_draft", "r1", { allowDraft: false });
+      const created = await runSeed(app, r1);
+
+      expect(created).toMatchObject({ outcome: "created", conflict: null });
+      expect(
+        await definitionDoc(connection, FORM, "seed_allow_draft"),
+      ).toMatchObject({ allowDraft: false });
+      const installation = await installationOf(connection, r1);
+      expect(installation?.metadata).toMatchObject({ allowDraft: false });
+      const rerun = await runSeed(app, r1);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_allow_draft", allowDraft: true },
+      });
+      const drifted = await runSeeds(app, [r1]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+      expect(
+        await definitionDoc(connection, FORM, "seed_allow_draft"),
+      ).toMatchObject({ allowDraft: true });
+    });
+
+    it("允許存草稿:沒宣告 = 開;改版宣告關掉 → 以條件更新改成關", async () => {
+      const r1 = formSeed("seed_allow_draft_next", "r1");
+      await runSeeds(app, [r1]);
+      const before = await definitionDoc(
+        connection,
+        FORM,
+        "seed_allow_draft_next",
+      );
+      expect(before?.allowDraft).not.toBe(false);
+
+      const r2 = formSeed("seed_allow_draft_next", "r2", {
+        allowDraft: false,
+        fields: changedFields,
+      });
+      const next = await runSeed(app, r2);
+
+      expect(next.conflict).toBeNull();
+      expect(
+        await definitionDoc(connection, FORM, "seed_allow_draft_next"),
+      ).toMatchObject({ allowDraft: false, currentVersion: 2 });
     });
 
     it("整批預檢:同批任一筆衝突就整批不寫,其他宣告也不會被安裝", async () => {

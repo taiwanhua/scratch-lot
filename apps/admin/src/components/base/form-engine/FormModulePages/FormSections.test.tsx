@@ -178,7 +178,7 @@ describe("表單分區收合(底座 10.3)", () => {
   it("送出時區塊內有錯:有錯的分區全部展開、捲到第一個錯誤;不寫入儲存,重新整理回到原狀態", async () => {
     const world = worldOf({
       failures: {
-        SubmitFormSubmission: {
+        CreateAndSubmitFormSubmission: {
           code: "VALIDATION_FAILED",
           extensions: {
             fieldErrors: [

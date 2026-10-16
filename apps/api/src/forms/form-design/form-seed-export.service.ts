@@ -4,6 +4,7 @@ import type { FormDefinition } from "@repo/domain/form";
 import type { FormDefinitionSeedSet } from "@repo/domain/seed";
 
 import { FormVersionsRepository } from "../../database/database.module";
+import { allowsDraft } from "../../database/schemas/form.schema";
 import {
   FormAccessService,
   type FormOperatorFacts,
@@ -87,6 +88,8 @@ export class FormSeedExportService {
       desiredStatus: "published",
       moduleKey: form.moduleKey,
       tabLabelTemplate: form.tabLabelTemplate,
+      // 允許存草稿:只有關掉才寫(缺席 = 開)
+      ...(allowsDraft(form) ? {} : { allowDraft: false }),
       definition: toPlainJson<FormDefinition>({
         fields: version.fields,
         layout: version.layout,

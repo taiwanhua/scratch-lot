@@ -45,7 +45,7 @@ export interface FormSubmissionState {
     values: StoredValues,
     touched?: readonly string[],
   ) => Promise<FormSubmissionFieldsFragment | null>;
-  /** 草稿 / 退回 / 撤回:存 + 送出(一顆鈕;綁流程的會進審核) */
+  /** 草稿 / 退回 / 撤回:帶畫面上的值送出(一個請求、一個交易;綁流程的會進審核) */
   submit: (
     values: StoredValues,
     touched?: readonly string[],
@@ -142,14 +142,19 @@ export const useFormSubmission = (
       return next;
     });
 
-  const submit = (values: StoredValues, touched?: readonly string[]) =>
+  // 送出後不再是「還沒送出過的草稿」,`touched` 用不到,不送
+  const submit = (values: StoredValues) =>
     wrap(async () => {
       if (submission === null) {
         return null;
       }
-      const saved = await saveAsDraft(submission, values, touched);
+      // 不先存草稿:表單關了「允許存草稿」時草稿也送得出去,送出失敗也不留半套的存檔
       const payload = await submitDraft.mutateAsync({
-        input: { id: saved.id, expectedEditVersion: saved.editVersion },
+        input: {
+          id: submission.id,
+          expectedEditVersion: submission.editVersion,
+          values,
+        },
       });
       const submitted = payload.submitFormSubmission.submission;
       updateCache(submitted);

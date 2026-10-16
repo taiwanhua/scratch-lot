@@ -245,6 +245,7 @@ export const mockHandlers = ({
           moduleKey: "demo-form",
           currentVersion: 1,
           tabLabelTemplate: null,
+          allowDraft: true,
         },
         {
           key: LEAVE_FORM_KEY,
@@ -252,6 +253,7 @@ export const mockHandlers = ({
           moduleKey: "demo.form",
           currentVersion: 1,
           tabLabelTemplate: null,
+          allowDraft: true,
         },
       ],
       versions: {
@@ -288,6 +290,7 @@ const leaveSubmissions = () => [
     currentInstanceId: "inst-1",
     abilities: {
       canEdit: false,
+      canSaveDraft: false,
       canDelete: false,
       canEditField: [],
       canWithdraw: false,
@@ -306,6 +309,7 @@ const leaveSubmissions = () => [
     currentInstanceId: "inst-2",
     abilities: {
       canEdit: false,
+      canSaveDraft: false,
       canDelete: false,
       canEditField: [],
       canWithdraw: false,

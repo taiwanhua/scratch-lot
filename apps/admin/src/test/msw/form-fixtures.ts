@@ -247,6 +247,7 @@ export const formFragment = (
   forkedFrom: null,
   currentVersion: 1,
   tabLabelTemplate: null,
+  allowDraft: true,
   hasDraft: true,
   tenantEnabled: null,
   assignments: [],
@@ -324,6 +325,7 @@ export const submissionFragment = (
   touched: [],
   abilities: {
     canEdit: true,
+    canSaveDraft: true,
     canDelete: true,
     canEditField: ["item", "qty", "unit_price", "note", "buyer"],
     canWithdraw: false,

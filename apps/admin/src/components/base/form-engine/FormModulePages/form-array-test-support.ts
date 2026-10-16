@@ -135,6 +135,7 @@ export const arraySubmission = () =>
     },
     abilities: {
       canEdit: true,
+      canSaveDraft: true,
       canDelete: true,
       canEditField: ["item", "lines"],
       canWithdraw: false,

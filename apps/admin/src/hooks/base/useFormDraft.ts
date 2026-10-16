@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { StoredValues } from "@repo/domain/form";
 import {
   type FormSubmissionFieldsFragment,
+  useCreateAndSubmitFormSubmissionMutation,
   useCreateFormDraftMutation,
   useSaveFormDraftMutation,
   useSubmitFormSubmissionMutation,
@@ -25,7 +26,10 @@ export interface FormDraftState {
     values: StoredValues,
     touched: readonly string[],
   ) => Promise<FormSubmissionFieldsFragment | null>;
-  /** 送出:畫面上一顆鈕 = 建 / 存草稿 + 送出兩個動作(Spec 6a §6) */
+  /**
+   * 送出:一個請求完成。還沒存過草稿 → `createAndSubmitFormSubmission`(一個交易建立 + 送出,失敗不留資料);
+   * 已存過草稿 → `submitFormSubmission` 帶畫面上的值送出那一筆
+   */
   submit: (
     values: StoredValues,
     touched: readonly string[],
@@ -35,10 +39,11 @@ export interface FormDraftState {
 }
 
 /**
- * 新增一筆提交(Spec 6a §6「提交」、docs/modules/forms.md):
+ * 新增一筆提交(Spec 6a §6「提交」、10.10「直接送出」、docs/modules/forms.md):
  *
- * - **頁面開啟時**產生一次性的 `clientRequestId`:`createFormDraft` 重試(網路斷、連點)命中同一個
- *   `(createdBy, clientRequestId)` 就回同一筆,「新增後直接送出」不會建出兩筆;
+ * - **頁面開啟時**產生一次性的 `clientRequestId`:`createFormDraft` / `createAndSubmitFormSubmission` 重試
+ *   (網路斷、連點)命中同一個 `(createdBy, clientRequestId)` 就回同一筆,不會建出兩筆;
+ * - [送出] 不先建草稿:失敗時資料庫不留任何資料,畫面保留輸入內容並顯示錯誤;只有 [存草稿] 才建草稿;
  * - 之後每次寫入都帶 `expectedEditVersion`(= 上一次拿到的 `editVersion`),不符 → `CONFLICT`,
  *   畫面提示「這筆資料已被別人更新,請重新載入」;
  * - `values` 是**整張表單的狀態**(缺席 = 清空),所以一律送整份;`touched` 是使用者碰過的欄位
@@ -56,6 +61,9 @@ export const useFormDraft = (formKey: string): FormDraftState => {
   const create = useCreateFormDraftMutation(session.client);
   const save = useSaveFormDraftMutation(session.client);
   const submitMutation = useSubmitFormSubmissionMutation(session.client);
+  const createAndSubmit = useCreateAndSubmitFormSubmissionMutation(
+    session.client,
+  );
 
   const persist = async (
     values: StoredValues,
@@ -78,6 +86,23 @@ export const useFormDraft = (formKey: string): FormDraftState => {
     return saved.saveFormDraft.submission;
   };
 
+  /** 送出(一個請求):沒有草稿 → 建立並送出;有草稿 → 帶這次的值送出那一筆。 */
+  const send = async (
+    values: StoredValues,
+    touched: readonly string[],
+  ): Promise<FormSubmissionFieldsFragment> => {
+    if (draft === null) {
+      const created = await createAndSubmit.mutateAsync({
+        input: { formKey, clientRequestId, values, touched: [...touched] },
+      });
+      return created.createAndSubmitFormSubmission.submission;
+    }
+    const submitted = await submitMutation.mutateAsync({
+      input: { id: draft.id, expectedEditVersion: draft.editVersion, values },
+    });
+    return submitted.submitFormSubmission.submission;
+  };
+
   const run = async (
     values: StoredValues,
     touched: readonly string[],
@@ -87,15 +112,10 @@ export const useFormDraft = (formKey: string): FormDraftState => {
     setError(null);
     let current: FormSubmissionFieldsFragment | null = draft;
     try {
-      current = await persist(values, touched);
+      current = andSubmit
+        ? await send(values, touched)
+        : await persist(values, touched);
       setDraft(current);
-      if (andSubmit) {
-        const submitted = await submitMutation.mutateAsync({
-          input: { id: current.id, expectedEditVersion: current.editVersion },
-        });
-        current = submitted.submitFormSubmission.submission;
-        setDraft(current);
-      }
       updateCache(current);
       return current;
     } catch (error_) {

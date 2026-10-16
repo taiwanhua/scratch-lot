@@ -6,6 +6,7 @@ import {
   type ListBuiltinColumns,
 } from "@repo/domain/form";
 import {
+  type CreateAndSubmitFormSubmissionMutationVariables,
   type CreateFormDraftMutationVariables,
   type FormFieldOptionsQuery,
   type FormFieldOptionsQueryVariables,
@@ -28,13 +29,15 @@ import {
 import { rawOf } from "@/lib/base/form-engine/definition";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
-import { type MockSubmission, submissionFragment } from "./form-fixtures";
+import { formCreateHandlers } from "./form-create-handlers";
+import type { MockSubmission } from "./form-fixtures";
 import { submissionActionHandlers } from "./form-submission-action-handlers";
 import { fragmentOf, revisionsOf } from "./form-submission-revisions";
 import { api } from "./server";
 
 export type FormRuntimeOperation =
   | "FormFieldOptions"
+  | "CreateAndSubmitFormSubmission"
   | "CreateFormDraft"
   | "SaveFormDraft"
   | "SubmitFormSubmission"
@@ -80,6 +83,7 @@ export interface FormRuntimeWorldOptions {
 export interface FormRuntimeWorld {
   handlers: Parameters<typeof import("./server").server.use>;
   inputs: {
+    createAndSubmitFormSubmission: CreateAndSubmitFormSubmissionMutationVariables["input"][];
     createFormDraft: CreateFormDraftMutationVariables["input"][];
     saveFormDraft: SaveFormDraftMutationVariables["input"][];
     submitFormSubmission: SubmitFormSubmissionMutationVariables["input"][];
@@ -123,6 +127,7 @@ export const formRuntimeWorld = (
   const listBuiltin = options.listBuiltin ?? {};
   const state: MockSubmission[] = structuredClone(options.submissions ?? []);
   const inputs: FormRuntimeWorld["inputs"] = {
+    createAndSubmitFormSubmission: [],
     createFormDraft: [],
     saveFormDraft: [],
     submitFormSubmission: [],
@@ -147,6 +152,14 @@ export const formRuntimeWorld = (
         );
   };
   const find = (id: string) => state.find((item) => item.id === id);
+  const push = (submission: MockSubmission) => {
+    state.push(submission);
+  };
+  /** 新一筆的 id(`<prefix>-<流水號>`) */
+  const nextId = (prefix: string) => () => {
+    created += 1;
+    return `${prefix}-${String(created)}`;
+  };
   /** 單筆 payload(`{ <操作名>: { submission } }`);型別交給各 handler 的回傳推導。 */
   const payload = (name: string, submission: MockSubmission) =>
     HttpResponse.json<GraphQLResponseBody<Record<string, never>>>({
@@ -296,28 +309,13 @@ export const formRuntimeWorld = (
         },
       });
     }),
-    api.mutation("CreateFormDraft", ({ variables }) => {
-      const { input } = variables as CreateFormDraftMutationVariables;
-      inputs.createFormDraft.push(input);
-      const failure = fail("CreateFormDraft");
-      if (failure !== null) {
-        return failure;
-      }
-      created += 1;
-      const submission = submissionFragment({
-        id: `sub-new-${String(created)}`,
-        formKey: input.formKey,
-        status: FormSubmissionStatus.Draft,
-        revision: 0,
-        revisions: [],
-        values: input.values ?? {},
-        touched: input.touched ?? [],
-        summary: null,
-        submittedAt: null,
-        editVersion: 1,
-      });
-      state.push(submission);
-      return payload("createFormDraft", submission);
+    ...formCreateHandlers({
+      push,
+      nextId: nextId("sub-new"),
+      fail,
+      payload,
+      inputs,
+      submitAs: options.submitAs,
     }),
     api.mutation("SaveFormDraft", ({ variables }) => {
       const { input } = variables as SaveFormDraftMutationVariables;
@@ -352,6 +350,8 @@ export const formRuntimeWorld = (
         return failure;
       }
       Object.assign(target, {
+        // `values` 有值 = 以畫面上的值送出(與送出同一次寫入)
+        values: input.values ?? target.values,
         status: options.submitAs?.status ?? FormSubmissionStatus.Completed,
         currentInstanceId:
           options.submitAs?.instanceId ?? target.currentInstanceId,
@@ -389,13 +389,8 @@ export const formRuntimeWorld = (
     }),
     ...submissionActionHandlers({
       byId: find,
-      push: (submission) => {
-        state.push(submission);
-      },
-      nextId: () => {
-        created += 1;
-        return `sub-copy-${String(created)}`;
-      },
+      push,
+      nextId: nextId("sub-copy"),
       fail,
       payload,
       inputs,

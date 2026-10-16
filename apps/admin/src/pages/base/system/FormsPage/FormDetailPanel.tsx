@@ -21,6 +21,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
+import { AllowDraftField } from "./AllowDraftField";
 import { FormDesigner } from "./FormDesigner/FormDesigner";
 import { VersionViewer } from "./FormDesigner/VersionViewer";
 import { AssignFormDialog } from "./FormDialogs/AssignFormDialog";
@@ -167,6 +168,7 @@ export const FormDetailPanel = ({
               }
             />
           )}
+        <AllowDraftField form={form} onChanged={onChanged} />
         {canBindWorkflow && hasPermission(FORMS_PERMISSIONS.edit) && (
           <WorkflowBindingField form={form} onChanged={onChanged} />
         )}

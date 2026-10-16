@@ -159,4 +159,57 @@ describe("表單模組編輯頁(預設組裝)", () => {
       await within(tabs).findByText(/編輯・2026-09-26 牛奶/),
     ).toBeInTheDocument();
   });
+
+  it("表單關了「允許存草稿」(canSaveDraft false):既有草稿沒有 [存草稿],[送出] 帶畫面上的值一次送出", async () => {
+    const draft = submissionFragment({
+      status: FormSubmissionStatus.Draft,
+      revision: 0,
+      submittedAt: null,
+      abilities: {
+        ...submissionFragment().abilities,
+        canSaveDraft: false,
+      },
+    });
+    const { user, world } = renderShopping({
+      path: EDIT_PATH,
+      world: { ...defaultRuntimeOptions(), submissions: [draft] },
+    });
+
+    const qty = await screen.findByRole("textbox", { name: "數量" });
+    expect(screen.queryByRole("button", { name: "存草稿" })).toBeNull();
+    await user.clear(qty);
+    await user.type(qty, "4");
+    await user.click(screen.getByRole("button", { name: "送出" }));
+
+    await waitFor(() => {
+      expect(world.inputs.submitFormSubmission).toHaveLength(1);
+    });
+    expect(world.inputs.submitFormSubmission[0]).toMatchObject({
+      id: "sub-1",
+      expectedEditVersion: 2,
+      values: expect.objectContaining({ item: "雞蛋", qty: "4" }),
+    });
+    expect(world.inputs.saveFormDraft).toHaveLength(0);
+  });
+
+  it("允許存草稿(canSaveDraft true):草稿有 [存草稿] 與 [送出]", async () => {
+    renderShopping({
+      path: EDIT_PATH,
+      world: {
+        ...defaultRuntimeOptions(),
+        submissions: [
+          submissionFragment({
+            status: FormSubmissionStatus.Draft,
+            revision: 0,
+            submittedAt: null,
+          }),
+        ],
+      },
+    });
+
+    expect(
+      await screen.findByRole("button", { name: "存草稿" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "送出" })).toBeInTheDocument();
+  });
 });

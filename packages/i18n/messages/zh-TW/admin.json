@@ -1320,7 +1320,8 @@
       "REVISION_LIMIT": "修訂次數已達上限,請建立新的申請。",
       "DOCUMENT_TOO_LARGE": "修訂記錄已達容量上限,無法再修改。",
       "FORM_HAS_WORKFLOW": "這張表單在本組織綁了審核流程,舊版資料不能升級到新版。",
-      "VERSION_NOT_PUBLISHED": "只能升級到已發布的版本,請重新整理。"
+      "VERSION_NOT_PUBLISHED": "只能升級到已發布的版本,請重新整理。",
+      "DRAFT_DISABLED": "這張表單不允許存草稿,請直接送出。"
     },
     "array": {
       "addRow": "+ 新增一列",
@@ -1387,6 +1388,10 @@
       "tenantEnabled": "在本組織啟用",
       "enabledOn": "已在本組織啟用這張表單。",
       "enabledOff": "已在本組織停用這張表單。",
+      "allowDraft": "允許存草稿",
+      "allowDraftHint": "關掉後,新增 / 編輯頁不顯示 [存草稿],只能直接送出。",
+      "allowDraftOn": "已允許存草稿。",
+      "allowDraftOff": "已關閉存草稿,之後只能直接送出。",
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",

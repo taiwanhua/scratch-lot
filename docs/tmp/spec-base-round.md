@@ -1578,6 +1578,7 @@ registerReport({
 
 驗收:上表每一列一個測試。
 
+- 受管表單的 seed 宣告(`FormDefinitionSeedSet`)以選填的 `allowDraft: false` 關掉;沒寫 = 開。它是受管 metadata(同 `tabLabelTemplate`):進 `contentHash`(只有關掉時才進,開著的既有宣告 hash 不變)、安裝時寫進表單、現場改過 → `METADATA_DRIFT`,「匯出專案設定」關著時輸出 `allowDraft: false`。
 - 刮刮樂專案:叫貨單、進貨單、調貨單開;撤銷售出申請、現金更正單、補打卡申請、支援需求單關。
 - Figma:沿用表單設計器畫面,設定區多一個開關(畫面清單 BS-21)。
 

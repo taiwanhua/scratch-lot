@@ -82,9 +82,10 @@ describe("明細列(填寫)", () => {
     await user.click(screen.getByRole("button", { name: "送出" }));
 
     await waitFor(() => {
-      expect(world.inputs.createFormDraft).toHaveLength(1);
+      expect(world.inputs.createAndSubmitFormSubmission).toHaveLength(1);
     });
-    const lines = world.inputs.createFormDraft[0]?.values?.lines as {
+    const lines = world.inputs.createAndSubmitFormSubmission[0]?.values
+      ?.lines as {
       rowId: string;
       name: string;
     }[];
@@ -173,9 +174,10 @@ describe("明細列(填寫)", () => {
     await user.click(screen.getByRole("button", { name: "送出" }));
 
     await waitFor(() => {
-      expect(world.inputs.createFormDraft).toHaveLength(1);
+      expect(world.inputs.createAndSubmitFormSubmission).toHaveLength(1);
     });
-    const lines = world.inputs.createFormDraft[0]?.values?.lines as {
+    const lines = world.inputs.createAndSubmitFormSubmission[0]?.values
+      ?.lines as {
       rowId: string;
       name: string;
     }[];
