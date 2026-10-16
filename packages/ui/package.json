@@ -458,6 +458,16 @@
         "types": "./dist/cjs/receipt58.d.ts",
         "default": "./dist/cjs/receipt58.js"
       }
+    },
+    "./stepper": {
+      "import": {
+        "types": "./dist/es/stepper.d.mts",
+        "default": "./dist/es/stepper.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/stepper.d.ts",
+        "default": "./dist/cjs/stepper.js"
+      }
     }
   },
   "scripts": {
