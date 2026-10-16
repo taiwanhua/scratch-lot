@@ -999,7 +999,9 @@ input GrantRoleUsersInput {
   userIds: [ID!]!
 }
 
-"""任意 JSON 物件(資料範圍的條件樹;形狀見 apps/api/src/data-scope/data-scope-rule.ts)"""
+"""
+任意 JSON 物件,形狀由各端點驗證(資料範圍的條件樹見 apps/api/src/data-scope/data-scope-rule.ts;個人偏好見 apps/api/src/user-preferences/user-preference-registry.ts)
+"""
 scalar JSONObject
 
 input LoginInput {
@@ -1227,6 +1229,7 @@ type Mutation {
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
+  updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateUser(input: UpdateUserInput!): UserPayload!
@@ -1251,6 +1254,10 @@ type MyApplicationsPayload {
   page: Int!
   pageSize: Int!
   totalCount: Int!
+}
+
+type MyPreferencesPayload {
+  settings: JSONObject!
 }
 
 input MyTasksInput {
@@ -1408,6 +1415,7 @@ type Query {
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
   moduleTree: [ModuleAdminNode!]!
   myApplications(input: MyApplicationsInput!): MyApplicationsPayload!
+  myPreferences: MyPreferencesPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
   org(id: ID!): Org!
   orgManagerCandidates(keyword: String, orgId: ID!): [UserSummary!]!
@@ -1894,6 +1902,14 @@ input UpdateFormSubmissionInput {
   expectedRevision: Int!
   id: ID!
   values: JSONObject!
+}
+
+input UpdateMyPreferencesInput {
+  settings: JSONObject!
+}
+
+type UpdateMyPreferencesPayload {
+  settings: JSONObject!
 }
 
 input UpdateOrgInput {

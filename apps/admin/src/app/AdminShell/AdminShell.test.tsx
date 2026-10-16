@@ -357,7 +357,7 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
     expect(screen.queryByRole("combobox", { name: "語言" })).toBeNull();
   });
 
-  it("頭像選單:使用者卡(姓名、帳號 · 當前組織)、外觀 / 語言兩組分段按鈕、兩個登出項", async () => {
+  it("頭像選單:使用者卡(姓名、帳號 · 當前組織)、外觀 / 語言兩組分段按鈕、個人設定、兩個登出項", async () => {
     server.use(...authWorld({ hasRefreshCookie: true }).handlers);
 
     const { user } = renderApp({ path: "/overview" });
@@ -375,7 +375,7 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["登出", "登出所有裝置"]);
+    ).toEqual(["個人設定", "登出", "登出所有裝置"]);
   });
 
   it("頭像選單的語言:切到 English 後文案變英文、選單不關,並記在 localStorage", async () => {

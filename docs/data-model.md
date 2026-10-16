@@ -23,6 +23,7 @@
 | `refresh_tokens`                    | 業務                                                     | 登入 refresh token(存雜湊)                                                                               | 帳號           | `refresh-token.schema.ts`         |
 | `action_tokens`                     | 業務                                                     | 啟用信 / 重設密碼 token(單次、TTL)                                                                       | 帳號           | `action-token.schema.ts`          |
 | `audit_logs`                        | 業務                                                     | 稽核日誌(只增不改)                                                                                       | 授權           | `audit-log.schema.ts`             |
+| `user_preferences`                  | 業務                                                     | 個人偏好(每個使用者一筆 `{ userId, settings: { <key>: 值 } }`,跟著帳號);key 須登記                       | 帳號           | `user-preference.schema.ts`       |
 | `demo_items_one` / `demo_items_two` | 種子(宣告的幾筆)+ 業務                                   | 示範模組資料(模組資料表)                                                                                 | 各自的模組文件 | `demo-item-*.schema.ts`           |
 | `forms`                             | 設定(受管 seed 或各環境自建)                             | 表單(一種填報的身分;共用 `ownerOrgId = null`、客製 = 租戶頂層)                                           | 表單           | `form.schema.ts`                  |
 | `form_versions`                     | 設定(受管 seed 或各環境自建)                             | 表單版本(草稿 / 發布中 / 已發布 / 已退役;欄位、版面、摘要槽、帶入規則)                                   | 表單           | `form-version.schema.ts`          |
@@ -52,6 +53,12 @@
 | `scheduled_job_runs` | 排程工作每個到期時點一筆:`key`、`scheduledFor`、`status`(`running` / `succeeded` / `failed`)、`startedAt`、`finishedAt`、`error`。唯一 `(key, scheduledFor)` 保證同一時點只執行一次 | `scheduled-job-run.schema.ts`、`apps/api/src/database/scheduled-job-runs.store.ts` |
 
 執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑;中途當掉的紀錄停在 `running`,`startedAt` 超過 15 分鐘後以條件式原子更新重新取得。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
+
+### 個人偏好
+
+`user_preferences` 只存跟著帳號的個人偏好(規格 10.6),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
+
+跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。顯示密度不做(規格第 11 章 B 類),沒有對應的偏好。
 
 ## 專案資料
 

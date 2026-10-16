@@ -1,0 +1,15 @@
+# 個人偏好(規格 10.6;api `apps/api/src/user-preferences/`):只讀寫自己的,所有登入者都能用。
+# settings = { <登記的 key>: 值 };每個登記的 key 都有值(沒存過 = 預設值,語言的預設是 null = 沒有設定)。
+query MyPreferences {
+  myPreferences {
+    settings
+  }
+}
+
+# UpdateMyPreferencesInput: { settings: { <key>: 值 | null } }
+# 只放要改的 key;null = 拿掉、回到預設。未登記的 key 或值不合型別 → VALIDATION_FAILED(extensions.reason / key),整筆不寫
+mutation UpdateMyPreferences($input: UpdateMyPreferencesInput!) {
+  updateMyPreferences(input: $input) {
+    settings
+  }
+}

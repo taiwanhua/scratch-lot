@@ -2,6 +2,7 @@ import { useTranslations } from "use-intl";
 
 import { Typography } from "@repo/ui/typography";
 
+import { useAccountLocaleSync } from "@/hooks/base/useAccountLocale";
 import { useMe } from "@/hooks/base/useMe";
 
 import { realtimeSignals } from "../module-pages";
@@ -19,12 +20,15 @@ export interface AdminShellProps {
  * `me` 走 `useMe()` 全域快取(RequireAuth 已等它載入;首登強改的導向也在 RequireAuth,殼不重複判斷),
  * 載到後交給 `ShellLayout` 排版(側欄 + AppBar + 路由頁籤列 + 內容區)。
  * 即時通道(`RealtimeProvider`)掛在殼這一層:登入後才連線,登出(殼卸載)就關掉。
+ * 同時等個人偏好回來、把語言對齊帳號(`useAccountLocaleSync`;規格 10.6):等待期間的載入中用本機快取的語言,
+ * 殼一出來就是帳號的語言,不會先閃一次快取的語言再換。
  */
 export const AdminShell = ({ pageMinWidths }: AdminShellProps) => {
   const tApp = useTranslations("admin.app");
   const me = useMe();
+  const accountLocale = useAccountLocaleSync(me.isSuccess);
 
-  if (me.isPending) {
+  if (me.isPending || (me.isSuccess && !accountLocale.isSettled)) {
     return <Typography sx={{ p: 4 }}>{tApp("loading")}</Typography>;
   }
   if (me.isError) {

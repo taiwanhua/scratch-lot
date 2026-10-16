@@ -31,6 +31,7 @@ import { Org, OrgSchema } from "./org.schema";
 import { Permission, PermissionSchema } from "./permission.schema";
 import { RefreshToken, RefreshTokenSchema } from "./refresh-token.schema";
 import { Role, RoleSchema } from "./role.schema";
+import { UserPreference, UserPreferenceSchema } from "./user-preference.schema";
 import { User, UserSchema } from "./user.schema";
 
 interface IndexInfo {
@@ -60,6 +61,7 @@ const REGISTRY: { name: string; schema: Schema }[] = [
   { name: RefreshToken.name, schema: RefreshTokenSchema },
   { name: ActionToken.name, schema: ActionTokenSchema },
   { name: AuditLog.name, schema: AuditLogSchema },
+  { name: UserPreference.name, schema: UserPreferenceSchema },
 ];
 
 async function readIndexes(
@@ -107,7 +109,7 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   }, HOOK_TIMEOUT_MS);
 
   it("全部 collection 皆已建模並可建立索引", () => {
-    expect(indexesByModel.size).toBe(17);
+    expect(indexesByModel.size).toBe(18);
   });
 
   it("orgs:unique(key sparse)+ unique(slug sparse)+(parentId)+(ancestors)", () => {
@@ -231,5 +233,10 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
     const indexes = indexesOf(AuditLog.name);
     expect(findIndex(indexes, { orgId: 1, createdAt: 1 })).toBeDefined();
     expect(findIndex(indexes, { targetType: 1, targetId: 1 })).toBeDefined();
+  });
+
+  it("user_preferences:userId 唯一(每個使用者一筆)", () => {
+    const indexes = indexesOf(UserPreference.name);
+    expect(findIndex(indexes, { userId: 1 })?.unique).toBe(true);
   });
 });

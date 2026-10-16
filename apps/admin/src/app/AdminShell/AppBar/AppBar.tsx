@@ -22,7 +22,7 @@ export interface AppBarProps {
   module?: ShellModule;
 }
 
-/** 後台 AppBar(Figma Draft/AdminAppBar 30:95):頁名、模組說明「?」、當前組織切換器、使用者選單(Draft/AdminUserMenu 278:77:使用者卡、外觀、語言、登出 / 登出所有裝置)。 */
+/** 後台 AppBar(Figma Draft/AdminAppBar 30:95):頁名、模組說明「?」、當前組織切換器、使用者選單(Draft/AdminUserMenu 278:77:使用者卡、外觀、語言、個人設定、登出 / 登出所有裝置)。 */
 export const AppBar = ({ me, title, module }: AppBarProps) => (
   <Box
     component="header"
