@@ -1050,7 +1050,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
             });
             const edited = await orgRow(rootOrgId);
 
-            api.reseed();
+            await api.reseed();
 
             // 整筆文件原封不動(含 _id 與 updatedAt):seed 沒有碰它
             expect(await orgRow(rootOrgId)).toEqual(edited);
@@ -1065,7 +1065,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
             const cleared = await orgRow(rootOrgId);
             expect(cleared).toHaveProperty("description", null);
 
-            api.reseed();
+            await api.reseed();
 
             expect(await orgRow(rootOrgId)).toEqual(cleared);
             expect(await findRootOrgId(api.connection)).toEqual(rootOrgId);
@@ -1110,7 +1110,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
             );
             const beforeSeed = await orgRow(rootOrgId);
 
-            api.reseed();
+            await api.reseed();
 
             expect(await orgRow(rootOrgId)).toEqual(beforeSeed);
             expect(await orgRow(rootOrgId)).toHaveProperty("description", null);
