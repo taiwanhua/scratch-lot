@@ -21,6 +21,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
+import { useNotificationTypeName } from "@/lib/base/notification-type-name";
 
 type TypePreference =
   MyNotificationPreferencesQuery["myNotificationPreferences"]["items"][number];
@@ -79,13 +80,14 @@ const withSettings = (
  * 改完按「儲存」一次寫入有變動的偏好 key(`updateMyPreferences`,key 由 api 給的 `preferenceKey`)。
  *
  * 語言不在這裡(只放頭像選單);顯示密度不做(規格第 11 章 B 類)。
- * 類型名稱用 api 回的 `name`(通知類型登記表的顯示名稱)。
+ * 類型名稱經 `useNotificationTypeName`(訊息檔 `admin.notifications.types.<key>`,沒有退回 api 的 `name`)。
  */
 export const PreferencesTab = () => {
   const t = useTranslations("admin.notifications.preferences");
   const tSettings = useTranslations("admin.personalSettings");
   const { session } = useSession();
   const queryClient = useQueryClient();
+  const typeName = useNotificationTypeName();
   const query = useMyNotificationPreferencesQuery(session.client);
   /** 尚未儲存的變動:偏好 key → 開 / 關 */
   const [draft, setDraft] = useState<Record<string, boolean>>({});
@@ -146,7 +148,7 @@ export const PreferencesTab = () => {
       key: "type",
       header: t("type"),
       isEmphasized: true,
-      render: (row) => row.name,
+      render: (row) => typeName(row.type, row.name),
     },
     ...channels.map((channel): TableColumn<TypePreference> => ({
       key: channel,
@@ -168,7 +170,7 @@ export const PreferencesTab = () => {
             slotProps={{
               input: {
                 "aria-label": t("channelSwitch", {
-                  type: row.name,
+                  type: typeName(row.type, row.name),
                   channel: channelLabel(channel),
                 }),
                 title: entry.canDisable ? undefined : t("locked"),

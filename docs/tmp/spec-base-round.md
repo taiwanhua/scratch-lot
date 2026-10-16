@@ -1001,7 +1001,7 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 - 頂端列 🔔 + 未讀數;點開為通知清單(標已讀、全部標已讀、點擊開連結)。
 - 新通知時右下角提示(數秒消失):用統一的 Snackbar(10.12),Severity=Info、有標題、沒有動作;不另做元件。
 - 個人偏好:每種類型的管道開關(依 `canDisable`)。
-- **類型名稱的語系**(2026-10-17 定):畫面上的通知類型名稱由 admin 依類型 key 從訊息檔 `admin.notifications.types.<key>` 取,沒有就退回 api 回的 `name`(登記表的繁中名稱);通知設定頁、個人偏好分頁與 🔔 清單共用同一個取名函式(`lib/base/notification-type-name.ts`)。底座的類型兩個語系都附文案,專案的類型在專案字典加同樣的 key。
+- **類型名稱的語系**(2026-10-17 定):畫面上的通知類型名稱由 admin 依類型 key 從訊息檔 `admin.notifications.types.<key>` 取,沒有就退回 api 回的 `name`(登記表的繁中名稱);通知設定頁、個人偏好分頁與 🔔 清單共用同一個取名函式(`lib/base/notification-type-name.ts`;🔔 清單目前只顯示依收件人語言產生的標題 / 內容,不顯示類型名稱)。底座的類型兩個語系都附文案,專案的類型在專案字典加同樣的 key。
 
 **通知鈴與通知清單**(2026-10-16 定):
 

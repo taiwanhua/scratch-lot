@@ -199,7 +199,7 @@ input ResetNotificationSettingInput {
 - **唯讀**:沒有 `system.notification-settings.edit` → 沒有操作欄;網址帶 `?edit=` 時清掉參數、不打開。站在根組織時也唯讀,並說明要先切換組織:前端以 `me.modules` 裡有根組織專屬模組判斷(`hooks/base/useHasRootOnlyModules.ts`,表單管理的 `useIsAtRootOrg` 共用);沒有這個訊號的根組織操作者照樣看得到按鈕,送出時 api 回 `TENANT_ONLY`,對話框顯示同一句說明。
 - **編輯收件人**:`AudiencePicker` 不允許「所有人」(`allowAll: false`)、欄位只有使用者 / 角色 / 權限(`notification-audience.ts`,對齊 api `NOTIFICATION_AUDIENCE_OPTIONS`);頂端資訊框說明組織範圍由類型決定、不能改。[儲存] 前先本地驗證(空群組、沒挑值),api 擋下的 `INVALID_AUDIENCE` / `OUT_OF_TENANT` 以 `extensions.path` 標回那一列(`audienceIssueFromPath`),其餘錯誤顯示在對話框內。成功後失效所有 `NotificationSettings` 查詢。
 - **還原預設**:只在調整過的列可按;確認框寫出還原後的預設條件(`defaultAudience` 的摘要)。成功後清單回到類型宣告的條件並標「預設」。
-- **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁、個人設定的通知管道開關與 🔔 清單共用這一支。
+- **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁與個人設定的通知管道開關(`PreferencesTab`)共用這一支;🔔 清單與新通知提示顯示的是通知的標題 / 內容(寫入當下依收件人的語言產生),不顯示類型名稱,之後要顯示也走這一支。
 - **與 Figma 的差異(刻意)**:BS-09a 的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);BS-09b 的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
 - **測試**:`NotificationSettingsPage.test.tsx`(清單、唯讀、根組織、搜尋、編輯與網址、錯誤標回條件列、還原預設、英文名稱與退回;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
