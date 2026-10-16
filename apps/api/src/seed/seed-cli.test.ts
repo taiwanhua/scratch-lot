@@ -174,8 +174,8 @@ describe("受管定義的最小 Nest 組裝與 CLI 子程序", () => {
     }
     uriA = buildDatabaseUri(baseUri, "cookhome-test-seed-cli-a");
     uriB = buildDatabaseUri(baseUri, "cookhome-test-seed-cli-b");
-    seedDatabase(uriA);
-    seedDatabase(uriB);
+    await seedDatabase(uriA);
+    await seedDatabase(uriB);
     connectionA = await mongoose.createConnection(uriA).asPromise();
     connectionB = await mongoose.createConnection(uriB).asPromise();
     await holdSeedLock(connectionA);
