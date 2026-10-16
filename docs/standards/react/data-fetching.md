@@ -122,7 +122,7 @@ const setOrgEnabled = useSetOrgEnabledMutation(
 
 位置與堆疊:電腦 / 平板右下角距邊 24,手機底部左右 16 滿寬(有底部導覽時放在它上面);
 **所有提示(操作結果、可撤銷、新通知)一律往上疊,新的在下面;最多 3 則,第 4 則出現時最舊的那則消失**。
-一般 4 秒、有動作(例 [撤銷])8 秒自動消失,滑鼠移上去暫停。正本寫在
+一般 4 秒、有動作(例 [撤銷])8 秒自動消失,滑鼠移上去或鍵盤焦點在卡片內時暫停,移開(焦點離開)後重新計時。正本寫在
 `apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar`(`Snackbar`、`SnackbarStack`、
 `enqueueSnackbar`)的 JSDoc。全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`;
 mutation 以外的提示(可撤銷、新通知、自己控制時機的流程)經 `useSnackbar()` 送出,各模組不另寫提示元件。

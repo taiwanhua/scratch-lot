@@ -9,7 +9,11 @@ import {
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { cssRulesMatching, declaredValue } from "../test/css-rules";
+import {
+  cssRulesMatching,
+  declaredValue,
+  emotionClassOf,
+} from "../test/css-rules";
 import { Snackbar } from "./Snackbar";
 
 const noop = () => {
@@ -227,5 +231,100 @@ describe("Snackbar 的計時(fake timers)", () => {
     fireEvent.mouseDown(document.body);
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("Snackbar 的鍵盤暫停與收尾(fake timers)", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("鍵盤焦點在卡片內就暫停;卡片內換焦點不算離開,焦點離開後重新計時", () => {
+    const onClose = jest.fn();
+    render(
+      <>
+        <Snackbar
+          message="已售出 3 張"
+          action={{ label: "撤銷", onClick: noop }}
+          closeLabel="關閉"
+          onClose={onClose}
+        />
+        <button type="button">外面</button>
+      </>,
+    );
+    const undoButton = screen.getByRole("button", { name: "撤銷" });
+    const closeButton = screen.getByRole("button", { name: "關閉" });
+
+    advance(5000);
+    act(() => {
+      undoButton.focus();
+    });
+    advance(60_000);
+    // 焦點從 [撤銷] 移到 ✕:仍在卡片內,維持暫停
+    act(() => {
+      closeButton.focus();
+    });
+    advance(60_000);
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => {
+      screen.getByRole("button", { name: "外面" }).focus();
+    });
+    advance(7999);
+    expect(onClose).not.toHaveBeenCalled();
+    advance(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("滑過與焦點任一個還在就維持暫停", () => {
+    const onClose = jest.fn();
+    render(
+      <>
+        <Snackbar message="已儲存" closeLabel="關閉" onClose={onClose} />
+        <button type="button">外面</button>
+      </>,
+    );
+    const alert = screen.getByRole("alert");
+
+    fireEvent.mouseEnter(alert);
+    act(() => {
+      screen.getByRole("button", { name: "關閉" }).focus();
+    });
+    fireEvent.mouseLeave(alert);
+    advance(60_000);
+    expect(onClose).not.toHaveBeenCalled();
+
+    act(() => {
+      screen.getByRole("button", { name: "外面" }).focus();
+    });
+    advance(4000);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("卸載時清掉計時器:之後不會再回報 onClose", () => {
+    const onClose = jest.fn();
+    const { unmount } = render(
+      <Snackbar message="已儲存" closeLabel="關閉" onClose={onClose} />,
+    );
+
+    advance(2000);
+    unmount();
+    expect(jest.getTimerCount()).toBe(0);
+    advance(60_000);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("Snackbar 卡片可以點", () => {
+  /** 堆疊容器是 `pointer-events: none`(不擋下面的畫面),卡片自己要宣告回 `auto`。 */
+  it("卡片宣告 pointer-events: auto", () => {
+    render(<Snackbar message="已儲存" closeLabel="關閉" onClose={noop} />);
+
+    const rules = cssRulesMatching(emotionClassOf(screen.getByRole("alert")));
+    expect(declaredValue(rules, "pointer-events")).toBe("auto");
   });
 });
