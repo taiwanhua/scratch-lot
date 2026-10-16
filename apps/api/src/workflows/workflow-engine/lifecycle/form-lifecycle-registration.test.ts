@@ -146,6 +146,7 @@ describe("resolveLifecycleInjections(inject 的解析)", () => {
       {} as never,
       {} as never,
       { get: (token: unknown) => resolve(token) } as never,
+      {} as never,
     );
     expect(() => {
       service.onModuleInit();

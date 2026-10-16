@@ -27,6 +27,7 @@ import {
   extensionsOf,
   ok,
 } from "../../../forms/test-support/form-fixtures";
+import { WORKFLOW_RESULT } from "../../../notifications/base-notification-types";
 import {
   LIFECYCLE_BLOCKED_CODE,
   lifecycleProbe,
@@ -293,6 +294,60 @@ describe("表單 / 流程的掛接點", () => {
       });
       expect(await projectWrites(draft.id)).toBe(0);
       expect(await auditCount(draft.id, "submission.submit")).toBe(0);
+    });
+
+    it("事後動作內 notify() 寫入通知;之後的事後動作拋錯 → 整個動作回復,那筆通知也一起消失", async () => {
+      /** submitted 時通知申請人;`failOn` 的事件在通知之後拋錯。 */
+      const notifyOnSubmitted = (dedupeKey: string, failOn: string | null) => {
+        lifecycleProbe.onEffect = async (context) => {
+          if (context.event === "submitted") {
+            await context.notify({
+              type: WORKFLOW_RESULT,
+              tenantId: context.tenantId,
+              orgId: context.orgId,
+              recipients: { kind: "users", userIds: [world.applicant.userId] },
+              params: { subject: "病假單", result: "approved" },
+              dedupeKey,
+            });
+          }
+          if (context.event === failOn) {
+            throw new Error(`injected failure in ${failOn}`);
+          }
+        };
+      };
+      const notificationsOf = (dedupeKey: string) =>
+        api.connection
+          .collection("notifications")
+          .countDocuments({ dedupeKey });
+
+      // 對照:動作成功 → 通知留下
+      sequence += 1;
+      const keptKey = `lifecycle-notify-kept:${String(sequence)}`;
+      notifyOnSubmitted(keptKey, null);
+      await createSubmitted(api, world.applicant.token, FORM_KEY, {
+        title: "通知留下",
+        days: 1,
+      });
+      expect(await notificationsOf(keptKey)).toBe(1);
+
+      // completed 拋錯 → 送出回復,submitted 寫的通知一起消失
+      resetLifecycleProbe();
+      sequence += 1;
+      const rolledBackKey = `lifecycle-notify-rollback:${String(sequence)}`;
+      const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
+        title: "通知回復",
+        days: 1,
+      });
+      notifyOnSubmitted(rolledBackKey, "completed");
+      const result = await call(api, world.applicant.token, SUBMIT, {
+        input: { id: draft.id, expectedEditVersion: draft.editVersion },
+      });
+      expect(result.errors).toBeDefined();
+      expect(events()).toEqual(["submitted", "completed"]);
+      expect(await rawSubmissionDoc(api.connection, draft.id)).toMatchObject({
+        status: "draft",
+      });
+      expect(await notificationsOf(rolledBackKey)).toBe(0);
     });
 
     it("handler 的 get 只拿得到 inject 宣告的 provider;沒宣告的 → 拋錯", async () => {

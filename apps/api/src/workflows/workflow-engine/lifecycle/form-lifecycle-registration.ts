@@ -5,6 +5,7 @@ import type { StoredValues } from "@repo/domain/form";
 import type { RealtimeSignal } from "@repo/domain/realtime";
 
 import type { OperatorContext } from "../../../database/operator-context";
+import type { NotifyInput } from "../../../notifications/notification.service";
 
 /**
  * 表單 / 流程的生命週期掛接點(底座規格 3.1 B1;現況說明 `docs/concepts/workflow-engine.md`「掛接點」)。
@@ -93,23 +94,10 @@ export type FormGuard = (
 ) => FormGuardResult | Promise<FormGuardResult>;
 
 /**
- * 事後動作內呼叫的通知入口(底座規格第 9 章的 `notify()`;由通知後端以 `FORM_LIFECYCLE_NOTIFY`
- * 提供,寫入 notifications 在交易內)。沒有提供時呼叫 → 拋錯(整個動作回復)。
+ * 事後動作內呼叫的通知入口 = 通知的單一入口 `NotificationService.notify()`(`docs/modules/notification-settings.md`):
+ * 寫入 notifications 併進這個動作的交易,動作回復就沒有通知、沒有信號、沒有信。
  */
-export interface LifecycleNotification {
-  type: string;
-  recipients: unknown;
-  params?: Readonly<Record<string, unknown>>;
-  ref?: unknown;
-  dedupeKey?: string;
-}
-
-export type LifecycleNotify = (
-  notification: LifecycleNotification,
-) => Promise<void>;
-
-/** DI token:通知後端提供的 `notify()`(可選)。 */
-export const FORM_LIFECYCLE_NOTIFY = Symbol("FORM_LIFECYCLE_NOTIFY");
+export type LifecycleNotify = (input: NotifyInput) => Promise<void>;
 
 export interface FormEffectContext {
   readonly event: FormEffectName;
