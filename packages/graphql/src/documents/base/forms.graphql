@@ -133,6 +133,26 @@ mutation ForkForm($input: ForkFormInput!) {
   }
 }
 
+# 設計器的 lookup 來源清單:底座三種 + 專案登記的來源
+query FormLookupProviders {
+  formLookupProviders {
+    items {
+      key
+      name
+      isBase
+      labelField
+      valueField
+      filterFields
+      fields {
+        key
+        type
+        label
+      }
+    }
+    totalCount
+  }
+}
+
 # version 省略 = 草稿(附 validation)
 query FormVersion($formKey: ID!, $version: Int) {
   formVersion(formKey: $formKey, version: $version) {

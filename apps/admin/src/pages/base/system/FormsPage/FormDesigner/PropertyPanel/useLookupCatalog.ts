@@ -8,14 +8,20 @@ import {
   fieldProtections,
   isProtected,
 } from "@repo/domain/form";
-import { useFormVersionQuery, useFormsQuery } from "@repo/graphql";
+import {
+  type FormLookupProvidersQuery,
+  useFormLookupProvidersQuery,
+  useFormVersionQuery,
+  useFormsQuery,
+} from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
 
 /**
  * lookup 來源的「可挑的表單 / 欄位」(Spec 6a §5「lookup 來源」;表 A:類別與表單 / 欄位**用下拉選**,不打字)。
  *
- * - `user` / `org`:api 登錄表(`apps/api/src/forms/lookup-providers.ts`)宣告的欄位與型別
+ * - 來源清單與 `user` / `org` / 專案來源的欄位:api 登錄表(`apps/api/src/forms/lookup-providers.ts`)的宣告,
+ *   經 `formLookupProviders` 取(含專案以 `LOOKUP_PROVIDER` 登記的來源);底座來源的名稱用 i18n,專案來源用宣告的名稱
  * - `form_submission`:表單 = 本租戶看得到(`forms` 查詢本來就依視角過濾)且**有已發布版本**的表單;
  *   欄位目錄 = 摘要槽 + 該表單**目前版本**的非受保護欄位(因引用而受保護的計算欄位也不列)—— 與 api 的
  *   `formSubmissionCatalog` 同一個判準
@@ -24,16 +30,24 @@ import { useSession } from "@/hooks/base/useSession";
  *
  * 每個欄位帶型別,帶入對應表用它只列型別相容的來源欄位(`isPrefillCompatible`,與檢查器同一支)。
  */
-const PROVIDER_FIELD_TYPES: Readonly<
-  Partial<Record<string, Readonly<Record<string, FieldType>>>>
-> = {
-  user: { name: "text", account: "text", email: "text" },
-  org: { name: "text", slug: "text" },
+export type LookupProviderOption =
+  FormLookupProvidersQuery["formLookupProviders"]["items"][number];
+
+/** 登錄表的全部來源(底座三種在前、專案來源接後);載入中為空陣列。 */
+export const useLookupProviders = (): LookupProviderOption[] => {
+  const { session } = useSession();
+  const providers = useFormLookupProvidersQuery(session.client);
+  return providers.data?.formLookupProviders.items ?? [];
 };
 
-/** 換 provider 時的預設顯示欄(該 provider 的第一個欄位;表單提交 = 摘要槽「標題」)。 */
-export const defaultLabelFieldOf = (provider: string): string =>
-  Object.keys(PROVIDER_FIELD_TYPES[provider] ?? {}).at(0) ?? "title";
+/** 來源在下拉的名稱:底座來源用 i18n,專案來源用宣告的名稱。 */
+export const useProviderLabel = (): ((
+  provider: LookupProviderOption,
+) => string) => {
+  const t = useTranslations("admin.forms.lookupSource");
+  return (provider) =>
+    provider.isBase ? t(`providers.${provider.key}`) : provider.name;
+};
 
 const SUMMARY_SLOT_TYPES: Readonly<Record<string, FieldType>> = {
   title: "text",
@@ -168,12 +182,17 @@ export const useLookupFieldOptions = (
     { enabled: form !== undefined, retry: false },
   );
 
-  const known = PROVIDER_FIELD_TYPES[source.provider];
-  if (known !== undefined) {
-    return Object.entries(known).map(([field, type]) => ({
-      value: field,
-      label: t(`fields.${field}`),
-      type,
+  const providers = useLookupProviders();
+  const declared = isSubmission
+    ? undefined
+    : providers.find((provider) => provider.key === source.provider);
+  if (declared !== undefined) {
+    return declared.fields.map((field) => ({
+      value: field.key,
+      label: declared.isBase
+        ? t(`fields.${field.key}`)
+        : (field.label ?? field.key),
+      type: field.type as FieldType,
     }));
   }
   const slotLabel = (slot: string) => t(`summarySlots.${slot}`);
