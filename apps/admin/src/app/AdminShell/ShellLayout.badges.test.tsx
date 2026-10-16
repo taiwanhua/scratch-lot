@@ -109,7 +109,7 @@ describe("側欄計數登記制(sidebarBadges + badge:<模組 key>)", () => {
     renderShell(counts);
     const nav = await findSideNav();
     expect(
-      await within(nav).findByRole("link", { name: /申請中心\s*1 筆待審核/ }),
+      await within(nav).findByRole("link", { name: /申請中心\s*1 筆待處理/ }),
     ).toBeInTheDocument();
     const socket = await latestSocket();
     act(() => {
@@ -122,7 +122,7 @@ describe("側欄計數登記制(sidebarBadges + badge:<模組 key>)", () => {
     });
 
     expect(
-      await within(nav).findByRole("link", { name: /申請中心\s*3 筆待審核/ }),
+      await within(nav).findByRole("link", { name: /申請中心\s*3 筆待處理/ }),
     ).toBeInTheDocument();
   });
 
@@ -144,7 +144,7 @@ describe("側欄計數登記制(sidebarBadges + badge:<模組 key>)", () => {
     // 示範表單掛在群組底下(群組預設展開)
     expect(
       await within(nav).findByRole("link", {
-        name: /^示範表單.*4 筆待審核$/,
+        name: /^示範表單.*4 筆待處理$/,
       }),
     ).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "申請中心" })).toBeVisible();
@@ -153,7 +153,7 @@ describe("側欄計數登記制(sidebarBadges + badge:<模組 key>)", () => {
   it("不是 badge: 的信號不重抓側欄計數", async () => {
     const { calls } = renderShell({ "apply-center": 2 });
     const nav = await findSideNav();
-    await within(nav).findByRole("link", { name: /2 筆待審核/ });
+    await within(nav).findByRole("link", { name: /2 筆待處理/ });
     const socket = await latestSocket();
     act(() => {
       socket.open();

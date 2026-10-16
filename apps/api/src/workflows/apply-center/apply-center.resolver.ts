@@ -66,7 +66,7 @@ export class ApplyCenterResolver {
     return this.service.myTasks(await this.access.factsOf(operator), input);
   }
 
-  /** 頁籤與側欄 badge 的數字;權限同兩個列表。 */
+  /** 申請中心兩個頁籤的 badge 數字;權限同兩個列表(側欄的數字走 `sidebarBadges`,見 `apply-center-badge.ts`)。 */
   @RequirePermission(APPLY_CENTER_VIEW_PERMISSION)
   @Query(() => ApplyCenterCounts, { name: "applyCenterCounts" })
   async applyCenterCounts(

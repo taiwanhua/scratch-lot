@@ -90,7 +90,7 @@
       "localeSaveFailed": "Language switched, but it was not saved to your account; it will change back the next time you sign in"
     },
     "sideNav": "Main navigation",
-    "navBadge": "{count} pending review",
+    "navBadge": "{count} pending",
     "collapseNav": "Collapse sidebar",
     "expandNav": "Expand sidebar",
     "currentOrg": "Current organization",

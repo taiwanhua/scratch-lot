@@ -9,7 +9,10 @@ export interface SidebarBadgeRegistration {
    * 操作者持有 `<模組 key>.view`(含同層 `*`)才算「看得到」,看不到就不算、不回傳。
    */
   readonly moduleKey: string;
-  /** 這個操作者的數字;拋錯時這一筆不回傳(記 log),其他模組照常。 */
+  /**
+   * 這個操作者的數字;拋錯時這一筆不回傳(記 log),其他模組照常。
+   * 數字本身的租戶、可見範圍、資料範圍由 `count` 自己負責(用 BaseRepository 帶操作者查);底座只過濾 view 權限。
+   */
   readonly count: (operator: OperatorContext) => Promise<number>;
 }
 

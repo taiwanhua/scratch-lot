@@ -25,23 +25,27 @@ export const useSidebarBadges = (): Readonly<Record<string, number>> => {
 };
 
 /**
- * 某個模組的數字已在別處取得(例:申請中心頁籤的 `applyCenterCounts.myTasks`):直接寫進側欄快取,
- * 兩邊不會一新一舊。快取裡沒有這個模組(看不到它)時不寫。
+ * 某個模組的數字已在別處取得(例:申請中心頁籤的 `applyCenterCounts.myTasks`):寫進側欄快取,
+ * 兩邊不會一新一舊。只在那份數字比側欄快取新(`updatedAt` 晚於側欄的 `dataUpdatedAt`)時才寫,
+ * 別處快取裡的舊數字不會讓側欄倒退;快取裡沒有這個模組(看不到它)時不寫。
  */
 export const useWriteSidebarBadge = () => {
   const queryClient = useQueryClient();
   return useCallback(
-    (moduleKey: string, count: number) => {
-      queryClient.setQueryData<SidebarBadgesQuery>(
-        useSidebarBadgesQuery.getKey(),
-        (current) =>
-          current?.sidebarBadges.some((badge) => badge.moduleKey === moduleKey)
-            ? {
-                sidebarBadges: current.sidebarBadges.map((badge) =>
-                  badge.moduleKey === moduleKey ? { ...badge, count } : badge,
-                ),
-              }
-            : current,
+    (moduleKey: string, count: number, updatedAt: number) => {
+      const key = useSidebarBadgesQuery.getKey();
+      const sidebarUpdatedAt = queryClient.getQueryState(key)?.dataUpdatedAt;
+      if (sidebarUpdatedAt === undefined || updatedAt <= sidebarUpdatedAt) {
+        return;
+      }
+      queryClient.setQueryData<SidebarBadgesQuery>(key, (current) =>
+        current?.sidebarBadges.some((badge) => badge.moduleKey === moduleKey)
+          ? {
+              sidebarBadges: current.sidebarBadges.map((badge) =>
+                badge.moduleKey === moduleKey ? { ...badge, count } : badge,
+              ),
+            }
+          : current,
       );
     },
     [queryClient],

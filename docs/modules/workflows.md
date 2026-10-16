@@ -202,22 +202,26 @@
 - `applicableForms`:我有該模組 `create`、表單可新增、且本租戶綁了流程,依模組分組。
 - `myTasks`:`assigneeId = 我`;`done = false` 待處理(`pending`,依建立時間)/ `true` 已處理(`approved` / `rejected` / `returned` / `late`,依決定時間);`cancelled` / `blocked` 的任務兩邊都不列。**摘要與申請人讀實例快照**。
 - `workflowInstance`:授權同 `canReadSubmissionRevision`,讀不到 → `NOT_FOUND`;`myTasks` 欄位是讀者自己在這個實例的任務,`abilities.canWithdraw` = 申請人、進行中、還沒有決定。
-- `applyCenterCounts`:頁籤與側欄 badge 的數字,見下一節。
+- `applyCenterCounts`:申請中心兩個頁籤的 badge 數字,見下一節(側欄的數字走 `sidebarBadges`)。
 
 ### 計數(`applyCenterCounts`)
 
 `applyCenterCounts: { myTasks, myApplications }` 只做 `countDocuments`,權限同兩個列表(`apply-center.view`)。條件與兩個列表**共用同一組 builder**(`myTasksFilter` / `myApplicationsFilter`),邊界一樣是 `tenantId` + 「我」:
 
-| 數字             | 條件                                                                                         | 顯示在                         |
-| ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------ |
-| `myTasks`        | 「待我審核」預設的待處理:`assigneeId = 我`、`status = pending`                               | 「待我審核」頁籤、側欄申請中心 |
-| `myApplications` | 「我的申請」的條件 + 狀態 `reviewing` / `returned`(草稿、已完成、已駁回、已作廢、已撤回不算) | 「我的申請」頁籤               |
+| 數字             | 條件                                                                                         | 顯示在           |
+| ---------------- | -------------------------------------------------------------------------------------------- | ---------------- |
+| `myTasks`        | 「待我審核」預設的待處理:`assigneeId = 我`、`status = pending`                               | 「待我審核」頁籤 |
+| `myApplications` | 「我的申請」的條件 + 狀態 `reviewing` / `returned`(草稿、已完成、已駁回、已作廢、已撤回不算) | 「我的申請」頁籤 |
+
+`applyCenterCounts` 只給頁籤用。側欄申請中心的數字同樣是 `myTasks`,但由側欄計數登記制提供:api 把 `apply-center` 登記為側欄計數(`apply-center-badge.ts`),殼查的是 `sidebarBadges`(見 [前端架構](../concepts/frontend-architecture.md#側欄計數登記制))。
 
 admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
-- 顯示用 `@repo/ui/badge`:0 不顯示、超過 99 顯示 `99+`;「待我審核」主色、「我的申請」灰底。側欄的 `myTasks` 走側欄計數登記制(`sidebarBadges` 的 `apply-center` 一筆,見 [前端架構](../concepts/frontend-architecture.md#側欄計數登記制)),展開時畫數字,收合時只畫小圓點。
+- 顯示用 `@repo/ui/badge`:0 不顯示、超過 99 顯示 `99+`;「待我審核」主色、「我的申請」灰底。側欄(`sidebarBadges`)展開時畫數字,收合時只畫小圓點;頁籤取到新的 `myTasks` 時,若比側欄快取新就寫進側欄那一筆。
 - 沒有 `apply-center.view` 的人不發請求。
-- 不輪詢:殼進站取一次、進申請中心(`refetchOnMount: "always"`)與切頁籤各重取一次,其餘靠寫入端失效 —— `useFormSubmissionCache`(送出、修改、刪除、撤回、作廢)、`useWorkflowCache`(決定、重試推進)、阻擋清單的 `useBlockedActions`(改派、新增審核者)都會一併呼叫 `useInvalidateApplyCenterCounts`。
+- 不另外輪詢:頁籤數字在進申請中心(`refetchOnMount: "always"`)與切頁籤各重取一次;側欄的 `sidebarBadges` 殼進站取一次。之後兩者都靠:
+  - 自己的寫入失效 —— `useFormSubmissionCache`(送出、修改、刪除、撤回、作廢)、`useWorkflowCache`(決定、重試推進)、阻擋清單的 `useBlockedActions`(改派、新增審核者)都會呼叫 `useInvalidateApplyCenterCounts`,同時失效頁籤與側欄的數字;
+  - 別人造成的變動 —— 流程任務建立、結束、改派時流程引擎對相關審核者送 `badge:apply-center`,收到就重抓頁籤與側欄的數字;即時通道斷線時跟著 `RealtimeProvider` 降級,每 60 秒重抓一次。
 
 ## 通知信
 

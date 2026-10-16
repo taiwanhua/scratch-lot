@@ -24,8 +24,8 @@ const APPLY_CENTER_VIEW_PERMISSION = `${APPLY_CENTER_MODULE_KEY}.view`;
  * 進站取一次,之後靠寫入端失效重查(`useInvalidateApplyCenterCounts`)與 `badge:apply-center` 信號,不輪詢。
  * 申請中心頁傳 `refetchOnMount: "always"`:每次進頁都重取一次。
  *
- * 側欄的數字來自 `sidebarBadges`(`useSidebarBadges`);這裡每次取到新的 `myTasks` 就寫進側欄那一筆,
- * 頁籤與側欄不會一新一舊。
+ * 側欄的數字來自 `sidebarBadges`(`useSidebarBadges`);這裡取到的 `myTasks` 比側欄快取新時寫進側欄那一筆,
+ * 頁籤與側欄不會一新一舊,快取裡較舊的頁籤數字也不會讓側欄倒退。
  */
 export const useApplyCenterCounts = ({
   refetchOnMount = true,
@@ -37,12 +37,13 @@ export const useApplyCenterCounts = ({
     refetchOnMount,
   });
   const myTasks = query.data?.applyCenterCounts.myTasks;
+  const updatedAt = query.dataUpdatedAt;
   const writeSidebarBadge = useWriteSidebarBadge();
   useEffect(() => {
     if (myTasks !== undefined) {
-      writeSidebarBadge(APPLY_CENTER_MODULE_KEY, myTasks);
+      writeSidebarBadge(APPLY_CENTER_MODULE_KEY, myTasks, updatedAt);
     }
-  }, [myTasks, query.dataUpdatedAt, writeSidebarBadge]);
+  }, [myTasks, updatedAt, writeSidebarBadge]);
   return {
     myTasks: myTasks ?? 0,
     myApplications: query.data?.applyCenterCounts.myApplications ?? 0,

@@ -90,7 +90,7 @@
       "localeSaveFailed": "語言已切換,但沒有存到帳號;下次登入會回到原本的語言"
     },
     "sideNav": "主選單",
-    "navBadge": "{count} 筆待審核",
+    "navBadge": "{count} 筆待處理",
     "collapseNav": "收合側欄",
     "expandNav": "展開側欄",
     "currentOrg": "當前組織",
