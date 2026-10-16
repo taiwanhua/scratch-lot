@@ -2622,6 +2622,8 @@
     "limitCount": "{count} selected / up to {max}",
     "limitReached": "You can choose up to {max}",
     "outOfScope": "Outside your management scope",
+    "disabledOrg": "Disabled",
+    "loadFailed": "Couldn't load organizations. Please try again later.",
     "confirm": "Done"
   },
   "seedExport": {
