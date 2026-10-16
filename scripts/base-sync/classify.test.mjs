@@ -77,3 +77,24 @@ test(".claude/skills 底下的 skill 判為 common", () => {
   // skills 以外的 .claude/ 設定仍不自動歸類
   assert.equal(classifyPath(".claude/settings.json", "M"), "unknown");
 });
+
+test("Figma 稽核腳本判為 common,專案設定判為 project", () => {
+  for (const file of [
+    "audit.js",
+    "audit-layout.js",
+    "audit-sync.js",
+    "audit-legend.js",
+    "audit-crossview.js",
+    "README.md",
+    "figma-audit.test.mjs",
+  ])
+    assert.equal(
+      classifyPath(`scripts/figma-audit/${file}`, "A"),
+      "common",
+      file,
+    );
+  assert.equal(
+    classifyPath("scripts/figma-audit/project/config.js", "M"),
+    "project",
+  );
+});
