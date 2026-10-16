@@ -521,10 +521,9 @@ describe("換發與訂閱交錯", () => {
     });
     conn.send({ op: "subscribe", topic: "board:b1" });
     const replies = [await conn.next(), await conn.next()];
-    expect(replies.map((reply) => reply.op).toSorted()).toEqual([
-      "renewed",
-      "subscribed",
-    ]);
+    expect(replies.map((reply) => reply.op)).toEqual(
+      expect.arrayContaining(["renewed", "subscribed"]),
+    );
     await expect(
       publish("tenant-race", "board:b1", { type: "board" }),
     ).resolves.toBe(1);
