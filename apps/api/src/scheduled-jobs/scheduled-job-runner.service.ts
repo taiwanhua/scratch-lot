@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import type { Types } from "mongoose";
 
 import { OrgsRepository } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
@@ -12,11 +13,14 @@ import {
   type ScheduledJobTenant,
 } from "./scheduled-job-registry";
 
-/** 一次呼叫裡,某工作某時點的處理結果。`skipped` = 該時點已有執行紀錄(別的呼叫跑過或正在跑)。 */
+/**
+ * 一次呼叫裡,某工作某時點的處理結果。`skipped` = 該時點已有執行紀錄(別的呼叫跑過或正在跑);
+ * `error` = 取執行權時資料庫出錯,handler 沒有執行(下一次呼叫再試)。
+ */
 export interface ScheduledJobOutcome {
   key: string;
   scheduledFor: string;
-  status: "succeeded" | "failed" | "skipped";
+  status: "succeeded" | "failed" | "skipped" | "error";
 }
 
 /**
@@ -83,24 +87,46 @@ export class ScheduledJobRunner {
       scheduledFor: scheduledFor.toISOString(),
       status,
     });
-    const runId = await this.runs.claim(job.key, scheduledFor, new Date());
+    const label = `排程工作「${job.key}」(${scheduledFor.toISOString()})`;
+    let runId: Types.ObjectId | null;
+    try {
+      runId = await this.runs.claim(job.key, scheduledFor, new Date());
+    } catch (error) {
+      // 取不到執行權(資料庫錯誤)就不執行 handler;只記 log,同一輪的其他工作照跑,下一次呼叫再試
+      this.logError(`${label}取得執行權失敗`, error);
+      return outcome("error");
+    }
     if (runId === null) {
       return outcome("skipped");
     }
+    let status: "succeeded" | "failed" = "succeeded";
+    let message: string | null = null;
     try {
       await job.handler({ key: job.key, scheduledFor, tenants });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `排程工作「${job.key}」(${scheduledFor.toISOString()})失敗:${message}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      await this.runs.finish(runId, "failed", new Date(), message);
-      return outcome("failed");
+      status = "failed";
+      message = messageOf(error);
+      this.logError(`${label}失敗`, error);
     }
-    await this.runs.finish(runId, "succeeded", new Date());
-    return outcome("succeeded");
+    try {
+      await this.runs.finish(runId, status, new Date(), message);
+    } catch (error) {
+      // 紀錄停在 running,逾時後由之後的呼叫重新取得(`STALE_RUNNING_MS`)
+      this.logError(`${label}寫入執行結果失敗`, error);
+    }
+    return outcome(status);
   }
+
+  private logError(prefix: string, error: unknown): void {
+    this.logger.error(
+      `${prefix}:${messageOf(error)}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+  }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**

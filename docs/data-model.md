@@ -51,7 +51,7 @@
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `scheduled_job_runs` | 排程工作每個到期時點一筆:`key`、`scheduledFor`、`status`(`running` / `succeeded` / `failed`)、`startedAt`、`finishedAt`、`error`。唯一 `(key, scheduledFor)` 保證同一時點只執行一次 | `scheduled-job-run.schema.ts`、`apps/api/src/database/scheduled-job-runs.store.ts` |
 
-執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑,中途當掉的紀錄停在 `running`。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
+執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑;中途當掉的紀錄停在 `running`,`startedAt` 超過 15 分鐘後以條件式原子更新重新取得。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
 
 ## 專案資料
 
