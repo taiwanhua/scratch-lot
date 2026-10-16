@@ -19,7 +19,12 @@ import {
   isolateGitConfig,
   publishedReleaseGh,
 } from "./test-support.mjs";
-import { exportNames, stripComments } from "./verify.mjs";
+import {
+  exportNames,
+  resolveKeyExpression,
+  seedKeys,
+  stripComments,
+} from "./verify.mjs";
 
 const TAG = "v0.3.0";
 
@@ -27,9 +32,35 @@ const TAG = "v0.3.0";
 const BASE_V3_CHANGES = {
   "apps/db-migrator/seeds/base/modules/lottery.ts": [
     'export const LOTTERY_MODULE_KEY = "lottery";',
+    "export const LOTTERY_HISTORY_KEY = `${LOTTERY_MODULE_KEY}.history-page`;",
     "export const lotteryModule = {",
-    "  nodes: [{ key: LOTTERY_MODULE_KEY, name: '刮刮樂', parentKey: null }],",
+    "  nodes: [",
+    "    { key: LOTTERY_MODULE_KEY, name: '刮刮樂', parentKey: null },",
+    "    { key: LOTTERY_HISTORY_KEY, name: '紀錄', parentKey: LOTTERY_MODULE_KEY },",
+    "  ],",
+    '  permissions: [{ key: permissionKey(LOTTERY_MODULE_KEY, "draw") }],',
     "};",
+    "// 底座的 helper 寫法:無法靜態解析,只計數",
+    "export const helper = (key) => ({ key: key });",
+    "",
+  ].join("\n"),
+  // 表單模組 helper:推導出的頁面與權限 key 以 helper 本身的宣告為樣板
+  "apps/db-migrator/seeds/base/form-module-declaration.ts": [
+    "export function formModuleDeclaration(spec) {",
+    "  const { key, name } = spec;",
+    "  return {",
+    "    nodes: [{ key, name }, { key: `${key}.view-page`, name: '詳情' }],",
+    '    permissions: [{ key: permissionKey(key, "view") }],',
+    "  };",
+    "}",
+    "",
+  ].join("\n"),
+  "apps/db-migrator/seeds/base/modules/requests.ts": [
+    'import { formModuleDeclaration } from "../form-module-declaration";',
+    "export const requestsModule = formModuleDeclaration({",
+    '  key: "requests",',
+    '  name: "申請",',
+    "});",
     "",
   ].join("\n"),
   "apps/db-migrator/seeds/base/roles.ts": [
@@ -145,7 +176,7 @@ test("乾淨:升級 merge 後四節皆為 0,exit 0 並註明已去除重複;--ou
   }
 });
 
-test("不乾淨 1:共用路徑改了或多了檔案,第 1 節逐檔列出;專案路徑的差異不列", async () => {
+test("不乾淨 1:共用路徑改了或多了檔案,第 1 節逐檔列出並標類別;專案路徑的差異不列", async () => {
   const result = await verifyScenario("common", {
     "packages/ui/src/tokens.ts": "export const spacing = 12;\n",
     "packages/ui/src/project-only.ts": "export const extra = 1;\n",
@@ -153,8 +184,27 @@ test("不乾淨 1:共用路徑改了或多了檔案,第 1 節逐檔列出;專案
       "export const brand = 'gadgets-2';\n",
   });
   assert.deepEqual(assertOnlySection(result, 1), [
-    "- A `packages/ui/src/project-only.ts`",
-    "- M `packages/ui/src/tokens.ts`",
+    "- common A `packages/ui/src/project-only.ts`",
+    "- common M `packages/ui/src/tokens.ts`",
+  ]);
+});
+
+test("不乾淨 1b:專案改寫了底座已發布的種子快照,第 1 節以 published-data 列出", async () => {
+  const result = await verifyScenario("published", {
+    "apps/db-migrator/seeds/base/revisions/roles.r1.json": '{"roles":["y"]}\n',
+  });
+  assert.deepEqual(assertOnlySection(result, 1), [
+    "- published-data M `apps/db-migrator/seeds/base/revisions/roles.r1.json`",
+  ]);
+});
+
+test("不乾淨 1c:專案多了無法歸類的路徑,第 1 節以 unknown 列出;混合路徑不列", async () => {
+  const result = await verifyScenario("unknown", {
+    "misc/project-notes.txt": "project only\n",
+    "docs/project-guide.md": "# 混合路徑由 inspect 核對\n",
+  });
+  assert.deepEqual(assertOnlySection(result, 1), [
+    "- unknown A `misc/project-notes.txt`",
   ]);
 });
 
@@ -193,36 +243,54 @@ test("不乾淨 2:頁面替換、help 替換與表單 options / pageOverrides �
   ]);
 });
 
-test("不乾淨 3:專案 seed 宣告了底座 seed 已有的 key,第 3 節列出 key 與兩邊檔案;引用與歷史快照不算", async () => {
+test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 節列出;無法解析的 key 也列;引用、別的 collection 與歷史快照不算", async () => {
   const result = await verifyScenario("seeds", {
     "apps/db-migrator/seeds/project/modules.ts": [
       'import { LOTTERY_MODULE_KEY } from "../base/modules/lottery";',
       "export const projectModules = {",
       "  nodes: [",
       "    { key: LOTTERY_MODULE_KEY, name: '刮刮樂(專案版)' },",
+      "    { key: `${LOTTERY_MODULE_KEY}.history-page`, name: '紀錄' },",
       "    { key: 'own-module', name: '專案自己的' },",
+      "    { key: makeKey('x'), name: '讀不懂' },",
+      "  ],",
+      "  permissions: [",
+      '    { key: permissionKey("lottery", "draw") },',
+      '    { key: "requests.view" },',
       "  ],",
       "};",
       "// { key: 'admin' } 註解裡的不算",
       "export const ownerRef = { collection: 'roles', key: 'admin' };",
+      "export const categories = {",
+      '  collection: "field_categories",',
+      '  entries: [{ key: "admin", data: {} }],',
+      "};",
       "",
     ].join("\n"),
     // 只給 migration 明示套用的歷史快照:不是目前宣告
     "apps/db-migrator/seeds/project/revisions/old.r1.seed.ts":
-      "export const seed = { entries: [{ key: 'lottery' }] };\n",
+      "export const seed = { collection: 'modules', entries: [{ key: 'lottery' }] };\n",
     // 設計器匯出、被 registry import 的快照:是目前宣告
     "apps/db-migrator/seeds/project/revisions/roles.r1.seed.ts":
-      'export const seed = { entries: [{ key: "admin", data: {} }] };\n',
+      'export const seed = { collection: "roles", entries: [{ key: "admin", data: {} }] };\n',
     "apps/db-migrator/seeds/project/registry.ts": [
       'import { seed as projectRoles } from "./revisions/roles.r1.seed";',
       "export const projectSeedSource = { moduleDeclarations: [], seeds: [projectRoles] };",
       "",
     ].join("\n"),
   });
+  const lottery = "`apps/db-migrator/seeds/base/modules/lottery.ts`";
+  const modules = "`apps/db-migrator/seeds/project/modules.ts`";
   assert.deepEqual(assertOnlySection(result, 3), [
-    "- `admin`:底座 `apps/db-migrator/seeds/base/roles.ts`;專案 `apps/db-migrator/seeds/project/revisions/roles.r1.seed.ts`",
-    "- `lottery`:底座 `apps/db-migrator/seeds/base/modules/lottery.ts`;專案 `apps/db-migrator/seeds/project/modules.ts`",
+    "- roles `admin`:底座 `apps/db-migrator/seeds/base/roles.ts`;專案 `apps/db-migrator/seeds/project/revisions/roles.r1.seed.ts`",
+    `- modules \`lottery\`:底座 ${lottery};專案 ${modules}`,
+    `- permissions \`lottery.draw\`:底座 ${lottery};專案 ${modules}`,
+    `- modules \`lottery.history-page\`:底座 ${lottery};專案 ${modules}`,
+    `- permissions \`requests.view\`:底座 \`apps/db-migrator/seeds/base/modules/requests.ts\`;專案 ${modules}`,
+    `- 無法解析的 key \`makeKey('x')\`(${modules})`,
   ]);
+  // 底座無法解析的 key 只計數,不計入結果
+  assert.match(result.stdout, /底座 seed 另有 1 個 key 無法靜態解析/);
 });
 
 test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 節列出;固定來源與專案值不算", async () => {
@@ -282,10 +350,40 @@ test("拒絕:底座版本沒被 upgrade 存過、或 HEAD 還沒包含它時,std
   });
 });
 
-test("掃描工具:去註解保留字串;匯出名稱含宣告、清單與改名,不含 default", () => {
+test("掃描工具:去註解保留字串;key 解析常數、樣板與 permissionKey;匯出名稱不含 default", () => {
   assert.equal(
     stripComments("const a = '// 不是註解'; // 註解\n/* 區塊\n註解 */b"),
     "const a = '// 不是註解'; \n\nb",
+  );
+  const constants = new Map([
+    ["GROUP", "system"],
+    ["USERS", "system.users"],
+  ]);
+  assert.equal(
+    resolveKeyExpression("`${GROUP}.forms`", constants),
+    "system.forms",
+  );
+  assert.equal(
+    resolveKeyExpression('permissionKey(USERS, "create")', constants),
+    "system.users.create",
+  );
+  assert.equal(resolveKeyExpression("`${missing}.x`", constants), null);
+  assert.equal(resolveKeyExpression("node.key", constants), null);
+  assert.deepEqual(
+    seedKeys(
+      [
+        "interface Shape { key: string; }",
+        "export const a = { collection: COLLECTION, entries: [{ key: GROUP }] };",
+        "export const b = { first: { collection: 'orgs', key: 'root' } };",
+        "export const c = { entries: [{ key: unknownValue }] };",
+      ].join("\n"),
+      new Map([...constants, ["COLLECTION", "roles"]]),
+    ),
+    {
+      declared: [{ collection: "roles", key: "system" }],
+      unresolved: [{ collection: "?", expression: "unknownValue" }],
+      helperCalls: [],
+    },
   );
   assert.deepEqual(
     [
@@ -294,11 +392,11 @@ test("掃描工具:去註解保留字串;匯出名稱含宣告、清單與改名
           "export default function Page() {}",
           "export async function load() {}",
           "export type Props = {};",
-          "export { a as renamed, type B, default as Ignored };",
+          "export { a as renamed, type B, default as Named, c as default };",
           "// export const commented = 1;",
         ].join("\n"),
       ),
     ].sort(),
-    ["B", "Ignored", "Page", "load", "Props", "renamed"].sort(),
+    ["B", "Named", "Props", "load", "renamed"].sort(),
   );
 });
