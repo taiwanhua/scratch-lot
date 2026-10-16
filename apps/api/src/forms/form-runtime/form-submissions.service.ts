@@ -4,11 +4,13 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
+  type ArrayRowValue,
   type ExpressionContext,
   type FieldDef,
   type FormDefinition,
   type StoredValues,
   type SubmissionSummary,
+  arrayColumnsOf,
   arrayRowsOf,
   computeSummary,
   defaultOrder,
@@ -346,6 +348,12 @@ function workflowFieldsOf(
     replacedById: record.replacedById ? String(record.replacedById) : null,
     copiedFrom: record.copiedFrom ? String(record.copiedFrom) : null,
   };
+}
+
+/** 引用存值的 id(不是 `{ id: string }` → null)。 */
+function referenceIdOf(cell: unknown): string | null {
+  const id = (cell as { id?: unknown } | null | undefined)?.id;
+  return typeof id === "string" ? id : null;
 }
 
 @Injectable()
@@ -1567,6 +1575,14 @@ export class FormSubmissionsService {
       ) {
         continue;
       }
+      if (field.type === "array") {
+        const copiedRows = await this.copiedRowsOf(facts, field, value);
+        values[field.key] = copiedRows.rows;
+        if (copiedRows.hasCleared) {
+          cleared.push(field.key);
+        }
+        continue;
+      }
       const copied = await this.copiedValueOf(facts, field, value, copies);
       if (copied === undefined) {
         cleared.push(field.key);
@@ -1578,9 +1594,62 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 一欄的複製值:引用失效、附件不是本 API 簽出的路徑 → undefined(清空並列在 `clearedFields`)。
+   * 明細列的複製值:每一列換新的 `rowId`(新單的列與來源的列是不同的列;子欄已由 `upgradeValues` 篩過)。
+   * 引用子欄同表單層引用欄重驗來源可讀(每個子欄的 id 去重後一次 `findByValues`,`publicOnly`),
+   * 讀不到的格清成 null,`hasCleared` 讓呼叫端把明細欄列進 `clearedFields`;其他格照原值(不重新帶入)。
+   */
+  private async copiedRowsOf(
+    facts: FormOperatorFacts,
+    field: FieldDef,
+    value: unknown,
+  ): Promise<{ rows: ArrayRowValue[]; hasCleared: boolean }> {
+    const rows: ArrayRowValue[] = arrayRowsOf(value).map((row) => ({
+      ...row,
+      rowId: randomUUID(),
+    }));
+    let hasCleared = false;
+    for (const column of arrayColumnsOf(field)) {
+      if (column.type !== "reference") {
+        continue;
+      }
+      const filled = rows.filter(
+        (row) => row[column.key] !== null && row[column.key] !== undefined,
+      );
+      const ids = [
+        ...new Set(
+          filled.flatMap((row) => {
+            const id = referenceIdOf(row[column.key]);
+            return id === null ? [] : [id];
+          }),
+        ),
+      ];
+      const source = column.source;
+      const records =
+        source && ids.length > 0
+          ? await this.lookups.findByValues(
+              facts,
+              source,
+              "id",
+              ids,
+              [source.labelField],
+              { publicOnly: true },
+            )
+          : [];
+      const readable = new Set(records.map((record) => record.id));
+      for (const row of filled) {
+        const id = referenceIdOf(row[column.key]);
+        if (id === null || !readable.has(id)) {
+          row[column.key] = null;
+          hasCleared = true;
+        }
+      }
+    }
+    return { rows, hasCleared };
+  }
+
+  /**
+   * 一欄的複製值(明細列見 `copiedRowsOf`):引用失效、附件不是本 API 簽出的路徑 → undefined(清空並列在 `clearedFields`)。
    * 附件只配新路徑並記進 `copies`,真的複製在交易成功之後(`copyAttachments`)。
-   * 明細列每一列換新的 `rowId`(新單的列與來源的列是不同的列;子欄已由 `upgradeValues` 篩過)。
    */
   private async copiedValueOf(
     facts: FormOperatorFacts,
@@ -1588,9 +1657,6 @@ export class FormSubmissionsService {
     value: unknown,
     copies: AttachmentCopy[],
   ): Promise<unknown> {
-    if (field.type === "array") {
-      return arrayRowsOf(value).map((row) => ({ ...row, rowId: randomUUID() }));
-    }
     if (field.type === "reference") {
       const id = (value as { id?: unknown }).id;
       const source = field.source;
