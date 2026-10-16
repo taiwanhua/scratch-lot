@@ -8,6 +8,7 @@ import { CheckIcon } from "./CheckIcon";
 import { ChevronDoubleLeftIcon } from "./ChevronDoubleLeftIcon";
 import { ChevronDoubleRightIcon } from "./ChevronDoubleRightIcon";
 import { ChevronDownIcon } from "./ChevronDownIcon";
+import { ChevronLeftIcon } from "./ChevronLeftIcon";
 import { ChevronRightIcon } from "./ChevronRightIcon";
 import { CloseIcon } from "./CloseIcon";
 import { DarkModeIcon } from "./DarkModeIcon";
@@ -25,6 +26,7 @@ import { ViewIcon } from "./ViewIcon";
 /** 手繪的殼圖示:path 取自 Figma 匯出的 SVG,每一筆顏色都明寫 `currentColor`。 */
 const icons = [
   { name: "ChevronDownIcon", Icon: ChevronDownIcon },
+  { name: "ChevronLeftIcon", Icon: ChevronLeftIcon },
   { name: "ChevronRightIcon", Icon: ChevronRightIcon },
   { name: "DotIcon", Icon: DotIcon },
   { name: "CloseIcon", Icon: CloseIcon },

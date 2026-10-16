@@ -488,6 +488,16 @@
         "types": "./dist/cjs/roster-grid.d.ts",
         "default": "./dist/cjs/roster-grid.js"
       }
+    },
+    "./month-calendar": {
+      "import": {
+        "types": "./dist/es/month-calendar.d.mts",
+        "default": "./dist/es/month-calendar.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/month-calendar.d.ts",
+        "default": "./dist/cjs/month-calendar.js"
+      }
     }
   },
   "scripts": {
