@@ -1426,7 +1426,7 @@ registerReport({
 - `RosterGrid`:人 × 日期矩陣,建立在既有 `DataTable`(`@tanstack/react-table` + `react-virtual`)上;元件負責版面、選取、捲動、凍結欄;格子內容由使用的模組決定。
 - `RosterGrid` 另有**頂部固定群組**(選用):日期表頭下方、人員列上方的一組列(例班表的「人力需求」區:一列一種人力需求範本,每格一個狀態標籤),和表頭、左右固定欄一起固定,不隨人員列捲動;群組標題可收合(▾ / ▸),收合時顯示一列**彙總**(每天一格,主行 + 副行,例「需 5 · 已排 4 / 缺 1 · 可排 2」,顏色由使用的模組決定);群組內容、列數與收合預設值由使用的模組決定,收合狀態由使用的模組保存。群組格子可點:有標籤時點標籤、空白格點了回呼模組(帶日期與那一列);空白格滑過顯示淡色「+ 新增」提示(文字由模組提供,例「+ 人力需求」)。
 - `RosterGrid` 支援**左右固定欄**(現有 `DataTable` 已有左右 pinning:左邊固定人員欄、右邊固定統計欄,中間日期區左右捲動)與**欄位顯示 / 隱藏**(TanStack column visibility;現有 DataTable 沒有開,本輪打開,讓使用的模組提供 [⚙ 顯示欄位]);另可把一組欄位**收合成一個窄欄**(例 [統計 ▸],點了展開)。
-- 欄位顯示與「收合成窄欄」都是受控 props(`columnVisibility` + `onColumnVisibilityChange`、`collapsedColumnGroups` + `onCollapsedColumnGroupsChange`),元件不自己存;使用的模組存在瀏覽器(每台裝置各自記住;key 照 `createAdminStorageKeys` 新增並登記 `docs/branding.md`)。讀不到就用模組給的預設值(2026-10-10 定:[⚙ 顯示欄位] 放在班表右上角,存在瀏覽器)。
+- 欄位顯示與「收合成窄欄」都是受控 props,元件不自己存:欄位顯示是 `columnVisibility`(元件沒有切換介面,由模組的 [⚙ 顯示欄位] 直接改);收合成窄欄是 `collapsedColumnGroups` + `onCollapsedColumnGroupsChange`。使用的模組存在瀏覽器(每台裝置各自記住;key 照 `createAdminStorageKeys` 新增並登記 `docs/branding.md`)。讀不到就用模組給的預設值(2026-10-10 定:[⚙ 顯示欄位] 放在班表右上角,存在瀏覽器)。
 
 | 操作                         | 結果                                                                              |
 | ---------------------------- | --------------------------------------------------------------------------------- |
