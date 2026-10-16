@@ -111,6 +111,19 @@ export class RoleMatrixService {
   }
 
   /**
+   * 人員條件的權限選項(AudiencePicker 的模組 / 權限樹):就是矩陣的**顯示樹** ——
+   * 全部 enabled 模組與權限,扣掉別租戶客製表單的欄位級權限(`foreignFieldPermissionKeys`),
+   * 再交集操作者自身的有效權限集。根組織操作者(租戶 = null)只看得到共用表單的欄位級權限,
+   * 也就是只列底座與專案的權限。
+   */
+  async permissionOptions(
+    operator: OperatorContext,
+  ): Promise<RoleMatrixModule[]> {
+    const view = await this.buildView(operator);
+    return view.matrixTree;
+  }
+
+  /**
    * 整份覆蓋(role-manager.md 權限表「編輯權限矩陣」):
    * 1. 以**全樹**正規化送進來的授予(`normalizeGrant`:樹外丟棄、勾下層補上層、`*` 收斂)
    * 2. subset-only 防越權:正規化後要是操作者有效權限集的子集,否則 `ROLE_OUT_OF_REACH`

@@ -1,9 +1,10 @@
-import { DataScopeAudienceType, DataScopeFieldType } from "@repo/graphql";
+import { DataScopeFieldType } from "@repo/graphql";
 
 import {
   CONDITIONS_BY_TYPE,
   type ConditionDraft,
   DYNAMIC_REFS_BY_TYPE,
+  DataScopeAudienceType,
   type DataScopeFieldLike,
   type GroupDraft,
   type RuleEditorDraft,

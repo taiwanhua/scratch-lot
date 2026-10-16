@@ -167,7 +167,14 @@ describe("條件樹編輯器(資料範圍)", () => {
       combineOp: "OR",
       rules: [
         {
-          audience: { type: "ROLE", ids: ["role-support"] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "role",
+              cond: "in",
+              value: { kind: "static", values: ["role-support"] },
+            },
+          },
           filter: {
             op: "AND",
             children: [

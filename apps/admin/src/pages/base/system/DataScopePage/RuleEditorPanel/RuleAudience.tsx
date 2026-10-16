@@ -1,6 +1,5 @@
 import { useTranslations } from "use-intl";
 
-import { DataScopeAudienceType } from "@repo/graphql";
 import { Autocomplete } from "@repo/ui/autocomplete";
 import { Box } from "@repo/ui/box";
 import { SelectField } from "@repo/ui/select-field";
@@ -9,7 +8,10 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreePicker } from "@/components/base/OrgTreePicker/OrgTreePicker";
 import { issueKey } from "@/lib/base/data-scope-issues";
-import type { AudienceDraft } from "@/lib/base/data-scope-rule";
+import {
+  type AudienceDraft,
+  DataScopeAudienceType,
+} from "@/lib/base/data-scope-rule";
 import {
   roleOwnerOrgGroupNameOf,
   shouldGroupRolesByOwnerOrg,
@@ -132,7 +134,10 @@ export const RuleAudience = ({
               isRoleList ? option.ownerOrgName : null
             }
             onChange={(next) => {
-              onChange({ ...audience, ids: next.map((option) => option.id) });
+              onChange({
+                type: audience.type,
+                ids: next.map((option) => option.id),
+              });
             }}
           />
         )}
@@ -155,7 +160,7 @@ export const RuleAudience = ({
             maxHeight={180}
             aria-label={t("audienceOrg")}
             onSelectedIdsChange={(ids) => {
-              onChange({ ...audience, ids });
+              onChange({ type: audience.type, ids });
             }}
           />
         </Box>

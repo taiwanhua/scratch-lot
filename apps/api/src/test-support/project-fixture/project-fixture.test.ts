@@ -287,7 +287,14 @@ describe("專案功能登記:只加專案來源,經真 AppModule / DatabaseModul
     };
     await save([
       {
-        audience: { type: "USER", ids: [String(userId)] },
+        audience: {
+          mode: "match",
+          filter: {
+            field: "user",
+            cond: "in",
+            value: { kind: "static", values: [String(userId)] },
+          },
+        },
         filter: ONLY_MINE,
       },
     ]);

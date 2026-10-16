@@ -1,5 +1,4 @@
 import {
-  DataScopeAudienceType,
   DataScopeCombineOp,
   DataScopeFieldType,
   RoleKind,
@@ -228,7 +227,14 @@ export const savedRule: TestDataScopeRule = {
   updatedAt: "2026-09-20T02:00:00.000Z",
   rules: [
     {
-      audience: { type: DataScopeAudienceType.Role, ids: ["role-support"] },
+      audience: {
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: ["role-support"] },
+        },
+      },
       filter: {
         op: "AND",
         children: [

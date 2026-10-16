@@ -79,6 +79,16 @@
         "default": "./dist/cjs/workflow.cjs"
       }
     },
+    "./audience": {
+      "import": {
+        "types": "./dist/es/audience.d.ts",
+        "default": "./dist/es/audience.js"
+      },
+      "require": {
+        "types": "./dist/cjs/audience.d.cts",
+        "default": "./dist/cjs/audience.cjs"
+      }
+    },
     "./seed": {
       "import": {
         "types": "./dist/es/seed.d.ts",
@@ -123,6 +133,9 @@
       "workflow": [
         "./dist/es/workflow.d.ts"
       ],
+      "audience": [
+        "./dist/es/audience.d.ts"
+      ],
       "seed": [
         "./dist/es/seed.d.ts"
       ],
@@ -144,7 +157,8 @@
   "dependencies": {
     "decimal.js": "^10.6.0",
     "json-logic-js": "^2.0.5",
-    "recheck": "^4.5.0"
+    "recheck": "^4.5.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@jest/globals": "^30.5.2",

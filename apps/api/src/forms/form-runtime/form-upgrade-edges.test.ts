@@ -498,7 +498,7 @@ describe("舊版資料升級的邊界", () => {
           combineOp: "OR",
           rules: [
             {
-              audience: { type: "ALL" },
+              audience: { mode: "all" },
               filter: {
                 op: "AND",
                 children: [

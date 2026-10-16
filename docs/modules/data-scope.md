@@ -2,7 +2,7 @@
 
 ## 用途
 
-讓根組織的系統管理員對模組資料的資料目標(一個模組一個:示範模組1 的 `demo_items_one`、各示範表單的 `form_submissions`)設定額外的過濾規則:規則依「套用對象」(全部 / 指定角色 / 指定組織 / 指定使用者)命中操作者,再以條件樹過濾他查得到的資料。規則只會讓看到的資料**變少**,永遠疊在租戶隔離保底之內。機制本體見 ADR-0008,查詢時的合成順序見 ADR-0011。
+讓根組織的系統管理員對模組資料的資料目標(一個模組一個:示範模組1 的 `demo_items_one`、各示範表單的 `form_submissions`)設定額外的過濾規則:規則依「套用對象」(人員條件:所有人,或由使用者 / 角色 / 所屬組織 / 權限組成的條件樹)命中操作者,再以「條件組合」過濾他查得到的資料。規則只會讓看到的資料**變少**,永遠疊在租戶隔離保底之內。機制本體見 ADR-0008,查詢時的合成順序見 ADR-0011。
 
 正本:`docs/adr/0008-data-scope.md`、`docs/adr/0011-permission-resolution-flow.md`
 
@@ -53,7 +53,8 @@ BaseRepository 查詢時套用;GQL-07 的語意正本在此。
 - 規則永遠以 `$and` 疊在租戶保底之內 —— 規則只會讓看到的**變少**,保底不可關。
 - 規則套在 `SCOPED_QUERY_MIDDLEWARE` **整組**(與租戶保底同一組),**含寫入與刪除的查詢** —— 看不到的資料也改不到 / 刪不到。
 - **`combineOp` 只作用在「命中同一個人的那幾條規則」之間**:`OR` = 聯集、`AND` = 交集;只命中一條的人就只受那一條限制,沒命中的規則不參與合成。
-- 套用對象比對的兩份事實:「指定組織」比 `memberOrgIds`(`org_user` 直接關聯)、「指定角色」比 `roleIds`(**啟用中**的角色 —— 停用角色後規則立刻不再命中,與管理範圍同一條規則)。
+- 套用對象由 `AudienceService.matchesAudience`(`apps/api/src/audience/`)判斷,與流程審核者 / 通知同一份程式:使用者比操作者 id;角色比 `roleIds`(**啟用中**的角色 —— 停用角色後規則立刻不再命中,與管理範圍同一條規則);所屬組織比 `memberOrgIds`(`org_user` 直接關聯),「含下層」= 所屬組織本身或任一上層是指定組織、「含上層」= 所屬組織是指定組織本身或它的上層;權限比**實際授予**的有效權限(`PermissionResolver.grantedPermissionKeys`:停用的權限 / 模組(含祖先)/ 角色不算,`<模組>.*` 展開),**不套超級管理員的略過**。同一個請求內事實只算一次。
+- 存著的規則若套用對象不是人員條件格式(改格式前的舊資料),執行面跳過那一條;環境清空重建,不寫遷移。
 - 動態值在**查詢當下**代入正在查的人:`current-user` → 操作者 id、`current-user-orgs` → 操作者的**所屬組織**(`org_user` 的直接關聯,**不含**可見性開關展開的下層);代入後若是空集合,該條件命中不到任何資料(fail-closed)。
 - **`rules: []` 不等於「從來沒設定過」**:整份覆蓋成空陣列 = 這個目標沒有規則(執行面只剩租戶保底),但 `dataScopeRule` 仍回一份 `rules: []` 的文件;`rule = null` 專指從來沒設定過。
 - **規則是共用狀態**:因為規則不隨租戶隔離,自動化測試動到規則的劇本結尾一定要整份覆蓋成 `rules: []` 清乾淨,否則會污染同一個資料庫上跑的其他劇本(TEST-11)。
@@ -118,7 +119,7 @@ type DataScopeRule {
 }
 
 type DataScopeRuleEntry {
-  audience: DataScopeAudience! # { type: ALL | ROLE | ORG | USER, ids: [ID!]! }
+  audience: JSONObject! # 人員條件:{ mode: "all" } | { mode: "match", filter }(形狀正本 @repo/domain/audience)
   filter: JSONObject! # 條件樹(形狀見下)
 }
 
@@ -130,6 +131,8 @@ input SaveDataScopeRuleInput {
 ```
 
 三者皆根組織專屬:`@RequirePermission` 先守 `.view` / `.edit`,service 再守根組織(見「規則」)。
+
+套用對象的權限選項(AudiencePicker 的模組 / 權限樹)由共用的 `audiencePermissionOptions { modules }` 提供(`apps/api/src/audience/`):回權限矩陣的顯示樹(全部 enabled 模組與權限 ∩ 操作者自身的有效權限集,扣掉別租戶客製表單的欄位級權限)。root 站在根組織、租戶 = null,所以只列底座與專案的權限。登入即可讀,不另掛權限 —— 樹本身已是操作者持有的那一份。
 
 **回傳欄位的語意**(GQL-07):
 
@@ -242,16 +245,16 @@ input SaveDataScopeRuleInput {
 
 `path` 指到條件樹裡出問題的位置(如 `rules[0].filter.children[1].value.values[0]`),`reason` 是原因列舉;前端依 `reason` 顯示中文、把錯誤標在 `path` 指到的那一列。一次只回第一個違規(整份覆蓋,修掉再送)。
 
-| `reason`                   | 什麼情況                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `MALFORMED_RULE`           | `rules` 不是陣列、單筆不是物件、缺 `audience` / `filter`                                 |
-| `MALFORMED_NODE`           | 節點既不是群組也不是條件列,或 `op` / `field` 型別不對                                    |
-| `EMPTY_GROUP`              | 群組的 `children` 是空的                                                                 |
-| `UNKNOWN_FIELD`            | `field` 不在該目標的欄位目錄內                                                           |
-| `CONDITION_NOT_ALLOWED`    | `cond` 不是該欄位型別允許的                                                              |
-| `VALUE_SOURCE_NOT_ALLOWED` | `value.kind` 不是 static / dynamic,或該型別不支援這個動態值                              |
-| `VALUE_INVALID`            | 空清單、id 不是 ObjectId、日期不是帶時區的 ISO 時點、`between` 不是兩個、enum 不在選項內 |
-| `AUDIENCE_INVALID`         | `audience.type` 不認得,或 `ALL` 以外沒給 `ids` / `ids` 不是 id                           |
+| `reason`                   | 什麼情況                                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MALFORMED_RULE`           | `rules` 不是陣列、單筆不是物件、缺 `audience` / `filter`                                                                                                                                                                                                                                                                  |
+| `MALFORMED_NODE`           | 節點既不是群組也不是條件列,或 `op` / `field` 型別不對                                                                                                                                                                                                                                                                     |
+| `EMPTY_GROUP`              | 群組的 `children` 是空的                                                                                                                                                                                                                                                                                                  |
+| `UNKNOWN_FIELD`            | `field` 不在該目標的欄位目錄內                                                                                                                                                                                                                                                                                            |
+| `CONDITION_NOT_ALLOWED`    | `cond` 不是該欄位型別允許的                                                                                                                                                                                                                                                                                               |
+| `VALUE_SOURCE_NOT_ALLOWED` | `value.kind` 不是 static / dynamic,或該型別不支援這個動態值                                                                                                                                                                                                                                                               |
+| `VALUE_INVALID`            | 空清單、id 不是 ObjectId、日期不是帶時區的 ISO 時點、`between` 不是兩個、enum 不在選項內                                                                                                                                                                                                                                  |
+| `AUDIENCE_INVALID`         | 套用對象不是人員條件格式:`mode` 不認得、`match` 沒有條件列(含空群組)、欄位不是使用者 / 角色 / 所屬組織 / 權限、值不合法(id / 權限 key、所屬組織沒給範圍或用了動態來源)、群組超過 3 層;舊格式 `{ type, ids }` 一律拒絕。`path` 指到出錯的條件列(如 `rules[0].audience.filter.children[1].field`、`rules[0].audience.mode`) |
 
 admin 的解讀集中在 `DataScopePage/data-scope-error.ts`。
 

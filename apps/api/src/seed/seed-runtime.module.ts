@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { InjectConnection, MongooseModule } from "@nestjs/mongoose";
 import type { Connection } from "mongoose";
 
+import { AudienceCoreModule } from "../audience/audience-core.module";
 import { AuditModule } from "../audit/audit.module";
 import { DataScopeService } from "../data-scope/data-scope.service";
 import { DatabaseModule } from "../database/database.module";
@@ -24,7 +25,7 @@ export { MONGODB_URI_ENV } from "../database/mongodb-uri";
  *
  * 資料範圍照常生效:`DataScopeService` 以既有的 class 註冊,啟動時把自己登記成查詢中介層的規則提供者;
  * `DatabaseModule` 的啟動檢查(沒有規則提供者就起不來)原樣保留。不匯入 `DataScopeModule` 是因為它帶著
- * `OrgsModule`,會連登入線與檔案儲存一起啟動;它需要的 `OwnerProtectionService` 由 `DefinitionSeedModule` 匯出。
+ * `OrgsModule`,會連登入線與檔案儲存一起啟動;它需要的 `OwnerProtectionService` 由 `DefinitionSeedModule` 匯出、`AudienceService`(套用對象的判斷)由 `AudienceCoreModule` 匯出。
  *
  * 設定只讀程序的環境變數(`ignoreEnvFile`):連到哪個資料庫、用哪個帳號由啟動它的命令決定,
  * 不被工作目錄裡的 `.env` 換掉。
@@ -40,6 +41,7 @@ export { MONGODB_URI_ENV } from "../database/mongodb-uri";
     }),
     DatabaseModule,
     PermissionModule,
+    AudienceCoreModule,
     AuditModule,
     FormsCoreModule,
     FormDesignModule,

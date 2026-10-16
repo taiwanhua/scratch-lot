@@ -102,7 +102,7 @@ service 呼叫 BaseRepository.xxx(operator, …)
   - `BaseRepository.existsAny`:只給前置檢查回答「有沒有」(刪組織、撤銷開通的「無業務資料引用」)。**不套資料範圍規則** —— 規則會收窄操作者看得到的,數到 0 就把還有資料的組織誤判成可刪,前置檢查必須 fail-closed。做法是方法內部在查詢上設 `existenceCheck`,中介層讀到就跳過資料範圍規則(租戶過濾仍依操作者上下文套上)。簽名是 `existsAny(operator, ownerField, orgId)`:條件只能是歸屬欄(`orgId` / `ownerOrgId`)等於某個組織,只回有無。唯一受控 caller 是 `database/org-business-data.reader.ts`,登記在 `EXISTS_ANY_CALLERS` 並由測試掃 src 鎖定;專案只能提供檢查登記,不能自行呼叫。旗標本身也只准出現在資料層三個檔。
   - `apps/api/src/database/form-submission-usage.ts`:退役欄位級權限清理的三層檢查要**跨全部租戶**計數提交(少算一筆草稿就會把還在用的權限刪掉),不經 BaseRepository;只回筆數與版本號,不回內容。
   - `apps/api/src/database/workflow-submission-store.ts`:審核流程(引擎、讀取授權、申請中心)讀寫提交,不套可見範圍與資料範圍規則,以 `tenantId` 為邊界;允許呼叫它的檔案登記在該檔 `WORKFLOW_SUBMISSION_STORE_CALLERS`,由測試鎖定。
-- 對全員生效(套用對象 `all`)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
+- 對全員生效(套用對象「所有人」)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
 
 正本:`apps/api/src/database/base.repository.ts`、`apps/api/src/database/operator-context.ts`、`apps/api/src/database/plugins/tenant-scope.plugin.ts`
 
@@ -110,12 +110,12 @@ service 呼叫 BaseRepository.xxx(operator, …)
 
 BaseRepository 資料操作方法的第一個參數。四個集合各有用途,不可互相代用:
 
-| 集合            | 內容                                   | 誰用                                                |
-| --------------- | -------------------------------------- | --------------------------------------------------- |
-| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍) | 治理類過濾(`orgs`)、角色 / 使用者候選               |
-| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)  | 業務類的租戶保底                                    |
-| `memberOrgIds`  | `org_user` 直接關聯,不含下層           | 資料範圍:套用對象「指定組織」、【操作者的所屬組織】 |
-| `roleIds`       | 啟用中角色                             | 資料範圍:套用對象「指定角色」                       |
+| 集合            | 內容                                   | 誰用                                              |
+| --------------- | -------------------------------------- | ------------------------------------------------- |
+| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍) | 治理類過濾(`orgs`)、角色 / 使用者候選             |
+| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)  | 業務類的租戶保底                                  |
+| `memberOrgIds`  | `org_user` 直接關聯,不含下層           | 資料範圍:套用對象的所屬組織、【操作者的所屬組織】 |
+| `roleIds`       | 啟用中角色                             | 資料範圍:套用對象的角色                           |
 
 - 另有 `actorId`(操作者)與 `currentOrgId`(當前組織)。
 - 根組織成員的可見範圍 = `"all"`;持超級管理員或擁有組織為根的角色,管理範圍 = `"all"`。
@@ -142,7 +142,7 @@ BaseRepository 資料操作方法的第一個參數。四個集合各有用途,�
 權限管「能做什麼」,資料範圍管「看得到哪些資料的上限」。兩者分離;`*` 不影響資料範圍。
 
 - 資料目標以 `(collection, moduleKey)` 為鍵:**一個模組一個目標**,同一張表可以有多個模組各一份(所有表單模組共用 `form_submissions`)。每個資料目標一份設定:`combineOp` + `rules[]`。
-- 一條規則 = 套用對象(`all` / `role` / `org` / `user`)+ 過濾條件(巢狀 AND / OR 樹)。
+- 一條規則 = 套用對象(人員條件:所有人 / 符合條件 —— 使用者、角色、所屬組織、權限組成的 AND / OR 樹)+ 條件組合(巢狀 AND / OR 樹)。
 - 沒有規則命中操作者 → 不過濾(= 可見範圍內)。
 - 多條命中:`OR`(預設)取聯集;`AND` 取交集。沒命中的規則不影響他。
 - 動態值:`current-user`(【操作者本人】)、`current-user-orgs`(【操作者的所屬組織】)。算不出對象 → 命中不到任何資料(fail-closed)。

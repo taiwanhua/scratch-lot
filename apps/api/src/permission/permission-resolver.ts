@@ -162,6 +162,36 @@ export class PermissionResolver {
       : this.resolveRoles(reader, idsOf(roles));
   }
 
+  /**
+   * 這些角色**實際授予**的有效權限 key(人員條件的「權限」欄用):與 `resolve` 同一套步驟 3–6
+   * (停用的角色 / 權限不算、`*` 展開、模組連祖先停用剔除),但**不套超級管理員的略過** ——
+   * 超級管理員要符合權限條件,就得真的被授予那個權限(或改用角色 / 指定本人)。
+   */
+  async grantedPermissionKeys(
+    roleIds: readonly Types.ObjectId[],
+  ): Promise<ReadonlySet<string>> {
+    if (roleIds.length === 0) {
+      return new Set();
+    }
+    const reader: OperatorContext = {
+      actorId: null,
+      currentOrgId: null,
+      visibleOrgIds: "all",
+      managedOrgIds: "all",
+      memberOrgIds: [],
+      roleIds: [],
+    };
+    const roles = await this.roles.findMany(reader, {
+      _id: { $in: [...roleIds] },
+      enabled: true,
+    });
+    if (roles.length === 0) {
+      return new Set();
+    }
+    const resolution = await this.resolveRoles(reader, idsOf(roles));
+    return resolution.permissionKeys;
+  }
+
   /** 超級管理員 bypass(ADR-0004):全部 enabled 模組(含根組織專屬)+ 這些模組的全部權限。 */
   private async resolveSuperAdmin(
     reader: OperatorContext,
