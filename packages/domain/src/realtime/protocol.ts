@@ -1,6 +1,7 @@
 import { signHmac, verifyHmac } from "./hmac";
 import {
   type RealtimeSignal,
+  isRealtimeId,
   isRealtimeSignal,
   isRealtimeTopic,
 } from "./topic";
@@ -33,8 +34,7 @@ export function isRealtimePublishRequest(
     return false;
   }
   return (
-    typeof record.tenantId === "string" &&
-    /^[\w-]+$/.test(record.tenantId) &&
+    isRealtimeId(record.tenantId) &&
     isRealtimeTopic(record.topic) &&
     isRealtimeSignal(record.signal)
   );

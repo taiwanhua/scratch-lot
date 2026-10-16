@@ -9,12 +9,14 @@ export {
   type RealtimeSignal,
   type RealtimeTopicKind,
   boardTopic,
+  isRealtimeId,
   isRealtimeSignal,
   isRealtimeTopic,
   printAgentTopic,
   userTopic,
 } from "./topic";
 export {
+  REALTIME_TICKET_MAX_TOPICS,
   REALTIME_TICKET_TTL_SECONDS,
   type RealtimeTicket,
   type RealtimeTicketRejection,

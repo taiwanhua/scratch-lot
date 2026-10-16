@@ -10,7 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@repo/domain": "workspace:*"
+    "@repo/domain": "workspace:*",
+    "@repo/logger": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.3",

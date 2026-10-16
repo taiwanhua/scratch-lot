@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   REALTIME_CLOSE_CODES,
+  REALTIME_TICKET_MAX_TOPICS,
   signRealtimePublish,
 } from "@repo/domain/realtime";
 
@@ -16,6 +17,7 @@ import {
   issueTicket,
   publish,
   publishRaw,
+  signRawTicket,
   statusOf,
 } from "./test-support";
 
@@ -62,6 +64,20 @@ describe("/connect 驗證訂閱憑證", () => {
     expect(await statusOf(connectWith("not-a-ticket"))).toBe(401);
     const valid = await issueTicket("tenant-a", { userId: "u1" }, []);
     expect(await statusOf(connectWith(`${valid}x`))).toBe(401);
+  });
+
+  it("頻道超過 50 個的憑證(簽章正確)→ 401", async () => {
+    const topics = Array.from(
+      { length: REALTIME_TICKET_MAX_TOPICS + 1 },
+      (_, index) => `board:b${String(index)}`,
+    );
+    const ticket = await signRawTicket({
+      tenantId: "tenant-a",
+      userId: "u1",
+      exp: nowSeconds() + 600,
+      topics,
+    });
+    expect(await statusOf(connectWith(ticket))).toBe(401);
   });
 
   it("不是 WebSocket 升級請求 → 426", async () => {
@@ -271,6 +287,50 @@ describe("憑證到期與換發", () => {
     await publish("tenant-renew2", "user:u1", { type: "task" });
     await expect(conn.next()).resolves.toMatchObject({ op: "signal" });
     conn.ws.close();
+  });
+});
+
+describe("推送時單一連線出錯", () => {
+  it("一條連線失敗只略過它,其他連線照收、/publish 不回 500", async () => {
+    const broken = await connect(
+      await issueTicket("tenant-s2", { userId: "u1" }, []),
+    );
+    const healthy = await connect(
+      await issueTicket("tenant-s2", { userId: "u2" }, []),
+    );
+    // 把 u1 連線的 attachment 弄壞(subscribedTopics 不是陣列):推送它時會拋錯
+    await runInDurableObject(hubStub("tenant-s2"), (_instance, state) => {
+      for (const ws of state.getWebSockets()) {
+        const attachment = ws.deserializeAttachment() as ConnectionAttachment;
+        if (attachment.userId === "u1") {
+          ws.serializeAttachment({ ...attachment, subscribedTopics: null });
+        }
+      }
+    });
+
+    for (const topic of ["user:u1", "user:u2"]) {
+      const body = JSON.stringify({
+        tenantId: "tenant-s2",
+        topic,
+        signal: { type: "task" },
+      });
+      const response = await publishRaw(
+        body,
+        await signRealtimePublish(body, env.REALTIME_PUBLISH_SECRET),
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        delivered: topic === "user:u2" ? 1 : 0,
+      });
+    }
+    await expect(healthy.next()).resolves.toEqual({
+      op: "signal",
+      topic: "user:u2",
+      signal: { type: "task" },
+    });
+    expect(broken.pending()).toBe(0);
+    broken.ws.close();
+    healthy.ws.close();
   });
 });
 

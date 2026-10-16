@@ -55,6 +55,16 @@ describe("/publish 請求", () => {
         payload: {},
       }),
     ).toBe(false);
+    // tenantId 與憑證同一套識別格式(isRealtimeId):格式錯或超過長度上限都拒絕
+    for (const tenantId of ["t 1", "", "t".repeat(129)]) {
+      expect(
+        isRealtimePublishRequest({
+          tenantId,
+          topic: "user:u1",
+          signal: { type: "task" },
+        }),
+      ).toBe(false);
+    }
     expect(
       isRealtimePublishRequest({
         tenantId: "t1",
