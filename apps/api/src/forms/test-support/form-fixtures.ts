@@ -870,6 +870,57 @@ export async function saveDefinition(
   return saved.saveFormVersionDraft.formVersion;
 }
 
+/** 交易之前留下的發布中斷停在哪裡(`simulateInterruptedPublish`)。 */
+export type InterruptedPublishStage = "publishing" | "unswitched";
+
+/**
+ * 直接寫入模擬**交易之前**留下的發布中斷(發布改成一個交易後,GraphQL 端點做不出這種資料;
+ * 重試發布與中斷判定保留給這種資料):
+ * - `publishing`:步驟 2 做完 —— 草稿配好版號、改 `publishing`
+ * - `unswitched`:再做完 4a / 4b —— 這一版 `published`、其餘 `published` 改 `retired`,`currentVersion` 還沒切
+ *
+ * 欄位級權限(步驟 3)不寫,重試發布會補上。回配到的版號。
+ */
+export async function simulateInterruptedPublish(
+  connection: Connection,
+  formKey: string,
+  stage: InterruptedPublishStage,
+  changelog = "測試發布",
+): Promise<number> {
+  const versions = connection.collection("form_versions");
+  const [latest] = await versions
+    .find<{ version: number }>({ formKey, version: { $ne: null } })
+    .sort({ version: -1 })
+    .limit(1)
+    .toArray();
+  const version = (latest?.version ?? 0) + 1;
+  const locked = await versions.findOneAndUpdate(
+    { formKey, status: "draft" },
+    { $set: { status: "publishing", version, changelog } },
+    { returnDocument: "after" },
+  );
+  if (!locked) {
+    throw new Error(`表單 ${formKey} 沒有草稿可以模擬發布中斷`);
+  }
+  if (stage === "unswitched") {
+    await versions.updateOne(
+      { _id: locked._id },
+      {
+        $set: {
+          status: "published",
+          publishedAt: new Date(),
+          publishedBy: null,
+        },
+      },
+    );
+    await versions.updateMany(
+      { formKey, status: "published", _id: { $ne: locked._id } },
+      { $set: { status: "retired" } },
+    );
+  }
+  return version;
+}
+
 export async function assignForm(
   api: AuthTestApp,
   token: string,

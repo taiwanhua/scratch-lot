@@ -330,34 +330,40 @@ describe("舊版資料升級到新版", () => {
     expect(codeOf(result)).toBe("FORBIDDEN");
   });
 
-  it("升級途中被別人改了的那筆跳過並計數(EDIT_CONFLICT)", async () => {
+  it("升級途中被別人改了:那一批的交易寫入衝突、自動整批重跑,重讀後照樣升級,不蓋掉別人的寫入", async () => {
     const { formKey, completedId } = await prepare();
+    const before = await raw(completedId);
     const values = api.app.get(SubmissionValuesService);
     const evaluate = values.evaluate.bind(values);
+    let interfered = false;
     const spy = jest
       .spyOn(values, "evaluate")
       .mockImplementation(async (input) => {
-        // 算值與條件更新之間,別人存了已完成那一筆
-        await connection
-          .collection("form_submissions")
-          .updateOne(
-            { _id: new Types.ObjectId(completedId) },
-            { $inc: { editVersion: 1 } },
-          );
+        // 算值與條件更新之間,別人(交易外)存了已完成那一筆;只發生一次
+        if (!interfered) {
+          interfered = true;
+          await connection
+            .collection("form_submissions")
+            .updateOne(
+              { _id: new Types.ObjectId(completedId) },
+              { $inc: { editVersion: 1 } },
+            );
+        }
         return evaluate(input);
       });
 
     try {
       const result = await upgrade(staff.token, formKey);
 
-      expect(result.data?.upgradeFormSubmissions.skipped).toEqual([
-        { reason: "EDIT_CONFLICT", count: 1 },
-      ]);
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.upgradeFormSubmissions.skipped).toEqual([]);
     } finally {
       spy.mockRestore();
     }
     const stored = await raw(completedId);
-    expect(stored.version).toBe(1);
+    expect(stored.version).toBe(2);
+    // 別人的 +1 與升級的 +1 都在
+    expect(stored.editVersion).toBe(before.editVersion + 2);
   });
 
   it("冪等:再升級一次沒有要升級的", async () => {

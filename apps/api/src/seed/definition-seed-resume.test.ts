@@ -457,13 +457,13 @@ describe("受管定義:每個中斷點都能以同一組 id 續跑,不會重試�
   });
 
   describe("中斷窗口裡的稽核與現場變動", () => {
-    it("版號已配置但稽核失敗:重跑走原服務的重試(留下 retry-publish 稽核),版號不變", async () => {
+    it("表單發布的稽核失敗:發布整個回復(仍是同一份草稿、沒配版號);重跑以同一份草稿發布成版本 1", async () => {
       const seed = formSeed(nextKey("seed_window"), "r1");
       failAuditOnce("form-version.publish");
       await runSeeds(app, [seed]);
       jest.restoreAllMocks();
-      const [allocated] = await versionDocs(connection, FORM, seed.key);
-      expect(allocated).toMatchObject({ version: 1, status: "publishing" });
+      const [draft] = await versionDocs(connection, FORM, seed.key);
+      expect(draft).toMatchObject({ version: null, status: "draft" });
 
       const resumed = await runSeed(app, seed);
 
@@ -471,11 +471,11 @@ describe("受管定義:每個中斷點都能以同一組 id 續跑,不會重試�
       expect(
         await auditCount(connection, {
           action: "form-version.retry-publish",
-          targetId: allocated?._id,
+          targetId: draft?._id,
         }),
-      ).toBe(1);
+      ).toBe(0);
       const [published] = await versionDocs(connection, FORM, seed.key);
-      expect(published?._id).toEqual(allocated?._id);
+      expect(published?._id).toEqual(draft?._id);
       expect(published).toMatchObject({ version: 1, status: "published" });
     });
 

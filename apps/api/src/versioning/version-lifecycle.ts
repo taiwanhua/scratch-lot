@@ -11,7 +11,8 @@ import { isDuplicateKeyError } from "../forms/forms-error";
 /**
  * 版本生命週期(Spec 6a §6「發布」;6b 的流程版本複用同一份,少了欄位級權限那一步):
  * 表單版本(`form_versions`)與流程版本(`workflow_versions`)共用的四步發布骨架、冪等重試與退役。
- * **不用 Mongo 交易**(ADR-0007 / ADR-0009:本機與 CI 單節點),只靠條件更新防重複、靠冪等步驟防中斷:
+ * 這裡的函式不自己開交易,由呼叫端決定:表單的發布 / 重試發布整個包在一個交易裡(`FormPublishService`,
+ * ADR-0013),任一步失敗全部回復;沒包交易的呼叫端仍靠條件更新防重複、靠冪等步驟接續:
  *
  * 1. 檢查器(呼叫端各自跑,有錯就停)
  * 2. `lockDraft`:條件更新 `{ status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、
@@ -20,7 +21,7 @@ import { isDuplicateKeyError } from "../forms/forms-error";
  * 4. `switchToPublished`:這一版 `publishing → published` → 其餘 `published → retired` →
  *    擁有者的 `currentVersion` 指向新版(填寫 / 送出只看 `currentVersion`,最後一筆寫完前看到的仍是舊版)
  *
- * 任何一步失敗,資料就停在那一步做到一半的樣子;重試從步驟 3 起重跑,每個寫入「已是目標狀態就跳過」。
+ * 沒包交易時任何一步失敗,資料就停在那一步做到一半的樣子;重試從步驟 3 起重跑,每個寫入「已是目標狀態就跳過」。
  */
 
 /**
@@ -173,7 +174,8 @@ export async function assertNotPublishing<TVersion extends LifecycleVersion>(
 
 /**
  * 步驟 2:搶鎖並配版號(草稿還是讀到的那一份才改;兩個發布同時來只有一個命中)。
- * 同版號被另一個發布配走(唯一索引)視同沒搶到。
+ * 同版號被另一個發布配走(唯一索引)視同沒搶到:轉成 `CONFLICT` **往外拋**,不接著寫
+ * (在交易內時整個交易隨之回復,TX-04)。
  */
 export async function lockDraftForPublish<TVersion extends LifecycleVersion>(
   config: VersionLifecycleConfig<TVersion>,

@@ -154,14 +154,11 @@ export abstract class StorageService {
   }
 
   /**
-   * 複製一個**私有**物件到同前綴的新路徑(`<前綴>/<新 uuid>.<副檔名>`),回新路徑(Spec 6b §6「複製為新單」:
-   * 附件複製一份歸新單)。與 `readUrlOf` 同一道把關:路徑不是本 API 簽出來的一律不複製、回 null。
-   * **呼叫端負責先驗「這個人看得到這筆資料嗎」**。供應商端的失敗原樣往外拋。
+   * 複製一個**私有**物件時的新路徑(`<前綴>/<新 uuid>.<副檔名>`),只算路徑、不碰 bucket。
+   * 路徑不是本 API 簽出來的回 null(與 `readUrlOf` 同一道把關)。
+   * 用途:交易內先把新路徑寫進資料,交易成功後再以 `copyPrivateObject(from, to)` 真的複製(TX-03)。
    */
-  async copyPrivateObject(
-    objectPath: string | null | undefined,
-  ): Promise<string | null> {
-    assertOutsideTransaction("複製 GCS 物件");
+  privateCopyPathOf(objectPath: string | null | undefined): string | null {
     const path = nonEmptyPath(objectPath);
     if (path === undefined || !isOwnedUploadPath(path)) {
       return null;
@@ -170,7 +167,32 @@ export abstract class StorageService {
     const dot = path.lastIndexOf(".");
     const prefix = path.slice(0, slash);
     const extension = dot > slash ? path.slice(dot + 1) : "";
-    const copied = `${prefix}/${randomUUID()}.${extension}`;
+    return `${prefix}/${randomUUID()}.${extension}`;
+  }
+
+  /**
+   * 複製一個**私有**物件到同前綴的新路徑,回新路徑(Spec 6b §6「複製為新單」:附件複製一份歸新單)。
+   * `to` 給了就複製到那裡(須是 `privateCopyPathOf` 算出來的同前綴路徑),沒給就現算一個。
+   * 與 `readUrlOf` 同一道把關:路徑不是本 API 簽出來的一律不複製、回 null。
+   * **呼叫端負責先驗「這個人看得到這筆資料嗎」**。供應商端的失敗原樣往外拋。
+   */
+  async copyPrivateObject(
+    objectPath: string | null | undefined,
+    to?: string,
+  ): Promise<string | null> {
+    assertOutsideTransaction("複製 GCS 物件");
+    const path = nonEmptyPath(objectPath);
+    if (path === undefined || !isOwnedUploadPath(path)) {
+      return null;
+    }
+    const copied = to ?? this.privateCopyPathOf(path);
+    if (
+      copied === null ||
+      !isOwnedUploadPath(copied) ||
+      copied.slice(0, copied.indexOf("/")) !== path.slice(0, path.indexOf("/"))
+    ) {
+      return null;
+    }
     await this.duplicateObject(path, copied);
     return copied;
   }

@@ -105,7 +105,7 @@ refresh cookie 整個瀏覽器共用,所以「誰後登入,全部分頁跟著他
 
 - 模板 = 全部模組扣除根組織專屬(模組與權限、資料範圍,以及權限容器租戶作業、類別作業),每個模組一筆 `*`。
 - 副本就是該租戶的天花板。seed 新增的模組只進模板,既有租戶的副本不會自動拿到。
-- 任一步失敗 → 反向補償刪除本次建的東西(Mongo 單節點沒有 transaction)。
+- 四步是一個交易:任一步失敗全部回復;啟用信在交易成功後才寄。
 - 「新增子組織」是另一個輕量入口,不走這個流程。
 
 正本:`apps/api/src/orgs/tenant-ops.service.ts`、`apps/db-migrator/seeds/base/role-bindings.ts`、`docs/modules/org-manager.md`

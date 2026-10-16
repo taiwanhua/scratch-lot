@@ -24,6 +24,7 @@ import {
   type FormRevision,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
+import { TransactionService } from "../../database/transaction";
 import { fieldGateOf } from "../field-permission-gate";
 import {
   FormAccessService,
@@ -55,7 +56,7 @@ import { assertSubmissionCapacity } from "./revision-limits";
 
 type SubmissionRecord = Persisted<FormSubmissionDocument>;
 
-/** 一批處理幾筆(每批先取 id,再逐筆讀完整文件、條件更新)。 */
+/** 一批處理幾筆(每批先取 id,再在一個交易裡逐筆讀完整文件、條件更新)。 */
 export const UPGRADE_BATCH_SIZE = 200;
 
 const MAX_CLIENT_REQUEST_ID_LENGTH = 100;
@@ -85,6 +86,8 @@ type UpgradeOutcome =
  * - 逐筆:`upgradeValues`(與複製為新單共用搬值)→ 現有的 settle(計算欄位、隱藏當 null)→ 已完成重算摘要、
  *   修訂 +1(`version` = 目標版、`ctx` 沿用上一筆修訂、`kind: "upgrade"`,誰與何時升級記在 `upgradedBy` / `upgradedAt`)→ 改綁;草稿只改綁與重算(草稿沒有修訂)
  * - 條件更新帶讀到的 `editVersion` 與 `version`:被人同時改的、超過容量的跳過並計數;已是目標版的不在範圍內(冪等)
+ * - **每批一個交易**(ADR-0013):一批裡的改綁一起提交或一起回復;中途失敗時已提交的批次留著
+ *   (已是目標版、不在範圍內),再送一次只處理剩下的
  * - 同 `(操作者, clientRequestId)` 重送回第一次的結果(記在稽核 `submission.upgrade` 那一筆)
  */
 @Injectable()
@@ -96,6 +99,7 @@ export class FormUpgradeService {
     private readonly values: SubmissionValuesService,
     private readonly audit: AuditService,
     private readonly auditLogs: AuditLogsRepository,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 各舊版本的筆數 + 補值欄位(守門同 `upgrade`)。 */
@@ -157,14 +161,17 @@ export class FormUpgradeService {
         },
         { select: "_id", sort: { _id: 1 }, limit: UPGRADE_BATCH_SIZE },
       );
-      for (const { _id } of batch) {
-        const outcome = await this.upgradeOne(
-          facts,
-          upgrade,
-          _id,
-          fills,
-          sources,
-        );
+      // 計數在交易提交後才累加:寫入衝突時整批自動重跑,不能把丟掉的那一輪算進去
+      const outcomes = await this.transactions.withTransaction(async () => {
+        const results: (UpgradeOutcome | null)[] = [];
+        for (const { _id } of batch) {
+          results.push(
+            await this.upgradeOne(facts, upgrade, _id, fills, sources),
+          );
+        }
+        return results;
+      });
+      for (const outcome of outcomes) {
         if (outcome?.kind === "upgraded") {
           upgraded.set(
             outcome.fromVersion,

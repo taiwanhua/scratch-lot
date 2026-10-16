@@ -27,7 +27,6 @@ import {
   UPLOAD_RULES,
   UploadPurpose,
 } from "../../storage/upload-rules";
-import { FormPublishHooks } from "../form-design/form-publish-hooks";
 import {
   CREATE_DRAFT,
   CREATE_FORM,
@@ -59,6 +58,7 @@ import {
   rootToken,
   saveDefinition,
   showKey,
+  simulateInterruptedPublish,
   submitDraft,
 } from "../test-support/form-fixtures";
 
@@ -773,23 +773,13 @@ describe("表單預設值、日期時間、上傳上限、型別檢查、刪除�
         definitionOf([field("title", "text"), field("note", "text")]),
         draft.createFormVersionDraft.formVersion.draftRevision,
       );
-      const hooks = api.app.get(FormPublishHooks);
-      jest
-        .spyOn(hooks, "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "publish-version"
-            ? Promise.reject(new Error("injected failure"))
-            : Promise.resolve(),
-        );
-      const failed = await call(api, root, PUBLISH, {
-        input: {
-          formKey: "delete_publishing",
-          expectedDraftRevision: saved.draftRevision,
-          changelog: "中斷",
-        },
-      });
-      expect(failed.errors).toBeDefined();
-      jest.restoreAllMocks();
+      // 發布是一個交易,不會再中斷;模擬交易之前留下的中斷資料
+      await simulateInterruptedPublish(
+        api.connection,
+        "delete_publishing",
+        "publishing",
+        "中斷",
+      );
       const blocked = await call(api, root, DELETE_VERSION_DRAFT, {
         input: {
           formKey: "delete_publishing",

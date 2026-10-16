@@ -6,6 +6,7 @@ import {
   FormsRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
+import { TransactionService } from "../../database/transaction";
 import {
   type LifecycleOwner,
   type PublishInternalOptions,
@@ -55,18 +56,17 @@ export interface PublishState {
 }
 
 /**
- * 四步發布(Spec 6a §6「發布」)。**不用 Mongo 交易**(ADR-0007 / ADR-0009:本機與 CI 單節點),
- * 只靠條件更新防重複、靠冪等步驟防中斷:
+ * 四步發布(Spec 6a §6「發布」),整個動作是**一個交易**(ADR-0013):
  *
  * 1. 跑檢查器,有錯就停(什麼都沒改)
  * 2. 條件更新 `{ status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、記 changelog;
  *    沒更新到 → 409(兩個發布同時來只有一個搶得到)
  * 3. 欄位級權限:缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label
- * 4. 切換三筆,依序逐筆寫:這一版 `publishing → published` → 前一版 `published → retired` →
- *    `forms.currentVersion` 指向新版(填寫者只看 `currentVersion`,最後一筆寫完前看到的仍是舊版)
+ * 4. 切換三筆:這一版 `publishing → published` → 前一版 `published → retired` → `forms.currentVersion` 指向新版
  *
- * 任何一步失敗,資料就停在那一步做到一半的樣子;`retryPublishFormVersion` 從步驟 3 起**重跑全部步驟**,
- * 每個寫入先看「已經是目標狀態就跳過」,重跑幾次結果都一樣。
+ * 任何一步失敗,版本、欄位級權限、`currentVersion` 與稽核一起回到發布前,不會留下「發布中斷」。
+ * `retryPublishFormVersion` 與中斷判定保留給交易之前留下的中斷資料(與受管定義安裝的接續),
+ * 同樣是一個交易,每個寫入「已是目標狀態就跳過」。
  */
 @Injectable()
 export class FormPublishService {
@@ -78,6 +78,7 @@ export class FormPublishService {
     private readonly fieldPermissions: FormFieldPermissionsService,
     private readonly hooks: FormPublishHooks,
     private readonly audit: AuditService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /**
@@ -172,22 +173,25 @@ export class FormPublishService {
       );
     }
 
-    // 步驟 2:搶鎖並配版號(草稿還是讀到的那一份才改;兩個發布同時來只有一個命中)
-    const locked = await lockDraftForPublish(
-      this.lifecycle(operator),
-      ownerOf(form),
-      draft._id,
-      input.expectedDraftRevision,
-      changelog,
-    );
-    const nextVersion = locked.version;
-    await this.audit.record(operator, {
-      action: FORM_VERSION_AUDIT.publish,
-      targetType: FORM_VERSION_TARGET,
-      targetId: locked._id,
-      after: { formKey: form.key, version: nextVersion, changelog },
+    // 步驟 2–4 + 稽核:一個交易。檢查器只讀(且內部平行讀),放在交易前;檢查之後草稿若被改過,
+    // 步驟 2 以 draftRevision 為條件的搶鎖就不會命中
+    return this.transactions.withTransaction(async () => {
+      // 步驟 2:搶鎖並配版號(草稿還是讀到的那一份才改;兩個發布同時來只有一個命中)
+      const locked = await lockDraftForPublish(
+        this.lifecycle(operator),
+        ownerOf(form),
+        draft._id,
+        input.expectedDraftRevision,
+        changelog,
+      );
+      await this.audit.record(operator, {
+        action: FORM_VERSION_AUDIT.publish,
+        targetType: FORM_VERSION_TARGET,
+        targetId: locked._id,
+        after: { formKey: form.key, version: locked.version, changelog },
+      });
+      return this.finish(operator, form, locked);
     });
-    return this.finish(operator, form, locked);
   }
 
   /**
@@ -195,10 +199,20 @@ export class FormPublishService {
    * `internal.versionId`:只給內部的受管定義安裝用 —— 只接續那一版;此刻中斷的是別的版本同樣回
    * `PUBLISH_NOT_INTERRUPTED`(在稽核、欄位級權限與切換之前判斷,接著處理的就是這裡選中的那一版)。
    */
-  async retry(
+  retry(
     facts: FormOperatorFacts,
     input: FormKeyInput,
     internal: RetryPublishInternalOptions = {},
+  ): Promise<FormVersionRecord> {
+    return this.transactions.withTransaction(() =>
+      this.retryInTransaction(facts, input, internal),
+    );
+  }
+
+  private async retryInTransaction(
+    facts: FormOperatorFacts,
+    input: FormKeyInput,
+    internal: RetryPublishInternalOptions,
   ): Promise<FormVersionRecord> {
     const operator = facts.operator;
     const form = await this.access.requireWritableForm(facts, input.formKey);

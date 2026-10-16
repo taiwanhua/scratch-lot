@@ -17,8 +17,8 @@ import { FormPublishHooks } from "../forms/form-design/form-publish-hooks";
 import {
   CREATE_DRAFT,
   CREATE_FORM,
+  type InterruptedPublishStage,
   MODULE_KEY,
-  PUBLISH,
   RETIRE_CURRENT,
   RETRY_PUBLISH,
   type VersionRow,
@@ -28,6 +28,7 @@ import {
   ok,
   publishNewForm,
   saveDefinition,
+  simulateInterruptedPublish,
 } from "../forms/test-support/form-fixtures";
 import {
   CREATE_WORKFLOW,
@@ -119,9 +120,10 @@ describe("data reset:中斷的發布、退役與安裝一律拒絕,不續發也�
   }
 
   /** root 建共用表單並開始發布(在指定的檢查點中斷)。 */
+  /** 表單發布是一個交易、不會再中斷:以直接寫入模擬交易之前留下的中斷資料。 */
   async function interruptFormPublish(
     key: string,
-    checkpoint: string,
+    stage: InterruptedPublishStage,
   ): Promise<void> {
     await ok(api, app.root, CREATE_FORM, {
       input: { key, moduleKey: MODULE_KEY, name: `表單 ${key}` },
@@ -131,23 +133,14 @@ describe("data reset:中斷的發布、退役與安裝一律拒絕,不續發也�
     }>(api, app.root, CREATE_DRAFT, {
       input: { formKey: key, baseVersion: null },
     });
-    const saved = await saveDefinition(
+    await saveDefinition(
       api,
       app.root,
       key,
       definitionOf([field("title", "text")]),
       draft.createFormVersionDraft.formVersion.draftRevision,
     );
-    failCheckpointOnce(api.app.get(FormPublishHooks), checkpoint);
-    const interrupted = await call(api, app.root, PUBLISH, {
-      input: {
-        formKey: key,
-        expectedDraftRevision: saved.draftRevision,
-        changelog: "測試發布",
-      },
-    });
-    expect(interrupted.errors).toBeDefined();
-    jest.restoreAllMocks();
+    await simulateInterruptedPublish(connection, key, stage);
   }
 
   async function interruptWorkflowPublish(
@@ -191,7 +184,7 @@ describe("data reset:中斷的發布、退役與安裝一律拒絕,不續發也�
   }
 
   it("畫面上的表單發布停在 publishing(沒有安裝紀錄):拒絕;重試發布完成後不再擋", async () => {
-    await interruptFormPublish("ui_publishing", "publish-version");
+    await interruptFormPublish("ui_publishing", "publishing");
     expect(
       await connection
         .collection("form_versions")
@@ -210,7 +203,7 @@ describe("data reset:中斷的發布、退役與安裝一律拒絕,不續發也�
   });
 
   it("表單版本已是 published、currentVersion 還沒切換:拒絕;重試發布完成後不再擋", async () => {
-    await interruptFormPublish("ui_unswitched", "current-version");
+    await interruptFormPublish("ui_unswitched", "unswitched");
     expect(
       await connection
         .collection("form_versions")
