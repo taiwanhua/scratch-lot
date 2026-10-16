@@ -7,6 +7,8 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose, { type Connection } from "mongoose";
 import request from "supertest";
 
+import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+
 /** db-migrator 套件根目錄(以子行程跑其 seed 指令,不 import — STRUCT-01 禁 app 互 import)。 */
 const DB_MIGRATOR_ROOT = path.resolve(
   __dirname,
@@ -41,8 +43,11 @@ export interface MigratorResult {
   stderr: string;
 }
 
-/** 子行程逾時:卡住就明確報錯,並把 stdout 尾端一起帶出來方便查(CI 曾因子行程卡住掛好幾小時)。 */
-const MIGRATOR_TIMEOUT_MS = 180_000;
+/**
+ * db-migrator 子行程的逾時:低於 hook 逾時(`HOOK_TIMEOUT_MS`),子行程卡住時由這裡先 kill 它,
+ * 並帶出 stderr 與 stdout 尾端報錯,不會被 beforeAll 的逾時蓋掉原因。一次 seed / update 正常只要數秒。
+ */
+export const MIGRATOR_TIMEOUT_MS = HOOK_TIMEOUT_MS - 15_000;
 
 /**
  * 以非同步子行程跑 db-migrator 的指令(tsx 入口 + 參數),收齊 stdout / stderr 後回結果。
@@ -79,7 +84,12 @@ ${stdout.slice(-2000)}`,
     }, MIGRATOR_TIMEOUT_MS);
     child.on("error", (error) => {
       clearTimeout(timer);
-      reject(new Error(`db-migrator 子行程失敗(${error.message}):${stderr}`));
+      reject(
+        new Error(
+          `db-migrator 子行程失敗(${error.message}):${stderr}
+${stdout.slice(-2000)}`,
+        ),
+      );
     });
     child.on("close", (status) => {
       clearTimeout(timer);

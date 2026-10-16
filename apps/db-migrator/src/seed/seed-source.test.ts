@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
@@ -11,6 +10,7 @@ import {
   PROJECT_FORM_KEY,
   PROJECT_REPORT_KEY,
 } from "../../test/fixtures/seeds-project/project-source";
+import { runNode } from "../../test/support/update-harness";
 import type { DefinitionSeedSet } from "./seed-declaration";
 import { runSeeds } from "./seed-runner";
 
@@ -67,7 +67,7 @@ function runSeedCommand(
   env: Record<string, string> = {},
 ) {
   const args = [TSX_CLI, SEED_ENTRY, fixtureRegistryPath(fixtureName)];
-  return spawnSync(process.execPath, args, {
+  return runNode(args, {
     cwd: PACKAGE_ROOT,
     env: {
       ...process.env,
@@ -75,7 +75,6 @@ function runSeedCommand(
       MONGODB_URI: databaseUri,
       ...env,
     },
-    encoding: "utf8",
   });
 }
 
@@ -216,7 +215,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
   it("空庫:專案初值、掛在底座父節點下的專案模組、納入專案模組的模板、引用底座的專案種子一次到位;重跑全部未變", async () => {
     const databaseUri = createTestDatabaseUri("fresh");
 
-    const firstRun = runSeedCommand(databaseUri, "seeds-project");
+    const firstRun = await runSeedCommand(databaseUri, "seeds-project");
     expect(firstRun.stderr).toBe("");
     expect(firstRun.status).toBe(0);
     expect(firstRun.stdout).toMatch(
@@ -326,7 +325,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
       isSystem: true,
     });
 
-    const secondRun = runSeedCommand(databaseUri, "seeds-project");
+    const secondRun = await runSeedCommand(databaseUri, "seeds-project");
     expect(secondRun.stderr).toBe("");
     expect(secondRun.status).toBe(0);
     expect(secondRun.stdout).toMatch(
@@ -338,7 +337,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
   it("既有環境加入專案來源:底座文件的 id 不變,根組織現場值(含清成 null 的說明)、模組初始值與 root 帳號都保留;專案初值不覆蓋已存在的值", async () => {
     const databaseUri = createTestDatabaseUri("upgrade");
 
-    expect(runSeedCommand(databaseUri).status).toBe(0);
+    expect(await runSeedCommand(databaseUri)).toMatchObject({ status: 0 });
     const manualGrant = await withDatabase(databaseUri, async (database) => {
       await database
         .collection("orgs")
@@ -377,7 +376,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
     const before = await snapshotOf(databaseUri);
 
     // 部署帶進專案來源;root 密碼的環境變數同時換了
-    const withProject = runSeedCommand(databaseUri, "seeds-project", {
+    const withProject = await runSeedCommand(databaseUri, "seeds-project", {
       ROOT_ADMIN_PASSWORD: ["changed", "secret", "456"].join("-"),
     });
     expect(withProject.stderr).toBe("");
@@ -424,7 +423,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
     });
 
     // 之後某一版把專案模組從來源拿掉:seed 不撤銷既有授權、不刪文件
-    const withdrawn = runSeedCommand(databaseUri);
+    const withdrawn = await runSeedCommand(databaseUri);
     expect(withdrawn.stderr).toBe("");
     expect(withdrawn.status).toBe(0);
     expect(withdrawn.stdout).toMatch(/seed 完成:新增 0 \/ 更新 0 \/ 認養 0 \//);
@@ -436,7 +435,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
   it("專案重宣告底座的種子:組裝時拒絕,指令非零結束,資料庫沒有任何寫入", async () => {
     const databaseUri = createTestDatabaseUri("collision");
 
-    const result = runSeedCommand(databaseUri, "seeds-collision");
+    const result = await runSeedCommand(databaseUri, "seeds-collision");
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("orgs.root 重複宣告(base 與 project)");
     expect(result.stdout).toBe("");

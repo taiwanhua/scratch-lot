@@ -1,9 +1,10 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
+
+import { runNode } from "../test/support/update-harness";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const MIGRATION = path.join(
@@ -62,8 +63,7 @@ async function openDatabase(databaseUri: string): Promise<Db> {
 }
 
 function runUpDirectly(databaseUri: string, times: number, failOn = "") {
-  return spawnSync(
-    process.execPath,
+  return runNode(
     [
       "--input-type=module",
       "-e",
@@ -73,7 +73,7 @@ function runUpDirectly(databaseUri: string, times: number, failOn = "") {
       MIGRATION,
       failOn,
     ],
-    { cwd: PACKAGE_ROOT, encoding: "utf8" },
+    { cwd: PACKAGE_ROOT },
   );
 }
 
@@ -352,7 +352,7 @@ describe("遷移:移除 shopping-list / leave 兩個舊表單模組", () => {
     const databaseUri = databaseUriOf("once");
     database = await openDatabase(databaseUri);
     await seedPreState(database);
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
   }, 120_000);
@@ -422,7 +422,7 @@ describe("遷移:移除 shopping-list / leave 兩個舊表單模組", () => {
 
   it("重跑冪等:再跑兩次不報錯、結果不變", async () => {
     const databaseUri = databaseUriOf("once");
-    const result = runUpDirectly(databaseUri, 2);
+    const result = await runUpDirectly(databaseUri, 2);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     const counts = await countRetired(database);
@@ -442,10 +442,10 @@ describe("遷移:中途中斷後重跑仍刪乾淨", () => {
     database = await openDatabase(databaseUri);
     await seedPreState(database);
     // 跑到刪完關聯與實例、要刪 forms 時中斷:認流程用的 org_form_workflow / workflow_instances 已經沒了
-    const interrupted = runUpDirectly(databaseUri, 1, "forms");
+    const interrupted = await runUpDirectly(databaseUri, 1, "forms");
     expect(interrupted.status).not.toBe(0);
     expect(interrupted.stderr).toContain("模擬中斷:forms");
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
   }, 120_000);
@@ -488,7 +488,7 @@ describe("遷移:沒有綁定的流程怎麼判", () => {
         });
       }
     }
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
   }, 120_000);

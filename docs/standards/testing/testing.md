@@ -51,6 +51,7 @@ Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md
 api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 打 `/graphql`(本地自起 mongodb-memory-server;CI 用 service container),驗回應與資料庫最終狀態。固定做法(先例:`apps/api/src/auth/auth.test.ts`、`apps/api/src/auth/test-support/auth-app.ts`):
 
 - **夾具**:測試開始前以**子行程**跑 db-migrator 的 `seed` 指令(完整 `update` 的相容別名)執行 migration 並建立種子資料(root 帳號、模組樹、權限、種子角色);STRUCT-01 禁 app 互 import,所以不能 import seed 的程式碼。額外的測試角色 / 使用者用 RelationService 具名方法或直接寫測試資料庫建(測試檔不受裸查詢禁令約束)
+- **連資料庫的子行程一律非同步**:測試裡會連到同行程 mongodb-memory-server 的子行程(seed、update、遷移腳本、CLI)不得用 `spawnSync`。mongod 是測試行程的子程序,輸出靠測試行程的事件迴圈讀;`spawnSync` 擋住事件迴圈時管線塞滿、mongod 停住,子行程報 `Server selection timed out` 或卡死。用 api 的 `auth-app.ts`(`seedDatabase` / `runMigratorUpdate`)或 db-migrator 的 `test/support/update-harness.ts`(`startNode` / `runNode` / `startEntry`)。子行程自設逾時時要低於 hook 逾時,逾時就 kill 子行程並帶出輸出尾端(先例 `auth-app.ts` 的 `MIGRATOR_TIMEOUT_MS`)。例外:不連這個 mongod 的子行程(建置、git、lint 腳本)可以用 `spawnSync`
 - **信件不真寄**:注入記錄用的 `MailService` adapter,測試從它讀出 token 走下一步;api 未設 `RESEND_API_KEY` 時本來就是這個模式
 - **測試專用的 resolver / module**(如驗 `@RequirePermission` 用的探針端點)放 `test-support/`,只在測試的 `extraModules` 掛上;**測試用 app 的 schema 走記憶體**(`NODE_ENV=test` 時 `autoSchemaFile: true`),探針才不會寫進提交的 `schema.gql`
 - 例外:某個能力在 GraphQL 端點上看不到(如守門器產出的操作者上下文)才允許經 `app.get(Service)` 從 DI 取出來驗 — 這是第二個接縫,PR 要說明理由
