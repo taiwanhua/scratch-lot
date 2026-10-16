@@ -1,4 +1,4 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { type Connection } from "mongoose";
 
 export interface TestDatabase {
@@ -14,16 +14,16 @@ export const HOOK_TIMEOUT_MS = 60_000;
 
 /**
  * 對真 MongoDB 的測試連線(#23 Testing Decisions):
- * 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。
+ * 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。
  * 各測試檔用獨立 databaseName,避免與其他測試(如 db-migrator)互踩。
  */
 export async function openTestDatabase(
   databaseName: string,
 ): Promise<TestDatabase> {
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let baseUri = process.env.MONGODB_URI;
   if (!baseUri) {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 

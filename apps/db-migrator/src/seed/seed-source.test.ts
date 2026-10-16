@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, type Document, MongoClient, type ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 import { seedRegistry as definitionRegistry } from "../../test/fixtures/seeds-definition/registry";
 import {
@@ -36,7 +36,7 @@ const ROOT_ADMIN_ENV = {
   ROOT_ADMIN_PASSWORD: ["initial", "secret", "123"].join("-"),
 };
 
-let memoryServer: MongoMemoryServer | undefined;
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 const usedDatabaseUris: string[] = [];
 
@@ -197,7 +197,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);

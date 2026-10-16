@@ -310,6 +310,9 @@ jobs:
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
 
   # api 的測試最久(整合測試對真 MongoDB),用 jest 的 --shard 分兩台並行。
+  # MongoDB:jest globalSetup 自起單一成員 replica set(MongoMemoryReplSet,交易需要;與本機同一套)。
+  # 不用 service container:GitHub 的 service container 不能自訂啟動參數(--replSet),起不了 replica set;
+  # mongod 二進位由 pnpm install 的 postinstall 下載(所以這裡不加 MONGOMS_DISABLE_POSTINSTALL)。
   # 直接 exec jest 而不走 `pnpm run test -- …`(後者的參數會被 jest 當成路徑 pattern);
   # 旗標與 apps/api/package.json 的 test script 相同,再加 --forceExit / --shard。
   # api 的 jest 以 moduleNameMapper 直接吃 @repo/domain 原始碼,不必先 build 依賴,所以這裡不用 turbo。
@@ -323,12 +326,6 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2]
-
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
 
     steps:
       - uses: actions/checkout@v4
@@ -346,8 +343,6 @@ jobs:
       # `--forceExit`:測試全過但有殘留 handle 時仍會退出,並把偵測到的 handle 印進 log(--detectOpenHandles)
       - name: test(api 第 ${{ matrix.shard }} / 2 片)
         run: pnpm --filter @repo/api exec jest --passWithNoTests --detectOpenHandles --forceExit --shard=${{ matrix.shard }}/2
-        env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
 
   # admin 的測試(約 600 案、單跑 5 分多)同樣用 jest 的 --shard 分兩台。
   # admin 的 jest 吃依賴的 dist(與 turbo 的 test dependsOn ^build 一致),先用 turbo build 依賴(`^...` = 不含 admin 本身),
@@ -401,7 +396,7 @@ jobs:
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
 
   # api / admin 以外受影響 package 的測試(domain / ui / i18n / logger / db-migrator …)
-  # MONGODB_URI:db-migrator 測試沿用本 job 的 MongoDB service container(本地無此變數時自起 mongodb-memory-server)
+  # MongoDB:db-migrator 的 jest globalSetup 自起單一成員 replica set(MongoMemoryReplSet),與 test-api 同一套
   # db-migrator 的 update 測試以子程序跑 api 的受管定義 CLI:它的 test 在 turbo 裡依賴 @repo/api#build
   #(apps/db-migrator/turbo.json),所以這裡會先建置 api 與 @repo/domain 等執行期依賴,不靠本機恰好留著的 dist;
   # 這些測試對真 MongoDB 逐一驗故障窗口,時間較長,逾時放寬到 30 分鐘。
@@ -410,12 +405,6 @@ jobs:
     if: needs.prepare.outputs.others == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
 
     steps:
       - uses: actions/checkout@v4
@@ -441,8 +430,6 @@ jobs:
 
       - name: test
         run: pnpm exec turbo run test ${{ needs.prepare.outputs.others-filter }} --log-order=stream -- --forceExit
-        env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
 
       - name: 修剪 turbo 快取
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true

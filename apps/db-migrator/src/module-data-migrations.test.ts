@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 import { runNode } from "../test/support/update-harness";
 
@@ -45,8 +45,8 @@ try {
 }
 `;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
-let memoryServer: MongoMemoryServer | undefined;
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 const clients: MongoClient[] = [];
 
@@ -192,7 +192,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);
