@@ -5,16 +5,16 @@ import { projectMail } from "@repo/project-config/mail";
 import type {
   ActionEmailInput,
   MailMessage,
-  WorkflowResultEmailInput,
-  WorkflowTaskEmailInput,
+  NotificationEmailInput,
 } from "./mail.service";
 import type { ResendClient, ResendEmailPayload } from "./resend-mail.service";
 
 /**
  * 信件的品牌文字與寄件人來自專案設定(`@repo/project-config/mail`)。三組測試各管一件事:
- * 1. **固定的 CookHome 夾具**:四類信件的完整輸出以快照固定 —— 快照是抽設定**之前**的程式產生的,
- *    之後必須逐字相同。夾具寫死在本檔,不讀目前的專案設定,換專案不必改。
- * 2. **替代品牌夾具**:四類信件與 Resend 的 `from` 都跟著換,且不殘留別的品牌。
+ * 1. **固定的 CookHome 夾具**:三類信件的完整輸出以快照固定 —— 啟用信與重設密碼信的快照是抽設定**之前**的
+ *    程式產生的,之後必須逐字相同;通知信(底座規格第 5 章,取代原本的兩封審核流程信)的快照從通知上線起固定。
+ *    夾具寫死在本檔,不讀目前的專案設定,換專案不必改。
+ * 2. **替代品牌夾具**:三類信件與 Resend 的 `from` 都跟著換,且不殘留別的品牌。
  * 3. **目前的專案設定**:正式模組(不替換設定)組出的寄件人、主旨、署名與 `from` 用的就是目前的設定值。
  */
 
@@ -43,32 +43,32 @@ const ACTION: ActionEmailInput = {
   expiresAt: new Date("2026-09-25T08:00:00Z"),
 };
 
-const TASK: WorkflowTaskEmailInput = {
+/** 有連結的通知信(審核任務)。 */
+const TASK: NotificationEmailInput = {
   to: "reviewer@example.com",
   name: "審核者",
-  formName: "請假單",
-  title: "九月特休",
-  stepName: "主管核准",
-  link: "https://admin.example.com/requests/1",
+  notificationType: "workflow.task-created",
+  title: "待審核:請假單:九月特休",
+  body: "您有一筆待審核的申請「請假單:九月特休」(關卡:主管核准)。",
+  link: "https://admin.example.com/apply-center/view-page/1",
 };
 
-const RESULT: WorkflowResultEmailInput = {
+/** 沒有連結的通知信。 */
+const RESULT: NotificationEmailInput = {
   to: "ming@example.com",
   name: "小明",
-  formName: "請假單",
-  title: null,
-  result: "rejected",
-  comment: "日期重疊",
-  link: "https://admin.example.com/requests/1",
+  notificationType: "workflow.result",
+  title: "申請已駁回:請假單",
+  body: "您的申請「請假單」已駁回。理由:日期重疊",
+  link: null,
 };
 
 /** 內容帶 HTML 特殊字元:跳脫規則是輸出的一部分,一起固定。 */
-const HOSTILE: WorkflowResultEmailInput = {
-  ...RESULT,
+const HOSTILE: NotificationEmailInput = {
+  ...TASK,
   name: `<b>O'Brien</b>`,
   title: `"A&B" <script>`,
-  result: "returned",
-  comment: "<img src=x onerror=alert(1)>",
+  body: "<img src=x onerror=alert(1)>",
 };
 
 interface MailModules {
@@ -114,7 +114,7 @@ const fakeResend = (): { client: ResendClient; sent: ResendEmailPayload[] } => {
   };
 };
 
-/** 四類信件各寄一封,回傳假 client 收到的 payload。 */
+/** 每類信件各寄一封(通知信有連結 / 沒有連結各一封),回傳假 client 收到的 payload。 */
 const sendFourKinds = async (
   project: MailProject | null,
 ): Promise<ResendEmailPayload[]> => {
@@ -126,8 +126,8 @@ const sendFourKinds = async (
     );
     await mail.sendActivationEmail(ACTION);
     await mail.sendPasswordResetEmail(ACTION);
-    await mail.sendWorkflowTaskEmail(TASK);
-    await mail.sendWorkflowResultEmail(RESULT);
+    await mail.sendNotificationEmail(TASK);
+    await mail.sendNotificationEmail(RESULT);
   });
   return sent;
 };
@@ -135,8 +135,8 @@ const sendFourKinds = async (
 const buildFourKinds = (templates: MailModules["templates"]): MailMessage[] => [
   templates.buildActivationEmail(ACTION),
   templates.buildPasswordResetEmail(ACTION),
-  templates.buildWorkflowTaskEmail(TASK),
-  templates.buildWorkflowResultEmail(RESULT),
+  templates.buildNotificationEmail(TASK),
+  templates.buildNotificationEmail(RESULT),
 ];
 
 afterEach(() => {
@@ -175,7 +175,7 @@ const withSnapshotExpirySpacing = (message: MailMessage): MailMessage => ({
 /*
  * 「逐字相同」的唯一例外:啟用信與重設密碼信裡到期時間的日期與時間之間那一個空白,
  * 會隨執行環境的 ICU 版本不同(見 `withSnapshotExpirySpacing`)。正式模板的輸出不為快照而改,
- * 所以只在這兩封信比對前正規化那一個字元;其餘內容與另外六份快照都是逐字比對。
+ * 所以只在這兩封信比對前正規化那一個字元;其餘內容與另外三份快照都是逐字比對。
  */
 describe("固定的 CookHome 設定:信件輸出與抽設定前逐字相同", () => {
   it("寄件人", async () => {
@@ -200,34 +200,19 @@ describe("固定的 CookHome 設定:信件輸出與抽設定前逐字相同", ()
     expect(withSnapshotExpirySpacing(message)).toMatchSnapshot();
   });
 
-  it("審核任務通知", async () => {
-    const [titled, untitled] = await withCookhome((templates) => [
-      templates.buildWorkflowTaskEmail(TASK),
-      templates.buildWorkflowTaskEmail({ ...TASK, title: null }),
+  it("通知信(有連結 / 沒有連結)", async () => {
+    const [linked, unlinked] = await withCookhome((templates) => [
+      templates.buildNotificationEmail(TASK),
+      templates.buildNotificationEmail(RESULT),
     ]);
-    expect(titled).toMatchSnapshot();
-    expect(untitled).toMatchSnapshot();
-  });
-
-  it("審核結果通知(核准 / 駁回附理由 / 退回)", async () => {
-    const [approved, rejected, returned] = await withCookhome((templates) => [
-      templates.buildWorkflowResultEmail({
-        ...RESULT,
-        result: "approved",
-        comment: null,
-      }),
-      templates.buildWorkflowResultEmail(RESULT),
-      templates.buildWorkflowResultEmail({ ...RESULT, result: "returned" }),
-    ]);
-    expect(approved).toMatchSnapshot();
-    expect(rejected).toMatchSnapshot();
-    expect(returned).toMatchSnapshot();
+    expect(linked).toMatchSnapshot();
+    expect(unlinked).toMatchSnapshot();
   });
 
   it("HTML 跳脫:使用者輸入的特殊字元不會變成標籤", async () => {
     expect(
       await withCookhome((templates) =>
-        templates.buildWorkflowResultEmail(HOSTILE),
+        templates.buildNotificationEmail(HOSTILE),
       ),
     ).toMatchSnapshot();
   });
@@ -254,7 +239,7 @@ describe("替代專案設定:信件品牌與寄件人跟著換", () => {
     expect(sender).toBe("Acme Portal <no-reply@acme.example>");
   });
 
-  it("四類信件:主旨前綴、內文品牌與署名都是替代品牌,不殘留原品牌", async () => {
+  it("每類信件:主旨前綴、內文品牌與署名都是替代品牌,不殘留原品牌", async () => {
     const messages = await withMailModules(ALTERNATIVE, ({ templates }) =>
       buildFourKinds(templates),
     );
@@ -275,7 +260,7 @@ describe("替代專案設定:信件品牌與寄件人跟著換", () => {
     }
   });
 
-  it("Resend 實際送出的 from 是替代寄件人(四類信件皆然)", async () => {
+  it("Resend 實際送出的 from 是替代寄件人(每類信件皆然)", async () => {
     const sent = await sendFourKinds(ALTERNATIVE);
 
     expect(sent.map((payload) => payload.from)).toEqual([
@@ -378,7 +363,7 @@ describe("目前的專案設定:正式接線", () => {
     );
   });
 
-  it("四類信件的主旨前綴是品牌名,純文字與 HTML 都以署名結尾", async () => {
+  it("每類信件的主旨前綴是品牌名,純文字與 HTML 都以署名結尾", async () => {
     const messages = await withMailModules(null, ({ templates }) =>
       buildFourKinds(templates),
     );
@@ -386,20 +371,22 @@ describe("目前的專案設定:正式接線", () => {
     expect(messages.map((message) => message.kind)).toEqual([
       "activation",
       "password-reset",
-      "workflow-task",
-      "workflow-result",
+      "notification",
+      "notification",
     ]);
     for (const message of messages) {
       expect(message.subject.startsWith(subjectPrefix)).toBe(true);
       expect(message.text.endsWith(`\n\n${projectMail.signature}`)).toBe(true);
-      expect(message.text).toContain(message.link);
+      if (message.link !== null) {
+        expect(message.text).toContain(message.link);
+      }
     }
     expect(messages[0]?.text).toContain(
       `您的 ${projectMail.brandName} 後台帳號已建立。`,
     );
   });
 
-  it("Resend 實際送出的 from 是目前設定的寄件人(四類信件皆然)", async () => {
+  it("Resend 實際送出的 from 是目前設定的寄件人(每類信件皆然)", async () => {
     const sent = await sendFourKinds(null);
 
     expect(sent).toHaveLength(4);

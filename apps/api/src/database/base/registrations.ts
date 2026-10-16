@@ -53,6 +53,16 @@ import {
 import { FormVersion, FormVersionSchema } from "../schemas/form-version.schema";
 import { FORMS_COLLECTION, Form, FormSchema } from "../schemas/form.schema";
 import { Module as ModuleEntity, ModuleSchema } from "../schemas/module.schema";
+import {
+  NOTIFICATION_SETTINGS_COLLECTION,
+  NotificationSetting,
+  NotificationSettingSchema,
+} from "../schemas/notification-setting.schema";
+import {
+  NOTIFICATIONS_COLLECTION,
+  Notification,
+  NotificationSchema,
+} from "../schemas/notification.schema";
 import { ORGS_COLLECTION, Org, OrgSchema } from "../schemas/org.schema";
 import { Permission, PermissionSchema } from "../schemas/permission.schema";
 import {
@@ -113,6 +123,8 @@ import {
   FormVersionsRepository,
   FormsRepository,
   ModulesRepository,
+  NotificationSettingsRepository,
+  NotificationsRepository,
   OrgsRepository,
   PermissionsRepository,
   RefreshTokensRepository,
@@ -489,6 +501,30 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
     ],
     repositories: [
       { modelName: UserPreference.name, provider: UserPreferencesRepository },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 通知(底座規格第 5 章):收件人的通知屬帳號、不擋刪組織;通知設定是以 tenantId 為邊界的租戶設定
+    key: "notifications",
+    models: [
+      {
+        name: Notification.name,
+        collection: NOTIFICATIONS_COLLECTION,
+        schema: NotificationSchema,
+      },
+      {
+        name: NotificationSetting.name,
+        collection: NOTIFICATION_SETTINGS_COLLECTION,
+        schema: NotificationSettingSchema,
+      },
+    ],
+    repositories: [
+      { modelName: Notification.name, provider: NotificationsRepository },
+      {
+        modelName: NotificationSetting.name,
+        provider: NotificationSettingsRepository,
+      },
     ],
     orgDataChecks: [],
   },

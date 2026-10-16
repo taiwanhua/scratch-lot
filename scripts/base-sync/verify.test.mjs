@@ -83,6 +83,9 @@ const BASE_V3_CHANGES = {
   // 與專案固定來源 `project/form-lifecycles.ts` 同名的底座檔:固定來源不算重名
   "apps/api/src/workflows/form-lifecycles.ts":
     "export const BASE_FORM_LIFECYCLES = [];\n",
+  // 與專案固定來源 `project/notifications.ts` 同名的底座檔:固定來源不算重名
+  "apps/api/src/notifications/notifications.ts":
+    "export const BASE_NOTIFICATION_TYPES = [];\n",
   "apps/admin/src/app/project/page-replacements.ts": [
     "// 範例:{ target: 'commented', Page: X } 不算登記",
     "export const projectPageReplacements: readonly ModulePageReplacement[] = [];",
@@ -318,6 +321,8 @@ test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 �
       "export const PROJECT_USER_PREFERENCES = [];\n",
     "apps/api/src/project/form-lifecycles.ts":
       "export const PROJECT_FORM_LIFECYCLES = [];\n",
+    "apps/api/src/project/notifications.ts":
+      "export const PROJECT_NOTIFICATIONS = {};\n",
   });
   assert.deepEqual(assertOnlySection(result, 4), [
     "- `apps/admin/src/hooks/project/useScanner.ts`:同名 `apps/admin/src/hooks/base/useScanner.ts`",

@@ -15,6 +15,7 @@ export const DATA_SCOPE_KEY = `${SYSTEM_GROUP_KEY}.data-scope`;
 export const FORMS_KEY = `${SYSTEM_GROUP_KEY}.forms`;
 export const WORKFLOWS_KEY = `${SYSTEM_GROUP_KEY}.workflows`;
 export const WORKFLOWS_BLOCKED_PAGE_KEY = `${WORKFLOWS_KEY}.blocked-page`;
+export const NOTIFICATION_SETTINGS_KEY = `${SYSTEM_GROUP_KEY}.notification-settings`;
 
 /**
  * 治理模組(CONTEXT.md「治理模組」):管平台結構本身,隨底座出貨。
@@ -158,6 +159,18 @@ export const systemModules: ModuleSeedDeclaration = {
       parentKey: WORKFLOWS_KEY,
       order: 1,
       route: "blocked-page",
+    },
+    {
+      // 通知設定(docs/modules/notification-settings.md):租戶管理員調整負責人提醒的收件人;
+      // 側欄順序固定:既有 8 項 → 通知設定 → 印表機管理(底座規格第 5 章)
+      key: NOTIFICATION_SETTINGS_KEY,
+      name: "通知設定",
+      sidebarType: "link",
+      parentKey: SYSTEM_GROUP_KEY,
+      order: 9,
+      route: "notification-settings",
+      icon: "notifications",
+      description: "負責人提醒類型的收件人(人員條件);組織範圍由通知類型宣告",
     },
   ],
   // 個別權限(綁「按鈕 / 欄位所在的那一頁」,ADR-0004);正本 = 兩份模組文件的權限表
@@ -501,6 +514,20 @@ export const systemModules: ModuleSeedDeclaration = {
       name: "編輯",
       description:
         "規則編輯器「儲存」+ API(整份 data_scope_rules 覆蓋;儲存即作廢記憶體快取)",
+    },
+    // 通知設定(docs/modules/notification-settings.md 權限表)
+    {
+      key: permissionKey(NOTIFICATION_SETTINGS_KEY, "view"),
+      moduleKey: NOTIFICATION_SETTINGS_KEY,
+      name: "檢視",
+      description: "看負責人提醒類型、組織範圍與目前的收件人條件",
+    },
+    {
+      key: permissionKey(NOTIFICATION_SETTINGS_KEY, "edit"),
+      moduleKey: NOTIFICATION_SETTINGS_KEY,
+      name: "編輯",
+      description:
+        "編輯收件人條件、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶)",
     },
   ],
 };

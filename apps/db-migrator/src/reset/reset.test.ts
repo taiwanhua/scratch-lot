@@ -319,8 +319,8 @@ describe("reset --mode=data(對真 MongoDB)", () => {
     expect(state.fields.map((field) => field.label)).not.toContain("辣味");
 
     // seed 管的設定留著(數量正本:src/seed/seed.test.ts 的模組 / 權限斷言)
-    expect(state.modules).toHaveLength(38);
-    expect(state.permissions).toHaveLength(114);
+    expect(state.modules).toHaveLength(39);
+    expect(state.permissions).toHaveLength(117);
     // root 在畫面建的類別(isSystem false、key 不在 registry)算人建資料,一起刪
     expect(state.fieldCategories.map((category) => category.key)).toEqual([
       "demo-category",
@@ -406,12 +406,12 @@ describe("reset --mode=data(對真 MongoDB)", () => {
         secondId: superAdminId,
       }),
     );
-    // 種子角色的擁有組織兩筆 + 租戶管理員模板的 34 + 34 綁定(正本:src/seed/seed.test.ts)
+    // 種子角色的擁有組織兩筆 + 租戶管理員模板的 35 + 35 綁定(正本:src/seed/seed.test.ts)
     expect(countOf("org_role", rootOrgId)).toBe(2);
-    expect(countOf("role_module", tenantAdminId)).toBe(34);
-    expect(countOf("role_permission", tenantAdminId)).toBe(34);
+    expect(countOf("role_module", tenantAdminId)).toBe(35);
+    expect(countOf("role_permission", tenantAdminId)).toBe(35);
     // 掛在被刪租戶 / 使用者 / 角色上的六筆關聯全數消失
-    expect(state.relationships).toHaveLength(2 + 1 + 1 + 34 + 34);
+    expect(state.relationships).toHaveLength(2 + 1 + 1 + 35 + 35);
   }, 300_000);
 });
 
@@ -433,7 +433,7 @@ describe("reset --mode=full(對真 MongoDB)", () => {
     expect(state.orgs.map((org) => org.key)).toEqual(["root"]);
     expect(state.users).toHaveLength(1);
     expect(state.roles).toHaveLength(2);
-    expect(state.modules).toHaveLength(38);
+    expect(state.modules).toHaveLength(39);
     expect(state.demoItemsOne).toHaveLength(5);
     expect(state.demoItemsTwo).toHaveLength(5);
     // 業務表整個被 drop;api 的 runtime 之後依 schema 建回空的 collection 與索引,人建的資料不在
@@ -633,7 +633,7 @@ describe("以拋棄式資料庫模擬 production:完整確認才執行", () => {
     const state = await readState(databaseUri);
     expect(state.orgs.map((org) => org.key)).toEqual(["root"]);
     expect(state.customers).toHaveLength(0);
-    expect(state.modules).toHaveLength(38);
+    expect(state.modules).toHaveLength(39);
     // production 的 data reset 同樣保留 root 現值
     expect(state.orgs[0]).toMatchObject({ name: "專案營運組織" });
   }, 300_000);

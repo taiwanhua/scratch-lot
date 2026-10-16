@@ -847,19 +847,19 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     ]);
   }, 120_000);
 
-  it("示範家族 12 筆 + 組織管理 13 筆(10 + 租戶作業 3)+ 使用者管理 8 筆 + 角色管理 7 筆 + 模組與權限 4 筆 + 欄位管理 5 筆(4 + 類別作業 1)+ 資料範圍 2 筆 + 表單管理 5 筆 + 流程管理 7 筆 + 申請中心 1 筆 + 三個示範表單各 4 筆個別權限依正本落庫(moduleId 綁「所在的那一頁」);全部 38 個模組各一筆 wildcard,共 114 筆", async () => {
+  it("示範家族 12 筆 + 組織管理 13 筆(10 + 租戶作業 3)+ 使用者管理 8 筆 + 角色管理 7 筆 + 模組與權限 4 筆 + 欄位管理 5 筆(4 + 類別作業 1)+ 資料範圍 2 筆 + 表單管理 5 筆 + 流程管理 7 筆 + 申請中心 1 筆 + 通知設定 2 筆 + 三個示範表單各 4 筆個別權限依正本落庫(moduleId 綁「所在的那一頁」);全部 39 個模組各一筆 wildcard,共 117 筆", async () => {
     const databaseUri = createTestDatabaseUri("permissions");
 
     const firstRun = await runSeedCommand(databaseUri);
     expect(firstRun.status).toBe(0);
     expect(firstRun.stdout).toContain(
-      "permissions:新增 114 / 更新 0 / 認養 0 / 未變 0",
+      "permissions:新增 117 / 更新 0 / 認養 0 / 未變 0",
     );
     // 冪等:重跑 0 新增 / 0 更新 / 全部未變
     const secondRun = await runSeedCommand(databaseUri);
     expect(secondRun.status).toBe(0);
     expect(secondRun.stdout).toContain(
-      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 114",
+      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 117",
     );
 
     const { modules, permissions } = await readSeededDocuments(databaseUri);
@@ -959,14 +959,17 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
       "system.workflows.blocked-page.reassign": "system.workflows.blocked-page",
       // 申請中心(固定模組)
       "apply-center.view": "apply-center",
+      // 正本:docs/modules/notification-settings.md 權限表(2)
+      "system.notification-settings.view": "system.notification-settings",
+      "system.notification-settings.edit": "system.notification-settings",
     };
 
     // D3:wildcard 只代表該模組自己這一層 → 每個模組(含群組、隱藏頁、api 樹)各一筆 `<key>.*`
     for (const module of modules) {
       expectedOwners[`${String(module.key)}.*`] = String(module.key);
     }
-    expect(modules).toHaveLength(38);
-    expect(permissions).toHaveLength(114);
+    expect(modules).toHaveLength(39);
+    expect(permissions).toHaveLength(117);
     for (const [key, ownerKey] of Object.entries(expectedOwners)) {
       const permission = permissions.find((entry) => entry.key === key);
       expect(permission).toMatchObject({
@@ -1293,13 +1296,13 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     const secondRun = await runSeedCommand(databaseUri);
     expect(secondRun.stderr).toBe("");
     expect(secondRun.status).toBe(0);
-    // 宣告的 114 筆全部未變;dynamic 那筆不在比對範圍內,不計入也不被動到
+    // 宣告的 117 筆全部未變;dynamic 那筆不在比對範圍內,不計入也不被動到
     expect(secondRun.stdout).toContain(
-      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 114",
+      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 117",
     );
 
     const { permissions } = await readSeededDocuments(databaseUri);
-    expect(permissions).toHaveLength(115);
+    expect(permissions).toHaveLength(118);
     expect(
       permissions.find((permission) => permission.key === dynamicKey),
     ).toMatchObject({
@@ -1378,7 +1381,7 @@ describe("種子角色綁定(ADR-0004 wildcard 只存 *、ADR-0009 模板扣除�
       (key) => key !== undefined && !rootOnlyKeys.has(key),
     );
     expect(new Set(boundModuleKeys)).toEqual(new Set(tenantModuleKeys));
-    expect(boundModuleKeys).toHaveLength(34);
+    expect(boundModuleKeys).toHaveLength(35);
     // 租戶作業(開通、轉移擁有者)與類別作業(管理類別)永遠不進模板
     // (ADR-0009 第 3 步:整個 rootOnly 模組被扣除)
     expect(boundModuleKeys).not.toContain("system.org-manager.tenant-ops");
@@ -1401,7 +1404,7 @@ describe("種子角色綁定(ADR-0004 wildcard 只存 *、ADR-0009 模板扣除�
     expect(new Set(boundPermissionKeys)).toEqual(
       new Set(tenantModuleKeys.map((key) => `${String(key)}.*`)),
     );
-    expect(boundPermissionKeys).toHaveLength(34);
+    expect(boundPermissionKeys).toHaveLength(35);
     // 管理類別(新增 / 改名 / 停用類別)只給站在根組織的人:模板既不綁它的容器 wildcard,也不綁它本身
     expect(boundPermissionKeys).not.toContain(
       "system.field-manager.category-ops.*",

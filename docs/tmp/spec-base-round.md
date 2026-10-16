@@ -939,7 +939,7 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
 
 | 層     | 誰設定     | 在哪裡                                     | 管什麼                                                                                                                      |
 | ------ | ---------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| 個人   | 收件人自己 | 個人設定 → 偏好分頁(10.6)                  | 每種類型 × 每個管道的開關;`canDisable` 為否的管道不能關                                                                     |
+| 個人   | 收件人自己 | 個人設定 → 偏好分頁(10.6)                  | 每種類型 × 每個管道的開關(偏好 key `notification_<類型>_<管道>`,見 10.6);`canDisable` 為否的管道不能關                      |
 | 管理者 | 租戶管理員 | 通知設定頁(`system.notification-settings`) | 負責人提醒類型的收件人(人員條件);當事人通知不在這裡設定                                                                     |
 | 環境   | 部署設定   | 環境變數 `WORKFLOW_MAIL_ENABLED`           | 改成**所有 email 的總開關**(不再只管流程通知信):關閉時 email 只寫 log,站內通知照常;同步改 `docs/env-registry.md` 的用途說明 |
 
@@ -964,6 +964,9 @@ API(Cloud Run)── HTTPS POST /publish(送出信號密鑰簽章)──┘     
         4 交易後:RealtimePublisher.publish(tenantId, ["user:<收件人 id>", ...], { type: "notification" })(一次送出)
         5 需要 email → MailService(交易後)
 ```
+
+- `notify` 另帶事件所在的 `tenantId`(信號送到哪個租戶、負責人提醒讀哪個租戶的通知設定)與 `orgId`(負責人提醒的組織範圍從它起算)。
+- 去重以「同一位收件人 + 同一個 `dedupeKey`」為單位(一個事件通知多人時每人一筆);已有就整個略過,不寫、不送信號、不寄信。收件人關掉站內、只收 email 時仍寫一筆(`channels` 不含 `in-app`,清單與未讀數不算它)供去重。
 
 ### 收件人:兩類
 
@@ -1514,8 +1517,8 @@ registerReport({
 **給 #47(通知管道開關)的登記制現況與限制**(T26 實作後補):
 
 - 偏好 key 只允許英數、`_`、`-`,英數開頭;不可含 `.` 與 `$`(寫入是原子的 `$set settings.<key>`,這兩個字元在 Mongo 的更新路徑有意義)。正本 `apps/api/src/user-preferences/user-preference-registry.ts`。
-- 值只能是一個純量(字串 / 布林 / 數字),所以「通知類型 × 管道」不能存成巢狀物件,要換成扁平 key;具體編碼由 #47 定案時寫死在本節與登記處。
-- 登記目前沒有單一 key 的自訂驗證(只有型別,字串另有 `pattern` / `maxLength`);`UserPreferenceRegistryModule.forRoot` 只收靜態的專案清單(`src/project/user-preferences.ts`),不收執行期才知道的 key(例如由通知類型登記推導)。#47 需要時自行擴充這兩點。
+- 值只能是一個純量(字串 / 布林 / 數字),所以「通知類型 × 管道」不能存成巢狀物件,換成扁平 key(#47 定案):**`notification_<類型 key 的 . 換成 _>_<管道>`**,例 `workflow.task-created` × `in-app` → `notification_workflow_task-created_in-app`。類型 key 只允許小寫英數與 `-`、以 `.` 分段,管道 key 只允許小寫英數與 `-`,兩者都不含 `_`,所以以 `_` 切開就能還原。值為布林、預設 `true`(開);正本 `apps/api/src/notifications/notification-registry.ts`(`notificationPreferenceKey`)。
+- #47 擴充了兩點:登記可宣告 `allowedValues`(只收列出的值;`canDisable` 為否的管道登記 `[true]`,送 `false` → `VALIDATION_FAILED` / `INVALID_VALUE`);`UserPreferenceRegistryModule.forRoot(project, derived)` 的第二個參數收由通知類型(底座 + 專案)推導的開關,與手寫登記一起驗格式與不重複。
 
 ### 10.7 標籤色票(第 26 項)
 

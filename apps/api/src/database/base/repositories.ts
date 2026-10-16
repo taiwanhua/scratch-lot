@@ -16,6 +16,8 @@ import { FormSubmission } from "../schemas/form-submission.schema";
 import { FormVersion } from "../schemas/form-version.schema";
 import { Form } from "../schemas/form.schema";
 import { Module as ModuleEntity } from "../schemas/module.schema";
+import { NotificationSetting } from "../schemas/notification-setting.schema";
+import { Notification } from "../schemas/notification.schema";
 import { Org } from "../schemas/org.schema";
 import { Permission } from "../schemas/permission.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
@@ -55,6 +57,8 @@ export type SeedDefinitionInstallationDocument =
   HydratedDocument<SeedDefinitionInstallation>;
 export type WorkflowInstanceDocument = HydratedDocument<WorkflowInstance>;
 export type UserPreferenceDocument = HydratedDocument<UserPreference>;
+export type NotificationDocument = HydratedDocument<Notification>;
+export type NotificationSettingDocument = HydratedDocument<NotificationSetting>;
 
 /** users(關聯歸屬資料:所屬組織走 org_user,資料層不自動過濾,ADR-0005)。 */
 @Injectable()
@@ -350,6 +354,34 @@ export class UserPreferencesRepository extends BaseRepository<
   constructor(
     @InjectModel(UserPreference.name)
     model: RepositoryModel<UserPreference, UserPreferenceDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** notifications(通知;屬收件人、依 recipientId 讀寫,同 user_preferences 不掛 tenantScope)。 */
+@Injectable()
+export class NotificationsRepository extends BaseRepository<
+  Notification,
+  NotificationDocument
+> {
+  constructor(
+    @InjectModel(Notification.name)
+    model: RepositoryModel<Notification, NotificationDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** notification_settings(負責人提醒的收件人調整;以 tenantId 為邊界的租戶設定)。 */
+@Injectable()
+export class NotificationSettingsRepository extends BaseRepository<
+  NotificationSetting,
+  NotificationSettingDocument
+> {
+  constructor(
+    @InjectModel(NotificationSetting.name)
+    model: RepositoryModel<NotificationSetting, NotificationSettingDocument>,
   ) {
     super(model);
   }

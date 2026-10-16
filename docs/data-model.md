@@ -24,6 +24,8 @@
 | `action_tokens`                     | 業務                                                     | 啟用信 / 重設密碼 token(單次、TTL)                                                                       | 帳號           | `action-token.schema.ts`          |
 | `audit_logs`                        | 業務                                                     | 稽核日誌(只增不改)                                                                                       | 授權           | `audit-log.schema.ts`             |
 | `user_preferences`                  | 業務                                                     | 個人偏好(每個使用者一筆 `{ userId, settings: { <key>: 值 } }`,跟著帳號);key 須登記                       | 帳號           | `user-preference.schema.ts`       |
+| `notifications`                     | 業務                                                     | 通知(一位收件人一筆;`(recipientId, dedupeKey)` 唯一;`createdAt` 90 天 TTL)                               | 流程           | `notification.schema.ts`          |
+| `notification_settings`             | 業務                                                     | 通知設定(租戶對負責人提醒類型的收件人調整;`(tenantId, type)` 唯一)                                       | 流程           | `notification-setting.schema.ts`  |
 | `demo_items_one` / `demo_items_two` | 種子(宣告的幾筆)+ 業務                                   | 示範模組資料(模組資料表)                                                                                 | 各自的模組文件 | `demo-item-*.schema.ts`           |
 | `forms`                             | 設定(受管 seed 或各環境自建)                             | 表單(一種填報的身分;共用 `ownerOrgId = null`、客製 = 租戶頂層)                                           | 表單           | `form.schema.ts`                  |
 | `form_versions`                     | 設定(受管 seed 或各環境自建)                             | 表單版本(草稿 / 發布中 / 已發布 / 已退役;欄位、版面、摘要槽、帶入規則)                                   | 表單           | `form-version.schema.ts`          |
@@ -59,6 +61,12 @@
 `user_preferences` 只存跟著帳號的個人偏好(規格 10.6),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
 
 跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。顯示密度不做(規格第 11 章 B 類),沒有對應的偏好。
+
+每種通知類型 × 每個管道另有一個布林開關,key 是 `notification_<類型 key 的 . 換成 _>_<管道>`(例 `notification_workflow_task-created_in-app`),由通知類型登記推導、不必手寫;不能關的管道只收 `true`(`allowedValues`)。規則見 `docs/modules/notification-settings.md`「個人偏好的管道開關」。
+
+### 通知
+
+`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
 
 ## 專案資料
 
