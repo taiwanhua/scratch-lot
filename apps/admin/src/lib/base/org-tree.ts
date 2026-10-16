@@ -29,7 +29,7 @@ export interface OrgOption {
 export type OrgLabelSuffix = (node: OrgNodeLike) => ReactNode;
 
 /**
- * 樹 → `@repo/ui/tree` 的資料;範圍外節點 disabled(顯示但不可選)。
+ * 樹 → `@repo/ui/tree` 的資料;範圍外節點與 `disabledIds` 裡的節點 disabled(顯示但不可選)。
  *
  * **葉節點一律給 `undefined`**:api 對沒有子組織的節點回 `children: []`,
  * 而 `TreeNode.children` 的語意是「有沒有下一層」— 空陣列把「能不能展開」
@@ -39,16 +39,17 @@ export type OrgLabelSuffix = (node: OrgNodeLike) => ReactNode;
 export const toTreeNodes = (
   nodes: readonly OrgNodeLike[],
   labelSuffixOf?: OrgLabelSuffix,
+  disabledIds: ReadonlySet<string> = new Set<string>(),
 ): TreeNode[] =>
   nodes.map((node) => ({
     id: node.id,
     label: node.name,
-    disabled: node.outOfScope,
+    disabled: node.outOfScope || disabledIds.has(node.id),
     labelSuffix: labelSuffixOf?.(node),
     children:
       node.children === undefined || node.children.length === 0
         ? undefined
-        : toTreeNodes(node.children, labelSuffixOf),
+        : toTreeNodes(node.children, labelSuffixOf, disabledIds),
   }));
 
 /** 深度優先攤平整棵樹(含範圍外節點),順序 = 畫面上的順序。 */

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll } from "@jest/globals";
+import { afterAll, afterEach, beforeAll, jest } from "@jest/globals";
 
 /**
  * jsdom 不算版面,所有元素的 offsetHeight / offsetWidth 都是 0,`@repo/ui/data-table` 的虛擬捲動會以為
@@ -30,5 +30,31 @@ export const setupFakeViewport = (): void => {
         Object.defineProperty(HTMLElement.prototype, key, descriptor);
       }
     }
+  });
+};
+
+/**
+ * 模擬手機寬(< sm):`matchMedia` 替身讓 `max-width` 查詢成立;測試結束還原(jsdom 本來沒有 `matchMedia`)。
+ */
+export const restoreViewportAfterEach = (): void => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, "matchMedia");
+  });
+};
+
+export const setMobileViewport = (): void => {
+  Object.defineProperty(globalThis, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: () => false,
+    }),
   });
 };
