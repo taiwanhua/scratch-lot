@@ -5,7 +5,7 @@ import { ScheduleTimelineBackdrop } from "./ScheduleTimelineBackdrop";
 import { ScheduleTimelineGroupBox } from "./ScheduleTimelineGroupBox";
 import { ScheduleTimelineMore } from "./ScheduleTimelineMore";
 import { ScheduleTimelineSlots } from "./ScheduleTimelineSlots";
-import { layoutTimeline } from "./layout-timeline";
+import type { TimelineLayout } from "./layout-timeline";
 import type { ScheduleTimelineDate } from "./schedule-timeline-types";
 import { WEEK_DAY_HEIGHT, WEEK_HOUR_HEIGHT } from "./timeline-geometry";
 import type { TimelineActions } from "./timeline-interaction";
@@ -14,7 +14,8 @@ import { hourLinesSx } from "./timeline-styles";
 
 export interface ScheduleTimelineWeekDayProps {
   day: ScheduleTimelineDate;
-  models: readonly GroupDayModel[];
+  /** 當天的排版(`layoutTimeline`,由 `ScheduleTimeline` 算好,自動捲動也用它) */
+  layout: TimelineLayout<GroupDayModel>;
   disabledRanges: readonly DisabledDayRange[];
   /** 當天欄寬(px,整數) */
   dayWidth: number;
@@ -26,12 +27,12 @@ export interface ScheduleTimelineWeekDayProps {
  */
 export const ScheduleTimelineWeekDay = ({
   day,
-  models,
+  layout,
   disabledRanges,
   dayWidth,
   actions,
 }: ScheduleTimelineWeekDayProps) => {
-  const { placed, collapsed } = layoutTimeline(models, dayWidth);
+  const { placed, collapsed } = layout;
 
   return (
     <Box

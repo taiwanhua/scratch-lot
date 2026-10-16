@@ -4,6 +4,7 @@ import { Children, type ReactNode } from "react";
 
 import { Box } from "../Box/Box";
 import type { ScheduleTimelineBar } from "./schedule-timeline-types";
+import { showsSubtitleInBar } from "./timeline-model";
 import { captionStrongSx, ellipsisSx, verticalTextSx } from "./timeline-styles";
 
 export interface ScheduleTimelineBarContentProps {
@@ -77,7 +78,7 @@ export const ScheduleTimelineBarContent = ({
       >
         {bar.title}
       </Box>
-      {!isWeek && bar.subtitle !== undefined ? (
+      {showsSubtitleInBar(orientation, bar) && bar.subtitle !== undefined ? (
         <Box
           component="span"
           sx={{

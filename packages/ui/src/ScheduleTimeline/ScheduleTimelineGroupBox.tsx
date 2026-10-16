@@ -18,6 +18,7 @@ import {
   type TimelineActions,
   activationProps,
   isSelected,
+  pressedOf,
 } from "./timeline-interaction";
 import {
   captionStrongSx,
@@ -81,7 +82,7 @@ export const ScheduleTimelineGroupBox = ({
           ? {}
           : activationProps({
               label: group.ariaLabel ?? fallbackLabel,
-              selected,
+              selected: pressedOf(actions, selected),
               date,
               range: { start: span.startMinute, end: span.endMinute },
               onActivate: (point) => {

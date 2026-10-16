@@ -1,9 +1,9 @@
 "use client";
 
-import MuiTableCell from "@mui/material/TableCell";
 import type { ReactNode } from "react";
 
 import { Box } from "../Box/Box";
+import { todayMarkSx } from "../theme/today-mark";
 import { HEADER_HEIGHT } from "./timeline-geometry";
 
 export interface ScheduleTimelineHeaderCellProps {
@@ -23,8 +23,11 @@ const shortDate = (date: string) =>
     .join("/");
 
 /**
- * 時間軸的表頭一格:用表格的表頭格(Figma Draft/TableHeaderCell,主題的 `MuiTableCell` head 樣式)。
- * 今天的日期畫成主色實心圓、字色 `primary.contrastText`,和 `MonthCalendar` 的今天同一個樣式。
+ * 時間軸的表頭一格,外觀照表格的表頭格(Figma Draft/TableHeaderCell:`background.default` 底、
+ * `text.secondary` 字、Subtitle/2 粗體,與主題 `MuiTableCell` head 同一組 token)。
+ * 不用 `MuiTableCell` 本身:時間軸不是表格,TableCell 的 head 變體會在 div 上補 `scope`(只對 th 合法);
+ * 也不標 `columnheader`(沒有 grid / table 的外層就不合法),是一般的文字。
+ * 今天的日期用 `todayMarkSx`(和 `MonthCalendar` 共用),表頭的「M/D」較寬,畫成膠囊。
  */
 export const ScheduleTimelineHeaderCell = ({
   width,
@@ -32,10 +35,8 @@ export const ScheduleTimelineHeaderCell = ({
   isToday = false,
   label,
 }: ScheduleTimelineHeaderCellProps) => (
-  <MuiTableCell
-    component="div"
-    variant="head"
-    role="columnheader"
+  <Box
+    data-timeline-header=""
     aria-current={isToday ? "date" : undefined}
     sx={{
       boxSizing: "border-box",
@@ -48,6 +49,9 @@ export const ScheduleTimelineHeaderCell = ({
       alignItems: "center",
       gap: 0.5,
       typography: "subtitle2",
+      fontWeight: 600,
+      color: "text.secondary",
+      bgcolor: "background.default",
       whiteSpace: "nowrap",
       overflow: "hidden",
       borderBottom: 1,
@@ -58,24 +62,11 @@ export const ScheduleTimelineHeaderCell = ({
       <Box
         component="span"
         data-today={isToday || undefined}
-        sx={(theme) => ({
-          minWidth: theme.spacing(3),
-          height: theme.spacing(3),
-          px: isToday ? 0.75 : 0,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: theme.spacing(1.5),
-          ...(isToday && {
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
-            fontWeight: 600,
-          }),
-        })}
+        sx={(theme) => todayMarkSx(theme, { isToday, shape: "pill" })}
       >
         {shortDate(date)}
       </Box>
     )}
     {label}
-  </MuiTableCell>
+  </Box>
 );

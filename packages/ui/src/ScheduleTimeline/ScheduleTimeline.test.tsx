@@ -99,7 +99,7 @@ describe("進入畫面自動捲動(《底座規格》10.11)", () => {
 
   it("切換週會重新捲;同一週資料變動不搶捲動位置;先沒資料、資料到了再捲一次", () => {
     const early = [
-      group("a", D4, 9, 14, "早班", "早", [bar("a1", D4, 9, 14, "甲")]),
+      group("a", D4, 10, 14, "早班", "早", [bar("a1", D4, 10, 14, "甲")]),
     ];
     const { rerender } = renderTimeline();
     const view = (props: Partial<ScheduleTimelineProps>) => (
@@ -128,7 +128,30 @@ describe("進入畫面自動捲動(《底座規格》10.11)", () => {
       }),
     );
 
-    expect(scrolled.top).toEqual([8 * 36, 8 * 36, 8 * 36]);
+    // 沒資料 08:00 → 資料到了捲到 09:00 → 同週加一筆更早的不動 → 換週(沒資料)08:00
+    expect(scrolled.top).toEqual([8 * 36, 9 * 36, 8 * 36]);
+  });
+
+  it("週模式收進「+N」的容器不算(只算畫得出來的)", () => {
+    const tooWide = group(
+      "wide",
+      D4,
+      6,
+      12,
+      "盤點",
+      "盤",
+      ["1", "2", "3", "4", "5"].map((n) => bar(`w${n}`, D4, 6, 12, n)),
+    );
+    renderTimeline({
+      groups: [
+        tooWide,
+        group("a", D4, 9, 14, "早班", "早", [bar("a1", D4, 9, 14, "甲")]),
+      ],
+    });
+
+    // 5 條要 160 寬 > 157 → 整筆收起;只剩 09:00 的早班 → 08:00
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(scrolled.top).toEqual([8 * 36]);
   });
 });
 
@@ -310,9 +333,9 @@ describe("回呼帶出的日期與時間", () => {
 });
 
 const todayHeaders = () =>
-  screen
-    .getAllByRole("columnheader")
-    .filter((cell) => cell.getAttribute("aria-current") === "date");
+  [...document.querySelectorAll("[data-timeline-header]")].filter(
+    (cell) => cell.getAttribute("aria-current") === "date",
+  );
 
 describe("今天(日期表頭主色實心圓)", () => {
   it("週模式:只有今天那一欄的表頭有今天樣式", () => {

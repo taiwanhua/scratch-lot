@@ -17,6 +17,7 @@ import {
   type TimelineActions,
   activationProps,
   isSelected,
+  pressedOf,
 } from "./timeline-interaction";
 import {
   barToneColors,
@@ -80,7 +81,7 @@ export const ScheduleTimelineVacancyItem = ({
           ? {}
           : activationProps({
               label: vacancy.ariaLabel ?? fallbackLabel,
-              selected,
+              selected: pressedOf(actions, selected),
               date,
               range,
               onActivate: (point) => {
