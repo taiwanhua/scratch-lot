@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { OperatorContextService } from "../../auth/operator-context.service";
 import { DatabaseModule } from "../../database/database.module";
 import { FormsCoreModule } from "../../forms/forms-core.module";
 import { MailModule } from "../../mail/mail.module";
@@ -9,6 +10,7 @@ import { WorkflowsCoreModule } from "../workflows-core.module";
 import { AssigneeInvalidationService } from "./assignee-invalidation.service";
 import { BlockedInstancesService } from "./blocked-instances.service";
 import { InstanceWithdrawService } from "./instance-withdraw.service";
+import { FormLifecycleService } from "./lifecycle/form-lifecycle.service";
 import { StepEntryService } from "./step-entry.service";
 import { SubmissionReadAccess } from "./submission-read-access.service";
 import { TaskActionsService } from "./task-actions.service";
@@ -24,7 +26,11 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
 /**
  * 審核流程引擎(`docs/modules/workflows.md`):推進(`advance` 的執行器)、送出的寫入順序、
  * 決定 / 改派 / 新增審核者 / 重試推進、撤回、審核者失效 hook、讀取授權 `canReadSubmissionRevision`、
- * 通知信、阻擋清單。表單執行端(送出、撤回、作廢、複製、讀取授權)與使用者管理(失效 hook)匯入它。
+ * 通知信、阻擋清單、表單 / 流程的掛接點(`lifecycle/`)。表單執行端(送出、撤回、作廢、複製、讀取授權)與
+ * 使用者管理(失效 hook)匯入它。
+ *
+ * `OperatorContextService` 以既有的 class 直接註冊(無狀態;同 `seed/definition-seed.module.ts`):掛接點的
+ * 系統身分要用它算可見範圍,匯入 `AuthModule` 會連登入守門一起帶進來。
  */
 @Module({
   imports: [
@@ -36,6 +42,8 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     RealtimeModule,
   ],
   providers: [
+    OperatorContextService,
+    FormLifecycleService,
     WorkflowEngineHooks,
     WorkflowEngineService,
     StepEntryService,
@@ -50,6 +58,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     WorkflowOperationsResolver,
   ],
   exports: [
+    FormLifecycleService,
     WorkflowEngineService,
     WorkflowSubmitService,
     SubmissionReadAccess,

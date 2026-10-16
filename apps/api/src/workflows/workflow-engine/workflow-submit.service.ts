@@ -31,6 +31,7 @@ import { WorkflowAccessService } from "../workflow-access.service";
 import { definitionOfVersion } from "../workflow-definition-input";
 import { submitBlockedError, workflowConflictError } from "../workflows-error";
 import type { InstanceRecord } from "./instance-writes";
+import { FormLifecycleService } from "./lifecycle/form-lifecycle.service";
 import {
   WorkflowEngineHooks,
   WorkflowEngineService,
@@ -64,7 +65,7 @@ export interface SubmitContent {
  *    (`(submissionId, N)` 唯一,先查再建)
  * 3. 提交的 `values` / `summary` / `revision` / 快照 / `reviewing` / `currentInstanceId` / `editVersion`
  *    **同一次**條件更新;舊實例 → `superseded`
- * 4. `advance`
+ * 4. 事後動作 `submitted`(掛接點;守門 `beforeSubmit` 由呼叫端在同一個交易的開頭呼叫)→ `advance`
  *
  * **整個送出是一個交易**(ADR-0013;呼叫端把稽核一起包進同一個交易):任一步失敗,實例、提交的變更、
  * 任務都不存在,提交維持送出前的狀態,重送就是重新送一次。
@@ -84,6 +85,7 @@ export class WorkflowSubmitService {
     private readonly engine: WorkflowEngineService,
     private readonly hooks: WorkflowEngineHooks,
     private readonly transactions: TransactionService,
+    private readonly lifecycle: FormLifecycleService,
   ) {}
 
   /**
@@ -229,6 +231,14 @@ export class WorkflowSubmitService {
         );
       }
       await this.hooks.reached("submit:submission-linked");
+      await this.lifecycle.emit("submitted", {
+        submissionId: record._id,
+        tenantId: record.tenantId,
+        orgId: record.orgId,
+        moduleKey: record.moduleKey,
+        formKey: record.formKey,
+        revision,
+      });
       await this.supersedeOlder(record._id, revision);
       // 第 4 步
       await this.engine.advance(instance._id);

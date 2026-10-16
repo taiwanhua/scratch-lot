@@ -330,6 +330,14 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 
 **申請中心**:`myApplications`、`applicableForms`、`myTasks`、`applyCenterCounts`(`apply-center.view`)、`workflowInstance`、`decideTask`(不看頁面權限);提交的 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(在表單執行端的 resolver,回 `FormSubmissionPayload`)。
 
+**掛接點**(不是 GraphQL;給專案程式碼):固定入口 `src/project/form-lifecycles.ts` 列 `registerFormLifecycle({ moduleKey, formKey?, guards, effects })`,契約與組裝驗證在 `workflow-engine/lifecycle/form-lifecycle-registration.ts`,執行在 `FormLifecycleService`(`WorkflowEngineModule` 匯出):
+
+- `guard(name, { operator, submission, values?, stepKey? })`:動作的交易內、寫入之前呼叫;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼。
+- `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(目前是 `decideTask` 的核准);其他會核准的路徑一律經它,不各自呼叫 `guard`。
+- `emit(event, subject, { stepKey?, skipped? })`:事後動作,以系統身分在同一個交易內執行;推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
+
+時機與帶入的資料見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
+
 input 欄位的缺席 / `null`:
 
 - `CreateWorkflowVersionDraftInput.baseVersion`:缺席 / `null` = 空白草稿。

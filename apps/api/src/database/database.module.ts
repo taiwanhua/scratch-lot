@@ -9,12 +9,17 @@ import { MongooseModule } from "@nestjs/mongoose";
 
 // 固定組裝入口:底座檔不得 import 專案來源,只有這裡(與 app.module.ts)例外
 import { PROJECT_DATABASE_REGISTRATIONS } from "../project/database/registrations";
+import { PROJECT_FORM_LIFECYCLES } from "../project/form-lifecycles";
 import { PROJECT_LOOKUP_PROVIDERS } from "../project/lookup-providers";
 import { PROJECT_REALTIME_BOARDS } from "../project/realtime-boards";
 import {
   REALTIME_BOARDS,
   composeRealtimeBoards,
 } from "../realtime/realtime-board-registration";
+import {
+  FORM_LIFECYCLES,
+  composeFormLifecycles,
+} from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { BASE_DATABASE_REGISTRATIONS } from "./base/registrations";
 import {
   OrgBusinessDataReader,
@@ -128,6 +133,12 @@ const DATABASE = assembleDatabase(
  */
 const REALTIME_BOARD_LIST = composeRealtimeBoards(PROJECT_REALTIME_BOARDS);
 
+/**
+ * 專案的表單 / 流程掛接點(`project/form-lifecycles.ts`)同樣只經這個組裝入口提供:
+ * api 與受管定義 CLI 都匯入 `DatabaseModule`,拿到同一份;(moduleKey, formKey) 重複 → 載入就拋錯。
+ */
+const FORM_LIFECYCLE_LIST = composeFormLifecycles(PROJECT_FORM_LIFECYCLES);
+
 @Module({
   ...DATABASE.metadata,
   providers: [
@@ -137,8 +148,13 @@ const REALTIME_BOARD_LIST = composeRealtimeBoards(PROJECT_REALTIME_BOARDS);
       // key 重複或空白 → 載入就拋錯,app 起不來
       useValue: REALTIME_BOARD_LIST,
     },
+    { provide: FORM_LIFECYCLES, useValue: FORM_LIFECYCLE_LIST },
   ],
-  exports: [...(DATABASE.metadata.exports ?? []), REALTIME_BOARDS],
+  exports: [
+    ...(DATABASE.metadata.exports ?? []),
+    REALTIME_BOARDS,
+    FORM_LIFECYCLES,
+  ],
 })
 export class DatabaseModule implements OnModuleInit, OnApplicationBootstrap {
   constructor(private readonly moduleRef: ModuleRef) {}

@@ -38,6 +38,10 @@ import {
 import { TransactionService, afterCommit } from "../../database/transaction";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
+import {
+  type EffectSubject,
+  FormLifecycleService,
+} from "../../workflows/workflow-engine/lifecycle/form-lifecycle.service";
 import { SubmissionReadAccess } from "../../workflows/workflow-engine/submission-read-access.service";
 import { WorkflowSubmitService } from "../../workflows/workflow-engine/workflow-submit.service";
 import { workflowForbiddenError } from "../../workflows/workflows-error";
@@ -220,6 +224,8 @@ export function definitionOf(version: FormVersionRecord): FormDefinition {
  * - 每次寫入帶 `expectedEditVersion`(已完成修改另帶 `expectedRevision`),條件更新不符 → 409;
  *   `values` / `summary` / `revision` / 快照 / `editVersion` 在**同一次**更新裡寫
  * - 值的寫入規則(四種不能填的原因與順序)在 `form-values/submission-values.service.ts`
+ * - 掛接點(`workflows/workflow-engine/lifecycle/`):送出、修改已完成單、刪除、撤回、作廢在交易開頭、寫入之前
+ *   呼叫守門;沒走流程的送出(`submitted` → `completed`)與作廢(`voided`)在寫入後、同一個交易內觸發事後動作
  */
 /** 落庫狀態 → GraphQL enum(窮舉:新增狀態時編譯器會指到這裡)。 */
 function submissionStatusOf(
@@ -259,6 +265,18 @@ function isDeletableRecord(record: {
     (record.status === "completed" && record.currentInstanceId === null) ||
     record.status === "rejected"
   );
+}
+
+/** 事後動作的單據資訊(掛接點)。 */
+function effectSubjectOf(record: SubmissionRecord): EffectSubject {
+  return {
+    submissionId: record._id,
+    tenantId: record.tenantId,
+    orgId: record.orgId,
+    moduleKey: record.moduleKey,
+    formKey: record.formKey,
+    revision: record.revision,
+  };
 }
 
 function summaryModelOf(summary: SubmissionSummary | null): {
@@ -337,6 +355,7 @@ export class FormSubmissionsService {
     private readonly readAccess: SubmissionReadAccess,
     private readonly withdrawal: InstanceWithdrawService,
     private readonly transactions: TransactionService,
+    private readonly lifecycle: FormLifecycleService,
   ) {}
 
   // ---- 讀 ----
@@ -803,6 +822,11 @@ export class FormSubmissionsService {
     );
     if (route.kind === "workflow") {
       await this.transactions.withTransaction(async () => {
+        await this.lifecycle.guard("beforeSubmit", {
+          operator: facts.operator,
+          submission: record,
+          values,
+        });
         await this.workflowSubmit.submit(
           facts.operator,
           record,
@@ -827,6 +851,11 @@ export class FormSubmissionsService {
     }
     // 不走流程:完成、修訂與稽核是一個交易(走流程的寫入由 WorkflowSubmitService 負責)
     return this.transactions.withTransaction(async () => {
+      await this.lifecycle.guard("beforeSubmit", {
+        operator: facts.operator,
+        submission: record,
+        values,
+      });
       const updated = await this.submissions.findOwnAndUpdate(
         facts.operator,
         {
@@ -852,6 +881,10 @@ export class FormSubmissionsService {
           "EDIT_VERSION_MISMATCH",
         );
       }
+      // 沒走流程的單直接完成:先 submitted 再 completed(掛接點)
+      const subject = effectSubjectOf(updated);
+      await this.lifecycle.emit("submitted", subject);
+      await this.lifecycle.emit("completed", subject);
       await this.audit.record(facts.operator, {
         action: SUBMISSION_AUDIT.submit,
         targetType: SUBMISSION_TARGET,
@@ -922,6 +955,11 @@ export class FormSubmissionsService {
         },
         { isWorkflowBound: await this.isWorkflowBound(facts, record) },
       );
+      await this.lifecycle.guard("beforeEditCompleted", {
+        operator: facts.operator,
+        submission: record,
+        values,
+      });
       const updated = await this.submissions.findOneAndUpdate(
         facts.operator,
         {
@@ -970,6 +1008,10 @@ export class FormSubmissionsService {
         // 草稿 / 被退回 / 已撤回:申請人本人可刪(實例已終局,推進只收尾它自己的任務與歷程)
         this.access.assertModulePermission(facts, own.moduleKey, "create");
         record = own;
+        await this.lifecycle.guard("beforeDelete", {
+          operator: facts.operator,
+          submission: own,
+        });
         deleted = await this.submissions.findOwnAndUpdate(
           facts.operator,
           { _id: id, status: own.status },
@@ -990,6 +1032,10 @@ export class FormSubmissionsService {
           );
         }
         this.access.assertModulePermission(facts, record.moduleKey, "delete");
+        await this.lifecycle.guard("beforeDelete", {
+          operator: facts.operator,
+          submission: record,
+        });
         deleted = await this.submissions.softDeleteById(facts.operator, id);
       }
       if (!deleted) {
@@ -1049,6 +1095,10 @@ export class FormSubmissionsService {
       );
     }
     this.assertEditVersion(record, input.expectedEditVersion);
+    await this.lifecycle.guard("beforeWithdraw", {
+      operator: facts.operator,
+      submission: record,
+    });
     await this.withdrawal.withdraw(
       record.currentInstanceId,
       facts.operator.actorId ?? record._id,
@@ -1100,6 +1150,10 @@ export class FormSubmissionsService {
       );
     }
     this.assertEditVersion(record, input.expectedEditVersion);
+    await this.lifecycle.guard("beforeVoid", {
+      operator: facts.operator,
+      submission: record,
+    });
     const filter = {
       _id: id,
       status: "completed" as const,
@@ -1133,6 +1187,7 @@ export class FormSubmissionsService {
         "EDIT_VERSION_MISMATCH",
       );
     }
+    await this.lifecycle.emit("voided", effectSubjectOf(updated));
     await this.audit.record(facts.operator, {
       action: SUBMISSION_AUDIT.void,
       targetType: SUBMISSION_TARGET,
