@@ -498,6 +498,16 @@
         "types": "./dist/cjs/month-calendar.d.ts",
         "default": "./dist/cjs/month-calendar.js"
       }
+    },
+    "./schedule-timeline": {
+      "import": {
+        "types": "./dist/es/schedule-timeline.d.mts",
+        "default": "./dist/es/schedule-timeline.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/schedule-timeline.d.ts",
+        "default": "./dist/cjs/schedule-timeline.js"
+      }
     }
   },
   "scripts": {
