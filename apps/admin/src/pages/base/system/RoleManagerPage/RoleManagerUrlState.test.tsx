@@ -3,7 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 
 import { currentSearch, urlJson, urlParam } from "@/test/url-reload";
 
-import { renderRolePage } from "./role-manager-test-support";
+import { ROLE_MANAGER_PERMISSIONS } from "./role-manager-permissions";
+import { ALL_PERMISSIONS, renderRolePage } from "./role-manager-test-support";
 
 describe("角色管理:清單條件、選中的角色與頁籤存在網址(REACT-14)", () => {
   it("擁有組織、搜尋、頁碼(`?list=`)、選中的角色(`?detail=`)、頁籤(`?tab=`)重新整理後都還在", async () => {
@@ -85,6 +86,35 @@ describe("角色管理:清單條件、選中的角色與頁籤存在網址(REACT
     await waitFor(() => {
       expect(urlParam("edit")).toBeNull();
     });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("種子角色鎖定(沒有那一筆的編輯能力)→ 不打開、清掉 `?edit=`,停在該角色的詳情", async () => {
+    renderRolePage({ search: "?edit=role-system" });
+
+    expect(
+      await screen.findByText("超級管理員 — 權限設定"),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(urlParam("edit")).toBeNull();
+    });
+    expect(urlParam("detail")).toBe("role-system");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("沒有編輯權限 → 不打開、清掉 `?edit=`,停在該角色的詳情", async () => {
+    renderRolePage({
+      permissions: ALL_PERMISSIONS.filter(
+        (key) => key !== ROLE_MANAGER_PERMISSIONS.edit,
+      ),
+      search: "?edit=role-audit",
+    });
+
+    expect(await screen.findByText("審核員 — 權限設定")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(urlParam("edit")).toBeNull();
+    });
+    expect(urlParam("detail")).toBe("role-audit");
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -81,6 +81,8 @@ export const RoleManagerPage = () => {
         : rowAbilityOf(data.ability, editRole).canEdit,
     ),
     isMissing: editTarget.isError,
+    // 沒有編輯權限、或種子角色鎖定:停在該角色的詳情(同組織、表單、流程)
+    onNoPermission: data.selectRole,
   });
   const [toggleRole, setToggleRole] = useState<RoleRow | null>(null);
   const [deleteRole, setDeleteRole] = useState<RoleRow | null>(null);

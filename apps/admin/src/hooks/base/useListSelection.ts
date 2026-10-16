@@ -13,7 +13,7 @@ export interface UseListSelectionOptions {
   /** 清單目前的 key(依序;第一筆是退回的預設) */
   keys: readonly string[];
   /** 清單查詢的狀態(TanStack Query 的同名欄位) */
-  query: { isFetching: boolean; dataUpdatedAt: number };
+  query: { isFetching: boolean; dataUpdatedAt: number; errorUpdatedAt: number };
 }
 
 /**
@@ -32,16 +32,25 @@ export const useListSelection = ({
   const [awaiting, setAwaiting] = useState<{
     key: string;
     since: number;
+    errorSince: number;
   } | null>(null);
 
+  // 清單換了新版(成功)或重抓失敗,都不再等:失敗時退回第一筆,不讓右欄一直停在載入中
   const isAwaiting =
     awaiting !== null &&
     awaiting.key === pickedKey &&
-    awaiting.since === query.dataUpdatedAt;
+    awaiting.since === query.dataUpdatedAt &&
+    awaiting.errorSince === query.errorUpdatedAt;
 
   const select = (key: string) => {
     setAwaiting(
-      keys.includes(key) ? null : { key, since: query.dataUpdatedAt },
+      keys.includes(key)
+        ? null
+        : {
+            key,
+            since: query.dataUpdatedAt,
+            errorSince: query.errorUpdatedAt,
+          },
     );
     setPickedKey(key);
   };
