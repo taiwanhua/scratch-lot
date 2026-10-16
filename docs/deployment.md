@@ -97,6 +97,22 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 4. 依既有 PR 與環境流程驗收。各次合併使用 merge commit,以 `git merge-base --is-ancestor <底座commit> <結果commit>` 核對 ancestry;不得用 `merge -s ours`、squash 或 cherry-pick 代替向下同步。
 5. 等待期間若 `main` 前進,從新 `main` **重建升級分支**,重新合併同一底座版本並驗證專案保留;不對含底座 merge 的分支跑一般 rebase,也不把 main 合入舊升級分支。
 
+**資料預檢**:升級後的 `update`(與 `data` reset)在執行任何 migration / seed 之前,會擋下發布與退役交易化之前的舊版留下的三種中斷狀態(停在 `publishing`、`published` 卻不是目前版本、目前版本指到非 `published` 的版本),處理見下節。
+
+#### 舊版留下的發布 / 退役中斷
+
+底座的表單 / 流程發布與退役已是交易(ADR-0013),api 不再有「重試發布」;不清庫升級的引用專案,庫裡可能還留著舊版的中斷資料。預檢(`apps/db-migrator/src/update/interrupted-lifecycles.ts`)逐筆列出並附 `_id`,不自動修。以 mongosh 連上該環境的資料庫,依種類處理後重跑 `update`(表單:`forms` / `form_versions` / `formKey`;流程:`workflows` / `workflow_versions` / `workflowKey`;以下以表單為例):
+
+1. **停在 `publishing`**:改回草稿,之後在畫面重新發布(同一張表單此時不會另有草稿)。
+   `db.form_versions.updateOne({ _id: ObjectId("<版本 _id>"), status: "publishing" }, { $set: { status: "draft", version: null, changelog: null } })`
+2. **`published` 卻不是目前版本**(切換到一半):其餘已發布的版本改退役,目前版本指向它。
+   `db.form_versions.updateMany({ formKey: "<key>", status: "published", version: { $ne: <版號> } }, { $set: { status: "retired" } })`
+   `db.forms.updateOne({ _id: ObjectId("<身分 _id>") }, { $set: { currentVersion: <版號> } })`
+3. **目前版本指到非 `published` 的版本**(退役做到一半):清掉目前版本。
+   `db.forms.updateOne({ _id: ObjectId("<身分 _id>") }, { $set: { currentVersion: null } })`
+
+處理完以同一指令重跑,預檢通過才會往下執行;處理記錄寫進升級 PR。
+
 **升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分四節,任一節有項目即 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。四節皆為 0 才 exit 0,即「已去除重複」。第 2–4 節是靜態掃描,不執行專案程式;各節涵蓋與漏報 / 誤報範圍如下(報告頁尾也附「限制」):
 
 1. **非專案、非混合路徑與新底座仍不同**:`common`、`published-data`、`unknown` 三類的差異逐檔列出並標類別(沒回收到、漂移或改寫已發布資料)。混合路徑不列,另依下段核對。

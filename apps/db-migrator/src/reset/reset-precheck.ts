@@ -4,15 +4,17 @@
  *
  * - 未完成的 update:migration 停在 preparing / started / verified、還原(down)做到一半、
  *   最近一次會套種子的執行沒有走完、受管定義的安裝紀錄還是 in-progress(`update/journal.ts`)
+ * - 底座交易化(ADR-0013)之前留下的中斷發布 / 退役:**所有**表單與流程(`update/interrupted-lifecycles.ts`,
+ *   與 update 預檢同一支);新版的發布與退役是交易,不會再產生,但不清庫的升級可能還留著舊資料
  *
- * 表單 / 流程的發布與退役各是一個交易(ADR-0013),不會停在半路,所以不在預檢範圍。
- * 操作者先以同一個 revision 的來源執行 update 把它做完,再明確執行 reset。
+ * 操作者先以同一個 revision 的來源執行 update 把它做完(舊中斷依 `docs/deployment.md` 手動補完),再明確執行 reset。
  * `full` 不經這一段:它已明確要清庫,未完成的安裝會一起清掉再依所選版本重建。
  */
 import type { Db } from "mongodb";
 
 import { definitionSeedId } from "@repo/domain/seed";
 
+import { findInterruptedLifecycles } from "../update/interrupted-lifecycles";
 import { findOpenMigrations, findUnfinishedUpdate } from "../update/journal";
 
 /** 預檢沒過;`blockers` 逐項列出。此時還沒有刪除任何資料。 */
@@ -21,7 +23,7 @@ export class ResetPrecheckError extends Error {
 
   constructor(readonly blockers: readonly string[]) {
     super(
-      `data reset 預檢未通過(尚未刪除任何資料):\n- ${blockers.join("\n- ")}\n請先以同一版來源執行 update 接續完成,再明確執行 reset;預檢不會替它續做或清掉半成品`,
+      `data reset 預檢未通過(尚未刪除任何資料):\n- ${blockers.join("\n- ")}\n請先以同一版來源執行 update 接續完成(舊版留下的發布 / 退役中斷依 docs/deployment.md 手動補完),再明確執行 reset;預檢不會替它續做或清掉半成品`,
     );
   }
 }
@@ -56,5 +58,6 @@ export async function findResetBlockers(
       `最近一次 ${operation}(run ${unfinishedRun})沒有走完:${status},停在 ${stage} 階段`,
     );
   }
+  blockers.push(...(await findInterruptedLifecycles(database)));
   return blockers;
 }

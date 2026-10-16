@@ -7,7 +7,8 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 /**
  * 版本狀態(同 `form_versions`,Spec 6a §6 的四步發布、冪等重試,少了欄位級權限那一步):
- * `draft` 設計中 / `publishing` 發布進行中 / `published` 凍結、供新送出 / `retired` 退役。
+ * `draft` 設計中 / `publishing` 只存在於發布交易內的搶鎖狀態(部分唯一索引保證至多一筆,交易外看不到)/
+ * `published` 凍結、供新送出 / `retired` 退役。
  */
 export const WORKFLOW_VERSION_STATUSES = [
   "draft",
