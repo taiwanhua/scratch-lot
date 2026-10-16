@@ -1,3 +1,7 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "eslint/config";
 
 /**
@@ -202,15 +206,24 @@ export const projectOwnership = defineConfig(
   },
 );
 
-/** app workspace 的套件名(`apps/<name>` 的 `@repo/<name>`);`packages/ui` 一個都不能 import。 */
-const APP_PACKAGES = [
-  "admin",
-  "api",
-  "db-migrator",
-  "e2e",
-  "front",
-  "storybook",
-];
+/**
+ * app workspace 的套件名(`apps/<name>/package.json` 的 `name`);`packages/ui` 一個都不能 import。
+ * 載入設定時從檔案系統讀,新增 app 不必回來改清單。本檔與 `apps/` 同在 repo 裡(workspace 套件,
+ * pnpm 的連結解析回真實路徑),所以以本檔位置往上兩層就是 repo 根目錄。
+ */
+const APPS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "apps",
+);
+const APP_PACKAGES = readdirSync(APPS_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => path.join(APPS_DIR, entry.name, "package.json"))
+  .filter((file) => existsSync(file))
+  .map((file) => JSON.parse(readFileSync(file, "utf8")).name)
+  .filter((name) => typeof name === "string");
+const escapeRegExp = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * `@repo/ui` 只放底座的底層元件(STRUCT-12;接在 `frontendStyle` 之後,只給 `packages/ui` 用):
@@ -227,7 +240,7 @@ export const uiOwnership = defineConfig(
         {
           patterns: [
             {
-              regex: `(^|/)apps/|^@repo/(${APP_PACKAGES.join("|")})(/|$)`,
+              regex: `(^|/)apps/|^(${APP_PACKAGES.map(escapeRegExp).join("|")})(/|$)`,
               message:
                 "@repo/ui 不能 import apps/ 的程式(STRUCT-12);共用的東西放進 ui 自己,app 專用的留在 app",
             },

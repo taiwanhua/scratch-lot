@@ -65,7 +65,7 @@ query Me {
       # 側欄圖示 key(白名單 @repo/domain/module-icon;#288):null = 用預設圖示。
       # 值由根組織在「模組與權限」頁管理,前端以 key 查 @repo/ui 的登錄表,認不得就退回預設
       icon
-      # FORM = 表單模組:沒有專屬說明檔時「?」退回表單模組通用說明(admin lib/help-registry)
+      # FORM = 表單模組:沒有專屬說明檔時「?」退回表單模組通用說明(admin lib/base/help-registry)
       engine
       permissions
     }

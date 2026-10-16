@@ -42,6 +42,8 @@ const MIXED = [
   /^(?:apps|packages)\/[^/]+\/package\.json$/,
   /^apps\/admin\/src\/app\/module-pages\.tsx$/,
   /^apps\/admin\/src\/lib\/base\/help-registry\.ts$/,
+  // 搬進 lib/base/ 之前的位置:比對分層前的底座版本時仍會出現,過渡期一併視為固定入口
+  /^apps\/admin\/src\/lib\/help-registry\.ts$/,
   /^apps\/api\/src\/app\.module\.ts$/,
   /^apps\/api\/src\/database\/database\.module\.ts$/,
   /^apps\/db-migrator\/seeds\/registry\.ts$/,
