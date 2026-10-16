@@ -57,6 +57,8 @@ afterEach(() => {
   useDesignerDraftStore.setState({ formKey: null, isDirty: false, save: null });
   // 流程設計器的「未存變更」回報同理
   useWorkflowDraftStore.setState(INITIAL_WORKFLOW_DRAFT);
+  // `useUrlState`(nuqs)寫入時也改 `window.history`:網址列回到起點,不讓上一個測試的網址參數漏進下一個
+  globalThis.history.replaceState(null, "", "/");
 });
 
 afterAll(() => {

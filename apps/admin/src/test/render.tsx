@@ -36,6 +36,8 @@ export const renderApp = ({
     session ?? createAuthSession(TEST_GRAPHQL_ENDPOINT, useSessionStore);
   const queryClient = createTestQueryClient();
   const user = userEvent.setup();
+  // nuqs(`useUrlState`)在掛載時讀 `window.location`:先把瀏覽器網址列對到起始網址(之後由 `HistorySync` 跟著 router 走)
+  globalThis.history.replaceState(null, "", path);
   const view = render(
     <TestApp
       path={path}

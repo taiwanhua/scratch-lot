@@ -223,10 +223,13 @@ export const defaultUsers = [operator, owner, ming, ...fillers];
 export const renderPage = ({
   permissions = ALL_PERMISSIONS,
   world = {},
+  search = "",
   meOrgs,
 }: {
   permissions?: readonly string[];
   world?: UserWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
   /**
    * 登入者自己的所屬組織(`me.orgs`,AppBar 的「當前組織」可切換清單)。
    * **傳進來的陣列就是 handler 回的那一份**,測試在流程中間 `push` 一筆,
@@ -247,7 +250,11 @@ export const renderPage = ({
     ...(meOrgs === undefined ? {} : { orgs: meOrgs }),
   });
   server.use(...fake.handlers, ...auth.handlers);
-  return { ...renderApp({ path: "/system/user-manager" }), fake, auth };
+  return {
+    ...renderApp({ path: `/system/user-manager${search}` }),
+    fake,
+    auth,
+  };
 };
 
 export const rowOf = (name: string) =>

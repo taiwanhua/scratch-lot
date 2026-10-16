@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { useMeQuery, useOrgQuery, useOrgTreeQuery } from "@repo/graphql";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
-import { type OrgNodeLike, rootOrgId } from "@/lib/base/org-tree";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
+import { type OrgNodeLike, findOrgNode, rootOrgId } from "@/lib/base/org-tree";
 
 import { ORG_MANAGER_PERMISSIONS } from "./org-manager-permissions";
 import type { OrgActionAbility } from "./org-manager-types";
@@ -37,14 +37,19 @@ export const useOrgManagerData = () => {
     canSetTimezone: hasPermission(ORG_MANAGER_PERMISSIONS.setTimezone),
   };
 
-  const [pickedOrgId, setPickedOrgId] = useState<string | null>(null);
+  /** 選中的組織存在網址 `?detail=<id>`(REACT-14);沒有 = 樹根。 */
+  const [pickedOrgId, setPickedOrgId] = useUrlSelectedId();
 
   const orgTree = useOrgTreeQuery(session.client);
   const orgNodes: readonly OrgNodeLike[] = orgTree.data?.orgTree ?? [];
   const treeRootId = rootOrgId(orgNodes);
 
   /** 還沒點過任何節點時預設選樹根(不在 effect 內 setState,REACT-06)。 */
-  const selectedOrgId = pickedOrgId ?? treeRootId;
+  // 網址上的組織不在樹裡(手改、換了組織、已刪除)→ 退回樹根
+  const selectedOrgId =
+    pickedOrgId !== null && findOrgNode(orgNodes, pickedOrgId) !== null
+      ? pickedOrgId
+      : treeRootId;
 
   const selected = useOrgQuery(
     session.client,

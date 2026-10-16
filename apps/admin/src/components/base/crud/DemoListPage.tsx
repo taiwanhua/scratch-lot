@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
@@ -12,6 +13,7 @@ import { Typography } from "@repo/ui/typography";
 import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DeleteItemDialog } from "./DeleteItemDialog";
 import { DemoListTable } from "./DemoListTable";
@@ -24,6 +26,21 @@ import type {
 } from "./demo-module-config";
 import { useDemoAccess } from "./useDemoAccess";
 import { useDemoSetEnabled } from "./useDemoQuery";
+
+/**
+ * 列表的篩選條件存在網址 `?list=`(REACT-14):搜尋、模組自有篩選、頁碼;重新整理、切頁籤回來都還在。
+ * 篩選器的值連同顯示文字一起存(`{ value, label }`),不必等選項清單回來才畫得出已選的那一個。
+ */
+const listSchema = z
+  .object({
+    keyword: z.string().default(""),
+    option: z
+      .object({ value: z.string(), label: z.string() })
+      .nullable()
+      .default(null),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ keyword: "", option: null, page: 1 });
 
 export interface DemoListPageProps<
   Row extends DemoItemLike,
@@ -54,10 +71,8 @@ export const DemoListPage = <
   const navigate = useNavigate();
   const access = useDemoAccess(config.moduleKeys, config.permissions);
 
-  // 篩選條件留在頁面層,不進 URL(REACT-02 第 2 點的 admin 例外:admin 有路由頁籤)
-  const [keyword, setKeywordValue] = useState("");
-  const [option, setOptionValue] = useState<DemoFilterOption | null>(null);
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useUrlState("list", listSchema);
+  const { keyword, option, page } = filters;
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleteError, setDeleteError] = useState<DemoErrorCode | null>(null);
   const [toggleError, setToggleError] = useState<DemoErrorCode | null>(null);
@@ -67,7 +82,7 @@ export const DemoListPage = <
     enabled: boolean;
   } | null>(null);
 
-  const rows = list.useRows({ page, keyword, option });
+  const rows = list.useRows(filters);
   const closeItemTabs = useCloseItemTabs();
 
   /**
@@ -139,12 +154,18 @@ export const DemoListPage = <
 
   /** 換關鍵字或換篩選都回到第一頁(否則會停在一個不存在的頁碼上看到空清單)。 */
   const setKeyword = (value: string) => {
-    setKeywordValue(value);
-    setPage(1);
+    setFilters((current) => ({ ...current, keyword: value, page: 1 }));
   };
   const setOption = (value: DemoFilterOption | null) => {
-    setOptionValue(value);
-    setPage(1);
+    setFilters((current) => ({
+      ...current,
+      option:
+        value === null ? null : { value: value.value, label: value.label },
+      page: 1,
+    }));
+  };
+  const setPage = (value: number) => {
+    setFilters((current) => ({ ...current, page: value }));
   };
 
   return (

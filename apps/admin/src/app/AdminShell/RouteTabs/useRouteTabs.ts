@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { type ShellModule, matchModuleRoute } from "@/lib/base/module-tree";
-import { type RouteTab, resolveTabs } from "@/lib/base/route-tabs";
+import { type RouteTab, entryHref, resolveTabs } from "@/lib/base/route-tabs";
 import { useRouteTabsStore } from "@/stores/base/useRouteTabsStore";
 
 export interface UseRouteTabsOptions {
@@ -12,6 +12,8 @@ export interface UseRouteTabsOptions {
   routes: ReadonlyMap<string, ShellModule>;
   /** 目前網址(已正規化) */
   currentPath: string;
+  /** 目前的網址參數(`location.search`,含 `?`):目前頁籤記下它,切回來時帶回去(規格 10.1) */
+  currentSearch: string;
 }
 
 export interface RouteTabsState {
@@ -34,6 +36,7 @@ export const useRouteTabs = ({
   userId,
   routes,
   currentPath,
+  currentSearch,
 }: UseRouteTabsOptions): RouteTabsState => {
   const navigate = useNavigate();
   const bind = useRouteTabsStore((state) => state.bind);
@@ -45,24 +48,26 @@ export const useRouteTabs = ({
   // 首次渲染就有 tab、不多閃一幀 — 沿用重構前「store 在 mount 時建立並立刻 sync」的時序。放在讀 entries 之前,快照才一致。
   useState(() => {
     bind(userId);
-    sync(routes, currentPath);
+    sync(routes, currentPath, currentSearch);
     return userId;
   });
   const entries = useRouteTabsStore((state) => state.entries);
 
   useEffect(() => {
-    sync(routes, currentPath);
-  }, [sync, routes, currentPath]);
+    sync(routes, currentPath, currentSearch);
+  }, [sync, routes, currentPath, currentSearch]);
 
   const tabs = useMemo(() => resolveTabs(entries, routes), [entries, routes]);
   const activeRoute =
     matchModuleRoute(routes, currentPath) === undefined ? null : currentPath;
 
+  /** 切到頁籤 = 回到它記下的「路徑 + 網址參數」(規格 10.1) */
   const select = useCallback(
     (route: string) => {
-      void navigate(route);
+      const entry = entries.find((item) => item.route === route);
+      void navigate(entry === undefined ? route : entryHref(entry));
     },
-    [navigate],
+    [entries, navigate],
   );
 
   const close = useCallback(

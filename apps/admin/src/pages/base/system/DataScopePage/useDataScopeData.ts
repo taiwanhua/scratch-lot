@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
   useDataScopeRuleQuery,
@@ -10,6 +10,7 @@ import {
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { flattenOrgs } from "@/lib/base/org-tree";
 
 import {
@@ -40,11 +41,16 @@ export const useDataScopeData = () => {
     [targets.data],
   );
 
-  /** 目標以 id 指定:一列 = 一個模組,同一個 collection 可能有好幾列。 */
-  const [pickedTargetId, setPickedTargetId] = useState<string | null>(null);
+  /** 目標以 id 指定:一列 = 一個模組,同一個 collection 可能有好幾列。存在網址 `?detail=<id>`(REACT-14)。 */
+  const [pickedTargetId, setPickedTargetId] = useUrlSelectedId();
   /** 還沒點過任何目標時預設選第一個(不在 effect 內 setState,REACT-06)。 */
   const firstTargetId = targetList.length > 0 ? targetList[0].id : null;
-  const selectedTargetId = pickedTargetId ?? firstTargetId;
+  // 網址上的目標不在清單裡(手改、模組已移除)→ 退回第一個
+  const selectedTargetId =
+    pickedTargetId !== null &&
+    targetList.some((item) => item.id === pickedTargetId)
+      ? pickedTargetId
+      : firstTargetId;
   const selectedIndex = targetList.findIndex(
     (item) => item.id === selectedTargetId,
   );

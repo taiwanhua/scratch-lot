@@ -98,9 +98,12 @@ const modulesWith = (permissions: readonly string[]): TestModule[] => [
 export const renderPage = ({
   permissions = [...DATA_SCOPE_OWN_PERMISSIONS, ...PICKER_PERMISSIONS],
   world = {},
+  search = "",
 }: {
   permissions?: readonly string[];
   world?: DataScopeWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 } = {}) => {
   const fake = dataScopeWorld({
     targets: dataScopeTargets,
@@ -117,7 +120,7 @@ export const renderPage = ({
       modules: modulesWith(permissions),
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/data-scope" }), fake };
+  return { ...renderApp({ path: `/system/data-scope${search}` }), fake };
 };
 
 /** 右邊的規則編輯器(左清單也有目標名稱,查詢一律先收斂到其中一邊)。 */

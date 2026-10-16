@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { useMeQuery, useModuleTreeQuery } from "@repo/graphql";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 
 import { findModuleNode, firstModuleId } from "./module-admin-tree";
 import { MODULE_MANAGER_PERMISSIONS } from "./module-manager-permissions";
@@ -27,14 +27,19 @@ export const useModuleManagerData = () => {
   /** 換圖示與停用是兩把鑰匙(#288);只有這一把時仍看得到目前圖示,只是不能換 */
   const canSetIcon = hasPermission(MODULE_MANAGER_PERMISSIONS.setIcon);
 
-  const [pickedModuleId, setPickedModuleId] = useState<string | null>(null);
+  /** 選中的節點存在網址 `?detail=<id>`(REACT-14);沒有 = 第一棵樹的根。 */
+  const [pickedModuleId, setPickedModuleId] = useUrlSelectedId();
 
   const moduleTree = useModuleTreeQuery(session.client);
   const nodes: readonly ModuleAdminNodeLike[] =
     moduleTree.data?.moduleTree ?? [];
 
   /** 還沒點過任何節點時預設選第一棵樹的根(不在 effect 內 setState,REACT-06)。 */
-  const selectedModuleId = pickedModuleId ?? firstModuleId(nodes);
+  // 網址上的節點不在樹裡(手改、換了組織)→ 退回第一棵樹的根
+  const selectedModuleId =
+    pickedModuleId !== null && findModuleNode(nodes, pickedModuleId) !== null
+      ? pickedModuleId
+      : firstModuleId(nodes);
   const selectedModule =
     selectedModuleId === null ? null : findModuleNode(nodes, selectedModuleId);
 

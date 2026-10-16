@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { z } from "zod";
 
 import {
   type WorkflowFieldsFragment,
@@ -10,9 +10,16 @@ import {
 } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 /** 左清單一頁幾個(流程數量不大;api 上限 100)。 */
 const PAGE_SIZE = 100;
+
+/** 左清單的搜尋存在網址 `?list=`(REACT-14);選中的流程在 `?detail=<流程 key>`。 */
+const listSchema = z
+  .object({ keyword: z.string().default("") })
+  .default({ keyword: "" });
 
 /**
  * 流程管理頁的資料層:左清單(root = 共用流程;租戶 = 分派來的 + 自己的客製)、選中的流程、
@@ -21,8 +28,14 @@ const PAGE_SIZE = 100;
 export const useWorkflowsPageData = (initialKey: string | null = null) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
-  const [keyword, setKeyword] = useState("");
-  const [pickedKey, setPickedKey] = useState<string | null>(initialKey);
+  const [list, setList] = useUrlState("list", listSchema);
+  const { keyword } = list;
+  const setKeyword = (value: string) => {
+    setList({ keyword: value });
+  };
+  // 網址上的選擇優先;沒有時用導過來時指定的那一個(`initialKey`:從阻擋清單等處要求 fork 的流程)
+  const [urlKey, setPickedKey] = useUrlSelectedId();
+  const pickedKey = urlKey ?? initialKey;
 
   const workflows = useWorkflowsQuery(session.client, {
     input: { keyword, page: 1, pageSize: PAGE_SIZE },

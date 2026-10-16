@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
@@ -17,6 +16,7 @@ import {
   useMyApplications,
 } from "@/hooks/base/useMyApplications";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import {
   APPLY_CENTER_VIEW_PAGE_KEY,
@@ -24,6 +24,10 @@ import {
 } from "../apply-center-keys";
 import { ApplyCenterFilters } from "./ApplyCenterFilters";
 import { TablePager } from "./TablePager";
+import {
+  APPLY_CENTER_LIST_KEY,
+  myApplicationsListSchema,
+} from "./apply-center-list";
 
 const PAGE_SIZE = 20;
 const ALL = "";
@@ -59,10 +63,11 @@ export const MyApplicationsTab = ({ modules }: MyApplicationsTabProps) => {
   const navigate = useNavigate();
   const routeOf = useModuleRoutes();
   const temporalText = useTemporalText();
-  const [moduleKey, setModuleKey] = useState<string | null>(null);
-  const [formKey, setFormKey] = useState<string | null>(null);
-  const [status, setStatus] = useState<FormSubmissionStatus | null>(null);
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useUrlState(
+    APPLY_CENTER_LIST_KEY,
+    myApplicationsListSchema,
+  );
+  const { module: moduleKey, form: formKey, status, page } = filters;
   const list = useMyApplications({
     moduleKey,
     formKey,
@@ -170,13 +175,11 @@ export const MyApplicationsTab = ({ modules }: MyApplicationsTabProps) => {
         modules={modules}
         moduleKey={moduleKey}
         onModuleKeyChange={(next) => {
-          setModuleKey(next);
-          setPage(1);
+          setFilters((current) => ({ ...current, module: next, page: 1 }));
         }}
         formKey={formKey}
         onFormKeyChange={(next) => {
-          setFormKey(next);
-          setPage(1);
+          setFilters((current) => ({ ...current, form: next, page: 1 }));
         }}
       >
         <SelectField<FormSubmissionStatus | typeof ALL>
@@ -190,8 +193,11 @@ export const MyApplicationsTab = ({ modules }: MyApplicationsTabProps) => {
             ...STATUSES.map((value) => ({ value, label: tStatus(value) })),
           ]}
           onChange={(next) => {
-            setStatus(next === ALL ? null : next);
-            setPage(1);
+            setFilters((current) => ({
+              ...current,
+              status: next === ALL ? null : next,
+              page: 1,
+            }));
           }}
         />
       </ApplyCenterFilters>
@@ -210,7 +216,9 @@ export const MyApplicationsTab = ({ modules }: MyApplicationsTabProps) => {
         totalCount={list.totalCount}
         page={page}
         pageSize={PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={(next) => {
+          setFilters((current) => ({ ...current, page: next }));
+        }}
       />
     </Stack>
   );

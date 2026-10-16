@@ -1,5 +1,5 @@
-import { createParser, useQueryState } from "nuqs";
-import { useCallback, useMemo } from "react";
+import { createParser, parseAsString, useQueryState } from "nuqs";
+import { useCallback, useEffect, useMemo } from "react";
 
 import {
   type UrlStateSchema,
@@ -9,6 +9,9 @@ import {
   urlStateDefault,
 } from "@/lib/base/url-state";
 
+/** 讀原字串用的解析器:只用來發現「網址上有值、但不合 schema」並清掉它。 */
+const rawParser = parseAsString.withOptions({ shallow: false });
+
 /** 寫入:新值,或由目前的值算出新值(同 `useState` 的 setter)。 */
 export type SetUrlState<T> = (next: T | ((current: T) => T)) => void;
 
@@ -16,7 +19,8 @@ export type SetUrlState<T> = (next: T | ((current: T) => T)) => void;
  * 頁面狀態存在網址(規格 10.1;frontend-architecture「頁面狀態放網址」):
  * 一個 `key` 一包值,`schema` 驗證並以 `.default(…)` 給預設值。
  *
- * - 網址沒有這個 key、或值被改壞(不合 schema、JSON 壞掉)→ 回預設值,不報錯
+ * - 網址沒有這個 key、或值被改壞(不合 schema、JSON 壞掉、舊格式)→ 回預設值,不報錯;
+ *   改壞的那一個 key 以 `replace` 從網址清掉(其他 key 不動),路由頁籤記下的參數跟著清掉(規格 10.1)
  * - 寫回預設值時把 key 從網址拿掉(網址只留跟預設不同的部分)
  * - 寫入用 `replace`:切篩選、換頁不堆瀏覽器上一頁紀錄
  * - 寫入走 react-router 的 navigate(nuqs `shallow: false`):`useLocation` 的讀者(殼、守門)看到的網址
@@ -41,6 +45,14 @@ export const useUrlState = <T extends NonNullable<unknown>>(
     [schema],
   );
   const [value, setQueryValue] = useQueryState(key, parser);
+  const [raw, setRaw] = useQueryState(key, rawParser);
+
+  // 網址上的值不合 schema → 畫面已退回預設值,網址也清掉那一個 key(replace),網址與畫面一致
+  useEffect(() => {
+    if (raw !== null && parseUrlState(schema, raw) === null) {
+      void setRaw(null);
+    }
+  }, [raw, schema, setRaw]);
 
   const setValue = useCallback<SetUrlState<T>>(
     (next) => {

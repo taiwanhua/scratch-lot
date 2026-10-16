@@ -98,6 +98,22 @@ describe("useUrlState", () => {
     consoleError.mockRestore();
   });
 
+  it("網址參數被改壞 → 以 replace 把那一個 key 從網址清掉,其他 key 不動", async () => {
+    renderAt(
+      `/report?keep=1&list=${encodeURIComponent('{"status":"hacked"}')}`,
+    );
+    const historyLength = globalThis.history.length;
+
+    expect(listValue()).toEqual({ status: "all", page: 1 });
+    await waitFor(() => {
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        /^\/report\?keep=1$/,
+      );
+    });
+    expect(globalThis.location.search).toBe("?keep=1");
+    expect(globalThis.history).toHaveLength(historyLength);
+  });
+
   it("寫入 → 網址與 router 的 location 都更新;寫回預設值 → key 從網址拿掉", async () => {
     const user = userEvent.setup();
     renderAt("/report?keep=1");

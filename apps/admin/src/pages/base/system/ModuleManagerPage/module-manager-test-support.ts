@@ -68,9 +68,12 @@ export const modulesWith = (permissions: readonly string[]): TestModule[] => [
 export const renderPage = ({
   permissions = FULL_PERMISSIONS,
   world = {},
+  search = "",
 }: {
   permissions?: readonly string[];
   world?: ModuleAdminWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 } = {}) => {
   const fake = moduleAdminWorld({ tree: moduleAdminTree, ...world });
   server.use(
@@ -80,7 +83,7 @@ export const renderPage = ({
       modules: modulesWith(permissions),
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/module-manager" }), fake };
+  return { ...renderApp({ path: `/system/module-manager${search}` }), fake };
 };
 
 /** 樹與資料區都有模組名稱(側欄也是),查詢一律先收斂到其中一邊。 */
