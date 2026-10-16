@@ -27,6 +27,9 @@ const VIEW = `${SAMPLE_ONE}.view`;
 const EDIT = `${SAMPLE_ONE}.edit`;
 const TWO_VIEW = "demo.sample-two.view";
 const TWO_EDIT = "demo.sample-two.edit";
+/** 本租戶 / 別租戶客製表單的欄位級動態權限(掛在示範模組1 下,持 `模組.*` 的人展開得到兩筆)。 */
+const OWN_FORM_SHOW = `${SAMPLE_ONE}.show-aud_own-secret`;
+const OTHER_FORM_SHOW = `${SAMPLE_ONE}.show-aud_other-secret`;
 
 const LOGIN = /* GraphQL */ `
   mutation Login($input: LoginInput!) {
@@ -303,6 +306,55 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
     });
     await setModuleEnabled(api.connection, "demo.sample-two", false);
 
+    // 兩張客製表單(本租戶 / 別租戶)與它們的動態權限
+    const sampleOne = await api.connection
+      .collection("modules")
+      .findOne<{ _id: Types.ObjectId }>({ key: SAMPLE_ONE });
+    if (!sampleOne) {
+      throw new Error("seed 沒有示範模組1");
+    }
+    const now = new Date();
+    const base = {
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      deletedAt: null,
+    };
+    await api.connection.collection("forms").insertMany([
+      {
+        key: "aud_own",
+        moduleKey: SAMPLE_ONE,
+        name: "本租戶客製",
+        ownerOrgId: tenant,
+        forkedFrom: null,
+        currentVersion: null,
+        ...base,
+      },
+      {
+        key: "aud_other",
+        moduleKey: SAMPLE_ONE,
+        name: "別租戶客製",
+        ownerOrgId: otherTenant,
+        forkedFrom: null,
+        currentVersion: null,
+        ...base,
+      },
+    ]);
+    await api.connection.collection("permissions").insertMany(
+      [OWN_FORM_SHOW, OTHER_FORM_SHOW].map((key) => ({
+        key,
+        moduleId: sampleOne._id,
+        name: key,
+        enabled: true,
+        isSystem: false,
+        settings: {},
+        source: "dynamic",
+        retiredAt: null,
+        ...base,
+      })),
+    );
+
     const superAdminRole = await api.connection
       .collection("roles")
       .findOne<{ _id: Types.ObjectId }>({ key: "super-admin" });
@@ -382,6 +434,16 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
       {},
     ],
     ["權限:停用的權限", () => match(leaf("permission", [TWO_EDIT])), {}],
+    [
+      "權限:本租戶客製表單的動態權限(經 模組.* 展開)",
+      () => match(leaf("permission", [OWN_FORM_SHOW])),
+      {},
+    ],
+    [
+      "權限:別租戶客製表單的動態權限(剔除,模組.* 也蓋不到)",
+      () => match(leaf("permission", [OTHER_FORM_SHOW])),
+      {},
+    ],
     ["權限:停用的模組", () => match(leaf("permission", [TWO_VIEW])), {}],
     [
       "巢狀 AND / OR(3 層)",
@@ -455,6 +517,15 @@ describe("人員條件:matchesAudience / listAudience(對真 Nest app + 真 Mong
       "wildcardA1",
     ]);
     expect(await list(match(leaf("permission", [TWO_EDIT])))).toEqual([]);
+    expect(await list(match(leaf("permission", [OWN_FORM_SHOW])))).toEqual([
+      "wildcardA1",
+    ]);
+    expect(await list(match(leaf("permission", [OTHER_FORM_SHOW])))).toEqual(
+      [],
+    );
+    expect(
+      await matches("wildcardA1", match(leaf("permission", [OTHER_FORM_SHOW]))),
+    ).toBe(false);
     expect(await list(match(leaf("permission", [TWO_VIEW])))).toEqual([]);
     expect(await list(match(orgLeaf(storeA1, "ancestors")))).toEqual(
       [
