@@ -13,9 +13,11 @@ import { Typography } from "@repo/ui/typography";
 import { LookupLabelTemplateInput } from "./LookupLabelTemplateInput";
 import {
   type LookupFieldOption,
+  type LookupProviderOption,
   type SelfFormCatalog,
-  defaultLabelFieldOf,
   useLookupFieldOptions,
+  useLookupProviders,
+  useProviderLabel,
   usePublishedForms,
 } from "./useLookupCatalog";
 
@@ -44,7 +46,31 @@ const withCurrent = (
 const choicesOf = (options: readonly LookupFieldOption[]) =>
   options.map(({ value, label }) => ({ value, label }));
 
-/** 固定條件:使用者 / 組織「只列啟用中的」(`filter.enabled`);表單提交「只列已完成的」(`completedOnly`,預設是)。 */
+/** 有沒有固定條件可設:表單提交一定有;其他來源要宣告 `enabled` 可當篩選。 */
+const hasFixedFilter = (
+  value: LookupSourceDescriptor,
+  provider: LookupProviderOption | undefined,
+): boolean =>
+  value.provider === FORM_SUBMISSION_PROVIDER ||
+  provider?.filterFields.includes("enabled") === true;
+
+/** 換來源:顯示欄 / 值欄回到該來源宣告的預設(值欄只有選項來源;預設 `id` 不寫)。 */
+const switchedTo = (
+  provider: string,
+  declared: LookupProviderOption | undefined,
+  hasValueField: boolean,
+): LookupSourceDescriptor => {
+  const next: LookupSourceDescriptor = {
+    provider,
+    labelField: declared?.labelField ?? "title",
+  };
+  if (hasValueField && declared !== undefined && declared.valueField !== "id") {
+    next.valueField = declared.valueField;
+  }
+  return next;
+};
+
+/** 固定條件:使用者 / 組織 / 宣告了 `enabled` 的專案來源「只列啟用中的」(`filter.enabled`);表單提交「只列已完成的」(`completedOnly`,預設是)。 */
 const isFixedFilterOn = (value: LookupSourceDescriptor): boolean =>
   value.provider === FORM_SUBMISSION_PROVIDER
     ? value.completedOnly !== false
@@ -70,7 +96,7 @@ const withFixedFilter = (
  * lookup 來源描述的編輯(`options.source`、`reference.source`、`prefills[].source`;Spec 6a §5「lookup 來源」)。
  * 照填表時的順序排:來源 → 表單(只有表單提交)→ 顯示欄 → 顯示模板(選填)→ 固定條件(選填)→ 值欄(只有選項來源);
  * 每一格中文標籤 + 一句說明,**全部用下拉選**(表單只列本租戶看得到且有已發布版本的,欄位從該表單目前版本挑,
- * `useLookupCatalog.ts`)。provider 以 api 的登錄表為準(`apps/api/src/forms/lookup-providers.ts`)。
+ * `useLookupCatalog.ts`)。來源清單以 api 的登錄表為準(`formLookupProviders`,含專案登記的來源)。
  */
 export const LookupSourceEditor = ({
   value,
@@ -83,6 +109,11 @@ export const LookupSourceEditor = ({
   const isSubmission = value.provider === FORM_SUBMISSION_PROVIDER;
   const { forms, isTruncated } = usePublishedForms(isSubmission, selfForm);
   const fieldOptions = useLookupFieldOptions(value, selfForm);
+  const providers = useLookupProviders();
+  const providerLabel = useProviderLabel();
+  const declared = providers.find(
+    (provider) => provider.key === value.provider,
+  );
   const isPending = fieldOptions === null;
   const formHintKey = selfForm === null ? "formHint" : "formHintWithSelf";
 
@@ -92,16 +123,21 @@ export const LookupSourceEditor = ({
         label={t("provider")}
         value={value.provider}
         helperText={t("providerHint")}
-        options={[
-          { value: "user", label: t("providers.user") },
-          { value: "org", label: t("providers.org") },
-          {
-            value: FORM_SUBMISSION_PROVIDER,
-            label: t("providers.form_submission"),
-          },
-        ]}
+        options={withCurrent(
+          providers.map((provider) => ({
+            value: provider.key,
+            label: providerLabel(provider),
+          })),
+          value.provider,
+        )}
         onChange={(provider) => {
-          onChange({ provider, labelField: defaultLabelFieldOf(provider) });
+          onChange(
+            switchedTo(
+              provider,
+              providers.find((candidate) => candidate.key === provider),
+              hasValueField,
+            ),
+          );
         }}
         size="small"
       />
@@ -152,23 +188,25 @@ export const LookupSourceEditor = ({
         fieldOptions={fieldOptions}
         onChange={onChange}
       />
-      <Stack spacing={0.25}>
-        <Typography variant="body2">{t("fixedFilter")}</Typography>
-        <FormControlLabel
-          label={isSubmission ? t("completedOnly") : t("enabledOnly")}
-          control={
-            <Switch
-              checked={isFixedFilterOn(value)}
-              onChange={(_event, checked) => {
-                onChange(withFixedFilter(value, checked));
-              }}
-            />
-          }
-        />
-        <Typography variant="caption" color="text.secondary">
-          {t("fixedFilterHint")}
-        </Typography>
-      </Stack>
+      {hasFixedFilter(value, declared) && (
+        <Stack spacing={0.25}>
+          <Typography variant="body2">{t("fixedFilter")}</Typography>
+          <FormControlLabel
+            label={isSubmission ? t("completedOnly") : t("enabledOnly")}
+            control={
+              <Switch
+                checked={isFixedFilterOn(value)}
+                onChange={(_event, checked) => {
+                  onChange(withFixedFilter(value, checked));
+                }}
+              />
+            }
+          />
+          <Typography variant="caption" color="text.secondary">
+            {t("fixedFilterHint")}
+          </Typography>
+        </Stack>
+      )}
       {hasValueField && (
         <SelectField<string>
           label={t("valueField")}

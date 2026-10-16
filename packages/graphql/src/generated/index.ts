@@ -770,6 +770,30 @@ export type FormLookupPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type FormLookupProvider = {
+  __typename?: 'FormLookupProvider';
+  fields: Array<FormLookupProviderField>;
+  filterFields: Array<Scalars['String']['output']>;
+  isBase: Scalars['Boolean']['output'];
+  key: Scalars['String']['output'];
+  labelField: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  valueField: Scalars['String']['output'];
+};
+
+export type FormLookupProviderField = {
+  __typename?: 'FormLookupProviderField';
+  key: Scalars['String']['output'];
+  label?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type FormLookupProvidersPayload = {
+  __typename?: 'FormLookupProvidersPayload';
+  items: Array<FormLookupProvider>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type FormLookupRecord = {
   __typename?: 'FormLookupRecord';
   id: Scalars['ID']['output'];
@@ -1931,6 +1955,7 @@ export type Query = {
   form: FormPayload;
   formFieldOptions: FormFieldOptionsPayload;
   formLookup: FormLookupPayload;
+  formLookupProviders: FormLookupProvidersPayload;
   formLookupRecord: FormLookupRecordPayload;
   formRuntimeVersion: FormVersionPayload;
   formSubmission: FormSubmissionPayload;
@@ -3623,6 +3648,11 @@ export type ForkFormMutationVariables = Exact<{
 
 
 export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+
+export type FormLookupProvidersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type FormLookupProvidersQuery = { __typename?: 'Query', formLookupProviders: { __typename?: 'FormLookupProvidersPayload', totalCount: number, items: Array<{ __typename?: 'FormLookupProvider', key: string, name: string, isBase: boolean, labelField: string, valueField: string, filterFields: Array<string>, fields: Array<{ __typename?: 'FormLookupProviderField', key: string, type: string, label?: string | null }> }> } };
 
 export type FormVersionQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -6945,6 +6975,50 @@ export const useForkFormMutation = <
 
 
 useForkFormMutation.fetcher = (client: GraphQLClient, variables: ForkFormMutationVariables, headers?: RequestInit['headers']) => fetcher<ForkFormMutation, ForkFormMutationVariables>(client, ForkFormDocument, variables, headers);
+
+export const FormLookupProvidersDocument = `
+    query FormLookupProviders {
+  formLookupProviders {
+    items {
+      key
+      name
+      isBase
+      labelField
+      valueField
+      filterFields
+      fields {
+        key
+        type
+        label
+      }
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useFormLookupProvidersQuery = <
+      TData = FormLookupProvidersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: FormLookupProvidersQueryVariables,
+      options?: Omit<UseQueryOptions<FormLookupProvidersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FormLookupProvidersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FormLookupProvidersQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['FormLookupProviders'] : ['FormLookupProviders', variables],
+    queryFn: fetcher<FormLookupProvidersQuery, FormLookupProvidersQueryVariables>(client, FormLookupProvidersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFormLookupProvidersQuery.getKey = (variables?: FormLookupProvidersQueryVariables) => variables === undefined ? ['FormLookupProviders'] : ['FormLookupProviders', variables];
+
+
+useFormLookupProvidersQuery.fetcher = (client: GraphQLClient, variables?: FormLookupProvidersQueryVariables, headers?: RequestInit['headers']) => fetcher<FormLookupProvidersQuery, FormLookupProvidersQueryVariables>(client, FormLookupProvidersDocument, variables, headers);
 
 export const FormVersionDocument = `
     query FormVersion($formKey: ID!, $version: Int) {

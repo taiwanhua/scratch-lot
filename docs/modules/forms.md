@@ -246,7 +246,7 @@
 
 ## lookup 登錄表
 
-`apps/api/src/forms/lookup-providers.ts`。帶入、引用、lookup 選項都用這一張;執行時 provider 與 `filter` 一律從**版本定義**取,前端只帶 `{ formKey, version, target }` + 關鍵字。目標是欄位(lookup 選項欄 / 引用欄)時,讀者還要讀得到那一欄:受保護欄位沒有 `show` → `FORBIDDEN`(先於「有沒有 lookup 來源」判,不從錯誤碼透露定義;草稿預覽不套)。
+`apps/api/src/forms/lookup-providers.ts`(底座三種)+ 專案登記的來源(下方「專案登記的來源」)。帶入、引用、lookup 選項都用這一張;執行時 provider 與 `filter` 一律從**版本定義**取,前端只帶 `{ formKey, version, target }` + 關鍵字。目標是欄位(lookup 選項欄 / 引用欄)時,讀者還要讀得到那一欄:受保護欄位沒有 `show` → `FORBIDDEN`(先於「有沒有 lookup 來源」判,不從錯誤碼透露定義;草稿預覽不套)。
 
 | provider          | 可回的欄位                                          | 讀欄位要的權限                                                                    | 可當 `filter` | 範圍                                                           |
 | ----------------- | --------------------------------------------------- | --------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------- |
@@ -256,7 +256,22 @@
 
 - `form_submission` 來源回每一筆時,欄位依**那筆自己綁的版本**判斷:存在且非受保護 → 語意值(選項 / 引用另附 label);存在但受保護且沒有 `show` → **省略**;那一版沒有這個欄位 → `null`。
 - 設計時的欄位目錄 = 來源表單目前版本的非受保護欄位 + 摘要槽;檢查器以它驗 `labelField` / `valueField` / 帶入的來源欄位,以及 `labelTemplate` 的佔位符。**帶入規則**的來源是這張表單自己(從本表單先前的提交帶入)時用**這份草稿**的欄位(還沒發布也行,`form-definition-checker.ts`);選項 / 引用來源指到自己照一般規則(已發布版的欄位目錄);執行時照一般規則以那筆提交綁的版本判斷。
-- **新增一個來源**:`LOOKUP_PROVIDERS` 加宣告 → `LookupProvidersService.providerFor` 加實作(搜尋與依值取回都要套操作者的範圍)→ 本表補一列。
+- 設計器的來源清單是 `formLookupProviders`(`system.forms.view`;`form-design/lookup-providers.resolver.ts`):底座三種在前、專案來源依 key 排,回宣告的名稱、欄位(型別與專案宣告的欄位名)、可當 `filter` 的欄位、預設顯示欄與值欄,不回權限與執行面。底座來源的名稱與欄位名由前端 i18n 顯示;來源有宣告 `enabled` 可當 `filter` 才出現「只列啟用中的」。
+- **新增底座來源**:`LOOKUP_PROVIDERS` 加宣告 → `LookupProvidersService.providerFor` 加實作(搜尋與依值取回都要套操作者的範圍)→ 本表補一列。
+
+### 專案登記的來源
+
+專案模組以 multi-provider token `LOOKUP_PROVIDER`(`apps/api/src/forms/lookup-provider-registration.ts`)提供 `{ declaration, runtime }`(一筆或一組);`LookupProvidersService` 啟動時以 Nest `DiscoveryService` 收集各模組的登記。檢查器的登錄表(`LookupProviderRegistry`)、設計器來源清單、`formLookup` / 引用重驗 / 現名解析都含專案來源。
+
+| 項目          | 規則                                                                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| key           | 底座來源不加前綴;專案來源一律 `<專案前綴>_<名稱>`(小寫英數與底線,例 `lottery_game`)。與底座撞名、專案之間重複、格式不合 → 啟動丟 `LookupProviderRegistrationError`,app 起不來                          |
+| `declaration` | `name`、`fields`(型別、讀該欄要的權限、設計器顯示的欄位名)、`filterFields`、`labelField`(預設顯示欄)、`valueField`(預設值欄,省略 = `id`)、`permission`(讀這個來源要的權限,例該模組 `view`;沒有 → 查無) |
+| `runtime`     | 只給 `repository`(資料登記導出的 `BaseRepository` 實例,啟動時以 `instanceof` 驗)與選填的 `keywordFields`(省略 = 只比 `labelField`)。欄位名即文件欄位名                                                 |
+| 範圍          | 搜尋與依值取回由底座固定呼叫 `BaseRepository` 的 `findMany` / `count`:租戶隔離、可見範圍、資料範圍、軟刪除由 plugin 套,專案沒有自訂查詢的接縫,放寬不了                                                 |
+| 欄位權限      | 同 `user`:讀不到的欄位省略、不拿它比關鍵字;以它當 `valueField` 反查也要讀得到;寫進提交的快照用 `publicOnly`(帶權限的欄位一律省略)                                                                      |
+
+驗收夾具:`apps/api/src/test-support/project-fixture/project-fixture-lookup.ts`(`fixture_item`,只存在於測試,不在正式 `project/` 路徑)。
 
 ### 顯示模板 `labelTemplate`
 

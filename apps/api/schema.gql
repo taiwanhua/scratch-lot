@@ -698,6 +698,27 @@ type FormLookupPayload {
   totalCount: Int!
 }
 
+type FormLookupProvider {
+  fields: [FormLookupProviderField!]!
+  filterFields: [String!]!
+  isBase: Boolean!
+  key: String!
+  labelField: String!
+  name: String!
+  valueField: String!
+}
+
+type FormLookupProviderField {
+  key: String!
+  label: String
+  type: String!
+}
+
+type FormLookupProvidersPayload {
+  items: [FormLookupProvider!]!
+  totalCount: Int!
+}
+
 type FormLookupRecord {
   id: ID!
   label: String
@@ -1371,6 +1392,7 @@ type Query {
   form(key: ID!): FormPayload!
   formFieldOptions(input: FormFieldOptionsInput!): FormFieldOptionsPayload!
   formLookup(input: FormLookupInput!): FormLookupPayload!
+  formLookupProviders: FormLookupProvidersPayload!
   formLookupRecord(input: FormLookupRecordInput!): FormLookupRecordPayload!
   formRuntimeVersion(formKey: ID!, version: Int!): FormVersionPayload!
   formSubmission(id: ID!, revision: Int): FormSubmissionPayload!

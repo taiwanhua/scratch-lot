@@ -91,6 +91,10 @@
 
 正本:`packages/domain/src/form/dependencies.ts`、`apps/api/src/forms/form-values/submission-values.service.ts`、`apps/api/src/forms/field-permission-gate.ts`
 
+## lookup 來源
+
+帶入、引用與 lookup 選項共用一張 lookup 登錄表:底座提供使用者、組織、其他表單提交三種來源,專案可以登記自己的來源(key 一律加專案前綴,撞名時 api 起不來)。專案來源只交出宣告與一個 `BaseRepository`,查詢由底座組,所以租戶隔離、可見範圍與資料範圍照常套用,專案放寬不了;設計器的來源清單與發布時的檢查器自動包含專案來源。登記方式、宣告欄位與權限規則見 `docs/modules/forms.md`「lookup 登錄表」。
+
 ## 顯示名:labelTemplate 與頁籤模板
 
 - **lookup 的顯示模板**(`labelTemplate`,來源描述的選填欄位):選資料、引用與 lookup 選項的顯示名由 api 以模板組好(`{{name}}({{email}})`);模板引用的欄位只要有一個讀者讀不到,整串退回顯示欄 `labelField`。佔位符見 `docs/modules/forms.md`「lookup 登錄表」。
