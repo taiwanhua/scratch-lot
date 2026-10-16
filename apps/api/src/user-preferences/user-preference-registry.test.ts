@@ -89,6 +89,22 @@ describe("個人偏好的登記", () => {
     ).toThrow(UserPreferenceRegistryError);
   });
 
+  it.each(["base", "project"] as const)(
+    "%s 的手寫 key 不能以 notification_ 開頭(保留給通知管道開關)→ 起不來",
+    (source) => {
+      const reserved = [
+        { key: "notification_custom", type: "boolean", defaultValue: true },
+      ] as const;
+      expect(() =>
+        source === "base"
+          ? composeUserPreferences(reserved, [])
+          : composeUserPreferences([], reserved),
+      ).toThrow(UserPreferenceRegistryError);
+      // 推導來源可以用
+      expect(() => composeUserPreferences([], [], reserved)).not.toThrow();
+    },
+  );
+
   it("推導出的登記(通知管道開關)與手寫登記一起驗:撞 key 也起不來", () => {
     const derived = [
       { key: "lotteryView", type: "boolean", defaultValue: true },

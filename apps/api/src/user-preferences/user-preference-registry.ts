@@ -4,6 +4,13 @@
  * 專案的在 `src/project/user-preferences.ts`(固定入口,由 `app.module.ts` 經
  * `UserPreferenceRegistryModule.forRoot` 組裝);兩份合成時驗 key 格式與不重複,不合就讓 app 起不來。
  */
+import { NOTIFICATION_PREFERENCE_PREFIX } from "../notifications/notification-registry";
+
+/**
+ * 保留給推導來源的 key 前綴:通知管道開關(`notification_<類型>_<管道>`)只能由通知類型登記推導,
+ * 底座與專案手寫的 key 不能用這個開頭(否則日後新增通知類型時會撞 key,或被誤當成管道開關)。
+ */
+const RESERVED_DERIVED_PREFIX = `${NOTIFICATION_PREFERENCE_PREFIX}_`;
 
 /** 偏好值的型別(值一律是 JSON 純量;要多個值就登記多個 key)。 */
 export type UserPreferenceType = "string" | "boolean" | "number";
@@ -102,6 +109,14 @@ export function composeUserPreferences(
     if (!KEY_PATTERN.test(definition.key)) {
       throw new UserPreferenceRegistryError(
         `${source} 的偏好 key「${definition.key}」格式不對:英數開頭,只能有英數、- 與 _`,
+      );
+    }
+    if (
+      source !== "derived" &&
+      definition.key.startsWith(RESERVED_DERIVED_PREFIX)
+    ) {
+      throw new UserPreferenceRegistryError(
+        `${source} 的偏好 key「${definition.key}」不能以 ${RESERVED_DERIVED_PREFIX} 開頭(保留給通知管道開關)`,
       );
     }
     if (registry.has(definition.key)) {

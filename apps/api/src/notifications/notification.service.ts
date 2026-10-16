@@ -80,6 +80,8 @@ interface PlannedDelivery {
   channels: string[];
   title: string;
   body: string;
+  /** 收件人的語言(個人偏好;沒有設定 = null) */
+  locale: string | null;
 }
 
 /**
@@ -157,6 +159,7 @@ export class NotificationService {
             title: item.title,
             body: item.body,
             path,
+            locale: item.locale,
           });
           deliveries.set(channel, list);
         }
@@ -317,12 +320,10 @@ export class NotificationService {
       if (channels.length === 0) {
         continue;
       }
-      const locale = settings[LOCALE_PREFERENCE_KEY];
-      const content = templateFor(
-        type,
-        typeof locale === "string" ? locale : null,
-      )(input.params ?? {});
-      planned.push({ recipientId, channels, ...content });
+      const stored = settings[LOCALE_PREFERENCE_KEY];
+      const locale = typeof stored === "string" ? stored : null;
+      const content = templateFor(type, locale)(input.params ?? {});
+      planned.push({ recipientId, channels, locale, ...content });
     }
     return planned;
   }

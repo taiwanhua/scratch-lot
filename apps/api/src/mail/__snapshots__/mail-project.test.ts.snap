@@ -100,6 +100,32 @@ CookHome 後台管理系統",
 }
 `;
 
+exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 通知信外框依收件人語言:英文問候語、連結說明,以品牌名署名 1`] = `
+{
+  "html": "<!doctype html><html lang="zh-Hant"><body>
+<p>Hi Ming,</p>
+<p>A request &quot;Leave&quot; is waiting for your review (step: Manager).</p>
+<p>Open the link below for details:</p>
+<p><a href="https://admin.example.com/apply-center/view-page/1">https://admin.example.com/apply-center/view-page/1</a></p>
+<p>CookHome</p>
+</body></html>",
+  "kind": "notification",
+  "link": "https://admin.example.com/apply-center/view-page/1",
+  "notificationType": "workflow.task-created",
+  "subject": "【CookHome】Pending review: Leave",
+  "text": "Hi Ming,
+
+A request "Leave" is waiting for your review (step: Manager).
+
+Open the link below for details:
+
+https://admin.example.com/apply-center/view-page/1
+
+CookHome",
+  "to": "reviewer@example.com",
+}
+`;
+
 exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 重設密碼信 1`] = `
 {
   "html": "<!doctype html><html lang="zh-Hant"><body>

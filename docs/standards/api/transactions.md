@@ -45,7 +45,7 @@ repository 一律把目前交易的 session 明確交給 driver:沒帶 `session`
 ```ts
 await this.transactions.withTransaction(async (session) => {
   await this.notifications.create(operator, notice, { session }); // 資料庫寫入:交易內
-  afterCommit(() => this.mail.sendWorkflowTaskEmail(input)); // 外部動作:交易後
+  afterCommit(() => this.mail.sendNotificationEmail(input)); // 外部動作:交易後
   afterCommit(() => this.cache.delete(key)); // 行程內副作用:交易後
 });
 ```
