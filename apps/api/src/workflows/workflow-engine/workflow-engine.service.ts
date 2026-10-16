@@ -15,7 +15,7 @@ import {
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
 } from "../../database/database.module";
-import { TransactionService } from "../../database/transaction";
+import { TransactionService, afterCommit } from "../../database/transaction";
 import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import { WorkflowTasksRepository } from "../../database/workflow-tasks.repository";
 import { RealtimePublisher } from "../../realtime/realtime-publisher.service";
@@ -133,28 +133,28 @@ export class WorkflowEngineService {
    *
    * 推進完對這個實例的審核者(現任與被改派走的)送 `badge:apply-center`(底座規格 10.4):
    * 每個入口(送出、決定、改派、撤回、失效 hook、重試推進)都在寫入後呼叫這裡,任務的建立 / 結束 / 改派
-   * 都會經過;多送給同一實例其他審核者只是讓他們重抓一次計數。`publishBadge` 在交易內走
-   * `publishAfterCommit`:交易提交後才送,回復就不送。
+   * 都會經過;多送給同一實例其他審核者只是讓他們重抓一次計數。交易內只用 `afterCommit` 登記,
+   * 提交後才讀審核者並送出(回復就不送);失敗只記 log。
    */
   advance(instanceId: Types.ObjectId): Promise<InstanceRecord | null> {
     return this.transactions.withTransaction(async () => {
       const instance = await this.runRounds(instanceId);
-      if (instance !== null) {
-        await this.publishTaskBadges(instance);
+      const tenantId = instance?.tenantId ?? null;
+      if (instance !== null && tenantId !== null) {
+        // 交易內只登記;讀審核者與送出都在提交之後(交易回復就不做),不在交易 session 上吞錯誤(TX-04)
+        afterCommit(() => this.publishTaskBadges(tenantId, instance._id));
       }
       return instance;
     });
   }
 
-  /** 盡力而為:找審核者或登記送出失敗只記 log,不讓推進(與它的交易)失敗。 */
-  private async publishTaskBadges(instance: InstanceRecord): Promise<void> {
-    if (instance.tenantId === null) {
-      return;
-    }
+  /** 交易提交後執行,盡力而為:讀審核者或送出失敗只記 log。 */
+  private async publishTaskBadges(
+    tenantId: Types.ObjectId,
+    instanceId: Types.ObjectId,
+  ): Promise<void> {
     try {
-      const tasks = await this.tasks.findMany(instance.tenantId, {
-        instanceId: instance._id,
-      });
+      const tasks = await this.tasks.findMany(tenantId, { instanceId });
       const reviewers = new Set(
         tasks.flatMap((task) => [
           String(task.assigneeId),
@@ -162,15 +162,13 @@ export class WorkflowEngineService {
         ]),
       );
       if (reviewers.size > 0) {
-        await this.realtime.publishBadge(
-          instance.tenantId,
-          APPLY_CENTER_MODULE_KEY,
-          [...reviewers],
-        );
+        await this.realtime.publishBadge(tenantId, APPLY_CENTER_MODULE_KEY, [
+          ...reviewers,
+        ]);
       }
     } catch (error) {
       this.logger.warn(
-        `實例 ${String(instance._id)} 的側欄計數信號沒有送出(盡力而為):${error instanceof Error ? error.message : String(error)}`,
+        `實例 ${String(instanceId)} 的側欄計數信號沒有送出(盡力而為):${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

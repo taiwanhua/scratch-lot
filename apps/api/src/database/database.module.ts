@@ -11,7 +11,10 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { PROJECT_DATABASE_REGISTRATIONS } from "../project/database/registrations";
 import { PROJECT_LOOKUP_PROVIDERS } from "../project/lookup-providers";
 import { PROJECT_REALTIME_BOARDS } from "../project/realtime-boards";
-import { REALTIME_BOARDS } from "../realtime/realtime-board-registration";
+import {
+  REALTIME_BOARDS,
+  composeRealtimeBoards,
+} from "../realtime/realtime-board-registration";
 import { BASE_DATABASE_REGISTRATIONS } from "./base/registrations";
 import {
   OrgBusinessDataReader,
@@ -123,11 +126,17 @@ const DATABASE = assembleDatabase(
  * 專案的看板頻道登記(`project/realtime-boards.ts`)也經這個組裝入口提供(STRUCT-12 api:底座只有
  * `app.module.ts` 與本檔能讀專案來源),由即時通道的 `RealtimeTicketService` 注入 `REALTIME_BOARDS`。
  */
+const REALTIME_BOARD_LIST = composeRealtimeBoards(PROJECT_REALTIME_BOARDS);
+
 @Module({
   ...DATABASE.metadata,
   providers: [
     ...(DATABASE.metadata.providers ?? []),
-    { provide: REALTIME_BOARDS, useValue: PROJECT_REALTIME_BOARDS },
+    {
+      provide: REALTIME_BOARDS,
+      // key 重複或空白 → 載入就拋錯,app 起不來
+      useValue: REALTIME_BOARD_LIST,
+    },
   ],
   exports: [...(DATABASE.metadata.exports ?? []), REALTIME_BOARDS],
 })

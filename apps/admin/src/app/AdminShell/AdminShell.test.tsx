@@ -1,8 +1,9 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { COLOR_MODE_STORAGE_KEY } from "@/lib/base/color-mode";
 import { LOCALE_STORAGE_KEY } from "@/lib/base/locale";
+import { RealtimeConnection } from "@/lib/base/realtime/realtime-connection";
 import {
   SWITCHED_ACCESS_TOKEN,
   authWorld,
@@ -293,6 +294,33 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
       within(await findSideNav()).getByText("測試租戶"),
     ).toBeInTheDocument();
     expect(screen.getByText("當前組織:測試租戶")).toBeInTheDocument();
+  });
+
+  it("切換當前組織成功 → 立即換發即時通道的訂閱憑證(RealtimeConnection.refresh)", async () => {
+    const refresh = jest.spyOn(RealtimeConnection.prototype, "refresh");
+    try {
+      const world = authWorld({
+        hasRefreshCookie: true,
+        modules: [overviewModule, ...sampleTwoModules],
+        orgs: [testOrg, tenant],
+      });
+      server.use(...world.handlers);
+
+      const { user } = renderApp({ path: "/overview" });
+      const switcher = await screen.findByRole("combobox", {
+        name: "當前組織",
+      });
+      expect(refresh).not.toHaveBeenCalled();
+      await user.click(switcher);
+      await user.click(await screen.findByRole("option", { name: "測試租戶" }));
+
+      await waitFor(() => {
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
+      expect(world.calls.switchOrg).toBe(1);
+    } finally {
+      refresh.mockRestore();
+    }
   });
 
   it("使用者選單:登出所有裝置 → 打 api、回登入頁", async () => {

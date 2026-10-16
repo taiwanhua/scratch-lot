@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { Types } from "mongoose";
 
 import type { RealtimePublishRequest } from "@repo/domain/realtime";
 
@@ -6,6 +7,7 @@ import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
+import { TransactionService } from "../../database/transaction";
 import { call, ok } from "../../forms/test-support/form-fixtures";
 import { RealtimeTransport } from "../../realtime/realtime-transport";
 import { interruptAt } from "../test-support/hooks-fixture";
@@ -16,6 +18,7 @@ import {
   WITHDRAW,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
+  currentInstance,
   decideOn,
   pendingTaskOf,
   setupWorld,
@@ -23,6 +26,7 @@ import {
   useWorkflow,
   usersStep,
 } from "../test-support/workflow-fixtures";
+import { WorkflowEngineService } from "./workflow-engine.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -125,6 +129,32 @@ describe("流程任務 → badge:apply-center", () => {
     } finally {
       restore();
     }
+    expect(badgesSince(from)).toEqual([]);
+  });
+
+  it("沒有外層交易時直接呼叫 advance(重試推進、排程等)→ advance 自己的交易提交後送出", async () => {
+    const submitted = await submitLeave(world);
+    const instance = await currentInstance(world, submitted.id);
+    const engine = api.app.get(WorkflowEngineService, { strict: false });
+    const from = sent.length;
+    await engine.advance(new Types.ObjectId(instance.id));
+    expect(badgesSince(from).flat()).toEqual(
+      expect.arrayContaining([topicOf(a), topicOf(b)]),
+    );
+  });
+
+  it("在外層交易內呼叫 advance、外層之後回復 → 不送(登記在外層交易上,跟著回復)", async () => {
+    const submitted = await submitLeave(world);
+    const instance = await currentInstance(world, submitted.id);
+    const engine = api.app.get(WorkflowEngineService, { strict: false });
+    const transactions = api.app.get(TransactionService, { strict: false });
+    const from = sent.length;
+    await expect(
+      transactions.withTransaction(async () => {
+        await engine.advance(new Types.ObjectId(instance.id));
+        throw new Error("外層後面一步失敗");
+      }),
+    ).rejects.toThrow("外層後面一步失敗");
     expect(badgesSince(from)).toEqual([]);
   });
 });

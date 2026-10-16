@@ -61,7 +61,8 @@ export const RealtimeProvider = ({
   const listeners = useRef(new Map<string, Set<RealtimeSignalHandler>>());
   const connection = useRef<RealtimeConnection | null>(null);
   const injected = useRef(connectionOptions);
-  const followUps = useRef(new Set<string>());
+  /** 各信號類型排著的補抓計時器(以最後一次信號為準重排)。 */
+  const followUps = useRef(new Map<string, unknown>());
 
   const invalidateAll = useCallback(() => {
     for (const keys of signals.values()) {
@@ -88,15 +89,22 @@ export const RealtimeProvider = ({
         for (const queryKey of keys) {
           void queryClient.invalidateQueries({ queryKey });
         }
-        // 約 2.5 秒後再抓一次(同一類型排一次就好),補上送出端在 2 秒窗內丟掉的變動
-        if (keys.length > 0 && !followUps.current.has(signal.type)) {
-          followUps.current.add(signal.type);
-          timers.set(() => {
-            followUps.current.delete(signal.type);
-            for (const queryKey of keys) {
-              void queryClient.invalidateQueries({ queryKey });
-            }
-          }, REALTIME_FOLLOW_UP_MS);
+        // 最後一次信號後約 2.5 秒再抓一次,補上送出端在 2 秒窗內丟掉的變動:
+        // 每來一次就清掉這個類型原本的計時器、從現在起重排(窗是從每次前緣信號起算的)
+        if (keys.length > 0) {
+          const previous = followUps.current.get(signal.type);
+          if (previous !== undefined) {
+            timers.clear(previous);
+          }
+          followUps.current.set(
+            signal.type,
+            timers.set(() => {
+              followUps.current.delete(signal.type);
+              for (const queryKey of keys) {
+                void queryClient.invalidateQueries({ queryKey });
+              }
+            }, REALTIME_FOLLOW_UP_MS),
+          );
         }
         for (const handler of listeners.current.get(signal.type) ?? []) {
           handler(signal, topic);
@@ -105,9 +113,14 @@ export const RealtimeProvider = ({
     });
     connection.current = instance;
     instance.start();
+    const pending = followUps.current;
     return () => {
       instance.stop();
       connection.current = null;
+      for (const handle of pending.values()) {
+        timers.clear(handle);
+      }
+      pending.clear();
     };
   }, [session.client, queryClient, signals, invalidateAll]);
 

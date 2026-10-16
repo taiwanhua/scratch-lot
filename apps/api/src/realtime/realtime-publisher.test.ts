@@ -40,7 +40,7 @@ class RecordingTransport extends RealtimeTransport {
 
 /**
  * 送出信號(底座規格第 4 章):交易後執行、交易回復不送、盡力而為、一次多頻道。
- * 用真的單一成員 replica set 跑交易,transport 換成記錄用;每個測試用不同使用者,避開 2 秒合併。
+ * 用真的單一成員 replica set 跑交易,transport 換成記錄用(這裡的信號類型都不合併,看板合併另見 `signal-coalescer.test.ts`)。
  */
 describe("RealtimePublisher", () => {
   let database: TestDatabase;
