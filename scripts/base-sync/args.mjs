@@ -13,11 +13,15 @@ const COMMANDS = {
     "--commit": "commit",
     "--base": "base",
     "--worktree-root": "worktreeRoot",
+    "--accept-mixed": "acceptMixed",
   },
 };
 
 /** 可重複的參數(輸出成陣列)。 */
-const REPEATABLE = new Set(["projects"]);
+const REPEATABLE = new Set(["projects", "acceptMixed"]);
+
+/** 可省略的參數;其餘都必填。 */
+const OPTIONAL = new Set(["acceptMixed"]);
 
 const HELP_FLAGS = new Set(["--help", "-h"]);
 
@@ -36,7 +40,7 @@ const SUMMARIES = {
   contribute: [
     "把專案一個 commit 相對其 parent 的精確差異,從底座最新 origin/main 準備成 common-only 分支,只 stage 不提交。",
     "--project 是來源專案根目錄、--commit 是完整 40 位 commit SHA、--base 是底座 repo 根目錄;工作樹建在已存在的 --worktree-root 目錄之下。",
-    "含專案專屬路徑或 merge commit 的來源一律拒絕。",
+    "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕。",
   ],
 };
 
@@ -48,6 +52,7 @@ const FOOTER = [
 function synopsis(command) {
   const options = Object.entries(COMMANDS[command]).map(([name, key]) => {
     const option = `${name} <${name.slice(2)}>`;
+    if (OPTIONAL.has(key)) return `[${option} ...]`;
     return REPEATABLE.has(key) ? `${option} [${option} ...]` : option;
   });
   return `${command} ${options.join(" ")}`;
@@ -61,7 +66,7 @@ export function usage(command) {
           `用法:${PROGRAM} <命令> <參數…>`,
           `      ${PROGRAM} [命令] --help | -h`,
           "",
-          "底座跨 repo 升級與回收的共用入口;每個命令列出的參數都必填。",
+          "底座跨 repo 升級與回收的共用入口;每個命令列出的參數除方括號內的以外都必填。",
           "",
           ...Object.keys(COMMANDS).flatMap((name) => [
             `  ${synopsis(name)}`,
@@ -106,7 +111,9 @@ export function parseArguments(argv) {
     }
   }
   for (const [name, key] of Object.entries(spec)) {
-    if (!Object.hasOwn(options, key)) fail(`${command} 需要 ${name}`);
+    if (!Object.hasOwn(options, key) && !OPTIONAL.has(key)) {
+      fail(`${command} 需要 ${name}`);
+    }
   }
   return { command, options };
 }

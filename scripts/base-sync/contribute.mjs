@@ -1,7 +1,9 @@
 /**
  * `contribute`:把引用專案一個已明選的 commit 的精確差異(相對它唯一的 parent),
  * 從底座最新 origin/main 準備成 common-only contribution 分支。差異只 stage 不提交,provenance 在輸出與分支 metadata;
- * 不把專案分支 merge 回底座、不自動選 hunk。含 project / mixed / published-data / unknown 路徑一律拒絕,由 agent 先拆 commit。
+ * 不把專案分支 merge 回底座、不自動選 hunk。含 project / published-data / unknown 路徑一律拒絕,由 agent 先拆 commit。
+ * mixed 只接受以 `--accept-mixed` 逐檔明列的檔案(agent 已整理成只含底座段落),其差異列進報告供審查;
+ * 未明列的 mixed 仍拒絕,明列的檔不在差異內或不是 mixed 也報錯(防止誤列)。
  * `common` 只是路徑候選,是否通用仍須讀 exact delta 判斷,由使用者決定納入。
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -41,7 +43,34 @@ function requireSourceCommit(root, commit) {
   if (!commitExists(root, commit)) fail("--commit 不在來源專案的本機歷史");
 }
 
-function sourceDelta(project, commit) {
+const MIXED_REVIEW_NOTE = "混合檔:只含底座段落,請審查";
+
+/** 命令列路徑一律以 repo 相對、正斜線比對(容許 Windows 的反斜線與開頭的 `./`)。 */
+const normalizePath = (file) =>
+  file.replaceAll("\\", "/").replace(/^(?:\.\/)+/, "");
+
+/** 明列的檔必須在來源差異內且確實是 mixed;回傳去重後的集合。 */
+function acceptedMixedPaths(files, acceptMixed) {
+  const byPath = new Map(files.map((file) => [file.path, file]));
+  const accepted = new Set();
+  for (const raw of acceptMixed) {
+    const file = byPath.get(normalizePath(raw));
+    if (file === undefined) {
+      fail(
+        `--accept-mixed 列的 ${normalizePath(raw)} 不在來源 commit 的差異內`,
+      );
+    }
+    if (file.category !== "mixed") {
+      fail(
+        `--accept-mixed 只能列混合檔:${file.path} 是 ${file.category},請移除這個參數`,
+      );
+    }
+    accepted.add(file.path);
+  }
+  return accepted;
+}
+
+function sourceDelta(project, commit, acceptMixed) {
   const [, ...parents] = git(project.root, [
     "rev-list",
     "--parents",
@@ -55,10 +84,13 @@ function sourceDelta(project, commit) {
   const [parent] = parents;
   const files = classifyFiles(diffFiles(project.root, parent, commit));
   if (files.length === 0) fail("來源 commit 沒有任何檔案差異");
-  const rejected = files.filter((file) => file.category !== "common");
+  const accepted = acceptedMixedPaths(files, acceptMixed);
+  const rejected = files.filter(
+    (file) => file.category !== "common" && !accepted.has(file.path),
+  );
   if (rejected.length > 0) {
     fail(
-      `來源 commit 含非 common 路徑,請先拆成 common-only commit:${rejected
+      `來源 commit 含未接受的非 common 路徑,請先拆成 common-only commit,或以 --accept-mixed 明列只含底座段落的混合檔:${rejected
         .map((file) => `${file.path}(${file.category})`)
         .join("、")}`,
     );
@@ -72,7 +104,22 @@ function sourceDelta(project, commit) {
     commit,
     "--",
   ]);
-  return { parent, files, patch: `${patch}\n` };
+  const mixedReview = files
+    .filter((file) => accepted.has(file.path))
+    .map((file) => ({
+      path: file.path,
+      status: file.status,
+      diff: git(project.root, [
+        "diff",
+        "--full-index",
+        "--no-renames",
+        parent,
+        commit,
+        "--",
+        file.path,
+      ]),
+    }));
+  return { parent, files, mixedReview, patch: `${patch}\n` };
 }
 
 /** 在暫存 index 上確認 patch 能乾淨套在底座 main,才建立任何分支或工作樹。 */
@@ -147,7 +194,7 @@ export function contribute(options, { fetchRemote }) {
   const knownBaseRef =
     resolveRef(baseRoot, "refs/remotes/origin/main^{commit}") ?? "HEAD";
   verifiedOrigin(baseRoot, "--base", knownBaseRef);
-  const delta = sourceDelta(project, commit);
+  const delta = sourceDelta(project, commit, options.acceptMixed ?? []);
   const mainCommit = fetchOriginMain(baseRoot, "--base", fetchRemote);
   const baseRepository = verifiedOrigin(baseRoot, "--base", mainCommit);
   if (baseRepository !== project.adopted.repository) {
@@ -203,5 +250,6 @@ export function contribute(options, { fetchRemote }) {
     branch,
     worktree,
     files: delta.files,
+    mixedReview: { note: MIXED_REVIEW_NOTE, files: delta.mixedReview },
   };
 }

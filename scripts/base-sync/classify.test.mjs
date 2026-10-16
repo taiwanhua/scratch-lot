@@ -52,3 +52,15 @@ test("admin 的固定組裝入口判為 mixed", () => {
     "mixed",
   );
 });
+
+test("realtime / print-agent 判為 common", () => {
+  assert.equal(classifyPath("apps/realtime/src/index.ts", "A"), "common");
+  assert.equal(classifyPath("apps/print-agent/src/main.ts", "M"), "common");
+});
+
+test("專案的名詞表與討論紀錄判為 project,底座的仍是 mixed", () => {
+  assert.equal(classifyPath("CONTEXT-PROJECT.md", "M"), "project");
+  assert.equal(classifyPath("docs/tmp/project-dis.md", "M"), "project");
+  assert.equal(classifyPath("CONTEXT.md", "M"), "mixed");
+  assert.equal(classifyPath("docs/tmp/dis.md", "M"), "mixed");
+});

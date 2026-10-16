@@ -33,6 +33,9 @@ const PROJECT = [
   /^apps\/front\//,
   /^deploy\/project\//,
   /^deploy\/env\//,
+  // 專案自己的名詞表與討論紀錄(與底座的 CONTEXT.md、docs/tmp/dis.md 拆開);須排在 MIXED 的 *.md / docs/ 之前
+  /^CONTEXT-PROJECT\.md$/,
+  /^docs\/tmp\/project-dis\.md$/,
 ];
 
 const MIXED = [
@@ -61,7 +64,7 @@ const MIXED = [
 
 const COMMON = [
   /^packages\//,
-  /^apps\/(?:admin|api|db-migrator|e2e|storybook)\//,
+  /^apps\/(?:admin|api|db-migrator|e2e|print-agent|realtime|storybook)\//,
   /^scripts\//,
 ];
 
