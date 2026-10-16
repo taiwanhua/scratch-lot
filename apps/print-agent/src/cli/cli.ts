@@ -145,7 +145,7 @@ async function runCommand(args: ParsedArgs, io: CliIo): Promise<number> {
   const simulatorDir = args.values.get("--simulator");
   const transport: PrinterTransport =
     simulatorDir === undefined
-      ? new TcpPrinterTransport()
+      ? new TcpPrinterTransport({ logger })
       : new SimulatorTransport({ dir: simulatorDir });
   if (simulatorDir !== undefined) {
     logger.info("模擬印表機模式:不送出,存成圖片", { dir: simulatorDir });

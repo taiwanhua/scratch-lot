@@ -10,17 +10,17 @@ API 建立 print_job → 送出 print-agent:<id> 的 print-job 信號
 
 ## 模組
 
-| 模組                     | 做什麼                                                                                                                      |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `src/pairing`            | 伺服器網址 + 配對碼 → 換長期金鑰 → 寫入本機設定檔;已有設定檔時不覆蓋(加 `--force` 才重新配對)                               |
-| `src/api-client`         | 用金鑰呼叫 API:拿工作、認領、拿圖片、回報、換訂閱憑證、心跳。路徑與形狀的正本是 `@repo/domain/printing`                     |
-| `src/realtime`           | Node 內建 WebSocket 連即時通道,收 `print-agent:<id>`;在原連線換發憑證;斷線依 1 / 2 / 5 / 10 / 30 秒退避重連                 |
-| `src/agent`              | 接起來:啟動先拿一次未完成工作;沒連上即時通道時每 60 秒輪詢、重新連上先補抓;**不論有沒有連上都每 60 秒心跳**(維持「已連線」) |
-| `src/job-runner`         | 佇列:同一台印表機一次一張、依序印;回報失敗時重試                                                                            |
-| `src/escpos`             | PNG 解碼(純 JS 的 `pngjs`)→ 單色點陣 → `GS v 0` 分段(每段 128 列)→ `GS V 66` 切紙;`DLE EOT 4` 查缺紙;TCP 連線與逾時         |
-| `src/simulator`          | 模擬印表機:不送出,把收到的 ESC/POS 指令解回圖片存成 PNG                                                                     |
-| `src/logging`            | 每天一個 log 檔(`print-agent-YYYY-MM-DD.log`)、保留 14 天;不寫金鑰                                                          |
-| `src/release`、`scripts` | 打包與發布(見下文)                                                                                                          |
+| 模組                     | 做什麼                                                                                                                                                                                                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pairing`            | 伺服器網址 + 配對碼 → 換長期金鑰 → 寫入本機設定檔;已有設定檔時不覆蓋(加 `--force` 才重新配對)                                                                                                                                                                                    |
+| `src/api-client`         | 用金鑰呼叫 API:拿工作、認領、拿圖片、回報、換訂閱憑證、心跳。路徑與形狀的正本是 `@repo/domain/printing`                                                                                                                                                                          |
+| `src/realtime`           | Node 內建 WebSocket 連即時通道,收 `print-agent:<id>`;在原連線換發憑證;斷線依 1 / 2 / 5 / 10 / 30 秒退避重連                                                                                                                                                                      |
+| `src/agent`              | 接起來:啟動先拿一次未完成工作;沒連上即時通道時每 60 秒輪詢、重新連上先補抓;**不論有沒有連上都每 60 秒心跳**(維持「已連線」)                                                                                                                                                      |
+| `src/job-runner`         | 佇列:同一台印表機一次一張、依序印;認領已超過 2 分鐘結果逾時的不印;回報在佇列外退避重試(約 90 秒);心跳查狀態時佇列忙就用上次的狀態                                                                                                                                                |
+| `src/escpos`             | PNG 解碼(純 JS 的 `pngjs`)→ 單色點陣 → `GS v 0` 分段(每段 128 列)→ `GS V 66` 切紙;`DLE EOT 4` 查缺紙(不回應的機型每台記一次 warn、照常列印);一張單據從連線到關閉共用 30 秒總期限,收據機卡住時 destroy 並回報 `other`;先讀 IHDR 擋掉超過 `PRINT_IMAGE_MAX_HEIGHT_DOTS` 的圖再解碼 |
+| `src/simulator`          | 模擬印表機:不送出,把收到的 ESC/POS 指令解回圖片存成 PNG                                                                                                                                                                                                                          |
+| `src/logging`            | 每天一個 log 檔(`print-agent-YYYY-MM-DD.log`)、保留 14 天;不寫金鑰                                                                                                                                                                                                               |
+| `src/release`、`scripts` | 打包與發布(見下文)                                                                                                                                                                                                                                                               |
 
 **只印一次**:信號與輪詢可能同時帶來同一張工作。本機先擋掉最近處理過的工作 id,真正的保證是 API 的認領(條件更新,第二次 409)。
 
@@ -56,6 +56,8 @@ pnpm --filter @repo/print-agent agent run --config-dir ./tmp/config --simulator 
 
 設定檔只有服務身分能讀:Windows 以 `icacls` 只留 SYSTEM 與 Administrators;Linux 目錄 0700 / 檔案 0600,擁有者 `print-agent`;macOS 目錄 0700 / 檔案 0600,擁有者 root。
 
+log 的保留期以代理程式自己的檔案為準(每天一個、14 天):服務管理員那邊不再存 stdout(Linux `StandardOutput=null`、macOS stdout 指到 `/dev/null`、WinSW 只留兩個 1MB 的滾動檔),當掉時的 stderr 才另外留(Linux 的 journald、macOS 的 `stderr.log`)。
+
 ## 安裝(店家)
 
 1. 印表機管理 → 代理程式分頁 → 依電腦系統下載安裝檔;[新增代理程式] 選分店與名稱,留著顯示伺服器網址與配對碼(10 分鐘有效)的畫面。
@@ -64,6 +66,8 @@ pnpm --filter @repo/print-agent agent run --config-dir ./tmp/config --simulator 
    - **Linux**:`sudo ./install.sh`(Debian / Ubuntu / Raspberry Pi OS;需要 systemd 與 `useradd`)。
    - **macOS(Apple 晶片)**:在「終端機」進到解壓後的資料夾,執行 `sudo ./install.sh`。
 3. 依提示貼上伺服器網址與配對碼 → 安裝程式註冊服務並啟動 → 回到代理程式分頁確認「已連線」。
+
+**Windows 跳出 SmartScreen**(「Windows 已保護您的電腦」):執行檔沒有程式碼簽章,第一次執行 `安裝.bat` 或 `print-agent.exe` 時可能出現。確認檔案是從印表機管理頁下載的,按「其他資訊」→「仍要執行」。若檔案被標成「已封鎖」,先在 zip 檔上按右鍵 →「內容」→ 勾「解除封鎖」→ 確定,再解壓縮。
 
 **macOS 第一次被擋**:執行檔沒有 Apple 開發者簽章。`install.sh` 會先解除下載帶來的隔離標記;如果仍出現「無法打開,因為無法驗證開發者」,到「系統設定 → 隱私權與安全性」最下方按「仍要打開」,或在終端機執行 `xattr -dr com.apple.quarantine <解壓後的資料夾>` 再執行一次安裝。
 
@@ -77,9 +81,13 @@ pnpm --filter @repo/print-agent agent run --config-dir ./tmp/config --simulator 
 - Linux:`sudo systemctl disable --now print-agent`,刪除 `/etc/systemd/system/print-agent.service`、`/opt/print-agent`、`/etc/print-agent`、`/var/log/print-agent`。
 - macOS:`sudo launchctl bootout system/print-agent`,刪除 `/Library/LaunchDaemons/print-agent.plist`、`/usr/local/print-agent`、`/Library/Application Support/print-agent`、`/Library/Logs/print-agent`。
 
-## 收據機固定 IP
+## 實機測試(收據機到貨後)
 
-收據機到貨後撰寫(底座規格「實機測試清單」第 1 項:路由器保留 IP 綁收據機 MAC;路由器不能設時才用收據機網頁或芯燁設定工具設固定 IP)。
+底座規格「實機測試清單」之外,代理程式還要確認:
+
+- **固定 IP**:到貨後撰寫設定步驟(路由器保留 IP 綁收據機 MAC;路由器不能設時才用收據機網頁或芯燁設定工具設固定 IP,注意不可與其他設備撞號)。
+- **9100 是否回 `DLE EOT 4`**:不回應時代理程式照常列印,但查不到缺紙(log 會出現一次「收據機沒有回應 DLE EOT 4」);要確認機型設定能否打開即時狀態回傳。
+- **切紙**:`GS V 66 0` 是否每張都切;**分段**:每段 128 列是否會斷印。
 
 ## 打包(四個平台)
 

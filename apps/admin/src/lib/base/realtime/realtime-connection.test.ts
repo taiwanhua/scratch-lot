@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 
 import {
+  MIN_RENEW_DELAY_MS,
+  RECONNECT_BACKOFF_MS,
+} from "@repo/domain/realtime";
+
+import {
   FakeSocket,
   ManualTimers,
   flushPromises,
@@ -9,8 +14,6 @@ import {
 
 import {
   DISABLED_RETRY_MS,
-  MIN_RENEW_DELAY_MS,
-  RECONNECT_BACKOFF_MS,
   RENEW_AFTER_MS,
   RealtimeConnection,
   type RealtimeGrant,

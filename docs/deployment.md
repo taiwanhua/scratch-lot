@@ -672,7 +672,7 @@ api 讀 `manifest.json`、以既有檔案服務簽 1 小時的下載網址(印�
 
 ```bash
 gcloud storage buckets add-iam-policy-binding gs://<私有 bucket> \
-  --member=serviceAccount:<deployer-sa> --role=roles/storage.objectAdmin \
+  --member=serviceAccount:<deployer-sa> --role=roles/storage.objectUser \
   --condition='expression=resource.name.startsWith("projects/_/buckets/<私有 bucket>/objects/print-agent/"),title=print-agent-release'
 ```
 

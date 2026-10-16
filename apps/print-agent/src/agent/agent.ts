@@ -2,7 +2,6 @@ import {
   PRINT_AGENT_HEARTBEAT_INTERVAL_MS,
   PRINT_AGENT_POLL_INTERVAL_MS,
   PRINT_SIGNALS,
-  type PrintAgentJob,
   type PrintAgentPrinter,
   type PrinterStatus,
 } from "@repo/domain/printing";
@@ -265,14 +264,7 @@ export class PrintAgent {
       printerId: claimed.printer.id,
     });
     // 不等印完:輪詢只負責認領,列印在佇列裡依序跑
-    void this.enqueue(claimed.printer, claimed.job);
-  }
-
-  private enqueue(
-    printer: PrintAgentPrinter,
-    job: PrintAgentJob,
-  ): Promise<void> {
-    return this.runner.enqueue(printer, job);
+    void this.runner.enqueue(claimed.printer, claimed.job, this.timers.now());
   }
 
   private reportApiError(

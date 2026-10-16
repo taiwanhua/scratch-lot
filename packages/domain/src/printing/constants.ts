@@ -45,6 +45,30 @@ export const PRINT_IMAGE_WIDTH_DOTS: Readonly<
 /** 一張列印影像(PNG)的大小上限(bytes)。 */
 export const PRINT_IMAGE_MAX_BYTES = 512 * 1024;
 
+/**
+ * 一張列印影像的高度上限(點)。58mm 收據機 8 點/mm,8000 點 = 100cm 紙長:
+ * 一般單據(表頭、明細、合計、QR code、簽名欄)約 10–40cm,留到一公尺給長明細;
+ * 再長多半是程式錯誤(例:把整頁轉成圖片),會一口氣吐出一大段紙。api 收圖與代理程式開印前都檢查。
+ */
+export const PRINT_IMAGE_MAX_HEIGHT_DOTS = 8000;
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** 只讀 PNG 的 IHDR(不解碼):回寬高;不是 PNG 回 null。 */
+export function readPngDimensions(
+  bytes: Uint8Array,
+): { width: number; height: number } | null {
+  if (
+    bytes.length < 24 ||
+    PNG_SIGNATURE.some((value, index) => bytes[index] !== value) ||
+    String.fromCodePoint(...bytes.subarray(12, 16)) !== "IHDR"
+  ) {
+    return null;
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  return { width: view.getUint32(16), height: view.getUint32(20) };
+}
+
 /** 工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗。 */
 export const PRINT_JOB_STATUSES = [
   "pending",

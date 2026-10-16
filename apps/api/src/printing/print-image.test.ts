@@ -1,6 +1,9 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { PRINT_IMAGE_MAX_BYTES } from "@repo/domain/printing";
+import {
+  PRINT_IMAGE_MAX_BYTES,
+  PRINT_IMAGE_MAX_HEIGHT_DOTS,
+} from "@repo/domain/printing";
 
 import { decodePrintImage } from "./print-jobs.service";
 import { pngBase64 } from "./test-support/printing-fixtures";
@@ -39,6 +42,23 @@ describe("列印影像 decodePrintImage", () => {
       expect.objectContaining({
         code: "INVALID_IMAGE",
         message: "image is not a PNG",
+      }),
+    ]);
+  });
+
+  it("高度上限 PRINT_IMAGE_MAX_HEIGHT_DOTS:剛好可以、超過一點 → INVALID_IMAGE", () => {
+    expect(
+      decodePrintImage(pngBase64(384, PRINT_IMAGE_MAX_HEIGHT_DOTS), 58).length,
+    ).toBeGreaterThan(0);
+    expect(
+      fieldErrorsOf(() =>
+        decodePrintImage(pngBase64(384, PRINT_IMAGE_MAX_HEIGHT_DOTS + 1), 58),
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        fieldKey: "image",
+        code: "INVALID_IMAGE",
+        message: expect.stringContaining("height"),
       }),
     ]);
   });
