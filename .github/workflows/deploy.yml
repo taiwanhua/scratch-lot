@@ -90,6 +90,7 @@ jobs:
           API_SERVICE: ${{ steps.cfg.outputs.api_service }}
           ADMIN_SERVICE: ${{ steps.cfg.outputs.admin_service }}
           FORCE: ${{ inputs.force }}
+          REALTIME: ${{ steps.cfg.outputs.realtime }}
         run: |
           decide() { # $1=服務名 $2=package 名 → 印 true/false
             local img base
@@ -117,10 +118,13 @@ jobs:
           # api 或 db-migrator 任一有變就跑 update:只改專案種子、快照或 migration 的部署不會換 api image,
           # 但設定照樣要交付(實際的設定版本記在 seed_update_runs.releaseCommit,不以 api image 的 SHA 代替)
           update=false; { [ "$api" = true ] || [ "$migrator" = true ]; } && update=true
+          # 即時通道(Cloudflare Worker)啟用時每次都部署(wrangler deploy 冪等、免費):Worker 沒有可比對的 image tag
+          node=$update; [ "$REALTIME" = true ] && node=true
           echo "api=$api" >> "$GITHUB_OUTPUT"
           echo "admin=$admin" >> "$GITHUB_OUTPUT"
           echo "update=$update" >> "$GITHUB_OUTPUT"
-          echo "::notice::部署判斷:api=$api admin=$admin update=$update(force=$FORCE)"
+          echo "node=$node" >> "$GITHUB_OUTPUT"
+          echo "::notice::部署判斷:api=$api admin=$admin update=$update realtime=$REALTIME(force=$FORCE)"
 
       # image tag = 完整 Git SHA-環境-run ID-attempt;admin 的 VITE_* build 時烘入 → 每環境各一顆
       - name: build + push api
@@ -146,8 +150,9 @@ jobs:
           docker push "$REGISTRY/admin:$IMAGE_TAG"
 
       # api 的環境變數兩個來源(docs/deployment.md「四、環境變數管理」):
-      #   非機密 → deploy/env/<環境>.yaml(--env-vars-file 整包取代既有明文變數;GRAPHQL_SANDBOX 也在檔內)
-      #   機密   → Secret Manager(--set-secrets;secret 名稱來自 deploy/project/cloud.json 的 secrets)
+      #   非機密 → deploy/env/<環境>.yaml(--env-vars-file 整包取代既有明文變數;GRAPHQL_SANDBOX、REALTIME_URL 也在檔內)
+      #   機密   → Secret Manager(--set-secrets;secret 名稱來自 deploy/project/cloud.json 的 secrets,
+      #            即時通道啟用時再加 realtime.secrets 的兩把)
       # 兩個旗標各管各的:--env-vars-file 只取代明文變數,不會清掉 --set-secrets 掛入的 secret 變數
       - name: deploy api
         if: steps.affected.outputs.api == 'true'
@@ -161,10 +166,15 @@ jobs:
           ENC_SECRET_NAME: ${{ steps.cfg.outputs.enc_secret }}
           JWT_SECRET_NAME: ${{ steps.cfg.outputs.jwt_secret }}
           RESEND_SECRET_NAME: ${{ steps.cfg.outputs.resend_secret }}
+          REALTIME_TICKET_SECRET_NAME: ${{ steps.cfg.outputs.realtime_ticket_secret }}
+          REALTIME_PUBLISH_SECRET_NAME: ${{ steps.cfg.outputs.realtime_publish_secret }}
         run: |
           SECRETS="MONGODB_URI=$MONGODB_SECRET_NAME:latest,FIELD_ENCRYPTION_KEY=$ENC_SECRET_NAME:latest,JWT_SECRET=$JWT_SECRET_NAME:latest"
           if [ -n "$RESEND_SECRET_NAME" ]; then
             SECRETS="$SECRETS,RESEND_API_KEY=$RESEND_SECRET_NAME:latest"
+          fi
+          if [ -n "$REALTIME_TICKET_SECRET_NAME" ]; then
+            SECRETS="$SECRETS,REALTIME_TICKET_SECRET=$REALTIME_TICKET_SECRET_NAME:latest,REALTIME_PUBLISH_SECRET=$REALTIME_PUBLISH_SECRET_NAME:latest"
           fi
           gcloud run deploy "$API_SERVICE" --region="$REGION" \
             --image="$REGISTRY/api:$IMAGE_TAG" \
@@ -190,10 +200,10 @@ jobs:
       # 受管定義由 api 的 CLI 發布,所以連 api 與它的 workspace 依賴一起安裝、建置 —— 用的是這個 checkout 的產物,
       # 不是雲端上那顆(可能較舊的)api image。MONGOMS_DISABLE_POSTINSTALL 避免下載測試用的 mongod 二進位檔。
       - uses: pnpm/action-setup@v4 # 版本讀 package.json 的 packageManager 欄位
-        if: steps.affected.outputs.update == 'true'
+        if: steps.affected.outputs.node == 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.affected.outputs.update == 'true'
+        if: steps.affected.outputs.node == 'true'
         with:
           node-version: 24
           cache: pnpm
@@ -227,3 +237,36 @@ jobs:
           echo "::add-mask::$ROOT_ADMIN_PASSWORD"
           export MONGODB_URI ROOT_ADMIN_PASSWORD
           pnpm --filter @repo/db-migrator run update
+
+      # 即時通道(apps/realtime,Cloudflare Worker + Durable Object;每個環境一個 Worker):
+      # Worker 名稱、Cloudflare 帳號與兩把密鑰的 Secret Manager 名稱來自 cloud.json 的 realtime;沒寫 = 不部署。
+      # 密鑰正本在 Secret Manager(api 也從那裡掛),部署時讀出、以 --secrets-file 隨這一版上傳成 Wrangler secret,
+      # 兩邊永遠同一個值;暫存檔在 RUNNER_TEMP,上傳後刪除。網域(rt-<環境>.<網域>)在 Cloudflare 綁一次,見 docs/deployment.md。
+      - name: 安裝即時通道的依賴
+        if: steps.cfg.outputs.realtime == 'true'
+        run: |
+          pnpm install --frozen-lockfile --filter "@repo/realtime..."
+          pnpm --filter "@repo/realtime^..." run build
+
+      - name: deploy realtime(Cloudflare Worker)
+        if: steps.cfg.outputs.realtime == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ steps.cfg.outputs.cloudflare_account_id }}
+          REALTIME_WORKER: ${{ steps.cfg.outputs.realtime_worker }}
+          REALTIME_TICKET_SECRET_NAME: ${{ steps.cfg.outputs.realtime_ticket_secret }}
+          REALTIME_PUBLISH_SECRET_NAME: ${{ steps.cfg.outputs.realtime_publish_secret }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::GitHub secret CLOUDFLARE_API_TOKEN 未設定(docs/env-registry.md)"
+            exit 1
+          fi
+          REALTIME_TICKET_SECRET=$(gcloud secrets versions access latest --secret="$REALTIME_TICKET_SECRET_NAME")
+          REALTIME_PUBLISH_SECRET=$(gcloud secrets versions access latest --secret="$REALTIME_PUBLISH_SECRET_NAME")
+          echo "::add-mask::$REALTIME_TICKET_SECRET"
+          echo "::add-mask::$REALTIME_PUBLISH_SECRET"
+          export REALTIME_TICKET_SECRET REALTIME_PUBLISH_SECRET CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
+          SECRETS_FILE="$RUNNER_TEMP/realtime-secrets.json"
+          trap 'rm -f "$SECRETS_FILE"' EXIT
+          (umask 077; node -e 'process.stdout.write(JSON.stringify({REALTIME_TICKET_SECRET: process.env.REALTIME_TICKET_SECRET, REALTIME_PUBLISH_SECRET: process.env.REALTIME_PUBLISH_SECRET}))' > "$SECRETS_FILE")
+          pnpm --filter @repo/realtime exec wrangler deploy --name "$REALTIME_WORKER" --secrets-file "$SECRETS_FILE"

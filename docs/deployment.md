@@ -24,16 +24,17 @@ admin (nginx / Cloud Run) ├─> api (NestJS / Cloud Run) ─> MongoDB
 
 ### 資源清單
 
-| 項目                                             | 識別正本 / 建立位置                                                   |
-| ------------------------------------------------ | --------------------------------------------------------------------- |
-| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用                 |
-| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`                            |
-| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                                             |
-| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                                              |
-| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                                       |
-| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)      | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務) |
-| front / Storybook                                | 專案自己的 Vercel 設定與網域                                          |
-| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                                |
+| 項目                                             | 識別正本 / 建立位置                                                                          |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用                                        |
+| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`                                                   |
+| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                                                                    |
+| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                                                                     |
+| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                                                              |
+| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)      | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務)                        |
+| 即時通道 Worker、Cloudflare 帳號、兩把密鑰名稱   | `cloud.json` 各環境的 `realtime`(可省略 = 停用);步驟見[即時通道](#即時通道cloudflare-worker) |
+| front / Storybook                                | 專案自己的 Vercel 設定與網域                                                                 |
+| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                                                       |
 
 值的用途與未設行為見 `docs/env-registry.md`,建立與驗證狀態依[初始化索引](project-initialization.md)記在 issue/PR。下文的 `project`、`example.invalid`、`<...>` 是操作示例,須換成該專案實際輸入。
 
@@ -183,16 +184,17 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **image**:tag = `<完整 Git SHA>-<環境>-<Actions run ID>-<attempt>`,每次 build 使用新 tag,不會移走其他環境或先前重跑所用 digest 的 tag。admin 的 `VITE_GRAPHQL_ENDPOINT` 由設定的 `apiUrl` 加 `/graphql`,以 `--build-arg` 烘入。舊版短 SHA tag 可由 preflight 解析,但已因重建失去 tag 的舊 digest 仍須人工查證,不可視為已核對。
 - **api 的環境變數**:非機密整包來自 `deploy/env/<環境>.yaml`(`--env-vars-file`),機密來自 Secret Manager(`--set-secrets`);見四、。
 - **部署成功後執行一次 `update`**:api 或 db-migrator 任一受影響就執行,只改專案 seed、快照或 migration 也會更新資料。runner 安裝 db-migrator、API 與其依賴,建置同一 checkout 的 API CLI 並確認可啟動,再讀該環境的資料庫與 root 初始密碼 Secret,執行 `pnpm --filter @repo/db-migrator run update`。完整順序、結果與失敗處理見下方「設定與資料更新」。
+- **即時通道(Cloudflare Worker)**:`cloud.json` 該環境寫了 `realtime` 才部署,而且每次都部署(Worker 沒有可比對的 image tag;`wrangler deploy` 冪等、免費方案不計次)。從 Secret Manager 讀兩把密鑰,以 `wrangler deploy --name <Worker> --secrets-file` 隨這一版上傳成 Wrangler secret;api 同時掛同兩把。見四、「即時通道」。
 - **front 不走 deploy.yml**:Vercel 在分支 push 時自動建置(`main` → production、`staging` / `dev` → 各自的分支網域);要不靠 commit 重建用 Deploy Hook(見四、「Vercel 補充設定」)。
 
 ### 專案部署設定(deploy/project)
 
 deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩份 JSON;workflow 只負責讀取、驗證與接線。換成另一個專案時改這兩份檔,不改 workflow。
 
-| 檔案                         | 內容                                                                                                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deploy/project/github.json` | `expectedRepository`(owner/repo 的唯一正本)、`projectStatus`(看板是否啟用、project 與 Status 欄位的 ID、十個狀態選項的 ID)                                                        |
-| `deploy/project/cloud.json`  | `gcp`(專案、區域、Artifact Registry、WIF provider、部署用 service account)、`environments.dev / staging / production`(api / admin 服務名、API 網址、seed 帳號與信箱、Secret 名稱) |
+| 檔案                         | 內容                                                                                                                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy/project/github.json` | `expectedRepository`(owner/repo 的唯一正本)、`projectStatus`(看板是否啟用、project 與 Status 欄位的 ID、十個狀態選項的 ID)                                                                                                                                            |
+| `deploy/project/cloud.json`  | `gcp`(專案、區域、Artifact Registry、WIF provider、部署用 service account)、`environments.dev / staging / production`(api / admin 服務名、API 網址、seed 帳號與信箱、Secret 名稱;可省略的 `realtime`:Worker 名稱、Cloudflare 帳號 id、兩把即時通道密鑰的 Secret 名稱) |
 
 - **只放非機密設定與 Secret「名稱」**;Secret 的值仍在 Secret Manager / GitHub Secrets。api 的非機密執行期變數仍只在 `deploy/env/<環境>.yaml`,不複製到這裡。
 - **讀取器**:`scripts/project-settings/config.mjs` 是唯一的讀取 / 驗證模組,CLI 是 `read-config.mjs`,只用 Node 內建模組(不需先 `pnpm install`)。兩個入口:
@@ -593,6 +595,34 @@ db.scheduled_job_runs
 卡住的紀錄會在下一次呼叫被重新取得,通常不必手動處理;反覆卡住表示 handler 太慢,先看 Cloud Run log 的逾時紀錄。
 
 正本:`apps/api/src/scheduled-jobs/`、`deploy/env/<環境>.yaml`
+
+### 即時通道(Cloudflare Worker)
+
+即時通道 = `apps/realtime`(Worker + Durable Object `TenantHub`,底座規格第 4 章);**每個環境一個 Worker**,網域 `rt-dev.<網域>` / `rt-staging.<網域>` / `rt.<網域>`(登記 `docs/branding.md`)。全部用 Cloudflare 免費方案;用量看 Cloudflare 後台。未啟用的環境不部署 Worker,api 不簽發訂閱憑證,admin 以 60 秒輪詢運作(頭像選單黃點)。
+
+`cloud.json` 各環境的 `realtime`(省略或 `null` = 停用;寫了就要完整):
+
+```json
+"realtime": {
+  "worker": "<project>-realtime-dev",
+  "cloudflareAccountId": "<32 位 hex 帳號 id>",
+  "secrets": { "ticketSecret": "realtime-ticket-secret-dev", "publishSecret": "realtime-publish-secret-dev" }
+}
+```
+
+**啟用步驟**(每個環境各一次;deploy.yml 只負責部署,不建立任何資源):
+
+1. Secret Manager 建兩把密鑰(值各自隨機產生,三環境不同):`realtime-ticket-secret-<環境>`、`realtime-publish-secret-<環境>`,依「新增一個 Secret Manager 機密的標準步驟」授權 **api 執行身分**與**部署 SA**(部署時讀出上傳給 Worker)讀取。
+2. GitHub repo Secrets 加 `CLOUDFLARE_API_TOKEN`(權限見 `docs/env-registry.md`;三環境共用一把)。
+3. `cloud.json` 該環境寫 `realtime`;`deploy/env/<環境>.yaml` 加 `REALTIME_URL: "https://rt-<環境>.<網域>"`。兩者走 PR 一起改。
+4. 跑 Deploy:最後的「deploy realtime」步驟以 `pnpm --filter @repo/realtime exec wrangler deploy --name <worker> --secrets-file <暫存檔>` 部署(Durable Object 的 migration 隨 `wrangler.jsonc` 套用),api 部署時掛上兩把密鑰。
+5. Cloudflare 後台 → Workers → 該 Worker → Settings → Domains & Routes 加自訂網域 `rt-<環境>.<網域>`(一次即可;網域須在同一個 Cloudflare 帳號的 DNS)。
+6. 驗證:登入 admin,頭像選單的小圓點是綠色;Worker 的 log(`wrangler tail --name <worker>`)看得到連線。把 Worker 停掉(或 `REALTIME_URL` 拿掉再部署)時圓點變黃、資料每 60 秒更新。
+
+- **換密鑰**:在 Secret Manager 加新版本後重跑 Deploy(api 與 Worker 一起換);換的瞬間已連線的瀏覽器在下一次換發被拒,會自動重新連線。
+- **本機**:`apps/realtime/.dev.vars.example` 複製成 `.dev.vars`,`pnpm --filter @repo/realtime dev`(`wrangler dev`,`http://localhost:8787`);api 的 `.env` 設 `REALTIME_URL=http://localhost:8787` 與同樣的兩把密鑰。
+
+正本:`apps/realtime/wrangler.jsonc`、`.github/workflows/deploy.yml`「deploy realtime」、`apps/api/src/realtime/realtime.config.ts`
 
 ### Vercel 補充設定
 
