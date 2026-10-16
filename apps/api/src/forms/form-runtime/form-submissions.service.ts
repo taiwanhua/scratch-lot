@@ -35,6 +35,7 @@ import {
   type FormSubmissionStatus,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
+import { TransactionService } from "../../database/transaction";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
 import { SubmissionReadAccess } from "../../workflows/workflow-engine/submission-read-access.service";
@@ -320,6 +321,7 @@ export class FormSubmissionsService {
     private readonly workflowSubmit: WorkflowSubmitService,
     private readonly readAccess: SubmissionReadAccess,
     private readonly withdrawal: InstanceWithdrawService,
+    private readonly transactions: TransactionService,
   ) {}
 
   // ---- 讀 ----
@@ -977,11 +979,22 @@ export class FormSubmissionsService {
    * 推進收尾把提交同步成 `withdrawn`(可改後再送)。已有審核意見 → `CONFLICT`(`HAS_DECISIONS`)。
    * 看得到這筆(已送出過)、但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;
    * 看不到、或是別人的草稿 → `NOT_FOUND`(別人的草稿一律不存在,同 `remove` / `findReadable`)。
+   * 一個交易(撤回、推進收尾、稽核;ADR-0013)。
    */
   async withdraw(
     facts: FormOperatorFacts,
     input: WithdrawSubmissionInput,
   ): Promise<FormSubmissionModel> {
+    const withdrawn = await this.transactions.withTransaction(() =>
+      this.withdrawOnce(facts, input),
+    );
+    return this.single(facts, withdrawn);
+  }
+
+  private async withdrawOnce(
+    facts: FormOperatorFacts,
+    input: WithdrawSubmissionInput,
+  ): Promise<SubmissionRecord> {
     const id = toObjectId(input.id, "id");
     const record = await this.submissions.findOwnById(facts.operator, id);
     if (!record) {
@@ -1013,16 +1026,27 @@ export class FormSubmissionsService {
       targetId: record._id,
       before: { revision: record.revision },
     });
-    return this.single(facts, await this.reloadOwn(facts, record));
+    return this.reloadOwn(facts, record);
   }
 
   /**
    * 作廢(綁流程且已核准;申請人本人或有該模組 `edit` 者;理由必填;不需審核):提交 → `voided`,內容凍結。
+   * 一個交易(提交更新與稽核;ADR-0013)。
    */
   async voidSubmission(
     facts: FormOperatorFacts,
     input: VoidSubmissionInput,
   ): Promise<FormSubmissionModel> {
+    const voided = await this.transactions.withTransaction(() =>
+      this.voidOnce(facts, input),
+    );
+    return this.single(facts, voided);
+  }
+
+  private async voidOnce(
+    facts: FormOperatorFacts,
+    input: VoidSubmissionInput,
+  ): Promise<SubmissionRecord> {
     const reason = input.reason.trim();
     if (reason === "") {
       throw validationError("reason is required", ["reason"]);
@@ -1083,7 +1107,7 @@ export class FormSubmissionsService {
       before: { status: record.status, revision: record.revision },
       after: { status: "voided", reason },
     });
-    return this.single(facts, updated);
+    return updated;
   }
 
   /**

@@ -125,7 +125,7 @@ export interface WorkflowOutcome {
   historyIndex: number;
 }
 
-/** 這次送出所依據的草稿版本與流程版本(`linking` 重試時核對)。 */
+/** 這次送出所依據的草稿版本與流程版本(送出時記下,供追查)。 */
 export interface WorkflowLinkSource {
   submissionEditVersion: number;
   formVersion: number;
@@ -177,7 +177,7 @@ export class WorkflowInstance {
   @Prop({ type: String, required: true, enum: INSTANCE_STATUSES })
   status!: InstanceStatus;
 
-  /** 送出第 2 步記下(`linking` 重試時核對;相同沿用、不同重置)。 */
+  /** 送出第 2 步記下(這次送出依據的草稿與流程版本)。 */
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   linkSource!: WorkflowLinkSource | null;
 

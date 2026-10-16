@@ -64,8 +64,8 @@ export class WorkflowTasksRepository {
   }
 
   /**
-   * 依計畫建任務;同一 `(instanceId, taskKey)` 已存在時由唯一索引拒絕(duplicate key)——
-   * 推進重跑不會重建,呼叫端把 duplicate key 當「已建過」。
+   * 依計畫建任務;同一 `(instanceId, taskKey)` 已存在時由唯一索引拒絕(duplicate key)。
+   * 推進在交易內先查再建(TX-04),撞唯一鍵代表並發,錯誤往外拋讓交易重跑。
    */
   async create(
     operator: OperatorContext,
