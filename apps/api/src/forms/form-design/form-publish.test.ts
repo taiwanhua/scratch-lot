@@ -26,7 +26,6 @@ import {
   MODULE_KEY,
   PUBLISH,
   RETIRE_CURRENT,
-  RETRY_PUBLISH,
   SAVE_DRAFT,
   type VersionRow,
   call,
@@ -59,7 +58,7 @@ interface PermissionDoc {
  * 四步發布(一個交易)與重試(Spec 6a §6、§10「發布」):打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
  * 「中途失敗」以 `FormPublishHooks` 在指定檢查點丟錯模擬(TEST-07 的第二個接縫;理由見該檔註解)。
  */
-describe("表單發布(四步一個交易、重試、版本)", () => {
+describe("表單發布(四步一個交易)與退役", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let token: string;
@@ -128,7 +127,6 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
     const permissions = await permissionsOf(formKey);
     return {
       currentVersion: form.currentVersion,
-      publishInterrupted: form.publishInterrupted,
       versions: versions.map((version) => ({
         version: version.version,
         status: version.status,
@@ -208,7 +206,6 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
     expect(form).toMatchObject({
       currentVersion: 1,
       hasDraft: false,
-      publishInterrupted: false,
     });
     const permissions = await permissionsOf("pub_full");
     expect(
@@ -401,82 +398,6 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
     expect(form).toMatchObject({ currentVersion: null, hasDraft: true });
   });
 
-  it("交易前留下的發布中斷:禁止開草稿 / 退役 / 再發布;重試(一個交易)完成後恢復", async () => {
-    await publishNewForm(api, token, "pub_blocked", definitionOf(v1Fields));
-    await ok(api, token, CREATE_DRAFT, {
-      input: { formKey: "pub_blocked", baseVersion: 1 },
-    });
-    await saveDefinition(api, token, "pub_blocked", definitionOf(v2Fields), 0);
-    // 發布改成交易後不會再產生中斷;以直接寫入模擬交易之前留下的資料(步驟 2 做完、3 / 4 沒做)
-    await connection
-      .collection("form_versions")
-      .updateOne(
-        { formKey: "pub_blocked", status: "draft" },
-        { $set: { status: "publishing", version: 2, changelog: "中斷" } },
-      );
-
-    expect(await getForm(api, token, "pub_blocked")).toMatchObject({
-      publishInterrupted: true,
-      currentVersion: 1,
-    });
-    // 填寫者仍看舊版(currentVersion 還沒切)
-    const forms = await ok<{
-      moduleForms: { key: string; currentVersion: number }[];
-    }>(api, token, MODULE_FORMS, { moduleKey: MODULE_KEY });
-    expect(
-      forms.moduleForms.find((item) => item.key === "pub_blocked")
-        ?.currentVersion,
-    ).toBe(1);
-
-    for (const [query, input] of [
-      [CREATE_DRAFT, { formKey: "pub_blocked" }],
-      [RETIRE_CURRENT, { formKey: "pub_blocked", expectedVersion: 1 }],
-      [
-        PUBLISH,
-        { formKey: "pub_blocked", expectedDraftRevision: 1, changelog: "x" },
-      ],
-    ] as const) {
-      const blocked = await call(api, token, query, { input });
-      expect(codeOf(blocked)).toBe("CONFLICT");
-      expect(extensionsOf(blocked).reason).toBe("PUBLISH_IN_PROGRESS");
-    }
-
-    // 重試中途失敗:同樣整個回復,仍是中斷狀態
-    failAt("current-version");
-    const failedRetry = await call(api, token, RETRY_PUBLISH, {
-      input: { formKey: "pub_blocked" },
-    });
-    expect(failedRetry.errors).toBeDefined();
-    jest.restoreAllMocks();
-    expect(await getForm(api, token, "pub_blocked")).toMatchObject({
-      publishInterrupted: true,
-      currentVersion: 1,
-    });
-    const halfway = await versionsOf("pub_blocked");
-    expect(
-      halfway
-        .map((version) => version.status)
-        .toSorted((left, right) => left.localeCompare(right)),
-    ).toEqual(["PUBLISHED", "PUBLISHING"]);
-
-    const retried = await ok<{
-      retryPublishFormVersion: { formVersion: VersionRow };
-    }>(api, token, RETRY_PUBLISH, { input: { formKey: "pub_blocked" } });
-    expect(retried.retryPublishFormVersion.formVersion).toMatchObject({
-      version: 2,
-      status: "PUBLISHED",
-    });
-    expect(await getForm(api, token, "pub_blocked")).toMatchObject({
-      publishInterrupted: false,
-      currentVersion: 2,
-    });
-    // 沒有中斷可重試 → 409
-    const nothing = await call(api, token, RETRY_PUBLISH, {
-      input: { formKey: "pub_blocked" },
-    });
-    expect(extensionsOf(nothing).reason).toBe("PUBLISH_NOT_INTERRUPTED");
-  });
-
   describe("發布任一步失敗 → 版本、欄位級權限、表單狀態都回到發布前(一個交易)", () => {
     let baseline: unknown;
 
@@ -521,11 +442,10 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
       });
       expect(failed.errors).toBeDefined();
       jest.restoreAllMocks();
-      // 回到發布前:草稿還在(同一份、同 revision)、v1 仍是目前版本、權限沒動、沒有中斷、沒有稽核
+      // 回到發布前:草稿還在(同一份、同 revision)、v1 仍是目前版本、權限沒動、沒有稽核
       expect(await snapshotOf(formKey)).toEqual(before);
       expect(await getForm(api, token, formKey)).toMatchObject({
         currentVersion: 1,
-        publishInterrupted: false,
         hasDraft: true,
       });
 
@@ -556,9 +476,9 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
     const result = await call(api, token, PUBLISH, {
       input: { formKey: "pub_cas", expectedDraftRevision: 1, changelog: "x" },
     });
-    // 條件更新沒命中(CURRENT_VERSION_CHANGED),或交易的寫入衝突自動重試後重讀到改過的表單
-    // (v1 已發布、currentVersion 卻是 null → PUBLISH_IN_PROGRESS);兩者都是 409、不蓋掉
+    // 條件更新以發布開始時讀到的 currentVersion 為準(寫入衝突自動重跑也一樣):不命中 → 409、不蓋掉
     expect(codeOf(result)).toBe("CONFLICT");
+    expect(extensionsOf(result).reason).toBe("CURRENT_VERSION_CHANGED");
     const raw = await connection
       .collection("forms")
       .findOne<{ currentVersion: number | null }>({ key: "pub_cas" });
@@ -665,35 +585,35 @@ describe("表單發布(四步一個交易、重試、版本)", () => {
     );
   });
 
-  it("退役第一步成功、第二步失敗後重試:接著做完(冪等)", async () => {
+  it("退役第二步失敗 → 版本與 currentVersion 都回到退役前(一個交易),沒有稽核;再退役一次就完成", async () => {
     await publishNewForm(
       api,
       token,
-      "pub_retire_retry",
+      "pub_retire_tx",
       definitionOf([field("title", "text")]),
     );
     failAt("retire-current");
     const failed = await call(api, token, RETIRE_CURRENT, {
-      input: { formKey: "pub_retire_retry", expectedVersion: 1 },
+      input: { formKey: "pub_retire_tx", expectedVersion: 1 },
     });
     expect(failed.errors).toBeDefined();
     jest.restoreAllMocks();
-    // 停在兩步之間:版本已退役、currentVersion 還指著它
-    const [halfway] = await versionsOf("pub_retire_retry");
-    expect(halfway?.status).toBe("RETIRED");
-    expect(await getForm(api, token, "pub_retire_retry")).toMatchObject({
+    const [version] = await versionsOf("pub_retire_tx");
+    expect(version?.status).toBe("PUBLISHED");
+    expect(await getForm(api, token, "pub_retire_tx")).toMatchObject({
       currentVersion: 1,
     });
+    expect(await retireAuditsOf("pub_retire_tx")).toBe(0);
 
-    const retried = await ok<{ retireCurrentVersion: { form: unknown } }>(
+    const retired = await ok<{ retireCurrentVersion: { form: unknown } }>(
       api,
       token,
       RETIRE_CURRENT,
-      { input: { formKey: "pub_retire_retry", expectedVersion: 1 } },
+      { input: { formKey: "pub_retire_tx", expectedVersion: 1 } },
     );
-    expect(retried.retireCurrentVersion.form).toMatchObject({
+    expect(retired.retireCurrentVersion.form).toMatchObject({
       currentVersion: null,
-      publishInterrupted: false,
     });
+    expect(await retireAuditsOf("pub_retire_tx")).toBe(1);
   });
 });

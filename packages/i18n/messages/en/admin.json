@@ -288,6 +288,7 @@
       "disableSuccess": "Organization disabled.",
       "deleteSuccess": "Organization deleted.",
       "provisionSuccess": "Tenant provisioned.",
+      "provisionMailNotSent": "The tenant was provisioned, but the activation email was not sent. Ask the first admin to use \"Forgot password\" on the sign-in page.",
       "revokeSuccess": "Tenant provisioning revoked."
     },
     "errors": {
@@ -1390,7 +1391,6 @@
       "version": "v{version}",
       "noVersion": "Not published",
       "disabled": "Disabled",
-      "interrupted": "Publish interrupted",
       "hasDraft": "Draft",
       "workflow": "Workflow: {name}",
       "workflowInvalid": "Bound workflow is invalid"
@@ -1507,9 +1507,6 @@
       "diffChanged": "Changed: {fields}",
       "newDraft": "New draft",
       "draftCreated": "Draft created.",
-      "interrupted": "The last publish did not finish. Use “Retry publish” to complete it; new drafts, retiring and publishing are blocked until then.",
-      "retry": "Retry publish",
-      "retried": "Publish completed.",
       "publishedLine": "{at} · {user}",
       "upgrade": "Upgrade old data to this version",
       "upgradeBlockedByWorkflow": "This form has an approval workflow in your organization; old data cannot be upgraded to a new version."
@@ -2283,7 +2280,6 @@
     "errors": {
       "CONFLICT": "This record was updated by someone else. Please reload.",
       "DRAFT_REVISION_MISMATCH": "The draft was updated by someone else. Please reload.",
-      "PUBLISH_IN_PROGRESS": "The previous publish has not finished. Please retry publishing first.",
       "HAS_DECISIONS": "Someone has already reviewed it; it cannot be withdrawn.",
       "ALREADY_DECIDED": "This task has already been decided and cannot be reassigned.",
       "ALREADY_IN_STEP": "This person is already in this step.",
@@ -2314,7 +2310,6 @@
       "noVersion": "Unpublished",
       "version": "Version {version}",
       "assigned": "Assigned to {count}",
-      "interrupted": "Publish interrupted",
       "hasDraft": "Has draft",
       "boundForms": "Bound forms: {forms}"
     },
@@ -2388,9 +2383,6 @@
       "diffChanged": "Changed: {steps}",
       "diffStructure": "The fork / join structure changed",
       "draftCreated": "New draft created",
-      "interrupted": "The previous publish was interrupted. Please retry.",
-      "retry": "Retry publish",
-      "retried": "Publish retried",
       "statuses": {
         "DRAFT": "Draft",
         "PUBLISHING": "Publishing",
@@ -2662,7 +2654,6 @@
       "ROOT_ONLY": "Only system administrators can export project settings.",
       "NOT_FOUND": "This version could not be found. Reload and try again.",
       "VERSION_NOT_PUBLISHED": "Only published versions can be exported.",
-      "PUBLISH_IN_PROGRESS": "Publishing this version has not finished. Use \"Retry publish\" in the version list first.",
       "NOT_PORTABLE": "This version can't be exported yet.",
       "VALIDATION_FAILED": "The revision or release notes are not valid. Fix them and try again.",
       "UNEXPECTED": "Export failed. Please try again later."

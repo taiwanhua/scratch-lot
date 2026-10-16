@@ -749,10 +749,6 @@ export type FormForkSourceModel = {
   version: Scalars['Int']['output'];
 };
 
-export type FormKeyInput = {
-  formKey: Scalars['ID']['input'];
-};
-
 export type FormLookupInput = {
   formKey: Scalars['ID']['input'];
   keyword?: InputMaybe<Scalars['String']['input']>;
@@ -835,7 +831,6 @@ export type FormModel = {
   name: Scalars['String']['output'];
   ownerOrgId?: Maybe<Scalars['ID']['output']>;
   ownerOrgName?: Maybe<Scalars['String']['output']>;
-  publishInterrupted: Scalars['Boolean']['output'];
   tabLabelTemplate?: Maybe<Scalars['String']['output']>;
   tenantEnabled?: Maybe<Scalars['Boolean']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -1299,8 +1294,6 @@ export type Mutation = {
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
-  retryPublishFormVersion: FormVersionPayload;
-  retryPublishWorkflowVersion: WorkflowVersionPayload;
   revokeFormFromTenant: FormPayload;
   revokeRoleUsers: RoleUsersPayload;
   revokeTenantProvision: RevokeTenantProvisionPayload;
@@ -1565,16 +1558,6 @@ export type MutationRetireCurrentWorkflowVersionArgs = {
 
 export type MutationRetryAdvanceInstanceArgs = {
   input: RetryAdvanceInstanceInput;
-};
-
-
-export type MutationRetryPublishFormVersionArgs = {
-  input: FormKeyInput;
-};
-
-
-export type MutationRetryPublishWorkflowVersionArgs = {
-  input: WorkflowKeyInput;
 };
 
 
@@ -1927,6 +1910,7 @@ export type ProvisionTenantInput = {
 
 export type ProvisionTenantPayload = {
   __typename?: 'ProvisionTenantPayload';
+  activationMailSent: Scalars['Boolean']['output'];
   moduleKeys: Array<Scalars['String']['output']>;
   org: Org;
   ownerUserId: Scalars['ID']['output'];
@@ -3103,7 +3087,6 @@ export type WorkflowModel = {
   name: Scalars['String']['output'];
   ownerOrgId?: Maybe<Scalars['ID']['output']>;
   ownerOrgName?: Maybe<Scalars['String']['output']>;
-  publishInterrupted: Scalars['Boolean']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -3653,7 +3636,7 @@ export type FormLookupRecordQueryVariables = Exact<{
 
 export type FormLookupRecordQuery = { __typename?: 'Query', formLookupRecord: { __typename?: 'FormLookupRecordPayload', record?: { __typename?: 'FormLookupRecord', id: string, value?: string | null, label?: string | null, values: Record<string, unknown> } | null } };
 
-export type FormFieldsFragment = { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null };
+export type FormFieldsFragment = { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null };
 
 export type FormVersionFieldsFragment = { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null };
 
@@ -3664,35 +3647,35 @@ export type FormsQueryVariables = Exact<{
 }>;
 
 
-export type FormsQuery = { __typename?: 'Query', forms: { __typename?: 'FormsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null }> } };
+export type FormsQuery = { __typename?: 'Query', forms: { __typename?: 'FormsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null }> } };
 
 export type FormQueryVariables = Exact<{
   key: Scalars['ID']['input'];
 }>;
 
 
-export type FormQuery = { __typename?: 'Query', form: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type FormQuery = { __typename?: 'Query', form: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type CreateFormMutationVariables = Exact<{
   input: CreateFormInput;
 }>;
 
 
-export type CreateFormMutation = { __typename?: 'Mutation', createForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type CreateFormMutation = { __typename?: 'Mutation', createForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type UpdateFormMutationVariables = Exact<{
   input: UpdateFormInput;
 }>;
 
 
-export type UpdateFormMutation = { __typename?: 'Mutation', updateForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type UpdateFormMutation = { __typename?: 'Mutation', updateForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ForkFormMutationVariables = Exact<{
   input: ForkFormInput;
 }>;
 
 
-export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type ForkFormMutation = { __typename?: 'Mutation', forkForm: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type FormLookupProvidersQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3735,19 +3718,12 @@ export type PublishFormVersionMutationVariables = Exact<{
 
 export type PublishFormVersionMutation = { __typename?: 'Mutation', publishFormVersion: { __typename?: 'FormVersionPayload', formVersion: { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
 
-export type RetryPublishFormVersionMutationVariables = Exact<{
-  input: FormKeyInput;
-}>;
-
-
-export type RetryPublishFormVersionMutation = { __typename?: 'Mutation', retryPublishFormVersion: { __typename?: 'FormVersionPayload', formVersion: { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
-
 export type RetireCurrentVersionMutationVariables = Exact<{
   input: RetireCurrentVersionInput;
 }>;
 
 
-export type RetireCurrentVersionMutation = { __typename?: 'Mutation', retireCurrentVersion: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type RetireCurrentVersionMutation = { __typename?: 'Mutation', retireCurrentVersion: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ExportFormSeedQueryVariables = Exact<{
   input: ExportFormSeedInput;
@@ -3776,7 +3752,7 @@ export type DeleteFormVersionDraftMutationVariables = Exact<{
 }>;
 
 
-export type DeleteFormVersionDraftMutation = { __typename?: 'Mutation', deleteFormVersionDraft: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type DeleteFormVersionDraftMutation = { __typename?: 'Mutation', deleteFormVersionDraft: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type ValidateFormVersionQueryVariables = Exact<{
   input: ValidateFormVersionInput;
@@ -3797,21 +3773,21 @@ export type AssignFormToTenantsMutationVariables = Exact<{
 }>;
 
 
-export type AssignFormToTenantsMutation = { __typename?: 'Mutation', assignFormToTenants: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type AssignFormToTenantsMutation = { __typename?: 'Mutation', assignFormToTenants: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type RevokeFormFromTenantMutationVariables = Exact<{
   input: RevokeFormFromTenantInput;
 }>;
 
 
-export type RevokeFormFromTenantMutation = { __typename?: 'Mutation', revokeFormFromTenant: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type RevokeFormFromTenantMutation = { __typename?: 'Mutation', revokeFormFromTenant: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type SetTenantFormEnabledMutationVariables = Exact<{
   input: SetTenantFormEnabledInput;
 }>;
 
 
-export type SetTenantFormEnabledMutation = { __typename?: 'Mutation', setTenantFormEnabled: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type SetTenantFormEnabledMutation = { __typename?: 'Mutation', setTenantFormEnabled: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type RetiredFormPermissionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3931,7 +3907,7 @@ export type ProvisionTenantMutationVariables = Exact<{
 }>;
 
 
-export type ProvisionTenantMutation = { __typename?: 'Mutation', provisionTenant: { __typename?: 'ProvisionTenantPayload', ownerUserId: string, roleId: string, moduleKeys: Array<string>, org: { __typename?: 'Org', id: string, name: string, parentId?: string | null, enabled: boolean, ownerUserId?: string | null, visibility?: OrgVisibility | null, slug?: string | null, logoUrl?: string | null } } };
+export type ProvisionTenantMutation = { __typename?: 'Mutation', provisionTenant: { __typename?: 'ProvisionTenantPayload', ownerUserId: string, roleId: string, moduleKeys: Array<string>, activationMailSent: boolean, org: { __typename?: 'Org', id: string, name: string, parentId?: string | null, enabled: boolean, ownerUserId?: string | null, visibility?: OrgVisibility | null, slug?: string | null, logoUrl?: string | null } } };
 
 export type RevokeTenantProvisionMutationVariables = Exact<{
   input: RevokeTenantProvisionInput;
@@ -4186,7 +4162,7 @@ export type CopyUserOrgRolesMutationVariables = Exact<{
 
 export type CopyUserOrgRolesMutation = { __typename?: 'Mutation', copyUserOrgRoles: { __typename?: 'CopyUserOrgRolesPayload', mode: CopyUserOrgRolesMode, applied: boolean, outOfScopeKept: boolean, user: { __typename?: 'User', id: string }, orgs: { __typename?: 'CopyUserOrgRolesOrgDiff', added: Array<{ __typename?: 'UserOrg', id: string, name: string }>, removed: Array<{ __typename?: 'UserOrg', id: string, name: string }>, kept: Array<{ __typename?: 'UserOrg', id: string, name: string }> }, roles: { __typename?: 'CopyUserOrgRolesRoleDiff', added: Array<{ __typename?: 'CopyUserOrgRolesRole', id: string, name: string, ownerOrgName?: string | null }>, removed: Array<{ __typename?: 'CopyUserOrgRolesRole', id: string, name: string, ownerOrgName?: string | null }>, kept: Array<{ __typename?: 'CopyUserOrgRolesRole', id: string, name: string, ownerOrgName?: string | null }> }, blockers: Array<{ __typename?: 'CopyUserOrgRolesBlocker', code: CopyUserOrgRolesBlockerCode, roleId?: string | null, orgId?: string | null }> } };
 
-export type WorkflowFieldsFragment = { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } };
+export type WorkflowFieldsFragment = { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } };
 
 export type WorkflowVersionFieldsFragment = { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null };
 
@@ -4197,49 +4173,49 @@ export type WorkflowsQueryVariables = Exact<{
 }>;
 
 
-export type WorkflowsQuery = { __typename?: 'Query', workflows: { __typename?: 'WorkflowsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } }> } };
+export type WorkflowsQuery = { __typename?: 'Query', workflows: { __typename?: 'WorkflowsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } }> } };
 
 export type WorkflowQueryVariables = Exact<{
   key: Scalars['ID']['input'];
 }>;
 
 
-export type WorkflowQuery = { __typename?: 'Query', workflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type WorkflowQuery = { __typename?: 'Query', workflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type CreateWorkflowMutationVariables = Exact<{
   input: CreateWorkflowInput;
 }>;
 
 
-export type CreateWorkflowMutation = { __typename?: 'Mutation', createWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type CreateWorkflowMutation = { __typename?: 'Mutation', createWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type UpdateWorkflowMutationVariables = Exact<{
   input: UpdateWorkflowInput;
 }>;
 
 
-export type UpdateWorkflowMutation = { __typename?: 'Mutation', updateWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type UpdateWorkflowMutation = { __typename?: 'Mutation', updateWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type ForkWorkflowMutationVariables = Exact<{
   input: ForkWorkflowInput;
 }>;
 
 
-export type ForkWorkflowMutation = { __typename?: 'Mutation', forkWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type ForkWorkflowMutation = { __typename?: 'Mutation', forkWorkflow: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type AssignWorkflowToTenantsMutationVariables = Exact<{
   input: AssignWorkflowToTenantsInput;
 }>;
 
 
-export type AssignWorkflowToTenantsMutation = { __typename?: 'Mutation', assignWorkflowToTenants: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type AssignWorkflowToTenantsMutation = { __typename?: 'Mutation', assignWorkflowToTenants: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type RevokeWorkflowFromTenantMutationVariables = Exact<{
   input: RevokeWorkflowFromTenantInput;
 }>;
 
 
-export type RevokeWorkflowFromTenantMutation = { __typename?: 'Mutation', revokeWorkflowFromTenant: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type RevokeWorkflowFromTenantMutation = { __typename?: 'Mutation', revokeWorkflowFromTenant: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type WorkflowVersionQueryVariables = Exact<{
   workflowKey: Scalars['ID']['input'];
@@ -4284,26 +4260,19 @@ export type PublishWorkflowVersionMutationVariables = Exact<{
 
 export type PublishWorkflowVersionMutation = { __typename?: 'Mutation', publishWorkflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
 
-export type RetryPublishWorkflowVersionMutationVariables = Exact<{
-  input: WorkflowKeyInput;
-}>;
-
-
-export type RetryPublishWorkflowVersionMutation = { __typename?: 'Mutation', retryPublishWorkflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
-
 export type DeleteWorkflowVersionDraftMutationVariables = Exact<{
   input: DeleteWorkflowVersionDraftInput;
 }>;
 
 
-export type DeleteWorkflowVersionDraftMutation = { __typename?: 'Mutation', deleteWorkflowVersionDraft: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type DeleteWorkflowVersionDraftMutation = { __typename?: 'Mutation', deleteWorkflowVersionDraft: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type RetireCurrentWorkflowVersionMutationVariables = Exact<{
   input: WorkflowKeyInput;
 }>;
 
 
-export type RetireCurrentWorkflowVersionMutation = { __typename?: 'Mutation', retireCurrentWorkflowVersion: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, publishInterrupted: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
+export type RetireCurrentWorkflowVersionMutation = { __typename?: 'Mutation', retireCurrentWorkflowVersion: { __typename?: 'WorkflowPayload', workflow: { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, hasRolePlaceholder: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } } } };
 
 export type ExportWorkflowSeedQueryVariables = Exact<{
   input: ExportWorkflowSeedInput;
@@ -4317,14 +4286,14 @@ export type BindFormWorkflowMutationVariables = Exact<{
 }>;
 
 
-export type BindFormWorkflowMutation = { __typename?: 'Mutation', bindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type BindFormWorkflowMutation = { __typename?: 'Mutation', bindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type UnbindFormWorkflowMutationVariables = Exact<{
   input: UnbindFormWorkflowInput;
 }>;
 
 
-export type UnbindFormWorkflowMutation = { __typename?: 'Mutation', unbindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, publishInterrupted: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
+export type UnbindFormWorkflowMutation = { __typename?: 'Mutation', unbindFormWorkflow: { __typename?: 'FormPayload', form: { __typename?: 'FormModel', id: string, key: string, moduleKey: string, moduleName?: string | null, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, tabLabelTemplate?: string | null, hasDraft: boolean, tenantEnabled?: boolean | null, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'FormForkSourceModel', formKey: string, version: number } | null, assignments: Array<{ __typename?: 'FormAssignment', tenantOrgId: string, tenantName?: string | null, enabled: boolean }>, abilities: { __typename?: 'FormAbilities', canEdit: boolean, canAssign: boolean, canSetEnabled: boolean, canFork: boolean }, workflowBinding?: { __typename?: 'FormWorkflowBinding', workflowKey: string, workflowName?: string | null, isValid: boolean } | null } } };
 
 export type FormWorkflowOptionsQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -4651,7 +4620,6 @@ export const FormFieldsFragmentDoc = `
   currentVersion
   tabLabelTemplate
   hasDraft
-  publishInterrupted
   tenantEnabled
   assignments {
     tenantOrgId
@@ -4871,7 +4839,6 @@ export const WorkflowFieldsFragmentDoc = `
   }
   currentVersion
   hasDraft
-  publishInterrupted
   hasRolePlaceholder
   assignments {
     tenantOrgId
@@ -7253,36 +7220,6 @@ export const usePublishFormVersionMutation = <
 
 usePublishFormVersionMutation.fetcher = (client: GraphQLClient, variables: PublishFormVersionMutationVariables, headers?: RequestInit['headers']) => fetcher<PublishFormVersionMutation, PublishFormVersionMutationVariables>(client, PublishFormVersionDocument, variables, headers);
 
-export const RetryPublishFormVersionDocument = `
-    mutation RetryPublishFormVersion($input: FormKeyInput!) {
-  retryPublishFormVersion(input: $input) {
-    formVersion {
-      ...FormVersionFields
-    }
-  }
-}
-    ${FormVersionFieldsFragmentDoc}`;
-
-export const useRetryPublishFormVersionMutation = <
-      TError = unknown,
-      TContext = unknown
-    >(
-      client: GraphQLClient,
-      options?: UseMutationOptions<RetryPublishFormVersionMutation, TError, RetryPublishFormVersionMutationVariables, TContext>,
-      headers?: RequestInit['headers']
-    ) => {
-    
-    return useMutation<RetryPublishFormVersionMutation, TError, RetryPublishFormVersionMutationVariables, TContext>(
-      {
-    mutationKey: ['RetryPublishFormVersion'],
-    mutationFn: (variables?: RetryPublishFormVersionMutationVariables) => fetcher<RetryPublishFormVersionMutation, RetryPublishFormVersionMutationVariables>(client, RetryPublishFormVersionDocument, variables, headers)(),
-    ...options
-  }
-    )};
-
-
-useRetryPublishFormVersionMutation.fetcher = (client: GraphQLClient, variables: RetryPublishFormVersionMutationVariables, headers?: RequestInit['headers']) => fetcher<RetryPublishFormVersionMutation, RetryPublishFormVersionMutationVariables>(client, RetryPublishFormVersionDocument, variables, headers);
-
 export const RetireCurrentVersionDocument = `
     mutation RetireCurrentVersion($input: RetireCurrentVersionInput!) {
   retireCurrentVersion(input: $input) {
@@ -8263,6 +8200,7 @@ export const ProvisionTenantDocument = `
     ownerUserId
     roleId
     moduleKeys
+    activationMailSent
   }
 }
     `;
@@ -9893,36 +9831,6 @@ export const usePublishWorkflowVersionMutation = <
 
 
 usePublishWorkflowVersionMutation.fetcher = (client: GraphQLClient, variables: PublishWorkflowVersionMutationVariables, headers?: RequestInit['headers']) => fetcher<PublishWorkflowVersionMutation, PublishWorkflowVersionMutationVariables>(client, PublishWorkflowVersionDocument, variables, headers);
-
-export const RetryPublishWorkflowVersionDocument = `
-    mutation RetryPublishWorkflowVersion($input: WorkflowKeyInput!) {
-  retryPublishWorkflowVersion(input: $input) {
-    workflowVersion {
-      ...WorkflowVersionFields
-    }
-  }
-}
-    ${WorkflowVersionFieldsFragmentDoc}`;
-
-export const useRetryPublishWorkflowVersionMutation = <
-      TError = unknown,
-      TContext = unknown
-    >(
-      client: GraphQLClient,
-      options?: UseMutationOptions<RetryPublishWorkflowVersionMutation, TError, RetryPublishWorkflowVersionMutationVariables, TContext>,
-      headers?: RequestInit['headers']
-    ) => {
-    
-    return useMutation<RetryPublishWorkflowVersionMutation, TError, RetryPublishWorkflowVersionMutationVariables, TContext>(
-      {
-    mutationKey: ['RetryPublishWorkflowVersion'],
-    mutationFn: (variables?: RetryPublishWorkflowVersionMutationVariables) => fetcher<RetryPublishWorkflowVersionMutation, RetryPublishWorkflowVersionMutationVariables>(client, RetryPublishWorkflowVersionDocument, variables, headers)(),
-    ...options
-  }
-    )};
-
-
-useRetryPublishWorkflowVersionMutation.fetcher = (client: GraphQLClient, variables: RetryPublishWorkflowVersionMutationVariables, headers?: RequestInit['headers']) => fetcher<RetryPublishWorkflowVersionMutation, RetryPublishWorkflowVersionMutationVariables>(client, RetryPublishWorkflowVersionDocument, variables, headers);
 
 export const DeleteWorkflowVersionDraftDocument = `
     mutation DeleteWorkflowVersionDraft($input: DeleteWorkflowVersionDraftInput!) {

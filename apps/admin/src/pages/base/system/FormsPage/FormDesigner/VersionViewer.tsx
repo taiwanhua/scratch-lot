@@ -73,8 +73,7 @@ export const VersionViewer = ({
       },
     }),
   );
-  const canBaseOn =
-    form.abilities.canEdit && !form.publishInterrupted && !form.hasDraft;
+  const canBaseOn = form.abilities.canEdit && !form.hasDraft;
 
   if (query.isLoading) {
     return <CircularProgress aria-label={t("loading")} />;

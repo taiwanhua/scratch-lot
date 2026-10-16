@@ -56,9 +56,7 @@ import {
   publishNewForm,
   rawSubmission,
   rootToken,
-  saveDefinition,
   showKey,
-  simulateInterruptedPublish,
   submitDraft,
 } from "../test-support/form-fixtures";
 
@@ -752,42 +750,6 @@ describe("表單預設值、日期時間、上傳上限、型別檢查、刪除�
       await ok(api, root, CREATE_DRAFT, {
         input: { formKey: "delete_draft_form", baseVersion: 1 },
       });
-    });
-
-    it("發布中(發布中斷)不可刪:409 PUBLISH_IN_PROGRESS", async () => {
-      await publishNewForm(
-        api,
-        root,
-        "delete_publishing",
-        definitionOf([field("title", "text")]),
-      );
-      const draft = await ok<{
-        createFormVersionDraft: { formVersion: VersionRow };
-      }>(api, root, CREATE_DRAFT, {
-        input: { formKey: "delete_publishing", baseVersion: 1 },
-      });
-      const saved = await saveDefinition(
-        api,
-        root,
-        "delete_publishing",
-        definitionOf([field("title", "text"), field("note", "text")]),
-        draft.createFormVersionDraft.formVersion.draftRevision,
-      );
-      // 發布是一個交易,不會再中斷;模擬交易之前留下的中斷資料
-      await simulateInterruptedPublish(
-        api.connection,
-        "delete_publishing",
-        "publishing",
-        "中斷",
-      );
-      const blocked = await call(api, root, DELETE_VERSION_DRAFT, {
-        input: {
-          formKey: "delete_publishing",
-          expectedDraftRevision: saved.draftRevision,
-        },
-      });
-      expect(codeOf(blocked)).toBe("CONFLICT");
-      expect(extensionsOf(blocked).reason).toBe("PUBLISH_IN_PROGRESS");
     });
 
     it("沒有 system.forms.edit 的人不能刪", async () => {

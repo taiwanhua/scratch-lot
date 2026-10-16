@@ -20,10 +20,6 @@ export const FORM_CONFLICT_REASONS = [
   "DRAFT_EXISTS",
   /** 要存 / 發布的草稿不存在(已被發布或還沒開)。 */
   "DRAFT_MISSING",
-  /** 發布進行中(有 `publishing` 版本、或已發布但還沒切換完):禁止開草稿 / 退役 / 再發布。 */
-  "PUBLISH_IN_PROGRESS",
-  /** 重試發布時沒有中斷的發布可以接續。 */
-  "PUBLISH_NOT_INTERRUPTED",
   /** 退役目前版本時表單沒有已發布的版本。 */
   "NO_CURRENT_VERSION",
   /** 讀到之後 `currentVersion` 被別人改了(同時的退役 / 發布);重新載入再做。 */

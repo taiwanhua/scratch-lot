@@ -38,7 +38,6 @@ import {
   type SetTenantFormEnabledInput,
   type UpdateFormInput,
 } from "./dto/form-design.input";
-import { FormPublishService } from "./form-publish.service";
 import { FormVersionsService } from "./form-versions.service";
 import type {
   FormAssignment,
@@ -107,7 +106,6 @@ export class FormsService {
     private readonly relations: BusinessRelationshipsRepository,
     private readonly access: FormAccessService,
     private readonly versionsService: FormVersionsService,
-    private readonly publisher: FormPublishService,
     private readonly audit: AuditService,
   ) {}
 
@@ -476,13 +474,12 @@ export class FormsService {
     form: FormRecord,
   ): Promise<FormModel> {
     const operator = facts.operator;
-    const [module, owner, draft, publishState] = await Promise.all([
+    const [module, owner, draft] = await Promise.all([
       this.modules.findOne(operator, { key: form.moduleKey }),
       form.ownerOrgId
         ? this.orgs.findById(orgReader(operator), form.ownerOrgId)
         : null,
       this.versions.findOne(operator, { formKey: form.key, status: "draft" }),
-      this.publisher.stateOf(operator, form),
     ]);
     const tenantLink =
       facts.tenantId === null
@@ -509,7 +506,6 @@ export class FormsService {
       currentVersion: form.currentVersion,
       tabLabelTemplate: form.tabLabelTemplate,
       hasDraft: draft !== null,
-      publishInterrupted: publishState.interrupted !== null,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,
       assignments,

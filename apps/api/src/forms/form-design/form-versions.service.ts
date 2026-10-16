@@ -14,6 +14,7 @@ import {
   FormsRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
+import { TransactionService } from "../../database/transaction";
 import { retireCurrentVersion } from "../../versioning/version-lifecycle";
 import type { FieldGate } from "../field-permission-gate";
 import {
@@ -85,6 +86,7 @@ export class FormVersionsService {
     private readonly values: SubmissionValuesService,
     private readonly userNames: FormUserNames,
     private readonly audit: AuditService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 某一版;`version` 省略 = 草稿(附檢查器結果)。 */
@@ -148,7 +150,6 @@ export class FormVersionsService {
   ): Promise<FormVersionPayload> {
     const operator = facts.operator;
     const form = await this.access.requireWritableForm(facts, input.formKey);
-    await this.publisher.assertNotPublishing(operator, form);
     const existing = await this.versions.findOne(operator, {
       formKey: form.key,
       status: "draft",
@@ -294,7 +295,7 @@ export class FormVersionsService {
 
   /**
    * 刪除草稿(`deleteFormVersionDraft`):條件 = 還是草稿、`draftRevision` 是讀到的那一份;
-   * 發布中(有 `publishing` 版本或發布中斷)不可。刪掉後可以再以任一版本為基底開新草稿。
+   * 刪掉後可以再以任一版本為基底開新草稿。
    *
    * **硬刪**(`hardDeleteDraft`,ADR-0007 第三種):草稿從未發布、沒有提交綁它;軟刪除會佔住
    * `(formKey, status)` 的部分唯一索引,讓這張表單永遠開不了新草稿。單一條件刪除
@@ -307,7 +308,6 @@ export class FormVersionsService {
   ): Promise<FormRecord> {
     const operator = facts.operator;
     const form = await this.access.requireWritableForm(facts, input.formKey);
-    await this.publisher.assertNotPublishing(operator, form);
     const deleted = await this.versions.hardDeleteDraft(operator, {
       formKey: form.key,
       status: "draft",
@@ -356,8 +356,8 @@ export class FormVersionsService {
   }
 
   /**
-   * 退役目前版本(帶當時看到的 `expectedVersion`):`published → retired`,再 `currentVersion → null`;
-   * 每步已是目標狀態就算完成,中斷後再呼叫一次會接著做完;`currentVersion` 已指向別的版本 → 409。
+   * 退役目前版本(帶當時看到的 `expectedVersion`,一個交易):`published → retired`,再 `currentVersion → null`,
+   * 連同稽核一起提交或一起回復;同一版再退役一次什麼都不改;`currentVersion` 已指向別的版本 → 409。
    */
   async retireCurrent(
     facts: FormOperatorFacts,
@@ -365,26 +365,28 @@ export class FormVersionsService {
   ): Promise<FormRecord> {
     const operator = facts.operator;
     const form = await this.access.requireWritableForm(facts, input.formKey);
-    const retired = await retireCurrentVersion(
-      this.publisher.lifecycle(operator),
-      { key: form.key, currentVersion: form.currentVersion },
-      input.expectedVersion,
-    );
-    const updated = await this.forms.findById(operator, form._id);
-    if (!updated) {
-      throw notFoundError(`Form not found: ${input.formKey}`);
-    }
-    // 重複退役(兩步都已是目標狀態、什麼都沒改)不寫稽核
-    if (retired || form.currentVersion !== null) {
-      await this.audit.record(operator, {
-        action: FORM_VERSION_AUDIT.retire,
-        targetType: FORM_VERSION_TARGET,
-        ...(retired ? { targetId: retired._id } : {}),
-        before: { formKey: form.key, currentVersion: form.currentVersion },
-        after: { currentVersion: null },
-      });
-    }
-    return updated;
+    return this.transactions.withTransaction(async () => {
+      const retired = await retireCurrentVersion(
+        this.publisher.lifecycle(operator),
+        { key: form.key, currentVersion: form.currentVersion },
+        input.expectedVersion,
+      );
+      const updated = await this.forms.findById(operator, form._id);
+      if (!updated) {
+        throw notFoundError(`Form not found: ${input.formKey}`);
+      }
+      // 重複退役(兩步都已是目標狀態、什麼都沒改)不寫稽核
+      if (retired || form.currentVersion !== null) {
+        await this.audit.record(operator, {
+          action: FORM_VERSION_AUDIT.retire,
+          targetType: FORM_VERSION_TARGET,
+          ...(retired ? { targetId: retired._id } : {}),
+          before: { formKey: form.key, currentVersion: form.currentVersion },
+          after: { currentVersion: null },
+        });
+      }
+      return updated;
+    });
   }
 
   /**

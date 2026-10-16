@@ -24,7 +24,6 @@ export const SEED_EXPORT_ERROR_CODES = [
   "FORBIDDEN",
   "ROOT_ONLY",
   "NOT_FOUND",
-  "PUBLISH_IN_PROGRESS",
   "VALIDATION_FAILED",
   "VERSION_NOT_PUBLISHED",
   "NOT_PORTABLE",
@@ -51,7 +50,6 @@ const REFINED: Partial<
   Record<string, Partial<Record<string, SeedExportErrorCode>>>
 > = {
   FORBIDDEN: { ROOT_ONLY: "ROOT_ONLY" },
-  CONFLICT: { PUBLISH_IN_PROGRESS: "PUBLISH_IN_PROGRESS" },
 };
 
 const isIssue = (value: unknown): value is SeedExportIssue =>

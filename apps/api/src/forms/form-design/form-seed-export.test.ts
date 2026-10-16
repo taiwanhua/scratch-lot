@@ -358,27 +358,6 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
         fields: ["version"],
       });
     });
-
-    it("發布還沒切換完(版本已是 published、目前版本還沒指向它):不算已發布,拒絕", async () => {
-      const key = "exp_interrupted";
-      await publishNewForm(
-        api,
-        app.root,
-        key,
-        definitionOf([field("title", "text")]),
-      );
-      await connection
-        .collection("forms")
-        .updateOne({ key }, { $set: { currentVersion: null } });
-
-      const result = await exportSeed(app.root, inputOf(key, 1));
-
-      expect(result.data).toBeNull();
-      expect(extensionsOf(result)).toMatchObject({
-        code: "CONFLICT",
-        reason: "PUBLISH_IN_PROGRESS",
-      });
-    });
   });
 
   describe("拒絕:權限、身分與輸入(後端自己守,不靠畫面藏按鈕)", () => {

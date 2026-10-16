@@ -583,14 +583,14 @@ describe("受管定義:每個中斷點都能以同一組 id 續跑,不會重試�
       expect(await versionDocs(connection, FORM, key)).toHaveLength(2);
     });
 
-    it("流程:版號已配置但稽核失敗,重跑以同一版接續;中斷期間不能改由別的 revision 安裝", async () => {
+    it("流程發布的稽核失敗:發布整個回復(仍是草稿),重跑以同一份草稿發布;中斷期間不能改由別的 revision 安裝", async () => {
       const key = nextKey("seed_window_flow");
       const seed = workflowSeed(key, "r1");
       failAuditOnce("workflow-version.publish");
       await runSeeds(app, [seed]);
       jest.restoreAllMocks();
       const [allocated] = await versionDocs(connection, WORKFLOW, key);
-      expect(allocated).toMatchObject({ version: 1, status: "publishing" });
+      expect(allocated).toMatchObject({ version: null, status: "draft" });
 
       const other = await runSeed(
         app,

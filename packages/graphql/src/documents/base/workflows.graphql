@@ -4,8 +4,7 @@
 # 1. 定義以 `definition: { steps, edges }` 進出:`steps` 是 StepDef 的 JSON(含 `kind: review | join`),
 #    `edges` 為 null = 直線(陣列順序即流程)。形狀正本是 `@repo/domain/workflow`。存草稿與發布都帶
 #    `expectedDraftRevision`,不符 → CONFLICT(reason DRAFT_REVISION_MISMATCH)。
-# 2. 發布與表單同一套四步生命週期(沒有欄位級權限那一步):中斷時 `publishInterrupted` 為 true,
-#    RetryPublishWorkflowVersion 冪等重跑;中斷期間開草稿 / 退役 / 再發布 → CONFLICT(PUBLISH_IN_PROGRESS)。
+# 2. 發布與表單同一套生命週期(沒有欄位級權限那一步),發布與退役各是一個交易:失敗全部回復,沒有重試。
 # 3. `abilities` 已含權限與「是不是自己的流程」判斷,前端直接用。
 
 fragment WorkflowFields on WorkflowModel {
@@ -21,7 +20,6 @@ fragment WorkflowFields on WorkflowModel {
   }
   currentVersion
   hasDraft
-  publishInterrupted
   # 目前發布版含角色佔位(共用流程):租戶不能直接綁,要以它為基底建客製流程
   hasRolePlaceholder
   # 只有 root 視角的共用流程有;其餘為空陣列
@@ -216,17 +214,8 @@ mutation PublishWorkflowVersion($input: PublishWorkflowVersionInput!) {
   }
 }
 
-# WorkflowKeyInput: { workflowKey }
-mutation RetryPublishWorkflowVersion($input: WorkflowKeyInput!) {
-  retryPublishWorkflowVersion(input: $input) {
-    workflowVersion {
-      ...WorkflowVersionFields
-    }
-  }
-}
-
 # WorkflowKeyInput: { workflowKey };進行中的實例照常走完,只影響新送出
-# DeleteWorkflowVersionDraftInput: { workflowKey, expectedDraftRevision };發布中 → CONFLICT(PUBLISH_IN_PROGRESS)
+# DeleteWorkflowVersionDraftInput: { workflowKey, expectedDraftRevision };草稿已被發布掉 → CONFLICT(DRAFT_MISSING)
 mutation DeleteWorkflowVersionDraft($input: DeleteWorkflowVersionDraftInput!) {
   deleteWorkflowVersionDraft(input: $input) {
     workflow {

@@ -22,7 +22,6 @@ import {
 } from "../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
-  CREATE_DRAFT,
   F,
   FORK_FORM,
   FORMS_MODULES,
@@ -30,9 +29,7 @@ import {
   M,
   MODULE_KEY,
   PASSWORD,
-  RETRY_PUBLISH,
   UPDATE_FORM,
-  type VersionRow,
   assignForm,
   createOperator,
   createSubmitted,
@@ -43,9 +40,7 @@ import {
   ok,
   publishDefinition,
   rawSubmission,
-  saveDefinition,
   showKey,
-  simulateInterruptedPublish,
 } from "../forms/test-support/form-fixtures";
 import { createRole } from "../permission/test-support/fixtures";
 import { ROOT_ADMIN_ACCOUNT_ENV } from "./seed-operator.service";
@@ -449,42 +444,6 @@ describe("受管表單:歷史核對、退役、既有資料保護、操作者與
       expect(
         await persistedStateOf(connection, FORM, "seed_tenant_owned"),
       ).toEqual(before);
-    });
-
-    it("畫面上的發布中斷(不是這次安裝的):衝突;在原畫面重試完成後,內容相同即可採納", async () => {
-      const r1 = formSeed("seed_interrupted", "r1");
-      await runSeeds(app, [r1]);
-      const draft = await ok<{
-        createFormVersionDraft: { formVersion: VersionRow };
-      }>(api, app.root, CREATE_DRAFT, {
-        input: { formKey: "seed_interrupted", baseVersion: 1 },
-      });
-      await saveDefinition(
-        api,
-        app.root,
-        "seed_interrupted",
-        definitionOf(changedFields),
-        draft.createFormVersionDraft.formVersion.draftRevision,
-      );
-      // 表單發布是一個交易、不會再中斷:模擬交易之前留下的「已發布、未切換」
-      await simulateInterruptedPublish(
-        connection,
-        "seed_interrupted",
-        "unswitched",
-        "畫面發布",
-      );
-      const r2 = formSeed("seed_interrupted", "r2", { fields: changedFields });
-
-      const blockedRerun = await runSeed(app, r1);
-      const blockedNext = await runSeed(app, r2);
-
-      expect(blockedRerun.conflict?.code).toBe("PUBLISH_IN_PROGRESS");
-      expect(blockedNext.conflict?.code).toBe("PUBLISH_IN_PROGRESS");
-      await ok(api, app.root, RETRY_PUBLISH, {
-        input: { formKey: "seed_interrupted" },
-      });
-      const adopted = await runSeed(app, r2);
-      expect(adopted).toMatchObject({ outcome: "adopted", localVersion: 2 });
     });
   });
 

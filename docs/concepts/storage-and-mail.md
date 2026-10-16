@@ -78,7 +78,7 @@
 
 - 換檔即刪舊:`updateOrg` 把 `logoPath` 換掉或清空後,刪舊物件。刪不掉只記 log,不擋更新。
 - 「上傳了但沒送出」的物件沒有任何欄位指向它,api 也不知道它存在。不掃描、不做 TTL 清理。
-- 開通租戶失敗的補償刪除只抹自己建的東西。
+- 開通租戶失敗由交易整個回復(資料庫的寫入),不碰 bucket;已上傳的商標物件同上一條,沒有欄位指向它。
 - 真要清孤兒,在 bucket 設 lifecycle rule(前綴 + 年齡),不在 api 寫掃描器。
 
 正本:`apps/api/src/orgs/orgs.service.ts`、`apps/api/src/storage/storage.service.ts` 的 `deleteObject`

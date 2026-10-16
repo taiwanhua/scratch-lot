@@ -176,7 +176,6 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
         isShared: true,
         currentVersion: 1,
         hasDraft: false,
-        publishInterrupted: false,
       });
     });
 

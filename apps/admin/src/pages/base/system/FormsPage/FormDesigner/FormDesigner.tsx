@@ -92,7 +92,7 @@ export const FormDesigner = ({ form, onChanged }: FormDesignerProps) => {
           {t("noDraft")}
         </Typography>
         <Button
-          disabled={form.publishInterrupted || createDraft.isPending}
+          disabled={createDraft.isPending}
           onClick={() => {
             createDraft.mutate({
               input: {

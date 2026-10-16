@@ -44,7 +44,7 @@
 ```
 
 - 存草稿與發布都帶「讀到的草稿修訂號」,不符 → 「已被別人更新,請重新載入」。
-- 發布四步:檢查器 → 搶鎖配版號 → 欄位級權限建 / 復活 / 退役 → 三筆切換;後三步是一個交易,任一步失敗全部回到發布前。「重試發布」只處理交易之前留下的發布中斷。
+- 發布四步:檢查器 → 搶鎖配版號 → 欄位級權限建 / 復活 / 退役 → 三筆切換;後三步是一個交易,任一步失敗全部回到發布前,沒有「發布中斷」與重試。退役目前版本同樣是一個交易。
 - 檢查器(`validateDefinition`)前後端同一份;檢查器的錯草稿照存、發布擋;例外是正則不合法或有 ReDoS 風險的,連存草稿都不收。正則的 ReDoS 檢查在獨立子路徑 `@repo/domain/form-regex-safety`,由呼叫端注入(api 直接用,admin 設計器懶載入,不進首屏 bundle)。
 
 正本:`apps/api/src/forms/form-design/form-publish.service.ts`、`packages/domain/src/form/validate-definition.ts`

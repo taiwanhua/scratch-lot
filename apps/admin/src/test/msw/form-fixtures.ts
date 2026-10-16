@@ -248,7 +248,6 @@ export const formFragment = (
   currentVersion: 1,
   tabLabelTemplate: null,
   hasDraft: true,
-  publishInterrupted: false,
   tenantEnabled: null,
   assignments: [],
   abilities: {

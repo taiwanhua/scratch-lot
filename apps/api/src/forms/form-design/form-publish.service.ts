@@ -10,10 +10,7 @@ import { TransactionService } from "../../database/transaction";
 import {
   type LifecycleOwner,
   type PublishInternalOptions,
-  type RetryPublishInternalOptions,
   type VersionLifecycleConfig,
-  assertNotPublishing,
-  interruptedPublishOf,
   lockDraftForPublish,
   publishExpectationMismatch,
   repositoryVersionStore,
@@ -30,10 +27,7 @@ import {
   definitionInvalidError,
   validationError,
 } from "../forms-error";
-import type {
-  FormKeyInput,
-  PublishFormVersionInput,
-} from "./dto/form-design.input";
+import type { PublishFormVersionInput } from "./dto/form-design.input";
 import { FormDefinitionChecker } from "./form-definition-checker";
 import { FormFieldPermissionsService } from "./form-field-permissions.service";
 import { FormPublishHooks } from "./form-publish-hooks";
@@ -43,17 +37,11 @@ export const FORM_VERSION_AUDIT = {
   createDraft: "form-version.create-draft",
   saveDraft: "form-version.save-draft",
   publish: "form-version.publish",
-  retryPublish: "form-version.retry-publish",
   retire: "form-version.retire",
   deleteDraft: "form-version.delete-draft",
 } as const;
 
 export const FORM_VERSION_TARGET = "form_version";
-
-/** 發布中斷的判定結果:要接續完成的那一版;沒有中斷為 null。 */
-export interface PublishState {
-  interrupted: FormVersionRecord | null;
-}
 
 /**
  * 四步發布(Spec 6a §6「發布」),整個動作是**一個交易**(ADR-0013):
@@ -64,9 +52,8 @@ export interface PublishState {
  * 3. 欄位級權限:缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label
  * 4. 切換三筆:這一版 `publishing → published` → 前一版 `published → retired` → `forms.currentVersion` 指向新版
  *
- * 任何一步失敗,版本、欄位級權限、`currentVersion` 與稽核一起回到發布前,不會留下「發布中斷」。
- * `retryPublishFormVersion` 與中斷判定保留給交易之前留下的中斷資料(與受管定義安裝的接續),
- * 同樣是一個交易,每個寫入「已是目標狀態就跳過」。
+ * 任何一步失敗,版本、欄位級權限、`currentVersion` 與稽核一起回到發布前,草稿原封不動;
+ * 交易外看不到發布到一半的狀態,所以沒有「發布中斷」與重試。
  */
 @Injectable()
 export class FormPublishService {
@@ -80,30 +67,6 @@ export class FormPublishService {
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
   ) {}
-
-  /**
-   * 發布中斷 = 有 `publishing` 版本,或有 `published` 版本但它不是 `currentVersion`
-   * (步驟 4 的第一筆寫了、最後一筆沒寫)。有中斷時禁止開草稿 / 退役 / 再發布。
-   */
-  async stateOf(
-    operator: OperatorContext,
-    form: FormRecord,
-  ): Promise<PublishState> {
-    return {
-      interrupted: await interruptedPublishOf(
-        this.lifecycle(operator),
-        ownerOf(form),
-      ),
-    };
-  }
-
-  /** 發布進行中(或中斷)→ `CONFLICT`(`PUBLISH_IN_PROGRESS`)。 */
-  async assertNotPublishing(
-    operator: OperatorContext,
-    form: FormRecord,
-  ): Promise<void> {
-    await assertNotPublishing(this.lifecycle(operator), ownerOf(form));
-  }
 
   /** 表單版本的生命週期設定(`versioning/version-lifecycle.ts`;流程版本共用同一份骨架)。 */
   lifecycle(
@@ -143,7 +106,6 @@ export class FormPublishService {
     if (mismatch !== null) {
       throw conflictError(mismatch, "CURRENT_VERSION_CHANGED");
     }
-    await this.assertNotPublishing(operator, form);
     const draft = await this.versions.findOne(operator, {
       ...(internal.draftId === undefined ? {} : { _id: internal.draftId }),
       formKey: form.key,
@@ -194,54 +156,7 @@ export class FormPublishService {
     });
   }
 
-  /**
-   * 從步驟 3 冪等重跑;沒有中斷的發布 → `CONFLICT`(`PUBLISH_NOT_INTERRUPTED`)。
-   * `internal.versionId`:只給內部的受管定義安裝用 —— 只接續那一版;此刻中斷的是別的版本同樣回
-   * `PUBLISH_NOT_INTERRUPTED`(在稽核、欄位級權限與切換之前判斷,接著處理的就是這裡選中的那一版)。
-   */
-  retry(
-    facts: FormOperatorFacts,
-    input: FormKeyInput,
-    internal: RetryPublishInternalOptions = {},
-  ): Promise<FormVersionRecord> {
-    return this.transactions.withTransaction(() =>
-      this.retryInTransaction(facts, input, internal),
-    );
-  }
-
-  private async retryInTransaction(
-    facts: FormOperatorFacts,
-    input: FormKeyInput,
-    internal: RetryPublishInternalOptions,
-  ): Promise<FormVersionRecord> {
-    const operator = facts.operator;
-    const form = await this.access.requireWritableForm(facts, input.formKey);
-    const { interrupted } = await this.stateOf(operator, form);
-    if (!interrupted) {
-      throw conflictError(
-        `Form ${form.key} has no interrupted publish`,
-        "PUBLISH_NOT_INTERRUPTED",
-      );
-    }
-    if (
-      internal.versionId !== undefined &&
-      !interrupted._id.equals(internal.versionId)
-    ) {
-      throw conflictError(
-        `Form ${form.key} interrupted publish is version ${String(interrupted.version)}, not the expected one`,
-        "PUBLISH_NOT_INTERRUPTED",
-      );
-    }
-    await this.audit.record(operator, {
-      action: FORM_VERSION_AUDIT.retryPublish,
-      targetType: FORM_VERSION_TARGET,
-      targetId: interrupted._id,
-      after: { formKey: form.key, version: interrupted.version },
-    });
-    return this.finish(operator, form, interrupted);
-  }
-
-  /** 步驟 3、4;每一筆寫入都「已是目標狀態就跳過」。 */
+  /** 步驟 3、4(在發布的交易內)。 */
   private async finish(
     operator: OperatorContext,
     form: FormRecord,

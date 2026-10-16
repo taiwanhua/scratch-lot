@@ -100,8 +100,7 @@ export const FlowVersionViewer = ({
     }),
   );
   const { canEdit } = workflow.abilities;
-  const canBaseOn =
-    canEdit && !workflow.publishInterrupted && !workflow.hasDraft;
+  const canBaseOn = canEdit && !workflow.hasDraft;
 
   if (query.isLoading) {
     return <CircularProgress aria-label={t("loading")} />;

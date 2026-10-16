@@ -6,6 +6,7 @@ import type { WorkflowDefinition } from "@repo/domain/workflow";
 import { AuditService } from "../../audit/audit.service";
 import { WorkflowVersionsRepository } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
+import { TransactionService } from "../../database/transaction";
 import {
   type WorkflowRecord,
   WorkflowsRepository,
@@ -81,6 +82,7 @@ export class WorkflowVersionsService {
     private readonly publisher: WorkflowPublishService,
     private readonly userNames: FormUserNames,
     private readonly audit: AuditService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /** 某一版;`version` 省略 = 草稿(附檢查器結果)。 */
@@ -148,7 +150,6 @@ export class WorkflowVersionsService {
       facts,
       input.workflowKey,
     );
-    await this.publisher.assertNotPublishing(operator, workflow);
     const existing = await this.versions.findOne(operator, {
       workflowKey: workflow.key,
       status: "draft",
@@ -314,7 +315,7 @@ export class WorkflowVersionsService {
   }
 
   /**
-   * 刪除草稿(`expectedDraftRevision` 樂觀鎖;發布進行中 / 中斷時不可 → `PUBLISH_IN_PROGRESS`)。
+   * 刪除草稿(`expectedDraftRevision` 樂觀鎖;同時被發布掉了 → 條件刪不到,回 `DRAFT_MISSING`)。
    * **硬刪**(`hardDeleteDraft`,ADR-0007 第三種):草稿從未發布,沒有實例 / 任務引用它;軟刪除會佔住「至多一份草稿」的
    * 部分唯一索引,改成 `retired` 又會把「發布過」的語意弄髒。刪前的整份內容寫進稽核的 `before`,
    * 需要時從稽核回看。已發布 / 退役的版本不受影響,之後可再以任一版開新草稿。
@@ -329,9 +330,6 @@ export class WorkflowVersionsService {
       facts,
       input.workflowKey,
     );
-    // 先擋發布中斷;競態下(檢查後、刪除前剛好有人把草稿搶鎖成 publishing)條件刪不到,
-    // 會回 `DRAFT_MISSING` 而不是 `PUBLISH_IN_PROGRESS` —— 可接受:草稿確實已不在、不會誤刪,重新載入即見發布中
-    await this.publisher.assertNotPublishing(operator, workflow);
     const deleted = await this.versions.hardDeleteDraft(operator, {
       workflowKey: workflow.key,
       status: "draft",
@@ -394,7 +392,7 @@ export class WorkflowVersionsService {
   }
 
   /**
-   * 退役目前版本:`published → retired`,再 `currentVersion → null`;中斷後再呼叫一次會接著做完。
+   * 退役目前版本(一個交易):`published → retired`,再 `currentVersion → null`,連同稽核一起提交或回復。
    * 進行中的實例照常走完(實例記的是自己的版本),只影響新送出。
    *
    * `internal.expectedVersion`:只給內部的受管定義安裝用 —— 指名要退役的版本,`currentVersion` 已是別的
@@ -412,31 +410,33 @@ export class WorkflowVersionsService {
       facts,
       input.workflowKey,
     );
-    const retired = await retireCurrentVersion(
-      this.publisher.lifecycle(operator, workflow),
-      ownerOf(workflow),
-      internal.expectedVersion ?? workflow.currentVersion,
-    );
-    const updated = await this.workflows.findOne(workflow.tenantId, {
-      key: workflow.key,
-    });
-    if (!updated) {
-      throw workflowNotFoundError(`Workflow not found: ${workflow.key}`);
-    }
-    // 指名版本的重複退役(兩步都已是目標狀態、什麼都沒改)不寫稽核(同表單)
-    if (retired || workflow.currentVersion !== null) {
-      await this.audit.record(operator, {
-        action: WORKFLOW_VERSION_AUDIT.retire,
-        targetType: WORKFLOW_VERSION_TARGET,
-        ...(retired ? { targetId: retired._id } : {}),
-        before: {
-          workflowKey: workflow.key,
-          currentVersion: workflow.currentVersion,
-        },
-        after: { currentVersion: null },
+    return this.transactions.withTransaction(async () => {
+      const retired = await retireCurrentVersion(
+        this.publisher.lifecycle(operator, workflow),
+        ownerOf(workflow),
+        internal.expectedVersion ?? workflow.currentVersion,
+      );
+      const updated = await this.workflows.findOne(workflow.tenantId, {
+        key: workflow.key,
       });
-    }
-    return updated;
+      if (!updated) {
+        throw workflowNotFoundError(`Workflow not found: ${workflow.key}`);
+      }
+      // 指名版本的重複退役(兩步都已是目標狀態、什麼都沒改)不寫稽核(同表單)
+      if (retired || workflow.currentVersion !== null) {
+        await this.audit.record(operator, {
+          action: WORKFLOW_VERSION_AUDIT.retire,
+          targetType: WORKFLOW_VERSION_TARGET,
+          ...(retired ? { targetId: retired._id } : {}),
+          before: {
+            workflowKey: workflow.key,
+            currentVersion: workflow.currentVersion,
+          },
+          after: { currentVersion: null },
+        });
+      }
+      return updated;
+    });
   }
 
   private async payloadOf(

@@ -137,18 +137,6 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       : null;
   }
 
-  async findInterruptedPublish(
-    facts: FormOperatorFacts,
-    key: string,
-  ): Promise<VersionSnapshot | null> {
-    const form = await this.access.findForm(facts.operator, key);
-    if (form === null) {
-      return null;
-    }
-    const { interrupted } = await this.publisher.stateOf(facts.operator, form);
-    return interrupted === null ? null : toSnapshot(form, interrupted);
-  }
-
   async validate(
     facts: FormOperatorFacts,
     seed: FormDefinitionSeedSet,
@@ -256,14 +244,6 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         },
       },
     );
-  }
-
-  async retryPublish(
-    facts: FormOperatorFacts,
-    key: string,
-    versionId: Types.ObjectId,
-  ): Promise<void> {
-    await this.publisher.retry(facts, { formKey: key }, { versionId });
   }
 
   async retire(

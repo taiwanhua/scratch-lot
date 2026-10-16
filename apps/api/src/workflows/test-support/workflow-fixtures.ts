@@ -74,7 +74,6 @@ const WORKFLOW_FIELDS = /* GraphQL */ `
     isShared
     currentVersion
     hasDraft
-    publishInterrupted
     hasRolePlaceholder
     forkedFrom {
       workflowKey
@@ -247,17 +246,6 @@ export const PUBLISH_WORKFLOW = /* GraphQL */ `
   ${VERSION_FIELDS}
   mutation PublishWorkflowVersion($input: PublishWorkflowVersionInput!) {
     publishWorkflowVersion(input: $input) {
-      workflowVersion {
-        ...WorkflowVersionFields
-      }
-    }
-  }
-`;
-
-export const RETRY_PUBLISH_WORKFLOW = /* GraphQL */ `
-  ${VERSION_FIELDS}
-  mutation RetryPublishWorkflowVersion($input: WorkflowKeyInput!) {
-    retryPublishWorkflowVersion(input: $input) {
       workflowVersion {
         ...WorkflowVersionFields
       }
@@ -659,7 +647,6 @@ export interface WorkflowRow {
   isShared: boolean;
   currentVersion: number | null;
   hasDraft: boolean;
-  publishInterrupted: boolean;
   hasRolePlaceholder: boolean;
   forkedFrom: { workflowKey: string; version: number } | null;
   assignments: { tenantOrgId: string }[];

@@ -14,7 +14,6 @@ import { WorkflowAccessService } from "../workflow-access.service";
 import { definitionOfVersion } from "../workflow-definition-input";
 import { WORKFLOWS_PERMISSIONS } from "../workflow-keys";
 import {
-  workflowConflictError,
   workflowForbiddenError,
   workflowNotFoundError,
   workflowValidationError,
@@ -81,12 +80,6 @@ export class WorkflowSeedExportService {
       throw workflowValidationError(
         `Version ${String(input.version)} of ${workflow.key} is not published`,
         ["version"],
-      );
-    }
-    if (workflow.currentVersion !== version.version) {
-      throw workflowConflictError(
-        `${workflow.key} has an unfinished publish (version ${String(version.version)})`,
-        "PUBLISH_IN_PROGRESS",
       );
     }
     const seed: WorkflowDefinitionSeedSet = {

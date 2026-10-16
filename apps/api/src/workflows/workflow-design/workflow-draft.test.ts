@@ -37,7 +37,6 @@ import {
   saveWorkflowDraft,
   setupWorld,
 } from "../test-support/workflow-fixtures";
-import { WorkflowPublishHooks } from "./workflow-publish.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -209,55 +208,6 @@ describe("流程草稿:刪除與檢查用表單", () => {
         { input: { workflowKey: key, baseVersion: 1 } },
       );
       expect(reopened.errors).toBeUndefined();
-    });
-
-    it("發布中斷(publishing)時不可刪 → PUBLISH_IN_PROGRESS", async () => {
-      const key = nextKey("delete_publishing");
-      const draft = await createWithDraft(key);
-      const saved = await saveWorkflowDraft(
-        world,
-        key,
-        { steps: [managerStep("boss")] },
-        draft.draftRevision,
-      );
-      const hooks = api.app.get(WorkflowPublishHooks);
-      const spy = jest
-        .spyOn(hooks, "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "publish-version"
-            ? Promise.reject(new Error("模擬中斷"))
-            : Promise.resolve(),
-        );
-      try {
-        const interrupted = await call(
-          api,
-          world.admin.token,
-          PUBLISH_WORKFLOW,
-          {
-            input: {
-              workflowKey: key,
-              expectedDraftRevision: saved.draftRevision,
-              changelog: "中斷",
-            },
-          },
-        );
-        expect(interrupted.errors).toBeDefined();
-      } finally {
-        spy.mockRestore();
-      }
-      const blocked = await call(
-        api,
-        world.admin.token,
-        DELETE_WORKFLOW_DRAFT,
-        {
-          input: {
-            workflowKey: key,
-            expectedDraftRevision: saved.draftRevision,
-          },
-        },
-      );
-      expect(errorCode(blocked)).toBe("CONFLICT");
-      expect(errorReason(blocked)).toBe("PUBLISH_IN_PROGRESS");
     });
   });
 

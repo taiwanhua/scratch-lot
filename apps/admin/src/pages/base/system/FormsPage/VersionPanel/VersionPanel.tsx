@@ -8,7 +8,6 @@ import {
   useCreateFormVersionDraftMutation,
   useExportFormSeedQuery,
   useFormVersionsQuery,
-  useRetryPublishFormVersionMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
@@ -75,16 +74,15 @@ export const VersionPanel = ({
   const items = versions.data?.formVersions.items ?? [];
   const draft = items.find((item) => item.status === FormVersionStatus.Draft);
   const canEdit = form.abilities.canEdit;
-  const isLocked = form.publishInterrupted;
   // 升級動的是本組織的提交資料:看的是表單所屬模組的 edit,不是表單設計的權限
-  const canUpgradeData = hasPermission(`${form.moduleKey}.edit`) && !isLocked;
+  const canUpgradeData = hasPermission(`${form.moduleKey}.edit`);
   const hasWorkflow =
     form.workflowBinding !== null && form.workflowBinding !== undefined;
   const hasPublished = items.some(
     (item) => item.status === FormVersionStatus.Published,
   );
   // 共用表單只有站在根組織的人改得動(`canEdit`),所以這兩個條件合起來就是 api 的匯出判準
-  const canExportSeed = form.isShared && canEdit && !isLocked;
+  const canExportSeed = form.isShared && canEdit;
 
   const createDraft = useCreateFormVersionDraftMutation(
     session.client,
@@ -94,15 +92,6 @@ export const VersionPanel = ({
       onSuccess: onChanged,
     }),
   );
-  const retry = useRetryPublishFormVersionMutation(
-    session.client,
-    useMutationFeedback({
-      success: t("retried"),
-      error: (failure) => tErrors(formErrorOf(failure).code),
-      onSuccess: onChanged,
-    }),
-  );
-
   const previousOf = (item: FormVersionFieldsFragment) =>
     items
       .filter(
@@ -137,7 +126,7 @@ export const VersionPanel = ({
             {t("view", { version: item.version })}
           </Button>
         )}
-        {canEdit && !isLocked && isDraft && (
+        {canEdit && isDraft && (
           <Button
             size="small"
             onClick={() => {
@@ -147,7 +136,7 @@ export const VersionPanel = ({
             {t("publish")}
           </Button>
         )}
-        {canEdit && !isLocked && isDraft && (
+        {canEdit && isDraft && (
           <Button
             size="small"
             variant="text"
@@ -159,7 +148,7 @@ export const VersionPanel = ({
             {t("deleteDraft")}
           </Button>
         )}
-        {canEdit && !isLocked && isCurrent && (
+        {canEdit && isCurrent && (
           <Button
             size="small"
             variant="text"
@@ -171,7 +160,7 @@ export const VersionPanel = ({
             {t("retire")}
           </Button>
         )}
-        {canEdit && !isLocked && isBase && draft === undefined && (
+        {canEdit && isBase && draft === undefined && (
           <Button
             size="small"
             variant="text"
@@ -233,31 +222,10 @@ export const VersionPanel = ({
 
   return (
     <Stack spacing={2}>
-      {isLocked && (
-        <Alert
-          severity="warning"
-          action={
-            canEdit && (
-              <Button
-                size="small"
-                variant="text"
-                disabled={retry.isPending}
-                onClick={() => {
-                  retry.mutate({ input: { formKey: form.key } });
-                }}
-              >
-                {t("retry")}
-              </Button>
-            )
-          }
-        >
-          {t("interrupted")}
-        </Alert>
-      )}
       {canUpgradeData && hasWorkflow && hasPublished && (
         <Alert severity="info">{t("upgradeBlockedByWorkflow")}</Alert>
       )}
-      {canEdit && !isLocked && draft === undefined && items.length === 0 && (
+      {canEdit && draft === undefined && items.length === 0 && (
         <Stack direction="row">
           <Button
             variant="outlined"

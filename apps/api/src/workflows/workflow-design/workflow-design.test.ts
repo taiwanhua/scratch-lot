@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import { AuditService } from "../../audit/audit.service";
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -29,7 +30,6 @@ import {
   PUBLISH_WORKFLOW,
   type Person,
   RETIRE_WORKFLOW,
-  RETRY_PUBLISH_WORKFLOW,
   REVOKE_WORKFLOW,
   SUBMIT_SUBMISSION,
   VALIDATE_WORKFLOW,
@@ -307,86 +307,127 @@ describe("流程設計與綁定", () => {
       ).toContain("CYCLE");
     });
 
-    it("發布在切換 currentVersion 前中斷 → publishInterrupted、禁止開草稿;重試發布從切換那步接下去", async () => {
-      const key = nextKey("interrupted");
+    it.each([
+      ["搶鎖配版號之後(寫稽核時)", "audit"],
+      ["這一版改 published 時", "publish-version"],
+      ["前一版改 retired 時", "retire-previous"],
+      ["最後一筆(currentVersion)", "current-version"],
+    ] as const)(
+      "發布在%s失敗 → 版本與 currentVersion 都回到發布前(一個交易);草稿還在,再發布一次就成功",
+      async (_label, checkpoint) => {
+        const key = nextKey(`tx_${checkpoint.replaceAll("-", "_")}`);
+        await publishWorkflow(world, key, {
+          steps: [usersStep("one", [staff(0)])],
+        });
+        await ok(api, world.admin.token, CREATE_WORKFLOW_DRAFT, {
+          input: { workflowKey: key, baseVersion: 1 },
+        });
+        const draft = await ok<{
+          workflowVersion: { workflowVersion: WorkflowVersionRow };
+        }>(api, world.admin.token, WORKFLOW_VERSION, { workflowKey: key });
+        const input = {
+          input: {
+            workflowKey: key,
+            expectedDraftRevision:
+              draft.workflowVersion.workflowVersion.draftRevision,
+            changelog: "第二版",
+          },
+        };
+        const versionsBefore = await world.connection
+          .collection("workflow_versions")
+          .find({ workflowKey: key })
+          .project({ _id: 1, version: 1, status: 1, draftRevision: 1 })
+          .sort({ _id: 1 })
+          .toArray();
+        const spy =
+          checkpoint === "audit"
+            ? jest
+                .spyOn(api.app.get(AuditService), "record")
+                .mockRejectedValueOnce(new Error("模擬中斷"))
+            : jest
+                .spyOn(api.app.get(WorkflowPublishHooks), "reached")
+                .mockImplementation((reached) =>
+                  reached === checkpoint
+                    ? Promise.reject(new Error("模擬中斷"))
+                    : Promise.resolve(),
+                );
+        try {
+          const failed = await call(
+            api,
+            world.admin.token,
+            PUBLISH_WORKFLOW,
+            input,
+          );
+          expect(failed.errors).toBeDefined();
+        } finally {
+          spy.mockRestore();
+        }
+        const versionsAfter = await world.connection
+          .collection("workflow_versions")
+          .find({ workflowKey: key })
+          .project({ _id: 1, version: 1, status: 1, draftRevision: 1 })
+          .sort({ _id: 1 })
+          .toArray();
+        expect(versionsAfter).toEqual(versionsBefore);
+        const state = await ok<{ workflow: { workflow: WorkflowRow } }>(
+          api,
+          world.admin.token,
+          WORKFLOW,
+          { key },
+        );
+        expect(state.workflow.workflow).toMatchObject({
+          currentVersion: 1,
+          hasDraft: true,
+        });
+        expect(
+          await world.connection.collection("audit_logs").countDocuments({
+            action: "workflow-version.publish",
+            "after.workflowKey": key,
+            "after.version": 2,
+          }),
+        ).toBe(0);
+
+        const published = await ok<{
+          publishWorkflowVersion: { workflowVersion: WorkflowVersionRow };
+        }>(api, world.admin.token, PUBLISH_WORKFLOW, input);
+        expect(published.publishWorkflowVersion.workflowVersion).toMatchObject({
+          version: 2,
+          status: "PUBLISHED",
+        });
+      },
+    );
+
+    it("退役第二步(currentVersion → null)失敗 → 版本與 currentVersion 都回到退役前(一個交易)", async () => {
+      const key = nextKey("tx_retire");
       await publishWorkflow(world, key, {
         steps: [usersStep("one", [staff(0)])],
       });
-      const hooks = api.app.get(WorkflowPublishHooks);
       const spy = jest
-        .spyOn(hooks, "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "current-version"
+        .spyOn(api.app.get(WorkflowPublishHooks), "reached")
+        .mockImplementation((reached) =>
+          reached === "retire-current"
             ? Promise.reject(new Error("模擬中斷"))
             : Promise.resolve(),
         );
       try {
-        const failed = await call(
-          api,
-          world.admin.token,
-          CREATE_WORKFLOW_DRAFT,
-          {
-            input: { workflowKey: key, baseVersion: 1 },
-          },
-        );
-        expect(failed.errors).toBeUndefined();
-        const draft = await ok<{
-          workflowVersion: { workflowVersion: WorkflowVersionRow };
-        }>(api, world.admin.token, WORKFLOW_VERSION, { workflowKey: key });
-        const interrupted = await call(
-          api,
-          world.admin.token,
-          PUBLISH_WORKFLOW,
-          {
-            input: {
-              workflowKey: key,
-              expectedDraftRevision:
-                draft.workflowVersion.workflowVersion.draftRevision,
-              changelog: "第二版",
-            },
-          },
-        );
-        expect(interrupted.errors).toBeDefined();
+        const failed = await call(api, world.admin.token, RETIRE_WORKFLOW, {
+          input: { workflowKey: key },
+        });
+        expect(failed.errors).toBeDefined();
       } finally {
         spy.mockRestore();
       }
+      const version = await world.connection
+        .collection("workflow_versions")
+        .findOne<{ status: string }>({ workflowKey: key, version: 1 });
+      expect(version?.status).toBe("published");
       const state = await ok<{ workflow: { workflow: WorkflowRow } }>(
         api,
         world.admin.token,
         WORKFLOW,
         { key },
       );
-      expect(state.workflow.workflow).toMatchObject({
-        currentVersion: 1,
-        publishInterrupted: true,
-      });
-      const blocked = await call(
-        api,
-        world.admin.token,
-        CREATE_WORKFLOW_DRAFT,
-        {
-          input: { workflowKey: key, baseVersion: 1 },
-        },
-      );
-      expect(errorReason(blocked)).toBe("PUBLISH_IN_PROGRESS");
-      const retried = await ok<{
-        retryPublishWorkflowVersion: { workflowVersion: WorkflowVersionRow };
-      }>(api, world.admin.token, RETRY_PUBLISH_WORKFLOW, {
-        input: { workflowKey: key },
-      });
-      expect(retried.retryPublishWorkflowVersion.workflowVersion).toMatchObject(
-        { version: 2, status: "PUBLISHED" },
-      );
-      const after = await ok<{ workflow: { workflow: WorkflowRow } }>(
-        api,
-        world.admin.token,
-        WORKFLOW,
-        { key },
-      );
-      expect(after.workflow.workflow).toMatchObject({
-        currentVersion: 2,
-        publishInterrupted: false,
-      });
+      expect(state.workflow.workflow.currentVersion).toBe(1);
     });
   });
 

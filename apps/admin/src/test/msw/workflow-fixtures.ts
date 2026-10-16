@@ -245,7 +245,6 @@ export const workflowFragment = (
   forkedFrom: null,
   currentVersion: 1,
   hasDraft: true,
-  publishInterrupted: false,
   hasRolePlaceholder: false,
   assignments: [],
   boundForms: [],
