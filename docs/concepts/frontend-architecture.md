@@ -108,10 +108,12 @@ test/       測試支援
 ```
 /login、/forgot-password、/set-password      公開
 /change-password                             RequireAuth
+/settings/personal                           RequireAuth → AdminShell → 個人設定頁(殼層固定路由)
 / 與其餘路徑                                  RequireAuth → AdminShell → ModuleRoute
 ```
 
 - `RequireAuth`:未登入回登入頁;`me.mustChangePassword` 導去改密碼頁。
+- **殼層固定路由**(目前只有個人設定 `/settings/personal`):開在殼裡,但不是模組、不分配給角色、不經 `ModuleRoute`,所有登入者都能開。`lib/base/shell-routes.ts` 的 `withShellRoutes` 把它以一筆不在側欄的頁面形狀(`link`、精準比對)併進殼用的路由集合,AppBar 頁名、「?」說明(key `personal-settings`)與路由頁籤因此和模組頁走同一條路;`ModuleRoute` 的權限判斷不吃這份。
 - `ModuleRoute`:把網址對上 `me.modules`,決定顯示哪一頁。
 - 模組 key → 頁面元件由 `app/module-pages.tsx` 組裝;有路由授權但沒登記元件的模組顯示佔位頁。登記不會新增路由授權。
 
@@ -155,8 +157,9 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - 尾端一段的退路只給 `hidden`;`link` 後面多一段就是打錯網址。
 - 群組路由與 `/` 是同一個函式 `firstLinkRoute`,只差起點。
 - 「總覽」是正式模組(`overview`),由角色授權。
+- 殼(`ShellLayout`)用的集合另外併入殼層固定路由(`withShellRoutes`),頁名、「?」說明與路由頁籤因此認得個人設定;`ModuleRoute` 與側欄只看 `me.modules`。殼層固定路由後面多一段不算命中。
 
-正本:`apps/admin/src/lib/base/module-tree.ts` 的 `enterableRouteMap` / `matchModuleRoute` / `firstLinkRoute`、`docs/testing/permission-scenarios.md` 劇本 7 / 13
+正本:`apps/admin/src/lib/base/module-tree.ts` 的 `enterableRouteMap` / `matchModuleRoute` / `firstLinkRoute`、`apps/admin/src/lib/base/shell-routes.ts`、`docs/testing/permission-scenarios.md` 劇本 7 / 13
 
 ## 頁籤兩種
 

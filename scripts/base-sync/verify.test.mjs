@@ -77,6 +77,9 @@ const BASE_V3_CHANGES = {
     "export const reportPeriod = 1;\nexport type Period = number;\n",
   "apps/admin/src/app/base/realtime-signals.ts":
     "export const baseRealtimeSignals = [];\n",
+  // 與專案固定來源 `project/user-preferences.ts` 同名的底座檔:固定來源不算重名
+  "apps/api/src/user-preferences/user-preferences.ts":
+    "export const BASE_USER_PREFERENCES = [];\n",
   "apps/admin/src/app/project/page-replacements.ts": [
     "// 範例:{ target: 'commented', Page: X } 不算登記",
     "export const projectPageReplacements: readonly ModulePageReplacement[] = [];",
@@ -308,6 +311,8 @@ test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 �
       "export const projectRealtimeSignals = [];\n",
     "apps/api/src/project/realtime-boards.ts":
       "export const PROJECT_REALTIME_BOARDS = [];\n",
+    "apps/api/src/project/user-preferences.ts":
+      "export const PROJECT_USER_PREFERENCES = [];\n",
   });
   assert.deepEqual(assertOnlySection(result, 4), [
     "- `apps/admin/src/hooks/project/useScanner.ts`:同名 `apps/admin/src/hooks/base/useScanner.ts`",

@@ -1500,6 +1500,12 @@ registerReport({
 
 驗收:上表每一列一個測試。
 
+**給 #47(通知管道開關)的登記制現況與限制**(T26 實作後補):
+
+- 偏好 key 只允許英數、`_`、`-`,英數開頭;不可含 `.` 與 `$`(寫入是原子的 `$set settings.<key>`,這兩個字元在 Mongo 的更新路徑有意義)。正本 `apps/api/src/user-preferences/user-preference-registry.ts`。
+- 值只能是一個純量(字串 / 布林 / 數字),所以「通知類型 × 管道」不能存成巢狀物件,要換成扁平 key;具體編碼由 #47 定案時寫死在本節與登記處。
+- 登記目前沒有單一 key 的自訂驗證(只有型別,字串另有 `pattern` / `maxLength`);`UserPreferenceRegistryModule.forRoot` 只收靜態的專案清單(`src/project/user-preferences.ts`),不收執行期才知道的 key(例如由通知類型登記推導)。#47 需要時自行擴充這兩點。
+
 ### 10.7 標籤色票(第 26 項)
 
 - `packages/ui/src/theme/tokens.ts` 新增 `tagPalettes`:10 組(藍、青、綠、萊姆、黃、橘、紅、粉、紫、灰),每組有淺色 / 深色模式的底色與文字色,文字達 WCAG AA。
