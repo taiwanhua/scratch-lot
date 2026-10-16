@@ -2707,5 +2707,37 @@
   },
   "urlState": {
     "editNotFound": "找不到這筆資料"
+  },
+  "notifications": {
+    "bell": "通知",
+    "bellWithCount": "通知,{count} 則未讀",
+    "title": "通知",
+    "markAllRead": "全部標為已讀",
+    "filter": "通知篩選",
+    "filterAll": "全部",
+    "filterUnread": "未讀",
+    "empty": "目前沒有通知",
+    "emptyUnread": "沒有未讀的通知",
+    "unread": "未讀",
+    "loadFailed": "通知載入失敗",
+    "markReadFailed": "標為已讀失敗,請稍後再試",
+    "alert": {
+      "title": "新通知",
+      "many": "你有 {count} 則新通知"
+    },
+    "preferences": {
+      "heading": "通知管道",
+      "type": "通知類型",
+      "channels": {
+        "in-app": "站內通知",
+        "email": "Email"
+      },
+      "channelSwitch": "{type}:{channel}",
+      "locked": "這個管道不能關閉",
+      "save": "儲存",
+      "saved": "已儲存通知設定",
+      "saveFailed": "儲存失敗,請稍後再試",
+      "loadFailed": "通知設定載入失敗"
+    }
   }
 }

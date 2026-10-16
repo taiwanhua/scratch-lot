@@ -19,6 +19,7 @@ import { EditIcon } from "./EditIcon";
 import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
+import { NotificationsIcon } from "./NotificationsIcon";
 import { SettingsIcon } from "./SettingsIcon";
 import { SystemModeIcon } from "./SystemModeIcon";
 import { ViewIcon } from "./ViewIcon";
@@ -54,6 +55,7 @@ const actionIcons = [
   { name: "DarkModeIcon", Icon: DarkModeIcon },
   { name: "LogoutIcon", Icon: LogoutIcon },
   { name: "DevicesIcon", Icon: DevicesIcon },
+  { name: "NotificationsIcon", Icon: NotificationsIcon },
 ] as const;
 
 describe("icons", () => {

@@ -22,6 +22,8 @@ invalidate、prefetch 一律用 codegen 提供的 `useXxxQuery.getKey()`,保證�
 ❌ queryClient.invalidateQueries({ queryKey: ["ModuleTree"] });
 ```
 
+**例外:infinite 查詢**(捲到底載入下一批)。codegen 沒開 `addInfiniteQuery`(一開就替**每一支** query 多產一個 infinite hook,產物多約 1,700 行,且它的 `pageParam` 要是整份 variables(`{ input: { ... } }`)、key 第一段是 `"<Operation>.infinite"` 字串,invalidate 前綴仍得手寫),所以 infinite 查詢直接用 `useInfiniteQuery` + 該 operation 的 codegen `fetcher`。它的 key 不能手寫整串:第一段取 `useXxxQuery.getKey(...)[0]`,接一段 `"infinite"` 和篩選條件,前綴集中成一個常數由 hook 檔匯出,invalidate 與信號登記都引用它(先例 `hooks/base/useNotifications.ts` 的 `NOTIFICATION_LIST_KEY`)。
+
 ## DATA-03 Server Component 用 fetcher 模式
 
 front 的 RSC 不能用 hooks,用該 operation 的 codegen fetcher。底座中性首頁不讀業務 API;專案新增公開查詢後,將下例的 `useXxxQuery` 換成該查詢的生成出口(受保護端點須另帶合適憑證):

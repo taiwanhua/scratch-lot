@@ -2707,5 +2707,37 @@
   },
   "urlState": {
     "editNotFound": "This record could not be found"
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellWithCount": "Notifications, {count} unread",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "filter": "Notification filter",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "empty": "No notifications",
+    "emptyUnread": "No unread notifications",
+    "unread": "Unread",
+    "loadFailed": "Couldn't load notifications",
+    "markReadFailed": "Couldn't mark as read. Please try again later",
+    "alert": {
+      "title": "New notification",
+      "many": "You have {count} new notifications"
+    },
+    "preferences": {
+      "heading": "Notification channels",
+      "type": "Notification type",
+      "channels": {
+        "in-app": "In-app",
+        "email": "Email"
+      },
+      "channelSwitch": "{type}: {channel}",
+      "locked": "This channel can't be turned off",
+      "save": "Save",
+      "saved": "Notification settings saved",
+      "saveFailed": "Couldn't save. Please try again later",
+      "loadFailed": "Couldn't load notification settings"
+    }
   }
 }

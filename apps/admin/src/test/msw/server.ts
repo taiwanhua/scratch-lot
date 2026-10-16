@@ -12,9 +12,18 @@ export const api = graphql.link(TEST_GRAPHQL_ENDPOINT);
  * 殼一登入就查側欄計數(`SidebarBadges`),沒有特別準備的測試一律「沒有數字」;
  * 要驗數字的 world(如 `workflowRuntimeWorld`)自己再登記一份蓋過它。
  * 不放進 `authWorld`:它通常排在最前面,會蓋掉各 world 的版本。
+ * 頂端列的通知鈴同理:一登入就查未讀數(`MyNotificationUnreadCount`),預設「沒有未讀」;
+ * 個人設定的偏好分頁查管道開關(`MyNotificationPreferences`),預設沒有類型。
+ * 要驗通知的測試用 `notificationWorld`(`test/msw/notification-handlers.ts`)蓋過。
  */
 export const server = setupServer(
   api.query("SidebarBadges", () =>
     HttpResponse.json({ data: { sidebarBadges: [] } }),
+  ),
+  api.query("MyNotificationUnreadCount", () =>
+    HttpResponse.json({ data: { myNotificationUnreadCount: { count: 0 } } }),
+  ),
+  api.query("MyNotificationPreferences", () =>
+    HttpResponse.json({ data: { myNotificationPreferences: { items: [] } } }),
   ),
 );
