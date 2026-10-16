@@ -62,7 +62,14 @@ export const OrgTreeSelectField = ({
     isMultiSelect && selected.length > 0 ? (
       <Box
         component="span"
-        sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, py: 0.5 }}
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          flex: "1 1 auto",
+          minWidth: 0,
+          gap: 0.5,
+          py: 1,
+        }}
       >
         {selected.map((org) => (
           <Tag
@@ -98,7 +105,7 @@ export const OrgTreeSelectField = ({
           endAdornment: (
             <ChevronDownIcon fontSize="small" sx={{ color: "action.active" }} />
           ),
-          sx: { flexWrap: "wrap", cursor: disabled ? undefined : "pointer" },
+          sx: { cursor: disabled ? undefined : "pointer" },
         },
         htmlInput: {
           role: "combobox",
@@ -106,9 +113,9 @@ export const OrgTreeSelectField = ({
           "aria-expanded": isOpen,
           sx: {
             cursor: disabled ? undefined : "pointer",
-            // 多選時輸入框只是焦點載體,標籤佔滿一行時讓它縮到最小
+            // 多選有標籤時輸入框只是焦點載體,寬度讓給標籤(標籤自己換行,箭頭固定在右側)
             ...(isMultiSelect && selected.length > 0
-              ? { width: 0, minWidth: 30, flexGrow: 1 }
+              ? { width: 0, minWidth: 0, paddingInline: 0 }
               : {}),
           },
         },
