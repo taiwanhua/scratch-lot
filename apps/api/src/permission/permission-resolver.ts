@@ -163,19 +163,24 @@ export class PermissionResolver {
   }
 
   /**
-   * 這些角色**實際授予**的有效權限 key(人員條件的「權限」欄用):與 `resolve` 同一套步驟 3–6
-   * (停用的角色 / 權限不算、`*` 展開、模組連祖先停用剔除),但**不套超級管理員的略過** ——
-   * 超級管理員要符合權限條件,就得真的被授予那個權限(或改用角色 / 指定本人)。
+   * 這些角色**實際授予**的有效權限(人員條件的「權限」欄用,判斷一律走 `holdsPermission`):
+   * 與 `resolve` 同一套步驟 3–6(停用的角色 / 權限不算、`*` 展開、模組連祖先停用剔除、
+   * 別租戶客製表單的動態權限剔除),但**不套超級管理員的略過** —— 超級管理員要符合權限條件,
+   * 就得真的被授予那個權限(或改用角色 / 指定本人)。
+   *
+   * `orgId`:「哪些表單動態權限屬於別租戶」以這個組織所屬的租戶判斷(與 `resolve` 的當前組織同義)。
+   * 判斷操作者時給他的當前組織;列出某租戶的人時給租戶頂層 —— 兩條路對同一個人才會一致。
    */
   async grantedPermissionKeys(
     roleIds: readonly Types.ObjectId[],
-  ): Promise<ReadonlySet<string>> {
+    orgId: Types.ObjectId | null,
+  ): Promise<PermissionHolding> {
     if (roleIds.length === 0) {
-      return new Set();
+      return EMPTY_RESOLUTION;
     }
     const reader: OperatorContext = {
       actorId: null,
-      currentOrgId: null,
+      currentOrgId: orgId,
       visibleOrgIds: "all",
       managedOrgIds: "all",
       memberOrgIds: [],
@@ -186,10 +191,13 @@ export class PermissionResolver {
       enabled: true,
     });
     if (roles.length === 0) {
-      return new Set();
+      return EMPTY_RESOLUTION;
     }
     const resolution = await this.resolveRoles(reader, idsOf(roles));
-    return resolution.permissionKeys;
+    return {
+      permissionKeys: resolution.permissionKeys,
+      foreignPermissionKeys: resolution.foreignPermissionKeys,
+    };
   }
 
   /** 超級管理員 bypass(ADR-0004):全部 enabled 模組(含根組織專屬)+ 這些模組的全部權限。 */

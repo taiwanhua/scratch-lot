@@ -9,7 +9,7 @@ import {
   type AudienceOrgRange,
   isAudienceGroup,
 } from "@repo/domain/audience";
-import { isWildcardKey } from "@repo/domain/permission";
+import { ownerModuleKey, wildcardKeyOf } from "@repo/domain/permission";
 
 import {
   OrgsRepository,
@@ -19,7 +19,11 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  type PermissionHolding,
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 
 /**
  * 解析人員條件的使用處提供的上下文。
@@ -49,7 +53,7 @@ const DIRECTORY_READER: OperatorContext = {
 
 /** 一次請求內、同一位操作者的事實(用到才查,查過就留著)。 */
 interface OperatorFacts {
-  permissionKeys?: Promise<ReadonlySet<string>>;
+  permissionKeys?: Promise<PermissionHolding>;
   /** 所屬組織各自的祖先(含自己):判斷「含下層」用。 */
   memberOrgLineage?: Promise<Set<string>>;
   /** 「含上層」:指定組織(排序後的 id 串)→ 它們本身與所有上層。 */
@@ -149,8 +153,10 @@ export class AudienceService {
         return operator.roleIds.some((id) => ids.has(String(id)));
       }
       case "permission": {
-        const granted = await this.permissionKeysOf(operator);
-        return staticValuesOf(leaf).some((key) => granted.has(key));
+        const holding = await this.permissionKeysOf(operator);
+        return staticValuesOf(leaf).some((key) =>
+          holdsPermission(holding, key),
+        );
       }
       case "org": {
         return this.matchesOrg(operator, leaf, ctx);
@@ -215,13 +221,17 @@ export class AudienceService {
     return facts;
   }
 
-  /** 操作者實際被授予的有效權限(同一個請求只算一次)。 */
+  /**
+   * 操作者實際被授予的有效權限(同一個請求只算一次)。別租戶表單的動態權限以他的**當前組織**
+   * 判斷,與 `PermissionResolver.resolve` 同義。
+   */
   private permissionKeysOf(
     operator: OperatorContext,
-  ): Promise<ReadonlySet<string>> {
+  ): Promise<PermissionHolding> {
     const facts = this.factsOf(operator);
     facts.permissionKeys ??= this.resolver.grantedPermissionKeys(
       operator.roleIds,
+      operator.currentOrgId,
     );
     return facts.permissionKeys;
   }
@@ -257,7 +267,7 @@ export class AudienceService {
     const matched =
       audience.mode === "all"
         ? eligible
-        : await this.listNode(audience.filter, ctx);
+        : await this.listNode(audience.filter, ctx, tenantId);
     return [...eligible]
       .filter((id) => matched.has(id))
       .map((id) => new Types.ObjectId(id));
@@ -266,12 +276,13 @@ export class AudienceService {
   private async listNode(
     node: AudienceNode,
     ctx: AudienceContext,
+    tenantId: Types.ObjectId,
   ): Promise<Set<string>> {
     if (!isAudienceGroup(node)) {
-      return this.listLeaf(node, ctx);
+      return this.listLeaf(node, ctx, tenantId);
     }
     const sets = await Promise.all(
-      node.children.map((child) => this.listNode(child, ctx)),
+      node.children.map((child) => this.listNode(child, ctx, tenantId)),
     );
     return node.op === "AND" ? intersect(sets) : union(sets);
   }
@@ -279,6 +290,7 @@ export class AudienceService {
   private async listLeaf(
     leaf: AudienceLeaf,
     ctx: AudienceContext,
+    tenantId: Types.ObjectId,
   ): Promise<Set<string>> {
     switch (leaf.field) {
       case "user": {
@@ -288,7 +300,7 @@ export class AudienceService {
         return this.holdersOfRoles(objectIdsOf(staticValuesOf(leaf)));
       }
       case "permission": {
-        return this.holdersOfPermissions(staticValuesOf(leaf));
+        return this.holdersOfPermissions(staticValuesOf(leaf), tenantId);
       }
       case "org": {
         return this.membersOfOrgCondition(leaf, ctx);
@@ -318,37 +330,43 @@ export class AudienceService {
 
   /**
    * 持有任一權限 key 的人:先從 `role_permission` 反推候選角色(直接授予該權限,或授予同模組的
-   * `<模組>.*`),找出持有這些角色的人;再以每個候選人的啟用中角色走一次
-   * `grantedPermissionKeys`(與 `matchesAudience` 同一份有效權限的算法:停用的權限 / 模組 / 角色、
-   * 模組要有綁定都在那裡處理),確認真的持有。候選名單只會多不會少,第二步保證與逐人判斷一致。
+   * `<模組>.*` —— `holdsPermission` 的同層回退也算),找出持有這些角色的人;再以每個候選人的
+   * 啟用中角色走一次 `grantedPermissionKeys` + `holdsPermission`(與 `matchesAudience` 同一份判斷:
+   * 停用的權限 / 模組 / 角色、模組要有綁定、別租戶表單的動態權限都在那裡處理),確認真的持有。
+   * 候選名單只會多不會少,第二步保證與逐人判斷一致。
    */
-  private async holdersOfPermissions(keys: string[]): Promise<Set<string>> {
-    const direct = await this.permissions.findMany(DIRECTORY_READER, {
-      key: { $in: keys },
+  private async holdersOfPermissions(
+    keys: string[],
+    tenantId: Types.ObjectId,
+  ): Promise<Set<string>> {
+    const candidateKeys = [
+      ...new Set(
+        keys.flatMap((key) => [key, wildcardKeyOf(ownerModuleKey(key))]),
+      ),
+    ];
+    const granting = await this.permissions.findMany(DIRECTORY_READER, {
+      key: { $in: candidateKeys },
     });
-    if (direct.length === 0) {
+    if (granting.length === 0) {
       return new Set();
     }
-    const moduleIds = direct.map((permission) => permission.moduleId);
-    const sameModule = await this.permissions.findMany(DIRECTORY_READER, {
-      moduleId: { $in: moduleIds },
-    });
-    const wildcards = sameModule.filter((permission) =>
-      isWildcardKey(permission.key),
-    );
     const grantingRoleIds = await this.relations.listLinks("role_permission", {
-      secondIds: [...direct, ...wildcards].map((permission) => permission._id),
+      secondIds: granting.map((permission) => permission._id),
     });
     const candidates = await this.holdersOfRoles(
       grantingRoleIds.map((link) => link.firstId),
     );
-    return this.confirmHolders(candidates, keys);
+    return this.confirmHolders(candidates, keys, tenantId);
   }
 
-  /** 候選人逐一確認:同一組啟用中角色只算一次有效權限。 */
+  /**
+   * 候選人逐一確認:同一組啟用中角色只算一次有效權限。別租戶表單的動態權限以**這次列名單的租戶**
+   * 判斷(名單只列本租戶的人,他們在本租戶裡的當前組織同屬這個租戶)。
+   */
   private async confirmHolders(
     candidates: Set<string>,
     keys: string[],
+    tenantId: Types.ObjectId,
   ): Promise<Set<string>> {
     if (candidates.size === 0) {
       return new Set();
@@ -370,17 +388,20 @@ export class AudienceService {
       const userId = String(link.firstId);
       rolesByUser.set(userId, [...(rolesByUser.get(userId) ?? []), roleId]);
     }
-    const grantedBySet = new Map<string, Promise<ReadonlySet<string>>>();
+    const holdingBySet = new Map<string, Promise<PermissionHolding>>();
     const holders = new Set<string>();
     for (const [userId, roleIds] of rolesByUser) {
-      const setKey = roleIds.toSorted((a, b) => a.localeCompare(b)).join(",");
-      let granted = grantedBySet.get(setKey);
-      if (!granted) {
-        granted = this.resolver.grantedPermissionKeys(objectIdsOf(roleIds));
-        grantedBySet.set(setKey, granted);
+      const setKey = roleIds.toSorted((x, y) => x.localeCompare(y)).join(",");
+      let holding = holdingBySet.get(setKey);
+      if (!holding) {
+        holding = this.resolver.grantedPermissionKeys(
+          objectIdsOf(roleIds),
+          tenantId,
+        );
+        holdingBySet.set(setKey, holding);
       }
-      const keySet = await granted;
-      if (keys.some((key) => keySet.has(key))) {
+      const resolved = await holding;
+      if (keys.some((key) => holdsPermission(resolved, key))) {
         holders.add(userId);
       }
     }
