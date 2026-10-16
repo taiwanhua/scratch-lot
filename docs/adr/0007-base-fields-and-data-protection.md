@@ -10,7 +10,7 @@
 - **軟刪除**:刪除 = 寫 `deletedAt`;之後預設排除,要看已刪除的明講 `includeDeleted`。已刪除的不能再更新。
 - **硬刪除只有四種**,其餘一律軟刪除:
   - **關聯的移除**:核心關聯(ADR-0001,`RelationService.unlinkMany`)與業務關聯(`BusinessRelationshipsRepository.deleteMany`:收回表單 / 流程分派、解除流程綁定)。關聯是「有 / 沒有」的事實,表只存現況,歷史在 `audit_logs`。
-  - **補償刪除**(`BaseRepository.hardDeleteById`):本次請求剛建立、尚未對外可見的文件 —— 開通租戶失敗的回滾,以及撤銷開通抹掉的租戶組織、角色副本、首任管理員帳號(ADR-0009)。
+  - **補償刪除**(`BaseRepository.hardDeleteById`):本次請求剛建立、尚未對外可見的文件 —— 開通租戶失敗的回滾,以及撤銷開通抹掉的租戶組織、角色副本、首任管理員帳號(ADR-0009)。多步驟寫入的失敗回復改由交易負責(ADR-0013),新功能不再新增補償刪除的用途。
   - **從未對外生效的版本草稿**(`BaseRepository.hardDeleteDraft`):`form_versions` / `workflow_versions` 中 `status = draft`、`version` 為 null 的那一份;條件與刪除同一次寫入,刪前的整份內容寫進稽核的 `before`。
   - **退役的表單欄位級權限**(`permissions` 裡 `source = dynamic` 且已退役的那一筆):root 在「退役權限清理」確認後,權限列(經 `hardDeleteById`)與它的全部 `role_permission` 綁定一起抹掉,並寫稽核;還有草稿或審核中的提交用到就擋下。
 - 其餘真正抹除(個資清除、清理測試資料)一律走 cleanup migration(ADR-0002),不給 API 硬刪按鈕。

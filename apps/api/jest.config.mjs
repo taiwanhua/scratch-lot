@@ -11,6 +11,10 @@ const require = createRequire(import.meta.url);
  */
 const config = {
   preset: "@repo/jest-presets/node",
+  // 整次測試共用一個單一成員 replica set(交易需要;沒給 MONGODB_URI 時才起)
+  globalSetup: "<rootDir>/src/database/test-support/mongo-global-setup.ts",
+  globalTeardown:
+    "<rootDir>/src/database/test-support/mongo-global-teardown.ts",
   transform: {
     "^.+\\.tsx?$": [require.resolve("ts-jest"), { isolatedModules: true }],
   },

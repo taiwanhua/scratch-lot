@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { verify as verifyArgon2 } from "@node-rs/argon2";
 import { MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 import { baseOnlyProjectSettings } from "../../test/fixtures/seeds-base/project-source";
 import { runNode } from "../../test/support/update-harness";
@@ -25,8 +25,8 @@ const ROOT_ADMIN_ENV = {
   ROOT_ADMIN_PASSWORD: ["initial", "secret", "123"].join("-"),
 };
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
-let memoryServer: MongoMemoryServer | undefined;
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 
 function buildDatabaseUri(databaseName: string): string {
@@ -243,7 +243,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);

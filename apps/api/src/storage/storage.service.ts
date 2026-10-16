@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Logger } from "@nestjs/common";
 
+import { assertOutsideTransaction } from "../database/transaction";
 import { storageError } from "./storage-error";
 import type { StorageConfig } from "./storage.config";
 import {
@@ -139,6 +140,7 @@ export abstract class StorageService {
    * (`updateOrg` 只記 warn:清不掉只是留一個孤兒物件,不該讓使用者的編輯失敗)。
    */
   async deleteObject(objectPath: string | null | undefined): Promise<boolean> {
+    assertOutsideTransaction("刪除 GCS 物件");
     const path = nonEmptyPath(objectPath);
     if (path === undefined) {
       return false;
@@ -159,6 +161,7 @@ export abstract class StorageService {
   async copyPrivateObject(
     objectPath: string | null | undefined,
   ): Promise<string | null> {
+    assertOutsideTransaction("複製 GCS 物件");
     const path = nonEmptyPath(objectPath);
     if (path === undefined || !isOwnedUploadPath(path)) {
       return null;
