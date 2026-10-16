@@ -74,4 +74,36 @@ describe("個人偏好的登記", () => {
       false,
     );
   });
+
+  it("allowedValues:只收列出的值(例:不能關的通知管道只收 true),預設值也要在其中", () => {
+    const locked = {
+      key: "locked",
+      type: "boolean",
+      defaultValue: true,
+      allowedValues: [true],
+    } as const;
+    expect(isValidPreferenceValue(locked, true)).toBe(true);
+    expect(isValidPreferenceValue(locked, false)).toBe(false);
+    expect(() =>
+      composeUserPreferences([], [{ ...locked, defaultValue: false }]),
+    ).toThrow(UserPreferenceRegistryError);
+  });
+
+  it("推導出的登記(通知管道開關)與手寫登記一起驗:撞 key 也起不來", () => {
+    const derived = [
+      { key: "lotteryView", type: "boolean", defaultValue: true },
+    ] as const;
+    const registry = composeUserPreferences(BASE_USER_PREFERENCES, [], derived);
+    expect([...registry.keys()]).toEqual([
+      LOCALE_PREFERENCE_KEY,
+      "lotteryView",
+    ]);
+    expect(() =>
+      composeUserPreferences(
+        BASE_USER_PREFERENCES,
+        [{ key: "lotteryView", type: "boolean", defaultValue: false }],
+        derived,
+      ),
+    ).toThrow(UserPreferenceRegistryError);
+  });
 });

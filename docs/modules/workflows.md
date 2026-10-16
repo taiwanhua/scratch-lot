@@ -221,12 +221,12 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 ## 通知信
 
-`workflow-engine/workflow-notifier.service.ts`:任務建立(給審核者)、有結果(核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。
+`workflow-engine/workflow-notifier.service.ts`:任務建立(`workflow.task-created`,給審核者)、有結果(`workflow.result`:核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。站內通知與 email 都經通知的單一入口 `notify()`(`docs/modules/notification-settings.md`)。
 
-- 開關 `WORKFLOW_MAIL_ENABLED`(普通 env,`"true"` 才寄,每次寄信時讀;`docs/env-registry.md`):關閉時只寫 log。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`(沒設 = 不限)。
-- **交易內登記、提交後寄**:推進在交易內執行 `notifyTaskCreated` / `notifyResult` 時只登記寄信(`afterCommit`,TX-03),接著同一個交易追加歷程標記 —— 任務信 = 該 `taskKey` 的 `task_created`;結果信 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)。交易提交後才真的寄;交易回復就不寄、標記也不存在。
-- **盡力通知**:寄信失敗只記 log、不影響推進,歷程**仍記為已通知**(標記在交易內已寫入);重試推進看標記不重寄,所以不保證恰好一次、也不保證一定寄達。開關關閉時一樣追加標記、只寫 log。
-- 內容只讀實例快照(表單名、實例上的標題槽、關卡名),連結 `<ADMIN_APP_URL>/apply-center/view-page/<實例 id>`。模板在 `apps/api/src/mail/mail-templates.ts`(品牌文字登記 `docs/branding.md`)。
+- email 的總開關 `WORKFLOW_MAIL_ENABLED`(普通 env,`"true"` 才寄,每次寄信時讀;`docs/env-registry.md`):關閉時 email 只寫 log,站內通知照常。收件人另依個人偏好的管道開關(審核者的站內通知不能關),再經 `MailService` 的 `MAIL_ALLOWLIST`(沒設 = 不限)。
+- **與推進同一個交易**:推進在交易內執行 `notifyTaskCreated` / `notifyResult` 時寫通知(`dedupeKey` = 類型 + 實例 + `taskKey` / `result`),接著同一個交易追加歷程標記 —— 任務 = 該 `taskKey` 的 `task_created`;結果 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)。站內信號與 email 在交易提交後才送;交易回復就沒有通知、沒有信號、沒有信,標記也不存在。
+- **盡力通知**:寄信失敗只記 log、不影響推進,歷程**仍記為已通知**;重試推進看標記不重發,所以不保證 email 一定寄達。開關關閉時一樣追加標記。
+- 內容只讀實例快照(表單名、實例上的標題槽、關卡名),連結到申請中心詳情頁(連結種類 `workflow-instance` → `/apply-center/view-page/<實例 id>`;email 是 `<ADMIN_APP_URL>` + 這段路徑)。標題 / 內容是通知類型的範本(`apps/api/src/notifications/base-notification-types.ts`),email 外框在 `apps/api/src/mail/mail-templates.ts` 的 `buildNotificationEmail`(品牌文字登記 `docs/branding.md`)。
 
 ## 阻擋清單
 

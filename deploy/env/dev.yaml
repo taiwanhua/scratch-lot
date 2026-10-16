@@ -11,7 +11,7 @@ COOKIE_DOMAIN: ".scratch-lot.com"
 # MAIL_ALLOWLIST 不寫 = 不限收件人(三環境一致,使用者裁決)
 # GraphQL Sandbox / introspection:dev 開(其他環境不寫此鍵 = 關)
 GRAPHQL_SANDBOX: "true"
-# WORKFLOW_MAIL_ENABLED 不寫 = 審核流程通知信關(只寫 log);要寄才設 "true"
+# WORKFLOW_MAIL_ENABLED 不寫 = 通知 email 總開關關(只寫 log,站內通知照常);要寄才設 "true"
 # 檔案儲存的 GCS bucket(ADR-0010;GCS_BUCKET_PRIVATE 空值 = 改用記錄用 adapter,不會真的上傳)
 GCS_BUCKET_PRIVATE: "scratch-lot-assets-dev"
 # 公開讀 bucket(ADR-0010):目前的呼叫端是示範模組1 的封面;用途與未設時的行為見 docs/env-registry.md

@@ -20,6 +20,11 @@ export interface UserPreferenceDefinition {
   readonly pattern?: RegExp;
   /** `string` 型別的長度上限 */
   readonly maxLength?: number;
+  /**
+   * 只收這幾個值(任何型別都可用;例:不能關的通知管道開關只收 `true`)。
+   * 由登記決定、不能由使用者放寬;值不在其中 → `VALIDATION_FAILED` / `INVALID_VALUE`。
+   */
+  readonly allowedValues?: readonly UserPreferenceValue[];
 }
 
 /** 登記不合契約(key 格式不對、重複、預設值型別不符)時拋出;屬程式錯誤,讓 app 起不來。 */
@@ -35,7 +40,10 @@ const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[A-Za-z\d]{2,8})*$/;
 /** 語言:跟著帳號走(規格 10.6;規範 I18N-05);前端另存一份本機快取供登入前與第一個畫面使用。 */
 export const LOCALE_PREFERENCE_KEY = "locale";
 
-/** 底座登記的偏好。通知管道開關由通知設定登記(規格 10.6「這一輪的項目」)。 */
+/**
+ * 底座登記的偏好。通知管道開關不寫在這裡:由通知類型登記推導(`notificationPreferenceDefinitions`,
+ * `apps/api/src/notifications/notification-registry.ts`),經 `forRoot` 的第二個參數合成(規格 10.6)。
+ */
 export const BASE_USER_PREFERENCES: readonly UserPreferenceDefinition[] = [
   {
     key: LOCALE_PREFERENCE_KEY,
@@ -51,6 +59,12 @@ export function isValidPreferenceValue(
   definition: UserPreferenceDefinition,
   value: unknown,
 ): value is UserPreferenceValue {
+  if (
+    definition.allowedValues !== undefined &&
+    !definition.allowedValues.includes(value as UserPreferenceValue)
+  ) {
+    return false;
+  }
   switch (definition.type) {
     case "boolean": {
       return typeof value === "boolean";
@@ -69,15 +83,20 @@ export function isValidPreferenceValue(
   }
 }
 
-/** 合成底座與專案的登記:key → 定義。key 格式不對、重複、預設值不合型別一律拋錯。 */
+/**
+ * 合成底座、專案與推導出的登記:key → 定義。key 格式不對、重複、預設值不合型別一律拋錯。
+ * `derived` 是由其他登記推導的偏好(通知類型 × 管道的開關),與手寫的登記同樣驗證、不可撞 key。
+ */
 export function composeUserPreferences(
   base: readonly UserPreferenceDefinition[],
   project: readonly UserPreferenceDefinition[],
+  derived: readonly UserPreferenceDefinition[] = [],
 ): ReadonlyMap<string, UserPreferenceDefinition> {
   const registry = new Map<string, UserPreferenceDefinition>();
   const sourced = [
     ...base.map((definition) => ["base", definition] as const),
     ...project.map((definition) => ["project", definition] as const),
+    ...derived.map((definition) => ["derived", definition] as const),
   ];
   for (const [source, definition] of sourced) {
     if (!KEY_PATTERN.test(definition.key)) {

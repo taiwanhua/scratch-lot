@@ -1016,6 +1016,14 @@ type LogoutPayload {
   success: Boolean!
 }
 
+input MarkNotificationsReadInput {
+  ids: [ID!]!
+}
+
+type MarkNotificationsReadPayload {
+  unreadCount: Int!
+}
+
 type Me {
   account: String!
   address: String
@@ -1176,6 +1184,8 @@ type Mutation {
   login(input: LoginInput!): LoginPayload!
   logout: LogoutPayload!
   logoutAllDevices: LogoutAllDevicesPayload!
+  markAllNotificationsRead: MarkNotificationsReadPayload!
+  markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
@@ -1183,6 +1193,7 @@ type Mutation {
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   refresh: RefreshPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
+  resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
   retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
@@ -1223,6 +1234,7 @@ type Mutation {
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
+  updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateUser(input: UpdateUserInput!): UserPayload!
@@ -1249,6 +1261,30 @@ type MyApplicationsPayload {
   totalCount: Int!
 }
 
+type MyNotificationPreferencesPayload {
+  items: [NotificationTypePreference!]!
+}
+
+type MyNotificationUnreadCountPayload {
+  count: Int!
+}
+
+input MyNotificationsInput {
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  unreadOnly: Boolean
+}
+
+type MyNotificationsPayload {
+  items: [Notification!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+  unreadCount: Int!
+}
+
 type MyPreferencesPayload {
   settings: JSONObject!
 }
@@ -1261,6 +1297,66 @@ input MyTasksInput {
 
   """每頁筆數,上限 100"""
   pageSize: Int = 20
+}
+
+type Notification {
+  body: String!
+  createdAt: DateTime!
+  id: ID!
+  link: String
+  readAt: DateTime
+  refId: String
+  refType: String
+  title: String!
+  type: String!
+}
+
+type NotificationChannelPreference {
+  canDisable: Boolean!
+  channel: String!
+  enabled: Boolean!
+  preferenceKey: String!
+}
+
+type NotificationOrgScope {
+  range: String!
+  ref: String!
+}
+
+type NotificationSetting {
+  audience: JSONObject!
+  defaultAudience: JSONObject!
+  isDefault: Boolean!
+  name: String!
+  orgScope: NotificationOrgScope!
+  type: String!
+  updatedAt: DateTime
+  updatedBy: ID
+}
+
+type NotificationSettingPayload {
+  setting: NotificationSetting!
+}
+
+input NotificationSettingsInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type NotificationSettingsPayload {
+  items: [NotificationSetting!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type NotificationTypePreference {
+  channels: [NotificationChannelPreference!]!
+  name: String!
+  type: String!
 }
 
 type Org {
@@ -1409,8 +1505,12 @@ type Query {
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
   moduleTree: [ModuleAdminNode!]!
   myApplications(input: MyApplicationsInput!): MyApplicationsPayload!
+  myNotificationPreferences: MyNotificationPreferencesPayload!
+  myNotificationUnreadCount: MyNotificationUnreadCountPayload!
+  myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!
   myPreferences: MyPreferencesPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
+  notificationSettings(input: NotificationSettingsInput!): NotificationSettingsPayload!
   org(id: ID!): Org!
   orgManagerCandidates(keyword: String, orgId: ID!): [UserSummary!]!
   orgMemberCandidates(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
@@ -1473,6 +1573,10 @@ input RequestPasswordResetInput {
 
 type RequestPasswordResetPayload {
   success: Boolean!
+}
+
+input ResetNotificationSettingInput {
+  type: String!
 }
 
 input RetireCurrentVersionInput {
@@ -1904,6 +2008,11 @@ input UpdateMyPreferencesInput {
 
 type UpdateMyPreferencesPayload {
   settings: JSONObject!
+}
+
+input UpdateNotificationSettingInput {
+  audience: JSONObject!
+  type: String!
 }
 
 input UpdateOrgInput {

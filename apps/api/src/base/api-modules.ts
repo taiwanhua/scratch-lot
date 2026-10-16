@@ -8,6 +8,7 @@ import { FieldsModule } from "../fields/fields.module";
 import { FormDesignModule } from "../forms/form-design/form-design.module";
 import { FormRuntimeModule } from "../forms/form-runtime/form-runtime.module";
 import { ModuleManagerModule } from "../modules/module-manager.module";
+import { NotificationsModule } from "../notifications/notifications.module";
 import { OrgMembersModule } from "../orgs/org-members.module";
 import { OrgsModule } from "../orgs/orgs.module";
 import { PermissionModule } from "../permission/permission.module";
@@ -49,4 +50,5 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "workflow-engine", module: WorkflowEngineModule },
   { key: "apply-center", module: ApplyCenterModule },
   { key: "user-preferences", module: UserPreferencesModule },
+  { key: "notifications", module: NotificationsModule },
 ];

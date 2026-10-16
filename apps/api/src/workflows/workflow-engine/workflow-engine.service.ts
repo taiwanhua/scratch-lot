@@ -101,7 +101,7 @@ export class WorkflowEngineHooks {
  * 重複到「沒事可做」,**整段推進(含連續推進)是一個交易**(ADR-0013、TX-01):任何一步失敗,這次推進的
  * 所有寫入一起回復;呼叫端(送出、決定、撤回、改派、新增審核者、失效 hook、重試推進)已在交易內時就併進
  * 呼叫端的交易。並發的另一個交易寫到同一份實例 → 寫入衝突、整個交易由 driver 重跑,重讀後再判斷。
- * 通知信排在交易提交後(`WorkflowNotifier`)。
+ * 通知與推進同一個交易寫入,站內信號與 email 排在交易提交後(`WorkflowNotifier` → `notify()`)。
  *
  * **掛接點的事後動作**(`lifecycle/`)也在推進裡觸發、同一個交易:實例的條件更新成功且把審核關卡改成
  * `completed` / `skipped` → `stepPassed`(跳過帶 `skipped: true`);提交同步成完成 / 駁回 / 退回 / 撤回且
@@ -356,16 +356,17 @@ export class WorkflowEngineService {
         return "done";
       }
       case "notifyTaskCreated": {
-        this.notifier.taskCreated(
+        await this.notifier.taskCreated(
           instance,
           definition,
           action.stepKey,
+          action.taskKey,
           action.assigneeId,
         );
         return "done";
       }
       case "notifyResult": {
-        this.notifier.result(instance, action.result);
+        await this.notifier.result(instance, action.result);
         return "done";
       }
       case "appendHistoryOnce": {

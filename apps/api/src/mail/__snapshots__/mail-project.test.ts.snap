@@ -4,27 +4,25 @@ exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 HTML 
 {
   "html": "<!doctype html><html lang="zh-Hant"><body>
 <p>&lt;b&gt;O&#39;Brien&lt;/b&gt; 您好:</p>
-<p>您的申請「請假單:&quot;A&amp;B&quot; &lt;script&gt;」已退回修改。</p>
-<p>理由:&lt;img src=x onerror=alert(1)&gt;</p>
-<p>請開啟以下連結查看詳情:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
+<p>&lt;img src=x onerror=alert(1)&gt;</p>
+<p>請開啟以下連結查看:</p>
+<p><a href="https://admin.example.com/apply-center/view-page/1">https://admin.example.com/apply-center/view-page/1</a></p>
 <p>CookHome 後台管理系統</p>
 </body></html>",
-  "kind": "workflow-result",
-  "link": "https://admin.example.com/requests/1",
-  "subject": "【CookHome】申請已退回修改:請假單:"A&B" <script>",
+  "kind": "notification",
+  "link": "https://admin.example.com/apply-center/view-page/1",
+  "notificationType": "workflow.task-created",
+  "subject": "【CookHome】"A&B" <script>",
   "text": "<b>O'Brien</b> 您好:
 
-您的申請「請假單:"A&B" <script>」已退回修改。
+<img src=x onerror=alert(1)>
 
-理由:<img src=x onerror=alert(1)>
+請開啟以下連結查看:
 
-請開啟以下連結查看詳情:
-
-https://admin.example.com/requests/1
+https://admin.example.com/apply-center/view-page/1
 
 CookHome 後台管理系統",
-  "to": "ming@example.com",
+  "to": "reviewer@example.com",
 }
 `;
 
@@ -56,125 +54,46 @@ CookHome 後台管理系統",
 }
 `;
 
-exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 審核任務通知 1`] = `
+exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 通知信(有連結 / 沒有連結) 1`] = `
 {
   "html": "<!doctype html><html lang="zh-Hant"><body>
 <p>審核者 您好:</p>
-<p>您有一筆待審核的申請:「請假單:九月特休」(關卡:主管核准)。請開啟以下連結查看並審核:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
+<p>您有一筆待審核的申請「請假單:九月特休」(關卡:主管核准)。</p>
+<p>請開啟以下連結查看:</p>
+<p><a href="https://admin.example.com/apply-center/view-page/1">https://admin.example.com/apply-center/view-page/1</a></p>
 <p>CookHome 後台管理系統</p>
 </body></html>",
-  "kind": "workflow-task",
-  "link": "https://admin.example.com/requests/1",
+  "kind": "notification",
+  "link": "https://admin.example.com/apply-center/view-page/1",
+  "notificationType": "workflow.task-created",
   "subject": "【CookHome】待審核:請假單:九月特休",
   "text": "審核者 您好:
 
-您有一筆待審核的申請:「請假單:九月特休」(關卡:主管核准)。請開啟以下連結查看並審核:
+您有一筆待審核的申請「請假單:九月特休」(關卡:主管核准)。
 
-https://admin.example.com/requests/1
+請開啟以下連結查看:
 
-CookHome 後台管理系統",
-  "to": "reviewer@example.com",
-}
-`;
-
-exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 審核任務通知 2`] = `
-{
-  "html": "<!doctype html><html lang="zh-Hant"><body>
-<p>審核者 您好:</p>
-<p>您有一筆待審核的申請:「請假單」(關卡:主管核准)。請開啟以下連結查看並審核:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
-<p>CookHome 後台管理系統</p>
-</body></html>",
-  "kind": "workflow-task",
-  "link": "https://admin.example.com/requests/1",
-  "subject": "【CookHome】待審核:請假單",
-  "text": "審核者 您好:
-
-您有一筆待審核的申請:「請假單」(關卡:主管核准)。請開啟以下連結查看並審核:
-
-https://admin.example.com/requests/1
+https://admin.example.com/apply-center/view-page/1
 
 CookHome 後台管理系統",
   "to": "reviewer@example.com",
 }
 `;
 
-exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 審核結果通知(核准 / 駁回附理由 / 退回) 1`] = `
+exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 通知信(有連結 / 沒有連結) 2`] = `
 {
   "html": "<!doctype html><html lang="zh-Hant"><body>
 <p>小明 您好:</p>
-<p>您的申請「請假單」已核准。</p>
-<p>請開啟以下連結查看詳情:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
+<p>您的申請「請假單」已駁回。理由:日期重疊</p>
 <p>CookHome 後台管理系統</p>
 </body></html>",
-  "kind": "workflow-result",
-  "link": "https://admin.example.com/requests/1",
-  "subject": "【CookHome】申請已核准:請假單",
-  "text": "小明 您好:
-
-您的申請「請假單」已核准。
-
-請開啟以下連結查看詳情:
-
-https://admin.example.com/requests/1
-
-CookHome 後台管理系統",
-  "to": "ming@example.com",
-}
-`;
-
-exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 審核結果通知(核准 / 駁回附理由 / 退回) 2`] = `
-{
-  "html": "<!doctype html><html lang="zh-Hant"><body>
-<p>小明 您好:</p>
-<p>您的申請「請假單」已駁回。</p>
-<p>理由:日期重疊</p>
-<p>請開啟以下連結查看詳情:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
-<p>CookHome 後台管理系統</p>
-</body></html>",
-  "kind": "workflow-result",
-  "link": "https://admin.example.com/requests/1",
+  "kind": "notification",
+  "link": null,
+  "notificationType": "workflow.result",
   "subject": "【CookHome】申請已駁回:請假單",
   "text": "小明 您好:
 
-您的申請「請假單」已駁回。
-
-理由:日期重疊
-
-請開啟以下連結查看詳情:
-
-https://admin.example.com/requests/1
-
-CookHome 後台管理系統",
-  "to": "ming@example.com",
-}
-`;
-
-exports[`固定的 CookHome 設定:信件輸出與抽設定前逐字相同 審核結果通知(核准 / 駁回附理由 / 退回) 3`] = `
-{
-  "html": "<!doctype html><html lang="zh-Hant"><body>
-<p>小明 您好:</p>
-<p>您的申請「請假單」已退回修改。</p>
-<p>理由:日期重疊</p>
-<p>請開啟以下連結查看詳情:</p>
-<p><a href="https://admin.example.com/requests/1">https://admin.example.com/requests/1</a></p>
-<p>CookHome 後台管理系統</p>
-</body></html>",
-  "kind": "workflow-result",
-  "link": "https://admin.example.com/requests/1",
-  "subject": "【CookHome】申請已退回修改:請假單",
-  "text": "小明 您好:
-
-您的申請「請假單」已退回修改。
-
-理由:日期重疊
-
-請開啟以下連結查看詳情:
-
-https://admin.example.com/requests/1
+您的申請「請假單」已駁回。理由:日期重疊
 
 CookHome 後台管理系統",
   "to": "ming@example.com",

@@ -1114,6 +1114,15 @@ export type LogoutPayload = {
   success: Scalars['Boolean']['output'];
 };
 
+export type MarkNotificationsReadInput = {
+  ids: Array<Scalars['ID']['input']>;
+};
+
+export type MarkNotificationsReadPayload = {
+  __typename?: 'MarkNotificationsReadPayload';
+  unreadCount: Scalars['Int']['output'];
+};
+
 export type Me = {
   __typename?: 'Me';
   account: Scalars['String']['output'];
@@ -1284,6 +1293,8 @@ export type Mutation = {
   login: LoginPayload;
   logout: LogoutPayload;
   logoutAllDevices: LogoutAllDevicesPayload;
+  markAllNotificationsRead: MarkNotificationsReadPayload;
+  markNotificationsRead: MarkNotificationsReadPayload;
   moveOrg: OrgPayload;
   provisionTenant: ProvisionTenantPayload;
   publishFormVersion: FormVersionPayload;
@@ -1291,6 +1302,7 @@ export type Mutation = {
   reassignTask: WorkflowTaskPayload;
   refresh: RefreshPayload;
   requestPasswordReset: RequestPasswordResetPayload;
+  resetNotificationSetting: NotificationSettingPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
@@ -1331,6 +1343,7 @@ export type Mutation = {
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
   updateMyPreferences: UpdateMyPreferencesPayload;
+  updateNotificationSetting: NotificationSettingPayload;
   updateOrg: OrgPayload;
   updateRole: RolePayload;
   updateUser: UserPayload;
@@ -1516,6 +1529,11 @@ export type MutationLoginArgs = {
 };
 
 
+export type MutationMarkNotificationsReadArgs = {
+  input: MarkNotificationsReadInput;
+};
+
+
 export type MutationMoveOrgArgs = {
   input: MoveOrgInput;
 };
@@ -1543,6 +1561,11 @@ export type MutationReassignTaskArgs = {
 
 export type MutationRequestPasswordResetArgs = {
   input: RequestPasswordResetInput;
+};
+
+
+export type MutationResetNotificationSettingArgs = {
+  input: ResetNotificationSettingInput;
 };
 
 
@@ -1746,6 +1769,11 @@ export type MutationUpdateMyPreferencesArgs = {
 };
 
 
+export type MutationUpdateNotificationSettingArgs = {
+  input: UpdateNotificationSettingInput;
+};
+
+
 export type MutationUpdateOrgArgs = {
   input: UpdateOrgInput;
 };
@@ -1797,6 +1825,32 @@ export type MyApplicationsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type MyNotificationPreferencesPayload = {
+  __typename?: 'MyNotificationPreferencesPayload';
+  items: Array<NotificationTypePreference>;
+};
+
+export type MyNotificationUnreadCountPayload = {
+  __typename?: 'MyNotificationUnreadCountPayload';
+  count: Scalars['Int']['output'];
+};
+
+export type MyNotificationsInput = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type MyNotificationsPayload = {
+  __typename?: 'MyNotificationsPayload';
+  items: Array<Notification>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+  unreadCount: Scalars['Int']['output'];
+};
+
 export type MyPreferencesPayload = {
   __typename?: 'MyPreferencesPayload';
   settings: Scalars['JSONObject']['output'];
@@ -1809,6 +1863,72 @@ export type MyTasksInput = {
   page?: InputMaybe<Scalars['Int']['input']>;
   /** 每頁筆數,上限 100 */
   pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type Notification = {
+  __typename?: 'Notification';
+  body: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  link?: Maybe<Scalars['String']['output']>;
+  readAt?: Maybe<Scalars['DateTime']['output']>;
+  refId?: Maybe<Scalars['String']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  title: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type NotificationChannelPreference = {
+  __typename?: 'NotificationChannelPreference';
+  canDisable: Scalars['Boolean']['output'];
+  channel: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  preferenceKey: Scalars['String']['output'];
+};
+
+export type NotificationOrgScope = {
+  __typename?: 'NotificationOrgScope';
+  range: Scalars['String']['output'];
+  ref: Scalars['String']['output'];
+};
+
+export type NotificationSetting = {
+  __typename?: 'NotificationSetting';
+  audience: Scalars['JSONObject']['output'];
+  defaultAudience: Scalars['JSONObject']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  orgScope: NotificationOrgScope;
+  type: Scalars['String']['output'];
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedBy?: Maybe<Scalars['ID']['output']>;
+};
+
+export type NotificationSettingPayload = {
+  __typename?: 'NotificationSettingPayload';
+  setting: NotificationSetting;
+};
+
+export type NotificationSettingsInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type NotificationSettingsPayload = {
+  __typename?: 'NotificationSettingsPayload';
+  items: Array<NotificationSetting>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type NotificationTypePreference = {
+  __typename?: 'NotificationTypePreference';
+  channels: Array<NotificationChannelPreference>;
+  name: Scalars['String']['output'];
+  type: Scalars['String']['output'];
 };
 
 export type Org = {
@@ -1966,8 +2086,12 @@ export type Query = {
   moduleListColumns: ModuleListColumnsPayload;
   moduleTree: Array<ModuleAdminNode>;
   myApplications: MyApplicationsPayload;
+  myNotificationPreferences: MyNotificationPreferencesPayload;
+  myNotificationUnreadCount: MyNotificationUnreadCountPayload;
+  myNotifications: MyNotificationsPayload;
   myPreferences: MyPreferencesPayload;
   myTasks: WorkflowTasksPayload;
+  notificationSettings: NotificationSettingsPayload;
   org: Org;
   orgManagerCandidates: Array<UserSummary>;
   orgMemberCandidates: OrgMembersPayload;
@@ -2140,8 +2264,18 @@ export type QueryMyApplicationsArgs = {
 };
 
 
+export type QueryMyNotificationsArgs = {
+  input: MyNotificationsInput;
+};
+
+
 export type QueryMyTasksArgs = {
   input: MyTasksInput;
+};
+
+
+export type QueryNotificationSettingsArgs = {
+  input: NotificationSettingsInput;
 };
 
 
@@ -2286,6 +2420,10 @@ export type RequestPasswordResetInput = {
 export type RequestPasswordResetPayload = {
   __typename?: 'RequestPasswordResetPayload';
   success: Scalars['Boolean']['output'];
+};
+
+export type ResetNotificationSettingInput = {
+  type: Scalars['String']['input'];
 };
 
 export type RetireCurrentVersionInput = {
@@ -2739,6 +2877,11 @@ export type UpdateMyPreferencesInput = {
 export type UpdateMyPreferencesPayload = {
   __typename?: 'UpdateMyPreferencesPayload';
   settings: Scalars['JSONObject']['output'];
+};
+
+export type UpdateNotificationSettingInput = {
+  audience: Scalars['JSONObject']['input'];
+  type: Scalars['String']['input'];
 };
 
 export type UpdateOrgInput = {
@@ -3848,6 +3991,60 @@ export type SetPermissionEnabledMutationVariables = Exact<{
 
 export type SetPermissionEnabledMutation = { __typename?: 'Mutation', setPermissionEnabled: { __typename?: 'PermissionAdminPayload', permission: { __typename?: 'PermissionAdmin', id: string, key: string, name: string, description?: string | null, enabled: boolean } } };
 
+export type NotificationItemFragment = { __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string };
+
+export type MyNotificationsQueryVariables = Exact<{
+  input: MyNotificationsInput;
+}>;
+
+
+export type MyNotificationsQuery = { __typename?: 'Query', myNotifications: { __typename?: 'MyNotificationsPayload', page: number, pageSize: number, totalCount: number, unreadCount: number, items: Array<{ __typename?: 'Notification', id: string, type: string, title: string, body: string, refType?: string | null, refId?: string | null, link?: string | null, readAt?: string | null, createdAt: string }> } };
+
+export type MyNotificationUnreadCountQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyNotificationUnreadCountQuery = { __typename?: 'Query', myNotificationUnreadCount: { __typename?: 'MyNotificationUnreadCountPayload', count: number } };
+
+export type MarkNotificationsReadMutationVariables = Exact<{
+  input: MarkNotificationsReadInput;
+}>;
+
+
+export type MarkNotificationsReadMutation = { __typename?: 'Mutation', markNotificationsRead: { __typename?: 'MarkNotificationsReadPayload', unreadCount: number } };
+
+export type MarkAllNotificationsReadMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MarkAllNotificationsReadMutation = { __typename?: 'Mutation', markAllNotificationsRead: { __typename?: 'MarkNotificationsReadPayload', unreadCount: number } };
+
+export type MyNotificationPreferencesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyNotificationPreferencesQuery = { __typename?: 'Query', myNotificationPreferences: { __typename?: 'MyNotificationPreferencesPayload', items: Array<{ __typename?: 'NotificationTypePreference', type: string, name: string, channels: Array<{ __typename?: 'NotificationChannelPreference', channel: string, preferenceKey: string, enabled: boolean, canDisable: boolean }> }> } };
+
+export type NotificationSettingItemFragment = { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } };
+
+export type NotificationSettingsQueryVariables = Exact<{
+  input: NotificationSettingsInput;
+}>;
+
+
+export type NotificationSettingsQuery = { __typename?: 'Query', notificationSettings: { __typename?: 'NotificationSettingsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } }> } };
+
+export type UpdateNotificationSettingMutationVariables = Exact<{
+  input: UpdateNotificationSettingInput;
+}>;
+
+
+export type UpdateNotificationSettingMutation = { __typename?: 'Mutation', updateNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+
+export type ResetNotificationSettingMutationVariables = Exact<{
+  input: ResetNotificationSettingInput;
+}>;
+
+
+export type ResetNotificationSettingMutation = { __typename?: 'Mutation', resetNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+
 export type OrgNodeFieldsFragment = { __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null };
 
 export type OrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
@@ -4697,6 +4894,34 @@ export const ModuleAdminNodeFieldsFragmentDoc = `
     description
     enabled
   }
+}
+    `;
+export const NotificationItemFragmentDoc = `
+    fragment NotificationItem on Notification {
+  id
+  type
+  title
+  body
+  refType
+  refId
+  link
+  readAt
+  createdAt
+}
+    `;
+export const NotificationSettingItemFragmentDoc = `
+    fragment NotificationSettingItem on NotificationSetting {
+  type
+  name
+  orgScope {
+    ref
+    range
+  }
+  audience
+  isDefault
+  defaultAudience
+  updatedAt
+  updatedBy
 }
     `;
 export const OrgNodeFieldsFragmentDoc = `
@@ -7905,6 +8130,266 @@ export const useSetPermissionEnabledMutation = <
 
 
 useSetPermissionEnabledMutation.fetcher = (client: GraphQLClient, variables: SetPermissionEnabledMutationVariables, headers?: RequestInit['headers']) => fetcher<SetPermissionEnabledMutation, SetPermissionEnabledMutationVariables>(client, SetPermissionEnabledDocument, variables, headers);
+
+export const MyNotificationsDocument = `
+    query MyNotifications($input: MyNotificationsInput!) {
+  myNotifications(input: $input) {
+    items {
+      ...NotificationItem
+    }
+    page
+    pageSize
+    totalCount
+    unreadCount
+  }
+}
+    ${NotificationItemFragmentDoc}`;
+
+export const useMyNotificationsQuery = <
+      TData = MyNotificationsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MyNotificationsQueryVariables,
+      options?: Omit<UseQueryOptions<MyNotificationsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyNotificationsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyNotificationsQuery, TError, TData>(
+      {
+    queryKey: ['MyNotifications', variables],
+    queryFn: fetcher<MyNotificationsQuery, MyNotificationsQueryVariables>(client, MyNotificationsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyNotificationsQuery.getKey = (variables: MyNotificationsQueryVariables) => ['MyNotifications', variables];
+
+
+useMyNotificationsQuery.fetcher = (client: GraphQLClient, variables: MyNotificationsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyNotificationsQuery, MyNotificationsQueryVariables>(client, MyNotificationsDocument, variables, headers);
+
+export const MyNotificationUnreadCountDocument = `
+    query MyNotificationUnreadCount {
+  myNotificationUnreadCount {
+    count
+  }
+}
+    `;
+
+export const useMyNotificationUnreadCountQuery = <
+      TData = MyNotificationUnreadCountQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyNotificationUnreadCountQueryVariables,
+      options?: Omit<UseQueryOptions<MyNotificationUnreadCountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyNotificationUnreadCountQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyNotificationUnreadCountQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyNotificationUnreadCount'] : ['MyNotificationUnreadCount', variables],
+    queryFn: fetcher<MyNotificationUnreadCountQuery, MyNotificationUnreadCountQueryVariables>(client, MyNotificationUnreadCountDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyNotificationUnreadCountQuery.getKey = (variables?: MyNotificationUnreadCountQueryVariables) => variables === undefined ? ['MyNotificationUnreadCount'] : ['MyNotificationUnreadCount', variables];
+
+
+useMyNotificationUnreadCountQuery.fetcher = (client: GraphQLClient, variables?: MyNotificationUnreadCountQueryVariables, headers?: RequestInit['headers']) => fetcher<MyNotificationUnreadCountQuery, MyNotificationUnreadCountQueryVariables>(client, MyNotificationUnreadCountDocument, variables, headers);
+
+export const MarkNotificationsReadDocument = `
+    mutation MarkNotificationsRead($input: MarkNotificationsReadInput!) {
+  markNotificationsRead(input: $input) {
+    unreadCount
+  }
+}
+    `;
+
+export const useMarkNotificationsReadMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<MarkNotificationsReadMutation, TError, MarkNotificationsReadMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<MarkNotificationsReadMutation, TError, MarkNotificationsReadMutationVariables, TContext>(
+      {
+    mutationKey: ['MarkNotificationsRead'],
+    mutationFn: (variables?: MarkNotificationsReadMutationVariables) => fetcher<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>(client, MarkNotificationsReadDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useMarkNotificationsReadMutation.fetcher = (client: GraphQLClient, variables: MarkNotificationsReadMutationVariables, headers?: RequestInit['headers']) => fetcher<MarkNotificationsReadMutation, MarkNotificationsReadMutationVariables>(client, MarkNotificationsReadDocument, variables, headers);
+
+export const MarkAllNotificationsReadDocument = `
+    mutation MarkAllNotificationsRead {
+  markAllNotificationsRead {
+    unreadCount
+  }
+}
+    `;
+
+export const useMarkAllNotificationsReadMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<MarkAllNotificationsReadMutation, TError, MarkAllNotificationsReadMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<MarkAllNotificationsReadMutation, TError, MarkAllNotificationsReadMutationVariables, TContext>(
+      {
+    mutationKey: ['MarkAllNotificationsRead'],
+    mutationFn: (variables?: MarkAllNotificationsReadMutationVariables) => fetcher<MarkAllNotificationsReadMutation, MarkAllNotificationsReadMutationVariables>(client, MarkAllNotificationsReadDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useMarkAllNotificationsReadMutation.fetcher = (client: GraphQLClient, variables?: MarkAllNotificationsReadMutationVariables, headers?: RequestInit['headers']) => fetcher<MarkAllNotificationsReadMutation, MarkAllNotificationsReadMutationVariables>(client, MarkAllNotificationsReadDocument, variables, headers);
+
+export const MyNotificationPreferencesDocument = `
+    query MyNotificationPreferences {
+  myNotificationPreferences {
+    items {
+      type
+      name
+      channels {
+        channel
+        preferenceKey
+        enabled
+        canDisable
+      }
+    }
+  }
+}
+    `;
+
+export const useMyNotificationPreferencesQuery = <
+      TData = MyNotificationPreferencesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyNotificationPreferencesQueryVariables,
+      options?: Omit<UseQueryOptions<MyNotificationPreferencesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyNotificationPreferencesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyNotificationPreferencesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyNotificationPreferences'] : ['MyNotificationPreferences', variables],
+    queryFn: fetcher<MyNotificationPreferencesQuery, MyNotificationPreferencesQueryVariables>(client, MyNotificationPreferencesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyNotificationPreferencesQuery.getKey = (variables?: MyNotificationPreferencesQueryVariables) => variables === undefined ? ['MyNotificationPreferences'] : ['MyNotificationPreferences', variables];
+
+
+useMyNotificationPreferencesQuery.fetcher = (client: GraphQLClient, variables?: MyNotificationPreferencesQueryVariables, headers?: RequestInit['headers']) => fetcher<MyNotificationPreferencesQuery, MyNotificationPreferencesQueryVariables>(client, MyNotificationPreferencesDocument, variables, headers);
+
+export const NotificationSettingsDocument = `
+    query NotificationSettings($input: NotificationSettingsInput!) {
+  notificationSettings(input: $input) {
+    items {
+      ...NotificationSettingItem
+    }
+    page
+    pageSize
+    totalCount
+  }
+}
+    ${NotificationSettingItemFragmentDoc}`;
+
+export const useNotificationSettingsQuery = <
+      TData = NotificationSettingsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: NotificationSettingsQueryVariables,
+      options?: Omit<UseQueryOptions<NotificationSettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<NotificationSettingsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<NotificationSettingsQuery, TError, TData>(
+      {
+    queryKey: ['NotificationSettings', variables],
+    queryFn: fetcher<NotificationSettingsQuery, NotificationSettingsQueryVariables>(client, NotificationSettingsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useNotificationSettingsQuery.getKey = (variables: NotificationSettingsQueryVariables) => ['NotificationSettings', variables];
+
+
+useNotificationSettingsQuery.fetcher = (client: GraphQLClient, variables: NotificationSettingsQueryVariables, headers?: RequestInit['headers']) => fetcher<NotificationSettingsQuery, NotificationSettingsQueryVariables>(client, NotificationSettingsDocument, variables, headers);
+
+export const UpdateNotificationSettingDocument = `
+    mutation UpdateNotificationSetting($input: UpdateNotificationSettingInput!) {
+  updateNotificationSetting(input: $input) {
+    setting {
+      ...NotificationSettingItem
+    }
+  }
+}
+    ${NotificationSettingItemFragmentDoc}`;
+
+export const useUpdateNotificationSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateNotificationSettingMutation, TError, UpdateNotificationSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateNotificationSettingMutation, TError, UpdateNotificationSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateNotificationSetting'],
+    mutationFn: (variables?: UpdateNotificationSettingMutationVariables) => fetcher<UpdateNotificationSettingMutation, UpdateNotificationSettingMutationVariables>(client, UpdateNotificationSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateNotificationSettingMutation.fetcher = (client: GraphQLClient, variables: UpdateNotificationSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateNotificationSettingMutation, UpdateNotificationSettingMutationVariables>(client, UpdateNotificationSettingDocument, variables, headers);
+
+export const ResetNotificationSettingDocument = `
+    mutation ResetNotificationSetting($input: ResetNotificationSettingInput!) {
+  resetNotificationSetting(input: $input) {
+    setting {
+      ...NotificationSettingItem
+    }
+  }
+}
+    ${NotificationSettingItemFragmentDoc}`;
+
+export const useResetNotificationSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ResetNotificationSettingMutation, TError, ResetNotificationSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ResetNotificationSettingMutation, TError, ResetNotificationSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['ResetNotificationSetting'],
+    mutationFn: (variables?: ResetNotificationSettingMutationVariables) => fetcher<ResetNotificationSettingMutation, ResetNotificationSettingMutationVariables>(client, ResetNotificationSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useResetNotificationSettingMutation.fetcher = (client: GraphQLClient, variables: ResetNotificationSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<ResetNotificationSettingMutation, ResetNotificationSettingMutationVariables>(client, ResetNotificationSettingDocument, variables, headers);
 
 export const OrgTreeDocument = `
     query OrgTree {

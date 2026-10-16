@@ -215,9 +215,9 @@ describe("審核流程引擎", () => {
       expect(after.abilities.canEdit).toBe(false);
       const kinds = mail()
         .sent.slice(before)
-        .map((message) => message.kind);
-      expect(kinds).toContain("workflow-task");
-      expect(kinds).toContain("workflow-result");
+        .map((message) => message.notificationType);
+      expect(kinds).toContain("workflow.task-created");
+      expect(kinds).toContain("workflow.result");
     });
 
     it("退回修改 → returned;改完再送出修訂 +1、新實例從頭、舊實例 superseded 並收尾", async () => {
@@ -903,7 +903,7 @@ describe("審核流程引擎", () => {
       await retryAdvance(world, instance.id);
       const results = mail()
         .sent.slice(before)
-        .filter((message) => message.kind === "workflow-result");
+        .filter((message) => message.notificationType === "workflow.result");
       expect(results).toHaveLength(1);
       expect(results[0]?.subject).toContain("已核准");
       expect(
@@ -948,7 +948,7 @@ describe("審核流程引擎", () => {
       const resultMails = () =>
         mail()
           .sent.slice(before)
-          .filter((message) => message.kind === "workflow-result");
+          .filter((message) => message.notificationType === "workflow.result");
       expect(resultMails()).toEqual([]);
       await decide(world, staff(0), task, "APPROVE");
       expect(resultMails()).toHaveLength(1);
@@ -976,7 +976,7 @@ describe("審核流程引擎", () => {
       await retryAdvance(world, instance.id);
       const results = mail()
         .sent.slice(before)
-        .filter((message) => message.kind === "workflow-result");
+        .filter((message) => message.notificationType === "workflow.result");
       expect(results).toHaveLength(1);
       expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
     });

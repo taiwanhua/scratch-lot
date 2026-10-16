@@ -14,6 +14,8 @@ export * from "./form-submission.schema";
 export * from "./form-version.schema";
 export * from "./form.schema";
 export * from "./module.schema";
+export * from "./notification-setting.schema";
+export * from "./notification.schema";
 export * from "./org.schema";
 export * from "./permission.schema";
 export * from "./refresh-token.schema";

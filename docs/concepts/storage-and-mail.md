@@ -101,7 +101,7 @@
 | 品牌文字 | 登記在 `docs/branding.md`                                              |
 
 - 換供應商只換 adapter,呼叫端不動。
-- 審核流程的通知信另受 `WORKFLOW_MAIL_ENABLED` 開關控制(`docs/modules/workflows.md`)。
+- 通知的 email(含審核流程)另受總開關 `WORKFLOW_MAIL_ENABLED` 控制(`docs/modules/notification-settings.md`);啟用信 / 重設密碼信不受它管。
 - 連結效期與單次使用見 `docs/concepts/accounts-and-tenants.md`「啟用與重設密碼連結」。
 
 正本:`apps/api/src/mail/mail.service.ts`、`apps/api/src/mail/mail.config.ts`、`apps/api/src/mail/mail.module.ts`、`apps/api/src/mail/mail-templates.ts`
