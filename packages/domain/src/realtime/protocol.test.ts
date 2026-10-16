@@ -15,8 +15,12 @@ describe("信號只有類型與編號", () => {
   });
 
   it("夾帶任何其他欄位(資料)→ 不是信號", () => {
-    expect(isRealtimeSignal({ type: "badge:apply-center", data: { count: 3 } })).toBe(false);
-    expect(isRealtimeSignal({ type: "notification", id: "1", title: "x" })).toBe(false);
+    expect(
+      isRealtimeSignal({ type: "badge:apply-center", data: { count: 3 } }),
+    ).toBe(false);
+    expect(
+      isRealtimeSignal({ type: "notification", id: "1", title: "x" }),
+    ).toBe(false);
   });
 
   it("類型 / 編號格式不對 → 不是信號", () => {
@@ -73,7 +77,12 @@ describe("/publish 請求", () => {
   });
 
   it("topics 必須是不重複、格式正確的非空陣列(舊的單一 topic 欄位不再接受)", () => {
-    for (const topics of [[], ["user:u1", "user:u1"], ["tenant:t1"], "user:u1"]) {
+    for (const topics of [
+      [],
+      ["user:u1", "user:u1"],
+      ["tenant:t1"],
+      "user:u1",
+    ]) {
       expect(isRealtimePublishRequest({ tenantId: "t1", topics, signal })).toBe(
         false,
       );
