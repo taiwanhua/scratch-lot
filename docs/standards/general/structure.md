@@ -81,8 +81,9 @@ admin 的 `components/`、`hooks/`、`stores/`、`lib/` 底下**只有 `base/`(�
 | CLI 工具(`apps/db-migrator`) | `process.stdout.write` / `process.stderr.write` | 摘要輸出(新增 N / 更新 M / 認養 A / 未變 K)就是它的介面;tsx 直跑的腳本不該依賴需先 build 的套件 |
 | api(NestJS)                  | Nest 內建 `Logger`(`new Logger(ClassName)`)     | 框架自帶等級、前綴與輸出管道,與 Nest 的啟動 log 一致;不另接 `@repo/logger`                      |
 | front / admin(瀏覽器、Next)  | `@repo/logger`                                  | 全 repo 唯一允許碰 `console` 的地方,集中管理                                                    |
+| realtime(Cloudflare Worker)  | `@repo/logger`                                  | 輸出走 console 即進 Workers 日誌;沿用同一個豁免點,不另寫 console                                |
 
-`no-console` 一律開著;三種以外的寫法都算違規。
+`no-console` 一律開著;表列以外的寫法都算違規。
 
 ## STRUCT-07 前後端共用的純邏輯放 `@repo/domain`,按主題分資料夾,不一個共用開一個包
 
