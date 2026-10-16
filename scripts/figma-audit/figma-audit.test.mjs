@@ -239,7 +239,18 @@ function syncScene() {
     n(
       "FRAME",
       { name: "AA-01 列表 · 手機", ay: 2000, width: 390, height: 844 },
-      [n("FRAME", { name: "toolbar" }, [button("篩選")])],
+      [
+        n("FRAME", { name: "toolbar" }, [button("篩選")]),
+        // 全螢幕對話框的 app bar(Kind=Dialog)不算標題列,它的按鈕不比
+        n(
+          "INSTANCE",
+          {
+            name: "MobileAppBar",
+            componentProperties: { Kind: { value: "Dialog" } },
+          },
+          [button("儲存")],
+        ),
+      ],
     ),
   ]);
   const page = n("PAGE", { name: "Screen / 測試" }, [desktop, mobile]);

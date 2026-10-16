@@ -68,7 +68,7 @@ export const testConfig = () => ({
     nonButton: /Tag|AppBar/,
     headInstance: /PageHeader/,
     headFrame: /^toolbar$/,
-    appBar: { name: /MobileAppBar/, skipKind: "Dialog" },
+    appBar: { name: /MobileAppBar/, kindProp: "Kind", skipKind: "Dialog" },
     merged: [],
     exempt: {},
     sharedBlocks: [

@@ -87,8 +87,8 @@ const AUDIT_CONFIG = {
     // 標題列:這些實例、這些名稱的框(不在實例內)
     headInstance: /CashPointHeader|StoreTopBar/,
     headFrame: /^(store-top|toolbar|title|doc-head)$/,
-    // 平板 / 手機最上面的 app bar(Kind=Dialog 是全螢幕對話框,不算標題列)
-    appBar: { name: /ScratchLotAppBar/, skipKind: "Dialog" },
+    // 平板 / 手機最上面的 app bar;kindProp 屬性等於 skipKind 的是全螢幕對話框,不算標題列
+    appBar: { name: /ScratchLotAppBar/, kindProp: "Kind", skipKind: "Dialog" },
     // 手機收進選單的按鈕:[選單按鈕, 收起來的按鈕]
     merged: [
       ["+ 新增 ▾", ["+ 人力需求", "+ 新增排班"]],
