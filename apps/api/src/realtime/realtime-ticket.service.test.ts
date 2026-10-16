@@ -227,3 +227,41 @@ describe("realtimeTicket:只含操作者有權的頻道", () => {
     expect(unknown.ticket.topics).toEqual([self]);
   });
 });
+
+describe("代理程式的訂閱憑證(底座規格第 6 章)", () => {
+  const agentId = String(new Types.ObjectId());
+
+  it("只含 print-agent:<自己>,租戶 = 代理程式分店所屬租戶;10 分鐘", async () => {
+    const grant = await serviceWith([]).issueForAgent(tenantA, agentId, NOW);
+    if (grant === null) {
+      throw new Error("沒有簽發");
+    }
+    const verified = await verifyRealtimeTicket(grant.ticket, SECRET, NOW);
+    expect(verified).toEqual({
+      ok: true,
+      ticket: {
+        tenantId: String(tenantA),
+        agentId,
+        exp: NOW + 600,
+        topics: [`print-agent:${agentId}`],
+      },
+    });
+    expect(grant.connectUrl).toBe("wss://rt-dev.example.com/connect");
+  });
+
+  it("根組織的代理程式 → platform;即時通道停用 → null", async () => {
+    const grant = await serviceWith([]).issueForAgent(null, agentId, NOW);
+    const verified = await verifyRealtimeTicket(
+      grant?.ticket ?? "",
+      SECRET,
+      NOW,
+    );
+    expect(verified.ok && verified.ticket.tenantId).toBe(REALTIME_PLATFORM_HUB);
+    await expect(
+      serviceWith([], { config: { enabled: false } }).issueForAgent(
+        tenantA,
+        agentId,
+      ),
+    ).resolves.toBeNull();
+  });
+});

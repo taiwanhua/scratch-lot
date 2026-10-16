@@ -34,6 +34,9 @@
 | `workflow_versions`                 | 設定(受管 seed 或各環境自建)                             | 流程版本(生命週期同表單版本;`steps[]` 節點 + `edges[]` 連線)                                             | 流程           | `workflow-version.schema.ts`      |
 | `workflow_instances`                | 業務                                                     | 流程實例(一筆提交的一個修訂號送出一次;**唯一權威**:關卡狀態、派任計畫、已接受的決定)                     | 流程           | `workflow-instance.schema.ts`     |
 | `workflow_tasks`                    | 業務                                                     | 審核任務(實例派任計畫一項的投影;「待我審核」與讀取授權用)                                                | 流程           | `workflow-task.schema.ts`         |
+| `print_agents`                      | 業務                                                     | 店內代理程式(分店的列印程式;金鑰與配對碼只存雜湊、`lastSeenAt` 判斷離線)                                 | 列印           | `print-agent.schema.ts`           |
+| `printers`                          | 業務                                                     | 收據機(只記到分店層;連線位址、分店預設、代理程式回報的狀態)                                              | 列印           | `printer.schema.ts`               |
+| `print_jobs`                        | 業務                                                     | 列印工作(單據的黑白 PNG 快照、狀態、補印原因與第幾次)                                                    | 列印           | `print-job.schema.ts`             |
 
 共用表單與流程可由專案 seed 管理;未登記的共用定義及租戶客製定義仍在各環境獨立維護。它們共用原本的身分與版本 collection,不另複製一份設定表。
 
@@ -56,6 +59,18 @@
 
 執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑;中途當掉的紀錄停在 `running`,`startedAt` 超過 15 分鐘後以條件式原子更新重新取得。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
 
+### 列印
+
+`print_agents`、`printers`、`print_jobs` 是印表機管理模組(`system.printers`)的模組資料表(`moduleData`,`moduleKey` 固定 `system.printers`),都掛在**分店**(`orgId`)上;印表機的分店 = 它的代理程式的分店,工作的分店 = 印表機的分店。
+
+| collection     | 欄位                                                                                                                                                                                                                                                                                    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `print_agents` | `orgId`、`name`、`keyHash`(長期金鑰的 SHA-256;沒配對 / 已撤銷為 null)、`pairingCodeHash` + `pairingExpiresAt`(等待中的 8 碼配對碼,10 分鐘,用過即清)、`lastSeenAt`(超過 2 分鐘 = 離線)、`version`、`enabled`;`keyHash`、`pairingCodeHash` 各自唯一(只索引有值的)                         |
+| `printers`     | `orgId`、`agentId`、`name`、`host`、`port`(預設 9100)、`paperWidth`(58)、`isDefault`(同分店至多一台)、`enabled`、`status`(`ok` / `paper-out` / `offline`,代理程式回報)、`statusAt`                                                                                                      |
+| `print_jobs`   | `orgId`、`printerId`、`agentId`(建立時的代理程式快照)、`documentType`、`refType` + `refId`(單據)、`image`(PNG,預設查詢不帶)、`status`(`pending` / `sent` / `printed` / `failed`)、`error`、`isReprint`、`printNo`、`reprintReason`、`reprintNote`、`requestedBy`、`sentAt`、`printedAt` |
+
+狀態轉換只用條件更新:認領 `pending → sent`(且 2 分鐘內)、回報 `sent → printed / failed`、逾時與停用 `pending → failed`;同時到的兩個請求只有一個命中。規則與 API 見 `docs/modules/printers.md`。
+
 ### 個人偏好
 
 `user_preferences` 只存跟著帳號的個人偏好(規格 10.6),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
@@ -76,7 +91,7 @@
 
 - **基礎欄位**:`createdAt` `updatedAt` `createdBy` `updatedBy` `deletedAt`(軟刪除)。五個欄位都由 `baseFieldsPlugin` 掛上與自動填:`createdBy` / `updatedBy` / `deletedAt` 由 plugin 加;timestamps 沿用 schema 自己宣告的 `timestamps: true`,沒宣告時由 plugin 補上。
 - **租戶過濾**:租戶資料(有 `orgId`、掛 `tenantScopePlugin`)的查詢一律經 BaseRepository 自動過濾,禁裸 `Model.find`。哪些表屬租戶資料 / 全域資料 / 關聯歸屬資料,見 `docs/concepts/data-layer-and-isolation.md`「三類資料」。
-- **模組資料表**(schema 明確開 `tenantScopePlugin({ moduleData: true })`:`demo_items_one`、`demo_items_two`、`form_submissions`、`workflow_instances`)另有兩欄,由 plugin 一併宣告並建索引 `(tenantId, moduleKey, createdAt)`、`(moduleKey, orgId)`:`moduleKey`(必填,這筆屬於哪個模組;固定欄位模組寫死自己的 key)與 `tenantId`(租戶頂層 `orgs` id,`BaseRepository.create` 依 `orgId` 的祖先推導,根組織的資料為 null,呼叫端給的值一律覆蓋;兩欄建立後不可經一般更新改動)。`tenantId` 只用於租戶邊界、索引與日後分片,**不決定可見範圍**(仍看 `orgId`)。這個選項不綁 `kind: "business"`:`fields`、`audit_logs`、`customers` 也是租戶資料,但不是模組資料,沒有這兩欄。
+- **模組資料表**(schema 明確開 `tenantScopePlugin({ moduleData: true })`:`demo_items_one`、`demo_items_two`、`form_submissions`、`workflow_instances`、`print_agents`、`printers`、`print_jobs`)另有兩欄,由 plugin 一併宣告並建索引 `(tenantId, moduleKey, createdAt)`、`(moduleKey, orgId)`:`moduleKey`(必填,這筆屬於哪個模組;固定欄位模組寫死自己的 key)與 `tenantId`(租戶頂層 `orgs` id,`BaseRepository.create` 依 `orgId` 的祖先推導,根組織的資料為 null,呼叫端給的值一律覆蓋;兩欄建立後不可經一般更新改動)。`tenantId` 只用於租戶邊界、索引與日後分片,**不決定可見範圍**(仍看 `orgId`)。這個選項不綁 `kind: "business"`:`fields`、`audit_logs`、`customers` 也是租戶資料,但不是模組資料,沒有這兩欄。
 - **以 `tenantId` 為邊界、不掛 `tenantScopePlugin` 的表**:`business_relationships`、`workflows`、`workflow_tasks`。這些表沒有 `orgId`,而讀者不一定在資料所屬組織的可見範圍內(部門使用者的可見範圍不含租戶頂層;審核者不一定看得到申請人的組織);存取只經各自的 repository(`BusinessRelationshipsRepository` / `WorkflowsRepository` / `WorkflowTasksRepository`),每個方法強制帶 `tenantId`,沒給就拋錯。
 - **種子 vs 業務**:種子由 seed 以 key 冪等 upsert(`apps/db-migrator/seeds/`);業務資料不做跨環境搬移。
 - **索引**:各 schema 檔以 `.index(...)` 就地宣告(唯一鍵、orgId 複合、ancestors、TTL 等)。

@@ -12,9 +12,9 @@ import {
 } from "./module-icon-registry";
 
 describe("模組圖示登錄表", () => {
-  it("是 29 個 key,順序即顯示順序,沒有重複", () => {
-    expect(MODULE_ICON_KEYS).toHaveLength(29);
-    expect(new Set(MODULE_ICON_KEYS).size).toBe(29);
+  it("是 30 個 key,順序即顯示順序,沒有重複", () => {
+    expect(MODULE_ICON_KEYS).toHaveLength(30);
+    expect(new Set(MODULE_ICON_KEYS).size).toBe(30);
     expect(MODULE_ICON_KEYS[0]).toBe("dashboard");
   });
 

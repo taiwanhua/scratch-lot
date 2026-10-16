@@ -93,6 +93,7 @@ function fakeBucket(): {
         getSignedUrl,
         delete: deleteFile,
         copy: () => Promise.resolve([]),
+        download: () => Promise.resolve([Buffer.from("{}")]),
       };
     },
   };

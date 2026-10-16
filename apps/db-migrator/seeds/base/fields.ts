@@ -3,7 +3,11 @@ import {
   type SeedDocumentSet,
   seedRef,
 } from "../../src/seed/seed-declaration";
-import { DEMO_CATEGORY_KEY, GENDER_CATEGORY_KEY } from "./field-categories";
+import {
+  DEMO_CATEGORY_KEY,
+  GENDER_CATEGORY_KEY,
+  REPRINT_REASON_CATEGORY_KEY,
+} from "./field-categories";
 import { ROOT_ORG_KEY } from "./orgs";
 
 interface FieldOption {
@@ -58,6 +62,12 @@ export const fields: SeedDocumentSet = {
       { value: "staple", label: "主食" },
       { value: "side-dish", label: "小菜" },
       { value: "drink", label: "飲品" },
+    ]),
+    // 補印原因:值與 `@repo/domain/printing` 的 `REPRINT_REASONS` 一致(`other` = 說明必填)
+    ...globalOptions(REPRINT_REASON_CATEGORY_KEY, [
+      { value: "lost", label: "遺失" },
+      { value: "damaged", label: "破損" },
+      { value: "other", label: "其他" },
     ]),
   ],
 };

@@ -16,6 +16,7 @@ export const FORMS_KEY = `${SYSTEM_GROUP_KEY}.forms`;
 export const WORKFLOWS_KEY = `${SYSTEM_GROUP_KEY}.workflows`;
 export const WORKFLOWS_BLOCKED_PAGE_KEY = `${WORKFLOWS_KEY}.blocked-page`;
 export const NOTIFICATION_SETTINGS_KEY = `${SYSTEM_GROUP_KEY}.notification-settings`;
+export const PRINTERS_KEY = `${SYSTEM_GROUP_KEY}.printers`;
 
 /**
  * 治理模組(CONTEXT.md「治理模組」):管平台結構本身,隨底座出貨。
@@ -171,6 +172,17 @@ export const systemModules: ModuleSeedDeclaration = {
       route: "notification-settings",
       icon: "notifications",
       description: "負責人提醒類型的收件人(人員條件);組織範圍由通知類型宣告",
+    },
+    {
+      // 印表機管理(docs/modules/printers.md):印表機、代理程式(配對 / 下載安裝檔)、列印紀錄
+      key: PRINTERS_KEY,
+      name: "印表機管理",
+      sidebarType: "link",
+      parentKey: SYSTEM_GROUP_KEY,
+      order: 10,
+      route: "printers",
+      icon: "print",
+      description: "店內收據機:印表機、代理程式(配對與安裝檔下載)與列印紀錄",
     },
   ],
   // 個別權限(綁「按鈕 / 欄位所在的那一頁」,ADR-0004);正本 = 兩份模組文件的權限表
@@ -500,6 +512,27 @@ export const systemModules: ModuleSeedDeclaration = {
       name: "刪除退役權限",
       description:
         "刪除表單發布產生、已退役的欄位級權限 + API(三層檢查:草稿仍用到擋下、只剩已完成要確認、沒人用直接刪)",
+    },
+    // 印表機管理(docs/modules/printers.md 權限表)
+    {
+      key: permissionKey(PRINTERS_KEY, "view"),
+      moduleKey: PRINTERS_KEY,
+      name: "檢視",
+      description: "看印表機、代理程式、列印紀錄三個分頁(唯讀)",
+    },
+    {
+      key: permissionKey(PRINTERS_KEY, "create"),
+      moduleKey: PRINTERS_KEY,
+      name: "新增",
+      description:
+        "新增代理程式(產生配對碼)、新增印表機、下載代理程式安裝檔 + API",
+    },
+    {
+      key: permissionKey(PRINTERS_KEY, "edit"),
+      moduleKey: PRINTERS_KEY,
+      name: "編輯",
+      description:
+        "編輯印表機、停用印表機 / 代理程式、重新配對、測試列印 + API",
     },
     // 資料範圍(docs/modules/data-scope.md 權限表;模組本身 isRootOnly)
     {

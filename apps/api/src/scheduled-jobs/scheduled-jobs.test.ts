@@ -365,9 +365,18 @@ describe("排程任務(Cloud Scheduler 內部端點)", () => {
 
     it("某個工作取執行權時資料庫出錯 → 該工作 error,同一輪其他工作照跑,不拋錯", async () => {
       const store = api.app.get(ScheduledJobRunsStore);
+      // 只讓探針工作取執行權失敗(底座自己登記的工作照常跑,不吃掉這一次失敗)
+      const realClaim = store.claim.bind(store);
+      let failedOnce = false;
       const claim = jest
         .spyOn(store, "claim")
-        .mockRejectedValueOnce(new Error("mongo down"));
+        .mockImplementation((key, scheduledFor, startedAt) => {
+          if (!failedOnce && key === PROBE_JOB_KEYS.every15m) {
+            failedOnce = true;
+            return Promise.reject(new Error("mongo down"));
+          }
+          return realClaim(key, scheduledFor, startedAt);
+        });
       try {
         const outcomes = await runAt("2030-06-01T10:00:00.000Z");
         expect(statusOf(outcomes, PROBE_JOB_KEYS.every15m)).toBe("error");
@@ -382,14 +391,32 @@ describe("排程任務(Cloud Scheduler 內部端點)", () => {
 
     it("寫入執行結果失敗 → 只記 log,結果照回,紀錄停在 running", async () => {
       const store = api.app.get(ScheduledJobRunsStore);
+      // 只讓探針工作的結果寫入失敗:記下它取到的執行紀錄 id
+      const realClaim = store.claim.bind(store);
+      const realFinish = store.finish.bind(store);
+      let probeRunId: Types.ObjectId | null = null;
+      const claimSpy = jest
+        .spyOn(store, "claim")
+        .mockImplementation(async (key, scheduledFor, startedAt) => {
+          const id = await realClaim(key, scheduledFor, startedAt);
+          if (key === PROBE_JOB_KEYS.every15m) {
+            probeRunId = id;
+          }
+          return id;
+        });
       const finish = jest
         .spyOn(store, "finish")
-        .mockRejectedValueOnce(new Error("mongo down"));
+        .mockImplementation((id, status, finishedAt, error) =>
+          probeRunId !== null && id.equals(probeRunId)
+            ? Promise.reject(new Error("mongo down"))
+            : realFinish(id, status, finishedAt, error),
+        );
       try {
         const outcomes = await runAt("2030-06-01T11:00:00.000Z");
         expect(statusOf(outcomes, PROBE_JOB_KEYS.every15m)).toBe("succeeded");
       } finally {
         finish.mockRestore();
+        claimSpy.mockRestore();
       }
       const runs = await runsAt(
         PROBE_JOB_KEYS.every15m,

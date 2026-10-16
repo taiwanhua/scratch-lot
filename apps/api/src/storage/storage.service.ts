@@ -15,6 +15,24 @@ import {
   isOwnedUploadPath,
 } from "./upload-rules";
 
+/**
+ * **發布檔**的路徑前綴:由 CI 發布 workflow 直接寫進私有 bucket(不是使用者上傳的),
+ * API 只讀、只簽下載網址。目前只有列印代理程式的安裝檔(`@repo/domain/printing` 的
+ * `PRINT_AGENT_RELEASE_PREFIX`;docs/modules/printers.md「下載」)。
+ */
+export const RELEASE_OBJECT_PREFIXES: readonly string[] = ["print-agent/"];
+
+const RELEASE_OBJECT_PATH = /^[\w-]+(?:\/[\w.-]+)+$/;
+
+/** 是不是發布檔的路徑(前綴在清單上、每一段只有英數 / 底線 / 連字號 / 點,不含 `..`)。 */
+export function isReleaseObjectPath(path: string): boolean {
+  return (
+    RELEASE_OBJECT_PATH.test(path) &&
+    !path.split("/").some((segment) => segment === ".." || segment === ".") &&
+    RELEASE_OBJECT_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
+}
+
 /** `createUploadUrl` 的輸入(GraphQL 形狀見 models/upload-url.model.ts)。 */
 export interface CreateUploadInput {
   purpose: UploadPurpose;
@@ -197,6 +215,33 @@ export abstract class StorageService {
     return copied;
   }
 
+  /**
+   * 讀一個**發布檔**的內容(如 `print-agent/manifest.json`);物件不存在回 null。
+   * 路徑不是發布檔前綴一律拒絕(回 null 並記 warn),不讓呼叫端讀到任意物件。只讀、無副作用。
+   */
+  async readReleaseObject(objectPath: string): Promise<Buffer | null> {
+    if (!isReleaseObjectPath(objectPath)) {
+      this.logger.warn(`物件路徑 ${objectPath} 不是發布檔,不讀`);
+      return null;
+    }
+    return this.downloadObject(objectPath);
+  }
+
+  /**
+   * 簽一個**發布檔**的下載網址(效期由呼叫端給:代理程式安裝檔是 1 小時)。
+   * 與 `readReleaseObject` 同一道把關;**呼叫端負責先驗權限**。
+   */
+  async releaseDownloadUrlOf(
+    objectPath: string,
+    ttlMs: number,
+  ): Promise<string | null> {
+    if (!isReleaseObjectPath(objectPath)) {
+      this.logger.warn(`物件路徑 ${objectPath} 不是發布檔,不簽下載網址`);
+      return null;
+    }
+    return this.signReadUrl(objectPath, new Date(Date.now() + ttlMs));
+  }
+
   /** 簽一個只能以該 content type PUT 一次的上傳網址。 */
   protected abstract signUploadUrl(request: SignUploadRequest): Promise<string>;
 
@@ -214,6 +259,9 @@ export abstract class StorageService {
 
   /** 把物件從 bucket 刪掉(路徑已由 `deleteObject` 驗過歸屬)。 */
   protected abstract removeObject(objectPath: string): Promise<void>;
+
+  /** 讀私有 bucket 上一個物件的內容;不存在回 null(路徑已由呼叫端驗過)。 */
+  protected abstract downloadObject(objectPath: string): Promise<Buffer | null>;
 }
 
 /** 空字串 / 未設定視同沒有檔案(去空白後判斷)。 */

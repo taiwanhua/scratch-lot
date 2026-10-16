@@ -29,3 +29,6 @@ export * from "./workflow-instance.schema";
 export * from "./workflow-task.schema";
 export * from "./workflow-version.schema";
 export * from "./workflow.schema";
+export * from "./print-agent.schema";
+export * from "./printer.schema";
+export * from "./print-job.schema";

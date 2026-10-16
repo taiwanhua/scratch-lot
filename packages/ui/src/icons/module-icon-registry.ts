@@ -8,7 +8,7 @@
  * 不能由 bundler 靜態分析出「哪些圖示會被用到」。折衷是這份登錄表:
  *
  * - 每個圖示走**單檔路徑** `@mui/icons-material/XxxOutlined`(不是 `{ Xxx } from "@mui/icons-material"`),
- *   Vite / bunchee 只打包表裡列到的這 29 個;
+ *   Vite / bunchee 只打包表裡列到的這 30 個;
  * - 資料庫存的是表裡的 key(kebab-case),不是元件名 —— 換圖示庫時只改這份表;
  * - 值不在表裡(舊資料、手改、空值)一律回 `DEFAULT_MODULE_ICON`,畫面不會缺一塊。
  *
@@ -37,6 +37,7 @@ import MailOutlined from "@mui/icons-material/MailOutlined";
 import NotificationsOutlined from "@mui/icons-material/NotificationsOutlined";
 import PeopleOutlined from "@mui/icons-material/PeopleOutlined";
 import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import PrintOutlined from "@mui/icons-material/PrintOutlined";
 import ReceiptLongOutlined from "@mui/icons-material/ReceiptLongOutlined";
 import RestaurantMenuOutlined from "@mui/icons-material/RestaurantMenuOutlined";
 import SettingsOutlined from "@mui/icons-material/SettingsOutlined";
@@ -94,6 +95,7 @@ export const MODULE_ICONS = {
   notifications: { label: "通知", Icon: NotificationsOutlined },
   restaurant: { label: "菜單", Icon: RestaurantMenuOutlined },
   star: { label: "收藏", Icon: StarBorderOutlined },
+  print: { label: "列印", Icon: PrintOutlined },
 } as const satisfies Record<string, ModuleIconEntry>;
 
 /** 白名單裡的 key。 */

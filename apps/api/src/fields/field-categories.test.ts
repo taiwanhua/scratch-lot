@@ -233,9 +233,10 @@ describe("欄位類別:root 新增 / 改名 / 停用(GraphQL 端點 + 真 MongoD
       });
 
       const rows = await list(tenantManagerToken);
-      expect(rows.slice(0, 3).map((row) => row.key)).toEqual([
+      expect(rows.slice(0, 4).map((row) => row.key)).toEqual([
         "gender",
         "demo-category",
+        "reprint-reason",
         "cuisine",
       ]);
 

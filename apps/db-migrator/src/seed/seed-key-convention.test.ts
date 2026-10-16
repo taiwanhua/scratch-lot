@@ -283,7 +283,7 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
     expect(findSeedKeyViolations(baseRegistry)).toEqual([]);
   });
 
-  it("示範家族(含三個示範表單)、治理模組(含表單 / 流程管理)、申請中心依正本落地:個別權限 12 + 13 + 8 + 7 + 4 + 5 + 2 + 5 + 7 + 1 + 2 + 4 × 3 = 78 筆;全部 39 個模組各一筆 wildcard(共 117 筆)", () => {
+  it("示範家族(含三個示範表單)、治理模組(含表單 / 流程管理)、申請中心、通知設定、印表機管理與列印 API 依正本落地:個別權限 12 + 13 + 8 + 7 + 4 + 5 + 2 + 5 + 7 + 1 + 2 + 3 + 2 + 4 × 3 = 83 筆;全部 41 個模組各一筆 wildcard(共 124 筆)", () => {
     const moduleKeys = entryKeysOf(baseRegistry, "modules");
     const permissionKeys = entryKeysOf(baseRegistry, "permissions");
 
@@ -318,7 +318,7 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
     // role-manager.md(7)、module-manager.md(4)、field-manager.md(4 + 類別作業 1)、data-scope.md(2)、forms.md(5)、
     // notification-settings.md(2)
     const individualKeys = permissionKeys.filter((key) => !key.endsWith(".*"));
-    expect(individualKeys).toHaveLength(78);
+    expect(individualKeys).toHaveLength(83);
     expect(new Set(individualKeys)).toEqual(
       new Set([
         "demo.sub.sample-one.view",
@@ -404,15 +404,21 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
         // 通知設定(docs/modules/notification-settings.md 權限表)
         "system.notification-settings.view",
         "system.notification-settings.edit",
+        // 印表機管理與列印 API(docs/modules/printers.md)
+        "system.printers.view",
+        "system.printers.create",
+        "system.printers.edit",
+        "api.printing.print",
+        "api.printing.reprint",
       ]),
     );
 
     // 每個模組各一筆 `<key>.*`(D3:wildcard 只代表該模組自己這一層)
-    expect(moduleKeys).toHaveLength(39);
+    expect(moduleKeys).toHaveLength(41);
     expect(new Set(permissionKeys.filter((key) => key.endsWith(".*")))).toEqual(
       new Set(moduleKeys.map((key) => `${key}.*`)),
     );
-    expect(permissionKeys).toHaveLength(117);
+    expect(permissionKeys).toHaveLength(124);
 
     // D1:治理模組 key 累加 system 群組前綴;tenant-ops / category-ops 是頁面模組底下的純權限容器
     expect(moduleKeys.filter((key) => key.startsWith("system"))).toEqual([
@@ -429,6 +435,7 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
       "system.workflows",
       "system.workflows.blocked-page",
       "system.notification-settings",
+      "system.printers",
     ]);
   });
 });

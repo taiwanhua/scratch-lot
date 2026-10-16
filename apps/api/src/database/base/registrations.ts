@@ -66,6 +66,21 @@ import {
 import { ORGS_COLLECTION, Org, OrgSchema } from "../schemas/org.schema";
 import { Permission, PermissionSchema } from "../schemas/permission.schema";
 import {
+  PRINT_AGENTS_COLLECTION,
+  PrintAgent,
+  PrintAgentSchema,
+} from "../schemas/print-agent.schema";
+import {
+  PRINT_JOBS_COLLECTION,
+  PrintJob,
+  PrintJobSchema,
+} from "../schemas/print-job.schema";
+import {
+  PRINTERS_COLLECTION,
+  Printer,
+  PrinterSchema,
+} from "../schemas/printer.schema";
+import {
   RefreshToken,
   RefreshTokenSchema,
 } from "../schemas/refresh-token.schema";
@@ -127,6 +142,9 @@ import {
   NotificationsRepository,
   OrgsRepository,
   PermissionsRepository,
+  PrintAgentsRepository,
+  PrintJobsRepository,
+  PrintersRepository,
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
@@ -527,5 +545,51 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
       },
     ],
     orgDataChecks: [],
+  },
+  {
+    // 列印(docs/modules/printers.md):代理程式、印表機、列印工作;都掛在分店上
+    key: "printing",
+    models: [
+      {
+        name: PrintAgent.name,
+        collection: PRINT_AGENTS_COLLECTION,
+        schema: PrintAgentSchema,
+      },
+      {
+        name: Printer.name,
+        collection: PRINTERS_COLLECTION,
+        schema: PrinterSchema,
+      },
+      {
+        name: PrintJob.name,
+        collection: PRINT_JOBS_COLLECTION,
+        schema: PrintJobSchema,
+      },
+    ],
+    repositories: [
+      { modelName: PrintAgent.name, provider: PrintAgentsRepository },
+      { modelName: Printer.name, provider: PrintersRepository },
+      { modelName: PrintJob.name, provider: PrintJobsRepository },
+    ],
+    orgDataChecks: [
+      {
+        key: "base.print-agents",
+        modelName: PrintAgent.name,
+        repository: PrintAgentsRepository,
+        ownerField: "orgId",
+      },
+      {
+        key: "base.printers",
+        modelName: Printer.name,
+        repository: PrintersRepository,
+        ownerField: "orgId",
+      },
+      {
+        key: "base.print-jobs",
+        modelName: PrintJob.name,
+        repository: PrintJobsRepository,
+        ownerField: "orgId",
+      },
+    ],
   },
 ];
