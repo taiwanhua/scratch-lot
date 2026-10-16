@@ -1,0 +1,10 @@
+# 即時通道的訂閱憑證(底座規格第 4 章):登入後連線、到期前 1 分鐘在原連線換發;
+# boardOrgId 只在看板頁帶(條件不符時憑證只含 user:<自己>)。停用時回 null → 前端改 60 秒輪詢。
+query RealtimeTicket($boardOrgId: ID) {
+  realtimeTicket(boardOrgId: $boardOrgId) {
+    ticket
+    connectUrl
+    expiresAt
+    topics
+  }
+}
