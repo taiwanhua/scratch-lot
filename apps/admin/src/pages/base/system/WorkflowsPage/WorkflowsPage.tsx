@@ -96,7 +96,9 @@ export const WorkflowsPage = () => {
         {data.selected === null ? (
           <Card sx={{ flex: 1, p: 3 }}>
             <Typography variant="body2" color="text.secondary">
-              {data.isLoading ? t("loading") : t("empty")}
+              {data.isLoading || data.isSelectionPending
+                ? t("loading")
+                : t("empty")}
             </Typography>
           </Card>
         ) : (
