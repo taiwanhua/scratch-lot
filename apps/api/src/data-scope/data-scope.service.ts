@@ -5,8 +5,10 @@ import {
 } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { validateAudience as validateAudienceShape } from "@repo/domain/audience";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 
+import { AudienceService } from "../audience/audience.service";
 import { AuditService } from "../audit/audit.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -32,6 +34,7 @@ import {
   targetNotFoundError,
 } from "./data-scope-error";
 import {
+  DATA_SCOPE_AUDIENCE_OPTIONS,
   type DataScopeField,
   type DataScopeGroupOp,
   type DataScopeOperatorFacts,
@@ -122,6 +125,7 @@ export class DataScopeService
     private readonly orgs: OrgsRepository,
     private readonly audit: AuditService,
     private readonly ownerProtection: OwnerProtectionService,
+    private readonly audience: AudienceService,
   ) {}
 
   onModuleInit(): void {
@@ -136,7 +140,8 @@ export class DataScopeService
 
   /**
    * 查詢中介層的唯一入口:回傳要 AND 進查詢的條件,沒有任何模組的規則命中 → `null`。
-   * 命中判斷、動態值代入、combineOp 合成在 `compileRules`,依模組拼 `$or` 在 `combineByModule`
+   * 套用對象的命中由 `AudienceService.matchesAudience` 判斷(人員條件;同一個請求的事實只算一次),
+   * 動態值代入、combineOp 合成在 `compileRules`,依模組拼 `$or` 在 `combineByModule`
    * (都是 `data-scope-rule.ts` 的純函式)。
    */
   async conditionFor(
@@ -156,8 +161,12 @@ export class DataScopeService
       : { rule: DEFAULT_TENANT_TIMEZONE, operator: DEFAULT_TENANT_TIMEZONE };
     const conditions: ModuleCondition[] = [];
     for (const [moduleKey, cached] of byModule) {
+      const matched = await this.matchedRules(cached.rules, operator);
+      if (matched.length === 0) {
+        continue;
+      }
       const condition = compileRules(
-        cached.rules,
+        matched,
         cached.combineOp,
         cached.catalog,
         facts,
@@ -168,6 +177,20 @@ export class DataScopeService
       }
     }
     return combineByModule(conditions);
+  }
+
+  /** 套用對象命中操作者的規則(依序判斷;順序不影響合成結果)。 */
+  private async matchedRules(
+    rules: readonly DataScopeRuleEntry[],
+    operator: OperatorContext,
+  ): Promise<DataScopeRuleEntry[]> {
+    const matched: DataScopeRuleEntry[] = [];
+    for (const rule of rules) {
+      if (await this.audience.matchesAudience(operator, rule.audience)) {
+        matched.push(rule);
+      }
+    }
+    return matched;
   }
 
   /**
@@ -222,7 +245,12 @@ export class DataScopeService
       ) {
         continue;
       }
-      const rules = document.rules as unknown as DataScopeRuleEntry[];
+      // 套用對象不是人員條件格式的規則(改格式前存的舊資料;環境清空重建、不寫遷移)判斷不了套用到誰:
+      // 跳過,不讓舊形狀走進判斷程式
+      const rules = (document.rules as unknown as DataScopeRuleEntry[]).filter(
+        (rule) =>
+          validateAudienceShape(rule.audience, DATA_SCOPE_AUDIENCE_OPTIONS).ok,
+      );
       const catalog = fieldCatalogOf(
         declaredFieldsOf(targetByModule.get(document.moduleKey) ?? null),
       );
@@ -302,7 +330,7 @@ export class DataScopeService
     const target = await this.mustFindTarget(input.targetId);
     const catalog = fieldCatalogOf(declaredFieldsOf(target));
     const rules = input.rules.map((rule) => ({
-      audience: { type: rule.audience.type, ids: rule.audience.ids ?? [] },
+      audience: rule.audience,
       filter: rule.filter,
     }));
     const violation = validateRules(rules, catalog);
@@ -390,7 +418,6 @@ function factsOf(operator: OperatorContext): DataScopeOperatorFacts {
   return {
     actorId: operator.actorId,
     memberOrgIds: operator.memberOrgIds,
-    roleIds: operator.roleIds,
   };
 }
 

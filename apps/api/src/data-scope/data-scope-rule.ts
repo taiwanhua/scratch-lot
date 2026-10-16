@@ -1,6 +1,12 @@
 import { Types } from "mongoose";
 
 import {
+  AUDIENCE_FIELDS,
+  type Audience,
+  type AudienceOptions,
+  validateAudience as validateAudienceShape,
+} from "@repo/domain/audience";
+import {
   type LocalDate,
   localDateOf,
   startOfLocalDay,
@@ -64,15 +70,15 @@ export const DYNAMIC_REFS_BY_TYPE: Record<
   enum: [],
 };
 
-/** 套用對象的種類(ADR-0008:全部人 / 指定角色 / 指定組織 / 指定使用者)。 */
-export const DATA_SCOPE_AUDIENCE_TYPES = [
-  "all",
-  "role",
-  "org",
-  "user",
-] as const;
-
-export type DataScopeAudienceType = (typeof DATA_SCOPE_AUDIENCE_TYPES)[number];
+/**
+ * 套用對象 = 人員條件(`@repo/domain/audience`):可選「所有人」、四個欄位(使用者 / 角色 / 所屬組織 / 權限)
+ * 都能用,所屬組織只能指定組織(資料範圍由 root 設定,沒有單據 / 事件可代入)。
+ */
+export const DATA_SCOPE_AUDIENCE_OPTIONS: AudienceOptions = {
+  allowAll: true,
+  fields: AUDIENCE_FIELDS,
+  orgSources: ["static"],
+};
 
 /** 條件樹的群組節點運算子(每層可切,ADR-0008)。 */
 export const DATA_SCOPE_GROUP_OPS = ["AND", "OR"] as const;
@@ -128,11 +134,8 @@ export interface DataScopeGroup {
 
 export type DataScopeNode = DataScopeGroup | DataScopeLeaf;
 
-export interface DataScopeAudience {
-  type: DataScopeAudienceType;
-  /** `all` 以外必給且非空;role / org / user 各自是該種類的 id 清單。 */
-  ids?: string[];
-}
+/** 套用對象(人員條件;形狀正本 `@repo/domain/audience`)。 */
+export type DataScopeAudience = Audience;
 
 export interface DataScopeRuleEntry {
   audience: DataScopeAudience;
@@ -156,7 +159,10 @@ export const RULE_INVALID_REASONS = [
   "VALUE_SOURCE_NOT_ALLOWED",
   /** 值本身不合法:空清單、id 不是 ObjectId、日期不是帶時區的 ISO 時點、between 不是兩個、enum 不在選項內 */
   "VALUE_INVALID",
-  /** 套用對象的 type 不認得,或 all 以外沒給 ids / ids 不是 ObjectId */
+  /**
+   * 套用對象不合法(人員條件的格式):`mode` 不認得、`match` 沒有條件列(含空群組)、
+   * 欄位不在清單、值不合法、群組超過 3 層;`path` 指到出錯的條件列
+   */
   "AUDIENCE_INVALID",
   /** rules 不是陣列、單筆不是物件、缺 audience / filter */
   "MALFORMED_RULE",
@@ -172,13 +178,14 @@ export interface RuleViolation {
   detail: string;
 }
 
-/** 查詢當下代入動態值與比對套用對象所需的操作者事實(來自 OperatorContext)。 */
+/**
+ * 查詢當下代入動態值所需的操作者事實(來自 OperatorContext)。
+ * 套用對象的比對不在這裡:由 `AudienceService.matchesAudience` 判斷(人員條件,與審核者 / 通知同一份)。
+ */
 export interface DataScopeOperatorFacts {
   actorId: Types.ObjectId | null;
-  /** 所屬組織(org_user);動態值【操作者的所屬組織】與套用對象「指定組織」用它。 */
+  /** 所屬組織(org_user);動態值【操作者的所屬組織】用它。 */
   memberOrgIds: readonly Types.ObjectId[];
-  /** 持有的啟用中角色;套用對象「指定角色」用它。 */
-  roleIds: readonly Types.ObjectId[];
 }
 
 /**
@@ -285,50 +292,20 @@ function validateRuleEntry(
   return validateNode(entry.filter, byName, `${path}.filter`);
 }
 
+/** 套用對象:人員條件的格式檢查(`@repo/domain/audience`),錯誤一律 `AUDIENCE_INVALID`。 */
 function validateAudience(
   audience: unknown,
   path: string,
 ): RuleViolation | undefined {
-  if (!isRecord(audience)) {
-    return {
-      path,
-      reason: "AUDIENCE_INVALID",
-      detail: "audience must be an object",
-    };
-  }
-  const type = audience.type;
-  if (
-    typeof type !== "string" ||
-    !(DATA_SCOPE_AUDIENCE_TYPES as readonly string[]).includes(type)
-  ) {
-    return {
-      path: `${path}.type`,
-      reason: "AUDIENCE_INVALID",
-      detail: `audience.type must be one of ${DATA_SCOPE_AUDIENCE_TYPES.join(" / ")}`,
-    };
-  }
-  if (type === "all") {
+  const result = validateAudienceShape(audience, DATA_SCOPE_AUDIENCE_OPTIONS);
+  if (result.ok) {
     return undefined;
   }
-  const ids = audience.ids;
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return {
-      path: `${path}.ids`,
-      reason: "AUDIENCE_INVALID",
-      detail: `audience.ids is required and must not be empty for type=${type}`,
-    };
-  }
-  const bad = ids.findIndex(
-    (id) => typeof id !== "string" || !Types.ObjectId.isValid(id),
-  );
-  if (bad !== -1) {
-    return {
-      path: `${path}.ids[${String(bad)}]`,
-      reason: "AUDIENCE_INVALID",
-      detail: "audience.ids must be object ids",
-    };
-  }
-  return undefined;
+  return {
+    path: result.issue.path === "" ? path : `${path}.${result.issue.path}`,
+    reason: "AUDIENCE_INVALID",
+    detail: result.issue.message,
+  };
 }
 
 function validateNode(
@@ -569,27 +546,9 @@ export function hasDateCondition(
 
 // ---- 執行(查詢中介層) ----
 
-/** 套用對象是否命中操作者(ADR-0008:全部人 / 指定角色 / 指定組織 / 指定使用者)。 */
-export function matchesAudience(
-  audience: DataScopeAudience,
-  facts: DataScopeOperatorFacts,
-): boolean {
-  if (audience.type === "all") {
-    return true;
-  }
-  const ids = new Set(audience.ids);
-  if (ids.size === 0) {
-    return false;
-  }
-  if (audience.type === "user") {
-    return facts.actorId !== null && ids.has(String(facts.actorId));
-  }
-  const mine = audience.type === "role" ? facts.roleIds : facts.memberOrgIds;
-  return mine.some((id) => ids.has(String(id)));
-}
-
 /**
- * 把一份已驗證的規則編譯成要 AND 進查詢的 Mongo 條件;沒有規則命中操作者 → `null`
+ * 把**已命中操作者**的規則(套用對象由呼叫端以 `AudienceService.matchesAudience` 篩過)
+ * 編譯成要 AND 進查詢的 Mongo 條件;一條都沒有 → `null`
  * (ADR-0008:「沒有規則命中操作者 → 預設 = 可見範圍內」,也就是只剩租戶保底)。
  * `timezones` 只有日期條件用得到(見 `compileDateLeaf`)。
  */
@@ -601,9 +560,9 @@ export function compileRules(
   timezones: DataScopeTimezones,
 ): MongoCondition | null {
   const byName = new Map(catalog.map((field) => [field.name, field]));
-  const matched = rules
-    .filter((rule) => matchesAudience(rule.audience, facts))
-    .map((rule) => compileNode(rule.filter, byName, facts, timezones));
+  const matched = rules.map((rule) =>
+    compileNode(rule.filter, byName, facts, timezones),
+  );
   if (matched.length === 0) {
     return null;
   }

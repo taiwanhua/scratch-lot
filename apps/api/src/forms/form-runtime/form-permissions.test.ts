@@ -733,7 +733,7 @@ describe("表單的欄位級權限:投影 / 守門 / 依賴鏈 / 權限被刪 / 
           combineOp: "OR",
           rules: [
             {
-              audience: { type: "ALL" },
+              audience: { mode: "all" },
               filter: {
                 op: "AND",
                 children: [

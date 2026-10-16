@@ -77,7 +77,14 @@ describe("示範模組1 範圍(#318,GraphQL 端點 + 真 MongoDB)", () => {
   /** 套用對象 = 客服角色 → 建立者是【操作者本人】。 */
   function ownedByOperatorRule(): Record<string, unknown> {
     return {
-      audience: { type: "ROLE", ids: [String(agent.roleId)] },
+      audience: {
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: [String(agent.roleId)] },
+        },
+      },
       filter: {
         field: "createdBy",
         cond: "in",
@@ -89,7 +96,14 @@ describe("示範模組1 範圍(#318,GraphQL 端點 + 真 MongoDB)", () => {
   /** 套用對象 = 客服角色 → 狀態是「已發布」(seed 宣告的 enum 欄位)。 */
   function publishedRule(): Record<string, unknown> {
     return {
-      audience: { type: "ROLE", ids: [String(agent.roleId)] },
+      audience: {
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: [String(agent.roleId)] },
+        },
+      },
       filter: {
         field: "status",
         cond: "in",

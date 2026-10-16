@@ -1,3 +1,4 @@
+import { AudienceModule } from "../audience/audience.module";
 import { AuditModule } from "../audit/audit.module";
 import { AuthModule } from "../auth/auth.module";
 import { DataScopeModule } from "../data-scope/data-scope.module";
@@ -34,6 +35,7 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "org-members", module: OrgMembersModule },
   { key: "roles", module: RolesModule },
   { key: "module-manager", module: ModuleManagerModule },
+  { key: "audience", module: AudienceModule },
   { key: "data-scope", module: DataScopeModule },
   { key: "fields", module: FieldsModule },
   { key: "demo-items-one", module: DemoItemsOneModule },

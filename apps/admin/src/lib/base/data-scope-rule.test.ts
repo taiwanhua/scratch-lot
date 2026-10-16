@@ -1,10 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
-import {
-  DataScopeAudienceType,
-  DataScopeCombineOp,
-  DataScopeFieldType,
-} from "@repo/graphql";
+import { DataScopeCombineOp, DataScopeFieldType } from "@repo/graphql";
 
 import {
   type RuleIssue,
@@ -12,6 +8,7 @@ import {
   validateEditorDraft,
 } from "./data-scope-issues";
 import {
+  DataScopeAudienceType,
   type DataScopeFieldLike,
   type GroupDraft,
   type RuleEditorDraft,
@@ -61,7 +58,14 @@ const SAVED_RULE = {
   combineOp: DataScopeCombineOp.Or,
   rules: [
     {
-      audience: { type: DataScopeAudienceType.Role, ids: ["role-support"] },
+      audience: {
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: ["role-support"] },
+        },
+      },
       filter: {
         op: "AND",
         children: [
@@ -113,7 +117,7 @@ describe("條件樹 ↔ api JSON", () => {
       combineOp: DataScopeCombineOp.And,
       rules: [
         {
-          audience: { type: DataScopeAudienceType.All, ids: [] },
+          audience: { mode: "all" },
           filter: {
             field: "status",
             cond: "in",
@@ -137,7 +141,7 @@ describe("條件樹 ↔ api JSON", () => {
     });
   });
 
-  it("套用對象「全部」送出時 ids 一律是空陣列", () => {
+  it("套用對象「全部」送出成人員條件的「所有人」(不帶 ids)", () => {
     const draft: RuleEditorDraft = {
       combineOp: DataScopeCombineOp.Or,
       rules: [
@@ -148,10 +152,7 @@ describe("條件樹 ↔ api JSON", () => {
       ],
     };
 
-    expect(toRuleEntryInputs(draft)[0]?.audience).toEqual({
-      type: DataScopeAudienceType.All,
-      ids: [],
-    });
+    expect(toRuleEntryInputs(draft)[0]?.audience).toEqual({ mode: "all" });
   });
 });
 
