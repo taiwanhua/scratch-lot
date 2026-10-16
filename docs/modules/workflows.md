@@ -60,11 +60,10 @@
 
 提交同步只在「提交仍指向本實例、修訂號相符、狀態是 `reviewing`」時寫(被取代 / 已作廢的提交不會被已取代的實例改回)。`blocked` 旗標跟著實例的 `blocked` 走(列 5 / 8 / 8b)。
 
-### 實例(`workflow_instances.status`,八值)
+### 實例(`workflow_instances.status`,七值)
 
 | 狀態         | 意思                                            | 轉到(誰)                                                                                                                                    |
 | ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `linking`    | 送出第 2 步建立、提交還沒連上;不派單            | 第 4 步 → `running`(同一個交易內;提交後看不到 `linking`,出現代表交易前留下的舊資料)                                                         |
 | `running`    | 進行中                                          | 關卡阻擋 → `blocked`;全案核准三條件成立 → `approved`(與最後節點完成同一次 CAS);有效駁回 / 退回 → `rejected` / `returned`;撤回 → `withdrawn` |
 | `blocked`    | 進行中,至少一個 active 關卡阻擋(其他關卡照常審) | 可解除(列 8)→ `running`;其餘同 `running`                                                                                                    |
 | `approved`   | 全案核准(終局)                                  | 推進收尾(列 2):任務投影、提交 `completed`、`finishedAt`、結果信                                                                             |
@@ -142,12 +141,11 @@
 
 0. 提交已是 `reviewing`(重複送出)且指向屬於目前修訂的實例 → 對它**再推進一次**(一個交易;結果與重試推進相同);不跑送出時檢查、不看目前綁定、不增加修訂,稽核記 `resumed`。指向的實例不屬於目前修訂 → `CONFLICT`(`STATUS_MISMATCH`)。
 1. 表單的驗證與重算 → **送出時檢查**(`@repo/domain/workflow` 的 `checkSubmitCompatibility`,四種擋法見 `docs/concepts/workflow-engine.md`「送出:從提交到實例」):沒綁也沒進過審核 → 照不走流程的方式送出;擋下 → `FORBIDDEN` + reason(`WORKFLOW_REMOVED` / `WORKFLOW_UNPUBLISHED` / `WORKFLOW_MISCONFIGURED` + `issues`)。接著是修訂數與文件大小的上限(見 `docs/modules/forms.md`「提交的寫入規則」)。新修訂號 N = 目前 + 1。
-2. 建 `linking` 實例(`(submissionId, N)` 唯一,先查再建 —— 已有 = 另一次送出已提交 → `CONFLICT`(`EDIT_VERSION_MISMATCH`);每個節點一筆 `pending` 的 StepState;記 `linkSource`)。
+2. 建實例,直接 `running`、`activeStepKeys = [startStepKey]`、`history: started`(`(submissionId, N)` 唯一,先查再建 —— 已有 = 另一次送出已提交 → `CONFLICT`(`EDIT_VERSION_MISMATCH`);每個節點一筆 `pending` 的 StepState)。
 3. 提交的 `values` / `summary` / `revision` / 快照 / `reviewing` / `currentInstanceId` / `editVersion` **同一次**條件更新;前一個修訂被退回 / 撤回的實例 → `superseded`(推進收尾它自己的任務與歷程,不碰提交)。
-4. 實例 `linking → running`、`activeStepKeys = [startStepKey]`、`history: started`。
-5. `advance`。
+4. `advance`。
 
-**第 2–5 步是一個交易**:任一步失敗,實例、任務、提交的變更都不存在,提交維持送出前的狀態,重送就是重新送一次。三個檢查點(`submit:instance-created` / `submit:submission-linked` / `submit:started`)在 `WorkflowEngineHooks`,測試在那裡注入中斷、驗證全部回復。
+**整個送出(第 2–4 步與稽核)是一個交易**:任一步失敗,實例、任務、提交的變更、稽核都不存在,提交維持送出前的狀態,重送就是重新送一次。檢查點 `submit:instance-created` / `submit:submission-linked` 在 `WorkflowEngineHooks`,測試在那裡(與推進的 `action:*`)注入中斷、驗證全部回復。
 
 ## 推進(`advance` 的執行器)
 
@@ -226,8 +224,8 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 `workflow-engine/workflow-notifier.service.ts`:任務建立(給審核者)、有結果(核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。
 
 - 開關 `WORKFLOW_MAIL_ENABLED`(普通 env,`"true"` 才寄,每次寄信時讀;`docs/env-registry.md`):關閉時只寫 log。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`(沒設 = 不限)。
-- **交易後寄**:推進在交易內只登記寄信,交易提交後才寄(`afterCommit`,TX-03);交易回復就不寄。
-- **盡力通知**:寄信失敗只記 log、不影響推進。「寄過沒」看 `history`:任務信 = 該 `taskKey` 的 `task_created`;結果信 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)—— 寄出(或關閉時只記 log)後追加,重試推進不重寄,但不保證恰好一次。
+- **交易內登記、提交後寄**:推進在交易內執行 `notifyTaskCreated` / `notifyResult` 時只登記寄信(`afterCommit`,TX-03),接著同一個交易追加歷程標記 —— 任務信 = 該 `taskKey` 的 `task_created`;結果信 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)。交易提交後才真的寄;交易回復就不寄、標記也不存在。
+- **盡力通知**:寄信失敗只記 log、不影響推進,歷程**仍記為已通知**(標記在交易內已寫入);重試推進看標記不重寄,所以不保證恰好一次、也不保證一定寄達。開關關閉時一樣追加標記、只寫 log。
 - 內容只讀實例快照(表單名、實例上的標題槽、關卡名),連結 `<ADMIN_APP_URL>/apply-center/view-page/<實例 id>`。模板在 `apps/api/src/mail/mail-templates.ts`(品牌文字登記 `docs/branding.md`)。
 
 ## 阻擋清單
@@ -235,7 +233,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 `workflow-engine/blocked-instances.service.ts`(`blockedInstances`,以操作者的租戶為邊界):
 
 - `BLOCKED`:實例 `status = blocked`。
-- `NEEDS_ADVANCE`:候選 = 進行中 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的實例,依最久沒動排序取最多 200 筆,對它們跑一次判斷表(`WorkflowEngineService.planOf`,不寫入),還有動作 = 需要推進 —— 對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8 / 8b 與資料矛盾;另加 `linking` 超過 10 分鐘。候選超過 200 筆回 `truncated: true`(處理完這批再查)。
+- `NEEDS_ADVANCE`:候選 = 進行中 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的實例,依最久沒動排序取最多 200 筆,對它們跑一次判斷表(`WorkflowEngineService.planOf`,不寫入),還有動作 = 需要推進 —— 對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8 / 8b 與資料矛盾。候選超過 200 筆回 `truncated: true`(處理完這批再查)。
 - 清單與處置回傳(改派 / 新增審核者 / 重試推進)的摘要**只給標題**(`date` / `amount` 為 null):流程管理者不一定讀得到提交內容。
 
 ## admin 頁面

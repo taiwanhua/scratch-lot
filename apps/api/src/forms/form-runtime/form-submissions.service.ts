@@ -710,9 +710,9 @@ export class FormSubmissionsService {
    *
    * - **不走流程**(沒綁、也沒進過審核):6a 行為 —— `completed`、`revision = 1`、`revisions[0]` = 快照 + ctx,
    *   `values` / `summary` / `revision` / `revisions` / `editVersion` 同一次更新
-   * - **走流程**:`WorkflowSubmitService` 的寫入順序(建 `linking` 實例 → 提交連上並進 `reviewing` →
-   *   實例 `running` → 推進);送審不經過 `completed`。被退回 / 撤回後再送出 = 修訂 +1、新實例
-   * - 提交已是 `reviewing`(同一次送出的重試):直接接續原實例,不驗、不看綁定、不增加修訂
+   * - **走流程**:`WorkflowSubmitService` 建實例 → 提交連上並進 `reviewing` → 推進,連同稽核是**一個交易**
+   *   (ADR-0013);送審不經過 `completed`。被退回 / 撤回後再送出 = 修訂 +1、新實例
+   * - 提交已是 `reviewing`(重複送出):對原實例再推進一次(連同稽核一個交易),不驗、不看綁定、不增加修訂
    *
    * 版本已退役的既有草稿仍可送出(寬鬆)。
    */
@@ -722,17 +722,19 @@ export class FormSubmissionsService {
   ): Promise<FormSubmissionModel> {
     const record = await this.requireOwnSubmittable(facts, input.id);
     if (record.status === "reviewing") {
-      await this.workflowSubmit.resume(record);
-      await this.audit.record(facts.operator, {
-        action: SUBMISSION_AUDIT.submit,
-        targetType: SUBMISSION_TARGET,
-        targetId: record._id,
-        after: {
-          revision: record.revision,
-          formKey: record.formKey,
-          version: record.version,
-          resumed: true,
-        },
+      await this.transactions.withTransaction(async () => {
+        await this.workflowSubmit.resume(record);
+        await this.audit.record(facts.operator, {
+          action: SUBMISSION_AUDIT.submit,
+          targetType: SUBMISSION_TARGET,
+          targetId: record._id,
+          after: {
+            revision: record.revision,
+            formKey: record.formKey,
+            version: record.version,
+            resumed: true,
+          },
+        });
       });
       return this.single(facts, await this.reloadOwn(facts, record));
     }
@@ -782,24 +784,26 @@ export class FormSubmissionsService {
       { isWorkflowBound: route.kind === "workflow" },
     );
     if (route.kind === "workflow") {
-      await this.workflowSubmit.submit(
-        facts.operator,
-        record,
-        input.expectedEditVersion,
-        { values, summary, ctx, at },
-        route,
-      );
-      await this.audit.record(facts.operator, {
-        action: SUBMISSION_AUDIT.submit,
-        targetType: SUBMISSION_TARGET,
-        targetId: record._id,
-        after: {
-          revision: record.revision + 1,
-          formKey: record.formKey,
-          version: record.version,
-          workflowKey: route.workflowKey,
-          workflowVersion: route.workflowVersion,
-        },
+      await this.transactions.withTransaction(async () => {
+        await this.workflowSubmit.submit(
+          facts.operator,
+          record,
+          input.expectedEditVersion,
+          { values, summary, ctx, at },
+          route,
+        );
+        await this.audit.record(facts.operator, {
+          action: SUBMISSION_AUDIT.submit,
+          targetType: SUBMISSION_TARGET,
+          targetId: record._id,
+          after: {
+            revision: record.revision + 1,
+            formKey: record.formKey,
+            version: record.version,
+            workflowKey: route.workflowKey,
+            workflowVersion: route.workflowVersion,
+          },
+        });
       });
       return this.single(facts, await this.reloadOwn(facts, record));
     }

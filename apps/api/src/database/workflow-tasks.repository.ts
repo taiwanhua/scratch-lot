@@ -9,6 +9,7 @@ import {
   type WorkflowTask,
 } from "./schemas/workflow-task.schema";
 import { assertTenantBoundary } from "./tenant-boundary";
+import { currentSession } from "./transaction";
 
 /** 已落庫的一筆任務(含基礎欄位,ADR-0007)。 */
 export type WorkflowTaskRecord = WorkflowTask &
@@ -43,6 +44,7 @@ export class WorkflowTasksRepository {
         ...(options.limit === undefined ? {} : { limit: options.limit }),
       })
       .lean<WorkflowTaskRecord[]>()
+      .session(currentSession() ?? null)
       .exec();
   }
 
@@ -53,6 +55,7 @@ export class WorkflowTasksRepository {
     return this.model
       .findOne(conditionOf(tenantId, filter))
       .lean<WorkflowTaskRecord>()
+      .session(currentSession() ?? null)
       .exec();
   }
 
@@ -60,12 +63,16 @@ export class WorkflowTasksRepository {
     tenantId: Types.ObjectId | null | undefined,
     filter: Record<string, unknown>,
   ): Promise<number> {
-    return this.model.countDocuments(conditionOf(tenantId, filter)).exec();
+    return this.model
+      .countDocuments(conditionOf(tenantId, filter))
+      .session(currentSession() ?? null)
+      .exec();
   }
 
   /**
-   * 依計畫建任務;同一 `(instanceId, taskKey)` 已存在時由唯一索引拒絕(duplicate key)。
-   * 推進在交易內先查再建(TX-04),撞唯一鍵代表並發,錯誤往外拋讓交易重跑。
+   * 依計畫建任務;同一 `(instanceId, taskKey)` 已存在時由唯一索引拒絕(duplicate key,E11000)。
+   * 推進在交易內先查再建(TX-04)。E11000 不是暫時性錯誤,driver 不會自動重跑:撞到時錯誤往外拋、
+   * 整個交易回復並回報(並發的寫入通常先以寫入衝突重跑,重讀後就查得到已建的任務)。
    */
   async create(
     operator: OperatorContext,
@@ -81,7 +88,7 @@ export class WorkflowTasksRepository {
       editVersion: 0,
     });
     document.$locals[OPERATOR_LOCAL_KEY] = operator;
-    await document.save();
+    await document.save({ session: currentSession() ?? null });
     return document.toObject<WorkflowTaskRecord>();
   }
 
@@ -104,6 +111,7 @@ export class WorkflowTasksRepository {
         { returnDocument: "after", runValidators: true },
       )
       .lean<WorkflowTaskRecord>()
+      .session(currentSession() ?? null)
       .exec();
   }
 }

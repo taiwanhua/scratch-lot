@@ -2993,11 +2993,10 @@ export type WorkflowInstancePayload = {
   instance: WorkflowInstanceModel;
 };
 
-/** 流程實例狀態:連結中 / 審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代 */
+/** 流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代 */
 export enum WorkflowInstanceStatus {
   Approved = 'APPROVED',
   Blocked = 'BLOCKED',
-  Linking = 'LINKING',
   Rejected = 'REJECTED',
   Returned = 'RETURNED',
   Running = 'RUNNING',

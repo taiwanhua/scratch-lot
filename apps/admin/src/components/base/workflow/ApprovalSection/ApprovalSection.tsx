@@ -23,7 +23,6 @@ import { StepProgress } from "./StepProgress";
 import { TaskActions } from "./TaskActions";
 
 const INSTANCE_TONE: Record<WorkflowInstanceStatus, TagTone> = {
-  [WorkflowInstanceStatus.Linking]: "grey",
   [WorkflowInstanceStatus.Running]: "primary",
   [WorkflowInstanceStatus.Blocked]: "warning",
   [WorkflowInstanceStatus.Approved]: "success",

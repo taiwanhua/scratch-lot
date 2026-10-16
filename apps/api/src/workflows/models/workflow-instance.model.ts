@@ -14,7 +14,6 @@ import {
 
 /** 實例狀態(成員值即落庫字串;Spec 6b §4)。 */
 export enum WorkflowInstanceStatusEnum {
-  LINKING = "linking",
   RUNNING = "running",
   BLOCKED = "blocked",
   APPROVED = "approved",
@@ -27,7 +26,7 @@ export enum WorkflowInstanceStatusEnum {
 registerEnumType(WorkflowInstanceStatusEnum, {
   name: "WorkflowInstanceStatus",
   description:
-    "流程實例狀態:連結中 / 審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代",
+    "流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代",
 });
 
 /** 關卡在實例內的狀態。 */

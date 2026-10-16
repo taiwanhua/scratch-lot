@@ -57,7 +57,7 @@ export class RetryAdvanceInstanceInput {
 export enum BlockedInstancesFilter {
   /** 實例 `blocked`(有關卡解析為空、或承辦人失效)。 */
   BLOCKED = "blocked",
-  /** 判斷表還有事可做(中斷未恢復、投影不同步…)或 `linking` 超過 10 分鐘。 */
+  /** 判斷表還有事可做(投影不同步、資料被改過…)。 */
   NEEDS_ADVANCE = "needsAdvance",
 }
 

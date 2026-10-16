@@ -19,11 +19,21 @@
 - 已在交易內的 service 再呼叫 `withTransaction` 會直接在同一個交易裡執行,**沒有獨立的回復點**:內層拋錯若被外層 `catch` 後繼續,內層已做的寫入會隨外層一起提交。要回復就讓錯誤往外拋,不要在外層吞掉。
 - 預設上限 60 秒;動作應在毫秒級,長批次(db-migrator 的大批次遷移)改成每批一個交易 + 檢查點續跑。
 
-## TX-02 session 傳給每一個讀寫;交易內不平行讀寫
+## TX-02 讀寫預設帶目前交易的 session;原生 collection 自己帶;交易內不平行讀寫
 
-`fn` 收到的 `session` 傳給每一個 repository 呼叫(`{ session }`,`BaseRepository` 的讀寫方法都有這個選填參數)。Mongoose 已開 `transactionAsyncLocalStorage`,沒帶 session 的 Mongoose 操作(含專屬 repository 的 `save()`、`insertMany`)也會自動加入;原生 driver 的 `collection(...)` 存取不會 —— 明確傳是規則,自動加入只是保險。
+repository 一律把目前交易的 session 明確交給 driver:沒帶 `session`(`undefined`)時用 `currentSession() ?? null`(`apps/api/src/database/transaction.ts`)—— `BaseRepository` 的讀寫方法、專屬 repository(`workflow_tasks`、`business_relationships`)與 `WorkflowSubmissionStore` 都這樣做,所以 service 在 `withTransaction` 裡呼叫 repository 不必逐一傳 `fn` 收到的 `session`。Mongoose 另開了 `transactionAsyncLocalStorage`,其他沒帶 session 的 Mongoose 操作(`save()`、`insertMany`、query)也會自動加入,只是保險。
 
-- 不在交易內的寫入會在交易回復後留下來,而且寫到交易鎖住的文件時會等到交易結束(看起來像卡住)。
+```ts
+✅ await this.transactions.withTransaction(async () => {
+     const order = await this.orders.create(operator, input); // 自動帶目前交易的 session
+     await this.items.updateMany(operator, filter, update);
+   });
+✅ // 新的原生 collection 存取:自己帶 currentSession()
+   await this.model.collection.updateOne(filter, update, { session: currentSession() });
+❌ await this.model.db.collection("orgs").findOne(filter); // 原生 driver 不會自動加入交易
+```
+
+- **原生 driver 的 `collection(...)` 存取不會自動加入**:新增這類存取(含專屬 repository / store 裡的)必須自帶 `currentSession()`(或方法收 `SessionOptions`、沒給時用 `currentSession()`)。不在交易內的寫入會在交易回復後留下來,而且寫到交易鎖住的文件時會等到交易結束(看起來像卡住)。
 - **交易內不要用 `Promise.all` 平行讀寫**:同一個 session 上的操作要依序 `await`。平行發出時,一個失敗、其他還在跑,錯誤處理與回復的順序無法保證。
 - **刻意在交易外讀寫要明給 `{ session: null }`**:例如跨請求共用的快取載入(`DataScopeService` 載入規則),不能讀到某個尚未提交的交易內容,也不能被綁在別人的交易上。
 - 租戶保底與資料範圍規則與 session 無關,帶 session 不能放寬任何範圍。

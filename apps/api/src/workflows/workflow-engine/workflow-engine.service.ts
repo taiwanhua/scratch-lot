@@ -44,9 +44,11 @@ const MAX_ROUNDS = 60;
  * 引擎的檢查點(正式環境什麼都不做)。要驗「中斷 → 整個動作全部回復」,測試必須能讓某一步**真的**
  * 在交易半路失敗;要驗並發,測試要能在某一步插進另一個請求 —— GraphQL 端點上看不到這個能力,所以測試經
  * `app.get(WorkflowEngineHooks)` 讓指定檢查點丟錯或插入動作(TEST-07 的第二個接縫,理由同 `FormPublishHooks`):
- * - `submit:instance-created` / `submit:submission-linked` / `submit:started`:送出第 2 / 3 / 4 步之後
+ * - `submit:before-write`:送出建實例之前(已查過同修訂號沒有實例)
+ * - `submit:instance-created` / `submit:submission-linked`:送出第 2 / 3 步之後
  * - `decide:before-write` / `decide:accepted`:決定寫入實例之前 / 之後
- * - `withdraw:before-write` / `reassign:before-write`:撤回 / 改派寫入實例之前
+ * - `withdraw:before-write` / `reassign:before-write` / `add-assignee:before-write`:撤回 / 改派 /
+ *   新增審核者寫入實例之前
  * - `action:<動作種類>`:推進執行每一個動作之前(如 `action:createTask`)
  *
  * 檢查點都在交易內:丟錯 = 整個交易回復;插入的動作要在交易外執行(`hooks-fixture.ts` 的 `interleaveAt`),
@@ -310,7 +312,8 @@ export class WorkflowEngineService {
 
   /**
    * 依計畫建任務;`(instanceId, taskKey)` 已存在 = 已建過(推進重跑不重建)。先查再建(TX-04:交易內
-   * 撞唯一鍵後不能接著寫);並發下的最終裁決仍是唯一索引,撞到就讓整個交易重跑或回報。
+   * 撞唯一鍵後不能接著寫)。並發的最終裁決仍是唯一索引:撞到 E11000(不是暫時性錯誤,driver 不會自動重跑)
+   * 就讓錯誤往外拋、整個交易回復並回報;並發的推進通常先以寫入衝突重跑,重讀後就查得到已建的任務。
    */
   private async createTask(
     instance: InstanceRecord,

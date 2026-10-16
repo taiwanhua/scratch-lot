@@ -31,9 +31,10 @@ import {
  * `advance(instance)` 的判斷表(Spec §6「冪等推進」),**純函式**:
  * 輸入(版本定義、實例、任務投影集合、提交、現在時間)→ 輸出「這一輪要做的動作清單」。
  * 不碰資料庫:api 依序執行動作(每個寫入都是條件更新),做完**重讀再呼叫一次**,直到 `row` 是
- * 「沒事可做」的 1 / 3 / 9。
+ * 「沒事可做」的 3 / 9。
  *
- * 由上往下找第一個成立的列:1 → 2 → 3 → 4 → 5 → 4b → 4c → 5b → 6 → 7 → 8 → 8b → 9。
+ * 由上往下找第一個成立的列:2 → 3 → 4 → 5 → 4b → 4c → 5b → 6 → 7 → 8 → 8b → 9。
+ * (原本的列 1「`linking` 沒事可做」已隨 `linking` 狀態移除;其他列號不變,文件與測試照舊引用。)
  * 列 4、5、5b、8 對 `activeStepKeys` 裡每一關各自判斷;4b、4c、7 看所有節點與任務。
  *
  * 列 5 需要查資料庫才知道「跳過條件成不成立、解析出誰」:第一次呼叫回 `resolveStepEntry`,
@@ -43,7 +44,7 @@ import {
  * 1. 依陣列順序執行;**`updateInstance` 的條件不成立(CAS 失敗)就中止本輪**,後面的動作一個都不做,
  *    重讀實例與任務再呼叫 `advance`。後面的動作(同步提交、寄信)是依「這筆更新成功」算出來的,
  *    CAS 失敗代表快照已過期,繼續做會把舊判斷寫進去。
- * 2. 其他動作的「條件不成立」都是**已做過**(冪等),照常往下:`createTask` 撞唯一鍵、`syncTask` 的狀態
+ * 2. 其他動作的「條件不成立」都是**已做過**(冪等),照常往下:`createTask` 的任務已存在、`syncTask` 的狀態
  *    已被改過、`updateSubmission` 沒有同步資格、`appendHistoryOnce` 事件已存在。
  * 3. `invalidState` = 權威資料自相矛盾,不寫任何東西、中止推進並記 log;它會一直出現在「需要推進」,
  *    等人工修資料。
@@ -71,7 +72,6 @@ export interface AdvanceInput {
 
 /** 判斷表的列號(8b 是本實作補的恢復列:提交的阻擋標記與實例不符)。 */
 export type AdvanceRow =
-  | "1"
   | "2"
   | "3"
   | "4"
@@ -186,9 +186,6 @@ export interface AdvancePlan {
 /** 判斷表的入口:回第一個成立的列與它要做的動作。 */
 export function advance(input: AdvanceInput): AdvancePlan {
   const { instance } = input;
-  if (instance.status === "linking") {
-    return { row: "1", actions: [] };
-  }
   if (isTerminalInstanceStatus(instance.status)) {
     const finishing = finishingActions(input);
     return finishing.length > 0
@@ -908,7 +905,7 @@ function syncSubmissionBlockedRow8b(input: AdvanceInput): AdvancePlan | null {
 
 /**
  * 新實例的 `steps[]`:版本的**每個節點**各一筆 `pending`(見檔頭「執行合約」的最後一段)。
- * 送出第 2 步建 `linking` 實例時寫入;之後只改欄位,不增刪元素。
+ * 送出建實例時寫入;之後只改欄位,不增刪元素。
  */
 export function initialStepStates(definition: WorkflowDefinition): StepState[] {
   return definition.steps.map((step) => ({

@@ -338,6 +338,7 @@ export class TaskActionsService {
       );
     }
     const taskKey = nextTaskKey(input.stepKey, step.plan);
+    await this.hooks.reached("add-assignee:before-write");
     const updated = await this.instances.findOneAndUpdate(
       systemContext(),
       {
