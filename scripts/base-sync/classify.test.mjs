@@ -46,4 +46,9 @@ test("admin 的固定組裝入口判為 mixed", () => {
     classifyPath("apps/admin/src/lib/base/help-registry.ts", "M"),
     "mixed",
   );
+  // 搬進 lib/base/ 之前的舊位置(比對分層前的底座版本時會出現)
+  assert.equal(
+    classifyPath("apps/admin/src/lib/help-registry.ts", "M"),
+    "mixed",
+  );
 });

@@ -3,7 +3,8 @@
  * `@repo/ui` 所有權的 lint 負例(STRUCT-12;admin 的同名檢查見 `apps/admin/scripts/check-ownership-lint.mjs`):
  * 以 ui **正式的** ESLint 設定去 lint `lint-fixtures/ownership/` 的小型 `src/`,確認
  * ①import `apps/` 路徑或 app 套件被擋 ②`project/` 底下的程式被擋 ③一般檔案沒被誤擋;
- * 再掃正式 `src/` 確認沒有任何 `project/` 目錄(含非程式檔,lint 看不到),並以夾具驗證掃描本身抓得到。
+ * 再掃整個 `packages/ui`(`node_modules`、`dist`、`lint-fixtures` 除外)確認沒有任何 `project/` 目錄
+ * (含非程式檔與 src 以外的位置,lint 看不到),並以夾具驗證掃描本身抓得到。
  * 接在 `lint` script 後面跑,所以 CI 的 lint 會連這一步一起驗。
  *
  * 夾具放在 `src/` 以外(`eslint src/`、jest 都不會掃到;tsconfig 已排除);ESLint 以夾具目錄為工作目錄執行。
@@ -27,10 +28,13 @@ const RULES = ["no-restricted-imports", "no-restricted-syntax"];
 
 const toPosix = (path) => path.split(sep).join("/");
 
-/** 某個根目錄底下所有名為 `project` 的目錄(相對於根,posix)。 */
+/** 掃描時整個跳過的目錄名:依賴、建置產物,以及刻意放了 `project/` 的夾具。 */
+const SKIP_DIRS = new Set(["node_modules", "dist", "lint-fixtures"]);
+
+/** 某個根目錄底下所有名為 `project` 的目錄(相對於根,posix;跳過 `SKIP_DIRS`)。 */
 const findProjectDirs = (root, dir = root) =>
   readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name !== "node_modules")
+    .filter((entry) => entry.isDirectory() && !SKIP_DIRS.has(entry.name))
     .flatMap((entry) => {
       const full = join(dir, entry.name);
       const nested = findProjectDirs(root, full);
@@ -96,16 +100,16 @@ for (const [file, expected] of Object.entries(EXPECTATIONS)) {
   }
 }
 
-// 目錄掃描:夾具一定要被抓到(掃描本身有效),正式 src/ 一個都不能有
+// 目錄掃描:夾具一定要被抓到(掃描本身有效),整個 packages/ui 一個都不能有
 const fixtureDirs = findProjectDirs(fixtureRoot);
 if (!fixtureDirs.includes("src/project")) {
   problems.push(
     `目錄掃描沒抓到夾具的 src/project(實際:${fixtureDirs.join("、") || "無"})`,
   );
 }
-for (const dir of findProjectDirs(join(packageRoot, "src"))) {
+for (const dir of findProjectDirs(packageRoot)) {
   problems.push(
-    `src/${dir}:@repo/ui 不能有 project/ 目錄(STRUCT-12);專案元件放 admin 的 components/project/`,
+    `${dir}:@repo/ui 不能有 project/ 目錄(STRUCT-12);專案元件放 admin 的 components/project/`,
   );
 }
 
@@ -115,5 +119,5 @@ if (problems.length > 0) {
 
 console.log(
   `check:ownership-lint ✓ ${String(Object.keys(EXPECTATIONS).length)} 個夾具檔符合預期` +
-    "(import apps 拒絕、project/ 程式拒絕);src/ 沒有 project/ 目錄",
+    "(import apps 拒絕、project/ 程式拒絕);packages/ui 沒有 project/ 目錄",
 );
