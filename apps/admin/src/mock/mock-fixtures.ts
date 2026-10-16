@@ -1,3 +1,4 @@
+import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 import { projectPublic } from "@repo/project-config/public";
 
 import {
@@ -20,6 +21,10 @@ import {
   MODULE_MANAGER_MODULE_KEY,
   MODULE_MANAGER_PERMISSIONS,
 } from "@/pages/base/system/ModuleManagerPage/module-manager-permissions";
+import {
+  NOTIFICATION_SETTINGS_MODULE_KEY,
+  NOTIFICATION_SETTINGS_PERMISSIONS,
+} from "@/pages/base/system/NotificationSettingsPage/notification-settings-permissions";
 import {
   ORG_MANAGER_MODULE_KEY,
   ORG_MANAGER_PERMISSIONS,
@@ -203,6 +208,20 @@ const withFullPermissions = (module: TestModule): TestModule => ({
   permissions: [...(permissionsByModuleKey[module.key] ?? module.permissions)],
 });
 
+/** 通知設定(seed 正本 apps/db-migrator/seeds/base/modules/system.ts 的 order 9)。 */
+const notificationSettingsModule: TestModule = {
+  id: "m-notification-settings",
+  key: NOTIFICATION_SETTINGS_MODULE_KEY,
+  name: "通知設定",
+  parentId: "m-system",
+  sidebarType: ModuleSidebarType.Link,
+  engine: ModuleEngine.Fixed,
+  order: 9,
+  route: "/system/notification-settings",
+  icon: "notifications",
+  permissions: Object.values(NOTIFICATION_SETTINGS_PERMISSIONS),
+};
+
 /**
  * 側欄與路由的來源:總覽 + 系統管理群組 + 該視角看得到的治理模組 + 示範家族,權限給滿。
  *
@@ -230,6 +249,8 @@ export const modulesForView = (view: MockView): TestModule[] => [
   ).filter((module) => module.key !== "system"),
   ...applyCenterModules(),
   ...demoGroupFormModules(["demo.form.*"]),
+  // 通知設定(掛在系統管理群組下,排在既有 8 項之後;底座規格第 5 章)
+  notificationSettingsModule,
   // 印表機管理(系統管理群組最後一項)
   printersModule(),
 ];

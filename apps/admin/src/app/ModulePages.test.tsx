@@ -120,6 +120,7 @@ describe("底座來源 + 空專案(原版相容性)", () => {
         "system.field-manager",
         "system.forms",
         "system.module-manager",
+        "system.notification-settings",
         "system.org-manager",
         "system.printers",
         "system.role-manager",
