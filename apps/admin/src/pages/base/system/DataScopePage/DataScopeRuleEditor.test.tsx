@@ -190,6 +190,47 @@ describe("條件樹編輯器(資料範圍)", () => {
     });
   });
 
+  it("這一版畫面表達不出來的套用對象(多條件列):顯示唯讀提示,不假裝成「所有人」", async () => {
+    renderPage({
+      world: {
+        rules: [
+          {
+            ...savedRule,
+            rules: savedRule.rules.map((rule) => ({
+              ...rule,
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "role",
+                      cond: "in",
+                      value: { kind: "static", values: ["role-support"] },
+                    },
+                    {
+                      field: "permission",
+                      cond: "in",
+                      value: { kind: "static", values: ["demo.view-all"] },
+                    },
+                  ],
+                },
+              },
+            })),
+          },
+        ],
+      },
+    });
+    await waitForEditor("示範模組1(demo_items_one)");
+
+    expect(
+      await within(editor()).findByText("套用對象:進階條件,這一版畫面無法編輯"),
+    ).toBeInTheDocument();
+    expect(
+      within(editor()).queryByRole("combobox", { name: "套用對象" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("日期條件:存的時點以租戶時區回顯成日期,改選的那天送出台北 00:00 的時點", async () => {
     const { user: actor, fake } = renderPage({ world: { rules: [savedRule] } });
     await waitForEditor("示範模組1(demo_items_one)");

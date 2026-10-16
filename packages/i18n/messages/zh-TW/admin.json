@@ -832,6 +832,7 @@
       "audienceUser": "使用者",
       "remove": "刪除規則",
       "audienceEmpty": "沒有符合的對象",
+      "audiencePreserved": "進階條件,這一版畫面無法編輯",
       "audienceNoOwnerOrg": "無擁有組織"
     },
     "group": {

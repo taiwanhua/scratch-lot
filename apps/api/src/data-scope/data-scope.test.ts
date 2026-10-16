@@ -1070,6 +1070,30 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
         moduleKey: { $exists: false },
       });
     });
+
+    it("存著的套用對象不是人員條件格式(舊資料)→ 整個目標 fail-closed,誰都看不到,不是跳過那條", async () => {
+      // 先清空(作廢快取),再把規則直接改成改格式前的舊形狀,讓下一次查詢載入它
+      await saveRule([]);
+      await connection.collection("data_scope_rules").updateOne(
+        { collection: "demo_items_one", moduleKey: SAMPLE_ONE_MODULE_KEY },
+        {
+          $set: {
+            rules: [
+              {
+                audience: { type: "role", ids: [String(new Types.ObjectId())] },
+                filter: ONLY_MINE,
+              },
+            ],
+          },
+        },
+      );
+      expect(await visibleItemsOne(agentUserId, deptOne)).toEqual([]);
+      await saveRule([]);
+      expect(await visibleItemsOne(agentUserId, deptOne)).toEqual([
+        "乙的項目",
+        "甲的項目",
+      ]);
+    });
   });
 
   describe("日期條件:日曆天、逐租戶套用 —— 以根組織的時區還原那一天,以操作者租戶的時區算邊界", () => {

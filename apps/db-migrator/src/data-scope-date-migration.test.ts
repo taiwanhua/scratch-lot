@@ -93,7 +93,7 @@ async function seedPreState(
     combineOp: "OR",
     rules: [
       {
-        audience: { type: "all" },
+        audience: { mode: "all" },
         filter: {
           op: "AND",
           children: [
