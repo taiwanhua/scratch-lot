@@ -185,6 +185,7 @@ pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort
 - **共用函式不指定「誰定義」,直接給簽章與所屬檔案**:例 `orgs/owner-protection.service.ts` 的 `assertTenantTopOperableBy(operator, org, action)`,誰先到誰寫、後到的 rebase 改用。
 - **要 root-only 就指定權限 key 掛在 `system.org-manager.tenant-ops` 容器底下**:`isRootOnly` 是模組的旗標、不是權限的旗標(模板複製時整個模組被扣除),寫「這個動作要 root-only」等於沒寫。先例:`tenant-ops.provision` / `revoke-provision` / `transfer-owner`。
 - **已知會超過 `max-lines` 400 的檔案,拆票時直接指定兩個檔名**。
+- **討論定案的行為,逐條寫進 spec,寫到實作者不用回來問**:寫 spec(含改寫、拆節、改名)時,對照討論紀錄把每一條已定的決定落到正文,不能只剩一句大概。行為類的規格寫成「操作 → 結果」情境表,邊界(重複開啟、錯誤參數、沒權限、空資料)各一列,並寫明保存在哪、沿用哪個既有機制;驗收寫「表的每一列一個測試」。「與 X 無關」「依現況」「實作時再定」這類句子不能代替行為描述。代價:實作者照字面做,漏掉的行為要到審查才發現,回頭補規格、補票、重做(例:頁籤記住網址參數早已定案,改名拆節時只剩「與 RouteTabs 無關」,實作完才被審查抓到)。
 
 ### 分工與依賴
 
