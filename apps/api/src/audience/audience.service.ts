@@ -52,6 +52,8 @@ interface OperatorFacts {
   permissionKeys?: Promise<ReadonlySet<string>>;
   /** 所屬組織各自的祖先(含自己):判斷「含下層」用。 */
   memberOrgLineage?: Promise<Set<string>>;
+  /** 「含上層」:指定組織(排序後的 id 串)→ 它們本身與所有上層。 */
+  ancestorsByTargets?: Map<string, Promise<Set<string>>>;
 }
 
 function intersect(sets: Set<string>[]): Set<string> {
@@ -79,6 +81,11 @@ function union(sets: Set<string>[]): Set<string> {
  * `listAudience` 只列啟用中、在本租戶(所屬組織至少一個在租戶子樹內)的使用者。
  *
  * 兩條路對同一組條件與使用者的結果必須一致(`audience.test.ts` 的表格測試)。
+ *
+ * **租戶邊界不在這裡檢查條件本身**:`listAudience` 只以「使用者在本租戶子樹內」收斂名單,
+ * 不檢查條件裡的角色 / 指定組織 / 指定使用者是不是本租戶的。租戶端的使用處(審核者、知會、
+ * 逾時通知、通知收件人)**要在儲存時**自己檢查角色與組織屬於本租戶(格式檢查只看形狀,
+ * `validateAudience` 不知道租戶);資料範圍由 root 設定、本來就跨租戶,不在此限。
  */
 @Injectable()
 export class AudienceService {
@@ -172,8 +179,30 @@ export class AudienceService {
     const orgIds =
       range === "self"
         ? new Set(targets.map(String))
-        : await this.selfAndAncestorIds(targets);
+        : await this.cachedSelfAndAncestorIds(operator, targets);
     return operator.memberOrgIds.some((id) => orgIds.has(String(id)));
+  }
+
+  /**
+   * 「含上層」的組織集合,同一個請求內依指定組織快取(資料範圍一次請求可能查好幾張表,
+   * 每張都要判斷同一條規則)。只活在這個請求:組織搬家後下一個請求就讀到新的樹。
+   */
+  private cachedSelfAndAncestorIds(
+    operator: OperatorContext,
+    targets: readonly Types.ObjectId[],
+  ): Promise<Set<string>> {
+    const facts = this.factsOf(operator);
+    facts.ancestorsByTargets ??= new Map();
+    const key = targets
+      .map(String)
+      .toSorted((a, b) => a.localeCompare(b))
+      .join(",");
+    let cached = facts.ancestorsByTargets.get(key);
+    if (!cached) {
+      cached = this.selfAndAncestorIds(targets);
+      facts.ancestorsByTargets.set(key, cached);
+    }
+    return cached;
   }
 
   private factsOf(operator: OperatorContext): OperatorFacts {

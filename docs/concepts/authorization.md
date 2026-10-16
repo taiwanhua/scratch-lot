@@ -100,6 +100,7 @@ token → userId
 | 前端 | 頁內功能:`usePermissions().hasPermission(key)`,同一個判斷函式                                                                         |
 
 - `@RequirePermission` 是單一 key。多選一(如上傳用途)由 resolver 自己查有效權限集合。
+- **登入即可讀、不掛 `@RequirePermission` 的例外**:回傳內容本身就只有操作者自己持有的那一份,沒有東西可多看 —— `me`(含 `me.modules`)、`audiencePermissionOptions`(人員條件的權限樹 = 權限矩陣的顯示樹,全樹 ∩ 操作者有效權限集,扣掉別租戶客製表單的欄位級權限)。新增這類端點要符合同一條件並登記在這裡。
 
 正本:`apps/api/src/permission/permission.guard.ts`、`apps/api/src/permission/require-permission.decorator.ts`、`apps/admin/src/hooks/base/usePermissions.ts`
 

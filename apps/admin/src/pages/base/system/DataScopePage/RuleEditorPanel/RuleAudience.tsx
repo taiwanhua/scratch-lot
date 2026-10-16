@@ -94,6 +94,23 @@ export const RuleAudience = ({
           roleOwnerOrgGroupNameOf(option, t("audienceNoOwnerOrg"))
       : undefined;
 
+  // 存著的人員條件這一版畫面表達不出來(多個條件列、權限、含下層…):只顯示唯讀提示,
+  // 不假裝成「所有人」;儲存時原樣送回
+  if (audience.preserved !== undefined) {
+    return (
+      <Stack spacing={0.75}>
+        <Typography variant="body2">
+          {t("audience")}:{t("audiencePreserved")}
+        </Typography>
+        {issue !== undefined && (
+          <Typography variant="caption" color="error.main">
+            {tReasons(issue.reason)}
+          </Typography>
+        )}
+      </Stack>
+    );
+  }
+
   return (
     <Stack spacing={0.75}>
       <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
