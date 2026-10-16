@@ -5,7 +5,7 @@ import {
   FORGOT_PASSWORD_PATH,
   LOGIN_PATH,
   SET_PASSWORD_PATH,
-} from "../lib/paths";
+} from "../lib/base/paths";
 import { ChangePasswordPage } from "../pages/base/auth/ChangePasswordPage/ChangePasswordPage";
 import { ForgotPasswordPage } from "../pages/base/auth/ForgotPasswordPage/ForgotPasswordPage";
 import { LoginPage } from "../pages/base/auth/LoginPage/LoginPage";

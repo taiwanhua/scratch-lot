@@ -1,8 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { COLOR_MODE_STORAGE_KEY } from "@/lib/color-mode";
-import { LOCALE_STORAGE_KEY } from "@/lib/locale";
+import { COLOR_MODE_STORAGE_KEY } from "@/lib/base/color-mode";
+import { LOCALE_STORAGE_KEY } from "@/lib/base/locale";
 import {
   SWITCHED_ACCESS_TOKEN,
   authWorld,

@@ -10,10 +10,10 @@ import {
   useUsersQuery,
 } from "@repo/graphql";
 
-import { useMe } from "@/hooks/useMe";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { type OrgNodeLike, rootOrgId } from "@/lib/org-tree";
+import { useMe } from "@/hooks/base/useMe";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { type OrgNodeLike, rootOrgId } from "@/lib/base/org-tree";
 
 import {
   ORG_MANAGER_VIEW_PERMISSION,

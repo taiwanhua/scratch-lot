@@ -11,12 +11,16 @@ import { Link } from "@repo/ui/link";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 import {
   authErrorCodeOf,
   passwordViolationsOf,
-} from "@/lib/auth/graphql-errors";
-import { FORGOT_PASSWORD_PATH, LOGIN_PATH, TOKEN_PARAM } from "@/lib/paths";
+} from "@/lib/base/auth/graphql-errors";
+import {
+  FORGOT_PASSWORD_PATH,
+  LOGIN_PATH,
+  TOKEN_PARAM,
+} from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 import { NewPasswordFields } from "../NewPasswordFields/NewPasswordFields";

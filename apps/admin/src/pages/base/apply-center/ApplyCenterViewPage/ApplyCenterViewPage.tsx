@@ -13,18 +13,18 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useTabLabelRenderer } from "@/components/form-engine/FormModulePages/useTabLabelRenderer";
-import { FormRenderer } from "@/components/form-engine/FormRenderer/FormRenderer";
-import { ApprovalSection } from "@/components/workflow/ApprovalSection/ApprovalSection";
-import { SubmissionStatusTag } from "@/components/workflow/SubmissionStatusTag";
-import { useFormRuntimeVersion } from "@/hooks/useFormRuntimeVersion";
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { useRouteTabItemLabel } from "@/hooks/useRouteTabItemLabel";
-import { useSession } from "@/hooks/useSession";
-import { revisionContextOf } from "@/lib/form-engine/expression-context";
-import { permissionsOfSubmission } from "@/lib/form-engine/field-permissions";
-import type { ModulePageProps } from "@/lib/module-tree";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useTabLabelRenderer } from "@/components/base/form-engine/FormModulePages/useTabLabelRenderer";
+import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
+import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
+import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
+import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import { useSession } from "@/hooks/base/useSession";
+import { revisionContextOf } from "@/lib/base/form-engine/expression-context";
+import { permissionsOfSubmission } from "@/lib/base/form-engine/field-permissions";
+import type { ModulePageProps } from "@/lib/base/module-tree";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import {
   APPLY_CENTER_MODULE_KEY,

@@ -13,9 +13,9 @@ import { useMemo, useState } from "react";
 import type { WorkflowDefinition } from "@repo/domain/workflow";
 import { Box } from "@repo/ui/box";
 
-import { dropTargetOf } from "@/lib/workflow/flow-drop";
-import { layoutDefinition } from "@/lib/workflow/flow-layout";
-import type { DropTarget } from "@/lib/workflow/flow-ops";
+import { dropTargetOf } from "@/lib/base/workflow/flow-drop";
+import { layoutDefinition } from "@/lib/base/workflow/flow-layout";
+import type { DropTarget } from "@/lib/base/workflow/flow-ops";
 
 import { JoinNode } from "./JoinNode";
 import { ReviewStepNode } from "./ReviewStepNode";

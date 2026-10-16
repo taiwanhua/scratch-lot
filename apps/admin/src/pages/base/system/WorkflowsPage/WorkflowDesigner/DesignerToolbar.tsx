@@ -7,7 +7,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import type { WorkflowError } from "@/lib/workflow/workflow-errors";
+import type { WorkflowError } from "@/lib/base/workflow/workflow-errors";
 
 import { CheckFormField } from "./CheckFormField";
 import type { CatalogForm } from "./useDesignerCatalog";

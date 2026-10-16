@@ -17,13 +17,13 @@ import { Table } from "@repo/ui/table";
 import { Tag, type TagTone } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { SeedExportDialog } from "@/components/SeedExportDialog/SeedExportDialog";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
-import { definitionOf } from "@/lib/workflow/definition";
-import { workflowVersionDiff } from "@/lib/workflow/version-diff";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { SeedExportDialog } from "@/components/base/SeedExportDialog/SeedExportDialog";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { definitionOf } from "@/lib/base/workflow/definition";
+import { workflowVersionDiff } from "@/lib/base/workflow/version-diff";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { DeleteWorkflowDraftDialog } from "./DeleteWorkflowDraftDialog";
 import { PublishWorkflowDialog } from "./PublishWorkflowDialog";

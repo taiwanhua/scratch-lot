@@ -1,8 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { formModulePages } from "@/components/form-engine/FormModulePages/form-module-pages";
-import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/form-engine/tab-label";
+import { formModulePages } from "@/components/base/form-engine/FormModulePages/form-module-pages";
+import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/base/form-engine/tab-label";
 import { setHelpFiles } from "@/test/help-registry";
 import {
   type TestModule,

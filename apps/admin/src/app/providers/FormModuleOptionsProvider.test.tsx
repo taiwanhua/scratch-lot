@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
 
-import { useFormModuleOptions } from "@/hooks/useFormModuleOptions";
-import { composeFormModuleOptions } from "@/lib/form-engine/form-module-options";
-import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/form-engine/tab-label";
+import { useFormModuleOptions } from "@/hooks/base/useFormModuleOptions";
+import { composeFormModuleOptions } from "@/lib/base/form-engine/form-module-options";
+import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/base/form-engine/tab-label";
 
 import { FormModuleOptionsProvider } from "./FormModuleOptionsProvider";
 

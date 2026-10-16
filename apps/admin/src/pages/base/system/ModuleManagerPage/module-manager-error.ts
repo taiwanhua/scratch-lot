@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 import type { ModuleManagerErrorCode } from "./module-manager-types";
 
@@ -9,7 +9,7 @@ import type { ModuleManagerErrorCode } from "./module-manager-types";
  */
 const MODULE_MANAGER_ERROR_CODES = ["FORBIDDEN", "NOT_FOUND"] as const;
 
-/** 共用形狀(`lib/errors.ts`);本頁只看 `code`。 */
+/** 共用形狀(`lib/base/errors.ts`);本頁只看 `code`。 */
 export type ModuleManagerError = AdminError<ModuleManagerErrorCode, never>;
 
 export const moduleManagerErrorOf = (error: unknown): ModuleManagerError =>

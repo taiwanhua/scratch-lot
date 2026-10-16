@@ -6,13 +6,13 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { issueKey } from "@/lib/data-scope-issues";
+import { issueKey } from "@/lib/base/data-scope-issues";
 import {
   CONDITIONS_BY_TYPE,
   type ConditionDraft,
   newCondition,
   withCondition,
-} from "@/lib/data-scope-rule";
+} from "@/lib/base/data-scope-rule";
 
 import type { DataScopeEditorEnv } from "../data-scope-types";
 import { ValueEditor } from "./ValueEditor";

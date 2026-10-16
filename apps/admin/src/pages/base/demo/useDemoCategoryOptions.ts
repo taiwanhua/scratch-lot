@@ -1,7 +1,7 @@
 import { useFieldCategoriesQuery, useFieldsQuery } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import {
   DEMO_CATEGORY_KEY,

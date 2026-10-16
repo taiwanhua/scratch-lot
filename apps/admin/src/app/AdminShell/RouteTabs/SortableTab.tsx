@@ -6,7 +6,7 @@ import { IconButton } from "@repo/ui/icon-button";
 import { CloseIcon } from "@repo/ui/icons";
 import { Typography } from "@repo/ui/typography";
 
-import type { RouteTab } from "@/lib/route-tabs";
+import type { RouteTab } from "@/lib/base/route-tabs";
 
 /** 頁籤高 / 關閉圖示(theme.spacing 單位;Figma RouteTab 30 高、close 12)。 */
 const TAB_HEIGHT = 3.75;

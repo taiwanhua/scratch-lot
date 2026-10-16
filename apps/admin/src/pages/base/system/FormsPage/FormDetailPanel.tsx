@@ -15,10 +15,10 @@ import { Switch } from "@repo/ui/switch";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
 import { FormDesigner } from "./FormDesigner/FormDesigner";

@@ -10,8 +10,8 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
-import { LOGIN_PATH } from "@/lib/paths";
+import { useSession } from "@/hooks/base/useSession";
+import { LOGIN_PATH } from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 

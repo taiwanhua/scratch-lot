@@ -5,8 +5,8 @@ import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useDesignerDraftStore } from "@/stores/useDesignerDraftStore";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
 
 import { FormDetailPanel } from "./FormDetailPanel";
 import { CreateFormDialog } from "./FormDialogs/CreateFormDialog";

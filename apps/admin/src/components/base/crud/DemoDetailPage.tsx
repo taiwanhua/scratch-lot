@@ -10,11 +10,11 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useCloseItemTabs } from "@/hooks/useCloseItemTabs";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useRouteTabItemLabel } from "@/hooks/useRouteTabItemLabel";
-import { useSession } from "@/hooks/useSession";
-import type { ModulePageProps } from "@/lib/module-tree";
+import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import { useSession } from "@/hooks/base/useSession";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { DeleteItemDialog } from "./DeleteItemDialog";
 import { DemoFieldRow } from "./DemoFieldRow";
@@ -34,7 +34,7 @@ export interface DemoDetailPageProps<
  * 設定驅動的詳情頁(隱藏頁模組 `<模組>.view-page`;Figma 175:318)。
  *
  * 網址是 `/<模組路由>/view-page/<id>`,`<id>` 由殼的路由防守解出來傳進 `routeParam`
- * (`lib/module-tree.ts` 的 `matchModuleRoute`);沒綁這個模組的人根本走不到這裡。
+ * (`lib/base/module-tree.ts` 的 `matchModuleRoute`);沒綁這個模組的人根本走不到這裡。
  *
  * 欄位表由 `config.detail.fields` 決定。每一列的 `isVisible` 就是**欄位級權限**的接縫:
  * 沒有權限時整列不渲染,**不是顯示空值** —— 值是 null 也可能只是沒填,拿值猜權限是錯的。

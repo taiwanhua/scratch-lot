@@ -8,7 +8,7 @@ import { Typography } from "@repo/ui/typography";
 import type {
   DesignerIssue,
   DesignerReport,
-} from "@/lib/form-engine/designer-issues";
+} from "@/lib/base/form-engine/designer-issues";
 
 import type { RegexCheckStatus } from "./useRegexSafety";
 

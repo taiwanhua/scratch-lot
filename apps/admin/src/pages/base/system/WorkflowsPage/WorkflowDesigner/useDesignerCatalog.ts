@@ -7,8 +7,8 @@ import {
   useRolesQuery,
 } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
-import { definitionOf as formDefinitionOf } from "@/lib/form-engine/definition";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf as formDefinitionOf } from "@/lib/base/form-engine/definition";
 
 export interface CatalogForm {
   key: string;

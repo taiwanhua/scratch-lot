@@ -1,5 +1,5 @@
 import { DemoDetailPage } from "@/components/base/crud/DemoDetailPage";
-import type { ModulePageProps } from "@/lib/module-tree";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { sampleTwoModule } from "../SampleTwoModule";
 

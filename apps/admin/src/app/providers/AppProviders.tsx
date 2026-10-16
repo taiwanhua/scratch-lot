@@ -7,12 +7,12 @@ import { projectPublic } from "@repo/project-config/public";
 import { AppThemeProvider } from "@repo/ui/app-theme-provider";
 import { createBrandFromPrimary } from "@repo/ui/theme";
 
-import type { AuthSession } from "@/lib/auth/session";
+import type { AuthSession } from "@/lib/base/auth/session";
 import {
   COLOR_MODE_STORAGE_KEY,
   COLOR_SCHEME_STORAGE_KEY,
-} from "@/lib/color-mode";
-import { useLocaleStore } from "@/stores/useLocaleStore";
+} from "@/lib/base/color-mode";
+import { useLocaleStore } from "@/stores/base/useLocaleStore";
 
 import { SessionProvider } from "./SessionProvider";
 import { SnackbarProvider } from "./SnackbarProvider";

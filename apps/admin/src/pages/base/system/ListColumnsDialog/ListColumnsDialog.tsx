@@ -6,7 +6,7 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import { ListColumnsEditor } from "./ListColumnsEditor";
 

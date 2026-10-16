@@ -4,14 +4,14 @@ import { useState } from "react";
 
 import { ModuleListColumnKind } from "@repo/graphql";
 
-import { formModulePages } from "@/components/form-engine/FormModulePages/form-module-pages";
+import { formModulePages } from "@/components/base/form-engine/FormModulePages/form-module-pages";
 import {
   SHOPPING_ALL,
   defaultRuntimeOptions,
-} from "@/components/form-engine/FormModulePages/form-module-test-support";
-import { FormSubmissionList } from "@/components/form-engine/FormSubmissionList";
-import { DEFAULT_FORM_MODULE_OPTIONS } from "@/lib/form-engine/form-module-options";
-import type { ModulePageProps } from "@/lib/module-tree";
+} from "@/components/base/form-engine/FormModulePages/form-module-test-support";
+import { FormSubmissionList } from "@/components/base/form-engine/FormSubmissionList";
+import { DEFAULT_FORM_MODULE_OPTIONS } from "@/lib/base/form-engine/form-module-options";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 import { authWorld } from "@/test/msw/auth-handlers";
 import {
   DEMO_FORM_KEY,

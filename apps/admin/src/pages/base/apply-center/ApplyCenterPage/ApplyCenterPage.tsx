@@ -7,11 +7,11 @@ import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 
-import { useApplicableForms } from "@/hooks/useApplicableForms";
+import { useApplicableForms } from "@/hooks/base/useApplicableForms";
 import {
   useApplyCenterCounts,
   useInvalidateApplyCenterCounts,
-} from "@/hooks/useApplyCenterCounts";
+} from "@/hooks/base/useApplyCenterCounts";
 
 import { ApplyCenterTabLabel } from "./ApplyCenterTabLabel";
 import { MyApplicationsTab } from "./MyApplicationsTab";

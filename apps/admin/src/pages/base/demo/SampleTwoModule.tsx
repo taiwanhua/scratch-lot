@@ -24,7 +24,7 @@ import {
   useDemoItemCache,
   useDemoRows,
 } from "@/components/base/crud/useDemoQuery";
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import {
   SAMPLE_TWO_I18N,

@@ -1,8 +1,8 @@
 import type { DataScopeRuleQuery, DataScopeTargetsQuery } from "@repo/graphql";
 
-import type { RuleIssue } from "@/lib/data-scope-issues";
-import type { DataScopeFieldLike } from "@/lib/data-scope-rule";
-import type { OrgNodeLike, OrgOption } from "@/lib/org-tree";
+import type { RuleIssue } from "@/lib/base/data-scope-issues";
+import type { DataScopeFieldLike } from "@/lib/base/data-scope-rule";
+import type { OrgNodeLike, OrgOption } from "@/lib/base/org-tree";
 
 /** `dataScopeTargets` 的一個資料目標(左清單的一列、右編輯器的欄位目錄來源)。 */
 export type DataScopeTarget =
@@ -15,7 +15,7 @@ export type DataScopeRuleData = NonNullable<
 
 /**
  * 套用對象與條件值共用的清單選項(角色 / 使用者)。
- * 角色的選項另外帶分辨同名角色用的欄位(#261 的 8;`lib/role-options.ts` 產生),
+ * 角色的選項另外帶分辨同名角色用的欄位(#261 的 8;`lib/base/role-options.ts` 產生),
  * 使用者的選項只填 `id` / `label`。
  */
 export interface PickerOption {

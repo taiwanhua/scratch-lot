@@ -41,7 +41,7 @@ const MIXED = [
   /^pnpm-workspace\.yaml$/,
   /^(?:apps|packages)\/[^/]+\/package\.json$/,
   /^apps\/admin\/src\/app\/module-pages\.tsx$/,
-  /^apps\/admin\/src\/lib\/help-registry\.ts$/,
+  /^apps\/admin\/src\/lib\/base\/help-registry\.ts$/,
   /^apps\/api\/src\/app\.module\.ts$/,
   /^apps\/api\/src\/database\/database\.module\.ts$/,
   /^apps\/db-migrator\/seeds\/registry\.ts$/,

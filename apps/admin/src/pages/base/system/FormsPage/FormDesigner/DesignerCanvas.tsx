@@ -15,14 +15,17 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Tooltip } from "@repo/ui/tooltip";
 
-import { FormRenderer } from "@/components/form-engine/FormRenderer/FormRenderer";
+import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
 import type {
   DesignDefinition,
   DesignSection,
-} from "@/lib/form-engine/design-definition";
-import { parseDesignId } from "@/lib/form-engine/design-ids";
-import { type PlaceTarget, sectionCols } from "@/lib/form-engine/designer-ops";
-import { liveContextOf } from "@/lib/form-engine/expression-context";
+} from "@/lib/base/form-engine/design-definition";
+import { parseDesignId } from "@/lib/base/form-engine/design-ids";
+import {
+  type PlaceTarget,
+  sectionCols,
+} from "@/lib/base/form-engine/designer-ops";
+import { liveContextOf } from "@/lib/base/form-engine/expression-context";
 
 import { UnplacedFields } from "./UnplacedFields";
 

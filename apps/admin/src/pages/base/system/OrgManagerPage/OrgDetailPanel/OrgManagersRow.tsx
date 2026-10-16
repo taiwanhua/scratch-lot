@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { useOrgManagersQuery } from "@repo/graphql";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import { OrgDetailRow } from "./OrgDetailRow";
 

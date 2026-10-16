@@ -9,8 +9,8 @@ import {
   useRolesQuery,
 } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import { ROLE_MANAGER_PERMISSIONS } from "./role-manager-permissions";
 import {

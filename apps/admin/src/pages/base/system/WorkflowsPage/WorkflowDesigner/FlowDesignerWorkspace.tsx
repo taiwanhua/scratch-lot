@@ -11,14 +11,14 @@ import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { JsonPreview } from "@/components/JsonPreview";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { JsonPreview } from "@/components/base/JsonPreview";
+import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
 import {
   checkFormKeyOf,
   definitionInputOf,
   definitionOf,
-} from "@/lib/workflow/definition";
-import { mergeReports } from "@/lib/workflow/validation";
+} from "@/lib/base/workflow/definition";
+import { mergeReports } from "@/lib/base/workflow/validation";
 
 import { DesignerToolbar } from "./DesignerToolbar";
 import { FlowCanvas } from "./FlowCanvas";

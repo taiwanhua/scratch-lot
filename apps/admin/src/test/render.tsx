@@ -3,8 +3,8 @@ import { render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
-import { type AuthSession, createAuthSession } from "../lib/auth/session";
-import { useSessionStore } from "../stores/useSessionStore";
+import { type AuthSession, createAuthSession } from "../lib/base/auth/session";
+import { useSessionStore } from "../stores/base/useSessionStore";
 import { TEST_GRAPHQL_ENDPOINT } from "./msw/server";
 import { TestApp } from "./test-app";
 

@@ -12,7 +12,7 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { conditionFieldsOf } from "@/lib/form-engine/expression-options";
+import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
 
 import { FieldSourceSelect } from "./FieldSourceSelect";
 import { UsersField } from "./UsersField";

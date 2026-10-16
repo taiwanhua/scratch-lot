@@ -16,14 +16,14 @@ import { Stack } from "@repo/ui/stack";
 import { Table } from "@repo/ui/table";
 import { Tag, type TagTone } from "@repo/ui/tag";
 
-import { SeedExportDialog } from "@/components/SeedExportDialog/SeedExportDialog";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
-import { definitionOf } from "@/lib/form-engine/definition";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
-import { versionDiff } from "@/lib/form-engine/version-diff";
+import { SeedExportDialog } from "@/components/base/SeedExportDialog/SeedExportDialog";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { definitionOf } from "@/lib/base/form-engine/definition";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
+import { versionDiff } from "@/lib/base/form-engine/version-diff";
 
 import { DeleteDraftDialog } from "./DeleteDraftDialog";
 import { PublishDialog } from "./PublishDialog";

@@ -10,7 +10,7 @@ import {
   ModuleSidebarType,
 } from "@repo/graphql";
 
-import { rawOf } from "@/lib/form-engine/definition";
+import { rawOf } from "@/lib/base/form-engine/definition";
 
 import type { TestModule } from "./auth-handlers";
 

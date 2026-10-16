@@ -3,16 +3,16 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-import { colorModeInitTag } from "./src/lib/color-mode-init";
-import { projectHtmlTransform } from "./src/lib/project-html";
+import { colorModeInitTag } from "./src/lib/base/color-mode-init";
+import { projectHtmlTransform } from "./src/lib/base/project-html";
 
-/** 首幀外觀腳本注入 `<head>`(見 `src/lib/color-mode-init.ts`)。 */
+/** 首幀外觀腳本注入 `<head>`(見 `src/lib/base/color-mode-init.ts`)。 */
 const colorModeInit = {
   name: "admin:color-mode-init",
   transformIndexHtml: () => [colorModeInitTag()],
 };
 
-/** `<title>` 寫入專案設定的頁面標題(見 `src/lib/project-html.ts`)。 */
+/** `<title>` 寫入專案設定的頁面標題(見 `src/lib/base/project-html.ts`)。 */
 const projectHtml = {
   name: "admin:project-html",
   transformIndexHtml: projectHtmlTransform("app"),

@@ -14,10 +14,10 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { checkFormKeyOf, definitionOf } from "@/lib/workflow/definition";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { checkFormKeyOf, definitionOf } from "@/lib/base/workflow/definition";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";

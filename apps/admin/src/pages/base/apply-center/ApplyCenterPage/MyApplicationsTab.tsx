@@ -9,14 +9,14 @@ import { DataTable, type DataTableColumn } from "@repo/ui/data-table";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import { SubmissionStatusTag } from "@/components/workflow/SubmissionStatusTag";
-import type { ApplicableModule } from "@/hooks/useApplicableForms";
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
+import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
+import type { ApplicableModule } from "@/hooks/base/useApplicableForms";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 import {
   type MyApplication,
   useMyApplications,
-} from "@/hooks/useMyApplications";
-import { useTemporalText } from "@/hooks/useTemporalText";
+} from "@/hooks/base/useMyApplications";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import {
   APPLY_CENTER_VIEW_PAGE_KEY,

@@ -13,9 +13,9 @@ import { Button } from "@repo/ui/button";
 import type { ModuleIconKey } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import { DisableModuleDialog } from "./DisableModuleDialog";
 import { ModuleDetailPanel } from "./ModuleDetailPanel/ModuleDetailPanel";

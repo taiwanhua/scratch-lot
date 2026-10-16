@@ -9,9 +9,9 @@ import { Pagination } from "@repo/ui/pagination";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useCloseItemTabs } from "@/hooks/useCloseItemTabs";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 
 import { DeleteItemDialog } from "./DeleteItemDialog";
 import { DemoListTable } from "./DemoListTable";

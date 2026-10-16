@@ -13,8 +13,8 @@ import { Pagination } from "@repo/ui/pagination";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 
 import { AssignRolesDialog } from "./AssignRolesDialog/AssignRolesDialog";
 import { CopyOrgRolesDialog } from "./CopyOrgRolesDialog/CopyOrgRolesDialog";

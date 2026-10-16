@@ -45,7 +45,7 @@ export interface RoleOption {
 export const buildRoleOptions = (
   assignable: readonly AssignableRole[],
   targetRoles: readonly UserRoleGrant[],
-  /** 目標使用者是否有資格被授予某個角色(`lib/role-eligibility.ts` 算好的查詢函式) */
+  /** 目標使用者是否有資格被授予某個角色(`lib/base/role-eligibility.ts` 算好的查詢函式) */
   isEligible: (ownerOrgId: string | null) => boolean = () => true,
 ): RoleOption[] => {
   const grants = new Map(targetRoles.map((role) => [role.id, role]));

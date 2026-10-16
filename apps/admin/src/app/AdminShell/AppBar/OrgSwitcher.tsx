@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 import { type MeQuery, useMeQuery, useSwitchOrgMutation } from "@repo/graphql";
 import { SelectField } from "@repo/ui/select-field";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 export interface OrgSwitcherProps {
   me: MeQuery["me"];

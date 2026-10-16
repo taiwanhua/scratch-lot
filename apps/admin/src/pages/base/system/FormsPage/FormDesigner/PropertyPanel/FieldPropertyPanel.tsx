@@ -13,12 +13,12 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { Typography } from "@repo/ui/typography";
 
-import { ExpressionPicker } from "@/components/form-engine/ExpressionPicker/ExpressionPicker";
-import { widgetKindsFor } from "@/components/form-engine/widgets/widget-registry";
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
-import type { FieldKeyProblem } from "@/lib/form-engine/designer-ops";
-import { conditionFieldsOf } from "@/lib/form-engine/expression-options";
-import { propertySectionsOf } from "@/lib/form-engine/property-sections";
+import { ExpressionPicker } from "@/components/base/form-engine/ExpressionPicker/ExpressionPicker";
+import { widgetKindsFor } from "@/components/base/form-engine/widgets/widget-registry";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
+import type { FieldKeyProblem } from "@/lib/base/form-engine/designer-ops";
+import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
+import { propertySectionsOf } from "@/lib/base/form-engine/property-sections";
 
 import { ArrayColumnPanel } from "./ArrayColumnsEditor/ArrayColumnPanel";
 import { ArrayColumnsEditor } from "./ArrayColumnsEditor/ArrayColumnsEditor";
@@ -49,7 +49,7 @@ export interface FieldPropertyPanelProps {
 
 /**
  * 屬性面板(Spec 6a §8 畫面 2):選中欄位的定義,**每種型別只出現該有的設定**(§5 表 A,
- * `lib/form-engine/property-sections.ts`)。表達式一律用型別導向的結構化選擇器(表 B);條件類不列受保護欄位。
+ * `lib/base/form-engine/property-sections.ts`)。表達式一律用型別導向的結構化選擇器(表 B);條件類不列受保護欄位。
  * 每一塊的檢查器錯誤就地顯示(表達式槽依 `location.exprSlot` 分派),其餘列在最上方。
  */
 export const FieldPropertyPanel = ({

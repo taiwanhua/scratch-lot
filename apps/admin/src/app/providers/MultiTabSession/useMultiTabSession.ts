@@ -2,9 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { useMe } from "@/hooks/useMe";
-import { useSession } from "@/hooks/useSession";
-import { useRouteTabsStore } from "@/stores/useRouteTabsStore";
+import { useMe } from "@/hooks/base/useMe";
+import { useSession } from "@/hooks/base/useSession";
+import { useRouteTabsStore } from "@/stores/base/useRouteTabsStore";
 
 /** 提示停留多久才重新開機(票面「1 到 2 秒後」);夠久到看得完那句話,又不會讓人以為當掉。 */
 export const TAB_SWITCH_DELAY_MS = 1500;

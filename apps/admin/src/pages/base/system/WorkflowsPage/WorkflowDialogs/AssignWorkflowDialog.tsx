@@ -15,12 +15,12 @@ import { FormControlLabel } from "@repo/ui/form-control-label";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSnackbar } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 import {
   type WorkflowError,
   workflowErrorOf,
-} from "@/lib/workflow/workflow-errors";
+} from "@/lib/base/workflow/workflow-errors";
 
 export interface AssignWorkflowDialogProps {
   workflow: WorkflowFieldsFragment;

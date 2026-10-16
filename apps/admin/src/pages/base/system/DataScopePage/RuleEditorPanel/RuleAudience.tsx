@@ -7,13 +7,13 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { OrgTreePicker } from "@/components/OrgTreePicker/OrgTreePicker";
-import { issueKey } from "@/lib/data-scope-issues";
-import type { AudienceDraft } from "@/lib/data-scope-rule";
+import { OrgTreePicker } from "@/components/base/OrgTreePicker/OrgTreePicker";
+import { issueKey } from "@/lib/base/data-scope-issues";
+import type { AudienceDraft } from "@/lib/base/data-scope-rule";
 import {
   roleOwnerOrgGroupNameOf,
   shouldGroupRolesByOwnerOrg,
-} from "@/lib/role-options";
+} from "@/lib/base/role-options";
 
 import type { DataScopeEditorEnv, PickerOption } from "../data-scope-types";
 
@@ -78,7 +78,7 @@ export const RuleAudience = ({
   });
 
   /**
-   * 角色清單才分組,而且只在跨兩個以上**擁有組織**時分(`lib/role-options.ts`)。
+   * 角色清單才分組,而且只在跨兩個以上**擁有組織**時分(`lib/base/role-options.ts`)。
    * 使用者清單維持不分組 —— 它的 label 已含帳號,不會同名難辨。
    *
    * **以擁有組織為組、不是租戶頂層**(#372):同一個租戶底下可以有很多個擁有組織,

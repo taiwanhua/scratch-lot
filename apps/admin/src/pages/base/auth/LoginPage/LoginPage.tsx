@@ -10,8 +10,12 @@ import { Link } from "@repo/ui/link";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { useSession } from "@/hooks/useSession";
-import { FORGOT_PASSWORD_PATH, NEXT_PARAM, safeNextPath } from "@/lib/paths";
+import { useSession } from "@/hooks/base/useSession";
+import {
+  FORGOT_PASSWORD_PATH,
+  NEXT_PARAM,
+  safeNextPath,
+} from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 import { type LoginErrorKey, loginErrorKeyOf } from "./login-error";

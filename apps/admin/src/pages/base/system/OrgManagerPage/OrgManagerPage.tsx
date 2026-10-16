@@ -9,9 +9,9 @@ import {
 } from "@repo/graphql";
 import { Stack } from "@repo/ui/stack";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { orgTrail } from "@/lib/org-tree";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { orgTrail } from "@/lib/base/org-tree";
 
 import { CreateChildOrgDialog } from "./CreateChildOrgDialog";
 import { DeleteOrgDialog } from "./DeleteOrgDialog";

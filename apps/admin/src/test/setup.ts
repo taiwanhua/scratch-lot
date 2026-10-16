@@ -5,21 +5,21 @@ import { cleanup, configure } from "@testing-library/react";
 
 import { defaultLocale } from "@repo/i18n";
 
-import { INITIAL_SESSION_SNAPSHOT } from "../lib/auth/session-store";
-import { LOCALE_STORAGE_KEY } from "../lib/locale";
-import { useDesignerDraftStore } from "../stores/useDesignerDraftStore";
-import { useLocaleStore } from "../stores/useLocaleStore";
-import { useSessionStore } from "../stores/useSessionStore";
+import { INITIAL_SESSION_SNAPSHOT } from "../lib/base/auth/session-store";
+import { LOCALE_STORAGE_KEY } from "../lib/base/locale";
+import { useDesignerDraftStore } from "../stores/base/useDesignerDraftStore";
+import { useLocaleStore } from "../stores/base/useLocaleStore";
+import { useSessionStore } from "../stores/base/useSessionStore";
 import {
   LEGACY_SIDE_NAV_STORAGE_KEY,
   SIDE_NAV_STORAGE_KEY,
   useSideNavStore,
-} from "../stores/useSideNavStore";
-import { useSnackbarStore } from "../stores/useSnackbarStore";
+} from "../stores/base/useSideNavStore";
+import { useSnackbarStore } from "../stores/base/useSnackbarStore";
 import {
   INITIAL_WORKFLOW_DRAFT,
   useWorkflowDraftStore,
-} from "../stores/useWorkflowDraftStore";
+} from "../stores/base/useWorkflowDraftStore";
 import { resetHelpFiles } from "./help-registry";
 import { server } from "./msw/server";
 

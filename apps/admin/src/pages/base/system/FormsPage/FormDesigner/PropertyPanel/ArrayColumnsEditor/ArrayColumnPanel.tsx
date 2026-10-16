@@ -14,13 +14,13 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
 import {
   type FieldKeyProblem,
   newColumnOf,
-} from "@/lib/form-engine/designer-ops";
-import { columnSectionsOf } from "@/lib/form-engine/property-sections";
-import { scalarText } from "@/lib/form-engine/value-text";
+} from "@/lib/base/form-engine/designer-ops";
+import { columnSectionsOf } from "@/lib/base/form-engine/property-sections";
+import { scalarText } from "@/lib/base/form-engine/value-text";
 
 import { FieldKeyInput } from "../FieldKeyInput";
 import { OptionsEditor } from "../OptionsEditor";
