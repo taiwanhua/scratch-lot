@@ -509,6 +509,48 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       ).toMatchObject({ allowDraft: true });
     });
 
+    it("允許存草稿沒變:改版的 metadata 更新不帶它(舊表單不寫進顯式 true,稽核不記)", async () => {
+      const r1 = formSeed("seed_allow_draft_same", "r1");
+      await runSeeds(app, [r1]);
+      // 這個設定之前建的表單:沒有 allowDraft 欄位
+      await connection
+        .collection("forms")
+        .updateOne(
+          { key: "seed_allow_draft_same" },
+          { $unset: { allowDraft: "" } },
+        );
+      const form = await definitionDoc(
+        connection,
+        FORM,
+        "seed_allow_draft_same",
+      );
+
+      const next = await runSeed(
+        app,
+        formSeed("seed_allow_draft_same", "r2", {
+          name: "改名後",
+          fields: changedFields,
+        }),
+      );
+
+      expect(next.conflict).toBeNull();
+      const after = await definitionDoc(
+        connection,
+        FORM,
+        "seed_allow_draft_same",
+      );
+      expect(after?.name).toBe("改名後");
+      expect(after).not.toHaveProperty("allowDraft");
+      const audits = await connection
+        .collection("audit_logs")
+        .find({ action: "form.update", targetId: form?._id })
+        .toArray();
+      expect(audits.length).toBeGreaterThan(0);
+      for (const audit of audits) {
+        expect(audit.after).not.toHaveProperty("allowDraft");
+      }
+    });
+
     it("允許存草稿:沒宣告 = 開;改版宣告關掉 → 以條件更新改成關", async () => {
       const r1 = formSeed("seed_allow_draft_next", "r1");
       await runSeeds(app, [r1]);

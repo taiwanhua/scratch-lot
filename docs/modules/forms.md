@@ -94,7 +94,7 @@
 
 - `FormSubmissionAbilities.canSaveDraft` = 草稿 / 被退回 / 撤回、建立者本人 + 模組 `create`,且表單允許存草稿;編輯頁依它顯示 [存草稿]。
 - `UpdateFormInput.allowDraft`:缺席 / `null` = 不動;稽核 `form.update` 記前後值。
-- **受管表單**:seed 宣告寫 `allowDraft: false` 才關,沒寫 = 開。它和名稱、頁籤模板一樣是受管 metadata:只有關掉時才進 `contentHash`(開著的既有宣告 hash 不變)、安裝 / 改版以條件更新寫進表單、現場切過 → `METADATA_DRIFT`;「匯出專案設定」在關著時輸出 `allowDraft: false`(`packages/domain/src/seed/canonical.ts`、`apps/api/src/seed/form-definition.adapter.ts`)。
+- **受管表單**:seed 宣告寫 `allowDraft: false` 才關,沒寫 = 開。它和名稱、頁籤模板一樣是受管 metadata:只有關掉時才進 `contentHash`(開著的既有宣告 hash 不變)、寫進表單的方式同其他受管 metadata:首次安裝先以名稱建立身分,同一次安裝接著以條件更新寫入頁籤模板與允許存草稿(值和現場不同才帶);改版同樣以條件更新寫入;採納不寫入(現場已是宣告的值才採納);現場切過 → `METADATA_DRIFT`;「匯出專案設定」在關著時輸出 `allowDraft: false`(`packages/domain/src/seed/canonical.ts`、`apps/api/src/seed/form-definition.adapter.ts`)。
 - 正本測試:`apps/api/src/forms/form-runtime/form-allow-draft.test.ts`(情境表每列一個)。
 
 ## 表單版本
