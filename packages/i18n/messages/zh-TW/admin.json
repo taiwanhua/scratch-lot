@@ -2615,6 +2615,15 @@
     "forbidden": "你沒有檢視使用者清單的權限",
     "disabled": "已停用"
   },
+  "orgTreeSelect": {
+    "search": "搜尋組織",
+    "empty": "沒有可選的組織",
+    "noMatch": "沒有符合的組織",
+    "limitCount": "已選 {count} / 上限 {max}",
+    "limitReached": "最多選 {max} 個",
+    "outOfScope": "不在你的管理範圍內",
+    "confirm": "確定"
+  },
   "seedExport": {
     "action": "匯出專案設定",
     "title": "匯出專案設定",
