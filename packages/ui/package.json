@@ -478,6 +478,16 @@
         "types": "./dist/cjs/section.d.ts",
         "default": "./dist/cjs/section.js"
       }
+    },
+    "./roster-grid": {
+      "import": {
+        "types": "./dist/es/roster-grid.d.mts",
+        "default": "./dist/es/roster-grid.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/roster-grid.d.ts",
+        "default": "./dist/cjs/roster-grid.js"
+      }
     }
   },
   "scripts": {

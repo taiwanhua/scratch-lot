@@ -53,6 +53,7 @@ export const DataTableHeaderCell = <Row extends RowData>({
           whiteSpace: "nowrap",
         },
         pinnedCellSx(placement, true),
+        column.headerSx,
       )}
     >
       {column.isSortable === true ? (
