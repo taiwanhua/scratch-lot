@@ -10,6 +10,12 @@ import type { z } from "zod";
  *   (被手改壞、舊版格式、JSON 語法錯)就回 `null`,呼叫端退回預設值,不丟錯。
  */
 
+/**
+ * `useUrlState` 收的 schema:必須帶 `.default(…)`(型別上就擋掉沒有預設值的 schema)。
+ * 頂層不要用「字串與其他型別的 union」或 `z.coerce`:字串原樣寫進網址,讀回時先試原字串,會被當成字串吃掉(REACT-14)。
+ */
+export type UrlStateSchema<T> = z.ZodDefault<z.ZodType<T>>;
+
 /** 網址值 → 狀態;不合 schema 回 `null`。 */
 export const parseUrlState = <T>(
   schema: z.ZodType<T>,

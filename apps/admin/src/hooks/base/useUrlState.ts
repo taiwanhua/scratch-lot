@@ -1,8 +1,8 @@
 import { createParser, useQueryState } from "nuqs";
 import { useCallback, useMemo } from "react";
-import type { z } from "zod";
 
 import {
+  type UrlStateSchema,
   isSameUrlState,
   parseUrlState,
   serializeUrlState,
@@ -27,7 +27,7 @@ export type SetUrlState<T> = (next: T | ((current: T) => T)) => void;
  */
 export const useUrlState = <T extends NonNullable<unknown>>(
   key: string,
-  schema: z.ZodType<T>,
+  schema: UrlStateSchema<T>,
 ): [T, SetUrlState<T>] => {
   const parser = useMemo(
     () =>

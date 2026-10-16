@@ -198,7 +198,7 @@ interface CellRenderContext<Row> {
 
 正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`
 
-重新整理、分享網址、從別的頁籤切回來,頁面都要回到同一個狀態。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
+重新整理、分享網址之後,頁面都要回到同一個狀態。切換殼的路由頁籤目前**不保留網址參數**(`RouteTabs` 只記 pathname),切走再切回來會回到預設狀態。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
 
 ```ts
 ✅ const listSchema = z.object({ status: z.enum(["all", "done"]), page: z.number().int().min(1) })
@@ -210,9 +210,12 @@ interface CellRenderContext<Row> {
 ```
 
 - **一個 key 一包值**:同一個區塊的篩選、關鍵字、排序、頁碼放同一個 key(物件寫 JSON);同一頁有兩個互不相干的區塊(對應不同 API)才分兩個 key。字串直接寫(`?tab=mine`)。
-- **schema 必須 `.default(…)`**:網址沒有這個 key、或被手改壞(JSON 壞掉、值不在列舉裡)時回到預設值,不報錯;寫回預設值時 key 自動從網址拿掉。schema 放模組層常數。
+- **schema 必須 `.default(…)`**(型別上就只收帶預設值的 schema,沒帶編譯不過):網址沒有這個 key、或被手改壞(JSON 壞掉、值不在列舉裡)時回到預設值,不報錯;寫回預設值時 key 自動從網址拿掉。schema 放模組層常數。
+- **頂層 schema 不要用「字串與其他型別的 union」,也不要用 `z.coerce`**:字串原樣寫進網址,讀回時先把原字串交給 schema,所以 `z.union([z.string(), z.number()])` 寫進去的 `2` 讀回來會變成字串 `"2"`,`z.coerce` 也會把任何字串硬轉過去。要混型別就包成物件(`{ kind, value }`)。
 - 寫入是 `replace`(不堆上一頁紀錄),並經 react-router 的 navigate,`useLocation` 讀到的網址與畫面一致。
-- **頁內分頁用 `PageTabs`**,不要自己拿 `Tabs` + `useUrlState` 拼:它把目前分頁記在 `?tab=`、依 `permission` 藏掉沒權限的分頁、只剩一個分頁時不顯示分頁籤、放不下時單列捲動並把選到的分頁捲進可視範圍。純展示、不需要記在網址的切換(設計器的「設計 / 預覽」這類)才直接用 `@repo/ui/tabs`。
+- **頁內分頁用 `PageTabs`**,不要自己拿 `Tabs` + `useUrlState` 拼:它把目前分頁記在 `?tab=`、依 `permission` 藏掉沒權限的分頁、只剩一個分頁時不顯示分頁籤、放不下時單列捲動並把選到的分頁捲進可視範圍。只有兩類例外直接用 `@repo/ui/tabs`(受控 `value` / `onChange`):
+  - **切換需要被攔下**:例如有未存變更時要先確認(設計器的「設計 / 預覽」、版本檢視);`PageTabs` 不提供 `onBeforeChange`。
+  - **分頁綁在某一筆資料上**:換一筆資料就該回到第一頁(以 `key={id}` 重來),記在網址反而會讓分頁跟著跑到別筆。
 
 | 放進網址                              | 不放進網址                       |
 | ------------------------------------- | -------------------------------- |

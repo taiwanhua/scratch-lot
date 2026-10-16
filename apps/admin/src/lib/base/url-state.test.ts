@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { z } from "zod";
 
 import {
+  type UrlStateSchema,
   isSameUrlState,
   parseUrlState,
   serializeUrlState,
@@ -48,6 +49,33 @@ describe("url-state(網址值 ↔ 狀態)", () => {
 
   it("字串 schema 不接受列舉外的值", () => {
     expect(parseUrlState(tabSchema, "admin")).toBeNull();
+  });
+
+  /** REACT-14 禁止頂層「字串 + 其他型別」的 union 與 `z.coerce`:這兩個案例就是原因。 */
+  it('頂層 union 混字串會有歧義:寫進去的數字 2 讀回來變成字串 "2"', () => {
+    const mixed = z.union([z.string(), z.number()]).default("");
+    expect(parseUrlState(mixed, serializeUrlState(2))).toBe("2");
+  });
+
+  it("z.coerce 會把任何字串硬轉:壞值讀不回預設", () => {
+    const coerced = z.coerce.number().default(1);
+    expect(parseUrlState(coerced, "")).toBe(0);
+  });
+
+  it("包成物件就沒有歧義", () => {
+    const wrapped = z
+      .object({ value: z.union([z.string(), z.number()]) })
+      .default({ value: "" });
+    expect(parseUrlState(wrapped, serializeUrlState({ value: 2 }))).toEqual({
+      value: 2,
+    });
+  });
+
+  it("型別上只收帶預設值的 schema", () => {
+    // @ts-expect-error -- 沒有 .default(…) 的 schema 編譯就不過
+    const noDefault: UrlStateSchema<string> = z.string();
+    const withDefault: UrlStateSchema<string> = z.string().default("");
+    expect([noDefault, withDefault]).toHaveLength(2);
   });
 
   it("預設值取自 schema 的 .default(…)", () => {

@@ -101,6 +101,7 @@ describe("useUrlState", () => {
   it("寫入 → 網址與 router 的 location 都更新;寫回預設值 → key 從網址拿掉", async () => {
     const user = userEvent.setup();
     renderAt("/report?keep=1");
+    const historyLength = globalThis.history.length;
 
     await user.click(screen.getByRole("button", { name: "next page" }));
 
@@ -122,5 +123,7 @@ describe("useUrlState", () => {
         /^\/report\?keep=1$/,
       );
     });
+    // replace:切篩選、換頁不堆上一頁紀錄
+    expect(globalThis.history).toHaveLength(historyLength);
   });
 });
