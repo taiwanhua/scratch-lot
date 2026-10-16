@@ -184,7 +184,10 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         key: seed.key,
         name: seed.name,
         tabLabelTemplate: seed.tabLabelTemplate,
-        allowDraft: seed.allowDraft ?? true,
+        // 允許存草稿只在和現場不同時才帶:稽核不多記沒變的欄位,也不替舊表單寫進顯式的 true
+        ...((seed.allowDraft ?? true) === (expected.metadata.allowDraft ?? true)
+          ? {}
+          : { allowDraft: seed.allowDraft ?? true }),
       },
       {
         expected: {
