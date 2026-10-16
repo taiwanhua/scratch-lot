@@ -35,4 +35,5 @@ export * from "./LightModeIcon";
 export * from "./DarkModeIcon";
 export * from "./LogoutIcon";
 export * from "./DevicesIcon";
+export * from "./NotificationsIcon";
 export * from "./module-icon-registry";

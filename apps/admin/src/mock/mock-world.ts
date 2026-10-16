@@ -39,6 +39,11 @@ import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
 import { moduleAdminWorld } from "@/test/msw/module-manager-handlers";
 import {
+  notificationPreferenceDefaults,
+  notificationWorld,
+  sampleNotifications,
+} from "@/test/msw/notification-handlers";
+import {
   orgDetails,
   orgManagerCandidates,
   orgManagersByOrg,
@@ -135,13 +140,21 @@ export const mockHandlers = ({
 }: MockWorldOptions): MockHandler[] => {
   // 視角決定哪一棵組織樹;使用者管理的「子樹過濾」也要同一棵,不然點左樹會篩不到人
   const orgTree = view === "root" ? rootTree : tenantTree;
+  // 個人偏好先放好通知管道開關的 key(`UpdateMyPreferences` 只收已有的 key),通知假 api 讀同一份
+  const auth = authWorld({
+    hasRefreshCookie: authenticated,
+    modules: modulesForView(view),
+    orgs: orgsForView(view),
+    preferences: notificationPreferenceDefaults(),
+  });
 
   return [
     // 登入線:Login / Refresh / Me / SwitchOrg / 改密碼…(`hasRefreshCookie` 即「已登入」)
-    ...authWorld({
-      hasRefreshCookie: authenticated,
-      modules: modulesForView(view),
-      orgs: orgsForView(view),
+    ...auth.handlers,
+    // 通知鈴 / 通知清單 / 偏好分頁的管道開關(底座規格第 5 章)
+    ...notificationWorld({
+      notifications: sampleNotifications(),
+      preferences: auth.preferences,
     }).handlers,
     // 組織管理(#134 / #135 / #137):`users` 讓給 userWorld
     ...withoutOperations(

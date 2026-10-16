@@ -409,6 +409,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "`components/base/crud/DemoFormFields` 的 `t(definition.hintKey)`,值寫在 `pages/base/demo/SampleOneModule.tsx` 的附件上傳欄設定",
   },
+  {
+    key: "admin.notifications.preferences.channels.",
+    reason:
+      "個人設定偏好分頁的 `t(`channels.${channel}`)`,channel 是 api `myNotificationPreferences` 回的管道 key(`in-app`、`email`;沒登記文案的管道顯示 key 本身)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>
