@@ -32,7 +32,7 @@
 
 無自有 collection。畫面資料來自 `me`(`name`、`currentOrg`)。
 
-正本:`apps/admin/src/pages/base/OverviewPage/OverviewPage.tsx`、`apps/admin/src/hooks/useMe.ts`
+正本:`apps/admin/src/pages/base/OverviewPage/OverviewPage.tsx`、`apps/admin/src/hooks/base/useMe.ts`
 
 ## 規則
 
@@ -40,7 +40,7 @@
 - **沒綁總覽的角色**:登入後被導到側欄第一個能進的頁;手打 `/overview` 是無權限頁;一個能進的頁都沒有才顯示無權限頁。
 - **為什麼進權限體系**:總覽內容會因租戶而異,做成固定列就無法授權 / 收回。
 
-正本:`apps/admin/src/lib/module-tree.ts`(`firstLinkRoute`)、`apps/admin/src/app/guards/ModuleRoute/ModuleRoute.tsx`
+正本:`apps/admin/src/lib/base/module-tree.ts`(`firstLinkRoute`)、`apps/admin/src/app/guards/ModuleRoute/ModuleRoute.tsx`
 
 ## api 介面
 

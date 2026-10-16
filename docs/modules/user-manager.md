@@ -141,21 +141,21 @@ copyUserOrgRoles(input: { sourceUserId, targetUserId, mode: MERGE | REPLACE, dry
 
 ## admin 頁面
 
-左 `OrgTreePicker`(跨頁共用,`components/OrgTreePicker/`;組織管理也用)+ 右 `Table` / `Pagination`;六個彈窗各一個資料夾,開關狀態一律在頁面層,關閉即卸載(初始值靠 props 帶入,不用 effect 同步,REACT-06)。
+左 `OrgTreePicker`(跨頁共用,`components/base/OrgTreePicker/`;組織管理也用)+ 右 `Table` / `Pagination`;六個彈窗各一個資料夾,開關狀態一律在頁面層,關閉即卸載(初始值靠 props 帶入,不用 effect 同步,REACT-06)。
 
 - **初始狀態**:進頁面預設選中**樹根**(= 操作者管理範圍的根,與組織管理頁一致),樹還沒載完之前不送 `users`(右側顯示載入中)。前端**永遠不送 `orgId: null`** —— `UsersInput.orgId` 是「不給 = 整個管理範圍」,給 null 會在 API 的 `toObjectId` 擋下(`orgId is not a valid id: null`)。樹不可用時才走「不給 `orgId`」那條路。
 - **組織樹的權限**:api 的 `orgTree` / `org` 接受 `system.org-manager.view` 或 `system.user-manager.view` 任一(見 `docs/modules/org-manager.md` api 介面);admin 只看 `system.org-manager.view`(`user-manager-permissions.ts` 的 `ORG_MANAGER_VIEW_PERMISSION`,**頁內判斷**,ADR-0011):沒有那個 key 就不送查詢,清單改成不給 `orgId`(= 整個管理範圍),「所屬組織」動作 disabled。
 - **角色清單**:指派角色彈窗用正式的 `roles` query,範圍與 api 防越權(`ROLE_OUT_OF_REACH`)同一條 —— 擁有組織在操作者管理範圍內,角色的**描述文字**(Figma 86:245)也從這裡來。已授予但操作者觸及不到的角色仍唯讀顯示,送出時不包含(api 也不會動它)。
-  - 每一列標「角色名稱 — 擁有組織」,跨租戶時依 `ownerOrg.tenantTop` 分組並可搜尋(共用 `apps/admin/src/lib/role-options.ts`,規則見 `docs/modules/role-manager.md` admin 頁面的「角色選單怎麼分辨同名角色」)。
-  - **沒有授予資格的角色顯示但 disabled** 並就地說明「此角色只能授予 <擁有組織> 及其下層的使用者」,不等到送出才吃到錯。資格以 `orgTree` 算(`lib/role-eligibility.ts`),判定權仍在 api。
+  - 每一列標「角色名稱 — 擁有組織」,跨租戶時依 `ownerOrg.tenantTop` 分組並可搜尋(共用 `apps/admin/src/lib/base/role-options.ts`,規則見 `docs/modules/role-manager.md` admin 頁面的「角色選單怎麼分辨同名角色」)。
+  - **沒有授予資格的角色顯示但 disabled** 並就地說明「此角色只能授予 <擁有組織> 及其下層的使用者」,不等到送出才吃到錯。資格以 `orgTree` 算(`lib/base/role-eligibility.ts`),判定權仍在 api。
 - **擁有者保護只需要一個 id**:前端不重做 `owner-protection.service.ts` 的判斷,只取 `org(樹根 id)`:`parentId === null` 代表操作者站在根組織 → 一律放行不標保護;否則樹根就是租戶頂層,它的 `ownerUserId` 就是受保護的那一位(`protectedOwnerUserId`),該列的「停用」disabled 並提示。
   - **「所屬組織」照常可開**:api 只擋「把擁有者移出他擁有的租戶頂層」,整個按鈕 disabled 會比 api 嚴,擁有者連把自己加進分店都做不到。鎖在彈窗裡:樹根(= 他擁有的租戶頂層,`protectedOwnerOrgId`)那一個節點以 `Tree` 的 `disabledCheckIds` 鎖住(維持勾選、取消不掉),其餘組織照常可勾可取消。「哪個組織是他擁有的」不必向 api 多要欄位 —— `protectedOwnerUserId` 本來就是從樹根的 `ownerUserId` 來的。
   - api 仍會回 `OWNER_PROTECTED`,彈窗照樣顯示訊息(fail-closed 在後端,前端只是先講清楚)。
-- **複製組織與角色**(`CopyOrgRolesDialog/`):列動作有 view + manage-orgs + assign-roles 三個權限才出現。目標用共用的 `components/UserPicker/`(`allowDisabled` 讓停用的人可選、`excludeUserIds` 排除來源本人與操作者自己)。選目標或切合併 / 取代就重送一次 `dryRun: true`;預覽以「目標 × 方式」為鍵,慢回來的過時預覽不會蓋掉新的。確認鈕在預覽未完成、有 `blockers` 或沒有差異時停用;成功跳提示並重查清單與目標那一筆(DATA-04);預覽或送出失敗只在彈窗內就地顯示原因、不跳 Snackbar(DATA-06 的 `error` 回 `null`),預覽失敗也以「目標 × 方式」比對,被丟棄的過時請求失敗不寫入。三句方式說明(合併 / 取代 / 不同步)的正本是 i18n 的 `admin.userManager.copyOrgRoles.*`。
+- **複製組織與角色**(`CopyOrgRolesDialog/`):列動作有 view + manage-orgs + assign-roles 三個權限才出現。目標用共用的 `components/base/UserPicker/`(`allowDisabled` 讓停用的人可選、`excludeUserIds` 排除來源本人與操作者自己)。選目標或切合併 / 取代就重送一次 `dryRun: true`;預覽以「目標 × 方式」為鍵,慢回來的過時預覽不會蓋掉新的。確認鈕在預覽未完成、有 `blockers` 或沒有差異時停用;成功跳提示並重查清單與目標那一筆(DATA-04);預覽或送出失敗只在彈窗內就地顯示原因、不跳 Snackbar(DATA-06 的 `error` 回 `null`),預覽失敗也以「目標 × 方式」比對,被丟棄的過時請求失敗不寫入。三句方式說明(合併 / 取代 / 不同步)的正本是 i18n 的 `admin.userManager.copyOrgRoles.*`。
 - **密碼三頁**(`apps/admin/src/pages/base/auth/`):`/forgot-password`(任何 Email 都顯示已寄出)、`/set-password?token=…`(啟用與重設共用;成功持回傳 token 直接進後台;`ACTION_TOKEN_INVALID` 或無 token → 連結失效 + 一鍵重新申請)、`/change-password?next=…`(已登入;路由守門 `RequireAuth` 依 `me.mustChangePassword` 或 fetch 層攔到的 `MUST_CHANGE_PASSWORD` 導來,成功後清旗標、重取 `me`、回 `next`)。密碼規則即時提示與 api 同用 `@repo/domain/password`;文案在 `admin.forgotPassword` / `admin.setPassword` / `admin.changePassword` / `admin.passwordRules`。
 - **與 Figma 的差異(刻意)**:清單多一欄「帳號」(30:105 沒有,但清單欄位的正本是本文);列動作多一個「所屬組織」(31:98 只有編輯 / 指派角色 / 停用,但所屬組織需要入口);新增彈窗的「初始密碼」欄改成選了 PASSWORD 才出現(202:743 常駐);新增 / 編輯彈窗的「啟用此使用者」勾選框不做(`createUser` / `updateUser` 沒有 `enabled` 欄位,啟用停用走專用動作);編輯彈窗的所屬組織唯讀(所屬組織走專用彈窗)。
 
-正本:`apps/admin/src/pages/base/system/UserManagerPage/`(`useUserManagerData.ts`、`useUserOrgsFlow.ts`、`OrgPickerDialog/`、`OrgChangeDialog/`、`AssignRolesDialog/`、`CopyOrgRolesDialog/`)、`apps/admin/src/components/UserPicker/`、`apps/admin/src/components/OrgTreePicker/OrgTreePicker.tsx`、`apps/admin/src/lib/role-eligibility.ts`、`apps/admin/src/pages/base/auth/`
+正本:`apps/admin/src/pages/base/system/UserManagerPage/`(`useUserManagerData.ts`、`useUserOrgsFlow.ts`、`OrgPickerDialog/`、`OrgChangeDialog/`、`AssignRolesDialog/`、`CopyOrgRolesDialog/`)、`apps/admin/src/components/base/UserPicker/`、`apps/admin/src/components/base/OrgTreePicker/OrgTreePicker.tsx`、`apps/admin/src/lib/base/role-eligibility.ts`、`apps/admin/src/pages/base/auth/`
 
 ## 錯誤碼
 

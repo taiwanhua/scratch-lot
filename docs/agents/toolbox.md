@@ -177,10 +177,10 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 
 不是每個套件都列:這裡只記**為了某個功能特地引進、選型有講究**的依賴(誰用、為什麼是它、授權)。版本一律 `npm view <pkg> version` 查 registry,不照記憶寫,並對齊既有同家族套件的主 / 次版本。
 
-| 套件             | 版本(寫進 package.json) | 授權 | 誰用                                        | 用途                                                                   |
-| ---------------- | ----------------------- | ---- | ------------------------------------------- | ---------------------------------------------------------------------- |
-| `@xyflow/react`  | `^12.12.0`              | MIT  | `apps/admin`(流程設計器)                    | 畫流程圖(節點、連線、縮放);不開放自由拉線,節點是審核關卡卡片與匯合菱形 |
-| `@dagrejs/dagre` | `^3.1.1`                | MIT  | `apps/admin`(`lib/workflow/flow-layout.ts`) | 流程圖自動直式排版,節點位置不讓使用者手擺                              |
+| 套件             | 版本(寫進 package.json) | 授權 | 誰用                                             | 用途                                                                   |
+| ---------------- | ----------------------- | ---- | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| `@xyflow/react`  | `^12.12.0`              | MIT  | `apps/admin`(流程設計器)                         | 畫流程圖(節點、連線、縮放);不開放自由拉線,節點是審核關卡卡片與匯合菱形 |
+| `@dagrejs/dagre` | `^3.1.1`                | MIT  | `apps/admin`(`lib/base/workflow/flow-layout.ts`) | 流程圖自動直式排版,節點位置不讓使用者手擺                              |
 
 - 兩者只在流程管理頁用,頁面懶載入,不進首屏 bundle。
 - React Flow 在 jest(jsdom)要 `ResizeObserver` / `DOMMatrixReadOnly` 替身(`apps/admin/src/test/react-flow.ts` 的 `setupReactFlowEnvironment()`);點節點用 `fireEvent.click`(d3-drag 的指標事件在 jsdom 會炸)。

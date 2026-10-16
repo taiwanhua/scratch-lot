@@ -189,7 +189,7 @@ input SaveDataScopeRuleInput {
 
 **日期條件是日曆天,逐租戶套用**:與表單引擎的日期同一種做法(`docs/concepts/form-engine.md`「值、計算與條件」),全系統沒有第二套。規則裡的「2/1」對每個租戶都是**它自己時區的 2/1**。
 
-- **存值**:選的那一天在規則作者時區 00:00 的時點。規則是根組織專屬設定、沒有 `orgId`,作者就是根組織;本頁只有站在根組織才進得來,所以 admin 的 `DatePicker` 選日後以 `me.currentOrg.timezone`(= 根組織的時區)換成時點、送帶時區的 ISO 8601 字串(`lib/form-engine/local-day.ts`,與日期欄的 `DateWidget` 同一組),回顯時再換回該時區的 `YYYY-MM-DD`。api 只收時點(`@repo/domain/form` 的 `toInstant` 認得的字串),`YYYY-MM-DD` 這種沒有時區的字一律 `VALUE_INVALID`。
+- **存值**:選的那一天在規則作者時區 00:00 的時點。規則是根組織專屬設定、沒有 `orgId`,作者就是根組織;本頁只有站在根組織才進得來,所以 admin 的 `DatePicker` 選日後以 `me.currentOrg.timezone`(= 根組織的時區)換成時點、送帶時區的 ISO 8601 字串(`lib/base/form-engine/local-day.ts`,與日期欄的 `DateWidget` 同一組),回顯時再換回該時區的 `YYYY-MM-DD`。api 只收時點(`@repo/domain/form` 的 `toInstant` 認得的字串),`YYYY-MM-DD` 這種沒有時區的字一律 `VALUE_INVALID`。
 - **比對**:api 先用**規則作者的時區**把存的時點還原成日曆天(`localDateOf`),再用**操作者所在租戶的時區**算那一天的 00:00 與次日 00:00 當邊界(`startOfLocalDay` / `addLocalCalendar`,夏令時間切換日也對)。根組織自己查資料時兩個時區相同。
 
 | `cond`    | 條件(D、A、B 都是操作者租戶時區的那一天) | 含不含當天         |
@@ -217,7 +217,7 @@ input SaveDataScopeRuleInput {
 
 程式在 `apps/admin/src/pages/base/system/DataScopePage/`:`TargetListPanel.tsx`(左資料目標清單,一列 = 一個模組:主文字模組名、副文字 collection)、`RuleEditorPanel/`(右規則編輯器)、`DiscardChangesDialog.tsx`(未儲存離開確認)、`useDataScopeData.ts`(資料與 mutation)。
 
-- 純函式在 `apps/admin/src/lib/`:`data-scope-rule.ts`(型別目錄、編輯器狀態 ↔ api JSON、條件樹增刪改)與 `data-scope-issues.ts`(本地驗證、`RULE_INVALID` 的 `path` → 標在哪一格)。**型別 → 運算子 → 值來源那張表在 admin 重寫了一份**(STRUCT-01 不能 import api),改動時兩邊一起改。
+- 純函式在 `apps/admin/src/lib/base/`:`data-scope-rule.ts`(型別目錄、編輯器狀態 ↔ api JSON、條件樹增刪改)與 `data-scope-issues.ts`(本地驗證、`RULE_INVALID` 的 `path` → 標在哪一格)。**型別 → 運算子 → 值來源那張表在 admin 重寫了一份**(STRUCT-01 不能 import api),改動時兩邊一起改。
 - 條件樹節點**不帶自產 id**:位置(`rules[n]` + 往下的 `children[i]`)就是身分,與 api 回的 `path` 同一套座標。
 - **UI 上限三層**(ADR-0008「任意深、UI 建議 3 層」):第三層的群組不再給「+ 群組」;資料結構本身不設限,更深的規則由 api 回來仍讀得回、顯示得出來,只是不能再往下加。
 - 新群組**一定帶一條條件列**(空群組會被 `EMPTY_GROUP` 拒絕,不讓它先出現在畫面上)。
@@ -227,7 +227,7 @@ input SaveDataScopeRuleInput {
 - 動作按鈕依 `system.data-scope.edit`,只有 `.view` 時整個編輯器唯讀。
 - 非根組織不在頁面判斷 —— 本模組 `isRootOnly`,租戶的 `me.modules` 裡沒有它,路由層就擋掉(ADR-0011)。
 
-正本:`apps/admin/src/pages/base/system/DataScopePage/`、`apps/admin/src/lib/data-scope-rule.ts`、`apps/admin/src/lib/data-scope-issues.ts`
+正本:`apps/admin/src/pages/base/system/DataScopePage/`、`apps/admin/src/lib/base/data-scope-rule.ts`、`apps/admin/src/lib/base/data-scope-issues.ts`
 
 ## 錯誤碼
 
@@ -266,7 +266,7 @@ admin 的解讀集中在 `DataScopePage/data-scope-error.ts`。
 ## 測試
 
 - api:`apps/api/src/data-scope/data-scope.test.ts`(端點、根組織守門、`RULE_INVALID`、`hasRule`、同 collection 兩個模組各自的規則);執行面 `apps/api/src/database/data-scope-provider.test.ts`、`apps/api/src/database/base.repository.test.ts`、`apps/api/src/demo-items-one/demo-items-one-scope.test.ts`
-- admin:`apps/admin/src/pages/base/system/DataScopePage/DataScopePage.test.tsx`、`DataScopeRuleEditor.test.tsx`、`apps/admin/src/lib/data-scope-rule.test.ts`
+- admin:`apps/admin/src/pages/base/system/DataScopePage/DataScopePage.test.tsx`、`DataScopeRuleEditor.test.tsx`、`apps/admin/src/lib/base/data-scope-rule.test.ts`
 - 劇本 E2E(`docs/testing/permission-scenarios.md`):劇本 2 資料範圍規則 `scenario-02-data-scope-rule.spec.ts`、劇本 3 未宣告對照 `scenario-03-undeclared-target.spec.ts`、劇本 4 頂層合成 OR / AND `scenario-04-combine-op.spec.ts`、劇本 16 租戶視角 `scenario-16-tenant-perspective.spec.ts`(皆在 `apps/e2e/src/specs/`)
 
 正本:上列檔案、`docs/testing/permission-scenarios.md`

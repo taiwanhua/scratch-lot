@@ -4,13 +4,13 @@
 
 程式的分布:
 
-| 塊           | 位置                                                                                         | 內容                                                                                         |
-| ------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 共用純邏輯   | `@repo/domain/form`                                                                          | 定義的型別、表達式與型別表、檢查器、值的正規化與規則驗證、計算與顯示條件收斂、時區、升級搬值 |
-| api 表單設計 | `apps/api/src/forms/form-design/`                                                            | 表單、版本、四步發布、分派 / 啟用、欄位級權限的產生與退役清理、列表欄位配置                  |
-| api 表單執行 | `apps/api/src/forms/form-runtime/`                                                           | 草稿 / 送出 / 修訂、欄位級投影、顯示名、lookup、類別選項、舊版資料升級                       |
-| api 共用     | `apps/api/src/forms/`(根目錄、`form-values/`)                                                | 可見 / 可改判準、寫入規則、欄位級權限閘門、lookup 登錄表                                     |
-| admin        | `apps/admin/src/components/form-engine/`、`lib/form-engine/`、`pages/base/system/FormsPage/` | 引擎零件、純邏輯、表單管理頁                                                                 |
+| 塊           | 位置                                                                                                   | 內容                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 共用純邏輯   | `@repo/domain/form`                                                                                    | 定義的型別、表達式與型別表、檢查器、值的正規化與規則驗證、計算與顯示條件收斂、時區、升級搬值 |
+| api 表單設計 | `apps/api/src/forms/form-design/`                                                                      | 表單、版本、四步發布、分派 / 啟用、欄位級權限的產生與退役清理、列表欄位配置                  |
+| api 表單執行 | `apps/api/src/forms/form-runtime/`                                                                     | 草稿 / 送出 / 修訂、欄位級投影、顯示名、lookup、類別選項、舊版資料升級                       |
+| api 共用     | `apps/api/src/forms/`(根目錄、`form-values/`)                                                          | 可見 / 可改判準、寫入規則、欄位級權限閘門、lookup 登錄表                                     |
+| admin        | `apps/admin/src/components/base/form-engine/`、`lib/base/form-engine/`、`pages/base/system/FormsPage/` | 引擎零件、純邏輯、表單管理頁                                                                 |
 
 `@repo/domain/form` 打成一檔且模組頂層就註冊 JSONLogic 運算子;只要格式檢查(表單 key、欄位 key、租戶短碼)的地方改走輕量子路徑 `@repo/domain/form-keys`,正則的 ReDoS 檢查在 `@repo/domain/form-regex-safety`,兩者都是為了不把整個引擎拉進 admin 首屏 bundle。
 
@@ -95,7 +95,7 @@
 - **值的合法性**:值來源「固定值」要是該型別的合法值、靜態選項要在清單內(`CONSTANT_VALUE_INVALID`,與預設值同一個判準);預設值規則(`DEFAULT_*`)、上傳欄上限(`UPLOAD_LIMIT_INVALID`)、日期時間欄上下限的格式(`RULE_RANGE_INVALID`)。
 - 明細列的規則見下方「明細列」;列表欄位配置引用不到的欄位是警告(`LIST_COLUMN_MISSING` / `LIST_COLUMN_ARRAY`)。
 
-**ReDoS 檢查注入**:`validateDefinition` 的 `regexSafety` 是必填選項;實作 `recheckRegexSafety`(recheck,固定純 JS 後端)在 `@repo/domain/form-regex-safety` —— recheck 瀏覽器版約 2.9 MB,放在 `form` 會跟著渲染器進 admin 首屏 bundle。api 的 `form-definition-checker.ts` 直接 import;admin 設計器以動態 `import()` 懶載入(`lib/form-engine/regex-safety-loader.ts`,模組層 promise 快取、失敗清掉下次重試),正則改動停手 300ms 才檢查、過期結果丟掉;還沒有結果時檢查結果區顯示「正則檢查中」,載入失敗顯示「存草稿時會再檢查」—— 兩種情況都先不把正則判成不安全(存草稿 / 發布時 api 照驗)。
+**ReDoS 檢查注入**:`validateDefinition` 的 `regexSafety` 是必填選項;實作 `recheckRegexSafety`(recheck,固定純 JS 後端)在 `@repo/domain/form-regex-safety` —— recheck 瀏覽器版約 2.9 MB,放在 `form` 會跟著渲染器進 admin 首屏 bundle。api 的 `form-definition-checker.ts` 直接 import;admin 設計器以動態 `import()` 懶載入(`lib/base/form-engine/regex-safety-loader.ts`,模組層 promise 快取、失敗清掉下次重試),正則改動停手 300ms 才檢查、過期結果丟掉;還沒有結果時檢查結果區顯示「正則檢查中」,載入失敗顯示「存草稿時會再檢查」—— 兩種情況都先不把正則判成不安全(存草稿 / 發布時 api 照驗)。
 
 ### 刪除草稿
 
@@ -269,9 +269,9 @@
 
 ## 頁籤 / 標題模板
 
-`lib/form-engine/tab-label.ts` 的 `renderTabLabel`:表單的 `tabLabelTemplate` 有值用它,否則用模組層模板(`ModulePageSource.forms[].options.tabLabelTemplate`,預設 `{{title}}`)。**前端從那筆資料的值即時算**,不讀後端存的 `summary`:摘要槽依那筆綁的版本 `summaryMap` 對到欄位取值;新增 / 編輯頁用正在輸入的值(`FormFillForm` 的 `tabLabelOf`),所以草稿也算得出來。api 對模板只做 trim、空字串存 `null`,不驗佔位符。
+`lib/base/form-engine/tab-label.ts` 的 `renderTabLabel`:表單的 `tabLabelTemplate` 有值用它,否則用模組層模板(`ModulePageSource.forms[].options.tabLabelTemplate`,預設 `{{title}}`)。**前端從那筆資料的值即時算**,不讀後端存的 `summary`:摘要槽依那筆綁的版本 `summaryMap` 對到欄位取值;新增 / 編輯頁用正在輸入的值(`FormFillForm` 的 `tabLabelOf`),所以草稿也算得出來。api 對模板只做 trim、空字串存 `null`,不驗佔位符。
 
-模組 options 與四頁共用一筆來源:底座在 `app/base/module-pages.ts`,專案在 `app/project/module-pages.ts`。`lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀設定表,`app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入;context 與 hook 同檔在 `hooks/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`。有 Provider 但缺該 key 時回預設,缺 Provider 則報接線錯誤。`formModulePages(moduleKey)` 只產生預設頁,不接收 options 或修改全域 Map。
+模組 options 與四頁共用一筆來源:底座在 `app/base/module-pages.ts`,專案在 `app/project/module-pages.ts`。`lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀設定表,`app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入;context 與 hook 同檔在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`。有 Provider 但缺該 key 時回預設,缺 Provider 則報接線錯誤。`formModulePages(moduleKey)` 只產生預設頁,不接收 options 或修改全域 Map。
 
 | 佔位符                                  | 值                                                                    |
 | --------------------------------------- | --------------------------------------------------------------------- |
@@ -282,7 +282,7 @@
 | `{{action}}`                            | 頁面種類:檢視 / 編輯 / 新增;**模板沒寫時自動加在最前面**,以「・」分隔 |
 
 - 值的格式化同 `templateTextOf`:選項 / 引用印 label、日期 / 日期時間 `formatTemporal`(讀者現在的租戶時區)、數字照 `precision`、是 / 否印文字、讀不到(`"[redacted]"`)為空。套出來是空的退回表單名。
-- 表單模組新增 / 編輯 / 檢視頁與申請中心詳情頁都走 `components/form-engine/FormModulePages/useTabLabelRenderer.ts`(版本定義或 `moduleForms` 載到前回 null,頁籤維持模組名;自動加的頁面種類以字典 `admin.formEngine.pages.tabLabelWithAction` 組);刪除確認的「這一筆」用同一個算法但不加頁面種類。
+- 表單模組新增 / 編輯 / 檢視頁與申請中心詳情頁都走 `components/base/form-engine/FormModulePages/useTabLabelRenderer.ts`(版本定義或 `moduleForms` 載到前回 null,頁籤維持模組名;自動加的頁面種類以字典 `admin.formEngine.pages.tabLabelWithAction` 組);刪除確認的「這一筆」用同一個算法但不加頁面種類。
 
 ## 退役權限清理
 
@@ -320,17 +320,17 @@
 
 目前共用發布版另提供「匯出專案設定」,開啟共用 `SeedExportDialog` 填寫版本識別與發布說明;條件與下載內容見[匯出專案設定](#匯出專案設定)。
 
-**未存的變更不會無聲消失**:「表單設計 / 表單版本」兩頁籤都保持掛載;有未存變更時換表單先跳窗(留在設計 / 放棄變更 / 先存草稿);發布跳窗提示「發布的是上次存的草稿」並提供先存(狀態經 `stores/useDesignerDraftStore.ts`)。存草稿 / 發布收到 `CONFLICT` → 「草稿已被別人更新,請重新載入」。
+**未存的變更不會無聲消失**:「表單設計 / 表單版本」兩頁籤都保持掛載;有未存變更時換表單先跳窗(留在設計 / 放棄變更 / 先存草稿);發布跳窗提示「發布的是上次存的草稿」並提供先存(狀態經 `stores/base/useDesignerDraftStore.ts`)。存草稿 / 發布收到 `CONFLICT` → 「草稿已被別人更新,請重新載入」。
 
 ### 設計器
 
 - **畫布**:`FormRenderer` 設計模式,dnd-kit 拖拉;計算 / 固定值欄位畫成有框的唯讀輸入框,是 / 否欄位標題在元件前面。沒選欄位時右側是「表單設定」(摘要槽、帶入規則)。「預覽」切 `preview` 模式(即時跑條件與計算,「以後端重算」後以 `previewFormVersion` 回的值與顯示 / 唯讀為準)。
-- **欄位身分**:設計器內部以**穩定的內部 id**(`_id`)當欄位身分,`key` 只是資料:載入草稿時配 id、存草稿 / JSON 預覽 / 預覽時丟掉(`lib/form-engine/design-definition.ts`);選取、拖拉、改屬性、刪除都以 id 找欄位(`designer-ops.ts`),所以舊草稿 key 重複也刪得掉、不會改錯欄。改 key 當場擋格式、保留字與重複(輸入框標紅、不寫入),不等檢查器。
-- **屬性面板依型別只出現該有的設定**(`lib/form-engine/property-sections.ts`):上傳 / 引用欄位不顯示值來源;值來源是公式 / 固定值時隱藏鎖定條件、預設值、允許清單外的值(改成公式 / 固定值時定義裡的預設值一併拿掉);元件下拉只在有兩種以上畫法時出現,多行文字有列數、數字有單位;驗證規則裡上傳有「允許的檔型 / 大小上限(MB)」(`rules.accept` / `rules.maxSizeMb`,`lib/form-engine/upload-types.ts`,全勾 = 不存 `accept`);日期與日期時間有上下限(以租戶時區輸入、存 ISO;日期時間兩格直排)。是 / 否欄位的必填 = 必須勾選(`false` 與沒填都算沒勾,判準 `requiredIssueOf`;填寫頁標題帶必填記號)。自訂驗證可填錯誤訊息(`rules.customMessage`)。欄位級權限是兩個勾選:「受保護(要權限才看得到)」「限定可改(要權限才能改)」。
-- **值的輸入元件**一律用 `components/form-engine/TypedValueInput/`(固定值、預設值、日期上下限、表達式常數共用):文字 / 數字打字、是 / 否下拉、日期 → 日期選擇器(存租戶時區當地 00:00 的 ISO)、日期時間 → 日期時間選擇器、單選 / 多選從該欄位的選項挑(靜態下拉;類別 / 資料來源用填寫時的選擇器),存正確型別(是 / 否是布林、多選是陣列、日期是 ISO);表達式常數的形狀是語意值(選項只存 value、數字存 number)。值來源「固定值」存進 `valueSource.value`,計算時照欄位型別正規化(型別不對 → null,檢查器先以 `CONSTANT_VALUE_INVALID` 擋發布)。已停用的靜態選項若是目前的值仍列出並標「已停用」;類別 / 資料來源選項以**已存的草稿**查詢(先存草稿才挑得到)。
+- **欄位身分**:設計器內部以**穩定的內部 id**(`_id`)當欄位身分,`key` 只是資料:載入草稿時配 id、存草稿 / JSON 預覽 / 預覽時丟掉(`lib/base/form-engine/design-definition.ts`);選取、拖拉、改屬性、刪除都以 id 找欄位(`designer-ops.ts`),所以舊草稿 key 重複也刪得掉、不會改錯欄。改 key 當場擋格式、保留字與重複(輸入框標紅、不寫入),不等檢查器。
+- **屬性面板依型別只出現該有的設定**(`lib/base/form-engine/property-sections.ts`):上傳 / 引用欄位不顯示值來源;值來源是公式 / 固定值時隱藏鎖定條件、預設值、允許清單外的值(改成公式 / 固定值時定義裡的預設值一併拿掉);元件下拉只在有兩種以上畫法時出現,多行文字有列數、數字有單位;驗證規則裡上傳有「允許的檔型 / 大小上限(MB)」(`rules.accept` / `rules.maxSizeMb`,`lib/base/form-engine/upload-types.ts`,全勾 = 不存 `accept`);日期與日期時間有上下限(以租戶時區輸入、存 ISO;日期時間兩格直排)。是 / 否欄位的必填 = 必須勾選(`false` 與沒填都算沒勾,判準 `requiredIssueOf`;填寫頁標題帶必填記號)。自訂驗證可填錯誤訊息(`rules.customMessage`)。欄位級權限是兩個勾選:「受保護(要權限才看得到)」「限定可改(要權限才能改)」。
+- **值的輸入元件**一律用 `components/base/form-engine/TypedValueInput/`(固定值、預設值、日期上下限、表達式常數共用):文字 / 數字打字、是 / 否下拉、日期 → 日期選擇器(存租戶時區當地 00:00 的 ISO)、日期時間 → 日期時間選擇器、單選 / 多選從該欄位的選項挑(靜態下拉;類別 / 資料來源用填寫時的選擇器),存正確型別(是 / 否是布林、多選是陣列、日期是 ISO);表達式常數的形狀是語意值(選項只存 value、數字存 number)。值來源「固定值」存進 `valueSource.value`,計算時照欄位型別正規化(型別不對 → null,檢查器先以 `CONSTANT_VALUE_INVALID` 擋發布)。已停用的靜態選項若是目前的值仍列出並標「已停用」;類別 / 資料來源選項以**已存的草稿**查詢(先存草稿才挑得到)。
 - **預設值**編輯器(`FormDesigner/PropertyPanel/DefaultValueEditor.tsx`,種類正本 `defaultKindsOf`):文字 / 多行 / 數字 / 日期 / 日期時間 = 不設 / 固定值 / 公式(公式用型別導向選擇器,根 = 欄位型別、不列自己);單選 / 多選從選項挑;是否 = 是 / 否;引用只列「填寫者 / 填寫者的組織」。
 - **類別、表單、欄位都用下拉選**:類別從啟用中的 `fieldCategories` 挑;lookup 來源「表單提交」的表單從 `forms` 挑(看得到且有已發布版本;帶入規則另列這張表單自己,即使還沒發布,欄位目錄用目前草稿的欄位),顯示欄 / 值欄 / 帶入的來源欄位從該表單目前版本的非受保護欄位 + 摘要槽挑(`FormDesigner/PropertyPanel/useLookupCatalog.ts`,與 api 的欄位目錄同一判準)。lookup 來源的設定照填表順序排:來源 → 表單(表單提交才有)→ 顯示欄(表單提交預設標題槽)→ 顯示模板(選填;文字框 + 「插入欄位」下拉,`FormDesigner/PropertyPanel/LookupLabelTemplateInput.tsx`;清空 = 拿掉 `labelTemplate`)→ 固定條件(使用者 / 組織「只列啟用中的」= `filter.enabled`;表單提交「只列已完成的提交」= `completedOnly`)→ 值欄(只有選項來源);帶入規則在前面多「規則名稱」、後面接對應表(本表單欄位只列使用者填的 ← 來源欄位只列 `isPrefillCompatible` 相容的)。
-- **表達式**一律用**型別導向的結構化選擇器**(欄位 / 系統值 / 常數 / 運算,可巢狀),不做文字輸入:每個位置帶期望型別往下傳,只列型別對得上的東西(型別表正本 `expression-types.ts`,過濾在 `lib/form-engine/expression-options.ts`)。公式的根 = 欄位型別;條件(顯示 / 鎖定條件、自訂驗證、流程跳過條件)的根 = 是 / 否,常數與系統值不能單獨當條件的根;條件不列受保護欄位。鎖定條件與自訂驗證可引用自己(「超過 5 就鎖住」),顯示條件不可。`dateDiff` 有單位下拉(天 / 小時 / 分鐘,預設天);`dateAdd` 的方向(之前 / 之後)與單位(天 / 週 / 月 / 年)是下拉、數量是數字位置。還沒選的參數是空位「請選節點種類」(JSON 是 `null`;比較的參數選了之後可用「清空(= 空值)」回到空位),條件位置(`if` 第一格、且 / 或 / 非的參數)預設放「等於」比較,且 / 或的加參數鈕叫「+ 條件」;巢狀的運算畫成帶框縮排群組、標頭是運算子名(`ExpressionPicker/ExpressionGroup.tsx`)。常數種類有文字 / 數字 / 是否 / 日期 / 日期時間 / 清單;位置有**目標選項欄**時(選項欄公式、和選項欄比較或 `in` 的另一邊)常數改從它的選項挑(清單 = 多選挑)。
+- **表達式**一律用**型別導向的結構化選擇器**(欄位 / 系統值 / 常數 / 運算,可巢狀),不做文字輸入:每個位置帶期望型別往下傳,只列型別對得上的東西(型別表正本 `expression-types.ts`,過濾在 `lib/base/form-engine/expression-options.ts`)。公式的根 = 欄位型別;條件(顯示 / 鎖定條件、自訂驗證、流程跳過條件)的根 = 是 / 否,常數與系統值不能單獨當條件的根;條件不列受保護欄位。鎖定條件與自訂驗證可引用自己(「超過 5 就鎖住」),顯示條件不可。`dateDiff` 有單位下拉(天 / 小時 / 分鐘,預設天);`dateAdd` 的方向(之前 / 之後)與單位(天 / 週 / 月 / 年)是下拉、數量是數字位置。還沒選的參數是空位「請選節點種類」(JSON 是 `null`;比較的參數選了之後可用「清空(= 空值)」回到空位),條件位置(`if` 第一格、且 / 或 / 非的參數)預設放「等於」比較,且 / 或的加參數鈕叫「+ 條件」;巢狀的運算畫成帶框縮排群組、標頭是運算子名(`ExpressionPicker/ExpressionGroup.tsx`)。常數種類有文字 / 數字 / 是否 / 日期 / 日期時間 / 清單;位置有**目標選項欄**時(選項欄公式、和選項欄比較或 `in` 的另一邊)常數改從它的選項挑(清單 = 多選挑)。
 - **明細列**:屬性面板的「子欄位」清單(`PropertyPanel/ArrayColumnsEditor/`),點一個子欄整個面板換成它的縮小版(只列白名單內的設定,key 當場擋格式與同明細重複);列內公式的選擇器把同一列的其他子欄列成「本列・<標題>」(`row.<key>`);彙總的明細欄 / 數字子欄是下拉。
 - **刪被引用的欄位**:先列出草稿內引用它的表達式、摘要槽、帶入規則,以及草稿外的列表欄位配置(只提示);確認後只從草稿的 `fields[]` / `layout` 移除,引用處變成檢查器錯誤。刪分區二選一:欄位移到「未放置」或連同欄位刪除。
 
@@ -343,25 +343,25 @@
 
 專案表單模組在 `app/project/module-pages.ts` 的 `forms` 新增一筆,預設展開列表、檢視、新增、編輯四頁;單頁客製用 `pageOverrides` 的 `list` / `viewPage` / `createPage` / `editPage`,元件放 `pages/project/`。若是替換底座已登記的頁,改用 `app/project/page-replacements.ts`,保留底座原檔、宣告及模組 options;移除替換就回到原版。頁面登記不替使用者授權,也不改表單執行端點。型別、碰撞檢查與完整範例見[前端架構](../concepts/frontend-architecture.md#頁面登記與客製替換)與[表單引擎](../concepts/form-engine.md#前端引擎零件與預設組裝)。
 
-| 零件                                                                                | 檔案(`apps/admin/src/`)                                                  |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `FormRenderer`(五種 `mode`;版面以 `@repo/ui/grid` 排 12 格)、設計模式的格子與放置區 | `components/form-engine/FormRenderer/`                                   |
-| widget 登錄表(`widget.kind` → 元件)                                                 | `components/form-engine/widgets/widget-registry.ts`                      |
-| `FormSubmissionList` / `FormSubmissionDetail`(含修訂紀錄與差異)                     | `components/form-engine/FormSubmissionList.tsx`、`FormSubmissionDetail/` |
-| `FormPicker` / `LookupDialog` / `ReferenceField`                                    | `components/form-engine/`                                                |
-| `renderValue(ctx)` / `FormValue`                                                    | `components/form-engine/render-value.ts`、`FormValue.tsx`                |
-| `formModulePages(moduleKey)` 與四個預設頁                                           | `components/form-engine/FormModulePages/`                                |
-| 純邏輯:欄位狀態(五種 mode)、欄位級權限來源、設計器操作、帶入、修訂差異              | `lib/form-engine/`                                                       |
-| `useModuleForms` / `useFormDraft` / `useFormSubmission` / `useFormRuntimeVersion`   | `hooks/`                                                                 |
+| 零件                                                                                | 檔案(`apps/admin/src/`)                                                       |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `FormRenderer`(五種 `mode`;版面以 `@repo/ui/grid` 排 12 格)、設計模式的格子與放置區 | `components/base/form-engine/FormRenderer/`                                   |
+| widget 登錄表(`widget.kind` → 元件)                                                 | `components/base/form-engine/widgets/widget-registry.ts`                      |
+| `FormSubmissionList` / `FormSubmissionDetail`(含修訂紀錄與差異)                     | `components/base/form-engine/FormSubmissionList.tsx`、`FormSubmissionDetail/` |
+| `FormPicker` / `LookupDialog` / `ReferenceField`                                    | `components/base/form-engine/`                                                |
+| `renderValue(ctx)` / `FormValue`                                                    | `components/base/form-engine/render-value.ts`、`FormValue.tsx`                |
+| `formModulePages(moduleKey)` 與四個預設頁                                           | `components/base/form-engine/FormModulePages/`                                |
+| 純邏輯:欄位狀態(五種 mode)、欄位級權限來源、設計器操作、帶入、修訂差異              | `lib/base/form-engine/`                                                       |
+| `useModuleForms` / `useFormDraft` / `useFormSubmission` / `useFormRuntimeVersion`   | `hooks/base/`                                                                 |
 
-- **欄位級權限**:已有提交 → 用 api 的 `fieldStates.redacted` 與 `abilities.canEditField`;新增、草稿還沒建 → 由持有的 `<模組>.show-/edit-<formKey>-<fieldKey>` 推(推錯只影響畫面,寫入仍由 api 守)。定義裡標 `redacted: true` 的欄位(`formRuntimeVersion` 的骨架)一律當讀不到、整格不渲染(`lib/form-engine/field-states.ts`、`field-permissions.ts`);骨架省略了公式,所以「只因依賴而受保護」的計算欄位靠這個旗標,不靠權限 key 推。
-- **預設值與「碰過」旗標**在 `hooks/useFillValues.ts`(填寫頁與設計器預覽共用;計算在 `lib/form-engine/form-defaults.ts`):新增頁一打開就填預設值;改到的欄位(含帶入)記為碰過,其餘有預設值、改得動、公式引用都讀得到的欄位依目前的值重算;存草稿時 `touched` 一併送出。引用欄的預設值畫面上先用登入者名稱 / 當前組織名稱當 label,送出時 api 重取。
-- **日期 / 日期時間**:`DateWidget`(`@repo/ui/date-picker`,選日 → 租戶時區當地 00:00 的 ISO;換算在 `lib/form-engine/local-day.ts`)與 `DateTimeWidget`(`@repo/ui/date-time-picker`,收發 ISO)以 `WidgetContext.timezone` 輸入與顯示 = **讀者現在的租戶時區**(`hooks/useTenantTimezone.ts`,`me.currentOrg.timezone`;填寫 / 草稿 / 設計器預覽由表達式 `ctx.timezone` 帶入,唯讀檢視由詳情明給)。**顯示一律走 `hooks/useTemporalText.ts`**(`formatTemporal`;時區 = 呼叫端給的 → 讀者的租戶時區 → `Asia/Taipei`,不用瀏覽器時區),元件不自己格式化日期值:列表(摘要槽「日期」對到日期欄印日期、其餘印到分鐘)、詳情、修訂差異、計算欄位、修訂時間、設計器預覽的摘要都是讀者的租戶時區。
+- **欄位級權限**:已有提交 → 用 api 的 `fieldStates.redacted` 與 `abilities.canEditField`;新增、草稿還沒建 → 由持有的 `<模組>.show-/edit-<formKey>-<fieldKey>` 推(推錯只影響畫面,寫入仍由 api 守)。定義裡標 `redacted: true` 的欄位(`formRuntimeVersion` 的骨架)一律當讀不到、整格不渲染(`lib/base/form-engine/field-states.ts`、`field-permissions.ts`);骨架省略了公式,所以「只因依賴而受保護」的計算欄位靠這個旗標,不靠權限 key 推。
+- **預設值與「碰過」旗標**在 `hooks/base/useFillValues.ts`(填寫頁與設計器預覽共用;計算在 `lib/base/form-engine/form-defaults.ts`):新增頁一打開就填預設值;改到的欄位(含帶入)記為碰過,其餘有預設值、改得動、公式引用都讀得到的欄位依目前的值重算;存草稿時 `touched` 一併送出。引用欄的預設值畫面上先用登入者名稱 / 當前組織名稱當 label,送出時 api 重取。
+- **日期 / 日期時間**:`DateWidget`(`@repo/ui/date-picker`,選日 → 租戶時區當地 00:00 的 ISO;換算在 `lib/base/form-engine/local-day.ts`)與 `DateTimeWidget`(`@repo/ui/date-time-picker`,收發 ISO)以 `WidgetContext.timezone` 輸入與顯示 = **讀者現在的租戶時區**(`hooks/base/useTenantTimezone.ts`,`me.currentOrg.timezone`;填寫 / 草稿 / 設計器預覽由表達式 `ctx.timezone` 帶入,唯讀檢視由詳情明給)。**顯示一律走 `hooks/base/useTemporalText.ts`**(`formatTemporal`;時區 = 呼叫端給的 → 讀者的租戶時區 → `Asia/Taipei`,不用瀏覽器時區),元件不自己格式化日期值:列表(摘要槽「日期」對到日期欄印日期、其餘印到分鐘)、詳情、修訂差異、計算欄位、修訂時間、設計器預覽的摘要都是讀者的租戶時區。
 - **唯讀檢視 = 同一套填寫元件走 readOnly**(`FormRenderer` 的 `readonly` mode 對每個 widget 傳 `isReadOnly`,不是停用):文字 / 數字 / 日期 / 選項 / 引用走 `widgets/ReadOnlyField.tsx`(有框輸入框、文字照一般顏色、`readonly`;數字帶單位、選項與引用顯示 `displayValues` 的現名或快照 +「(來源不可用)」、多選以「、」串起;不查選項),是否欄是同一個開關 / 勾選框帶 `readOnly`,上傳欄是檔名下載鈕(`onDownload`)。填寫、預覽、唯讀三種模式的分區都是有框卡片 + 標題列。`FormValue` 只給表格格子(列表、修訂差異)。
 - **修訂紀錄跳窗**:詳情的表單 / 版本 / 狀態 / 建立者與修訂清單收在「修訂紀錄」跳窗(`FormSubmissionDetail` 的 `isHistoryOpen` / `onHistoryClose`,按鈕由頁面放在標題列「刪除」左邊)。客製頁用 `FormSubmissionDetail` 時要自己放「修訂紀錄」按鈕並傳這兩個 prop;不傳就沒有這個跳窗。
-- **明細列表格**(`components/form-engine/widgets/ArrayTableWidget/`):桌機表格、手機寬(< `sm`,`@repo/ui/media-query` 的 `useBreakpointDown`)每列一張卡片;列尾「上方插入一列」「上移」「下移」(圖示鈕)與「複製」「刪除」(`lib/form-engine/array-rows.ts` 的純函式;第一列不能上移、最後一列不能下移;移動只換陣列順序、`rowId` 不變,修訂差異因此標「移動」)、表尾「+ 新增一列」,新增 / 插入 / 複製都到 `maxRows` 停;不做拖拉排序;每格錯誤以 `rowId` + `columnKey` 標在那一格、列數錯誤在表尾。表格裡的格子不畫標題(widget 的 `hiddenLabel`:有框輸入框因此不留 legend 缺口,標題改當 `aria-label`;`@repo/ui` 的 `SelectField` / `Autocomplete` / `DatePicker` / `DateTimePicker` 同名 prop),卡片照常顯示;格子與列動作是 `memo` 元件,回呼以 ref 取最新的列保持穩定;唯讀檢視同一元件走 `isReadOnly`;設計模式畫表格外觀的占位。每一格的元件取自 `widgets/widget-registry-core.ts`(單值 widget;完整登錄表 `widget-registry.ts` 再加 `table`,拆兩支是為了不讓明細元件與登錄表互相 import)。修訂差異的明細在 `FormSubmissionDetail/ArrayRevisionDiff.tsx`。
-- **選項欄**三種來源統一在 `components/form-engine/widgets/useFieldOptions.ts`:靜態清單讀定義、類別選項打 `formFieldOptions`(先取前 100 筆、前端比對關鍵字;api 回的 `totalCount` 大於取回筆數時,打字搜尋改送 api 的 `keyword`;沒有搜尋框的下拉 / 單選鈕只列前 100 筆)、lookup 打 `formLookup`(關鍵字送 api)。類別選項的查詢失敗時該欄只顯示既有值、改不了。
-- **容量上限**(`REVISION_LIMIT` / `DOCUMENT_TOO_LARGE`)在 `lib/form-engine/form-errors.ts` 細分成自己的碼,由 `hooks/useCapacityErrorSnackbar.ts` 以 Snackbar 告知(不是「被別人更新」,不給重新載入)。
+- **明細列表格**(`components/base/form-engine/widgets/ArrayTableWidget/`):桌機表格、手機寬(< `sm`,`@repo/ui/media-query` 的 `useBreakpointDown`)每列一張卡片;列尾「上方插入一列」「上移」「下移」(圖示鈕)與「複製」「刪除」(`lib/base/form-engine/array-rows.ts` 的純函式;第一列不能上移、最後一列不能下移;移動只換陣列順序、`rowId` 不變,修訂差異因此標「移動」)、表尾「+ 新增一列」,新增 / 插入 / 複製都到 `maxRows` 停;不做拖拉排序;每格錯誤以 `rowId` + `columnKey` 標在那一格、列數錯誤在表尾。表格裡的格子不畫標題(widget 的 `hiddenLabel`:有框輸入框因此不留 legend 缺口,標題改當 `aria-label`;`@repo/ui` 的 `SelectField` / `Autocomplete` / `DatePicker` / `DateTimePicker` 同名 prop),卡片照常顯示;格子與列動作是 `memo` 元件,回呼以 ref 取最新的列保持穩定;唯讀檢視同一元件走 `isReadOnly`;設計模式畫表格外觀的占位。每一格的元件取自 `widgets/widget-registry-core.ts`(單值 widget;完整登錄表 `widget-registry.ts` 再加 `table`,拆兩支是為了不讓明細元件與登錄表互相 import)。修訂差異的明細在 `FormSubmissionDetail/ArrayRevisionDiff.tsx`。
+- **選項欄**三種來源統一在 `components/base/form-engine/widgets/useFieldOptions.ts`:靜態清單讀定義、類別選項打 `formFieldOptions`(先取前 100 筆、前端比對關鍵字;api 回的 `totalCount` 大於取回筆數時,打字搜尋改送 api 的 `keyword`;沒有搜尋框的下拉 / 單選鈕只列前 100 筆)、lookup 打 `formLookup`(關鍵字送 api)。類別選項的查詢失敗時該欄只顯示既有值、改不了。
+- **容量上限**(`REVISION_LIMIT` / `DOCUMENT_TOO_LARGE`)在 `lib/base/form-engine/form-errors.ts` 細分成自己的碼,由 `hooks/base/useCapacityErrorSnackbar.ts` 以 Snackbar 告知(不是「被別人更新」,不給重新載入)。
 
 ## api 介面
 

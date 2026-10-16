@@ -79,7 +79,7 @@ Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `pr
 
 ### 功能來源與組裝
 
-後台頁面在各層分 `base` 與 `project`,由 `app/module-pages.tsx` 組裝;頁面新增與替換分開登記,底座原版保留。Help 由 `lib/help-registry.ts` 讀底座、專案新增、專案替換三區。API 功能與資料分別經 AppModule、DatabaseModule 組裝,專案來源在 `src/project/`;新增租戶 model 的 repository 與組織資料檢查一起登記。登記不授權,既有路由及 API 守門仍生效。
+後台頁面在各層分 `base` 與 `project`,由 `app/module-pages.tsx` 組裝;頁面新增與替換分開登記,底座原版保留。Help 由 `lib/base/help-registry.ts` 讀底座、專案新增、專案替換三區。API 功能與資料分別經 AppModule、DatabaseModule 組裝,專案來源在 `src/project/`;新增租戶 model 的 repository 與組織資料檢查一起登記。登記不授權,既有路由及 API 守門仍生效。
 
 頁面、表單設定及 help 見[前端架構](concepts/frontend-architecture.md),API 登記與碰撞檢查見[資料層組裝](concepts/data-layer-and-isolation.md#底座與專案資料的組裝),固定入口與 import 方向見 STRUCT-12。新增模組照 [module scaffold](agents/module-scaffold.md)。
 

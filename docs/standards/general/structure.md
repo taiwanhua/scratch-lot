@@ -10,6 +10,17 @@
 
 被兩個以上 app 使用(或明確預期會被共用)的元件 → `@repo/ui`;單一 app 專用的元件留在該 app 內。搬移時機:第二個使用者出現的那個 PR。
 
+- **`@repo/ui` 只放底座的底層元件,每個都要有 stories**;Storybook 只收 `@repo/ui` 與工具頁。
+- **專案元件放 admin 的 `components/project/`**,用元件測試驗證,不進 Storybook。日後發現可共用 → 搬進 `@repo/ui`、補 stories、走底座回收。
+- **專案程式不能放進 `packages/ui`**(底座同步工具會把它當共用改良):`packages/ui` 不得 import `apps/` 的任何路徑或 app 套件、不得有 `project/` 目錄。lint:`@repo/eslint-config/frontend-style` 的 `uiOwnership`;負例與目錄掃描:`packages/ui/scripts/check-ownership-lint.mjs`(接在 ui 的 `lint` 後面)。
+- 已定的歸屬:
+
+  | 元件                                                           | 位置                        |
+  | -------------------------------------------------------------- | --------------------------- |
+  | Section、MonthCalendar、RosterGrid、Stepper、58mm 單據版面零件 | `@repo/ui`(有 stories)      |
+  | AudiencePicker、OrgTreeSelect、列印按鈕、通知鈴 / 清單         | admin `components/base/`    |
+  | 張數格子、面額清點、看板卡片                                   | admin `components/project/` |
+
 ## STRUCT-03 app 內分層:`app / pages / components / hooks / stores / lib / test`,import 只能往下
 
 (決策見 ADR-0012;lint:`@repo/eslint-config/frontend-style` 的 `import-x/no-restricted-paths`,正本 `packages/config-eslint/frontend-style.js`)
@@ -18,22 +29,24 @@
 apps/<app>/src/
 ├── app/          組裝層:main.tsx、routes.tsx、providers/、guards/(RequireAuth、ModuleRoute、ForbiddenPage)、
 │                 AdminShell/(AppBar / SideNav / RouteTabs 版面)、module-pages.tsx。不含業務內容
-├── pages/        admin 先分 base/ 與 project/,各自依功能分目錄:
+├── pages/        admin 分 base/ 與 project/,各自依功能分目錄:
 │                 base/auth/LoginPage/、base/OverviewPage/、base/system/OrgManagerPage/ …
 │                 一個頁面一個資料夾,只有這頁用的元件放在頁底下
 ├── components/   兩個以上頁面共用、但還不到進 @repo/ui 的元件;CRUD 共版型在 base/crud/
-├── hooks/        跨頁 hook(useMe、useSession)
-├── stores/       zustand store(useXxxStore.ts)
+├── hooks/        跨頁 hook(base/useMe、base/useSession)
+├── stores/       zustand store(base/useXxxStore.ts)
 ├── lib/          純工具、client、paths(不含 React)
 └── test/         MSW、renderApp 等測試支援
 ```
+
+admin 的 `components/`、`hooks/`、`stores/`、`lib/` 底下**只有 `base/`(底座維護)與 `project/`(專案內容)兩個子目錄**,不在層的根目錄放檔案(`app/`、`pages/` 的分法見 STRUCT-12);以下說的「放 `components/`」等,在 admin 指該層的 `base/` 或 `project/`。由 `apps/admin/scripts/check-ownership-lint.mjs` 檢查(接在 admin 的 `lint` 後面)。
 
 - **import 方向只能往下**:`app → pages → components → hooks / stores → lib`;下層不准 import 上層,同層的頁面之間不准互相 import(要共用就往上提到 `components/` 或 `hooks/`)。
 - **元件放在唯一使用它的那層**:只有一頁用 → 該頁資料夾底下;兩頁以上用 → `components/`;兩個 app 用 → `@repo/ui`(STRUCT-02)。殼(AdminShell)只被 `routes.tsx` 用,所以住 `app/`。
 - **頁面一律資料夾**(如 `pages/base/OverviewPage/OverviewPage.tsx`),即使目前只有一個檔;非頁面的單檔元件不開資料夾(GEN-01)。
 - **路由群組資料夾可放該群組共用的元件**:`pages/base/auth/AuthCard.tsx` 給四個登入線頁面用、之後 `pages/base/system/` 也可以放治理模組共用的東西;跨群組才上提到 `components/`。「同層頁面不互相 import」指的是頁面資料夾之間(`LoginPage/` 不 import `SetPasswordPage/` 的檔)。
-- **非 React 程式碼要碰 store**(如 `lib/auth/auth-fetch.ts` 要讀 access token、失效時 `clear()`):lib 不准 import `stores/`,改由 app 層把 store 實例注入(`createAuthSession(endpoint, useSessionStore)`),lib 只認 zustand 的 `StoreApi<T>` 介面(型別放 `lib/`)。先例 `apps/admin/src/lib/auth/auth-fetch.ts`。
-- **跨路由群組要共用就上提到 `components/`**,不要複製一份:`pages/base/auth/NewPasswordFields/` 的密碼欄位若要給 `pages/base/system/` 的新增使用者彈窗用,正確做法是搬到 `components/NewPasswordFields/`。已知的重複:使用者管理的 `UserManagerPage/UserFormDialog/ActivationFields.tsx` 另有一份單欄位版的密碼規則提示,與 `NewPasswordFields` 待合併。
+- **非 React 程式碼要碰 store**(如 `lib/base/auth/auth-fetch.ts` 要讀 access token、失效時 `clear()`):lib 不准 import `stores/`,改由 app 層把 store 實例注入(`createAuthSession(endpoint, useSessionStore)`),lib 只認 zustand 的 `StoreApi<T>` 介面(型別放 `lib/`)。先例 `apps/admin/src/lib/base/auth/auth-fetch.ts`。
+- **跨路由群組要共用就上提到 `components/`**,不要複製一份:`pages/base/auth/NewPasswordFields/` 的密碼欄位若要給 `pages/base/system/` 的新增使用者彈窗用,正確做法是搬到 `components/base/NewPasswordFields/`。已知的重複:使用者管理的 `UserManagerPage/UserFormDialog/ActivationFields.tsx` 另有一份單欄位版的密碼規則提示,與 `NewPasswordFields` 待合併。
 - **`pages/` 為什麼取代 `features/`**:admin 的業務單位是模組(側欄每一項),「一個頁面 = 一個模組」已是產品定義(ADR-0004),不需要再一層沒定義的 feature。
 
 底座與專案的所有權限制另見 STRUCT-12;`base/`、`project/` 不改變以上分層。注入用 context 與 hook 同檔放 `hooks/`,Provider 放 `app/providers/`(REACT-02),包括表單模組 options。
@@ -167,7 +180,7 @@ admin 每個環境各建一顆 image,正是最容易吃到這個坑的形狀(`VI
 ❌ rows.toSorted((a, b) => a.name.localeCompare(b.name));
 ```
 
-不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 通常退回 `en-US`**,中文字的先後跟著不一樣 —— 排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。先例與理由註解在 `apps/admin/src/lib/role-options.ts`(`COLLATION_LOCALE`)。同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
+不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 通常退回 `en-US`**,中文字的先後跟著不一樣 —— 排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。先例與理由註解在 `apps/admin/src/lib/base/role-options.ts`(`COLLATION_LOCALE`)。同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
 
 ## STRUCT-11 正式文件寫現況,完成的計畫歸回正本
 
@@ -208,7 +221,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 
 - 頁面分 `pages/base/` 與 `pages/project/`;其他層既有共用內容仍由底座維護,專案內容放該層 `project/`,不另開頂層 `src/project/`。專案頁不可引用底座頁內部,共用能力走 components/hooks/lib;CRUD 模板在 `components/base/crud/`。
 - `app/module-pages.tsx` 組裝 `app/base/module-pages.ts`、`app/project/module-pages.ts` 與 `app/project/page-replacements.ts`。專案新增或替換不改底座清單;表單 options 與四頁來自同一筆 `forms` 宣告。
-- `lib/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
+- `lib/base/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
 - `src/test/**` 只豁免所有權方向,仍守 STRUCT-03 與循環依賴檢查。固定入口是個別檔案的例外,不放寬整個 app 層。
 
 ### api

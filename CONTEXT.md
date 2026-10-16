@@ -241,7 +241,7 @@ _Avoid_: 平台級資料(users 適用、roles 不適用,故不採)
 
 ### 表單引擎
 
-正本:`docs/concepts/form-engine.md`、`docs/modules/forms.md`、`apps/api/src/forms/`、`packages/domain/src/form/`、`apps/admin/src/components/form-engine/`、`apps/admin/src/lib/form-engine/`
+正本:`docs/concepts/form-engine.md`、`docs/modules/forms.md`、`apps/api/src/forms/`、`packages/domain/src/form/`、`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`
 
 **表單模組**:
 seed 宣告 `engine: "form"` 的業務模組;骨架(路由、隱藏頁、權限、資料目標)照舊由 seed 宣告,頁面由表單引擎組裝,資料存所有表單模組共用的 `form_submissions`。範例:三個示範表單(頂層 `demo-form`、群組內 `demo.form`、次群組內 `demo.sub.form`)。與固定欄位模組(示範模組那種)並存。
@@ -325,7 +325,7 @@ _Avoid_: 遷移(那是資料庫 migration)、改版
 
 ### 審核流程
 
-正本:`docs/concepts/workflow-engine.md`、`docs/modules/workflows.md`、`apps/api/src/workflows/`、`packages/domain/src/workflow/`、`apps/admin/src/components/workflow/`
+正本:`docs/concepts/workflow-engine.md`、`docs/modules/workflows.md`、`apps/api/src/workflows/`、`packages/domain/src/workflow/`、`apps/admin/src/components/base/workflow/`
 
 **流程**:
 一組審核關卡的身分(如「病假審核」),全域唯一 key、**建立後不可改**。和表單一樣在畫面上設計、版本化、發布;明確登記的共用流程也可作為受管定義交付。分共用流程與客製流程。
