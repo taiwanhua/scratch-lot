@@ -25,6 +25,7 @@ export * from "./HelpIcon";
 export * from "./ViewIcon";
 export * from "./EditIcon";
 export * from "./DeleteIcon";
+export * from "./SettingsIcon";
 export * from "./AddIcon";
 export * from "./ArrowUpIcon";
 export * from "./ArrowDownIcon";

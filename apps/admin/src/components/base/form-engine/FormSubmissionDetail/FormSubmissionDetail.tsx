@@ -15,6 +15,7 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
+import { useIsCurrentFormVersion } from "@/hooks/base/useIsCurrentFormVersion";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
@@ -75,6 +76,12 @@ export const FormSubmissionDetail = ({
     shown?.viewedVersion ?? null,
   );
   const tenantTimezone = useTenantTimezone();
+  // 分區收合紀錄只在看目前版本時清掉已不存在的分區(看綁舊版本的單不能清掉新版本的紀錄)
+  const isCurrentVersion = useIsCurrentFormVersion(
+    base?.moduleKey ?? "",
+    base?.formKey ?? "",
+    shown?.viewedVersion ?? null,
+  );
   // 已完成:條件用那次修訂的 ctx;草稿(還沒有 ctx):用真正的現在 + 填寫者本人與那一筆的組織、租戶時區
   const expressionContext = useMemo(() => {
     if (shown === null) {
@@ -156,6 +163,7 @@ export const FormSubmissionDetail = ({
         onDownload={(field) => {
           void download(field);
         }}
+        pruneMissingSections={isCurrentVersion}
       />
       {isHistoryOpen && (
         <Dialog

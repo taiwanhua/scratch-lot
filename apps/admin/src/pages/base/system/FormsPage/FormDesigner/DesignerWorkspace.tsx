@@ -174,6 +174,7 @@ export const DesignerWorkspace = ({
             formKey={form.key}
             definition={definition}
             selectedFieldId={state.selectedFieldId}
+            selectedSectionKey={state.selectedSectionKey}
             onSelectField={state.select}
             onAddField={(type, target) => {
               state.add(

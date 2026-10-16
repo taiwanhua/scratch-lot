@@ -52,6 +52,8 @@ export interface FormFillFormProps {
   onCancel: () => void;
   /** 409 時的「重新載入」 */
   onReload: () => void;
+  /** 渲染的是表單目前版本(分區收合紀錄才清掉已不存在的分區);不給 = false */
+  isCurrentVersion?: boolean;
   /** 頁籤 / 標題:以正在輸入的值即時算(`useTabLabelRenderer`);不給就不動頁籤 */
   tabLabelOf?: (values: StoredValues) => string | null;
 }
@@ -86,6 +88,7 @@ export const FormFillForm = ({
   onCancel,
   onReload,
   tabLabelOf,
+  isCurrentVersion = false,
 }: FormFillFormProps) => {
   const t = useTranslations("admin.formEngine.fill");
   const tErrors = useTranslations("admin.formEngine.errors");
@@ -132,6 +135,7 @@ export const FormFillForm = ({
         permissions={permissions}
         onChange={fill.change}
         fieldErrors={error?.fieldErrors ?? []}
+        pruneMissingSections={isCurrentVersion}
       />
       {/* 容量上限(修訂次數 / 文件大小)已由 Snackbar 告知,這裡不重複 */}
       {error !== null &&

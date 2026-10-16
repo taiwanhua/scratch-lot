@@ -42,6 +42,8 @@ import { useSectionSummary } from "./useSectionSummary";
 export interface FormRendererDesignProps {
   /** 選中欄位的設計器內部 id(`design-definition.ts`;一般定義沒有 id 時用 key) */
   selectedFieldId: string | null;
+  /** 打開分區設定的分區 key:標題列反白(`aria-current`) */
+  selectedSectionKey?: string | null;
   onSelectField: (fieldId: string) => void;
   /** 分區標題旁的操作(設計器:改名、刪分區) */
   renderSectionActions?: (section: LayoutSection) => ReactNode;
@@ -68,6 +70,11 @@ export interface FormRendererProps {
   onDownload?: (field: FieldDef) => void;
   /** 後端算的值與狀態(預覽「以後端重算」之後);有就以後端為準 */
   serverState?: ServerFormState | null;
+  /**
+   * 渲染的是表單**目前版本**時給 true:分區收合紀錄(`form:<formKey>`)打開時清掉這一版沒有的分區。
+   * 看綁舊版本的單時不給,免得清掉新版本分區的紀錄。不給 = false(不清)
+   */
+  pruneMissingSections?: boolean;
   /** 設計模式的選取(畫布由設計器包 `DndContext`) */
   design?: FormRendererDesignProps;
 }
@@ -104,6 +111,7 @@ export const FormRenderer = ({
   onDownload,
   serverState = null,
   design,
+  pruneMissingSections = false,
 }: FormRendererProps) => {
   const byKey = useMemo(() => fieldMapOf(version.fields), [version.fields]);
   // 版面格 → 欄位:設計器的定義以內部 id 對(key 重複也對得準),一般定義以 key 對
@@ -176,6 +184,7 @@ export const FormRenderer = ({
     formKey: context.formKey,
     mode,
     fieldErrors,
+    pruneMissingSections,
   });
   const summaryOf = useSectionSummary({
     byKey,
@@ -272,15 +281,32 @@ export const FormRenderer = ({
           );
         }
 
+        // 打開分區設定的那個分區:標題列反白
+        const isSectionSelected = design?.selectedSectionKey === section.key;
         return (
           <Stack
             key={section.key}
             component="section"
             spacing={1.5}
             aria-label={section.title}
+            aria-current={isSectionSelected ? "true" : undefined}
           >
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Typography variant="subtitle1" component="h2" sx={{ flex: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                bgcolor: isSectionSelected ? "primary.lighter" : "transparent",
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                component="h2"
+                sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+              >
                 {section.title}
               </Typography>
               {design?.renderSectionActions?.(section)}

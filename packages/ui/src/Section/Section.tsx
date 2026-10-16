@@ -1,6 +1,6 @@
 "use client";
 
-import ButtonBase from "@mui/material/ButtonBase";
+import ButtonBase, { buttonBaseClasses } from "@mui/material/ButtonBase";
 import MuiCollapse from "@mui/material/Collapse";
 import MuiTypography from "@mui/material/Typography";
 import type { SxProps, Theme } from "@mui/material/styles";
@@ -62,7 +62,14 @@ const headerStyles = (theme: Theme) =>
     textAlign: "left",
   }) as const;
 
-const HeaderButton = styled(ButtonBase)(({ theme }) => headerStyles(theme));
+/** 鍵盤聚焦時的外框(ButtonBase 沒有預設外框;畫在標題列內側,不被外框的 overflow 裁掉)。 */
+const HeaderButton = styled(ButtonBase)(({ theme }) => ({
+  ...headerStyles(theme),
+  [`&.${buttonBaseClasses.focusVisible}`]: {
+    outline: `2px solid ${(theme.vars ?? theme).palette.primary.main}`,
+    outlineOffset: -2,
+  },
+}));
 
 const StaticHeader = styled("div")(({ theme }) => headerStyles(theme));
 

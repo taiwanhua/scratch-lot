@@ -18,6 +18,7 @@ import { EditIcon } from "./EditIcon";
 import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
+import { SettingsIcon } from "./SettingsIcon";
 import { SystemModeIcon } from "./SystemModeIcon";
 import { ViewIcon } from "./ViewIcon";
 
@@ -40,6 +41,7 @@ const actionIcons = [
   { name: "ViewIcon", Icon: ViewIcon },
   { name: "EditIcon", Icon: EditIcon },
   { name: "DeleteIcon", Icon: DeleteIcon },
+  { name: "SettingsIcon", Icon: SettingsIcon },
   { name: "AddIcon", Icon: AddIcon },
   { name: "ArrowUpIcon", Icon: ArrowUpIcon },
   { name: "ArrowDownIcon", Icon: ArrowDownIcon },
