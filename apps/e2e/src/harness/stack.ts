@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 
-import type { MongoMemoryServer } from "mongodb-memory-server";
+import type { MongoMemoryReplSet } from "mongodb-memory-server";
 import type { PreviewServer } from "vite";
 
 import {
@@ -39,25 +39,27 @@ import { log, run, start, stopProcess, waitUntil } from "./process";
  */
 
 interface StackState {
-  mongo: MongoMemoryServer | null;
+  mongo: MongoMemoryReplSet | null;
   api: ChildProcess | null;
   admin: PreviewServer | null;
 }
 
 let state: StackState | null = null;
 
-/** 起 Mongo:給了 `E2E_MONGODB_URI`(CI 的 service container)就用它,否則自起記憶體版。 */
+/** 起 Mongo:給了 `E2E_MONGODB_URI`(CI 的 service container)就用它,否則自起記憶體版(單一成員 replica set:api 的交易需要)。 */
 async function startMongo(): Promise<{
   uri: string;
-  server: MongoMemoryServer | null;
+  server: MongoMemoryReplSet | null;
 }> {
   if (MONGODB_URI !== "") {
     log(`使用外部 MongoDB(E2E_MONGODB_URI)`);
     return { uri: MONGODB_URI, server: null };
   }
-  log("啟動 mongodb-memory-server");
-  const { MongoMemoryServer: Server } = await import("mongodb-memory-server");
-  const server = await Server.create({ instance: { dbName: DB_NAME } });
+  log("啟動 mongodb-memory-server(單一成員 replica set)");
+  const { MongoMemoryReplSet: Server } = await import("mongodb-memory-server");
+  const server = await Server.create({
+    replSet: { count: 1, dbName: DB_NAME },
+  });
   return { uri: server.getUri(DB_NAME), server };
 }
 

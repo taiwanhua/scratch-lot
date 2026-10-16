@@ -1,5 +1,6 @@
 import { Logger } from "@nestjs/common";
 
+import { assertOutsideTransaction } from "../database/transaction";
 import {
   buildActivationEmail,
   buildPasswordResetEmail,
@@ -86,6 +87,8 @@ export abstract class MailService {
 
   /** 白名單有值時只寄名單內(dev / staging 防誤寄真人);名單外靜默略過、不視為錯誤。 */
   private async send(message: MailMessage): Promise<void> {
+    // 交易可能自動重試或回復,信寄出去就收不回來:一律排到交易成功之後(afterCommit)
+    assertOutsideTransaction("寄信");
     if (!isRecipientAllowed(this.config.allowlist, message.to)) {
       this.logger.warn(
         `收件人 ${message.to} 不在 MAIL_ALLOWLIST 內,略過 ${message.kind} 信`,

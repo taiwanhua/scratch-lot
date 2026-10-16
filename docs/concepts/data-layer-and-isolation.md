@@ -1,6 +1,6 @@
 # 資料層與租戶隔離(現況說明)
 
-回答「資料分幾類、誰看得到哪些、怎麼保證繞不過」。決策理由見 ADR-0001(核心關聯)、ADR-0002(種子與遷移)、ADR-0005(多租戶隔離)、ADR-0007(基礎欄位)、ADR-0008(資料範圍)。collection 一覽見 `docs/data-model.md`。
+回答「資料分幾類、誰看得到哪些、怎麼保證繞不過」。決策理由見 ADR-0001(核心關聯)、ADR-0002(種子與遷移)、ADR-0005(多租戶隔離)、ADR-0007(基礎欄位)、ADR-0008(資料範圍)、ADR-0013(交易)。collection 一覽見 `docs/data-model.md`。
 
 ## 三類資料
 
@@ -105,6 +105,26 @@ service 呼叫 BaseRepository.xxx(operator, …)
 - 對全員生效(套用對象 `all`)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
 
 正本:`apps/api/src/database/base.repository.ts`、`apps/api/src/database/operator-context.ts`、`apps/api/src/database/plugins/tenant-scope.plugin.ts`
+
+## 交易
+
+一個使用者動作 = 一個交易:任何一步失敗,這個動作的寫入一起回復。所有環境的 MongoDB 都是 replica set(Atlas;本機 Docker 與測試是單一成員 replica set),才能用交易。
+
+```
+service 呼叫 TransactionService.withTransaction(async (session) => …)
+  → session.withTransaction:寫入衝突自動整個重跑,上限 60 秒
+  → fn 內:repository.xxx(operator, …, { session })   ← 租戶保底、資料範圍照套
+           afterCommit(() => 外部動作)                 ← 只登記,不執行
+  → 提交成功 → 依序執行 afterCommit(失敗只記 log)
+    回復     → 丟棄 afterCommit
+```
+
+- **session 傳遞**:`BaseRepository` 的讀寫方法都接受選填 `{ session }`;沒帶時自動用目前交易的 session(以 AsyncLocalStorage 追蹤)。專屬 repository 與原生 collection 存取不會自動加入,要明確傳。帶不帶 session,租戶保底與資料範圍規則都一樣套。
+- **巢狀呼叫**:已在交易內再呼叫 `withTransaction` → 加入同一個交易,內層失敗整個回復。
+- **交易內不得有外部動作**(寄信、HTTP、GCS 寫入、Cloudflare):自動重試會重複執行、回復也收不回。改用 `afterCommit` 排到提交之後;對外 adapter 的入口(`MailService` 寄信、`StorageService` 的刪除 / 複製)以 `assertOutsideTransaction` 在交易內被呼叫時拋錯。資料庫寫入(如通知)留在交易內。
+- **不取代樂觀鎖**:`editVersion` / `version` 的條件更新照舊。db-migrator 的大批次遷移不包成單一交易,每批一個交易 + 檢查點續跑(ADR-0002)。
+
+寫法見 `docs/standards/api/transactions.md`(TX)。正本:`apps/api/src/database/transaction.ts`、`apps/api/src/database/base.repository.ts`
 
 ## 操作者上下文的四個集合
 

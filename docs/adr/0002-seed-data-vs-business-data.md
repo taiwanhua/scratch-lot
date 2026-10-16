@@ -49,7 +49,7 @@ Migration 明確引用不可變的歷史 seed 快照,先核對資料前提,再�
 
 - 欄位形狀存在兩處(api schema 與 seed),schema 改了 seed 要跟;索引測試抓不到欄位漂移。漂移變嚴重再抽共用型別套件(待辦見 `docs/tmp/dis.md` 搜「db-schemas」)。
 - migrations 維持 `.js`(migrate-mongo 的載入器);seed 以 tsx 直跑 TypeScript。
-- 整批更新不是資料庫交易,定義發布後立即生效。失敗以檢查點續跑或明示修復處理;migration down 或切回舊 image 都不代表設定與資料已整批回復。
+- 整批更新不包成單一資料庫交易(交易有時間與大小上限,ADR-0013),定義發布後立即生效。大批次遷移每批一個交易,失敗以檢查點續跑或明示修復處理;migration down 或切回舊 image 都不代表設定與資料已整批回復。
 - 示範模組初建啟用,production 也允許示範資料;模組開關與租戶分配由人員維護,seed 不自動停用或撤銷分配。
 
 ## 還原(reset)

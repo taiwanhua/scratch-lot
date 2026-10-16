@@ -22,6 +22,7 @@ import {
   type LegacyUnscopedModel,
   composeDatabaseRegistrations,
 } from "./registration";
+import { TransactionService } from "./transaction";
 
 // 相容出口:功能模組一直從這裡拿 repository 與文件型別,搬到 leaf 檔後照舊可用
 export * from "./base/repositories";
@@ -64,8 +65,9 @@ export function assembleDatabase(
       providers: [
         ...composed.providers,
         orgBusinessDataReaderProvider(composed.orgDataChecks),
+        TransactionService,
       ],
-      exports: [...composed.exports, OrgBusinessDataReader],
+      exports: [...composed.exports, OrgBusinessDataReader, TransactionService],
     },
   };
 }

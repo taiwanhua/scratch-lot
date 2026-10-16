@@ -5,7 +5,7 @@ import type { Type } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { MONGOOSE_MODULE_OPTIONS } from "@nestjs/mongoose/dist/mongoose.constants";
 import { Test } from "@nestjs/testing";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose from "mongoose";
 
 import {
@@ -60,13 +60,13 @@ describe("連線 factory 的 MONGODB_URI 接線", () => {
     jwtSecret: process.env.JWT_SECRET,
   };
   let appModule: Type;
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let databaseUri: string;
 
   beforeAll(async () => {
     let baseUri = originalEnv.uri;
     if (!baseUri) {
-      memoryServer = await MongoMemoryServer.create();
+      memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       baseUri = memoryServer.getUri();
     }
     databaseUri = buildDatabaseUri(baseUri, "cookhome-test-mongodb-uri");

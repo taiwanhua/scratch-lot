@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { type Db, type Document, MongoClient } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 export const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
 const TSX_CLI = path.join(
@@ -166,9 +166,9 @@ export function fixtureSourceRoot(...segments: string[]): string {
  */
 export const BASE_ONLY_REGISTRY = `--registry=${fixtureSourceRoot("seeds-base", "registry.ts")}`;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
 export class TestMongo {
-  private memoryServer: MongoMemoryServer | undefined;
+  private memoryServer: MongoMemoryReplSet | undefined;
   private baseUri = "";
   private readonly used: string[] = [];
 
@@ -179,7 +179,9 @@ export class TestMongo {
       this.baseUri = process.env.MONGODB_URI;
       return;
     }
-    this.memoryServer = await MongoMemoryServer.create();
+    this.memoryServer = await MongoMemoryReplSet.create({
+      replSet: { count: 1 },
+    });
     this.baseUri = this.memoryServer.getUri();
   }
 
