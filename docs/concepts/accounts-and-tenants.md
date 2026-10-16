@@ -44,7 +44,7 @@ refresh cookie 整個瀏覽器共用,所以「誰後登入,全部分頁跟著他
 - 不做 `storage` 事件退路。
 - 要同時用兩個帳號:開不同瀏覽器設定檔或無痕視窗。
 
-正本:`apps/admin/src/app/providers/MultiTabSession/`、`apps/admin/src/lib/auth/session-channel.ts`
+正本:`apps/admin/src/app/providers/MultiTabSession/`、`apps/admin/src/lib/base/auth/session-channel.ts`
 
 ## 組織樹與租戶
 

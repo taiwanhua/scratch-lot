@@ -84,7 +84,7 @@ token → userId
 
 - `@RequirePermission` 是單一 key。多選一(如上傳用途)由 resolver 自己查有效權限集合。
 
-正本:`apps/api/src/permission/permission.guard.ts`、`apps/api/src/permission/require-permission.decorator.ts`、`apps/admin/src/hooks/usePermissions.ts`
+正本:`apps/api/src/permission/permission.guard.ts`、`apps/api/src/permission/require-permission.decorator.ts`、`apps/admin/src/hooks/base/usePermissions.ts`
 
 ## abilities 的兩種語意
 

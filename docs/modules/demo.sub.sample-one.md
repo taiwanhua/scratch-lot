@@ -176,7 +176,7 @@ input DemoItemsOneInput {
 
 **只屬於這一頁的元件**:`SampleOnePage/SampleOneCategoryFilter.tsx`(工具列的分類 `Autocomplete`)、`SampleOneFormPage/SampleOneCategoryField.tsx`(表單的分類欄,含唯讀退化)、`FormTipsBlock.tsx` / `ItemHistoryBlock.tsx`(兩個 slot)、`SampleOneViewPage/AttachmentField.tsx`(私有附件現簽下載);分類選項的共用 hook 是 `pages/base/demo/useDemoCategoryOptions.ts`。
 
-**路由尾端的識別碼**:詳情與編輯頁的模組路由本身不含 `<id>`(seed 的 route 是 `view-page` / `edit-page`),所以殼的路由防守多一條退路 —— 精準比對落空時,**只對 hidden 模組**再試一次「去掉最後一段」(`lib/module-tree.ts` 的 `matchModuleRoute`),解出來的那一段以 `routeParam` 傳給頁面。link 頁(列表)後面多接一段仍然是無權限頁;「可進 = 有那個模組路由」這條規則沒有放寬。規則本文在 ADR-0011「路由防守 / 尾端動態參數的退路」。
+**路由尾端的識別碼**:詳情與編輯頁的模組路由本身不含 `<id>`(seed 的 route 是 `view-page` / `edit-page`),所以殼的路由防守多一條退路 —— 精準比對落空時,**只對 hidden 模組**再試一次「去掉最後一段」(`lib/base/module-tree.ts` 的 `matchModuleRoute`),解出來的那一段以 `routeParam` 傳給頁面。link 頁(列表)後面多接一段仍然是無權限頁;「可進 = 有那個模組路由」這條規則沒有放寬。規則本文在 ADR-0011「路由防守 / 尾端動態參數的退路」。
 
 **兩層判斷分開問**(ADR-0011):
 
@@ -191,7 +191,7 @@ input DemoItemsOneInput {
 
 **分類下拉的選項**來自 `fieldCategories` → `fields(categoryId)`,兩個端點都掛在 `system.field-manager.view` 底下。沒有那個權限時:列表不顯示分類篩選、表單的分類欄退成唯讀(保留原值並說明原因)。停用的選項不列入可選清單。
 
-正本:`apps/admin/src/pages/base/demo/`、`apps/admin/src/app/module-pages.tsx`、`apps/admin/src/lib/module-tree.ts`
+正本:`apps/admin/src/pages/base/demo/`、`apps/admin/src/app/module-pages.tsx`、`apps/admin/src/lib/base/module-tree.ts`
 
 ## 錯誤碼
 

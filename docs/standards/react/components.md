@@ -29,7 +29,7 @@
 2. URL 能表達的(頁碼、篩選、tab)→ URL(searchParams / router)。**admin 例外**:admin 有路由頁籤,`RouteTabs` 以 pathname 記頁籤、不處理 search,所以頁內篩選(頁碼、關鍵字、選中組織)留在頁面層的 `useState`,不進 URL。
 3. 只有單一元件用 → `useState`。
 4. 跨元件的用戶端狀態(登入狀態、語言、路由頁籤…)→ **zustand**:`stores/useXxxStore.ts`,需要跨重新整理保留的用 `persist` middleware(sessionStorage / localStorage 由該狀態的規則決定)。
-5. context **只剩注入用**(theme、QueryClient、Intl provider、`AuthSession` 實例),不承載會變的狀態;redux / 自刻 `useSyncExternalStore` store 不用。注入用的 context 物件**與它的 hook 同檔、放 `hooks/`**(`hooks/useSession.ts` 同時匯出 `SessionContext` 與 `useSession`),provider 元件放 `app/providers/`。
+5. context **只剩注入用**(theme、QueryClient、Intl provider、`AuthSession` 實例),不承載會變的狀態;redux / 自刻 `useSyncExternalStore` store 不用。注入用的 context 物件**與它的 hook 同檔、放 `hooks/`**(`hooks/base/useSession.ts` 同時匯出 `SessionContext` 與 `useSession`),provider 元件放 `app/providers/`。
 
 ```ts
 ✅ export const useLocaleStore = create<LocaleState>()(persist((set) => ({ … }), { name: adminStorageKeys.locale, storage: localeStorage }));
@@ -40,8 +40,8 @@
 
 **① 沿用既有 storage key 與格式時要保住舊格式**(`docs/branding.md` 登記的那些)。`persist` 預設寫 `{ state, version }` 的 JSON 封包,直接套上去會讓既存值失效、既有測試的 storage 斷言也會壞。先分辨既存格式是哪一種再決定怎麼寫:
 
-- **既存格式本來就是 `persist` 的 JSON 封包**(只是換了 storage 後端、換了 key、讀取時要多墊一層搬移)→ **只換 `StateStorage`**:自訂一個 `getItem` / `setItem` / `removeItem` 的三方法物件,用 `createJSONStorage(() => …)` 包起來交給 `persist`。序列化仍由 zustand 做,`version` / `migrate` 也照常運作。先例 `stores/useSideNavStore.ts`。
-- **既存格式不是 JSON 封包**(裸字串、自己手寫的格式)→ 才整份自訂 `PersistStorage<S>`(`getItem` 要自己回 `{ state, version }`),因為序列化的形狀根本對不上。先例 `stores/useLocaleStore.ts`(localStorage 存的是 `"en"` 這種語言代碼字串)與 `stores/useRouteTabsStore.ts`。
+- **既存格式本來就是 `persist` 的 JSON 封包**(只是換了 storage 後端、換了 key、讀取時要多墊一層搬移)→ **只換 `StateStorage`**:自訂一個 `getItem` / `setItem` / `removeItem` 的三方法物件,用 `createJSONStorage(() => …)` 包起來交給 `persist`。序列化仍由 zustand 做,`version` / `migrate` 也照常運作。先例 `stores/base/useSideNavStore.ts`。
+- **既存格式不是 JSON 封包**(裸字串、自己手寫的格式)→ 才整份自訂 `PersistStorage<S>`(`getItem` 要自己回 `{ state, version }`),因為序列化的形狀根本對不上。先例 `stores/base/useLocaleStore.ts`(localStorage 存的是 `"en"` 這種語言代碼字串)與 `stores/base/useRouteTabsStore.ts`。
 
 換句話說:`createJSONStorage` 管「存到哪」,`PersistStorage` 管「存成什麼形狀」;只有後者不對時才寫後者。
 

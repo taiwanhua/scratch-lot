@@ -188,7 +188,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 - **兩種視角不做兩套頁,全由資料決定**:`org(樹根).isSystem` 為真 = 操作者站在根組織(根組織視角),否則樹根就是租戶頂層(租戶視角)。加上手上有沒有 `tenant-ops` 那三筆權限,已足以決定畫面,不需要「我是不是超級管理員」這種旗標。Figma 87:3 / 92:694 只是同一支頁面的兩組資料。取 `org(樹根)` 時樹根沒被點掉就與選中的那一筆同一把 query key,不多發一次請求。
 - **「是不是租戶頂層」讀 `org.visibility !== null`**:api 只讓租戶頂層有 `visibility` 與 `ownerUserId`,前端不必自己數 `ancestors` 或比對樹的層數。
 - **「租戶」標籤只標父節點是平台根組織的節點**,不是「父節點是樹根」—— 租戶視角的樹根是租戶頂層,它的子組織不是租戶。實作上先以 `org(樹根).isSystem` 判斷「樹根就是平台根組織」,是的話它的直接子組織才掛標籤。停用的組織掛「停用」標籤。標籤走 `@repo/ui/tree` 的 `TreeNode.labelSuffix`(Figma Draft/OrgTreeItem 的 ShowTag 槽位),`label` 仍是純文字,搜尋與無障礙名稱不受影響;共用的 `OrgTreePicker` 以 `labelSuffixOf` 接出來。
-- **樹的葉節點在 admin 歸一化成 `children: undefined`**(`lib/org-tree.ts` 的 `toTreeNodes`):api 對葉節點回 `children: []`,而 `TreeNode.children` 的語意是「有沒有下一層」—— 不把「能不能展開」交給樹元件自己解讀。
+- **樹的葉節點在 admin 歸一化成 `children: undefined`**(`lib/base/org-tree.ts` 的 `toTreeNodes`):api 對葉節點回 `children: []`,而 `TreeNode.children` 的語意是「有沒有下一層」—— 不把「能不能展開」交給樹元件自己解讀。
 - **搬移是編輯彈窗裡的「上層組織」下拉,不是動作列上的按鈕**(Figma 88:182、help.md 沿用此說法);下拉文案用白話:「可以搬到你管理範圍內的任何組織底下,除了它自己和它底下的組織」。候選在前端先照三條規則濾過,api 仍會再驗一次。樹上有的就是管理範圍,所以「管理範圍內」= 在樹上走得到;「同租戶」的上限是**含自己的那一棵樹根**(管理範圍多根時 `orgTrail` 會找出是哪一棵),根組織視角要再往下一層取租戶頂層(`useMoveTargets.ts`)。租戶頂層自己的候選是空的 = 搬不動,與 api 的租戶頂層保護一致。
 - **根組織與租戶頂層的編輯彈窗不顯示「上層組織」下拉**:兩者都搬不動,而它原本的上層不在候選裡,渲染出來只是空白的下拉。租戶內的人編輯租戶頂層時,在那個位置改放租戶頂層提示(與停用 / 刪除按鈕同一句,樣式同欄位說明);根組織視角編輯租戶頂層時不放提示(那句話是對租戶內的人說的)。儲存時不送 `moveOrg`。
 - **編輯彈窗最多打六個 mutation**,依序 `updateOrg` → `moveOrg` → `transferOrgOwner` → `setOrgVisibility` → `setOrgTimezone` → `setOrgManagers`,**只送有變動的那幾個**(租戶短碼跟著 `updateOrg` 送)。任何一步失敗就停在那裡,前面已成功的不回滾 —— 它們各自是完整的動作、各自留了稽核;重新送出只會補上還沒做的那幾步。
@@ -205,7 +205,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 - **彈窗裡的第一個 `TextField`**:MUI 有一條 `.MuiDialogTitle-root + .MuiDialogContent-root { padding-top: 0 }`,特異度贏過 `sx` 的單一 class,浮動標籤會被標題壓住;`@repo/ui/dialog` 以 `&&` 拉高特異度處理掉。
 - **與設計稿的差異**:Figma 的資料區有「建立時間」一列,`org(id)` 沒有這個欄位,故未做;可見範圍在 Figma 是核取方塊,依本檔與 ADR-0005 的說法改用開關(`Switch`)。
 
-正本:`apps/admin/src/pages/base/system/OrgManagerPage/`(`useOrgManagerData.ts`、`useMoveTargets.ts`、`useTenantOwner.ts`、`OrgDetailPanel/`、`MembersTab/`、`EditOrgDialog/`、`ProvisionTenantDialog/`、`RevokeProvisionDialog.tsx`)、`apps/admin/src/lib/org-tree.ts`、`apps/admin/src/components/OrgTreePicker/OrgTreePicker.tsx`
+正本:`apps/admin/src/pages/base/system/OrgManagerPage/`(`useOrgManagerData.ts`、`useMoveTargets.ts`、`useTenantOwner.ts`、`OrgDetailPanel/`、`MembersTab/`、`EditOrgDialog/`、`ProvisionTenantDialog/`、`RevokeProvisionDialog.tsx`)、`apps/admin/src/lib/base/org-tree.ts`、`apps/admin/src/components/base/OrgTreePicker/OrgTreePicker.tsx`
 
 ## 錯誤碼
 

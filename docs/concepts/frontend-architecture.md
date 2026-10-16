@@ -24,18 +24,20 @@
 ```
 app/        組裝層:路由、守門、殼、providers(不含業務內容)
 pages/      base/ 放底座頁,project/ 放專案頁;各自依功能分目錄
-components/ 跨頁共用元件(含 base/crud/、表單引擎、流程元件)
-hooks/      跨頁共用 hook
-stores/     zustand store
-lib/        純函式與基礎設施(auth、module-tree、route-tabs、form-engine、workflow…)
+components/ 跨頁共用元件:base/(crud/、表單引擎、流程元件、選擇器…)、project/(專案元件)
+hooks/      跨頁共用 hook:base/、project/
+stores/     zustand store:base/、project/
+lib/        純函式與基礎設施:base/(auth、module-tree、route-tabs、form-engine、workflow…)、project/
 test/       測試支援
 ```
 
 - import 只能往下。
 - 殼(`AdminShell`)不是頁面,住 `app/`。
-- `pages/base/` 保留底座的登入、治理、示範與申請中心頁;專案新增或客製頁放 `pages/project/`。其他層的既有共用內容由底座維護,專案內容放各層的 `project/`,不另建頂層 `src/project/` 繞過分層。
+- `components/`、`hooks/`、`stores/`、`lib/` 底下只有 `base/` 與 `project/` 兩個子目錄:`base/` 是底座維護的共用內容,`project/` 放專案內容;層的根目錄不放檔案,也不另建頂層 `src/project/` 繞過分層。
+- `pages/base/` 保留底座的登入、治理、示範與申請中心頁;專案新增或客製頁放 `pages/project/`。
+- 專案元件放 `components/project/`,用元件測試驗證、不進 Storybook;`@repo/ui` 只放底座的底層元件(STRUCT-02)。
 - 專案頁使用共用的 components/hooks/lib,不 import 底座頁內部。固定欄位 CRUD 共版型在 `components/base/crud/`,底座與專案頁都可使用。
-- 底座不可反向 import 專案來源;只有頁面組裝入口 `app/module-pages.tsx` 與 help 組裝入口 `lib/help-registry.ts` 讀兩方來源。`src/test/**` 只豁免這項所有權限制,分層與循環依賴檢查仍適用。
+- 底座不可反向 import 專案來源;只有頁面組裝入口 `app/module-pages.tsx` 與 help 組裝入口 `lib/base/help-registry.ts` 讀兩方來源。`src/test/**` 只豁免這項所有權限制,分層與循環依賴檢查仍適用。
 
 正本:`apps/admin/src/`、`docs/standards/general/structure.md` STRUCT-03
 
@@ -45,21 +47,21 @@ test/       測試支援
 
 | 區塊      | 做什麼                                                                                                                                                                                              | 程式                                                             |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/useSideNavStore.ts`           |
+| SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/base/useSideNavStore.ts`      |
 | AppBar    | 頁名、「?」模組說明、當前組織切換器、頭像選單                                                                                                                                                       | `app/AdminShell/AppBar/`                                         |
-| RouteTabs | 開過的路由各一個頁籤;可關閉、可拖曳排序、鍵盤可操作                                                                                                                                                 | `app/AdminShell/RouteTabs/`、`stores/useRouteTabsStore.ts`       |
+| RouteTabs | 開過的路由各一個頁籤;可關閉、可拖曳排序、鍵盤可操作                                                                                                                                                 | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
 | 內容區    | `<main>`:高度由殼給、自己捲動;有最小寬度                                                                                                                                                            | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
 
 - 殼的設計稿節點登記在 `docs/branding.md`。
 
-正本:`apps/admin/src/app/AdminShell/`、`apps/admin/src/lib/module-tree.ts` 的 `buildNavTree`
+正本:`apps/admin/src/app/AdminShell/`、`apps/admin/src/lib/base/module-tree.ts` 的 `buildNavTree`
 
 ### 側欄
 
 - **兩種寬度**:展開 240px、收合成 64px 圖示列(`NavRail`)。收合態的群組以浮層展開子項;圖示格的提示就是模組名稱(REACT-10 的例外)。
 - 收合狀態存 localStorage,是這台瀏覽器的偏好,不分使用者。
 - 側欄只有模組樹那一格捲動,底部的收合開關永遠看得到。
-- **待辦數(badges)**:`ShellLayout` 傳入「模組 key → 數字」,數字大於 0 才顯示;展開態畫數字(`@repo/ui/badge`)、收合態畫小圓點。目前只有申請中心一項:待我處理的任務數,來自 `applyCenterCounts`(`hooks/useApplyCenterCounts.ts`)。沒有申請中心檢視權限時不發請求。進站取一次,之後由送出、審核、改派、撤回、作廢、刪除這些寫入主動失效重查,不輪詢。
+- **待辦數(badges)**:`ShellLayout` 傳入「模組 key → 數字」,數字大於 0 才顯示;展開態畫數字(`@repo/ui/badge`)、收合態畫小圓點。目前只有申請中心一項:待我處理的任務數,來自 `applyCenterCounts`(`hooks/base/useApplyCenterCounts.ts`)。沒有申請中心檢視權限時不發請求。進站取一次,之後由送出、審核、改派、撤回、作廢、刪除這些寫入主動失效重查,不輪詢。
 
 ### 內容區的寬度與內距
 
@@ -86,20 +88,20 @@ test/       測試支援
 | 專案新增 | `project/additions/`    | 底座沒有同 key 說明時新增專屬內容           |
 | 專案替換 | `project/replacements/` | 替換已存在的底座說明,底座原檔保留           |
 
-`lib/help-registry.ts` 是唯一 Vite glob 入口,用三份 `eager: true`、`?raw` glob 讀取原文,交給 `lib/module-help.ts` 的純函式 `composeHelpRegistry` 合成。重複 key、新增撞底座、替換不存在的底座 key、重複或空白替換都會失敗。替換的是 help key,不要求有同 key 的頁面登記。
+`lib/base/help-registry.ts` 是唯一 Vite glob 入口,用三份 `eager: true`、`?raw` glob 讀取原文,交給 `lib/base/module-help.ts` 的純函式 `composeHelpRegistry` 合成。重複 key、新增撞底座、替換不存在的底座 key、重複或空白替換都會失敗。替換的是 help key,不要求有同 key 的頁面登記。
 
 殼只經 `moduleHelpMarkdown(module)` 取內容:先專屬說明,`FORM` 模組再退到 `form-module`,最後才是沒有內容。客製替換頁未另放說明時,原版說明仍可使用;若底座只有通用說明,專案專屬檔應放 `additions/`。
 
 `scripts/check-help-bundle.mjs` 掃描三個來源,保留 `.md` 錯命名檢查與必備底座通用檔檢查;專案目錄可空。建置與 Docker 都要驗證原文進入 bundle。bundle 有文字只證明收檔,替換內容是否真的顯示仍由 HelpButton 測試驗證。
 
-正本:`apps/admin/src/lib/help-registry.ts`、`apps/admin/src/lib/module-help.ts`、`apps/admin/scripts/check-help-bundle.mjs`
+正本:`apps/admin/src/lib/base/help-registry.ts`、`apps/admin/src/lib/base/module-help.ts`、`apps/admin/scripts/check-help-bundle.mjs`
 
 ### 外觀(跟隨系統 / 亮 / 暗)
 
 - 預設跟隨系統。選擇由 `@repo/ui` 的 `AppThemeProvider` 存 localStorage(`useColorMode` 讀寫,STYLE-04);另存亮 / 暗各用哪組配色。
-- **首幀腳本**:React 起來前先依 localStorage 把 `<html>` 的 class 設成 `light` / `dark`,重新整理時不會先閃亮色。腳本在 `lib/color-mode-init.ts`,由 `vite.config.ts` / `vite.mock.config.ts` 以 `transformIndexHtml` 注入 `index.html` 的 `<head>`;與 `AppThemeProvider` 用同一組 key 常數(`lib/color-mode.ts`)。不用 MUI 的 `InitColorSchemeScript`,因為 React 插入的內嵌 script 不會執行。
+- **首幀腳本**:React 起來前先依 localStorage 把 `<html>` 的 class 設成 `light` / `dark`,重新整理時不會先閃亮色。腳本在 `lib/base/color-mode-init.ts`,由 `vite.config.ts` / `vite.mock.config.ts` 以 `transformIndexHtml` 注入 `index.html` 的 `<head>`;與 `AppThemeProvider` 用同一組 key 常數(`lib/base/color-mode.ts`)。不用 MUI 的 `InitColorSchemeScript`,因為 React 插入的內嵌 script 不會執行。
 
-正本:`apps/admin/src/lib/color-mode.ts`、`apps/admin/src/lib/color-mode-init.ts`、`packages/ui/src/AppThemeProvider/`
+正本:`apps/admin/src/lib/base/color-mode.ts`、`apps/admin/src/lib/base/color-mode-init.ts`、`packages/ui/src/AppThemeProvider/`
 
 ## 守門與路由
 
@@ -132,9 +134,9 @@ test/       測試支援
 
 ### 表單設定的注入
 
-`ModulePageSource.forms` 同時供應預設四頁與模組 options,不另外維護 key 清單。純函式 `lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 產生唯讀設定表;`formModulePages(moduleKey)` 只產生四個懶載入預設元件,不在載入時修改全域 Map。替換底座表單頁會保留原模組 options。
+`ModulePageSource.forms` 同時供應預設四頁與模組 options,不另外維護 key 清單。純函式 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 產生唯讀設定表;`formModulePages(moduleKey)` 只產生四個懶載入預設元件,不在載入時修改全域 Map。替換底座表單頁會保留原模組 options。
 
-`app/providers/RootProviders.tsx` 讀取固定入口的設定表,以既有 `AppProviders` 包住 `FormModuleOptionsProvider`。正式 `App.tsx` 與 `test/test-app.tsx` 共用這個入口。依 REACT-02,context 與 `useFormModuleOptions(moduleKey)` 同檔放在 `hooks/useFormModuleOptions.ts`,Provider 放在 `app/providers/FormModuleOptionsProvider.tsx`;components 往下用 hook,不反向 import app。
+`app/providers/RootProviders.tsx` 讀取固定入口的設定表,以既有 `AppProviders` 包住 `FormModuleOptionsProvider`。正式 `App.tsx` 與 `test/test-app.tsx` 共用這個入口。依 REACT-02,context 與 `useFormModuleOptions(moduleKey)` 同檔放在 `hooks/base/useFormModuleOptions.ts`,Provider 放在 `app/providers/FormModuleOptionsProvider.tsx`;components 往下用 hook,不反向 import app。
 
 Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provider 則明確報接線錯誤。一般元件測試經 test-app 或 hooks 層的 context 注入。表單自身模板優先於模組模板,申請中心詳情也讀同一份設定;模板細節見[forms](../modules/forms.md#頁籤--標題模板)。
 
@@ -154,7 +156,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - 群組路由與 `/` 是同一個函式 `firstLinkRoute`,只差起點。
 - 「總覽」是正式模組(`overview`),由角色授權。
 
-正本:`apps/admin/src/lib/module-tree.ts` 的 `enterableRouteMap` / `matchModuleRoute` / `firstLinkRoute`、`docs/testing/permission-scenarios.md` 劇本 7 / 13
+正本:`apps/admin/src/lib/base/module-tree.ts` 的 `enterableRouteMap` / `matchModuleRoute` / `firstLinkRoute`、`docs/testing/permission-scenarios.md` 劇本 7 / 13
 
 ## 頁籤兩種
 
@@ -168,18 +170,18 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - 帶識別碼的詳情 / 編輯頁是**詳情子頁籤**:每筆一個,標籤「所屬模組名 — 項目名」。項目名由頁面拿到資料後經 `useRouteTabItemLabel` 提供,殼不查業務資料。
 - 項目名最前面接頁面種類(「檢視・項目名」「編輯・項目名」),同一筆的詳情與編輯分得出來。組法是字典 `admin.formEngine.pages.tabLabelWithAction`,文字是 `admin.formEngine.pages.actions`:
   - 固定欄位模組:頁面把頁面種類傳給 `useRouteTabItemLabel` 的第二個參數(`"view"` / `"edit"`),由它組。
-  - 表單模組與申請中心詳情:項目名由頁籤模板算出(`lib/form-engine/tab-label.ts` 的 `renderTabLabel`,模板沒寫 `{{action}}` 時自動接在最前面),呼叫端傳組好的字串、不給第二個參數;見 `docs/modules/forms.md`。
-- 刪除成功後,那一筆的詳情與編輯子頁籤一起關掉(以 `<隱藏頁路由>/<id>` 網址前綴比對,別筆不動):在詳情頁刪除 → 導向所屬模組的列表頁(沒綁列表頁 → 導向 `/`,與關掉最後一個頁籤的落點一致);從列表刪除 → 當前頁籤不變。做法是 `useRouteTabsStore` 的 `closeItemTabs`,各刪除流程成功後經 `hooks/useCloseItemTabs` 呼叫,不自己導向列表。
+  - 表單模組與申請中心詳情:項目名由頁籤模板算出(`lib/base/form-engine/tab-label.ts` 的 `renderTabLabel`,模板沒寫 `{{action}}` 時自動接在最前面),呼叫端傳組好的字串、不給第二個參數;見 `docs/modules/forms.md`。
+- 刪除成功後,那一筆的詳情與編輯子頁籤一起關掉(以 `<隱藏頁路由>/<id>` 網址前綴比對,別筆不動):在詳情頁刪除 → 導向所屬模組的列表頁(沒綁列表頁 → 導向 `/`,與關掉最後一個頁籤的落點一致);從列表刪除 → 當前頁籤不變。做法是 `useRouteTabsStore` 的 `closeItemTabs`,各刪除流程成功後經 `hooks/base/useCloseItemTabs` 呼叫,不自己導向列表。
 - 要能分享、重整回得來、出現在頁籤列 → 做成(隱藏頁)路由。只是同一筆資料的不同面向 → 頁內頁籤。
 
-正本:`apps/admin/src/lib/route-tabs.ts`、`apps/admin/src/stores/useRouteTabsStore.ts`、`apps/admin/src/app/AdminShell/RouteTabs/useRouteTabs.ts`、`apps/admin/src/hooks/useRouteTabItemLabel.ts`、`apps/admin/src/hooks/useCloseItemTabs.ts`
+正本:`apps/admin/src/lib/base/route-tabs.ts`、`apps/admin/src/stores/base/useRouteTabsStore.ts`、`apps/admin/src/app/AdminShell/RouteTabs/useRouteTabs.ts`、`apps/admin/src/hooks/base/useRouteTabItemLabel.ts`、`apps/admin/src/hooks/base/useCloseItemTabs.ts`
 
 ## 頁內權限判斷
 
 - `usePermissions().hasPermission(key)`:`me.modules` 的 permissions 組成集合,判斷規則來自 `@repo/domain/permission`。
 - 業務模組的 `item.abilities` 直接讀,不與 `usePermissions` 相乘;治理模組的 `Role.abilities` 要相乘。見 `docs/concepts/authorization.md`「abilities 的兩種語意」。
 
-正本:`apps/admin/src/hooks/usePermissions.ts`、`packages/domain/src/permission/keys.ts`
+正本:`apps/admin/src/hooks/base/usePermissions.ts`、`packages/domain/src/permission/keys.ts`
 
 ## 表格兩種
 
@@ -212,13 +214,13 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 ## 操作結果提示(Snackbar)
 
 - 每支 mutation 都經 `useMutationFeedback`:成功或失敗各跳一則。
-- 狀態在 `stores/useSnackbarStore`;`AppProviders` 裡的 `SnackbarProvider` 是全站唯一出口。
+- 狀態在 `stores/base/useSnackbarStore`;`AppProviders` 裡的 `SnackbarProvider` 是全站唯一出口。
 - 長度 1 的佇列:只顯示最新一則,舊的直接被取代。
 - 一次操作只跳一則;多步流程自己在最後呼叫一次。
 - 成功文案 key:`<ns>.feedback.<action>Success`。失敗文案用該頁的錯誤解讀(回 `AdminError`)。
 - 彈窗開著時 Snackbar 被 `aria-hidden`,由 `SnackbarAnnouncer` 以 `role="status"` 補念。
 
-正本:`apps/admin/src/hooks/useMutationFeedback.ts`、`apps/admin/src/app/providers/SnackbarProvider.tsx`、`apps/admin/src/lib/errors.ts`、`docs/standards/react/data-fetching.md` DATA-06
+正本:`apps/admin/src/hooks/base/useMutationFeedback.ts`、`apps/admin/src/app/providers/SnackbarProvider.tsx`、`apps/admin/src/lib/base/errors.ts`、`docs/standards/react/data-fetching.md` DATA-06
 
 ## 快取規則
 
@@ -232,7 +234,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 - 禁止整站 refetch 或重新整理頁面來同步資料。
 - 登出或換人:清 react-query 快取(見 `docs/concepts/accounts-and-tenants.md`「多分頁」)。
 
-正本:`apps/admin/src/hooks/useMe.ts`、`docs/standards/react/data-fetching.md` DATA-02 / DATA-04
+正本:`apps/admin/src/hooks/base/useMe.ts`、`docs/standards/react/data-fetching.md` DATA-02 / DATA-04
 
 ## zustand store 與瀏覽器儲存
 

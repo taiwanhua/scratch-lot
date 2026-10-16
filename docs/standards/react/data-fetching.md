@@ -9,9 +9,9 @@ query / mutation 一律透過 codegen 產生的 `useXxxQuery` / `useXxxMutation`
 ❌ const data = await client.request(`query { moduleTree { id } }`);
 ```
 
-admin 傳給 hook 的 client 有兩個(`apps/admin/src/lib/auth/`):**`session.client`** 給登入後的查詢(自動帶 access token、`TOKEN_EXPIRED` 時靜默換票重送一次、`UNAUTHENTICATED` 清狀態導登入頁)、**`session.publicClient`** 只給 `login` / `refresh` / 密碼流程這幾個公開端點。拿錯 client 會在登入頁無限轉圈或已登入頁被當成沒登入。
+admin 傳給 hook 的 client 有兩個(`apps/admin/src/lib/base/auth/`):**`session.client`** 給登入後的查詢(自動帶 access token、`TOKEN_EXPIRED` 時靜默換票重送一次、`UNAUTHENTICATED` 清狀態導登入頁)、**`session.publicClient`** 只給 `login` / `refresh` / 密碼流程這幾個公開端點。拿錯 client 會在登入頁無限轉圈或已登入頁被當成沒登入。
 
-登入者資料一律經 `hooks/useMe.ts` 的 `useMe()`(`me` query 的唯一包裝,`staleTime: Infinity`、**`retryOnMount: false`**)。`retryOnMount` 必須關:`me` 失敗(如 token 失效)後 `RequireAuth` 會導向登入頁並重新掛載,預設 `retryOnMount: true` 會在掛載時再打一次 → 再失敗 → 再導向,形成無限迴圈。其他「失敗就導向」的查詢比照。正本:`apps/admin/src/hooks/useMe.ts`、`apps/admin/src/lib/auth/`
+登入者資料一律經 `hooks/base/useMe.ts` 的 `useMe()`(`me` query 的唯一包裝,`staleTime: Infinity`、**`retryOnMount: false`**)。`retryOnMount` 必須關:`me` 失敗(如 token 失效)後 `RequireAuth` 會導向登入頁並重新掛載,預設 `retryOnMount: true` 會在掛載時再打一次 → 再失敗 → 再導向,形成無限迴圈。其他「失敗就導向」的查詢比照。正本:`apps/admin/src/hooks/base/useMe.ts`、`apps/admin/src/lib/base/auth/`
 
 ## DATA-02 query key 交給 codegen,不自創字串
 
@@ -72,7 +72,7 @@ GraphQL endpoint 一律讀環境變數(front:`NEXT_PUBLIC_GRAPHQL_ENDPOINT`;admi
 
 (理由:沒有這條時,成功沒有任何回饋、失敗只顯示在表單上,使用者無從確認操作結果。)
 
-admin 的每一支 mutation 都要有操作結果提示,做法固定:`apps/admin/src/hooks/useMutationFeedback.ts`
+admin 的每一支 mutation 都要有操作結果提示,做法固定:`apps/admin/src/hooks/base/useMutationFeedback.ts`
 回傳的 `{ onSuccess, onError }` 直接塞進 codegen mutation hook 的 options,**它包住呼叫端原本的
 callback、不取代**(DATA-04 的寫回與失效、關彈窗照舊在裡面)。
 
@@ -101,7 +101,7 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   同一支端點兩種說法(啟用 / 停用)就給一個吃 payload 的函式,不要各寫一個 mutation。
 - **失敗文案用該頁既有的錯誤解讀**(`<ns>ErrorOf(error)` + `errors.<code>`),不要在提示裡另起一套;
   **表單 / 彈窗內原本的錯誤顯示保留** —— 欄位級標示講「哪裡要改」,Snackbar 講「這次沒成功」。
-  **錯誤解讀的回傳形狀只有一種**:`<ns>ErrorOf` 一律回 `apps/admin/src/lib/errors.ts`
+  **錯誤解讀的回傳形狀只有一種**:`<ns>ErrorOf` 一律回 `apps/admin/src/lib/base/errors.ts`
   的 `AdminError`(`{ code, reason?, reasons?, fields?, path?, message? }`,選填欄位沒有就缺席),
   各頁的 `*-error.ts` 只宣告碼表 / 原因白名單交給 `parseAdminError`,不再各自解析 `extensions`;
   `message` 是 api 的原文,只供除錯,不拿來顯示。
@@ -117,7 +117,7 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   兩支的 `error` 都回 `null`;送出成功仍照跳。
 
 排隊策略是**長度 1 的佇列:只顯示最新的一則,舊的直接被取代**(正本寫在
-`apps/admin/src/stores/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc)——
+`apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc)——
 這是操作回饋不是通知中心,連續送出時使用者要看的是最後那一次的結果。
 全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`。
 

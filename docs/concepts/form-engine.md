@@ -119,7 +119,7 @@ export const projectModulePages: ModulePageSource = {
 
 要客製的是**底座既有表單頁**時,改在 `app/project/page-replacements.ts` 寫明目標,不把相同 moduleKey 再加進專案 `forms`。底座原版與 options 保留,移除替換即可還原頁面。登記或換 Page 都不改 `me.modules` 的路由與授權;碰撞與替換規則見[前端架構](frontend-architecture.md#頁面登記與客製替換)。
 
-options 由 `lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
+options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
 
 | 零件                                                    | 做什麼                                                                          |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -138,4 +138,4 @@ options 由 `lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptio
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
 
-正本:`apps/admin/src/components/form-engine/`、`apps/admin/src/lib/form-engine/`、`apps/admin/src/hooks/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`
+正本:`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`、`apps/admin/src/hooks/base/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`

@@ -31,7 +31,7 @@ admin 的三個常數與底座頁面來源在 `apps/admin/src/app/base/module-pa
 | `<key>.edit-page`   | 編輯 | hidden      | `<路由>/edit-page/<id>`        | 僅 `*`   |
 
 - 新增頁網址最後一段是**表單 key**:此刻可新增的表單只有一張時列表的新增鈕直接進,多張時先跳選單;網址沒帶表單 key 時同樣處理。
-- 四頁由純函式 `formModulePages(moduleKey)` 產生,元件在 `apps/admin/src/components/form-engine/FormModulePages/`;頁籤 / 標題從 `RootProviders` 注入的設定讀取,三個示範均未另給 options,沿用預設模組層模板(見 [forms「頁籤 / 標題模板」](./forms.md#頁籤--標題模板))。
+- 四頁由純函式 `formModulePages(moduleKey)` 產生,元件在 `apps/admin/src/components/base/form-engine/FormModulePages/`;頁籤 / 標題從 `RootProviders` 注入的設定讀取,三個示範均未另給 options,沿用預設模組層模板(見 [forms「頁籤 / 標題模板」](./forms.md#頁籤--標題模板))。
 - 新增專案表單模組寫 `app/project/module-pages.ts` 的 `forms`,單頁客製使用 `pageOverrides`;要客製這三個底座示範的既有頁,則在 `app/project/page-replacements.ts` 明確替換目標,保留底座宣告與原頁。兩種情境都不靠重複 key 覆蓋,範例見[表單引擎](../concepts/form-engine.md#前端引擎零件與預設組裝)。
 
 ## 權限表
@@ -63,4 +63,4 @@ admin 的三個常數與底座頁面來源在 `apps/admin/src/app/base/module-pa
 
 三個示範表單都沒有專屬說明檔,「?」用表單模組通用說明 `apps/admin/src/md/module-help/base/form-module.help.md`(含審核流程;彈窗標題是各自的模組名)。表單模組不必各放一份說明;專案有特殊需求時,在 `md/module-help/project/additions/<模組 key>.help.md` 新增專屬檔即可,專屬檔優先。
 
-只有替換已存在的底座說明 key 才放 `project/replacements/`,原檔仍保留;客製頁未另放說明時沿用原本的通用說明。三來源由 `apps/admin/src/lib/help-registry.ts` 打包與組裝,專屬 → 表單通用的查詢規則在 `lib/module-help.ts` 的 `resolveModuleHelp`;詳見[前端架構](../concepts/frontend-architecture.md#模組說明的來源與替換)。
+只有替換已存在的底座說明 key 才放 `project/replacements/`,原檔仍保留;客製頁未另放說明時沿用原本的通用說明。三來源由 `apps/admin/src/lib/base/help-registry.ts` 打包與組裝,專屬 → 表單通用的查詢規則在 `lib/base/module-help.ts` 的 `resolveModuleHelp`;詳見[前端架構](../concepts/frontend-architecture.md#模組說明的來源與替換)。

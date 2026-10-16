@@ -141,16 +141,16 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 ## admin 頁面
 
-左清單(搜尋 + 分頁)+ 右頁籤(權限矩陣 / 分配使用者)。勾選連動一律呼叫 `@repo/domain/permission`,顯示與計算餵同一棵 `roleMatrix.modules`;前端不自己拼樹、不自己算防越權。換算的薄殼在 `apps/admin/src/lib/role-matrix-208.ts`。
+左清單(搜尋 + 分頁)+ 右頁籤(權限矩陣 / 分配使用者)。勾選連動一律呼叫 `@repo/domain/permission`,顯示與計算餵同一棵 `roleMatrix.modules`;前端不自己拼樹、不自己算防越權。換算的薄殼在 `apps/admin/src/lib/base/role-matrix-208.ts`。
 
 **未儲存離開**:矩陣有未送出的勾選時,離開前要問。「離開」有兩類,分兩路接:
 
 - **切頁籤、換選角色**:頁面自己攔,跳「放棄變更」確認彈窗。
-- **關分頁、重新整理、上一頁**:交給 `beforeunload`,用瀏覽器自己的提示(文案不可控,只求不靜默丟失;`hooks/useUnsavedGuard.ts`)。
+- **關分頁、重新整理、上一頁**:交給 `beforeunload`,用瀏覽器自己的提示(文案不可控,只求不靜默丟失;`hooks/base/useUnsavedGuard.ts`)。
 
 儲存成功後只精準 invalidate 該角色的 `RoleMatrix` 與 `Roles`(DATA-02 / 04),不整頁重抓。
 
-**`shrinkOnly` 與 `ceiling` 的前端鎖**:兩把鎖疊在同一組 `disabledCheckIds` 上(`useRoleMatrix` 的 `lockedIds`),算法同一支(`lib/role-matrix-208.ts` 的 `rowIdsOutside`:一份授予展開後涵蓋不到的列):
+**`shrinkOnly` 與 `ceiling` 的前端鎖**:兩把鎖疊在同一組 `disabledCheckIds` 上(`useRoleMatrix` 的 `lockedIds`),算法同一支(`lib/base/role-matrix-208.ts` 的 `rowIdsOutside`:一份授予展開後涵蓋不到的列):
 
 - `RoleMatrixPayload.ceiling` 非 null(= 預設角色)→ 鎖**天花板外的列**並顯示「以系統內建的角色範本為上限」;**root 也鎖**。
 - `RoleMatrixPayload.shrinkOnly` 為 true(= 非 root 的預設角色)→ 再鎖**目前沒有勾的列**並顯示「只能縮不能擴」。
@@ -169,7 +169,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 ### 角色選單怎麼分辨同名角色
 
-三個地方列角色:資料範圍頁的套用對象「指定角色」、使用者頁的「指派角色」、角色管理頁的左清單。每個租戶都有自己的「租戶管理員」,根組織視角只看角色名稱完全分不出來,所以兩層一起上,共用純函式 `apps/admin/src/lib/role-options.ts`:
+三個地方列角色:資料範圍頁的套用對象「指定角色」、使用者頁的「指派角色」、角色管理頁的左清單。每個租戶都有自己的「租戶管理員」,根組織視角只看角色名稱完全分不出來,所以兩層一起上,共用純函式 `apps/admin/src/lib/base/role-options.ts`:
 
 - 每一列「**角色名稱**」為主文字、「**擁有組織**」為次文字(選單裡是兩行;角色管理頁的左清單是單行,用 `roleOptionLabel` 接成「名稱 — 擁有組織」)。
 - 跨兩個以上群組時才**分組**;只有一組時不分組 —— 只有一組的標題是雜訊。判斷與取值是兩個函式,因為 MUI 的 `groupBy` 只要給了就一定畫標題;角色管理頁的左清單自己畫分段,另用 `groupRoleOptions` 取巢狀結構。
@@ -186,7 +186,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 **為什麼不統一**:兩套回答的是不同問題。資料範圍頁在挑「這條規則要套用給誰」,**組織的粒度**才有意義(同一個租戶底下的南港店角色與內湖店角色要分得開);另外兩處只要能**分辨同名角色**,租戶頂層那一層就夠了,再往下切會讓單一租戶的畫面冒出一堆只有一列的標題。兩套共用同一份排序與「只有一組就不分組」的原則,所以不是兩套邏輯、只是兩個分組鍵。`shouldGroupXxx` 與 `roleXxxGroupNameOf` 一律**成對使用**。
 
-正本:`apps/admin/src/pages/base/system/RoleManagerPage/`(`useRoleMatrix.ts`、`role-manager-types.ts`、`RoleDetailPanel/DetailTabs.tsx`、`AssignUsersTab/AddUsersDialog.tsx`、`RoleListPanel/`)、`apps/admin/src/lib/role-matrix-208.ts`、`apps/admin/src/lib/role-options.ts`、`apps/admin/src/hooks/useUnsavedGuard.ts`
+正本:`apps/admin/src/pages/base/system/RoleManagerPage/`(`useRoleMatrix.ts`、`role-manager-types.ts`、`RoleDetailPanel/DetailTabs.tsx`、`AssignUsersTab/AddUsersDialog.tsx`、`RoleListPanel/`)、`apps/admin/src/lib/base/role-matrix-208.ts`、`apps/admin/src/lib/base/role-options.ts`、`apps/admin/src/hooks/base/useUnsavedGuard.ts`
 
 ## 錯誤碼
 
@@ -218,7 +218,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 - api:`apps/api/src/roles/roles.test.ts`、`role-kinds.test.ts`、`role-matrix.test.ts`、`role-matrix-tenant-owner.test.ts`、`role-users.test.ts`(共用 `roles-test-support.ts`)
 - 矩陣純函式:`packages/domain/src/permission/matrix.test.ts`(案名對應 M-01〜M-10)
-- admin:`apps/admin/src/pages/base/system/RoleManagerPage/RoleManagerPage.test.tsx`、`RoleManagerMatrix.test.tsx`、`RoleManagerUsers.test.tsx`(共用 `role-manager-test-support.ts`)、`apps/admin/src/lib/role-matrix-208.test.ts`
+- admin:`apps/admin/src/pages/base/system/RoleManagerPage/RoleManagerPage.test.tsx`、`RoleManagerMatrix.test.tsx`、`RoleManagerUsers.test.tsx`(共用 `role-manager-test-support.ts`)、`apps/admin/src/lib/base/role-matrix-208.test.ts`
 - 劇本(`docs/testing/permission-scenarios.md`):劇本 1 wildcard 涵蓋未來、劇本 8 組織外、劇本 10 防越權;E2E 為 `apps/e2e/src/specs/scenario-01-wildcard.spec.ts`、`scenario-08-out-of-scope.spec.ts`、`scenario-10-out-of-reach.spec.ts`
 
 正本:`apps/api/src/roles/`、`packages/domain/src/permission/`、`apps/admin/src/pages/base/system/RoleManagerPage/`、`apps/e2e/src/specs/`、`docs/testing/permission-scenarios.md`

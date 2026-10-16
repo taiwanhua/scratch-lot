@@ -32,7 +32,7 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 
 設計器不讓使用者自由拉線:admin 以「段落串」(主線關卡 / 一組分流)編輯,存檔時才產生 `steps` / `edges`,形狀本身就守住上面的規則;節點位置自動排版。設計器細節見 `docs/modules/workflows.md`「admin 頁面」。
 
-正本:`packages/domain/src/workflow/graph.ts`、`validate-structure.ts`、`apps/admin/src/lib/workflow/flow-model.ts`
+正本:`packages/domain/src/workflow/graph.ts`、`validate-structure.ts`、`apps/admin/src/lib/base/workflow/flow-model.ts`
 
 ## 送出:從提交到實例
 
@@ -106,7 +106,7 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 
 ## 前端怎麼組
 
-- 審核區塊(`apps/admin/src/components/workflow/ApprovalSection/`)在表單模組的預設詳情頁掛在提交內容下方(客製頁自己放),申請中心詳情頁也用它:關卡 / 分支進度、我的任務動作、申請人的撤回 / 作廢 / 複製為新單、時間軸、重試推進。
+- 審核區塊(`apps/admin/src/components/base/workflow/ApprovalSection/`)在表單模組的預設詳情頁掛在提交內容下方(客製頁自己放),申請中心詳情頁也用它:關卡 / 分支進度、我的任務動作、申請人的撤回 / 作廢 / 複製為新單、時間軸、重試推進。
 - 流程設計器、阻擋清單、申請中心、表單管理的流程綁定欄的頁面細節見 `docs/modules/workflows.md`「admin 頁面」。
 
 ## 不用交易
