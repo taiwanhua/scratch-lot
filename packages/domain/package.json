@@ -88,6 +88,16 @@
         "types": "./dist/cjs/seed.d.cts",
         "default": "./dist/cjs/seed.cjs"
       }
+    },
+    "./realtime": {
+      "import": {
+        "types": "./dist/es/realtime.d.ts",
+        "default": "./dist/es/realtime.js"
+      },
+      "require": {
+        "types": "./dist/cjs/realtime.d.cts",
+        "default": "./dist/cjs/realtime.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -115,6 +125,9 @@
       ],
       "seed": [
         "./dist/es/seed.d.ts"
+      ],
+      "realtime": [
+        "./dist/es/realtime.d.ts"
       ]
     }
   },

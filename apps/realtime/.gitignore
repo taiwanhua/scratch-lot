@@ -1,0 +1,3 @@
+# wrangler dev 的本機狀態與本機密鑰(值不入版控;範本見 .dev.vars.example)
+.wrangler/
+.dev.vars
