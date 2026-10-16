@@ -14,7 +14,16 @@ export const REALTIME_FIELD_MAX_LENGTH = 128;
 
 const TOPIC_PATTERN = /^(user|print-agent|board):[\w-]+$/;
 const SIGNAL_TYPE_PATTERN = /^[a-z][a-z0-9-]*(?::[\w-]+)?$/;
-const SIGNAL_ID_PATTERN = /^[\w-]+$/;
+const ID_PATTERN = /^[\w-]+$/;
+
+/** 租戶、使用者、代理程式與信號編號共用的識別格式(英數、底線、連字號,長度上限同上)。 */
+export function isRealtimeId(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length <= REALTIME_FIELD_MAX_LENGTH &&
+    ID_PATTERN.test(value)
+  );
+}
 
 export function userTopic(userId: string): string {
   return `user:${userId}`;
@@ -62,12 +71,5 @@ export function isRealtimeSignal(value: unknown): value is RealtimeSignal {
   ) {
     return false;
   }
-  if (id === undefined) {
-    return true;
-  }
-  return (
-    typeof id === "string" &&
-    id.length <= REALTIME_FIELD_MAX_LENGTH &&
-    SIGNAL_ID_PATTERN.test(id)
-  );
+  return id === undefined || isRealtimeId(id);
 }

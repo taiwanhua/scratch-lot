@@ -125,3 +125,26 @@ export async function statusOf(response: Promise<Response>): Promise<number> {
   const resolved = await response;
   return resolved.status;
 }
+
+/**
+ * 不經 `signRealtimeTicket` 的形狀檢查、直接用測試密鑰簽任意內容(測「簽章正確但內容不合法」的憑證)。
+ * 格式與正式憑證相同:`base64url(JSON).base64url(HMAC-SHA256)`。
+ */
+export async function signRawTicket(payload: unknown): Promise<string> {
+  const encoder = new TextEncoder();
+  const toBase64Url = (bytes: Uint8Array) =>
+    btoa(String.fromCodePoint(...bytes))
+      .replaceAll("+", "-")
+      .replaceAll("/", "_")
+      .replaceAll("=", "");
+  const body = toBase64Url(encoder.encode(JSON.stringify(payload)));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(env.REALTIME_TICKET_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+  return `${body}.${toBase64Url(new Uint8Array(signature))}`;
+}

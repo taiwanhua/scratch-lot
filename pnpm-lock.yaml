@@ -399,6 +399,9 @@ importers:
       '@repo/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@repo/logger':
+        specifier: workspace:*
+        version: link:../../packages/logger
     devDependencies:
       '@cloudflare/vitest-plugin':
         specifier: 1.4.3

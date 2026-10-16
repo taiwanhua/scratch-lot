@@ -12,6 +12,7 @@ import {
   realtimeTicketHolder,
   verifyRealtimeTicket,
 } from "@repo/domain/realtime";
+import { log } from "@repo/logger";
 
 import { type RealtimeEnv, VERIFIED_TICKET_HEADER, nowSeconds } from "./env";
 
@@ -52,6 +53,28 @@ function send(ws: WebSocket, message: RealtimeServerMessage): void {
 
 function closeExpired(ws: WebSocket): void {
   ws.close(REALTIME_CLOSE_CODES.ticketExpired, "ticket expired");
+}
+
+/** 對一條連線送出信號:憑證過期就關閉、不推;有訂閱該頻道才推。回傳是否推送。 */
+function deliver(
+  ws: WebSocket,
+  topic: string,
+  message: RealtimeServerMessage,
+  now: number,
+): boolean {
+  const attachment = readAttachment(ws);
+  if (attachment === null) {
+    return false;
+  }
+  if (attachment.exp <= now) {
+    closeExpired(ws);
+    return false;
+  }
+  if (!attachment.subscribedTopics.includes(topic)) {
+    return false;
+  }
+  send(ws, message);
+  return true;
 }
 
 /**
@@ -100,17 +123,13 @@ export class TenantHub extends DurableObject<RealtimeEnv> {
     };
     let delivered = 0;
     for (const ws of this.ctx.getWebSockets()) {
-      const attachment = readAttachment(ws);
-      if (attachment === null) {
-        continue;
-      }
-      if (attachment.exp <= now) {
-        closeExpired(ws);
-        continue;
-      }
-      if (attachment.subscribedTopics.includes(topic)) {
-        send(ws, message);
-        delivered += 1;
+      // 每條連線各自處理:一條連線出錯(已斷、attachment 壞掉)只略過它,不影響其他連線,`/publish` 也不回 500
+      try {
+        if (deliver(ws, topic, message, now)) {
+          delivered += 1;
+        }
+      } catch (error) {
+        log("realtime: 推送到單一連線失敗,略過", topic, error);
       }
     }
     return delivered;
