@@ -95,7 +95,12 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 4. 依既有 PR 與環境流程驗收。各次合併使用 merge commit,以 `git merge-base --is-ancestor <底座commit> <結果commit>` 核對 ancestry;不得用 `merge -s ours`、squash 或 cherry-pick 代替向下同步。
 5. 等待期間若 `main` 前進,從新 `main` **重建升級分支**,重新合併同一底座版本並驗證專案保留;不對含底座 merge 的分支跑一般 rebase,也不把 main 合入舊升級分支。
 
-**升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分四節:共用路徑與新底座仍不同的檔案(沒回收到或漂移)、客製替換登記(頁面替換、help `project/replacements/`、專案表單的 options / pageOverrides)、底座與專案 seed 同 key、專案路徑與底座同名或同匯出名稱的檔案。四節皆為 0 才 exit 0,即「已去除重複」;有項目時 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。第 2–4 節是靜態掃描,讀不懂的登記照樣列出,不會略過。
+**升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分四節,任一節有項目即 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。四節皆為 0 才 exit 0,即「已去除重複」。第 2–4 節是靜態掃描,不執行專案程式;各節涵蓋與漏報 / 誤報範圍如下(報告頁尾也附「限制」):
+
+1. **非專案、非混合路徑與新底座仍不同**:`common`、`published-data`、`unknown` 三類的差異逐檔列出並標類別(沒回收到、漂移或改寫已發布資料)。混合路徑不列,另依下段核對。
+2. **客製替換登記**:`page-replacements.ts` 的 target、help `project/replacements/` 的檔、專案 `forms` 帶 options / pageOverrides 的那幾筆。其他登記方式不在範圍;spread、變數等讀不懂的寫法照列為「無法靜態解析」。
+3. **底座與專案 seed 同 collection + key**:key 只解析字串、常數(含 seed 執行器定義的常數)、`${常數}` 樣板、`permissionKey()`,以及 `formModuleDeclaration()` 依 helper 本身宣告推導的頁面與權限 key。其他寫法在專案端列為「無法解析的 key」,底座端只計數。collection 讀不出時只比 key,可能誤報。每模組自動產生的 wildcard 與 data_scope_targets 不另比,由模組 key 涵蓋。未被 import 的 revisions 快照不算目前宣告,其中的 key 不比。正式組裝 `seeds/registry.ts` 在載入時就拒絕底座與專案撞 key,這部分由 CI 把關。
+4. **專案路徑與底座同名或同匯出名稱**:只比 `project/` 路徑的程式檔(不含 STRUCT-12 的成對固定來源、專案值與 seed / migration)與底座 common 程式檔的檔名(不含 `index`)及具名匯出(不含 default)。常見名稱可能誤報;改了名的重複抓不到。
 
 verify 不涵蓋的仍由人執行並記在 PR:混合路徑以 `inspect --from <新底座 commit> --to HEAD` 的 `mixed` 清單逐段核對,底座段落與新底座一致、只剩專案段落;seed 所有權轉移時,已部署環境的模組與權限資料不重複、不遺失(見[發布前環境與資料核對](#發布前環境與資料核對));Figma 在專案 Screens 跑稽核腳本,本地草稿元件、指向本地草稿的實例與標示本輪草稿的節點皆為 0;專案與底座 CI 全綠。
 

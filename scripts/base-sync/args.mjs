@@ -44,9 +44,9 @@ const SUMMARIES = {
     "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕。",
   ],
   verify: [
-    "唯讀:升級 merge 提交後,核對專案的改動是否已被新底座包含,輸出 Markdown 報告:共用路徑與底座 --tag 仍不同的檔案、客製替換登記、底座與專案 seed 同 key、專案路徑與底座同名或同匯出名稱的檔案。",
+    "唯讀:升級 merge 提交後,核對專案的改動是否已被新底座包含,輸出 Markdown 報告:非專案、非混合路徑(common / published-data / unknown)與底座 --tag 仍不同的檔案、客製替換登記、底座與專案 seed 同 collection + key(含專案端無法解析的 key)、專案路徑與底座同名或同匯出名稱的檔案。",
     "--project 是專案 repo(或升級工作樹)根目錄;--tag 須已由 upgrade 存進 refs/base/releases/ 且被 HEAD 包含;--out 可省略,另把報告寫到該檔。不 fetch、不寫任何 ref。",
-    "四節皆為 0 才 exit 0(已去除重複);任一節有項目 exit 1,人只判讀例外。Figma 稽核與 CI 不在本指令內。",
+    "四節皆為 0 才 exit 0(已去除重複);任一節有項目 exit 1,人只判讀例外。第 2–4 節是靜態掃描,漏報 / 誤報範圍列在報告頁尾的「限制」。Figma 稽核與 CI 不在本指令內。",
   ],
 };
 

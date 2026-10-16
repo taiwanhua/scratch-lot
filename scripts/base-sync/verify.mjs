@@ -2,14 +2,26 @@
  * `verify`:唯讀。升級完成(merge 已提交)後,核對專案的改動是否已被新底座包含,產出 Markdown 報告
  * (操作正本:docs/deployment.md「底座首次接軌與版本升級」的升級後檢查)。四節:
  *
- *   1. 共用路徑(common)與新底座 tag 仍不同的檔案:沒回收到或漂移
+ *   1. 非專案、非混合路徑(common / published-data / unknown)與新底座 tag 仍不同的檔案:沒回收到、漂移或改寫已發布資料
  *   2. 所有客製替換登記:頁面替換、help 替換、專案表單模組的 options / pageOverrides
- *   3. 同一個 key 同時出現在底座 seed 與專案 seed
+ *   3. 同一個 collection + key 同時宣告在底座 seed 與專案 seed,以及專案 seed 裡無法解析的 key
  *   4. 專案路徑內與底座同名或同匯出名稱的檔案
  *
  * 「底座」一律取新底座 tag 的 commit,「專案」一律取專案已提交的 HEAD;不讀工作樹、不 fetch、不寫任何 ref。
- * tag 取自 upgrade 存的 `refs/base/releases/<tag>`,且 HEAD 必須已包含它。
- * 第 2–4 節是靜態文字掃描(不執行 TypeScript):讀不懂的登記照樣列出,寧可多列、不漏列;人只判讀例外。
+ * tag 取自 upgrade 存的 `refs/base/releases/<tag>`,且 HEAD 必須已包含它。任一節有項目即 exit 1,人只判讀例外。
+ *
+ * 第 2–4 節是靜態文字掃描,不執行專案的 TypeScript(seed 組裝要 tsx 與已安裝的依賴,且本工具只執行 git / gh;
+ * 正式組裝 `seeds/registry.ts` 在載入時就拒絕底座與專案撞 key,CI 已涵蓋,verify 補的是它看不到的寫法)。
+ * 各節的漏報 / 誤報範圍:
+ *   1. 混合路徑不列(另以 inspect 的 mixed 清單核對);沒有誤報,差異即項目
+ *   2. 只認上述三種登記;spread、變數等讀不懂的寫法照列為「無法靜態解析」(多列,不漏列)
+ *   3. key 只解析字串、常數(跨檔、可組合,含 src/seed/ 執行器的常數)、`${常數}` 樣板、`permissionKey()`,
+ *      以及 formModuleDeclaration() 依 helper 本身宣告推導的頁面 / 權限 key;其他寫法在專案端列為
+ *      「無法解析的 key」、底座端只計數。collection 由 nodes / permissions 陣列、formModuleDeclaration() 或所在 set
+ *      的 collection 判定,讀不出時只比 key(可能誤報)。推導出的 wildcard 權限與 data_scope_targets 不另比
+ *      (由模組 key 涵蓋);未被 import 的 revisions 快照不算目前宣告(漏報其中的 key)
+ *   4. 只比 project/ 路徑的程式檔(不含 STRUCT-12 成對固定來源、專案值與 seed / migration)與底座 common
+ *      程式檔的檔名(不含 index)與具名匯出(不含 default);常見名稱可能誤報,改名後的重複會漏報
  * Figma 稽核與 CI 不在本指令內。
  */
 import { spawnSync } from "node:child_process";
@@ -37,6 +49,7 @@ export const HELP_REPLACEMENTS =
   "apps/admin/src/md/module-help/project/replacements/";
 const BASE_SEEDS = "apps/db-migrator/seeds/base/";
 const PROJECT_SEEDS = "apps/db-migrator/seeds/project/";
+const SEED_RUNTIME = "apps/db-migrator/src/seed/";
 
 const CODE_FILE = /\.[cm]?[jt]sx?$/;
 
@@ -237,10 +250,21 @@ const oneLine = (text) => text.replaceAll(/\s+/g, " ").trim();
 
 // ---------------------------------------------------------------- 第 1 節
 
-function commonDifferences(root, tagCommit, head) {
+/** 第 1 節列的類別:專案路徑屬專案自己;混合路徑由 inspect 的 mixed 清單逐段核對,兩者不列。 */
+const UNCONTRIBUTED_CATEGORIES = new Set([
+  "common",
+  "published-data",
+  "unknown",
+]);
+
+function baseDifferences(root, tagCommit, head) {
   return diffFiles(root, tagCommit, head)
-    .filter((file) => classifyPath(file.path, file.status) === "common")
-    .map(({ path: file, status }) => ({ path: file, status }));
+    .map(({ path: file, status }) => ({
+      path: file,
+      status,
+      category: classifyPath(file, status),
+    }))
+    .filter((file) => UNCONTRIBUTED_CATEGORIES.has(file.category));
 }
 
 // ---------------------------------------------------------------- 第 2 節
@@ -339,108 +363,379 @@ function customizationItems(headFiles, headBlobs) {
 
 // ---------------------------------------------------------------- 第 3 節
 
-const STRING_CONSTANT =
-  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(["'])([^"'\n\\]*)\2/g;
-const KEY_PROPERTY =
-  /(?<![\w$.])key\s*:\s*(?:(["'`])([^"'`\n\\]*)\1|([A-Za-z_$][\w$]*)\b(?!\s*[.(\[]))/g;
+/** 型別註記(`key: string;`)不是宣告。 */
+const TYPE_KEYWORDS = new Set(["string", "number", "unknown", "never", "any"]);
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+const CONSTANT_DECLARATION =
+  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[\w$.<>[\]| ]+)?\s*=\s*/g;
+const KEY_PROPERTY = /(?<![\w$.])key\s*:\s*/g;
+/** 宣告陣列的屬性名 → collection(模組宣告的形狀與推導,見 seeds/base/module-declaration.ts)。 */
+const ARRAY_COLLECTIONS = { nodes: "modules", permissions: "permissions" };
+/** 以呼叫參數宣告模組的 helper(seeds/base/form-module-declaration.ts)。 */
+const MODULE_HELPERS = new Set(["formModuleDeclaration"]);
+const UNKNOWN_COLLECTION = "?";
 
-/** 所在的物件字面值(往回找未配對的左大括號);找不到回 null。 */
-function enclosingObject(text, index) {
+/** 字串內容換成空白(長度不變),供結構掃描:字串裡的括號、逗號不算。 */
+function skeletonOf(text) {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (QUOTES.has(text[index])) {
+      const end = Math.min(skipString(text, index), text.length);
+      const length = end - index;
+      out +=
+        length >= 2
+          ? `${text[index]}${" ".repeat(length - 2)}${text[end - 1]}`
+          : text[index];
+      index = end;
+    } else {
+      out += text[index];
+      index += 1;
+    }
+  }
+  return out;
+}
+
+/** 從 start 讀一個運算式,直到頂層的 `,` `;` 或右括號。 */
+function readExpression(skeleton, text, start) {
+  let depth = 0;
+  let index = start;
+  while (index < skeleton.length) {
+    const char = skeleton[index];
+    if (OPEN[char]) depth += 1;
+    else if (CLOSE.has(char)) {
+      if (depth === 0) break;
+      depth -= 1;
+    } else if ((char === "," || char === ";") && depth === 0) break;
+    index += 1;
+  }
+  return text.slice(start, index).trim();
+}
+
+/** 往回找包住 index 的左括號位置;沒有回 -1。 */
+function enclosingOpen(skeleton, index) {
   let depth = 0;
   for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
-    const char = text[cursor];
-    if (char === "}") depth += 1;
-    else if (char === "{") {
-      if (depth === 0) {
-        const close = matchingClose(text, cursor);
-        return close === -1 ? null : text.slice(cursor, close + 1);
-      }
+    const char = skeleton[cursor];
+    if (CLOSE.has(char)) depth += 1;
+    else if (OPEN[char]) {
+      if (depth === 0) return cursor;
       depth -= 1;
     }
+  }
+  return -1;
+}
+
+/**
+ * key 運算式 → 值:字串字面值、常數、`${常數}` 樣板、`permissionKey(模組, 動作)`(與 @repo/domain 同規則,以「.」相接)。
+ * 其他寫法(函式參數、成員存取、外部套件的值、其他函式呼叫)回 null。
+ */
+export function resolveKeyExpression(expression, constants) {
+  const raw = expression.trim().replace(/\s+as\s+const$/, "");
+  const literal = /^(["'])((?:\\.|(?!\1)[^\\])*)\1$/.exec(raw);
+  if (literal) return literal[2];
+  if (raw.length >= 2 && raw.startsWith("`") && raw.endsWith("`")) {
+    let isResolved = true;
+    const value = raw.slice(1, -1).replaceAll(/\$\{([^}]*)\}/g, (_, inner) => {
+      const part = resolveKeyExpression(inner, constants);
+      if (part === null) isResolved = false;
+      return part ?? "";
+    });
+    return isResolved ? value : null;
+  }
+  if (IDENTIFIER.test(raw)) return constants.get(raw) ?? null;
+  const call = /^permissionKey\s*\(([\s\S]*)\)$/.exec(raw);
+  if (call) {
+    const args = splitTopLevel(call[1]);
+    if (args.length !== 2) return null;
+    const [moduleKey, action] = args.map((arg) =>
+      resolveKeyExpression(arg, constants),
+    );
+    return moduleKey === null || action === null
+      ? null
+      : `${moduleKey}.${action}`;
   }
   return null;
 }
 
-/** seed 檔裡的 key 宣告;`{ collection, key }` 形式的引用(關聯、$seedRef)不算宣告。 */
-function seedKeys(text, constants) {
+/** 檔案裡 `const NAME = <運算式>` 的名稱與原文。 */
+function constantExpressions(text) {
   const stripped = stripComments(text);
-  const keys = new Set();
-  for (const match of stripped.matchAll(KEY_PROPERTY)) {
-    const key = match[2] ?? constants.get(match[3]) ?? null;
-    if (key === null || key === "") continue;
-    const object = enclosingObject(stripped, match.index);
+  const skeleton = skeletonOf(stripped);
+  return [...skeleton.matchAll(CONSTANT_DECLARATION)].map((match) => [
+    match[1],
+    readExpression(skeleton, stripped, match.index + match[0].length),
+  ]);
+}
+
+/** 常數表:反覆代換到不再變動(常數可由其他常數組成,跨檔)。 */
+function constantTable(texts) {
+  const pending = texts.flatMap(constantExpressions);
+  const table = new Map();
+  let isChanged = true;
+  while (isChanged) {
+    isChanged = false;
+    for (const [name, expression] of pending) {
+      if (table.has(name)) continue;
+      const value = resolveKeyExpression(expression, table);
+      if (value !== null) {
+        table.set(name, value);
+        isChanged = true;
+      }
+    }
+  }
+  return table;
+}
+
+/** key 所屬的 collection:往外找宣告陣列(nodes / permissions)、模組 helper 的呼叫或帶 `collection` 的 set。 */
+function collectionOf(skeleton, text, objectOpen, constants) {
+  let cursor = objectOpen;
+  for (;;) {
+    const parent = enclosingOpen(skeleton, cursor);
+    if (parent === -1) return UNKNOWN_COLLECTION;
+    const before = skeleton.slice(0, parent);
+    if (skeleton[parent] === "[") {
+      const property = /([A-Za-z_$][\w$]*)\s*:\s*$/.exec(before)?.[1];
+      if (property && Object.hasOwn(ARRAY_COLLECTIONS, property)) {
+        return ARRAY_COLLECTIONS[property];
+      }
+    } else if (skeleton[parent] === "(") {
+      const callee = /([A-Za-z_$][\w$]*)\s*$/.exec(before)?.[1];
+      if (callee && MODULE_HELPERS.has(callee)) return "modules";
+    } else {
+      const close = matchingClose(text, parent);
+      const value =
+        close === -1
+          ? null
+          : propertyValue(text.slice(parent, close + 1), "collection");
+      if (value !== null) {
+        return resolveKeyExpression(value, constants) ?? UNKNOWN_COLLECTION;
+      }
+    }
+    cursor = parent;
+  }
+}
+
+/**
+ * seed 檔裡的 key 宣告 → `{ declared, unresolved, helperCalls }`:
+ * declared / unresolved 是 `{ collection, key }` / `{ collection, expression }`;
+ * helperCalls 是以模組 helper 宣告的模組(`{ helper, key }`),之後依 helper 本身的宣告展開推導出的 key。
+ * `{ collection, key }` 形式的引用(關聯兩端、$seedRef)不是宣告;型別註記略過。
+ */
+export function seedKeys(text, constants) {
+  const stripped = stripComments(text);
+  const skeleton = skeletonOf(stripped);
+  const declared = [];
+  const unresolved = [];
+  const helperCalls = [];
+  for (const match of skeleton.matchAll(KEY_PROPERTY)) {
+    const expression = readExpression(
+      skeleton,
+      stripped,
+      match.index + match[0].length,
+    );
+    if (expression === "" || TYPE_KEYWORDS.has(expression)) continue;
+    const objectOpen = enclosingOpen(skeleton, match.index);
+    if (objectOpen === -1 || skeleton[objectOpen] !== "{") continue;
+    const close = matchingClose(stripped, objectOpen);
     if (
-      object !== null &&
-      /\bcollection\s*:/.test(withoutStrings(topLevel(object)))
+      close !== -1 &&
+      /\bcollection\s*:/.test(
+        withoutStrings(topLevel(stripped.slice(objectOpen, close + 1))),
+      )
     ) {
       continue;
     }
-    keys.add(key);
+    const collection = collectionOf(skeleton, stripped, objectOpen, constants);
+    const key = resolveKeyExpression(expression, constants);
+    if (key === null) {
+      unresolved.push({ collection, expression: oneLine(expression) });
+      continue;
+    }
+    declared.push({ collection, key });
+    const parent = enclosingOpen(skeleton, objectOpen);
+    const callee =
+      parent !== -1 && skeleton[parent] === "("
+        ? /([A-Za-z_$][\w$]*)\s*$/.exec(skeleton.slice(0, parent))?.[1]
+        : undefined;
+    if (callee && MODULE_HELPERS.has(callee)) {
+      helperCalls.push({ helper: callee, key });
+    }
   }
-  return keys;
+  return { declared, unresolved, helperCalls };
+}
+
+/**
+ * 模組 helper 推導出的 key(例如表單模組的 `${key}.view-page`、`permissionKey(key, "view")`):
+ * 取 helper 定義檔裡以參數 `key` 組成的宣告當樣板,代入呼叫時的模組 key。不另寫一份推導規則。
+ */
+function helperTemplates(entries) {
+  const templates = new Map();
+  for (const helper of MODULE_HELPERS) {
+    const definition = entries.find(({ text }) =>
+      text.includes(`function ${helper}(`),
+    );
+    if (definition) templates.set(helper, definition.unresolved);
+  }
+  return templates;
+}
+
+function expandHelperCalls(entry, templates, constants) {
+  return entry.helperCalls.flatMap(({ helper, key }) => {
+    const scoped = new Map([...constants, ["key", key]]);
+    return (templates.get(helper) ?? []).flatMap(
+      ({ collection, expression }) => {
+        const derived = resolveKeyExpression(expression, scoped);
+        return derived === null ? [] : [{ collection, key: derived }];
+      },
+    );
+  });
+}
+
+/** helper 定義檔裡能以參數 `key` 代入的樣板不是無法解析的宣告。 */
+function isHelperTemplate(expression, constants) {
+  return (
+    resolveKeyExpression(
+      expression,
+      new Map([...constants, ["key", "key"]]),
+    ) !== null
+  );
 }
 
 const isRevision = (file) => file.includes("/revisions/");
 
 /**
- * 一方的 seed 宣告:目前的宣告檔,加上被宣告檔 import 的 revisions 快照(設計器匯出、直接當 seed 用的那種)。
+ * 一方目前的 seed 宣告檔:非快照的檔,加上被這些檔 import 的 revisions 快照(設計器匯出、直接當 seed 用的那種)。
  * 只給 migration 明示套用的歷史快照不算目前宣告(已發布快照不能刪,退場是以新增版本表達)。
  */
-function seedDeclarations(blobs, prefix) {
+function liveSeedFiles(blobs, prefix) {
   const files = [...blobs.keys()].filter(
     (file) => file.startsWith(prefix) && CODE_FILE.test(file),
   );
-  const current = files.filter((file) => !isRevision(file));
-  const currentText = current.map((file) => blobs.get(file)).join("\n");
-  const live = files.filter((file) => {
+  const currentText = files
+    .filter((file) => !isRevision(file))
+    .map((file) => blobs.get(file))
+    .join("\n");
+  return files.filter((file) => {
     if (!isRevision(file)) return true;
     const stem = path.posix.basename(file).replace(CODE_FILE, "");
     return currentText.includes(`revisions/${stem}`);
   });
-  const constants = new Map();
-  for (const file of files) {
-    for (const match of stripComments(blobs.get(file)).matchAll(
-      STRING_CONSTANT,
-    )) {
-      constants.set(match[1], match[3]);
-    }
-  }
-  return { live, constants };
 }
 
-function seedKeyDuplicates(baseBlobs, headBlobs) {
-  const base = seedDeclarations(baseBlobs, BASE_SEEDS);
-  const project = seedDeclarations(headBlobs, PROJECT_SEEDS);
-  // 專案可 import 底座的常數,解析時兩方的常數都看得到(專案優先)
-  const projectConstants = new Map([...base.constants, ...project.constants]);
-  const collect = (blobs, files, constants) => {
-    const owners = new Map();
-    for (const file of files) {
-      for (const key of seedKeys(blobs.get(file), constants)) {
-        owners.set(key, [...(owners.get(key) ?? []), file]);
-      }
-    }
-    return owners;
-  };
-  const baseOwners = collect(baseBlobs, base.live, base.constants);
-  const projectOwners = collect(headBlobs, project.live, projectConstants);
-  return [...projectOwners.keys()]
-    .filter((key) => baseOwners.has(key))
-    .sort()
-    .map((key) => ({
-      key,
-      base: baseOwners.get(key),
-      project: projectOwners.get(key),
+const sameCollection = (a, b) =>
+  a === b || a === UNKNOWN_COLLECTION || b === UNKNOWN_COLLECTION;
+
+/**
+ * 第 3 節:同 collection + key(任一方讀不出 collection 時只比 key)同時宣告在底座與專案的 seed,
+ * 加上專案 seed 裡無法靜態解析的 key(可能與底座重複,須人判讀)。底座無法解析的只計數。
+ */
+function seedKeyFindings(baseBlobs, headBlobs) {
+  const baseFiles = liveSeedFiles(baseBlobs, BASE_SEEDS);
+  const projectFiles = liveSeedFiles(headBlobs, PROJECT_SEEDS);
+  // 常數另取 seed 執行器的定義(如 API_MODULE_KEY),宣告檔會 import 它們
+  const runtimeTexts = [...baseBlobs.keys()]
+    .filter(
+      (file) =>
+        file.startsWith(SEED_RUNTIME) &&
+        CODE_FILE.test(file) &&
+        !file.includes(".test."),
+    )
+    .map((file) => baseBlobs.get(file));
+  const baseTexts = [
+    ...baseFiles.map((file) => baseBlobs.get(file)),
+    ...runtimeTexts,
+  ];
+  const baseConstants = constantTable(baseTexts);
+  // 專案可 import 底座的常數:兩方的常數一起代換
+  const projectConstants = constantTable([
+    ...baseTexts,
+    ...projectFiles.map((file) => headBlobs.get(file)),
+  ]);
+  const scan = (blobs, files, constants) =>
+    files.map((file) => ({
+      file,
+      text: blobs.get(file),
+      ...seedKeys(blobs.get(file), constants),
     }));
+  const base = scan(baseBlobs, baseFiles, baseConstants);
+  const project = scan(headBlobs, projectFiles, projectConstants);
+  // helper 由底座提供;專案呼叫的是同一份
+  const templates = helperTemplates(base);
+  for (const [entries, constants] of [
+    [base, baseConstants],
+    [project, projectConstants],
+  ]) {
+    for (const entry of entries) {
+      entry.declared.push(...expandHelperCalls(entry, templates, constants));
+    }
+  }
+
+  const duplicates = new Map();
+  for (const { file, declared } of project) {
+    for (const { collection, key } of declared) {
+      const owners = base
+        .filter((entry) =>
+          entry.declared.some(
+            (item) =>
+              item.key === key && sameCollection(item.collection, collection),
+          ),
+        )
+        .map((entry) => entry.file);
+      if (owners.length === 0) continue;
+      const id = `${key}\0${collection}`;
+      const found = duplicates.get(id) ?? {
+        kind: "duplicate",
+        collection,
+        key,
+        base: owners,
+        project: [],
+      };
+      if (!found.project.includes(file)) found.project.push(file);
+      duplicates.set(id, found);
+    }
+  }
+  const unresolved = project.flatMap(({ file, unresolved: expressions }) =>
+    expressions.map(({ expression }) => ({
+      kind: "unresolved",
+      expression,
+      path: file,
+    })),
+  );
+  const order = (item) =>
+    item.kind === "duplicate"
+      ? `0${item.key}\0${item.collection}`
+      : `1${item.path}\0${item.expression}`;
+  return {
+    items: [...duplicates.values(), ...unresolved].sort((a, b) =>
+      order(a) < order(b) ? -1 : order(a) > order(b) ? 1 : 0,
+    ),
+    baseUnresolved: base.reduce(
+      (sum, entry) =>
+        sum +
+        entry.unresolved.filter(
+          ({ expression }) =>
+            !(
+              [...templates.values()].includes(entry.unresolved) &&
+              isHelperTemplate(expression, baseConstants)
+            ),
+        ).length,
+      0,
+    ),
+  };
 }
 
 // ---------------------------------------------------------------- 第 4 節
 
 const EXPORT_DECLARATION =
-  /\bexport\s+(?:declare\s+)?(?:default\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\s*\*?|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
+  /\bexport\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\s*\*?|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g;
 const EXPORT_LIST = /\bexport\s+(?:type\s+)?\{([^}]*)\}/g;
 
-/** 檔案的具名匯出(不含 default)。 */
+/**
+ * 檔案的具名匯出。default 匯出一律不列(`export default function Page`、`export { x as default }`):
+ * 頁面元件多半以 default 匯出,名稱與底座撞名不代表重複,列了只會誤報。
+ * `export { default as X }` 是具名匯出 X,照列。
+ */
 export function exportNames(text) {
   const stripped = stripComments(text);
   const names = new Set();
@@ -511,8 +806,16 @@ function section(title, items, render) {
   ];
 }
 
+/** 報告頁尾的限制(逐節的漏報 / 誤報範圍;正本同 docs/deployment.md 升級後檢查)。 */
+const LIMITATIONS = [
+  "限制:第 1 節不列專案與混合路徑(混合路徑以 inspect 的 mixed 清單逐段核對)。",
+  "第 2 節只認 page-replacements、help project/replacements/ 與專案 forms 的 options / pageOverrides;讀不懂的寫法照列為無法解析。",
+  "第 3 節是靜態掃描:只認字串、常數、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端列為無法解析、底座端只計數;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key。",
+  "第 4 節只比專案 project/ 路徑的程式檔與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default);內容相同但名稱不同的重複抓不到。",
+];
+
 function renderReport(report) {
-  const { project, base, adopted, sections } = report;
+  const { project, base, adopted, sections, baseUnresolvedSeedKeys } = report;
   const total = Object.values(sections).reduce(
     (sum, items) => sum + items.length,
     0,
@@ -530,9 +833,9 @@ function renderReport(report) {
     }`,
     "",
     ...section(
-      `1. 共用路徑與底座 ${base.tag} 仍不同`,
-      sections.commonDifferences,
-      (item) => `- ${item.status} ${code(item.path)}`,
+      `1. 非專案、非混合路徑與底座 ${base.tag} 仍不同`,
+      sections.baseDifferences,
+      (item) => `- ${item.category} ${item.status} ${code(item.path)}`,
     ),
     ...section("2. 客製替換登記", sections.customizations, (item) => {
       const key = item.key === null ? "" : ` ${code(item.key)}`;
@@ -540,10 +843,21 @@ function renderReport(report) {
       return `- ${item.kind}${key}(${code(item.path)})${note}`;
     }),
     ...section(
-      "3. 底座 seed 與專案 seed 同 key",
-      sections.seedKeyDuplicates,
+      "3. 底座 seed 與專案 seed 同 collection + key",
+      sections.seedKeys,
       (item) =>
-        `- ${code(item.key)}:底座 ${codeList(item.base)};專案 ${codeList(item.project)}`,
+        item.kind === "duplicate"
+          ? `- ${item.collection} ${code(item.key)}:底座 ${codeList(item.base)};專案 ${codeList(item.project)}`
+          : `- 無法解析的 key ${code(item.expression)}(${code(item.path)})`,
+    ).toSpliced(
+      -1,
+      0,
+      ...(baseUnresolvedSeedKeys > 0
+        ? [
+            "",
+            `底座 seed 另有 ${String(baseUnresolvedSeedKeys)} 個 key 無法靜態解析,未列入比對(不計入結果)。`,
+          ]
+        : []),
     ),
     ...section(
       "4. 專案路徑與底座同名或同匯出名稱",
@@ -562,6 +876,8 @@ function renderReport(report) {
       },
     ),
     "Figma 稽核與 CI 不在本報告內,仍依 docs/deployment.md 由人執行。",
+    "",
+    LIMITATIONS.join(""),
     "",
   ].join("\n");
 }
@@ -628,6 +944,7 @@ export function verify(options) {
     ]),
   ]);
 
+  const seedFindings = seedKeyFindings(baseBlobs, headBlobs);
   const report = {
     project: { repository: project.repository, root, commit: head },
     base: {
@@ -637,10 +954,11 @@ export function verify(options) {
       commit: tagCommit,
     },
     adopted: project.adopted,
+    baseUnresolvedSeedKeys: seedFindings.baseUnresolved,
     sections: {
-      commonDifferences: commonDifferences(root, tagCommit, head),
+      baseDifferences: baseDifferences(root, tagCommit, head),
       customizations: customizationItems(headFiles, headBlobs),
-      seedKeyDuplicates: seedKeyDuplicates(baseBlobs, headBlobs),
+      seedKeys: seedFindings.items,
       nameDuplicates: nameDuplicates(
         projectCode,
         headBlobs,
