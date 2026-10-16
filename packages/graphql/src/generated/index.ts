@@ -2406,6 +2406,7 @@ export type Query = {
   roleUserCandidates: RoleUserCandidatesPayload;
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
+  sidebarBadges: Array<SidebarBadge>;
   tenantModuleOptions: Array<ModuleOption>;
   user: User;
   users: UsersPayload;
@@ -3133,6 +3134,14 @@ export type SetUserOrgsPayload = {
   revokedRoleIds: Array<Scalars['ID']['output']>;
   unqualifiedRoles: Array<UnqualifiedRole>;
   user: User;
+};
+
+export type SidebarBadge = {
+  __typename?: 'SidebarBadge';
+  /** 數字;0 也回傳,前端只在大於 0 時顯示 */
+  count: Scalars['Int']['output'];
+  /** 模組 key(側欄以它對上模組節點) */
+  moduleKey: Scalars['String']['output'];
 };
 
 export type SubmitFormSubmissionInput = {
@@ -4749,6 +4758,11 @@ export type RevokeRoleUsersMutationVariables = Exact<{
 
 
 export type RevokeRoleUsersMutation = { __typename?: 'Mutation', revokeRoleUsers: { __typename?: 'RoleUsersPayload', totalCount: number, page: number, pageSize: number, role: { __typename?: 'Role', id: string, name: string, description?: string | null, enabled: boolean, kind: RoleKind, isSystem: boolean, isTemplateCopy: boolean, userCount: number, abilities: { __typename?: 'RoleAbilities', canEdit: boolean, canEditMatrix: boolean, canToggleEnabled: boolean, canDelete: boolean }, ownerOrg?: { __typename?: 'RoleOwnerOrg', id: string, name: string, tenantTop?: { __typename?: 'RoleOrgRef', id: string, name: string } | null } | null }, items: Array<{ __typename?: 'RoleUser', id: string, account: string, name: string, email: string, enabled: boolean, outOfScope: boolean, ownerProtected: boolean, orgs: Array<{ __typename?: 'RoleUserOrg', id: string, name: string }> }> } };
+
+export type SidebarBadgesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SidebarBadgesQuery = { __typename?: 'Query', sidebarBadges: Array<{ __typename?: 'SidebarBadge', moduleKey: string, count: number }> };
 
 export type CreateUploadUrlMutationVariables = Exact<{
   input: CreateUploadUrlInput;
@@ -10494,6 +10508,38 @@ export const useRevokeRoleUsersMutation = <
 
 
 useRevokeRoleUsersMutation.fetcher = (client: GraphQLClient, variables: RevokeRoleUsersMutationVariables, headers?: RequestInit['headers']) => fetcher<RevokeRoleUsersMutation, RevokeRoleUsersMutationVariables>(client, RevokeRoleUsersDocument, variables, headers);
+
+export const SidebarBadgesDocument = `
+    query SidebarBadges {
+  sidebarBadges {
+    moduleKey
+    count
+  }
+}
+    `;
+
+export const useSidebarBadgesQuery = <
+      TData = SidebarBadgesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: SidebarBadgesQueryVariables,
+      options?: Omit<UseQueryOptions<SidebarBadgesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<SidebarBadgesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<SidebarBadgesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['SidebarBadges'] : ['SidebarBadges', variables],
+    queryFn: fetcher<SidebarBadgesQuery, SidebarBadgesQueryVariables>(client, SidebarBadgesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useSidebarBadgesQuery.getKey = (variables?: SidebarBadgesQueryVariables) => variables === undefined ? ['SidebarBadges'] : ['SidebarBadges', variables];
+
+
+useSidebarBadgesQuery.fetcher = (client: GraphQLClient, variables?: SidebarBadgesQueryVariables, headers?: RequestInit['headers']) => fetcher<SidebarBadgesQuery, SidebarBadgesQueryVariables>(client, SidebarBadgesDocument, variables, headers);
 
 export const CreateUploadUrlDocument = `
     mutation CreateUploadUrl($input: CreateUploadUrlInput!) {

@@ -1774,6 +1774,7 @@ type Query {
   roleUserCandidates(input: RoleUserCandidatesInput!, roleId: ID!): RoleUserCandidatesPayload!
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
+  sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
   user(id: ID!): User!
   users(input: UsersInput!): UsersPayload!
@@ -2181,6 +2182,14 @@ type SetUserOrgsPayload {
   revokedRoleIds: [ID!]!
   unqualifiedRoles: [UnqualifiedRole!]!
   user: User!
+}
+
+type SidebarBadge {
+  """數字;0 也回傳,前端只在大於 0 時顯示"""
+  count: Int!
+
+  """模組 key(側欄以它對上模組節點)"""
+  moduleKey: String!
 }
 
 input SubmitFormSubmissionInput {

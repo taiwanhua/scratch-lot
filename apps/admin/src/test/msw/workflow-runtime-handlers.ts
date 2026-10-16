@@ -179,6 +179,16 @@ export const workflowRuntimeWorld = (
       countsCalls += 1;
       return HttpResponse.json({ data: { applyCenterCounts: countsOf() } });
     }),
+    // 側欄計數登記制:申請中心那一筆 = 待我處理的任務數(api 只回看得到的模組;這裡的登入者都看得到)
+    api.query("SidebarBadges", () =>
+      HttpResponse.json({
+        data: {
+          sidebarBadges: [
+            { moduleKey: "apply-center", count: countsOf().myTasks },
+          ],
+        },
+      }),
+    ),
     api.query("WorkflowInstance", ({ variables }) => {
       const instance = findInstance((variables as { id: string }).id);
       return instance === undefined

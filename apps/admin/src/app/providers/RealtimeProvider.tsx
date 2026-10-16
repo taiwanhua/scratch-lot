@@ -23,7 +23,10 @@ import {
   type RealtimeStatus,
   browserTimers,
 } from "@/lib/base/realtime/realtime-connection";
-import type { RealtimeSignalTable } from "@/lib/base/realtime/signal-registry";
+import {
+  type RealtimeSignalTable,
+  signalQueryKeys,
+} from "@/lib/base/realtime/signal-registry";
 
 /** 斷線(慢速模式)時多久輪詢一次登記的資料(毫秒)。 */
 export const REALTIME_POLL_INTERVAL_MS = 60_000;
@@ -85,7 +88,7 @@ export const RealtimeProvider = ({
       onStatus: setStatus,
       onCatchUp: invalidateAll,
       onSignal: (signal, topic) => {
-        const keys = signals.get(signal.type) ?? [];
+        const keys = signalQueryKeys(signals, signal.type);
         for (const queryKey of keys) {
           void queryClient.invalidateQueries({ queryKey });
         }
