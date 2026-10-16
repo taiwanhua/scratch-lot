@@ -155,6 +155,87 @@ describe("檢查器:明細列的定義", () => {
     expect(issue?.location.property).toBe("options");
   });
 
+  describe("引用子欄(B2b)", () => {
+    const store = column("store", "reference", {
+      source: { provider: "user", labelField: "name" },
+    });
+
+    it("有來源的引用子欄沒有錯誤;登錄表認得的來源也過", () => {
+      expect(
+        reportOf(definitionOf([title, arrayField("items", [qty, store])]))
+          .errors,
+      ).toEqual([]);
+      const report = validateDefinition(
+        definitionOf([title, arrayField("items", [store])]),
+        {
+          regexSafety: recheckRegexSafety,
+          lookupProviders: { user: { fields: { name: "text" } } },
+        },
+      );
+      expect(report.errors).toEqual([]);
+    });
+
+    it("沒設來源 → REFERENCE_SOURCE_MISSING,定位到明細欄 + 子欄", () => {
+      const [issue] = errorsOf(
+        [arrayField("items", [column("store", "reference")])],
+        "REFERENCE_SOURCE_MISSING",
+      );
+      expect(issue?.location).toEqual({
+        fieldKey: "items",
+        columnKey: "store",
+        property: "source",
+      });
+    });
+
+    it("登錄表沒有的來源 → 錯誤定位到子欄", () => {
+      const report = validateDefinition(
+        definitionOf([
+          title,
+          arrayField("items", [
+            column("store", "reference", {
+              source: { provider: "nowhere", labelField: "name" },
+            }),
+          ]),
+        ]),
+        {
+          regexSafety: recheckRegexSafety,
+          lookupProviders: { user: { fields: { name: "text" } } },
+        },
+      );
+      expect(report.errors).toContainEqual(
+        expect.objectContaining({
+          location: expect.objectContaining({
+            fieldKey: "items",
+            columnKey: "store",
+          }) as unknown,
+        }),
+      );
+    });
+
+    it("引用子欄不能用列內公式", () => {
+      const computedRef = column("store", "reference", {
+        source: { provider: "user", labelField: "name" },
+        valueSource: { kind: "computed", expr: { var: "row.qty" } },
+      });
+      const [issue] = errorsOf(
+        [arrayField("items", [qty, computedRef])],
+        "ARRAY_COLUMN_SETTING",
+      );
+      expect(issue?.location.property).toBe("valueSource");
+    });
+
+    it("不是引用的子欄不能設來源", () => {
+      const withSource = column("note", "text", {
+        source: { provider: "user", labelField: "name" },
+      });
+      const [issue] = errorsOf(
+        [arrayField("items", [withSource])],
+        "ARRAY_COLUMN_SETTING",
+      );
+      expect(issue?.location.property).toBe("source");
+    });
+  });
+
   it("每版明細欄上限 5", () => {
     const arrays = Array.from({ length: 6 }, (_, index) =>
       arrayField(`items_${String(index)}`, [qty]),

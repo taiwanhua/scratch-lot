@@ -36,7 +36,7 @@ export const DEFAULT_SPAN = 6;
 export const initialSpanOf = (field: Pick<FieldDef, "type">): number =>
   field.type === "array" ? LAYOUT_COLUMNS : DEFAULT_SPAN;
 
-/** 新的子欄(元件取該型別白名單的第一個;數字 0 位小數;單選是空的靜態清單)。 */
+/** 新的子欄(元件取該型別白名單的第一個;數字 0 位小數;單選是空的靜態清單;引用預設來源 = 使用者)。 */
 export const newColumnOf = (
   type: ArrayColumnType,
   key: string,
@@ -49,6 +49,9 @@ export const newColumnOf = (
   widget: { kind: ARRAY_COLUMN_WIDGETS[type][0] ?? "textField" },
   valueSource: { kind: "input" },
   ...(type === "select" && { options: { kind: "static", items: [] } }),
+  ...(type === "reference" && {
+    source: { provider: "user", labelField: "name" },
+  }),
   rules: { required: false },
 });
 

@@ -444,6 +444,47 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     ]);
   });
 
+  it("明細引用子欄的來源照表單層引用欄檢查;其他子欄帶 source 仍拒絕", () => {
+    const seed = formSeed([
+      field("title", "text"),
+      field("items", "array", {
+        columns: [
+          {
+            key: "store",
+            label: "分店",
+            type: "reference",
+            widget: { kind: "referencePicker" },
+            valueSource: { kind: "input" },
+            source: { provider: "org", labelField: "name" },
+          },
+          {
+            key: "vendor",
+            label: "廠商",
+            type: "reference",
+            widget: { kind: "referencePicker" },
+            valueSource: { kind: "input" },
+            source: { provider: "vendor", labelField: "name" },
+          },
+          {
+            key: "note",
+            label: "備註",
+            type: "text",
+            widget: { kind: "textField" },
+            valueSource: { kind: "input" },
+            source: { provider: "org", labelField: "name" },
+          },
+        ],
+      }),
+    ]);
+    expect(codesAt(errorsOf(seed))).toEqual([
+      [
+        "LOOKUP_PROVIDER_UNSUPPORTED",
+        "definition.fields.1.columns.1.source.provider",
+      ],
+      ["FIELD_UNSUPPORTED", "definition.fields.1.columns.2.source"],
+    ]);
+  });
+
   it("form_submission:formKey 要指向同一計畫可解析的共用表單(可以是自己);有 filter 一律拒絕", () => {
     const source = (formKey: string, filter?: Record<string, unknown>) =>
       field("ref", "reference", {

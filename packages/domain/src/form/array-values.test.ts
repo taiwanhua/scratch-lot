@@ -73,6 +73,39 @@ describe("明細列:值正規化", () => {
     });
   });
 
+  it("引用子欄收 `{ id, label }` 或 id 字串,存 `{ id, label }`;語意值是 id", () => {
+    const refs = arrayField("lines", [
+      column("store", "reference", {
+        source: { provider: "user", labelField: "name" },
+      }),
+    ]);
+    const result = normalizeFieldValue(refs, [
+      { rowId: rowIdOf(1), store: { id: "u1", label: "甲店" } },
+      { rowId: rowIdOf(2), store: "u2" },
+    ]);
+    expect(result).toEqual({
+      ok: true,
+      value: [
+        { rowId: rowIdOf(1), store: { id: "u1", label: "甲店" } },
+        { rowId: rowIdOf(2), store: { id: "u2", label: null } },
+      ],
+    });
+    expect(
+      semanticValuesOf([refs], { lines: result.ok ? result.value : null }),
+    ).toEqual({
+      lines: [
+        { rowId: rowIdOf(1), store: "u1" },
+        { rowId: rowIdOf(2), store: "u2" },
+      ],
+    });
+    expect(
+      normalizeFieldValue(refs, [{ rowId: rowIdOf(3), store: 42 }]),
+    ).toMatchObject({
+      ok: false,
+      issue: { rowId: rowIdOf(3), columnKey: "store", code: "TYPE_INVALID" },
+    });
+  });
+
   it("空陣列收成 null", () => {
     expect(normalizeFieldValue(items, [])).toEqual({ ok: true, value: null });
   });
@@ -178,6 +211,29 @@ describe("明細列:以 rowId 對列的修訂差異", () => {
         kind: "kept",
         isMoved: false,
         changedColumns: ["note"],
+      }),
+    ]);
+  });
+
+  it("引用子欄:只在 id 變時列為改值(label 快照不同不算)", () => {
+    const refs = arrayField("lines", [
+      column("store", "reference", {
+        source: { provider: "user", labelField: "name" },
+      }),
+    ]);
+    const previous = [
+      { rowId: rowIdOf(1), store: { id: "u1", label: "甲店" } },
+      { rowId: rowIdOf(2), store: { id: "u2", label: "乙店" } },
+    ];
+    const next = [
+      { rowId: rowIdOf(1), store: { id: "u1", label: "甲店(改名)" } },
+      { rowId: rowIdOf(2), store: { id: "u3", label: "乙店" } },
+    ];
+    expect(arrayRowChanges(refs, previous, next)).toEqual([
+      expect.objectContaining({
+        rowId: rowIdOf(2),
+        kind: "kept",
+        changedColumns: ["store"],
       }),
     ]);
   });

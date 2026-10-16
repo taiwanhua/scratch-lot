@@ -62,6 +62,33 @@ describe("表單管理:設計器的明細列", () => {
     expect(screen.queryByText("預設值")).toBeNull();
   });
 
+  it("子欄型別選「引用」:出現資料來源設定、沒有值的來源(只能使用者填);存下預設來源", async () => {
+    const { user, world } = renderFormsPage(smallDesignOptions());
+    const panel = await openDefaultColumn(user);
+    await user.click(within(panel).getByRole("combobox", { name: "型別" }));
+    await user.click(await screen.findByRole("option", { name: "引用" }));
+
+    expect(
+      within(panel).getByRole("combobox", { name: "資料來源" }),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("combobox", { name: "值的來源" }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "存草稿" }));
+    await waitFor(() => {
+      expect(world.inputs.saveFormVersionDraft).toHaveLength(1);
+    });
+    const saved = world.inputs.saveFormVersionDraft[0]?.fields.find(
+      (field) => field.type === "array",
+    ) as FieldDef | undefined;
+    expect(saved?.columns?.[0]).toMatchObject({
+      type: "reference",
+      widget: { kind: "referencePicker" },
+      valueSource: { kind: "input" },
+      source: { provider: "user", labelField: "name" },
+    });
+  });
+
   it("子欄 key 與同一明細的別的子欄重複 → 當場擋下、不寫入", async () => {
     const { user, world } = renderFormsPage(smallDesignOptions());
     await addField(user, "明細列");

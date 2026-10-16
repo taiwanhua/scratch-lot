@@ -104,13 +104,14 @@ export const propertySectionsOf = (
 
 /**
  * 明細子欄的面板(縮小版,只列白名單內的設定):型別 / 元件 / 列數 / 自訂驗證 / 允許清單外 / 鎖定條件 / 預設值都沒有;
- * 值來源只有「使用者填 / 列內公式」(另外處理)。
+ * 值來源只有「使用者填 / 列內公式」(另外處理;引用子欄只能使用者填);引用子欄有來源設定。
  */
 export const columnSectionsOf = (type: FieldDef["type"]): PropertySections => ({
   ...ARRAY_SECTIONS,
   arrayColumns: false,
   rowRange: false,
   options: type === "select",
+  referenceSource: type === "reference",
   lengthRange: type === "text",
   numberRange: type === "number",
   dateRange: type === "date" || type === "datetime",
