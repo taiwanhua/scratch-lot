@@ -88,6 +88,26 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`tReasons(issue.reason)`,reason 是 `RuleInvalidReason`(`data-scope-issues.ts` / api 回傳)",
   },
   {
+    key: "admin.audiencePicker.fields.",
+    reason:
+      "`t(`fields.${field}`)`,field 取自 AudiencePicker 的 `fields`(`@repo/domain/audience` 的 `AUDIENCE_FIELDS`)",
+  },
+  {
+    key: "admin.audiencePicker.ranges.",
+    reason:
+      "`t(`ranges.${range}`)`,range 取自 `@repo/domain/audience` 的 `AUDIENCE_ORG_RANGES`",
+  },
+  {
+    key: "admin.audiencePicker.emptyGroup",
+    reason:
+      "資料範圍 `RuleCard` 的 `tPicker(issue.localReason)`,localReason 由 `data-scope-issues.ts` 本地驗證給(空群組)",
+  },
+  {
+    key: "admin.audiencePicker.emptyValue",
+    reason:
+      "資料範圍 `RuleCard` 的 `tPicker(issue.localReason)`,localReason 由 `data-scope-issues.ts` 本地驗證給(條件列沒挑值)",
+  },
+  {
     key: "admin.demoSampleOne.status.",
     reason: "`t(`status.${row.status}`)`,status 是示範模組1 的狀態列舉",
   },
