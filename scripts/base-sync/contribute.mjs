@@ -1,9 +1,9 @@
 /**
  * `contribute`:把引用專案一個已明選的 commit 的精確差異(相對它唯一的 parent),
- * 從底座最新 origin/main 準備成 common-only contribution 分支。差異只 stage 不提交,provenance 在輸出與分支 metadata;
+ * 從底座最新 origin/main 準備成 contribution 分支(common 路徑,加上 `--accept-mixed` 明列的混合檔)。差異只 stage 不提交,provenance 在輸出與分支 metadata;
  * 不把專案分支 merge 回底座、不自動選 hunk。含 project / published-data / unknown 路徑一律拒絕,由 agent 先拆 commit。
  * mixed 只接受以 `--accept-mixed` 逐檔明列的檔案(agent 已整理成只含底座段落),其差異列進報告供審查;
- * 未明列的 mixed 仍拒絕,明列的檔不在差異內或不是 mixed 也報錯(防止誤列)。
+ * 未明列的 mixed 仍拒絕,明列的檔不在差異內、不是 mixed 或是二進位也報錯(防止誤列;二進位無法逐段審查)。
  * `common` 只是路徑候選,是否通用仍須讀 exact delta 判斷,由使用者決定納入。
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -49,8 +49,21 @@ const MIXED_REVIEW_NOTE = "混合檔:只含底座段落,請審查";
 const normalizePath = (file) =>
   file.replaceAll("\\", "/").replace(/^(?:\.\/)+/, "");
 
-/** 明列的檔必須在來源差異內且確實是 mixed;回傳去重後的集合。 */
-function acceptedMixedPaths(files, acceptMixed) {
+/** `git diff --numstat` 對二進位檔的增刪行數是 `-`。 */
+function isBinaryChange(root, parent, commit, file) {
+  return git(root, [
+    "diff",
+    "--numstat",
+    "--no-renames",
+    parent,
+    commit,
+    "--",
+    file,
+  ]).startsWith("-\t-\t");
+}
+
+/** 明列的檔必須在來源差異內、確實是 mixed 且是文字檔;回傳去重後的集合。路徑比對區分大小寫。 */
+function acceptedMixedPaths(files, acceptMixed, { root, parent, commit }) {
   const byPath = new Map(files.map((file) => [file.path, file]));
   const accepted = new Set();
   for (const raw of acceptMixed) {
@@ -63,6 +76,11 @@ function acceptedMixedPaths(files, acceptMixed) {
     if (file.category !== "mixed") {
       fail(
         `--accept-mixed 只能列混合檔:${file.path} 是 ${file.category},請移除這個參數`,
+      );
+    }
+    if (isBinaryChange(root, parent, commit, file.path)) {
+      fail(
+        `--accept-mixed 不接受二進位檔:${file.path} 無法逐段確認只含底座段落,請從回收 commit 拆出並人工處理`,
       );
     }
     accepted.add(file.path);
@@ -84,13 +102,17 @@ function sourceDelta(project, commit, acceptMixed) {
   const [parent] = parents;
   const files = classifyFiles(diffFiles(project.root, parent, commit));
   if (files.length === 0) fail("來源 commit 沒有任何檔案差異");
-  const accepted = acceptedMixedPaths(files, acceptMixed);
+  const accepted = acceptedMixedPaths(files, acceptMixed, {
+    root: project.root,
+    parent,
+    commit,
+  });
   const rejected = files.filter(
     (file) => file.category !== "common" && !accepted.has(file.path),
   );
   if (rejected.length > 0) {
     fail(
-      `來源 commit 含未接受的非 common 路徑,請先拆成 common-only commit,或以 --accept-mixed 明列只含底座段落的混合檔:${rejected
+      `來源 commit 含未接受的非 common 路徑,請先拆出這些路徑,或以 --accept-mixed 明列只含底座段落的混合檔:${rejected
         .map((file) => `${file.path}(${file.category})`)
         .join("、")}`,
     );

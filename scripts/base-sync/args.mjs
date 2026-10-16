@@ -38,7 +38,7 @@ const SUMMARIES = {
     "--project 是專案 repo 根目錄,可重複以批次升級同一底座的多個專案;工作樹建在已存在的 --worktree-root 目錄之下。",
   ],
   contribute: [
-    "把專案一個 commit 相對其 parent 的精確差異,從底座最新 origin/main 準備成 common-only 分支,只 stage 不提交。",
+    "把專案一個 commit 相對其 parent 的精確差異,從底座最新 origin/main 準備成 contribution 分支(common 路徑與明列的混合檔),只 stage 不提交。",
     "--project 是來源專案根目錄、--commit 是完整 40 位 commit SHA、--base 是底座 repo 根目錄;工作樹建在已存在的 --worktree-root 目錄之下。",
     "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕。",
   ],

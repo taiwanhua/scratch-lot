@@ -720,7 +720,7 @@ test("contribute --accept-mixed:未明列的混合檔、未知路徑、已發布
   }
 });
 
-test("contribute --accept-mixed 指到非混合檔或不在差異內的檔:明確報錯,不建工作樹", async () => {
+test("contribute --accept-mixed 指到非混合檔、不在差異內或大小寫不符的檔:明確報錯,不建工作樹", async () => {
   const fixture = createFixture();
   const { root } = fixture.projects.widgets;
   const baseLocal = cloneBase(fixture);
@@ -732,6 +732,8 @@ test("contribute --accept-mixed 指到非混合檔或不在差異內的檔:明�
         "export const brand = 'widgets2';\n",
       "misc/notes.txt": "unclassified\n",
       "docs/x.md": "# 共用\n",
+      "apps/db-migrator/migrations/base/20260901120000_data_old.js":
+        "module.exports = { up: async () => { /* rewritten */ } };\n",
     },
     "listed by mistake",
   );
@@ -745,7 +747,13 @@ test("contribute --accept-mixed 指到非混合檔或不在差異內的檔:明�
       /只能列混合檔:packages\/project-config\/src\/project\/public\.ts 是 project/,
     ],
     ["misc/notes.txt", /只能列混合檔:misc\/notes\.txt 是 unknown/],
+    [
+      "apps/db-migrator/migrations/base/20260901120000_data_old.js",
+      /只能列混合檔:apps\/db-migrator\/migrations\/base\/20260901120000_data_old\.js 是 published-data/,
+    ],
     ["docs/missing.md", /docs\/missing\.md 不在來源 commit 的差異內/],
+    // 路徑比對區分大小寫(Git 路徑本身區分大小寫)
+    ["Docs/X.md", /Docs\/X\.md 不在來源 commit 的差異內/],
   ]) {
     assertRejected(
       await run(
@@ -756,6 +764,74 @@ test("contribute --accept-mixed 指到非混合檔或不在差異內的檔:明�
     );
     assertNothingPrepared(fixture, baseLocal);
   }
+});
+
+test("contribute --accept-mixed 不接受二進位的混合檔,要求拆出人工處理", async () => {
+  const fixture = createFixture();
+  const { root } = fixture.projects.widgets;
+  const baseLocal = cloneBase(fixture);
+  const commit = commitFiles(
+    root,
+    {
+      "packages/ui/src/spacing.ts": "export const gap = 4;\n",
+      "docs/logo.png": "\u0000PNG\u0000binary\u0000",
+    },
+    "binary mixed doc",
+  );
+  assertRejected(
+    await run(
+      contributeWith(fixture, baseLocal, commit, ["docs/logo.png"]),
+      createFakeGh().runExternal,
+    ),
+    /不接受二進位檔:docs\/logo\.png.*人工處理/,
+  );
+  assertNothingPrepared(fixture, baseLocal);
+});
+
+test("contribute --accept-mixed:混合檔改名(刪舊 + 加新)兩個路徑都要明列", async () => {
+  const fixture = createFixture();
+  const { root } = fixture.projects.widgets;
+  // 底座與專案都已有同一份 docs/a.md,專案再把它改名
+  git(fixture.base.src, "checkout", "-q", "main");
+  commitFiles(fixture.base.src, { "docs/a.md": "# 共用\n" }, "base: docs");
+  git(fixture.base.src, "push", "-q", "origin", "main");
+  const baseLocal = cloneBase(fixture);
+  commitFiles(root, { "docs/a.md": "# 共用\n" }, "sync docs");
+  const commit = commitFiles(
+    root,
+    { "docs/a.md": null, "docs/b.md": "# 共用\n" },
+    "rename docs",
+  );
+
+  for (const [listed, pattern] of [
+    ["docs/b.md", /docs\/a\.md\(mixed\)/],
+    ["docs/a.md", /docs\/b\.md\(mixed\)/],
+  ]) {
+    assertRejected(
+      await run(
+        contributeWith(fixture, baseLocal, commit, [listed]),
+        createFakeGh().runExternal,
+      ),
+      pattern,
+    );
+    assertNothingPrepared(fixture, baseLocal);
+  }
+
+  const result = await run(
+    contributeWith(fixture, baseLocal, commit, ["docs/a.md", "docs/b.md"]),
+    createFakeGh().runExternal,
+  );
+  assert.equal(result.exitCode, 0, result.stderr);
+  assert.deepEqual(
+    result.json.mixedReview.files.map(({ path: file, status }) => [
+      file,
+      status,
+    ]),
+    [
+      ["docs/a.md", "D"],
+      ["docs/b.md", "A"],
+    ],
+  );
 });
 
 /** 模擬 agent 整合時更新採用版本記錄。 */
