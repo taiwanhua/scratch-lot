@@ -52,7 +52,7 @@ await this.transactions.withTransaction(async (session) => {
 
 - 交易提交後依登記順序執行;某一個失敗只記 log,不影響其他與已提交的資料。回復(含被自動重試丟掉的那一輪)則不執行。
 - `afterCommit` 在回應送出前執行,**會算進請求的回應時間**;慢的外部動作仍要盡力而為、設逾時。
-- 交易結束(提交或回復)後,`fn` 裡排出去、晚到的非同步工作不再算在交易內:`afterCommit` 拋錯、`currentSession()` 回 undefined。不在交易內呼叫 `afterCommit` 會拋錯。
+- 交易結束(提交或回復)後,`fn` 裡排出去、晚到的非同步工作不再算在交易內:`afterCommit` 拋錯、`currentSession()` 回 undefined。「結束」以 driver 為準 —— driver 一提交 / 回復(`session.inTransaction()` 轉為 false)就算交易外,不等 `withTransaction` 返回;被自動重試丟掉的那一輪也一樣。不在交易內呼叫 `afterCommit` 會拋錯。
 - **防線是執行期斷言**:對外 adapter 的入口呼叫 `assertOutsideTransaction("<動作>")`,在交易內被呼叫就拋錯,經過它的測試必然失敗。現有入口:`MailService` 寄信、`StorageService.deleteObject` / `copyPrivateObject`、`RealtimePublisher.publish` 送出信號(交易內改用 `publishAfterCommit`);**新增對外 adapter 要在入口加上它**。只讀、無副作用的呼叫(簽讀取 / 上傳網址)不加。
 
 ## TX-04 交易內不吞資料庫錯誤;冪等改用先查或 upsert

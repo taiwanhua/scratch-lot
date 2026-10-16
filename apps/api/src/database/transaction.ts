@@ -30,6 +30,8 @@ export interface TransactionOptions {
  * 交易的**一次嘗試**:session 與這次嘗試登記的交易後動作。
  * `open` 只在這次嘗試進行中為 true;嘗試結束(提交、回復、被重試取代)就關閉 ——
  * `fn` 裡排出去、晚於交易結束才跑的非同步工作(setTimeout 等)不會再被當成「在交易內」。
+ * `open` 要等 `connection.transaction()` 返回才關,driver 提交(或回復)後到返回之間還有收尾空檔,
+ * 所以 `activeScope()` 另看 driver 的 `session.inTransaction()`。
  */
 interface TransactionScope {
   readonly session: ClientSession;
@@ -40,9 +42,16 @@ interface TransactionScope {
 const transactionScope = new AsyncLocalStorage<TransactionScope>();
 const logger = new Logger("Transaction");
 
+/**
+ * 進行中的嘗試:這次嘗試還沒被關閉,**而且** driver 仍在交易中。
+ * - `inTransaction()` 在 driver 送出提交 / 回復並得到結果的那一刻轉為 false,不必等 withTransaction 返回
+ * - 重試時同一個 session 會重新 `startTransaction`(又回到 true),上一輪靠 `open` 擋掉
+ */
 function activeScope(): TransactionScope | undefined {
   const scope = transactionScope.getStore();
-  return scope?.open === true ? scope : undefined;
+  return scope?.open === true && scope.session.inTransaction()
+    ? scope
+    : undefined;
 }
 
 /**
