@@ -2807,6 +2807,65 @@
       "saved": "Notification settings saved",
       "saveFailed": "Couldn't save. Please try again later",
       "loadFailed": "Couldn't load notification settings"
+    },
+    "types": {
+      "workflow": {
+        "task-created": "Awaiting your review",
+        "result": "Application result",
+        "overdue": "Review overdue",
+        "cc": "For your information"
+      },
+      "printing": {
+        "job-failed": "Print failed",
+        "agent-offline": "Print agent offline"
+      }
+    }
+  },
+  "notificationSettings": {
+    "intro": "Recipients of these reminders can be set by user, role and permission. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
+    "rootReadOnly": "You are in the root organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
+    "search": "Search notification types",
+    "searchPlaceholder": "Name",
+    "tableLabel": "Notification types",
+    "empty": "No matching notification types",
+    "loadFailed": "Notification settings failed to load. Refresh and try again.",
+    "total": "{total} in total, {pageSize} per page",
+    "columns": {
+      "type": "Notification type",
+      "orgScope": "Organization scope",
+      "audience": "Recipients",
+      "actions": "Actions"
+    },
+    "orgScope": "{origin, select, tenant {Top-level organization} other {Organization of the event}}{range, select, descendants { and its children} ancestors { and its parents} other {}}",
+    "defaultTag": "Default",
+    "actions": {
+      "edit": "Edit",
+      "reset": "Restore default"
+    },
+    "edit": {
+      "title": "Edit recipients: {name}",
+      "scopeHint": "Organization scope: {scope} (set by the notification type, cannot be changed). Recipients = people within the scope who also match the conditions below.",
+      "audienceTitle": "Recipients",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "reset": {
+      "title": "Restore default: {name}",
+      "body": "Recipients go back to the default: {audience}. Your current changes will be removed.",
+      "cancel": "Cancel",
+      "confirm": "Restore default"
+    },
+    "feedback": {
+      "saveSuccess": "Recipients updated",
+      "resetSuccess": "Default recipients restored"
+    },
+    "errors": {
+      "INVALID_AUDIENCE": "This condition cannot be used. Check it and save again.",
+      "OUT_OF_TENANT": "This person or role is not in your organization",
+      "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
+      "TENANT_ONLY": "Recipients cannot be changed in the root organization. Switch to the organization you want to set up first.",
+      "FORBIDDEN": "You do not have permission to change notification settings",
+      "UNEXPECTED": "Something went wrong. Please try again later."
     }
   },
   "printers": {

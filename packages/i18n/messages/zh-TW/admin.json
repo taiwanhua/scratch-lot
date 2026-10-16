@@ -2807,6 +2807,65 @@
       "saved": "已儲存通知設定",
       "saveFailed": "儲存失敗,請稍後再試",
       "loadFailed": "通知設定載入失敗"
+    },
+    "types": {
+      "workflow": {
+        "task-created": "待你審核",
+        "result": "申請結果",
+        "overdue": "審核逾時",
+        "cc": "知會"
+      },
+      "printing": {
+        "job-failed": "列印失敗",
+        "agent-offline": "列印代理程式離線"
+      }
+    }
+  },
+  "notificationSettings": {
+    "intro": "這些提醒的收件人可以依使用者、角色與權限調整。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
+    "rootReadOnly": "目前在根組織:這裡只顯示預設收件人,不能調整;請先切換到要設定的組織。",
+    "search": "搜尋通知類型",
+    "searchPlaceholder": "名稱",
+    "tableLabel": "通知類型清單",
+    "empty": "沒有符合的通知類型",
+    "loadFailed": "通知設定載入失敗,請重新整理再試一次",
+    "total": "共 {total} 筆,每頁 {pageSize} 筆",
+    "columns": {
+      "type": "通知類型",
+      "orgScope": "組織範圍",
+      "audience": "收件人",
+      "actions": "操作"
+    },
+    "orgScope": "{origin, select, tenant {最上層組織} other {觸發事件的組織}}{range, select, descendants {含下層} ancestors {含上層} other {}}",
+    "defaultTag": "預設",
+    "actions": {
+      "edit": "編輯",
+      "reset": "還原預設"
+    },
+    "edit": {
+      "title": "編輯收件人:{name}",
+      "scopeHint": "組織範圍:{scope}(由通知類型決定,不能修改)。收件人 = 組織範圍內、而且符合下列條件的人。",
+      "audienceTitle": "收件人",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "reset": {
+      "title": "還原預設:{name}",
+      "body": "收件人會改回預設:{audience}。目前的調整會被移除。",
+      "cancel": "取消",
+      "confirm": "還原預設"
+    },
+    "feedback": {
+      "saveSuccess": "已更新收件人",
+      "resetSuccess": "已還原預設收件人"
+    },
+    "errors": {
+      "INVALID_AUDIENCE": "這個條件不能使用,請檢查後再儲存",
+      "OUT_OF_TENANT": "這個對象不在你的組織內",
+      "UNKNOWN_TYPE": "找不到這個通知類型,請重新整理再試一次",
+      "TENANT_ONLY": "根組織不能調整收件人,請先切換到要設定的組織",
+      "FORBIDDEN": "你沒有調整通知設定的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
     }
   },
   "printers": {

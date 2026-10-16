@@ -439,6 +439,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "列印按鈕送出失敗的提示 `t(`errors.${printButtonErrorOf(error).code}`)`(錯誤碼表在 `lib/base/print-button.ts`)",
   },
+  {
+    key: "admin.notifications.types.",
+    reason:
+      "`lib/base/notification-type-name.ts` 的 `t(`types.${type}`)`,type 是 api 回的通知類型 key(`workflow.task-created` 等;沒有文案的類型退回 api 的 `name`)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

@@ -23,6 +23,8 @@ import { FORMS_MODULE_KEY } from "@/pages/base/system/FormsPage/forms-permission
 import { LazyFormsPage } from "@/pages/base/system/FormsPage/lazy-forms-page";
 import { ModuleManagerPage } from "@/pages/base/system/ModuleManagerPage/ModuleManagerPage";
 import { MODULE_MANAGER_MODULE_KEY } from "@/pages/base/system/ModuleManagerPage/module-manager-permissions";
+import { NotificationSettingsPage } from "@/pages/base/system/NotificationSettingsPage/NotificationSettingsPage";
+import { NOTIFICATION_SETTINGS_MODULE_KEY } from "@/pages/base/system/NotificationSettingsPage/notification-settings-permissions";
 import { OrgManagerPage } from "@/pages/base/system/OrgManagerPage/OrgManagerPage";
 import { ORG_MANAGER_MODULE_KEY } from "@/pages/base/system/OrgManagerPage/org-manager-permissions";
 import { LazyPrintersPage } from "@/pages/base/system/PrintersPage/lazy-printers-page";
@@ -86,6 +88,8 @@ export const baseModulePages: ModulePageSource = {
     // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `lg`、在 `xl` 以下收窄屬性面板(T48)
     { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage },
     { key: WORKFLOWS_BLOCKED_PAGE_KEY, Page: LazyWorkflowBlockedPage },
+    // 通知設定(底座規格第 5 章):負責人提醒的收件人
+    { key: NOTIFICATION_SETTINGS_MODULE_KEY, Page: NotificationSettingsPage },
     { key: APPLY_CENTER_MODULE_KEY, Page: LazyApplyCenterPage },
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
     // 印表機管理(底座規格第 6 章 B8):懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)

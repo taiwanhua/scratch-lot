@@ -44,6 +44,11 @@ import {
   sampleNotifications,
 } from "@/test/msw/notification-handlers";
 import {
+  notificationPermissionModules,
+  notificationSettingsWorld,
+  notificationTypes,
+} from "@/test/msw/notification-settings-handlers";
+import {
   orgDetails,
   orgManagerCandidates,
   orgManagersByOrg,
@@ -63,6 +68,7 @@ import {
 } from "@/test/msw/role-fixtures";
 import { roleWorld } from "@/test/msw/role-manager-handlers";
 import { userWorld } from "@/test/msw/user-manager-handlers";
+import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
 import { workflowDesignWorld } from "@/test/msw/workflow-design-handlers";
 import {
   APPLICANT,
@@ -197,7 +203,37 @@ export const mockHandlers = ({
         rules: [savedRule],
         permissionModules: matrixModules,
       }).handlers,
-      ["Roles", "Users", "OrgTree"],
+      ["Roles", "Users", "OrgTree", "AudiencePermissionOptions"],
+    ),
+    // 通知設定(底座規格第 5 章):印表機離線調整過收件人、盤點提醒用預設;`Roles` 讓給 roleWorld,
+    // 權限候選樹改由這裡提供(示範家族 + 印表機管理 / 通知設定,預設收件人的權限名稱才解得出來)
+    ...withoutOperations(
+      notificationSettingsWorld({
+        types: notificationTypes({
+          "printing.agent-offline": {
+            audience: {
+              mode: "match",
+              filter: {
+                op: "AND",
+                children: [
+                  {
+                    field: "role",
+                    cond: "in",
+                    value: { kind: "static", values: [HR_ROLE_ID] },
+                  },
+                  {
+                    field: "permission",
+                    cond: "in",
+                    value: { kind: "static", values: ["system.printers.edit"] },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+        permissionModules: [...matrixModules, ...notificationPermissionModules],
+      }).handlers,
+      ["Roles"],
     ),
     // 欄位管理(#206 / #264):`currentOrg` 只決定新增選項的擁有組織標籤
     ...fieldWorld({
