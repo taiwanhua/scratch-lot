@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- launchd daemon(開機自動執行、當掉自動重啟);由 install.sh 放到 /Library/LaunchDaemons/。 -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>print-agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/print-agent/print-agent</string>
+    <string>run</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <!-- 代理程式自己每天寫一個 log(/Library/Logs/print-agent/);stdout 是同一份,不重複存 -->
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/Library/Logs/print-agent/stderr.log</string>
+</dict>
+</plist>

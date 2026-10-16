@@ -236,12 +236,13 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 
 ### 其他 workflow
 
-| workflow                                 | 觸發                                             | 做什麼                                                                                                                                                              |
-| ---------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Reset DB**(`reset-db.yml`)             | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
-| **E2E**(`e2e.yml`)                       | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
-| **Docs**(`docs.yml`)                     | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
-| **Project Status**(`project-status.yml`) | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
+| workflow                                           | 觸發                                             | 做什麼                                                                                                                                                              |
+| -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Reset DB**(`reset-db.yml`)                       | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **E2E**(`e2e.yml`)                                 | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
+| **Docs**(`docs.yml`)                               | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
+| **Project Status**(`project-status.yml`)           | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
+| **Print Agent Release**(`print-agent-release.yml`) | 只能手動;production 只能從 `main`                | 列印代理程式四平台建置 → 上傳該環境私有 bucket `print-agent/<版本>/` → 更新 `manifest.json`、保留 3 版;見四、「列印代理程式發布」                                   |
 
 ### Release 步驟
 
@@ -639,6 +640,45 @@ db.scheduled_job_runs
 - **本機**:`apps/realtime/.dev.vars.example` 複製成 `.dev.vars`,`pnpm --filter @repo/realtime dev`(`wrangler dev`,`http://localhost:8787`);api 的 `.env` 設 `REALTIME_URL=http://localhost:8787` 與同樣的兩把密鑰。
 
 正本:`apps/realtime/wrangler.jsonc`、`.github/workflows/deploy.yml`「deploy realtime」、`apps/api/src/realtime/realtime.config.ts`
+
+### 列印代理程式發布(print-agent-release.yml)
+
+列印代理程式(`apps/print-agent`,底座規格第 6 章「發布」)的安裝檔放在**各環境自己的私有 bucket**(`deploy/env/<環境>.yaml` 的 `GCS_BUCKET_PRIVATE`,與 api 讀檔的是同一個),不用 GitHub Release(repo private 時店家下載不到):
+
+```
+<私有 bucket>/print-agent/
+ ├ manifest.json          最新版本、各版本、各檔案的 SHA-256(格式正本:@repo/domain/printing)
+ └ <版本>/                四個平台的壓縮檔
+```
+
+api 讀 `manifest.json`、以既有檔案服務簽 1 小時的下載網址(印表機管理頁的下載區);bucket 的讀取與簽名權限沿用上面「GCS bucket 與 IAM」的第 2、3 步,不必另設。
+
+**發布**(只能手動觸發,不進 PR CI):`gh workflow run "Print Agent Release" --ref main -f version=<x.y.z> -f environment=<dev|staging|production>`。順序同 Deploy:先 dev 試裝,再 staging、production;**production 只能從 `main` 發**,dev / staging 可指定其他分支。
+
+1. `build`:四種 runner(`windows-latest`、`ubuntu-latest`、`ubuntu-24.04-arm`、`macos-15`)各自打包單一執行檔與安裝檔(`apps/print-agent/scripts/package-sea.ts`;Windows 另下載 WinSW 並核對 SHA-256)。
+2. `publish`:以 Deploy 同一套 WIF + 部署 SA 認證 → 重算 SHA-256 → 先上傳四個檔到 `print-agent/<版本>/` → 換 `manifest.json`(`no-store`)→ 刪掉第 4 版以前的檔。版本必須是 `x.y.z`、大於目前的最新版本、不能重複發布;`manifest.json` 讀不懂時停下來不覆蓋。
+3. 驗證:run 的 Summary 印出新的 `manifest.json`(四個檔與 SHA-256);印表機管理 → 代理程式分頁的下載區顯示新版本,四個按鈕都能下載。
+
+**第一次發布前要準備的**(每個環境各一次;workflow 只上傳,不建立任何資源):
+
+| 項目                      | 內容                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 私有 bucket               | 已建立(uniform bucket-level access)且 `deploy/env/<環境>.yaml` 寫了 `GCS_BUCKET_PRIVATE`;步驟見「GCS bucket 與 IAM」       |
+| WIF 與部署 SA             | 沿用 `deploy/project/cloud.json` 的 `gcp`(Deploy 用的同一組),不建新身分、不建金鑰                                          |
+| 部署 SA 對 `print-agent/` | 物件讀寫刪(只限這個前綴),見下方指令                                                                                        |
+| GitHub                    | 不需要新的 Secret 或變數;repo 為 private 時 macOS runner 以 10 倍、Windows 以 2 倍計費,`ubuntu-24.04-arm` 要該帳號方案可用 |
+
+部署 SA 對 `print-agent/` 的寫入權限(IAM 條件只放行這個前綴;讀 `manifest.json`、上傳、覆蓋、刪舊版都靠它,不需要列出 bucket):
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://<私有 bucket> \
+  --member=serviceAccount:<deployer-sa> --role=roles/storage.objectAdmin \
+  --condition='expression=resource.name.startsWith("projects/_/buckets/<私有 bucket>/objects/print-agent/"),title=print-agent-release'
+```
+
+**workflow 還沒進 `main` 時想先驗一次**:照 `docs/agents/issue-tracker.md`「新增一個只手動觸發的 workflow 時怎麼驗」暫加 `push` trigger;`push` 事件沒有 inputs,驗證時要把兩個 job 讀 `inputs.version` / `inputs.environment` 的地方暫時寫死(例 `0.0.1` / `dev`),驗完一起改回。
+
+正本:`.github/workflows/print-agent-release.yml`、`apps/print-agent/README.md`、`apps/api/src/printing/print-agent-release.service.ts`
 
 ### Vercel 補充設定
 
