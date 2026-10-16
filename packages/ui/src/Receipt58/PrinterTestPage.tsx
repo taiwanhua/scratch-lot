@@ -96,10 +96,12 @@ export const PrinterTestPage = ({
     <Receipt58Divider />
     <Receipt58Row label={labels.rowLabel} value={labels.rowValue} />
     <Receipt58Table head={labels.tableHead} rows={[labels.tableRow]} />
+    <Receipt58Divider />
     <Receipt58Text>{labels.longText}</Receipt58Text>
     <Receipt58Divider />
     <Receipt58Barcode value={barcodeValue} />
     <Receipt58Qr value={managementUrl} caption={labels.qrCaption} />
+    {/* 條碼與切紙之間不另加虛線:切紙列本身就是一條點線,兼作分隔 */}
     <Receipt58Cut label={labels.cut} />
   </Receipt58>
 );

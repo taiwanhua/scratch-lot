@@ -14,6 +14,12 @@ describe("code128Modules", () => {
     expect(modules.endsWith("1100011101011")).toBe(true);
   });
 
+  it("內容含非 ASCII(中文)時拋出錯誤,不產生錯的條碼", () => {
+    expect(() => code128Modules("單號123")).toThrow(
+      'Code128 barcode accepts ASCII only (0–127); got "單號123"',
+    );
+  });
+
   it("不同內容產生不同條紋", () => {
     expect(code128Modules("A1")).not.toBe(code128Modules("A2"));
   });

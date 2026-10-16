@@ -44,6 +44,16 @@ export const RECEIPT58_GAP = 8;
 /** 熱感紙只有黑:字、線一律 common.black(不隨深色模式改變,STYLE-04 的 palette 管道)。 */
 export const RECEIPT58_INK = "common.black";
 
+/**
+ * 「標籤 + 值」兩欄列的標籤欄:內容短時照內容寬,太長時最多佔一半寬並換行,
+ * 值欄(`flex: 1`)永遠留得到另一半,兩邊都不截斷。
+ */
+export const RECEIPT58_LABEL_SX = {
+  flex: "0 1 auto",
+  minWidth: 0,
+  maxWidth: "50%",
+} as const;
+
 /** 點數 → CSS 長度字串(sx 的數字會被當成 spacing 倍數,列印幾何一律寫成 px 字串)。 */
 export const dots = (value: number): string => `${String(value)}px`;
 

@@ -193,6 +193,24 @@ describe("Receipt58Row / Receipt58Total", () => {
     expect(getComputedStyle(screen.getByText("合計")).fontWeight).toBe("600");
     expect(screen.getByText("3,400")).toBeInTheDocument();
   });
+
+  it.each([
+    ["Receipt58Row", <Receipt58Row key="row" label={LONG_TEXT} value="值" />],
+    [
+      "Receipt58Total",
+      <Receipt58Total key="total" label={LONG_TEXT} value="3,400" />,
+    ],
+  ])("%s:標籤太長時可縮、最多佔一半寬並換行,不截斷", (_, element) => {
+    render(element);
+
+    const label = getComputedStyle(screen.getByText(LONG_TEXT));
+    expect(label.flexShrink).toBe("1");
+    expect(label.minWidth).toBe("0");
+    expect(label.maxWidth).toBe("50%");
+    expect(label.whiteSpace).toBe("pre-wrap");
+    expect(label.overflowWrap).toBe("anywhere");
+    expect(label.overflow).not.toBe("hidden");
+  });
 });
 
 describe("Receipt58Table", () => {
@@ -255,6 +273,11 @@ describe("Receipt58Divider / Receipt58Signature / Receipt58Cut", () => {
       container.querySelector("[data-receipt58-sign-line]"),
     ).toBeInTheDocument();
     expect(screen.getByText("切紙")).toBeInTheDocument();
+    // 剪刀是單色 SVG 圖示,不是 ✂ 字元(彩色 emoji 二值化會變黑塊)
+    expect(
+      container.querySelector("svg[data-receipt58-cut-icon]"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("✂")).not.toBeInTheDocument();
   });
 });
 
@@ -295,6 +318,12 @@ describe("Receipt58Qr / Receipt58Barcode", () => {
     const barcode = screen.getByRole("img", { name: value });
     expect(Number(barcode.getAttribute("width"))).toBe(
       Number(barcode.dataset.modules),
+    );
+  });
+
+  it("條碼內容含非 ASCII 時拋出可讀的錯誤", () => {
+    expect(() => render(<Receipt58Barcode value="測試123" />)).toThrow(
+      /ASCII only/,
     );
   });
 });
