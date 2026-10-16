@@ -9,6 +9,7 @@ import {
   useWorkflowsQuery,
 } from "@repo/graphql";
 
+import { useListSelection } from "@/hooks/base/useListSelection";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -43,11 +44,17 @@ export const useWorkflowsPageData = (initialKey: string | null = null) => {
   const items: readonly WorkflowFieldsFragment[] =
     workflows.data?.workflows.items ?? [];
 
-  /** 還沒點過任何一個時預設選第一個(不在 effect 內 setState,REACT-06)。 */
-  const selectedKey =
-    pickedKey !== null && items.some((item) => item.key === pickedKey)
-      ? pickedKey
-      : (items.at(0)?.key ?? null);
+  /**
+   * 還沒點過任何一個時預設選第一個(不在 effect 內 setState,REACT-06);指定的流程不在清單裡 →
+   * 清單查完才退回第一個,剛建立 / fork 的那一個等清單帶回來(`useListSelection`)。
+   */
+  const selection = useListSelection({
+    pickedKey,
+    setPickedKey,
+    keys: items.map((item) => item.key),
+    query: workflows,
+  });
+  const { selectedKey } = selection;
   const selected = items.find((item) => item.key === selectedKey) ?? null;
 
   const invalidate = async (workflowKey: string | null) => {
@@ -76,7 +83,9 @@ export const useWorkflowsPageData = (initialKey: string | null = null) => {
     isLoading: workflows.isLoading,
     selected,
     selectedKey,
-    select: setPickedKey,
+    /** 指定的流程還沒出現在清單上(剛建立 / fork),右欄顯示載入中 */
+    isSelectionPending: selection.isPending,
+    select: selection.select,
     invalidate,
   };
 };
