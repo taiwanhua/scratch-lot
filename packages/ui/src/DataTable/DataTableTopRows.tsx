@@ -2,17 +2,12 @@
 
 import MuiTableCell from "@mui/material/TableCell";
 import MuiTableRow from "@mui/material/TableRow";
-import type { SxProps, Theme } from "@mui/material/styles";
 import type { Header, RowData } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 
 import { mergeSx } from "../theme/sx";
 import type { DataTableColumn } from "./data-table-column";
-import {
-  type PinnedPlacement,
-  pinnedCellSx,
-  pinnedEdgeShadow,
-} from "./pinned-cell-sx";
+import { type PinnedPlacement, pinnedCellSx } from "./pinned-cell-sx";
 import type { DataTableFeatures } from "./useDataTable";
 
 /**
@@ -24,24 +19,6 @@ export interface DataTableTopRow {
   /** 某一欄的格子內容;回 `null` 就是空格 */
   renderCell: (columnKey: string) => ReactNode;
 }
-
-/**
- * 格子底線改用 inset 陰影畫在格子裡:表格的格線是合併框線(border-collapse),半透明的 divider
- * 底下沒有格子的底色,固定在上方時捲過去的資料列會從那 1px 透出來。固定欄的分隔陰影一起疊上。
- */
-const bottomLineSx =
-  (placement?: PinnedPlacement): SxProps<Theme> =>
-  (theme) => {
-    const { divider } = (theme.vars ?? theme).palette;
-    const line = `inset 0 -1px 0 ${divider}`;
-    return {
-      borderBottom: 0,
-      boxShadow:
-        placement?.isEdge === true
-          ? `${line}, ${pinnedEdgeShadow(placement.side, divider)}`
-          : line,
-    };
-  };
 
 type LeafHeader<Row extends RowData> = Header<DataTableFeatures, Row>;
 
@@ -86,7 +63,6 @@ export const DataTableTopRows = <Row extends RowData>({
             overflow: "hidden",
           },
           pinnedCellSx(placement, false),
-          bottomLineSx(placement),
           column.cellSx,
         )}
       >
@@ -103,7 +79,7 @@ export const DataTableTopRows = <Row extends RowData>({
         aria-hidden
         variant="body"
         component="td"
-        sx={mergeSx({ p: 0, bgcolor: "background.paper" }, bottomLineSx())}
+        sx={{ p: 0, bgcolor: "background.paper" }}
       />
       {endHeaders.map((header) => renderCell(row, header))}
     </MuiTableRow>

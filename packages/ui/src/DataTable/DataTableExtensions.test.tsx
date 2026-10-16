@@ -115,6 +115,15 @@ describe("DataTable 固定列 topRows", () => {
     const theadRules = cssRulesMatching(`.${emotionClassOf(thead)}`);
     expect(declaredValue(theadRules, "position")).toBe("sticky");
     expect(declaredValue(theadRules, "top")).toBe("0");
+    // 分開框線:格線畫在格子自己的不透明底上,捲過去的資料列不會從格線透出來
+    const tableElement = container.querySelector("table");
+    if (tableElement === null) throw new Error("沒有 table");
+    expect(
+      declaredValue(
+        cssRulesMatching(`.${emotionClassOf(tableElement)}`),
+        "border-collapse",
+      ),
+    ).toBe("separate");
 
     const pinnedTop = screen.getByText("固定-name").closest("td");
     if (pinnedTop === null) throw new Error("固定列的格子不是 td");

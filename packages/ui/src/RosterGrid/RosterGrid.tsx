@@ -10,6 +10,10 @@ import type {
   DataTableColumnVisibility,
 } from "../DataTable/data-table-column";
 import { RosterCell } from "./RosterCell";
+import {
+  DEFAULT_DATE_COLUMN_WIDTH,
+  buildRosterColumns,
+} from "./roster-columns";
 import type {
   RosterCellContext,
   RosterCellKey,
@@ -17,11 +21,7 @@ import type {
   RosterDate,
   RosterTopGroup,
 } from "./roster-grid-types";
-import {
-  DEFAULT_DATE_COLUMN_WIDTH,
-  useRosterColumns,
-} from "./useRosterColumns";
-import { useRosterTopRows } from "./useRosterTopRows";
+import { buildRosterTopRows } from "./roster-top-rows";
 
 export type * from "./roster-grid-types";
 export type {
@@ -50,9 +50,11 @@ export interface RosterGridProps<Person extends RowData> {
   selectedCell?: RosterCellKey | null;
   /** 點日期格(停用的日期不可點);沒給時格子不可點 */
   onCellClick?: (person: Person, date: string) => void;
-  /** 欄位顯示 / 隱藏(受控;key = 欄位 key 或日期)。使用的模組存在瀏覽器 */
+  /**
+   * 欄位顯示 / 隱藏(受控;key = 欄位 key 或日期)。元件沒有切換介面:使用的模組提供 [⚙ 顯示欄位],
+   * 直接改這個值並存在瀏覽器
+   */
   columnVisibility?: DataTableColumnVisibility;
-  onColumnVisibilityChange?: (visibility: DataTableColumnVisibility) => void;
   /** 可收合成一個窄欄的欄位群組 */
   columnGroups?: readonly RosterColumnGroup[];
   /** 收合中的群組 id(受控)。使用的模組存在瀏覽器 */
@@ -88,7 +90,6 @@ export const RosterGrid = <Person extends RowData>({
   selectedCell = null,
   onCellClick,
   columnVisibility,
-  onColumnVisibilityChange,
   columnGroups = NO_COLUMNS,
   collapsedColumnGroups = NO_GROUP_IDS,
   onCollapsedColumnGroupsChange,
@@ -139,7 +140,7 @@ export const RosterGrid = <Person extends RowData>({
     );
   };
 
-  const columns = useRosterColumns({
+  const columns = buildRosterColumns({
     leadingColumns,
     trailingColumns,
     dates,
@@ -147,13 +148,14 @@ export const RosterGrid = <Person extends RowData>({
     renderDateCell,
     columnGroups,
     collapsedColumnGroups,
+    columnVisibility,
     onToggleGroup: toggleGroup,
   });
 
   const labelColumnKey = leadingColumns.find(
     (column) => columnVisibility?.[column.key] !== false,
   )?.key;
-  const topRows = useRosterTopRows({
+  const topRows = buildRosterTopRows({
     group: topGroup,
     dates,
     labelColumnKey,
@@ -167,7 +169,6 @@ export const RosterGrid = <Person extends RowData>({
       getRowKey={getPersonKey}
       topRows={topRows}
       columnVisibility={columnVisibility}
-      onColumnVisibilityChange={onColumnVisibilityChange}
       isLoading={isLoading}
       emptyMessage={emptyMessage}
       containerSx={containerSx}

@@ -45,9 +45,10 @@ export const DataTableBodyRows = <Row extends RowData>({
     () => modelRows.map((row) => row.original),
     [modelRows],
   );
-  // useVirtualizer 回傳可變的實例,React Compiler 因此跳過本元件的自動 memo;
-  // 本元件不把 virtualizer 的函式往下傳給 memo 過的子元件,略過 memo 不影響正確性
-  // eslint-disable-next-line react-hooks/incompatible-library -- 見上兩行
+  // useVirtualizer 回傳可變的實例,React Compiler 因此跳過本元件的自動 memo(本元件每次捲動本來就要重畫)。
+  // 往下傳給 memo 過的 `DataTableBodyRow` 的只有 `measureElement`:它是實例上固定的函式,
+  // 捲動時參照不變,列的 memo 照常生效
+  // eslint-disable-next-line react-hooks/incompatible-library -- 見上三行
   const virtualizer = useVirtualizer({
     count: modelRows.length,
     getScrollElement: () => scrollElement,

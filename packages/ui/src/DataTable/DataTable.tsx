@@ -64,10 +64,11 @@ export interface DataTableProps<Row extends RowData> {
   onColumnWidthsChange?: (widths: DataTableColumnWidths) => void;
   /** 欄寬把手的無障礙名稱;預設「調整「<表頭>」欄寬」(表頭不是字串時用 key) */
   resizeLabelOf?: (column: CellRenderColumn<Row>) => string;
-  /** 欄位顯示 / 隱藏(受控);給了就由呼叫端管,沒列到的欄照常顯示 */
+  /**
+   * 欄位顯示 / 隱藏(受控):`false` 的欄不畫,沒列到的欄照常顯示。表格本身沒有切換介面,
+   * 由呼叫端的 [顯示欄位] 直接改這個值。
+   */
   columnVisibility?: DataTableColumnVisibility;
-  /** 欄位顯示改變時回報整份狀態(由呼叫端提供的 [顯示欄位] 介面觸發) */
-  onColumnVisibilityChange?: (visibility: DataTableColumnVisibility) => void;
   /**
    * 表頭下方的固定列(例:班表的人力需求區):和表頭一起固定、不隨資料列捲動,
    * 依欄位對齊。給了的時候改成整個表頭區塊一起 sticky。
@@ -112,7 +113,6 @@ export const DataTable = <Row extends RowData>({
   onColumnWidthsChange,
   resizeLabelOf = defaultResizeLabel,
   columnVisibility,
-  onColumnVisibilityChange,
   topRows = NO_TOP_ROWS,
   minWidth = 0,
   size = "medium",
@@ -135,7 +135,6 @@ export const DataTable = <Row extends RowData>({
     columnWidths,
     onColumnWidthsChange,
     columnVisibility,
-    onColumnVisibilityChange,
   });
   const columnByKey = useMemo(
     () => new Map(columns.map((column) => [column.key, column])),
@@ -193,6 +192,11 @@ export const DataTable = <Row extends RowData>({
           tableLayout: "fixed",
           width: "100%",
           minWidth: Math.max(table.getTotalSize(), minWidth),
+          // 有固定列時整個表頭 sticky:合併框線(collapse)的半透明格線底下沒有格子的底色,
+          // 捲過去的資料列會從格線透出來;分開框線時格線畫在格子自己的不透明底色上
+          ...(hasTopRows
+            ? { borderCollapse: "separate", borderSpacing: 0 }
+            : {}),
         }}
       >
         <MuiTableHead
@@ -202,8 +206,6 @@ export const DataTable = <Row extends RowData>({
                   position: "sticky",
                   top: 0,
                   zIndex: 2,
-                  // 不透明底:格線是半透明的 divider,沒有底的話捲過去的資料列會從格線透出來
-                  bgcolor: "background.paper",
                 }
               : undefined
           }

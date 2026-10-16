@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, createElement } from "react";
 
 import { Box } from "../Box/Box";
 import type { DataTableTopRow } from "../DataTable/DataTableTopRows";
@@ -11,7 +11,7 @@ import type {
   RosterTopGroupRow,
 } from "./roster-grid-types";
 
-export interface UseRosterTopRowsOptions {
+export interface BuildRosterTopRowsOptions {
   /** 沒有頂部群組時回 `undefined` */
   group: RosterTopGroup | undefined;
   dates: readonly RosterDate[];
@@ -21,32 +21,31 @@ export interface UseRosterTopRowsOptions {
   emptyCellLabel: (date: string, rowKey: string) => string;
 }
 
+/** 日期格的內容留一點內距(日期欄的表格格子本身是 0 內距,讓班表格子能貼滿)。 */
+const padded = (content: ReactNode) =>
+  createElement(Box, { sx: { p: 0.5 } }, content);
+
 /**
- * 頂部固定群組 → `DataTable` 的 `topRows`:
+ * 頂部固定群組 → `DataTable` 的 `topRows`(純函式,每次 render 重算):
  * - 收合:一列,標題(▸)+ 每天一格彙總;
  * - 展開:標題列(▾)+ 每一列(列名 + 每天的格子;空白格可點、滑過顯示提示)。
  * 停用的日期格子留空。
  */
-/** 日期格的內容留一點內距(日期欄的表格格子本身是 0 內距,讓班表格子能貼滿)。 */
-const padded = (content: ReactNode) => <Box sx={{ p: 0.5 }}>{content}</Box>;
-
-export const useRosterTopRows = ({
+export const buildRosterTopRows = ({
   group,
   dates,
   labelColumnKey,
   emptyCellLabel,
-}: UseRosterTopRowsOptions): DataTableTopRow[] | undefined => {
+}: BuildRosterTopRowsOptions): DataTableTopRow[] | undefined => {
   if (group === undefined) return undefined;
   const dateByKey = new Map(dates.map((d) => [d.date, d]));
-  const title = (
-    <RosterGroupToggle
-      label={group.title}
-      expanded={!group.collapsed}
-      onToggle={() => {
-        group.onCollapsedChange(!group.collapsed);
-      }}
-    />
-  );
+  const title = createElement(RosterGroupToggle, {
+    label: group.title,
+    expanded: !group.collapsed,
+    onToggle: () => {
+      group.onCollapsedChange(!group.collapsed);
+    },
+  });
   const summaryCell = (columnKey: string): ReactNode => {
     const summary = dateByKey.get(columnKey)?.disabled
       ? undefined
@@ -54,7 +53,7 @@ export const useRosterTopRows = ({
     let content: ReactNode = null;
     if (columnKey === labelColumnKey) content = title;
     else if (summary !== undefined)
-      content = padded(<RosterGroupSummaryCell summary={summary} />);
+      content = padded(createElement(RosterGroupSummaryCell, { summary }));
     return content;
   };
   if (group.collapsed) {
@@ -71,15 +70,13 @@ export const useRosterTopRows = ({
     else if (!isOpenDate) return content;
     else if (cell !== undefined) content = padded(cell);
     else if (onEmptyCellClick !== undefined)
-      content = (
-        <RosterEmptyGroupCell
-          hint={group.emptyCellHint}
-          label={emptyCellLabel(columnKey, row.key)}
-          onClick={() => {
-            onEmptyCellClick(columnKey, row.key);
-          }}
-        />
-      );
+      content = createElement(RosterEmptyGroupCell, {
+        hint: group.emptyCellHint,
+        label: emptyCellLabel(columnKey, row.key),
+        onClick: () => {
+          onEmptyCellClick(columnKey, row.key);
+        },
+      });
     return content;
   };
   return [
