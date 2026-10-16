@@ -2693,6 +2693,7 @@
     "permissionWildcard": "全部",
     "permissionLoadFailed": "權限清單載入失敗,請稍後再試。",
     "permissionConfirm": "確定",
-    "outOfList": "不在候選清單中"
+    "outOfList": "不在候選清單中",
+    "loading": "載入中…"
   }
 }

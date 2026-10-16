@@ -1,8 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { delay } from "msw";
 
 import { checkboxOf } from "@/components/base/OrgTreeSelect/org-tree-select-test-support";
 import { savedRule } from "@/test/msw/data-scope-fixtures";
+import { api, server } from "@/test/msw/server";
 
 import {
   audienceRegion,
@@ -16,6 +18,31 @@ import {
 } from "./data-scope-test-support";
 
 type Actor = ReturnType<typeof renderPage>["user"];
+
+/** 已存一條規則,套用對象只有一列「角色 屬於 `roleIds`」(條件組合沿用 savedRule)。 */
+const worldWithRoles = (roleIds: string[]) => ({
+  rules: [
+    {
+      ...savedRule,
+      rules: savedRule.rules.map((entry) => ({
+        ...entry,
+        audience: {
+          mode: "match",
+          filter: {
+            op: "AND",
+            children: [
+              {
+                field: "role",
+                cond: "in",
+                value: { kind: "static", values: roleIds },
+              },
+            ],
+          },
+        },
+      })),
+    },
+  ],
+});
 
 /** 加一條新規則,把套用對象切到「符合條件」(新規則預設「所有人」)。 */
 const startMatchRule = async (actor: Actor) => {
@@ -108,36 +135,8 @@ describe("套用對象(AudiencePicker)", () => {
   });
 
   it("已存的角色不在候選清單裡:照樣列成標籤,改別的值時原樣送回", async () => {
-    const [entry] = savedRule.rules;
     const { user: actor, fake } = renderPage({
-      world: {
-        rules: [
-          {
-            ...savedRule,
-            rules: [
-              {
-                ...entry,
-                audience: {
-                  mode: "match",
-                  filter: {
-                    op: "AND",
-                    children: [
-                      {
-                        field: "role",
-                        cond: "in",
-                        value: {
-                          kind: "static",
-                          values: ["role-gone", "role-support"],
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            ],
-          },
-        ],
-      },
+      world: worldWithRoles(["role-gone", "role-support"]),
     });
     await waitForEditor("示範模組1(demo_items_one)");
 
@@ -171,6 +170,25 @@ describe("套用對象(AudiencePicker)", () => {
         ],
       },
     });
+  });
+
+  it("角色清單還在載入時:不判定「不在候選清單中」,值欄位停用、標籤先不出現", async () => {
+    renderPage({ world: worldWithRoles(["role-gone", "role-support"]) });
+    server.use(
+      api.query("Roles", async () => {
+        await delay("infinite");
+      }),
+    );
+    await waitForEditor("示範模組1(demo_items_one)");
+
+    const field = await within(audienceRegion()).findByRole("combobox", {
+      name: "值",
+    });
+    expect(field).toBeDisabled();
+    expect(screen.queryByText("不在候選清單中")).not.toBeInTheDocument();
+    expect(
+      within(audienceRegion()).queryByText("客服"),
+    ).not.toBeInTheDocument();
   });
 
   it("條件列沒挑值:按儲存不送出,錯誤標在那一列(本地文案)", async () => {

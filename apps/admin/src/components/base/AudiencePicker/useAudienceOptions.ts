@@ -38,6 +38,9 @@ export interface AudienceOptions {
   /** 依擁有組織排好序(同組織相鄰,`groupBy` 才不會重複標題) */
   roles: readonly RoleMenuOption[];
   users: readonly AudienceUserOption[];
+  /** 清單還在路上:這段期間不能判定已存的 id「不在候選清單中」 */
+  isRolesLoading: boolean;
+  isUsersLoading: boolean;
   permissionModules: readonly PermissionOptionModule[];
   isPermissionsLoading: boolean;
   isPermissionsError: boolean;
@@ -88,6 +91,8 @@ export const useAudienceOptions = (
   return {
     roles: roleOptions,
     users: userOptions,
+    isRolesLoading: roles.isLoading,
+    isUsersLoading: users.isLoading,
     permissionModules:
       permissions.data?.audiencePermissionOptions.modules ?? [],
     isPermissionsLoading: permissions.isLoading,

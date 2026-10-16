@@ -2693,6 +2693,7 @@
     "permissionWildcard": "All",
     "permissionLoadFailed": "Failed to load permissions. Please try again later.",
     "permissionConfirm": "Done",
-    "outOfList": "Not in the candidate list"
+    "outOfList": "Not in the candidate list",
+    "loading": "Loading…"
   }
 }
