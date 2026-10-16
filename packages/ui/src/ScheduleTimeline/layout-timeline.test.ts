@@ -5,7 +5,7 @@ import {
   RULE_CASES,
   describeLayout,
   ruleCase,
-} from "./layout-timeline-rule-cases";
+} from "./layout-timeline-test-support";
 
 describe("layoutTimeline 規則頁案例(Figma 401:805)", () => {
   for (const rule of RULE_CASES) {
@@ -54,5 +54,17 @@ describe("layoutTimeline 寬度與排序", () => {
     const result = layoutTimeline(groups, 157);
     expect(result.placed.map((p) => p.group.id)).toEqual(["c"]);
     expect(result.collapsed.map((group) => group.id)).toEqual(["a", "b"]);
+  });
+
+  it("缺少的排序鍵當 0:[1] 與 [1, 0] 平手,交給建立時間", () => {
+    const base = { start: 0, end: 60, slots: 3 };
+    const groups = [
+      { ...base, id: "a", sortKeys: [1, 0], createdAt: 1 },
+      { ...base, id: "b", sortKeys: [1], createdAt: 0 },
+      { ...base, id: "c", sortKeys: [1, -1], createdAt: 2 },
+    ];
+    const result = layoutTimeline(groups, 157);
+    expect(result.placed.map((p) => p.group.id)).toEqual(["c"]);
+    expect(result.collapsed.map((group) => group.id)).toEqual(["b", "a"]);
   });
 });
