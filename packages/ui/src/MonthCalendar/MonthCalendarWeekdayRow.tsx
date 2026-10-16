@@ -31,11 +31,14 @@ export const MonthCalendarWeekdayRow = ({
         minWidth: 0,
         display: "grid",
         gridTemplateColumns: WEEK_COLUMNS,
+        // 星期列灰底(Figma Draft/MonthCalendar 48:360)
+        bgcolor: "background.default",
       }}
     >
-      {labels.map((label) => (
+      {labels.map((label, index) => (
         <Box
-          key={label}
+          // 位置就是星期幾;使用處傳入的文字可能重複(例:英文縮寫 T / S),不能當 key
+          key={index}
           role="columnheader"
           sx={{
             typography: "caption",
