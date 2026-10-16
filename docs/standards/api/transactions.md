@@ -17,7 +17,7 @@
 ```
 
 - 已在交易內的 service 再呼叫 `withTransaction` 會直接在同一個交易裡執行,**沒有獨立的回復點**:內層拋錯若被外層 `catch` 後繼續,內層已做的寫入會隨外層一起提交。要回復就讓錯誤往外拋,不要在外層吞掉。
-- 預設上限 60 秒;動作應在毫秒級,長批次(db-migrator 的大批次遷移)改成每批一個交易 + 檢查點續跑。
+- 預設上限 60 秒(`timeoutMs` 可改);動作應在毫秒級,長批次(db-migrator 的大批次遷移)改成每批一個交易 + 檢查點續跑。上限由 `withTransaction` 自己計時:每次嘗試開始前與 `fn` 結束後(提交前)各檢查一次,超過就拋 `TransactionTimeoutError`、整個回復且不再重試;單一操作卡住時由伺服器的 `transactionLifetimeLimitSeconds`(預設 60 秒)中止交易。**不要把 `timeoutMS` 交給 driver 的 `withTransaction`**:mongodb 7.x 會讓交易內游標的 getMore 帶上 `maxTimeMS`、被 server 拒絕,交易內讀超過一批(101 筆)就失敗。
 
 ## TX-02 讀寫預設帶目前交易的 session;原生 collection 自己帶;交易內不平行讀寫
 
