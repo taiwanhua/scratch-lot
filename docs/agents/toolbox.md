@@ -204,7 +204,7 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 | 先寫紅燈測試再實作                                   | `mattpocock-skills:tdd`                                       | 測試只呼叫 spec 指定的接縫;api 打真的 `/graphql`(TEST-07)、admin 走 MSW(TEST-08)                             |
 | 難纏的 bug、效能退化                                 | `mattpocock-skills:diagnosing-bugs`                           | 先重現再下手;先查 pitfalls,很多「壞掉」其實是快取或埠                                                        |
 | 查官方文件 / API 事實                                | `mattpocock-skills:research`                                  | 它會在 repo 寫一份 Markdown,先講好路徑,不要混進本票 commit                                                   |
-| 改 `CONTEXT.md` / `CONTEXT-PROJECT.md` 詞彙或寫 ADR  | `mattpocock-skills:domain-modeling`                           | 規則本文由文件票寫;新詞連 `_Avoid_` 一起寫;專案名詞寫進 `CONTEXT-PROJECT.md`                                 |
+| 改 `CONTEXT.md` / `CONTEXT-PROJECT.md` 詞彙或寫 ADR  | `mattpocock-skills:domain-modeling`                           | 底座 `CONTEXT.md` 由文件票寫;專案新詞由模組票寫進 `CONTEXT-PROJECT.md`;新詞連 `_Avoid_` 一起寫               |
 | 設計模組介面、決定接縫放哪                           | `mattpocock-skills:codebase-design`                           | 結論要寫回模組文件或規範,不留在對話裡                                                                        |
 | rebase / merge 衝突                                  | `mattpocock-skills:resolving-merge-conflicts`                 | 衝突對象是還沒 release 的 feat 時改走疊分支,不要 rebase 到 `dev`(pitfalls)                                   |
 | 新增後台 CRUD 模組(固定欄位)                         | `/module-scaffold`(repo 自製)                                 | 先選 `plan`(四輪問答 → 規格卡 → 可產 issue)或 `build`(照規格卡與 module-scaffold.md 實作);動態表單模組不適用 |
