@@ -1,9 +1,11 @@
 "use client";
 
+import ContentCutOutlined from "@mui/icons-material/ContentCutOutlined";
 import Box from "@mui/material/Box";
 import type { ReactNode } from "react";
 
 import {
+  RECEIPT58_FONT,
   RECEIPT58_INK,
   RECEIPT58_STROKE,
   dots,
@@ -24,9 +26,12 @@ export const Receipt58Cut = ({ label }: Receipt58CutProps) => (
     data-receipt58-cut=""
     sx={{ display: "flex", alignItems: "center", gap: dots(6) }}
   >
-    <Box component="span" aria-hidden sx={receiptTextSx("small")}>
-      ✂
-    </Box>
+    {/* 用單色 SVG 圖示,不用 ✂ 字元:彩色 emoji 字型二值化後會變成黑塊 */}
+    <ContentCutOutlined
+      aria-hidden
+      data-receipt58-cut-icon=""
+      sx={{ fontSize: dots(RECEIPT58_FONT.small.size), color: RECEIPT58_INK }}
+    />
     <Box
       sx={{
         flex: 1,

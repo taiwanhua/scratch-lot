@@ -11,7 +11,7 @@ import {
 import { code128Modules, moduleDots } from "./symbol-modules";
 
 export interface Receipt58BarcodeProps {
-  /** 條碼內容(Code128;ASCII)。 */
+  /** 條碼內容(Code128):**只接受 ASCII**(英數字與符號);含中文等非 ASCII 字元時拋出錯誤。 */
   value: string;
   /** 條碼高度(點);預設 64。 */
   height?: number;

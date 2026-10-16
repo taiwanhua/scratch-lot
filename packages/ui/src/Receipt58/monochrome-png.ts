@@ -113,15 +113,21 @@ const zlibDeflate = async (
 ): Promise<Uint8Array> => {
   const compression = new CompressionStream("deflate");
   const writer = compression.writable.getWriter();
-  void writer.write(raw);
-  void writer.close();
-  const reader = compression.readable.getReader();
-  const parts: Uint8Array[] = [];
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    parts.push(value);
-  }
+  // 寫入與讀出同時進行(資料大於串流緩衝時,先等寫完會互等);任一邊失敗都由 Promise.all 拋出
+  const writing = (async () => {
+    await writer.write(raw);
+    await writer.close();
+  })();
+  const reading = (async () => {
+    const reader = compression.readable.getReader();
+    const parts: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return parts;
+      parts.push(value);
+    }
+  })();
+  const [, parts] = await Promise.all([writing, reading]);
   return concatBytes(parts);
 };
 

@@ -66,7 +66,8 @@ describe("PrinterTestPage", () => {
   it("分隔線:各區塊之間的虛線", () => {
     const { container } = renderTestPage();
 
-    expect(container.querySelectorAll("hr")).toHaveLength(4);
+    // 表頭|字體大小|對齊|欄位|換行|條碼;條碼與切紙之間由切紙列的點線分隔
+    expect(container.querySelectorAll("hr")).toHaveLength(5);
   });
 
   it("條碼:一維條碼(Code128)+ QR code(內容 = 印表機管理頁的連結)", () => {

@@ -24,7 +24,8 @@ export interface RenderReceiptToPngOptions {
  */
 const rasterizeWithCanvas: ReceiptRasterizer = async (node) => {
   const { domToCanvas } = await import("modern-screenshot");
-  const cssWidth = node.getBoundingClientRect().width || RECEIPT58_DOTS;
+  // offsetWidth 是版面寬(不受祖先 transform 縮放影響),預覽被縮小顯示時仍以實際 384 計算
+  const cssWidth = node.offsetWidth || RECEIPT58_DOTS;
   const canvas = await domToCanvas(node, {
     scale: RECEIPT58_DOTS / cssWidth,
     // 底色不是品牌色:熱感紙的白,轉圖時把透明處補白
