@@ -26,6 +26,7 @@ registerEnumType(PrintJobStatusEnum, {
 export enum PrintJobErrorEnum {
   AGENT_OFFLINE = "agent-offline",
   AGENT_DISABLED = "agent-disabled",
+  NO_RESULT = "no-result",
   PAPER_OUT = "paper-out",
   PRINTER_OFFLINE = "printer-offline",
   OTHER = "other",
@@ -33,7 +34,7 @@ export enum PrintJobErrorEnum {
 registerEnumType(PrintJobErrorEnum, {
   name: "PrintJobError",
   description:
-    "失敗原因:代理程式離線(含 2 分鐘沒被認領)/ 代理程式已停用 / 缺紙 / 連不上印表機 / 其他",
+    "失敗原因:代理程式離線(含 2 分鐘沒被認領)/ 代理程式已停用 / 未收到列印結果(已送出 2 分鐘沒回報)/ 缺紙 / 連不上印表機 / 其他",
 });
 
 export enum PrinterStatusEnum {
@@ -177,6 +178,10 @@ export class PrintJobModel {
 
   @Field(() => String)
   refId!: string;
+
+  /** 單據的顯示名稱;建立時沒給為 null。 */
+  @Field(() => String, { nullable: true })
+  documentName!: string | null;
 
   @Field(() => PrintJobStatusEnum)
   status!: PrintJobStatusEnum;

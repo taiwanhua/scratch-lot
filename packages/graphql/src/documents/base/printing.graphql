@@ -42,6 +42,7 @@ fragment PrintJobFields on PrintJob {
   documentType
   refType
   refId
+  documentName
   status
   error
   isReprint
@@ -59,7 +60,7 @@ fragment PrintJobFields on PrintJob {
 
 # ---- 代理程式(system.printers.view / create / edit)----
 
-# PrintAgentsInput: { orgId?, enabled?, page?, pageSize? }
+# PrintAgentsInput: { orgId?, includeDisabled?(預設 false = 只列啟用中的), page?, pageSize? }
 query PrintAgents($input: PrintAgentsInput!) {
   printAgents(input: $input) {
     items {
@@ -203,7 +204,7 @@ query DocumentPrintCount($input: DocumentPrintCountInput!) {
   }
 }
 
-# CreatePrintJobInput: { printerId, documentType, refType, refId, image, isReprint?, reprintReason?, reprintNote? }
+# CreatePrintJobInput: { printerId, documentType, refType, refId, documentName?, image, isReprint?, reprintReason?, reprintNote? }
 # 補印另要 api.printing.reprint;代理程式離線時回 FAILED(AGENT_OFFLINE)
 mutation CreatePrintJob($input: CreatePrintJobInput!) {
   createPrintJob(input: $input) {

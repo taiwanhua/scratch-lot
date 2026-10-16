@@ -96,8 +96,8 @@ export class PrintAgentsService {
     if (input.orgId) {
       filter.orgId = parseObjectId(input.orgId) ?? new Types.ObjectId();
     }
-    if (input.enabled !== undefined && input.enabled !== null) {
-      filter.enabled = input.enabled;
+    if (input.includeDisabled !== true) {
+      filter.enabled = true;
     }
     const totalCount = await this.agents.count(operator, filter);
     const documents = await this.agents.findMany(operator, filter, {

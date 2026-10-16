@@ -46,28 +46,31 @@
 
 seed 只給初值:專案在 `apps/db-migrator/seeds/project/settings.ts` 的 `moduleInitialValues` 依模組 key 指定 `enabled`、`icon`、`settings`;未指定的圖示沿用模組宣告。以下是底座 `seeds/base/modules/*.ts` 的圖示預設,建立後由根組織在這一頁換:
 
-| 模組                                                         | 初始 icon      |
-| ------------------------------------------------------------ | -------------- |
-| `overview` 總覽                                              | `dashboard`    |
-| `apply-center` 申請中心                                      | `mail`         |
-| `system` 系統管理                                            | `settings`     |
-| `system.org-manager` 組織管理                                | `business`     |
-| `system.org-manager.tenant-ops` 租戶作業                     | `key`          |
-| `system.user-manager` 使用者管理                             | `people`       |
-| `system.role-manager` 角色管理                               | `shield`       |
-| `system.module-manager` 模組與權限                           | `apps`         |
-| `system.field-manager` 欄位管理                              | `label`        |
-| `system.field-manager.category-ops` 類別作業                 | `category`     |
-| `system.data-scope` 資料範圍                                 | `filter`       |
-| `system.forms` 表單管理                                      | `list`         |
-| `system.workflows` 流程管理                                  | `account-tree` |
-| `demo` 示範群組                                              | `extension`    |
-| `demo.sub` 示範次群組                                        | `folder`       |
-| `demo.sub.sample-one` 示範模組1                              | `grid`         |
-| `demo.sample-two` 示範模組2                                  | `list`         |
-| `demo-form` / `demo.form` / `demo.sub.form` 三個示範表單模組 | `description`  |
-| `api` API 能力                                               | `tune`         |
-| 其餘隱藏頁                                                   | 不給(`null`)   |
+| 模組                                                         | 初始 icon       |
+| ------------------------------------------------------------ | --------------- |
+| `overview` 總覽                                              | `dashboard`     |
+| `apply-center` 申請中心                                      | `mail`          |
+| `system` 系統管理                                            | `settings`      |
+| `system.org-manager` 組織管理                                | `business`      |
+| `system.org-manager.tenant-ops` 租戶作業                     | `key`           |
+| `system.user-manager` 使用者管理                             | `people`        |
+| `system.role-manager` 角色管理                               | `shield`        |
+| `system.module-manager` 模組與權限                           | `apps`          |
+| `system.field-manager` 欄位管理                              | `label`         |
+| `system.field-manager.category-ops` 類別作業                 | `category`      |
+| `system.data-scope` 資料範圍                                 | `filter`        |
+| `system.forms` 表單管理                                      | `list`          |
+| `system.workflows` 流程管理                                  | `account-tree`  |
+| `system.notification-settings` 通知設定                      | `notifications` |
+| `system.printers` 印表機管理                                 | `print`         |
+| `demo` 示範群組                                              | `extension`     |
+| `demo.sub` 示範次群組                                        | `folder`        |
+| `demo.sub.sample-one` 示範模組1                              | `grid`          |
+| `demo.sample-two` 示範模組2                                  | `list`          |
+| `demo-form` / `demo.form` / `demo.sub.form` 三個示範表單模組 | `description`   |
+| `api` API 能力                                               | `tune`          |
+| `api.printing` 列印                                          | `print`         |
+| 其餘隱藏頁                                                   | 不給(`null`)    |
 
 seed 唯一會寫入既有文件 `icon` 的情形是**這一欄根本不存在**(文件建立時還沒有圖示欄)—— 那時補初值,否則已經種過的環境永遠拿不到圖示。所以 `setModuleIcon` 清空時寫的是 `icon: null` 而不是 `$unset`:欄位留著才算「人改過的值」,下次部署不會把宣告的初值補回來。
 

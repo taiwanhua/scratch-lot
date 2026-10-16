@@ -16,9 +16,12 @@ export class PrintAgentsInput {
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
 
-  /** 缺席 / null = 啟用與停用都列。 */
-  @Field(() => Boolean, { nullable: true })
-  enabled?: boolean | null;
+  /**
+   * 連已停用的一起列(停用是終態,紀錄不刪);缺席 / null / false = 只列啟用中的。
+   * 畫面的「顯示已停用」開關用它。
+   */
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  includeDisabled?: boolean | null;
 
   @Field(() => Int, { nullable: true, defaultValue: 1 })
   page?: number;
@@ -182,6 +185,10 @@ export class CreatePrintJobInput {
 
   @Field(() => String)
   refId!: string;
+
+  /** 單據的顯示名稱(列印失敗通知用);缺席 / null = 通知顯示「單據類型 + 編號」。 */
+  @Field(() => String, { nullable: true })
+  documentName?: string | null;
 
   @Field(() => String)
   image!: string;

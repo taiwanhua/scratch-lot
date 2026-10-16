@@ -401,6 +401,23 @@ describe("列印 API(後台)", () => {
       expect(printable.printablePrinters.totalCount).toBe(0);
     });
 
+    it("掛到已停用的代理程式 → VALIDATION_FAILED(agentId INVALID)", async () => {
+      const disabled = await pairedAgent(world, world.storeA, "停用後掛印表機");
+      await ok(world, world.admin, DOCS.disableAgent, {
+        input: { id: disabled.agent.id },
+      });
+      const result = await gql(world, world.admin, DOCS.createPrinter, {
+        input: {
+          agentId: disabled.agent.id,
+          name: "掛不上去",
+          host: "receipt-y.lan",
+        },
+      });
+      expect(result.error?.extensions?.fieldErrors).toEqual([
+        expect.objectContaining({ fieldKey: "agentId", code: "INVALID" }),
+      ]);
+    });
+
     it("主機格式不對、埠超出範圍 → VALIDATION_FAILED", async () => {
       const result = await gql(world, world.admin, DOCS.createPrinter, {
         input: {
