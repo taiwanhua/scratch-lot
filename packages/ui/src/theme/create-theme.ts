@@ -1,6 +1,7 @@
 import { type Theme, createTheme } from "@mui/material/styles";
 
 import type { Brand } from "./brand";
+import { tableHeaderSx } from "./table-header";
 import {
   type CustomShadows,
   buildShadows,
@@ -248,11 +249,8 @@ export const createAppTheme = (
       },
       MuiTableCell: {
         styleOverrides: {
-          head: ({ theme }) => ({
-            color: theme.vars.palette.text.secondary,
-            backgroundColor: theme.vars.palette.background.default,
-            fontWeight: 600,
-          }),
+          // 表頭格外觀的正本(ScheduleTimeline 的表頭也讀同一份)
+          head: ({ theme }) => tableHeaderSx(theme),
         },
       },
     },
