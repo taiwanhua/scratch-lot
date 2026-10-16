@@ -8,6 +8,14 @@ on:
   push:
     branches: [main, dev, staging]
     paths-ignore: ["docs/**", "*.md", ".claude/**", ".agents/**"]
+  # 手動觸發:對任一分支跑同一套 CI(整合分支的票不個別開 PR 時用)。
+  # base_ref 填要比對的分支(例 feat/base-round)只跑受影響的 package;留空 = 全跑。
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "比對的基準分支(留空 = 全跑)"
+        required: false
+        default: ""
 
 # 同一個 PR(或同一分支)有新 commit 時,取消還在跑的舊 run
 concurrency:
@@ -75,7 +83,9 @@ jobs:
         id: affected
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_REF: ${{ inputs.base_ref }}
         run: |
+          if [ -z "$BASE" ] && [ -n "$BASE_REF" ]; then BASE=$(git merge-base "origin/$BASE_REF" HEAD 2>/dev/null || true); fi
           all=false
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             all=true
@@ -126,7 +136,9 @@ jobs:
       - name: 已發布的 migration / 種子快照不可改寫
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_REF: ${{ inputs.base_ref }}
         run: |
+          if [ -z "$BASE" ] && [ -n "$BASE_REF" ]; then BASE=$(git merge-base "origin/$BASE_REF" HEAD 2>/dev/null || true); fi
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "::notice::沒有可比對的基線,略過 migration / 種子快照的不可變檢查"
           else
