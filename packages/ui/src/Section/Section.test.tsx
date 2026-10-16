@@ -2,6 +2,11 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import {
+  cssRulesMatching,
+  declaredValue,
+  emotionClassOf,
+} from "../test/css-rules";
 import { Section } from "./Section";
 
 describe("Section", () => {
@@ -90,5 +95,13 @@ describe("Section", () => {
     const frame = container.querySelector("section");
     expect(frame).toHaveAttribute("id", "form-section-basic");
     expect(frame).toHaveAccessibleName("基本資料");
+  });
+
+  it("標題列鍵盤聚焦時有外框(focus-visible)", () => {
+    render(<Section title="基本資料">內容</Section>);
+
+    const header = screen.getByRole("button", { name: "基本資料" });
+    const rules = cssRulesMatching(emotionClassOf(header), "Mui-focusVisible");
+    expect(declaredValue(rules, "outline")).toMatch(/^2px solid/);
   });
 });

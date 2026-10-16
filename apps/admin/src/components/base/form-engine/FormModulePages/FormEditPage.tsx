@@ -10,6 +10,7 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 
 import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
+import { useIsCurrentFormVersion } from "@/hooks/base/useIsCurrentFormVersion";
 import { useMe } from "@/hooks/base/useMe";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
@@ -59,6 +60,12 @@ export const FormEditPage = ({ module, routeParam }: ModulePageProps) => {
   const permissions = useMemo(
     () => (submission === null ? null : permissionsOfSubmission(submission)),
     [submission],
+  );
+  // 綁舊版本的單不清新版本分區的收合紀錄
+  const isCurrentVersion = useIsCurrentFormVersion(
+    moduleKey,
+    submission?.formKey ?? "",
+    submission?.version ?? null,
   );
   // 頁籤 / 標題:以正在輸入的值即時算(`FormFillForm` 呼叫);日期用租戶時區。
   // 頁層不要再呼叫 `useRouteTabItemLabel`:會蓋掉 `FormFillForm` 設的即時值
@@ -121,6 +128,7 @@ export const FormEditPage = ({ module, routeParam }: ModulePageProps) => {
         definition={version.definition}
         formKey={submission.formKey}
         version={submission.version}
+        isCurrentVersion={isCurrentVersion}
         initialValues={submission.values}
         initialTouched={submission.touched}
         recomputeDefaults={isFreshDraft}

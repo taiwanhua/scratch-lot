@@ -27,6 +27,7 @@ import {
 
 const CREATE_PATH = `${DEMO_FORM_ROUTES.createPage}/shopping_list`;
 const VIEW_PATH = `${DEMO_FORM_ROUTES.viewPage}/sub-1`;
+const EDIT_PATH = `${DEMO_FORM_ROUTES.editPage}/sub-1`;
 const PAGE_ID = `form:${SHOPPING_FORM_KEY}`;
 const STORAGE_KEY = sectionsStorageKey("user-1");
 
@@ -64,6 +65,29 @@ const worldOf = (
   ...defaultRuntimeOptions(),
   versions: { [`${SHOPPING_FORM_KEY}@1`]: collapsibleDefinition() },
   ...extra,
+});
+
+/** 第 2 版:多一個「附註」分區。 */
+const v2 = (): FormDefinition => {
+  const definition = collapsibleDefinition();
+  definition.layout.sections.push({
+    key: "addendum",
+    title: "附註",
+    rows: [],
+    collapsible: true,
+  });
+  return definition;
+};
+
+/** 購物單目前是第 2 版;看的那一筆綁 `version`。 */
+const worldAt = (version: number): FormRuntimeWorldOptions => ({
+  ...defaultRuntimeOptions(),
+  moduleForms: [{ ...shoppingForm, currentVersion: 2 }],
+  versions: {
+    [`${SHOPPING_FORM_KEY}@1`]: collapsibleDefinition(),
+    [`${SHOPPING_FORM_KEY}@2`]: v2(),
+  },
+  submissions: [submissionFragment({ version, viewedVersion: version })],
 });
 
 const stored = (): unknown =>
@@ -203,6 +227,47 @@ describe("表單分區收合(底座 10.3)", () => {
         [PAGE_ID]: { extra: false },
         "dealers.detail": { contact: true },
       });
+    });
+  });
+
+  it("同一張表單的編輯頁也共用 `form:<formKey>`", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ [PAGE_ID]: { extra: false } }),
+    );
+    renderShopping({
+      path: EDIT_PATH,
+      world: worldOf({ submissions: [submissionFragment()] }),
+    });
+
+    await waitFor(async () => {
+      expect(await header("採購資訊")).toHaveAttribute("aria-expanded", "true");
+    });
+  });
+
+  it("看綁舊版本的單:不清掉新版本分區的紀錄;看目前版本才清", async () => {
+    const seeded = { [PAGE_ID]: { addendum: true, extra: false } };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+
+    const old = renderShopping({ path: VIEW_PATH, world: worldAt(1) });
+    await waitFor(async () => {
+      expect(await header("採購資訊")).toHaveAttribute("aria-expanded", "true");
+    });
+    // 等「目前版本」查詢回來(殼的表單清單也用同一支查詢)後,紀錄仍原封不動
+    await waitFor(() => {
+      expect(old.queryClient.isFetching()).toBe(0);
+    });
+    expect(stored()).toEqual(seeded);
+    old.unmount();
+
+    // 第 1 版有、第 2 版也有的分區不受影響;換看目前版本(第 2 版)的單 → 第 2 版沒有的才清
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ [PAGE_ID]: { addendum: true, removed: true } }),
+    );
+    renderShopping({ path: VIEW_PATH, world: worldAt(2) });
+    await waitFor(() => {
+      expect(stored()).toEqual({ [PAGE_ID]: { addendum: true } });
     });
   });
 });

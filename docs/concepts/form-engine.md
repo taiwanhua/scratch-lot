@@ -82,7 +82,7 @@
 | 預設收合(`defaultCollapsed`)               | 使用者沒改過時是收合的;只在可以收合時生效                                   |
 | 收合時標題列顯示的欄位(`summaryFieldKeys`) | 收合時標題後接「標題:值」;只能挑本分區的非明細欄位,讀者看不到或沒值的不顯示 |
 
-- 收合狀態**不寫進定義**,由 admin 依使用者記在瀏覽器:頁面 id `form:<formKey>`(新增、編輯、檢視共用一組,不分版本)、區塊 key = 分區 `key`;只記與預設不同的,打開時清掉已不存在的分區。設計器預覽不記。儲存規則與一般頁面共用,見 `apps/admin/src/lib/base/section-collapse.ts`;key 登記於 `docs/branding.md`。
+- 收合狀態**不寫進定義**,由 admin 依使用者記在瀏覽器:頁面 id `form:<formKey>`(新增、編輯、檢視共用一組,不分版本)、區塊 key = 分區 `key`;只記與預設不同的;打開表單**目前版本**時清掉已不存在的分區(看綁舊版本的單不清,免得清掉新版本分區的紀錄)。設計器預覽不記。儲存規則與一般頁面共用,見 `apps/admin/src/lib/base/section-collapse.ts`;key 登記於 `docs/branding.md`。
 - 送出有錯 → 有錯的分區全部展開、捲到版面順序第一個錯誤;這是暫時的,不寫入記憶。
 - 三個設定的形狀與欄位由檢查器驗(`SECTION_COLLAPSE_INVALID`、`SECTION_SUMMARY_FIELD_INVALID`);補預設值的正本是 `packages/domain/src/form/layout.ts` 的 `sectionCollapseOf`。
 

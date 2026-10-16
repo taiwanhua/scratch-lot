@@ -26,6 +26,10 @@ describe("表單管理:設計器的分區設定(可以收合、預設收合、�
     await user.click(
       within(canvas()).getByRole("button", { name: "分區設定「採購內容」" }),
     );
+    // 畫布上打開設定的那個分區反白
+    expect(
+      within(canvas()).getByRole("region", { name: "採購內容" }),
+    ).toHaveAttribute("aria-current", "true");
     const panel = properties();
     expect(within(panel).getByText("分區設定 — 採購內容")).toBeInTheDocument();
     const defaultCollapsed = within(panel).getByRole("switch", {

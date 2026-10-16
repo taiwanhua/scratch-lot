@@ -10,7 +10,7 @@ import { useTranslations } from "use-intl";
 
 import type { FieldType } from "@repo/domain/form";
 import { IconButton } from "@repo/ui/icon-button";
-import { DeleteIcon, EditIcon } from "@repo/ui/icons";
+import { DeleteIcon, SettingsIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Tooltip } from "@repo/ui/tooltip";
@@ -37,6 +37,8 @@ export interface DesignerCanvasProps {
   /** 設計器內部的定義(欄位帶內部 id;選取、拖拉都以 id 認欄位) */
   definition: DesignDefinition;
   selectedFieldId: string | null;
+  /** 打開分區設定的那個分區(畫布上反白) */
+  selectedSectionKey: string | null;
   onSelectField: (fieldId: string) => void;
   onAddField: (type: FieldType, target: PlaceTarget) => void;
   onMoveField: (fieldId: string, target: PlaceTarget) => void;
@@ -57,6 +59,7 @@ export const DesignerCanvas = ({
   formKey,
   definition,
   selectedFieldId,
+  selectedSectionKey,
   onSelectField,
   onAddField,
   onMoveField,
@@ -125,6 +128,7 @@ export const DesignerCanvas = ({
           expressionContext={DESIGN_CONTEXT}
           design={{
             selectedFieldId,
+            selectedSectionKey,
             onSelectField,
             renderSectionActions: (layoutSection) => {
               const section = definition.layout.sections.find(
@@ -135,11 +139,12 @@ export const DesignerCanvas = ({
                   <Stack
                     direction="row"
                     spacing={0.5}
-                    sx={{ alignItems: "center" }}
+                    sx={{ alignItems: "center", flex: 1, minWidth: 0 }}
                   >
                     <TextField
                       label={t("sectionTitle")}
                       size="small"
+                      sx={{ flex: 1, minWidth: 0 }}
                       value={section.title}
                       onChange={(event) => {
                         onRenameSection(section.key, event.target.value);
@@ -155,7 +160,7 @@ export const DesignerCanvas = ({
                           onSelectSection(section.key);
                         }}
                       >
-                        <EditIcon fontSize="small" />
+                        <SettingsIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title={t("removeSection")} describeChild={false}>

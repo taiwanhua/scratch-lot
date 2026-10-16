@@ -92,6 +92,7 @@ export const FormCreateBody = ({
       definition={definition}
       formKey={form.key}
       version={form.currentVersion}
+      isCurrentVersion
       initialValues={{}}
       recomputeDefaults
       fillDefaultsOnMount
