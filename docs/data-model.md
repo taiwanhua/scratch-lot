@@ -45,6 +45,14 @@
 
 安裝紀錄是映射與續跑依據,不取代 repo 的設定正本。受管範圍由當前 registry 決定;歷史紀錄存在,不代表可以覆蓋現場定義。版本內容仍由表單與流程的設計服務發布,不經普通 documents seed 寫入。
 
+### 排程任務執行紀錄
+
+| collection           | 用途                                                                                                                                                                                | 存取正本                                                                           |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `scheduled_job_runs` | 排程工作每個到期時點一筆:`key`、`scheduledFor`、`status`(`running` / `succeeded` / `failed`)、`startedAt`、`finishedAt`、`error`。唯一 `(key, scheduledFor)` 保證同一時點只執行一次 | `scheduled-job-run.schema.ts`、`apps/api/src/database/scheduled-job-runs.store.ts` |
+
+執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑,中途當掉的紀錄停在 `running`。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
+
 ## 專案資料
 
 底座的 `apps/api/src/project/database/registrations.ts` 預設沒有業務資料登記。引用專案在該目錄維護 schema、repository 與組織資料檢查,規則見[資料層組裝](concepts/data-layer-and-isolation.md#底座與專案資料的組裝)。

@@ -11,6 +11,7 @@ import { OrgMembersModule } from "../orgs/org-members.module";
 import { OrgsModule } from "../orgs/orgs.module";
 import { PermissionModule } from "../permission/permission.module";
 import { RolesModule } from "../roles/roles.module";
+import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
 import { StorageModule } from "../storage/storage.module";
 import { UsersModule } from "../users/users.module";
 import { ApplyCenterModule } from "../workflows/apply-center/apply-center.module";
@@ -25,6 +26,7 @@ import type { ApiFeatureRegistration } from "./api-feature-registration";
 export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "auth", module: AuthModule },
   { key: "audit", module: AuditModule },
+  { key: "scheduled-jobs", module: ScheduledJobsModule },
   { key: "permission", module: PermissionModule },
   { key: "storage", module: StorageModule },
   { key: "orgs", module: OrgsModule },

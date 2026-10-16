@@ -10,6 +10,7 @@ import { BusinessRelationshipsRepository } from "../business-relationships.repos
 import { FormSubmissionUsageCounter } from "../form-submission-usage";
 import type { DatabaseRegistration } from "../registration";
 import { RelationService } from "../relation.service";
+import { ScheduledJobRunsStore } from "../scheduled-job-runs.store";
 import { ActionToken, ActionTokenSchema } from "../schemas/action-token.schema";
 import { AuditLog, AuditLogSchema } from "../schemas/audit-log.schema";
 import {
@@ -59,6 +60,11 @@ import {
   RefreshTokenSchema,
 } from "../schemas/refresh-token.schema";
 import { Role, RoleSchema } from "../schemas/role.schema";
+import {
+  SCHEDULED_JOB_RUNS_COLLECTION,
+  ScheduledJobRun,
+  ScheduledJobRunSchema,
+} from "../schemas/scheduled-job-run.schema";
 import {
   SeedDefinitionInstallation,
   SeedDefinitionInstallationSchema,
@@ -437,6 +443,29 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
           provide: SeedLockReader,
           inject: [getModelToken(SeedLock.name)],
           useFactory: (model: Model<SeedLock>) => new SeedLockReader(model),
+        },
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 排程任務的執行紀錄(系統紀錄,沒有組織歸屬):只經專用的 store 讀寫
+    key: "scheduled-jobs",
+    models: [
+      {
+        name: ScheduledJobRun.name,
+        collection: SCHEDULED_JOB_RUNS_COLLECTION,
+        schema: ScheduledJobRunSchema,
+      },
+    ],
+    repositories: [
+      {
+        modelName: ScheduledJobRun.name,
+        provider: {
+          provide: ScheduledJobRunsStore,
+          inject: [getModelToken(ScheduledJobRun.name)],
+          useFactory: (model: Model<ScheduledJobRun>) =>
+            new ScheduledJobRunsStore(model),
         },
       },
     ],
