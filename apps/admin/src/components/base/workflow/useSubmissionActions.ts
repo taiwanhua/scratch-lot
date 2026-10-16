@@ -8,6 +8,7 @@ import {
   useWithdrawSubmissionMutation,
 } from "@repo/graphql";
 
+import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormSubmissionCache } from "@/hooks/base/useFormSubmissionCache";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -41,7 +42,7 @@ export interface SubmissionActions {
  */
 export const useSubmissionActions = (): SubmissionActions => {
   const t = useTranslations("admin.approval.feedback");
-  const tErrors = useTranslations("admin.workflows.errors");
+  const errorText = useAdminErrorText("admin.workflows.errors");
   const { session } = useSession();
   const showSnackbar = useSnackbar();
   const updateSubmission = useFormSubmissionCache();
@@ -65,7 +66,7 @@ export const useSubmissionActions = (): SubmissionActions => {
       showSnackbar("success", success);
       return result;
     } catch (error) {
-      const message = tErrors(workflowErrorOf(error).code);
+      const message = errorText(workflowErrorOf(error));
       setErrorMessage(message);
       showSnackbar("error", message);
       return null;

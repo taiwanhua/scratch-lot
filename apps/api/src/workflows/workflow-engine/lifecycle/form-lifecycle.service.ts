@@ -1,4 +1,9 @@
-import { Inject, Injectable, Optional } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  type OnModuleInit,
+  Optional,
+} from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { GraphQLError } from "graphql";
 import type { ClientSession, Types } from "mongoose";
@@ -15,10 +20,12 @@ import {
   type FormEffectContext,
   type FormEffectName,
   type FormGuardName,
+  type FormLifecycleRegistration,
   type FormLifecycles,
   type LifecycleNotify,
   type LifecycleResolver,
   type LifecycleSubmission,
+  resolveLifecycleInjections,
 } from "./form-lifecycle-registration";
 
 /** 專案錯誤碼:大寫英數與底線(同底座的 reason)。 */
@@ -78,28 +85,46 @@ function sessionOf(what: string): ClientSession {
  * - `emit`:狀態改變後在同一個交易內呼叫事後動作(系統身分);拋錯往外拋 = 整個動作回復
  */
 @Injectable()
-export class FormLifecycleService {
-  private readonly get: LifecycleResolver;
+export class FormLifecycleService implements OnModuleInit {
+  private resolvers: ReadonlyMap<FormLifecycleRegistration, LifecycleResolver> =
+    new Map();
 
   constructor(
     @Inject(FORM_LIFECYCLES) private readonly lifecycles: FormLifecycles,
     private readonly operators: OperatorContextService,
     private readonly realtime: RealtimePublisher,
-    moduleRef: ModuleRef,
+    private readonly moduleRef: ModuleRef,
     @Optional()
     @Inject(FORM_LIFECYCLE_NOTIFY)
     private readonly notifier: LifecycleNotify | null = null,
-  ) {
-    this.get = (token) => moduleRef.get(token, { strict: false });
+  ) {}
+
+  /** 啟動時解析每筆登記的 `inject`;宣告的 token 找不到 → app 起不來。 */
+  onModuleInit(): void {
+    this.resolvers = resolveLifecycleInjections(
+      this.lifecycles.registrations,
+      (token) => this.moduleRef.get(token, { strict: false }),
+    );
+  }
+
+  private resolverOf(
+    registration: FormLifecycleRegistration,
+  ): LifecycleResolver {
+    const resolver = this.resolvers.get(registration);
+    if (resolver === undefined) {
+      throw new Error(`掛接點 ${registration.moduleKey} 的 inject 尚未解析`);
+    }
+    return resolver;
   }
 
   async guard(name: FormGuardName, input: GuardInput): Promise<void> {
     const { submission } = input;
-    const handler = this.lifecycles.lookup(
+    const registration = this.lifecycles.lookup(
       submission.moduleKey,
       submission.formKey,
-    )?.guards?.[name];
-    if (handler === undefined) {
+    );
+    const handler = registration?.guards?.[name];
+    if (registration === null || handler === undefined) {
       return;
     }
     const blocked = await handler({
@@ -109,7 +134,7 @@ export class FormLifecycleService {
       values: input.values ?? submission.values,
       stepKey: input.stepKey ?? null,
       session: sessionOf(`守門 ${name}`),
-      get: this.get,
+      get: this.resolverOf(registration),
     });
     if (blocked === null) {
       return;
@@ -132,9 +157,12 @@ export class FormLifecycleService {
     subject: EffectSubject,
     detail: { stepKey?: string | null; skipped?: boolean } = {},
   ): Promise<void> {
-    const handler = this.lifecycles.lookup(subject.moduleKey, subject.formKey)
-      ?.effects?.[event];
-    if (handler === undefined) {
+    const registration = this.lifecycles.lookup(
+      subject.moduleKey,
+      subject.formKey,
+    );
+    const handler = registration?.effects?.[event];
+    if (registration === null || handler === undefined) {
       return;
     }
     const session = sessionOf(`事後動作 ${event}`);
@@ -150,7 +178,7 @@ export class FormLifecycleService {
       skipped: detail.skipped ?? false,
       operator: await this.operators.systemOperatorOfOrg(subject.orgId),
       session,
-      get: this.get,
+      get: this.resolverOf(registration),
       notify: (notification) => {
         if (this.notifier === null) {
           return Promise.reject(

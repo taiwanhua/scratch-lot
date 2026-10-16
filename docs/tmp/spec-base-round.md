@@ -409,16 +409,16 @@ S2 測試案例(這三項從底座階段移到**專案階段**實作):
 
 **守門(8 個)**:只能讀;回傳「通過」或「擋下 + 錯誤碼 + 訊息」。
 
-| 守門                  | 時機                                              | 帶入           |
-| --------------------- | ------------------------------------------------- | -------------- |
-| `beforeSubmit`        | 驗證之後、寫入之前(含退回 / 撤回後再送出)         | 這一版的欄位值 |
-| `beforeApprove`       | 某人按核准、批次核准的每一筆、B5 自動通過         | 關卡 key       |
-| `beforeReject`        | 按駁回                                            | 關卡 key       |
-| `beforeReturn`        | 按退回                                            | 關卡 key       |
-| `beforeWithdraw`      | 申請人撤回                                        | —              |
-| `beforeVoid`          | 作廢                                              | —              |
-| `beforeDelete`        | 刪除草稿 / 退回 / 撤回中的單,或沒走流程的已完成單 | —              |
-| `beforeEditCompleted` | 修改沒走流程的已完成單                            | 新的欄位值     |
+| 守門                  | 時機                                                          | 帶入           |
+| --------------------- | ------------------------------------------------------------- | -------------- |
+| `beforeSubmit`        | 驗證之後、寫入之前(含退回 / 撤回後再送出)                     | 這一版的欄位值 |
+| `beforeApprove`       | 某人按核准、批次核准的每一筆、B5 自動通過                     | 關卡 key       |
+| `beforeReject`        | 按駁回                                                        | 關卡 key       |
+| `beforeReturn`        | 按退回                                                        | 關卡 key       |
+| `beforeWithdraw`      | 申請人撤回                                                    | —              |
+| `beforeVoid`          | 作廢                                                          | —              |
+| `beforeDelete`        | 刪除草稿 / 退回 / 撤回中的單、沒走流程的已完成單,或已駁回的單 | —              |
+| `beforeEditCompleted` | 修改沒走流程的已完成單                                        | 新的欄位值     |
 
 **事後動作(7 個)**:狀態改變後在同一個交易內執行;任何一個失敗 → 整個動作回復,使用者看到錯誤訊息。
 
@@ -463,10 +463,13 @@ registerFormLifecycle({
 - 守門收到:操作者、提交、這一版的值、關卡、動作、`session`(唯讀用)。
 - 事後動作收到:事件、提交 id、修訂號、關卡、`skipped`、`session`,以及**系統身分**的操作者:可見範圍依單據的組織設定,不使用按下按鈕那個人的權限。
 - 同一個 (moduleKey, formKey) 只能登記一次;重複 → 啟動時報錯。
+- 同一個模組不能同時登記「整個模組」(省略 `formKey`)與「指定表單」;違反 → 啟動時報錯。
+- `formKey` 不可為 `"*"`(內部代表整個模組);組裝時擋下。
+- 守門與事後動作要用的 repository / service 列在 `inject`(token 清單);啟動時逐一解析,找不到 → 起不來;handler 的 `get` 只拿得到自己宣告的,取未宣告的 → 拋錯。
 
 #### 規則
 
-- 守門擋下 → 回 `FORBIDDEN` + reason = 專案的錯誤碼(例 `PURCHASE_UNRECEIVED_ROWS`),訊息走 i18n。
+- 守門擋下 → 回 `FORBIDDEN` + reason = 專案的錯誤碼(例 `PURCHASE_UNRECEIVED_ROWS`,大寫英數與底線),訊息走 i18n:專案在 `admin.json` 加 `lifecycle` namespace,key = 錯誤碼(`admin.lifecycle.PURCHASE_UNRECEIVED_ROWS`);沒有這個 key → 顯示通用的「沒有權限」。
 - 事後動作內可以呼叫 `notify()`(寫入 notifications 在交易內);送出信號排在交易成功之後(由底座統一處理,專案只呼叫 `realtime.publishAfterCommit()`)。
 - 撤回、退回雖有守門,專案不需要時不登記即可。
 

@@ -6,12 +6,13 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { FormErrorCode } from "@/lib/base/form-engine/form-errors";
+import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
+import type { FormError } from "@/lib/base/form-engine/form-errors";
 
 export interface DeleteSubmissionDialogProps {
   label: string;
   isSubmitting: boolean;
-  errorCode: FormErrorCode | null;
+  error: FormError | null;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -20,12 +21,12 @@ export interface DeleteSubmissionDialogProps {
 export const DeleteSubmissionDialog = ({
   label,
   isSubmitting,
-  errorCode,
+  error,
   onCancel,
   onConfirm,
 }: DeleteSubmissionDialogProps) => {
   const t = useTranslations("admin.formEngine.pages");
-  const tErrors = useTranslations("admin.formEngine.errors");
+  const errorText = useAdminErrorText("admin.formEngine.errors");
 
   return (
     <Dialog
@@ -47,9 +48,7 @@ export const DeleteSubmissionDialog = ({
     >
       <Stack spacing={2}>
         <Typography variant="body2">{t("deleteBody", { label })}</Typography>
-        {errorCode !== null && (
-          <Alert severity="error">{tErrors(errorCode)}</Alert>
-        )}
+        {error !== null && <Alert severity="error">{errorText(error)}</Alert>}
       </Stack>
     </Dialog>
   );

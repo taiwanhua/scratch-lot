@@ -6,7 +6,13 @@ import {
   FormLifecycleRegistrationError,
   composeFormLifecycles,
   registerFormLifecycle,
+  resolveLifecycleInjections,
 } from "./form-lifecycle-registration";
+import { FormLifecycleService } from "./form-lifecycle.service";
+
+class StockRepository {}
+class MissingService {}
+class UndeclaredService {}
 
 const pass: FormGuard = () => null;
 
@@ -76,6 +82,23 @@ describe("composeFormLifecycles(掛接點登記的組裝驗證)", () => {
     );
   });
 
+  it('formKey 寫 "*" → 拋錯(整個模組請省略 formKey)', () => {
+    expect(() => composeFormLifecycles([purchase({ formKey: "*" })])).toThrow(
+      /formKey 不可是 "\*"/,
+    );
+  });
+
+  it("inject 有空的 token 或重複 → 拋錯", () => {
+    expect(() =>
+      composeFormLifecycles([purchase({ inject: [undefined as never] })]),
+    ).toThrow(/inject 有空的 token/);
+    expect(() =>
+      composeFormLifecycles([
+        purchase({ inject: [StockRepository, StockRepository] }),
+      ]),
+    ).toThrow(/inject 重複列了 StockRepository/);
+  });
+
   it("固定入口重複登記 → 載入組裝入口(DatabaseModule)就拋錯,app 起不來", () => {
     jest.isolateModules(() => {
       jest.doMock("../../../project/form-lifecycles", () => ({
@@ -85,5 +108,47 @@ describe("composeFormLifecycles(掛接點登記的組裝驗證)", () => {
         jest.requireActual("../../../database/database.module"),
       ).toThrow(/purchasing\.purchase \/ purchase 重複登記/);
     });
+  });
+});
+
+describe("resolveLifecycleInjections(inject 的解析)", () => {
+  const stock = new StockRepository();
+  const resolve = (token: unknown): unknown => {
+    if (token === StockRepository) {
+      return stock;
+    }
+    throw new Error(`Nest could not find ${String(token)}`);
+  };
+
+  it("宣告的拿得到;沒宣告的 → 拋錯", () => {
+    const registration = purchase({ inject: [StockRepository] });
+    const get = resolveLifecycleInjections([registration], resolve).get(
+      registration,
+    );
+    expect(get?.(StockRepository)).toBe(stock);
+    expect(() => get?.(UndeclaredService)).toThrow(
+      /沒有在 inject 宣告 UndeclaredService/,
+    );
+  });
+
+  it("宣告的 token 不存在 → FormLifecycleRegistrationError", () => {
+    expect(() =>
+      resolveLifecycleInjections(
+        [purchase({ inject: [MissingService] })],
+        resolve,
+      ),
+    ).toThrow(FormLifecycleRegistrationError);
+  });
+
+  it("FormLifecycleService 啟動(onModuleInit)時解析;找不到 → app 起不來", () => {
+    const service = new FormLifecycleService(
+      composeFormLifecycles([purchase({ inject: [MissingService] })]),
+      {} as never,
+      {} as never,
+      { get: (token: unknown) => resolve(token) } as never,
+    );
+    expect(() => {
+      service.onModuleInit();
+    }).toThrow(/inject 的 MissingService 找不到/);
   });
 });

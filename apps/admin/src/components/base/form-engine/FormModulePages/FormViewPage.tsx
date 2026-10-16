@@ -134,7 +134,7 @@ export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
             submission.formKey
           }
           isSubmitting={state.isPending}
-          errorCode={state.error?.code ?? null}
+          error={state.error}
           onCancel={() => {
             setIsDeleting(false);
           }}

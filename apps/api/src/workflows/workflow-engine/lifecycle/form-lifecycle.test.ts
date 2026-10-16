@@ -14,6 +14,8 @@ import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
+import { UsersRepository } from "../../../database/database.module";
+import { TransactionService } from "../../../database/transaction";
 import {
   DELETE_SUBMISSION,
   SUBMIT,
@@ -42,10 +44,12 @@ import {
   type WfSubmissionRow,
   type World,
   decideOn,
+  joinStep,
   pendingTaskOf,
   rawInstances,
   rawSubmissionDoc,
   rawTasks,
+  retryAdvance,
   setupWorld,
   submission,
   submitLeave,
@@ -290,6 +294,53 @@ describe("表單 / 流程的掛接點", () => {
       expect(await projectWrites(draft.id)).toBe(0);
       expect(await auditCount(draft.id, "submission.submit")).toBe(0);
     });
+
+    it("handler 的 get 只拿得到 inject 宣告的 provider;沒宣告的 → 拋錯", async () => {
+      const seen: string[] = [];
+      lifecycleProbe.onEffect = (context) => {
+        if (context.event === "submitted") {
+          seen.push(
+            context.get(TransactionService) === api.app.get(TransactionService)
+              ? "declared"
+              : "other",
+          );
+          try {
+            context.get(UsersRepository);
+            seen.push("undeclared returned");
+          } catch (error) {
+            seen.push(error instanceof Error ? error.message : "thrown");
+          }
+        }
+        return Promise.resolve();
+      };
+      await createSubmitted(api, world.applicant.token, FORM_KEY, {
+        title: "取 provider",
+        days: 1,
+      });
+      expect(seen).toEqual([
+        "declared",
+        expect.stringContaining("沒有在 inject 宣告 UsersRepository"),
+      ]);
+    });
+
+    it("守門回不合格的錯誤碼 → 程式錯誤(不是 FORBIDDEN),仍是草稿", async () => {
+      const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
+        title: "壞的碼",
+        days: 1,
+      });
+      blockOn("beforeSubmit");
+      lifecycleProbe.blockCode = "bad-code";
+      const result = await call(api, world.applicant.token, SUBMIT, {
+        input: { id: draft.id, expectedEditVersion: draft.editVersion },
+      });
+      expect(result.errors).toBeDefined();
+      expect(codeOf(result)).not.toBe("FORBIDDEN");
+      expect(result.errors?.[0]?.message).toContain("bad-code");
+      expect(await rawSubmissionDoc(api.connection, draft.id)).toMatchObject({
+        status: "draft",
+        editVersion: draft.editVersion,
+      });
+    });
   });
 
   describe("綁流程(第一關天數 ≤ 1 跳過 → 第二關)", () => {
@@ -498,6 +549,88 @@ describe("表單 / 流程的掛接點", () => {
       ).toMatchObject({ status: "reviewing" });
       expect(await projectWrites(submitted.id)).toBe(writesBefore);
       expect(await auditCount(task.id, "task.decide")).toBe(0);
+    });
+
+    it("重試推進觸發的事後動作用系統身分(不是按重試的人)", async () => {
+      const submitted = await atFirstStep();
+      await decideOn(world, staff(0), submitted.id, "APPROVE");
+      const task = await pendingTaskOf(world, staff(1), submitted.id);
+      // 第二關的核准已寫進實例、但還沒推進(模擬推進中斷),由重試推進接續
+      const at = new Date();
+      await api.connection.collection("workflow_instances").updateOne(
+        { submissionId: new Types.ObjectId(submitted.id) },
+        {
+          $push: {
+            "steps.$[s].decisions": {
+              taskKey: task.taskKey,
+              userId: staff(1).userId,
+              decision: "approved",
+              comment: null,
+              at,
+            },
+            history: {
+              at,
+              kind: "approved",
+              stepKey: "second",
+              taskKey: task.taskKey,
+              userId: staff(1).userId,
+              comment: null,
+            },
+          },
+          $inc: { editVersion: 1 },
+        } as never,
+        { arrayFilters: [{ "s.stepKey": "second" }] },
+      );
+      resetLifecycleProbe();
+      const [instance] = await rawInstances(api.connection, submitted.id);
+      await retryAdvance(world, String(instance?._id));
+      expect(events()).toEqual(["stepPassed:second", "completed"]);
+      for (const context of lifecycleProbe.effectContexts) {
+        expect(context.operator.actorId).toBeNull();
+        expect(context.operator.roleIds).toEqual([]);
+        expect(context.operator.currentOrgId?.equals(world.kitchen)).toBe(true);
+      }
+    });
+  });
+
+  describe("分流 / 匯合", () => {
+    beforeAll(async () => {
+      sequence += 1;
+      await useWorkflow(world, `lifecycle_join_${String(sequence)}`, {
+        steps: [
+          usersStep("init", [staff(0)]),
+          usersStep("left", [staff(1)], {
+            skipWhen: { "<=": [{ var: "days" }, 1] },
+          }),
+          usersStep("right", [staff(1)], {
+            skipWhen: { "<=": [{ var: "days" }, 1] },
+          }),
+          joinStep("merge"),
+        ],
+        edges: [
+          { from: "init", to: "left" },
+          { from: "init", to: "right" },
+          { from: "left", to: "merge" },
+          { from: "right", to: "merge" },
+        ],
+      });
+    });
+
+    it("匯合節點完成不觸發 stepPassed;分支跳過照常觸發", async () => {
+      const submitted = await submitLeave(world, { title: "一天", days: 1 });
+      resetLifecycleProbe();
+      await decideOn(world, staff(0), submitted.id, "APPROVE");
+      expect(events()).toEqual([
+        "stepPassed:init",
+        "stepPassed:left:skipped",
+        "stepPassed:right:skipped",
+        "completed",
+      ]);
+      const [instance] = await rawInstances(api.connection, submitted.id);
+      const merge = (
+        instance?.steps as { stepKey: string; status: string }[] | undefined
+      )?.find((step) => step.stepKey === "merge");
+      expect(merge?.status).toBe("completed");
     });
   });
 });

@@ -11,6 +11,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFillValues } from "@/hooks/base/useFillValues";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import type { FieldPermissionFacts } from "@/lib/base/form-engine/field-states";
@@ -92,6 +93,7 @@ export const FormFillForm = ({
 }: FormFillFormProps) => {
   const t = useTranslations("admin.formEngine.fill");
   const tErrors = useTranslations("admin.formEngine.errors");
+  const errorText = useAdminErrorText("admin.formEngine.errors");
   const fill = useFillValues({
     fields: definition.fields,
     initialValues,
@@ -152,7 +154,7 @@ export const FormFillForm = ({
             {tErrors("CONFLICT")}
           </Alert>
         ) : (
-          <Alert severity="error">{tErrors(error.code)}</Alert>
+          <Alert severity="error">{errorText(error)}</Alert>
         ))}
       <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
         <Button variant="text" onClick={onCancel}>
