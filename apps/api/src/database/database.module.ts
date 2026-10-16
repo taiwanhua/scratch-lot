@@ -9,6 +9,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 
 // 固定組裝入口:底座檔不得 import 專案來源,只有這裡(與 app.module.ts)例外
 import { PROJECT_DATABASE_REGISTRATIONS } from "../project/database/registrations";
+import { PROJECT_LOOKUP_PROVIDERS } from "../project/lookup-providers";
 import { BASE_DATABASE_REGISTRATIONS } from "./base/registrations";
 import {
   OrgBusinessDataReader,
@@ -16,6 +17,11 @@ import {
   orgBusinessDataReaderProvider,
 } from "./org-business-data.reader";
 import { getDataScopeRuleProvider } from "./plugins/data-scope-provider";
+import {
+  type LookupSourceRepositoryBinding,
+  PROJECT_LOOKUP_SOURCES,
+  assertLookupRepositories,
+} from "./project-lookup-sources";
 import {
   type ComposedDatabase,
   type DatabaseRegistration,
@@ -46,18 +52,22 @@ export interface DatabaseAssembly {
  * - model 只在這裡向 Mongoose 註冊,**不匯出** model provider 與 MongooseModule
  * - providers / exports 全由登記導出(repository 與專用 adapter)
  * - `OrgBusinessDataReader` 的檢查清單來自登記;啟動時驗證每項檢查沒有錯綁
+ * - 專案 lookup 來源(`project/lookup-providers.ts`)驗過 repository 綁定後以 `PROJECT_LOOKUP_SOURCES` 提供
  *
  * 登記不合契約(碰撞、錯綁、缺 plugin)在這裡就拋錯,app 起不來。
  */
 export function assembleDatabase(
   base: readonly DatabaseRegistration[],
   project: readonly DatabaseRegistration[],
+  lookupSources: readonly LookupSourceRepositoryBinding[] = [],
 ): DatabaseAssembly {
   const composed = composeDatabaseRegistrations(
     base,
     project,
     LEGACY_UNSCOPED_MODELS,
   );
+  // 專案 lookup 來源只能綁專案資料登記的 repository(宣告本身由 LookupProvidersService 啟動時驗)
+  assertLookupRepositories(lookupSources, composed);
   return {
     composed,
     metadata: {
@@ -66,8 +76,14 @@ export function assembleDatabase(
         ...composed.providers,
         orgBusinessDataReaderProvider(composed.orgDataChecks),
         TransactionService,
+        { provide: PROJECT_LOOKUP_SOURCES, useValue: lookupSources },
       ],
-      exports: [...composed.exports, OrgBusinessDataReader, TransactionService],
+      exports: [
+        ...composed.exports,
+        OrgBusinessDataReader,
+        TransactionService,
+        PROJECT_LOOKUP_SOURCES,
+      ],
     },
   };
 }
@@ -92,6 +108,7 @@ export function assertProjectRepositories(
 const DATABASE = assembleDatabase(
   BASE_DATABASE_REGISTRATIONS,
   PROJECT_DATABASE_REGISTRATIONS,
+  PROJECT_LOOKUP_PROVIDERS,
 );
 
 /**

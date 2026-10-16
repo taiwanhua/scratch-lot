@@ -38,7 +38,8 @@ export type FormDesignOperation =
   | "DeleteRetiredPermission"
   | "DeleteFormVersionDraft"
   | "SetModuleListColumns"
-  | "ExportFormSeed";
+  | "ExportFormSeed"
+  | "FormLookupProviders";
 
 type RetiredPermission =
   RetiredFormPermissionsQuery["retiredFormPermissions"]["items"][number];
@@ -114,15 +115,18 @@ export const formDesignWorld = (
   const lookupProviders = options.lookupProviders ?? BASE_LOOKUP_PROVIDERS;
 
   const handlers = [
-    api.query("FormLookupProviders", () =>
-      HttpResponse.json({
-        data: {
-          formLookupProviders: {
-            items: lookupProviders,
-            totalCount: lookupProviders.length,
+    api.query(
+      "FormLookupProviders",
+      () =>
+        fail("FormLookupProviders") ??
+        HttpResponse.json({
+          data: {
+            formLookupProviders: {
+              items: lookupProviders,
+              totalCount: lookupProviders.length,
+            },
           },
-        },
-      }),
+        }),
     ),
     // 屬性面板「欄位管理類別」的下拉(與欄位管理頁同一支查詢;設計器帶 `enabledOnly`,停用的類別不列)
     api.query("FieldCategories", ({ variables }) => {

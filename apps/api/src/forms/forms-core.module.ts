@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { DiscoveryModule } from "@nestjs/core";
 
 import { DatabaseModule } from "../database/database.module";
 import { FieldCategoryOptionsService } from "./field-category-options.service";
@@ -15,8 +14,7 @@ import { MeOrgTimezoneResolver } from "./me-org-timezone.resolver";
  * 權限解析與稽核由 @Global 的 PermissionModule / AuditModule 提供。
  */
 @Module({
-  // DiscoveryModule:lookup 登錄表啟動時收集專案以 `LOOKUP_PROVIDER` 登記的來源
-  imports: [DatabaseModule, DiscoveryModule],
+  imports: [DatabaseModule],
   providers: [
     FormAccessService,
     FieldCategoryOptionsService,
