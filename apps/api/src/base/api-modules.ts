@@ -15,6 +15,7 @@ import { RealtimeModule } from "../realtime/realtime.module";
 import { RolesModule } from "../roles/roles.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
 import { StorageModule } from "../storage/storage.module";
+import { UserPreferencesModule } from "../user-preferences/user-preferences.module";
 import { UsersModule } from "../users/users.module";
 import { ApplyCenterModule } from "../workflows/apply-center/apply-center.module";
 import { WorkflowDesignModule } from "../workflows/workflow-design/workflow-design.module";
@@ -47,4 +48,5 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "workflow-design", module: WorkflowDesignModule },
   { key: "workflow-engine", module: WorkflowEngineModule },
   { key: "apply-center", module: ApplyCenterModule },
+  { key: "user-preferences", module: UserPreferencesModule },
 ];

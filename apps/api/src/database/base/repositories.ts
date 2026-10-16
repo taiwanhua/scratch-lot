@@ -21,6 +21,7 @@ import { Permission } from "../schemas/permission.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
 import { Role } from "../schemas/role.schema";
 import { SeedDefinitionInstallation } from "../schemas/seed-definition-installation.schema";
+import { UserPreference } from "../schemas/user-preference.schema";
 import { User } from "../schemas/user.schema";
 import { WorkflowInstance } from "../schemas/workflow-instance.schema";
 import { WorkflowVersion } from "../schemas/workflow-version.schema";
@@ -53,6 +54,7 @@ export type WorkflowVersionDocument = HydratedDocument<WorkflowVersion>;
 export type SeedDefinitionInstallationDocument =
   HydratedDocument<SeedDefinitionInstallation>;
 export type WorkflowInstanceDocument = HydratedDocument<WorkflowInstance>;
+export type UserPreferenceDocument = HydratedDocument<UserPreference>;
 
 /** users(關聯歸屬資料:所屬組織走 org_user,資料層不自動過濾,ADR-0005)。 */
 @Injectable()
@@ -334,6 +336,20 @@ export class WorkflowInstancesRepository extends BaseRepository<
   constructor(
     @InjectModel(WorkflowInstance.name)
     model: RepositoryModel<WorkflowInstance, WorkflowInstanceDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** user_preferences(個人偏好;屬帳號、非租戶資料,同 refresh_tokens)。 */
+@Injectable()
+export class UserPreferencesRepository extends BaseRepository<
+  UserPreference,
+  UserPreferenceDocument
+> {
+  constructor(
+    @InjectModel(UserPreference.name)
+    model: RepositoryModel<UserPreference, UserPreferenceDocument>,
   ) {
     super(model);
   }

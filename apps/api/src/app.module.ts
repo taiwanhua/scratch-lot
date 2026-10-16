@@ -13,6 +13,8 @@ import { BASE_API_MODULES } from "./base/api-modules";
 import { MONGODB_URI_ENV, requireMongoDbUri } from "./database/mongodb-uri";
 import { PROJECT_API_MODULES } from "./project/api-modules";
 import { ProjectModule } from "./project/project.module";
+import { PROJECT_USER_PREFERENCES } from "./project/user-preferences";
+import { UserPreferenceRegistryModule } from "./user-preferences/user-preference-registry.module";
 
 // 功能組裝的固定入口:底座清單與專案清單分開維護,這裡先驗兩份的 key 與 module 都不重複。
 // 底座功能直接匯入;專案功能由普通的 ProjectModule 匯入(只新增,不替換核心 module / provider)。
@@ -52,6 +54,8 @@ const isSandboxEnabled =
         ? [ApolloServerPluginLandingPageLocalDefault({ embed: true })]
         : [],
     }),
+    // 個人偏好的登記:底座 + 專案(`project/user-preferences.ts`)合成一份,全域提供
+    UserPreferenceRegistryModule.forRoot(PROJECT_USER_PREFERENCES),
     ...BASE_FEATURE_MODULES,
     ProjectModule,
   ],

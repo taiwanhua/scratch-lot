@@ -25,7 +25,7 @@ export type Scalars = {
   Float: { input: number; output: number; }
   /** A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format. */
   DateTime: { input: string; output: string; }
-  /** 任意 JSON 物件(資料範圍的條件樹;形狀見 apps/api/src/data-scope/data-scope-rule.ts) */
+  /** 任意 JSON 物件,形狀由各端點驗證(資料範圍的條件樹見 apps/api/src/data-scope/data-scope-rule.ts;個人偏好見 apps/api/src/user-preferences/user-preference-registry.ts) */
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
 
@@ -1337,6 +1337,7 @@ export type Mutation = {
   updateFieldCategory: FieldCategoryPayload;
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
+  updateMyPreferences: UpdateMyPreferencesPayload;
   updateOrg: OrgPayload;
   updateRole: RolePayload;
   updateUser: UserPayload;
@@ -1757,6 +1758,11 @@ export type MutationUpdateFormSubmissionArgs = {
 };
 
 
+export type MutationUpdateMyPreferencesArgs = {
+  input: UpdateMyPreferencesInput;
+};
+
+
 export type MutationUpdateOrgArgs = {
   input: UpdateOrgInput;
 };
@@ -1806,6 +1812,11 @@ export type MyApplicationsPayload = {
   page: Scalars['Int']['output'];
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
+};
+
+export type MyPreferencesPayload = {
+  __typename?: 'MyPreferencesPayload';
+  settings: Scalars['JSONObject']['output'];
 };
 
 export type MyTasksInput = {
@@ -1971,6 +1982,7 @@ export type Query = {
   moduleListColumns: ModuleListColumnsPayload;
   moduleTree: Array<ModuleAdminNode>;
   myApplications: MyApplicationsPayload;
+  myPreferences: MyPreferencesPayload;
   myTasks: WorkflowTasksPayload;
   org: Org;
   orgManagerCandidates: Array<UserSummary>;
@@ -2734,6 +2746,15 @@ export type UpdateFormSubmissionInput = {
   expectedRevision: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
   values: Scalars['JSONObject']['input'];
+};
+
+export type UpdateMyPreferencesInput = {
+  settings: Scalars['JSONObject']['input'];
+};
+
+export type UpdateMyPreferencesPayload = {
+  __typename?: 'UpdateMyPreferencesPayload';
+  settings: Scalars['JSONObject']['output'];
 };
 
 export type UpdateOrgInput = {
@@ -4096,6 +4117,18 @@ export type CreateUploadUrlMutationVariables = Exact<{
 
 
 export type CreateUploadUrlMutation = { __typename?: 'Mutation', createUploadUrl: { __typename?: 'UploadUrlPayload', uploadUrl: string, objectPath: string, expiresAt: string } };
+
+export type MyPreferencesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyPreferencesQuery = { __typename?: 'Query', myPreferences: { __typename?: 'MyPreferencesPayload', settings: Record<string, unknown> } };
+
+export type UpdateMyPreferencesMutationVariables = Exact<{
+  input: UpdateMyPreferencesInput;
+}>;
+
+
+export type UpdateMyPreferencesMutation = { __typename?: 'Mutation', updateMyPreferences: { __typename?: 'UpdateMyPreferencesPayload', settings: Record<string, unknown> } };
 
 export type UsersQueryVariables = Exact<{
   input: UsersInput;
@@ -9019,6 +9052,65 @@ export const useCreateUploadUrlMutation = <
 
 
 useCreateUploadUrlMutation.fetcher = (client: GraphQLClient, variables: CreateUploadUrlMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateUploadUrlMutation, CreateUploadUrlMutationVariables>(client, CreateUploadUrlDocument, variables, headers);
+
+export const MyPreferencesDocument = `
+    query MyPreferences {
+  myPreferences {
+    settings
+  }
+}
+    `;
+
+export const useMyPreferencesQuery = <
+      TData = MyPreferencesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyPreferencesQueryVariables,
+      options?: Omit<UseQueryOptions<MyPreferencesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyPreferencesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyPreferencesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyPreferences'] : ['MyPreferences', variables],
+    queryFn: fetcher<MyPreferencesQuery, MyPreferencesQueryVariables>(client, MyPreferencesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyPreferencesQuery.getKey = (variables?: MyPreferencesQueryVariables) => variables === undefined ? ['MyPreferences'] : ['MyPreferences', variables];
+
+
+useMyPreferencesQuery.fetcher = (client: GraphQLClient, variables?: MyPreferencesQueryVariables, headers?: RequestInit['headers']) => fetcher<MyPreferencesQuery, MyPreferencesQueryVariables>(client, MyPreferencesDocument, variables, headers);
+
+export const UpdateMyPreferencesDocument = `
+    mutation UpdateMyPreferences($input: UpdateMyPreferencesInput!) {
+  updateMyPreferences(input: $input) {
+    settings
+  }
+}
+    `;
+
+export const useUpdateMyPreferencesMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateMyPreferencesMutation, TError, UpdateMyPreferencesMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateMyPreferencesMutation, TError, UpdateMyPreferencesMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateMyPreferences'],
+    mutationFn: (variables?: UpdateMyPreferencesMutationVariables) => fetcher<UpdateMyPreferencesMutation, UpdateMyPreferencesMutationVariables>(client, UpdateMyPreferencesDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateMyPreferencesMutation.fetcher = (client: GraphQLClient, variables: UpdateMyPreferencesMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateMyPreferencesMutation, UpdateMyPreferencesMutationVariables>(client, UpdateMyPreferencesDocument, variables, headers);
 
 export const UsersDocument = `
     query Users($input: UsersInput!) {

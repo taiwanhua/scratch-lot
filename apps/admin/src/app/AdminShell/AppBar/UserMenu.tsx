@@ -17,6 +17,7 @@ import {
   DevicesIcon,
   LightModeIcon,
   LogoutIcon,
+  SettingsIcon,
   SystemModeIcon,
 } from "@repo/ui/icons";
 import { MenuItem, MenuItemIcon, MenuList } from "@repo/ui/menu";
@@ -25,9 +26,10 @@ import { SegmentedControl } from "@repo/ui/segmented-control";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useChangeLocale } from "@/hooks/base/useAccountLocale";
 import { useRealtimeStatus } from "@/hooks/base/useRealtime";
 import { useSession } from "@/hooks/base/useSession";
-import { LOGIN_PATH } from "@/lib/base/paths";
+import { LOGIN_PATH, PERSONAL_SETTINGS_PATH } from "@/lib/base/paths";
 import { useLocaleStore } from "@/stores/base/useLocaleStore";
 
 /** 觸發鈕的頭像(theme.spacing 單位;Figma AdminAppBar avatar 32)。 */
@@ -88,8 +90,11 @@ const Separator = () => (
  * AppBar 的使用者選單(頭像;Figma `Draft/AdminUserMenu` 278:77):
  * - **使用者卡**:頭像 + 姓名 + 「帳號 · 當前組織」,不可點
  * - **外觀**:跟隨系統 / 亮 / 暗(`@repo/ui` 的 `useColorMode`,選擇記在 localStorage,預設跟隨系統)
- * - **語言**:語言只記 localStorage(I18N-05),經 `useLocaleStore` 寫回
+ * - **語言**:跟著帳號(I18N-05;規格 10.6):立即生效並寫本機快取,同時寫入帳號(`useChangeLocale`;寫入失敗跳提示、畫面維持新語言)
+ * - **個人設定**:開殼層路由 `/settings/personal`(偏好 / 代理人分頁)
  * - 登出 / 登出所有裝置(api 打完先離開受保護路由再清狀態,登出不帶 next)
+ *
+ * 外觀只存本機(跟著裝置),不寫帳號。
  *
  * 頭像右下角的小圓點是即時通道的連線狀態(底座規格第 4 章「降級」):綠 = 即時;黃 = 重新連線中(慢速模式,
  * 資料每 60 秒更新一次)。
@@ -109,7 +114,7 @@ export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const colorMode = useColorMode();
   const locale = useLocaleStore((state) => state.locale);
-  const setLocale = useLocaleStore((state) => state.setLocale);
+  const changeLocale = useChangeLocale();
 
   // 先離開受保護路由再清狀態,登出不帶 next
   const signOut = () => {
@@ -235,13 +240,27 @@ export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
             <SegmentedControl<Locale>
               aria-label={t("language")}
               value={locale}
-              onChange={setLocale}
+              onChange={changeLocale}
               options={locales.map((item) => ({
                 value: item,
                 label: localeLabels[item],
               }))}
             />
           </Section>
+          <Separator />
+          <MenuList dense disablePadding>
+            <MenuItem
+              onClick={() => {
+                closeMenu();
+                void navigate(PERSONAL_SETTINGS_PATH);
+              }}
+            >
+              <MenuItemIcon>
+                <SettingsIcon />
+              </MenuItemIcon>
+              {t("personalSettings")}
+            </MenuItem>
+          </MenuList>
           <Separator />
           <MenuList dense disablePadding>
             <MenuItem

@@ -21,6 +21,7 @@ export * from "./role.schema";
 export * from "./scheduled-job-run.schema";
 export * from "./seed-definition-installation.schema";
 export * from "./seed-lock.schema";
+export * from "./user-preference.schema";
 export * from "./user.schema";
 export * from "./workflow-instance.schema";
 export * from "./workflow-task.schema";

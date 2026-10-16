@@ -14,6 +14,7 @@ import {
   matchModuleRoute,
   normalizePathname,
 } from "@/lib/base/module-tree";
+import { withShellRoutes } from "@/lib/base/shell-routes";
 import { APPLY_CENTER_MODULE_KEY } from "@/pages/base/apply-center/apply-center-keys";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
@@ -53,7 +54,16 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   const { modules } = me;
 
   const tree = useMemo(() => buildNavTree(modules), [modules]);
-  const routes = useMemo(() => enterableRouteMap(modules), [modules]);
+  const tPersonalSettings = useTranslations("admin.personalSettings");
+  const personalSettingsLabel = tPersonalSettings("title");
+  // 可進入路由集合 + 殼層路由(個人設定):頁名、「?」說明、路由頁籤與模組頁走同一條路
+  const routes = useMemo(
+    () =>
+      withShellRoutes(enterableRouteMap(modules), {
+        personalSettings: personalSettingsLabel,
+      }),
+    [modules, personalSettingsLabel],
+  );
 
   const path = normalizePathname(pathname);
   const routeTabs = useRouteTabs({ userId: me.id, routes, currentPath: path });

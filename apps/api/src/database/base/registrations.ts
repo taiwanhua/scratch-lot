@@ -70,6 +70,11 @@ import {
   SeedDefinitionInstallationSchema,
 } from "../schemas/seed-definition-installation.schema";
 import { SeedLock, SeedLockSchema } from "../schemas/seed-lock.schema";
+import {
+  USER_PREFERENCES_COLLECTION,
+  UserPreference,
+  UserPreferenceSchema,
+} from "../schemas/user-preference.schema";
 import { User, UserSchema } from "../schemas/user.schema";
 import {
   WORKFLOW_INSTANCES_COLLECTION,
@@ -113,6 +118,7 @@ import {
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
+  UserPreferencesRepository,
   UsersRepository,
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
@@ -468,6 +474,21 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
             new ScheduledJobRunsStore(model),
         },
       },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 個人偏好(每個使用者一筆;屬帳號、沒有組織歸屬,同 refresh_tokens)
+    key: "user-preferences",
+    models: [
+      {
+        name: UserPreference.name,
+        collection: USER_PREFERENCES_COLLECTION,
+        schema: UserPreferenceSchema,
+      },
+    ],
+    repositories: [
+      { modelName: UserPreference.name, provider: UserPreferencesRepository },
     ],
     orgDataChecks: [],
   },

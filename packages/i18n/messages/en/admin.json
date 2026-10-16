@@ -85,7 +85,9 @@
         "system": "System",
         "light": "Light",
         "dark": "Dark"
-      }
+      },
+      "personalSettings": "Personal settings",
+      "localeSaveFailed": "Language switched, but it was not saved to your account; it will change back the next time you sign in"
     },
     "sideNav": "Main navigation",
     "navBadge": "{count} pending review",
@@ -2669,5 +2671,11 @@
   "realtime": {
     "live": "Live",
     "slow": "Reconnecting (slow mode, refreshes every 60 seconds)"
+  },
+  "personalSettings": {
+    "title": "Personal settings",
+    "tabs": "Personal settings tabs",
+    "tabPreferences": "Preferences",
+    "preferencesEmpty": "There are no preferences to adjust yet. Switch appearance and language from the avatar menu at the top right."
   }
 }

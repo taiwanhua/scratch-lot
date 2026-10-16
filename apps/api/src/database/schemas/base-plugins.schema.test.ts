@@ -25,13 +25,14 @@ import { OrgSchema } from "./org.schema";
 import { PermissionSchema } from "./permission.schema";
 import { RefreshTokenSchema } from "./refresh-token.schema";
 import { RoleSchema } from "./role.schema";
+import { UserPreferenceSchema } from "./user-preference.schema";
 import { UserSchema } from "./user.schema";
 import { WorkflowInstanceSchema } from "./workflow-instance.schema";
 import { WorkflowTaskSchema } from "./workflow-task.schema";
 import { WorkflowVersionSchema } from "./workflow-version.schema";
 import { WorkflowSchema } from "./workflow.schema";
 
-/** 全部底座 collection(docs/data-model.md「Collection 一覽」,24 張)。 */
+/** 全部底座 collection(docs/data-model.md「Collection 一覽」,25 張)。 */
 const ALL_SCHEMAS: Record<string, Schema> = {
   orgs: OrgSchema,
   users: UserSchema,
@@ -57,6 +58,7 @@ const ALL_SCHEMAS: Record<string, Schema> = {
   refresh_tokens: RefreshTokenSchema,
   action_tokens: ActionTokenSchema,
   audit_logs: AuditLogSchema,
+  user_preferences: UserPreferenceSchema,
 };
 
 /**
@@ -127,8 +129,8 @@ const MODULE_DATA_COLLECTIONS = new Set([
 ]);
 
 describe("底座 schema 的 plugin 掛載(ADR-0005 / ADR-0007)", () => {
-  it("全部 24 張 collection 都掛 baseFields:timestamps + createdBy / updatedBy / deletedAt", () => {
-    expect(Object.keys(ALL_SCHEMAS)).toHaveLength(24);
+  it("全部 25 張 collection 都掛 baseFields:timestamps + createdBy / updatedBy / deletedAt", () => {
+    expect(Object.keys(ALL_SCHEMAS)).toHaveLength(25);
     for (const [name, schema] of Object.entries(ALL_SCHEMAS)) {
       expect({ name, timestamps: schema.get("timestamps") }).toEqual({
         name,
