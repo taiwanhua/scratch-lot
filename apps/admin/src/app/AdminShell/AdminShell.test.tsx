@@ -118,6 +118,21 @@ describe("SideNav(模組陣列以 parentId 組樹;ADR-0011「前端判斷 / 側�
   });
 });
 
+describe("即時通道連線狀態(頭像選單的小圓點)", () => {
+  it("即時通道停用 / 連不上 → 黃點(慢速模式),滑過顯示狀態文字", async () => {
+    server.use(...authWorld({ hasRefreshCookie: true }).handlers);
+
+    renderApp({ path: "/" });
+    await findSideNav();
+
+    const dot = await screen.findByTestId("realtime-status");
+    await waitFor(() => {
+      expect(dot).toHaveAttribute("data-status", "slow");
+    });
+    expect(dot).toHaveAttribute("title", "重新連線中(慢速模式,每 60 秒更新)");
+  });
+});
+
 describe("路由與導向(ADR-0011「路由與導向規則」:模組路由 / 群組路由 / `/`)", () => {
   it("`/` → 側欄第一個能進的頁:有總覽權限就是 /overview(佔位內容:問候 + 當前組織)", async () => {
     server.use(...authWorld({ hasRefreshCookie: true }).handlers);
