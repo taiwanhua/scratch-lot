@@ -258,6 +258,10 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
         HttpResponse.json({ data: { me: { ...me, mustChangePassword } } })
       );
     }),
+    // 即時通道在測試與 mock 開發模式一律停用:殼走 60 秒輪詢,不開 WebSocket
+    api.query("RealtimeTicket", () =>
+      HttpResponse.json({ data: { realtimeTicket: null } }),
+    ),
     api.mutation("RequestPasswordReset", ({ variables }) => {
       calls.requestPasswordReset += 1;
       const { input } = variables as RequestPasswordResetMutationVariables;

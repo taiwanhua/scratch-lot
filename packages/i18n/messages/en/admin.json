@@ -2665,5 +2665,9 @@
       "VALIDATION_FAILED": "The revision or release notes are not valid. Fix them and try again.",
       "UNEXPECTED": "Export failed. Please try again later."
     }
+  },
+  "realtime": {
+    "live": "Live",
+    "slow": "Reconnecting (slow mode, refreshes every 60 seconds)"
   }
 }

@@ -25,6 +25,7 @@ import { SegmentedControl } from "@repo/ui/segmented-control";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useRealtimeStatus } from "@/hooks/base/useRealtime";
 import { useSession } from "@/hooks/base/useSession";
 import { LOGIN_PATH } from "@/lib/base/paths";
 import { useLocaleStore } from "@/stores/base/useLocaleStore";
@@ -37,6 +38,8 @@ const CARD_AVATAR_SIZE = 5;
 const MENU_WIDTH = 260;
 /** 選單內各區塊的左右內距(theme.spacing 單位;Figma 12,與 `MenuList` 的項目左緣對齊)。 */
 const ITEM_INSET = 1.5;
+/** 連線狀態小圓點的直徑(px;疊在觸發鈕頭像右下角)。 */
+const STATUS_DOT_SIZE = 10;
 
 const COLOR_MODE_ICONS: Record<ColorMode, ReactNode> = {
   system: <SystemModeIcon />,
@@ -88,6 +91,9 @@ const Separator = () => (
  * - **語言**:語言只記 localStorage(I18N-05),經 `useLocaleStore` 寫回
  * - 登出 / 登出所有裝置(api 打完先離開受保護路由再清狀態,登出不帶 next)
  *
+ * 頭像右下角的小圓點是即時通道的連線狀態(底座規格第 4 章「降級」):綠 = 即時;黃 = 重新連線中(慢速模式,
+ * 資料每 60 秒更新一次)。
+ *
  * 外觀與語言是分段按鈕,切了立刻生效、**不關選單**。浮層用 `Popover` 而不是 `Menu`:`Menu` 按 Tab 就關、
  * 而且只讓 `MenuItem` 參與鍵盤移動,分段按鈕會變成鍵盤到不了;這裡只有登出兩項是 `MenuList`(上下鍵移動),
  * 其餘靠 Tab 依序走到(Popover 把焦點圈在浮層裡,Esc 關閉)。
@@ -95,6 +101,9 @@ const Separator = () => (
 export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
   const t = useTranslations("admin.shell.userMenu");
   const tSession = useTranslations("admin.session");
+  const tRealtime = useTranslations("admin.realtime");
+  const isLive = useRealtimeStatus() === "live";
+  const realtimeLabel = tRealtime(isLive ? "live" : "slow");
   const { session } = useSession();
   const navigate = useNavigate();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -130,18 +139,39 @@ export const UserMenu = ({ name, account, orgName }: UserMenuProps) => {
         aria-expanded={menuAnchor === null ? undefined : true}
         onClick={openMenu}
         startIcon={
-          <Avatar
-            aria-hidden
-            sx={{
-              width: (theme) => theme.spacing(AVATAR_SIZE),
-              height: (theme) => theme.spacing(AVATAR_SIZE),
-              bgcolor: "primary.lighter",
-              color: "primary.dark",
-              typography: "subtitle2",
-            }}
-          >
-            {initial}
-          </Avatar>
+          <Box sx={{ position: "relative", display: "inline-flex" }}>
+            <Avatar
+              aria-hidden
+              sx={{
+                width: (theme) => theme.spacing(AVATAR_SIZE),
+                height: (theme) => theme.spacing(AVATAR_SIZE),
+                bgcolor: "primary.lighter",
+                color: "primary.dark",
+                typography: "subtitle2",
+              }}
+            >
+              {initial}
+            </Avatar>
+            <Box
+              component="span"
+              // 不進按鈕的可及名稱(按鈕名稱維持使用者姓名);滑過顯示狀態文字
+              aria-hidden
+              title={realtimeLabel}
+              data-testid="realtime-status"
+              data-status={isLive ? "live" : "slow"}
+              sx={{
+                position: "absolute",
+                right: -1,
+                bottom: -1,
+                width: STATUS_DOT_SIZE,
+                height: STATUS_DOT_SIZE,
+                borderRadius: "50%",
+                border: 2,
+                borderColor: "background.paper",
+                bgcolor: isLive ? "success.main" : "warning.main",
+              }}
+            />
+          </Box>
         }
         sx={{ typography: "subtitle2" }}
       >
