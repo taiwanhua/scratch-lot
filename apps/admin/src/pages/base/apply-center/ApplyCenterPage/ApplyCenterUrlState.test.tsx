@@ -80,4 +80,15 @@ describe("申請中心:分頁與篩選存在網址(REACT-14,Figma BS-15a)", () =
       expect(third.runtime.inputs.myTasks.at(-1)?.done).toBe(true);
     });
   });
+
+  it("頁碼在 `?list=`:帶頁碼打開(重新整理)照那一頁查", async () => {
+    const list = encodeURIComponent('{"page":2}');
+    const { runtime } = renderApplyCenter({
+      path: `${APPLY_CENTER_ROUTE}?tab=mine&list=${list}`,
+    });
+
+    await waitFor(() => {
+      expect(runtime.inputs.myApplications.at(-1)?.page).toBe(2);
+    });
+  });
 });

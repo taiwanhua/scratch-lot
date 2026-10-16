@@ -69,6 +69,27 @@ describe("Tabs", () => {
   });
 
   /** 資料換掉的瞬間 `value` 可能指到不存在的頁籤 —— 這時整列都不選中,而不是 MUI 警告。 */
+  it("給了 id / aria-controls 就掛在 tab 上(呼叫端的 tabpanel 以 aria-labelledby 指回來)", () => {
+    render(
+      <Tabs
+        value="matrix"
+        items={[
+          {
+            value: "matrix",
+            label: "權限設定",
+            id: "t-matrix",
+            "aria-controls": "p-matrix",
+          },
+        ]}
+        onChange={noop}
+      />,
+    );
+
+    const tab = screen.getByRole("tab", { name: "權限設定" });
+    expect(tab).toHaveAttribute("id", "t-matrix");
+    expect(tab).toHaveAttribute("aria-controls", "p-matrix");
+  });
+
   it("value 不在 items 裡時沒有任何 tab 被選中", () => {
     render(<Tabs value="gone" items={items} onChange={noop} />);
 

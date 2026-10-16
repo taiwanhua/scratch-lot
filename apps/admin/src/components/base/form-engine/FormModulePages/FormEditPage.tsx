@@ -13,6 +13,7 @@ import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useIsCurrentFormVersion } from "@/hooks/base/useIsCurrentFormVersion";
 import { useMe } from "@/hooks/base/useMe";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { liveContextOf } from "@/lib/base/form-engine/expression-context";
 import { permissionsOfSubmission } from "@/lib/base/form-engine/field-permissions";
@@ -80,9 +81,10 @@ export const FormEditPage = ({ module, routeParam }: ModulePageProps) => {
     submittedAt: submission?.submittedAt,
   });
 
+  const tabHref = useRouteTabHref();
   const leave = () => {
     if (access.listRoute !== null) {
-      void navigate(access.listRoute);
+      void navigate(tabHref(access.listRoute));
     }
   };
 

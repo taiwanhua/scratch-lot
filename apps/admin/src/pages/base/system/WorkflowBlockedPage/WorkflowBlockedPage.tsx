@@ -19,6 +19,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { RetryAdvanceButton } from "@/components/base/workflow/ApprovalSection/RetryAdvanceButton";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -69,6 +70,7 @@ export const WorkflowBlockedPage = () => {
   const temporalText = useTemporalText();
   const navigate = useNavigate();
   const routeOf = useModuleRoutes();
+  const tabHref = useRouteTabHref();
   const { session } = useSession();
   const [list, setList] = useUrlState("list", listSchema);
   const { filter, page } = list;
@@ -140,7 +142,7 @@ export const WorkflowBlockedPage = () => {
             <Button
               variant="text"
               onClick={() => {
-                void navigate(workflowsRoute);
+                void navigate(tabHref(workflowsRoute));
               }}
             >
               {t("back")}

@@ -57,6 +57,13 @@ export interface ModulePageReplacement extends PagePresentation {
   readonly target: string;
 }
 
+/**
+ * 網址狀態的盤點(REACT-14 入口清單):頁面 key → 這一頁以 `useUrlState` 放進網址的 key(空陣列 = 沒有)。
+ * 底座的在 `app/base/url-state-inventory.ts`,專案的在 `app/project/url-state-inventory.ts`;
+ * 每一頁都要登記,入口清單測試(`app/url-state-inventory.test.ts`)比對登記表。
+ */
+export type UrlStateInventory = Readonly<Record<string, readonly string[]>>;
+
 export interface ComposeModulePagesInput {
   readonly base: ModulePageSource;
   readonly project: ModulePageSource;

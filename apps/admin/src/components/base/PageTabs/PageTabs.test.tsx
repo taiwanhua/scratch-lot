@@ -74,6 +74,37 @@ describe("PageTabs", () => {
     });
   });
 
+  it("內容區是 role=tabpanel,與選中的 tab 以 aria-controls / aria-labelledby 互相關聯", async () => {
+    const { user } = renderTabs("/overview", [
+      item("mine", "我的申請"),
+      item("tasks", "待我審核"),
+    ]);
+
+    const panel = await screen.findByRole("tabpanel", { name: "我的申請" });
+    expect(panel).toHaveTextContent("我的申請的內容");
+    const tab = screen.getByRole("tab", { name: "我的申請" });
+    expect(tab).toHaveAttribute("aria-controls", panel.id);
+
+    await user.click(screen.getByRole("tab", { name: "待我審核" }));
+
+    const next = await screen.findByRole("tabpanel", { name: "待我審核" });
+    expect(next).toHaveTextContent("待我審核的內容");
+    expect(screen.getByRole("tab", { name: "待我審核" })).toHaveAttribute(
+      "aria-controls",
+      next.id,
+    );
+  });
+
+  it("只剩一個分頁時沒有分頁籤,也就沒有 tabpanel", async () => {
+    renderTabs("/overview", [
+      item("mine", "我的申請"),
+      item("audit", "稽核", "system.audit.view"),
+    ]);
+
+    expect(await screen.findByText("我的申請的內容")).toBeInTheDocument();
+    expect(screen.queryByRole("tabpanel")).not.toBeInTheDocument();
+  });
+
   it("網址的分頁不存在(被改壞)→ 退回第一個分頁,不報錯", async () => {
     renderTabs("/overview?tab=nope", [
       item("mine", "我的申請"),

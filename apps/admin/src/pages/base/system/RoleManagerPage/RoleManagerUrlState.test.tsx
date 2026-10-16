@@ -45,4 +45,24 @@ describe("角色管理:清單條件、選中的角色與頁籤存在網址(REACT
     expect(await screen.findByText("審核員 — 分配使用者")).toBeInTheDocument();
     expect(urlParam("detail")).toBe(detail);
   });
+
+  it("持有人清單的頁碼在 `?users=`(連同角色 id):重新整理後照頁碼查;換了角色就回第一頁", async () => {
+    const users = encodeURIComponent('{"role":"role-editor","page":2}');
+    const { fake } = renderRolePage({
+      search: `?detail=role-editor&tab=users&users=${users}`,
+    });
+
+    await waitFor(() => {
+      expect(fake.inputs.roleUsers.at(-1)).toMatchObject({
+        roleId: "role-editor",
+        input: { page: 2 },
+      });
+    });
+  });
+
+  it("網址上的角色不在清單裡(手改、已刪除)→ 退回第一筆", async () => {
+    renderRolePage({ search: "?detail=role-missing" });
+
+    expect(await screen.findByText("內容編輯 — 權限設定")).toBeInTheDocument();
+  });
 });

@@ -87,6 +87,8 @@ export interface OrgWorld {
   handlers: Parameters<typeof import("./server").server.use>;
   /** 各操作收到的輸入(依序),用來斷言「送出去的是什麼」 */
   inputs: {
+    /** 成員清單的查詢(驗頁碼有照網址送出) */
+    orgMembers: OrgMembersQueryVariables[];
     createChildOrg: CreateChildOrgMutationVariables["input"][];
     updateOrg: UpdateOrgMutationVariables["input"][];
     setOrgEnabled: SetOrgEnabledMutationVariables["input"][];
@@ -144,6 +146,7 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
   const tenantTopWorld = orgTenantTopWorld({ failure: fail });
 
   const inputs: OrgWorld["inputs"] = {
+    orgMembers: [],
     createChildOrg: [],
     updateOrg: [],
     setOrgEnabled: [],
@@ -202,6 +205,7 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
     // 加入成員真的改到 `membersByOrg` —— 連動語意實作進 handler(TEST-08)
     api.query("OrgMembers", ({ variables }) => {
       const { orgId, input } = variables as OrgMembersQueryVariables;
+      inputs.orgMembers.push({ orgId, input });
       const rows = membersByOrg.get(orgId) ?? [];
       return HttpResponse.json({
         data: {

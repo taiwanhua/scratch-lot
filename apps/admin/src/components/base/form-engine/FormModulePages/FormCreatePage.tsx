@@ -10,6 +10,7 @@ import {
   type ModuleFormSummary,
   useModuleForms,
 } from "@/hooks/base/useModuleForms";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { FormPicker } from "../FormPicker";
@@ -36,9 +37,10 @@ export const FormCreatePage = ({ module, routeParam }: ModulePageProps) => {
     form?.currentVersion ?? null,
   );
 
+  const tabHref = useRouteTabHref();
   const backToList = () => {
     if (access.listRoute !== null) {
-      void navigate(access.listRoute);
+      void navigate(tabHref(access.listRoute));
     }
   };
 

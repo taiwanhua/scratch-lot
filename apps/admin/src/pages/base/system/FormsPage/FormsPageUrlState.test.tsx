@@ -40,4 +40,12 @@ describe("表單管理:清單搜尋與選中的表單存在網址(REACT-14)", ()
     ).toBeInTheDocument();
     expect(screen.getByLabelText("搜尋表單")).toHaveValue("出差");
   });
+
+  it("網址上的表單不在清單裡(手改、被收回)→ 退回第一張", async () => {
+    renderFormsPage(options(), FORMS_ALL, {}, "?detail=missing");
+
+    expect(
+      await screen.findByRole("heading", { name: "購物單" }),
+    ).toBeInTheDocument();
+  });
 });

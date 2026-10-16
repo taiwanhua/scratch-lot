@@ -28,7 +28,6 @@ export const useOrgManagerData = () => {
     canToggleEnabled: hasPermission(ORG_MANAGER_PERMISSIONS.toggleEnabled),
     canMove: hasPermission(ORG_MANAGER_PERMISSIONS.move),
     canDelete: hasPermission(ORG_MANAGER_PERMISSIONS.delete),
-    canViewMembers: hasPermission(ORG_MANAGER_PERMISSIONS.viewMembers),
     canAddMembers: hasPermission(ORG_MANAGER_PERMISSIONS.addMembers),
     canProvision: hasPermission(ORG_MANAGER_PERMISSIONS.provision),
     canRevokeProvision: hasPermission(ORG_MANAGER_PERMISSIONS.revokeProvision),

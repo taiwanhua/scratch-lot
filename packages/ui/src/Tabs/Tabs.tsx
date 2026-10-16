@@ -16,6 +16,10 @@ export interface TabItem {
   disabled?: boolean;
   /** 給輔助科技的名稱;`label` 不是純文字時才需要 */
   "aria-label"?: string;
+  /** 頁籤元素的 id;呼叫端自己畫內容區(`role="tabpanel"`)時,內容區以 `aria-labelledby` 指回它 */
+  id?: string;
+  /** 這個頁籤控制的內容區 id(`role="tabpanel"` 那一塊) */
+  "aria-controls"?: string;
 }
 
 export interface TabsProps {
@@ -116,6 +120,8 @@ export const Tabs = ({
           label={item.label}
           disabled={item.disabled}
           aria-label={item["aria-label"]}
+          id={item.id}
+          aria-controls={item["aria-controls"]}
         />
       ))}
     </StyledTabs>
