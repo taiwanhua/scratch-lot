@@ -4,6 +4,7 @@ import {
   FORM_SUBMISSION_PROVIDER,
   type FieldDef,
   type FormDefinition,
+  type LookupProviderRegistry,
   type LookupSourceDescriptor,
   type ValidationReport,
   hasLabelTemplate,
@@ -202,7 +203,36 @@ export class FormDefinitionChecker {
       formKey: form.key,
       catalog: selfCatalog,
     });
+    this.checkProjectValueFields(sources, lookupProviders, report);
     return report;
+  }
+
+  /**
+   * 專案來源的值欄(非 `id`)只能是文字欄位:依值取回以字串等值比對文件欄位,
+   * 數字 / 日期等型別的值存成別的型別,比對不到(底座的 user / org 可回欄位本來就都是文字)。
+   */
+  private checkProjectValueFields(
+    sources: ReturnType<typeof sourcesOf>,
+    registry: LookupProviderRegistry,
+    report: ValidationReport,
+  ): void {
+    for (const { source, location } of sources) {
+      const valueField = source.valueField ?? "id";
+      const type = registry[source.provider]?.fields[valueField];
+      if (
+        valueField === "id" ||
+        type === undefined ||
+        type === "text" ||
+        !this.lookups.isProjectSource(source.provider)
+      ) {
+        continue;
+      }
+      report.errors.push({
+        code: "LOOKUP_UNKNOWN_FIELD",
+        message: `lookup 來源 ${source.provider} 的值欄只能是 id 或文字欄位(${valueField} 是 ${type})`,
+        location,
+      });
+    }
   }
 
   /** 已發布 / 退役過的每個欄位 key 最後一次的定義(同 key 改型別 → `KEY_TYPE_CHANGED`)。 */

@@ -33,11 +33,20 @@ import { useSession } from "@/hooks/base/useSession";
 export type LookupProviderOption =
   FormLookupProvidersQuery["formLookupProviders"]["items"][number];
 
-/** 登錄表的全部來源(底座三種在前、專案來源接後);載入中為空陣列。 */
-export const useLookupProviders = (): LookupProviderOption[] => {
+export interface LookupProviders {
+  /** 登錄表的全部來源(底座三種在前、專案來源接後);載入中或失敗時為空陣列。 */
+  providers: LookupProviderOption[];
+  /** 來源清單查詢失敗(畫面以表單管理的錯誤文案顯示) */
+  error: unknown;
+}
+
+export const useLookupProviders = (): LookupProviders => {
   const { session } = useSession();
-  const providers = useFormLookupProvidersQuery(session.client);
-  return providers.data?.formLookupProviders.items ?? [];
+  const query = useFormLookupProvidersQuery(session.client);
+  return {
+    providers: query.data?.formLookupProviders.items ?? [],
+    error: query.error,
+  };
 };
 
 /** 來源在下拉的名稱:底座來源用 i18n,專案來源用宣告的名稱。 */
@@ -182,7 +191,7 @@ export const useLookupFieldOptions = (
     { enabled: form !== undefined, retry: false },
   );
 
-  const providers = useLookupProviders();
+  const { providers } = useLookupProviders();
   const declared = isSubmission
     ? undefined
     : providers.find((provider) => provider.key === source.provider);

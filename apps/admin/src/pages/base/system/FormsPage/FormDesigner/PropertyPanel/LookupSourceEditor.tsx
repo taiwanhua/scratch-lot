@@ -4,11 +4,14 @@ import {
   FORM_SUBMISSION_PROVIDER,
   type LookupSourceDescriptor,
 } from "@repo/domain/form";
+import { Alert } from "@repo/ui/alert";
 import { FormControlLabel } from "@repo/ui/form-control-label";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { Typography } from "@repo/ui/typography";
+
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { LookupLabelTemplateInput } from "./LookupLabelTemplateInput";
 import {
@@ -45,6 +48,15 @@ const withCurrent = (
 
 const choicesOf = (options: readonly LookupFieldOption[]) =>
   options.map(({ value, label }) => ({ value, label }));
+
+/** 值欄可挑的欄位:專案來源只列文字欄位(依值取回以字串比對;與 api 檢查器同一條規則)。 */
+const valueFieldOptionsOf = (
+  options: readonly LookupFieldOption[],
+  provider: LookupProviderOption | undefined,
+): LookupFieldOption[] =>
+  provider?.isBase === false
+    ? options.filter((option) => option.type === "text")
+    : [...options];
 
 /** 有沒有固定條件可設:表單提交一定有;其他來源要宣告 `enabled` 可當篩選。 */
 const hasFixedFilter = (
@@ -109,7 +121,8 @@ export const LookupSourceEditor = ({
   const isSubmission = value.provider === FORM_SUBMISSION_PROVIDER;
   const { forms, isTruncated } = usePublishedForms(isSubmission, selfForm);
   const fieldOptions = useLookupFieldOptions(value, selfForm);
-  const providers = useLookupProviders();
+  const tErrors = useTranslations("admin.forms.errors");
+  const { providers, error: providersError } = useLookupProviders();
   const providerLabel = useProviderLabel();
   const declared = providers.find(
     (provider) => provider.key === value.provider,
@@ -141,6 +154,11 @@ export const LookupSourceEditor = ({
         }}
         size="small"
       />
+      {providersError !== null && (
+        <Alert severity="error">
+          {tErrors(formErrorOf(providersError).code)}
+        </Alert>
+      )}
       {isSubmission && (
         <SelectField<string>
           label={t("form")}
@@ -215,7 +233,10 @@ export const LookupSourceEditor = ({
           helperText={t("valueFieldHint")}
           options={[
             { value: UNSET, label: t("valueFieldId") },
-            ...withCurrent(choicesOf(fieldOptions ?? []), value.valueField),
+            ...withCurrent(
+              choicesOf(valueFieldOptionsOf(fieldOptions ?? [], declared)),
+              value.valueField,
+            ),
           ]}
           onChange={(valueField) => {
             const next = { ...value, valueField };
