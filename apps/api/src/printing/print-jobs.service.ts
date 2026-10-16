@@ -16,6 +16,7 @@ import {
   REPRINT_REASON_CATEGORY_KEY,
   REPRINT_REASON_OTHER,
   isPrintAgentOffline,
+  readPngDimensions,
 } from "@repo/domain/printing";
 import { printAgentTopic, userTopic } from "@repo/domain/realtime";
 
@@ -80,9 +81,6 @@ export const EXPIRE_STALE_JOBS_KEY = "printing.expire-stale-jobs";
 /** 一次逾時掃描最多處理幾筆(其餘下一輪)。 */
 const EXPIRE_BATCH_LIMIT = 500;
 
-const PNG_SIGNATURE = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-]);
 const BASE64 = /^[\d+/A-Za-z]+={0,2}$/;
 const DATA_URL_PREFIX = /^data:image\/png;base64,/;
 const TEXT_MAX_LENGTH = 200;
@@ -182,20 +180,17 @@ export function decodePrintImage(raw: string, paperWidth: number): Buffer {
       `image is too large (max ${String(PRINT_IMAGE_MAX_BYTES)} bytes)`,
     );
   }
-  if (
-    bytes.length < 24 ||
-    !bytes.subarray(0, 8).equals(PNG_SIGNATURE) ||
-    bytes.toString("latin1", 12, 16) !== "IHDR"
-  ) {
+  // 寬高的正本:@repo/domain/printing(代理程式開印前用同一個函式檢查)
+  const size = readPngDimensions(bytes);
+  if (size === null) {
     throw invalidImage("image is not a PNG");
   }
-  const width = bytes.readUInt32BE(16);
+  const { width, height } = size;
   if (width !== expectedWidth) {
     throw invalidImage(
       `image width must be ${String(expectedWidth)} dots for ${String(paperWidth)}mm paper (got ${String(width)})`,
     );
   }
-  const height = bytes.readUInt32BE(20);
   if (height === 0 || height > PRINT_IMAGE_MAX_HEIGHT_DOTS) {
     throw invalidImage(
       `image height must be 1–${String(PRINT_IMAGE_MAX_HEIGHT_DOTS)} dots (got ${String(height)})`,

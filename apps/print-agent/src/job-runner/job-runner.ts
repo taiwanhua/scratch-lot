@@ -10,6 +10,7 @@ import {
 import type { AgentApi } from "../api-client/api-client";
 import { buildPrintCommands } from "../escpos/commands";
 import { decodePrintImage } from "../escpos/png";
+import { JOB_TIMEOUT_MS } from "../escpos/tcp-printer";
 import type { PrintOutcome, PrinterTransport } from "../escpos/transport";
 import type { Logger } from "../logging/logger";
 import { type Timers, sleep, systemTimers } from "../timers";
@@ -20,10 +21,18 @@ import { type Timers, sleep, systemTimers } from "../timers";
  * 心跳查印表機狀態:佇列空著才排進去查(不在列印中途插進另一條連線);佇列忙就直接用上次的狀態,
  * 心跳不會被一張卡住的單據拖住。
  *
- * - 開印前若認領已超過 `PRINT_JOB_RESULT_TIMEOUT_MS`(API 已標「未收到列印結果」),不印,避免晚很久才吐單。
+ * - 開印前若結果逾時(`PRINT_JOB_RESULT_TIMEOUT_MS`,從認領起算)剩不到 `PRINT_START_MARGIN_MS`
+ *   (一張的總期限 + 回報餘裕),不印、回報失敗:否則可能印出來了,API 卻先標「未收到列印結果」,
+ *   使用者補印成兩張。
  * - 回報結果在佇列外進行(不擋下一張),網路錯誤依 `RESULT_RETRY_DELAYS_MS` 退避重試,總長約 90 秒;
  *   仍失敗時 API 會在 2 分鐘後標「未收到列印結果」。
  */
+/** 回報結果的餘裕(毫秒):印完到 API 收到回報要留的時間。 */
+export const RESULT_REPORT_MARGIN_MS = 15_000;
+
+/** 結果逾時剩下少於這段時間就不開印(約 45 秒)。 */
+export const PRINT_START_MARGIN_MS = JOB_TIMEOUT_MS + RESULT_REPORT_MARGIN_MS;
+
 export const RESULT_RETRY_DELAYS_MS: readonly number[] = [
   2000, 4000, 8000, 16_000, 30_000, 30_000,
 ];
@@ -104,11 +113,19 @@ export class JobRunner {
     claimedAt: number,
   ): Promise<void> {
     const { logger } = this.options;
-    if (this.timers.now() - claimedAt > PRINT_JOB_RESULT_TIMEOUT_MS) {
-      logger.warn("認領已超過結果逾時,不印(API 已標「未收到列印結果」)", {
-        jobId: job.id,
-        printerId: printer.id,
-      });
+    const remaining =
+      claimedAt + PRINT_JOB_RESULT_TIMEOUT_MS - this.timers.now();
+    if (remaining < PRINT_START_MARGIN_MS) {
+      logger.warn(
+        "離結果逾時太近,不印(避免印出後 API 才標「未收到列印結果」)",
+        {
+          jobId: job.id,
+          printerId: printer.id,
+          remainingMs: remaining,
+        },
+      );
+      // 還來得及就讓要求人立刻看到失敗;已逾時的回報會被 API 拒絕(409),無妨
+      this.reportLater(job.id, { status: "failed", error: "other" });
       return;
     }
     const outcome = await this.print(printer, job);

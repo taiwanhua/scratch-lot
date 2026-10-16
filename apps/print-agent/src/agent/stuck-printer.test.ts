@@ -122,4 +122,24 @@ describe("收據機卡住(接受連線但不讀資料)", () => {
       ),
     ).toHaveLength(1);
   });
+
+  it("查紙途中撞到總期限:回報 other,但不誤記「沒回 DLE EOT」", async () => {
+    const fake = await stuckPrinter(1);
+    const logger = new MemoryLogger();
+    const transport = new TcpPrinterTransport({
+      jobTimeoutMs: 200,
+      statusTimeoutMs: 5000,
+      logger,
+    });
+    await expect(
+      transport.print(samplePrinter({ port: fake.port }), [
+        Uint8Array.of(0x1b, 0x40),
+      ]),
+    ).resolves.toMatchObject({ ok: false, error: "other" });
+    // 讓被 destroy 的那條連線把查紙收尾跑完
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(
+      logger.lines.filter((line) => line.message.includes("DLE EOT")),
+    ).toHaveLength(0);
+  });
 });

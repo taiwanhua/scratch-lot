@@ -13,7 +13,11 @@ import {
   pngFromRows,
   samplePrinter,
 } from "../test-support/fakes";
-import { JobRunner, RESULT_RETRY_DELAYS_MS } from "./job-runner";
+import {
+  JobRunner,
+  PRINT_START_MARGIN_MS,
+  RESULT_RETRY_DELAYS_MS,
+} from "./job-runner";
 
 function setup() {
   const api = new FakeAgentApi();
@@ -47,7 +51,7 @@ async function claim(api: FakeAgentApi, id: string) {
 }
 
 describe("佇列", () => {
-  it("認領已超過結果逾時才輪到:不印、不回報", async () => {
+  it("認領已超過結果逾時才輪到:不印,回報失敗", async () => {
     const { api, transport, timers, runner } = setup();
     api.addJob("late");
     const claimed = await claim(api, "late");
@@ -55,7 +59,28 @@ describe("佇列", () => {
     await runner.enqueue(claimed.printer, claimed.job, 0);
     await runner.idle();
     expect(transport.printed).toHaveLength(0);
-    expect(api.results).toHaveLength(0);
+    expect(api.results).toEqual([
+      { jobId: "late", body: { status: "failed", error: "other" } },
+    ]);
+  });
+
+  it("結果逾時剩不到「總期限 + 回報餘裕」(約 45 秒)就不開印;剛好夠才印", async () => {
+    expect(PRINT_START_MARGIN_MS).toBe(45_000);
+    const { api, transport, timers, runner } = setup();
+    api.addJob("tight");
+    api.addJob("enough");
+    const tight = await claim(api, "tight");
+    const enough = await claim(api, "enough");
+    await timers.advance(PRINT_JOB_RESULT_TIMEOUT_MS - PRINT_START_MARGIN_MS);
+    // tight 早 1ms 認領:剩 44.999 秒
+    await runner.enqueue(tight.printer, tight.job, -1);
+    await runner.enqueue(enough.printer, enough.job, 0);
+    await runner.idle();
+    expect(transport.printed).toHaveLength(1);
+    expect(api.results).toEqual([
+      { jobId: "tight", body: { status: "failed", error: "other" } },
+      { jobId: "enough", body: { status: "printed" } },
+    ]);
   });
 
   it("回報結果失敗時依退避重試(總長約 90 秒),不擋下一張", async () => {
