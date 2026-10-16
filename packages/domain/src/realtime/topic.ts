@@ -46,7 +46,7 @@ export function isRealtimeTopic(value: unknown): value is string {
 }
 
 /**
- * 信號:只有類型(如 `task`、`badge:<模組 key>`、`print-job`)與可選的編號。
+ * 信號:只有類型(如 `notification`、`badge:<模組 key>`、`print-job`)與可選的編號。
  * 刻意沒有資料欄位 —— 資料一律向 API 拿,權限與可見範圍由 API 判斷。
  */
 export interface RealtimeSignal {

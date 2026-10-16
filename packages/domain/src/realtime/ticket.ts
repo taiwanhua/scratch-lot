@@ -17,16 +17,13 @@ import {
  *
  * - 內容:`{ tenantId, userId | agentId, exp, topics }`;`exp` 是 Unix 秒,效期 10 分鐘。
  * - 字串格式:`<base64url(JSON)>.<base64url(HMAC-SHA256)>`,簽章對象是第一段原字串。
- * - 不存資料庫;驗證只看簽章與到期,不查資料庫。可訂閱的頻道由 API 依權限與可見範圍計算。
- * - `topics` 最多 `REALTIME_TICKET_MAX_TOPICS`(50)個;超過視為格式錯誤(malformed,Worker 回 401),
- *   簽發端(API)計算可訂閱頻道時要照這個上限(RT-03)。
+ * - 不存資料庫;驗證只看簽章與到期,不查資料庫。可訂閱的頻道由 API 依權限與可見範圍計算:
+ *   平常只有自己的個人頻道,打開看板頁時多一個 `board:<分店>`。
+ * - 頻道數量不設上限;連線資料(attachment)寫入失敗時由 Durable Object 關閉該連線(RT-01)。
  */
 
 /** 訂閱憑證效期(秒)。 */
 export const REALTIME_TICKET_TTL_SECONDS = 600;
-
-/** 一張訂閱憑證最多可列的頻道數(控制憑證長度與連線 attachment 大小;RT-03)。 */
-export const REALTIME_TICKET_MAX_TOPICS = 50;
 
 interface RealtimeTicketBase {
   tenantId: string;
@@ -64,11 +61,7 @@ export function parseRealtimeTicket(value: unknown): RealtimeTicket | null {
   ) {
     return null;
   }
-  if (
-    !Array.isArray(topics) ||
-    topics.length > REALTIME_TICKET_MAX_TOPICS ||
-    !topics.every(isRealtimeTopic)
-  ) {
+  if (!Array.isArray(topics) || !topics.every(isRealtimeTopic)) {
     return null;
   }
   const base = { tenantId, exp, topics: [...topics] };

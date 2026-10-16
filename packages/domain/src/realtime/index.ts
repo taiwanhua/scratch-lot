@@ -16,7 +16,6 @@ export {
   userTopic,
 } from "./topic";
 export {
-  REALTIME_TICKET_MAX_TOPICS,
   REALTIME_TICKET_TTL_SECONDS,
   type RealtimeTicket,
   type RealtimeTicketRejection,
@@ -30,6 +29,7 @@ export {
 } from "./ticket";
 export {
   REALTIME_CLOSE_CODES,
+  REALTIME_PUBLISH_BODY_MAX_LENGTH,
   REALTIME_PUBLISH_SIGNATURE_HEADER,
   type RealtimeClientMessage,
   type RealtimePublishRequest,

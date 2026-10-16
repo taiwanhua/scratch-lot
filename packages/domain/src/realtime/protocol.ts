@@ -11,14 +11,19 @@ import {
  *
  * 1. API → Worker `POST /publish`:body 是 `RealtimePublishRequest` 的 JSON,
  *    header `x-realtime-signature` 帶「送出信號密鑰」對**原始 body 字串**的 HMAC-SHA256(base64url)。
+ *    一次送出可帶多個頻道(算 1 次 Worker + 1 次 Durable Object 請求);同一條連線訂閱了其中幾個也只推一次。
  * 2. 連線上的訊息(JSON 文字):前端 / 代理程式送 `RealtimeClientMessage`,Durable Object 回 `RealtimeServerMessage`。
  */
 
 export const REALTIME_PUBLISH_SIGNATURE_HEADER = "x-realtime-signature";
 
+/** `/publish` body 的長度上限(bytes);送出端一次帶的頻道要切成不超過它的批次。 */
+export const REALTIME_PUBLISH_BODY_MAX_LENGTH = 65_536;
+
 export interface RealtimePublishRequest {
   tenantId: string;
-  topic: string;
+  /** 這次送出的頻道(至少一個、不重複)。 */
+  topics: string[];
   signal: RealtimeSignal;
 }
 
@@ -33,9 +38,13 @@ export function isRealtimePublishRequest(
   if (keys.length !== 3) {
     return false;
   }
+  const { topics } = record;
   return (
     isRealtimeId(record.tenantId) &&
-    isRealtimeTopic(record.topic) &&
+    Array.isArray(topics) &&
+    topics.length > 0 &&
+    topics.every(isRealtimeTopic) &&
+    new Set(topics).size === topics.length &&
     isRealtimeSignal(record.signal)
   );
 }
@@ -81,6 +90,11 @@ export type RealtimeServerMessage =
 export const REALTIME_CLOSE_CODES = {
   /** 訂閱憑證過期且未換發:前端應重新取得訂閱憑證再連線。 */
   ticketExpired: 4001,
+  /**
+   * 連線資料(attachment)寫不進去(例:超過 Cloudflare 的 16 KB 上限):Durable Object 關閉該連線並記 log,
+   * 不讓錯誤變成 500;前端照斷線處理(降級輪詢、退避重連)。
+   */
+  attachmentFailed: 4002,
 } as const;
 
 /** 解析連線上的訊息;格式不對回 `null`。 */
