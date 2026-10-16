@@ -448,6 +448,16 @@
         "types": "./dist/cjs/snackbar.d.ts",
         "default": "./dist/cjs/snackbar.js"
       }
+    },
+    "./receipt58": {
+      "import": {
+        "types": "./dist/es/receipt58.d.mts",
+        "default": "./dist/es/receipt58.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/receipt58.d.ts",
+        "default": "./dist/cjs/receipt58.js"
+      }
     }
   },
   "scripts": {
@@ -472,6 +482,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/node": "^24.19.2",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "bunchee": "^6.4.0",
@@ -497,6 +508,9 @@
     "@tanstack/react-table": "^9.2.4",
     "@tanstack/react-virtual": "^3.14.13",
     "dayjs": "^1.11.23",
+    "jsbarcode": "^3.12.3",
+    "modern-screenshot": "^4.7.0",
+    "qrcode": "^1.5.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   }
