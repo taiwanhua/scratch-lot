@@ -270,6 +270,7 @@ PR 連結、改動檔案清單、測試結果(與基準比較)、截圖或 E2E �
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
 | 看完整差異與回收候選 | `node scripts/base-sync/run.mjs inspect --project <路徑> --from <commit> --to <commit>`                                        | 唯讀分類，候選仍需語意審查                                        |
 | 準備正式版本升級     | `node scripts/base-sync/run.mjs upgrade --project <路徑> --tag <版本> --worktree-root <父目錄>`                                | 隔離分支與未提交 merge；批次重複 `--project`                      |
+| 升級後確認去除重複   | `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`                                     | 唯讀 Markdown 四節報告；皆 0 才 exit 0，人只判讀例外              |
 | 準備共用改良回收     | `node scripts/base-sync/run.mjs contribute --project <來源路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <父目錄>` | common 路徑加明列混合檔的 contribution，不帶整個專案歷史          |
 | 回收含混合檔         | 上一列加 `--accept-mixed <路徑>`(可重複)                                                                                       | 只收明列且只含底座段落的混合檔；差異列在報告 `mixedReview` 供審查 |
 | 看累積未部署變更     | `node scripts/project-settings/preflight.mjs --environment <環境> --target <完整SHA>`                                          | 實際 app/DB 基準、累積差異與未核對事項                            |

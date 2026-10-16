@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** CLI:`node scripts/base-sync/run.mjs <inspect|upgrade|contribute> …`,用法見 `--help`。 */
+/** CLI:`node scripts/base-sync/run.mjs <inspect|upgrade|contribute|verify> …`,用法見 `--help`。 */
 import { runBaseSync } from "./base-sync.mjs";
 
 const result = await runBaseSync(process.argv.slice(2));
