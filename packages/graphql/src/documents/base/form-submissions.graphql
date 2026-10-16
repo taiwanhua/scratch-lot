@@ -42,6 +42,9 @@ fragment FormSubmissionFields on FormSubmissionModel {
     timezone
     userId
     orgId
+    # 送出當時的所屬組織(全部)與租戶(表達式的 ctx.user.orgIds / ctx.tenant.id)
+    orgIds
+    tenantId
   }
   # 這次回傳的修訂用哪一版的定義渲染(升級過的提交,歷史修訂可能綁在較舊的版本)
   viewedVersion

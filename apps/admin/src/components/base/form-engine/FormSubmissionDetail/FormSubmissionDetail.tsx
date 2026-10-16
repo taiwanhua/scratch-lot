@@ -102,8 +102,8 @@ export const FormSubmissionDetail = ({
     }
     return shown.ctx === null || shown.ctx === undefined
       ? liveContextOf(
-          shown.createdBy?.id ?? null,
-          shown.orgId,
+          // 草稿只知道建立者與那一筆的組織(同 api 草稿檢視的上下文:所屬組織全部、租戶留空)
+          { userId: shown.createdBy?.id ?? null, orgId: shown.orgId },
           now,
           tenantTimezone,
         )

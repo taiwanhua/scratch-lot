@@ -40,7 +40,7 @@ import {
   type EffectSubject,
   FormLifecycleService,
 } from "./lifecycle/form-lifecycle.service";
-import { StepEntryService } from "./step-entry.service";
+import { type StepEntryOptions, StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
 
 /** 一輪動作執行的結果。 */
@@ -102,6 +102,8 @@ export class WorkflowEngineHooks {
  * 所有寫入一起回復;呼叫端(送出、決定、撤回、改派、新增審核者、失效 hook、重試推進)已在交易內時就併進
  * 呼叫端的交易。並發的另一個交易寫到同一份實例 → 寫入衝突、整個交易由 driver 重跑,重讀後再判斷。
  * 通知與推進同一個交易寫入,站內信號與 email 排在交易提交後(`WorkflowNotifier` → `notify()`)。
+ *
+ * 進關時的 B4 跳過與 B5 自動通過(含自動通過的 `beforeApprove` 守門)由 `StepEntryService` 算,同一個交易。
  *
  * **掛接點的事後動作**(`lifecycle/`)也在推進裡觸發、同一個交易:實例的條件更新成功且把審核關卡改成
  * `completed` / `skipped` → `stepPassed`(跳過帶 `skipped: true`);提交同步成完成 / 駁回 / 退回 / 撤回且
@@ -204,7 +206,9 @@ export class WorkflowEngineService {
         return null;
       }
       const definition = await this.definitionOf(instance);
-      const plan = await this.planOf(instance, definition);
+      const plan = await this.roundPlanOf(instance, definition, {
+        runApproveGuards: true,
+      });
       if (plan.actions.length === 0) {
         return instance;
       }
@@ -219,10 +223,21 @@ export class WorkflowEngineService {
     return this.findInstance(instanceId);
   }
 
-  /** 這一輪的判斷(不寫入);給「需要推進」的識別用。 */
-  async planOf(
+  /**
+   * 這一輪的判斷(不寫入);給「需要推進」的識別用。不跑 B5 自動通過的守門(識別可能不在交易內;
+   * 列 5 一定有動作,守門結果不影響「需不需要推進」)。
+   */
+  planOf(
     instance: InstanceRecord,
     definition: WorkflowDefinition,
+  ): Promise<AdvancePlan> {
+    return this.roundPlanOf(instance, definition, { runApproveGuards: false });
+  }
+
+  private async roundPlanOf(
+    instance: InstanceRecord,
+    definition: WorkflowDefinition,
+    options: StepEntryOptions,
   ): Promise<AdvancePlan> {
     const tenantId = instance.tenantId;
     // 依序讀:可能在交易內,同一個 session 上不平行讀寫(TX-02)
@@ -259,7 +274,12 @@ export class WorkflowEngineService {
         ],
       };
     }
-    const entry = await this.entries.resolve(instance, step);
+    const entry = await this.entries.resolve(
+      instance,
+      definition,
+      step,
+      options,
+    );
     return advance({ ...input, stepEntries: { [first.stepKey]: entry } });
   }
 

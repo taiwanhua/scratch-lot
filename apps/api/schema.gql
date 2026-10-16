@@ -848,6 +848,8 @@ type FormSubmissionAttachmentUrlPayload {
 type FormSubmissionContext {
   at: DateTime!
   orgId: ID
+  orgIds: [ID!]!
+  tenantId: ID
   timezone: String!
   userId: ID
 }
@@ -1121,6 +1123,7 @@ type MeOrg {
   id: ID!
   logoUrl: String
   name: String!
+  tenantId: ID
   tenantName: String!
   timezone: String!
 }
@@ -2569,6 +2572,7 @@ type WorkflowHistoryEventModel {
   at: DateTime!
   comment: String
   kind: String!
+  reason: String
   result: String
   stepKey: String
   taskKey: String

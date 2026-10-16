@@ -1,12 +1,13 @@
 import { type OutcomeCandidate, selectOutcome } from "./evaluate";
 import { endStepKey, nextStepKeys, previousStepKeys, stepOf } from "./graph";
-import { buildPlan } from "./plan";
+import { type AutoApproval, buildPlan, keepsApplicant } from "./plan";
 import {
   evaluationOf,
   isProjectionInSync,
   projectAllTasks,
 } from "./projection";
 import {
+  type AcceptedDecision,
   type HistoryEvent,
   type InstanceOutcome,
   type InstanceSnapshot,
@@ -14,6 +15,7 @@ import {
   LIVE_INSTANCE_STATUSES,
   type NotifiedResult,
   type PlanItem,
+  type SkipReason,
   type StepState,
   type StepStatus,
   type SubmissionSnapshot,
@@ -54,9 +56,21 @@ import {
  * (`steps: { $elemMatch: { stepKey: N, status: "pending" } }`),元素不存在就永遠不成立。
  */
 
-/** 列 5 的外部輸入:跳過,或解析到的審核者(未剔除申請人也可,這裡會剔除)。 */
+/**
+ * 列 5 的外部輸入:跳過(帶原因,時間軸顯示是哪一項成立),或解析到的審核者(未剔除申請人也可,這裡會剔除;
+ * B5 自動通過可能記在申請人名下時(`keepsApplicant`)申請人留在計畫裡)。
+ *
+ * `autoApprovals` = 已過 `beforeApprove` 的 B5 自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門,
+ * 擋下的不放進來 —— 留給他照常審核):進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 =
+ * 已核准);`any` 只記第一位(一人核准即過)。
+ */
 export type StepEntry =
-  { kind: "skip" } | { kind: "assign"; assigneeIds: string[] };
+  | { kind: "skip"; reason?: SkipReason }
+  | {
+      kind: "assign";
+      assigneeIds: string[];
+      autoApprovals?: readonly AutoApproval[];
+    };
 
 export interface AdvanceInput {
   definition: WorkflowDefinition;
@@ -107,6 +121,8 @@ export interface StepUpdate {
   status?: StepStatus;
   blocked?: boolean;
   plan?: PlanItem[];
+  /** 整份取代(只有進關時的 B5 自動通過會寫;人按的決定由 api 以 `$push` 寫)。 */
+  decisions?: AcceptedDecision[];
 }
 
 export interface InstanceUpdate {
@@ -377,6 +393,7 @@ function successorStart(
   input: AdvanceInput,
   nodeKey: string,
   mode: "completed" | "skipped" | "recover",
+  skipReason: SkipReason | null = null,
 ): AdvanceAction {
   const { definition, instance, now } = input;
   const statuses = statusMapOf(instance);
@@ -392,6 +409,9 @@ function successorStart(
       at: now,
       kind: mode === "completed" ? "step_completed" : "step_skipped",
       stepKey: nodeKey,
+      ...(mode === "skipped" && skipReason !== null
+        ? { reason: skipReason }
+        : {}),
     });
   }
   const { started, waiting } = startSuccessors(
@@ -631,9 +651,19 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
     return { row: "5", actions: [{ kind: "resolveStepEntry", stepKey }] };
   }
   if (entry.kind === "skip") {
-    return { row: "5", actions: [successorStart(input, stepKey, "skipped")] };
+    return {
+      row: "5",
+      actions: [
+        successorStart(input, stepKey, "skipped", entry.reason ?? null),
+      ],
+    };
   }
-  const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy);
+  const node = stepOf(definition, stepKey);
+  const reviewNode = node !== undefined && isReviewStep(node) ? node : null;
+  const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy, {
+    keepApplicant:
+      reviewNode !== null && keepsApplicant(definition, instance, reviewNode),
+  });
   const condition = liveCondition(instance, {
     stepStatus: { [stepKey]: "pending" },
   });
@@ -664,20 +694,116 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
       ],
     };
   }
+  const decisions = autoDecisionsOf(
+    reviewNode?.mode ?? "any",
+    plan,
+    entry.autoApprovals ?? [],
+    now,
+  );
+  const update: InstanceUpdate = {
+    steps: {
+      [stepKey]: {
+        status: "active",
+        plan,
+        blocked: false,
+        ...(decisions.length > 0
+          ? { decisions: decisions.map(({ decision }) => decision) }
+          : {}),
+      },
+    },
+    pushHistory: [
+      { at: now, kind: "step_entered", stepKey },
+      // 決定與它的 `approved` 事件同一次原子寫入(`historyIndexOf` 靠它排接受順序)
+      ...decisions.map(({ decision, reason }) => ({
+        at: now,
+        kind: "approved" as const,
+        stepKey,
+        taskKey: decision.taskKey,
+        userId: decision.userId,
+        comment: null,
+        reason,
+      })),
+    ],
+    incEditVersion: true,
+  };
   return {
     row: "5",
     actions: [
-      {
-        kind: "updateInstance",
-        condition,
-        update: {
-          steps: { [stepKey]: { status: "active", plan, blocked: false } },
-          pushHistory: [{ at: now, kind: "step_entered", stepKey }],
-          incEditVersion: true,
-        },
-      },
+      { kind: "updateInstance", condition, update },
+      ...autoApprovedTasks(input, stepKey, update),
     ],
   };
+}
+
+/**
+ * B5 自動通過 → 進關時一併寫入的決定(記成那個人的核准,`comment = null`):只記計畫裡有的人;
+ * `any` 只記第一位(一人核准即過,多記的會變成「晚於結果」);`all` 每位各記一票,其他人照常審核。
+ */
+function autoDecisionsOf(
+  mode: "any" | "all",
+  plan: readonly PlanItem[],
+  approvals: readonly AutoApproval[],
+  now: Date,
+): { decision: AcceptedDecision; reason: AutoApproval["reason"] }[] {
+  const result: {
+    decision: AcceptedDecision;
+    reason: AutoApproval["reason"];
+  }[] = [];
+  const seen = new Set<string>();
+  for (const approval of approvals) {
+    const item = plan.find((entry) => entry.assigneeId === approval.assigneeId);
+    if (item === undefined || seen.has(item.taskKey)) {
+      continue;
+    }
+    seen.add(item.taskKey);
+    result.push({
+      decision: {
+        taskKey: item.taskKey,
+        userId: item.assigneeId,
+        decision: "approved",
+        comment: null,
+        at: now,
+      },
+      reason: approval.reason,
+    });
+    if (mode === "any") {
+      break;
+    }
+  }
+  return result;
+}
+
+/**
+ * 自動通過的人的任務:進關的 CAS 成功後立刻建(投影 = 已核准)。不能等列 6 —— 這一關可能在下一輪的列 4
+ * 就完成(連帶全案核准),列 6 只補進行中關卡的任務。`(instanceId, taskKey)` 唯一,重跑不重建。
+ */
+function autoApprovedTasks(
+  input: AdvanceInput,
+  stepKey: string,
+  update: InstanceUpdate,
+): AdvanceAction[] {
+  const patch = update.steps?.[stepKey];
+  const decided = new Set((patch?.decisions ?? []).map((one) => one.taskKey));
+  if (decided.size === 0) {
+    return [];
+  }
+  const instance = input.instance;
+  const next: InstanceSnapshot = {
+    ...instance,
+    steps: instance.steps.map((state) =>
+      state.stepKey === stepKey ? { ...state, ...patch } : state,
+    ),
+    history: [...instance.history, ...(update.pushHistory ?? [])],
+  };
+  const projections = projectAllTasks(input.definition, next);
+  const actions: AdvanceAction[] = [];
+  for (const taskKey of decided) {
+    const projection = projections.get(taskKey)?.projection;
+    if (projection !== undefined) {
+      actions.push({ kind: "createTask", stepKey, taskKey, projection });
+    }
+  }
+  return actions;
 }
 
 // ---- 列 4b:後繼啟動的恢復 ----

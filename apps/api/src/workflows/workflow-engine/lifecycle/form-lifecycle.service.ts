@@ -41,6 +41,12 @@ export interface ApproveGuardInput {
   stepKey: string;
 }
 
+/** 守門擋下的結果(專案錯誤碼 + 訊息)。 */
+export interface GuardBlocked {
+  code: string;
+  message: string;
+}
+
 /** 事後動作要知道的單據(提交或實例都有這些欄位)。 */
 export interface EffectSubject {
   submissionId: Types.ObjectId;
@@ -87,7 +93,8 @@ function sessionOf(what: string): ClientSession {
  *
  * - `guard`:動作的交易內、寫入之前呼叫;沒登記 → 通過。擋下 → 拋 `lifecycleBlockedError`(交易回復,
  *   此時還沒有任何寫入)。守門的例外照樣往外拋(TX-04:不吞)
- * - `runApproveGuard`:`beforeApprove` 的單一入口(某人按核准、批次核准、B5 自動通過都呼叫它)
+ * - `runApproveGuard` / `checkApproveGuard`:`beforeApprove` 的入口(某人按核准、批次核准 → 擋下拋錯;
+ *   B5 自動通過 → 擋下以回傳值表示,留給他照常審核)
  * - `emit`:狀態改變後在同一個交易內呼叫事後動作(系統身分);拋錯往外拋 = 整個動作回復
  */
 @Injectable()
@@ -122,6 +129,20 @@ export class FormLifecycleService implements OnModuleInit {
   }
 
   async guard(name: FormGuardName, input: GuardInput): Promise<void> {
+    const blocked = await this.check(name, input);
+    if (blocked !== null) {
+      throw lifecycleBlockedError(blocked.code, blocked.message);
+    }
+  }
+
+  /**
+   * 跑守門、回結果(不拋):通過 / 沒登記 → null;擋下 → 專案的錯誤碼與訊息。錯誤碼不合格、
+   * handler 拋錯照樣往外拋(程式錯誤,不是「擋下」)。
+   */
+  private async check(
+    name: FormGuardName,
+    input: GuardInput,
+  ): Promise<GuardBlocked | null> {
     const { submission } = input;
     const registration = this.lifecycles.lookup(
       submission.moduleKey,
@@ -129,7 +150,7 @@ export class FormLifecycleService implements OnModuleInit {
     );
     const handler = registration?.guards?.[name];
     if (registration === null || handler === undefined) {
-      return;
+      return null;
     }
     const blocked = await handler({
       guard: name,
@@ -141,19 +162,27 @@ export class FormLifecycleService implements OnModuleInit {
       get: this.resolverOf(registration),
     });
     if (blocked === null) {
-      return;
+      return null;
     }
     if (!PROJECT_REASON_PATTERN.test(blocked.code)) {
       throw new Error(
         `守門 ${name}(${submission.moduleKey} / ${submission.formKey})回的錯誤碼「${blocked.code}」不是大寫英數與底線`,
       );
     }
-    throw lifecycleBlockedError(blocked.code, blocked.message);
+    return { code: blocked.code, message: blocked.message };
   }
 
-  /** 核准的守門(單一入口;批次核准、B5 自動通過直接呼叫它)。 */
+  /** 核准的守門(單一入口;某人按核准、批次核准的每一筆):擋下 → 拋 `lifecycleBlockedError`。 */
   runApproveGuard(input: ApproveGuardInput): Promise<void> {
     return this.guard("beforeApprove", input);
+  }
+
+  /**
+   * 同一個 `beforeApprove`,但以回傳值表示擋下(B5 自動通過:擋下不是錯誤,是「停在這一關等人處理」,
+   * 推進照常寫入)。
+   */
+  checkApproveGuard(input: ApproveGuardInput): Promise<GuardBlocked | null> {
+    return this.check("beforeApprove", input);
   }
 
   async emit(

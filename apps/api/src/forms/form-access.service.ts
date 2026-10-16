@@ -141,6 +141,20 @@ export class FormAccessService {
     return tenantTimezoneOfOrg(this.orgs, operator, orgId);
   }
 
+  /**
+   * 某個組織所屬的租戶頂層 id(`me.currentOrg.tenantId`;表達式的 `ctx.tenant.id`,送出時快照的
+   * `revisions[].ctx.tenantId` 同一條規則):根組織 / 讀不到 → null。
+   */
+  async tenantIdOfOrg(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<Types.ObjectId | null> {
+    const org = await this.orgs.findById(orgReader(operator), orgId);
+    return org
+      ? tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors })
+      : null;
+  }
+
   /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有;別租戶表單的動態權限 → 不持有)。 */
   has(facts: FormOperatorFacts, key: string): boolean {
     return holdsPermission(facts, key);

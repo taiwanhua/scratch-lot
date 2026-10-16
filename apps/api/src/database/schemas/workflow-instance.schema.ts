@@ -8,7 +8,9 @@ import {
   DECISIONS,
   type Decision,
   HISTORY_KINDS,
+  HISTORY_REASONS,
   type HistoryKind,
+  type HistoryReason,
   INSTANCE_STATUSES,
   type InstanceStatus,
   type NotifiedResult,
@@ -112,6 +114,10 @@ export class WorkflowHistoryEvent {
 
   @Prop({ type: String, default: null })
   result!: NotifiedResult | null;
+
+  /** 跳過 / 自動通過的原因(`step_skipped`:哪一項成立;`approved`:B5 自動通過);其他 null。 */
+  @Prop({ type: String, enum: [...HISTORY_REASONS, null], default: null })
+  reason!: HistoryReason | null;
 }
 
 const WorkflowHistoryEventSchema =

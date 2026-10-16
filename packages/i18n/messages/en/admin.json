@@ -1808,7 +1808,11 @@
           "timezone": "Time zone",
           "user": {
             "id": "Filled by",
-            "orgId": "Filler's organization"
+            "orgId": "Filler's current organization",
+            "orgIds": "Filler's organizations (all)"
+          },
+          "tenant": {
+            "id": "Tenant"
           }
         }
       },
@@ -2146,6 +2150,12 @@
         "withdrawn": "Withdrawn by the applicant",
         "completed": "Approval completed",
         "superseded": "Superseded by a resubmitted revision"
+      },
+      "reasons": {
+        "skip_orgs": "\"{step}\" skipped: the applicant belongs to a specified organization",
+        "skip_condition": "\"{step}\" skipped by its condition",
+        "auto_applicant": "{user} approved at \"{step}\" (the applicant is a reviewer, approved automatically)",
+        "auto_prior_approver": "{user} approved at \"{step}\" (already approved at an earlier step, approved automatically)"
       }
     },
     "decide": {

@@ -78,6 +78,7 @@ describe("表單模組詳情頁(預設組裝,FormRenderer 唯讀模式)", () => 
               timezone: "Asia/Taipei",
               userId: "user-1",
               orgId: "org-1",
+              orgIds: ["org-1"],
             },
           }),
         ],

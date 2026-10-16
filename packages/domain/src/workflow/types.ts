@@ -36,6 +36,33 @@ export type AssigneeSource =
   /** 主管:從提交所屬組織往上第 `level` 組主管(1 起) */
   | { kind: "manager"; level: number };
 
+/** 「申請人屬於這些組織」的「租戶」特殊值(不是組織 id;畫面顯示「最上層組織」)。 */
+export const SKIP_ORG_TENANT = "tenant";
+
+/**
+ * 「申請人屬於這些組織就跳過」(《底座規格》3.4 B4):比對申請人送出當下的**所屬組織(全部)**
+ * (修訂 `ctx` 快照的 `orgIds`),任一個在名單裡(勾「包含下層」時含名單組織的下層)就成立。
+ * 共用流程只能用 `SKIP_ORG_TENANT`;指定組織只能用在租戶客製流程。
+ */
+export interface SkipOrgsDef {
+  /** 組織 id 或 `SKIP_ORG_TENANT`;至少一個。 */
+  orgIds: string[];
+  /** 包含下層。 */
+  includeDescendants: boolean;
+}
+
+/**
+ * 自動通過(《底座規格》3.5 B5;兩項各自開關,省略 = 照常審核):
+ * - `applicant`:申請人是這一關的審核者 → 記成申請人核准(預設照常 = 剔除申請人)
+ * - `priorApprover`:審核者已在**這一輪**(同一實例)更早的關卡親自核准過 → 記成他核准
+ *
+ * 兩種都照樣經 `beforeApprove`;被擋下就留給他照常審核。
+ */
+export interface AutoApproveDef {
+  applicant?: boolean;
+  priorApprover?: boolean;
+}
+
 /** 審核關卡(`kind` 省略 = `review`)。 */
 export interface ReviewStepDef {
   key: string;
@@ -43,13 +70,30 @@ export interface ReviewStepDef {
   kind?: "review";
   assignee: AssigneeSource;
   mode: ApprovalMode;
-  /** 跳過條件(6a 表達式);成立 → 整關跳過;沒設 → 永遠不跳過。 */
+  /**
+   * 跳過條件(6a 表達式;畫面上的「符合條件」);成立 → 整關跳過;沒設 → 不看公式。
+   * 與 `skipOrgs` 任一項成立就跳過。
+   */
   skipWhen?: Expression | null;
+  /** 申請人屬於這些組織就跳過(畫面上的「申請人屬於這些組織」);沒設 → 不看組織。 */
+  skipOrgs?: SkipOrgsDef | null;
+  /** 自動通過;沒設 = 兩項都照常審核。 */
+  autoApprove?: AutoApproveDef | null;
   /** 審核者可否「退回修改」;省略 = true。 */
   allowReturn?: boolean;
 }
 
-/** 系統匯合節點:沒有 `assignee` / `mode` / `skipWhen` / `allowReturn`。 */
+/** 審核關卡才有的屬性(匯合節點帶了任一個 → `JOIN_HAS_REVIEW_PROPS`)。 */
+export const REVIEW_STEP_PROPS = [
+  "assignee",
+  "mode",
+  "skipWhen",
+  "skipOrgs",
+  "autoApprove",
+  "allowReturn",
+] as const;
+
+/** 系統匯合節點:沒有 `REVIEW_STEP_PROPS` 的任何一個。 */
 export interface JoinStepDef {
   key: string;
   name: string;
@@ -208,6 +252,31 @@ export const HISTORY_KINDS = [
 
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
 
+/**
+ * 歷程事件的原因(時間軸顯示「是哪一項成立」):
+ * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件)
+ * - `approved`:`auto_applicant`(申請人是審核者,自動通過)/ `auto_prior_approver`(已在前關核准,自動通過)
+ *
+ * 其他事件與人按的核准沒有原因(null)。
+ */
+export const HISTORY_REASONS = [
+  "skip_orgs",
+  "skip_condition",
+  "auto_applicant",
+  "auto_prior_approver",
+] as const;
+
+export type HistoryReason = (typeof HISTORY_REASONS)[number];
+
+/** 跳過的原因(`step_skipped` 帶)。 */
+export type SkipReason = Extract<HistoryReason, "skip_orgs" | "skip_condition">;
+
+/** 自動通過的原因(自動記的 `approved` 帶)。 */
+export type AutoApproveReason = Extract<
+  HistoryReason,
+  "auto_applicant" | "auto_prior_approver"
+>;
+
 /** 結果通知的種類(`notified` 事件帶它,與流程完成事件 `completed` 分開)。 */
 export type NotifiedResult = "approved" | "rejected" | "returned";
 
@@ -221,6 +290,8 @@ export interface HistoryEvent {
   comment?: string | null;
   /** 只有 `notified`:這次通知的結果種類。 */
   result?: NotifiedResult | null;
+  /** 跳過 / 自動通過的原因(見 `HISTORY_REASONS`);其他 null。 */
+  reason?: HistoryReason | null;
 }
 
 /** 全案終局採用的那一筆決定(只能從 null 寫成有值一次)。 */

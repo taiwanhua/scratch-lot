@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import type { FormDefinition } from "@repo/domain/form";
 
 import { useFormDraft } from "@/hooks/base/useFormDraft";
+import { useLiveIdentity } from "@/hooks/base/useLiveIdentity";
 import { useMe } from "@/hooks/base/useMe";
 import type { ModuleFormSummary } from "@/hooks/base/useModuleForms";
 import { useSnackbar } from "@/hooks/base/useMutationFeedback";
@@ -66,11 +67,10 @@ export const FormCreateBody = ({
     [draft.draft],
   );
   const permissions = fromDraft ?? held;
-  const userId = user?.id ?? null;
-  const orgId = user?.currentOrg?.id ?? null;
+  const identity = useLiveIdentity();
   const expressionContext = useMemo(
-    () => liveContextOf(userId, orgId, now, timezone),
-    [userId, orgId, now, timezone],
+    () => liveContextOf(identity, now, timezone),
+    [identity, now, timezone],
   );
   // 頁籤 / 標題:以正在輸入的值即時算(`FormFillForm` 呼叫);建立者 = 自己
   const tabLabelOf = useTabLabelRenderer({

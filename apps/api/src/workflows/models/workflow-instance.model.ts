@@ -187,6 +187,14 @@ export class WorkflowHistoryEventModel {
   /** 只有 `notified`:結果通知的種類。 */
   @Field(() => String, { nullable: true })
   result!: string | null;
+
+  /**
+   * 跳過 / 自動通過的原因(`@repo/domain/workflow` 的 `HISTORY_REASONS`):`step_skipped` 帶
+   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);B5 自動記的 `approved` 帶
+   * `auto_applicant` / `auto_prior_approver`。其他事件 null。
+   */
+  @Field(() => String, { nullable: true })
+  reason!: string | null;
 }
 
 @ObjectType()

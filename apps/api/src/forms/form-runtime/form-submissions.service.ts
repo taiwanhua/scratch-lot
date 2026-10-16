@@ -104,6 +104,7 @@ import {
   type FormSubmissionsPayload,
   type FormSummary,
 } from "./models/form-submission.model";
+import { expressionContextOf } from "./revision-context";
 import { assertSubmissionCapacity } from "./revision-limits";
 
 type SubmissionRecord = Persisted<FormSubmissionDocument>;
@@ -189,20 +190,6 @@ export function touchedKeysOf(
       .map((field) => field.key),
   );
   return [...new Set(touched)].filter((key) => inputs.has(key));
-}
-
-/** 一次送出 / 修改的上下文 → 表達式的 `ctx.*`(Spec §4 `revisions[].ctx`)。 */
-export function expressionContextOf(
-  ctx: FormRevision["ctx"],
-): ExpressionContext {
-  return {
-    now: new Date(ctx.at).toISOString(),
-    timezone: ctx.timezone,
-    user: {
-      id: ctx.userId ? String(ctx.userId) : null,
-      orgId: ctx.orgId ? String(ctx.orgId) : null,
-    },
-  };
 }
 
 /** 版本定義快取的鍵。 */
@@ -2035,6 +2022,8 @@ export class FormSubmissionsService {
       timezone: facts.timezone,
       userId: facts.operator.actorId,
       orgId: facts.operator.currentOrgId,
+      orgIds: [...facts.operator.memberOrgIds],
+      tenantId: facts.tenantId,
     };
   }
 
@@ -2212,6 +2201,10 @@ export class FormSubmissionsService {
               timezone: viewed.ctx.timezone,
               userId: viewed.ctx.userId ? String(viewed.ctx.userId) : null,
               orgId: viewed.ctx.orgId ? String(viewed.ctx.orgId) : null,
+              orgIds: (viewed.ctx.orgIds ?? []).map(String),
+              tenantId: viewed.ctx.tenantId
+                ? String(viewed.ctx.tenantId)
+                : null,
             }
           : null,
         viewedVersion: viewed.version,

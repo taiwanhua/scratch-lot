@@ -255,6 +255,7 @@ describe("表單模組:欄位預設值與日期時間", () => {
               timezone: "Asia/Tokyo",
               userId: "user-1",
               orgId: "org-1",
+              orgIds: ["org-1"],
             },
             values: { item: "牛奶", deliver_at: "2026-03-01T02:30:00Z" },
           }),
@@ -296,6 +297,7 @@ describe("表單模組:欄位預設值與日期時間", () => {
               timezone: "Asia/Tokyo",
               userId: "user-1",
               orgId: "org-1",
+              orgIds: ["org-1"],
             },
             // 摘要槽日期對日期欄:存的是東京 09-26 00:00 的時點(= 台北 09-25 23:00)
             summary: {

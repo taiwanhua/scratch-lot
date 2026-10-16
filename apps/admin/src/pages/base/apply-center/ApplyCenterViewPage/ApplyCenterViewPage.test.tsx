@@ -226,4 +226,75 @@ describe("申請中心詳情頁(view-page)", () => {
       "三部門匯合:已結束",
     );
   });
+
+  it("時間軸寫出跳過是哪一項成立、自動通過的原因(B4 / B5)", async () => {
+    const event = (
+      kind: string,
+      stepKey: string,
+      reason: string | null,
+      who: typeof MANAGER | null = null,
+    ) => ({
+      at: "2026-09-20T02:00:00.000Z",
+      kind,
+      stepKey,
+      taskKey: who === null ? null : `${stepKey}-1`,
+      user: who,
+      toUser: null,
+      comment: null,
+      result: null,
+      reason,
+    });
+    renderApplyCenter({
+      path: `${APPLY_VIEW_ROUTE}/inst-1`,
+      runtime: {
+        ...defaultRuntime(),
+        instances: [
+          instanceFragment({
+            steps: [
+              instanceStep("store", "分店主管", {
+                status: WorkflowStepStatus.Skipped,
+              }),
+              instanceStep("finance", "財務", {
+                status: WorkflowStepStatus.Skipped,
+              }),
+              instanceStep("manager", "直屬主管", {
+                status: WorkflowStepStatus.Completed,
+              }),
+              instanceStep("hr", "人資", {
+                status: WorkflowStepStatus.Active,
+              }),
+            ],
+            history: [
+              event("step_skipped", "store", "skip_orgs"),
+              event("step_skipped", "finance", "skip_condition"),
+              event("approved", "manager", "auto_applicant", MANAGER),
+              event("approved", "hr", "auto_prior_approver", HR),
+              event("approved", "hr", null, HR),
+            ],
+          }),
+        ],
+      },
+    });
+    const timeline = await screen.findByRole("region", { name: "審核歷程" });
+    expect(
+      within(timeline).getByText("「分店主管」申請人屬於指定的組織,略過"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText("「財務」符合跳過條件,略過"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "小華 在「直屬主管」核准(申請人是審核者,自動通過)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "人資阿美 在「人資」核准(已在前關核准,自動通過)",
+      ),
+    ).toBeInTheDocument();
+    // 人按的核准沒有原因:照事件種類
+    expect(
+      within(timeline).getByText("人資阿美 在「人資」核准"),
+    ).toBeInTheDocument();
+  });
 });

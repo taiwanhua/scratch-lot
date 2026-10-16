@@ -58,6 +58,8 @@ export const CONTEXT_VAR_PATHS = [
   "ctx.timezone",
   "ctx.user.id",
   "ctx.user.orgId",
+  "ctx.user.orgIds",
+  "ctx.tenant.id",
 ] as const;
 
 /** 欄位的 `var` 路徑:單一段,不含 `.`(欄位 key 本來就不准有 `.`)。 */

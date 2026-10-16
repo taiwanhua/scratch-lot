@@ -25,7 +25,10 @@ import {
   type PlaceTarget,
   sectionCols,
 } from "@/lib/base/form-engine/designer-ops";
-import { liveContextOf } from "@/lib/base/form-engine/expression-context";
+import {
+  NO_IDENTITY,
+  liveContextOf,
+} from "@/lib/base/form-engine/expression-context";
 
 import { UnplacedFields } from "./UnplacedFields";
 
@@ -48,7 +51,7 @@ export interface DesignerCanvasProps {
   onRemoveSection: (section: DesignSection) => void;
 }
 
-const DESIGN_CONTEXT = liveContextOf(null, null, new Date(0));
+const DESIGN_CONTEXT = liveContextOf(NO_IDENTITY, new Date(0));
 
 /**
  * 設計器畫布(Spec 6a §8 畫面 2):`FormRenderer` 的 `design` 模式(不跑條件與計算、只標示),

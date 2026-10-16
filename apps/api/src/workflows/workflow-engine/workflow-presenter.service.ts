@@ -180,6 +180,7 @@ export class WorkflowPresenter {
         toUser: userRefOf(event.toUserId, names),
         comment: event.comment,
         result: event.result,
+        reason: event.reason ?? null,
       })),
       outcome: instance.outcome
         ? {
