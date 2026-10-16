@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import mongoose, { type HydratedDocument, type Model, Types } from "mongoose";
 
 import { RecordingMailService } from "../mail/recording-mail.service";
+import { RecordingStorageService } from "../storage/recording-storage.service";
 import { BaseRepository } from "./base.repository";
 import type { OperatorContext } from "./operator-context";
 import { TenantScopeError } from "./plugins/tenant-scope.plugin";
@@ -181,7 +182,7 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
       expect(await namesInDatabase()).toEqual(before);
     });
 
-    it("巢狀呼叫加入外層交易:內層拋錯,外層先寫的也一起回復", async () => {
+    it("巢狀呼叫加入外層交易:內層的錯誤往外拋,外層先寫的也一起回復", async () => {
       const before = await namesInDatabase();
       await expect(
         transactions.withTransaction(async (outer) => {
@@ -194,6 +195,150 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
         }),
       ).rejects.toThrow("內層錯誤");
       expect(await namesInDatabase()).toEqual(before);
+    });
+  });
+
+  it("專屬 repository 那種不經 BaseRepository 的 Mongoose 寫入(save / insertMany / updateOne)沒帶 session 也加入交易", async () => {
+    const plain = database.connection.model(
+      "TransactionPlain",
+      new mongoose.Schema({ name: String }),
+      "transaction_plain",
+    );
+    await plain.init();
+    await plain.create({ name: "既有" });
+
+    await expect(
+      transactions.withTransaction(async () => {
+        await new plain({ name: "save" }).save();
+        await plain.insertMany([{ name: "insertMany" }]);
+        await plain.updateOne({ name: "既有" }, { $set: { name: "改掉" } });
+        throw new Error("注入錯誤");
+      }),
+    ).rejects.toThrow("注入錯誤");
+
+    const remaining = await plain.find({}, { name: 1 }).lean();
+    expect(remaining.map((document) => document.name)).toEqual(["既有"]);
+  });
+
+  it("巢狀呼叫沒有獨立回復點:內層拋錯被外層接住後繼續,內層的寫入隨外層一起提交", async () => {
+    await transactions.withTransaction(async (outer) => {
+      await items.create(asA, { name: "巢狀-外層" }, { session: outer });
+      await transactions
+        .withTransaction(async (inner) => {
+          await items.create(asA, { name: "巢狀-內層" }, { session: inner });
+          throw new Error("內層錯誤");
+        })
+        .catch(ignoreError);
+    });
+    expect(await namesInDatabase()).toEqual(
+      expect.arrayContaining(["巢狀-外層", "巢狀-內層"]),
+    );
+  });
+
+  describe("交易結束後 scope 關閉", () => {
+    it("fn 裡排出去、晚於交易結束才跑的工作不再被當成在交易內", async () => {
+      const seen: {
+        session: unknown;
+        afterCommitThrows: boolean;
+        assertThrows: boolean;
+      }[] = [];
+      let late: Promise<void> | undefined;
+
+      await transactions.withTransaction(async (session) => {
+        await items.create(asA, { name: "晚到-交易內" }, { session });
+        late = new Promise<void>((resolve) => {
+          setTimeout(() => {
+            seen.push({
+              session: currentSession(),
+              afterCommitThrows: throws(registerNoopAfterCommit),
+              assertThrows: throws(assertMailAllowed),
+            });
+            // 交易已結束:BaseRepository 不得沿用已結束的 session
+            void items.create(asA, { name: "晚到-交易後" }).then(() => {
+              resolve();
+            });
+          }, 50);
+        });
+      });
+
+      await late;
+      expect(seen).toEqual([
+        { session: undefined, afterCommitThrows: true, assertThrows: false },
+      ]);
+      expect(await namesInDatabase()).toEqual(
+        expect.arrayContaining(["晚到-交易內", "晚到-交易後"]),
+      );
+    });
+  });
+
+  describe("兩個交易並行", () => {
+    it("隔離:另一個交易看不到尚未提交的寫入,提交後才看得到", async () => {
+      const written = deferred();
+      const gate = deferred();
+
+      const first = transactions.withTransaction(async (session) => {
+        await items.create(asA, { name: "並行-未提交" }, { session });
+        written.resolve();
+        await gate.promise;
+      });
+      await written.promise;
+
+      await transactions.withTransaction(async (session) => {
+        await expect(
+          items.findOne(asA, { name: "並行-未提交" }, { session }),
+        ).resolves.toBeNull();
+      });
+      await expect(
+        items.findOne(asA, { name: "並行-未提交" }),
+      ).resolves.toBeNull();
+
+      gate.resolve();
+      await first;
+      await expect(
+        items.findOne(asA, { name: "並行-未提交" }),
+      ).resolves.not.toBeNull();
+    });
+
+    it("真實寫入衝突:後到的交易拿到 WriteConflict 自動重試,先到的提交後寫入成功", async () => {
+      const target = await items.create(asA, { name: "衝突-初始" });
+      const written = deferred();
+      const gate = deferred();
+
+      const first = transactions.withTransaction(async (session) => {
+        await items.updateById(
+          asA,
+          target._id,
+          { $set: { name: "衝突-先到" } },
+          { session },
+        );
+        written.resolve();
+        await gate.promise;
+      });
+      await written.promise;
+
+      let attempts = 0;
+      await transactions.withTransaction(async (session) => {
+        attempts += 1;
+        try {
+          await items.updateById(
+            asA,
+            target._id,
+            { $set: { name: "衝突-後到" } },
+            { session },
+          );
+        } finally {
+          // 第一次嘗試撞到先到交易的鎖(WriteConflict)之後,才讓先到的提交
+          if (attempts === 1) {
+            gate.resolve();
+          }
+        }
+      });
+      await first;
+
+      expect(attempts).toBeGreaterThanOrEqual(2);
+      await expect(items.findById(asA, target._id)).resolves.toMatchObject({
+        name: "衝突-後到",
+      });
     });
   });
 
@@ -371,6 +516,32 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
       expect(mail.sent).toHaveLength(1);
     });
 
+    it("交易內刪除 / 複製 GCS 物件 → 拋錯,交易後照常執行", async () => {
+      const storage = new RecordingStorageService({
+        privateBucket: undefined,
+        publicBucket: undefined,
+        signedUrlTtlMs: 60_000,
+      });
+      const objectPath = "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.png";
+
+      await expect(
+        transactions.withTransaction(() => storage.deleteObject(objectPath)),
+      ).rejects.toThrow("交易內不得刪除 GCS 物件");
+      await expect(
+        transactions.withTransaction(() =>
+          storage.copyPrivateObject(objectPath),
+        ),
+      ).rejects.toThrow("交易內不得複製 GCS 物件");
+      expect(storage.deleted).toEqual([]);
+      expect(storage.copied).toEqual([]);
+
+      await transactions.withTransaction(async (session) => {
+        await items.create(asA, { name: "交易後刪檔" }, { session });
+        afterCommit(() => storage.deleteObject(objectPath));
+      });
+      expect(storage.deleted).toEqual([objectPath]);
+    });
+
     it("交易外呼叫斷言不拋錯", () => {
       expect(() => {
         assertOutsideTransaction("呼叫 HTTP");
@@ -378,3 +549,33 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
     });
   });
 });
+
+function throws(run: () => void): boolean {
+  try {
+    run();
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function ignoreError(): void {
+  // 刻意吞掉內層錯誤,驗證沒有獨立回復點
+}
+
+function registerNoopAfterCommit(): void {
+  afterCommit(ignoreError);
+}
+
+function assertMailAllowed(): void {
+  assertOutsideTransaction("寄信");
+}
+
+/** 可以從外部 resolve 的 promise(控制兩個並行交易的先後)。 */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve: () => void = ignoreError;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}

@@ -31,7 +31,7 @@ concurrency:
 #            ├─ test-api-1 / 2   api 的 jest 分兩片(--shard)
 #            ├─ test-admin-1 / 2 admin 的 jest 分兩片(--shard)
 #            ├─ test-others      api / admin 以外的 turbo test
-#            └─ build            turbo build(front 的 ISR 預渲染要活的 api)
+#            └─ build            turbo build(front 的 ISR 預渲染要活的 api;Mongo 以 docker run 起單一成員 replica set)
 #   以上全部 ─→ verify           總結;PR 的必要檢查名稱就是它
 #
 # turbo 本機快取(.turbo/cache)用 actions/cache 在 run 之間保存:每個跑 turbo 的 job 各一把 key
@@ -226,6 +226,16 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
       # 不加 MONGOMS_DISABLE_POSTINSTALL:schema:generate 用 mongodb-memory-server 起 mongod
       #(二進位在 pnpm install 的 postinstall 下載,見根 package.json 的 onlyBuiltDependencies)
       - name: 安裝依賴
@@ -337,6 +347,16 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
       - name: 安裝依賴
         run: pnpm install --frozen-lockfile
 
@@ -416,6 +436,16 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
       - name: 安裝依賴
         run: pnpm install --frozen-lockfile
 
@@ -439,12 +469,6 @@ jobs:
     if: needs.prepare.outputs.any == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
 
     steps:
       - uses: actions/checkout@v4
@@ -475,13 +499,21 @@ jobs:
         if: needs.prepare.outputs.front == 'true'
         run: pnpm exec turbo run build --filter=@repo/api
 
+      # 與本機 / 正式環境一致:單一成員 replica set(api 的交易需要)。service container 不能帶 --replSet,
+      # 所以用 docker run 起 mongo:8,初始化並等到選出 PRIMARY(可寫入)
+      - name: 啟動 MongoDB(單一成員 replica set,拋棄式)
+        if: needs.prepare.outputs.front == 'true'
+        run: |
+          docker run -d --name mongo -p 27017:27017 mongo:8 --replSet ci --bind_ip_all
+          timeout 90 bash -c 'until docker exec mongo mongosh --quiet --eval "try { rs.status() } catch (e) { rs.initiate({ _id: \"ci\", members: [{ _id: 0, host: \"localhost:27017\" }] }) } if (!db.hello().isWritablePrimary) { quit(1) }"; do sleep 2; done'
+
       - name: 啟動 api(接 CI 的拋棄式 MongoDB,空資料庫)
         if: needs.prepare.outputs.front == 'true'
         run: |
           node apps/api/dist/main.js &
           timeout 60 bash -c 'until curl -sf -X POST -H "Content-Type: application/json" -d "{\"query\":\"{__typename}\"}" http://127.0.0.1:5001/graphql -o /dev/null; do sleep 2; done'
         env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
+          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base?directConnection=true&replicaSet=ci
           PORT: "5001"
           # api 缺少 JWT_SECRET 即啟動失敗;CI 只需一個假值讓 front 預渲染能打到 api
           JWT_SECRET: ci-only-jwt-secret

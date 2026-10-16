@@ -60,11 +60,12 @@ export type RepositoryCreate<TSchema> = Partial<TSchema> & {
 };
 
 /**
- * 交易的 session(`TransactionService.withTransaction` 給的)。沒帶時用目前所在交易的 session,
- * 不在交易內就是一般讀寫;租戶保底、資料範圍規則與帶不帶 session 無關,一律照套。
+ * 交易的 session(`TransactionService.withTransaction` 給的)。沒帶(`undefined`)時用目前進行中交易的
+ * session,不在交易內就是一般讀寫;明給 `null` = 刻意在交易外讀寫(如共用快取的載入,不該看到、
+ * 也不該被綁在某個請求尚未提交的交易上)。租戶保底、資料範圍規則與 session 無關,一律照套。
  */
 export interface SessionOptions {
-  session?: ClientSession;
+  session?: ClientSession | null;
 }
 
 export interface FindOptions extends SessionOptions {
@@ -531,9 +532,15 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
   "database/org-business-data.reader.ts",
 ];
 
-/** 明確給的 session 優先,否則用目前所在交易的;都沒有 → null(一般讀寫,不在交易內)。 */
+/**
+ * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
+ * 一律以明確值交給 Mongoose:交易已結束時,Mongoose 自己的 AsyncLocalStorage 可能還留著那個 session
+ * (`fn` 裡排出去的晚到工作),明給 null 才不會誤用已結束的 session。
+ */
 function sessionOf(options: SessionOptions): ClientSession | null {
-  return options.session ?? currentSession() ?? null;
+  return options.session === undefined
+    ? (currentSession() ?? null)
+    : options.session;
 }
 
 /** 更新內容不得觸及的欄位:所屬組織(租戶隔離)與建立資訊(稽核)。 */

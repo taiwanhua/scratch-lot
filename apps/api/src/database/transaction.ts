@@ -2,7 +2,15 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectConnection } from "@nestjs/mongoose";
-import type { ClientSession, Connection } from "mongoose";
+import mongoose, { type ClientSession, type Connection } from "mongoose";
+
+/**
+ * 交易內的 Mongoose 操作自動帶 session(Mongoose 內建的 transactionAsyncLocalStorage):
+ * `connection.transaction(fn)` 執行 `fn` 期間,沒有明確指定 `session` 的 query、`save()`、
+ * `insertMany`、`bulkWrite` 都會用目前交易的 session —— 專屬 repository 也一樣涵蓋。
+ * 明確給 `session`(含 `null`)時以明確值為準。這是 mongoose 實例的全域設定,資料層載入時就打開。
+ */
+mongoose.set("transactionAsyncLocalStorage", true);
 
 /**
  * 單一交易的預設上限(毫秒):整個 `withTransaction`(含寫入衝突的自動重試)超過就中止並回復。
@@ -10,7 +18,7 @@ import type { ClientSession, Connection } from "mongoose";
  */
 export const TRANSACTION_TIMEOUT_MS = 60_000;
 
-/** 交易成功提交後才執行的動作(送即時信號、寄信、GCS 複製…);失敗只記 log。 */
+/** 交易成功提交後才執行的動作(送即時信號、寄信、GCS 複製、快取作廢…);失敗只記 log。 */
 export type AfterCommitCallback = () => unknown;
 
 export interface TransactionOptions {
@@ -18,23 +26,35 @@ export interface TransactionOptions {
   timeoutMs?: number;
 }
 
-/** 目前這個非同步呼叫鏈所在的交易:session 與交易後動作的佇列。 */
+/**
+ * 交易的**一次嘗試**:session 與這次嘗試登記的交易後動作。
+ * `open` 只在這次嘗試進行中為 true;嘗試結束(提交、回復、被重試取代)就關閉 ——
+ * `fn` 裡排出去、晚於交易結束才跑的非同步工作(setTimeout 等)不會再被當成「在交易內」。
+ */
 interface TransactionScope {
   readonly session: ClientSession;
-  afterCommit: AfterCommitCallback[];
+  readonly afterCommit: AfterCommitCallback[];
+  open: boolean;
 }
 
 const transactionScope = new AsyncLocalStorage<TransactionScope>();
 const logger = new Logger("Transaction");
 
+function activeScope(): TransactionScope | undefined {
+  const scope = transactionScope.getStore();
+  return scope?.open === true ? scope : undefined;
+}
+
 /**
- * 交易的單一入口(ADR「引入 Mongo 交易」;用法見 `docs/standards/api/transactions.md`):
+ * 交易的單一入口(ADR-0013;用法見 `docs/standards/api/transactions.md`):
  * 一個使用者動作 = 一個交易,`fn` 裡任何一步拋錯,這個交易內的所有寫入一起回復。
  *
- * - 內部用 driver 的 `session.withTransaction`:寫入衝突等暫時性錯誤會**整個 `fn` 重跑**,
- *   所以 `fn` 裡不得有外部副作用(寄信、HTTP、GCS、Cloudflare),那些用 `afterCommit` 排到交易後
- * - `fn` 收到的 `session` 要傳給每一個讀寫;`BaseRepository` 沒帶 `session` 時自動用目前交易的
- * - 已在交易內再呼叫 → 加入同一個交易(不開巢狀交易),`fn` 拋錯一樣讓外層整個回復
+ * - 內部用 Mongoose 的 `connection.transaction`(driver 的 `session.withTransaction`):寫入衝突等
+ *   暫時性錯誤會**整個 `fn` 重跑**(Mongoose 並在重試前重設文件狀態),所以 `fn` 裡不得有外部副作用,
+ *   那些用 `afterCommit` 排到交易後
+ * - `fn` 收到的 `session` 要傳給每一個讀寫;沒傳時 Mongoose 操作也會自動帶上(見檔頭)
+ * - 已在交易內再呼叫 → 直接在同一個交易裡執行 `fn`,**沒有獨立的回復點**:內層拋錯若被外層接住後
+ *   繼續,內層已做的寫入會隨外層一起提交;要回復就讓錯誤一路往外拋
  */
 @Injectable()
 export class TransactionService {
@@ -53,31 +73,40 @@ async function runTransaction<T>(
   fn: (session: ClientSession) => Promise<T>,
   options: TransactionOptions,
 ): Promise<T> {
-  const current = transactionScope.getStore();
+  const current = activeScope();
   if (current !== undefined) {
     return fn(current.session);
   }
 
-  const session = await connection.startSession();
-  const scope: TransactionScope = { session, afterCommit: [] };
+  let attempt: TransactionScope | undefined;
   let result: T;
   try {
-    result = await transactionScope.run(scope, () =>
-      session.withTransaction(
-        () => {
-          // 自動重試會重跑整個 fn:上一輪排進來的交易後動作屬於已回復的那次,一併丟棄
-          scope.afterCommit = [];
-          return fn(session);
-        },
-        { timeoutMS: options.timeoutMs ?? TRANSACTION_TIMEOUT_MS },
-      ),
+    result = await connection.transaction(
+      (session) => {
+        // 自動重試會重跑整個 fn:上一輪(含它登記的交易後動作)屬於已回復的那次,關閉並丟棄
+        if (attempt !== undefined) {
+          attempt.open = false;
+        }
+        const scope: TransactionScope = {
+          session,
+          afterCommit: [],
+          open: true,
+        };
+        attempt = scope;
+        return transactionScope.run(scope, () => fn(session));
+      },
+      // driver 的 withTransaction 接受 timeoutMS(整個交易含重試的上限);Mongoose 的型別沒列出
+      {
+        timeoutMS: options.timeoutMs ?? TRANSACTION_TIMEOUT_MS,
+      } as Parameters<Connection["transaction"]>[1],
     );
   } finally {
-    await session.endSession();
+    if (attempt !== undefined) {
+      attempt.open = false;
+    }
   }
 
-  // 已在交易範圍外:交易後動作裡再呼叫外部服務不會被 `assertOutsideTransaction` 擋下
-  await runAfterCommit(scope.afterCommit);
+  await runAfterCommit(attempt?.afterCommit ?? []);
   return result;
 }
 
@@ -97,30 +126,31 @@ async function runAfterCommit(
 }
 
 /**
- * 在**目前交易**上登記一個交易後動作:交易成功提交後依登記順序執行,失敗只記 log;
- * 交易回復(或被自動重試丟掉的那一輪)則不執行。不在交易內呼叫即拋錯 —— 那代表呼叫端以為自己在交易裡。
+ * 在**目前交易**上登記一個交易後動作:交易成功提交後依登記順序執行(算進這個請求的回應時間),
+ * 失敗只記 log;交易回復(或被自動重試丟掉的那一輪)則不執行。
+ * 不在進行中的交易內呼叫即拋錯 —— 那代表呼叫端以為自己在交易裡。
  */
 export function afterCommit(callback: AfterCommitCallback): void {
-  const scope = transactionScope.getStore();
+  const scope = activeScope();
   if (scope === undefined) {
     throw new Error(
-      "afterCommit 只能在 TransactionService.withTransaction 內呼叫",
+      "afterCommit 只能在 TransactionService.withTransaction 進行中呼叫",
     );
   }
   scope.afterCommit.push(callback);
 }
 
-/** 目前所在交易的 session;不在交易內回 undefined。 */
+/** 目前進行中交易的 session;不在交易內(或交易已結束)回 undefined。 */
 export function currentSession(): ClientSession | undefined {
-  return transactionScope.getStore()?.session;
+  return activeScope()?.session;
 }
 
 /**
- * 外部副作用的執行期防線:在交易內呼叫即拋錯(自動重試會讓副作用重複發生,回復時也收不回來)。
+ * 外部副作用的執行期防線:在進行中的交易內呼叫即拋錯(自動重試會讓副作用重複發生,回復時也收不回來)。
  * 每個對外 adapter 的入口(寄信、GCS 寫入、HTTP、Cloudflare)都要先呼叫它;應改用 `afterCommit`。
  */
 export function assertOutsideTransaction(action: string): void {
-  if (transactionScope.getStore() !== undefined) {
+  if (activeScope() !== undefined) {
     throw new Error(
       `交易內不得${action}:外部副作用改用 afterCommit 排到交易成功之後`,
     );
