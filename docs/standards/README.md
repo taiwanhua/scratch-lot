@@ -27,6 +27,7 @@
 | CLI 工具 / `apps/db-migrator`(seed、migrate、reset) | `general/structure.md` STRUCT-06(輸出用 `process.stdout.write`)/ STRUCT-05 的已知誤判 / STRUCT-10;規則本體見 ADR-0002               |
 | UI 文案 / 多語(i18n)                                | `general/i18n.md`                                                                                                                   |
 | Figma 設計稿                                        | `general/figma.md`                                                                                                                  |
+| 即時通道(`apps/realtime`)                           | `realtime/realtime.md`                                                                                                              |
 | Markdown 文件(docs/、help.md、README)               | `general/structure.md` STRUCT-09(prettier)、STRUCT-11(正式文件寫現況,完成計畫歸回正本)                                              |
 
 ## 尚未定案(刻意不寫)

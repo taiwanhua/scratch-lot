@@ -1,0 +1,4 @@
+# 複製成 .dev.vars 給 `pnpm --filter @repo/realtime dev`(wrangler dev)使用;值只在本機,不入版控。
+# 雲端由 Wrangler secret 提供(部署接線見部署文件)。
+REALTIME_TICKET_SECRET=local-ticket-secret
+REALTIME_PUBLISH_SECRET=local-publish-secret
