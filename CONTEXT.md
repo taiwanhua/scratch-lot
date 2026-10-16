@@ -422,7 +422,7 @@ _Avoid_: 轉簽
 _Avoid_: 刪除、取消(取消專指任務因關卡結束而不用再審)
 
 **申請中心**:
-固定模組(`apply-center`):「我的申請」「待我審核」兩個跨模組頁籤 + 「新申請」入口 + 自己的詳情頁;表單仍留在各自的業務模組。側欄與兩個頁籤顯示計數 badge:待我處理的任務數、我進行中(審核中 / 被退回)的申請數。
+固定模組(`apply-center`):「我的申請」「待我審核」兩個跨模組頁籤 + 「新申請」入口 + 自己的詳情頁;表單仍留在各自的業務模組。側欄只顯示待我審核的計數(待我處理的任務數);兩個頁籤各顯示自己的計數:待我處理的任務數、我進行中(審核中 / 被退回)的申請數。
 _Avoid_: 簽核中心、待辦中心
 
 **流程管理**:
@@ -461,6 +461,8 @@ _Avoid_: RouteTabs(那是頁籤)
 
 ### 即時通道
 
+正本:`docs/standards/realtime/realtime.md`、`docs/deployment.md`「即時通道」、`apps/realtime/`、`packages/domain/src/realtime/`、`apps/api/src/realtime/`、`apps/admin/src/app/providers/RealtimeProvider.tsx`
+
 **即時通道**:
 整個 Cloudflare Durable Objects 服務,程式在 `apps/realtime`;只傳信號,不保存資料。
 _Avoid_: WebSocket 伺服器
@@ -481,7 +483,7 @@ Durable Object 內的分類標籤,例如 `user:<id>`;信號送到頻道,訂閱�
 _Avoid_: 主題(theme 專指設計系統的 MUI theme)
 
 **訂閱憑證**:
-API 簽發的短期通行證(預設 10 分鐘),連線時交給 Cloudflare Worker 驗證。
+API 簽發的短期通行證(預設 10 分鐘),連線時交給 Cloudflare Worker 驗證;到期前在原連線上換發。平常只含自己的頻道,打開看板頁時才換發含那家店看板頻道的憑證。
 _Avoid_: token
 
 **信號**:
@@ -489,9 +491,11 @@ _Avoid_: token
 _Avoid_: 推播、通知
 
 **送出信號**:
-API 把信號送進即時通道的動作。
+API 把信號送進即時通道的動作:在交易成功之後執行(交易回復就不送),盡力而為(失敗不影響已存的資料);一次可送到多個頻道。
 
 ### 通知
+
+正本:`docs/tmp/spec-base-round.md` 第 5 章(實作完成後改指 `docs/concepts/` 與程式)
 
 **通知**:
 存在 `notifications` 的一封信,有標題、內容、已讀狀態。與信號不同:通知會保存,信號只是「有東西變了」的提醒。
@@ -504,6 +508,8 @@ _Avoid_: 信號
 收件人由人員條件決定、租戶可在「通知設定」調整的通知。
 
 ### 列印
+
+正本:`docs/tmp/spec-base-round.md` 第 6 章(實作完成後改指 `docs/concepts/` 與程式)
 
 **代理程式**:
 店內電腦上執行的列印程式(`apps/print-agent`):收到列印工作的信號後向 API 拿單據圖,送到收據機並回報結果。
