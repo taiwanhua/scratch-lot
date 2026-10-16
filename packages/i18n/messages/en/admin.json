@@ -2060,7 +2060,6 @@
       "blocked": "A step has no valid reviewer; waiting for a workflow manager.",
       "stepClosed": "This step has closed or the task changed; the latest state has been reloaded.",
       "statuses": {
-        "LINKING": "Submitting",
         "RUNNING": "In review",
         "BLOCKED": "In review (needs attention)",
         "APPROVED": "Approved",

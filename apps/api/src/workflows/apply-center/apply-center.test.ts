@@ -27,7 +27,7 @@ import { RecordingMailService } from "../../mail/recording-mail.service";
 import { createRole } from "../../permission/test-support/fixtures";
 import { RecordingStorageService } from "../../storage/recording-storage.service";
 import { StorageService } from "../../storage/storage.service";
-import { interruptAt } from "../test-support/hooks-fixture";
+import { interleaveAt, interruptAt } from "../test-support/hooks-fixture";
 import {
   ADD_ASSIGNEE,
   APPLICABLE_FORMS,
@@ -42,7 +42,6 @@ import {
   REASSIGN,
   SAVE_SUBMISSION,
   SUBMISSION,
-  SUBMIT_SUBMISSION,
   type TaskRow,
   UNBIND,
   VOID,
@@ -59,6 +58,7 @@ import {
   decideOn,
   errorCode,
   errorReason,
+  joinStep,
   pendingTaskOf,
   person,
   rawTasks,
@@ -70,6 +70,7 @@ import {
   submissionStatus,
   submitExisting,
   submitLeave,
+  taskStatuses,
   tasksOf,
   uploadValue,
   useWorkflow,
@@ -999,6 +1000,76 @@ describe("申請中心與讀取授權", () => {
       expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
     });
 
+    it("新增審核者與審核者失效並發(失效先提交、寫同一份實例)→ 新增審核者的交易寫入衝突、重跑後照常加入;兩邊的變更都在", async () => {
+      const emptyRole = await createRole(api.app, world.connection, {
+        name: nextKey("空角色並發"),
+        ownerOrgId: world.tenant,
+      });
+      const [a, b, added] = [
+        await reviewerOnly(),
+        await reviewerOnly(),
+        await reviewerOnly(),
+      ];
+      await useWorkflow(world, nextKey("add_vs_invalidate"), {
+        steps: [
+          usersStep("init", [staff(0)]),
+          usersStep("pair", [a, b], { mode: "all" }),
+          reviewStep(
+            "nobody",
+            { kind: "role", roleId: String(emptyRole), placeholder: null },
+            { mode: "all" },
+          ),
+          joinStep("merge"),
+        ],
+        edges: [
+          { from: "init", to: "pair" },
+          { from: "init", to: "nobody" },
+          { from: "pair", to: "merge" },
+          { from: "nobody", to: "merge" },
+        ],
+      });
+      const submitted = await submitLeave(world);
+      await decideOn(world, staff(0), submitted.id, "APPROVE");
+      const before = await currentInstance(world, submitted.id);
+      expect(before.status).toBe("BLOCKED");
+      expect(stepOfRow(before, "nobody").plan).toEqual([]);
+      const restore = interleaveAt(
+        api,
+        "add-assignee:before-write",
+        async () => {
+          await setEnabled(world, a, false);
+        },
+      );
+      try {
+        await ok(api, world.admin.token, ADD_ASSIGNEE, {
+          input: {
+            instanceId: before.id,
+            stepKey: "nobody",
+            userId: String(added.userId),
+          },
+        });
+      } finally {
+        restore();
+      }
+      const instance = await currentInstance(world, submitted.id);
+      expect(instance.status).toBe("BLOCKED");
+      expect(stepOfRow(instance, "nobody").plan).toHaveLength(1);
+      expect(stepOfRow(instance, "pair").blocked).toBe(true);
+      expect(
+        instance.history.filter((event) => event.kind === "assignee_added"),
+      ).toHaveLength(1);
+      expect(
+        instance.history.filter(
+          (event) => event.kind === "blocked" && event.stepKey === "pair",
+        ),
+      ).toHaveLength(1);
+      expect(await taskStatuses(world.connection, instance.id)).toMatchObject({
+        "nobody-1": "pending",
+        "pair-1": "blocked",
+        "pair-2": "pending",
+      });
+    });
+
     it("阻擋中被接受的駁回照樣終局;推進前中斷 → 整個決定回復,再駁回一次 → rejected", async () => {
       const [a, b] = [await reviewerOnly(), await reviewerOnly()];
       await useWorkflow(world, nextKey("blocked_reject"), {
@@ -1056,34 +1127,6 @@ describe("申請中心與讀取授權", () => {
       expect(ids).toContain(brokenInstance.id);
       const healthyInstance = await currentInstance(world, healthy.id);
       expect(ids).not.toContain(healthyInstance.id);
-      // linking 超過 10 分鐘也列進來(送出改成交易後不會再產生;人工造出交易前留下的舊資料)
-      const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
-        title: "卡在 linking",
-        days: 2,
-      });
-      await call(api, world.applicant.token, SUBMIT_SUBMISSION, {
-        input: { id: draft.id, expectedEditVersion: draft.editVersion },
-      });
-      const stale = await world.connection
-        .collection("workflow_instances")
-        .findOneAndUpdate(
-          { submissionId: new Types.ObjectId(draft.id) },
-          {
-            $set: {
-              status: "linking",
-              activeStepKeys: [],
-              createdAt: new Date(Date.now() - 11 * 60 * 1000),
-            },
-          },
-        );
-      const relisted = await ok<{
-        blockedInstances: { items: InstanceRow[] };
-      }>(api, world.admin.token, BLOCKED_INSTANCES, {
-        input: { filter: "NEEDS_ADVANCE", pageSize: 100 },
-      });
-      expect(relisted.blockedInstances.items.map((item) => item.id)).toContain(
-        String(stale?._id),
-      );
     });
   });
 

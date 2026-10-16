@@ -125,14 +125,6 @@ export interface WorkflowOutcome {
   historyIndex: number;
 }
 
-/** 這次送出所依據的草稿版本與流程版本(送出時記下,供追查)。 */
-export interface WorkflowLinkSource {
-  submissionEditVersion: number;
-  formVersion: number;
-  workflowKey: string;
-  workflowVersion: number;
-}
-
 /**
  * 流程實例(Spec 6b §4「workflow_instances」;`docs/data-model.md`):一筆提交的某個修訂號送出後的一次執行。
  * **唯一權威**:關卡進度、派任計畫、已接受的決定都在這份文件上,任務文件只是投影。
@@ -176,10 +168,6 @@ export class WorkflowInstance {
 
   @Prop({ type: String, required: true, enum: INSTANCE_STATUSES })
   status!: InstanceStatus;
-
-  /** 送出第 2 步記下(這次送出依據的草稿與流程版本)。 */
-  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
-  linkSource!: WorkflowLinkSource | null;
 
   /** 目前進行中的關卡 key;直線時長度 ≤ 1,分流後多個,結束後為空。 */
   @Prop({ type: [String], default: [] })

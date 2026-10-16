@@ -198,7 +198,7 @@ describe("workflows / workflow_versions / workflow_instances / workflow_tasks", 
         formVersion: 1,
         workflowKey: "leave_review",
         workflowVersion: 1,
-        status: "linking" as const,
+        status: "running" as const,
       };
       await instanceModel.create(base);
       await expect(instanceModel.create(base)).rejects.toMatchObject({

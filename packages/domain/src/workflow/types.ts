@@ -88,7 +88,6 @@ export function allowsReturn(step: StepDef): boolean {
 
 /** 實例狀態(Spec §4、§6)。 */
 export const INSTANCE_STATUSES = [
-  "linking",
   "running",
   "blocked",
   "approved",

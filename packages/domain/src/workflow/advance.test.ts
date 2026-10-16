@@ -75,11 +75,6 @@ function kindsOf(actions: readonly AdvanceAction[]): string[] {
 }
 
 describe("advance 判斷表:每一列", () => {
-  it("列 1:linking 的實例沒事可做(不派單)", () => {
-    const plan = run(LINEAR, newInstance(LINEAR, { status: "linking" }));
-    expect(plan).toEqual({ row: "1", actions: [] });
-  });
-
   it("列 2:已核准但未收尾 → 任務投影同步、提交 → completed、記流程完成、寄結果信、最後寫 finishedAt", () => {
     let instance = entered(newInstance(LINEAR), "boss", ["u1", "u2"]);
     instance = decide(instance, "boss", "boss-1", "approved");

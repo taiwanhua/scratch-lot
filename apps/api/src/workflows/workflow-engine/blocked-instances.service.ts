@@ -25,16 +25,13 @@ import { WorkflowPresenter } from "./workflow-presenter.service";
 /** 「需要推進」一次最多 dry-run 這麼多筆候選(超過回 `truncated: true`,處理完再查)。 */
 export const NEEDS_ADVANCE_CANDIDATE_LIMIT = 200;
 
-/** `linking` 超過這麼久沒連上提交,列進「需要推進」(Spec §6)。 */
-const LINKING_STALE_MS = 10 * 60 * 1000;
-
 /**
  * 阻擋清單(流程管理 → 阻擋,Spec 6b §6「需要推進」的識別、§8 畫面 6):以操作者的租戶為邊界。
  *
  * - `blocked`:實例 `status = blocked`
  * - `needsAdvance`:對候選實例跑一次判斷表(**不寫入**,`WorkflowEngineService.planOf`),還有動作 = 需要推進
- *   ——直接對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8(含 8b 與資料矛盾的 `invalid`);
- *   另加 `linking` 超過 10 分鐘。候選 = 進行中的實例 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的終局實例
+ *   ——直接對應判斷表的列 2 / 4 / 4b / 4c / 5 / 5b / 6 / 7 / 8(含 8b 與資料矛盾的 `invalid`)。
+ *   候選 = 進行中的實例 + 終局未收尾(`finishedAt` 空)+ 任務仍待處理 / 阻擋的終局實例
  */
 @Injectable()
 export class BlockedInstancesService {
@@ -88,7 +85,7 @@ export class BlockedInstancesService {
   }
 
   /**
-   * 先以狀態預篩候選(進行中 / `linking` / 終局未收尾 / 任務仍待處理或阻擋),依最久沒動的排序、
+   * 先以狀態預篩候選(進行中 / 終局未收尾 / 任務仍待處理或阻擋),依最久沒動的排序、
    * 取上限筆數,再逐筆 dry-run 判斷表。候選超過上限 → `truncated: true`。
    */
   private async needingAdvance(
@@ -103,7 +100,7 @@ export class BlockedInstancesService {
       {
         tenantId,
         $or: [
-          { status: { $in: ["linking", ...LIVE_INSTANCE_STATUSES] } },
+          { status: { $in: [...LIVE_INSTANCE_STATUSES] } },
           {
             status: { $in: [...TERMINAL_INSTANCE_STATUSES] },
             finishedAt: null,
@@ -117,15 +114,8 @@ export class BlockedInstancesService {
       },
     );
     const truncated = candidates.length > NEEDS_ADVANCE_CANDIDATE_LIMIT;
-    const staleBefore = Date.now() - LINKING_STALE_MS;
     const result: InstanceRecord[] = [];
     for (const instance of candidates.slice(0, NEEDS_ADVANCE_CANDIDATE_LIMIT)) {
-      if (instance.status === "linking") {
-        if (instance.createdAt.getTime() < staleBefore) {
-          result.push(instance);
-        }
-        continue;
-      }
       const definition = await this.engine.definitionOf(instance);
       const plan = await this.engine.planOf(instance, definition);
       if (plan.actions.length > 0) {
