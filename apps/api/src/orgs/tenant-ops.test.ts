@@ -1235,7 +1235,14 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
         );
       const saved = await saveRule([
         {
-          audience: { type: "USER", ids: [String(rootOpsId)] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "user",
+              cond: "in",
+              value: { kind: "static", values: [String(rootOpsId)] },
+            },
+          },
           filter: {
             op: "AND",
             children: [

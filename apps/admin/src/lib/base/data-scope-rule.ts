@@ -1,8 +1,4 @@
-import {
-  DataScopeAudienceType,
-  DataScopeCombineOp,
-  DataScopeFieldType,
-} from "@repo/graphql";
+import { DataScopeCombineOp, DataScopeFieldType } from "@repo/graphql";
 
 /**
  * 資料範圍規則編輯器的**純模型**(#210):型別目錄、編輯器狀態 ↔ api JSON、條件樹的增刪改。
@@ -89,9 +85,30 @@ export interface GroupDraft {
 
 export type NodeDraft = GroupDraft | ConditionDraft;
 
+/**
+ * 畫面上的套用對象種類(全部 / 角色 / 組織 / 使用者,一次一種)。api 已改成人員條件
+ * (`{ mode: "all" } | { mode: "match", filter }`,形狀正本 `@repo/domain/audience`);
+ * 這一版畫面仍是單選種類,讀寫時在 `toAudienceDraft` / `toAudienceJson` 互轉。
+ * AudiencePicker(條件樹)上線後整組換掉。
+ */
+export const DataScopeAudienceType = {
+  All: "ALL",
+  Role: "ROLE",
+  Org: "ORG",
+  User: "USER",
+} as const;
+
+export type DataScopeAudienceType =
+  (typeof DataScopeAudienceType)[keyof typeof DataScopeAudienceType];
+
 export interface AudienceDraft {
   type: DataScopeAudienceType;
   ids: string[];
+  /**
+   * 存著的人員條件不是這一版畫面表達得出來的(多個條件列、權限、含下層…):原樣保留,
+   * 沒改套用對象就原樣送回,不讓畫面把它改寫成別的意思。
+   */
+  preserved?: Record<string, unknown>;
 }
 
 export interface RuleDraft {
@@ -105,9 +122,9 @@ export interface RuleEditorDraft {
   rules: RuleDraft[];
 }
 
-/** 送出時的一筆規則(對應 `DataScopeRuleEntryInput`)。 */
+/** 送出時的一筆規則(對應 `DataScopeRuleEntryInput`;`audience` 是人員條件 JSON)。 */
 export interface RuleEntryInput {
-  audience: { type: DataScopeAudienceType; ids: string[] };
+  audience: Record<string, unknown>;
   filter: Record<string, unknown>;
 }
 
@@ -162,13 +179,86 @@ const toFilterDraft = (filter: unknown): GroupDraft => {
     : { kind: "group", op: "AND", children: [node] };
 };
 
+const LEAF_TYPE_BY_FIELD: Record<string, DataScopeAudienceType> = {
+  role: DataScopeAudienceType.Role,
+  org: DataScopeAudienceType.Org,
+  user: DataScopeAudienceType.User,
+};
+
+/** 條件樹只有一個條件列(或只包一個條件列的群組)時取出那一列。 */
+const singleLeafOf = (node: unknown): Record<string, unknown> | undefined => {
+  if (!isRecord(node)) {
+    return undefined;
+  }
+  if (!("children" in node)) {
+    return node;
+  }
+  if (!Array.isArray(node.children) || node.children.length !== 1) {
+    return undefined;
+  }
+  const [only] = node.children as unknown[];
+  return singleLeafOf(only);
+};
+
+/** 人員條件 JSON → 這一版畫面的單選種類;表達不出來的原樣保留(`preserved`)。 */
+export const toAudienceDraft = (audience: unknown): AudienceDraft => {
+  if (isRecord(audience) && audience.mode === "all") {
+    return { type: DataScopeAudienceType.All, ids: [] };
+  }
+  const leaf = isRecord(audience) ? singleLeafOf(audience.filter) : undefined;
+  const type =
+    typeof leaf?.field === "string"
+      ? LEAF_TYPE_BY_FIELD[leaf.field]
+      : undefined;
+  const value = isRecord(leaf?.value) ? leaf.value : undefined;
+  const representable =
+    type !== undefined &&
+    value?.kind === "static" &&
+    Array.isArray(value.values) &&
+    (type !== DataScopeAudienceType.Org || leaf?.range === "self");
+  if (representable && Array.isArray(value.values)) {
+    return { type, ids: value.values.map(String) };
+  }
+  return {
+    type: DataScopeAudienceType.All,
+    ids: [],
+    preserved: isRecord(audience) ? audience : {},
+  };
+};
+
+/** 這一版畫面的單選種類 → 人員條件 JSON(組織 = 所屬組織本身,與改版前「指定組織」同義)。 */
+export const toAudienceJson = (
+  audience: AudienceDraft,
+): Record<string, unknown> => {
+  if (audience.preserved !== undefined) {
+    return audience.preserved;
+  }
+  if (audience.type === DataScopeAudienceType.All) {
+    return { mode: "all" };
+  }
+  const field = {
+    [DataScopeAudienceType.Role]: "role",
+    [DataScopeAudienceType.Org]: "org",
+    [DataScopeAudienceType.User]: "user",
+  }[audience.type];
+  return {
+    mode: "match",
+    filter: {
+      field,
+      cond: "in",
+      value: { kind: "static", values: [...audience.ids] },
+      ...(audience.type === DataScopeAudienceType.Org ? { range: "self" } : {}),
+    },
+  };
+};
+
 /** `dataScopeRule` 的回傳(`rule = null` → 尚無規則)轉成編輯器狀態。 */
 export const toEditorDraft = (
   rule:
     | {
         combineOp: DataScopeCombineOp;
         rules: readonly {
-          audience: { type: DataScopeAudienceType; ids: readonly string[] };
+          audience: Record<string, unknown>;
           filter: Record<string, unknown>;
         }[];
       }
@@ -180,7 +270,7 @@ export const toEditorDraft = (
     : {
         combineOp: rule.combineOp,
         rules: rule.rules.map((entry) => ({
-          audience: { type: entry.audience.type, ids: [...entry.audience.ids] },
+          audience: toAudienceDraft(entry.audience),
           filter: toFilterDraft(entry.filter),
         })),
       };
@@ -207,13 +297,7 @@ const toFilterJson = (node: NodeDraft): Record<string, unknown> => {
 /** 整份覆蓋:畫面上留著的就是之後生效的全部(`rules: []` = 刪掉這個目標的規則)。 */
 export const toRuleEntryInputs = (draft: RuleEditorDraft): RuleEntryInput[] =>
   draft.rules.map((rule) => ({
-    audience: {
-      type: rule.audience.type,
-      ids:
-        rule.audience.type === DataScopeAudienceType.All
-          ? []
-          : [...rule.audience.ids],
-    },
+    audience: toAudienceJson(rule.audience),
     filter: toFilterJson(rule.filter),
   }));
 

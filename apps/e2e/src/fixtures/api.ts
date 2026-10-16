@@ -110,7 +110,7 @@ mutation SaveDataScopeRule($input: SaveDataScopeRuleInput!) {
       collection
       moduleKey
       combineOp
-      rules { audience { type ids } filter }
+      rules { audience filter }
     }
   }
 }`;
@@ -381,9 +381,9 @@ export async function setDemoItemOneStatus(
 /** 多條規則命中同一個人時的頂層合成:OR = 聯集、AND = 交集。 */
 export type DataScopeCombineOp = "AND" | "OR";
 
-/** 一條規則:套用對象 + 條件樹(`filter`)。 */
+/** 一條規則:套用對象(人員條件,形狀正本 `@repo/domain/audience`)+ 條件樹(`filter`)。 */
 export interface DataScopeRuleEntry {
-  audience: { type: "ALL" | "ROLE" | "ORG" | "USER"; ids: string[] };
+  audience: Record<string, unknown>;
   filter: Record<string, unknown>;
 }
 
@@ -463,10 +463,17 @@ function singleCondition(
   };
 }
 
-/** 套用對象 = 指定角色 → 建立者 屬於【操作者本人】(劇本 2 / 3 / 4 的規則①)。 */
+/** 套用對象 = 角色 屬於 → 建立者 屬於【操作者本人】(劇本 2 / 3 / 4 的規則①)。 */
 export function ownedByOperatorRule(roleId: string): DataScopeRuleEntry {
   return {
-    audience: { type: "ROLE", ids: [roleId] },
+    audience: {
+      mode: "match",
+      filter: {
+        field: "role",
+        cond: "in",
+        value: { kind: "static", values: [roleId] },
+      },
+    },
     filter: singleCondition("createdBy", {
       kind: "dynamic",
       ref: "current-user",
@@ -474,10 +481,18 @@ export function ownedByOperatorRule(roleId: string): DataScopeRuleEntry {
   };
 }
 
-/** 套用對象 = 指定組織 → 狀態 屬於【已發布】(劇本 4 的規則②)。 */
+/** 套用對象 = 所屬組織(本身)屬於 → 狀態 屬於【已發布】(劇本 4 的規則②)。 */
 export function publishedInOrgRule(orgId: string): DataScopeRuleEntry {
   return {
-    audience: { type: "ORG", ids: [orgId] },
+    audience: {
+      mode: "match",
+      filter: {
+        field: "org",
+        cond: "in",
+        value: { kind: "static", values: [orgId] },
+        range: "self",
+      },
+    },
     filter: singleCondition("status", {
       kind: "static",
       values: ["published"],
@@ -664,7 +679,7 @@ query DataScopeRule($targetId: ID!) {
       collection
       moduleKey
       combineOp
-      rules { audience { type ids } filter }
+      rules { audience filter }
     }
   }
 }`;

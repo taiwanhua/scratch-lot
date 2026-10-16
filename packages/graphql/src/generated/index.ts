@@ -97,6 +97,11 @@ export type AssignWorkflowToTenantsInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
+export type AudiencePermissionOptionsPayload = {
+  __typename?: 'AudiencePermissionOptionsPayload';
+  modules: Array<RoleMatrixModule>;
+};
+
 export type BindFormWorkflowInput = {
   formKey: Scalars['ID']['input'];
   workflowKey: Scalars['ID']['input'];
@@ -281,25 +286,6 @@ export type CreateWorkflowVersionDraftInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
-export type DataScopeAudience = {
-  __typename?: 'DataScopeAudience';
-  ids: Array<Scalars['ID']['output']>;
-  type: DataScopeAudienceType;
-};
-
-export type DataScopeAudienceInput = {
-  ids?: InputMaybe<Array<Scalars['ID']['input']>>;
-  type: DataScopeAudienceType;
-};
-
-/** 套用對象:全部人 / 指定角色 / 指定組織 / 指定使用者 */
-export enum DataScopeAudienceType {
-  All = 'ALL',
-  Org = 'ORG',
-  Role = 'ROLE',
-  User = 'USER'
-}
-
 /** 多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集 */
 export enum DataScopeCombineOp {
   And = 'AND',
@@ -332,12 +318,12 @@ export type DataScopeRule = {
 
 export type DataScopeRuleEntry = {
   __typename?: 'DataScopeRuleEntry';
-  audience: DataScopeAudience;
+  audience: Scalars['JSONObject']['output'];
   filter: Scalars['JSONObject']['output'];
 };
 
 export type DataScopeRuleEntryInput = {
-  audience: DataScopeAudienceInput;
+  audience: Scalars['JSONObject']['input'];
   filter: Scalars['JSONObject']['input'];
 };
 
@@ -1928,6 +1914,7 @@ export type Query = {
   __typename?: 'Query';
   applicableForms: Array<ApplicableModuleForms>;
   applyCenterCounts: ApplyCenterCounts;
+  audiencePermissionOptions: AudiencePermissionOptionsPayload;
   blockedInstances: WorkflowInstancesPayload;
   dataScopeRule: DataScopeRulePayload;
   dataScopeTargets: DataScopeTargetsPayload;
@@ -3249,6 +3236,11 @@ export type CopySubmissionToDraftMutationVariables = Exact<{
 
 export type CopySubmissionToDraftMutation = { __typename?: 'Mutation', copySubmissionToDraft: { __typename?: 'FormSubmissionPayload', submission: { __typename?: 'FormSubmissionModel', clearedFields: Array<string>, id: string, moduleKey: string, formKey: string, formName?: string | null, version: number, status: FormSubmissionStatus, revision: number, viewedRevision: number, values: Record<string, unknown>, viewedVersion: number, editVersion: number, orgId: string, submittedAt?: string | null, createdAt: string, updatedAt: string, currentInstanceId?: string | null, blocked: boolean, voidedAt?: string | null, voidReason?: string | null, replacedById?: string | null, copiedFrom?: string | null, touched: Array<string>, fieldStates: Array<{ __typename?: 'FormFieldState', key: string, visible: boolean, readonly: boolean, redacted: boolean }>, displayValues: Array<{ __typename?: 'FormDisplayValue', fieldKey: string, items: Array<{ __typename?: 'FormDisplayItem', value: string, label?: string | null, available: boolean }> }>, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, ctx?: { __typename?: 'FormSubmissionContext', at: string, timezone: string, userId?: string | null, orgId?: string | null } | null, createdBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, abilities: { __typename?: 'FormSubmissionAbilities', canEdit: boolean, canDelete: boolean, canEditField: Array<string>, canWithdraw: boolean, canVoid: boolean, canCopy: boolean } } } };
 
+export type AudiencePermissionOptionsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AudiencePermissionOptionsQuery = { __typename?: 'Query', audiencePermissionOptions: { __typename?: 'AudiencePermissionOptionsPayload', modules: Array<{ __typename?: 'RoleMatrixModule', id: string, key: string, name: string, parentId?: string | null, sidebarType: ModuleSidebarType, order: number, description?: string | null, children: Array<{ __typename?: 'RoleMatrixModule', id: string, key: string, name: string, parentId?: string | null, sidebarType: ModuleSidebarType, order: number, description?: string | null, children: Array<{ __typename?: 'RoleMatrixModule', id: string, key: string, name: string, parentId?: string | null, sidebarType: ModuleSidebarType, order: number, description?: string | null, children: Array<{ __typename?: 'RoleMatrixModule', id: string, key: string, name: string, parentId?: string | null, sidebarType: ModuleSidebarType, order: number, description?: string | null, permissions: Array<{ __typename?: 'RoleMatrixPermission', id: string, key: string, name: string, description?: string | null, action: string }> }>, permissions: Array<{ __typename?: 'RoleMatrixPermission', id: string, key: string, name: string, description?: string | null, action: string }> }>, permissions: Array<{ __typename?: 'RoleMatrixPermission', id: string, key: string, name: string, description?: string | null, action: string }> }>, permissions: Array<{ __typename?: 'RoleMatrixPermission', id: string, key: string, name: string, description?: string | null, action: string }> }> } };
+
 export type LoginMutationVariables = Exact<{
   input: LoginInput;
 }>;
@@ -3314,14 +3306,14 @@ export type DataScopeRuleQueryVariables = Exact<{
 }>;
 
 
-export type DataScopeRuleQuery = { __typename?: 'Query', dataScopeRule: { __typename?: 'DataScopeRulePayload', rule?: { __typename?: 'DataScopeRule', targetId: string, collection: string, moduleKey: string, combineOp: DataScopeCombineOp, updatedAt: string, rules: Array<{ __typename?: 'DataScopeRuleEntry', filter: Record<string, unknown>, audience: { __typename?: 'DataScopeAudience', type: DataScopeAudienceType, ids: Array<string> } }> } | null } };
+export type DataScopeRuleQuery = { __typename?: 'Query', dataScopeRule: { __typename?: 'DataScopeRulePayload', rule?: { __typename?: 'DataScopeRule', targetId: string, collection: string, moduleKey: string, combineOp: DataScopeCombineOp, updatedAt: string, rules: Array<{ __typename?: 'DataScopeRuleEntry', audience: Record<string, unknown>, filter: Record<string, unknown> }> } | null } };
 
 export type SaveDataScopeRuleMutationVariables = Exact<{
   input: SaveDataScopeRuleInput;
 }>;
 
 
-export type SaveDataScopeRuleMutation = { __typename?: 'Mutation', saveDataScopeRule: { __typename?: 'SaveDataScopeRulePayload', rule: { __typename?: 'DataScopeRule', targetId: string, collection: string, moduleKey: string, combineOp: DataScopeCombineOp, updatedAt: string, rules: Array<{ __typename?: 'DataScopeRuleEntry', filter: Record<string, unknown>, audience: { __typename?: 'DataScopeAudience', type: DataScopeAudienceType, ids: Array<string> } }> } } };
+export type SaveDataScopeRuleMutation = { __typename?: 'Mutation', saveDataScopeRule: { __typename?: 'SaveDataScopeRulePayload', rule: { __typename?: 'DataScopeRule', targetId: string, collection: string, moduleKey: string, combineOp: DataScopeCombineOp, updatedAt: string, rules: Array<{ __typename?: 'DataScopeRuleEntry', audience: Record<string, unknown>, filter: Record<string, unknown> }> } } };
 
 export type DemoItemOneFieldsFragment = { __typename?: 'DemoItemOne', id: string, name: string, category?: string | null, categoryLabel?: string | null, note?: string | null, internalNote?: string | null, coverPath?: string | null, coverUrl?: string | null, status: DemoItemOneStatus, enabled: boolean, createdAt: string, updatedAt: string, attachment?: { __typename?: 'DemoItemOneAttachment', path: string, name?: string | null, size?: number | null, contentType?: string | null } | null, createdBy?: { __typename?: 'DemoItemOneUserRef', id: string, name: string } | null, abilities: { __typename?: 'DemoItemOneAbilities', canEdit: boolean, canDelete: boolean, canEditInternalNote: boolean } };
 
@@ -5167,6 +5159,48 @@ export const useCopySubmissionToDraftMutation = <
 
 useCopySubmissionToDraftMutation.fetcher = (client: GraphQLClient, variables: CopySubmissionToDraftMutationVariables, headers?: RequestInit['headers']) => fetcher<CopySubmissionToDraftMutation, CopySubmissionToDraftMutationVariables>(client, CopySubmissionToDraftDocument, variables, headers);
 
+export const AudiencePermissionOptionsDocument = `
+    query AudiencePermissionOptions {
+  audiencePermissionOptions {
+    modules {
+      ...RoleMatrixNodeFields
+      children {
+        ...RoleMatrixNodeFields
+        children {
+          ...RoleMatrixNodeFields
+          children {
+            ...RoleMatrixNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+    ${RoleMatrixNodeFieldsFragmentDoc}`;
+
+export const useAudiencePermissionOptionsQuery = <
+      TData = AudiencePermissionOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: AudiencePermissionOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<AudiencePermissionOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<AudiencePermissionOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<AudiencePermissionOptionsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['AudiencePermissionOptions'] : ['AudiencePermissionOptions', variables],
+    queryFn: fetcher<AudiencePermissionOptionsQuery, AudiencePermissionOptionsQueryVariables>(client, AudiencePermissionOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useAudiencePermissionOptionsQuery.getKey = (variables?: AudiencePermissionOptionsQueryVariables) => variables === undefined ? ['AudiencePermissionOptions'] : ['AudiencePermissionOptions', variables];
+
+
+useAudiencePermissionOptionsQuery.fetcher = (client: GraphQLClient, variables?: AudiencePermissionOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<AudiencePermissionOptionsQuery, AudiencePermissionOptionsQueryVariables>(client, AudiencePermissionOptionsDocument, variables, headers);
+
 export const LoginDocument = `
     mutation Login($input: LoginInput!) {
   login(input: $input) {
@@ -5508,10 +5542,7 @@ export const DataScopeRuleDocument = `
       combineOp
       updatedAt
       rules {
-        audience {
-          type
-          ids
-        }
+        audience
         filter
       }
     }
@@ -5552,10 +5583,7 @@ export const SaveDataScopeRuleDocument = `
       combineOp
       updatedAt
       rules {
-        audience {
-          type
-          ids
-        }
+        audience
         filter
       }
     }

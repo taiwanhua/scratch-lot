@@ -1877,7 +1877,14 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
         );
       const saved = await saveRule([
         {
-          audience: { type: "USER", ids: [String(tenantAdminId)] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "user",
+              cond: "in",
+              value: { kind: "static", values: [String(tenantAdminId)] },
+            },
+          },
           filter: {
             op: "AND",
             children: [
