@@ -17,7 +17,6 @@ import {
   publish,
   publishMany,
   publishRaw,
-  signRawTicket,
   statusOf,
 } from "./test-support";
 

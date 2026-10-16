@@ -1,7 +1,8 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   // 即時通道:Worker(入口,驗證訂閱憑證 / 送出信號簽章)+ Durable Object `TenantHub`(每租戶一個 `hub:<租戶 id>`)。
-  // 三個環境各一個 Worker 與網域,部署設定另行接線;本檔只描述本機開發(`wrangler dev`)與測試共用的部分。
+  // 三個環境各一個 Worker:deploy.yml 以 `wrangler deploy --name <cloud.json 的 realtime.worker>` 部署,網域在 Cloudflare 綁定
+  // (docs/deployment.md「即時通道」);本檔是本機開發(`wrangler dev`)、測試與三環境共用的設定。
   // 密鑰 REALTIME_TICKET_SECRET / REALTIME_PUBLISH_SECRET:本機放 .dev.vars,雲端放 Wrangler secret。
   "name": "realtime",
   "main": "src/index.ts",
