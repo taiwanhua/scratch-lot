@@ -64,6 +64,7 @@ import {
   rawTasks,
   retryAdvance,
   reviewStep,
+  roleSource,
   setupWorld,
   stepOfRow,
   submission,
@@ -966,13 +967,7 @@ describe("申請中心與讀取授權", () => {
         ownerOrgId: world.tenant,
       });
       await useWorkflow(world, nextKey("empty"), {
-        steps: [
-          reviewStep(
-            "nobody",
-            { kind: "role", roleId: String(emptyRole), placeholder: null },
-            { mode: "all" },
-          ),
-        ],
+        steps: [reviewStep("nobody", roleSource(emptyRole), { mode: "all" })],
       });
       const submitted = await submitLeave(world);
       let instance = await currentInstance(world, submitted.id);
@@ -1014,11 +1009,7 @@ describe("申請中心與讀取授權", () => {
         steps: [
           usersStep("init", [staff(0)]),
           usersStep("pair", [a, b], { mode: "all" }),
-          reviewStep(
-            "nobody",
-            { kind: "role", roleId: String(emptyRole), placeholder: null },
-            { mode: "all" },
-          ),
+          reviewStep("nobody", roleSource(emptyRole), { mode: "all" }),
           joinStep("merge"),
         ],
         edges: [

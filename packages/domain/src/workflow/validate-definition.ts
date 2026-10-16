@@ -1,6 +1,18 @@
+import { validateAudience } from "../audience/schema";
+import type { Audience } from "../audience/types";
 import { FIELD_KEY_PATTERN } from "../form/keys";
 import type { FieldDef } from "../form/types";
-import { assigneeFieldProblem, skipWhenProblems } from "./form-refs";
+import {
+  APPROVER_AUDIENCE_OPTIONS,
+  audienceFormFieldRefsOf,
+  audienceLeavesOf,
+  sharedAudienceViolations,
+} from "./approver-audience";
+import {
+  assigneeFieldProblem,
+  audienceOrgFieldProblem,
+  skipWhenProblems,
+} from "./form-refs";
 import { hasEdges } from "./graph";
 import {
   WorkflowIssueCollector,
@@ -24,10 +36,12 @@ export interface WorkflowUserFact {
 }
 
 export interface ValidateWorkflowOptions {
-  /** 共用流程(`ownerOrgId = null`):不准 `users`、`role` 只能當佔位。 */
+  /** 共用流程(`ownerOrgId = null`):人員條件只能用權限與非指定的組織來源(`AUDIENCE_IN_SHARED`)。 */
   isShared: boolean;
   /** 本租戶的角色 id;不給就不檢查 `ROLE_NOT_IN_TENANT`。 */
   tenantRoleIds?: ReadonlySet<string>;
+  /** 本租戶子樹的組織 id;不給就不檢查 `ORG_NOT_IN_TENANT`。 */
+  tenantOrgIds?: ReadonlySet<string>;
   /** 本租戶使用者目錄;不給就不出 `USER_INVALID`。 */
   users?: ReadonlyMap<string, WorkflowUserFact>;
   /**
@@ -36,7 +50,7 @@ export interface ValidateWorkflowOptions {
    */
   forms?: ReadonlyMap<string, readonly FieldDef[] | null>;
   /**
-   * 設計器選的「檢查用表單」目前版本的欄位:`skipWhen` 對它驗。
+   * 設計器選的「檢查用表單」目前版本的欄位:`skipWhen` 與人員條件的表單組織欄位對它驗。
    * 不給時改用定義裡第一個 `field` 來源的表單;兩者都沒有 → 只檢查表達式形狀。
    */
   checkFormFields?: readonly FieldDef[] | null;
@@ -180,7 +194,7 @@ function checkReviewStep(
       property: "mode",
     });
   }
-  checkAssignee(step, options, collector, location);
+  checkAssignee(step, options, skipFields, collector, location);
   if (step.skipWhen !== undefined && step.skipWhen !== null) {
     for (const problem of skipWhenProblems(step.skipWhen, skipFields)) {
       const code = {
@@ -201,6 +215,7 @@ function checkReviewStep(
 function checkAssignee(
   step: ReviewStepDef,
   options: ValidateWorkflowOptions,
+  checkFields: readonly FieldDef[] | null,
   collector: WorkflowIssueCollector,
   location: WorkflowIssueLocation,
 ): void {
@@ -218,20 +233,15 @@ function checkAssignee(
     return;
   }
   switch (assignee.kind) {
-    case "users": {
-      if (options.isShared) {
-        collector.error(
-          "USERS_IN_SHARED",
-          `共用流程不能指定使用者(關卡 ${step.key})`,
-          at("userIds"),
-        );
-        return;
-      }
-      checkUsers(step, assignee.userIds, options, collector, at);
-      return;
-    }
-    case "role": {
-      checkRole(step, assignee, options, collector, at);
+    case "audience": {
+      checkAudience(
+        step,
+        assignee.audience,
+        options,
+        checkFields,
+        collector,
+        at,
+      );
       return;
     }
     case "field": {
@@ -251,13 +261,111 @@ function checkAssignee(
   }
 }
 
+/** 某條件列的屬性路徑(`assignee.audience.<人員條件裡的路徑>`)。 */
+function audienceProperty(path: string): string {
+  return path === "" ? "audience" : `audience.${path}`;
+}
+
+/**
+ * 人員條件:先驗格式(`AUDIENCE_INVALID`,只報第一個);共用流程再找不能用的條件列
+ * (`AUDIENCE_IN_SHARED`);客製流程的角色 / 指定組織要屬本租戶(`ROLE_NOT_IN_TENANT` /
+ * `ORG_NOT_IN_TENANT`)、指定的使用者不在 / 停用 → 警告(解析時會被略過);表單組織欄位對檢查用表單驗。
+ */
+function checkAudience(
+  step: ReviewStepDef,
+  raw: unknown,
+  options: ValidateWorkflowOptions,
+  checkFields: readonly FieldDef[] | null,
+  collector: WorkflowIssueCollector,
+  at: (property: string) => WorkflowIssueLocation,
+): void {
+  const validation = validateAudience(raw, APPROVER_AUDIENCE_OPTIONS);
+  if (!validation.ok) {
+    collector.error(
+      "AUDIENCE_INVALID",
+      `關卡 ${step.key} 的審核者條件不完整或格式不對:${validation.issue.message}`,
+      at(audienceProperty(validation.issue.path)),
+    );
+    return;
+  }
+  const audience = validation.audience;
+  if (options.isShared) {
+    for (const { path } of sharedAudienceViolations(audience)) {
+      collector.error(
+        "AUDIENCE_IN_SHARED",
+        `共用流程的審核者條件只能用權限與非指定的組織來源(關卡 ${step.key})`,
+        at(audienceProperty(path)),
+      );
+    }
+  } else {
+    checkAudienceTenant(step, audience, options, collector, at);
+  }
+  if (checkFields === null) {
+    return;
+  }
+  for (const { fieldKey, path } of audienceFormFieldRefsOf(audience)) {
+    const problem = audienceOrgFieldProblem(checkFields, fieldKey);
+    if (problem !== null) {
+      collector.error(
+        problem,
+        problem === "FIELD_MISSING"
+          ? `關卡 ${step.key} 的審核者條件用的組織欄位 ${fieldKey} 不在檢查用表單`
+          : `關卡 ${step.key} 的審核者條件用的欄位 ${fieldKey} 不是組織引用欄`,
+        at(audienceProperty(path)),
+      );
+    }
+  }
+}
+
+/** 客製流程:角色 / 指定組織要屬本租戶;指定使用者不存在 / 不在本租戶 / 停用 → 警告。 */
+function checkAudienceTenant(
+  step: ReviewStepDef,
+  audience: Audience,
+  options: ValidateWorkflowOptions,
+  collector: WorkflowIssueCollector,
+  at: (property: string) => WorkflowIssueLocation,
+): void {
+  for (const { leaf, path } of audienceLeavesOf(audience)) {
+    if (leaf.value.kind !== "static") {
+      continue;
+    }
+    const property = audienceProperty(`${path}.value`);
+    const ids = leaf.value.values;
+    if (
+      leaf.field === "role" &&
+      options.tenantRoleIds !== undefined &&
+      ids.some((id) => !options.tenantRoleIds?.has(id))
+    ) {
+      collector.error(
+        "ROLE_NOT_IN_TENANT",
+        `關卡 ${step.key} 的審核者條件選的角色不是本租戶的角色`,
+        at(property),
+      );
+    }
+    if (
+      leaf.field === "org" &&
+      options.tenantOrgIds !== undefined &&
+      ids.some((id) => !options.tenantOrgIds?.has(id))
+    ) {
+      collector.error(
+        "ORG_NOT_IN_TENANT",
+        `關卡 ${step.key} 的審核者條件選的組織不在本租戶`,
+        at(property),
+      );
+    }
+    if (leaf.field === "user") {
+      checkUsers(step, ids, options, collector, () => at(property));
+    }
+  }
+}
+
 /** 指定使用者:不存在 / 不在本租戶 / 已停用 → 警告(發布後解析時會被略過)。 */
 function checkUsers(
   step: ReviewStepDef,
   userIds: readonly string[],
   options: ValidateWorkflowOptions,
   collector: WorkflowIssueCollector,
-  at: (property: string) => WorkflowIssueLocation,
+  at: () => WorkflowIssueLocation,
 ): void {
   const { users } = options;
   if (users === undefined) {
@@ -271,54 +379,9 @@ function checkUsers(
         fact === undefined
           ? `關卡 ${step.key} 指定的使用者 ${userId} 不存在或不在本租戶`
           : `關卡 ${step.key} 指定的使用者 ${userId} 已停用`,
-        at("userIds"),
+        at(),
       );
     }
-  }
-}
-
-function checkRole(
-  step: ReviewStepDef,
-  assignee: { roleId: string | null; placeholder: string | null },
-  options: ValidateWorkflowOptions,
-  collector: WorkflowIssueCollector,
-  at: (property: string) => WorkflowIssueLocation,
-): void {
-  const hasRoleId = assignee.roleId !== null && assignee.roleId !== "";
-  if (options.isShared) {
-    if ((assignee.placeholder ?? "").trim() === "") {
-      collector.error(
-        "ROLE_PLACEHOLDER_MISSING",
-        `共用流程的角色來源要填佔位名稱(關卡 ${step.key})`,
-        at("placeholder"),
-      );
-    }
-    if (hasRoleId) {
-      collector.error(
-        "ROLE_ID_IN_SHARED",
-        `共用流程的角色來源只能當佔位,不能指到角色(關卡 ${step.key})`,
-        at("roleId"),
-      );
-    }
-    return;
-  }
-  if (!hasRoleId) {
-    collector.error(
-      "ROLE_ID_MISSING",
-      `關卡 ${step.key} 要選本租戶的角色`,
-      at("roleId"),
-    );
-    return;
-  }
-  if (
-    options.tenantRoleIds !== undefined &&
-    !options.tenantRoleIds.has(assignee.roleId ?? "")
-  ) {
-    collector.error(
-      "ROLE_NOT_IN_TENANT",
-      `關卡 ${step.key} 選的角色不是本租戶的角色`,
-      at("roleId"),
-    );
   }
 }
 

@@ -1,5 +1,14 @@
+import { validateAudience } from "../audience/schema";
 import type { FieldDef } from "../form/types";
-import { assigneeFieldProblem, skipWhenProblems } from "./form-refs";
+import {
+  APPROVER_AUDIENCE_OPTIONS,
+  audienceFormFieldRefsOf,
+} from "./approver-audience";
+import {
+  assigneeFieldProblem,
+  audienceOrgFieldProblem,
+  skipWhenProblems,
+} from "./form-refs";
 import {
   type ReviewStepDef,
   type WorkflowDefinition,
@@ -12,7 +21,8 @@ import {
  * 表單與流程各自改版,一筆草稿綁的可能是舊版表單,流程要看的欄位在那一版可能不存在。
  *
  * 四種擋下:
- * 1. `field` 來源的欄位在這個表單版本不存在、或不是使用者型引用欄 → 流程設定有誤
+ * 1. `field` 來源的欄位在這個表單版本不存在、或不是使用者型引用欄;人員條件用的表單組織欄位
+ *    不存在、或不是組織引用欄(`FIELD_NOT_ORG_REFERENCE`)→ 流程設定有誤
  * 2. `skipWhen` 引用的欄位在這個表單版本不存在、或是受保護欄位 → 流程設定有誤
  * 3. 綁的流程沒有已發布版本(`currentVersion = null`)→ 流程尚未發布
  * 4. 進過審核、但現在綁定被解除或流程被收回分派 → 審核流程已移除
@@ -49,13 +59,14 @@ export type SubmitCheckCode =
 export interface SubmitCheckIssue {
   stepKey: string;
   stepNumber: number;
-  /** `assignee` = 審核者來源的欄位;`skipWhen` = 跳過條件引用的欄位。 */
+  /** `assignee` = 審核者來源的欄位(含人員條件的表單組織欄位);`skipWhen` = 跳過條件引用的欄位。 */
   slot: "assignee" | "skipWhen";
   fieldKey: string | null;
   problem:
     | "FORM_MISMATCH"
     | "FIELD_MISSING"
     | "FIELD_NOT_USER_REFERENCE"
+    | "FIELD_NOT_ORG_REFERENCE"
     | "UNKNOWN_FIELD"
     | "PROTECTED_FIELD"
     | "INVALID_EXPRESSION";
@@ -143,6 +154,40 @@ function definitionIssuesAgainst(
   return issues;
 }
 
+/** 人員條件:用到的表單組織欄位要在這一版且是組織引用欄(格式錯的條件發布前已擋,這裡略過)。 */
+function audienceIssues(
+  step: ReviewStepDef,
+  stepNumber: number,
+  audience: unknown,
+  fields: readonly FieldDef[],
+): SubmitCheckIssue[] {
+  const validation = validateAudience(audience, APPROVER_AUDIENCE_OPTIONS);
+  if (!validation.ok) {
+    return [];
+  }
+  const label = `關卡「${step.name}」的審核者條件`;
+  return audienceFormFieldRefsOf(validation.audience).flatMap(
+    ({ fieldKey }) => {
+      const problem = audienceOrgFieldProblem(fields, fieldKey);
+      return problem === null
+        ? []
+        : [
+            {
+              stepKey: step.key,
+              stepNumber,
+              slot: "assignee" as const,
+              fieldKey,
+              problem,
+              detail:
+                problem === "FIELD_MISSING"
+                  ? `${label}用的組織欄位 ${fieldKey} 不在這個表單版本`
+                  : `${label}用的欄位 ${fieldKey} 不是組織引用欄`,
+            },
+          ];
+    },
+  );
+}
+
 /** `field` 來源:要屬於被送出的這張表單、欄位在這一版且是使用者型引用欄。 */
 function assigneeIssues(
   step: ReviewStepDef,
@@ -151,6 +196,9 @@ function assigneeIssues(
   fields: readonly FieldDef[],
 ): SubmitCheckIssue[] {
   const { assignee } = step;
+  if (assignee.kind === "audience") {
+    return audienceIssues(step, stepNumber, assignee.audience, fields);
+  }
   if (assignee.kind !== "field") {
     return [];
   }

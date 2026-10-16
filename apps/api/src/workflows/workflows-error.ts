@@ -134,13 +134,14 @@ export interface BindingIssue {
   stepKey: string;
   stepNumber: number;
   problem:
-    | "ROLE_IN_SHARED"
-    | "USERS_IN_SHARED"
+    | "AUDIENCE_IN_SHARED"
     | "USER_NOT_IN_TENANT"
     | "ROLE_NOT_IN_TENANT"
+    | "ORG_NOT_IN_TENANT"
     | "FIELD_FORM_MISMATCH"
     | "FIELD_MISSING"
-    | "FIELD_NOT_USER_REFERENCE";
+    | "FIELD_NOT_USER_REFERENCE"
+    | "FIELD_NOT_ORG_REFERENCE";
   detail: string;
 }
 

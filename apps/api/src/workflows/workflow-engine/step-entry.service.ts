@@ -1,9 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Types } from "mongoose";
 
 import type { ExpressionContext, FieldDef } from "@repo/domain/form";
 import {
-  type AssigneeSource,
   type ReviewStepDef,
   type StepEntry,
   shouldSkipStep,
@@ -12,12 +10,8 @@ import {
 import { FormVersionsRepository } from "../../database/database.module";
 import type { FormRevision } from "../../database/schemas/form-submission.schema";
 import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
-import { OrgManagersService } from "../../orgs/org-managers.service";
-import {
-  TenantDirectoryService,
-  objectIdsOf,
-  systemContext,
-} from "../tenant-directory.service";
+import { systemContext } from "../tenant-directory.service";
+import { AudienceSourceService } from "./audience-source.service";
 import type { InstanceRecord } from "./instance-writes";
 
 /** 一次送出的上下文 → 表達式的 `ctx.*`(跳過條件用送出當時,不用推進當下)。 */
@@ -39,7 +33,8 @@ export function expressionContextOf(
  * 進到某個審核關卡時,算一次跳過條件、解析一次審核者,結果交回 `advance` 寫進派任計畫後不再重算。
  *
  * - 跳過條件拿**該實例修訂**的表單內容與送出當時的上下文算(同一實例內容固定,不重算公式)
- * - 審核者只算啟用中、仍在本租戶的人;剔除申請人由 domain 的 `buildPlan` 做(`manager` 的往上找在這裡)
+ * - 審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算(只算啟用中、仍在本租戶的人);
+ *   剔除申請人由 domain 的 `buildPlan` 做
  * - 解析不到任何人 → 空名單(該關阻擋,不自動改派、不自動跳過)
  */
 @Injectable()
@@ -49,8 +44,7 @@ export class StepEntryService {
   constructor(
     private readonly submissions: WorkflowSubmissionStore,
     private readonly formVersions: FormVersionsRepository,
-    private readonly directory: TenantDirectoryService,
-    private readonly managers: OrgManagersService,
+    private readonly sources: AudienceSourceService,
   ) {}
 
   async resolve(
@@ -77,17 +71,16 @@ export class StepEntryService {
     if (await this.isSkipped(instance, step, revision)) {
       return { kind: "skip" };
     }
-    const candidates = await this.candidatesOf(
-      instance,
-      tenantId,
+    const assigneeIds = await this.sources.resolveAudienceSource(
       step.assignee,
-      revision.values,
+      {
+        tenantId,
+        orgId: instance.orgId,
+        applicantId: instance.createdBy,
+        values: revision.values,
+      },
     );
-    const eligible = await this.directory.eligibleUserIds(tenantId, candidates);
-    return {
-      kind: "assign",
-      assigneeIds: candidates.map(String).filter((id) => eligible.has(id)),
-    };
+    return { kind: "assign", assigneeIds: assigneeIds.map(String) };
   }
 
   /** 跳過條件:沒設 → 不跳過;算不出來(資料損毀)→ 不跳過(照常派人,保守)。 */
@@ -120,43 +113,5 @@ export class StepEntryService {
       version: instance.formVersion,
     });
     return version?.fields ?? [];
-  }
-
-  /** 四種來源的候選名單(還沒過「啟用 / 在本租戶」)。 */
-  private async candidatesOf(
-    instance: InstanceRecord,
-    tenantId: Types.ObjectId,
-    assignee: AssigneeSource,
-    values: Record<string, unknown>,
-  ): Promise<Types.ObjectId[]> {
-    switch (assignee.kind) {
-      case "users": {
-        return objectIdsOf(assignee.userIds);
-      }
-      case "role": {
-        return assignee.roleId && Types.ObjectId.isValid(assignee.roleId)
-          ? this.directory.roleMemberIds(
-              tenantId,
-              new Types.ObjectId(assignee.roleId),
-            )
-          : [];
-      }
-      case "field": {
-        const stored = values[assignee.fieldKey] as { id?: unknown } | null;
-        const id = typeof stored?.id === "string" ? stored.id : null;
-        return id === null ? [] : objectIdsOf([id]);
-      }
-      case "manager": {
-        if (instance.createdBy === null) {
-          return [];
-        }
-        return this.managers.resolveManagers(
-          instance.createdBy,
-          instance.orgId,
-          tenantId,
-          assignee.level,
-        );
-      }
-    }
   }
 }

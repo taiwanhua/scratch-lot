@@ -82,12 +82,7 @@ export const FlowVersionViewer = ({
     checkFormFields,
   });
   const check = useFlowCheck(workflow.key);
-  const dataOf = useFlowNodeData(
-    definition,
-    report.errors,
-    catalog.forms,
-    catalog.roles,
-  );
+  const dataOf = useFlowNodeData(definition, report.errors, catalog.forms);
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,
     useMutationFeedback({
@@ -160,7 +155,6 @@ export const FlowVersionViewer = ({
         isKeyLocked
         isShared={workflow.isShared}
         forms={catalog.forms}
-        roles={catalog.roles}
         checkFormKey={checkFormKey}
         checkFormFields={checkFormFields}
         isReadonly

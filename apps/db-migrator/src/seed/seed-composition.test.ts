@@ -816,7 +816,25 @@ describe("版本化定義宣告的組裝", () => {
           {
             key: "named",
             name: "指定人",
-            assignee: { kind: "users", userIds: ["0123456789abcdef01234567"] },
+            assignee: {
+              kind: "audience",
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "user",
+                      cond: "in",
+                      value: {
+                        kind: "static",
+                        values: ["0123456789abcdef01234567"],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
             mode: "any",
           },
         ],
@@ -832,7 +850,9 @@ describe("版本化定義宣告的組裝", () => {
       ),
     );
     expect(problems).toEqual([
-      expect.stringContaining("definition.steps.0.assignee.userIds"),
+      expect.stringContaining(
+        "definition.steps.0.assignee.audience.filter.children[0]",
+      ),
     ]);
     expect(problems[0]).toContain("ASSIGNEE_NOT_PORTABLE");
   });

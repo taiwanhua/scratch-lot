@@ -15,7 +15,6 @@ import { Dialog } from "@repo/ui/dialog";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
-import { Typography } from "@repo/ui/typography";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
@@ -115,9 +114,6 @@ export const ForkWorkflowDialog = ({
       }
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
-        {source.hasRolePlaceholder && (
-          <Typography variant="body2">{t("placeholderHint")}</Typography>
-        )}
         <SelectField
           label={t("baseVersion")}
           value={baseVersion}

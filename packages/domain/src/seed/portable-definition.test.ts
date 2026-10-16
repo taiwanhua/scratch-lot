@@ -678,6 +678,23 @@ describe("validatePortableDefinition:宣告的形狀", () => {
   });
 });
 
+/** 共用流程不能用的人員條件:指定使用者或角色的一列。 */
+const audienceOf = (field: "user" | "role") => ({
+  kind: "audience" as const,
+  audience: {
+    mode: "match" as const,
+    filter: {
+      op: "AND" as const,
+      children: [
+        {
+          field,
+          cond: "in" as const,
+          value: { kind: "static" as const, values: [HEX_24] },
+        },
+      ],
+    },
+  },
+});
 describe("validatePortableDefinition:共用流程", () => {
   const requestForm = formSeed([
     field("title", "text"),
@@ -689,13 +706,34 @@ describe("validatePortableDefinition:共用流程", () => {
     tenantFormKeys: new Set(["leave_request_acme"]),
   });
 
-  it("主管、有佔位名稱的角色、可解析表單的使用者引用欄:通過", () => {
+  it("主管、權限 + 單據所屬組織的人員條件、可解析表單的使用者引用欄:通過", () => {
     const seed = workflowSeed(
       {
         steps: [
           review("boss"),
           review("hr", {
-            assignee: { kind: "role", roleId: null, placeholder: "人資" },
+            assignee: {
+              kind: "audience",
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "permission",
+                      cond: "in",
+                      value: { kind: "static", values: ["hr.approve"] },
+                    },
+                    {
+                      field: "org",
+                      cond: "in",
+                      value: { kind: "dynamic", ref: "submission-org" },
+                      range: "self",
+                    },
+                  ],
+                },
+              },
+            },
           }),
           review("picked", {
             assignee: {
@@ -712,13 +750,11 @@ describe("validatePortableDefinition:共用流程", () => {
     expect(errorsOf(seed, catalog)).toEqual([]);
   });
 
-  it("指定使用者、指到角色 id、指向租戶客製表單:拒絕並指出關卡", () => {
+  it("指定使用者、角色條件、指向租戶客製表單:拒絕並指出關卡", () => {
     const seed = workflowSeed({
       steps: [
-        review("named", { assignee: { kind: "users", userIds: [HEX_24] } }),
-        review("role", {
-          assignee: { kind: "role", roleId: HEX_24, placeholder: "人資" },
-        }),
+        review("named", { assignee: audienceOf("user") }),
+        review("role", { assignee: audienceOf("role") }),
         review("tenant", {
           assignee: {
             kind: "field",
@@ -730,8 +766,14 @@ describe("validatePortableDefinition:共用流程", () => {
     });
     const errors = errorsOf(seed, catalog);
     expect(codesAt(errors)).toEqual([
-      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.0.assignee.userIds"],
-      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.1.assignee.roleId"],
+      [
+        "ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.0.assignee.audience.filter.children[0]",
+      ],
+      [
+        "ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.1.assignee.audience.filter.children[0]",
+      ],
       ["ASSIGNEE_NOT_PORTABLE", "definition.steps.2.assignee.formKey"],
     ]);
     expect(errors[2]?.message).toContain("租戶客製表單");

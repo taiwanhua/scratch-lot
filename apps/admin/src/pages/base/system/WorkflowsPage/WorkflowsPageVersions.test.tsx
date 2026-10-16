@@ -143,7 +143,6 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
           workflowFragment({
             isShared: true,
             ownerOrgId: null,
-            hasRolePlaceholder: true,
             abilities: {
               canEdit: false,
               canPublish: false,
@@ -155,9 +154,6 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
       },
     });
     await screen.findByRole("heading", { name: "病假審核" });
-    expect(
-      screen.getByText(/角色關卡只存佔位,不能直接綁表單/),
-    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "以此為基底建流程" }));
     const dialog = await screen.findByRole("dialog", {

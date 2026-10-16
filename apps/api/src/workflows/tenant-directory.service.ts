@@ -56,6 +56,12 @@ export class TenantDirectoryService {
     return orgs.map((org) => org._id);
   }
 
+  /** 同上,字串 id 的集合(檢查人員條件裡指定的組織屬不屬本租戶)。 */
+  async tenantOrgIdSet(tenantId: Types.ObjectId): Promise<Set<string>> {
+    const ids = await this.tenantOrgIds(tenantId);
+    return new Set(ids.map(String));
+  }
+
   /** 租戶子樹的成員 id(`org_user`,去重)。 */
   async memberIds(tenantId: Types.ObjectId): Promise<Set<string>> {
     const links = await this.relations.listLinks("org_user", {

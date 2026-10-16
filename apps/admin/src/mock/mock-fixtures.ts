@@ -43,6 +43,7 @@ import {
 } from "@/test/msw/module-fixtures";
 import type { TestRole } from "@/test/msw/role-fixtures";
 import type { TestUser } from "@/test/msw/user-manager-handlers";
+import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
 import {
   applyCenterModules,
   demoGroupFormModules,
@@ -66,7 +67,11 @@ import {
  *
  * `map` 只做一件事:codegen 的型別把欄位標成 optional,補成角色管理頁夾具的 `TestRole` 形狀。
  */
-export const mockRoles: TestRole[] = dataScopeRoles.map((role) => ({
+export const mockRoles: TestRole[] = [
+  ...dataScopeRoles,
+  // 流程管理的「病假審核 · 人資」關卡用的角色(人員條件只收 ObjectId 字串,id 對齊 `workflow-fixtures.ts`)
+  { ...dataScopeRoles[0], id: HR_ROLE_ID, name: "人資", userCount: 2 },
+].map((role) => ({
   ...role,
   description: role.description ?? null,
   ownerOrg:
