@@ -1,9 +1,10 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
 import { MongoMemoryServer } from "mongodb-memory-server";
+
+import { runNode } from "../test/support/update-harness";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const MIGRATION = path.join(
@@ -53,8 +54,7 @@ function runUpDirectly(
   times: number,
   method: "up" | "down" = "up",
 ) {
-  return spawnSync(
-    process.execPath,
+  return runNode(
     [
       "--input-type=module",
       "-e",
@@ -64,7 +64,7 @@ function runUpDirectly(
       MIGRATION,
       method,
     ],
-    { cwd: PACKAGE_ROOT, encoding: "utf8" },
+    { cwd: PACKAGE_ROOT },
   );
 }
 
@@ -143,7 +143,7 @@ describe("遷移:資料範圍規則的日期條件值改存時點", () => {
     const database = await openDatabase(databaseUri);
     await seedPreState(database, null);
 
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
 
@@ -171,7 +171,7 @@ describe("遷移:資料範圍規則的日期條件值改存時點", () => {
     const database = await openDatabase(databaseUri);
     await seedPreState(database, "America/New_York");
 
-    expect(runUpDirectly(databaseUri, 1).status).toBe(0);
+    expect(await runUpDirectly(databaseUri, 1)).toMatchObject({ status: 0 });
 
     const filter = (await filterOf(database)) as {
       children: { value?: { values: string[] } }[];
@@ -186,8 +186,8 @@ describe("遷移:資料範圍規則的日期條件值改存時點", () => {
     const database = await openDatabase(databaseUri);
     await seedPreState(database, null);
 
-    expect(runUpDirectly(databaseUri, 1).status).toBe(0);
-    const result = runUpDirectly(databaseUri, 1, "down");
+    expect(await runUpDirectly(databaseUri, 1)).toMatchObject({ status: 0 });
+    const result = await runUpDirectly(databaseUri, 1, "down");
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
 
@@ -216,8 +216,8 @@ describe("遷移:資料範圍規則的日期條件值改存時點", () => {
     await seedPreState(once, null);
     await seedPreState(twice, null);
 
-    runUpDirectly(onceUri, 1);
-    const result = runUpDirectly(twiceUri, 2);
+    await runUpDirectly(onceUri, 1);
+    const result = await runUpDirectly(twiceUri, 2);
 
     expect(result.status).toBe(0);
     expect(await filterOf(twice)).toEqual(await filterOf(once));

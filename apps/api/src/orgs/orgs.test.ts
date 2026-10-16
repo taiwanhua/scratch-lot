@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 import {
   type AuthTestApp,
+  MIGRATOR_TIMEOUT_MS,
   ROOT_ADMIN,
   startAuthTestApp,
 } from "../auth/test-support/auth-app";
@@ -285,8 +286,8 @@ const OTHER_LOGO_PATH = "org-logos/6ba7b810-9dad-11d1-80b4-00c04fd430c8.webp";
 const ORG_MANAGER_MODULE = "system.org-manager";
 /** 只有空白的輸入:與 null、空字串同樣視為清空。 */
 const BLANK = " ".repeat(3);
-/** 會重跑 seed 子行程的案例:一次 seed 要數秒,給足時間。 */
-const RESEED_TIMEOUT_MS = 180_000;
+/** 會重跑 seed 子行程的案例(一案最多兩次):每次 seed 最多到子行程逾時,再留一份給其餘步驟。 */
+const RESEED_TIMEOUT_MS = MIGRATOR_TIMEOUT_MS * 3;
 
 function flatten(nodes: TreeNode[]): TreeNode[] {
   return nodes.flatMap((node) => [node, ...flatten(node.children ?? [])]);
