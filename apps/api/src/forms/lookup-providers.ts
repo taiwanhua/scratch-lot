@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { DiscoveryService } from "@nestjs/core";
 import { Types } from "mongoose";
 
 import {
@@ -14,7 +15,11 @@ import {
   temporalIsoOf,
 } from "@repo/domain/form";
 
-import type { Persisted } from "../database/base.repository";
+import {
+  BaseRepository,
+  type Persisted,
+  type RepositoryDocument,
+} from "../database/base.repository";
 import {
   type FormSubmissionDocument,
   FormSubmissionsRepository,
@@ -31,34 +36,30 @@ import {
   escapeRegex,
 } from "./form-access.service";
 import { formModulePermission } from "./form-permission-keys";
+import {
+  LOOKUP_PROVIDER,
+  type LookupProviderDeclaration,
+  type LookupProviderRegistration,
+  collectLookupRegistrations,
+} from "./lookup-provider-registration";
 
 /**
  * lookup 來源登錄表(Spec 6a §5「lookup 來源」):帶入(prefill)、引用(reference)、
- * lookup 選項(`options.kind = "lookup"`)都用這一張。**新增來源 = 這裡加一筆**:
+ * lookup 選項(`options.kind = "lookup"`)都用這一張。
  *
- * 1. `LOOKUP_PROVIDERS` 加一筆宣告(可回的欄位、各欄位型別與讀它要的權限、可當固定條件的欄位)
- * 2. `LookupProvidersService.providerFor` 加一個實作(搜尋、依值取回,都要套操作者的範圍)
- * 3. `docs/modules/forms.md`「lookup 登錄表」補一列
+ * - **底座來源**(`user`、`org`、`form_submission`):宣告在 `LOOKUP_PROVIDERS`,實作在 `providerFor`。
+ * - **專案來源**:專案模組以 `LOOKUP_PROVIDER` 登記 `{ declaration, runtime }`(`lookup-provider-registration.ts`),
+ *   本服務啟動時收集並驗證(撞名 → 起不來);查詢一律由這裡經 `BaseRepository` 組(`projectProvider`)。
+ * - 新增來源後 `docs/modules/forms.md`「lookup 登錄表」補一列。
  *
  * 執行時的查詢一律**以版本定義為準**:前端只帶「哪一版的哪一欄 / 哪一條帶入規則」+ 關鍵字,
  * provider 與 `filter` 都從定義取,前端改不了(`form-runtime/form-lookup.service.ts`)。
  */
 
-/** 一個來源欄位:型別(帶入時驗型別相容)與讀它需要的權限(沒有就不回這一欄)。 */
-export interface LookupFieldSpec {
-  type: FieldType;
-  /** 讀這一欄要的權限 key(含同層 wildcard);不給 = 看得到這筆就看得到這欄。 */
-  permission?: string;
-}
-
-export interface LookupProviderDeclaration {
-  /** 顯示在設計器來源下拉的名稱。 */
-  name: string;
-  /** 可回的欄位(`id` 一律可回,不必列)。`form_submission` 的欄位依 `formKey` 而定,這裡不列。 */
-  fields: Readonly<Record<string, LookupFieldSpec>>;
-  /** 可當 `filter` 固定條件的欄位(等值比對);其餘鍵一律不套。 */
-  filterFields: readonly string[];
-}
+export type {
+  LookupFieldSpec,
+  LookupProviderDeclaration,
+} from "./lookup-provider-registration";
 
 /** 讀使用者的帳號 / Email 要能看使用者管理(與使用者清單同一條)。 */
 const USER_MANAGER_VIEW = "system.user-manager.view";
@@ -71,6 +72,7 @@ const USER_PROVIDER: LookupProviderDeclaration = {
     email: { type: "text", permission: USER_MANAGER_VIEW },
   },
   filterFields: ["enabled"],
+  labelField: "name",
 };
 
 const ORG_PROVIDER: LookupProviderDeclaration = {
@@ -80,12 +82,14 @@ const ORG_PROVIDER: LookupProviderDeclaration = {
     slug: { type: "text" },
   },
   filterFields: ["enabled"],
+  labelField: "name",
 };
 
 const FORM_SUBMISSION_DECLARATION: LookupProviderDeclaration = {
   name: "其他表單提交",
   fields: {},
   filterFields: [],
+  labelField: "title",
 };
 
 export const LOOKUP_PROVIDERS: Readonly<
@@ -288,6 +292,81 @@ function summarySlotOf(
   };
 }
 
+/** 設計器的來源清單一筆(`formLookupProviders`):宣告去掉權限與執行面。 */
+export interface LookupProviderSummary {
+  key: string;
+  name: string;
+  /** 底座來源(名稱與欄位名由前端 i18n 顯示);false = 專案登記的來源 */
+  isBase: boolean;
+  labelField: string;
+  valueField: string;
+  filterFields: readonly string[];
+  fields: readonly { key: string; type: FieldType; label: string | null }[];
+}
+
+function summaryOf(
+  key: string,
+  declaration: LookupProviderDeclaration,
+  isBase: boolean,
+): LookupProviderSummary {
+  return {
+    key,
+    name: declaration.name,
+    isBase,
+    labelField: declaration.labelField,
+    valueField: declaration.valueField ?? "id",
+    filterFields: declaration.filterFields,
+    fields: Object.entries(declaration.fields).map(([name, spec]) => ({
+      key: name,
+      type: spec.type,
+      label: spec.label ?? null,
+    })),
+  };
+}
+
+function fieldTypesOf(
+  declaration: LookupProviderDeclaration,
+): Record<string, FieldType> {
+  return Object.fromEntries(
+    Object.entries(declaration.fields).map(([name, spec]) => [name, spec.type]),
+  );
+}
+
+/** 文件欄位原值 → lookup 值:ObjectId 轉字串、日期轉 ISO(同日期欄的語意值),陣列逐項轉。 */
+function plainValueOf(value: unknown): unknown {
+  if (value instanceof Types.ObjectId) {
+    return String(value);
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => plainValueOf(item));
+  }
+  return value ?? null;
+}
+
+type AnyRepository = BaseRepository<unknown, RepositoryDocument>;
+type ProjectDocument = Persisted<RepositoryDocument>;
+
+/** 固定呼叫 BaseRepository 本身的 `findMany`:子類覆寫不了查詢,範圍一定由 plugin 套。 */
+function baseFindMany(
+  repository: AnyRepository,
+  ...args: Parameters<AnyRepository["findMany"]>
+): Promise<ProjectDocument[]> {
+  return BaseRepository.prototype.findMany.call(repository, ...args) as Promise<
+    ProjectDocument[]
+  >;
+}
+
+/** 同上,`count`。 */
+function baseCount(
+  repository: AnyRepository,
+  ...args: Parameters<AnyRepository["count"]>
+): Promise<number> {
+  return BaseRepository.prototype.count.call(repository, ...args);
+}
+
 const EMPTY_PROVIDER: LookupProviderRuntime = {
   search: () => Promise.resolve({ items: [], totalCount: 0 }),
   findByValues: () => Promise.resolve([]),
@@ -323,7 +402,11 @@ const LABELLED_TYPES: ReadonlySet<FieldType> = new Set([
 ]);
 
 @Injectable()
-export class LookupProvidersService {
+export class LookupProvidersService implements OnModuleInit {
+  /** 專案登記的來源(`LOOKUP_PROVIDER`);啟動時收集一次。 */
+  private projectSources: ReadonlyMap<string, LookupProviderRegistration> =
+    new Map();
+
   constructor(
     private readonly users: UsersRepository,
     private readonly orgs: OrgsRepository,
@@ -331,7 +414,37 @@ export class LookupProvidersService {
     private readonly submissions: FormSubmissionsRepository,
     private readonly versions: FormVersionsRepository,
     private readonly access: FormAccessService,
+    private readonly discovery: DiscoveryService,
   ) {}
+
+  /**
+   * 收集各模組以 `LOOKUP_PROVIDER` 提供的專案來源(Nest 沒有內建 multi-provider:同一個 token 在每個
+   * 模組各有一份,由 DiscoveryService 掃出來)。撞名、格式或宣告不合 → 丟錯,app 起不來。
+   */
+  onModuleInit(): void {
+    const provided = this.discovery
+      .getProviders()
+      .filter((wrapper) => wrapper.token === LOOKUP_PROVIDER)
+      .map((wrapper) => wrapper.instance as unknown);
+    this.projectSources = collectLookupRegistrations(
+      provided,
+      Object.keys(LOOKUP_PROVIDERS),
+    );
+  }
+
+  /** 設計器的來源清單:底座三種在前,專案來源依 key 排。 */
+  summaries(): LookupProviderSummary[] {
+    return [
+      ...Object.entries(LOOKUP_PROVIDERS).map(([key, declaration]) =>
+        summaryOf(key, declaration, true),
+      ),
+      ...[...this.projectSources.values()]
+        .map(({ declaration }) =>
+          summaryOf(declaration.key, declaration, false),
+        )
+        .toSorted((a, b) => a.key.localeCompare(b.key, "zh-Hant")),
+    ];
+  }
 
   /**
    * 檢查器要的登錄表(`@repo/domain/form` 的 `LookupProviderRegistry`)。
@@ -344,14 +457,10 @@ export class LookupProvidersService {
   ): Promise<LookupProviderRegistry> {
     const registry: Record<string, { fields: Record<string, FieldType> }> = {};
     for (const [key, declaration] of Object.entries(LOOKUP_PROVIDERS)) {
-      registry[key] = {
-        fields: Object.fromEntries(
-          Object.entries(declaration.fields).map(([name, spec]) => [
-            name,
-            spec.type,
-          ]),
-        ),
-      };
+      registry[key] = { fields: fieldTypesOf(declaration) };
+    }
+    for (const [key, { declaration }] of this.projectSources) {
+      registry[key] = { fields: fieldTypesOf(declaration) };
     }
     const union: Record<string, FieldType> = { ...SUMMARY_SLOT_FIELDS };
     for (const formKey of new Set(formKeys)) {
@@ -427,10 +536,113 @@ export class LookupProvidersService {
         return this.formSubmissionProvider;
       }
       default: {
-        // 定義檢查器擋掉未登錄的來源;走到這裡是舊資料,一律查無(fail-closed)
-        return EMPTY_PROVIDER;
+        const registration = this.projectSources.get(key);
+        // 定義檢查器擋掉未登錄的來源;走到這裡是舊資料(或專案拿掉了登記),一律查無(fail-closed)
+        return registration === undefined
+          ? EMPTY_PROVIDER
+          : this.projectProvider(registration);
       }
     }
+  }
+
+  // ---- 專案來源:一律經 BaseRepository(租戶隔離、可見範圍、資料範圍由 plugin 套)----
+
+  private projectProvider(
+    registration: LookupProviderRegistration,
+  ): LookupProviderRuntime {
+    const { declaration, runtime } = registration;
+    const repository = runtime.repository as unknown as AnyRepository;
+    const canReadSource = (facts: FormOperatorFacts): boolean =>
+      declaration.permission === undefined ||
+      this.access.has(facts, declaration.permission);
+    const canReadField = (
+      facts: FormOperatorFacts,
+      field: string,
+      publicOnly: boolean,
+    ): boolean => {
+      const permission = declaration.fields[field]?.permission;
+      return (
+        permission === undefined ||
+        (!publicOnly && this.access.has(facts, permission))
+      );
+    };
+    const toRecord = (
+      facts: FormOperatorFacts,
+      document: object,
+      publicOnly: boolean,
+    ): LookupRecord => {
+      const raw = document as Record<string, unknown>;
+      const values: Record<string, unknown> = {};
+      for (const field of Object.keys(declaration.fields)) {
+        if (canReadField(facts, field, publicOnly)) {
+          values[field] = plainValueOf(raw[field]);
+        }
+      }
+      return { id: String(raw._id), values, labels: {} };
+    };
+
+    return {
+      search: async (facts, source, query) => {
+        if (!canReadSource(facts)) {
+          return { items: [], totalCount: 0 };
+        }
+        const fixed = allowedFilterOf(declaration, source.filter);
+        const keyword = query.keyword?.trim();
+        // 關鍵字只比對讀得到的欄位(不能拿受保護欄位試出值)
+        const keywordFields = (
+          runtime.keywordFields ??
+          (declaration.labelField === "id" ? [] : [declaration.labelField])
+        ).filter((field) => canReadField(facts, field, false));
+        const condition =
+          keyword && keywordFields.length > 0
+            ? {
+                $and: [
+                  fixed,
+                  {
+                    $or: keywordFields.map((field) => ({
+                      [field]: { $regex: escapeRegex(keyword), $options: "i" },
+                    })),
+                  },
+                ],
+              }
+            : fixed;
+        const sort: Record<string, 1 | -1> =
+          declaration.labelField === "id"
+            ? { _id: 1 }
+            : { [declaration.labelField]: 1, _id: 1 };
+        const [totalCount, found] = await Promise.all([
+          baseCount(repository, facts.operator, condition),
+          baseFindMany(repository, facts.operator, condition, {
+            sort,
+            skip: (query.page - 1) * query.pageSize,
+            limit: query.pageSize,
+          }),
+        ]);
+        return {
+          items: found.map((document) => toRecord(facts, document, false)),
+          totalCount,
+        };
+      },
+      findByValues: async (facts, source, field, values, _fields, options) => {
+        // 以受權限保護的欄位反查也要讀得到那一欄,否則可以拿它逐一試出值(同 user 的帳號 / Email)
+        if (
+          !canReadSource(facts) ||
+          (field !== "id" && !Object.hasOwn(declaration.fields, field)) ||
+          (field !== "id" && !canReadField(facts, field, false))
+        ) {
+          return [];
+        }
+        const fixed = allowedFilterOf(declaration, source.filter);
+        const condition =
+          field === "id"
+            ? { ...fixed, _id: { $in: objectIdsOf(values) } }
+            : { ...fixed, [field]: { $in: [...values] } };
+        const found = await baseFindMany(repository, facts.operator, condition);
+        return found.map((document) =>
+          toRecord(facts, document, options.publicOnly === true),
+        );
+      },
+    };
   }
 
   // ---- user:操作者可見範圍內組織的成員(org_user)----
