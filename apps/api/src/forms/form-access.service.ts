@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import type { Persisted } from "../database/base.repository";
 import { BusinessRelationshipsRepository } from "../database/business-relationships.repository";
 import {
@@ -18,7 +16,10 @@ import {
   tenantTimezoneOf,
   tenantTimezoneOfOrg,
 } from "../database/tenant-timezone";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import {
   type FormModuleAction,
   formModulePermission,
@@ -30,6 +31,7 @@ export type FormRecord = Persisted<FormDocument>;
 /**
  * 一位操作者在這次請求裡、表單引擎要用的事實(一次算好,各 service 共用):
  * - `permissionKeys`:有效權限集合(`PermissionResolver`,wildcard 已展開成具體 key)
+ * - `foreignPermissionKeys`:被濾掉的別租戶表單動態權限(`has` 用它讓 `*` 也蓋不到)
  * - `isSuperAdmin`:持超級管理員(欄位級權限列被刪時「只有 root 看得到」的 root)
  * - `isRoot`:當前組織是根組織(`parentId === null`;管共用表單、分派的判準)
  * - `tenantId`:當前組織的租戶頂層(根組織 = null → 看全部共用表單)
@@ -38,6 +40,7 @@ export type FormRecord = Persisted<FormDocument>;
 export interface FormOperatorFacts {
   operator: OperatorContext;
   permissionKeys: ReadonlySet<string>;
+  foreignPermissionKeys: ReadonlySet<string>;
   isSuperAdmin: boolean;
   isRoot: boolean;
   tenantId: Types.ObjectId | null;
@@ -94,7 +97,11 @@ export class FormAccessService {
   ): Promise<FormOperatorFacts> {
     const resolution = operator.actorId
       ? await this.permissions.resolve(operator.actorId, operator.currentOrgId)
-      : { isSuperAdmin: false, permissionKeys: new Set<string>() };
+      : {
+          isSuperAdmin: false,
+          permissionKeys: new Set<string>(),
+          foreignPermissionKeys: new Set<string>(),
+        };
     const current = operator.currentOrgId
       ? await this.orgs.findById(orgReader(operator), operator.currentOrgId)
       : null;
@@ -104,6 +111,7 @@ export class FormAccessService {
     return {
       operator,
       permissionKeys: resolution.permissionKeys,
+      foreignPermissionKeys: resolution.foreignPermissionKeys,
       isSuperAdmin: resolution.isSuperAdmin,
       isRoot: current?.parentId === null,
       tenantId,
@@ -119,9 +127,9 @@ export class FormAccessService {
     return tenantTimezoneOfOrg(this.orgs, operator, orgId);
   }
 
-  /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有)。 */
+  /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有;別租戶表單的動態權限 → 不持有)。 */
   has(facts: FormOperatorFacts, key: string): boolean {
-    return hasPermission(facts.permissionKeys, key);
+    return holdsPermission(facts, key);
   }
 
   /** 表單模組的個別權限;沒有 → `FORBIDDEN`(與 `@RequirePermission` 同一種錯誤,無 reason)。 */

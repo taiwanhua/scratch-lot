@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { Module } from "@nestjs/common";
+import { Query, Resolver } from "@nestjs/graphql";
 import type { Connection, Types } from "mongoose";
 
 import {
@@ -7,6 +9,7 @@ import {
 } from "../../auth/test-support/auth-app";
 import { createOrg } from "../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { RequirePermission } from "../../permission/require-permission.decorator";
 import {
   CREATE_DRAFT,
   CREATE_FORM,
@@ -46,6 +49,40 @@ import {
 } from "../test-support/form-fixtures";
 
 jest.setTimeout(FORM_TEST_TIMEOUT_MS);
+
+/** 租戶乙的客製表單(下方「別租戶的客製表單」一組測試建立)與它的受保護欄位、依表單新增權限。 */
+const B_FORM = "shared_b_custom";
+const B_SECRET_SHOW = showKey(B_FORM, "b_secret");
+const B_FORM_CREATE = `${MODULE_KEY}.create-${B_FORM}`;
+
+/** 測試專用探針:`@RequirePermission` 要求乙客製表單的欄位級權限(守門對別租戶動態權限的判斷)。 */
+@Resolver()
+class ForeignPermissionProbeResolver {
+  @RequirePermission(B_SECRET_SHOW)
+  @Query(() => Boolean, { name: "foreignPermissionProbe" })
+  probe(): boolean {
+    return true;
+  }
+}
+
+@Module({ providers: [ForeignPermissionProbeResolver] })
+class ForeignPermissionProbeModule {}
+
+const FOREIGN_PERMISSION_PROBE = /* GraphQL */ `
+  query ForeignPermissionProbe {
+    foreignPermissionProbe
+  }
+`;
+
+const ME_PERMISSION_KEYS = /* GraphQL */ `
+  query MePermissionKeys {
+    me {
+      modules {
+        permissions
+      }
+    }
+  }
+`;
 
 const ROLE_MATRIX = /* GraphQL */ `
   query RoleMatrix($roleId: ID!) {
@@ -129,8 +166,21 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
       .toSorted((a, b) => a.localeCompare(b));
   }
 
+  /** 某位操作者 `me.modules` 裡的全部權限 key。 */
+  async function mePermissionKeys(token: string): Promise<string[]> {
+    const data = await ok<{ me: { modules: { permissions: string[] }[] } }>(
+      api,
+      token,
+      ME_PERMISSION_KEYS,
+      {},
+    );
+    return data.me.modules.flatMap((module) => module.permissions);
+  }
+
   beforeAll(async () => {
-    api = await startAuthTestApp("cookhome-test-forms");
+    api = await startAuthTestApp("cookhome-test-forms", {}, [
+      ForeignPermissionProbeModule,
+    ]);
     connection = api.connection;
     root = await rootToken(api);
     tenantA = await createOrg(connection, { name: "租戶甲" });
@@ -323,8 +373,6 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
   });
 
   describe("別租戶的客製表單:執行端與權限矩陣都當它不存在", () => {
-    const B_FORM = "shared_b_custom";
-
     beforeAll(async () => {
       // B 以分派來的共用表單為基底建客製表單,加一個受保護欄位後發布
       await ok(api, adminB.token, FORK_FORM, {
@@ -351,7 +399,59 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
         ]),
         0,
       );
+      // 依表單新增權限(B9b 建立;這裡直接寫一筆,只驗解析與過濾認得 `create-`)
+      const module = await connection
+        .collection("modules")
+        .findOne<{ _id: Types.ObjectId }>({ key: MODULE_KEY });
+      if (!module) {
+        throw new Error(`測試資料庫沒有模組 ${MODULE_KEY}`);
+      }
+      await connection.collection("permissions").insertOne({
+        key: B_FORM_CREATE,
+        moduleId: module._id,
+        name: "乙的客製 新增",
+        enabled: true,
+        isSystem: false,
+        settings: {},
+        source: "dynamic",
+        retiredAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
     }, HOOK_TIMEOUT_MS);
+
+    it("me.modules:A 持表單模組 `*` 也拿不到 B 客製表單的動態權限;B 自己拿得到", async () => {
+      const ownKeys = await mePermissionKeys(adminB.token);
+      expect(ownKeys).toEqual(
+        expect.arrayContaining([B_SECRET_SHOW, B_FORM_CREATE]),
+      );
+      const keysOfA = await mePermissionKeys(adminA.token);
+      expect(keysOfA).toContain(M.all);
+      expect(keysOfA.filter((key) => key.includes(B_FORM))).toEqual([]);
+      // 根組織只認共用表單的動態權限
+      const rootKeys = await mePermissionKeys(root);
+      expect(rootKeys.filter((key) => key.includes(B_FORM))).toEqual([]);
+    });
+
+    it("@RequirePermission:別租戶的動態權限一律拒絕(持 `*` 也一樣);本租戶放行", async () => {
+      const denied = await call(
+        api,
+        adminA.token,
+        FOREIGN_PERMISSION_PROBE,
+        {},
+      );
+      expect(codeOf(denied)).toBe("FORBIDDEN");
+      const allowed = await call(
+        api,
+        adminB.token,
+        FOREIGN_PERMISSION_PROBE,
+        {},
+      );
+      expect(allowed.errors).toBeUndefined();
+    });
 
     it("A 用 B 的客製表單 key:formRuntimeVersion / formLookup 都 NOT_FOUND,欄位目錄不透露它的欄位", async () => {
       const runtime = await call(api, staffA.token, FORM_RUNTIME_VERSION, {
@@ -427,6 +527,7 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
         ?.permissions.map((permission) => permission.key);
       expect(keys).toContain(showKey("shared_a_tenant", "a_secret"));
       expect(keys).not.toContain(showKey(B_FORM, "b_secret"));
+      expect(keys).not.toContain(B_FORM_CREATE);
       const denied = await call(api, roleAdminA.token, SAVE_ROLE_MATRIX, {
         input: {
           roleId: String(staffA.roleId),
