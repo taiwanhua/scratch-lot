@@ -1,0 +1,2 @@
+# 批次檔一定要 CRLF(LF 的 .bat 在 cmd 裡 goto / call 標籤會錯亂)
+*.bat text eol=crlf

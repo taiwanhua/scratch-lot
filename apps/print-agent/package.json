@@ -1,0 +1,39 @@
+{
+  "name": "@repo/print-agent",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "agent": "tsx src/main.ts",
+    "build": "tsx scripts/build.ts",
+    "package": "tsx scripts/package-sea.ts",
+    "lint": "eslint src/ scripts/ --max-warnings 0",
+    "check-types": "tsc --noEmit",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "preset": "@repo/jest-presets/node",
+    "moduleNameMapper": {
+      "^@repo/domain/(.*)$": "<rootDir>/../../packages/domain/src/$1"
+    }
+  },
+  "dependencies": {
+    "@repo/domain": "workspace:*",
+    "pngjs": "7.0.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.5.2",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/jest-presets": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^24.19.2",
+    "@types/pngjs": "6.0.5",
+    "esbuild": "0.28.2",
+    "eslint": "^9.39.0",
+    "fflate": "0.8.3",
+    "jest": "^30.5.2",
+    "postject": "1.0.0-alpha.6",
+    "tsx": "^4.23.13",
+    "typescript": "5.9.3"
+  }
+}

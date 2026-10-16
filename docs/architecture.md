@@ -4,15 +4,16 @@
 
 ## Apps
 
-| App                 | 技術                                                              | 用途                                                                                                                                                            | Port              |
-| ------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `@repo/api`         | NestJS + GraphQL(Apollo / Express,code-first)+ Mongoose + MongoDB | 後端 API,front 與 admin 都打這個服務                                                                                                                            | 5001              |
-| `@repo/front`       | Next.js(App Router)                                               | 前台。SEO 頁面走 Server Component + ISR,不使用 Next API Routes                                                                                                  | 3002              |
-| `@repo/admin`       | Vite + React SPA                                                  | 後台管理,不需 SEO                                                                                                                                               | 3001              |
-| `@repo/storybook`   | Storybook(react-vite)                                             | 設計系統目錄 + Palette Lab;元件的 stories 住在 `packages/ui`                                                                                                    | 6006              |
-| `@repo/db-migrator` | migrate-mongo + update / reset runner                             | 資料庫遷移、種子、還原工具;不部署、不常駐,CI 在部署 api 後呼叫(ADR-0002)                                                                                        | —                 |
-| `@repo/e2e`         | Playwright(只裝 chromium)                                         | 權限劇本的 E2E(`docs/testing/permission-scenarios.md`);不部署,**只手動觸發**(`pnpm e2e` / `e2e.yml`,TEST-05);harness 自己起 Mongo → update → api → admin 靜態檔 | 5101 / 4301(可改) |
-| `@repo/realtime`    | Cloudflare Workers + Durable Objects                              | 即時通道:Worker 驗證訂閱憑證(`/connect`)與送出信號簽章(`/publish`);每租戶一個 Durable Object `TenantHub` 保存連線並推送信號                                     | 8787              |
+| App                 | 技術                                                              | 用途                                                                                                                                                                        | Port              |
+| ------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `@repo/api`         | NestJS + GraphQL(Apollo / Express,code-first)+ Mongoose + MongoDB | 後端 API,front 與 admin 都打這個服務                                                                                                                                        | 5001              |
+| `@repo/front`       | Next.js(App Router)                                               | 前台。SEO 頁面走 Server Component + ISR,不使用 Next API Routes                                                                                                              | 3002              |
+| `@repo/admin`       | Vite + React SPA                                                  | 後台管理,不需 SEO                                                                                                                                                           | 3001              |
+| `@repo/storybook`   | Storybook(react-vite)                                             | 設計系統目錄 + Palette Lab;元件的 stories 住在 `packages/ui`                                                                                                                | 6006              |
+| `@repo/db-migrator` | migrate-mongo + update / reset runner                             | 資料庫遷移、種子、還原工具;不部署、不常駐,CI 在部署 api 後呼叫(ADR-0002)                                                                                                    | —                 |
+| `@repo/e2e`         | Playwright(只裝 chromium)                                         | 權限劇本的 E2E(`docs/testing/permission-scenarios.md`);不部署,**只手動觸發**(`pnpm e2e` / `e2e.yml`,TEST-05);harness 自己起 Mongo → update → api → admin 靜態檔             | 5101 / 4301(可改) |
+| `@repo/realtime`    | Cloudflare Workers + Durable Objects                              | 即時通道:Worker 驗證訂閱憑證(`/connect`)與送出信號簽章(`/publish`);每租戶一個 Durable Object `TenantHub` 保存連線並推送信號                                                 | 8787              |
+| `@repo/print-agent` | Node 24 + TypeScript(SEA 單一執行檔)                              | 店內列印代理程式:向 API 接收列印工作、轉 ESC/POS 經 TCP 9100 送收據機;不部署到雲端,由 `print-agent-release.yml` 打包四平台安裝檔放私有 bucket(`apps/print-agent/README.md`) | —                 |
 
 ### 技術棧版本
 

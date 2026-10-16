@@ -1,0 +1,2 @@
+# 本機模擬印表機的輸出與開發用設定(`pnpm agent run --simulator …`)
+tmp/

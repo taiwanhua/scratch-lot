@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- WinSW 2.12.0 的服務設定(檔名須與 print-agent-service.exe 同名);由「安裝.bat」安裝。 -->
+<service>
+  <id>print-agent</id>
+  <name>列印代理程式 (print-agent)</name>
+  <description>向伺服器接收列印工作並送到店內收據機。</description>
+  <executable>%BASE%\print-agent.exe</executable>
+  <arguments>run</arguments>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 hour</resetfailure>
+  <stoptimeout>30 sec</stoptimeout>
+  <!-- 代理程式自己每天寫一個 log(C:\ProgramData\print-agent\logs\);這裡只留服務本身的輸出 -->
+  <logpath>%ProgramData%\print-agent\logs\service</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>1024</sizeThreshold>
+    <keepFiles>2</keepFiles>
+  </log>
+</service>
