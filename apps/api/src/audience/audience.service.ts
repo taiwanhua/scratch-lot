@@ -22,7 +22,6 @@ import { RelationService } from "../database/relation.service";
 import {
   type PermissionHolding,
   PermissionResolver,
-  holdsPermission,
 } from "../permission/permission-resolver";
 
 /**
@@ -81,7 +80,12 @@ function union(sets: Set<string>[]): Set<string> {
  * | 列出符合的人     | `listAudience`    | 每個條件列各查一群人,AND 交集、OR 聯集;權限從 `role_permission` 反推 |
  *
  * 共同規則:停用的權限、模組(含祖先停用)、角色都不算;**權限條件只算實際授予的權限,
- * 不套超級管理員的略過**(`PermissionResolver.grantedPermissionKeys`)。
+ * 不套超級管理員的略過**(`PermissionResolver.grantedPermissionKeys`)。權限條件看的是展開後的
+ * **有效權限 key 是否在集合裡**(已剔除停用 / 不存在 / 別租戶表單的),**不走 `holdsPermission` 的
+ * `*` 同層回退** —— 持 `X.*` 不代表持有 `X` 底下已停用的 key(`@RequirePermission` 守門仍用 `holdsPermission`)。
+ *
+ * 別租戶表單動態權限的「租戶」:判斷用操作者的當前組織、列出用這次列名單的租戶。同時屬於多個租戶的人,
+ * 當前組織不在列名單的租戶時兩條路可能不同 —— 已知並接受(一般使用者只屬一個租戶)。
  * `listAudience` 只列啟用中、在本租戶(所屬組織至少一個在租戶子樹內)的使用者。
  *
  * 兩條路對同一組條件與使用者的結果必須一致(`audience.test.ts` 的表格測試)。
@@ -155,7 +159,7 @@ export class AudienceService {
       case "permission": {
         const holding = await this.permissionKeysOf(operator);
         return staticValuesOf(leaf).some((key) =>
-          holdsPermission(holding, key),
+          holding.permissionKeys.has(key),
         );
       }
       case "org": {
@@ -222,7 +226,7 @@ export class AudienceService {
   }
 
   /**
-   * 操作者實際被授予的有效權限(同一個請求只算一次)。別租戶表單的動態權限以他的**當前組織**
+   * 操作者實際被授予的有效權限(同一個請求只算一次;看 `permissionKeys` 的成員,不走 `*` 回退)。別租戶表單的動態權限以他的**當前組織**
    * 判斷,與 `PermissionResolver.resolve` 同義。
    */
   private permissionKeysOf(
@@ -330,8 +334,8 @@ export class AudienceService {
 
   /**
    * 持有任一權限 key 的人:先從 `role_permission` 反推候選角色(直接授予該權限,或授予同模組的
-   * `<模組>.*` —— `holdsPermission` 的同層回退也算),找出持有這些角色的人;再以每個候選人的
-   * 啟用中角色走一次 `grantedPermissionKeys` + `holdsPermission`(與 `matchesAudience` 同一份判斷:
+   * `<模組>.*` —— 展開會得到它),找出持有這些角色的人;再以每個候選人的啟用中角色走一次
+   * `grantedPermissionKeys` 看 key 在不在展開後的集合裡(與 `matchesAudience` 同一份判斷:
    * 停用的權限 / 模組 / 角色、模組要有綁定、別租戶表單的動態權限都在那裡處理),確認真的持有。
    * 候選名單只會多不會少,第二步保證與逐人判斷一致。
    */
@@ -401,7 +405,7 @@ export class AudienceService {
         holdingBySet.set(setKey, holding);
       }
       const resolved = await holding;
-      if (keys.some((key) => holdsPermission(resolved, key))) {
+      if (keys.some((key) => resolved.permissionKeys.has(key))) {
         holders.add(userId);
       }
     }
