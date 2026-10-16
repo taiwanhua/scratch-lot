@@ -86,7 +86,7 @@ describe("受管定義 CLI 的組裝:發布引用專案 lookup 來源的表單",
       baseUri = memoryServer.getUri();
     }
     const uri = buildDatabaseUri(baseUri, "cookhome-test-project-lookup-seed");
-    seedDatabase(uri);
+    await seedDatabase(uri);
     connection = await mongoose.createConnection(uri).asPromise();
     await holdSeedLock(connection);
     process.env[MONGODB_URI_ENV] = uri;
