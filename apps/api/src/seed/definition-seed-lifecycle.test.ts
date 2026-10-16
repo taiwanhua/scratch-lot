@@ -22,10 +22,6 @@ import {
 } from "../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
-  FormPublishHooks,
-  type PublishCheckpoint,
-} from "../forms/form-design/form-publish-hooks";
-import {
   CREATE_DRAFT,
   F,
   FORK_FORM,
@@ -34,13 +30,10 @@ import {
   M,
   MODULE_KEY,
   PASSWORD,
-  PUBLISH,
   RETRY_PUBLISH,
   UPDATE_FORM,
   type VersionRow,
   assignForm,
-  call,
-  codeOf,
   createOperator,
   createSubmitted,
   definitionOf,
@@ -52,6 +45,7 @@ import {
   rawSubmission,
   saveDefinition,
   showKey,
+  simulateInterruptedPublish,
 } from "../forms/test-support/form-fixtures";
 import { createRole } from "../permission/test-support/fixtures";
 import { ROOT_ADMIN_ACCOUNT_ENV } from "./seed-operator.service";
@@ -465,30 +459,20 @@ describe("受管表單:歷史核對、退役、既有資料保護、操作者與
       }>(api, app.root, CREATE_DRAFT, {
         input: { formKey: "seed_interrupted", baseVersion: 1 },
       });
-      const saved = await saveDefinition(
+      await saveDefinition(
         api,
         app.root,
         "seed_interrupted",
         definitionOf(changedFields),
         draft.createFormVersionDraft.formVersion.draftRevision,
       );
-      const publishHooks = api.app.get(FormPublishHooks);
-      jest
-        .spyOn(publishHooks, "reached")
-        .mockImplementation((checkpoint: PublishCheckpoint) =>
-          checkpoint === "current-version"
-            ? Promise.reject(new Error("injected failure"))
-            : Promise.resolve(),
-        );
-      const interrupted = await call(api, app.root, PUBLISH, {
-        input: {
-          formKey: "seed_interrupted",
-          expectedDraftRevision: saved.draftRevision,
-          changelog: "畫面發布",
-        },
-      });
-      expect(codeOf(interrupted)).toBeDefined();
-      jest.restoreAllMocks();
+      // 表單發布是一個交易、不會再中斷:模擬交易之前留下的「已發布、未切換」
+      await simulateInterruptedPublish(
+        connection,
+        "seed_interrupted",
+        "unswitched",
+        "畫面發布",
+      );
       const r2 = formSeed("seed_interrupted", "r2", { fields: changedFields });
 
       const blockedRerun = await runSeed(app, r1);

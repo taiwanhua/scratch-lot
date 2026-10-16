@@ -82,14 +82,14 @@
 
 ### 四步發布
 
-`form-design/form-publish.service.ts`。**不用 Mongo 交易**(本機與 CI 單節點測不到交易;一致性靠冪等重試):
+`form-design/form-publish.service.ts`。步驟 1 的檢查器在交易前(只讀);步驟 2–4 與稽核 `form-version.publish` 是**一個交易**(ADR-0013),任一步失敗,版本、欄位級權限、`forms.currentVersion` 與稽核一起回到發布前,草稿原封不動,可以直接再發布:
 
 1. 跑檢查器(`validateDefinition` + api 端的登錄表),有錯就停,什麼都沒改。
 2. 條件更新 `{ _id, status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、記 changelog。沒更新到 → `CONFLICT`。兩個發布同時送出只有一個命中。
 3. 欄位級權限:這一版要的缺的建、有 `retiredAt` 的清掉、不再宣告的標 `retiredAt`、`name` 隨表單名與欄位 label 更新(「<表單名> / <欄位 label> 可見 / 可改」)。同 key 欄位沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
-4. 切換三筆,依序逐筆寫:這一版 `publishing → published` → 其餘 `published → retired` → `forms.currentVersion` 指向新版。第一筆寫完到第二筆寫完之間,會**短暫有兩個 `published`**;對外(填寫、新增資格、版本面板的「目前版本」)一律以 `forms.currentVersion` 為準,最後一筆寫完前填寫者看到的仍是舊版。
+4. 切換三筆:這一版 `publishing → published` → 其餘 `published → retired` → `forms.currentVersion` 指向新版(條件更新,讀到之後被改過 → `CONFLICT`)。對外(填寫、新增資格、版本面板的「目前版本」)一律以 `forms.currentVersion` 為準。
 
-**中斷**:有 `publishing` 版本,或有 `published` 版本但它不是 `currentVersion`,就是發布中斷(`FormModel.publishInterrupted`)。`retryPublishFormVersion` 從步驟 3 起重跑,每個寫入先看「已是目標狀態就跳過」,重跑幾次結果都一樣。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「中途失敗後重試 = 一次成功」。
+**中斷**:有 `publishing` 版本,或有 `published` 版本但它不是 `currentVersion`,就是發布中斷(`FormModel.publishInterrupted`)。發布改成交易後不會再產生;判定與 `retryPublishFormVersion` 保留給交易之前留下的資料(與受管定義安裝的接續)。重試同樣是一個交易,從步驟 3 起重跑,每個寫入先看「已是目標狀態就跳過」。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。
 
 ### 退役目前版本
 
@@ -209,10 +209,10 @@
 - **範圍**:操作者看得到(可見範圍 + 資料範圍)、本租戶的資料(root 站在根組織 = 根組織自己的,`tenantId = null`)、狀態 `draft` 與**沒走過流程**的 `completed`(`currentInstanceId = null`;走過流程的已完成鎖定、不動)、`version` 不是目標版。草稿包含別人的草稿(資料範圍內)。
 - **搬值**(`upgradeValues`,與「複製為新單」共用):目標版的使用者填欄位,來源版有同 key 同型別的就保留值;明細列逐子欄同規則(`rowId` 保留);目標版沒有的、型別變了的丟掉(歷史修訂的快照留著)。**補值**只填搬完後沒有值的欄位,已有值不覆蓋。
 - **補值欄位**(`upgradeFillTargets`,再篩操作者改得動的):必填的使用者填欄位 ∪ 對到摘要槽的欄位 ∪ 目標版新增的欄位(任一來源版沒有同 key 同型別的);明細列、上傳、引用不列入。前端依型別呈現輸入框(`TypedValueInput`,選項查目標版的定義);api 照型別正規化,單選 / 多選再重取選項 label 寫快照、驗選項存在(每欄一次;`SubmissionValuesService.snapshotChoices`),不合法 → `VALIDATION_FAILED` + `fieldErrors`。不是目標版使用者填欄位的鍵 → `VALIDATION_FAILED`(`fills`);是目標版的使用者填欄位、但不在這一刻的補值清單內(查計畫之後清單變了、或操作者改不動)→ 忽略。
-- **逐筆**(每批 200 筆,先取 id 再逐筆讀完整文件):搬值 + 補值 → settle 重算計算欄位(隱藏欄位當 null;草稿模式 = 只驗型別,不驗規則)→ 已完成重算摘要、修訂 +1(`version` = 目標版、`kind: "upgrade"`、`ctx` 沿用上一筆修訂、另記 `upgradedBy` / `upgradedAt` = 操作者與升級時間)→ 改綁 `version`;草稿只改綁與重算(草稿沒有修訂),並把 `touched` 篩成目標版仍有的使用者填欄位。條件更新帶讀到的 `editVersion`、`version`、狀態;還沒有 `version` 的舊修訂在同一次更新補成改綁前的版本(這時整個 `revisions` 換掉,平常是 `$push`)。
+- **逐筆**(每批 200 筆,先取 id 再逐筆讀完整文件;**每批一個交易**,一批的改綁一起提交或一起回復,中途失敗時已提交的批次留著、再送一次只處理剩下的):搬值 + 補值 → settle 重算計算欄位(隱藏欄位當 null;草稿模式 = 只驗型別,不驗規則)→ 已完成重算摘要、修訂 +1(`version` = 目標版、`kind: "upgrade"`、`ctx` 沿用上一筆修訂、另記 `upgradedBy` / `upgradedAt` = 操作者與升級時間)→ 改綁 `version`;草稿只改綁與重算(草稿沒有修訂),並把 `touched` 篩成目標版仍有的使用者填欄位。條件更新帶讀到的 `editVersion`、`version`、狀態;還沒有 `version` 的舊修訂在同一次更新補成改綁前的版本(這時整個 `revisions` 換掉,平常是 `$push`)。
 - **重算用那筆資料自己的上下文,不是操作者此刻**:已完成 = 最後一筆修訂的 `ctx`;草稿(沒有修訂)= 建立者、建立時間、資料歸屬組織與本租戶時區。所以引用 `ctx.user.*` / `ctx.now` 的計算欄位與條件升級前後不變(不會因為換成升級者的身分把欄位判成隱藏而清空)。修訂紀錄那一列印「<升級者> 於 <升級時間> 升級到第 N 版」(取 `upgradedBy` / `upgradedAt`,不是 ctx)。
 - **不驗證**:升級後不符新版規則的已完成資料,使用者下次編輯送出時才被擋、當場補。
-- **跳過並計數**:條件更新沒命中(被別人同時改,`EDIT_CONFLICT`)、加上升級修訂後超過容量(`DOCUMENT_TOO_LARGE`)、存值在目標版算不出來(`VALUES_INVALID`)。沒綁流程的表單不限修訂次數,所以不會因次數跳過。
+- **跳過並計數**:條件更新沒命中(`EDIT_CONFLICT`;在交易內被別人同時改會是寫入衝突,整批自動重跑、重讀後照樣升級,所以實際上很少出現)、加上升級修訂後超過容量(`DOCUMENT_TOO_LARGE`)、存值在目標版算不出來(`VALUES_INVALID`)。沒綁流程的表單不限修訂次數,所以不會因次數跳過。
 - **冪等**:已是目標版的不在範圍內,重跑只處理剩下的;守門之後,同一張表單、同 `(操作者, clientRequestId)` 重送回第一次記下的結果(查稽核 `submission.upgrade`,條件 `{ targetType: "form", targetId, action, actorId, after.clientRequestId }` 走 `{ targetType, targetId }` 索引);拿同一個 id 升級這張表單的另一版 → `CONFLICT` `CLIENT_REQUEST_REUSED`。**重送只保證資料不重複處理,結果不保證與當下的資料相同**(第一次之後別人改的、新進的舊版資料不反映;要處理就用新的 id 再升級一次)。
 - **量級**:`upgradeFormSubmissions` 是同步 mutation,整個升級在一次請求裡跑完(逐筆讀寫)。預期是幾百到幾千筆;**上萬筆建議分次做**(例如請操作者重按,已升級的不會重複處理),避免請求逾時。
 - **回傳**:`upgraded: [{ fromVersion, count }]`、`skipped: [{ reason, count }]`;稽核一筆 `submission.upgrade`(筆數,不逐筆、不記值)。

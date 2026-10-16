@@ -14,22 +14,20 @@ import type { DefinitionSeedSet } from "@repo/domain/seed";
 import { AuditService } from "../audit/audit.service";
 import type { AuthTestApp } from "../auth/test-support/auth-app";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
-import { FormPublishHooks } from "../forms/form-design/form-publish-hooks";
 import {
   CREATE_DRAFT,
   FORM_TEST_TIMEOUT_MS,
-  PUBLISH,
   RETIRE_CURRENT,
   RETRY_PUBLISH,
   UPDATE_FORM,
   type VersionRow,
   call,
-  codeOf,
   definitionOf,
   field,
   getForm,
   ok,
   saveDefinition,
+  simulateInterruptedPublish,
 } from "../forms/test-support/form-fixtures";
 import {
   CREATE_WORKFLOW_DRAFT,
@@ -252,9 +250,11 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
       const r1 = formSeed("resume_switch_form", "r1");
       await runSeeds(app, [r1]);
       const r2 = formSeed(r1.key, "r2", { fields: nextFields });
+      // 表單發布是一個交易:安裝停在發布之前,再模擬交易之前留下的「已發布、未切換」
       await interruptInstall(r2, () =>
-        failCheckpointOnce(api.app.get(FormPublishHooks), "current-version"),
+        failCheckpointOnce(app.hooks, "publish"),
       );
+      await simulateInterruptedPublish(connection, r2.key, "unswitched");
       await rename(r2, "畫面改的名字");
 
       await expectRejectedBeforeAnyWrite(r2, "METADATA_DRIFT");
@@ -355,10 +355,12 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
   describe("重試發布只接續這次安裝的那一版", () => {
     it("表單:核對之後、重試之前,畫面完成了這一版並讓另一版發布中斷 → 不替另一版繼續發布", async () => {
       const seed = formSeed("retry_bound_form", "r1");
-      const formHooks = api.app.get(FormPublishHooks);
+      // 表單發布是一個交易、不會再中斷:安裝停在發布之前,再以直接寫入模擬交易之前留下的中斷
+      // (這一版已 published、currentVersion 還沒切),續跑才會走原服務的重試
       await interruptInstall(seed, () =>
-        failCheckpointOnce(formHooks, "current-version"),
+        failCheckpointOnce(app.hooks, "publish"),
       );
+      await simulateInterruptedPublish(connection, seed.key, "unswitched");
       beforeWrite("retry-publish", async () => {
         await ok(api, app.root, RETRY_PUBLISH, {
           input: { formKey: seed.key },
@@ -375,16 +377,15 @@ describe("受管定義:續跑先核對現場,重試與發布只處理自己的�
           definitionOf(uiFields),
           draft.createFormVersionDraft.formVersion.draftRevision,
         );
-        const restore = failCheckpointOnce(formHooks, "current-version");
-        const published = await call(api, app.root, PUBLISH, {
-          input: {
-            formKey: seed.key,
-            expectedDraftRevision: saved.draftRevision,
-            changelog: "畫面發布",
-          },
-        });
-        restore();
-        expect(codeOf(published)).toBeDefined();
+        expect(saved.draftRevision).toBe(
+          draft.createFormVersionDraft.formVersion.draftRevision + 1,
+        );
+        await simulateInterruptedPublish(
+          connection,
+          seed.key,
+          "unswitched",
+          "畫面發布",
+        );
       });
 
       const resumed = await runSeeds(app, [seed]);

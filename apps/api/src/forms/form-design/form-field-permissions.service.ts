@@ -27,11 +27,7 @@ import {
   fieldPermissionPrefix,
   parseFieldPermissionKey,
 } from "../form-permission-keys";
-import {
-  isDuplicateKeyError,
-  notFoundError,
-  permissionNotDeletableError,
-} from "../forms-error";
+import { notFoundError, permissionNotDeletableError } from "../forms-error";
 import type { DeleteRetiredPermissionInput } from "./dto/form-design.input";
 import { FormPublishHooks } from "./form-publish-hooks";
 import type {
@@ -85,7 +81,7 @@ export class FormFieldPermissionsService {
   ) {}
 
   /**
-   * 發布步驟 3。**每一筆寫入都先看「已經是目標狀態就跳過」**,所以中途失敗後重跑幾次結果都一樣;
+   * 發布步驟 3(在發布的交易內執行)。每一筆寫入都先看「已經是目標狀態就跳過」(重試發布接續舊資料時也一樣);
    * 同 key 欄位跨版本沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
    */
   async syncForVersion(
@@ -150,23 +146,18 @@ export class FormFieldPermissionsService {
       });
       return;
     }
-    try {
-      await this.permissions.create(operator, {
-        key,
-        moduleId,
-        name,
-        enabled: true,
-        isSystem: false,
-        settings: {},
-        source: "dynamic",
-        retiredAt: null,
-      });
-    } catch (error) {
-      // 另一個重試同時建好了同一筆:目標狀態已達成
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-    }
+    // `current` 是同一個交易裡先查的結果(發布是一個交易,TX-04):沒有才建;
+    // 同時有別的發布建了同一筆 → 唯一索引擋下,錯誤往外拋、整個發布回復
+    await this.permissions.create(operator, {
+      key,
+      moduleId,
+      name,
+      enabled: true,
+      isSystem: false,
+      settings: {},
+      source: "dynamic",
+      retiredAt: null,
+    });
   }
 
   /** 這張表單兩種動作的 key 前綴(formKey 不含 `-`,前綴不會誤中別張表單)。 */
