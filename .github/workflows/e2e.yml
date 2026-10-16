@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       # 資料庫走上面的 service container,所以不必下載測試用的 mongod 二進位檔

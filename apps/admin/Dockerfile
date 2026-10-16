@@ -4,7 +4,7 @@
 #     --build-arg VITE_GRAPHQL_ENDPOINT=http://localhost:5001/graphql .
 
 # ---- base ----
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable
 WORKDIR /app
 
