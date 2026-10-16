@@ -76,6 +76,11 @@ class PrinterConnection {
     });
   }
 
+  /** 連線已出錯或關閉。 */
+  get closed(): boolean {
+    return this.failure !== null;
+  }
+
   private wake(): void {
     const waiter = this.waiter;
     this.waiter = null;
@@ -225,7 +230,11 @@ export class TcpPrinterTransport implements PrinterTransport {
       return { ok: false, error: "other", detail: "列印逾時" };
     }
     try {
-      const paper = await this.queryPaper(printer, connection);
+      const paper = await this.queryPaper(
+        printer,
+        connection,
+        () => state.expired,
+      );
       if (paper === "paper-out") {
         connection.destroy();
         return { ok: false, error: "paper-out", detail: "缺紙" };
@@ -244,10 +253,13 @@ export class TcpPrinterTransport implements PrinterTransport {
   private async queryPaper(
     printer: PrintAgentPrinter,
     connection: PrinterConnection,
+    expired: () => boolean = () => false,
   ): Promise<PaperStatus> {
     await connection.write(PAPER_STATUS_REQUEST);
     const byte = await connection.readByte(this.statusTimeoutMs);
-    if (byte === null && !this.silentStatus.has(printer.id)) {
+    // 查到一半撞到總期限(連線被 destroy)或連線斷了:不是「機型不回 DLE EOT」,不記
+    const silent = byte === null && !expired() && !connection.closed;
+    if (silent && !this.silentStatus.has(printer.id)) {
       this.silentStatus.add(printer.id);
       this.options.logger?.warn(
         "收據機沒有回應 DLE EOT 4(查不到缺紙狀態):照常列印;請確認機型是否開啟即時狀態回傳",
