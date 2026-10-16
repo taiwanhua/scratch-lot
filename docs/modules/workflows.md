@@ -215,7 +215,7 @@
 
 admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
-- 顯示用 `@repo/ui/badge`:0 不顯示、超過 99 顯示 `99+`;「待我審核」主色、「我的申請」灰底。側欄(`app/AdminShell/ShellLayout.tsx` 把 `{ "apply-center": myTasks }` 傳給 `SideNav` 的 `badges`)展開時畫數字,收合時只畫小圓點。
+- 顯示用 `@repo/ui/badge`:0 不顯示、超過 99 顯示 `99+`;「待我審核」主色、「我的申請」灰底。側欄的 `myTasks` 走側欄計數登記制(`sidebarBadges` 的 `apply-center` 一筆,見 [前端架構](../concepts/frontend-architecture.md#側欄計數登記制)),展開時畫數字,收合時只畫小圓點。
 - 沒有 `apply-center.view` 的人不發請求。
 - 不輪詢:殼進站取一次、進申請中心(`refetchOnMount: "always"`)與切頁籤各重取一次,其餘靠寫入端失效 —— `useFormSubmissionCache`(送出、修改、刪除、撤回、作廢)、`useWorkflowCache`(決定、重試推進)、阻擋清單的 `useBlockedActions`(改派、新增審核者)都會一併呼叫 `useInvalidateApplyCenterCounts`。
 

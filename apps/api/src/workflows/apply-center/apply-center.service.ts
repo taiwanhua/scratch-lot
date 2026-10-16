@@ -240,7 +240,7 @@ export class ApplyCenterService {
       return { myTasks: 0, myApplications: 0 };
     }
     const [myTasks, myApplications] = await Promise.all([
-      this.tasks.count(tenantId, myTasksFilter(actorId, { done: false })),
+      this.myTaskCount(facts),
       this.boundFormKeys(tenantId).then((boundKeys) =>
         this.store.count(
           tenantId,
@@ -251,6 +251,19 @@ export class ApplyCenterService {
       ),
     ]);
     return { myTasks, myApplications };
+  }
+
+  /**
+   * 待我處理的任務數(`counts` 的 `myTasks`):側欄「申請中心」的數字只要這一項
+   * (登記在 `ApplyCenterBadge`,底座規格 10.4)。
+   */
+  async myTaskCount(facts: FormOperatorFacts): Promise<number> {
+    const tenantId = facts.tenantId;
+    const actorId = facts.operator.actorId;
+    if (tenantId === null || actorId === null) {
+      return 0;
+    }
+    return this.tasks.count(tenantId, myTasksFilter(actorId, { done: false }));
   }
 
   /** 實例詳情:授權同 `canReadSubmissionRevision`(申請人 / 模組讀者 / 任務持有者只看該修訂)。 */

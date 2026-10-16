@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 import type { MeQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 
-import { useApplyCenterCounts } from "@/hooks/base/useApplyCenterCounts";
+import { useSidebarBadges } from "@/hooks/base/useSidebarBadges";
 import {
   buildNavTree,
   enterableRouteMap,
@@ -15,7 +15,6 @@ import {
   normalizePathname,
 } from "@/lib/base/module-tree";
 import { withShellRoutes } from "@/lib/base/shell-routes";
-import { APPLY_CENTER_MODULE_KEY } from "@/pages/base/apply-center/apply-center-keys";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { AppBar } from "./AppBar/AppBar";
@@ -84,12 +83,9 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
       ? undefined
       : pageMinWidths[currentModule.key]) ?? DEFAULT_SHELL_MIN_WIDTH;
   const isNavCollapsed = useSideNavStore((state) => state.isCollapsed);
-  // 側欄「申請中心」右側 = 待我處理的任務數(進站取一次,之後隨送出 / 審核 / 改派等寫入失效重查)
-  const { myTasks } = useApplyCenterCounts();
-  const navBadges = useMemo(
-    () => ({ [APPLY_CENTER_MODULE_KEY]: myTasks }),
-    [myTasks],
-  );
+  // 側欄計數登記制(底座規格 10.4):模組 key → 數字,來自 `sidebarBadges`(只含看得到的模組);
+  // 進站取一次,之後靠 `badge:<模組 key>` 信號重抓(斷線時跟即時通道降級每 60 秒一次)
+  const navBadges = useSidebarBadges();
 
   return (
     <Box

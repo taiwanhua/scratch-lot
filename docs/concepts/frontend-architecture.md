@@ -61,7 +61,19 @@ test/       測試支援
 - **兩種寬度**:展開 240px、收合成 64px 圖示列(`NavRail`)。收合態的群組以浮層展開子項;圖示格的提示就是模組名稱(REACT-10 的例外)。
 - 收合狀態存 localStorage,是這台瀏覽器的偏好,不分使用者。
 - 側欄只有模組樹那一格捲動,底部的收合開關永遠看得到。
-- **待辦數(badges)**:`ShellLayout` 傳入「模組 key → 數字」,數字大於 0 才顯示;展開態畫數字(`@repo/ui/badge`)、收合態畫小圓點。目前只有申請中心一項:待我處理的任務數,來自 `applyCenterCounts`(`hooks/base/useApplyCenterCounts.ts`)。沒有申請中心檢視權限時不發請求。進站取一次,之後由送出、審核、改派、撤回、作廢、刪除這些寫入主動失效重查,不輪詢。
+- **側欄計數(badges)採登記制**:`ShellLayout` 把「模組 key → 數字」傳給 `SideNav`,數字大於 0 才顯示;展開態畫數字(`@repo/ui/badge`,超過 99 顯示 `99+`)、收合態畫小圓點,手機抽屜沿用展開態。數字一律來自 `sidebarBadges`(`hooks/base/useSidebarBadges.ts`),前端不寫死任何模組。
+
+#### 側欄計數登記制
+
+| 環節     | 做法                                                                                                                                                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 登記     | api 的功能模組(底座或專案)匯入 `SidebarBadgesModule`,在 `onModuleInit` 呼叫 `SidebarBadgeRegistry.registerBadge({ moduleKey, count(operator) })`;模組 key 空白或重複 → app 起不來                                                                               |
+| 查詢     | `sidebarBadges: [{ moduleKey, count }]` 一次回傳登入者看得到的所有模組;「看得到」= 持有 `<模組 key>.view`(含同層 `*`,與 `@RequirePermission` 同一個判斷)。沒權限的模組不回傳;某一筆計算失敗只略過那一筆並記 log                                                 |
+| 送出信號 | 數字變了,寫入端在交易後呼叫 `RealtimePublisher.publishBadge(tenantId, moduleKey, userIds)`,對那些人送 `badge:<模組 key>`(一次 `/publish` 帶多個 `user:` 頻道);每天才變的計數由專案排程每天送一次                                                                |
+| 重抓     | 底座的信號登記 `badge:*`(`app/base/realtime-signals.ts`,結尾 `:*` 是前綴登記)收所有 `badge:<模組 key>` → 重抓 `sidebarBadges`;專案新增計數不必在前端登記。連線中不輪詢;斷線時跟 `RealtimeProvider` 每 60 秒重抓、重連後先補抓一次,收到信號約 2.5 秒後再補抓一次 |
+| 本人寫入 | 自己的寫入改變了數字時,由寫入端失效重查(申請中心:`useInvalidateApplyCenterCounts` 同時失效頁籤與側欄的數字)                                                                                                                                                     |
+
+**申請中心**登記為 `apply-center`(`workflows/apply-center/apply-center-badge.ts`):側欄只顯示 `myTasks`(待我處理的任務數);兩個頁籤的數字(含 `myApplications`)繼續用 `applyCenterCounts`(`hooks/base/useApplyCenterCounts.ts`),進申請中心或切頁籤重取到的 `myTasks` 會寫進側欄那一筆,頁籤與側欄不會一新一舊。流程任務建立、結束、改派時,流程引擎對相關審核者送 `badge:apply-center`,同時重抓頁籤與側欄的數字。
 
 ### 內容區的寬度與內距
 

@@ -16,6 +16,7 @@ import { PrintingModule } from "../printing/printing.module";
 import { RealtimeModule } from "../realtime/realtime.module";
 import { RolesModule } from "../roles/roles.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
+import { SidebarBadgesModule } from "../sidebar-badges/sidebar-badges.module";
 import { StorageModule } from "../storage/storage.module";
 import { UserPreferencesModule } from "../user-preferences/user-preferences.module";
 import { UsersModule } from "../users/users.module";
@@ -35,6 +36,7 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "permission", module: PermissionModule },
   { key: "storage", module: StorageModule },
   { key: "realtime", module: RealtimeModule },
+  { key: "sidebar-badges", module: SidebarBadgesModule },
   { key: "orgs", module: OrgsModule },
   { key: "users", module: UsersModule },
   { key: "org-members", module: OrgMembersModule },
