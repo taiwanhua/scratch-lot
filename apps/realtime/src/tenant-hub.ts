@@ -55,11 +55,41 @@ function closeExpired(ws: WebSocket): void {
   ws.close(REALTIME_CLOSE_CODES.ticketExpired, "ticket expired");
 }
 
-/** 對一條連線送出信號:憑證過期就關閉、不推;有訂閱該頻道才推。回傳是否推送。 */
+/**
+ * 寫入連線資料(attachment)。寫不進去(例:超過 Cloudflare 的 16 KB 上限)時記 log、用明確的關閉代碼
+ * 關閉這條連線,不讓錯誤往外拋成 500;回傳是否寫入成功(失敗時呼叫端不再回訊息給這條連線)。
+ */
+function writeAttachment(
+  ws: WebSocket,
+  attachment: ConnectionAttachment,
+): boolean {
+  try {
+    ws.serializeAttachment(attachment);
+    return true;
+  } catch (error) {
+    log(
+      "realtime: 寫入連線資料失敗,關閉連線",
+      attachment.holder,
+      attachment.allowedTopics.length,
+      error,
+    );
+    try {
+      ws.close(REALTIME_CLOSE_CODES.attachmentFailed, "attachment failed");
+    } catch {
+      // 連線已斷:沒有東西要關
+    }
+    return false;
+  }
+}
+
+/**
+ * 對一條連線送出信號:憑證過期就關閉、不推;訂閱了這次送出的任一頻道才推,**同一條連線只推一次**
+ * (訊息的 `topic` 是這條連線訂閱的頻道裡,在送出清單中最前面的那一個)。回傳是否推送。
+ */
 function deliver(
   ws: WebSocket,
-  topic: string,
-  message: RealtimeServerMessage,
+  topics: readonly string[],
+  signal: RealtimeSignal,
   now: number,
 ): boolean {
   const attachment = readAttachment(ws);
@@ -70,10 +100,13 @@ function deliver(
     closeExpired(ws);
     return false;
   }
-  if (!attachment.subscribedTopics.includes(topic)) {
+  const topic = topics.find((candidate) =>
+    attachment.subscribedTopics.includes(candidate),
+  );
+  if (topic === undefined) {
     return false;
   }
-  send(ws, message);
+  send(ws, { op: "signal", topic, signal });
   return true;
 }
 
@@ -106,30 +139,30 @@ export class TenantHub extends DurableObject<RealtimeEnv> {
       WebSocket,
     ];
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment(attachmentFor(ticket));
+    // 寫不進去時 writeAttachment 已關閉連線;照樣回 101,前端收到關閉代碼後照斷線處理
+    writeAttachment(server, attachmentFor(ticket));
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /** 送出信號:推給訂閱該頻道的連線;遇到憑證已過期的連線一律關閉、不推。回傳實際推送的連線數。 */
-  publish(topic: string, signal: RealtimeSignal): number {
+  /**
+   * 送出信號:推給訂閱了任一頻道的連線,同一條連線只推一次;遇到憑證已過期的連線一律關閉、不推。
+   * 回傳實際推送的連線數。
+   */
+  publish(topics: readonly string[], signal: RealtimeSignal): number {
     const now = nowSeconds();
-    const message: RealtimeServerMessage = {
-      op: "signal",
-      topic,
-      signal:
-        signal.id === undefined
-          ? { type: signal.type }
-          : { type: signal.type, id: signal.id },
-    };
+    const clean: RealtimeSignal =
+      signal.id === undefined
+        ? { type: signal.type }
+        : { type: signal.type, id: signal.id };
     let delivered = 0;
     for (const ws of this.ctx.getWebSockets()) {
       // 每條連線各自處理:一條連線出錯(已斷、attachment 壞掉)只略過它,不影響其他連線,`/publish` 也不回 500
       try {
-        if (deliver(ws, topic, message, now)) {
+        if (deliver(ws, topics, clean, now)) {
           delivered += 1;
         }
       } catch (error) {
-        log("realtime: 推送到單一連線失敗,略過", topic, error);
+        log("realtime: 推送到單一連線失敗,略過", topics, error);
       }
     }
     return delivered;
@@ -162,22 +195,27 @@ export class TenantHub extends DurableObject<RealtimeEnv> {
         send(ws, { op: "rejected", reason: "not-allowed" });
         return;
       }
-      if (!attachment.subscribedTopics.includes(message.topic)) {
-        ws.serializeAttachment({
+      if (
+        !attachment.subscribedTopics.includes(message.topic) &&
+        !writeAttachment(ws, {
           ...attachment,
           subscribedTopics: [...attachment.subscribedTopics, message.topic],
-        });
+        })
+      ) {
+        return;
       }
       send(ws, { op: "subscribed", topic: message.topic });
       return;
     }
-    ws.serializeAttachment({
+    const written = writeAttachment(ws, {
       ...attachment,
       subscribedTopics: attachment.subscribedTopics.filter(
         (topic) => topic !== message.topic,
       ),
     });
-    send(ws, { op: "unsubscribed", topic: message.topic });
+    if (written) {
+      send(ws, { op: "unsubscribed", topic: message.topic });
+    }
   }
 
   /**
@@ -203,12 +241,14 @@ export class TenantHub extends DurableObject<RealtimeEnv> {
       send(ws, { op: "rejected", reason: "ticket-mismatch" });
       return;
     }
-    ws.serializeAttachment({
+    const written = writeAttachment(ws, {
       ...next,
       subscribedTopics: attachment.subscribedTopics.filter((topic) =>
         next.allowedTopics.includes(topic),
       ),
     });
-    send(ws, { op: "renewed", exp: next.exp });
+    if (written) {
+      send(ws, { op: "renewed", exp: next.exp });
+    }
   }
 }

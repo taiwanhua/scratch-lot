@@ -2,7 +2,6 @@ import { describe, expect, it } from "@jest/globals";
 
 import { encodeBase64Url, encodeUtf8, signHmac } from "./hmac";
 import {
-  REALTIME_TICKET_MAX_TOPICS,
   REALTIME_TICKET_TTL_SECONDS,
   type RealtimeTicket,
   parseRealtimeTicket,
@@ -114,30 +113,13 @@ describe("訂閱憑證內容形狀", () => {
     expect(parseRealtimeTicket(userTicket({ topics: ["admin"] }))).toBeNull();
   });
 
-  it("頻道最多 50 個:剛好 50 個通過,51 個拒絕", () => {
-    expect(REALTIME_TICKET_MAX_TOPICS).toBe(50);
-    expect(
-      parseRealtimeTicket(userTicket({ topics: boardTopics(50) })),
-    ).not.toBeNull();
-    expect(
-      parseRealtimeTicket(userTicket({ topics: boardTopics(51) })),
-    ).toBeNull();
-  });
-
-  it("頻道超過上限的憑證即使簽章正確也驗不過(malformed)", async () => {
-    const body = encodeBase64Url(
-      encodeUtf8(
-        JSON.stringify(
-          userTicket({
-            topics: boardTopics(51),
-          }),
-        ),
-      ),
-    );
-    const token = `${body}.${await signHmac(SECRET, body)}`;
+  it("頻道數量不設上限:簽章正確的憑證不因頻道多而被拒", async () => {
+    const ticket = userTicket({ topics: boardTopics(51) });
+    expect(parseRealtimeTicket(ticket)).not.toBeNull();
+    const token = await signRealtimeTicket(ticket, SECRET);
     await expect(verifyRealtimeTicket(token, SECRET, NOW)).resolves.toEqual({
-      ok: false,
-      reason: "malformed",
+      ok: true,
+      ticket,
     });
   });
 });

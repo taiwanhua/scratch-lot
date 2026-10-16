@@ -99,13 +99,22 @@ export function publishRaw(
   });
 }
 
-/** 正確簽章的 `/publish`,回傳推送到的連線數。 */
-export async function publish(
+/** 正確簽章的 `/publish`(一次帶單一頻道),回傳推送到的連線數。 */
+export function publish(
   tenantId: string,
   topic: string,
   signal: { type: string; id?: string },
 ): Promise<number> {
-  const body = JSON.stringify({ tenantId, topic, signal });
+  return publishMany(tenantId, [topic], signal);
+}
+
+/** 正確簽章的 `/publish`(一次帶多個頻道),回傳推送到的連線數。 */
+export async function publishMany(
+  tenantId: string,
+  topics: string[],
+  signal: { type: string; id?: string },
+): Promise<number> {
+  const body = JSON.stringify({ tenantId, topics, signal });
   const response = await publishRaw(
     body,
     await signRealtimePublish(body, env.REALTIME_PUBLISH_SECRET),

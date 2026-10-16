@@ -10,20 +10,20 @@ import { isRealtimeSignal, isRealtimeTopic } from "./topic";
 
 describe("信號只有類型與編號", () => {
   it("接受 { type } 與 { type, id }", () => {
-    expect(isRealtimeSignal({ type: "task" })).toBe(true);
+    expect(isRealtimeSignal({ type: "notification" })).toBe(true);
     expect(isRealtimeSignal({ type: "badge:orders", id: "o1" })).toBe(true);
   });
 
   it("夾帶任何其他欄位(資料)→ 不是信號", () => {
-    expect(isRealtimeSignal({ type: "task", data: { count: 3 } })).toBe(false);
-    expect(isRealtimeSignal({ type: "task", id: "1", title: "x" })).toBe(false);
+    expect(isRealtimeSignal({ type: "badge:apply-center", data: { count: 3 } })).toBe(false);
+    expect(isRealtimeSignal({ type: "notification", id: "1", title: "x" })).toBe(false);
   });
 
   it("類型 / 編號格式不對 → 不是信號", () => {
     expect(isRealtimeSignal({ type: "" })).toBe(false);
-    expect(isRealtimeSignal({ type: "Task" })).toBe(false);
-    expect(isRealtimeSignal({ type: "task", id: 1 })).toBe(false);
-    expect(isRealtimeSignal("task")).toBe(false);
+    expect(isRealtimeSignal({ type: "Notification" })).toBe(false);
+    expect(isRealtimeSignal({ type: "notification", id: 1 })).toBe(false);
+    expect(isRealtimeSignal("notification")).toBe(false);
   });
 });
 
@@ -39,43 +39,52 @@ describe("頻道格式", () => {
 });
 
 describe("/publish 請求", () => {
-  it("形狀:tenantId、topic、signal 三個欄位", () => {
+  const signal = { type: "badge:apply-center" };
+
+  it("形狀:tenantId、topics(一次多個頻道)、signal 三個欄位", () => {
     expect(
       isRealtimePublishRequest({
         tenantId: "t1",
-        topic: "user:u1",
-        signal: { type: "task" },
+        topics: ["user:u1", "user:u2", "board:b1"],
+        signal,
       }),
     ).toBe(true);
     expect(
       isRealtimePublishRequest({
         tenantId: "t1",
-        topic: "user:u1",
-        signal: { type: "task" },
+        topics: ["user:u1"],
+        signal,
         payload: {},
       }),
     ).toBe(false);
     // tenantId 與憑證同一套識別格式(isRealtimeId):格式錯或超過長度上限都拒絕
     for (const tenantId of ["t 1", "", "t".repeat(129)]) {
       expect(
-        isRealtimePublishRequest({
-          tenantId,
-          topic: "user:u1",
-          signal: { type: "task" },
-        }),
+        isRealtimePublishRequest({ tenantId, topics: ["user:u1"], signal }),
       ).toBe(false);
     }
     expect(
       isRealtimePublishRequest({
         tenantId: "t1",
-        topic: "user:u1",
-        signal: { type: "task", data: 1 },
+        topics: ["user:u1"],
+        signal: { type: "notification", data: 1 },
       }),
     ).toBe(false);
   });
 
+  it("topics 必須是不重複、格式正確的非空陣列(舊的單一 topic 欄位不再接受)", () => {
+    for (const topics of [[], ["user:u1", "user:u1"], ["tenant:t1"], "user:u1"]) {
+      expect(isRealtimePublishRequest({ tenantId: "t1", topics, signal })).toBe(
+        false,
+      );
+    }
+    expect(
+      isRealtimePublishRequest({ tenantId: "t1", topic: "user:u1", signal }),
+    ).toBe(false);
+  });
+
   it("簽章對原始 body 驗證;改一個字或缺簽章都不通過", async () => {
-    const body = JSON.stringify({ tenantId: "t1", topic: "user:u1" });
+    const body = JSON.stringify({ tenantId: "t1", topics: ["user:u1"] });
     const signature = await signRealtimePublish(body, "publish-secret");
     await expect(
       verifyRealtimePublish(body, signature, "publish-secret"),
