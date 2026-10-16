@@ -2614,6 +2614,15 @@
     "forbidden": "You don't have permission to view the user list",
     "disabled": "Disabled"
   },
+  "orgTreeSelect": {
+    "search": "Search organizations",
+    "empty": "No organizations to choose from",
+    "noMatch": "No matching organizations",
+    "limitCount": "{count} selected / up to {max}",
+    "limitReached": "You can choose up to {max}",
+    "outOfScope": "Outside your management scope",
+    "confirm": "Done"
+  },
   "seedExport": {
     "action": "Export project settings",
     "title": "Export project settings",

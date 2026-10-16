@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Tree } from "@repo/ui/tree";
 
@@ -9,6 +9,8 @@ import {
   filterOrgTree,
   toTreeNodes,
 } from "@/lib/base/org-tree";
+
+import { OrgDisabledReason } from "./OrgDisabledReason";
 
 export interface OrgTreePickerProps {
   /** `orgTree` 查詢的結果(範圍外節點已標 `outOfScope`,本元件轉成 disabled) */
@@ -29,12 +31,19 @@ export interface OrgTreePickerProps {
    * (範圍外)不同 —— 鎖住的節點仍然是選取結果的一部分。
    */
   lockedIds?: readonly string[];
+  /**
+   * 停用 + 原因:列在裡面的節點整個停用(不能選),節點右側顯示原因文字,滑過顯示完整原因
+   * (例「已由 王小明 對應」;專案的一對一對應把已占用的組織停用並註明)。
+   * 與 `lockedIds` 不同 —— 這裡的節點不是選取結果的一部分,只是「看得到、選不了」。
+   */
+  disabledReasons?: Readonly<Partial<Record<string, string>>>;
   maxHeight?: number | string;
   "aria-label"?: string;
 }
 
 /**
- * 組織樹選擇器(使用者管理 #139 的左側篩選樹與「選擇所屬組織」彈窗、組織管理 #138 共用,STRUCT-02)。
+ * 組織樹選擇器(使用者管理 #139 的左側篩選樹與「選擇所屬組織」彈窗、組織管理 #138、
+ * 欄位型的 `OrgTreeSelect` 共用,STRUCT-02)。
  * 預設整棵展開:展開狀態由「使用者收合過哪些節點」反推(REACT-06:不在 effect 內 setState,
  * 資料載入後新節點自動是展開的)。
  */
@@ -47,18 +56,45 @@ export const OrgTreePicker = ({
   keyword = "",
   labelSuffixOf,
   lockedIds,
+  disabledReasons,
   maxHeight,
   "aria-label": ariaLabel,
 }: OrgTreePickerProps) => {
   const [collapsedIds, setCollapsedIds] = useState<readonly string[]>([]);
+
+  /** 原有的附加標籤後面再接停用原因;兩者都沒有的節點維持 undefined(不畫空的附加區)。 */
+  const suffixOf = useCallback(
+    (node: OrgNodeLike) => {
+      const suffix = labelSuffixOf?.(node);
+      const reason = disabledReasons?.[node.id];
+      return reason === undefined ? (
+        suffix
+      ) : (
+        <>
+          {suffix}
+          <OrgDisabledReason reason={reason} />
+        </>
+      );
+    },
+    [labelSuffixOf, disabledReasons],
+  );
+  const disabledIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(disabledReasons ?? {}).flatMap(([id, reason]) =>
+          reason === undefined ? [] : [id],
+        ),
+      ),
+    [disabledReasons],
+  );
 
   const visibleNodes = useMemo(
     () => filterOrgTree(nodes, keyword),
     [nodes, keyword],
   );
   const items = useMemo(
-    () => toTreeNodes(visibleNodes, labelSuffixOf),
-    [visibleNodes, labelSuffixOf],
+    () => toTreeNodes(visibleNodes, suffixOf, disabledIds),
+    [visibleNodes, suffixOf, disabledIds],
   );
   const expandedIds = useMemo(
     () => allOrgIds(visibleNodes).filter((id) => !collapsedIds.includes(id)),

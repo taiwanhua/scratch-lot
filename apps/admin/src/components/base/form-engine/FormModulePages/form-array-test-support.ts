@@ -1,4 +1,3 @@
-import { afterEach, jest } from "@jest/globals";
 import { screen, within } from "@testing-library/react";
 
 import type { ArrayColumnDef, FormDefinition } from "@repo/domain/form";
@@ -150,29 +149,3 @@ export const linesTable = () => screen.getByRole("table", { name: "明細" });
 /** 表格第 `index` 列(0 起算,不含表頭)。 */
 export const lineRow = (index: number) =>
   within(linesTable()).getAllByRole("row")[index + 1];
-
-/**
- * 模擬手機寬(< sm):`matchMedia` 替身讓 `max-width` 查詢成立;測試結束還原(jsdom 本來沒有 `matchMedia`)。
- */
-export const restoreViewportAfterEach = (): void => {
-  afterEach(() => {
-    Reflect.deleteProperty(globalThis, "matchMedia");
-  });
-};
-
-export const setMobileViewport = (): void => {
-  Object.defineProperty(globalThis, "matchMedia", {
-    configurable: true,
-    writable: true,
-    value: (query: string) => ({
-      matches: query.includes("max-width"),
-      media: query,
-      onchange: null,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      dispatchEvent: () => false,
-    }),
-  });
-};
