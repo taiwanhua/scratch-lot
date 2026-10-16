@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import type { AuthSession } from "@/lib/auth/session";
+import type { AuthSession } from "@/lib/base/auth/session";
 
 import { formModuleOptions } from "../module-pages";
 import { AppProviders } from "./AppProviders";

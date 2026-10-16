@@ -14,12 +14,12 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { FormRenderer } from "@/components/form-engine/FormRenderer/FormRenderer";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { definitionOf } from "@/lib/form-engine/definition";
-import { liveContextOf } from "@/lib/form-engine/expression-context";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
+import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf } from "@/lib/base/form-engine/definition";
+import { liveContextOf } from "@/lib/base/form-engine/expression-context";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { DesignerPreview } from "./DesignerPreview";
 import type { DesignerMode } from "./DesignerToolbar";

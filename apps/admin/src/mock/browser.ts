@@ -1,6 +1,6 @@
 import { setupWorker } from "msw/browser";
 
-import { GRAPHQL_ENDPOINT } from "@/lib/graphql";
+import { GRAPHQL_ENDPOINT } from "@/lib/base/graphql";
 import { TEST_GRAPHQL_ENDPOINT } from "@/test/msw/server";
 
 import type { MockView } from "./mock-fixtures";

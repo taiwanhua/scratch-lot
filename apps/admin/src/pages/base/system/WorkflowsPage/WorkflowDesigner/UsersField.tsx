@@ -6,7 +6,7 @@ import { Autocomplete } from "@repo/ui/autocomplete";
 import {
   type UserCandidate,
   useUserCandidates,
-} from "@/components/UserPicker/useUserCandidates";
+} from "@/components/base/UserPicker/useUserCandidates";
 
 export interface UsersFieldProps {
   /** 定義裡存的只有 id */

@@ -7,7 +7,7 @@ import {
   useOrgMembersQuery,
 } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import {
   type OrgManagerErrorCode,

@@ -5,8 +5,8 @@ import { Alert } from "@repo/ui/alert";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useRouteTabItemLabel } from "@/hooks/useRouteTabItemLabel";
-import type { ModulePageProps } from "@/lib/module-tree";
+import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { DemoForm } from "./DemoForm";
 import { demoErrorOf } from "./demo-error";

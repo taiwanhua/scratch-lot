@@ -3,8 +3,8 @@ import { useState } from "react";
 
 import { useFieldCategoriesQuery, useFieldsQuery } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import { FIELD_MANAGER_PERMISSIONS } from "./field-manager-permissions";
 import type { FieldCategoryLike, FieldOptionLike } from "./field-manager-types";

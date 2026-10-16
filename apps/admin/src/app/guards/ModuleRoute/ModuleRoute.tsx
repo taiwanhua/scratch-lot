@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useMe } from "@/hooks/useMe";
+import { useMe } from "@/hooks/base/useMe";
 import {
   type ModulePageProps,
   buildNavTree,
@@ -13,7 +13,7 @@ import {
   firstLinkRoute,
   matchModuleRoute,
   normalizePathname,
-} from "@/lib/module-tree";
+} from "@/lib/base/module-tree";
 
 import { ForbiddenPage } from "../ForbiddenPage";
 import { ModulePage } from "./ModulePage";

@@ -7,7 +7,7 @@ import { AppThemeProvider } from "@repo/ui/app-theme-provider";
 import { Dialog } from "@repo/ui/dialog";
 import { defaultBrand } from "@repo/ui/theme";
 
-import { useSnackbarStore } from "@/stores/useSnackbarStore";
+import { useSnackbarStore } from "@/stores/base/useSnackbarStore";
 
 import { SnackbarProvider } from "./SnackbarProvider";
 

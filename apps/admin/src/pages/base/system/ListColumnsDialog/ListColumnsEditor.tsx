@@ -19,14 +19,17 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { type FormError, formErrorOf } from "@/lib/form-engine/form-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import {
+  type FormError,
+  formErrorOf,
+} from "@/lib/base/form-engine/form-errors";
 import {
   LIST_COLUMN_WIDTH,
   type ListColumnSpec,
   SUMMARY_SLOTS,
-} from "@/lib/form-engine/list-columns";
+} from "@/lib/base/form-engine/list-columns";
 
 import { ListColumnRow } from "./ListColumnRow";
 import { useListColumnCandidates } from "./useListColumnCandidates";

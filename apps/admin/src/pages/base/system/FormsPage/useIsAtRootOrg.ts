@@ -1,6 +1,6 @@
 import type { FormFieldsFragment } from "@repo/graphql";
 
-import { useMe } from "@/hooks/useMe";
+import { useMe } from "@/hooks/base/useMe";
 
 /** 根組織專屬(`isRootOnly`)的模組:租戶的 `me.modules` 裡根本沒有它們(ADR-0009 / ADR-0011)。 */
 const ROOT_ONLY_MODULE_KEYS = new Set([

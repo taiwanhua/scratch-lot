@@ -13,8 +13,8 @@ import {
   useSaveRoleMatrixMutation,
 } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 import {
   allMatrixRowIds,
   isSameGrant,
@@ -22,7 +22,7 @@ import {
   nextGrantFromSelection,
   outOfCeilingMatrixRowIds,
   ungrantedMatrixRowIds,
-} from "@/lib/role-matrix-208";
+} from "@/lib/base/role-matrix-208";
 
 import {
   type RoleManagerErrorCode,
@@ -44,7 +44,7 @@ export interface UseRoleMatrixOptions {
  * 權限矩陣的狀態(#208;規則正本 ADR-0004 + `docs/modules/role-manager.md`「權限矩陣規則」)。
  *
  * **連動一律呼叫 `@repo/domain/permission`**:本 hook 只保管「使用者改過的那份授予」,
- * 勾選換算、`*` 收斂 / 展開、整組切換全部交給純函式(`lib/role-matrix-208.ts` 是它的薄殼)。
+ * 勾選換算、`*` 收斂 / 展開、整組切換全部交給純函式(`lib/base/role-matrix-208.ts` 是它的薄殼)。
  *
  * 草稿連同 roleId 一起存,換角色時**推導**成「沒有草稿」而不是在 effect 內清空(REACT-06);
  * 未儲存時換角色會先被放棄變更彈窗攔下,所以正常情況不會丟掉東西。

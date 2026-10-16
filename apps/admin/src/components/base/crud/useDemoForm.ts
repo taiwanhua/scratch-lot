@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 
 import { type DemoError, demoErrorOf } from "./demo-error";
 import type {

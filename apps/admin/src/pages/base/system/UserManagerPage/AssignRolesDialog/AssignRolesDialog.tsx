@@ -9,9 +9,9 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
-import { isEligibleForRole, orgTrailIndex } from "@/lib/role-eligibility";
-import { roleGroupNameOf, shouldGroupRoles } from "@/lib/role-options";
+import { useSession } from "@/hooks/base/useSession";
+import { isEligibleForRole, orgTrailIndex } from "@/lib/base/role-eligibility";
+import { roleGroupNameOf, shouldGroupRoles } from "@/lib/base/role-options";
 
 import type { UserManagerErrorCode } from "../user-manager-error";
 import type { UserRow } from "../user-manager-types";

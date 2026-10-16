@@ -13,8 +13,8 @@ import {
   nextDesignId,
   toDesignDefinition,
   toFormDefinition,
-} from "@/lib/form-engine/design-definition";
-import type { DesignerReport } from "@/lib/form-engine/designer-issues";
+} from "@/lib/base/form-engine/design-definition";
+import type { DesignerReport } from "@/lib/base/form-engine/designer-issues";
 import {
   type PlaceTarget,
   type RemoveSectionMode,
@@ -28,7 +28,7 @@ import {
   renameSection,
   setFieldSpan,
   updateField,
-} from "@/lib/form-engine/designer-ops";
+} from "@/lib/base/form-engine/designer-ops";
 
 import { type RegexCheckStatus, useRegexSafety } from "./useRegexSafety";
 
@@ -77,7 +77,7 @@ export interface DesignerState {
 
 /**
  * 設計器的草稿狀態(初始值由外層 gate 後帶進 `useState` 初始化器,REACT-08)。
- * 載入時給每個欄位配內部 id(`design-definition.ts`),所有改動都走 `lib/form-engine/designer-ops.ts`
+ * 載入時給每個欄位配內部 id(`design-definition.ts`),所有改動都走 `lib/base/form-engine/designer-ops.ts`
  * 的純函式、以 id 找欄位;**刪欄位只動草稿**,引用處交給檢查器報錯。
  */
 export const useDesignerState = (initial: FormDefinition): DesignerState => {

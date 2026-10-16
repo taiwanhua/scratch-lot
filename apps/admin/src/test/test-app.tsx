@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router";
 
 import { RootProviders } from "../app/providers/RootProviders";
 import { AppRoutes } from "../app/routes";
-import type { AuthSession } from "../lib/auth/session";
+import type { AuthSession } from "../lib/base/auth/session";
 import { LocationProbe } from "./location-probe";
 
 export interface TestAppProps {

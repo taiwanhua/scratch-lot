@@ -8,9 +8,9 @@ import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useWorkflowDraftStore } from "@/stores/useWorkflowDraftStore";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useWorkflowDraftStore } from "@/stores/base/useWorkflowDraftStore";
 
 import {
   WORKFLOWS_BLOCKED_PAGE_KEY,

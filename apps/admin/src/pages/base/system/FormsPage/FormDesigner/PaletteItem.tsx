@@ -3,7 +3,7 @@ import { useDraggable } from "@dnd-kit/core";
 import type { FieldType } from "@repo/domain/form";
 import { Button } from "@repo/ui/button";
 
-import { paletteId } from "@/lib/form-engine/design-ids";
+import { paletteId } from "@/lib/base/form-engine/design-ids";
 
 export interface PaletteItemProps {
   type: FieldType;

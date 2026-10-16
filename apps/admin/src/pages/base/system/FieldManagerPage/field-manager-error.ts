@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 import type { FieldManagerErrorCode } from "./field-manager-types";
 
@@ -30,7 +30,7 @@ type RefinedForbiddenReason = (typeof REFINED_FORBIDDEN_REASONS)[number];
 const isRefinedReason = (reason: unknown): reason is RefinedForbiddenReason =>
   (REFINED_FORBIDDEN_REASONS as readonly unknown[]).includes(reason);
 
-/** 共用形狀(`lib/errors.ts`);本頁只看 `code`(細分的 reason 已折進 `code`)。 */
+/** 共用形狀(`lib/base/errors.ts`);本頁只看 `code`(細分的 reason 已折進 `code`)。 */
 export type FieldManagerError = AdminError<FieldManagerErrorCode, never>;
 
 export const fieldManagerErrorOf = (error: unknown): FieldManagerError =>

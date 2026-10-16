@@ -5,7 +5,7 @@ import type { FormDefinition, RegexSafetyCheck } from "@repo/domain/form";
 
 // recheck 的懶載入換成可控的替身:測「載入中 / 載入失敗」兩態,也確認沒有正則時根本不載
 const loadRegexSafety = jest.fn<() => Promise<RegexSafetyCheck>>();
-jest.unstable_mockModule("@/lib/form-engine/regex-safety-loader", () => ({
+jest.unstable_mockModule("@/lib/base/form-engine/regex-safety-loader", () => ({
   loadRegexSafety,
 }));
 const { useRegexSafety } = await import("./useRegexSafety");

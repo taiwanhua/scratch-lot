@@ -5,8 +5,8 @@ import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { SAMPLE_ONE_I18N } from "../demo-sample-one-config";
 import { changedFieldsOf, historyActionKeyOf } from "../demo-sample-one-view";

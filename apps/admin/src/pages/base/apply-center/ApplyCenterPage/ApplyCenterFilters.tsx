@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import type { ApplicableModule } from "@/hooks/useApplicableForms";
+import type { ApplicableModule } from "@/hooks/base/useApplicableForms";
 
 const ALL = "";
 

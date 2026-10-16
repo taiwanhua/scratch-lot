@@ -2,9 +2,9 @@
  * 模組說明的三份來源在檔案系統上的樣子(`check-help-bundle.mjs` 與它的測試共用):
  * 哪三個目錄、各有哪些 `<moduleKey>.help.md`,以及「檔案層」就看得出來的問題。
  *
- * 執行期的合成與驗證在 `src/lib/module-help.ts` 的 `composeHelpRegistry`(那份吃的是 Vite glob 的產物);
+ * 執行期的合成與驗證在 `src/lib/base/module-help.ts` 的 `composeHelpRegistry`(那份吃的是 Vite glob 的產物);
  * 這裡是 build 後、部署前的那一道:碰撞留到瀏覽器才丟錯就太晚了,所以新增撞底座、替換不存在的底座說明
- * 也在這裡擋。目錄的對應要與 `src/lib/help-registry.ts` 的三個 glob 一致。
+ * 也在這裡擋。目錄的對應要與 `src/lib/base/help-registry.ts` 的三個 glob 一致。
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -87,7 +87,7 @@ export const readHelpSources = (helpRoot) => {
         : "";
       if (key === "") {
         problems.push(
-          `${relativePath} 的檔名不是 <moduleKey>${HELP_SUFFIX},不會被收進 bundle(lib/help-registry.ts 的 glob 只認這個命名)`,
+          `${relativePath} 的檔名不是 <moduleKey>${HELP_SUFFIX},不會被收進 bundle(lib/base/help-registry.ts 的 glob 只認這個命名)`,
         );
         continue;
       }

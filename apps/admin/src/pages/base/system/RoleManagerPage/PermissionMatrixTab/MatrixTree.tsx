@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Tree, type TreeNode } from "@repo/ui/tree";
 import { Typography } from "@repo/ui/typography";
 
-import type { MatrixSelection } from "@/lib/role-matrix-208";
+import type { MatrixSelection } from "@/lib/base/role-matrix-208";
 
 import type { MatrixModuleView } from "../role-manager-types";
 
@@ -101,7 +101,7 @@ export interface MatrixTreeProps {
 /**
  * 權限矩陣的樹(Figma 57:142 的列;元件能力見 `@repo/ui/tree` 的 PermissionMatrix story):
  * 模組列粗體、其下先列自己這層的權限(「全部(*)」在最前)再列子模組,縮排照 Figma 用 24。
- * 三態與「不可取消」都由呼叫端算好餵進來(`lib/role-matrix-208.ts`),`Tree` 只負責呈現。
+ * 三態與「不可取消」都由呼叫端算好餵進來(`lib/base/role-matrix-208.ts`),`Tree` 只負責呈現。
  * 預設整棵展開:展開狀態由「使用者收合過哪些節點」反推(REACT-06)。
  */
 export const MatrixTree = ({

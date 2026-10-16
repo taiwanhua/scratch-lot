@@ -8,8 +8,8 @@ import {
   definitionFingerprint,
   parseFlow,
   toDefinition,
-} from "@/lib/workflow/flow-model";
-import type { FlowOpResult } from "@/lib/workflow/flow-ops";
+} from "@/lib/base/workflow/flow-model";
+import type { FlowOpResult } from "@/lib/base/workflow/flow-ops";
 
 /** 與上次存檔比對的字串:節點 / 連線排序後比(陣列順序不同但圖一樣 = 沒改)。 */
 const fingerprintOf = definitionFingerprint;

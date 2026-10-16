@@ -5,9 +5,9 @@ import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 export interface RetireWorkflowDialogProps {
   workflowKey: string;

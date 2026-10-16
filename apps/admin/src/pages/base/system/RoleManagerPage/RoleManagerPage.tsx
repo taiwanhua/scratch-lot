@@ -9,10 +9,10 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
 
-import { DiscardChangesDialog } from "@/components/DiscardChangesDialog";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
 
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
 import { RoleDetailPanel } from "./RoleDetailPanel/RoleDetailPanel";

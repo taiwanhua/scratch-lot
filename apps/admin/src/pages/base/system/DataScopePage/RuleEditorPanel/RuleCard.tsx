@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { RuleDraft } from "@/lib/data-scope-rule";
+import type { RuleDraft } from "@/lib/base/data-scope-rule";
 
 import type { DataScopeEditorEnv } from "../data-scope-types";
 import { ConditionGroup } from "./ConditionGroup";

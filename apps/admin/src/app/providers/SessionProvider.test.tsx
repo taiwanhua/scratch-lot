@@ -3,8 +3,8 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { useMeQuery } from "@repo/graphql";
 
-import { createAuthSession } from "@/lib/auth/session";
-import { useSessionStore } from "@/stores/useSessionStore";
+import { createAuthSession } from "@/lib/base/auth/session";
+import { useSessionStore } from "@/stores/base/useSessionStore";
 import { authWorld } from "@/test/msw/auth-handlers";
 import { TEST_GRAPHQL_ENDPOINT, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";

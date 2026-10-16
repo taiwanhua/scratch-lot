@@ -1,4 +1,7 @@
-import { type AuthErrorCode, authErrorCodeOf } from "@/lib/auth/graphql-errors";
+import {
+  type AuthErrorCode,
+  authErrorCodeOf,
+} from "@/lib/base/auth/graphql-errors";
 
 /** 登入表單的錯誤文案 key(`admin.login.errors.*`);GQL-04 對照表決定哪個碼顯示什麼。 */
 export type LoginErrorKey =

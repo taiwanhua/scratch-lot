@@ -5,7 +5,7 @@ import type { FormUpgradePlanQuery } from "@repo/graphql";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TypedValueInput } from "@/components/form-engine/TypedValueInput/TypedValueInput";
+import { TypedValueInput } from "@/components/base/form-engine/TypedValueInput/TypedValueInput";
 
 export type UpgradePlan = FormUpgradePlanQuery["formUpgradePlan"];
 

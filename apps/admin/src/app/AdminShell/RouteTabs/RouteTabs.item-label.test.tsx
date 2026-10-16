@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { readStoredEntries, routeTabsStorageKey } from "@/lib/route-tabs";
+import { readStoredEntries, routeTabsStorageKey } from "@/lib/base/route-tabs";
 import {
   SAMPLE_ONE_ROUTES,
   VIEW_ONLY,

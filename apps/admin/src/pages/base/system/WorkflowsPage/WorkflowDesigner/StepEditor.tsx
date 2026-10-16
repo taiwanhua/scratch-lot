@@ -14,10 +14,10 @@ import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { JsonPreview } from "@/components/JsonPreview";
-import { ExpressionPicker } from "@/components/form-engine/ExpressionPicker/ExpressionPicker";
-import { conditionFieldsOf } from "@/lib/form-engine/expression-options";
-import type { DropTarget } from "@/lib/workflow/flow-ops";
+import { JsonPreview } from "@/components/base/JsonPreview";
+import { ExpressionPicker } from "@/components/base/form-engine/ExpressionPicker/ExpressionPicker";
+import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
+import type { DropTarget } from "@/lib/base/workflow/flow-ops";
 
 import { AssigneeSourcePicker } from "./AssigneeSourcePicker";
 import type { CatalogForm, CatalogRole } from "./useDesignerCatalog";

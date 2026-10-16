@@ -6,14 +6,14 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { issueKey } from "@/lib/data-scope-issues";
+import { issueKey } from "@/lib/base/data-scope-issues";
 import {
   DATA_SCOPE_GROUP_OPS,
   type GroupDraft,
   type NodeDraft,
   newCondition,
   newGroup,
-} from "@/lib/data-scope-rule";
+} from "@/lib/base/data-scope-rule";
 
 import type { DataScopeEditorEnv } from "../data-scope-types";
 import { ConditionRow } from "./ConditionRow";

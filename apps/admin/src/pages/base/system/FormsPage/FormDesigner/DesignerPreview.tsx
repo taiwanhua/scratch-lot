@@ -11,17 +11,17 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { FormRenderer } from "@/components/form-engine/FormRenderer/FormRenderer";
-import { LookupDialog } from "@/components/form-engine/LookupDialog/LookupDialog";
-import { useFillValues } from "@/hooks/useFillValues";
-import { useMe } from "@/hooks/useMe";
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
-import { useTenantTimezone } from "@/hooks/useTenantTimezone";
-import { liveContextOf } from "@/lib/form-engine/expression-context";
-import { OPEN_PERMISSIONS } from "@/lib/form-engine/field-states";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
-import { summaryDateTypeOf } from "@/lib/form-engine/tab-label";
+import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
+import { LookupDialog } from "@/components/base/form-engine/LookupDialog/LookupDialog";
+import { useFillValues } from "@/hooks/base/useFillValues";
+import { useMe } from "@/hooks/base/useMe";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { liveContextOf } from "@/lib/base/form-engine/expression-context";
+import { OPEN_PERMISSIONS } from "@/lib/base/form-engine/field-states";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
+import { summaryDateTypeOf } from "@/lib/base/form-engine/tab-label";
 
 export interface DesignerPreviewProps {
   formKey: string;

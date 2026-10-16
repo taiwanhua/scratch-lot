@@ -9,7 +9,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { OrgNodeLike, OrgOption } from "@/lib/org-tree";
+import type { OrgNodeLike, OrgOption } from "@/lib/base/org-tree";
 
 import type {
   DataScopeRuleData,

@@ -25,9 +25,9 @@ import { SegmentedControl } from "@repo/ui/segmented-control";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
-import { LOGIN_PATH } from "@/lib/paths";
-import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useSession } from "@/hooks/base/useSession";
+import { LOGIN_PATH } from "@/lib/base/paths";
+import { useLocaleStore } from "@/stores/base/useLocaleStore";
 
 /** 觸發鈕的頭像(theme.spacing 單位;Figma AdminAppBar avatar 32)。 */
 const AVATAR_SIZE = 4;

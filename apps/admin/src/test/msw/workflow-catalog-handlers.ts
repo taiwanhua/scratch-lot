@@ -8,7 +8,7 @@ import {
   type UsersQueryVariables,
 } from "@repo/graphql";
 
-import { rawOf } from "@/lib/form-engine/definition";
+import { rawOf } from "@/lib/base/form-engine/definition";
 
 import { formFragment } from "./form-fixtures";
 import { api } from "./server";

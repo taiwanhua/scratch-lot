@@ -10,7 +10,7 @@ import {
 } from "@repo/domain/form";
 import { useFormVersionQuery, useFormsQuery } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 /**
  * lookup 來源的「可挑的表單 / 欄位」(Spec 6a §5「lookup 來源」;表 A:類別與表單 / 欄位**用下拉選**,不打字)。

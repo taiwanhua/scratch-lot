@@ -5,9 +5,9 @@ import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 export interface DeleteDraftDialogProps {
   formKey: string;

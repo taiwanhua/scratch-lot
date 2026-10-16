@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { routeTabsStorageKey } from "@/lib/route-tabs";
+import { routeTabsStorageKey } from "@/lib/base/route-tabs";
 import { authWorld, overviewModule, testUser } from "@/test/msw/auth-handlers";
 import {
   sampleTwoModules,

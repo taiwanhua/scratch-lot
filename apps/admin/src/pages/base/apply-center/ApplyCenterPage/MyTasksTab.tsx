@@ -13,10 +13,10 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Tag, type TagTone } from "@repo/ui/tag";
 
-import type { ApplicableModule } from "@/hooks/useApplicableForms";
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { useMyTasks } from "@/hooks/useMyTasks";
-import { useTemporalText } from "@/hooks/useTemporalText";
+import type { ApplicableModule } from "@/hooks/base/useApplicableForms";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useMyTasks } from "@/hooks/base/useMyTasks";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { APPLY_CENTER_VIEW_PAGE_KEY } from "../apply-center-keys";
 import { ApplyCenterFilters } from "./ApplyCenterFilters";

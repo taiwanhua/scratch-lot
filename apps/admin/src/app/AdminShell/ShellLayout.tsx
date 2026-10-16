@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 import type { MeQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 
-import { useApplyCenterCounts } from "@/hooks/useApplyCenterCounts";
+import { useApplyCenterCounts } from "@/hooks/base/useApplyCenterCounts";
 import {
   buildNavTree,
   enterableRouteMap,
@@ -13,9 +13,9 @@ import {
   firstLinkRoute,
   matchModuleRoute,
   normalizePathname,
-} from "@/lib/module-tree";
+} from "@/lib/base/module-tree";
 import { APPLY_CENTER_MODULE_KEY } from "@/pages/base/apply-center/apply-center-keys";
-import { useSideNavStore } from "@/stores/useSideNavStore";
+import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { AppBar } from "./AppBar/AppBar";
 import { RouteTabs } from "./RouteTabs/RouteTabs";

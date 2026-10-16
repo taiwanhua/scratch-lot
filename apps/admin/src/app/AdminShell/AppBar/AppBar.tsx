@@ -2,7 +2,7 @@ import type { MeQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Typography } from "@repo/ui/typography";
 
-import type { ShellModule } from "@/lib/module-tree";
+import type { ShellModule } from "@/lib/base/module-tree";
 
 import { HelpButton } from "./HelpButton";
 import { OrgSwitcher } from "./OrgSwitcher";

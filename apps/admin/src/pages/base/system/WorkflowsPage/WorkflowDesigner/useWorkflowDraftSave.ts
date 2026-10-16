@@ -7,14 +7,14 @@ import {
   useSaveWorkflowVersionDraftMutation,
 } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { definitionInputOf } from "@/lib/workflow/definition";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionInputOf } from "@/lib/base/workflow/definition";
 import {
   type WorkflowError,
   workflowErrorOf,
-} from "@/lib/workflow/workflow-errors";
-import { useWorkflowDraftStore } from "@/stores/useWorkflowDraftStore";
+} from "@/lib/base/workflow/workflow-errors";
+import { useWorkflowDraftStore } from "@/stores/base/useWorkflowDraftStore";
 
 export interface WorkflowDraftSaveInput {
   workflowKey: string;

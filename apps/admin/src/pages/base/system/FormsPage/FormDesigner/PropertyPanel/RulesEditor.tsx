@@ -14,17 +14,17 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 
-import { ExpressionPicker } from "@/components/form-engine/ExpressionPicker/ExpressionPicker";
-import { TypedValueInput } from "@/components/form-engine/TypedValueInput/TypedValueInput";
-import { useTenantTimezone } from "@/hooks/useTenantTimezone";
-import type { PropertySections } from "@/lib/form-engine/property-sections";
+import { ExpressionPicker } from "@/components/base/form-engine/ExpressionPicker/ExpressionPicker";
+import { TypedValueInput } from "@/components/base/form-engine/TypedValueInput/TypedValueInput";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import type { PropertySections } from "@/lib/base/form-engine/property-sections";
 import {
   UPLOAD_TYPE_GROUPS,
   type UploadTypeGroupKey,
   acceptOfGroups,
   acceptedGroupsOf,
-} from "@/lib/form-engine/upload-types";
-import { scalarText } from "@/lib/form-engine/value-text";
+} from "@/lib/base/form-engine/upload-types";
+import { scalarText } from "@/lib/base/form-engine/value-text";
 
 export interface RulesEditorProps {
   field: FieldDef;

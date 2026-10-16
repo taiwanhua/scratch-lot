@@ -3,8 +3,8 @@ import { useState } from "react";
 
 import { useMeQuery, useModuleTreeQuery } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import { findModuleNode, firstModuleId } from "./module-admin-tree";
 import { MODULE_MANAGER_PERMISSIONS } from "./module-manager-permissions";

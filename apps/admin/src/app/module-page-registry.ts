@@ -3,13 +3,13 @@ import type { ComponentType } from "react";
 import {
   formModulePageKeys,
   formModulePages,
-} from "@/components/form-engine/FormModulePages/form-module-pages";
+} from "@/components/base/form-engine/FormModulePages/form-module-pages";
 import {
   type FormModuleOptions,
   type FormModuleOptionsRegistry,
   composeFormModuleOptions,
-} from "@/lib/form-engine/form-module-options";
-import type { ModulePageProps } from "@/lib/module-tree";
+} from "@/lib/base/form-engine/form-module-options";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import type { ShellMinWidth } from "./AdminShell/shell-geometry";
 import type { ModulePageRegistry } from "./guards/ModuleRoute/ModuleRoute";

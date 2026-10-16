@@ -25,7 +25,7 @@ import {
   type UpdateFormSubmissionMutationVariables,
 } from "@repo/graphql";
 
-import { rawOf } from "@/lib/form-engine/definition";
+import { rawOf } from "@/lib/base/form-engine/definition";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import { type MockSubmission, submissionFragment } from "./form-fixtures";

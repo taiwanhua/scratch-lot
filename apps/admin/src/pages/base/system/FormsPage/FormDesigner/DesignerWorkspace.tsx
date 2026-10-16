@@ -10,21 +10,21 @@ import {
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 
-import { JsonPreview } from "@/components/JsonPreview";
-import { useSession } from "@/hooks/useSession";
-import { definitionOf, rawOf } from "@/lib/form-engine/definition";
-import type { DesignSection } from "@/lib/form-engine/design-definition";
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
+import { JsonPreview } from "@/components/base/JsonPreview";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf, rawOf } from "@/lib/base/form-engine/definition";
+import type { DesignSection } from "@/lib/base/form-engine/design-definition";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
 import {
   fieldById,
   fieldKeyProblemOf,
   sectionCols,
   spanOf,
-} from "@/lib/form-engine/designer-ops";
+} from "@/lib/base/form-engine/designer-ops";
 import {
   fieldReferences,
   sectionReferences,
-} from "@/lib/form-engine/field-references";
+} from "@/lib/base/form-engine/field-references";
 
 import { ComponentPalette } from "./ComponentPalette";
 import { DeleteFieldDialog } from "./DeleteFieldDialog";

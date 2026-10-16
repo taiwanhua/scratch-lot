@@ -6,7 +6,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
 
 import type { DefinitionSettingsPatch } from "../useDesignerState";
 import { PrefillEditor } from "./PrefillEditor";

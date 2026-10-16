@@ -2,7 +2,7 @@ import { useTranslations } from "use-intl";
 
 import { Typography } from "@repo/ui/typography";
 
-import { useMe } from "@/hooks/useMe";
+import { useMe } from "@/hooks/base/useMe";
 
 import { ShellLayout } from "./ShellLayout";
 import type { ShellMinWidth } from "./shell-geometry";

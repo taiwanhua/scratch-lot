@@ -9,10 +9,10 @@ import {
   useUsersQuery,
 } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { type OrgNodeLike, flattenOrgs } from "@/lib/org-tree";
-import { roleMenuOptions, sortRolesByOwnerOrg } from "@/lib/role-options";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { type OrgNodeLike, flattenOrgs } from "@/lib/base/org-tree";
+import { roleMenuOptions, sortRolesByOwnerOrg } from "@/lib/base/role-options";
 
 import {
   DATA_SCOPE_PERMISSIONS,

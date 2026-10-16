@@ -12,13 +12,16 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { type FormError, formErrorOf } from "@/lib/form-engine/form-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import {
+  type FormError,
+  formErrorOf,
+} from "@/lib/base/form-engine/form-errors";
 import {
   useDesignerDraftStore,
   useIsDesignerDirty,
-} from "@/stores/useDesignerDraftStore";
+} from "@/stores/base/useDesignerDraftStore";
 
 export interface PublishDialogProps {
   formKey: string;

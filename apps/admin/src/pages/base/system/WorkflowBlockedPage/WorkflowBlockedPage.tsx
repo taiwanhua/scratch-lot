@@ -16,10 +16,10 @@ import { Table } from "@repo/ui/table";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { RetryAdvanceButton } from "@/components/workflow/ApprovalSection/RetryAdvanceButton";
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
+import { RetryAdvanceButton } from "@/components/base/workflow/ApprovalSection/RetryAdvanceButton";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { WORKFLOWS_MODULE_KEY } from "../workflows-permissions";
 import { AssignUserDialog } from "./AssignUserDialog";

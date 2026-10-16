@@ -6,8 +6,8 @@ import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 
-import { DiscardChangesDialog } from "@/components/DiscardChangesDialog";
-import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
+import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
 
 import { DemoTextField, DemoUploadField } from "./DemoFormFields";
 import { hasFieldError } from "./demo-error";

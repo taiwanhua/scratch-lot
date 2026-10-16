@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { UploadPurpose, useCreateUploadUrlMutation } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 /**
  * 商標上傳(ADR-0010 的三步,編輯組織與開通租戶共用):

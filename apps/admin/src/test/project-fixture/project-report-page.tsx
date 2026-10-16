@@ -1,4 +1,4 @@
-import type { ModulePageProps } from "../../lib/module-tree";
+import type { ModulePageProps } from "../../lib/base/module-tree";
 
 /** 測試專案新增的頁面:只印得出「這是專案頁」與殼傳進來的模組名。 */
 export const ProjectReportPage = ({ module }: ModulePageProps) => (

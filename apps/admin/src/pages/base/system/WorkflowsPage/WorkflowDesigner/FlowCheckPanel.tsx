@@ -6,8 +6,8 @@ import { List, ListItemButton, ListItemText } from "@repo/ui/list";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { definitionFingerprint } from "@/lib/workflow/flow-model";
-import type { WorkflowError } from "@/lib/workflow/workflow-errors";
+import { definitionFingerprint } from "@/lib/base/workflow/flow-model";
+import type { WorkflowError } from "@/lib/base/workflow/workflow-errors";
 
 import type { FlowCheckResult } from "./useFlowCheck";
 

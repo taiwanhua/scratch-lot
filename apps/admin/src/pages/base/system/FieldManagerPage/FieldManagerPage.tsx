@@ -10,8 +10,8 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 
 import { CategoryFormDialog } from "./CategoryFormDialog/CategoryFormDialog";
 import { CategoryListPanel } from "./CategoryListPanel";
