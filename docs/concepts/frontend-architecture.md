@@ -8,7 +8,7 @@
 | -------------- | ---------------------------------------------------------------------- |
 | 跨元件狀態     | zustand(`stores/`);context 只做注入(theme、QueryClient、Intl、session) |
 | 伺服器資料     | 只走 TanStack Query(`@repo/graphql` 的 codegen hooks)                  |
-| URL 表達得了的 | 放 URL(admin 例外見 REACT-02)                                          |
+| URL 表達得了的 | 放 URL;admin 一律經 `useUrlState`(REACT-14)                            |
 | 檔名           | 元件 `PascalCase.tsx`、hook `useXxx.ts`、其餘 kebab-case               |
 | 一檔一元件     | 有子元件才開同名資料夾;不用 `index.ts` barrel                          |
 | 寫法           | 箭頭函數;props 用 `export interface XxxProps`                          |
@@ -162,19 +162,42 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 判準:它是不是一個網址。
 
-| 種類     | 是什麼                             | 規則                                                                                             |
-| -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 路由頁籤 | 殼的 `RouteTabs`;一個網址一個      | 與路由防守同一個比對;以完整網址去重;關閉切相鄰;sessionStorage 以使用者分 key 保留;進不去的被剔除 |
-| 頁內頁籤 | `@repo/ui/tabs`;同一網址內切換區塊 | 不是路由、不進頁籤列、狀態不進 URL                                                               |
+| 種類     | 是什麼                        | 規則                                                                                             |
+| -------- | ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| 路由頁籤 | 殼的 `RouteTabs`;一個網址一個 | 與路由防守同一個比對;以完整網址去重;關閉切相鄰;sessionStorage 以使用者分 key 保留;進不去的被剔除 |
+| 頁內分頁 | `PageTabs`;同一網址內切換區塊 | 不是路由、不進頁籤列;目前分頁記在網址參數(`?tab=`),重新整理、分享網址都回到同一頁                |
 
 - 帶識別碼的詳情 / 編輯頁是**詳情子頁籤**:每筆一個,標籤「所屬模組名 — 項目名」。項目名由頁面拿到資料後經 `useRouteTabItemLabel` 提供,殼不查業務資料。
 - 項目名最前面接頁面種類(「檢視・項目名」「編輯・項目名」),同一筆的詳情與編輯分得出來。組法是字典 `admin.formEngine.pages.tabLabelWithAction`,文字是 `admin.formEngine.pages.actions`:
   - 固定欄位模組:頁面把頁面種類傳給 `useRouteTabItemLabel` 的第二個參數(`"view"` / `"edit"`),由它組。
   - 表單模組與申請中心詳情:項目名由頁籤模板算出(`lib/base/form-engine/tab-label.ts` 的 `renderTabLabel`,模板沒寫 `{{action}}` 時自動接在最前面),呼叫端傳組好的字串、不給第二個參數;見 `docs/modules/forms.md`。
 - 刪除成功後,那一筆的詳情與編輯子頁籤一起關掉(以 `<隱藏頁路由>/<id>` 網址前綴比對,別筆不動):在詳情頁刪除 → 導向所屬模組的列表頁(沒綁列表頁 → 導向 `/`,與關掉最後一個頁籤的落點一致);從列表刪除 → 當前頁籤不變。做法是 `useRouteTabsStore` 的 `closeItemTabs`,各刪除流程成功後經 `hooks/base/useCloseItemTabs` 呼叫,不自己導向列表。
-- 要能分享、重整回得來、出現在頁籤列 → 做成(隱藏頁)路由。只是同一筆資料的不同面向 → 頁內頁籤。
+- 要出現在頁籤列、有自己的網址 → 做成(隱藏頁)路由。只是同一頁的不同面向 → 頁內分頁。
 
 正本:`apps/admin/src/lib/base/route-tabs.ts`、`apps/admin/src/stores/base/useRouteTabsStore.ts`、`apps/admin/src/app/AdminShell/RouteTabs/useRouteTabs.ts`、`apps/admin/src/hooks/base/useRouteTabItemLabel.ts`、`apps/admin/src/hooks/base/useCloseItemTabs.ts`
+
+## 頁面狀態放網址(useUrlState)與頁內分頁(PageTabs)
+
+任何頁面都能用,不限有頁內分頁的頁面。新頁面一律用 `useUrlState`,不自行讀寫 `useSearchParams`(REACT-14)。
+
+| 項目       | 做法                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 介面       | `useUrlState(key, schema)` 回 `[值, 寫入]`;寫入可給新值或 `(目前值) => 新值`                                                       |
+| 一個 key   | 一包值:物件寫 JSON(`?list={"status":"done","page":2}`),字串直接寫(`?tab=mine`);同一頁對應不同 API 的區塊用不同 key                 |
+| 驗證與預設 | zod schema,預設值寫在 schema 的 `.default(…)`;網址沒有這個 key、或被改壞(JSON 壞掉、值不合 schema)時回預設值,不報錯                |
+| 寫入       | `replace`,不堆上一頁紀錄;寫回預設值時 key 從網址拿掉;經 react-router 的 navigate,`useLocation` 讀到的網址與畫面一致                |
+| 套件       | `nuqs`(adapter `nuqs/adapters/react-router/v8`),由 `app/providers/RootProviders.tsx` 最外層的 `NuqsAdapter` 接上;頁面不直接用 nuqs |
+
+放與不放網址的判準見 REACT-14 的表:篩選、關鍵字、排序、頁碼、頁內分頁、打開的詳情放;未存的輸入、敏感資料、大量勾選、暫時性介面狀態不放。
+
+**`PageTabs`**(`components/base/PageTabs/`)建在 `@repo/ui/tabs` 上,只多兩件事:
+
+- **目前分頁記在網址**:內部用 `useUrlState`,預設 key 是 `tab`(同一頁有兩組分頁時用 `urlKey` 換);網址上的分頁不存在或看不到時顯示第一個看得到的分頁,不寫回網址。
+- **分頁權限**:分頁設 `permission`,`hasPermission` 不成立就不顯示;只剩一個分頁時不顯示分頁籤、直接顯示內容(右側動作 `actions` 仍在);一個都看不到時整個不渲染。
+
+只有選到的分頁內容會掛載。放不下時分頁籤維持單列、橫向捲動:還有分頁的那一側顯示漸層 + ‹ / ›(點了捲一段),捲到底的那一側兩者都消失;選到的分頁(含從網址打開)自動捲進可視範圍。捲動是 `@repo/ui/tabs` 的 `scrollable`,窄寬同一行為。與殼的 `RouteTabs` 無關。
+
+正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`、`packages/ui/src/Tabs/Tabs.tsx`、`docs/standards/react/components.md` REACT-14
 
 ## 頁內權限判斷
 

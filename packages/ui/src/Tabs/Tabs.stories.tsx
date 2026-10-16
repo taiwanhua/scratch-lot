@@ -38,3 +38,31 @@ export const WithDisabled: Story = {
 
 /** `value` 指到不存在的頁籤時整列都不選中(資料剛換掉的瞬間)。 */
 export const NoneSelected: Story = { args: { value: "gone" } };
+
+/**
+ * Figma BS-15b `260:68369`:放不下時單列橫向捲動,還有頁籤的那一側顯示漸層 + ‹ / ›;
+ * 選中的頁籤(`修訂紀錄`)一開始就捲進可視範圍。外框模擬窄卡片。
+ */
+export const Scrollable: Story = {
+  args: {
+    scrollable: true,
+    value: "history",
+    items: [
+      { value: "basic", label: "基本資料" },
+      { value: "contact", label: "聯絡資訊" },
+      { value: "contract", label: "合約" },
+      { value: "files", label: "附件" },
+      { value: "review", label: "審核紀錄" },
+      { value: "history", label: "修訂紀錄" },
+      { value: "system", label: "系統資訊" },
+    ],
+    "aria-label": "客戶分頁",
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 420 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
