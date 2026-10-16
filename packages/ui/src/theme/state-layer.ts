@@ -12,6 +12,11 @@ export interface StateLayerOptions {
   tone?: StateLayerTone;
   /** 已選取:常駐 selected 圖層 + 1px main 邊框 */
   selected?: boolean;
+  /**
+   * 已選取用的色系;預設同 `tone`。白底元件的選取要用主色時給 `primary`
+   * (MUI 清單 / 表格列的選取做法:滑過仍是灰,選取疊主色,例 `MonthCalendar` 的已選日期)
+   */
+  selectedTone?: StateLayerTone;
 }
 
 /** 1px 內框:用 inset 陰影畫,不佔版面,選取 / 滑過時元素不會位移。 */
@@ -34,27 +39,35 @@ const layer = (color: string) => `linear-gradient(${color}, ${color})`;
  */
 export const stateLayerSx = (
   theme: Theme,
-  { tone = "grey", selected = false }: StateLayerOptions = {},
+  {
+    tone = "grey",
+    selected = false,
+    selectedTone = tone,
+  }: StateLayerOptions = {},
 ): CSSObject => {
   const { palette } = theme.vars ?? theme;
-  const main = tone === "grey" ? palette.grey[500] : palette[tone].main;
+  const mainOf = (t: StateLayerTone) =>
+    t === "grey" ? palette.grey[500] : palette[t].main;
+  const main = mainOf(tone);
+  const selectedMain = mainOf(selectedTone);
   const hoverLayer = layer(theme.alpha(main, palette.action.hoverOpacity));
+  const pressedLayer = layer(theme.alpha(main, palette.action.selectedOpacity));
   const selectedLayer = layer(
-    theme.alpha(main, palette.action.selectedOpacity),
+    theme.alpha(selectedMain, palette.action.selectedOpacity),
   );
   const resting = selected ? [selectedLayer] : [];
   return {
     cursor: "pointer",
     backgroundImage: resting.length > 0 ? resting.join(", ") : "none",
-    boxShadow: selected ? ring(main) : "none",
+    boxShadow: selected ? ring(selectedMain) : "none",
     "@media (hover: hover)": {
       "&:hover": {
         backgroundImage: [hoverLayer, ...resting].join(", "),
-        boxShadow: ring(main),
+        boxShadow: ring(selected ? selectedMain : main),
       },
     },
     "&:active": {
-      backgroundImage: [selectedLayer, ...resting].join(", "),
+      backgroundImage: [pressedLayer, ...resting].join(", "),
     },
     "&:focus-visible": {
       outline: `2px solid ${palette.action.focus}`,

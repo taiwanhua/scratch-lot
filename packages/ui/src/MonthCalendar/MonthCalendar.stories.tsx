@@ -47,12 +47,15 @@ const ControlledCalendar = (props: MonthCalendarProps) => {
   );
 };
 
-/** 只顯示(selectionMode 預設 none):今天畫圓底,點日期不選取。 */
+/** 只顯示(selectionMode 預設 none):今天的日期數字畫成主色實心圓,點日期不選取。 */
 export const Default: Story = {};
 
-/** 單選:點一天選定,再點另一天就換成另一天(Figma Draft/MonthCalendar 48:360 的已選格)。 */
+/**
+ * 單選:點一天選定,再點另一天就換成另一天。已選日期疊 `primary.main` × `selectedOpacity`
+ * + 1px `primary.main` 框(Figma Draft/MonthCalendar 48:360 的已選格);滑過仍是灰。
+ */
 export const SingleSelection: Story = {
-  args: { selectionMode: "single", selectedDates: ["2026-10-16"] },
+  args: { selectionMode: "single", selectedDates: ["2026-10-20"] },
 };
 
 /** 多選:點一下選取 / 取消;每週左側整週勾選框(Figma BS-23 260:6356)。 */
@@ -124,6 +127,19 @@ export const Narrow: Story = {
       </Box>
     ),
   ],
+};
+
+/**
+ * [今天] 按鈕(`showTodayButton`,預設關):放在換月表頭右側,只在 `showHeader` 開時出現。
+ * 這裡從 2026 年 12 月開始,點 [今天] 回到今天所在的 10 月;顯示的已是當月時按鈕停用。
+ */
+export const WithTodayButton: Story = {
+  args: {
+    month: "2026-12",
+    showTodayButton: true,
+    selectionMode: "single",
+    selectedDates: ["2026-10-20"],
+  },
 };
 
 /** 不顯示內建表頭:換月由使用的頁面自己提供。 */

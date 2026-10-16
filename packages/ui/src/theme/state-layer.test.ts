@@ -43,4 +43,16 @@ describe("stateLayerSx(《底座規格》10.11)", () => {
     expect(active.backgroundImage).toContain("selectedOpacity");
     expect(focus.outline).toContain("action-focus");
   });
+
+  it("selectedTone:白底元件滑過仍是灰,已選取疊主色並加主色框", () => {
+    const sx = stateLayerSx(theme, { selected: true, selectedTone: "primary" });
+    const hover = (sx["@media (hover: hover)"] as Record<string, unknown>)[
+      "&:hover"
+    ] as Record<string, string>;
+
+    expect(sx.backgroundImage).toContain("primary-main");
+    expect(sx.boxShadow).toContain("primary-main");
+    expect(hover.backgroundImage).toContain("grey-500");
+    expect(hover.boxShadow).toContain("primary-main");
+  });
 });

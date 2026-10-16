@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { Box } from "../Box/Box";
+import { Button } from "../Button/Button";
 import { IconButton } from "../IconButton/IconButton";
 import { Typography } from "../Typography/Typography";
 import { ChevronLeftIcon } from "../icons/ChevronLeftIcon";
@@ -14,15 +15,23 @@ export interface MonthCalendarHeaderProps {
   nextMonthLabel: string;
   onPrev: () => void;
   onNext: () => void;
+  /** [今天] 按鈕(選用);沒給就不顯示 */
+  todayButton?: {
+    label: ReactNode;
+    /** 顯示的已是今天所在的月份 */
+    disabled: boolean;
+    onClick: () => void;
+  };
 }
 
-/** 換月表頭「◀ 2026 年 11 月 ▶」(Figma Draft/MonthCalendar 48:360 的上緣)。 */
+/** 換月表頭「◀ 2026 年 11 月 ▶」與右側選用的 [今天](Figma Draft/MonthCalendar 48:360 的上緣)。 */
 export const MonthCalendarHeader = ({
   title,
   prevMonthLabel,
   nextMonthLabel,
   onPrev,
   onNext,
+  todayButton,
 }: MonthCalendarHeaderProps) => (
   <Box sx={{ display: "flex", alignItems: "center", gap: 1, pb: 1 }}>
     <IconButton
@@ -44,5 +53,16 @@ export const MonthCalendarHeader = ({
     >
       <ChevronRightIcon fontSize="small" />
     </IconButton>
+    {todayButton === undefined ? null : (
+      <Button
+        variant="outlined"
+        size="small"
+        disabled={todayButton.disabled}
+        onClick={todayButton.onClick}
+        sx={{ ml: "auto" }}
+      >
+        {todayButton.label}
+      </Button>
+    )}
   </Box>
 );
