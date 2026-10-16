@@ -2622,6 +2622,8 @@
     "limitCount": "已選 {count} / 上限 {max}",
     "limitReached": "最多選 {max} 個",
     "outOfScope": "不在你的管理範圍內",
+    "disabledOrg": "已停用",
+    "loadFailed": "組織清單載入失敗,請稍後再試。",
     "confirm": "確定"
   },
   "seedExport": {

@@ -1,132 +1,23 @@
 import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { HttpResponse } from "msw";
-import { useState } from "react";
 
-import { authWorld } from "@/test/msw/auth-handlers";
 import { tenantTree } from "@/test/msw/org-fixtures";
 import type { TestOrgNode } from "@/test/msw/org-manager-handlers";
-import { api, server } from "@/test/msw/server";
-import { renderApp } from "@/test/render";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
-import { OrgTreeSelect, type OrgTreeSelectProps } from "./OrgTreeSelect";
+import {
+  checkboxOf,
+  field,
+  fieldRoot,
+  node,
+  openPanel,
+  renderSelect,
+  rowOf,
+  treeLabels,
+  valueText,
+} from "./org-tree-select-test-support";
 
 restoreViewportAfterEach();
-
-/** 形狀同 api 的 `orgTree`(樹根 `parentId` 為 null、葉節點 `children: []`,TEST-12) */
-const node = (
-  id: string,
-  name: string,
-  parentId: string | null,
-  overrides: Partial<TestOrgNode> = {},
-): TestOrgNode => ({
-  id,
-  name,
-  parentId,
-  enabled: true,
-  outOfScope: false,
-  ownerUserId: null,
-  children: [],
-  ...overrides,
-});
-
-/** Figma Draft/OrgTreeSelect 的示範樹:示範公司 > 北區(A 店、B 店)、南區(C 店) */
-const demoTree: TestOrgNode[] = [
-  node("org-co", "示範公司", null, {
-    ownerUserId: "user-owner",
-    children: [
-      node("org-north", "北區", "org-co", {
-        children: [
-          node("org-a", "A 店", "org-north"),
-          node("org-b", "B 店", "org-north"),
-        ],
-      }),
-      node("org-south", "南區", "org-co", {
-        children: [node("org-c", "C 店", "org-south")],
-      }),
-    ],
-  }),
-];
-
-type HarnessProps = Omit<OrgTreeSelectProps, "value" | "onChange" | "label"> & {
-  initial?: readonly string[];
-};
-
-/** 受控外殼:把選取結果寫在畫面上,斷言「送出去的是什麼」 */
-const Harness = ({ initial = [], ...props }: HarnessProps) => {
-  const [value, setValue] = useState<readonly string[]>(initial);
-  return (
-    <>
-      <OrgTreeSelect
-        label="組織"
-        value={value}
-        onChange={setValue}
-        {...props}
-      />
-      <output data-testid="value">{value.join(",")}</output>
-    </>
-  );
-};
-
-const renderSelect = (
-  props: HarnessProps = {},
-  orgTree: TestOrgNode[] = demoTree,
-) => {
-  server.use(
-    ...authWorld({ hasRefreshCookie: true }).handlers,
-    api.query("OrgTree", () => HttpResponse.json({ data: { orgTree } })),
-  );
-  return renderApp({ path: "/overview", extra: <Harness {...props} /> });
-};
-
-type User = ReturnType<typeof renderSelect>["user"];
-
-const field = () => screen.getByRole("combobox", { name: "組織" });
-const valueText = () => screen.getByTestId("value").textContent;
-
-/** 打開面板,回傳搜尋框 */
-const openPanel = async (user: User) => {
-  await user.click(field());
-  return screen.findByRole("textbox", { name: "搜尋組織" });
-};
-
-/** 欄位外框(多選的標籤在裡面);面板開著時欄位被 modal 標成 aria-hidden,所以帶 `hidden` */
-const fieldRoot = (): HTMLElement => {
-  const root = screen
-    .getByRole("combobox", { name: "組織", hidden: true })
-    .closest<HTMLElement>(".MuiInputBase-root");
-  if (root === null) {
-    throw new Error("找不到欄位外框");
-  }
-  return root;
-};
-
-const rowOf = (label: string): HTMLElement => {
-  const row = screen
-    .getAllByRole("treeitem")
-    .find((item) => item.textContent.startsWith(label));
-  if (row === undefined) {
-    throw new Error(`找不到「${label}」這一列`);
-  }
-  return row;
-};
-
-/** 某一列自己的勾選框(DOM 上是該列的第一個 input) */
-const checkboxOf = (label: string): HTMLInputElement => {
-  const box = rowOf(label).querySelector<HTMLInputElement>(
-    "input[type='checkbox']",
-  );
-  if (box === null) {
-    throw new Error(`「${label}」這一列沒有勾選框`);
-  }
-  return box;
-};
-
-const treeLabels = () =>
-  screen
-    .getAllByRole("treeitem")
-    .map((item) => item.querySelector(".MuiTreeItem-label")?.textContent);
 
 describe("OrgTreeSelect", () => {
   it("點欄位:打開欄位下方的浮動面板,搜尋框取得焦點", async () => {
@@ -160,15 +51,15 @@ describe("OrgTreeSelect", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("輸入關鍵字:樹只留符合的節點與它們的祖先,祖先照常顯示", async () => {
+  it("輸入關鍵字:樹留下命中的節點與它的祖先、子樹,其餘隱藏", async () => {
     const { user } = renderSelect();
     const search = await openPanel(user);
     await screen.findByText("A 店");
 
-    await user.type(search, "A 店");
+    await user.type(search, "北區");
 
     await waitFor(() => {
-      expect(treeLabels()).toEqual(["示範公司", "北區", "A 店"]);
+      expect(treeLabels()).toEqual(["示範公司", "北區", "A 店", "B 店"]);
     });
   });
 
@@ -297,8 +188,9 @@ describe("OrgTreeSelect", () => {
       "租戶 A",
       "A-1 內容組",
       "A-1-1 編輯組",
-      "A-2 台北分店",
-      "A-2-1 門市櫃台",
+      // 停用的分店照常列出,名稱後帶「已停用」標籤
+      "A-2 台北分店已停用",
+      "A-2-1 門市櫃台已停用",
     ]);
     const tree = screen.getByRole("tree");
     expect(within(tree).queryByText("平台根組織")).toBeNull();

@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { Alert } from "@repo/ui/alert";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { OrgTreePicker } from "@/components/base/OrgTreePicker/OrgTreePicker";
 import {
+  type OrgLabelSuffix,
   type OrgNodeLike,
   allOrgIds,
   filterOrgTree,
@@ -17,6 +19,9 @@ export interface OrgTreeSelectPanelProps {
   label: string;
   nodes: readonly OrgNodeLike[];
   isLoading: boolean;
+  /** `orgTree` 查詢失敗:顯示錯誤,不要誤報成「沒有可選的組織」 */
+  isError: boolean;
+  labelSuffixOf?: OrgLabelSuffix;
   value: readonly string[];
   isMultiSelect: boolean;
   maxCount?: number;
@@ -36,6 +41,8 @@ export const OrgTreeSelectPanel = ({
   label,
   nodes,
   isLoading,
+  isError,
+  labelSuffixOf,
   value,
   isMultiSelect,
   maxCount,
@@ -73,8 +80,9 @@ export const OrgTreeSelectPanel = ({
       const picked = ids.at(0);
       if (picked !== undefined) {
         onChange([picked]);
-        onClose();
       }
+      // 再點一次已選的節點(MUI 回空陣列或不變)也只是「選這個」:一樣關閉
+      onClose();
       return;
     }
     // 鍵盤或連點繞過停用勾選框時,超過上限的新增一律不收
@@ -90,6 +98,8 @@ export const OrgTreeSelectPanel = ({
   };
 
   const emptyText = nodes.length === 0 ? t("empty") : t("noMatch");
+  const isShowingEmpty = !isError && !isLoading && !hasMatch;
+  const isShowingTree = !isError && !isShowingEmpty;
 
   return (
     <Stack spacing={1.5}>
@@ -103,11 +113,13 @@ export const OrgTreeSelectPanel = ({
           setKeyword(event.target.value);
         }}
       />
-      {!isLoading && !hasMatch ? (
+      {isError && <Alert severity="error">{t("loadFailed")}</Alert>}
+      {isShowingEmpty && (
         <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
           {emptyText}
         </Typography>
-      ) : (
+      )}
+      {isShowingTree && (
         <OrgTreePicker
           nodes={nodes}
           isLoading={isLoading}
@@ -117,6 +129,7 @@ export const OrgTreeSelectPanel = ({
           onSelectedIdsChange={handleSelectedIdsChange}
           lockedIds={lockedIds}
           disabledReasons={disabledReasons}
+          labelSuffixOf={labelSuffixOf}
           maxHeight={maxHeight}
           aria-label={label}
         />

@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { useOrgTreeQuery } from "@repo/graphql";
@@ -7,11 +7,12 @@ import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Popover } from "@repo/ui/popover";
+import { Tag } from "@repo/ui/tag";
 
 import { useSession } from "@/hooks/base/useSession";
-import { type OrgOption, flattenOrgs } from "@/lib/base/org-tree";
+import { type OrgNodeLike, flattenOrgs } from "@/lib/base/org-tree";
 
-import { OrgTreeSelectField } from "./OrgTreeSelectField";
+import { OrgTreeSelectField, type SelectedOrg } from "./OrgTreeSelectField";
 import { OrgTreeSelectPanel } from "./OrgTreeSelectPanel";
 
 export interface OrgTreeSelectProps {
@@ -45,6 +46,8 @@ const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
  *
  * - **候選 = 操作者的管理範圍**:自己查 `orgTree`(api 只回管理範圍內的組織,#187),
  *   呼叫端不必、也不能另給一份清單。
+ * - **組織本身停用(`enabled: false`)照常可選**,樹上帶「已停用」標籤提示。
+ * - **已選但樹上沒有的組織**(管理範圍外,api 不回):欄位顯示「不在你的管理範圍內」,可以取消,計入上限。
  * - **停用有兩種來源**:範圍外(`outOfScope`,現況 api 不回、恆為 false,留著相容)與呼叫端的
  *   `disabledReasons`(例:專案的一對一對應把已占用的分店停用並註明「已由 王小明 對應」)。
  *   已選的組織之後變成停用時,欄位上的標籤仍在、可以取消,但在樹上勾不回來。
@@ -88,13 +91,27 @@ export const OrgTreeSelect = ({
     }),
     [orgs, disabledReasons, t],
   );
+  /**
+   * 欄位上的已選組織。樹上找不到的 id(管理範圍外,api 根本不回)顯示成「不在你的管理範圍內」,
+   * 仍可取消,數量與上限計數一致;`orgTree` 還在載入時先不顯示,免得每個都閃一下範圍外。
+   */
   const selected = useMemo(
-    () =>
-      value.flatMap((id): OrgOption[] => {
-        const org = orgs.find((item) => item.id === id);
-        return org === undefined ? [] : [org];
-      }),
-    [orgs, value],
+    (): SelectedOrg[] =>
+      orgTree.isPending
+        ? []
+        : value.map((id) => {
+            const org = orgs.find((item) => item.id === id);
+            return org === undefined
+              ? { id, name: t("outOfScope"), isOutOfScope: true }
+              : { id, name: org.name, isOutOfScope: false };
+          }),
+    [orgTree.isPending, orgs, value, t],
+  );
+  /** 停用的組織照常可選,只在樹上帶「已停用」標籤(同組織管理頁) */
+  const labelSuffixOf = useCallback(
+    (node: OrgNodeLike) =>
+      node.enabled ? undefined : <Tag tone="error" label={t("disabledOrg")} />,
+    [t],
   );
 
   const close = () => {
@@ -106,6 +123,8 @@ export const OrgTreeSelect = ({
       label={label}
       nodes={nodes}
       isLoading={orgTree.isLoading}
+      isError={orgTree.isError}
+      labelSuffixOf={labelSuffixOf}
       value={value}
       isMultiSelect={isMultiSelect}
       maxCount={maxCount}
