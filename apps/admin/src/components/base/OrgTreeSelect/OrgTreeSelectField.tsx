@@ -5,12 +5,17 @@ import { ChevronDownIcon } from "@repo/ui/icons";
 import { Tag } from "@repo/ui/tag";
 import { TextField } from "@repo/ui/text-field";
 
-import type { OrgOption } from "@/lib/base/org-tree";
+/** 欄位上的一個已選組織;`isOutOfScope` = 樹上找不到(管理範圍外),`name` 已換成提示文字 */
+export interface SelectedOrg {
+  id: string;
+  name: string;
+  isOutOfScope: boolean;
+}
 
 export interface OrgTreeSelectFieldProps {
   label: string;
-  /** 已選的組織(依 `value` 的順序;樹上找不到的 id 不顯示) */
-  selected: readonly OrgOption[];
+  /** 已選的組織(依 `value` 的順序;樹上找不到的 id 以「不在你的管理範圍內」顯示) */
+  selected: readonly SelectedOrg[];
   isMultiSelect: boolean;
   isOpen: boolean;
   helperText?: ReactNode;
