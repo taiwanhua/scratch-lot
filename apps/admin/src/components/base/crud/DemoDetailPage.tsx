@@ -12,6 +12,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
@@ -65,11 +66,13 @@ export const DemoDetailPage = <
   useRouteTabItemLabel(item?.name, "view");
   const closeItemTabs = useCloseItemTabs();
 
+  const tabHref = useRouteTabHref();
+  /** 回列表帶回列表頁籤記下的條件;進某一筆(編輯頁)是新的網址,不帶參數。 */
   const goTo = (route: string | null, id?: string) => {
     if (route === null) {
       return;
     }
-    void navigate(id === undefined ? route : `${route}/${id}`);
+    void navigate(id === undefined ? tabHref(route) : `${route}/${id}`);
   };
 
   /** `useDelete` 只收 `{ onSuccess(): void; … }`,所以回饋在這一層自己報一次(#376)。 */

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
@@ -19,6 +19,8 @@ export interface PageTabsProps {
   actions?: ReactNode;
   /** 使用者切換分頁後(網址已寫入)通知呼叫端,例:切頁籤時重取數字 */
   onChange?: (value: string) => void;
+  /** 分頁列與內容之間的間距(theme.spacing 單位);預設 2 */
+  spacing?: number;
 }
 
 /**
@@ -35,17 +37,27 @@ export const PageTabs = ({
   "aria-label": ariaLabel,
   actions,
   onChange,
+  spacing = 2,
 }: PageTabsProps) => {
   const { visibleItems, current, select } = usePageTabs(items, urlKey);
+  const idBase = useId();
+  const tabId = (value: string) => `${idBase}-tab-${value}`;
+  const panelId = (value: string) => `${idBase}-panel-${value}`;
 
   if (current === undefined) {
     return null;
   }
 
   const showTabs = visibleItems.length > 1;
+  // 分頁籤與內容區互相指:tab 的 aria-controls → 內容區,內容區(role="tabpanel")的 aria-labelledby → tab
+  const tabItems = visibleItems.map((item) => ({
+    ...item,
+    id: tabId(item.value),
+    "aria-controls": panelId(item.value),
+  }));
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+    <Stack spacing={spacing} sx={{ flex: 1, minHeight: 0 }}>
       {(showTabs || actions !== undefined) && (
         <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
           {/* minWidth 0:讓分頁列在 flex 裡可以比內容窄,才會出現橫向捲動 */}
@@ -55,7 +67,7 @@ export const PageTabs = ({
                 scrollable
                 aria-label={ariaLabel}
                 value={current.value}
-                items={visibleItems}
+                items={tabItems}
                 onChange={(next) => {
                   select(next);
                   onChange?.(next);
@@ -66,7 +78,23 @@ export const PageTabs = ({
           {actions}
         </Stack>
       )}
-      {current.content}
+      {showTabs ? (
+        <Box
+          role="tabpanel"
+          id={panelId(current.value)}
+          aria-labelledby={tabId(current.value)}
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {current.content}
+        </Box>
+      ) : (
+        current.content
+      )}
     </Stack>
   );
 };

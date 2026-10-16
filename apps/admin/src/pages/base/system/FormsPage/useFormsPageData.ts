@@ -46,7 +46,11 @@ export const useFormsPageData = () => {
   const items: readonly FormFieldsFragment[] = forms.data?.forms.items ?? [];
 
   /** 還沒點過任何一張時預設選第一張(不在 effect 內 setState,REACT-06)。 */
-  const selectedKey = pickedKey ?? items.at(0)?.key ?? null;
+  // 網址上的表單不在清單裡(手改、被收回、已刪除)→ 退回第一張(同流程管理)
+  const selectedKey =
+    pickedKey !== null && items.some((form) => form.key === pickedKey)
+      ? pickedKey
+      : (items.at(0)?.key ?? null);
   const selected = items.find((form) => form.key === selectedKey) ?? null;
 
   const invalidate = async (formKey: string | null) => {

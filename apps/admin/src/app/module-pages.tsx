@@ -3,6 +3,7 @@
 import { projectModulePages } from "@/app/project/module-pages";
 import { projectPageReplacements } from "@/app/project/page-replacements";
 import { projectRealtimeSignals } from "@/app/project/realtime-signals";
+import { projectUrlStateInventory } from "@/app/project/url-state-inventory";
 import { composeRealtimeSignals } from "@/lib/base/realtime/signal-registry";
 
 import { baseModulePages } from "./base/module-pages";
@@ -42,3 +43,13 @@ export const realtimeSignals = composeRealtimeSignals(
   baseRealtimeSignals,
   projectRealtimeSignals,
 );
+
+/**
+ * 專案來源的網址狀態盤點(REACT-14 入口清單):專案的頁面登記 + 換掉的底座頁 + 專案的盤點表。
+ * 只有這支看得到專案來源,入口清單測試從這裡拿,底座的盤點表另外比對底座來源。
+ */
+export const projectUrlStateCoverage = {
+  source: projectModulePages,
+  replacements: projectPageReplacements,
+  inventory: projectUrlStateInventory,
+};

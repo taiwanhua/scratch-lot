@@ -198,7 +198,7 @@ interface CellRenderContext<Row> {
 
 正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`
 
-重新整理、分享網址之後,頁面都要回到同一個狀態;殼的路由頁籤也記「路徑 + 網址參數」,切走再切回來、從側欄點已開著的那一頁,都回到離開時的條件(關掉頁籤再從側欄打開才是預設條件)。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
+重新整理、分享網址之後,頁面都要回到同一個狀態;殼的路由頁籤也記「路徑 + 網址參數」,切走再切回來、從側欄點已開著的那一頁,都回到離開時的條件(關掉頁籤再從側欄打開才是預設條件);頁面內的「返回列表 / 取消 / 存完離開」也經 `useRouteTabHref` 帶回列表頁籤記下的條件,不直接 `navigate(listRoute)`。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
 
 ```ts
 ✅ const listSchema = z.object({ status: z.enum(["all", "done"]), page: z.number().int().min(1) })
@@ -217,12 +217,13 @@ interface CellRenderContext<Row> {
   - **切換需要被攔下**:例如有未存變更時要先確認(設計器的「設計 / 預覽」、版本檢視、角色管理的「權限設定 / 分配使用者」);`PageTabs` 不提供 `onBeforeChange`。不綁在某一筆上的(角色管理)目前分頁仍以 `useUrlState` 記在 `?tab=`。
   - **分頁綁在某一筆資料上**:換一筆資料就該回到第一頁(以 `key={id}` 重來),記在網址反而會讓分頁跟著跑到別筆。
 
-| 放進網址                                | 不放進網址                       |
-| --------------------------------------- | -------------------------------- |
-| 列表的篩選、關鍵字、排序、頁碼          | 表單還沒存的輸入內容             |
-| 報表的期間、分店、報表種類              | 敏感資料(身分證字號、金額明細等) |
-| 頁內分頁(`PageTabs`)                    | 大量資料(例如勾選的大量 id)      |
-| 目前打開的詳情或彈窗(例 `?detail=<id>`) | 暫時性介面狀態(展開、hover 等)   |
+| 放進網址                                                                                     | 不放進網址                                                                                                                                             |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 列表的篩選、關鍵字、排序、頁碼                                                               | 表單還沒存的輸入內容                                                                                                                                   |
+| 報表的期間、分店、報表種類                                                                   | 敏感資料(身分證字號、金額明細等)                                                                                                                       |
+| 頁內分頁(`PageTabs`)                                                                         | 大量資料(例如勾選的大量 id)                                                                                                                            |
+| 目前打開的詳情:主從版面選中的那一筆(例 `?detail=<id>`)、唯讀的檢視彈窗(例 `?dialog=retired`) | 暫時性介面狀態(展開、hover 等)                                                                                                                         |
+|                                                                                              | 編輯、新增、確認類彈窗(刪除 / 停用 / 撤銷):內容是還沒存的輸入或一次性的動作確認,重新整理就該從頭來;放進網址等於分享出去的連結一打開就停在「確定刪除?」 |
 
-- **key 慣例**:列表一包 `list`;主從版面選中的那一筆 `detail`(`hooks/base/useUrlSelectedId`);頁內分頁 `tab`。不用 `view`:mock 開發模式以 `?view=tenant` 切視角。
-- **新頁面要登記進入口清單**(`apps/admin/src/app/url-state-inventory.test.ts`):寫明這一頁放進網址的 key;那支測試也擋掉 `useUrlState` 以外直接讀寫查詢字串的程式。各頁的盤點見 `docs/concepts/frontend-architecture.md`「既有頁面改用的盤點」。
+- **key 慣例**:列表一包 `list`;主從版面選中的那一筆 `detail`(`hooks/base/useUrlSelectedId`);頁內分頁 `tab`;唯讀的檢視彈窗 `dialog`(值是彈窗名)。不用 `view`:mock 開發模式以 `?view=tenant` 切視角。
+- **新頁面要登記進入口清單**:底座頁登記在 `apps/admin/src/app/base/url-state-inventory.ts`、專案頁在 `app/project/url-state-inventory.ts`,寫明這一頁放進網址的 key(`app/url-state-inventory.test.ts` 比對)。`useUrlState` 以外直接 import `useSearchParams` 或 nuqs 由 ESLint(`no-restricted-imports`)擋下。各頁的盤點見 `docs/concepts/frontend-architecture.md`「既有頁面改用的盤點」。

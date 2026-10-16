@@ -57,4 +57,16 @@ describe("表單模組列表頁:篩選存在網址(REACT-14)", () => {
       "草稿",
     );
   });
+
+  it("頁碼在 `?list=`:帶頁碼打開(重新整理)照那一頁查", async () => {
+    const list = encodeURIComponent('{"page":3}');
+    const { world: runtime } = renderShopping({
+      path: `${DEMO_FORM_ROUTES.list}?list=${list}`,
+      world: world(),
+    });
+
+    await waitFor(() => {
+      expect(runtime.inputs.formSubmissions.at(-1)?.page).toBe(3);
+    });
+  });
 });

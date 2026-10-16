@@ -31,4 +31,11 @@ describe("模組與權限:選中的節點存在網址(REACT-14)", () => {
     ).toBeInTheDocument();
     expect(within(detail()).queryByText("overview")).toBeNull();
   });
+
+  it("網址上的節點不在樹裡(手改、換了組織)→ 退回第一棵樹的根", async () => {
+    renderPage({ search: "?detail=module-missing" });
+    await waitForTree();
+
+    expect(await within(detail()).findByText("overview")).toBeInTheDocument();
+  });
 });

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE, type FieldDef } from "@repo/domain/form";
 import {
@@ -18,6 +19,7 @@ import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
 import { useIsCurrentFormVersion } from "@/hooks/base/useIsCurrentFormVersion";
 import { useSession } from "@/hooks/base/useSession";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
+import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   liveContextOf,
   revisionContextOf,
@@ -36,6 +38,9 @@ export interface FormSubmissionDetailProps {
   onHistoryClose?: () => void;
 }
 
+/** 檢視中的修訂號;0 = 目前內容(網址不寫)。 */
+const revisionSchema = z.number().int().min(0).default(0);
+
 /**
  * 詳情(Spec 6a §8 `<FormSubmissionDetail id>`、畫面 11):唯讀渲染 = 同一套填寫元件走 `readOnly`
  * (條件用**該修訂的 `ctx`**、定義用**該修訂的版本**(`viewedVersion`)、不重算存值;日期以讀者現在的租戶時區顯示)、現名 / 快照顯示(`displayValues`)、
@@ -51,7 +56,15 @@ export const FormSubmissionDetail = ({
   const t = useTranslations("admin.formEngine.detail");
   const tErrors = useTranslations("admin.formEngine.errors");
   const { session } = useSession();
-  const [viewedRevision, setViewedRevision] = useState<number | null>(null);
+  // 正在檢視的舊修訂(唯讀檢視)記在網址 `?revision=<n>`(REACT-14);沒有 = 目前內容
+  const [revisionParam, setRevisionParam] = useUrlState(
+    "revision",
+    revisionSchema,
+  );
+  const viewedRevision = revisionParam === 0 ? null : revisionParam;
+  const setViewedRevision = (revision: number | null) => {
+    setRevisionParam(revision ?? 0);
+  };
   const [downloadFailed, setDownloadFailed] = useState(false);
 
   const current = useFormSubmissionQuery(

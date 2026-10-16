@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -11,7 +12,9 @@ import { Typography } from "@repo/ui/typography";
 import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import { useUrlState } from "@/hooks/base/useUrlState";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { ApprovalSection } from "../../workflow/ApprovalSection/ApprovalSection";
@@ -19,6 +22,9 @@ import { FormSubmissionDetail } from "../FormSubmissionDetail/FormSubmissionDeta
 import { DeleteSubmissionDialog } from "./DeleteSubmissionDialog";
 import { formModuleKeyOf, useFormModuleAccess } from "./useFormModuleAccess";
 import { useTabLabelRenderer } from "./useTabLabelRenderer";
+
+/** 開著的唯讀彈窗(`?dialog=`):修訂紀錄;`none` = 沒開(網址不寫)。 */
+const dialogSchema = z.enum(["none", "revisions"]).default("none");
 
 /**
  * 表單模組詳情頁(預設組裝;Spec 6a §8 畫面 11)。網址 `/<模組>/view-page/<id>`。
@@ -36,7 +42,12 @@ export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
   const state = useFormSubmission(id);
   const { submission } = state;
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  // 修訂紀錄是唯讀的檢視彈窗:開著的狀態記在網址 `?dialog=revisions`(REACT-14)
+  const [dialog, setDialog] = useUrlState("dialog", dialogSchema);
+  const isHistoryOpen = dialog === "revisions";
+  const setIsHistoryOpen = (open: boolean) => {
+    setDialog(open ? "revisions" : "none");
+  };
   // 頁籤 / 標題:以那一筆的值與綁的版本即時算;日期用讀者的租戶時區;定義載到前先不給(頁籤維持模組名)
   const version = useFormRuntimeVersion(
     submission?.formKey ?? null,
@@ -56,9 +67,10 @@ export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
   useRouteTabItemLabel(title);
   const closeItemTabs = useCloseItemTabs();
 
+  const tabHref = useRouteTabHref();
   const leave = () => {
     if (access.listRoute !== null) {
-      void navigate(access.listRoute);
+      void navigate(tabHref(access.listRoute));
     }
   };
 

@@ -120,8 +120,10 @@ export const OrgDetailPanel = ({
         />
       </Stack>
 
+      {/* 間距沿用改版前:分頁列與內容之間 1.5 */}
       <PageTabs
         aria-label={t("tabs.label")}
+        spacing={1.5}
         items={[
           {
             value: "detail",

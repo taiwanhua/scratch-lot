@@ -31,7 +31,6 @@ export interface OrgActionAbility {
   canToggleEnabled: boolean;
   canMove: boolean;
   canDelete: boolean;
-  canViewMembers: boolean;
   canAddMembers: boolean;
   canProvision: boolean;
   canRevokeProvision: boolean;

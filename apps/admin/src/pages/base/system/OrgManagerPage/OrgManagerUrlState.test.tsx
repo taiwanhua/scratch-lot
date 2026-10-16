@@ -44,4 +44,18 @@ describe("組織管理:選中的組織與詳情頁籤存在網址(REACT-14)", ()
     ).toBeInTheDocument();
     expect(within(detail()).queryByText("A-1 內容組")).toBeNull();
   });
+
+  it("成員清單的頁碼在 `?members=`(連同組織 id):重新整理後照頁碼查", async () => {
+    const members = encodeURIComponent('{"org":"org-content","page":2}');
+    const { fake } = renderPage({
+      search: `?detail=org-content&tab=members&members=${members}`,
+    });
+
+    await waitFor(() => {
+      expect(fake.inputs.orgMembers.at(-1)).toMatchObject({
+        orgId: "org-content",
+        input: { page: 2 },
+      });
+    });
+  });
 });

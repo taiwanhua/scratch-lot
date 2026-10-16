@@ -26,4 +26,10 @@ describe("資料範圍:選中的資料目標存在網址(REACT-14)", () => {
 
     await waitForEditor("示範表單(頂層)(form_submissions)");
   });
+
+  it("網址上的目標不在清單裡(手改、模組已移除)→ 退回第一個", async () => {
+    renderPage({ search: "?detail=target-missing" });
+
+    await waitForEditor("示範模組1(demo_items_one)");
+  });
 });

@@ -1,5 +1,6 @@
 import { Suspense, useState } from "react";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import {
   type SetModuleEnabledMutation,
@@ -16,6 +17,7 @@ import { Stack } from "@repo/ui/stack";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DisableModuleDialog } from "./DisableModuleDialog";
 import { ModuleDetailPanel } from "./ModuleDetailPanel/ModuleDetailPanel";
@@ -35,6 +37,9 @@ import type {
 } from "./module-manager-types";
 import { useModuleManagerData } from "./useModuleManagerData";
 
+/** 開著的唯讀彈窗(`?dialog=`):目前只有退役權限清單;`none` = 沒開(網址不寫)。 */
+const dialogSchema = z.enum(["none", "retired"]).default("none");
+
 /**
  * 模組與權限(模組 key `system.module-manager`,正本 `docs/modules/module-manager.md`;
  * Figma「Screen / Admin 模組與權限」89:2、停用確認 211:331)。**根組織專屬**(ADR-0009)。
@@ -51,7 +56,9 @@ export const ModuleManagerPage = () => {
   const data = useModuleManagerData();
   const { hasPermission } = usePermissions();
   const [isListColumnsOpen, setIsListColumnsOpen] = useState(false);
-  const [isRetiredOpen, setIsRetiredOpen] = useState(false);
+  // 退役權限清單是唯讀的檢視彈窗:開著的狀態記在網址 `?dialog=retired`(REACT-14),重新整理還開著
+  const [dialog, setDialog] = useUrlState("dialog", dialogSchema);
+  const isRetiredOpen = dialog === "retired";
 
   const [isDisableOpen, setIsDisableOpen] = useState(false);
   const [actionError, setActionError] = useState<ModuleManagerErrorCode | null>(
@@ -168,7 +175,7 @@ export const ModuleManagerPage = () => {
         <Button
           variant="outlined"
           onClick={() => {
-            setIsRetiredOpen(true);
+            setDialog("retired");
           }}
         >
           {t("retired.open")}
@@ -221,7 +228,7 @@ export const ModuleManagerPage = () => {
               MODULE_MANAGER_PERMISSIONS.deleteRetiredPermission,
             )}
             onClose={() => {
-              setIsRetiredOpen(false);
+              setDialog("none");
             }}
           />
         </Suspense>

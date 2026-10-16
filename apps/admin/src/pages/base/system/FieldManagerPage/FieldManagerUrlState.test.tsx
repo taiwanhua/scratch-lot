@@ -26,4 +26,10 @@ describe("欄位管理:選中的類別存在網址(REACT-14)", () => {
     expect(await within(optionsPanel()).findByText("炸物")).toBeInTheDocument();
     expect(screen.queryByText("性別 — 選項")).toBeNull();
   });
+
+  it("網址上的類別不在清單裡(手改、已停用)→ 退回第一個類別", async () => {
+    renderPage({ search: "?detail=category-missing" });
+
+    expect(await screen.findByText("性別 — 選項")).toBeInTheDocument();
+  });
 });

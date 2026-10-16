@@ -19,6 +19,7 @@ import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/Appr
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import { useFormRuntimeVersion } from "@/hooks/base/useFormRuntimeVersion";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { revisionContextOf } from "@/lib/base/form-engine/expression-context";
@@ -43,6 +44,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.applyCenter.view");
   const tErrors = useTranslations("admin.workflows.errors");
   const navigate = useNavigate();
+  const tabHref = useRouteTabHref();
   const routeOf = useModuleRoutes();
   const { session } = useSession();
   const instanceId = routeParam ?? "";
@@ -119,7 +121,7 @@ export const ApplyCenterViewPage = ({ routeParam }: ModulePageProps) => {
               variant="text"
               size="small"
               onClick={() => {
-                void navigate(listRoute);
+                void navigate(tabHref(listRoute));
               }}
             >
               {t("back")}
