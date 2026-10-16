@@ -64,3 +64,16 @@ test("專案的名詞表與討論紀錄判為 project,底座的仍是 mixed", ()
   assert.equal(classifyPath("CONTEXT.md", "M"), "mixed");
   assert.equal(classifyPath("docs/tmp/dis.md", "M"), "mixed");
 });
+
+test(".claude/skills 底下的 skill 判為 common", () => {
+  assert.equal(
+    classifyPath(".claude/skills/module-scaffold/SKILL.md", "M"),
+    "common",
+  );
+  assert.equal(
+    classifyPath(".claude/skills/module-scaffold/references/pointers.md", "A"),
+    "common",
+  );
+  // skills 以外的 .claude/ 設定仍不自動歸類
+  assert.equal(classifyPath(".claude/settings.json", "M"), "unknown");
+});
