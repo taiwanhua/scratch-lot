@@ -21,13 +21,16 @@ export const TIMELINE_MORE_WIDTH = 24;
 export interface TimelineLayoutGroup {
   /** 唯一識別;排序的最後一關,保證不平手。 */
   id: string;
-  /** 開始時間;與 `end`、`createdAt` 用同一種數值單位即可(例:epoch 毫秒)。 */
+  /**
+   * 開始時間;與 `end`、`createdAt` 用同一種數值單位即可(例:epoch 毫秒)。
+   * 跨午夜的容器由呼叫端先裁到當天範圍再傳入(規格 10.11:當天畫到 24:00、次日從 00:00 接續)。
+   */
   start: number;
   /** 結束時間(不含):前一個在 14:30 結束、下一個在 14:30 開始不算重疊。 */
   end: number;
   /** 佔的條數(非負整數,由模組提供;例:班表 = 執行任務筆數,空的佔虛線空位)。 */
   slots: number;
-  /** 模組提供的排序鍵,逐項升冪比較(例:[崗位排序, 範本排序]);較短的視為較前。 */
+  /** 模組提供的排序鍵,逐項升冪比較(例:[崗位排序, 範本排序]);缺少的項當 0(`[1]` 與 `[1, 0]` 平手,交給建立時間)。 */
   sortKeys?: readonly number[];
   /** 建立時間(排序鍵之後的平手規則)。 */
   createdAt: number;
@@ -56,14 +59,14 @@ const compareSortKeys = (
   a: readonly number[] = [],
   b: readonly number[] = [],
 ): number => {
-  const length = Math.min(a.length, b.length);
+  const length = Math.max(a.length, b.length);
   for (let index = 0; index < length; index += 1) {
     const diff = (a[index] ?? 0) - (b[index] ?? 0);
     if (diff !== 0) {
       return diff;
     }
   }
-  return a.length - b.length;
+  return 0;
 };
 
 /** id 以 code unit 比較,不受執行環境的語系影響。 */

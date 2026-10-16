@@ -6,7 +6,7 @@ import {
   layoutTimeline,
   timelineGroupWidth,
 } from "./layout-timeline";
-import { ruleCase } from "./layout-timeline-rule-cases";
+import { ruleCase } from "./layout-timeline-test-support";
 
 /** 固定 seed 的亂數(mulberry32),測試可重現。 */
 const seededRandom = (seed: number) => {
