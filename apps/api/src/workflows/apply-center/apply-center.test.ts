@@ -55,6 +55,7 @@ import {
   bindForm,
   byText,
   currentInstance,
+  decide,
   decideOn,
   errorCode,
   errorReason,
@@ -998,7 +999,7 @@ describe("申請中心與讀取授權", () => {
       expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
     });
 
-    it("阻擋中被接受的駁回照樣終局:推進前中斷 → 重試推進 → rejected", async () => {
+    it("阻擋中被接受的駁回照樣終局;推進前中斷 → 整個決定回復,再駁回一次 → rejected", async () => {
       const [a, b] = [await reviewerOnly(), await reviewerOnly()];
       await useWorkflow(world, nextKey("blocked_reject"), {
         steps: [usersStep("one", [a, b], { mode: "all" })],
@@ -1022,11 +1023,13 @@ describe("申請中心與讀取授權", () => {
       } finally {
         restore();
       }
-      const stuck = await currentInstance(world, submitted.id);
-      expect(stuck.status).toBe("BLOCKED");
-      expect(stepOfRow(stuck, "one").decisions).toHaveLength(1);
-      const retried = await retryAdvance(world, stuck.id);
-      expect(retried.status).toBe("REJECTED");
+      const rolledBack = await currentInstance(world, submitted.id);
+      expect(rolledBack.status).toBe("BLOCKED");
+      expect(stepOfRow(rolledBack, "one").decisions).toHaveLength(0);
+      const again = await decide(world, a, task, "REJECT", "阻擋中駁回");
+      expect(again.result).toBe("ACCEPTED");
+      const rejected = await currentInstance(world, submitted.id);
+      expect(rejected.status).toBe("REJECTED");
       expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
     });
 
@@ -1053,24 +1056,25 @@ describe("申請中心與讀取授權", () => {
       expect(ids).toContain(brokenInstance.id);
       const healthyInstance = await currentInstance(world, healthy.id);
       expect(ids).not.toContain(healthyInstance.id);
-      // linking 超過 10 分鐘(第 3 步從未成功)也列進來
+      // linking 超過 10 分鐘也列進來(送出改成交易後不會再產生;人工造出交易前留下的舊資料)
       const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
         title: "卡在 linking",
         days: 2,
       });
-      const restore = interruptAt(api, "submit:instance-created");
-      try {
-        await call(api, world.applicant.token, SUBMIT_SUBMISSION, {
-          input: { id: draft.id, expectedEditVersion: draft.editVersion },
-        });
-      } finally {
-        restore();
-      }
+      await call(api, world.applicant.token, SUBMIT_SUBMISSION, {
+        input: { id: draft.id, expectedEditVersion: draft.editVersion },
+      });
       const stale = await world.connection
         .collection("workflow_instances")
         .findOneAndUpdate(
           { submissionId: new Types.ObjectId(draft.id) },
-          { $set: { createdAt: new Date(Date.now() - 11 * 60 * 1000) } },
+          {
+            $set: {
+              status: "linking",
+              activeStepKeys: [],
+              createdAt: new Date(Date.now() - 11 * 60 * 1000),
+            },
+          },
         );
       const relisted = await ok<{
         blockedInstances: { items: InstanceRow[] };

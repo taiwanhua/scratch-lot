@@ -69,7 +69,7 @@ async function trySubmit(world: World, row: WfSubmissionRow): Promise<unknown> {
 }
 
 /**
- * 審核流程引擎(真 Mongo,Spec 6b §10「api 真 Mongo」):送出的寫入順序與中斷恢復、直線流程、
+ * 審核流程引擎(真 Mongo,Spec 6b §10「api 真 Mongo」):送出與決定各是一個交易(中斷 → 全部回復)、直線流程、
  * 會簽模式與決定的交錯、跳過條件、再送出、通知信(開啟)。
  */
 describe("審核流程引擎", () => {
@@ -288,50 +288,60 @@ describe("審核流程引擎", () => {
       expect(await activeStepsOf(world, submitted.id)).toEqual(["last"]);
     });
 
-    it("all:A 核准後 B 駁回(B 的決定在 A 的推進前寫入)→ 兩筆都記下、結果駁回、A 投影 approved", async () => {
+    it("all:A 寫入決定前 B 的駁回已提交 → A 的交易寫入衝突、重跑後得 stepClosed;結果駁回", async () => {
       await useWorkflow(world, nextKey("all_interleave"), {
         steps: [usersStep("pair", [staff(0), staff(1)], { mode: "all" })],
       });
       const submitted = await submitLeave(world);
       const taskB = await pendingTaskOf(world, staff(1), submitted.id);
-      const restore = interleaveAt(api, "decide:accepted", async () => {
+      const restore = interleaveAt(api, "decide:before-write", async () => {
         await decide(world, staff(1), taskB, "REJECT", "不同意");
       });
+      let result: Awaited<ReturnType<typeof decideOn>>;
       try {
-        await decideOn(world, staff(0), submitted.id, "APPROVE");
+        result = await decideOn(world, staff(0), submitted.id, "APPROVE");
       } finally {
         restore();
       }
+      expect(result.result).toBe("STEP_CLOSED");
       const instance = await currentInstance(world, submitted.id);
       expect(instance.status).toBe("REJECTED");
-      expect(stepOfRow(instance, "pair").decisions).toHaveLength(2);
+      expect(stepOfRow(instance, "pair").decisions).toHaveLength(1);
       expect(await taskStatuses(world.connection, instance.id)).toEqual({
-        "pair-1": "approved",
+        "pair-1": "cancelled",
         "pair-2": "rejected",
       });
       expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
     });
 
-    it("any:A、B 都在關卡關閉前寫入 → 一筆 approved、一筆 late", async () => {
+    it("any:兩人同時核准同一關(B 在 A 寫入前提交)→ B 成功、A 重跑後得 stepClosed,全案只核准一次", async () => {
       await useWorkflow(world, nextKey("any_both"), {
         steps: [usersStep("either", [staff(0), staff(1)])],
       });
       const submitted = await submitLeave(world);
       const taskB = await pendingTaskOf(world, staff(1), submitted.id);
-      const restore = interleaveAt(api, "decide:accepted", async () => {
-        await decide(world, staff(1), taskB, "REJECT", "晚到的駁回");
+      let other: Awaited<ReturnType<typeof decide>> | undefined;
+      const restore = interleaveAt(api, "decide:before-write", async () => {
+        other = await decide(world, staff(1), taskB, "APPROVE");
       });
+      let mine: Awaited<ReturnType<typeof decideOn>>;
       try {
-        await decideOn(world, staff(0), submitted.id, "APPROVE");
+        mine = await decideOn(world, staff(0), submitted.id, "APPROVE");
       } finally {
         restore();
       }
+      expect(other?.result).toBe("ACCEPTED");
+      expect(mine.result).toBe("STEP_CLOSED");
       const instance = await currentInstance(world, submitted.id);
       expect(instance.status).toBe("APPROVED");
+      expect(stepOfRow(instance, "either").decisions).toHaveLength(1);
       expect(await taskStatuses(world.connection, instance.id)).toEqual({
-        "either-1": "approved",
-        "either-2": "late",
+        "either-1": "cancelled",
+        "either-2": "approved",
       });
+      expect(
+        instance.history.filter((event) => event.kind === "notified"),
+      ).toHaveLength(1);
     });
 
     it("any:A 先寫且推進已前進關卡後 B 才到 → B 得 stepClosed、任務不變", async () => {
@@ -484,21 +494,23 @@ describe("審核流程引擎", () => {
     });
   });
 
-  describe("送出的寫入順序:中斷與恢復", () => {
+  describe("送出是一個交易:中斷 → 全部回復", () => {
     beforeAll(async () => {
       await useWorkflow(world, nextKey("submit_steps"), {
         steps: [usersStep("one", [staff(4)])],
       });
     });
 
-    for (const [label, checkpoint] of [
-      ["第 2 步(建 linking 實例)", "submit:instance-created"],
-      ["第 3 步(提交連上實例)", "submit:submission-linked"],
-      ["第 4 步(實例 running)", "submit:started"],
+    for (const [label, checkpoint, nth] of [
+      ["第 2 步(建實例)", "submit:instance-created", 1],
+      ["第 3 步(提交連上實例)", "submit:submission-linked", 1],
+      ["第 4 步(實例 running)", "submit:started", 1],
+      ["推進建第一筆任務前", "action:createTask", 1],
     ] as const) {
-      it(`${label}之後中斷,重送同一次送出 → 結果與一次成功相同,且只有一個實例`, async () => {
+      it(`${label}之後中斷 → 提交維持草稿、實例與任務都不存在;重送 = 一次成功`, async () => {
         const row = await draftOf(world);
-        const restore = interruptAt(api, checkpoint);
+        const before = await rawSubmissionDoc(world.connection, row.id);
+        const restore = interruptAt(api, checkpoint, nth);
         try {
           const failed = (await trySubmit(world, row)) as {
             errors?: unknown[];
@@ -507,28 +519,20 @@ describe("審核流程引擎", () => {
         } finally {
           restore();
         }
-        if (checkpoint === "submit:instance-created") {
-          // linking 的實例不派單
-          const [linking] = await rawInstances(world.connection, row.id);
-          expect(linking?.status).toBe("linking");
-          expect(
-            await rawTasks(world.connection, String(linking?._id)),
-          ).toEqual([]);
-        }
+        expect(await rawInstances(world.connection, row.id)).toEqual([]);
+        expect(
+          await world.connection
+            .collection("workflow_tasks")
+            .countDocuments({ submissionId: new Types.ObjectId(row.id) }),
+        ).toBe(0);
+        const after = await rawSubmissionDoc(world.connection, row.id);
+        expect(after?.status).toBe("draft");
+        expect(after?.revision).toBe(before?.revision);
+        expect(after?.editVersion).toBe(before?.editVersion);
+        expect(after?.currentInstanceId ?? null).toBeNull();
         const retried = await submitExisting(world, row);
         expect(retried.status).toBe("REVIEWING");
         expect(retried.revision).toBe(1);
-        if (checkpoint !== "submit:instance-created") {
-          // 提交已連上(第 3 步後):重送走第 0 步接續,稽核標記 resumed
-          const resumed = await world.connection
-            .collection("audit_logs")
-            .countDocuments({
-              action: "submission.submit",
-              targetId: new Types.ObjectId(row.id),
-              "after.resumed": true,
-            });
-          expect(resumed).toBe(1);
-        }
         const instances = await rawInstances(world.connection, row.id);
         expect(instances).toHaveLength(1);
         expect(instances[0]?.status).toBe("running");
@@ -536,128 +540,35 @@ describe("審核流程引擎", () => {
       });
     }
 
-    it("linking 未連上時草稿被改過 → 重送把 linking 實例整份重置成新內容", async () => {
-      const row = await draftOf(world, "改前");
-      const restore = interruptAt(api, "submit:instance-created");
-      try {
-        await trySubmit(world, row);
-      } finally {
-        restore();
-      }
-      const saved = await ok<{
-        saveFormDraft: { submission: WfSubmissionRow };
-      }>(api, world.applicant.token, SAVE_SUBMISSION, {
-        input: {
-          id: row.id,
-          expectedEditVersion: row.editVersion,
-          values: { title: "改後", days: 3 },
-        },
-      });
-      await submitExisting(world, saved.saveFormDraft.submission);
-      const instances = await rawInstances(world.connection, row.id);
-      expect(instances).toHaveLength(1);
-      expect((instances[0]?.summary as { title?: string }).title).toBe("改後");
-      expect(
-        (instances[0]?.linkSource as { submissionEditVersion: number })
-          .submissionEditVersion,
-      ).toBe(saved.saveFormDraft.submission.editVersion);
-    });
-
-    it("linking 未連上時流程換過 → 重送依新流程重置", async () => {
+    it("重複送出(提交已是審核中)→ 對原實例再推進一次:不增加修訂、不另建實例,稽核標記 resumed", async () => {
       const row = await draftOf(world);
-      const restore = interruptAt(api, "submit:instance-created");
-      try {
-        await trySubmit(world, row);
-      } finally {
-        restore();
-      }
-      const newKey = nextKey("switched");
-      await useWorkflow(world, newKey, {
-        steps: [usersStep("other", [staff(5)])],
-      });
       await submitExisting(world, row);
-      const instances = await rawInstances(world.connection, row.id);
-      expect(instances).toHaveLength(1);
-      expect(instances[0]?.workflowKey).toBe(newKey);
-      await pendingTaskOf(world, staff(5), row.id);
-      await useWorkflow(world, nextKey("submit_steps"), {
-        steps: [usersStep("one", [staff(4)])],
-      });
-    });
-
-    it("已連上(第 3 步成功後中斷)再更換流程 → 重試仍用原本已連結的流程版本", async () => {
-      const row = await draftOf(world);
-      const restore = interruptAt(api, "submit:submission-linked");
-      try {
-        await trySubmit(world, row);
-      } finally {
-        restore();
-      }
-      const [linked] = await rawInstances(world.connection, row.id);
-      const originalKey = linked?.workflowKey;
-      await useWorkflow(world, nextKey("changed_after_link"), {
-        steps: [usersStep("other", [staff(5)])],
-      });
-      await submitExisting(world, row);
-      const instances = await rawInstances(world.connection, row.id);
-      expect(instances).toHaveLength(1);
-      expect(instances[0]?.workflowKey).toBe(originalKey);
-      await pendingTaskOf(world, staff(4), row.id);
-      await useWorkflow(world, nextKey("submit_steps"), {
-        steps: [usersStep("one", [staff(4)])],
-      });
-    });
-
-    it("已連上後解除綁定 → 重試仍能恢復原實例,不被送出時檢查擋住", async () => {
-      const row = await draftOf(world);
-      const restore = interruptAt(api, "submit:submission-linked");
-      try {
-        await trySubmit(world, row);
-      } finally {
-        restore();
-      }
-      await ok(api, world.admin.token, UNBIND, {
-        input: { formKey: FORM_KEY },
-      });
-      const retried = await submitExisting(world, row);
-      expect(retried.status).toBe("REVIEWING");
-      await pendingTaskOf(world, staff(4), row.id);
-      await useWorkflow(world, nextKey("submit_steps"), {
-        steps: [usersStep("one", [staff(4)])],
-      });
-    });
-
-    it("已 running 但推進前中斷、再解除綁定 → 重試接續原實例、不增加修訂", async () => {
-      const row = await draftOf(world);
-      const restore = interruptAt(api, "submit:started");
-      try {
-        await trySubmit(world, row);
-      } finally {
-        restore();
-      }
-      await ok(api, world.admin.token, UNBIND, {
-        input: { formKey: FORM_KEY },
-      });
-      const retried = await submitExisting(world, row);
-      expect(retried.revision).toBe(1);
+      const again = await submitExisting(world, row);
+      expect(again.status).toBe("REVIEWING");
+      expect(again.revision).toBe(1);
       expect(await rawInstances(world.connection, row.id)).toHaveLength(1);
+      const resumed = await world.connection
+        .collection("audit_logs")
+        .countDocuments({
+          action: "submission.submit",
+          targetId: new Types.ObjectId(row.id),
+          "after.resumed": true,
+        });
+      expect(resumed).toBe(1);
       await pendingTaskOf(world, staff(4), row.id);
-      await useWorkflow(world, nextKey("submit_steps"), {
-        steps: [usersStep("one", [staff(4)])],
-      });
     });
   });
 
-  describe("中斷恢復(重試推進後與正常路徑一致)", () => {
-    it("有終局決定但關卡未前進 → 重試推進 → rejected", async () => {
-      await useWorkflow(world, nextKey("recover_terminal"), {
+  describe("決定是一個交易:中斷 → 全部回復", () => {
+    it("決定寫入後、推進前中斷 → 決定不存在、任務仍待審;再決定一次照常終局", async () => {
+      await useWorkflow(world, nextKey("rollback_decide"), {
         steps: [usersStep("one", [staff(0)])],
       });
       const submitted = await submitLeave(world);
       const task = await pendingTaskOf(world, staff(0), submitted.id);
       const restore = interruptAt(api, "decide:accepted");
       try {
-        await call(api, staff(0).token, DECIDE, {
+        const result = await call(api, staff(0).token, DECIDE, {
           input: {
             taskId: task.id,
             expectedEditVersion: task.editVersion,
@@ -665,25 +576,35 @@ describe("審核流程引擎", () => {
             comment: "中斷",
           },
         });
+        expect(result.errors).toBeDefined();
       } finally {
         restore();
       }
-      const stuck = await currentInstance(world, submitted.id);
-      expect(stuck.status).toBe("RUNNING");
-      expect(stepOfRow(stuck, "one").decisions).toHaveLength(1);
-      const retried = await retryAdvance(world, stuck.id);
-      expect(retried.status).toBe("REJECTED");
+      const instance = await currentInstance(world, submitted.id);
+      expect(instance.status).toBe("RUNNING");
+      expect(stepOfRow(instance, "one").decisions).toHaveLength(0);
+      expect(await taskStatuses(world.connection, instance.id)).toEqual({
+        "one-1": "pending",
+      });
+      expect(
+        await world.connection.collection("audit_logs").countDocuments({
+          action: "task.decide",
+          targetId: new Types.ObjectId(task.id),
+        }),
+      ).toBe(0);
+      const again = await decide(world, staff(0), task, "REJECT", "再一次");
+      expect(again.result).toBe("ACCEPTED");
       expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
     });
 
-    it("實例 approved 但提交未 completed → 重試推進補上", async () => {
-      await useWorkflow(world, nextKey("recover_submission"), {
+    it("推進同步提交前中斷 → 實例、任務、提交都維持決定前", async () => {
+      await useWorkflow(world, nextKey("rollback_submission"), {
         steps: [usersStep("one", [staff(0)])],
       });
       const submitted = await submitLeave(world);
+      const task = await pendingTaskOf(world, staff(0), submitted.id);
       const restore = interruptAt(api, "action:updateSubmission");
       try {
-        const task = await pendingTaskOf(world, staff(0), submitted.id);
         await call(api, staff(0).token, DECIDE, {
           input: {
             taskId: task.id,
@@ -697,12 +618,14 @@ describe("審核流程引擎", () => {
       const raw = await rawSubmissionDoc(world.connection, submitted.id);
       expect(raw?.status).toBe("reviewing");
       const instance = await currentInstance(world, submitted.id);
-      expect(instance.status).toBe("APPROVED");
-      await retryAdvance(world, instance.id);
-      expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+      expect(instance.status).toBe("RUNNING");
+      expect(stepOfRow(instance, "one").decisions).toHaveLength(0);
+      expect(await taskStatuses(world.connection, instance.id)).toEqual({
+        "one-1": "pending",
+      });
     });
 
-    it("任務只建一半後角色名單變了 → 重試推進仍依計畫補建(不重新解析)", async () => {
+    it("任務投影被弄亂(人工造出)→ 重試推進補回;角色名單變了也依原計畫補建(不重新解析)", async () => {
       await useWorkflow(world, nextKey("recover_tasks"), {
         steps: [
           reviewStep("hr", {
@@ -712,22 +635,18 @@ describe("審核流程引擎", () => {
           }),
         ],
       });
-      const restore = interruptAt(api, "action:createTask", 2);
-      let submissionId = "";
-      try {
-        const row = await createDraft(api, world.applicant.token, FORM_KEY, {
-          title: "一半",
-          days: 3,
-        });
-        submissionId = row.id;
-        await call(api, world.applicant.token, SUBMIT_SUBMISSION, {
-          input: { id: row.id, expectedEditVersion: row.editVersion },
-        });
-      } finally {
-        restore();
-      }
-      const [instanceDoc] = await rawInstances(world.connection, submissionId);
+      const row = await createDraft(api, world.applicant.token, FORM_KEY, {
+        title: "一半",
+        days: 3,
+      });
+      await submitExisting(world, row);
+      const [instanceDoc] = await rawInstances(world.connection, row.id);
       const instanceId = String(instanceDoc?._id);
+      // 人工刪掉第二筆任務(舊資料或 bug 才會有的落盤狀態)
+      await world.connection.collection("workflow_tasks").deleteOne({
+        instanceId: new Types.ObjectId(instanceId),
+        taskKey: "hr-2",
+      });
       expect(await rawTasks(world.connection, instanceId)).toHaveLength(1);
       // 人資 2 被移出角色、新人加入:計畫固定,補建的仍是原本的人資 2
       await world.connection.collection("core_relationships").deleteOne({
@@ -756,12 +675,7 @@ describe("審核流程引擎", () => {
         ),
       );
       // 角色移除後既有任務仍可審
-      const result = await decideOn(
-        world,
-        world.hr[1],
-        submissionId,
-        "APPROVE",
-      );
+      const result = await decideOn(world, world.hr[1], row.id, "APPROVE");
       expect(result.result).toBe("ACCEPTED");
     });
 
@@ -862,7 +776,7 @@ describe("審核流程引擎", () => {
     });
   });
 
-  it("最後節點完成與全案核准在同一次更新:任何時刻都看不到「終點已完成但實例仍 running」", async () => {
+  it("最後節點完成與全案核准在同一個交易:交易外任何時刻都看不到「終點已完成但實例仍 running」", async () => {
     await useWorkflow(world, nextKey("atomic_approve"), {
       steps: [usersStep("one", [staff(0)]), usersStep("last", [staff(1)])],
     });
@@ -887,14 +801,21 @@ describe("審核流程引擎", () => {
       spy.mockRestore();
     }
     expect(observed.length).toBeGreaterThan(0);
+    // 交易進行中,交易外只看得到決定前的已提交狀態;提交後一次看到全案核准
     expect(
       observed.filter(
-        (one) =>
-          one.last === "completed" &&
-          (one.status === "running" || one.status === "blocked"),
+        (one) => !(one.status === "running" && one.last === "active"),
       ),
     ).toEqual([]);
-    expect(observed).toContainEqual({ status: "approved", last: "completed" });
+    const after = await world.connection
+      .collection("workflow_instances")
+      .findOne({ _id: new Types.ObjectId(instance.id) });
+    expect(after?.status).toBe("approved");
+    expect(
+      (after?.steps as { stepKey: string; status: string }[]).find(
+        (step) => step.stepKey === "last",
+      )?.status,
+    ).toBe("completed");
   });
 
   describe("通知信(WORKFLOW_MAIL_ENABLED = true)", () => {
@@ -917,6 +838,47 @@ describe("審核流程引擎", () => {
           (event) => event.kind === "notified" && event.result === "approved",
         ),
       ).toHaveLength(1);
+    });
+
+    it("通知信排在交易提交後:登記寄信之後交易回復 → 不寄;重新決定提交後才寄一次", async () => {
+      await useWorkflow(world, nextKey("mail_rollback"), {
+        steps: [usersStep("one", [staff(0)])],
+      });
+      const submitted = await submitLeave(world);
+      const task = await pendingTaskOf(world, staff(0), submitted.id);
+      const before = mail().sent.length;
+      const hooks = api.app.get(WorkflowEngineHooks);
+      let isNotifyQueued = false;
+      const spy = jest
+        .spyOn(hooks, "reached")
+        .mockImplementation((reached: string) => {
+          if (reached === "action:notifyResult") {
+            isNotifyQueued = true;
+          } else if (isNotifyQueued && reached === "action:appendHistoryOnce") {
+            return Promise.reject(new Error("模擬中斷:寄信已登記之後"));
+          }
+          return Promise.resolve();
+        });
+      try {
+        const failed = await call(api, staff(0).token, DECIDE, {
+          input: {
+            taskId: task.id,
+            expectedEditVersion: task.editVersion,
+            decision: "APPROVE",
+          },
+        });
+        expect(failed.errors).toBeDefined();
+      } finally {
+        spy.mockRestore();
+      }
+      expect(isNotifyQueued).toBe(true);
+      const resultMails = () =>
+        mail()
+          .sent.slice(before)
+          .filter((message) => message.kind === "workflow-result");
+      expect(resultMails()).toEqual([]);
+      await decide(world, staff(0), task, "APPROVE");
+      expect(resultMails()).toHaveLength(1);
     });
 
     it("4c 恢復(終點已完成但實例仍 running)也會寄核准信,且重試不重寄", async () => {

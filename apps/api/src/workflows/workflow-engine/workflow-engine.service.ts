@@ -15,11 +15,11 @@ import {
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
 } from "../../database/database.module";
+import { TransactionService } from "../../database/transaction";
 import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import { WorkflowTasksRepository } from "../../database/workflow-tasks.repository";
 import { systemContext } from "../tenant-directory.service";
 import { definitionOfVersion } from "../workflow-definition-input";
-import { isDuplicateKey } from "../workflows-error";
 import {
   type InstanceRecord,
   historyEventDocument,
@@ -37,15 +37,20 @@ import { WorkflowNotifier } from "./workflow-notifier.service";
 /** 一輪動作執行的結果。 */
 type RoundResult = "done" | "casFailed" | "invalid";
 
-/** 推進的上限輪數(正常一次推進只要個位數輪;超過代表資料在來回打架,記 log 停下)。 */
+/** 推進的上限輪數(正常一次推進只要個位數輪;超過代表判斷表在來回打架,記 log 停下)。 */
 const MAX_ROUNDS = 60;
 
 /**
- * 引擎的檢查點(正式環境什麼都不做)。要驗「中斷後重試 = 一次成功」,測試必須能讓某一步**真的**
- * 在半路失敗 —— GraphQL 端點上看不到這個能力,所以測試經 `app.get(WorkflowEngineHooks)` 讓指定檢查點丟錯
- * (TEST-07 的第二個接縫,理由同 `FormPublishHooks`):
- * - `submit:instance-created` / `submit:submission-linked` / `submit:started`:送出寫入順序第 2 / 3 / 4 步之後
+ * 引擎的檢查點(正式環境什麼都不做)。要驗「中斷 → 整個動作全部回復」,測試必須能讓某一步**真的**
+ * 在交易半路失敗;要驗並發,測試要能在某一步插進另一個請求 —— GraphQL 端點上看不到這個能力,所以測試經
+ * `app.get(WorkflowEngineHooks)` 讓指定檢查點丟錯或插入動作(TEST-07 的第二個接縫,理由同 `FormPublishHooks`):
+ * - `submit:instance-created` / `submit:submission-linked` / `submit:started`:送出第 2 / 3 / 4 步之後
+ * - `decide:before-write` / `decide:accepted`:決定寫入實例之前 / 之後
+ * - `withdraw:before-write` / `reassign:before-write`:撤回 / 改派寫入實例之前
  * - `action:<動作種類>`:推進執行每一個動作之前(如 `action:createTask`)
+ *
+ * 檢查點都在交易內:丟錯 = 整個交易回復;插入的動作要在交易外執行(`hooks-fixture.ts` 的 `interleaveAt`),
+ * 且只能插在本交易寫入之前 —— 插在寫入之後,另一個請求會等本交易的鎖,而本交易在等它。
  */
 @Injectable()
 export class WorkflowEngineHooks {
@@ -68,12 +73,14 @@ export class WorkflowEngineHooks {
  *
  * 1. 讀實例(權威)、它的全部任務、對應的提交 → `advance` → 列 5 需要時先解析進關結果再呼叫一次
  * 2. 依序執行動作,每個寫入都是條件更新:實例用 `editVersion` CAS(節點以 `arrayFilters` 指到 `stepKey`)、
- *    任務用 `(instanceId, taskKey)` 唯一鍵與讀到的狀態、提交用「仍指向本實例 + 修訂號 + 審核中」
- * 3. **`updateInstance` 的條件不成立就中止本輪**、重讀再判斷;其他動作條件不成立 = 已做過
+ *    任務先查 `(instanceId, taskKey)` 再建、投影同步帶讀到的狀態、提交用「仍指向本實例 + 修訂號 + 審核中」
+ * 3. `updateInstance` 的條件不成立就結束本輪、重讀再判斷;其他動作條件不成立 = 已做過
  * 4. `invalidState` = 權威資料自相矛盾:不寫、停下、記 log(它會一直出現在「需要推進」)
  *
- * 重複到「沒事可做」。任何入口(送出、決定、撤回、改派、新增審核者、失效 hook、重試推進)都呼叫同一支,
- * 重跑結果相同。
+ * 重複到「沒事可做」,**整段推進(含連續推進)是一個交易**(ADR-0013、TX-01):任何一步失敗,這次推進的
+ * 所有寫入一起回復;呼叫端(送出、決定、撤回、改派、新增審核者、失效 hook、重試推進)已在交易內時就併進
+ * 呼叫端的交易。並發的另一個交易寫到同一份實例 → 寫入衝突、整個交易由 driver 重跑,重讀後再判斷。
+ * 通知信排在交易提交後(`WorkflowNotifier`)。
  */
 @Injectable()
 export class WorkflowEngineService {
@@ -87,6 +94,7 @@ export class WorkflowEngineService {
     private readonly entries: StepEntryService,
     private readonly notifier: WorkflowNotifier,
     private readonly hooks: WorkflowEngineHooks,
+    private readonly transactions: TransactionService,
   ) {}
 
   /**
@@ -115,8 +123,14 @@ export class WorkflowEngineService {
     return this.instances.findOne(systemContext(), { _id: instanceId });
   }
 
-  /** 推進到「沒事可做」;回最後讀到的實例(實例不存在回 null)。 */
-  async advance(instanceId: Types.ObjectId): Promise<InstanceRecord | null> {
+  /** 推進到「沒事可做」(一個交易);回最後讀到的實例(實例不存在回 null)。 */
+  advance(instanceId: Types.ObjectId): Promise<InstanceRecord | null> {
+    return this.transactions.withTransaction(() => this.runRounds(instanceId));
+  }
+
+  private async runRounds(
+    instanceId: Types.ObjectId,
+  ): Promise<InstanceRecord | null> {
     for (let round = 0; round < MAX_ROUNDS; round += 1) {
       const instance = await this.findInstance(instanceId);
       if (instance === null) {
@@ -144,13 +158,15 @@ export class WorkflowEngineService {
     definition: WorkflowDefinition,
   ): Promise<AdvancePlan> {
     const tenantId = instance.tenantId;
-    const [tasks, submission] =
+    // 依序讀:可能在交易內,同一個 session 上不平行讀寫(TX-02)
+    const tasks =
       tenantId === null
-        ? [[], null]
-        : await Promise.all([
-            this.tasks.findMany(tenantId, { instanceId: instance._id }),
-            this.submissions.findById(tenantId, instance.submissionId),
-          ]);
+        ? []
+        : await this.tasks.findMany(tenantId, { instanceId: instance._id });
+    const submission =
+      tenantId === null
+        ? null
+        : await this.submissions.findById(tenantId, instance.submissionId);
     const input: AdvanceInput = {
       definition,
       instance: toInstanceSnapshot(instance),
@@ -257,7 +273,7 @@ export class WorkflowEngineService {
         return "done";
       }
       case "notifyTaskCreated": {
-        await this.notifier.taskCreated(
+        this.notifier.taskCreated(
           instance,
           definition,
           action.stepKey,
@@ -266,7 +282,7 @@ export class WorkflowEngineService {
         return "done";
       }
       case "notifyResult": {
-        await this.notifier.result(instance, action.result);
+        this.notifier.result(instance, action.result);
         return "done";
       }
       case "appendHistoryOnce": {
@@ -292,32 +308,36 @@ export class WorkflowEngineService {
     }
   }
 
-  /** 依計畫建任務;`(instanceId, taskKey)` 已存在 = 已建過(推進重跑不重建)。 */
+  /**
+   * 依計畫建任務;`(instanceId, taskKey)` 已存在 = 已建過(推進重跑不重建)。先查再建(TX-04:交易內
+   * 撞唯一鍵後不能接著寫);並發下的最終裁決仍是唯一索引,撞到就讓整個交易重跑或回報。
+   */
   private async createTask(
     instance: InstanceRecord,
     action: Extract<AdvanceAction, { kind: "createTask" }>,
   ): Promise<void> {
-    try {
-      await this.tasks.create(systemContext(), instance.tenantId, {
-        instanceId: instance._id,
-        stepKey: action.stepKey,
-        taskKey: action.taskKey,
-        submissionId: instance.submissionId,
-        revision: instance.revision,
-        moduleKey: instance.moduleKey,
-        formKey: instance.formKey,
-        assigneeId: toObjectId(action.projection.assigneeId),
-        previousAssigneeIds: action.projection.previousAssigneeIds.map((id) =>
-          toObjectId(id),
-        ),
-        status: action.projection.status,
-        decidedAt: action.projection.decidedAt,
-        comment: action.projection.comment,
-      });
-    } catch (error) {
-      if (!isDuplicateKey(error)) {
-        throw error;
-      }
+    const existing = await this.tasks.findOne(instance.tenantId, {
+      instanceId: instance._id,
+      taskKey: action.taskKey,
+    });
+    if (existing !== null) {
+      return;
     }
+    await this.tasks.create(systemContext(), instance.tenantId, {
+      instanceId: instance._id,
+      stepKey: action.stepKey,
+      taskKey: action.taskKey,
+      submissionId: instance.submissionId,
+      revision: instance.revision,
+      moduleKey: instance.moduleKey,
+      formKey: instance.formKey,
+      assigneeId: toObjectId(action.projection.assigneeId),
+      previousAssigneeIds: action.projection.previousAssigneeIds.map((id) =>
+        toObjectId(id),
+      ),
+      status: action.projection.status,
+      decidedAt: action.projection.decidedAt,
+      comment: action.projection.comment,
+    });
   }
 }

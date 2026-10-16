@@ -41,6 +41,7 @@ import {
   useWorkflow,
   usersStep,
 } from "../test-support/workflow-fixtures";
+import { WorkflowEngineService } from "./workflow-engine.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -216,33 +217,35 @@ describe("審核流程引擎:平行分支", () => {
     expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
   });
 
-  it("財務駁回與法務退回交錯 → 只採接受順序最早的一筆為 outcome、另一筆 late;重試推進後不變", async () => {
+  it("財務駁回與法務退回並發(法務先提交)→ 先提交的那筆為 outcome、財務重跑後得 stepClosed;重試推進後不變", async () => {
     await useWorkflow(world, nextKey("purchase_race"), purchase());
     const submitted = await submitLeave(world);
     await decideOn(world, staff(0), submitted.id, "APPROVE");
     const legalTask = await pendingTaskOf(world, staff(4), submitted.id);
-    const restore = interleaveAt(api, "decide:accepted", async () => {
+    const restore = interleaveAt(api, "decide:before-write", async () => {
       await decide(world, staff(4), legalTask, "RETURN", "法務退回");
     });
+    let finance: Awaited<ReturnType<typeof decideOn>>;
     try {
-      await decideOn(world, staff(1), submitted.id, "REJECT");
+      finance = await decideOn(world, staff(1), submitted.id, "REJECT");
     } finally {
       restore();
     }
+    expect(finance.result).toBe("STEP_CLOSED");
     const instance = await currentInstance(world, submitted.id);
-    expect(instance.status).toBe("REJECTED");
+    expect(instance.status).toBe("RETURNED");
     expect(instance.outcome).toMatchObject({
-      kind: "rejected",
-      stepKey: "finance",
-      taskKey: "finance-1",
+      kind: "returned",
+      stepKey: "legal",
+      taskKey: "legal-1",
     });
     const before = await taskStatuses(world.connection, instance.id);
     expect(before).toMatchObject({
-      "finance-1": "rejected",
-      "legal-1": "late",
+      "finance-1": "cancelled",
+      "legal-1": "returned",
     });
     const retried = await retryAdvance(world, instance.id);
-    expect(retried.status).toBe("REJECTED");
+    expect(retried.status).toBe("RETURNED");
     expect(retried.outcome).toEqual(instance.outcome);
     expect(await taskStatuses(world.connection, instance.id)).toEqual(before);
     expect(
@@ -257,7 +260,7 @@ describe("審核流程引擎:平行分支", () => {
     await decideOn(world, staff(1), submitted.id, "APPROVE");
     await decideOn(world, staff(4), submitted.id, "APPROVE");
     const legalLast = await pendingTaskOf(world, staff(5), submitted.id);
-    const restore = interleaveAt(api, "decide:accepted", async () => {
+    const restore = interleaveAt(api, "decide:before-write", async () => {
       await decide(world, staff(5), legalLast, "APPROVE");
     });
     try {
@@ -276,53 +279,57 @@ describe("審核流程引擎:平行分支", () => {
     expect(confirmTasks).toHaveLength(1);
   });
 
-  it("兩個推進讀到同一份快照(在第一個實例寫入前插進重試推進)→ 後啟動的那個 CAS 失敗,匯合與確認關只啟動一次", async () => {
+  it("兩個推進讀到同一份快照(第一個寫入前插進另一個推進並提交)→ 前者寫入衝突、重跑,各分支只啟動一次", async () => {
     await useWorkflow(world, nextKey("purchase_two_advances"), purchase());
     const submitted = await submitLeave(world);
-    await decideOn(world, staff(0), submitted.id, "APPROVE");
-    await decideOn(world, staff(1), submitted.id, "APPROVE");
-    await decideOn(world, staff(4), submitted.id, "APPROVE");
-    await decideOn(world, staff(5), submitted.id, "APPROVE");
     const before = await currentInstance(world, submitted.id);
+    // init 已完成、但三條分支都沒啟動(人工造出,讓推進的第一個寫入就是 updateInstance)
+    await world.connection
+      .collection("workflow_instances")
+      .updateOne(
+        { _id: new Types.ObjectId(before.id) },
+        { $set: { activeStepKeys: [], "steps.0.status": "completed" } },
+      );
+    const engine = api.app.get(WorkflowEngineService);
+    const instanceId = new Types.ObjectId(before.id);
     let isInterleaved = false;
     const restore = interleaveAt(api, "action:updateInstance", async () => {
       isInterleaved = true;
-      await retryAdvance(world, before.id);
+      await engine.advance(instanceId);
     });
     try {
-      await decideOn(world, staff(6), submitted.id, "APPROVE");
+      await engine.advance(instanceId);
     } finally {
       restore();
     }
     expect(isInterleaved).toBe(true);
     const instance = await currentInstance(world, submitted.id);
-    expect(instance.activeStepKeys).toEqual(["confirm"]);
-    expect(
-      instance.history.filter(
-        (event) =>
-          event.kind === "step_completed" && event.stepKey === "purchase",
-      ),
-    ).toHaveLength(1);
-    expect(
-      instance.history.filter(
-        (event) => event.kind === "step_entered" && event.stepKey === "confirm",
-      ),
-    ).toHaveLength(1);
+    expect(instance.activeStepKeys.toSorted(byText)).toEqual(
+      ["finance", "legal", "purchase"].toSorted(byText),
+    );
+    for (const stepKey of ["finance", "legal", "purchase"]) {
+      expect(
+        instance.history.filter(
+          (event) => event.kind === "step_entered" && event.stepKey === stepKey,
+        ),
+      ).toHaveLength(1);
+    }
     const tasks = await rawTasks(world.connection, instance.id);
-    expect(tasks.filter((task) => task.stepKey === "confirm")).toHaveLength(1);
+    expect(tasks.filter((task) => task.stepKey === "purchase")).toHaveLength(1);
   });
 
-  it("匯合後中斷再重試 → 匯合與其後關卡只啟動一次", async () => {
+  it("匯合後建確認關任務時中斷 → 整個決定回復;再決定一次,匯合與其後關卡只啟動一次", async () => {
     await useWorkflow(world, nextKey("purchase_interrupt"), purchase());
     const submitted = await submitLeave(world);
     await decideOn(world, staff(0), submitted.id, "APPROVE");
     await decideOn(world, staff(1), submitted.id, "APPROVE");
     await decideOn(world, staff(4), submitted.id, "APPROVE");
     await decideOn(world, staff(5), submitted.id, "APPROVE");
+    const before = await currentInstance(world, submitted.id);
     // 最後一條分支核准後,推進建確認關任務時中斷
+    const task = await pendingTaskOf(world, staff(6), submitted.id);
     const restore = interruptAt(api, "action:createTask");
     try {
-      const task = await pendingTaskOf(world, staff(6), submitted.id);
       await api.graphql(
         DECIDE,
         {
@@ -337,11 +344,12 @@ describe("審核流程引擎:平行分支", () => {
     } finally {
       restore();
     }
-    const stuck = await currentInstance(world, submitted.id);
-    expect(stuck.activeStepKeys).toEqual(["confirm"]);
-    await retryAdvance(world, stuck.id);
-    await retryAdvance(world, stuck.id);
+    const rolledBack = await currentInstance(world, submitted.id);
+    expect(rolledBack.activeStepKeys).toEqual(before.activeStepKeys);
+    expect(rolledBack.editVersion).toBe(before.editVersion);
+    await decide(world, staff(6), task, "APPROVE");
     const instance = await currentInstance(world, submitted.id);
+    expect(instance.activeStepKeys).toEqual(["confirm"]);
     expect(
       instance.history.filter(
         (event) => event.kind === "step_entered" && event.stepKey === "confirm",

@@ -11,6 +11,7 @@ import {
 
 import { AuditService } from "../../audit/audit.service";
 import { WorkflowInstancesRepository } from "../../database/database.module";
+import { TransactionService } from "../../database/transaction";
 import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import {
   type WorkflowTaskRecord,
@@ -57,21 +58,20 @@ const DECISION_OF: Readonly<Record<WorkflowDecisionEnum, Decision>> = {
   [WorkflowDecisionEnum.RETURN]: "returned",
 };
 
-/** 改派 / 新增審核者的 CAS 重讀次數(編輯版號被別的動作推進時重試;決定已寫入則直接拒絕)。 */
-const CAS_ATTEMPTS = 3;
-
 const LIVE = [...LIVE_INSTANCE_STATUSES];
 
 export type DecideResult = "accepted" | "stepClosed";
 
 /**
- * 審核動作(Spec 6b §6「決定」「撤回、改派、新增審核者、審核者失效」):
+ * 審核動作(Spec 6b §6「決定」「撤回、改派、新增審核者、審核者失效」)。**每個動作是一個交易**
+ * (ADR-0013):讀、寫實例與任務、稽核、推進全在同一個交易裡,任一步失敗全部回復。並發的兩個動作寫到同一份
+ * 實例 → 後到的寫入衝突、整個交易由 driver 重跑,重讀後依當下狀態判斷(下列語意不變):
  *
- * - `decideTask`:前置檢查後**單文件原子**寫實例(`$push decisions` + `$push history` + `$inc editVersion`,
+ * - `decideTask`:前置檢查後寫實例(`$push decisions` + `$push history` + `$inc editVersion`,
  *   條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 taskKey 還沒有決定」),**不比對** `editVersion`;
  *   條件不成立 → `stepClosed`、任務不動。接受後 `advance`。
- * - `reassignTask` / `addStepAssignee`:`editVersion` CAS(條件本身含「該 taskKey 尚無決定」);
- *   因為決定被接受時會原子 +1,依舊狀態算好的改派一定失敗重讀。
+ * - `reassignTask` / `addStepAssignee`:`editVersion` 條件更新(條件本身含「該 taskKey 尚無決定」);
+ *   決定先提交 → 重跑後讀到決定 → 「此任務已決定」。
  * - `retryAdvanceInstance`:寫 `advance_retried` 後推進。
  */
 @Injectable()
@@ -84,9 +84,49 @@ export class TaskActionsService {
     private readonly engine: WorkflowEngineService,
     private readonly hooks: WorkflowEngineHooks,
     private readonly audit: AuditService,
+    private readonly transactions: TransactionService,
   ) {}
 
-  async decide(
+  decide(
+    facts: FormOperatorFacts,
+    input: DecideTaskInput,
+  ): Promise<{ task: WorkflowTaskRecord; result: DecideResult }> {
+    return this.transactions.withTransaction(() =>
+      this.decideOnce(facts, input),
+    );
+  }
+
+  reassign(
+    facts: FormOperatorFacts,
+    input: ReassignTaskInput,
+  ): Promise<WorkflowTaskRecord> {
+    return this.transactions.withTransaction(() =>
+      this.reassignOnce(facts, input),
+    );
+  }
+
+  addAssignee(
+    facts: FormOperatorFacts,
+    input: AddStepAssigneeInput,
+  ): Promise<WorkflowTaskRecord> {
+    return this.transactions.withTransaction(() =>
+      this.addAssigneeOnce(facts, input),
+    );
+  }
+
+  /** 重試推進(寫 `advance_retried`);任何狀態都可以按,結果與正常路徑相同。 */
+  retry(
+    facts: FormOperatorFacts,
+    input: RetryAdvanceInstanceInput,
+  ): Promise<InstanceRecord> {
+    return this.transactions.withTransaction(() =>
+      this.retryOnce(facts, input),
+    );
+  }
+
+  // ---- 交易內的動作本體 ----
+
+  private async decideOnce(
     facts: FormOperatorFacts,
     input: DecideTaskInput,
   ): Promise<{ task: WorkflowTaskRecord; result: DecideResult }> {
@@ -128,6 +168,7 @@ export class TaskActionsService {
         ["decision"],
       );
     }
+    await this.hooks.reached("decide:before-write");
     const at = new Date();
     const accepted = await this.instances.findOneAndUpdate(
       systemContext(),
@@ -196,103 +237,90 @@ export class TaskActionsService {
     return { task: await this.reload(task), result: "accepted" };
   }
 
-  async reassign(
+  private async reassignOnce(
     facts: FormOperatorFacts,
     input: ReassignTaskInput,
   ): Promise<WorkflowTaskRecord> {
     const task = await this.requireTask(facts, input.taskId);
     const toUserId = toObjectId(input.toUserId, "toUserId");
     await this.assertEligible(task.tenantId, toUserId);
-    let before: Types.ObjectId | null = null;
-    for (
-      let attempt = 0;
-      attempt < CAS_ATTEMPTS && before === null;
-      attempt += 1
-    ) {
-      const instance = await this.liveInstanceOf(task.instanceId);
-      const step = this.activeStep(instance, task.stepKey);
-      assertNotApplicant(instance, toUserId);
-      if (step.decisions.some((entry) => entry.taskKey === task.taskKey)) {
-        throw workflowConflictError(
-          `Task ${task.taskKey} has already been decided`,
-          "ALREADY_DECIDED",
-        );
-      }
-      const item = step.plan.find((entry) => entry.taskKey === task.taskKey);
-      if (!item) {
-        throw workflowConflictError(
-          `Task ${task.taskKey} is not in the plan`,
-          "INSTANCE_CHANGED",
-        );
-      }
-      if (step.plan.some((entry) => entry.assigneeId.equals(toUserId))) {
-        throw workflowConflictError(
-          "The new assignee is already in this step",
-          "ALREADY_IN_STEP",
-        );
-      }
-      await this.hooks.reached("reassign:before-write");
-      const updated = await this.instances.findOneAndUpdate(
-        systemContext(),
-        {
-          _id: instance._id,
-          editVersion: instance.editVersion,
-          status: { $in: LIVE },
-          steps: {
-            $elemMatch: {
-              stepKey: task.stepKey,
-              status: "active",
-              "decisions.taskKey": { $ne: task.taskKey },
-            },
-          },
-        },
-        {
-          $set: {
-            "steps.$[s].plan.$[p].assigneeId": toUserId,
-            "steps.$[s].plan.$[p].assigneeState": "active",
-          },
-          $push: {
-            "steps.$[s].plan.$[p].previousAssigneeIds": item.assigneeId,
-            history: {
-              at: new Date(),
-              kind: "reassigned",
-              stepKey: task.stepKey,
-              taskKey: task.taskKey,
-              userId: item.assigneeId,
-              toUserId,
-            },
-          },
-          $inc: { editVersion: 1 },
-        },
-        {
-          arrayFilters: [
-            { "s.stepKey": task.stepKey },
-            { "p.taskKey": task.taskKey },
-          ],
-        },
-      );
-      if (updated !== null) {
-        before = item.assigneeId;
-      }
-    }
-    if (before === null) {
+    const instance = await this.liveInstanceOf(task.instanceId);
+    const step = this.activeStep(instance, task.stepKey);
+    assertNotApplicant(instance, toUserId);
+    if (step.decisions.some((entry) => entry.taskKey === task.taskKey)) {
       throw workflowConflictError(
-        "The instance kept changing; reload and try again",
+        `Task ${task.taskKey} has already been decided`,
+        "ALREADY_DECIDED",
+      );
+    }
+    const item = step.plan.find((entry) => entry.taskKey === task.taskKey);
+    if (!item) {
+      throw workflowConflictError(
+        `Task ${task.taskKey} is not in the plan`,
         "INSTANCE_CHANGED",
       );
+    }
+    if (step.plan.some((entry) => entry.assigneeId.equals(toUserId))) {
+      throw workflowConflictError(
+        "The new assignee is already in this step",
+        "ALREADY_IN_STEP",
+      );
+    }
+    await this.hooks.reached("reassign:before-write");
+    const updated = await this.instances.findOneAndUpdate(
+      systemContext(),
+      {
+        _id: instance._id,
+        editVersion: instance.editVersion,
+        status: { $in: LIVE },
+        steps: {
+          $elemMatch: {
+            stepKey: task.stepKey,
+            status: "active",
+            "decisions.taskKey": { $ne: task.taskKey },
+          },
+        },
+      },
+      {
+        $set: {
+          "steps.$[s].plan.$[p].assigneeId": toUserId,
+          "steps.$[s].plan.$[p].assigneeState": "active",
+        },
+        $push: {
+          "steps.$[s].plan.$[p].previousAssigneeIds": item.assigneeId,
+          history: {
+            at: new Date(),
+            kind: "reassigned",
+            stepKey: task.stepKey,
+            taskKey: task.taskKey,
+            userId: item.assigneeId,
+            toUserId,
+          },
+        },
+        $inc: { editVersion: 1 },
+      },
+      {
+        arrayFilters: [
+          { "s.stepKey": task.stepKey },
+          { "p.taskKey": task.taskKey },
+        ],
+      },
+    );
+    if (updated === null) {
+      throw instanceChangedError();
     }
     await this.audit.record(facts.operator, {
       action: TASK_AUDIT.reassign,
       targetType: "workflow_task",
       targetId: task._id,
-      before: { assigneeId: String(before) },
+      before: { assigneeId: String(item.assigneeId) },
       after: { assigneeId: String(toUserId) },
     });
     await this.engine.advance(task.instanceId);
     return this.reload(task);
   }
 
-  async addAssignee(
+  private async addAssigneeOnce(
     facts: FormOperatorFacts,
     input: AddStepAssigneeInput,
   ): Promise<WorkflowTaskRecord> {
@@ -300,67 +328,54 @@ export class TaskActionsService {
     const userId = toObjectId(input.userId, "userId");
     const tenantId = await this.requireInstanceInTenant(facts, instanceId);
     await this.assertEligible(tenantId, userId);
-    let taskKey: string | null = null;
-    for (
-      let attempt = 0;
-      attempt < CAS_ATTEMPTS && taskKey === null;
-      attempt += 1
-    ) {
-      const instance = await this.liveInstanceOf(instanceId);
-      const step = this.activeStep(instance, input.stepKey);
-      assertNotApplicant(instance, userId);
-      if (!step.blocked || step.plan.length > 0) {
-        throw workflowConflictError(
-          `Step ${input.stepKey} is not blocked by an empty assignee list`,
-          "INSTANCE_CHANGED",
-        );
-      }
-      const key = nextTaskKey(input.stepKey, step.plan);
-      const updated = await this.instances.findOneAndUpdate(
-        systemContext(),
-        {
-          _id: instance._id,
-          editVersion: instance.editVersion,
-          status: { $in: LIVE },
-          steps: {
-            $elemMatch: {
-              stepKey: input.stepKey,
-              status: "active",
-              blocked: true,
-              plan: { $size: 0 },
-            },
-          },
-        },
-        {
-          $push: {
-            "steps.$[s].plan": {
-              taskKey: key,
-              assigneeId: userId,
-              previousAssigneeIds: [],
-              assigneeState: "active",
-            },
-            history: {
-              at: new Date(),
-              kind: "assignee_added",
-              stepKey: input.stepKey,
-              taskKey: key,
-              toUserId: userId,
-              userId: facts.operator.actorId,
-            },
-          },
-          $inc: { editVersion: 1 },
-        },
-        { arrayFilters: [{ "s.stepKey": input.stepKey }] },
-      );
-      if (updated !== null) {
-        taskKey = key;
-      }
-    }
-    if (taskKey === null) {
+    const instance = await this.liveInstanceOf(instanceId);
+    const step = this.activeStep(instance, input.stepKey);
+    assertNotApplicant(instance, userId);
+    if (!step.blocked || step.plan.length > 0) {
       throw workflowConflictError(
-        "The instance kept changing; reload and try again",
+        `Step ${input.stepKey} is not blocked by an empty assignee list`,
         "INSTANCE_CHANGED",
       );
+    }
+    const taskKey = nextTaskKey(input.stepKey, step.plan);
+    const updated = await this.instances.findOneAndUpdate(
+      systemContext(),
+      {
+        _id: instance._id,
+        editVersion: instance.editVersion,
+        status: { $in: LIVE },
+        steps: {
+          $elemMatch: {
+            stepKey: input.stepKey,
+            status: "active",
+            blocked: true,
+            plan: { $size: 0 },
+          },
+        },
+      },
+      {
+        $push: {
+          "steps.$[s].plan": {
+            taskKey,
+            assigneeId: userId,
+            previousAssigneeIds: [],
+            assigneeState: "active",
+          },
+          history: {
+            at: new Date(),
+            kind: "assignee_added",
+            stepKey: input.stepKey,
+            taskKey,
+            toUserId: userId,
+            userId: facts.operator.actorId,
+          },
+        },
+        $inc: { editVersion: 1 },
+      },
+      { arrayFilters: [{ "s.stepKey": input.stepKey }] },
+    );
+    if (updated === null) {
+      throw instanceChangedError();
     }
     await this.audit.record(facts.operator, {
       action: TASK_AUDIT.addAssignee,
@@ -376,8 +391,7 @@ export class TaskActionsService {
     return task;
   }
 
-  /** 重試推進(寫 `advance_retried`);任何狀態都可以按,結果與正常路徑相同。 */
-  async retry(
+  private async retryOnce(
     facts: FormOperatorFacts,
     input: RetryAdvanceInstanceInput,
   ): Promise<InstanceRecord> {
@@ -508,6 +522,14 @@ export class TaskActionsService {
   private async reload(task: WorkflowTaskRecord): Promise<WorkflowTaskRecord> {
     return (await this.tasks.findOne(task.tenantId, { _id: task._id })) ?? task;
   }
+}
+
+/** 條件更新沒命中:交易內讀到的實例與寫入時不同(不應發生;並發由寫入衝突重跑處理)。 */
+function instanceChangedError(): Error {
+  return workflowConflictError(
+    "The instance changed; reload and try again",
+    "INSTANCE_CHANGED",
+  );
 }
 
 function requireActor(facts: FormOperatorFacts): Types.ObjectId {

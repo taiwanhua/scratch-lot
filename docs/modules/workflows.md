@@ -14,7 +14,7 @@
 
 - 一張表單可以**綁流程**:送出後依關卡找審核者、產生任務、核准 / 駁回 / 退回,核准才 `completed`。沒綁流程的表單送出即完成。
 - 流程可在畫面設計、發布及分派。登記為 seed 的共用流程隨專案版本交付,沿用同一套發布服務;未登記與租戶客製流程獨立維護。分派與表單綁定仍由各環境操作,綁流程的示範對象見 [demo-form](./demo-form.md)。受管邊界與衝突處理見[受管表單與流程](../concepts/data-layer-and-isolation.md#受管表單與流程)。
-- 引擎原則:**實例是唯一權威**(關卡進度、派任計畫、被接受的決定都在實例文件上,任務只是投影);每個寫入都是條件更新;每個中斷都有冪等的恢復入口。不用 Mongo 交易。
+- 引擎原則:**實例是唯一權威**(關卡進度、派任計畫、被接受的決定都在實例文件上,任務只是投影);每個寫入都是條件更新;**每個使用者動作是一個 Mongo 交易**(ADR-0013;推進併在觸發它的動作裡),任一步失敗全部回復。
 
 ## 模組 key 與權限表
 
@@ -64,7 +64,7 @@
 
 | 狀態         | 意思                                            | 轉到(誰)                                                                                                                                    |
 | ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `linking`    | 送出第 2 步建立、提交還沒連上;不派單            | 第 4 步 → `running`;第 3 步從未成功 = 閒置文件,重送同修訂號依 `linkSource` 沿用或重置                                                       |
+| `linking`    | 送出第 2 步建立、提交還沒連上;不派單            | 第 4 步 → `running`(同一個交易內;提交後看不到 `linking`,出現代表交易前留下的舊資料)                                                         |
 | `running`    | 進行中                                          | 關卡阻擋 → `blocked`;全案核准三條件成立 → `approved`(與最後節點完成同一次 CAS);有效駁回 / 退回 → `rejected` / `returned`;撤回 → `withdrawn` |
 | `blocked`    | 進行中,至少一個 active 關卡阻擋(其他關卡照常審) | 可解除(列 8)→ `running`;其餘同 `running`                                                                                                    |
 | `approved`   | 全案核准(終局)                                  | 推進收尾(列 2):任務投影、提交 `completed`、`finishedAt`、結果信                                                                             |
@@ -140,23 +140,25 @@
 
 `workflow-engine/workflow-submit.service.ts`,由表單的 `submitFormSubmission`(`forms/form-runtime/form-submissions.service.ts`)呼叫:
 
-0. 提交已是 `reviewing` 且指向屬於目前修訂的實例 → **直接接續**(`linking` 補第 4 步、之後推進);不跑送出時檢查、不看目前綁定、不增加修訂。指向的實例不屬於目前修訂 → `CONFLICT`(`STATUS_MISMATCH`)。
+0. 提交已是 `reviewing`(重複送出)且指向屬於目前修訂的實例 → 對它**再推進一次**(一個交易;結果與重試推進相同);不跑送出時檢查、不看目前綁定、不增加修訂,稽核記 `resumed`。指向的實例不屬於目前修訂 → `CONFLICT`(`STATUS_MISMATCH`)。
 1. 表單的驗證與重算 → **送出時檢查**(`@repo/domain/workflow` 的 `checkSubmitCompatibility`,四種擋法見 `docs/concepts/workflow-engine.md`「送出:從提交到實例」):沒綁也沒進過審核 → 照不走流程的方式送出;擋下 → `FORBIDDEN` + reason(`WORKFLOW_REMOVED` / `WORKFLOW_UNPUBLISHED` / `WORKFLOW_MISCONFIGURED` + `issues`)。接著是修訂數與文件大小的上限(見 `docs/modules/forms.md`「提交的寫入規則」)。新修訂號 N = 目前 + 1。
-2. 建 `linking` 實例(`(submissionId, N)` 唯一;每個節點一筆 `pending` 的 StepState;記 `linkSource`)。撞唯一鍵:`linkSource` 相同沿用、不同整份重置(未連上、沒有任務,重置安全)。
+2. 建 `linking` 實例(`(submissionId, N)` 唯一,先查再建 —— 已有 = 另一次送出已提交 → `CONFLICT`(`EDIT_VERSION_MISMATCH`);每個節點一筆 `pending` 的 StepState;記 `linkSource`)。
 3. 提交的 `values` / `summary` / `revision` / 快照 / `reviewing` / `currentInstanceId` / `editVersion` **同一次**條件更新;前一個修訂被退回 / 撤回的實例 → `superseded`(推進收尾它自己的任務與歷程,不碰提交)。
-4. 實例 `linking → running`、`activeStepKeys = [startStepKey]`、`history: started`(CAS)。
+4. 實例 `linking → running`、`activeStepKeys = [startStepKey]`、`history: started`。
 5. `advance`。
 
-任一步失敗,重送同一次送出會從缺的那步接下去;`linking` 的實例不派單。三個檢查點(`submit:instance-created` / `submit:submission-linked` / `submit:started`)在 `WorkflowEngineHooks`,測試在那裡注入中斷。
+**第 2–5 步是一個交易**:任一步失敗,實例、任務、提交的變更都不存在,提交維持送出前的狀態,重送就是重新送一次。三個檢查點(`submit:instance-created` / `submit:submission-linked` / `submit:started`)在 `WorkflowEngineHooks`,測試在那裡注入中斷、驗證全部回復。
 
 ## 推進(`advance` 的執行器)
 
 `workflow-engine/workflow-engine.service.ts`。判斷表本體與**執行合約**在 `@repo/domain/workflow` 的 `advance.ts` 檔頭,這裡只執行:
 
 1. 讀實例(權威)、它的全部任務、對應的提交 → `advance`;列 5 需要時先解析進關結果(`step-entry.service.ts`:跳過條件用**該修訂**的值與送出當時的 `ctx`;審核者四種來源只算啟用中且仍在本租戶的人;`manager` 用 `OrgManagersService.resolveManagers`,名單規則在 `@repo/domain/workflow` 的 `managers.ts`)再呼叫一次(兩段式)。
-2. 依序執行動作。實例的條件翻成 Mongo(`instance-writes.ts`):`editVersion` CAS、狀態、`outcome` / `finishedAt` 為 null、節點狀態以 `$elemMatch` 對陣列元素下條件、`activeStepKeys` 的 `$nin`;節點欄位以 `arrayFilters` 指到 `stepKey`(`BaseRepository.findOneAndUpdate` 的 `options.arrayFilters`)。任務用 `(instanceId, taskKey)` 唯一鍵與讀到的狀態;提交用同步資格條件;`appendHistoryOnce` 以 `history` 沒有同種類 + 同 `taskKey` / `result` 的事件為條件。
-3. **`updateInstance` 的條件不成立就中止本輪**、重讀再判斷;其他動作條件不成立 = 已做過。`invalidState` 不寫、停下、記 log(會一直出現在「需要推進」)。
+2. 依序執行動作。實例的條件翻成 Mongo(`instance-writes.ts`):`editVersion` CAS、狀態、`outcome` / `finishedAt` 為 null、節點狀態以 `$elemMatch` 對陣列元素下條件、`activeStepKeys` 的 `$nin`;節點欄位以 `arrayFilters` 指到 `stepKey`(`BaseRepository.findOneAndUpdate` 的 `options.arrayFilters`)。任務先查 `(instanceId, taskKey)` 再建(交易內不吞重複鍵錯誤,TX-04)、投影同步帶讀到的狀態;提交用同步資格條件;`appendHistoryOnce` 以 `history` 沒有同種類 + 同 `taskKey` / `result` 的事件為條件。
+3. `updateInstance` 的條件不成立就結束本輪、重讀再判斷;其他動作條件不成立 = 已做過。`invalidState` 不寫、停下、記 log(會一直出現在「需要推進」)。
 4. 重複到沒事可做(上限 60 輪,超過記 log 停下,重試推進可接續)。
+
+整段推進(含連續推進、跳過、自動通過)是**一個交易**(`TransactionService.withTransaction`);由動作觸發時併進該動作的交易。並發的另一個交易先寫了同一份實例 → 寫入衝突、整個交易由 driver 重跑。交易內讀寫依序 `await`(TX-02);`WorkflowSubmissionStore` 用原生 collection,自己帶目前交易的 session。
 
 流程定義依實例記錄的 key 與版號讀取資料庫,不跨請求保留永久快取。重置後同 key/版號重建或刪除,既有服務程序會讀到新內容或回報版本不存在;一般改版仍建立新版,不原地修改已發布版本。
 
@@ -164,17 +166,17 @@
 
 ## 決定、撤回、改派、新增審核者、審核者失效
 
-- **`decideTask`**(`task-actions.service.ts`):前置(任務是我的且 `pending`、提交仍指向這個實例、實例進行中、關卡為 active、退回要 `allowReturn`、駁回 / 退回理由必填、任務 `expectedEditVersion`)後,**單文件原子**寫實例:條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 `taskKey` 還沒有決定」→ `$push steps.$[cur].decisions` + `$push history` + `$inc editVersion`;**不比對** `editVersion`(兩人同時決定都會被記下,誰算數由 `advance` 依接受順序判)。條件不成立、任務已不是 `pending`、我已被改派走 → 回 `result: STEP_CLOSED`、任務不動。
-- **撤回**(申請人本人:看得到這張單但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;依可見範圍與資料範圍規則根本讀不到 → `NOT_FOUND`;提交要是 `reviewing` 且有實例,否則 `CONFLICT` `STATUS_MISMATCH`;`instance-withdraw.service.ts` 另以實例的 `createdBy` 再比一次):CAS `{ editVersion, 進行中, 所有關卡都沒有決定 }` → `withdrawn`、active 關卡 `terminated`。「沒有決定」寫在條件裡,所以撤回讀到無決定後決定才寫入 → CAS 失敗 → 重讀看到決定 → `CONFLICT`(`HAS_DECISIONS`)。推進收尾把提交同步成 `withdrawn`。
-- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);CAS `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`。決定被接受時的原子 `+1` 讓依決定前的狀態算好的改派一定失敗重讀(已有決定 → `ALREADY_DECIDED`)。計畫固定:之後補建任務不會把原承辦人建回來。
-- **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);CAS 追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋。
-- **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目 CAS `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
+- **`decideTask`**(`task-actions.service.ts`):前置(任務是我的且 `pending`、提交仍指向這個實例、實例進行中、關卡為 active、退回要 `allowReturn`、駁回 / 退回理由必填、任務 `expectedEditVersion`)後寫實例:條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 `taskKey` 還沒有決定」→ `$push steps.$[cur].decisions` + `$push history` + `$inc editVersion`;**不比對** `editVersion`。寫決定、任務版號、稽核與推進是一個交易;兩人同時決定同一份實例 → 後到的寫入衝突、重跑後依當下狀態判(關卡已結束 → `STEP_CLOSED`;關卡仍進行中 → 照常接受)。條件不成立、任務已不是 `pending`、我已被改派走 → 回 `result: STEP_CLOSED`、任務不動。
+- **撤回**(申請人本人:看得到這張單但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;依可見範圍與資料範圍規則根本讀不到 → `NOT_FOUND`;提交要是 `reviewing` 且有實例,否則 `CONFLICT` `STATUS_MISMATCH`;`instance-withdraw.service.ts` 另以實例的 `createdBy` 再比一次):條件更新 `{ editVersion, 進行中, 所有關卡都沒有決定 }` → `withdrawn`、active 關卡 `terminated`;撤回、推進收尾(提交同步成 `withdrawn`)與稽核是一個交易。決定在撤回讀完之後先提交 → 撤回的寫入衝突、重跑看到決定 → `CONFLICT`(`HAS_DECISIONS`);「沒有決定」也寫在條件裡。
+- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。
+- **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);條件更新追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋(一個交易)。
+- **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。**每個實例一個交易**(標失效 + 推進),對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目條件更新 `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
 - **角色來源派單後被移除角色的人仍可審**(計畫固定);被停用 / 移出租戶走失效。
 
 ## 再送出、作廢、複製為新單
 
 - **再送出**(`returned` / `withdrawn`):申請人以 `saveFormDraft` 改內容(狀態不變),再 `submitFormSubmission` → 修訂 +1、新實例從起點開始、前一個實例 `superseded`。
-- **作廢**(`voidSubmission`;走過流程(`currentInstanceId` 有值)且 `completed`,否則 `CONFLICT` `STATUS_MISMATCH`;申請人本人或有該模組 `edit`;理由必填;不需審核)→ `voided`、稽核。看的是提交有沒有走過流程,不是表單現在有沒有綁。
+- **作廢**(`voidSubmission`;走過流程(`currentInstanceId` 有值)且 `completed`,否則 `CONFLICT` `STATUS_MISMATCH`;申請人本人或有該模組 `edit`;理由必填;不需審核)→ `voided`、稽核(一個交易)。看的是提交有沒有走過流程,不是表單現在有沒有綁。
 - **複製為新單**(`copySubmissionToDraft`;來源 = 已作廢、讀者讀得到全部內容(只能讀某個修訂的審核者 → `FORBIDDEN`);讀者要有目標模組的 `create`;目標 = 同表單目前可新增的版本,沒有 → `FORBIDDEN` `FORM_NOT_AVAILABLE`):
   - 只複製讀者對來源有 `show`、目標版本有同 key 同型別的使用者填欄位、讀者對目標有 `edit` 的欄位;`computed` / `constant` 由目標版本重算。
   - 引用重驗來源可讀(`LookupProvidersService`),失效 → 清空;附件以 `StorageService.copyPrivateObject` 複製一份歸新單,複製失敗也清空。清空的欄位列在回傳的 `clearedFields`。
@@ -224,6 +226,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 `workflow-engine/workflow-notifier.service.ts`:任務建立(給審核者)、有結果(核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。
 
 - 開關 `WORKFLOW_MAIL_ENABLED`(普通 env,`"true"` 才寄,每次寄信時讀;`docs/env-registry.md`):關閉時只寫 log。收件人再經 `MailService` 的 `MAIL_ALLOWLIST`(沒設 = 不限)。
+- **交易後寄**:推進在交易內只登記寄信,交易提交後才寄(`afterCommit`,TX-03);交易回復就不寄。
 - **盡力通知**:寄信失敗只記 log、不影響推進。「寄過沒」看 `history`:任務信 = 該 `taskKey` 的 `task_created`;結果信 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)—— 寄出(或關閉時只記 log)後追加,重試推進不重寄,但不保證恰好一次。
 - 內容只讀實例快照(表單名、實例上的標題槽、關卡名),連結 `<ADMIN_APP_URL>/apply-center/view-page/<實例 id>`。模板在 `apps/api/src/mail/mail-templates.ts`(品牌文字登記 `docs/branding.md`)。
 

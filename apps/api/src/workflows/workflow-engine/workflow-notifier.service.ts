@@ -12,6 +12,7 @@ import {
   FormsRepository,
   UsersRepository,
 } from "../../database/database.module";
+import { afterCommit } from "../../database/transaction";
 import { MailService } from "../../mail/mail.service";
 import { systemContext } from "../tenant-directory.service";
 import type { InstanceRecord } from "./instance-writes";
@@ -24,6 +25,8 @@ const DEFAULT_ADMIN_APP_URL = "http://localhost:3001";
  *
  * - 開關 `WORKFLOW_MAIL_ENABLED`(普通 env,預設關;`docs/env-registry.md`):**每次寄信時讀**,
  *   關閉時只寫 log。收件人仍受既有 `MAIL_ALLOWLIST` 約束(`MailService` 那一層)。
+ * - **交易後寄**:推進在交易內呼叫,這裡只把寄信排到交易提交之後(`afterCommit`,TX-03);
+ *   交易回復(含被自動重試丟掉的那一輪)就不寄。收件人與表單名也在提交後才讀。
  * - **盡力通知**:寄信失敗只記 log、不影響推進;「寄過沒」由引擎以 `history` 的
  *   `task_created` / `notified` 標記判斷(重試推進不重寄,但不保證恰好一次)。
  * - 內容只讀**實例快照**(表單名、實例上的標題槽、關卡名),不讀提交最新的摘要;
@@ -44,17 +47,40 @@ export class WorkflowNotifier {
     return this.config.get<string>("WORKFLOW_MAIL_ENABLED") === "true";
   }
 
-  async taskCreated(
+  /** 任務建立通知(排到目前交易提交後寄)。 */
+  taskCreated(
     instance: InstanceRecord,
     definition: WorkflowDefinition,
     stepKey: string,
     assigneeId: string,
-  ): Promise<void> {
+  ): void {
     const label = `任務通知(實例 ${String(instance._id)}、關卡 ${stepKey}、審核者 ${assigneeId})`;
     if (!this.isEnabled()) {
       this.logger.log(`WORKFLOW_MAIL_ENABLED 未開啟,不寄${label}`);
       return;
     }
+    afterCommit(() =>
+      this.sendTaskCreated(label, instance, definition, stepKey, assigneeId),
+    );
+  }
+
+  /** 結果通知(排到目前交易提交後寄)。 */
+  result(instance: InstanceRecord, result: NotifiedResult): void {
+    const label = `結果通知(實例 ${String(instance._id)}、${result})`;
+    if (!this.isEnabled()) {
+      this.logger.log(`WORKFLOW_MAIL_ENABLED 未開啟,不寄${label}`);
+      return;
+    }
+    afterCommit(() => this.sendResult(label, instance, result));
+  }
+
+  private async sendTaskCreated(
+    label: string,
+    instance: InstanceRecord,
+    definition: WorkflowDefinition,
+    stepKey: string,
+    assigneeId: string,
+  ): Promise<void> {
     try {
       const recipient = await this.recipientOf(assigneeId);
       if (recipient === null) {
@@ -75,15 +101,11 @@ export class WorkflowNotifier {
     }
   }
 
-  async result(
+  private async sendResult(
+    label: string,
     instance: InstanceRecord,
     result: NotifiedResult,
   ): Promise<void> {
-    const label = `結果通知(實例 ${String(instance._id)}、${result})`;
-    if (!this.isEnabled()) {
-      this.logger.log(`WORKFLOW_MAIL_ENABLED 未開啟,不寄${label}`);
-      return;
-    }
     try {
       const recipient =
         instance.createdBy === null
