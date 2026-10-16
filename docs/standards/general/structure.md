@@ -229,6 +229,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 
 - 功能來源為 `base/api-modules.ts` 與 `project/api-modules.ts`,專案功能由 `project/project.module.ts` 掛載;`app.module.ts` 是底座讀取專案功能的固定入口,不提供核心 module/provider 替換。
 - 資料來源為 `database/base/registrations.ts` 與 `project/database/registrations.ts`,只由 `database/database.module.ts` 組裝。業務服務使用 repository,不自行以 Mongoose 注入或註冊 Model。
+- 專案 lookup 來源為 `project/lookup-providers.ts`(`{ declaration, repositoryToken }` 清單),同樣只由 `database/database.module.ts` 組裝:`repositoryToken` 必須是專案資料登記的 repository,清單以 `PROJECT_LOOKUP_SOURCES` 提供給 api 與受管定義 CLI;規則見 [forms](../../modules/forms.md#專案登記的來源)。
 - repository providers 與 Nest exports 由登記導出,不匯出 Model provider 或整個 MongooseModule。底座 repository 實作放 `database/base/` 等 leaf 檔,不回指組裝入口;`database.module.ts` 保留既有 repository 的 TypeScript re-export 相容出口。
 - 新專案租戶資料沿用 BaseRepository 與隔離 plugins,同時登記組織歸屬檢查;刪組織與撤銷開通共用 `OrgBusinessDataReader`,不能新增可繞過檢查的 callback。專案資料登記不提供略過隔離的開關。
 - 測試 fixture 只豁免所有權方向,不新增 raw query 或 Mongoose 任意注入的例外;正式來源不得引用 fixture。驗收入口見 TEST-07 / TEST-08。
