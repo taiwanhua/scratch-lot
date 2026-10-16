@@ -9,8 +9,12 @@
  *
  * 夾具放在 `src/` 以外(`eslint src/`、tsc、jest 都不會掃到);ESLint 以夾具目錄為工作目錄執行,
  * 因為 `import-x/no-restricted-paths` 的 `basePath: "./src"` 是相對於工作目錄解析的。
+ *
+ * 另外檢查正式 `src/` 的 components / hooks / stores / lib 底下只有 `base/` 與 `project/`(STRUCT-12):
+ * 放在層根目錄的檔案不屬於任何一方,所有權規則與底座同步工具都無從判斷。
  */
 import { spawnSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,22 +31,28 @@ const EXPECTATIONS = {
   // 底座 → 專案:每一層都拒絕
   "src/app/base/imports-project-entry.ts": { restricted: ["專案來源"] },
   "src/pages/base/imports-project-page.ts": { restricted: ["專案來源"] },
-  "src/components/imports-project-component.ts": { restricted: ["專案來源"] },
-  "src/lib/imports-project-lib.ts": { restricted: ["專案來源"] },
+  "src/components/base/imports-project-component.ts": {
+    restricted: ["專案來源"],
+  },
+  "src/components/base/imports-project-hook.ts": { restricted: ["專案來源"] },
+  "src/hooks/base/imports-project-hook.ts": { restricted: ["專案來源"] },
+  "src/stores/base/imports-project-store.ts": { restricted: ["專案來源"] },
+  "src/lib/base/imports-project-lib.ts": { restricted: ["專案來源"] },
   // 專案頁 → 底座頁內部:拒絕
   "src/pages/project/imports-base-page.ts": { restricted: ["底座頁的內部"] },
   // 原本的分層照舊(含專案自己的檔案):components → pages 仍拒絕
-  "src/components/imports-page.ts": { restricted: ["STRUCT-03"] },
+  "src/components/base/imports-page.ts": { restricted: ["STRUCT-03"] },
   "src/components/project/imports-page.ts": { restricted: ["STRUCT-03"] },
   // 循環依賴照舊
-  "src/lib/cycle-a.ts": { cycle: true },
-  "src/lib/cycle-b.ts": { cycle: true },
+  "src/lib/base/cycle-a.ts": { cycle: true },
+  "src/lib/base/cycle-b.ts": { cycle: true },
   // 允許:固定組裝入口、專案 → 共用(components / lib)與專案自己的來源、底座組裝、test 支援檔
   "src/app/module-pages.tsx": {},
   "src/app/base/module-pages.ts": {},
   "src/app/project/module-pages.ts": {},
   "src/app/project/page-replacements.ts": {},
   "src/pages/project/project-page.ts": {},
+  "src/stores/project/imports-base-lib.ts": {},
   "src/test/imports-project.ts": {},
 };
 
@@ -112,11 +122,27 @@ for (const [file, messages] of byFile) {
   }
 }
 
+/** 這幾層只能有 `base/` 與 `project/` 兩個子目錄(`app/`、`pages/` 另有固定入口,不在此列)。 */
+const SPLIT_LAYERS = ["components", "hooks", "stores", "lib"];
+for (const layer of SPLIT_LAYERS) {
+  for (const entry of readdirSync(join(appRoot, "src", layer), {
+    withFileTypes: true,
+  })) {
+    if (entry.isDirectory() && ["base", "project"].includes(entry.name)) {
+      continue;
+    }
+    problems.push(
+      `src/${layer}/${entry.name}:${layer}/ 底下只能有 base/ 與 project/,請搬進其中一個`,
+    );
+  }
+}
+
 if (problems.length > 0) {
   fail("所有權 / 分層的 lint 行為與預期不符:", problems);
 }
 
 console.log(
   `check:ownership-lint ✓ ${String(byFile.size)} 個夾具檔的結果都符合預期` +
-    "(底座→專案拒絕、專案→共用允許、固定入口允許、分層與循環依賴照舊)",
+    "(底座→專案拒絕、專案→共用允許、固定入口允許、分層與循環依賴照舊);" +
+    "components / hooks / stores / lib 只有 base/ 與 project/",
 );
