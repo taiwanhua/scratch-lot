@@ -64,7 +64,7 @@ export const API_URL = `http://${HOST}:${String(API_PORT)}`;
 export const GRAPHQL_ENDPOINT = `${API_URL}/graphql`;
 export const ADMIN_URL = `http://${HOST}:${String(ADMIN_PORT)}`;
 
-/** 空 = harness 自己起 mongodb-memory-server;CI 給 service container 的位址。 */
+/** 空 = harness 自己起單一成員 replica set(本機與 CI 皆然);給值時須指向 replica set。 */
 export const MONGODB_URI = text("E2E_MONGODB_URI", "");
 export const DB_NAME = text("E2E_DB_NAME", "wowgo_base_e2e");
 

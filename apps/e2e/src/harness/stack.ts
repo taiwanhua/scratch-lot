@@ -46,7 +46,10 @@ interface StackState {
 
 let state: StackState | null = null;
 
-/** 起 Mongo:給了 `E2E_MONGODB_URI`(CI 的 service container)就用它,否則自起記憶體版(單一成員 replica set:api 的交易需要)。 */
+/**
+ * 起 Mongo:給了 `E2E_MONGODB_URI`(須為 replica set)就用它,否則自起單一成員 replica set
+ *(MongoMemoryReplSet;api 的交易需要 replica set)。本機與 CI(e2e.yml)都走自起。
+ */
 async function startMongo(): Promise<{
   uri: string;
   server: MongoMemoryReplSet | null;

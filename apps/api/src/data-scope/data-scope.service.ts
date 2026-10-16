@@ -205,9 +205,11 @@ export class DataScopeService
   }
 
   private async load(collection: string): Promise<CollectionRules> {
+    // 共用快取的載入一律在交易外讀(`session: null`):快取跨請求共用,不能讀到某個交易尚未提交的內容,
+    // 也不能因為那個交易回復而留下錯的快取(TX-03)
     const [documents, targets] = await Promise.all([
-      this.rules.findMany(RULE_READER, { collection }),
-      this.targets.findMany(RULE_READER, { collection }),
+      this.rules.findMany(RULE_READER, { collection }, { session: null }),
+      this.targets.findMany(RULE_READER, { collection }, { session: null }),
     ]);
     const targetByModule = new Map(
       targets.map((target) => [target.moduleKey, target]),

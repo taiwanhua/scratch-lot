@@ -91,7 +91,7 @@ Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `pr
 ## 本地開發
 
 ```bash
-docker compose up -d        # 啟動 MongoDB
+docker compose up -d        # 啟動 MongoDB(單一成員 replica set)
 pnpm install
 pnpm dev                    # turbo 同時啟動 api / front / admin / storybook
 pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
@@ -99,7 +99,7 @@ pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
 
 執行前先依各 app 的 `.env.example` 建立自己的 `.env`;已有檔案時核對內容,不要覆寫。API 的 `MONGODB_URI` 必填,缺值、空字串或純空白都會在連線 factory 拒絕,不使用內建 DB 預設。schema 產生器與測試 harness 自行提供隔離 URI。
 
-根 `.env.example` 提供 Compose 的 `LOCAL_MONGO_PORT`、`LOCAL_API_PORT`、`LOCAL_ADMIN_PORT`、`LOCAL_MONGO_DB`;複製為根 `.env` 後可覆寫。`COMPOSE_PROJECT_NAME` 決定容器、網路與 volume 前綴,新專案使用獨立名稱;既有專案保留原名與 `mongo-data` volume key,避免改接空庫。API 在主機執行時,其 `.env` 的 URI 必須對應 host port 與 DB;根 `.env` 不會自動替 API 設定連線。`--profile full` 的 admin build endpoint 會跟隨 host API port。變數清單見 `docs/env-registry.md`,新專案逐項檢查見[初始化索引](project-initialization.md#本機與測試環境)。
+根 `.env.example` 提供 Compose 的 `LOCAL_MONGO_PORT`、`LOCAL_API_PORT`、`LOCAL_ADMIN_PORT`、`LOCAL_MONGO_DB`;複製為根 `.env` 後可覆寫。`COMPOSE_PROJECT_NAME` 決定容器、網路與 volume 前綴,新專案使用獨立名稱;既有專案保留原名與 `mongo-data` volume key,避免改接空庫。API 在主機執行時,其 `.env` 的 URI 必須對應 host port 與 DB;根 `.env` 不會自動替 API 設定連線。`--profile full` 的 admin build endpoint 會跟隨 host API port。本機 mongo 是以 Compose 專案名命名的單一成員 replica set(交易需要,ADR-0013),`MONGODB_URI` 要帶 `?directConnection=true&replicaSet=<專案名>`;既有的單節點環境升級時,`docker compose up -d` 會重建容器、保留 `mongo-data` volume,再把 `apps/api/.env` 的 URI 補上這兩個參數(步驟見 [deployment](deployment.md#本地容器))。變數清單見 `docs/env-registry.md`,新專案逐項檢查見[初始化索引](project-initialization.md#本機與測試環境)。
 
 ## 技術選型
 
