@@ -6,6 +6,11 @@ import { RecordingStorageService } from "../storage/recording-storage.service";
 import { BaseRepository } from "./base.repository";
 import type { OperatorContext } from "./operator-context";
 import { TenantScopeError } from "./plugins/tenant-scope.plugin";
+import { RelationService } from "./relation.service";
+import {
+  CoreRelationship,
+  CoreRelationshipSchema,
+} from "./schemas/core-relationship.schema";
 import { DemoItemOne, DemoItemOneSchema } from "./schemas/demo-item-one.schema";
 import {
   HOOK_TIMEOUT_MS,
@@ -14,6 +19,7 @@ import {
 } from "./test-support/mongo-connection";
 import {
   TransactionService,
+  TransactionTimeoutError,
   afterCommit,
   assertOutsideTransaction,
   currentSession,
@@ -535,19 +541,84 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
     });
   });
 
-  it("超過上限即中止並回復", async () => {
-    const before = await namesInDatabase();
-    await expect(
-      transactions.withTransaction(
-        async (session) => {
-          await items.create(asA, { name: "逾時" }, { session });
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          await items.create(asA, { name: "逾時-2" }, { session });
-        },
-        { timeoutMs: 100 },
-      ),
-    ).rejects.toThrow();
-    expect(await namesInDatabase()).toEqual(before);
+  describe("超過上限", () => {
+    it("fn 跑完已超過上限 → 不提交,整個回復", async () => {
+      const before = await namesInDatabase();
+      await expect(
+        transactions.withTransaction(
+          async (session) => {
+            await items.create(asA, { name: "逾時" }, { session });
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await items.create(asA, { name: "逾時-2" }, { session });
+          },
+          { timeoutMs: 100 },
+        ),
+      ).rejects.toBeInstanceOf(TransactionTimeoutError);
+      expect(await namesInDatabase()).toEqual(before);
+    });
+
+    it("寫入衝突重試時已超過上限 → 不再重跑 fn", async () => {
+      let attempt = 0;
+      await expect(
+        transactions.withTransaction(
+          async (session) => {
+            attempt += 1;
+            await items.create(asA, { name: "逾時重試" }, { session });
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            throw transientError();
+          },
+          { timeoutMs: 100 },
+        ),
+      ).rejects.toBeInstanceOf(TransactionTimeoutError);
+      expect(attempt).toBe(1);
+      expect(await namesInDatabase()).not.toContain("逾時重試");
+    });
+  });
+
+  /**
+   * driver 一批預設回 101 筆,超過就要再發 getMore。交易帶 `timeoutMS` 時(mongodb 7.5),
+   * getMore 會被加上 `maxTimeMS`,server 拒絕(non-awaitData cursor 不能帶);T50 回歸。
+   */
+  describe("交易內讀超過一批(> 101 筆,需要 getMore)", () => {
+    const BEYOND_FIRST_BATCH = 150;
+    let relations: RelationService;
+    const memberOrgId = new Types.ObjectId();
+
+    beforeAll(async () => {
+      await model.insertMany(
+        Array.from({ length: BEYOND_FIRST_BATCH }, (_, index) => ({
+          orgId: orgA,
+          name: `多批-${String(index).padStart(3, "0")}`,
+        })),
+      );
+      const relationModel = database.connection.model<CoreRelationship>(
+        CoreRelationship.name,
+        CoreRelationshipSchema,
+      );
+      await relationModel.init();
+      relations = new RelationService(relationModel);
+      await relationModel.insertMany(
+        Array.from({ length: BEYOND_FIRST_BATCH }, () => ({
+          type: "org_user",
+          firstId: memberOrgId,
+          secondId: new Types.ObjectId(),
+        })),
+      );
+    }, HOOK_TIMEOUT_MS);
+
+    it("BaseRepository.findMany 讀得到全部", async () => {
+      const found = await transactions.withTransaction((session) =>
+        items.findMany(asA, { name: { $regex: /^多批-/ } }, { session }),
+      );
+      expect(found).toHaveLength(BEYOND_FIRST_BATCH);
+    });
+
+    it("RelationService.listLinks(沒帶 session、自動加入交易)讀得到全部", async () => {
+      const links = await transactions.withTransaction(() =>
+        relations.listLinks("org_user", { firstIds: [memberOrgId] }),
+      );
+      expect(links).toHaveLength(BEYOND_FIRST_BATCH);
+    });
   });
 
   describe("帶 session 時租戶保底仍生效", () => {

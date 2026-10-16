@@ -15,8 +15,22 @@ mongoose.set("transactionAsyncLocalStorage", true);
 /**
  * 單一交易的預設上限(毫秒):整個 `withTransaction`(含寫入衝突的自動重試)超過就中止並回復。
  * 動作都應在毫秒級;與 MongoDB 伺服器的 `transactionLifetimeLimitSeconds` 預設值相同。
+ *
+ * 由這裡自己計時,**不交給 driver 的 `withTransaction({ timeoutMS })`**:mongodb 7.x 會把交易的
+ * `timeoutMS` 套到交易內每個操作,游標的 getMore 也被加上 `maxTimeMS`,server 拒絕
+ * (non-awaitData cursor 不能帶),交易內讀超過一批(101 筆)就失敗(T50)。
+ * 每次嘗試開始前、`fn` 結束後(提交前)各檢查一次,超過就拋 `TransactionTimeoutError` 讓 driver 回復;
+ * 單一操作卡住時由伺服器的 `transactionLifetimeLimitSeconds` 中止交易,之後的重試再被這裡擋下。
  */
 export const TRANSACTION_TIMEOUT_MS = 60_000;
+
+/** 交易超過上限:這次嘗試已回復,不再重試。 */
+export class TransactionTimeoutError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`交易超過上限 ${String(timeoutMs)}ms,已回復`);
+    this.name = "TransactionTimeoutError";
+  }
+}
 
 /** 交易成功提交後才執行的動作(送即時信號、寄信、GCS 複製、快取作廢…);失敗只記 log。 */
 export type AfterCommitCallback = () => unknown;
@@ -87,28 +101,35 @@ async function runTransaction<T>(
     return fn(current.session);
   }
 
+  const timeoutMs = options.timeoutMs ?? TRANSACTION_TIMEOUT_MS;
+  const deadline = performance.now() + timeoutMs;
+  // 拋一般 Error(非 MongoError)時 driver 會回復這次嘗試並直接往外拋,不重試
+  const assertWithinDeadline = (): void => {
+    if (performance.now() >= deadline) {
+      throw new TransactionTimeoutError(timeoutMs);
+    }
+  };
+
   let attempt: TransactionScope | undefined;
   let result: T;
   try {
-    result = await connection.transaction(
-      (session) => {
-        // 自動重試會重跑整個 fn:上一輪(含它登記的交易後動作)屬於已回復的那次,關閉並丟棄
-        if (attempt !== undefined) {
-          attempt.open = false;
-        }
-        const scope: TransactionScope = {
-          session,
-          afterCommit: [],
-          open: true,
-        };
-        attempt = scope;
-        return transactionScope.run(scope, () => fn(session));
-      },
-      // driver 的 withTransaction 接受 timeoutMS(整個交易含重試的上限);Mongoose 的型別沒列出
-      {
-        timeoutMS: options.timeoutMs ?? TRANSACTION_TIMEOUT_MS,
-      } as Parameters<Connection["transaction"]>[1],
-    );
+    // 不給 driver timeoutMS(原因見 TRANSACTION_TIMEOUT_MS);重試總時長另有 driver 內建的 120 秒上限
+    result = await connection.transaction(async (session) => {
+      // 自動重試會重跑整個 fn:上一輪(含它登記的交易後動作)屬於已回復的那次,關閉並丟棄
+      if (attempt !== undefined) {
+        attempt.open = false;
+      }
+      assertWithinDeadline();
+      const scope: TransactionScope = {
+        session,
+        afterCommit: [],
+        open: true,
+      };
+      attempt = scope;
+      const value = await transactionScope.run(scope, () => fn(session));
+      assertWithinDeadline();
+      return value;
+    });
   } finally {
     if (attempt !== undefined) {
       attempt.open = false;
