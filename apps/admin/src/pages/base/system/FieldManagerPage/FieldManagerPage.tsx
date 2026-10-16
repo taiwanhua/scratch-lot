@@ -12,6 +12,11 @@ import { Stack } from "@repo/ui/stack";
 
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import {
+  editAbilityOf,
+  useUrlEdit,
+  useUrlEditGuard,
+} from "@/hooks/base/useUrlEdit";
 
 import { CategoryFormDialog } from "./CategoryFormDialog/CategoryFormDialog";
 import { CategoryListPanel } from "./CategoryListPanel";
@@ -22,6 +27,7 @@ import type {
   FieldManagerErrorCode,
   FieldOptionLike,
 } from "./field-manager-types";
+import { canEditOption } from "./field-source";
 import { useFieldManagerData } from "./useFieldManagerData";
 
 /**
@@ -40,7 +46,25 @@ export const FieldManagerPage = () => {
   const t = useTranslations("admin.fieldManager");
   const data = useFieldManagerData();
 
-  const [editing, setEditing] = useState<FieldOptionLike | null>(null);
+  /**
+   * 編輯選項的彈窗記在網址 `?edit=<選項 id>`(REACT-14):以 id 從選中類別的選項清單(伺服器最新的那一份)取那一筆;
+   * 不在清單裡 → 提示找不到,沒有編輯權限(含別的組織加的選項)→ 清掉參數。
+   */
+  const edit = useUrlEdit();
+  const editTarget =
+    data.fields.find((field) => field.id === edit.requestedId) ?? null;
+  const editingId = useUrlEditGuard({
+    edit,
+    canEdit: editAbilityOf(
+      data.canEdit,
+      editTarget === null
+        ? undefined
+        : canEditOption(editTarget, { canEdit: data.canEdit }),
+    ),
+    isMissing:
+      edit.requestedId !== null && data.isFieldsReady && editTarget === null,
+  });
+  const editing = editingId === null ? null : editTarget;
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [actionError, setActionError] = useState<FieldManagerErrorCode | null>(
     null,
@@ -99,7 +123,7 @@ export const FieldManagerPage = () => {
 
   const closeDialog = () => {
     setIsCreateOpen(false);
-    setEditing(null);
+    edit.close();
   };
 
   const handleSaved = () => {
@@ -164,7 +188,7 @@ export const FieldManagerPage = () => {
           }}
           onEdit={(field) => {
             setActionError(null);
-            setEditing(field);
+            edit.open(field.id);
           }}
           onToggleEnabled={handleToggleEnabled}
         />
@@ -172,6 +196,7 @@ export const FieldManagerPage = () => {
 
       {isDialogOpen && data.selectedCategory !== null && (
         <FieldFormDialog
+          key={editing?.id ?? "create"}
           categoryId={data.selectedCategory.id}
           categoryName={data.selectedCategory.name}
           {...(editing === null ? {} : { field: editing })}

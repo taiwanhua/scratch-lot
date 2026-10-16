@@ -51,4 +51,15 @@ describe("流程管理:清單搜尋與選中的流程存在網址(REACT-14)", ()
     ).toBeInTheDocument();
     expect(screen.getByLabelText("搜尋")).toHaveValue("出差");
   });
+
+  it("帶 `?edit=<流程 key>` 進入 → 選中那個流程並打開改名稱彈窗", async () => {
+    renderWorkflows({ world, path: `${WORKFLOWS_ROUTE}?edit=trip_review` });
+
+    expect(
+      await screen.findByRole("dialog", { name: "改名稱" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "出差審核", hidden: true }),
+    ).toBeInTheDocument();
+  });
 });

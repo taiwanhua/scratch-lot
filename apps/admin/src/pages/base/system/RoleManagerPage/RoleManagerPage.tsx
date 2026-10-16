@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import {
   type SetRoleEnabledMutation,
   useDeleteRoleMutation,
+  useRoleQuery,
   useSetRoleEnabledMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
@@ -13,6 +14,11 @@ import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
+import {
+  editAbilityOf,
+  useUrlEdit,
+  useUrlEditGuard,
+} from "@/hooks/base/useUrlEdit";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
@@ -51,9 +57,31 @@ export const RoleManagerPage = () => {
   // 右欄頁籤記在網址 `?tab=`(REACT-14);切頁籤要先被「未存的矩陣變更」攔下,所以不用 PageTabs、直接用 Tabs
   const [activeTab, setActiveTab] = useUrlState("tab", roleDetailTabSchema);
   /** null = 沒開;`{ role: null }` = 新增;`{ role }` = 編輯 */
-  const [formTarget, setFormTarget] = useState<{ role: RoleRow | null } | null>(
-    null,
+  const [isCreating, setIsCreating] = useState(false);
+  /**
+   * 編輯彈窗記在網址 `?edit=<id>`(REACT-14):打開時以 id 讀那一個角色的最新資料;
+   * 沒有編輯權限(含種子角色鎖定)、或讀不到時清掉參數。
+   */
+  const edit = useUrlEdit();
+  const editTarget = useRoleQuery(
+    session.client,
+    { id: edit.requestedId ?? "" },
+    {
+      enabled: edit.requestedId !== null && data.ability.canEdit,
+      retry: false,
+    },
   );
+  const editRole = editTarget.data?.role.role;
+  const editingId = useUrlEditGuard({
+    edit,
+    canEdit: editAbilityOf(
+      data.ability.canEdit,
+      editRole === undefined
+        ? undefined
+        : rowAbilityOf(data.ability, editRole).canEdit,
+    ),
+    isMissing: editTarget.isError,
+  });
   const [toggleRole, setToggleRole] = useState<RoleRow | null>(null);
   const [deleteRole, setDeleteRole] = useState<RoleRow | null>(null);
   const [actionError, setActionError] = useState<RoleManagerError | null>(null);
@@ -147,11 +175,11 @@ export const RoleManagerPage = () => {
         ability={data.ability}
         onCreate={() => {
           setActionError(null);
-          setFormTarget({ role: null });
+          setIsCreating(true);
         }}
         onEdit={(role) => {
           setActionError(null);
-          setFormTarget({ role });
+          edit.open(role.id);
         }}
         onToggleEnabled={(role) => {
           setActionError(null);
@@ -167,7 +195,8 @@ export const RoleManagerPage = () => {
         {actionError !== null &&
           toggleRole === null &&
           deleteRole === null &&
-          formTarget === null && (
+          !isCreating &&
+          editingId === null && (
             <Alert severity="error">{tErrors(actionError.code)}</Alert>
           )}
         <RoleDetailPanel
@@ -184,14 +213,17 @@ export const RoleManagerPage = () => {
         />
       </Stack>
 
-      {formTarget !== null && (
+      {(isCreating || (editingId !== null && editRole !== undefined)) && (
         <RoleFormDialog
-          role={formTarget.role}
+          key={isCreating ? "create" : (editingId ?? "")}
+          role={isCreating ? null : (editRole ?? null)}
           onCancel={() => {
-            setFormTarget(null);
+            setIsCreating(false);
+            edit.close();
           }}
           onSaved={(roleId) => {
-            setFormTarget(null);
+            setIsCreating(false);
+            edit.close();
             data.selectRole(roleId);
             void data.invalidate(roleId);
           }}

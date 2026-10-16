@@ -2704,5 +2704,8 @@
     "summaryAnd": "and",
     "summaryOr": "or",
     "summaryUnset": "(not selected)"
+  },
+  "urlState": {
+    "editNotFound": "This record could not be found"
   }
 }

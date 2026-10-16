@@ -58,4 +58,18 @@ describe("組織管理:選中的組織與詳情頁籤存在網址(REACT-14)", ()
       });
     });
   });
+
+  it("帶 `?edit=<id>` 進入 → 選中那個組織並打開編輯彈窗;關掉停在它的詳情", async () => {
+    const { user } = renderPage({ search: "?edit=org-content" });
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "編輯組織 — A-1 內容組",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => {
+      expect(urlParam("edit")).toBeNull();
+    });
+    expect(urlParam("detail")).toBe("org-content");
+    expect(await within(detail()).findByText("A-1 內容組")).toBeInTheDocument();
+  });
 });

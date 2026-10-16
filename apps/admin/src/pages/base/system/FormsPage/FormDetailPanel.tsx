@@ -36,10 +36,17 @@ export interface FormDetailPanelProps {
   form: FormFieldsFragment;
   onChanged: () => void;
   onForked: (formKey: string) => void;
+  /** 編輯彈窗開著(網址 `?edit=<key>`,由頁面保管) */
+  isEditing: boolean;
+  /** 按「編輯」:頁面把 `?edit=<key>` 寫進網址 */
+  onEdit: (key: string) => void;
+  /** 關掉編輯彈窗(取消、存完) */
+  onEditClose: () => void;
 }
 
 type DetailTab = "design" | "versions";
-type OpenDialog = "edit" | "fork" | "assign" | "listColumns" | null;
+/** 不進網址的彈窗(建新表單、分派、列表欄位);編輯彈窗在網址 `?edit=`(頁面保管) */
+type OpenDialog = "fork" | "assign" | "listColumns" | null;
 
 /**
  * 表單管理右欄(Spec 6a §8 畫面 1 的右側):表單資料、設計 / 版本兩個頁籤,以及
@@ -50,6 +57,9 @@ export const FormDetailPanel = ({
   form,
   onChanged,
   onForked,
+  isEditing,
+  onEdit,
+  onEditClose,
 }: FormDetailPanelProps) => {
   const t = useTranslations("admin.forms.detail");
   const tErrors = useTranslations("admin.forms.errors");
@@ -113,7 +123,7 @@ export const FormDetailPanel = ({
             <Button
               variant="text"
               onClick={() => {
-                setDialog("edit");
+                onEdit(form.key);
               }}
             >
               {t("edit")}
@@ -220,14 +230,14 @@ export const FormDetailPanel = ({
           />
         </Box>
       </Stack>
-      {dialog === "edit" && (
+      {isEditing && (
         <EditFormDialog
           form={form}
           onClose={() => {
-            setDialog(null);
+            onEditClose();
           }}
           onSaved={() => {
-            setDialog(null);
+            onEditClose();
             onChanged();
           }}
         />

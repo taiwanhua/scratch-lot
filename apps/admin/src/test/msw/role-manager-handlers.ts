@@ -210,7 +210,11 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
     }),
     api.query("Role", ({ variables }) => {
       const { id } = variables as { id: string };
-      return HttpResponse.json({ data: { role: { role: roleOf(id) } } });
+      const found = roleList.find((item) => item.id === id);
+      // 不存在或範圍外:api 回 FORBIDDEN(不透露存在與否)
+      return found === undefined
+        ? graphqlError("FORBIDDEN", "No such role")
+        : HttpResponse.json({ data: { role: { role: found } } });
     }),
     api.query("RoleMatrix", ({ variables }) => {
       const { roleId } = variables as { roleId: string };

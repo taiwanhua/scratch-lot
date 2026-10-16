@@ -22,10 +22,17 @@ export interface WorkflowDetailPanelProps {
   isForkRequested: boolean;
   onChanged: () => void;
   onForked: (workflowKey: string) => void;
+  /** 編輯彈窗開著(網址 `?edit=<key>`,由頁面保管) */
+  isEditing: boolean;
+  /** 按「編輯」:頁面把 `?edit=<key>` 寫進網址 */
+  onEdit: (key: string) => void;
+  /** 關掉編輯彈窗(取消、存完) */
+  onEditClose: () => void;
 }
 
 type DetailTab = "design" | "versions";
-type OpenDialog = "edit" | "fork" | "assign" | null;
+/** 不進網址的彈窗(fork、分派);編輯彈窗在網址 `?edit=`(頁面保管) */
+type OpenDialog = "fork" | "assign" | null;
 
 /**
  * 流程管理右欄(Spec 6b §8 畫面 2–5 的右側):流程資料、設計 / 版本兩個頁籤,以及改名稱、
@@ -36,6 +43,9 @@ export const WorkflowDetailPanel = ({
   isForkRequested,
   onChanged,
   onForked,
+  isEditing,
+  onEdit,
+  onEditClose,
 }: WorkflowDetailPanelProps) => {
   const t = useTranslations("admin.workflows.detail");
   const [tab, setTab] = useState<DetailTab>("design");
@@ -81,7 +91,7 @@ export const WorkflowDetailPanel = ({
             <Button
               variant="text"
               onClick={() => {
-                setDialog("edit");
+                onEdit(workflow.key);
               }}
             >
               {t("edit")}
@@ -165,14 +175,14 @@ export const WorkflowDetailPanel = ({
           />
         </Box>
       </Stack>
-      {dialog === "edit" && (
+      {isEditing && (
         <WorkflowNameDialog
           workflow={workflow}
           onClose={() => {
-            setDialog(null);
+            onEditClose();
           }}
           onSaved={() => {
-            setDialog(null);
+            onEditClose();
             onChanged();
           }}
         />

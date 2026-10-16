@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Card } from "@repo/ui/card";
@@ -6,6 +6,7 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
+import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
 import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
 
 import { FormDetailPanel } from "./FormDetailPanel";
@@ -26,7 +27,38 @@ import { useIsAtRootOrg } from "./useIsAtRootOrg";
 export const FormsPage = () => {
   const t = useTranslations("admin.forms");
   const { hasPermission } = usePermissions();
-  const data = useFormsPageData();
+  /**
+   * 編輯彈窗記在網址 `?edit=<key>`(REACT-14):編的就是右欄選中的那一個,所以網址上的 key 同時是選中的;
+   * 清單查完還沒有 → 提示找不到,沒有編輯權限(`abilities.canEdit`)→ 停在它的詳情。
+   */
+  const edit = useUrlEdit();
+  const data = useFormsPageData(edit.requestedId);
+  const selectItem = data.select;
+  const keepDetail = useCallback(
+    (key: string) => {
+      selectItem(key);
+    },
+    [selectItem],
+  );
+  const editingKey = useUrlEditGuard({
+    edit,
+    canEdit:
+      data.selected !== null && data.selected.key === edit.requestedId
+        ? data.selected.abilities.canEdit
+        : undefined,
+    isMissing:
+      edit.requestedId !== null &&
+      data.isListSettled &&
+      data.selectedKey !== edit.requestedId,
+    onNoPermission: keepDetail,
+  });
+  /** 關掉編輯彈窗:停在剛編的那一個(網址 `?detail=` 記下它) */
+  const closeEdit = () => {
+    if (editingKey !== null) {
+      selectItem(editingKey);
+    }
+    edit.close();
+  };
   const [isCreating, setIsCreating] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const isDirty = useDesignerDraftStore(
@@ -73,6 +105,9 @@ export const FormsPage = () => {
         <FormDetailPanel
           key={data.selected.key}
           form={data.selected}
+          isEditing={editingKey === data.selected.key}
+          onEdit={edit.open}
+          onEditClose={closeEdit}
           onChanged={() => {
             void data.invalidate(data.selectedKey);
           }}

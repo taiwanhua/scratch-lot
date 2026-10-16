@@ -8,13 +8,13 @@ import { Stack } from "@repo/ui/stack";
 import { useSession } from "@/hooks/base/useSession";
 import type { OrgNodeLike } from "@/lib/base/org-tree";
 
-import type { UserActionAbility, UserRow } from "../user-manager-types";
+import type { UserActionAbility } from "../user-manager-types";
 import { UserFormBody } from "./UserFormBody";
 import { EMPTY_USER_FORM } from "./useUserForm";
 
 export interface UserFormDialogProps {
-  /** 編輯的對象;新增模式為 null */
-  user: UserRow | null;
+  /** 編輯的那一筆的 id(網址 `?edit=<id>`,打開時讀最新資料);新增模式為 null */
+  userId: string | null;
   /** 新增模式的預設所屬組織 = 目前選中的組織 */
   defaultOrgIds: readonly string[];
   orgNodes: readonly OrgNodeLike[];
@@ -29,7 +29,7 @@ export interface UserFormDialogProps {
  * 身分證這些欄位,`nationalId` 還要看欄位級權限),取到才把表單掛上去。
  */
 export const UserFormDialog = ({
-  user,
+  userId,
   defaultOrgIds,
   orgNodes,
   isOrgTreeAvailable,
@@ -41,11 +41,11 @@ export const UserFormDialog = ({
   const { session } = useSession();
   const detail = useUserQuery(
     session.client,
-    { id: user?.id ?? "" },
-    { enabled: user !== null },
+    { id: userId ?? "" },
+    { enabled: userId !== null },
   );
 
-  if (user === null) {
+  if (userId === null) {
     return (
       <UserFormBody
         userId={null}
@@ -68,10 +68,10 @@ export const UserFormDialog = ({
         onClose={onClose}
         fullWidth
         maxWidth="sm"
-        title={t("editTitle", { name: user.name })}
+        title={t("editTitle", { name: "" })}
       >
         <Stack sx={{ alignItems: "center", py: 4 }}>
-          <CircularProgress aria-label={t("editTitle", { name: user.name })} />
+          <CircularProgress aria-label={t("editTitle", { name: "" })} />
         </Stack>
       </Dialog>
     );

@@ -32,4 +32,13 @@ describe("欄位管理:選中的類別存在網址(REACT-14)", () => {
 
     expect(await screen.findByText("性別 — 選項")).toBeInTheDocument();
   });
+
+  it("帶 `?edit=<選項 id>` 進入 → 從選中類別的最新清單取那一筆,打開編輯彈窗", async () => {
+    renderPage({ search: "?detail=cat-demo&edit=f-fried" });
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "編輯選項 — 示範分類",
+    });
+    expect(within(dialog).getByLabelText(/選項名稱/)).toHaveValue("炸物");
+  });
 });
