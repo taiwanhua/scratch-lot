@@ -103,7 +103,11 @@ PR 另列新增能力、客製治理頁與 API/權限的相容性,以及 wildcar
 
 先用 `node scripts/base-sync/run.mjs inspect --project <專案路徑> --from <基準commit> --to <目標commit>` 看完整差異與維護歸屬。共用路徑只是候選,仍須檢查是否含品牌、業務耦合、資料假設或客製行為,不等於已同意回收。
 
-選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、混合或未知路徑、merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
+選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、未知路徑、已發布 migration/seed 快照或 merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
+
+混合檔(固定組裝入口、共用文件等)要回收時,agent 先在 commit 裡把它整理成**只含底座段落**,再以 `--accept-mixed <路徑>` 逐檔明列(可重複)。工具只接受明列的混合檔,並把它們的差異列進報告的 `mixedReview`(「混合檔:只含底座段落,請審查」);未明列的混合檔仍拒絕,明列的檔不在差異內或實際不是混合檔也報錯。審查時逐段確認這些差異沒有專案值。
+
+規格與 Figma 工作檔一律放進實作的 repo,不留在 repo 外:規格放 `docs/tmp/spec-<主題>.md`,Figma 重建腳本、稽核腳本與節點表放 `docs/tmp/figma-<主題>/`。從最新 `origin/main` 開 `feat/<主題>-spec` 分支 → commit → push 分支備份 → 依畫面修規格都在這條分支更新 → 定稿後 PR 走 dev → staging → main;實作的整合分支從合併後的 main 開出。該輪完工後規格與工作檔從 `docs/tmp/` 移除:節點表搬進 [FIGMA-09](standards/general/figma.md),做法寫進正式文件。
 
 agent 核對 exact diff、處理相容性並測試後,沿現有 PR 流程交底座審查。PR 記錄來源 repo/commit、通用性與驗證;接受回收不等於立即同步,須等納入底座正式 tag/Release,再向下升級。
 

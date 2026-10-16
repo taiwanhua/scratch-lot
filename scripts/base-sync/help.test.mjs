@@ -61,6 +61,12 @@ test("說明:八種文件化寫法都以繁中用法成功結束,且不呼叫 gh
       }
     }
   }
+  // 可省略、可重複的參數以方括號標示
+  const contributeHelp = await runBaseSync(
+    ["contribute", "--help"],
+    boundaries,
+  );
+  assert.match(contributeHelp.stdout, /\[--accept-mixed <[^>]+> \.\.\.\]/);
   assert.deepEqual(calls, []);
 
   const rejected = [

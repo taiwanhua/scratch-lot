@@ -266,13 +266,16 @@ PR 連結、改動檔案清單、測試結果(與基準比較)、截圖或 E2E �
 
 人員、Claude 與 Codex 共用同一 Node CLI，不需要另一個工具在線。`node scripts/base-sync/run.mjs --help` 或 `<命令> --help` 顯示用法，不需 repo 或網路；`-h` 同義。先核對本次 repo、正式版本與差異，依[deployment](../deployment.md#底座首次接軌與版本升級)整合與驗收，再沿既有 gh/PR 流程交付。
 
-| 工作                 | 指令                                                                                                                           | 結果                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| 看完整差異與回收候選 | `node scripts/base-sync/run.mjs inspect --project <路徑> --from <commit> --to <commit>`                                        | 唯讀分類，候選仍需語意審查                   |
-| 準備正式版本升級     | `node scripts/base-sync/run.mjs upgrade --project <路徑> --tag <版本> --worktree-root <父目錄>`                                | 隔離分支與未提交 merge；批次重複 `--project` |
-| 準備共用改良回收     | `node scripts/base-sync/run.mjs contribute --project <來源路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <父目錄>` | common-only contribution，不帶整個專案歷史   |
-| 看累積未部署變更     | `node scripts/project-settings/preflight.mjs --environment <環境> --target <完整SHA>`                                          | 實際 app/DB 基準、累積差異與未核對事項       |
-| 讀資料狀態 JSON      | `pnpm --silent --filter @repo/db-migrator run migrate:status --json`                                                           | 現有 plan/journal/lock 的唯讀投影            |
+| 工作                 | 指令                                                                                                                           | 結果                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| 看完整差異與回收候選 | `node scripts/base-sync/run.mjs inspect --project <路徑> --from <commit> --to <commit>`                                        | 唯讀分類，候選仍需語意審查                                        |
+| 準備正式版本升級     | `node scripts/base-sync/run.mjs upgrade --project <路徑> --tag <版本> --worktree-root <父目錄>`                                | 隔離分支與未提交 merge；批次重複 `--project`                      |
+| 準備共用改良回收     | `node scripts/base-sync/run.mjs contribute --project <來源路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <父目錄>` | common-only contribution，不帶整個專案歷史                        |
+| 回收含混合檔         | 上一列加 `--accept-mixed <路徑>`(可重複)                                                                                       | 只收明列且只含底座段落的混合檔；差異列在報告 `mixedReview` 供審查 |
+| 看累積未部署變更     | `node scripts/project-settings/preflight.mjs --environment <環境> --target <完整SHA>`                                          | 實際 app/DB 基準、累積差異與未核對事項                            |
+| 讀資料狀態 JSON      | `pnpm --silent --filter @repo/db-migrator run migrate:status --json`                                                           | 現有 plan/journal/lock 的唯讀投影                                 |
+
+規格與 Figma 工作檔放實作 repo：`docs/tmp/spec-<主題>.md`、`docs/tmp/figma-<主題>/`，在 `feat/<主題>-spec` 分支 commit 並 push 備份，定稿後走 dev → staging → main，實作整合分支從合併後的 main 開出（[deployment](../deployment.md#共用改良回收)）。
 
 新 clone 沿用 `gh repo clone <owner/repo> <路徑>`，版本身分沿根 `package.json.wowgoBase`。CLI 的 JSON 報告不另作人工維護正本；不自動 push、開 PR、接受回收或部署。preflight/status 的 exit 0 只表示成功讀取或生成，須審查 issues 與資料恢復限制，不能當作部署核准。
 
