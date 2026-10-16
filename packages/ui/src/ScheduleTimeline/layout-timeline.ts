@@ -77,8 +77,11 @@ const compareIds = (a: string, b: string): number => {
   return a < b ? -1 : 1;
 };
 
-/** 完整排序:開始時間 → 排序鍵 → 建立時間 → id。 */
-const compareGroups = (a: TimelineLayoutGroup, b: TimelineLayoutGroup) =>
+/** 完整排序:開始時間 → 排序鍵 → 建立時間 → id(日模式往下排的順序也用它)。 */
+export const compareTimelineGroups = (
+  a: TimelineLayoutGroup,
+  b: TimelineLayoutGroup,
+) =>
   a.start - b.start ||
   compareSortKeys(a.sortKeys, b.sortKeys) ||
   a.createdAt - b.createdAt ||
@@ -121,7 +124,7 @@ export const layoutTimeline = <G extends TimelineLayoutGroup>(
   groups: readonly G[],
   dayWidth: number,
 ): TimelineLayout<G> => {
-  const sorted = groups.toSorted(compareGroups);
+  const sorted = groups.toSorted(compareTimelineGroups);
   const available = Math.floor(dayWidth);
   const firstPass = placeAll(sorted, available);
   return firstPass.collapsed.length === 0
