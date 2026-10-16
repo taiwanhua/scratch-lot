@@ -2427,7 +2427,7 @@
       "newStep": "Step {n}",
       "newJoin": "Join",
       "moveToBranch": "Move to \"{join}\" branch {n}",
-      "catalogTruncated": "More than 100 forms or roles: the dropdowns are truncated. Please narrow the scope.",
+      "catalogTruncated": "More than 100 forms: the dropdowns are truncated. Please narrow the scope.",
       "check": "Check",
       "checking": "Checking…",
       "viewing": "Viewing v{version} (read-only)",
@@ -2446,7 +2446,7 @@
       "LAST_STEP": "A workflow needs at least one step."
     },
     "node": {
-      "audience": "Reviewers: people condition",
+      "audience": "Reviewers: {source}",
       "field": "Form field: {form} · {field}",
       "manager": "Manager level {level}",
       "unset": "Not set",

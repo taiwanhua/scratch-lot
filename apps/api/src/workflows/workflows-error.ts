@@ -107,6 +107,24 @@ export function workflowDefinitionInvalidError(
   });
 }
 
+/**
+ * 落盤的審核者來源種類認不得(例:規則改版前的 `users` / `role`):不默默當成「沒有人」,
+ * 明確丟 `VALIDATION_FAILED` + `reason: ASSIGNEE_KIND_UNKNOWN`(與檢查器的錯誤碼同名),
+ * 解析審核者(推進)與綁定時檢查都走這裡。
+ */
+export const ASSIGNEE_KIND_UNKNOWN = "ASSIGNEE_KIND_UNKNOWN";
+
+export function assigneeKindUnknownError(kind: unknown): GraphQLError {
+  return new GraphQLError(`Unknown assignee kind: ${String(kind)}`, {
+    extensions: {
+      code: "VALIDATION_FAILED",
+      fields: ["definition"],
+      reason: ASSIGNEE_KIND_UNKNOWN,
+      kind: String(kind),
+    },
+  });
+}
+
 /** 綁定時檢查未過:`VALIDATION_FAILED` + `issues`(指出哪一關、哪種來源不能直接綁)。 */
 export function bindingInvalidError(
   message: string,

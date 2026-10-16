@@ -259,7 +259,7 @@ mutation UnbindFormWorkflow($input: UnbindFormWorkflowInput!) {
   }
 }
 
-# 流程下拉:本租戶看得到且已發布的流程,canBind = 可直接綁;不能綁的看 issues(ROLE_IN_SHARED → 建客製流程)
+# 流程下拉:本租戶看得到且已發布的流程,canBind = 可直接綁;不能綁的看 issues(AUDIENCE_IN_SHARED → 建客製流程)
 query FormWorkflowOptions($formKey: ID!) {
   formWorkflowOptions(formKey: $formKey) {
     items {

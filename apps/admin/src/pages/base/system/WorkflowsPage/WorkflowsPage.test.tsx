@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "@jest/globals";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 
 import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
 import {
@@ -124,6 +124,81 @@ describe("流程管理:清單與設計器", () => {
         },
       },
     });
+  });
+
+  it("換成人員條件:先開條件對話框,[取消] 保留原本的來源與設定;[套用] 才換", async () => {
+    const { user } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "直屬主管");
+    const panel = propertiesPanel();
+    const kind = within(panel).getByRole("combobox", { name: "審核者來源" });
+
+    await user.click(kind);
+    await user.click(await screen.findByRole("option", { name: "人員條件" }));
+    let dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 直屬主管",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+
+    expect(kind).toHaveTextContent("主管");
+    expect(
+      within(panel).getByRole("combobox", { name: "第幾層" }),
+    ).toHaveTextContent("第 1 層");
+    expect(within(canvas).getByText("主管第 1 層")).toBeInTheDocument();
+
+    await user.click(kind);
+    await user.click(await screen.findByRole("option", { name: "人員條件" }));
+    dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 直屬主管",
+    });
+    const valueBox = within(dialog).getByRole("combobox", { name: "值" });
+    await waitFor(() => {
+      expect(valueBox).toBeEnabled();
+    });
+    await user.click(valueBox);
+    await user.click(await screen.findByRole("option", { name: /人資/ }));
+    await user.click(within(dialog).getByRole("button", { name: "套用" }));
+
+    expect(kind).toHaveTextContent("人員條件");
+    expect(
+      await within(panel).findByText("角色 屬於 人資"),
+    ).toBeInTheDocument();
+  });
+
+  it("人員條件還是空的:卡片顯示「審核者:未設定」", async () => {
+    const definition = leaveWorkflowDefinition();
+    renderWorkflows({
+      world: {
+        ...defaultDesignOptions(),
+        versions: {
+          leave_review: [
+            workflowVersionFragment(
+              {
+                ...definition,
+                steps: definition.steps.map((step) =>
+                  step.key === "hr"
+                    ? {
+                        ...step,
+                        assignee: {
+                          kind: "audience",
+                          audience: {
+                            mode: "match",
+                            filter: { op: "AND", children: [] },
+                          },
+                        },
+                      }
+                    : step,
+                ),
+              },
+              { baseVersion: 1 },
+            ),
+          ],
+        },
+      },
+    });
+    const canvas = await findCanvas();
+
+    expect(within(canvas).getByText("審核者:未設定")).toBeInTheDocument();
   });
 
   it("編輯條件:沒挑值就套用 → 標在那一列、不關閉;取消不改關卡", async () => {
@@ -312,7 +387,7 @@ describe("流程管理:清單與設計器", () => {
     await findCanvas();
 
     expect(
-      await screen.findByText("表單或角色超過 100 筆,清單已截斷,請縮小範圍。"),
+      await screen.findByText("表單超過 100 張,清單已截斷,請縮小範圍。"),
     ).toBeInTheDocument();
   });
 });

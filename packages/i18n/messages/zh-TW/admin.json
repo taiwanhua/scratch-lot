@@ -2427,7 +2427,7 @@
       "newStep": "關卡 {n}",
       "newJoin": "匯合",
       "moveToBranch": "移到「{join}」第 {n} 條分支",
-      "catalogTruncated": "表單或角色超過 100 筆,清單已截斷,請縮小範圍。",
+      "catalogTruncated": "表單超過 100 張,清單已截斷,請縮小範圍。",
       "check": "檢查",
       "checking": "檢查中…",
       "viewing": "檢視 v{version}(唯讀)",
@@ -2446,7 +2446,7 @@
       "LAST_STEP": "流程至少要有一關。"
     },
     "node": {
-      "audience": "審核者:人員條件",
+      "audience": "審核者:{source}",
       "field": "表單欄位:{form} · {field}",
       "manager": "主管第 {level} 層",
       "unset": "未設定",

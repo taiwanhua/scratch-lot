@@ -147,6 +147,22 @@ export const toAudienceDraft = (
   };
 };
 
+/** 人員條件 JSON 裡有沒有任何條件列(「符合條件」但條件樹是空的 = 還沒設定)。 */
+export const hasAudienceRows = (audience: unknown): boolean => {
+  if (!isRecord(audience) || audience.mode !== "match") {
+    return false;
+  }
+  const visit = (node: unknown): boolean => {
+    if (!isRecord(node)) {
+      return false;
+    }
+    return Array.isArray(node.children)
+      ? node.children.some((child) => visit(child))
+      : "field" in node;
+  };
+  return visit(audience.filter);
+};
+
 // ---- 編輯器狀態 → JSON ----
 
 const toNodeJson = (node: AudienceNodeDraft): Record<string, unknown> => {

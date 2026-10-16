@@ -2619,7 +2619,6 @@ type WorkflowModel {
   currentVersion: Int
   forkedFrom: WorkflowForkSourceModel
   hasDraft: Boolean!
-  hasRolePlaceholder: Boolean!
   id: ID!
   isShared: Boolean!
   key: ID!

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 
+import type { AssigneeSource } from "@repo/domain/workflow";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -37,12 +39,32 @@ import {
   submitLeave,
   useWorkflow,
 } from "../test-support/workflow-fixtures";
+import { AudienceSourceService } from "../workflow-engine/audience-source.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 interface IssueResult {
   errors?: { extensions?: Record<string, unknown> }[];
 }
+
+/** 以申請人的單據(廚房部)解析一個來源。 */
+function resolveFor(
+  api: AuthTestApp,
+  world: World,
+  source: Record<string, unknown>,
+  values: Record<string, unknown> = {},
+) {
+  return api.app
+    .get(AudienceSourceService)
+    .resolveAudienceSource(source as unknown as AssigneeSource, {
+      tenantId: world.tenant,
+      orgId: world.kitchen,
+      applicantId: world.applicant.userId,
+      values,
+    });
+}
+
+const byText = (a: string, b: string): number => a.localeCompare(b);
 
 function problemsOf(result: IssueResult): string[] {
   const issues = result.errors?.[0]?.extensions?.issues;
@@ -199,5 +221,93 @@ describe("審核者來源:人員條件", () => {
 
     expect(errorReason(blocked)).toBe("WORKFLOW_MISCONFIGURED");
     expect(problemsOf(blocked)).toEqual(["FIELD_NOT_ORG_REFERENCE"]);
+  });
+
+  /**
+   * `resolveAudienceSource` 是給程式呼叫的方法(知會對象等「依單據找人」的使用處直接用),
+   * GraphQL 上看不到它單獨的行為,所以這兩案經 DI 取服務直接驗(TEST-07 的第二個接縫)。
+   */
+  describe("resolveAudienceSource", () => {
+    it("表單的組織欄位填了組織 → 派給那個組織的人;沒填 → 沒有人", async () => {
+      const branch = await createOrg(world.connection, {
+        name: "新竹店",
+        parentId: world.tenant,
+      });
+      const clerk = await person(api, world.connection, branch, world.tenant);
+      const source = audienceSource(
+        audienceRow("org", { kind: "dynamic", ref: "form-field:branch" }),
+      );
+
+      const picked = await resolveFor(api, world, source, {
+        branch: { id: String(branch) },
+      });
+
+      expect(picked.map(String)).toEqual([String(clerk.userId)]);
+      expect(await resolveFor(api, world, source, { branch: null })).toEqual(
+        [],
+      );
+    });
+
+    it("租戶 + 含下層 → 租戶裡所有持有該角色的人(含下層組織)", async () => {
+      const auditor = await createRole(api.app, world.connection, {
+        name: "稽核",
+        ownerOrgId: world.tenant,
+        assignTo: [world.manager.userId, world.applicant.userId],
+      });
+      const source = audienceSource(
+        audienceRow("role", [auditor]),
+        audienceRow("org", { kind: "dynamic", ref: "tenant" }, "descendants"),
+      );
+
+      const picked = await resolveFor(api, world, source);
+
+      expect(picked.map(String).toSorted(byText)).toEqual(
+        [String(world.manager.userId), String(world.applicant.userId)].toSorted(
+          byText,
+        ),
+      );
+      // 只取租戶頂層本身:兩人都在下層組織,沒有人
+      expect(
+        await resolveFor(
+          api,
+          world,
+          audienceSource(
+            audienceRow("role", [auditor]),
+            audienceRow("org", { kind: "dynamic", ref: "tenant" }, "self"),
+          ),
+        ),
+      ).toEqual([]);
+    });
+
+    it("落盤的來源種類認不得(舊的 users / role)→ 明確丟 ASSIGNEE_KIND_UNKNOWN,不當成沒有人", async () => {
+      await expect(
+        resolveFor(api, world, {
+          kind: "users",
+          userIds: [String(world.manager.userId)],
+        }),
+      ).rejects.toMatchObject({
+        extensions: { reason: "ASSIGNEE_KIND_UNKNOWN" },
+      });
+    });
+  });
+
+  it("綁定時:發布版裡有認不得的來源種類(舊資料)→ ASSIGNEE_KIND_UNKNOWN", async () => {
+    const key = nextKey("legacy_kind");
+    await publishWorkflow(world, key, {
+      steps: [reviewStep("boss", { kind: "manager", level: 1 })],
+    });
+    await world.connection
+      .collection("workflow_versions")
+      .updateOne(
+        { workflowKey: key, version: 1 },
+        { $set: { "steps.0.assignee": { kind: "role", roleId: null } } },
+      );
+
+    const bound = await call(api, world.admin.token, BIND, {
+      input: { formKey: FORM_KEY, workflowKey: key },
+    });
+
+    expect(errorCode(bound)).toBe("VALIDATION_FAILED");
+    expect(errorReason(bound)).toBe("ASSIGNEE_KIND_UNKNOWN");
   });
 });

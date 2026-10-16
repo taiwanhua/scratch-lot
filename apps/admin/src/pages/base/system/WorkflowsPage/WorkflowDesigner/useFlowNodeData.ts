@@ -7,6 +7,8 @@ import {
   isJoinStep,
 } from "@repo/domain/workflow";
 
+import { hasAudienceRows } from "@/lib/base/audience-draft";
+
 import type { JoinNodeData, ReviewNodeData } from "./flow-nodes";
 import type { CatalogForm } from "./useDesignerCatalog";
 
@@ -21,11 +23,16 @@ export const useFlowNodeData = (
 ): ((stepKey: string) => ReviewNodeData | JoinNodeData) => {
   const t = useTranslations("admin.workflows.node");
   const tMode = useTranslations("admin.workflows.step.modes");
+  const tKinds = useTranslations("admin.workflows.assignee.kinds");
 
   const sourceLine = (source: AssigneeSource): string => {
     switch (source.kind) {
       case "audience": {
-        return t("audience");
+        return t("audience", {
+          source: hasAudienceRows(source.audience)
+            ? tKinds("audience")
+            : t("unset"),
+        });
       }
       case "field": {
         const form = forms.find((item) => item.key === source.formKey);
