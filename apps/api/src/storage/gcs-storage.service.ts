@@ -24,6 +24,8 @@ export interface GcsBucket {
     delete(options?: GcsDeleteOptions): Promise<unknown>;
     /** 複製到同一顆 bucket 的另一個物件名稱。 */
     copy(destination: string): Promise<unknown>;
+    /** 讀整個物件(發布檔,如代理程式的 `manifest.json`);不存在時 SDK 拋 code 404。 */
+    download(): Promise<[Buffer]>;
   };
 }
 
@@ -136,6 +138,20 @@ export class GcsStorageService extends StorageService {
   protected override async removeObject(objectPath: string): Promise<void> {
     // ignoreNotFound:換圖的舊物件可能早就被清掉(重試、手動刪),不算失敗
     await this.bucket.file(objectPath).delete({ ignoreNotFound: true });
+  }
+
+  protected override async downloadObject(
+    objectPath: string,
+  ): Promise<Buffer | null> {
+    try {
+      const [content] = await this.bucket.file(objectPath).download();
+      return content;
+    } catch (error) {
+      if ((error as { code?: unknown }).code === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   protected override async duplicateObject(

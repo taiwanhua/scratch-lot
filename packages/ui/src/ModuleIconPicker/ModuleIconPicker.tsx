@@ -51,7 +51,7 @@ export interface ModuleIconPickerProps {
 }
 
 /**
- * 模組圖示選擇器(#287):下拉列出 `@repo/ui/icons` 白名單的 29 個 MUI Outlined 圖示,
+ * 模組圖示選擇器(#287):下拉列出 `@repo/ui/icons` 白名單的 30 個 MUI Outlined 圖示,
  * 每列「圖示 + 短詞」,收合後顯示目前選中的那一個。模組與權限頁、角色/選單設定共用。
  *
  * 值域由登錄表決定,元件本身不認得任何圖示 —— 加圖示只改 `module-icon-registry.ts`。

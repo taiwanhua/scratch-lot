@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import {
   REALTIME_TICKET_TTL_SECONDS,
   boardTopic,
+  printAgentTopic,
   signRealtimeTicket,
   userTopic,
 } from "@repo/domain/realtime";
@@ -103,9 +104,39 @@ export class RealtimeTicketService {
       },
       this.config.ticketSecret,
     );
+    return { ticket, connectUrl: this.connectUrl(), expiresAt, topics };
+  }
+
+  /**
+   * 代理程式的訂閱憑證(底座規格第 6 章「代理程式」):只放自己的 `print-agent:<id>`,
+   * Durable Object 是代理程式分店所屬的租戶(根組織 = 平台)。呼叫端已用金鑰驗過身分。
+   * 即時通道停用時回 null,代理程式改 60 秒輪詢。
+   */
+  async issueForAgent(
+    tenantId: Types.ObjectId | null,
+    agentId: string,
+    nowSeconds = Math.floor(Date.now() / 1000),
+  ): Promise<RealtimeTicketGrant | null> {
+    if (!this.config.enabled) {
+      return null;
+    }
+    const topics = [printAgentTopic(agentId)];
+    const expiresAt = nowSeconds + REALTIME_TICKET_TTL_SECONDS;
+    const ticket = await signRealtimeTicket(
+      { tenantId: realtimeHubOf(tenantId), agentId, exp: expiresAt, topics },
+      this.config.ticketSecret,
+    );
+    return { ticket, connectUrl: this.connectUrl(), expiresAt, topics };
+  }
+
+  /** `wss://<REALTIME_URL 的 host>/connect`(本地 http 時 `ws:`)。 */
+  private connectUrl(): string {
+    if (!this.config.enabled) {
+      throw new Error("即時通道停用時沒有連線網址");
+    }
     const connect = new URL("/connect", this.config.url);
     connect.protocol = connect.protocol === "http:" ? "ws:" : "wss:";
-    return { ticket, connectUrl: connect.toString(), expiresAt, topics };
+    return connect.toString();
   }
 
   private async canWatchBoard(

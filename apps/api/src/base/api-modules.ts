@@ -12,6 +12,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { OrgMembersModule } from "../orgs/org-members.module";
 import { OrgsModule } from "../orgs/orgs.module";
 import { PermissionModule } from "../permission/permission.module";
+import { PrintingModule } from "../printing/printing.module";
 import { RealtimeModule } from "../realtime/realtime.module";
 import { RolesModule } from "../roles/roles.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
@@ -51,4 +52,5 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "apply-center", module: ApplyCenterModule },
   { key: "user-preferences", module: UserPreferencesModule },
   { key: "notifications", module: NotificationsModule },
+  { key: "printing", module: PrintingModule },
 ];

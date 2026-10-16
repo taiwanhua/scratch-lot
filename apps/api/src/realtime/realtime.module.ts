@@ -28,6 +28,6 @@ import { RealtimeResolver } from "./realtime.resolver";
     RealtimeTicketService,
     RealtimeResolver,
   ],
-  exports: [RealtimePublisher],
+  exports: [RealtimePublisher, RealtimeTicketService],
 })
 export class RealtimeModule {}

@@ -416,7 +416,7 @@ describe("seed 指令(對真 MongoDB)", () => {
 });
 
 describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種子內容」)", () => {
-  it("空資料庫執行後具備兩個全域類別與七個全域選項(orgId=null、isSystem=true),選項以 categoryId 指向所屬類別", async () => {
+  it("空資料庫執行後具備三個全域類別與十個全域選項(orgId=null、isSystem=true),選項以 categoryId 指向所屬類別", async () => {
     const databaseUri = createTestDatabaseUri("fields");
 
     const result = await runSeedCommand(databaseUri);
@@ -430,6 +430,7 @@ describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種�
     ).toEqual([
       ["demo-category", "示範分類"],
       ["gender", "性別"],
+      ["reprint-reason", "補印原因"],
     ]);
     for (const category of fieldCategories) {
       expect(category.isSystem).toBe(true);
@@ -453,9 +454,14 @@ describe("欄位類別與全域選項種子(docs/modules/field-manager.md「種�
         ["side-dish", "小菜", 2],
         ["drink", "飲品", 3],
       ],
+      "reprint-reason": [
+        ["lost", "遺失", 1],
+        ["damaged", "破損", 2],
+        ["other", "其他", 3],
+      ],
     };
 
-    expect(fields).toHaveLength(7);
+    expect(fields).toHaveLength(10);
     for (const [categoryKey, options] of Object.entries(expectedOptions)) {
       const seeded = fields.filter(
         (field) =>
@@ -546,13 +552,13 @@ describe("seed 以 key 認養 root 在畫面建的類別與選項(ADR-0002)", ()
     });
     expect(adoptRun.stderr).toBe("");
     expect(adoptRun.status).toBe(0);
-    // 類別:demo-category 補說明 = 更新、cuisine = 認養、gender = 未變
+    // 類別:demo-category 補說明 = 更新、cuisine = 認養、gender 與 reprint-reason = 未變
     expect(adoptRun.stdout).toContain(
-      "field_categories:新增 0 / 更新 1 / 認養 1 / 未變 1",
+      "field_categories:新增 0 / 更新 1 / 認養 1 / 未變 2",
     );
-    // 選項:cuisine.sweet = 新增、根組織的 spicy = 認養、七個種子選項未變
+    // 選項:cuisine.sweet = 新增、根組織的 spicy = 認養、十個種子選項未變
     expect(adoptRun.stdout).toContain(
-      "fields:新增 1 / 更新 0 / 認養 1 / 未變 7",
+      "fields:新增 1 / 更新 0 / 認養 1 / 未變 10",
     );
 
     const after = await withDatabase(databaseUri, async (database) => {
@@ -613,9 +619,9 @@ describe("seed 以 key 認養 root 在畫面建的類別與選項(ADR-0002)", ()
     });
     expect(rerun.status).toBe(0);
     expect(rerun.stdout).toContain(
-      "field_categories:新增 0 / 更新 0 / 認養 0 / 未變 3",
+      "field_categories:新增 0 / 更新 0 / 認養 0 / 未變 4",
     );
-    expect(rerun.stdout).toContain("fields:新增 0 / 更新 0 / 認養 0 / 未變 9");
+    expect(rerun.stdout).toContain("fields:新增 0 / 更新 0 / 認養 0 / 未變 12");
   }, 120_000);
 });
 
@@ -847,19 +853,19 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     ]);
   }, 120_000);
 
-  it("示範家族 12 筆 + 組織管理 13 筆(10 + 租戶作業 3)+ 使用者管理 8 筆 + 角色管理 7 筆 + 模組與權限 4 筆 + 欄位管理 5 筆(4 + 類別作業 1)+ 資料範圍 2 筆 + 表單管理 5 筆 + 流程管理 7 筆 + 申請中心 1 筆 + 通知設定 2 筆 + 三個示範表單各 4 筆個別權限依正本落庫(moduleId 綁「所在的那一頁」);全部 39 個模組各一筆 wildcard,共 117 筆", async () => {
+  it("示範家族 12 筆 + 組織管理 13 筆(10 + 租戶作業 3)+ 使用者管理 8 筆 + 角色管理 7 筆 + 模組與權限 4 筆 + 欄位管理 5 筆(4 + 類別作業 1)+ 資料範圍 2 筆 + 表單管理 5 筆 + 流程管理 7 筆 + 通知設定 2 筆 + 印表機管理 3 筆 + 列印 API 2 筆 + 申請中心 1 筆 + 三個示範表單各 4 筆個別權限依正本落庫(moduleId 綁「所在的那一頁」);全部 41 個模組各一筆 wildcard,共 124 筆", async () => {
     const databaseUri = createTestDatabaseUri("permissions");
 
     const firstRun = await runSeedCommand(databaseUri);
     expect(firstRun.status).toBe(0);
     expect(firstRun.stdout).toContain(
-      "permissions:新增 117 / 更新 0 / 認養 0 / 未變 0",
+      "permissions:新增 124 / 更新 0 / 認養 0 / 未變 0",
     );
     // 冪等:重跑 0 新增 / 0 更新 / 全部未變
     const secondRun = await runSeedCommand(databaseUri);
     expect(secondRun.status).toBe(0);
     expect(secondRun.stdout).toContain(
-      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 117",
+      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 124",
     );
 
     const { modules, permissions } = await readSeededDocuments(databaseUri);
@@ -962,14 +968,20 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
       // 正本:docs/modules/notification-settings.md 權限表(2)
       "system.notification-settings.view": "system.notification-settings",
       "system.notification-settings.edit": "system.notification-settings",
+      // 正本:docs/modules/printers.md 權限表(印表機管理 3 + 列印 API 2)
+      "system.printers.view": "system.printers",
+      "system.printers.create": "system.printers",
+      "system.printers.edit": "system.printers",
+      "api.printing.print": "api.printing",
+      "api.printing.reprint": "api.printing",
     };
 
     // D3:wildcard 只代表該模組自己這一層 → 每個模組(含群組、隱藏頁、api 樹)各一筆 `<key>.*`
     for (const module of modules) {
       expectedOwners[`${String(module.key)}.*`] = String(module.key);
     }
-    expect(modules).toHaveLength(39);
-    expect(permissions).toHaveLength(117);
+    expect(modules).toHaveLength(41);
+    expect(permissions).toHaveLength(124);
     for (const [key, ownerKey] of Object.entries(expectedOwners)) {
       const permission = permissions.find((entry) => entry.key === key);
       expect(permission).toMatchObject({
@@ -1296,13 +1308,13 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     const secondRun = await runSeedCommand(databaseUri);
     expect(secondRun.stderr).toBe("");
     expect(secondRun.status).toBe(0);
-    // 宣告的 117 筆全部未變;dynamic 那筆不在比對範圍內,不計入也不被動到
+    // 宣告的 124 筆全部未變;dynamic 那筆不在比對範圍內,不計入也不被動到
     expect(secondRun.stdout).toContain(
-      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 117",
+      "permissions:新增 0 / 更新 0 / 認養 0 / 未變 124",
     );
 
     const { permissions } = await readSeededDocuments(databaseUri);
-    expect(permissions).toHaveLength(118);
+    expect(permissions).toHaveLength(125);
     expect(
       permissions.find((permission) => permission.key === dynamicKey),
     ).toMatchObject({
@@ -1381,7 +1393,7 @@ describe("種子角色綁定(ADR-0004 wildcard 只存 *、ADR-0009 模板扣除�
       (key) => key !== undefined && !rootOnlyKeys.has(key),
     );
     expect(new Set(boundModuleKeys)).toEqual(new Set(tenantModuleKeys));
-    expect(boundModuleKeys).toHaveLength(35);
+    expect(boundModuleKeys).toHaveLength(37);
     // 租戶作業(開通、轉移擁有者)與類別作業(管理類別)永遠不進模板
     // (ADR-0009 第 3 步:整個 rootOnly 模組被扣除)
     expect(boundModuleKeys).not.toContain("system.org-manager.tenant-ops");
@@ -1404,7 +1416,7 @@ describe("種子角色綁定(ADR-0004 wildcard 只存 *、ADR-0009 模板扣除�
     expect(new Set(boundPermissionKeys)).toEqual(
       new Set(tenantModuleKeys.map((key) => `${String(key)}.*`)),
     );
-    expect(boundPermissionKeys).toHaveLength(35);
+    expect(boundPermissionKeys).toHaveLength(37);
     // 管理類別(新增 / 改名 / 停用類別)只給站在根組織的人:模板既不綁它的容器 wildcard,也不綁它本身
     expect(boundPermissionKeys).not.toContain(
       "system.field-manager.category-ops.*",

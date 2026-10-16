@@ -20,6 +20,9 @@ import { NotificationSetting } from "../schemas/notification-setting.schema";
 import { Notification } from "../schemas/notification.schema";
 import { Org } from "../schemas/org.schema";
 import { Permission } from "../schemas/permission.schema";
+import { PrintAgent } from "../schemas/print-agent.schema";
+import { PrintJob } from "../schemas/print-job.schema";
+import { Printer } from "../schemas/printer.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
 import { Role } from "../schemas/role.schema";
 import { SeedDefinitionInstallation } from "../schemas/seed-definition-installation.schema";
@@ -59,6 +62,9 @@ export type WorkflowInstanceDocument = HydratedDocument<WorkflowInstance>;
 export type UserPreferenceDocument = HydratedDocument<UserPreference>;
 export type NotificationDocument = HydratedDocument<Notification>;
 export type NotificationSettingDocument = HydratedDocument<NotificationSetting>;
+export type PrintAgentDocument = HydratedDocument<PrintAgent>;
+export type PrinterDocument = HydratedDocument<Printer>;
+export type PrintJobDocument = HydratedDocument<PrintJob>;
 
 /** users(關聯歸屬資料:所屬組織走 org_user,資料層不自動過濾,ADR-0005)。 */
 @Injectable()
@@ -382,6 +388,48 @@ export class NotificationSettingsRepository extends BaseRepository<
   constructor(
     @InjectModel(NotificationSetting.name)
     model: RepositoryModel<NotificationSetting, NotificationSettingDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** print_agents(店內代理程式;租戶資料,`orgId` = 分店;docs/modules/printers.md)。 */
+@Injectable()
+export class PrintAgentsRepository extends BaseRepository<
+  PrintAgent,
+  PrintAgentDocument
+> {
+  constructor(
+    @InjectModel(PrintAgent.name)
+    model: RepositoryModel<PrintAgent, PrintAgentDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** printers(收據機;只記到分店層)。 */
+@Injectable()
+export class PrintersRepository extends BaseRepository<
+  Printer,
+  PrinterDocument
+> {
+  constructor(
+    @InjectModel(Printer.name)
+    model: RepositoryModel<Printer, PrinterDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** print_jobs(列印工作;認領用條件更新 `findOneAndUpdate`)。 */
+@Injectable()
+export class PrintJobsRepository extends BaseRepository<
+  PrintJob,
+  PrintJobDocument
+> {
+  constructor(
+    @InjectModel(PrintJob.name)
+    model: RepositoryModel<PrintJob, PrintJobDocument>,
   ) {
     super(model);
   }

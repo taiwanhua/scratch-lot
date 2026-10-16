@@ -108,6 +108,16 @@
         "types": "./dist/cjs/realtime.d.cts",
         "default": "./dist/cjs/realtime.cjs"
       }
+    },
+    "./printing": {
+      "import": {
+        "types": "./dist/es/printing.d.ts",
+        "default": "./dist/es/printing.js"
+      },
+      "require": {
+        "types": "./dist/cjs/printing.d.cts",
+        "default": "./dist/cjs/printing.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -141,6 +151,9 @@
       ],
       "realtime": [
         "./dist/es/realtime.d.ts"
+      ],
+      "printing": [
+        "./dist/es/printing.d.ts"
       ]
     }
   },
