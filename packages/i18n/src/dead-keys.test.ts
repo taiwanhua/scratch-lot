@@ -170,6 +170,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "`t(`sources.${kind}`)`,kind 是 `FieldOptions` 的三種來源",
   },
   {
+    key: "admin.forms.lookupSource.providers.",
+    reason:
+      "`t(`providers.${provider.key}`)`(`useLookupCatalog.ts` 的 `useProviderLabel`),key 是 api `formLookupProviders` 回的底座來源(`isBase`):user / org / form_submission",
+  },
+  {
     key: "admin.forms.lookupSource.fields.",
     reason: "`t(`fields.${field}`)`,field 是 lookup provider 可回的欄位",
   },
