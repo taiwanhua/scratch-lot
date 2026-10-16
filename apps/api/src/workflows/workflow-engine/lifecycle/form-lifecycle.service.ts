@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  type OnModuleInit,
-  Optional,
-} from "@nestjs/common";
+import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { GraphQLError } from "graphql";
 import type { ClientSession, Types } from "mongoose";
@@ -13,16 +8,15 @@ import type { StoredValues } from "@repo/domain/form";
 import { OperatorContextService } from "../../../auth/operator-context.service";
 import type { OperatorContext } from "../../../database/operator-context";
 import { currentSession } from "../../../database/transaction";
+import { NotificationService } from "../../../notifications/notification.service";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
 import {
   FORM_LIFECYCLES,
-  FORM_LIFECYCLE_NOTIFY,
   type FormEffectContext,
   type FormEffectName,
   type FormGuardName,
   type FormLifecycleRegistration,
   type FormLifecycles,
-  type LifecycleNotify,
   type LifecycleResolver,
   type LifecycleSubmission,
   resolveLifecycleInjections,
@@ -94,9 +88,7 @@ export class FormLifecycleService implements OnModuleInit {
     private readonly operators: OperatorContextService,
     private readonly realtime: RealtimePublisher,
     private readonly moduleRef: ModuleRef,
-    @Optional()
-    @Inject(FORM_LIFECYCLE_NOTIFY)
-    private readonly notifier: LifecycleNotify | null = null,
+    private readonly notifications: NotificationService,
   ) {}
 
   /** 啟動時解析每筆登記的 `inject`;宣告的 token 找不到 → app 起不來。 */
@@ -179,16 +171,7 @@ export class FormLifecycleService implements OnModuleInit {
       operator: await this.operators.systemOperatorOfOrg(subject.orgId),
       session,
       get: this.resolverOf(registration),
-      notify: (notification) => {
-        if (this.notifier === null) {
-          return Promise.reject(
-            new Error(
-              "notify() 尚未提供(通知後端沒有登記 FORM_LIFECYCLE_NOTIFY)",
-            ),
-          );
-        }
-        return this.notifier(notification);
-      },
+      notify: (input) => this.notifications.notify(input),
       realtime: {
         publishAfterCommit: (topics, signal) => {
           this.realtime.publishAfterCommit(subject.tenantId, topics, signal);
