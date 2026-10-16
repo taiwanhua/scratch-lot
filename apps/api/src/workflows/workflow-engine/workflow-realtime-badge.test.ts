@@ -6,12 +6,18 @@ import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
+import { call, ok } from "../../forms/test-support/form-fixtures";
 import { RealtimeTransport } from "../../realtime/realtime-transport";
+import { interruptAt } from "../test-support/hooks-fixture";
 import {
+  DECIDE,
   type Person,
+  REASSIGN,
+  WITHDRAW,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
   decideOn,
+  pendingTaskOf,
   setupWorld,
   submitLeave,
   useWorkflow,
@@ -21,29 +27,34 @@ import {
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 /**
- * 流程任務的側欄計數信號(底座規格 10.4):任務建立 / 結束時,交易後對相關審核者送 `badge:apply-center`,
- * 一次 `/publish` 帶多個 `user:` 頻道。即時通道在測試裡是停用的(記錄用 adapter),這裡攔它的 `send`。
+ * 流程任務的側欄計數信號(底座規格 10.4 的表格):任務建立 / 結束 / 改派時,交易提交後對相關審核者送
+ * `badge:apply-center`,一次 `/publish` 帶多個 `user:` 頻道;交易回復不送。`badge:*` 不合併,每次都送。
+ * 即時通道在測試裡是停用的(記錄用 adapter),這裡攔它的 `send`。
  */
 describe("流程任務 → badge:apply-center", () => {
   let api: AuthTestApp;
   let world: World;
-  let reviewers: Person[];
+  let a: Person;
+  let b: Person;
+  let c: Person;
   const sent: RealtimePublishRequest[] = [];
+  const topicOf = (who: Person) => `user:${String(who.userId)}`;
 
-  function badgeTopics(): string[][] {
-    return sent
+  /** 從第 `from` 筆起的 badge:apply-center 送出(每次送出的頻道)。 */
+  const badgesSince = (from: number): string[][] =>
+    sent
+      .slice(from)
       .filter((request) => request.signal.type === "badge:apply-center")
       .map((request) => request.topics);
-  }
 
   beforeAll(async () => {
     api = await startAuthTestApp("workflow_realtime_badge", {
       WORKFLOW_MAIL_ENABLED: "false",
     });
-    world = await setupWorld(api, api.connection, 2);
-    reviewers = world.staff.slice(0, 2);
+    world = await setupWorld(api, api.connection, 3);
+    [a, b, c] = world.staff as [Person, Person, Person];
     await useWorkflow(world, "badge_flow", {
-      steps: [usersStep("one", reviewers)],
+      steps: [usersStep("one", [a, b])],
     });
     const transport = api.app.get(RealtimeTransport, { strict: false });
     jest.spyOn(transport, "send").mockImplementation((request) => {
@@ -56,20 +67,64 @@ describe("流程任務 → badge:apply-center", () => {
     await api.close();
   });
 
-  it("任務建立給 A、B → 一次送出到 user:A、user:B;核准後對兩人再送一次(2 秒合併後的窗尾)", async () => {
-    const userTopics = reviewers.map((one) => `user:${String(one.userId)}`);
-    const submitted = await submitLeave(world);
-    expect(badgeTopics()).toEqual([expect.arrayContaining(userTopics)]);
-    expect(badgeTopics()[0]).toHaveLength(2);
+  it("流程任務建立給 A、B → 一次送出到 user:A、user:B", async () => {
+    const from = sent.length;
+    await submitLeave(world);
+    const badges = badgesSince(from);
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveLength(2);
+    expect(badges[0]).toEqual(expect.arrayContaining([topicOf(a), topicOf(b)]));
+  });
 
-    const [first] = reviewers;
-    if (first === undefined) {
-      throw new Error("缺審核者");
+  it("任務結束(A 核准,B 的任務因關卡結束取消)→ 對 A、B 送", async () => {
+    const submitted = await submitLeave(world);
+    const from = sent.length;
+    await decideOn(world, a, submitted.id, "APPROVE");
+    expect(badgesSince(from).flat()).toEqual(
+      expect.arrayContaining([topicOf(a), topicOf(b)]),
+    );
+  });
+
+  it("任務改派 A → C → 對 A、C 送", async () => {
+    const submitted = await submitLeave(world);
+    const task = await pendingTaskOf(world, a, submitted.id);
+    const from = sent.length;
+    await ok(api, world.admin.token, REASSIGN, {
+      input: { taskId: task.id, toUserId: String(c.userId) },
+    });
+    expect(badgesSince(from).flat()).toEqual(
+      expect.arrayContaining([topicOf(a), topicOf(c)]),
+    );
+  });
+
+  it("申請人撤回(任務取消)→ 對審核者送", async () => {
+    const submitted = await submitLeave(world);
+    const from = sent.length;
+    await ok(api, world.applicant.token, WITHDRAW, {
+      input: { id: submitted.id, expectedEditVersion: submitted.editVersion },
+    });
+    expect(badgesSince(from).flat()).toEqual(
+      expect.arrayContaining([topicOf(a), topicOf(b)]),
+    );
+  });
+
+  it("交易回復(決定後的推進中途失敗)→ 不送信號", async () => {
+    const submitted = await submitLeave(world);
+    const task = await pendingTaskOf(world, a, submitted.id);
+    const from = sent.length;
+    const restore = interruptAt(api, "action:updateInstance");
+    try {
+      const result = await call(api, a.token, DECIDE, {
+        input: {
+          taskId: task.id,
+          expectedEditVersion: task.editVersion,
+          decision: "APPROVE",
+        },
+      });
+      expect(result.errors).toBeDefined();
+    } finally {
+      restore();
     }
-    await decideOn(world, first, submitted.id, "APPROVE");
-    // 送出後 2 秒內的第二次由送出端合併成窗尾一次
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-    const later = badgeTopics().slice(1).flat();
-    expect(later).toEqual(expect.arrayContaining(userTopics));
+    expect(badgesSince(from)).toEqual([]);
   });
 });

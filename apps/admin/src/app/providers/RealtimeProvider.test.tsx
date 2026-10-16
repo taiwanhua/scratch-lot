@@ -238,19 +238,23 @@ describe("RealtimeProvider", () => {
   });
 });
 
-describe("useRealtimeBoard", () => {
-  const BoardPage = ({ orgId }: { orgId: string | null }) => {
-    useRealtimeBoard("store-board", orgId);
-    return null;
-  };
+const noop = () => {
+  // 測試用的 context:不需要做事
+};
 
+const BoardPage = ({ orgId }: { orgId: string | null }) => {
+  useRealtimeBoard("store-board", orgId);
+  return null;
+};
+
+describe("useRealtimeBoard", () => {
   it("進入(先沒選店)→ 選 B → 換 C:直接換店、不經過 null;只有卸載時換回 null", () => {
     const setBoard = jest.fn<RealtimeContextValue["setBoard"]>();
     const value: RealtimeContextValue = {
       status: "live",
-      listen: () => () => undefined,
+      listen: () => noop,
       setBoard,
-      refresh: () => undefined,
+      refresh: noop,
     };
     const wrap = (orgId: string | null) => (
       <RealtimeContext.Provider value={value}>
