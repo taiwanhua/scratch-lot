@@ -91,6 +91,8 @@ export const useFieldManagerData = () => {
     selectCategory: setPickedCategoryId,
     fields,
     isFieldsLoading: fieldsQuery.isLoading,
+    /** 選中類別的選項清單已查完(網址 `?edit=` 的選項不在裡面就是不存在或看不到) */
+    isFieldsReady: fieldsQuery.isSuccess && !fieldsQuery.isFetching,
     invalidate,
     invalidateCategories,
   };

@@ -31,7 +31,10 @@ const listSchema = z
  * 以及寫入後的精準失效(清單、單張、版本面板、草稿;舊版資料升級會改綁提交,所以提交的清單、單筆、
  * 修訂紀錄與升級計畫也一併失效 —— 各頁各篩選、各筆,取 getKey 第一段當前綴,DATA-04)。
  */
-export const useFormsPageData = () => {
+export const useFormsPageData = (
+  /** 網址 `?edit=<表單 key>` 要編輯的表單:有就以它為選中的表單(編輯彈窗編的就是右欄那一張) */
+  editKey: string | null = null,
+) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const [list, setList] = useUrlState("list", listSchema);
@@ -39,7 +42,8 @@ export const useFormsPageData = () => {
   const setKeyword = (value: string) => {
     setList({ keyword: value });
   };
-  const [pickedKey, setPickedKey] = useUrlSelectedId();
+  const [urlPickedKey, setPickedKey] = useUrlSelectedId();
+  const pickedKey = editKey ?? urlPickedKey;
 
   const forms = useFormsQuery(session.client, {
     input: { keyword, page: 1, pageSize: PAGE_SIZE },
@@ -91,6 +95,8 @@ export const useFormsPageData = () => {
     setKeyword,
     forms: items,
     isLoading: forms.isLoading,
+    /** 清單已查完、沒有在等誰(網址上的表單不在清單裡就是不存在或看不到) */
+    isListSettled: forms.isSuccess && !selection.isPending,
     selected,
     selectedKey,
     /** 指定的表單還沒出現在清單上(剛建立 / fork),右欄顯示載入中 */

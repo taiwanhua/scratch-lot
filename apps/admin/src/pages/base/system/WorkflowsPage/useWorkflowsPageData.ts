@@ -26,7 +26,11 @@ const listSchema = z
  * 流程管理頁的資料層:左清單(root = 共用流程;租戶 = 分派來的 + 自己的客製)、選中的流程、
  * 寫入後的精準失效(清單、單個、版本面板、草稿)。
  */
-export const useWorkflowsPageData = (initialKey: string | null = null) => {
+export const useWorkflowsPageData = (
+  initialKey: string | null = null,
+  /** 網址 `?edit=<流程 key>` 要編輯的流程:有就以它為選中的流程(編輯彈窗編的就是右欄那一個) */
+  editKey: string | null = null,
+) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const [list, setList] = useUrlState("list", listSchema);
@@ -36,7 +40,7 @@ export const useWorkflowsPageData = (initialKey: string | null = null) => {
   };
   // 網址上的選擇優先;沒有時用導過來時指定的那一個(`initialKey`:從阻擋清單等處要求 fork 的流程)
   const [urlKey, setPickedKey] = useUrlSelectedId();
-  const pickedKey = urlKey ?? initialKey;
+  const pickedKey = editKey ?? urlKey ?? initialKey;
 
   const workflows = useWorkflowsQuery(session.client, {
     input: { keyword, page: 1, pageSize: PAGE_SIZE },
@@ -81,6 +85,8 @@ export const useWorkflowsPageData = (initialKey: string | null = null) => {
     setKeyword,
     workflows: items,
     isLoading: workflows.isLoading,
+    /** 清單已查完、沒有在等誰(網址上的流程不在清單裡就是不存在或看不到) */
+    isListSettled: workflows.isSuccess && !selection.isPending,
     selected,
     selectedKey,
     /** 指定的流程還沒出現在清單上(剛建立 / fork),右欄顯示載入中 */

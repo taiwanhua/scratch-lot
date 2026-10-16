@@ -2704,5 +2704,8 @@
     "summaryAnd": "且",
     "summaryOr": "或",
     "summaryUnset": "(未選)"
+  },
+  "urlState": {
+    "editNotFound": "找不到這筆資料"
   }
 }

@@ -48,4 +48,15 @@ describe("表單管理:清單搜尋與選中的表單存在網址(REACT-14)", ()
       await screen.findByRole("heading", { name: "購物單" }),
     ).toBeInTheDocument();
   });
+
+  it("帶 `?edit=<表單 key>` 進入 → 選中那張表單並打開編輯彈窗", async () => {
+    renderFormsPage(options(), FORMS_ALL, {}, "?edit=trip");
+
+    expect(
+      await screen.findByRole("dialog", { name: "編輯名稱與標題" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "出差單", hidden: true }),
+    ).toBeInTheDocument();
+  });
 });

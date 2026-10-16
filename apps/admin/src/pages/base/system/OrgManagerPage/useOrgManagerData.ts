@@ -17,7 +17,10 @@ import type { OrgActionAbility } from "./org-manager-types";
  * (`parentId === null`)、在租戶視角是租戶頂層(`parentId` 有值)。加上操作者有沒有
  * `tenant-ops.*` 那三筆權限,就足以決定畫面長什麼樣,不需要「我是不是超級管理員」這種旗標。
  */
-export const useOrgManagerData = () => {
+export const useOrgManagerData = (
+  /** 網址 `?edit=<id>` 要編輯的組織:有就以它為選中的組織(編輯彈窗編的就是選中的那一個) */
+  editOrgId: string | null = null,
+) => {
   const { session } = useSession();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
@@ -37,7 +40,8 @@ export const useOrgManagerData = () => {
   };
 
   /** 選中的組織存在網址 `?detail=<id>`(REACT-14);沒有 = 樹根。 */
-  const [pickedOrgId, setPickedOrgId] = useUrlSelectedId();
+  const [urlPickedOrgId, setPickedOrgId] = useUrlSelectedId();
+  const pickedOrgId = editOrgId ?? urlPickedOrgId;
 
   const orgTree = useOrgTreeQuery(session.client);
   const orgNodes: readonly OrgNodeLike[] = orgTree.data?.orgTree ?? [];
@@ -89,6 +93,8 @@ export const useOrgManagerData = () => {
     selectOrg: setPickedOrgId,
     org,
     isOrgLoading: selected.isLoading,
+    /** 樹已到手:網址上的組織不在樹裡就是不存在或看不到 */
+    isOrgTreeReady: orgTree.isSuccess,
     invalidate,
   };
 };

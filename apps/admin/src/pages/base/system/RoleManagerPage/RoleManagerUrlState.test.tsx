@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 
 import { currentSearch, urlJson, urlParam } from "@/test/url-reload";
 
@@ -64,5 +64,27 @@ describe("角色管理:清單條件、選中的角色與頁籤存在網址(REACT
     renderRolePage({ search: "?detail=role-missing" });
 
     expect(await screen.findByText("內容編輯 — 權限設定")).toBeInTheDocument();
+  });
+
+  it("帶 `?edit=<id>` 進入 → 讀那個角色的最新資料,打開編輯彈窗;關掉清掉參數", async () => {
+    const { user } = renderRolePage({ search: "?edit=role-audit" });
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "編輯角色 — 審核員",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => {
+      expect(urlParam("edit")).toBeNull();
+    });
+  });
+
+  it("`?edit=` 的角色不存在 → 不打開、清掉參數", async () => {
+    renderRolePage({ search: "?edit=role-gone" });
+
+    await screen.findByText("內容編輯");
+    await waitFor(() => {
+      expect(urlParam("edit")).toBeNull();
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
