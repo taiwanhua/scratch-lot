@@ -15,6 +15,7 @@
  */
 export * from "./icon-props";
 export * from "./ChevronDownIcon";
+export * from "./ChevronLeftIcon";
 export * from "./ChevronRightIcon";
 export * from "./ChevronDoubleLeftIcon";
 export * from "./ChevronDoubleRightIcon";
