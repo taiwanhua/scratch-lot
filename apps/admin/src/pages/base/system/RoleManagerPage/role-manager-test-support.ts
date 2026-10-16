@@ -89,6 +89,8 @@ const modulesWith = (permissions: readonly string[]): TestModule[] => [
 export interface RenderRolePageOptions {
   permissions?: readonly string[];
   world?: RoleWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 }
 
 /** 當前組織 = 租戶頂層(擁有組織下拉的預設值就是它)。 */
@@ -97,6 +99,7 @@ const CURRENT_ORG = { id: "org-tenant", name: "租戶 A" };
 export const renderRolePage = ({
   permissions = ALL_PERMISSIONS,
   world = {},
+  search = "",
 }: RenderRolePageOptions = {}) => {
   const fake = roleWorld(world);
   server.use(
@@ -107,7 +110,7 @@ export const renderRolePage = ({
       orgs: [CURRENT_ORG],
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/role-manager" }), fake };
+  return { ...renderApp({ path: `/system/role-manager${search}` }), fake };
 };
 
 /** 矩陣的一列:以「標籤 + key」開頭找(同一棵樹裡有好幾個「全部(*)」)。 */

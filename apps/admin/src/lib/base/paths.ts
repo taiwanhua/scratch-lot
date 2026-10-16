@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const LOGIN_PATH = "/login";
 export const FORGOT_PASSWORD_PATH = "/forgot-password";
 /** 啟用信與重設信共用(#61):`/set-password?token=…` */
@@ -10,6 +12,12 @@ export const CHANGE_PASSWORD_PATH = "/change-password";
 export const PERSONAL_SETTINGS_PATH = "/settings/personal";
 export const NEXT_PARAM = "next";
 export const TOKEN_PARAM = "token";
+
+/**
+ * `?next=` / `?token=` 的 `useUrlState` schema:原字串照收,沒帶 = 空字串。
+ * 登入、改密碼、設定密碼三頁經 `useUrlState` 讀它們(REACT-14)。
+ */
+export const urlStringSchema = z.string().default("");
 
 /** 未登入時導向的登入頁網址,帶原路徑供登入後回去(#61:`/login?next=<原路徑>`)。 */
 export const loginPathWithNext = (next: string): string =>

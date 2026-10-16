@@ -13,6 +13,7 @@ import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { DeleteRoleDialog } from "./DeleteRoleDialog";
 import { RoleDetailPanel } from "./RoleDetailPanel/RoleDetailPanel";
@@ -26,6 +27,7 @@ import {
 import {
   type RoleDetailTab,
   type RoleRow,
+  roleDetailTabSchema,
   rowAbilityOf,
 } from "./role-manager-types";
 import { useRoleManagerData } from "./useRoleManagerData";
@@ -46,7 +48,8 @@ export const RoleManagerPage = () => {
   const { session } = useSession();
   const data = useRoleManagerData();
 
-  const [activeTab, setActiveTab] = useState<RoleDetailTab>("matrix");
+  // 右欄頁籤記在網址 `?tab=`(REACT-14);切頁籤要先被「未存的矩陣變更」攔下,所以不用 PageTabs、直接用 Tabs
+  const [activeTab, setActiveTab] = useUrlState("tab", roleDetailTabSchema);
   /** null = 沒開;`{ role: null }` = 新增;`{ role }` = 編輯 */
   const [formTarget, setFormTarget] = useState<{ role: RoleRow | null } | null>(
     null,

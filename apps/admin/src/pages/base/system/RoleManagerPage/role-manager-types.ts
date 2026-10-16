@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type {
   RoleMatrixQuery,
   RoleUsersQuery,
@@ -27,6 +29,11 @@ export interface MatrixModuleView {
 
 /** 單一角色的兩個頁籤。 */
 export type RoleDetailTab = "matrix" | "users";
+
+/** 頁籤記在網址 `?tab=` 的 schema:沒帶或不認得 → 權限矩陣。 */
+export const roleDetailTabSchema = z
+  .enum(["matrix", "users"])
+  .default("matrix") satisfies z.ZodType<RoleDetailTab>;
 
 /** `@repo/ui/tabs` 回報的是字串(它不認得這一頁的頁籤有哪些),收窄回型別。 */
 export const isRoleDetailTab = (value: string): value is RoleDetailTab =>

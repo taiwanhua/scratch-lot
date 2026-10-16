@@ -95,6 +95,8 @@ export const renderFormsPage = (
   permissions: readonly string[] = FORMS_ALL,
   /** 執行端的假 api(預覽與設計器裡的選項選擇器會打,例:類別選項 `fieldOptions`) */
   runtime: FormRuntimeWorldOptions = {},
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search = "",
 ): ReturnType<typeof renderApp> & { world: FormDesignWorld } => {
   const world = formDesignWorld(options);
   server.use(
@@ -106,7 +108,7 @@ export const renderFormsPage = (
     // 預覽模式的帶入 / 選項會打執行端的查詢
     ...formRuntimeWorld(runtime).handlers,
   );
-  return { ...renderApp({ path: FORMS_ROUTE }), world };
+  return { ...renderApp({ path: `${FORMS_ROUTE}${search}` }), world };
 };
 
 /** 等設計器載完草稿(元件面板出現)。 */

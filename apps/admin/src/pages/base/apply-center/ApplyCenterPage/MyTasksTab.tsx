@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
@@ -17,10 +16,16 @@ import type { ApplicableModule } from "@/hooks/base/useApplicableForms";
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 import { useMyTasks } from "@/hooks/base/useMyTasks";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { APPLY_CENTER_VIEW_PAGE_KEY } from "../apply-center-keys";
 import { ApplyCenterFilters } from "./ApplyCenterFilters";
 import { TablePager } from "./TablePager";
+import {
+  APPLY_CENTER_LIST_KEY,
+  type DoneFilter,
+  myTasksListSchema,
+} from "./apply-center-list";
 
 const PAGE_SIZE = 20;
 
@@ -33,8 +38,6 @@ const TASK_TONE: Record<WorkflowTaskStatus, TagTone> = {
   [WorkflowTaskStatus.Cancelled]: "grey",
   [WorkflowTaskStatus.Blocked]: "warning",
 };
-
-type DoneFilter = "pending" | "done";
 
 export interface MyTasksTabProps {
   modules: readonly ApplicableModule[];
@@ -49,10 +52,11 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
   const navigate = useNavigate();
   const routeOf = useModuleRoutes();
   const temporalText = useTemporalText();
-  const [moduleKey, setModuleKey] = useState<string | null>(null);
-  const [formKey, setFormKey] = useState<string | null>(null);
-  const [done, setDone] = useState<DoneFilter>("pending");
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useUrlState(
+    APPLY_CENTER_LIST_KEY,
+    myTasksListSchema,
+  );
+  const { module: moduleKey, form: formKey, done, page } = filters;
   const list = useMyTasks({
     moduleKey,
     formKey,
@@ -139,13 +143,11 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
         modules={modules}
         moduleKey={moduleKey}
         onModuleKeyChange={(next) => {
-          setModuleKey(next);
-          setPage(1);
+          setFilters((current) => ({ ...current, module: next, page: 1 }));
         }}
         formKey={formKey}
         onFormKeyChange={(next) => {
-          setFormKey(next);
-          setPage(1);
+          setFilters((current) => ({ ...current, form: next, page: 1 }));
         }}
       >
         <SelectField<DoneFilter>
@@ -158,8 +160,7 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
             { value: "done", label: t("done") },
           ]}
           onChange={(next) => {
-            setDone(next);
-            setPage(1);
+            setFilters((current) => ({ ...current, done: next, page: 1 }));
           }}
         />
       </ApplyCenterFilters>
@@ -178,7 +179,9 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
         totalCount={list.totalCount}
         page={page}
         pageSize={PAGE_SIZE}
-        onPageChange={setPage}
+        onPageChange={(next) => {
+          setFilters((current) => ({ ...current, page: next }));
+        }}
       />
     </Stack>
   );

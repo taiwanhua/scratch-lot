@@ -49,7 +49,7 @@ export interface ShellLayoutProps {
 export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   const t = useTranslations("admin.shell");
   const tCommon = useTranslations("common");
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { modules } = me;
 
   const tree = useMemo(() => buildNavTree(modules), [modules]);
@@ -65,7 +65,12 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   );
 
   const path = normalizePathname(pathname);
-  const routeTabs = useRouteTabs({ userId: me.id, routes, currentPath: path });
+  const routeTabs = useRouteTabs({
+    userId: me.id,
+    routes,
+    currentPath: path,
+    currentSearch: search,
+  });
   // 目前網址對上的模組(可進入路由集合,ADR-0011);非模組路由為 undefined。
   // 用 `matchModuleRoute` 而不是 `routes.get(path)`:隱藏的詳情 / 編輯頁網址尾端帶識別碼,
   // 精準比對會落空,標題就會閃成「無權限」、「?」說明鈕也跟著不見(#320)

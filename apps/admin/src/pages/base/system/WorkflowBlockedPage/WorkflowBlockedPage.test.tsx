@@ -21,6 +21,7 @@ import {
   workflowRuntimeWorld,
 } from "@/test/msw/workflow-runtime-handlers";
 import { renderApp } from "@/test/render";
+import { currentSearch, urlJson } from "@/test/url-reload";
 
 /** 主管關卡的承辦人小華被停用(`invalid`)→ 實例阻擋;人資關解析為空的另一張。 */
 const blockedInstances = () => [
@@ -62,6 +63,8 @@ const blockedInstances = () => [
 const renderBlocked = (
   world: WorkflowRuntimeWorldOptions,
   timezone?: string,
+  /** 起始網址的查詢字串(含 `?`;重新整理用) */
+  search = "",
 ) => {
   const runtime = workflowRuntimeWorld({
     instances: blockedInstances(),
@@ -80,7 +83,10 @@ const renderBlocked = (
     ...runtime.handlers,
     ...workflowCatalogHandlers(),
   );
-  return { ...renderApp({ path: BLOCKED_ROUTE }), world: runtime };
+  return {
+    ...renderApp({ path: `${BLOCKED_ROUTE}${search}` }),
+    world: runtime,
+  };
 };
 
 beforeAll(async () => {
@@ -175,6 +181,29 @@ describe("阻擋清單", () => {
     await user.click(within(table).getByRole("button", { name: "重試推進" }));
     await waitFor(() => {
       expect(world.inputs.retry).toEqual(["inst-1"]);
+    });
+  });
+
+  it("篩選與頁碼存在網址 `?list=`(REACT-14):重新整理後還停在「需要推進」", async () => {
+    const first = renderBlocked({ blocked: { needsAdvance: ["inst-1"] } });
+    await screen.findByRole("table", { name: "阻擋清單" });
+    await first.user.click(screen.getByRole("tab", { name: "需要推進" }));
+    await waitFor(() => {
+      expect(urlJson("list")).toEqual({ filter: "NEEDS_ADVANCE", page: 1 });
+    });
+    first.unmount();
+
+    const second = renderBlocked(
+      { blocked: { needsAdvance: ["inst-1"] } },
+      undefined,
+      currentSearch(),
+    );
+
+    expect(
+      await screen.findByRole("tab", { name: "需要推進" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await waitFor(() => {
+      expect(second.world.inputs.blocked.at(-1)?.filter).toBe("NEEDS_ADVANCE");
     });
   });
 });

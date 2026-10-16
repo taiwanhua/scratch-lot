@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import {
-  type FormSubmissionStatus,
+  FormSubmissionStatus,
   useDeleteFormSubmissionMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
@@ -17,6 +18,7 @@ import { useCloseItemTabs } from "@/hooks/base/useCloseItemTabs";
 import { useFormSubmissionCache } from "@/hooks/base/useFormSubmissionCache";
 import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   type FormError,
   formErrorOf,
@@ -34,6 +36,16 @@ import { DeleteSubmissionDialog } from "./DeleteSubmissionDialog";
 import { FormListToolbar } from "./FormListToolbar";
 import { formModuleKeyOf, useFormModuleAccess } from "./useFormModuleAccess";
 
+/** 列表的篩選條件存在網址 `?list=`(REACT-14):搜尋、表單、狀態、頁碼。 */
+const listSchema = z
+  .object({
+    keyword: z.string().default(""),
+    formKey: z.string().nullable().default(null),
+    status: z.enum(FormSubmissionStatus).nullable().default(null),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ keyword: "", formKey: null, status: null, page: 1 });
+
 /**
  * 表單模組列表頁(預設組裝;Spec 6a §8 畫面 8):搜尋、依表單 / 狀態篩選、分頁;
  * 新增鈕 —— 此刻可新增的表單一張 → 直接進、多張 → 先選(`FormPicker`)。
@@ -47,11 +59,12 @@ export const FormListPage = ({ module }: ModulePageProps) => {
   const access = useFormModuleAccess(moduleKey);
   const { forms } = useModuleForms(moduleKey);
 
-  // 篩選留在頁面層,不進 URL(REACT-02 第 2 點的 admin 例外)
-  const [keyword, setKeywordValue] = useState("");
-  const [formKey, setFormKeyValue] = useState<string | null>(null);
-  const [status, setStatusValue] = useState<FormSubmissionStatus | null>(null);
-  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useUrlState("list", listSchema);
+  const { keyword, formKey, status } = filters;
+  /** 換任何一個篩選都回到第一頁(否則會停在一個不存在的頁碼上看到空清單)。 */
+  const setFilter = (patch: Partial<Omit<typeof filters, "page">>) => {
+    setFilters((current) => ({ ...current, ...patch, page: 1 }));
+  };
   const [isPicking, setIsPicking] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<FormSubmissionRow | null>(
     null,
@@ -159,19 +172,16 @@ export const FormListPage = ({ module }: ModulePageProps) => {
       <FormListToolbar
         keyword={keyword}
         onKeywordChange={(value) => {
-          setKeywordValue(value);
-          setPage(1);
+          setFilter({ keyword: value });
         }}
         forms={forms}
         formKey={formKey}
         onFormKeyChange={(value) => {
-          setFormKeyValue(value);
-          setPage(1);
+          setFilter({ formKey: value });
         }}
         status={status}
         onStatusChange={(value) => {
-          setStatusValue(value);
-          setPage(1);
+          setFilter({ status: value });
         }}
         canCreate={access.canCreate}
         hasForms={forms.length > 0}
@@ -182,8 +192,10 @@ export const FormListPage = ({ module }: ModulePageProps) => {
       >
         <FormSubmissionList
           moduleKey={moduleKey}
-          filters={{ keyword, formKey, status, page }}
-          onPageChange={setPage}
+          filters={filters}
+          onPageChange={(page) => {
+            setFilters((current) => ({ ...current, page }));
+          }}
           renderActions={renderActions}
           aria-label={t("tableAria", { module: module.name })}
         />

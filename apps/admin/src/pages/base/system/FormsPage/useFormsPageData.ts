@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { z } from "zod";
 
 import {
   type FormFieldsFragment,
@@ -14,9 +14,16 @@ import {
 } from "@repo/graphql";
 
 import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 /** 左清單一頁幾張(表單數量不大;api 上限 100)。 */
 const PAGE_SIZE = 100;
+
+/** 左清單的搜尋存在網址 `?list=`(REACT-14);選中的表單在 `?detail=<表單 key>`。 */
+const listSchema = z
+  .object({ keyword: z.string().default("") })
+  .default({ keyword: "" });
 
 /**
  * 表單管理頁的資料層:左清單(root 全部共用表單;租戶 = 分派來的 + 自己的客製)、選中的表單、
@@ -26,8 +33,12 @@ const PAGE_SIZE = 100;
 export const useFormsPageData = () => {
   const { session } = useSession();
   const queryClient = useQueryClient();
-  const [keyword, setKeyword] = useState("");
-  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const [list, setList] = useUrlState("list", listSchema);
+  const { keyword } = list;
+  const setKeyword = (value: string) => {
+    setList({ keyword: value });
+  };
+  const [pickedKey, setPickedKey] = useUrlSelectedId();
 
   const forms = useFormsQuery(session.client, {
     input: { keyword, page: 1, pageSize: PAGE_SIZE },

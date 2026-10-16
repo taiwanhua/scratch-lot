@@ -159,7 +159,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 
 **三態 indeterminate 的來源**:mixed 的定義是 M-08:**模組已勾、且直接子列只勾了一部分**。`@repo/ui/tree` 只負責呈現,`indeterminateIds` 由本頁算好傳入。
 
-**頁內頁籤**:用 `@repo/ui/tabs`(`RoleDetailPanel/DetailTabs.tsx`)。組織管理頁詳情的「組織資料 / 成員」兩個頁籤也用同一支元件(STRUCT-02)。
+**頁內頁籤**:用 `@repo/ui/tabs`(`RoleDetailPanel/DetailTabs.tsx`),不用 `PageTabs`:切頁籤要先被「未存的矩陣變更」攔下(REACT-14 的例外)。目前頁籤仍記在網址 `?tab=`(`useUrlState`);左清單的搜尋、擁有組織、頁碼在 `?list=`,選中的角色在 `?detail=<id>`,持有人清單的頁碼在 `?users=`(連同角色 id 一起存,換角色就回第一頁)。
 
 **清單列的動作**(編輯 / 停用 / 刪除)= **權限 × `Role.abilities`**(`rowAbilityOf`,`role-manager-types.ts`):權限決定「這個人能不能做這件事」、`abilities` 決定「這個角色讓不讓做」,兩者相乘才顯示按鈕。刪除送出後收到 `ROLE_NOT_DELETABLE` 才攤開 `extensions.reasons` 三項,並提示改用停用。
 

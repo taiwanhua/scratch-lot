@@ -6,8 +6,8 @@ import {
 import { type ShellModule, matchModuleRoute } from "./module-tree";
 
 /**
- * 一筆路由頁籤的紀錄(#67;dis #15:以路由 id 去重)。持久化到 sessionStorage 的就是這個形狀(`[{ route, itemLabel? }]`),
- * 模組名一律回頭從 `me.modules` 解析,權限或名稱變了不會留下舊字;唯一存下來的顯示資料是頁面給的 `itemLabel`。
+ * 一筆路由頁籤的紀錄(#67;dis #15:以路由 id 去重)。持久化到 sessionStorage 的就是這個形狀(`[{ route, itemLabel?, search? }]`),
+ * 模組名一律回頭從 `me.modules` 解析,權限或名稱變了不會留下舊字;存下來的只有頁面給的 `itemLabel` 與網址參數 `search`。
  */
 export interface RouteTabEntry {
   /**
@@ -20,7 +20,20 @@ export interface RouteTabEntry {
    * `resolveTabs` 顯示成「所屬模組名 — 項目名」。頁面每次進入都會重設,所以存檔裡的舊名只活到下次進入那一頁。
    */
   itemLabel?: string;
+  /**
+   * 這個頁籤記下的網址參數(含開頭的 `?`;規格 10.1「頁籤記住網址參數」):頁面以 `useUrlState` 寫進網址的篩選、頁碼、頁內分頁。
+   * 切回這個頁籤、從側欄點同一頁時帶回去;沒有參數(= 預設條件)時不存這個欄位。
+   */
+  search?: string;
 }
+
+/** 頁籤的完整網址:路徑 + 記下的網址參數(切回頁籤、側欄連結、關閉後的落點都用它)。 */
+export const entryHref = (entry: RouteTabEntry): string =>
+  `${entry.route}${entry.search ?? ""}`;
+
+/** 網址參數正規化:空的(`""`、`"?"`)一律當沒有。 */
+const normalizeSearch = (search: string): string | undefined =>
+  search === "" || search === "?" ? undefined : search;
 
 /** 解析後可渲染的頁籤:紀錄 + 從模組陣列查到的名稱。 */
 export interface RouteTab extends RouteTabEntry {
@@ -46,10 +59,12 @@ const isRouteTabEntry = (value: unknown): value is RouteTabEntry => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const { route, itemLabel } = value as Record<string, unknown>;
+  const { route, itemLabel, search } = value as Record<string, unknown>;
   return (
     typeof route === "string" &&
-    (itemLabel === undefined || typeof itemLabel === "string")
+    (itemLabel === undefined || typeof itemLabel === "string") &&
+    (search === undefined ||
+      (typeof search === "string" && search.startsWith("?")))
   );
 };
 
@@ -97,17 +112,35 @@ const isEnterable = (
 /**
  * 與「可進入路由集合」對齊:進不去的路由(權限變了、換了組織)剔除;目前路徑能進而還沒有 tab → 追加到最後
  * (= 進入路由即生成 tab;重複進入不重複生成)。`/`、群組路由、無權限頁都不在集合內,不生成。
- * 詳情 / 編輯頁的 `/…/view-page/<id>` 也算能進(#428):每一筆各生成一個子頁籤。沒變化就回原陣列。
+ * 詳情 / 編輯頁的 `/…/view-page/<id>` 也算能進(#428):每一筆各生成一個子頁籤。
+ *
+ * 目前路徑的頁籤同時記下目前的網址參數(`currentSearch`,規格 10.1):改篩選、切頁內分頁、用帶參數的網址打開
+ * (原本的條件直接換掉)、參數被清掉,都以網址為準。沒變化就回原陣列內容(逐筆同參考)。
  */
 export const syncEntries = (
   entries: readonly RouteTabEntry[],
   routes: ReadonlyMap<string, ShellModule>,
   currentPath: string,
+  currentSearch = "",
 ): RouteTabEntry[] => {
+  const search = normalizeSearch(currentSearch);
   const kept = entries.filter((entry) => isEnterable(routes, entry.route));
-  const hasCurrent = kept.some((entry) => entry.route === currentPath);
-  if (!hasCurrent && isEnterable(routes, currentPath)) {
-    kept.push({ route: currentPath });
+  const currentIndex = kept.findIndex((entry) => entry.route === currentPath);
+  if (currentIndex === -1) {
+    if (isEnterable(routes, currentPath)) {
+      kept.push(
+        search === undefined
+          ? { route: currentPath }
+          : { route: currentPath, search },
+      );
+    }
+  } else if (kept[currentIndex].search !== search) {
+    const { route, itemLabel } = kept[currentIndex];
+    kept[currentIndex] = {
+      route,
+      ...(itemLabel !== undefined && { itemLabel }),
+      ...(search !== undefined && { search }),
+    };
   }
   return isSameEntries(kept, entries) ? [...entries] : kept;
 };
@@ -161,7 +194,7 @@ export const closeEntry = (
     index < remaining.length ? remaining[index] : remaining.at(index - 1);
   return {
     entries: remaining,
-    navigateTo: neighbor?.route ?? EMPTY_TABS_ROUTE,
+    navigateTo: neighbor === undefined ? EMPTY_TABS_ROUTE : entryHref(neighbor),
   };
 };
 
@@ -171,7 +204,8 @@ const isUnderRoute = (route: string, prefix: string): boolean =>
 
 /**
  * 關掉同一筆的所有子頁籤(刪除成功後用):`itemRoutes` 是那一筆的詳情 / 編輯網址(`<隱藏頁路由>/<id>`),以網址前綴比對。
- * 當前頁籤在其中 → `navigateTo` = `fallbackRoute`(所屬模組的列表頁),不切相鄰;否則為 null。沒有對上的就回原內容。
+ * 當前頁籤在其中 → `navigateTo` = `fallbackRoute`(所屬模組的列表頁;列表頁籤開著時帶回它記下的網址參數),
+ * 不切相鄰;否則為 null。沒有對上的就回原內容。
  */
 export const closeItemEntries = (
   entries: readonly RouteTabEntry[],
@@ -182,10 +216,13 @@ export const closeItemEntries = (
   const isItemRoute = (route: string) =>
     itemRoutes.some((prefix) => isUnderRoute(route, prefix));
   const remaining = entries.filter((entry) => !isItemRoute(entry.route));
+  const fallback = remaining.find((entry) => entry.route === fallbackRoute);
+  const fallbackHref =
+    fallback === undefined ? fallbackRoute : entryHref(fallback);
   return {
     entries: remaining.length === entries.length ? [...entries] : remaining,
     navigateTo:
-      activeRoute !== null && isItemRoute(activeRoute) ? fallbackRoute : null,
+      activeRoute !== null && isItemRoute(activeRoute) ? fallbackHref : null,
   };
 };
 

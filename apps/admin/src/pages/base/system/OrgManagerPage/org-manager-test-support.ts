@@ -122,9 +122,12 @@ export const renderPage = ({
     USER_VIEW_PERMISSION,
   ],
   world = {},
+  search = "",
 }: {
   permissions?: readonly string[];
   world?: OrgWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 } = {}) => {
   const fake = orgWorld({
     orgTree: rootTree,
@@ -144,7 +147,7 @@ export const renderPage = ({
       modules: modulesWith(permissions),
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/org-manager" }), fake };
+  return { ...renderApp({ path: `/system/org-manager${search}` }), fake };
 };
 
 /** 樹與資料區都有組織名稱(側欄的組織切換器也是),查詢一律先收斂到其中一邊。 */

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
 import {
   BlockedInstancesFilter,
@@ -20,6 +21,7 @@ import { RetryAdvanceButton } from "@/components/base/workflow/ApprovalSection/R
 import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { WORKFLOWS_MODULE_KEY } from "../workflows-permissions";
 import { AssignUserDialog } from "./AssignUserDialog";
@@ -34,6 +36,19 @@ type Row = WorkflowInstanceFieldsFragment;
 const FILTERS = new Map<string, BlockedInstancesFilter>(
   Object.values(BlockedInstancesFilter).map((value) => [value, value]),
 );
+
+/**
+ * 篩選(阻擋 / 需要推進)與頁碼存在網址 `?list=`(REACT-14)。篩選畫成頁籤,但它是同一張表的篩選條件
+ * (換篩選回第一頁、表格不換),所以與頁碼放同一個 key,不用 PageTabs。
+ */
+const listSchema = z
+  .object({
+    filter: z
+      .enum(BlockedInstancesFilter)
+      .default(BlockedInstancesFilter.Blocked),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ filter: BlockedInstancesFilter.Blocked, page: 1 });
 
 interface Handling {
   instance: Row;
@@ -55,10 +70,8 @@ export const WorkflowBlockedPage = () => {
   const navigate = useNavigate();
   const routeOf = useModuleRoutes();
   const { session } = useSession();
-  const [filter, setFilter] = useState<BlockedInstancesFilter>(
-    BlockedInstancesFilter.Blocked,
-  );
-  const [page, setPage] = useState(1);
+  const [list, setList] = useUrlState("list", listSchema);
+  const { filter, page } = list;
   const [handling, setHandling] = useState<Handling | null>(null);
   const actions = useBlockedActions();
   const query = useBlockedInstancesQuery(session.client, {
@@ -138,8 +151,10 @@ export const WorkflowBlockedPage = () => {
           aria-label={t("filters")}
           value={filter}
           onChange={(next) => {
-            setFilter(FILTERS.get(next) ?? BlockedInstancesFilter.Blocked);
-            setPage(1);
+            setList({
+              filter: FILTERS.get(next) ?? BlockedInstancesFilter.Blocked,
+              page: 1,
+            });
           }}
           items={[
             {
@@ -219,7 +234,7 @@ export const WorkflowBlockedPage = () => {
             )}
             page={page}
             onChange={(_event, next) => {
-              setPage(next);
+              setList((current) => ({ ...current, page: next }));
             }}
           />
         </Stack>
