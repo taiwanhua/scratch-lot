@@ -2,12 +2,14 @@ import {
   type ColumnDef,
   type ColumnPinningState,
   type ColumnSizingState,
+  type ColumnVisibilityState,
   type RowData,
   type SortingState,
   type Updater,
   columnPinningFeature,
   columnResizingFeature,
   columnSizingFeature,
+  columnVisibilityFeature,
   createSortedRowModel,
   rowSortingFeature,
   tableFeatures,
@@ -21,6 +23,7 @@ import {
   DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_COLUMN_WIDTH,
   type DataTableColumn,
+  type DataTableColumnVisibility,
   type DataTableColumnWidths,
   type DataTableSort,
 } from "./data-table-column";
@@ -30,6 +33,7 @@ export const dataTableFeatures = tableFeatures({
   columnSizingFeature,
   columnResizingFeature,
   columnPinningFeature,
+  columnVisibilityFeature,
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
 });
@@ -46,6 +50,8 @@ export interface UseDataTableOptions<Row extends RowData> {
   isManualSorting?: boolean;
   columnWidths?: DataTableColumnWidths;
   onColumnWidthsChange?: (widths: DataTableColumnWidths) => void;
+  columnVisibility?: DataTableColumnVisibility;
+  onColumnVisibilityChange?: (visibility: DataTableColumnVisibility) => void;
 }
 
 const resolve = <Value>(updater: Updater<Value>, previous: Value): Value =>
@@ -65,7 +71,7 @@ const fromSorting = (sorting: SortingState): DataTableSort | null => {
 
 /**
  * 把 `DataTable` 的 props 接到 TanStack Table:欄位宣告 → column defs、
- * 排序與欄寬「給了就受控、沒給就內部管」、`pinned` → column pinning 狀態。
+ * 排序、欄寬與欄位顯示「給了就受控、沒給就內部管」、`pinned` → column pinning 狀態。
  */
 export const useDataTable = <Row extends RowData>({
   columns,
@@ -77,11 +83,16 @@ export const useDataTable = <Row extends RowData>({
   isManualSorting = false,
   columnWidths: controlledWidths,
   onColumnWidthsChange,
+  columnVisibility: controlledVisibility,
+  onColumnVisibilityChange,
 }: UseDataTableOptions<Row>) => {
   const [innerSort, setInnerSort] = useState(defaultSort);
   const [innerWidths, setInnerWidths] = useState<DataTableColumnWidths>({});
   const sort = controlledSort === undefined ? innerSort : controlledSort;
   const widths = controlledWidths ?? innerWidths;
+  const [innerVisibility, setInnerVisibility] =
+    useState<DataTableColumnVisibility>({});
+  const visibility = controlledVisibility ?? innerVisibility;
 
   const columnDefs = useMemo(
     () =>
@@ -117,6 +128,7 @@ export const useDataTable = <Row extends RowData>({
       sorting,
       columnSizing: widths,
       columnPinning,
+      columnVisibility: visibility,
     },
     manualSorting: isManualSorting,
     enableMultiSort: false,
@@ -132,6 +144,11 @@ export const useDataTable = <Row extends RowData>({
       const next = resolve(updater, widths as ColumnSizingState);
       setInnerWidths(next);
       onColumnWidthsChange?.(next);
+    },
+    onColumnVisibilityChange: (updater) => {
+      const next = resolve(updater, visibility as ColumnVisibilityState);
+      setInnerVisibility(next);
+      onColumnVisibilityChange?.(next);
     },
   });
 };

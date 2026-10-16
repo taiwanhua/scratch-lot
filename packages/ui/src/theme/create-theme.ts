@@ -45,6 +45,12 @@ const action = {
   focus: `rgba(${GREY_500_CHANNELS}, 0.24)`,
   disabled: `rgba(${GREY_500_CHANNELS}, 0.80)`,
   disabledBackground: `rgba(${GREY_500_CHANNELS}, 0.24)`,
+  /*
+   * 互動狀態的透明度(《底座規格》10.11):有色元件的 state layer = 同色系 main × 這兩個值,
+   * 與上面 `hover` / `selected` 的 8% / 16% 同一組(MUI 預設亮色是 4% / 8%,暗色才是 8% / 16%)。
+   */
+  hoverOpacity: 0.08,
+  selectedOpacity: 0.16,
 } as const;
 
 /**

@@ -35,6 +35,12 @@ export const pinnedPlacementOf = <Row extends RowData>(
   return undefined;
 };
 
+/** 與捲動區相鄰的固定欄的分隔陰影:1px 分隔線 + 6px 向外的柔影(Figma 尚無 DataTable 稿,STYLE-06 一次性直寫)。 */
+export const pinnedEdgeShadow = (side: "left" | "right", divider: string) =>
+  side === "left"
+    ? `inset -1px 0 0 ${divider}, 6px 0 6px -6px ${divider}`
+    : `inset 1px 0 0 ${divider}, -6px 0 6px -6px ${divider}`;
+
 /**
  * 固定欄的 sticky 樣式。表身的固定格要不透明底色(否則捲過去的內容會透出來),
  * 列 hover 時用疊一層 `action.hover` 的漸層維持與未固定格一致的回饋。
@@ -50,11 +56,7 @@ export const pinnedCellSx =
     // cssVariables 開著時取 `vars`(深色模式跟著切),否則退回 palette 本身(STYLE-04)
     const { palette } = theme.vars ?? theme;
     const { divider } = palette;
-    // Figma 尚無 DataTable 稿:分隔陰影 = 1px 分隔線 + 6px 向外的柔影(STYLE-06 一次性直寫)
-    const edgeShadow =
-      placement.side === "left"
-        ? `inset -1px 0 0 ${divider}, 6px 0 6px -6px ${divider}`
-        : `inset 1px 0 0 ${divider}, -6px 0 6px -6px ${divider}`;
+    const edgeShadow = pinnedEdgeShadow(placement.side, divider);
     const hover = palette.action.hover;
     return {
       position: "sticky",
