@@ -33,6 +33,8 @@ const PROJECT = [
   /^apps\/front\//,
   /^deploy\/project\//,
   /^deploy\/env\//,
+  // 共用工具的專案設定(例:Figma 稽核的頁面 id、元件名稱、例外清單);須排在 COMMON 的 scripts/ 之前
+  /^scripts\/[^/]+\/project\//,
   // 專案自己的名詞表與討論紀錄(與底座的 CONTEXT.md、docs/tmp/dis.md 拆開);須排在 MIXED 的 *.md / docs/ 之前
   /^CONTEXT-PROJECT\.md$/,
   /^docs\/tmp\/project-dis\.md$/,
