@@ -166,7 +166,7 @@ pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort
 - **細節不重複進 issue**:權限表、種子清單、schema 這類細節的正本在 repo 文件(`docs/modules/`、`docs/concepts/`、schema 檔),issue 只做精確指路;提到數量或清單時,同句附上正本檔案。
 - **spec 引用的內容若 repo 沒有正本,先補文件再發 spec** —— 只存在於對話或設計圖裡的細節,對接手者等於不存在。
 - 每份 spec issue 附「**接手指南**」節:無 session 的閱讀順序(`CLAUDE.md` 文件地圖 → `docs/README.md` → `docs/agents/domain.md` 概念導讀 → 本 spec 的資料來源表)。
-- **指路要能 grep 到**:引用 `docs/tmp/dis.md` 這類長備忘時給一個關鍵字(如「dis.md 搜『頁籤』」),編號不是標題、用 heading 搜不到。
+- **指路要能 grep 到**:引用 `docs/tmp/dis.md`(底座)或 `docs/tmp/project-dis.md`(專案)這類長備忘時,寫明哪一份並給一個關鍵字(如「dis.md 搜『populate』」「project-dis.md 搜『<條目關鍵字>』」),編號不是標題、用 heading 搜不到。
 - **指路要先開檔確認,不要憑記憶指先例**:指錯先例比不指更糟,實作者會照著一個不存在的東西做。寫到**檔案路徑**(例:列表 Switch 的先例是 `apps/admin/src/pages/base/system/FieldManagerPage/FieldOptionsPanel/FieldOptionsTable.tsx`,含無權限時退回 `Tag`;使用者管理的停用是 `Button`、啟用欄是 `Tag`,不是先例)。
 - **名字相近的元件 / 函式點名完整檔名**:例 `OrgPickerDialog`(勾選所屬組織)與 `OrgChangeDialog`(移除確認)只差一個詞,寫「組織彈窗」兩邊都對得上。
 - **引用慣例照實際寫法寫**:admin 的錯誤解讀是 `<ns>ErrorOf(error)` 取 code、再 `tErrors(code)` 取文案(DATA-06),沒有 `messageOf` 這種東西;訊息形狀與要顯示的文案一起對(例:`login` 的訊息要帶 `name` 才顯示得出「歡迎,某某」)。

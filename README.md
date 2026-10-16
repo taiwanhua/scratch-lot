@@ -62,11 +62,12 @@ feat 分支一律從 `main` 切出 → PR 合併 `dev` 整合測試 → 要上�
 
 ## 文件索引
 
-| 文件                                         | 內容                                                 |
-| -------------------------------------------- | ---------------------------------------------------- |
-| [docs/architecture.md](docs/architecture.md) | 專案架構、資料流、codegen、技術決策                  |
-| [docs/deployment.md](docs/deployment.md)     | 部署操作手冊:環境對照、CI/CD、環境變數管理、維運速查 |
-| [docs/standards/](docs/standards/README.md)  | 程式碼規範(GEN/STRUCT/REACT/DATA/GQL/TEST)           |
-| [docs/branding.md](docs/branding.md)         | 品牌設定與設計資源;新專案依初始化操作建立            |
-| [docs/agents/](docs/agents/)                 | AI 工作流程設定(issue tracker、triage、domain docs)  |
-| [docs/tmp/dis.md](docs/tmp/dis.md)           | 決策共識與待辦追蹤                                   |
+| 文件                                               | 內容                                                 |
+| -------------------------------------------------- | ---------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)       | 專案架構、資料流、codegen、技術決策                  |
+| [docs/deployment.md](docs/deployment.md)           | 部署操作手冊:環境對照、CI/CD、環境變數管理、維運速查 |
+| [docs/standards/](docs/standards/README.md)        | 程式碼規範(GEN/STRUCT/REACT/DATA/GQL/TEST)           |
+| [docs/branding.md](docs/branding.md)               | 品牌設定與設計資源;新專案依初始化操作建立            |
+| [docs/agents/](docs/agents/)                       | AI 工作流程設定(issue tracker、triage、domain docs)  |
+| [docs/tmp/dis.md](docs/tmp/dis.md)                 | 底座的待討論與待辦                                   |
+| [docs/tmp/project-dis.md](docs/tmp/project-dis.md) | 專案的待討論與待辦                                   |

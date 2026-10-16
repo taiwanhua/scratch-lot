@@ -184,7 +184,7 @@ admin 每個環境各建一顆 image,正是最容易吃到這個坑的形狀(`VI
 
 ## STRUCT-11 正式文件寫現況,完成的計畫歸回正本
 
-適用 `docs/**` 與根目錄的 `CLAUDE.md`、`CONTEXT.md`(給人與 AI 讀的文件)。`apps/admin/src/md/module-help/{base,project/additions,project/replacements}/` 的 `.help.md` 是租戶使用者說明,另守詞彙與受眾規則(FIGMA-04、`docs/agents/module-scaffold.md`),不在本條範圍 —— 但同樣不該出現票號。
+適用 `docs/**` 與根目錄的 `CLAUDE.md`、`CONTEXT.md`、`CONTEXT-PROJECT.md`(給人與 AI 讀的文件)。`apps/admin/src/md/module-help/{base,project/additions,project/replacements}/` 的 `.help.md` 是租戶使用者說明,另守詞彙與受眾規則(FIGMA-04、`docs/agents/module-scaffold.md`),不在本條範圍 —— 但同樣不該出現票號。
 
 - **不寫**「(2026-09-xx 裁決)」「第 N 段」、`#` 加票號、PR 號這類註記,也不寫「原本 A、後來改 B」:只寫 B。
 - **決策理由照寫**,寫進正文(「為什麼這樣做」「不這樣會怎樣」),但不帶時間與票號。理由是規則的一部分,刪了理由的規則沒人敢改也沒人知道能不能改。

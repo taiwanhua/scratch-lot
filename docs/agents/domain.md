@@ -8,13 +8,19 @@ engineering skills 在探索 codebase 時,應如何使用本 repo 的領域文�
 
 ```
 /
-├── CONTEXT.md        ← 詞彙表(唯一一份)
+├── CONTEXT.md        ← 底座詞彙表(隨底座版本同步)
+├── CONTEXT-PROJECT.md ← 專案詞彙表(只新增專案名詞)
 ├── docs/adr/         ← 決策、理由、取捨
 ├── docs/concepts/    ← 底座現況:是什麼、怎麼運作
 └── docs/modules/     ← 各模組的畫面、權限表、api 介面
 ```
 
-沒有 `CONTEXT-MAP.md`,也沒有各 context 自己的 `docs/adr/`。`CONTEXT.md` 與 ADR 由 `/domain-modeling` 在術語或決策真正敲定時新增或改寫。
+沒有 `CONTEXT-MAP.md`,也沒有各 context 自己的 `docs/adr/`。詞彙表分兩份,同一個 context:
+
+- **`CONTEXT.md`**:底座名詞,隨底座版本同步到各引用專案;改這份等於改底座,要走共用改良回收。
+- **`CONTEXT-PROJECT.md`**:專案自己的名詞;**只能新增,不能重新定義底座名詞**。底座不帶內容,新專案初始化時建立空檔。
+
+`/domain-modeling` 在術語或決策真正敲定時新增或改寫詞條與 ADR:**專案名詞寫進 `CONTEXT-PROJECT.md`**,底座名詞才寫進 `CONTEXT.md`。待辦同樣分兩份:底座的在 `docs/tmp/dis.md`,專案的在 `docs/tmp/project-dis.md`。
 
 正式文件只描述目前行為與操作;開發計畫完成後精簡歸入既有正本並移除,不保留第二套需求文件。文件歸屬與生命週期見 [STRUCT-11](../standards/general/structure.md#struct-11-正式文件寫現況完成的計畫歸回正本)。
 
@@ -23,7 +29,7 @@ engineering skills 在探索 codebase 時,應如何使用本 repo 的領域文�
 想理解底座如何運作,照這個順序讀:
 
 1. **`docs/README.md`**:系統地圖、核心概念、閱讀路線
-2. **`CONTEXT.md`**:詞彙表;產出內容一律用它的術語
+2. **`CONTEXT.md` + `CONTEXT-PROJECT.md`**:底座與專案詞彙表;產出內容一律用它們的術語
 3. **`docs/concepts/`**(現況說明,「是什麼 / 怎麼運作」),依序:
    1. `accounts-and-tenants.md`:兩套帳號、組織樹、角色授予資格、租戶開通與擁有者保護
    2. `authorization.md`:模組 = 頁面、權限、wildcard、解析流程、防越權、角色種類、稽核
@@ -60,9 +66,9 @@ concepts 讀完之後,接著看「規則長成程式之後的樣子」。示範�
 
 ## 使用詞彙表的用語
 
-當產出內容涉及領域概念(issue 標題、重構提案、假設、測試名稱)時,使用 `CONTEXT.md` 定義的術語,不要偏移到詞彙表明確避免的同義詞(每個詞條的 `_Avoid_`)。
+當產出內容涉及領域概念(issue 標題、重構提案、假設、測試名稱)時,使用 `CONTEXT.md` 與 `CONTEXT-PROJECT.md` 定義的術語,不要偏移到詞彙表明確避免的同義詞(每個詞條的 `_Avoid_`)。
 
-如果需要的概念還不在詞彙表裡,這本身就是訊號:要嘛你正在發明專案沒有使用的語言(請重新考慮),要嘛存在真正的缺口(記下來留給 `/domain-modeling`)。
+如果需要的概念還不在詞彙表裡,這本身就是訊號:要嘛你正在發明專案沒有使用的語言(請重新考慮),要嘛存在真正的缺口(記下來留給 `/domain-modeling`;專案名詞寫進 `CONTEXT-PROJECT.md`)。
 
 ## 標記與 ADR 的衝突
 
