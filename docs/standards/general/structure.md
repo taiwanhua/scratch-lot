@@ -222,7 +222,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 
 - 頁面分 `pages/base/` 與 `pages/project/`;其他層既有共用內容仍由底座維護,專案內容放該層 `project/`,不另開頂層 `src/project/`。專案頁不可引用底座頁內部,共用能力走 components/hooks/lib;CRUD 模板在 `components/base/crud/`。
 - `app/module-pages.tsx` 組裝 `app/base/module-pages.ts`、`app/project/module-pages.ts` 與 `app/project/page-replacements.ts`。專案新增或替換不改底座清單;表單 options 與四頁來自同一筆 `forms` 宣告。
-- 即時通道的信號類型登記同樣由 `app/module-pages.tsx` 組裝:`app/base/realtime-signals.ts` + `app/project/realtime-signals.ts`(信號類型 → 要 invalidate 的 query key),類型重複載入即丟錯,`realtimeSignals` 由 `AdminShell` 交給 `RealtimeProvider`。
+- 即時通道的信號類型登記同樣由 `app/module-pages.tsx` 組裝:`app/base/realtime-signals.ts` + `app/project/realtime-signals.ts`(信號類型 → 要 invalidate 的 query key;結尾 `:*` 為前綴登記,如 `badge:*`),類型重複載入即丟錯,`realtimeSignals` 由 `AdminShell` 交給 `RealtimeProvider`。
 - `lib/base/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
 - `src/test/**` 只豁免所有權方向,仍守 STRUCT-03 與循環依賴檢查。固定入口是個別檔案的例外,不放寬整個 app 層。
 
