@@ -127,7 +127,8 @@ const durationOf = (
  * 全站統一的短提示卡片(底座規格 10.12):標題(選填)+ 訊息,右側 ✕;有動作時按鈕放在 ✕ 左邊。
  *
  * **計時**:一般 4 秒、有動作 8 秒自動關(`autoHideDuration` 可調,但系統預設一致);
- * 滑鼠移上這一則就暫停,移開後**重新計時**(從頭算完整的時間)。計時各則獨立。
+ * 滑鼠移上這一則、或鍵盤焦點在這一則裡(focus-within)就暫停;移開 / 焦點離開後**重新計時**
+ * (從頭算完整的時間)。兩者同一套邏輯,任一個還在就維持暫停。計時各則獨立。
  *
  * 本元件只畫「一則」;位置(電腦 / 平板右下、手機底部滿寬)與堆疊(往上疊、新的在下、最多 3 則,
  * 第 4 則出現時最舊的消失)由 `SnackbarStack` 與 `enqueueSnackbar` 負責。
@@ -144,7 +145,9 @@ export const Snackbar = ({
   sx,
 }: SnackbarProps) => {
   const duration = durationOf(autoHideDuration, action !== undefined);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const isPaused = isHovered || isFocused;
 
   // 呼叫端每次 render 都可能給新的 onClose;用 ref 取最新的,計時才不會因父層重繪而重來
   const onCloseRef = useRef(onClose);
@@ -169,10 +172,20 @@ export const Snackbar = ({
       severity={severity}
       icon={false}
       onMouseEnter={() => {
-        setIsPaused(true);
+        setIsHovered(true);
       }}
       onMouseLeave={() => {
-        setIsPaused(false);
+        setIsHovered(false);
+      }}
+      // React 的 focus / blur 會冒泡(等同 focusin / focusout):焦點在卡片內任一按鈕都算
+      onFocus={() => {
+        setIsFocused(true);
+      }}
+      onBlur={(event) => {
+        // 焦點只是在卡片內換到另一顆按鈕(撤銷 → ✕)時不算離開
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsFocused(false);
+        }
       }}
       action={
         <>

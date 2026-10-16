@@ -39,15 +39,8 @@ export const SnackbarProvider = ({ children }: SnackbarProviderProps) => {
       {latest !== null && (
         <SnackbarAnnouncer
           key={`announcer-${String(latest.id)}`}
-          message={
-            latest.title === undefined ? (
-              latest.message
-            ) : (
-              <>
-                {latest.title} {latest.message}
-              </>
-            )
-          }
+          message={latest.message}
+          {...(latest.title !== undefined && { title: latest.title })}
           anchorRef={anchorRef}
         />
       )}

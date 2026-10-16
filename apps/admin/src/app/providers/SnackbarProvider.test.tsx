@@ -233,6 +233,44 @@ describe("SnackbarProvider:位置與堆疊(底座規格 10.12)", () => {
     expect(stackTexts()).toHaveLength(2);
   });
 
+  /**
+   * 有標題的那一則:provider 重繪(例如較舊的一則被關掉)不能讓補念重跑。標題與訊息分開傳給
+   * `SnackbarAnnouncer`(都是 store 裡的原值),它的 effect 依賴不變就不會再排一次 0 毫秒的填字。
+   */
+  it("有標題時,provider 重繪不會讓補念重跑", async () => {
+    renderProvider(true);
+    await screen.findByRole("dialog");
+    showResult("較舊的一則");
+    showNotification("你有 1 則新通知");
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "新通知 你有 1 則新通知",
+      );
+    });
+    const status = screen.getByRole("status");
+    const setTimeoutSpy = jest.spyOn(globalThis, "setTimeout");
+
+    try {
+      // 關掉較舊的一則:items 變了、latest 沒變,provider 重繪
+      const olderId = useSnackbarStore.getState().items[0]?.id ?? 0;
+      act(() => {
+        useSnackbarStore.getState().dismiss(olderId);
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const announceRuns = setTimeoutSpy.mock.calls.filter(
+        ([, delay]) => delay === 0,
+      );
+      expect(announceRuns).toEqual([]);
+      expect(screen.getByRole("status")).toBe(status);
+      expect(status).toHaveTextContent("新通知 你有 1 則新通知");
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
   it("沒有對話框時由提示自己的 alert 念,live region 留空(不重複念兩次)", async () => {
     renderProvider();
 
