@@ -353,6 +353,7 @@ describe("本地驗證", () => {
         childPath: [1],
         target: "value",
         reason: "AUDIENCE_INVALID",
+        localReason: "emptyValue",
       },
       {
         tree: "audience",
@@ -360,6 +361,7 @@ describe("本地驗證", () => {
         childPath: [2],
         target: "group",
         reason: "EMPTY_GROUP",
+        localReason: "emptyGroup",
       },
     ]);
   });

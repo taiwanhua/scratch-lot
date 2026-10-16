@@ -5,17 +5,19 @@ import { ChevronDownIcon } from "@repo/ui/icons";
 import { Tag } from "@repo/ui/tag";
 import { TextField } from "@repo/ui/text-field";
 
-/** 欄位上的一個已選組織;`isOutOfScope` = 樹上找不到(管理範圍外),`name` 已換成提示文字 */
-export interface SelectedOrg {
+/**
+ * 欄位上的一個已選項目。樹上找不到的 id(組織:管理範圍外;權限:已不在操作者持有的權限裡)
+ * 由呼叫端換好顯示文字,一樣列成可取消的標籤。
+ */
+export interface TreeSelectFieldItem {
   id: string;
   name: string;
-  isOutOfScope: boolean;
 }
 
-export interface OrgTreeSelectFieldProps {
+export interface TreeSelectFieldProps {
   label: string;
-  /** 已選的組織(依 `value` 的順序;樹上找不到的 id 以「不在你的管理範圍內」顯示) */
-  selected: readonly SelectedOrg[];
+  /** 已選的項目(依 `value` 的順序) */
+  selected: readonly TreeSelectFieldItem[];
   isMultiSelect: boolean;
   isOpen: boolean;
   helperText?: ReactNode;
@@ -33,11 +35,11 @@ export interface OrgTreeSelectFieldProps {
 const OPEN_KEYS = new Set(["Enter", " ", "ArrowDown"]);
 
 /**
- * `OrgTreeSelect` 收合時的欄位:外觀同 SelectField(浮動標籤 + 外框 + 右側箭頭)。
- * 單選顯示組織名稱;多選以 `Tag` 列出已選組織,每個標籤可 × 取消(停用的組織也能取消)。
- * 欄位本身唯讀,點擊或 Enter / 空白 / ↓ 打開面板。
+ * 樹狀選擇器收合時的欄位(`OrgTreeSelect`、人員條件的 `PermissionTreeSelect` 共用):
+ * 外觀同 SelectField(浮動標籤 + 外框 + 右側箭頭)。單選顯示名稱;多選以 `Tag` 列出已選項目,
+ * 每個標籤可 × 取消(停用 / 樹上找不到的也能取消)。欄位本身唯讀,點擊或 Enter / 空白 / ↓ 打開面板。
  */
-export const OrgTreeSelectField = ({
+export const TreeSelectField = ({
   label,
   selected,
   isMultiSelect,
@@ -50,7 +52,7 @@ export const OrgTreeSelectField = ({
   size,
   onOpen,
   onRemove,
-}: OrgTreeSelectFieldProps) => {
+}: TreeSelectFieldProps) => {
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!disabled) {
       onOpen(event.currentTarget);
@@ -76,15 +78,15 @@ export const OrgTreeSelectField = ({
           py: 1,
         }}
       >
-        {selected.map((org) => (
+        {selected.map((item) => (
           <Tag
-            key={org.id}
-            label={org.name}
+            key={item.id}
+            label={item.name}
             disabled={disabled}
             onDelete={(event: MouseEvent) => {
               // × 只取消這一個,不要外溢成「點欄位 → 打開面板」
               event.stopPropagation();
-              onRemove(org.id);
+              onRemove(item.id);
             }}
           />
         ))}

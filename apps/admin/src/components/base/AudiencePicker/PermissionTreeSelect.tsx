@@ -2,12 +2,10 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
-import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
-import { Popover } from "@repo/ui/popover";
 
-import { OrgTreeSelectField } from "@/components/base/OrgTreeSelect/OrgTreeSelectField";
+import { TreeSelectField } from "@/components/base/TreeSelect/TreeSelectField";
+import { TreeSelectPopup } from "@/components/base/TreeSelect/TreeSelectPopup";
 import {
   type PermissionOptionModule,
   permissionLabels,
@@ -32,7 +30,7 @@ const PANEL_TREE_MAX_HEIGHT = 320;
 
 /**
  * 人員條件「權限」的值(Figma `Draft/AudiencePicker` 的「示範模組 · 編輯」標籤):
- * 收合時是欄位 + 已選標籤(與 `OrgTreeSelect` 同一個欄位外觀),點開是「搜尋 + 模組 / 權限樹」。
+ * 收合時是欄位 + 已選標籤(與 `OrgTreeSelect` 共用 `TreeSelectField` / `TreeSelectPopup`),點開是「搜尋 + 模組 / 權限樹」。
  * 樹沿用權限矩陣的顯示樹(`audiencePermissionOptions`);**只有權限列可勾**,模組列只是分組。
  * 搜尋關鍵字只活在這一輪打開期間 —— 面板關閉即卸載(REACT-08)。
  */
@@ -59,7 +57,6 @@ export const PermissionTreeSelect = ({
   const selected = value.map((key) => ({
     id: key,
     name: labels.get(key) ?? key,
-    isOutOfScope: !labels.has(key),
   }));
 
   const close = () => {
@@ -81,7 +78,7 @@ export const PermissionTreeSelect = ({
   return (
     <>
       <Box sx={{ width: 300 }}>
-        <OrgTreeSelectField
+        <TreeSelectField
           label={label}
           selected={selected}
           isMultiSelect
@@ -96,34 +93,15 @@ export const PermissionTreeSelect = ({
           }}
         />
       </Box>
-      {isOpen && isMobile && (
-        <Dialog
-          open
-          fullScreen
-          onClose={close}
-          title={label}
-          actions={<Button onClick={close}>{t("permissionConfirm")}</Button>}
-        >
-          {panel}
-        </Dialog>
-      )}
-      {isOpen && !isMobile && (
-        <Popover
-          open
-          anchorEl={anchorEl}
-          onClose={close}
-          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-          transformOrigin={{ vertical: "top", horizontal: "left" }}
-          slotProps={{
-            paper: {
-              "aria-label": label,
-              sx: { minWidth: anchorEl.offsetWidth, mt: 0.5 },
-            },
-          }}
-        >
-          <Box sx={{ px: 1, py: 1.5 }}>{panel}</Box>
-        </Popover>
-      )}
+      <TreeSelectPopup
+        label={label}
+        anchorEl={anchorEl}
+        isMobile={isMobile}
+        confirmLabel={t("permissionConfirm")}
+        onClose={close}
+      >
+        {panel}
+      </TreeSelectPopup>
     </>
   );
 };

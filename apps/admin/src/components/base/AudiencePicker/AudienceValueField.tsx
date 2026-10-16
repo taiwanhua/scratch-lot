@@ -33,15 +33,29 @@ export interface AudienceValueFieldProps {
 const staticValues = (value: AudienceValueDraft): string[] =>
   value.kind === "static" ? value.values : [];
 
-/** 受控值是 id 陣列,Autocomplete 收的是選項物件 —— 在這裡對照回來。 */
-const pick = <T extends { id: string }>(
-  options: readonly T[],
+/**
+ * 受控值是 id 陣列,Autocomplete 收的是選項物件 —— 在這裡對照回來。
+ * 候選清單裡找不到的 id(超出一次取回的筆數、看不到的租戶、已刪除…)**不丟掉**:
+ * 補一個佔位選項(`missing` 產生,文字「不在候選清單中」),照樣列成可取消的標籤,
+ * 改別的值時原樣送回(同組織 / 權限欄位的做法)。佔位選項也放進 `options`,受控值才對得上。
+ */
+const withMissing = <T extends { id: string }>(
+  candidates: readonly T[],
   ids: readonly string[],
-): T[] =>
-  ids.flatMap((id) => {
-    const found = options.find((option) => option.id === id);
-    return found === undefined ? [] : [found];
-  });
+  missing: (id: string) => T,
+): { options: T[]; selected: T[] } => {
+  const extra = ids
+    .filter((id) => !candidates.some((option) => option.id === id))
+    .map((id) => missing(id));
+  const options = [...extra, ...candidates];
+  return {
+    options,
+    selected: ids.flatMap((id) => {
+      const found = options.find((option) => option.id === id);
+      return found === undefined ? [] : [found];
+    }),
+  };
+};
 
 /**
  * 條件列的「值」:依欄位換控制項。
@@ -63,13 +77,18 @@ export const AudienceValueField = ({
   };
 
   if (condition.field === "user") {
+    const users = withMissing(env.options.users, ids, (id) => ({
+      id,
+      label: t("outOfList"),
+    }));
     return (
       <Autocomplete<AudienceUserOption, true>
         multiple
         size="small"
         label={t("value")}
-        options={env.options.users}
-        value={pick(env.options.users, ids)}
+        options={users.options}
+        value={users.selected}
+        chipDeleteIcon="close"
         error={hasError}
         disabled={env.isReadOnly}
         noOptionsText={t("empty")}
@@ -84,8 +103,16 @@ export const AudienceValueField = ({
   }
 
   if (condition.field === "role") {
-    const roles = env.options.roles;
-    const groupBy = shouldGroupRolesByOwnerOrg(roles)
+    const roles = withMissing(env.options.roles, ids, (id) => ({
+      id,
+      name: t("outOfList"),
+      label: t("outOfList"),
+      ownerOrgId: null,
+      ownerOrgName: null,
+      tenantTopId: null,
+      tenantTopName: null,
+    }));
+    const groupBy = shouldGroupRolesByOwnerOrg(roles.options)
       ? (option: RoleMenuOption) =>
           roleOwnerOrgGroupNameOf(option, t("noOwnerOrg"))
       : undefined;
@@ -94,8 +121,9 @@ export const AudienceValueField = ({
         multiple
         size="small"
         label={t("value")}
-        options={roles}
-        value={pick(roles, ids)}
+        options={roles.options}
+        value={roles.selected}
+        chipDeleteIcon="close"
         error={hasError}
         disabled={env.isReadOnly}
         noOptionsText={t("empty")}

@@ -43,11 +43,14 @@ export const RuleCard = ({
 }: RuleCardProps) => {
   const t = useTranslations("admin.dataScope.rule");
   const tReasons = useTranslations("admin.dataScope.reasons");
+  const tPicker = useTranslations("admin.audiencePicker");
 
   const audienceIssues = new Map(
     audienceIssuesOf(env.ruleIssues, index).map((issue) => [
       audienceIssueKey(issue.childPath, issue.target),
-      tReasons(issue.reason),
+      issue.localReason === undefined
+        ? tReasons(issue.reason)
+        : tPicker(issue.localReason),
     ]),
   );
   const firstField = env.fields.at(0);

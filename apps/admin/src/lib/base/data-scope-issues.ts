@@ -59,6 +59,11 @@ export type RuleIssue =
       childPath: readonly number[];
       target: AudienceIssueTarget;
       reason: RuleInvalidReason;
+      /**
+       * 本地驗證才有:畫面用 AudiencePicker 自己的文案(`admin.audiencePicker.emptyValue` /
+       * `emptyGroup`)講清楚缺什麼;api 回來的 `AUDIENCE_INVALID` 原因不只一種,用通用說法。
+       */
+      localReason?: "emptyValue" | "emptyGroup";
     };
 
 export const issueKey = (
@@ -95,7 +100,7 @@ export const audienceIssuesOf = (
 
 // ---- 本地驗證(送出前) ----
 
-/** 套用對象:空群組標 `EMPTY_GROUP`(與條件組合同一句),沒挑值標 `AUDIENCE_INVALID`。 */
+/** 套用對象:空群組標 `EMPTY_GROUP`、沒挑值標 `AUDIENCE_INVALID`;文案由 `localReason` 決定。 */
 const audienceIssues = (
   audience: AudienceDraft,
   ruleIndex: number,
@@ -106,6 +111,7 @@ const audienceIssues = (
     childPath: location.childPath,
     target: location.target,
     reason: location.target === "group" ? "EMPTY_GROUP" : "AUDIENCE_INVALID",
+    localReason: location.target === "group" ? "emptyGroup" : "emptyValue",
   }));
 
 const staticValueIssue = (

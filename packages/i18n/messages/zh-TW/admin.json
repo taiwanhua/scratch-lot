@@ -862,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "這個比較方式不適用於該欄位的型別。",
       "VALUE_SOURCE_NOT_ALLOWED": "這個值來源不適用於該欄位的型別。",
       "VALUE_INVALID": "請填一個有效的值。",
-      "AUDIENCE_INVALID": "請把套用對象的條件填完整(每一列都要選值)。"
+      "AUDIENCE_INVALID": "套用對象的這個條件不正確。"
     },
     "feedback": {
       "saveSuccess": "已儲存資料範圍規則。"
@@ -2692,6 +2692,7 @@
     "permissionEmpty": "沒有符合的權限",
     "permissionWildcard": "全部",
     "permissionLoadFailed": "權限清單載入失敗,請稍後再試。",
-    "permissionConfirm": "確定"
+    "permissionConfirm": "確定",
+    "outOfList": "不在候選清單中"
   }
 }

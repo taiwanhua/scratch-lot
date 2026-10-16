@@ -221,7 +221,8 @@ input SaveDataScopeRuleInput {
 程式在 `apps/admin/src/pages/base/system/DataScopePage/`:`TargetListPanel.tsx`(左資料目標清單,一列 = 一個模組:主文字模組名、副文字 collection)、`RuleEditorPanel/`(右規則編輯器)、`DiscardChangesDialog.tsx`(未儲存離開確認)、`useDataScopeData.ts`(資料與 mutation)。
 
 - **規則卡分上下兩塊**(`RuleCard.tsx`,Figma `Draft/DataScopeRuleCard`):上「套用對象」= 共用元件 `AudiencePicker`(`apps/admin/src/components/base/AudiencePicker/`;欄位全開:使用者 / 角色 / 所屬組織 / 權限,所屬組織只能指定組織),下「條件組合」= 資料目標的欄位目錄。兩棵樹共用 `components/base/condition-tree/` 的 `ConditionGroup` / `ConditionRow`,只換欄位清單與條件列之後的控制項;根層下拉都叫「組合」,巢狀群組叫「群組組合」。
-- **套用對象**:頂層「所有人 / 符合條件」二選一,新規則預設所有人。選所有人時條件樹收起,狀態裡的條件樹仍留著,切回符合條件原樣回來;送出時所有人只送 `{ mode: "all" }`。角色依擁有組織分組(Autocomplete)、組織用 `OrgTreeSelect`、權限用可搜尋的模組 / 權限樹(`audiencePermissionOptions`,只有權限列可勾)。根節點一律以群組送出(存著的根若是單一條件列,讀進來包一層 AND)。
+- **套用對象的選項兩邊各一份**:admin 的 `DATA_SCOPE_AUDIENCE_FIELDS`(`lib/base/data-scope-rule.ts`)與傳給 AudiencePicker 的 `orgSources`(預設只有指定組織)對應 api 的 `DATA_SCOPE_AUDIENCE_OPTIONS`(`apps/api/src/data-scope/data-scope-rule.ts`:可用欄位、組織來源、允許所有人);**改動時兩邊一起改**。
+- **套用對象**:頂層「所有人 / 符合條件」二選一,新規則預設所有人。選所有人時條件樹收起,狀態裡的條件樹仍留著,切回符合條件原樣回來;送出時所有人只送 `{ mode: "all" }`。角色依擁有組織分組(Autocomplete;一次取 100 筆,清單外的已存值顯示「不在候選清單中」並原樣保留)、組織用 `OrgTreeSelect`、權限用可搜尋的模組 / 權限樹(`audiencePermissionOptions`,只有權限列可勾)。根節點一律以群組送出(存著的根若是單一條件列,讀進來包一層 AND)。
 - 純函式在 `apps/admin/src/lib/base/`:`data-scope-rule.ts`(型別目錄、編輯器狀態 ↔ api JSON)、`data-scope-issues.ts`(本地驗證、`RULE_INVALID` 的 `path` → 標在哪一棵樹的哪一格)、`condition-tree.ts`(兩棵樹共用的增刪改與 UI 上限)、`audience-draft.ts`(人員條件的編輯器狀態 ↔ JSON、本地驗證、`path` 定位)。**型別 → 運算子 → 值來源那張表在 admin 重寫了一份**(STRUCT-01 不能 import api),改動時兩邊一起改。
 - 條件樹節點**不帶自產 id**:位置(`rules[n]` + 往下的 `children[i]`)就是身分,與 api 回的 `path` 同一套座標;`rules[n].audience.…` 的路徑標在套用對象那棵樹(`AUDIENCE_INVALID` 指到的條件列標紅),其餘標在條件組合。
 - **UI 上限三層**(ADR-0008「任意深、UI 建議 3 層」,人員條件同為 3 層):第三層的群組不再給「+ 群組」;資料結構本身不設限,更深的規則由 api 回來仍讀得回、顯示得出來,只是不能再往下加。

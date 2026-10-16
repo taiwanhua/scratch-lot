@@ -862,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "This comparison does not apply to the field's type.",
       "VALUE_SOURCE_NOT_ALLOWED": "This value source does not apply to the field's type.",
       "VALUE_INVALID": "Please provide a valid value.",
-      "AUDIENCE_INVALID": "Please complete the applies-to conditions (every row needs a value)."
+      "AUDIENCE_INVALID": "This applies-to condition is invalid."
     },
     "feedback": {
       "saveSuccess": "Data scope rule saved."
@@ -2692,6 +2692,7 @@
     "permissionEmpty": "No matching permissions",
     "permissionWildcard": "All",
     "permissionLoadFailed": "Failed to load permissions. Please try again later.",
-    "permissionConfirm": "Done"
+    "permissionConfirm": "Done",
+    "outOfList": "Not in the candidate list"
   }
 }
