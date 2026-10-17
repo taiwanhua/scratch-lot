@@ -263,6 +263,15 @@ export const WorkflowVersionPanel = ({
           {diff.isStructureChanged && (
             <Typography variant="body2">{t("diffStructure")}</Typography>
           )}
+          {diff.flowCcChange === "added" && (
+            <Typography variant="body2">{t("diffFlowCcAdded")}</Typography>
+          )}
+          {diff.flowCcChange === "removed" && (
+            <Typography variant="body2">{t("diffFlowCcRemoved")}</Typography>
+          )}
+          {diff.flowCcChange === "changed" && (
+            <Typography variant="body2">{t("diffFlowCcChanged")}</Typography>
+          )}
         </Stack>
       )}
       {isPublishing && draft !== undefined && (

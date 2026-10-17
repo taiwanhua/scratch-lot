@@ -21,6 +21,7 @@ import { isFlowCcIssue } from "@/lib/base/workflow/validation";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { designerPropertyPanelSx } from "../../designer-layout";
+import { BackToFlowButton } from "./BackToFlowButton";
 import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
@@ -257,7 +258,16 @@ export const FlowVersionViewer = ({
           aria-label={t("viewingProperties")}
           sx={designerPropertyPanelSx}
         >
-          {renderPanel()}
+          <Stack spacing={1}>
+            {selected !== null && (
+              <BackToFlowButton
+                onBack={() => {
+                  setSelectedKey(null);
+                }}
+              />
+            )}
+            {renderPanel()}
+          </Stack>
         </Box>
       </Stack>
       <FlowIssueList
