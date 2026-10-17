@@ -35,6 +35,12 @@ export interface ModuleNodeDeclaration {
    */
   engine?: "form";
   /**
+   * 表單模組依表單分開新增權限(B9b;只給 `engine: "form"`,由 `formModuleDeclaration` 的 `perFormCreate` 帶入)。
+   * 落庫到 `modules.perFormCreate`(不宣告 = false);與 `engine` 一樣每次 seed 都同步宣告值,不提供執行期開關。
+   * 已有表單的模組改為開啟需要 migration(補建權限、把原持有模組 `create` 的角色授予對應權限)。
+   */
+  perFormCreate?: boolean;
+  /**
    * `modules.settings` 的**初始值**(不宣告 = `{}`)。與 `enabled`、`icon` 同屬「初始 seed 值的欄位」(ADR-0002):
    * 建立時寫入,之後保留人在畫面上的修改(如表單模組的列表欄位配置 `settings.list`)。
    */

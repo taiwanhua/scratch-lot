@@ -22,6 +22,8 @@ import {
 } from "../permission/permission-resolver";
 import {
   type FormModuleAction,
+  formCreatePermissionKey,
+  formCreatePermissionPrefix,
   formModulePermission,
 } from "./form-permission-keys";
 import { forbiddenError, notFoundError, validationError } from "./forms-error";
@@ -36,6 +38,7 @@ export type FormRecord = Persisted<FormDocument>;
  * - `isRoot`:當前組織是根組織(`parentId === null`;管共用表單、分派的判準)
  * - `tenantId`:當前組織的租戶頂層(根組織 = null → 看全部共用表單)
  * - `timezone`:租戶時區(`ctx.timezone`)
+ * - `perFormCreateModuleKeys`:宣告 `perFormCreate: true`(B9b 依表單分開新增權限)的表單模組 key
  */
 export interface FormOperatorFacts {
   operator: OperatorContext;
@@ -45,6 +48,7 @@ export interface FormOperatorFacts {
   isRoot: boolean;
   tenantId: Types.ObjectId | null;
   timezone: string;
+  perFormCreateModuleKeys: ReadonlySet<string>;
 }
 
 /** 讀組織只取判斷用欄位,不受管理範圍影響(同 `OwnerProtectionService` 的 fail-closed 讀法)。 */
@@ -116,7 +120,19 @@ export class FormAccessService {
       isRoot: current?.parentId === null,
       tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, tenantId),
+      perFormCreateModuleKeys: await this.perFormCreateModuleKeys(operator),
     };
+  }
+
+  /** 開啟 B9b 的表單模組(seed 宣告,執行期不改;全表種子資料,一次請求查一次)。 */
+  private async perFormCreateModuleKeys(
+    operator: OperatorContext,
+  ): Promise<ReadonlySet<string>> {
+    const modules = await this.modules.findMany(operator, {
+      engine: "form",
+      perFormCreate: true,
+    });
+    return new Set(modules.map((module) => module.key));
   }
 
   /** 某個組織所屬租戶的時區(`me.currentOrg.timezone`);組織讀不到 → 預設。 */
@@ -142,6 +158,65 @@ export class FormAccessService {
     if (!this.has(facts, key)) {
       throw forbiddenError(`Missing permission ${key}`);
     }
+  }
+
+  /**
+   * **新增資格的唯一判斷**(B9b):操作者能不能用這張表單在這個模組新增。
+   * 模組開啟 B9b(`perFormCreate`)→ 看 `<模組>.create-<formKey>`(模組 `create` 不算);否則看模組 `create`。
+   * 入口(新增 API、`moduleForms` 的 `canCreate`、abilities、複製為新單、`formLookup` 版本存取、申請中心新申請、
+   * 申請人改 / 送 / 刪自己的單)一律呼叫這裡,不自己拼 key。
+   */
+  canCreateWithForm(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): boolean {
+    return this.has(facts, this.createKeyOf(facts, moduleKey, formKey));
+  }
+
+  /** `canCreateWithForm` 的守門版;沒有 → `FORBIDDEN`(與 `@RequirePermission` 同一種錯誤,無 reason)。 */
+  assertCanCreateWithForm(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): void {
+    const key = this.createKeyOf(facts, moduleKey, formKey);
+    if (!this.has(facts, key)) {
+      throw forbiddenError(`Missing permission ${key}`);
+    }
+  }
+
+  private createKeyOf(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): string {
+    return facts.perFormCreateModuleKeys.has(moduleKey)
+      ? formCreatePermissionKey(moduleKey, formKey)
+      : formModulePermission(moduleKey, "create");
+  }
+
+  /**
+   * 在這個模組有沒有任何新增資格(不指定表單時用,例:執行端讀模組層資料)。
+   * 開啟 B9b 的模組:持有任一張表單的 `create-<formKey>`(或模組 `*`);否則看模組 `create`。
+   */
+  private canCreateInModule(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+  ): boolean {
+    if (!facts.perFormCreateModuleKeys.has(moduleKey)) {
+      return this.has(facts, formModulePermission(moduleKey, "create"));
+    }
+    if (this.has(facts, `${moduleKey}.*`)) {
+      return true;
+    }
+    const prefix = formCreatePermissionPrefix(moduleKey);
+    for (const key of facts.permissionKeys) {
+      if (key.startsWith(prefix) && this.has(facts, key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** `modules.engine = "form"` 的模組;不存在或不是表單模組 → `VALIDATION_FAILED`(`moduleKey`)。 */
@@ -340,10 +415,22 @@ export class FormAccessService {
     return link !== null;
   }
 
-  /** 執行端讀表單定義:持有該模組任一個個別權限即可(看得到提交的人要能渲染它)。 */
-  assertRuntimeAccess(facts: FormOperatorFacts, moduleKey: string): void {
-    const actions: FormModuleAction[] = ["view", "create", "edit"];
+  /**
+   * 執行端讀表單定義:持有該模組的 `view` / `edit`,或有新增資格即可(看得到提交的人要能渲染它)。
+   * 新增資格:給了 `formKey` → `canCreateWithForm`;沒給(模組層)→ 這個模組任一張表單的新增資格。
+   */
+  assertRuntimeAccess(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey?: string,
+  ): void {
+    const actions: FormModuleAction[] = ["view", "edit"];
+    const canCreate =
+      formKey === undefined
+        ? this.canCreateInModule(facts, moduleKey)
+        : this.canCreateWithForm(facts, moduleKey, formKey);
     if (
+      !canCreate &&
       !actions.some((action) =>
         this.has(facts, formModulePermission(moduleKey, action)),
       )

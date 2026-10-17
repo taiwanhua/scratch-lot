@@ -260,6 +260,7 @@ export const mockHandlers = ({
           currentVersion: 1,
           tabLabelTemplate: null,
           allowDraft: true,
+          canCreate: true,
         },
         {
           key: LEAVE_FORM_KEY,
@@ -268,6 +269,7 @@ export const mockHandlers = ({
           currentVersion: 1,
           tabLabelTemplate: null,
           allowDraft: true,
+          canCreate: true,
         },
       ],
       versions: {

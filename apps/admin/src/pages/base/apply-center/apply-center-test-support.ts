@@ -86,6 +86,7 @@ export const defaultFormRuntime = (): FormRuntimeWorldOptions => ({
       currentVersion: 1,
       tabLabelTemplate: null,
       allowDraft: true,
+      canCreate: true,
     },
   ],
   versions: { [`${LEAVE_FORM_KEY}@1`]: leaveDefinition() },

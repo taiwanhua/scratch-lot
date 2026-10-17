@@ -23,8 +23,12 @@ import {
   useIsDesignerDirty,
 } from "@/stores/base/useDesignerDraftStore";
 
+import { PublishedGrantDialog } from "./PublishedGrantDialog";
+
 export interface PublishDialogProps {
   formKey: string;
+  /** 表單名稱(發布成功提示「<表單名>」第 N 版已發布用) */
+  formName: string;
   draftRevision: number;
   onClose: () => void;
   onPublished: () => void;
@@ -33,9 +37,12 @@ export interface PublishDialogProps {
 /**
  * 發布草稿(Spec 6a §6 四步發布):`changelog` 必填;帶 `expectedDraftRevision`(草稿被別人改過 → `CONFLICT`)。
  * 檢查器有錯 → `VALIDATION_FAILED` + `issues`,就地列出(改完草稿再發布);中斷則在版本面板顯示「重試」。
+ * 這次發布新建了依表單新增權限(B9b,api `createdPermission`)→ 不跳成功提示,改換成
+ * `PublishedGrantDialog` 提醒到角色管理授予;關掉它才算發布流程結束(`onPublished`)。
  */
 export const PublishDialog = ({
   formKey,
+  formName,
   draftRevision,
   onClose,
   onPublished,
@@ -51,21 +58,48 @@ export const PublishDialog = ({
   const [savedRevision, setSavedRevision] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const expectedRevision = savedRevision ?? draftRevision;
+  const [granted, setGranted] = useState<{
+    version: number;
+    permissionName: string;
+  } | null>(null);
 
   const publish = usePublishFormVersionMutation(
     session.client,
     useMutationFeedback<PublishFormVersionMutation>({
       success: (payload) =>
-        t("success", {
-          version: payload.publishFormVersion.formVersion.version ?? 0,
-        }),
+        payload.publishFormVersion.createdPermission
+          ? null
+          : t("success", {
+              version: payload.publishFormVersion.formVersion.version ?? 0,
+            }),
       error: (failure) => tErrors(formErrorOf(failure).code),
-      onSuccess: onPublished,
+      onSuccess: (payload) => {
+        const created = payload.publishFormVersion.createdPermission;
+        if (created) {
+          setGranted({
+            version: payload.publishFormVersion.formVersion.version ?? 0,
+            permissionName: created.name,
+          });
+          return;
+        }
+        onPublished();
+      },
       onError: (failure) => {
         setError(formErrorOf(failure));
       },
     }),
   );
+
+  if (granted !== null) {
+    return (
+      <PublishedGrantDialog
+        formName={formName}
+        version={granted.version}
+        permissionName={granted.permissionName}
+        onClose={onPublished}
+      />
+    );
+  }
 
   return (
     <Dialog

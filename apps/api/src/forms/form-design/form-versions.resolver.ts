@@ -98,12 +98,16 @@ export class FormVersionsResolver {
     @Args("input") input: PublishFormVersionInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<FormVersionPayload> {
-    const record = await this.publisher.publish(
+    const { version, createdPermission } = await this.publisher.publish(
       await this.access.factsOf(operator),
       input,
     );
-    const names = await this.userNames.load(operator, [record.publishedBy]);
-    return { formVersion: toFormVersionModel(record, names), validation: null };
+    const names = await this.userNames.load(operator, [version.publishedBy]);
+    return {
+      formVersion: toFormVersionModel(version, names),
+      validation: null,
+      createdPermission,
+    };
   }
 
   /** 帶當時看到的版本號;兩步一個交易,同一版再退役不改任何東西,`currentVersion` 已換成別版 → 409。 */

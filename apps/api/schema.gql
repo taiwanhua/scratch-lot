@@ -675,6 +675,11 @@ type FormAssignment {
   tenantOrgId: ID!
 }
 
+type FormCreatePermission {
+  key: String!
+  name: String!
+}
+
 type FormDefinitionIssue {
   code: String!
   location: JSONObject!
@@ -939,6 +944,7 @@ type FormSubmissionsPayload {
 
 type FormSummary {
   allowDraft: Boolean!
+  canCreate: Boolean!
   currentVersion: Int!
   key: ID!
   moduleKey: String!
@@ -995,6 +1001,7 @@ type FormVersionModel {
 }
 
 type FormVersionPayload {
+  createdPermission: FormCreatePermission
   formVersion: FormVersionModel!
   validation: FormValidationReport
 }

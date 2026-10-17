@@ -73,3 +73,33 @@ describe("表單模組宣告的頁內權限(B9a)", () => {
     }
   });
 });
+
+function mainNode(spec: FormModuleSpec) {
+  return formModuleDeclaration(spec).nodes.find(
+    (node) => node.key === spec.key,
+  );
+}
+
+describe("表單模組依表單分開新增權限(B9b)的宣告", () => {
+  it("沒宣告 → 主節點不帶 perFormCreate(落庫為 false),固定四條照舊", () => {
+    expect(mainNode(SPEC)?.perFormCreate).toBeUndefined();
+    expect(permissionKeysOf(SPEC)).toContain("store.create");
+  });
+
+  it("宣告 `perFormCreate: true` → 只標在主節點;權限仍是固定四條(`create-<formKey>` 由發布時建立)", () => {
+    const spec = { ...SPEC, perFormCreate: true };
+    const declaration = formModuleDeclaration(spec);
+    expect(mainNode(spec)?.perFormCreate).toBe(true);
+    expect(
+      declaration.nodes
+        .filter((node) => node.key !== spec.key)
+        .every((node) => node.perFormCreate === undefined),
+    ).toBe(true);
+    expect(permissionKeysOf(spec)).toEqual([
+      "store.view",
+      "store.create",
+      "store.edit",
+      "store.delete",
+    ]);
+  });
+});

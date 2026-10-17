@@ -54,6 +54,27 @@ export function fieldPermissionPrefix(
   return permissionKey(moduleKey, `${action}-${formKey}-`);
 }
 
+/**
+ * 依表單分開的新增權限 key(B9b):`<moduleKey>.create-<formKey>`。只有宣告 `perFormCreate: true` 的表單模組
+ * 在發布步驟 3 建立;判斷一律走 `FormAccessService.canCreateWithForm`。
+ */
+export function formCreatePermissionKey(
+  moduleKey: string,
+  formKey: string,
+): string {
+  return permissionKey(moduleKey, `create-${formKey}`);
+}
+
+/** 依表單分開的新增權限顯示名:「<表單名> 新增」(隨表單改名,在下次發布時更新)。 */
+export function formCreatePermissionName(formName: string): string {
+  return `${formName} 新增`;
+}
+
+/** 某表單模組全部依表單新增權限的 key 前綴(`<moduleKey>.create-`)。 */
+export function formCreatePermissionPrefix(moduleKey: string): string {
+  return permissionKey(moduleKey, "create-");
+}
+
 export interface ParsedFieldPermissionKey {
   moduleKey: string;
   action: FieldPermissionAction;

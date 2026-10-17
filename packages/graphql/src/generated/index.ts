@@ -739,6 +739,12 @@ export type FormAssignment = {
   tenantOrgId: Scalars['ID']['output'];
 };
 
+export type FormCreatePermission = {
+  __typename?: 'FormCreatePermission';
+  key: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type FormDefinitionIssue = {
   __typename?: 'FormDefinitionIssue';
   code: Scalars['String']['output'];
@@ -1028,6 +1034,7 @@ export type FormSubmissionsPayload = {
 export type FormSummary = {
   __typename?: 'FormSummary';
   allowDraft: Scalars['Boolean']['output'];
+  canCreate: Scalars['Boolean']['output'];
   currentVersion: Scalars['Int']['output'];
   key: Scalars['ID']['output'];
   moduleKey: Scalars['String']['output'];
@@ -1092,6 +1099,7 @@ export type FormVersionModel = {
 
 export type FormVersionPayload = {
   __typename?: 'FormVersionPayload';
+  createdPermission?: Maybe<FormCreatePermission>;
   formVersion: FormVersionModel;
   validation?: Maybe<FormValidationReport>;
 };
@@ -4112,7 +4120,7 @@ export type ModuleFormsQueryVariables = Exact<{
 }>;
 
 
-export type ModuleFormsQuery = { __typename?: 'Query', moduleForms: Array<{ __typename?: 'FormSummary', key: string, name: string, moduleKey: string, currentVersion: number, tabLabelTemplate?: string | null, allowDraft: boolean }> };
+export type ModuleFormsQuery = { __typename?: 'Query', moduleForms: Array<{ __typename?: 'FormSummary', key: string, name: string, moduleKey: string, currentVersion: number, tabLabelTemplate?: string | null, allowDraft: boolean, canCreate: boolean }> };
 
 export type FormRuntimeVersionQueryVariables = Exact<{
   formKey: Scalars['ID']['input'];
@@ -4296,7 +4304,7 @@ export type PublishFormVersionMutationVariables = Exact<{
 }>;
 
 
-export type PublishFormVersionMutation = { __typename?: 'Mutation', publishFormVersion: { __typename?: 'FormVersionPayload', formVersion: { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
+export type PublishFormVersionMutation = { __typename?: 'Mutation', publishFormVersion: { __typename?: 'FormVersionPayload', formVersion: { __typename?: 'FormVersionModel', id: string, formKey: string, version?: number | null, status: FormVersionStatus, draftRevision: number, baseVersion?: number | null, fields: Array<Record<string, unknown>>, layout: Record<string, unknown>, summaryMap: Record<string, unknown>, prefills: Array<Record<string, unknown>>, changelog?: string | null, publishedAt?: string | null, createdAt: string, updatedAt: string, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, createdPermission?: { __typename?: 'FormCreatePermission', key: string, name: string } | null } };
 
 export type RetireCurrentVersionMutationVariables = Exact<{
   input: RetireCurrentVersionInput;
@@ -7257,6 +7265,7 @@ export const ModuleFormsDocument = `
     currentVersion
     tabLabelTemplate
     allowDraft
+    canCreate
   }
 }
     `;
@@ -8105,6 +8114,10 @@ export const PublishFormVersionDocument = `
   publishFormVersion(input: $input) {
     formVersion {
       ...FormVersionFields
+    }
+    createdPermission {
+      key
+      name
     }
   }
 }

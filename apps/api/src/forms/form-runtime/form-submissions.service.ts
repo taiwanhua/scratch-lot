@@ -379,7 +379,10 @@ export class FormSubmissionsService {
 
   // ---- 讀 ----
 
-  /** 新增選單(Spec §3 的交集):一張直接進、多張先選。 */
+  /**
+   * 新增選單(Spec §3 的交集):一張直接進、多張先選。每張附 `canCreate`(`canCreateWithForm`):
+   * 清單本身也給列表的表單篩選與頁籤模板用,所以不在這裡刪掉不能新增的表單。
+   */
   async moduleForms(
     facts: FormOperatorFacts,
     moduleKey: string,
@@ -394,6 +397,7 @@ export class FormSubmissionsService {
       currentVersion: form.currentVersion ?? 0,
       tabLabelTemplate: form.tabLabelTemplate,
       allowDraft: allowsDraft(form),
+      canCreate: this.access.canCreateWithForm(facts, form.moduleKey, form.key),
     }));
   }
 
@@ -412,7 +416,7 @@ export class FormSubmissionsService {
     }
     // 沒有業務模組權限的審核者(申請中心詳情頁)也要拿得到定義來渲染他審的那筆
     if (!(await this.readAccess.holdsTaskOnForm(facts, formKey))) {
-      this.access.assertRuntimeAccess(facts, form.moduleKey);
+      this.access.assertRuntimeAccess(facts, form.moduleKey, form.key);
     }
     const record = await this.versions.findOne(facts.operator, {
       formKey,
@@ -690,7 +694,7 @@ export class FormSubmissionsService {
     formKey: string,
   ): Promise<{ form: FormRecord; version: FormVersionRecord }> {
     const form = await this.access.requireAvailableForm(facts, formKey);
-    this.access.assertModulePermission(facts, form.moduleKey, "create");
+    this.access.assertCanCreateWithForm(facts, form.moduleKey, form.key);
     const version = await this.versions.findOne(facts.operator, {
       formKey: form.key,
       version: form.currentVersion,
@@ -1121,7 +1125,7 @@ export class FormSubmissionsService {
       let record: SubmissionRecord | null;
       if (own !== null && APPLICANT_EDITABLE.includes(own.status)) {
         // 草稿 / 被退回 / 已撤回:申請人本人可刪(實例已終局,推進只收尾它自己的任務與歷程)
-        this.access.assertModulePermission(facts, own.moduleKey, "create");
+        this.access.assertCanCreateWithForm(facts, own.moduleKey, own.formKey);
         record = own;
         await this.lifecycle.guard("beforeDelete", {
           operator: facts.operator,
@@ -1390,7 +1394,7 @@ export class FormSubmissionsService {
       );
     }
     const form = await this.access.requireAvailableForm(facts, source.formKey);
-    this.access.assertModulePermission(facts, form.moduleKey, "create");
+    this.access.assertCanCreateWithForm(facts, form.moduleKey, form.key);
     const target = await this.versions.findOne(facts.operator, {
       formKey: form.key,
       version: form.currentVersion,
@@ -1733,11 +1737,16 @@ export class FormSubmissionsService {
     canVoid: boolean;
     canCopy: boolean;
   } {
-    const can = (action: "view" | "create" | "edit" | "delete"): boolean =>
+    const can = (action: "view" | "edit" | "delete"): boolean =>
       this.access.has(facts, formModulePermission(record.moduleKey, action));
+    const canCreate = this.access.canCreateWithForm(
+      facts,
+      record.moduleKey,
+      record.formKey,
+    );
     const isBound = record.currentInstanceId !== null;
     const isApplicantEditable =
-      isOwner && APPLICANT_EDITABLE.includes(record.status) && can("create");
+      isOwner && APPLICANT_EDITABLE.includes(record.status) && canCreate;
     const canEdit =
       isApplicantEditable ||
       (record.status === "completed" && !isBound && can("edit"));
@@ -1752,7 +1761,7 @@ export class FormSubmissionsService {
       canWithdraw: isOwner && record.status === "reviewing",
       canVoid:
         record.status === "completed" && isBound && (isOwner || can("edit")),
-      canCopy: record.status === "voided" && can("create"),
+      canCopy: record.status === "voided" && canCreate,
     };
   }
 
@@ -1906,7 +1915,11 @@ export class FormSubmissionsService {
         "STATUS_MISMATCH",
       );
     }
-    this.access.assertModulePermission(facts, record.moduleKey, "create");
+    this.access.assertCanCreateWithForm(
+      facts,
+      record.moduleKey,
+      record.formKey,
+    );
     return record;
   }
 

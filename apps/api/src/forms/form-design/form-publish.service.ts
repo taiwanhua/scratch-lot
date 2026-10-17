@@ -29,7 +29,10 @@ import {
 } from "../forms-error";
 import type { PublishFormVersionInput } from "./dto/form-design.input";
 import { FormDefinitionChecker } from "./form-definition-checker";
-import { FormFieldPermissionsService } from "./form-field-permissions.service";
+import {
+  type CreatedFormCreatePermission,
+  FormFieldPermissionsService,
+} from "./form-field-permissions.service";
 import { FormPublishHooks } from "./form-publish-hooks";
 
 /** 稽核動作名(`docs/modules/forms.md`「稽核」)。 */
@@ -43,13 +46,20 @@ export const FORM_VERSION_AUDIT = {
 
 export const FORM_VERSION_TARGET = "form_version";
 
+/** 發布結果:發布後的版本 + 步驟 3 新建的依表單新增權限(B9b;沒有 = null)。 */
+export interface PublishedFormVersion {
+  version: FormVersionRecord;
+  createdPermission: CreatedFormCreatePermission | null;
+}
+
 /**
  * 四步發布(Spec 6a §6「發布」),整個動作是**一個交易**(ADR-0013):
  *
  * 1. 跑檢查器,有錯就停(什麼都沒改)
  * 2. 條件更新 `{ status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、記 changelog;
  *    沒更新到 → 409(兩個發布同時來只有一個搶得到)
- * 3. 欄位級權限:缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label
+ * 3. 欄位級權限:缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label;
+ *    模組開啟 B9b(`perFormCreate`)時確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」,不退役、不自動授予)
  * 4. 切換三筆:這一版 `publishing → published` → 前一版 `published → retired` → `forms.currentVersion` 指向新版
  *
  * 任何一步失敗,版本、欄位級權限、`currentVersion` 與稽核一起回到發布前,草稿原封不動;
@@ -95,7 +105,7 @@ export class FormPublishService {
     facts: FormOperatorFacts,
     input: PublishFormVersionInput,
     internal: PublishInternalOptions = {},
-  ): Promise<FormVersionRecord> {
+  ): Promise<PublishedFormVersion> {
     const operator = facts.operator;
     const form = await this.access.requireWritableForm(facts, input.formKey);
     const changelog = input.changelog.trim();
@@ -161,16 +171,21 @@ export class FormPublishService {
     operator: OperatorContext,
     form: FormRecord,
     target: FormVersionRecord,
-  ): Promise<FormVersionRecord> {
-    // 步驟 3:欄位級權限(`name` 用表單現在的名稱)
-    await this.fieldPermissions.syncForVersion(operator, form, target.fields);
+  ): Promise<PublishedFormVersion> {
+    // 步驟 3:欄位級權限 + 依表單新增權限(`name` 用表單現在的名稱)
+    const createdPermission = await this.fieldPermissions.syncForVersion(
+      operator,
+      form,
+      target.fields,
+    );
     // 步驟 4:三筆切換
-    return switchToPublished(
+    const version = await switchToPublished(
       this.lifecycle(operator),
       ownerOf(form),
       target,
       operator.actorId,
     );
+    return { version, createdPermission };
   }
 }
 

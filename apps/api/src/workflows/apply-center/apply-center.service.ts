@@ -21,7 +21,6 @@ import {
   type FormOperatorFacts,
   toObjectId,
 } from "../../forms/form-access.service";
-import { formModulePermission } from "../../forms/form-permission-keys";
 import { FormSubmissionStatusEnum } from "../../forms/form-runtime/models/form-submission.model";
 import type {
   WorkflowInstanceModel,
@@ -160,7 +159,7 @@ export class ApplyCenterService {
     return { items, totalCount, page, pageSize };
   }
 
-  /** 新申請:我有 `create` 且可新增、而且本租戶綁了流程的表單,依模組分組。 */
+  /** 新申請:我有新增資格(`canCreateWithForm`)且可新增、而且本租戶綁了流程的表單,依模組分組。 */
   async applicableForms(
     facts: FormOperatorFacts,
   ): Promise<ApplicableModuleForms[]> {
@@ -175,14 +174,13 @@ export class ApplyCenterService {
     );
     const groups: ApplicableModuleForms[] = [];
     for (const module of modules) {
-      if (
-        !this.formAccess.has(facts, formModulePermission(module.key, "create"))
-      ) {
-        continue;
-      }
       const available = await this.formAccess.availableForms(facts, module.key);
       const forms = available
-        .filter((form) => boundKeys.has(form.key))
+        .filter(
+          (form) =>
+            boundKeys.has(form.key) &&
+            this.formAccess.canCreateWithForm(facts, module.key, form.key),
+        )
         .map((form) => ({
           key: form.key,
           name: form.name,
@@ -190,6 +188,7 @@ export class ApplyCenterService {
           currentVersion: form.currentVersion ?? 0,
           tabLabelTemplate: form.tabLabelTemplate,
           allowDraft: allowsDraft(form),
+          canCreate: true,
         }));
       if (forms.length > 0) {
         groups.push({ moduleKey: module.key, moduleName: module.name, forms });

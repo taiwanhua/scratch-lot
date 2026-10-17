@@ -44,6 +44,7 @@ const leaveForm = {
   currentVersion: 1,
   tabLabelTemplate: null,
   allowDraft: true,
+  canCreate: true,
 };
 
 const leave = (overrides: Parameters<typeof submissionFragment>[0] = {}) =>

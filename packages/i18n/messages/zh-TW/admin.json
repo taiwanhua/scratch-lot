@@ -1309,7 +1309,7 @@
     "errors": {
       "CONFLICT": "這筆資料已被別人更新,請重新載入。",
       "FIELD_FORBIDDEN": "你沒有修改其中某個欄位的權限,這次變更沒有存檔。",
-      "FORM_NOT_AVAILABLE": "這張表單目前不能新增(可能已停用、收回或沒有發布版本)。",
+      "FORM_NOT_AVAILABLE": "這張表單目前不能新增(可能已停用、收回、沒有發布版本,或你沒有這張表單的新增權限)。",
       "NOT_FORM_OWNER": "這張表單不屬於你的組織,不能修改。",
       "ROOT_ONLY": "只有平台能執行這個動作。",
       "FORBIDDEN": "你沒有執行這個動作的權限。",
@@ -1515,7 +1515,14 @@
       "confirm": "發布",
       "success": "已發布 v{version}。",
       "unsavedWarning": "設計器有未存的變更:發布的是上次存的草稿。",
-      "saveFirst": "先存草稿"
+      "saveFirst": "先存草稿",
+      "granted": {
+        "title": "發布成功",
+        "body": "「{form}」第 {version} 版已發布。",
+        "hint": "已建立權限「{permission}」,不會自動授予。請到角色管理授予需要的角色。",
+        "later": "稍後",
+        "goToRoles": "前往角色管理"
+      }
     },
     "retire": {
       "title": "退役目前版本?",

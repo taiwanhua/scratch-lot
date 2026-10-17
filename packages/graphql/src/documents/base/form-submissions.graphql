@@ -83,7 +83,7 @@ fragment FormLookupRecordFields on FormLookupRecord {
   values
 }
 
-# 新增選單:此刻可以新增的表單(一張直接進、多張先選)
+# 新增選單:此刻可以新增的表單(一張直接進、多張先選);canCreate = false 的只給篩選與頁籤模板用
 query ModuleForms($moduleKey: ID!) {
   moduleForms(moduleKey: $moduleKey) {
     key
@@ -93,6 +93,8 @@ query ModuleForms($moduleKey: ID!) {
     tabLabelTemplate
     # 表單設定「允許存草稿」;false = 新增頁沒有 [存草稿]
     allowDraft
+    # 讀者能不能用這張表單新增(B9b 模組看 create-<formKey>);[+ 新增] 與新增頁只認 true 的
+    canCreate
   }
 }
 

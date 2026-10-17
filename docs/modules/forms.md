@@ -31,7 +31,7 @@
 | `<moduleKey>.<action>`                            | 各表單模組    | 宣告的頁內權限(如 `store.sell`;見下方「表單模組宣告」)                      |
 | `<moduleKey>.show-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:讀受保護欄位(`source: dynamic`,發布時建)                             |
 | `<moduleKey>.edit-<formKey>-<fieldKey>`           | 各表單模組    | 欄位級:改設了 `permission.edit` 的欄位(同上)                                |
-| `<moduleKey>.create-<formKey>`                    | 各表單模組    | 依表單新增(`source: dynamic`);解析認得,尚無建立流程                         |
+| `<moduleKey>.create-<formKey>`                    | 各表單模組    | 依表單新增(`source: dynamic`;只有宣告 `perFormCreate` 的模組在發布時建)     |
 
 `show-` / `edit-` / `create-` 三種合稱表單動態權限;別租戶客製表單的那幾筆在權限解析就被剔除(見[授權](../concepts/authorization.md#表單模組的權限))。
 
@@ -39,11 +39,12 @@
 
 ### 表單模組宣告
 
-`formModuleDeclaration({ key, name, parentKey, route, order, icon, description, settings?, permissions? })` 產出整份骨架:列表節點(`engine: "form"`、`sidebarType: link`)、三個隱藏頁、固定四條權限、`form_submissions` 的資料範圍目標。
+`formModuleDeclaration({ key, name, parentKey, route, order, icon, description, settings?, permissions?, perFormCreate? })` 產出整份骨架:列表節點(`engine: "form"`、`sidebarType: link`)、三個隱藏頁、固定四條權限、`form_submissions` 的資料範圍目標。
 
 - `permissions: [{ action, name, description? }]`(選填):頁內額外權限,掛在模組主節點,和固定四條一起產生 `<moduleKey>.<action>`。例:`permissions: [{ action: "sell", name: "銷售" }]` → `store.sell`。
 - `action` 和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀 → 宣告時丟錯。
 - `<moduleKey>.*` 照常由組裝器自動產生,自然涵蓋宣告的頁內權限。
+- `perFormCreate: true`(選填,預設關):依表單分開新增權限(B9b)。落庫 `modules.perFormCreate`,每次 seed 同步宣告值,沒有執行期開關;底座示範表單模組都不開。開啟後每張表單發布時建 `<moduleKey>.create-<formKey>`(見[四步發布](#四步發布)),新增資格看它而不看模組 `create`(`FormAccessService.canCreateWithForm`;入口清單見[授權](../concepts/authorization.md#依表單分開新增權限b9b))。已有表單的模組改為開啟要另寫 migration(補建權限、把原持有模組 `create` 的角色授予對應權限)。
 
 正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`
 
@@ -114,7 +115,7 @@
 
 1. 跑檢查器(`validateDefinition` + api 端的登錄表),有錯就停,什麼都沒改。
 2. 條件更新 `{ _id, status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、記 changelog。沒更新到 → `CONFLICT`。兩個發布同時送出只有一個命中。
-3. 欄位級權限:這一版要的缺的建、有 `retiredAt` 的清掉、不再宣告的標 `retiredAt`、`name` 隨表單名與欄位 label 更新(「<表單名> / <欄位 label> 可見 / 可改」)。同 key 欄位沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
+3. 欄位級權限:這一版要的缺的建、有 `retiredAt` 的清掉、不再宣告的標 `retiredAt`、`name` 隨表單名與欄位 label 更新(「<表單名> / <欄位 label> 可見 / 可改」)。同 key 欄位沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。模組宣告了 `perFormCreate` 時再確保 `<moduleKey>.create-<formKey>`:缺的建、`name` 隨表單名(「<表單名> 新增」);不退役、不授予任何角色。這次新建的回在 `publishFormVersion` 的 `createdPermission`(其餘為 null),表單管理的發布成功畫面據此提示到角色管理授予並附連結。
 4. 切換三筆:這一版 `publishing → published` → 其餘 `published → retired` → `forms.currentVersion` 指向新版(條件更新,讀到之後被改過 → `CONFLICT`)。對外(填寫、新增資格、版本面板的「目前版本」)一律以 `forms.currentVersion` 為準。
 
 **沒有發布中斷**:交易外看不到 `publishing` 或切換到一半的版本,所以沒有「發布中斷」狀態與重試發布。交易化之前的舊版留下的中斷資料(不清庫的升級才會有)由 db-migrator 的 update / reset 預檢擋下,依 [deployment](../deployment.md#舊版留下的發布--退役中斷)手動補完。步驟 3 / 4 每筆寫入前有一個檢查點(`form-design/form-publish-hooks.ts`),測試在那裡注入失敗來驗「任一步失敗 → 全部回到發布前」。

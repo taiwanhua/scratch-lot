@@ -188,7 +188,7 @@ export class FormLookupService {
   }
 
   /**
-   * 讀版本定義並解析目標。已發布 / 退役版:要有該模組的 `create` 或 `edit`(填寫中才會查),
+   * 讀版本定義並解析目標。已發布 / 退役版:要有這張表單的新增資格(`canCreateWithForm`)或模組 `edit`(填寫中才會查),
    * 目標是欄位時還要讀得到那一欄(欄位級 `show`,含依賴鏈);
    * 草稿(`version` 省略):設計器預覽,要表單管理的檢視且讀得到這張表單。
    */
@@ -214,7 +214,7 @@ export class FormLookupService {
     }
     if (!isDraft) {
       const canFill =
-        this.access.has(facts, `${form.moduleKey}.create`) ||
+        this.access.canCreateWithForm(facts, form.moduleKey, form.key) ||
         this.access.has(facts, `${form.moduleKey}.edit`);
       if (!canFill) {
         throw forbiddenError(`Missing permission ${form.moduleKey}.create`);

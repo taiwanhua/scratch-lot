@@ -1275,6 +1275,10 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
           .map((module) => module.key),
       ),
     ).toEqual(new Set(formModuleKeys));
+    // 底座示範表單模組不開啟依表單分開新增權限(B9b);每個模組都落庫 perFormCreate = false
+    expect(modules.every((module) => module.perFormCreate === false)).toBe(
+      true,
+    );
   }, 120_000);
 
   it("seed 只同步 source = seed 的權限:先塞一筆 dynamic 權限再跑 seed,它原封不動還在", async () => {
