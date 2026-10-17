@@ -39,6 +39,35 @@ const twoWorkflows = () => ({
   ],
 });
 
+type FlowCc = { kind: "manager"; level: number } | null;
+
+/** 病假審核兩個發布過的版本,只差在整個流程的知會對象(v1 → v2)。 */
+const ccVersionsWorld = (before: FlowCc, after: FlowCc) => ({
+  workflows: [workflowFragment({ currentVersion: 2, hasDraft: false })],
+  versions: {
+    leave_review: [
+      workflowVersionFragment(
+        { ...leaveWorkflowDefinition(), cc: after },
+        {
+          id: "wv-leave-2",
+          version: 2,
+          status: WorkflowVersionStatus.Published,
+          changelog: "改知會",
+        },
+      ),
+      workflowVersionFragment(
+        { ...leaveWorkflowDefinition(), cc: before },
+        {
+          id: "wv-leave-1",
+          version: 1,
+          status: WorkflowVersionStatus.Retired,
+          changelog: "第一版",
+        },
+      ),
+    ],
+  },
+});
+
 describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
   it("發布擋錯(VALIDATION_FAILED)→ 就地列出檢查器指出的問題", async () => {
     const { user } = renderWorkflows({
@@ -246,44 +275,29 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("與上一版差異:列出整個流程知會對象的變動(新增)", async () => {
-    const { user } = renderWorkflows({
-      world: {
-        workflows: [workflowFragment({ currentVersion: 2, hasDraft: false })],
-        versions: {
-          leave_review: [
-            workflowVersionFragment(
-              {
-                ...leaveWorkflowDefinition(),
-                cc: { kind: "manager", level: 1 },
-              },
-              {
-                id: "wv-leave-2",
-                version: 2,
-                status: WorkflowVersionStatus.Published,
-                changelog: "加知會",
-              },
-            ),
-            workflowVersionFragment(leaveWorkflowDefinition(), {
-              id: "wv-leave-1",
-              version: 1,
-              status: WorkflowVersionStatus.Retired,
-              changelog: "第一版",
-            }),
-          ],
-        },
-      },
-    });
-    await user.click(await screen.findByRole("tab", { name: "流程版本" }));
-    const table = await screen.findByRole("table", { name: "流程版本" });
-    await user.click(
-      await within(table).findByRole("button", { name: "與上一版差異" }),
-    );
+  it.each([
+    [null, { kind: "manager", level: 1 }, "整個流程的知會對象:新增"],
+    [{ kind: "manager", level: 1 }, null, "整個流程的知會對象:移除"],
+    [
+      { kind: "manager", level: 1 },
+      { kind: "manager", level: 2 },
+      "整個流程的知會對象:有變更",
+    ],
+  ] as const)(
+    "與上一版差異:列出整個流程知會對象的變動(%j → %j:%s)",
+    async (before, after, text) => {
+      const { user } = renderWorkflows({
+        world: ccVersionsWorld(before, after),
+      });
+      await user.click(await screen.findByRole("tab", { name: "流程版本" }));
+      const table = await screen.findByRole("table", { name: "流程版本" });
+      await user.click(
+        await within(table).findByRole("button", { name: "與上一版差異" }),
+      );
 
-    const diff = await screen.findByRole("region", { name: "版本差異" });
-    expect(
-      within(diff).getByText("整個流程的知會對象:新增"),
-    ).toBeInTheDocument();
-    expect(within(diff).getByText("變更:—")).toBeInTheDocument();
-  });
+      const diff = await screen.findByRole("region", { name: "版本差異" });
+      expect(within(diff).getByText(text)).toBeInTheDocument();
+      expect(within(diff).getByText("變更:—")).toBeInTheDocument();
+    },
+  );
 });

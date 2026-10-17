@@ -131,4 +131,26 @@ describe("流程管理:唯讀檢視已發布的版本", () => {
       await screen.findByRole("region", { name: "流程圖" }),
     ).toBeInTheDocument();
   });
+
+  it("唯讀檢視選了關卡時,「回到整個流程設定」回到整個流程面板(唯讀)", async () => {
+    const { user } = renderWorkflows();
+    await findCanvas();
+    const viewer = await openVersion(user);
+    const versionCanvas = within(viewer).getByRole("region", {
+      name: "v1 的流程圖",
+    });
+    await within(versionCanvas).findByRole("group", { name: "直屬主管" });
+    clickNode(versionCanvas, "人資");
+    const panel = within(viewer).getByRole("region", { name: "屬性(唯讀)" });
+
+    await user.click(
+      within(panel).getByRole("button", { name: "回到整個流程設定" }),
+    );
+
+    const flow = within(panel).getByRole("region", { name: "整個流程的設定" });
+    expect(
+      within(flow).getByRole("combobox", { name: "知會對象" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(panel).toHaveFocus();
+  });
 });

@@ -2444,6 +2444,9 @@
       "diffRemoved": "移除:{steps}",
       "diffChanged": "變更:{steps}",
       "diffStructure": "分流 / 匯合的結構有變更",
+      "diffFlowCcAdded": "整個流程的知會對象:新增",
+      "diffFlowCcRemoved": "整個流程的知會對象:移除",
+      "diffFlowCcChanged": "整個流程的知會對象:有變更",
       "draftCreated": "已開新草稿",
       "statuses": {
         "DRAFT": "草稿",
@@ -2453,10 +2456,7 @@
       },
       "view": "檢視 v{version}",
       "baseOnViewing": "以 v{version} 為基底開新草稿",
-      "deleteDraft": "刪除草稿",
-      "diffFlowCcAdded": "整個流程的知會對象:新增",
-      "diffFlowCcRemoved": "整個流程的知會對象:移除",
-      "diffFlowCcChanged": "整個流程的知會對象:有變更"
+      "deleteDraft": "刪除草稿"
     },
     "publish": {
       "title": "發布草稿",

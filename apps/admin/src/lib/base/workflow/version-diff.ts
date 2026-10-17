@@ -19,6 +19,10 @@ export interface WorkflowVersionDiff {
 const edgeIds = (definition: WorkflowDefinition): string[] =>
   (definition.edges ?? []).map((edge) => `${edge.from}->${edge.to}`).toSorted();
 
+/** 內容相同(鍵順序不同、`null` 與缺鍵都算相同;見 `canonical`)。 */
+const isSameJson = (a: unknown, b: unknown): boolean =>
+  JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+
 const flowCcChangeOf = (
   before: WorkflowDefinition,
   after: WorkflowDefinition,
@@ -31,13 +35,11 @@ const flowCcChangeOf = (
   if (next === null) {
     return "removed";
   }
-  return JSON.stringify(canonical(previous)) === JSON.stringify(canonical(next))
-    ? null
-    : "changed";
+  return isSameJson(previous, next) ? null : "changed";
 };
 
 /**
- * 以關卡 key 比對兩版定義:新增 / 移除 / 內容有變(名稱、來源、會簽、跳過、自動通過、逾時提醒、知會…);
+ * 以關卡 key 比對兩版定義(內容以 `canonical` 比,鍵順序與 `null` / 缺鍵不算變更):新增 / 移除 / 內容有變(名稱、來源、會簽、跳過、自動通過、逾時提醒、知會…);
  * 連線另外比一次(直線 ↔ 分流、分支增減);整個流程的知會對象也比(新增 / 移除 / 修改)。
  * 回的是關卡**名稱**(找不到才用 key)。
  */
@@ -57,10 +59,7 @@ export const workflowVersionDiff = (
     changed: after.steps
       .filter((step) => {
         const previous = beforeByKey.get(step.key);
-        return (
-          previous !== undefined &&
-          JSON.stringify(previous) !== JSON.stringify(step)
-        );
+        return previous !== undefined && !isSameJson(previous, step);
       })
       .map((step) => step.name),
     isStructureChanged:

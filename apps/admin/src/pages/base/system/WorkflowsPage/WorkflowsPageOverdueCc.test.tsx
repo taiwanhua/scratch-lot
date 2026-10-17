@@ -206,5 +206,7 @@ describe("流程管理:關卡面板的逾時提醒與知會、整個流程的知
     expect(
       within(propertiesPanel()).getByRole("region", { name: "整個流程的設定" }),
     ).toBeInTheDocument();
+    // 按鈕卸載後焦點落在屬性面板,不掉回 body
+    expect(propertiesPanel()).toHaveFocus();
   });
 });

@@ -183,4 +183,21 @@ describe("流程設計器:分流 / 匯合的建立與限制", () => {
     expect(edges).toContainEqual({ from: "finance", to: "confirm" });
     expect(edges).toContainEqual({ from: "confirm", to: "merge" });
   });
+
+  it("選了匯合節點時也能按「回到整個流程設定」回到整個流程面板", async () => {
+    const { user } = renderWorkflows({ world: purchaseWorld() });
+    const canvas = await findPurchaseCanvas();
+    clickNode(canvas, "匯合:三部門匯合");
+
+    await user.click(
+      within(propertiesPanel()).getByRole("button", {
+        name: "回到整個流程設定",
+      }),
+    );
+
+    expect(
+      within(propertiesPanel()).getByRole("region", { name: "整個流程的設定" }),
+    ).toBeInTheDocument();
+    expect(propertiesPanel()).toHaveFocus();
+  });
 });

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { type WorkflowIssue, isJoinStep } from "@repo/domain/workflow";
@@ -65,6 +65,8 @@ export const FlowVersionViewer = ({
   const tErrors = useTranslations("admin.workflows.errors");
   const { session } = useSession();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  /** 屬性面板(「回到整個流程設定」後把焦點放回這裡) */
+  const panelRef = useRef<HTMLElement>(null);
   const query = useWorkflowVersionQuery(
     session.client,
     { workflowKey: workflow.key, version },
@@ -256,6 +258,9 @@ export const FlowVersionViewer = ({
         <Box
           component="section"
           aria-label={t("viewingProperties")}
+          ref={panelRef}
+          // 「回到整個流程設定」按下後按鈕會卸載:焦點移到屬性面板本身,不掉回 body
+          tabIndex={-1}
           sx={designerPropertyPanelSx}
         >
           <Stack spacing={1}>
@@ -263,6 +268,7 @@ export const FlowVersionViewer = ({
               <BackToFlowButton
                 onBack={() => {
                   setSelectedKey(null);
+                  panelRef.current?.focus();
                 }}
               />
             )}

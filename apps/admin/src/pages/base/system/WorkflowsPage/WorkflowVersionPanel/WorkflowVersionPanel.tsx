@@ -20,7 +20,10 @@ import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { definitionOf } from "@/lib/base/workflow/definition";
-import { workflowVersionDiff } from "@/lib/base/workflow/version-diff";
+import {
+  type FlowCcChange,
+  workflowVersionDiff,
+} from "@/lib/base/workflow/version-diff";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { DeleteWorkflowDraftDialog } from "./DeleteWorkflowDraftDialog";
@@ -40,6 +43,13 @@ const STATUS_TONE: Record<WorkflowVersionStatus, TagTone> = {
   [WorkflowVersionStatus.Published]: "success",
   [WorkflowVersionStatus.Retired]: "grey",
 };
+
+/** 「與上一版差異」整個流程知會對象那一行的文案鍵(鍵寫死,不靠動態組字)。 */
+const FLOW_CC_CHANGE_KEYS = {
+  added: "diffFlowCcAdded",
+  removed: "diffFlowCcRemoved",
+  changed: "diffFlowCcChanged",
+} as const satisfies Record<FlowCcChange, string>;
 
 type VersionRow = WorkflowVersionFieldsFragment;
 
@@ -263,14 +273,10 @@ export const WorkflowVersionPanel = ({
           {diff.isStructureChanged && (
             <Typography variant="body2">{t("diffStructure")}</Typography>
           )}
-          {diff.flowCcChange === "added" && (
-            <Typography variant="body2">{t("diffFlowCcAdded")}</Typography>
-          )}
-          {diff.flowCcChange === "removed" && (
-            <Typography variant="body2">{t("diffFlowCcRemoved")}</Typography>
-          )}
-          {diff.flowCcChange === "changed" && (
-            <Typography variant="body2">{t("diffFlowCcChanged")}</Typography>
+          {diff.flowCcChange !== null && (
+            <Typography variant="body2">
+              {t(FLOW_CC_CHANGE_KEYS[diff.flowCcChange])}
+            </Typography>
           )}
         </Stack>
       )}

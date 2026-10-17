@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { type WorkflowIssue, isJoinStep } from "@repo/domain/workflow";
@@ -107,6 +107,8 @@ export const FlowDesignerWorkspace = ({
   const actions = useFlowActions(state);
   const dataOf = useFlowNodeData(definition, report.errors, catalog.forms);
   const [forkingKey, setForkingKey] = useState<string | null>(null);
+  /** 屬性面板(「回到整個流程設定」後把焦點放回這裡) */
+  const panelRef = useRef<HTMLElement>(null);
   const isEditable = state.flow !== null;
   const selected =
     definition.steps.find((step) => step.key === state.selectedKey) ?? null;
@@ -254,6 +256,9 @@ export const FlowDesignerWorkspace = ({
         <Box
           component="section"
           aria-label={t("properties")}
+          ref={panelRef}
+          // 「回到整個流程設定」按下後按鈕會卸載:焦點移到屬性面板本身,不掉回 body
+          tabIndex={-1}
           sx={designerPropertyPanelSx}
         >
           <Stack spacing={1}>
@@ -261,6 +266,7 @@ export const FlowDesignerWorkspace = ({
               <BackToFlowButton
                 onBack={() => {
                   state.select(null);
+                  panelRef.current?.focus();
                 }}
               />
             )}

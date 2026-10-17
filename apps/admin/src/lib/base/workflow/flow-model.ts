@@ -175,7 +175,11 @@ export const toDefinition = (flow: Flow): WorkflowDefinition => {
 
 const edgeIdOf = (edge: WorkflowEdge): string => `${edge.from}->${edge.to}`;
 
-/** 物件的鍵依字母排序(遞迴),讓「同內容、不同鍵順序」的 JSON 字串相同;`undefined` 與 `null` 視同。 */
+/**
+ * 比對用的正規形(遞迴):物件的鍵依字母排序,並**剔除值為 `null` / `undefined` 的鍵**(`{ cc: null }` 與沒有 `cc` 相同);
+ * 陣列**保留順序**(順序有意義,例:條件列、分支)。「同內容、不同鍵順序」的 JSON 字串因此相同。
+ * 用在「有沒有未存的變更」(`definitionFingerprint`)與版本差異(`version-diff.ts`)。
+ */
 export const canonical = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => canonical(item));
