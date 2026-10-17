@@ -141,6 +141,7 @@
 | `printAgentDownloadUrl(input: { platform }): PrintAgentDownloadUrlPayload!` | `system.printers.create`                 | 最新版本該平台的下載網址(1 小時);沒有 → `NOT_FOUND`                                                        |
 | `printablePrinters(orgId: ID!): PrintablePrintersPayload!`                  | `api.printing.print`                     | 列印按鈕的選單:這家分店可選的印表機 + `defaultPrinterId`;不分頁                                            |
 | `documentPrintCount(input: { refType, refId }): DocumentPrintCountPayload!` | `api.printing.print`                     | `printedCount`(> 0 時按鈕變 [補印])                                                                        |
+| `reprintReasons: ReprintReasonsPayload!`                                    | `api.printing.reprint`                   | 補印對話框的原因選項:`reprint-reason` 類別的啟用選項(與建立補印時的驗證同一個查法),依排序值排              |
 | `createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!`             | `api.printing.print`(補印另要 `reprint`) | 建立工作                                                                                                   |
 | `printJob(id: ID!): PrintJobPayload!`                                       | 要求人本人,或 `system.printers.view`     | 收到 `print-result` 後查結果;其餘 `NOT_FOUND`                                                              |
 | `printJobs(input: PrintJobsInput!): PrintJobsPayload!`                      | `system.printers.view`                   | 列印紀錄,新到舊:`orgId?`、`printerId?`、`status?`、`refType?` + `refId?`                                   |
@@ -228,7 +229,8 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 ## 測試
 
-- api:`apps/api/src/printing/print-agent.test.ts`(配對、認領競爭、分店隔離、撤銷、離線 / 逾時 / 重新配對 / 停用表每列一個)、`print-jobs.test.ts`(建立權限、補印表的 API 列、權限表的 API 列、預設印表機、下載);夾具 `test-support/printing-fixtures.ts`。
+- api:`apps/api/src/printing/print-agent.test.ts`(配對、認領競爭、分店隔離、撤銷、離線 / 逾時 / 重新配對 / 停用表每列一個)、`print-jobs.test.ts`(建立權限、補印表的 API 列、補印原因選項、權限表的 API 列、預設印表機、下載);夾具 `test-support/printing-fixtures.ts`。
+- admin:`components/base/PrintButton/PrintButton.test.tsx`(六種狀態、權限、`print-result`、灰掉的原因、選印表機)、`PrintButtonTiming.test.tsx`(等列印結果的節奏、信號比建立回應先到)、`PrintButtonReprint.test.tsx`(補印表的畫面列);假伺服器 `test/msw/print-button-handlers.ts`。
 - 共用契約:`packages/domain/src/printing/printing.test.ts`;代理程式訂閱憑證:`apps/api/src/realtime/realtime-ticket.service.test.ts`。
 
 ## admin 頁面
@@ -246,7 +248,7 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 - **新增代理程式**:選組織(`orgTree` 管理範圍)+ 名稱 → 同一個對話框顯示伺服器網址(`AuthSession.endpoint` 的 origin)與配對碼(顯示成 `XXXX-XXXX`,複製的是 8 碼本身),各附 [複製]。[重新配對] 先確認,成功後同樣顯示。配對碼只在這個對話框出現,不進網址、不進快取以外的地方。
 - **新增 / 編輯印表機**:「所屬組織」只列有啟用中代理程式的組織,選了才列該組織的代理程式(印表機的分店 = 代理程式的分店);編輯不能換組織、紙寬只有 58mm。編輯時「啟用」開關有變再接 `setPrinterEnabled`,整段算一次儲存(一則提示)。新增的一律啟用。
 - **下載**:平台建議由 `lib/base/print-agent-platform.ts` 依瀏覽器判斷(Windows / macOS / Linux x64 / Linux arm64;手機與認不出來的不建議)。按下才查 `printAgentDownloadUrl`(不吃快取),以連結點擊開始下載;失敗跳提示。
-- **測試列印**(`TestPrintDialog/`):開窗即送 —— 畫面外掛 `@repo/ui/receipt58` 的 `PrinterTestPage`(表頭 = 最上層組織名稱 `me.currentOrg.tenantName`(不印分店名稱)、印表機名稱與 IP、開窗時間;QR code = 本頁網址),`renderReceiptToPng` 轉 384 點 PNG → `printPrinterTestPage`。等結果:即時通道連著(`useRealtimeStatus() === "live"`)時靠 `print-result` 信號(`useRealtimeSignal`,不登記 invalidate)才查 `printJob`,另在建立後約 2 分鐘(逾時判斷之後)補查一次;沒連上時建立後馬上查、之後每 5 秒查一次;已印 / 失敗就停。結果:成功、缺紙(warning)、代理程式離線(附最後連線時間)、其他失敗原因、api 擋下;失敗與擋下有 [重試]。結果就顯示在對話框裡,mutation 不另跳提示(DATA-06「結果就地顯示在開著的彈窗裡等候」)。
+- **測試列印**(`TestPrintDialog/`):開窗即送 —— 畫面外掛 `@repo/ui/receipt58` 的 `PrinterTestPage`(表頭 = 最上層組織名稱 `me.currentOrg.tenantName`(不印分店名稱)、印表機名稱與 IP、開窗時間;QR code = 本頁網址),`renderReceiptToPng` 轉 384 點 PNG → `printPrinterTestPage`。等結果見下方「等列印結果」。結果:成功、缺紙(warning)、代理程式離線(附最後連線時間)、其他失敗原因、api 擋下;失敗與擋下有 [重試]。結果就顯示在對話框裡,mutation 不另跳提示(DATA-06「結果就地顯示在開著的彈窗裡等候」)。
 
 ### 網址狀態(REACT-14)
 
@@ -258,4 +260,33 @@ operation 文件:`packages/graphql/src/documents/base/printing.graphql`。
 
 正本:`apps/admin/src/pages/base/system/PrintersPage/`、`apps/admin/src/md/module-help/base/system.printers.help.md`;測試 `PrintersPage.test.tsx`(印表機分頁、權限表的畫面列、側欄順序)、`PrintersAgents.test.tsx`(請更新、顯示已停用、下載、新增 / 重新配對 / 停用)、`PrintersTestPrint.test.tsx`(三種結果與擋下)、`PrintersPrinterForm.test.tsx`(新增 / 編輯 / `?edit=`);假 api `apps/admin/src/test/msw/printing-handlers.ts`。
 
-列印按鈕元件(各單據的 [列印] / [補印])尚未實作。
+### 列印按鈕(`apps/admin/src/components/base/PrintButton/`)
+
+底座內沒有頁面使用;專案的單據頁放一顆 `<PrintButton>`,傳單據所屬分店 `orgId`、`documentType`、`refType` + `refId`、`documentName?`、`defaultPrinterId?`(專案的預設,如收銀點的印表機)與 `renderImage(reprint)`(把預覽中的 `Receipt58` 交給 `renderReceiptToPng`;補印時帶第幾次、原因、說明、時間、補印人,組 `Receipt58ReprintMark`)。
+
+| 狀態(Figma `Draft/PrintButton`) | 畫面                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Default                         | [列印]                                                                                                                         |
+| Sending                         | [列印] 不能按 +「已送到印表機…」                                                                                               |
+| Printed                         | ✓ 已印出(按鈕變 [補印])                                                                                                        |
+| Failed                          | ✗ 失敗:<原因>;原因文案與列印紀錄共用 `admin.printers.jobError`;「未收到列印結果」另提示「請先確認是否已出紙,再決定要不要補印」 |
+| Reprint                         | 印過的單據 [補印] +「已印 N 次」;按下開補印對話框(原因必填、「其他」說明必填;沒有可選的原因時提示「尚未設定補印原因」)         |
+| Disabled                        | 灰色並提示原因:沒登記印表機「本店未設定印表機」、有登記但都停用(或代理程式停用)「本店的印表機都已停用」、清單載入失敗另有提示  |
+
+- 沒有 `api.printing.print` 不渲染;印過但沒有 `api.printing.reprint` 不顯示 [補印](「已印 N 次」照顯示)。
+- 選印表機:可選的只有一台直接送;多台時按下先選,預設(`defaultPrinterId` → 分店預設 → 第一台)標「預設」並先選中。
+- 結果:見下方「等列印結果」;有結果後重抓 `documentPrintCount`;已印次數查不到時當作沒印過。等待期間按鈕不能按,最長約 4 分鐘(等待中快到 2 分鐘才被認領,再等 2 分鐘的回報逾時;第二次補查才拿到結果)。
+- 送出的回饋是按鈕旁的進度文字,成功不另跳提示;送不出去(轉圖片失敗、API 錯誤)跳一則失敗提示。
+
+### 等列印結果(`hooks/base/usePrintJobResult.ts`)
+
+列印按鈕與測試列印共用同一個 hook:傳入建立工作時 api 回的那一筆,回傳最新的那一筆。常數(`PRINT_RESULT_LIVE_CHECK_MS`、`PRINT_RESULT_SLOW_POLL_MS`)也在這支。
+
+| 情況                                           | 做法                                                                                                                   |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 收到自己那張工作的 `print-result`              | 立刻查 `printJob`(信號不帶資料,RT-02;`useRealtimeSignal`,不登記 invalidate)                                            |
+| 信號比建立工作的回應先到                       | 以工作 id 暫存(最多 20 個),拿到工作時馬上查                                                                            |
+| 即時通道連著(`useRealtimeStatus() === "live"`) | 建立回應就是第一份資料,不馬上查;建立後約 2 分 5 秒補查一次(逾時判斷之後:api 讀取時把逾時的標失敗),之後每 2 分 5 秒再查 |
+| 沒連上(連線中 / 慢速模式)                      | 建立後馬上查,之後每 5 秒查一次                                                                                         |
+| 連線狀態改變                                   | 換成新狀態的節奏                                                                                                       |
+| 已印 / 失敗                                    | 停止查詢;元件卸載時查詢也跟著停                                                                                        |

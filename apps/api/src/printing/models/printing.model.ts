@@ -316,6 +316,24 @@ export class DocumentPrintCountPayload {
   printedCount!: number;
 }
 
+/** 補印原因的一個選項(欄位管理「補印原因」類別裡操作者看得到的啟用選項)。 */
+@ObjectType("ReprintReason")
+export class ReprintReasonModel {
+  /** 存進 `reprintReason` 的值(底座 seed:`lost`、`damaged`、`other`)。 */
+  @Field(() => String)
+  value!: string;
+
+  @Field(() => String)
+  label!: string;
+}
+
+/** 補印對話框的原因選項,依欄位管理的排序值排好;不分頁。 */
+@ObjectType()
+export class ReprintReasonsPayload {
+  @Field(() => [ReprintReasonModel])
+  items!: ReprintReasonModel[];
+}
+
 @ObjectType("PrintAgentReleaseFile")
 export class PrintAgentReleaseFileModel {
   @Field(() => PrintAgentPlatformEnum)

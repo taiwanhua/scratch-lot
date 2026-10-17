@@ -4,6 +4,7 @@ import { render } from "@testing-library/react";
 import { AddIcon } from "./AddIcon";
 import { ArrowDownIcon } from "./ArrowDownIcon";
 import { ArrowUpIcon } from "./ArrowUpIcon";
+import { CheckCircleIcon } from "./CheckCircleIcon";
 import { CheckIcon } from "./CheckIcon";
 import { ChevronDoubleLeftIcon } from "./ChevronDoubleLeftIcon";
 import { ChevronDoubleRightIcon } from "./ChevronDoubleRightIcon";
@@ -16,6 +17,7 @@ import { DeleteIcon } from "./DeleteIcon";
 import { DevicesIcon } from "./DevicesIcon";
 import { DotIcon } from "./DotIcon";
 import { EditIcon } from "./EditIcon";
+import { ErrorCircleIcon } from "./ErrorCircleIcon";
 import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
@@ -56,6 +58,8 @@ const actionIcons = [
   { name: "LogoutIcon", Icon: LogoutIcon },
   { name: "DevicesIcon", Icon: DevicesIcon },
   { name: "NotificationsIcon", Icon: NotificationsIcon },
+  { name: "CheckCircleIcon", Icon: CheckCircleIcon },
+  { name: "ErrorCircleIcon", Icon: ErrorCircleIcon },
 ] as const;
 
 describe("icons", () => {

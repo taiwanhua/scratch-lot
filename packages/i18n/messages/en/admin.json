@@ -2967,5 +2967,36 @@
       "cancel": "Cancel",
       "success": "Print agent disabled"
     }
+  },
+  "printButton": {
+    "print": "Print",
+    "reprint": "Reprint",
+    "sending": "Sent to printer…",
+    "printed": "Printed",
+    "failed": "Failed: {reason}",
+    "printedCount": "Printed {count, plural, one {# time} other {# times}}",
+    "noPrinter": "No printer set up for this store",
+    "noAvailablePrinter": "All printers for this store are disabled",
+    "printersLoadFailed": "Couldn't load printers. Refresh and try again.",
+    "choosePrinter": "Choose a printer",
+    "defaultPrinter": "{name} (default)",
+    "noResultHint": "Check whether the receipt came out before deciding to reprint",
+    "reprintDialog": {
+      "title": "Reprint",
+      "reason": "Reprint reason",
+      "note": "Note",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "reasonRequired": "Choose a reprint reason",
+      "noteRequired": "A note is required when the reason is Other",
+      "reasonsUnavailable": "Couldn't load reprint reasons. Try again later.",
+      "noReasons": "No reprint reasons are set up yet. Ask an administrator to add them."
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to print this document",
+      "NOT_FOUND": "Printer not found. Refresh and try again.",
+      "VALIDATION_FAILED": "Can't print: the printer is disabled or the document image is invalid",
+      "UNEXPECTED": "Couldn't send the print job. Try again later."
+    }
   }
 }

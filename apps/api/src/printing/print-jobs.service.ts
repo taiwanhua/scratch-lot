@@ -378,6 +378,26 @@ export class PrintJobsService implements OnModuleInit {
     });
   }
 
+  /**
+   * 補印對話框的原因選項:「補印原因」類別裡操作者看得到的啟用選項,依欄位管理的排序值排。
+   * 查詢條件與建立補印時的驗證共用(`reprintReasonFilter`)。類別不存在 → 空清單。
+   */
+  async reprintReasons(
+    operator: OperatorContext,
+  ): Promise<{ value: string; label: string }[]> {
+    const filter = await this.reprintReasonFilter(operator);
+    if (filter === null) {
+      return [];
+    }
+    const options = await this.fields.findMany(operator, filter, {
+      sort: { order: 1, createdAt: 1 },
+    });
+    return options.map((option) => ({
+      value: option.value,
+      label: option.label,
+    }));
+  }
+
   // ---- 代理程式(HTTP;呼叫端已用金鑰驗過身分,operator = 代理程式分店)----
 
   /** 未完成的工作:先把逾時的標失敗,再列 2 分鐘內等待中的(啟動時拉到舊工作也不印)。 */
@@ -774,21 +794,32 @@ export class PrintJobsService implements OnModuleInit {
     operator: OperatorContext,
     value: string,
   ): Promise<boolean> {
+    const filter = await this.reprintReasonFilter(operator);
+    if (filter === null) {
+      return false;
+    }
+    const option = await this.fields.findOne(operator, { ...filter, value });
+    return option !== null;
+  }
+
+  /**
+   * 「補印原因」類別裡操作者看得到的啟用選項的查詢條件:選項清單(`reprintReasons`)與
+   * 建立補印時的驗證(`isReprintReason`)共用,列得出來的就送得進去。
+   * 類別不存在(seed 未跑)→ `null`:清單為空、補印原因一律不合法。
+   */
+  private async reprintReasonFilter(
+    operator: OperatorContext,
+  ): Promise<{ categoryId: Types.ObjectId; enabled: true } | null> {
     const category = await this.categories.findOne(operator, {
       key: REPRINT_REASON_CATEGORY_KEY,
     });
     if (category === null) {
       this.logger.warn(
-        `欄位類別 ${REPRINT_REASON_CATEGORY_KEY} 不存在(seed 未跑?),補印原因一律不合法`,
+        `欄位類別 ${REPRINT_REASON_CATEGORY_KEY} 不存在(seed 未跑?),補印原因清單為空、一律不合法`,
       );
-      return false;
+      return null;
     }
-    const option = await this.fields.findOne(operator, {
-      categoryId: category._id,
-      value,
-      enabled: true,
-    });
-    return option !== null;
+    return { categoryId: category._id, enabled: true };
   }
 
   private async holds(
