@@ -45,16 +45,19 @@ GraphQL 的 `generate` 在寫產物前檢查兩份文件來源,負例驗證使�
 
 ## 部署與工具識別
 
-| 項目                                                 | 現有正本                                                                                   | 初始化驗證                                                                                                       |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Repo、Actions 與看板識別                             | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                        | 讀取器 github scope 以新 repo 身分解析成功;新 repo 有實際 CI run;不用看板時 `projectStatus.enabled` 設為 `false` |
-| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                     | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                                               |
-| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                    | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對                                  |
-| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                | 每環境都有適合的網域、bucket、開關及其他必要值                                                                   |
-| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                | 啟用雲端的四類必需 Secret 各有可讀版本;寄信未啟用時 `resendApiKey: null`;值不回寫文件、repo 或公開設定           |
-| Vercel front/Storybook                               | `docs/deployment.md`                                                                       | 專案、root directory、build 與各環境 endpoint 均已設好                                                           |
-| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                               | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                                         |
-| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功                      |
+| 項目                                                 | 現有正本                                                                                            | 初始化驗證                                                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Repo、Actions 與看板識別                             | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                                 | 讀取器 github scope 以新 repo 身分解析成功;新 repo 有實際 CI run;不用看板時 `projectStatus.enabled` 設為 `false` |
+| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                              | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                                               |
+| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                             | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對                                  |
+| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                         | 每環境都有適合的網域、bucket、開關及其他必要值                                                                   |
+| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                         | 啟用雲端的四類必需 Secret 各有可讀版本;寄信未啟用時 `resendApiKey: null`;值不回寫文件、repo 或公開設定           |
+| 排程(Cloud Scheduler)                                | `docs/deployment.md`「Cloud Scheduler」、`deploy/env/*.yaml` 的 `SCHEDULER_*`                       | 三環境各一個工作;手動執行一次,Cloud Run log 回 200                                                               |
+| 即時通道(Cloudflare Worker)                          | `docs/deployment.md`「即時通道」、`cloud.json` 的 `realtime`、`deploy/env/*.yaml` 的 `REALTIME_URL` | 三環境的兩把密鑰有可讀版本、`CLOUDFLARE_API_TOKEN` 已設、網域已綁;部署後頭像圓點為綠色                           |
+| 列印代理程式發布                                     | `docs/deployment.md`「列印代理程式發布」                                                            | 部署 SA 對三個私有 bucket 的 `print-agent/` 有寫入權限;各環境跑過一次 release,下載區有四個按鈕                   |
+| Vercel front/Storybook                               | `docs/deployment.md`                                                                                | 專案、root directory、build 與各環境 endpoint 均已設好                                                           |
+| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                                        | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                                         |
+| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job          | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功                      |
 
 本節每一項要分三種狀態記錄,互不代替:
 

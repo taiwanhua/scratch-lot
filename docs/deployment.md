@@ -24,17 +24,18 @@ admin (nginx / Cloud Run) ├─> api (NestJS / Cloud Run) ─> MongoDB
 
 ### 資源清單
 
-| 項目                                             | 識別正本 / 建立位置                                                                          |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用                                        |
-| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`                                                   |
-| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                                                                    |
-| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                                                                     |
-| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                                                              |
-| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)      | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務)                        |
-| 即時通道 Worker、Cloudflare 帳號、兩把密鑰名稱   | `cloud.json` 各環境的 `realtime`(可省略 = 停用);步驟見[即時通道](#即時通道cloudflare-worker) |
-| front / Storybook                                | 專案自己的 Vercel 設定與網域                                                                 |
-| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                                                       |
+| 項目                                                     | 識別正本 / 建立位置                                                                                   |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| repo、看板                                               | `deploy/project/github.json`;看板由專案另建或明確停用                                                 |
+| GCP、region、registry、WIF、部署 service account         | `deploy/project/cloud.json` 啟用後的 `gcp`                                                            |
+| Cloud Run 服務、API URL、Secret 名稱、seed 帳號          | `cloud.json` 的各環境設定                                                                             |
+| API 明文變數、bucket、cookie 與後台網址                  | `deploy/env/<環境>.yaml`                                                                              |
+| 真正密碼、連線字串與金鑰                                 | Secret Manager;不進 repo 或文件                                                                       |
+| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)              | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務)                                 |
+| 即時通道 Worker、Cloudflare 帳號、兩把密鑰名稱           | `cloud.json` 各環境的 `realtime`(可省略 = 停用);步驟見[即時通道](#即時通道cloudflare-worker)          |
+| 列印代理程式安裝檔(部署 SA 對 `print-agent/` 的寫入權限) | 各環境私有 bucket 的 `print-agent/`;步驟見[列印代理程式發布](#列印代理程式發布print-agent-releaseyml) |
+| front / Storybook                                        | 專案自己的 Vercel 設定與網域                                                                          |
+| DNS、寄件網域、資料庫與預算                              | 專案自己的外部服務設定                                                                                |
 
 值的用途與未設行為見 `docs/env-registry.md`,建立與驗證狀態依[初始化索引](project-initialization.md)記在 issue/PR。下文的 `project`、`example.invalid`、`<...>` 是操作示例,須換成該專案實際輸入。
 

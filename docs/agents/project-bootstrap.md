@@ -97,6 +97,16 @@ git branch --set-upstream-to=origin/main main
 
 依輸入與授權建立,步驟以 [deployment](../deployment.md) 為準(GCP 基礎資源、WIF、Secret、GCS bucket 與 IAM、Vercel、網域),看板與 `GH_PROJECT_TOKEN` 見 [issue tracker](issue-tracker.md)。新專案使用自己的資源與密鑰。
 
+**底座服務三項,三個環境一起開**:雲端啟用時,下列三項與 GCP 基礎資源同一次建立,dev / staging / production 都開;專案明確不要某一項時才不建,記為「已停用」,不留半套。三項都不由 deploy.yml 建立,deploy.yml 只負責部署。
+
+| 服務                                                                        | 不開的效果                                         | 要建的資源(每環境)                                                                                                   | 要向專案取得的輸入                                                          | 接線(走 PR)                                                                 | 驗證                                                                                |
+| --------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [排程](../deployment.md#cloud-scheduler排程任務)                            | 逾時提醒等排程工作不跑(端點回 403)                 | 啟用 Scheduler API;呼叫身分 SA(三環境共用一個);每環境一個每 15 分鐘的工作                                            | 帳單帳戶(免費額度以帳單帳戶計,三環境用掉 3 個;同帳單帳戶其他專案的工作另計) | `deploy/env/<環境>.yaml` 的 `SCHEDULER_INVOKER_EMAIL`、`SCHEDULER_AUDIENCE` | `gcloud scheduler jobs run` 後 Cloud Run log 該請求回 200                           |
+| [即時通道](../deployment.md#即時通道cloudflare-worker)                      | admin 每 60 秒輪詢(頭像黃點),列印改輪詢            | Secret Manager 兩把密鑰(授權 api 執行身分與部署 SA);GitHub Secret `CLOUDFLARE_API_TOKEN`(三環境共用);Worker 自訂網域 | Cloudflare 帳號 id、網域在同帳號的 DNS、token 由專案擁有者建立              | `cloud.json` 各環境 `realtime`;`deploy/env/<環境>.yaml` 的 `REALTIME_URL`   | 部署後頭像圓點是綠色;`wrangler tail` 看得到連線                                     |
+| [列印代理程式發布](../deployment.md#列印代理程式發布print-agent-releaseyml) | 印表機管理頁沒有下載按鈕(「還沒有可下載的安裝檔」) | 部署 SA 對各環境私有 bucket `print-agent/` 前綴的寫入權限                                                            | 無(沿用私有 bucket 與部署 SA)                                               | 無                                                                          | 依序對 dev、staging、production 手動跑 Print Agent Release,下載區顯示版本與四個按鈕 |
+
+順序:先建 Secret、SA、IAM 與 Scheduler 工作(staging / production 的工作先 `pause`)→ 接線 PR 合進 `dev`、部署 dev → Cloudflare 綁 dev 網域 → 驗證 dev。Worker 由該環境第一次部署建立,自訂網域只能在那之後綁,所以各環境的網域在各自首次部署後才綁。staging 在 feat 合進 `staging`、部署 staging 後綁網域、`resume` 工作並驗證;production 在 release 部署後做同樣的事。Print Agent Release 是只手動觸發的 workflow,檔案進預設分支前叫不動(見 [issue tracker](issue-tracker.md)「新增一個只手動觸發的 workflow 時怎麼驗」)。
+
 啟用 Figma 時,核對底座來源、專案 Brand Library 與 Screens 的 fileKey、引用權限及維護者,登記於[品牌註冊表](../branding.md)。依 [toolbox](toolbox.md#figma-品牌同步) 從本專案 `projectPublic.brand` 產生品牌輸入、在獨立 Brand Library 用本機外掛套用並發布;另建空白專案 Screens 檔,逐頁複製正式 Screens Starter 的畫面內容,加入底座與專案 Brand Library,重新開啟外掛補綁專案色,再處理陰影樣式與品牌示例文字。只用本專案檔案及代表畫面驗收,在初始化 PR 記錄結果;不沿用來源專案的 Figma 檔或舊 receipt。資源未知就記缺項,停用就記停用。
 
 對外部資源這個項目,設定檔填好識別只算**已提供**;資源實際存在才是**已建立**;以新專案跑過實際連線、部署或移卡才是**已驗證**。本機檔案則依初始化索引,檔案存在即可記該檔案項目已建立,不代表它引用的外部資源存在。停用的整合記為「已停用」,不記成已建立。
@@ -113,6 +123,7 @@ git branch --set-upstream-to=origin/main main
 - **初始資料**:在明確建立的拋棄式空資料庫,依 [deployment](../deployment.md#設定與資料更新)建置同一 checkout 的 CLI,使用獨立 URI 與測試用 `ROOT_ADMIN_*` 執行 `update` 並原樣重跑一次;再對第二個空庫做同樣的事,確認受管定義內容一致,而組織、帳號、ID 與分派各自獨立。不要求正式密碼來驗拋棄式庫,也不以正式 URI 執行此步。
 - **本機隔離**:`docker compose config` 只核對渲染結果。兩個專案同時啟動、停一邊不影響另一邊,要實際操作過才算驗證。
 - **首次雲端部署**:啟用的每個環境在手動 Deploy 前,從該環境欲部署的完整 commit 跑[發布前核對](../deployment.md#發布前環境與資料核對),讀取 issues 後再部署;新建空環境尚無 Cloud Run 服務及 DB 更新基準時,`CLOUD_STATUS_UNAVAILABLE` / `DATA_BASELINE_MISSING` 是預期觀察,須核實確為首次建立並記入 PR,其他未核對事項仍要處理。Deploy 後再核對 revision、資料更新與 smoke;只填 `cloud.json` 或只跑 preflight 不算已驗證。
+- **底座服務三項**:排程、即時通道、列印代理程式發布逐環境依第 4 節表格的「驗證」欄實測;資源已建但該環境還沒部署新程式時記「已建立」,不記「已驗證」。
 - **Figma**:啟用時依 toolbox 完成品牌庫與 Screens 的預覽、套用、回讀,重檢待處理與例外均為 0;核對 Button、巢狀側欄及代表畫面的主色、陰影、文字與遠端元件連結。Library 升級另核對實際發布與接受。只將本專案的操作結果列為已驗證,檔案存在或來源專案的結果不能代替。
 - **E2E**:只提建議與理由,不自行觸發。
 
