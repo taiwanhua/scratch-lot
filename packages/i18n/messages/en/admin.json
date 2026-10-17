@@ -3147,7 +3147,7 @@
     "download": {
       "title": "Print agent",
       "titleWithVersion": "Print agent · latest version {version}",
-      "description": "Install it on a store computer that is on every day (it can share the checkout computer); one per store. The computer and the receipt printer must be on the same local network, with sleep turned off.",
+      "description": "Install it on a store computer that is on every day (it can share the checkout computer), with sleep turned off. One agent can serve every receipt printer on the same local network; if the printers are on different networks, or you want each checkout to work independently, install one for each.",
       "notPublished": "No installer is available yet. Please contact your system administrator.",
       "button": "Download {name}",
       "buttonSuggested": "Download {name} (recommended)",
