@@ -36,4 +36,6 @@ export * from "./DarkModeIcon";
 export * from "./LogoutIcon";
 export * from "./DevicesIcon";
 export * from "./NotificationsIcon";
+export * from "./CheckCircleIcon";
+export * from "./ErrorCircleIcon";
 export * from "./module-icon-registry";

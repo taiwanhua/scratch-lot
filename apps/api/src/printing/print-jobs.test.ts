@@ -266,6 +266,22 @@ describe("列印 API(後台)", () => {
       );
       expect(result.error?.code).toBe("FORBIDDEN");
     });
+
+    it("補印對話框的原因選項 = 「補印原因」類別的啟用選項(遺失 / 破損 / 其他)", async () => {
+      const data = await ok<{
+        reprintReasons: { items: { value: string; label: string }[] };
+      }>(world, world.admin, DOCS.reprintReasons, {});
+      expect(data.reprintReasons.items.map((item) => item.value)).toEqual([
+        "lost",
+        "damaged",
+        "other",
+      ]);
+    });
+
+    it("沒有 api.printing.reprint → 原因選項 FORBIDDEN", async () => {
+      const result = await gql(world, world.cashier, DOCS.reprintReasons, {});
+      expect(result.error?.code).toBe("FORBIDDEN");
+    });
   });
 
   describe("印表機管理的權限(API 列,每列一個測試)", () => {

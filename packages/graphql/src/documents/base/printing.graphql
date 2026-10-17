@@ -235,3 +235,13 @@ query PrintJobs($input: PrintJobsInput!) {
     pageSize
   }
 }
+
+# 補印對話框的原因選項(api.printing.reprint):「補印原因」類別的啟用選項,依排序值排好;不分頁
+query ReprintReasons {
+  reprintReasons {
+    items {
+      value
+      label
+    }
+  }
+}

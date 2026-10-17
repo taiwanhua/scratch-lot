@@ -30,6 +30,7 @@ import {
   PrintablePrintersPayload,
   PrinterPayload,
   PrintersPayload,
+  ReprintReasonsPayload,
 } from "./models/printing.model";
 import { PrintAgentReleaseService } from "./print-agent-release.service";
 import { PrintAgentsService } from "./print-agents.service";
@@ -185,6 +186,15 @@ export class PrintingResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<DocumentPrintCountPayload> {
     return { printedCount: await this.jobs.printedCount(operator, input) };
+  }
+
+  /** 補印對話框的原因選項(有補印權限才需要選原因)。 */
+  @RequirePermission("api.printing.reprint")
+  @Query(() => ReprintReasonsPayload, { name: "reprintReasons" })
+  async reprintReasons(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<ReprintReasonsPayload> {
+    return { items: await this.jobs.reprintReasons(operator) };
   }
 
   @RequirePermission("api.printing.print")

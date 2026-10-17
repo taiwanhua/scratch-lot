@@ -1782,6 +1782,7 @@ type Query {
   printablePrinters(orgId: ID!): PrintablePrintersPayload!
   printers(input: PrintersInput!): PrintersPayload!
   realtimeTicket(board: RealtimeBoardInput): RealtimeTicketPayload
+  reprintReasons: ReprintReasonsPayload!
   retiredFormPermissions: RetiredFormPermissionsPayload!
   role(id: ID!): RolePayload!
   roleMatrix(roleId: ID!): RoleMatrixPayload!
@@ -1830,6 +1831,15 @@ input ReassignTaskInput {
 
 type RefreshPayload {
   accessToken: String!
+}
+
+type ReprintReason {
+  label: String!
+  value: String!
+}
+
+type ReprintReasonsPayload {
+  items: [ReprintReason!]!
 }
 
 input RequestPasswordResetInput {

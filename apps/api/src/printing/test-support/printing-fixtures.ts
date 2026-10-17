@@ -228,6 +228,16 @@ export const DOCS = {
       }
     }
   `,
+  reprintReasons: /* GraphQL */ `
+    query ReprintReasons {
+      reprintReasons {
+        items {
+          value
+          label
+        }
+      }
+    }
+  `,
   release: /* GraphQL */ `
     query PrintAgentRelease {
       printAgentRelease {

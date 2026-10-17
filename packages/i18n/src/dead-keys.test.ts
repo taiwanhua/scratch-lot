@@ -422,7 +422,12 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.printers.jobError.",
     reason:
-      "`tJobError(job.error)`(列印紀錄的結果、測試列印的失敗原因),值是 GraphQL 的 `PrintJobError` 列舉",
+      "`tJobError(job.error)`(列印紀錄的結果、測試列印與列印按鈕的失敗原因),值是 GraphQL 的 `PrintJobError` 列舉",
+  },
+  {
+    key: "admin.printButton.errors.",
+    reason:
+      "列印按鈕送出失敗的提示 `t(`errors.${printButtonErrorOf(error).code}`)`(錯誤碼表在 `lib/base/print-button.ts`)",
   },
 ];
 

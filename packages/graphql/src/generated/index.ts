@@ -2419,6 +2419,7 @@ export type Query = {
   printablePrinters: PrintablePrintersPayload;
   printers: PrintersPayload;
   realtimeTicket?: Maybe<RealtimeTicketPayload>;
+  reprintReasons: ReprintReasonsPayload;
   retiredFormPermissions: RetiredFormPermissionsPayload;
   role: RolePayload;
   roleMatrix: RoleMatrixPayload;
@@ -2767,6 +2768,17 @@ export type ReassignTaskInput = {
 export type RefreshPayload = {
   __typename?: 'RefreshPayload';
   accessToken: Scalars['String']['output'];
+};
+
+export type ReprintReason = {
+  __typename?: 'ReprintReason';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type ReprintReasonsPayload = {
+  __typename?: 'ReprintReasonsPayload';
+  items: Array<ReprintReason>;
 };
 
 export type RequestPasswordResetInput = {
@@ -4684,6 +4696,11 @@ export type PrintJobsQueryVariables = Exact<{
 
 
 export type PrintJobsQuery = { __typename?: 'Query', printJobs: { __typename?: 'PrintJobsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'PrintJob', id: string, orgId: string, printerId: string, documentType: string, refType: string, refId: string, documentName?: string | null, status: PrintJobStatus, error?: PrintJobError | null, isReprint: boolean, printNo: number, reprintReason?: string | null, reprintNote?: string | null, createdAt: string, sentAt?: string | null, printedAt?: string | null, requestedBy?: { __typename?: 'PrintJobRequester', id: string, name: string } | null }> } };
+
+export type ReprintReasonsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ReprintReasonsQuery = { __typename?: 'Query', reprintReasons: { __typename?: 'ReprintReasonsPayload', items: Array<{ __typename?: 'ReprintReason', value: string, label: string }> } };
 
 export type RealtimeTicketQueryVariables = Exact<{
   board?: InputMaybe<RealtimeBoardInput>;
@@ -10155,6 +10172,40 @@ usePrintJobsQuery.getKey = (variables: PrintJobsQueryVariables) => ['PrintJobs',
 
 
 usePrintJobsQuery.fetcher = (client: GraphQLClient, variables: PrintJobsQueryVariables, headers?: RequestInit['headers']) => fetcher<PrintJobsQuery, PrintJobsQueryVariables>(client, PrintJobsDocument, variables, headers);
+
+export const ReprintReasonsDocument = `
+    query ReprintReasons {
+  reprintReasons {
+    items {
+      value
+      label
+    }
+  }
+}
+    `;
+
+export const useReprintReasonsQuery = <
+      TData = ReprintReasonsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ReprintReasonsQueryVariables,
+      options?: Omit<UseQueryOptions<ReprintReasonsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ReprintReasonsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ReprintReasonsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ReprintReasons'] : ['ReprintReasons', variables],
+    queryFn: fetcher<ReprintReasonsQuery, ReprintReasonsQueryVariables>(client, ReprintReasonsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useReprintReasonsQuery.getKey = (variables?: ReprintReasonsQueryVariables) => variables === undefined ? ['ReprintReasons'] : ['ReprintReasons', variables];
+
+
+useReprintReasonsQuery.fetcher = (client: GraphQLClient, variables?: ReprintReasonsQueryVariables, headers?: RequestInit['headers']) => fetcher<ReprintReasonsQuery, ReprintReasonsQueryVariables>(client, ReprintReasonsDocument, variables, headers);
 
 export const RealtimeTicketDocument = `
     query RealtimeTicket($board: RealtimeBoardInput) {

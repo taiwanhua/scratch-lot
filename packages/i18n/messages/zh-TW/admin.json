@@ -2967,5 +2967,36 @@
       "cancel": "取消",
       "success": "已停用代理程式"
     }
+  },
+  "printButton": {
+    "print": "列印",
+    "reprint": "補印",
+    "sending": "已送到印表機…",
+    "printed": "已印出",
+    "failed": "失敗:{reason}",
+    "printedCount": "已印 {count} 次",
+    "noPrinter": "本店未設定印表機",
+    "noAvailablePrinter": "本店的印表機都已停用",
+    "printersLoadFailed": "印表機清單載入失敗,請重新整理後再試",
+    "choosePrinter": "選擇印表機",
+    "defaultPrinter": "{name}(預設)",
+    "noResultHint": "請先確認是否已出紙,再決定要不要補印",
+    "reprintDialog": {
+      "title": "補印",
+      "reason": "補印原因",
+      "note": "說明",
+      "submit": "送出",
+      "cancel": "取消",
+      "reasonRequired": "請選擇補印原因",
+      "noteRequired": "選「其他」時請填寫說明",
+      "reasonsUnavailable": "補印原因載入失敗,請稍後再試",
+      "noReasons": "尚未設定補印原因,請洽管理員新增"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有列印這張單據的權限",
+      "NOT_FOUND": "找不到這台印表機,請重新整理後再試",
+      "VALIDATION_FAILED": "印表機已停用或單據圖片不正確,無法列印",
+      "UNEXPECTED": "送出列印失敗,請稍後再試"
+    }
   }
 }
