@@ -190,8 +190,8 @@ export type AdvanceAction =
   /** 寄結果信給申請人(盡力;寄信關閉時只記 log)。 */
   | { kind: "notifyResult"; result: NotifiedResult }
   /**
-   * 追加一筆歷程,條件是 `history` 裡還沒有「同種類 + 同 `taskKey` / `result`」的事件
-   * (`task_created` 與 `notified` 的冪等標記)。
+   * 追加一筆歷程,條件是 `history` 裡還沒有「同種類 + 同 `taskKey` / `result` / `userId`」的事件
+   * (`task_created` 與 `notified` 的冪等標記;`task_created` 帶承辦人,改派後的新承辦人另記一筆)。
    */
   | { kind: "appendHistoryOnce"; event: HistoryEvent }
   /** 權威資料自相矛盾(見檔頭「執行合約」3):不寫、中止、記 log。 */
@@ -930,6 +930,9 @@ function delegatorsOf(
 /**
  * 「有新任務」的信與 `task_created` 事件。任務已建、但事件還沒記(建完就中斷)也要補,
  * 否則這位審核者永遠收不到信;只通知還能審的人(有效承辦人、尚未決定)。
+ *
+ * 標記以「任務 + 承辦人」為單位:改派不換 `taskKey`,改派後的承辦人沒有自己的 `task_created`
+ * → 補通知他;改派兩次給不同人各收一則;同一任務再改派回已通知過的人不重複。
  */
 function announceActions(
   input: AdvanceInput,
@@ -937,7 +940,10 @@ function announceActions(
   item: PlanItem,
 ): AdvanceAction[] {
   const isAnnounced = input.instance.history.some(
-    (event) => event.kind === "task_created" && event.taskKey === item.taskKey,
+    (event) =>
+      event.kind === "task_created" &&
+      event.taskKey === item.taskKey &&
+      event.userId === item.assigneeId,
   );
   const isDecided = state.decisions.some(
     (decision) => decision.taskKey === item.taskKey,

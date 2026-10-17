@@ -287,7 +287,7 @@
 
 - **`decideTask`**(`task-actions.service.ts`):前置(任務是我的且 `pending`、提交仍指向這個實例、實例進行中、關卡為 active、退回要 `allowReturn`、駁回 / 退回理由必填、任務 `expectedEditVersion`)後寫實例:條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 `taskKey` 還沒有決定」→ `$push steps.$[cur].decisions` + `$push history` + `$inc editVersion`;**不比對** `editVersion`。寫決定、任務版號、稽核與推進是一個交易;兩人同時決定同一份實例 → 後到的寫入衝突、重跑後依當下狀態判(關卡已結束 → `STEP_CLOSED`;關卡仍進行中 → 照常接受)。條件不成立、任務已不是 `pending`、我已被改派走 → 回 `result: STEP_CLOSED`、任務不動。
 - **撤回**(申請人本人:看得到這張單但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;依可見範圍與資料範圍規則根本讀不到 → `NOT_FOUND`;提交要是 `reviewing` 且有實例,否則 `CONFLICT` `STATUS_MISMATCH`;`instance-withdraw.service.ts` 另以實例的 `createdBy` 再比一次):條件更新 `{ editVersion, 進行中, 所有關卡都沒有決定 }` → `withdrawn`、active 關卡 `terminated`;撤回、推進收尾(提交同步成 `withdrawn`)與稽核是一個交易。決定在撤回讀完之後先提交 → 撤回的寫入衝突、重跑看到決定 → `CONFLICT`(`HAS_DECISIONS`);「沒有決定」也寫在條件裡。
-- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。
+- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進;推進在同一個交易給改派後的承辦人寫 `workflow.task-created`,見「通知信」)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。
 - **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);條件更新追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋(一個交易)。
 - **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。**每個實例一個交易**(標失效 + 推進),對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目條件更新 `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
 - **人員條件派單後不再符合的人(例如被移除角色)仍可審**(計畫固定);被停用 / 移出租戶走失效。
@@ -350,10 +350,10 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 ## 通知信
 
-`workflow-engine/workflow-notifier.service.ts`:任務建立(`workflow.task-created`,給審核者)、有結果(`workflow.result`:核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。站內通知與 email 都經通知的單一入口 `notify()`(`docs/modules/notification-settings.md`)。
+`workflow-engine/workflow-notifier.service.ts`:任務建立(`workflow.task-created`,給審核者;改派後給新承辦人)、有結果(`workflow.result`:核准 / 駁回 / 退回,給申請人;駁回 / 退回附理由)。撤回是申請人自己的動作、`superseded` 不通知。站內通知與 email 都經通知的單一入口 `notify()`(`docs/modules/notification-settings.md`)。
 
 - email 的總開關 `WORKFLOW_MAIL_ENABLED`(普通 env,`"true"` 才寄,每次寄信時讀;`docs/env-registry.md`):關閉時 email 只寫 log,站內通知照常。收件人另依個人偏好的管道開關(審核者的站內通知不能關),再經 `MailService` 的 `MAIL_ALLOWLIST`(沒設 = 不限)。
-- **與推進同一個交易**:推進在交易內執行 `notifyTaskCreated` / `notifyResult` 時寫通知(`dedupeKey` = 類型 + 實例 + `taskKey` / `result`),接著同一個交易追加歷程標記 —— 任務 = 該 `taskKey` 的 `task_created`;結果 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)。站內信號與 email 在交易提交後才送;交易回復就沒有通知、沒有信號、沒有信,標記也不存在。
+- **與推進同一個交易**:推進在交易內執行 `notifyTaskCreated` / `notifyResult` 時寫通知(`dedupeKey` = 類型 + 實例 + `taskKey` / `result`),接著同一個交易追加歷程標記 —— 任務 = 該 `taskKey` + 承辦人(`userId`)的 `task_created`(改派不換 `taskKey`:改派後的承辦人沒有自己的標記 → 列 6 補通知他;改派兩次給不同人各一則,改派回已通知過的人不重複;原承辦人不另外通知;部署影響:部署前已經改派、還在進行中的任務,部署後這個實例下次推進時,新承辦人會補收一則,時間比較晚、不是重複);結果 = `notified`(帶 `result`,與流程完成事件 `completed` 分開)。站內信號與 email 在交易提交後才送;交易回復就沒有通知、沒有信號、沒有信,標記也不存在。
 - **盡力通知**:寄信失敗只記 log、不影響推進,歷程**仍記為已通知**;重試推進看標記不重發,所以不保證 email 一定寄達。開關關閉時一樣追加標記。
 - 內容只讀實例快照(表單名、實例上的標題槽、關卡名),連結到申請中心詳情頁(連結種類 `workflow-instance` → `/apply-center/view-page/<實例 id>`;email 是 `<ADMIN_APP_URL>` + 這段路徑)。標題 / 內容是通知類型的範本(`apps/api/src/notifications/base-notification-types.ts`),email 外框在 `apps/api/src/mail/mail-templates.ts` 的 `buildNotificationEmail`(品牌文字登記 `docs/branding.md`)。
 

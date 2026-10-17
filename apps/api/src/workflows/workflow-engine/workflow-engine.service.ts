@@ -376,6 +376,8 @@ export class WorkflowEngineService {
                   kind: event.kind,
                   taskKey: event.taskKey ?? null,
                   result: event.result ?? null,
+                  // `task_created` 以「任務 + 承辦人」為單位(改派後的新承辦人另記一筆)
+                  userId: event.userId ? toObjectId(event.userId) : null,
                 },
               },
             },
