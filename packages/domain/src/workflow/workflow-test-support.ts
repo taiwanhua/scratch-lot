@@ -327,7 +327,8 @@ function applyAction(world: World, action: AdvanceAction): boolean {
         (candidate: HistoryEvent) =>
           candidate.kind === event.kind &&
           (candidate.taskKey ?? null) === (event.taskKey ?? null) &&
-          (candidate.result ?? null) === (event.result ?? null),
+          (candidate.result ?? null) === (event.result ?? null) &&
+          (candidate.userId ?? null) === (event.userId ?? null),
       );
       if (exists) {
         return false;
