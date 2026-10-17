@@ -43,11 +43,7 @@ import {
   notificationWorld,
   sampleNotifications,
 } from "@/test/msw/notification-handlers";
-import {
-  notificationPermissionModules,
-  notificationSettingsWorld,
-  notificationTypes,
-} from "@/test/msw/notification-settings-handlers";
+import { notificationSettingsWorld } from "@/test/msw/notification-settings-handlers";
 import {
   orgDetails,
   orgManagerCandidates,
@@ -68,7 +64,6 @@ import {
 } from "@/test/msw/role-fixtures";
 import { roleWorld } from "@/test/msw/role-manager-handlers";
 import { userWorld } from "@/test/msw/user-manager-handlers";
-import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
 import { workflowDesignWorld } from "@/test/msw/workflow-design-handlers";
 import {
   APPLICANT,
@@ -92,6 +87,7 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 
 /**
@@ -153,6 +149,8 @@ export const mockHandlers = ({
     hasRefreshCookie: authenticated,
     modules: modulesForView(view),
     orgs: orgsForView(view),
+    // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
+    currentOrgTenantId: view === "root" ? null : "org-tenant-a",
     preferences: notificationPreferenceDefaults(),
   });
 
@@ -205,34 +203,9 @@ export const mockHandlers = ({
       }).handlers,
       ["Roles", "Users", "OrgTree", "AudiencePermissionOptions"],
     ),
-    // 通知設定(底座規格第 5 章):印表機離線調整過收件人、盤點提醒用預設;`Roles` 讓給 roleWorld,
-    // 權限候選樹改由這裡提供(示範家族 + 印表機管理 / 通知設定,預設收件人的權限名稱才解得出來)
+    // 通知設定(底座規格第 5 章;`mock-notification-settings.ts`):`Roles` 讓給 roleWorld,權限候選樹由它提供
     ...withoutOperations(
-      notificationSettingsWorld({
-        types: notificationTypes({
-          "printing.agent-offline": {
-            audience: {
-              mode: "match",
-              filter: {
-                op: "AND",
-                children: [
-                  {
-                    field: "role",
-                    cond: "in",
-                    value: { kind: "static", values: [HR_ROLE_ID] },
-                  },
-                  {
-                    field: "permission",
-                    cond: "in",
-                    value: { kind: "static", values: ["system.printers.edit"] },
-                  },
-                ],
-              },
-            },
-          },
-        }),
-        permissionModules: [...matrixModules, ...notificationPermissionModules],
-      }).handlers,
+      notificationSettingsWorld(mockNotificationSettings()).handlers,
       ["Roles"],
     ),
     // 欄位管理(#206 / #264):`currentOrg` 只決定新增選項的擁有組織標籤

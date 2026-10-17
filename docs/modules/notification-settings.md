@@ -196,12 +196,12 @@ input ResetNotificationSettingInput {
 
 - **清單**:一列一種負責人提醒類型,欄位是通知類型、組織範圍、收件人、操作。組織範圍唯讀,由 `orgScope` 換成一行白話(`ref`:觸發事件的組織 / 最上層組織;`range`:本身 / 含下層 / 含上層)。收件人是人員條件的一行摘要(與流程設計器的審核者框共用 `useAudienceSummary`);沒調整過的(`isDefault`)標「預設」。
 - **網址**(REACT-14,`app/base/url-state-inventory.ts`):`list` 存搜尋與頁碼;`edit` 存正在編輯的類型 key(`?edit=printing.agent-offline`),打開時以類型 key 查 `notificationSettings`、挑出 key 完全相同的那一筆,不靠目前這一頁的清單。不放網址:還原預設的確認(確認類彈窗)、編輯彈窗裡的條件(未存輸入)。
-- **唯讀**:沒有 `system.notification-settings.edit` → 沒有操作欄;網址帶 `?edit=` 時清掉參數、不打開。站在根組織時也唯讀,並說明要先切換組織:前端以 `me.modules` 裡有根組織專屬模組判斷(`hooks/base/useHasRootOnlyModules.ts`,表單管理的 `useIsAtRootOrg` 共用);沒有這個訊號的根組織操作者照樣看得到按鈕,送出時 api 回 `TENANT_ONLY`,對話框顯示同一句說明。
+- **唯讀**:沒有 `system.notification-settings.edit` → 沒有操作欄;網址帶 `?edit=` 時清掉參數、不打開。站在根組織時也唯讀,並說明要先切換組織:判斷用 `hooks/base/useIsAtRootOrg.ts`(`me` 已載入且 `me.currentOrg.tenantId === null`;表單管理共用同一支),手上有根組織專屬模組的超級管理員站在租戶時照常可改。`me` 還沒載入時還不知道,按鈕先不出現、`?edit=` 先留著,載入後才決定打開或清掉。api 仍會擋(`TENANT_ONLY`),萬一擋下,對話框顯示同一句說明。
 - **編輯收件人**:`AudiencePicker` 不允許「所有人」(`allowAll: false`)、欄位只有使用者 / 角色 / 權限(`notification-audience.ts`,對齊 api `NOTIFICATION_AUDIENCE_OPTIONS`);頂端資訊框說明組織範圍由類型決定、不能改。[儲存] 前先本地驗證(空群組、沒挑值),api 擋下的 `INVALID_AUDIENCE` / `OUT_OF_TENANT` 以 `extensions.path` 標回那一列(`audienceIssueFromPath`),其餘錯誤顯示在對話框內。成功後失效所有 `NotificationSettings` 查詢。
 - **還原預設**:只在調整過的列可按;確認框寫出還原後的預設條件(`defaultAudience` 的摘要)。成功後清單回到類型宣告的條件並標「預設」。
 - **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁與個人設定的通知管道開關(`PreferencesTab`)共用這一支;🔔 清單與新通知提示顯示的是通知的標題 / 內容(寫入當下依收件人的語言產生),不顯示類型名稱,之後要顯示也走這一支。
 - **與 Figma 的差異(刻意)**:BS-09a 的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);BS-09b 的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
-- **測試**:`NotificationSettingsPage.test.tsx`(清單、唯讀、根組織、搜尋、編輯與網址、錯誤標回條件列、還原預設、英文名稱與退回;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
+- **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
 正本:`apps/admin/src/pages/base/system/NotificationSettingsPage/`、`apps/admin/src/lib/base/notification-type-name.ts`、`apps/admin/src/test/msw/notification-settings-handlers.ts`
 

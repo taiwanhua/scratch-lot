@@ -97,12 +97,18 @@ export const renderFormsPage = (
   runtime: FormRuntimeWorldOptions = {},
   /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
   search = "",
+  /**
+   * 站在根組織(`me.currentOrg.tenantId = null`)。預設跟著表單夾具的視角:root 視角的表單沒有
+   * 本租戶的啟用開關(`tenantEnabled === null`);有開關的夾具代表站在租戶。
+   */
+  isAtRoot = (options.forms ?? []).every((form) => form.tenantEnabled === null),
 ): ReturnType<typeof renderApp> & { world: FormDesignWorld } => {
   const world = formDesignWorld(options);
   server.use(
     ...authWorld({
       hasRefreshCookie: true,
       modules: formsModules(permissions),
+      currentOrgTenantId: isAtRoot ? null : "org-tenant-a",
     }).handlers,
     ...world.handlers,
     // 預覽模式的帶入 / 選項會打執行端的查詢

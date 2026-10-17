@@ -58,15 +58,18 @@ export const NotificationSettingsPage = () => {
   const edit = useUrlEdit();
   const editTarget = useNotificationSettingByType(
     edit.requestedId,
-    data.canEdit,
+    data.canEdit !== false,
   );
   const editingType = useUrlEditGuard({
     edit,
     canEdit: data.canEdit,
     isMissing: editTarget.isMissing,
   });
+  // 還不知道能不能改(`me` 未載入)時先不開;知道之後由 `useUrlEditGuard` 決定開或清掉參數
   const editing =
-    editingType !== null && editTarget.setting?.type === editingType
+    data.canEdit === true &&
+    editingType !== null &&
+    editTarget.setting?.type === editingType
       ? editTarget.setting
       : null;
 
@@ -129,7 +132,7 @@ export const NotificationSettingsPage = () => {
           <NotificationSettingsTable
             rows={data.rows}
             isLoading={data.isLoading}
-            canEdit={data.canEdit}
+            canEdit={data.canEdit === true}
             onEdit={(row) => {
               edit.open(row.type);
             }}
