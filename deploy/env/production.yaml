@@ -22,6 +22,11 @@ GCS_BUCKET_PUBLIC: "scratch-lot-public-prod"
 # PASSWORD_RESET_TOKEN_TTL: "30m"
 # GCS_SIGNED_URL_TTL: "1h"
 
-# 即時通道 Worker 的網址(docs/deployment.md「即時通道」):cloud.json 該環境寫好 realtime、Cloudflare 綁好網域後打開;
+# 即時通道 Worker 的網址(docs/deployment.md「即時通道」);Worker 與網域見 cloud.json 的 realtime
 # 不寫 = 即時通道停用(admin 每 60 秒輪詢)
-# REALTIME_URL: "https://rt.scratch-lot.com"
+REALTIME_URL: "https://rt.scratch-lot.com"
+
+# 排程任務的呼叫身分(docs/deployment.md「Cloud Scheduler」):Scheduler 工作的 OIDC SA;audience 與工作的 --oidc-token-audience 完全相同
+# 不寫 = 排程端點拒絕所有呼叫(排程關閉)
+SCHEDULER_INVOKER_EMAIL: "scheduler-invoker@scratch-lot-online.iam.gserviceaccount.com"
+SCHEDULER_AUDIENCE: "https://api.scratch-lot.com"
