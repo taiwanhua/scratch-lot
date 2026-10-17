@@ -599,7 +599,7 @@ registerFormLifecycle({
 - 「租戶」是特殊選項(不是 ID;畫面顯示「最上層組織」),共用流程可用;指定特定組織只能用在租戶客製流程。
 - 不改用人員條件(見 3.0「不改用人員條件的地方」)。
 - 跳過的關卡狀態 `skipped`、觸發 `stepPassed(skipped: true)`,**不執行** `beforeApprove`;時間軸記是哪一項成立(「申請人屬於最上層組織」/「符合條件」)。
-- 修訂的 `ctx` 快照新增 `ctx.tenant.id`、`ctx.user.orgIds`,加入 `CONTEXT_VAR_PATHS`,也可用於公式和條件。設計器顯示白話:「租戶」「申請人所屬的組織(全部)」「申請人的目前組織」。
+- 修訂的 `ctx` 快照新增 `ctx.tenant.id`、`ctx.user.orgIds`,加入 `CONTEXT_VAR_PATHS`,也可用於公式和條件。設計器顯示白話:「最上層組織」「申請人所屬的組織(全部)」「申請人的目前組織」(2026-10-17 定:租戶畫面一律稱「最上層組織」,見 CONTEXT「最上層組織」)。
 - Figma:BS-02a / c、BS-03 的關卡面板。
 
 ---
