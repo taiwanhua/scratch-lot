@@ -185,8 +185,11 @@ export class RealtimeLink {
       }, REALTIME_PONG_TIMEOUT_MS);
       try {
         socket.send(REALTIME_PING);
-      } catch {
+      } catch (error) {
         // 連線已在關閉中:交給重連流程
+        this.options.logger?.warn("送不出 ping:重新連線", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         this.restart();
       }
     }, REALTIME_PING_INTERVAL_MS);
