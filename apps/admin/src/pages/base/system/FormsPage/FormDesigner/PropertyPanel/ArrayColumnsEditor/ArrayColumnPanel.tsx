@@ -26,6 +26,7 @@ import { FieldKeyInput } from "../FieldKeyInput";
 import { LookupSourceEditor } from "../LookupSourceEditor";
 import { OptionsEditor } from "../OptionsEditor";
 import { RulesEditor } from "../RulesEditor";
+import { ColumnPrefillEditor } from "./ColumnPrefillEditor";
 import { ColumnValueSourceEditor } from "./ColumnValueSourceEditor";
 
 export interface ArrayColumnPanelProps {
@@ -194,8 +195,26 @@ export const ArrayColumnPanel = ({
         <LookupSourceEditor
           value={column.source ?? { provider: "user", labelField: "name" }}
           hasValueField={false}
+          // 明細子欄的篩選只能引用表單層欄位(同一列的其他子欄不行)
+          linkFields={fields.filter(
+            (candidate) =>
+              candidate.key !== arrayField.key && candidate.type !== "array",
+          )}
           onChange={(source) => {
             onChange({ ...column, source });
+          }}
+        />
+      )}
+      {sections.referenceSource && (
+        <ColumnPrefillEditor
+          column={column}
+          siblings={siblings}
+          onChange={(prefill) => {
+            const next = { ...column, prefill };
+            if (prefill === null) {
+              Reflect.deleteProperty(next, "prefill");
+            }
+            onChange(next);
           }}
         />
       )}

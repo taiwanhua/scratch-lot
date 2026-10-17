@@ -1169,7 +1169,8 @@
       "uploadRejected": "File type or size not allowed: {types}, up to {size} MB.",
       "uploading": "Uploading…",
       "uploadFailed": "Upload failed. Please try again.",
-      "removeFile": "Remove file"
+      "removeFile": "Remove file",
+      "filterPending": "Fill in {fields} first"
     },
     "renderer": {
       "empty": "—",
@@ -1179,7 +1180,9 @@
       "readonlyPermission": "You can see this field but are not allowed to change it.",
       "readonlyCondition": "This field is read-only right now.",
       "summaryItem": "{label}: {value}",
-      "summarySeparator": " · "
+      "summarySeparator": " · ",
+      "linkedCleared": "Cleared {field} (a field it depends on changed)",
+      "linkedClearedRows": "Cleared {field} in {count} rows (a field it depends on changed)"
     },
     "design": {
       "hasVisibleWhen": "Has visibility condition",
@@ -1729,7 +1732,14 @@
       "labelTemplate": "Display template (optional)",
       "labelTemplateHint": "When set, the display name is built from the template (e.g. name + email); otherwise the display field is used",
       "insertPlaceholder": "Insert a field",
-      "insertPlaceholderHint": "Pick a field to append it to the template"
+      "insertPlaceholderHint": "Pick a field to append it to the template",
+      "linkedFilter": "Linked filter (optional)",
+      "linkedFilterHint": "Narrow the choices by the current value of another field on this form; changing that field clears what was picked here",
+      "linkedFilterField": "{field} equals",
+      "linkedFilterNone": "Not linked",
+      "filterFields": {
+        "enabled": "Enabled"
+      }
     },
     "rules": {
       "required": "Required",
@@ -1993,7 +2003,15 @@
         "computed": "Row formula"
       },
       "formula": "Row formula",
-      "rowField": "This row · {label}"
+      "rowField": "This row · {label}",
+      "prefill": "Fill the same row (optional)",
+      "prefillHint": "When a record is picked, copy its fields into other columns of the same row (overwrites; still editable afterwards)",
+      "prefillTarget": "Column in this row",
+      "prefillTargetUnset": "Choose a column",
+      "prefillSource": "Source field",
+      "prefillSourceUnset": "Choose a source field",
+      "addPrefill": "+ Mapping",
+      "removePrefill": "Remove"
     },
     "upgrade": {
       "title": "Upgrade old data to v{version}",

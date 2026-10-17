@@ -193,6 +193,10 @@ export const FieldPropertyPanel = ({
         <LookupSourceEditor
           value={field.source ?? { provider: "user", labelField: "name" }}
           hasValueField={false}
+          linkFields={fields.filter(
+            (candidate) =>
+              candidate.key !== field.key && candidate.type !== "array",
+          )}
           onChange={(source) => {
             onChange({ ...field, source });
           }}

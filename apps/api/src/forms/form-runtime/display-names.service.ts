@@ -8,6 +8,7 @@ import {
   arrayRowsOf,
   columnPathOf,
   lookupLabelFieldsOf,
+  withoutLookupFilterVars,
 } from "@repo/domain/form";
 
 import { FieldCategoryOptionsService } from "../field-category-options.service";
@@ -228,9 +229,10 @@ export class DisplayNamesService {
   ): Promise<Map<string, ReadonlyMap<string, string | null>>> {
     const labels = new Map<string, ReadonlyMap<string, string | null>>();
     for (const [signature, group] of groups) {
+      // 現名只看讀不讀得到,不看連動篩選(那是填寫當下縮小候選的條件)
       const records = await this.lookups.findByValues(
         facts,
-        group.source,
+        withoutLookupFilterVars(group.source),
         group.field,
         [...group.values],
         lookupLabelFieldsOf(group.source),

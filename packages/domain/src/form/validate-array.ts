@@ -20,9 +20,11 @@ import type {
   ArrayColumnType,
   FieldDef,
   FieldRules,
+  PrefillMapping,
 } from "./types";
 import {
   type FieldValidationContext,
+  isPrefillCompatible,
   validateColumnContent,
 } from "./validate-fields";
 
@@ -222,6 +224,75 @@ function validateColumn(
     return;
   }
   validateColumnContentAt(column, location, context, collector);
+  if (type === "reference") {
+    validateColumnPrefill(field, column, context, collector);
+  }
+}
+
+/**
+ * 列內帶入(《底座規格》3.2 B2c;沿用表單層帶入規則的對應表與檢查):目標是同一明細的其他子欄、
+ * 只能使用者填且不是引用子欄;來源欄位要在子欄來源的可回欄位內、型別相容(`isPrefillCompatible`)。
+ */
+function validateColumnPrefill(
+  field: FieldDef,
+  column: ArrayColumnDef,
+  context: FieldValidationContext,
+  collector: IssueCollector,
+): void {
+  const mapping: unknown = column.prefill?.mapping;
+  if (column.prefill === undefined || column.prefill === null) {
+    return;
+  }
+  const location = { fieldKey: field.key, columnKey: column.key };
+  if (!Array.isArray(mapping)) {
+    collector.error(
+      "ARRAY_COLUMN_SETTING",
+      `子欄位「${column.label}」的帶入規則要有對應表`,
+      { ...location, property: "prefill.mapping" },
+    );
+    return;
+  }
+  const siblings = new Map(
+    arrayColumnsOf(field)
+      .filter((candidate) => candidate !== column)
+      .map((candidate) => [candidate.key, candidate]),
+  );
+  const providerKey = column.source?.provider;
+  const provider =
+    providerKey === undefined
+      ? undefined
+      : context.lookupProviders?.[providerKey];
+  for (const [index, entry] of (mapping as PrefillMapping[]).entries()) {
+    const at = { ...location, property: `prefill.mapping.${String(index)}` };
+    const target = siblings.get(entry.fieldKey);
+    if (target?.valueSource.kind !== "input" || target.type === "reference") {
+      collector.error(
+        "PREFILL_TARGET_NOT_INPUT",
+        `帶入目標 ${entry.fieldKey} 必須是同一列使用者填寫的子欄位(不能是列內公式、引用或自己)`,
+        at,
+      );
+      continue;
+    }
+    if (provider === undefined) {
+      continue;
+    }
+    const sourceType = provider.fields[entry.sourceField];
+    if (sourceType === undefined) {
+      collector.error(
+        "PREFILL_UNKNOWN_SOURCE_FIELD",
+        `來源沒有欄位 ${entry.sourceField}`,
+        at,
+      );
+      continue;
+    }
+    if (!isPrefillCompatible(sourceType, target.type)) {
+      collector.error(
+        "PREFILL_TYPE_INCOMPATIBLE",
+        `來源欄位 ${entry.sourceField}(${sourceType})不能帶入 ${target.type} 子欄位「${target.label}」`,
+        at,
+      );
+    }
+  }
 }
 
 /** 子欄的值來源:使用者填 / 列內公式(引用子欄只能使用者填);列內公式要有公式。 */
@@ -262,12 +333,14 @@ function validateColumnSettings(
 ): void {
   validateColumnValueSource(column, type, location, collector);
   const record = column as unknown as Record<string, unknown>;
-  if (type !== "reference" && isPresent(record.source)) {
-    collector.error(
-      "ARRAY_COLUMN_SETTING",
-      `子欄位「${column.label}」不支援這個設定(source)`,
-      { ...location, property: "source" },
-    );
+  for (const setting of ["source", "prefill"] as const) {
+    if (type !== "reference" && isPresent(record[setting])) {
+      collector.error(
+        "ARRAY_COLUMN_SETTING",
+        `子欄位「${column.label}」不支援這個設定(${setting})`,
+        { ...location, property: setting },
+      );
+    }
   }
   for (const setting of UNSUPPORTED_COLUMN_SETTINGS) {
     if (isPresent(record[setting])) {

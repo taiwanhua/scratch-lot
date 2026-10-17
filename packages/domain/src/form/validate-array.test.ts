@@ -452,3 +452,70 @@ describe("檢查器:明細與子路徑不可用的地方", () => {
     );
   });
 });
+
+/** 列內帶入測試的引用子欄「遊戲」(來源 `project_game`)。 */
+function game(mapping: { sourceField: string; fieldKey: string }[]) {
+  return column("game", "reference", {
+    source: { provider: "project_game", labelField: "title" },
+    prefill: { mapping },
+  });
+}
+
+describe("檢查器:明細引用子欄的列內帶入(B2c)", () => {
+  const registry = {
+    project_game: {
+      fields: { title: "text" as const, bookAmount: "number" as const },
+    },
+  };
+  const errorsWith = (fields: FieldDef[]): DefinitionIssue[] =>
+    validateDefinition(definitionOf([title, ...fields]), {
+      regexSafety: recheckRegexSafety,
+      lookupProviders: registry,
+    }).errors;
+
+  it("帶入同一列型別相容的子欄 → 沒有錯誤", () => {
+    const lines = arrayField("lines", [
+      game([{ sourceField: "bookAmount", fieldKey: "amount" }]),
+      column("amount", "number"),
+    ]);
+    expect(errorsWith([lines])).toEqual([]);
+  });
+
+  it("型別不符 → PREFILL_TYPE_INCOMPATIBLE,定位到子欄的對應表", () => {
+    const lines = arrayField("lines", [
+      game([{ sourceField: "title", fieldKey: "amount" }]),
+      column("amount", "number"),
+    ]);
+    const issue = errorsWith([lines]).find(
+      (candidate) => candidate.code === "PREFILL_TYPE_INCOMPATIBLE",
+    );
+    expect(issue?.location).toEqual({
+      fieldKey: "lines",
+      columnKey: "game",
+      property: "prefill.mapping.0",
+    });
+  });
+
+  it("目標不是同一列使用者填的子欄 / 來源沒有這個欄位 → 錯誤", () => {
+    const lines = arrayField("lines", [
+      game([
+        { sourceField: "bookAmount", fieldKey: "game" },
+        { sourceField: "nope", fieldKey: "amount" },
+      ]),
+      column("amount", "number"),
+    ]);
+    const codes = errorsWith([lines]).map((issue) => issue.code);
+    expect(codes).toContain("PREFILL_TARGET_NOT_INPUT");
+    expect(codes).toContain("PREFILL_UNKNOWN_SOURCE_FIELD");
+  });
+
+  it("不是引用的子欄不能設帶入規則", () => {
+    const lines = arrayField("lines", [
+      column("note", "text", { prefill: { mapping: [] } }),
+    ]);
+    const issue = errorsWith([lines]).find(
+      (candidate) => candidate.code === "ARRAY_COLUMN_SETTING",
+    );
+    expect(issue?.location.property).toBe("prefill");
+  });
+});

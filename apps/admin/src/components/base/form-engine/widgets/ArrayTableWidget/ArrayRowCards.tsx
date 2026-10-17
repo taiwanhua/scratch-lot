@@ -26,6 +26,8 @@ export const ArrayRowCards = ({
   cellError,
   displayOf,
   onCellChange,
+  filterLinks,
+  onReferencePick,
   onInsertBefore,
   onMove,
   onDuplicate,
@@ -96,6 +98,8 @@ export const ArrayRowCards = ({
                     errorMessage={cellError(row.rowId, column.key)}
                     display={displayOf(column.key)}
                     onCellChange={onCellChange}
+                    filterLinks={filterLinks}
+                    onReferencePick={onReferencePick}
                   />
                 ))}
               </Stack>

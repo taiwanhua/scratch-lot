@@ -21,6 +21,7 @@ import {
   temporalIsoOf,
   upgradeValues,
   uploadLimitIssue,
+  withoutLookupFilterVars,
 } from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
@@ -1523,9 +1524,10 @@ export class FormSubmissionsService {
     if (typeof id !== "string" || !source) {
       return null;
     }
+    // 預設值只驗讀得到;連動篩選在送出時以最後的值重驗
     const [record] = await this.lookups.findByValues(
       facts,
-      source,
+      withoutLookupFilterVars(source),
       "id",
       [id],
       lookupLabelFieldsOf(source),
@@ -1628,7 +1630,8 @@ export class FormSubmissionsService {
         source && ids.length > 0
           ? await this.lookups.findByValues(
               facts,
-              source,
+              // 複製只重驗讀得到(保留值);連動篩選在送出時以最後的值重驗
+              withoutLookupFilterVars(source),
               "id",
               ids,
               [source.labelField],
@@ -1665,7 +1668,7 @@ export class FormSubmissionsService {
       }
       const [record] = await this.lookups.findByValues(
         facts,
-        source,
+        withoutLookupFilterVars(source),
         "id",
         [id],
         [source.labelField],

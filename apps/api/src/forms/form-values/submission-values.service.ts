@@ -6,6 +6,7 @@ import {
   ComputedCycleError,
   type ExpressionContext,
   type FieldDef,
+  type LookupFilterScalar,
   type LookupSourceDescriptor,
   type StoredValues,
   type ValueIssue,
@@ -13,10 +14,15 @@ import {
   arrayRowsOf,
   computeAll,
   evaluateCondition,
+  filterVarValueOf,
+  hasLookupFilterVars,
+  lookupFilterVarsOf,
   lookupLabelFieldsOf,
   normalizeFieldValue,
+  resolveLookupSource,
   uploadLimitIssue,
   validateValueRules,
+  withoutLookupFilterVars,
 } from "@repo/domain/form";
 
 import {
@@ -33,6 +39,7 @@ import type { FormOperatorFacts } from "../form-access.service";
 import { forbiddenError, valuesInvalidError } from "../forms-error";
 import {
   LookupProvidersService,
+  type LookupRecord,
   lookupDisplayLabelOf,
 } from "../lookup-providers";
 import { REDACTED, isSameStoredValue, semanticOf } from "./stored-values";
@@ -74,7 +81,43 @@ interface OptionContext {
   facts: FormOperatorFacts;
   categories: Map<string, Promise<CategoryOptions>>;
   issues: ValueIssue[];
+  /** 連動篩選(B2d)引用的表單層欄位此刻的值(這次會存下的最終值)。 */
+  filterValueOf: (fieldKey: string) => LookupFilterScalar | null;
 }
+
+/** 以一組存值給連動篩選取值(`filterVarValueOf`:引用給 id、單選給 value)。 */
+function filterValuesFrom(
+  fields: readonly FieldDef[],
+  values: StoredValues | null,
+): (fieldKey: string) => LookupFilterScalar | null {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  return (fieldKey) =>
+    values === null
+      ? null
+      : filterVarValueOf(byKey.get(fieldKey), values[fieldKey]);
+}
+
+/** 連動篩選引用的欄位值,這次和上一個已完成修訂不同(同值的引用不能再沿用原快照、要重驗篩選)。 */
+function filterVarsChanged(
+  source: LookupSourceDescriptor | null | undefined,
+  current: (fieldKey: string) => LookupFilterScalar | null,
+  previous: (fieldKey: string) => LookupFilterScalar | null,
+): boolean {
+  return lookupFilterVarsOf(source).some(
+    ({ fieldKey }) => current(fieldKey) !== previous(fieldKey),
+  );
+}
+
+/** 引用重驗的結果:讀得到且符合篩選的(依 id)、讀得到但不符連動篩選的 id。 */
+interface ReferenceLookup {
+  found: ReadonlyMap<string, LookupRecord>;
+  mismatched: ReadonlySet<string>;
+}
+
+const NO_REFERENCES: ReferenceLookup = {
+  found: new Map(),
+  mismatched: new Set(),
+};
 
 /** 一欄落在 Spec §5「不能填的四種原因」的哪一列。 */
 type FieldClass = "hidden" | "computed" | "kept" | "readonly" | "input";
@@ -131,6 +174,7 @@ export class SubmissionValuesService {
       facts,
       categories: new Map(),
       issues: [],
+      filterValueOf: filterValuesFrom(fields, values),
     };
     const resolved: StoredValues = { ...values };
     for (const field of fields) {
@@ -403,7 +447,12 @@ export class SubmissionValuesService {
       facts: input.facts,
       categories: new Map(),
       issues,
+      filterValueOf: filterValuesFrom(input.fields, final),
     };
+    const previousFilterValueOf = filterValuesFrom(
+      input.fields,
+      input.previous,
+    );
     for (const field of input.fields) {
       const value = final[field.key];
       if (
@@ -420,11 +469,19 @@ export class SubmissionValuesService {
           value,
           previous,
           context,
+          previousFilterValueOf,
         );
         continue;
       }
+      // 同值保留原快照;但連動篩選引用的欄位改了值 → 用最後的值重驗(B2d)
       final[field.key] =
-        previous !== undefined && isSameStoredValue(field, value, previous)
+        previous !== undefined &&
+        isSameStoredValue(field, value, previous) &&
+        !filterVarsChanged(
+          field.source,
+          context.filterValueOf,
+          previousFilterValueOf,
+        )
           ? previous
           : await this.snapshotOf(field, value, context);
     }
@@ -440,6 +497,7 @@ export class SubmissionValuesService {
     value: unknown,
     previous: unknown,
     context: OptionContext,
+    previousFilterValueOf: (fieldKey: string) => LookupFilterScalar | null,
   ): Promise<ArrayRowValue[]> {
     const previousRows = new Map(
       arrayRowsOf(previous).map((row) => [row.rowId, row]),
@@ -461,6 +519,7 @@ export class SubmissionValuesService {
           rows,
           previousRows,
           context,
+          previousFilterValueOf,
         );
       }
     }
@@ -504,8 +563,17 @@ export class SubmissionValuesService {
     rows: ArrayRowValue[],
     previousRows: ReadonlyMap<string, ArrayRowValue>,
     context: OptionContext,
+    previousFilterValueOf: (fieldKey: string) => LookupFilterScalar | null,
   ): Promise<void> {
-    const pending = pendingReferencesOf(column, rows, previousRows);
+    // 連動篩選引用的表單層欄位改了值 → 每一列都用最後的值重驗(不沿用原快照)
+    const kept = filterVarsChanged(
+      column.source,
+      context.filterValueOf,
+      previousFilterValueOf,
+    )
+      ? new Map<string, ArrayRowValue>()
+      : previousRows;
+    const pending = pendingReferencesOf(column, rows, kept);
     if (pending.length === 0) {
       return;
     }
@@ -513,27 +581,21 @@ export class SubmissionValuesService {
     const ids = [
       ...new Set(pending.flatMap(({ id }) => (id === null ? [] : [id]))),
     ];
-    const records =
-      source && ids.length > 0
-        ? await this.lookups.findByValues(
-            context.facts,
-            source,
-            "id",
-            ids,
-            lookupLabelFieldsOf(source),
-            { publicOnly: true },
-          )
-        : [];
-    const found = new Map(records.map((record) => [record.id, record]));
+    const { found, mismatched } = source
+      ? await this.referencesOf(context, source, ids)
+      : NO_REFERENCES;
     for (const { row, id } of pending) {
       const record = id === null ? undefined : found.get(id);
       if (!record || !source) {
+        const isMismatch = id !== null && mismatched.has(id);
         context.issues.push({
           fieldKey: field.key,
           rowId: row.rowId,
           columnKey: column.key,
-          code: "SOURCE_UNAVAILABLE",
-          message: `「${field.label}」的「${column.label}」引用的資料不存在或無權讀取`,
+          code: isMismatch ? "LOOKUP_FILTER_MISMATCH" : "SOURCE_UNAVAILABLE",
+          message: isMismatch
+            ? `「${field.label}」的「${column.label}」不符篩選條件,請重新選擇`
+            : `「${field.label}」的「${column.label}」引用的資料不存在或無權讀取`,
         });
         continue;
       }
@@ -544,6 +606,47 @@ export class SubmissionValuesService {
     }
   }
 
+  /**
+   * 引用的 id 一次查回(`publicOnly`)。來源有連動篩選(B2d)時以這次的最終值換成條件再查;
+   * 查不到的 id 再以拿掉連動篩選的來源查一次(只查缺的):讀得到 = 不符篩選(`mismatched`),
+   * 讀不到 = 來源不可用。被引用欄位沒有值 → 篩選查無,讀得到的一律算不符。
+   */
+  private async referencesOf(
+    context: OptionContext,
+    source: LookupSourceDescriptor,
+    ids: readonly string[],
+  ): Promise<ReferenceLookup> {
+    if (ids.length === 0) {
+      return NO_REFERENCES;
+    }
+    const resolved = resolveLookupSource(source, context.filterValueOf);
+    const records =
+      resolved === null
+        ? []
+        : await this.lookups.findByValues(
+            context.facts,
+            resolved,
+            "id",
+            ids,
+            lookupLabelFieldsOf(source),
+            { publicOnly: true },
+          );
+    const found = new Map(records.map((record) => [record.id, record]));
+    const missing = ids.filter((id) => !found.has(id));
+    if (!hasLookupFilterVars(source) || missing.length === 0) {
+      return { found, mismatched: new Set() };
+    }
+    const readable = await this.lookups.findByValues(
+      context.facts,
+      withoutLookupFilterVars(source),
+      "id",
+      missing,
+      [],
+      { publicOnly: true },
+    );
+    return { found, mismatched: new Set(readable.map((record) => record.id)) };
+  }
+
   /** 一欄的新快照:引用重驗來源、選項重取 label(multiSelect 逐項)。 */
   private async snapshotOf(
     field: FieldDef,
@@ -551,7 +654,7 @@ export class SubmissionValuesService {
     context: OptionContext,
   ): Promise<unknown> {
     if (field.type === "reference") {
-      return this.resolveReference(context.facts, field, value, context.issues);
+      return this.resolveReference(field, value, context);
     }
     if (field.type === "select") {
       return this.resolveOption(field, value, context);
@@ -567,30 +670,26 @@ export class SubmissionValuesService {
   }
 
   private async resolveReference(
-    facts: FormOperatorFacts,
     field: FieldDef,
     value: unknown,
-    issues: ValueIssue[],
+    context: OptionContext,
   ): Promise<unknown> {
     const id =
       isRecord(value) && typeof value.id === "string" ? value.id : null;
     const source = field.source;
-    const [record] =
+    const { found, mismatched } =
       id === null || !source
-        ? []
-        : await this.lookups.findByValues(
-            facts,
-            source,
-            "id",
-            [id],
-            lookupLabelFieldsOf(source),
-            { publicOnly: true },
-          );
+        ? NO_REFERENCES
+        : await this.referencesOf(context, source, [id]);
+    const record = id === null ? undefined : found.get(id);
     if (!record || !source) {
-      issues.push({
+      const isMismatch = id !== null && mismatched.has(id);
+      context.issues.push({
         fieldKey: field.key,
-        code: "SOURCE_UNAVAILABLE",
-        message: `「${field.label}」引用的資料不存在或無權讀取`,
+        code: isMismatch ? "LOOKUP_FILTER_MISMATCH" : "SOURCE_UNAVAILABLE",
+        message: isMismatch
+          ? `「${field.label}」不符篩選條件,請重新選擇`
+          : `「${field.label}」引用的資料不存在或無權讀取`,
       });
       return value;
     }

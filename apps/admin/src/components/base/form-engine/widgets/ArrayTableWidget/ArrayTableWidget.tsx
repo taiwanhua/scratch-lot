@@ -17,6 +17,7 @@ import {
   emptyRowOf,
   insertRowBefore,
   moveRow,
+  pickReferenceIn,
   removeRowIn,
   setCellIn,
 } from "@/lib/base/form-engine/array-rows";
@@ -53,6 +54,7 @@ export const ArrayTableWidget = ({
   errors = [],
   context,
   columnDisplay,
+  filterLinks,
 }: WidgetProps) => {
   const t = useTranslations("admin.formEngine.array");
   const isMobile = useBreakpointDown("sm");
@@ -77,6 +79,32 @@ export const ArrayTableWidget = ({
   const onCellChange = useCallback(
     (rowId: string, columnKey: string, next: unknown) => {
       update((current) => setCellIn(current, rowId, columnKey, next));
+    },
+    [update],
+  );
+  const onReferencePick = useCallback(
+    (
+      rowId: string,
+      columnKey: string,
+      next: { id: string; label: string },
+      sourceValues: Readonly<Record<string, unknown>>,
+    ) => {
+      const column = latest.current.columns.find(
+        (candidate) => candidate.key === columnKey,
+      );
+      if (column === undefined) {
+        return;
+      }
+      update((current) =>
+        pickReferenceIn(
+          current,
+          rowId,
+          column,
+          latest.current.columns,
+          next,
+          sourceValues,
+        ),
+      );
     },
     [update],
   );
@@ -124,6 +152,8 @@ export const ArrayTableWidget = ({
       )?.message ?? null,
     displayOf: (columnKey) => columnDisplay?.(columnKey) ?? NO_DISPLAY,
     onCellChange,
+    filterLinks,
+    onReferencePick,
     onInsertBefore,
     onMove,
     onDuplicate,

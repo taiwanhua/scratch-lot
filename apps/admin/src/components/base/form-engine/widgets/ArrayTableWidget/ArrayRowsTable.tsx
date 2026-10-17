@@ -34,6 +34,8 @@ export const ArrayRowsTable = ({
   cellError,
   displayOf,
   onCellChange,
+  filterLinks,
+  onReferencePick,
   onInsertBefore,
   onMove,
   onDuplicate,
@@ -59,6 +61,8 @@ export const ArrayRowsTable = ({
         errorMessage={cellError(row.rowId, column.key)}
         display={displayOf(column.key)}
         onCellChange={onCellChange}
+        filterLinks={filterLinks}
+        onReferencePick={onReferencePick}
       />
     ),
   }));

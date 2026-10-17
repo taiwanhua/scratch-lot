@@ -117,6 +117,30 @@ function columnSourcesOf(
   );
 }
 
+/** 這個來源的帶入對應表:表單層帶入規則,或明細引用子欄的列內帶入(B2c);其他來源沒有。 */
+function mappingOf(
+  definition: FormDefinition,
+  location: Record<string, unknown>,
+): readonly { sourceField: string }[] {
+  if (typeof location.prefillIndex === "number") {
+    return definition.prefills[location.prefillIndex]?.mapping ?? [];
+  }
+  if (typeof location.columnKey !== "string") {
+    return [];
+  }
+  const owner = definition.fields.find(
+    (field) => isRecord(field) && field.key === location.fieldKey,
+  );
+  const column =
+    owner === undefined
+      ? undefined
+      : arrayColumnsOf(owner).find(
+          (candidate) => candidate.key === location.columnKey,
+        );
+  const mapping: unknown = column?.prefill?.mapping;
+  return Array.isArray(mapping) ? (mapping as { sourceField: string }[]) : [];
+}
+
 /** 定義裡用到的所有 lookup 來源描述(選項、引用、明細引用子欄、帶入),附定位。 */
 function sourcesOf(
   definition: FormDefinition,
@@ -217,6 +241,8 @@ export class FormDefinitionChecker {
             ...lookupProviders[FORM_SUBMISSION_PROVIDER]?.fields,
             ...selfCatalog,
           },
+          // 表單提交來源沒有可當篩選的欄位(連動篩選一律擋下)
+          filterFields: {},
         },
       },
       listColumnFieldKeys: listColumns,
@@ -315,11 +341,7 @@ export class FormDefinitionChecker {
         ? self.catalog
         : await this.lookups.formSubmissionCatalog(facts, source.formKey);
       const wanted = [source.labelField, source.valueField ?? "id"];
-      const prefill =
-        typeof location.prefillIndex === "number"
-          ? definition.prefills[location.prefillIndex]
-          : undefined;
-      for (const mapping of prefill?.mapping ?? []) {
+      for (const mapping of mappingOf(definition, location)) {
         wanted.push(mapping.sourceField);
       }
       for (const name of new Set(wanted)) {
