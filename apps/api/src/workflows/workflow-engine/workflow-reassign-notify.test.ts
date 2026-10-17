@@ -35,6 +35,7 @@ import {
   retryAdvance,
   setupWorld,
   submitLeave,
+  tasksOf,
   useWorkflow,
   usersStep,
 } from "../test-support/workflow-fixtures";
@@ -238,6 +239,35 @@ describe("改派通知新承辦人", () => {
     expect(await taskNotices(next, instanceId)).toHaveLength(1);
     expect(await taskNotices(deputy, instanceId)).toHaveLength(1);
     expect(await taskNotices(original, instanceId)).toEqual([]);
+  });
+
+  it("改派給有代理設定的人 → 改派不套用代理(3.7 / 3.8):任務與通知都給他本人,代理人不收", async () => {
+    const [first, chosen, chosenDeputy] = [
+      await fresh(),
+      await fresh(),
+      await fresh(),
+    ];
+    await bindNew([["first", [first]]]);
+    const submitted = await submitLeave(world);
+    const instanceId = await instanceIdOf(submitted.id);
+    const now = Date.now();
+    await ok(api, chosen.token, CREATE_DELEGATION, {
+      input: {
+        delegateUserId: String(chosenDeputy.userId),
+        startAt: new Date(now - HOUR_MS).toISOString(),
+        endAt: new Date(now + 24 * HOUR_MS).toISOString(),
+      },
+    });
+
+    await reassign(await onlyTaskId(instanceId), chosen);
+
+    await pendingTaskOf(world, chosen, submitted.id);
+    const deputyTasks = await tasksOf(world, chosenDeputy);
+    expect(
+      deputyTasks.filter((one) => one.submissionId === submitted.id),
+    ).toEqual([]);
+    expect(await taskNotices(chosen, instanceId)).toHaveLength(1);
+    expect(await taskNotices(chosenDeputy, instanceId)).toEqual([]);
   });
 
   it("逾時第 2 級通知對象收到後改派 → 新承辦人收一則「待你審核」,並從第 1 級重新計時", async () => {
