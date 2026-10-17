@@ -492,7 +492,7 @@ function checkAudienceTenant(
     ) {
       collector.error(
         "ROLE_NOT_IN_TENANT",
-        `${label}條件選的角色不是本租戶的角色`,
+        `${label}條件選的角色不屬於這個最上層組織`,
         at(property),
       );
     }
@@ -503,7 +503,7 @@ function checkAudienceTenant(
     ) {
       collector.error(
         "ORG_NOT_IN_TENANT",
-        `${label}條件選的組織不在本租戶`,
+        `${label}條件選的組織不在這個最上層組織之下`,
         at(property),
       );
     }
@@ -532,7 +532,7 @@ function checkUsers(
       collector.warn(
         "USER_INVALID",
         fact === undefined
-          ? `${who} 指定的使用者 ${userId} 不存在或不在本租戶`
+          ? `${who} 指定的使用者 ${userId} 不存在或不在這個最上層組織`
           : `${who} 指定的使用者 ${userId} 已停用`,
         at(),
       );

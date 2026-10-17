@@ -416,6 +416,36 @@ describe("B5 自動通過:進關一次寫入核准", () => {
     );
   });
 
+  it("申請人經由「已在前關核准過」(auto_prior_approver)被守門擋下 → 照一般規則剔除申請人", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { priorApprover: true } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT, "u1"],
+        autoApprovals: [],
+        blockedAutoApprovals: [
+          {
+            assigneeId: APPLICANT,
+            reason: "auto_prior_approver",
+            code: "NOT_READY",
+          },
+        ],
+      },
+    });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss?.plan.map((item) => item.assigneeId)).toEqual(["u1"]);
+    expect(boss?.decisions).toEqual([]);
+    expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(
+      world.instance.history.find(
+        (event) => event.kind === "auto_approve_blocked",
+      ),
+    ).toMatchObject({ userId: APPLICANT, reason: "auto_prior_approver" });
+  });
+
   it("前關核准過的審核者(不是申請人)被擋下 → 照常留一張待審任務給他", () => {
     const definition: WorkflowDefinition = {
       steps: [review("boss", { autoApprove: { priorApprover: true } })],

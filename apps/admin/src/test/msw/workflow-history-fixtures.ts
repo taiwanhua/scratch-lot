@@ -22,3 +22,12 @@ export const historyEvent = (
   code,
   delegators: [],
 });
+
+/** B5 自動通過被守門擋下(`auto_approve_blocked`;預設是「已在前關核准過」那一種,`code` = 專案錯誤碼)。 */
+export const autoApproveBlockedEvent = (
+  stepKey: string,
+  who: typeof APPLICANT,
+  code: string,
+  reason = "auto_prior_approver",
+): WorkflowInstanceFieldsFragment["history"][number] =>
+  historyEvent("auto_approve_blocked", stepKey, reason, who, code);

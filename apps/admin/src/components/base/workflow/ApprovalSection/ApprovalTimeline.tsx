@@ -112,7 +112,11 @@ export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
                   delegators: event.delegators
                     .map((one) => one.name ?? "—")
                     .join(tApproval("nameSeparator")),
-                  message: blockedMessage(event.code),
+                  // 只有守門擋下的事件用得到專案文案;其他事件不查
+                  message:
+                    event.kind === BLOCKED_KIND
+                      ? blockedMessage(event.code)
+                      : "",
                 })}
               </Typography>
               {event.comment !== null &&
