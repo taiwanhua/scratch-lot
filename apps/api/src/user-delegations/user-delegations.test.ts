@@ -273,7 +273,7 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
     ).toEqual({ code: "VALIDATION_FAILED", reason: "INVALID_PERIOD" });
   });
 
-  it("替別人設定代理:沒有入口;刪別人的代理 → NOT_FOUND;沒有改結束日的端點", async () => {
+  it("替別人設定代理:沒有入口;刪別人的代理 → NOT_FOUND", async () => {
     const me = await someone(api, tenant);
     const owner = await someone(api, tenant);
     const deputy = await someone(api, tenant);

@@ -220,7 +220,7 @@
 | `createMyDelegation(input: { delegateUserId, startAt, endAt, note })` | 新增;`note` 缺席 / `null` / 空白 = 沒有備註                                                  |
 | `deleteMyDelegation(input: { id })`                                   | 軟刪除(未結束的才能刪)                                                                       |
 
-錯誤(`VALIDATION_FAILED` + `extensions.reason`,正本 `user-delegations-error.ts`):`DELEGATION_OVERLAP`(與自己其他代理期間有交集;`[startAt, endAt)` 相接不算)、`SELF_DELEGATION`、`DELEGATE_NOT_ELIGIBLE`(停用、不存在、不在操作者的最上層組織,或操作者站在根組織)、`INVALID_PERIOD`(迄 <= 起;新增時迄已過)、`DELEGATION_ENDED`(改 / 刪已結束的)。改 / 刪別人的或不存在的 → `NOT_FOUND`。重疊檢查是先查再寫,沒有唯一索引兜底(同一人同時送兩筆重疊的極少見,接受)。
+錯誤(`VALIDATION_FAILED` + `extensions.reason`,正本 `user-delegations-error.ts`):`DELEGATION_OVERLAP`(與自己其他代理期間有交集;`[startAt, endAt)` 相接不算)、`SELF_DELEGATION`、`DELEGATE_NOT_ELIGIBLE`(停用、不存在、不在操作者的最上層組織,或操作者站在根組織)、`INVALID_PERIOD`(迄 <= 起;新增時迄已過)、`DELEGATION_ENDED`(刪已結束的)。刪別人的或不存在的 → `NOT_FOUND`。重疊檢查是先查再寫,沒有唯一索引兜底(同一人同時送兩筆重疊的極少見,接受)。
 
 **派任**(`workflow-engine/assignee-delegation.service.ts`,`StepEntryService` 解析審核者之後呼叫):
 

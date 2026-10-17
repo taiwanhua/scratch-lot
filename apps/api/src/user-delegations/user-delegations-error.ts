@@ -13,7 +13,7 @@ export const USER_DELEGATION_REJECT_REASONS = [
   "DELEGATE_NOT_ELIGIBLE",
   /** 迄 <= 起,或新增時迄已過 */
   "INVALID_PERIOD",
-  /** 已結束的代理唯讀(不能改、不能刪) */
+  /** 已結束的代理唯讀(不能刪;代理本來就沒有修改端點) */
   "DELEGATION_ENDED",
 ] as const;
 
