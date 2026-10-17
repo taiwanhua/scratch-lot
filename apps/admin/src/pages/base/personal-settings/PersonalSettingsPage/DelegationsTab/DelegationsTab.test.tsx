@@ -1,9 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
 
 import { authWorld } from "@/test/msw/auth-handlers";
 import { delegationWorld } from "@/test/msw/delegation-handlers";
-import { server } from "@/test/msw/server";
+import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
 
@@ -142,6 +143,21 @@ describe("代理人分頁", () => {
     const alert2 = await findSnackbarAlert();
     expect(alert2.text).toBe("和你已設定的代理期間重疊");
     expect(screen.getByRole("dialog", { name: "新增代理" })).toBeVisible();
+  });
+
+  it("代理人候選載入失敗(網路錯誤)→ 顯示載入失敗,不說成沒有權限", async () => {
+    const { user } = renderDelegations();
+    server.use(api.query("MyDelegateCandidates", () => HttpResponse.error()));
+
+    await findTable();
+    await user.click(screen.getByRole("button", { name: "+ 新增代理" }));
+    const dialog = await screen.findByRole("dialog", { name: "新增代理" });
+    await user.click(within(dialog).getByRole("combobox", { name: "代理人" }));
+
+    expect(
+      await screen.findByText("人員清單載入失敗,請稍後再試"),
+    ).toBeVisible();
+    expect(screen.queryByText("你沒有檢視使用者清單的權限")).toBeNull();
   });
 
   it("刪除未結束的代理:確認後從清單拿掉", async () => {

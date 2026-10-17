@@ -31,6 +31,13 @@ export const UserPickerField = ({
   helperText,
 }: UserPickerFieldProps) => {
   const t = useTranslations("admin.userPicker");
+  const noOptionsTextKey = (): "forbidden" | "loadFailed" | "empty" => {
+    if (users.isForbidden) {
+      return "forbidden";
+    }
+    return users.isLoadFailed === true ? "loadFailed" : "empty";
+  };
+  const noOptionsText = t(noOptionsTextKey());
   const reasonOf = (user: UserCandidate): string | null =>
     user.enabled || allowDisabled
       ? (disabledReasonOf?.(user) ?? null)
@@ -53,7 +60,7 @@ export const UserPickerField = ({
       size="small"
       loading={users.isFetching}
       loadingText={t("loading")}
-      noOptionsText={users.isForbidden ? t("forbidden") : t("empty")}
+      noOptionsText={noOptionsText}
       helperText={helperText}
       getOptionKey={(user) => user.id}
       getOptionLabel={(user) =>

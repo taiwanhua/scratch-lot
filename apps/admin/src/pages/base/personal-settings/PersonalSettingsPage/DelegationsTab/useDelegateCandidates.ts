@@ -36,6 +36,8 @@ export const useDelegateCandidates = (): UserCandidates => {
     })),
     setKeyword,
     isFetching: query.isFetching,
-    isForbidden: query.isError,
+    // 這支查詢不看權限:失敗只會是網路 / 伺服器問題,不能說成「沒有權限」
+    isForbidden: false,
+    isLoadFailed: query.isError,
   };
 };

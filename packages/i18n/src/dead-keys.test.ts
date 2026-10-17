@@ -444,6 +444,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "`lib/base/notification-type-name.ts` 的 `t(`types.${type}`)`,type 是 api 回的通知類型 key(`workflow.task-created` 等;沒有文案的類型退回 api 的 `name`)",
   },
+  {
+    key: "admin.personalSettings.delegations.statuses.",
+    reason:
+      "`t(`statuses.${row.status}`)`,status 逐一取自 GraphQL 的 `UserDelegationStatus` 列舉(`DelegationsTab`)",
+  },
+  {
+    key: "admin.personalSettings.delegations.errors.",
+    reason:
+      "`t(`errors.${delegationsErrorKey(error)}`)`,`delegations-error.ts` 把 api 錯誤換成 `<code>` 或 `reasons.<reason>`(碼與 reason 列舉見同檔)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>
