@@ -7,6 +7,7 @@ import {
   it,
   jest,
 } from "@jest/globals";
+import { Logger } from "@nestjs/common";
 import type { Types } from "mongoose";
 
 import { DEFAULT_OVERDUE_AUDIENCE } from "@repo/domain/workflow";
@@ -29,6 +30,7 @@ import {
   DECIDE,
   type DefinitionShape,
   FORK_WORKFLOW,
+  FORM_KEY,
   PUBLISH_WORKFLOW,
   type Person,
   REASSIGN,
@@ -70,6 +72,16 @@ jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 const HOUR_MS = 3_600_000;
 const MINUTE_MS = 60_000;
 
+const CREATE_DELEGATION = /* GraphQL */ `
+  mutation OverdueCreateMyDelegation($input: CreateMyDelegationInput!) {
+    createMyDelegation(input: $input) {
+      delegation {
+        id
+      }
+    }
+  }
+`;
+
 interface RawTask {
   _id: Types.ObjectId;
   taskKey: string;
@@ -86,6 +98,14 @@ interface RawNotification {
   body: string;
   refId: string | null;
   dedupeKey: string;
+}
+
+/** 有沒有一筆 warn log 含這段文字。 */
+function warnedWith(
+  warn: { mock: { calls: unknown[][] } },
+  text: string,
+): boolean {
+  return warn.mock.calls.some((args) => String(args[0]).includes(text));
 }
 
 /** 只用人員條件的使用者列(逾時提醒的通知對象)。 */
@@ -121,6 +141,18 @@ describe("逾時提醒與知會", () => {
 
   async function fresh(): Promise<Person> {
     return person(api, world.connection, world.tenant, world.tenant);
+  }
+
+  /** 本人設定代理(起 = 一小時前,迄 = 一天後)。 */
+  async function delegate(from: Person, to: Person): Promise<void> {
+    const now = Date.now();
+    await ok(api, from.token, CREATE_DELEGATION, {
+      input: {
+        delegateUserId: String(to.userId),
+        startAt: new Date(now - HOUR_MS).toISOString(),
+        endAt: new Date(now + 24 * HOUR_MS).toISOString(),
+      },
+    });
   }
 
   async function latestInstance(
@@ -389,6 +421,137 @@ describe("逾時提醒與知會", () => {
       expect(await notices(WORKFLOW_OVERDUE, world.admin, instanceId)).toEqual(
         [],
       );
+    });
+
+    it("代理人承接的任務超過 N → 承辦人(代理人)與被代理者都收第 1 級;超過 M → 通知對象照收、剔除承辦人,被代理者在名單內照收一則", async () => {
+      const original = await fresh();
+      const deputy = await fresh();
+      const watcher = await fresh();
+      await delegate(original, deputy);
+      await bindNew({
+        steps: [
+          usersStep("first", [original], {
+            overdue: {
+              reviewerAfterHours: 1,
+              audienceAfterHours: 2,
+              audience: usersAudience([original, deputy, watcher]),
+            },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instanceId = await latestInstanceId(submitted.id);
+      const task = await onlyTask(instanceId);
+      expect(String(task.assigneeId)).toBe(String(deputy.userId));
+
+      await sweepAfter(task, 1);
+      expect(await notices(WORKFLOW_OVERDUE, deputy, instanceId)).toHaveLength(
+        1,
+      );
+      expect(
+        await notices(WORKFLOW_OVERDUE, original, instanceId),
+      ).toHaveLength(1);
+      expect(await notices(WORKFLOW_OVERDUE, watcher, instanceId)).toEqual([]);
+
+      await sweepAfter(task, 2);
+      // 第 2 級:承辦人(代理人)剔除;被代理者在通知對象裡 → 另收第 2 級一則
+      expect(await notices(WORKFLOW_OVERDUE, deputy, instanceId)).toHaveLength(
+        1,
+      );
+      expect(
+        await notices(WORKFLOW_OVERDUE, original, instanceId),
+      ).toHaveLength(2);
+      expect(await notices(WORKFLOW_OVERDUE, watcher, instanceId)).toHaveLength(
+        1,
+      );
+    });
+
+    it("多位被代理者委託同一位代理人(合併成一張任務)→ 第 1 級代理人與每位被代理者各一則", async () => {
+      const first = await fresh();
+      const second = await fresh();
+      const deputy = await fresh();
+      await delegate(first, deputy);
+      await delegate(second, deputy);
+      await bindNew({
+        steps: [
+          usersStep("first", [first, second], {
+            mode: "all",
+            overdue: {
+              reviewerAfterHours: 1,
+              audienceAfterHours: 5,
+              audience: DEFAULT_OVERDUE_AUDIENCE,
+            },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instanceId = await latestInstanceId(submitted.id);
+      const tasks = await tasksOfInstance(instanceId);
+      expect(tasks).toHaveLength(1);
+      const [task] = tasks as [RawTask];
+
+      await sweepAfter(task, 1);
+      for (const who of [deputy, first, second]) {
+        expect(await notices(WORKFLOW_OVERDUE, who, instanceId)).toHaveLength(
+          1,
+        );
+      }
+    });
+
+    it("代理承接的任務改派後(被代理者清空)→ 只提醒新承辦人", async () => {
+      const original = await fresh();
+      const deputy = await fresh();
+      const other = await fresh();
+      await delegate(original, deputy);
+      await bindNew({
+        steps: [
+          usersStep("first", [original], {
+            overdue: {
+              reviewerAfterHours: 1,
+              audienceAfterHours: 5,
+              audience: DEFAULT_OVERDUE_AUDIENCE,
+            },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instanceId = await latestInstanceId(submitted.id);
+      const pending = await pendingTaskOf(world, deputy, submitted.id);
+      await ok(api, world.admin.token, REASSIGN, {
+        input: { taskId: pending.id, toUserId: String(other.userId) },
+      });
+      const reassigned = await onlyTask(instanceId);
+
+      await sweepAfter(reassigned, 1);
+      expect(await notices(WORKFLOW_OVERDUE, other, instanceId)).toHaveLength(
+        1,
+      );
+      expect(await notices(WORKFLOW_OVERDUE, original, instanceId)).toEqual([]);
+      expect(await notices(WORKFLOW_OVERDUE, deputy, instanceId)).toEqual([]);
+    });
+
+    it("第 2 級算不到通知對象 → 不通知、記 warn(只有承辦人本人符合 / 條件沒人符合)", async () => {
+      const reviewer = await fresh();
+      await bindNew({
+        steps: [
+          usersStep("first", [reviewer], {
+            overdue: {
+              reviewerAfterHours: 1,
+              audienceAfterHours: 2,
+              audience: usersAudience([reviewer]),
+            },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instanceId = await latestInstanceId(submitted.id);
+      const warn = jest.spyOn(Logger.prototype, "warn");
+      await sweepAfter(await onlyTask(instanceId), 2);
+      expect(
+        await notices(WORKFLOW_OVERDUE, reviewer, instanceId),
+      ).toHaveLength(1);
+      expect(warnedWith(warn, "符合的只有承辦人本人")).toBe(true);
+      warn.mockRestore();
     });
 
     it("一張任務提醒失敗 → 只回復那一張、到期時點延一個排程週期;一個租戶整批出錯不中斷其他租戶", async () => {
@@ -799,6 +962,94 @@ describe("逾時提醒與知會", () => {
         id: instanceId,
       });
       expect(newerInstance.errors?.[0]).toBeDefined();
+    });
+
+    it("退回後重送是新實例、從第一關重審:再通過該關時關卡知會對象再收到一次", async () => {
+      const first = await fresh();
+      const second = await fresh();
+      const watcher = await fresh();
+      await bindNew({
+        steps: [
+          usersStep("first", [first], { cc: usersSource([watcher]) }),
+          usersStep("second", [second]),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const firstInstance = await latestInstanceId(submitted.id);
+      await decideOn(world, first, submitted.id, "APPROVE");
+      await decideOn(world, second, submitted.id, "RETURN");
+      expect(await notices(WORKFLOW_CC, watcher, firstInstance)).toHaveLength(
+        1,
+      );
+
+      const returned = await submission(world, world.applicant, submitted.id);
+      const saved = await ok<{
+        saveFormDraft: { submission: { id: string; editVersion: number } };
+      }>(api, world.applicant.token, SAVE_SUBMISSION, {
+        input: {
+          id: submitted.id,
+          expectedEditVersion: returned.editVersion,
+          values: { title: "改成兩天", days: 2 },
+        },
+      });
+      await submitExisting(world, saved.saveFormDraft.submission);
+      const secondInstance = await latestInstanceId(submitted.id);
+      expect(secondInstance).not.toBe(firstInstance);
+      await decideOn(world, first, submitted.id, "APPROVE");
+
+      expect(await notices(WORKFLOW_CC, watcher, secondInstance)).toHaveLength(
+        1,
+      );
+      expect(await notices(WORKFLOW_CC, watcher, firstInstance)).toHaveLength(
+        1,
+      );
+    });
+
+    it("算不到知會對象 → 不知會、動作照常,記 warn(表單欄位沒填 / 條件沒人符合 / 欄位來源指向別張表單)", async () => {
+      const reviewer = await fresh();
+      const gone = await fresh();
+      await world.connection
+        .collection("users")
+        .updateOne({ _id: gone.userId }, { $set: { enabled: false } });
+      const cases: { cc: Record<string, unknown>; reason: string }[] = [
+        {
+          cc: { kind: "field", formKey: FORM_KEY, fieldKey: "approver" },
+          reason: "表單欄位 approver 沒填",
+        },
+        { cc: usersSource([gone]), reason: "人員條件沒有人符合" },
+        {
+          cc: { kind: "field", formKey: FORM_KEY, fieldKey: "approver" },
+          reason: "知會對象欄位屬於表單 other_form",
+        },
+      ];
+      for (const [index, { cc, reason }] of cases.entries()) {
+        sequence += 1;
+        const key = `overdue_cc_${String(sequence)}`;
+        await useWorkflow(world, key, {
+          steps: [usersStep("first", [reviewer], { cc })],
+        });
+        if (index === 2) {
+          // 檢查器擋得到別張表單;直接改已發布的版本,模擬送出時不檢查的情況
+          await world.connection
+            .collection("workflow_versions")
+            .updateOne(
+              { workflowKey: key, status: "published" },
+              { $set: { "steps.0.cc.formKey": "other_form" } },
+            );
+        }
+        const submitted = await submitLeave(world);
+        const instanceId = await latestInstanceId(submitted.id);
+        const warn = jest.spyOn(Logger.prototype, "warn");
+        await decideOn(world, reviewer, submitted.id, "APPROVE");
+        expect(warnedWith(warn, reason)).toBe(true);
+        warn.mockRestore();
+        const sent = await world.connection
+          .collection("notifications")
+          .countDocuments({ type: WORKFLOW_CC, refId: instanceId });
+        expect(sent).toBe(0);
+        const row = await submission(world, world.applicant, submitted.id);
+        expect(row.status).toBe("COMPLETED");
+      }
     });
 
     it("以某版為基底建流程(fork):逾時提醒、關卡知會、整個流程的知會都帶過去", async () => {

@@ -247,14 +247,14 @@
 
 - 設計器預設的通知對象是 `DEFAULT_OVERDUE_AUDIENCE`(權限 `system.workflows.blocked-page.reassign`)。
 - **檢查器**:N、M 不是正整數小時或 M ≤ N → `OVERDUE_INVALID`(`property: "overdue"` / `"overdue.audienceAfterHours"`)。通知對象與知會對象走審核者同一套檢查(`checkPeopleSource`):`AUDIENCE_INVALID`、`AUDIENCE_IN_SHARED`、`ROLE_NOT_IN_TENANT`、`ORG_NOT_IN_TENANT`、`USER_INVALID`、`FIELD_*`、`MANAGER_LEVEL_INVALID`、`ASSIGNEE_KIND_UNKNOWN`,`property` 指到 `overdue.audience…` / `cc…`;整個流程的知會沒有 `stepKey`(`property` 以 `cc` 開頭)。匯合節點帶了 `overdue` / `cc` 是 `JOIN_HAS_REVIEW_PROPS`。檢查器的表單 / 使用者目錄也收知會對象的 `field` 來源與指定的使用者。
-- **送出時檢查與綁定時檢查不看知會對象 / 通知對象**:執行時算不到人就不通知(知會對象的 `field` 來源指向別張表單 → 當作算不到人、`Logger.warn`)。
+- **送出時檢查與綁定時檢查不看知會對象 / 通知對象**:執行時算不到人就不通知,一律 `Logger.warn` 寫明原因(`audience-source.service.ts` 的 `emptySourceReason`:表單欄位沒填、表單的組織欄位沒填、人員條件沒人符合、找不到主管;知會對象的 `field` 來源指向別張表單;逾時第 2 級「符合的只有承辦人本人」)。
 - 受管定義:`definition` 多一個可選的 `cc`;`overdue` / `cc` 的 `null` 與省略同義(canonical 收斂,舊宣告的 hash 不變)。
 
 **逾時提醒**(`workflow-engine/workflow-overdue.service.ts`,`WorkflowOverdueService`):
 
 1. 計時在任務上(`workflow_tasks`):建任務時 `assignedAt` = 現在、`overdueLevel` = 0、`overdueDueAt` = `assignedAt` + N 小時(關卡沒開、或任務建出來就不是 `pending`(B5 自動通過)→ null)。推進同步投影時承辦人換了(改派)→ 三欄重設(`overdue-timer.ts`);被改派走的人不再收。
 2. 排程:`onModuleInit` 登記 `registerScheduledJob({ key: "workflow.overdue-reminders", every: "15m" })`,handler 呼叫 `sweep(now, 租戶們)`。每個租戶撈 `status = pending` 且 `overdueDueAt <= now` 的任務(依到期時點,一次最多 500 張,其餘下一輪)。
-3. **每張任務一個交易**:再讀一次(仍 `pending`、仍到期)→ 實例仍在跑且關卡仍進行中、這一關仍開著(否則 `overdueDueAt` 清成 null,不再排)→ 到 N 未通知 → 第 1 級給 `assigneeId`;到 M 未通知 → 第 2 級給通知對象(`resolveAudienceSource({ kind: "audience" })`,依這張單據代入動態組織;剔除審核者本人)→ 條件更新(條件含讀到的 `overdueLevel` 與 `assignedAt`)寫新級數與下一級到期時點(N → M → null)。排程晚到一次就過了 M 時兩級一起發。一張失敗只回復那一張、記 error log,`overdueDueAt` 在交易外往後延一個排程週期(15 分鐘)再試 —— 失敗的任務不會一直排在最前面、讓超過一批上限後的其他任務輪不到。每個租戶各自 try/catch,一個租戶出錯不中斷其他租戶。
+3. **每張任務一個交易**:再讀一次(仍 `pending`、仍到期)→ 實例仍在跑且關卡仍進行中、這一關仍開著(否則 `overdueDueAt` 清成 null,不再排)→ 到 N 未通知 → 第 1 級給 `assigneeId` 與派任計畫該項的 `delegatorIds`(代理承接時連被代理者一起提醒;改派後計畫清空 `delegatorIds`,只剩新承辦人;去重);到 M 未通知 → 第 2 級給通知對象(`resolveAudienceSource({ kind: "audience" })`,依這張單據代入動態組織;剔除承辦人本人;被代理者在名單內照收)→ 條件更新(條件含讀到的 `overdueLevel` 與 `assignedAt`)寫新級數與下一級到期時點(N → M → null)。排程晚到一次就過了 M 時兩級一起發。一張失敗只回復那一張、記 error log,`overdueDueAt` 在交易外往後延一個排程週期(15 分鐘)再試 —— 失敗的任務不會一直排在最前面、讓超過一批上限後的其他任務輪不到。每個租戶各自 try/catch,一個租戶出錯不中斷其他租戶。
 4. 不動任務狀態、關卡、實例(`editVersion` 不變)。通知 `workflow.overdue`(`params`:`subject`、`stepName`、`hours`),`dedupeKey` = `workflow.overdue:<taskId>:<assignedAt 毫秒>:<級數>` —— 規格的冪等鍵 `(taskId, level)` 以「這一次指派」為單位。
 
 **知會**(`workflow-engine/workflow-cc.service.ts`,`WorkflowCcService`):

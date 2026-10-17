@@ -24,7 +24,10 @@ import { NotificationService } from "../../notifications/notification.service";
 import { ScheduledJobRegistry } from "../../scheduled-jobs/scheduled-job-registry";
 import { systemContext } from "../tenant-directory.service";
 import { definitionOfVersion } from "../workflow-definition-input";
-import { AudienceSourceService } from "./audience-source.service";
+import {
+  AudienceSourceService,
+  emptySourceReason,
+} from "./audience-source.service";
 import type { InstanceRecord } from "./instance-writes";
 import { nextOverdueDueAt, overdueOf } from "./overdue-timer";
 import { StepEntryService } from "./step-entry.service";
@@ -46,7 +49,7 @@ const RETRY_DELAY_MS = OVERDUE_RETRY_DELAY_MS;
  *
  * | 情況                   | 結果                                                                 |
  * | ---------------------- | -------------------------------------------------------------------- |
- * | 超過 N 小時未處理      | 通知目前的審核者一次(第 1 級)                                        |
+ * | 超過 N 小時未處理      | 通知目前的審核者一次(第 1 級);代理承接時連被代理者(`delegatorIds`)一起 |
  * | 超過 M 小時未處理      | 通知「通知對象」一次(第 2 級);審核者不在名單裡(不重複收到)          |
  * | 任務改派               | 新的承辦人重新計時、從第 1 級開始(推進同步投影時重設,`overdue-timer.ts`) |
  * | 任務在排程跑之前已處理 | 不通知(只撈 `pending`,交易內再讀一次)                              |
@@ -186,7 +189,7 @@ export class WorkflowOverdueService implements OnModuleInit {
     };
     let level = task.overdueLevel;
     if (level < 1 && reached(0)) {
-      await this.notify(instance, task, [task.assigneeId], {
+      await this.notify(instance, task, reviewersOf(instance, task), {
         level: 1,
         hours: overdue.reviewerAfterHours,
         stepName: step.name,
@@ -241,21 +244,35 @@ export class WorkflowOverdueService implements OnModuleInit {
       : { overdue, name: step.name };
   }
 
-  /** 第 2 級的收件人:通知對象(依這張單據算的人員條件);審核者本人不重複收到。 */
+  /**
+   * 第 2 級的收件人:通知對象(依這張單據算的人員條件);承辦人本人不重複收到,被代理者在名單內照收。
+   * 送出 / 綁定時不檢查通知對象,算不到人就不通知、記 warn 寫明原因。
+   */
   private async audienceOf(
     instance: InstanceRecord,
     task: WorkflowTaskRecord,
     overdue: OverdueReminderDef,
   ): Promise<Types.ObjectId[]> {
+    const where = `任務 ${String(task._id)} 的逾時提醒(第 2 級)`;
     const context = await this.entries.submissionContextOf(instance);
     if (context === null) {
+      this.logger.warn(`${where}:實例沒有最上層組織,不通知`);
       return [];
     }
-    const audience = await this.sources.resolveAudienceSource(
-      { kind: "audience", audience: overdue.audience },
-      context,
-    );
-    return audience.filter((id) => !id.equals(task.assigneeId));
+    const source = { kind: "audience", audience: overdue.audience } as const;
+    const audience = await this.sources.resolveAudienceSource(source, context);
+    const recipients = audience.filter((id) => !id.equals(task.assigneeId));
+    if (recipients.length === 0) {
+      // 送出 / 綁定時不檢查通知對象:算不到人就不通知,但要記下原因
+      this.logger.warn(
+        `${where}:算不到通知對象(${
+          audience.length === 0
+            ? emptySourceReason(source, context)
+            : "符合的只有承辦人本人"
+        }),不通知`,
+      );
+    }
+    return recipients;
   }
 
   private async notify(
@@ -320,4 +337,26 @@ function messageOf(error: unknown): string {
   return error instanceof Error
     ? (error.stack ?? error.message)
     : String(error);
+}
+
+/**
+ * 第 1 級的收件人:目前承辦人,加上這張任務代理承接的被代理者(派任計畫該項的 `delegatorIds`,
+ * B15)。流程管理者改派後計畫清空 `delegatorIds`,就只剩新承辦人。去重:同一人只收一則。
+ */
+function reviewersOf(
+  instance: InstanceRecord,
+  task: WorkflowTaskRecord,
+): Types.ObjectId[] {
+  const item = instance.steps
+    .find((state) => state.stepKey === task.stepKey)
+    ?.plan.find((entry) => entry.taskKey === task.taskKey);
+  const seen = new Set<string>();
+  return [task.assigneeId, ...(item?.delegatorIds ?? [])].filter((id) => {
+    const key = String(id);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
