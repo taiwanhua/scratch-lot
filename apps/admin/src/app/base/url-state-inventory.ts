@@ -28,6 +28,7 @@ export const baseUrlStateInventory: UrlStateInventory = {
   "system.workflows.blocked-page": ["list"],
   "apply-center": ["tab", "list"],
   "apply-center.view-page": [],
+  "system.printers": ["tab", "list", "edit"],
 };
 
 /**

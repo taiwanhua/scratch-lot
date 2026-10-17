@@ -54,6 +54,7 @@ import {
   tenantTree,
 } from "@/test/msw/org-fixtures";
 import { orgWorld } from "@/test/msw/org-manager-handlers";
+import { printingWorld } from "@/test/msw/printing-handlers";
 import {
   candidates,
   grantedFixture,
@@ -286,6 +287,9 @@ export const mockHandlers = ({
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
     ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
+    // 印表機管理(底座規格第 6 章 B8):兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
+    // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
+    ...printingWorld().handlers,
   ];
 };
 

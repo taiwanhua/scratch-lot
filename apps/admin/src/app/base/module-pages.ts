@@ -25,6 +25,8 @@ import { ModuleManagerPage } from "@/pages/base/system/ModuleManagerPage/ModuleM
 import { MODULE_MANAGER_MODULE_KEY } from "@/pages/base/system/ModuleManagerPage/module-manager-permissions";
 import { OrgManagerPage } from "@/pages/base/system/OrgManagerPage/OrgManagerPage";
 import { ORG_MANAGER_MODULE_KEY } from "@/pages/base/system/OrgManagerPage/org-manager-permissions";
+import { LazyPrintersPage } from "@/pages/base/system/PrintersPage/lazy-printers-page";
+import { PRINTERS_MODULE_KEY } from "@/pages/base/system/PrintersPage/printers-permissions";
 import { RoleManagerPage } from "@/pages/base/system/RoleManagerPage/RoleManagerPage";
 import { ROLE_MANAGER_MODULE_KEY } from "@/pages/base/system/RoleManagerPage/role-manager-permissions";
 import { UserManagerPage } from "@/pages/base/system/UserManagerPage/UserManagerPage";
@@ -85,6 +87,8 @@ export const baseModulePages: ModulePageSource = {
     { key: WORKFLOWS_BLOCKED_PAGE_KEY, Page: LazyWorkflowBlockedPage },
     { key: APPLY_CENTER_MODULE_KEY, Page: LazyApplyCenterPage },
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
+    // 印表機管理(底座規格第 6 章 B8):懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)
+    { key: PRINTERS_MODULE_KEY, Page: LazyPrintersPage },
   ],
   // 三個示範表單模組(頂層 / 群組內 / 次群組內;Spec 6a §8「登記與客製」):四個 key 全用表單引擎的預設組裝;
   // 表單綁了流程時,詳情頁下方自動掛審核區塊(預設組裝含)

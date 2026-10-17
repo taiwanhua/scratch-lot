@@ -2739,5 +2739,213 @@
       "saveFailed": "Couldn't save. Please try again later",
       "loadFailed": "Couldn't load notification settings"
     }
+  },
+  "printers": {
+    "total": "{total} in total",
+    "tabs": "Printer management tabs",
+    "tabPrinters": "Printers",
+    "tabAgents": "Print agents",
+    "tabJobs": "Print log",
+    "newPrinter": "+ New printer",
+    "newAgent": "+ New print agent",
+    "feedback": {
+      "createSuccess": "Printer added",
+      "updateSuccess": "Printer saved"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to do this",
+      "NOT_FOUND": "Not found (it may be outside your scope, or no installer is available yet)",
+      "VALIDATION_FAILED": "Some fields are invalid. Please check the highlighted fields",
+      "CONFLICT": "This print agent is disabled and can't be paired again. Add a new print agent instead",
+      "UNEXPECTED": "Something went wrong. Please try again later"
+    },
+    "printerStatus": {
+      "disabled": "Disabled",
+      "agentOffline": "Offline",
+      "unknown": "Not reported",
+      "ok": "OK",
+      "paperOut": "Out of paper",
+      "offline": "Unreachable",
+      "agentOfflineHint": "The print agent is offline, so the printer status is unknown"
+    },
+    "enabledFilter": {
+      "all": "All",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "printers": {
+      "name": "Name",
+      "org": "Organization",
+      "address": "IP:Port",
+      "agent": "Print agent",
+      "isDefault": "Default",
+      "default": "Default",
+      "status": "Status",
+      "actions": "Actions",
+      "testPrint": "Test print",
+      "testPrintOf": "Test print \"{name}\"",
+      "edit": "Edit",
+      "editOf": "Edit \"{name}\"",
+      "orgFilter": "Organization",
+      "allOrgs": "All",
+      "statusFilter": "Status",
+      "empty": "No printers yet",
+      "tableAria": "Printers"
+    },
+    "printerForm": {
+      "createTitle": "New printer",
+      "editTitle": "Edit printer",
+      "org": "Organization",
+      "orgHint": "Only organizations with a print agent are listed; that agent prints for this printer",
+      "noAgentOrg": "No print agents yet. Add one in the Print agents tab first",
+      "name": "Name",
+      "host": "IP address",
+      "port": "Port",
+      "agent": "Print agent",
+      "paperWidth": "Paper width",
+      "paperWidthMm": "{width}mm",
+      "isDefault": "Set as this organization's default printer",
+      "enabled": "Enabled",
+      "fixedIpHint": "Reserve the IP on your router (bind the receipt printer's MAC to a fixed IP).",
+      "required": "Required",
+      "hostInvalid": "Enter the receipt printer's IP address",
+      "portInvalid": "Enter a number from 1 to 65535",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "agentStatus": {
+      "disabled": "Disabled",
+      "unpaired": "Waiting to pair",
+      "online": "Connected",
+      "offline": "Offline"
+    },
+    "testPage": {
+      "title": "Test page",
+      "large": "Large ABC 123",
+      "normal": "Normal ABC 123",
+      "small": "Small ABC 123",
+      "bold": "Bold ABC 123",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "alignRight": "Right",
+      "rowLabel": "Label",
+      "rowValue": "Value",
+      "tableItem": "Item",
+      "tableQty": "Qty",
+      "tableAmount": "Amount",
+      "tableItemValue": "Sample item",
+      "longText": "Line wrapping: this line is deliberately long to check that text longer than one line wraps onto the next line instead of being cut off.",
+      "qrCaption": "Scan to open printer management",
+      "cut": "Cut"
+    },
+    "testPrint": {
+      "title": "Test print · {name}",
+      "sending": "Sending the test page…",
+      "sent": "Sent to the printer, waiting for the result…",
+      "printed": "Test page printed. Check the font sizes, alignment, barcode, QR code and paper cut.",
+      "paperOut": "Failed: out of paper. Refill the paper and press [Test print] again.",
+      "agentOffline": "Failed: print agent offline (last seen {lastSeenAt}).",
+      "agentOfflineNever": "Failed: print agent offline (never connected).",
+      "failed": "Failed: {reason}.",
+      "rejected": "Not sent: {reason}",
+      "retry": "Retry",
+      "close": "Close"
+    },
+    "jobError": {
+      "AGENT_OFFLINE": "print agent offline",
+      "AGENT_DISABLED": "print agent disabled",
+      "NO_RESULT": "no print result received",
+      "PAPER_OUT": "out of paper",
+      "PRINTER_OFFLINE": "receipt printer unreachable",
+      "OTHER": "other reason"
+    },
+    "jobStatus": {
+      "PENDING": "Waiting",
+      "SENT": "Sent",
+      "PRINTED": "Printed",
+      "FAILED": "Failed",
+      "failedWith": "Failed: {reason}"
+    },
+    "jobs": {
+      "createdAt": "Time",
+      "document": "Document",
+      "printer": "Printer",
+      "printNo": "Print no.",
+      "printNoValue": "#{no}",
+      "reprintNo": "Reprint #{no}",
+      "status": "Result",
+      "requestedBy": "Requested by",
+      "testPage": "Test page",
+      "printerFilter": "Printer",
+      "allPrinters": "All",
+      "statusFilter": "Result",
+      "allStatuses": "All",
+      "empty": "No print records yet",
+      "tableAria": "Print log"
+    },
+    "agents": {
+      "name": "Print agent",
+      "org": "Organization",
+      "status": "Status",
+      "lastSeenAt": "Last seen",
+      "version": "Version",
+      "updateAvailable": "Update",
+      "actions": "Actions",
+      "resetPairing": "Pair again",
+      "resetPairingOf": "Pair \"{name}\" again",
+      "disable": "Disable",
+      "disableOf": "Disable \"{name}\"",
+      "showDisabled": "Show disabled",
+      "empty": "No print agents yet",
+      "tableAria": "Print agents"
+    },
+    "download": {
+      "title": "Print agent",
+      "titleWithVersion": "Print agent · latest version {version}",
+      "description": "Install it on a store computer that is on every day (it can share the checkout computer); one per store. The computer and the receipt printer must be on the same local network, with sleep turned off.",
+      "notPublished": "No installer is available yet. Please contact your system administrator.",
+      "button": "Download {name}",
+      "buttonSuggested": "Download {name} (recommended)",
+      "windowsX64": "Windows x64",
+      "linuxX64": "Linux x64",
+      "linuxArm64": "Linux arm64",
+      "macosArm64": "macOS arm64"
+    },
+    "pairing": {
+      "serverUrl": "Server URL",
+      "code": "Pairing code",
+      "copy": "Copy",
+      "copyOf": "Copy {label}",
+      "copied": "{label} copied",
+      "copyFailed": "Couldn't copy. Please select the text and copy it manually",
+      "hint": "Valid for 10 minutes (until {expiresAt}). Run the installer on the store computer and paste the server URL and pairing code."
+    },
+    "createAgent": {
+      "title": "New print agent",
+      "org": "Organization",
+      "name": "Name",
+      "nameHint": "e.g. Checkout computer",
+      "required": "Required",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "done": "Done",
+      "success": "Print agent added"
+    },
+    "resetPairing": {
+      "title": "Pair \"{name}\" again",
+      "body": "The old key stops working immediately and this computer must pair again with a new pairing code. Printer settings are kept.",
+      "doneBody": "Run the installer again on this computer and paste the server URL and the new pairing code.",
+      "confirm": "Pair again",
+      "cancel": "Cancel",
+      "done": "Done",
+      "success": "New pairing code created"
+    },
+    "disableAgent": {
+      "title": "Disable \"{name}\"?",
+      "body": "Its key stops working immediately, its printers can no longer be chosen for printing, and waiting or sent print jobs are marked as failed. A disabled print agent can't be enabled again; to keep printing, add a new print agent and move the printers to it.",
+      "confirm": "Disable",
+      "cancel": "Cancel",
+      "success": "Print agent disabled"
+    }
   }
 }

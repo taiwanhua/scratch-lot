@@ -414,6 +414,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "個人設定偏好分頁的 `t(`channels.${channel}`)`,channel 是 api `myNotificationPreferences` 回的管道 key(`in-app`、`email`;沒登記文案的管道顯示 key 本身)",
   },
+  {
+    key: "admin.printers.jobStatus.",
+    reason:
+      "`PrintJobStatusTag` 的 `t(job.status)` 與列印紀錄的結果篩選,值是 GraphQL 的 `PrintJobStatus` 列舉",
+  },
+  {
+    key: "admin.printers.jobError.",
+    reason:
+      "`tJobError(job.error)`(列印紀錄的結果、測試列印的失敗原因),值是 GraphQL 的 `PrintJobError` 列舉",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

@@ -2739,5 +2739,213 @@
       "saveFailed": "儲存失敗,請稍後再試",
       "loadFailed": "通知設定載入失敗"
     }
+  },
+  "printers": {
+    "total": "共 {total} 筆",
+    "tabs": "印表機管理分頁",
+    "tabPrinters": "印表機",
+    "tabAgents": "代理程式",
+    "tabJobs": "列印紀錄",
+    "newPrinter": "+ 新增印表機",
+    "newAgent": "+ 新增代理程式",
+    "feedback": {
+      "createSuccess": "已新增印表機",
+      "updateSuccess": "已儲存印表機"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這項操作的權限",
+      "NOT_FOUND": "找不到這筆資料(可能不在你的管理範圍內,或還沒有可下載的安裝檔)",
+      "VALIDATION_FAILED": "資料未通過驗證,請檢查標示的欄位",
+      "CONFLICT": "這個代理程式已停用,不能重新配對;要再用請新增代理程式",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "printerStatus": {
+      "disabled": "已停用",
+      "agentOffline": "離線",
+      "unknown": "未回報",
+      "ok": "正常",
+      "paperOut": "缺紙",
+      "offline": "連不上",
+      "agentOfflineHint": "代理程式離線,無法得知印表機狀態"
+    },
+    "enabledFilter": {
+      "all": "全部",
+      "enabled": "啟用中",
+      "disabled": "已停用"
+    },
+    "printers": {
+      "name": "名稱",
+      "org": "所屬組織",
+      "address": "IP:Port",
+      "agent": "代理程式",
+      "isDefault": "預設",
+      "default": "預設",
+      "status": "狀態",
+      "actions": "操作",
+      "testPrint": "測試列印",
+      "testPrintOf": "測試列印「{name}」",
+      "edit": "編輯",
+      "editOf": "編輯「{name}」",
+      "orgFilter": "所屬組織",
+      "allOrgs": "全部",
+      "statusFilter": "狀態",
+      "empty": "還沒有印表機",
+      "tableAria": "印表機"
+    },
+    "printerForm": {
+      "createTitle": "新增印表機",
+      "editTitle": "編輯印表機",
+      "org": "所屬組織",
+      "orgHint": "只列有代理程式的組織;印表機由該組織的代理程式負責列印",
+      "noAgentOrg": "還沒有代理程式:請先到「代理程式」分頁新增",
+      "name": "名稱",
+      "host": "IP 位址",
+      "port": "Port",
+      "agent": "代理程式",
+      "paperWidth": "紙寬",
+      "paperWidthMm": "{width}mm",
+      "isDefault": "設為這個組織的預設印表機",
+      "enabled": "啟用",
+      "fixedIpHint": "建議在路由器保留 IP(把收據機 MAC 綁定固定 IP)。",
+      "required": "必填",
+      "hostInvalid": "請填收據機的 IP 位址",
+      "portInvalid": "請填 1–65535 的數字",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "agentStatus": {
+      "disabled": "已停用",
+      "unpaired": "等待配對",
+      "online": "已連線",
+      "offline": "離線"
+    },
+    "testPage": {
+      "title": "測試頁",
+      "large": "大字 ABC 123",
+      "normal": "一般字 ABC 123",
+      "small": "小字 ABC 123",
+      "bold": "粗體字 ABC 123",
+      "alignLeft": "靠左",
+      "alignCenter": "置中",
+      "alignRight": "靠右",
+      "rowLabel": "左欄",
+      "rowValue": "右欄",
+      "tableItem": "品項",
+      "tableQty": "數量",
+      "tableAmount": "金額",
+      "tableItemValue": "示範品項",
+      "longText": "長文字換行:這一行故意寫得很長,用來確認超過一行約 16 個中文字時會自動換到下一行,不會被截斷。",
+      "qrCaption": "掃描開啟印表機管理",
+      "cut": "切紙"
+    },
+    "testPrint": {
+      "title": "測試列印 · {name}",
+      "sending": "正在送出測試頁…",
+      "sent": "已送到印表機,等待列印結果…",
+      "printed": "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
+      "paperOut": "失敗:缺紙。補紙後再按一次 [測試列印]。",
+      "agentOffline": "失敗:代理程式離線(最後連線 {lastSeenAt})。",
+      "agentOfflineNever": "失敗:代理程式離線(還沒連線過)。",
+      "failed": "失敗:{reason}。",
+      "rejected": "沒有送出:{reason}",
+      "retry": "重試",
+      "close": "關閉"
+    },
+    "jobError": {
+      "AGENT_OFFLINE": "代理程式離線",
+      "AGENT_DISABLED": "代理程式已停用",
+      "NO_RESULT": "未收到列印結果",
+      "PAPER_OUT": "缺紙",
+      "PRINTER_OFFLINE": "連不上收據機",
+      "OTHER": "其他原因"
+    },
+    "jobStatus": {
+      "PENDING": "等待中",
+      "SENT": "已送出",
+      "PRINTED": "已印出",
+      "FAILED": "失敗",
+      "failedWith": "失敗:{reason}"
+    },
+    "jobs": {
+      "createdAt": "時間",
+      "document": "單據",
+      "printer": "印表機",
+      "printNo": "次數",
+      "printNoValue": "第 {no} 次",
+      "reprintNo": "補印 第 {no} 次",
+      "status": "結果",
+      "requestedBy": "操作者",
+      "testPage": "測試頁",
+      "printerFilter": "印表機",
+      "allPrinters": "全部",
+      "statusFilter": "結果",
+      "allStatuses": "全部",
+      "empty": "還沒有列印紀錄",
+      "tableAria": "列印紀錄"
+    },
+    "agents": {
+      "name": "代理程式",
+      "org": "所屬組織",
+      "status": "狀態",
+      "lastSeenAt": "最後連線",
+      "version": "版本",
+      "updateAvailable": "請更新",
+      "actions": "操作",
+      "resetPairing": "重新配對",
+      "resetPairingOf": "重新配對「{name}」",
+      "disable": "停用",
+      "disableOf": "停用「{name}」",
+      "showDisabled": "顯示已停用",
+      "empty": "還沒有代理程式",
+      "tableAria": "代理程式"
+    },
+    "download": {
+      "title": "列印代理程式",
+      "titleWithVersion": "列印代理程式 · 最新版本 {version}",
+      "description": "裝在店內每天開著的電腦上(可以和收銀共用同一台);一家店只需要一個。電腦和收據機要在同一個區域網路,並關閉睡眠。",
+      "notPublished": "還沒有可下載的安裝檔,請洽系統管理員。",
+      "button": "下載 {name}",
+      "buttonSuggested": "下載 {name}(建議)",
+      "windowsX64": "Windows x64",
+      "linuxX64": "Linux x64",
+      "linuxArm64": "Linux arm64",
+      "macosArm64": "macOS arm64"
+    },
+    "pairing": {
+      "serverUrl": "伺服器網址",
+      "code": "配對碼",
+      "copy": "複製",
+      "copyOf": "複製{label}",
+      "copied": "已複製{label}",
+      "copyFailed": "複製失敗,請手動選取文字複製",
+      "hint": "10 分鐘內有效(到 {expiresAt})。在店內電腦執行安裝程式,貼上伺服器網址與配對碼即可完成。"
+    },
+    "createAgent": {
+      "title": "新增代理程式",
+      "org": "所屬組織",
+      "name": "名稱",
+      "nameHint": "例:櫃台電腦",
+      "required": "必填",
+      "cancel": "取消",
+      "submit": "建立",
+      "done": "完成",
+      "success": "已新增代理程式"
+    },
+    "resetPairing": {
+      "title": "重新配對「{name}」",
+      "body": "舊的金鑰會立即失效,這台電腦要用新的配對碼重新配對;印表機設定保留。",
+      "doneBody": "在這台電腦重新執行安裝程式,貼上伺服器網址與新的配對碼。",
+      "confirm": "重新配對",
+      "cancel": "取消",
+      "done": "完成",
+      "success": "已產生新的配對碼"
+    },
+    "disableAgent": {
+      "title": "停用「{name}」?",
+      "body": "停用後金鑰立即失效,旗下的印表機不能再選來列印,等待中與已送出的列印工作都會標為失敗。停用後無法再啟用;要再用請新增代理程式,再把印表機改掛過去。",
+      "confirm": "停用",
+      "cancel": "取消",
+      "success": "已停用代理程式"
+    }
   }
 }
