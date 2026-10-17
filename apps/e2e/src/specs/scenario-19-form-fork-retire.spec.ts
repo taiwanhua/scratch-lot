@@ -107,7 +107,8 @@ test("劇本 19:以分派來的表單為基底建客製表單並發布;退役目
   await clickAndWaitForOperation(
     page,
     pageArea(page).getByRole("button", { name: "送出" }),
-    "SubmitFormSubmission",
+    // 新增頁還沒存過草稿:建立與送出是同一個請求(useFormDraft 的 createAndSubmit)
+    "CreateAndSubmitFormSubmission",
   );
   await page.waitForURL((url) => url.pathname.startsWith(DEMO_FORM_VIEW_ROUTE));
 

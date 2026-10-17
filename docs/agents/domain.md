@@ -56,7 +56,7 @@ concepts 讀完之後,接著看「規則長成程式之後的樣子」。示範�
 然後:
 
 1. **[module-scaffold](./module-scaffold.md)**:從上面抽出來的藍本:要動哪些檔、照什麼順序、每一步的正本;表單模組走同檔的「表單模組路線」
-2. **[權限測試劇本](../testing/permission-scenarios.md)**:24 條劇本,每條標明用哪一頁、哪個帳號、什麼步驟、預期什麼;新模組做完拿它自檢
+2. **[權限測試劇本](../testing/permission-scenarios.md)**:29 條劇本,每條標明用哪一頁、哪個帳號、什麼步驟、預期什麼;新模組做完拿它自檢
 
 底座示範頁在 `apps/admin/src/pages/base/demo/`:示範模組1 / 2 各一組頁面(`SampleOne*` / `SampleTwo*`),共用 CRUD 模板在 `apps/admin/src/components/base/crud/`。示範表單沒有專屬頁面,在 `app/base/module-pages.ts` 的 `forms` 宣告,由固定入口 `app/module-pages.tsx` 展開引擎四頁與 options。前端要動手之前先讀 `docs/concepts/frontend-architecture.md` 與 `DemoModuleConfig` 的逐項 JSDoc(前端藍本的規格)。
 
