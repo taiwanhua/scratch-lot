@@ -14,6 +14,7 @@ import {
 } from "../../auth/test-support/auth-app";
 import { ok } from "../../forms/test-support/form-fixtures";
 import {
+  LIFECYCLE_BLOCKED_CODE,
   lifecycleProbe,
   resetLifecycleProbe,
 } from "../test-support/lifecycle-fixture";
@@ -60,6 +61,7 @@ interface RawEvent {
   taskKey: string | null;
   userId: unknown;
   reason: string | null;
+  code?: string | null;
 }
 
 interface RawInstance {
@@ -335,7 +337,44 @@ describe("每一關指定組織跳過與自動通過", () => {
       expect(guardsCalled()).not.toContain("beforeApprove");
     });
 
-    it("自動通過被守門擋下 → 送出照常成功,停在這一關等人處理(任務留給他)", async () => {
+    it("申請人的自動通過被守門擋下 → 送出照常成功;照一般規則剔除申請人、派給其他審核者;時間軸記原因與錯誤碼", async () => {
+      await bindNew({
+        steps: [
+          usersStep("first", [world.applicant, staff(0)], {
+            autoApprove: { applicant: true },
+          }),
+        ],
+      });
+      lifecycleProbe.blockOn = "beforeApprove";
+      const submitted = await submitLeave(world);
+      expect(submitted.status).toBe("REVIEWING");
+      const instance = await latestInstance(submitted.id);
+      const first = stepIn(instance, "first");
+      expect(first.status).toBe("active");
+      expect(first.plan.map((item) => String(item.assigneeId))).toEqual([
+        String(staff(0).userId),
+      ]);
+      expect(first.decisions).toEqual([]);
+      expect(eventsOf(instance, "approved")).toEqual([]);
+      expect(eventsOf(instance, "auto_approve_blocked")).toEqual([
+        expect.objectContaining({
+          stepKey: "first",
+          reason: "auto_applicant",
+          code: LIFECYCLE_BLOCKED_CODE,
+        }),
+      ]);
+      expect(
+        String(eventsOf(instance, "auto_approve_blocked")[0]?.userId),
+      ).toBe(String(world.applicant.userId));
+      expect(events()).toEqual(["submitted"]);
+      const statuses = await taskStatuses(
+        world.connection,
+        String(instance._id),
+      );
+      expect(statuses).toEqual({ "first-1": "pending" });
+    });
+
+    it("只有申請人、自動通過被守門擋下 → 剔除後沒人,該關阻擋(流程管理者新增審核者)", async () => {
       await bindNew({
         steps: [
           usersStep("first", [world.applicant], {
@@ -347,16 +386,14 @@ describe("每一關指定組織跳過與自動通過", () => {
       const submitted = await submitLeave(world);
       expect(submitted.status).toBe("REVIEWING");
       const instance = await latestInstance(submitted.id);
-      const first = stepIn(instance, "first");
-      expect(first.status).toBe("active");
-      expect(first.decisions).toEqual([]);
-      expect(eventsOf(instance, "approved")).toEqual([]);
-      expect(events()).toEqual(["submitted"]);
-      const statuses = await taskStatuses(
-        world.connection,
-        String(instance._id),
-      );
-      expect(statuses).toEqual({ "first-1": "pending" });
+      expect(stepIn(instance, "first").plan).toEqual([]);
+      expect(instance.status).toBe("blocked");
+      expect(instance.history.slice(-2).map((event) => event.kind)).toEqual([
+        "auto_approve_blocked",
+        "blocked",
+      ]);
+      const row = await submission(world, world.applicant, submitted.id);
+      expect(row.blocked).toBe(true);
     });
 
     it("審核者已在這一輪更早的關卡核准過 → 多人會簽只記他那一票,其他人照常審核", async () => {

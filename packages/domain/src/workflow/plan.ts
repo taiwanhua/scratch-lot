@@ -88,6 +88,11 @@ export interface AutoApproval {
   reason: AutoApproveReason;
 }
 
+/** B5 自動通過被 `beforeApprove` 擋下的一位(`code` = 專案錯誤碼;時間軸記 `auto_approve_blocked`)。 */
+export interface BlockedAutoApproval extends AutoApproval {
+  code: string;
+}
+
 /** 某關的所有上游關卡(沿入線往回走到起點;不含自己)。 */
 function upstreamStepKeys(
   definition: WorkflowDefinition,
@@ -136,26 +141,8 @@ export function priorApproverIds(
 }
 
 /**
- * 申請人要不要留在這一關的計畫裡(預設剔除,不能自審):開了 `applicant`,或開了 `priorApprover` 且
- * 申請人在這一輪更早的關卡已有記在他名下的核准(例:前一關 B5「申請人是審核者」自動通過)。
- * 留下的申請人若自動通過被守門擋下,任務照常留給他處理。
- */
-export function keepsApplicant(
-  definition: WorkflowDefinition,
-  instance: Pick<InstanceSnapshot, "steps" | "history" | "createdBy">,
-  step: Pick<ReviewStepDef, "key" | "autoApprove">,
-): boolean {
-  if (step.autoApprove?.applicant === true) {
-    return true;
-  }
-  return (
-    step.autoApprove?.priorApprover === true &&
-    priorApproverIds(definition, instance, step.key).has(instance.createdBy)
-  );
-}
-
-/**
- * B5 自動通過的候選人(還沒經守門;api 依序跑 `runApproveGuard`,擋下的留給他照常審核):
+ * B5 自動通過的候選人(還沒經守門;api 依序以本人身分跑 `checkApproveGuard`,結果放進 `StepEntry` 的
+ * `autoApprovals` / `blockedAutoApprovals`):
  * - 申請人在名單裡:開了 `applicant` → `auto_applicant`;否則開了 `priorApprover` 且他已在前關核准過 →
  *   `auto_prior_approver`
  * - 其他人:開了 `priorApprover` 且已在前關核准過 → `auto_prior_approver`
@@ -189,7 +176,7 @@ export function autoApprovalCandidates(
 
 /**
  * 派任計畫:解析到的審核者去重、剔除申請人(不能自審),每人一項,`taskKey` 依序編。
- * `keepApplicant`(`keepsApplicant`:B5 自動通過可能記在申請人名下)時申請人留在計畫裡。
+ * `keepApplicant`(申請人的 B5 自動通過**成立**,已過守門)時申請人留在計畫裡。
  * 剔除後為空 → 空陣列(呼叫端依來源決定:`manager` 往上一層在解析時就做完了,其餘阻擋)。
  */
 export function buildPlan(

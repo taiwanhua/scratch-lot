@@ -181,6 +181,7 @@ export class WorkflowPresenter {
         comment: event.comment,
         result: event.result,
         reason: event.reason ?? null,
+        code: event.code ?? null,
       })),
       outcome: instance.outcome
         ? {

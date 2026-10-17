@@ -91,6 +91,7 @@ export function historyEventOf(event: {
   comment?: string | null;
   result?: NotifiedResult | null;
   reason?: HistoryReason | null;
+  code?: string | null;
 }): HistoryEvent {
   return {
     at: event.at,
@@ -102,6 +103,7 @@ export function historyEventOf(event: {
     comment: event.comment ?? null,
     result: event.result ?? null,
     reason: event.reason ?? null,
+    code: event.code ?? null,
   };
 }
 
@@ -178,6 +180,7 @@ export function historyEventDocument(
     comment: event.comment ?? null,
     result: event.result ?? null,
     reason: event.reason ?? null,
+    code: event.code ?? null,
   };
 }
 

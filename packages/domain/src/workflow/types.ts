@@ -248,6 +248,7 @@ export const HISTORY_KINDS = [
   "notified",
   "superseded",
   "advance_retried",
+  "auto_approve_blocked",
 ] as const;
 
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
@@ -256,6 +257,7 @@ export type HistoryKind = (typeof HISTORY_KINDS)[number];
  * 歷程事件的原因(時間軸顯示「是哪一項成立」):
  * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件)
  * - `approved`:`auto_applicant`(申請人是審核者,自動通過)/ `auto_prior_approver`(已在前關核准,自動通過)
+ * - `auto_approve_blocked`(B5 自動通過被 `beforeApprove` 擋下):同上兩個值,表示是哪一種自動通過沒成立
  *
  * 其他事件與人按的核准沒有原因(null)。
  */
@@ -292,6 +294,8 @@ export interface HistoryEvent {
   result?: NotifiedResult | null;
   /** 跳過 / 自動通過的原因(見 `HISTORY_REASONS`);其他 null。 */
   reason?: HistoryReason | null;
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
+  code?: string | null;
 }
 
 /** 全案終局採用的那一筆決定(只能從 null 寫成有值一次)。 */

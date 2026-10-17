@@ -186,9 +186,9 @@
   1. `skipOrgs`:比對修訂 `ctx.orgIds`(送出當下的所屬組織全部,`org_user` 直接關聯)與名單;`includeDescendants` 時讀那些組織的 `ancestors`。快照沒有 `orgIds`(舊修訂)→ 不成立。
   2. `skipWhen`:照舊。
   3. 任一成立 → `{ kind: "skip", reason }`,`step_skipped` 帶 `reason`(`skip_orgs` / `skip_condition`,兩項都成立記 `skip_orgs`);不經 `beforeApprove`,推進照常觸發 `stepPassed(skipped: true)`。
-  4. 否則解析審核者 → domain `autoApprovalCandidates` 列候選 → 逐位以**本人**的操作者上下文(`OperatorContextService.resolve`,單據組織為目前組織)跑 `FormLifecycleService.checkApproveGuard`(同一個 `beforeApprove`,擋下以回傳值表示,不拋)。通過的放進 `autoApprovals`;`any` 一位通過就停。
+  4. 否則解析審核者 → domain `autoApprovalCandidates` 列候選 → 逐位以**本人**的操作者上下文(`OperatorContextService.resolve`,單據組織為目前組織)跑 `FormLifecycleService.checkApproveGuard`(同一個 `beforeApprove`,擋下以回傳值表示,不拋)。通過的放進 `autoApprovals`、擋下的放進 `blockedAutoApprovals`(帶專案錯誤碼);`any` 一位通過就停。
 - **寫入**(domain `advance` 列 5):進關的同一次 CAS 寫計畫與自動通過的決定(`decisions` 整份 + 每筆 `approved` 事件帶 `reason`:`auto_applicant` / `auto_prior_approver`),接著建那幾位的任務(投影 = `approved`,不寄「有新任務」)。之後照判斷表:`any` 下一輪列 4 完成、`all` 等其他人。
-- `keepsApplicant`:開了 `applicant`,或開了 `priorApprover` 且申請人在上游已有核准 → 申請人留在計畫(`buildPlan` 的 `keepApplicant`);被守門擋下時任務留給他。其餘情況照舊剔除申請人。
+- 申請人**只有在自動通過成立(過了守門)時**才留在計畫(`buildPlan` 的 `keepApplicant`);被擋下就照舊剔除,剔除後沒人 → 列 5 的阻擋。其他人被擋下照常留待審任務。每位被擋下的在同一次 CAS 記一筆 `auto_approve_blocked`(`userId`、`reason` = `auto_applicant` / `auto_prior_approver`、`code` = 專案錯誤碼;GraphQL `WorkflowHistoryEventModel.code`),時間軸以 `admin.approval.timeline.autoApproveBlocked.*` + `admin.lifecycle.<碼>`(沒有就用通用句)顯示。
 - 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(B5 自動記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
 - 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
 - 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
