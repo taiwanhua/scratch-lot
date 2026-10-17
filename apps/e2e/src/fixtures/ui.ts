@@ -352,6 +352,13 @@ export async function orgTreeRootLabels(page: Page): Promise<string[]> {
 /** 編輯彈窗的「上層組織」下拉(`admin.orgManager.form.parent`;選項文字 = 含祖先的完整路徑)。 */
 export const MOVE_TARGET_SELECT = "上層組織(搬移)";
 
+/**
+ * 租戶內的人編輯租戶頂層時,「上層組織」下拉的位置改放的提示(`admin.orgManager.actions.tenantTopHint`;
+ * 與停用 / 刪除按鈕的說明同一句)。
+ */
+export const TENANT_TOP_HINT =
+  "頂層組織不可由組織內的人停用、搬移或刪除,需要時請聯絡系統管理員";
+
 /** 「上層組織」下拉的第一個選項 = 不搬(`admin.orgManager.form.parentUnset`)。 */
 export const MOVE_TARGET_UNSET = "不變更";
 
