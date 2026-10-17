@@ -12,6 +12,7 @@ import type {
   PrintAgentTicketResponse,
   PrinterStatus,
 } from "@repo/domain/printing";
+import { REALTIME_PING, REALTIME_PONG } from "@repo/domain/realtime";
 
 import type { AgentApi } from "../api-client/api-client";
 import type { PrintOutcome, PrinterTransport } from "../escpos/transport";
@@ -247,14 +248,27 @@ export class RecordingTransport implements PrinterTransport {
 }
 
 /** 假 WebSocket:測試從外面觸發 open / message / close。 */
+/**
+ * 假的即時通道連線。像真的 Durable Object 一樣對 `REALTIME_PING` 自動回 pong(`autoPong = false` 模擬半開連線:
+ * 送得出去但沒有回應);ping 不記在 `sent`,只算進 `pings`,`sent` 只有其他訊息。
+ */
 export class FakeSocket implements AgentSocket {
   readonly sent: string[] = [];
+  pings = 0;
+  autoPong = true;
   closed: { code?: number } | null = null;
   private readonly listeners = new Map<string, ((event: never) => void)[]>();
 
   constructor(readonly url: string) {}
 
   send(data: string): void {
+    if (data === REALTIME_PING) {
+      this.pings += 1;
+      if (this.autoPong) {
+        this.emit("message", { data: REALTIME_PONG });
+      }
+      return;
+    }
     this.sent.push(data);
   }
 

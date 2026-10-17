@@ -111,6 +111,14 @@ const sameBoard = (a: RealtimeBoard | null, b: RealtimeBoard | null) =>
  * - **重連退避**:斷線後依 1 / 2 / 5 / 10 / 30 秒重連;憑證過期被關(4001)立即重拿憑證重連;
  *   換發被拒(切換到別的租戶、憑證無效)→ 關掉重連
  * - **降級與補抓**:不是 `live` 的期間狀態為 `slow`(輪詢由 provider 做);斷線後重新連上先 `onCatchUp`
+ * - **不送 ping / pong**(代理程式的 `RealtimeLink` 才送;2026-10-17 評估,底座規格第 4 章「降級」):
+ *   ① 背景分頁的計時器會被瀏覽器節流,分頁也可能被凍結(Chrome 的分頁凍結 / 省記憶體、手機瀏覽器切到背景);
+ *   恢復時「pong 逾時」計時與已到的 pong 誰先跑不一定,會誤判斷線,每個背景分頁回前景都重連 + 補抓一次。
+ *   ② 每個開著的分頁每天約 2,880 則 ping;auto-response 不計時長,但訊息若照「每 20 則算 1 次請求」計,
+ *   分頁數 × 使用者數會吃掉 Durable Object 的免費額度;代理程式一家店只有一台。
+ *   ③ 後台半開時傷害小:分頁回到前景時 TanStack Query 照預設重抓,列印結果連著即時通道時也有 2 分 5 秒的補查;
+ *   代理程式則無人看管、連著時不輪詢,工作 2 分鐘沒被認領就標「代理程式離線」。
+ *   Durable Object 回的 `pong` 不會出現在這條連線上(不送 ping),收到也不理。
  */
 export class RealtimeConnection {
   private readonly createSocket: (url: string) => RealtimeSocket;
@@ -388,7 +396,8 @@ export class RealtimeConnection {
         }
         return;
       }
-      case "unsubscribed": {
+      case "unsubscribed":
+      case "pong": {
         return;
       }
       case "rejected": {

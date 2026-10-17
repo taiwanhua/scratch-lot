@@ -1,11 +1,14 @@
 import { describe, expect, it } from "@jest/globals";
 
 import {
+  REALTIME_PING,
+  REALTIME_PONG,
   isRealtimePublishRequest,
   parseRealtimeClientMessage,
   signRealtimePublish,
   verifyRealtimePublish,
 } from "./protocol";
+import { REALTIME_PING_INTERVAL_MS, REALTIME_PONG_TIMEOUT_MS } from "./timing";
 import { isRealtimeSignal, isRealtimeTopic } from "./topic";
 
 describe("信號只有類型與編號", () => {
@@ -132,5 +135,22 @@ describe("連線上的訊息", () => {
     expect(
       parseRealtimeClientMessage('{"op":"subscribe","topic":"x"}'),
     ).toBeNull();
+  });
+});
+
+describe("偵測半開連線的 ping / pong", () => {
+  it("與其他訊息同一格式({ op }),在 Cloudflare 的 2,048 字元上限內", () => {
+    expect(JSON.parse(REALTIME_PING)).toEqual({ op: "ping" });
+    expect(JSON.parse(REALTIME_PONG)).toEqual({ op: "pong" });
+    expect(REALTIME_PING.length).toBeLessThanOrEqual(2048);
+    expect(REALTIME_PONG.length).toBeLessThanOrEqual(2048);
+  });
+
+  it("ping 不是一般的客戶端訊息(由 auto-response 處理,不進 webSocketMessage)", () => {
+    expect(parseRealtimeClientMessage(REALTIME_PING)).toBeNull();
+  });
+
+  it("pong 逾時短於送 ping 的間隔:同一時間最多一個 ping 在等回應", () => {
+    expect(REALTIME_PONG_TIMEOUT_MS).toBeLessThan(REALTIME_PING_INTERVAL_MS);
   });
 });

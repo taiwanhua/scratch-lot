@@ -2,10 +2,17 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   REALTIME_CLOSE_CODES,
+  REALTIME_PING_INTERVAL_MS,
+  REALTIME_PONG_TIMEOUT_MS,
   RECONNECT_BACKOFF_MS,
 } from "@repo/domain/realtime";
 
-import { FakeSocket, ManualTimers, freshSecret } from "../test-support/fakes";
+import {
+  FakeSocket,
+  ManualTimers,
+  MemoryLogger,
+  freshSecret,
+} from "../test-support/fakes";
 import {
   type AgentTicket,
   DISABLED_RETRY_MS,
@@ -15,7 +22,10 @@ import {
   type RealtimeLinkStatus,
 } from "./realtime-link";
 
-function setup(tickets: (AgentTicket | null | Error)[] = []) {
+function setup(
+  tickets: (AgentTicket | null | Error)[] = [],
+  logger?: MemoryLogger,
+) {
   const timers = new ManualTimers();
   const sockets: FakeSocket[] = [];
   const statuses: RealtimeLinkStatus[] = [];
@@ -39,6 +49,7 @@ function setup(tickets: (AgentTicket | null | Error)[] = []) {
     },
     onSignal: (signal) => signals.push(signal),
     onStatus: (status) => statuses.push(status),
+    logger,
     timers,
     createSocket: (url) => {
       const socket = new FakeSocket(url);
@@ -195,5 +206,67 @@ describe("代理程式的即時通道連線", () => {
     await timers.advance(RECONNECT_BACKOFF_MS[0] ?? 0);
     expect(sockets).toHaveLength(1);
     link.stop();
+  });
+
+  it("連上後每 30 秒送 ping;pong 正常時不重連", async () => {
+    const { link, timers, sockets, last, statuses } = setup();
+    link.start();
+    await timers.advance(0);
+    expect(last().pings).toBe(0);
+    last().open();
+    await timers.advance(REALTIME_PING_INTERVAL_MS - 1);
+    expect(last().pings).toBe(0);
+    await timers.advance(1);
+    expect(last().pings).toBe(1);
+    await timers.advance(REALTIME_PING_INTERVAL_MS * 4);
+    expect(last().pings).toBe(5);
+    expect(sockets).toHaveLength(1);
+    expect(sockets[0]?.closed).toBeNull();
+    expect(statuses).toEqual(["live"]);
+    link.stop();
+  });
+
+  it("ping 送出後 10 秒沒有 pong(半開連線)→ 關掉重連(down → 重連)", async () => {
+    const logger = new MemoryLogger();
+    const { link, timers, sockets, last, statuses } = setup([], logger);
+    link.start();
+    await timers.advance(0);
+    last().open();
+    last().autoPong = false;
+    await timers.advance(REALTIME_PING_INTERVAL_MS);
+    expect(last().pings).toBe(1);
+    await timers.advance(REALTIME_PONG_TIMEOUT_MS - 1);
+    expect(sockets[0]?.closed).toBeNull();
+    await timers.advance(1);
+    expect(sockets[0]?.closed).toEqual({ code: 1000 });
+    expect(statuses).toEqual(["live", "down"]);
+    expect(logger.lines.map((line) => line.message)).toContain(
+      "即時通道沒有回應 ping:重新連線",
+    );
+    await timers.advance(0);
+    expect(sockets).toHaveLength(2);
+    last().open();
+    expect(statuses).toEqual(["live", "down", "live"]);
+    // 舊連線不再送 ping;新連線照常
+    await timers.advance(REALTIME_PING_INTERVAL_MS);
+    expect(sockets[0]?.pings).toBe(1);
+    expect(last().pings).toBe(1);
+    link.stop();
+  });
+
+  it("沒開線不送 ping;斷線或 stop 後不再送", async () => {
+    const { link, timers, sockets, last } = setup();
+    link.start();
+    await timers.advance(REALTIME_PING_INTERVAL_MS);
+    expect(last().pings).toBe(0);
+    last().open();
+    last().drop();
+    await timers.advance(REALTIME_PING_INTERVAL_MS);
+    expect(sockets[0]?.pings).toBe(0);
+    last().open();
+    link.stop();
+    await timers.advance(REALTIME_PING_INTERVAL_MS * 2);
+    expect(last().pings).toBe(0);
+    expect(timers.pending).toBe(0);
   });
 });

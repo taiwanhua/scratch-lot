@@ -12,7 +12,8 @@ import {
  * 1. API → Worker `POST /publish`:body 是 `RealtimePublishRequest` 的 JSON,
  *    header `x-realtime-signature` 帶「送出信號密鑰」對**原始 body 字串**的 HMAC-SHA256(base64url)。
  *    一次送出可帶多個頻道(算 1 次 Worker + 1 次 Durable Object 請求);同一條連線訂閱了其中幾個也只推一次。
- * 2. 連線上的訊息(JSON 文字):前端 / 代理程式送 `RealtimeClientMessage`,Durable Object 回 `RealtimeServerMessage`。
+ * 2. 連線上的訊息(JSON 文字):前端 / 代理程式送 `RealtimeClientMessage`,Durable Object 回 `RealtimeServerMessage`;
+ *    另有偵測半開連線的 `REALTIME_PING` / `REALTIME_PONG`(Durable Object 以 auto-response 回,不經 `webSocketMessage`)。
  */
 
 export const REALTIME_PUBLISH_SIGNATURE_HEADER = "x-realtime-signature";
@@ -78,13 +79,25 @@ export type RealtimeClientMessage =
 export type RealtimeRejectReason =
   "not-allowed" | "invalid-ticket" | "ticket-mismatch" | "bad-message";
 
-/** Durable Object 回給連線的訊息。 */
+/**
+ * 偵測半開連線(連線其實斷了、兩端都沒發現)的 ping / pong:客戶端送 `REALTIME_PING`,Durable Object 回 `REALTIME_PONG`。
+ *
+ * Durable Object 用 `ctx.setWebSocketAutoResponse` 登記這一組字串:**整個字串完全相同**才自動回應,
+ * 不喚醒休眠中的 Durable Object、不進 `webSocketMessage`(RT-01)。所以客戶端一律送這個常數本身,
+ * 不要自己 `JSON.stringify`(空白或欄位順序不同就不會被自動回應,改由 `webSocketMessage` 回 `bad-message`)。
+ * Cloudflare 限制兩個字串各 2,048 字元以內。間隔與逾時見 `timing.ts`。
+ */
+export const REALTIME_PING = '{"op":"ping"}';
+export const REALTIME_PONG = '{"op":"pong"}';
+
+/** Durable Object 回給連線的訊息(`pong` 由 auto-response 回,內容固定是 `REALTIME_PONG`)。 */
 export type RealtimeServerMessage =
   | { op: "signal"; topic: string; signal: RealtimeSignal }
   | { op: "subscribed"; topic: string }
   | { op: "unsubscribed"; topic: string }
   | { op: "renewed"; exp: number }
-  | { op: "rejected"; reason: RealtimeRejectReason };
+  | { op: "rejected"; reason: RealtimeRejectReason }
+  | { op: "pong" };
 
 /** 連線被關閉的原因代碼(WebSocket close code 4000–4999 為應用自訂)。 */
 export const REALTIME_CLOSE_CODES = {

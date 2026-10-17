@@ -1,6 +1,9 @@
 import {
   MIN_RENEW_DELAY_MS,
   REALTIME_CLOSE_CODES,
+  REALTIME_PING,
+  REALTIME_PING_INTERVAL_MS,
+  REALTIME_PONG_TIMEOUT_MS,
   REALTIME_TICKET_TTL_SECONDS,
   RECONNECT_BACKOFF_MS,
   RENEW_BEFORE_MS,
@@ -18,6 +21,9 @@ import { type Timers, systemTimers } from "../timers";
  *   `wss://…/connect?ticket=`;Durable Object 初始訂閱 `print-agent:<自己>`,不必再送 `subscribe`。
  * - **換發**:收到憑證後(效期 − 1 分鐘,最少 30 秒)在**原連線**上送 `renew`;不拿 `expiresAt` 對本機時鐘。
  *   送出後 15 秒沒有回應(`renewed` / `rejected`)就關掉重連。時間常數與 admin 共用 `@repo/domain/realtime`。
+ * - **偵測半開連線**(連線其實斷了、兩端都沒發現):連上後每 30 秒送 `REALTIME_PING`,10 秒內沒收到 `pong` 就關掉重連
+ *   (`down` → 輪詢降級 → 重新連上先補抓)。Durable Object 以 auto-response 回 pong,不喚醒、不計時長費用。
+ *   換發約 9 分鐘才一次,只靠換發逾時要好幾分鐘才發現;送出的工作 2 分鐘沒被認領就標「代理程式離線」。
  * - **重連退避**:斷線後依 1 / 2 / 5 / 10 / 30 秒重連;憑證過期被關(4001)立即重拿憑證;換發被拒 → 關掉重連。
  * - **停用**:API 回的憑證是 null(該環境沒有即時通道)→ 狀態 `down`,60 秒後再問。
  *
@@ -92,6 +98,10 @@ export class RealtimeLink {
   /** 已送出、等 `renewed` 的換發:記下拿到新憑證的時刻(下一次換發由它起算)。 */
   private pendingRenewAt: number | null = null;
   private renewing = false;
+  /** 下一次送 ping 的計時。 */
+  private pingTimer: unknown = null;
+  /** 已送出 ping、等 pong 的逾時計時(收到 pong 就清掉)。 */
+  private pongTimer: unknown = null;
 
   constructor(private readonly options: RealtimeLinkOptions) {
     this.createSocket = options.createSocket ?? nodeSocket;
@@ -112,6 +122,7 @@ export class RealtimeLink {
     const socket = this.socket;
     this.socket = null;
     this.resetRenew();
+    this.stopPing();
     socket?.close(1000, "stop");
   }
 
@@ -143,6 +154,42 @@ export class RealtimeLink {
   private resetRenew(): void {
     this.renewing = false;
     this.pendingRenewAt = null;
+  }
+
+  private stopPing(): void {
+    if (this.pingTimer !== null) {
+      this.timers.clear(this.pingTimer);
+      this.pingTimer = null;
+    }
+    if (this.pongTimer !== null) {
+      this.timers.clear(this.pongTimer);
+      this.pongTimer = null;
+    }
+  }
+
+  /** 每 30 秒送一次 ping;送出後 10 秒沒有 pong 就關掉重連。 */
+  private schedulePing(socket: AgentSocket): void {
+    this.pingTimer = this.timers.set(() => {
+      this.pingTimer = null;
+      if (socket !== this.socket) {
+        return;
+      }
+      this.schedulePing(socket);
+      // 先排逾時再送:pong 若在 send 之內就回來(同步),也清得掉這個計時
+      this.pongTimer = this.timers.set(() => {
+        this.pongTimer = null;
+        if (socket === this.socket) {
+          this.options.logger?.warn("即時通道沒有回應 ping:重新連線");
+          this.restart();
+        }
+      }, REALTIME_PONG_TIMEOUT_MS);
+      try {
+        socket.send(REALTIME_PING);
+      } catch {
+        // 連線已在關閉中:交給重連流程
+        this.restart();
+      }
+    }, REALTIME_PING_INTERVAL_MS);
   }
 
   private reconnectLater(immediately = false): void {
@@ -197,6 +244,7 @@ export class RealtimeLink {
     }
     this.socket = socket;
     this.resetRenew();
+    this.stopPing();
     socket.addEventListener("open", () => {
       if (socket !== this.socket) {
         return;
@@ -204,6 +252,7 @@ export class RealtimeLink {
       this.failures = 0;
       this.setStatus("live");
       this.scheduleRenew(receivedAt);
+      this.schedulePing(socket);
     });
     socket.addEventListener("message", (event) => {
       if (socket === this.socket) {
@@ -216,6 +265,7 @@ export class RealtimeLink {
       }
       this.socket = null;
       this.resetRenew();
+      this.stopPing();
       this.clearTimer();
       this.setStatus("down");
       this.reconnectLater(event.code === REALTIME_CLOSE_CODES.ticketExpired);
@@ -262,11 +312,12 @@ export class RealtimeLink {
     }, RENEW_RESPONSE_TIMEOUT_MS);
   }
 
-  /** 關掉目前連線並重新連(換發被拒、拿不到新憑證)。 */
+  /** 關掉目前連線並重新連(換發被拒或逾時、拿不到新憑證、ping 沒有回應)。 */
   private restart(): void {
     const socket = this.socket;
     this.socket = null;
     this.resetRenew();
+    this.stopPing();
     socket?.close(1000, "restart");
     this.setStatus("down");
     this.reconnectLater(true);
@@ -293,6 +344,13 @@ export class RealtimeLink {
         // 代理程式只送 renew(不送 subscribe):換發中收到任何拒絕都是換發失敗,關掉重連
         if (this.pendingRenewAt !== null) {
           this.restart();
+        }
+        return;
+      }
+      case "pong": {
+        if (this.pongTimer !== null) {
+          this.timers.clear(this.pongTimer);
+          this.pongTimer = null;
         }
         return;
       }

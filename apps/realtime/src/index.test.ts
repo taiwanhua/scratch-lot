@@ -1,9 +1,11 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   REALTIME_CLOSE_CODES,
+  REALTIME_PING,
+  REALTIME_PONG,
   signRealtimePublish,
 } from "@repo/domain/realtime";
 
@@ -527,6 +529,51 @@ describe("換發與訂閱交錯", () => {
     await expect(
       publish("tenant-race", "board:b1", { type: "board" }),
     ).resolves.toBe(1);
+    conn.ws.close();
+  });
+});
+
+describe("偵測半開連線的 ping / pong", () => {
+  it("Durable Object 對 ping 自動回 pong,不觸發 webSocketMessage", async () => {
+    const conn = await connect(
+      await issueTicket("tenant-ping", { userId: "u1" }, []),
+    );
+    const handled: string[] = [];
+    await runInDurableObject(hubStub("tenant-ping"), (instance, state) => {
+      expect(state.getWebSocketAutoResponse()?.request).toBe(REALTIME_PING);
+      expect(state.getWebSocketAutoResponse()?.response).toBe(REALTIME_PONG);
+      const original = instance.webSocketMessage.bind(instance);
+      vi.spyOn(instance, "webSocketMessage").mockImplementation(
+        async (ws, raw) => {
+          handled.push(typeof raw === "string" ? raw : "binary");
+          await original(ws, raw);
+        },
+      );
+    });
+
+    conn.ws.send(REALTIME_PING);
+    await expect(conn.next()).resolves.toEqual({ op: "pong" });
+    expect(handled).toEqual([]);
+    await runInDurableObject(hubStub("tenant-ping"), (_instance, state) => {
+      const [ws] = state.getWebSockets();
+      expect(ws && state.getWebSocketAutoResponseTimestamp(ws)).toBeInstanceOf(
+        Date,
+      );
+    });
+
+    // 對照組:不是完全相同的字串(多了空白)就照一般訊息處理,證明上面的監聽有效
+    conn.ws.send('{ "op": "ping" }');
+    await expect(conn.next()).resolves.toEqual({
+      op: "rejected",
+      reason: "bad-message",
+    });
+    expect(handled).toEqual(['{ "op": "ping" }']);
+
+    // ping 之後連線照常收信號
+    await expect(
+      publish("tenant-ping", "user:u1", { type: "notification" }),
+    ).resolves.toBe(1);
+    await expect(conn.next()).resolves.toMatchObject({ op: "signal" });
     conn.ws.close();
   });
 });

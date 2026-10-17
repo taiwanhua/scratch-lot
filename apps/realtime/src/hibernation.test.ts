@@ -54,4 +54,13 @@ describe("Durable Object 必用 WebSocket Hibernation API", () => {
     expect(hub).toMatch(/\.serializeAttachment\(/);
     expect(hub).toMatch(/override async webSocketMessage\(/);
   });
+
+  it("ping / pong 用 auto-response 回(不喚醒 Durable Object)", () => {
+    const hub = stripComments(
+      sources.find(([path]) => path === "./tenant-hub.ts")?.[1] ?? "",
+    );
+    expect(hub).toMatch(
+      /this\.ctx\.setWebSocketAutoResponse\(\s*new WebSocketRequestResponsePair\(REALTIME_PING, REALTIME_PONG\)/,
+    );
+  });
 });
