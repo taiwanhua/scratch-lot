@@ -20,7 +20,7 @@ import { formModuleKeyOf, useFormModuleAccess } from "./useFormModuleAccess";
 /**
  * 表單模組新增頁(預設組裝;Spec 6a §8 畫面 9)。網址 `/<模組>/create-page/<formKey>`:
  * 沒帶表單 key 時,此刻可新增的表單一張 → 直接換到它、多張 → 先選;
- * 帶了但那張表單現在不能新增(停用、收回分派、退役目前版本)→ 說明原因,不給填。
+ * 帶了但那張表單現在不能新增(停用、收回分派、退役目前版本、沒有這張表單的新增權限)→ 說明原因,不給填。
  */
 export const FormCreatePage = ({ module, routeParam }: ModulePageProps) => {
   const moduleKey = formModuleKeyOf(module.key);
@@ -28,7 +28,8 @@ export const FormCreatePage = ({ module, routeParam }: ModulePageProps) => {
   const tErrors = useTranslations("admin.formEngine.errors");
   const navigate = useNavigate();
   const access = useFormModuleAccess(moduleKey);
-  const { forms, isLoading } = useModuleForms(moduleKey);
+  // 只認讀者有新增權限的表單(依表單分開新增權限 B9b;api `canCreate`)
+  const { creatableForms: forms, isLoading } = useModuleForms(moduleKey);
   const formKey = routeParam ?? null;
   const form: ModuleFormSummary | null =
     forms.find((candidate) => candidate.key === formKey) ?? null;

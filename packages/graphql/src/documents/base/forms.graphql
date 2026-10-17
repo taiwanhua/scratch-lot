@@ -202,10 +202,15 @@ mutation SaveFormVersionDraft($input: SaveFormVersionDraftInput!) {
 
 # PublishFormVersionInput: { formKey, expectedDraftRevision, changelog }
 # 檢查器有錯 → VALIDATION_FAILED(extensions.issues);兩個發布同時送出只有一個成功
+# createdPermission:這次發布新建的依表單新增權限(B9b);不自動授予,發布成功畫面提示到角色管理授予
 mutation PublishFormVersion($input: PublishFormVersionInput!) {
   publishFormVersion(input: $input) {
     formVersion {
       ...FormVersionFields
+    }
+    createdPermission {
+      key
+      name
     }
   }
 }

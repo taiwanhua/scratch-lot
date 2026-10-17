@@ -116,6 +116,19 @@ describe("表單模組新增頁(預設組裝)", () => {
     expect(world.inputs.saveFormDraft).toHaveLength(0);
   });
 
+  it("沒有這張表單的新增權限(依表單分開新增權限 B9b,api `canCreate = false`):說明原因,不給填", async () => {
+    renderShopping({
+      path: CREATE_PATH,
+      world: {
+        ...defaultRuntimeOptions(),
+        moduleForms: [{ ...shoppingForm, canCreate: false }],
+      },
+    });
+
+    expect(await screen.findByText(/這張表單目前不能新增/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "送出" })).toBeNull();
+  });
+
   it("表單關了「允許存草稿」:新增頁沒有 [存草稿],只有 [送出]", async () => {
     renderShopping({
       path: CREATE_PATH,

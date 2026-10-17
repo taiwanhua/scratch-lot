@@ -14,7 +14,10 @@ export interface FormModuleAccess {
   viewRoute: string | null;
   createRoute: string | null;
   editRoute: string | null;
-  /** 綁了新增頁、且有模組 `create` */
+  /**
+   * 綁了新增頁、且有模組 `create`。依表單分開新增權限(B9b)的模組不看模組 `create`:
+   * 列表的 [+ 新增] 另外看 `useModuleForms` 的 `creatableForms`(`FormListPage`)。
+   */
   canCreate: boolean;
 }
 

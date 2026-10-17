@@ -47,14 +47,39 @@
 | 來源         | 權限                                                                                           | 怎麼來                                                                              |
 | ------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | seed 宣告    | 固定四條 `view` / `create` / `edit` / `delete` + 宣告的頁內權限(如 `store.sell`)               | `formModuleDeclaration` 的選填 `permissions: [{ action, name }]`,和固定四條一起產生 |
-| 表單動態權限 | 欄位級 `show-<formKey>-<fieldKey>` / `edit-<formKey>-<fieldKey>`;依表單新增 `create-<formKey>` | 執行期產生(`permissions.source = "dynamic"`),欄位級的在表單發布第 3 步建立          |
+| 表單動態權限 | 欄位級 `show-<formKey>-<fieldKey>` / `edit-<formKey>-<fieldKey>`;依表單新增 `create-<formKey>` | 執行期產生(`permissions.source = "dynamic"`),都在表單發布第 3 步建立                |
 
 - 頁內權限的動作不能和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀,宣告時就擋下。
 - 表單動態權限的 key 拆得出 formKey(`parseFormPermissionKey`)。退役權限清理用 `parseFieldPermissionKey`(不認 `create-`);發布同步只比對 `show-` / `edit-<formKey>-` 前綴。依表單新增權限因此不會被當成欄位級權限列出、退役或刪除。
 - **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key:api 端的權限判斷一律用 `holdsPermission`(不直接呼叫 `hasPermission`);前端拿到的 `me.modules` 已過濾,照用 `hasPermission`。
 - 只有權限集裡有動態權限(持表單模組 `*`,或被授了動態權限)才查 `forms`;只持固定權限的操作者不多一次查詢。
 
-正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
+### 依表單分開新增權限(B9b)
+
+一個表單模組綁多張表單時,預設「能不能新增」只看模組 `create`:有它就每張都能填。模組要讓每張表單各自授權時,在 seed 宣告 `perFormCreate: true`(`formModuleDeclaration` 的選填欄位,落庫 `modules.perFormCreate`,每次 seed 同步宣告值;沒有執行期開關)。底座示範表單模組都不開。
+
+| 項目       | 現況                                                                                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 權限       | 表單每次發布的第 3 步確保 `<模組>.create-<formKey>`:缺的建,名稱「<表單名> 新增」跟著表單現在的名稱(改名後下次發布更新);表單不能刪,所以不退役                                           |
+| 判斷       | 唯一函式 `FormAccessService.canCreateWithForm(操作者, 模組, formKey)`:模組開啟 → 看 `create-<formKey>`(模組 `create` 不算);沒開 → 看模組 `create`。`<模組>.*` 依同層 wildcard 自然包含 |
+| 入口       | 全部呼叫判斷函式,見下表                                                                                                                                                                |
+| 不自動授予 | 新建的權限不授予任何角色(租戶以某版為基底建的客製表單也一樣);發布回 `createdPermission`,表單管理的發布成功畫面提示「請到角色管理授予」並附連結。模板以 `*` 授予整層的角色自然持有      |
+| 改既有模組 | 已有表單的模組改為開啟,要另寫 migration:補建權限、把原持有模組 `create` 的角色授予對應權限                                                                                             |
+
+入口(開啟的模組裡,只有模組 `create`、沒有表單權限的人每一個都被擋):
+
+| 入口                                                                          | 走法                                                                                            |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 新增 API(`createFormDraft`、`createAndSubmitFormSubmission`)                  | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
+| `moduleForms`                                                                 | 清單照舊(列表的表單篩選、頁籤模板要用),每張附 `canCreate`                                       |
+| abilities(`canEdit` / `canDelete` / `canSaveDraft` 的申請人那一支、`canCopy`) | 申請人改、送、刪自己的單與複製為新單都要這張表單的新增資格                                      |
+| 申請人改 / 存草稿 / 送出 / 刪除自己的單                                       | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
+| 複製為新單(`copySubmissionToDraft`)                                           | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
+| `formLookup` 版本存取、執行端讀定義(`formRuntimeVersion`、選項)               | 這張表單的新增資格或模組 `view` / `edit`                                                        |
+| 申請中心「新申請」(`applicableForms`)                                         | 只列有新增資格的表單                                                                            |
+| admin 的 [+ 新增] 與新增頁                                                    | 只用 `canCreate = true` 的表單;有表單但一張都不能新增時不出現 [+ 新增],直接開新增頁說明不能新增 |
+
+正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/forms/form-access.service.ts`(`canCreateWithForm`)、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
 
 ## Wildcard(同層語意)
 

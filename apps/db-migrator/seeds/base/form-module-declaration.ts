@@ -81,6 +81,11 @@ export interface FormModuleSpec {
   settings?: Record<string, unknown>;
   /** 頁內額外權限(選填,B9a);和固定四條 `view` / `create` / `edit` / `delete` 一起產生。 */
   permissions?: readonly FormModulePermissionSpec[];
+  /**
+   * 依表單分開新增權限(B9b,選填,預設關):true 時每張表單發布時自動建 `<模組>.create-<formKey>`
+   * (名稱「<表單名> 新增」),新增資格看它而不看模組 `create`。只能在這裡宣告;底座示範表單模組不開。
+   */
+  perFormCreate?: boolean;
 }
 
 /**
@@ -120,6 +125,7 @@ export function formModuleDeclaration(
         route: spec.route,
         icon: spec.icon,
         engine: "form",
+        ...(spec.perFormCreate === true ? { perFormCreate: true } : {}),
         description: spec.description,
         ...(spec.settings === undefined ? {} : { settings: spec.settings }),
       },

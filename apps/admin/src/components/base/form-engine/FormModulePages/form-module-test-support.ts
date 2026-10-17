@@ -31,6 +31,7 @@ export const shoppingForm = {
   currentVersion: 1,
   tabLabelTemplate: null,
   allowDraft: true,
+  canCreate: true,
 };
 
 export const defaultRuntimeOptions = (): FormRuntimeWorldOptions => ({

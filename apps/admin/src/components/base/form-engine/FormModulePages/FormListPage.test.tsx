@@ -173,6 +173,70 @@ describe("表單模組列表頁(預設組裝)", () => {
     });
   });
 
+  describe("依表單分開新增權限(B9b):[+ 新增] 只列有新增權限的表單(api `canCreate`)", () => {
+    const store = {
+      ...shoppingForm,
+      key: "shopping_list_store",
+      name: "購物單(門市版)",
+    };
+    const locked = {
+      ...shoppingForm,
+      key: "shopping_list_locked",
+      name: "採購單(沒有新增權限)",
+      canCreate: false,
+    };
+
+    it("多張可新增:FormPicker 只列可新增的,沒有新增權限的不出現", async () => {
+      const { user } = renderShopping({
+        path: DEMO_FORM_ROUTES.list,
+        world: {
+          ...defaultRuntimeOptions(),
+          moduleForms: [shoppingForm, locked, store],
+        },
+      });
+
+      await user.click(await createButton());
+      const picker = await screen.findByRole("dialog", {
+        name: "選擇要填寫的表單",
+      });
+      expect(within(picker).getByText("購物單")).toBeInTheDocument();
+      expect(within(picker).getByText("購物單(門市版)")).toBeInTheDocument();
+      expect(within(picker).queryByText("採購單(沒有新增權限)")).toBeNull();
+    });
+
+    it("只剩一張可新增:按新增直接進那一張(不先選)", async () => {
+      const { user } = renderShopping({
+        path: DEMO_FORM_ROUTES.list,
+        world: {
+          ...defaultRuntimeOptions(),
+          moduleForms: [locked, shoppingForm],
+        },
+      });
+
+      await user.click(await createButton());
+
+      expect(
+        await screen.findByRole("heading", { name: "新增 — 購物單" }),
+      ).toBeInTheDocument();
+    });
+
+    it("有表單但一張都不能新增(只有模組 `create`):不出現新增鈕", async () => {
+      renderShopping({
+        path: DEMO_FORM_ROUTES.list,
+        world: { ...defaultRuntimeOptions(), moduleForms: [locked] },
+      });
+
+      await table();
+      // 表單清單回來之前新增鈕先停用;回來後一張都不能新增 → 整顆不出現
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "+ 新增" })).toBeNull();
+      });
+      expect(
+        screen.getByRole("combobox", { name: "表單" }),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("沒有可新增的表單(停用、收回或退役):新增鈕停用", async () => {
     renderShopping({
       path: DEMO_FORM_ROUTES.list,

@@ -120,6 +120,18 @@ export class FormValidationReport {
   warnings!: FormDefinitionIssue[];
 }
 
+/** 發布時新建的依表單新增權限(B9b):不自動授予,發布成功畫面提示到角色管理授予。 */
+@ObjectType()
+export class FormCreatePermission {
+  /** `<模組>.create-<formKey>` */
+  @Field(() => String)
+  key!: string;
+
+  /** 「<表單名> 新增」 */
+  @Field(() => String)
+  name!: string;
+}
+
 /** 單一版本的查詢 / 寫入回傳。 */
 @ObjectType()
 export class FormVersionPayload {
@@ -129,6 +141,13 @@ export class FormVersionPayload {
   /** 草稿的檢查器結果(存草稿、讀草稿時附上;已發布版為 null)。 */
   @Field(() => FormValidationReport, { nullable: true })
   validation!: FormValidationReport | null;
+
+  /**
+   * 只有發布(`publishFormVersion`)會給:這次發布新建的依表單新增權限(模組開啟 B9b 且第一次發布);
+   * 其餘情況(已存在、模組沒開、非發布的端點)為 null。
+   */
+  @Field(() => FormCreatePermission, { nullable: true })
+  createdPermission?: FormCreatePermission | null;
 }
 
 /** 一欄在這次渲染的狀態(後端依條件與讀者權限算好)。 */

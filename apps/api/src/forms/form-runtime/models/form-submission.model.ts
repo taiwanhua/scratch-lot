@@ -46,7 +46,7 @@ registerEnumType(FormSubmissionSort, {
   description: "提交列表的排序(預設送出時間新到舊;草稿沒有送出時間,排在最後)",
 });
 
-/** 新增選單的一張表單(`moduleForms` 的交集結果)。 */
+/** 新增選單的一張表單(`moduleForms` 的交集結果;能不能用它新增看 `canCreate`)。 */
 @ObjectType()
 export class FormSummary {
   @Field(() => ID)
@@ -68,6 +68,13 @@ export class FormSummary {
   /** 允許存草稿(表單設定;沒設過 = true):false 時新增頁不顯示 [存草稿]。 */
   @Field(() => Boolean)
   allowDraft!: boolean;
+
+  /**
+   * 讀者能不能用這張表單新增(`canCreateWithForm`;B9b 模組看 `create-<formKey>`,其餘看模組 `create`)。
+   * 列表的表單篩選、頁籤模板要整份清單;[+ 新增] 與新增頁只認 `canCreate = true` 的表單。
+   */
+  @Field(() => Boolean)
+  canCreate!: boolean;
 }
 
 /** 顯示名的一項(選項 / 引用):來源還在且讀者有權 → 現名;否則快照 + `available: false`。 */

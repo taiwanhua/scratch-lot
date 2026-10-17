@@ -1309,7 +1309,7 @@
     "errors": {
       "CONFLICT": "This record was updated by someone else. Please reload.",
       "FIELD_FORBIDDEN": "You are not allowed to change one of the fields; nothing was saved.",
-      "FORM_NOT_AVAILABLE": "This form cannot be filled in right now (it may be disabled, revoked or unpublished).",
+      "FORM_NOT_AVAILABLE": "This form cannot be filled in right now (it may be disabled, revoked or unpublished, or you lack permission to create with it).",
       "NOT_FORM_OWNER": "This form does not belong to your organization.",
       "ROOT_ONLY": "Only the platform can do this.",
       "FORBIDDEN": "You do not have permission to do this.",
@@ -1515,7 +1515,14 @@
       "confirm": "Publish",
       "success": "v{version} published.",
       "unsavedWarning": "The designer has unsaved changes: the last saved draft will be published.",
-      "saveFirst": "Save draft first"
+      "saveFirst": "Save draft first",
+      "granted": {
+        "title": "Published",
+        "body": "Version {version} of \"{form}\" has been published.",
+        "hint": "The permission \"{permission}\" was created and is not granted automatically. Grant it to the roles that need it in Role management.",
+        "later": "Later",
+        "goToRoles": "Go to Role management"
+      }
     },
     "retire": {
       "title": "Retire the current version?",

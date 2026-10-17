@@ -294,6 +294,7 @@ export const VersionPanel = ({
       {isPublishing && draft !== undefined && (
         <PublishDialog
           formKey={form.key}
+          formName={form.name}
           draftRevision={draft.draftRevision}
           onClose={() => {
             setIsPublishing(false);

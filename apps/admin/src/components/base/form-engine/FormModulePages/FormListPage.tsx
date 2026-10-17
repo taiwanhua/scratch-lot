@@ -48,7 +48,7 @@ const listSchema = z
 
 /**
  * 表單模組列表頁(預設組裝;Spec 6a §8 畫面 8):搜尋、依表單 / 狀態篩選、分頁;
- * 新增鈕 —— 此刻可新增的表單一張 → 直接進、多張 → 先選(`FormPicker`)。
+ * 新增鈕 —— 此刻可新增(且讀者有新增權限)的表單一張 → 直接進、多張 → 先選(`FormPicker`)。
  * 列操作依 api 的 `abilities`(已含權限)與「有沒有綁那一頁」相乘:綁流程且已核准的單鎖定 ——
  * 不出現「編輯」(api 的 `canEdit` 為 false)、改出現「作廢」(`canVoid`,Spec 6b §8 畫面 11)。
  */
@@ -57,7 +57,12 @@ export const FormListPage = ({ module }: ModulePageProps) => {
   const t = useTranslations("admin.formEngine.pages");
   const navigate = useNavigate();
   const access = useFormModuleAccess(moduleKey);
-  const { forms } = useModuleForms(moduleKey);
+  const { forms, creatableForms } = useModuleForms(moduleKey);
+  // [+ 新增] 出現:有可新增的表單;或有模組 `create`、此刻一張表單都沒有(停用並附原因)。
+  // 有表單但一張都不能新增(依表單分開新增權限的模組只有模組 `create`)→ 不出現(ADR-0011)
+  const canCreate =
+    access.createRoute !== null &&
+    (creatableForms.length > 0 || (access.canCreate && forms.length === 0));
 
   const [filters, setFilters] = useUrlState("list", listSchema);
   const { keyword, formKey, status } = filters;
@@ -98,8 +103,8 @@ export const FormListPage = ({ module }: ModulePageProps) => {
     }
   };
   const handleCreate = () => {
-    if (forms.length === 1) {
-      goCreate(forms[0].key);
+    if (creatableForms.length === 1) {
+      goCreate(creatableForms[0].key);
       return;
     }
     setIsPicking(true);
@@ -183,8 +188,8 @@ export const FormListPage = ({ module }: ModulePageProps) => {
         onStatusChange={(value) => {
           setFilter({ status: value });
         }}
-        canCreate={access.canCreate}
-        hasForms={forms.length > 0}
+        canCreate={canCreate}
+        hasForms={creatableForms.length > 0}
         onCreate={handleCreate}
       />
       <Card
@@ -202,7 +207,7 @@ export const FormListPage = ({ module }: ModulePageProps) => {
       </Card>
       {isPicking && (
         <FormPicker
-          forms={forms}
+          forms={creatableForms}
           onPick={(form) => {
             setIsPicking(false);
             goCreate(form.key);
