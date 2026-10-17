@@ -112,6 +112,8 @@ describe("print-agent-release.yml", () => {
     expect(workflow).toContain(
       "print-agent/manifest.json application/json no-store",
     );
+    expect(workflow).toMatch(/WINSW_SHA256: [\da-f]{64}\n/);
+    expect(workflow).toContain('if [ "$actual" != "$WINSW_SHA256" ]');
   });
 
   it("發布只打單一物件端點,不用會先列出 bucket 的 gcloud storage cp / rm(部署 SA 沒有 objects.list)", () => {
@@ -123,8 +125,10 @@ describe("print-agent-release.yml", () => {
     expect(publish).toContain(
       "https://storage.googleapis.com/storage/v1/b/$BUCKET/o",
     );
-    expect(workflow).toMatch(/WINSW_SHA256: [\da-f]{64}\n/);
-    expect(workflow).toContain('if [ "$actual" != "$WINSW_SHA256" ]');
+    expect(publish).toContain(
+      '"$api/$(uri print-agent/manifest.json)?alt=media"',
+    );
+    expect(publish).toContain('-X DELETE "${auth[@]}" "$api/$(uri "$object")"');
   });
 
   it("checkout 不留 git 認證(persist-credentials: false)", () => {
