@@ -19,7 +19,7 @@ import { signInAgain } from "./ui";
 import { publishSharedFormIn, setOrgManagers } from "./workflow-api";
 
 /**
- * 劇本 20–24(審核流程)的共用前置與畫面動作。前置一律走 api(TEST-11):
+ * 劇本 20–29(審核流程、代理、知會、批次核准、通知)的共用前置與畫面動作。前置一律走 api(TEST-11):
  * 建人、主管、角色、共用表單(掛在 seed 的「示範表單(群組內)」模組,路由 `/demo/form`)都在這裡;流程定義由各劇本自己給。
  */
 
@@ -252,8 +252,32 @@ export function reviewStep(
   };
 }
 
+/** 審核者來源「人員條件」:條件列全部 AND。 */
+function audienceOf(
+  ...rows: Record<string, unknown>[]
+): Record<string, unknown> {
+  return {
+    kind: "audience",
+    audience: { mode: "match", filter: { op: "AND", children: rows } },
+  };
+}
+
+/** 指定這幾個人(人員條件的使用者條件列)。 */
 export function usersOf(...people: WorkflowPerson[]): Record<string, unknown> {
-  return { kind: "users", userIds: people.map((person) => person.userId) };
+  return audienceOf({
+    field: "user",
+    cond: "in",
+    value: { kind: "static", values: people.map((person) => person.userId) },
+  });
+}
+
+/** 持有這個角色的人(人員條件的角色條件列)。 */
+export function roleOf(roleId: string): Record<string, unknown> {
+  return audienceOf({
+    field: "role",
+    cond: "in",
+    value: { kind: "static", values: [roleId] },
+  });
 }
 
 /* ---- 畫面 ---- */
@@ -359,4 +383,64 @@ export async function myApplicationRow(
     .getByRole("table", { name: "我的申請" })
     .getByRole("row")
     .filter({ hasText: title });
+}
+
+/* ---- 劇本 25–29 ---- */
+
+export const PERSONAL_SETTINGS_ROUTE = "/settings/personal";
+
+/** 審核區塊的審核歷程(`<section aria-label="審核歷程">`)。 */
+export function approvalTimeline(page: Page): Locator {
+  return page.getByRole("region", { name: "審核歷程" });
+}
+
+/** 審核歷程裡的一筆(整句比對;文案從 zh-TW 字典原樣複製)。 */
+export function timelineEntry(page: Page, text: string): Locator {
+  return approvalTimeline(page).getByRole("listitem").filter({ hasText: text });
+}
+
+/** 某個時區「今天」的 `YYYY-MM-DD`(代理期間、日期欄要的是最上層組織時區的日期)。 */
+export function todayIn(timezone = "Asia/Taipei"): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+/**
+ * 在 `@repo/ui` 的日期欄(MUI X 的區段欄位:年 / 月 / 日各一個 `spinbutton`,包在 `role="group"` 裡)
+ * 輸入一個日期:點年的區段後依序打數字,區段會自己往下一段跳。
+ */
+export async function typeDate(
+  scope: Locator,
+  label: string,
+  ymd: string,
+): Promise<void> {
+  const group = scope.getByRole("group", { name: label });
+  await group.getByRole("spinbutton").first().click();
+  await group.page().keyboard.type(ymd.replaceAll("-", ""));
+  await expect(group).toContainText(ymd);
+}
+
+/** 頂端列的通知鈴(無障礙名稱「通知」或「通知,N 則未讀」)。 */
+export function notificationBell(page: Page): Locator {
+  return page.getByRole("button", { name: /^通知(,\d+ 則未讀)?$/ });
+}
+
+/** 打開通知鈴,回通知清單的彈出框(`role="dialog"`、名稱「通知」)。 */
+export async function openNotifications(page: Page): Promise<Locator> {
+  await notificationBell(page).click();
+  const panel = page.getByRole("dialog", { name: "通知" });
+  await expect(panel).toBeVisible();
+  return panel;
+}
+
+/** 通知清單裡標題含某段字的那幾則(`ListItemButton`)。 */
+export function notificationItems(panel: Locator, text: string): Locator {
+  return panel
+    .getByRole("list", { name: "通知" })
+    .getByRole("button")
+    .filter({ hasText: text });
 }

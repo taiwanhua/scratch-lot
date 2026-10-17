@@ -24,6 +24,7 @@ import {
 } from "@/test/msw/module-manager-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
+import { currentSearch, urlParam } from "@/test/url-reload";
 
 import { MODULE_MANAGER_PERMISSIONS } from "./module-manager-permissions";
 import {
@@ -74,7 +75,7 @@ const retiredPermission = (
   usage: usage(drafts, completed),
 });
 
-const render = (permissions: readonly string[]) => {
+const render = (permissions: readonly string[], search = "") => {
   const design = formDesignWorld({
     forms: [formFragment()],
     versions: {
@@ -111,7 +112,10 @@ const render = (permissions: readonly string[]) => {
     ...authWorld({ hasRefreshCookie: true, modules: modulesWith(permissions) })
       .handlers,
   );
-  return { ...renderApp({ path: "/system/module-manager" }), design };
+  return {
+    ...renderApp({ path: `/system/module-manager${search}` }),
+    design,
+  };
 };
 
 describe("模組與權限:表單模組的列表欄位配置、退役權限清理", () => {
@@ -263,5 +267,31 @@ describe("模組與權限:表單模組的列表欄位配置、退役權限清理
     expect(await engineOf("系統管理")).toBeUndefined();
     expect(await engineOf("編輯")).toBeUndefined();
     expect(await engineOf("API 能力")).toBeUndefined();
+  });
+
+  it("退役權限清單是唯讀的檢視彈窗:開著記在網址 `?dialog=retired`,重新整理還開著;關掉就拿掉", async () => {
+    const first = render(FULL_PERMISSIONS);
+    await waitForTree();
+    await first.user.click(
+      screen.getByRole("button", { name: "退役權限清理" }),
+    );
+    await screen.findByRole("dialog", { name: "退役權限清理" });
+    await waitFor(() => {
+      expect(urlParam("dialog")).toBe("retired");
+    });
+    first.unmount();
+
+    const second = render(FULL_PERMISSIONS, currentSearch());
+    const dialog = await screen.findByRole("dialog", { name: "退役權限清理" });
+    expect(
+      await within(dialog).findByText("購物單 / 舊單價 可見"),
+    ).toBeInTheDocument();
+
+    await second.user.click(
+      within(dialog).getByRole("button", { name: "關閉" }),
+    );
+    await waitFor(() => {
+      expect(urlParam("dialog")).toBeNull();
+    });
   });
 });

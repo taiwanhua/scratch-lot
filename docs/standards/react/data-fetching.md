@@ -9,9 +9,9 @@ query / mutation 一律透過 codegen 產生的 `useXxxQuery` / `useXxxMutation`
 ❌ const data = await client.request(`query { moduleTree { id } }`);
 ```
 
-admin 傳給 hook 的 client 有兩個(`apps/admin/src/lib/auth/`):**`session.client`** 給登入後的查詢(自動帶 access token、`TOKEN_EXPIRED` 時靜默換票重送一次、`UNAUTHENTICATED` 清狀態導登入頁)、**`session.publicClient`** 只給 `login` / `refresh` / 密碼流程這幾個公開端點。拿錯 client 會在登入頁無限轉圈或已登入頁被當成沒登入。
+admin 傳給 hook 的 client 有兩個(`apps/admin/src/lib/base/auth/`):**`session.client`** 給登入後的查詢(自動帶 access token、`TOKEN_EXPIRED` 時靜默換票重送一次、`UNAUTHENTICATED` 清狀態導登入頁)、**`session.publicClient`** 只給 `login` / `refresh` / 密碼流程這幾個公開端點。拿錯 client 會在登入頁無限轉圈或已登入頁被當成沒登入。
 
-登入者資料一律經 `hooks/useMe.ts` 的 `useMe()`(`me` query 的唯一包裝,`staleTime: Infinity`、**`retryOnMount: false`**)。`retryOnMount` 必須關:`me` 失敗(如 token 失效)後 `RequireAuth` 會導向登入頁並重新掛載,預設 `retryOnMount: true` 會在掛載時再打一次 → 再失敗 → 再導向,形成無限迴圈。其他「失敗就導向」的查詢比照。正本:`apps/admin/src/hooks/useMe.ts`、`apps/admin/src/lib/auth/`
+登入者資料一律經 `hooks/base/useMe.ts` 的 `useMe()`(`me` query 的唯一包裝,`staleTime: Infinity`、**`retryOnMount: false`**)。`retryOnMount` 必須關:`me` 失敗(如 token 失效)後 `RequireAuth` 會導向登入頁並重新掛載,預設 `retryOnMount: true` 會在掛載時再打一次 → 再失敗 → 再導向,形成無限迴圈。其他「失敗就導向」的查詢比照。正本:`apps/admin/src/hooks/base/useMe.ts`、`apps/admin/src/lib/base/auth/`
 
 ## DATA-02 query key 交給 codegen,不自創字串
 
@@ -21,6 +21,8 @@ invalidate、prefetch 一律用 codegen 提供的 `useXxxQuery.getKey()`,保證�
 ✅ queryClient.invalidateQueries({ queryKey: useModuleTreeQuery.getKey() });
 ❌ queryClient.invalidateQueries({ queryKey: ["ModuleTree"] });
 ```
+
+**例外:infinite 查詢**(捲到底載入下一批)。codegen 沒開 `addInfiniteQuery`(一開就替**每一支** query 多產一個 infinite hook,產物多約 1,700 行,且它的 `pageParam` 要是整份 variables(`{ input: { ... } }`)、key 第一段是 `"<Operation>.infinite"` 字串,invalidate 前綴仍得手寫),所以 infinite 查詢直接用 `useInfiniteQuery` + 該 operation 的 codegen `fetcher`。它的 key 不能手寫整串:第一段取 `useXxxQuery.getKey(...)[0]`,接一段 `"infinite"` 和篩選條件,前綴集中成一個常數由 hook 檔匯出,invalidate 與信號登記都引用它(先例 `hooks/base/useNotifications.ts` 的 `NOTIFICATION_LIST_KEY`)。
 
 ## DATA-03 Server Component 用 fetcher 模式
 
@@ -72,7 +74,7 @@ GraphQL endpoint 一律讀環境變數(front:`NEXT_PUBLIC_GRAPHQL_ENDPOINT`;admi
 
 (理由:沒有這條時,成功沒有任何回饋、失敗只顯示在表單上,使用者無從確認操作結果。)
 
-admin 的每一支 mutation 都要有操作結果提示,做法固定:`apps/admin/src/hooks/useMutationFeedback.ts`
+admin 的每一支 mutation 都要有操作結果提示,做法固定:`apps/admin/src/hooks/base/useMutationFeedback.ts`
 回傳的 `{ onSuccess, onError }` 直接塞進 codegen mutation hook 的 options,**它包住呼叫端原本的
 callback、不取代**(DATA-04 的寫回與失效、關彈窗照舊在裡面)。
 
@@ -101,7 +103,7 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   同一支端點兩種說法(啟用 / 停用)就給一個吃 payload 的函式,不要各寫一個 mutation。
 - **失敗文案用該頁既有的錯誤解讀**(`<ns>ErrorOf(error)` + `errors.<code>`),不要在提示裡另起一套;
   **表單 / 彈窗內原本的錯誤顯示保留** —— 欄位級標示講「哪裡要改」,Snackbar 講「這次沒成功」。
-  **錯誤解讀的回傳形狀只有一種**:`<ns>ErrorOf` 一律回 `apps/admin/src/lib/errors.ts`
+  **錯誤解讀的回傳形狀只有一種**:`<ns>ErrorOf` 一律回 `apps/admin/src/lib/base/errors.ts`
   的 `AdminError`(`{ code, reason?, reasons?, fields?, path?, message? }`,選填欄位沒有就缺席),
   各頁的 `*-error.ts` 只宣告碼表 / 原因白名單交給 `parseAdminError`,不再各自解析 `extensions`;
   `message` 是 api 的原文,只供除錯,不拿來顯示。
@@ -109,17 +111,27 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   `useDemoForm` 的上傳 + 儲存)不要把 feedback 交給每一支,改成整段 try / catch 完成後自己呼叫
   `feedback.onSuccess()` / `feedback.onError(error)`;共版型那種只收 `{ onSuccess(): void }` 的
   設定物件介面也走這一招,不要為了回饋去改介面的形狀。
-- **只有 dry-run / 預覽這種「還沒完成操作」的步驟**可以 `success: null`(成功不跳 —— 跳「已更新」是騙人的),
+- **dry-run / 預覽這種「還沒完成操作」的步驟**可以 `success: null`(成功不跳 —— 跳「已更新」是騙人的),
   失敗是否照跳看下一條。先例:使用者管理的所屬組織試算(`useUserOrgsFlow`)、複製組織與角色的預覽
   (`CopyOrgRolesDialog/useCopyOrgRoles.ts`)。
-- **`error` 回 `null` = 失敗不跳提示**(DATA-06 唯一的例外),只給「錯誤已就地顯示在使用者正盯著的彈窗裡、
+- **`error` 回 `null` = 失敗不跳提示**,只給「錯誤已就地顯示在使用者正盯著的彈窗裡、
   且彈窗不會關」的流程用,避免同一句話出現兩次。先例是複製組織與角色的彈窗:預覽與送出的失敗都寫在彈窗裡,
   兩支的 `error` 都回 `null`;送出成功仍照跳。
+- **結果就地顯示在開著的彈窗裡等候**:送出之後彈窗留著,等這次操作的最終結果(例如列印工作建立後,等代理程式回報已印 / 失敗),
+  並把結果直接寫在彈窗裡 —— 成功不另外跳提示(`success: null`;建立成功還不是最終結果,彈窗裡的結果才是回饋),
+  沒建成的錯誤也寫在彈窗裡,`error` 依上一條回 `null`。先例:印表機管理的測試列印
+  (`apps/admin/src/pages/base/system/PrintersPage/TestPrintDialog/useTestPrint.ts`);各單據的列印按鈕比照。
+- **立即生效的切換、背景寫回**:畫面在送出前就已經換好、寫入只是把它存起來的操作,`success: null`(畫面就是成功的回饋);
+  使用者親手做的切換,失敗照跳(畫面與存下來的不一致,要讓他知道);沒有使用者操作、系統自己補寫的背景寫回,
+  `error` 也回 `null`(使用者不知道有這件事,下次會再補)。先例:頭像選單切語言(`useChangeLocale`)與
+  登入後把本機語言寫回帳號(`useAccountLocaleSync`),都在 `apps/admin/src/hooks/base/useAccountLocale.ts`。
 
-排隊策略是**長度 1 的佇列:只顯示最新的一則,舊的直接被取代**(正本寫在
-`apps/admin/src/stores/useSnackbarStore.ts` 與 `@repo/ui/snackbar` 的 JSDoc)——
-這是操作回饋不是通知中心,連續送出時使用者要看的是最後那一次的結果。
-全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`。
+位置與堆疊:電腦 / 平板右下角距邊 24,手機底部左右 16 滿寬(有底部導覽時放在它上面);
+**所有提示(操作結果、可撤銷、新通知)一律往上疊,新的在下面;最多 3 則,第 4 則出現時最舊的那則消失**。
+一般 4 秒、有動作(例 [撤銷])8 秒自動消失,滑鼠移上去或鍵盤焦點在卡片內時暫停,移開(焦點離開)後重新計時。正本寫在
+`apps/admin/src/stores/base/useSnackbarStore.ts` 與 `@repo/ui/snackbar`(`Snackbar`、`SnackbarStack`、
+`enqueueSnackbar`)的 JSDoc。全站唯一的出口是 `AppProviders` 裡的 `SnackbarProvider`;
+mutation 以外的提示(可撤銷、新通知、自己控制時機的流程)經 `useSnackbar()` 送出,各模組不另寫提示元件。
 
-測試:`apps/admin/src/test/snackbar.ts` 的 `findSnackbarAlert()`。**不要只用 `findByText` 斷言** ——
+測試:`apps/admin/src/test/snackbar.ts` 的 `findSnackbarAlert()`(取最新、最下面那一則)。**不要只用 `findByText` 斷言** ——
 失敗提示與頁面上那一條錯誤是同一份文案,只比文字同時抓到兩個節點,也證明不了提示真的跳了。

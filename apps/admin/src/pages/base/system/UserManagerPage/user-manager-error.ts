@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 使用者管理會收到的業務錯誤碼(GQL-04;api 的程式正本 `apps/api/src/users/users-error.ts`)。
@@ -20,7 +20,7 @@ export type UserManagerErrorCode =
   (typeof USER_MANAGER_ERROR_CODES)[number] | "UNEXPECTED";
 
 /**
- * 共用形狀(`lib/errors.ts`)。本頁用到的選填欄位只有 `fields`:
+ * 共用形狀(`lib/base/errors.ts`)。本頁用到的選填欄位只有 `fields`:
  * `VALIDATION_FAILED` 時 api 以 `extensions.fields` 指出重複 / 不合法的欄位。
  */
 export type UserManagerError = AdminError<UserManagerErrorCode, never>;

@@ -53,6 +53,7 @@ export const DataTableHeaderCell = <Row extends RowData>({
           whiteSpace: "nowrap",
         },
         pinnedCellSx(placement, true),
+        column.headerSx,
       )}
     >
       {column.isSortable === true ? (
@@ -66,16 +67,18 @@ export const DataTableHeaderCell = <Row extends RowData>({
       ) : (
         column.header
       )}
-      <DataTableResizeHandle
-        label={resizeLabel}
-        width={width}
-        minWidth={header.column.columnDef.minSize ?? 0}
-        isResizing={header.column.getIsResizing()}
-        onDragStart={header.getResizeHandler()}
-        onKeyboardResize={(next) => {
-          onKeyboardResize(column.key, next);
-        }}
-      />
+      {header.column.getCanResize() && (
+        <DataTableResizeHandle
+          label={resizeLabel}
+          width={width}
+          minWidth={header.column.columnDef.minSize ?? 0}
+          isResizing={header.column.getIsResizing()}
+          onDragStart={header.getResizeHandler()}
+          onKeyboardResize={(next) => {
+            onKeyboardResize(column.key, next);
+          }}
+        />
+      )}
     </MuiTableCell>
   );
 };

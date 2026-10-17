@@ -5,12 +5,17 @@ import { List, ListItemButton, ListItemText } from "@repo/ui/list";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { isFlowCcIssue } from "@/lib/base/workflow/validation";
+
 export interface FlowIssueListProps {
   errors: readonly WorkflowIssue[];
   warnings: readonly WorkflowIssue[];
   stepNameOf: (stepKey: string) => string;
-  /** 點一筆 → 選中它指到的關卡(沒有關卡定位的,例如「流程至少一關」,不動) */
-  onLocate: (stepKey: string) => void;
+  /**
+   * 點一筆 → 選中它指到的關卡;整個流程的知會對象那幾筆 → `null`(取消選取,屬性面板回到「整個流程」);
+   * 其他沒有關卡定位的(例如「流程至少一關」)不動
+   */
+  onLocate: (stepKey: string | null) => void;
 }
 
 /**
@@ -38,13 +43,16 @@ export const FlowIssueList = ({
         <List dense aria-label={t("region")}>
           {all.map(({ issue, isError }, index) => {
             const stepKey = issue.location.stepKey;
+            const isFlowCc = isFlowCcIssue(issue);
             return (
               <ListItemButton
                 key={`${issue.code}-${String(index)}`}
-                disabled={stepKey === undefined}
+                disabled={stepKey === undefined && !isFlowCc}
                 onClick={() => {
                   if (stepKey !== undefined) {
                     onLocate(stepKey);
+                  } else if (isFlowCc) {
+                    onLocate(null);
                   }
                 }}
               >

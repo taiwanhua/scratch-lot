@@ -44,7 +44,7 @@ describe("CookHome 的歷史值仍在契約之內", () => {
     expect(assertProjectPublicConfig(COOKHOME_PUBLIC)).toBe(COOKHOME_PUBLIC);
   });
 
-  it("slug `cookhome` 生出的六把鍵與既有瀏覽器裡的鍵逐字相同", () => {
+  it("slug `cookhome` 生出的七把鍵與既有瀏覽器裡的鍵逐字相同", () => {
     expect(createAdminStorageKeys("cookhome")).toEqual({
       locale: "cookhome-admin-locale",
       colorMode: "cookhome-admin-color-mode",
@@ -52,6 +52,7 @@ describe("CookHome 的歷史值仍在契約之內", () => {
       routeTabsPrefix: "cookhome-admin-route-tabs",
       sessionChannel: "cookhome-admin-session",
       sideNav: "cookhome-admin-sidenav",
+      sectionsPrefix: "cookhome-admin-sections",
     });
   });
 

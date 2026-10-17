@@ -43,7 +43,10 @@ export class CreateFormInput {
   name!: string;
 }
 
-/** 改表單的名稱 / 頁籤模板;缺席 = 不動,`tabLabelTemplate: null` = 清空(改回模組層模板)。 */
+/**
+ * 改表單的名稱 / 頁籤模板 / 允許存草稿;缺席 = 不動,`tabLabelTemplate: null` = 清空(改回模組層模板),
+ * `allowDraft: null` = 不動。
+ */
 @InputType()
 export class UpdateFormInput {
   @Field(() => ID)
@@ -54,6 +57,9 @@ export class UpdateFormInput {
 
   @Field(() => String, { nullable: true })
   tabLabelTemplate?: string | null;
+
+  @Field(() => Boolean, { nullable: true })
+  allowDraft?: boolean | null;
 }
 
 /** 以某表單的某一版為基底建新表單(客製副本 + 一份草稿,同模組)。 */
@@ -141,13 +147,6 @@ export class DeleteFormVersionDraftInput {
 
   @Field(() => Int)
   expectedDraftRevision!: number;
-}
-
-/** 只帶表單 key 的動作(重試發布)。 */
-@InputType()
-export class FormKeyInput {
-  @Field(() => ID)
-  formKey!: string;
 }
 
 /** 退役目前版本:帶當時看到的版本號(`currentVersion` 已指向別的版本 → 409)。 */

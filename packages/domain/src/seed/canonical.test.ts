@@ -97,6 +97,14 @@ describe("contentHash / snapshotHash", () => {
     );
   });
 
+  it("允許存草稿:缺席與 true 同一份內容(既有宣告的 hash 不變);false 兩個 hash 都變", () => {
+    const base = hashesOf(formSeed(fields()));
+    expect(hashesOf(formSeed(fields(), { allowDraft: true }))).toEqual(base);
+    const off = hashesOf(formSeed(fields(), { allowDraft: false }));
+    expect(off.contentHash).not.toBe(base.contentHash);
+    expect(off.snapshotHash).not.toBe(base.snapshotHash);
+  });
+
   it("物件鍵的先後不影響 hash", () => {
     const reordered = fields().map(
       (item) =>
@@ -185,6 +193,72 @@ describe("contentHash / snapshotHash", () => {
           edges: [{ from: "boss", to: "hr" }],
         }),
       ).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+  });
+
+  it("流程:skipOrgs / autoApprove 省略、null、{} 都是沒設(autoApprove 的 false = 照常審核);有設才是不同內容", () => {
+    const implicit = workflowSeed({ steps: [review("boss")] });
+    for (const unset of [null, {}]) {
+      expect(
+        hashesOf(
+          workflowSeed({
+            steps: [
+              review("boss", {
+                skipOrgs: unset as never,
+                autoApprove: unset as never,
+              }),
+            ],
+          }),
+        ),
+      ).toEqual(hashesOf(implicit));
+    }
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [
+            review("boss", {
+              autoApprove: { applicant: false, priorApprover: false },
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(hashesOf(implicit));
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [review("boss", { autoApprove: { applicant: true } })],
+        }),
+      ).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [
+            review("boss", {
+              skipOrgs: { orgIds: ["tenant"], includeDescendants: true },
+            }),
+          ],
+        }),
+      ).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+  });
+
+  it("流程:逾時提醒、關卡知會、整個流程的知會省略與 null 都是沒設;有設才是不同內容", () => {
+    const implicit = workflowSeed({ steps: [review("boss")] });
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [review("boss", { overdue: null, cc: null })],
+          cc: null,
+        }),
+      ),
+    ).toEqual(hashesOf(implicit));
+    const cc = { kind: "manager", level: 1 } as const;
+    expect(
+      hashesOf(workflowSeed({ steps: [review("boss", { cc })] })).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+    expect(
+      hashesOf(workflowSeed({ steps: [review("boss")], cc })).contentHash,
     ).not.toBe(hashesOf(implicit).contentHash);
   });
 

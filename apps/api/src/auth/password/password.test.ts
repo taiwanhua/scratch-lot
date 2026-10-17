@@ -204,7 +204,7 @@ describe("登入線3:requestPasswordReset / setPassword / changePassword(GraphQL
     if (!sent) {
       throw new Error("記錄用 adapter 沒收到重設信");
     }
-    return tokenOf(sent.link);
+    return tokenOf(sent.link ?? "");
   }
 
   async function actionTokensOf(
@@ -239,7 +239,7 @@ describe("登入線3:requestPasswordReset / setPassword / changePassword(GraphQL
         to: "forgot-user@example.com",
       });
       expect(
-        sent?.link.startsWith(
+        sent?.link?.startsWith(
           "https://erp-test.cookhome.online/set-password?token=",
         ),
       ).toBe(true);

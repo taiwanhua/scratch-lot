@@ -43,6 +43,19 @@ export const CLOUD_OUTPUT_KEYS = [
   "resend_secret",
   "root_account",
   "root_email",
+  "realtime",
+  "realtime_worker",
+  "cloudflare_account_id",
+  "realtime_ticket_secret",
+  "realtime_publish_secret",
+];
+
+/** 即時通道停用(環境沒有 `realtime` 或為 null)時,這四個輸出是空字串、`realtime` 是 "false"。 */
+export const REALTIME_OUTPUT_KEYS = [
+  "realtime_worker",
+  "cloudflare_account_id",
+  "realtime_ticket_secret",
+  "realtime_publish_secret",
 ];
 
 /** `--scope github` 啟用時的固定輸出鍵;停用時只有 `enabled`。 */
@@ -76,6 +89,8 @@ const PATTERNS = {
     /^projects\/[0-9]+\/locations\/global\/workloadIdentityPools\/[a-z0-9-]+\/providers\/[a-z0-9-]+$/,
   serviceAccount: /^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/,
   cloudRunService: /^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/,
+  workerName: /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/,
+  cloudflareAccountId: /^[0-9a-f]{32}$/,
   httpsOrigin: /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]+)?$/,
   secretName: /^[A-Za-z0-9_-]{1,255}$/,
   email: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/,
@@ -218,13 +233,80 @@ export function resolveGithubConfig({ rootDir, repository }) {
   };
 }
 
+/**
+ * 即時通道(Cloudflare Worker)的部署目標,可省略:環境沒有 `realtime` 或為 null = 停用(不部署 Worker、
+ * api 不掛兩把密鑰)。有寫就要完整:Worker 名稱、Cloudflare 帳號 id、兩把密鑰在 Secret Manager 的名稱
+ * (Worker 部署時從 Secret Manager 讀出、以 Wrangler secret 上傳,兩邊同一個值)。
+ */
+function validateRealtime(env, at) {
+  if (!Object.hasOwn(env, "realtime") || env.realtime === null) {
+    return {
+      realtime: "false",
+      ...Object.fromEntries(REALTIME_OUTPUT_KEYS.map((key) => [key, ""])),
+    };
+  }
+  const realtime = section(
+    CLOUD_FILE,
+    env,
+    "realtime",
+    ["worker", "cloudflareAccountId", "secrets"],
+    `${at}.realtime`,
+  );
+  const secrets = section(
+    CLOUD_FILE,
+    realtime,
+    "secrets",
+    ["ticketSecret", "publishSecret"],
+    `${at}.realtime.secrets`,
+  );
+  return {
+    realtime: "true",
+    realtime_worker: text(
+      CLOUD_FILE,
+      `${at}.realtime.worker`,
+      realtime.worker,
+      PATTERNS.workerName,
+    ),
+    cloudflare_account_id: text(
+      CLOUD_FILE,
+      `${at}.realtime.cloudflareAccountId`,
+      realtime.cloudflareAccountId,
+      PATTERNS.cloudflareAccountId,
+    ),
+    realtime_ticket_secret: text(
+      CLOUD_FILE,
+      `${at}.realtime.secrets.ticketSecret`,
+      secrets.ticketSecret,
+      PATTERNS.secretName,
+    ),
+    realtime_publish_secret: text(
+      CLOUD_FILE,
+      `${at}.realtime.secrets.publishSecret`,
+      secrets.publishSecret,
+      PATTERNS.secretName,
+    ),
+  };
+}
+
+const ENVIRONMENT_KEYS = [
+  "apiService",
+  "adminService",
+  "apiUrl",
+  "rootAdmin",
+  "secrets",
+];
+
 function validateEnvironment(environments, name) {
   const at = `environments.${name}`;
+  const raw = environments[name];
+  // `realtime` 可省略(舊設定沒有這一段 = 即時通道停用);其餘鍵照舊剛好這幾個
   const env = section(
     CLOUD_FILE,
     environments,
     name,
-    ["apiService", "adminService", "apiUrl", "rootAdmin", "secrets"],
+    isPlainObject(raw) && Object.hasOwn(raw, "realtime")
+      ? [...ENVIRONMENT_KEYS, "realtime"]
+      : ENVIRONMENT_KEYS,
     at,
   );
   const rootAdmin = section(
@@ -281,6 +363,7 @@ function validateEnvironment(environments, name) {
       rootAdmin.email,
       PATTERNS.email,
     ),
+    ...validateRealtime(env, at),
   };
 }
 

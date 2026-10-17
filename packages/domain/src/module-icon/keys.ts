@@ -9,7 +9,7 @@
  * 新增一個 key = 同一份 PR 同時補 ui 登錄表,否則側欄會拿到畫不出來的 key。
  */
 
-/** 可選的側欄圖示 key(29 個;語意對照見 `docs/modules/module-manager.md`「側欄圖示」)。 */
+/** 可選的側欄圖示 key(30 個;語意對照見 `docs/modules/module-manager.md`「側欄圖示」)。 */
 export const MODULE_ICON_KEYS = [
   "dashboard",
   "home",
@@ -40,6 +40,7 @@ export const MODULE_ICON_KEYS = [
   "notifications",
   "restaurant",
   "star",
+  "print",
 ] as const;
 
 /** 白名單內的一個圖示 key。 */

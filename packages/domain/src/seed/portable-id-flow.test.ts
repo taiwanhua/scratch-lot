@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { column } from "../form/array-test-support";
 import { definitionOf, field } from "../form/form-test-support";
 import type {
   Expression,
@@ -298,5 +299,42 @@ describe("合法的空值不誤拒", () => {
     ).toEqual([
       ["FIXED_ENVIRONMENT_VALUE", "definition.fields.1.default.expr"],
     ]);
+  });
+});
+
+/** 明細:引用子欄 who(可選帶入 id → copied)+ 列內公式拿 copied 比寫死的值。 */
+function lines(prefill: boolean): FieldDef {
+  return field("lines", "array", {
+    widget: { kind: "table" },
+    columns: [
+      column("copied", "text"),
+      column("who", "reference", {
+        source: { provider: "user", labelField: "name" },
+        ...(prefill && {
+          prefill: { mapping: [{ sourceField: "id", fieldKey: "copied" }] },
+        }),
+      }),
+      column("flag", "number", {
+        valueSource: {
+          kind: "computed",
+          expr: { if: [{ "==": [idOf("row.copied"), "source-user"] }, 1, 0] },
+        },
+      }),
+    ],
+  });
+}
+
+describe("明細引用子欄的列內帶入(B2c)也納入 ID 流向", () => {
+  it("由來源 id 帶進同一列的子欄,列內公式拿它比寫死的值 → ID_COMPARISON", () => {
+    const errors = portableErrors(
+      formSeed([field("subject", "text"), lines(true)]),
+    );
+    expect(errors.map(([code]) => code)).toContain("ID_COMPARISON");
+  });
+
+  it("沒有列內帶入時同一條公式不算 ID 比較", () => {
+    expect(
+      portableErrors(formSeed([field("subject", "text"), lines(false)])),
+    ).toEqual([]);
   });
 });

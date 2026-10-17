@@ -1,0 +1,54 @@
+# 代理人(《底座規格》3.7 B15;api `apps/api/src/user-delegations/`):只讀寫自己的,所有登入者都能用。
+# 起訖是時點:起 = 選的那一天在最上層組織時區 00:00、迄 = 結束日 24:00(隔天 00:00,不含)。
+# status:UPCOMING 未開始 / ACTIVE 代理中 / ENDED 已結束(唯讀)
+fragment UserDelegationFields on UserDelegationModel {
+  id
+  delegate {
+    id
+    name
+  }
+  startAt
+  endAt
+  note
+  status
+  createdAt
+}
+
+query MyDelegations($input: MyDelegationsInput!) {
+  myDelegations(input: $input) {
+    items {
+      ...UserDelegationFields
+    }
+    page
+    pageSize
+    totalCount
+  }
+}
+
+# 可選的代理人:同一最上層組織、啟用中、不含自己;keyword 比對姓名與帳號
+query MyDelegateCandidates($input: MyDelegateCandidatesInput!) {
+  myDelegateCandidates(input: $input) {
+    items {
+      id
+      name
+      account
+    }
+    totalCount
+  }
+}
+
+# 重疊 / 代理人是自己 / 代理人不可選 / 期間不合 → VALIDATION_FAILED(extensions.reason)
+mutation CreateMyDelegation($input: CreateMyDelegationInput!) {
+  createMyDelegation(input: $input) {
+    delegation {
+      ...UserDelegationFields
+    }
+  }
+}
+
+# 已結束的 → VALIDATION_FAILED / DELEGATION_ENDED;已派出的任務不變
+mutation DeleteMyDelegation($input: DeleteMyDelegationInput!) {
+  deleteMyDelegation(input: $input) {
+    id
+  }
+}

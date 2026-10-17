@@ -5,8 +5,9 @@ import { Alert } from "@repo/ui/alert";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useRouteTabItemLabel } from "@/hooks/useRouteTabItemLabel";
-import type { ModulePageProps } from "@/lib/module-tree";
+import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
+import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { DemoForm } from "./DemoForm";
 import { demoErrorOf } from "./demo-error";
@@ -50,9 +51,10 @@ export const DemoFormPage = <
   // 編輯情境的路由頁籤顯示「模組名 — 編輯・項目名」;新增情境沒有項目,維持模組名
   useRouteTabItemLabel(isEdit ? query.item?.name : null, "edit");
 
+  const tabHref = useRouteTabHref();
   const leave = () => {
     if (access.listRoute !== null) {
-      void navigate(access.listRoute);
+      void navigate(tabHref(access.listRoute));
     }
   };
 

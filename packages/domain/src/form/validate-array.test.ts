@@ -155,6 +155,87 @@ describe("檢查器:明細列的定義", () => {
     expect(issue?.location.property).toBe("options");
   });
 
+  describe("引用子欄(B2b)", () => {
+    const store = column("store", "reference", {
+      source: { provider: "user", labelField: "name" },
+    });
+
+    it("有來源的引用子欄沒有錯誤;登錄表認得的來源也過", () => {
+      expect(
+        reportOf(definitionOf([title, arrayField("items", [qty, store])]))
+          .errors,
+      ).toEqual([]);
+      const report = validateDefinition(
+        definitionOf([title, arrayField("items", [store])]),
+        {
+          regexSafety: recheckRegexSafety,
+          lookupProviders: { user: { fields: { name: "text" } } },
+        },
+      );
+      expect(report.errors).toEqual([]);
+    });
+
+    it("沒設來源 → REFERENCE_SOURCE_MISSING,定位到明細欄 + 子欄", () => {
+      const [issue] = errorsOf(
+        [arrayField("items", [column("store", "reference")])],
+        "REFERENCE_SOURCE_MISSING",
+      );
+      expect(issue?.location).toEqual({
+        fieldKey: "items",
+        columnKey: "store",
+        property: "source",
+      });
+    });
+
+    it("登錄表沒有的來源 → 錯誤定位到子欄", () => {
+      const report = validateDefinition(
+        definitionOf([
+          title,
+          arrayField("items", [
+            column("store", "reference", {
+              source: { provider: "nowhere", labelField: "name" },
+            }),
+          ]),
+        ]),
+        {
+          regexSafety: recheckRegexSafety,
+          lookupProviders: { user: { fields: { name: "text" } } },
+        },
+      );
+      expect(report.errors).toContainEqual(
+        expect.objectContaining({
+          location: expect.objectContaining({
+            fieldKey: "items",
+            columnKey: "store",
+          }) as unknown,
+        }),
+      );
+    });
+
+    it("引用子欄不能用列內公式", () => {
+      const computedRef = column("store", "reference", {
+        source: { provider: "user", labelField: "name" },
+        valueSource: { kind: "computed", expr: { var: "row.qty" } },
+      });
+      const [issue] = errorsOf(
+        [arrayField("items", [qty, computedRef])],
+        "ARRAY_COLUMN_SETTING",
+      );
+      expect(issue?.location.property).toBe("valueSource");
+    });
+
+    it("不是引用的子欄不能設來源", () => {
+      const withSource = column("note", "text", {
+        source: { provider: "user", labelField: "name" },
+      });
+      const [issue] = errorsOf(
+        [arrayField("items", [withSource])],
+        "ARRAY_COLUMN_SETTING",
+      );
+      expect(issue?.location.property).toBe("source");
+    });
+  });
+
   it("每版明細欄上限 5", () => {
     const arrays = Array.from({ length: 6 }, (_, index) =>
       arrayField(`items_${String(index)}`, [qty]),
@@ -369,5 +450,72 @@ describe("檢查器:明細與子路徑不可用的地方", () => {
     expect(report.warnings.map((issue) => issue.code)).toContain(
       "LIST_COLUMN_ARRAY",
     );
+  });
+});
+
+/** 列內帶入測試的引用子欄「遊戲」(來源 `project_game`)。 */
+function game(mapping: { sourceField: string; fieldKey: string }[]) {
+  return column("game", "reference", {
+    source: { provider: "project_game", labelField: "title" },
+    prefill: { mapping },
+  });
+}
+
+describe("檢查器:明細引用子欄的列內帶入(B2c)", () => {
+  const registry = {
+    project_game: {
+      fields: { title: "text" as const, bookAmount: "number" as const },
+    },
+  };
+  const errorsWith = (fields: FieldDef[]): DefinitionIssue[] =>
+    validateDefinition(definitionOf([title, ...fields]), {
+      regexSafety: recheckRegexSafety,
+      lookupProviders: registry,
+    }).errors;
+
+  it("帶入同一列型別相容的子欄 → 沒有錯誤", () => {
+    const lines = arrayField("lines", [
+      game([{ sourceField: "bookAmount", fieldKey: "amount" }]),
+      column("amount", "number"),
+    ]);
+    expect(errorsWith([lines])).toEqual([]);
+  });
+
+  it("型別不符 → PREFILL_TYPE_INCOMPATIBLE,定位到子欄的對應表", () => {
+    const lines = arrayField("lines", [
+      game([{ sourceField: "title", fieldKey: "amount" }]),
+      column("amount", "number"),
+    ]);
+    const issue = errorsWith([lines]).find(
+      (candidate) => candidate.code === "PREFILL_TYPE_INCOMPATIBLE",
+    );
+    expect(issue?.location).toEqual({
+      fieldKey: "lines",
+      columnKey: "game",
+      property: "prefill.mapping.0",
+    });
+  });
+
+  it("目標不是同一列使用者填的子欄 / 來源沒有這個欄位 → 錯誤", () => {
+    const lines = arrayField("lines", [
+      game([
+        { sourceField: "bookAmount", fieldKey: "game" },
+        { sourceField: "nope", fieldKey: "amount" },
+      ]),
+      column("amount", "number"),
+    ]);
+    const codes = errorsWith([lines]).map((issue) => issue.code);
+    expect(codes).toContain("PREFILL_TARGET_NOT_INPUT");
+    expect(codes).toContain("PREFILL_UNKNOWN_SOURCE_FIELD");
+  });
+
+  it("不是引用的子欄不能設帶入規則", () => {
+    const lines = arrayField("lines", [
+      column("note", "text", { prefill: { mapping: [] } }),
+    ]);
+    const issue = errorsWith([lines]).find(
+      (candidate) => candidate.code === "ARRAY_COLUMN_SETTING",
+    );
+    expect(issue?.location.property).toBe("prefill");
   });
 });

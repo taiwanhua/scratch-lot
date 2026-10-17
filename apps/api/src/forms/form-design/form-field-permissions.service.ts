@@ -25,13 +25,11 @@ import {
   fieldPermissionKey,
   fieldPermissionName,
   fieldPermissionPrefix,
+  formCreatePermissionKey,
+  formCreatePermissionName,
   parseFieldPermissionKey,
 } from "../form-permission-keys";
-import {
-  isDuplicateKeyError,
-  notFoundError,
-  permissionNotDeletableError,
-} from "../forms-error";
+import { notFoundError, permissionNotDeletableError } from "../forms-error";
 import type { DeleteRetiredPermissionInput } from "./dto/form-design.input";
 import { FormPublishHooks } from "./form-publish-hooks";
 import type {
@@ -66,9 +64,20 @@ function desiredPermissionsOf(
   return desired;
 }
 
+/** 發布步驟 3 這次新建的依表單新增權限(B9b);發布成功畫面提示「到角色管理授予」用。 */
+export interface CreatedFormCreatePermission {
+  key: string;
+  name: string;
+}
+
+/** 一筆宣告權限這次的寫入結果。 */
+type DeclareOutcome = "created" | "updated" | "unchanged";
+
 /**
- * 欄位級權限(`permissions.source = "dynamic"`,Spec 6a §6):
- * - 發布步驟 3 的同步(`syncForVersion`):缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label
+ * 表單動態權限(`permissions.source = "dynamic"`,Spec 6a §6、B9b):
+ * - 發布步驟 3 的同步(`syncForVersion`):欄位級權限缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label;
+ *   模組開啟 B9b(`perFormCreate`)時再確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」隨表單改名;不退役,
+ *   不自動授予任何角色)
  * - 「模組與權限」頁的退役權限清理(`retired` / `deleteRetired`):三層檢查
  */
 @Injectable()
@@ -85,14 +94,15 @@ export class FormFieldPermissionsService {
   ) {}
 
   /**
-   * 發布步驟 3。**每一筆寫入都先看「已經是目標狀態就跳過」**,所以中途失敗後重跑幾次結果都一樣;
+   * 發布步驟 3(在發布的交易內執行)。每一筆寫入都先看「已經是目標狀態就跳過」(重試發布接續舊資料時也一樣);
    * 同 key 欄位跨版本沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
+   * 回傳這次**新建**的依表單新增權限(B9b;已存在、或模組沒開 → null)。
    */
   async syncForVersion(
     operator: OperatorContext,
     form: FormRecord,
     fields: readonly FieldDef[],
-  ): Promise<void> {
+  ): Promise<CreatedFormCreatePermission | null> {
     const module = await this.modules.findOne(operator, {
       key: form.moduleKey,
     });
@@ -126,6 +136,31 @@ export class FormFieldPermissionsService {
         });
       }
     }
+    return module.perFormCreate
+      ? this.syncCreatePermission(operator, module._id, form)
+      : null;
+  }
+
+  /**
+   * 依表單新增權限(B9b):缺的建、`name` 隨表單名稱。表單不能刪,所以不退役;
+   * 欄位級權限的退役與清理只認 `show-` / `edit-`(`parseFieldPermissionKey`),碰不到它。
+   */
+  private async syncCreatePermission(
+    operator: OperatorContext,
+    moduleId: Types.ObjectId,
+    form: FormRecord,
+  ): Promise<CreatedFormCreatePermission | null> {
+    const key = formCreatePermissionKey(form.moduleKey, form.key);
+    const name = formCreatePermissionName(form.name);
+    const current = await this.permissions.findOne(operator, { key });
+    const outcome = await this.ensureDeclared(
+      operator,
+      moduleId,
+      key,
+      name,
+      current ?? undefined,
+    );
+    return outcome === "created" ? { key, name } : null;
   }
 
   /** 一筆這一版宣告的權限:缺的建、退役的復活、`name` 不同的改;已是目標狀態就跳過。 */
@@ -135,38 +170,34 @@ export class FormFieldPermissionsService {
     key: string,
     name: string,
     current: PermissionRecord | undefined,
-  ): Promise<void> {
+  ): Promise<DeclareOutcome> {
     // 形狀上撞到手寫的 seed 權限(不該發生):不碰 seed 的資料
     if (current?.source === "seed") {
-      return;
+      return "unchanged";
     }
     if (current?.retiredAt === null && current.name === name) {
-      return;
+      return "unchanged";
     }
     await this.hooks.reached("permission");
     if (current) {
       await this.permissions.updateById(operator, current._id, {
         $set: { retiredAt: null, name },
       });
-      return;
+      return "updated";
     }
-    try {
-      await this.permissions.create(operator, {
-        key,
-        moduleId,
-        name,
-        enabled: true,
-        isSystem: false,
-        settings: {},
-        source: "dynamic",
-        retiredAt: null,
-      });
-    } catch (error) {
-      // 另一個重試同時建好了同一筆:目標狀態已達成
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-    }
+    // `current` 是同一個交易裡先查的結果(發布是一個交易,TX-04):沒有才建;
+    // 同時有別的發布建了同一筆 → 唯一索引擋下,錯誤往外拋、整個發布回復
+    await this.permissions.create(operator, {
+      key,
+      moduleId,
+      name,
+      enabled: true,
+      isSystem: false,
+      settings: {},
+      source: "dynamic",
+      retiredAt: null,
+    });
+    return "created";
   }
 
   /** 這張表單兩種動作的 key 前綴(formKey 不含 `-`,前綴不會誤中別張表單)。 */

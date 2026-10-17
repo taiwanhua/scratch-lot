@@ -2,26 +2,26 @@ import { afterEach, describe, expect, it } from "@jest/globals";
 
 import { projectPublic } from "@repo/project-config/public";
 
-import { SESSION_CHANNEL_NAME } from "@/lib/auth/session-channel";
+import { SESSION_CHANNEL_NAME } from "@/lib/base/auth/session-channel";
 import {
   COLOR_MODE_STORAGE_KEY,
   COLOR_SCHEME_STORAGE_KEY,
-} from "@/lib/color-mode";
+} from "@/lib/base/color-mode";
 import {
   LOCALE_STORAGE_KEY,
   readStoredLocale,
   writeStoredLocale,
-} from "@/lib/locale";
+} from "@/lib/base/locale";
 import {
   ROUTE_TABS_STORAGE_PREFIX,
   readStoredEntries,
   routeTabsStorageKey,
   writeStoredEntries,
-} from "@/lib/route-tabs";
+} from "@/lib/base/route-tabs";
 import {
   LEGACY_SIDE_NAV_STORAGE_KEY,
   SIDE_NAV_STORAGE_KEY,
-} from "@/stores/useSideNavStore";
+} from "@/stores/base/useSideNavStore";
 
 /**
  * 正式常數 × 目前的專案設定:六把鍵都掛在目前的 slug 底下,資料格式固定。

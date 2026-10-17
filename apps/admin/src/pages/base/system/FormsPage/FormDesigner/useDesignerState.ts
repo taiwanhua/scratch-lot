@@ -13,11 +13,12 @@ import {
   nextDesignId,
   toDesignDefinition,
   toFormDefinition,
-} from "@/lib/form-engine/design-definition";
-import type { DesignerReport } from "@/lib/form-engine/designer-issues";
+} from "@/lib/base/form-engine/design-definition";
+import type { DesignerReport } from "@/lib/base/form-engine/designer-issues";
 import {
   type PlaceTarget,
   type RemoveSectionMode,
+  type SectionCollapsePatch,
   addField,
   addSection,
   moveField,
@@ -28,7 +29,8 @@ import {
   renameSection,
   setFieldSpan,
   updateField,
-} from "@/lib/form-engine/designer-ops";
+  updateSectionCollapse,
+} from "@/lib/base/form-engine/designer-ops";
 
 import { type RegexCheckStatus, useRegexSafety } from "./useRegexSafety";
 
@@ -49,7 +51,11 @@ export interface DesignerState {
   regexStatus: RegexCheckStatus;
   /** 選中欄位的內部 id */
   selectedFieldId: string | null;
+  /** 選欄位(同時取消選分區) */
   select: (fieldId: string | null) => void;
+  /** 選中分區的 key(屬性面板顯示「分區設定」;和選欄位互斥) */
+  selectedSectionKey: string | null;
+  selectSection: (sectionKey: string | null) => void;
   /** 依 key 選(檢查結果定位只知道 key;重複時選第一個) */
   selectByKey: (fieldKey: string | null) => void;
   /**
@@ -70,6 +76,8 @@ export interface DesignerState {
   addSection: (title: string) => void;
   renameSection: (sectionKey: string, title: string) => void;
   removeSection: (sectionKey: string, mode: RemoveSectionMode) => void;
+  /** 分區的收合設定(可以收合、預設收合、收合時標題列顯示的欄位) */
+  updateSection: (sectionKey: string, patch: SectionCollapsePatch) => void;
   patchSettings: (patch: DefinitionSettingsPatch) => void;
   /** 存草稿成功後把**送出去的那一份**當成新的基準(存檔途中又改的仍算未存) */
   markSaved: (saved: FormDefinition) => void;
@@ -77,7 +85,7 @@ export interface DesignerState {
 
 /**
  * 設計器的草稿狀態(初始值由外層 gate 後帶進 `useState` 初始化器,REACT-08)。
- * 載入時給每個欄位配內部 id(`design-definition.ts`),所有改動都走 `lib/form-engine/designer-ops.ts`
+ * 載入時給每個欄位配內部 id(`design-definition.ts`),所有改動都走 `lib/base/form-engine/designer-ops.ts`
  * 的純函式、以 id 找欄位;**刪欄位只動草稿**,引用處交給檢查器報錯。
  */
 export const useDesignerState = (initial: FormDefinition): DesignerState => {
@@ -85,7 +93,14 @@ export const useDesignerState = (initial: FormDefinition): DesignerState => {
     toDesignDefinition(initial),
   );
   const [saved, setSaved] = useState(initial);
-  const [selectedFieldId, select] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    fieldId: string | null;
+    sectionKey: string | null;
+  }>({ fieldId: null, sectionKey: null });
+  const select = (fieldId: string | null) => {
+    setSelection({ fieldId, sectionKey: null });
+  };
+  const selectedFieldId = selection.fieldId;
   const output = useMemo(() => toFormDefinition(definition), [definition]);
   const { regexSafety, status: regexStatus } = useRegexSafety(output);
 
@@ -106,6 +121,10 @@ export const useDesignerState = (initial: FormDefinition): DesignerState => {
     regexStatus,
     selectedFieldId,
     select,
+    selectedSectionKey: selection.sectionKey,
+    selectSection: (sectionKey) => {
+      setSelection({ fieldId: null, sectionKey });
+    },
     selectByKey: (fieldKey) => {
       select(
         definition.fields.find((field) => field.key === fieldKey)?._id ?? null,
@@ -157,6 +176,12 @@ export const useDesignerState = (initial: FormDefinition): DesignerState => {
     },
     removeSection: (sectionKey, mode) => {
       setDefinition(removeSection(definition, sectionKey, mode));
+      if (selection.sectionKey === sectionKey) {
+        setSelection({ fieldId: null, sectionKey: null });
+      }
+    },
+    updateSection: (sectionKey, patch) => {
+      setDefinition(updateSectionCollapse(definition, sectionKey, patch));
     },
     patchSettings: (patch) => {
       setDefinition({ ...definition, ...patch });

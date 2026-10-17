@@ -24,9 +24,12 @@ export const WORKFLOW_REASSIGN_PERMISSION = permissionKey(
   "reassign",
 );
 
+/** 申請中心的模組 key(側欄計數信號 `badge:apply-center` 也用它)。 */
+export const APPLY_CENTER_MODULE_KEY = "apply-center";
+
 /** 申請中心(`apply-center`):我的申請 / 待我審核 / 新申請入口。 */
 export const APPLY_CENTER_VIEW_PERMISSION = permissionKey(
-  "apply-center",
+  APPLY_CENTER_MODULE_KEY,
   "view",
 );
 

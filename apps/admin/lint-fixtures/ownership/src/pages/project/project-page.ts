@@ -1,6 +1,6 @@
+import { sharedPart } from "../../components/base/shared-part";
 import { projectPart } from "../../components/project/project-part";
-import { sharedPart } from "../../components/shared-part";
-import { baseUtil } from "../../lib/base-util";
+import { baseUtil } from "../../lib/base/base-util";
 import { projectUtil } from "../../lib/project/project-util";
 
 export const projectPage = [

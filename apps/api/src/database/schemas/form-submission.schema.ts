@@ -29,13 +29,16 @@ export type FormSubmissionStatus = SubmissionStatus;
 
 /**
  * 一次送出 / 修改的上下文(歷史檢視重算條件時轉成表達式的 `ctx.*`,不拿讀者現在的身分補值)。
- * `orgId` = 操作者當時的當前組織。
+ * `orgId` = 操作者當時的當前組織;`orgIds` = 操作者當時的所屬組織(全部,`org_user` 的直接關聯);
+ * `tenantId` = 操作者當時的租戶頂層(根組織 = null)。`orgIds` / `tenantId` 缺席 = 舊修訂(讀成空 / null)。
  */
 export interface FormRevisionContext {
   at: Date;
   timezone: string;
   userId: Types.ObjectId | null;
   orgId: Types.ObjectId | null;
+  orgIds?: Types.ObjectId[];
+  tenantId?: Types.ObjectId | null;
 }
 
 /** 修訂的來由:`upgrade` = 舊版資料升級到新版(改綁版本 + 補值 + 重算,不驗證);缺席 = 一般送出 / 修改。 */

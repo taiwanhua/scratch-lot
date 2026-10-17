@@ -8,6 +8,7 @@ import {
   arrayRowsOf,
   columnPathOf,
   lookupLabelFieldsOf,
+  withoutLookupFilterVars,
 } from "@repo/domain/form";
 
 import { FieldCategoryOptionsService } from "../field-category-options.service";
@@ -73,7 +74,7 @@ interface DisplayTarget {
 }
 
 /**
- * 一筆提交要解析顯示名的目標:一般欄位照舊;明細欄的類別選項子欄攤成一個 `<明細 key>.<子欄 key>` 的目標,
+ * 一筆提交要解析顯示名的目標:一般欄位照舊;明細欄的單選 / 引用子欄攤成一個 `<明細 key>.<子欄 key>` 的目標,
  * 值 = 各列該子欄的值(去重)。被遮蔽的明細(`"[redacted]"`)沒有列,不解析。
  */
 function displayTargetsOf(entry: DisplayNameEntry): DisplayTarget[] {
@@ -83,13 +84,19 @@ function displayTargetsOf(entry: DisplayNameEntry): DisplayTarget[] {
     }
     const rows = arrayRowsOf(entry.values[field.key]);
     return arrayColumnsOf(field)
-      .filter((column) => column.type === "select")
+      .filter(
+        (column) => column.type === "select" || column.type === "reference",
+      )
       .map((column) => {
         const seen = new Set<string>();
         const cells = rows
           .map((row) => row[column.key])
           .filter((cell) => {
-            const identity = JSON.stringify(cell ?? null);
+            // 引用比 id(label 快照不同的同一筆只解析一次);選項比整個存值
+            const identity =
+              column.type === "reference" && isRecord(cell)
+                ? String(cell.id)
+                : JSON.stringify(cell ?? null);
             if (cell === null || cell === undefined || seen.has(identity)) {
               return false;
             }
@@ -189,7 +196,8 @@ function groupsOf(entries: readonly DisplayNameEntry[]): {
  *
  * **批次**(DataLoader 的做法,不逐列查):先把整頁每一筆、每一欄要解析的值依來源分組,
  * 每個類別 / 每個 lookup 來源只查一次,再分回各筆。靜態選項的 label 從該筆綁的版本定義取,不在這裡。
- * 明細的類別選項子欄以 `fieldKey = "<明細 key>.<子欄 key>"` 回一組(各列的值合在一起)。
+ * 明細的類別 / lookup 選項子欄與引用子欄以 `fieldKey = "<明細 key>.<子欄 key>"` 回一組(各列的值合在一起;
+ * 引用子欄同一來源的 id 一次查完)。
  */
 @Injectable()
 export class DisplayNamesService {
@@ -221,9 +229,10 @@ export class DisplayNamesService {
   ): Promise<Map<string, ReadonlyMap<string, string | null>>> {
     const labels = new Map<string, ReadonlyMap<string, string | null>>();
     for (const [signature, group] of groups) {
+      // 現名只看讀不讀得到,不看連動篩選(那是填寫當下縮小候選的條件)
       const records = await this.lookups.findByValues(
         facts,
-        group.source,
+        withoutLookupFilterVars(group.source),
         group.field,
         [...group.values],
         lookupLabelFieldsOf(group.source),

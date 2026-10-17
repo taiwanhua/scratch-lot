@@ -800,7 +800,8 @@ describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以�
       ctx: {
         now: new Date().toISOString(),
         timezone: "Asia/Taipei",
-        user: { id: "root", orgId: "root" },
+        user: { id: "root", orgId: "root", orgIds: ["root"] },
+        tenant: { id: null },
       },
     });
 

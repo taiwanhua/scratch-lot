@@ -1,4 +1,4 @@
-import type { ModulePageProps } from "../../lib/module-tree";
+import type { ModulePageProps } from "../../lib/base/module-tree";
 
 /**
  * 測試專案對治理頁(角色管理)的替換:同一個網址、同一筆 `me.modules`,內容換成專案版。

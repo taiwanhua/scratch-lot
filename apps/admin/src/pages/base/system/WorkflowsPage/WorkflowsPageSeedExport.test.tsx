@@ -194,8 +194,9 @@ describe("流程管理:版本面板的「匯出專案設定」", () => {
               issues: [
                 {
                   code: "ASSIGNEE_NOT_PORTABLE",
-                  message: "共用流程的關卡不能指名使用者(USERS_IN_SHARED)",
-                  path: "definition.steps.0.assignee.userIds",
+                  message:
+                    "共用流程的審核者條件只能用權限與非指定的組織來源(關卡 boss)(AUDIENCE_IN_SHARED)",
+                  path: "definition.steps.0.assignee.audience.filter.children[0]",
                 },
               ],
             },
@@ -215,7 +216,7 @@ describe("流程管理:版本面板的「匯出專案設定」", () => {
     ).toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        "definition.steps.0.assignee.userIds:共用流程的關卡不能指名使用者(USERS_IN_SHARED)",
+        "definition.steps.0.assignee.audience.filter.children[0]:共用流程的審核者條件只能用權限與非指定的組織來源(關卡 boss)(AUDIENCE_IN_SHARED)",
       ),
     ).toBeInTheDocument();
     expect(downloads).toEqual([]);
@@ -265,7 +266,6 @@ describe("流程管理:版本面板的「匯出專案設定」", () => {
         ownerOrgName: "CookHome",
       }),
     ],
-    ["發布中斷的共用流程", sharedWorkflow({ publishInterrupted: true })],
   ])("不可用:%s 沒有匯出按鈕", async (_title, world) => {
     const { user } = renderWorkflows({ world });
 

@@ -11,8 +11,8 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Tooltip } from "@repo/ui/tooltip";
 
-import { useSession } from "@/hooks/useSession";
-import { nextKey } from "@/lib/form-engine/designer-ops";
+import { useSession } from "@/hooks/base/useSession";
+import { nextKey } from "@/lib/base/form-engine/designer-ops";
 
 import { LookupSourceEditor } from "./LookupSourceEditor";
 import { useRowIds } from "./useRowIds";

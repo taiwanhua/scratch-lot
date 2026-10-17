@@ -4,8 +4,9 @@ import MuiChip, { type ChipProps as MuiChipProps } from "@mui/material/Chip";
 
 import { CloseIcon } from "../icons/CloseIcon";
 import { mergeSx } from "../theme/sx";
+import { type TagTone, tagToneStyles } from "./tag-tones";
 
-export type TagTone = "grey" | "primary" | "success" | "warning" | "error";
+export type { TagTone } from "./tag-tones";
 
 export interface TagProps extends Omit<
   MuiChipProps,
@@ -14,15 +15,6 @@ export interface TagProps extends Omit<
   /** 色調(Figma Draft/Tag 76:722 的 Tone 變體軸);預設 grey。 */
   tone?: TagTone;
 }
-
-/** 每個色調的底色與字色(語意 token;grey 沒有 lighter / darker,改用灰階兩階)。 */
-const toneStyles: Record<TagTone, { bgcolor: string; color: string }> = {
-  grey: { bgcolor: "grey.200", color: "grey.700" },
-  primary: { bgcolor: "primary.lighter", color: "primary.darker" },
-  success: { bgcolor: "success.lighter", color: "success.darker" },
-  warning: { bgcolor: "warning.lighter", color: "warning.darker" },
-  error: { bgcolor: "error.lighter", color: "error.darker" },
-};
 
 /**
  * 狀態 / 分類標籤(啟用、停用、系統內建、群組、隱藏頁、+N…)。
@@ -44,7 +36,7 @@ export const Tag = ({ tone = "grey", sx, onDelete, ...rest }: TagProps) => (
         // Figma 指定 11px;theme.typography 的最小級是 caption 12px,故此處直寫
         fontSize: "0.6875rem",
         fontWeight: 600,
-        ...toneStyles[tone],
+        ...tagToneStyles[tone],
         "& .MuiChip-label": { paddingInline: 0 },
         "& .MuiChip-deleteIcon": {
           fontSize: "0.75rem",

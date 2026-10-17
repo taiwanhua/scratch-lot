@@ -40,8 +40,6 @@ export const SEED_CONFLICT_CODES = [
   "UNEXPECTED_DRAFT",
   /** 這次安裝建立的草稿被別人改過。 */
   "DRAFT_DRIFT",
-  /** 有不是這次安裝的發布進行中 / 中斷。 */
-  "PUBLISH_IN_PROGRESS",
   /** 同 key 另一個 revision 的安裝還沒完成(先以原 revision 續跑)。 */
   "INSTALLATION_IN_PROGRESS",
   /** 安裝紀錄指向的定義不存在。 */
@@ -60,10 +58,12 @@ export const SEED_CONFLICT_CODES = [
 
 export type SeedConflictCode = (typeof SEED_CONFLICT_CODES)[number];
 
-/** 身分(表單 / 流程)上可改的受管 metadata;`tabLabelTemplate` 只有表單有。 */
+/** 身分(表單 / 流程)上可改的受管 metadata;`tabLabelTemplate`、`allowDraft` 只有表單有。 */
 export interface IdentityMetadata {
   name: string;
   tabLabelTemplate?: string | null;
+  /** 允許存草稿;缺席 = 開(流程、這個欄位之前的安裝快照)。 */
+  allowDraft?: boolean;
 }
 
 /** 條件更新 metadata 的前置狀態:哪一筆定義、當時的目前版本與 metadata。 */
@@ -79,7 +79,8 @@ export function isSameIdentityMetadata(
 ): boolean {
   return (
     left.name === right.name &&
-    (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null)
+    (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null) &&
+    (left.allowDraft ?? true) === (right.allowDraft ?? true)
   );
 }
 
@@ -155,12 +156,6 @@ export interface DefinitionAdapter<
     key: string,
   ): Promise<VersionSnapshot | null>;
 
-  /** 發布進行中 / 中斷的那一版(原生命週期的判定);沒有為 null。 */
-  findInterruptedPublish(
-    facts: FormOperatorFacts,
-    key: string,
-  ): Promise<VersionSnapshot | null>;
-
   /** 寫入前的定義檢查(原檢查器);回問題清單,空陣列 = 可發布。 */
   validate(facts: FormOperatorFacts, seed: TSeed): Promise<string[]>;
 
@@ -204,13 +199,6 @@ export interface DefinitionAdapter<
     draftId: Types.ObjectId,
     expectedDraftRevision: number,
     expected: { definitionId: Types.ObjectId; currentVersion: number | null },
-  ): Promise<void>;
-
-  /** 只接續 `versionId` 那一版的中斷發布(由原服務對它實際選中的版本判斷)。 */
-  retryPublish(
-    facts: FormOperatorFacts,
-    key: string,
-    versionId: Types.ObjectId,
   ): Promise<void>;
 
   retire(

@@ -8,7 +8,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
-import type { NavNode } from "@/lib/module-tree";
+import type { NavNode } from "@/lib/base/module-tree";
 
 import { NavNodes } from "../NavNodes/NavNodes";
 import {

@@ -8,7 +8,8 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 /**
  * 版本狀態(Spec 6a §6「表單版本」):
  * - `draft`:設計中、可改,`version = null`;一張表單同時最多一筆
- * - `publishing`:發布進行中(步驟 2 搶到鎖、還沒切換完);同時最多一筆,存在時禁止開草稿 / 退役 / 再發布
+ * - `publishing`:只存在於發布交易內的搶鎖狀態(步驟 2 搶到鎖、還沒切換完,ADR-0013);部分唯一索引保證同一時間至多一筆,
+ *   交易外看不到
  * - `published`:凍結、供新增;`forms.currentVersion` 指它
  * - `retired`:發布下一版時前一版自動變成,或「退役目前版本」;既有提交照舊
  */

@@ -2,7 +2,7 @@
 # 建置方式(從 repo 根目錄):docker build -f apps/api/Dockerfile -t wowgo-base-api .
 
 # ---- base:node + pnpm(corepack 依 root package.json 的 packageManager 欄位選版本) ----
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN pnpm exec turbo run build --filter=@repo/api
 RUN CI=true pnpm install --prod --frozen-lockfile --ignore-scripts
 
 # ---- runner:最小執行環境 ----
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=builder /app .

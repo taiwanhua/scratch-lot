@@ -16,7 +16,7 @@
 
 - 元件**有子元件才開同名資料夾**;單檔就夠的元件直接放檔,不硬開資料夾。例外是**頁面一律資料夾**(路由 = 資料夾,STRUCT-03)。
 - 子元件放在**唯一使用它的父元件**資料夾底下;同一層有多個葉元件可用一個 PascalCase「分組資料夾」收起來(裡面沒有同名元件)。
-- **路徑別名 `@/` = 該 app 的 `src/`**(tsconfig `paths` + Vite alias + jest `moduleNameMapper` 三處同一份約定;Next 原生讀 tsconfig):往上兩層以上的引用一律 `@/`(`@/hooks/useMe`、`@/lib/paths`),同資料夾、子資料夾、或只往上一層的用相對路徑(`./SortableTab`、`../user-manager-types`)。`@/` 與 `@repo/*` 不衝突:前者只攔 `@/` 開頭,後者是 workspace 套件名。
+- **路徑別名 `@/` = 該 app 的 `src/`**(tsconfig `paths` + Vite alias + jest `moduleNameMapper` 三處同一份約定;Next 原生讀 tsconfig):往上兩層以上的引用一律 `@/`(`@/hooks/base/useMe`、`@/lib/base/paths`),同資料夾、子資料夾、或只往上一層的用相對路徑(`./SortableTab`、`../user-manager-types`)。`@/` 與 `@repo/*` 不衝突:前者只攔 `@/` 開頭,後者是 workspace 套件名。
 - **不用 `index.ts` barrel**,import 寫到檔案:`import { SideNav } from "./SideNav/SideNav"`。子元件只給父用這件事靠位置與 review 表達,不靠 index 藏。**唯一例外是 packages 的對外出口檔**(`packages/ui/src/button.ts` → `export * from "./Button/Button"`):bunchee 只從 `exports` 名反推 `src/<名>.ts`,子路徑要 kebab、元件檔要 PascalCase,所以每個子路徑一個 3 行出口檔;它是套件邊界不是內部捷徑,package 內部 import 仍寫到檔案。
 - 測試與 story 跟元件同資料夾、同名:`Foo.tsx` / `Foo.test.tsx` / `Foo.stories.tsx`(ui 的三件套)。分組資料夾(如 `icons/`)底下一組小元件共用一個測試檔時,以資料夾名的 PascalCase 命名(`icons/Icons.test.tsx`)。
 - **Windows 改大小寫的坑**:`git` 的 `core.ignorecase=true` 會讓 `button/` → `Button/` 這種只改大小寫的搬移在 index 留下舊名,Linux CI 上找不到檔。改名後用 `git rm -r --cached <舊路徑>` 再 `git add <新路徑>`,並以 `git ls-files | grep -i <名>` 確認 index 只有一份。
@@ -26,7 +26,7 @@
 ✅ app/AdminShell/SideNav/NavNodes/NavNodes.tsx
 ✅ app/AdminShell/SideNav/NavNodes/NavItems/NavGroupItem.tsx   ← 分組資料夾 NavItems,裡面兩個葉元件
 ✅ app/AdminShell/SideNav/NavNodes/NavItems/NavLinkItem.tsx
-✅ hooks/useMe.ts     lib/module-tree.ts
+✅ hooks/base/useMe.ts     lib/base/module-tree.ts
    (遞迴樹拆成葉元件時,葉元件不 import 回遞迴層 — NavGroupItem 收 `children`,遞迴只留在 NavNodes,否則撞 `import-x/no-cycle`)
 ❌ features/shell/side-nav.tsx(一檔四個元件、kebab)   ❌ SideNav/index.ts
 ```

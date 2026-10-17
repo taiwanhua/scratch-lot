@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { WorkflowVersionStatus } from "@repo/graphql";
+
 import { server } from "@/test/msw/server";
 import {
   leaveWorkflowDefinition,
@@ -37,6 +39,35 @@ const twoWorkflows = () => ({
   ],
 });
 
+type FlowCc = { kind: "manager"; level: number } | null;
+
+/** 病假審核兩個發布過的版本,只差在整個流程的知會對象(v1 → v2)。 */
+const ccVersionsWorld = (before: FlowCc, after: FlowCc) => ({
+  workflows: [workflowFragment({ currentVersion: 2, hasDraft: false })],
+  versions: {
+    leave_review: [
+      workflowVersionFragment(
+        { ...leaveWorkflowDefinition(), cc: after },
+        {
+          id: "wv-leave-2",
+          version: 2,
+          status: WorkflowVersionStatus.Published,
+          changelog: "改知會",
+        },
+      ),
+      workflowVersionFragment(
+        { ...leaveWorkflowDefinition(), cc: before },
+        {
+          id: "wv-leave-1",
+          version: 1,
+          status: WorkflowVersionStatus.Retired,
+          changelog: "第一版",
+        },
+      ),
+    ],
+  },
+});
+
 describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
   it("發布擋錯(VALIDATION_FAILED)→ 就地列出檢查器指出的問題", async () => {
     const { user } = renderWorkflows({
@@ -49,9 +80,12 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
               fields: ["definition"],
               issues: [
                 {
-                  code: "ROLE_ID_MISSING",
-                  message: "關卡「人資」的角色還沒選",
-                  location: { stepKey: "hr" },
+                  code: "AUDIENCE_INVALID",
+                  message: "關卡 hr 的審核者條件不完整或格式不對",
+                  location: {
+                    stepKey: "hr",
+                    property: "assignee.audience.filter.children",
+                  },
                 },
               ],
             },
@@ -71,7 +105,7 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
     await user.click(within(dialog).getByRole("button", { name: "發布" }));
 
     expect(
-      await within(dialog).findByText("關卡「人資」的角色還沒選"),
+      await within(dialog).findByText("關卡 hr 的審核者條件不完整或格式不對"),
     ).toBeInTheDocument();
   });
 
@@ -143,7 +177,6 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
           workflowFragment({
             isShared: true,
             ownerOrgId: null,
-            hasRolePlaceholder: true,
             abilities: {
               canEdit: false,
               canPublish: false,
@@ -155,9 +188,6 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
       },
     });
     await screen.findByRole("heading", { name: "病假審核" });
-    expect(
-      screen.getByText(/角色關卡只存佔位,不能直接綁表單/),
-    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "以此為基底建流程" }));
     const dialog = await screen.findByRole("dialog", {
@@ -244,4 +274,30 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
       screen.queryByRole("dialog", { name: "還有沒存的變更" }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    [null, { kind: "manager", level: 1 }, "整個流程的知會對象:新增"],
+    [{ kind: "manager", level: 1 }, null, "整個流程的知會對象:移除"],
+    [
+      { kind: "manager", level: 1 },
+      { kind: "manager", level: 2 },
+      "整個流程的知會對象:有變更",
+    ],
+  ] as const)(
+    "與上一版差異:列出整個流程知會對象的變動(%j → %j:%s)",
+    async (before, after, text) => {
+      const { user } = renderWorkflows({
+        world: ccVersionsWorld(before, after),
+      });
+      await user.click(await screen.findByRole("tab", { name: "流程版本" }));
+      const table = await screen.findByRole("table", { name: "流程版本" });
+      await user.click(
+        await within(table).findByRole("button", { name: "與上一版差異" }),
+      );
+
+      const diff = await screen.findByRole("region", { name: "版本差異" });
+      expect(within(diff).getByText(text)).toBeInTheDocument();
+      expect(within(diff).getByText("變更:—")).toBeInTheDocument();
+    },
+  );
 });

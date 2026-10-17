@@ -1,6 +1,6 @@
 # @repo/e2e — 權限劇本的 E2E
 
-`docs/testing/permission-scenarios.md` 的 24 條劇本,逐條改成 Playwright spec。
+`docs/testing/permission-scenarios.md` 的 29 條劇本,逐條改成 Playwright spec。
 **只在手動觸發時跑**(本機 `pnpm e2e`、CI 的 `.github/workflows/e2e.yml`),不進每個 PR 的 CI ——
 理由與寫法規範見 `docs/standards/testing/testing.md` 的 TEST-05 與 TEST-11。
 

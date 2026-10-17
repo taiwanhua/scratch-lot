@@ -6,10 +6,10 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { widgetKindsFor } from "@/components/form-engine/widgets/widget-registry";
-import type { FieldKeyProblem } from "@/lib/form-engine/designer-ops";
-import type { PropertySections } from "@/lib/form-engine/property-sections";
-import { scalarText } from "@/lib/form-engine/value-text";
+import { widgetKindsFor } from "@/components/base/form-engine/widgets/widget-registry";
+import type { FieldKeyProblem } from "@/lib/base/form-engine/designer-ops";
+import type { PropertySections } from "@/lib/base/form-engine/property-sections";
+import { scalarText } from "@/lib/base/form-engine/value-text";
 
 import { FieldKeyInput } from "./FieldKeyInput";
 

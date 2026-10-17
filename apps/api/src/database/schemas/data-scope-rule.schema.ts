@@ -28,7 +28,7 @@ export class DataScopeRule {
   @Prop({ type: String, enum: DATA_SCOPE_COMBINE_OPS, default: "OR" })
   combineOp!: DataScopeCombineOp;
 
-  /** `{ audience, filter 巢狀樹 }`;結構見 base-schema。 */
+  /** `{ audience: 人員條件(@repo/domain/audience), filter: 條件組合巢狀樹 }`;形狀正本 docs/modules/data-scope.md。 */
   @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
   rules!: Record<string, unknown>[];
 }

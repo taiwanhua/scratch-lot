@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type ArrayColumnDef,
   type FieldDef,
   type LookupSourceDescriptor,
   type Prefill,
+  arrayColumnsOf,
+  filterScalarForField,
   lookupLabelFieldsOf,
+  resolveLookupSource,
 } from "@repo/domain/form";
 
 import { FormVersionsRepository } from "../../database/database.module";
@@ -41,6 +45,36 @@ interface ResolvedTarget {
   mappedFields: string[];
 }
 
+/**
+ * 目標欄位 key 的擁有者:一般欄位就是自己;明細引用子欄的路徑 `<明細 key>.<子欄 key>` → 明細欄
+ * (子欄的權限繼承整個明細欄)。
+ */
+function ownerKeyOf(fieldKey: string): string {
+  const dot = fieldKey.indexOf(".");
+  return dot === -1 ? fieldKey : fieldKey.slice(0, dot);
+}
+
+/** 目標欄位:一般欄位照 key 找;`<明細 key>.<子欄 key>` 找明細欄裡的引用子欄。 */
+function targetFieldOf(
+  fields: readonly FieldDef[],
+  fieldKey: string,
+): FieldDef | undefined {
+  const ownerKey = ownerKeyOf(fieldKey);
+  const owner = fields.find((candidate) => candidate.key === ownerKey);
+  if (ownerKey === fieldKey) {
+    return owner;
+  }
+  if (owner?.type !== "array") {
+    return undefined;
+  }
+  const columnKey = fieldKey.slice(ownerKey.length + 1);
+  const column = arrayColumnsOf(owner).find(
+    (candidate) =>
+      candidate.key === columnKey && candidate.type === "reference",
+  );
+  return column ? { ...column, key: fieldKey } : undefined;
+}
+
 function targetOf(
   fields: readonly FieldDef[],
   prefills: readonly Prefill[],
@@ -56,7 +90,7 @@ function targetOf(
     );
   }
   if (hasField) {
-    const field = fields.find((candidate) => candidate.key === target.fieldKey);
+    const field = targetFieldOf(fields, target.fieldKey ?? "");
     if (field?.options?.kind === "lookup") {
       return {
         source: field.options.source,
@@ -65,7 +99,15 @@ function targetOf(
       };
     }
     if (field?.type === "reference" && field.source) {
-      return { source: field.source, valueField: "id", mappedFields: [] };
+      return {
+        source: field.source,
+        valueField: "id",
+        // 明細引用子欄的列內帶入(B2c):回對應表要的來源欄位,前端帶進同一列
+        mappedFields:
+          (field as ArrayColumnDef).prefill?.mapping.map(
+            (mapping) => mapping.sourceField,
+          ) ?? [],
+      };
     }
     throw validationError(
       `Field ${String(target.fieldKey)} has no lookup source`,
@@ -89,6 +131,7 @@ function targetOf(
 /**
  * `formLookup` / `formLookupRecord`(Spec 6a §5「lookup 來源」):前端只帶
  * `{ formKey, version, target }` + 關鍵字,**provider 與 `filter` 從版本定義取**,前端改不了;
+ * 目標可以是明細的引用子欄(`fieldKey = "<明細 key>.<子欄 key>"`,權限看整個明細欄);
  * 再套操作者的可見範圍與欄位權限(`lookup-providers.ts`)。
  */
 @Injectable()
@@ -109,6 +152,9 @@ export class FormLookupService {
       MAX_PAGE_SIZE,
       Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE),
     );
+    if (target === null) {
+      return { items: [], totalCount: 0, page, pageSize };
+    }
     const result = await this.providers.search(
       facts,
       target.source,
@@ -128,6 +174,9 @@ export class FormLookupService {
     input: FormLookupRecordInput,
   ): Promise<FormLookupRecord | null> {
     const target = await this.resolve(facts, input);
+    if (target === null) {
+      return null;
+    }
     const [record] = await this.providers.findByValues(
       facts,
       target.source,
@@ -139,7 +188,7 @@ export class FormLookupService {
   }
 
   /**
-   * 讀版本定義並解析目標。已發布 / 退役版:要有該模組的 `create` 或 `edit`(填寫中才會查),
+   * 讀版本定義並解析目標。已發布 / 退役版:要有這張表單的新增資格(`canCreateWithForm`)或模組 `edit`(填寫中才會查),
    * 目標是欄位時還要讀得到那一欄(欄位級 `show`,含依賴鏈);
    * 草稿(`version` 省略):設計器預覽,要表單管理的檢視且讀得到這張表單。
    */
@@ -149,8 +198,9 @@ export class FormLookupService {
       formKey: string;
       version?: number | null;
       target: FormLookupTargetInput;
+      filterValues?: Record<string, unknown> | null;
     },
-  ): Promise<ResolvedTarget> {
+  ): Promise<ResolvedTarget | null> {
     const isDraft = input.version === null || input.version === undefined;
     if (isDraft) {
       if (!this.access.has(facts, FORMS_PERMISSIONS.view)) {
@@ -164,7 +214,7 @@ export class FormLookupService {
     }
     if (!isDraft) {
       const canFill =
-        this.access.has(facts, `${form.moduleKey}.create`) ||
+        this.access.canCreateWithForm(facts, form.moduleKey, form.key) ||
         this.access.has(facts, `${form.moduleKey}.edit`);
       if (!canFill) {
         throw forbiddenError(`Missing permission ${form.moduleKey}.create`);
@@ -187,22 +237,33 @@ export class FormLookupService {
     }
     const fieldKey = input.target.fieldKey;
     // 讀不到這一欄(受保護沒有 show)的人不給候選資料;先於「有沒有 lookup 來源」判,
-    // 否則能從錯誤碼的差別推出這欄的定義(骨架省略了 `options` / `source`)
+    // 否則能從錯誤碼的差別推出這欄的定義(骨架省略了 `options` / `source`)。
+    // 明細子欄(`<明細 key>.<子欄 key>`)看整個明細欄的權限
+    const ownerKey =
+      fieldKey === undefined || fieldKey === null ? null : ownerKeyOf(fieldKey);
     if (
       !isDraft &&
-      fieldKey !== undefined &&
-      fieldKey !== null &&
-      version.fields.some((candidate) => candidate.key === fieldKey) &&
+      ownerKey !== null &&
+      version.fields.some((candidate) => candidate.key === ownerKey) &&
       !fieldGateOf(facts, form.moduleKey, form.key).canShow(
         version.fields,
-        fieldKey,
+        ownerKey,
       )
     ) {
       throw forbiddenError(
-        `Missing field permission: ${requiredShowKeys(version.fields, fieldKey).join(", ")}`,
+        `Missing field permission: ${requiredShowKeys(version.fields, ownerKey).join(", ")}`,
       );
     }
-    return targetOf(version.fields, version.prefills, input.target);
+    const target = targetOf(version.fields, version.prefills, input.target);
+    // 連動篩選(B2d):換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
+    // 值依被引用欄位的型別收,型別不符當沒填(查無),不讓竄改的值撞上文件欄位的型別
+    const source = resolveLookupSource(target.source, (fieldKey) =>
+      filterScalarForField(
+        version.fields.find((field) => field.key === fieldKey),
+        input.filterValues?.[fieldKey],
+      ),
+    );
+    return source === null ? null : { ...target, source };
   }
 
   private requestedFields(target: ResolvedTarget): string[] {

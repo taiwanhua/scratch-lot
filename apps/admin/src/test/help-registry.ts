@@ -3,10 +3,10 @@ import {
   type HelpSources,
   composeHelpRegistry,
   resolveModuleHelp,
-} from "../lib/module-help";
+} from "../lib/base/module-help";
 
 /**
- * `lib/help-registry.ts` 的測試替身(jest `moduleNameMapper` 換掉,見 `jest.config.mjs`)。
+ * `lib/base/help-registry.ts` 的測試替身(jest `moduleNameMapper` 換掉,見 `jest.config.mjs`)。
  * 真的那份用 Vite 的 `import.meta.glob` 把三份來源(底座 / 專案新增 / 專案替換)的 `*.help.md` 打包進 bundle —
  * jest 沒有這個編譯期轉換,所以測試改用這份假的檔案表,介面(`moduleHelpMarkdown`)一模一樣,
  * 合成與驗證走同一支 `composeHelpRegistry`。
@@ -88,6 +88,6 @@ export const resetHelpFiles = (): void => {
   registry = compose(DEFAULT_HELP_FILES);
 };
 
-/** 與 `lib/help-registry.ts` 同名同形的查詢函式(同一條專屬檔優先、表單模組退回通用檔)。 */
+/** 與 `lib/base/help-registry.ts` 同名同形的查詢函式(同一條專屬檔優先、表單模組退回通用檔)。 */
 export const moduleHelpMarkdown = (module: HelpModule): string | undefined =>
   resolveModuleHelp(registry, module);

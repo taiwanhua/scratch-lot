@@ -24,16 +24,18 @@
 
 底座與專案分來源登記,由固定入口組裝;建立專案時新增或修改 project 來源,不覆寫底座原檔。頁面與資料契約見[前端架構](concepts/frontend-architecture.md)及[資料層組裝](concepts/data-layer-and-isolation.md#底座與專案資料的組裝)。
 
-| 項目         | 專案來源                                                                      | 初始化與升級驗證                                                                                                 |
-| ------------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| 後台新增頁   | `apps/admin/src/pages/project/`、`app/project/module-pages.ts`                | 與 `app/base/module-pages.ts` 一起組裝;固定頁與表單展開頁均驗 key,新增不碰底座清單                               |
-| 客製治理頁   | `apps/admin/src/app/project/page-replacements.ts` 與 `pages/project/`         | 指定既有底座頁,原頁保留;同網址、授權與頁籤守門不變,省略 minWidth 繼承原版                                        |
-| 表單模組設定 | 專案 module-pages 來源的 `forms`                                              | options 與四頁同一來源,經 RootProviders 注入;不同組裝互不污染,不寫全域 Map                                       |
-| 模組說明     | `apps/admin/src/md/module-help/project/additions/`、`project/replacements/`   | 新增與替換分開,無替換則沿用底座;重複/未知/空白替換拒絕,三區真 build 與 help bundle check 通過                    |
-| API 功能     | `apps/api/src/project/api-modules.ts`、`project.module.ts`、`project/<業務>/` | 真 AppModule 掛入普通 ProjectModule;feature key/module identity 不撞底座,核心 guards 不變                        |
-| API 資料     | `apps/api/src/project/database/registrations.ts` 及該目錄的 schema/repository | 新租戶 model 的 schema、repository、org check 一起登記;驗 plugin、識別與實際綁定,資料不能漏掉刪組織/撤銷開通檢查 |
-| GraphQL 文件 | `packages/graphql/src/documents/project/`                                     | 與 base 文件生成同一份型別/hooks;operation 名稱與 fragment 名稱各自全域唯一,拒絕匿名、根目錄散檔及 symlink       |
-| 前台業務     | `apps/front/src/app/`、`components/` 及專案前台文案                           | 依專案設計完整畫面與風格;新增或替換業務內容時,一併核對 API 與 documents                                          |
+| 項目           | 專案來源                                                                      | 初始化與升級驗證                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 後台新增頁     | `apps/admin/src/pages/project/`、`app/project/module-pages.ts`                | 與 `app/base/module-pages.ts` 一起組裝;固定頁與表單展開頁均驗 key,新增不碰底座清單                                                                             |
+| 客製治理頁     | `apps/admin/src/app/project/page-replacements.ts` 與 `pages/project/`         | 指定既有底座頁,原頁保留;同網址、授權與頁籤守門不變,省略 minWidth 繼承原版                                                                                      |
+| 表單模組設定   | 專案 module-pages 來源的 `forms`                                              | options 與四頁同一來源,經 RootProviders 注入;不同組裝互不污染,不寫全域 Map                                                                                     |
+| 模組說明       | `apps/admin/src/md/module-help/project/additions/`、`project/replacements/`   | 新增與替換分開,無替換則沿用底座;重複/未知/空白替換拒絕,三區真 build 與 help bundle check 通過                                                                  |
+| API 功能       | `apps/api/src/project/api-modules.ts`、`project.module.ts`、`project/<業務>/` | 真 AppModule 掛入普通 ProjectModule;feature key/module identity 不撞底座,核心 guards 不變                                                                      |
+| API 資料       | `apps/api/src/project/database/registrations.ts` 及該目錄的 schema/repository | 新租戶 model 的 schema、repository、org check 一起登記;驗 plugin、識別與實際綁定,資料不能漏掉刪組織/撤銷開通檢查                                               |
+| 詞彙與待辦     | `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md`                               | 初始化時建空檔(底座不帶內容);只新增專案名詞與專案待辦,不重新定義 `CONTEXT.md` 的底座名詞                                                                       |
+| GraphQL 文件   | `packages/graphql/src/documents/project/`                                     | 與 base 文件生成同一份型別/hooks;operation 名稱與 fragment 名稱各自全域唯一,拒絕匿名、根目錄散檔及 symlink                                                     |
+| 前台業務       | `apps/front/src/app/`、`components/` 及專案前台文案                           | 依專案設計完整畫面與風格;新增或替換業務內容時,一併核對 API 與 documents                                                                                        |
+| Figma 稽核設定 | `scripts/figma-audit/project/config.js`                                       | 專案 Screens 的頁 id、元件名稱、例外清單、專案名詞與跨畫面比對規則;不改共用腳本,`node --test scripts/figma-audit/*.test.mjs` 通過(共用腳本不含 `projectTerms`) |
 
 API 的新租戶資料遵守 BaseRepository、baseFields 與 tenantScope 契約,不自行注入 raw Model 或繞過資料隔離。底座的 project 功能與資料登記預設為空,新模組沿既有租戶資料契約登記。底座不提供核心 module/provider 替換介面。
 
@@ -43,16 +45,19 @@ GraphQL 的 `generate` 在寫產物前檢查兩份文件來源,負例驗證使�
 
 ## 部署與工具識別
 
-| 項目                                                 | 現有正本                                                                                   | 初始化驗證                                                                                                       |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Repo、Actions 與看板識別                             | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                        | 讀取器 github scope 以新 repo 身分解析成功;新 repo 有實際 CI run;不用看板時 `projectStatus.enabled` 設為 `false` |
-| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                     | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                                               |
-| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                    | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對                                  |
-| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                | 每環境都有適合的網域、bucket、開關及其他必要值                                                                   |
-| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                | 啟用雲端的四類必需 Secret 各有可讀版本;寄信未啟用時 `resendApiKey: null`;值不回寫文件、repo 或公開設定           |
-| Vercel front/Storybook                               | `docs/deployment.md`                                                                       | 專案、root directory、build 與各環境 endpoint 均已設好                                                           |
-| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                               | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                                         |
-| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功                      |
+| 項目                                                 | 現有正本                                                                                            | 初始化驗證                                                                                                       |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Repo、Actions 與看板識別                             | `deploy/project/github.json`(`expectedRepository`、`projectStatus`)                                 | 讀取器 github scope 以新 repo 身分解析成功;新 repo 有實際 CI run;不用看板時 `projectStatus.enabled` 設為 `false` |
+| 標籤與流程                                           | `docs/agents/issue-tracker.md`、`.github/workflows/project-status.yml`                              | 新看板的狀態選項與流程對得上;`GH_PROJECT_TOKEN` 與預設分支另行設定                                               |
+| GCP/WIF、registry、Cloud Run、Secret 名稱、seed 帳號 | `deploy/project/cloud.json`;說明見 `docs/deployment.md`「專案部署設定」                             | 讀取器 cloud scope 三環境解析成功;目標為新專案,部署身分與執行身分的權限分別核對                                  |
+| API 非機密執行期設定                                 | `deploy/env/*.yaml`、`docs/env-registry.md`                                                         | 每環境都有適合的網域、bucket、開關及其他必要值                                                                   |
+| Secret 值                                            | `docs/env-registry.md` 所列 Secret Manager / GitHub Secrets                                         | 啟用雲端的四類必需 Secret 各有可讀版本;寄信未啟用時 `resendApiKey: null`;值不回寫文件、repo 或公開設定           |
+| 排程(Cloud Scheduler)                                | `docs/deployment.md`「Cloud Scheduler」、`deploy/env/*.yaml` 的 `SCHEDULER_*`                       | 三環境各一個工作;手動執行一次,Cloud Run log 回 200                                                               |
+| 即時通道(Cloudflare Worker)                          | `docs/deployment.md`「即時通道」、`cloud.json` 的 `realtime`、`deploy/env/*.yaml` 的 `REALTIME_URL` | 三環境的兩把密鑰有可讀版本、`CLOUDFLARE_API_TOKEN` 已設、網域已綁;部署後頭像圓點為綠色                           |
+| 列印代理程式發布                                     | `docs/deployment.md`「列印代理程式發布」                                                            | 部署 SA 對三個私有 bucket 的 `print-agent/` 有寫入權限;各環境跑過一次 release,下載區有四個按鈕                   |
+| Vercel front/Storybook                               | `docs/deployment.md`                                                                                | 專案、root directory、build 與各環境 endpoint 均已設好                                                           |
+| DNS、Resend、GCS、資料庫                             | `docs/deployment.md`、`docs/env-registry.md`                                                        | DNS/寄件網域、bucket IAM/CORS、DB 帳號與環境隔離逐項驗證                                                         |
+| 設定讀取與驗證                                       | `scripts/project-settings/`(`read-config.mjs` 兩個入口、測試);CI 的 `project-settings` job          | `node --test scripts/project-settings/*.test.mjs` 通過;以新專案的 repo 名稱跑兩個入口都成功                      |
 
 本節每一項要分三種狀態記錄,互不代替:
 

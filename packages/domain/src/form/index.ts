@@ -32,6 +32,7 @@ export * from "./issues";
 export * from "./keys";
 export * from "./layout";
 export * from "./list-settings";
+export * from "./lookup-filter";
 export * from "./registry";
 export * from "./semantic";
 export * from "./summary";

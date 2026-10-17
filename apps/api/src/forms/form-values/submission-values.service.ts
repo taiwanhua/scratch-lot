@@ -1,10 +1,12 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type ArrayColumnDef,
   type ArrayRowValue,
   ComputedCycleError,
   type ExpressionContext,
   type FieldDef,
+  type LookupFilterScalar,
   type LookupSourceDescriptor,
   type StoredValues,
   type ValueIssue,
@@ -12,10 +14,15 @@ import {
   arrayRowsOf,
   computeAll,
   evaluateCondition,
+  filterVarValueOf,
+  hasLookupFilterVars,
+  lookupFilterVarsOf,
   lookupLabelFieldsOf,
   normalizeFieldValue,
+  resolveLookupSource,
   uploadLimitIssue,
   validateValueRules,
+  withoutLookupFilterVars,
 } from "@repo/domain/form";
 
 import {
@@ -32,6 +39,7 @@ import type { FormOperatorFacts } from "../form-access.service";
 import { forbiddenError, valuesInvalidError } from "../forms-error";
 import {
   LookupProvidersService,
+  type LookupRecord,
   lookupDisplayLabelOf,
 } from "../lookup-providers";
 import { REDACTED, isSameStoredValue, semanticOf } from "./stored-values";
@@ -73,7 +81,43 @@ interface OptionContext {
   facts: FormOperatorFacts;
   categories: Map<string, Promise<CategoryOptions>>;
   issues: ValueIssue[];
+  /** 連動篩選(B2d)引用的表單層欄位此刻的值(這次會存下的最終值)。 */
+  filterValueOf: (fieldKey: string) => LookupFilterScalar | null;
 }
+
+/** 以一組存值給連動篩選取值(`filterVarValueOf`:引用給 id、單選給 value)。 */
+function filterValuesFrom(
+  fields: readonly FieldDef[],
+  values: StoredValues | null,
+): (fieldKey: string) => LookupFilterScalar | null {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  return (fieldKey) =>
+    values === null
+      ? null
+      : filterVarValueOf(byKey.get(fieldKey), values[fieldKey]);
+}
+
+/** 連動篩選引用的欄位值,這次和上一個已完成修訂不同(同值的引用不能再沿用原快照、要重驗篩選)。 */
+function filterVarsChanged(
+  source: LookupSourceDescriptor | null | undefined,
+  current: (fieldKey: string) => LookupFilterScalar | null,
+  previous: (fieldKey: string) => LookupFilterScalar | null,
+): boolean {
+  return lookupFilterVarsOf(source).some(
+    ({ fieldKey }) => current(fieldKey) !== previous(fieldKey),
+  );
+}
+
+/** 引用重驗的結果:讀得到且符合篩選的(依 id)、讀得到但不符連動篩選的 id。 */
+interface ReferenceLookup {
+  found: ReadonlyMap<string, LookupRecord>;
+  mismatched: ReadonlySet<string>;
+}
+
+const NO_REFERENCES: ReferenceLookup = {
+  found: new Map(),
+  mismatched: new Set(),
+};
 
 /** 一欄落在 Spec §5「不能填的四種原因」的哪一列。 */
 type FieldClass = "hidden" | "computed" | "kept" | "readonly" | "input";
@@ -130,6 +174,7 @@ export class SubmissionValuesService {
       facts,
       categories: new Map(),
       issues: [],
+      filterValueOf: filterValuesFrom(fields, values),
     };
     const resolved: StoredValues = { ...values };
     for (const field of fields) {
@@ -402,7 +447,12 @@ export class SubmissionValuesService {
       facts: input.facts,
       categories: new Map(),
       issues,
+      filterValueOf: filterValuesFrom(input.fields, final),
     };
+    const previousFilterValueOf = filterValuesFrom(
+      input.fields,
+      input.previous,
+    );
     for (const field of input.fields) {
       const value = final[field.key];
       if (
@@ -419,36 +469,61 @@ export class SubmissionValuesService {
           value,
           previous,
           context,
+          previousFilterValueOf,
         );
         continue;
       }
+      // 同值保留原快照;但連動篩選引用的欄位改了值 → 用最後的值重驗(B2d)
       final[field.key] =
-        previous !== undefined && isSameStoredValue(field, value, previous)
+        previous !== undefined &&
+        isSameStoredValue(field, value, previous) &&
+        !filterVarsChanged(
+          field.source,
+          context.filterValueOf,
+          previousFilterValueOf,
+        )
           ? previous
           : await this.snapshotOf(field, value, context);
     }
   }
 
   /**
-   * 明細列的新快照:每一列的單選子欄(靜態清單驗啟用中、類別重取 label);與上一個已完成修訂同一列同值的
-   * 保留原快照。錯誤定位到 `rowId` + 子欄。
+   * 明細列的新快照:每一列的單選子欄(靜態清單驗啟用中、類別重取 label)與引用子欄(重驗來源可讀、重取 label);
+   * 與上一個已完成修訂同一列同值的保留原快照。錯誤定位到 `rowId` + 子欄。
+   * 引用子欄**同一子欄的 id 合併成一次查詢**(200 列也只查一次),不逐列查。
    */
   private async snapshotRowsOf(
     field: FieldDef,
     value: unknown,
     previous: unknown,
     context: OptionContext,
+    previousFilterValueOf: (fieldKey: string) => LookupFilterScalar | null,
   ): Promise<ArrayRowValue[]> {
     const previousRows = new Map(
       arrayRowsOf(previous).map((row) => [row.rowId, row]),
     );
-    const choiceColumns = arrayColumnsOf(field).filter(
-      (column) =>
-        column.type === "select" && column.valueSource.kind === "input",
+    const inputColumns = arrayColumnsOf(field).filter(
+      (column) => column.valueSource.kind === "input",
     );
-    const rows: ArrayRowValue[] = [];
-    for (const row of arrayRowsOf(value)) {
-      const next: ArrayRowValue = { ...row };
+    const choiceColumns = inputColumns.filter(
+      (column) => column.type === "select",
+    );
+    const rows: ArrayRowValue[] = arrayRowsOf(value).map((row) => ({
+      ...row,
+    }));
+    for (const column of inputColumns) {
+      if (column.type === "reference") {
+        await this.snapshotReferenceColumn(
+          field,
+          column,
+          rows,
+          previousRows,
+          context,
+          previousFilterValueOf,
+        );
+      }
+    }
+    for (const row of rows) {
       for (const column of choiceColumns) {
         const cell = row[column.key];
         if (cell === null || cell === undefined) {
@@ -456,11 +531,11 @@ export class SubmissionValuesService {
         }
         const before = previousRows.get(row.rowId)?.[column.key];
         if (before !== undefined && isSameStoredValue(column, cell, before)) {
-          next[column.key] = before;
+          row[column.key] = before;
           continue;
         }
         const issues: ValueIssue[] = [];
-        next[column.key] = await this.resolveOption(column, cell, {
+        row[column.key] = await this.resolveOption(column, cell, {
           ...context,
           issues,
         });
@@ -473,9 +548,103 @@ export class SubmissionValuesService {
           })),
         );
       }
-      rows.push(next);
     }
     return rows;
+  }
+
+  /**
+   * 明細的一個引用子欄(就地改 `rows`):與上一個已完成修訂同一列同 id 的保留原快照;其餘的 id 去重後
+   * **一次** `findByValues`(`publicOnly`,同表單層引用欄),讀得到的寫 `{ id, label }` 新快照,
+   * 讀不到(已刪 / 不在可見範圍)的列 → `SOURCE_UNAVAILABLE`,定位到 `rowId` + 子欄。
+   */
+  private async snapshotReferenceColumn(
+    field: FieldDef,
+    column: ArrayColumnDef,
+    rows: ArrayRowValue[],
+    previousRows: ReadonlyMap<string, ArrayRowValue>,
+    context: OptionContext,
+    previousFilterValueOf: (fieldKey: string) => LookupFilterScalar | null,
+  ): Promise<void> {
+    // 連動篩選引用的表單層欄位改了值 → 每一列都用最後的值重驗(不沿用原快照)
+    const kept = filterVarsChanged(
+      column.source,
+      context.filterValueOf,
+      previousFilterValueOf,
+    )
+      ? new Map<string, ArrayRowValue>()
+      : previousRows;
+    const pending = pendingReferencesOf(column, rows, kept);
+    if (pending.length === 0) {
+      return;
+    }
+    const source = column.source;
+    const ids = [
+      ...new Set(pending.flatMap(({ id }) => (id === null ? [] : [id]))),
+    ];
+    const { found, mismatched } = source
+      ? await this.referencesOf(context, source, ids)
+      : NO_REFERENCES;
+    for (const { row, id } of pending) {
+      const record = id === null ? undefined : found.get(id);
+      if (!record || !source) {
+        const isMismatch = id !== null && mismatched.has(id);
+        context.issues.push({
+          fieldKey: field.key,
+          rowId: row.rowId,
+          columnKey: column.key,
+          code: isMismatch ? "LOOKUP_FILTER_MISMATCH" : "SOURCE_UNAVAILABLE",
+          message: isMismatch
+            ? `「${field.label}」的「${column.label}」不符篩選條件,請重新選擇`
+            : `「${field.label}」的「${column.label}」引用的資料不存在或無權讀取`,
+        });
+        continue;
+      }
+      row[column.key] = {
+        id: record.id,
+        label: lookupDisplayLabelOf(record, source),
+      };
+    }
+  }
+
+  /**
+   * 引用的 id 一次查回(`publicOnly`)。來源有連動篩選(B2d)時以這次的最終值換成條件再查;
+   * 查不到的 id 再以拿掉連動篩選的來源查一次(只查缺的):讀得到 = 不符篩選(`mismatched`),
+   * 讀不到 = 來源不可用。被引用欄位沒有值 → 篩選查無,讀得到的一律算不符。
+   */
+  private async referencesOf(
+    context: OptionContext,
+    source: LookupSourceDescriptor,
+    ids: readonly string[],
+  ): Promise<ReferenceLookup> {
+    if (ids.length === 0) {
+      return NO_REFERENCES;
+    }
+    const resolved = resolveLookupSource(source, context.filterValueOf);
+    const records =
+      resolved === null
+        ? []
+        : await this.lookups.findByValues(
+            context.facts,
+            resolved,
+            "id",
+            ids,
+            lookupLabelFieldsOf(source),
+            { publicOnly: true },
+          );
+    const found = new Map(records.map((record) => [record.id, record]));
+    const missing = ids.filter((id) => !found.has(id));
+    if (!hasLookupFilterVars(source) || missing.length === 0) {
+      return { found, mismatched: new Set() };
+    }
+    const readable = await this.lookups.findByValues(
+      context.facts,
+      withoutLookupFilterVars(source),
+      "id",
+      missing,
+      [],
+      { publicOnly: true },
+    );
+    return { found, mismatched: new Set(readable.map((record) => record.id)) };
   }
 
   /** 一欄的新快照:引用重驗來源、選項重取 label(multiSelect 逐項)。 */
@@ -485,7 +654,7 @@ export class SubmissionValuesService {
     context: OptionContext,
   ): Promise<unknown> {
     if (field.type === "reference") {
-      return this.resolveReference(context.facts, field, value, context.issues);
+      return this.resolveReference(field, value, context);
     }
     if (field.type === "select") {
       return this.resolveOption(field, value, context);
@@ -501,30 +670,26 @@ export class SubmissionValuesService {
   }
 
   private async resolveReference(
-    facts: FormOperatorFacts,
     field: FieldDef,
     value: unknown,
-    issues: ValueIssue[],
+    context: OptionContext,
   ): Promise<unknown> {
     const id =
       isRecord(value) && typeof value.id === "string" ? value.id : null;
     const source = field.source;
-    const [record] =
+    const { found, mismatched } =
       id === null || !source
-        ? []
-        : await this.lookups.findByValues(
-            facts,
-            source,
-            "id",
-            [id],
-            lookupLabelFieldsOf(source),
-            { publicOnly: true },
-          );
+        ? NO_REFERENCES
+        : await this.referencesOf(context, source, [id]);
+    const record = id === null ? undefined : found.get(id);
     if (!record || !source) {
-      issues.push({
+      const isMismatch = id !== null && mismatched.has(id);
+      context.issues.push({
         fieldKey: field.key,
-        code: "SOURCE_UNAVAILABLE",
-        message: `「${field.label}」引用的資料不存在或無權讀取`,
+        code: isMismatch ? "LOOKUP_FILTER_MISMATCH" : "SOURCE_UNAVAILABLE",
+        message: isMismatch
+          ? `「${field.label}」不符篩選條件,請重新選擇`
+          : `「${field.label}」引用的資料不存在或無權讀取`,
       });
       return value;
     }
@@ -632,6 +797,34 @@ export class SubmissionValuesService {
       );
     }
   }
+}
+
+/**
+ * 明細引用子欄要重驗的格(就地把與上一個已完成修訂同一列同 id 的格換回原快照,其餘回傳待查;
+ * 存值不是 `{ id }` 的 id 為 null,一律讀不到)。
+ */
+function pendingReferencesOf(
+  column: ArrayColumnDef,
+  rows: ArrayRowValue[],
+  previousRows: ReadonlyMap<string, ArrayRowValue>,
+): { row: ArrayRowValue; id: string | null }[] {
+  const pending: { row: ArrayRowValue; id: string | null }[] = [];
+  for (const row of rows) {
+    const cell = row[column.key];
+    if (cell === null || cell === undefined) {
+      continue;
+    }
+    const before = previousRows.get(row.rowId)?.[column.key];
+    if (before !== undefined && isSameStoredValue(column, cell, before)) {
+      row[column.key] = before;
+      continue;
+    }
+    pending.push({
+      row,
+      id: isRecord(cell) && typeof cell.id === "string" ? cell.id : null,
+    });
+  }
+  return pending;
 }
 
 function sameClasses(

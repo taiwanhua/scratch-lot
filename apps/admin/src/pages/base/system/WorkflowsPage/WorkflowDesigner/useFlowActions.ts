@@ -7,7 +7,7 @@ import {
   isForkSource,
   parallelOf,
   positionOf,
-} from "@/lib/workflow/flow-model";
+} from "@/lib/base/workflow/flow-model";
 import {
   type DropTarget,
   addBranch,
@@ -22,7 +22,7 @@ import {
   renameJoin,
   shiftStep,
   updateStep,
-} from "@/lib/workflow/flow-ops";
+} from "@/lib/base/workflow/flow-ops";
 
 import type { MoveOption } from "./StepEditor";
 import type { FlowDesignerState } from "./useFlowDesignerState";

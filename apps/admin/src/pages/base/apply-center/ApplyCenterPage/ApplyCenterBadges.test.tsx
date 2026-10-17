@@ -46,7 +46,7 @@ describe("申請中心的頁籤 badge 與側欄待審數(applyCenterCounts)", ()
     ]);
     const nav = await findSideNav();
     expect(
-      within(nav).getByRole("link", { name: /申請中心\s*1 筆待審核/ }),
+      within(nav).getByRole("link", { name: /申請中心\s*1 筆待處理/ }),
     ).toBeInTheDocument();
   });
 
@@ -101,7 +101,7 @@ describe("申請中心的頁籤 badge 與側欄待審數(applyCenterCounts)", ()
     const { user } = renderApplyCenter({ path: `${APPLY_VIEW_ROUTE}/inst-1` });
     const nav = await findSideNav();
     expect(
-      await within(nav).findByRole("link", { name: /申請中心\s*1 筆待審核/ }),
+      await within(nav).findByRole("link", { name: /申請中心\s*1 筆待處理/ }),
     ).toBeInTheDocument();
 
     const actions = await screen.findByRole("group", {
@@ -122,7 +122,7 @@ describe("申請中心的頁籤 badge 與側欄待審數(applyCenterCounts)", ()
   it("側欄收合時只畫小圓點(沒有數字)", async () => {
     const { user } = renderApplyCenter({ path: APPLY_CENTER_ROUTE });
     const nav = await findSideNav();
-    await within(nav).findByRole("link", { name: /1 筆待審核/ });
+    await within(nav).findByRole("link", { name: /1 筆待處理/ });
 
     await user.click(within(nav).getByRole("button", { name: "收合側欄" }));
 

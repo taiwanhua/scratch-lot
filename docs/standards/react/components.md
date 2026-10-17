@@ -26,10 +26,10 @@
 (決策見 ADR-0012:zustand 是唯一的跨元件狀態容器)
 
 1. 伺服器資料 → TanStack Query(codegen hooks),**不要**複製進 useState 或 store。
-2. URL 能表達的(頁碼、篩選、tab)→ URL(searchParams / router)。**admin 例外**:admin 有路由頁籤,`RouteTabs` 以 pathname 記頁籤、不處理 search,所以頁內篩選(頁碼、關鍵字、選中組織)留在頁面層的 `useState`,不進 URL。
+2. URL 能表達的(頁碼、篩選、排序、頁內分頁、打開的詳情)→ URL。admin 一律經 `useUrlState`,頁內分頁用 `PageTabs`(REACT-14);哪些不進 URL 也見 REACT-14。
 3. 只有單一元件用 → `useState`。
-4. 跨元件的用戶端狀態(登入狀態、語言、路由頁籤…)→ **zustand**:`stores/useXxxStore.ts`,需要跨重新整理保留的用 `persist` middleware(sessionStorage / localStorage 由該狀態的規則決定)。
-5. context **只剩注入用**(theme、QueryClient、Intl provider、`AuthSession` 實例),不承載會變的狀態;redux / 自刻 `useSyncExternalStore` store 不用。注入用的 context 物件**與它的 hook 同檔、放 `hooks/`**(`hooks/useSession.ts` 同時匯出 `SessionContext` 與 `useSession`),provider 元件放 `app/providers/`。
+4. 跨元件的用戶端狀態(登入狀態、語言、路由頁籤…)→ **zustand**:`stores/{base,project}/useXxxStore.ts`,需要跨重新整理保留的用 `persist` middleware(sessionStorage / localStorage 由該狀態的規則決定)。
+5. context **只剩注入用**(theme、QueryClient、Intl provider、`AuthSession` 實例),不承載會變的狀態;redux / 自刻 `useSyncExternalStore` store 不用。注入用的 context 物件**與它的 hook 同檔、放 `hooks/`**(`hooks/base/useSession.ts` 同時匯出 `SessionContext` 與 `useSession`),provider 元件放 `app/providers/`。
 
 ```ts
 ✅ export const useLocaleStore = create<LocaleState>()(persist((set) => ({ … }), { name: adminStorageKeys.locale, storage: localeStorage }));
@@ -40,8 +40,8 @@
 
 **① 沿用既有 storage key 與格式時要保住舊格式**(`docs/branding.md` 登記的那些)。`persist` 預設寫 `{ state, version }` 的 JSON 封包,直接套上去會讓既存值失效、既有測試的 storage 斷言也會壞。先分辨既存格式是哪一種再決定怎麼寫:
 
-- **既存格式本來就是 `persist` 的 JSON 封包**(只是換了 storage 後端、換了 key、讀取時要多墊一層搬移)→ **只換 `StateStorage`**:自訂一個 `getItem` / `setItem` / `removeItem` 的三方法物件,用 `createJSONStorage(() => …)` 包起來交給 `persist`。序列化仍由 zustand 做,`version` / `migrate` 也照常運作。先例 `stores/useSideNavStore.ts`。
-- **既存格式不是 JSON 封包**(裸字串、自己手寫的格式)→ 才整份自訂 `PersistStorage<S>`(`getItem` 要自己回 `{ state, version }`),因為序列化的形狀根本對不上。先例 `stores/useLocaleStore.ts`(localStorage 存的是 `"en"` 這種語言代碼字串)與 `stores/useRouteTabsStore.ts`。
+- **既存格式本來就是 `persist` 的 JSON 封包**(只是換了 storage 後端、換了 key、讀取時要多墊一層搬移)→ **只換 `StateStorage`**:自訂一個 `getItem` / `setItem` / `removeItem` 的三方法物件,用 `createJSONStorage(() => …)` 包起來交給 `persist`。序列化仍由 zustand 做,`version` / `migrate` 也照常運作。先例 `stores/base/useSideNavStore.ts`。
+- **既存格式不是 JSON 封包**(裸字串、自己手寫的格式)→ 才整份自訂 `PersistStorage<S>`(`getItem` 要自己回 `{ state, version }`),因為序列化的形狀根本對不上。先例 `stores/base/useLocaleStore.ts`(localStorage 存的是 `"en"` 這種語言代碼字串)與 `stores/base/useRouteTabsStore.ts`。
 
 換句話說:`createJSONStorage` 管「存到哪」,`PersistStorage` 管「存成什麼形狀」;只有後者不對時才寫後者。
 
@@ -182,6 +182,7 @@ interface CellRenderContext<Row> {
 - **`DataTable`**:`render?: (ctx) => ReactNode`;沒給 `render` 時直接顯示 `ctx.value`(字串、數字原樣,空值與物件不顯示)。排序比的也是 `accessor` 取出的值,所以要能排序的欄一定要給 `accessor`。
 - **`Table`**:`render: (row, ctx) => ReactNode`,`ctx` 是**選填的第二參數**,只看 `row` 的既有寫法不必改;`ctx.value` 只在給了 `accessor` 時才有值。
 - 要看「別列」的邏輯(合計、累計、與上一列比較、奇偶列)一律從 `ctx.rows` / `ctx.index` 取,不要在呼叫端另外維護一份排序後的陣列 —— 排序改變時兩邊會對不上。
+- **`accessor` 只能是 row 的純函式**(同一列永遠算出同一個值):`DataTable` 會快取它算出的值,欄位內容要依外部的對照資料(組織名稱、代理程式名稱這類另外查回來的表)時改用 `render` —— 對照資料晚到才會重畫;那一欄要排序的話,先把對照結果放進 rows 再交給 `accessor`。先例:印表機管理的「所屬組織」「代理程式」欄(`pages/base/system/PrintersPage/`)。
 - `ctx` **不帶翻譯函式**(I18N-01:`@repo/ui` 語言無關);欄內文字由呼叫端在閉包裡用自己的 `t` 取。
 - 布林旗標依 GEN-04 命名(`isSortable`、`isEmphasized`);`pinned` 是 `"left" | "right"`。
 
@@ -193,3 +194,52 @@ interface CellRenderContext<Row> {
 | 大量資料(上百到上萬列)、需要欄寬拖拉、欄位固定、表頭排序的列表 | `@repo/ui/data-table`       |
 
 `DataTable` 的三件事:①列虛擬捲動,**捲動容器要有確定的高度**(父層是 STYLE-08 的 `flex: 1; minHeight: 0` 欄,或以 `containerSx` 給 `height` / `maxHeight`),高度跟著內容長時等於沒有虛擬化;②排序與欄寬都是「給了就受控(`sort` + `onSortChange`、`columnWidths` + `onColumnWidthsChange`),沒給就內部管」,資料已由 api 排好時加 `isManualSorting`;③儲存格不折行、超出寬度以省略號截斷(列高一致,虛擬捲動才量得準),要完整內容就加寬或在 `render` 裡放 `Tooltip`。
+
+## REACT-14 admin 的頁面狀態放網址:一律用 `useUrlState`,頁內分頁用 `PageTabs`
+
+正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`
+
+重新整理、分享網址之後,頁面都要回到同一個狀態;殼的路由頁籤也記「路徑 + 網址參數」,切走再切回來、從側欄點已開著的那一頁,都回到離開時的條件(關掉頁籤再從側欄打開才是預設條件);頁面內的「返回列表 / 取消 / 存完離開」也經 `useRouteTabHref` 帶回列表頁籤記下的條件,不直接 `navigate(listRoute)`。新頁面**不自行讀寫 `useSearchParams`**(也不直接用 nuqs),一律經 `useUrlState(key, schema)`:
+
+```ts
+✅ const listSchema = z.object({ status: z.enum(["all", "done"]), page: z.number().int().min(1) })
+     .default({ status: "all", page: 1 });          // 模組層常數;預設值就寫在 schema
+   const [list, setList] = useUrlState("list", listSchema);
+   setList((current) => ({ ...current, page: 2 }));  // ?list={"status":"all","page":2}
+❌ const [searchParams, setSearchParams] = useSearchParams();   // 自己解析、自己驗、自己給預設值
+❌ const [page, setPage] = useState(1);                          // 能進網址的篩選留在 useState
+```
+
+- **一個 key 一包值**:同一個區塊的篩選、關鍵字、排序、頁碼放同一個 key(物件寫 JSON);同一頁有兩個互不相干的區塊(對應不同 API)才分兩個 key。字串直接寫(`?tab=mine`)。
+- **schema 必須 `.default(…)`**(型別上就只收帶預設值的 schema,沒帶編譯不過):網址沒有這個 key、或被手改壞(JSON 壞掉、值不在列舉裡、舊格式)時回到預設值,不報錯,壞掉的那一個 key 以 `replace` 從網址清掉;寫回預設值時 key 自動從網址拿掉。schema 放模組層常數。
+- **頂層 schema 不要用「字串與其他型別的 union」,也不要用 `z.coerce`**:字串原樣寫進網址,讀回時先把原字串交給 schema,所以 `z.union([z.string(), z.number()])` 寫進去的 `2` 讀回來會變成字串 `"2"`,`z.coerce` 也會把任何字串硬轉過去。要混型別就包成物件(`{ kind, value }`)。
+- 寫入是 `replace`(不堆上一頁紀錄),並經 react-router 的 navigate,`useLocation` 讀到的網址與畫面一致。
+- **頁內分頁用 `PageTabs`**,不要自己拿 `Tabs` + `useUrlState` 拼:它把目前分頁記在 `?tab=`、依 `permission` 藏掉沒權限的分頁、只剩一個分頁時不顯示分頁籤、放不下時單列捲動並把選到的分頁捲進可視範圍。只有兩類例外直接用 `@repo/ui/tabs`(受控 `value` / `onChange`):
+  - **切換需要被攔下**:例如有未存變更時要先確認(設計器的「設計 / 預覽」、版本檢視、角色管理的「權限設定 / 分配使用者」);`PageTabs` 不提供 `onBeforeChange`。不綁在某一筆上的(角色管理)目前分頁仍以 `useUrlState` 記在 `?tab=`。
+  - **分頁綁在某一筆資料上**:換一筆資料就該回到第一頁(以 `key={id}` 重來),記在網址反而會讓分頁跟著跑到別筆。
+
+| 放進網址                                                                                     | 不放進網址                                                                                          |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 列表的篩選、關鍵字、排序、頁碼                                                               | 表單還沒存的輸入內容                                                                                |
+| 報表的期間、分店、報表種類                                                                   | 敏感資料(身分證字號、金額明細等)                                                                    |
+| 頁內分頁(`PageTabs`)                                                                         | 大量資料(例如勾選的大量 id)                                                                         |
+| 目前打開的詳情:主從版面選中的那一筆(例 `?detail=<id>`)、唯讀的檢視彈窗(例 `?dialog=retired`) | 暫時性介面狀態(展開、hover 等)                                                                      |
+| 編輯彈窗:只記那一筆的 id(`?edit=<id>`),打開時用 id 向伺服器讀最新資料來填                    | 編輯彈窗裡的內容(未存輸入)                                                                          |
+|                                                                                              | 新增彈窗:還沒有那一筆,內容全是未存輸入                                                              |
+|                                                                                              | 確認類彈窗(刪除 / 停用 / 撤銷):一次性的動作確認;放進網址等於分享出去的連結一打開就停在「確定刪除?」 |
+
+**編輯彈窗記在網址**(2026-10-17 定):`useUrlEdit` + `useUrlEditGuard`(`apps/admin/src/hooks/base/useUrlEdit.ts`)。
+
+| 情況                 | 結果                                                             |
+| -------------------- | ---------------------------------------------------------------- |
+| 帶 `?edit=123` 進入  | 讀那筆最新資料,打開編輯彈窗                                      |
+| 沒有編輯權限         | 不打開彈窗,清掉 `?edit=`(replace);有檢視權限就停在該筆詳情或列表 |
+| 那筆不存在或看不到   | 不打開,清掉參數,Snackbar 提示「找不到這筆資料」(i18n)            |
+| 關閉彈窗(取消或存完) | 清掉 `?edit=`                                                    |
+| 有未存變更時關閉     | 照現有機制攔下(有的頁就沿用,沒有的頁不新增)                      |
+| 切頁籤再切回         | 頁籤記住的參數裡有 `?edit=`,彈窗跟著回來(沿用 RouteTabs 記參數)  |
+
+打開彈窗的頁面讀 `requestedId` 向伺服器查那一筆,再把「能不能編輯」與「查不到」交給 `useUrlEditGuard`;主從版面(組織、表單、流程)的 `?edit=` 同時是選中的那一筆,關掉時停在它的詳情。
+
+- **key 慣例**:列表一包 `list`;主從版面選中的那一筆 `detail`(`hooks/base/useUrlSelectedId`);頁內分頁 `tab`;唯讀的檢視彈窗 `dialog`(值是彈窗名);編輯彈窗 `edit`(值是那一筆的 id)。不用 `view`:mock 開發模式以 `?view=tenant` 切視角。
+- **新頁面要登記進入口清單**:底座頁登記在 `apps/admin/src/app/base/url-state-inventory.ts`、專案頁在 `app/project/url-state-inventory.ts`,寫明這一頁放進網址的 key(`app/url-state-inventory.test.ts` 比對)。`useUrlState` 以外直接 import `useSearchParams` 或 nuqs 由 ESLint(`no-restricted-imports`)擋下。各頁的盤點見 `docs/concepts/frontend-architecture.md`「既有頁面改用的盤點」。

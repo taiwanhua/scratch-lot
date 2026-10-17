@@ -2,7 +2,7 @@
 
 ## 用途
 
-讓根組織的系統管理員對模組資料的資料目標(一個模組一個:示範模組1 的 `demo_items_one`、各示範表單的 `form_submissions`)設定額外的過濾規則:規則依「套用對象」(全部 / 指定角色 / 指定組織 / 指定使用者)命中操作者,再以條件樹過濾他查得到的資料。規則只會讓看到的資料**變少**,永遠疊在租戶隔離保底之內。機制本體見 ADR-0008,查詢時的合成順序見 ADR-0011。
+讓根組織的系統管理員對模組資料的資料目標(一個模組一個:示範模組1 的 `demo_items_one`、各示範表單的 `form_submissions`)設定額外的過濾規則:規則依「套用對象」(人員條件:所有人,或由使用者 / 角色 / 所屬組織 / 權限組成的條件樹)命中操作者,再以「條件組合」過濾他查得到的資料。規則只會讓看到的資料**變少**,永遠疊在租戶隔離保底之內。機制本體見 ADR-0008,查詢時的合成順序見 ADR-0011。
 
 正本:`docs/adr/0008-data-scope.md`、`docs/adr/0011-permission-resolution-flow.md`
 
@@ -53,7 +53,8 @@ BaseRepository 查詢時套用;GQL-07 的語意正本在此。
 - 規則永遠以 `$and` 疊在租戶保底之內 —— 規則只會讓看到的**變少**,保底不可關。
 - 規則套在 `SCOPED_QUERY_MIDDLEWARE` **整組**(與租戶保底同一組),**含寫入與刪除的查詢** —— 看不到的資料也改不到 / 刪不到。
 - **`combineOp` 只作用在「命中同一個人的那幾條規則」之間**:`OR` = 聯集、`AND` = 交集;只命中一條的人就只受那一條限制,沒命中的規則不參與合成。
-- 套用對象比對的兩份事實:「指定組織」比 `memberOrgIds`(`org_user` 直接關聯)、「指定角色」比 `roleIds`(**啟用中**的角色 —— 停用角色後規則立刻不再命中,與管理範圍同一條規則)。
+- 套用對象由 `AudienceService.matchesAudience`(`apps/api/src/audience/`)判斷,與流程審核者 / 通知同一份程式:使用者比操作者 id;角色比 `roleIds`(**啟用中**的角色 —— 停用角色後規則立刻不再命中,與管理範圍同一條規則);所屬組織比 `memberOrgIds`(`org_user` 直接關聯),「含下層」= 所屬組織本身或任一上層是指定組織、「含上層」= 所屬組織是指定組織本身或它的上層;權限比**實際授予**的有效權限(`PermissionResolver.grantedPermissionKeys`:看 key 在不在展開後的有效權限集合裡 —— 停用的權限 / 模組(含祖先)/ 角色不算,`<模組>.*` 展開,別租戶客製表單的動態權限以操作者當前組織的租戶剔除;**不走 `holdsPermission` 的 `*` 同層回退**,持 `X.*` 不算持有 `X` 底下已停用的 key),**不套超級管理員的略過**。同時屬於多個租戶的人,判斷用他的當前組織、列出名單(審核者 / 通知)用列名單的租戶,兩者可能不同 —— 已知並接受。同一個請求內事實只算一次。
+- 存著的規則若有任一條的套用對象不是人員條件格式(改格式前的舊資料、壞資料),判斷不了套用到誰:**整個資料目標對所有人命中不到任何資料**(fail-closed;跳過那一條會變成多看)。環境清空重建,不寫遷移;遇到時到「資料範圍」頁重設那幾條的套用對象再儲存即恢復。
 - 動態值在**查詢當下**代入正在查的人:`current-user` → 操作者 id、`current-user-orgs` → 操作者的**所屬組織**(`org_user` 的直接關聯,**不含**可見性開關展開的下層);代入後若是空集合,該條件命中不到任何資料(fail-closed)。
 - **`rules: []` 不等於「從來沒設定過」**:整份覆蓋成空陣列 = 這個目標沒有規則(執行面只剩租戶保底),但 `dataScopeRule` 仍回一份 `rules: []` 的文件;`rule = null` 專指從來沒設定過。
 - **規則是共用狀態**:因為規則不隨租戶隔離,自動化測試動到規則的劇本結尾一定要整份覆蓋成 `rules: []` 清乾淨,否則會污染同一個資料庫上跑的其他劇本(TEST-11)。
@@ -118,7 +119,7 @@ type DataScopeRule {
 }
 
 type DataScopeRuleEntry {
-  audience: DataScopeAudience! # { type: ALL | ROLE | ORG | USER, ids: [ID!]! }
+  audience: JSONObject! # 人員條件:{ mode: "all" } | { mode: "match", filter }(形狀正本 @repo/domain/audience)
   filter: JSONObject! # 條件樹(形狀見下)
 }
 
@@ -130,6 +131,8 @@ input SaveDataScopeRuleInput {
 ```
 
 三者皆根組織專屬:`@RequirePermission` 先守 `.view` / `.edit`,service 再守根組織(見「規則」)。
+
+套用對象的權限選項(AudiencePicker 的模組 / 權限樹)由共用的 `audiencePermissionOptions { modules }` 提供(`apps/api/src/audience/`):回權限矩陣的顯示樹(全部 enabled 模組與權限 ∩ 操作者自身的有效權限集,扣掉別租戶客製表單的欄位級權限)。root 站在根組織、租戶 = null,所以只列底座與專案的權限。登入即可讀,不另掛權限 —— 樹本身已是操作者持有的那一份。
 
 **回傳欄位的語意**(GQL-07):
 
@@ -189,7 +192,7 @@ input SaveDataScopeRuleInput {
 
 **日期條件是日曆天,逐租戶套用**:與表單引擎的日期同一種做法(`docs/concepts/form-engine.md`「值、計算與條件」),全系統沒有第二套。規則裡的「2/1」對每個租戶都是**它自己時區的 2/1**。
 
-- **存值**:選的那一天在規則作者時區 00:00 的時點。規則是根組織專屬設定、沒有 `orgId`,作者就是根組織;本頁只有站在根組織才進得來,所以 admin 的 `DatePicker` 選日後以 `me.currentOrg.timezone`(= 根組織的時區)換成時點、送帶時區的 ISO 8601 字串(`lib/form-engine/local-day.ts`,與日期欄的 `DateWidget` 同一組),回顯時再換回該時區的 `YYYY-MM-DD`。api 只收時點(`@repo/domain/form` 的 `toInstant` 認得的字串),`YYYY-MM-DD` 這種沒有時區的字一律 `VALUE_INVALID`。
+- **存值**:選的那一天在規則作者時區 00:00 的時點。規則是根組織專屬設定、沒有 `orgId`,作者就是根組織;本頁只有站在根組織才進得來,所以 admin 的 `DatePicker` 選日後以 `me.currentOrg.timezone`(= 根組織的時區)換成時點、送帶時區的 ISO 8601 字串(`lib/base/form-engine/local-day.ts`,與日期欄的 `DateWidget` 同一組),回顯時再換回該時區的 `YYYY-MM-DD`。api 只收時點(`@repo/domain/form` 的 `toInstant` 認得的字串),`YYYY-MM-DD` 這種沒有時區的字一律 `VALUE_INVALID`。
 - **比對**:api 先用**規則作者的時區**把存的時點還原成日曆天(`localDateOf`),再用**操作者所在租戶的時區**算那一天的 00:00 與次日 00:00 當邊界(`startOfLocalDay` / `addLocalCalendar`,夏令時間切換日也對)。根組織自己查資料時兩個時區相同。
 
 | `cond`    | 條件(D、A、B 都是操作者租戶時區的那一天) | 含不含當天         |
@@ -217,17 +220,21 @@ input SaveDataScopeRuleInput {
 
 程式在 `apps/admin/src/pages/base/system/DataScopePage/`:`TargetListPanel.tsx`(左資料目標清單,一列 = 一個模組:主文字模組名、副文字 collection)、`RuleEditorPanel/`(右規則編輯器)、`DiscardChangesDialog.tsx`(未儲存離開確認)、`useDataScopeData.ts`(資料與 mutation)。
 
-- 純函式在 `apps/admin/src/lib/`:`data-scope-rule.ts`(型別目錄、編輯器狀態 ↔ api JSON、條件樹增刪改)與 `data-scope-issues.ts`(本地驗證、`RULE_INVALID` 的 `path` → 標在哪一格)。**型別 → 運算子 → 值來源那張表在 admin 重寫了一份**(STRUCT-01 不能 import api),改動時兩邊一起改。
-- 條件樹節點**不帶自產 id**:位置(`rules[n]` + 往下的 `children[i]`)就是身分,與 api 回的 `path` 同一套座標。
-- **UI 上限三層**(ADR-0008「任意深、UI 建議 3 層」):第三層的群組不再給「+ 群組」;資料結構本身不設限,更深的規則由 api 回來仍讀得回、顯示得出來,只是不能再往下加。
-- 新群組**一定帶一條條件列**(空群組會被 `EMPTY_GROUP` 拒絕,不讓它先出現在畫面上)。
+- **規則卡分上下兩塊**(`RuleCard.tsx`,Figma `Draft/DataScopeRuleCard`):上「套用對象」= 共用元件 `AudiencePicker`(`apps/admin/src/components/base/AudiencePicker/`;欄位全開:使用者 / 角色 / 所屬組織 / 權限,所屬組織只能指定組織),下「條件組合」= 資料目標的欄位目錄。兩棵樹共用 `components/base/condition-tree/` 的 `ConditionGroup` / `ConditionRow`,只換欄位清單與條件列之後的控制項;根層下拉都叫「組合」,巢狀群組叫「群組組合」。
+- **套用對象的選項兩邊各一份**:admin 的 `DATA_SCOPE_AUDIENCE_FIELDS`(`lib/base/data-scope-rule.ts`)與傳給 AudiencePicker 的 `orgSources`(預設只有指定組織)對應 api 的 `DATA_SCOPE_AUDIENCE_OPTIONS`(`apps/api/src/data-scope/data-scope-rule.ts`:可用欄位、組織來源、允許所有人);**改動時兩邊一起改**。
+- **套用對象**:頂層「所有人 / 符合條件」二選一,新規則預設所有人。選所有人時條件樹收起,狀態裡的條件樹仍留著,切回符合條件原樣回來;送出時所有人只送 `{ mode: "all" }`。角色依擁有組織分組(Autocomplete;一次取 100 筆,清單外的已存值顯示「不在候選清單中」並原樣保留)、組織用 `OrgTreeSelect`、權限用可搜尋的模組 / 權限樹(`audiencePermissionOptions`,只有權限列可勾)。根節點一律以群組送出(存著的根若是單一條件列,讀進來包一層 AND)。
+- 純函式在 `apps/admin/src/lib/base/`:`data-scope-rule.ts`(型別目錄、編輯器狀態 ↔ api JSON)、`data-scope-issues.ts`(本地驗證、`RULE_INVALID` 的 `path` → 標在哪一棵樹的哪一格)、`condition-tree.ts`(兩棵樹共用的增刪改與 UI 上限)、`audience-draft.ts`(人員條件的編輯器狀態 ↔ JSON、本地驗證、`path` 定位)。**型別 → 運算子 → 值來源那張表在 admin 重寫了一份**(STRUCT-01 不能 import api),改動時兩邊一起改。
+- 條件樹節點**不帶自產 id**:位置(`rules[n]` + 往下的 `children[i]`)就是身分,與 api 回的 `path` 同一套座標;`rules[n].audience.…` 的路徑標在套用對象那棵樹(`AUDIENCE_INVALID` 指到的條件列標紅),其餘標在條件組合。
+- **UI 上限三層**(ADR-0008「任意深、UI 建議 3 層」,人員條件同為 3 層):第三層的群組不再給「+ 群組」;資料結構本身不設限,更深的規則由 api 回來仍讀得回、顯示得出來,只是不能再往下加。
+- 新群組**一定帶一條條件列**;刪光條件列的空群組送出前就擋下(條件組合 `EMPTY_GROUP`、套用對象同一句),套用對象的條件列沒挑值標 `AUDIENCE_INVALID`。
 - 動態值與靜態值在同一個「值」下拉裡(動態值排在最前面):選了動態值就取代整份靜態值,反之亦然。
 - **左清單的「已設規則」讀 `DataScopeTarget.hasRule`**(判準見「api 介面」)。
 - 選中的目標以 id 記(`selectedTargetId`;同一個 collection 可能有好幾列)。未儲存就切換資料目標 → 放棄變更確認;`saveDataScopeRule` 成功後失效該目標的 `dataScopeRule` 與 `dataScopeTargets`。
 - 動作按鈕依 `system.data-scope.edit`,只有 `.view` 時整個編輯器唯讀。
 - 非根組織不在頁面判斷 —— 本模組 `isRootOnly`,租戶的 `me.modules` 裡沒有它,路由層就擋掉(ADR-0011)。
+- 元件測試:`DataScopePage.test.tsx`、`DataScopeRuleEditor.test.tsx`(條件組合)、`DataScopeAudience.test.tsx`(套用對象)。
 
-正本:`apps/admin/src/pages/base/system/DataScopePage/`、`apps/admin/src/lib/data-scope-rule.ts`、`apps/admin/src/lib/data-scope-issues.ts`
+正本:`apps/admin/src/pages/base/system/DataScopePage/`、`apps/admin/src/components/base/AudiencePicker/`、`apps/admin/src/components/base/condition-tree/`、`apps/admin/src/lib/base/data-scope-rule.ts`、`apps/admin/src/lib/base/data-scope-issues.ts`、`apps/admin/src/lib/base/audience-draft.ts`
 
 ## 錯誤碼
 
@@ -242,16 +249,16 @@ input SaveDataScopeRuleInput {
 
 `path` 指到條件樹裡出問題的位置(如 `rules[0].filter.children[1].value.values[0]`),`reason` 是原因列舉;前端依 `reason` 顯示中文、把錯誤標在 `path` 指到的那一列。一次只回第一個違規(整份覆蓋,修掉再送)。
 
-| `reason`                   | 什麼情況                                                                                 |
-| -------------------------- | ---------------------------------------------------------------------------------------- |
-| `MALFORMED_RULE`           | `rules` 不是陣列、單筆不是物件、缺 `audience` / `filter`                                 |
-| `MALFORMED_NODE`           | 節點既不是群組也不是條件列,或 `op` / `field` 型別不對                                    |
-| `EMPTY_GROUP`              | 群組的 `children` 是空的                                                                 |
-| `UNKNOWN_FIELD`            | `field` 不在該目標的欄位目錄內                                                           |
-| `CONDITION_NOT_ALLOWED`    | `cond` 不是該欄位型別允許的                                                              |
-| `VALUE_SOURCE_NOT_ALLOWED` | `value.kind` 不是 static / dynamic,或該型別不支援這個動態值                              |
-| `VALUE_INVALID`            | 空清單、id 不是 ObjectId、日期不是帶時區的 ISO 時點、`between` 不是兩個、enum 不在選項內 |
-| `AUDIENCE_INVALID`         | `audience.type` 不認得,或 `ALL` 以外沒給 `ids` / `ids` 不是 id                           |
+| `reason`                   | 什麼情況                                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MALFORMED_RULE`           | `rules` 不是陣列、單筆不是物件、缺 `audience` / `filter`                                                                                                                                                                                                                                                                  |
+| `MALFORMED_NODE`           | 節點既不是群組也不是條件列,或 `op` / `field` 型別不對                                                                                                                                                                                                                                                                     |
+| `EMPTY_GROUP`              | 群組的 `children` 是空的                                                                                                                                                                                                                                                                                                  |
+| `UNKNOWN_FIELD`            | `field` 不在該目標的欄位目錄內                                                                                                                                                                                                                                                                                            |
+| `CONDITION_NOT_ALLOWED`    | `cond` 不是該欄位型別允許的                                                                                                                                                                                                                                                                                               |
+| `VALUE_SOURCE_NOT_ALLOWED` | `value.kind` 不是 static / dynamic,或該型別不支援這個動態值                                                                                                                                                                                                                                                               |
+| `VALUE_INVALID`            | 空清單、id 不是 ObjectId、日期不是帶時區的 ISO 時點、`between` 不是兩個、enum 不在選項內                                                                                                                                                                                                                                  |
+| `AUDIENCE_INVALID`         | 套用對象不是人員條件格式:`mode` 不認得、`match` 沒有條件列(含空群組)、欄位不是使用者 / 角色 / 所屬組織 / 權限、值不合法(id / 權限 key、所屬組織沒給範圍或用了動態來源)、群組超過 3 層;舊格式 `{ type, ids }` 一律拒絕。`path` 指到出錯的條件列(如 `rules[0].audience.filter.children[1].field`、`rules[0].audience.mode`) |
 
 admin 的解讀集中在 `DataScopePage/data-scope-error.ts`。
 
@@ -266,7 +273,7 @@ admin 的解讀集中在 `DataScopePage/data-scope-error.ts`。
 ## 測試
 
 - api:`apps/api/src/data-scope/data-scope.test.ts`(端點、根組織守門、`RULE_INVALID`、`hasRule`、同 collection 兩個模組各自的規則);執行面 `apps/api/src/database/data-scope-provider.test.ts`、`apps/api/src/database/base.repository.test.ts`、`apps/api/src/demo-items-one/demo-items-one-scope.test.ts`
-- admin:`apps/admin/src/pages/base/system/DataScopePage/DataScopePage.test.tsx`、`DataScopeRuleEditor.test.tsx`、`apps/admin/src/lib/data-scope-rule.test.ts`
+- admin:`apps/admin/src/pages/base/system/DataScopePage/DataScopePage.test.tsx`、`DataScopeRuleEditor.test.tsx`、`apps/admin/src/lib/base/data-scope-rule.test.ts`
 - 劇本 E2E(`docs/testing/permission-scenarios.md`):劇本 2 資料範圍規則 `scenario-02-data-scope-rule.spec.ts`、劇本 3 未宣告對照 `scenario-03-undeclared-target.spec.ts`、劇本 4 頂層合成 OR / AND `scenario-04-combine-op.spec.ts`、劇本 16 租戶視角 `scenario-16-tenant-perspective.spec.ts`(皆在 `apps/e2e/src/specs/`)
 
 正本:上列檔案、`docs/testing/permission-scenarios.md`

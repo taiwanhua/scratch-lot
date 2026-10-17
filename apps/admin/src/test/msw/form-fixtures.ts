@@ -10,7 +10,7 @@ import {
   ModuleSidebarType,
 } from "@repo/graphql";
 
-import { rawOf } from "@/lib/form-engine/definition";
+import { rawOf } from "@/lib/base/form-engine/definition";
 
 import type { TestModule } from "./auth-handlers";
 
@@ -247,8 +247,8 @@ export const formFragment = (
   forkedFrom: null,
   currentVersion: 1,
   tabLabelTemplate: null,
+  allowDraft: true,
   hasDraft: true,
-  publishInterrupted: false,
   tenantEnabled: null,
   assignments: [],
   abilities: {
@@ -309,7 +309,13 @@ export const submissionFragment = (
   fieldStates: [],
   displayValues: [],
   summary: { title: "雞蛋", date: STAMP, amount: "60" },
-  ctx: { at: STAMP, timezone: "Asia/Taipei", userId: "user-1", orgId: "org-1" },
+  ctx: {
+    at: STAMP,
+    timezone: "Asia/Taipei",
+    userId: "user-1",
+    orgId: "org-1",
+    orgIds: ["org-1"],
+  },
   editVersion: 2,
   orgId: "org-1",
   createdBy: { id: "user-1", name: "小華" },
@@ -325,6 +331,7 @@ export const submissionFragment = (
   touched: [],
   abilities: {
     canEdit: true,
+    canSaveDraft: true,
     canDelete: true,
     canEditField: ["item", "qty", "unit_price", "note", "buyer"],
     canWithdraw: false,

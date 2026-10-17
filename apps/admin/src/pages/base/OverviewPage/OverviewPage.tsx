@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMe } from "@/hooks/useMe";
+import { useMe } from "@/hooks/base/useMe";
 
 /**
  * 總覽(模組 key `overview`,正本 docs/modules/overview.md):登入後的第一頁。

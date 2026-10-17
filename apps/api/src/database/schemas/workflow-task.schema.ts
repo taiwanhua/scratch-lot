@@ -66,6 +66,23 @@ export class WorkflowTask {
   /** 只擋同一個人兩個分頁重複送;關卡結果由實例決定。 */
   @Prop({ type: Number, default: 0 })
   editVersion!: number;
+
+  /**
+   * 派給目前承辦人的時點(建任務、改派時寫;B16 逾時提醒從這裡起算)。這個欄位出現之前的任務為 null。
+   */
+  @Prop({ type: Date, default: null })
+  assignedAt!: Date | null;
+
+  /** B16 這一次指派已通知到第幾級(0 = 還沒、1 = 已通知審核者、2 = 已通知通知對象);改派歸 0。 */
+  @Prop({ type: Number, default: 0 })
+  overdueLevel!: number;
+
+  /**
+   * B16 下一級該通知的時點(`assignedAt` + N / M 小時);關卡沒開逾時提醒、已通知完兩級 = null。
+   * 排程只撈 `status = pending` 且這個時點已到的任務。
+   */
+  @Prop({ type: Date, default: null })
+  overdueDueAt!: Date | null;
 }
 
 // 由 class 產生 Mongoose Schema(供 MongooseModule 註冊為 model,並掛下方索引)
@@ -78,5 +95,7 @@ WorkflowTaskSchema.index({ assigneeId: 1, status: 1 });
 WorkflowTaskSchema.index({ tenantId: 1, moduleKey: 1, status: 1 });
 // 曾持有(被改派走)的人仍可讀該修訂
 WorkflowTaskSchema.index({ previousAssigneeIds: 1 });
+// B16 逾時提醒的排程(以租戶為邊界,只撈待處理且到期的)
+WorkflowTaskSchema.index({ tenantId: 1, status: 1, overdueDueAt: 1 });
 // 基礎欄位(ADR-0007);不掛 tenantScope(理由見 class 註解)
 WorkflowTaskSchema.plugin(baseFieldsPlugin);

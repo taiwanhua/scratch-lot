@@ -77,7 +77,7 @@ export interface DemoFilterOption {
   label: string;
 }
 
-/** 列表頁的篩選條件(頁內 `useState`,不進 URL — REACT-02 的 admin 例外)。 */
+/** 列表頁的篩選條件(存在網址 `?list=`,`DemoListPage` 經 `useUrlState` 讀寫;REACT-14)。 */
 export interface DemoListFilters {
   page: number;
   /** 搜尋框;空字串 = 不篩 */

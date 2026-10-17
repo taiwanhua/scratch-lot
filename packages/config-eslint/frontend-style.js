@@ -1,3 +1,7 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "eslint/config";
 
 /**
@@ -8,7 +12,8 @@ import { defineConfig } from "eslint/config";
  *   import { frontendStyle } from "@repo/eslint-config/frontend-style";
  *   /** @type {import("eslint").Linter.Config[]} *\/
  *   export default [...config, ...frontendStyle];
- * 後台另接 `projectOwnership`(底座 / 專案的所有權方向,見檔尾):`[...config, ...frontendStyle, ...projectOwnership]`。
+ * 後台另接 `projectOwnership`(底座 / 專案的所有權方向,見檔尾):`[...config, ...frontendStyle, ...projectOwnership]`;
+ * `packages/ui` 另接 `uiOwnership`(不 import apps、不放專案程式):`[...config, ...frontendStyle, ...uiOwnership]`。
  *
  * 檔名規則只看第一段(unicorn 的 multipleFileExtensions 預設):`RouteTabs.drag.test.tsx` 檢 `RouteTabs`、
  * `vite-env.d.ts` 檢 `vite-env`,第二段以後不管。
@@ -195,6 +200,64 @@ export const projectOwnership = defineConfig(
                 "專案頁不能 import 底座頁的內部(pages/base/);要共用就經 components / hooks / lib",
             },
           ],
+        },
+      ],
+    },
+  },
+);
+
+/**
+ * app workspace 的套件名(`apps/<name>/package.json` 的 `name`);`packages/ui` 一個都不能 import。
+ * 載入設定時從檔案系統讀,新增 app 不必回來改清單。本檔與 `apps/` 同在 repo 裡(workspace 套件,
+ * pnpm 的連結解析回真實路徑),所以以本檔位置往上兩層就是 repo 根目錄。
+ */
+const APPS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "apps",
+);
+const APP_PACKAGES = readdirSync(APPS_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => path.join(APPS_DIR, entry.name, "package.json"))
+  .filter((file) => existsSync(file))
+  .map((file) => JSON.parse(readFileSync(file, "utf8")).name)
+  .filter((name) => typeof name === "string");
+const escapeRegExp = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * `@repo/ui` 只放底座的底層元件(STRUCT-12;接在 `frontendStyle` 之後,只給 `packages/ui` 用):
+ * - 不能 import `apps/` 的任何路徑:相對路徑走進 `apps/`,或 `@repo/admin`、`@repo/front` 等 app 套件
+ * - 不能有 `project/` 目錄:專案元件放 admin 的 `components/project/`,不進 `@repo/ui`;
+ *   `project/` 底下的程式檔一律報錯(非程式檔由 `packages/ui/scripts/check-ownership-lint.mjs` 掃目錄把關)
+ */
+export const uiOwnership = defineConfig(
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: `(^|/)apps/|^(${APP_PACKAGES.map(escapeRegExp).join("|")})(/|$)`,
+              message:
+                "@repo/ui 不能 import apps/ 的程式(STRUCT-12);共用的東西放進 ui 自己,app 專用的留在 app",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/**/project/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Program",
+          message:
+            "@repo/ui 不能有 project/ 目錄(STRUCT-12):專案元件放 admin 的 components/project/",
         },
       ],
     },

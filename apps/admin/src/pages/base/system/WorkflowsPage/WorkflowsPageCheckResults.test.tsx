@@ -50,13 +50,9 @@ describe("流程管理:「檢查」的結果面板", () => {
     const rows = within(list)
       .getAllByRole("button")
       .map((row) => row.textContent);
-    // 即時檢查(角色還沒選)+ api 才看得到的錯誤 / 警告併在同一關;錯誤在前、警告在後
-    expect(rows).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("錯誤 · ROLE_ID_MISSING"),
-        expect.stringContaining("錯誤 · ROLE_NOT_IN_TENANT"),
-      ]),
-    );
+    // api 才看得到的錯誤 / 警告併在同一關;錯誤在前、警告在後
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toContain("錯誤 · ROLE_NOT_IN_TENANT");
     expect(rows.at(-1)).toContain(
       "關卡 hr 指定的使用者 u9 已停用警告 · USER_INVALID",
     );

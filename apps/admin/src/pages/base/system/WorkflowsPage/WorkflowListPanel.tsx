@@ -126,9 +126,6 @@ export const WorkflowListPanel = ({
                       })}
                     />
                   )}
-                  {workflow.publishInterrupted && (
-                    <Tag tone="error" label={t("interrupted")} />
-                  )}
                   {workflow.hasDraft && (
                     <Tag tone="grey" label={t("hasDraft")} />
                   )}

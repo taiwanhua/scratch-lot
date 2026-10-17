@@ -8,6 +8,9 @@ import { GraphQLError, GraphQLScalarType, Kind, type ValueNode } from "graphql";
  * 仍然只能在 service 驗 — 等於驗兩次、還對不起來。改成:**存什麼形狀就傳什麼形狀**,
  * 由 `saveDataScopeRule` 一次驗完並以 `RULE_INVALID` 附 `path` 指出是哪一個節點錯
  * (JSON path 才指得到巢狀位置,GraphQL 的欄位錯誤指不到)。形狀正本見 `data-scope-rule.ts`。
+ *
+ * 個人偏好的 `settings`(`{ <登記的 key>: 值 }`)也用它:key 由登記決定、專案可增,
+ * 寫不成固定的 GraphQL 型別;key 與型別由 `UserPreferencesService` 依登記驗。
  */
 
 function parseLiteral(node: ValueNode): unknown {
@@ -53,7 +56,7 @@ function assertObject(value: unknown): Record<string, unknown> {
 export const GraphQLJSONObject = new GraphQLScalarType({
   name: "JSONObject",
   description:
-    "任意 JSON 物件(資料範圍的條件樹;形狀見 apps/api/src/data-scope/data-scope-rule.ts)",
+    "任意 JSON 物件,形狀由各端點驗證(資料範圍的條件樹見 apps/api/src/data-scope/data-scope-rule.ts;個人偏好見 apps/api/src/user-preferences/user-preference-registry.ts)",
   serialize: (value) => assertObject(value),
   parseValue: (value) => assertObject(value),
   parseLiteral: (node) => assertObject(parseLiteral(node)),

@@ -139,21 +139,6 @@ export class WorkflowDefinitionAdapter implements DefinitionAdapter<WorkflowDefi
       : null;
   }
 
-  async findInterruptedPublish(
-    facts: FormOperatorFacts,
-    key: string,
-  ): Promise<VersionSnapshot | null> {
-    const workflow = await this.workflows.findOne(SHARED, { key });
-    if (workflow === null) {
-      return null;
-    }
-    const interrupted = await this.publisher.interruptedOf(
-      facts.operator,
-      workflow,
-    );
-    return interrupted === null ? null : toSnapshot(workflow, interrupted);
-  }
-
   async validate(
     facts: FormOperatorFacts,
     seed: WorkflowDefinitionSeedSet,
@@ -225,6 +210,7 @@ export class WorkflowDefinitionAdapter implements DefinitionAdapter<WorkflowDefi
           edges: seed.definition.edges ?? null,
           // 一定明給(含 null):缺席在原服務是「不動已存的值」,宣告的 null 是清空
           checkFormKey: seed.checkFormKey,
+          cc: seed.definition.cc ?? null,
         },
       },
       { draftId },
@@ -253,14 +239,6 @@ export class WorkflowDefinitionAdapter implements DefinitionAdapter<WorkflowDefi
         },
       },
     );
-  }
-
-  async retryPublish(
-    facts: FormOperatorFacts,
-    key: string,
-    versionId: Types.ObjectId,
-  ): Promise<void> {
-    await this.publisher.retry(facts, { workflowKey: key }, { versionId });
   }
 
   async retire(

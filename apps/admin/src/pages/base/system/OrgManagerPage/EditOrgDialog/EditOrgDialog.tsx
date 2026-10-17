@@ -22,9 +22,9 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import type { OrgOption } from "@/lib/org-tree";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import type { OrgOption } from "@/lib/base/org-tree";
 
 import { OrgLogoField } from "../OrgLogoField";
 import {

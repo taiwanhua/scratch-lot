@@ -22,7 +22,7 @@ describe("ModuleIconPicker", () => {
     expect(screen.getAllByText("圖示").length).toBeGreaterThan(0);
   });
 
-  it("展開後列出白名單全部 29 個選項,每個都有圖示", async () => {
+  it("展開後列出白名單全部 30 個選項,每個都有圖示", async () => {
     const user = userEvent.setup();
     render(<ModuleIconPicker label="圖示" value="people" />);
 
@@ -30,7 +30,7 @@ describe("ModuleIconPicker", () => {
     const options = within(listbox).getAllByRole("option");
 
     expect(options).toHaveLength(MODULE_ICON_KEYS.length);
-    expect(options).toHaveLength(29);
+    expect(options).toHaveLength(30);
     for (const [index, key] of MODULE_ICON_KEYS.entries()) {
       const option = options[index];
       expect(option).toHaveTextContent(MODULE_ICONS[key].label);

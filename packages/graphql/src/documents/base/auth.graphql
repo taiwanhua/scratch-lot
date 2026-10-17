@@ -49,6 +49,10 @@ query Me {
       logoUrl
       # 租戶時區(IANA):表單的日期時間欄以它輸入與顯示;已送出的修訂用那次的 ctx.timezone
       timezone
+      # 最上層組織名稱(租戶頂層;根組織 = 自己):單據(58mm)上方印的租戶名稱,不印分店名稱
+      tenantName
+      # 最上層組織 id(租戶頂層;根組織 = null):填寫中表達式的 ctx.tenant.id
+      tenantId
     }
     orgs {
       id
@@ -65,7 +69,7 @@ query Me {
       # 側欄圖示 key(白名單 @repo/domain/module-icon;#288):null = 用預設圖示。
       # 值由根組織在「模組與權限」頁管理,前端以 key 查 @repo/ui 的登錄表,認不得就退回預設
       icon
-      # FORM = 表單模組:沒有專屬說明檔時「?」退回表單模組通用說明(admin lib/help-registry)
+      # FORM = 表單模組:沒有專屬說明檔時「?」退回表單模組通用說明(admin lib/base/help-registry)
       engine
       permissions
     }

@@ -17,7 +17,10 @@ import type { WorkflowTaskRecord } from "../../database/workflow-tasks.repositor
 import { WorkflowTasksRepository } from "../../database/workflow-tasks.repository";
 import { WorkflowsRepository } from "../../database/workflows.repository";
 import { FormUserNames, userRefOf } from "../../forms/form-mapper";
-import type { FormSubmissionSummary } from "../../forms/models/form-common.model";
+import type {
+  FormSubmissionSummary,
+  FormUserRef,
+} from "../../forms/models/form-common.model";
 import {
   type WorkflowInstanceModel,
   WorkflowInstanceStatusEnum,
@@ -60,6 +63,23 @@ function nonNull<T>(value: T | null): value is T {
   return value !== null;
 }
 
+/** 舊資料可能沒有的 id 陣列欄位(`delegatorIds`)→ 一律給陣列;`refsOf` 與收集 userIds 共用同一個判斷。 */
+function idsOf(
+  ids: readonly Types.ObjectId[] | undefined,
+): readonly Types.ObjectId[] {
+  return ids ?? [];
+}
+
+/** id 們 → 使用者參照(舊資料沒有這個欄位 → 空陣列;被刪除的人 `name` 為 null)。 */
+function refsOf(
+  ids: readonly Types.ObjectId[] | undefined,
+  names: ReadonlyMap<string, string>,
+): FormUserRef[] {
+  return idsOf(ids)
+    .map((id) => userRefOf(id, names))
+    .filter((ref) => nonNull(ref));
+}
+
 /**
  * 實例與任務的對外形狀(申請中心、審核區塊、阻擋清單共用)。**摘要一律讀實例快照**
  * (`workflow_instances.summary`,該修訂的標題槽),不讀提交最新的 `summary` ——
@@ -84,14 +104,18 @@ export class WorkflowPresenter {
     const userIds: (Types.ObjectId | null)[] = [instance.createdBy];
     for (const step of instance.steps) {
       for (const item of step.plan) {
-        userIds.push(item.assigneeId, ...item.previousAssigneeIds);
+        userIds.push(
+          item.assigneeId,
+          ...item.previousAssigneeIds,
+          ...idsOf(item.delegatorIds),
+        );
       }
       for (const decision of step.decisions) {
         userIds.push(decision.userId);
       }
     }
     for (const event of instance.history) {
-      userIds.push(event.userId, event.toUserId);
+      userIds.push(event.userId, event.toUserId, ...idsOf(event.delegatorIds));
     }
     const names = await this.userNames.load(systemContext(), userIds);
     const myTasks =
@@ -157,6 +181,7 @@ export class WorkflowPresenter {
               .map((id) => userRefOf(id, names))
               .filter((ref) => nonNull(ref)),
             assigneeState: item.assigneeState,
+            delegators: refsOf(item.delegatorIds, names),
             taskId: taskIdByKey.get(item.taskKey) ?? null,
           })),
           decisions: (state?.decisions ?? []).map((decision) => ({
@@ -180,6 +205,9 @@ export class WorkflowPresenter {
         toUser: userRefOf(event.toUserId, names),
         comment: event.comment,
         result: event.result,
+        reason: event.reason ?? null,
+        code: event.code ?? null,
+        delegators: refsOf(event.delegatorIds, names),
       })),
       outcome: instance.outcome
         ? {

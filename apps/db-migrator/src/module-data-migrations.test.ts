@@ -1,10 +1,11 @@
-import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+
+import { runNode } from "../test/support/update-harness";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(PACKAGE_ROOT, "migrations");
@@ -44,8 +45,8 @@ try {
 }
 `;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
-let memoryServer: MongoMemoryServer | undefined;
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 const clients: MongoClient[] = [];
 
@@ -62,16 +63,14 @@ async function openDatabase(databaseUri: string): Promise<Db> {
 }
 
 function runMigrateUp(databaseUri: string) {
-  return spawnSync(process.execPath, [MIGRATE_MONGO_BIN, "up"], {
+  return runNode([MIGRATE_MONGO_BIN, "up"], {
     cwd: PACKAGE_ROOT,
     env: { ...process.env, MONGODB_URI: databaseUri },
-    encoding: "utf8",
   });
 }
 
 function runUpDirectly(databaseUri: string, times: number) {
-  return spawnSync(
-    process.execPath,
+  return runNode(
     [
       "--input-type=module",
       "-e",
@@ -80,7 +79,7 @@ function runUpDirectly(databaseUri: string, times: number) {
       String(times),
       ...BACKFILL_MIGRATIONS,
     ],
-    { cwd: PACKAGE_ROOT, encoding: "utf8" },
+    { cwd: PACKAGE_ROOT },
   );
 }
 
@@ -193,7 +192,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);
@@ -220,7 +219,7 @@ describe("回填遷移(模組資料欄位、資料範圍依模組、orgs.slug、
     database = await openDatabase(databaseUri);
     await seedPreState(database);
 
-    const result = runMigrateUp(databaseUri);
+    const result = await runMigrateUp(databaseUri);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     migrateOutput = result.stdout;
@@ -298,7 +297,7 @@ describe("回填遷移(模組資料欄位、資料範圍依模組、orgs.slug、
 
   it("重跑 migrate up 不重複執行(changelog 防重跑),回填結果不變", async () => {
     const before = await snapshotOf(database);
-    const result = runMigrateUp(databaseUri);
+    const result = await runMigrateUp(databaseUri);
     expect(result.status).toBe(0);
     expect(await snapshotOf(database)).toEqual(before);
   });
@@ -313,10 +312,10 @@ describe("回填遷移本身冪等:直接呼叫 up 兩次,結果與一次相同"
     await seedPreState(once);
     await seedPreState(twice);
 
-    const first = runUpDirectly(onceUri, 1);
+    const first = await runUpDirectly(onceUri, 1);
     expect(first.stderr).toBe("");
     expect(first.status).toBe(0);
-    const second = runUpDirectly(twiceUri, 2);
+    const second = await runUpDirectly(twiceUri, 2);
     expect(second.stderr).toBe("");
     expect(second.status).toBe(0);
 

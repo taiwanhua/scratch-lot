@@ -8,8 +8,8 @@ import { Dialog } from "@repo/ui/dialog";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import type { ApplicableModule } from "@/hooks/useApplicableForms";
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
+import type { ApplicableModule } from "@/hooks/base/useApplicableForms";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
 
 import { formModulePageKey } from "../apply-center-keys";
 

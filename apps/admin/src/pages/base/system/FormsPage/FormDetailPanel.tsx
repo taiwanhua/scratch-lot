@@ -15,12 +15,15 @@ import { Switch } from "@repo/ui/switch";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
+import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
+import { AllowDraftField } from "./AllowDraftField";
 import { FormDesigner } from "./FormDesigner/FormDesigner";
 import { VersionViewer } from "./FormDesigner/VersionViewer";
 import { AssignFormDialog } from "./FormDialogs/AssignFormDialog";
@@ -29,16 +32,22 @@ import { ForkFormDialog } from "./FormDialogs/ForkFormDialog";
 import { VersionPanel } from "./VersionPanel/VersionPanel";
 import { WorkflowBindingField } from "./WorkflowBinding/WorkflowBindingField";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
-import { useIsAtRootOrg } from "./useIsAtRootOrg";
 
 export interface FormDetailPanelProps {
   form: FormFieldsFragment;
   onChanged: () => void;
   onForked: (formKey: string) => void;
+  /** 編輯彈窗開著(網址 `?edit=<key>`,由頁面保管) */
+  isEditing: boolean;
+  /** 按「編輯」:頁面把 `?edit=<key>` 寫進網址 */
+  onEdit: (key: string) => void;
+  /** 關掉編輯彈窗(取消、存完) */
+  onEditClose: () => void;
 }
 
 type DetailTab = "design" | "versions";
-type OpenDialog = "edit" | "fork" | "assign" | "listColumns" | null;
+/** 不進網址的彈窗(建新表單、分派、列表欄位);編輯彈窗在網址 `?edit=`(頁面保管) */
+type OpenDialog = "fork" | "assign" | "listColumns" | null;
 
 /**
  * 表單管理右欄(Spec 6a §8 畫面 1 的右側):表單資料、設計 / 版本兩個頁籤,以及
@@ -49,6 +58,9 @@ export const FormDetailPanel = ({
   form,
   onChanged,
   onForked,
+  isEditing,
+  onEdit,
+  onEditClose,
 }: FormDetailPanelProps) => {
   const t = useTranslations("admin.forms.detail");
   const tErrors = useTranslations("admin.forms.errors");
@@ -63,7 +75,7 @@ export const FormDetailPanel = ({
   const canBindWorkflow = form.tenantEnabled === true;
   // 列表欄位配置是模組層的設定(`modules.settings.list`),只有站在根組織、能改表單的人設(api 另守 ROOT_ONLY)
   const canEditListColumns =
-    useIsAtRootOrg([form]) && hasPermission(FORMS_PERMISSIONS.edit);
+    useIsAtRootOrg() === true && hasPermission(FORMS_PERMISSIONS.edit);
 
   const setEnabled = useSetTenantFormEnabledMutation(
     session.client,
@@ -89,7 +101,8 @@ export const FormDetailPanel = ({
           spacing={1}
           sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
         >
-          <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+          {/* 標題欄以內容寬為底:放不下時操作鈕整組換到下一列,不把標題擠扁(`designer-layout.ts`) */}
+          <Stack spacing={0.5} sx={detailHeaderTitleSx}>
             <Typography variant="h6" component="h1">
               {form.name}
             </Typography>
@@ -108,46 +121,48 @@ export const FormDetailPanel = ({
               </Typography>
             )}
           </Stack>
-          {form.abilities.canEdit && (
-            <Button
-              variant="text"
-              onClick={() => {
-                setDialog("edit");
-              }}
-            >
-              {t("edit")}
-            </Button>
-          )}
-          {form.abilities.canFork && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("fork");
-              }}
-            >
-              {t("fork")}
-            </Button>
-          )}
-          {canEditListColumns && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("listColumns");
-              }}
-            >
-              {t("listColumns")}
-            </Button>
-          )}
-          {form.abilities.canAssign && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("assign");
-              }}
-            >
-              {t("assign")}
-            </Button>
-          )}
+          <Stack direction="row" spacing={1} sx={detailHeaderActionsSx}>
+            {form.abilities.canEdit && (
+              <Button
+                variant="text"
+                onClick={() => {
+                  onEdit(form.key);
+                }}
+              >
+                {t("edit")}
+              </Button>
+            )}
+            {form.abilities.canFork && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("fork");
+                }}
+              >
+                {t("fork")}
+              </Button>
+            )}
+            {canEditListColumns && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("listColumns");
+                }}
+              >
+                {t("listColumns")}
+              </Button>
+            )}
+            {form.abilities.canAssign && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("assign");
+                }}
+              >
+                {t("assign")}
+              </Button>
+            )}
+          </Stack>
         </Stack>
         {form.abilities.canSetEnabled &&
           form.tenantEnabled !== null &&
@@ -167,6 +182,7 @@ export const FormDetailPanel = ({
               }
             />
           )}
+        <AllowDraftField form={form} onChanged={onChanged} />
         {canBindWorkflow && hasPermission(FORMS_PERMISSIONS.edit) && (
           <WorkflowBindingField form={form} onChanged={onChanged} />
         )}
@@ -218,14 +234,14 @@ export const FormDetailPanel = ({
           />
         </Box>
       </Stack>
-      {dialog === "edit" && (
+      {isEditing && (
         <EditFormDialog
           form={form}
           onClose={() => {
-            setDialog(null);
+            onEditClose();
           }}
           onSaved={() => {
-            setDialog(null);
+            onEditClose();
             onChanged();
           }}
         />

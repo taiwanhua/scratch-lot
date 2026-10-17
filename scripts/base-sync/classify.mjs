@@ -33,6 +33,11 @@ const PROJECT = [
   /^apps\/front\//,
   /^deploy\/project\//,
   /^deploy\/env\//,
+  // 共用工具的專案設定(例:Figma 稽核的頁面 id、元件名稱、例外清單);須排在 COMMON 的 scripts/ 之前
+  /^scripts\/[^/]+\/project\//,
+  // 專案自己的名詞表與討論紀錄(與底座的 CONTEXT.md、docs/tmp/dis.md 拆開);須排在 MIXED 的 *.md / docs/ 之前
+  /^CONTEXT-PROJECT\.md$/,
+  /^docs\/tmp\/project-dis\.md$/,
 ];
 
 const MIXED = [
@@ -41,6 +46,8 @@ const MIXED = [
   /^pnpm-workspace\.yaml$/,
   /^(?:apps|packages)\/[^/]+\/package\.json$/,
   /^apps\/admin\/src\/app\/module-pages\.tsx$/,
+  /^apps\/admin\/src\/lib\/base\/help-registry\.ts$/,
+  // 搬進 lib/base/ 之前的位置:比對分層前的底座版本時仍會出現,過渡期一併視為固定入口
   /^apps\/admin\/src\/lib\/help-registry\.ts$/,
   /^apps\/api\/src\/app\.module\.ts$/,
   /^apps\/api\/src\/database\/database\.module\.ts$/,
@@ -59,8 +66,12 @@ const MIXED = [
 
 const COMMON = [
   /^packages\//,
-  /^apps\/(?:admin|api|db-migrator|e2e|storybook)\//,
+  /^apps\/(?:admin|api|db-migrator|e2e|print-agent|realtime|storybook)\//,
   /^scripts\//,
+  // 底座帶的 repo 自製 Claude skill(module-scaffold、project-bootstrap…);專案自己的 skill 日後需要時另立 project/ 規則
+  /^\.claude\/skills\//,
+  // 底座指定的 Node 版本(與根 package.json 的 engines、workflow 的 node-version 一致)
+  /^\.nvmrc$/,
 ];
 
 const isImmutableSource = (file) =>

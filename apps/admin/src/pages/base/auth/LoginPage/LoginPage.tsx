@@ -1,5 +1,5 @@
 import { type SyntheticEvent, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { useLoginMutation } from "@repo/graphql";
@@ -10,8 +10,14 @@ import { Link } from "@repo/ui/link";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { useSession } from "@/hooks/useSession";
-import { FORGOT_PASSWORD_PATH, NEXT_PARAM, safeNextPath } from "@/lib/paths";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
+import {
+  FORGOT_PASSWORD_PATH,
+  NEXT_PARAM,
+  safeNextPath,
+  urlStringSchema,
+} from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 import { type LoginErrorKey, loginErrorKeyOf } from "./login-error";
@@ -21,8 +27,8 @@ export const LoginPage = () => {
   const t = useTranslations("admin.login");
   const { session, snapshot } = useSession();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get(NEXT_PARAM));
+  const [next] = useUrlState(NEXT_PARAM, urlStringSchema);
+  const nextPath = safeNextPath(next);
 
   const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");

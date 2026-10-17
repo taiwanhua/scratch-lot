@@ -30,7 +30,17 @@ export async function tenantTimezoneOf(
   const rootOrTenant = tenantId
     ? await orgs.findById(reader, tenantId)
     : await orgs.findOne(reader, { parentId: null });
-  const timezone: unknown = rootOrTenant?.settings.timezone;
+  return timezoneOfTenantSettings(rootOrTenant?.settings);
+}
+
+/**
+ * 租戶頂層(或根組織)`settings` 裡的時區;沒設或不合法 → `DEFAULT_TENANT_TIMEZONE`。
+ * 已經讀到組織文件的呼叫端(排程任務一次列出所有租戶)用它,判斷規則與 `tenantTimezoneOf` 同一份。
+ */
+export function timezoneOfTenantSettings(
+  settings: Record<string, unknown> | undefined,
+): string {
+  const timezone: unknown = settings?.timezone;
   return isValidTimezone(timezone) ? timezone : DEFAULT_TENANT_TIMEZONE;
 }
 

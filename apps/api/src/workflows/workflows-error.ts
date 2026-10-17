@@ -16,10 +16,6 @@ export const WORKFLOW_CONFLICT_REASONS = [
   "DRAFT_EXISTS",
   /** 要存 / 發布的草稿不存在。 */
   "DRAFT_MISSING",
-  /** 發布進行中或中斷:禁止開草稿 / 退役 / 再發布。 */
-  "PUBLISH_IN_PROGRESS",
-  /** 重試發布時沒有中斷的發布。 */
-  "PUBLISH_NOT_INTERRUPTED",
   /** 退役目前版本時沒有已發布的版本。 */
   "NO_CURRENT_VERSION",
   /** 讀到之後 `currentVersion` 被別人改了。 */
@@ -111,6 +107,24 @@ export function workflowDefinitionInvalidError(
   });
 }
 
+/**
+ * 落盤的審核者來源種類認不得(例:規則改版前的 `users` / `role`):不默默當成「沒有人」,
+ * 明確丟 `VALIDATION_FAILED` + `reason: ASSIGNEE_KIND_UNKNOWN`(與檢查器的錯誤碼同名),
+ * 解析審核者(推進)與綁定時檢查都走這裡。
+ */
+export const ASSIGNEE_KIND_UNKNOWN = "ASSIGNEE_KIND_UNKNOWN";
+
+export function assigneeKindUnknownError(kind: unknown): GraphQLError {
+  return new GraphQLError(`Unknown assignee kind: ${String(kind)}`, {
+    extensions: {
+      code: "VALIDATION_FAILED",
+      fields: ["definition"],
+      reason: ASSIGNEE_KIND_UNKNOWN,
+      kind: String(kind),
+    },
+  });
+}
+
 /** 綁定時檢查未過:`VALIDATION_FAILED` + `issues`(指出哪一關、哪種來源不能直接綁)。 */
 export function bindingInvalidError(
   message: string,
@@ -138,13 +152,14 @@ export interface BindingIssue {
   stepKey: string;
   stepNumber: number;
   problem:
-    | "ROLE_IN_SHARED"
-    | "USERS_IN_SHARED"
+    | "AUDIENCE_IN_SHARED"
     | "USER_NOT_IN_TENANT"
     | "ROLE_NOT_IN_TENANT"
+    | "ORG_NOT_IN_TENANT"
     | "FIELD_FORM_MISMATCH"
     | "FIELD_MISSING"
-    | "FIELD_NOT_USER_REFERENCE";
+    | "FIELD_NOT_USER_REFERENCE"
+    | "FIELD_NOT_ORG_REFERENCE";
   detail: string;
 }
 

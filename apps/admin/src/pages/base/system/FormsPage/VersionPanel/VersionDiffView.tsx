@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { VersionDiff } from "@/lib/form-engine/version-diff";
+import type { VersionDiff } from "@/lib/base/form-engine/version-diff";
 
 export interface VersionDiffViewProps {
   diff: VersionDiff;
@@ -12,7 +12,7 @@ export interface VersionDiffViewProps {
 const labels = (fields: VersionDiff["added"]): string =>
   fields.map((field) => `${field.label}(${field.key})`).join("、");
 
-/** 與上一版的差異:新增 / 移除 / 定義有變的欄位(以欄位 key 比對,`lib/form-engine/version-diff.ts`)。 */
+/** 與上一版的差異:新增 / 移除 / 定義有變的欄位(以欄位 key 比對,`lib/base/form-engine/version-diff.ts`)。 */
 export const VersionDiffView = ({ diff }: VersionDiffViewProps) => {
   const t = useTranslations("admin.forms.versions");
 

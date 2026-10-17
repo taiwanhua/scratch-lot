@@ -15,6 +15,7 @@
  */
 export * from "./icon-props";
 export * from "./ChevronDownIcon";
+export * from "./ChevronLeftIcon";
 export * from "./ChevronRightIcon";
 export * from "./ChevronDoubleLeftIcon";
 export * from "./ChevronDoubleRightIcon";
@@ -25,6 +26,7 @@ export * from "./HelpIcon";
 export * from "./ViewIcon";
 export * from "./EditIcon";
 export * from "./DeleteIcon";
+export * from "./SettingsIcon";
 export * from "./AddIcon";
 export * from "./ArrowUpIcon";
 export * from "./ArrowDownIcon";
@@ -33,4 +35,7 @@ export * from "./LightModeIcon";
 export * from "./DarkModeIcon";
 export * from "./LogoutIcon";
 export * from "./DevicesIcon";
+export * from "./NotificationsIcon";
+export * from "./CheckCircleIcon";
+export * from "./ErrorCircleIcon";
 export * from "./module-icon-registry";

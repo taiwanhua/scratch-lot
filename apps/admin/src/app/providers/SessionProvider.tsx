@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 
-import { SessionContext } from "@/hooks/useSession";
-import type { AuthSession } from "@/lib/auth/session";
-import { useSessionStore } from "@/stores/useSessionStore";
+import { SessionContext } from "@/hooks/base/useSession";
+import type { AuthSession } from "@/lib/base/auth/session";
+import { useSessionStore } from "@/stores/base/useSessionStore";
 
 import { MultiTabSession } from "./MultiTabSession/MultiTabSession";
 

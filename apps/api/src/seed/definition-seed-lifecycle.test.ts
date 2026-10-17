@@ -22,11 +22,6 @@ import {
 } from "../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import {
-  FormPublishHooks,
-  type PublishCheckpoint,
-} from "../forms/form-design/form-publish-hooks";
-import {
-  CREATE_DRAFT,
   F,
   FORK_FORM,
   FORMS_MODULES,
@@ -34,13 +29,8 @@ import {
   M,
   MODULE_KEY,
   PASSWORD,
-  PUBLISH,
-  RETRY_PUBLISH,
   UPDATE_FORM,
-  type VersionRow,
   assignForm,
-  call,
-  codeOf,
   createOperator,
   createSubmitted,
   definitionOf,
@@ -50,7 +40,6 @@ import {
   ok,
   publishDefinition,
   rawSubmission,
-  saveDefinition,
   showKey,
 } from "../forms/test-support/form-fixtures";
 import { createRole } from "../permission/test-support/fixtures";
@@ -455,52 +444,6 @@ describe("受管表單:歷史核對、退役、既有資料保護、操作者與
       expect(
         await persistedStateOf(connection, FORM, "seed_tenant_owned"),
       ).toEqual(before);
-    });
-
-    it("畫面上的發布中斷(不是這次安裝的):衝突;在原畫面重試完成後,內容相同即可採納", async () => {
-      const r1 = formSeed("seed_interrupted", "r1");
-      await runSeeds(app, [r1]);
-      const draft = await ok<{
-        createFormVersionDraft: { formVersion: VersionRow };
-      }>(api, app.root, CREATE_DRAFT, {
-        input: { formKey: "seed_interrupted", baseVersion: 1 },
-      });
-      const saved = await saveDefinition(
-        api,
-        app.root,
-        "seed_interrupted",
-        definitionOf(changedFields),
-        draft.createFormVersionDraft.formVersion.draftRevision,
-      );
-      const publishHooks = api.app.get(FormPublishHooks);
-      jest
-        .spyOn(publishHooks, "reached")
-        .mockImplementation((checkpoint: PublishCheckpoint) =>
-          checkpoint === "current-version"
-            ? Promise.reject(new Error("injected failure"))
-            : Promise.resolve(),
-        );
-      const interrupted = await call(api, app.root, PUBLISH, {
-        input: {
-          formKey: "seed_interrupted",
-          expectedDraftRevision: saved.draftRevision,
-          changelog: "畫面發布",
-        },
-      });
-      expect(codeOf(interrupted)).toBeDefined();
-      jest.restoreAllMocks();
-      const r2 = formSeed("seed_interrupted", "r2", { fields: changedFields });
-
-      const blockedRerun = await runSeed(app, r1);
-      const blockedNext = await runSeed(app, r2);
-
-      expect(blockedRerun.conflict?.code).toBe("PUBLISH_IN_PROGRESS");
-      expect(blockedNext.conflict?.code).toBe("PUBLISH_IN_PROGRESS");
-      await ok(api, app.root, RETRY_PUBLISH, {
-        input: { formKey: "seed_interrupted" },
-      });
-      const adopted = await runSeed(app, r2);
-      expect(adopted).toMatchObject({ outcome: "adopted", localVersion: 2 });
     });
   });
 

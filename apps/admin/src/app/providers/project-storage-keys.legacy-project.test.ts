@@ -8,28 +8,28 @@ import {
   SESSION_CHANNEL_NAME,
   type SessionMessage,
   createSessionChannel,
-} from "@/lib/auth/session-channel";
+} from "@/lib/base/auth/session-channel";
 import {
   COLOR_MODE_STORAGE_KEY,
   COLOR_SCHEME_STORAGE_KEY,
-} from "@/lib/color-mode";
-import { colorModeInitScript } from "@/lib/color-mode-init";
+} from "@/lib/base/color-mode";
+import { colorModeInitScript } from "@/lib/base/color-mode-init";
 import {
   LOCALE_STORAGE_KEY,
   readStoredLocale,
   writeStoredLocale,
-} from "@/lib/locale";
+} from "@/lib/base/locale";
 import {
   ROUTE_TABS_STORAGE_PREFIX,
   readStoredEntries,
   routeTabsStorageKey,
   writeStoredEntries,
-} from "@/lib/route-tabs";
+} from "@/lib/base/route-tabs";
 import {
   LEGACY_SIDE_NAV_STORAGE_KEY,
   SIDE_NAV_STORAGE_KEY,
   useSideNavStore,
-} from "@/stores/useSideNavStore";
+} from "@/stores/base/useSideNavStore";
 import { authHandlers, authWorld, testUser } from "@/test/msw/auth-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";

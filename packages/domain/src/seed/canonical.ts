@@ -254,6 +254,7 @@ const UNSET_FIELD_KEYS = [
   "permission",
   "help",
   "source",
+  "prefill",
   "columns",
   "width",
   "visibleWhen",
@@ -317,6 +318,15 @@ function normalizeFormDefinition(definition: FormDefinition): unknown {
 }
 
 /** 關卡:`kind` 省略 = `review`;審核關卡的 `skipWhen` 未設定 = 缺席、`allowReturn` 省略 = true。 */
+/** 省略、null 或空物件。 */
+function isUnset(value: unknown): boolean {
+  return (
+    value === undefined ||
+    value === null ||
+    (isPlainRecord(value) && Object.keys(value).length === 0)
+  );
+}
+
 function normalizeStep(step: StepDef): unknown {
   if (!isPlainRecord(step)) {
     return step;
@@ -331,8 +341,28 @@ function normalizeStep(step: StepDef): unknown {
   if (result.skipWhen === null || result.skipWhen === undefined) {
     delete result.skipWhen;
   }
+  // 指定組織跳過、自動通過:省略 / null / `{}` 都是「沒設」;自動通過的 `false` 與省略同義(照常審核)
+  if (isUnset(result.skipOrgs)) {
+    delete result.skipOrgs;
+  }
+  if (isPlainRecord(result.autoApprove)) {
+    const kept = Object.fromEntries(
+      Object.entries(result.autoApprove).filter(([, value]) => value !== false),
+    );
+    result.autoApprove = kept;
+  }
+  if (isUnset(result.autoApprove)) {
+    delete result.autoApprove;
+  }
   if (result.allowReturn === undefined) {
     result.allowReturn = true;
+  }
+  // 逾時提醒、知會:省略 / null 都是「沒設」
+  if (result.overdue === null) {
+    delete result.overdue;
+  }
+  if (result.cc === null) {
+    delete result.cc;
   }
   return result;
 }
@@ -357,6 +387,10 @@ function normalizeWorkflowDefinition(definition: WorkflowDefinition): unknown {
   ) {
     delete result.edges;
   }
+  // 整個流程的知會:省略 / null 都是「沒設」
+  if (result.cc === null) {
+    delete result.cc;
+  }
   return result;
 }
 
@@ -373,6 +407,8 @@ function managedMetadataOf(seed: DefinitionSeedSet): PlainRecord {
         name: seed.name,
         moduleKey: seed.moduleKey,
         tabLabelTemplate: seed.tabLabelTemplate,
+        // 允許存草稿:只有關掉才進 hash(缺席 = 開,開著的宣告與這個欄位出現之前的 hash 相同)
+        ...(seed.allowDraft === false ? { allowDraft: false } : {}),
       }
     : { name: seed.name, checkFormKey: seed.checkFormKey };
 }

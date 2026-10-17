@@ -56,8 +56,8 @@ const bindingOptions = () => ({
         {
           stepKey: "hr",
           stepNumber: 2,
-          problem: "ROLE_IN_SHARED",
-          detail: "角色佔位",
+          problem: "AUDIENCE_IN_SHARED",
+          detail: "審核者條件用了角色",
         },
       ],
     },
@@ -114,7 +114,7 @@ describe("表單管理:流程綁定欄", () => {
     });
     expect(within(region).getByText("共用病假審核")).toBeInTheDocument();
     expect(
-      within(region).getByText(/第 2 關:審核者是角色佔位/),
+      within(region).getByText(/第 2 關:審核者條件用了使用者、角色或指定組織/),
     ).toBeInTheDocument();
     expect(
       within(region).getByRole("button", { name: "建客製流程" }),

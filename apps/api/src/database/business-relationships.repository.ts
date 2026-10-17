@@ -10,6 +10,7 @@ import type {
 } from "./schemas/business-relationship.schema";
 import { ORGS_COLLECTION } from "./schemas/org.schema";
 import { tenantIdOfOrg } from "./tenant-id";
+import { currentSession } from "./transaction";
 
 /** 已落庫的一筆業務關聯(含基礎欄位,ADR-0007)。 */
 export type BusinessRelationshipRecord = BusinessRelationship &
@@ -65,7 +66,7 @@ export class BusinessRelationshipsRepository {
       .collection<{ ancestors?: Types.ObjectId[] }>(ORGS_COLLECTION)
       .findOne(
         { _id: operator.currentOrgId },
-        { projection: { ancestors: 1 } },
+        { projection: { ancestors: 1 }, session: currentSession() },
       );
     if (!org) {
       throw new TenantScopeError(
@@ -96,7 +97,10 @@ export class BusinessRelationshipsRepository {
   ): Promise<Types.ObjectId> {
     const org = await this.model.db
       .collection<{ ancestors?: Types.ObjectId[] }>(ORGS_COLLECTION)
-      .findOne({ _id: tenantId }, { projection: { ancestors: 1 } });
+      .findOne(
+        { _id: tenantId },
+        { projection: { ancestors: 1 }, session: currentSession() },
+      );
     if (org?.ancestors?.length !== 1) {
       throw new TenantScopeError(
         `business_relationships:${String(tenantId)} 不是存在的租戶頂層`,
@@ -112,6 +116,7 @@ export class BusinessRelationshipsRepository {
     const documents = await this.model
       .find(conditionOf(assertTenantId(tenantId), filter))
       .lean<BusinessRelationshipRecord[]>()
+      .session(currentSession() ?? null)
       .exec();
     return documents;
   }
@@ -123,6 +128,7 @@ export class BusinessRelationshipsRepository {
     return this.model
       .findOne(conditionOf(assertTenantId(tenantId), filter))
       .lean<BusinessRelationshipRecord>()
+      .session(currentSession() ?? null)
       .exec();
   }
 
@@ -142,7 +148,7 @@ export class BusinessRelationshipsRepository {
     });
     // baseFields 的 save 中介層從這裡取操作者,填 createdBy / updatedBy(ADR-0007)
     document.$locals[OPERATOR_LOCAL_KEY] = operator;
-    await document.save();
+    await document.save({ session: currentSession() ?? null });
     return document.toObject<BusinessRelationshipRecord>();
   }
 
@@ -160,6 +166,7 @@ export class BusinessRelationshipsRepository {
         { returnDocument: "after" },
       )
       .lean<BusinessRelationshipRecord>()
+      .session(currentSession() ?? null)
       .exec();
   }
 
@@ -180,6 +187,7 @@ export class BusinessRelationshipsRepository {
         { returnDocument: "after" },
       )
       .lean<BusinessRelationshipRecord>()
+      .session(currentSession() ?? null)
       .exec();
   }
 
@@ -193,6 +201,7 @@ export class BusinessRelationshipsRepository {
   ): Promise<number> {
     const { deletedCount } = await this.model
       .deleteMany(conditionOf(assertTenantId(tenantId), filter))
+      .session(currentSession() ?? null)
       .exec();
     return deletedCount;
   }

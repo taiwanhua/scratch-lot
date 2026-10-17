@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import type { FormDefinition, RegexSafetyCheck } from "@repo/domain/form";
 
-import { loadRegexSafety } from "@/lib/form-engine/regex-safety-loader";
+import { loadRegexSafety } from "@/lib/base/form-engine/regex-safety-loader";
 
 /** 停止打字多久才檢查(recheck 單次可能花上數百毫秒,每打一個字就跑會卡)。 */
 export const REGEX_CHECK_DEBOUNCE_MS = 300;

@@ -8,8 +8,8 @@ import {
   useSetUserOrgsMutation,
 } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 
 import {
   type UserManagerErrorCode,

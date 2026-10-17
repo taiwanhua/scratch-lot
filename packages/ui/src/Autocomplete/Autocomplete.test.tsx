@@ -174,6 +174,33 @@ describe("Autocomplete", () => {
     expect(onChange).toHaveBeenCalledWith([]);
   });
 
+  it("chipDeleteIcon=close:chip 的刪除鈕換成小 ×(同 Tag),點了一樣移除", async () => {
+    const user = userEvent.setup();
+    const onChange = jest.fn();
+    render(
+      <Autocomplete
+        label="角色"
+        options={roles}
+        value={[support]}
+        multiple
+        chipDeleteIcon="close"
+        getOptionLabel={(role) => role.name}
+        getOptionKey={(role) => role.id}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.queryByTestId("CancelIcon")).not.toBeInTheDocument();
+    const chip = screen.getByText("客服").closest(".MuiChip-root");
+    const icon = chip?.querySelector(".MuiChip-deleteIcon") ?? null;
+    if (icon === null) {
+      throw new Error("chip 沒有刪除鈕");
+    }
+    await user.click(icon);
+
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
   it("getOptionDisabled 的選項灰掉、選不下去,並就地寫原因", async () => {
     const user = userEvent.setup();
     const onChange = jest.fn();

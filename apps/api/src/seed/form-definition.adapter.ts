@@ -10,6 +10,7 @@ import {
   FormVersionsRepository,
   PermissionsRepository,
 } from "../database/database.module";
+import { allowsDraft } from "../database/schemas/form.schema";
 import type { SeedInstallationMetadata } from "../database/schemas/seed-definition-installation.schema";
 import {
   FormAccessService,
@@ -63,11 +64,15 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
   }
 
   identityMetadataOf(seed: FormDefinitionSeedSet): IdentityMetadata {
-    return { name: seed.name, tabLabelTemplate: seed.tabLabelTemplate };
+    return {
+      name: seed.name,
+      tabLabelTemplate: seed.tabLabelTemplate,
+      allowDraft: seed.allowDraft ?? true,
+    };
   }
 
   initialMetadataOf(seed: FormDefinitionSeedSet): IdentityMetadata {
-    return { name: seed.name, tabLabelTemplate: null };
+    return { name: seed.name, tabLabelTemplate: null, allowDraft: true };
   }
 
   installationMetadataOf(
@@ -77,6 +82,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       name: seed.name,
       moduleKey: seed.moduleKey,
       tabLabelTemplate: seed.tabLabelTemplate,
+      allowDraft: seed.allowDraft ?? true,
     };
   }
 
@@ -95,6 +101,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           metadata: {
             name: form.name,
             tabLabelTemplate: form.tabLabelTemplate,
+            allowDraft: allowsDraft(form),
           },
         };
   }
@@ -137,18 +144,6 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       : null;
   }
 
-  async findInterruptedPublish(
-    facts: FormOperatorFacts,
-    key: string,
-  ): Promise<VersionSnapshot | null> {
-    const form = await this.access.findForm(facts.operator, key);
-    if (form === null) {
-      return null;
-    }
-    const { interrupted } = await this.publisher.stateOf(facts.operator, form);
-    return interrupted === null ? null : toSnapshot(form, interrupted);
-  }
-
   async validate(
     facts: FormOperatorFacts,
     seed: FormDefinitionSeedSet,
@@ -189,6 +184,10 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         key: seed.key,
         name: seed.name,
         tabLabelTemplate: seed.tabLabelTemplate,
+        // 允許存草稿只在和現場不同時才帶:稽核不多記沒變的欄位,也不替舊表單寫進顯式的 true
+        ...((seed.allowDraft ?? true) === (expected.metadata.allowDraft ?? true)
+          ? {}
+          : { allowDraft: seed.allowDraft ?? true }),
       },
       {
         expected: {
@@ -196,6 +195,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           currentVersion: expected.currentVersion,
           name: expected.metadata.name,
           tabLabelTemplate: expected.metadata.tabLabelTemplate ?? null,
+          allowDraft: expected.metadata.allowDraft ?? true,
         },
       },
     );
@@ -256,14 +256,6 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         },
       },
     );
-  }
-
-  async retryPublish(
-    facts: FormOperatorFacts,
-    key: string,
-    versionId: Types.ObjectId,
-  ): Promise<void> {
-    await this.publisher.retry(facts, { formKey: key }, { versionId });
   }
 
   async retire(
@@ -333,6 +325,7 @@ function toSnapshot(
           moduleKey: form.moduleKey,
           name: metadata.name,
           tabLabelTemplate: metadata.tabLabelTemplate ?? null,
+          allowDraft: metadata.allowDraft ?? true,
         },
         {
           fields: record.fields,

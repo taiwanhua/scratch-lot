@@ -1,7 +1,7 @@
 import { ModuleSidebarType } from "@repo/graphql";
 import { List } from "@repo/ui/list";
 
-import { type NavNode, findNavNode } from "@/lib/module-tree";
+import { type NavNode, findNavNode } from "@/lib/base/module-tree";
 
 import { NavRailGroupItem } from "./NavRailGroupItem";
 import { NavRailLinkItem } from "./NavRailLinkItem";

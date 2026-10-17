@@ -16,15 +16,18 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { type FormError, formErrorOf } from "@/lib/form-engine/form-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import {
+  type FormError,
+  formErrorOf,
+} from "@/lib/base/form-engine/form-errors";
 import {
   DEFAULT_TAB_LABEL_TEMPLATE,
   TAB_LABEL_PLACEHOLDERS,
   applyTabLabelTemplate,
   valuePlaceholderOf,
-} from "@/lib/form-engine/tab-label";
+} from "@/lib/base/form-engine/tab-label";
 
 export interface EditFormDialogProps {
   form: FormFieldsFragment;

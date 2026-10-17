@@ -6,8 +6,8 @@ import { List } from "@repo/ui/list";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { NavNode } from "@/lib/module-tree";
-import { useSideNavStore } from "@/stores/useSideNavStore";
+import type { NavNode } from "@/lib/base/module-tree";
+import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { NAV_COLLAPSED_WIDTH, NAV_WIDTH } from "../shell-geometry";
 import { NavNodes } from "./NavNodes/NavNodes";

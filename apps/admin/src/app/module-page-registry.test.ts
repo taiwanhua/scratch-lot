@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { formModulePages } from "@/components/form-engine/FormModulePages/form-module-pages";
-import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/form-engine/tab-label";
+import { formModulePages } from "@/components/base/form-engine/FormModulePages/form-module-pages";
+import { DEFAULT_TAB_LABEL_TEMPLATE } from "@/lib/base/form-engine/tab-label";
 
 import {
   type ModulePageSource,

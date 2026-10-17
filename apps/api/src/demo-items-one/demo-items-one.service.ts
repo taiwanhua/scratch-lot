@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import { AuditService } from "../audit/audit.service";
 import {
   AuditLogsRepository,
@@ -10,7 +8,11 @@ import {
   UsersRepository,
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  type PermissionHolding,
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import { StorageService } from "../storage/storage.service";
 import {
   UPLOAD_RULES,
@@ -197,8 +199,8 @@ export class DemoItemsOneService {
     operator: OperatorContext,
     input: CreateDemoItemOneInput,
   ): Promise<DemoItemOneModel> {
-    const permissionKeys = await this.permissionKeysOf(operator);
-    this.assertInternalNoteWritable(input, permissionKeys);
+    const holding = await this.permissionsOf(operator);
+    this.assertInternalNoteWritable(input, holding);
     const name = requireText(input.name, "name");
     const options = await this.categories.options(operator);
     const category = this.categories.assertSelectable(options, input.category);
@@ -232,8 +234,8 @@ export class DemoItemsOneService {
     operator: OperatorContext,
     input: UpdateDemoItemOneInput,
   ): Promise<DemoItemOneModel> {
-    const permissionKeys = await this.permissionKeysOf(operator);
-    this.assertInternalNoteWritable(input, permissionKeys);
+    const holding = await this.permissionsOf(operator);
+    this.assertInternalNoteWritable(input, holding);
     const current = await this.mustFind(operator, input.id);
     const patch: UpdatePatch = { set: {}, unset: {}, before: {}, after: {} };
 
@@ -360,18 +362,14 @@ export class DemoItemsOneService {
     return record;
   }
 
-  private async permissionKeysOf(
+  private async permissionsOf(
     operator: OperatorContext,
-  ): Promise<ReadonlySet<string>> {
+  ): Promise<PermissionHolding> {
     if (!operator.actorId) {
       // 防呆:全域 AuthGuard 已擋掉未登入,這裡只是讓型別收斂
-      return new Set<string>();
+      return { permissionKeys: new Set(), foreignPermissionKeys: new Set() };
     }
-    const { permissionKeys } = await this.permissions.resolve(
-      operator.actorId,
-      operator.currentOrgId,
-    );
-    return permissionKeys;
+    return this.permissions.resolve(operator.actorId, operator.currentOrgId);
   }
 
   /**
@@ -380,14 +378,12 @@ export class DemoItemsOneService {
    */
   private assertInternalNoteWritable(
     input: { internalNote?: string | null },
-    permissionKeys: ReadonlySet<string>,
+    holding: PermissionHolding,
   ): void {
     if (input.internalNote === undefined) {
       return;
     }
-    if (
-      !hasPermission(permissionKeys, SAMPLE_ONE_PERMISSIONS.editInternalNote)
-    ) {
+    if (!holdsPermission(holding, SAMPLE_ONE_PERMISSIONS.editInternalNote)) {
       throw forbiddenError(
         `Missing permission ${SAMPLE_ONE_PERMISSIONS.editInternalNote} for field internalNote`,
         "FIELD_FORBIDDEN",
@@ -408,7 +404,7 @@ export class DemoItemsOneService {
     operator: OperatorContext,
     records: readonly DemoItemOneRecord[],
   ): Promise<DemoItemOneViewContext> {
-    const permissionKeys = await this.permissionKeysOf(operator);
+    const holding = await this.permissionsOf(operator);
     const [categories, users] = await Promise.all([
       this.categories.options(operator),
       this.loadUserNames(
@@ -417,11 +413,11 @@ export class DemoItemsOneService {
       ),
     ]);
     return {
-      canShowInternalNote: hasPermission(
-        permissionKeys,
+      canShowInternalNote: holdsPermission(
+        holding,
         SAMPLE_ONE_PERMISSIONS.showInternalNote,
       ),
-      abilities: abilitiesOf(permissionKeys),
+      abilities: abilitiesOf(holding),
       categories,
       users,
       publicUrlOf: (objectPath) => this.storage.publicUrlOf(objectPath),

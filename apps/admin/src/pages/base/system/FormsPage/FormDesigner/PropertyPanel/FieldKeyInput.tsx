@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 
 import { TextField } from "@repo/ui/text-field";
 
-import type { FieldKeyProblem } from "@/lib/form-engine/designer-ops";
+import type { FieldKeyProblem } from "@/lib/base/form-engine/designer-ops";
 
 export interface FieldKeyInputProps {
   value: string;

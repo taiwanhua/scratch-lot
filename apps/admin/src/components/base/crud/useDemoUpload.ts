@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { type UploadPurpose, useCreateUploadUrlMutation } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import type { DemoUploadedFile } from "./demo-module-config";
 

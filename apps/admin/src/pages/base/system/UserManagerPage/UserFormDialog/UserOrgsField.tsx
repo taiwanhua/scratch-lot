@@ -5,7 +5,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import type { OrgOption } from "@/lib/org-tree";
+import type { OrgOption } from "@/lib/base/org-tree";
 
 export interface UserOrgsFieldProps {
   /** 已選的組織(含完整路徑名稱);順序 = 樹上的順序 */

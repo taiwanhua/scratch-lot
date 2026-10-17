@@ -8,9 +8,9 @@ import {
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import { ExpressionPicker } from "@/components/form-engine/ExpressionPicker/ExpressionPicker";
-import { TypedValueInput } from "@/components/form-engine/TypedValueInput/TypedValueInput";
-import { initialExpressionOf } from "@/lib/form-engine/expression-options";
+import { ExpressionPicker } from "@/components/base/form-engine/ExpressionPicker/ExpressionPicker";
+import { TypedValueInput } from "@/components/base/form-engine/TypedValueInput/TypedValueInput";
+import { initialExpressionOf } from "@/lib/base/form-engine/expression-options";
 
 export interface ValueSourceEditorProps {
   field: FieldDef;

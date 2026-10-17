@@ -667,6 +667,46 @@ describe("表單的欄位級權限:投影 / 守門 / 依賴鏈 / 權限被刪 / 
       const denied = await call(api, tenantAdmin.token, RETIRED_PERMISSIONS);
       expect(codeOf(denied)).toBe("FORBIDDEN");
     });
+
+    it("依表單新增權限(`create-<formKey>`)不是欄位級權限:退役清理不列、不能刪", async () => {
+      const createKey = `${MODULE_KEY}.create-${CLEANUP}`;
+      const module = await connection
+        .collection("modules")
+        .findOne<{ _id: Types.ObjectId }>({ key: MODULE_KEY });
+      expect(module).not.toBeNull();
+      const permissions = connection.collection("permissions");
+      // 就算(不該發生地)被標了退役,清理也不能把它當欄位級權限處理
+      await permissions.insertOne({
+        key: createKey,
+        moduleId: module?._id,
+        name: `表單 ${CLEANUP} 新增`,
+        enabled: true,
+        isSystem: false,
+        settings: {},
+        source: "dynamic",
+        retiredAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      try {
+        const data = await ok<{
+          retiredFormPermissions: { items: RetiredItem[] };
+        }>(api, root, RETIRED_PERMISSIONS);
+        expect(
+          data.retiredFormPermissions.items.map((item) => item.key),
+        ).not.toContain(createKey);
+        const result = await call(api, root, DELETE_RETIRED_PERMISSION, {
+          input: { permissionKey: createKey, confirmCompletedUsage: true },
+        });
+        expect(extensionsOf(result).reasons).toEqual(["NOT_DYNAMIC"]);
+        expect(await permissions.countDocuments({ key: createKey })).toBe(1);
+      } finally {
+        await permissions.deleteOne({ key: createKey });
+      }
+    });
   });
 
   describe("資料範圍:依 moduleKey 套規則;建立者一律讀得到自己的單(列表不放寬)", () => {
@@ -693,7 +733,7 @@ describe("表單的欄位級權限:投影 / 守門 / 依賴鏈 / 權限被刪 / 
           combineOp: "OR",
           rules: [
             {
-              audience: { type: "ALL" },
+              audience: { mode: "all" },
               filter: {
                 op: "AND",
                 children: [

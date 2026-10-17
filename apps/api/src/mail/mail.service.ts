@@ -1,15 +1,14 @@
 import { Logger } from "@nestjs/common";
 
+import { assertOutsideTransaction } from "../database/transaction";
 import {
   buildActivationEmail,
+  buildNotificationEmail,
   buildPasswordResetEmail,
-  buildWorkflowResultEmail,
-  buildWorkflowTaskEmail,
 } from "./mail-templates";
 import type { MailConfig } from "./mail.config";
 
-export type MailKind =
-  "activation" | "password-reset" | "workflow-task" | "workflow-result";
+export type MailKind = "activation" | "password-reset" | "notification";
 
 /** 啟用信 / 重設信共用的輸入:收件人、稱呼、「設定新密碼」頁連結(含 token)、連結到期時間。 */
 export interface ActionEmailInput {
@@ -19,39 +18,37 @@ export interface ActionEmailInput {
   expiresAt: Date;
 }
 
-/** 審核任務通知(給審核者):表單名、實例快照的標題槽、關卡名、申請中心詳情頁連結。 */
-export interface WorkflowTaskEmailInput {
+/**
+ * 通知信(底座規格第 5 章;email 管道):標題 / 內容由通知類型的範本產生(與站內通知同一份),
+ * 連結是通知的連結登記換成的完整網址;沒有連結 = null。
+ */
+export interface NotificationEmailInput {
   to: string;
   name: string;
-  formName: string;
-  title: string | null;
-  stepName: string;
-  link: string;
-}
-
-/** 審核結果通知(給申請人):核准 / 駁回 / 退回;駁回 / 退回附理由。 */
-export interface WorkflowResultEmailInput {
-  to: string;
-  name: string;
-  formName: string;
-  title: string | null;
-  result: "approved" | "rejected" | "returned";
-  comment: string | null;
-  link: string;
+  /** 通知類型 key(例 `workflow.result`) */
+  notificationType: string;
+  title: string;
+  body: string;
+  link: string | null;
+  /** 收件人的語言(個人偏好 `locale`);決定問候語、連結說明與署名的語系,沒有或認不得 = 繁中 */
+  locale: string | null;
 }
 
 /** 模板產出、交給 adapter 投遞的一封信。 */
 export interface MailMessage {
   kind: MailKind;
+  /** 通知信才有:通知類型 key */
+  notificationType?: string;
   to: string;
-  link: string;
+  /** 信裡的連結;通知信沒有連結時為 null */
+  link: string | null;
   subject: string;
   text: string;
   html: string;
 }
 
 /**
- * 寄信介面(ADR-0010):呼叫端只認 `sendActivationEmail` / `sendPasswordResetEmail` / 審核流程的兩封通知;
+ * 寄信介面(ADR-0010):呼叫端只認 `sendActivationEmail` / `sendPasswordResetEmail` / `sendNotificationEmail`;
  * 模板與收件白名單在此共用,供應商只是 `deliver` 的 adapter(Resend 是第一個;測試 / 本地用記錄用 adapter)。
  * 亦為 Nest 的注入 token(MailModule 依 RESEND_API_KEY 有無決定實作)。
  */
@@ -71,14 +68,9 @@ export abstract class MailService {
     return this.send(buildPasswordResetEmail(input));
   }
 
-  /** 審核流程:有新任務(Spec 6b §7;是否寄由 `WORKFLOW_MAIL_ENABLED` 在呼叫端決定)。 */
-  sendWorkflowTaskEmail(input: WorkflowTaskEmailInput): Promise<void> {
-    return this.send(buildWorkflowTaskEmail(input));
-  }
-
-  /** 審核流程:申請有結果(核准 / 駁回 / 退回)。 */
-  sendWorkflowResultEmail(input: WorkflowResultEmailInput): Promise<void> {
-    return this.send(buildWorkflowResultEmail(input));
+  /** 通知信(通知的 email 管道;是否寄由總開關 `WORKFLOW_MAIL_ENABLED` 在呼叫端決定)。 */
+  sendNotificationEmail(input: NotificationEmailInput): Promise<void> {
+    return this.send(buildNotificationEmail(input));
   }
 
   /** 實際投遞一封信;失敗即拋錯。 */
@@ -86,6 +78,8 @@ export abstract class MailService {
 
   /** 白名單有值時只寄名單內(dev / staging 防誤寄真人);名單外靜默略過、不視為錯誤。 */
   private async send(message: MailMessage): Promise<void> {
+    // 交易可能自動重試或回復,信寄出去就收不回來:一律排到交易成功之後(afterCommit)
+    assertOutsideTransaction("寄信");
     if (!isRecipientAllowed(this.config.allowlist, message.to)) {
       this.logger.warn(
         `收件人 ${message.to} 不在 MAIL_ALLOWLIST 內,略過 ${message.kind} 信`,

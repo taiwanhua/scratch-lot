@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import { AuditService } from "../../audit/audit.service";
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -29,7 +30,6 @@ import {
   PUBLISH_WORKFLOW,
   type Person,
   RETIRE_WORKFLOW,
-  RETRY_PUBLISH_WORKFLOW,
   REVOKE_WORKFLOW,
   SUBMIT_SUBMISSION,
   VALIDATE_WORKFLOW,
@@ -41,6 +41,8 @@ import {
   type WorkflowRow,
   type WorkflowVersionRow,
   type World,
+  audienceRow,
+  audienceSource,
   bindForm,
   currentInstance,
   decideOn,
@@ -50,11 +52,13 @@ import {
   person,
   publishWorkflow,
   reviewStep,
+  roleSource,
   saveWorkflowDraft,
   setupWorld,
   submitExisting,
   submitLeave,
   useWorkflow,
+  usersSource,
   usersStep,
 } from "../test-support/workflow-fixtures";
 import { WorkflowPublishHooks } from "./workflow-publish.service";
@@ -149,33 +153,43 @@ describe("流程設計與綁定", () => {
   });
 
   describe("共用 / 客製與發布", () => {
-    it("共用流程含 users → 發布被擋(USERS_IN_SHARED)", async () => {
-      const result = await publishShared(nextKey("shared_users"), {
+    it("共用流程的審核者條件用使用者 / 角色 → 發布被擋(AUDIENCE_IN_SHARED)", async () => {
+      const users = await publishShared(nextKey("shared_users"), {
         steps: [usersStep("one", [staff(0)])],
       });
-      expect(errorCode(result)).toBe("VALIDATION_FAILED");
-      expect(issueCodes(result, "code")).toContain("USERS_IN_SHARED");
+      expect(errorCode(users)).toBe("VALIDATION_FAILED");
+      expect(issueCodes(users, "code")).toEqual(["AUDIENCE_IN_SHARED"]);
+      const role = await publishShared(nextKey("shared_role"), {
+        steps: [reviewStep("hr", roleSource(world.hrRoleId))],
+      });
+      expect(issueCodes(role, "code")).toEqual(["AUDIENCE_IN_SHARED"]);
     });
 
-    it("共用流程的角色只能當佔位:可發布,但租戶不能直接綁;fork 後 role 填本租戶 roleId 才能發布、才能綁", async () => {
+    it("共用流程發布版含角色條件(舊資料)→ 租戶不能直接綁(AUDIENCE_IN_SHARED);fork 後角色屬本租戶 → 可發布、可綁、派給該角色", async () => {
       const sharedKey = nextKey("shared_role");
       const published = await publishShared(sharedKey, {
         steps: [
           reviewStep("boss", { kind: "manager", level: 1 }),
-          reviewStep("hr", { kind: "role", roleId: null, placeholder: "人資" }),
+          reviewStep(
+            "hr",
+            audienceSource(
+              audienceRow("permission", ["hr.approve"]),
+              audienceRow("org", { kind: "dynamic", ref: "tenant" }),
+            ),
+          ),
         ],
       });
       expect(published.errors).toBeUndefined();
+      // 規則改版前發布的版本:直接改落盤的定義,模擬「共用流程含角色條件」
+      await world.connection
+        .collection("workflow_versions")
+        .updateOne(
+          { workflowKey: sharedKey, version: 1 },
+          { $set: { "steps.1.assignee": roleSource(world.hrRoleId) } },
+        );
       await ok(api, world.root, ASSIGN_WORKFLOW, {
         input: { workflowKey: sharedKey, tenantOrgIds: [String(world.tenant)] },
       });
-      const shared = await ok<{ workflow: { workflow: WorkflowRow } }>(
-        api,
-        world.admin.token,
-        WORKFLOW,
-        { key: sharedKey },
-      );
-      expect(shared.workflow.workflow.hasRolePlaceholder).toBe(true);
       const options = await ok<{
         formWorkflowOptions: {
           items: {
@@ -190,14 +204,14 @@ describe("流程設計與綁定", () => {
       );
       expect(option?.canBind).toBe(false);
       expect(option?.issues.map((issue) => issue.problem)).toEqual([
-        "ROLE_IN_SHARED",
+        "AUDIENCE_IN_SHARED",
       ]);
       const bound = await call(api, world.admin.token, BIND, {
         input: { formKey: FORM_KEY, workflowKey: sharedKey },
       });
       expect(errorCode(bound)).toBe("VALIDATION_FAILED");
-      expect(issueCodes(bound, "problem")).toEqual(["ROLE_IN_SHARED"]);
-      // fork:草稿沿用佔位 → 發布擋 ROLE_ID_MISSING
+      expect(issueCodes(bound, "problem")).toEqual(["AUDIENCE_IN_SHARED"]);
+      // fork:客製流程可以用本租戶的角色
       const forkKey = nextKey("tenant_role");
       const forked = await ok<{ forkWorkflow: { workflow: WorkflowRow } }>(
         api,
@@ -220,35 +234,12 @@ describe("流程設計與綁定", () => {
       const draft = await ok<{
         workflowVersion: { workflowVersion: WorkflowVersionRow };
       }>(api, world.admin.token, WORKFLOW_VERSION, { workflowKey: forkKey });
-      const draftRow = draft.workflowVersion.workflowVersion;
-      const blocked = await call(api, world.admin.token, PUBLISH_WORKFLOW, {
-        input: {
-          workflowKey: forkKey,
-          expectedDraftRevision: draftRow.draftRevision,
-          changelog: "少了角色",
-        },
-      });
-      expect(issueCodes(blocked, "code")).toContain("ROLE_ID_MISSING");
-      const saved = await saveWorkflowDraft(
-        world,
-        forkKey,
-        {
-          steps: [
-            reviewStep("boss", { kind: "manager", level: 1 }),
-            reviewStep("hr", {
-              kind: "role",
-              roleId: String(world.hrRoleId),
-              placeholder: "人資",
-            }),
-          ],
-        },
-        draftRow.draftRevision,
-      );
       await ok(api, world.admin.token, PUBLISH_WORKFLOW, {
         input: {
           workflowKey: forkKey,
-          expectedDraftRevision: saved.draftRevision,
-          changelog: "指到本租戶人資",
+          expectedDraftRevision:
+            draft.workflowVersion.workflowVersion.draftRevision,
+          changelog: "本租戶人資",
         },
       });
       await bindForm(world, forkKey);
@@ -307,86 +298,127 @@ describe("流程設計與綁定", () => {
       ).toContain("CYCLE");
     });
 
-    it("發布在切換 currentVersion 前中斷 → publishInterrupted、禁止開草稿;重試發布從切換那步接下去", async () => {
-      const key = nextKey("interrupted");
+    it.each([
+      ["搶鎖配版號之後(寫稽核時)", "audit"],
+      ["這一版改 published 時", "publish-version"],
+      ["前一版改 retired 時", "retire-previous"],
+      ["最後一筆(currentVersion)", "current-version"],
+    ] as const)(
+      "發布在%s失敗 → 版本與 currentVersion 都回到發布前(一個交易);草稿還在,再發布一次就成功",
+      async (_label, checkpoint) => {
+        const key = nextKey(`tx_${checkpoint.replaceAll("-", "_")}`);
+        await publishWorkflow(world, key, {
+          steps: [usersStep("one", [staff(0)])],
+        });
+        await ok(api, world.admin.token, CREATE_WORKFLOW_DRAFT, {
+          input: { workflowKey: key, baseVersion: 1 },
+        });
+        const draft = await ok<{
+          workflowVersion: { workflowVersion: WorkflowVersionRow };
+        }>(api, world.admin.token, WORKFLOW_VERSION, { workflowKey: key });
+        const input = {
+          input: {
+            workflowKey: key,
+            expectedDraftRevision:
+              draft.workflowVersion.workflowVersion.draftRevision,
+            changelog: "第二版",
+          },
+        };
+        const versionsBefore = await world.connection
+          .collection("workflow_versions")
+          .find({ workflowKey: key })
+          .project({ _id: 1, version: 1, status: 1, draftRevision: 1 })
+          .sort({ _id: 1 })
+          .toArray();
+        const spy =
+          checkpoint === "audit"
+            ? jest
+                .spyOn(api.app.get(AuditService), "record")
+                .mockRejectedValueOnce(new Error("模擬中斷"))
+            : jest
+                .spyOn(api.app.get(WorkflowPublishHooks), "reached")
+                .mockImplementation((reached) =>
+                  reached === checkpoint
+                    ? Promise.reject(new Error("模擬中斷"))
+                    : Promise.resolve(),
+                );
+        try {
+          const failed = await call(
+            api,
+            world.admin.token,
+            PUBLISH_WORKFLOW,
+            input,
+          );
+          expect(failed.errors).toBeDefined();
+        } finally {
+          spy.mockRestore();
+        }
+        const versionsAfter = await world.connection
+          .collection("workflow_versions")
+          .find({ workflowKey: key })
+          .project({ _id: 1, version: 1, status: 1, draftRevision: 1 })
+          .sort({ _id: 1 })
+          .toArray();
+        expect(versionsAfter).toEqual(versionsBefore);
+        const state = await ok<{ workflow: { workflow: WorkflowRow } }>(
+          api,
+          world.admin.token,
+          WORKFLOW,
+          { key },
+        );
+        expect(state.workflow.workflow).toMatchObject({
+          currentVersion: 1,
+          hasDraft: true,
+        });
+        expect(
+          await world.connection.collection("audit_logs").countDocuments({
+            action: "workflow-version.publish",
+            "after.workflowKey": key,
+            "after.version": 2,
+          }),
+        ).toBe(0);
+
+        const published = await ok<{
+          publishWorkflowVersion: { workflowVersion: WorkflowVersionRow };
+        }>(api, world.admin.token, PUBLISH_WORKFLOW, input);
+        expect(published.publishWorkflowVersion.workflowVersion).toMatchObject({
+          version: 2,
+          status: "PUBLISHED",
+        });
+      },
+    );
+
+    it("退役第二步(currentVersion → null)失敗 → 版本與 currentVersion 都回到退役前(一個交易)", async () => {
+      const key = nextKey("tx_retire");
       await publishWorkflow(world, key, {
         steps: [usersStep("one", [staff(0)])],
       });
-      const hooks = api.app.get(WorkflowPublishHooks);
       const spy = jest
-        .spyOn(hooks, "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "current-version"
+        .spyOn(api.app.get(WorkflowPublishHooks), "reached")
+        .mockImplementation((reached) =>
+          reached === "retire-current"
             ? Promise.reject(new Error("模擬中斷"))
             : Promise.resolve(),
         );
       try {
-        const failed = await call(
-          api,
-          world.admin.token,
-          CREATE_WORKFLOW_DRAFT,
-          {
-            input: { workflowKey: key, baseVersion: 1 },
-          },
-        );
-        expect(failed.errors).toBeUndefined();
-        const draft = await ok<{
-          workflowVersion: { workflowVersion: WorkflowVersionRow };
-        }>(api, world.admin.token, WORKFLOW_VERSION, { workflowKey: key });
-        const interrupted = await call(
-          api,
-          world.admin.token,
-          PUBLISH_WORKFLOW,
-          {
-            input: {
-              workflowKey: key,
-              expectedDraftRevision:
-                draft.workflowVersion.workflowVersion.draftRevision,
-              changelog: "第二版",
-            },
-          },
-        );
-        expect(interrupted.errors).toBeDefined();
+        const failed = await call(api, world.admin.token, RETIRE_WORKFLOW, {
+          input: { workflowKey: key },
+        });
+        expect(failed.errors).toBeDefined();
       } finally {
         spy.mockRestore();
       }
+      const version = await world.connection
+        .collection("workflow_versions")
+        .findOne<{ status: string }>({ workflowKey: key, version: 1 });
+      expect(version?.status).toBe("published");
       const state = await ok<{ workflow: { workflow: WorkflowRow } }>(
         api,
         world.admin.token,
         WORKFLOW,
         { key },
       );
-      expect(state.workflow.workflow).toMatchObject({
-        currentVersion: 1,
-        publishInterrupted: true,
-      });
-      const blocked = await call(
-        api,
-        world.admin.token,
-        CREATE_WORKFLOW_DRAFT,
-        {
-          input: { workflowKey: key, baseVersion: 1 },
-        },
-      );
-      expect(errorReason(blocked)).toBe("PUBLISH_IN_PROGRESS");
-      const retried = await ok<{
-        retryPublishWorkflowVersion: { workflowVersion: WorkflowVersionRow };
-      }>(api, world.admin.token, RETRY_PUBLISH_WORKFLOW, {
-        input: { workflowKey: key },
-      });
-      expect(retried.retryPublishWorkflowVersion.workflowVersion).toMatchObject(
-        { version: 2, status: "PUBLISHED" },
-      );
-      const after = await ok<{ workflow: { workflow: WorkflowRow } }>(
-        api,
-        world.admin.token,
-        WORKFLOW,
-        { key },
-      );
-      expect(after.workflow.workflow).toMatchObject({
-        currentVersion: 2,
-        publishInterrupted: false,
-      });
+      expect(state.workflow.workflow.currentVersion).toBe(1);
     });
   });
 
@@ -491,9 +523,7 @@ describe("流程設計與綁定", () => {
       });
       const outsiderKey = nextKey("users_outside");
       await publishWorkflow(world, outsiderKey, {
-        steps: [
-          reviewStep("pick", { kind: "users", userIds: [String(outsider)] }),
-        ],
+        steps: [reviewStep("pick", usersSource([outsider]))],
       });
       const outsiderBind = await call(api, world.admin.token, BIND, {
         input: { formKey: FORM_KEY, workflowKey: outsiderKey },

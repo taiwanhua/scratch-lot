@@ -7,8 +7,8 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { UserPicker } from "@/components/UserPicker/UserPicker";
-import type { UserCandidate } from "@/components/UserPicker/useUserCandidates";
+import { UserPicker } from "@/components/base/UserPicker/UserPicker";
+import type { UserCandidate } from "@/components/base/UserPicker/useUserCandidates";
 
 export interface AssignUserDialogProps {
   /** `reassign` = 把一個任務改派給別人;`add` = 對解析為空的關卡新增審核者 */

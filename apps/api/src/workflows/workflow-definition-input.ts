@@ -1,9 +1,13 @@
+import type { Audience } from "@repo/domain/audience";
 import type { Expression } from "@repo/domain/form";
-import type {
-  AssigneeSource,
-  StepDef,
-  WorkflowDefinition,
-  WorkflowEdge,
+import {
+  type AssigneeSource,
+  type OverdueReminderDef,
+  REVIEW_STEP_PROPS,
+  type SkipOrgsDef,
+  type StepDef,
+  type WorkflowDefinition,
+  type WorkflowEdge,
 } from "@repo/domain/workflow";
 
 /**
@@ -25,28 +29,16 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function nullableText(value: unknown): string | null {
-  return typeof value === "string" && value !== "" ? value : null;
-}
-
 function assigneeOf(raw: unknown): AssigneeSource {
   if (!isObject(raw)) {
     return { kind: "" } as unknown as AssigneeSource;
   }
   switch (raw.kind) {
-    case "users": {
+    case "audience": {
+      // 人員條件原樣保留(格式交給檢查器的 `AUDIENCE_INVALID`)
       return {
-        kind: "users",
-        userIds: Array.isArray(raw.userIds)
-          ? raw.userIds.filter((id): id is string => typeof id === "string")
-          : [],
-      };
-    }
-    case "role": {
-      return {
-        kind: "role",
-        roleId: nullableText(raw.roleId),
-        placeholder: nullableText(raw.placeholder),
+        kind: "audience",
+        audience: raw.audience as Audience,
       };
     }
     case "field": {
@@ -74,9 +66,9 @@ function stepOf(raw: unknown): StepDef {
   if (step.kind === "join") {
     // 帶了審核屬性照樣保留,讓檢查器指出 `JOIN_HAS_REVIEW_PROPS`
     const extras = Object.fromEntries(
-      ["assignee", "mode", "skipWhen", "allowReturn"]
-        .filter((property) => step[property] !== undefined)
-        .map((property) => [property, step[property]]),
+      REVIEW_STEP_PROPS.filter((property) => step[property] !== undefined).map(
+        (property) => [property, step[property]],
+      ),
     );
     return { ...base, kind: "join", ...extras };
   }
@@ -90,9 +82,23 @@ function stepOf(raw: unknown): StepDef {
     ...(step.skipWhen === undefined || step.skipWhen === null
       ? {}
       : { skipWhen: step.skipWhen as Expression }),
+    // 指定組織跳過、自動通過原樣保留(形狀交給檢查器的 `SKIP_ORGS_INVALID` / `AUTO_APPROVE_INVALID`)
+    ...(step.skipOrgs === undefined || step.skipOrgs === null
+      ? {}
+      : { skipOrgs: step.skipOrgs as SkipOrgsDef }),
+    ...(step.autoApprove === undefined || step.autoApprove === null
+      ? {}
+      : { autoApprove: step.autoApprove }),
     ...(typeof step.allowReturn === "boolean"
       ? { allowReturn: step.allowReturn }
       : {}),
+    // 逾時提醒原樣保留(形狀交給檢查器的 `OVERDUE_INVALID` / `AUDIENCE_INVALID`);知會對象同審核者整形
+    ...(step.overdue === undefined || step.overdue === null
+      ? {}
+      : { overdue: step.overdue as OverdueReminderDef }),
+    ...(step.cc === undefined || step.cc === null
+      ? {}
+      : { cc: assigneeOf(step.cc) }),
   };
 }
 
@@ -100,6 +106,21 @@ export interface DefinitionInput {
   steps: readonly Record<string, unknown>[];
   edges?: readonly { from: string; to: string }[] | null;
   checkFormKey?: string | null;
+  /** 整個流程的知會對象:缺席 = 存草稿時不動已存的值;`null` = 清掉。 */
+  cc?: Record<string, unknown> | null;
+}
+
+/**
+ * 設計器送來的「整個流程的知會對象」:缺席 = undefined(存草稿時不動已存的值);`null` = null(清掉);
+ * 其他值同審核者來源整形(對錯交給檢查器)。
+ */
+export function flowCcFromInput(
+  value: Record<string, unknown> | null | undefined,
+): AssigneeSource | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  return value === null ? null : assigneeOf(value);
 }
 
 /**
@@ -123,16 +144,20 @@ export function definitionFromInput(
     from: edge.from,
     to: edge.to,
   }));
+  const cc = flowCcFromInput(input.cc);
   return {
     steps: input.steps.map((step) => stepOf(step)),
     edges: edges.length > 0 ? edges : null,
+    // 缺席 = 不帶(存草稿時不動已存的值)
+    ...(cc !== undefined && { cc }),
   };
 }
 
-/** 落庫的版本 → 定義(`edges` 空陣列與 null 同義)。 */
+/** 落庫的版本 → 定義(`edges` 空陣列與 null 同義;沒存過 `cc` 的舊版本 = 沒設)。 */
 export function definitionOfVersion(version: {
   steps: StepDef[];
   edges: WorkflowEdge[] | null;
+  cc?: AssigneeSource | null;
 }): WorkflowDefinition {
   const edges = (version.edges ?? []).map((edge) => ({
     from: edge.from,
@@ -141,5 +166,6 @@ export function definitionOfVersion(version: {
   return {
     steps: version.steps.map((step) => ({ ...step })),
     edges: edges.length > 0 ? edges : null,
+    ...(version.cc !== undefined && version.cc !== null && { cc: version.cc }),
   };
 }

@@ -5,7 +5,7 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import { ProvisionTenantForm } from "./ProvisionTenantForm";
 import { toModuleRows } from "./module-selection";

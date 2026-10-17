@@ -1,7 +1,9 @@
 /* eslint-disable @repo/no-raw-model-query -- 此檔即過濾層本身:裸 Model 存取的唯一合法出口(ADR-0005);到期條件:無 */
 import mongoose, {
+  type ClientSession,
   type Model,
   type QueryFilter,
+  type SaveOptions,
   type Types,
   type UpdateQuery,
 } from "mongoose";
@@ -23,6 +25,7 @@ import { ORGS_COLLECTION } from "./schemas/org.schema";
 import { WORKFLOW_TASKS_COLLECTION } from "./schemas/workflow-task.schema";
 import { WORKFLOWS_COLLECTION } from "./schemas/workflow.schema";
 import { tenantIdOfOrg } from "./tenant-id";
+import { currentSession } from "./transaction";
 
 /** Model 型別參數固定為預設值(無 query helpers / instance methods / virtuals),只讓 hydrated 文件型別可推導。 */
 type NoExtras = Record<never, never>;
@@ -38,7 +41,7 @@ export type RepositoryModel<TSchema, TDocument> = Model<
 /** hydrated 文件型別的最小需求(由傳入的 Model 推導,不需手動指定)。 */
 export interface RepositoryDocument {
   $locals: Record<string, unknown>;
-  save(): Promise<unknown>;
+  save(options?: SaveOptions): Promise<unknown>;
 }
 
 /** 經 BaseRepository 取回的文件:一定帶基礎欄位(由 baseFields plugin 保證)。 */
@@ -56,7 +59,16 @@ export type RepositoryCreate<TSchema> = Partial<TSchema> & {
   _id?: Types.ObjectId;
 };
 
-export interface FindOptions {
+/**
+ * 交易的 session(`TransactionService.withTransaction` 給的)。沒帶(`undefined`)時用目前進行中交易的
+ * session,不在交易內就是一般讀寫;明給 `null` = 刻意在交易外讀寫(如共用快取的載入,不該看到、
+ * 也不該被綁在某個請求尚未提交的交易上)。租戶保底、資料範圍規則與 session 無關,一律照套。
+ */
+export interface SessionOptions {
+  session?: ClientSession | null;
+}
+
+export interface FindOptions extends SessionOptions {
   /** 連軟刪除的資料一起查(ADR-0007);預設排除。 */
   includeDeleted?: boolean;
   /**
@@ -73,7 +85,7 @@ export interface FindOptions {
 }
 
 /** 條件更新的額外選項。 */
-export interface UpdateOptions {
+export interface UpdateOptions extends SessionOptions {
   /** 陣列元素的篩選(`$[識別名]` 指到哪幾個元素;Mongo `arrayFilters`)。 */
   arrayFilters?: Record<string, unknown>[];
 }
@@ -82,7 +94,7 @@ export interface UpdateOptions {
  * 所有資料存取的共用層(ADR-0005 / ADR-0007 / ADR-0011):
  * 每個公開方法都以操作者上下文開頭 — 租戶過濾、軟刪除排除、基礎欄位填寫全由 plugin 依此自動完成,
  * 個別功能不自己寫、也繞不過(api 內裸 `Model.xxx()` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下)。
- * 刪除一律走 `softDeleteById`(ADR-0007);硬刪除只有 `hardDeleteById`(補償刪除)與
+ * 刪除一律走 `softDeleteById`(ADR-0007);硬刪除只有 `hardDeleteById`(撤銷開通、退役權限清理)與
  * `hardDeleteDraft`(從未對外生效的版本草稿,見該方法)。
  */
 export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
@@ -131,7 +143,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     const query = scopeQuery(this.model.find({ ...filter }, options.select), {
       operator,
       includeDeleted: options.includeDeleted,
-    });
+    }).session(sessionOf(options));
     if (options.sort) {
       query.sort(options.sort);
     }
@@ -153,7 +165,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     const document = await scopeQuery(
       this.model.findOne({ ...filter }, options.select),
       { operator, includeDeleted: options.includeDeleted },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -173,15 +187,16 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   findOwnById(
     operator: OperatorContext,
     id: Types.ObjectId | string,
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
-    return this.findOwnOne(operator, { _id: id });
+    return this.findOwnOne(operator, { _id: id }, options);
   }
 
   /** 同 `findOwnById`,以條件找(如 `(createdBy, clientRequestId)` 的冪等重試)。 */
   async findOwnOne(
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema>,
-    options: Pick<FindOptions, "includeDeleted" | "select"> = {},
+    options: Pick<FindOptions, "includeDeleted" | "select" | "session"> = {},
   ): Promise<Persisted<TDocument> | null> {
     if (operator.actorId === null) {
       return null;
@@ -196,7 +211,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         ownRecordsOnly: true,
         includeDeleted: options.includeDeleted,
       },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -208,6 +225,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema>,
     update: RepositoryUpdate<TSchema>,
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
     if (operator.actorId === null) {
       return null;
@@ -224,7 +242,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         { returnDocument: "after", runValidators: true },
       ),
       { operator, ownRecordsOnly: true },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -236,7 +256,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     return scopeQuery(this.model.countDocuments({ ...filter }), {
       operator,
       includeDeleted: options.includeDeleted,
-    }).exec();
+    })
+      .session(sessionOf(options))
+      .exec();
   }
 
   /**
@@ -252,12 +274,15 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     operator: OperatorContext,
     ownerField: "orgId" | "ownerOrgId",
     orgId: Types.ObjectId,
+    options: SessionOptions = {},
   ): Promise<boolean> {
     const filter = { [ownerField]: orgId } as RepositoryFilter<TSchema>;
     const found = await scopeQuery(this.model.countDocuments(filter).limit(1), {
       operator,
       existenceCheck: true,
-    }).exec();
+    })
+      .session(sessionOf(options))
+      .exec();
     return found > 0;
   }
 
@@ -268,12 +293,14 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   async create(
     operator: OperatorContext,
     data: RepositoryCreate<TSchema>,
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument>> {
+    const session = sessionOf(options);
     const document = new this.model(
-      await this.withModuleTenant(this.withTenantOrg(operator, data)),
+      await this.withModuleTenant(this.withTenantOrg(operator, data), session),
     );
     document.$locals[OPERATOR_LOCAL_KEY] = operator;
-    await document.save();
+    await document.save({ session });
     return document as Persisted<TDocument>;
   }
 
@@ -285,6 +312,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     operator: OperatorContext,
     id: Types.ObjectId | string,
     update: RepositoryUpdate<TSchema>,
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
     assertUpdateLeavesProtectedPaths(
       this.model.modelName,
@@ -297,7 +325,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         runValidators: true,
       }),
       { operator },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -329,7 +359,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
           : { arrayFilters: options.arrayFilters }),
       }),
       { operator },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -341,6 +373,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema>,
     update: RepositoryUpdate<TSchema>,
+    options: SessionOptions = {},
   ): Promise<number> {
     assertUpdateLeavesProtectedPaths(
       this.model.modelName,
@@ -350,7 +383,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     const { modifiedCount } = await scopeQuery(
       this.model.updateMany({ ...filter }, update, { runValidators: true }),
       { operator },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return modifiedCount;
   }
 
@@ -358,28 +393,38 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   softDeleteById(
     operator: OperatorContext,
     id: Types.ObjectId | string,
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
-    return this.updateById(operator, id, { $set: { deletedAt: new Date() } });
+    return this.updateById(
+      operator,
+      id,
+      { $set: { deletedAt: new Date() } },
+      options,
+    );
   }
 
   /**
-   * **補償刪除**:把一筆文件從資料庫抹掉,回傳是否真的刪到(ADR-0007 軟刪除的唯一例外)。
+   * **硬刪除**:把一筆文件從資料庫抹掉,回傳是否真的刪到(ADR-0007 軟刪除的例外)。
    *
-   * 為什麼需要它:Mongo 單節點沒有 transaction,多步驟寫入(開通租戶的四步,ADR-0009)失敗時
-   * 只能以補償刪除回滾。這裡軟刪除幫不上忙 — `users` 的 account / email 唯一索引**含已軟刪除的文件**,
-   * 留一筆殭屍會讓同一組帳號 / Email 永遠再也開不了,重試必然再失敗。
+   * 為什麼需要它:撤銷開通(ADR-0009)要把開通建出的組織、角色副本、首任管理員「當作沒發生過」——
+   * 軟刪除幫不上忙,`users` 的 account / email 唯一索引**含已軟刪除的文件**,留一筆殭屍會讓同一組帳號 /
+   * Email 永遠再也開不了;退役權限清理同理(權限 key 全域唯一)。多步驟寫入的失敗回復一律由交易負責
+   * (ADR-0013),不再用它做補償刪除。
    *
-   * **只准用在「本次請求剛建立、尚未對外可見」的文件**:使用者要刪的資料一律 `softDeleteById`。
+   * **只准用在 ADR-0007 列出的用途**:使用者要刪的資料一律 `softDeleteById`。
    * 租戶過濾與 `deletedAt` 一樣由 plugin 套上(`includeDeleted` 讓半途已被標記刪除的也刪得掉)。
    */
   async hardDeleteById(
     operator: OperatorContext,
     id: Types.ObjectId | string,
+    options: SessionOptions = {},
   ): Promise<boolean> {
     const { deletedCount } = await scopeQuery(
       this.model.deleteOne({ _id: id }),
       { operator, includeDeleted: true },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return deletedCount > 0;
   }
 
@@ -394,11 +439,14 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   async hardDeleteDraft(
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema> & { status: "draft"; version: null },
+    options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
     const document = await scopeQuery(
       this.model.findOneAndDelete({ ...filter }),
       { operator },
-    ).exec();
+    )
+      .session(sessionOf(options))
+      .exec();
     return document as Persisted<TDocument> | null;
   }
 
@@ -419,6 +467,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    */
   private async withModuleTenant(
     data: Partial<TSchema>,
+    session: ClientSession | null,
   ): Promise<Partial<TSchema>> {
     if (getTenantScope(this.model.schema)?.moduleData !== true) {
       return data;
@@ -433,7 +482,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       .collection<{ ancestors?: Types.ObjectId[] }>(ORGS_COLLECTION)
       .findOne(
         { _id: new mongoose.Types.ObjectId(String(orgId)) },
-        { projection: { ancestors: 1 } },
+        { projection: { ancestors: 1 }, session: session ?? undefined },
       );
     if (!org) {
       throw new TenantScopeError(
@@ -483,6 +532,17 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
 export const EXISTS_ANY_CALLERS: readonly string[] = [
   "database/org-business-data.reader.ts",
 ];
+
+/**
+ * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
+ * 一律以明確值交給 Mongoose:交易已結束時,Mongoose 自己的 AsyncLocalStorage 可能還留著那個 session
+ * (`fn` 裡排出去的晚到工作),明給 null 才不會誤用已結束的 session。
+ */
+function sessionOf(options: SessionOptions): ClientSession | null {
+  return options.session === undefined
+    ? (currentSession() ?? null)
+    : options.session;
+}
 
 /** 更新內容不得觸及的欄位:所屬組織(租戶隔離)與建立資訊(稽核)。 */
 const PROTECTED_UPDATE_PATHS: readonly string[] = [

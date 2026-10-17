@@ -113,7 +113,7 @@ export async function expectDemoItems(
 /**
  * 頁面區域(`AdminShell/ShellLayout` 的 `<main>`)。
  *
- * **右上角的 Snackbar 不在這裡面** —— 它掛在 `app/providers/SnackbarProvider` 上、是整個
+ * **右下角的 Snackbar 不在這裡面** —— 它掛在 `app/providers/SnackbarProvider` 上、是整個
  * app 根層的兄弟節點。自 #376 起同一句錯誤文案會**同時**出現在頁內橫幅與 Snackbar 兩處
  * (前者說明脈絡、後者是全站回饋,兩個都要留),所以驗頁內文案時一律從這個範圍往下找,
  * 否則 `getByText` 會撞上 strict mode。
@@ -351,6 +351,13 @@ export async function orgTreeRootLabels(page: Page): Promise<string[]> {
 
 /** 編輯彈窗的「上層組織」下拉(`admin.orgManager.form.parent`;選項文字 = 含祖先的完整路徑)。 */
 export const MOVE_TARGET_SELECT = "上層組織(搬移)";
+
+/**
+ * 租戶內的人編輯租戶頂層時,「上層組織」下拉的位置改放的提示(`admin.orgManager.actions.tenantTopHint`;
+ * 與停用 / 刪除按鈕的說明同一句)。
+ */
+export const TENANT_TOP_HINT =
+  "頂層組織不可由組織內的人停用、搬移或刪除,需要時請聯絡系統管理員";
 
 /** 「上層組織」下拉的第一個選項 = 不搬(`admin.orgManager.form.parentUnset`)。 */
 export const MOVE_TARGET_UNSET = "不變更";

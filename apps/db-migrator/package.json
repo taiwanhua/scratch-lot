@@ -16,6 +16,8 @@
   },
   "jest": {
     "preset": "@repo/jest-presets/node",
+    "globalSetup": "<rootDir>/test/support/mongo-global-setup.ts",
+    "globalTeardown": "<rootDir>/test/support/mongo-global-teardown.ts",
     "moduleNameMapper": {
       "^@repo/domain/(.*)$": "<rootDir>/../../packages/domain/src/$1"
     }
@@ -27,13 +29,13 @@
     "mongodb": "~7.5.0"
   },
   "devDependencies": {
-    "@jest/globals": "^30.2.0",
+    "@jest/globals": "^30.5.2",
     "@repo/eslint-config": "workspace:*",
     "@repo/jest-presets": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-    "@types/node": "^22.15.3",
+    "@types/node": "^24.19.2",
     "eslint": "^9.39.0",
-    "jest": "^30.2.0",
+    "jest": "^30.5.2",
     "mongodb-memory-server": "^11.2.0",
     "tsx": "^4.23.13",
     "typescript": "5.9.3"

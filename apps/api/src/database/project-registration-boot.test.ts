@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import type { Provider } from "@nestjs/common";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 import type { DatabaseRegistration } from "./registration";
 import { HOOK_TIMEOUT_MS } from "./test-support/mongo-connection";
@@ -100,7 +100,7 @@ function bootRegistration(
  * 啟動檢查才失敗 —— 這就是「登記本身沒有被擋」的證據(對照組)。
  */
 describe("專案資料登記:不合契約時真的 DatabaseModule 起不來", () => {
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let uri: string;
 
   beforeAll(async () => {
@@ -108,7 +108,7 @@ describe("專案資料登記:不合契約時真的 DatabaseModule 起不來", ()
     if (baseUri) {
       uri = baseUri;
     } else {
-      memoryServer = await MongoMemoryServer.create();
+      memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       uri = memoryServer.getUri();
     }
   }, HOOK_TIMEOUT_MS);

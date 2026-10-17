@@ -118,7 +118,7 @@ query TenantModuleOptions {
   }
 }
 
-# ADR-0009 四步 + 擁有者 + 啟用信一次完成;logoPath 只收 createUploadUrl 發出的物件路徑。
+# ADR-0009 四步 + 擁有者一個交易完成,啟用信在交易提交後寄;logoPath 只收 createUploadUrl 發出的物件路徑。
 # moduleKeys 不在 tenantModuleOptions 內(含根組織專屬模組)或一個都沒勾、slug 格式不符
 # (^[a-z][a-z0-9_]{1,19}$)或已被用 → VALIDATION_FAILED,
 # errors[0].extensions.fields 指出是哪一欄。成功後組織樹要重查(多一個租戶節點)
@@ -137,6 +137,8 @@ mutation ProvisionTenant($input: ProvisionTenantInput!) {
     ownerUserId
     roleId
     moduleKeys
+    # 交易提交後才寄;false = 開通已成立但啟用信沒寄出,請首任管理員用「忘記密碼」
+    activationMailSent
   }
 }
 

@@ -57,7 +57,7 @@ export class RetryAdvanceInstanceInput {
 export enum BlockedInstancesFilter {
   /** 實例 `blocked`(有關卡解析為空、或承辦人失效)。 */
   BLOCKED = "blocked",
-  /** 判斷表還有事可做(中斷未恢復、投影不同步…)或 `linking` 超過 10 分鐘。 */
+  /** 判斷表還有事可做(投影不同步、資料被改過…)。 */
   NEEDS_ADVANCE = "needsAdvance",
 }
 
@@ -80,4 +80,21 @@ export class BlockedInstancesInput {
     description: `每頁筆數,上限 ${String(MAX_PAGE_SIZE)}`,
   })
   pageSize?: number;
+}
+
+/** 批次核准一次最多幾筆(底座規格 3.10 B18;前端勾選上限同值)。 */
+export const BATCH_APPROVE_LIMIT = 50;
+
+/** 審核者一次核准多個任務(每一筆一個交易);只支援核准。 */
+@InputType()
+export class BatchApproveTasksInput {
+  /** 要核准的任務;重複的只算一次,1 到 50 筆。 */
+  @Field(() => [ID], {
+    description: `要核准的任務,1 到 ${String(BATCH_APPROVE_LIMIT)} 筆(重複的只算一次)`,
+  })
+  taskIds!: string[];
+
+  /** 共同意見;缺席 / `null` / 空白 = 沒有。 */
+  @Field(() => String, { nullable: true })
+  comment?: string | null;
 }

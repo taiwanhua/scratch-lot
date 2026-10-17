@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import type { GraphQLClient } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import type {
   DemoItemResult,

@@ -4,7 +4,7 @@ import type { FieldDef } from "@repo/domain/form";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { FormValue } from "@/components/form-engine/FormValue";
+import { FormValue } from "@/components/base/form-engine/FormValue";
 
 export interface UpgradeConfirmStepProps {
   /** 將升級的筆數(各舊版本加總) */

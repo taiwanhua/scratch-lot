@@ -31,7 +31,7 @@ concurrency:
 #            ├─ test-api-1 / 2   api 的 jest 分兩片(--shard)
 #            ├─ test-admin-1 / 2 admin 的 jest 分兩片(--shard)
 #            ├─ test-others      api / admin 以外的 turbo test
-#            └─ build            turbo build(front 的 ISR 預渲染要活的 api)
+#            └─ build            turbo build(front 的 ISR 預渲染要活的 api;Mongo 以 docker run 起單一成員 replica set)
 #   以上全部 ─→ verify           總結;PR 的必要檢查名稱就是它
 #
 # turbo 本機快取(.turbo/cache)用 actions/cache 在 run 之間保存:每個跑 turbo 的 job 各一把 key
@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       # 只為了跑 turbo ls,不需要測試用的 mongod 二進位檔
@@ -149,6 +149,7 @@ jobs:
   # turbo 的受影響清單看不到,所以不掛在 prepare 後面、每次都跑。
   # 只用 Node 內建模組:不需 pnpm install,也不碰雲端、Secret 或看板(測試用假命令與假 GitHub client)。
   # 同一 job 也跑底座同步 CLI(scripts/base-sync/)的測試:真 Git 隔離夾具,gh 是假實作,不碰真 repo 或 GitHub。
+  # 以及 Figma 稽核腳本(scripts/figma-audit/)的測試:fake Figma 上跑各項檢查,並確認共用腳本不含專案名詞與寫死的節點 id;不碰真 Figma 檔。
   project-settings:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -158,13 +159,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: 讀取器 / schema / workflow 接線測試
         run: node --test scripts/project-settings/*.test.mjs
 
       - name: 底座同步 CLI 測試(inspect / upgrade / contribute)
         run: node --test scripts/base-sync/*.test.mjs
+
+      - name: Figma 稽核腳本測試
+        run: node --test scripts/figma-audit/*.test.mjs
 
       # 以本 repo 的身分實際解析正式設定:三個環境與看板各一次(只印非機密設定與 Secret 名稱)
       - name: 正式設定 dry-run
@@ -191,7 +195,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安裝依賴
@@ -223,8 +227,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
+
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
 
       # 不加 MONGOMS_DISABLE_POSTINSTALL:schema:generate 用 mongodb-memory-server 起 mongod
       #(二進位在 pnpm install 的 postinstall 下載,見根 package.json 的 onlyBuiltDependencies)
@@ -285,7 +299,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安裝依賴
@@ -310,6 +324,9 @@ jobs:
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
 
   # api 的測試最久(整合測試對真 MongoDB),用 jest 的 --shard 分兩台並行。
+  # MongoDB:jest globalSetup 自起單一成員 replica set(MongoMemoryReplSet,交易需要;與本機同一套)。
+  # 不用 service container:GitHub 的 service container 不能自訂啟動參數(--replSet),起不了 replica set;
+  # mongod 二進位由 pnpm install 的 postinstall 下載(所以這裡不加 MONGOMS_DISABLE_POSTINSTALL)。
   # 直接 exec jest 而不走 `pnpm run test -- …`(後者的參數會被 jest 當成路徑 pattern);
   # 旗標與 apps/api/package.json 的 test script 相同,再加 --forceExit / --shard。
   # api 的 jest 以 moduleNameMapper 直接吃 @repo/domain 原始碼,不必先 build 依賴,所以這裡不用 turbo。
@@ -324,12 +341,6 @@ jobs:
       matrix:
         shard: [1, 2]
 
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v4
 
@@ -337,8 +348,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
+
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
 
       - name: 安裝依賴
         run: pnpm install --frozen-lockfile
@@ -346,8 +367,6 @@ jobs:
       # `--forceExit`:測試全過但有殘留 handle 時仍會退出,並把偵測到的 handle 印進 log(--detectOpenHandles)
       - name: test(api 第 ${{ matrix.shard }} / 2 片)
         run: pnpm --filter @repo/api exec jest --passWithNoTests --detectOpenHandles --forceExit --shard=${{ matrix.shard }}/2
-        env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
 
   # admin 的測試(約 600 案、單跑 5 分多)同樣用 jest 的 --shard 分兩台。
   # admin 的 jest 吃依賴的 dist(與 turbo 的 test dependsOn ^build 一致),先用 turbo build 依賴(`^...` = 不含 admin 本身),
@@ -370,7 +389,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安裝依賴
@@ -401,7 +420,7 @@ jobs:
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
 
   # api / admin 以外受影響 package 的測試(domain / ui / i18n / logger / db-migrator …)
-  # MONGODB_URI:db-migrator 測試沿用本 job 的 MongoDB service container(本地無此變數時自起 mongodb-memory-server)
+  # MongoDB:db-migrator 的 jest globalSetup 自起單一成員 replica set(MongoMemoryReplSet),與 test-api 同一套
   # db-migrator 的 update 測試以子程序跑 api 的受管定義 CLI:它的 test 在 turbo 裡依賴 @repo/api#build
   #(apps/db-migrator/turbo.json),所以這裡會先建置 api 與 @repo/domain 等執行期依賴,不靠本機恰好留著的 dist;
   # 這些測試對真 MongoDB 逐一驗故障窗口,時間較長,逾時放寬到 30 分鐘。
@@ -411,12 +430,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v4
 
@@ -424,8 +437,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
+
+      # mongod 二進位快取(MongoMemoryReplSet 用;版本由 mongodb-memory-server 決定,跟 lockfile 走)。
+      # 命中時 postinstall 跳過下載
+      - name: 快取 mongod 二進位
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
 
       - name: 安裝依賴
         run: pnpm install --frozen-lockfile
@@ -441,8 +464,6 @@ jobs:
 
       - name: test
         run: pnpm exec turbo run test ${{ needs.prepare.outputs.others-filter }} --log-order=stream -- --forceExit
-        env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
 
       - name: 修剪 turbo 快取
         run: find .turbo/cache -type f -mtime +7 -delete 2>/dev/null || true
@@ -453,12 +474,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      mongo:
-        image: mongo:7
-        ports:
-          - 27017:27017
-
     steps:
       - uses: actions/checkout@v4
 
@@ -466,7 +481,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 安裝依賴
@@ -488,13 +503,60 @@ jobs:
         if: needs.prepare.outputs.front == 'true'
         run: pnpm exec turbo run build --filter=@repo/api
 
+      # 與本機 / 正式環境一致:單一成員 replica set(api 的交易需要)。service container 不能帶 --replSet,
+      # 所以用 docker run 起 mongo,初始化並等到選出 PRIMARY(可寫入)。
+      # image 固定 patch 版本(與 docker-compose.yml 同一個;版本差異見 docs/deployment.md「CI」)。
+      # 容器偶發一起來就退出:每次失敗印出退出狀態與容器 logs,先 docker rm -f 再重起,最多 3 次。
+      - name: 啟動 MongoDB(單一成員 replica set,拋棄式)
+        if: needs.prepare.outputs.front == 'true'
+        env:
+          MONGO_IMAGE: mongo:8.3.13
+        run: |
+          init_js='try { rs.status() } catch (e) { rs.initiate({ _id: "ci", members: [{ _id: 0, host: "localhost:27017" }] }) } if (!db.hello().isWritablePrimary) { quit(1) }'
+
+          # 等到 PRIMARY 回 0;容器已停止或逾時回 1
+          wait_primary() {
+            local deadline=$((SECONDS + 90))
+            local out
+            while :; do
+              if out=$(docker exec mongo mongosh --quiet --eval "$init_js" 2>&1); then
+                return 0
+              fi
+              if [ "$(docker container inspect -f '{{.State.Running}}' mongo 2>/dev/null)" != "true" ]; then
+                echo "容器已停止"
+                return 1
+              fi
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "90 秒內沒有選出 PRIMARY;最後一次 mongosh 輸出:"
+                echo "$out"
+                return 1
+              fi
+              sleep 2
+            done
+          }
+
+          for attempt in 1 2 3; do
+            docker rm -f mongo >/dev/null 2>&1 || true
+            if docker run -d --name mongo -p 27017:27017 "$MONGO_IMAGE" --replSet ci --bind_ip_all && wait_primary; then
+              echo "MongoDB 已就緒($MONGO_IMAGE,第 $attempt 次)"
+              exit 0
+            fi
+            echo "::warning::MongoDB 第 $attempt 次啟動失敗"
+            echo "::group::mongo 容器狀態與 logs(第 $attempt 次)"
+            docker inspect -f 'status={{.State.Status}} exitCode={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} error={{.State.Error}}' mongo || true
+            docker logs mongo 2>&1 || true
+            echo "::endgroup::"
+          done
+          echo "::error::MongoDB 連續 3 次啟動失敗,原因見上面各次的 logs"
+          exit 1
+
       - name: 啟動 api(接 CI 的拋棄式 MongoDB,空資料庫)
         if: needs.prepare.outputs.front == 'true'
         run: |
           node apps/api/dist/main.js &
           timeout 60 bash -c 'until curl -sf -X POST -H "Content-Type: application/json" -d "{\"query\":\"{__typename}\"}" http://127.0.0.1:5001/graphql -o /dev/null; do sleep 2; done'
         env:
-          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base
+          MONGODB_URI: mongodb://127.0.0.1:27017/wowgo-base?directConnection=true&replicaSet=ci
           PORT: "5001"
           # api 缺少 JWT_SECRET 即啟動失敗;CI 只需一個假值讓 front 預渲染能打到 api
           JWT_SECRET: ci-only-jwt-secret

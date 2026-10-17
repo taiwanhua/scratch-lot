@@ -257,6 +257,89 @@ test("deploy:Resend 未啟用時不掛不存在的 secret,其餘三個 API secre
   assert.doesNotMatch(deploy, /RESEND_API_KEY/);
 });
 
+const REALTIME_DEV = {
+  worker: "widgets-realtime-dev",
+  cloudflareAccountId: "0123456789abcdef0123456789abcdef",
+  secrets: {
+    ticketSecret: "rt-ticket-dev",
+    publishSecret: "rt-publish-dev",
+  },
+};
+
+const runRealtimeDeploy = (secrets) => {
+  const cloud = sampleCloud();
+  cloud.environments.dev.realtime = REALTIME_DEV;
+  return runJob("deploy.yml", {
+    inputs: { environment: "dev", force: "false" },
+    github: { repository: "acme/widgets" },
+    secrets,
+    env: { GITHUB_REF_NAME: "dev", ...deployEnv() },
+    cwd: installScripts(makeProjectRoot({ cloud })),
+  });
+};
+
+test("deploy:即時通道啟用時 api 掛兩把密鑰,最後以 wrangler 部署該環境的 Worker 並上傳密鑰", async () => {
+  const job = await runRealtimeDeploy({ CLOUDFLARE_API_TOKEN: "cf-token" });
+  assert.equal(job.failed, null, job.failed?.stderr);
+  const deploy = commands(job.calls, "gcloud").find((call) =>
+    call.startsWith("gcloud run deploy widgets-api-dev "),
+  );
+  assert.match(
+    deploy,
+    /REALTIME_TICKET_SECRET=rt-ticket-dev:latest,REALTIME_PUBLISH_SECRET=rt-publish-dev:latest/,
+  );
+  const reads = commands(job.calls, "gcloud").filter((call) =>
+    call.startsWith("gcloud secrets versions access latest --secret=rt-"),
+  );
+  assert.deepEqual(reads, [
+    "gcloud secrets versions access latest --secret=rt-ticket-dev",
+    "gcloud secrets versions access latest --secret=rt-publish-dev",
+  ]);
+  const pnpmCalls = commands(job.calls, "pnpm");
+  assert.ok(
+    pnpmCalls.includes(
+      "pnpm install --frozen-lockfile --filter @repo/realtime...",
+    ),
+  );
+  const wrangler = pnpmCalls.find((call) => call.includes("wrangler deploy"));
+  assert.match(
+    wrangler,
+    /^pnpm --filter @repo\/realtime exec wrangler deploy --name widgets-realtime-dev --secrets-file .*realtime-secrets\.json$/,
+  );
+  // 密鑰暫存檔上傳後刪除
+  const file = wrangler.slice(wrangler.lastIndexOf(" ") + 1);
+  assert.equal(existsSync(file), false);
+});
+
+test("deploy:即時通道啟用但沒有 CLOUDFLARE_API_TOKEN → 在讀密鑰前失敗", async () => {
+  const job = await runRealtimeDeploy({});
+  assert.equal(job.failed?.label, "deploy realtime(Cloudflare Worker)");
+  assert.equal(
+    commands(job.calls, "gcloud").some((call) =>
+      call.startsWith("gcloud secrets versions access latest --secret=rt-"),
+    ),
+    false,
+  );
+});
+
+test("deploy:即時通道未啟用(cloud.json 沒寫 realtime)→ 不裝、不部署 Worker,api 不掛即時通道密鑰", async () => {
+  const job = await runDeploy("dev", {
+    repository: "acme/widgets",
+    cwd: installScripts(makeProjectRoot()),
+  });
+  assert.equal(job.failed, null, job.failed?.stderr);
+  assert.equal(
+    job.calls.some((call) => call.join(" ").includes("realtime")),
+    false,
+  );
+  assert.ok(
+    job.trace.some(
+      (step) =>
+        step.label === "deploy realtime(Cloudflare Worker)" && step.skipped,
+    ),
+  );
+});
+
 test("deploy:分支與環境不對應時在 checkout 前失敗", async () => {
   const pairs = [
     ["dev", "main"],
@@ -654,6 +737,7 @@ test("值含 shell 特殊字元時原樣成為單一引數:不展開、不分詞
     ["deploy.yml", "deploy api"],
     ["deploy.yml", "deploy admin"],
     ["deploy.yml", "update(migration → 種子 → 定義)"],
+    ["deploy.yml", "deploy realtime(Cloudflare Worker)"],
     ["reset-db.yml", "reset"],
   ];
   for (const [workflow, name] of targets) {
