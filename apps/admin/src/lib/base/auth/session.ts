@@ -17,6 +17,8 @@ export interface AuthSession {
   /** 登入狀態(`stores/base/useSessionStore.ts`,由組裝根注入);元件經 `useSession()` 讀,非 React 程式碼經 `getState()` */
   store: SessionStore;
   channel: SessionChannel;
+  /** GraphQL 端點網址(組裝根給的);要顯示 API origin 的畫面(印表機管理的伺服器網址)由它取,不另讀環境變數 */
+  endpoint: string;
   /** 公開端點用(login / refresh):不帶 access token、不攔截 */
   publicClient: GraphQLClient;
   /** 受保護端點用:自動帶 access token;TOKEN_EXPIRED 時靜默換票一次再重送 */
@@ -93,6 +95,7 @@ export const createAuthSession = (
   return {
     store,
     channel,
+    endpoint,
     publicClient,
     client,
     refresh,

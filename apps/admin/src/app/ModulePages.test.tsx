@@ -121,6 +121,7 @@ describe("底座來源 + 空專案(原版相容性)", () => {
         "system.forms",
         "system.module-manager",
         "system.org-manager",
+        "system.printers",
         "system.role-manager",
         "system.user-manager",
         "system.workflows",
