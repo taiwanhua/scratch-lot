@@ -459,6 +459,43 @@ describe("表單發布(四步一個交易)與退役", () => {
     });
   });
 
+  it("依表單分開新增權限(B9b):發布失敗 → 這次新建的 `create-<formKey>` 跟著回復;再發布才建", async () => {
+    const formKey = "pub_per_form_create";
+    const createKey = `${MODULE_KEY}.create-${formKey}`;
+    const countCreateKey = () =>
+      connection.collection("permissions").countDocuments({ key: createKey });
+    await ok(api, token, CREATE_FORM, {
+      input: { key: formKey, moduleKey: MODULE_KEY, name: "依表單新增" },
+    });
+    await ok(api, token, CREATE_DRAFT, {
+      input: { formKey, baseVersion: null },
+    });
+    await saveDefinition(api, token, formKey, definitionOf(v1Fields), 0);
+    // seed 宣告的開關;測試直接改資料庫模擬開啟,結束時還原(不影響本檔其他案例)
+    await connection
+      .collection("modules")
+      .updateOne({ key: MODULE_KEY }, { $set: { perFormCreate: true } });
+    try {
+      // 步驟 3 建好權限之後、步驟 4 最後一筆失敗
+      failAt("current-version");
+      const failed = await call(api, token, PUBLISH, {
+        input: { formKey, expectedDraftRevision: 1, changelog: "測試發布" },
+      });
+      expect(failed.errors).toBeDefined();
+      jest.restoreAllMocks();
+      expect(await countCreateKey()).toBe(0);
+
+      await ok(api, token, PUBLISH, {
+        input: { formKey, expectedDraftRevision: 1, changelog: "測試發布" },
+      });
+      expect(await countCreateKey()).toBe(1);
+    } finally {
+      await connection
+        .collection("modules")
+        .updateOne({ key: MODULE_KEY }, { $set: { perFormCreate: false } });
+    }
+  });
+
   it("currentVersion 用條件更新:讀到之後被別人改了 → 409,整個發布回復,不蓋掉", async () => {
     await publishNewForm(api, token, "pub_cas", definitionOf(v1Fields));
     await ok(api, token, CREATE_DRAFT, {

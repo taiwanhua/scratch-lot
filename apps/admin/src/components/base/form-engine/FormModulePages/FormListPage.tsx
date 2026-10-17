@@ -57,10 +57,12 @@ export const FormListPage = ({ module }: ModulePageProps) => {
   const t = useTranslations("admin.formEngine.pages");
   const navigate = useNavigate();
   const access = useFormModuleAccess(moduleKey);
-  const { forms, creatableForms } = useModuleForms(moduleKey);
+  const { forms, creatableForms, isLoading } = useModuleForms(moduleKey);
   // [+ 新增] 出現:有可新增的表單;或有模組 `create`、此刻一張表單都沒有(停用並附原因)。
-  // 有表單但一張都不能新增(依表單分開新增權限的模組只有模組 `create`)→ 不出現(ADR-0011)
+  // 有表單但一張都不能新增(依表單分開新增權限的模組只有模組 `create`)→ 不出現(ADR-0011)。
+  // 表單清單載完之前不出現(否則依表單分開新增權限的模組會先閃一下停用的按鈕再消失)
   const canCreate =
+    !isLoading &&
     access.createRoute !== null &&
     (creatableForms.length > 0 || (access.canCreate && forms.length === 0));
 
