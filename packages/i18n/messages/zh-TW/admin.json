@@ -1812,7 +1812,7 @@
             "orgIds": "填寫者所屬的組織(全部)"
           },
           "tenant": {
-            "id": "租戶"
+            "id": "最上層組織"
           }
         }
       },
@@ -2149,8 +2149,14 @@
         "assignee_added": "「{step}」新增審核者 {toUser}",
         "withdrawn": "申請人撤回",
         "completed": "審核完成",
-        "superseded": "已被再次送出的修訂取代"
+        "superseded": "已被再次送出的修訂取代",
+        "auto_approve_blocked": "「{step}」自動通過未成立:{message}"
       },
+      "autoApproveBlocked": {
+        "auto_applicant": "「{step}」申請人自動通過未成立:{message}",
+        "auto_prior_approver": "「{step}」{user} 已在前關核准,自動通過未成立:{message}"
+      },
+      "autoApproveBlockedGeneric": "目前不符合自動通過的條件",
       "reasons": {
         "skip_orgs": "「{step}」申請人屬於指定的組織,略過",
         "skip_condition": "「{step}」符合跳過條件,略過",

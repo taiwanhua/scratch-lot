@@ -2570,6 +2570,7 @@ type WorkflowForkSourceModel {
 
 type WorkflowHistoryEventModel {
   at: DateTime!
+  code: String
   comment: String
   kind: String!
   reason: String

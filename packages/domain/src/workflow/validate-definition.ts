@@ -267,7 +267,7 @@ function checkSkipOrgs(
   ) {
     collector.error(
       "ORG_NOT_IN_TENANT",
-      `關卡 ${step.key} 的「申請人屬於這些組織」選的組織不在本租戶`,
+      `關卡 ${step.key} 的「申請人屬於這些組織」選的組織不在這個最上層組織之下`,
       at,
     );
   }

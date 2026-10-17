@@ -1812,7 +1812,7 @@
             "orgIds": "Filler's organizations (all)"
           },
           "tenant": {
-            "id": "Tenant"
+            "id": "Top-level organization"
           }
         }
       },
@@ -2149,8 +2149,14 @@
         "assignee_added": "\"{step}\" reviewer {toUser} added",
         "withdrawn": "Withdrawn by the applicant",
         "completed": "Approval completed",
-        "superseded": "Superseded by a resubmitted revision"
+        "superseded": "Superseded by a resubmitted revision",
+        "auto_approve_blocked": "\"{step}\" automatic approval did not apply: {message}"
       },
+      "autoApproveBlocked": {
+        "auto_applicant": "\"{step}\" automatic approval for the applicant did not apply: {message}",
+        "auto_prior_approver": "\"{step}\" {user} already approved at an earlier step, but automatic approval did not apply: {message}"
+      },
+      "autoApproveBlockedGeneric": "The conditions for automatic approval are not met right now",
       "reasons": {
         "skip_orgs": "\"{step}\" skipped: the applicant belongs to a specified organization",
         "skip_condition": "\"{step}\" skipped by its condition",

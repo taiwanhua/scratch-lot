@@ -118,6 +118,10 @@ export class WorkflowHistoryEvent {
   /** 跳過 / 自動通過的原因(`step_skipped`:哪一項成立;`approved`:B5 自動通過);其他 null。 */
   @Prop({ type: String, enum: [...HISTORY_REASONS, null], default: null })
   reason!: HistoryReason | null;
+
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼。 */
+  @Prop({ type: String, default: null })
+  code!: string | null;
 }
 
 const WorkflowHistoryEventSchema =

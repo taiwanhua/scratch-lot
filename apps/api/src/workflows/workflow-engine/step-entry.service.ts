@@ -5,6 +5,7 @@ import type { FieldDef } from "@repo/domain/form";
 import {
   type ApplicantOrgFact,
   type AutoApproval,
+  type BlockedAutoApproval,
   type ReviewStepDef,
   type SkipReason,
   type StepEntry,
@@ -54,8 +55,8 @@ export interface StepEntryOptions {
  * - 審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算(只算啟用中、仍在本租戶的人);
  *   剔除申請人由 domain 的 `buildPlan` 做
  * - **自動通過**(3.5 B5):domain `autoApprovalCandidates` 列出候選,逐位以**他本人**的身分跑
- *   `checkApproveGuard`(`beforeApprove`);擋下的不放進 `autoApprovals`(任務留給他照常審核)。
- *   `any` 一位通過就停(一人核准即過)
+ *   `checkApproveGuard`(`beforeApprove`);擋下的放進 `blockedAutoApprovals`(申請人照一般規則剔除,
+ *   其他人照常審核;時間軸記 `auto_approve_blocked`)。`any` 一位通過就停(一人核准即過)
  * - 解析不到任何人 → 空名單(該關阻擋,不自動改派、不自動跳過)
  *
  * 推進在交易內呼叫這裡:讀取依序 `await`(TX-02);守門擋下是結果不是錯誤,其他例外照樣往外拋(TX-04)。
@@ -121,10 +122,16 @@ export class StepEntryService {
     if (candidates.length === 0) {
       return { kind: "assign", assigneeIds };
     }
-    const autoApprovals = options.runApproveGuards
-      ? await this.guardedApprovals(submission, step, candidates)
-      : candidates;
-    return { kind: "assign", assigneeIds, autoApprovals };
+    if (!options.runApproveGuards) {
+      return { kind: "assign", assigneeIds, autoApprovals: candidates };
+    }
+    const guarded = await this.guardedApprovals(submission, step, candidates);
+    return {
+      kind: "assign",
+      assigneeIds,
+      autoApprovals: guarded.passed,
+      blockedAutoApprovals: guarded.blocked,
+    };
   }
 
   /** 跳過的原因;都不成立 → null。 */
@@ -203,29 +210,28 @@ export class StepEntryService {
   }
 
   /**
-   * 逐位以本人身分跑 `beforeApprove`(依序,TX-02);擋下的略過。`any` 一位通過就停。
-   * 守門擋下以回傳值表示(`checkApproveGuard`),不 catch 例外。
+   * 逐位以本人身分跑 `beforeApprove`(依序,TX-02);擋下的另列(帶專案錯誤碼,時間軸記一筆)。
+   * `any` 一位通過就停。守門擋下以回傳值表示(`checkApproveGuard`),不 catch 例外。
    */
   private async guardedApprovals(
     submission: SubmissionRecord,
     step: ReviewStepDef,
     candidates: readonly AutoApproval[],
-  ): Promise<AutoApproval[]> {
+  ): Promise<{ passed: AutoApproval[]; blocked: BlockedAutoApproval[] }> {
     const passed: AutoApproval[] = [];
+    const blocked: BlockedAutoApproval[] = [];
     for (const candidate of candidates) {
       const { operator } = await this.operators.resolve(
         toObjectId(candidate.assigneeId),
         submission.orgId,
       );
-      const blocked = await this.lifecycle.checkApproveGuard({
+      const result = await this.lifecycle.checkApproveGuard({
         operator,
         submission,
         stepKey: step.key,
       });
-      if (blocked !== null) {
-        this.logger.log(
-          `提交 ${String(submission._id)} 關卡 ${step.key}:${candidate.assigneeId} 的自動通過被守門擋下(${blocked.code}),留給他照常審核`,
-        );
+      if (result !== null) {
+        blocked.push({ ...candidate, code: result.code });
         continue;
       }
       passed.push(candidate);
@@ -233,7 +239,7 @@ export class StepEntryService {
         break;
       }
     }
-    return passed;
+    return { passed, blocked };
   }
 
   private async fieldsOf(instance: InstanceRecord): Promise<FieldDef[]> {

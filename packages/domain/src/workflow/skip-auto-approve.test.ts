@@ -4,7 +4,6 @@ import { advance } from "./advance";
 import {
   autoApprovalCandidates,
   isApplicantInSkipOrgs,
-  keepsApplicant,
   priorApproverIds,
 } from "./plan";
 import type { InstanceSnapshot, WorkflowDefinition } from "./types";
@@ -178,7 +177,7 @@ describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandi
     ).toEqual([{ assigneeId: "u1", reason: "auto_prior_approver" }]);
   });
 
-  it("更早那一票是 B5「申請人是審核者」自動通過、記在申請人名下 → 也算(申請人留在計畫裡)", () => {
+  it("更早那一票是 B5「申請人是審核者」自動通過、記在申請人名下 → 也算", () => {
     const step = review("third", { autoApprove: { priorApprover: true } });
     const definition = linear({ autoApprove: { priorApprover: true } });
     const instance = atThird(definition, [
@@ -187,7 +186,6 @@ describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandi
     expect(priorApproverIds(definition, instance, "third")).toEqual(
       new Set([APPLICANT, "second-reviewer"]),
     );
-    expect(keepsApplicant(definition, instance, step)).toBe(true);
     expect(
       autoApprovalCandidates(definition, instance, step, [APPLICANT]),
     ).toEqual([{ assigneeId: APPLICANT, reason: "auto_prior_approver" }]);
@@ -258,7 +256,6 @@ describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandi
     expect(
       autoApprovalCandidates(definition, instance, step, ["u1", APPLICANT]),
     ).toEqual([]);
-    expect(keepsApplicant(definition, instance, step)).toBe(false);
   });
 });
 
@@ -351,17 +348,98 @@ describe("B5 自動通過:進關一次寫入核准", () => {
     });
   });
 
-  it("守門擋下(沒放進 autoApprovals)→ 停在這一關,任務留給他照常審核", () => {
+  it("申請人的自動通過被守門擋下 → 照一般規則剔除申請人,派給其他審核者;時間軸記原因與錯誤碼", () => {
     const definition: WorkflowDefinition = {
       steps: [review("boss", { autoApprove: { applicant: true } })],
     };
     const world = worldOf(definition);
     runAdvance(world, {
-      boss: { kind: "assign", assigneeIds: [APPLICANT], autoApprovals: [] },
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT, "u1"],
+        autoApprovals: [],
+        blockedAutoApprovals: [
+          {
+            assigneeId: APPLICANT,
+            reason: "auto_applicant",
+            code: "NOT_READY",
+          },
+        ],
+      },
     });
     const boss = world.instance.steps.find((step) => step.stepKey === "boss");
     expect(boss?.status).toBe("active");
+    expect(boss?.plan.map((item) => item.assigneeId)).toEqual(["u1"]);
     expect(boss?.decisions).toEqual([]);
     expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(
+      world.instance.history.filter(
+        (event) => event.kind === "auto_approve_blocked",
+      ),
+    ).toEqual([
+      {
+        at: NOW,
+        kind: "auto_approve_blocked",
+        stepKey: "boss",
+        userId: APPLICANT,
+        reason: "auto_applicant",
+        code: "NOT_READY",
+      },
+    ]);
+  });
+
+  it("只有申請人、自動通過被擋下 → 剔除後沒人,該關阻擋(擋下的紀錄在阻擋之前)", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { applicant: true } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: [APPLICANT],
+        autoApprovals: [],
+        blockedAutoApprovals: [
+          {
+            assigneeId: APPLICANT,
+            reason: "auto_applicant",
+            code: "NOT_READY",
+          },
+        ],
+      },
+    });
+    const boss = world.instance.steps.find((step) => step.stepKey === "boss");
+    expect(boss?.plan).toEqual([]);
+    expect(boss?.blocked).toBe(true);
+    expect(world.instance.status).toBe("blocked");
+    expect(world.instance.history.slice(-2).map((event) => event.kind)).toEqual(
+      ["auto_approve_blocked", "blocked"],
+    );
+  });
+
+  it("前關核准過的審核者(不是申請人)被擋下 → 照常留一張待審任務給他", () => {
+    const definition: WorkflowDefinition = {
+      steps: [review("boss", { autoApprove: { priorApprover: true } })],
+    };
+    const world = worldOf(definition);
+    runAdvance(world, {
+      boss: {
+        kind: "assign",
+        assigneeIds: ["u1"],
+        autoApprovals: [],
+        blockedAutoApprovals: [
+          {
+            assigneeId: "u1",
+            reason: "auto_prior_approver",
+            code: "NOT_READY",
+          },
+        ],
+      },
+    });
+    expect(taskStatusOf(world, "boss-1")).toBe("pending");
+    expect(
+      world.instance.history.find(
+        (event) => event.kind === "auto_approve_blocked",
+      ),
+    ).toMatchObject({ userId: "u1", reason: "auto_prior_approver" });
   });
 });

@@ -191,10 +191,14 @@ export class WorkflowHistoryEventModel {
   /**
    * 跳過 / 自動通過的原因(`@repo/domain/workflow` 的 `HISTORY_REASONS`):`step_skipped` 帶
    * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);B5 自動記的 `approved` 帶
-   * `auto_applicant` / `auto_prior_approver`。其他事件 null。
+   * `auto_applicant` / `auto_prior_approver`;`auto_approve_blocked` 帶同兩值(哪一種自動通過沒成立)。其他事件 null。
    */
   @Field(() => String, { nullable: true })
   reason!: string | null;
+
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
+  @Field(() => String, { nullable: true })
+  code!: string | null;
 }
 
 @ObjectType()

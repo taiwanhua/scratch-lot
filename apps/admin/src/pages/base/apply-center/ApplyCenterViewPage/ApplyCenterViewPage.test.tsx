@@ -233,6 +233,7 @@ describe("申請中心詳情頁(view-page)", () => {
       stepKey: string,
       reason: string | null,
       who: typeof MANAGER | null = null,
+      code: string | null = null,
     ) => ({
       at: "2026-09-20T02:00:00.000Z",
       kind,
@@ -243,6 +244,7 @@ describe("申請中心詳情頁(view-page)", () => {
       comment: null,
       result: null,
       reason,
+      code,
     });
     renderApplyCenter({
       path: `${APPLY_VIEW_ROUTE}/inst-1`,
@@ -270,6 +272,20 @@ describe("申請中心詳情頁(view-page)", () => {
               event("approved", "manager", "auto_applicant", MANAGER),
               event("approved", "hr", "auto_prior_approver", HR),
               event("approved", "hr", null, HR),
+              event(
+                "auto_approve_blocked",
+                "manager",
+                "auto_applicant",
+                MANAGER,
+                "UNKNOWN_PROJECT_CODE",
+              ),
+              event(
+                "auto_approve_blocked",
+                "hr",
+                "auto_prior_approver",
+                HR,
+                "UNKNOWN_PROJECT_CODE",
+              ),
             ],
           }),
         ],
@@ -290,6 +306,17 @@ describe("申請中心詳情頁(view-page)", () => {
     expect(
       within(timeline).getByText(
         "人資阿美 在「人資」核准(已在前關核准,自動通過)",
+      ),
+    ).toBeInTheDocument();
+    // 自動通過被守門擋下:專案沒有 `admin.lifecycle.<碼>` 文案 → 中性通用句
+    expect(
+      within(timeline).getByText(
+        "「直屬主管」申請人自動通過未成立:目前不符合自動通過的條件",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "「人資」人資阿美 已在前關核准,自動通過未成立:目前不符合自動通過的條件",
       ),
     ).toBeInTheDocument();
     // 人按的核准沒有原因:照事件種類

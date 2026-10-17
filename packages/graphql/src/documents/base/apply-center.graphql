@@ -117,6 +117,8 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
     result
     # 跳過 / 自動通過的原因(skip_orgs / skip_condition / auto_applicant / auto_prior_approver;其他 null)
     reason
+    # 只有 auto_approve_blocked:守門擋下的專案錯誤碼(admin.lifecycle.<碼>)
+    code
   }
   outcome {
     kind

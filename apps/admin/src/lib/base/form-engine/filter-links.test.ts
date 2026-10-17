@@ -70,7 +70,8 @@ const links = linkedReferencesOf(fields);
 const CTX: ExpressionContext = {
   now: "2026-10-17T00:00:00.000Z",
   timezone: "Asia/Taipei",
-  user: { id: "u1", orgId: "o1" },
+  user: { id: "u1", orgId: "o1", orgIds: ["o1"] },
+  tenant: { id: null },
 };
 const ref = (id: string) => ({ id, label: id });
 

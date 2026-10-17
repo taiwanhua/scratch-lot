@@ -1,6 +1,6 @@
 import { type OutcomeCandidate, selectOutcome } from "./evaluate";
 import { endStepKey, nextStepKeys, previousStepKeys, stepOf } from "./graph";
-import { type AutoApproval, buildPlan, keepsApplicant } from "./plan";
+import { type AutoApproval, type BlockedAutoApproval, buildPlan } from "./plan";
 import {
   evaluationOf,
   isProjectionInSync,
@@ -57,12 +57,14 @@ import {
  */
 
 /**
- * 列 5 的外部輸入:跳過(帶原因,時間軸顯示是哪一項成立),或解析到的審核者(未剔除申請人也可,這裡會剔除;
- * B5 自動通過可能記在申請人名下時(`keepsApplicant`)申請人留在計畫裡)。
+ * 列 5 的外部輸入:跳過(帶原因,時間軸顯示是哪一項成立),或解析到的審核者(未剔除申請人也可,這裡會剔除)。
  *
- * `autoApprovals` = 已過 `beforeApprove` 的 B5 自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門,
- * 擋下的不放進來 —— 留給他照常審核):進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 =
- * 已核准);`any` 只記第一位(一人核准即過)。
+ * `autoApprovals` = 已過 `beforeApprove` 的 B5 自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門):
+ * 進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 = 已核准);`any` 只記第一位(一人核准即過)。
+ * **申請人只有在自動通過成立時才留在計畫裡**,否則照一般規則剔除(剔除後沒人 → 阻擋)。
+ *
+ * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句剔除;其他人照常留一張待審任務。每位在時間軸記一筆
+ * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
  */
 export type StepEntry =
   | { kind: "skip"; reason?: SkipReason }
@@ -70,6 +72,7 @@ export type StepEntry =
       kind: "assign";
       assigneeIds: string[];
       autoApprovals?: readonly AutoApproval[];
+      blockedAutoApprovals?: readonly BlockedAutoApproval[];
     };
 
 export interface AdvanceInput {
@@ -661,9 +664,20 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
   const node = stepOf(definition, stepKey);
   const reviewNode = node !== undefined && isReviewStep(node) ? node : null;
   const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy, {
-    keepApplicant:
-      reviewNode !== null && keepsApplicant(definition, instance, reviewNode),
+    keepApplicant: (entry.autoApprovals ?? []).some(
+      (approval) => approval.assigneeId === instance.createdBy,
+    ),
   });
+  const blockedNotes: HistoryEvent[] = (entry.blockedAutoApprovals ?? []).map(
+    (blocked) => ({
+      at: now,
+      kind: "auto_approve_blocked",
+      stepKey,
+      userId: blocked.assigneeId,
+      reason: blocked.reason,
+      code: blocked.code,
+    }),
+  );
   const condition = liveCondition(instance, {
     stepStatus: { [stepKey]: "pending" },
   });
@@ -678,7 +692,10 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
           update: {
             steps: { [stepKey]: { status: "active", plan: [], blocked: true } },
             ...(instance.status === "blocked" ? {} : { status: "blocked" }),
-            pushHistory: [{ at: now, kind: "blocked", stepKey }],
+            pushHistory: [
+              ...blockedNotes,
+              { at: now, kind: "blocked", stepKey },
+            ],
             incEditVersion: true,
           },
         },
@@ -713,6 +730,7 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
     },
     pushHistory: [
       { at: now, kind: "step_entered", stepKey },
+      ...blockedNotes,
       // 決定與它的 `approved` 事件同一次原子寫入(`historyIndexOf` 靠它排接受順序)
       ...decisions.map(({ decision, reason }) => ({
         at: now,
