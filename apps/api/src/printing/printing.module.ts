@@ -5,6 +5,7 @@ import { NotificationsCoreModule } from "../notifications/notifications-core.mod
 import { RealtimeModule } from "../realtime/realtime.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
 import { StorageModule } from "../storage/storage.module";
+import { MeOrgTenantNameResolver } from "./me-org-tenant-name.resolver";
 import { PrintAgentAuthGuard } from "./print-agent-auth.guard";
 import { PrintAgentReleaseService } from "./print-agent-release.service";
 import { PrintAgentController } from "./print-agent.controller";
@@ -35,6 +36,7 @@ import { PrintingResolver } from "./printing.resolver";
     PrintersService,
     PrintAgentAuthGuard,
     PrintingResolver,
+    MeOrgTenantNameResolver,
   ],
 })
 export class PrintingModule {}

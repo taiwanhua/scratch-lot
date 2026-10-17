@@ -91,6 +91,8 @@ export const printingWorld = (options: PrintingWorldOptions = {}) => {
     setPrinterEnabled: [] as SetPrinterEnabledMutationVariables["input"][],
     testPrint: [] as PrintPrinterTestPageMutationVariables["input"][],
     jobs: [] as PrintJobsQueryVariables["input"][],
+    /** `printJob(id)` 被查的 id(驗「即時通道連著時等信號才查」) */
+    printJob: [] as string[],
     release: 0,
   };
 
@@ -322,6 +324,7 @@ export const printingWorld = (options: PrintingWorldOptions = {}) => {
     }),
     api.query("PrintJob", ({ variables }) => {
       const { id } = variables as PrintJobQueryVariables;
+      inputs.printJob.push(id);
       const index = jobs.findIndex((job) => job.id === id);
       if (index === -1) return printingError("NOT_FOUND");
       // 假代理程式:第一次查就有結果

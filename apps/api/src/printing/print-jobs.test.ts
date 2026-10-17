@@ -518,4 +518,18 @@ describe("列印 API(後台)", () => {
       expect(download.error?.code).toBe("NOT_FOUND");
     });
   });
+
+  it("單據上方的租戶名稱:me.currentOrg.tenantName 是最上層組織的名稱,不是分店名稱(分店層級的使用者也讀得到)", async () => {
+    const data = await ok<{
+      me: { currentOrg: { name: string; tenantName: string } | null };
+    }>(
+      world,
+      world.cashier,
+      "query MeTenantName { me { currentOrg { name tenantName } } }",
+    );
+    expect(data.me.currentOrg).toEqual({
+      name: "分店 A",
+      tenantName: "列印測試租戶",
+    });
+  });
 });

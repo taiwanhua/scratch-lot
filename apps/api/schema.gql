@@ -1101,6 +1101,7 @@ type MeOrg {
   id: ID!
   logoUrl: String
   name: String!
+  tenantName: String!
   timezone: String!
 }
 

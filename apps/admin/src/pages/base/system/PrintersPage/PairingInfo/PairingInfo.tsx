@@ -1,5 +1,6 @@
 import { useTranslations } from "use-intl";
 
+import { PRINT_PAIRING_CODE_LENGTH } from "@repo/domain/printing";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
@@ -9,9 +10,14 @@ import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
-/** 配對碼顯示成兩段(`8K3M-Q7PZ`,人要從畫面抄到店內電腦);複製的是 8 碼本身,代理程式兩種都收。 */
+/** 兩段之間的位置(8 碼 → 4 + 4)。 */
+const PAIRING_CODE_HALF = PRINT_PAIRING_CODE_LENGTH / 2;
+
+/** 配對碼顯示成兩段(`8K3M-Q7PZ`,人要從畫面抄到店內電腦);複製的是配對碼本身,代理程式兩種都收。 */
 const formatPairingCode = (code: string): string =>
-  code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+  code.length === PRINT_PAIRING_CODE_LENGTH
+    ? `${code.slice(0, PAIRING_CODE_HALF)}-${code.slice(PAIRING_CODE_HALF)}`
+    : code;
 
 export interface PairingInfoProps {
   pairingCode: string;
