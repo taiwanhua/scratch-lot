@@ -2623,6 +2623,7 @@ type WorkflowDecisionModel {
 }
 
 input WorkflowDefinitionInput {
+  cc: JSONObject
   checkFormKey: ID
   edges: [WorkflowEdgeInput!]
   steps: [JSONObject!]!
@@ -2836,6 +2837,7 @@ type WorkflowValidationReport {
 
 type WorkflowVersionModel {
   baseVersion: Int
+  cc: JSONObject
   changelog: String
   checkFormKey: ID
   draftRevision: Int!

@@ -49,7 +49,7 @@ const DEFINITION_KEYS: Readonly<
   Record<DefinitionSeedSet["kind"], readonly string[]>
 > = {
   "form-definition": ["fields", "layout", "summaryMap", "prefills"],
-  "workflow-definition": ["steps", "edges"],
+  "workflow-definition": ["steps", "edges", "cc"],
 };
 
 function isNonBlankString(value: unknown): value is string {

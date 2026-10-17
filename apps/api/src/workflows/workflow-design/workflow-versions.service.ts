@@ -203,6 +203,7 @@ export class WorkflowVersionsService {
         baseVersion,
         steps: definition.steps,
         edges: definition.edges ?? null,
+        cc: definition.cc ?? null,
         checkFormKey,
         changelog: null,
         publishedAt: null,
@@ -279,6 +280,7 @@ export class WorkflowVersionsService {
           edges: definition.edges ?? null,
           // 缺席 = 不動已存的值(GQL-06;`docs/modules/workflows.md`「api 介面」)
           ...(checkFormKey !== undefined && { checkFormKey }),
+          ...(definition.cc !== undefined && { cc: definition.cc }),
         },
         $inc: { draftRevision: 1 },
       },
@@ -362,6 +364,7 @@ export class WorkflowVersionsService {
         baseVersion: deleted.baseVersion,
         steps: deleted.steps,
         edges: deleted.edges ?? null,
+        cc: deleted.cc ?? null,
         checkFormKey: deleted.checkFormKey ?? null,
       },
     });

@@ -47,6 +47,7 @@ import {
   FormLifecycleService,
 } from "../../workflows/workflow-engine/lifecycle/form-lifecycle.service";
 import { SubmissionReadAccess } from "../../workflows/workflow-engine/submission-read-access.service";
+import { WorkflowCcService } from "../../workflows/workflow-engine/workflow-cc.service";
 import { WorkflowSubmitService } from "../../workflows/workflow-engine/workflow-submit.service";
 import { workflowForbiddenError } from "../../workflows/workflows-error";
 import { fieldGateOf } from "../field-permission-gate";
@@ -362,6 +363,7 @@ export class FormSubmissionsService {
     private readonly withdrawal: InstanceWithdrawService,
     private readonly transactions: TransactionService,
     private readonly lifecycle: FormLifecycleService,
+    private readonly cc: WorkflowCcService,
   ) {}
 
   // ---- 讀 ----
@@ -1294,6 +1296,8 @@ export class FormSubmissionsService {
       );
     }
     await this.lifecycle.emit("voided", effectSubjectOf(updated));
+    // B17:單據被作廢 → 整個流程的知會對象(同一個交易)
+    await this.cc.voided(record.currentInstanceId);
     await this.audit.record(facts.operator, {
       action: SUBMISSION_AUDIT.void,
       targetType: SUBMISSION_TARGET,

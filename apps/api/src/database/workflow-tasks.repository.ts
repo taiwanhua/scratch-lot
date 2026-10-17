@@ -18,9 +18,26 @@ export type WorkflowTaskRecord = WorkflowTask &
 /** 新建一筆任務的內容(`tenantId` 由方法參數給)。 */
 export type NewWorkflowTask = Omit<
   WorkflowTask,
-  "tenantId" | "editVersion" | "previousAssigneeIds" | "decidedAt" | "comment"
+  | "tenantId"
+  | "editVersion"
+  | "previousAssigneeIds"
+  | "decidedAt"
+  | "comment"
+  | "assignedAt"
+  | "overdueLevel"
+  | "overdueDueAt"
 > &
-  Partial<Pick<WorkflowTask, "previousAssigneeIds" | "decidedAt" | "comment">>;
+  Partial<
+    Pick<
+      WorkflowTask,
+      | "previousAssigneeIds"
+      | "decidedAt"
+      | "comment"
+      | "assignedAt"
+      | "overdueLevel"
+      | "overdueDueAt"
+    >
+  >;
 
 /**
  * `workflow_tasks` 的存取層(`docs/data-model.md`「workflow_tasks」)。
@@ -85,6 +102,9 @@ export class WorkflowTasksRepository {
       previousAssigneeIds: task.previousAssigneeIds ?? [],
       decidedAt: task.decidedAt ?? null,
       comment: task.comment ?? null,
+      assignedAt: task.assignedAt ?? null,
+      overdueLevel: task.overdueLevel ?? 0,
+      overdueDueAt: task.overdueDueAt ?? null,
       editVersion: 0,
     });
     document.$locals[OPERATOR_LOCAL_KEY] = operator;

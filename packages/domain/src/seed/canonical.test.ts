@@ -243,6 +243,25 @@ describe("contentHash / snapshotHash", () => {
     ).not.toBe(hashesOf(implicit).contentHash);
   });
 
+  it("流程:逾時提醒、關卡知會、整個流程的知會省略與 null 都是沒設;有設才是不同內容", () => {
+    const implicit = workflowSeed({ steps: [review("boss")] });
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [review("boss", { overdue: null, cc: null })],
+          cc: null,
+        }),
+      ),
+    ).toEqual(hashesOf(implicit));
+    const cc = { kind: "manager", level: 1 } as const;
+    expect(
+      hashesOf(workflowSeed({ steps: [review("boss", { cc })] })).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+    expect(
+      hashesOf(workflowSeed({ steps: [review("boss")], cc })).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+  });
+
   it("contentHash 的來源字串不含 revision、changelog 與 desiredStatus", () => {
     const canonical = definitionContentCanonical(
       formSeed(fields(), { revision: "rev-marker", changelog: "log-marker" }),

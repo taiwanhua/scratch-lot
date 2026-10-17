@@ -190,6 +190,10 @@ export class WorkflowVersionModel {
   @Field(() => ID, { nullable: true })
   checkFormKey!: string | null;
 
+  /** 整個流程的知會對象(`AssigneeSource`);沒設 = null。發布快照保留、開草稿 / fork 帶過去。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  cc!: Record<string, unknown> | null;
+
   @Field(() => String, { nullable: true })
   changelog!: string | null;
 

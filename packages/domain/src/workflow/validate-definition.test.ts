@@ -1,16 +1,18 @@
 import { describe, expect, it } from "@jest/globals";
 
+import type { Audience } from "../audience/types";
 import { field } from "../form/form-test-support";
 import type { FieldDef } from "../form/types";
 import {
   type SubmitCheckInput,
   checkSubmitCompatibility,
 } from "./submit-check";
-import type {
-  ReviewStepDef,
-  StepDef,
-  WorkflowDefinition,
-  WorkflowEdge,
+import {
+  DEFAULT_OVERDUE_AUDIENCE,
+  type ReviewStepDef,
+  type StepDef,
+  type WorkflowDefinition,
+  type WorkflowEdge,
 } from "./types";
 import {
   type ValidateWorkflowOptions,
@@ -414,6 +416,152 @@ describe("validateWorkflowDefinition:指定組織跳過與自動通過(B4 / B5)"
         ],
       }),
     ).toEqual(["ALL_STEPS_SKIPPABLE"]);
+  });
+});
+
+describe("validateWorkflowDefinition:逾時提醒與知會(B16 / B17)", () => {
+  const permissionAudience = DEFAULT_OVERDUE_AUDIENCE;
+  const roleAudience: Audience = {
+    mode: "match",
+    filter: {
+      field: "role",
+      cond: "in",
+      value: { kind: "static", values: ["0123456789abcdef01234567"] },
+    },
+  };
+  const overdue = (
+    reviewerAfterHours: unknown,
+    audienceAfterHours: unknown,
+    audience: unknown = permissionAudience,
+  ) =>
+    ({
+      reviewerAfterHours,
+      audienceAfterHours,
+      audience,
+    }) as ReviewStepDef["overdue"];
+
+  it("N、M 是正整數小時且 M > N 才通過;M ≤ N、小數、缺欄 → OVERDUE_INVALID", () => {
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(24, 48) })] }),
+    ).toEqual([]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(24, 24) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(48, 24) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(1.5, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(0, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(null, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+  });
+
+  it("M ≤ N 的錯誤定位到 overdue.audienceAfterHours", () => {
+    const report = validateWorkflowDefinition(
+      { steps: [review("a", { overdue: overdue(5, 2) })] },
+      CUSTOM,
+    );
+    expect(report.errors[0]?.location).toEqual({
+      stepKey: "a",
+      stepIndex: 0,
+      property: "overdue.audienceAfterHours",
+    });
+  });
+
+  it("通知對象要設條件(不能所有人);共用流程不能用角色 → AUDIENCE_IN_SHARED", () => {
+    expect(
+      codesOf({
+        steps: [review("a", { overdue: overdue(1, 2, { mode: "all" }) })],
+      }),
+    ).toEqual(["AUDIENCE_INVALID"]);
+    expect(
+      codesOf(
+        { steps: [review("a", { overdue: overdue(1, 2, roleAudience) })] },
+        SHARED,
+      ),
+    ).toEqual(["AUDIENCE_IN_SHARED"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(1, 2) })] }, SHARED),
+    ).toEqual([]);
+  });
+
+  it("關卡的知會對象同審核者三種來源與同一套檢查,定位到 cc…", () => {
+    expect(
+      codesOf({ steps: [review("a", { cc: { kind: "manager", level: 2 } })] }),
+    ).toEqual([]);
+    const report = validateWorkflowDefinition(
+      { steps: [review("a", { cc: { kind: "manager", level: 0 } })] },
+      CUSTOM,
+    );
+    expect(report.errors.map((issue) => issue.code)).toEqual([
+      "MANAGER_LEVEL_INVALID",
+    ]);
+    expect(report.errors[0]?.location.property).toBe("cc.level");
+    expect(
+      codesOf(
+        {
+          steps: [
+            review("a", { cc: { kind: "audience", audience: roleAudience } }),
+          ],
+        },
+        SHARED,
+      ),
+    ).toEqual(["AUDIENCE_IN_SHARED"]);
+    expect(
+      codesOf(
+        {
+          steps: [
+            review("a", {
+              cc: { kind: "field", formKey: "leave", fieldKey: "nope" },
+            }),
+          ],
+        },
+        { ...CUSTOM, forms: new Map([["leave", []]]) },
+      ),
+    ).toEqual(["FIELD_MISSING"]);
+  });
+
+  it("整個流程的知會對象:同一套檢查,沒有關卡定位(property 以 cc 開頭)", () => {
+    const report = validateWorkflowDefinition(
+      {
+        steps: [review("a")],
+        cc: { kind: "audience", audience: roleAudience },
+      },
+      SHARED,
+    );
+    expect(report.errors).toEqual([
+      expect.objectContaining({
+        code: "AUDIENCE_IN_SHARED",
+        location: { property: "cc.audience.filter" },
+      }),
+    ]);
+    expect(
+      codesOf({
+        steps: [review("a")],
+        cc: { kind: "nope" } as never,
+      }),
+    ).toEqual(["ASSIGNEE_KIND_UNKNOWN"]);
+  });
+
+  it("匯合節點帶了逾時提醒 / 知會 → JOIN_HAS_REVIEW_PROPS", () => {
+    const definition = graph(
+      [
+        review("a"),
+        review("b"),
+        review("c"),
+        {
+          ...join("j"),
+          cc: { kind: "manager", level: 1 },
+        } as unknown as StepDef,
+      ],
+      [edge("a", "b"), edge("a", "c"), edge("b", "j"), edge("c", "j")],
+    );
+    expect(codesOf(definition)).toContain("JOIN_HAS_REVIEW_PROPS");
   });
 });
 

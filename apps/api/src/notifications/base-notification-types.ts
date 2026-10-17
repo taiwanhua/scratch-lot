@@ -51,6 +51,31 @@ const RESULT_LABELS: Readonly<Record<string, { "zh-TW": string; en: string }>> =
 const resultLabel = (params: NotificationParams, locale: "zh-TW" | "en") =>
   RESULT_LABELS[text(params, "result")]?.[locale] ?? text(params, "result");
 
+/** 知會的時機 → 各語言的一句話(關卡的兩種帶關卡名);不認得的時機只說「知會您」。 */
+const ccEventText = (
+  params: NotificationParams,
+  locale: "zh-TW" | "en",
+): string => {
+  const step = text(params, "stepName");
+  const labels: Readonly<Record<string, { "zh-TW": string; en: string }>> = {
+    "step-passed": {
+      "zh-TW": `的「${step}」關卡已通過`,
+      en: `passed the step "${step}"`,
+    },
+    "step-skipped": {
+      "zh-TW": `的「${step}」關卡已跳過`,
+      en: `skipped the step "${step}"`,
+    },
+    completed: { "zh-TW": "已完成", en: "was completed" },
+    rejected: { "zh-TW": "已駁回", en: "was rejected" },
+    voided: { "zh-TW": "已作廢", en: "was voided" },
+  };
+  return (
+    labels[text(params, "event")]?.[locale] ??
+    (locale === "zh-TW" ? "知會您" : "was shared with you")
+  );
+};
+
 /** 列印失敗原因(`@repo/domain/printing` 的 `PRINT_JOB_ERRORS`)→ 各語言的一句話;不認得的原樣顯示。 */
 const PRINT_FAILURE_LABELS: Readonly<
   Record<PrintJobError, { "zh-TW": string; en: string }>
@@ -99,8 +124,8 @@ const printFailureLabel = (
  * | ------------------------ | ----------------------------------------------------------------- |
  * | `workflow.task-created`  | `subject`(表單名:標題)、`stepName`                               |
  * | `workflow.result`        | `subject`、`result`(approved / rejected / returned)、`comment`    |
- * | `workflow.overdue`       | `subject`、`stepName`                                             |
- * | `workflow.cc`            | `subject`                                                         |
+ * | `workflow.overdue`       | `subject`、`stepName`、`hours`(已超過的小時數 N 或 M)               |
+ * | `workflow.cc`            | `subject`、`event`(`@repo/domain/workflow` 的 `CC_EVENTS`)、`stepName`(關卡的兩種才有) |
  * | `printing.job-failed`    | `documentName`、`reason`(失敗原因代碼,範本換成各語言的一句話);測試頁改給 `testPagePrinter` |
  * | `printing.agent-offline` | `agentName`、`orgName`                                            |
  */
@@ -148,11 +173,11 @@ export const BASE_NOTIFICATION_TYPES: readonly NotificationTypeDefinition[] = [
     template: {
       "zh-TW": (params) => ({
         title: `審核逾時:${text(params, "subject")}`,
-        body: `申請「${text(params, "subject")}」在「${text(params, "stepName")}」關卡已逾時。`,
+        body: `申請「${text(params, "subject")}」在「${text(params, "stepName")}」關卡已超過 ${text(params, "hours")} 小時未處理。`,
       }),
       en: (params) => ({
         title: `Review overdue: ${text(params, "subject")}`,
-        body: `The request "${text(params, "subject")}" is overdue at step "${text(params, "stepName")}".`,
+        body: `The request "${text(params, "subject")}" has been waiting at step "${text(params, "stepName")}" for over ${text(params, "hours")} hours.`,
       }),
     },
   },
@@ -165,11 +190,11 @@ export const BASE_NOTIFICATION_TYPES: readonly NotificationTypeDefinition[] = [
     template: {
       "zh-TW": (params) => ({
         title: `知會:${text(params, "subject")}`,
-        body: `申請「${text(params, "subject")}」知會您。`,
+        body: `申請「${text(params, "subject")}」${ccEventText(params, "zh-TW")}。`,
       }),
       en: (params) => ({
         title: `FYI: ${text(params, "subject")}`,
-        body: `You were copied on the request "${text(params, "subject")}".`,
+        body: `The request "${text(params, "subject")}" ${ccEventText(params, "en")}.`,
       }),
     },
   },

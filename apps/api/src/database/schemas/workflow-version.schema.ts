@@ -1,7 +1,11 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from "mongoose";
 
-import type { StepDef, WorkflowEdge } from "@repo/domain/workflow";
+import type {
+  AssigneeSource,
+  StepDef,
+  WorkflowEdge,
+} from "@repo/domain/workflow";
 
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
@@ -51,6 +55,13 @@ export class WorkflowVersion {
   /** 連線;null = 直線(依 `steps[]` 順序)。 */
   @Prop({ type: [MongooseSchema.Types.Mixed], default: null })
   edges!: WorkflowEdge[] | null;
+
+  /**
+   * 整個流程的知會對象(B17;`AssigneeSource`,來源同審核者三種):單據完成、被駁回、被作廢時通知。
+   * null = 沒設(這個欄位出現之前的版本讀起來也是 null)。關卡的知會在 `steps[].cc`。
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  cc!: AssigneeSource | null;
 
   /**
    * 設計器的「檢查用表單」(表單 key;選填、null = 沒選):設計時對照的表單,

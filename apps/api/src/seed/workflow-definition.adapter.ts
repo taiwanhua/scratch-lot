@@ -210,6 +210,7 @@ export class WorkflowDefinitionAdapter implements DefinitionAdapter<WorkflowDefi
           edges: seed.definition.edges ?? null,
           // 一定明給(含 null):缺席在原服務是「不動已存的值」,宣告的 null 是清空
           checkFormKey: seed.checkFormKey,
+          cc: seed.definition.cc ?? null,
         },
       },
       { draftId },

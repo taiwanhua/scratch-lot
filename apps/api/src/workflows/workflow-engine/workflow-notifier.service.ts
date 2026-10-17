@@ -79,8 +79,8 @@ export class WorkflowNotifier {
     });
   }
 
-  /** 「表單名:標題」(實例快照沒有標題時只有表單名)。 */
-  private async subjectOf(instance: InstanceRecord): Promise<string> {
+  /** 「表單名:標題」(實例快照沒有標題時只有表單名);知會與逾時提醒共用。 */
+  async subjectOf(instance: InstanceRecord): Promise<string> {
     const form = await this.forms.findOne(systemContext(), {
       key: instance.formKey,
     });
