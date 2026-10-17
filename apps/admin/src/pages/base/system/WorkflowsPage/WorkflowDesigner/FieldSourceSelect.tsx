@@ -23,10 +23,12 @@ export interface FieldSourceSelectProps {
   isLoaded: boolean;
   formNameOf: (formKey: string) => string;
   isDisabled: boolean;
+  /** 欄位下方說明(依用途:審核者 / 知會對象 / 通知對象 = 送出時這個欄位選的人) */
+  hint: string;
 }
 
 /**
- * 審核者來源「表單欄位」的欄位下拉:欄位來自「檢查用表單」的目前版本;選了欄位,來源的表單就是檢查用表單。
+ * 人員來源「表單欄位」的欄位下拉(審核者、知會對象共用):欄位來自「檢查用表單」的目前版本;選了欄位,來源的表單就是檢查用表單。
  * 沒選檢查用表單 → 下拉只顯示「請先選檢查用表單」(不是空清單);這一關原本指向別張表單時註明,
  * 改選欄位就換成檢查用表單的欄位。檢查用表單沒有可選的欄時,下拉下方說明要先去表單設計器加一個。
  */
@@ -38,6 +40,7 @@ export const FieldSourceSelect = ({
   isLoaded,
   formNameOf,
   isDisabled,
+  hint,
 }: FieldSourceSelectProps) => {
   const t = useTranslations("admin.workflows.assignee");
   const isOnOtherForm =
@@ -68,7 +71,7 @@ export const FieldSourceSelect = ({
           displayEmpty
           size="small"
           disabled
-          helperText={t("fieldHint")}
+          helperText={hint}
           options={[
             {
               value: "",
@@ -100,7 +103,7 @@ export const FieldSourceSelect = ({
         displayEmpty
         size="small"
         disabled={isDisabled}
-        helperText={t("fieldHint")}
+        helperText={hint}
         options={[
           { value: "", label: t("fieldUnset") },
           ...choices.map((field) => ({ value: field.key, label: field.label })),

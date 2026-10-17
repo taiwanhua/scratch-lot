@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import type { WorkflowDefinition } from "@repo/domain/workflow";
+import type { AssigneeSource, WorkflowDefinition } from "@repo/domain/workflow";
 
 import {
   type Flow,
@@ -11,12 +11,13 @@ import {
 } from "@/lib/base/workflow/flow-model";
 import type { FlowOpResult } from "@/lib/base/workflow/flow-ops";
 
-/** 與上次存檔比對的字串:節點 / 連線排序後比(陣列順序不同但圖一樣 = 沒改)。 */
+/** 與上次存檔比對的字串:節點 / 連線排序後比(陣列順序不同但圖一樣 = 沒改),連同整個流程的知會對象。 */
 const fingerprintOf = definitionFingerprint;
 
 /**
- * 設計器的編輯狀態:段落串(`flow-model.ts`)、「檢查用表單」、選中的節點、上一個被拒絕的操作,
- * 與「有沒有未存的變更」(與上次存檔的定義 + 檢查用表單比對,不是比有沒有按過東西)。
+ * 設計器的編輯狀態:段落串(`flow-model.ts`)、整個流程的知會對象(`cc`,段落串之外的流程層設定)、
+ * 「檢查用表單」、選中的節點、上一個被拒絕的操作,與「有沒有未存的變更」
+ * (與上次存檔的定義 + 檢查用表單比對,不是比有沒有按過東西)。
  *
  * 草稿的結構表示不了(`parseFlow` 回 null:手改過的 JSON、舊資料)時 `flow` 為 null,
  * 設計器改成唯讀顯示原定義與檢查結果,不去猜使用者要的是什麼。
@@ -26,6 +27,7 @@ export const useFlowDesignerState = (
   initialCheckFormKey: string | null,
 ) => {
   const [flow, setFlow] = useState<Flow | null>(() => parseFlow(initial));
+  const [cc, setCc] = useState<AssigneeSource | null>(initial.cc ?? null);
   const [savedFingerprint, setSavedFingerprint] = useState(() =>
     fingerprintOf(initial),
   );
@@ -35,8 +37,8 @@ export const useFlowDesignerState = (
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [opError, setOpError] = useState<FlowOpError | null>(null);
   const definition = useMemo(
-    () => (flow === null ? initial : toDefinition(flow)),
-    [flow, initial],
+    () => (flow === null ? initial : { ...toDefinition(flow), cc }),
+    [flow, initial, cc],
   );
   const isDirty =
     flow !== null &&
@@ -48,6 +50,8 @@ export const useFlowDesignerState = (
     definition,
     checkFormKey,
     setCheckFormKey,
+    /** 改整個流程的知會對象(`null` = 不知會) */
+    setCc,
     isDirty,
     selectedKey,
     opError,

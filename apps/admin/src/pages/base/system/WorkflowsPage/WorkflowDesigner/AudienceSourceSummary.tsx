@@ -9,9 +9,12 @@ import { Typography } from "@repo/ui/typography";
 import { useAudienceSummary } from "@/components/base/AudiencePicker/useAudienceSummary";
 
 import { AudienceConditionDialog } from "./AudienceConditionDialog";
+import type { PeoplePurpose } from "./people-purpose";
 import type { ApproverAudienceSetup } from "./useApproverAudienceSetup";
 
 export interface AudienceSourceSummaryProps {
+  /** 用途:審核者 / 知會對象 / 通知對象(框的標題與對話框標題) */
+  purpose: PeoplePurpose;
   audience: Audience;
   stepName: string;
   isShared: boolean;
@@ -21,10 +24,12 @@ export interface AudienceSourceSummaryProps {
 }
 
 /**
- * 關卡面板的「審核者」框(Figma BS-02a / c):條件摘要一行白話 + [編輯條件](開 `AudienceConditionDialog`;
- * [套用] 才寫回,[取消] 不動)。欄位與組織來源見 `useApproverAudienceSetup`。
+ * 關卡面板的人員條件框(Figma BS-02a / c、BS-03):條件摘要一行白話 + [編輯條件](開 `AudienceConditionDialog`;
+ * [套用] 才寫回,[取消] 不動)。審核者、知會對象、逾時通知對象共用,標題依 `purpose`。
+ * 欄位與組織來源見 `useApproverAudienceSetup`。
  */
 export const AudienceSourceSummary = ({
+  purpose,
   audience,
   stepName,
   isShared,
@@ -41,10 +46,10 @@ export const AudienceSourceSummary = ({
     <Box
       sx={{ bgcolor: "action.hover", borderRadius: 1, px: 1.5, py: 1.25 }}
       role="group"
-      aria-label={t("audienceRegion")}
+      aria-label={t(`purposes.${purpose}.audienceRegion`)}
     >
       <Typography variant="caption" color="text.secondary" component="p">
-        {t("audienceTitle")}
+        {t(`purposes.${purpose}.audienceTitle`)}
       </Typography>
       <Typography variant="body2" sx={{ my: 0.75 }}>
         {summary === "" ? t("audienceEmpty") : summary}
@@ -62,6 +67,7 @@ export const AudienceSourceSummary = ({
       )}
       {isDialogOpen && (
         <AudienceConditionDialog
+          purpose={purpose}
           stepName={stepName}
           isShared={isShared}
           initial={setup.initialDraftOf(audience)}

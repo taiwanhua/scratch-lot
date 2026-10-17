@@ -376,6 +376,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "`t(`kinds.${kind}`)`,kind 取自 `ASSIGNEE_KINDS`",
   },
   {
+    key: "admin.workflows.assignee.purposes.",
+    reason:
+      "`t(`purposes.${purpose}.<文案>`)`,purpose 是流程設計器的 `PeoplePurpose`(審核者 / 知會對象 / 通知對象)",
+  },
+  {
     key: "admin.forms.binding.problems.",
     reason:
       "`t(`problems.${issue.problem}`)`,problem 是 api 綁定時檢查的 `BindingIssue.problem`",

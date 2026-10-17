@@ -2513,7 +2513,8 @@
       "viewingSelectHint": "點流程圖上的關卡或匯合節點看它的設定(唯讀)。",
       "viewingCanvas": "v{version} 的流程圖",
       "viewingProperties": "屬性(唯讀)",
-      "closeViewing": "關閉檢視"
+      "closeViewing": "關閉檢視",
+      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "分流前面一定要有一個審核關卡:先刪掉或移動整組分流。",
@@ -2549,7 +2550,6 @@
         "all": "每個人都核准才通過,一人駁回就駁回。"
       },
       "allowReturn": "允許退回修改",
-      "skipWhen": "跳過條件",
       "skipNeedsCheckForm": "請先選上方的「檢查用表單」:跳過條件的欄位來自它。",
       "actions": "關卡操作",
       "insertAfter": "在後面加一關",
@@ -2561,9 +2561,42 @@
       "moveTo": "移到分支",
       "moveToPlaceholder": "選擇分支",
       "needsCheckForm": "請先選檢查用表單",
-      "skipWhenUnset": "未設定",
       "checkFormLoading": "檢查用表單載入中…",
-      "noUsableFields": "此表單沒有可用欄位"
+      "noUsableFields": "此表單沒有可用欄位",
+      "skip": {
+        "title": "跳過這一關(符合任一項就跳過)",
+        "orgs": "申請人屬於這些組織",
+        "orgsPick": "指定組織",
+        "tenant": "最上層組織",
+        "includeDescendants": "包含下層",
+        "orgsHint": "看申請人所屬的組織(全部),不是只看目前組織。",
+        "sharedOrgsHint": "共用流程只能選最上層組織。",
+        "condition": "符合條件"
+      },
+      "autoApprove": {
+        "title": "自動通過",
+        "applicant": "申請人是這一關的審核者時",
+        "priorApprover": "審核者已在前面的關卡核准過時",
+        "normal": "照常審核",
+        "auto": "自動通過",
+        "hint": "自動通過 = 記成那個人核准(多人會簽只算他那一票),照樣經過專案的核准前檢查;沒通過就照常審核。"
+      },
+      "overdue": {
+        "title": "逾時提醒",
+        "enabled": "開啟逾時提醒",
+        "over": "超過",
+        "reviewerHours": "通知審核者的時數",
+        "reviewerSuffix": "小時未處理 → 通知審核者",
+        "audienceHours": "通知「通知對象」的時數",
+        "audienceSuffix": "小時 → 同時通知「通知對象」",
+        "hint": "只提醒,不自動核准或駁回。以日曆小時計(含夜間與假日),從任務派給目前的審核者起算。",
+        "invalid": "時數要是正整數,而且通知「通知對象」的時數要大於通知審核者的時數。"
+      },
+      "cc": {
+        "title": "知會",
+        "hint": "這一關通過或被跳過時通知知會對象(不用審核,可以唯讀查看這張單據)。要讓他也知道最後結果(完成、駁回、作廢),請把他加進「整個流程的知會對象」。",
+        "none": "不知會"
+      }
     },
     "join": {
       "region": "匯合節點「{name}」",
@@ -2589,8 +2622,6 @@
       "warning": "警告"
     },
     "assignee": {
-      "region": "審核者",
-      "kind": "審核者來源",
       "kinds": {
         "audience": "人員條件",
         "field": "表單欄位",
@@ -2599,7 +2630,6 @@
       "sharedHint": "共用流程給所有租戶用,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。",
       "field": "欄位",
       "fieldUnset": "未選擇",
-      "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);審核者 = 送出時這個欄位選的人。",
       "level": "第幾層",
       "levelHint": "從申請所屬組織往上找,第 1 層 = 最近的一組主管。",
       "levelOption": "第 {level} 層",
@@ -2608,17 +2638,42 @@
       "fieldNoChoices": "檢查用表單沒有「引用(使用者)」欄位;請先在表單設計器加一個資料來源為使用者的引用欄位並發布。",
       "fieldOtherForm": "這一關原本指向表單「{form}」;改選欄位會換成檢查用表單的欄位。",
       "noCheckFormReadonly": "這一版沒有指定檢查用表單",
-      "audienceTitle": "審核者",
-      "audienceRegion": "審核者條件",
       "audienceEmpty": "尚未設定條件",
       "audienceEdit": "編輯條件",
-      "dialogTitle": "審核者條件 · {step}",
-      "dialogTitleShared": "審核者條件 · {step}(共用流程)",
       "dialogCancel": "取消",
       "dialogApply": "套用",
       "orgSubmission": "單據所屬組織",
       "orgTenant": "最上層組織",
-      "orgFormField": "表單欄位:{field}"
+      "orgFormField": "表單欄位:{field}",
+      "purposes": {
+        "approver": {
+          "kind": "審核者來源",
+          "region": "審核者",
+          "audienceTitle": "審核者",
+          "audienceRegion": "審核者條件",
+          "dialogTitle": "審核者條件 · {step}",
+          "dialogTitleShared": "審核者條件 · {step}(共用流程)",
+          "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);審核者 = 送出時這個欄位選的人。"
+        },
+        "cc": {
+          "kind": "知會對象",
+          "region": "知會對象",
+          "audienceTitle": "知會對象",
+          "audienceRegion": "知會對象條件",
+          "dialogTitle": "知會對象條件 · {step}",
+          "dialogTitleShared": "知會對象條件 · {step}(共用流程)",
+          "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);知會對象 = 送出時這個欄位選的人。"
+        },
+        "overdue": {
+          "kind": "通知對象",
+          "region": "通知對象",
+          "audienceTitle": "通知對象",
+          "audienceRegion": "通知對象條件",
+          "dialogTitle": "通知對象條件 · {step}",
+          "dialogTitleShared": "通知對象條件 · {step}(共用流程)",
+          "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);通知對象 = 送出時這個欄位選的人。"
+        }
+      }
     },
     "blocked": {
       "title": "阻擋清單",
@@ -2677,6 +2732,13 @@
       "error": "錯誤",
       "warning": "警告",
       "serverFailed": "完整檢查沒有跑完({reason}),下面只列即時檢查的結果。"
+    },
+    "flow": {
+      "title": "整個流程",
+      "region": "整個流程的設定",
+      "ccTitle": "整個流程的知會對象",
+      "ccHint": "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
+      "issues": "整個流程的問題"
     }
   },
   "userPicker": {

@@ -2513,7 +2513,8 @@
       "viewingSelectHint": "Click a step or merge node on the flow chart to see its settings (read-only).",
       "viewingCanvas": "Flow chart of v{version}",
       "viewingProperties": "Properties (read-only)",
-      "closeViewing": "Close"
+      "closeViewing": "Close",
+      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft."
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "A fork needs a review step before it: delete or move the whole fork first.",
@@ -2549,7 +2550,6 @@
         "all": "Everyone must approve; one rejection rejects."
       },
       "allowReturn": "Allow returning for changes",
-      "skipWhen": "Skip condition",
       "skipNeedsCheckForm": "Select the check form above first: skip condition fields come from it.",
       "actions": "Step actions",
       "insertAfter": "Add a step after",
@@ -2561,9 +2561,42 @@
       "moveTo": "Move to branch",
       "moveToPlaceholder": "Choose a branch",
       "needsCheckForm": "Select a check form first",
-      "skipWhenUnset": "Not set",
       "checkFormLoading": "Loading the check form…",
-      "noUsableFields": "This form has no usable fields"
+      "noUsableFields": "This form has no usable fields",
+      "skip": {
+        "title": "Skip this step (when any item matches)",
+        "orgs": "Applicant belongs to these organizations",
+        "orgsPick": "Specific organizations",
+        "tenant": "Top-level organization",
+        "includeDescendants": "Include sub-organizations",
+        "orgsHint": "Checks all organizations the applicant belongs to, not just the current one.",
+        "sharedOrgsHint": "Shared workflows can only choose the top-level organization.",
+        "condition": "Matches condition"
+      },
+      "autoApprove": {
+        "title": "Auto-approve",
+        "applicant": "When the applicant is a reviewer of this step",
+        "priorApprover": "When the reviewer already approved an earlier step",
+        "normal": "Review as usual",
+        "auto": "Auto-approve",
+        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the project's pre-approval check; if it fails, they review as usual."
+      },
+      "overdue": {
+        "title": "Overdue reminders",
+        "enabled": "Turn on overdue reminders",
+        "over": "After",
+        "reviewerHours": "Hours before reminding the reviewer",
+        "reviewerSuffix": "hours unhandled → remind the reviewer",
+        "audienceHours": "Hours before notifying the reminder recipients",
+        "audienceSuffix": "hours → also notify the reminder recipients",
+        "hint": "Reminders only; nothing is approved or rejected automatically. Counted in calendar hours (nights and holidays included) from when the task was assigned to the current reviewer.",
+        "invalid": "Hours must be positive whole numbers, and the recipients' hours must be greater than the reviewer's."
+      },
+      "cc": {
+        "title": "CC",
+        "hint": "CC recipients are notified when this step passes or is skipped (no review needed; they can view the document read-only). To also tell them the final outcome (completed, rejected, voided), add them to the whole flow's CC recipients.",
+        "none": "No CC"
+      }
     },
     "join": {
       "region": "Join node \"{name}\"",
@@ -2589,8 +2622,6 @@
       "warning": "Warning"
     },
     "assignee": {
-      "region": "Reviewers",
-      "kind": "Reviewer source",
       "kinds": {
         "audience": "People condition",
         "field": "Form field",
@@ -2599,7 +2630,6 @@
       "sharedHint": "Shared workflows are used by every tenant, so conditions can only use \"Permission\" and organization sources (the document's organization, an organization field on the form, the top-level organization).",
       "field": "Field",
       "fieldUnset": "Not selected",
-      "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the reviewer is whoever that field selects on submission.",
       "level": "Level",
       "levelHint": "Searched upward from the submission's organization; level 1 = the nearest managers.",
       "levelOption": "Level {level}",
@@ -2608,17 +2638,42 @@
       "fieldNoChoices": "The check form has no “Reference (user)” field. Add a reference field whose data source is Users in the form designer, then publish it.",
       "fieldOtherForm": "This step points to the form “{form}”; choosing a field switches it to the check form's field.",
       "noCheckFormReadonly": "This version has no check form",
-      "audienceTitle": "Reviewers",
-      "audienceRegion": "Reviewer condition",
       "audienceEmpty": "No condition yet",
       "audienceEdit": "Edit condition",
-      "dialogTitle": "Reviewer condition · {step}",
-      "dialogTitleShared": "Reviewer condition · {step} (shared workflow)",
       "dialogCancel": "Cancel",
       "dialogApply": "Apply",
       "orgSubmission": "Document's organization",
       "orgTenant": "Top-level organization",
-      "orgFormField": "Form field: {field}"
+      "orgFormField": "Form field: {field}",
+      "purposes": {
+        "approver": {
+          "kind": "Reviewer source",
+          "region": "Reviewers",
+          "audienceTitle": "Reviewers",
+          "audienceRegion": "Reviewer condition",
+          "dialogTitle": "Reviewer condition · {step}",
+          "dialogTitleShared": "Reviewer condition · {step} (shared workflow)",
+          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the reviewer is whoever that field selects on submission."
+        },
+        "cc": {
+          "kind": "CC recipients",
+          "region": "CC recipients",
+          "audienceTitle": "CC recipients",
+          "audienceRegion": "CC recipient condition",
+          "dialogTitle": "CC recipient condition · {step}",
+          "dialogTitleShared": "CC recipient condition · {step} (shared workflow)",
+          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the CC recipient is whoever that field selects on submission."
+        },
+        "overdue": {
+          "kind": "Reminder recipients",
+          "region": "Reminder recipients",
+          "audienceTitle": "Reminder recipients",
+          "audienceRegion": "Reminder recipient condition",
+          "dialogTitle": "Reminder recipient condition · {step}",
+          "dialogTitleShared": "Reminder recipient condition · {step} (shared workflow)",
+          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the recipient is whoever that field selects on submission."
+        }
+      }
     },
     "blocked": {
       "title": "Blocked list",
@@ -2677,6 +2732,13 @@
       "error": "Error",
       "warning": "Warning",
       "serverFailed": "The full check did not finish ({reason}); only the live check results are listed."
+    },
+    "flow": {
+      "title": "Whole flow",
+      "region": "Whole-flow settings",
+      "ccTitle": "Whole flow's CC recipients",
+      "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
+      "issues": "Whole-flow issues"
     }
   },
   "userPicker": {
