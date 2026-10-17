@@ -109,7 +109,8 @@ test("劇本 18:root 建表單、設計、發布、分派;員工填寫送出,列
   await clickAndWaitForOperation(
     page,
     pageArea(page).getByRole("button", { name: "送出" }),
-    "SubmitFormSubmission",
+    // 新增頁還沒存過草稿:建立與送出是同一個請求(useFormDraft 的 createAndSubmit)
+    "CreateAndSubmitFormSubmission",
   );
 
   // 送出後到詳情頁:標題 = 摘要槽(填的值)、值看得到;狀態在「修訂紀錄」跳窗裡(已完成)

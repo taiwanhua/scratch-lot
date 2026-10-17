@@ -21,7 +21,7 @@ describe("目前的專案設定符合公開契約", () => {
     expect(projectPublic.slug).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   });
 
-  it("六把 admin 儲存鍵都以目前的 slug 開頭,用途後綴固定", () => {
+  it("七把 admin 儲存鍵都以目前的 slug 開頭,用途後綴固定", () => {
     const { slug } = projectPublic;
 
     expect(createAdminStorageKeys(slug)).toEqual({
@@ -31,6 +31,7 @@ describe("目前的專案設定符合公開契約", () => {
       routeTabsPrefix: `${slug}-admin-route-tabs`,
       sessionChannel: `${slug}-admin-session`,
       sideNav: `${slug}-admin-sidenav`,
+      sectionsPrefix: `${slug}-admin-sections`,
     });
   });
 

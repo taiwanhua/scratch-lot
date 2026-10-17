@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { z } from "zod";
 
 import {
   type RolesQueryVariables,
@@ -9,8 +10,10 @@ import {
   useRolesQuery,
 } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import { ROLE_MANAGER_PERMISSIONS } from "./role-manager-permissions";
 import {
@@ -21,6 +24,17 @@ import {
   type RoleRow,
 } from "./role-manager-types";
 import { useOwnerOrgOptions } from "./useOwnerOrgOptions";
+
+/**
+ * 左清單的篩選存在網址 `?list=`(REACT-14):搜尋、擁有組織(`""` = 全部)、頁碼;選中的角色在 `?detail=<id>`。
+ */
+const listSchema = z
+  .object({
+    keyword: z.string().default(""),
+    ownerOrgId: z.string().default(""),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ keyword: "", ownerOrgId: "", page: 1 });
 
 /**
  * 角色管理頁的資料層:清單、搜尋、分頁、選中的角色與權限判斷(ADR-0011「頁內功能」)。
@@ -44,11 +58,10 @@ export const useRoleManagerData = () => {
     canDelete: hasPermission(ROLE_MANAGER_PERMISSIONS.delete),
   };
 
-  const [keyword, setKeywordValue] = useState("");
-  /** 擁有組織篩選;`""` = 全部(不送 `ownerOrgId`)。與搜尋框並存、兩者疊加。 */
-  const [ownerOrgId, setOwnerOrgIdValue] = useState("");
-  const [page, setPage] = useState(1);
-  const [pickedRoleId, setPickedRoleId] = useState<string | null>(null);
+  /** 擁有組織篩選 `ownerOrgId`:`""` = 全部(不送 `ownerOrgId`)。與搜尋框並存、兩者疊加。 */
+  const [list, setList] = useUrlState("list", listSchema);
+  const { keyword, ownerOrgId, page } = list;
+  const [pickedRoleId, setPickedRoleId] = useUrlSelectedId();
 
   /** 下拉的候選 = 操作者的管理範圍(與新增角色的「擁有組織」同一份,#246 的 3)。 */
   const ownerOrgs = useOwnerOrgOptions();
@@ -75,14 +88,15 @@ export const useRoleManagerData = () => {
 
   /** 換關鍵字回到第一頁(否則會停在一個不存在的頁碼上看到空清單)。 */
   const setKeyword = (value: string) => {
-    setKeywordValue(value);
-    setPage(1);
+    setList((current) => ({ ...current, keyword: value, page: 1 }));
   };
 
   /** 換擁有組織同理回到第一頁。 */
   const setOwnerOrgId = (value: string) => {
-    setOwnerOrgIdValue(value);
-    setPage(1);
+    setList((current) => ({ ...current, ownerOrgId: value, page: 1 }));
+  };
+  const setPage = (value: number) => {
+    setList((current) => ({ ...current, page: value }));
   };
 
   /** 寫入成功後精準失效(DATA-02 / 04):清單 + 被改到那筆角色的矩陣與持有人清單。 */

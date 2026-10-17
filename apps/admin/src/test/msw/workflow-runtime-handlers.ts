@@ -3,6 +3,7 @@ import { HttpResponse } from "msw";
 import {
   type AddStepAssigneeMutationVariables,
   type ApplicableFormsQuery,
+  type BatchApproveTasksMutationVariables,
   BlockedInstancesFilter,
   type BlockedInstancesQueryVariables,
   type DecideTaskMutationVariables,
@@ -10,6 +11,7 @@ import {
   type MyApplicationsQueryVariables,
   type MyTasksQueryVariables,
   type ReassignTaskMutationVariables,
+  WorkflowBatchApproveFailure,
   WorkflowDecideResult,
   WorkflowDecision,
   type WorkflowInstanceFieldsFragment,
@@ -23,7 +25,7 @@ import { api } from "./server";
 import { type ApplicationRow, STAMP } from "./workflow-fixtures";
 
 export type WorkflowRuntimeOperation =
-  "DecideTask" | "ReassignTask" | "RetryAdvanceInstance";
+  "DecideTask" | "BatchApproveTasks" | "ReassignTask" | "RetryAdvanceInstance";
 
 export interface WorkflowRuntimeWorldOptions {
   /** 登入者的 id(`myTasks` / 實例上的 `myTasks` 以它為準);預設 `user-1`(authWorld 的測試使用者) */
@@ -40,6 +42,8 @@ export interface WorkflowRuntimeWorldOptions {
   };
   /** `decideTask` 回 `STEP_CLOSED`(此關已結束或任務已變更),任務不動 */
   closedTaskIds?: string[];
+  /** 批次核准時被專案守門擋下的任務:任務 id → 專案錯誤碼(其他筆照常核准) */
+  blockedTaskReasons?: Record<string, string>;
   failures?: Partial<Record<WorkflowRuntimeOperation, FormFailure>>;
   /** 直接指定 `applyCenterCounts` 的回傳(驗 `99+` 這種大數字);缺席時由任務與申請的狀態算 */
   counts?: { myTasks: number; myApplications: number };
@@ -49,6 +53,7 @@ export interface WorkflowRuntimeWorld {
   handlers: Parameters<typeof import("./server").server.use>;
   inputs: {
     decide: DecideTaskMutationVariables["input"][];
+    batchApprove: BatchApproveTasksMutationVariables["input"][];
     reassign: ReassignTaskMutationVariables["input"][];
     addAssignee: AddStepAssigneeMutationVariables["input"][];
     retry: string[];
@@ -103,6 +108,7 @@ export const workflowRuntimeWorld = (
   const failures = options.failures ?? {};
   const inputs: WorkflowRuntimeWorld["inputs"] = {
     decide: [],
+    batchApprove: [],
     reassign: [],
     addAssignee: [],
     retry: [],
@@ -128,6 +134,29 @@ export const workflowRuntimeWorld = (
     ),
   });
   const findInstance = (id: string) => instances.find((item) => item.id === id);
+  /** 決定被接受:任務改狀態、決定記進實例那一關。 */
+  const applyDecision = (
+    task: WorkflowTaskFieldsFragment,
+    decision: WorkflowDecision,
+    comment: string | null,
+  ) => {
+    Object.assign(task, {
+      status: TASK_STATUS_OF[decision],
+      decidedAt: STAMP,
+      comment,
+      editVersion: task.editVersion + 1,
+    });
+    const step = findInstance(task.instanceId)?.steps.find(
+      (item) => item.stepKey === task.stepKey,
+    );
+    step?.decisions.push({
+      taskKey: task.taskKey,
+      user: task.assignee,
+      decision: DECISION_VALUE_OF[decision],
+      comment,
+      at: STAMP,
+    });
+  };
   let countsCalls = 0;
   /** 同 api 的條件:派給我的待處理任務、我的審核中 / 被退回的申請。 */
   const countsOf = () =>
@@ -179,6 +208,16 @@ export const workflowRuntimeWorld = (
       countsCalls += 1;
       return HttpResponse.json({ data: { applyCenterCounts: countsOf() } });
     }),
+    // 側欄計數登記制:申請中心那一筆 = 待我處理的任務數(api 只回看得到的模組;這裡的登入者都看得到)
+    api.query("SidebarBadges", () =>
+      HttpResponse.json({
+        data: {
+          sidebarBadges: [
+            { moduleKey: "apply-center", count: countsOf().myTasks },
+          ],
+        },
+      }),
+    ),
     api.query("WorkflowInstance", ({ variables }) => {
       const instance = findInstance((variables as { id: string }).id);
       return instance === undefined
@@ -205,24 +244,56 @@ export const workflowRuntimeWorld = (
           },
         });
       }
-      Object.assign(task, {
-        status: TASK_STATUS_OF[input.decision],
-        decidedAt: STAMP,
-        comment: input.comment ?? null,
-        editVersion: task.editVersion + 1,
-      });
-      const step = findInstance(task.instanceId)?.steps.find(
-        (item) => item.stepKey === task.stepKey,
-      );
-      step?.decisions.push({
-        taskKey: task.taskKey,
-        user: task.assignee,
-        decision: DECISION_VALUE_OF[input.decision],
-        comment: input.comment ?? null,
-        at: STAMP,
-      });
+      applyDecision(task, input.decision, input.comment ?? null);
       return HttpResponse.json({
         data: { decideTask: { task, result: WorkflowDecideResult.Accepted } },
+      });
+    }),
+    // 同 api:去重、逐筆各自處理(已不在手上 / 被守門擋下 / 核准),順序同輸入
+    api.mutation("BatchApproveTasks", ({ variables }) => {
+      const { input } = variables as BatchApproveTasksMutationVariables;
+      inputs.batchApprove.push(input);
+      const failure = fail("BatchApproveTasks");
+      if (failure !== null) {
+        return failure;
+      }
+      const comment = input.comment?.trim() ?? "";
+      const results = [...new Set(input.taskIds)].map((taskId) => {
+        const task = tasks.find(
+          (item) =>
+            item.id === taskId &&
+            item.assignee.id === viewerId &&
+            item.status === WorkflowTaskStatus.Pending,
+        );
+        const projectReason = options.blockedTaskReasons?.[taskId];
+        if (
+          task === undefined ||
+          options.closedTaskIds?.includes(taskId) === true
+        ) {
+          return {
+            taskId,
+            ok: false,
+            reason: WorkflowBatchApproveFailure.NotYours,
+            projectReason: null,
+          };
+        }
+        if (projectReason !== undefined) {
+          return {
+            taskId,
+            ok: false,
+            reason: WorkflowBatchApproveFailure.Blocked,
+            projectReason,
+          };
+        }
+        applyDecision(
+          task,
+          WorkflowDecision.Approve,
+          comment === "" ? null : comment,
+        );
+        return { taskId, ok: true, reason: null, projectReason: null };
+      });
+      return HttpResponse.json({
+        data: { batchApproveTasks: { results } },
       });
     }),
     api.query("BlockedInstances", ({ variables }) => {
@@ -279,6 +350,7 @@ export const workflowRuntimeWorld = (
         assignee: { id: input.userId, name: input.userId },
         previousAssignees: [],
         assigneeState: "active",
+        delegators: [],
         taskId: null,
       });
       if (step !== undefined) {

@@ -15,6 +15,8 @@ export const DATA_SCOPE_KEY = `${SYSTEM_GROUP_KEY}.data-scope`;
 export const FORMS_KEY = `${SYSTEM_GROUP_KEY}.forms`;
 export const WORKFLOWS_KEY = `${SYSTEM_GROUP_KEY}.workflows`;
 export const WORKFLOWS_BLOCKED_PAGE_KEY = `${WORKFLOWS_KEY}.blocked-page`;
+export const NOTIFICATION_SETTINGS_KEY = `${SYSTEM_GROUP_KEY}.notification-settings`;
+export const PRINTERS_KEY = `${SYSTEM_GROUP_KEY}.printers`;
 
 /**
  * 治理模組(CONTEXT.md「治理模組」):管平台結構本身,隨底座出貨。
@@ -158,6 +160,29 @@ export const systemModules: ModuleSeedDeclaration = {
       parentKey: WORKFLOWS_KEY,
       order: 1,
       route: "blocked-page",
+    },
+    {
+      // 通知設定(docs/modules/notification-settings.md):租戶管理員調整負責人提醒的收件人;
+      // 側欄順序固定:既有 8 項 → 通知設定 → 印表機管理(底座規格第 5 章)
+      key: NOTIFICATION_SETTINGS_KEY,
+      name: "通知設定",
+      sidebarType: "link",
+      parentKey: SYSTEM_GROUP_KEY,
+      order: 9,
+      route: "notification-settings",
+      icon: "notifications",
+      description: "負責人提醒類型的收件人(人員條件);組織範圍由通知類型宣告",
+    },
+    {
+      // 印表機管理(docs/modules/printers.md):印表機、代理程式(配對 / 下載安裝檔)、列印紀錄
+      key: PRINTERS_KEY,
+      name: "印表機管理",
+      sidebarType: "link",
+      parentKey: SYSTEM_GROUP_KEY,
+      order: 10,
+      route: "printers",
+      icon: "print",
+      description: "店內收據機:印表機、代理程式(配對與安裝檔下載)與列印紀錄",
     },
   ],
   // 個別權限(綁「按鈕 / 欄位所在的那一頁」,ADR-0004);正本 = 兩份模組文件的權限表
@@ -488,6 +513,27 @@ export const systemModules: ModuleSeedDeclaration = {
       description:
         "刪除表單發布產生、已退役的欄位級權限 + API(三層檢查:草稿仍用到擋下、只剩已完成要確認、沒人用直接刪)",
     },
+    // 印表機管理(docs/modules/printers.md 權限表)
+    {
+      key: permissionKey(PRINTERS_KEY, "view"),
+      moduleKey: PRINTERS_KEY,
+      name: "檢視",
+      description: "看印表機、代理程式、列印紀錄三個分頁(唯讀)",
+    },
+    {
+      key: permissionKey(PRINTERS_KEY, "create"),
+      moduleKey: PRINTERS_KEY,
+      name: "新增",
+      description:
+        "新增代理程式(產生配對碼)、新增印表機、下載代理程式安裝檔 + API",
+    },
+    {
+      key: permissionKey(PRINTERS_KEY, "edit"),
+      moduleKey: PRINTERS_KEY,
+      name: "編輯",
+      description:
+        "編輯印表機、停用印表機 / 代理程式、重新配對、測試列印 + API",
+    },
     // 資料範圍(docs/modules/data-scope.md 權限表;模組本身 isRootOnly)
     {
       key: permissionKey(DATA_SCOPE_KEY, "view"),
@@ -501,6 +547,20 @@ export const systemModules: ModuleSeedDeclaration = {
       name: "編輯",
       description:
         "規則編輯器「儲存」+ API(整份 data_scope_rules 覆蓋;儲存即作廢記憶體快取)",
+    },
+    // 通知設定(docs/modules/notification-settings.md 權限表)
+    {
+      key: permissionKey(NOTIFICATION_SETTINGS_KEY, "view"),
+      moduleKey: NOTIFICATION_SETTINGS_KEY,
+      name: "檢視",
+      description: "看負責人提醒類型、組織範圍與目前的收件人條件",
+    },
+    {
+      key: permissionKey(NOTIFICATION_SETTINGS_KEY, "edit"),
+      moduleKey: NOTIFICATION_SETTINGS_KEY,
+      name: "編輯",
+      description:
+        "編輯收件人條件、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶)",
     },
   ],
 };

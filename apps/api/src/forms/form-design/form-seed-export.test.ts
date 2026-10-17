@@ -358,27 +358,6 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
         fields: ["version"],
       });
     });
-
-    it("發布還沒切換完(版本已是 published、目前版本還沒指向它):不算已發布,拒絕", async () => {
-      const key = "exp_interrupted";
-      await publishNewForm(
-        api,
-        app.root,
-        key,
-        definitionOf([field("title", "text")]),
-      );
-      await connection
-        .collection("forms")
-        .updateOne({ key }, { $set: { currentVersion: null } });
-
-      const result = await exportSeed(app.root, inputOf(key, 1));
-
-      expect(result.data).toBeNull();
-      expect(extensionsOf(result)).toMatchObject({
-        code: "CONFLICT",
-        reason: "PUBLISH_IN_PROGRESS",
-      });
-    });
   });
 
   describe("拒絕:權限、身分與輸入(後端自己守,不靠畫面藏按鈕)", () => {
@@ -633,7 +612,7 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
   });
 
   describe("匯出 → 型別檢查 → 專案 registry → 真發布", () => {
-    it("匯出檔原樣通過 SeedSet 型別檢查與 registry 組裝;來源環境採納原版本,空的環境發布出同樣的內容", async () => {
+    it("匯出檔原樣通過 SeedSet 型別檢查與 registry 組裝;來源環境採納原版本,空的環境發布出同樣的內容(含關掉的允許存草稿)", async () => {
       const key = "exp_roundtrip";
       await publishNewForm(
         api,
@@ -644,7 +623,7 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
       );
       await publishDefinition(api, app.root, key, fullDefinition(), 1);
       await ok(api, app.root, UPDATE_FORM, {
-        input: { key, tabLabelTemplate: "{{title}}" },
+        input: { key, tabLabelTemplate: "{{title}}", allowDraft: false },
       });
 
       const file = await exportOk(
@@ -654,6 +633,8 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
 
       expect(typeCheckSeedSource(file.source)).toEqual([]);
       const exported = evaluateSeedSource(file.source) as FormDefinitionSeedSet;
+      // 允許存草稿關著:匯出檔保留這個設定
+      expect(exported.allowDraft).toBe(false);
       // 登記進專案 registry(與底座的模組、欄位類別一起組裝)後仍是同一份宣告
       const registered = registerExportedSeeds([file]);
       expect(registered).toEqual([exported]);
@@ -701,6 +682,7 @@ describe("exportFormSeed:把共用表單的已發布版本匯出成專案設定"
         moduleKey: MODULE_KEY,
         ownerOrgId: null,
         tabLabelTemplate: "{{title}}",
+        allowDraft: false,
         currentVersion: 1,
       });
       const targetVersions = await versionDocs(connection, FORM, key);

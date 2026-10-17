@@ -26,7 +26,7 @@ import {
   loadStorageConfig,
 } from "./storage.config";
 import { createStorageService } from "./storage.module";
-import { StorageService } from "./storage.service";
+import { StorageService, isReleaseObjectPath } from "./storage.service";
 import {
   MAX_ATTACHMENT_UPLOAD_BYTES,
   MAX_IMAGE_UPLOAD_BYTES,
@@ -93,6 +93,7 @@ function fakeBucket(): {
         getSignedUrl,
         delete: deleteFile,
         copy: () => Promise.resolve([]),
+        download: () => Promise.resolve([Buffer.from("{}")]),
       };
     },
   };
@@ -394,6 +395,37 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
       ["空字串", ""],
     ])("%s 不是(%s)", (_case, path) => {
       expect(isOwnedUploadPath(path)).toBe(false);
+    });
+  });
+
+  describe("發布檔 isReleaseObjectPath / readReleaseObject(代理程式安裝檔)", () => {
+    it("只收 print-agent/ 前綴底下的路徑", () => {
+      expect(isReleaseObjectPath("print-agent/manifest.json")).toBe(true);
+      expect(
+        isReleaseObjectPath("print-agent/1.2.0/print-agent-windows-x64.zip"),
+      ).toBe(true);
+      expect(isReleaseObjectPath("org-logo/abc.png")).toBe(false);
+      expect(isReleaseObjectPath("print-agentx/manifest.json")).toBe(false);
+      expect(isReleaseObjectPath("print-agent")).toBe(false);
+    });
+
+    it("拒絕 .. / . 與奇怪字元", () => {
+      expect(isReleaseObjectPath("print-agent/../org-logo/a.png")).toBe(false);
+      expect(isReleaseObjectPath("print-agent/./manifest.json")).toBe(false);
+      expect(isReleaseObjectPath("print-agent/a b.zip")).toBe(false);
+      expect(isReleaseObjectPath("/print-agent/manifest.json")).toBe(false);
+    });
+
+    it("前綴不對 → 不讀、不簽(回 null)", async () => {
+      const storage = recordingWith();
+      storage.putObject("org-logo/secret.png", "x");
+      await expect(
+        storage.readReleaseObject("org-logo/secret.png"),
+      ).resolves.toBeNull();
+      await expect(
+        storage.releaseDownloadUrlOf("org-logo/secret.png", 1000),
+      ).resolves.toBeNull();
+      expect(storage.signed).toHaveLength(0);
     });
   });
 

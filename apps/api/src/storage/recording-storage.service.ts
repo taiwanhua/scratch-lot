@@ -23,6 +23,23 @@ export class RecordingStorageService extends StorageService {
   readonly deleted: string[] = [];
   /** 被複製的物件(`複製為新單` 的附件;只記下來供測試斷言)。 */
   readonly copied: { from: string; to: string }[] = [];
+  /**
+   * 「bucket 上已經有」的物件(發布檔,如代理程式的 `manifest.json`):沒有真的 bucket,
+   * 測試以 `putObject` 放進來,`readReleaseObject` 從這裡讀。
+   */
+  private readonly objects = new Map<string, Buffer>();
+
+  /** 測試用:放一個物件到假的 bucket(`null` = 拿掉)。 */
+  putObject(objectPath: string, content: Buffer | string | null): void {
+    if (content === null) {
+      this.objects.delete(objectPath);
+      return;
+    }
+    this.objects.set(
+      objectPath,
+      typeof content === "string" ? Buffer.from(content, "utf8") : content,
+    );
+  }
 
   protected override signUploadUrl({
     objectPath,
@@ -59,6 +76,12 @@ export class RecordingStorageService extends StorageService {
     this.deleted.push(objectPath);
     this.logger.log(`[記錄用 adapter,未真的刪除] delete ${objectPath}`);
     return Promise.resolve();
+  }
+
+  protected override downloadObject(
+    objectPath: string,
+  ): Promise<Buffer | null> {
+    return Promise.resolve(this.objects.get(objectPath) ?? null);
   }
 
   protected override duplicateObject(from: string, to: string): Promise<void> {

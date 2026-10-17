@@ -3,8 +3,8 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { type Plugin, defineConfig } from "vite";
 
-import { colorModeInitTag } from "./src/lib/color-mode-init";
-import { projectHtmlTransform } from "./src/lib/project-html";
+import { colorModeInitTag } from "./src/lib/base/color-mode-init";
+import { projectHtmlTransform } from "./src/lib/base/project-html";
 
 /**
  * mock 開發模式的 Vite 設定(`pnpm --filter @repo/admin dev:mock`)。
@@ -39,13 +39,13 @@ const mockHtmlEntry: Plugin = {
   },
 };
 
-/** 首幀外觀腳本注入 `<head>`(見 `src/lib/color-mode-init.ts`)。 */
+/** 首幀外觀腳本注入 `<head>`(見 `src/lib/base/color-mode-init.ts`)。 */
 const colorModeInit = {
   name: "admin:color-mode-init",
   transformIndexHtml: () => [colorModeInitTag()],
 };
 
-/** `<title>` 寫入專案設定的頁面標題,後面加(mock)(見 `src/lib/project-html.ts`)。 */
+/** `<title>` 寫入專案設定的頁面標題,後面加(mock)(見 `src/lib/base/project-html.ts`)。 */
 const projectHtml = {
   name: "admin:project-html",
   transformIndexHtml: projectHtmlTransform("mock"),
@@ -70,7 +70,7 @@ export default defineConfig({
   // 與正式 dev server 分開的預打包快取(mock 多了 msw 一包,共用會互相失效)
   cacheDir: "node_modules/.vite-mock",
   define: {
-    // 讓 `src/lib/graphql.ts` 的 GRAPHQL_ENDPOINT 指向假 api(DATA-05 的環境變數這一層)
+    // 讓 `src/lib/base/graphql.ts` 的 GRAPHQL_ENDPOINT 指向假 api(DATA-05 的環境變數這一層)
     "import.meta.env.VITE_GRAPHQL_ENDPOINT": JSON.stringify(
       MOCK_GRAPHQL_ENDPOINT,
     ),

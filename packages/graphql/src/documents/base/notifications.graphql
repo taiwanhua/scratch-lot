@@ -1,0 +1,108 @@
+# 通知(底座規格第 5 章;api `apps/api/src/notifications/`):我的通知只讀寫自己的,所有登入者都能用;
+# 通知設定要 system.notification-settings.view / edit。欄位語意見 docs/modules/notification-settings.md「api 介面」。
+
+fragment NotificationItem on Notification {
+  id
+  type
+  title
+  body
+  refType
+  refId
+  link
+  readAt
+  createdAt
+}
+
+# MyNotificationsInput: { unreadOnly?, page?, pageSize? }(依時間新到舊;unreadOnly = 只列未讀)
+query MyNotifications($input: MyNotificationsInput!) {
+  myNotifications(input: $input) {
+    items {
+      ...NotificationItem
+    }
+    page
+    pageSize
+    totalCount
+    unreadCount
+  }
+}
+
+query MyNotificationUnreadCount {
+  myNotificationUnreadCount {
+    count
+  }
+}
+
+# MarkNotificationsReadInput: { ids }(只動自己的未讀通知;別人的或不存在的 id 略過)
+mutation MarkNotificationsRead($input: MarkNotificationsReadInput!) {
+  markNotificationsRead(input: $input) {
+    unreadCount
+  }
+}
+
+mutation MarkAllNotificationsRead {
+  markAllNotificationsRead {
+    unreadCount
+  }
+}
+
+# 個人設定「偏好」分頁的管道開關;開關本身用 UpdateMyPreferences 寫 { [preferenceKey]: true | false | null }
+# canDisable = false 的管道送 false → VALIDATION_FAILED(reason INVALID_VALUE)
+query MyNotificationPreferences {
+  myNotificationPreferences {
+    items {
+      type
+      name
+      channels {
+        channel
+        preferenceKey
+        enabled
+        canDisable
+      }
+    }
+  }
+}
+
+fragment NotificationSettingItem on NotificationSetting {
+  type
+  name
+  orgScope {
+    ref
+    range
+  }
+  audience
+  isDefault
+  defaultAudience
+  updatedAt
+  updatedBy
+}
+
+# NotificationSettingsInput: { keyword?, page?, pageSize? }(只列負責人提醒類型)
+query NotificationSettings($input: NotificationSettingsInput!) {
+  notificationSettings(input: $input) {
+    items {
+      ...NotificationSettingItem
+    }
+    page
+    pageSize
+    totalCount
+  }
+}
+
+# UpdateNotificationSettingInput: { type, audience }(audience 不能「所有人」、不含所屬組織欄;
+# 使用者 / 角色須屬本租戶,否則 VALIDATION_FAILED reason OUT_OF_TENANT;站在根組織 → FORBIDDEN reason TENANT_ONLY)
+mutation UpdateNotificationSetting($input: UpdateNotificationSettingInput!) {
+  updateNotificationSetting(input: $input) {
+    setting {
+      ...NotificationSettingItem
+    }
+  }
+}
+
+# ResetNotificationSettingInput: { type }(還原成類型宣告的預設人員條件)
+mutation ResetNotificationSetting($input: ResetNotificationSettingInput!) {
+  resetNotificationSetting(input: $input) {
+    setting {
+      ...NotificationSettingItem
+    }
+  }
+}

@@ -10,8 +10,9 @@ import { isDuplicateKeyError } from "../forms/forms-error";
 
 /**
  * 版本生命週期(Spec 6a §6「發布」;6b 的流程版本複用同一份,少了欄位級權限那一步):
- * 表單版本(`form_versions`)與流程版本(`workflow_versions`)共用的四步發布骨架、冪等重試與退役。
- * **不用 Mongo 交易**(ADR-0007 / ADR-0009:本機與 CI 單節點),只靠條件更新防重複、靠冪等步驟防中斷:
+ * 表單版本(`form_versions`)與流程版本(`workflow_versions`)共用的四步發布骨架與退役。
+ * 這裡的函式不自己開交易:呼叫端(`FormPublishService`、`WorkflowPublishService`、兩邊的退役)把整個動作
+ * 包在一個交易裡(ADR-0013),任一步失敗全部回復,所以交易外永遠看不到 `publishing` 或切換到一半的版本:
  *
  * 1. 檢查器(呼叫端各自跑,有錯就停)
  * 2. `lockDraft`:條件更新 `{ status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、
@@ -20,7 +21,7 @@ import { isDuplicateKeyError } from "../forms/forms-error";
  * 4. `switchToPublished`:這一版 `publishing → published` → 其餘 `published → retired` →
  *    擁有者的 `currentVersion` 指向新版(填寫 / 送出只看 `currentVersion`,最後一筆寫完前看到的仍是舊版)
  *
- * 任何一步失敗,資料就停在那一步做到一半的樣子;重試從步驟 3 起重跑,每個寫入「已是目標狀態就跳過」。
+ * `publishing` 只是交易內的搶鎖狀態(兩個發布同時搶同一份草稿,只有一個命中)。
  */
 
 /**
@@ -32,10 +33,7 @@ export type VersionSwitchCheckpoint =
 
 /** 生命週期會回的 `CONFLICT` 原因(表單與流程共用同一組語彙)。 */
 export type VersionConflictReason =
-  | "PUBLISH_IN_PROGRESS"
-  | "DRAFT_REVISION_MISMATCH"
-  | "CURRENT_VERSION_CHANGED"
-  | "NO_CURRENT_VERSION";
+  "DRAFT_REVISION_MISMATCH" | "CURRENT_VERSION_CHANGED" | "NO_CURRENT_VERSION";
 
 /**
  * 發布的內部前提(只給受管定義的安裝,`seed/`;GraphQL input 不收):
@@ -46,14 +44,6 @@ export type VersionConflictReason =
 export interface PublishInternalOptions {
   draftId?: Types.ObjectId;
   expected?: { ownerId: Types.ObjectId; currentVersion: number | null };
-}
-
-/**
- * 重試發布的內部前提(同上,只給受管定義的安裝):只接續 `versionId` 那一版;
- * 此刻中斷的是別的版本 → `PUBLISH_NOT_INTERRUPTED`,不替別人把發布做完。
- */
-export interface RetryPublishInternalOptions {
-  versionId?: Types.ObjectId;
 }
 
 /** `expected` 不符時的訊息;符合(或沒給)回 null。擁有者 = 表單 / 流程。 */
@@ -130,50 +120,9 @@ export function repositoryVersionStore<
 }
 
 /**
- * 發布中斷 = 有 `publishing` 版本,或有 `published` 版本但它不是 `currentVersion`
- * (步驟 4 的第一筆寫了、最後一筆沒寫)。有中斷時禁止開草稿 / 退役 / 再發布。回要接續完成的那一版。
- */
-export async function interruptedPublishOf<TVersion extends LifecycleVersion>(
-  config: VersionLifecycleConfig<TVersion>,
-  owner: LifecycleOwner,
-): Promise<TVersion | null> {
-  const candidates = await config.versions.findMany(
-    {
-      [config.keyField]: owner.key,
-      status: { $in: ["publishing", "published"] },
-    },
-    { sort: { version: -1 } },
-  );
-  const publishing = candidates.find(
-    (candidate) => candidate.status === "publishing",
-  );
-  if (publishing) {
-    return publishing;
-  }
-  return (
-    candidates.find(
-      (candidate) => candidate.version !== owner.currentVersion,
-    ) ?? null
-  );
-}
-
-/** 發布進行中(或中斷)→ `CONFLICT`(`PUBLISH_IN_PROGRESS`)。 */
-export async function assertNotPublishing<TVersion extends LifecycleVersion>(
-  config: VersionLifecycleConfig<TVersion>,
-  owner: LifecycleOwner,
-): Promise<void> {
-  const interrupted = await interruptedPublishOf(config, owner);
-  if (interrupted) {
-    throw config.conflict(
-      "PUBLISH_IN_PROGRESS",
-      `${owner.key} has an unfinished publish (version ${String(interrupted.version)})`,
-    );
-  }
-}
-
-/**
  * 步驟 2:搶鎖並配版號(草稿還是讀到的那一份才改;兩個發布同時來只有一個命中)。
- * 同版號被另一個發布配走(唯一索引)視同沒搶到。
+ * 同版號被另一個發布配走(唯一索引)視同沒搶到:轉成 `CONFLICT` **往外拋**,不接著寫
+ * (在交易內時整個交易隨之回復,TX-04)。
  */
 export async function lockDraftForPublish<TVersion extends LifecycleVersion>(
   config: VersionLifecycleConfig<TVersion>,
@@ -208,7 +157,7 @@ export async function lockDraftForPublish<TVersion extends LifecycleVersion>(
   return locked;
 }
 
-/** 步驟 4:三筆切換,每一筆寫入都「已是目標狀態就跳過」。 */
+/** 步驟 4:三筆切換(在呼叫端的交易內;`target` 是步驟 2 搶到鎖的那一版)。 */
 export async function switchToPublished<TVersion extends LifecycleVersion>(
   config: VersionLifecycleConfig<TVersion>,
   owner: LifecycleOwner,
@@ -272,8 +221,8 @@ export async function switchToPublished<TVersion extends LifecycleVersion>(
  * 1. `{ version: expected, status: "published" } → retired`
  * 2. 擁有者 `{ currentVersion: expected } → null`
  *
- * **冪等**:每一步「已是目標狀態」視為完成(版本已是 `retired`、`currentVersion` 已是 null),
- * 兩步之間中斷後再呼叫一次會接著做完;只有 `currentVersion` 已指向別的版本(期間有人發布了新版)才
+ * 兩步在呼叫端的同一個交易裡,任一步失敗一起回復。**冪等**:同一版再退役一次(版本已是 `retired`、
+ * `currentVersion` 已是 null)視為完成、什麼都不改;只有 `currentVersion` 已指向別的版本(期間有人發布了新版)才
  * `CURRENT_VERSION_CHANGED`。`expectedVersion` 為 null(呼叫端讀到的就沒有已發布版本)或那一版既不是
  * 已發布也不是已退役 → `NO_CURRENT_VERSION`。回這次被退役的那一版(第 1 步先前已做完則為 null)。
  */
@@ -282,7 +231,6 @@ export async function retireCurrentVersion<TVersion extends LifecycleVersion>(
   owner: LifecycleOwner,
   expectedVersion: number | null,
 ): Promise<TVersion | null> {
-  await assertNotPublishing(config, owner);
   if (expectedVersion === null) {
     throw config.conflict(
       "NO_CURRENT_VERSION",

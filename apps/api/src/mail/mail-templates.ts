@@ -4,8 +4,7 @@ import { formatMailSender } from "./mail-sender";
 import type {
   ActionEmailInput,
   MailMessage,
-  WorkflowResultEmailInput,
-  WorkflowTaskEmailInput,
+  NotificationEmailInput,
 } from "./mail.service";
 
 /*
@@ -76,68 +75,66 @@ export function buildPasswordResetEmail(input: ActionEmailInput): MailMessage {
   };
 }
 
-/** 審核任務通知(Spec 6b §7「通知信」):有新的審核任務,給審核者。內容只讀實例快照。 */
-export function buildWorkflowTaskEmail(
-  input: WorkflowTaskEmailInput,
+/**
+ * 通知信(底座規格第 5 章;通知的 email 管道):主旨與內容就是通知的標題與內容(類型範本產生,
+ * 與站內通知同一份),有連結時附上。
+ */
+export function buildNotificationEmail(
+  input: NotificationEmailInput,
 ): MailMessage {
-  const subject = input.title
-    ? `${input.formName}:${input.title}`
-    : input.formName;
+  const frame = notificationFrameOf(input.locale);
   const paragraphs = [
-    `${input.name} 您好:`,
-    `您有一筆待審核的申請:「${subject}」(關卡:${input.stepName})。請開啟以下連結查看並審核:`,
-    input.link,
-    SIGNATURE,
+    frame.greeting(input.name),
+    input.body,
+    ...(input.link === null ? [] : [frame.linkIntro, input.link]),
+    frame.signature,
   ];
   return {
-    kind: "workflow-task",
+    kind: "notification",
+    notificationType: input.notificationType,
     to: input.to,
     link: input.link,
-    subject: `【${BRAND_NAME}】待審核:${subject}`,
+    subject: `【${BRAND_NAME}】${input.title}`,
     text: paragraphs.join("\n\n"),
     html: toHtml(paragraphs, input.link),
   };
 }
 
-const RESULT_LABELS: Readonly<
-  Record<WorkflowResultEmailInput["result"], string>
-> = {
-  approved: "已核准",
-  rejected: "已駁回",
-  returned: "已退回修改",
-};
+/** 通知信外框(問候語、連結說明、署名)的語系;內文已由通知類型的範本以同一個語言產生。 */
+interface NotificationFrame {
+  greeting: (name: string) => string;
+  linkIntro: string;
+  signature: string;
+}
 
-/** 審核結果通知(核准 / 駁回 / 退回),給申請人;駁回 / 退回附理由。 */
-export function buildWorkflowResultEmail(
-  input: WorkflowResultEmailInput,
-): MailMessage {
-  const subject = input.title
-    ? `${input.formName}:${input.title}`
-    : input.formName;
-  const label = RESULT_LABELS[input.result];
-  const paragraphs = [
-    `${input.name} 您好:`,
-    `您的申請「${subject}」${label}。`,
-    ...(input.comment ? [`理由:${input.comment}`] : []),
-    "請開啟以下連結查看詳情:",
-    input.link,
-    SIGNATURE,
-  ];
-  return {
-    kind: "workflow-result",
-    to: input.to,
-    link: input.link,
-    subject: `【${BRAND_NAME}】申請${label}:${subject}`,
-    text: paragraphs.join("\n\n"),
-    html: toHtml(paragraphs, input.link),
+const NOTIFICATION_FRAMES: Readonly<Record<"zh-TW" | "en", NotificationFrame>> =
+  {
+    "zh-TW": {
+      greeting: (name) => `${name} 您好:`,
+      linkIntro: "請開啟以下連結查看:",
+      signature: SIGNATURE,
+    },
+    // 專案設定的署名只有一份(繁中),英文外框以品牌名署名
+    en: {
+      greeting: (name) => `Hi ${name},`,
+      linkIntro: "Open the link below for details:",
+      signature: BRAND_NAME,
+    },
   };
+
+/** 收件人語言 → 外框:英文(`en`、`en-US`…)用英文,其餘一律繁中。 */
+function notificationFrameOf(locale: string | null): NotificationFrame {
+  const [language] = (locale ?? "").split("-", 1);
+  return language === "en"
+    ? NOTIFICATION_FRAMES.en
+    : NOTIFICATION_FRAMES["zh-TW"];
 }
 
 /** 純文字段落轉最簡 HTML:連結那一段做成可點的 <a>,其餘逐段 <p>;內容一律跳脫。 */
-function toHtml(paragraphs: string[], link: string): string {
+function toHtml(paragraphs: string[], link: string | null): string {
   const body = paragraphs
     .map((paragraph) =>
-      paragraph === link
+      link !== null && paragraph === link
         ? `<p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>`
         : `<p>${escapeHtml(paragraph)}</p>`,
     )

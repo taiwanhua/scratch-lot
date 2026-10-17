@@ -22,7 +22,7 @@ const VISIBILITY_SUBTREE = "subtree";
  * 登入線自己讀組織樹時用的上下文:計算兩個範圍的當下還沒有範圍可用,
  * 這是唯一合法以 "all" 讀 orgs 的地方(此服務即兩個範圍的計算明文;資料層只消費結果)。
  */
-function systemOperator(actorId: Types.ObjectId): OperatorContext {
+function systemOperator(actorId: Types.ObjectId | null): OperatorContext {
   return {
     actorId,
     currentOrgId: null,
@@ -98,10 +98,12 @@ export class OperatorContextService {
         ? currentOrgId
         : (memberOrgs[0]?.id ?? null);
 
-    const [visibleOrgIds, enabledRoles] = await Promise.all([
-      this.visibleOrgIdsOf(reader, memberOrgDocuments),
-      this.enabledRolesOf(reader, userId),
-    ]);
+    // 依序讀(TX-02):B5 自動通過在推進的交易內以審核者本人的身分跑守門,也走這裡
+    const visibleOrgIds = await this.visibleOrgIdsOf(
+      reader,
+      memberOrgDocuments,
+    );
+    const enabledRoles = await this.enabledRolesOf(reader, userId);
     const managedOrgIds = await this.managedOrgIdsOf(reader, enabledRoles);
     return {
       operator: {
@@ -114,6 +116,25 @@ export class OperatorContextService {
         roleIds: enabledRoles.map((role) => role._id),
       },
       memberOrgs,
+    };
+  }
+
+  /**
+   * 系統身分(表單 / 流程掛接點的事後動作;底座規格 3.1 B1):沒有操作者、不帶任何角色,
+   * 以單據的組織為所屬組織、當前組織;可見範圍照登入線同一條規則算(根組織 → 全部;
+   * 租戶頂層開了「含下層」→ 含其整棵下層),不使用按下按鈕那個人的權限。組織不存在 → 只看得到它自己。
+   */
+  async systemOperatorOfOrg(orgId: Types.ObjectId): Promise<OperatorContext> {
+    const reader = systemOperator(null);
+    const org = await this.orgs.findById(reader, orgId);
+    return {
+      actorId: null,
+      currentOrgId: orgId,
+      visibleOrgIds:
+        org === null ? [orgId] : await this.visibleOrgIdsOf(reader, [org]),
+      managedOrgIds: [],
+      memberOrgIds: [orgId],
+      roleIds: [],
     };
   }
 

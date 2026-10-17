@@ -18,6 +18,7 @@ import type { ScenarioTenant } from "../fixtures/scenario-tenant";
 import { expect, test } from "../fixtures/test";
 import {
   MOVE_TARGET_SELECT,
+  TENANT_TOP_HINT,
   dialogWithButton,
   openEditOrgDialog,
   orgDetail,
@@ -152,13 +153,14 @@ test("劇本 17:②租戶內任何人對租戶頂層停用 / 刪除 / 搬移 →
   // —— 「租戶內任何人」不只擁有者,連權限齊全的其他人也一樣動不了頂層
   await grantMemberGovernanceRole(tenant, "租戶治理", tenantOrgId);
 
-  // 畫面(+tenant):選租戶頂層 → 停用 / 刪除按鈕在但停用;編輯彈窗的「上層組織」下拉停用
+  // 畫面(+tenant):選租戶頂層 → 停用 / 刪除按鈕在但停用;編輯彈窗沒有「上層組織」下拉、改放租戶頂層提示
   await signIn(page, tenantAdmin.account, tenantAdmin.password);
   await page.goto(ORG_MANAGER_ROUTE);
   const dialog = await openEditOrgDialog(page, tenantOrgName);
   await expect(
     dialog.getByRole("combobox", { name: MOVE_TARGET_SELECT }),
-  ).toHaveAttribute("aria-disabled", "true");
+  ).toHaveCount(0);
+  await expect(dialog.getByText(TENANT_TOP_HINT)).toBeVisible();
   await dialog.getByRole("button", { name: "取消", exact: true }).click();
   await expect(dialog).toBeHidden();
   const detail = orgDetail(page);

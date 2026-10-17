@@ -15,12 +15,12 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 import {
   type WorkflowError,
   workflowErrorOf,
-} from "@/lib/workflow/workflow-errors";
+} from "@/lib/base/workflow/workflow-errors";
 
 export interface WorkflowNameDialogProps {
   /** 改名稱時給;建立時省略(多一個 key 欄,建立後不可改) */

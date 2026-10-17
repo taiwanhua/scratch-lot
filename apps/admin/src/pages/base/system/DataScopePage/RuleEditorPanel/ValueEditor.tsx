@@ -7,15 +7,18 @@ import { DatePicker } from "@repo/ui/date-picker";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import { useTenantTimezone } from "@/hooks/useTenantTimezone";
+import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import {
   type ConditionDraft,
   DYNAMIC_REFS_BY_TYPE,
   type DataScopeDynamicRef,
   type DataScopeFieldLike,
   type DataScopeValueDraft,
-} from "@/lib/data-scope-rule";
-import { localDayInstantOf, localDayTextOf } from "@/lib/form-engine/local-day";
+} from "@/lib/base/data-scope-rule";
+import {
+  localDayInstantOf,
+  localDayTextOf,
+} from "@/lib/base/form-engine/local-day";
 
 import type { DataScopeEditorEnv } from "../data-scope-types";
 

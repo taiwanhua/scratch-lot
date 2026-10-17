@@ -1,0 +1,247 @@
+# 印表機管理與列印(底座規格第 6 章;正本 docs/modules/printers.md「api 介面」)。
+# 欄位語意:
+#   PrintAgent.online — 啟用且 2 分鐘內看到過;updateAvailable — 版本比安裝檔最新版舊(讀不到 manifest 時 false)
+#   PrintAgent.paired — 有有效金鑰;pairingExpiresAt — 等待中的配對碼到期時間(配對碼只在產生時回一次)
+#   Printer.available — 列印按鈕上可選(印表機與代理程式都啟用;離線仍可選,送出時立即失敗)
+#   PrintJob.requestedBy — 查不到使用者時 null;error 只在 FAILED 時有值
+
+fragment PrintAgentFields on PrintAgent {
+  id
+  orgId
+  name
+  paired
+  pairingExpiresAt
+  online
+  lastSeenAt
+  version
+  updateAvailable
+  enabled
+  createdAt
+}
+
+fragment PrinterFields on Printer {
+  id
+  orgId
+  agentId
+  name
+  host
+  port
+  paperWidth
+  isDefault
+  enabled
+  status
+  statusAt
+  agentOnline
+  available
+}
+
+fragment PrintJobFields on PrintJob {
+  id
+  orgId
+  printerId
+  documentType
+  refType
+  refId
+  documentName
+  status
+  error
+  isReprint
+  printNo
+  reprintReason
+  reprintNote
+  requestedBy {
+    id
+    name
+  }
+  createdAt
+  sentAt
+  printedAt
+}
+
+# ---- 代理程式(system.printers.view / create / edit)----
+
+# PrintAgentsInput: { orgId?, includeDisabled?(預設 false = 只列啟用中的), page?, pageSize? }
+query PrintAgents($input: PrintAgentsInput!) {
+  printAgents(input: $input) {
+    items {
+      ...PrintAgentFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+# CreatePrintAgentInput: { orgId, name }
+# 回 8 碼配對碼(10 分鐘);伺服器網址由前端以自己打的 API origin 顯示
+mutation CreatePrintAgent($input: CreatePrintAgentInput!) {
+  createPrintAgent(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+    pairingCode
+    pairingExpiresAt
+  }
+}
+
+# PrintAgentIdInput: { id }
+# 舊金鑰立即失效、產生新配對碼;已停用 → CONFLICT(reason AGENT_DISABLED)
+mutation ResetPrintAgentPairing($input: PrintAgentIdInput!) {
+  resetPrintAgentPairing(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+    pairingCode
+    pairingExpiresAt
+  }
+}
+
+# PrintAgentIdInput: { id }
+mutation DisablePrintAgent($input: PrintAgentIdInput!) {
+  disablePrintAgent(input: $input) {
+    agent {
+      ...PrintAgentFields
+    }
+  }
+}
+
+# 下載區(system.printers.create):最新版本與四個平台;還沒發布時 latestVersion = null
+query PrintAgentRelease {
+  printAgentRelease {
+    latestVersion
+    files {
+      platform
+      name
+      sha256
+      size
+    }
+  }
+}
+
+# PrintAgentDownloadUrlInput: { platform }
+# 按下載時才呼叫:現簽 1 小時的網址;manifest 沒有該平台 → NOT_FOUND
+query PrintAgentDownloadUrl($input: PrintAgentDownloadUrlInput!) {
+  printAgentDownloadUrl(input: $input) {
+    url
+    version
+    expiresAt
+    file {
+      platform
+      name
+      sha256
+      size
+    }
+  }
+}
+
+# ---- 印表機 ----
+
+# PrintersInput: { orgId?, agentId?, enabled?, keyword?, page?, pageSize? }
+query Printers($input: PrintersInput!) {
+  printers(input: $input) {
+    items {
+      ...PrinterFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+# CreatePrinterInput: { agentId, name, host, port?, paperWidth?, isDefault? }(分店 = 代理程式的分店)
+mutation CreatePrinter($input: CreatePrinterInput!) {
+  createPrinter(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+
+# UpdatePrinterInput: { id, agentId?, name?, host?, port?, isDefault? }(缺席或 null = 不動)
+mutation UpdatePrinter($input: UpdatePrinterInput!) {
+  updatePrinter(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+
+# SetPrinterEnabledInput: { id, enabled }
+mutation SetPrinterEnabled($input: SetPrinterEnabledInput!) {
+  setPrinterEnabled(input: $input) {
+    printer {
+      ...PrinterFields
+    }
+  }
+}
+
+# PrintPrinterTestPageInput: { printerId, image }(system.printers.edit;image = 384 點寬黑白 PNG 的 base64)
+mutation PrintPrinterTestPage($input: PrintPrinterTestPageInput!) {
+  printPrinterTestPage(input: $input) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+
+# ---- 列印按鈕(api.printing.print)----
+
+# 這家分店可選的印表機 + 分店預設;沒有印表機 → items 為空(按鈕灰色「本店未設定印表機」)
+query PrintablePrinters($orgId: ID!) {
+  printablePrinters(orgId: $orgId) {
+    items {
+      ...PrinterFields
+    }
+    totalCount
+    defaultPrinterId
+  }
+}
+
+# DocumentPrintCountInput: { refType, refId };printedCount > 0 時按鈕變 [補印]
+query DocumentPrintCount($input: DocumentPrintCountInput!) {
+  documentPrintCount(input: $input) {
+    printedCount
+  }
+}
+
+# CreatePrintJobInput: { printerId, documentType, refType, refId, documentName?, image, isReprint?, reprintReason?, reprintNote? }
+# 補印另要 api.printing.reprint;代理程式離線時回 FAILED(AGENT_OFFLINE)
+mutation CreatePrintJob($input: CreatePrintJobInput!) {
+  createPrintJob(input: $input) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+
+# 收到 print-result 信號後查結果(要求人本人或 system.printers.view)
+query PrintJob($id: ID!) {
+  printJob(id: $id) {
+    job {
+      ...PrintJobFields
+    }
+  }
+}
+
+# 列印紀錄(system.printers.view),新到舊
+# PrintJobsInput: { orgId?, printerId?, status?, refType?, refId?, page?, pageSize? }
+query PrintJobs($input: PrintJobsInput!) {
+  printJobs(input: $input) {
+    items {
+      ...PrintJobFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+# 補印對話框的原因選項(api.printing.reprint):「補印原因」類別的啟用選項,依排序值排好;不分頁
+query ReprintReasons {
+  reprintReasons {
+    items {
+      value
+      label
+    }
+  }
+}

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { findSnackbar, findSnackbarAlert } from "@/test/snackbar";
+import {
+  findSnackbar,
+  findSnackbarAlert,
+  querySnackbar,
+} from "@/test/snackbar";
 
 import {
   findRowOf,
@@ -33,9 +37,7 @@ describe("欄位管理頁的操作結果提示", () => {
     const snackbar = await findSnackbar();
     await actor.click(within(snackbar).getByRole("button", { name: "關閉" }));
     await waitFor(() => {
-      expect(
-        document.querySelector(".MuiSnackbar-root"),
-      ).not.toBeInTheDocument();
+      expect(querySnackbar()).not.toBeInTheDocument();
     });
   });
 

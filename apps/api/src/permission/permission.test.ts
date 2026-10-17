@@ -115,7 +115,7 @@ const SAMPLE_ONE_FAMILY = [
   `${SAMPLE_ONE}.edit-page`,
 ];
 /**
- * seed 的全部模組(總覽 1 + 系統管理群組 12 + 隱藏 api 樹 1 + 示範家族 6 + 示範模組2 一支 4
+ * seed 的全部模組(總覽 1 + 系統管理群組 14 + 隱藏 api 樹 2 + 示範家族 6 + 示範模組2 一支 4
  * + 申請中心一支 2 + 三個示範表單各 4)。
  */
 const ALL_SEEDED_MODULES = [
@@ -132,7 +132,10 @@ const ALL_SEEDED_MODULES = [
   "system.forms",
   "system.workflows",
   "system.workflows.blocked-page",
+  "system.notification-settings",
+  "system.printers",
   "api",
+  "api.printing",
   ...SAMPLE_ONE_FAMILY,
   "demo.sample-two",
   "demo.sample-two.view-page",

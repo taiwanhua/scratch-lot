@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 組織管理會收到的業務錯誤碼(GQL-04;api 的程式正本 `apps/api/src/orgs/org-error.ts`)。
@@ -34,7 +34,7 @@ export const ORG_NOT_DELETABLE_REASONS = [
 export type OrgNotDeletableReason = (typeof ORG_NOT_DELETABLE_REASONS)[number];
 
 /**
- * 共用形狀(`lib/errors.ts`)。本頁用到的選填欄位:`reasons`(`ORG_NOT_DELETABLE` /
+ * 共用形狀(`lib/base/errors.ts`)。本頁用到的選填欄位:`reasons`(`ORG_NOT_DELETABLE` /
  * `PROVISION_NOT_REVOKABLE` 時逐項列出為什麼不行)與 `fields`(`VALIDATION_FAILED` 時不合法的欄位)。
  */
 export type OrgManagerError = AdminError<

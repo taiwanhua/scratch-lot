@@ -1,8 +1,9 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { COLOR_MODE_STORAGE_KEY } from "@/lib/color-mode";
-import { LOCALE_STORAGE_KEY } from "@/lib/locale";
+import { COLOR_MODE_STORAGE_KEY } from "@/lib/base/color-mode";
+import { LOCALE_STORAGE_KEY } from "@/lib/base/locale";
+import { RealtimeConnection } from "@/lib/base/realtime/realtime-connection";
 import {
   SWITCHED_ACCESS_TOKEN,
   authWorld,
@@ -115,6 +116,21 @@ describe("SideNav(模組陣列以 parentId 組樹;ADR-0011「前端判斷 / 側�
     expect(logo).toHaveAttribute("src", "https://cdn.test/org-1.png");
     // 商標取代名稱文字(Figma AdminSideNav 的 ShowLogo 變體);名稱仍由 alt 讀得到
     expect(within(nav).queryByText("平台根組織")).not.toBeInTheDocument();
+  });
+});
+
+describe("即時通道連線狀態(頭像選單的小圓點)", () => {
+  it("即時通道停用 / 連不上 → 黃點(慢速模式),滑過顯示狀態文字", async () => {
+    server.use(...authWorld({ hasRefreshCookie: true }).handlers);
+
+    renderApp({ path: "/" });
+    await findSideNav();
+
+    const dot = await screen.findByTestId("realtime-status");
+    await waitFor(() => {
+      expect(dot).toHaveAttribute("data-status", "slow");
+    });
+    expect(dot).toHaveAttribute("title", "重新連線中(慢速模式,每 60 秒更新)");
   });
 });
 
@@ -280,6 +296,33 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
     expect(screen.getByText("當前組織:測試租戶")).toBeInTheDocument();
   });
 
+  it("切換當前組織成功 → 立即換發即時通道的訂閱憑證(RealtimeConnection.refresh)", async () => {
+    const refresh = jest.spyOn(RealtimeConnection.prototype, "refresh");
+    try {
+      const world = authWorld({
+        hasRefreshCookie: true,
+        modules: [overviewModule, ...sampleTwoModules],
+        orgs: [testOrg, tenant],
+      });
+      server.use(...world.handlers);
+
+      const { user } = renderApp({ path: "/overview" });
+      const switcher = await screen.findByRole("combobox", {
+        name: "當前組織",
+      });
+      expect(refresh).not.toHaveBeenCalled();
+      await user.click(switcher);
+      await user.click(await screen.findByRole("option", { name: "測試租戶" }));
+
+      await waitFor(() => {
+        expect(refresh).toHaveBeenCalledTimes(1);
+      });
+      expect(world.calls.switchOrg).toBe(1);
+    } finally {
+      refresh.mockRestore();
+    }
+  });
+
   it("使用者選單:登出所有裝置 → 打 api、回登入頁", async () => {
     const world = authWorld({
       hasRefreshCookie: true,
@@ -314,7 +357,7 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
     expect(screen.queryByRole("combobox", { name: "語言" })).toBeNull();
   });
 
-  it("頭像選單:使用者卡(姓名、帳號 · 當前組織)、外觀 / 語言兩組分段按鈕、兩個登出項", async () => {
+  it("頭像選單:使用者卡(姓名、帳號 · 當前組織)、外觀 / 語言兩組分段按鈕、個人設定、兩個登出項", async () => {
     server.use(...authWorld({ hasRefreshCookie: true }).handlers);
 
     const { user } = renderApp({ path: "/overview" });
@@ -332,7 +375,7 @@ describe("AppBar(當前組織切換、使用者選單、語言)", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((item) => item.textContent),
-    ).toEqual(["登出", "登出所有裝置"]);
+    ).toEqual(["個人設定", "登出", "登出所有裝置"]);
   });
 
   it("頭像選單的語言:切到 English 後文案變英文、選單不關,並記在 localStorage", async () => {

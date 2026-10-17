@@ -46,6 +46,7 @@ export const leaveSubmission = (
     currentInstanceId: "inst-1",
     abilities: {
       canEdit: false,
+      canSaveDraft: false,
       canDelete: false,
       canEditField: [],
       canWithdraw: false,
@@ -84,6 +85,8 @@ export const defaultFormRuntime = (): FormRuntimeWorldOptions => ({
       moduleKey: DEMO_GROUP_FORM_KEY,
       currentVersion: 1,
       tabLabelTemplate: null,
+      allowDraft: true,
+      canCreate: true,
     },
   ],
   versions: { [`${LEAVE_FORM_KEY}@1`]: leaveDefinition() },

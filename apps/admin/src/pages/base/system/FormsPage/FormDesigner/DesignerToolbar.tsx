@@ -7,7 +7,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import type { FormError } from "@/lib/form-engine/form-errors";
+import type { FormError } from "@/lib/base/form-engine/form-errors";
 
 export type DesignerMode = "design" | "preview";
 

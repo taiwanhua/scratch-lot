@@ -2,6 +2,8 @@ import type { ModuleIconKey } from "@repo/domain/module-icon";
 
 import {
   type ModuleSeedDeclaration,
+  type PermissionDeclaration,
+  WILDCARD_ACTION,
   permissionKey,
 } from "./module-declaration";
 
@@ -19,6 +21,52 @@ export const FORM_SUBMISSION_STATUS_OPTIONS = [
   { value: "voided", label: "已作廢" },
 ];
 
+/** 表單模組頁內的額外權限(B9a):和固定四條一起掛在模組主節點,key = `<模組>.<action>`。 */
+export interface FormModulePermissionSpec {
+  /** kebab-case 動作段(例 `sell` → `<模組>.sell`)。 */
+  action: string;
+  name: string;
+  description?: string;
+}
+
+/** 表單模組固定的四條個別權限:動作 → 顯示名與說明。 */
+const FIXED_PERMISSIONS = [
+  { action: "view", name: "檢視", description: "看列表與單筆資料、進入詳情頁" },
+  {
+    action: "create",
+    name: "新增",
+    description: "進入新增頁的按鈕 + 新增 API",
+  },
+  {
+    action: "edit",
+    name: "編輯",
+    description: "進入編輯頁的按鈕 + 編輯 API(綁流程的單核准後只能作廢)",
+  },
+  { action: "delete", name: "刪除", description: "列表的刪除按鈕 + 刪除 API" },
+] as const;
+
+const FIXED_ACTIONS: ReadonlySet<string> = new Set(
+  FIXED_PERMISSIONS.map((permission) => permission.action),
+);
+
+/**
+ * 表單動態權限的動作前綴(執行期由表單發布建立:`show-` / `edit-<formKey>-<fieldKey>`、
+ * `create-<formKey>`;解析正本 `apps/api/src/forms/form-permission-keys.ts`):宣告的頁內權限不得占用。
+ */
+const DYNAMIC_ACTION_PREFIXES = ["show-", "edit-", "create-"] as const;
+
+function assertDeclarableAction(moduleKey: string, action: string): void {
+  if (
+    action === WILDCARD_ACTION ||
+    FIXED_ACTIONS.has(action) ||
+    DYNAMIC_ACTION_PREFIXES.some((prefix) => action.startsWith(prefix))
+  ) {
+    throw new Error(
+      `表單模組 ${moduleKey} 的頁內權限動作 "${action}" 與固定權限、wildcard 或表單動態權限的形狀衝突`,
+    );
+  }
+}
+
 export interface FormModuleSpec {
   key: string;
   name: string;
@@ -31,11 +79,18 @@ export interface FormModuleSpec {
   description: string;
   /** `modules.settings` 的初始值(如列表欄位配置 `list`);不給 = `{}`。建立後由 root 在畫面上改。 */
   settings?: Record<string, unknown>;
+  /** 頁內額外權限(選填,B9a);和固定四條 `view` / `create` / `edit` / `delete` 一起產生。 */
+  permissions?: readonly FormModulePermissionSpec[];
+  /**
+   * 依表單分開新增權限(B9b,選填,預設關):true 時每張表單發布時自動建 `<模組>.create-<formKey>`
+   * (名稱「<表單名> 新增」),新增資格看它而不看模組 `create`。只能在這裡宣告;底座示範表單模組不開。
+   */
+  perFormCreate?: boolean;
 }
 
 /**
- * 表單模組(`engine: "form"`)的 seed 骨架:主節點 + 三個 `-page` 隱藏頁 + 四筆個別權限 +
- * `form_submissions` 的資料範圍目標。
+ * 表單模組(`engine: "form"`)的 seed 骨架:主節點 + 三個 `-page` 隱藏頁 + 四筆個別權限
+ * (+ 宣告的頁內權限 `spec.permissions`)+ `form_submissions` 的資料範圍目標。
  *
  * 骨架照固定欄位模組的宣告方式;差別只在 `engine: "form"`:頁面由表單引擎組裝、資料存所有表單模組
  * 共用的 `form_submissions`,資料範圍目標的 `moduleKey` 由 seed runner 填本模組 key
@@ -46,6 +101,19 @@ export function formModuleDeclaration(
   spec: FormModuleSpec,
 ): ModuleSeedDeclaration {
   const { key, name } = spec;
+  const extraPermissions = (spec.permissions ?? []).map(
+    (permission): PermissionDeclaration => {
+      assertDeclarableAction(key, permission.action);
+      return {
+        key: permissionKey(key, permission.action),
+        moduleKey: key,
+        name: permission.name,
+        ...(permission.description === undefined
+          ? {}
+          : { description: permission.description }),
+      };
+    },
+  );
   return {
     nodes: [
       {
@@ -57,6 +125,7 @@ export function formModuleDeclaration(
         route: spec.route,
         icon: spec.icon,
         engine: "form",
+        ...(spec.perFormCreate === true ? { perFormCreate: true } : {}),
         description: spec.description,
         ...(spec.settings === undefined ? {} : { settings: spec.settings }),
       },
@@ -86,30 +155,13 @@ export function formModuleDeclaration(
       },
     ],
     permissions: [
-      {
-        key: permissionKey(key, "view"),
+      ...FIXED_PERMISSIONS.map((permission): PermissionDeclaration => ({
+        key: permissionKey(key, permission.action),
         moduleKey: key,
-        name: "檢視",
-        description: "看列表與單筆資料、進入詳情頁",
-      },
-      {
-        key: permissionKey(key, "create"),
-        moduleKey: key,
-        name: "新增",
-        description: "進入新增頁的按鈕 + 新增 API",
-      },
-      {
-        key: permissionKey(key, "edit"),
-        moduleKey: key,
-        name: "編輯",
-        description: "進入編輯頁的按鈕 + 編輯 API(綁流程的單核准後只能作廢)",
-      },
-      {
-        key: permissionKey(key, "delete"),
-        moduleKey: key,
-        name: "刪除",
-        description: "列表的刪除按鈕 + 刪除 API",
-      },
+        name: permission.name,
+        description: permission.description,
+      })),
+      ...extraPermissions,
     ],
     // collection 固定 form_submissions;moduleKey 由 runner 填本模組 key。
     // 欄位目錄 = 基礎欄位(程式自動附加)+ 提交狀態;表單自訂欄位進條件不在此範圍

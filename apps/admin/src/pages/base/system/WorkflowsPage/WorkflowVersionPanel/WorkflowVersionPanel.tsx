@@ -7,23 +7,24 @@ import {
   WorkflowVersionStatus,
   useCreateWorkflowVersionDraftMutation,
   useExportWorkflowSeedQuery,
-  useRetryPublishWorkflowVersionMutation,
   useWorkflowVersionsQuery,
 } from "@repo/graphql";
-import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Table } from "@repo/ui/table";
 import { Tag, type TagTone } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { SeedExportDialog } from "@/components/SeedExportDialog/SeedExportDialog";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { useTemporalText } from "@/hooks/useTemporalText";
-import { definitionOf } from "@/lib/workflow/definition";
-import { workflowVersionDiff } from "@/lib/workflow/version-diff";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { SeedExportDialog } from "@/components/base/SeedExportDialog/SeedExportDialog";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { definitionOf } from "@/lib/base/workflow/definition";
+import {
+  type FlowCcChange,
+  workflowVersionDiff,
+} from "@/lib/base/workflow/version-diff";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { DeleteWorkflowDraftDialog } from "./DeleteWorkflowDraftDialog";
 import { PublishWorkflowDialog } from "./PublishWorkflowDialog";
@@ -42,6 +43,13 @@ const STATUS_TONE: Record<WorkflowVersionStatus, TagTone> = {
   [WorkflowVersionStatus.Published]: "success",
   [WorkflowVersionStatus.Retired]: "grey",
 };
+
+/** 「與上一版差異」整個流程知會對象那一行的文案鍵(鍵寫死,不靠動態組字)。 */
+const FLOW_CC_CHANGE_KEYS = {
+  added: "diffFlowCcAdded",
+  removed: "diffFlowCcRemoved",
+  changed: "diffFlowCcChanged",
+} as const satisfies Record<FlowCcChange, string>;
 
 type VersionRow = WorkflowVersionFieldsFragment;
 
@@ -74,9 +82,8 @@ export const WorkflowVersionPanel = ({
     (item) => item.status === WorkflowVersionStatus.Draft,
   );
   const { canEdit, canPublish } = workflow.abilities;
-  const isLocked = workflow.publishInterrupted;
   // 共用流程只有站在根組織的人發布得了(`canPublish`),所以這兩個條件合起來就是 api 的匯出判準
-  const canExportSeed = workflow.isShared && canPublish && !isLocked;
+  const canExportSeed = workflow.isShared && canPublish;
 
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,
@@ -86,15 +93,6 @@ export const WorkflowVersionPanel = ({
       onSuccess: onChanged,
     }),
   );
-  const retry = useRetryPublishWorkflowVersionMutation(
-    session.client,
-    useMutationFeedback({
-      success: t("retried"),
-      error: (failure) => tErrors(workflowErrorOf(failure).code),
-      onSuccess: onChanged,
-    }),
-  );
-
   const previousOf = (item: VersionRow): VersionRow | undefined =>
     items
       .filter(
@@ -129,7 +127,7 @@ export const WorkflowVersionPanel = ({
             {t("view", { version: item.version })}
           </Button>
         )}
-        {canPublish && !isLocked && isDraft && (
+        {canPublish && isDraft && (
           <Button
             size="small"
             onClick={() => {
@@ -139,7 +137,7 @@ export const WorkflowVersionPanel = ({
             {t("publish")}
           </Button>
         )}
-        {canEdit && !isLocked && isDraft && (
+        {canEdit && isDraft && (
           <Button
             size="small"
             variant="text"
@@ -151,7 +149,7 @@ export const WorkflowVersionPanel = ({
             {t("deleteDraft")}
           </Button>
         )}
-        {canPublish && !isLocked && isCurrent && (
+        {canPublish && isCurrent && (
           <Button
             size="small"
             variant="text"
@@ -163,7 +161,7 @@ export const WorkflowVersionPanel = ({
             {t("retire")}
           </Button>
         )}
-        {canEdit && !isLocked && isBase && draft === undefined && (
+        {canEdit && isBase && draft === undefined && (
           <Button
             size="small"
             variant="text"
@@ -215,27 +213,6 @@ export const WorkflowVersionPanel = ({
 
   return (
     <Stack spacing={2}>
-      {isLocked && (
-        <Alert
-          severity="warning"
-          action={
-            canPublish && (
-              <Button
-                size="small"
-                variant="text"
-                disabled={retry.isPending}
-                onClick={() => {
-                  retry.mutate({ input: { workflowKey: workflow.key } });
-                }}
-              >
-                {t("retry")}
-              </Button>
-            )
-          }
-        >
-          {t("interrupted")}
-        </Alert>
-      )}
       <Table<VersionRow>
         aria-label={t("tableAria")}
         size="small"
@@ -295,6 +272,11 @@ export const WorkflowVersionPanel = ({
           </Typography>
           {diff.isStructureChanged && (
             <Typography variant="body2">{t("diffStructure")}</Typography>
+          )}
+          {diff.flowCcChange !== null && (
+            <Typography variant="body2">
+              {t(FLOW_CC_CHANGE_KEYS[diff.flowCcChange])}
+            </Typography>
           )}
         </Stack>
       )}

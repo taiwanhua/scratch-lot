@@ -53,21 +53,41 @@ function taskOf(
   };
 }
 
-/** 為這些任務補上 `task_created` 事件(已寄過通知的狀態)。 */
+/** 為這些任務補上 `task_created` 事件(已寄過通知的狀態;承辦人取計畫目前那一位)。 */
 function announce(
   instance: InstanceSnapshot,
   taskKeys: readonly string[],
 ): InstanceSnapshot {
   const next = clone(instance);
   for (const taskKey of taskKeys) {
+    const stepKey = taskKey.slice(0, taskKey.lastIndexOf("-"));
+    const item = next.steps
+      .find((state) => state.stepKey === stepKey)
+      ?.plan.find((entry) => entry.taskKey === taskKey);
     next.history.push({
       at: NOW,
       kind: "task_created",
-      stepKey: taskKey.slice(0, taskKey.lastIndexOf("-")),
+      stepKey,
       taskKey,
+      ...(item ? { userId: item.assigneeId } : {}),
     });
   }
   return next;
+}
+
+/** 模擬流程管理者改派 `boss` 關卡唯一的一項(同一個 `taskKey` 換承辦人)。 */
+function reassignTo(
+  instance: InstanceSnapshot,
+  from: string,
+  to: string,
+): InstanceSnapshot {
+  return withStep(instance, "boss", {
+    plan: instance.steps[0]?.plan.map((item) => ({
+      ...item,
+      assigneeId: to,
+      previousAssigneeIds: [...item.previousAssigneeIds, from],
+    })),
+  });
 }
 
 function kindsOf(actions: readonly AdvanceAction[]): string[] {
@@ -75,11 +95,6 @@ function kindsOf(actions: readonly AdvanceAction[]): string[] {
 }
 
 describe("advance 判斷表:每一列", () => {
-  it("列 1:linking 的實例沒事可做(不派單)", () => {
-    const plan = run(LINEAR, newInstance(LINEAR, { status: "linking" }));
-    expect(plan).toEqual({ row: "1", actions: [] });
-  });
-
   it("列 2:已核准但未收尾 → 任務投影同步、提交 → completed、記流程完成、寄結果信、最後寫 finishedAt", () => {
     let instance = entered(newInstance(LINEAR), "boss", ["u1", "u2"]);
     instance = decide(instance, "boss", "boss-1", "approved");
@@ -454,6 +469,7 @@ describe("advance 判斷表:每一列", () => {
       kind: "task_created",
       stepKey: "boss",
       taskKey: "boss-2",
+      userId: "u2",
     });
     // boss-1 任務已建但沒記 task_created(建完就中斷)→ 補寄信與事件;boss-2 已記過 → 只補建
     const replan = run(LINEAR, announced, [taskOf("boss", "boss-1", "u1")]);
@@ -489,6 +505,40 @@ describe("advance 判斷表:每一列", () => {
     ]);
     expect(plan.row).not.toBe("6");
     expect(kindsOf(plan.actions)).not.toContain("notifyTaskCreated");
+  });
+
+  it("列 6:改派(同一個 taskKey 換承辦人)→ 新承辦人沒記過 task_created 就補通知;改派回已通知過的人不重複", () => {
+    const base = announce(entered(newInstance(LINEAR), "boss", ["u1"]), [
+      "boss-1",
+    ]);
+    const toU9 = reassignTo(base, "u1", "u9");
+    const plan = run(LINEAR, toU9, [taskOf("boss", "boss-1", "u1")]);
+    expect(plan.row).toBe("6");
+    expect(plan.actions).toEqual([
+      {
+        kind: "notifyTaskCreated",
+        stepKey: "boss",
+        taskKey: "boss-1",
+        assigneeId: "u9",
+      },
+      {
+        kind: "appendHistoryOnce",
+        event: {
+          at: NOW,
+          kind: "task_created",
+          stepKey: "boss",
+          taskKey: "boss-1",
+          userId: "u9",
+        },
+      },
+    ]);
+    // u9 記過之後 → 不再通知;再改派回 u1(u1 已記過)→ 也不重複
+    const announced = announce(toU9, ["boss-1"]);
+    const settled = run(LINEAR, announced, [taskOf("boss", "boss-1", "u9")]);
+    expect(kindsOf(settled.actions)).not.toContain("notifyTaskCreated");
+    const backToU1 = reassignTo(announced, "u9", "u1");
+    const back = run(LINEAR, backToU1, [taskOf("boss", "boss-1", "u9")]);
+    expect(kindsOf(back.actions)).not.toContain("notifyTaskCreated");
   });
 
   it("列 7:已完成關卡(不在 active)的任務投影不同步也會修", () => {

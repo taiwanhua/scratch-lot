@@ -1,16 +1,18 @@
 import { describe, expect, it } from "@jest/globals";
 
+import type { Audience } from "../audience/types";
 import { field } from "../form/form-test-support";
 import type { FieldDef } from "../form/types";
 import {
   type SubmitCheckInput,
   checkSubmitCompatibility,
 } from "./submit-check";
-import type {
-  ReviewStepDef,
-  StepDef,
-  WorkflowDefinition,
-  WorkflowEdge,
+import {
+  DEFAULT_OVERDUE_AUDIENCE,
+  type ReviewStepDef,
+  type StepDef,
+  type WorkflowDefinition,
+  type WorkflowEdge,
 } from "./types";
 import {
   type ValidateWorkflowOptions,
@@ -57,6 +59,51 @@ const source = (formKey: string, fieldKey: string): WorkflowDefinition => ({
 /** 一關、帶跳過條件。 */
 const withSkip = (skipWhen: unknown): WorkflowDefinition => ({
   steps: [review("hr", { skipWhen: skipWhen as never })],
+});
+
+const ROLE_ID = "65a000000000000000000001";
+const ORG_ID = "65a000000000000000000002";
+const USER_ID = "65a000000000000000000003";
+
+const roleRow = {
+  field: "role",
+  cond: "in",
+  value: { kind: "static", values: [ROLE_ID] },
+};
+const userRow = {
+  field: "user",
+  cond: "in",
+  value: { kind: "static", values: [USER_ID] },
+};
+const orgRow = {
+  field: "org",
+  cond: "in",
+  value: { kind: "static", values: [ORG_ID] },
+  range: "self",
+};
+const permissionRow = {
+  field: "permission",
+  cond: "in",
+  value: { kind: "static", values: ["accounts.close-period"] },
+};
+const dynamicOrg = (ref: string) => ({
+  field: "org",
+  cond: "in",
+  value: { kind: "dynamic", ref },
+  range: "self",
+});
+const match = (...children: unknown[]) => ({
+  mode: "match",
+  filter: { op: "AND", children },
+});
+
+/** 一關、審核者來源 = 人員條件(原樣放進去,讓檢查器自己驗格式)。 */
+const byAudience = (audience: unknown): WorkflowDefinition => ({
+  steps: [
+    review("a", {
+      assignee: { kind: "audience", audience: audience as never },
+    }),
+  ],
 });
 
 /** 病假單:審核主管(使用者引用)、天數、受保護的內部備註、計算欄位引用受保護欄位。 */
@@ -108,58 +155,87 @@ describe("validateWorkflowDefinition:基本與審核者來源", () => {
     ).toEqual(["ASSIGNEE_KIND_UNKNOWN"]);
   });
 
-  it("users:共用流程不可用(錯);客製流程指到不存在或停用的人(警告)", () => {
-    const definition = {
-      steps: [
-        review("a", {
-          assignee: { kind: "users", userIds: ["u1", "u2", "u3"] },
-        }),
-      ],
-    };
-    expect(codesOf(definition, SHARED)).toEqual(["USERS_IN_SHARED"]);
-    const users = new Map([
-      ["u1", { isEnabled: true }],
-      ["u2", { isEnabled: false }],
+  it("audience:格式不對 → AUDIENCE_INVALID(指到出錯的條件列);不能選所有人", () => {
+    expect(codesOf(byAudience({ mode: "all" }))).toEqual(["AUDIENCE_INVALID"]);
+    const report = validateWorkflowDefinition(
+      byAudience(match({ ...roleRow, value: { kind: "static", values: [] } })),
+      CUSTOM,
+    );
+    expect(report.errors.map((issue) => issue.code)).toEqual([
+      "AUDIENCE_INVALID",
     ]);
-    expect(codesOf(definition, { isShared: false, users })).toEqual([]);
+    expect(report.errors[0]?.location.property).toBe(
+      "assignee.audience.filter.children[0].value.values",
+    );
+    expect(codesOf(byAudience(null))).toEqual(["AUDIENCE_INVALID"]);
+  });
+
+  it("共用流程:使用者 / 角色 / 指定組織 → AUDIENCE_IN_SHARED;權限與非指定的組織來源可用", () => {
+    const report = validateWorkflowDefinition(
+      byAudience(match(roleRow, userRow, orgRow)),
+      SHARED,
+    );
+    expect(report.errors.map((issue) => issue.code)).toEqual([
+      "AUDIENCE_IN_SHARED",
+      "AUDIENCE_IN_SHARED",
+      "AUDIENCE_IN_SHARED",
+    ]);
+    expect(report.errors.map((issue) => issue.location.property)).toEqual([
+      "assignee.audience.filter.children[0]",
+      "assignee.audience.filter.children[1]",
+      "assignee.audience.filter.children[2]",
+    ]);
+    expect(
+      codesOf(
+        byAudience(
+          match(
+            permissionRow,
+            dynamicOrg("submission-org"),
+            dynamicOrg("tenant"),
+          ),
+        ),
+        SHARED,
+      ),
+    ).toEqual([]);
+  });
+
+  it("客製流程:角色 / 指定組織要屬本租戶;指定使用者不存在或停用 → 警告", () => {
+    const definition = byAudience(match(roleRow, orgRow, userRow));
+    expect(
+      codesOf(definition, {
+        isShared: false,
+        tenantRoleIds: new Set(["65a000000000000000000099"]),
+        tenantOrgIds: new Set(["65a000000000000000000099"]),
+      }),
+    ).toEqual(["ROLE_NOT_IN_TENANT", "ORG_NOT_IN_TENANT"]);
+    expect(
+      codesOf(definition, {
+        isShared: false,
+        tenantRoleIds: new Set([ROLE_ID]),
+        tenantOrgIds: new Set([ORG_ID]),
+      }),
+    ).toEqual([]);
+    const users = new Map([[USER_ID, { isEnabled: false }]]);
     expect(warningsOf(definition, { isShared: false, users })).toEqual([
-      "USER_INVALID",
       "USER_INVALID",
     ]);
   });
 
-  it("role:共用版要填佔位、不能指到角色;客製版要填本租戶的 roleId", () => {
-    const placeholderOnly = {
-      steps: [
-        review("hr", {
-          assignee: { kind: "role", roleId: null, placeholder: "人資" },
-        }),
-      ],
-    };
-    expect(codesOf(placeholderOnly, SHARED)).toEqual([]);
-    expect(codesOf(placeholderOnly, CUSTOM)).toEqual(["ROLE_ID_MISSING"]);
+  it("表單的組織欄位:對檢查用表單驗;不是組織引用欄 → FIELD_NOT_ORG_REFERENCE", () => {
+    const options = { isShared: true, checkFormFields: SICK_LEAVE_FIELDS };
     expect(
-      codesOf(
-        {
-          steps: [
-            review("hr", {
-              assignee: { kind: "role", roleId: "r1", placeholder: null },
-            }),
-          ],
-        },
-        SHARED,
-      ),
-    ).toEqual(["ROLE_PLACEHOLDER_MISSING", "ROLE_ID_IN_SHARED"]);
-    const custom = {
-      steps: [
-        review("hr", {
-          assignee: { kind: "role", roleId: "other", placeholder: "人資" },
-        }),
-      ],
-    };
+      codesOf(byAudience(match(dynamicOrg("form-field:store"))), options),
+    ).toEqual([]);
     expect(
-      codesOf(custom, { isShared: false, tenantRoleIds: new Set(["r1"]) }),
-    ).toEqual(["ROLE_NOT_IN_TENANT"]);
+      codesOf(byAudience(match(dynamicOrg("form-field:approver"))), options),
+    ).toEqual(["FIELD_NOT_ORG_REFERENCE"]);
+    expect(
+      codesOf(byAudience(match(dynamicOrg("form-field:ghost"))), options),
+    ).toEqual(["FIELD_MISSING"]);
+    // 沒有可對照的表單 → 只驗格式
+    expect(
+      codesOf(byAudience(match(dynamicOrg("form-field:ghost"))), SHARED),
+    ).toEqual([]);
   });
 
   it("field:表單不存在;欄位不在目前版本或不是使用者型引用欄", () => {
@@ -236,6 +312,256 @@ describe("validateWorkflowDefinition:基本與審核者來源", () => {
     };
     expect(codesOf(definition)).toEqual([]);
     expect(warningsOf(definition)).toEqual(["ALL_STEPS_SKIPPABLE"]);
+  });
+});
+
+/** 一關、帶「申請人屬於這些組織」。 */
+const withOrgs = (skipOrgs: unknown): WorkflowDefinition => ({
+  steps: [review("hr", { skipOrgs: skipOrgs as never })],
+});
+
+describe("validateWorkflowDefinition:指定組織跳過與自動通過(B4 / B5)", () => {
+  it("共用流程指定特定組織 → SKIP_ORGS_IN_SHARED;只選租戶可以", () => {
+    expect(
+      codesOf(withOrgs({ orgIds: [ORG_ID], includeDescendants: true }), SHARED),
+    ).toEqual(["SKIP_ORGS_IN_SHARED"]);
+    expect(
+      codesOf(
+        withOrgs({ orgIds: ["tenant", ORG_ID], includeDescendants: false }),
+        SHARED,
+      ),
+    ).toEqual(["SKIP_ORGS_IN_SHARED"]);
+    expect(
+      codesOf(
+        withOrgs({ orgIds: ["tenant"], includeDescendants: true }),
+        SHARED,
+      ),
+    ).toEqual([]);
+  });
+
+  it("客製流程:指定組織要在本租戶(ORG_NOT_IN_TENANT,property = skipOrgs)", () => {
+    const options = { isShared: false, tenantOrgIds: new Set([ORG_ID]) };
+    expect(
+      codesOf(
+        withOrgs({ orgIds: [ORG_ID], includeDescendants: false }),
+        options,
+      ),
+    ).toEqual([]);
+    const report = validateWorkflowDefinition(
+      withOrgs({
+        orgIds: ["65a000000000000000000009"],
+        includeDescendants: false,
+      }),
+      options,
+    );
+    expect(report.errors).toEqual([
+      expect.objectContaining({
+        code: "ORG_NOT_IN_TENANT",
+        location: { stepKey: "hr", stepIndex: 0, property: "skipOrgs" },
+      }),
+    ]);
+  });
+
+  it("形狀不對(沒選組織、含下層不是布林)→ SKIP_ORGS_INVALID;沒設 / null = 不看組織", () => {
+    expect(
+      codesOf(withOrgs({ orgIds: [], includeDescendants: false })),
+    ).toEqual(["SKIP_ORGS_INVALID"]);
+    expect(codesOf(withOrgs({ orgIds: [ORG_ID] }))).toEqual([
+      "SKIP_ORGS_INVALID",
+    ]);
+    expect(codesOf(withOrgs(null))).toEqual([]);
+  });
+
+  it("自動通過只能是布林;不認得的值 → AUTO_APPROVE_INVALID", () => {
+    expect(
+      codesOf({
+        steps: [
+          review("hr", {
+            autoApprove: { applicant: true, priorApprover: false },
+          }),
+        ],
+      }),
+    ).toEqual([]);
+    expect(
+      codesOf({
+        steps: [review("hr", { autoApprove: { applicant: "yes" } as never })],
+      }),
+    ).toEqual(["AUTO_APPROVE_INVALID"]);
+  });
+
+  it("匯合節點帶了指定組織跳過 / 自動通過 → JOIN_HAS_REVIEW_PROPS", () => {
+    const definition = graph(
+      [
+        review("a"),
+        review("b"),
+        review("c"),
+        {
+          ...join("j"),
+          autoApprove: { applicant: true },
+        } as unknown as StepDef,
+      ],
+      [edge("a", "b"), edge("a", "c"), edge("b", "j"), edge("c", "j")],
+    );
+    expect(codesOf(definition)).toContain("JOIN_HAS_REVIEW_PROPS");
+  });
+
+  it("所有關卡都可能被跳過(含指定組織跳過)→ 警告", () => {
+    expect(
+      warningsOf({
+        steps: [
+          review("a", { skipWhen: true }),
+          review("b", {
+            skipOrgs: { orgIds: ["tenant"], includeDescendants: true },
+          }),
+        ],
+      }),
+    ).toEqual(["ALL_STEPS_SKIPPABLE"]);
+  });
+});
+
+describe("validateWorkflowDefinition:逾時提醒與知會(B16 / B17)", () => {
+  const permissionAudience = DEFAULT_OVERDUE_AUDIENCE;
+  const roleAudience: Audience = {
+    mode: "match",
+    filter: {
+      field: "role",
+      cond: "in",
+      value: { kind: "static", values: ["0123456789abcdef01234567"] },
+    },
+  };
+  const overdue = (
+    reviewerAfterHours: unknown,
+    audienceAfterHours: unknown,
+    audience: unknown = permissionAudience,
+  ) =>
+    ({
+      reviewerAfterHours,
+      audienceAfterHours,
+      audience,
+    }) as ReviewStepDef["overdue"];
+
+  it("N、M 是正整數小時且 M > N 才通過;M ≤ N、小數、缺欄 → OVERDUE_INVALID", () => {
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(24, 48) })] }),
+    ).toEqual([]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(24, 24) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(48, 24) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(1.5, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(0, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(null, 3) })] }),
+    ).toEqual(["OVERDUE_INVALID"]);
+  });
+
+  it("M ≤ N 的錯誤定位到 overdue.audienceAfterHours", () => {
+    const report = validateWorkflowDefinition(
+      { steps: [review("a", { overdue: overdue(5, 2) })] },
+      CUSTOM,
+    );
+    expect(report.errors[0]?.location).toEqual({
+      stepKey: "a",
+      stepIndex: 0,
+      property: "overdue.audienceAfterHours",
+    });
+  });
+
+  it("通知對象要設條件(不能所有人);共用流程不能用角色 → AUDIENCE_IN_SHARED", () => {
+    expect(
+      codesOf({
+        steps: [review("a", { overdue: overdue(1, 2, { mode: "all" }) })],
+      }),
+    ).toEqual(["AUDIENCE_INVALID"]);
+    expect(
+      codesOf(
+        { steps: [review("a", { overdue: overdue(1, 2, roleAudience) })] },
+        SHARED,
+      ),
+    ).toEqual(["AUDIENCE_IN_SHARED"]);
+    expect(
+      codesOf({ steps: [review("a", { overdue: overdue(1, 2) })] }, SHARED),
+    ).toEqual([]);
+  });
+
+  it("關卡的知會對象同審核者三種來源與同一套檢查,定位到 cc…", () => {
+    expect(
+      codesOf({ steps: [review("a", { cc: { kind: "manager", level: 2 } })] }),
+    ).toEqual([]);
+    const report = validateWorkflowDefinition(
+      { steps: [review("a", { cc: { kind: "manager", level: 0 } })] },
+      CUSTOM,
+    );
+    expect(report.errors.map((issue) => issue.code)).toEqual([
+      "MANAGER_LEVEL_INVALID",
+    ]);
+    expect(report.errors[0]?.location.property).toBe("cc.level");
+    expect(
+      codesOf(
+        {
+          steps: [
+            review("a", { cc: { kind: "audience", audience: roleAudience } }),
+          ],
+        },
+        SHARED,
+      ),
+    ).toEqual(["AUDIENCE_IN_SHARED"]);
+    expect(
+      codesOf(
+        {
+          steps: [
+            review("a", {
+              cc: { kind: "field", formKey: "leave", fieldKey: "nope" },
+            }),
+          ],
+        },
+        { ...CUSTOM, forms: new Map([["leave", []]]) },
+      ),
+    ).toEqual(["FIELD_MISSING"]);
+  });
+
+  it("整個流程的知會對象:同一套檢查,沒有關卡定位(property 以 cc 開頭)", () => {
+    const report = validateWorkflowDefinition(
+      {
+        steps: [review("a")],
+        cc: { kind: "audience", audience: roleAudience },
+      },
+      SHARED,
+    );
+    expect(report.errors).toEqual([
+      expect.objectContaining({
+        code: "AUDIENCE_IN_SHARED",
+        location: { property: "cc.audience.filter" },
+      }),
+    ]);
+    expect(
+      codesOf({
+        steps: [review("a")],
+        cc: { kind: "nope" } as never,
+      }),
+    ).toEqual(["ASSIGNEE_KIND_UNKNOWN"]);
+  });
+
+  it("匯合節點帶了逾時提醒 / 知會 → JOIN_HAS_REVIEW_PROPS", () => {
+    const definition = graph(
+      [
+        review("a"),
+        review("b"),
+        review("c"),
+        {
+          ...join("j"),
+          cc: { kind: "manager", level: 1 },
+        } as unknown as StepDef,
+      ],
+      [edge("a", "b"), edge("a", "c"), edge("b", "j"), edge("c", "j")],
+    );
+    expect(codesOf(definition)).toContain("JOIN_HAS_REVIEW_PROPS");
   });
 });
 
@@ -541,6 +867,36 @@ describe("checkSubmitCompatibility:送出時檢查每一列", () => {
     expect(
       checkSubmitCompatibility({ ...base, formFields: notUser }),
     ).toMatchObject({ issues: [{ problem: "FIELD_NOT_USER_REFERENCE" }] });
+  });
+
+  it("人員條件的表單組織欄位不是組織引用欄 → FIELD_NOT_ORG_REFERENCE(送出時)", () => {
+    const definition = byAudience(
+      match(permissionRow, dynamicOrg("form-field:store")),
+    );
+    expect(checkSubmitCompatibility({ ...base, definition })).toMatchObject({
+      kind: "workflow",
+    });
+    const storeAsText = SICK_LEAVE_FIELDS.map((candidate) =>
+      candidate.key === "store" ? field("store", "text") : candidate,
+    );
+    expect(
+      checkSubmitCompatibility({
+        ...base,
+        definition,
+        formFields: storeAsText,
+      }),
+    ).toMatchObject({
+      kind: "blocked",
+      code: "WORKFLOW_MISCONFIGURED",
+      issues: [
+        {
+          stepNumber: 1,
+          slot: "assignee",
+          fieldKey: "store",
+          problem: "FIELD_NOT_ORG_REFERENCE",
+        },
+      ],
+    });
   });
 
   it("skipWhen 用到的欄位不存在或受保護 → 流程設定有誤;舊版草稿仍有該欄位 → 通過", () => {

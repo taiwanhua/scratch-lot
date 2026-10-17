@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { type GraphqlResponse, graphql, graphqlOk } from "./graphql";
 
 /**
- * 劇本 20–24(審核流程)的前置操作。正本是 `packages/graphql/src/documents/workflows.graphql`、
+ * 劇本 20–29(審核流程、代理、知會、批次核准、通知)的前置操作。正本是 `packages/graphql/src/documents/workflows.graphql`、
  * `apply-center.graphql`、`forms.graphql`、`form-submissions.graphql`、`orgs.graphql`,
  * 這裡只抄 e2e 用到的欄位;前置一律走 api(TEST-11)。
  */
@@ -172,6 +172,8 @@ export type StepJson = Record<string, unknown>;
 export interface WorkflowDefinitionJson {
   steps: StepJson[];
   edges: { from: string; to: string }[] | null;
+  /** 整個流程的知會對象(B17;單據完成 / 駁回 / 作廢時通知);省略 = 不知會。 */
+  cc?: Record<string, unknown> | null;
 }
 
 export type DecisionName = "APPROVE" | "REJECT" | "RETURN";
@@ -482,4 +484,106 @@ export async function taskSubmissionIds(
 ): Promise<string[]> {
   const tasks = await myTasks(accessToken);
   return tasks.map((task) => task.submissionId);
+}
+
+/* ---- 劇本 25–29:改派、作廢、代理人、通知 ---- */
+
+const REASSIGN_TASK = `
+mutation ReassignTask($input: ReassignTaskInput!) {
+  reassignTask(input: $input) { task { id } }
+}`;
+
+const VOID_SUBMISSION = `
+mutation VoidSubmission($input: VoidSubmissionInput!) {
+  voidSubmission(input: $input) { submission { id status } }
+}`;
+
+const CREATE_MY_DELEGATION = `
+mutation CreateMyDelegation($input: CreateMyDelegationInput!) {
+  createMyDelegation(input: $input) { delegation { id status } }
+}`;
+
+const MY_NOTIFICATIONS = `
+query MyNotifications($input: MyNotificationsInput!) {
+  myNotifications(input: $input) {
+    items { id type title body refId readAt }
+    unreadCount
+  }
+}`;
+
+/** 流程管理者把某張任務改派給另一個人(不必是阻擋中的任務)。 */
+export async function reassignTask(
+  accessToken: string,
+  taskId: string,
+  toUserId: string,
+): Promise<void> {
+  await graphqlOk(REASSIGN_TASK, { input: { taskId, toUserId } }, accessToken);
+}
+
+/** 申請人作廢自己已完成的單(理由必填)。 */
+export async function voidSubmission(
+  accessToken: string,
+  id: string,
+  reason: string,
+): Promise<void> {
+  const current = await formSubmission(accessToken, id);
+  await graphqlOk(
+    VOID_SUBMISSION,
+    { input: { id, expectedEditVersion: current.editVersion, reason } },
+    accessToken,
+  );
+}
+
+/** 設定自己的代理人(起訖是時點;只讀寫自己的)。 */
+export async function createMyDelegation(
+  accessToken: string,
+  input: { delegateUserId: string; startAt: Date; endAt: Date },
+): Promise<string> {
+  const data = await graphqlOk<{
+    createMyDelegation: { delegation: { id: string } };
+  }>(
+    CREATE_MY_DELEGATION,
+    {
+      input: {
+        delegateUserId: input.delegateUserId,
+        startAt: input.startAt.toISOString(),
+        endAt: input.endAt.toISOString(),
+        note: null,
+      },
+    },
+    accessToken,
+  );
+  return data.createMyDelegation.delegation.id;
+}
+
+export interface NotificationEntry {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  refId: string | null;
+  readAt: string | null;
+}
+
+/** 我的通知(依時間新到舊,一次 100 則;劇本裡的人通知不會超過這個數)。 */
+export async function myNotifications(
+  accessToken: string,
+): Promise<{ items: NotificationEntry[]; unreadCount: number }> {
+  const data = await graphqlOk<{
+    myNotifications: { items: NotificationEntry[]; unreadCount: number };
+  }>(MY_NOTIFICATIONS, { input: { page: 1, pageSize: 100 } }, accessToken);
+  return data.myNotifications;
+}
+
+/** 某人收到的某類型通知、內容(標題 + 內文)含某段字的那幾則。 */
+export async function notificationsMatching(
+  accessToken: string,
+  type: string,
+  text: string,
+): Promise<NotificationEntry[]> {
+  const { items } = await myNotifications(accessToken);
+  return items.filter(
+    (item) =>
+      item.type === type && `${item.title}\n${item.body}`.includes(text),
+  );
 }

@@ -134,7 +134,7 @@ export class FormFieldOptionsService {
     if (!form) {
       throw notFoundError(`Form not found: ${input.formKey}`);
     }
-    this.access.assertRuntimeAccess(facts, form.moduleKey);
+    this.access.assertRuntimeAccess(facts, form.moduleKey, form.key);
     const version = await this.versions.findOne(facts.operator, {
       formKey: form.key,
       version: input.version,

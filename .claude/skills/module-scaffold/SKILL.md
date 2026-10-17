@@ -143,6 +143,6 @@ description: 新增後台 CRUD 模組(固定欄位模組)時用:plan 模式問�
 ## 4. 不做的事
 
 - **二選一由使用者裁決**:缺答案就問,在規格卡或 PR 裡寫明誰選的。
-- **規則本文只回報**:ADR、`docs/standards/`、`CONTEXT.md`、`docs/agents/module-scaffold.md` 寫錯或缺漏,寫進 PR 的「規則回饋」,由文件票改。模組文件與 help.md 是本模組自己的,照 §3 寫。
+- **規則本文只回報**:ADR、`docs/standards/`、底座 `CONTEXT.md`、`docs/agents/module-scaffold.md` 寫錯或缺漏,寫進 PR 的「規則回饋」,由文件票改。模組文件、help.md 與 `CONTEXT-PROJECT.md` 的專案新詞是本模組自己的,照 §3 寫。
 - **Figma 只列清單**:要畫的畫面寫在規格卡「要畫的畫面」,本 skill 不開 Figma。
 - **共用元件保持原樣**:`components/base/crud/` 需要改才做得出來時,停下回報,另開票。

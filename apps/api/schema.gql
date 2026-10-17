@@ -65,6 +65,21 @@ input AssignWorkflowToTenantsInput {
   workflowKey: ID!
 }
 
+type AudiencePermissionOptionsPayload {
+  modules: [RoleMatrixModule!]!
+}
+
+input BatchApproveTasksInput {
+  comment: String
+
+  """要核准的任務,1 到 50 筆(重複的只算一次)"""
+  taskIds: [ID!]!
+}
+
+type BatchApproveTasksPayload {
+  results: [WorkflowBatchApproveResultModel!]!
+}
+
 input BindFormWorkflowInput {
   formKey: ID!
   workflowKey: ID!
@@ -153,6 +168,13 @@ type CopyUserOrgRolesRoleDiff {
   removed: [CopyUserOrgRolesRole!]!
 }
 
+input CreateAndSubmitFormSubmissionInput {
+  clientRequestId: String!
+  formKey: ID!
+  touched: [String!]
+  values: JSONObject
+}
+
 input CreateChildOrgInput {
   description: String
   name: String!
@@ -206,6 +228,39 @@ input CreateFormVersionDraftInput {
   formKey: ID!
 }
 
+input CreateMyDelegationInput {
+  delegateUserId: ID!
+  endAt: DateTime!
+  note: String
+  startAt: DateTime!
+}
+
+input CreatePrintAgentInput {
+  name: String!
+  orgId: ID!
+}
+
+input CreatePrintJobInput {
+  documentName: String
+  documentType: String!
+  image: String!
+  isReprint: Boolean
+  printerId: ID!
+  refId: String!
+  refType: String!
+  reprintNote: String
+  reprintReason: String
+}
+
+input CreatePrinterInput {
+  agentId: ID!
+  host: String!
+  isDefault: Boolean
+  name: String!
+  paperWidth: Int
+  port: Int
+}
+
 input CreateRoleInput {
   description: String
   name: String!
@@ -249,24 +304,6 @@ input CreateWorkflowVersionDraftInput {
   workflowKey: ID!
 }
 
-type DataScopeAudience {
-  ids: [ID!]!
-  type: DataScopeAudienceType!
-}
-
-input DataScopeAudienceInput {
-  ids: [ID!]
-  type: DataScopeAudienceType!
-}
-
-"""套用對象:全部人 / 指定角色 / 指定組織 / 指定使用者"""
-enum DataScopeAudienceType {
-  ALL
-  ORG
-  ROLE
-  USER
-}
-
 """多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集"""
 enum DataScopeCombineOp {
   AND
@@ -296,12 +333,12 @@ type DataScopeRule {
 }
 
 type DataScopeRuleEntry {
-  audience: DataScopeAudience!
+  audience: JSONObject!
   filter: JSONObject!
 }
 
 input DataScopeRuleEntryInput {
-  audience: DataScopeAudienceInput!
+  audience: JSONObject!
   filter: JSONObject!
 }
 
@@ -374,6 +411,14 @@ type DeleteFormSubmissionPayload {
 input DeleteFormVersionDraftInput {
   expectedDraftRevision: Int!
   formKey: ID!
+}
+
+input DeleteMyDelegationInput {
+  id: ID!
+}
+
+type DeleteMyDelegationPayload {
+  id: ID!
 }
 
 input DeleteOrgInput {
@@ -535,6 +580,15 @@ type DemoItemsTwoPayload {
   totalCount: Int!
 }
 
+input DocumentPrintCountInput {
+  refId: String!
+  refType: String!
+}
+
+type DocumentPrintCountPayload {
+  printedCount: Int!
+}
+
 input ExportFormSeedInput {
   changelog: String!
   formKey: ID!
@@ -636,6 +690,11 @@ type FormAssignment {
   tenantOrgId: ID!
 }
 
+type FormCreatePermission {
+  key: String!
+  name: String!
+}
+
 type FormDefinitionIssue {
   code: String!
   location: JSONObject!
@@ -692,11 +751,8 @@ type FormForkSourceModel {
   version: Int!
 }
 
-input FormKeyInput {
-  formKey: ID!
-}
-
 input FormLookupInput {
+  filterValues: JSONObject
   formKey: ID!
   keyword: String
   page: Int = 1
@@ -712,6 +768,27 @@ type FormLookupPayload {
   totalCount: Int!
 }
 
+type FormLookupProvider {
+  fields: [FormLookupProviderField!]!
+  filterFields: [String!]!
+  isBase: Boolean!
+  key: String!
+  labelField: String!
+  name: String!
+  valueField: String!
+}
+
+type FormLookupProviderField {
+  key: String!
+  label: String
+  type: String!
+}
+
+type FormLookupProvidersPayload {
+  items: [FormLookupProvider!]!
+  totalCount: Int!
+}
+
 type FormLookupRecord {
   id: ID!
   label: String
@@ -720,6 +797,7 @@ type FormLookupRecord {
 }
 
 input FormLookupRecordInput {
+  filterValues: JSONObject
   formKey: ID!
   id: ID!
   target: FormLookupTargetInput!
@@ -737,6 +815,7 @@ input FormLookupTargetInput {
 
 type FormModel {
   abilities: FormAbilities!
+  allowDraft: Boolean!
   assignments: [FormAssignment!]!
   createdAt: DateTime!
   currentVersion: Int
@@ -750,7 +829,6 @@ type FormModel {
   name: String!
   ownerOrgId: ID
   ownerOrgName: String
-  publishInterrupted: Boolean!
   tabLabelTemplate: String
   tenantEnabled: Boolean
   updatedAt: DateTime!
@@ -773,6 +851,7 @@ type FormSubmissionAbilities {
   canDelete: Boolean!
   canEdit: Boolean!
   canEditField: [String!]!
+  canSaveDraft: Boolean!
   canVoid: Boolean!
   canWithdraw: Boolean!
 }
@@ -784,6 +863,8 @@ type FormSubmissionAttachmentUrlPayload {
 type FormSubmissionContext {
   at: DateTime!
   orgId: ID
+  orgIds: [ID!]!
+  tenantId: ID
   timezone: String!
   userId: ID
 }
@@ -879,6 +960,8 @@ type FormSubmissionsPayload {
 }
 
 type FormSummary {
+  allowDraft: Boolean!
+  canCreate: Boolean!
   currentVersion: Int!
   key: ID!
   moduleKey: String!
@@ -935,6 +1018,7 @@ type FormVersionModel {
 }
 
 type FormVersionPayload {
+  createdPermission: FormCreatePermission
   formVersion: FormVersionModel!
   validation: FormValidationReport
 }
@@ -992,7 +1076,9 @@ input GrantRoleUsersInput {
   userIds: [ID!]!
 }
 
-"""任意 JSON 物件(資料範圍的條件樹;形狀見 apps/api/src/data-scope/data-scope-rule.ts)"""
+"""
+任意 JSON 物件,形狀由各端點驗證(資料範圍的條件樹見 apps/api/src/data-scope/data-scope-rule.ts;個人偏好見 apps/api/src/user-preferences/user-preference-registry.ts)
+"""
 scalar JSONObject
 
 input LoginInput {
@@ -1010,6 +1096,14 @@ type LogoutAllDevicesPayload {
 
 type LogoutPayload {
   success: Boolean!
+}
+
+input MarkNotificationsReadInput {
+  ids: [ID!]!
+}
+
+type MarkNotificationsReadPayload {
+  unreadCount: Int!
 }
 
 type Me {
@@ -1044,6 +1138,8 @@ type MeOrg {
   id: ID!
   logoUrl: String
   name: String!
+  tenantId: ID
+  tenantName: String!
   timezone: String!
 }
 
@@ -1140,10 +1236,12 @@ type Mutation {
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
   assignWorkflowToTenants(input: AssignWorkflowToTenantsInput!): WorkflowPayload!
+  batchApproveTasks(input: BatchApproveTasksInput!): BatchApproveTasksPayload!
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
+  createAndSubmitFormSubmission(input: CreateAndSubmitFormSubmissionInput!): FormSubmissionPayload!
   createChildOrg(input: CreateChildOrgInput!): OrgPayload!
   createDemoItemOne(input: CreateDemoItemOneInput!): DemoItemOnePayload!
   createDemoItemTwo(input: CreateDemoItemTwoInput!): DemoItemTwoPayload!
@@ -1152,6 +1250,10 @@ type Mutation {
   createForm(input: CreateFormInput!): FormPayload!
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
   createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
+  createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
+  createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
+  createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
+  createPrinter(input: CreatePrinterInput!): PrinterPayload!
   createRole(input: CreateRoleInput!): RolePayload!
   createUploadUrl(input: CreateUploadUrlInput!): UploadUrlPayload!
   createUser(input: CreateUserInput!): UserPayload!
@@ -1162,28 +1264,33 @@ type Mutation {
   deleteDemoItemTwo(input: DeleteDemoItemTwoInput!): DeleteDemoItemTwoPayload!
   deleteFormSubmission(input: DeleteFormSubmissionInput!): DeleteFormSubmissionPayload!
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
+  deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
+  disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
   grantRoleUsers(input: GrantRoleUsersInput!): RoleUsersPayload!
   login(input: LoginInput!): LoginPayload!
   logout: LogoutPayload!
   logoutAllDevices: LogoutAllDevicesPayload!
+  markAllNotificationsRead: MarkNotificationsReadPayload!
+  markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
+  printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   refresh: RefreshPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
+  resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
+  resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
   retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
-  retryPublishFormVersion(input: FormKeyInput!): FormVersionPayload!
-  retryPublishWorkflowVersion(input: WorkflowKeyInput!): WorkflowVersionPayload!
   revokeFormFromTenant(input: RevokeFormFromTenantInput!): FormPayload!
   revokeRoleUsers(input: RevokeRoleUsersInput!): RoleUsersPayload!
   revokeTenantProvision(input: RevokeTenantProvisionInput!): RevokeTenantProvisionPayload!
@@ -1206,6 +1313,7 @@ type Mutation {
   setOrgVisibility(input: SetOrgVisibilityInput!): OrgPayload!
   setPassword(input: SetPasswordInput!): SetPasswordPayload!
   setPermissionEnabled(input: SetPermissionEnabledInput!): PermissionAdminPayload!
+  setPrinterEnabled(input: SetPrinterEnabledInput!): PrinterPayload!
   setRoleEnabled(input: SetRoleEnabledInput!): RolePayload!
   setTenantFormEnabled(input: SetTenantFormEnabledInput!): FormPayload!
   setUserEnabled(input: SetUserEnabledInput!): UserPayload!
@@ -1220,7 +1328,10 @@ type Mutation {
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
+  updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
+  updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
+  updatePrinter(input: UpdatePrinterInput!): PrinterPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
@@ -1246,6 +1357,67 @@ type MyApplicationsPayload {
   totalCount: Int!
 }
 
+input MyDelegateCandidatesInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type MyDelegateCandidatesPayload {
+  items: [UserDelegateCandidateModel!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type MyDelegationPayload {
+  delegation: UserDelegationModel!
+}
+
+input MyDelegationsInput {
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type MyDelegationsPayload {
+  items: [UserDelegationModel!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type MyNotificationPreferencesPayload {
+  items: [NotificationTypePreference!]!
+}
+
+type MyNotificationUnreadCountPayload {
+  count: Int!
+}
+
+input MyNotificationsInput {
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  unreadOnly: Boolean
+}
+
+type MyNotificationsPayload {
+  items: [Notification!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+  unreadCount: Int!
+}
+
+type MyPreferencesPayload {
+  settings: JSONObject!
+}
+
 input MyTasksInput {
   done: Boolean = false
   formKey: ID
@@ -1254,6 +1426,66 @@ input MyTasksInput {
 
   """每頁筆數,上限 100"""
   pageSize: Int = 20
+}
+
+type Notification {
+  body: String!
+  createdAt: DateTime!
+  id: ID!
+  link: String
+  readAt: DateTime
+  refId: String
+  refType: String
+  title: String!
+  type: String!
+}
+
+type NotificationChannelPreference {
+  canDisable: Boolean!
+  channel: String!
+  enabled: Boolean!
+  preferenceKey: String!
+}
+
+type NotificationOrgScope {
+  range: String!
+  ref: String!
+}
+
+type NotificationSetting {
+  audience: JSONObject!
+  defaultAudience: JSONObject!
+  isDefault: Boolean!
+  name: String!
+  orgScope: NotificationOrgScope!
+  type: String!
+  updatedAt: DateTime
+  updatedBy: ID
+}
+
+type NotificationSettingPayload {
+  setting: NotificationSetting!
+}
+
+input NotificationSettingsInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type NotificationSettingsPayload {
+  items: [NotificationSetting!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type NotificationTypePreference {
+  channels: [NotificationChannelPreference!]!
+  name: String!
+  type: String!
 }
 
 type Org {
@@ -1337,6 +1569,205 @@ input PreviewFormVersionInput {
   version: Int
 }
 
+type PrintAgent {
+  createdAt: DateTime!
+  enabled: Boolean!
+  id: ID!
+  lastSeenAt: DateTime
+  name: String!
+  online: Boolean!
+  orgId: ID!
+  paired: Boolean!
+  pairingExpiresAt: DateTime
+  updateAvailable: Boolean!
+  version: String
+}
+
+input PrintAgentDownloadUrlInput {
+  platform: PrintAgentPlatform!
+}
+
+type PrintAgentDownloadUrlPayload {
+  expiresAt: DateTime!
+  file: PrintAgentReleaseFile!
+  url: String!
+  version: String!
+}
+
+input PrintAgentIdInput {
+  id: ID!
+}
+
+type PrintAgentPairingPayload {
+  agent: PrintAgent!
+  pairingCode: String!
+  pairingExpiresAt: DateTime!
+}
+
+type PrintAgentPayload {
+  agent: PrintAgent!
+}
+
+"""代理程式安裝檔的平台"""
+enum PrintAgentPlatform {
+  LINUX_ARM64
+  LINUX_X64
+  MACOS_ARM64
+  WINDOWS_X64
+}
+
+type PrintAgentReleaseFile {
+  name: String!
+  platform: PrintAgentPlatform!
+  sha256: String!
+  size: Int!
+}
+
+type PrintAgentReleasePayload {
+  files: [PrintAgentReleaseFile!]!
+  latestVersion: String
+}
+
+input PrintAgentsInput {
+  includeDisabled: Boolean = false
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type PrintAgentsPayload {
+  items: [PrintAgent!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type PrintJob {
+  createdAt: DateTime!
+  documentName: String
+  documentType: String!
+  error: PrintJobError
+  id: ID!
+  isReprint: Boolean!
+  orgId: ID!
+  printNo: Int!
+  printedAt: DateTime
+  printerId: ID!
+  refId: String!
+  refType: String!
+  reprintNote: String
+  reprintReason: String
+  requestedBy: PrintJobRequester
+  sentAt: DateTime
+  status: PrintJobStatus!
+}
+
+"""
+失敗原因:代理程式離線(含 2 分鐘沒被認領)/ 代理程式已停用 / 未收到列印結果(已送出 2 分鐘沒回報)/ 缺紙 / 連不上印表機 / 其他
+"""
+enum PrintJobError {
+  AGENT_DISABLED
+  AGENT_OFFLINE
+  NO_RESULT
+  OTHER
+  PAPER_OUT
+  PRINTER_OFFLINE
+}
+
+type PrintJobPayload {
+  job: PrintJob!
+}
+
+type PrintJobRequester {
+  id: ID!
+  name: String!
+}
+
+"""列印工作狀態:等待中 → 已送出(代理程式認領)→ 已印 / 失敗"""
+enum PrintJobStatus {
+  FAILED
+  PENDING
+  PRINTED
+  SENT
+}
+
+input PrintJobsInput {
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  printerId: ID
+  refId: String
+  refType: String
+  status: PrintJobStatus
+}
+
+type PrintJobsPayload {
+  items: [PrintJob!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+input PrintPrinterTestPageInput {
+  image: String!
+  printerId: ID!
+}
+
+type PrintablePrintersPayload {
+  defaultPrinterId: ID
+  items: [Printer!]!
+  totalCount: Int!
+}
+
+type Printer {
+  agentId: ID!
+  agentOnline: Boolean!
+  available: Boolean!
+  enabled: Boolean!
+  host: String!
+  id: ID!
+  isDefault: Boolean!
+  name: String!
+  orgId: ID!
+  paperWidth: Int!
+  port: Int!
+  status: PrinterStatus
+  statusAt: DateTime
+}
+
+type PrinterPayload {
+  printer: Printer!
+}
+
+"""代理程式回報的印表機狀態:正常 / 缺紙 / 離線"""
+enum PrinterStatus {
+  OFFLINE
+  OK
+  PAPER_OUT
+}
+
+input PrintersInput {
+  agentId: ID
+  enabled: Boolean
+  keyword: String
+  orgId: ID
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type PrintersPayload {
+  items: [Printer!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
 input ProvisionTenantInput {
   adminAccount: String!
   adminEmail: String!
@@ -1347,6 +1778,7 @@ input ProvisionTenantInput {
 }
 
 type ProvisionTenantPayload {
+  activationMailSent: Boolean!
   moduleKeys: [String!]!
   org: Org!
   ownerUserId: ID!
@@ -1368,6 +1800,7 @@ input PublishWorkflowVersionInput {
 type Query {
   applicableForms: [ApplicableModuleForms!]!
   applyCenterCounts: ApplyCenterCounts!
+  audiencePermissionOptions: AudiencePermissionOptionsPayload!
   blockedInstances(input: BlockedInstancesInput!): WorkflowInstancesPayload!
   dataScopeRule(targetId: ID!): DataScopeRulePayload!
   dataScopeTargets: DataScopeTargetsPayload!
@@ -1377,6 +1810,7 @@ type Query {
   demoItemTwo(id: ID!): DemoItemTwoPayload!
   demoItemsOne(input: DemoItemsOneInput!): DemoItemsOnePayload!
   demoItemsTwo(input: DemoItemsTwoInput!): DemoItemsTwoPayload!
+  documentPrintCount(input: DocumentPrintCountInput!): DocumentPrintCountPayload!
   exportFormSeed(input: ExportFormSeedInput!): ExportFormSeedPayload!
   exportWorkflowSeed(input: ExportWorkflowSeedInput!): ExportWorkflowSeedPayload!
   fieldCategories(input: FieldCategoriesInput): FieldCategoriesPayload!
@@ -1384,6 +1818,7 @@ type Query {
   form(key: ID!): FormPayload!
   formFieldOptions(input: FormFieldOptionsInput!): FormFieldOptionsPayload!
   formLookup(input: FormLookupInput!): FormLookupPayload!
+  formLookupProviders: FormLookupProvidersPayload!
   formLookupRecord(input: FormLookupRecordInput!): FormLookupRecordPayload!
   formRuntimeVersion(formKey: ID!, version: Int!): FormVersionPayload!
   formSubmission(id: ID!, revision: Int): FormSubmissionPayload!
@@ -1399,19 +1834,36 @@ type Query {
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
   moduleTree: [ModuleAdminNode!]!
   myApplications(input: MyApplicationsInput!): MyApplicationsPayload!
+  myDelegateCandidates(input: MyDelegateCandidatesInput!): MyDelegateCandidatesPayload!
+  myDelegations(input: MyDelegationsInput!): MyDelegationsPayload!
+  myNotificationPreferences: MyNotificationPreferencesPayload!
+  myNotificationUnreadCount: MyNotificationUnreadCountPayload!
+  myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!
+  myPreferences: MyPreferencesPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
+  notificationSettings(input: NotificationSettingsInput!): NotificationSettingsPayload!
   org(id: ID!): Org!
   orgManagerCandidates(keyword: String, orgId: ID!): [UserSummary!]!
   orgMemberCandidates(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgMembers(input: OrgMembersInput!, orgId: ID!): OrgMembersPayload!
   orgTree: [OrgNode!]!
   previewFormVersion(input: PreviewFormVersionInput!): FormPreviewPayload!
+  printAgentDownloadUrl(input: PrintAgentDownloadUrlInput!): PrintAgentDownloadUrlPayload!
+  printAgentRelease: PrintAgentReleasePayload!
+  printAgents(input: PrintAgentsInput!): PrintAgentsPayload!
+  printJob(id: ID!): PrintJobPayload!
+  printJobs(input: PrintJobsInput!): PrintJobsPayload!
+  printablePrinters(orgId: ID!): PrintablePrintersPayload!
+  printers(input: PrintersInput!): PrintersPayload!
+  realtimeTicket(board: RealtimeBoardInput): RealtimeTicketPayload
+  reprintReasons: ReprintReasonsPayload!
   retiredFormPermissions: RetiredFormPermissionsPayload!
   role(id: ID!): RolePayload!
   roleMatrix(roleId: ID!): RoleMatrixPayload!
   roleUserCandidates(input: RoleUserCandidatesInput!, roleId: ID!): RoleUserCandidatesPayload!
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
+  sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
   user(id: ID!): User!
   users(input: UsersInput!): UsersPayload!
@@ -1424,6 +1876,28 @@ type Query {
   workflows(input: WorkflowsInput!): WorkflowsPayload!
 }
 
+input RealtimeBoardInput {
+  """看板 key(專案登記)"""
+  key: String!
+
+  """看板開著的那家店(組織 id)"""
+  orgId: ID!
+}
+
+type RealtimeTicketPayload {
+  """連線網址 `wss://…/connect`,前端加上 `?ticket=`"""
+  connectUrl: String!
+
+  """到期時間(Unix 秒)"""
+  expiresAt: Int!
+
+  """訂閱憑證(10 分鐘);連線或在原連線上換發時送出"""
+  ticket: String!
+
+  """憑證內的頻道:平常只有 `user:<自己>`,看板頁符合條件時多一個 `board:<店>`"""
+  topics: [String!]!
+}
+
 input ReassignTaskInput {
   taskId: ID!
   toUserId: ID!
@@ -1433,12 +1907,25 @@ type RefreshPayload {
   accessToken: String!
 }
 
+type ReprintReason {
+  label: String!
+  value: String!
+}
+
+type ReprintReasonsPayload {
+  items: [ReprintReason!]!
+}
+
 input RequestPasswordResetInput {
   email: String!
 }
 
 type RequestPasswordResetPayload {
   success: Boolean!
+}
+
+input ResetNotificationSettingInput {
+  type: String!
 }
 
 input RetireCurrentVersionInput {
@@ -1761,6 +2248,11 @@ input SetPermissionEnabledInput {
   id: ID!
 }
 
+input SetPrinterEnabledInput {
+  enabled: Boolean!
+  id: ID!
+}
+
 input SetRoleEnabledInput {
   enabled: Boolean!
   id: ID!
@@ -1790,9 +2282,18 @@ type SetUserOrgsPayload {
   user: User!
 }
 
+type SidebarBadge {
+  """數字;0 也回傳,前端只在大於 0 時顯示"""
+  count: Int!
+
+  """模組 key(側欄以它對上模組節點)"""
+  moduleKey: String!
+}
+
 input SubmitFormSubmissionInput {
   expectedEditVersion: Int!
   id: ID!
+  values: JSONObject
 }
 
 input SwitchOrgInput {
@@ -1852,6 +2353,7 @@ input UpdateFieldInput {
 }
 
 input UpdateFormInput {
+  allowDraft: Boolean
   key: ID!
   name: String
   tabLabelTemplate: String
@@ -1864,12 +2366,34 @@ input UpdateFormSubmissionInput {
   values: JSONObject!
 }
 
+input UpdateMyPreferencesInput {
+  settings: JSONObject!
+}
+
+type UpdateMyPreferencesPayload {
+  settings: JSONObject!
+}
+
+input UpdateNotificationSettingInput {
+  audience: JSONObject!
+  type: String!
+}
+
 input UpdateOrgInput {
   description: String
   id: ID!
   logoPath: String
   name: String
   slug: String
+}
+
+input UpdatePrinterInput {
+  agentId: ID
+  host: String
+  id: ID!
+  isDefault: Boolean
+  name: String
+  port: Int
 }
 
 input UpdateRoleInput {
@@ -1941,6 +2465,29 @@ input UserActivationInput {
 enum UserActivationMode {
   EMAIL
   PASSWORD
+}
+
+type UserDelegateCandidateModel {
+  account: String!
+  id: ID!
+  name: String!
+}
+
+type UserDelegationModel {
+  createdAt: DateTime!
+  delegate: FormUserRef!
+  endAt: DateTime!
+  id: ID!
+  note: String
+  startAt: DateTime!
+  status: UserDelegationStatus!
+}
+
+"""代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀)"""
+enum UserDelegationStatus {
+  ACTIVE
+  ENDED
+  UPCOMING
 }
 
 type UserOrg {
@@ -2027,6 +2574,20 @@ type WorkflowAssignment {
   tenantOrgId: ID!
 }
 
+"""批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗"""
+enum WorkflowBatchApproveFailure {
+  BLOCKED
+  FAILED
+  NOT_YOURS
+}
+
+type WorkflowBatchApproveResultModel {
+  ok: Boolean!
+  projectReason: String
+  reason: WorkflowBatchApproveFailure
+  taskId: ID!
+}
+
 type WorkflowBindingIssueModel {
   detail: String!
   problem: String!
@@ -2062,6 +2623,7 @@ type WorkflowDecisionModel {
 }
 
 input WorkflowDefinitionInput {
+  cc: JSONObject
   checkFormKey: ID
   edges: [WorkflowEdgeInput!]
   steps: [JSONObject!]!
@@ -2084,8 +2646,11 @@ type WorkflowForkSourceModel {
 
 type WorkflowHistoryEventModel {
   at: DateTime!
+  code: String
   comment: String
+  delegators: [FormUserRef!]!
   kind: String!
+  reason: String
   result: String
   stepKey: String
   taskKey: String
@@ -2129,11 +2694,10 @@ type WorkflowInstancePayload {
   instance: WorkflowInstanceModel!
 }
 
-"""流程實例狀態:連結中 / 審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代"""
+"""流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代"""
 enum WorkflowInstanceStatus {
   APPROVED
   BLOCKED
-  LINKING
   REJECTED
   RETURNED
   RUNNING
@@ -2183,14 +2747,12 @@ type WorkflowModel {
   currentVersion: Int
   forkedFrom: WorkflowForkSourceModel
   hasDraft: Boolean!
-  hasRolePlaceholder: Boolean!
   id: ID!
   isShared: Boolean!
   key: ID!
   name: String!
   ownerOrgId: ID
   ownerOrgName: String
-  publishInterrupted: Boolean!
   updatedAt: DateTime!
 }
 
@@ -2207,6 +2769,7 @@ type WorkflowPayload {
 type WorkflowPlanItemModel {
   assignee: FormUserRef!
   assigneeState: String!
+  delegators: [FormUserRef!]!
   previousAssignees: [FormUserRef!]!
   taskId: ID
   taskKey: String!
@@ -2274,6 +2837,7 @@ type WorkflowValidationReport {
 
 type WorkflowVersionModel {
   baseVersion: Int
+  cc: JSONObject
   changelog: String
   checkFormKey: ID
   draftRevision: Int!

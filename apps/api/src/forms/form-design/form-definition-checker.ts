@@ -4,8 +4,10 @@ import {
   FORM_SUBMISSION_PROVIDER,
   type FieldDef,
   type FormDefinition,
+  type LookupProviderRegistry,
   type LookupSourceDescriptor,
   type ValidationReport,
+  arrayColumnsOf,
   hasLabelTemplate,
   lookupTemplateFieldOf,
   templatePlaceholdersOf,
@@ -95,7 +97,51 @@ function isSelfPrefill(
   );
 }
 
-/** 定義裡用到的所有 lookup 來源描述(選項、引用、帶入),附定位。 */
+/** 明細引用子欄的來源描述(定位到明細欄 + 子欄)。 */
+function columnSourcesOf(
+  field: FieldDef,
+): { source: LookupSourceDescriptor; location: Record<string, unknown> }[] {
+  return arrayColumnsOf(field).flatMap((column) =>
+    column.type === "reference" && column.source
+      ? [
+          {
+            source: column.source,
+            location: {
+              fieldKey: field.key,
+              columnKey: column.key,
+              property: "source",
+            },
+          },
+        ]
+      : [],
+  );
+}
+
+/** 這個來源的帶入對應表:表單層帶入規則,或明細引用子欄的列內帶入(B2c);其他來源沒有。 */
+function mappingOf(
+  definition: FormDefinition,
+  location: Record<string, unknown>,
+): readonly { sourceField: string }[] {
+  if (typeof location.prefillIndex === "number") {
+    return definition.prefills[location.prefillIndex]?.mapping ?? [];
+  }
+  if (typeof location.columnKey !== "string") {
+    return [];
+  }
+  const owner = definition.fields.find(
+    (field) => isRecord(field) && field.key === location.fieldKey,
+  );
+  const column =
+    owner === undefined
+      ? undefined
+      : arrayColumnsOf(owner).find(
+          (candidate) => candidate.key === location.columnKey,
+        );
+  const mapping: unknown = column?.prefill?.mapping;
+  return Array.isArray(mapping) ? (mapping as { sourceField: string }[]) : [];
+}
+
+/** 定義裡用到的所有 lookup 來源描述(選項、引用、明細引用子欄、帶入),附定位。 */
 function sourcesOf(
   definition: FormDefinition,
 ): { source: LookupSourceDescriptor; location: Record<string, unknown> }[] {
@@ -119,6 +165,7 @@ function sourcesOf(
         location: { fieldKey: field.key, property: "source" },
       });
     }
+    found.push(...columnSourcesOf(field));
   }
   for (const [prefillIndex, prefill] of definition.prefills.entries()) {
     if (isRecord(prefill) && isRecord(prefill.source)) {
@@ -194,6 +241,8 @@ export class FormDefinitionChecker {
             ...lookupProviders[FORM_SUBMISSION_PROVIDER]?.fields,
             ...selfCatalog,
           },
+          // 表單提交來源沒有可當篩選的欄位(連動篩選一律擋下)
+          filterFields: {},
         },
       },
       listColumnFieldKeys: listColumns,
@@ -202,7 +251,36 @@ export class FormDefinitionChecker {
       formKey: form.key,
       catalog: selfCatalog,
     });
+    this.checkProjectValueFields(sources, lookupProviders, report);
     return report;
+  }
+
+  /**
+   * 專案來源的值欄(非 `id`)只能是文字欄位:依值取回以字串等值比對文件欄位,
+   * 數字 / 日期等型別的值存成別的型別,比對不到(底座的 user / org 可回欄位本來就都是文字)。
+   */
+  private checkProjectValueFields(
+    sources: ReturnType<typeof sourcesOf>,
+    registry: LookupProviderRegistry,
+    report: ValidationReport,
+  ): void {
+    for (const { source, location } of sources) {
+      const valueField = source.valueField ?? "id";
+      const type = registry[source.provider]?.fields[valueField];
+      if (
+        valueField === "id" ||
+        type === undefined ||
+        type === "text" ||
+        !this.lookups.isProjectSource(source.provider)
+      ) {
+        continue;
+      }
+      report.errors.push({
+        code: "LOOKUP_UNKNOWN_FIELD",
+        message: `lookup 來源 ${source.provider} 的值欄只能是 id 或文字欄位(${valueField} 是 ${type})`,
+        location,
+      });
+    }
   }
 
   /** 已發布 / 退役過的每個欄位 key 最後一次的定義(同 key 改型別 → `KEY_TYPE_CHANGED`)。 */
@@ -263,11 +341,7 @@ export class FormDefinitionChecker {
         ? self.catalog
         : await this.lookups.formSubmissionCatalog(facts, source.formKey);
       const wanted = [source.labelField, source.valueField ?? "id"];
-      const prefill =
-        typeof location.prefillIndex === "number"
-          ? definition.prefills[location.prefillIndex]
-          : undefined;
-      for (const mapping of prefill?.mapping ?? []) {
+      for (const mapping of mappingOf(definition, location)) {
         wanted.push(mapping.sourceField);
       }
       for (const name of new Set(wanted)) {

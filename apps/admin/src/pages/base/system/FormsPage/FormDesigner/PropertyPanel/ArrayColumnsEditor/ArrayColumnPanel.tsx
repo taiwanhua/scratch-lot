@@ -14,17 +14,19 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
 import {
   type FieldKeyProblem,
   newColumnOf,
-} from "@/lib/form-engine/designer-ops";
-import { columnSectionsOf } from "@/lib/form-engine/property-sections";
-import { scalarText } from "@/lib/form-engine/value-text";
+} from "@/lib/base/form-engine/designer-ops";
+import { columnSectionsOf } from "@/lib/base/form-engine/property-sections";
+import { scalarText } from "@/lib/base/form-engine/value-text";
 
 import { FieldKeyInput } from "../FieldKeyInput";
+import { LookupSourceEditor } from "../LookupSourceEditor";
 import { OptionsEditor } from "../OptionsEditor";
 import { RulesEditor } from "../RulesEditor";
+import { ColumnPrefillEditor } from "./ColumnPrefillEditor";
 import { ColumnValueSourceEditor } from "./ColumnValueSourceEditor";
 
 export interface ArrayColumnPanelProps {
@@ -45,8 +47,9 @@ const COLUMN_OPTION_KINDS = ["static", "fieldCategory"] as const;
 
 /**
  * 明細子欄的屬性面板(屬性面板的縮小版,Spec 6a §5「明細列」):**只列白名單內的設定** —— key(當場擋
- * 格式與同一明細內重複)、標題、型別(文字 / 數字 / 日期 / 日期時間 / 單選 / 是否)、小數位數、表格欄寬、說明、
- * 值來源(使用者填 / 列內公式)、選項(靜態 / 類別)、驗證規則(必填、長度 / 數值 / 日期上下限、文字格式)。
+ * 格式與同一明細內重複)、標題、型別(文字 / 數字 / 日期 / 日期時間 / 單選 / 是否 / 引用)、小數位數、表格欄寬、說明、
+ * 值來源(使用者填 / 列內公式;引用子欄只能使用者填)、選項(靜態 / 類別)、引用來源(同表單層引用欄)、
+ * 驗證規則(必填、長度 / 數值 / 日期上下限、文字格式)。
  * 沒有顯示 / 鎖定條件、預設值、自訂驗證、允許清單外、欄位權限(整欄的設定在明細欄上)。
  */
 export const ArrayColumnPanel = ({
@@ -165,24 +168,53 @@ export const ArrayColumnPanel = ({
           });
         }}
       />
-      <ColumnValueSourceEditor
-        arrayField={arrayField}
-        column={column}
-        fields={fields}
-        formKey={formKey}
-        exprIssues={issues
-          .filter((issue) => issue.location.exprSlot === "valueSource.expr")
-          .map((issue) => issue.message)}
-        onChange={(valueSource) => {
-          onChange({ ...column, valueSource });
-        }}
-      />
+      {!sections.referenceSource && (
+        <ColumnValueSourceEditor
+          arrayField={arrayField}
+          column={column}
+          fields={fields}
+          formKey={formKey}
+          exprIssues={issues
+            .filter((issue) => issue.location.exprSlot === "valueSource.expr")
+            .map((issue) => issue.message)}
+          onChange={(valueSource) => {
+            onChange({ ...column, valueSource });
+          }}
+        />
+      )}
       {sections.options && (
         <OptionsEditor
           value={column.options}
           kinds={COLUMN_OPTION_KINDS}
           onChange={(options) => {
             onChange({ ...column, options });
+          }}
+        />
+      )}
+      {sections.referenceSource && (
+        <LookupSourceEditor
+          value={column.source ?? { provider: "user", labelField: "name" }}
+          hasValueField={false}
+          // 明細子欄的篩選只能引用表單層欄位(同一列的其他子欄不行)
+          linkFields={fields.filter(
+            (candidate) =>
+              candidate.key !== arrayField.key && candidate.type !== "array",
+          )}
+          onChange={(source) => {
+            onChange({ ...column, source });
+          }}
+        />
+      )}
+      {sections.referenceSource && (
+        <ColumnPrefillEditor
+          column={column}
+          siblings={siblings}
+          onChange={(prefill) => {
+            const next = { ...column, prefill };
+            if (prefill === null) {
+              Reflect.deleteProperty(next, "prefill");
+            }
+            onChange(next);
           }}
         />
       )}

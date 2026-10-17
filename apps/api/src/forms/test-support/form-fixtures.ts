@@ -172,7 +172,6 @@ const FORM_FIELDS = /* GraphQL */ `
     currentVersion
     tabLabelTemplate
     hasDraft
-    publishInterrupted
     tenantEnabled
     assignments {
       tenantOrgId
@@ -322,17 +321,6 @@ export const PUBLISH = /* GraphQL */ `
   ${VERSION_FIELDS}
   mutation PublishFormVersion($input: PublishFormVersionInput!) {
     publishFormVersion(input: $input) {
-      formVersion {
-        ...VersionFields
-      }
-    }
-  }
-`;
-
-export const RETRY_PUBLISH = /* GraphQL */ `
-  ${VERSION_FIELDS}
-  mutation RetryPublishFormVersion($input: FormKeyInput!) {
-    retryPublishFormVersion(input: $input) {
       formVersion {
         ...VersionFields
       }
@@ -628,7 +616,6 @@ export interface FormRow {
   forkedFrom: { formKey: string; version: number } | null;
   currentVersion: number | null;
   hasDraft: boolean;
-  publishInterrupted: boolean;
   tenantEnabled: boolean | null;
   assignments: { tenantOrgId: string; enabled: boolean }[];
   abilities: {

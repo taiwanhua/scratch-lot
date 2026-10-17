@@ -119,6 +119,34 @@ describe("validatePortableDefinition:表達式的 ID 語意", () => {
     ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.!==.0"]]);
   });
 
+  it("新系統值:ctx.tenant.id 是動態 ID、ctx.user.orgIds 是動態 ID 集合", () => {
+    expect(
+      codesAt(
+        errorsOf(formWithCondition({ "==": [idOf("ctx.tenant.id"), "abc"] })),
+      ),
+    ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.==.1"]]);
+    expect(
+      codesAt(
+        errorsOf(formWithCondition({ in: [HEX_24, idOf("ctx.user.orgIds")] })),
+      ),
+    ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.in.0"]]);
+    // 動態 ID 對動態 ID 集合 / 動態 ID 比較:通過
+    expect(
+      errorsOf(
+        formWithCondition({
+          in: [idOf("ctx.user.orgId"), idOf("ctx.user.orgIds")],
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      errorsOf(
+        formWithCondition({
+          "==": [idOf("ctx.tenant.id"), idOf("ctx.user.orgId")],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
   it("引用欄與一般文字欄比較拒絕(只允許另一個動態 ID 或 null)", () => {
     expect(
       codesAt(
@@ -444,6 +472,47 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     ]);
   });
 
+  it("明細引用子欄的來源照表單層引用欄檢查;其他子欄帶 source 仍拒絕", () => {
+    const seed = formSeed([
+      field("title", "text"),
+      field("items", "array", {
+        columns: [
+          {
+            key: "store",
+            label: "分店",
+            type: "reference",
+            widget: { kind: "referencePicker" },
+            valueSource: { kind: "input" },
+            source: { provider: "org", labelField: "name" },
+          },
+          {
+            key: "vendor",
+            label: "廠商",
+            type: "reference",
+            widget: { kind: "referencePicker" },
+            valueSource: { kind: "input" },
+            source: { provider: "vendor", labelField: "name" },
+          },
+          {
+            key: "note",
+            label: "備註",
+            type: "text",
+            widget: { kind: "textField" },
+            valueSource: { kind: "input" },
+            source: { provider: "org", labelField: "name" },
+          },
+        ],
+      }),
+    ]);
+    expect(codesAt(errorsOf(seed))).toEqual([
+      [
+        "LOOKUP_PROVIDER_UNSUPPORTED",
+        "definition.fields.1.columns.1.source.provider",
+      ],
+      ["FIELD_UNSUPPORTED", "definition.fields.1.columns.2.source"],
+    ]);
+  });
+
   it("form_submission:formKey 要指向同一計畫可解析的共用表單(可以是自己);有 filter 一律拒絕", () => {
     const source = (formKey: string, filter?: Record<string, unknown>) =>
       field("ref", "reference", {
@@ -678,6 +747,23 @@ describe("validatePortableDefinition:宣告的形狀", () => {
   });
 });
 
+/** 共用流程不能用的人員條件:指定使用者或角色的一列。 */
+const audienceOf = (field: "user" | "role") => ({
+  kind: "audience" as const,
+  audience: {
+    mode: "match" as const,
+    filter: {
+      op: "AND" as const,
+      children: [
+        {
+          field,
+          cond: "in" as const,
+          value: { kind: "static" as const, values: [HEX_24] },
+        },
+      ],
+    },
+  },
+});
 describe("validatePortableDefinition:共用流程", () => {
   const requestForm = formSeed([
     field("title", "text"),
@@ -689,13 +775,34 @@ describe("validatePortableDefinition:共用流程", () => {
     tenantFormKeys: new Set(["leave_request_acme"]),
   });
 
-  it("主管、有佔位名稱的角色、可解析表單的使用者引用欄:通過", () => {
+  it("主管、權限 + 單據所屬組織的人員條件、可解析表單的使用者引用欄:通過", () => {
     const seed = workflowSeed(
       {
         steps: [
           review("boss"),
           review("hr", {
-            assignee: { kind: "role", roleId: null, placeholder: "人資" },
+            assignee: {
+              kind: "audience",
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "permission",
+                      cond: "in",
+                      value: { kind: "static", values: ["hr.approve"] },
+                    },
+                    {
+                      field: "org",
+                      cond: "in",
+                      value: { kind: "dynamic", ref: "submission-org" },
+                      range: "self",
+                    },
+                  ],
+                },
+              },
+            },
           }),
           review("picked", {
             assignee: {
@@ -712,13 +819,11 @@ describe("validatePortableDefinition:共用流程", () => {
     expect(errorsOf(seed, catalog)).toEqual([]);
   });
 
-  it("指定使用者、指到角色 id、指向租戶客製表單:拒絕並指出關卡", () => {
+  it("指定使用者、角色條件、指向租戶客製表單:拒絕並指出關卡", () => {
     const seed = workflowSeed({
       steps: [
-        review("named", { assignee: { kind: "users", userIds: [HEX_24] } }),
-        review("role", {
-          assignee: { kind: "role", roleId: HEX_24, placeholder: "人資" },
-        }),
+        review("named", { assignee: audienceOf("user") }),
+        review("role", { assignee: audienceOf("role") }),
         review("tenant", {
           assignee: {
             kind: "field",
@@ -730,11 +835,36 @@ describe("validatePortableDefinition:共用流程", () => {
     });
     const errors = errorsOf(seed, catalog);
     expect(codesAt(errors)).toEqual([
-      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.0.assignee.userIds"],
-      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.1.assignee.roleId"],
+      [
+        "ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.0.assignee.audience.filter.children[0]",
+      ],
+      [
+        "ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.1.assignee.audience.filter.children[0]",
+      ],
       ["ASSIGNEE_NOT_PORTABLE", "definition.steps.2.assignee.formKey"],
     ]);
     expect(errors[2]?.message).toContain("租戶客製表單");
+  });
+
+  it("知會對象(關卡與整個流程)指向租戶客製表單:同樣拒絕,訊息講得出是哪張表單", () => {
+    const tenantField = {
+      kind: "field",
+      formKey: "leave_request_acme",
+      fieldKey: "approver",
+    } as const;
+    const seed = workflowSeed({
+      steps: [review("boss", { cc: tenantField })],
+      cc: tenantField,
+    });
+    const errors = errorsOf(seed, catalog);
+    expect(codesAt(errors)).toEqual([
+      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.0.cc.formKey"],
+      ["ASSIGNEE_NOT_PORTABLE", "definition.cc.formKey"],
+    ]);
+    expect(errors[0]?.message).toContain("租戶客製表單");
+    expect(errors[1]?.message).toContain("租戶客製表單");
   });
 
   it("跳過條件:ID 與寫死的值比較拒絕;一般數值條件照舊;檢查用表單解不開時指出 checkFormKey", () => {

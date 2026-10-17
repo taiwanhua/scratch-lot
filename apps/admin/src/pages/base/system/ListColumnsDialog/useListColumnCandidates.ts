@@ -1,8 +1,8 @@
 import { fieldProtections, isProtected } from "@repo/domain/form";
 import { useFormsQuery } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
-import { useVersionDefinitions } from "@/hooks/useVersionDefinitions";
+import { useSession } from "@/hooks/base/useSession";
+import { useVersionDefinitions } from "@/hooks/base/useVersionDefinitions";
 
 export interface FieldCandidate {
   formKey: string;

@@ -6,6 +6,7 @@ import type {
   FieldDef,
   FormDefinition,
   LayoutCol,
+  LayoutSection,
   PrefillMapping,
   SummarySlot,
 } from "./types";
@@ -48,6 +49,13 @@ export function validateLayout(
     for (const { col, path } of cols) {
       checkLayoutCol(col, path, byKey, placed, collector);
     }
+    checkSectionCollapse(
+      section,
+      cols.map(({ col }) => col.fieldKey),
+      byKey,
+      sectionPath,
+      collector,
+    );
   }
   for (const field of definition.fields) {
     if (field.valueSource.kind !== "constant" && !placed.has(field.key)) {
@@ -59,6 +67,79 @@ export function validateLayout(
         },
       );
     }
+  }
+}
+
+/**
+ * 分區的收合設定(選填,沒有 = 不可收合):`collapsible` / `defaultCollapsed` 要是布林、`summaryFieldKeys` 要是字串陣列;
+ * 收合時標題列顯示的欄位須放在**本分區**、不能是明細欄(標題列只放得下單值)、不能重複。
+ */
+function checkSectionCollapse(
+  section: LayoutSection,
+  sectionFieldKeys: readonly string[],
+  byKey: ReadonlyMap<string, FieldDef>,
+  sectionPath: string,
+  collector: IssueCollector,
+): void {
+  const { collapsible, defaultCollapsed, summaryFieldKeys } = section as {
+    collapsible?: unknown;
+    defaultCollapsed?: unknown;
+    summaryFieldKeys?: unknown;
+  };
+  for (const [property, value] of [
+    ["collapsible", collapsible],
+    ["defaultCollapsed", defaultCollapsed],
+  ] as const) {
+    if (value !== undefined && typeof value !== "boolean") {
+      collector.error(
+        "SECTION_COLLAPSE_INVALID",
+        `分區「${section.title}」的 ${property} 須為布林值`,
+        { layoutPath: sectionPath, property },
+      );
+    }
+  }
+  if (summaryFieldKeys === undefined) {
+    return;
+  }
+  if (
+    !Array.isArray(summaryFieldKeys) ||
+    !summaryFieldKeys.every((key) => typeof key === "string")
+  ) {
+    collector.error(
+      "SECTION_COLLAPSE_INVALID",
+      `分區「${section.title}」的 summaryFieldKeys 須為欄位 key 陣列`,
+      { layoutPath: sectionPath, property: "summaryFieldKeys" },
+    );
+    return;
+  }
+  const inSection = new Set(sectionFieldKeys);
+  const seen = new Set<string>();
+  for (const [index, key] of summaryFieldKeys.entries()) {
+    const location = {
+      layoutPath: sectionPath,
+      fieldKey: key,
+      property: `summaryFieldKeys.${String(index)}`,
+    };
+    if (seen.has(key)) {
+      collector.error(
+        "SECTION_SUMMARY_FIELD_INVALID",
+        `分區「${section.title}」收合時顯示的欄位 ${key} 重複`,
+        location,
+      );
+    } else if (!inSection.has(key) || !byKey.has(key)) {
+      collector.error(
+        "SECTION_SUMMARY_FIELD_INVALID",
+        `分區「${section.title}」收合時顯示的欄位 ${key} 不在這個分區`,
+        location,
+      );
+    } else if (byKey.get(key)?.type === "array") {
+      collector.error(
+        "SECTION_SUMMARY_FIELD_INVALID",
+        `分區「${section.title}」收合時不能顯示明細欄 ${key}`,
+        location,
+      );
+    }
+    seen.add(key);
   }
 }
 
@@ -251,12 +332,45 @@ function checkPrefillMapping(
     );
     return;
   }
+  checkPrefillEntry(
+    mapping,
+    target,
+    provider,
+    {
+      location,
+      targetMessage: `帶入目標 ${mapping.fieldKey} 必須是使用者填寫的欄位(不能是計算、固定值或引用欄位)`,
+    },
+    collector,
+  );
+}
+
+/**
+ * 帶入對應表的一列(表單層帶入規則與明細引用子欄的列內帶入共用,STRUCT-13):目標要是使用者填、不是引用的
+ * 欄位 / 子欄(找不到也算)→ `PREFILL_TARGET_NOT_INPUT`;來源欄位要在 provider 可回欄位內
+ * → `PREFILL_UNKNOWN_SOURCE_FIELD`;型別要相容(`isPrefillCompatible`)→ `PREFILL_TYPE_INCOMPATIBLE`。
+ * 沒注入登錄表就只驗目標。目標不合時表單層仍接著驗來源,子欄(`stopOnBadTarget`)報一個就停。
+ */
+export function checkPrefillEntry(
+  mapping: PrefillMapping,
+  target: Pick<FieldDef, "type" | "label" | "valueSource"> | undefined,
+  provider: LookupProviderSpec | undefined,
+  options: {
+    location: DefinitionIssueLocation;
+    targetMessage: string;
+    stopOnBadTarget?: boolean;
+  },
+  collector: IssueCollector,
+): void {
+  const { location } = options;
   if (target?.valueSource.kind !== "input" || target.type === "reference") {
     collector.error(
       "PREFILL_TARGET_NOT_INPUT",
-      `帶入目標 ${mapping.fieldKey} 必須是使用者填寫的欄位(不能是計算、固定值或引用欄位)`,
+      options.targetMessage,
       location,
     );
+    if (options.stopOnBadTarget === true) {
+      return;
+    }
   }
   if (!provider) {
     return;

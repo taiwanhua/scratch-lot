@@ -8,6 +8,7 @@ import {
 } from "@repo/graphql";
 
 import {
+  APPLICANT,
   APPLY_VIEW_ROUTE,
   HR,
   MANAGER,
@@ -225,5 +226,165 @@ describe("申請中心詳情頁(view-page)", () => {
     expect(rows.map((row) => row.getAttribute("aria-label"))).toContain(
       "三部門匯合:已結束",
     );
+  });
+
+  it("時間軸寫出跳過是哪一項成立、自動通過的原因(B4 / B5)", async () => {
+    const event = (
+      kind: string,
+      stepKey: string,
+      reason: string | null,
+      who: typeof MANAGER | null = null,
+      code: string | null = null,
+    ) => ({
+      at: "2026-09-20T02:00:00.000Z",
+      kind,
+      stepKey,
+      taskKey: who === null ? null : `${stepKey}-1`,
+      user: who,
+      toUser: null,
+      comment: null,
+      result: null,
+      reason,
+      code,
+      delegators: [],
+    });
+    renderApplyCenter({
+      path: `${APPLY_VIEW_ROUTE}/inst-1`,
+      runtime: {
+        ...defaultRuntime(),
+        instances: [
+          instanceFragment({
+            steps: [
+              instanceStep("store", "分店主管", {
+                status: WorkflowStepStatus.Skipped,
+              }),
+              instanceStep("finance", "財務", {
+                status: WorkflowStepStatus.Skipped,
+              }),
+              instanceStep("manager", "直屬主管", {
+                status: WorkflowStepStatus.Completed,
+              }),
+              instanceStep("hr", "人資", {
+                status: WorkflowStepStatus.Active,
+              }),
+            ],
+            history: [
+              event("step_skipped", "store", "skip_orgs"),
+              event("step_skipped", "finance", "skip_condition"),
+              event("approved", "manager", "auto_applicant", MANAGER),
+              event("approved", "hr", "auto_prior_approver", HR),
+              event("approved", "hr", null, HR),
+              event(
+                "auto_approve_blocked",
+                "manager",
+                "auto_applicant",
+                MANAGER,
+                "UNKNOWN_PROJECT_CODE",
+              ),
+              event(
+                "auto_approve_blocked",
+                "hr",
+                "auto_prior_approver",
+                HR,
+                "UNKNOWN_PROJECT_CODE",
+              ),
+            ],
+          }),
+        ],
+      },
+    });
+    const timeline = await screen.findByRole("region", { name: "審核歷程" });
+    expect(
+      within(timeline).getByText("「分店主管」申請人屬於指定的組織,略過"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText("「財務」符合跳過條件,略過"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "小華 在「直屬主管」核准(申請人是審核者,自動通過)",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "人資阿美 在「人資」核准(已在前關核准,自動通過)",
+      ),
+    ).toBeInTheDocument();
+    // 自動通過被守門擋下:專案沒有 `admin.lifecycle.<碼>` 文案 → 中性通用句
+    expect(
+      within(timeline).getByText(
+        "「直屬主管」申請人自動通過未成立:目前不符合自動通過的條件",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "「人資」人資阿美 已在前關核准,自動通過未成立:目前不符合自動通過的條件",
+      ),
+    ).toBeInTheDocument();
+    // 人按的核准沒有原因:照事件種類
+    expect(
+      within(timeline).getByText("人資阿美 在「人資」核准"),
+    ).toBeInTheDocument();
+  });
+  it("代理派任(B15):兩位委託同一位代理人 → 進度寫「代理人(代理 A、B)」,時間軸派任與核准都寫「由代理人代理 A、B」", async () => {
+    renderApplyCenter({
+      path: `${APPLY_VIEW_ROUTE}/inst-1`,
+      runtime: {
+        ...defaultRuntime(),
+        instances: [
+          instanceFragment({
+            steps: [
+              instanceStep("manager", "直屬主管", {
+                status: WorkflowStepStatus.Active,
+                plan: [
+                  planItem("manager-1", HR, {
+                    delegators: [MANAGER, APPLICANT],
+                  }),
+                ],
+              }),
+            ],
+            history: [
+              {
+                at: "2026-09-20T02:00:00.000Z",
+                kind: "task_created",
+                stepKey: "manager",
+                taskKey: "manager-1",
+                user: HR,
+                toUser: null,
+                comment: null,
+                result: null,
+                reason: null,
+                code: null,
+                delegators: [MANAGER, APPLICANT],
+              },
+              {
+                at: "2026-09-20T03:00:00.000Z",
+                kind: "approved",
+                stepKey: "manager",
+                taskKey: "manager-1",
+                user: HR,
+                toUser: null,
+                comment: null,
+                result: null,
+                reason: null,
+                code: null,
+                delegators: [MANAGER, APPLICANT],
+              },
+            ],
+          }),
+        ],
+      },
+    });
+    const timeline = await screen.findByRole("region", { name: "審核歷程" });
+    expect(
+      within(timeline).getByText("「直屬主管」由 人資阿美 代理 小華、小明"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "「直屬主管」由 人資阿美 代理 小華、小明 核准",
+      ),
+    ).toBeInTheDocument();
+    const rows = await progressRows();
+    expect(rows[0]).toHaveTextContent("人資阿美(代理 小華、小明)");
   });
 });

@@ -7,7 +7,7 @@ import {
 } from "@repo/graphql";
 import { Autocomplete } from "@repo/ui/autocomplete";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 export interface ManagerFieldProps {
   orgId: string;

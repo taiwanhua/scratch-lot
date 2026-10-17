@@ -9,11 +9,11 @@
     "node/jest-preset.mjs"
   ],
   "dependencies": {
-    "jest": "^30.2.0",
+    "jest": "^30.5.2",
     "jest-fixed-jsdom": "^0.0.11",
     "ts-jest": "^29.4.6"
   },
   "devDependencies": {
-    "jest-environment-jsdom": "^30.2.0"
+    "jest-environment-jsdom": "^30.5.2"
   }
 }

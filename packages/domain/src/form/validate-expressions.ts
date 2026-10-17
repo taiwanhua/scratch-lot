@@ -299,7 +299,12 @@ function validateRequiredVisibility(
   }
   const isVisible = evaluateCondition(expr, {
     values: {},
-    ctx: { now: "", timezone: "UTC", user: { id: null, orgId: null } },
+    ctx: {
+      now: "",
+      timezone: "UTC",
+      user: { id: null, orgId: null, orgIds: [] },
+      tenant: { id: null },
+    },
   });
   if (!isVisible) {
     collector.error(

@@ -87,7 +87,7 @@ export const propertiesPanel = (): HTMLElement =>
 /**
  * 點流程圖上的節點(選取):React Flow 的節點掛了 d3-drag,userEvent 的指標事件會讓 d3 讀
  * `event.view.document` 而在 jsdom 炸掉;點選只需要 click,用 `fireEvent.click`。
- * 拖拉的放置判斷另有純函式測試(`lib/workflow/flow-drop.test.ts`),畫面上用「上移 / 下移 / 移到分支」。
+ * 拖拉的放置判斷另有純函式測試(`lib/base/workflow/flow-drop.test.ts`),畫面上用「上移 / 下移 / 移到分支」。
  */
 export const clickNode = (canvas: HTMLElement, name: string): void => {
   fireEvent.click(within(canvas).getByRole("group", { name }));

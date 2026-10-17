@@ -20,10 +20,6 @@ export const FORM_CONFLICT_REASONS = [
   "DRAFT_EXISTS",
   /** 要存 / 發布的草稿不存在(已被發布或還沒開)。 */
   "DRAFT_MISSING",
-  /** 發布進行中(有 `publishing` 版本、或已發布但還沒切換完):禁止開草稿 / 退役 / 再發布。 */
-  "PUBLISH_IN_PROGRESS",
-  /** 重試發布時沒有中斷的發布可以接續。 */
-  "PUBLISH_NOT_INTERRUPTED",
   /** 退役目前版本時表單沒有已發布的版本。 */
   "NO_CURRENT_VERSION",
   /** 讀到之後 `currentVersion` 被別人改了(同時的退役 / 發布);重新載入再做。 */
@@ -46,7 +42,7 @@ export const FORM_CONFLICT_REASONS = [
   "FORM_HAS_WORKFLOW",
   /** 舊版資料升級:目標版本不是已發布的版本。 */
   "VERSION_NOT_PUBLISHED",
-  /** 受管定義安裝的條件更新:比對之後表單身分、目前版本或名稱 / 頁籤模板被別人改了(只有內部的安裝流程會帶預期值)。 */
+  /** 受管定義安裝的條件更新:比對之後表單身分、目前版本或名稱 / 頁籤模板 / 允許存草稿被別人改了(只有內部的安裝流程會帶預期值)。 */
   "METADATA_CHANGED",
 ] as const;
 
@@ -62,6 +58,8 @@ export const FORM_FORBIDDEN_REASONS = [
   "NOT_FORM_OWNER",
   /** 只有站在根組織才能做(分派 / 收回、建共用表單)。 */
   "ROOT_ONLY",
+  /** 表單關了「允許存草稿」:不能建草稿、不能存狀態為草稿的單(只能直接送出)。 */
+  "DRAFT_DISABLED",
 ] as const;
 
 export type FormForbiddenReason = (typeof FORM_FORBIDDEN_REASONS)[number];

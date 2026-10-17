@@ -1,0 +1,19 @@
+# 人員條件(api 正本 apps/api/src/audience/、格式正本 @repo/domain/audience)。
+# AudiencePicker 的權限樹 = 權限矩陣的顯示樹(操作者自己持有的模組 / 權限,扣掉別租戶客製表單的欄位級權限);
+# root 只看得到底座與專案的權限。節點欄位沿用矩陣的 RoleMatrixNodeFields,深度與 RoleMatrix 相同。
+query AudiencePermissionOptions {
+  audiencePermissionOptions {
+    modules {
+      ...RoleMatrixNodeFields
+      children {
+        ...RoleMatrixNodeFields
+        children {
+          ...RoleMatrixNodeFields
+          children {
+            ...RoleMatrixNodeFields
+          }
+        }
+      }
+    }
+  }
+}

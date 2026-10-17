@@ -2,9 +2,9 @@ import { QueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { BrowserRouter } from "react-router";
 
-import { type AuthSession, createAuthSession } from "../lib/auth/session";
-import { GRAPHQL_ENDPOINT } from "../lib/graphql";
-import { useSessionStore } from "../stores/useSessionStore";
+import { type AuthSession, createAuthSession } from "../lib/base/auth/session";
+import { GRAPHQL_ENDPOINT } from "../lib/base/graphql";
+import { useSessionStore } from "../stores/base/useSessionStore";
 import { RootProviders } from "./providers/RootProviders";
 import { AppRoutes } from "./routes";
 

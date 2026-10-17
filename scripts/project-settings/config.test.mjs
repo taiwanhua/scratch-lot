@@ -35,6 +35,12 @@ const ORIGINAL_SHARED = {
   deployer_sa: "github-deployer@cookhome-online.iam.gserviceaccount.com",
   root_account: "root",
   root_email: "a0987837233@gmail.com",
+  // 即時通道是之後加的可省略段落:舊設定沒有它 = 停用,其餘輸出逐值不變
+  realtime: "false",
+  realtime_worker: "",
+  cloudflare_account_id: "",
+  realtime_ticket_secret: "",
+  realtime_publish_secret: "",
 };
 const ORIGINAL_ENVIRONMENTS = {
   dev: {
@@ -164,14 +170,14 @@ test("正式設定:repo 身分不符時照樣被拒絕(不因為是正式檔而�
   );
 });
 
-test("cloud 輸出的鍵固定為契約的十六個,且全是字串", () => {
+test("cloud 輸出的鍵固定為契約的二十一個,且全是字串", () => {
   const resolved = resolveCloudConfig({
     rootDir: makeProjectRoot(),
     environment: "staging",
     repository: REPO,
   });
   assert.deepEqual(Object.keys(resolved), CLOUD_OUTPUT_KEYS);
-  assert.equal(CLOUD_OUTPUT_KEYS.length, 16);
+  assert.equal(CLOUD_OUTPUT_KEYS.length, 21);
   for (const value of Object.values(resolved))
     assert.equal(typeof value, "string");
   assert.equal(resolved.api_service, "widgets-api-staging");
@@ -757,4 +763,73 @@ test("cloud scope 只用 github.json 的身分欄位:看板停用或看板欄位
     }).api_service,
     "widgets-api",
   );
+});
+
+// ---------------------------------------------------------------- 即時通道
+
+const ACCOUNT_ID = "0123456789abcdef0123456789abcdef";
+
+function realtimeCloud(dev) {
+  const cloud = sampleCloud();
+  cloud.environments.dev.realtime = dev;
+  return cloud;
+}
+
+const resolveDev = (cloud) =>
+  resolveCloudConfig({
+    rootDir: makeProjectRoot({ cloud }),
+    environment: "dev",
+    repository: REPO,
+  });
+
+test("realtime:省略或 null = 停用,四個輸出為空字串", () => {
+  for (const cloud of [sampleCloud(), realtimeCloud(null)]) {
+    const resolved = resolveDev(cloud);
+    assert.equal(resolved.realtime, "false");
+    assert.equal(resolved.realtime_worker, "");
+    assert.equal(resolved.cloudflare_account_id, "");
+    assert.equal(resolved.realtime_ticket_secret, "");
+    assert.equal(resolved.realtime_publish_secret, "");
+  }
+});
+
+test("realtime:有寫就解析出 Worker 名稱、帳號與兩把密鑰的名稱", () => {
+  const resolved = resolveDev(
+    realtimeCloud({
+      worker: "widgets-realtime-dev",
+      cloudflareAccountId: ACCOUNT_ID,
+      secrets: {
+        ticketSecret: "realtime-ticket-dev",
+        publishSecret: "realtime-publish-dev",
+      },
+    }),
+  );
+  assert.equal(resolved.realtime, "true");
+  assert.equal(resolved.realtime_worker, "widgets-realtime-dev");
+  assert.equal(resolved.cloudflare_account_id, ACCOUNT_ID);
+  assert.equal(resolved.realtime_ticket_secret, "realtime-ticket-dev");
+  assert.equal(resolved.realtime_publish_secret, "realtime-publish-dev");
+});
+
+test("realtime:缺鍵、未知鍵、格式錯一律拒絕", () => {
+  const valid = {
+    worker: "widgets-realtime-dev",
+    cloudflareAccountId: ACCOUNT_ID,
+    secrets: { ticketSecret: "a", publishSecret: "b" },
+  };
+  const broken = [
+    [{ ...valid, worker: undefined }, /realtime/],
+    [{ ...valid, extra: 1 }, /realtime/],
+    [{ ...valid, worker: "Bad Name" }, /realtime\.worker/],
+    [{ ...valid, cloudflareAccountId: "xyz" }, /cloudflareAccountId/],
+    [{ ...valid, secrets: { ticketSecret: "a" } }, /publishSecret/],
+    ["yes", /realtime/],
+  ];
+  for (const [realtime, pattern] of broken) {
+    const value =
+      typeof realtime === "object"
+        ? JSON.parse(JSON.stringify(realtime))
+        : realtime;
+    expectError(() => resolveDev(realtimeCloud(value)), pattern);
+  }
 });

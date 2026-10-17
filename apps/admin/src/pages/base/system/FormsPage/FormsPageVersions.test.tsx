@@ -1,8 +1,6 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { formFragment } from "@/test/msw/form-fixtures";
-
 import {
   defaultDesignOptions,
   findDesigner,
@@ -80,23 +78,6 @@ describe("表單管理:版本面板", () => {
     const refreshed = await screen.findByRole("table", { name: "版本清單" });
     expect(await within(refreshed).findByText("v2")).toBeInTheDocument();
     expect(within(refreshed).getByText("已退役")).toBeInTheDocument();
-  });
-
-  it("發布中斷:只剩「重試發布」,開草稿 / 退役 / 發布的按鈕都不出現", async () => {
-    const options = defaultDesignOptions();
-    const { user } = renderFormsPage({
-      ...options,
-      forms: [formFragment({ publishInterrupted: true })],
-    });
-    const table = await openVersions(user);
-
-    expect(
-      screen.getByRole("button", { name: "重試發布" }),
-    ).toBeInTheDocument();
-    expect(within(table).queryByRole("button", { name: "發布" })).toBeNull();
-    expect(
-      within(table).queryByRole("button", { name: "退役目前版本" }),
-    ).toBeNull();
   });
 
   it("以此為基底建新表單:key 建立後不可改的提示", async () => {

@@ -11,6 +11,7 @@ import { validateDefaults } from "./validate-defaults";
 import { validateExpressionTypes } from "./validate-expression-types";
 import { validateExpressions } from "./validate-expressions";
 import { type RegexSafetyCheck, validateFields } from "./validate-fields";
+import { validateLookupFilters } from "./validate-lookup-filters";
 import {
   collectFieldWarnings,
   validateLayout,
@@ -71,6 +72,10 @@ export function validateDefinition(
       ...(options.fieldCategoryKeys && {
         fieldCategoryKeys: options.fieldCategoryKeys,
       }),
+      // 引用子欄的來源照表單層引用欄對照登錄表
+      ...(options.lookupProviders && {
+        lookupProviders: options.lookupProviders,
+      }),
     },
     collector,
   );
@@ -80,6 +85,7 @@ export function validateDefinition(
   validateLayout(definition, collector);
   validateSummary(definition, protections, collector);
   validatePrefills(definition, options.lookupProviders, collector);
+  validateLookupFilters(definition, options.lookupProviders, collector);
   collectFieldWarnings(definition, options.listColumnFieldKeys, collector);
   return { errors: collector.errors, warnings: collector.warnings };
 }

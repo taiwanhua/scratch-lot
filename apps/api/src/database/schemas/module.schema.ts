@@ -78,6 +78,14 @@ export class Module {
   /** 頁面組裝方式(見 `MODULE_ENGINES`);seed 宣告 `engine: "form"` 才是表單模組,其餘 `fixed`。 */
   @Prop({ type: String, enum: MODULE_ENGINES, default: "fixed" })
   engine!: ModuleEngine;
+
+  /**
+   * 表單模組依表單分開新增權限(B9b):true 時每張表單發布時建 `<模組>.create-<formKey>`,
+   * 新增資格看它而不看模組 `create`(`FormAccessService.canCreateWithForm`)。
+   * 與 `engine` 同屬「每次 seed 都同步」的欄位:只能在 seed 宣告,執行期不改。
+   */
+  @Prop({ type: Boolean, default: false })
+  perFormCreate!: boolean;
 }
 
 // 由 class 產生 Mongoose Schema(供 MongooseModule 註冊為 model,並掛下方索引/plugin)

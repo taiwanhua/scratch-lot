@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useDesignerDraftStore } from "@/stores/useDesignerDraftStore";
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
+import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
 
 import { FormDetailPanel } from "./FormDetailPanel";
 import { CreateFormDialog } from "./FormDialogs/CreateFormDialog";
@@ -14,7 +16,6 @@ import { FormListPanel } from "./FormListPanel";
 import { UnsavedDesignDialog } from "./UnsavedDesignDialog";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
 import { useFormsPageData } from "./useFormsPageData";
-import { useIsAtRootOrg } from "./useIsAtRootOrg";
 
 /**
  * 表單管理(模組 key `system.forms`,正本 `docs/modules/forms.md`;Spec 6a §8 畫面 1–5)。
@@ -26,14 +27,45 @@ import { useIsAtRootOrg } from "./useIsAtRootOrg";
 export const FormsPage = () => {
   const t = useTranslations("admin.forms");
   const { hasPermission } = usePermissions();
-  const data = useFormsPageData();
+  /**
+   * 編輯彈窗記在網址 `?edit=<key>`(REACT-14):編的就是右欄選中的那一個,所以網址上的 key 同時是選中的;
+   * 清單查完還沒有 → 提示找不到,沒有編輯權限(`abilities.canEdit`)→ 停在它的詳情。
+   */
+  const edit = useUrlEdit();
+  const data = useFormsPageData(edit.requestedId);
+  const selectItem = data.select;
+  const keepDetail = useCallback(
+    (key: string) => {
+      selectItem(key);
+    },
+    [selectItem],
+  );
+  const editingKey = useUrlEditGuard({
+    edit,
+    canEdit:
+      data.selected !== null && data.selected.key === edit.requestedId
+        ? data.selected.abilities.canEdit
+        : undefined,
+    isMissing:
+      edit.requestedId !== null &&
+      data.isListSettled &&
+      data.selectedKey !== edit.requestedId,
+    onNoPermission: keepDetail,
+  });
+  /** 關掉編輯彈窗:停在剛編的那一個(網址 `?detail=` 記下它) */
+  const closeEdit = () => {
+    if (editingKey !== null) {
+      selectItem(editingKey);
+    }
+    edit.close();
+  };
   const [isCreating, setIsCreating] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const isDirty = useDesignerDraftStore(
     (state) => state.isDirty && state.formKey === data.selectedKey,
   );
   const saveDraft = useDesignerDraftStore((state) => state.save);
-  const isAtRoot = useIsAtRootOrg(data.forms);
+  const isAtRoot = useIsAtRootOrg() === true;
 
   /** 換表單:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。 */
   const requestSelect = (key: string) => {
@@ -64,13 +96,18 @@ export const FormsPage = () => {
       {data.selected === null ? (
         <Card sx={{ flex: 1, p: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            {data.isLoading ? t("loading") : t("empty")}
+            {data.isLoading || data.isSelectionPending
+              ? t("loading")
+              : t("empty")}
           </Typography>
         </Card>
       ) : (
         <FormDetailPanel
           key={data.selected.key}
           form={data.selected}
+          isEditing={editingKey === data.selected.key}
+          onEdit={edit.open}
+          onEditClose={closeEdit}
           onChanged={() => {
             void data.invalidate(data.selectedKey);
           }}

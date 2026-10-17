@@ -14,6 +14,7 @@ import {
 import { authWorld } from "@/test/msw/auth-handlers";
 import { dataScopeTargets, savedRule } from "@/test/msw/data-scope-fixtures";
 import { dataScopeWorld } from "@/test/msw/data-scope-handlers";
+import { delegationWorld } from "@/test/msw/delegation-handlers";
 import { demoHistory, demoItems } from "@/test/msw/demo-fixtures";
 import { demoWorld } from "@/test/msw/demo-sample-one-handlers";
 import { demoTwoWorld } from "@/test/msw/demo-sample-two-handlers";
@@ -39,6 +40,12 @@ import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
 import { moduleAdminWorld } from "@/test/msw/module-manager-handlers";
 import {
+  notificationPreferenceDefaults,
+  notificationWorld,
+  sampleNotifications,
+} from "@/test/msw/notification-handlers";
+import { notificationSettingsWorld } from "@/test/msw/notification-settings-handlers";
+import {
   orgDetails,
   orgManagerCandidates,
   orgManagersByOrg,
@@ -49,6 +56,7 @@ import {
   tenantTree,
 } from "@/test/msw/org-fixtures";
 import { orgWorld } from "@/test/msw/org-manager-handlers";
+import { printingWorld } from "@/test/msw/printing-handlers";
 import {
   candidates,
   grantedFixture,
@@ -70,6 +78,10 @@ import {
   planItem,
   taskFragment,
 } from "@/test/msw/workflow-fixtures";
+import {
+  autoApproveBlockedEvent,
+  historyEvent,
+} from "@/test/msw/workflow-history-fixtures";
 import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
@@ -79,6 +91,7 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 
 /**
@@ -135,14 +148,26 @@ export const mockHandlers = ({
 }: MockWorldOptions): MockHandler[] => {
   // 視角決定哪一棵組織樹;使用者管理的「子樹過濾」也要同一棵,不然點左樹會篩不到人
   const orgTree = view === "root" ? rootTree : tenantTree;
+  // 個人偏好先放好通知管道開關的 key(`UpdateMyPreferences` 只收已有的 key),通知假 api 讀同一份
+  const auth = authWorld({
+    hasRefreshCookie: authenticated,
+    modules: modulesForView(view),
+    orgs: orgsForView(view),
+    // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
+    currentOrgTenantId: view === "root" ? null : "org-tenant-a",
+    preferences: notificationPreferenceDefaults(),
+  });
 
   return [
     // 登入線:Login / Refresh / Me / SwitchOrg / 改密碼…(`hasRefreshCookie` 即「已登入」)
-    ...authWorld({
-      hasRefreshCookie: authenticated,
-      modules: modulesForView(view),
-      orgs: orgsForView(view),
+    ...auth.handlers,
+    // 通知鈴 / 通知清單 / 偏好分頁的管道開關(底座規格第 5 章)
+    ...notificationWorld({
+      notifications: sampleNotifications(),
+      preferences: auth.preferences,
     }).handlers,
+    // 個人設定的代理人分頁(底座規格 3.7 B15)
+    ...delegationWorld().handlers,
     // 組織管理(#134 / #135 / #137):`users` 讓給 userWorld
     ...withoutOperations(
       orgWorld({
@@ -177,9 +202,17 @@ export const mockHandlers = ({
     ...moduleAdminWorld({ tree: moduleAdminTree }).handlers,
     // 資料範圍(#205 / #246):`savedRule` 讓左清單一開始就有一筆「已設規則」
     ...withoutOperations(
-      dataScopeWorld({ targets: dataScopeTargets, rules: [savedRule] })
-        .handlers,
-      ["Roles", "Users", "OrgTree"],
+      dataScopeWorld({
+        targets: dataScopeTargets,
+        rules: [savedRule],
+        permissionModules: matrixModules,
+      }).handlers,
+      ["Roles", "Users", "OrgTree", "AudiencePermissionOptions"],
+    ),
+    // 通知設定(底座規格第 5 章;`mock-notification-settings.ts`):`Roles` 讓給 roleWorld,權限候選樹由它提供
+    ...withoutOperations(
+      notificationSettingsWorld(mockNotificationSettings()).handlers,
+      ["Roles"],
     ),
     // 欄位管理(#206 / #264):`currentOrg` 只決定新增選項的擁有組織標籤
     ...fieldWorld({
@@ -242,6 +275,8 @@ export const mockHandlers = ({
           moduleKey: "demo-form",
           currentVersion: 1,
           tabLabelTemplate: null,
+          allowDraft: true,
+          canCreate: true,
         },
         {
           key: LEAVE_FORM_KEY,
@@ -249,6 +284,8 @@ export const mockHandlers = ({
           moduleKey: "demo.form",
           currentVersion: 1,
           tabLabelTemplate: null,
+          allowDraft: true,
+          canCreate: true,
         },
       ],
       versions: {
@@ -268,6 +305,9 @@ export const mockHandlers = ({
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
     ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
+    // 印表機管理(底座規格第 6 章 B8):兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
+    // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
+    ...printingWorld().handlers,
   ];
 };
 
@@ -285,6 +325,7 @@ const leaveSubmissions = () => [
     currentInstanceId: "inst-1",
     abilities: {
       canEdit: false,
+      canSaveDraft: false,
       canDelete: false,
       canEditField: [],
       canWithdraw: false,
@@ -303,6 +344,7 @@ const leaveSubmissions = () => [
     currentInstanceId: "inst-2",
     abilities: {
       canEdit: false,
+      canSaveDraft: false,
       canDelete: false,
       canEditField: [],
       canWithdraw: false,
@@ -330,7 +372,7 @@ const mockWorkflowRuntime = () => ({
           status: WorkflowStepStatus.Completed,
         }),
         instanceStep("finance", "財務部審核", {
-          status: WorkflowStepStatus.Completed,
+          status: WorkflowStepStatus.Skipped,
         }),
         instanceStep("legal", "法務部審核", {
           mode: "all",
@@ -354,9 +396,40 @@ const mockWorkflowRuntime = () => ({
         }),
         instanceStep("confirm", "原部門確認"),
       ],
+      // 時間軸示範 B4 跳過、B5 自動通過的原因,與自動通過被守門擋下(錯誤碼沒有文案 → 通用句)
+      history: [
+        historyEvent("started", null, null, APPLICANT),
+        historyEvent("step_entered", "review", null),
+        historyEvent("approved", "review", "auto_applicant", APPLICANT),
+        historyEvent("step_completed", "review", null),
+        historyEvent("step_skipped", "finance", "skip_orgs"),
+        historyEvent("step_entered", "legal", null),
+        historyEvent("approved", "legal", "auto_prior_approver", HR),
+        historyEvent("step_entered", "purchase", null),
+        autoApproveBlockedEvent("purchase", MANAGER, "STOCK_NOT_COUNTED"),
+        historyEvent("blocked", "purchase", null),
+      ],
     }),
   ],
-  tasks: [taskFragment({ id: "task-manager-1" })],
+  // 待我審核三筆(批次核准 BS-07a / b):「出差三天」核准時被專案守門擋下(錯誤碼沒有文案 → 通用句)
+  tasks: [
+    taskFragment({ id: "task-manager-1" }),
+    taskFragment({
+      id: "task-manager-2",
+      instanceId: "inst-3",
+      formName: "採購申請單",
+      stepName: "部門主管",
+      summary: { title: "辦公椅 5 張", date: null, amount: null },
+    }),
+    taskFragment({
+      id: "task-manager-3",
+      instanceId: "inst-4",
+      formName: "出差申請單",
+      stepName: "財務複核",
+      summary: { title: "出差三天", date: null, amount: null },
+    }),
+  ],
+  blockedTaskReasons: { "task-manager-3": "LEAVE_QUOTA_SHORT" },
   applications: [
     applicationRow(),
     applicationRow({

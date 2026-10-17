@@ -101,13 +101,13 @@ export class FormModel {
   @Field(() => String, { nullable: true })
   tabLabelTemplate!: string | null;
 
+  /** 允許存草稿(表單設定);沒設過的舊表單為 true。 */
+  @Field(() => Boolean)
+  allowDraft!: boolean;
+
   /** 有一份草稿(版本面板的「編輯草稿」)。 */
   @Field(() => Boolean)
   hasDraft!: boolean;
-
-  /** 發布中斷(有 `publishing` 版本,或已發布版本號 ≠ `currentVersion`):顯示「重試」。 */
-  @Field(() => Boolean)
-  publishInterrupted!: boolean;
 
   /** 站在租戶內時,本租戶對這張的開關(`org_form.meta.enabled`);root 視角為 null。 */
   @Field(() => Boolean, { nullable: true })

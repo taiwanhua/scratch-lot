@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, within } from "@testing-library/react";
 
-import { projectHtmlTransform } from "@/lib/project-html";
+import { projectHtmlTransform } from "@/lib/base/project-html";
 import { authHandlers, authWorld } from "@/test/msw/auth-handlers";
 import { server } from "@/test/msw/server";
 import { primaryMainOf } from "@/test/primary-color";

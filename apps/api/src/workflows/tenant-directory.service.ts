@@ -1,11 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import {
-  OrgsRepository,
-  RolesRepository,
-  UsersRepository,
-} from "../database/database.module";
+import { OrgsRepository, UsersRepository } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
 
@@ -44,7 +40,6 @@ export class TenantDirectoryService {
   constructor(
     private readonly orgs: OrgsRepository,
     private readonly users: UsersRepository,
-    private readonly roles: RolesRepository,
     private readonly relations: RelationService,
   ) {}
 
@@ -54,6 +49,12 @@ export class TenantDirectoryService {
       $or: [{ _id: tenantId }, { ancestors: tenantId }],
     });
     return orgs.map((org) => org._id);
+  }
+
+  /** 同上,字串 id 的集合(檢查人員條件裡指定的組織屬不屬本租戶)。 */
+  async tenantOrgIdSet(tenantId: Types.ObjectId): Promise<Set<string>> {
+    const ids = await this.tenantOrgIds(tenantId);
+    return new Set(ids.map(String));
   }
 
   /** 租戶子樹的成員 id(`org_user`,去重)。 */
@@ -116,27 +117,5 @@ export class TenantDirectoryService {
       firstIds: await this.tenantOrgIds(tenantId),
     });
     return new Set(links.map((link) => String(link.secondId)));
-  }
-
-  /**
-   * 持有該角色的人(`user_role`);角色必須屬本租戶且啟用中,否則空(該關阻擋)。
-   * 回的名單還沒過「啟用 / 在本租戶」,呼叫端再以 `eligibleUserIds` 收斂。
-   */
-  async roleMemberIds(
-    tenantId: Types.ObjectId,
-    roleId: Types.ObjectId,
-  ): Promise<Types.ObjectId[]> {
-    const tenantRoles = await this.tenantRoleIds(tenantId);
-    if (!tenantRoles.has(String(roleId))) {
-      return [];
-    }
-    const role = await this.roles.findById(systemContext(), roleId);
-    if (role?.enabled !== true) {
-      return [];
-    }
-    const links = await this.relations.listLinks("user_role", {
-      secondIds: [roleId],
-    });
-    return links.map((link) => link.firstId);
   }
 }

@@ -77,6 +77,8 @@ export interface RoleWorld {
   /** 各操作收到的輸入(依序),用來斷言「送出去的是什麼」 */
   inputs: {
     roles: RolesQueryVariables["input"][];
+    /** 持有人清單的查詢(驗頁碼有照網址送出) */
+    roleUsers: RoleUsersQueryVariables[];
     createRole: CreateRoleMutationVariables["input"][];
     updateRole: UpdateRoleMutationVariables["input"][];
     setRoleEnabled: SetRoleEnabledMutationVariables["input"][];
@@ -115,6 +117,7 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
 
   const inputs: RoleWorld["inputs"] = {
     roles: [],
+    roleUsers: [],
     createRole: [],
     updateRole: [],
     setRoleEnabled: [],
@@ -207,7 +210,11 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
     }),
     api.query("Role", ({ variables }) => {
       const { id } = variables as { id: string };
-      return HttpResponse.json({ data: { role: { role: roleOf(id) } } });
+      const found = roleList.find((item) => item.id === id);
+      // 不存在或範圍外:api 回 FORBIDDEN(不透露存在與否)
+      return found === undefined
+        ? graphqlError("FORBIDDEN", "No such role")
+        : HttpResponse.json({ data: { role: { role: found } } });
     }),
     api.query("RoleMatrix", ({ variables }) => {
       const { roleId } = variables as { roleId: string };
@@ -215,6 +222,7 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
     }),
     api.query("RoleUsers", ({ variables }) => {
       const { roleId, input } = variables as RoleUsersQueryVariables;
+      inputs.roleUsers.push({ roleId, input });
       return HttpResponse.json({
         data: { roleUsers: usersPayload(roleId, input.page ?? 1) },
       });

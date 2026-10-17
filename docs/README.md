@@ -51,7 +51,7 @@ Turborepo monorepo(pnpm workspace),套件名一律 `@repo/` 前綴。
 
 | 你是     | 照這個順序讀                                                                                                                                                  |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 新手     | 本頁 → `CONTEXT.md`(詞彙)→ `docs/concepts/` 七份(順序見下)→ 感興趣的 `docs/modules/<key>.md`                                                                  |
+| 新手     | 本頁 → `CONTEXT.md` + `CONTEXT-PROJECT.md`(詞彙)→ `docs/concepts/` 七份(順序見下)→ 感興趣的 `docs/modules/<key>.md`                                           |
 | 開發者   | 新手路線 → `docs/standards/README.md`(只載入相關規範)→ `docs/agents/module-scaffold.md`(新增模組;要人機問答出規格卡用 `/module-scaffold`)→ 需要理由時讀 ADR   |
 | AI agent | 新手路線 → `docs/agents/collaboration.md`(分工與接手)→ `docs/agents/toolbox.md`(工具與環境)→ `docs/agents/issue-tracker.md`(票與 PR 流程)→ 依改動範圍載入規範 |
 
@@ -64,7 +64,8 @@ concepts 的順序:`accounts-and-tenants` → `authorization` → `data-layer-an
 | 文件                                                                                        | 是什麼                                           | 什麼時候讀                 |
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------------- |
 | `CLAUDE.md`                                                                                 | 分支流程、規範入口、文件地圖                     | 第一次進 repo              |
-| `CONTEXT.md`                                                                                | 詞彙表                                           | 寫文件、命名、開票前       |
+| `CONTEXT.md`                                                                                | 底座詞彙表                                       | 寫文件、命名、開票前       |
+| `CONTEXT-PROJECT.md`                                                                        | 專案詞彙表(只新增,不重新定義底座名詞)            | 寫文件、命名、開票前       |
 | `docs/README.md`                                                                            | 本頁                                             | 入口                       |
 | `docs/concepts/accounts-and-tenants.md`                                                     | 帳號、組織樹、租戶開通、擁有者保護               | 動登入、使用者、組織       |
 | `docs/concepts/authorization.md`                                                            | 模組、權限、解析流程、防越權、稽核               | 動權限、角色、任何守門     |
@@ -79,7 +80,7 @@ concepts 的順序:`accounts-and-tenants` → `authorization` → `data-layer-an
 | `docs/modules/<key>.md`                                                                     | 各模組的權限表、api 介面、畫面                   | 動某個模組                 |
 | `apps/admin/src/md/module-help/{base,project/additions,project/replacements}/<key>.help.md` | 租戶使用者看的模組說明                           | 改模組的使用者文案         |
 | `docs/standards/README.md`                                                                  | 程式碼規範索引(規則編號)                         | 寫或 review 程式碼         |
-| `docs/testing/permission-scenarios.md`                                                      | 24 條權限驗收劇本                                | 驗收、寫 E2E               |
+| `docs/testing/permission-scenarios.md`                                                      | 29 條權限驗收劇本                                | 驗收、寫 E2E               |
 | `docs/testing/handover-quiz.md`                                                             | 接手自測題                                       | 讀完文件後自我檢查         |
 | `docs/agents/toolbox.md`                                                                    | agent 的工具與環境須知                           | AI agent 開工前            |
 | `docs/agents/collaboration.md`                                                              | Claude、Codex 與人員共用的分工、工作樹與接手規則 | 派工、恢復或換手           |
@@ -93,6 +94,7 @@ concepts 的順序:`accounts-and-tenants` → `authorization` → `data-layer-an
 | `docs/branding.md`                                                                          | 品牌文字、色彩、網域、儲存鍵登記                 | 動品牌元素或儲存鍵         |
 | `docs/agents/project-bootstrap.md`                                                          | 建立引用專案與接續初始化的共用操作               | 新專案初始化               |
 | `docs/project-initialization.md`                                                            | 初始化設定的正本索引與驗證責任                   | 建立專案與核對初始化設定   |
-| `docs/tmp/dis.md`                                                                           | 進行中討論與待辦                                 | 查尚未定案的事             |
+| `docs/tmp/dis.md`                                                                           | 底座進行中討論與待辦                             | 查尚未定案的事             |
+| `docs/tmp/project-dis.md`                                                                   | 專案進行中討論與待辦                             | 查尚未定案的事             |
 
 正本:`docs/` 目錄本身;新增文件時在本表補一行。

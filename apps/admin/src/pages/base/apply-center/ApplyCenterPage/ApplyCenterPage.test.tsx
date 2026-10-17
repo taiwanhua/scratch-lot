@@ -93,7 +93,12 @@ describe("申請中心", () => {
 
     await user.click(screen.getByRole("combobox", { name: "處理狀態" }));
     await user.click(await screen.findByRole("option", { name: "已處理" }));
-    expect(await within(table).findByText("舊修訂的標題")).toBeInTheDocument();
+    // 已處理沒有列勾選,表格換了一個(重新取)
+    expect(
+      await within(
+        await screen.findByRole("table", { name: "待我審核" }),
+      ).findByText("舊修訂的標題"),
+    ).toBeInTheDocument();
     expect(runtime.inputs.myTasks.at(-1)?.done).toBe(true);
   });
 

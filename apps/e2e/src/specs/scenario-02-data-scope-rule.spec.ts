@@ -8,13 +8,7 @@ import {
 } from "../fixtures/demo-keys";
 import { createScenarioDemoItems } from "../fixtures/scenario-demo-items";
 import { expect, test } from "../fixtures/test";
-import {
-  checkOption,
-  chooseOption,
-  clickAndWaitFor,
-  expectDemoItems,
-  signIn,
-} from "../fixtures/ui";
+import { clickAndWaitFor, expectDemoItems, signIn } from "../fixtures/ui";
 
 /**
  * 劇本 2 — 資料範圍規則
@@ -63,18 +57,29 @@ test("劇本 2:規則命中客服 → 只見自建;刪規則 → 恢復可見範
   await expect(rootPage.getByText(HAS_RULE_TAG)).toHaveCount(0);
 
   await rootPage.getByRole("button", { name: "+ 新增規則" }).click();
-  await chooseOption(rootPage, "套用對象", "角色");
+  // 規則卡分上下兩塊:套用對象(人員條件)與條件組合,兩塊都有「欄位」「值」,一律在區塊內找
+  const audience = rootPage.getByRole("region", { name: "套用對象" });
+  const conditions = rootPage.getByRole("region", { name: "條件組合" });
+  await audience.getByRole("radio", { name: "符合條件" }).check();
+  await audience.getByRole("combobox", { name: "欄位", exact: true }).click();
+  await rootPage.getByRole("option", { name: "角色", exact: true }).click();
   // 每個租戶都有一個「客服」,主文字一模一樣 —— 用次文字(擁有組織)挑自己這一個
-  await rootPage
-    .getByRole("combobox", { name: "對象", exact: true })
+  await audience
+    .getByRole("combobox", { name: "值", exact: true })
     .fill("客服");
   await rootPage
     .getByRole("option")
     .filter({ hasText: tenant.tenantOrgName })
     .click();
+  await rootPage.keyboard.press("Escape");
   // 新規則的條件列預設是第一個欄位(狀態),改成「建立者 屬於【操作者本人】」
-  await chooseOption(rootPage, "欄位", "建立者");
-  await checkOption(rootPage, "值", "【操作者本人】");
+  await conditions.getByRole("combobox", { name: "欄位", exact: true }).click();
+  await rootPage.getByRole("option", { name: "建立者", exact: true }).click();
+  await conditions.getByRole("combobox", { name: "值", exact: true }).click();
+  await rootPage
+    .getByRole("option", { name: "【操作者本人】", exact: true })
+    .click();
+  await rootPage.keyboard.press("Escape");
   await clickAndWaitFor(rootPage, "儲存", "SaveDataScopeRule");
   await expect(rootPage.getByText(SAVED)).toBeVisible();
   await expect(rootPage.getByText(HAS_RULE_TAG)).toBeVisible();

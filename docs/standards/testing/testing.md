@@ -28,7 +28,7 @@
 
 ## TEST-05 劇本 E2E 只手動跑,不進每個 PR 的 CI
 
-Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md` 的 **24 條權限劇本**從人工驗收
+Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md` 的 **29 條權限劇本**從人工驗收
 改成機器裁決。E2E 慢且脆、數量是成本,所以解法是「**寫了但不自動跑**」:
 
 - **跑的時機只有手動觸發**:本機 `pnpm e2e`、CI 是 `.github/workflows/e2e.yml`(只有 `workflow_dispatch`)。
@@ -48,9 +48,10 @@ Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md
 
 ## TEST-07 api 的整合測試:打真的 GraphQL 端點,對真 MongoDB
 
-api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 打 `/graphql`(本地自起 mongodb-memory-server;CI 用 service container),驗回應與資料庫最終狀態。固定做法(先例:`apps/api/src/auth/auth.test.ts`、`apps/api/src/auth/test-support/auth-app.ts`):
+api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 打 `/graphql`(本機與 CI 都由 jest globalSetup 起單一成員 replica set `MongoMemoryReplSet`,交易需要;見 `apps/api/src/database/test-support/mongo-global-setup.ts`),驗回應與資料庫最終狀態。固定做法(先例:`apps/api/src/auth/auth.test.ts`、`apps/api/src/auth/test-support/auth-app.ts`):
 
 - **夾具**:測試開始前以**子行程**跑 db-migrator 的 `seed` 指令(完整 `update` 的相容別名)執行 migration 並建立種子資料(root 帳號、模組樹、權限、種子角色);STRUCT-01 禁 app 互 import,所以不能 import seed 的程式碼。額外的測試角色 / 使用者用 RelationService 具名方法或直接寫測試資料庫建(測試檔不受裸查詢禁令約束)
+- **連資料庫的子行程一律非同步**:測試裡會連到同行程 mongodb-memory-server 的子行程(seed、update、遷移腳本、CLI)不得用 `spawnSync`。mongod 是測試行程的子程序,輸出靠測試行程的事件迴圈讀;`spawnSync` 擋住事件迴圈時管線塞滿、mongod 停住,子行程報 `Server selection timed out` 或卡死。用 api 的 `auth-app.ts`(`seedDatabase` / `runMigratorUpdate`)或 db-migrator 的 `test/support/update-harness.ts`(`startNode` / `runNode` / `startEntry`)。子行程自設逾時時要低於 hook 逾時,逾時就 kill 子行程並帶出輸出尾端(先例 `auth-app.ts` 的 `MIGRATOR_TIMEOUT_MS`)。例外:不連這個 mongod 的子行程(建置、git、lint 腳本)可以用 `spawnSync`
 - **信件不真寄**:注入記錄用的 `MailService` adapter,測試從它讀出 token 走下一步;api 未設 `RESEND_API_KEY` 時本來就是這個模式
 - **測試專用的 resolver / module**(如驗 `@RequirePermission` 用的探針端點)放 `test-support/`,只在測試的 `extraModules` 掛上;**測試用 app 的 schema 走記憶體**(`NODE_ENV=test` 時 `autoSchemaFile: true`),探針才不會寫進提交的 `schema.gql`
 - 例外:某個能力在 GraphQL 端點上看不到(如守門器產出的操作者上下文)才允許經 `app.get(Service)` 從 DI 取出來驗 — 這是第二個接縫,PR 要說明理由
@@ -79,12 +80,12 @@ api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 
 
 - preset 用 `@repo/jest-presets/browser-esm`(jsdom + Node 的 fetch / Request / Response / BroadcastChannel 全域給 MSW;ts-jest ESM 模式 —— react-router、use-intl 只出 ESM);`packages/ui` 用同一個 preset 但覆寫 `testEnvironment`(TEST-09)。
 - 渲染一律用 `renderApp()`;`test/test-app.tsx` 與正式 `App.tsx` 共用 `RootProviders`(既有 AppProviders 加上表單模組 options 注入),測試 app 再接 Router。不要裸 render 元件或各自重建一套 providers。
-- 表單 options 的 context 與 hook 在 `hooks/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`。元件測試經 test-app 或 hooks 層 context 注入設定,不從 components 測試反向 import app Provider;缺 Provider 應報接線錯誤,有 Provider 但缺 key 才用預設。
+- 表單 options 的 context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`。元件測試經 test-app 或 hooks 層 context 注入設定,不從 components 測試反向 import app Provider;缺 Provider 應報接線錯誤,有 Provider 但缺 key 才用預設。
 - **逾時有兩層**:preset 的 `testTimeout` 15 秒(單一測試;CI runner 慢,jsdom + MSW + ts-jest ESM 的第一個測試要付暖機成本),以及 testing-library 的 `findBy*` / `waitFor`(`src/test/setup.ts` 已 `configure({ asyncUtilTimeout: 5000 })`)。個別測試不自行加 timeout。
 - Jest 設定拆成多個 `projects` 時,在根設定沿用 `testTimeout: preset.testTimeout`。`testTimeout` 是全域選項,只放在各 project 的 preset 不會生效,會退回 Jest 預設的 5 秒;不要另寫較長時限。先例與正本:`apps/admin/jest.config.mjs`、`packages/jest-presets/browser-esm/jest-preset.mjs`。
 - **httpOnly cookie 在 jsdom 看不到**,用 `authWorld({ hasRefreshCookie })` 這類旗標模擬「瀏覽器有沒有帶 cookie」並計數請求;MSW `server.use()` 的 handler **先列的先贏**。
-- **Vite 專屬語法進不了 jest**:`import.meta.glob`(`?raw` 載入 md、圖片清單…)是 Vite 的編譯期轉換,jest 直接載入會 `(intermediate value).glob is not a function`。做法:**把讀檔與組裝入口集中在 `lib/help-registry.ts`**,測試用 `moduleNameMapper` 整支換成 `src/test/help-registry.ts`(保留相同介面與 set/reset,`setup.ts` 每個測試後歸零)。兩邊共用 `lib/module-help.ts` 的純合成與查詢,測試來源也分 base / additions / replacements;判斷邏輯不能藏在被換掉的入口。**不要**逐檔 `jest.unstable_mockModule` —— 殼的所有測試都會經過它,等於每個測試檔都要動。
-- **jest 的 `moduleNameMapper` 也是先列的先贏**:`^@/lib/help-registry$` 這種精確鍵要排在通則 `^@/(.*)$` **前面**,否則被通則吃掉(`apps/admin/jest.config.mjs`)。
+- **Vite 專屬語法進不了 jest**:`import.meta.glob`(`?raw` 載入 md、圖片清單…)是 Vite 的編譯期轉換,jest 直接載入會 `(intermediate value).glob is not a function`。做法:**把讀檔與組裝入口集中在 `lib/base/help-registry.ts`**,測試用 `moduleNameMapper` 整支換成 `src/test/help-registry.ts`(保留相同介面與 set/reset,`setup.ts` 每個測試後歸零)。兩邊共用 `lib/base/module-help.ts` 的純合成與查詢,測試來源也分 base / additions / replacements;判斷邏輯不能藏在被換掉的入口。**不要**逐檔 `jest.unstable_mockModule` —— 殼的所有測試都會經過它,等於每個測試檔都要動。
+- **jest 的 `moduleNameMapper` 也是先列的先贏**:`^@/lib/base/help-registry$` 這種精確鍵要排在通則 `^@/(.*)$` **前面**,否則被通則吃掉(`apps/admin/jest.config.mjs`)。
 - **zustand store 是模組層單例**,`src/test/setup.ts` 要在每個測試後歸零。
 
 ### 專案頁面登記與 help
@@ -96,8 +97,8 @@ api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 
 ### 依元件而定的陷阱
 
 - **`React.lazy` + 動態 `import()` 不必 mock**:ESM 模式下 `import("@repo/ui/markdown")` 這種子路徑匯出在 jest 裡解得開,照常渲染。要改的只有斷言時機 —— 懶載入的內容多一個 `Suspense` tick,**該邊界底下的第一筆斷言一律用 `findBy*` / `waitFor`**(`await within(dialog).findByRole("heading", …)`),沿用 `getBy*` 會抓到 fallback 而紅;同一邊界底下後續的斷言不必再等。**不要斷言 fallback 本身**(chunk 常在同一個 tick 內就解析完,會偶發)。**lazy 元件的頁面測試要先 preload**:在 `beforeAll` 裡 `await import(<lazy 載入的那支模組>)`,第一次載入依賴鏈的成本就不會算進 `findBy*` 的 5 秒與單一測試的 15 秒 —— 全套並行時 CPU 被搶,現載整條依賴鏈會逾時。先例 `app/AdminShell/AppBar/HelpButton.test.tsx`。
-- **用到 `DataTable`(`@repo/ui/data-table`)的頁面測試要在檔案頂層呼叫 `setupFakeViewport()`**(`apps/admin/src/test/viewport.ts`):jsdom 不算版面,offsetHeight / offsetWidth 都是 0,虛擬捲動會以為看得到 0 列而一列都不畫 —— 看起來像 MSW 沒回資料。先例 `components/form-engine/FormModulePages/FormListPage.test.tsx`、`app/ModulePages.test.tsx`。
-- **用到 React Flow(`@xyflow/react`,流程設計器的流程圖)的頁面測試要在檔案頂層呼叫 `setupReactFlowEnvironment()`**(`apps/admin/src/test/react-flow.ts`):jsdom 沒有 `ResizeObserver` 與 `DOMMatrixReadOnly`,流程圖一掛就丟錯;替身只要「存在」—— 節點的 `width` / `height` 由設計器明給,不必真的量。兩個配套:①**點節點用 `fireEvent.click`,不要 `userEvent.click`**:節點掛了 d3-drag,userEvent 的指標事件會讓 d3 讀 `event.view.document` 而在 jsdom 炸掉(先例 `WorkflowsPage/workflows-page-test-support.ts` 的 `clickNode`);②**拖拉在 jsdom 模擬不了**,畫面測試走「上移 / 下移 / 移到分支」按鈕,放開時的放置規則另寫純函式測試(`lib/workflow/flow-drop.test.ts`)。鍵盤選取(聚焦節點按 Enter)可以用 `fireEvent.keyDown` 驗。
+- **用到 `DataTable`(`@repo/ui/data-table`)的頁面測試要在檔案頂層呼叫 `setupFakeViewport()`**(`apps/admin/src/test/viewport.ts`):jsdom 不算版面,offsetHeight / offsetWidth 都是 0,虛擬捲動會以為看得到 0 列而一列都不畫 —— 看起來像 MSW 沒回資料。先例 `components/base/form-engine/FormModulePages/FormListPage.test.tsx`、`app/ModulePages.test.tsx`。
+- **用到 React Flow(`@xyflow/react`,流程設計器的流程圖)的頁面測試要在檔案頂層呼叫 `setupReactFlowEnvironment()`**(`apps/admin/src/test/react-flow.ts`):jsdom 沒有 `ResizeObserver` 與 `DOMMatrixReadOnly`,流程圖一掛就丟錯;替身只要「存在」—— 節點的 `width` / `height` 由設計器明給,不必真的量。兩個配套:①**點節點用 `fireEvent.click`,不要 `userEvent.click`**:節點掛了 d3-drag,userEvent 的指標事件會讓 d3 讀 `event.view.document` 而在 jsdom 炸掉(先例 `WorkflowsPage/workflows-page-test-support.ts` 的 `clickNode`);②**拖拉在 jsdom 模擬不了**,畫面測試走「上移 / 下移 / 移到分支」按鈕,放開時的放置規則另寫純函式測試(`lib/base/workflow/flow-drop.test.ts`)。鍵盤選取(聚焦節點按 Enter)可以用 `fireEvent.keyDown` 驗。
 - **MUI 樹:點內容區只「選取」,展開 / 收合要點最前面的箭頭**(`@repo/ui/tree` 設了 `expansionTrigger="iconContainer"`):選取用 `userEvent.click(螢幕上那個節點的文字)`,展開用 `.MuiTreeItem-iconContainer`(`element.closest(".MuiTreeItem-content")?.querySelector(".MuiTreeItem-iconContainer")`)。先例 `packages/ui/src/Tree/Tree.test.tsx` 與 `OrgManagerPage` / `ModuleManagerPage` 的 `*-test-support.ts` 的 `clickNode`。點父不會把它收起來,同一個 `it` 可以連點父子兩層。
 - **`pointer-events: none` 的 disabled 勾選框用 `fireEvent`,不要 `userEvent.click`**:MUI 對 disabled 的 Checkbox / Radio 設 `pointer-events: none`,`userEvent.click` 會**擲錯**(「unable to click element as it has or inherits pointer-events set to none」),看起來像元件壞了。要驗「點下去也沒事」時改 `fireEvent.click(box)`(先例 `packages/ui/src/Tree/Tree.test.tsx`),或依 TEST-09 的寫法用 `userEvent.setup({ pointerEventsCheck: 0 })`。
 - **Autocomplete 的兩行選項一律用 `apps/admin/src/test/autocomplete.ts`**:`getByRole("option", { name })` 對兩行選項(主文字 + 次文字)的完整比對對不上 —— 無障礙名稱是兩行串起來的那一長串。共用 helper 有兩支:`openAutocomplete(actor, name)`(以無障礙名稱找 combobox、點開、回傳選項)與 `autocompleteOption(text)`(在展開的選單裡以**主文字**先比開頭、再比包含;找不到時把現有選項一起印出來)。新的呼叫端**直接用這兩支**,不要再各寫一份。

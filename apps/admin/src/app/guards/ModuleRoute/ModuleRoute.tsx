@@ -4,7 +4,7 @@ import { useTranslations } from "use-intl";
 
 import { CircularProgress } from "@repo/ui/circular-progress";
 
-import { useMe } from "@/hooks/useMe";
+import { useMe } from "@/hooks/base/useMe";
 import {
   type ModulePageProps,
   buildNavTree,
@@ -13,7 +13,7 @@ import {
   firstLinkRoute,
   matchModuleRoute,
   normalizePathname,
-} from "@/lib/module-tree";
+} from "@/lib/base/module-tree";
 
 import { ForbiddenPage } from "../ForbiddenPage";
 import { ModulePage } from "./ModulePage";
@@ -52,10 +52,16 @@ export const ModuleRoute = ({ pages }: ModuleRouteProps) => {
   const matched = matchModuleRoute(routes, path);
   if (matched !== undefined) {
     const Page = pages[matched.module.key] ?? ModulePage;
-    // 懶載入的頁面(表單管理、表單模組預設組裝)在 chunk 到之前先顯示載入中
+    // 懶載入的頁面(表單管理、表單模組預設組裝)在 chunk 到之前先顯示載入中。
+    // 以模組 key 當 key:兩個模組共用同一個頁面元件(表單模組的預設組裝)時,換模組就是換一頁,
+    // 頁面狀態(含 `useUrlState` 在掛載時讀的網址)不會從上一個模組帶過來
     return (
       <Suspense fallback={<CircularProgress aria-label={t("loading")} />}>
-        <Page module={matched.module} routeParam={matched.param} />
+        <Page
+          key={matched.module.key}
+          module={matched.module}
+          routeParam={matched.param}
+        />
       </Suspense>
     );
   }

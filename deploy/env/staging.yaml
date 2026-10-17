@@ -1,6 +1,6 @@
 # Cloud Run api 服務(`staging` 環境)的非機密環境變數(deploy.yml 以 `--env-vars-file` 整包餵入;
 # 此檔是該環境全部明文變數的唯一來源 — 檔內沒寫的變數,部署後就不存在)。
-# 機密(MONGODB_URI / FIELD_ENCRYPTION_KEY / JWT_SECRET / RESEND_API_KEY)走 Secret Manager,
+# 機密(MONGODB_URI / FIELD_ENCRYPTION_KEY / JWT_SECRET / RESEND_API_KEY / REALTIME_*_SECRET)走 Secret Manager,
 # 由 deploy.yml `--set-secrets` 掛入,不在此檔。變數說明:docs/env-registry.md;
 # 值一律加引號(gcloud 只收字串)。NODE_ENV=production 已烘在 apps/api/Dockerfile。
 
@@ -21,3 +21,12 @@ GCS_BUCKET_PUBLIC: "scratch-lot-public-staging"
 # ACTIVATION_TOKEN_TTL: "7d"
 # PASSWORD_RESET_TOKEN_TTL: "30m"
 # GCS_SIGNED_URL_TTL: "1h"
+
+# 即時通道 Worker 的網址(docs/deployment.md「即時通道」);Worker 與網域見 cloud.json 的 realtime
+# 不寫 = 即時通道停用(admin 每 60 秒輪詢)
+REALTIME_URL: "https://rt-staging.scratch-lot.com"
+
+# 排程任務的呼叫身分(docs/deployment.md「Cloud Scheduler」):Scheduler 工作的 OIDC SA;audience 與工作的 --oidc-token-audience 完全相同
+# 不寫 = 排程端點拒絕所有呼叫(排程關閉)
+SCHEDULER_INVOKER_EMAIL: "scheduler-invoker@scratch-lot-online.iam.gserviceaccount.com"
+SCHEDULER_AUDIENCE: "https://api-staging.scratch-lot.com"

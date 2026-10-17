@@ -10,7 +10,7 @@ import { HelpIcon } from "@repo/ui/icons";
 import { Stack } from "@repo/ui/stack";
 import { Tooltip } from "@repo/ui/tooltip";
 
-import { moduleHelpMarkdown } from "@/lib/help-registry";
+import { moduleHelpMarkdown } from "@/lib/base/help-registry";
 
 /**
  * `@repo/ui/markdown`(react-markdown + remark-gfm 的 micromark / mdast 依賴鏈)約佔主 chunk
@@ -35,7 +35,7 @@ export interface HelpButtonProps {
 /**
  * AppBar 的「?」模組說明(#197;Figma Draft/AdminAppBar 的 help-button I44:119;81:51
  * + Overlay / 模組說明 81:241 的 Draft/HelpDialog 95:235)。
- * 內容是 build 時打包進來的 `src/md/module-help/<模組 key>.help.md`(`lib/help-registry`),
+ * 內容是 build 時打包進來的 `src/md/module-help/<模組 key>.help.md`(`lib/base/help-registry`),
  * 表單模組沒有專屬檔時用 `form-module.help.md`;都沒有時按鈕 disabled 並在 hover 提示。
  */
 export const HelpButton = ({

@@ -86,6 +86,11 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
         name
       }
       assigneeState
+      # B15 代理人:這一項由 assignee(代理人)承接的原審核者們;沒有代理 / 已改派 → 空陣列
+      delegators {
+        id
+        name
+      }
       # 只有流程管理者(abilities.canManage)拿得到:阻擋清單改派(ReassignTask)要它
       taskId
     }
@@ -115,6 +120,15 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
     }
     comment
     result
+    # 跳過 / 自動通過的原因(skip_orgs / skip_condition / auto_applicant / auto_prior_approver;其他 null)
+    reason
+    # 只有 auto_approve_blocked:守門擋下的專案錯誤碼(admin.lifecycle.<碼>)
+    code
+    # task_created 與決定:這張任務代理的原審核者們(時間軸「由 user 代理 delegators」);其他空陣列
+    delegators {
+      id
+      name
+    }
   }
   outcome {
     kind
@@ -215,6 +229,20 @@ mutation DecideTask($input: DecideTaskInput!) {
       ...WorkflowTaskFields
     }
     result
+  }
+}
+
+# BatchApproveTasksInput: { taskIds(1–50,重複只算一次), comment? };每一筆一個交易、各自經 beforeApprove。
+# results 順序同輸入:ok=false 時 reason = NOT_YOURS(已被處理 / 改派 / 此關已結束)| BLOCKED(專案守門擋下,
+# 錯誤碼在 projectReason,文案 admin.lifecycle.<碼>)| FAILED(其他失敗,那一筆回復)。
+mutation BatchApproveTasks($input: BatchApproveTasksInput!) {
+  batchApproveTasks(input: $input) {
+    results {
+      taskId
+      ok
+      reason
+      projectReason
+    }
   }
 }
 

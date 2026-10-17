@@ -7,7 +7,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { type Db, type Document, MongoClient } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 export const PACKAGE_ROOT = path.resolve(__dirname, "..", "..");
 const TSX_CLI = path.join(
@@ -89,23 +89,17 @@ export interface RunningCommand {
 }
 
 /**
- * 以子行程跑一支 tsx 入口。非同步 spawn(不是 spawnSync):本機的 mongodb-memory-server 是這個測試行程的
- * 子程序,測試行程的事件迴圈被擋住太久時沒人讀它的輸出,指令裡再起的 api 子程序會跟著卡住。
+ * 以子行程跑 node(`args` 照給)。非同步 spawn(不是 spawnSync):本機的 mongodb-memory-server 是這個測試行程的
+ * 子程序,它的輸出靠測試行程的事件迴圈讀;事件迴圈被擋住時管線塞滿、mongod 停住,子行程連不上資料庫
+ * (`Server selection timed out`)或跟著卡住。對資料庫跑子行程的測試一律走這裡,不用 spawnSync。
  */
-export function startEntry(
-  entry: string,
+export function startNode(
   args: readonly string[],
-  databaseUri: string,
-  env: Record<string, string | undefined> = {},
+  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
 ): RunningCommand {
-  const child = spawn(process.execPath, [TSX_CLI, entry, ...args], {
-    cwd: PACKAGE_ROOT,
-    env: {
-      ...process.env,
-      ...ROOT_ADMIN_ENV,
-      MONGODB_URI: databaseUri,
-      ...env,
-    },
+  const child = spawn(process.execPath, args, {
+    cwd: options.cwd ?? PACKAGE_ROOT,
+    env: options.env ?? process.env,
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
@@ -127,6 +121,31 @@ export function startEntry(
       child.kill();
     },
   };
+}
+
+/** {@link startNode} 跑完的結果。 */
+export function runNode(
+  args: readonly string[],
+  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
+): Promise<CommandResult> {
+  return startNode(args, options).done;
+}
+
+/** 以子行程跑一支 tsx 入口(帶 root 初始帳號與 `MONGODB_URI`)。 */
+export function startEntry(
+  entry: string,
+  args: readonly string[],
+  databaseUri: string,
+  env: Record<string, string | undefined> = {},
+): RunningCommand {
+  return startNode([TSX_CLI, entry, ...args], {
+    env: {
+      ...process.env,
+      ...ROOT_ADMIN_ENV,
+      MONGODB_URI: databaseUri,
+      ...env,
+    },
+  });
 }
 
 /** 跑 update 指令(等同 `pnpm --filter @repo/db-migrator run update …`)。 */
@@ -166,9 +185,9 @@ export function fixtureSourceRoot(...segments: string[]): string {
  */
 export const BASE_ONLY_REGISTRY = `--registry=${fixtureSourceRoot("seeds-base", "registry.ts")}`;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
 export class TestMongo {
-  private memoryServer: MongoMemoryServer | undefined;
+  private memoryServer: MongoMemoryReplSet | undefined;
   private baseUri = "";
   private readonly used: string[] = [];
 
@@ -179,7 +198,9 @@ export class TestMongo {
       this.baseUri = process.env.MONGODB_URI;
       return;
     }
-    this.memoryServer = await MongoMemoryServer.create();
+    this.memoryServer = await MongoMemoryReplSet.create({
+      replSet: { count: 1 },
+    });
     this.baseUri = this.memoryServer.getUri();
   }
 

@@ -2,7 +2,7 @@
  * 表達式的 **ID 語意**資料流(可攜性檢查用;規則正本在 `portable-definition.ts` 的檔頭)。
  *
  * 不另寫求值器:形狀先過既有 `scanExpression`,這裡只沿同一棵樹推「這個位置的值從哪來」——
- * 動態 ID(`ctx.user.id`、引用欄、lookup 選項值、由它們帶入或算出的欄位)、動態 ID 集合、null、空陣列、
+ * 動態 ID(`ctx.user.id`、`ctx.tenant.id`、引用欄、lookup 選項值、由它們帶入或算出的欄位)、動態 ID 集合、null、空陣列、
  * 寫死的值、其他動態值。判斷只看來源,不看字串長得像不像 ObjectId:24 碼文字常數與文字欄比較照常通過。
  */
 import { isArrayAggregateOperator } from "../form/array";
@@ -79,7 +79,11 @@ export interface IdFlow {
 const ID_CONTEXT_PATHS: ReadonlySet<string> = new Set([
   "ctx.user.id",
   "ctx.user.orgId",
+  "ctx.tenant.id",
 ]);
+
+/** 動態 ID 集合的系統值(填寫者的所屬組織全部)。 */
+const ID_LIST_CONTEXT_PATHS: ReadonlySet<string> = new Set(["ctx.user.orgIds"]);
 
 const EQUALITY_OPERATORS: ReadonlySet<string> = new Set([
   "==",
@@ -248,6 +252,9 @@ class IdFlowAnalyzer {
 
   private varOrigins(target: string, path: string): number {
     if (target.startsWith("ctx.")) {
+      if (ID_LIST_CONTEXT_PATHS.has(target)) {
+        return ORIGIN.idList;
+      }
       return ID_CONTEXT_PATHS.has(target) ? ORIGIN.id : ORIGIN.dynamic;
     }
     const origins = target.startsWith(ROW_PREFIX)

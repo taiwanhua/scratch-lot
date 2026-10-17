@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 import type { MeQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 
-import { useApplyCenterCounts } from "@/hooks/useApplyCenterCounts";
+import { useSidebarBadges } from "@/hooks/base/useSidebarBadges";
 import {
   buildNavTree,
   enterableRouteMap,
@@ -13,9 +13,9 @@ import {
   firstLinkRoute,
   matchModuleRoute,
   normalizePathname,
-} from "@/lib/module-tree";
-import { APPLY_CENTER_MODULE_KEY } from "@/pages/base/apply-center/apply-center-keys";
-import { useSideNavStore } from "@/stores/useSideNavStore";
+} from "@/lib/base/module-tree";
+import { withShellRoutes } from "@/lib/base/shell-routes";
+import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { AppBar } from "./AppBar/AppBar";
 import { RouteTabs } from "./RouteTabs/RouteTabs";
@@ -49,14 +49,28 @@ export interface ShellLayoutProps {
 export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   const t = useTranslations("admin.shell");
   const tCommon = useTranslations("common");
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { modules } = me;
 
   const tree = useMemo(() => buildNavTree(modules), [modules]);
-  const routes = useMemo(() => enterableRouteMap(modules), [modules]);
+  const tPersonalSettings = useTranslations("admin.personalSettings");
+  const personalSettingsLabel = tPersonalSettings("title");
+  // 可進入路由集合 + 殼層路由(個人設定):頁名、「?」說明、路由頁籤與模組頁走同一條路
+  const routes = useMemo(
+    () =>
+      withShellRoutes(enterableRouteMap(modules), {
+        personalSettings: personalSettingsLabel,
+      }),
+    [modules, personalSettingsLabel],
+  );
 
   const path = normalizePathname(pathname);
-  const routeTabs = useRouteTabs({ userId: me.id, routes, currentPath: path });
+  const routeTabs = useRouteTabs({
+    userId: me.id,
+    routes,
+    currentPath: path,
+    currentSearch: search,
+  });
   // 目前網址對上的模組(可進入路由集合,ADR-0011);非模組路由為 undefined。
   // 用 `matchModuleRoute` 而不是 `routes.get(path)`:隱藏的詳情 / 編輯頁網址尾端帶識別碼,
   // 精準比對會落空,標題就會閃成「無權限」、「?」說明鈕也跟著不見(#320)
@@ -74,12 +88,9 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
       ? undefined
       : pageMinWidths[currentModule.key]) ?? DEFAULT_SHELL_MIN_WIDTH;
   const isNavCollapsed = useSideNavStore((state) => state.isCollapsed);
-  // 側欄「申請中心」右側 = 待我處理的任務數(進站取一次,之後隨送出 / 審核 / 改派等寫入失效重查)
-  const { myTasks } = useApplyCenterCounts();
-  const navBadges = useMemo(
-    () => ({ [APPLY_CENTER_MODULE_KEY]: myTasks }),
-    [myTasks],
-  );
+  // 側欄計數登記制(底座規格 10.4):模組 key → 數字,來自 `sidebarBadges`(只含看得到的模組);
+  // 進站取一次,之後靠 `badge:<模組 key>` 信號重抓(斷線時跟即時通道降級每 60 秒一次)
+  const navBadges = useSidebarBadges();
 
   return (
     <Box

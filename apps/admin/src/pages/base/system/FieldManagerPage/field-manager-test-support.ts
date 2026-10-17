@@ -79,9 +79,12 @@ export const modulesWith = (permissions: readonly string[]): TestModule[] => [
 export const renderPage = ({
   permissions = FULL_PERMISSIONS,
   world = {},
+  search = "",
 }: {
   permissions?: readonly string[];
   world?: FieldWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 } = {}) => {
   const fake = fieldWorld({
     categories: fieldCategories,
@@ -98,7 +101,7 @@ export const renderPage = ({
       modules: modulesWith(permissions),
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/field-manager" }), fake };
+  return { ...renderApp({ path: `/system/field-manager${search}` }), fake };
 };
 
 /** 類別清單與選項表格各自收斂:兩邊都可能出現同一個名稱。 */

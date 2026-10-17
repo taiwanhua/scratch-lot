@@ -34,6 +34,7 @@ import { addMemberToNeihu } from "../fixtures/scenario-org-membership";
 import { expect, test } from "../fixtures/test";
 import {
   MOVE_TARGET_SELECT,
+  TENANT_TOP_HINT,
   VISIBILITY_SWITCH,
   expectDemoItems,
   expectForbiddenPage,
@@ -376,11 +377,13 @@ test("劇本 14:⑥搬移候選 = 管理範圍 ∩ 同租戶 − 自己子樹;�
   await nangangDialog.getByRole("button", { name: "取消" }).click();
   await expect(nangangDialog).toBeHidden();
 
-  // 租戶頂層:下拉出現但停用(租戶內的人不可搬頂層,ADR-0009)
+  // 租戶頂層:沒有「上層組織」下拉,那個位置改放租戶頂層提示(租戶內的人不可搬頂層,ADR-0009;
+  // 現況見 docs/modules/org-manager.md「根組織與租戶頂層的編輯彈窗不顯示「上層組織」下拉」)
   const topDialog = await openEditOrgDialog(page, tenantOrgName);
   await expect(
     topDialog.getByRole("combobox", { name: MOVE_TARGET_SELECT }),
-  ).toHaveAttribute("aria-disabled", "true");
+  ).toHaveCount(0);
+  await expect(topDialog.getByText(TENANT_TOP_HINT)).toBeVisible();
   await topDialog.getByRole("button", { name: "取消" }).click();
   await expect(topDialog).toBeHidden();
 

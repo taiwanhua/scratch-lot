@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 角色管理會收到的業務錯誤碼(GQL-04;api 的程式正本 `apps/api/src/roles/`)。
@@ -31,7 +31,7 @@ export type RoleNotDeletableReason =
   (typeof ROLE_NOT_DELETABLE_REASONS)[number];
 
 /**
- * 共用形狀(`lib/errors.ts`)。本頁用到的選填欄位:`reasons`(`ROLE_NOT_DELETABLE`
+ * 共用形狀(`lib/base/errors.ts`)。本頁用到的選填欄位:`reasons`(`ROLE_NOT_DELETABLE`
  * 時逐項列出為什麼不能刪)與 `fields`(`VALIDATION_FAILED` 時不合法的欄位)。
  */
 export type RoleManagerError = AdminError<

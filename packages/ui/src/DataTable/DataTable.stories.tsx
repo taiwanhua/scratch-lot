@@ -254,3 +254,25 @@ export const Clickable: Story = {
     },
   },
 };
+
+const RowSelectionDemo = (args: DataTableProps<DemoOrder>) => {
+  const [keys, setKeys] = useState<string[]>([]);
+  return (
+    <DataTable
+      {...args}
+      rowSelection={{
+        selectedKeys: keys,
+        onSelectedKeysChange: setKeys,
+        maxCount: 5,
+        isRowSelectable: (row) => row.status === "待付款",
+        hint: "只有待付款的能勾,最多 5 筆",
+      }}
+    />
+  );
+};
+
+/** 列勾選(選用):只有待付款的能勾、上限 5 筆(到上限時其他未勾的列停用);上方「已選 N 筆 · 清除」。 */
+export const RowSelection: Story = {
+  args: { rows: makeOrders(40) },
+  render: (args) => <RowSelectionDemo {...args} />,
+};

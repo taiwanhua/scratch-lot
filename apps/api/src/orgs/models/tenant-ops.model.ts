@@ -58,6 +58,13 @@ export class ProvisionTenantPayload {
   /** 副本實際綁到的模組 key(含為了讓樹不斷而補上的上層模組)。 */
   @Field(() => [String])
   moduleKeys!: string[];
+
+  /**
+   * 啟用信有沒有寄出(交易提交後才寄,ADR-0013)。false = 開通已成立但信寄不出去:
+   * 請首任管理員以「忘記密碼」自助設定密碼。
+   */
+  @Field(() => Boolean)
+  activationMailSent!: boolean;
 }
 
 /**

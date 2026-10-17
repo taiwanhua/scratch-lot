@@ -13,10 +13,10 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { definitionOf } from "@/lib/workflow/definition";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf } from "@/lib/base/workflow/definition";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowDesignerWorkspace } from "./FlowDesignerWorkspace";
@@ -86,7 +86,6 @@ export const WorkflowDesigner = ({
     currentDefinition ?? { steps: [] },
     NO_ISSUES,
     [],
-    [],
   );
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,
@@ -124,7 +123,7 @@ export const WorkflowDesigner = ({
           {t("noDraft")}
         </Typography>
         <Button
-          disabled={workflow.publishInterrupted || createDraft.isPending}
+          disabled={createDraft.isPending}
           onClick={() => {
             createDraft.mutate({
               input: {

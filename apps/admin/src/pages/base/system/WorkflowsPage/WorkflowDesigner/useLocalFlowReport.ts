@@ -19,7 +19,7 @@ export interface LocalFlowReportInput {
 }
 
 /**
- * `field` 來源要對照的表單目錄:前端只拿得到「檢查用表單」的欄位,所以只有每個 `field` 來源都指向它
+ * `field` 來源(審核者、知會對象)要對照的表單目錄:前端只拿得到「檢查用表單」的欄位,所以只有每個 `field` 來源都指向它
  * (或還沒選表單)時才給 —— 給了目錄,目錄裡沒有的表單會被當成不存在,指到別張表單的舊資料交給 api 檢查。
  */
 const formsOf = ({
@@ -31,12 +31,18 @@ const formsOf = ({
   if (checkFormKey === null || checkFormFields === null) {
     return undefined;
   }
-  const isAllOnCheckForm = definition.steps.every(
-    (step) =>
-      isJoinStep(step) ||
-      step.assignee.kind !== "field" ||
-      step.assignee.formKey === checkFormKey ||
-      step.assignee.formKey === "",
+  // 審核者與知會對象(關卡 / 整個流程)的 `field` 來源都要指向檢查用表單
+  const sources = [
+    ...definition.steps.flatMap((step) =>
+      isJoinStep(step) ? [] : [step.assignee, step.cc ?? null],
+    ),
+    definition.cc ?? null,
+  ];
+  const isAllOnCheckForm = sources.every(
+    (source) =>
+      source?.kind !== "field" ||
+      source.formKey === checkFormKey ||
+      source.formKey === "",
   );
   return isAllOnCheckForm
     ? new Map([[checkFormKey, checkFormFields]])

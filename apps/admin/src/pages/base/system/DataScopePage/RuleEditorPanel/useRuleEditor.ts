@@ -7,21 +7,21 @@ import {
   useSaveDataScopeRuleMutation,
 } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 import {
   type RuleIssue,
   issueFromRuleInvalid,
   issuesByKey,
   validateEditorDraft,
-} from "@/lib/data-scope-issues";
+} from "@/lib/base/data-scope-issues";
 import {
   type RuleDraft,
   type RuleEditorDraft,
   newRule,
   toEditorDraft,
   toRuleEntryInputs,
-} from "@/lib/data-scope-rule";
+} from "@/lib/base/data-scope-rule";
 
 import { type DataScopeError, dataScopeErrorOf } from "../data-scope-error";
 import type { DataScopeRuleData, DataScopeTarget } from "../data-scope-types";
@@ -123,12 +123,15 @@ export const useRuleEditor = ({
     onDirtyChange(false);
   };
 
+  const ruleIssues = [
+    ...localIssues,
+    ...(serverIssue === null ? [] : [serverIssue]),
+  ];
+
   return {
     draft,
-    issues: issuesByKey([
-      ...localIssues,
-      ...(serverIssue === null ? [] : [serverIssue]),
-    ]),
+    issues: issuesByKey(ruleIssues),
+    ruleIssues,
     error,
     isSaving: save.isPending,
     submit,

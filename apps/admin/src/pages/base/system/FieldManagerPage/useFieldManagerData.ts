@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { useFieldCategoriesQuery, useFieldsQuery } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 
 import { FIELD_MANAGER_PERMISSIONS } from "./field-manager-permissions";
 import type { FieldCategoryLike, FieldOptionLike } from "./field-manager-types";
@@ -32,14 +32,20 @@ export const useFieldManagerData = () => {
     FIELD_MANAGER_PERMISSIONS.manageCategories,
   );
 
-  const [pickedCategoryId, setPickedCategoryId] = useState<string | null>(null);
+  /** 選中的類別存在網址 `?detail=<id>`(REACT-14);沒有 = 第一個類別。 */
+  const [pickedCategoryId, setPickedCategoryId] = useUrlSelectedId();
 
   const categoriesQuery = useFieldCategoriesQuery(session.client);
   const categories: readonly FieldCategoryLike[] =
     categoriesQuery.data?.fieldCategories.items ?? [];
 
   const firstCategoryId = categories.at(0)?.id ?? null;
-  const selectedCategoryId = pickedCategoryId ?? firstCategoryId;
+  // 網址上的類別不在清單裡(被停用、手改)→ 退回第一個
+  const selectedCategoryId =
+    pickedCategoryId !== null &&
+    categories.some((category) => category.id === pickedCategoryId)
+      ? pickedCategoryId
+      : firstCategoryId;
   const selectedCategory =
     categories.find((category) => category.id === selectedCategoryId) ?? null;
 
@@ -85,6 +91,8 @@ export const useFieldManagerData = () => {
     selectCategory: setPickedCategoryId,
     fields,
     isFieldsLoading: fieldsQuery.isLoading,
+    /** 選中類別的選項清單已查完(網址 `?edit=` 的選項不在裡面就是不存在或看不到) */
+    isFieldsReady: fieldsQuery.isSuccess && !fieldsQuery.isFetching,
     invalidate,
     invalidateCategories,
   };

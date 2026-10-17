@@ -44,7 +44,7 @@ export const DEFINITION_STORES: Readonly<
 
 export const PERMISSIONS_COLLECTION = "permissions";
 
-/** 凍結的歷史版本;`draft` 不留,`publishing` 在預檢就整次拒絕。 */
+/** 凍結的歷史版本;`draft` 不留(`publishing` 只存在於發布的交易內,交易外看不到)。 */
 const HISTORY_STATUSES = ["published", "retired"];
 
 /** api 安裝紀錄的完成狀態(另一個值 `in-progress` 在預檢就整次拒絕)。 */

@@ -40,6 +40,49 @@
 
 正本:`docs/modules/demo.sub.sample-one.md`「權限表」、`apps/api/src/demo-items-one/demo-item-one-mapper.ts`、`apps/db-migrator/seeds/base/modules/api.ts`
 
+## 表單模組的權限
+
+表單模組(`engine: "form"`)的權限分兩種來源:
+
+| 來源         | 權限                                                                                           | 怎麼來                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| seed 宣告    | 固定四條 `view` / `create` / `edit` / `delete` + 宣告的頁內權限(如 `store.sell`)               | `formModuleDeclaration` 的選填 `permissions: [{ action, name }]`,和固定四條一起產生 |
+| 表單動態權限 | 欄位級 `show-<formKey>-<fieldKey>` / `edit-<formKey>-<fieldKey>`;依表單新增 `create-<formKey>` | 執行期產生(`permissions.source = "dynamic"`),都在表單發布第 3 步建立                |
+
+- 頁內權限的動作不能和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀,宣告時就擋下。
+- 表單動態權限的 key 拆得出 formKey(`parseFormPermissionKey`)。退役權限清理用 `parseFieldPermissionKey`(不認 `create-`);發布同步只比對 `show-` / `edit-<formKey>-` 前綴。依表單新增權限因此不會被當成欄位級權限列出、退役或刪除。
+- **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key:api 端的權限判斷一律用 `holdsPermission`(不直接呼叫 `hasPermission`);前端拿到的 `me.modules` 已過濾,照用 `hasPermission`。
+- 只有權限集裡有動態權限(持表單模組 `*`,或被授了動態權限)才查 `forms`;只持固定權限的操作者不多一次查詢。
+
+### 依表單分開新增權限(B9b)
+
+一個表單模組綁多張表單時,預設「能不能新增」只看模組 `create`:有它就每張都能填。模組要讓每張表單各自授權時,在 seed 宣告 `perFormCreate: true`(`formModuleDeclaration` 的選填欄位,落庫 `modules.perFormCreate`,每次 seed 同步宣告值;沒有執行期開關)。底座示範表單模組都不開。
+
+| 項目       | 現況                                                                                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 權限       | 表單每次發布的第 3 步確保 `<模組>.create-<formKey>`:缺的建,名稱「<表單名> 新增」跟著表單現在的名稱(改名後下次發布更新);表單不能刪,所以不退役                                           |
+| 判斷       | 唯一函式 `FormAccessService.canCreateWithForm(操作者, 模組, formKey)`:模組開啟 → 看 `create-<formKey>`(模組 `create` 不算);沒開 → 看模組 `create`。`<模組>.*` 依同層 wildcard 自然包含 |
+| 入口       | 全部呼叫判斷函式,見下表                                                                                                                                                                |
+| 不自動授予 | 新建的權限不授予任何角色(租戶以某版為基底建的客製表單也一樣);發布回 `createdPermission`,表單管理的發布成功畫面提示「請到角色管理授予」並附連結。模板以 `*` 授予整層的角色自然持有      |
+| 改既有模組 | 已有表單的模組改為開啟,要另寫 migration:補建權限、把原持有模組 `create` 的角色授予對應權限                                                                                             |
+
+入口(開啟的模組裡,只有模組 `create`、沒有表單權限的人每一個都被擋):
+
+| 入口                                                                          | 走法                                                                                                              |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 新增 API(`createFormDraft`、`createAndSubmitFormSubmission`)                  | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| `moduleForms`                                                                 | 清單照舊(列表的表單篩選、頁籤模板要用),每張附 `canCreate`                                                         |
+| abilities(`canEdit` / `canDelete` / `canSaveDraft` 的申請人那一支、`canCopy`) | 申請人改、送、刪自己的單與複製為新單都要這張表單的新增資格                                                        |
+| 申請人改 / 存草稿 / 送出 / 刪除自己的單                                       | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| 複製為新單(`copySubmissionToDraft`)                                           | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| `formLookup` 版本存取、執行端讀定義(`formRuntimeVersion`、選項)               | 這張表單的新增資格或模組 `view` / `edit`                                                                          |
+| 模組層的執行端讀取(`moduleForms`、`moduleListColumns`)                        | 這個模組任一張表單的新增資格(`canCreateInFormModule`)或模組 `view` / `edit`                                       |
+| 表單附件上傳網址(`createUploadUrl`,`FORM_ATTACHMENT`)                         | 任一表單模組的新增資格(`canCreateInFormModule`)或模組 `edit`                                                      |
+| 申請中心「新申請」(`applicableForms`;先以模組層新增資格略過模組)              | 只列有新增資格的表單                                                                                              |
+| admin 的 [+ 新增] 與新增頁                                                    | 只用 `canCreate = true` 的表單;表單清單載完前、或有表單但一張都不能新增時不出現 [+ 新增],直接開新增頁說明不能新增 |
+
+正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/forms/form-create-access.ts`(判準)、`apps/api/src/forms/form-access.service.ts`(`canCreateWithForm`)、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
+
 ## Wildcard(同層語意)
 
 - 每個模組固定有一筆 `<模組 key>.*`(群組、隱藏頁、`api` 樹都有;seed 自動產生)。
@@ -59,13 +102,14 @@ token → userId
   → role_module:moduleIds
   → role_permission:權限(停用的不算)
   → 展開 `X.*`:moduleId = X 的全部 enabled 權限
+  → 剔除別租戶的表單動態權限(看當前組織的租戶)
   → 查模組(自己或祖先停用 → 剔除),每個模組掛自己的有效權限
   → me.modules
 ```
 
 - 單一入口 `PermissionResolver.resolve`。`@RequirePermission` 守門與 `me.modules` 吃同一份結果,兩邊永遠一致。
 - 不快取。權限變更下一個請求就生效。
-- 當前組織不參與計算。
+- 當前組織不參與角色與權限的計算;只用來判斷哪些表單動態權限屬於別租戶(見「表單模組的權限」)。
 - `me.modules` 每筆:`id`、`key`、`name`、`parentId`、`sidebarType`、`order`、`route`、`icon`、`engine`(`FORM` = 表單模組,admin 依它掛表單引擎的預設組裝)、`permissions`。
 - `route` 是完整路徑(父段累加,如 `/demo/sub/sample-one`);權限容器為 `null`。
 - `permissions` 只放 moduleId 等於該模組的 key;持 `X.*` 時含 `X.*` 本身與展開後各筆。
@@ -75,16 +119,17 @@ token → userId
 
 ## 兩道防守
 
-| 在哪 | 做什麼                                                                                                  |
-| ---- | ------------------------------------------------------------------------------------------------------- |
-| api  | resolver 標 `@RequirePermission(key)`;判斷「key 在集合中,或擁有模組的 `*` 在集合中」;無權 → `FORBIDDEN` |
-| api  | 資料查詢一律經 BaseRepository(租戶保底 + 資料範圍規則)                                                  |
-| 前端 | 路由防守:可進 = 有那個模組路由(見 `docs/concepts/frontend-architecture.md`「路由與導向」)               |
-| 前端 | 頁內功能:`usePermissions().hasPermission(key)`,同一個判斷函式                                           |
+| 在哪 | 做什麼                                                                                                                                |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| api  | resolver 標 `@RequirePermission(key)`;判斷「key 在集合中,或擁有模組的 `*` 在集合中」(別租戶的表單動態權限一律不算);無權 → `FORBIDDEN` |
+| api  | 資料查詢一律經 BaseRepository(租戶保底 + 資料範圍規則)                                                                                |
+| 前端 | 路由防守:可進 = 有那個模組路由(見 `docs/concepts/frontend-architecture.md`「路由與導向」)                                             |
+| 前端 | 頁內功能:`usePermissions().hasPermission(key)`,同一個判斷函式                                                                         |
 
 - `@RequirePermission` 是單一 key。多選一(如上傳用途)由 resolver 自己查有效權限集合。
+- **登入即可讀、不掛 `@RequirePermission` 的例外**:回傳內容本身就只有操作者自己持有的那一份,沒有東西可多看 —— `me`(含 `me.modules`)、`audiencePermissionOptions`(人員條件的權限樹 = 權限矩陣的顯示樹,全樹 ∩ 操作者有效權限集,扣掉別租戶客製表單的欄位級權限)。新增這類端點要符合同一條件並登記在這裡。
 
-正本:`apps/api/src/permission/permission.guard.ts`、`apps/api/src/permission/require-permission.decorator.ts`、`apps/admin/src/hooks/usePermissions.ts`
+正本:`apps/api/src/permission/permission.guard.ts`、`apps/api/src/permission/require-permission.decorator.ts`、`apps/admin/src/hooks/base/usePermissions.ts`
 
 ## abilities 的兩種語意
 

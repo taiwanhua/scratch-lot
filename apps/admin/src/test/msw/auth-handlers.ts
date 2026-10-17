@@ -9,6 +9,7 @@ import {
   RequestPasswordResetMutationVariables,
   SetPasswordMutationVariables,
   SwitchOrgMutationVariables,
+  UpdateMyPreferencesMutationVariables,
 } from "@repo/graphql";
 
 import { api } from "./server";
@@ -67,7 +68,12 @@ export const testUser: MeQuery["me"] = {
   email: "root@example.invalid",
   nickname: null,
   mustChangePassword: false,
-  currentOrg: { ...testOrg, logoUrl: null, timezone: "Asia/Taipei" },
+  currentOrg: {
+    ...testOrg,
+    logoUrl: null,
+    timezone: "Asia/Taipei",
+    tenantName: testOrg.name,
+  },
   orgs: [testOrg],
   modules: [overviewModule],
 };
@@ -88,12 +94,21 @@ export interface AuthWorldOptions {
   expiredTokens?: string[];
   /** `me.modules`(預設只有總覽) */
   modules?: TestModule[];
+  /** `me.id`(預設 `testUser.id`);換人登入、依使用者分把的儲存鍵用 */
+  userId?: string;
   /** 所屬組織清單(預設只有平台根組織);當前組織預設 = 第一個(#66 組織切換器) */
   orgs?: TestOrg[];
   /** 當前組織的商標網址(側欄有商標就顯示圖、沒有才顯示名稱);預設沒有 */
   currentOrgLogoUrl?: string | null;
   /** 當前組織的租戶時區(`me.currentOrg.timezone`);預設 `Asia/Taipei` */
   currentOrgTimezone?: string;
+  /** 當前組織的最上層組織名稱(`me.currentOrg.tenantName`,單據上方印的租戶名稱);預設 = 當前組織自己的名稱 */
+  currentOrgTenantName?: string;
+  /**
+   * 當前組織的最上層組織 id(`me.currentOrg.tenantId`):`null` = 站在根組織;不給 = 不帶這個欄位
+   * (前端當成不在根組織)。切換組織後沿用同一個值。
+   */
+  currentOrgTenantId?: string | null;
   /** 首登須改密碼(預設 false):true 時除 me / changePassword / logout 外的受保護操作回 MUST_CHANGE_PASSWORD */
   mustChangePassword?: boolean;
   /** 使用者目前的密碼(changePassword 驗「目前密碼」用) */
@@ -102,6 +117,10 @@ export interface AuthWorldOptions {
   validActionTokens?: string[];
   /** setPassword 成功後發的 access token */
   setPasswordAccessToken?: string;
+  /** 帳號的個人偏好(`myPreferences.settings`;預設 `{ locale: null }` = 還沒有語言設定) */
+  preferences?: Record<string, unknown>;
+  /** 寫入個人偏好一律失敗(驗「切語言時寫入帳號失敗」) */
+  failPreferenceWrites?: boolean;
 }
 
 export interface AuthWorld {
@@ -117,7 +136,11 @@ export interface AuthWorld {
     requestPasswordReset: number;
     setPassword: number;
     changePassword: number;
+    myPreferences: number;
+    updateMyPreferences: number;
   };
+  /** 帳號目前的個人偏好(寫入會改它;同一個 world 的另一次登入讀到的就是它 = 另一台裝置) */
+  preferences: Record<string, unknown>;
   /** requestPasswordReset 收到的 email(依序) */
   resetRequests: string[];
 }
@@ -144,13 +167,21 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
     refreshedTokens = ["access-2"],
     expiredTokens = [],
     modules = [overviewModule],
+    userId = testUser.id,
     orgs = [testOrg],
     currentOrgLogoUrl = null,
     currentOrgTimezone = "Asia/Taipei",
+    currentOrgTenantName,
+    currentOrgTenantId,
     currentPassword = "secret-1234",
     validActionTokens = ["token-1"],
     setPasswordAccessToken = "access-set",
+    failPreferenceWrites = false,
   } = options;
+  const preferences: Record<string, unknown> = {
+    locale: null,
+    ...options.preferences,
+  };
   let hasRefreshCookie = options.hasRefreshCookie ?? false;
   let mustChangePassword = options.mustChangePassword ?? false;
   const validTokens = new Set([
@@ -169,16 +200,27 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
     requestPasswordReset: 0,
     setPassword: 0,
     changePassword: 0,
+    myPreferences: 0,
+    updateMyPreferences: 0,
   };
   const resetRequests: string[] = [];
   /** 所屬組織 → 當前組織(多一個現簽的商標網址)。 */
   const toCurrentOrg = (org: TestOrg | undefined): TestCurrentOrg | null =>
     org === undefined
       ? null
-      : { ...org, logoUrl: currentOrgLogoUrl, timezone: currentOrgTimezone };
+      : {
+          ...org,
+          logoUrl: currentOrgLogoUrl,
+          timezone: currentOrgTimezone,
+          tenantName: currentOrgTenantName ?? org.name,
+          ...(currentOrgTenantId === undefined
+            ? {}
+            : { tenantId: currentOrgTenantId }),
+        };
 
   const me: MeQuery["me"] = {
     ...testUser,
+    id: userId,
     modules,
     orgs,
     currentOrg: toCurrentOrg(orgs[0]),
@@ -254,6 +296,10 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
         HttpResponse.json({ data: { me: { ...me, mustChangePassword } } })
       );
     }),
+    // 即時通道在測試與 mock 開發模式一律停用:殼走 60 秒輪詢,不開 WebSocket
+    api.query("RealtimeTicket", () =>
+      HttpResponse.json({ data: { realtimeTicket: null } }),
+    ),
     api.mutation("RequestPasswordReset", ({ variables }) => {
       calls.requestPasswordReset += 1;
       const { input } = variables as RequestPasswordResetMutationVariables;
@@ -304,9 +350,43 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
       mustChangePassword = false;
       return HttpResponse.json({ data: { changePassword: { success: true } } });
     }),
+    // 個人偏好(規格 10.6):只讀寫自己的、不看權限;未登記的 key 回 VALIDATION_FAILED(api 只登記 locale)
+    api.query("MyPreferences", ({ request }) => {
+      calls.myPreferences += 1;
+      return (
+        guard(request) ??
+        HttpResponse.json({
+          data: { myPreferences: { settings: { ...preferences } } },
+        })
+      );
+    }),
+    api.mutation("UpdateMyPreferences", ({ request, variables }) => {
+      calls.updateMyPreferences += 1;
+      const denied = guard(request);
+      if (denied !== null) {
+        return denied;
+      }
+      if (failPreferenceWrites) {
+        return HttpResponse.error();
+      }
+      const { settings } = (variables as UpdateMyPreferencesMutationVariables)
+        .input;
+      for (const key of Object.keys(settings)) {
+        if (!(key in preferences)) {
+          return graphqlError("VALIDATION_FAILED", "Unknown preference", {
+            reason: "UNKNOWN_KEY",
+            key,
+          });
+        }
+      }
+      Object.assign(preferences, settings);
+      return HttpResponse.json({
+        data: { updateMyPreferences: { settings: { ...preferences } } },
+      });
+    }),
   ];
 
-  return { handlers, calls, resetRequests };
+  return { handlers, calls, resetRequests, preferences };
 };
 
 /** 只要 handler、不需要計數時的簡寫。 */

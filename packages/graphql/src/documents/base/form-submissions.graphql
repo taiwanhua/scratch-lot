@@ -42,6 +42,9 @@ fragment FormSubmissionFields on FormSubmissionModel {
     timezone
     userId
     orgId
+    # 送出當時的所屬組織(全部)與租戶(表達式的 ctx.user.orgIds / ctx.tenant.id)
+    orgIds
+    tenantId
   }
   # 這次回傳的修訂用哪一版的定義渲染(升級過的提交,歷史修訂可能綁在較舊的版本)
   viewedVersion
@@ -66,6 +69,8 @@ fragment FormSubmissionFields on FormSubmissionModel {
   touched
   abilities {
     canEdit
+    # [存草稿]:草稿 / 退回 / 撤回的建立者,且表單允許存草稿(false = 只有 [送出])
+    canSaveDraft
     canDelete
     canEditField
     canWithdraw
@@ -81,7 +86,7 @@ fragment FormLookupRecordFields on FormLookupRecord {
   values
 }
 
-# 新增選單:此刻可以新增的表單(一張直接進、多張先選)
+# 新增選單:此刻可以新增的表單(一張直接進、多張先選);canCreate = false 的只給篩選與頁籤模板用
 query ModuleForms($moduleKey: ID!) {
   moduleForms(moduleKey: $moduleKey) {
     key
@@ -89,6 +94,10 @@ query ModuleForms($moduleKey: ID!) {
     moduleKey
     currentVersion
     tabLabelTemplate
+    # 表單設定「允許存草稿」;false = 新增頁沒有 [存草稿]
+    allowDraft
+    # 讀者能不能用這張表單新增(B9b 模組看 create-<formKey>);[+ 新增] 與新增頁只認 true 的
+    canCreate
   }
 }
 
@@ -171,7 +180,20 @@ query FormSubmissionAttachmentUrl(
   }
 }
 
+# 新增頁的 [送出]:CreateAndSubmitFormSubmissionInput 同 CreateFormDraftInput;一個交易內建立 + 守門 + 送出,
+# 失敗時不留任何資料(不產生草稿);同 clientRequestId 重試回同一筆
+mutation CreateAndSubmitFormSubmission(
+  $input: CreateAndSubmitFormSubmissionInput!
+) {
+  createAndSubmitFormSubmission(input: $input) {
+    submission {
+      ...FormSubmissionFields
+    }
+  }
+}
+
 # CreateFormDraftInput: { formKey, clientRequestId, values? };同 clientRequestId 重試回同一筆
+# 表單關了「允許存草稿」→ FORBIDDEN(reason DRAFT_DISABLED)
 mutation CreateFormDraft($input: CreateFormDraftInput!) {
   createFormDraft(input: $input) {
     submission {
@@ -181,6 +203,7 @@ mutation CreateFormDraft($input: CreateFormDraftInput!) {
 }
 
 # SaveFormDraftInput: { id, expectedEditVersion, values };values 是整張表單的狀態(缺席 = 清空)
+# 狀態草稿且表單關了「允許存草稿」→ FORBIDDEN(reason DRAFT_DISABLED)
 mutation SaveFormDraft($input: SaveFormDraftInput!) {
   saveFormDraft(input: $input) {
     submission {
@@ -189,7 +212,8 @@ mutation SaveFormDraft($input: SaveFormDraftInput!) {
   }
 }
 
-# SubmitFormSubmissionInput: { id, expectedEditVersion };值錯誤 → VALIDATION_FAILED(extensions.fieldErrors)
+# SubmitFormSubmissionInput: { id, expectedEditVersion, values? };values 有值 = 以畫面上的整張表單狀態送出
+# (同一個交易寫入);值錯誤 → VALIDATION_FAILED(extensions.fieldErrors)
 mutation SubmitFormSubmission($input: SubmitFormSubmissionInput!) {
   submitFormSubmission(input: $input) {
     submission {

@@ -5,8 +5,10 @@ import {
 } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { validateAudience as validateAudienceShape } from "@repo/domain/audience";
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
 
+import { AudienceService } from "../audience/audience.service";
 import { AuditService } from "../audit/audit.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -32,6 +34,7 @@ import {
   targetNotFoundError,
 } from "./data-scope-error";
 import {
+  DATA_SCOPE_AUDIENCE_OPTIONS,
   type DataScopeField,
   type DataScopeGroupOp,
   type DataScopeOperatorFacts,
@@ -78,7 +81,15 @@ interface CachedRule {
   catalog: DataScopeField[];
   /** 有日期條件:查詢時要先讀規則作者(根組織)與操作者所在租戶的時區(沒有就不讀)。 */
   hasDateCondition: boolean;
+  /**
+   * 有規則的套用對象不是人員條件格式(改格式前存的舊資料、壞資料):判斷不了套用到誰,
+   * 這個目標對**所有人**命中不到任何資料(fail-closed;跳過那條會變成多看)。
+   */
+  hasInvalidAudience: boolean;
 }
+
+/** 命中不到任何文件的條件(fail-closed 用)。 */
+const MATCH_NOTHING = { _id: { $in: [] } };
 
 /** 一個 collection 的快取:moduleKey → 該模組的規則;空 Map = 這張表沒有任何模組設了規則。 */
 type CollectionRules = Map<string, CachedRule>;
@@ -122,6 +133,7 @@ export class DataScopeService
     private readonly orgs: OrgsRepository,
     private readonly audit: AuditService,
     private readonly ownerProtection: OwnerProtectionService,
+    private readonly audience: AudienceService,
   ) {}
 
   onModuleInit(): void {
@@ -136,7 +148,8 @@ export class DataScopeService
 
   /**
    * 查詢中介層的唯一入口:回傳要 AND 進查詢的條件,沒有任何模組的規則命中 → `null`。
-   * 命中判斷、動態值代入、combineOp 合成在 `compileRules`,依模組拼 `$or` 在 `combineByModule`
+   * 套用對象的命中由 `AudienceService.matchesAudience` 判斷(人員條件;同一個請求的事實只算一次),
+   * 動態值代入、combineOp 合成在 `compileRules`,依模組拼 `$or` 在 `combineByModule`
    * (都是 `data-scope-rule.ts` 的純函式)。
    */
   async conditionFor(
@@ -156,8 +169,16 @@ export class DataScopeService
       : { rule: DEFAULT_TENANT_TIMEZONE, operator: DEFAULT_TENANT_TIMEZONE };
     const conditions: ModuleCondition[] = [];
     for (const [moduleKey, cached] of byModule) {
+      if (cached.hasInvalidAudience) {
+        conditions.push({ moduleKey, condition: MATCH_NOTHING });
+        continue;
+      }
+      const matched = await this.matchedRules(cached.rules, operator);
+      if (matched.length === 0) {
+        continue;
+      }
       const condition = compileRules(
-        cached.rules,
+        matched,
         cached.combineOp,
         cached.catalog,
         facts,
@@ -168,6 +189,20 @@ export class DataScopeService
       }
     }
     return combineByModule(conditions);
+  }
+
+  /** 套用對象命中操作者的規則(依序判斷;順序不影響合成結果)。 */
+  private async matchedRules(
+    rules: readonly DataScopeRuleEntry[],
+    operator: OperatorContext,
+  ): Promise<DataScopeRuleEntry[]> {
+    const matched: DataScopeRuleEntry[] = [];
+    for (const rule of rules) {
+      if (await this.audience.matchesAudience(operator, rule.audience)) {
+        matched.push(rule);
+      }
+    }
+    return matched;
   }
 
   /**
@@ -205,9 +240,11 @@ export class DataScopeService
   }
 
   private async load(collection: string): Promise<CollectionRules> {
+    // 共用快取的載入一律在交易外讀(`session: null`):快取跨請求共用,不能讀到某個交易尚未提交的內容,
+    // 也不能因為那個交易回復而留下錯的快取(TX-03)
     const [documents, targets] = await Promise.all([
-      this.rules.findMany(RULE_READER, { collection }),
-      this.targets.findMany(RULE_READER, { collection }),
+      this.rules.findMany(RULE_READER, { collection }, { session: null }),
+      this.targets.findMany(RULE_READER, { collection }, { session: null }),
     ]);
     const targetByModule = new Map(
       targets.map((target) => [target.moduleKey, target]),
@@ -223,6 +260,12 @@ export class DataScopeService
         continue;
       }
       const rules = document.rules as unknown as DataScopeRuleEntry[];
+      // 套用對象不是人員條件格式(改格式前存的舊資料;環境清空重建、不寫遷移)→ 整個目標 fail-closed,
+      // 舊形狀也不會走進判斷程式
+      const hasInvalidAudience = rules.some(
+        (rule) =>
+          !validateAudienceShape(rule.audience, DATA_SCOPE_AUDIENCE_OPTIONS).ok,
+      );
       const catalog = fieldCatalogOf(
         declaredFieldsOf(targetByModule.get(document.moduleKey) ?? null),
       );
@@ -230,7 +273,9 @@ export class DataScopeService
         combineOp: document.combineOp,
         rules,
         catalog,
-        hasDateCondition: hasDateCondition(rules, catalog),
+        hasDateCondition:
+          !hasInvalidAudience && hasDateCondition(rules, catalog),
+        hasInvalidAudience,
       });
     }
     return loaded;
@@ -302,7 +347,7 @@ export class DataScopeService
     const target = await this.mustFindTarget(input.targetId);
     const catalog = fieldCatalogOf(declaredFieldsOf(target));
     const rules = input.rules.map((rule) => ({
-      audience: { type: rule.audience.type, ids: rule.audience.ids ?? [] },
+      audience: rule.audience,
       filter: rule.filter,
     }));
     const violation = validateRules(rules, catalog);
@@ -390,7 +435,6 @@ function factsOf(operator: OperatorContext): DataScopeOperatorFacts {
   return {
     actorId: operator.actorId,
     memberOrgIds: operator.memberOrgIds,
-    roleIds: operator.roleIds,
   };
 }
 

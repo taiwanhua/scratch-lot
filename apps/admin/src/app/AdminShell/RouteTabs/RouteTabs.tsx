@@ -18,7 +18,7 @@ import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
 
-import type { RouteTab } from "@/lib/route-tabs";
+import type { RouteTab } from "@/lib/base/route-tabs";
 
 import { SortableTab } from "./SortableTab";
 

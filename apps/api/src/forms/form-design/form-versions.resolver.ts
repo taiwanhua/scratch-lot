@@ -15,7 +15,6 @@ import {
   CreateFormVersionDraftInput,
   DeleteFormVersionDraftInput,
   ExportFormSeedInput,
-  FormKeyInput,
   PreviewFormVersionInput,
   PublishFormVersionInput,
   RetireCurrentVersionInput,
@@ -99,30 +98,19 @@ export class FormVersionsResolver {
     @Args("input") input: PublishFormVersionInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<FormVersionPayload> {
-    const record = await this.publisher.publish(
+    const { version, createdPermission } = await this.publisher.publish(
       await this.access.factsOf(operator),
       input,
     );
-    const names = await this.userNames.load(operator, [record.publishedBy]);
-    return { formVersion: toFormVersionModel(record, names), validation: null };
+    const names = await this.userNames.load(operator, [version.publishedBy]);
+    return {
+      formVersion: toFormVersionModel(version, names),
+      validation: null,
+      createdPermission,
+    };
   }
 
-  /** 發布中斷時,從步驟 3 冪等重跑。 */
-  @RequirePermission(FORMS_PERMISSIONS.edit)
-  @Mutation(() => FormVersionPayload)
-  async retryPublishFormVersion(
-    @Args("input") input: FormKeyInput,
-    @CurrentOperator() operator: OperatorContext,
-  ): Promise<FormVersionPayload> {
-    const record = await this.publisher.retry(
-      await this.access.factsOf(operator),
-      input,
-    );
-    const names = await this.userNames.load(operator, [record.publishedBy]);
-    return { formVersion: toFormVersionModel(record, names), validation: null };
-  }
-
-  /** 帶當時看到的版本號;兩步冪等(中斷後重呼叫會接著做完),`currentVersion` 已換成別版 → 409。 */
+  /** 帶當時看到的版本號;兩步一個交易,同一版再退役不改任何東西,`currentVersion` 已換成別版 → 409。 */
   @RequirePermission(FORMS_PERMISSIONS.edit)
   @Mutation(() => FormPayload)
   async retireCurrentVersion(

@@ -1,6 +1,6 @@
 # 資料層與租戶隔離(現況說明)
 
-回答「資料分幾類、誰看得到哪些、怎麼保證繞不過」。決策理由見 ADR-0001(核心關聯)、ADR-0002(種子與遷移)、ADR-0005(多租戶隔離)、ADR-0007(基礎欄位)、ADR-0008(資料範圍)。collection 一覽見 `docs/data-model.md`。
+回答「資料分幾類、誰看得到哪些、怎麼保證繞不過」。決策理由見 ADR-0001(核心關聯)、ADR-0002(種子與遷移)、ADR-0005(多租戶隔離)、ADR-0007(基礎欄位)、ADR-0008(資料範圍)、ADR-0013(交易)。collection 一覽見 `docs/data-model.md`。
 
 ## 三類資料
 
@@ -73,7 +73,7 @@ repository token 不能與 model token、組裝器內部 token 或 Nest 全域 g
 - 底座與一般新增專案資料表由 `baseFieldsPlugin` 掛上 `createdAt`、`updatedAt`、`createdBy`、`updatedBy`、`deletedAt`。schema class 不重複宣告。
 - 刪除 = 寫 `deletedAt`。之後查詢預設排除;要看已刪除的明講 `includeDeleted`。
 - 已刪除的不能再更新。
-- 硬刪除只有四種:關聯的移除、補償刪除(`hardDeleteById`,本次請求剛建、尚未對外可見的文件)、從未發布的版本草稿(`hardDeleteDraft`)、退役的表單欄位級權限。清單與理由見 ADR-0007;其餘抹除走 cleanup migration。
+- 硬刪除只有四種:關聯的移除、撤銷開通的抹除(`hardDeleteById`;開通失敗由交易回復,不再補償刪除)、從未發布的版本草稿(`hardDeleteDraft`)、退役的表單欄位級權限。清單與理由見 ADR-0007;其餘抹除走 cleanup migration。
 - `updateById` / `updateMany` 碰到 `orgId`、`createdBy`、`createdAt`(含子路徑)→ 拋錯。
 - 各表的偏好設定統一叫 `settings`,已知 key 在程式裡定義。
 - 高敏個資(`nationalId`)欄位級加密(AES-256-GCM,金鑰 `FIELD_ENCRYPTION_KEY`),預設不投影。
@@ -102,20 +102,42 @@ service 呼叫 BaseRepository.xxx(operator, …)
   - `BaseRepository.existsAny`:只給前置檢查回答「有沒有」(刪組織、撤銷開通的「無業務資料引用」)。**不套資料範圍規則** —— 規則會收窄操作者看得到的,數到 0 就把還有資料的組織誤判成可刪,前置檢查必須 fail-closed。做法是方法內部在查詢上設 `existenceCheck`,中介層讀到就跳過資料範圍規則(租戶過濾仍依操作者上下文套上)。簽名是 `existsAny(operator, ownerField, orgId)`:條件只能是歸屬欄(`orgId` / `ownerOrgId`)等於某個組織,只回有無。唯一受控 caller 是 `database/org-business-data.reader.ts`,登記在 `EXISTS_ANY_CALLERS` 並由測試掃 src 鎖定;專案只能提供檢查登記,不能自行呼叫。旗標本身也只准出現在資料層三個檔。
   - `apps/api/src/database/form-submission-usage.ts`:退役欄位級權限清理的三層檢查要**跨全部租戶**計數提交(少算一筆草稿就會把還在用的權限刪掉),不經 BaseRepository;只回筆數與版本號,不回內容。
   - `apps/api/src/database/workflow-submission-store.ts`:審核流程(引擎、讀取授權、申請中心)讀寫提交,不套可見範圍與資料範圍規則,以 `tenantId` 為邊界;允許呼叫它的檔案登記在該檔 `WORKFLOW_SUBMISSION_STORE_CALLERS`,由測試鎖定。
-- 對全員生效(套用對象 `all`)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
+- 對全員生效(套用對象「所有人」)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
 
 正本:`apps/api/src/database/base.repository.ts`、`apps/api/src/database/operator-context.ts`、`apps/api/src/database/plugins/tenant-scope.plugin.ts`
+
+## 交易
+
+一個使用者動作 = 一個交易:任何一步失敗,這個動作的寫入一起回復。所有環境的 MongoDB 都是 replica set(Atlas;本機 Docker 與測試是單一成員 replica set),才能用交易。
+
+```
+service 呼叫 TransactionService.withTransaction(async (session) => …)
+  → Mongoose connection.transaction(driver 的 session.withTransaction):寫入衝突自動整個重跑,上限 60 秒
+  → fn 內:repository.xxx(operator, …, { session })   ← 租戶保底、資料範圍照套
+           afterCommit(() => 外部動作)                 ← 只登記,不執行
+  → 提交成功 → 依序執行 afterCommit(失敗只記 log)
+    回復     → 丟棄 afterCommit
+```
+
+- **session 傳遞**:`BaseRepository` 的讀寫方法都接受選填 `{ session }`;沒帶時用目前進行中交易的 session,明給 `null` = 刻意在交易外(共用快取的載入)。Mongoose 開了 `transactionAsyncLocalStorage`,交易內沒帶 session 的 Mongoose 操作(專屬 repository 的 query、`save()`、`insertMany`)也自動加入;原生 driver 的 `collection(...)` 存取不會,要明確傳。帶不帶 session,租戶保底與資料範圍規則都一樣套。
+- **交易結束即關閉**:提交或回復之後,`fn` 裡排出去、晚到的非同步工作不再算在交易內(`currentSession()` 回 undefined、`afterCommit` 拋錯),`BaseRepository` 也不會沿用已結束的 session。
+- **巢狀呼叫**:已在交易內再呼叫 `withTransaction` → 直接在同一個交易裡執行,沒有獨立的回復點。內層的錯誤往外拋時整個交易回復;被外層接住後繼續,內層已做的寫入會隨外層一起提交。
+- **交易內不得有外部動作或行程內的非冪等副作用**(寄信、HTTP、GCS 寫入、Cloudflare、快取作廢):自動重試會重複執行、回復也收不回。改用 `afterCommit` 排到提交之後(會算進回應時間);對外 adapter 的入口(`MailService` 寄信、`StorageService` 的刪除 / 複製)以 `assertOutsideTransaction` 在交易內被呼叫時拋錯。資料庫寫入(如通知)留在交易內。
+- **交易內不吞資料庫錯誤**:寫入出錯只能回復,不能 `catch` 後繼續;冪等改用先查或 upsert。
+- **不取代樂觀鎖**:`editVersion` / `version` 的條件更新照舊。db-migrator 的大批次遷移不包成單一交易,每批一個交易 + 檢查點續跑(ADR-0002)。
+
+寫法見 `docs/standards/api/transactions.md`(TX)。正本:`apps/api/src/database/transaction.ts`、`apps/api/src/database/base.repository.ts`
 
 ## 操作者上下文的四個集合
 
 BaseRepository 資料操作方法的第一個參數。四個集合各有用途,不可互相代用:
 
-| 集合            | 內容                                   | 誰用                                                |
-| --------------- | -------------------------------------- | --------------------------------------------------- |
-| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍) | 治理類過濾(`orgs`)、角色 / 使用者候選               |
-| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)  | 業務類的租戶保底                                    |
-| `memberOrgIds`  | `org_user` 直接關聯,不含下層           | 資料範圍:套用對象「指定組織」、【操作者的所屬組織】 |
-| `roleIds`       | 啟用中角色                             | 資料範圍:套用對象「指定角色」                       |
+| 集合            | 內容                                   | 誰用                                              |
+| --------------- | -------------------------------------- | ------------------------------------------------- |
+| `managedOrgIds` | 啟用中角色的擁有組織子樹聯集(管理範圍) | 治理類過濾(`orgs`)、角色 / 使用者候選             |
+| `visibleOrgIds` | 所屬組織,開關 ON 時各含下層(可見範圍)  | 業務類的租戶保底                                  |
+| `memberOrgIds`  | `org_user` 直接關聯,不含下層           | 資料範圍:套用對象的所屬組織、【操作者的所屬組織】 |
+| `roleIds`       | 啟用中角色                             | 資料範圍:套用對象的角色                           |
 
 - 另有 `actorId`(操作者)與 `currentOrgId`(當前組織)。
 - 根組織成員的可見範圍 = `"all"`;持超級管理員或擁有組織為根的角色,管理範圍 = `"all"`。
@@ -142,7 +164,7 @@ BaseRepository 資料操作方法的第一個參數。四個集合各有用途,�
 權限管「能做什麼」,資料範圍管「看得到哪些資料的上限」。兩者分離;`*` 不影響資料範圍。
 
 - 資料目標以 `(collection, moduleKey)` 為鍵:**一個模組一個目標**,同一張表可以有多個模組各一份(所有表單模組共用 `form_submissions`)。每個資料目標一份設定:`combineOp` + `rules[]`。
-- 一條規則 = 套用對象(`all` / `role` / `org` / `user`)+ 過濾條件(巢狀 AND / OR 樹)。
+- 一條規則 = 套用對象(人員條件:所有人 / 符合條件 —— 使用者、角色、所屬組織、權限組成的 AND / OR 樹)+ 條件組合(巢狀 AND / OR 樹)。
 - 沒有規則命中操作者 → 不過濾(= 可見範圍內)。
 - 多條命中:`OR`(預設)取聯集;`AND` 取交集。沒命中的規則不影響他。
 - 動態值:`current-user`(【操作者本人】)、`current-user-orgs`(【操作者的所屬組織】)。算不出對象 → 命中不到任何資料(fail-closed)。
@@ -213,14 +235,14 @@ documents 預設以 `key` 識別,可用 `keyField` 指定其他欄位;`seedRef` 
 
 發布由 API 的專用 CLI 沿用既有設計服務,使用該環境真實的根組織操作者、權限檢查與稽核。普通 documents seed 不直接寫表單、流程、版本或動態權限。
 
-| 現場狀態                               | 處理方式                                  |
-| -------------------------------------- | ----------------------------------------- |
-| 尚無該定義                             | 建立共用身分,經草稿、檢查與發布建立版本   |
-| 已有完全相同的共用發布內容             | 採納原版,保留 ID、歷史與分派              |
-| 已受管且內容未變                       | 核對實體後回報未變,不增版或重寫發布時間   |
-| 已受管且有新內容                       | 核對前次安裝狀態後發布新版,保留歷史       |
-| 有未預期草稿、發布中斷、版本或名稱漂移 | 回報衝突,由操作者整理現場或重新匯出進版控 |
-| 本次安裝中斷                           | 依安裝紀錄接續原 ID 與版本,不另發第二版   |
+| 現場狀態                     | 處理方式                                  |
+| ---------------------------- | ----------------------------------------- |
+| 尚無該定義                   | 建立共用身分,經草稿、檢查與發布建立版本   |
+| 已有完全相同的共用發布內容   | 採納原版,保留 ID、歷史與分派              |
+| 已受管且內容未變             | 核對實體後回報未變,不增版或重寫發布時間   |
+| 已受管且有新內容             | 核對前次安裝狀態後發布新版,保留歷史       |
+| 有未預期草稿、版本或名稱漂移 | 回報衝突,由操作者整理現場或重新匯出進版控 |
+| 本次安裝中斷                 | 依安裝紀錄接續原 ID 與版本,不另發第二版   |
 
 退役需明確宣告;只從 registry 移除,不會刪定義、退役或撤銷分派。退役後重新發布,即使內容相同也需新 revision 與新版號。歷史查驗只讀既有映射及凍結內容,不把目前版本切回舊版。既有提交、修訂與進行中的流程繼續引用原版,不因定義更新自動升級。
 
@@ -266,7 +288,7 @@ documents 預設以 `key` 識別,可用 `keyField` 指定其他欄位;`seedRef` 
 
 受管範圍依當前 registry 判定;已移除宣告的定義、自建與租戶客製/fork 不在 data 保留範圍。受管定義的已發布/已退役版本連同動態權限 ID、退役狀態及有效安裝映射保留;租戶分派、綁定與案件清除。普通設定種子的識別鍵與初始值政策沿用原宣告;示範業務資料整表清除後依宣告補回。
 
-data 遇到未完成 migration、回滾或任何中斷發布時,在刪除前拒絕。先續完原 update 或 UI 發布,再明確重置;預檢不自動發布半成品。full 可清除中斷狀態,依目前版本重建。
+data 遇到未完成 migration、回滾或未完成的受管定義安裝時,在刪除前拒絕。先續完原 update,再明確重置;預檢不自動續做半成品。表單 / 流程的發布與退役各是一個交易,不會再停在半路;交易化之前的舊版留下的中斷(不清庫升級才有)由 update 與 data 預檢擋下,依 [deployment](../deployment.md#舊版留下的發布--退役中斷)手動補完。full 可清除中斷狀態,依目前版本重建。
 
 三個環境都須明示環境、模式與實際資料庫名並通過確認。預檢、刪除與 update 共用同一把鎖;失敗會保留階段與結果,不標成成功。用法與失敗處理見 [deployment](../deployment.md#資料庫還原reset)。
 

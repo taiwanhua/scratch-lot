@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import {
@@ -9,9 +9,10 @@ import {
 } from "@repo/graphql";
 import { Stack } from "@repo/ui/stack";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { orgTrail } from "@/lib/org-tree";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
+import { orgTrail } from "@/lib/base/org-tree";
 
 import { CreateChildOrgDialog } from "./CreateChildOrgDialog";
 import { DeleteOrgDialog } from "./DeleteOrgDialog";
@@ -26,10 +27,12 @@ import { useMoveTargets } from "./useMoveTargets";
 import { useOrgManagerData } from "./useOrgManagerData";
 import { isTenantTop, useTenantOwner } from "./useTenantOwner";
 
-/** 同時只會開一個彈窗;用一個標籤而不是五個布林,避免出現「兩個都開著」的狀態。 */
+/**
+ * 不進網址的彈窗(新增、開通、確認類),同時只會開一個;用一個標籤而不是五個布林,避免出現「兩個都開著」的狀態。
+ * 編輯彈窗在網址 `?edit=<id>`(見下方 `useUrlEdit`)。
+ */
 type OpenDialog =
   | "createChild"
-  | "edit"
   | "toggleEnabled"
   | "delete"
   | "provision"
@@ -48,7 +51,36 @@ export const OrgManagerPage = () => {
   const t = useTranslations("admin.orgManager");
   const tErrors = useTranslations("admin.orgManager.errors");
   const { session } = useSession();
-  const data = useOrgManagerData();
+  /**
+   * 編輯彈窗記在網址 `?edit=<id>`(REACT-14):編的就是選中的組織,所以網址上的組織同時是選中的那一個
+   * (以 id 讀最新的單筆);不在樹裡 → 提示找不到,沒有編輯權限 → 停在它的詳情。
+   */
+  const edit = useUrlEdit();
+  const data = useOrgManagerData(edit.requestedId);
+  const selectOrg = data.selectOrg;
+  const keepDetail = useCallback(
+    (orgId: string) => {
+      selectOrg(orgId);
+    },
+    [selectOrg],
+  );
+  const editingId = useUrlEditGuard({
+    edit,
+    canEdit: data.ability.canEdit,
+    isMissing:
+      edit.requestedId !== null &&
+      data.isOrgTreeReady &&
+      data.selectedOrgId !== edit.requestedId,
+    onNoPermission: keepDetail,
+  });
+  /** 關掉編輯彈窗:停在剛編的那一個組織的詳情 */
+  const closeEdit = () => {
+    if (editingId !== null) {
+      selectOrg(editingId);
+    }
+    edit.close();
+    setActionError(null);
+  };
   const owner = useTenantOwner(data.org);
   const moveTargets = useMoveTargets({
     nodes: data.orgNodes,
@@ -158,7 +190,9 @@ export const OrgManagerPage = () => {
         ability={data.ability}
         isTenantTopProtected={isTenantTopProtected}
         onEdit={() => {
-          setOpenDialog("edit");
+          if (data.org !== undefined) {
+            edit.open(data.org.id);
+          }
         }}
         onToggleEnabled={() => {
           setActionError(null);
@@ -191,7 +225,7 @@ export const OrgManagerPage = () => {
         />
       )}
 
-      {openDialog === "edit" && data.org !== undefined && (
+      {editingId !== null && data.org?.id === editingId && (
         <EditOrgDialog
           org={data.org}
           parentOptions={moveTargets}
@@ -199,10 +233,10 @@ export const OrgManagerPage = () => {
           isTenantTopProtected={isTenantTopProtected}
           ownerCandidates={owner.candidates}
           ability={data.ability}
-          onClose={closeDialog}
+          onClose={closeEdit}
           onSaved={() => {
             const orgId = data.org?.id;
-            closeDialog();
+            closeEdit();
             void data.invalidate(orgId);
           }}
         />

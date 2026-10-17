@@ -4,7 +4,7 @@ import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 
-import type { FormError } from "@/lib/form-engine/form-errors";
+import type { FormError } from "@/lib/base/form-engine/form-errors";
 
 export interface RetiredPermissionOutcomeProps {
   permission: { name: string };

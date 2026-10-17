@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import type { Persisted } from "../database/base.repository";
 import { BusinessRelationshipsRepository } from "../database/business-relationships.repository";
 import {
@@ -18,7 +16,15 @@ import {
   tenantTimezoneOf,
   tenantTimezoneOfOrg,
 } from "../database/tenant-timezone";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
+import {
+  type FormCreateModule,
+  canCreateInFormModule,
+  formCreateKeyOf,
+} from "./form-create-access";
 import {
   type FormModuleAction,
   formModulePermission,
@@ -30,18 +36,22 @@ export type FormRecord = Persisted<FormDocument>;
 /**
  * 一位操作者在這次請求裡、表單引擎要用的事實(一次算好,各 service 共用):
  * - `permissionKeys`:有效權限集合(`PermissionResolver`,wildcard 已展開成具體 key)
+ * - `foreignPermissionKeys`:被濾掉的別租戶表單動態權限(`has` 用它讓 `*` 也蓋不到)
  * - `isSuperAdmin`:持超級管理員(欄位級權限列被刪時「只有 root 看得到」的 root)
  * - `isRoot`:當前組織是根組織(`parentId === null`;管共用表單、分派的判準)
  * - `tenantId`:當前組織的租戶頂層(根組織 = null → 看全部共用表單)
  * - `timezone`:租戶時區(`ctx.timezone`)
+ * - `perFormCreateModuleKeys`:宣告 `perFormCreate: true`(B9b 依表單分開新增權限)的表單模組 key
  */
 export interface FormOperatorFacts {
   operator: OperatorContext;
   permissionKeys: ReadonlySet<string>;
+  foreignPermissionKeys: ReadonlySet<string>;
   isSuperAdmin: boolean;
   isRoot: boolean;
   tenantId: Types.ObjectId | null;
   timezone: string;
+  perFormCreateModuleKeys: ReadonlySet<string>;
 }
 
 /** 讀組織只取判斷用欄位,不受管理範圍影響(同 `OwnerProtectionService` 的 fail-closed 讀法)。 */
@@ -94,7 +104,12 @@ export class FormAccessService {
   ): Promise<FormOperatorFacts> {
     const resolution = operator.actorId
       ? await this.permissions.resolve(operator.actorId, operator.currentOrgId)
-      : { isSuperAdmin: false, permissionKeys: new Set<string>() };
+      : {
+          isSuperAdmin: false,
+          modules: [],
+          permissionKeys: new Set<string>(),
+          foreignPermissionKeys: new Set<string>(),
+        };
     const current = operator.currentOrgId
       ? await this.orgs.findById(orgReader(operator), operator.currentOrgId)
       : null;
@@ -104,10 +119,17 @@ export class FormAccessService {
     return {
       operator,
       permissionKeys: resolution.permissionKeys,
+      foreignPermissionKeys: resolution.foreignPermissionKeys,
       isSuperAdmin: resolution.isSuperAdmin,
       isRoot: current?.parentId === null,
       tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, tenantId),
+      // 權限解析已帶出模組事實;看不到的模組本來就沒有它的任何權限,不必知道開關
+      perFormCreateModuleKeys: new Set(
+        resolution.modules
+          .filter((module) => module.perFormCreate)
+          .map((module) => module.key),
+      ),
     };
   }
 
@@ -119,9 +141,23 @@ export class FormAccessService {
     return tenantTimezoneOfOrg(this.orgs, operator, orgId);
   }
 
-  /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有)。 */
+  /**
+   * 某個組織所屬的租戶頂層 id(`me.currentOrg.tenantId`;表達式的 `ctx.tenant.id`,送出時快照的
+   * `revisions[].ctx.tenantId` 同一條規則):根組織 / 讀不到 → null。
+   */
+  async tenantIdOfOrg(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<Types.ObjectId | null> {
+    const org = await this.orgs.findById(orgReader(operator), orgId);
+    return org
+      ? tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors })
+      : null;
+  }
+
+  /** 持有某權限(含同層 wildcard;權限不存在或被停用 → 不持有;別租戶表單的動態權限 → 不持有)。 */
   has(facts: FormOperatorFacts, key: string): boolean {
-    return hasPermission(facts.permissionKeys, key);
+    return holdsPermission(facts, key);
   }
 
   /** 表單模組的個別權限;沒有 → `FORBIDDEN`(與 `@RequirePermission` 同一種錯誤,無 reason)。 */
@@ -134,6 +170,58 @@ export class FormAccessService {
     if (!this.has(facts, key)) {
       throw forbiddenError(`Missing permission ${key}`);
     }
+  }
+
+  /**
+   * **新增資格的唯一判斷**(B9b):操作者能不能用這張表單在這個模組新增。
+   * 模組開啟 B9b(`perFormCreate`)→ 看 `<模組>.create-<formKey>`(模組 `create` 不算);否則看模組 `create`。
+   * 入口(新增 API、`moduleForms` 的 `canCreate`、abilities、複製為新單、`formLookup` 版本存取、申請中心新申請、
+   * 申請人改 / 送 / 刪自己的單)一律呼叫這裡,不自己拼 key。
+   */
+  canCreateWithForm(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): boolean {
+    return this.has(facts, this.createKeyOf(facts, moduleKey, formKey));
+  }
+
+  /** `canCreateWithForm` 的守門版;沒有 → `FORBIDDEN`(與 `@RequirePermission` 同一種錯誤,無 reason)。 */
+  assertCanCreateWithForm(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): void {
+    const key = this.createKeyOf(facts, moduleKey, formKey);
+    if (!this.has(facts, key)) {
+      throw forbiddenError(`Missing permission ${key}`);
+    }
+  }
+
+  private createKeyOf(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey: string,
+  ): string {
+    return formCreateKeyOf(this.createModuleOf(facts, moduleKey), formKey);
+  }
+
+  private createModuleOf(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+  ): FormCreateModule {
+    return {
+      key: moduleKey,
+      perFormCreate: facts.perFormCreateModuleKeys.has(moduleKey),
+    };
+  }
+
+  /**
+   * 在這個模組有沒有任何新增資格(不指定表單時用,例:執行端讀模組層資料)。
+   * 開啟 B9b 的模組:持有任一張表單的 `create-<formKey>`(或模組 `*`);否則看模組 `create`。
+   */
+  canCreateInModule(facts: FormOperatorFacts, moduleKey: string): boolean {
+    return canCreateInFormModule(facts, this.createModuleOf(facts, moduleKey));
   }
 
   /** `modules.engine = "form"` 的模組;不存在或不是表單模組 → `VALIDATION_FAILED`(`moduleKey`)。 */
@@ -332,10 +420,22 @@ export class FormAccessService {
     return link !== null;
   }
 
-  /** 執行端讀表單定義:持有該模組任一個個別權限即可(看得到提交的人要能渲染它)。 */
-  assertRuntimeAccess(facts: FormOperatorFacts, moduleKey: string): void {
-    const actions: FormModuleAction[] = ["view", "create", "edit"];
+  /**
+   * 執行端讀表單定義:持有該模組的 `view` / `edit`,或有新增資格即可(看得到提交的人要能渲染它)。
+   * 新增資格:給了 `formKey` → `canCreateWithForm`;沒給(模組層)→ 這個模組任一張表單的新增資格。
+   */
+  assertRuntimeAccess(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+    formKey?: string,
+  ): void {
+    const actions: FormModuleAction[] = ["view", "edit"];
+    const canCreate =
+      formKey === undefined
+        ? this.canCreateInModule(facts, moduleKey)
+        : this.canCreateWithForm(facts, moduleKey, formKey);
     if (
+      !canCreate &&
       !actions.some((action) =>
         this.has(facts, formModulePermission(moduleKey, action)),
       )

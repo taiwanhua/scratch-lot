@@ -50,3 +50,24 @@ export const declaredValue = (
     .filter((value) => value !== "");
   return values.at(-1) ?? null;
 };
+
+/**
+ * 包在 `@media` 裡的樣式規則(`cssRulesMatching` 只看最上層)。`media` 比對 media 條件文字,
+ * 例 `min-width:600px`(MUI `sm` 斷點);響應式 `sx` 的 `xs` 值會寫在 `min-width:0px` 底下。
+ */
+export const mediaRulesMatching = (
+  media: string,
+  ...needles: readonly string[]
+): CSSStyleRule[] =>
+  [...document.styleSheets]
+    .flatMap((sheet) => [...sheet.cssRules])
+    .filter(
+      (rule): rule is CSSMediaRule =>
+        rule instanceof CSSMediaRule && rule.conditionText.includes(media),
+    )
+    .flatMap((rule) => [...rule.cssRules])
+    .filter(
+      (rule): rule is CSSStyleRule =>
+        rule instanceof CSSStyleRule &&
+        needles.every((needle) => rule.selectorText.includes(needle)),
+    );

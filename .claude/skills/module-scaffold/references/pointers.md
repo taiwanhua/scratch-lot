@@ -44,5 +44,5 @@
 
 - ADR:0002 seed、0004 權限模型、0005 租戶隔離、0007 基礎欄位、0008 資料範圍、0009 開通與模板、0010 檔案儲存、0011 權限判斷流程、0012 前端分層(`docs/adr/`)
 - 規範索引:`docs/standards/README.md`;常用編號 GQL-02 / 03 / 04 / 05 / 06 / 07、STRUCT-01 / 03、I18N-02、REACT-06、TEST-07 / 08、FIGMA-04
-- 詞彙:`CONTEXT.md`(「隱藏頁」「權限容器」等)
+- 詞彙:`CONTEXT.md`(底座名詞,「隱藏頁」「權限容器」等)、`CONTEXT-PROJECT.md`(專案名詞)
 - 劇本:`docs/testing/permission-scenarios.md`

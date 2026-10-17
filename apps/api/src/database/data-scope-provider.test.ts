@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { MongooseModule } from "@nestjs/mongoose";
 import { Test } from "@nestjs/testing";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 
 import { DatabaseModule } from "./database.module";
 import { HOOK_TIMEOUT_MS } from "./test-support/mongo-connection";
@@ -17,7 +17,7 @@ import { HOOK_TIMEOUT_MS } from "./test-support/mongo-connection";
  * 「掛了就起得來」的正向情境由 `data-scope/data-scope.test.ts` 起整個 AppModule 覆蓋。
  */
 describe("DataScopeRuleProvider 未註冊時 app 起不來(#246 的 6)", () => {
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let uri: string;
 
   beforeAll(async () => {
@@ -25,7 +25,7 @@ describe("DataScopeRuleProvider 未註冊時 app 起不來(#246 的 6)", () => {
     if (baseUri) {
       uri = baseUri;
     } else {
-      memoryServer = await MongoMemoryServer.create();
+      memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       uri = memoryServer.getUri();
     }
   }, HOOK_TIMEOUT_MS);

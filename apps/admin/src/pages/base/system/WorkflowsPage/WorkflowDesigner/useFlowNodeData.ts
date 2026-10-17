@@ -7,8 +7,10 @@ import {
   isJoinStep,
 } from "@repo/domain/workflow";
 
+import { hasAudienceRows } from "@/lib/base/audience-draft";
+
 import type { JoinNodeData, ReviewNodeData } from "./flow-nodes";
-import type { CatalogForm, CatalogRole } from "./useDesignerCatalog";
+import type { CatalogForm } from "./useDesignerCatalog";
 
 /**
  * 流程圖節點要顯示的文字(React Flow 的 `node.data`):審核關卡卡片的來源 / 會簽 / 跳過條件 / 退回,
@@ -18,20 +20,18 @@ export const useFlowNodeData = (
   definition: WorkflowDefinition,
   errors: readonly WorkflowIssue[],
   forms: readonly CatalogForm[],
-  roles: readonly CatalogRole[],
 ): ((stepKey: string) => ReviewNodeData | JoinNodeData) => {
   const t = useTranslations("admin.workflows.node");
   const tMode = useTranslations("admin.workflows.step.modes");
+  const tKinds = useTranslations("admin.workflows.assignee.kinds");
 
   const sourceLine = (source: AssigneeSource): string => {
     switch (source.kind) {
-      case "users": {
-        return t("users", { count: source.userIds.length });
-      }
-      case "role": {
-        const role = roles.find((item) => item.id === source.roleId);
-        return t("role", {
-          name: role?.name ?? source.placeholder ?? t("unset"),
+      case "audience": {
+        return t("audience", {
+          source: hasAudienceRows(source.audience)
+            ? tKinds("audience")
+            : t("unset"),
         });
       }
       case "field": {
@@ -61,7 +61,11 @@ export const useFlowNodeData = (
       };
     }
     const lines = [sourceLine(step.assignee), tMode(step.mode)];
-    if (step.skipWhen !== undefined && step.skipWhen !== null) {
+    // 「跳過這一關」兩項(符合條件 / 申請人屬於這些組織)任一項有設就標
+    const hasSkip =
+      (step.skipWhen !== undefined && step.skipWhen !== null) ||
+      (step.skipOrgs !== undefined && step.skipOrgs !== null);
+    if (hasSkip) {
       lines.push(t("skipWhen"));
     }
     if (step.allowReturn === false) {

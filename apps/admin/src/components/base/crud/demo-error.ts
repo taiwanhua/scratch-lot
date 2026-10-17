@@ -1,4 +1,4 @@
-import { type AdminError, parseAdminError } from "@/lib/errors";
+import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 示範家族三頁會收到的業務錯誤(GQL-04)。文案在 `<ns>.errors.*`,認不出來的一律 `UNEXPECTED`。
@@ -15,7 +15,7 @@ export type DemoErrorCode =
   | "UNEXPECTED";
 
 /**
- * 共用形狀(`lib/errors.ts`)。本頁用到的選填欄位只有 `fields`:`VALIDATION_FAILED` 時
+ * 共用形狀(`lib/base/errors.ts`)。本頁用到的選填欄位只有 `fields`:`VALIDATION_FAILED` 時
  * api 逐項回報的欄位名(`name` / `category` / `coverPath`…),前端據此把錯誤標在對應的
  * 表單欄位上;`FIELD_FORBIDDEN` 時是下方 `FIELD_FORBIDDEN_FIELDS`。
  */

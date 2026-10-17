@@ -8,6 +8,7 @@ import {
   columnPinningFeature,
   columnResizingFeature,
   columnSizingFeature,
+  columnVisibilityFeature,
   createSortedRowModel,
   rowSortingFeature,
   tableFeatures,
@@ -21,6 +22,7 @@ import {
   DEFAULT_COLUMN_MIN_WIDTH,
   DEFAULT_COLUMN_WIDTH,
   type DataTableColumn,
+  type DataTableColumnVisibility,
   type DataTableColumnWidths,
   type DataTableSort,
 } from "./data-table-column";
@@ -30,6 +32,7 @@ export const dataTableFeatures = tableFeatures({
   columnSizingFeature,
   columnResizingFeature,
   columnPinningFeature,
+  columnVisibilityFeature,
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
 });
@@ -46,7 +49,11 @@ export interface UseDataTableOptions<Row extends RowData> {
   isManualSorting?: boolean;
   columnWidths?: DataTableColumnWidths;
   onColumnWidthsChange?: (widths: DataTableColumnWidths) => void;
+  columnVisibility?: DataTableColumnVisibility;
 }
+
+/** 沒給欄位顯示時:全部顯示 */
+const NO_HIDDEN_COLUMNS: DataTableColumnVisibility = {};
 
 const resolve = <Value>(updater: Updater<Value>, previous: Value): Value =>
   typeof updater === "function"
@@ -65,7 +72,7 @@ const fromSorting = (sorting: SortingState): DataTableSort | null => {
 
 /**
  * 把 `DataTable` 的 props 接到 TanStack Table:欄位宣告 → column defs、
- * 排序與欄寬「給了就受控、沒給就內部管」、`pinned` → column pinning 狀態。
+ * 排序與欄寬「給了就受控、沒給就內部管」、欄位顯示只收受控值、`pinned` → column pinning 狀態。
  */
 export const useDataTable = <Row extends RowData>({
   columns,
@@ -77,6 +84,7 @@ export const useDataTable = <Row extends RowData>({
   isManualSorting = false,
   columnWidths: controlledWidths,
   onColumnWidthsChange,
+  columnVisibility = NO_HIDDEN_COLUMNS,
 }: UseDataTableOptions<Row>) => {
   const [innerSort, setInnerSort] = useState(defaultSort);
   const [innerWidths, setInnerWidths] = useState<DataTableColumnWidths>({});
@@ -91,6 +99,7 @@ export const useDataTable = <Row extends RowData>({
         size: column.width ?? DEFAULT_COLUMN_WIDTH,
         minSize: column.minWidth ?? DEFAULT_COLUMN_MIN_WIDTH,
         enableSorting: column.isSortable === true,
+        enableResizing: column.isResizable !== false,
         sortUndefined: "last",
         sortFn: (rowA, rowB, columnId) =>
           compareCellValues(rowA.getValue(columnId), rowB.getValue(columnId)),
@@ -117,6 +126,7 @@ export const useDataTable = <Row extends RowData>({
       sorting,
       columnSizing: widths,
       columnPinning,
+      columnVisibility: columnVisibility,
     },
     manualSorting: isManualSorting,
     enableMultiSort: false,

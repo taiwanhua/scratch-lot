@@ -62,6 +62,8 @@ export interface SeedInstallationMetadata {
   /** 表單才有。 */
   moduleKey?: string;
   tabLabelTemplate?: string | null;
+  /** 表單才有:允許存草稿(缺席 = 開;這個欄位之前的快照沒有它)。 */
+  allowDraft?: boolean;
   /** 流程才有。 */
   checkFormKey?: string | null;
 }
@@ -72,7 +74,11 @@ export interface SeedInstallationExpectation {
   definitionExists: boolean;
   currentVersion: number | null;
   /** 登記時身分上的名稱 / 頁籤模板;身分不存在為 null。 */
-  metadata: { name: string; tabLabelTemplate?: string | null } | null;
+  metadata: {
+    name: string;
+    tabLabelTemplate?: string | null;
+    allowDraft?: boolean;
+  } | null;
 }
 
 export interface SeedInstallationCheckpoint {

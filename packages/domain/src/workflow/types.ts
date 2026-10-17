@@ -4,6 +4,7 @@
  *
  * id 一律是字串(domain 不認得 ObjectId);api 讀出文件後轉成字串再交給本套件的函式。
  */
+import type { Audience } from "../audience/types";
 import type { Expression } from "../form/types";
 
 // ---- 版本定義(`workflow_versions.steps[]` / `edges[]`) ----
@@ -18,21 +19,83 @@ export const APPROVAL_MODES = ["any", "all"] as const;
 
 export type ApprovalMode = (typeof APPROVAL_MODES)[number];
 
-/** 審核者來源的四種(Spec §5「審核者來源」)。 */
-export const ASSIGNEE_KINDS = ["users", "role", "field", "manager"] as const;
+/** 審核者來源的三種(《底座規格》3.3):人員條件 / 表單欄位 / 主管。 */
+export const ASSIGNEE_KINDS = ["audience", "field", "manager"] as const;
 
 export type AssigneeKind = (typeof ASSIGNEE_KINDS)[number];
 
 /** 審核者來源;進到該關時解析一次,寫進派任計畫後不再重算。 */
 export type AssigneeSource =
-  /** 指定使用者(共用流程不可用) */
-  | { kind: "users"; userIds: string[] }
-  /** 角色:共用版只填 `placeholder`,客製版填本租戶的 `roleId` */
-  | { kind: "role"; roleId: string | null; placeholder: string | null }
+  /**
+   * 人員條件(取代原本的「指定使用者」與「角色」;格式正本 `@repo/domain/audience`,
+   * 一定是 `match`):使用處的選項見 `approver-audience.ts`
+   */
+  | { kind: "audience"; audience: Audience }
   /** 表單欄位:提交該修訂 `values[fieldKey]`(`reference(user)`)指到的人 */
   | { kind: "field"; formKey: string; fieldKey: string }
   /** 主管:從提交所屬組織往上第 `level` 組主管(1 起) */
   | { kind: "manager"; level: number };
+
+/** 「申請人屬於這些組織」的「租戶」特殊值(不是組織 id;畫面顯示「最上層組織」)。 */
+export const SKIP_ORG_TENANT = "tenant";
+
+/**
+ * 「申請人屬於這些組織就跳過」(《底座規格》3.4 B4):比對申請人送出當下的**所屬組織(全部)**
+ * (修訂 `ctx` 快照的 `orgIds`),任一個在名單裡(勾「包含下層」時含名單組織的下層)就成立。
+ * 共用流程只能用 `SKIP_ORG_TENANT`;指定組織只能用在租戶客製流程。
+ */
+export interface SkipOrgsDef {
+  /** 組織 id 或 `SKIP_ORG_TENANT`;至少一個。 */
+  orgIds: string[];
+  /** 包含下層。 */
+  includeDescendants: boolean;
+}
+
+/**
+ * 自動通過(《底座規格》3.5 B5;兩項各自開關,省略 = 照常審核):
+ * - `applicant`:申請人是這一關的審核者 → 記成申請人核准(預設照常 = 剔除申請人)
+ * - `priorApprover`:審核者已在**這一輪**(同一實例)更早的關卡親自核准過 → 記成他核准
+ *
+ * 兩種都照樣經 `beforeApprove`;被擋下就留給他照常審核。
+ */
+export interface AutoApproveDef {
+  applicant?: boolean;
+  priorApprover?: boolean;
+}
+
+/**
+ * 逾時提醒(《底座規格》3.8 B16;省略 / `null` = 不檢查、不通知)。時數以日曆小時計(含夜間與假日),
+ * 從任務派給目前承辦人起算(改派 = 重新計時):
+ * - 超過 `reviewerAfterHours`(N)仍未處理 → 通知目前的審核者一次
+ * - 超過 `audienceAfterHours`(M,必須 > N)→ 通知 `audience`(通知對象)一次;審核者不再重複收到
+ *
+ * **只提醒,不自動核准或駁回**。`audience` 是人員條件(一定要設條件;設計器預設
+ * `DEFAULT_OVERDUE_AUDIENCE` = 持有阻擋清單改派權限的人)。
+ */
+export interface OverdueReminderDef {
+  /** N:正整數小時。 */
+  reviewerAfterHours: number;
+  /** M:正整數小時,> N。 */
+  audienceAfterHours: number;
+  /** 通知對象(人員條件,`match`)。 */
+  audience: Audience;
+}
+
+/**
+ * 逾時提醒的預設通知對象:持有阻擋清單改派權限(`system.workflows.blocked-page.reassign`)的人 ——
+ * 會處理卡單的流程管理者。人員條件一定要有條件,所以用權限表達「流程管理者」。
+ */
+export const DEFAULT_OVERDUE_AUDIENCE: Audience = {
+  mode: "match",
+  filter: {
+    field: "permission",
+    cond: "in",
+    value: {
+      kind: "static",
+      values: ["system.workflows.blocked-page.reassign"],
+    },
+  },
+};
 
 /** 審核關卡(`kind` 省略 = `review`)。 */
 export interface ReviewStepDef {
@@ -41,13 +104,39 @@ export interface ReviewStepDef {
   kind?: "review";
   assignee: AssigneeSource;
   mode: ApprovalMode;
-  /** 跳過條件(6a 表達式);成立 → 整關跳過;沒設 → 永遠不跳過。 */
+  /**
+   * 跳過條件(6a 表達式;畫面上的「符合條件」);成立 → 整關跳過;沒設 → 不看公式。
+   * 與 `skipOrgs` 任一項成立就跳過。
+   */
   skipWhen?: Expression | null;
+  /** 申請人屬於這些組織就跳過(畫面上的「申請人屬於這些組織」);沒設 → 不看組織。 */
+  skipOrgs?: SkipOrgsDef | null;
+  /** 自動通過;沒設 = 兩項都照常審核。 */
+  autoApprove?: AutoApproveDef | null;
   /** 審核者可否「退回修改」;省略 = true。 */
   allowReturn?: boolean;
+  /** 逾時提醒(B16);沒設 = 不檢查、不通知。 */
+  overdue?: OverdueReminderDef | null;
+  /**
+   * 知會對象(B17;來源同審核者三種,不需要審核):這一關**整關通過或被跳過**時通知
+   * (`workflow.cc`),之後以任務持有者同等規則唯讀該修訂。沒設 = 不知會。
+   */
+  cc?: AssigneeSource | null;
 }
 
-/** 系統匯合節點:沒有 `assignee` / `mode` / `skipWhen` / `allowReturn`。 */
+/** 審核關卡才有的屬性(匯合節點帶了任一個 → `JOIN_HAS_REVIEW_PROPS`)。 */
+export const REVIEW_STEP_PROPS = [
+  "assignee",
+  "mode",
+  "skipWhen",
+  "skipOrgs",
+  "autoApprove",
+  "allowReturn",
+  "overdue",
+  "cc",
+] as const;
+
+/** 系統匯合節點:沒有 `REVIEW_STEP_PROPS` 的任何一個。 */
 export interface JoinStepDef {
   key: string;
   name: string;
@@ -69,7 +158,23 @@ export interface WorkflowEdge {
 export interface WorkflowDefinition {
   steps: StepDef[];
   edges?: WorkflowEdge[] | null;
+  /**
+   * 整個流程的知會對象(B17;來源同審核者三種):單據**完成、被駁回、被作廢**時通知。
+   * 關卡的知會另設在各關的 `cc`。沒設 = 不知會。
+   */
+  cc?: AssigneeSource | null;
 }
+
+/** 知會的時機(`workflow.cc` 的 `event` 參數;《底座規格》3.9 的情境表)。 */
+export const CC_EVENTS = [
+  "step-passed",
+  "step-skipped",
+  "completed",
+  "rejected",
+  "voided",
+] as const;
+
+export type CcEvent = (typeof CC_EVENTS)[number];
 
 export function isJoinStep(step: StepDef): step is JoinStepDef {
   return step.kind === "join";
@@ -88,7 +193,6 @@ export function allowsReturn(step: StepDef): boolean {
 
 /** 實例狀態(Spec §4、§6)。 */
 export const INSTANCE_STATUSES = [
-  "linking",
   "running",
   "blocked",
   "approved",
@@ -150,6 +254,12 @@ export interface PlanItem {
   assigneeId: string;
   previousAssigneeIds: string[];
   assigneeState: AssigneeState;
+  /**
+   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的**原審核者們**(依名單順序)。
+   * 多位審核者委託同一位代理人時合成這一項:代理人一票作用到所有被代理者;代理人本人原本就在名單時,
+   * 這一項仍是他自己的、另記他代理的人。沒有代理 → 沒有這個欄位(或空陣列)。流程管理者改派後清空。
+   */
+  delegatorIds?: string[];
 }
 
 /** 審核決定(存值與任務狀態同名,方便投影)。 */
@@ -203,9 +313,36 @@ export const HISTORY_KINDS = [
   "notified",
   "superseded",
   "advance_retried",
+  "auto_approve_blocked",
 ] as const;
 
 export type HistoryKind = (typeof HISTORY_KINDS)[number];
+
+/**
+ * 歷程事件的原因(時間軸顯示「是哪一項成立」):
+ * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件)
+ * - `approved`:`auto_applicant`(申請人是審核者,自動通過)/ `auto_prior_approver`(已在前關核准,自動通過)
+ * - `auto_approve_blocked`(B5 自動通過被 `beforeApprove` 擋下):同上兩個值,表示是哪一種自動通過沒成立
+ *
+ * 其他事件與人按的核准沒有原因(null)。
+ */
+export const HISTORY_REASONS = [
+  "skip_orgs",
+  "skip_condition",
+  "auto_applicant",
+  "auto_prior_approver",
+] as const;
+
+export type HistoryReason = (typeof HISTORY_REASONS)[number];
+
+/** 跳過的原因(`step_skipped` 帶)。 */
+export type SkipReason = Extract<HistoryReason, "skip_orgs" | "skip_condition">;
+
+/** 自動通過的原因(自動記的 `approved` 帶)。 */
+export type AutoApproveReason = Extract<
+  HistoryReason,
+  "auto_applicant" | "auto_prior_approver"
+>;
 
 /** 結果通知的種類(`notified` 事件帶它,與流程完成事件 `completed` 分開)。 */
 export type NotifiedResult = "approved" | "rejected" | "returned";
@@ -220,6 +357,15 @@ export interface HistoryEvent {
   comment?: string | null;
   /** 只有 `notified`:這次通知的結果種類。 */
   result?: NotifiedResult | null;
+  /** 跳過 / 自動通過的原因(見 `HISTORY_REASONS`);其他 null。 */
+  reason?: HistoryReason | null;
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
+  code?: string | null;
+  /**
+   * `task_created` 與決定事件(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <user> 代理 <delegators>」)。沒有代理 → 沒有這個欄位(或空陣列)。
+   */
+  delegatorIds?: string[];
 }
 
 /** 全案終局採用的那一筆決定(只能從 null 寫成有值一次)。 */

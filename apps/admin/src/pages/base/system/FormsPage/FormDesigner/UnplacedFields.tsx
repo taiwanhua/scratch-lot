@@ -4,8 +4,8 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { DesignDefinition } from "@/lib/form-engine/design-definition";
-import { unplacedFields } from "@/lib/form-engine/designer-ops";
+import type { DesignDefinition } from "@/lib/base/form-engine/design-definition";
+import { unplacedFields } from "@/lib/base/form-engine/designer-ops";
 
 export interface UnplacedFieldsProps {
   definition: DesignDefinition;

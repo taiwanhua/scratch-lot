@@ -5,6 +5,7 @@ import {
   openTaskInApplyCenter,
   progressRow,
   reviewStep,
+  roleOf,
 } from "../fixtures/scenario-workflows";
 import { expect, test } from "../fixtures/test";
 import {
@@ -34,11 +35,7 @@ test("劇本 20:主管 + 人資兩級核准,主管從申請所屬組織往上找
     definition: {
       steps: [
         reviewStep("manager", "直屬主管", { kind: "manager", level: 1 }),
-        reviewStep("hr", "人資", {
-          kind: "role",
-          roleId: world.hrRoleId,
-          placeholder: null,
-        }),
+        reviewStep("hr", "人資", roleOf(world.hrRoleId)),
       ],
       edges: null,
     },

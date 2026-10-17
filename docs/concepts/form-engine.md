@@ -44,7 +44,7 @@
 ```
 
 - 存草稿與發布都帶「讀到的草稿修訂號」,不符 → 「已被別人更新,請重新載入」。
-- 發布四步、不用交易:檢查器 → 搶鎖配版號 → 欄位級權限建 / 復活 / 退役 → 三筆逐筆切換。中斷時版本面板顯示「重試發布」,從第三步冪等重跑。
+- 發布四步:檢查器 → 搶鎖配版號 → 欄位級權限建 / 復活 / 退役 → 三筆切換;後三步是一個交易,任一步失敗全部回到發布前,沒有「發布中斷」與重試。退役目前版本同樣是一個交易。
 - 檢查器(`validateDefinition`)前後端同一份;檢查器的錯草稿照存、發布擋;例外是正則不合法或有 ReDoS 風險的,連存草稿都不收。正則的 ReDoS 檢查在獨立子路徑 `@repo/domain/form-regex-safety`,由呼叫端注入(api 直接用,admin 設計器懶載入,不進首屏 bundle)。
 
 正本:`apps/api/src/forms/form-design/form-publish.service.ts`、`packages/domain/src/form/validate-definition.ts`
@@ -58,19 +58,34 @@
 
 表單在本租戶綁了審核流程時,送出後進「審核中」、核准才「已完成」並鎖定(只能作廢),狀態共七個,見 `docs/concepts/workflow-engine.md`。
 
-- 新增 = 先建草稿(頁面開啟時產生的 `clientRequestId`,重試回同一筆)再送出;畫面上一顆「送出」就是這兩步。
+- 新增頁的 [送出] = **直接送出**(`createAndSubmitFormSubmission`):建立 + 守門 + 送出一個交易,失敗不留任何資料;只有 [存草稿] 才建草稿(頁面開啟時產生的 `clientRequestId`,重試回同一筆)。表單可關掉「允許存草稿」,見 `docs/modules/forms.md`「允許存草稿」。
+- 建草稿、存草稿、直接送出、刪除、送出、修改已完成單、複製為新單各是一個交易(連同稽核);複製為新單的附件在交易成功後才複製。
 - 每次寫入帶 `expectedEditVersion`(已完成修改另帶 `expectedRevision`),不符 → 請重新載入。
-- 每個修訂號留**完整值快照** + `ctx`(時間、時區、操作者、當時組織)+ 這一筆修訂綁的表單版本(`revisions[].version`);差異在讀取時由相鄰兩筆算,各修訂用自己的版本渲染。唯讀檢視以該修訂的 `ctx` 重算顯示 / 唯讀條件,**不重算、不清空存值**,不拿讀者現在的身分補值。
+- 每個修訂號留**完整值快照** + `ctx`(時間、時區、操作者、當時的目前組織、當時的所屬組織全部、租戶;表達式的 `ctx.now` / `ctx.timezone` / `ctx.user.id` / `ctx.user.orgId` / `ctx.user.orgIds` / `ctx.tenant.id`)+ 這一筆修訂綁的表單版本(`revisions[].version`);差異在讀取時由相鄰兩筆算,各修訂用自己的版本渲染。唯讀檢視以該修訂的 `ctx` 重算顯示 / 唯讀條件,**不重算、不清空存值**,不拿讀者現在的身分補值。
 - 容量上限(整筆大小、修訂次數)見 `docs/modules/forms.md`「提交的寫入規則」。
 
 ## 值、計算與條件
 
 - **值依型別存**:選項 `{ value, label }`、引用 `{ id, label }`、上傳 `{ path, name, size, contentType }`、數字十進位字串、日期與日期時間存 Mongo `Date`;表達式看到的是語意值(選項的 value、引用的 id、日期的 ISO 字串)。
 - **日期與日期時間都是時點**:`date` 是時間固定在租戶時區當地 00:00 的時點,和 `datetime` 只差在顯示精度。輸入以租戶時區的當地日期(時間)換成時點;顯示一律換成**讀者現在的租戶時區**(填寫中與唯讀歷史都一樣;修訂的 `ctx.timezone` 只用於重算條件),`date` 印 `YYYY-MM-DD`、`datetime` 印 `YYYY-MM-DD HH:mm`,前後端共用 `formatTemporal`。日期與日期時間互比、`dateDiff` 的天數、`dateAdd` 的日曆加減、「今天」的邊界都換成租戶時區的當地日期再算。同一個時點在不同時區可能落在不同日期,這是預期行為;租戶改時區時,跨過午夜的既有日期會位移一天。正本:`packages/domain/src/form/temporal.ts`
-- **明細列**(`array`)= 一個欄位裝多列同結構的子欄位(採購品項、出差行程),存 `[{ rowId, <子欄 key>: 值 }]`,每列有穩定的 `rowId`;子欄可用列內公式(`row.<子欄 key>`),表單層以彙總(`sumOf` / `countOf` / `minOf` / `maxOf` / `avgOf`)讀它;權限、顯示條件與「不能填的原因」都套在整個明細欄上,有列數與子欄數的硬上限。細節見 `docs/modules/forms.md`「明細列」。
+- **明細列**(`array`)= 一個欄位裝多列同結構的子欄位(採購品項、出差行程),存 `[{ rowId, <子欄 key>: 值 }]`,每列有穩定的 `rowId`;子欄可用列內公式(`row.<子欄 key>`),表單層以彙總(`sumOf` / `countOf` / `minOf` / `maxOf` / `avgOf`)讀它;子欄可以是**引用**(存 `{ id, label }`,同表單層引用欄:送出時每一列重驗來源並重取 label,同一子欄的 id 合併成一次查詢;表格格子是自動完成、手機寬是卡片;現名以 `<明細 key>.<子欄 key>` 回;修訂差異比 id);權限、顯示條件與「不能填的原因」都套在整個明細欄上,有列數與子欄數的硬上限。細節見 `docs/modules/forms.md`「明細列」。
 - **被顯示條件隱藏的欄位當 null 算**(明細整欄 null、彙總視為空明細):下游公式讀到被隱藏的計算欄位也是 null;前端即時預覽與後端送出同一套語意(`packages/domain/src/form/visibility.ts` 的 `settleHidden`),預覽算出的值 = 存下的值。被隱藏的欄位每次寫入都清空(含存草稿)。
 - **預設值**(只有使用者填的欄位;固定值或公式):建草稿時後端算一次、只填沒碰過的空欄;填寫時沒碰過的欄位依賴變了跟著重算,碰過(`touched[]`)就停。預設值計算不看顯示條件,前後端一致。
 - 計算欄位送出時由後端重算、以後端為準;條件也一律以後端算的為準。
+
+## 版面區塊
+
+版面(`layout`)由分區(`LayoutSection { key, title, rows }`)組成,每列以 12 格排欄位。分區另有三個選填的收合設定,在設計器的「分區設定」調整:
+
+| 設定                                       | 說明                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| 可以收合(`collapsible`)                    | 標題列可點,展開 / 收合;沒設 = 不可收合,舊定義照舊畫成有框卡片               |
+| 預設收合(`defaultCollapsed`)               | 使用者沒改過時是收合的;只在可以收合時生效                                   |
+| 收合時標題列顯示的欄位(`summaryFieldKeys`) | 收合時標題後接「標題:值」;只能挑本分區的非明細欄位,讀者看不到或沒值的不顯示 |
+
+- 收合狀態**不寫進定義**,由 admin 依使用者記在瀏覽器:頁面 id `form:<formKey>`(新增、編輯、檢視共用一組,不分版本)、區塊 key = 分區 `key`;只記與預設不同的;打開表單**目前版本**時清掉已不存在的分區(看綁舊版本的單不清,免得清掉新版本分區的紀錄)。設計器預覽不記。儲存規則與一般頁面共用,見 `apps/admin/src/lib/base/section-collapse.ts`;key 登記於 `docs/branding.md`。
+- 送出有錯 → 有錯的分區全部展開、捲到版面順序第一個錯誤;這是暫時的,不寫入記憶。
+- 三個設定的形狀與欄位由檢查器驗(`SECTION_COLLAPSE_INVALID`、`SECTION_SUMMARY_FIELD_INVALID`);補預設值的正本是 `packages/domain/src/form/layout.ts` 的 `sectionCollapseOf`。
 
 ## 舊版資料升級
 
@@ -90,6 +105,18 @@
 - 不能填的四種原因,後端依序判:顯示條件為假(清空)→ 計算 / 固定值(後端算)→ 沒有欄位級 edit(保留既有值,送不同值整筆 403)→ 唯讀條件(保留既有值)。
 
 正本:`packages/domain/src/form/dependencies.ts`、`apps/api/src/forms/form-values/submission-values.service.ts`、`apps/api/src/forms/field-permission-gate.ts`
+
+## lookup 來源
+
+帶入、引用與 lookup 選項共用一張 lookup 登錄表:底座提供使用者、組織、其他表單提交三種來源,專案可以在固定入口登記自己的來源(key 一律加專案前綴,撞名時 api 起不來)。專案來源只交出宣告與一個專案資料登記裡的 `BaseRepository`,查詢由底座組,所以租戶隔離、可見範圍與資料範圍照常套用,專案放寬不了;設計器的來源清單與發布時的檢查器自動包含專案來源。登記方式、宣告欄位與權限規則見 `docs/modules/forms.md`「lookup 登錄表」。
+
+引用欄位(含明細引用子欄)的篩選條件可以引用表單層的其他欄位(連動篩選,`{ var: "<欄位 key>" }`):填寫時查詢一併送那一欄目前的值,api 只把它當成縮小範圍的條件;送出時以存下的值再驗一次,不符 → `LOOKUP_FILTER_MISMATCH`。被引用欄位改值時前端清空依賴它的引用欄並提示,沒填時依賴它的引用欄停用。明細引用子欄另可設列內帶入:選定 / 改選時把來源欄位帶進同一列的其他子欄(沿用帶入規則的對應表,之後可手動改,伺服器不強制)。規則見 `docs/modules/forms.md`「連動篩選」與「明細列」。
+
+## 掛接點
+
+專案可以登記表單的守門(送出、修改已完成單、刪除、撤回、作廢、核准 / 駁回 / 退回之前,只能讀、可擋下)與事後動作(送出、關卡通過、完成、駁回、退回、撤回、作廢之後,同一個交易內寫入專案資料),固定入口 `apps/api/src/project/form-lifecycles.ts`。沒綁流程的表單送出依序觸發 `submitted`、`completed`;守門擋下時這個動作沒有任何寫入,事後動作失敗整個動作回復。時機、帶入的資料與系統身分見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。
+
+正本:`apps/api/src/workflows/workflow-engine/lifecycle/`
 
 ## 顯示名:labelTemplate 與頁籤模板
 
@@ -119,7 +146,7 @@ export const projectModulePages: ModulePageSource = {
 
 要客製的是**底座既有表單頁**時,改在 `app/project/page-replacements.ts` 寫明目標,不把相同 moduleKey 再加進專案 `forms`。底座原版與 options 保留,移除替換即可還原頁面。登記或換 Page 都不改 `me.modules` 的路由與授權;碰撞與替換規則見[前端架構](frontend-architecture.md#頁面登記與客製替換)。
 
-options 由 `lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
+options 由 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 合成唯讀表,再由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入。context 與 hook 在 `hooks/base/useFormModuleOptions.ts`,Provider 在 `app/providers/FormModuleOptionsProvider.tsx`;components 向下讀 hook,不 import app。`useTabLabelRenderer` 用這份設定,表單自身模板仍優先於模組模板,未設定時用 `{{title}}`;有 Provider 但未登記該 key 時亦用預設,缺 Provider 則報接線錯誤。不同組裝不會互相污染。
 
 | 零件                                                    | 做什麼                                                                          |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------- |
@@ -138,4 +165,4 @@ options 由 `lib/form-engine/form-module-options.ts` 的 `composeFormModuleOptio
 | `create` / `edit` | 跑                                           | 套             | 真實值 |
 | `readonly`        | 只重算顯示 / 唯讀條件(用該修訂的 `ctx`)      | 套(現在的讀者) | 存值   |
 
-正本:`apps/admin/src/components/form-engine/`、`apps/admin/src/lib/form-engine/`、`apps/admin/src/hooks/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`
+正本:`apps/admin/src/components/base/form-engine/`、`apps/admin/src/lib/base/form-engine/`、`apps/admin/src/hooks/base/useModuleForms.ts`、`useFormDraft.ts`、`useFormSubmission.ts`

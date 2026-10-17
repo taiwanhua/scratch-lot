@@ -4,7 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import {
   SIDE_NAV_STORAGE_KEY,
   useSideNavStore,
-} from "@/stores/useSideNavStore";
+} from "@/stores/base/useSideNavStore";
 import { authWorld } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";

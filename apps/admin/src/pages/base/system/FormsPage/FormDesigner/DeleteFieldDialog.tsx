@@ -6,7 +6,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { FieldReference } from "@/lib/form-engine/field-references";
+import type { FieldReference } from "@/lib/base/form-engine/field-references";
 
 import { FieldReferenceList } from "./FieldReferenceList";
 

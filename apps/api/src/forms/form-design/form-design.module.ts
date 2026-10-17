@@ -11,6 +11,7 @@ import { FormVersionsResolver } from "./form-versions.resolver";
 import { FormVersionsService } from "./form-versions.service";
 import { FormsResolver } from "./forms.resolver";
 import { FormsService } from "./forms.service";
+import { LookupProvidersResolver } from "./lookup-providers.resolver";
 import { ModuleListColumnsResolver } from "./module-list-columns.resolver";
 import { ModuleListColumnsService } from "./module-list-columns.service";
 import { RetiredPermissionsResolver } from "./retired-permissions.resolver";
@@ -18,7 +19,7 @@ import { SeedExportCatalogService } from "./seed-export-catalog.service";
 
 /**
  * 表單設計(`docs/modules/forms.md`):表單、版本、四步發布與重試、分派 / 啟用、
- * 欄位級權限的產生與退役清理、表單模組的列表欄位配置。
+ * 欄位級權限的產生與退役清理、表單模組的列表欄位配置、設計器的 lookup 來源清單。
  */
 @Module({
   imports: [DatabaseModule, FormsCoreModule],
@@ -33,6 +34,7 @@ import { SeedExportCatalogService } from "./seed-export-catalog.service";
     FormsResolver,
     FormVersionsResolver,
     RetiredPermissionsResolver,
+    LookupProvidersResolver,
     ModuleListColumnsService,
     ModuleListColumnsResolver,
     SeedExportCatalogService,

@@ -6,10 +6,10 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
-import { useIsWorkflowDirty } from "@/stores/useWorkflowDraftStore";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
+import { useIsWorkflowDirty } from "@/stores/base/useWorkflowDraftStore";
 
 export interface DeleteWorkflowDraftDialogProps {
   workflowKey: string;

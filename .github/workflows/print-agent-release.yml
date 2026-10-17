@@ -1,0 +1,235 @@
+name: Print Agent Release
+
+# 列印代理程式(apps/print-agent)發布:只能手動觸發,不進 PR CI(macOS / Windows runner 較貴,代理程式很少改版)。
+#   UI :GitHub → Actions → Print Agent Release → Run workflow → 填 version、選 environment
+#   CLI:gh workflow run "Print Agent Release" --ref main -f version=1.0.0 -f environment=dev
+# 順序同 Deploy:先 dev 測試,再 staging、production(production 只能從 main 發)。
+#
+# 1. 四個平台的 runner 同時建置 SEA 單一執行檔 → 打包壓縮(build job)
+# 2. 重算 SHA-256 → 上傳到該環境的私有 bucket `print-agent/<版本>/` → 更新 `manifest.json` → 刪掉第 4 版以前的檔(publish job)
+# bucket = deploy/env/<環境>.yaml 的 GCS_BUCKET_PRIVATE;身分沿用 Deploy 的 WIF + 部署 SA(不建金鑰)。
+# 權限與第一次發布前要準備的資源見 docs/deployment.md「列印代理程式發布」。
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "版本(x.y.z,須大於目前的最新版本)"
+        required: true
+        type: string
+      environment:
+        description: "發布到哪個環境的私有 bucket"
+        required: true
+        type: choice
+        options: [dev, staging, production]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: print-agent-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build (${{ matrix.platform }})
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: windows-x64
+            runner: windows-latest
+          - platform: linux-x64
+            runner: ubuntu-latest
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+          - platform: macos-arm64
+            runner: macos-15
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: 檢查版本與分支
+        env:
+          VERSION: ${{ inputs.version }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version 必須是 x.y.z"
+            exit 1
+          fi
+          if [ "$ENVIRONMENT" = production ] && [ "$GITHUB_REF_NAME" != main ]; then
+            echo "::error::production 只能從 main 發布(目前分支:$GITHUB_REF_NAME)"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 後續步驟不需要 git 認證,不留 token 在工作目錄
+
+      - uses: pnpm/action-setup@v4 # 版本讀 package.json 的 packageManager 欄位
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安裝依賴
+        run: pnpm install --frozen-lockfile --filter @repo/print-agent...
+
+      # WinSW(Windows 服務包裝);固定版本並核對 SHA-256,下載內容與版本不符就停
+      - name: 下載 WinSW
+        if: matrix.platform == 'windows-x64'
+        env:
+          WINSW_VERSION: v2.12.0
+          WINSW_SHA256: 05b82d46ad331cc16bdc00de5c6332c1ef818df8ceefcd49c726553209b3a0da
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/WinSW-x64.exe" "https://github.com/winsw/winsw/releases/download/$WINSW_VERSION/WinSW-x64.exe"
+          # 從 stdin 算(Windows 路徑含反斜線時 sha256sum 會在輸出前加跳脫字元)
+          actual=$(sha256sum < "$RUNNER_TEMP/WinSW-x64.exe" | cut -d" " -f1)
+          if [ "$actual" != "$WINSW_SHA256" ]; then
+            echo "::error::WinSW 的 SHA-256 不符($actual)"
+            exit 1
+          fi
+
+      - name: 打包
+        env:
+          VERSION: ${{ inputs.version }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          if [ "$PLATFORM" = windows-x64 ]; then
+            pnpm --filter @repo/print-agent exec tsx scripts/package-sea.ts --version "$VERSION" --winsw "$RUNNER_TEMP/WinSW-x64.exe"
+          else
+            pnpm --filter @repo/print-agent exec tsx scripts/package-sea.ts --version "$VERSION"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: print-agent-${{ matrix.platform }}
+          path: apps/print-agent/dist/release/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Workload Identity Federation 免金鑰認證
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false # 後續步驟不需要 git 認證,不留 token 在工作目錄
+
+      # 同 Deploy:讀 deploy/project/*.json 並核對專案身分,repo 或環境不符時在雲端認證前失敗
+      - name: 專案設定(核對 repo 與環境)
+        id: cfg
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/project-settings/read-config.mjs --scope cloud --environment "$ENVIRONMENT" --repository "$REPOSITORY" > "$RUNNER_TEMP/project-cloud.json"
+          node scripts/project-settings/write-github-output.mjs --scope cloud < "$RUNNER_TEMP/project-cloud.json"
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: 安裝依賴
+        run: pnpm install --frozen-lockfile --filter @repo/print-agent...
+
+      - name: 發布目標 bucket
+        id: bucket
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          bucket=$(pnpm --silent --filter @repo/print-agent exec tsx scripts/release-bucket.ts --environment "$ENVIRONMENT")
+          echo "name=$bucket" >> "$GITHUB_OUTPUT"
+          echo "::notice::發布到 gs://$bucket/print-agent/"
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: print-agent-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/print-agent-release
+
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ steps.cfg.outputs.gcp_project_id }}
+          workload_identity_provider: ${{ steps.cfg.outputs.wif_provider }}
+          service_account: ${{ steps.cfg.outputs.deployer_sa }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # 先上傳四個檔,再換 manifest(api 讀 manifest 簽下載網址:換之前看到的仍是舊版,不會指到還沒上傳的檔);
+      # 最後才刪超過保留數量的舊版。
+      # 讀、寫、刪都直接打 GCS JSON API 的單一物件端點:部署 SA 的權限只放行 print-agent/ 前綴的物件
+      # (docs/deployment.md「列印代理程式發布」),沒有 bucket 的 storage.objects.list;
+      # gcloud storage cp / rm 會先列出 bucket,在這個權限下一律被拒。
+      - name: 上傳並更新 manifest.json
+        env:
+          VERSION: ${{ inputs.version }}
+          BUCKET: ${{ steps.bucket.outputs.name }}
+        run: |
+          artifacts="$RUNNER_TEMP/print-agent-release"
+          work="$RUNNER_TEMP/print-agent-manifest"
+          api="https://storage.googleapis.com/storage/v1/b/$BUCKET/o"
+          upload="https://storage.googleapis.com/upload/storage/v1/b/$BUCKET/o"
+          mkdir -p "$work"
+          token=$(gcloud auth print-access-token)
+          echo "::add-mask::$token"
+          auth=(-H "Authorization: Bearer $token")
+          uri() { jq -rn --arg v "$1" '$v|@uri'; }
+          # 上傳單一物件:<檔案> <物件名稱> <Content-Type> [Cache-Control];multipart 一次寫入內容與 metadata,
+          # 內容那一段的 Content-Type 必須和 metadata 的 contentType 相同(不同時 GCS 回 400)
+          put() {
+            local file="$1" name="$2" type="$3" cache="${4:-}" boundary="print-agent-$RANDOM$RANDOM" body="$work/upload.body" metadata
+            metadata=$(jq -cn --arg n "$name" --arg t "$type" --arg c "$cache" \
+              '{name: $n, contentType: $t} + (if $c == "" then {} else {cacheControl: $c} end)')
+            {
+              printf -- '--%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n' "$boundary" "$metadata"
+              printf -- '--%s\r\nContent-Type: %s\r\n\r\n' "$boundary" "$type"
+              cat "$file"
+              printf -- '\r\n--%s--\r\n' "$boundary"
+            } > "$body"
+            if ! curl -sS --fail-with-body -o "$work/upload.out" "${auth[@]}" \
+              -H "Content-Type: multipart/related; boundary=$boundary" \
+              --data-binary @"$body" "$upload?uploadType=multipart"; then
+              cat "$work/upload.out" >&2
+              echo "::error::上傳失敗:$name"
+              exit 1
+            fi
+            rm -f "$body"
+          }
+          current=()
+          status=$(curl -sS -o "$work/current.json" -w '%{http_code}' "${auth[@]}" "$api/$(uri print-agent/manifest.json)?alt=media")
+          if [ "$status" = 200 ]; then
+            current=(--current "$work/current.json")
+          elif [ "$status" = 404 ]; then
+            echo "::notice::還沒有 manifest.json:第一次發布"
+          else
+            cat "$work/current.json" >&2
+            echo "::error::讀不到目前的 manifest.json(HTTP $status)"
+            exit 1
+          fi
+          pnpm --filter @repo/print-agent exec tsx scripts/update-manifest.ts --version "$VERSION" --artifacts "$artifacts" --out "$work/manifest.json" --removed "$work/removed.txt" "${current[@]}"
+          for file in "$artifacts"/*; do
+            name="print-agent/$VERSION/$(basename "$file")"
+            put "$file" "$name" application/octet-stream
+          done
+          put "$work/manifest.json" print-agent/manifest.json application/json no-store
+          while IFS= read -r object; do
+            [ -n "$object" ] || continue
+            curl -sS --fail-with-body -o /dev/null -X DELETE "${auth[@]}" "$api/$(uri "$object")" \
+              || echo "::warning::刪除舊版失敗:$object"
+          done < "$work/removed.txt"
+          {
+            echo "### 列印代理程式 $VERSION"
+            echo
+            echo '```json'
+            cat "$work/manifest.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

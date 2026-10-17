@@ -32,6 +32,11 @@ export const ALLOW_CUSTOM_WIDGETS: readonly string[] = [
 /** 一個 lookup 來源可回的欄位與各欄位的型別(帶入時驗型別相容用)。 */
 export interface LookupProviderSpec {
   fields: Readonly<Record<string, FieldType>>;
+  /**
+   * 可當 `filter` 的欄位與型別(連動篩選驗型別相符用);型別不明(專案宣告的篩選欄位不在可回欄位內)為 null。
+   * 不給 = 不檢查連動篩選的篩選欄位。
+   */
+  filterFields?: Readonly<Record<string, FieldType | null>>;
 }
 
 export type LookupProviderRegistry = Readonly<

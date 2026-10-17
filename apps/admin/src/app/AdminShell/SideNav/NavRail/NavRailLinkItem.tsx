@@ -6,6 +6,7 @@ import { moduleIconOf } from "@repo/ui/icons";
 import { ListItemButton } from "@repo/ui/list";
 import { Tooltip } from "@repo/ui/tooltip";
 
+import { useNavLinkHref } from "../useNavLinkHref";
 import { railItemSx } from "./nav-rail-styles";
 
 export interface NavRailLinkItemProps {
@@ -31,24 +32,27 @@ export const NavRailLinkItem = ({
   icon,
   isSelected,
   badge,
-}: NavRailLinkItemProps) => (
-  <Tooltip title={label} placement="right" describeChild={false}>
-    <ListItemButton<typeof Link>
-      component={Link}
-      to={to}
-      selected={isSelected}
-      aria-current={isSelected ? "page" : undefined}
-      sx={railItemSx}
-    >
-      {/* `react-hooks/static-components` 不准在 render 內把元件存進變數(每次 render 都是新身分),
-          所以用 `createElement` 直接畫 —— 圖示是資料選出來的,無法寫成模組層常數 */}
-      <Badge
-        variant="dot"
-        color="primary"
-        invisible={badge === undefined || badge <= 0}
+}: NavRailLinkItemProps) => {
+  const href = useNavLinkHref(to);
+  return (
+    <Tooltip title={label} placement="right" describeChild={false}>
+      <ListItemButton<typeof Link>
+        component={Link}
+        to={href}
+        selected={isSelected}
+        aria-current={isSelected ? "page" : undefined}
+        sx={railItemSx}
       >
-        {createElement(moduleIconOf(icon), { fontSize: "small" })}
-      </Badge>
-    </ListItemButton>
-  </Tooltip>
-);
+        {/* `react-hooks/static-components` 不准在 render 內把元件存進變數(每次 render 都是新身分),
+          所以用 `createElement` 直接畫 —— 圖示是資料選出來的,無法寫成模組層常數 */}
+        <Badge
+          variant="dot"
+          color="primary"
+          invisible={badge === undefined || badge <= 0}
+        >
+          {createElement(moduleIconOf(icon), { fontSize: "small" })}
+        </Badge>
+      </ListItemButton>
+    </Tooltip>
+  );
+};

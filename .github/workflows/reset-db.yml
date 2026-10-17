@@ -90,7 +90,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       # reset 清除後在同一把鎖內執行 update(migration → 種子 → 受管定義),受管定義由 api 的 CLI 發布:

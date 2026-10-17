@@ -10,7 +10,11 @@
  * | reference / upload 固定值 | 缺席、null、空集合;reference 的 `ctx.user.id` / `ctx.user.orgId` 預設表達式 | 非空的 constant / default |
  * | lookup 選項的固定預設 | 缺席、null、空集合(選項在執行期查) | 任何非空固定值(改用 account / slug 當值也一樣),多選逐項驗 |
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
- * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、`roleId = null` 且有 placeholder 的 `role` | `users`、非空 `roleId`、指向租戶客製表單 |
+ * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、只用權限與非指定組織來源的人員條件 | 人員條件的使用者 / 角色 / 指定組織、指向租戶客製表單 |
+ *
+ * filter 帶連動篩選 `{ var: "<欄位>" }`(B2d)的,目前也一律判為不可攜(`LOOKUP_FILTER_UNSUPPORTED`):
+ * 可攜的固定條件只有底座 `user` / `org` 的 boolean `enabled`,而連動篩選要跨環境驗證的是「被引用欄位的值
+ * 不夾帶本地 id」,這需要把 `{ var }` 納入 ID 流向分析;等專案真的要交付帶連動篩選的共用定義時再放寬。
  *
  * 表達式(default、computed、rules.custom、visibleWhen、readonlyWhen、skipWhen)另驗 ID 語意,見
  * `portable-expression.ts`:ID 只能與另一個動態 ID 或 null 比較、`in` 只能對動態 ID 集合或空陣列、
@@ -122,12 +126,11 @@ const REFERENCE_DEFAULT_PATHS: ReadonlySet<string> = new Set([
 
 /** 共用流程不可攜的審核者來源(既有檢查器的錯誤碼)。 */
 const ASSIGNEE_CODES: ReadonlySet<string> = new Set([
-  "USERS_IN_SHARED",
-  "ROLE_ID_IN_SHARED",
-  "ROLE_PLACEHOLDER_MISSING",
+  "AUDIENCE_IN_SHARED",
   "FIELD_FORM_MISSING",
   "FIELD_MISSING",
   "FIELD_NOT_USER_REFERENCE",
+  "FIELD_NOT_ORG_REFERENCE",
 ]);
 
 class PortableCollector {
@@ -295,30 +298,49 @@ class FormOrigins {
       for (const mapping of mappings) {
         flows.push([
           mapping.fieldKey,
-          this.prefillSourceOrigins(prefill, mapping),
+          this.prefillSourceOrigins(prefill.source, mapping),
         ]);
       }
     }
     for (const field of fieldsOf(definition)) {
-      flows.push(...fieldFlowsOf(field, origins));
+      flows.push(
+        ...fieldFlowsOf(field, origins),
+        ...this.columnPrefillFlowsOf(field),
+      );
     }
     return flows;
   }
 
+  /** 明細引用子欄的列內帶入(B2c):來源欄位的值寫進同一列的子欄(`<明細>.<子欄>`)。 */
+  private columnPrefillFlowsOf(field: FieldDef): [string, number][] {
+    return arrayColumnsOf(field).flatMap((column) => {
+      const mapping: unknown = recordOf(column.prefill)?.mapping;
+      return (Array.isArray(mapping) ? mapping : [])
+        .filter(
+          (entry): entry is { fieldKey: string; sourceField?: unknown } =>
+            isPlainRecord(entry) && typeof entry.fieldKey === "string",
+        )
+        .map((entry): [string, number] => [
+          columnId(field.key, entry.fieldKey),
+          this.prefillSourceOrigins(column.source, entry),
+        ]);
+    });
+  }
+
   /**
-   * 帶入來源欄位的值來源:provider 的 `id` 是 ID;表單提交的欄位照來源表單的欄位。
+   * 帶入來源欄位(表單層帶入規則、明細引用子欄的列內帶入)的值來源:provider 的 `id` 是 ID;表單提交的欄位照來源表單的欄位。
    * 摘要槽(`title` / `date` / `amount`)優先於同名欄位,讀的是該槽對到的欄位 ——
    * 與執行端 lookup 的解析順序一致(槽沒對到欄位時讀到的是 null,不帶 ID)。
    */
   private prefillSourceOrigins(
-    prefill: Prefill,
+    lookupSource: unknown,
     mapping: { sourceField?: unknown },
   ): number {
     const { sourceField } = mapping;
     if (sourceField === "id") {
       return ORIGIN.id;
     }
-    const source = recordOf(prefill.source);
+    const source = recordOf(lookupSource);
     if (
       source?.provider !== FORM_SUBMISSION ||
       typeof source.formKey !== "string" ||
@@ -881,7 +903,18 @@ function checkColumn(
     );
     return;
   }
-  for (const property of ["default", "source", "columns"]) {
+  // 引用子欄的來源與表單層引用欄同一套可攜性檢查;其他子欄不支援 `source`
+  const isReference = column.type === "reference";
+  if (isReference && !isEmptyFixedValue(column.source)) {
+    checkLookupSource(
+      column.source,
+      joinSeedPath(columnPath, "source"),
+      context,
+    );
+  }
+  for (const property of isReference
+    ? ["default", "columns"]
+    : ["default", "source", "columns"]) {
     if (!isEmptyFixedValue(column[property])) {
       collector.error(
         "FIELD_UNSUPPORTED",
@@ -1105,18 +1138,28 @@ function hasMalformedStep(
   return isMalformed;
 }
 
-/** 既有檢查器報「審核者欄位所屬表單不存在」時,那一關指到的 formKey(用來講清楚是缺登記還是租戶客製)。 */
+/**
+ * 既有檢查器報「欄位所屬表單不存在」時,出錯的那個來源指到的 formKey(用來講清楚是缺登記還是租戶客製)。
+ * 來源依 `property` 的前綴:`assignee`(審核者)/ `cc`(知會對象;沒有 `stepIndex` = 整個流程的)/
+ * `overdue`(逾時通知對象)。
+ */
 function missingAssigneeFormKeyOf(
   seed: WorkflowDefinitionSeedSet,
   issue: WorkflowIssue,
 ): string | null {
-  const { stepIndex } = issue.location;
-  if (issue.code !== "FIELD_FORM_MISSING" || stepIndex === undefined) {
+  const { stepIndex, property } = issue.location;
+  if (issue.code !== "FIELD_FORM_MISSING" || property === undefined) {
     return null;
   }
-  const step = seed.definition.steps[stepIndex] as
-    { assignee?: unknown } | undefined;
-  const formKey = recordOf(step?.assignee)?.formKey;
+  const slot = property.split(".", 1)[0] ?? "";
+  if (!["assignee", "cc", "overdue"].includes(slot)) {
+    return null;
+  }
+  const owner =
+    stepIndex === undefined
+      ? recordOf(seed.definition)
+      : recordOf(seed.definition.steps[stepIndex]);
+  const formKey = recordOf(owner?.[slot])?.formKey;
   return typeof formKey === "string" ? formKey : null;
 }
 

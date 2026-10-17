@@ -4,10 +4,12 @@ import { render } from "@testing-library/react";
 import { AddIcon } from "./AddIcon";
 import { ArrowDownIcon } from "./ArrowDownIcon";
 import { ArrowUpIcon } from "./ArrowUpIcon";
+import { CheckCircleIcon } from "./CheckCircleIcon";
 import { CheckIcon } from "./CheckIcon";
 import { ChevronDoubleLeftIcon } from "./ChevronDoubleLeftIcon";
 import { ChevronDoubleRightIcon } from "./ChevronDoubleRightIcon";
 import { ChevronDownIcon } from "./ChevronDownIcon";
+import { ChevronLeftIcon } from "./ChevronLeftIcon";
 import { ChevronRightIcon } from "./ChevronRightIcon";
 import { CloseIcon } from "./CloseIcon";
 import { DarkModeIcon } from "./DarkModeIcon";
@@ -15,15 +17,19 @@ import { DeleteIcon } from "./DeleteIcon";
 import { DevicesIcon } from "./DevicesIcon";
 import { DotIcon } from "./DotIcon";
 import { EditIcon } from "./EditIcon";
+import { ErrorCircleIcon } from "./ErrorCircleIcon";
 import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
+import { NotificationsIcon } from "./NotificationsIcon";
+import { SettingsIcon } from "./SettingsIcon";
 import { SystemModeIcon } from "./SystemModeIcon";
 import { ViewIcon } from "./ViewIcon";
 
 /** 手繪的殼圖示:path 取自 Figma 匯出的 SVG,每一筆顏色都明寫 `currentColor`。 */
 const icons = [
   { name: "ChevronDownIcon", Icon: ChevronDownIcon },
+  { name: "ChevronLeftIcon", Icon: ChevronLeftIcon },
   { name: "ChevronRightIcon", Icon: ChevronRightIcon },
   { name: "DotIcon", Icon: DotIcon },
   { name: "CloseIcon", Icon: CloseIcon },
@@ -40,6 +46,7 @@ const actionIcons = [
   { name: "ViewIcon", Icon: ViewIcon },
   { name: "EditIcon", Icon: EditIcon },
   { name: "DeleteIcon", Icon: DeleteIcon },
+  { name: "SettingsIcon", Icon: SettingsIcon },
   { name: "AddIcon", Icon: AddIcon },
   { name: "ArrowUpIcon", Icon: ArrowUpIcon },
   { name: "ArrowDownIcon", Icon: ArrowDownIcon },
@@ -50,6 +57,9 @@ const actionIcons = [
   { name: "DarkModeIcon", Icon: DarkModeIcon },
   { name: "LogoutIcon", Icon: LogoutIcon },
   { name: "DevicesIcon", Icon: DevicesIcon },
+  { name: "NotificationsIcon", Icon: NotificationsIcon },
+  { name: "CheckCircleIcon", Icon: CheckCircleIcon },
+  { name: "ErrorCircleIcon", Icon: ErrorCircleIcon },
 ] as const;
 
 describe("icons", () => {

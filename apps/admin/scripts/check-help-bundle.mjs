@@ -16,7 +16,7 @@
  *   4. **內容不在 bundle 裡**(指紋比對,見下)。
  *
  * 另外,表單模組共用的通用說明 `form-module.help.md` 必須存在於底座:表單模組沒有專屬檔時「?」退回它
- * (`lib/module-help.ts` 的 `resolveModuleHelp`),它不見了所有表單模組的說明一起消失。
+ * (`lib/base/module-help.ts` 的 `resolveModuleHelp`),它不見了所有表單模組的說明一起消失。
  *
  * 比對方式:每份取第一個 `## ` 標題後的第一個非空行,前 12 個字當指紋。bundle 是
  * 壓縮過的 JS 字串,非 ASCII 可能被輸出成 `\uXXXX`,所以原字串與跳脫形式都試。
@@ -116,7 +116,7 @@ if (missing.length > 0) {
   fail("下列模組說明沒有被打包進 dist:", [
     ...missing,
     "檢查:①根目錄 .dockerignore 是否把 apps/admin/src/md/**/*.md 排除 " +
-      "②檔名是否為 <moduleKey>.help.md、是否放在來源目錄裡(lib/help-registry.ts 的 glob)",
+      "②檔名是否為 <moduleKey>.help.md、是否放在來源目錄裡(lib/base/help-registry.ts 的 glob)",
   ]);
 }
 

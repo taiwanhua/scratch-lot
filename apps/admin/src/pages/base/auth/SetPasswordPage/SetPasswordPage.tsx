@@ -1,5 +1,5 @@
 import { type SyntheticEvent, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { PASSWORD_MIN_LENGTH } from "@repo/domain/password";
@@ -11,12 +11,18 @@ import { Link } from "@repo/ui/link";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
 import {
   authErrorCodeOf,
   passwordViolationsOf,
-} from "@/lib/auth/graphql-errors";
-import { FORGOT_PASSWORD_PATH, LOGIN_PATH, TOKEN_PARAM } from "@/lib/paths";
+} from "@/lib/base/auth/graphql-errors";
+import {
+  FORGOT_PASSWORD_PATH,
+  LOGIN_PATH,
+  TOKEN_PARAM,
+  urlStringSchema,
+} from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 import { NewPasswordFields } from "../NewPasswordFields/NewPasswordFields";
@@ -30,8 +36,7 @@ export const SetPasswordPage = () => {
   const t = useTranslations("admin.setPassword");
   const { session } = useSession();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get(TOKEN_PARAM) ?? "";
+  const [token] = useUrlState(TOKEN_PARAM, urlStringSchema);
 
   const password = useNewPassword();
   const [isLinkInvalid, setIsLinkInvalid] = useState(token.length === 0);

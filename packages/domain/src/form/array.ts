@@ -30,7 +30,7 @@ export const ROW_VAR_PREFIX = "row.";
 export const ARRAY_ROW_ID_PATTERN =
   /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu;
 
-/** 子欄型別 → 可用的元件(第一版每種一個:文字單行、數字、日期 / 日期時間選擇器、下拉、勾選框)。 */
+/** 子欄型別 → 可用的元件(每種一個:文字單行、數字、日期 / 日期時間選擇器、下拉、勾選框、引用的搜尋選擇器)。 */
 export const ARRAY_COLUMN_WIDGETS: Readonly<
   Record<ArrayColumnType, readonly string[]>
 > = {
@@ -40,6 +40,7 @@ export const ARRAY_COLUMN_WIDGETS: Readonly<
   datetime: ["dateTimePicker"],
   select: ["dropdown"],
   boolean: ["checkbox"],
+  reference: ["referencePicker"],
 };
 
 /**
@@ -62,6 +63,7 @@ export const ARRAY_COLUMN_RULES: Readonly<
   datetime: ["required", "min", "max"],
   select: ["required"],
   boolean: ["required"],
+  reference: ["required"],
 };
 
 /** 明細欄本身可設的規則。 */

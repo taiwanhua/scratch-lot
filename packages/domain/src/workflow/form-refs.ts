@@ -3,7 +3,7 @@ import { scanExpression } from "../form/expression-shape";
 import type { Expression, FieldDef } from "../form/types";
 
 /**
- * 流程對表單欄位的兩種引用(`field` 審核者來源、`skipWhen` 跳過條件)的共用檢查:
+ * 流程對表單欄位的引用(`field` 審核者來源、人員條件的表單組織欄位、`skipWhen` 跳過條件)的共用檢查:
  * 定義檢查器(發布前、對表單**目前版本**)與送出時檢查(對**這筆提交綁的版本**)用同一份。
  */
 
@@ -24,6 +24,29 @@ export function assigneeFieldProblem(
     return "FIELD_MISSING";
   }
   return isUserReferenceField(field) ? null : "FIELD_NOT_USER_REFERENCE";
+}
+
+/** 組織型引用欄:`reference` 且來源 provider 是 `org`。 */
+export function isOrgReferenceField(field: FieldDef | undefined): boolean {
+  return field?.type === "reference" && field.source?.provider === "org";
+}
+
+/**
+ * 人員條件「表單的組織欄位」(`form-field:<key>`)對某版欄位的問題:欄位不存在、或不是組織引用欄。
+ * 送出時、綁定時、設計時同一份檢查(《底座規格》3.0)。
+ */
+export type AudienceOrgFieldProblem =
+  "FIELD_MISSING" | "FIELD_NOT_ORG_REFERENCE";
+
+export function audienceOrgFieldProblem(
+  fields: readonly FieldDef[],
+  fieldKey: string,
+): AudienceOrgFieldProblem | null {
+  const field = fields.find((candidate) => candidate.key === fieldKey);
+  if (field === undefined) {
+    return "FIELD_MISSING";
+  }
+  return isOrgReferenceField(field) ? null : "FIELD_NOT_ORG_REFERENCE";
 }
 
 /** 跳過條件的一個問題(形狀不合法 / 引用不存在的欄位 / 引用受保護欄位)。 */

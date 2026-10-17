@@ -73,10 +73,7 @@ const DATA_SCOPE_RULE = /* GraphQL */ `
         moduleKey
         combineOp
         rules {
-          audience {
-            type
-            ids
-          }
+          audience
           filter
         }
       }
@@ -91,10 +88,7 @@ const SAVE_DATA_SCOPE_RULE = /* GraphQL */ `
         collection
         combineOp
         rules {
-          audience {
-            type
-            ids
-          }
+          audience
           filter
         }
       }
@@ -135,7 +129,7 @@ interface RuleShape {
   moduleKey?: string;
   combineOp: string;
   rules: {
-    audience: { type: string; ids: string[] };
+    audience: Record<string, unknown>;
     filter: Record<string, unknown>;
   }[];
 }
@@ -203,7 +197,7 @@ function createdAtConditionOf(node: unknown): unknown {
 function dateRule(cond: string, values: string[]) {
   return [
     {
-      audience: { type: "ALL" },
+      audience: { mode: "all" },
       filter: {
         op: "AND",
         children: [
@@ -225,9 +219,16 @@ function twoRules(
   orgId: Types.ObjectId,
 ): Record<string, unknown>[] {
   return [
-    { audience: { type: "ALL" }, filter: ONLY_MINE },
+    { audience: { mode: "all" }, filter: ONLY_MINE },
     {
-      audience: { type: "ROLE", ids: [roleId] },
+      audience: {
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: [roleId] },
+        },
+      },
       filter: staticOrgFilter(orgId),
     },
   ];
@@ -362,7 +363,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
     audience?: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const result = await saveRule([
-      { audience: audience ?? { type: "ALL" }, filter },
+      { audience: audience ?? { mode: "all" }, filter },
     ]);
     const error = result.errors?.[0];
     expect(error).toBeDefined();
@@ -724,15 +725,67 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       expect(extensions.path).toBe("rules[0].filter.children");
     });
 
-    it("RULE_INVALID:套用對象是角色卻沒給 ids", async () => {
-      const extensions = await saveInvalid(ONLY_MINE, { type: "ROLE" });
+    it.each([
+      ["mode 不認得", { mode: "everyone" }, "rules[0].audience.mode"],
+      ["match 沒有條件列", { mode: "match" }, "rules[0].audience.filter"],
+      [
+        "match 的群組是空的",
+        { mode: "match", filter: { op: "AND", children: [] } },
+        "rules[0].audience.filter.children",
+      ],
+      [
+        "欄位不合法",
+        {
+          mode: "match",
+          filter: {
+            op: "AND",
+            children: [
+              {
+                field: "role",
+                cond: "in",
+                value: {
+                  kind: "static",
+                  values: [String(new Types.ObjectId())],
+                },
+              },
+              {
+                field: "createdBy",
+                cond: "in",
+                value: { kind: "static", values: [] },
+              },
+            ],
+          },
+        },
+        "rules[0].audience.filter.children[1].field",
+      ],
+      [
+        "資料範圍的組織只能指定(不收動態來源)",
+        {
+          mode: "match",
+          filter: {
+            field: "org",
+            cond: "in",
+            value: { kind: "dynamic", ref: "tenant" },
+            range: "self",
+          },
+        },
+        "rules[0].audience.filter.value.ref",
+      ],
+      ["舊格式 ALL", { type: "all" }, "rules[0].audience.mode"],
+      [
+        "舊格式 ROLE",
+        { type: "role", ids: [String(new Types.ObjectId())] },
+        "rules[0].audience.mode",
+      ],
+    ])("RULE_INVALID / AUDIENCE_INVALID:%s", async (_label, audience, path) => {
+      const extensions = await saveInvalid(ONLY_MINE, audience);
       expect(extensions.reason).toBe("AUDIENCE_INVALID");
-      expect(extensions.path).toBe("rules[0].audience.ids");
+      expect(extensions.path).toBe(path);
     });
 
     it("編輯是根組織專屬的:租戶端持有 edit 也被擋", async () => {
       const result = await saveRule(
-        [{ audience: { type: "ALL" }, filter: ONLY_MINE }],
+        [{ audience: { mode: "all" }, filter: ONLY_MINE }],
         "OR",
         tenantViewerToken,
       );
@@ -743,7 +796,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
   describe("已設規則的旗標(DataScopeTarget.hasRule,#246 的 1)", () => {
     it("存了規則之後 → true", async () => {
       const result = await saveRule([
-        { audience: { type: "ALL" }, filter: ONLY_MINE },
+        { audience: { mode: "all" }, filter: ONLY_MINE },
       ]);
       expect(result.errors).toBeUndefined();
       expect(await hasRule()).toBe(true);
@@ -773,7 +826,14 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
 
       const result = await saveRule([
         {
-          audience: { type: "ROLE", ids: [String(agentRoleId)] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "role",
+              cond: "in",
+              value: { kind: "static", values: [String(agentRoleId)] },
+            },
+          },
           filter: ONLY_MINE,
         },
       ]);
@@ -822,8 +882,12 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       });
       expect(rule?.combineOp).toBe("OR");
       expect(rule?.rules[0]?.audience).toEqual({
-        type: "ROLE",
-        ids: [String(agentRoleId)],
+        mode: "match",
+        filter: {
+          field: "role",
+          cond: "in",
+          value: { kind: "static", values: [String(agentRoleId)] },
+        },
       });
       expect(rule?.rules[0]?.filter).toEqual(ONLY_MINE);
     });
@@ -840,7 +904,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
 
   describe("動態值代入", () => {
     it("current-user-orgs → 操作者的所屬組織(不是可見範圍)", async () => {
-      await saveRule([{ audience: { type: "ALL" }, filter: ONLY_MY_ORGS }]);
+      await saveRule([{ audience: { mode: "all" }, filter: ONLY_MY_ORGS }]);
       // 主管同屬部門一與部門二 → 兩邊都看得到
       expect(await visibleItemsOne(supervisorUserId, deptTwo)).toEqual([
         "乙的項目",
@@ -935,7 +999,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
 
     it("只有示範模組1 有規則 → 只收窄示範模組1 的資料;沒規則的模組維持只看可見範圍", async () => {
       const result = await saveRule([
-        { audience: { type: "ALL" }, filter: ONLY_MINE },
+        { audience: { mode: "all" }, filter: ONLY_MINE },
       ]);
       expect(result.errors).toBeUndefined();
       expect(await visibleItemsOne(agentUserId, deptOne)).toEqual([
@@ -947,7 +1011,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
 
     it("兩個模組各設規則 → 各自生效(另一模組:只看部門二 → 部門一的都看不到)", async () => {
       const result = await saveRuleOf(otherTargetId, [
-        { audience: { type: "ALL" }, filter: staticOrgFilter(deptTwo) },
+        { audience: { mode: "all" }, filter: staticOrgFilter(deptTwo) },
       ]);
       expect(result.errors).toBeUndefined();
       expect(await visibleItemsOne(agentUserId, deptOne)).toEqual(["甲的項目"]);
@@ -988,7 +1052,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       await connection.collection("data_scope_rules").insertOne({
         collection: "demo_items_one",
         combineOp: "OR",
-        rules: [{ audience: { type: "all" }, filter: ONLY_MINE }],
+        rules: [{ audience: { mode: "all" }, filter: ONLY_MINE }],
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: null,
@@ -1005,6 +1069,30 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
         collection: "demo_items_one",
         moduleKey: { $exists: false },
       });
+    });
+
+    it("存著的套用對象不是人員條件格式(舊資料)→ 整個目標 fail-closed,誰都看不到,不是跳過那條", async () => {
+      // 先清空(作廢快取),再把規則直接改成改格式前的舊形狀,讓下一次查詢載入它
+      await saveRule([]);
+      await connection.collection("data_scope_rules").updateOne(
+        { collection: "demo_items_one", moduleKey: SAMPLE_ONE_MODULE_KEY },
+        {
+          $set: {
+            rules: [
+              {
+                audience: { type: "role", ids: [String(new Types.ObjectId())] },
+                filter: ONLY_MINE,
+              },
+            ],
+          },
+        },
+      );
+      expect(await visibleItemsOne(agentUserId, deptOne)).toEqual([]);
+      await saveRule([]);
+      expect(await visibleItemsOne(agentUserId, deptOne)).toEqual([
+        "乙的項目",
+        "甲的項目",
+      ]);
     });
   });
 
@@ -1300,7 +1388,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
           $set: {
             rules: [
               {
-                audience: { type: "all" },
+                audience: { mode: "all" },
                 filter: dateRule("between", ["2020-01-01", "2020-01-02"])[0]
                   ?.filter,
               },
@@ -1320,7 +1408,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
           collection,
           moduleKey: "test.not-module-data",
           combineOp: "OR",
-          rules: [{ audience: { type: "all" }, filter: ONLY_MINE }],
+          rules: [{ audience: { mode: "all" }, filter: ONLY_MINE }],
           createdAt: now,
           updatedAt: now,
           createdBy: null,
@@ -1376,7 +1464,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
         combineOp: "OR",
         rules: [
           {
-            audience: { type: "all" },
+            audience: { mode: "all" },
             filter: {
               op: "AND",
               children: [
@@ -1418,7 +1506,14 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       // 客服角色只看「已發布」;部門一的示範資料全是草稿 ⇒ 客服甲在部門一一筆都看不到
       const result = await saveRule([
         {
-          audience: { type: "ROLE", ids: [String(agentRoleId)] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "role",
+              cond: "in",
+              value: { kind: "static", values: [String(agentRoleId)] },
+            },
+          },
           filter: {
             op: "AND",
             children: [

@@ -10,7 +10,7 @@ import {
   LIST_COLUMN_WIDTH,
   type ListColumnSpec,
   SUMMARY_SLOTS,
-} from "@/lib/form-engine/list-columns";
+} from "@/lib/base/form-engine/list-columns";
 
 import type { FieldCandidate } from "./useListColumnCandidates";
 

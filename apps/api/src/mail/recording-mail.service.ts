@@ -10,7 +10,7 @@ export class RecordingMailService extends MailService {
   protected override deliver(message: MailMessage): Promise<void> {
     this.sent.push(message);
     this.logger.log(
-      `[記錄用 adapter,未真寄出] ${message.kind} → ${message.to}\n主旨:${message.subject}\n連結:${message.link}`,
+      `[記錄用 adapter,未真寄出] ${message.kind} → ${message.to}\n主旨:${message.subject}\n連結:${message.link ?? "(無)"}`,
     );
     return Promise.resolve();
   }

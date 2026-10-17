@@ -34,6 +34,7 @@ import {
   setupWorld,
   submission,
   submitLeave,
+  usersSource,
 } from "../workflows/test-support/workflow-fixtures";
 import {
   type SeedTestApp,
@@ -44,8 +45,8 @@ import {
   installationOf,
   installationsOf,
   managerStep,
+  permissionStep,
   persistedStateOf,
-  placeholderStep,
   runSeed,
   runSeeds,
   seedHashes,
@@ -151,7 +152,7 @@ describe("受管流程:安裝、重跑、採納、改版、退役與在途保護
           formKey: "seed_flow_form",
           fieldKey: "approver",
         }),
-        placeholderStep("hr", "人資"),
+        permissionStep("hr", "hr.approve"),
       ],
     });
 
@@ -215,7 +216,7 @@ describe("受管流程:安裝、重跑、採納、改版、退役與在途保護
     });
     expect(installation?.definitionId).toEqual(workflow._id);
     expect(installation?.draftId).toEqual(version._id);
-    // 畫面上是一個已發布、帶角色佔位的共用流程
+    // 畫面上是一個已發布的共用流程
     const shown = await ok<{ workflow: { workflow: WorkflowRow } }>(
       api,
       world.root,
@@ -226,8 +227,6 @@ describe("受管流程:安裝、重跑、採納、改版、退役與在途保護
       isShared: true,
       currentVersion: 1,
       hasDraft: false,
-      publishInterrupted: false,
-      hasRolePlaceholder: true,
     });
   });
 
@@ -260,21 +259,16 @@ describe("受管流程:安裝、重跑、採納、改版、退役與在途保護
     expect(await auditCount(connection)).toBe(auditsBefore);
   });
 
-  it("共用流程指名環境裡的人:檢查器擋下(共用流程不能帶 users),不會被繞過", async () => {
+  it("共用流程指名環境裡的人:檢查器擋下(共用流程的人員條件不能用使用者),不會被繞過", async () => {
     const result = await runSeed(
       app,
       workflowSeed("seed_flow_users", "r1", {
-        steps: [
-          reviewStep("one", {
-            kind: "users",
-            userIds: [String(world.manager.userId)],
-          }),
-        ],
+        steps: [reviewStep("one", usersSource([world.manager]))],
       }),
     );
 
     expect(result.conflict?.code).toBe("DEFINITION_INVALID");
-    expect(result.conflict?.message).toContain("USERS_IN_SHARED");
+    expect(result.conflict?.message).toContain("AUDIENCE_IN_SHARED");
   });
 
   it("重跑未變:流程、版本、安裝紀錄逐欄不變,沒有新增稽核", async () => {

@@ -35,6 +35,10 @@ import {
 import type { DefinitionSeedClient } from "./definition-client";
 import type { InstalledDefinitionResult } from "./definition-result";
 import {
+  InterruptedLifecycleError,
+  findInterruptedLifecycles,
+} from "./interrupted-lifecycles";
+import {
   type InspectedDependency,
   type MigrationContext,
   type MigrationDefinitionContext,
@@ -228,6 +232,11 @@ class UpdateRun {
     const { journal, plan, context } = this;
     await journal.beginRun(plan.planHash, "precheck");
     try {
+      // 舊版(發布 / 退役交易化之前)留下的中斷:api 不會再接續,先擋下、不自動修
+      const interrupted = await findInterruptedLifecycles(context.database);
+      if (interrupted.length > 0) {
+        throw new InterruptedLifecycleError(interrupted);
+      }
       const open = await this.reconcile();
       await journal.setStage("migrations");
       for (const { fileName } of plan.applied) {

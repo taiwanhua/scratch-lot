@@ -7,7 +7,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import type { WorkflowError } from "@/lib/workflow/workflow-errors";
+import type { WorkflowError } from "@/lib/base/workflow/workflow-errors";
 
 import { CheckFormField } from "./CheckFormField";
 import type { CatalogForm } from "./useDesignerCatalog";
@@ -18,6 +18,8 @@ export interface DesignerToolbarProps {
   isSaving: boolean;
   isEditable: boolean;
   error: WorkflowError | null;
+  /** 設計器擋下不讓存的原因(例:逾時提醒的時數不合法);有值時「存草稿」停用並顯示原因 */
+  saveBlockedReason: string | null;
   onSave: () => void;
   onReload: () => void;
   onAppendStep: () => void;
@@ -30,7 +32,7 @@ export interface DesignerToolbarProps {
 
 /**
  * 設計器頂列:「檢查用表單」與「檢查」鈕(`CheckFormField`)、草稿修訂號、未存標示、
- * 在最後加一關、存草稿。存草稿遇到 `CONFLICT`(別人先存過)→ 提示並提供「重新載入」。
+ * 在最後加一關、存草稿(設計器擋下時停用並說明原因)。存草稿遇到 `CONFLICT`(別人先存過)→ 提示並提供「重新載入」。
  */
 export const DesignerToolbar = ({
   revision,
@@ -38,6 +40,7 @@ export const DesignerToolbar = ({
   isSaving,
   isEditable,
   error,
+  saveBlockedReason,
   onSave,
   onReload,
   onAppendStep,
@@ -78,11 +81,17 @@ export const DesignerToolbar = ({
           </Button>
         )}
         {isEditable && (
-          <Button disabled={!isDirty || isSaving} onClick={onSave}>
+          <Button
+            disabled={!isDirty || isSaving || saveBlockedReason !== null}
+            onClick={onSave}
+          >
             {t("save")}
           </Button>
         )}
       </Stack>
+      {isEditable && saveBlockedReason !== null && (
+        <Alert severity="warning">{saveBlockedReason}</Alert>
+      )}
       {error !== null && (
         <Alert
           severity="error"

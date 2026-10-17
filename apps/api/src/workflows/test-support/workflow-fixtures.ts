@@ -74,8 +74,6 @@ const WORKFLOW_FIELDS = /* GraphQL */ `
     isShared
     currentVersion
     hasDraft
-    publishInterrupted
-    hasRolePlaceholder
     forkedFrom {
       workflowKey
       version
@@ -247,17 +245,6 @@ export const PUBLISH_WORKFLOW = /* GraphQL */ `
   ${VERSION_FIELDS}
   mutation PublishWorkflowVersion($input: PublishWorkflowVersionInput!) {
     publishWorkflowVersion(input: $input) {
-      workflowVersion {
-        ...WorkflowVersionFields
-      }
-    }
-  }
-`;
-
-export const RETRY_PUBLISH_WORKFLOW = /* GraphQL */ `
-  ${VERSION_FIELDS}
-  mutation RetryPublishWorkflowVersion($input: WorkflowKeyInput!) {
-    retryPublishWorkflowVersion(input: $input) {
       workflowVersion {
         ...WorkflowVersionFields
       }
@@ -659,8 +646,6 @@ export interface WorkflowRow {
   isShared: boolean;
   currentVersion: number | null;
   hasDraft: boolean;
-  publishInterrupted: boolean;
-  hasRolePlaceholder: boolean;
   forkedFrom: { workflowKey: string; version: number } | null;
   assignments: { tenantOrgId: string }[];
   boundForms: { formKey: string }[];
@@ -937,16 +922,58 @@ export function reviewStep(
   } as unknown as StepDef;
 }
 
+/** 人員條件的一個條件列(AND 根群組裡的一列;`range` 只給所屬組織)。 */
+export function audienceRow(
+  field: "user" | "role" | "org" | "permission",
+  value:
+    readonly (string | Types.ObjectId)[] | { kind: "dynamic"; ref: string },
+  range?: "self" | "descendants" | "ancestors",
+): Record<string, unknown> {
+  return {
+    field,
+    cond: "in",
+    value: Array.isArray(value)
+      ? { kind: "static", values: value.map(String) }
+      : value,
+    ...(field === "org" ? { range: range ?? "self" } : {}),
+  };
+}
+
+/** 審核者來源「人員條件」:條件列全部 AND。 */
+export function audienceSource(
+  ...rows: Record<string, unknown>[]
+): Record<string, unknown> {
+  return {
+    kind: "audience",
+    audience: { mode: "match", filter: { op: "AND", children: rows } },
+  };
+}
+
+/** 指定這幾個人(人員條件的使用者條件列)。 */
+export function usersSource(
+  people: readonly (Person | Types.ObjectId)[],
+): Record<string, unknown> {
+  return audienceSource(
+    audienceRow(
+      "user",
+      people.map((one) => ("userId" in one ? one.userId : one)),
+    ),
+  );
+}
+
+/** 持有這個角色的人(人員條件的角色條件列)。 */
+export function roleSource(
+  roleId: Types.ObjectId | string,
+): Record<string, unknown> {
+  return audienceSource(audienceRow("role", [roleId]));
+}
+
 export function usersStep(
   key: string,
   people: readonly Person[],
   overrides: Record<string, unknown> = {},
 ): StepDef {
-  return reviewStep(
-    key,
-    { kind: "users", userIds: people.map((one) => String(one.userId)) },
-    overrides,
-  );
+  return reviewStep(key, usersSource(people), overrides);
 }
 
 export function joinStep(key: string): StepDef {
@@ -958,6 +985,8 @@ export interface DefinitionShape {
   edges?: WorkflowEdge[] | null;
   /** 缺席 = 存草稿時不送(不動已存的值) */
   checkFormKey?: string | null;
+  /** 整個流程的知會對象;缺席 = 存草稿時不送(不動已存的值) */
+  cc?: Record<string, unknown> | null;
 }
 
 /** 租戶管理員建客製流程 → 開草稿 → 存定義 → 發布;回發布後的版本。 */
@@ -1024,6 +1053,7 @@ export async function saveWorkflowDraft(
         ...(definition.checkFormKey !== undefined && {
           checkFormKey: definition.checkFormKey,
         }),
+        ...(definition.cc !== undefined && { cc: definition.cc }),
       },
     },
   });
