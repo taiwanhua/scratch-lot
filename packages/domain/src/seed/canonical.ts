@@ -254,6 +254,7 @@ const UNSET_FIELD_KEYS = [
   "permission",
   "help",
   "source",
+  "prefill",
   "columns",
   "width",
   "visibleWhen",

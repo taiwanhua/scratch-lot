@@ -1169,7 +1169,8 @@
       "uploadRejected": "檔案類型或大小不符:可上傳 {types},{size} MB 以內。",
       "uploading": "上傳中…",
       "uploadFailed": "上傳失敗,請再試一次。",
-      "removeFile": "移除檔案"
+      "removeFile": "移除檔案",
+      "filterPending": "請先填「{fields}」"
     },
     "renderer": {
       "empty": "—",
@@ -1179,7 +1180,9 @@
       "readonlyPermission": "你看得到這個欄位,但沒有修改它的權限。",
       "readonlyCondition": "此欄位目前為唯讀。",
       "summaryItem": "{label}:{value}",
-      "summarySeparator": " · "
+      "summarySeparator": " · ",
+      "linkedCleared": "已清空「{field}」(它依賴的欄位改了值)",
+      "linkedClearedRows": "已清空 {count} 列的「{field}」(它依賴的欄位改了值)"
     },
     "design": {
       "hasVisibleWhen": "有顯示條件",
@@ -1729,7 +1732,14 @@
       "labelTemplate": "顯示模板(選填)",
       "labelTemplateHint": "有填就用模板組顯示名(例:名稱 + Email),沒填用顯示欄",
       "insertPlaceholder": "插入欄位",
-      "insertPlaceholderHint": "挑一個欄位,把它插到模板最後"
+      "insertPlaceholderHint": "挑一個欄位,把它插到模板最後",
+      "linkedFilter": "連動篩選(選填)",
+      "linkedFilterHint": "依表單上另一欄目前的值縮小可選的資料;那一欄改值時,這裡已選的會被清空",
+      "linkedFilterField": "{field} 等於",
+      "linkedFilterNone": "不連動",
+      "filterFields": {
+        "enabled": "啟用狀態"
+      }
     },
     "rules": {
       "required": "必填",
@@ -1993,7 +2003,15 @@
         "computed": "列內公式"
       },
       "formula": "列內公式",
-      "rowField": "本列・{label}"
+      "rowField": "本列・{label}",
+      "prefill": "帶入同一列(選填)",
+      "prefillHint": "選定或改選時,把來源的欄位帶進同一列的子欄位(會覆蓋原值,之後仍可手動改)",
+      "prefillTarget": "本列子欄位",
+      "prefillTargetUnset": "請選子欄位",
+      "prefillSource": "來源欄位",
+      "prefillSourceUnset": "請選來源欄位",
+      "addPrefill": "+ 對應",
+      "removePrefill": "移除"
     },
     "upgrade": {
       "title": "將舊版資料升級到 v{version}",

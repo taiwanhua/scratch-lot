@@ -58,7 +58,10 @@ export interface LookupSourceDescriptor {
   labelTemplate?: string | null;
   /** 值欄,`options` 用;預設 `id`。 */
   valueField?: string;
-  /** 固定條件(provider 允許的欄位 = 值),後端套。 */
+  /**
+   * 固定條件(provider 允許的欄位 = 值),後端套。值也可以是連動篩選 `{ var: "<表單層欄位 key>" }`
+   * (只有引用欄位 / 明細引用子欄;執行時換成那一欄目前的值,`lookup-filter.ts`)。
+   */
   filter?: Record<string, unknown>;
   /** 只有 `provider = "form_submission"` 要:查哪張表單的提交。 */
   formKey?: string;
@@ -177,6 +180,11 @@ export interface ArrayColumnDef {
   options?: FieldOptions | null;
   /** 只有 reference:lookup 來源描述(同表單層引用欄的 `source`)。 */
   source?: LookupSourceDescriptor | null;
+  /**
+   * 只有 reference:列內帶入(《底座規格》3.2 B2c)。選定 / 改選時把來源欄位帶入**同一列**的其他子欄
+   * (`mapping[].fieldKey` = 同一明細的子欄 key),覆蓋原值、之後可手動改;伺服器不強制。
+   */
+  prefill?: ColumnPrefill | null;
   rules?: FieldRules | null;
   help?: string | null;
   width?: number | null;
@@ -259,6 +267,11 @@ export type SummarySlot = keyof SummaryMap;
 export interface PrefillMapping {
   sourceField: string;
   fieldKey: string;
+}
+
+/** 明細引用子欄的列內帶入:來源 = 子欄自己的 `source`,目標 = 同一列的子欄。 */
+export interface ColumnPrefill {
+  mapping: PrefillMapping[];
 }
 
 export interface Prefill {

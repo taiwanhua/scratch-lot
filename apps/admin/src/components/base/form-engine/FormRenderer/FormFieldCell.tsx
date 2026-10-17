@@ -7,6 +7,7 @@ import type {
   FieldUiState,
   FormRendererMode,
 } from "@/lib/base/form-engine/field-states";
+import type { FilterLinkValues } from "@/lib/base/form-engine/filter-links";
 import type { FormFieldErrorLike } from "@/lib/base/form-engine/form-errors";
 import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 
@@ -29,6 +30,8 @@ export interface FormFieldCellProps {
   columnDisplay?: (columnKey: string) => readonly FormDisplayItemLike[];
   display?: readonly FormDisplayItemLike[];
   onDownload?: (field: FieldDef) => void;
+  /** 連動篩選(B2d)被引用欄位的目前值;引用欄與明細欄才給 */
+  filterLinks?: FilterLinkValues;
 }
 
 /**
@@ -68,6 +71,7 @@ export const FormFieldCell = ({
   columnDisplay,
   display,
   onDownload,
+  filterLinks,
 }: FormFieldCellProps) => {
   const t = useTranslations("admin.formEngine.renderer");
   const help = field.help ?? "";
@@ -113,6 +117,7 @@ export const FormFieldCell = ({
     context,
     ...(display !== undefined && { display }),
     ...(onDownload !== undefined && { onDownload }),
+    ...(filterLinks !== undefined && { filterLinks }),
     ...arrayPropsOf(errors, columnDisplay),
   });
 };

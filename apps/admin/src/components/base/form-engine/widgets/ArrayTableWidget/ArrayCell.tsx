@@ -3,11 +3,13 @@ import { createElement, memo } from "react";
 import type { ArrayColumnDef } from "@repo/domain/form";
 
 import { cellFieldOf } from "@/lib/base/form-engine/array-rows";
+import type { FilterLinkValues } from "@/lib/base/form-engine/filter-links";
 import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 
 import { ReadOnlyField } from "../ReadOnlyField";
 import { baseWidgetOf } from "../widget-registry-core";
 import type { WidgetContext } from "../widget-types";
+import type { ArrayReferencePick } from "./array-rows-view";
 
 export interface ArrayCellProps {
   arrayKey: string;
@@ -29,6 +31,10 @@ export interface ArrayCellProps {
   display: readonly FormDisplayItemLike[];
   /** 穩定的回呼(`ArrayTableWidget` 以 ref 取最新的列),memo 才擋得住重繪 */
   onCellChange: (rowId: string, columnKey: string, value: unknown) => void;
+  /** 連動篩選的被引用欄位(表單層)目前的值(引用子欄用;同一份物件,沒變就不重繪) */
+  filterLinks: FilterLinkValues | undefined;
+  /** 穩定的回呼:引用子欄有列內帶入時,選定 / 改選連同帶入的子欄一次寫進這一列 */
+  onReferencePick: ArrayReferencePick;
 }
 
 /**
@@ -50,6 +56,8 @@ export const ArrayCell = memo(
     errorMessage,
     display,
     onCellChange,
+    filterLinks,
+    onReferencePick,
   }: ArrayCellProps) => {
     const field = cellFieldOf(arrayKey, column);
     return column.valueSource.kind === "computed" ? (
@@ -76,6 +84,17 @@ export const ArrayCell = memo(
         context,
         display,
         ...(errorMessage !== null && { helperText: errorMessage }),
+        ...(column.type === "reference" && { filterLinks }),
+        // 列內帶入(B2c):有對應表的引用子欄改走一次寫整列
+        ...(column.type === "reference" &&
+          (column.prefill?.mapping.length ?? 0) > 0 && {
+            onReferencePick: (
+              next: { id: string; label: string },
+              sourceValues: Readonly<Record<string, unknown>>,
+            ) => {
+              onReferencePick(rowId, column.key, next, sourceValues);
+            },
+          }),
       })
     );
   },

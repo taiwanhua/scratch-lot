@@ -9,6 +9,7 @@ import {
   type LookupProviderRegistry,
   type LookupSourceDescriptor,
   formatTemporal,
+  hasLookupFilterVars,
   optionLabelOf,
   renderLookupLabel,
   semanticValueOf,
@@ -213,7 +214,10 @@ export function lookupValueOf(record: LookupRecord, field: string): unknown {
   return field === "id" ? record.id : record.values[field];
 }
 
-/** 定義裡的 `filter` 只收 provider 允許的欄位(其餘忽略 —— 不認得的條件不套,也不放寬)。 */
+/**
+ * 定義裡的 `filter` 只收 provider 允許的欄位(其餘忽略 —— 不認得的條件不套,也不放寬)。
+ * 連動篩選換成的值若是 id 字串(引用欄的值),文件那一欄可能存 ObjectId 或字串:兩種都比。
+ */
 function allowedFilterOf(
   declaration: LookupProviderDeclaration,
   filter: Record<string, unknown> | undefined,
@@ -221,10 +225,25 @@ function allowedFilterOf(
   const allowed: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(filter ?? {})) {
     if (declaration.filterFields.includes(key)) {
-      allowed[key] = value;
+      allowed[key] =
+        typeof value === "string" && Types.ObjectId.isValid(value)
+          ? { $in: [value, new Types.ObjectId(value)] }
+          : value;
     }
   }
   return allowed;
+}
+
+/** 篩選欄位的型別(連動篩選驗型別相符用):`enabled` 是是否;其餘照可回欄位的型別,不在可回欄位內為 null。 */
+function filterFieldTypesOf(
+  declaration: LookupProviderDeclaration,
+): Record<string, FieldType | null> {
+  return Object.fromEntries(
+    declaration.filterFields.map((name) => [
+      name,
+      declaration.fields[name]?.type ?? (name === "enabled" ? "boolean" : null),
+    ]),
+  );
 }
 
 function objectIdsOf(values: readonly string[]): Types.ObjectId[] {
@@ -460,18 +479,30 @@ export class LookupProvidersService implements OnModuleInit {
     facts: FormOperatorFacts,
     formKeys: readonly string[],
   ): Promise<LookupProviderRegistry> {
-    const registry: Record<string, { fields: Record<string, FieldType> }> = {};
+    const registry: Record<
+      string,
+      {
+        fields: Record<string, FieldType>;
+        filterFields?: Record<string, FieldType | null>;
+      }
+    > = {};
     for (const [key, declaration] of Object.entries(LOOKUP_PROVIDERS)) {
-      registry[key] = { fields: fieldTypesOf(declaration) };
+      registry[key] = {
+        fields: fieldTypesOf(declaration),
+        filterFields: filterFieldTypesOf(declaration),
+      };
     }
     for (const [key, { declaration }] of this.projectSources) {
-      registry[key] = { fields: fieldTypesOf(declaration) };
+      registry[key] = {
+        fields: fieldTypesOf(declaration),
+        filterFields: filterFieldTypesOf(declaration),
+      };
     }
     const union: Record<string, FieldType> = { ...SUMMARY_SLOT_FIELDS };
     for (const formKey of new Set(formKeys)) {
       Object.assign(union, await this.formSubmissionCatalog(facts, formKey));
     }
-    registry[FORM_SUBMISSION_PROVIDER] = { fields: union };
+    registry[FORM_SUBMISSION_PROVIDER] = { fields: union, filterFields: {} };
     return registry;
   }
 
@@ -500,6 +531,10 @@ export class LookupProvidersService implements OnModuleInit {
     query: LookupSearch,
     fields: readonly string[],
   ): Promise<LookupPage> {
+    // 連動篩選沒換成值(呼叫端漏了 `resolveLookupSource`)→ 查無,不把 `{ var }` 當條件、也不放寬
+    if (hasLookupFilterVars(source)) {
+      return Promise.resolve({ items: [], totalCount: 0 });
+    }
     return this.providerFor(source.provider).search(
       facts,
       source,
@@ -516,7 +551,7 @@ export class LookupProvidersService implements OnModuleInit {
     fields: readonly string[] = [],
     options: LookupReadOptions = {},
   ): Promise<LookupRecord[]> {
-    if (values.length === 0) {
+    if (values.length === 0 || hasLookupFilterVars(source)) {
       return Promise.resolve([]);
     }
     return this.providerFor(source.provider).findByValues(

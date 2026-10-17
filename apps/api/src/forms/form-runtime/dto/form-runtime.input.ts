@@ -156,6 +156,14 @@ export class FormLookupInput {
   @Field(() => String, { nullable: true })
   keyword?: string | null;
 
+  /**
+   * 連動篩選(`filter` 裡的 `{ var: "<欄位 key>" }`)引用欄位目前填的值:`{ <欄位 key>: 語意值 }`。
+   * 只取定義裡被引用的欄位、只收純量;api 只把它當成縮小範圍的條件(仍在操作者可見範圍內),
+   * 送出時再以存下的值重驗。缺了被引用欄位的值 → 查無。
+   */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
+
   @Field(() => Int, { nullable: true, defaultValue: 1 })
   page?: number;
 
@@ -201,6 +209,10 @@ export class FormLookupRecordInput {
 
   @Field(() => FormLookupTargetInput)
   target!: FormLookupTargetInput;
+
+  /** 同 `FormLookupInput.filterValues`。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
 
   /** 來源資料的 id。 */
   @Field(() => ID)

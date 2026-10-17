@@ -1,5 +1,6 @@
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { type ReactNode, useMemo } from "react";
+import { useTranslations } from "use-intl";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
@@ -16,6 +17,7 @@ import { Grid } from "@repo/ui/grid";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { fieldMapOf } from "@/lib/base/form-engine/definition";
 import { designIdOf } from "@/lib/base/form-engine/design-definition";
@@ -27,6 +29,12 @@ import {
   type ServerFormState,
   resolveFormState,
 } from "@/lib/base/form-engine/field-states";
+import {
+  type FilterLinkValues,
+  clearLinkedReferences,
+  filterLinkValuesOf,
+  linkedReferencesOf,
+} from "@/lib/base/form-engine/filter-links";
 import type { FormFieldErrorLike } from "@/lib/base/form-engine/form-errors";
 import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 
@@ -193,8 +201,49 @@ export const FormRenderer = ({
     timezone: cellContext.timezone,
   });
 
+  // 連動篩選(B2d):被引用欄位的目前值給引用欄查詢;以內容當 memo 鍵,值沒變時同一份物件(明細格子不重繪)
+  const links = useMemo(
+    () => linkedReferencesOf(version.fields),
+    [version.fields],
+  );
+  const linkValues = filterLinkValuesOf(version.fields, links, resolved.values);
+  const linkKey = JSON.stringify(linkValues);
+  const filterLinks = useMemo(
+    (): FilterLinkValues | undefined =>
+      links.length === 0
+        ? undefined
+        : (JSON.parse(linkKey) as FilterLinkValues),
+    [links.length, linkKey],
+  );
+  const tRenderer = useTranslations("admin.formEngine.renderer");
+  const showSnackbar = useSnackbar();
+
   const handleChange = (fieldKey: string, value: unknown) => {
-    onChange?.({ ...values, [fieldKey]: value });
+    const next = { ...values, [fieldKey]: value };
+    if (links.length === 0) {
+      onChange?.(next);
+      return;
+    }
+    // 被引用欄位改值:清空依賴它的引用欄並提示(編輯既有單據打開時不清,只在改值的這一刻)
+    const { values: cleared, cleared: notices } = clearLinkedReferences(
+      version.fields,
+      links,
+      values,
+      next,
+      fieldKey,
+    );
+    onChange?.(cleared);
+    for (const notice of notices) {
+      showSnackbar(
+        "info",
+        notice.rows === undefined
+          ? tRenderer("linkedCleared", { field: notice.label })
+          : tRenderer("linkedClearedRows", {
+              count: notice.rows,
+              field: notice.label,
+            }),
+      );
+    }
   };
 
   const isDesign = mode === "design";
@@ -232,6 +281,10 @@ export const FormRenderer = ({
                 columnDisplay: columnDisplayOf(displayValues, field.key),
               })}
               {...(onDownload !== undefined && { onDownload })}
+              {...(filterLinks !== undefined &&
+                (field.type === "reference" || field.type === "array") && {
+                  filterLinks,
+                })}
               display={
                 displayValues.find((entry) => entry.fieldKey === field.key)
                   ?.items ?? []

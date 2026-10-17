@@ -89,6 +89,44 @@ describe("表單管理:設計器的明細列", () => {
     });
   });
 
+  it("引用子欄可設連動篩選(只列型別相符的表單層欄位,存 `{ var }`)與列內帶入", async () => {
+    const { user, world } = renderFormsPage(smallDesignOptions());
+    await addField(user, "是否");
+    const flagKey = screen.getByRole<HTMLInputElement>("textbox", {
+      name: "欄位 key",
+    }).value;
+    const panel = await openDefaultColumn(user);
+    await user.click(within(panel).getByRole("combobox", { name: "型別" }));
+    await user.click(await screen.findByRole("option", { name: "引用" }));
+
+    const linked = within(panel).getByRole("group", {
+      name: "連動篩選(選填)",
+    });
+    await user.click(
+      await within(linked).findByRole("combobox", { name: "啟用狀態 等於" }),
+    );
+    const options = screen
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    // 只列型別相符的(是否欄位);明細欄自己不列
+    expect(options).toEqual(["不連動", expect.stringContaining(flagKey)]);
+    await user.click(screen.getByRole("option", { name: new RegExp(flagKey) }));
+    expect(
+      within(panel).getByRole("group", { name: "帶入同一列(選填)" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "存草稿" }));
+    await waitFor(() => {
+      expect(world.inputs.saveFormVersionDraft).toHaveLength(1);
+    });
+    const saved = world.inputs.saveFormVersionDraft[0]?.fields.find(
+      (field) => field.type === "array",
+    ) as FieldDef | undefined;
+    expect(saved?.columns?.[0]?.source?.filter).toEqual({
+      enabled: { var: flagKey },
+    });
+  });
+
   it("子欄 key 與同一明細的別的子欄重複 → 當場擋下、不寫入", async () => {
     const { user, world } = renderFormsPage(smallDesignOptions());
     await addField(user, "明細列");

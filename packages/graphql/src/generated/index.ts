@@ -793,6 +793,7 @@ export type FormForkSourceModel = {
 };
 
 export type FormLookupInput = {
+  filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
   formKey: Scalars['ID']['input'];
   keyword?: InputMaybe<Scalars['String']['input']>;
   page?: InputMaybe<Scalars['Int']['input']>;
@@ -842,6 +843,7 @@ export type FormLookupRecord = {
 };
 
 export type FormLookupRecordInput = {
+  filterValues?: InputMaybe<Scalars['JSONObject']['input']>;
   formKey: Scalars['ID']['input'];
   id: Scalars['ID']['input'];
   target: FormLookupTargetInput;

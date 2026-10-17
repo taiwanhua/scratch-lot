@@ -5,6 +5,8 @@ import {
   columnPathOf,
 } from "@repo/domain/form";
 
+import { storedFromLookup } from "./prefill";
+
 /**
  * 明細列(`array`)填寫時的列操作(純函式;`ArrayTableWidget` 與測試共用,Spec 6a §5「明細列」):
  * 每列 `{ rowId, <子欄 key>: 值 }`,`rowId` 在建列時以 `crypto.randomUUID()` 產生、之後不變;
@@ -98,3 +100,38 @@ export const cellFieldOf = (
   arrayKey: string,
   column: ArrayColumnDef,
 ): FieldDef => ({ ...column, key: columnPathOf(arrayKey, column.key) });
+
+/**
+ * 列內帶入(《底座規格》3.2 B2c):引用子欄選定 / 改選時,存下引用值,並依子欄的帶入規則把來源欄位
+ * 帶進**同一列**的其他子欄(一次更新;覆蓋原值,之後可手動改)。來源被省略的欄位(受保護且無權)不動。
+ * 複製列、複製為新單不走這裡(保留值、不重新帶入)。
+ */
+export const pickReferenceIn = (
+  rows: readonly ArrayRowValue[],
+  rowId: string,
+  column: ArrayColumnDef,
+  columns: readonly ArrayColumnDef[],
+  value: unknown,
+  sourceValues: Readonly<Record<string, unknown>>,
+): ArrayRowValue[] =>
+  rows.map((row) => {
+    if (row.rowId !== rowId) {
+      return row;
+    }
+    const next: ArrayRowValue = { ...row, [column.key]: value };
+    for (const entry of column.prefill?.mapping ?? []) {
+      const target = columns.find(
+        (candidate) => candidate.key === entry.fieldKey && candidate !== column,
+      );
+      if (
+        target !== undefined &&
+        sourceValues[entry.sourceField] !== undefined
+      ) {
+        next[target.key] = storedFromLookup(
+          target,
+          sourceValues[entry.sourceField],
+        );
+      }
+    }
+    return next;
+  });

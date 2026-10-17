@@ -2,7 +2,9 @@ import { useTranslations } from "use-intl";
 
 import {
   FORM_SUBMISSION_PROVIDER,
+  type FieldDef,
   type LookupSourceDescriptor,
+  isLookupFilterVar,
 } from "@repo/domain/form";
 import { Alert } from "@repo/ui/alert";
 import { FormControlLabel } from "@repo/ui/form-control-label";
@@ -13,6 +15,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
+import { LinkedFilterEditor } from "./LinkedFilterEditor";
 import { LookupLabelTemplateInput } from "./LookupLabelTemplateInput";
 import {
   type LookupFieldOption,
@@ -31,6 +34,11 @@ export interface LookupSourceEditorProps {
   hasValueField: boolean;
   /** 目前在設計的表單:給了就能選自己當來源(帶入規則),欄位目錄用草稿的欄位 */
   selfForm?: SelfFormCatalog | null;
+  /**
+   * 連動篩選(B2d)可引用的表單層欄位;給了才出現「連動篩選」(只有引用欄位、明細引用子欄)。
+   * 呼叫端已排除自己與明細欄。
+   */
+  linkFields?: readonly FieldDef[];
 }
 
 const UNSET = "";
@@ -96,10 +104,17 @@ const withFixedFilter = (
     return { ...value, completedOnly: isOn };
   }
   const next = { ...value };
+  const filter: Record<string, unknown> = { ...value.filter };
   if (isOn) {
-    next.filter = { ...value.filter, enabled: true };
+    filter.enabled = true;
   } else {
+    // 只拿掉「只列啟用中的」,連動篩選的條件留著
+    Reflect.deleteProperty(filter, "enabled");
+  }
+  if (Object.keys(filter).length === 0) {
     Reflect.deleteProperty(next, "filter");
+  } else {
+    next.filter = filter;
   }
   return next;
 };
@@ -115,6 +130,7 @@ export const LookupSourceEditor = ({
   onChange,
   hasValueField,
   selfForm = null,
+  linkFields,
 }: LookupSourceEditorProps) => {
   const t = useTranslations("admin.forms.lookupSource");
   const tForms = useTranslations("admin.forms");
@@ -206,25 +222,34 @@ export const LookupSourceEditor = ({
         fieldOptions={fieldOptions}
         onChange={onChange}
       />
-      {hasFixedFilter(value, declared) && (
-        <Stack spacing={0.25}>
-          <Typography variant="body2">{t("fixedFilter")}</Typography>
-          <FormControlLabel
-            label={isSubmission ? t("completedOnly") : t("enabledOnly")}
-            control={
-              <Switch
-                checked={isFixedFilterOn(value)}
-                onChange={(_event, checked) => {
-                  onChange(withFixedFilter(value, checked));
-                }}
-              />
-            }
-          />
-          <Typography variant="caption" color="text.secondary">
-            {t("fixedFilterHint")}
-          </Typography>
-        </Stack>
+      {linkFields !== undefined && declared !== undefined && (
+        <LinkedFilterEditor
+          value={value}
+          provider={declared}
+          fields={linkFields}
+          onChange={onChange}
+        />
       )}
+      {hasFixedFilter(value, declared) &&
+        !isLookupFilterVar(value.filter?.enabled) && (
+          <Stack spacing={0.25}>
+            <Typography variant="body2">{t("fixedFilter")}</Typography>
+            <FormControlLabel
+              label={isSubmission ? t("completedOnly") : t("enabledOnly")}
+              control={
+                <Switch
+                  checked={isFixedFilterOn(value)}
+                  onChange={(_event, checked) => {
+                    onChange(withFixedFilter(value, checked));
+                  }}
+                />
+              }
+            />
+            <Typography variant="caption" color="text.secondary">
+              {t("fixedFilterHint")}
+            </Typography>
+          </Stack>
+        )}
       {hasValueField && (
         <SelectField<string>
           label={t("valueField")}

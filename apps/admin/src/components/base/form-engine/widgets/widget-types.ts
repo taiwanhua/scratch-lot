@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from "react";
 
 import type { FieldDef } from "@repo/domain/form";
 
+import type { FilterLinkValues } from "@/lib/base/form-engine/filter-links";
 import type { FormFieldErrorLike } from "@/lib/base/form-engine/form-errors";
 import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 
@@ -55,6 +56,19 @@ export interface WidgetProps {
   errors?: readonly FormFieldErrorLike[];
   /** 明細列唯讀:子欄的顯示名(`displayValues` 裡 `<明細 key>.<子欄 key>` 那一組) */
   columnDisplay?: (columnKey: string) => readonly FormDisplayItemLike[];
+  /**
+   * 連動篩選(B2d):被引用欄位此刻的值與標題(引用欄查詢一併送、沒填就停用;明細往子欄傳)。
+   * 只列有被引用的欄位;沒有連動篩選的表單不給。
+   */
+  filterLinks?: FilterLinkValues;
+  /**
+   * 列內帶入(B2c):引用欄選定 / 改選一筆時,改呼叫它(連同來源回的欄位值),由明細把引用值與帶入的子欄
+   * 一次寫進同一列。不給 = 照常 `onChange`。
+   */
+  onReferencePick?: (
+    value: { id: string; label: string },
+    sourceValues: Readonly<Record<string, unknown>>,
+  ) => void;
 }
 
 export type WidgetComponent = ComponentType<WidgetProps>;

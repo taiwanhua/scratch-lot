@@ -1,11 +1,14 @@
 import { Injectable } from "@nestjs/common";
 
 import {
+  type ArrayColumnDef,
   type FieldDef,
   type LookupSourceDescriptor,
   type Prefill,
   arrayColumnsOf,
+  filterScalarOf,
   lookupLabelFieldsOf,
+  resolveLookupSource,
 } from "@repo/domain/form";
 
 import { FormVersionsRepository } from "../../database/database.module";
@@ -96,7 +99,15 @@ function targetOf(
       };
     }
     if (field?.type === "reference" && field.source) {
-      return { source: field.source, valueField: "id", mappedFields: [] };
+      return {
+        source: field.source,
+        valueField: "id",
+        // 明細引用子欄的列內帶入(B2c):回對應表要的來源欄位,前端帶進同一列
+        mappedFields:
+          (field as ArrayColumnDef).prefill?.mapping.map(
+            (mapping) => mapping.sourceField,
+          ) ?? [],
+      };
     }
     throw validationError(
       `Field ${String(target.fieldKey)} has no lookup source`,
@@ -141,6 +152,9 @@ export class FormLookupService {
       MAX_PAGE_SIZE,
       Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE),
     );
+    if (target === null) {
+      return { items: [], totalCount: 0, page, pageSize };
+    }
     const result = await this.providers.search(
       facts,
       target.source,
@@ -160,6 +174,9 @@ export class FormLookupService {
     input: FormLookupRecordInput,
   ): Promise<FormLookupRecord | null> {
     const target = await this.resolve(facts, input);
+    if (target === null) {
+      return null;
+    }
     const [record] = await this.providers.findByValues(
       facts,
       target.source,
@@ -181,8 +198,9 @@ export class FormLookupService {
       formKey: string;
       version?: number | null;
       target: FormLookupTargetInput;
+      filterValues?: Record<string, unknown> | null;
     },
-  ): Promise<ResolvedTarget> {
+  ): Promise<ResolvedTarget | null> {
     const isDraft = input.version === null || input.version === undefined;
     if (isDraft) {
       if (!this.access.has(facts, FORMS_PERMISSIONS.view)) {
@@ -236,7 +254,12 @@ export class FormLookupService {
         `Missing field permission: ${requiredShowKeys(version.fields, ownerKey).join(", ")}`,
       );
     }
-    return targetOf(version.fields, version.prefills, input.target);
+    const target = targetOf(version.fields, version.prefills, input.target);
+    // 連動篩選(B2d):換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
+    const source = resolveLookupSource(target.source, (fieldKey) =>
+      filterScalarOf(input.filterValues?.[fieldKey]),
+    );
+    return source === null ? null : { ...target, source };
   }
 
   private requestedFields(target: ResolvedTarget): string[] {
