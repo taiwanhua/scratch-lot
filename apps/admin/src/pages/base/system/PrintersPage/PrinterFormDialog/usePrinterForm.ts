@@ -176,6 +176,8 @@ export const usePrinterForm = (
         ),
       );
       feedback.onError(error);
+      // 兩步儲存可能第一步(updatePrinter)已經寫進去、第二步(setPrinterEnabled)才失敗:清單照樣重取
+      await invalidate();
     } finally {
       setIsSubmitting(false);
     }

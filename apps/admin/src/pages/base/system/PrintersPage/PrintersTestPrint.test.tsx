@@ -1,5 +1,14 @@
-import { beforeAll, describe, expect, it, jest } from "@jest/globals";
-import { screen, within } from "@testing-library/react";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from "@jest/globals";
+import { act, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
 
 import { PrintJobError } from "@repo/graphql";
 
@@ -11,6 +20,8 @@ jest.unstable_mockModule("./TestPrintDialog/test-page-image", () => ({
 }));
 const { renderPrinters } = await import("./printers-test-support");
 const { setupFakeViewport } = await import("@/test/viewport");
+const { FakeSocket } = await import("@/test/realtime");
+const { api, server } = await import("@/test/msw/server");
 
 setupFakeViewport();
 
@@ -91,5 +102,85 @@ describe("印表機管理:[測試列印] 三種結果", () => {
     expect(
       await within(dialog).findByText("沒有送出:你沒有這項操作的權限"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("印表機管理:[測試列印] 等結果的方式", () => {
+  // 即時通道:把瀏覽器的 WebSocket 換成假的,API 發憑證(測試預設的憑證是 null = 慢速模式)
+  const sockets: InstanceType<typeof FakeSocket>[] = [];
+  const OriginalWebSocket = globalThis.WebSocket;
+
+  beforeEach(() => {
+    sockets.length = 0;
+    globalThis.WebSocket = class extends FakeSocket {
+      constructor(url: string) {
+        super(url);
+        sockets.push(this);
+      }
+    } as unknown as typeof WebSocket;
+  });
+
+  afterEach(() => {
+    globalThis.WebSocket = OriginalWebSocket;
+  });
+
+  it("即時通道連著:等待中先不查;收到 print-result 信號才查 printJob → 已印出", async () => {
+    const { user, printing } = renderPrinters();
+    // renderPrinters 登記的憑證是 null;這一筆排在最前面(MSW 先列的先贏)
+    server.use(
+      api.query("RealtimeTicket", () =>
+        HttpResponse.json({
+          data: {
+            realtimeTicket: {
+              ticket: "t1",
+              connectUrl: "wss://rt.test/connect",
+              expiresAt: Math.floor(Date.now() / 1000) + 600,
+              topics: ["user:user-1"],
+            },
+          },
+        }),
+      ),
+    );
+    await waitFor(() => {
+      expect(sockets.length).toBeGreaterThan(0);
+    });
+    const socket = sockets.at(-1);
+    act(() => {
+      socket?.open();
+    });
+
+    const dialog = await openTestPrint(user);
+    expect(await within(dialog).findByRole("status")).toHaveTextContent(
+      "正在送出測試頁…",
+    );
+    await waitFor(() => {
+      expect(printing.inputs.testPrint).toHaveLength(1);
+    });
+    const jobId = printing.jobs[0].id;
+    expect(printing.inputs.printJob).toEqual([]);
+
+    act(() => {
+      socket?.receive({
+        op: "signal",
+        topic: "user:user-1",
+        signal: { type: "print-result", id: jobId },
+      });
+    });
+    expect(
+      await within(dialog).findByText(
+        "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
+      ),
+    ).toBeInTheDocument();
+    expect(printing.inputs.printJob).toEqual([jobId]);
+  });
+
+  it("沒連上即時通道(慢速模式):建立後馬上查一次 printJob", async () => {
+    const { user, printing } = renderPrinters();
+
+    const dialog = await openTestPrint(user);
+    await within(dialog).findByText(
+      "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
+    );
+    expect(printing.inputs.printJob).toHaveLength(1);
   });
 });

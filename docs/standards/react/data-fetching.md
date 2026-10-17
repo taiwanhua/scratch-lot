@@ -111,12 +111,16 @@ const setOrgEnabled = useSetOrgEnabledMutation(
   `useDemoForm` 的上傳 + 儲存)不要把 feedback 交給每一支,改成整段 try / catch 完成後自己呼叫
   `feedback.onSuccess()` / `feedback.onError(error)`;共版型那種只收 `{ onSuccess(): void }` 的
   設定物件介面也走這一招,不要為了回饋去改介面的形狀。
-- **只有 dry-run / 預覽這種「還沒完成操作」的步驟**可以 `success: null`(成功不跳 —— 跳「已更新」是騙人的),
+- **dry-run / 預覽這種「還沒完成操作」的步驟**可以 `success: null`(成功不跳 —— 跳「已更新」是騙人的),
   失敗是否照跳看下一條。先例:使用者管理的所屬組織試算(`useUserOrgsFlow`)、複製組織與角色的預覽
   (`CopyOrgRolesDialog/useCopyOrgRoles.ts`)。
-- **`error` 回 `null` = 失敗不跳提示**(DATA-06 唯一的例外),只給「錯誤已就地顯示在使用者正盯著的彈窗裡、
+- **`error` 回 `null` = 失敗不跳提示**,只給「錯誤已就地顯示在使用者正盯著的彈窗裡、
   且彈窗不會關」的流程用,避免同一句話出現兩次。先例是複製組織與角色的彈窗:預覽與送出的失敗都寫在彈窗裡,
   兩支的 `error` 都回 `null`;送出成功仍照跳。
+- **結果就地顯示在開著的彈窗裡等候**:送出之後彈窗留著,等這次操作的最終結果(例如列印工作建立後,等代理程式回報已印 / 失敗),
+  並把結果直接寫在彈窗裡 —— 成功不另外跳提示(`success: null`;建立成功還不是最終結果,彈窗裡的結果才是回饋),
+  沒建成的錯誤也寫在彈窗裡,`error` 依上一條回 `null`。先例:印表機管理的測試列印
+  (`apps/admin/src/pages/base/system/PrintersPage/TestPrintDialog/useTestPrint.ts`);各單據的列印按鈕比照。
 - **立即生效的切換、背景寫回**:畫面在送出前就已經換好、寫入只是把它存起來的操作,`success: null`(畫面就是成功的回饋);
   使用者親手做的切換,失敗照跳(畫面與存下來的不一致,要讓他知道);沒有使用者操作、系統自己補寫的背景寫回,
   `error` 也回 `null`(使用者不知道有這件事,下次會再補)。先例:頭像選單切語言(`useChangeLocale`)與

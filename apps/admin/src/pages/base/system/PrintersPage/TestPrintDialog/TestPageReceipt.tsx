@@ -20,7 +20,8 @@ export interface TestPageReceiptProps {
 /**
  * 要送去印的測試頁(`@repo/ui/receipt58` 的 `PrinterTestPage`,Figma BS-18d):掛在畫面外、不給人看,
  * 只當轉圖的來源(與預覽同一個元件,底座規格「版面零件」)。
- * 表頭 = 租戶名稱(目前組織)+ 印表機名稱與 IP + 送出時間(租戶時區);QR code = 本頁的網址。
+ * 表頭 = 最上層組織名稱(`me.currentOrg.tenantName`,不印分店名稱)+ 印表機名稱與 IP + 送出時間(租戶時區);
+ * QR code = 本頁的網址。
  */
 export const TestPageReceipt = ({
   printer,
@@ -42,7 +43,7 @@ export const TestPageReceipt = ({
     >
       <PrinterTestPage
         ref={receiptRef}
-        tenantName={me.data?.me.currentOrg?.name ?? ""}
+        tenantName={me.data?.me.currentOrg?.tenantName ?? ""}
         printerName={printer.name}
         printerHost={printer.host}
         time={temporalText(now, "datetime")}

@@ -2934,7 +2934,7 @@
     "resetPairing": {
       "title": "Pair \"{name}\" again",
       "body": "The old key stops working immediately and this computer must pair again with a new pairing code. Printer settings are kept.",
-      "doneBody": "Run the installer again on this computer and paste the server URL and the new pairing code.",
+      "doneBody": "New computer, or the code expired before setup finished: run the installer on that computer and paste the server URL and the new pairing code. Same computer that is already set up: as an administrator, run print-agent pair --server (server URL) --code (new code) --force, then restart the print agent service (see \"Pair again\" in this page help).",
       "confirm": "Pair again",
       "cancel": "Cancel",
       "done": "Done",

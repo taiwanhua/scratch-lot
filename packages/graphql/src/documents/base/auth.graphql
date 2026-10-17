@@ -49,6 +49,8 @@ query Me {
       logoUrl
       # 租戶時區(IANA):表單的日期時間欄以它輸入與顯示;已送出的修訂用那次的 ctx.timezone
       timezone
+      # 最上層組織名稱(租戶頂層;根組織 = 自己):單據(58mm)上方印的租戶名稱,不印分店名稱
+      tenantName
     }
     orgs {
       id

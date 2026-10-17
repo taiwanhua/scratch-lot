@@ -182,6 +182,7 @@ interface CellRenderContext<Row> {
 - **`DataTable`**:`render?: (ctx) => ReactNode`;沒給 `render` 時直接顯示 `ctx.value`(字串、數字原樣,空值與物件不顯示)。排序比的也是 `accessor` 取出的值,所以要能排序的欄一定要給 `accessor`。
 - **`Table`**:`render: (row, ctx) => ReactNode`,`ctx` 是**選填的第二參數**,只看 `row` 的既有寫法不必改;`ctx.value` 只在給了 `accessor` 時才有值。
 - 要看「別列」的邏輯(合計、累計、與上一列比較、奇偶列)一律從 `ctx.rows` / `ctx.index` 取,不要在呼叫端另外維護一份排序後的陣列 —— 排序改變時兩邊會對不上。
+- **`accessor` 只能是 row 的純函式**(同一列永遠算出同一個值):`DataTable` 會快取它算出的值,欄位內容要依外部的對照資料(組織名稱、代理程式名稱這類另外查回來的表)時改用 `render` —— 對照資料晚到才會重畫;那一欄要排序的話,先把對照結果放進 rows 再交給 `accessor`。先例:印表機管理的「所屬組織」「代理程式」欄(`pages/base/system/PrintersPage/`)。
 - `ctx` **不帶翻譯函式**(I18N-01:`@repo/ui` 語言無關);欄內文字由呼叫端在閉包裡用自己的 `t` 取。
 - 布林旗標依 GEN-04 命名(`isSortable`、`isEmphasized`);`pinned` 是 `"left" | "right"`。
 

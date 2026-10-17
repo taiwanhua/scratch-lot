@@ -132,7 +132,7 @@ describe("印表機管理:新增 / 編輯印表機", () => {
     });
   });
 
-  it("帶 ?edit= 進來:直接打開那一台;沒有 edit 權限時不打開並清掉參數", async () => {
+  it("帶 ?edit= 進來:直接打開那一台", async () => {
     renderPrinters({ path: "/system/printers?edit=printer-store" });
     const dialog = await screen.findByRole("dialog", { name: "編輯印表機" });
     expect(within(dialog).getByRole("textbox", { name: /名稱/ })).toHaveValue(
@@ -147,6 +147,21 @@ describe("印表機管理:新增 / 編輯印表機", () => {
     });
     const table = await screen.findByRole("table", { name: "印表機" });
     await within(table).findByText("倉庫收據機");
+    await waitFor(() => {
+      expect(globalThis.location.search).not.toContain("edit=");
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("?edit= 的那一台不在目前這一頁的清單:不打開、清掉參數,提示找不到這筆資料", async () => {
+    renderPrinters({ path: "/system/printers?edit=printer-missing" });
+    const table = await screen.findByRole("table", { name: "印表機" });
+    await within(table).findByText("倉庫收據機");
+
+    expect(await findSnackbarAlert()).toEqual({
+      severity: "warning",
+      text: "找不到這筆資料",
+    });
     await waitFor(() => {
       expect(globalThis.location.search).not.toContain("edit=");
     });

@@ -68,7 +68,12 @@ export const testUser: MeQuery["me"] = {
   email: "root@example.invalid",
   nickname: null,
   mustChangePassword: false,
-  currentOrg: { ...testOrg, logoUrl: null, timezone: "Asia/Taipei" },
+  currentOrg: {
+    ...testOrg,
+    logoUrl: null,
+    timezone: "Asia/Taipei",
+    tenantName: testOrg.name,
+  },
   orgs: [testOrg],
   modules: [overviewModule],
 };
@@ -97,6 +102,8 @@ export interface AuthWorldOptions {
   currentOrgLogoUrl?: string | null;
   /** 當前組織的租戶時區(`me.currentOrg.timezone`);預設 `Asia/Taipei` */
   currentOrgTimezone?: string;
+  /** 當前組織的最上層組織名稱(`me.currentOrg.tenantName`,單據上方印的租戶名稱);預設 = 當前組織自己的名稱 */
+  currentOrgTenantName?: string;
   /** 首登須改密碼(預設 false):true 時除 me / changePassword / logout 外的受保護操作回 MUST_CHANGE_PASSWORD */
   mustChangePassword?: boolean;
   /** 使用者目前的密碼(changePassword 驗「目前密碼」用) */
@@ -159,6 +166,7 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
     orgs = [testOrg],
     currentOrgLogoUrl = null,
     currentOrgTimezone = "Asia/Taipei",
+    currentOrgTenantName,
     currentPassword = "secret-1234",
     validActionTokens = ["token-1"],
     setPasswordAccessToken = "access-set",
@@ -194,7 +202,12 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
   const toCurrentOrg = (org: TestOrg | undefined): TestCurrentOrg | null =>
     org === undefined
       ? null
-      : { ...org, logoUrl: currentOrgLogoUrl, timezone: currentOrgTimezone };
+      : {
+          ...org,
+          logoUrl: currentOrgLogoUrl,
+          timezone: currentOrgTimezone,
+          tenantName: currentOrgTenantName ?? org.name,
+        };
 
   const me: MeQuery["me"] = {
     ...testUser,
