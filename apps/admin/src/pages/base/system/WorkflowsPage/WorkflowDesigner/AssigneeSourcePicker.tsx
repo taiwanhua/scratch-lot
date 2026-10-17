@@ -17,10 +17,16 @@ import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
 import { AudienceConditionDialog } from "./AudienceConditionDialog";
 import { AudienceSourceSummary } from "./AudienceSourceSummary";
 import { FieldSourceSelect } from "./FieldSourceSelect";
+import type { PeoplePurpose } from "./people-purpose";
 import { useApproverAudienceSetup } from "./useApproverAudienceSetup";
 import type { CatalogForm } from "./useDesignerCatalog";
 
 const MANAGER_LEVELS = [1, 2, 3, 4, 5] as const;
+
+/** 下拉的「不設」選項值(只有給了 `noneLabel` 才出現)。 */
+const NONE = "none";
+
+type KindOption = AssigneeKind | typeof NONE;
 
 /**
  * 換成「表單欄位 / 主管」時的起點(必要欄位先給空值,檢查器會指出還沒填的);
@@ -41,9 +47,14 @@ const defaultSourceOf = (
 };
 
 export interface AssigneeSourcePickerProps {
-  value: AssigneeSource;
-  onChange: (value: AssigneeSource) => void;
-  /** 關卡名稱(條件對話框的標題) */
+  /** 用途:審核者 / 知會對象(下拉標籤、條件框與對話框的標題、欄位說明) */
+  purpose: PeoplePurpose;
+  /** 目前的來源;`null` = 沒設(只有給了 `noneLabel` 的使用處會出現,例如知會) */
+  value: AssigneeSource | null;
+  onChange: (value: AssigneeSource | null) => void;
+  /** 下拉多一個「不設」選項(例:「不知會」);審核者一定要有來源,不給 */
+  noneLabel?: string;
+  /** 關卡名稱(條件對話框的標題;整個流程的知會傳「整個流程」) */
   stepName: string;
   /** 共用流程:人員條件只能用權限與非指定的組織來源 */
   isShared: boolean;
@@ -62,7 +73,8 @@ const assigneeFieldsOf = (fields: readonly FieldDef[] | null): FieldDef[] =>
   );
 
 /**
- * 審核者來源的三種(《底座規格》3.3;Figma BS-02a / c):人員條件 / 表單欄位 / 主管。
+ * 人員來源的三種(《底座規格》3.3、3.9;Figma BS-02a / c、BS-03):人員條件 / 表單欄位 / 主管。
+ * 審核者來源與知會對象(關卡、整個流程)共用,只換標題與說明(`purpose`);知會多一個「不知會」(`noneLabel`)。
  * 「人員條件」取代原本的「指定使用者」與「角色」:面板只放條件摘要與 [編輯條件],
  * 條件在對話框用 `AudiencePicker` 編輯(面板寬度放不下條件列)。從別的來源換成人員條件時
  * 先開對話框,**按 [套用] 才換**;[取消] 保留原本的來源與設定;
@@ -70,8 +82,10 @@ const assigneeFieldsOf = (fields: readonly FieldDef[] | null): FieldDef[] =>
  * 「主管」從申請所屬組織往上找第幾層。
  */
 export const AssigneeSourcePicker = ({
+  purpose,
   value,
   onChange,
+  noneLabel,
   stepName,
   isShared,
   forms,
@@ -85,20 +99,34 @@ export const AssigneeSourcePicker = ({
   const setup = useApproverAudienceSetup(isShared, checkFormFields);
   const formNameOf = (formKey: string): string =>
     forms.find((form) => form.key === formKey)?.name ?? formKey;
+  const current: KindOption = value?.kind ?? NONE;
 
   return (
-    <Stack spacing={1.5} role="group" aria-label={t("region")}>
-      <SelectField<AssigneeKind>
-        label={t("kind")}
-        value={value.kind}
+    <Stack
+      spacing={1.5}
+      role="group"
+      aria-label={t(`purposes.${purpose}.region`)}
+    >
+      <SelectField<KindOption>
+        label={t(`purposes.${purpose}.kind`)}
+        value={current}
         size="small"
         disabled={isDisabled}
-        options={ASSIGNEE_KINDS.map((kind) => ({
-          value: kind,
-          label: t(`kinds.${kind}`),
-        }))}
+        options={[
+          ...(noneLabel === undefined
+            ? []
+            : [{ value: NONE as KindOption, label: noneLabel }]),
+          ...ASSIGNEE_KINDS.map((kind) => ({
+            value: kind,
+            label: t(`kinds.${kind}`),
+          })),
+        ]}
         onChange={(kind) => {
-          if (kind === value.kind) {
+          if (kind === current) {
+            return;
+          }
+          if (kind === NONE) {
+            onChange(null);
             return;
           }
           if (kind === "audience") {
@@ -108,8 +136,9 @@ export const AssigneeSourcePicker = ({
           onChange(defaultSourceOf(kind, checkFormKey));
         }}
       />
-      {value.kind === "audience" && (
+      {value?.kind === "audience" && (
         <AudienceSourceSummary
+          purpose={purpose}
           audience={value.audience}
           stepName={stepName}
           isShared={isShared}
@@ -122,6 +151,7 @@ export const AssigneeSourcePicker = ({
       )}
       {isSwitching && (
         <AudienceConditionDialog
+          purpose={purpose}
           stepName={stepName}
           isShared={isShared}
           initial={setup.initialDraftOf(null)}
@@ -139,7 +169,7 @@ export const AssigneeSourcePicker = ({
           }}
         />
       )}
-      {value.kind === "field" && (
+      {value?.kind === "field" && (
         <FieldSourceSelect
           value={value}
           onChange={onChange}
@@ -148,9 +178,10 @@ export const AssigneeSourcePicker = ({
           isLoaded={checkFormFields !== null}
           formNameOf={formNameOf}
           isDisabled={isDisabled}
+          hint={t(`purposes.${purpose}.fieldHint`)}
         />
       )}
-      {value.kind === "manager" && (
+      {value?.kind === "manager" && (
         <SelectField
           label={t("level")}
           value={String(value.level)}

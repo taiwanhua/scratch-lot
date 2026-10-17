@@ -65,3 +65,12 @@ export const mergeReports = (
     warnings: merge(local.warnings, remote.warnings),
   };
 };
+
+/**
+ * 整個流程的知會對象(`definition.cc`)那幾筆問題:沒有關卡定位、`property` 以 `cc` 開頭
+ * (`docs/modules/workflows.md`「逾時提醒與知會」)。設計器把它們放在「整個流程」面板,點了就取消選取關卡。
+ */
+export const isFlowCcIssue = (issue: WorkflowIssue): boolean =>
+  issue.location.stepKey === undefined &&
+  (issue.location.property === "cc" ||
+    issue.location.property?.startsWith("cc.") === true);

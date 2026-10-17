@@ -1,4 +1,8 @@
-import type { WorkflowDefinition } from "@repo/domain/workflow";
+import {
+  DEFAULT_OVERDUE_AUDIENCE,
+  SKIP_ORG_TENANT,
+  type WorkflowDefinition,
+} from "@repo/domain/workflow";
 import { WorkflowVersionStatus } from "@repo/graphql";
 
 import { SHOPPING_FORM_KEY } from "@/test/msw/form-fixtures";
@@ -55,6 +59,33 @@ const sharedPurchaseDefinition = (): WorkflowDefinition => {
 };
 
 /**
+ * 病假審核草稿的「人資」關:跳過、自動通過、逾時提醒、知會四個區塊都設好(BS-03 的示範值);
+ * 整個流程的知會對象 = 直屬主管(屬性面板沒選關卡時看得到)。
+ */
+const bs03LeaveDefinition = (): WorkflowDefinition => {
+  const definition = leaveWorkflowDefinition();
+  return {
+    ...definition,
+    steps: definition.steps.map((step) =>
+      step.key === "hr"
+        ? {
+            ...step,
+            skipOrgs: { orgIds: [SKIP_ORG_TENANT], includeDescendants: false },
+            skipWhen: { "<": [{ var: "days" }, 3] },
+            autoApprove: { priorApprover: true },
+            overdue: {
+              reviewerAfterHours: 24,
+              audienceAfterHours: 48,
+              audience: DEFAULT_OVERDUE_AUDIENCE,
+            },
+            cc: { kind: "manager", level: 2 },
+          }
+        : step,
+    ),
+  };
+};
+
+/**
  * mock 開發模式的流程管理假資料:直線的「病假審核」(客製,綁了病假單)與平行的「採購審核」
  * (共用,已發布第 1 版 + 一份草稿;版本面板看得到「匯出專案設定」)。
  */
@@ -76,8 +107,9 @@ export const mockWorkflowDesign = (): WorkflowDesignWorldOptions => ({
   ],
   versions: {
     leave_review: [
-      workflowVersionFragment(leaveWorkflowDefinition(), {
+      workflowVersionFragment(bs03LeaveDefinition(), {
         baseVersion: 1,
+        cc: { kind: "manager", level: 1 },
       }),
       workflowVersionFragment(leaveWorkflowDefinition(), {
         id: "wv-leave-1",

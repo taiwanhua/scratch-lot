@@ -7,6 +7,7 @@ import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
 import { definitionFingerprint } from "@/lib/base/workflow/flow-model";
+import { isFlowCcIssue } from "@/lib/base/workflow/validation";
 import type { WorkflowError } from "@/lib/base/workflow/workflow-errors";
 
 import type { FlowCheckResult } from "./useFlowCheck";
@@ -18,8 +19,8 @@ export interface FlowCheckPanelProps {
   definition: WorkflowDefinition;
   checkFormKey: string | null;
   stepNameOf: (stepKey: string) => string;
-  /** 點一筆 → 選中那一關並打開屬性面板 */
-  onLocate: (stepKey: string) => void;
+  /** 點一筆 → 選中那一關並打開屬性面板;整個流程的知會對象那幾筆 → `null`(屬性面板回到「整個流程」) */
+  onLocate: (stepKey: string | null) => void;
 }
 
 interface IssueRow {
@@ -118,11 +119,9 @@ export const FlowCheckPanel = ({
             {group.rows.map(({ issue, isError }, index) => (
               <ListItemButton
                 key={`${issue.code}-${String(index)}`}
-                disabled={group.stepKey === null}
+                disabled={group.stepKey === null && !isFlowCcIssue(issue)}
                 onClick={() => {
-                  if (group.stepKey !== null) {
-                    onLocate(group.stepKey);
-                  }
+                  onLocate(group.stepKey);
                 }}
               >
                 <ListItemText

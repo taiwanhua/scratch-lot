@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { isJoinStep } from "@repo/domain/workflow";
+import { type WorkflowIssue, isJoinStep } from "@repo/domain/workflow";
 import type {
   WorkflowFieldsFragment,
   WorkflowVersionFieldsFragment,
@@ -9,7 +9,6 @@ import type {
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
-import { Typography } from "@repo/ui/typography";
 
 import { JsonPreview } from "@/components/base/JsonPreview";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
@@ -18,13 +17,14 @@ import {
   definitionInputOf,
   definitionOf,
 } from "@/lib/base/workflow/definition";
-import { mergeReports } from "@/lib/base/workflow/validation";
+import { isFlowCcIssue, mergeReports } from "@/lib/base/workflow/validation";
 
 import { designerPropertyPanelSx } from "../../designer-layout";
 import { DesignerToolbar } from "./DesignerToolbar";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
 import { FlowIssueList } from "./FlowIssueList";
+import { FlowSettingsPanel } from "./FlowSettingsPanel";
 import { ForkDialog } from "./ForkDialog";
 import { JoinPanel } from "./JoinPanel";
 import { StepEditor } from "./StepEditor";
@@ -50,6 +50,7 @@ export interface FlowDesignerWorkspaceProps {
  * 檢查器即時跑 `@repo/domain/workflow` 的 `validateWorkflowDefinition`(與 api 同一份),錯誤定位到關卡;
  * 「檢查」鈕另跑 api 的完整檢查、結果面板依關卡列出。「檢查用表單」隨草稿存(`checkFormKey`),
  * 新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值。
+ * 屬性面板沒選關卡時是「整個流程」的設定(整個流程的知會對象)。逾時提醒的時數不合法(`OVERDUE_INVALID`)時擋下不讓存。
  * 存草稿帶 `expectedDraftRevision`。有沒有未存的變更回報給 `useWorkflowDraftStore`
  * (換流程攔截、發布跳窗提示),關分頁 / 重新整理由 `useUnsavedGuard` 問。
  */
@@ -71,16 +72,6 @@ export const FlowDesignerWorkspace = ({
       : checkFormKeyOf(draft),
   );
   const { definition, checkFormKey } = state;
-  const saving = useWorkflowDraftSave({
-    workflowKey: workflow.key,
-    initialRevision: draft.draftRevision,
-    definition,
-    checkFormKey,
-    isDirty: state.isDirty,
-    markSaved: state.markSaved,
-    onSaved,
-  });
-  useUnsavedGuard(state.isDirty);
   const catalog = useDesignerCatalog(workflow.isShared);
   const checkFormFields = useFormFields(checkFormKey, catalog.forms);
   const local = useLocalFlowReport({
@@ -90,6 +81,23 @@ export const FlowDesignerWorkspace = ({
     checkFormKey,
     checkFormFields,
   });
+  // 逾時提醒 M ≤ N 或不是正整數:設計器擋下不讓存(《底座規格》3.8;api 存草稿照收、發布擋)
+  const blockedReason = local.errors.some(
+    (issue) => issue.code === "OVERDUE_INVALID",
+  )
+    ? t("saveBlockedOverdue")
+    : null;
+  const saving = useWorkflowDraftSave({
+    workflowKey: workflow.key,
+    initialRevision: draft.draftRevision,
+    definition,
+    checkFormKey,
+    isDirty: state.isDirty,
+    blockedReason,
+    markSaved: state.markSaved,
+    onSaved,
+  });
+  useUnsavedGuard(state.isDirty);
   const report = useMemo(
     () => mergeReports(local, state.isDirty ? null : saving.serverReport),
     [local, state.isDirty, saving.serverReport],
@@ -101,10 +109,9 @@ export const FlowDesignerWorkspace = ({
   const isEditable = state.flow !== null;
   const selected =
     definition.steps.find((step) => step.key === state.selectedKey) ?? null;
-  const issuesOf = (stepKey: string): string[] =>
-    [...report.errors, ...report.warnings]
-      .filter((issue) => issue.location.stepKey === stepKey)
-      .map((issue) => issue.message);
+  const allIssues = [...report.errors, ...report.warnings];
+  const issuesOf = (stepKey: string): WorkflowIssue[] =>
+    allIssues.filter((issue) => issue.location.stepKey === stepKey);
   const stepNameOf = (stepKey: string): string =>
     definition.steps.find((step) => step.key === stepKey)?.name ?? stepKey;
 
@@ -114,9 +121,19 @@ export const FlowDesignerWorkspace = ({
     }
     if (selected === null) {
       return (
-        <Typography variant="body2" color="text.secondary">
-          {t("selectHint")}
-        </Typography>
+        <FlowSettingsPanel
+          cc={definition.cc ?? null}
+          onCcChange={state.setCc}
+          selectHint={t("selectHint")}
+          issues={allIssues
+            .filter((issue) => isFlowCcIssue(issue))
+            .map((issue) => issue.message)}
+          isShared={workflow.isShared}
+          forms={catalog.forms}
+          checkFormKey={checkFormKey}
+          checkFormFields={checkFormFields}
+          isReadonly={false}
+        />
       );
     }
     if (isJoinStep(selected)) {
@@ -125,7 +142,7 @@ export const FlowDesignerWorkspace = ({
           key={selected.key}
           join={selected}
           branchCount={actions.branchCountOf(selected.key)}
-          issues={issuesOf(selected.key)}
+          issues={issuesOf(selected.key).map((issue) => issue.message)}
           onRename={(name) => {
             actions.renameJoin(selected.key, name);
           }}
@@ -144,6 +161,7 @@ export const FlowDesignerWorkspace = ({
     const info = actions.positionInfo(selected.key);
     return (
       <StepEditor
+        key={selected.key}
         step={selected}
         onChange={(next) => {
           actions.update(selected.key, next);
@@ -189,6 +207,7 @@ export const FlowDesignerWorkspace = ({
         isSaving={saving.isPending}
         isEditable={isEditable}
         error={saving.error}
+        saveBlockedReason={blockedReason}
         onSave={() => {
           void saving.save();
         }}

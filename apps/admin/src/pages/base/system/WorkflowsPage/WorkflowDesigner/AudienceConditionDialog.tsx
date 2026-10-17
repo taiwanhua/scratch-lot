@@ -16,7 +16,12 @@ import {
   validateAudienceDraft,
 } from "@/lib/base/audience-draft";
 
+import type { PeoplePurpose } from "./people-purpose";
+
 export interface AudienceConditionDialogProps {
+  /** 用途:審核者 / 知會對象 / 通知對象(只換標題) */
+  purpose: PeoplePurpose;
+  /** 標題後半:關卡名稱(整個流程的知會對象傳「整個流程」) */
   stepName: string;
   isShared: boolean;
   initial: AudienceDraft;
@@ -27,12 +32,13 @@ export interface AudienceConditionDialogProps {
 }
 
 /**
- * 審核者條件對話框(《底座規格》3.3;Figma BS-02b 客製 / BS-02d 共用):關卡面板放不下條件列,
+ * 人員條件對話框(《底座規格》3.3;Figma BS-02b 客製 / BS-02d 共用;審核者、知會對象、逾時通知對象共用):關卡面板放不下條件列,
  * 條件在這裡用 `AudiencePicker` 編輯;[套用] 才寫回關卡,[取消] 不動。
  * 共用流程頂端說明只能用「權限」與組織來源,欄位清單也只給這兩種(`SHARED_APPROVER_AUDIENCE_OPTIONS`)。
  * 套用前先做本地驗證(空群組、沒挑值),有問題就標在那一列、不關閉。
  */
 export const AudienceConditionDialog = ({
+  purpose,
   stepName,
   isShared,
   initial,
@@ -74,8 +80,8 @@ export const AudienceConditionDialog = ({
       maxWidth="md"
       title={
         isShared
-          ? t("dialogTitleShared", { step: stepName })
-          : t("dialogTitle", { step: stepName })
+          ? t(`purposes.${purpose}.dialogTitleShared`, { step: stepName })
+          : t(`purposes.${purpose}.dialogTitle`, { step: stepName })
       }
       actions={
         <>
@@ -89,7 +95,7 @@ export const AudienceConditionDialog = ({
       <Stack spacing={2} sx={{ pt: 1 }}>
         {isShared && <Alert severity="warning">{t("sharedHint")}</Alert>}
         <AudiencePicker
-          title={t("audienceTitle")}
+          title={t(`purposes.${purpose}.audienceTitle`)}
           isTitleHidden
           value={draft}
           onChange={(next) => {

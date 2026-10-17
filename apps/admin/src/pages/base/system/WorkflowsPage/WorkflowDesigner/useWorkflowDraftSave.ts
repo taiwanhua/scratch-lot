@@ -7,7 +7,10 @@ import {
   useSaveWorkflowVersionDraftMutation,
 } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import {
+  useMutationFeedback,
+  useSnackbar,
+} from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { definitionInputOf } from "@/lib/base/workflow/definition";
 import {
@@ -23,6 +26,8 @@ export interface WorkflowDraftSaveInput {
   /** 設計器的「檢查用表單」(一併存進草稿) */
   checkFormKey: string | null;
   isDirty: boolean;
+  /** 設計器擋下不讓存的原因(例:逾時提醒的時數不合法);null = 可以存 */
+  blockedReason: string | null;
   markSaved: (saved: WorkflowDefinition, checkFormKey: string | null) => void;
   onSaved: () => void;
 }
@@ -31,6 +36,7 @@ export interface WorkflowDraftSaveInput {
  * 流程設計器的「存草稿」:帶 `expectedDraftRevision`(= 讀到或上次存完的 `draftRevision`),
  * 不符 → `CONFLICT`(`DRAFT_REVISION_MISMATCH`),畫面提示「已被別人更新,請重新載入」。
  * 並把「有沒有未存的變更 + 怎麼存」回報給 `useWorkflowDraftStore`(換流程攔截、發布跳窗先存都走同一支)。
+ * 有 `blockedReason`(設計器擋下的錯誤)時不送出,跳提示並回 null —— 三個入口(存草稿鈕、換流程、發布前先存)一致。
  */
 export const useWorkflowDraftSave = ({
   workflowKey,
@@ -38,6 +44,7 @@ export const useWorkflowDraftSave = ({
   definition,
   checkFormKey,
   isDirty,
+  blockedReason,
   markSaved,
   onSaved,
 }: WorkflowDraftSaveInput) => {
@@ -53,6 +60,7 @@ export const useWorkflowDraftSave = ({
     success: t("saved"),
     error: (failure) => tErrors(workflowErrorOf(failure).code),
   });
+  const showSnackbar = useSnackbar();
   const report = useWorkflowDraftStore((state) => state.report);
   const clear = useWorkflowDraftStore((state) => state.clear);
 
@@ -60,6 +68,10 @@ export const useWorkflowDraftSave = ({
     const snapshot = definition;
     const checkFormSnapshot = checkFormKey;
     setError(null);
+    if (blockedReason !== null) {
+      showSnackbar("error", blockedReason);
+      return null;
+    }
     try {
       const payload = await mutation.mutateAsync({
         input: {

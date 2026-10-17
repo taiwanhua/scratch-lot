@@ -209,7 +209,8 @@ export const effectiveEdgesOf = (
 
 /**
  * 比對用的正規化字串:節點依 key 排序、連線用「實際的連線」排序。陣列順序不同(api / fork 建的平行定義)、
- * 直線寫成 null 或單鏈,只要圖一樣就相同 —— 「有沒有未存的變更」靠它判斷。
+ * 直線寫成 null 或單鏈,只要圖一樣就相同 —— 「有沒有未存的變更」靠它判斷。整個流程的知會對象(`cc`)一起比
+ * (沒設與 `null` 相同)。
  */
 export const definitionFingerprint = (definition: WorkflowDefinition): string =>
   JSON.stringify({
@@ -219,6 +220,7 @@ export const definitionFingerprint = (definition: WorkflowDefinition): string =>
     edges: effectiveEdgesOf(definition)
       .map((edge) => edgeIdOf(edge))
       .toSorted((a, b) => a.localeCompare(b)),
+    cc: canonical(definition.cc ?? null),
   });
 
 interface GraphIndex {

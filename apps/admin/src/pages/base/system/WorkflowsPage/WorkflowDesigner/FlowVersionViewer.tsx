@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { isJoinStep } from "@repo/domain/workflow";
+import { type WorkflowIssue, isJoinStep } from "@repo/domain/workflow";
 import {
   type WorkflowFieldsFragment,
   useCreateWorkflowVersionDraftMutation,
@@ -17,6 +17,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { checkFormKeyOf, definitionOf } from "@/lib/base/workflow/definition";
+import { isFlowCcIssue } from "@/lib/base/workflow/validation";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import { designerPropertyPanelSx } from "../../designer-layout";
@@ -24,6 +25,7 @@ import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
 import { FlowIssueList } from "./FlowIssueList";
+import { FlowSettingsPanel } from "./FlowSettingsPanel";
 import { JoinPanel } from "./JoinPanel";
 import { StepEditor } from "./StepEditor";
 import { useDesignerCatalog, useFormFields } from "./useDesignerCatalog";
@@ -115,19 +117,28 @@ export const FlowVersionViewer = ({
 
   const selected =
     definition.steps.find((step) => step.key === selectedKey) ?? null;
-  const issuesOf = (stepKey: string): string[] =>
-    [...report.errors, ...report.warnings]
-      .filter((issue) => issue.location.stepKey === stepKey)
-      .map((issue) => issue.message);
+  const allIssues = [...report.errors, ...report.warnings];
+  const issuesOf = (stepKey: string): WorkflowIssue[] =>
+    allIssues.filter((issue) => issue.location.stepKey === stepKey);
   const stepNameOf = (stepKey: string): string =>
     definition.steps.find((step) => step.key === stepKey)?.name ?? stepKey;
 
   const renderPanel = () => {
     if (selected === null) {
       return (
-        <Typography variant="body2" color="text.secondary">
-          {t("viewingSelectHint")}
-        </Typography>
+        <FlowSettingsPanel
+          cc={definition.cc ?? null}
+          onCcChange={ignore}
+          selectHint={t("viewingSelectHint")}
+          issues={allIssues
+            .filter((issue) => isFlowCcIssue(issue))
+            .map((issue) => issue.message)}
+          isShared={workflow.isShared}
+          forms={catalog.forms}
+          checkFormKey={checkFormKey}
+          checkFormFields={checkFormFields}
+          isReadonly
+        />
       );
     }
     if (isJoinStep(selected)) {
@@ -139,7 +150,7 @@ export const FlowVersionViewer = ({
             (definition.edges ?? []).filter((edge) => edge.to === selected.key)
               .length
           }
-          issues={issuesOf(selected.key)}
+          issues={issuesOf(selected.key).map((issue) => issue.message)}
           onRename={ignore}
           onAddBranch={ignore}
           onInsertAfter={ignore}
