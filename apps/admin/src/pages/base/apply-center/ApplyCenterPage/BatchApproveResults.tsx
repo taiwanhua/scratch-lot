@@ -8,7 +8,7 @@ import {
 import { Table } from "@repo/ui/table";
 import { Typography } from "@repo/ui/typography";
 
-import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
+import { adminErrorText } from "@/lib/base/errors";
 
 export type BatchApproveResult =
   BatchApproveTasksMutation["batchApproveTasks"]["results"][number];
@@ -20,14 +20,14 @@ export interface BatchApproveResultsProps {
 
 /**
  * 批次核准的逐筆結果表(Figma BS-07b 257:6335):標題 + 結果。被守門擋下的顯示專案的錯誤訊息
- * (`admin.lifecycle.<碼>`,沒有就退回「沒有權限」那句,同單筆核准)。
+ * (`admin.lifecycle.<碼>`;專案沒有文案時用中性的「這張單目前不能核准」,不用單筆核准的「沒有權限」)。
  */
 export const BatchApproveResults = ({
   tasks,
   results,
 }: BatchApproveResultsProps) => {
   const t = useTranslations("admin.applyCenter.batchApprove");
-  const errorText = useAdminErrorText("admin.workflows.errors");
+  const tRoot = useTranslations();
   const titleOf = (taskId: string) => {
     const task = tasks.find((item) => item.id === taskId);
     return task === undefined
@@ -41,12 +41,16 @@ export const BatchApproveResults = ({
     switch (result.reason) {
       case WorkflowBatchApproveFailure.Blocked: {
         return t("results.BLOCKED", {
-          message: errorText({
-            code: "FORBIDDEN",
-            ...(result.projectReason != null && {
-              projectReason: result.projectReason,
-            }),
-          }),
+          message: adminErrorText(
+            {
+              code: "BLOCKED_GENERIC",
+              ...(result.projectReason != null && {
+                projectReason: result.projectReason,
+              }),
+            },
+            () => t("results.BLOCKED_GENERIC"),
+            tRoot,
+          ),
         });
       }
       case WorkflowBatchApproveFailure.NotYours: {

@@ -46,8 +46,8 @@ export const defaultSelectionLabels: DataTableRowSelectionLabels<unknown> = {
 };
 
 /**
- * 表頭勾選框按下去之後的選取:本頁可勾的列全勾了 → 取消本頁;否則把本頁還沒勾的可勾列依序補上,
- * 補到 `maxCount` 為止。別頁勾的不動。
+ * 表頭勾選框按下去之後的選取:本頁可勾的列全勾了,或已到上限(再也補不進去)→ 取消本頁;
+ * 否則把本頁還沒勾的可勾列依序補上,補到 `maxCount` 為止。別頁勾的不動。
  */
 export const togglePageSelection = (
   selectedKeys: readonly string[],
@@ -57,7 +57,7 @@ export const togglePageSelection = (
   const selected = new Set(selectedKeys);
   const isAllSelected =
     pageKeys.length > 0 && pageKeys.every((key) => selected.has(key));
-  if (isAllSelected) {
+  if (isAllSelected || selectedKeys.length >= maxCount) {
     const page = new Set(pageKeys);
     return selectedKeys.filter((key) => !page.has(key));
   }

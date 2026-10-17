@@ -182,6 +182,10 @@ export class TaskActionsService {
     taskId: string,
     comment: string | null,
   ): Promise<BatchApproveOutcome> {
+    if (!OBJECT_ID_PATTERN.test(taskId)) {
+      // 不合法的 id 一定找不到任務:同「不在你手上」
+      return failed(taskId, WorkflowBatchApproveFailureEnum.NOT_YOURS);
+    }
     try {
       const { result } = await this.transactions.withTransaction(() =>
         this.decideOnce(facts, {
@@ -207,8 +211,9 @@ export class TaskActionsService {
       ) {
         return failed(taskId, WorkflowBatchApproveFailureEnum.NOT_YOURS);
       }
-      this.logger.warn(
+      this.logger.error(
         `批次核准的一筆失敗(任務 ${taskId}):${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       return failed(taskId, WorkflowBatchApproveFailureEnum.FAILED);
     }
@@ -653,6 +658,9 @@ export class TaskActionsService {
     return (await this.tasks.findOne(task.tenantId, { _id: task._id })) ?? task;
   }
 }
+
+/** 任務 id 的形狀(Mongo ObjectId 的 24 位十六進位)。 */
+const OBJECT_ID_PATTERN = /^[\da-f]{24}$/i;
 
 function failed(
   taskId: string,

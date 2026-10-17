@@ -18,17 +18,17 @@
 
 ## 模組 key 與權限表
 
-| 權限 key                                 | moduleId 指向 | 它是哪一頁的什麼                                                                                                         |
-| ---------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `system.workflows.view`                  | 流程管理      | 流程清單、流程、版本、檢查器(`validateWorkflowVersion`)                                                                  |
-| `system.workflows.create`                | 流程管理      | 建流程(根組織 = 共用、租戶內 = 客製)、以某版為基底建流程(fork)                                                           |
-| `system.workflows.edit`                  | 流程管理      | 改名稱、開草稿、存草稿、刪草稿(只能動自己擁有的流程)                                                                     |
-| `system.workflows.publish`               | 流程管理      | 發布、退役目前版本                                                                                                       |
-| `system.workflows.assign`                | 流程管理      | 分派 / 收回共用流程(另外要站在根組織)                                                                                    |
-| `system.workflows.blocked-page.reassign` | 阻擋清單      | 阻擋清單查詢、改派、新增審核者、重試推進(隱藏頁自有權限,不靠父模組 wildcard)                                             |
-| `system.forms.edit`                      | 表單管理      | 表單的流程綁定 / 解除、流程下拉(`formWorkflowOptions`)—— 綁定掛在表單管理上                                              |
-| `apply-center.view`                      | 申請中心      | 我的申請、待我審核、新申請入口、badge 計數                                                                               |
-| (無)                                     | —             | `workflowInstance` / `decideTask` / 撤回 / 作廢 / 複製:授權是「讀得到那個修訂」「我是承辦人」「我是申請人」,不看頁面權限 |
+| 權限 key                                 | moduleId 指向 | 它是哪一頁的什麼                                                                                                                               |
+| ---------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `system.workflows.view`                  | 流程管理      | 流程清單、流程、版本、檢查器(`validateWorkflowVersion`)                                                                                        |
+| `system.workflows.create`                | 流程管理      | 建流程(根組織 = 共用、租戶內 = 客製)、以某版為基底建流程(fork)                                                                                 |
+| `system.workflows.edit`                  | 流程管理      | 改名稱、開草稿、存草稿、刪草稿(只能動自己擁有的流程)                                                                                           |
+| `system.workflows.publish`               | 流程管理      | 發布、退役目前版本                                                                                                                             |
+| `system.workflows.assign`                | 流程管理      | 分派 / 收回共用流程(另外要站在根組織)                                                                                                          |
+| `system.workflows.blocked-page.reassign` | 阻擋清單      | 阻擋清單查詢、改派、新增審核者、重試推進(隱藏頁自有權限,不靠父模組 wildcard)                                                                   |
+| `system.forms.edit`                      | 表單管理      | 表單的流程綁定 / 解除、流程下拉(`formWorkflowOptions`)—— 綁定掛在表單管理上                                                                    |
+| `apply-center.view`                      | 申請中心      | 我的申請、待我審核、新申請入口、badge 計數                                                                                                     |
+| (無)                                     | —             | `workflowInstance` / `decideTask` / `batchApproveTasks` / 撤回 / 作廢 / 複製:授權是「讀得到那個修訂」「我是承辦人」「我是申請人」,不看頁面權限 |
 
 申請中心另有隱藏頁 `apply-center.view-page`(詳情頁的路由節點兼權限容器),沒有自己的權限。
 
@@ -229,9 +229,9 @@
 - `workflowInstance`:授權同 `canReadSubmissionRevision`,讀不到 → `NOT_FOUND`;`myTasks` 欄位是讀者自己在這個實例的任務,`abilities.canWithdraw` = 申請人、進行中、還沒有決定。
 - `applyCenterCounts`:申請中心兩個頁籤的 badge 數字,見下一節(側欄的數字走 `sidebarBadges`)。
 - `batchApproveTasks(input: { taskIds, comment? })`(`task-actions.service.ts` 的 `batchApprove`;授權同 `decideTask`,不看頁面權限):批次核准,只支援核准。`taskIds` 去重後 1 到 50 筆(`BATCH_APPROVE_LIMIT`),否則 `VALIDATION_FAILED` `taskIds`、整批不做;`comment` 缺席 / `null` / 空白 = 沒有,有值就是每一筆的共同意見。**逐筆依序、每一筆一個交易**,走和 `decideTask` 核准相同的本體(含 `runApproveGuard`),只是不比對任務的 `editVersion`;一筆失敗只回復那一筆。回 `BatchApproveTasksPayload { results }`,順序同輸入,每筆 `{ taskId, ok, reason, projectReason }`:
-  - `NOT_YOURS`:任務不存在 / 不是我的、已被處理、已改派走、此關已結束(單筆核准會回 `STEP_CLOSED` 或 `NOT_FOUND` 的情況)
+  - `NOT_YOURS`:任務不存在 / 不是我的 / id 不合法、已被處理、已改派走、此關已結束(單筆核准會回 `STEP_CLOSED` 或 `NOT_FOUND` 的情況)
   - `BLOCKED`:專案的 `beforeApprove` 擋下,`projectReason` = 專案錯誤碼(前端文案 `admin.lifecycle.<碼>`)
-  - `FAILED`:其他錯誤(交易失敗等;記 warn log)
+  - `FAILED`:其他錯誤(交易失敗等;記 error log 含 stack)
 
 ### 計數(`applyCenterCounts`)
 
@@ -327,7 +327,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 - 「待處理」的 `DataTable` 開 `rowSelection`(`@repo/ui/data-table` 的選用列勾選):只有 `PENDING` 的列能勾、上限 50 筆(到上限時其他未勾的列停用)、表頭勾選框 = 全選本頁。勾選以任務 id 記在元件 state,換頁保留;**不放網址**(大量 id);換篩選條件(模組 / 表單 / 待處理 · 已處理)時清掉。「已處理」不開列勾選。
 - 有勾選時表格上方是「已選 N 筆 · 清除」+ 說明「只能批次核准;駁回、退回請逐筆處理」+ [核准(N)]。
-- [核准(N)] → 對話框填共同意見(選填)→ `batchApproveTasks`;同一個對話框改顯示結果:全部成功「N 筆已核准」/ 部分失敗「N 筆已核准,M 筆未完成」+ 逐筆結果表(標題取自開啟當下的勾選;`BLOCKED` 顯示專案錯誤訊息,同單筆核准走 `useAdminErrorText`)。成功的取消勾選、失敗的保持勾選;每個相關實例走 `useWorkflowCache` 失效(清單、詳情、計數)。整個請求失敗時錯誤就地顯示在對話框。
+- [核准(N)] → 對話框填共同意見(選填)→ `batchApproveTasks`;同一個對話框改顯示結果:全部成功「N 筆已核准」/ 部分失敗「N 筆已核准,M 筆未完成」+ 逐筆結果表(標題取自開啟當下的勾選;`BLOCKED` 顯示專案錯誤訊息 `admin.lifecycle.<碼>`,專案沒有文案時用中性的「這張單目前不能核准」)。成功的與「已不在你手上」(`NOT_YOURS`,會從清單消失)的取消勾選,`BLOCKED` / `FAILED` 保持勾選;每個相關實例走 `useWorkflowCache` 失效(清單、詳情、計數)。結果就在對話框裡,不另跳 Snackbar(DATA-06 例外);整個請求失敗時錯誤也就地顯示在對話框。
 
 ### 審核區塊與表單模組
 
@@ -368,12 +368,12 @@ GraphQL 文件:`packages/graphql/src/documents/base/workflows.graphql`(設計、
 
 **阻擋清單**(`system.workflows.blocked-page.reassign`):`blockedInstances`、`reassignTask`、`addStepAssignee`、`retryAdvanceInstance`。
 
-**申請中心**:`myApplications`、`applicableForms`、`myTasks`、`applyCenterCounts`(`apply-center.view`)、`workflowInstance`、`decideTask`(不看頁面權限);提交的 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(在表單執行端的 resolver,回 `FormSubmissionPayload`)。
+**申請中心**:`myApplications`、`applicableForms`、`myTasks`、`applyCenterCounts`(`apply-center.view`)、`workflowInstance`、`decideTask`、`batchApproveTasks`(不看頁面權限);提交的 `withdrawSubmission`、`voidSubmission`、`copySubmissionToDraft`(在表單執行端的 resolver,回 `FormSubmissionPayload`)。
 
 **掛接點**(不是 GraphQL;給專案程式碼):固定入口 `src/project/form-lifecycles.ts` 列 `registerFormLifecycle({ moduleKey, formKey?, guards, effects })`,契約與組裝驗證在 `workflow-engine/lifecycle/form-lifecycle-registration.ts`,執行在 `FormLifecycleService`(`WorkflowEngineModule` 匯出):
 
 - `guard(name, { operator, submission, values?, stepKey? })`:動作的交易內、寫入之前呼叫;擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼。
-- `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(目前是 `decideTask` 的核准);其他會核准的路徑一律經它,不各自呼叫 `guard`。
+- `runApproveGuard({ operator, submission, stepKey })`:`beforeApprove` 的單一入口(`decideTask` 的核准、`batchApproveTasks` 的每一筆);其他會核准的路徑一律經它,不各自呼叫 `guard`。
 - `emit(event, subject, { stepKey?, skipped? })`:事後動作,以系統身分在同一個交易內執行;推進(`WorkflowEngineService`)在關卡完成 / 跳過與提交同步成終局時呼叫,送出(`WorkflowSubmitService`)在建好實例後呼叫 `submitted`。
 
 時機與帶入的資料見 `docs/concepts/workflow-engine.md`「掛接點:守門與事後動作」。

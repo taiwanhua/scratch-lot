@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import {
+  WorkflowBatchApproveFailure,
   type WorkflowTaskFieldsFragment,
   WorkflowTaskStatus,
 } from "@repo/graphql";
@@ -57,7 +58,7 @@ export interface MyTasksTabProps {
  * 「待我審核」(Spec 6b §8 畫面 8):模組、表單、實例快照的標題槽、申請人、關卡、建立時間;
  * 篩選模組 / 表單 / 待處理 · 已處理。點「審核」進申請中心詳情頁(不經業務模組頁面權限)。
  * 「待處理」可勾選多筆批次核准(B18):勾選跨頁保留、最多 50 筆,屬大量資料不放網址;
- * 換篩選條件時清掉。結果中失敗的保持勾選。
+ * 換篩選條件時清掉。結果中被擋下 / 失敗的保持勾選(已不在你手上的除外)。
  */
 export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
   const t = useTranslations("admin.applyCenter.tasks");
@@ -249,8 +250,15 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
             setIsBatchOpen(false);
           }}
           onSettled={(results) => {
-            const failed = new Set(
-              results.filter((item) => !item.ok).map((item) => item.taskId),
+            // 被擋下 / 失敗的保持勾選;已不在你手上的會從清單消失,一併取消
+            const kept = new Set(
+              results
+                .filter(
+                  (item) =>
+                    !item.ok &&
+                    item.reason !== WorkflowBatchApproveFailure.NotYours,
+                )
+                .map((item) => item.taskId),
             );
             for (const instanceId of new Set(
               selectedTasks.map((task) => task.instanceId),
@@ -258,7 +266,7 @@ export const MyTasksTab = ({ modules }: MyTasksTabProps) => {
               invalidateWorkflow(instanceId);
             }
             setSelectedTasks((current) =>
-              current.filter((task) => failed.has(task.id)),
+              current.filter((task) => kept.has(task.id)),
             );
           }}
         />
