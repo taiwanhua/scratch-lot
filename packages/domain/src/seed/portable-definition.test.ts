@@ -119,6 +119,34 @@ describe("validatePortableDefinition:表達式的 ID 語意", () => {
     ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.!==.0"]]);
   });
 
+  it("新系統值:ctx.tenant.id 是動態 ID、ctx.user.orgIds 是動態 ID 集合", () => {
+    expect(
+      codesAt(
+        errorsOf(formWithCondition({ "==": [idOf("ctx.tenant.id"), "abc"] })),
+      ),
+    ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.==.1"]]);
+    expect(
+      codesAt(
+        errorsOf(formWithCondition({ in: [HEX_24, idOf("ctx.user.orgIds")] })),
+      ),
+    ).toEqual([["ID_COMPARISON", "definition.fields.0.visibleWhen.in.0"]]);
+    // 動態 ID 對動態 ID 集合 / 動態 ID 比較:通過
+    expect(
+      errorsOf(
+        formWithCondition({
+          in: [idOf("ctx.user.orgId"), idOf("ctx.user.orgIds")],
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      errorsOf(
+        formWithCondition({
+          "==": [idOf("ctx.tenant.id"), idOf("ctx.user.orgId")],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
   it("引用欄與一般文字欄比較拒絕(只允許另一個動態 ID 或 null)", () => {
     expect(
       codesAt(
