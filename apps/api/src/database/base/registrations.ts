@@ -96,6 +96,11 @@ import {
 } from "../schemas/seed-definition-installation.schema";
 import { SeedLock, SeedLockSchema } from "../schemas/seed-lock.schema";
 import {
+  USER_DELEGATIONS_COLLECTION,
+  UserDelegation,
+  UserDelegationSchema,
+} from "../schemas/user-delegation.schema";
+import {
   USER_PREFERENCES_COLLECTION,
   UserPreference,
   UserPreferenceSchema,
@@ -148,6 +153,7 @@ import {
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
+  UserDelegationsRepository,
   UserPreferencesRepository,
   UsersRepository,
   WorkflowInstancesRepository,
@@ -519,6 +525,21 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
     ],
     repositories: [
       { modelName: UserPreference.name, provider: UserPreferencesRepository },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 代理人(《底座規格》3.7 B15;屬帳號、沒有組織歸屬,同 user_preferences)
+    key: "user-delegations",
+    models: [
+      {
+        name: UserDelegation.name,
+        collection: USER_DELEGATIONS_COLLECTION,
+        schema: UserDelegationSchema,
+      },
+    ],
+    repositories: [
+      { modelName: UserDelegation.name, provider: UserDelegationsRepository },
     ],
     orgDataChecks: [],
   },

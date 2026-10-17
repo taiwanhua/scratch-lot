@@ -26,6 +26,10 @@ const BLOCKED_REASONS: ReadonlySet<string> = new Set([
 
 const textKeyOf = (event: HistoryEvent): string => {
   const reason = event.reason ?? null;
+  // B15 代理人:派給代理人的任務寫「由 X 代理 Y」
+  if (event.kind === "task_created" && event.delegator != null) {
+    return "taskDelegated";
+  }
   if (event.kind === BLOCKED_KIND) {
     return reason !== null && BLOCKED_REASONS.has(reason)
       ? `autoApproveBlocked.${reason}`
@@ -42,7 +46,7 @@ export interface ApprovalTimelineProps {
 
 /**
  * 審核時間軸(Spec 6b §8 零件 `<ApprovalTimeline>`):實例 `history` 依時間列出 ——
- * 送出、進關、跳過(寫出是「申請人屬於指定的組織」還是「符合跳過條件」)、派任、核准 / 駁回 / 退回(含理由;
+ * 送出、進關、跳過(寫出是「申請人屬於指定的組織」還是「符合跳過條件」)、派任(代理派任寫「由 X 代理 Y」)、核准 / 駁回 / 退回(含理由;
  * B5 自動通過寫出原因;自動通過被守門擋下寫出專案文案)、阻擋 / 解除、改派、撤回、完成。
  */
 export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
@@ -93,6 +97,7 @@ export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
                   step: stepName(event.stepKey),
                   user: event.user?.name ?? "—",
                   toUser: event.toUser?.name ?? "—",
+                  delegator: event.delegator?.name ?? "—",
                   message: blockedMessage(event.code),
                 })}
               </Typography>

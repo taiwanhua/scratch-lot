@@ -65,6 +65,9 @@ import {
  *
  * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句剔除;其他人照常留一張待審任務。每位在時間軸記一筆
  * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
+ *
+ * `delegatorOf` = B15 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
+ * 代理人 id → 原審核者 id。派任計畫那一項記 `delegatorId`,`task_created` 事件帶它(時間軸「由 X 代理 Y」)。
  */
 export type StepEntry =
   | { kind: "skip"; reason?: SkipReason }
@@ -73,6 +76,7 @@ export type StepEntry =
       assigneeIds: string[];
       autoApprovals?: readonly AutoApproval[];
       blockedAutoApprovals?: readonly BlockedAutoApproval[];
+      delegatorOf?: Readonly<Record<string, string>>;
     };
 
 export interface AdvanceInput {
@@ -667,6 +671,7 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
     keepApplicant: (entry.autoApprovals ?? []).some(
       (approval) => approval.assigneeId === instance.createdBy,
     ),
+    ...(entry.delegatorOf !== undefined && { delegatorOf: entry.delegatorOf }),
   });
   const blockedNotes: HistoryEvent[] = (entry.blockedAutoApprovals ?? []).map(
     (blocked) => ({
@@ -943,6 +948,7 @@ function announceActions(
         stepKey: state.stepKey,
         taskKey: item.taskKey,
         userId: item.assigneeId,
+        ...(item.delegatorId != null && { delegatorId: item.delegatorId }),
       },
     },
   ];

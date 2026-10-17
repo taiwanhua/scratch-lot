@@ -14,6 +14,7 @@ import {
 import { authWorld } from "@/test/msw/auth-handlers";
 import { dataScopeTargets, savedRule } from "@/test/msw/data-scope-fixtures";
 import { dataScopeWorld } from "@/test/msw/data-scope-handlers";
+import { delegationWorld } from "@/test/msw/delegation-handlers";
 import { demoHistory, demoItems } from "@/test/msw/demo-fixtures";
 import { demoWorld } from "@/test/msw/demo-sample-one-handlers";
 import { demoTwoWorld } from "@/test/msw/demo-sample-two-handlers";
@@ -162,6 +163,8 @@ export const mockHandlers = ({
       notifications: sampleNotifications(),
       preferences: auth.preferences,
     }).handlers,
+    // 個人設定的代理人分頁(底座規格 3.7 B15)
+    ...delegationWorld().handlers,
     // 組織管理(#134 / #135 / #137):`users` 讓給 userWorld
     ...withoutOperations(
       orgWorld({

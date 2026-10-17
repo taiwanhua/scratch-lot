@@ -2111,6 +2111,7 @@
       "noAssignee": "No reviewer found",
       "assigneeDecided": "{name} ({decision})",
       "assigneeInvalid": "{name} (invalid)",
+      "assigneeDelegated": "{name} (on behalf of {delegator})",
       "statuses": {
         "PENDING": "Not reached",
         "ACTIVE": "In review",
@@ -2157,6 +2158,7 @@
         "auto_prior_approver": "\"{step}\" {user} already approved at an earlier step, but automatic approval did not apply: {message}"
       },
       "autoApproveBlockedGeneric": "The conditions for automatic approval are not met right now",
+      "taskDelegated": "\"{step}\" assigned to {user} on behalf of {delegator}",
       "reasons": {
         "skip_orgs": "\"{step}\" skipped: the applicant belongs to a specified organization",
         "skip_condition": "\"{step}\" skipped by its condition",
@@ -2723,7 +2725,52 @@
     "title": "Personal settings",
     "tabs": "Personal settings tabs",
     "tabPreferences": "Preferences",
-    "preferencesEmpty": "There are no preferences to adjust yet. Switch appearance and language from the avatar menu at the top right."
+    "tabDelegations": "Delegates",
+    "preferencesEmpty": "There are no preferences to adjust yet. Switch appearance and language from the avatar menu at the top right.",
+    "delegations": {
+      "create": "+ Add delegate",
+      "hint": "During a delegation, tasks that would be assigned to you go to your delegate. Tasks already assigned to you before it starts are not moved.",
+      "tableAria": "My delegations",
+      "delegate": "Delegate",
+      "startAt": "Start",
+      "endAt": "End",
+      "note": "Note",
+      "status": "Status",
+      "actions": "Actions",
+      "statuses": {
+        "UPCOMING": "Upcoming",
+        "ACTIVE": "Active",
+        "ENDED": "Ended"
+      },
+      "empty": "No delegations yet",
+      "loadFailed": "Could not load delegations. Please refresh",
+      "total": "{total} in total",
+      "delete": "Delete",
+      "deleteOf": "Delete delegation to {name}",
+      "deleteTitle": "Delete delegation to {name}?",
+      "deleteBody": "After deleting, tasks assigned to you will no longer go to this delegate. Tasks already assigned to the delegate are not moved back.",
+      "deleteConfirm": "Delete",
+      "deleted": "Delegation deleted",
+      "dialogTitle": "Add delegate",
+      "startDay": "Start",
+      "endDay": "End",
+      "endBeforeStart": "End cannot be before start",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "created": "Delegation added",
+      "errors": {
+        "NOT_FOUND": "This delegation was not found. Please refresh",
+        "VALIDATION_FAILED": "The data did not pass validation. Please check and try again",
+        "UNEXPECTED": "Something went wrong. Please try again later",
+        "reasons": {
+          "DELEGATION_OVERLAP": "Overlaps a delegation you already set",
+          "SELF_DELEGATION": "You cannot delegate to yourself",
+          "DELEGATE_NOT_ELIGIBLE": "This delegate is disabled or not in your top-level organization",
+          "INVALID_PERIOD": "End must be after start and not in the past",
+          "DELEGATION_ENDED": "Ended delegations cannot be changed or deleted"
+        }
+      }
+    }
   },
   "conditionTree": {
     "rootOp": "Combine",

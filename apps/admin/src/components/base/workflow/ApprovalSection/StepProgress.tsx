@@ -54,7 +54,15 @@ export const StepProgress = ({ instance }: StepProgressProps) => {
         const decision = step.decisions.find(
           (entry) => entry.taskKey === item.taskKey,
         );
-        const name = item.assignee.name ?? item.assignee.id;
+        const assignee = item.assignee.name ?? item.assignee.id;
+        // B15 代理人:代理派任的那一項寫出代理的是誰
+        const name =
+          item.delegator == null
+            ? assignee
+            : t("assigneeDelegated", {
+                name: assignee,
+                delegator: item.delegator.name ?? item.delegator.id,
+              });
         if (decision !== undefined) {
           return t("assigneeDecided", {
             name,

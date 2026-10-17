@@ -22,13 +22,18 @@ describe("個人設定頁", () => {
     expect(within(main).queryByText("語言")).toBeNull();
   });
 
-  it("開 /settings/personal 不帶 tab:顯示偏好分頁;只有一個分頁時不顯示分頁籤", async () => {
+  it("開 /settings/personal 不帶 tab:顯示偏好分頁(分頁籤「偏好 | 代理人」,偏好選中)", async () => {
     server.use(...authWorld({ hasRefreshCookie: true }).handlers);
 
     renderApp({ path: "/settings/personal" });
 
     expect(await screen.findByText(PREFERENCES_EMPTY)).toBeVisible();
-    expect(screen.queryByRole("tablist", { name: "個人設定分頁" })).toBeNull();
+    const tabs = screen.getByRole("tablist", { name: "個人設定分頁" });
+    expect(within(tabs).getByRole("tab", { name: "偏好" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(within(tabs).getByRole("tab", { name: "代理人" })).toBeVisible();
   });
 
   it("沒有任何權限的使用者開個人設定:照常打開(頁名、路由頁籤、說明鈕都在)", async () => {

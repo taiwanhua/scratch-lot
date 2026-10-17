@@ -45,11 +45,11 @@ export const formModuleUrlStateInventory: Readonly<
   editPage: [],
 };
 
-/** `app/routes.tsx` 的非模組路由(以路徑登記):登入三頁讀網址參數,個人設定的分頁用 PageTabs。 */
+/** `app/routes.tsx` 的非模組路由(以路徑登記):登入三頁讀網址參數,個人設定的分頁用 PageTabs、代理人清單的頁碼在 `list`。 */
 export const nonModuleRouteUrlStateInventory: UrlStateInventory = {
   "/login": ["next"],
   "/forgot-password": [],
   "/set-password": ["token"],
   "/change-password": ["next"],
-  "/settings/personal": ["tab"],
+  "/settings/personal": ["tab", "list"],
 };

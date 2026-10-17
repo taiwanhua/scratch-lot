@@ -26,6 +26,7 @@ import { Printer } from "../schemas/printer.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
 import { Role } from "../schemas/role.schema";
 import { SeedDefinitionInstallation } from "../schemas/seed-definition-installation.schema";
+import { UserDelegation } from "../schemas/user-delegation.schema";
 import { UserPreference } from "../schemas/user-preference.schema";
 import { User } from "../schemas/user.schema";
 import { WorkflowInstance } from "../schemas/workflow-instance.schema";
@@ -60,6 +61,8 @@ export type SeedDefinitionInstallationDocument =
   HydratedDocument<SeedDefinitionInstallation>;
 export type WorkflowInstanceDocument = HydratedDocument<WorkflowInstance>;
 export type UserPreferenceDocument = HydratedDocument<UserPreference>;
+
+export type UserDelegationDocument = HydratedDocument<UserDelegation>;
 export type NotificationDocument = HydratedDocument<Notification>;
 export type NotificationSettingDocument = HydratedDocument<NotificationSetting>;
 export type PrintAgentDocument = HydratedDocument<PrintAgent>;
@@ -360,6 +363,20 @@ export class UserPreferencesRepository extends BaseRepository<
   constructor(
     @InjectModel(UserPreference.name)
     model: RepositoryModel<UserPreference, UserPreferenceDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** user_delegations(代理人;屬帳號、非租戶資料,同 user_preferences)。 */
+@Injectable()
+export class UserDelegationsRepository extends BaseRepository<
+  UserDelegation,
+  UserDelegationDocument
+> {
+  constructor(
+    @InjectModel(UserDelegation.name)
+    model: RepositoryModel<UserDelegation, UserDelegationDocument>,
   ) {
     super(model);
   }
