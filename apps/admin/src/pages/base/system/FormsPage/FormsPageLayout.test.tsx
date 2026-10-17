@@ -55,7 +55,7 @@ describe("表單管理:設計器的響應式版面(T48)", () => {
     ).toBe("0");
   });
 
-  it("標頭:標題欄以內容寬為底,操作鈕自成一組可整組換行(不把標題擠扁)", async () => {
+  it("標頭:xl 以下標題欄以內容寬為底(xl 起照舊 basis 0),操作鈕自成一組可整組換行(不把標題擠扁)", async () => {
     renderFormsPage(smallDesignOptions());
     await findDesigner();
 
@@ -64,9 +64,9 @@ describe("表單管理:設計器的響應式版面(T48)", () => {
     if (titleColumn === null) {
       throw new Error("標題沒有父層");
     }
-    const style = globalThis.getComputedStyle(titleColumn);
-    expect(style.flexBasis).toBe("auto");
-    expect(style.minWidth).toBe("0");
+    expect(mediaRulesOf(titleColumn, XS)).toContain("flex-basis: auto;");
+    expect(mediaRulesOf(titleColumn, XL)).toContain("flex-basis: 0;");
+    expect(globalThis.getComputedStyle(titleColumn).minWidth).toBe("0");
 
     const actions = screen.getByRole("button", {
       name: "分派租戶",

@@ -130,11 +130,8 @@ describe("底座來源 + 空專案(原版相容性)", () => {
     );
   });
 
-  it("寬度照舊:表單管理與流程管理 xl,其餘用殼層預設", () => {
-    expect(baseOnly.pageMinWidths).toEqual({
-      "system.forms": "xl",
-      "system.workflows": "xl",
-    });
+  it("寬度:底座頁都沒宣告,一律用殼層預設(兩個設計器在 xl 以下自己換版,T48)", () => {
+    expect(baseOnly.pageMinWidths).toEqual({});
   });
 
   it("三個示範表單模組的設定取自同一份 forms 登記,模板用預設", () => {
