@@ -272,6 +272,7 @@ export const workflowVersionFragment = (
   steps: definition.steps.map((step): Record<string, unknown> => ({ ...step })),
   edges: definition.edges ?? null,
   checkFormKey: null,
+  cc: definition.cc ? { ...definition.cc } : null, // 整個流程的知會對象
   changelog: null,
   publishedAt: null,
   publishedBy: null,

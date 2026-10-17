@@ -193,7 +193,7 @@ const permission = (
   action,
 });
 
-const systemModule = (
+export const systemModule = (
   key: string,
   name: string,
   actions: [string, string][],
