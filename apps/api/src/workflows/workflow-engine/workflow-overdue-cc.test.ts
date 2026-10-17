@@ -1,5 +1,6 @@
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -43,6 +44,7 @@ import {
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
   audienceRow,
+  audienceSource,
   decideOn,
   instanceOf,
   pendingTaskOf,
@@ -211,6 +213,11 @@ describe("逾時提醒與知會", () => {
   });
 
   beforeEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  // spy(例如 `Logger.prototype.warn`)斷言失敗時也不漏到後面的測試
+  afterEach(() => {
     jest.restoreAllMocks();
   });
 
@@ -531,27 +538,53 @@ describe("逾時提醒與知會", () => {
     });
 
     it("第 2 級算不到通知對象 → 不通知、記 warn(只有承辦人本人符合 / 條件沒人符合)", async () => {
-      const reviewer = await fresh();
-      await bindNew({
-        steps: [
-          usersStep("first", [reviewer], {
-            overdue: {
-              reviewerAfterHours: 1,
-              audienceAfterHours: 2,
-              audience: usersAudience([reviewer]),
-            },
-          }),
-        ],
-      });
-      const submitted = await submitLeave(world);
-      const instanceId = await latestInstanceId(submitted.id);
-      const warn = jest.spyOn(Logger.prototype, "warn");
-      await sweepAfter(await onlyTask(instanceId), 2);
-      expect(
-        await notices(WORKFLOW_OVERDUE, reviewer, instanceId),
-      ).toHaveLength(1);
-      expect(warnedWith(warn, "符合的只有承辦人本人")).toBe(true);
-      warn.mockRestore();
+      const gone = await fresh();
+      await world.connection
+        .collection("users")
+        .updateOne({ _id: gone.userId }, { $set: { enabled: false } });
+      for (const { audienceOf, reason } of [
+        {
+          audienceOf: (reviewer: Person) => usersAudience([reviewer]),
+          reason: "符合的只有承辦人本人",
+        },
+        {
+          audienceOf: () => usersAudience([gone]),
+          reason: "人員條件沒有人符合",
+        },
+      ]) {
+        const reviewer = await fresh();
+        await bindNew({
+          steps: [
+            usersStep("first", [reviewer], {
+              overdue: {
+                reviewerAfterHours: 1,
+                audienceAfterHours: 2,
+                audience: audienceOf(reviewer),
+              },
+            }),
+          ],
+        });
+        const submitted = await submitLeave(world);
+        const instanceId = await latestInstanceId(submitted.id);
+        const task = await onlyTask(instanceId);
+        const warn = jest.spyOn(Logger.prototype, "warn");
+        try {
+          await sweepAfter(task, 2);
+          expect(warnedWith(warn, reason)).toBe(true);
+        } finally {
+          warn.mockRestore();
+        }
+        // 第 1 級照發;第 2 級沒有人收
+        const sent = await world.connection
+          .collection("notifications")
+          .find({ type: WORKFLOW_OVERDUE, refId: instanceId })
+          .toArray();
+        expect(sent.map((one) => String(one.recipientId))).toEqual([
+          String(reviewer.userId),
+        ]);
+        const after = await onlyTask(instanceId);
+        expect(after.overdueLevel).toBe(2);
+      }
     });
 
     it("一張任務提醒失敗 → 只回復那一張、到期時點延一個排程週期;一個租戶整批出錯不中斷其他租戶", async () => {
@@ -757,6 +790,46 @@ describe("逾時提醒與知會", () => {
       const all = await notices(WORKFLOW_CC, watcher, instanceId);
       expect(all).toHaveLength(2);
       expect(all.map((one) => one.body).join("\n")).toContain("已作廢");
+    });
+
+    it("只設在關卡的知會對象:單據完成 / 作廢 / 駁回都不收(要收就加進整個流程的知會對象)", async () => {
+      const first = await fresh();
+      const second = await fresh();
+      const watcher = await fresh();
+      await bindNew({
+        steps: [
+          usersStep("first", [first], { cc: usersSource([watcher]) }),
+          usersStep("second", [second]),
+        ],
+      });
+      const onlyStepPassed = async (instanceId: string) => {
+        const sent = await notices(WORKFLOW_CC, watcher, instanceId);
+        expect(sent).toHaveLength(1);
+        expect(sent[0]?.body).toContain("「first」關卡已通過");
+      };
+
+      // 完成後再作廢
+      const completed = await submitLeave(world);
+      const completedInstance = await latestInstanceId(completed.id);
+      await decideOn(world, first, completed.id, "APPROVE");
+      await decideOn(world, second, completed.id, "APPROVE");
+      const approved = await submission(world, world.applicant, completed.id);
+      expect(approved.status).toBe("COMPLETED");
+      await ok(api, world.applicant.token, VOID, {
+        input: {
+          id: completed.id,
+          expectedEditVersion: approved.editVersion,
+          reason: "重開",
+        },
+      });
+      await onlyStepPassed(completedInstance);
+
+      // 第一關通過、第二關駁回
+      const rejected = await submitLeave(world);
+      const rejectedInstance = await latestInstanceId(rejected.id);
+      await decideOn(world, first, rejected.id, "APPROVE");
+      await decideOn(world, second, rejected.id, "REJECT");
+      await onlyStepPassed(rejectedInstance);
     });
 
     it("單據被駁回 → 整個流程的知會對象收到", async () => {
@@ -1005,30 +1078,45 @@ describe("逾時提醒與知會", () => {
       );
     });
 
-    it("算不到知會對象 → 不知會、動作照常,記 warn(表單欄位沒填 / 條件沒人符合 / 欄位來源指向別張表單)", async () => {
+    it("算不到知會對象 → 不知會、動作照常,記 warn(表單欄位沒填 / 表單的組織欄位沒填 / 條件沒人符合 / 找不到主管 / 欄位來源指向別張表單)", async () => {
       const reviewer = await fresh();
       const gone = await fresh();
       await world.connection
         .collection("users")
         .updateOne({ _id: gone.userId }, { $set: { enabled: false } });
-      const cases: { cc: Record<string, unknown>; reason: string }[] = [
+      const cases: {
+        cc: Record<string, unknown>;
+        reason: string;
+        otherForm?: true;
+      }[] = [
         {
           cc: { kind: "field", formKey: FORM_KEY, fieldKey: "approver" },
           reason: "表單欄位 approver 沒填",
         },
+        {
+          cc: audienceSource(
+            audienceRow("org", { kind: "dynamic", ref: "form-field:branch" }),
+          ),
+          reason: "人員條件用的表單組織欄位 branch 沒填",
+        },
         { cc: usersSource([gone]), reason: "人員條件沒有人符合" },
+        {
+          cc: { kind: "manager", level: 5 },
+          reason: "找不到第 5 組主管",
+        },
         {
           cc: { kind: "field", formKey: FORM_KEY, fieldKey: "approver" },
           reason: "知會對象欄位屬於表單 other_form",
+          otherForm: true,
         },
       ];
-      for (const [index, { cc, reason }] of cases.entries()) {
+      for (const { cc, reason, otherForm } of cases) {
         sequence += 1;
         const key = `overdue_cc_${String(sequence)}`;
         await useWorkflow(world, key, {
           steps: [usersStep("first", [reviewer], { cc })],
         });
-        if (index === 2) {
+        if (otherForm) {
           // 檢查器擋得到別張表單;直接改已發布的版本,模擬送出時不檢查的情況
           await world.connection
             .collection("workflow_versions")
@@ -1040,9 +1128,12 @@ describe("逾時提醒與知會", () => {
         const submitted = await submitLeave(world);
         const instanceId = await latestInstanceId(submitted.id);
         const warn = jest.spyOn(Logger.prototype, "warn");
-        await decideOn(world, reviewer, submitted.id, "APPROVE");
-        expect(warnedWith(warn, reason)).toBe(true);
-        warn.mockRestore();
+        try {
+          await decideOn(world, reviewer, submitted.id, "APPROVE");
+          expect(warnedWith(warn, reason)).toBe(true);
+        } finally {
+          warn.mockRestore();
+        }
         const sent = await world.connection
           .collection("notifications")
           .countDocuments({ type: WORKFLOW_CC, refId: instanceId });
