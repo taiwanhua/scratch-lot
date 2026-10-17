@@ -196,10 +196,11 @@ export interface PlanItem {
   previousAssigneeIds: string[];
   assigneeState: AssigneeState;
   /**
-   * B15 代理人:進關時原審核者在代理期間、任務改派給代理人(`assigneeId`)時,這裡記**原審核者**;
-   * 沒有代理 → 沒有這個欄位(或 null)。流程管理者改派後清成 null(新承辦人不是代理)。
+   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的**原審核者們**(依名單順序)。
+   * 多位審核者委託同一位代理人時合成這一項:代理人一票作用到所有被代理者;代理人本人原本就在名單時,
+   * 這一項仍是他自己的、另記他代理的人。沒有代理 → 沒有這個欄位(或空陣列)。流程管理者改派後清空。
    */
-  delegatorId?: string | null;
+  delegatorIds?: string[];
 }
 
 /** 審核決定(存值與任務狀態同名,方便投影)。 */
@@ -301,8 +302,11 @@ export interface HistoryEvent {
   reason?: HistoryReason | null;
   /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
   code?: string | null;
-  /** 只有 `task_created`:這張任務是代理派任時的原審核者(時間軸「由 <user> 代理 <delegator>」)。 */
-  delegatorId?: string | null;
+  /**
+   * `task_created` 與決定事件(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <user> 代理 <delegators>」)。沒有代理 → 沒有這個欄位(或空陣列)。
+   */
+  delegatorIds?: string[];
 }
 
 /** 全案終局採用的那一筆決定(只能從 null 寫成有值一次)。 */

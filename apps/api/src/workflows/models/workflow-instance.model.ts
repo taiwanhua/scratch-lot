@@ -99,9 +99,12 @@ export class WorkflowPlanItemModel {
   @Field(() => String)
   assigneeState!: string;
 
-  /** B15 代理人:這一項是代理派任時的原審核者(`assignee` 是代理人);沒有代理 / 已改派 → null。 */
-  @Field(() => FormUserRef, { nullable: true })
-  delegator!: FormUserRef | null;
+  /**
+   * B15 代理人:這一項由 `assignee`(代理人)承接的原審核者們(多位委託同一人時都列;代理人本人也是審核者時
+   * 列他代理的人)。沒有代理 / 已改派 → 空陣列。
+   */
+  @Field(() => [FormUserRef])
+  delegators!: FormUserRef[];
 
   /**
    * 這一項對應的任務 id(`reassignTask` 要它)。**只給流程管理者**(`abilities.canManage`):
@@ -204,9 +207,12 @@ export class WorkflowHistoryEventModel {
   @Field(() => String, { nullable: true })
   code!: string | null;
 
-  /** 只有 `task_created`:代理派任時的原審核者(時間軸「由 <user> 代理 <delegator>」);其他 null。 */
-  @Field(() => FormUserRef, { nullable: true })
-  delegator!: FormUserRef | null;
+  /**
+   * `task_created` 與決定(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <user> 代理 <delegators>」);其他事件空陣列。
+   */
+  @Field(() => [FormUserRef])
+  delegators!: FormUserRef[];
 }
 
 @ObjectType()

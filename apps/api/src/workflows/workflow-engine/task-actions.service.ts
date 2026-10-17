@@ -306,6 +306,8 @@ export class TaskActionsService {
             taskKey: task.taskKey,
             userId: me,
             comment: comment === "" ? null : comment,
+            // B15:代理人的這一票作用到他代理的所有人,時間軸寫「由 X 代理 A、B 核准」
+            delegatorIds: delegatorIdsOf(instance, task.stepKey, task.taskKey),
           },
         },
         $inc: { editVersion: 1 },
@@ -384,8 +386,8 @@ export class TaskActionsService {
         $set: {
           "steps.$[s].plan.$[p].assigneeId": toUserId,
           "steps.$[s].plan.$[p].assigneeState": "active",
-          // 改派後的承辦人不是代理(B15),不再記原審核者
-          "steps.$[s].plan.$[p].delegatorId": null,
+          // 改派後的承辦人不是代理(B15),不再記被代理者
+          "steps.$[s].plan.$[p].delegatorIds": [],
         },
         $push: {
           "steps.$[s].plan.$[p].previousAssigneeIds": item.assigneeId,
@@ -663,6 +665,17 @@ export class TaskActionsService {
 
 /** 任務 id 的形狀(Mongo ObjectId 的 24 位十六進位)。 */
 const OBJECT_ID_PATTERN = /^[\da-f]{24}$/i;
+
+/** B15:計畫裡這一項代理的原審核者們(決定事件帶著,時間軸寫「由 X 代理 A、B」);沒有 → 空陣列。 */
+function delegatorIdsOf(
+  instance: InstanceRecord,
+  stepKey: string,
+  taskKey: string,
+): Types.ObjectId[] {
+  const step = instance.steps.find((one) => one.stepKey === stepKey);
+  const item = step?.plan.find((one) => one.taskKey === taskKey);
+  return [...(item?.delegatorIds ?? [])];
+}
 
 function failed(
   taskId: string,

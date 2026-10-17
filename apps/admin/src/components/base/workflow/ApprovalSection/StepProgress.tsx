@@ -29,6 +29,7 @@ export interface StepProgressProps {
  */
 export const StepProgress = ({ instance }: StepProgressProps) => {
   const t = useTranslations("admin.approval.progress");
+  const tApproval = useTranslations("admin.approval");
   const tDecision = useTranslations("admin.approval.decisions");
 
   const stateLabel = (step: InstanceStep): { tone: TagTone; label: string } => {
@@ -57,11 +58,13 @@ export const StepProgress = ({ instance }: StepProgressProps) => {
         const assignee = item.assignee.name ?? item.assignee.id;
         // B15 代理人:代理派任的那一項寫出代理的是誰
         const name =
-          item.delegator == null
+          item.delegators.length === 0
             ? assignee
             : t("assigneeDelegated", {
                 name: assignee,
-                delegator: item.delegator.name ?? item.delegator.id,
+                delegators: item.delegators
+                  .map((one) => one.name ?? one.id)
+                  .join(tApproval("nameSeparator")),
               });
         if (decision !== undefined) {
           return t("assigneeDecided", {

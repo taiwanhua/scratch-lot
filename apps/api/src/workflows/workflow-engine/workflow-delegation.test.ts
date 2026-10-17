@@ -49,16 +49,6 @@ const CREATE_DELEGATION = /* GraphQL */ `
   }
 `;
 
-const UPDATE_DELEGATION = /* GraphQL */ `
-  mutation UpdateMyDelegation($input: UpdateMyDelegationInput!) {
-    updateMyDelegation(input: $input) {
-      delegation {
-        id
-      }
-    }
-  }
-`;
-
 const DELETE_DELEGATION = /* GraphQL */ `
   mutation DeleteMyDelegation($input: DeleteMyDelegationInput!) {
     deleteMyDelegation(input: $input) {
@@ -77,7 +67,7 @@ const INSTANCE_DELEGATION = /* GraphQL */ `
             assignee {
               id
             }
-            delegator {
+            delegators {
               id
               name
             }
@@ -88,7 +78,7 @@ const INSTANCE_DELEGATION = /* GraphQL */ `
           user {
             id
           }
-          delegator {
+          delegators {
             id
           }
         }
@@ -100,7 +90,7 @@ const INSTANCE_DELEGATION = /* GraphQL */ `
 interface RawPlanItem {
   taskKey: string;
   assigneeId: Types.ObjectId;
-  delegatorId: Types.ObjectId | null;
+  delegatorIds?: Types.ObjectId[];
 }
 
 interface RawInstance {
@@ -108,12 +98,36 @@ interface RawInstance {
   history: {
     kind: string;
     userId: Types.ObjectId | null;
-    delegatorId?: Types.ObjectId | null;
+    delegatorIds?: Types.ObjectId[];
   }[];
 }
 
 function planOf(instance: RawInstance, stepKey: string): RawPlanItem[] {
   return instance.steps.find((step) => step.stepKey === stepKey)?.plan ?? [];
+}
+
+/** 計畫項目 / 事件記的被代理者(字串;沒有 = 空陣列)。 */
+function delegatorsIn(entry: { delegatorIds?: Types.ObjectId[] } | undefined) {
+  return (entry?.delegatorIds ?? []).map(String);
+}
+
+interface DelegationView {
+  workflowInstance: {
+    instance: {
+      steps: {
+        stepKey: string;
+        plan: {
+          assignee: { id: string };
+          delegators: { id: string; name: string | null }[];
+        }[];
+      }[];
+      history: {
+        kind: string;
+        user: { id: string } | null;
+        delegators: { id: string }[];
+      }[];
+    };
+  };
 }
 
 /**
@@ -211,12 +225,12 @@ describe("代理人:進關改派給代理人", () => {
     expect(planOf(raw, "first")).toEqual([
       expect.objectContaining({
         assigneeId: deputy.userId,
-        delegatorId: original.userId,
+        delegatorIds: [original.userId],
       }),
     ]);
     const created = raw.history.find((event) => event.kind === "task_created");
     expect(String(created?.userId)).toBe(String(deputy.userId));
-    expect(String(created?.delegatorId)).toBe(String(original.userId));
+    expect(delegatorsIn(created)).toEqual([String(original.userId)]);
 
     // 任務在代理人名下,原審核者沒有
     expect(await pendingStep(deputy, submitted.id)).toBe("first");
@@ -224,32 +238,22 @@ describe("代理人:進關改派給代理人", () => {
 
     // GraphQL:計畫項目與 task_created 都帶原審核者
     const row = await submission(world, world.applicant, submitted.id);
-    const data = await ok<{
-      workflowInstance: {
-        instance: {
-          steps: {
-            stepKey: string;
-            plan: {
-              assignee: { id: string };
-              delegator: { id: string; name: string | null } | null;
-            }[];
-          }[];
-          history: {
-            kind: string;
-            user: { id: string } | null;
-            delegator: { id: string } | null;
-          }[];
-        };
-      };
-    }>(api, world.applicant.token, INSTANCE_DELEGATION, {
-      id: row.currentInstanceId,
-    });
+    const data = await ok<DelegationView>(
+      api,
+      world.applicant.token,
+      INSTANCE_DELEGATION,
+      {
+        id: row.currentInstanceId,
+      },
+    );
     const step = data.workflowInstance.instance.steps.find(
       (one) => one.stepKey === "first",
     );
     expect(step?.plan[0]?.assignee.id).toBe(String(deputy.userId));
-    expect(step?.plan[0]?.delegator?.id).toBe(String(original.userId));
-    expect(step?.plan[0]?.delegator?.name).not.toBeNull();
+    expect(step?.plan[0]?.delegators.map((one) => one.id)).toEqual([
+      String(original.userId),
+    ]);
+    expect(step?.plan[0]?.delegators[0]?.name).not.toBeNull();
     expect(
       data.workflowInstance.instance.history.find(
         (event) => event.kind === "task_created",
@@ -257,7 +261,7 @@ describe("代理人:進關改派給代理人", () => {
     ).toEqual({
       kind: "task_created",
       user: { id: String(deputy.userId) },
-      delegator: { id: String(original.userId) },
+      delegators: [{ id: String(original.userId) }],
     });
 
     // 讀取:代理人以任務持有者規則讀得到他審的修訂
@@ -269,7 +273,7 @@ describe("代理人:進關改派給代理人", () => {
     expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
   });
 
-  it("代理人承接的任務經流程管理者改派 → 新承辦人不是代理,delegator 清成 null", async () => {
+  it("代理人承接的任務經流程管理者改派 → 新承辦人不是代理,被代理者清空", async () => {
     const [original, deputy, other] = await freshStaff();
     await delegate(original, deputy);
     await bindNew({ steps: [usersStep("first", [original])] });
@@ -283,29 +287,22 @@ describe("代理人:進關改派給代理人", () => {
     expect(plan.map((item) => String(item.assigneeId))).toEqual([
       String(other.userId),
     ]);
-    expect(plan[0]?.delegatorId ?? null).toBeNull();
+    expect(delegatorsIn(plan[0])).toEqual([]);
     const row = await submission(world, world.applicant, submitted.id);
-    const data = await ok<{
-      workflowInstance: {
-        instance: {
-          steps: {
-            stepKey: string;
-            plan: {
-              assignee: { id: string };
-              delegator: { id: string } | null;
-            }[];
-          }[];
-        };
-      };
-    }>(api, world.applicant.token, INSTANCE_DELEGATION, {
-      id: row.currentInstanceId,
-    });
+    const data = await ok<DelegationView>(
+      api,
+      world.applicant.token,
+      INSTANCE_DELEGATION,
+      {
+        id: row.currentInstanceId,
+      },
+    );
     const [item] =
       data.workflowInstance.instance.steps.find(
         (one) => one.stepKey === "first",
       )?.plan ?? [];
     expect(item?.assignee.id).toBe(String(other.userId));
-    expect(item?.delegator).toBeNull();
+    expect(item?.delegators).toEqual([]);
   });
 
   it("代理人停用 → 照原審核者派任並記 log", async () => {
@@ -320,7 +317,7 @@ describe("代理人:進關改派給代理人", () => {
       expect(plan.map((item) => String(item.assigneeId))).toEqual([
         String(original.userId),
       ]);
-      expect(plan[0]?.delegatorId ?? null).toBeNull();
+      expect(delegatorsIn(plan[0])).toEqual([]);
       expect(
         warn.mock.calls.some(([message]) =>
           String(message).includes(String(deputy.userId)),
@@ -360,7 +357,7 @@ describe("代理人:進關改派給代理人", () => {
     expect(plan.map((item) => String(item.assigneeId))).toEqual([
       String(original.userId),
     ]);
-    expect(plan[0]?.delegatorId ?? null).toBeNull();
+    expect(delegatorsIn(plan[0])).toEqual([]);
   });
 
   it("原審核者本人就是申請人 → 不換成他的代理人:沒開 B5 照規則剔除(阻擋);開了 B5 自動通過", async () => {
@@ -388,7 +385,7 @@ describe("代理人:進關改派給代理人", () => {
     expect(plan.map((item) => String(item.assigneeId))).toEqual([
       String(applicant.userId),
     ]);
-    expect(plan[0]?.delegatorId ?? null).toBeNull();
+    expect(delegatorsIn(plan[0])).toEqual([]);
     const row = await submission(world, applicant, auto.id);
     expect(row.status).toBe("COMPLETED");
   });
@@ -404,6 +401,100 @@ describe("代理人:進關改派給代理人", () => {
     expect(await tasksOn(deputy, submitted.id)).toEqual([]);
   });
 
+  it("會簽兩位都委託同一位代理人 → 代理人只有一張待辦,一次核准就算完兩位;時間軸「由 C 代理 A、B 核准」", async () => {
+    const [a, b, c] = await freshStaff();
+    await delegate(a, c);
+    await delegate(b, c);
+    await bindNew({ steps: [usersStep("first", [a, b], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(c.userId),
+    ]);
+    expect(delegatorsIn(plan[0])).toEqual([String(a.userId), String(b.userId)]);
+    expect(await tasksOn(c, submitted.id)).toHaveLength(1);
+
+    await decideOn(world, c, submitted.id, "APPROVE");
+    expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+    const raw = await latestInstance(submitted.id);
+    const approved = raw.history.find((event) => event.kind === "approved");
+    expect(String(approved?.userId)).toBe(String(c.userId));
+    expect(delegatorsIn(approved)).toEqual([
+      String(a.userId),
+      String(b.userId),
+    ]);
+  });
+
+  it("代理人本人原本就在會簽名單 → 仍是他自己的一張待辦,另記「A 由 C 代理」;一票算完", async () => {
+    const [a, c] = await freshStaff();
+    await delegate(a, c);
+    await bindNew({ steps: [usersStep("first", [a, c], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(c.userId),
+    ]);
+    expect(delegatorsIn(plan[0])).toEqual([String(a.userId)]);
+    const row = await submission(world, world.applicant, submitted.id);
+    const data = await ok<DelegationView>(
+      api,
+      world.applicant.token,
+      INSTANCE_DELEGATION,
+      { id: row.currentInstanceId },
+    );
+    expect(
+      data.workflowInstance.instance.history.find(
+        (event) => event.kind === "task_created",
+      ),
+    ).toEqual({
+      kind: "task_created",
+      user: { id: String(c.userId) },
+      delegators: [{ id: String(a.userId) }],
+    });
+    await decideOn(world, c, submitted.id, "APPROVE");
+    expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+  });
+
+  it("會簽 A、B 只有 A 在代理期間(A → C)→ C 承接 A 那一項、B 照常;兩張待辦、兩票", async () => {
+    const [a, b, c] = await freshStaff();
+    await delegate(a, c);
+    await bindNew({ steps: [usersStep("first", [a, b], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(c.userId),
+      String(b.userId),
+    ]);
+    expect(plan.map((item) => delegatorsIn(item))).toEqual([
+      [String(a.userId)],
+      [],
+    ]);
+    await decideOn(world, c, submitted.id, "APPROVE");
+    expect(await submissionStatus(world, submitted.id)).toBe("REVIEWING");
+    await decideOn(world, b, submitted.id, "APPROVE");
+    expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+  });
+
+  it("會簽兩位委託同一位代理人,代理人退回 → 一次作用到兩位(整張退回),事件記兩位被代理者", async () => {
+    const [a, b, c] = await freshStaff();
+    await delegate(a, c);
+    await delegate(b, c);
+    await bindNew({ steps: [usersStep("first", [a, b], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    await decideOn(world, c, submitted.id, "RETURN");
+    expect(await submissionStatus(world, submitted.id)).toBe("RETURNED");
+    const raw = await latestInstance(submitted.id);
+    const returned = raw.history.find((event) => event.kind === "returned");
+    expect(delegatorsIn(returned)).toEqual([
+      String(a.userId),
+      String(b.userId),
+    ]);
+  });
+
   it("B 代理 A,派任時 B 也在自己的代理期間(B → C)→ 仍派給 B,不轉給 C", async () => {
     const [a, b, c] = await freshStaff();
     await delegate(a, b);
@@ -414,19 +505,16 @@ describe("代理人:進關改派給代理人", () => {
     expect(plan.map((item) => String(item.assigneeId))).toEqual([
       String(b.userId),
     ]);
-    expect(String(plan[0]?.delegatorId)).toBe(String(a.userId));
+    expect(delegatorsIn(plan[0])).toEqual([String(a.userId)]);
   });
 
-  it("進行中的代理改迄日或刪除 → 已派出的任務不變;之後進關不再改派", async () => {
+  it("進行中的代理刪除 → 已派出的任務不變;之後進關不再改派", async () => {
     const [original, deputy] = await freshStaff();
     const id = await delegate(original, deputy);
     await bindNew({
       steps: [usersStep("first", [original]), usersStep("second", [original])],
     });
     const submitted = await submitLeave(world);
-    await ok(api, original.token, UPDATE_DELEGATION, {
-      input: { id, endAt: new Date(Date.now() + 2 * HOUR_MS).toISOString() },
-    });
     expect(await pendingStep(deputy, submitted.id)).toBe("first");
     await ok(api, original.token, DELETE_DELEGATION, { input: { id } });
     expect(await pendingStep(deputy, submitted.id)).toBe("first");

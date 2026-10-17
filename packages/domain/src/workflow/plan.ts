@@ -177,7 +177,7 @@ export function autoApprovalCandidates(
 /**
  * 派任計畫:解析到的審核者去重、剔除申請人(不能自審),每人一項,`taskKey` 依序編。
  * `keepApplicant`(申請人的 B5 自動通過**成立**,已過守門)時申請人留在計畫裡。
- * `delegatorOf`(B15 代理人;代理人 id → 原審核者 id)有記的那一項帶 `delegatorId`。
+ * `delegatorOf`(B15 代理人;代理人 id → 原審核者 id 們)有記的那一項帶 `delegatorIds`。
  * 剔除後為空 → 空陣列(呼叫端依來源決定:`manager` 往上一層在解析時就做完了,其餘阻擋)。
  */
 export function buildPlan(
@@ -186,20 +186,20 @@ export function buildPlan(
   applicantId: string,
   options: {
     keepApplicant?: boolean;
-    delegatorOf?: Readonly<Record<string, string>>;
+    delegatorOf?: Readonly<Record<string, readonly string[]>>;
   } = {},
 ): PlanItem[] {
   const unique = [...new Set(assigneeIds)].filter(
     (id) => options.keepApplicant === true || id !== applicantId,
   );
   return unique.map((assigneeId, index) => {
-    const delegatorId = options.delegatorOf?.[assigneeId];
+    const delegatorIds = options.delegatorOf?.[assigneeId] ?? [];
     return {
       taskKey: taskKeyOf(stepKey, index + 1),
       assigneeId,
       previousAssigneeIds: [],
       assigneeState: "active",
-      ...(delegatorId !== undefined && { delegatorId }),
+      ...(delegatorIds.length > 0 && { delegatorIds: [...delegatorIds] }),
     };
   });
 }

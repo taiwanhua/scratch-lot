@@ -24,11 +24,22 @@ const BLOCKED_REASONS: ReadonlySet<string> = new Set([
   "auto_prior_approver",
 ]);
 
+/** B15 代理人:派任與人按的決定帶了被代理者時,寫「由 X 代理 A、B …」。 */
+const DELEGATED_KINDS: ReadonlySet<string> = new Set([
+  "task_created",
+  "approved",
+  "rejected",
+  "returned",
+]);
+
 const textKeyOf = (event: HistoryEvent): string => {
   const reason = event.reason ?? null;
-  // B15 代理人:派給代理人的任務寫「由 X 代理 Y」
-  if (event.kind === "task_created" && event.delegator != null) {
-    return "taskDelegated";
+  if (
+    reason === null &&
+    event.delegators.length > 0 &&
+    DELEGATED_KINDS.has(event.kind)
+  ) {
+    return `delegated.${event.kind}`;
   }
   if (event.kind === BLOCKED_KIND) {
     return reason !== null && BLOCKED_REASONS.has(reason)
@@ -51,6 +62,7 @@ export interface ApprovalTimelineProps {
  */
 export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
   const t = useTranslations("admin.approval.timeline");
+  const tApproval = useTranslations("admin.approval");
   const tRoot = useTranslations();
   const temporalText = useTemporalText();
   // 擋下的專案文案沿用 `admin.lifecycle.<碼>`;專案沒有文案時用中性的通用句
@@ -97,7 +109,9 @@ export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
                   step: stepName(event.stepKey),
                   user: event.user?.name ?? "—",
                   toUser: event.toUser?.name ?? "—",
-                  delegator: event.delegator?.name ?? "—",
+                  delegators: event.delegators
+                    .map((one) => one.name ?? "—")
+                    .join(tApproval("nameSeparator")),
                   message: blockedMessage(event.code),
                 })}
               </Typography>

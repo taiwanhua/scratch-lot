@@ -56,22 +56,8 @@ export class CreateMyDelegationInput {
 }
 
 /**
- * 改迄日與備註(未結束的才能改;已派出的任務不變)。代理人與起日不改(要換就刪掉重設)。
- * `note` 缺席 = 不動;`null` / 空白 = 清掉。
+ * 刪除(未結束的才能刪;已派出的任務不變)。不提供改結束日:提早結束 = 刪除,延長 = 刪除後重新設定。
  */
-@InputType()
-export class UpdateMyDelegationInput {
-  @Field(() => ID)
-  id!: string;
-
-  @Field(() => GraphQLISODateTime)
-  endAt!: Date;
-
-  @Field(() => String, { nullable: true })
-  note?: string | null;
-}
-
-/** 刪除(未結束的才能刪;已派出的任務不變)。 */
 @InputType()
 export class DeleteMyDelegationInput {
   @Field(() => ID)

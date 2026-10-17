@@ -2072,6 +2072,7 @@
     }
   },
   "approval": {
+    "nameSeparator": ", ",
     "submissionStatus": {
       "DRAFT": "Draft",
       "REVIEWING": "In review",
@@ -2111,7 +2112,7 @@
       "noAssignee": "No reviewer found",
       "assigneeDecided": "{name} ({decision})",
       "assigneeInvalid": "{name} (invalid)",
-      "assigneeDelegated": "{name} (on behalf of {delegator})",
+      "assigneeDelegated": "{name} (on behalf of {delegators})",
       "statuses": {
         "PENDING": "Not reached",
         "ACTIVE": "In review",
@@ -2158,7 +2159,12 @@
         "auto_prior_approver": "\"{step}\" {user} already approved at an earlier step, but automatic approval did not apply: {message}"
       },
       "autoApproveBlockedGeneric": "The conditions for automatic approval are not met right now",
-      "taskDelegated": "\"{step}\" assigned to {user} on behalf of {delegator}",
+      "delegated": {
+        "task_created": "\"{step}\" assigned to {user} on behalf of {delegators}",
+        "approved": "{user} approved \"{step}\" on behalf of {delegators}",
+        "rejected": "{user} rejected \"{step}\" on behalf of {delegators}",
+        "returned": "{user} returned \"{step}\" for changes on behalf of {delegators}"
+      },
       "reasons": {
         "skip_orgs": "\"{step}\" skipped: the applicant belongs to a specified organization",
         "skip_condition": "\"{step}\" skipped by its condition",

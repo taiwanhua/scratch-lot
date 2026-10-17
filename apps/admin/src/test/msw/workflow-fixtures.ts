@@ -312,6 +312,7 @@ export const planItem = (
   assignee,
   previousAssignees: [],
   assigneeState: "active",
+  delegators: [],
   taskId: null,
   ...overrides,
 });
@@ -378,6 +379,7 @@ export const instanceFragment = (
       toUser: null,
       comment: null,
       result: null,
+      delegators: [],
     },
     {
       at: STAMP,
@@ -388,6 +390,7 @@ export const instanceFragment = (
       toUser: null,
       comment: null,
       result: null,
+      delegators: [],
     },
     {
       at: STAMP,
@@ -398,6 +401,7 @@ export const instanceFragment = (
       toUser: null,
       comment: null,
       result: null,
+      delegators: [],
     },
   ],
   outcome: null,

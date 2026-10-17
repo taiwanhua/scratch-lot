@@ -56,15 +56,15 @@ function planItemOf(item: {
   assigneeId: IdLike;
   previousAssigneeIds: readonly IdLike[];
   assigneeState: PlanItem["assigneeState"];
-  delegatorId?: IdLike | null;
+  delegatorIds?: readonly IdLike[] | null;
 }): PlanItem {
-  const delegatorId = nullableId(item.delegatorId);
+  const delegatorIds = (item.delegatorIds ?? []).map((id) => idOf(id));
   return {
     taskKey: item.taskKey,
     assigneeId: idOf(item.assigneeId),
     previousAssigneeIds: item.previousAssigneeIds.map((id) => idOf(id)),
     assigneeState: item.assigneeState,
-    ...(delegatorId !== null && { delegatorId }),
+    ...(delegatorIds.length > 0 && { delegatorIds }),
   };
 }
 
@@ -95,9 +95,9 @@ export function historyEventOf(event: {
   result?: NotifiedResult | null;
   reason?: HistoryReason | null;
   code?: string | null;
-  delegatorId?: IdLike | null;
+  delegatorIds?: readonly IdLike[] | null;
 }): HistoryEvent {
-  const delegatorId = nullableId(event.delegatorId);
+  const delegatorIds = (event.delegatorIds ?? []).map((id) => idOf(id));
   return {
     at: event.at,
     kind: event.kind,
@@ -109,7 +109,7 @@ export function historyEventOf(event: {
     result: event.result ?? null,
     reason: event.reason ?? null,
     code: event.code ?? null,
-    ...(delegatorId !== null && { delegatorId }),
+    ...(delegatorIds.length > 0 && { delegatorIds }),
   };
 }
 
@@ -187,7 +187,7 @@ export function historyEventDocument(
     result: event.result ?? null,
     reason: event.reason ?? null,
     code: event.code ?? null,
-    delegatorId: event.delegatorId ? toObjectId(event.delegatorId) : null,
+    delegatorIds: (event.delegatorIds ?? []).map((id) => toObjectId(id)),
   };
 }
 
@@ -210,7 +210,7 @@ export function planItemDocument(item: PlanItem): Record<string, unknown> {
     assigneeId: toObjectId(item.assigneeId),
     previousAssigneeIds: item.previousAssigneeIds.map((id) => toObjectId(id)),
     assigneeState: item.assigneeState,
-    delegatorId: item.delegatorId ? toObjectId(item.delegatorId) : null,
+    delegatorIds: (item.delegatorIds ?? []).map((id) => toObjectId(id)),
   };
 }
 

@@ -20,4 +20,5 @@ export const historyEvent = (
   result: null,
   reason,
   code,
+  delegators: [],
 });

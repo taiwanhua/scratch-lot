@@ -42,9 +42,12 @@ export class WorkflowPlanItem {
   @Prop({ type: String, required: true, enum: ASSIGNEE_STATES })
   assigneeState!: AssigneeState;
 
-  /** B15 代理人:進關時原審核者在代理期間、改派給代理人(`assigneeId`)時記原審核者;沒有代理 / 改派後 null。 */
-  @Prop({ type: Types.ObjectId, default: null })
-  delegatorId!: Types.ObjectId | null;
+  /**
+   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的原審核者們;多位委託同一人時合成這一項。
+   * 沒有代理 / 流程管理者改派後為空陣列。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  delegatorIds!: Types.ObjectId[];
 }
 
 const WorkflowPlanItemSchema = SchemaFactory.createForClass(WorkflowPlanItem);
@@ -127,9 +130,12 @@ export class WorkflowHistoryEvent {
   @Prop({ type: String, default: null })
   code!: string | null;
 
-  /** 只有 `task_created`:代理派任時的原審核者(時間軸「由 <userId> 代理 <delegatorId>」);其他 null。 */
-  @Prop({ type: Types.ObjectId, default: null })
-  delegatorId!: Types.ObjectId | null;
+  /**
+   * `task_created` 與決定(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <userId> 代理 <delegatorIds>」);其他事件空陣列。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  delegatorIds!: Types.ObjectId[];
 }
 
 const WorkflowHistoryEventSchema =

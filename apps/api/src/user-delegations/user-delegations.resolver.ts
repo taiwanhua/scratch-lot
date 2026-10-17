@@ -7,7 +7,6 @@ import {
   DeleteMyDelegationInput,
   MyDelegateCandidatesInput,
   MyDelegationsInput,
-  UpdateMyDelegationInput,
 } from "./dto/user-delegations.input";
 import {
   DeleteMyDelegationPayload,
@@ -47,14 +46,6 @@ export class UserDelegationsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<MyDelegationPayload> {
     return { delegation: await this.service.create(operator, input) };
-  }
-
-  @Mutation(() => MyDelegationPayload, { name: "updateMyDelegation" })
-  async updateMyDelegation(
-    @Args("input") input: UpdateMyDelegationInput,
-    @CurrentOperator() operator: OperatorContext,
-  ): Promise<MyDelegationPayload> {
-    return { delegation: await this.service.update(operator, input) };
   }
 
   @Mutation(() => DeleteMyDelegationPayload, { name: "deleteMyDelegation" })

@@ -350,6 +350,7 @@ export const workflowRuntimeWorld = (
         assignee: { id: input.userId, name: input.userId },
         previousAssignees: [],
         assigneeState: "active",
+        delegators: [],
         taskId: null,
       });
       if (step !== undefined) {

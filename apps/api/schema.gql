@@ -1328,7 +1328,6 @@ type Mutation {
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
-  updateMyDelegation(input: UpdateMyDelegationInput!): MyDelegationPayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
@@ -2367,12 +2366,6 @@ input UpdateFormSubmissionInput {
   values: JSONObject!
 }
 
-input UpdateMyDelegationInput {
-  endAt: DateTime!
-  id: ID!
-  note: String
-}
-
 input UpdateMyPreferencesInput {
   settings: JSONObject!
 }
@@ -2654,7 +2647,7 @@ type WorkflowHistoryEventModel {
   at: DateTime!
   code: String
   comment: String
-  delegator: FormUserRef
+  delegators: [FormUserRef!]!
   kind: String!
   reason: String
   result: String
@@ -2775,7 +2768,7 @@ type WorkflowPayload {
 type WorkflowPlanItemModel {
   assignee: FormUserRef!
   assigneeState: String!
-  delegator: FormUserRef
+  delegators: [FormUserRef!]!
   previousAssignees: [FormUserRef!]!
   taskId: ID
   taskKey: String!

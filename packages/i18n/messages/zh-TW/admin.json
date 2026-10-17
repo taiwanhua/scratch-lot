@@ -2072,6 +2072,7 @@
     }
   },
   "approval": {
+    "nameSeparator": "、",
     "submissionStatus": {
       "DRAFT": "草稿",
       "REVIEWING": "審核中",
@@ -2111,7 +2112,7 @@
       "noAssignee": "找不到審核者",
       "assigneeDecided": "{name}({decision})",
       "assigneeInvalid": "{name}(已失效)",
-      "assigneeDelegated": "{name}(代理 {delegator})",
+      "assigneeDelegated": "{name}(代理 {delegators})",
       "statuses": {
         "PENDING": "還沒到",
         "ACTIVE": "審核中",
@@ -2158,7 +2159,12 @@
         "auto_prior_approver": "「{step}」{user} 已在前關核准,自動通過未成立:{message}"
       },
       "autoApproveBlockedGeneric": "目前不符合自動通過的條件",
-      "taskDelegated": "「{step}」由 {user} 代理 {delegator}",
+      "delegated": {
+        "task_created": "「{step}」由 {user} 代理 {delegators}",
+        "approved": "「{step}」由 {user} 代理 {delegators} 核准",
+        "rejected": "「{step}」由 {user} 代理 {delegators} 駁回",
+        "returned": "「{step}」由 {user} 代理 {delegators} 退回修改"
+      },
       "reasons": {
         "skip_orgs": "「{step}」申請人屬於指定的組織,略過",
         "skip_condition": "「{step}」符合跳過條件,略過",
