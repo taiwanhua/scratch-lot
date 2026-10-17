@@ -19,6 +19,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { checkFormKeyOf, definitionOf } from "@/lib/base/workflow/definition";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
+import { designerPropertyPanelSx } from "../../designer-layout";
 import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
@@ -243,7 +244,7 @@ export const FlowVersionViewer = ({
         <Box
           component="section"
           aria-label={t("viewingProperties")}
-          sx={{ width: 360, flexShrink: 0 }}
+          sx={designerPropertyPanelSx}
         >
           {renderPanel()}
         </Box>

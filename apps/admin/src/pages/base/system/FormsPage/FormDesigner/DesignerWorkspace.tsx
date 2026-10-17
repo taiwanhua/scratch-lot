@@ -26,6 +26,10 @@ import {
   sectionReferences,
 } from "@/lib/base/form-engine/field-references";
 
+import {
+  designerPropertyPanelSx,
+  designerWorkspaceSx,
+} from "../../designer-layout";
 import { ComponentPalette } from "./ComponentPalette";
 import { DeleteFieldDialog } from "./DeleteFieldDialog";
 import { DeleteSectionDialog } from "./DeleteSectionDialog";
@@ -36,7 +40,6 @@ import { FormSettingsPanel } from "./FormSettingsPanel/FormSettingsPanel";
 import { IssueList } from "./IssueList";
 import { FieldPropertyPanel } from "./PropertyPanel/FieldPropertyPanel";
 import { SectionPropertyPanel } from "./PropertyPanel/SectionPropertyPanel";
-import { propertyPanelSx, workspaceSx } from "./designer-layout";
 import { useDesignerSave } from "./useDesignerSave";
 import { useDesignerState } from "./useDesignerState";
 
@@ -156,7 +159,7 @@ export const DesignerWorkspace = ({
           isDirty={state.isDirty}
         />
       ) : (
-        <Stack direction="row" spacing={2} sx={workspaceSx}>
+        <Stack direction="row" spacing={2} sx={designerWorkspaceSx}>
           <ComponentPalette
             onAddField={(type: FieldType) => {
               state.add(
@@ -194,7 +197,7 @@ export const DesignerWorkspace = ({
           <Box
             component="section"
             aria-label={t("properties")}
-            sx={propertyPanelSx}
+            sx={designerPropertyPanelSx}
           >
             {sectionPanel ??
               (selected === null ? (

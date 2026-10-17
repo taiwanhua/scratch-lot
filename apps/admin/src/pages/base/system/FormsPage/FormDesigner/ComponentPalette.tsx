@@ -5,15 +5,18 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  designerPaletteDirection,
+  designerPaletteSx,
+} from "../../designer-layout";
 import { PaletteItem } from "./PaletteItem";
-import { paletteDirection, paletteSx } from "./designer-layout";
 
 export interface ComponentPaletteProps {
   onAddField: (type: FieldType) => void;
   onAddSection: () => void;
 }
 
-/** 設計器左欄(`xl` 以下為畫布上方一列,`designer-layout.ts`):欄位型別(拖進畫布或點擊新增)+ 新增分區。 */
+/** 設計器左欄(`xl` 以下為畫布上方一列,`pages/base/system/designer-layout.ts`):欄位型別(拖進畫布或點擊新增)+ 新增分區。 */
 export const ComponentPalette = ({
   onAddField,
   onAddSection,
@@ -24,9 +27,9 @@ export const ComponentPalette = ({
     <Stack
       component="section"
       aria-label={t("palette")}
-      direction={paletteDirection}
+      direction={designerPaletteDirection}
       spacing={1}
-      sx={paletteSx}
+      sx={designerPaletteSx}
     >
       <Typography variant="subtitle2">{t("palette")}</Typography>
       {FIELD_TYPES.map((type) => (

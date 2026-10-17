@@ -77,7 +77,7 @@ test/       測試支援
 
 ### 內容區的寬度與內距
 
-- **最小寬度**:只在 `sm` 以上套用。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;表單管理與流程管理(兩個設計器)在 `app/base/module-pages.ts` 的頁面宣告設定 `minWidth: "xl"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
+- **最小寬度**:只在 `sm` 以上套用。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
 - **內距**:手機寬(< `sm`)8px,其餘 24px(`MAIN_PADDING`)。
 - **高度**:殼外框固定 `100vh`,`<main>` 以 `flex: 1` + `minHeight: 0` 取得確定的高度,頁面可以撐滿(STYLE-08)。
 

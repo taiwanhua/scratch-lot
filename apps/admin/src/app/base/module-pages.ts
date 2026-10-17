@@ -58,7 +58,7 @@ export const DEMO_SUB_GROUP_FORM_MODULE_KEY = "demo.sub.form";
  * 沒登記的模組由殼顯示佔位頁(模組名)。路由本身仍由 `me.modules` 決定,這裡只決定「進去看到什麼」。
  *
  * `minWidth` = 內容區最小寬度的主題斷點(沒寫 = 殼層預設 `lg`;`AdminShell/shell-geometry.ts`)。
- * 設計器這種三欄工作區窄了會擠壞,宣告 `xl`:視窗比它窄時由內容區水平捲動。
+ * 目前底座沒有頁面宣告 `xl`:兩個設計器在 `xl` 以下自己換版(`pages/base/system/designer-layout.ts`)。
  */
 export const baseModulePages: ModulePageSource = {
   pages: [
@@ -80,11 +80,11 @@ export const baseModulePages: ModulePageSource = {
     { key: ROLE_MANAGER_MODULE_KEY, Page: RoleManagerPage },
     { key: DATA_SCOPE_MODULE_KEY, Page: DataScopePage },
     // 表單管理:懶載入(設計器不進首屏 bundle);沿用殼層預設 `lg`,設計器在 `xl` 以下自己換版
-    // (元件面板改成畫布上方一列、屬性面板收窄,`FormDesigner/designer-layout.ts`;T48)
+    // (`pages/base/system/designer-layout.ts`;T48)
     { key: FORMS_MODULE_KEY, Page: LazyFormsPage },
     // 審核流程(Spec 6b §8):流程管理、阻擋清單、申請中心兩頁籤與詳情,全部懶載入(不進首屏 bundle);
-    // 流程設計器(流程圖 + 關卡屬性)要 `xl`
-    { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage, minWidth: "xl" },
+    // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `lg`、在 `xl` 以下收窄屬性面板(T48)
+    { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage },
     { key: WORKFLOWS_BLOCKED_PAGE_KEY, Page: LazyWorkflowBlockedPage },
     { key: APPLY_CENTER_MODULE_KEY, Page: LazyApplyCenterPage },
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
