@@ -24,9 +24,9 @@ import type {
 } from "./types";
 import {
   type FieldValidationContext,
-  isPrefillCompatible,
   validateColumnContent,
 } from "./validate-fields";
+import { checkPrefillEntry } from "./validate-structure";
 
 /**
  * 檢查器的明細列段(Spec 6a §5「明細列」的檢查器一條):至少一個子欄、子欄 key 格式與重複、
@@ -230,7 +230,7 @@ function validateColumn(
 }
 
 /**
- * 列內帶入(《底座規格》3.2 B2c;沿用表單層帶入規則的對應表與檢查):目標是同一明細的其他子欄、
+ * 列內帶入(《底座規格》3.2 B2c;與表單層帶入規則共用一列的檢查 `checkPrefillEntry`):目標是同一明細的其他子欄、
  * 只能使用者填且不是引用子欄;來源欄位要在子欄來源的可回欄位內、型別相容(`isPrefillCompatible`)。
  */
 function validateColumnPrefill(
@@ -263,35 +263,17 @@ function validateColumnPrefill(
       ? undefined
       : context.lookupProviders?.[providerKey];
   for (const [index, entry] of (mapping as PrefillMapping[]).entries()) {
-    const at = { ...location, property: `prefill.mapping.${String(index)}` };
-    const target = siblings.get(entry.fieldKey);
-    if (target?.valueSource.kind !== "input" || target.type === "reference") {
-      collector.error(
-        "PREFILL_TARGET_NOT_INPUT",
-        `帶入目標 ${entry.fieldKey} 必須是同一列使用者填寫的子欄位(不能是列內公式、引用或自己)`,
-        at,
-      );
-      continue;
-    }
-    if (provider === undefined) {
-      continue;
-    }
-    const sourceType = provider.fields[entry.sourceField];
-    if (sourceType === undefined) {
-      collector.error(
-        "PREFILL_UNKNOWN_SOURCE_FIELD",
-        `來源沒有欄位 ${entry.sourceField}`,
-        at,
-      );
-      continue;
-    }
-    if (!isPrefillCompatible(sourceType, target.type)) {
-      collector.error(
-        "PREFILL_TYPE_INCOMPATIBLE",
-        `來源欄位 ${entry.sourceField}(${sourceType})不能帶入 ${target.type} 子欄位「${target.label}」`,
-        at,
-      );
-    }
+    checkPrefillEntry(
+      entry,
+      siblings.get(entry.fieldKey),
+      provider,
+      {
+        location: { ...location, property: `prefill.mapping.${String(index)}` },
+        targetMessage: `帶入目標 ${entry.fieldKey} 必須是同一列使用者填寫的子欄位(不能是列內公式、引用或自己)`,
+        stopOnBadTarget: true,
+      },
+      collector,
+    );
   }
 }
 

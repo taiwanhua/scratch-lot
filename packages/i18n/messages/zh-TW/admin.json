@@ -1933,6 +1933,8 @@
         "amount": "金額"
       },
       "refPrefill": "帶入規則「{label}」",
+      "refLookupFilter": "欄位 {field} 的連動篩選",
+      "refLookupFilterColumn": "明細 {field} 的子欄位 {column} 的連動篩選",
       "refListColumn": "模組的列表欄位配置(草稿外,不會變動)",
       "cancel": "取消",
       "confirm": "刪除"

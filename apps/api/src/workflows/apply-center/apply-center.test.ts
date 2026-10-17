@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import type { FieldDef } from "@repo/domain/form";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -190,6 +192,9 @@ describe("申請中心與讀取授權", () => {
     setup: {
       columns?: ReturnType<typeof column>[];
       rows?: ({ rowId: string } & Record<string, unknown>)[];
+      /** 表單層多加的欄位與它們的值(連動篩選引用的欄位) */
+      fields?: FieldDef[];
+      values?: Record<string, unknown>;
       beforeCopy?: () => Promise<void>;
     } = {},
   ): Promise<{
@@ -211,6 +216,7 @@ describe("申請中心與讀取授權", () => {
       formKey,
       definitionOf([
         field("title", "text"),
+        ...(setup.fields ?? []),
         field("items", "array", { columns }),
       ]),
       null,
@@ -228,6 +234,7 @@ describe("申請中心與讀取授權", () => {
     ];
     const draft = await createDraft(api, world.applicant.token, formKey, {
       title: "有明細的單",
+      ...setup.values,
       items: rows,
     });
     const submitted = await submitExisting(world, draft);
@@ -798,6 +805,47 @@ describe("申請中心與讀取授權", () => {
       expect(copied.map((row) => [row.name, row.who])).toEqual([
         ["甲", expect.objectContaining({ id: String(kept.userId) })],
         ["乙", null],
+      ]);
+    });
+
+    it("複製為新單:列內帶入的子欄保留值、不重新帶入;帶連動篩選的引用只驗讀得到,不因篩選被擋", async () => {
+      const kept = await person(
+        api,
+        world.connection,
+        world.kitchen,
+        world.tenant,
+      );
+      const who = column("who", "reference", {
+        source: {
+          provider: "user",
+          labelField: "name",
+          filter: { enabled: { var: "active_only" } },
+        },
+        prefill: { mapping: [{ sourceField: "name", fieldKey: "note" }] },
+      });
+      const { copied, clearedFields } = await copyArraySubmission(null, {
+        fields: [
+          field("active_only", "boolean", { widget: { kind: "checkbox" } }),
+        ],
+        values: { active_only: true },
+        columns: [column("note", "text"), who],
+        rows: [
+          {
+            rowId: randomUUID(),
+            note: "手寫的備註",
+            who: { id: String(kept.userId), label: null },
+          },
+        ],
+        beforeCopy: async () => {
+          // 送出後被引用的人停用了:此刻已不符篩選(enabled = true),複製時仍保留
+          await world.connection
+            .collection("users")
+            .updateOne({ _id: kept.userId }, { $set: { enabled: false } });
+        },
+      });
+      expect(clearedFields).toEqual([]);
+      expect(copied.map((row) => [row.note, row.who])).toEqual([
+        ["手寫的備註", expect.objectContaining({ id: String(kept.userId) })],
       ]);
     });
 

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 
-import type { ArrayColumnDef, FieldDef } from "@repo/domain/form";
+import type {
+  ArrayColumnDef,
+  ExpressionContext,
+  FieldDef,
+} from "@repo/domain/form";
 
 import { pickReferenceIn } from "./array-rows";
 import {
@@ -63,6 +67,11 @@ const fields: FieldDef[] = [
 ];
 
 const links = linkedReferencesOf(fields);
+const CTX: ExpressionContext = {
+  now: "2026-10-17T00:00:00.000Z",
+  timezone: "Asia/Taipei",
+  user: { id: "u1", orgId: "o1" },
+};
 const ref = (id: string) => ({ id, label: id });
 
 describe("連動篩選(B2d)填寫端", () => {
@@ -96,7 +105,7 @@ describe("連動篩選(B2d)填寫端", () => {
       links,
       before,
       { ...before, ship: ref("org-b") },
-      "ship",
+      CTX,
     );
     expect(values.main_book).toBeNull();
     expect(values.lines).toEqual([
@@ -115,7 +124,7 @@ describe("連動篩選(B2d)填寫端", () => {
         links,
         before,
         { ...before, ship: { id: "org-a", label: "改名" } },
-        "ship",
+        CTX,
       ).cleared,
     ).toEqual([]);
     expect(
@@ -124,9 +133,50 @@ describe("連動篩選(B2d)填寫端", () => {
         links,
         before,
         { ...before, main_book: ref("b2") },
-        "main_book",
+        CTX,
       ).values.main_book,
     ).toEqual(ref("b2"));
+  });
+
+  it("被引用的是計算欄位:它跟著輸入變了值也清(比收斂後的值)", () => {
+    const computedFields: FieldDef[] = [
+      {
+        key: "code",
+        label: "代碼",
+        type: "text",
+        widget: { kind: "textField" },
+        valueSource: { kind: "input" },
+      },
+      {
+        key: "store",
+        label: "分店",
+        type: "text",
+        widget: { kind: "textField" },
+        valueSource: { kind: "computed", expr: { var: "code" } },
+      },
+      {
+        key: "pick",
+        label: "本",
+        type: "reference",
+        widget: { kind: "referencePicker" },
+        valueSource: { kind: "input" },
+        source: {
+          provider: "project_book",
+          labelField: "name",
+          filter: { orgId: { var: "store" } },
+        },
+      },
+    ];
+    const before = { code: "A", pick: ref("b1") };
+    const result = clearLinkedReferences(
+      computedFields,
+      linkedReferencesOf(computedFields),
+      before,
+      { ...before, code: "B" },
+      CTX,
+    );
+    expect(result.values.pick).toBeNull();
+    expect(result.cleared).toEqual([{ label: "本" }]);
   });
 });
 

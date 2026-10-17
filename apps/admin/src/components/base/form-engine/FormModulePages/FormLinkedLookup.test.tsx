@@ -7,10 +7,11 @@ import {
   DEMO_FORM_ROUTES,
   SHOPPING_FORM_KEY,
   field,
+  submissionFragment,
 } from "@/test/msw/form-fixtures";
 import { findLatestSnackbar } from "@/test/snackbar";
 
-import { arrayDefinition, lineRow } from "./form-array-test-support";
+import { ROW_A, arrayDefinition, lineRow } from "./form-array-test-support";
 import { renderShopping, shoppingForm } from "./form-module-test-support";
 
 const CREATE_PATH = `${DEMO_FORM_ROUTES.createPage}/shopping_list`;
@@ -189,5 +190,135 @@ describe("連動篩選與列內帶入(《底座規格》3.2 B2c / B2d,填寫)", 
         within(lineRow(index)).getByRole("combobox", { name: "本" }),
       ).toHaveValue("");
     }
+  });
+});
+
+/** 另加「分店代碼」(文字)與表單層引用「主本」(篩選引用分店代碼),以及一條帶入規則把來源的 name 帶進分店代碼。 */
+const prefillDefinition = (): FormDefinition => {
+  const base = linkedDefinition();
+  return {
+    ...base,
+    fields: [
+      field("store_code", "分店代碼", "text"),
+      field("main_book", "主本", "reference", {
+        widget: { kind: "referencePicker" },
+        source: {
+          provider: "project_book",
+          labelField: "name",
+          filter: { code: { var: "store_code" } },
+        },
+      }),
+      ...base.fields,
+    ],
+    layout: {
+      sections: base.layout.sections.map((section, index) =>
+        index === 0
+          ? {
+              ...section,
+              rows: [
+                {
+                  cols: [
+                    { fieldKey: "store_code", span: 6 },
+                    { fieldKey: "main_book", span: 6 },
+                  ],
+                },
+                ...section.rows,
+              ],
+            }
+          : section,
+      ),
+    },
+    prefills: [
+      {
+        label: "從使用者帶入",
+        source: { provider: "user", labelField: "name" },
+        mapping: [{ sourceField: "name", fieldKey: "store_code" }],
+      },
+    ],
+  };
+};
+
+describe("連動篩選:值變動的其他入口與既有單據", () => {
+  it("帶入規則改了被引用欄位 → 也清空依賴它的引用欄並提示", async () => {
+    const { user } = renderShopping({
+      path: CREATE_PATH,
+      world: {
+        moduleForms: [shoppingForm],
+        versions: { [`${SHOPPING_FORM_KEY}@1`]: prefillDefinition() },
+        lookupRecords: [
+          ...LOOKUP_RECORDS,
+          {
+            id: "user-9",
+            value: "user-9",
+            label: "阿明",
+            values: { name: "B2" },
+          },
+        ],
+      },
+    });
+    await user.type(
+      await screen.findByRole("textbox", { name: "分店代碼" }),
+      "A1",
+    );
+    await pick(user, screen.getByRole("combobox", { name: "主本" }), "本一");
+    expect(screen.getByRole("combobox", { name: "主本" })).toHaveValue("本一");
+
+    await user.click(screen.getByRole("button", { name: "帶入資料" }));
+    const dialog = await screen.findByRole("dialog", { name: "帶入資料" });
+    await user.click(await within(dialog).findByText("阿明"));
+    await user.click(within(dialog).getByRole("button", { name: "帶入" }));
+
+    expect(
+      await screen.findByRole("textbox", { name: "分店代碼" }),
+    ).toHaveValue("B2");
+    const notice = await findLatestSnackbar();
+    expect(notice).toHaveTextContent("已清空「主本」");
+    expect(screen.getByRole("combobox", { name: "主本" })).toHaveValue("");
+  });
+
+  it("編輯既有單據打開時不清空依賴欄(只在改值時清)", async () => {
+    renderShopping({
+      path: `${DEMO_FORM_ROUTES.editPage}/sub-1`,
+      world: {
+        moduleForms: [shoppingForm],
+        versions: { [`${SHOPPING_FORM_KEY}@1`]: linkedDefinition() },
+        lookupRecords: LOOKUP_RECORDS,
+        submissions: [
+          submissionFragment({
+            values: {
+              ship: { id: "org-a", label: "A 店" },
+              item: "調貨",
+              lines: [
+                {
+                  rowId: ROW_A,
+                  book: { id: "book-1", label: "本一" },
+                  name: "週刊",
+                  qty: "1",
+                  price: "30",
+                  subtotal: "30",
+                },
+              ],
+              total: "30",
+            },
+            abilities: {
+              canEdit: true,
+              canSaveDraft: true,
+              canDelete: true,
+              canEditField: ["ship", "item", "lines"],
+              canWithdraw: false,
+              canVoid: false,
+              canCopy: false,
+            },
+          }),
+        ],
+      },
+    });
+    await screen.findByRole("table", { name: "明細" });
+    expect(
+      within(lineRow(0)).getByRole("combobox", { name: "本" }),
+    ).toHaveValue("本一");
+    expect(screen.getByRole("combobox", { name: "出貨分店" })).toHaveValue(
+      "A 店",
+    );
   });
 });
