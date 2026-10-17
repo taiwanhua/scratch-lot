@@ -78,7 +78,10 @@ import {
   planItem,
   taskFragment,
 } from "@/test/msw/workflow-fixtures";
-import { historyEvent } from "@/test/msw/workflow-history-fixtures";
+import {
+  autoApproveBlockedEvent,
+  historyEvent,
+} from "@/test/msw/workflow-history-fixtures";
 import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
@@ -393,7 +396,7 @@ const mockWorkflowRuntime = () => ({
         }),
         instanceStep("confirm", "原部門確認"),
       ],
-      // 時間軸示範 B4 跳過與 B5 自動通過的原因
+      // 時間軸示範 B4 跳過、B5 自動通過的原因,與自動通過被守門擋下(錯誤碼沒有文案 → 通用句)
       history: [
         historyEvent("started", null, null, APPLICANT),
         historyEvent("step_entered", "review", null),
@@ -403,6 +406,7 @@ const mockWorkflowRuntime = () => ({
         historyEvent("step_entered", "legal", null),
         historyEvent("approved", "legal", "auto_prior_approver", HR),
         historyEvent("step_entered", "purchase", null),
+        autoApproveBlockedEvent("purchase", MANAGER, "STOCK_NOT_COUNTED"),
         historyEvent("blocked", "purchase", null),
       ],
     }),
