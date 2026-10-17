@@ -104,6 +104,11 @@ export interface AuthWorldOptions {
   currentOrgTimezone?: string;
   /** 當前組織的最上層組織名稱(`me.currentOrg.tenantName`,單據上方印的租戶名稱);預設 = 當前組織自己的名稱 */
   currentOrgTenantName?: string;
+  /**
+   * 當前組織的最上層組織 id(`me.currentOrg.tenantId`):`null` = 站在根組織;不給 = 不帶這個欄位
+   * (前端當成不在根組織)。切換組織後沿用同一個值。
+   */
+  currentOrgTenantId?: string | null;
   /** 首登須改密碼(預設 false):true 時除 me / changePassword / logout 外的受保護操作回 MUST_CHANGE_PASSWORD */
   mustChangePassword?: boolean;
   /** 使用者目前的密碼(changePassword 驗「目前密碼」用) */
@@ -167,6 +172,7 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
     currentOrgLogoUrl = null,
     currentOrgTimezone = "Asia/Taipei",
     currentOrgTenantName,
+    currentOrgTenantId,
     currentPassword = "secret-1234",
     validActionTokens = ["token-1"],
     setPasswordAccessToken = "access-set",
@@ -207,6 +213,9 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
           logoUrl: currentOrgLogoUrl,
           timezone: currentOrgTimezone,
           tenantName: currentOrgTenantName ?? org.name,
+          ...(currentOrgTenantId === undefined
+            ? {}
+            : { tenantId: currentOrgTenantId }),
         };
 
   const me: MeQuery["me"] = {

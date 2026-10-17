@@ -2823,7 +2823,7 @@
   },
   "notificationSettings": {
     "intro": "Recipients of these reminders can be set by user, role and permission. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
-    "rootReadOnly": "You are in the root organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
+    "rootReadOnly": "The current organization is not under any top-level organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
     "search": "Search notification types",
     "searchPlaceholder": "Name",
     "tableLabel": "Notification types",
@@ -2863,7 +2863,7 @@
       "INVALID_AUDIENCE": "This condition cannot be used. Check it and save again.",
       "OUT_OF_TENANT": "This person or role is not in your organization",
       "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
-      "TENANT_ONLY": "Recipients cannot be changed in the root organization. Switch to the organization you want to set up first.",
+      "TENANT_ONLY": "Recipients cannot be changed here. Switch to the organization you want to set up first.",
       "FORBIDDEN": "You do not have permission to change notification settings",
       "UNEXPECTED": "Something went wrong. Please try again later."
     }

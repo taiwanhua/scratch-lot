@@ -15,6 +15,7 @@ import { Switch } from "@repo/ui/switch";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
@@ -31,7 +32,6 @@ import { ForkFormDialog } from "./FormDialogs/ForkFormDialog";
 import { VersionPanel } from "./VersionPanel/VersionPanel";
 import { WorkflowBindingField } from "./WorkflowBinding/WorkflowBindingField";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
-import { useIsAtRootOrg } from "./useIsAtRootOrg";
 
 export interface FormDetailPanelProps {
   form: FormFieldsFragment;
@@ -75,7 +75,7 @@ export const FormDetailPanel = ({
   const canBindWorkflow = form.tenantEnabled === true;
   // 列表欄位配置是模組層的設定(`modules.settings.list`),只有站在根組織、能改表單的人設(api 另守 ROOT_ONLY)
   const canEditListColumns =
-    useIsAtRootOrg([form]) && hasPermission(FORMS_PERMISSIONS.edit);
+    useIsAtRootOrg() === true && hasPermission(FORMS_PERMISSIONS.edit);
 
   const setEnabled = useSetTenantFormEnabledMutation(
     session.client,

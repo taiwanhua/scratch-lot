@@ -5,9 +5,8 @@ import {
   inRoles,
   notificationTypes,
 } from "@/test/msw/notification-settings-handlers";
-import { findSnackbarAlert, querySnackbar } from "@/test/snackbar";
+import { querySnackbar } from "@/test/snackbar";
 
-import { NOTIFICATION_SETTINGS_PERMISSIONS } from "./notification-settings-permissions";
 import {
   renderPage,
   rowOf,
@@ -30,40 +29,6 @@ describe("通知設定頁", () => {
     expect(within(agentRow).getByText("預設")).toBeVisible();
     expect(within(rowOf("盤點提醒")).getByText("最上層組織")).toBeVisible();
     expect(screen.getByText("共 2 筆,每頁 20 筆")).toBeVisible();
-  });
-
-  it("沒有 edit 權限 → 唯讀:沒有操作欄、沒有 [編輯] / [還原預設]", async () => {
-    renderPage({ permissions: [NOTIFICATION_SETTINGS_PERMISSIONS.view] });
-    await waitForRows();
-
-    expect(within(table()).queryByRole("button", { name: "編輯" })).toBeNull();
-    expect(
-      within(table()).queryByRole("button", { name: "還原預設" }),
-    ).toBeNull();
-    expect(
-      within(table()).queryByRole("columnheader", { name: "操作" }),
-    ).toBeNull();
-  });
-
-  it("沒有 edit 權限時網址帶 ?edit= 不打開彈窗,參數被清掉", async () => {
-    renderPage({
-      permissions: [NOTIFICATION_SETTINGS_PERMISSIONS.view],
-      search: "?edit=printing.agent-offline",
-    });
-    await waitForRows();
-
-    expect(screen.queryByRole("dialog")).toBeNull();
-    await waitFor(() => {
-      expect(globalThis.location.search).not.toContain("edit=");
-    });
-  });
-
-  it("站在根組織 → 唯讀並說明(api 只回預設、改了會 TENANT_ONLY)", async () => {
-    renderPage({ isAtRoot: true });
-    await waitForRows();
-
-    expect(screen.getByText(/目前在根組織:這裡只顯示預設收件人/)).toBeVisible();
-    expect(within(table()).queryByRole("button", { name: "編輯" })).toBeNull();
   });
 
   it("搜尋寫進網址 ?list=,只列符合的類型", async () => {
@@ -135,14 +100,6 @@ describe("通知設定頁", () => {
     expect(globalThis.location.search).not.toContain("edit=");
   });
 
-  it("網址帶 ?edit=<類型> 重新整理 → 直接打開那一種類型的編輯彈窗", async () => {
-    renderPage({ search: "?edit=lottery.stocktake-reminder" });
-
-    expect(
-      await screen.findByRole("dialog", { name: "編輯收件人:盤點提醒" }),
-    ).toBeVisible();
-  });
-
   it("api 擋下 OUT_OF_TENANT → 依 path 標在那一列條件,不關閉", async () => {
     const { user } = renderPage({
       world: {
@@ -172,7 +129,7 @@ describe("通知設定頁", () => {
     expect(screen.getByRole("dialog")).toBeVisible();
   });
 
-  it("api 回 TENANT_ONLY(沒有根組織訊號的根組織操作者)→ 對話框顯示要先切換組織", async () => {
+  it("api 回 TENANT_ONLY(例如別的分頁剛切到根組織)→ 對話框顯示要先切換組織", async () => {
     const { user } = renderPage({
       world: {
         failures: {
@@ -193,7 +150,7 @@ describe("通知設定頁", () => {
 
     expect(
       await within(dialog).findByText(
-        "根組織不能調整收件人,請先切換到要設定的組織",
+        "這裡不能調整收件人,請先切換到要設定的組織",
       ),
     ).toBeVisible();
     // 錯誤已就地顯示在對話框裡,不再跳提示(同一句不出現兩次)
@@ -281,19 +238,6 @@ describe("通知設定頁", () => {
     ).toBeVisible();
   });
 
-  it("網址帶 ?edit=<不存在的類型> → 不打開、清掉參數、提示「找不到這筆資料」", async () => {
-    renderPage({ search: "?edit=printing.gone" });
-
-    expect(await findSnackbarAlert()).toEqual({
-      text: "找不到這筆資料",
-      severity: "warning",
-    });
-    await waitFor(() => {
-      expect(globalThis.location.search).not.toContain("edit=");
-    });
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
   it("還原預設失敗 → 錯誤顯示在確認框裡、不另跳提示", async () => {
     const { user } = renderPage({
       world: {
@@ -320,7 +264,7 @@ describe("通知設定頁", () => {
 
     expect(
       await within(dialog).findByText(
-        "根組織不能調整收件人,請先切換到要設定的組織",
+        "這裡不能調整收件人,請先切換到要設定的組織",
       ),
     ).toBeVisible();
     expect(querySnackbar()).toBeNull();

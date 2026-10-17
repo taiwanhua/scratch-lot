@@ -8,7 +8,7 @@ import {
   useNotificationSettingsQuery,
 } from "@repo/graphql";
 
-import { useHasRootOnlyModules } from "@/hooks/base/useHasRootOnlyModules";
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -29,19 +29,30 @@ const listSchema = z
 /** 以類型 key 找一筆時一次取滿(`keyword` 比對類型 key 的子字串,可能帶出別的類型)。 */
 const LOOKUP_PAGE_SIZE = 100;
 
+/** 沒權限 → false;有權限 → 依是否站在根組織(還不知道 = undefined)。 */
+const canEditOf = (
+  hasEditPermission: boolean,
+  isAtRoot: boolean | undefined,
+): boolean | undefined => {
+  if (!hasEditPermission) {
+    return false;
+  }
+  return isAtRoot === undefined ? undefined : !isAtRoot;
+};
+
 /**
  * 通知設定頁的資料層:清單、搜尋 / 頁碼、權限與失效。
  *
- * **能不能改**(`canEdit`)= 有 `system.notification-settings.edit` 且不是站在根組織:根組織不是租戶,
- * api 只回預設、改了會 `FORBIDDEN` / `TENANT_ONLY`(`docs/modules/notification-settings.md`「欄位語意」)。
- * 前端看得到的根組織訊號只有 `me.modules` 裡的根組織專屬模組(`useHasRootOnlyModules`);
- * 沒有那個訊號的根組織操作者照樣看得到按鈕,送出時由 api 擋、顯示 `TENANT_ONLY` 的說明。
+ * **能不能改**(`canEdit`)= 有 `system.notification-settings.edit` 且不是站在根組織(`useIsAtRootOrg`:
+ * `me.currentOrg.tenantId === null`):根組織沒有自己的通知設定,api 只回預設、改了會 `FORBIDDEN` / `TENANT_ONLY`
+ * (`docs/modules/notification-settings.md`「欄位語意」)。有權限但 `me` 還沒載入時是 `undefined`(還不知道):
+ * 按鈕先不出現,網址上的 `?edit=` 也先留著,等知道了再決定開不開。
  */
 export const useNotificationSettingsData = () => {
   const { session } = useSession();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
-  const isAtRoot = useHasRootOnlyModules();
+  const isAtRoot = useIsAtRootOrg();
   const hasEditPermission = hasPermission(
     NOTIFICATION_SETTINGS_PERMISSIONS.edit,
   );
@@ -81,8 +92,8 @@ export const useNotificationSettingsData = () => {
   };
 
   return {
-    canEdit: hasEditPermission && !isAtRoot,
-    isAtRoot,
+    canEdit: canEditOf(hasEditPermission, isAtRoot),
+    isAtRoot: isAtRoot === true,
     keyword,
     setKeyword,
     page,

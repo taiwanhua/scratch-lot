@@ -62,13 +62,13 @@ const link = (
 
 const modulesWith = (
   permissions: readonly string[],
-  isAtRoot: boolean,
+  hasRootOnlyModules: boolean,
 ): TestModule[] => [
   overviewModule,
   systemGroup,
   link("m-role", "system.role-manager", "角色管理", 3, permissions),
-  // 根組織專屬模組只在根組織的 `me.modules` 裡(前端判斷「站在根組織」的訊號)
-  ...(isAtRoot
+  // 超級管理員手上有根組織專屬模組;它不代表「站在根組織」(那由 `currentOrg.tenantId` 決定)
+  ...(hasRootOnlyModules
     ? [link("m-module", "system.module-manager", "模組與權限", 4, [])]
     : []),
   link(
@@ -85,13 +85,17 @@ export const renderPage = ({
   world = {},
   search = "",
   isAtRoot = false,
+  hasRootOnlyModules = false,
   locale = null,
 }: {
   permissions?: readonly string[];
   world?: NotificationSettingsWorldOptions;
   /** 起始網址的查詢字串(含 `?`) */
   search?: string;
+  /** 站在根組織(`me.currentOrg.tenantId = null`);否則站在租戶 A */
   isAtRoot?: boolean;
+  /** 操作者手上有根組織專屬模組(超級管理員) */
+  hasRootOnlyModules?: boolean;
   /** 個人偏好的語系(`null` = 預設繁中) */
   locale?: string | null;
 } = {}) => {
@@ -105,7 +109,8 @@ export const renderPage = ({
     ...fake.handlers,
     ...authWorld({
       hasRefreshCookie: true,
-      modules: modulesWith(permissions, isAtRoot),
+      modules: modulesWith(permissions, hasRootOnlyModules),
+      currentOrgTenantId: isAtRoot ? null : "org-tenant-a",
       preferences: { locale },
     }).handlers,
   );

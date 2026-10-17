@@ -5,6 +5,7 @@ import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
 import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
@@ -15,7 +16,6 @@ import { FormListPanel } from "./FormListPanel";
 import { UnsavedDesignDialog } from "./UnsavedDesignDialog";
 import { FORMS_PERMISSIONS } from "./forms-permissions";
 import { useFormsPageData } from "./useFormsPageData";
-import { useIsAtRootOrg } from "./useIsAtRootOrg";
 
 /**
  * 表單管理(模組 key `system.forms`,正本 `docs/modules/forms.md`;Spec 6a §8 畫面 1–5)。
@@ -65,7 +65,7 @@ export const FormsPage = () => {
     (state) => state.isDirty && state.formKey === data.selectedKey,
   );
   const saveDraft = useDesignerDraftStore((state) => state.save);
-  const isAtRoot = useIsAtRootOrg(data.forms);
+  const isAtRoot = useIsAtRootOrg() === true;
 
   /** 換表單:設計器有未存的變更就先問(留下 / 放棄 / 先存),不讓右欄一換就把改動丟掉。 */
   const requestSelect = (key: string) => {
