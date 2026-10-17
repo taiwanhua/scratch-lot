@@ -76,7 +76,8 @@ export const EditRecipientsDialog = ({
     session.client,
     useMutationFeedback<UpdateNotificationSettingMutation>({
       success: t("feedback.saveSuccess"),
-      error: (error) => tErrors(notificationSettingsErrorOf(error).code),
+      // 失敗一律就地顯示在開著的彈窗裡(條件列或對話框底部),不再跳提示,免得同一句出現兩次
+      error: () => null,
       onSuccess: onSaved,
       onError: (error) => {
         const parsed = notificationSettingsErrorOf(error);
