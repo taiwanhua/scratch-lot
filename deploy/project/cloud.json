@@ -22,6 +22,14 @@
         "rootAdminPassword": "root-admin-password-dev",
         "jwtSecret": "jwt-secret-dev",
         "resendApiKey": "resend-api-key-dev"
+      },
+      "realtime": {
+        "worker": "scratch-lot-realtime-dev",
+        "cloudflareAccountId": "de223b0cd80b8650f5bd2ba059291766",
+        "secrets": {
+          "ticketSecret": "realtime-ticket-secret-dev",
+          "publishSecret": "realtime-publish-secret-dev"
+        }
       }
     },
     "staging": {
@@ -38,6 +46,14 @@
         "rootAdminPassword": "root-admin-password-staging",
         "jwtSecret": "jwt-secret-staging",
         "resendApiKey": "resend-api-key-staging"
+      },
+      "realtime": {
+        "worker": "scratch-lot-realtime-staging",
+        "cloudflareAccountId": "de223b0cd80b8650f5bd2ba059291766",
+        "secrets": {
+          "ticketSecret": "realtime-ticket-secret-staging",
+          "publishSecret": "realtime-publish-secret-staging"
+        }
       }
     },
     "production": {
@@ -54,6 +70,14 @@
         "rootAdminPassword": "root-admin-password",
         "jwtSecret": "jwt-secret",
         "resendApiKey": "resend-api-key"
+      },
+      "realtime": {
+        "worker": "scratch-lot-realtime",
+        "cloudflareAccountId": "de223b0cd80b8650f5bd2ba059291766",
+        "secrets": {
+          "ticketSecret": "realtime-ticket-secret",
+          "publishSecret": "realtime-publish-secret"
+        }
       }
     }
   }
