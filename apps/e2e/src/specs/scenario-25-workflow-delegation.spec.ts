@@ -39,6 +39,19 @@ async function openDelegationsTab(
   await page.getByRole("tab", { name: "代理人" }).click();
 }
 
+/** 某個時區現在是當天的第幾分鐘(0–1439)。 */
+function minutesOfDayIn(timezone = "Asia/Taipei"): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const valueOf = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+  return valueOf("hour") * 60 + valueOf("minute");
+}
+
 /** 「我的代理」表格裡代理人是某人的那一列。 */
 function delegationRow(page: Page, delegate: WorkflowPerson) {
   return page
@@ -58,6 +71,12 @@ test("劇本 25:代理期間的任務改派給代理人;會簽多人委託同一
   page,
   tenant,
 }) => {
+  // 代理期間是「今天到今天」(最上層組織時區 00:00 起、24:00 止):台北 23:50 之後開跑,
+  // 劇本中途就可能跨過午夜、代理已結束,任務不再改派而紅 —— 那 10 分鐘直接 skip,不是缺陷
+  test.skip(
+    minutesOfDayIn() >= 23 * 60 + 50,
+    "台北 23:50 之後開跑會跨日,「今天」的代理在劇本中途結束",
+  );
   test.setTimeout(300_000);
   const world = await createWorkflowWorld(tenant, {
     formName: "請款單",
@@ -170,6 +189,14 @@ test("劇本 25:代理期間的任務改派給代理人;會簽多人委託同一
     "COMPLETED",
   );
 
+  // 前置:刪除前再送一張 → 店長審核已派給代理人丙(代理 店長甲)
+  const pendingTitle = `請款一千-${tenant.slug}`;
+  const pending = await submitForm(world.applicant.token, world.formKey, {
+    title: pendingTitle,
+    amount: 1000,
+  });
+  expect(await taskSubmissionIds(delegate.token)).toEqual([pending.id]);
+
   // 步驟 4:店長甲刪除代理(進行中的代理可以刪)
   await openDelegationsTab(page, storeA);
   await delegationRow(page, delegate)
@@ -185,18 +212,23 @@ test("劇本 25:代理期間的任務改派給代理人;會簽多人委託同一
   );
   await expect(delegationRow(page, delegate)).toHaveCount(0);
 
-  // 預期:之後送出的單,店長審核回到店長甲名下;代理人丙的待我審核看不到
+  // 預期:已派出的任務不變 —— 刪除前那一張仍在代理人丙手上,沒有轉回店長甲
+  expect(await taskSubmissionIds(delegate.token)).toEqual([pending.id]);
+
+  // 預期:之後送出的單,店長審核回到店長甲名下;代理人丙的待我審核看不到它
   const afterTitle = `請款三千-${tenant.slug}`;
   const after = await submitForm(world.applicant.token, world.formKey, {
     title: afterTitle,
     amount: 3000,
   });
   expect(await taskSubmissionIds(storeA.token)).toEqual([after.id]);
-  expect(await myTasks(delegate.token)).toHaveLength(0);
+  expect(await taskSubmissionIds(delegate.token)).toEqual([pending.id]);
   await signInAgain(page, delegate.account, delegate.password);
   await page.goto(APPLY_CENTER_ROUTE);
   await page.getByRole("tab", { name: "待我審核" }).click();
-  await expect(page.getByText("目前沒有待審核的單")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `開啟「${pendingTitle}」` }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: `開啟「${afterTitle}」` }),
   ).toHaveCount(0);

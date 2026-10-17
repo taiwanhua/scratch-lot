@@ -126,14 +126,11 @@ test("劇本 29:流程動作產生通知 → 通知鈴看得到、點開標已�
     notificationItems(reopened, `申請已核准:${subject}`),
   ).toHaveCount(1);
 
-  // 預期:同一事件不重複 —— 同一張任務再送一次核准(此關已結束,不被接受)不會再產生通知:
+  // 預期:同一事件不重複 —— 同一張任務再送一次核准:任務已不是待處理,api 回 STEP_CLOSED(不是錯誤、任務不動;
+  // task-actions.service.ts 先看任務狀態,再比 editVersion),不會再產生通知:
   // 申請人的結果通知、主管的待審核通知都還是各一則
-  const replay = await decideTask(
-    world.manager.token,
-    managerTask,
-    "APPROVE",
-  ).catch(() => "REFUSED");
-  expect(replay).not.toBe("ACCEPTED");
+  const replay = await decideTask(world.manager.token, managerTask, "APPROVE");
+  expect(replay).toBe("STEP_CLOSED");
   expect(
     await notificationsMatching(world.applicant.token, RESULT, subject),
   ).toHaveLength(1);

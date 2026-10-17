@@ -165,6 +165,10 @@ test("劇本 26:關卡通過 / 被跳過知會該關的知會對象;完成、駁
       `申請「${returnSubject}」的「分店覆核」關卡已跳過。`,
     ),
   );
+  // 重送後走完 → 流程知會人收到這張的「已完成」(退回那一輪沒收過任何一則)
+  expect(await ccBodies(flowCc.token, returnSubject)).toEqual([
+    `申請「${returnSubject}」已完成。`,
+  ]);
 
   // 流程知會人 → 通知鈴:台中(完成、作廢)、高雄(駁回)、花蓮(重送後完成)共四則,只有知會
   await signInAgain(page, flowCc.account, flowCc.password);
