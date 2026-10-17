@@ -55,3 +55,27 @@ describe("workflowVersionDiff:整個流程的知會對象", () => {
     expect(diff.changed).toEqual([]);
   });
 });
+
+describe("workflowVersionDiff:關卡內容以正規形比對", () => {
+  it("鍵順序不同、cc: null 與缺鍵的關卡不算變更;真的改了才算", () => {
+    const before = definitionWith();
+    const reordered: WorkflowDefinition = {
+      steps: [
+        {
+          mode: "any",
+          assignee: { level: 1, kind: "manager" },
+          name: "主管",
+          key: "boss",
+          cc: null,
+        },
+      ],
+      edges: null,
+    };
+    expect(workflowVersionDiff(before, reordered).changed).toEqual([]);
+    const renamed: WorkflowDefinition = {
+      ...before,
+      steps: [{ ...before.steps[0], name: "主管審核" }],
+    };
+    expect(workflowVersionDiff(before, renamed).changed).toEqual(["主管審核"]);
+  });
+});

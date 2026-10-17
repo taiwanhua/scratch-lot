@@ -2444,6 +2444,9 @@
       "diffRemoved": "Removed: {steps}",
       "diffChanged": "Changed: {steps}",
       "diffStructure": "The fork / join structure changed",
+      "diffFlowCcAdded": "Whole flow CC recipients: added",
+      "diffFlowCcRemoved": "Whole flow CC recipients: removed",
+      "diffFlowCcChanged": "Whole flow CC recipients: changed",
       "draftCreated": "New draft created",
       "statuses": {
         "DRAFT": "Draft",
@@ -2453,10 +2456,7 @@
       },
       "view": "View v{version}",
       "baseOnViewing": "New draft based on v{version}",
-      "deleteDraft": "Delete draft",
-      "diffFlowCcAdded": "Whole flow CC recipients: added",
-      "diffFlowCcRemoved": "Whole flow CC recipients: removed",
-      "diffFlowCcChanged": "Whole flow CC recipients: changed"
+      "deleteDraft": "Delete draft"
     },
     "publish": {
       "title": "Publish draft",
