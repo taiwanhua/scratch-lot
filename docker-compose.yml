@@ -8,8 +8,9 @@ services:
   # 第一次起來由 healthcheck 執行 rs.initiate;選出 PRIMARY(可寫入)才算健康。
   # 成員位址登記成 localhost:27017,連線字串一律加 `directConnection=true`(容器內外、主機埠改過都連得到)。
   # 既有的 mongo-data volume 換成 replica set 啟動時資料保留(升級步驟見 docs/deployment.md「本地容器」)。
+  # image 固定 patch 版本,與 CI(.github/workflows/ci.yml 的 MONGO_IMAGE)同一個,升級時兩處一起改(docs/deployment.md「MongoDB 版本」)。
   mongo:
-    image: mongo:8
+    image: mongo:8.3.13
     restart: unless-stopped
     command: ["--replSet", "${COMPOSE_PROJECT_NAME}", "--bind_ip_all"]
     ports:
