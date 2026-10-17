@@ -165,7 +165,10 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       # 先上傳四個檔,再換 manifest(api 讀 manifest 簽下載網址:換之前看到的仍是舊版,不會指到還沒上傳的檔);
-      # 最後才刪超過保留數量的舊版
+      # 最後才刪超過保留數量的舊版。
+      # 讀、寫、刪都直接打 GCS JSON API 的單一物件端點:部署 SA 的權限只放行 print-agent/ 前綴的物件
+      # (docs/deployment.md「列印代理程式發布」),沒有 bucket 的 storage.objects.list;
+      # gcloud storage cp / rm 會先列出 bucket,在這個權限下一律被拒。
       - name: 上傳並更新 manifest.json
         env:
           VERSION: ${{ inputs.version }}
@@ -173,26 +176,49 @@ jobs:
         run: |
           artifacts="$RUNNER_TEMP/print-agent-release"
           work="$RUNNER_TEMP/print-agent-manifest"
-          prefix="gs://$BUCKET/print-agent"
+          api="https://storage.googleapis.com/storage/v1/b/$BUCKET/o"
+          upload="https://storage.googleapis.com/upload/storage/v1/b/$BUCKET/o"
           mkdir -p "$work"
+          token=$(gcloud auth print-access-token)
+          echo "::add-mask::$token"
+          auth=(-H "Authorization: Bearer $token")
+          uri() { jq -rn --arg v "$1" '$v|@uri'; }
+          # 上傳單一物件;$3 = 物件 metadata(JSON),一次寫入內容與 metadata(multipart)
+          put() {
+            local file="$1" name="$2" metadata="$3" boundary="print-agent-$RANDOM$RANDOM" body="$work/upload.body"
+            {
+              printf -- '--%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n' "$boundary" "$metadata"
+              printf -- '--%s\r\nContent-Type: application/octet-stream\r\n\r\n' "$boundary"
+              cat "$file"
+              printf -- '\r\n--%s--\r\n' "$boundary"
+            } > "$body"
+            curl -sS --fail-with-body -o /dev/null "${auth[@]}" \
+              -H "Content-Type: multipart/related; boundary=$boundary" \
+              --data-binary @"$body" "$upload?uploadType=multipart"
+            rm -f "$body"
+          }
           current=()
-          if gcloud storage cp "$prefix/manifest.json" "$work/current.json" 2> "$work/cp.err"; then
+          status=$(curl -sS -o "$work/current.json" -w '%{http_code}' "${auth[@]}" "$api/$(uri print-agent/manifest.json)?alt=media")
+          if [ "$status" = 200 ]; then
             current=(--current "$work/current.json")
-          elif grep -qiE 'not found|No URLs matched|404' "$work/cp.err"; then
+          elif [ "$status" = 404 ]; then
             echo "::notice::還沒有 manifest.json:第一次發布"
           else
-            cat "$work/cp.err" >&2
-            echo "::error::讀不到目前的 manifest.json"
+            cat "$work/current.json" >&2
+            echo "::error::讀不到目前的 manifest.json(HTTP $status)"
             exit 1
           fi
           pnpm --filter @repo/print-agent exec tsx scripts/update-manifest.ts --version "$VERSION" --artifacts "$artifacts" --out "$work/manifest.json" --removed "$work/removed.txt" "${current[@]}"
           for file in "$artifacts"/*; do
-            gcloud storage cp "$file" "$prefix/$VERSION/$(basename "$file")"
+            name="print-agent/$VERSION/$(basename "$file")"
+            put "$file" "$name" "$(jq -cn --arg n "$name" '{name: $n, contentType: "application/octet-stream"}')"
           done
-          gcloud storage cp "$work/manifest.json" "$prefix/manifest.json" --content-type=application/json --cache-control=no-store
+          put "$work/manifest.json" print-agent/manifest.json \
+            '{"name":"print-agent/manifest.json","contentType":"application/json","cacheControl":"no-store"}'
           while IFS= read -r object; do
             [ -n "$object" ] || continue
-            gcloud storage rm "gs://$BUCKET/$object" || echo "::warning::刪除舊版失敗:$object"
+            curl -sS --fail-with-body -o /dev/null -X DELETE "${auth[@]}" "$api/$(uri "$object")" \
+              || echo "::warning::刪除舊版失敗:$object"
           done < "$work/removed.txt"
           {
             echo "### 列印代理程式 $VERSION"

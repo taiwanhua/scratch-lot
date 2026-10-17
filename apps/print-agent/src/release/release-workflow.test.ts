@@ -101,12 +101,26 @@ describe("print-agent-release.yml", () => {
 
   it("先上傳四個檔、再換 manifest、最後才刪舊版;WinSW 固定版本並核對 SHA-256", () => {
     const publish = job("publish");
-    const upload = publish.indexOf('"$prefix/$VERSION/');
-    const manifest = publish.indexOf('"$prefix/manifest.json" --content-type');
-    const remove = publish.indexOf("gcloud storage rm");
+    const upload = publish.indexOf('name="print-agent/$VERSION/');
+    const manifest = publish.indexOf(
+      'put "$work/manifest.json" print-agent/manifest.json',
+    );
+    const remove = publish.indexOf("-X DELETE");
     expect(upload).toBeGreaterThan(-1);
     expect(manifest).toBeGreaterThan(upload);
     expect(remove).toBeGreaterThan(manifest);
+    expect(workflow).toContain('"cacheControl":"no-store"');
+  });
+
+  it("發布只打單一物件端點,不用會先列出 bucket 的 gcloud storage cp / rm(部署 SA 沒有 objects.list)", () => {
+    const publish = job("publish");
+    const storageCommands = publish
+      .split(NEWLINE)
+      .filter((line) => line.trimStart().startsWith("gcloud storage "));
+    expect(storageCommands).toEqual([]);
+    expect(publish).toContain(
+      "https://storage.googleapis.com/storage/v1/b/$BUCKET/o",
+    );
     expect(workflow).toMatch(/WINSW_SHA256: [\da-f]{64}\n/);
     expect(workflow).toContain('if [ "$actual" != "$WINSW_SHA256" ]');
   });
