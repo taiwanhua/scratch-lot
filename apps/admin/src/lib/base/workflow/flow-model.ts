@@ -176,7 +176,7 @@ export const toDefinition = (flow: Flow): WorkflowDefinition => {
 const edgeIdOf = (edge: WorkflowEdge): string => `${edge.from}->${edge.to}`;
 
 /** 物件的鍵依字母排序(遞迴),讓「同內容、不同鍵順序」的 JSON 字串相同;`undefined` 與 `null` 視同。 */
-const canonical = (value: unknown): unknown => {
+export const canonical = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     return value.map((item) => canonical(item));
   }

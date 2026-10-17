@@ -173,4 +173,38 @@ describe("流程管理:關卡面板的逾時提醒與知會、整個流程的知
       level: 1,
     });
   });
+
+  it("選了關卡時按「回到整個流程設定」→ 取消選取,面板回到整個流程", async () => {
+    const { user } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+
+    await user.click(screen.getByRole("button", { name: "回到整個流程設定" }));
+
+    expect(
+      within(propertiesPanel()).getByRole("region", { name: "整個流程的設定" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "回到整個流程設定" }),
+    ).toBeNull();
+  });
+
+  it("鍵盤也回得去:從名稱欄 Shift+Tab 到「回到整個流程設定」、按 Enter", async () => {
+    const { user } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    await user.click(
+      within(propertiesPanel()).getByRole("textbox", { name: "名稱" }),
+    );
+
+    await user.tab({ shift: true });
+    expect(
+      screen.getByRole("button", { name: "回到整個流程設定" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(
+      within(propertiesPanel()).getByRole("region", { name: "整個流程的設定" }),
+    ).toBeInTheDocument();
+  });
 });

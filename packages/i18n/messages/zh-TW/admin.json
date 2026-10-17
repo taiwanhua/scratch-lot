@@ -2453,7 +2453,10 @@
       },
       "view": "檢視 v{version}",
       "baseOnViewing": "以 v{version} 為基底開新草稿",
-      "deleteDraft": "刪除草稿"
+      "deleteDraft": "刪除草稿",
+      "diffFlowCcAdded": "整個流程的知會對象:新增",
+      "diffFlowCcRemoved": "整個流程的知會對象:移除",
+      "diffFlowCcChanged": "整個流程的知會對象:有變更"
     },
     "publish": {
       "title": "發布草稿",
@@ -2735,7 +2738,8 @@
       "region": "整個流程的設定",
       "ccTitle": "整個流程的知會對象",
       "ccHint": "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
-      "issues": "整個流程的問題"
+      "issues": "整個流程的問題",
+      "backToFlow": "回到整個流程設定"
     }
   },
   "userPicker": {

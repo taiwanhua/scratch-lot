@@ -20,6 +20,7 @@ import {
 import { isFlowCcIssue, mergeReports } from "@/lib/base/workflow/validation";
 
 import { designerPropertyPanelSx } from "../../designer-layout";
+import { BackToFlowButton } from "./BackToFlowButton";
 import { DesignerToolbar } from "./DesignerToolbar";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
@@ -255,7 +256,16 @@ export const FlowDesignerWorkspace = ({
           aria-label={t("properties")}
           sx={designerPropertyPanelSx}
         >
-          {renderPanel()}
+          <Stack spacing={1}>
+            {isEditable && selected !== null && (
+              <BackToFlowButton
+                onBack={() => {
+                  state.select(null);
+                }}
+              />
+            )}
+            {renderPanel()}
+          </Stack>
         </Box>
       </Stack>
       <FlowIssueList

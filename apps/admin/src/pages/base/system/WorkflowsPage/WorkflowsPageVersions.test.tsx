@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { WorkflowVersionStatus } from "@repo/graphql";
+
 import { server } from "@/test/msw/server";
 import {
   leaveWorkflowDefinition,
@@ -242,5 +244,46 @@ describe("流程管理:版本、發布擋錯、未存變更防呆", () => {
     expect(
       screen.queryByRole("dialog", { name: "還有沒存的變更" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("與上一版差異:列出整個流程知會對象的變動(新增)", async () => {
+    const { user } = renderWorkflows({
+      world: {
+        workflows: [workflowFragment({ currentVersion: 2, hasDraft: false })],
+        versions: {
+          leave_review: [
+            workflowVersionFragment(
+              {
+                ...leaveWorkflowDefinition(),
+                cc: { kind: "manager", level: 1 },
+              },
+              {
+                id: "wv-leave-2",
+                version: 2,
+                status: WorkflowVersionStatus.Published,
+                changelog: "加知會",
+              },
+            ),
+            workflowVersionFragment(leaveWorkflowDefinition(), {
+              id: "wv-leave-1",
+              version: 1,
+              status: WorkflowVersionStatus.Retired,
+              changelog: "第一版",
+            }),
+          ],
+        },
+      },
+    });
+    await user.click(await screen.findByRole("tab", { name: "流程版本" }));
+    const table = await screen.findByRole("table", { name: "流程版本" });
+    await user.click(
+      await within(table).findByRole("button", { name: "與上一版差異" }),
+    );
+
+    const diff = await screen.findByRole("region", { name: "版本差異" });
+    expect(
+      within(diff).getByText("整個流程的知會對象:新增"),
+    ).toBeInTheDocument();
+    expect(within(diff).getByText("變更:—")).toBeInTheDocument();
   });
 });

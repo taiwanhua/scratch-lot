@@ -2453,7 +2453,10 @@
       },
       "view": "View v{version}",
       "baseOnViewing": "New draft based on v{version}",
-      "deleteDraft": "Delete draft"
+      "deleteDraft": "Delete draft",
+      "diffFlowCcAdded": "Whole flow CC recipients: added",
+      "diffFlowCcRemoved": "Whole flow CC recipients: removed",
+      "diffFlowCcChanged": "Whole flow CC recipients: changed"
     },
     "publish": {
       "title": "Publish draft",
@@ -2735,7 +2738,8 @@
       "region": "Whole-flow settings",
       "ccTitle": "Whole flow's CC recipients",
       "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
-      "issues": "Whole-flow issues"
+      "issues": "Whole-flow issues",
+      "backToFlow": "Back to whole-flow settings"
     }
   },
   "userPicker": {
