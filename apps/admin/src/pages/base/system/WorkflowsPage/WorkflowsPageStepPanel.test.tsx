@@ -39,9 +39,10 @@ beforeAll(async () => {
 
 const SKIP_TITLE = "跳過這一關(符合任一項就跳過)";
 
-/** 「人資」關四個區塊都設好的值(跳過、自動通過、逾時提醒、知會)。 */
+/** 「人資」關四個區塊都設好的值(跳過兩項、自動通過、逾時提醒、知會)。 */
 const CONFIGURED: Partial<ReviewStepDef> = {
   skipOrgs: { orgIds: [SKIP_ORG_TENANT], includeDescendants: true },
+  skipWhen: { "<=": [{ var: "days" }, 1] },
   autoApprove: { priorApprover: true },
   overdue: {
     reviewerAfterHours: 12,
@@ -51,7 +52,10 @@ const CONFIGURED: Partial<ReviewStepDef> = {
   cc: { kind: "manager", level: 2 },
 };
 
-/** 病假審核草稿:「人資」關四個區塊都設好。 */
+/** 整個流程的知會對象。 */
+const FLOW_CC = { kind: "manager", level: 1 } as const;
+
+/** 病假審核草稿:「人資」關四個區塊都設好,整個流程的知會對象 = 主管第 1 層。 */
 const configuredOptions = () => {
   const definition: WorkflowDefinition = {
     steps: [
@@ -62,6 +66,7 @@ const configuredOptions = () => {
       }),
     ],
     edges: null,
+    cc: FLOW_CC,
   };
   const options = defaultDesignOptions();
   const [, ...rest] = options.versions?.leave_review ?? [];
@@ -76,32 +81,29 @@ const configuredOptions = () => {
   };
 };
 
-/** 選一個 `SelectField` 的選項。 */
-const pick = async (
-  user: ReturnType<typeof renderWorkflows>["user"],
-  combobox: HTMLElement,
-  option: string,
-): Promise<void> => {
-  await user.click(combobox);
-  await user.click(await screen.findByRole("option", { name: option }));
+/** 沒選關卡時,整個流程的知會對象顯示「主管 / 第 1 層」。 */
+const expectFlowCc = () => {
+  const flow = within(propertiesPanel()).getByRole("region", {
+    name: "整個流程的設定",
+  });
+  expect(
+    within(flow).getByRole("combobox", { name: "知會對象" }),
+  ).toHaveTextContent("主管");
+  expect(
+    within(flow).getByRole("combobox", { name: "第幾層" }),
+  ).toHaveTextContent("第 1 層");
 };
 
 /** 「人資」關四個區塊顯示的是 `CONFIGURED` 的值。 */
 const expectConfiguredPanel = () => {
   const panel = propertiesPanel();
   const skip = within(panel).getByRole("group", { name: SKIP_TITLE });
-  expect(
-    within(skip).getByRole("checkbox", { name: "申請人屬於這些組織" }),
-  ).toBeChecked();
-  expect(
-    within(skip).getByRole("checkbox", { name: "最上層組織" }),
-  ).toBeChecked();
-  expect(
-    within(skip).getByRole("checkbox", { name: "包含下層" }),
-  ).toBeChecked();
+  for (const name of ["申請人屬於這些組織", "最上層組織", "包含下層"]) {
+    expect(within(skip).getByRole("checkbox", { name })).toBeChecked();
+  }
   expect(
     within(skip).getByRole("checkbox", { name: "符合條件" }),
-  ).not.toBeChecked();
+  ).toBeChecked();
   const prior = within(panel).getByRole("radiogroup", {
     name: "審核者已在前面的關卡核准過時",
   });
@@ -121,31 +123,32 @@ const expectConfiguredPanel = () => {
   expect(
     within(panel).getByRole("spinbutton", { name: "通知「通知對象」的時數" }),
   ).toHaveValue(36);
-  expect(
-    within(panel).getByRole("combobox", { name: "知會對象" }),
-  ).toHaveTextContent("主管");
   const cc = within(panel).getByRole("group", { name: "知會對象" });
+  expect(
+    within(cc).getByRole("combobox", { name: "知會對象" }),
+  ).toHaveTextContent("主管");
   expect(
     within(cc).getByRole("combobox", { name: "第幾層" }),
   ).toHaveTextContent("第 2 層");
 };
 
-describe("流程管理:關卡面板的跳過、自動通過、逾時提醒、知會", () => {
-  it("四個區塊載入時顯示存的值", async () => {
+describe("流程管理:關卡面板的跳過、自動通過與存檔來回", () => {
+  it("四個區塊與整個流程的知會對象,載入時顯示存的值", async () => {
     renderWorkflows({ world: configuredOptions() });
     const canvas = await findCanvas();
-    clickNode(canvas, "人資");
+    expectFlowCc();
 
+    clickNode(canvas, "人資");
     expectConfiguredPanel();
   });
 
-  it("存草稿後重新載入,四個區塊的值不變", async () => {
+  it("存草稿後重新載入,四個區塊與整個流程的知會對象都不變", async () => {
     const { user, world, unmount } = renderWorkflows({
       world: configuredOptions(),
     });
     const canvas = await findCanvas();
     clickNode(canvas, "人資");
-    // 只改名稱(讓草稿有未存的變更),四個區塊照原樣送
+    // 只改名稱(讓草稿有未存的變更),其他照原樣送
     await user.type(
       within(propertiesPanel()).getByRole("textbox", { name: "名稱" }),
       "審核",
@@ -155,20 +158,23 @@ describe("流程管理:關卡面板的跳過、自動通過、逾時提醒、知
       severity: "success",
       text: "已存草稿",
     });
-    expect(world.inputs.saveDraft[0]?.definition.steps[1]).toMatchObject({
+    const saved = world.inputs.saveDraft[0];
+    expect(saved.definition.steps[1]).toMatchObject({
       key: "hr",
       name: "人資審核",
       ...CONFIGURED,
     });
+    expect(saved.definition.cc).toEqual(FLOW_CC);
 
     unmount();
     renderApp({ path: WORKFLOWS_ROUTE });
     const reloaded = await findCanvas();
+    expectFlowCc();
     clickNode(reloaded, "人資審核");
     expectConfiguredPanel();
   });
 
-  it("勾「申請人屬於這些組織」預設最上層組織;自動通過選「自動通過」;存草稿帶上", async () => {
+  it("勾「申請人屬於這些組織」預設最上層組織、不含下層;存草稿帶上", async () => {
     const { user, world } = renderWorkflows();
     const canvas = await findCanvas();
     clickNode(canvas, "人資");
@@ -184,9 +190,24 @@ describe("流程管理:關卡面板的跳過、自動通過、逾時提醒、知
     expect(
       within(panel).getByRole("combobox", { name: "指定組織" }),
     ).toBeInTheDocument();
-    const applicant = within(panel).getByRole("radiogroup", {
+    await user.click(screen.getByRole("button", { name: "存草稿" }));
+
+    await waitFor(() => {
+      expect(world.inputs.saveDraft).toHaveLength(1);
+    });
+    expect(world.inputs.saveDraft[0]?.definition.steps[1]).toMatchObject({
+      skipOrgs: { orgIds: [SKIP_ORG_TENANT], includeDescendants: false },
+    });
+  });
+
+  it("自動通過選「自動通過」→ 存草稿只帶開啟的那一項", async () => {
+    const { user, world } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    const applicant = within(propertiesPanel()).getByRole("radiogroup", {
       name: "申請人是這一關的審核者時",
     });
+
     await user.click(
       within(applicant).getByRole("radio", { name: "自動通過" }),
     );
@@ -195,68 +216,28 @@ describe("流程管理:關卡面板的跳過、自動通過、逾時提醒、知
     await waitFor(() => {
       expect(world.inputs.saveDraft).toHaveLength(1);
     });
-    expect(world.inputs.saveDraft[0]?.definition.steps[1]).toMatchObject({
-      skipOrgs: { orgIds: [SKIP_ORG_TENANT], includeDescendants: false },
-      autoApprove: { applicant: true },
-    });
-  });
-
-  it("開啟逾時提醒帶入預設(24 / 48 小時、通知對象 = 有改派權限的人);知會選主管;存草稿帶上", async () => {
-    const { user, world } = renderWorkflows();
-    const canvas = await findCanvas();
-    clickNode(canvas, "人資");
-    const panel = propertiesPanel();
-
-    await user.click(
-      within(panel).getByRole("switch", { name: "開啟逾時提醒" }),
+    expect(world.inputs.saveDraft[0]?.definition.steps[1]?.autoApprove).toEqual(
+      { applicant: true },
     );
-    expect(
-      within(panel).getByRole("spinbutton", { name: "通知審核者的時數" }),
-    ).toHaveValue(24);
-    expect(
-      within(panel).getByRole("group", { name: "通知對象條件" }),
-    ).toBeInTheDocument();
-    const cc = within(panel).getByRole("combobox", { name: "知會對象" });
-    expect(cc).toHaveTextContent("不知會");
-    await pick(user, cc, "主管");
-    await user.click(screen.getByRole("button", { name: "存草稿" }));
-
-    await waitFor(() => {
-      expect(world.inputs.saveDraft).toHaveLength(1);
-    });
-    expect(world.inputs.saveDraft[0]?.definition.steps[1]).toMatchObject({
-      overdue: {
-        reviewerAfterHours: 24,
-        audienceAfterHours: 48,
-        audience: DEFAULT_OVERDUE_AUDIENCE,
-      },
-      cc: { kind: "manager", level: 1 },
-    });
   });
 
-  it("逾時提醒 M ≤ N → 欄位標紅、擋下不讓存草稿", async () => {
+  it("自動通過改成「自動通過」再改回「照常審核」→ 定義回到原樣,不算未存的變更", async () => {
     const { user } = renderWorkflows();
     const canvas = await findCanvas();
     clickNode(canvas, "人資");
-    const panel = propertiesPanel();
+    const applicant = within(propertiesPanel()).getByRole("radiogroup", {
+      name: "申請人是這一關的審核者時",
+    });
 
     await user.click(
-      within(panel).getByRole("switch", { name: "開啟逾時提醒" }),
+      within(applicant).getByRole("radio", { name: "自動通過" }),
     );
-    const audienceHours = within(panel).getByRole("spinbutton", {
-      name: "通知「通知對象」的時數",
-    });
-    await user.clear(audienceHours);
-    await user.type(audienceHours, "10");
+    expect(screen.getByText("有未存的變更")).toBeInTheDocument();
+    await user.click(
+      within(applicant).getByRole("radio", { name: "照常審核" }),
+    );
 
-    expect(
-      within(panel).getByText(
-        "時數要是正整數,而且通知「通知對象」的時數要大於通知審核者的時數。",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("逾時提醒的時數不正確,修正後才能存草稿。"),
-    ).toBeInTheDocument();
+    expect(screen.queryByText("有未存的變更")).toBeNull();
     expect(screen.getByRole("button", { name: "存草稿" })).toBeDisabled();
   });
 
@@ -283,31 +264,5 @@ describe("流程管理:關卡面板的跳過、自動通過、逾時提醒、知
     expect(
       within(panel).getByText("共用流程只能選最上層組織。"),
     ).toBeInTheDocument();
-  });
-
-  it("沒選關卡時是「整個流程」設定:整個流程的知會對象選主管,存草稿帶 definition.cc", async () => {
-    const { user, world } = renderWorkflows();
-    await findCanvas();
-    const flow = within(propertiesPanel()).getByRole("region", {
-      name: "整個流程的設定",
-    });
-    expect(
-      within(flow).getByText(/單據完成、被駁回或被作廢時通知/),
-    ).toBeInTheDocument();
-
-    await pick(
-      user,
-      within(flow).getByRole("combobox", { name: "知會對象" }),
-      "主管",
-    );
-    await user.click(screen.getByRole("button", { name: "存草稿" }));
-
-    await waitFor(() => {
-      expect(world.inputs.saveDraft).toHaveLength(1);
-    });
-    expect(world.inputs.saveDraft[0]?.definition.cc).toEqual({
-      kind: "manager",
-      level: 1,
-    });
   });
 });

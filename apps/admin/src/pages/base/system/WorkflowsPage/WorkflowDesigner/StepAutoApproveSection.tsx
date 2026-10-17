@@ -17,14 +17,20 @@ const CASES = ["applicant", "priorApprover"] as const;
 
 type AutoApproveCase = (typeof CASES)[number];
 
-/** 兩項都照常審核 → 存 `null`(與省略同義,既有流程的形狀不變)。 */
+/**
+ * 只留值為 true 的鍵(照常審核 = 省略,不存 `false`):改成自動通過再改回照常,定義回到原樣、
+ * 不會被當成未存的變更;兩項都照常審核 → 存 `null`(與省略同義,既有流程的形狀不變)。
+ */
 const nextAutoApprove = (
   current: AutoApproveDef | null | undefined,
   key: AutoApproveCase,
   isAuto: boolean,
 ): AutoApproveDef | null => {
-  const next: AutoApproveDef = { ...current, [key]: isAuto };
-  return next.applicant === true || next.priorApprover === true ? next : null;
+  const merged: AutoApproveDef = { ...current, [key]: isAuto };
+  const next: AutoApproveDef = Object.fromEntries(
+    CASES.filter((item) => merged[item] === true).map((item) => [item, true]),
+  );
+  return Object.keys(next).length > 0 ? next : null;
 };
 
 /**

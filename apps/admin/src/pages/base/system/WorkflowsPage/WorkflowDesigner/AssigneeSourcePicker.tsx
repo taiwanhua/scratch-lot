@@ -17,7 +17,7 @@ import { conditionFieldsOf } from "@/lib/base/form-engine/expression-options";
 import { AudienceConditionDialog } from "./AudienceConditionDialog";
 import { AudienceSourceSummary } from "./AudienceSourceSummary";
 import { FieldSourceSelect } from "./FieldSourceSelect";
-import type { PeoplePurpose } from "./people-purpose";
+import type { SourcePurpose } from "./people-purpose";
 import { useApproverAudienceSetup } from "./useApproverAudienceSetup";
 import type { CatalogForm } from "./useDesignerCatalog";
 
@@ -48,7 +48,7 @@ const defaultSourceOf = (
 
 export interface AssigneeSourcePickerProps {
   /** 用途:審核者 / 知會對象(下拉標籤、條件框與對話框的標題、欄位說明) */
-  purpose: PeoplePurpose;
+  purpose: SourcePurpose;
   /** 目前的來源;`null` = 沒設(只有給了 `noneLabel` 的使用處會出現,例如知會) */
   value: AssigneeSource | null;
   onChange: (value: AssigneeSource | null) => void;

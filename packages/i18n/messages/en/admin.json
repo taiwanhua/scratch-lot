@@ -2579,7 +2579,7 @@
         "priorApprover": "When the reviewer already approved an earlier step",
         "normal": "Review as usual",
         "auto": "Auto-approve",
-        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the project's pre-approval check; if it fails, they review as usual."
+        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they review as usual."
       },
       "overdue": {
         "title": "Overdue reminders",
@@ -2665,13 +2665,10 @@
           "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the CC recipient is whoever that field selects on submission."
         },
         "overdue": {
-          "kind": "Reminder recipients",
-          "region": "Reminder recipients",
           "audienceTitle": "Reminder recipients",
           "audienceRegion": "Reminder recipient condition",
           "dialogTitle": "Reminder recipient condition · {step}",
-          "dialogTitleShared": "Reminder recipient condition · {step} (shared workflow)",
-          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the recipient is whoever that field selects on submission."
+          "dialogTitleShared": "Reminder recipient condition · {step} (shared workflow)"
         }
       }
     },

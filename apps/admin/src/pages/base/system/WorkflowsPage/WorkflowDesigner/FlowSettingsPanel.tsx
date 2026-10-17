@@ -40,6 +40,8 @@ export const FlowSettingsPanel = ({
   isReadonly,
 }: FlowSettingsPanelProps) => {
   const t = useTranslations("admin.workflows.flow");
+  // 即時檢查與 api 結果可能有同一句(訊息當 React key,先去重)
+  const messages = [...new Set(issues)];
 
   return (
     <Stack spacing={2} component="section" aria-label={t("region")}>
@@ -61,9 +63,9 @@ export const FlowSettingsPanel = ({
         checkFormFields={checkFormFields}
         isReadonly={isReadonly}
       />
-      {issues.length > 0 && (
+      {messages.length > 0 && (
         <Stack spacing={0.5} role="group" aria-label={t("issues")}>
-          {issues.map((message) => (
+          {messages.map((message) => (
             <Typography key={message} variant="caption" color="error">
               {message}
             </Typography>
