@@ -11,7 +11,8 @@
 - 理由:`accept()` 讓 Durable Object 在整個連線期間常駐記憶體、持續計費;Hibernation API 在閒置時讓 Durable Object 休眠,連線不斷、閒置不計費(免費方案的前提)。
 - 連線資訊(持有者、可訂閱頻道、已訂閱頻道、憑證到期時間)放 WebSocket 的 attachment(`serializeAttachment` / `deserializeAttachment`),不放類別欄位:休眠喚醒後類別欄位會重置,attachment 會保留。
 - **attachment 一律經 `writeAttachment` 寫入**:寫不進去(Cloudflare 上限 16 KB)時記 log、以 `REALTIME_CLOSE_CODES.attachmentFailed`(4002)關閉該連線,不讓錯誤變成 500;前端照斷線處理。訂閱憑證的頻道數量不設上限,這是唯一的保護(憑證平常只有自己的個人頻道,看板頁才多一個 `board:<分店>`)。把關:`apps/realtime/src/index.test.ts`「連線資料寫入失敗」。
-- 把關:`apps/realtime/src/hibernation.test.ts` 掃 `src/` 的正式程式碼,出現 `.accept()`,或 `TenantHub` 沒用 `ctx.acceptWebSocket` / `serializeAttachment` / `webSocketMessage` 時測試失敗。
+- **ping / pong 用 auto-response**:客戶端偵測半開連線的 ping 由 `TenantHub` constructor 登記的 `ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(REALTIME_PING, REALTIME_PONG))` 回應,不喚醒 Durable Object、不進 `webSocketMessage`;**不得**在 `webSocketMessage` 裡處理 ping(每次都會喚醒、計時長)。字串正本在 `@repo/domain/realtime`,完全相同才會自動回應,客戶端送常數本身、不自己組 JSON。把關:`apps/realtime/src/index.test.ts`「偵測半開連線的 ping / pong」。
+- 把關:`apps/realtime/src/hibernation.test.ts` 掃 `src/` 的正式程式碼,出現 `.accept()`,或 `TenantHub` 沒用 `ctx.acceptWebSocket` / `serializeAttachment` / `webSocketMessage` / `setWebSocketAutoResponse` 時測試失敗。
 
 ## RT-02 即時信號不帶資料
 

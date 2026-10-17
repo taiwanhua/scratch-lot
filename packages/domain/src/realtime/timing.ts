@@ -13,3 +13,12 @@ export const MIN_RENEW_DELAY_MS = 30_000;
 export const RECONNECT_BACKOFF_MS: readonly number[] = [
   1000, 2000, 5000, 10_000, 30_000,
 ];
+
+/**
+ * 偵測半開連線(底座規格第 4 章「降級」):連上後每隔這麼久送一次 `REALTIME_PING`(毫秒)。
+ * 目前只有代理程式的 `RealtimeLink` 採用;admin 不採用的理由見 `apps/admin` 的 `RealtimeConnection`。
+ */
+export const REALTIME_PING_INTERVAL_MS = 30_000;
+
+/** 送出 `REALTIME_PING` 後多久沒收到 `REALTIME_PONG` 就當連線壞了,關掉重連(毫秒)。 */
+export const REALTIME_PONG_TIMEOUT_MS = 10_000;

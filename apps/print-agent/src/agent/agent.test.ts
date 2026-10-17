@@ -5,6 +5,10 @@ import {
   PRINT_AGENT_POLL_INTERVAL_MS,
   PRINT_SIGNALS,
 } from "@repo/domain/printing";
+import {
+  REALTIME_PING_INTERVAL_MS,
+  REALTIME_PONG_TIMEOUT_MS,
+} from "@repo/domain/realtime";
 
 import { PrintAgentApiError } from "../api-client/api-client";
 import { RealtimeLink } from "../realtime/realtime-link";
@@ -161,6 +165,28 @@ describe("代理程式", () => {
     socket().open();
     await agent.idle();
     expect(transport.printed).toHaveLength(1);
+    await agent.stop();
+  });
+
+  it("半開連線:ping 10 秒沒有 pong → 重連,重新連上先補抓錯過的工作", async () => {
+    const { api, transport, agent, timers, socket, sockets } = setup();
+    await agent.start();
+    await timers.advance(0);
+    socket().open();
+    // 連線其實斷了:送得出去但收不到任何東西(信號也收不到)
+    socket().autoPong = false;
+    api.addJob("job-half-open");
+    await timers.advance(REALTIME_PING_INTERVAL_MS + REALTIME_PONG_TIMEOUT_MS);
+    expect(sockets[0]?.closed).not.toBeNull();
+    expect(transport.printed).toHaveLength(0);
+    await timers.advance(0); // 立即重連
+    expect(sockets).toHaveLength(2);
+    socket().open();
+    await agent.idle();
+    expect(transport.printed).toHaveLength(1);
+    expect(api.results).toEqual([
+      { jobId: "job-half-open", body: { status: "printed" } },
+    ]);
     await agent.stop();
   });
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "@jest/globals";
 
 import {
   MIN_RENEW_DELAY_MS,
+  REALTIME_PING_INTERVAL_MS,
   RECONNECT_BACKOFF_MS,
 } from "@repo/domain/realtime";
 
@@ -268,6 +269,16 @@ describe("RealtimeConnection", () => {
     await flushPromises();
     latest().receive({ op: "renewed", exp: 1 });
     expect(latest().sent).toEqual([{ op: "renew", ticket: "t1" }]);
+  });
+
+  it("後台不送 ping(背景分頁計時器會被節流,理由見 RealtimeConnection 說明);收到 pong 也不理", async () => {
+    const instance = await started();
+    await timers.advance(REALTIME_PING_INTERVAL_MS * 3);
+    expect(latest().sent).toEqual([]);
+    latest().receive({ op: "pong" });
+    expect(statuses).toEqual(["connecting", "live"]);
+    expect(sockets).toHaveLength(1);
+    instance.stop();
   });
 
   it("stop:關閉連線、不再重連", async () => {

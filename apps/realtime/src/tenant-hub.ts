@@ -2,6 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 
 import {
   REALTIME_CLOSE_CODES,
+  REALTIME_PING,
+  REALTIME_PONG,
   type RealtimeServerMessage,
   type RealtimeSignal,
   type RealtimeTicket,
@@ -116,8 +118,18 @@ function deliver(
  *
  * **只用 WebSocket Hibernation API**(`ctx.acceptWebSocket` + `webSocketMessage` / `serializeAttachment`):
  * 閒置連線不讓 Durable Object 常駐計費;測試會掃原始碼把關。
+ *
+ * **ping / pong 用 auto-response**:客戶端偵測半開連線送的 `REALTIME_PING` 由執行環境直接回 `REALTIME_PONG`,
+ * 不喚醒休眠中的 Durable Object、不進 `webSocketMessage`(不計時長費用)。
  */
 export class TenantHub extends DurableObject<RealtimeEnv> {
+  constructor(ctx: DurableObjectState, env: RealtimeEnv) {
+    super(ctx, env);
+    this.ctx.setWebSocketAutoResponse(
+      new WebSocketRequestResponsePair(REALTIME_PING, REALTIME_PONG),
+    );
+  }
+
   /** Worker 驗過訂閱憑證後轉來的連線請求。 */
   override fetch(request: Request): Response {
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {

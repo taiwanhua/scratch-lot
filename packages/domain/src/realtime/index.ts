@@ -29,6 +29,8 @@ export {
 } from "./ticket";
 export {
   REALTIME_CLOSE_CODES,
+  REALTIME_PING,
+  REALTIME_PONG,
   REALTIME_PUBLISH_BODY_MAX_LENGTH,
   REALTIME_PUBLISH_SIGNATURE_HEADER,
   type RealtimeClientMessage,
@@ -42,6 +44,8 @@ export {
 } from "./protocol";
 export {
   MIN_RENEW_DELAY_MS,
+  REALTIME_PING_INTERVAL_MS,
+  REALTIME_PONG_TIMEOUT_MS,
   RECONNECT_BACKOFF_MS,
   RENEW_BEFORE_MS,
 } from "./timing";
