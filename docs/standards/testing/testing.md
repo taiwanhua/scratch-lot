@@ -28,7 +28,7 @@
 
 ## TEST-05 劇本 E2E 只手動跑,不進每個 PR 的 CI
 
-Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md` 的 **24 條權限劇本**從人工驗收
+Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md` 的 **29 條權限劇本**從人工驗收
 改成機器裁決。E2E 慢且脆、數量是成本,所以解法是「**寫了但不自動跑**」:
 
 - **跑的時機只有手動觸發**:本機 `pnpm e2e`、CI 是 `.github/workflows/e2e.yml`(只有 `workflow_dispatch`)。
