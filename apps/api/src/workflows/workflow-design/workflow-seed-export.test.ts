@@ -5,7 +5,7 @@ import type {
   DefinitionSeedSet,
   WorkflowDefinitionSeedSet,
 } from "@repo/domain/seed";
-import type { StepDef } from "@repo/domain/workflow";
+import { DEFAULT_OVERDUE_AUDIENCE, type StepDef } from "@repo/domain/workflow";
 
 import type { AuthTestApp } from "../../auth/test-support/auth-app";
 import { findRootOrgId } from "../../auth/test-support/fixtures";
@@ -289,6 +289,46 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
       // 唯讀:身分、全部版本、安裝紀錄、稽核筆數都沒變
       expect(await persistedStateOf(connection, WORKFLOW, key)).toEqual(before);
       expect(await installationsOf(connection, key)).toEqual([]);
+    });
+
+    it("逾時提醒、關卡知會、整個流程的知會:匯出原樣帶出,換 key 安裝後版本上照樣保留", async () => {
+      const key = "exp_flow_overdue_cc";
+      const overdue = {
+        reviewerAfterHours: 24,
+        audienceAfterHours: 48,
+        audience: DEFAULT_OVERDUE_AUDIENCE,
+      };
+      const stepCc = { kind: "manager", level: 2 };
+      const flowCc = audienceSource(audienceRow("permission", ["hr.approve"]));
+      const steps = [
+        { ...bossOnly()[0], overdue, cc: stepCc },
+      ] as unknown as StepDef[];
+      await ok(api, world.root, CREATE_WORKFLOW, {
+        input: { key, name: `流程 ${key}` },
+      });
+      await publishWorkflowDraft(
+        world,
+        key,
+        { steps, cc: flowCc },
+        null,
+        world.root,
+      );
+
+      const file = await exportOk(designer.token, inputOf(key, 1));
+      const seed = evaluateSeedSource(file.source) as WorkflowDefinitionSeedSet;
+      expect(seed.definition).toEqual({
+        steps: [expect.objectContaining({ overdue, cc: stepCc })],
+        edges: null,
+        cc: flowCc,
+      });
+
+      const installedKey = `${key}_installed`;
+      await runSeed(app, { ...seed, key: installedKey });
+      const [installed] = await versionDocs(connection, WORKFLOW, installedKey);
+      expect(installed?.cc).toEqual(flowCc);
+      expect(installed?.steps).toEqual([
+        expect.objectContaining({ overdue, cc: stepCc }),
+      ]);
     });
 
     it("版本由呼叫端指名:已退役、草稿、不存在的版本都拒絕,不拿目前版本代替;退役目前版本後也不能再匯出它", async () => {

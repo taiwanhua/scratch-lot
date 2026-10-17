@@ -12,7 +12,6 @@ import {
   WorkflowVersionsRepository,
 } from "../../database/database.module";
 import { TransactionService } from "../../database/transaction";
-import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import {
   type WorkflowTaskRecord,
   WorkflowTasksRepository,
@@ -28,6 +27,7 @@ import { definitionOfVersion } from "../workflow-definition-input";
 import { AudienceSourceService } from "./audience-source.service";
 import type { InstanceRecord } from "./instance-writes";
 import { nextOverdueDueAt, overdueOf } from "./overdue-timer";
+import { StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
 
 /** 排程工作 key(`scheduled_job_runs` 的執行紀錄也用它)。 */
@@ -35,6 +35,10 @@ export const WORKFLOW_OVERDUE_JOB_KEY = "workflow.overdue-reminders";
 
 /** 每個租戶一次最多處理幾張到期任務(依到期時點由早到晚);沒處理到的下一輪(15 分鐘後)接著處理。 */
 const SWEEP_BATCH = 500;
+
+/** 一張任務提醒失敗後,到期時點往後延多久(一個排程週期)。 */
+export const OVERDUE_RETRY_DELAY_MS = 15 * 60_000;
+const RETRY_DELAY_MS = OVERDUE_RETRY_DELAY_MS;
 
 /**
  * 逾時提醒(《底座規格》3.8 B16):B14 排程每 15 分鐘檢查一次,經 B7 `notify()` 發 `workflow.overdue`。
@@ -52,7 +56,7 @@ const SWEEP_BATCH = 500;
  * 冪等:任務記「這一次指派已通知到第幾級」(`overdueLevel`)與下一級的到期時點(`overdueDueAt`),
  * 每張任務一個交易:再讀一次 → 通知 → 條件更新級數(條件含讀到的級數與指派時點);通知的 `dedupeKey`
  * = 類型 + 任務 + 指派時點 + 級數,即 `(taskId, level)` 以「這一次指派」為單位。一張失敗只回復那一張、記 log,
- * 不影響其他張(下一輪重試)。
+ * 到期時點往後延一個排程週期(不擋住同租戶其他到期任務);一個租戶整批出錯只記 log,其他租戶照跑。
  */
 @Injectable()
 export class WorkflowOverdueService implements OnModuleInit {
@@ -62,7 +66,7 @@ export class WorkflowOverdueService implements OnModuleInit {
     private readonly tasks: WorkflowTasksRepository,
     private readonly instances: WorkflowInstancesRepository,
     private readonly versions: WorkflowVersionsRepository,
-    private readonly submissions: WorkflowSubmissionStore,
+    private readonly entries: StepEntryService,
     private readonly sources: AudienceSourceService,
     private readonly notifications: NotificationService,
     private readonly notifier: WorkflowNotifier,
@@ -82,7 +86,10 @@ export class WorkflowOverdueService implements OnModuleInit {
     });
   }
 
-  /** 檢查這些租戶(根組織 `null` 沒有任務,略過)到期的待處理任務。 */
+  /**
+   * 檢查這些租戶(根組織 `null` 沒有任務,略過)到期的待處理任務。每個租戶各自 try/catch(同列印的
+   * `runScheduledSweep`):一個租戶出錯只記 log,其他租戶照跑。
+   */
   async sweep(
     now: Date,
     tenantIds: readonly (Types.ObjectId | null)[],
@@ -91,22 +98,59 @@ export class WorkflowOverdueService implements OnModuleInit {
       if (tenantId === null) {
         continue;
       }
-      const due = await this.tasks.findMany(
-        tenantId,
-        { status: "pending", overdueDueAt: { $ne: null, $lte: now } },
-        { sort: { overdueDueAt: 1 }, limit: SWEEP_BATCH },
-      );
-      for (const task of due) {
-        try {
-          await this.transactions.withTransaction(() =>
-            this.remindOnce(tenantId, task._id, now),
-          );
-        } catch (error) {
-          this.logger.error(
-            `任務 ${String(task._id)} 的逾時提醒失敗(下一輪重試):${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
-          );
-        }
+      try {
+        await this.sweepTenant(tenantId, now);
+      } catch (error) {
+        this.logger.error(
+          `租戶 ${String(tenantId)} 的逾時提醒檢查失敗(下一輪重試):${messageOf(error)}`,
+        );
       }
+    }
+  }
+
+  private async sweepTenant(
+    tenantId: Types.ObjectId,
+    now: Date,
+  ): Promise<void> {
+    const due = await this.tasks.findMany(
+      tenantId,
+      { status: "pending", overdueDueAt: { $ne: null, $lte: now } },
+      { sort: { overdueDueAt: 1 }, limit: SWEEP_BATCH },
+    );
+    for (const task of due) {
+      try {
+        await this.transactions.withTransaction(() =>
+          this.remindOnce(tenantId, task._id, now),
+        );
+      } catch (error) {
+        this.logger.error(
+          `任務 ${String(task._id)} 的逾時提醒失敗(延後一個排程週期再試):${messageOf(error)}`,
+        );
+        await this.deferAfterFailure(tenantId, task._id, now);
+      }
+    }
+  }
+
+  /**
+   * 失敗的任務把到期時點往後延一個排程週期:否則同一批失敗的任務一直排在最前面,超過一批的上限後
+   * 其他到期任務輪不到。交易已回復,這裡在交易外單獨寫一次;再失敗也只記 log(下一輪照舊會撈到它)。
+   */
+  private async deferAfterFailure(
+    tenantId: Types.ObjectId,
+    taskId: Types.ObjectId,
+    now: Date,
+  ): Promise<void> {
+    try {
+      await this.tasks.updateOne(
+        systemContext(),
+        tenantId,
+        { _id: taskId, status: "pending", overdueDueAt: { $ne: null } },
+        { $set: { overdueDueAt: new Date(now.getTime() + RETRY_DELAY_MS) } },
+      );
+    } catch (error) {
+      this.logger.error(
+        `任務 ${String(taskId)} 的逾時提醒延後失敗:${messageOf(error)}`,
+      );
     }
   }
 
@@ -203,25 +247,13 @@ export class WorkflowOverdueService implements OnModuleInit {
     task: WorkflowTaskRecord,
     overdue: OverdueReminderDef,
   ): Promise<Types.ObjectId[]> {
-    const tenantId = instance.tenantId;
-    if (tenantId === null) {
+    const context = await this.entries.submissionContextOf(instance);
+    if (context === null) {
       return [];
     }
-    const submission = await this.submissions.findById(
-      tenantId,
-      instance.submissionId,
-    );
-    const revision = submission?.revisions.find(
-      (entry) => entry.revision === instance.revision,
-    );
     const audience = await this.sources.resolveAudienceSource(
       { kind: "audience", audience: overdue.audience },
-      {
-        tenantId,
-        orgId: instance.orgId,
-        applicantId: instance.createdBy,
-        values: revision?.values ?? {},
-      },
+      context,
     );
     return audience.filter((id) => !id.equals(task.assigneeId));
   }
@@ -282,4 +314,10 @@ export class WorkflowOverdueService implements OnModuleInit {
       );
     }
   }
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error
+    ? (error.stack ?? error.message)
+    : String(error);
 }
