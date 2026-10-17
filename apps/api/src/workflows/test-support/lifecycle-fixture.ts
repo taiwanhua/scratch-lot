@@ -28,6 +28,7 @@ export interface EffectCall {
 /**
  * 掛接點測試的探針:病假表單登記全部 8 個守門與 7 個事後動作,行為由測試切換。
  * - `blockOn`:這個守門回「擋下」
+ * - `blockWhen`:給了就只擋它回 true 的那幾筆(例:批次核准只擋其中幾張單)
  * - `onEffect`:事後動作被呼叫時要做的事(例:以 `context.session` 寫一筆專案資料、拋錯)
  */
 export const lifecycleProbe: {
@@ -35,6 +36,7 @@ export const lifecycleProbe: {
   effects: EffectCall[];
   effectContexts: FormEffectContext[];
   blockOn: FormGuardName | null;
+  blockWhen: ((context: FormGuardContext) => boolean) | null;
   /** 擋下時回的錯誤碼(預設 `LIFECYCLE_BLOCKED_CODE`;測不合格的碼時換掉)。 */
   blockCode: string;
   onEffect: ((context: FormEffectContext) => Promise<void>) | null;
@@ -43,6 +45,7 @@ export const lifecycleProbe: {
   effects: [],
   effectContexts: [],
   blockOn: null,
+  blockWhen: null,
   blockCode: LIFECYCLE_BLOCKED_CODE,
   onEffect: null,
 };
@@ -53,13 +56,17 @@ export function resetLifecycleProbe(): void {
   lifecycleProbe.effects = [];
   lifecycleProbe.effectContexts = [];
   lifecycleProbe.blockOn = null;
+  lifecycleProbe.blockWhen = null;
   lifecycleProbe.blockCode = LIFECYCLE_BLOCKED_CODE;
   lifecycleProbe.onEffect = null;
 }
 
 const guard: FormGuard = (context) => {
   lifecycleProbe.guards.push({ guard: context.guard, context });
-  return lifecycleProbe.blockOn === context.guard
+  const isBlocked =
+    lifecycleProbe.blockOn === context.guard &&
+    (lifecycleProbe.blockWhen?.(context) ?? true);
+  return isBlocked
     ? { code: lifecycleProbe.blockCode, message: `blocked by ${context.guard}` }
     : null;
 };

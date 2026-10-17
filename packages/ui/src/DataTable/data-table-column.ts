@@ -16,6 +16,8 @@ export interface DataTableColumn<Row> extends CellRenderColumn<Row> {
   cellSx?: SxProps<Theme>;
   /** 疊加到這一欄表頭格上的樣式 */
   headerSx?: SxProps<Theme>;
+  /** `false` = 不能拖拉 / 鍵盤調整欄寬(不畫欄寬把手);預設可以 */
+  isResizable?: boolean;
 }
 
 /** 單欄排序狀態;`null` 表示不排序(照 `rows` 原順序)。 */

@@ -24,6 +24,8 @@ export interface DataTableBodyRowProps<Row extends RowData> {
   /** 資料列之前的列數(表頭 + 固定列) */
   rowIndexOffset: number;
   onRowClick?: (row: Row) => void;
+  /** 列勾選開啟時這列已勾(選取底色、`aria-selected`) */
+  isSelected?: boolean;
 }
 
 /**
@@ -39,6 +41,7 @@ const DataTableBodyRowInner = <Row extends RowData>({
   measureElement,
   rowIndexOffset,
   onRowClick,
+  isSelected = false,
 }: DataTableBodyRowProps<Row>) => {
   const isRowClickable = onRowClick !== undefined;
 
@@ -82,6 +85,7 @@ const DataTableBodyRowInner = <Row extends RowData>({
       data-index={index}
       aria-rowindex={index + rowIndexOffset + 1}
       hover={isRowClickable}
+      selected={isSelected}
       onClick={
         isRowClickable
           ? () => {

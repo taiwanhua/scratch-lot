@@ -81,3 +81,20 @@ export class BlockedInstancesInput {
   })
   pageSize?: number;
 }
+
+/** 批次核准一次最多幾筆(底座規格 3.10 B18;前端勾選上限同值)。 */
+export const BATCH_APPROVE_LIMIT = 50;
+
+/** 審核者一次核准多個任務(每一筆一個交易);只支援核准。 */
+@InputType()
+export class BatchApproveTasksInput {
+  /** 要核准的任務;重複的只算一次,1 到 50 筆。 */
+  @Field(() => [ID], {
+    description: `要核准的任務,1 到 ${String(BATCH_APPROVE_LIMIT)} 筆(重複的只算一次)`,
+  })
+  taskIds!: string[];
+
+  /** 共同意見;缺席 / `null` / 空白 = 沒有。 */
+  @Field(() => String, { nullable: true })
+  comment?: string | null;
+}

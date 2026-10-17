@@ -415,3 +415,42 @@ export class WorkflowTasksPayload {
   @Field(() => Int)
   pageSize!: number;
 }
+
+/** 批次核准一筆失敗的原因(底座規格 3.10 B18)。 */
+export enum WorkflowBatchApproveFailureEnum {
+  /** 任務已被處理、改派,或此關已結束(「這件已不在你手上」)。 */
+  NOT_YOURS = "notYours",
+  /** 被專案的 `beforeApprove` 守門擋下(錯誤碼在 `projectReason`)。 */
+  BLOCKED = "blocked",
+  /** 其他失敗(這一筆的交易回復,其他筆不受影響)。 */
+  FAILED = "failed",
+}
+
+registerEnumType(WorkflowBatchApproveFailureEnum, {
+  name: "WorkflowBatchApproveFailure",
+  description: "批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗",
+});
+
+/** 批次核准的一筆結果;順序同輸入(去重後)。 */
+@ObjectType()
+export class WorkflowBatchApproveResultModel {
+  @Field(() => ID)
+  taskId!: string;
+
+  @Field(() => Boolean)
+  ok!: boolean;
+
+  /** 失敗原因;成功時 `null`。 */
+  @Field(() => WorkflowBatchApproveFailureEnum, { nullable: true })
+  reason!: WorkflowBatchApproveFailureEnum | null;
+
+  /** `reason: BLOCKED` 時的專案錯誤碼(前端文案 `admin.lifecycle.<碼>`);其他情況 `null`。 */
+  @Field(() => String, { nullable: true })
+  projectReason!: string | null;
+}
+
+@ObjectType()
+export class BatchApproveTasksPayload {
+  @Field(() => [WorkflowBatchApproveResultModel])
+  results!: WorkflowBatchApproveResultModel[];
+}

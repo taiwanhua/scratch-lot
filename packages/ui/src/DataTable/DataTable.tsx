@@ -1,5 +1,6 @@
 "use client";
 
+import MuiBox from "@mui/material/Box";
 import MuiTable from "@mui/material/Table";
 import MuiTableBody from "@mui/material/TableBody";
 import MuiTableCell from "@mui/material/TableCell";
@@ -15,6 +16,7 @@ import { TableStatusRow } from "../Table/TableStatusRow";
 import { mergeSx } from "../theme/sx";
 import { DataTableBodyRows } from "./DataTableBodyRows";
 import { DataTableHeaderCell } from "./DataTableHeaderCell";
+import { DataTableSelectionBar } from "./DataTableSelectionBar";
 import { type DataTableTopRow, DataTableTopRows } from "./DataTableTopRows";
 import type { CellRenderColumn } from "./cell-render-context";
 import type {
@@ -23,8 +25,10 @@ import type {
   DataTableColumnWidths,
   DataTableSort,
 } from "./data-table-column";
+import type { DataTableRowSelection } from "./data-table-row-selection";
 import { pinnedPlacementOf } from "./pinned-cell-sx";
 import { useDataTable } from "./useDataTable";
+import { useSelectionColumn } from "./useSelectionColumn";
 
 export type {
   CellRenderColumn,
@@ -38,6 +42,10 @@ export type {
   DataTableSort,
 } from "./data-table-column";
 export type { DataTableTopRow } from "./DataTableTopRows";
+export type {
+  DataTableRowSelection,
+  DataTableRowSelectionLabels,
+} from "./data-table-row-selection";
 
 export interface DataTableProps<Row extends RowData> {
   columns: readonly DataTableColumn<Row>[];
@@ -85,6 +93,11 @@ export interface DataTableProps<Row extends RowData> {
    * 虛擬捲動需要確定的高度:父層高度不確定時用它給 `height` / `maxHeight`。
    */
   containerSx?: SxProps<Theme>;
+  /**
+   * 選用的列勾選(預設關閉,頁面要用才開):最前面多一個勾選欄,有勾選時表格上方出現
+   * 「已選 N 筆 · 清除」列。選取以列 key 由呼叫端持有,換頁保留(見 `DataTableRowSelection`)。
+   */
+  rowSelection?: DataTableRowSelection<Row>;
   "aria-label"?: string;
 }
 
@@ -95,11 +108,11 @@ const defaultResizeLabel = <Row,>(column: CellRenderColumn<Row>): string =>
 
 /**
  * 大量資料的表格(TanStack Table + Virtual):列虛擬捲動、欄寬拖拉、左右固定欄、單欄排序、
- * 欄位顯示 / 隱藏、表頭下方的固定列。
+ * 欄位顯示 / 隱藏、表頭下方的固定列、選用的列勾選。
  * 欄位宣告與渲染簽章見 REACT-13;少量資料的治理頁小表用 `@repo/ui/table` 的 `Table`。
  */
 export const DataTable = <Row extends RowData>({
-  columns,
+  columns: ownColumns,
   rows,
   getRowKey,
   isLoading = false,
@@ -117,8 +130,16 @@ export const DataTable = <Row extends RowData>({
   minWidth = 0,
   size = "medium",
   containerSx,
+  rowSelection,
   "aria-label": ariaLabel,
 }: DataTableProps<Row>) => {
+  const selection = useSelectionColumn(
+    ownColumns,
+    rows,
+    getRowKey,
+    rowSelection,
+  );
+  const { columns } = selection;
   // 捲動容器放 state 而不是 ref:ref 在子層的 layout effect 之後才掛上,
   // 虛擬捲動第一次量測時會拿到 null、之後也沒有重新渲染的契機
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
@@ -176,7 +197,7 @@ export const DataTable = <Row extends RowData>({
     );
   };
 
-  return (
+  const tableContainer = (
     <MuiTableContainer
       ref={setScrollElement}
       sx={mergeSx({ height: "100%", minHeight: 0 }, containerSx)}
@@ -246,11 +267,42 @@ export const DataTable = <Row extends RowData>({
               scrollElement={scrollElement}
               size={size}
               onRowClick={onRowClick}
+              selectedKeys={selection.selectedKeys}
               rowIndexOffset={headRowCount}
             />
           )}
         </MuiTableBody>
       </MuiTable>
     </MuiTableContainer>
+  );
+
+  if (rowSelection === undefined) {
+    return tableContainer;
+  }
+  const selectedCount = rowSelection.selectedKeys.length;
+  return (
+    <MuiBox
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 1.5,
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      {selectedCount > 0 && (
+        <DataTableSelectionBar
+          count={selectedCount}
+          countText={selection.labels.selectedCount(selectedCount)}
+          clearLabel={selection.labels.clear}
+          hint={rowSelection.hint}
+          actions={rowSelection.actions}
+          onClear={() => {
+            rowSelection.onSelectedKeysChange([]);
+          }}
+        />
+      )}
+      <MuiBox sx={{ flex: 1, minHeight: 0 }}>{tableContainer}</MuiBox>
+    </MuiBox>
   );
 };

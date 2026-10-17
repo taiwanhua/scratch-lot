@@ -380,7 +380,25 @@ const mockWorkflowRuntime = () => ({
       ],
     }),
   ],
-  tasks: [taskFragment({ id: "task-manager-1" })],
+  // 待我審核三筆(批次核准 BS-07a / b):「出差三天」核准時被專案守門擋下(錯誤碼沒有文案 → 通用句)
+  tasks: [
+    taskFragment({ id: "task-manager-1" }),
+    taskFragment({
+      id: "task-manager-2",
+      instanceId: "inst-3",
+      formName: "採購申請單",
+      stepName: "部門主管",
+      summary: { title: "辦公椅 5 張", date: null, amount: null },
+    }),
+    taskFragment({
+      id: "task-manager-3",
+      instanceId: "inst-4",
+      formName: "出差申請單",
+      stepName: "財務複核",
+      summary: { title: "出差三天", date: null, amount: null },
+    }),
+  ],
+  blockedTaskReasons: { "task-manager-3": "LEAVE_QUOTA_SHORT" },
   applications: [
     applicationRow(),
     applicationRow({

@@ -51,14 +51,26 @@ export interface EffectSubject {
   revision: number;
 }
 
-/** 守門擋下:`FORBIDDEN` + `reason` = 專案錯誤碼;使用者文案由前端依 reason 走 i18n。 */
+/**
+ * 守門擋下:`FORBIDDEN` + `reason` = 專案錯誤碼;使用者文案由前端依 reason 走 i18n。
+ * 獨立的類別讓批次核准分得出「被守門擋下」與其他 `FORBIDDEN`(`projectReason` = 專案錯誤碼)。
+ */
+export class LifecycleBlockedError extends GraphQLError {
+  constructor(
+    readonly projectReason: string,
+    message: string,
+  ) {
+    super(message, {
+      extensions: { code: "FORBIDDEN", reason: projectReason },
+    });
+  }
+}
+
 export function lifecycleBlockedError(
   code: string,
   message: string,
-): GraphQLError {
-  return new GraphQLError(message, {
-    extensions: { code: "FORBIDDEN", reason: code },
-  });
+): LifecycleBlockedError {
+  return new LifecycleBlockedError(code, message);
 }
 
 function sessionOf(what: string): ClientSession {
