@@ -6,7 +6,7 @@ import {
   type LookupSourceDescriptor,
   type Prefill,
   arrayColumnsOf,
-  filterScalarOf,
+  filterScalarForField,
   lookupLabelFieldsOf,
   resolveLookupSource,
 } from "@repo/domain/form";
@@ -256,8 +256,12 @@ export class FormLookupService {
     }
     const target = targetOf(version.fields, version.prefills, input.target);
     // 連動篩選(B2d):換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
+    // 值依被引用欄位的型別收,型別不符當沒填(查無),不讓竄改的值撞上文件欄位的型別
     const source = resolveLookupSource(target.source, (fieldKey) =>
-      filterScalarOf(input.filterValues?.[fieldKey]),
+      filterScalarForField(
+        version.fields.find((field) => field.key === fieldKey),
+        input.filterValues?.[fieldKey],
+      ),
     );
     return source === null ? null : { ...target, source };
   }

@@ -5,6 +5,7 @@ import { arrayField, column } from "./array-test-support";
 import { definitionOf, field } from "./form-test-support";
 import type { DefinitionIssue } from "./issues";
 import {
+  filterScalarForField,
   filterVarValueOf,
   isFilterVarCompatible,
   lookupFilterVarsOf,
@@ -75,6 +76,16 @@ describe("連動篩選(B2d)的純邏輯", () => {
     expect(filterVarValueOf(field("qty", "number"), "12")).toBe(12);
     expect(filterVarValueOf(field("note", "text"), "")).toBeNull();
     expect(filterVarValueOf(shipOrg, null)).toBeNull();
+  });
+
+  it("前端送的篩選值依被引用欄位的型別收,型別不符當沒填", () => {
+    expect(filterScalarForField(field("flag", "boolean"), true)).toBe(true);
+    expect(filterScalarForField(field("flag", "boolean"), "abc")).toBeNull();
+    expect(filterScalarForField(field("qty", "number"), "3")).toBeNull();
+    expect(filterScalarForField(field("qty", "number"), 3)).toBe(3);
+    expect(filterScalarForField(shipOrg, "org-a")).toBe("org-a");
+    expect(filterScalarForField(shipOrg, 1)).toBeNull();
+    expect(filterScalarForField(undefined, "x")).toBeNull();
   });
 
   it("型別相符:同型別、文字篩選欄收單選 / 引用;型別不明不擋", () => {

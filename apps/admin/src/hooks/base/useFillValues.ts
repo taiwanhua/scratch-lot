@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "use-intl";
 
 import type {
   ExpressionContext,
@@ -6,7 +7,13 @@ import type {
   StoredValues,
 } from "@repo/domain/form";
 
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import type { FieldPermissionFacts } from "@/lib/base/form-engine/field-states";
+import {
+  type ClearedLink,
+  clearLinkedReferences,
+  linkedReferencesOf,
+} from "@/lib/base/form-engine/filter-links";
 import {
   changedKeysOf,
   withDefaults,
@@ -33,7 +40,10 @@ export interface FillValues {
   values: StoredValues;
   /** 使用者碰過的欄位 key(存草稿時一併送出) */
   touched: readonly string[];
-  /** 使用者改了值(`FormRenderer` 的 onChange;帶入的 patch 也走這裡):改到的欄位記為碰過,再重算其餘預設值 */
+  /**
+   * 使用者改了值(`FormRenderer` 的 onChange;帶入的 patch 也走這裡):改到的欄位記為碰過,再重算其餘預設值;
+   * 連動篩選被引用欄位的值變了就清空依賴它的引用欄並提示(值變動的共同入口)
+   */
   change: (next: StoredValues) => void;
 }
 
@@ -50,10 +60,14 @@ export const useFillValues = ({
   fillOnMount,
   systemLabels,
 }: FillValuesOptions): FillValues => {
+  const t = useTranslations("admin.formEngine.renderer");
+  const showSnackbar = useSnackbar();
+  const links = useMemo(() => linkedReferencesOf(fields), [fields]);
   const [state, setState] = useState(() => {
     const touched = new Set(initialTouched);
     return {
       touched,
+      cleared: [] as ClearedLink[],
       values: fillOnMount
         ? withDefaults({
             fields,
@@ -73,21 +87,39 @@ export const useFillValues = ({
       for (const key of changedKeysOf(current.values, next)) {
         touched.add(key);
       }
-      return {
-        touched,
-        values: recomputeDefaults
-          ? withDefaults({
-              fields,
-              values: next,
-              ctx,
-              touched,
-              permissions,
-              ...(systemLabels !== undefined && { systemLabels }),
-            })
-          : next,
-      };
+      const settled = recomputeDefaults
+        ? withDefaults({
+            fields,
+            values: next,
+            ctx,
+            touched,
+            permissions,
+            ...(systemLabels !== undefined && { systemLabels }),
+          })
+        : next;
+      // 連動篩選(B2d):被引用欄位(含帶入、預設值、計算欄位)的篩選值變了 → 清空依賴它的引用欄
+      const { values, cleared } = clearLinkedReferences(
+        fields,
+        links,
+        current.values,
+        settled,
+        ctx,
+      );
+      return { touched, values, cleared };
     });
   };
+
+  // 清空的提示在 commit 之後才跳(更新函式要保持純粹)
+  useEffect(() => {
+    for (const notice of state.cleared) {
+      showSnackbar(
+        "info",
+        notice.rows === undefined
+          ? t("linkedCleared", { field: notice.label })
+          : t("linkedClearedRows", { count: notice.rows, field: notice.label }),
+      );
+    }
+  }, [state.cleared, showSnackbar, t]);
 
   return { values: state.values, touched: [...state.touched], change };
 };

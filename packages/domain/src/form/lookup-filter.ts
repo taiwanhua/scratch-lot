@@ -96,6 +96,26 @@ export function filterScalarOf(value: unknown): LookupFilterScalar | null {
   return isScalar ? value : null;
 }
 
+/** 欄位型別 → 篩選值的 JS 型別(沒列的是字串)。 */
+const SCALAR_TYPE_OF: Partial<Record<FieldType, "boolean" | "number">> = {
+  boolean: "boolean",
+  number: "number",
+};
+
+/**
+ * 前端送來的篩選值依**被引用欄位的型別**收:是否欄只收 true / false、數字欄只收數字、其餘(文字 / 單選 / 引用)
+ * 只收字串;型別不符或欄位不存在 → null(= 沒填,這個來源查無)。避免竄改的值型別撞上文件欄位(例 CastError)。
+ */
+export function filterScalarForField(
+  field: Pick<FieldDef, "type"> | undefined,
+  value: unknown,
+): LookupFilterScalar | null {
+  const scalar = filterScalarOf(value);
+  const expected =
+    field === undefined ? null : (SCALAR_TYPE_OF[field.type] ?? "string");
+  return typeof scalar === expected ? scalar : null;
+}
+
 /**
  * 把連動篩選換成目前的值:`valueOf(fieldKey)` 回那一欄的篩選值。
  * 任一被引用欄位沒有值(或 `{ var }` 形狀不對)→ `null`(這個來源此刻查無);沒有連動篩選照原樣回。

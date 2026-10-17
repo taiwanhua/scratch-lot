@@ -4,18 +4,21 @@ import {
   type FormDefinition,
   type SummarySlot,
   arrayColumnsOf,
+  lookupFilterVarsOf,
   referencedFieldKeys,
 } from "@repo/domain/form";
 
 /**
- * 刪欄位前的確認清單(Spec 6a §8「設計器其他規則」):先列出**草稿內**引用它的表達式、摘要槽、帶入規則,
+ * 刪欄位前的確認清單(Spec 6a §8「設計器其他規則」):先列出**草稿內**引用它的表達式、摘要槽、帶入規則、連動篩選,
  * 以及**草稿外**的列表欄位配置(只提示,不動)。確認後只從 `fields[]` / `layout` 移除,這些引用處
- * 會變成檢查器錯誤(`EXPR_UNKNOWN_FIELD`、`SUMMARY_UNMAPPED`、`PREFILL_…`)由設計者手動修。
+ * 會變成檢查器錯誤(`EXPR_UNKNOWN_FIELD`、`SUMMARY_UNMAPPED`、`PREFILL_…`、`LOOKUP_FILTER_VAR_INVALID`)由設計者手動修。
  */
 export type FieldReference =
   | { kind: "expression"; fieldKey: string; slot: ExpressionSlot }
   | { kind: "summary"; slot: SummarySlot }
   | { kind: "prefill"; prefillIndex: number; label: string }
+  /** 引用欄位 / 明細引用子欄的連動篩選 `{ var }` 引用它(B2d) */
+  | { kind: "lookupFilter"; fieldKey: string; columnKey?: string }
   | { kind: "listColumn" };
 
 const EXPRESSION_SLOTS: readonly ExpressionSlot[] = [
@@ -87,6 +90,27 @@ const expressionReferencesOf = (
     : []),
 ];
 
+/** 表單層引用欄與明細引用子欄的連動篩選裡 `{ var: fieldKey }` 的地方。 */
+const lookupFilterReferencesOf = (
+  field: FormDefinition["fields"][number],
+  fieldKey: string,
+): FieldReference[] => {
+  const refers = (source: Parameters<typeof lookupFilterVarsOf>[0]) =>
+    lookupFilterVarsOf(source).some((entry) => entry.fieldKey === fieldKey);
+  if (field.type === "reference") {
+    return refers(field.source)
+      ? [{ kind: "lookupFilter", fieldKey: field.key }]
+      : [];
+  }
+  return arrayColumnsOf(field)
+    .filter((column) => column.type === "reference" && refers(column.source))
+    .map((column) => ({
+      kind: "lookupFilter" as const,
+      fieldKey: field.key,
+      columnKey: column.key,
+    }));
+};
+
 export const fieldReferences = (
   definition: FormDefinition,
   fieldKey: string,
@@ -94,7 +118,10 @@ export const fieldReferences = (
 ): FieldReference[] => {
   const references: FieldReference[] = definition.fields
     .filter((field) => field.key !== fieldKey)
-    .flatMap((field) => expressionReferencesOf(field, fieldKey));
+    .flatMap((field) => [
+      ...expressionReferencesOf(field, fieldKey),
+      ...lookupFilterReferencesOf(field, fieldKey),
+    ]);
   for (const slot of ["title", "date", "amount"] as const) {
     if (definition.summaryMap[slot] === fieldKey) {
       references.push({ kind: "summary", slot });
@@ -128,7 +155,9 @@ export const sectionReferences = (
     )
     .filter(
       (reference) =>
-        reference.kind !== "expression" || !removed.has(reference.fieldKey),
+        (reference.kind !== "expression" &&
+          reference.kind !== "lookupFilter") ||
+        !removed.has(reference.fieldKey),
     )
     .filter((reference) => {
       const id = JSON.stringify(reference);

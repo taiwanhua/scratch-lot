@@ -12,6 +12,10 @@
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
  * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、只用權限與非指定組織來源的人員條件 | 人員條件的使用者 / 角色 / 指定組織、指向租戶客製表單 |
  *
+ * filter 帶連動篩選 `{ var: "<欄位>" }`(B2d)的,目前也一律判為不可攜(`LOOKUP_FILTER_UNSUPPORTED`):
+ * 可攜的固定條件只有底座 `user` / `org` 的 boolean `enabled`,而連動篩選要跨環境驗證的是「被引用欄位的值
+ * 不夾帶本地 id」,這需要把 `{ var }` 納入 ID 流向分析;等專案真的要交付帶連動篩選的共用定義時再放寬。
+ *
  * 表達式(default、computed、rules.custom、visibleWhen、readonlyWhen、skipWhen)另驗 ID 語意,見
  * `portable-expression.ts`:ID 只能與另一個動態 ID 或 null 比較、`in` 只能對動態 ID 集合或空陣列、
  * `if` 的 ID 分支不能混入寫死的值、其餘運算子不收 ID。
@@ -294,30 +298,49 @@ class FormOrigins {
       for (const mapping of mappings) {
         flows.push([
           mapping.fieldKey,
-          this.prefillSourceOrigins(prefill, mapping),
+          this.prefillSourceOrigins(prefill.source, mapping),
         ]);
       }
     }
     for (const field of fieldsOf(definition)) {
-      flows.push(...fieldFlowsOf(field, origins));
+      flows.push(
+        ...fieldFlowsOf(field, origins),
+        ...this.columnPrefillFlowsOf(field),
+      );
     }
     return flows;
   }
 
+  /** 明細引用子欄的列內帶入(B2c):來源欄位的值寫進同一列的子欄(`<明細>.<子欄>`)。 */
+  private columnPrefillFlowsOf(field: FieldDef): [string, number][] {
+    return arrayColumnsOf(field).flatMap((column) => {
+      const mapping: unknown = recordOf(column.prefill)?.mapping;
+      return (Array.isArray(mapping) ? mapping : [])
+        .filter(
+          (entry): entry is { fieldKey: string; sourceField?: unknown } =>
+            isPlainRecord(entry) && typeof entry.fieldKey === "string",
+        )
+        .map((entry): [string, number] => [
+          columnId(field.key, entry.fieldKey),
+          this.prefillSourceOrigins(column.source, entry),
+        ]);
+    });
+  }
+
   /**
-   * 帶入來源欄位的值來源:provider 的 `id` 是 ID;表單提交的欄位照來源表單的欄位。
+   * 帶入來源欄位(表單層帶入規則、明細引用子欄的列內帶入)的值來源:provider 的 `id` 是 ID;表單提交的欄位照來源表單的欄位。
    * 摘要槽(`title` / `date` / `amount`)優先於同名欄位,讀的是該槽對到的欄位 ——
    * 與執行端 lookup 的解析順序一致(槽沒對到欄位時讀到的是 null,不帶 ID)。
    */
   private prefillSourceOrigins(
-    prefill: Prefill,
+    lookupSource: unknown,
     mapping: { sourceField?: unknown },
   ): number {
     const { sourceField } = mapping;
     if (sourceField === "id") {
       return ORIGIN.id;
     }
-    const source = recordOf(prefill.source);
+    const source = recordOf(lookupSource);
     if (
       source?.provider !== FORM_SUBMISSION ||
       typeof source.formKey !== "string" ||

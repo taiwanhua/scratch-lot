@@ -1,6 +1,5 @@
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { type ReactNode, useMemo } from "react";
-import { useTranslations } from "use-intl";
 
 import {
   DEFAULT_TENANT_TIMEZONE,
@@ -17,7 +16,6 @@ import { Grid } from "@repo/ui/grid";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSnackbar } from "@/hooks/base/useMutationFeedback";
 import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { fieldMapOf } from "@/lib/base/form-engine/definition";
 import { designIdOf } from "@/lib/base/form-engine/design-definition";
@@ -31,7 +29,6 @@ import {
 } from "@/lib/base/form-engine/field-states";
 import {
   type FilterLinkValues,
-  clearLinkedReferences,
   filterLinkValuesOf,
   linkedReferencesOf,
 } from "@/lib/base/form-engine/filter-links";
@@ -215,35 +212,8 @@ export const FormRenderer = ({
         : (JSON.parse(linkKey) as FilterLinkValues),
     [links.length, linkKey],
   );
-  const tRenderer = useTranslations("admin.formEngine.renderer");
-  const showSnackbar = useSnackbar();
-
   const handleChange = (fieldKey: string, value: unknown) => {
-    const next = { ...values, [fieldKey]: value };
-    if (links.length === 0) {
-      onChange?.(next);
-      return;
-    }
-    // 被引用欄位改值:清空依賴它的引用欄並提示(編輯既有單據打開時不清,只在改值的這一刻)
-    const { values: cleared, cleared: notices } = clearLinkedReferences(
-      version.fields,
-      links,
-      values,
-      next,
-      fieldKey,
-    );
-    onChange?.(cleared);
-    for (const notice of notices) {
-      showSnackbar(
-        "info",
-        notice.rows === undefined
-          ? tRenderer("linkedCleared", { field: notice.label })
-          : tRenderer("linkedClearedRows", {
-              count: notice.rows,
-              field: notice.label,
-            }),
-      );
-    }
+    onChange?.({ ...values, [fieldKey]: value });
   };
 
   const isDesign = mode === "design";

@@ -332,12 +332,45 @@ function checkPrefillMapping(
     );
     return;
   }
+  checkPrefillEntry(
+    mapping,
+    target,
+    provider,
+    {
+      location,
+      targetMessage: `帶入目標 ${mapping.fieldKey} 必須是使用者填寫的欄位(不能是計算、固定值或引用欄位)`,
+    },
+    collector,
+  );
+}
+
+/**
+ * 帶入對應表的一列(表單層帶入規則與明細引用子欄的列內帶入共用,STRUCT-13):目標要是使用者填、不是引用的
+ * 欄位 / 子欄(找不到也算)→ `PREFILL_TARGET_NOT_INPUT`;來源欄位要在 provider 可回欄位內
+ * → `PREFILL_UNKNOWN_SOURCE_FIELD`;型別要相容(`isPrefillCompatible`)→ `PREFILL_TYPE_INCOMPATIBLE`。
+ * 沒注入登錄表就只驗目標。目標不合時表單層仍接著驗來源,子欄(`stopOnBadTarget`)報一個就停。
+ */
+export function checkPrefillEntry(
+  mapping: PrefillMapping,
+  target: Pick<FieldDef, "type" | "label" | "valueSource"> | undefined,
+  provider: LookupProviderSpec | undefined,
+  options: {
+    location: DefinitionIssueLocation;
+    targetMessage: string;
+    stopOnBadTarget?: boolean;
+  },
+  collector: IssueCollector,
+): void {
+  const { location } = options;
   if (target?.valueSource.kind !== "input" || target.type === "reference") {
     collector.error(
       "PREFILL_TARGET_NOT_INPUT",
-      `帶入目標 ${mapping.fieldKey} 必須是使用者填寫的欄位(不能是計算、固定值或引用欄位)`,
+      options.targetMessage,
       location,
     );
+    if (options.stopOnBadTarget === true) {
+      return;
+    }
   }
   if (!provider) {
     return;

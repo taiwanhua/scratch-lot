@@ -176,6 +176,11 @@ describe("連動篩選:查詢縮小範圍 / 送出再驗 / 檢查器;列內帶�
     // 不是純量的值當沒填(不能拿物件塞查詢條件)
     const injected = await lookup("owner", { active_only: { $ne: true } });
     expect(injected.totalCount).toBe(0);
+    // 型別不符(是否欄送字串)當沒填:查無,不是 500(CastError)
+    const mistyped = await lookup("owner", { active_only: "abc" });
+    expect(mistyped.totalCount).toBe(0);
+    const mistypedRow = await lookup("lines.who", { active_only: "true" });
+    expect(mistypedRow.totalCount).toBe(0);
   });
 
   it("明細引用子欄:同樣縮小範圍,且回列內帶入要的來源欄位", async () => {

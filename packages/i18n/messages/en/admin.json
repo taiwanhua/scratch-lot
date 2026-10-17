@@ -1933,6 +1933,8 @@
         "amount": "Amount"
       },
       "refPrefill": "Prefill rule “{label}”",
+      "refLookupFilter": "Linked filter of field {field}",
+      "refLookupFilterColumn": "Linked filter of column {column} in {field}",
       "refListColumn": "The module's list columns (outside the draft; not changed)",
       "cancel": "Cancel",
       "confirm": "Delete"

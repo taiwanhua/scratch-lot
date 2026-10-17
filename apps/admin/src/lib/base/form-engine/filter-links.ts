@@ -1,4 +1,5 @@
 import {
+  type ExpressionContext,
   type FieldDef,
   type LookupFilterScalar,
   type LookupFilterVar,
@@ -7,6 +8,7 @@ import {
   arrayRowsOf,
   filterVarValueOf,
   lookupFilterVarsOf,
+  settleHidden,
 } from "@repo/domain/form";
 
 /**
@@ -110,34 +112,21 @@ export interface ClearedLink {
   label: string;
   rows?: number;
 }
-
-/**
- * 某欄改值:它的篩選值變了的話,清空依賴它的引用欄(表單層引用欄整欄、明細引用子欄每一列),回清了什麼。
- * 篩選值沒變(例:引用換成同一個 id、文字只改空白以外的同值)不清。
- */
-export const clearLinkedReferences = (
-  fields: readonly FieldDef[],
+/** 清空依賴 `changed` 任一欄的引用欄(已經是空的不算)。 */
+const clearDependents = (
   links: readonly LinkedReference[],
-  before: StoredValues,
-  after: StoredValues,
-  changedKey: string,
+  current: StoredValues,
+  changed: ReadonlySet<string>,
 ): { values: StoredValues; cleared: ClearedLink[] } => {
-  const changed = fields.find((field) => field.key === changedKey);
-  if (
-    filterVarValueOf(changed, before[changedKey]) ===
-    filterVarValueOf(changed, after[changedKey])
-  ) {
-    return { values: after, cleared: [] };
-  }
-  const values: StoredValues = { ...after };
+  const values: StoredValues = { ...current };
   const cleared: ClearedLink[] = [];
   for (const link of links) {
-    if (!link.vars.some((entry) => entry.fieldKey === changedKey)) {
+    if (!link.vars.some((entry) => changed.has(entry.fieldKey))) {
       continue;
     }
-    const current = values[link.fieldKey];
+    const value = values[link.fieldKey];
     if (link.columnKey === undefined) {
-      if (current !== null && current !== undefined) {
+      if (value !== null && value !== undefined) {
         values[link.fieldKey] = null;
         cleared.push({ label: link.label });
       }
@@ -145,7 +134,7 @@ export const clearLinkedReferences = (
     }
     const columnKey = link.columnKey;
     let count = 0;
-    const rows = arrayRowsOf(current).map((row) => {
+    const rows = arrayRowsOf(value).map((row) => {
       if (row[columnKey] === null || row[columnKey] === undefined) {
         return row;
       }
@@ -156,6 +145,61 @@ export const clearLinkedReferences = (
       values[link.fieldKey] = rows;
       cleared.push({ label: link.label, rows: count });
     }
+  }
+  return { values, cleared };
+};
+
+/** 條件與計算收斂後的值(計算欄位也可能被引用);公式成圈時退回原值。 */
+const effectiveOf = (
+  fields: readonly FieldDef[],
+  values: StoredValues,
+  ctx: ExpressionContext,
+): StoredValues => {
+  try {
+    return settleHidden(fields, { values, ctx }).values;
+  } catch {
+    return values;
+  }
+};
+
+/**
+ * 值變了(使用者改值、帶入規則、預設值或計算欄位跟著變):被引用欄位的**篩選值**和改之前不同的,
+ * 清空依賴它的引用欄(表單層整欄、明細每一列),回清了什麼。比的是收斂後的值,所以計算欄位、
+ * 被隱藏的欄位也算;清掉的引用欄若又被別欄引用,連鎖清下去。篩選值沒變(同一個 id)不清。
+ * 編輯既有單據打開時不走這裡(只在改值的那一刻清)。
+ */
+export const clearLinkedReferences = (
+  fields: readonly FieldDef[],
+  links: readonly LinkedReference[],
+  before: StoredValues,
+  after: StoredValues,
+  ctx: ExpressionContext,
+): { values: StoredValues; cleared: ClearedLink[] } => {
+  if (links.length === 0) {
+    return { values: after, cleared: [] };
+  }
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  const referenced = [
+    ...new Set(links.flatMap((link) => link.vars.map((v) => v.fieldKey))),
+  ];
+  const settledBefore = effectiveOf(fields, before, ctx);
+  let values: StoredValues = after;
+  const cleared: ClearedLink[] = [];
+  for (let round = 0; round <= links.length; round += 1) {
+    const settledAfter = effectiveOf(fields, values, ctx);
+    const changed = new Set(
+      referenced.filter(
+        (key) =>
+          filterVarValueOf(byKey.get(key), settledBefore[key]) !==
+          filterVarValueOf(byKey.get(key), settledAfter[key]),
+      ),
+    );
+    const next = clearDependents(links, values, changed);
+    if (next.cleared.length === 0) {
+      break;
+    }
+    values = next.values;
+    cleared.push(...next.cleared);
   }
   return { values, cleared };
 };
