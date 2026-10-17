@@ -28,7 +28,10 @@ import { WorkflowSubmissionStore } from "../../database/workflow-submission-stor
 import { expressionContextOf } from "../../forms/form-runtime/revision-context";
 import { systemContext } from "../tenant-directory.service";
 import { AssigneeDelegationService } from "./assignee-delegation.service";
-import { AudienceSourceService } from "./audience-source.service";
+import {
+  AudienceSourceService,
+  type SubmissionAudienceContext,
+} from "./audience-source.service";
 import {
   type InstanceRecord,
   toInstanceSnapshot,
@@ -152,6 +155,34 @@ export class StepEntryService {
       autoApprovals: guarded.passed,
       blockedAutoApprovals: guarded.blocked,
       ...delegated,
+    };
+  }
+
+  /**
+   * 依「這張單據」算人的上下文(實例的修訂值、單據所屬組織、申請人):知會(`WorkflowCcService`)與
+   * 逾時提醒的通知對象(`WorkflowOverdueService`)從這裡取,與進關解析審核者讀同一份提交 ——
+   * 讀提交只經登記過的呼叫端(`WORKFLOW_SUBMISSION_STORE_CALLERS`),不另開一個。
+   * 實例沒有租戶 → null;找不到該修訂(資料損毀)→ 值為空(表單欄位來源算不到人)。
+   */
+  async submissionContextOf(
+    instance: InstanceRecord,
+  ): Promise<SubmissionAudienceContext | null> {
+    const tenantId = instance.tenantId;
+    if (tenantId === null) {
+      return null;
+    }
+    const submission = await this.submissions.findById(
+      tenantId,
+      instance.submissionId,
+    );
+    const revision = submission?.revisions.find(
+      (entry) => entry.revision === instance.revision,
+    );
+    return {
+      tenantId,
+      orgId: instance.orgId,
+      applicantId: instance.createdBy,
+      values: revision?.values ?? {},
     };
   }
 

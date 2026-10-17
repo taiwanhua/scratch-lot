@@ -20,6 +20,7 @@ import {
   WORKFLOW_CC,
   WORKFLOW_OVERDUE,
 } from "../../notifications/base-notification-types";
+import { NotificationService } from "../../notifications/notification.service";
 import { ScheduledJobRegistry } from "../../scheduled-jobs/scheduled-job-registry";
 import { interruptAt } from "../test-support/hooks-fixture";
 import {
@@ -27,12 +28,15 @@ import {
   CREATE_WORKFLOW_DRAFT,
   DECIDE,
   type DefinitionShape,
+  FORK_WORKFLOW,
   PUBLISH_WORKFLOW,
   type Person,
   REASSIGN,
+  SAVE_SUBMISSION,
   SUBMISSION,
   VALIDATE_WORKFLOW,
   VOID,
+  WITHDRAW,
   WORKFLOW_INSTANCE,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
@@ -41,11 +45,13 @@ import {
   instanceOf,
   pendingTaskOf,
   person,
+  publishWorkflow,
   rawInstances,
   rawTasks,
   saveWorkflowDraft,
   setupWorld,
   submission,
+  submitExisting,
   submitLeave,
   tasksOf,
   useWorkflow,
@@ -54,6 +60,7 @@ import {
 } from "../test-support/workflow-fixtures";
 import { WORKFLOW_REASSIGN_PERMISSION } from "../workflow-keys";
 import {
+  OVERDUE_RETRY_DELAY_MS,
   WORKFLOW_OVERDUE_JOB_KEY,
   WorkflowOverdueService,
 } from "./workflow-overdue.service";
@@ -384,6 +391,57 @@ describe("逾時提醒與知會", () => {
       );
     });
 
+    it("一張任務提醒失敗 → 只回復那一張、到期時點延一個排程週期;一個租戶整批出錯不中斷其他租戶", async () => {
+      const reviewer = await fresh();
+      await bindNew({
+        steps: [
+          usersStep("first", [reviewer], {
+            overdue: {
+              reviewerAfterHours: 1,
+              audienceAfterHours: 3,
+              audience: DEFAULT_OVERDUE_AUDIENCE,
+            },
+          }),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      const instanceId = await latestInstanceId(submitted.id);
+      const task = await onlyTask(instanceId);
+      const now = new Date(
+        (task.assignedAt?.getTime() ?? 0) + HOUR_MS + MINUTE_MS,
+      );
+      const service = api.app.get(WorkflowOverdueService);
+
+      const spy = jest
+        .spyOn(api.app.get(NotificationService), "notify")
+        .mockRejectedValueOnce(new Error("模擬通知失敗"));
+      // 第一個租戶 id 讀任務就會失敗(不是 ObjectId 的邊界)→ 只記 log,後面的租戶照跑
+      await service.sweep(now, [
+        "not-a-tenant" as unknown as Types.ObjectId,
+        world.tenant,
+      ]);
+      spy.mockRestore();
+
+      const deferred = await onlyTask(instanceId);
+      expect(deferred.overdueLevel).toBe(0);
+      expect(deferred.overdueDueAt?.getTime()).toBe(
+        now.getTime() + OVERDUE_RETRY_DELAY_MS,
+      );
+      expect(await notices(WORKFLOW_OVERDUE, reviewer, instanceId)).toEqual([]);
+
+      // 同一個時點不再撈到它;延後的時點到了再試就成功
+      await service.sweep(now, [world.tenant]);
+      expect(await notices(WORKFLOW_OVERDUE, reviewer, instanceId)).toEqual([]);
+      await service.sweep(new Date(now.getTime() + OVERDUE_RETRY_DELAY_MS), [
+        world.tenant,
+      ]);
+      expect(
+        await notices(WORKFLOW_OVERDUE, reviewer, instanceId),
+      ).toHaveLength(1);
+      const reminded = await onlyTask(instanceId);
+      expect(reminded.overdueLevel).toBe(1);
+    });
+
     it("這一關沒有開啟(預設)→ 不檢查、不通知", async () => {
       const reviewer = await fresh();
       await bindNew({ steps: [usersStep("first", [reviewer])] });
@@ -671,6 +729,107 @@ describe("逾時提醒與知會", () => {
         .collection("workflow_versions")
         .findOne({ workflowKey: key, status: "published" });
       expect(published?.cc).toEqual(cc);
+    });
+
+    it("退回、撤回不知會(關卡與整個流程都設了知會)", async () => {
+      const reviewer = await fresh();
+      const watcher = await fresh();
+      await bindNew({
+        steps: [usersStep("first", [reviewer], { cc: usersSource([watcher]) })],
+        cc: usersSource([watcher]),
+      });
+      const returned = await submitLeave(world);
+      const returnedInstance = await latestInstanceId(returned.id);
+      await decideOn(world, reviewer, returned.id, "RETURN");
+      expect(await notices(WORKFLOW_CC, watcher, returnedInstance)).toEqual([]);
+
+      const withdrawn = await submitLeave(world);
+      const withdrawnInstance = await latestInstanceId(withdrawn.id);
+      await ok(api, world.applicant.token, WITHDRAW, {
+        input: { id: withdrawn.id, expectedEditVersion: withdrawn.editVersion },
+      });
+      expect(await notices(WORKFLOW_CC, watcher, withdrawnInstance)).toEqual(
+        [],
+      );
+      const unreadable = await call(api, watcher.token, SUBMISSION, {
+        id: withdrawn.id,
+      });
+      expect(unreadable.errors?.[0]).toBeDefined();
+    });
+
+    it("知會對象只讀得到被知會的修訂:同一張單退回再送出後的新修訂讀不到", async () => {
+      const first = await fresh();
+      const second = await fresh();
+      const watcher = await fresh();
+      await bindNew({
+        steps: [
+          usersStep("first", [first], { cc: usersSource([watcher]) }),
+          usersStep("second", [second]),
+        ],
+      });
+      const submitted = await submitLeave(world);
+      await decideOn(world, first, submitted.id, "APPROVE");
+      await decideOn(world, second, submitted.id, "RETURN");
+      const returned = await submission(world, world.applicant, submitted.id);
+      const saved = await ok<{
+        saveFormDraft: { submission: { id: string; editVersion: number } };
+      }>(api, world.applicant.token, SAVE_SUBMISSION, {
+        input: {
+          id: submitted.id,
+          expectedEditVersion: returned.editVersion,
+          values: { title: "改成兩天", days: 2 },
+        },
+      });
+      const resubmitted = await submitExisting(
+        world,
+        saved.saveFormDraft.submission,
+      );
+      expect(resubmitted.revision).toBe(submitted.revision + 1);
+
+      // 省略修訂 = 他讀得到的最新一個(被知會的那個),新修訂擋下
+      const visible = await submission(world, watcher, submitted.id);
+      expect(visible.viewedRevision).toBe(submitted.revision);
+      const newer = await call(api, watcher.token, SUBMISSION, {
+        id: submitted.id,
+        revision: resubmitted.revision,
+      });
+      expect(newer.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
+      const instanceId = await latestInstanceId(submitted.id);
+      const newerInstance = await call(api, watcher.token, WORKFLOW_INSTANCE, {
+        id: instanceId,
+      });
+      expect(newerInstance.errors?.[0]).toBeDefined();
+    });
+
+    it("以某版為基底建流程(fork):逾時提醒、關卡知會、整個流程的知會都帶過去", async () => {
+      sequence += 1;
+      const key = `overdue_cc_${String(sequence)}`;
+      const overdue = {
+        reviewerAfterHours: 2,
+        audienceAfterHours: 6,
+        audience: DEFAULT_OVERDUE_AUDIENCE,
+      };
+      const stepCc = { kind: "manager", level: 1 };
+      const flowCc = usersSource([world.manager]);
+      await publishWorkflow(world, key, {
+        steps: [usersStep("first", [world.manager], { overdue, cc: stepCc })],
+        cc: flowCc,
+      });
+      await ok(api, world.admin.token, FORK_WORKFLOW, {
+        input: {
+          sourceKey: key,
+          sourceVersion: 1,
+          key: `${key}_fork`,
+          name: "fork",
+        },
+      });
+      const draft = await world.connection
+        .collection("workflow_versions")
+        .findOne({ workflowKey: `${key}_fork`, status: "draft" });
+      expect(draft?.cc).toEqual(flowCc);
+      expect(draft?.steps).toEqual([
+        expect.objectContaining({ overdue, cc: stepCc }),
+      ]);
     });
   });
 });

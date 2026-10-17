@@ -848,6 +848,25 @@ describe("validatePortableDefinition:共用流程", () => {
     expect(errors[2]?.message).toContain("租戶客製表單");
   });
 
+  it("知會對象(關卡與整個流程)指向租戶客製表單:同樣拒絕,訊息講得出是哪張表單", () => {
+    const tenantField = {
+      kind: "field",
+      formKey: "leave_request_acme",
+      fieldKey: "approver",
+    } as const;
+    const seed = workflowSeed({
+      steps: [review("boss", { cc: tenantField })],
+      cc: tenantField,
+    });
+    const errors = errorsOf(seed, catalog);
+    expect(codesAt(errors)).toEqual([
+      ["ASSIGNEE_NOT_PORTABLE", "definition.steps.0.cc.formKey"],
+      ["ASSIGNEE_NOT_PORTABLE", "definition.cc.formKey"],
+    ]);
+    expect(errors[0]?.message).toContain("租戶客製表單");
+    expect(errors[1]?.message).toContain("租戶客製表單");
+  });
+
   it("跳過條件:ID 與寫死的值比較拒絕;一般數值條件照舊;檢查用表單解不開時指出 checkFormKey", () => {
     expect(
       codesAt(

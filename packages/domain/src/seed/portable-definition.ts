@@ -1138,18 +1138,28 @@ function hasMalformedStep(
   return isMalformed;
 }
 
-/** 既有檢查器報「審核者欄位所屬表單不存在」時,那一關指到的 formKey(用來講清楚是缺登記還是租戶客製)。 */
+/**
+ * 既有檢查器報「欄位所屬表單不存在」時,出錯的那個來源指到的 formKey(用來講清楚是缺登記還是租戶客製)。
+ * 來源依 `property` 的前綴:`assignee`(審核者)/ `cc`(知會對象;沒有 `stepIndex` = 整個流程的)/
+ * `overdue`(逾時通知對象)。
+ */
 function missingAssigneeFormKeyOf(
   seed: WorkflowDefinitionSeedSet,
   issue: WorkflowIssue,
 ): string | null {
-  const { stepIndex } = issue.location;
-  if (issue.code !== "FIELD_FORM_MISSING" || stepIndex === undefined) {
+  const { stepIndex, property } = issue.location;
+  if (issue.code !== "FIELD_FORM_MISSING" || property === undefined) {
     return null;
   }
-  const step = seed.definition.steps[stepIndex] as
-    { assignee?: unknown } | undefined;
-  const formKey = recordOf(step?.assignee)?.formKey;
+  const slot = property.split(".", 1)[0] ?? "";
+  if (!["assignee", "cc", "overdue"].includes(slot)) {
+    return null;
+  }
+  const owner =
+    stepIndex === undefined
+      ? recordOf(seed.definition)
+      : recordOf(seed.definition.steps[stepIndex]);
+  const formKey = recordOf(owner?.[slot])?.formKey;
   return typeof formKey === "string" ? formKey : null;
 }
 

@@ -13,7 +13,6 @@ import {
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
 } from "../../database/database.module";
-import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import {
   WORKFLOW_CC,
   WORKFLOW_INSTANCE_REF,
@@ -23,6 +22,7 @@ import { systemContext } from "../tenant-directory.service";
 import { definitionOfVersion } from "../workflow-definition-input";
 import { AudienceSourceService } from "./audience-source.service";
 import type { InstanceRecord } from "./instance-writes";
+import { StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
 
 /** 單據層的三種時機(整個流程的知會對象)。 */
@@ -58,7 +58,7 @@ export class WorkflowCcService {
   constructor(
     private readonly instances: WorkflowInstancesRepository,
     private readonly versions: WorkflowVersionsRepository,
-    private readonly submissions: WorkflowSubmissionStore,
+    private readonly entries: StepEntryService,
     private readonly sources: AudienceSourceService,
     private readonly notifications: NotificationService,
     private readonly notifier: WorkflowNotifier,
@@ -154,28 +154,15 @@ export class WorkflowCcService {
     instance: InstanceRecord,
     source: AssigneeSource,
   ): Promise<Types.ObjectId[]> {
-    const tenantId = instance.tenantId;
-    if (tenantId === null) {
-      return [];
-    }
     if (source.kind === "field" && source.formKey !== instance.formKey) {
       this.logger.warn(
         `實例 ${String(instance._id)} 的知會對象欄位屬於表單 ${source.formKey},不是 ${instance.formKey},不知會`,
       );
       return [];
     }
-    const submission = await this.submissions.findById(
-      tenantId,
-      instance.submissionId,
-    );
-    const revision = submission?.revisions.find(
-      (entry) => entry.revision === instance.revision,
-    );
-    return this.sources.resolveAudienceSource(source, {
-      tenantId,
-      orgId: instance.orgId,
-      applicantId: instance.createdBy,
-      values: revision?.values ?? {},
-    });
+    const context = await this.entries.submissionContextOf(instance);
+    return context === null
+      ? []
+      : this.sources.resolveAudienceSource(source, context);
   }
 }
