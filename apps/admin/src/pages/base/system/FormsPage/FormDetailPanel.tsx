@@ -100,7 +100,8 @@ export const FormDetailPanel = ({
           spacing={1}
           sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
         >
-          <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+          {/* 標題欄以內容寬為底(`1 1 auto`):放不下時操作鈕整組換到下一列,而不是把標題擠成一字一行(T48) */}
+          <Stack spacing={0.5} sx={{ flex: "1 1 auto", minWidth: 0 }}>
             <Typography variant="h6" component="h1">
               {form.name}
             </Typography>
@@ -119,46 +120,52 @@ export const FormDetailPanel = ({
               </Typography>
             )}
           </Stack>
-          {form.abilities.canEdit && (
-            <Button
-              variant="text"
-              onClick={() => {
-                onEdit(form.key);
-              }}
-            >
-              {t("edit")}
-            </Button>
-          )}
-          {form.abilities.canFork && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("fork");
-              }}
-            >
-              {t("fork")}
-            </Button>
-          )}
-          {canEditListColumns && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("listColumns");
-              }}
-            >
-              {t("listColumns")}
-            </Button>
-          )}
-          {form.abilities.canAssign && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("assign");
-              }}
-            >
-              {t("assign")}
-            </Button>
-          )}
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ flexWrap: "wrap", alignItems: "center" }}
+          >
+            {form.abilities.canEdit && (
+              <Button
+                variant="text"
+                onClick={() => {
+                  onEdit(form.key);
+                }}
+              >
+                {t("edit")}
+              </Button>
+            )}
+            {form.abilities.canFork && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("fork");
+                }}
+              >
+                {t("fork")}
+              </Button>
+            )}
+            {canEditListColumns && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("listColumns");
+                }}
+              >
+                {t("listColumns")}
+              </Button>
+            )}
+            {form.abilities.canAssign && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("assign");
+                }}
+              >
+                {t("assign")}
+              </Button>
+            )}
+          </Stack>
         </Stack>
         {form.abilities.canSetEnabled &&
           form.tenantEnabled !== null &&

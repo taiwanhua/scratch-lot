@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { renderFormsPage } from "@/pages/base/system/FormsPage/forms-page-test-support";
+import { mediaRulesOf } from "@/test/media-rules";
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
 import { demoGroupNode, superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
@@ -10,24 +11,8 @@ import { renderApp } from "@/test/render";
 /** 主題斷點(MUI 預設,`packages/ui` 的 theme 沒改):lg 1200、xl 1536。 */
 const LG = 1200;
 const XL = 1536;
-/**
- * 內容區宣告的 CSS(emotion 插進 `<style>` 的規則原文)。jsdom 的 `getComputedStyle` 不套 `@media`
- * 也不算 `calc()`,所以直接讀宣告:非手機版面(`@media (min-width:600px)`)那條的 `min-width`。
- */
-const mediaRulesOf = (element: Element, minWidth: number): string => {
-  const classes = [...element.classList];
-  const rules = [...document.styleSheets].flatMap((sheet) => [
-    ...sheet.cssRules,
-  ]);
-  return rules
-    .filter((rule) =>
-      rule.cssText.startsWith(`@media (min-width:${String(minWidth)}px)`),
-    )
-    .map((rule) => rule.cssText)
-    .filter((text) => classes.some((name) => text.includes(`.${name} `)))
-    .join("\n");
-};
 
+/** 非手機版面(`@media (min-width:600px)`)那條的 `min-width`(jsdom 不套 @media,讀宣告)。 */
 const contentMinWidth = (): string =>
   mediaRulesOf(screen.getByTestId("shell-content"), 600);
 
@@ -79,11 +64,12 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
     expect(collapsed.overflowY).toBe("auto");
   });
 
-  it("表單管理(設計器頁)宣告 xl", async () => {
+  it("表單管理沿用殼層預設 lg(設計器在 xl 以下自己換版,T48:1440 寬不再水平溢出)", async () => {
     renderFormsPage();
 
     await screen.findByRole("navigation", { name: "主選單" });
-    expect(contentMinWidth()).toContain(`${String(XL)}px`);
+    expect(contentMinWidth()).toContain(`${String(LG)}px`);
+    expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
   });
 });
 

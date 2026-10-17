@@ -91,7 +91,7 @@ export const ColumnPrefillEditor = ({
                 );
               }}
               size="small"
-              sx={{ minWidth: 140 }}
+              sx={{ flex: 1, minWidth: 0 }}
             />
             <Typography aria-hidden>←</Typography>
             <SelectField<string>
@@ -115,7 +115,7 @@ export const ColumnPrefillEditor = ({
                 );
               }}
               size="small"
-              sx={{ minWidth: 140 }}
+              sx={{ flex: 1, minWidth: 0 }}
             />
             <Button
               variant="text"
