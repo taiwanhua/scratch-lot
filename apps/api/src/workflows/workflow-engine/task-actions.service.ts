@@ -44,7 +44,7 @@ import {
   type ReassignTaskInput,
   type RetryAdvanceInstanceInput,
 } from "./dto/workflow-engine.input";
-import type { InstanceRecord } from "./instance-writes";
+import { type InstanceRecord, delegatorIdsOf } from "./instance-writes";
 import {
   FormLifecycleService,
   LifecycleBlockedError,
@@ -665,17 +665,6 @@ export class TaskActionsService {
 
 /** 任務 id 的形狀(Mongo ObjectId 的 24 位十六進位)。 */
 const OBJECT_ID_PATTERN = /^[\da-f]{24}$/i;
-
-/** B15:計畫裡這一項代理的原審核者們(決定事件帶著,時間軸寫「由 X 代理 A、B」);沒有 → 空陣列。 */
-function delegatorIdsOf(
-  instance: InstanceRecord,
-  stepKey: string,
-  taskKey: string,
-): Types.ObjectId[] {
-  const step = instance.steps.find((one) => one.stepKey === stepKey);
-  const item = step?.plan.find((one) => one.taskKey === taskKey);
-  return [...(item?.delegatorIds ?? [])];
-}
 
 function failed(
   taskId: string,

@@ -28,7 +28,7 @@ import {
   AudienceSourceService,
   emptySourceReason,
 } from "./audience-source.service";
-import type { InstanceRecord } from "./instance-writes";
+import { type InstanceRecord, delegatorIdsOf } from "./instance-writes";
 import { nextOverdueDueAt, overdueOf } from "./overdue-timer";
 import { StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
@@ -55,6 +55,7 @@ const RETRY_DELAY_MS = OVERDUE_RETRY_DELAY_MS;
  * | 任務在排程跑之前已處理 | 不通知(只撈 `pending`,交易內再讀一次)                              |
  * | 夜間、假日             | 照算(日曆小時)                                                       |
  * | 這一關沒有開啟         | 任務沒有到期時點,不檢查                                              |
+ * | 第 2 級算不到通知對象  | 不通知、記 warn(原因見 `emptySourceReason`)                          |
  *
  * 冪等:任務記「這一次指派已通知到第幾級」(`overdueLevel`)與下一級的到期時點(`overdueDueAt`),
  * 每張任務一個交易:再讀一次 → 通知 → 條件更新級數(條件含讀到的級數與指派時點);通知的 `dedupeKey`
@@ -347,11 +348,11 @@ function reviewersOf(
   instance: InstanceRecord,
   task: WorkflowTaskRecord,
 ): Types.ObjectId[] {
-  const item = instance.steps
-    .find((state) => state.stepKey === task.stepKey)
-    ?.plan.find((entry) => entry.taskKey === task.taskKey);
   const seen = new Set<string>();
-  return [task.assigneeId, ...(item?.delegatorIds ?? [])].filter((id) => {
+  return [
+    task.assigneeId,
+    ...delegatorIdsOf(instance, task.stepKey, task.taskKey),
+  ].filter((id) => {
     const key = String(id);
     if (seen.has(key)) {
       return false;

@@ -317,3 +317,17 @@ export function instanceUpdateOf(update: InstanceUpdate): {
   }
   return { update: document, arrayFilters };
 }
+
+/**
+ * B15:計畫裡這一項代理的原審核者們(決定事件帶著,時間軸寫「由 X 代理 A、B」;逾時提醒第 1 級連他們一起提醒);
+ * 沒有(或流程管理者改派後清空)→ 空陣列。
+ */
+export function delegatorIdsOf(
+  instance: InstanceRecord,
+  stepKey: string,
+  taskKey: string,
+): Types.ObjectId[] {
+  const step = instance.steps.find((one) => one.stepKey === stepKey);
+  const item = step?.plan.find((one) => one.taskKey === taskKey);
+  return [...(item?.delegatorIds ?? [])];
+}
