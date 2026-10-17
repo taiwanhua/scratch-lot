@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 
 import { WorkflowTaskStatus } from "@repo/graphql";
 
+import { useSnackbarStore } from "@/stores/base/useSnackbarStore";
 import { APPLY_CENTER_ROUTE, taskFragment } from "@/test/msw/workflow-fixtures";
 import { currentSearch } from "@/test/url-reload";
 import { setupFakeViewport } from "@/test/viewport";
@@ -89,14 +90,19 @@ describe("申請中心:批次核准(底座規格 3.10 B18,Figma BS-07a / BS-07b)
       return within(row);
     };
     expect(rowOf("病假三天").getByText("已核准")).toBeInTheDocument();
-    expect(rowOf("事假一天").getByText(/^被擋下:/)).toBeInTheDocument();
+    expect(
+      rowOf("事假一天").getByText("被擋下:這張單目前不能核准"),
+    ).toBeInTheDocument();
     expect(rowOf("出差三天").getByText("這件已不在你手上")).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "關閉" }));
     await waitFor(() => {
       expect(within(table).queryByText("病假三天")).not.toBeInTheDocument();
     });
-    expect(screen.getByText("已選 2 筆")).toBeInTheDocument();
+    // 結果都在對話框裡,不另跳提示
+    expect(useSnackbarStore.getState().items).toHaveLength(0);
+    // 被擋下的保持勾選;已不在你手上的一併取消
+    expect(screen.getByText("已選 1 筆")).toBeInTheDocument();
     expect(
       screen.getByRole("checkbox", { name: "勾選「事假一天」" }),
     ).toBeChecked();
@@ -152,5 +158,33 @@ describe("申請中心:批次核准(底座規格 3.10 B18,Figma BS-07a / BS-07b)
     });
     expect(screen.getByRole("table", { name: "待我審核" })).not.toBe(table);
     expect(screen.queryByText(/^已選/)).toBeNull();
+  });
+
+  it("整個請求失敗 → 錯誤就地顯示在對話框裡、不跳提示;勾選不動", async () => {
+    const { user } = renderApplyCenter({
+      path: TASKS_ROUTE,
+      runtime: {
+        ...defaultRuntime(),
+        tasks: threeTasks().slice(0, 1),
+        failures: { BatchApproveTasks: { code: "VALIDATION_FAILED" } },
+      },
+    });
+    const table = await screen.findByRole("table", { name: "待我審核" });
+    await within(table).findByText("病假三天");
+    await user.click(
+      screen.getByRole("checkbox", { name: "勾選「病假三天」" }),
+    );
+    await user.click(screen.getByRole("button", { name: "核准(1)" }));
+    const dialog = await screen.findByRole("dialog", { name: "批次核准" });
+    await user.click(within(dialog).getByRole("button", { name: "核准 1 筆" }));
+
+    expect(
+      await within(dialog).findByText("有欄位填寫不正確,請修正後再試。"),
+    ).toBeInTheDocument();
+    expect(useSnackbarStore.getState().items).toHaveLength(0);
+    expect(
+      within(dialog).getByRole("button", { name: "核准 1 筆" }),
+    ).toBeEnabled();
+    expect(screen.getByText("已選 1 筆")).toBeInTheDocument();
   });
 });

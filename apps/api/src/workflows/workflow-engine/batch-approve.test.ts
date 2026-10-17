@@ -22,6 +22,7 @@ import {
 } from "../test-support/lifecycle-fixture";
 import {
   type Person,
+  REASSIGN,
   type TaskRow,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
@@ -210,15 +211,24 @@ describe("批次核准 batchApproveTasks", () => {
     ).toBe(false);
   });
 
-  it("勾選後已被處理的任務、不存在的任務 → 「這件已不在你手上」,其他筆照常", async () => {
-    const tasks = await pendingTasks(["已處理", "照常"]);
+  it("勾選後已被處理、被改派走的任務、不存在或不合法的 id → 「這件已不在你手上」,其他筆照常", async () => {
+    const tasks = await pendingTasks(["已處理", "照常", "改派走"]);
     await decide(world, reviewer, nth(tasks, 0), "APPROVE");
+    // 流程管理者把第三張改派給別人
+    await ok(api, world.admin.token, REASSIGN, {
+      input: {
+        taskId: nth(tasks, 2).id,
+        toUserId: String(nth(world.staff, 1).userId),
+      },
+    });
     const missing = String(new Types.ObjectId());
 
     const results = await batchApprove([
       nth(tasks, 0).id,
       missing,
       nth(tasks, 1).id,
+      nth(tasks, 2).id,
+      "not-an-id",
     ]);
 
     expect(results).toEqual([
@@ -230,7 +240,20 @@ describe("批次核准 batchApproveTasks", () => {
       },
       { taskId: missing, ok: false, reason: "NOT_YOURS", projectReason: null },
       { taskId: nth(tasks, 1).id, ok: true, reason: null, projectReason: null },
+      {
+        taskId: nth(tasks, 2).id,
+        ok: false,
+        reason: "NOT_YOURS",
+        projectReason: null,
+      },
+      {
+        taskId: "not-an-id",
+        ok: false,
+        reason: "NOT_YOURS",
+        projectReason: null,
+      },
     ]);
+    expect(await statusOf(nth(tasks, 2))).toBe("REVIEWING");
   });
 
   it("別人的任務 → 不在你手上(不能替別人核准)", async () => {

@@ -2279,7 +2279,6 @@
       "close": "關閉",
       "summaryAll": "{approved} 筆已核准",
       "summaryPartial": "{approved} 筆已核准,{failed} 筆未完成(其他筆不受影響)",
-      "feedback": "批次核准:{approved} 筆已核准,{failed} 筆未完成",
       "columnTitle": "標題",
       "columnResult": "結果",
       "resultTableAria": "批次核准結果",
@@ -2287,6 +2286,7 @@
         "approved": "已核准",
         "NOT_YOURS": "這件已不在你手上",
         "BLOCKED": "被擋下:{message}",
+        "BLOCKED_GENERIC": "這張單目前不能核准",
         "FAILED": "核准失敗,請稍後再逐筆處理"
       }
     },

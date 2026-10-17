@@ -2279,7 +2279,6 @@
       "close": "Close",
       "summaryAll": "{approved} approved",
       "summaryPartial": "{approved} approved, {failed} not completed (the others are not affected)",
-      "feedback": "Bulk approve: {approved} approved, {failed} not completed",
       "columnTitle": "Title",
       "columnResult": "Result",
       "resultTableAria": "Bulk approve results",
@@ -2287,6 +2286,7 @@
         "approved": "Approved",
         "NOT_YOURS": "This is no longer assigned to you",
         "BLOCKED": "Blocked: {message}",
+        "BLOCKED_GENERIC": "This item cannot be approved right now",
         "FAILED": "Approval failed; try again later one at a time"
       }
     },

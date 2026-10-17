@@ -148,6 +148,27 @@ describe("DataTable 列勾選", () => {
     expect(rowBox("戊")).toBeDisabled();
   });
 
+  it("已到上限、本頁只勾了一部分:表頭勾選框按下去 = 取消本頁(別頁勾的不動);本頁一列都沒勾時停用", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness rows={pageTwo} maxCount={2} />);
+    await user.click(rowBox("丁"));
+    rerender(<Harness rows={pageOne} maxCount={2} />);
+    await user.click(rowBox("甲"));
+    expect(rowBox("乙")).toBeDisabled();
+
+    const selectPage = screen.getByRole("checkbox", { name: "全選本頁" });
+    expect(selectPage).toHaveAttribute("data-indeterminate", "true");
+    await user.click(selectPage);
+    expect(rowBox("甲")).not.toBeChecked();
+    expect(screen.getByText("已選 1 筆")).toBeInTheDocument();
+
+    // 回到別頁補滿上限;本頁一列都沒勾 → 表頭停用
+    rerender(<Harness rows={pageTwo} maxCount={2} />);
+    await user.click(rowBox("戊"));
+    rerender(<Harness rows={pageOne} maxCount={2} />);
+    expect(screen.getByRole("checkbox", { name: "全選本頁" })).toBeDisabled();
+  });
+
   it("點勾選框不觸發整列點擊", async () => {
     const user = userEvent.setup();
     const onRowClick = jest.fn();

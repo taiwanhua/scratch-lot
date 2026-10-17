@@ -64,9 +64,8 @@ export const BatchApproveDialog = ({
       BatchApproveTasksMutation,
       BatchApproveTasksMutationVariables
     >({
-      success: (payload) =>
-        t("feedback", countsOf(payload.batchApproveTasks.results)),
-      // 錯誤就地顯示在開著的對話框裡
+      // 結果與錯誤都就地顯示在開著的對話框裡,不另跳提示(DATA-06 的例外)
+      success: null,
       error: () => null,
       onSuccess: (payload) => {
         setResults(payload.batchApproveTasks.results);
