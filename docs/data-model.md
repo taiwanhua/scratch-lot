@@ -103,6 +103,7 @@
 
 - **`modules` 執行期可改的欄位**(`module.schema.ts`):`enabled`(停用 / 啟用,連動子樹)、`icon`(側欄圖示 key)與 `settings`(表單模組的列表欄位配置)是**初始 seed 值的欄位** —— seed 只在建立時、或既有文件**沒有這一欄**時寫初值,有值就不覆蓋(`docs/concepts/data-layer-and-isolation.md`「種子資料與遷移」)。`icon` 的白名單正本是 `@repo/domain/module-icon` 的 `MODULE_ICON_KEYS`(schema 刻意不寫成 mongoose `enum` 以免抄成第二份),`null` = 側欄用預設圖示;規則見 `docs/modules/module-manager.md`。表單模組的 `settings.list` 是列表欄位配置,由 root 在畫面寫(見 `docs/modules/forms.md`「列表欄位配置」)。
 - **`modules.engine`**:`fixed`(固定欄位模組,預設)/ `form`(表單模組);由 seed 宣告,每次 seed 都同步宣告值,不在系統內改。
+- **`modules.perFormCreate`**:表單模組依表單分開新增權限(B9b;預設 `false`);由 seed 宣告(`formModuleDeclaration` 的 `perFormCreate`),每次 seed 都同步宣告值,不在系統內改。見[授權](concepts/authorization.md#依表單分開新增權限b9b)。
 - **`permissions.source`**:`seed` = 模組 seed 宣告、`dynamic` = 執行期產生(表單發布建的欄位級權限,key `<moduleKey>.show-<formKey>-<fieldKey>` / `edit-…`)。seed runner 只比對 / 更新 `source` 不是 `dynamic` 的文件,不刪不認識的;`retiredAt` 是 `dynamic` 權限退役時間(`null` = 使用中),退役的只由「模組與權限」頁的清理硬刪(連同 `role_permission` 綁定)。
 - **`core_relationships`**(`core-relationship.schema.ts`,ADR-0001):單一 collection 裝底座實體的關聯,`type` 是封閉 enum,命名順序 Org > User > Role > Module > Permission 決定 `firstId` / `secondId`;唯一 `(type, firstId, secondId, thirdId)`,`org_role` 另在角色側唯一(一個角色只屬一個擁有組織)。存取只經 `RelationService`,不掛租戶過濾。`org_manager` 是命名規約的例外:`firstId` = 組織、`secondId` = 使用者,語意是「主管」而不是成員(主管不必是該組織的直接成員,但必須是本租戶的使用者),一個組織多筆 = 多位主管;規則見 `docs/modules/org-manager.md`(主管與主管解析)。
 - **`orgs.slug`**:只有租戶頂層有;格式 `^[a-z][a-z0-9_]{1,19}$`(正本 `@repo/domain/form-keys` 的 `ORG_SLUG_PATTERN`)、唯一稀疏索引;開通時填,根組織可在組織編輯改。

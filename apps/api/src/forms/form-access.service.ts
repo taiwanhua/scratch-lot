@@ -21,9 +21,12 @@ import {
   holdsPermission,
 } from "../permission/permission-resolver";
 import {
+  type FormCreateModule,
+  canCreateInFormModule,
+  formCreateKeyOf,
+} from "./form-create-access";
+import {
   type FormModuleAction,
-  formCreatePermissionKey,
-  formCreatePermissionPrefix,
   formModulePermission,
 } from "./form-permission-keys";
 import { forbiddenError, notFoundError, validationError } from "./forms-error";
@@ -103,6 +106,7 @@ export class FormAccessService {
       ? await this.permissions.resolve(operator.actorId, operator.currentOrgId)
       : {
           isSuperAdmin: false,
+          modules: [],
           permissionKeys: new Set<string>(),
           foreignPermissionKeys: new Set<string>(),
         };
@@ -120,19 +124,13 @@ export class FormAccessService {
       isRoot: current?.parentId === null,
       tenantId,
       timezone: await tenantTimezoneOf(this.orgs, operator, tenantId),
-      perFormCreateModuleKeys: await this.perFormCreateModuleKeys(operator),
+      // 權限解析已帶出模組事實;看不到的模組本來就沒有它的任何權限,不必知道開關
+      perFormCreateModuleKeys: new Set(
+        resolution.modules
+          .filter((module) => module.perFormCreate)
+          .map((module) => module.key),
+      ),
     };
-  }
-
-  /** 開啟 B9b 的表單模組(seed 宣告,執行期不改;全表種子資料,一次請求查一次)。 */
-  private async perFormCreateModuleKeys(
-    operator: OperatorContext,
-  ): Promise<ReadonlySet<string>> {
-    const modules = await this.modules.findMany(operator, {
-      engine: "form",
-      perFormCreate: true,
-    });
-    return new Set(modules.map((module) => module.key));
   }
 
   /** 某個組織所屬租戶的時區(`me.currentOrg.timezone`);組織讀不到 → 預設。 */
@@ -191,32 +189,25 @@ export class FormAccessService {
     moduleKey: string,
     formKey: string,
   ): string {
-    return facts.perFormCreateModuleKeys.has(moduleKey)
-      ? formCreatePermissionKey(moduleKey, formKey)
-      : formModulePermission(moduleKey, "create");
+    return formCreateKeyOf(this.createModuleOf(facts, moduleKey), formKey);
+  }
+
+  private createModuleOf(
+    facts: FormOperatorFacts,
+    moduleKey: string,
+  ): FormCreateModule {
+    return {
+      key: moduleKey,
+      perFormCreate: facts.perFormCreateModuleKeys.has(moduleKey),
+    };
   }
 
   /**
    * 在這個模組有沒有任何新增資格(不指定表單時用,例:執行端讀模組層資料)。
    * 開啟 B9b 的模組:持有任一張表單的 `create-<formKey>`(或模組 `*`);否則看模組 `create`。
    */
-  private canCreateInModule(
-    facts: FormOperatorFacts,
-    moduleKey: string,
-  ): boolean {
-    if (!facts.perFormCreateModuleKeys.has(moduleKey)) {
-      return this.has(facts, formModulePermission(moduleKey, "create"));
-    }
-    if (this.has(facts, `${moduleKey}.*`)) {
-      return true;
-    }
-    const prefix = formCreatePermissionPrefix(moduleKey);
-    for (const key of facts.permissionKeys) {
-      if (key.startsWith(prefix) && this.has(facts, key)) {
-        return true;
-      }
-    }
-    return false;
+  canCreateInModule(facts: FormOperatorFacts, moduleKey: string): boolean {
+    return canCreateInFormModule(facts, this.createModuleOf(facts, moduleKey));
   }
 
   /** `modules.engine = "form"` 的模組;不存在或不是表單模組 → `VALIDATION_FAILED`(`moduleKey`)。 */

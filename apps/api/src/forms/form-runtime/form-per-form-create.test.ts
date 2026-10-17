@@ -89,6 +89,51 @@ const COPY = /* GraphQL */ `
   }
 `;
 
+const RUNTIME_VERSION = /* GraphQL */ `
+  query FormRuntimeVersion($formKey: ID!, $version: Int!) {
+    formRuntimeVersion(formKey: $formKey, version: $version) {
+      formVersion {
+        version
+      }
+    }
+  }
+`;
+
+const FIELD_OPTIONS = /* GraphQL */ `
+  query FormFieldOptions($input: FormFieldOptionsInput!) {
+    formFieldOptions(input: $input) {
+      totalCount
+    }
+  }
+`;
+
+const LIST_COLUMNS = /* GraphQL */ `
+  query ModuleListColumns($moduleKey: String!) {
+    moduleListColumns(moduleKey: $moduleKey) {
+      moduleKey
+    }
+  }
+`;
+
+const CREATE_UPLOAD_URL = /* GraphQL */ `
+  mutation CreateUploadUrl($input: CreateUploadUrlInput!) {
+    createUploadUrl(input: $input) {
+      objectPath
+    }
+  }
+`;
+
+const APPLICABLE_FORMS = /* GraphQL */ `
+  query ApplicableForms {
+    applicableForms {
+      moduleKey
+      forms {
+        key
+      }
+    }
+  }
+`;
+
 const PUBLISH_WITH_PERMISSION = /* GraphQL */ `
   mutation Publish($input: PublishFormVersionInput!) {
     publishFormVersion(input: $input) {
@@ -150,18 +195,15 @@ describe("依表單分開新增權限(B9b)", () => {
     if (name !== undefined) {
       await ok(api, token, UPDATE_FORM, { input: { key: formKey, name } });
     }
-    const draftRevision =
-      baseVersion === "existing"
-        ? 0
-        : (
-            await ok<{
-              createFormVersionDraft: {
-                formVersion: { draftRevision: number };
-              };
-            }>(api, token, CREATE_VERSION_DRAFT, {
-              input: { formKey, baseVersion },
-            })
-          ).createFormVersionDraft.formVersion.draftRevision;
+    let draftRevision = 0;
+    if (baseVersion !== "existing") {
+      const draft = await ok<{
+        createFormVersionDraft: { formVersion: { draftRevision: number } };
+      }>(api, token, CREATE_VERSION_DRAFT, {
+        input: { formKey, baseVersion },
+      });
+      draftRevision = draft.createFormVersionDraft.formVersion.draftRevision;
+    }
     const saved = await saveDefinition(
       api,
       token,
@@ -179,6 +221,14 @@ describe("依表單分開新增權限(B9b)", () => {
       },
     });
     return published.publishFormVersion.createdPermission;
+  }
+
+  /** 申請中心「新申請」裡這個模組的那一組(沒有 = undefined)。 */
+  async function applicableGroupOf(operator: FormOperator | undefined) {
+    const data = await ok<{
+      applicableForms: { moduleKey: string; forms: { key: string }[] }[];
+    }>(api, operator?.token ?? "", APPLICABLE_FORMS);
+    return data.applicableForms.find((group) => group.moduleKey === MODULE_KEY);
   }
 
   async function permissionOf(key: string) {
@@ -395,10 +445,10 @@ describe("依表單分開新增權限(B9b)", () => {
           .filter((form) => [FORM_A, FORM_B].includes(form.key))
           .every((form) => form.canCreate),
       ).toBe(true);
-      expect(
-        (await createDraft(api, wildcard.token, FORM_B, { title: "萬用" }))
-          .status,
-      ).toBe("DRAFT");
+      const draft = await createDraft(api, wildcard.token, FORM_B, {
+        title: "萬用",
+      });
+      expect(draft.status).toBe("DRAFT");
     });
   });
 
@@ -443,6 +493,117 @@ describe("依表單分開新增權限(B9b)", () => {
         key: "b9b_a_custom",
         canCreate: false,
       });
+    });
+  });
+
+  describe("模組層與定義讀取的入口(沒有 view / edit,只看新增資格)", () => {
+    /** 只有模組 `create`(沒有 view / edit、沒有表單權限) */
+    let createOnly: FormOperator;
+    /** 只有 A 的 `create-<formKey>` */
+    let formOnly: FormOperator;
+
+    beforeAll(async () => {
+      createOnly = await createOperator(api, connection, {
+        orgId: tenant,
+        permissionKeys: [M.create],
+      });
+      formOnly = await createOperator(api, connection, {
+        orgId: tenant,
+        permissionKeys: [createKey(FORM_A)],
+      });
+    }, HOOK_TIMEOUT_MS);
+
+    it("formRuntimeVersion:只有模組 `create` → FORBIDDEN;只有 `create-<formKey>` → 讀得到", async () => {
+      const variables = { formKey: FORM_A, version: 1 };
+      expect(
+        codeOf(await call(api, createOnly.token, RUNTIME_VERSION, variables)),
+      ).toBe("FORBIDDEN");
+      const data = await ok<{
+        formRuntimeVersion: { formVersion: { version: number } };
+      }>(api, formOnly.token, RUNTIME_VERSION, variables);
+      expect(data.formRuntimeVersion.formVersion.version).toBe(1);
+    });
+
+    it("formFieldOptions:只有模組 `create` → FORBIDDEN;只有 `create-<formKey>` → 過了權限(欄位不是選項欄位,另回非權限錯誤)", async () => {
+      const input = { formKey: FORM_A, version: 1, fieldKey: "title" };
+      expect(
+        codeOf(await call(api, createOnly.token, FIELD_OPTIONS, { input })),
+      ).toBe("FORBIDDEN");
+      expect(
+        codeOf(await call(api, formOnly.token, FIELD_OPTIONS, { input })),
+      ).not.toBe("FORBIDDEN");
+    });
+
+    it("moduleListColumns(模組層):只有模組 `create` → FORBIDDEN;持任一張表單的 `create-<formKey>` → 讀得到", async () => {
+      const variables = { moduleKey: MODULE_KEY };
+      expect(
+        codeOf(await call(api, createOnly.token, LIST_COLUMNS, variables)),
+      ).toBe("FORBIDDEN");
+      const data = await ok<{ moduleListColumns: { moduleKey: string } }>(
+        api,
+        formOnly.token,
+        LIST_COLUMNS,
+        variables,
+      );
+      expect(data.moduleListColumns.moduleKey).toBe(MODULE_KEY);
+    });
+
+    it("表單附件上傳網址:只有模組 `create` → FORBIDDEN;只有 `create-<formKey>` → 拿得到", async () => {
+      const input = {
+        purpose: "FORM_ATTACHMENT",
+        contentType: "application/pdf",
+        size: 1000,
+      };
+      expect(
+        codeOf(await call(api, createOnly.token, CREATE_UPLOAD_URL, { input })),
+      ).toBe("FORBIDDEN");
+      const data = await ok<{ createUploadUrl: { objectPath: string } }>(
+        api,
+        formOnly.token,
+        CREATE_UPLOAD_URL,
+        { input },
+      );
+      expect(data.createUploadUrl.objectPath).toMatch(/^form\//);
+    });
+
+    it("申請中心「新申請」:只列有新增資格的表單;只有模組 `create` 的人看不到這個模組", async () => {
+      // 綁流程的表單才會出現在新申請(放在最後:A 綁了流程後送出會走流程)
+      for (const formKey of [FORM_A, FORM_B]) {
+        const form = await connection
+          .collection("forms")
+          .findOne<{ _id: Types.ObjectId }>({ key: formKey });
+        if (!form) {
+          throw new Error(`表單 ${formKey} 不存在`);
+        }
+        await connection.collection("business_relationships").insertOne({
+          tenantId: tenant,
+          type: "org_form_workflow",
+          firstId: tenant,
+          secondId: form._id,
+          thirdId: new Types.ObjectId(),
+          meta: {},
+          deletedAt: null,
+        });
+      }
+      // 申請中心本身要 `apply-center.view`;業務模組的權限各自不同
+      const [onlyModuleCreate, onlyA, all] = await Promise.all(
+        [[M.view, M.create], [createKey(FORM_A)], [M.all]].map(
+          (permissionKeys) =>
+            createOperator(api, connection, {
+              orgId: tenant,
+              moduleKeys: [MODULE_KEY, "apply-center"],
+              permissionKeys: ["apply-center.view", ...permissionKeys],
+            }),
+        ),
+      );
+
+      expect(await applicableGroupOf(onlyModuleCreate)).toBeUndefined();
+      const groupA = await applicableGroupOf(onlyA);
+      expect(groupA?.forms).toEqual([{ key: FORM_A }]);
+      const groupAll = await applicableGroupOf(all);
+      expect(groupAll?.forms.map((form) => form.key)).toEqual(
+        expect.arrayContaining([FORM_A, FORM_B]),
+      );
     });
   });
 });

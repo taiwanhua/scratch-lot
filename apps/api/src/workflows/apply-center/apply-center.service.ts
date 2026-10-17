@@ -174,6 +174,10 @@ export class ApplyCenterService {
     );
     const groups: ApplicableModuleForms[] = [];
     for (const module of modules) {
+      // 模組層連一張表單的新增資格都沒有 → 不查表單
+      if (!this.formAccess.canCreateInModule(facts, module.key)) {
+        continue;
+      }
       const available = await this.formAccess.availableForms(facts, module.key);
       const forms = available
         .filter(

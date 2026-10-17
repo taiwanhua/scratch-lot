@@ -36,6 +36,8 @@ export interface ResolvedModule {
   icon: string | null;
   /** 頁面組裝方式(`modules.engine`)。 */
   engine: ModuleEngine;
+  /** 表單模組依表單分開新增權限(B9b,`modules.perFormCreate`);不送前端(`me.modules` 不帶)。 */
+  perFormCreate: boolean;
   /** 有效權限 key(moduleId 等於此模組者)。 */
   permissions: string[];
 }
@@ -364,6 +366,8 @@ function assemble(
         icon: module.icon,
         // 欄位加上之前寫入、還沒被 migration 補值的文件,mongoose 讀出時套 schema default(fixed)
         engine: module.engine,
+        // 同 engine:欄位加上之前寫入的文件讀出時套 schema default(false)
+        perFormCreate: module.perFormCreate,
         permissions: permissionKeys.toSorted((a, b) => a.localeCompare(b)),
       };
     })

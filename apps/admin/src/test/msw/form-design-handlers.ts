@@ -59,10 +59,7 @@ export interface FormDesignWorldOptions {
   failures?: Partial<Record<FormDesignOperation, FormFailure>>;
   /** `previewFormVersion` 的回應(沒給 = 回送來的值、全部顯示、沒有錯誤) */
   preview?: PreviewFormVersionQuery["previewFormVersion"];
-  /**
-   * 表單 key → 發布時新建的依表單新增權限(B9b;沒列 = `createdPermission: null`)。
-   * 只在該表單**第一次**發布回傳(之後的發布權限已存在,回 null),同 api。
-   */
+  /** 表單 key → 發布回的新建依表單新增權限(B9b;沒列 = null;api 只在第一次發布回) */
   createdPermissions?: Record<string, { key: string; name: string }>;
 }
 
@@ -95,9 +92,6 @@ export const formDesignWorld = (
   const versions = structuredClone(options.versions ?? {});
   const retired = structuredClone(options.retired ?? []);
   const failures = options.failures ?? {};
-  const pendingPermissions = new Map(
-    Object.entries(options.createdPermissions ?? {}),
-  );
   const inputs: FormDesignWorld["inputs"] = {
     saveFormVersionDraft: [],
     publishFormVersion: [],
@@ -331,8 +325,8 @@ export const formDesignWorld = (
         publishedAt: "2026-09-21T00:00:00.000Z",
       });
       Object.assign(form, { currentVersion: next, hasDraft: false });
-      const createdPermission = pendingPermissions.get(input.formKey) ?? null;
-      pendingPermissions.delete(input.formKey);
+      // 沒列 = 欄位缺席(等同 null)
+      const createdPermission = options.createdPermissions?.[input.formKey];
       return HttpResponse.json({
         data: { publishFormVersion: { formVersion: draft, createdPermission } },
       });

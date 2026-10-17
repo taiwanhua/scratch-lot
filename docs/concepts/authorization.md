@@ -68,18 +68,20 @@
 
 入口(開啟的模組裡,只有模組 `create`、沒有表單權限的人每一個都被擋):
 
-| 入口                                                                          | 走法                                                                                            |
-| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 新增 API(`createFormDraft`、`createAndSubmitFormSubmission`)                  | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
-| `moduleForms`                                                                 | 清單照舊(列表的表單篩選、頁籤模板要用),每張附 `canCreate`                                       |
-| abilities(`canEdit` / `canDelete` / `canSaveDraft` 的申請人那一支、`canCopy`) | 申請人改、送、刪自己的單與複製為新單都要這張表單的新增資格                                      |
-| 申請人改 / 存草稿 / 送出 / 刪除自己的單                                       | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
-| 複製為新單(`copySubmissionToDraft`)                                           | `assertCanCreateWithForm` → `FORBIDDEN`                                                         |
-| `formLookup` 版本存取、執行端讀定義(`formRuntimeVersion`、選項)               | 這張表單的新增資格或模組 `view` / `edit`                                                        |
-| 申請中心「新申請」(`applicableForms`)                                         | 只列有新增資格的表單                                                                            |
-| admin 的 [+ 新增] 與新增頁                                                    | 只用 `canCreate = true` 的表單;有表單但一張都不能新增時不出現 [+ 新增],直接開新增頁說明不能新增 |
+| 入口                                                                          | 走法                                                                                                              |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 新增 API(`createFormDraft`、`createAndSubmitFormSubmission`)                  | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| `moduleForms`                                                                 | 清單照舊(列表的表單篩選、頁籤模板要用),每張附 `canCreate`                                                         |
+| abilities(`canEdit` / `canDelete` / `canSaveDraft` 的申請人那一支、`canCopy`) | 申請人改、送、刪自己的單與複製為新單都要這張表單的新增資格                                                        |
+| 申請人改 / 存草稿 / 送出 / 刪除自己的單                                       | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| 複製為新單(`copySubmissionToDraft`)                                           | `assertCanCreateWithForm` → `FORBIDDEN`                                                                           |
+| `formLookup` 版本存取、執行端讀定義(`formRuntimeVersion`、選項)               | 這張表單的新增資格或模組 `view` / `edit`                                                                          |
+| 模組層的執行端讀取(`moduleForms`、`moduleListColumns`)                        | 這個模組任一張表單的新增資格(`canCreateInFormModule`)或模組 `view` / `edit`                                       |
+| 表單附件上傳網址(`createUploadUrl`,`FORM_ATTACHMENT`)                         | 任一表單模組的新增資格(`canCreateInFormModule`)或模組 `edit`                                                      |
+| 申請中心「新申請」(`applicableForms`;先以模組層新增資格略過模組)              | 只列有新增資格的表單                                                                                              |
+| admin 的 [+ 新增] 與新增頁                                                    | 只用 `canCreate = true` 的表單;表單清單載完前、或有表單但一張都不能新增時不出現 [+ 新增],直接開新增頁說明不能新增 |
 
-正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/forms/form-access.service.ts`(`canCreateWithForm`)、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
+正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`、`apps/api/src/forms/form-permission-keys.ts`、`apps/api/src/forms/form-create-access.ts`(判準)、`apps/api/src/forms/form-access.service.ts`(`canCreateWithForm`)、`apps/api/src/permission/foreign-form-permissions.ts`、`docs/modules/forms.md`「模組 key 與權限表」
 
 ## Wildcard(同層語意)
 

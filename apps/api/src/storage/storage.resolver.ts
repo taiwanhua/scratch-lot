@@ -3,6 +3,7 @@ import { Args, Mutation, Resolver } from "@nestjs/graphql";
 import { authError } from "../auth/auth-error";
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
+import { canCreateInFormModule } from "../forms/form-create-access";
 import {
   PermissionResolver,
   holdsPermission,
@@ -72,7 +73,8 @@ export class StorageResolver {
       resolution.modules.some(
         (module) =>
           module.engine === "form" &&
-          (holdsPermission(resolution, `${module.key}.create`) ||
+          // 新增資格走表單模組的同一份判準(B9b 模組看任一張表單的 `create-<formKey>`)
+          (canCreateInFormModule(resolution, module) ||
             holdsPermission(resolution, `${module.key}.edit`)),
       );
     if (
