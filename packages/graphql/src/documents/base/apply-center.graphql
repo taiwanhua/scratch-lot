@@ -86,6 +86,11 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
         name
       }
       assigneeState
+      # B15 代理人:這一項是代理派任時的原審核者(assignee 是代理人);沒有代理 / 已改派 → null
+      delegator {
+        id
+        name
+      }
       # 只有流程管理者(abilities.canManage)拿得到:阻擋清單改派(ReassignTask)要它
       taskId
     }
@@ -119,6 +124,11 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
     reason
     # 只有 auto_approve_blocked:守門擋下的專案錯誤碼(admin.lifecycle.<碼>)
     code
+    # 只有 task_created:代理派任時的原審核者(時間軸「由 user 代理 delegator」)
+    delegator {
+      id
+      name
+    }
   }
   outcome {
     kind

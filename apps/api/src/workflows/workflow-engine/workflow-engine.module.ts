@@ -8,6 +8,7 @@ import { NotificationsCoreModule } from "../../notifications/notifications-core.
 import { OrgsModule } from "../../orgs/orgs.module";
 import { RealtimeModule } from "../../realtime/realtime.module";
 import { WorkflowsCoreModule } from "../workflows-core.module";
+import { AssigneeDelegationService } from "./assignee-delegation.service";
 import { AssigneeInvalidationService } from "./assignee-invalidation.service";
 import { AudienceSourceService } from "./audience-source.service";
 import { BlockedInstancesService } from "./blocked-instances.service";
@@ -51,6 +52,7 @@ import { WorkflowSubmitService } from "./workflow-submit.service";
     WorkflowEngineService,
     StepEntryService,
     AudienceSourceService,
+    AssigneeDelegationService,
     WorkflowNotifier,
     WorkflowSubmitService,
     SubmissionReadAccess,

@@ -205,6 +205,35 @@
 
 匯合節點帶了 `skipOrgs` / `autoApprove` 一樣是 `JOIN_HAS_REVIEW_PROPS`;所有審核關卡都設了 `skipWhen` 或 `skipOrgs` → `ALL_STEPS_SKIPPABLE`(警告)。
 
+## 代理人
+
+《底座規格》3.7 B15;現況說明見 `docs/concepts/workflow-engine.md`「代理人」。
+
+**資料**:`user_delegations { userId, delegateUserId, startAt, endAt, note }`(+ 基礎欄位;索引 `(userId, startAt)`;屬帳號、不掛 tenantScope)。迄不含(結束日 24:00)。
+
+**設定端**(`apps/api/src/user-delegations/`;不經模組權限,身分取自登入、不收 userId):
+
+| 端點                                                                  | 說明                                                                                         |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `myDelegations(input: { page, pageSize })`                            | 自己的代理,依 `startAt` 新到舊;`status` = `UPCOMING` / `ACTIVE` / `ENDED`(依 api 當下時間算) |
+| `myDelegateCandidates(input: { keyword, page, pageSize })`            | 可選的代理人:操作者目前所在最上層組織的成員、啟用中、不含自己;站在根組織 → 空                |
+| `createMyDelegation(input: { delegateUserId, startAt, endAt, note })` | 新增;`note` 缺席 / `null` / 空白 = 沒有備註                                                  |
+| `updateMyDelegation(input: { id, endAt, note })`                      | 改迄日與備註(未結束的才能改);`note` 缺席 = 不動,`null` / 空白 = 清掉。代理人與起日不改       |
+| `deleteMyDelegation(input: { id })`                                   | 軟刪除(未結束的才能刪)                                                                       |
+
+錯誤(`VALIDATION_FAILED` + `extensions.reason`,正本 `user-delegations-error.ts`):`DELEGATION_OVERLAP`(與自己其他代理期間有交集;`[startAt, endAt)` 相接不算)、`SELF_DELEGATION`、`DELEGATE_NOT_ELIGIBLE`(停用、不存在、不在操作者的最上層組織,或操作者站在根組織)、`INVALID_PERIOD`(迄 <= 起;新增時迄已過)、`DELEGATION_ENDED`(改 / 刪已結束的)。改 / 刪別人的或不存在的 → `NOT_FOUND`。重疊檢查是先查再寫,沒有唯一索引兜底(同一人同時送兩筆重疊的極少見,接受)。
+
+**派任**(`workflow-engine/assignee-delegation.service.ts`,`StepEntryService` 解析審核者之後呼叫):
+
+1. 名單裡(不含申請人)此刻 `startAt <= now < endAt` 的人,讀他的代理人。
+2. 代理人以 `TenantDirectoryService.eligibleUserIds` 驗啟用、在本租戶;不合格 → 不換、`Logger.warn`。代理人是申請人 → 不換。
+3. 換過的名單交給 B5 候選與 `buildPlan`;`StepEntry.delegatorOf`(代理人 → 原審核者)讓計畫那一項記 `delegatorId`。代理人本來就在名單裡 → 以他自己那一項為準(不記成代理);兩位原審核者同一位代理人 → 去重後一項,記第一位。
+4. 不讀代理人自己的代理(不做代理鏈);只在進關那一次看,之後代理改迄日或刪除不動計畫。
+
+**寫入與顯示**:計畫項目 `delegatorId`(GraphQL `WorkflowPlanItemModel.delegator`);`task_created` 事件帶 `delegatorId`(`WorkflowHistoryEventModel.delegator`)。流程管理者改派(`reassignTask`)把 `delegatorId` 清成 null。admin 時間軸用 `admin.approval.timeline.taskDelegated`(「「關卡」由 X 代理 Y」),關卡進度用 `admin.approval.progress.assigneeDelegated`。
+
+**admin**:個人設定(`/settings/personal?tab=delegations`,頁碼在 `?list=`)的「代理人」分頁 `DelegationsTab`(清單 + 刪除確認)與分頁列右側的「新增代理」→ `NewDelegationDialog`(代理人用 `UserPickerField` + `myDelegateCandidates`;日期以 `lib/base/delegation-period.ts` 換成時點)。迄日顯示成結束日 23:59。
+
 ## 推進(`advance` 的執行器)
 
 `workflow-engine/workflow-engine.service.ts`。判斷表本體與**執行合約**在 `@repo/domain/workflow` 的 `advance.ts` 檔頭,這裡只執行:

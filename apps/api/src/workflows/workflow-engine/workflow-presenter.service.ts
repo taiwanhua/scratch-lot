@@ -84,14 +84,18 @@ export class WorkflowPresenter {
     const userIds: (Types.ObjectId | null)[] = [instance.createdBy];
     for (const step of instance.steps) {
       for (const item of step.plan) {
-        userIds.push(item.assigneeId, ...item.previousAssigneeIds);
+        userIds.push(
+          item.assigneeId,
+          ...item.previousAssigneeIds,
+          item.delegatorId ?? null,
+        );
       }
       for (const decision of step.decisions) {
         userIds.push(decision.userId);
       }
     }
     for (const event of instance.history) {
-      userIds.push(event.userId, event.toUserId);
+      userIds.push(event.userId, event.toUserId, event.delegatorId ?? null);
     }
     const names = await this.userNames.load(systemContext(), userIds);
     const myTasks =
@@ -157,6 +161,7 @@ export class WorkflowPresenter {
               .map((id) => userRefOf(id, names))
               .filter((ref) => nonNull(ref)),
             assigneeState: item.assigneeState,
+            delegator: userRefOf(item.delegatorId, names),
             taskId: taskIdByKey.get(item.taskKey) ?? null,
           })),
           decisions: (state?.decisions ?? []).map((decision) => ({
@@ -182,6 +187,7 @@ export class WorkflowPresenter {
         result: event.result,
         reason: event.reason ?? null,
         code: event.code ?? null,
+        delegator: userRefOf(event.delegatorId, names),
       })),
       outcome: instance.outcome
         ? {

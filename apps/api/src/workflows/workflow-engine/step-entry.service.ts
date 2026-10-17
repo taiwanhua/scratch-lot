@@ -27,6 +27,7 @@ import type {
 import { WorkflowSubmissionStore } from "../../database/workflow-submission-store";
 import { expressionContextOf } from "../../forms/form-runtime/revision-context";
 import { systemContext } from "../tenant-directory.service";
+import { AssigneeDelegationService } from "./assignee-delegation.service";
 import { AudienceSourceService } from "./audience-source.service";
 import {
   type InstanceRecord,
@@ -54,6 +55,8 @@ export interface StepEntryOptions {
  *   2. 「符合條件」(`skipWhen`):拿該修訂的表單內容與送出當時的上下文算(同一實例內容固定,不重算公式)
  * - 審核者三種來源由 `AudienceSourceService.resolveAudienceSource` 算(只算啟用中、仍在本租戶的人);
  *   剔除申請人由 domain 的 `buildPlan` 做
+ * - **代理人**(3.7 B15):解析完先把此刻在代理期間的人換成代理人(`AssigneeDelegationService`),
+ *   B5 自動通過與派任計畫都以換過的名單算(「已在前關核准過」只算代理人本人)
  * - **自動通過**(3.5 B5):domain `autoApprovalCandidates` 列出候選,逐位以**他本人**的身分跑
  *   `checkApproveGuard`(`beforeApprove`);擋下的放進 `blockedAutoApprovals`(申請人照一般規則剔除,
  *   其他人照常審核;時間軸記 `auto_approve_blocked`)。`any` 一位通過就停(一人核准即過)
@@ -72,6 +75,7 @@ export class StepEntryService {
     private readonly sources: AudienceSourceService,
     private readonly lifecycle: FormLifecycleService,
     private readonly operators: OperatorContextService,
+    private readonly delegations: AssigneeDelegationService,
   ) {}
 
   async resolve(
@@ -112,7 +116,16 @@ export class StepEntryService {
       applicantId: instance.createdBy,
       values: revision.values,
     });
-    const assigneeIds = resolved.map(String);
+    const { assigneeIds, delegatorOf } = await this.delegations.apply(
+      resolved.map(String),
+      {
+        tenantId,
+        applicantId:
+          instance.createdBy === null ? null : String(instance.createdBy),
+        now: new Date(),
+      },
+    );
+    const delegated = Object.keys(delegatorOf).length > 0 && { delegatorOf };
     const candidates = autoApprovalCandidates(
       definition,
       toInstanceSnapshot(instance),
@@ -120,10 +133,15 @@ export class StepEntryService {
       assigneeIds,
     );
     if (candidates.length === 0) {
-      return { kind: "assign", assigneeIds };
+      return { kind: "assign", assigneeIds, ...delegated };
     }
     if (!options.runApproveGuards) {
-      return { kind: "assign", assigneeIds, autoApprovals: candidates };
+      return {
+        kind: "assign",
+        assigneeIds,
+        autoApprovals: candidates,
+        ...delegated,
+      };
     }
     const guarded = await this.guardedApprovals(submission, step, candidates);
     return {
@@ -131,6 +149,7 @@ export class StepEntryService {
       assigneeIds,
       autoApprovals: guarded.passed,
       blockedAutoApprovals: guarded.blocked,
+      ...delegated,
     };
   }
 

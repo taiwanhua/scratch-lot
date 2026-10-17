@@ -18,6 +18,7 @@ import { RolesModule } from "../roles/roles.module";
 import { ScheduledJobsModule } from "../scheduled-jobs/scheduled-jobs.module";
 import { SidebarBadgesModule } from "../sidebar-badges/sidebar-badges.module";
 import { StorageModule } from "../storage/storage.module";
+import { UserDelegationsModule } from "../user-delegations/user-delegations.module";
 import { UserPreferencesModule } from "../user-preferences/user-preferences.module";
 import { UsersModule } from "../users/users.module";
 import { ApplyCenterModule } from "../workflows/apply-center/apply-center.module";
@@ -53,6 +54,7 @@ export const BASE_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "workflow-engine", module: WorkflowEngineModule },
   { key: "apply-center", module: ApplyCenterModule },
   { key: "user-preferences", module: UserPreferencesModule },
+  { key: "user-delegations", module: UserDelegationsModule },
   { key: "notifications", module: NotificationsModule },
   { key: "printing", module: PrintingModule },
 ];

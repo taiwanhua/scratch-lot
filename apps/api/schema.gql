@@ -228,6 +228,13 @@ input CreateFormVersionDraftInput {
   formKey: ID!
 }
 
+input CreateMyDelegationInput {
+  delegateUserId: ID!
+  endAt: DateTime!
+  note: String
+  startAt: DateTime!
+}
+
 input CreatePrintAgentInput {
   name: String!
   orgId: ID!
@@ -404,6 +411,14 @@ type DeleteFormSubmissionPayload {
 input DeleteFormVersionDraftInput {
   expectedDraftRevision: Int!
   formKey: ID!
+}
+
+input DeleteMyDelegationInput {
+  id: ID!
+}
+
+type DeleteMyDelegationPayload {
+  id: ID!
 }
 
 input DeleteOrgInput {
@@ -1235,6 +1250,7 @@ type Mutation {
   createForm(input: CreateFormInput!): FormPayload!
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
   createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
+  createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
   createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
   createPrinter(input: CreatePrinterInput!): PrinterPayload!
@@ -1248,6 +1264,7 @@ type Mutation {
   deleteDemoItemTwo(input: DeleteDemoItemTwoInput!): DeleteDemoItemTwoPayload!
   deleteFormSubmission(input: DeleteFormSubmissionInput!): DeleteFormSubmissionPayload!
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
+  deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
@@ -1311,6 +1328,7 @@ type Mutation {
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
+  updateMyDelegation(input: UpdateMyDelegationInput!): MyDelegationPayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
@@ -1335,6 +1353,39 @@ input MyApplicationsInput {
 
 type MyApplicationsPayload {
   items: [ApplicationItem!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+input MyDelegateCandidatesInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type MyDelegateCandidatesPayload {
+  items: [UserDelegateCandidateModel!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type MyDelegationPayload {
+  delegation: UserDelegationModel!
+}
+
+input MyDelegationsInput {
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+}
+
+type MyDelegationsPayload {
+  items: [UserDelegationModel!]!
   page: Int!
   pageSize: Int!
   totalCount: Int!
@@ -1784,6 +1835,8 @@ type Query {
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
   moduleTree: [ModuleAdminNode!]!
   myApplications(input: MyApplicationsInput!): MyApplicationsPayload!
+  myDelegateCandidates(input: MyDelegateCandidatesInput!): MyDelegateCandidatesPayload!
+  myDelegations(input: MyDelegationsInput!): MyDelegationsPayload!
   myNotificationPreferences: MyNotificationPreferencesPayload!
   myNotificationUnreadCount: MyNotificationUnreadCountPayload!
   myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!
@@ -2314,6 +2367,12 @@ input UpdateFormSubmissionInput {
   values: JSONObject!
 }
 
+input UpdateMyDelegationInput {
+  endAt: DateTime!
+  id: ID!
+  note: String
+}
+
 input UpdateMyPreferencesInput {
   settings: JSONObject!
 }
@@ -2413,6 +2472,29 @@ input UserActivationInput {
 enum UserActivationMode {
   EMAIL
   PASSWORD
+}
+
+type UserDelegateCandidateModel {
+  account: String!
+  id: ID!
+  name: String!
+}
+
+type UserDelegationModel {
+  createdAt: DateTime!
+  delegate: FormUserRef!
+  endAt: DateTime!
+  id: ID!
+  note: String
+  startAt: DateTime!
+  status: UserDelegationStatus!
+}
+
+"""代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀)"""
+enum UserDelegationStatus {
+  ACTIVE
+  ENDED
+  UPCOMING
 }
 
 type UserOrg {
@@ -2572,6 +2654,7 @@ type WorkflowHistoryEventModel {
   at: DateTime!
   code: String
   comment: String
+  delegator: FormUserRef
   kind: String!
   reason: String
   result: String
@@ -2692,6 +2775,7 @@ type WorkflowPayload {
 type WorkflowPlanItemModel {
   assignee: FormUserRef!
   assigneeState: String!
+  delegator: FormUserRef
   previousAssignees: [FormUserRef!]!
   taskId: ID
   taskKey: String!

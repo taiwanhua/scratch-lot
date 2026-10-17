@@ -40,6 +40,7 @@ import { Org, OrgSchema } from "./org.schema";
 import { Permission, PermissionSchema } from "./permission.schema";
 import { RefreshToken, RefreshTokenSchema } from "./refresh-token.schema";
 import { Role, RoleSchema } from "./role.schema";
+import { UserDelegation, UserDelegationSchema } from "./user-delegation.schema";
 import { UserPreference, UserPreferenceSchema } from "./user-preference.schema";
 import { User, UserSchema } from "./user.schema";
 
@@ -71,6 +72,7 @@ const REGISTRY: { name: string; schema: Schema }[] = [
   { name: ActionToken.name, schema: ActionTokenSchema },
   { name: AuditLog.name, schema: AuditLogSchema },
   { name: UserPreference.name, schema: UserPreferenceSchema },
+  { name: UserDelegation.name, schema: UserDelegationSchema },
   { name: Notification.name, schema: NotificationSchema },
   { name: NotificationSetting.name, schema: NotificationSettingSchema },
 ];
@@ -120,7 +122,7 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   }, HOOK_TIMEOUT_MS);
 
   it("全部 collection 皆已建模並可建立索引", () => {
-    expect(indexesByModel.size).toBe(20);
+    expect(indexesByModel.size).toBe(21);
   });
 
   it("orgs:unique(key sparse)+ unique(slug sparse)+(parentId)+(ancestors)", () => {
@@ -249,6 +251,11 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   it("user_preferences:userId 唯一(每個使用者一筆)", () => {
     const indexes = indexesOf(UserPreference.name);
     expect(findIndex(indexes, { userId: 1 })?.unique).toBe(true);
+  });
+
+  it("user_delegations:(userId, startAt)(個人清單、派任時查代理期間)", () => {
+    const indexes = indexesOf(UserDelegation.name);
+    expect(findIndex(indexes, { userId: 1, startAt: 1 })).toBeDefined();
   });
 
   it("notifications:(recipientId, dedupeKey) 唯一;createdAt 90 天 TTL;清單與未讀數的索引", () => {

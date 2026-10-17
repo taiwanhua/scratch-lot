@@ -99,6 +99,10 @@ export class WorkflowPlanItemModel {
   @Field(() => String)
   assigneeState!: string;
 
+  /** B15 代理人:這一項是代理派任時的原審核者(`assignee` 是代理人);沒有代理 / 已改派 → null。 */
+  @Field(() => FormUserRef, { nullable: true })
+  delegator!: FormUserRef | null;
+
   /**
    * 這一項對應的任務 id(`reassignTask` 要它)。**只給流程管理者**(`abilities.canManage`):
    * 阻擋清單要對別人的任務改派;其他讀者一律 null,任務還沒建出來(計畫剛寫入)也是 null。
@@ -199,6 +203,10 @@ export class WorkflowHistoryEventModel {
   /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
   @Field(() => String, { nullable: true })
   code!: string | null;
+
+  /** 只有 `task_created`:代理派任時的原審核者(時間軸「由 <user> 代理 <delegator>」);其他 null。 */
+  @Field(() => FormUserRef, { nullable: true })
+  delegator!: FormUserRef | null;
 }
 
 @ObjectType()

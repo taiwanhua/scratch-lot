@@ -384,6 +384,8 @@ export class TaskActionsService {
         $set: {
           "steps.$[s].plan.$[p].assigneeId": toUserId,
           "steps.$[s].plan.$[p].assigneeState": "active",
+          // 改派後的承辦人不是代理(B15),不再記原審核者
+          "steps.$[s].plan.$[p].delegatorId": null,
         },
         $push: {
           "steps.$[s].plan.$[p].previousAssigneeIds": item.assigneeId,

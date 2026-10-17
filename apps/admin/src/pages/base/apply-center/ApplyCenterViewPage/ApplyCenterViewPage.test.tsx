@@ -324,4 +324,43 @@ describe("申請中心詳情頁(view-page)", () => {
       within(timeline).getByText("人資阿美 在「人資」核准"),
     ).toBeInTheDocument();
   });
+  it("代理派任(B15):進度寫「代理人(代理 原審核者)」,時間軸寫「由代理人代理原審核者」", async () => {
+    renderApplyCenter({
+      path: `${APPLY_VIEW_ROUTE}/inst-1`,
+      runtime: {
+        ...defaultRuntime(),
+        instances: [
+          instanceFragment({
+            steps: [
+              instanceStep("manager", "直屬主管", {
+                status: WorkflowStepStatus.Active,
+                plan: [planItem("manager-1", HR, { delegator: MANAGER })],
+              }),
+            ],
+            history: [
+              {
+                at: "2026-09-20T02:00:00.000Z",
+                kind: "task_created",
+                stepKey: "manager",
+                taskKey: "manager-1",
+                user: HR,
+                toUser: null,
+                comment: null,
+                result: null,
+                reason: null,
+                code: null,
+                delegator: MANAGER,
+              },
+            ],
+          }),
+        ],
+      },
+    });
+    const timeline = await screen.findByRole("region", { name: "審核歷程" });
+    expect(
+      within(timeline).getByText("「直屬主管」由 人資阿美 代理 小華"),
+    ).toBeInTheDocument();
+    const rows = await progressRows();
+    expect(rows[0]).toHaveTextContent("人資阿美(代理 小華)");
+  });
 });

@@ -41,6 +41,10 @@ export class WorkflowPlanItem {
   /** `invalid` = 承辦人停用 / 移出租戶(阻擋的依據)。 */
   @Prop({ type: String, required: true, enum: ASSIGNEE_STATES })
   assigneeState!: AssigneeState;
+
+  /** B15 代理人:進關時原審核者在代理期間、改派給代理人(`assigneeId`)時記原審核者;沒有代理 / 改派後 null。 */
+  @Prop({ type: Types.ObjectId, default: null })
+  delegatorId!: Types.ObjectId | null;
 }
 
 const WorkflowPlanItemSchema = SchemaFactory.createForClass(WorkflowPlanItem);
@@ -122,6 +126,10 @@ export class WorkflowHistoryEvent {
   /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼。 */
   @Prop({ type: String, default: null })
   code!: string | null;
+
+  /** 只有 `task_created`:代理派任時的原審核者(時間軸「由 <userId> 代理 <delegatorId>」);其他 null。 */
+  @Prop({ type: Types.ObjectId, default: null })
+  delegatorId!: Types.ObjectId | null;
 }
 
 const WorkflowHistoryEventSchema =

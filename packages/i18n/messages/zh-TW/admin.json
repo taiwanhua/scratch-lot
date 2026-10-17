@@ -2111,6 +2111,7 @@
       "noAssignee": "找不到審核者",
       "assigneeDecided": "{name}({decision})",
       "assigneeInvalid": "{name}(已失效)",
+      "assigneeDelegated": "{name}(代理 {delegator})",
       "statuses": {
         "PENDING": "還沒到",
         "ACTIVE": "審核中",
@@ -2157,6 +2158,7 @@
         "auto_prior_approver": "「{step}」{user} 已在前關核准,自動通過未成立:{message}"
       },
       "autoApproveBlockedGeneric": "目前不符合自動通過的條件",
+      "taskDelegated": "「{step}」由 {user} 代理 {delegator}",
       "reasons": {
         "skip_orgs": "「{step}」申請人屬於指定的組織,略過",
         "skip_condition": "「{step}」符合跳過條件,略過",
@@ -2723,7 +2725,52 @@
     "title": "個人設定",
     "tabs": "個人設定分頁",
     "tabPreferences": "偏好",
-    "preferencesEmpty": "目前沒有可以調整的偏好。外觀與語言在右上角的頭像選單切換。"
+    "tabDelegations": "代理人",
+    "preferencesEmpty": "目前沒有可以調整的偏好。外觀與語言在右上角的頭像選單切換。",
+    "delegations": {
+      "create": "+ 新增代理",
+      "hint": "代理期間內,輪到你審核的任務改派給代理人。代理開始前已派給你的任務不會自動轉移。",
+      "tableAria": "我的代理",
+      "delegate": "代理人",
+      "startAt": "開始",
+      "endAt": "結束",
+      "note": "備註",
+      "status": "狀態",
+      "actions": "操作",
+      "statuses": {
+        "UPCOMING": "未開始",
+        "ACTIVE": "代理中",
+        "ENDED": "已結束"
+      },
+      "empty": "還沒有設定代理",
+      "loadFailed": "代理清單載入失敗,請重新整理",
+      "total": "共 {total} 筆",
+      "delete": "刪除",
+      "deleteOf": "刪除 {name} 的代理",
+      "deleteTitle": "刪除 {name} 的代理?",
+      "deleteBody": "刪除後,之後輪到你審核的任務不再改派給代理人;已經派給代理人的任務不會轉回來。",
+      "deleteConfirm": "刪除",
+      "deleted": "已刪除代理",
+      "dialogTitle": "新增代理",
+      "startDay": "開始",
+      "endDay": "結束",
+      "endBeforeStart": "結束不能早於開始",
+      "cancel": "取消",
+      "submit": "新增",
+      "created": "已新增代理",
+      "errors": {
+        "NOT_FOUND": "找不到這筆代理,請重新整理",
+        "VALIDATION_FAILED": "資料未通過驗證,請檢查後再試",
+        "UNEXPECTED": "操作失敗,請稍後再試",
+        "reasons": {
+          "DELEGATION_OVERLAP": "和你已設定的代理期間重疊",
+          "SELF_DELEGATION": "代理人不能是自己",
+          "DELEGATE_NOT_ELIGIBLE": "這位代理人已停用或不在你的最上層組織",
+          "INVALID_PERIOD": "結束必須晚於開始,而且不能已經過去",
+          "DELEGATION_ENDED": "已結束的代理不能修改或刪除"
+        }
+      }
+    }
   },
   "conditionTree": {
     "rootOp": "組合",

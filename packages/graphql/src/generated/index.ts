@@ -266,6 +266,13 @@ export type CreateFormVersionDraftInput = {
   formKey: Scalars['ID']['input'];
 };
 
+export type CreateMyDelegationInput = {
+  delegateUserId: Scalars['ID']['input'];
+  endAt: Scalars['DateTime']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  startAt: Scalars['DateTime']['input'];
+};
+
 export type CreatePrintAgentInput = {
   name: Scalars['String']['input'];
   orgId: Scalars['ID']['input'];
@@ -442,6 +449,15 @@ export type DeleteFormSubmissionPayload = {
 export type DeleteFormVersionDraftInput = {
   expectedDraftRevision: Scalars['Int']['input'];
   formKey: Scalars['ID']['input'];
+};
+
+export type DeleteMyDelegationInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteMyDelegationPayload = {
+  __typename?: 'DeleteMyDelegationPayload';
+  id: Scalars['ID']['output'];
 };
 
 export type DeleteOrgInput = {
@@ -1346,6 +1362,7 @@ export type Mutation = {
   createForm: FormPayload;
   createFormDraft: FormSubmissionPayload;
   createFormVersionDraft: FormVersionPayload;
+  createMyDelegation: MyDelegationPayload;
   createPrintAgent: PrintAgentPairingPayload;
   createPrintJob: PrintJobPayload;
   createPrinter: PrinterPayload;
@@ -1359,6 +1376,7 @@ export type Mutation = {
   deleteDemoItemTwo: DeleteDemoItemTwoPayload;
   deleteFormSubmission: DeleteFormSubmissionPayload;
   deleteFormVersionDraft: FormPayload;
+  deleteMyDelegation: DeleteMyDelegationPayload;
   deleteOrg: DeletePayload;
   deleteRetiredPermission: DeleteRetiredPermissionPayload;
   deleteRole: DeletePayload;
@@ -1422,6 +1440,7 @@ export type Mutation = {
   updateFieldCategory: FieldCategoryPayload;
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
+  updateMyDelegation: MyDelegationPayload;
   updateMyPreferences: UpdateMyPreferencesPayload;
   updateNotificationSetting: NotificationSettingPayload;
   updateOrg: OrgPayload;
@@ -1530,6 +1549,11 @@ export type MutationCreateFormVersionDraftArgs = {
 };
 
 
+export type MutationCreateMyDelegationArgs = {
+  input: CreateMyDelegationInput;
+};
+
+
 export type MutationCreatePrintAgentArgs = {
   input: CreatePrintAgentInput;
 };
@@ -1592,6 +1616,11 @@ export type MutationDeleteFormSubmissionArgs = {
 
 export type MutationDeleteFormVersionDraftArgs = {
   input: DeleteFormVersionDraftInput;
+};
+
+
+export type MutationDeleteMyDelegationArgs = {
+  input: DeleteMyDelegationInput;
 };
 
 
@@ -1890,6 +1919,11 @@ export type MutationUpdateFormSubmissionArgs = {
 };
 
 
+export type MutationUpdateMyDelegationArgs = {
+  input: UpdateMyDelegationInput;
+};
+
+
 export type MutationUpdateMyPreferencesArgs = {
   input: UpdateMyPreferencesInput;
 };
@@ -1951,6 +1985,40 @@ export type MyApplicationsInput = {
 export type MyApplicationsPayload = {
   __typename?: 'MyApplicationsPayload';
   items: Array<ApplicationItem>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type MyDelegateCandidatesInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MyDelegateCandidatesPayload = {
+  __typename?: 'MyDelegateCandidatesPayload';
+  items: Array<UserDelegateCandidateModel>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type MyDelegationPayload = {
+  __typename?: 'MyDelegationPayload';
+  delegation: UserDelegationModel;
+};
+
+export type MyDelegationsInput = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MyDelegationsPayload = {
+  __typename?: 'MyDelegationsPayload';
+  items: Array<UserDelegationModel>;
   page: Scalars['Int']['output'];
   pageSize: Scalars['Int']['output'];
   totalCount: Scalars['Int']['output'];
@@ -2427,6 +2495,8 @@ export type Query = {
   moduleListColumns: ModuleListColumnsPayload;
   moduleTree: Array<ModuleAdminNode>;
   myApplications: MyApplicationsPayload;
+  myDelegateCandidates: MyDelegateCandidatesPayload;
+  myDelegations: MyDelegationsPayload;
   myNotificationPreferences: MyNotificationPreferencesPayload;
   myNotificationUnreadCount: MyNotificationUnreadCountPayload;
   myNotifications: MyNotificationsPayload;
@@ -2616,6 +2686,16 @@ export type QueryModuleListColumnsArgs = {
 
 export type QueryMyApplicationsArgs = {
   input: MyApplicationsInput;
+};
+
+
+export type QueryMyDelegateCandidatesArgs = {
+  input: MyDelegateCandidatesInput;
+};
+
+
+export type QueryMyDelegationsArgs = {
+  input: MyDelegationsInput;
 };
 
 
@@ -3281,6 +3361,12 @@ export type UpdateFormSubmissionInput = {
   values: Scalars['JSONObject']['input'];
 };
 
+export type UpdateMyDelegationInput = {
+  endAt: Scalars['DateTime']['input'];
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateMyPreferencesInput = {
   settings: Scalars['JSONObject']['input'];
 };
@@ -3383,6 +3469,31 @@ export type UserActivationInput = {
 export enum UserActivationMode {
   Email = 'EMAIL',
   Password = 'PASSWORD'
+}
+
+export type UserDelegateCandidateModel = {
+  __typename?: 'UserDelegateCandidateModel';
+  account: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type UserDelegationModel = {
+  __typename?: 'UserDelegationModel';
+  createdAt: Scalars['DateTime']['output'];
+  delegate: FormUserRef;
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  status: UserDelegationStatus;
+};
+
+/** 代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀) */
+export enum UserDelegationStatus {
+  Active = 'ACTIVE',
+  Ended = 'ENDED',
+  Upcoming = 'UPCOMING'
 }
 
 export type UserOrg = {
@@ -3555,6 +3666,7 @@ export type WorkflowHistoryEventModel = {
   at: Scalars['DateTime']['output'];
   code?: Maybe<Scalars['String']['output']>;
   comment?: Maybe<Scalars['String']['output']>;
+  delegator?: Maybe<FormUserRef>;
   kind: Scalars['String']['output'];
   reason?: Maybe<Scalars['String']['output']>;
   result?: Maybe<Scalars['String']['output']>;
@@ -3685,6 +3797,7 @@ export type WorkflowPlanItemModel = {
   __typename?: 'WorkflowPlanItemModel';
   assignee: FormUserRef;
   assigneeState: Scalars['String']['output'];
+  delegator?: Maybe<FormUserRef>;
   previousAssignees: Array<FormUserRef>;
   taskId?: Maybe<Scalars['ID']['output']>;
   taskKey: Scalars['String']['output'];
@@ -3807,7 +3920,7 @@ export type WorkflowsPayload = {
 
 export type WorkflowTaskFieldsFragment = { __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null };
 
-export type WorkflowInstanceFieldsFragment = { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } };
+export type WorkflowInstanceFieldsFragment = { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } };
 
 export type MyApplicationsQueryVariables = Exact<{
   input: MyApplicationsInput;
@@ -3838,7 +3951,7 @@ export type WorkflowInstanceQueryVariables = Exact<{
 }>;
 
 
-export type WorkflowInstanceQuery = { __typename?: 'Query', workflowInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
+export type WorkflowInstanceQuery = { __typename?: 'Query', workflowInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
 
 export type DecideTaskMutationVariables = Exact<{
   input: DecideTaskInput;
@@ -4867,6 +4980,36 @@ export type CreateUploadUrlMutationVariables = Exact<{
 
 export type CreateUploadUrlMutation = { __typename?: 'Mutation', createUploadUrl: { __typename?: 'UploadUrlPayload', uploadUrl: string, objectPath: string, expiresAt: string } };
 
+export type UserDelegationFieldsFragment = { __typename?: 'UserDelegationModel', id: string, startAt: string, endAt: string, note?: string | null, status: UserDelegationStatus, createdAt: string, delegate: { __typename?: 'FormUserRef', id: string, name?: string | null } };
+
+export type MyDelegationsQueryVariables = Exact<{
+  input: MyDelegationsInput;
+}>;
+
+
+export type MyDelegationsQuery = { __typename?: 'Query', myDelegations: { __typename?: 'MyDelegationsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'UserDelegationModel', id: string, startAt: string, endAt: string, note?: string | null, status: UserDelegationStatus, createdAt: string, delegate: { __typename?: 'FormUserRef', id: string, name?: string | null } }> } };
+
+export type MyDelegateCandidatesQueryVariables = Exact<{
+  input: MyDelegateCandidatesInput;
+}>;
+
+
+export type MyDelegateCandidatesQuery = { __typename?: 'Query', myDelegateCandidates: { __typename?: 'MyDelegateCandidatesPayload', totalCount: number, items: Array<{ __typename?: 'UserDelegateCandidateModel', id: string, name: string, account: string }> } };
+
+export type CreateMyDelegationMutationVariables = Exact<{
+  input: CreateMyDelegationInput;
+}>;
+
+
+export type CreateMyDelegationMutation = { __typename?: 'Mutation', createMyDelegation: { __typename?: 'MyDelegationPayload', delegation: { __typename?: 'UserDelegationModel', id: string, startAt: string, endAt: string, note?: string | null, status: UserDelegationStatus, createdAt: string, delegate: { __typename?: 'FormUserRef', id: string, name?: string | null } } } };
+
+export type DeleteMyDelegationMutationVariables = Exact<{
+  input: DeleteMyDelegationInput;
+}>;
+
+
+export type DeleteMyDelegationMutation = { __typename?: 'Mutation', deleteMyDelegation: { __typename?: 'DeleteMyDelegationPayload', id: string } };
+
 export type MyPreferencesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -5080,7 +5223,7 @@ export type BlockedInstancesQueryVariables = Exact<{
 }>;
 
 
-export type BlockedInstancesQuery = { __typename?: 'Query', blockedInstances: { __typename?: 'WorkflowInstancesPayload', totalCount: number, page: number, pageSize: number, truncated: boolean, items: Array<{ __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } }> } };
+export type BlockedInstancesQuery = { __typename?: 'Query', blockedInstances: { __typename?: 'WorkflowInstancesPayload', totalCount: number, page: number, pageSize: number, truncated: boolean, items: Array<{ __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } }> } };
 
 export type ReassignTaskMutationVariables = Exact<{
   input: ReassignTaskInput;
@@ -5101,7 +5244,7 @@ export type RetryAdvanceInstanceMutationVariables = Exact<{
 }>;
 
 
-export type RetryAdvanceInstanceMutation = { __typename?: 'Mutation', retryAdvanceInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
+export type RetryAdvanceInstanceMutation = { __typename?: 'Mutation', retryAdvanceInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegator?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
 
 
 export const WorkflowTaskFieldsFragmentDoc = `
@@ -5181,6 +5324,10 @@ export const WorkflowInstanceFieldsFragmentDoc = `
         name
       }
       assigneeState
+      delegator {
+        id
+        name
+      }
       taskId
     }
     decisions {
@@ -5211,6 +5358,10 @@ export const WorkflowInstanceFieldsFragmentDoc = `
     result
     reason
     code
+    delegator {
+      id
+      name
+    }
   }
   outcome {
     kind
@@ -5688,6 +5839,20 @@ export const RoleUsersFieldsFragmentDoc = `
   }
 }
     ${RoleFieldsFragmentDoc}`;
+export const UserDelegationFieldsFragmentDoc = `
+    fragment UserDelegationFields on UserDelegationModel {
+  id
+  delegate {
+    id
+    name
+  }
+  startAt
+  endAt
+  note
+  status
+  createdAt
+}
+    `;
 export const WorkflowFieldsFragmentDoc = `
     fragment WorkflowFields on WorkflowModel {
   id
@@ -10776,6 +10941,136 @@ export const useCreateUploadUrlMutation = <
 
 
 useCreateUploadUrlMutation.fetcher = (client: GraphQLClient, variables: CreateUploadUrlMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateUploadUrlMutation, CreateUploadUrlMutationVariables>(client, CreateUploadUrlDocument, variables, headers);
+
+export const MyDelegationsDocument = `
+    query MyDelegations($input: MyDelegationsInput!) {
+  myDelegations(input: $input) {
+    items {
+      ...UserDelegationFields
+    }
+    page
+    pageSize
+    totalCount
+  }
+}
+    ${UserDelegationFieldsFragmentDoc}`;
+
+export const useMyDelegationsQuery = <
+      TData = MyDelegationsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MyDelegationsQueryVariables,
+      options?: Omit<UseQueryOptions<MyDelegationsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyDelegationsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyDelegationsQuery, TError, TData>(
+      {
+    queryKey: ['MyDelegations', variables],
+    queryFn: fetcher<MyDelegationsQuery, MyDelegationsQueryVariables>(client, MyDelegationsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyDelegationsQuery.getKey = (variables: MyDelegationsQueryVariables) => ['MyDelegations', variables];
+
+
+useMyDelegationsQuery.fetcher = (client: GraphQLClient, variables: MyDelegationsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyDelegationsQuery, MyDelegationsQueryVariables>(client, MyDelegationsDocument, variables, headers);
+
+export const MyDelegateCandidatesDocument = `
+    query MyDelegateCandidates($input: MyDelegateCandidatesInput!) {
+  myDelegateCandidates(input: $input) {
+    items {
+      id
+      name
+      account
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useMyDelegateCandidatesQuery = <
+      TData = MyDelegateCandidatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MyDelegateCandidatesQueryVariables,
+      options?: Omit<UseQueryOptions<MyDelegateCandidatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyDelegateCandidatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyDelegateCandidatesQuery, TError, TData>(
+      {
+    queryKey: ['MyDelegateCandidates', variables],
+    queryFn: fetcher<MyDelegateCandidatesQuery, MyDelegateCandidatesQueryVariables>(client, MyDelegateCandidatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyDelegateCandidatesQuery.getKey = (variables: MyDelegateCandidatesQueryVariables) => ['MyDelegateCandidates', variables];
+
+
+useMyDelegateCandidatesQuery.fetcher = (client: GraphQLClient, variables: MyDelegateCandidatesQueryVariables, headers?: RequestInit['headers']) => fetcher<MyDelegateCandidatesQuery, MyDelegateCandidatesQueryVariables>(client, MyDelegateCandidatesDocument, variables, headers);
+
+export const CreateMyDelegationDocument = `
+    mutation CreateMyDelegation($input: CreateMyDelegationInput!) {
+  createMyDelegation(input: $input) {
+    delegation {
+      ...UserDelegationFields
+    }
+  }
+}
+    ${UserDelegationFieldsFragmentDoc}`;
+
+export const useCreateMyDelegationMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateMyDelegationMutation, TError, CreateMyDelegationMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateMyDelegationMutation, TError, CreateMyDelegationMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateMyDelegation'],
+    mutationFn: (variables?: CreateMyDelegationMutationVariables) => fetcher<CreateMyDelegationMutation, CreateMyDelegationMutationVariables>(client, CreateMyDelegationDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateMyDelegationMutation.fetcher = (client: GraphQLClient, variables: CreateMyDelegationMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateMyDelegationMutation, CreateMyDelegationMutationVariables>(client, CreateMyDelegationDocument, variables, headers);
+
+export const DeleteMyDelegationDocument = `
+    mutation DeleteMyDelegation($input: DeleteMyDelegationInput!) {
+  deleteMyDelegation(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteMyDelegationMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteMyDelegationMutation, TError, DeleteMyDelegationMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteMyDelegationMutation, TError, DeleteMyDelegationMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteMyDelegation'],
+    mutationFn: (variables?: DeleteMyDelegationMutationVariables) => fetcher<DeleteMyDelegationMutation, DeleteMyDelegationMutationVariables>(client, DeleteMyDelegationDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteMyDelegationMutation.fetcher = (client: GraphQLClient, variables: DeleteMyDelegationMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteMyDelegationMutation, DeleteMyDelegationMutationVariables>(client, DeleteMyDelegationDocument, variables, headers);
 
 export const MyPreferencesDocument = `
     query MyPreferences {
