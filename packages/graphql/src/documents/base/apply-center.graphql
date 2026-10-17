@@ -218,6 +218,20 @@ mutation DecideTask($input: DecideTaskInput!) {
   }
 }
 
+# BatchApproveTasksInput: { taskIds(1–50,重複只算一次), comment? };每一筆一個交易、各自經 beforeApprove。
+# results 順序同輸入:ok=false 時 reason = NOT_YOURS(已被處理 / 改派 / 此關已結束)| BLOCKED(專案守門擋下,
+# 錯誤碼在 projectReason,文案 admin.lifecycle.<碼>)| FAILED(其他失敗,那一筆回復)。
+mutation BatchApproveTasks($input: BatchApproveTasksInput!) {
+  batchApproveTasks(input: $input) {
+    results {
+      taskId
+      ok
+      reason
+      projectReason
+    }
+  }
+}
+
 # ---- 申請人的提交動作(回表單提交;形狀同 FormSubmissionFields,前端直接寫回單筆快取) ----
 
 # WithdrawSubmissionInput: { id, expectedEditVersion };已有審核意見 → CONFLICT(HAS_DECISIONS)

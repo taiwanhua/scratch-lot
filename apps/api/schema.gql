@@ -69,6 +69,17 @@ type AudiencePermissionOptionsPayload {
   modules: [RoleMatrixModule!]!
 }
 
+input BatchApproveTasksInput {
+  comment: String
+
+  """要核准的任務,1 到 50 筆(重複的只算一次)"""
+  taskIds: [ID!]!
+}
+
+type BatchApproveTasksPayload {
+  results: [WorkflowBatchApproveResultModel!]!
+}
+
 input BindFormWorkflowInput {
   formKey: ID!
   workflowKey: ID!
@@ -1200,6 +1211,7 @@ type Mutation {
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
   assignWorkflowToTenants(input: AssignWorkflowToTenantsInput!): WorkflowPayload!
+  batchApproveTasks(input: BatchApproveTasksInput!): BatchApproveTasksPayload!
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
@@ -2475,6 +2487,20 @@ type WorkflowAbilities {
 type WorkflowAssignment {
   tenantName: String
   tenantOrgId: ID!
+}
+
+"""批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗"""
+enum WorkflowBatchApproveFailure {
+  BLOCKED
+  FAILED
+  NOT_YOURS
+}
+
+type WorkflowBatchApproveResultModel {
+  ok: Boolean!
+  projectReason: String
+  reason: WorkflowBatchApproveFailure
+  taskId: ID!
 }
 
 type WorkflowBindingIssueModel {

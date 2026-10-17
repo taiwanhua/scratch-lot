@@ -228,6 +228,10 @@
 - `myTasks`:`assigneeId = 我`;`done = false` 待處理(`pending`,依建立時間)/ `true` 已處理(`approved` / `rejected` / `returned` / `late`,依決定時間);`cancelled` / `blocked` 的任務兩邊都不列。**摘要與申請人讀實例快照**。
 - `workflowInstance`:授權同 `canReadSubmissionRevision`,讀不到 → `NOT_FOUND`;`myTasks` 欄位是讀者自己在這個實例的任務,`abilities.canWithdraw` = 申請人、進行中、還沒有決定。
 - `applyCenterCounts`:申請中心兩個頁籤的 badge 數字,見下一節(側欄的數字走 `sidebarBadges`)。
+- `batchApproveTasks(input: { taskIds, comment? })`(`task-actions.service.ts` 的 `batchApprove`;授權同 `decideTask`,不看頁面權限):批次核准,只支援核准。`taskIds` 去重後 1 到 50 筆(`BATCH_APPROVE_LIMIT`),否則 `VALIDATION_FAILED` `taskIds`、整批不做;`comment` 缺席 / `null` / 空白 = 沒有,有值就是每一筆的共同意見。**逐筆依序、每一筆一個交易**,走和 `decideTask` 核准相同的本體(含 `runApproveGuard`),只是不比對任務的 `editVersion`;一筆失敗只回復那一筆。回 `BatchApproveTasksPayload { results }`,順序同輸入,每筆 `{ taskId, ok, reason, projectReason }`:
+  - `NOT_YOURS`:任務不存在 / 不是我的、已被處理、已改派走、此關已結束(單筆核准會回 `STEP_CLOSED` 或 `NOT_FOUND` 的情況)
+  - `BLOCKED`:專案的 `beforeApprove` 擋下,`projectReason` = 專案錯誤碼(前端文案 `admin.lifecycle.<碼>`)
+  - `FAILED`:其他錯誤(交易失敗等;記 warn log)
 
 ### 計數(`applyCenterCounts`)
 
@@ -313,11 +317,17 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 | 畫面                              | 做什麼                                                                                                                                                                                                                        |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 我的申請(頁籤)                    | `DataTable`:模組、表單、標題槽、狀態 chip(七值,阻擋時「審核中(待處理)」)、目前關卡(所有進行中的關卡名稱)、送出時間;篩選模組 / 表單 / 狀態;走過流程的列有「檢視」→ 詳情頁,草稿 / 已退回 / 已撤回有「繼續編輯」→ 該模組的編輯頁 |
-| 待我審核(頁籤)                    | `DataTable`:模組、表單、實例快照的標題槽、申請人、關卡、任務狀態、建立時間;篩選模組 / 表單 / 待處理 · 已處理;待處理的列「審核」、其餘「檢視」→ 詳情頁                                                                         |
+| 待我審核(頁籤)                    | `DataTable`:模組、表單、實例快照的標題槽、申請人、關卡、任務狀態、建立時間;篩選模組 / 表單 / 待處理 · 已處理;待處理的列「審核」、其餘「檢視」→ 詳情頁。「待處理」開列勾選(批次核准,見下)                                      |
 | 新申請(右上)                      | 選模組 → 選表單(`applicableForms`)→ 進該模組的新增頁 `/<模組>/create-page/<表單 key>`;沒有可選的表單時按鈕停用                                                                                                                |
 | 詳情頁(隱藏頁 `view-page`,懶載入) | 網址 `/apply-center/view-page/<實例 id>`,與通知信的連結同形狀;該實例那個修訂的快照唯讀渲染(`formSubmission(id, revision)` + `FormRenderer` 的 `readonly` 模式)+ 審核區塊;不經業務模組的頁面權限                               |
 
 模組 / 表單篩選的選項取自「新申請」的清單。零件:`hooks/base/useMyApplications.ts`、`useMyTasks.ts`、`useApplicableForms.ts`、`useApplyCenterCounts.ts`。
+
+**批次核准**(`MyTasksTab.tsx`、`BatchApproveDialog.tsx`、`BatchApproveResults.tsx`;Figma BS-07a / BS-07b):
+
+- 「待處理」的 `DataTable` 開 `rowSelection`(`@repo/ui/data-table` 的選用列勾選):只有 `PENDING` 的列能勾、上限 50 筆(到上限時其他未勾的列停用)、表頭勾選框 = 全選本頁。勾選以任務 id 記在元件 state,換頁保留;**不放網址**(大量 id);換篩選條件(模組 / 表單 / 待處理 · 已處理)時清掉。「已處理」不開列勾選。
+- 有勾選時表格上方是「已選 N 筆 · 清除」+ 說明「只能批次核准;駁回、退回請逐筆處理」+ [核准(N)]。
+- [核准(N)] → 對話框填共同意見(選填)→ `batchApproveTasks`;同一個對話框改顯示結果:全部成功「N 筆已核准」/ 部分失敗「N 筆已核准,M 筆未完成」+ 逐筆結果表(標題取自開啟當下的勾選;`BLOCKED` 顯示專案錯誤訊息,同單筆核准走 `useAdminErrorText`)。成功的取消勾選、失敗的保持勾選;每個相關實例走 `useWorkflowCache` 失效(清單、詳情、計數)。整個請求失敗時錯誤就地顯示在對話框。
 
 ### 審核區塊與表單模組
 

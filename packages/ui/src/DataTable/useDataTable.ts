@@ -99,6 +99,7 @@ export const useDataTable = <Row extends RowData>({
         size: column.width ?? DEFAULT_COLUMN_WIDTH,
         minSize: column.minWidth ?? DEFAULT_COLUMN_MIN_WIDTH,
         enableSorting: column.isSortable === true,
+        enableResizing: column.isResizable !== false,
         sortUndefined: "last",
         sortFn: (rowA, rowB, columnId) =>
           compareCellValues(rowA.getValue(columnId), rowB.getValue(columnId)),

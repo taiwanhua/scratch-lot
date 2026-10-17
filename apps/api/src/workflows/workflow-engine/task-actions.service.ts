@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import { GraphQLError } from "graphql";
 import type { Types } from "mongoose";
 
 import {
@@ -21,7 +22,10 @@ import {
   type FormOperatorFacts,
   toObjectId,
 } from "../../forms/form-access.service";
-import { WorkflowDecisionEnum } from "../models/workflow-instance.model";
+import {
+  WorkflowBatchApproveFailureEnum,
+  WorkflowDecisionEnum,
+} from "../models/workflow-instance.model";
 import {
   TenantDirectoryService,
   systemContext,
@@ -32,14 +36,19 @@ import {
   workflowNotFoundError,
   workflowValidationError,
 } from "../workflows-error";
-import type {
-  AddStepAssigneeInput,
-  DecideTaskInput,
-  ReassignTaskInput,
-  RetryAdvanceInstanceInput,
+import {
+  type AddStepAssigneeInput,
+  BATCH_APPROVE_LIMIT,
+  type BatchApproveTasksInput,
+  type DecideTaskInput,
+  type ReassignTaskInput,
+  type RetryAdvanceInstanceInput,
 } from "./dto/workflow-engine.input";
 import type { InstanceRecord } from "./instance-writes";
-import { FormLifecycleService } from "./lifecycle/form-lifecycle.service";
+import {
+  FormLifecycleService,
+  LifecycleBlockedError,
+} from "./lifecycle/form-lifecycle.service";
 import {
   WorkflowEngineHooks,
   WorkflowEngineService,
@@ -63,6 +72,19 @@ const LIVE = [...LIVE_INSTANCE_STATUSES];
 
 export type DecideResult = "accepted" | "stepClosed";
 
+/** 批次核准的一筆結果(順序同輸入,去重後)。 */
+export interface BatchApproveOutcome {
+  taskId: string;
+  ok: boolean;
+  reason: WorkflowBatchApproveFailureEnum | null;
+  projectReason: string | null;
+}
+
+/** 決定的輸入;沒有 `expectedEditVersion` = 不比對(批次核准:勾選時讀到的版本不帶上來)。 */
+type DecideOnceInput = Omit<DecideTaskInput, "expectedEditVersion"> & {
+  expectedEditVersion?: number;
+};
+
 /**
  * 審核動作(Spec 6b §6「決定」「撤回、改派、新增審核者、審核者失效」)。**每個動作是一個交易**
  * (ADR-0013):讀、寫實例與任務、稽核、推進全在同一個交易裡,任一步失敗全部回復。並發的兩個動作寫到同一份
@@ -74,9 +96,13 @@ export type DecideResult = "accepted" | "stepClosed";
  * - `reassignTask` / `addStepAssignee`:`editVersion` 條件更新(條件本身含「該 taskKey 尚無決定」);
  *   決定先提交 → 重跑後讀到決定 → 「此任務已決定」。
  * - `retryAdvanceInstance`:寫 `advance_retried` 後推進。
+ * - `batchApproveTasks`:逐筆依序核准,**每一筆是自己的交易**(同 `decideTask` 的核准,含 `runApproveGuard`);
+ *   一筆失敗只回復那一筆,逐筆回報結果(底座規格 3.10 B18)。
  */
 @Injectable()
 export class TaskActionsService {
+  private readonly logger = new Logger(TaskActionsService.name);
+
   constructor(
     private readonly instances: WorkflowInstancesRepository,
     private readonly tasks: WorkflowTasksRepository,
@@ -96,6 +122,30 @@ export class TaskActionsService {
     return this.transactions.withTransaction(() =>
       this.decideOnce(facts, input),
     );
+  }
+
+  /**
+   * 批次核准:去重後 1 到 `BATCH_APPROVE_LIMIT` 筆,否則 `VALIDATION_FAILED`(整批不做)。
+   * 逐筆依序各開一個交易(不平行:同一張單的兩個任務會互相寫入衝突);結果順序同輸入。
+   */
+  async batchApprove(
+    facts: FormOperatorFacts,
+    input: BatchApproveTasksInput,
+  ): Promise<BatchApproveOutcome[]> {
+    const taskIds = [...new Set(input.taskIds)];
+    if (taskIds.length === 0 || taskIds.length > BATCH_APPROVE_LIMIT) {
+      throw workflowValidationError(
+        `taskIds must have 1 to ${String(BATCH_APPROVE_LIMIT)} items`,
+        ["taskIds"],
+      );
+    }
+    const comment = input.comment ?? null;
+    const outcomes: BatchApproveOutcome[] = [];
+    for (const taskId of taskIds) {
+      // 刻意依序:每一筆是自己的交易,結果不互相影響
+      outcomes.push(await this.approveOne(facts, taskId, comment));
+    }
+    return outcomes;
   }
 
   reassign(
@@ -126,11 +176,49 @@ export class TaskActionsService {
     );
   }
 
+  /** 批次核准的一筆:自己的交易;失敗轉成結果,不往外拋(其他筆照常)。 */
+  private async approveOne(
+    facts: FormOperatorFacts,
+    taskId: string,
+    comment: string | null,
+  ): Promise<BatchApproveOutcome> {
+    try {
+      const { result } = await this.transactions.withTransaction(() =>
+        this.decideOnce(facts, {
+          taskId,
+          decision: WorkflowDecisionEnum.APPROVE,
+          comment,
+        }),
+      );
+      return result === "accepted"
+        ? { taskId, ok: true, reason: null, projectReason: null }
+        : failed(taskId, WorkflowBatchApproveFailureEnum.NOT_YOURS);
+    } catch (error) {
+      if (error instanceof LifecycleBlockedError) {
+        return failed(
+          taskId,
+          WorkflowBatchApproveFailureEnum.BLOCKED,
+          error.projectReason,
+        );
+      }
+      if (
+        error instanceof GraphQLError &&
+        error.extensions.code === "NOT_FOUND"
+      ) {
+        return failed(taskId, WorkflowBatchApproveFailureEnum.NOT_YOURS);
+      }
+      this.logger.warn(
+        `批次核准的一筆失敗(任務 ${taskId}):${error instanceof Error ? error.message : String(error)}`,
+      );
+      return failed(taskId, WorkflowBatchApproveFailureEnum.FAILED);
+    }
+  }
+
   // ---- 交易內的動作本體 ----
 
   private async decideOnce(
     facts: FormOperatorFacts,
-    input: DecideTaskInput,
+    input: DecideOnceInput,
   ): Promise<{ task: WorkflowTaskRecord; result: DecideResult }> {
     const me = requireActor(facts);
     const task = await this.requireTask(facts, input.taskId);
@@ -149,7 +237,10 @@ export class TaskActionsService {
     if (!isMine || task.status !== "pending") {
       return { task, result: "stepClosed" };
     }
-    if (task.editVersion !== input.expectedEditVersion) {
+    if (
+      input.expectedEditVersion !== undefined &&
+      task.editVersion !== input.expectedEditVersion
+    ) {
       throw workflowConflictError(
         `Task edit version mismatch: expected ${String(input.expectedEditVersion)}, actual ${String(task.editVersion)}`,
         "EDIT_VERSION_MISMATCH",
@@ -222,7 +313,7 @@ export class TaskActionsService {
     await this.tasks.updateOne(
       facts.operator,
       task.tenantId,
-      { _id: task._id, editVersion: input.expectedEditVersion },
+      { _id: task._id, editVersion: task.editVersion },
       { $inc: { editVersion: 1 } },
     );
     await this.audit.record(facts.operator, {
@@ -561,6 +652,14 @@ export class TaskActionsService {
   private async reload(task: WorkflowTaskRecord): Promise<WorkflowTaskRecord> {
     return (await this.tasks.findOne(task.tenantId, { _id: task._id })) ?? task;
   }
+}
+
+function failed(
+  taskId: string,
+  reason: WorkflowBatchApproveFailureEnum,
+  projectReason: string | null = null,
+): BatchApproveOutcome {
+  return { taskId, ok: false, reason, projectReason };
 }
 
 /** 條件更新沒命中:交易內讀到的實例與寫入時不同(不應發生;並發由寫入衝突重跑處理)。 */

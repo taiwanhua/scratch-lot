@@ -2264,6 +2264,32 @@
         "BLOCKED": "待改派"
       }
     },
+    "batchApprove": {
+      "selectRow": "勾選「{label}」",
+      "selectPage": "全選本頁",
+      "selectedCount": "已選 {count} 筆",
+      "clear": "清除",
+      "hint": "只能批次核准;駁回、退回請逐筆處理",
+      "approve": "核准({count})",
+      "title": "批次核准",
+      "body": "將核准已選的 {count} 筆。每一筆各自處理,被擋下的不影響其他筆。",
+      "comment": "共同意見(選填)",
+      "cancel": "取消",
+      "confirm": "核准 {count} 筆",
+      "close": "關閉",
+      "summaryAll": "{approved} 筆已核准",
+      "summaryPartial": "{approved} 筆已核准,{failed} 筆未完成(其他筆不受影響)",
+      "feedback": "批次核准:{approved} 筆已核准,{failed} 筆未完成",
+      "columnTitle": "標題",
+      "columnResult": "結果",
+      "resultTableAria": "批次核准結果",
+      "results": {
+        "approved": "已核准",
+        "NOT_YOURS": "這件已不在你手上",
+        "BLOCKED": "被擋下:{message}",
+        "FAILED": "核准失敗,請稍後再逐筆處理"
+      }
+    },
     "newApplication": {
       "open": "新申請",
       "title": "新申請",

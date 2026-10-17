@@ -22,6 +22,8 @@ export interface DataTableBodyRowsProps<Row extends RowData> {
   scrollElement: HTMLDivElement | null;
   size: "small" | "medium";
   onRowClick?: (row: Row) => void;
+  /** 列勾選開啟時的已選列 key(勾了的列以選取底色標示);沒開 = undefined */
+  selectedKeys?: ReadonlySet<string>;
   /** 資料列之前的列數(表頭 + 固定列),`aria-rowindex` 從它之後接著數 */
   rowIndexOffset: number;
 }
@@ -38,6 +40,7 @@ export const DataTableBodyRows = <Row extends RowData>({
   scrollElement,
   size,
   onRowClick,
+  selectedKeys,
   rowIndexOffset,
 }: DataTableBodyRowsProps<Row>) => {
   const modelRows = table.getRowModel().rows;
@@ -81,6 +84,7 @@ export const DataTableBodyRows = <Row extends RowData>({
             measureElement={virtualizer.measureElement}
             rowIndexOffset={rowIndexOffset}
             onRowClick={onRowClick}
+            isSelected={selectedKeys?.has(row.id) ?? false}
           />
         );
       })}

@@ -2264,6 +2264,32 @@
         "BLOCKED": "Awaiting reassignment"
       }
     },
+    "batchApprove": {
+      "selectRow": "Select \"{label}\"",
+      "selectPage": "Select all on this page",
+      "selectedCount": "{count} selected",
+      "clear": "Clear",
+      "hint": "Only approval can be done in bulk; reject or return one at a time",
+      "approve": "Approve ({count})",
+      "title": "Bulk approve",
+      "body": "Approve the {count} selected items. Each one is handled on its own; a blocked item does not affect the others.",
+      "comment": "Shared comment (optional)",
+      "cancel": "Cancel",
+      "confirm": "Approve {count}",
+      "close": "Close",
+      "summaryAll": "{approved} approved",
+      "summaryPartial": "{approved} approved, {failed} not completed (the others are not affected)",
+      "feedback": "Bulk approve: {approved} approved, {failed} not completed",
+      "columnTitle": "Title",
+      "columnResult": "Result",
+      "resultTableAria": "Bulk approve results",
+      "results": {
+        "approved": "Approved",
+        "NOT_YOURS": "This is no longer assigned to you",
+        "BLOCKED": "Blocked: {message}",
+        "FAILED": "Approval failed; try again later one at a time"
+      }
+    },
     "newApplication": {
       "open": "New application",
       "title": "New application",

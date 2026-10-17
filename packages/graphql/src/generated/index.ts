@@ -102,6 +102,17 @@ export type AudiencePermissionOptionsPayload = {
   modules: Array<RoleMatrixModule>;
 };
 
+export type BatchApproveTasksInput = {
+  comment?: InputMaybe<Scalars['String']['input']>;
+  /** 要核准的任務,1 到 50 筆(重複的只算一次) */
+  taskIds: Array<Scalars['ID']['input']>;
+};
+
+export type BatchApproveTasksPayload = {
+  __typename?: 'BatchApproveTasksPayload';
+  results: Array<WorkflowBatchApproveResultModel>;
+};
+
 export type BindFormWorkflowInput = {
   formKey: Scalars['ID']['input'];
   workflowKey: Scalars['ID']['input'];
@@ -1310,6 +1321,7 @@ export type Mutation = {
   assignFormToTenants: FormPayload;
   assignUserRoles: UserPayload;
   assignWorkflowToTenants: WorkflowPayload;
+  batchApproveTasks: BatchApproveTasksPayload;
   bindFormWorkflow: FormPayload;
   changePassword: ChangePasswordPayload;
   copySubmissionToDraft: FormSubmissionPayload;
@@ -1434,6 +1446,11 @@ export type MutationAssignUserRolesArgs = {
 
 export type MutationAssignWorkflowToTenantsArgs = {
   input: AssignWorkflowToTenantsInput;
+};
+
+
+export type MutationBatchApproveTasksArgs = {
+  input: BatchApproveTasksInput;
 };
 
 
@@ -3447,6 +3464,21 @@ export type WorkflowAssignment = {
   tenantOrgId: Scalars['ID']['output'];
 };
 
+/** 批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗 */
+export enum WorkflowBatchApproveFailure {
+  Blocked = 'BLOCKED',
+  Failed = 'FAILED',
+  NotYours = 'NOT_YOURS'
+}
+
+export type WorkflowBatchApproveResultModel = {
+  __typename?: 'WorkflowBatchApproveResultModel';
+  ok: Scalars['Boolean']['output'];
+  projectReason?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<WorkflowBatchApproveFailure>;
+  taskId: Scalars['ID']['output'];
+};
+
 export type WorkflowBindingIssueModel = {
   __typename?: 'WorkflowBindingIssueModel';
   detail: Scalars['String']['output'];
@@ -3801,6 +3833,13 @@ export type DecideTaskMutationVariables = Exact<{
 
 
 export type DecideTaskMutation = { __typename?: 'Mutation', decideTask: { __typename?: 'WorkflowTaskPayload', result: WorkflowDecideResult, task: { __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null } } };
+
+export type BatchApproveTasksMutationVariables = Exact<{
+  input: BatchApproveTasksInput;
+}>;
+
+
+export type BatchApproveTasksMutation = { __typename?: 'Mutation', batchApproveTasks: { __typename?: 'BatchApproveTasksPayload', results: Array<{ __typename?: 'WorkflowBatchApproveResultModel', taskId: string, ok: boolean, reason?: WorkflowBatchApproveFailure | null, projectReason?: string | null }> } };
 
 export type WithdrawSubmissionMutationVariables = Exact<{
   input: WithdrawSubmissionInput;
@@ -5934,6 +5973,39 @@ export const useDecideTaskMutation = <
 
 
 useDecideTaskMutation.fetcher = (client: GraphQLClient, variables: DecideTaskMutationVariables, headers?: RequestInit['headers']) => fetcher<DecideTaskMutation, DecideTaskMutationVariables>(client, DecideTaskDocument, variables, headers);
+
+export const BatchApproveTasksDocument = `
+    mutation BatchApproveTasks($input: BatchApproveTasksInput!) {
+  batchApproveTasks(input: $input) {
+    results {
+      taskId
+      ok
+      reason
+      projectReason
+    }
+  }
+}
+    `;
+
+export const useBatchApproveTasksMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<BatchApproveTasksMutation, TError, BatchApproveTasksMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<BatchApproveTasksMutation, TError, BatchApproveTasksMutationVariables, TContext>(
+      {
+    mutationKey: ['BatchApproveTasks'],
+    mutationFn: (variables?: BatchApproveTasksMutationVariables) => fetcher<BatchApproveTasksMutation, BatchApproveTasksMutationVariables>(client, BatchApproveTasksDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useBatchApproveTasksMutation.fetcher = (client: GraphQLClient, variables: BatchApproveTasksMutationVariables, headers?: RequestInit['headers']) => fetcher<BatchApproveTasksMutation, BatchApproveTasksMutationVariables>(client, BatchApproveTasksDocument, variables, headers);
 
 export const WithdrawSubmissionDocument = `
     mutation WithdrawSubmission($input: WithdrawSubmissionInput!) {
