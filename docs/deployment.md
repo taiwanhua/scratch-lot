@@ -688,6 +688,7 @@ gcloud storage buckets add-iam-policy-binding gs://<私有 bucket> \
 - **兩個 Vercel 專案**:front 連此 repo 並選 Root Directory `apps/front`,依既有 workspace 建置 Next.js;Storybook 另建專案,Root Directory `apps/storybook`,build 後 Output Directory `storybook-static`。兩者都需要 repo 根的 workspace 套件,若 Vercel 沒自動讀到 Root Directory 外的來源,啟用「Include source files outside of the Root Directory in the Build Step」。首次部署實際核對 monorepo 依賴可安裝、各自 build 成功,不要把 Storybook 當 front 的子路由。
 - **前台環境值**:`NEXT_PUBLIC_GRAPHQL_ENDPOINT` 的 Production 指向正式 API;Preview 可對 `staging` 分支指定預發布 API,其他 Preview 分支指向 dev API。三種目標分別預覽並檢查請求位置,避免把 Preview 指到 production。
 - **分支網域**:`dev.project.example.invalid` → branch `dev`、`staging.project.example.invalid` → branch `staging`(示例)(Settings → Domains,各綁 Git Branch);api / admin 的 dev / staging 子網域走 Cloud Run domain mapping(`api-dev`、`erp-dev`、`api-staging`、`erp-staging`,Cloudflare 灰雲 CNAME → ghs.googlehosted.com)。
+- **Storybook 網域**:Storybook 專案同樣在 Settings → Domains 綁三個:正式網域(Production)與 dev / staging 兩個分支網域(Environment 選 Preview、Git Branch 填分支名);DNS 都是 Cloudflare 灰雲 CNAME,值照 Vercel 畫面給的填。分支網域屬於 Preview,受 Deployment Protection 管,要公開時在該專案關掉 Vercel Authentication(只影響該專案)。實際網域登記在[品牌註冊表](branding.md)。
 - **Deploy Hooks**(Settings → Git 最下方):`dev-front`、`staging-front`。對 hook URL 發 POST 即可**不靠 commit** 重 build 該分支的 front(Vercel 會跳過無檔案變更的 commit,分支剛建立或只想重烘時用這個)。
 - **Deployment Protection**:由專案按測試環境需求設定,與 API/admin 的存取方式一起驗證。
 - 三環境 admin image 烘入各自 `cloud.json` 的 `apiUrl`,可使用專案的自訂子網域。
