@@ -79,8 +79,9 @@ export const baseModulePages: ModulePageSource = {
     { key: USER_MANAGER_MODULE_KEY, Page: UserManagerPage },
     { key: ROLE_MANAGER_MODULE_KEY, Page: RoleManagerPage },
     { key: DATA_SCOPE_MODULE_KEY, Page: DataScopePage },
-    // 表單管理:懶載入(設計器不進首屏 bundle);表單設計器(元件面板 / 畫布 / 屬性面板)要 `xl`
-    { key: FORMS_MODULE_KEY, Page: LazyFormsPage, minWidth: "xl" },
+    // 表單管理:懶載入(設計器不進首屏 bundle);沿用殼層預設 `lg`,設計器在 `xl` 以下自己換版
+    // (元件面板改成畫布上方一列、屬性面板收窄,`FormDesigner/designer-layout.ts`;T48)
+    { key: FORMS_MODULE_KEY, Page: LazyFormsPage },
     // 審核流程(Spec 6b §8):流程管理、阻擋清單、申請中心兩頁籤與詳情,全部懶載入(不進首屏 bundle);
     // 流程設計器(流程圖 + 關卡屬性)要 `xl`
     { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage, minWidth: "xl" },
