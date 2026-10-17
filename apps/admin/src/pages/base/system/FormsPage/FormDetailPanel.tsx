@@ -21,6 +21,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { ListColumnsDialog } from "../ListColumnsDialog/ListColumnsDialog";
+import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
 import { AllowDraftField } from "./AllowDraftField";
 import { FormDesigner } from "./FormDesigner/FormDesigner";
 import { VersionViewer } from "./FormDesigner/VersionViewer";
@@ -100,8 +101,8 @@ export const FormDetailPanel = ({
           spacing={1}
           sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
         >
-          {/* 標題欄以內容寬為底(`1 1 auto`):放不下時操作鈕整組換到下一列,而不是把標題擠成一字一行(T48) */}
-          <Stack spacing={0.5} sx={{ flex: "1 1 auto", minWidth: 0 }}>
+          {/* 標題欄以內容寬為底:放不下時操作鈕整組換到下一列,不把標題擠扁(`designer-layout.ts`) */}
+          <Stack spacing={0.5} sx={detailHeaderTitleSx}>
             <Typography variant="h6" component="h1">
               {form.name}
             </Typography>
@@ -120,11 +121,7 @@ export const FormDetailPanel = ({
               </Typography>
             )}
           </Stack>
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ flexWrap: "wrap", alignItems: "center" }}
-          >
+          <Stack direction="row" spacing={1} sx={detailHeaderActionsSx}>
             {form.abilities.canEdit && (
               <Button
                 variant="text"

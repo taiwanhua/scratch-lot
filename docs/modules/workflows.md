@@ -273,7 +273,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 ### 流程管理(`system.workflows`)
 
-`apps/admin/src/pages/base/system/WorkflowsPage/`(懶載入:React Flow、dagre、檢查器不進首屏;殼層最小寬度 `xl`,`app/module-pages.tsx`)。左清單、右面板;頁首「阻擋清單」進隱藏頁(有 `system.workflows.blocked-page.reassign` 才出現)。
+`apps/admin/src/pages/base/system/WorkflowsPage/`(懶載入:React Flow、dagre、檢查器不進首屏;內容區最小寬度沿用殼層預設 `lg`;設計器在 `xl` 以下把屬性面板從 360 收窄為 300、流程圖拿剩下的寬度,右側標頭的操作鈕放不下時整組換到標題下一列,版面規則與表單設計器共用 `pages/base/system/designer-layout.ts`)。左清單、右面板;頁首「阻擋清單」進隱藏頁(有 `system.workflows.blocked-page.reassign` 才出現)。
 
 | 畫面                 | 做什麼                                                                                                                                                                                                                                    |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

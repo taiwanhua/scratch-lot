@@ -9,6 +9,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
+import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
 import { FlowVersionViewer } from "./WorkflowDesigner/FlowVersionViewer";
 import { WorkflowDesigner } from "./WorkflowDesigner/WorkflowDesigner";
 import { AssignWorkflowDialog } from "./WorkflowDialogs/AssignWorkflowDialog";
@@ -67,7 +68,8 @@ export const WorkflowDetailPanel = ({
           spacing={1}
           sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
         >
-          <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+          {/* 標題欄以內容寬為底:放不下時操作鈕整組換到下一列,不把標題擠扁(`designer-layout.ts`) */}
+          <Stack spacing={0.5} sx={detailHeaderTitleSx}>
             <Typography variant="h6" component="h1">
               {workflow.name}
             </Typography>
@@ -87,36 +89,38 @@ export const WorkflowDetailPanel = ({
                 </Typography>
               )}
           </Stack>
-          {workflow.abilities.canEdit && (
-            <Button
-              variant="text"
-              onClick={() => {
-                onEdit(workflow.key);
-              }}
-            >
-              {t("edit")}
-            </Button>
-          )}
-          {workflow.abilities.canFork && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("fork");
-              }}
-            >
-              {t("fork")}
-            </Button>
-          )}
-          {workflow.abilities.canAssign && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("assign");
-              }}
-            >
-              {t("assign")}
-            </Button>
-          )}
+          <Stack direction="row" spacing={1} sx={detailHeaderActionsSx}>
+            {workflow.abilities.canEdit && (
+              <Button
+                variant="text"
+                onClick={() => {
+                  onEdit(workflow.key);
+                }}
+              >
+                {t("edit")}
+              </Button>
+            )}
+            {workflow.abilities.canFork && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("fork");
+                }}
+              >
+                {t("fork")}
+              </Button>
+            )}
+            {workflow.abilities.canAssign && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("assign");
+                }}
+              >
+                {t("assign")}
+              </Button>
+            )}
+          </Stack>
         </Stack>
         {workflow.assignments.length > 0 && (
           <Typography variant="body2" color="text.secondary">

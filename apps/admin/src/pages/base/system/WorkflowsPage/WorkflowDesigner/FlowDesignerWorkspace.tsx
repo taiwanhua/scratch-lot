@@ -20,6 +20,7 @@ import {
 } from "@/lib/base/workflow/definition";
 import { mergeReports } from "@/lib/base/workflow/validation";
 
+import { designerPropertyPanelSx } from "../../designer-layout";
 import { DesignerToolbar } from "./DesignerToolbar";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
@@ -233,7 +234,7 @@ export const FlowDesignerWorkspace = ({
         <Box
           component="section"
           aria-label={t("properties")}
-          sx={{ width: 360, flexShrink: 0 }}
+          sx={designerPropertyPanelSx}
         >
           {renderPanel()}
         </Box>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { renderFormsPage } from "@/pages/base/system/FormsPage/forms-page-test-support";
+import { renderWorkflows } from "@/pages/base/system/WorkflowsPage/workflows-page-test-support";
 import { mediaRulesOf } from "@/test/media-rules";
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
 import { demoGroupNode, superAdminModules } from "@/test/msw/module-fixtures";
@@ -66,6 +67,14 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
 
   it("表單管理沿用殼層預設 lg(設計器在 xl 以下自己換版,T48:1440 寬不再水平溢出)", async () => {
     renderFormsPage();
+
+    await screen.findByRole("navigation", { name: "主選單" });
+    expect(contentMinWidth()).toContain(`${String(LG)}px`);
+    expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
+  });
+
+  it("流程管理也沿用殼層預設 lg(T48)", async () => {
+    renderWorkflows();
 
     await screen.findByRole("navigation", { name: "主選單" });
     expect(contentMinWidth()).toContain(`${String(LG)}px`);
