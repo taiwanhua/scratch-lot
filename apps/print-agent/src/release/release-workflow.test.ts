@@ -109,7 +109,9 @@ describe("print-agent-release.yml", () => {
     expect(upload).toBeGreaterThan(-1);
     expect(manifest).toBeGreaterThan(upload);
     expect(remove).toBeGreaterThan(manifest);
-    expect(workflow).toContain('"cacheControl":"no-store"');
+    expect(workflow).toContain(
+      "print-agent/manifest.json application/json no-store",
+    );
   });
 
   it("發布只打單一物件端點,不用會先列出 bucket 的 gcloud storage cp / rm(部署 SA 沒有 objects.list)", () => {

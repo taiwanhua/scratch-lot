@@ -183,18 +183,25 @@ jobs:
           echo "::add-mask::$token"
           auth=(-H "Authorization: Bearer $token")
           uri() { jq -rn --arg v "$1" '$v|@uri'; }
-          # 上傳單一物件;$3 = 物件 metadata(JSON),一次寫入內容與 metadata(multipart)
+          # 上傳單一物件:<檔案> <物件名稱> <Content-Type> [Cache-Control];multipart 一次寫入內容與 metadata,
+          # 內容那一段的 Content-Type 必須和 metadata 的 contentType 相同(不同時 GCS 回 400)
           put() {
-            local file="$1" name="$2" metadata="$3" boundary="print-agent-$RANDOM$RANDOM" body="$work/upload.body"
+            local file="$1" name="$2" type="$3" cache="${4:-}" boundary="print-agent-$RANDOM$RANDOM" body="$work/upload.body" metadata
+            metadata=$(jq -cn --arg n "$name" --arg t "$type" --arg c "$cache" \
+              '{name: $n, contentType: $t} + (if $c == "" then {} else {cacheControl: $c} end)')
             {
               printf -- '--%s\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n%s\r\n' "$boundary" "$metadata"
-              printf -- '--%s\r\nContent-Type: application/octet-stream\r\n\r\n' "$boundary"
+              printf -- '--%s\r\nContent-Type: %s\r\n\r\n' "$boundary" "$type"
               cat "$file"
               printf -- '\r\n--%s--\r\n' "$boundary"
             } > "$body"
-            curl -sS --fail-with-body -o /dev/null "${auth[@]}" \
+            if ! curl -sS --fail-with-body -o "$work/upload.out" "${auth[@]}" \
               -H "Content-Type: multipart/related; boundary=$boundary" \
-              --data-binary @"$body" "$upload?uploadType=multipart"
+              --data-binary @"$body" "$upload?uploadType=multipart"; then
+              cat "$work/upload.out" >&2
+              echo "::error::上傳失敗:$name"
+              exit 1
+            fi
             rm -f "$body"
           }
           current=()
@@ -211,10 +218,9 @@ jobs:
           pnpm --filter @repo/print-agent exec tsx scripts/update-manifest.ts --version "$VERSION" --artifacts "$artifacts" --out "$work/manifest.json" --removed "$work/removed.txt" "${current[@]}"
           for file in "$artifacts"/*; do
             name="print-agent/$VERSION/$(basename "$file")"
-            put "$file" "$name" "$(jq -cn --arg n "$name" '{name: $n, contentType: "application/octet-stream"}')"
+            put "$file" "$name" application/octet-stream
           done
-          put "$work/manifest.json" print-agent/manifest.json \
-            '{"name":"print-agent/manifest.json","contentType":"application/json","cacheControl":"no-store"}'
+          put "$work/manifest.json" print-agent/manifest.json application/json no-store
           while IFS= read -r object; do
             [ -n "$object" ] || continue
             curl -sS --fail-with-body -o /dev/null -X DELETE "${auth[@]}" "$api/$(uri "$object")" \
