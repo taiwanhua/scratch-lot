@@ -21,7 +21,6 @@ import {
   MAX_PAGE_SIZE,
   type MyDelegateCandidatesInput,
   type MyDelegationsInput,
-  type UpdateMyDelegationInput,
 } from "./dto/user-delegations.input";
 import {
   type MyDelegateCandidatesPayload,
@@ -79,10 +78,10 @@ export function delegationStatusOf(
  * | 代理人 = 自己                        | `VALIDATION_FAILED` / `SELF_DELEGATION`            |
  * | 代理人停用 / 不在操作者的最上層組織   | `VALIDATION_FAILED` / `DELEGATE_NOT_ELIGIBLE`      |
  * | 迄 <= 起;新增時迄已過                | `VALIDATION_FAILED` / `INVALID_PERIOD`             |
- * | 改 / 刪已結束的代理                  | `VALIDATION_FAILED` / `DELEGATION_ENDED`(唯讀)     |
- * | 改 / 刪別人的或不存在的              | `NOT_FOUND`                                        |
+ * | 刪已結束的代理                        | `VALIDATION_FAILED` / `DELEGATION_ENDED`(唯讀)     |
+ * | 刪別人的或不存在的                    | `NOT_FOUND`                                        |
  *
- * 改迄日或刪除都不動已派出的任務(派任只在進關那一次看代理,`AssigneeDelegationService`)。
+ * 不提供改結束日(2026-10-17 定):要提早結束就刪除,要延長就刪除後重新設定。刪除不動已派出的任務(派任只在進關那一次看代理,`AssigneeDelegationService`)。
  * 「代理人仍啟用、在本租戶」在派任當下再判斷一次(設定後才被停用的,派任時照原審核者)。
  */
 @Injectable()
@@ -197,34 +196,6 @@ export class UserDelegationsService {
       note: noteOf(input.note),
     });
     return this.toModel(created, now);
-  }
-
-  async update(
-    operator: OperatorContext,
-    input: UpdateMyDelegationInput,
-  ): Promise<UserDelegationModel> {
-    const now = new Date();
-    const current = await this.ownOpen(operator, input.id, now);
-    if (input.endAt.getTime() <= current.startAt.getTime()) {
-      throw userDelegationRejected("INVALID_PERIOD");
-    }
-    await this.assertNoOverlap(
-      operator,
-      current.userId,
-      current.startAt,
-      input.endAt,
-      current._id,
-    );
-    const updated = await this.delegations.updateById(operator, current._id, {
-      $set: {
-        endAt: input.endAt,
-        ...(input.note !== undefined && { note: noteOf(input.note) }),
-      },
-    });
-    if (updated === null) {
-      throw userDelegationNotFound(input.id);
-    }
-    return this.toModel(updated, now);
   }
 
   async remove(operator: OperatorContext, id: string): Promise<string> {

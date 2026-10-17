@@ -8,6 +8,7 @@ import {
 } from "@repo/graphql";
 
 import {
+  APPLICANT,
   APPLY_VIEW_ROUTE,
   HR,
   MANAGER,
@@ -245,6 +246,7 @@ describe("申請中心詳情頁(view-page)", () => {
       result: null,
       reason,
       code,
+      delegators: [],
     });
     renderApplyCenter({
       path: `${APPLY_VIEW_ROUTE}/inst-1`,
@@ -324,7 +326,7 @@ describe("申請中心詳情頁(view-page)", () => {
       within(timeline).getByText("人資阿美 在「人資」核准"),
     ).toBeInTheDocument();
   });
-  it("代理派任(B15):進度寫「代理人(代理 原審核者)」,時間軸寫「由代理人代理原審核者」", async () => {
+  it("代理派任(B15):兩位委託同一位代理人 → 進度寫「代理人(代理 A、B)」,時間軸派任與核准都寫「由代理人代理 A、B」", async () => {
     renderApplyCenter({
       path: `${APPLY_VIEW_ROUTE}/inst-1`,
       runtime: {
@@ -334,7 +336,11 @@ describe("申請中心詳情頁(view-page)", () => {
             steps: [
               instanceStep("manager", "直屬主管", {
                 status: WorkflowStepStatus.Active,
-                plan: [planItem("manager-1", HR, { delegator: MANAGER })],
+                plan: [
+                  planItem("manager-1", HR, {
+                    delegators: [MANAGER, APPLICANT],
+                  }),
+                ],
               }),
             ],
             history: [
@@ -349,7 +355,20 @@ describe("申請中心詳情頁(view-page)", () => {
                 result: null,
                 reason: null,
                 code: null,
-                delegator: MANAGER,
+                delegators: [MANAGER, APPLICANT],
+              },
+              {
+                at: "2026-09-20T03:00:00.000Z",
+                kind: "approved",
+                stepKey: "manager",
+                taskKey: "manager-1",
+                user: HR,
+                toUser: null,
+                comment: null,
+                result: null,
+                reason: null,
+                code: null,
+                delegators: [MANAGER, APPLICANT],
               },
             ],
           }),
@@ -358,9 +377,14 @@ describe("申請中心詳情頁(view-page)", () => {
     });
     const timeline = await screen.findByRole("region", { name: "審核歷程" });
     expect(
-      within(timeline).getByText("「直屬主管」由 人資阿美 代理 小華"),
+      within(timeline).getByText("「直屬主管」由 人資阿美 代理 小華、小明"),
+    ).toBeInTheDocument();
+    expect(
+      within(timeline).getByText(
+        "「直屬主管」由 人資阿美 代理 小華、小明 核准",
+      ),
     ).toBeInTheDocument();
     const rows = await progressRows();
-    expect(rows[0]).toHaveTextContent("人資阿美(代理 小華)");
+    expect(rows[0]).toHaveTextContent("人資阿美(代理 小華、小明)");
   });
 });

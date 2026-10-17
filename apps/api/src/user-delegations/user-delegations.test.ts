@@ -65,18 +65,6 @@ const CREATE = /* GraphQL */ `
   }
 `;
 
-const UPDATE = /* GraphQL */ `
-  mutation UpdateMyDelegation($input: UpdateMyDelegationInput!) {
-    updateMyDelegation(input: $input) {
-      delegation {
-        id
-        endAt
-        note
-      }
-    }
-  }
-`;
-
 const DELETE = /* GraphQL */ `
   mutation DeleteMyDelegation($input: DeleteMyDelegationInput!) {
     deleteMyDelegation(input: $input) {
@@ -285,7 +273,7 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
     ).toEqual({ code: "VALIDATION_FAILED", reason: "INVALID_PERIOD" });
   });
 
-  it("替別人設定代理:沒有入口;改 / 刪別人的代理 → NOT_FOUND", async () => {
+  it("替別人設定代理:沒有入口;刪別人的代理 → NOT_FOUND;沒有改結束日的端點", async () => {
     const me = await someone(api, tenant);
     const owner = await someone(api, tenant);
     const deputy = await someone(api, tenant);
@@ -293,12 +281,6 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
       data?: { createMyDelegation: { delegation: { id: string } } };
     };
     const id = created.data?.createMyDelegation.delegation.id;
-    const updated = await api.graphql(
-      UPDATE,
-      { input: { id, endAt: new Date(Date.now() + 2 * DAY_MS).toISOString() } },
-      { accessToken: me.token },
-    );
-    expect(rejection(updated).code).toBe("NOT_FOUND");
     const deleted = await api.graphql(
       DELETE,
       { input: { id } },
@@ -307,38 +289,13 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
     expect(rejection(deleted).code).toBe("NOT_FOUND");
   });
 
-  it("進行中的代理可以改迄日、改備註或刪除;改迄日不能早於起日", async () => {
+  it("進行中的代理可以刪除(要延長就刪除後重新設定,同一期間可以再新增)", async () => {
     const me = await someone(api, tenant);
     const deputy = await someone(api, tenant);
     const created = (await create(me, deputy, period(-HOUR_MS, DAY_MS))) as {
       data?: { createMyDelegation: { delegation: { id: string } } };
     };
     const id = created.data?.createMyDelegation.delegation.id;
-    const endAt = new Date(Date.now() + 3 * DAY_MS).toISOString();
-    const data = await ok<{
-      updateMyDelegation: {
-        delegation: { endAt: string; note: string | null };
-      };
-    }>(api, me.token, UPDATE, { input: { id, endAt, note: "延長" } });
-    expect(data.updateMyDelegation.delegation).toEqual({
-      id,
-      endAt,
-      note: "延長",
-    });
-    expect(
-      rejection(
-        await api.graphql(
-          UPDATE,
-          {
-            input: {
-              id,
-              endAt: new Date(Date.now() - 2 * HOUR_MS).toISOString(),
-            },
-          },
-          { accessToken: me.token },
-        ),
-      ),
-    ).toEqual({ code: "VALIDATION_FAILED", reason: "INVALID_PERIOD" });
     await ok(api, me.token, DELETE, { input: { id } });
     const after = await ok<{ myDelegations: { totalCount: number } }>(
       api,
@@ -347,9 +304,31 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
       { input: {} },
     );
     expect(after.myDelegations.totalCount).toBe(0);
+    const longer = await create(me, deputy, period(-HOUR_MS, 3 * DAY_MS));
+    expect(longer.errors).toBeUndefined();
   });
 
-  it("已結束的代理唯讀:改 / 刪 → VALIDATION_FAILED / DELEGATION_ENDED,紀錄保留", async () => {
+  it("沒有改結束日的端點(延長 = 刪除後重新設定)", async () => {
+    const me = await someone(api, tenant);
+    const result = await api.graphql(
+      /* GraphQL */ `
+        mutation {
+          updateMyDelegation(
+            input: { id: "x", endAt: "2026-01-01T00:00:00Z" }
+          ) {
+            delegation {
+              id
+            }
+          }
+        }
+      `,
+      {},
+      { accessToken: me.token },
+    );
+    expect(result.errors).toBeDefined();
+  });
+
+  it("已結束的代理唯讀:刪 → VALIDATION_FAILED / DELEGATION_ENDED,紀錄保留", async () => {
     const me = await someone(api, tenant);
     const deputy = await someone(api, tenant);
     const { insertedId } = await api.connection
@@ -367,15 +346,6 @@ describe("代理設定(myDelegations / createMyDelegation …)", () => {
         deletedAt: null,
       });
     const id = String(insertedId);
-    expect(
-      rejection(
-        await api.graphql(
-          UPDATE,
-          { input: { id, endAt: new Date(Date.now() + DAY_MS).toISOString() } },
-          { accessToken: me.token },
-        ),
-      ),
-    ).toEqual({ code: "VALIDATION_FAILED", reason: "DELEGATION_ENDED" });
     expect(
       rejection(
         await api.graphql(DELETE, { input: { id } }, { accessToken: me.token }),

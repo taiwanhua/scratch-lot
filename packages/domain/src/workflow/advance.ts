@@ -67,7 +67,8 @@ import {
  * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
  *
  * `delegatorOf` = B15 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
- * 代理人 id → 原審核者 id。派任計畫那一項記 `delegatorId`,`task_created` 事件帶它(時間軸「由 X 代理 Y」)。
+ * 代理人 id → 原審核者 id 們(多位委託同一人時合成一項,代理人一票作用到所有被代理者)。派任計畫那一項記
+ * `delegatorIds`,`task_created` 與自動通過的 `approved` 事件帶它(時間軸「由 X 代理 Y、Z」)。
  */
 export type StepEntry =
   | { kind: "skip"; reason?: SkipReason }
@@ -76,7 +77,7 @@ export type StepEntry =
       assigneeIds: string[];
       autoApprovals?: readonly AutoApproval[];
       blockedAutoApprovals?: readonly BlockedAutoApproval[];
-      delegatorOf?: Readonly<Record<string, string>>;
+      delegatorOf?: Readonly<Record<string, readonly string[]>>;
     };
 
 export interface AdvanceInput {
@@ -745,6 +746,9 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
         userId: decision.userId,
         comment: null,
         reason,
+        ...delegatorsOf(
+          plan.find((item) => item.taskKey === decision.taskKey) ?? {},
+        ),
       })),
     ],
     incEditVersion: true,
@@ -915,6 +919,14 @@ function createTasksRow6(input: AdvanceInput): AdvancePlan | null {
   return actions.length > 0 ? { row: "6", actions } : null;
 }
 
+/** B15:計畫項目有被代理者時,事件要帶的 `delegatorIds`;沒有 → 空物件(不帶欄位)。 */
+function delegatorsOf(
+  item: Pick<PlanItem, "delegatorIds">,
+): Pick<HistoryEvent, "delegatorIds"> {
+  const ids = item.delegatorIds ?? [];
+  return ids.length > 0 ? { delegatorIds: [...ids] } : {};
+}
+
 /**
  * 「有新任務」的信與 `task_created` 事件。任務已建、但事件還沒記(建完就中斷)也要補,
  * 否則這位審核者永遠收不到信;只通知還能審的人(有效承辦人、尚未決定)。
@@ -948,7 +960,7 @@ function announceActions(
         stepKey: state.stepKey,
         taskKey: item.taskKey,
         userId: item.assigneeId,
-        ...(item.delegatorId != null && { delegatorId: item.delegatorId }),
+        ...delegatorsOf(item),
       },
     },
   ];

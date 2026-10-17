@@ -11,8 +11,11 @@ import {
 export interface DelegatedAssignees {
   /** 換過的名單(在代理期間的人換成代理人;順序同原名單)。 */
   assigneeIds: string[];
-  /** 代理人 id → 原審核者 id(只有真的換了的;同一位代理人代好幾位時記第一位)。 */
-  delegatorOf: Record<string, string>;
+  /**
+   * 代理人 id → 原審核者 id 們(只有真的換了的;依名單順序)。多位委託同一位代理人時都記上,
+   * 計畫去重成一項(代理人一票作用到所有被代理者);代理人本人原本就在名單時也記。
+   */
+  delegatorOf: Record<string, string[]>;
 }
 
 /** 推進當下的上下文。 */
@@ -33,6 +36,8 @@ export interface DelegationContext {
  * | 代理人是申請人                          | 不換(任務留在原審核者名下,避免自己審自己)              |
  * | 原審核者是申請人                        | 不換(申請人照一般規則剔除或 B5 自動通過,不讓代理繞過) |
  * | 代理人自己也在代理期間(B → C)            | 仍派給代理人,不往下傳(不做代理鏈)                     |
+ * | 會簽多位委託同一位代理人(A、B → C)       | 合成 C 的一項,記 A、B;C 一票作用到兩位                 |
+ * | 代理人本人原本就在名單(A → C,C 也是審核者) | C 自己那一項,另記他代理 A                              |
  *
  * 只在進關那一次換;已派出的任務不會因為之後才開始的代理而轉(計畫固定)。
  * 讀取依序 `await`(TX-02):推進在交易內呼叫這裡。
@@ -74,7 +79,7 @@ export class AssigneeDelegationService {
     const eligible = await this.directory.eligibleUserIds(ctx.tenantId, [
       ...delegateOf.values(),
     ]);
-    const delegatorOf: Record<string, string> = {};
+    const delegatorOf: Record<string, string[]> = {};
     const result = assigneeIds.map((id) => {
       const delegate = delegateOf.get(id);
       if (delegate === undefined) {
@@ -90,9 +95,10 @@ export class AssigneeDelegationService {
         );
         return id;
       }
-      // 代理人本來就在名單裡 → 他自己那一項為準(不記成代理)
-      if (!assigneeIds.includes(delegateId) && !(delegateId in delegatorOf)) {
-        delegatorOf[delegateId] = id;
+      // 同一位代理人代好幾位 / 代理人本人也在名單:都合成代理人那一項(buildPlan 去重),記全部被代理者
+      const delegators = (delegatorOf[delegateId] ??= []);
+      if (!delegators.includes(id)) {
+        delegators.push(id);
       }
       return delegateId;
     });

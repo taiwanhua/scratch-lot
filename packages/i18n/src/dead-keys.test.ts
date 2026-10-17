@@ -445,6 +445,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`lib/base/notification-type-name.ts` 的 `t(`types.${type}`)`,type 是 api 回的通知類型 key(`workflow.task-created` 等;沒有文案的類型退回 api 的 `name`)",
   },
   {
+    key: "admin.approval.timeline.delegated.",
+    reason:
+      "`ApprovalTimeline` 的 `t(`delegated.${event.kind}`)`,kind 是帶了被代理者的 `task_created` / `approved` / `rejected` / `returned`",
+  },
+  {
     key: "admin.personalSettings.delegations.statuses.",
     reason:
       "`t(`statuses.${row.status}`)`,status 逐一取自 GraphQL 的 `UserDelegationStatus` 列舉(`DelegationsTab`)",
