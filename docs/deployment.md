@@ -671,7 +671,7 @@ api 讀 `manifest.json`、以既有檔案服務簽 1 小時的下載網址(印�
 | 部署 SA 對 `print-agent/` | 物件讀寫刪(只限這個前綴),見下方指令                                                                                        |
 | GitHub                    | 不需要新的 Secret 或變數;repo 為 private 時 macOS runner 以 10 倍、Windows 以 2 倍計費,`ubuntu-24.04-arm` 要該帳號方案可用 |
 
-部署 SA 對 `print-agent/` 的寫入權限(IAM 條件只放行這個前綴;讀 `manifest.json`、上傳、覆蓋、刪舊版都靠它,不需要列出 bucket):
+部署 SA 對 `print-agent/` 的寫入權限(IAM 條件只放行這個前綴;讀 `manifest.json`、上傳、覆蓋、刪舊版都靠它,不需要列出 bucket)。因為沒有 bucket 的 `storage.objects.list`,workflow 不能用 `gcloud storage cp` / `rm`(它們會先列出 bucket,一律被拒),讀、寫、刪都打 GCS JSON API 的單一物件端點:
 
 ```bash
 gcloud storage buckets add-iam-policy-binding gs://<私有 bucket> \
