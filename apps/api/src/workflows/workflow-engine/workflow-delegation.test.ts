@@ -19,6 +19,7 @@ import { ok } from "../../forms/test-support/form-fixtures";
 import {
   type DefinitionShape,
   type Person,
+  REASSIGN,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
   decideOn,
@@ -268,6 +269,45 @@ describe("代理人:進關改派給代理人", () => {
     expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
   });
 
+  it("代理人承接的任務經流程管理者改派 → 新承辦人不是代理,delegator 清成 null", async () => {
+    const [original, deputy, other] = await freshStaff();
+    await delegate(original, deputy);
+    await bindNew({ steps: [usersStep("first", [original])] });
+    const submitted = await submitLeave(world);
+    const task = await pendingTaskOf(world, deputy, submitted.id);
+    await ok(api, world.admin.token, REASSIGN, {
+      input: { taskId: task.id, toUserId: String(other.userId) },
+    });
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(other.userId),
+    ]);
+    expect(plan[0]?.delegatorId ?? null).toBeNull();
+    const row = await submission(world, world.applicant, submitted.id);
+    const data = await ok<{
+      workflowInstance: {
+        instance: {
+          steps: {
+            stepKey: string;
+            plan: {
+              assignee: { id: string };
+              delegator: { id: string } | null;
+            }[];
+          }[];
+        };
+      };
+    }>(api, world.applicant.token, INSTANCE_DELEGATION, {
+      id: row.currentInstanceId,
+    });
+    const [item] =
+      data.workflowInstance.instance.steps.find(
+        (one) => one.stepKey === "first",
+      )?.plan ?? [];
+    expect(item?.assignee.id).toBe(String(other.userId));
+    expect(item?.delegator).toBeNull();
+  });
+
   it("代理人停用 → 照原審核者派任並記 log", async () => {
     const [original, deputy] = await freshStaff();
     await delegate(original, deputy);
@@ -321,6 +361,36 @@ describe("代理人:進關改派給代理人", () => {
       String(original.userId),
     ]);
     expect(plan[0]?.delegatorId ?? null).toBeNull();
+  });
+
+  it("原審核者本人就是申請人 → 不換成他的代理人:沒開 B5 照規則剔除(阻擋);開了 B5 自動通過", async () => {
+    const [deputy] = await freshStaff();
+    const applicant = await person(
+      api,
+      world.connection,
+      world.kitchen,
+      world.tenant,
+    );
+    await delegate(applicant, deputy);
+
+    await bindNew({ steps: [usersStep("first", [applicant])] });
+    const excluded = await submitLeave(world, null, applicant);
+    expect(planOf(await latestInstance(excluded.id), "first")).toEqual([]);
+    expect(await tasksOn(deputy, excluded.id)).toEqual([]);
+
+    await bindNew({
+      steps: [
+        usersStep("first", [applicant], { autoApprove: { applicant: true } }),
+      ],
+    });
+    const auto = await submitLeave(world, null, applicant);
+    const plan = planOf(await latestInstance(auto.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(applicant.userId),
+    ]);
+    expect(plan[0]?.delegatorId ?? null).toBeNull();
+    const row = await submission(world, applicant, auto.id);
+    expect(row.status).toBe("COMPLETED");
   });
 
   it("代理開始前已派出的任務不自動轉給代理人", async () => {

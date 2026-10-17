@@ -2678,6 +2678,7 @@
     "loading": "Loading",
     "empty": "No matching people",
     "forbidden": "You don't have permission to view the user list",
+    "loadFailed": "Could not load the list of people. Please try again later",
     "disabled": "Disabled"
   },
   "orgTreeSelect": {

@@ -21,6 +21,8 @@ export interface UserCandidates {
   isFetching: boolean;
   /** 查詢被拒(沒有權限):清單空著,顯示「沒有權限」提示 */
   isForbidden: boolean;
+  /** 查詢失敗但不是權限問題(網路等):清單空著,顯示「載入失敗」提示 */
+  isLoadFailed?: boolean;
 }
 
 /**

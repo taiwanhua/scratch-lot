@@ -279,6 +279,7 @@ export class WorkflowEngineService {
       definition,
       step,
       options,
+      input.now,
     );
     return advance({ ...input, stepEntries: { [first.stepKey]: entry } });
   }

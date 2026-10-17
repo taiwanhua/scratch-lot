@@ -83,6 +83,8 @@ export class StepEntryService {
     definition: WorkflowDefinition,
     step: ReviewStepDef,
     options: StepEntryOptions,
+    /** 這一輪推進的時點(`AdvanceInput.now`);代理期間以它判斷,同一輪只用一個時點 */
+    now: Date,
   ): Promise<StepEntry> {
     const tenantId = instance.tenantId;
     if (tenantId === null) {
@@ -122,7 +124,7 @@ export class StepEntryService {
         tenantId,
         applicantId:
           instance.createdBy === null ? null : String(instance.createdBy),
-        now: new Date(),
+        now,
       },
     );
     const delegated = Object.keys(delegatorOf).length > 0 && { delegatorOf };
