@@ -63,12 +63,19 @@ function nonNull<T>(value: T | null): value is T {
   return value !== null;
 }
 
+/** 舊資料可能沒有的 id 陣列欄位(`delegatorIds`)→ 一律給陣列;`refsOf` 與收集 userIds 共用同一個判斷。 */
+function idsOf(
+  ids: readonly Types.ObjectId[] | undefined,
+): readonly Types.ObjectId[] {
+  return ids ?? [];
+}
+
 /** id 們 → 使用者參照(舊資料沒有這個欄位 → 空陣列;被刪除的人 `name` 為 null)。 */
 function refsOf(
   ids: readonly Types.ObjectId[] | undefined,
   names: ReadonlyMap<string, string>,
 ): FormUserRef[] {
-  return (ids ?? [])
+  return idsOf(ids)
     .map((id) => userRefOf(id, names))
     .filter((ref) => nonNull(ref));
 }
@@ -100,7 +107,7 @@ export class WorkflowPresenter {
         userIds.push(
           item.assigneeId,
           ...item.previousAssigneeIds,
-          ...item.delegatorIds,
+          ...idsOf(item.delegatorIds),
         );
       }
       for (const decision of step.decisions) {
@@ -108,7 +115,7 @@ export class WorkflowPresenter {
       }
     }
     for (const event of instance.history) {
-      userIds.push(event.userId, event.toUserId, ...event.delegatorIds);
+      userIds.push(event.userId, event.toUserId, ...idsOf(event.delegatorIds));
     }
     const names = await this.userNames.load(systemContext(), userIds);
     const myTasks =

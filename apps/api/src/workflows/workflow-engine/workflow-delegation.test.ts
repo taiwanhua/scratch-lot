@@ -478,6 +478,65 @@ describe("代理人:進關改派給代理人", () => {
     expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
   });
 
+  it("會簽兩位委託同一位代理人,代理人駁回 → 一次作用到兩位(整張駁回),事件記兩位被代理者", async () => {
+    const [a, b, c] = await freshStaff();
+    await delegate(a, c);
+    await delegate(b, c);
+    await bindNew({ steps: [usersStep("first", [a, b], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    await decideOn(world, c, submitted.id, "REJECT");
+    expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
+    const raw = await latestInstance(submitted.id);
+    const rejected = raw.history.find((event) => event.kind === "rejected");
+    expect(String(rejected?.userId)).toBe(String(c.userId));
+    expect(delegatorsIn(rejected)).toEqual([
+      String(a.userId),
+      String(b.userId),
+    ]);
+  });
+
+  it("A → C 且 C → D(C 本人在名單、自己也在代理期間)→ C 承接 A、D 承接 C,共兩項(不做代理鏈)", async () => {
+    const [a, c, d] = await freshStaff();
+    await delegate(a, c);
+    await delegate(c, d);
+    await bindNew({ steps: [usersStep("first", [a, c], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(c.userId),
+      String(d.userId),
+    ]);
+    expect(plan.map((item) => delegatorsIn(item))).toEqual([
+      [String(a.userId)],
+      [String(c.userId)],
+    ]);
+  });
+
+  it("合併後的那一項被流程管理者改派 → 新承辦人一票算整項,被代理者清空", async () => {
+    const [a, b, c, other] = [
+      ...(await freshStaff()),
+      await person(api, world.connection, world.tenant, world.tenant),
+    ];
+    await delegate(a, c);
+    await delegate(b, c);
+    await bindNew({ steps: [usersStep("first", [a, b], { mode: "all" })] });
+    const submitted = await submitLeave(world);
+    const task = await pendingTaskOf(world, c, submitted.id);
+    await ok(api, world.admin.token, REASSIGN, {
+      input: { taskId: task.id, toUserId: String(other.userId) },
+    });
+
+    const plan = planOf(await latestInstance(submitted.id), "first");
+    expect(plan.map((item) => String(item.assigneeId))).toEqual([
+      String(other.userId),
+    ]);
+    expect(delegatorsIn(plan[0])).toEqual([]);
+    await decideOn(world, other, submitted.id, "APPROVE");
+    expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
+  });
+
   it("會簽兩位委託同一位代理人,代理人退回 → 一次作用到兩位(整張退回),事件記兩位被代理者", async () => {
     const [a, b, c] = await freshStaff();
     await delegate(a, c);

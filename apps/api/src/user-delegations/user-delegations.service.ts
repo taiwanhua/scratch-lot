@@ -238,13 +238,11 @@ export class UserDelegationsService {
     userId: Types.ObjectId,
     startAt: Date,
     endAt: Date,
-    exceptId: Types.ObjectId | null = null,
   ): Promise<void> {
     const overlapping = await this.delegations.count(operator, {
       userId,
       startAt: { $lt: endAt },
       endAt: { $gt: startAt },
-      ...(exceptId !== null && { _id: { $ne: exceptId } }),
     });
     if (overlapping > 0) {
       throw userDelegationRejected("DELEGATION_OVERLAP");
