@@ -20,7 +20,10 @@ import {
 import { NotificationService } from "../../notifications/notification.service";
 import { systemContext } from "../tenant-directory.service";
 import { definitionOfVersion } from "../workflow-definition-input";
-import { AudienceSourceService } from "./audience-source.service";
+import {
+  AudienceSourceService,
+  emptySourceReason,
+} from "./audience-source.service";
 import type { InstanceRecord } from "./instance-writes";
 import { StepEntryService } from "./step-entry.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
@@ -124,7 +127,7 @@ export class WorkflowCcService {
     source: AssigneeSource,
     message: { event: CcEvent; stepName: string | null; dedupeSuffix: string },
   ): Promise<void> {
-    const recipientIds = await this.recipientsOf(instance, source);
+    const recipientIds = await this.recipientsOf(instance, source, message);
     if (recipientIds.length === 0) {
       return;
     }
@@ -149,20 +152,33 @@ export class WorkflowCcService {
     });
   }
 
-  /** 依這張單據(實例的修訂)算知會對象。 */
+  /**
+   * 依這張單據(實例的修訂)算知會對象。送出 / 綁定時不檢查知會對象,所以算不到人一律記 warn
+   * (欄位來源指向別張表單、表單欄位沒填、條件沒人符合…),不知會、不擋動作。
+   */
   private async recipientsOf(
     instance: InstanceRecord,
     source: AssigneeSource,
+    message: { event: CcEvent; dedupeSuffix: string },
   ): Promise<Types.ObjectId[]> {
+    const where = `實例 ${String(instance._id)} 的知會(${message.dedupeSuffix})`;
     if (source.kind === "field" && source.formKey !== instance.formKey) {
       this.logger.warn(
-        `實例 ${String(instance._id)} 的知會對象欄位屬於表單 ${source.formKey},不是 ${instance.formKey},不知會`,
+        `${where}:知會對象欄位屬於表單 ${source.formKey},不是 ${instance.formKey},不知會`,
       );
       return [];
     }
     const context = await this.entries.submissionContextOf(instance);
-    return context === null
-      ? []
-      : this.sources.resolveAudienceSource(source, context);
+    if (context === null) {
+      this.logger.warn(`${where}:實例沒有最上層組織,不知會`);
+      return [];
+    }
+    const ids = await this.sources.resolveAudienceSource(source, context);
+    if (ids.length === 0) {
+      this.logger.warn(
+        `${where}:算不到知會對象(${emptySourceReason(source, context)}),不知會`,
+      );
+    }
+    return ids;
   }
 }

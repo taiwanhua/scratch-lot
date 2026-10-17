@@ -5,7 +5,10 @@ import {
   AUDIENCE_FORM_FIELD_REF_PREFIX,
   type AudienceDynamicRef,
 } from "@repo/domain/audience";
-import type { AssigneeSource } from "@repo/domain/workflow";
+import {
+  type AssigneeSource,
+  audienceFormFieldRefsOf,
+} from "@repo/domain/workflow";
 
 import { AudienceService } from "../../audience/audience.service";
 import { OrgManagersService } from "../../orgs/org-managers.service";
@@ -126,5 +129,42 @@ export class AudienceSourceService {
       return id === null ? [] : [id];
     }
     return [];
+  }
+}
+
+/**
+ * 「依這張單據算人」算不到任何人時的原因(給 log 用;知會對象、逾時通知對象在送出 / 綁定時不檢查,
+ * 執行時算不到人就不通知,但一定要記下是為什麼):
+ * 表單欄位沒填 / 表單的組織欄位沒填 / 人員條件沒人符合 / 選到的人停用或不在本租戶 / 找不到主管。
+ */
+export function emptySourceReason(
+  source: AssigneeSource,
+  ctx: SubmissionAudienceContext,
+): string {
+  switch (source.kind) {
+    case "field": {
+      return referenceIdOf(ctx.values[source.fieldKey]) === null
+        ? `表單欄位 ${source.fieldKey} 沒填`
+        : `表單欄位 ${source.fieldKey} 選的人已停用或不在本租戶`;
+    }
+    case "audience": {
+      const unfilled =
+        source.audience.mode === "match"
+          ? audienceFormFieldRefsOf(source.audience)
+              .map((ref) => ref.fieldKey)
+              .filter(
+                (fieldKey) => referenceIdOf(ctx.values[fieldKey]) === null,
+              )
+          : [];
+      return unfilled.length > 0
+        ? `人員條件用的表單組織欄位 ${unfilled.join("、")} 沒填`
+        : "人員條件沒有人符合";
+    }
+    case "manager": {
+      return `單據所屬組織往上找不到第 ${String(source.level)} 組主管`;
+    }
+    default: {
+      return "來源不明";
+    }
   }
 }
