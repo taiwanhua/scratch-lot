@@ -41,6 +41,7 @@ export function toWorkflowVersionModel(
         ? edges.map((edge) => ({ from: edge.from, to: edge.to }))
         : null,
     checkFormKey: record.checkFormKey ?? null,
+    cc: record.cc ? { ...record.cc } : null,
     changelog: record.changelog,
     publishedAt: record.publishedAt,
     publishedBy: userRefOf(record.publishedBy, names),

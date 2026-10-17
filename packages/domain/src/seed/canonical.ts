@@ -357,6 +357,13 @@ function normalizeStep(step: StepDef): unknown {
   if (result.allowReturn === undefined) {
     result.allowReturn = true;
   }
+  // 逾時提醒、知會:省略 / null 都是「沒設」
+  if (result.overdue === null) {
+    delete result.overdue;
+  }
+  if (result.cc === null) {
+    delete result.cc;
+  }
   return result;
 }
 
@@ -379,6 +386,10 @@ function normalizeWorkflowDefinition(definition: WorkflowDefinition): unknown {
     (Array.isArray(edges) && edges.length === 0)
   ) {
     delete result.edges;
+  }
+  // 整個流程的知會:省略 / null 都是「沒設」
+  if (result.cc === null) {
+    delete result.cc;
   }
   return result;
 }

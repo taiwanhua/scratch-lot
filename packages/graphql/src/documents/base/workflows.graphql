@@ -57,6 +57,8 @@ fragment WorkflowVersionFields on WorkflowVersionModel {
   }
   # 設計器的「檢查用表單」(表單 key);沒選 = null
   checkFormKey
+  # 整個流程的知會對象(AssigneeSource);沒設 = null
+  cc
   changelog
   publishedAt
   publishedBy {
@@ -172,7 +174,7 @@ query WorkflowVersions($workflowKey: ID!) {
   }
 }
 
-# ValidateWorkflowVersionInput: { workflowKey, definition: { steps, edges? }, checkFormKey? }(不落庫)
+# ValidateWorkflowVersionInput: { workflowKey, definition: { steps, edges?, cc? }, checkFormKey? }(不落庫)
 query ValidateWorkflowVersion($input: ValidateWorkflowVersionInput!) {
   validateWorkflowVersion(input: $input) {
     ...WorkflowValidationFields
@@ -191,7 +193,7 @@ mutation CreateWorkflowVersionDraft($input: CreateWorkflowVersionDraftInput!) {
   }
 }
 
-# SaveWorkflowVersionDraftInput: { workflowKey, expectedDraftRevision, definition: { steps, edges?, checkFormKey? } }(checkFormKey 缺席 = 不動、null = 清掉)
+# SaveWorkflowVersionDraftInput: { workflowKey, expectedDraftRevision, definition: { steps, edges?, checkFormKey?, cc? } }(checkFormKey / cc 缺席 = 不動、null = 清掉)
 mutation SaveWorkflowVersionDraft($input: SaveWorkflowVersionDraftInput!) {
   saveWorkflowVersionDraft(input: $input) {
     workflowVersion {

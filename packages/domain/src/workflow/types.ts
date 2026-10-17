@@ -63,6 +63,40 @@ export interface AutoApproveDef {
   priorApprover?: boolean;
 }
 
+/**
+ * 逾時提醒(《底座規格》3.8 B16;省略 / `null` = 不檢查、不通知)。時數以日曆小時計(含夜間與假日),
+ * 從任務派給目前承辦人起算(改派 = 重新計時):
+ * - 超過 `reviewerAfterHours`(N)仍未處理 → 通知目前的審核者一次
+ * - 超過 `audienceAfterHours`(M,必須 > N)→ 通知 `audience`(通知對象)一次;審核者不再重複收到
+ *
+ * **只提醒,不自動核准或駁回**。`audience` 是人員條件(一定要設條件;設計器預設
+ * `DEFAULT_OVERDUE_AUDIENCE` = 持有阻擋清單改派權限的人)。
+ */
+export interface OverdueReminderDef {
+  /** N:正整數小時。 */
+  reviewerAfterHours: number;
+  /** M:正整數小時,> N。 */
+  audienceAfterHours: number;
+  /** 通知對象(人員條件,`match`)。 */
+  audience: Audience;
+}
+
+/**
+ * 逾時提醒的預設通知對象:持有阻擋清單改派權限(`system.workflows.blocked-page.reassign`)的人 ——
+ * 會處理卡單的流程管理者。人員條件一定要有條件,所以用權限表達「流程管理者」。
+ */
+export const DEFAULT_OVERDUE_AUDIENCE: Audience = {
+  mode: "match",
+  filter: {
+    field: "permission",
+    cond: "in",
+    value: {
+      kind: "static",
+      values: ["system.workflows.blocked-page.reassign"],
+    },
+  },
+};
+
 /** 審核關卡(`kind` 省略 = `review`)。 */
 export interface ReviewStepDef {
   key: string;
@@ -81,6 +115,13 @@ export interface ReviewStepDef {
   autoApprove?: AutoApproveDef | null;
   /** 審核者可否「退回修改」;省略 = true。 */
   allowReturn?: boolean;
+  /** 逾時提醒(B16);沒設 = 不檢查、不通知。 */
+  overdue?: OverdueReminderDef | null;
+  /**
+   * 知會對象(B17;來源同審核者三種,不需要審核):這一關**整關通過或被跳過**時通知
+   * (`workflow.cc`),之後以任務持有者同等規則唯讀該修訂。沒設 = 不知會。
+   */
+  cc?: AssigneeSource | null;
 }
 
 /** 審核關卡才有的屬性(匯合節點帶了任一個 → `JOIN_HAS_REVIEW_PROPS`)。 */
@@ -91,6 +132,8 @@ export const REVIEW_STEP_PROPS = [
   "skipOrgs",
   "autoApprove",
   "allowReturn",
+  "overdue",
+  "cc",
 ] as const;
 
 /** 系統匯合節點:沒有 `REVIEW_STEP_PROPS` 的任何一個。 */
@@ -115,7 +158,23 @@ export interface WorkflowEdge {
 export interface WorkflowDefinition {
   steps: StepDef[];
   edges?: WorkflowEdge[] | null;
+  /**
+   * 整個流程的知會對象(B17;來源同審核者三種):單據**完成、被駁回、被作廢**時通知。
+   * 關卡的知會另設在各關的 `cc`。沒設 = 不知會。
+   */
+  cc?: AssigneeSource | null;
 }
+
+/** 知會的時機(`workflow.cc` 的 `event` 參數;《底座規格》3.9 的情境表)。 */
+export const CC_EVENTS = [
+  "step-passed",
+  "step-skipped",
+  "completed",
+  "rejected",
+  "voided",
+] as const;
+
+export type CcEvent = (typeof CC_EVENTS)[number];
 
 export function isJoinStep(step: StepDef): step is JoinStepDef {
   return step.kind === "join";

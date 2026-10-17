@@ -213,6 +213,13 @@ export class WorkflowInstance {
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   outcome!: WorkflowOutcome | null;
 
+  /**
+   * 收過這個實例知會通知(B17,`workflow.cc`)的人:讀取授權以「任務持有者」同等規則讓他們唯讀
+   * 這個修訂(`canReadSubmissionRevision`)。與知會通知同一個交易追加(`$addToSet`),不動 `editVersion`。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  ccRecipientIds!: Types.ObjectId[];
+
   /** 模組 key(`tenantScopePlugin` 的 `moduleData` 宣告;抄自提交)。 */
   moduleKey!: string;
 
@@ -231,6 +238,8 @@ WorkflowInstanceSchema.index(
 );
 // 阻擋清單 / 需要推進的查詢(以租戶為邊界)
 WorkflowInstanceSchema.index({ tenantId: 1, status: 1 });
+// 知會對象的讀取授權(這位讀者被知會過哪些實例)
+WorkflowInstanceSchema.index({ ccRecipientIds: 1 });
 // 基礎欄位(ADR-0007)+ 模組資料表的 moduleKey / tenantId(ADR-0005)
 WorkflowInstanceSchema.plugin(baseFieldsPlugin);
 WorkflowInstanceSchema.plugin(tenantScopePlugin, { moduleData: true });

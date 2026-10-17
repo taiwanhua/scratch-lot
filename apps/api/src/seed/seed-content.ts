@@ -64,6 +64,8 @@ function shapeWorkflowSeed(
       definitionFromInput({
         steps: seed.definition.steps as unknown as Record<string, unknown>[],
         edges: seed.definition.edges,
+        // 宣告沒寫或 null = 沒設(整形後不帶這個鍵,與資料庫讀回的定義一致)
+        cc: seed.definition.cc ?? undefined,
       }),
     ),
   };

@@ -40,7 +40,9 @@ import {
   type EffectSubject,
   FormLifecycleService,
 } from "./lifecycle/form-lifecycle.service";
+import { overdueTimerOf } from "./overdue-timer";
 import { type StepEntryOptions, StepEntryService } from "./step-entry.service";
+import { WorkflowCcService } from "./workflow-cc.service";
 import { WorkflowNotifier } from "./workflow-notifier.service";
 
 /** 一輪動作執行的結果。 */
@@ -108,6 +110,9 @@ export class WorkflowEngineHooks {
  * **掛接點的事後動作**(`lifecycle/`)也在推進裡觸發、同一個交易:實例的條件更新成功且把審核關卡改成
  * `completed` / `skipped` → `stepPassed`(跳過帶 `skipped: true`);提交同步成完成 / 駁回 / 退回 / 撤回且
  * 真的命中 → `completed` / `rejected` / `returned` / `withdrawn`。事後動作拋錯 = 整個推進(與呼叫端的動作)回復。
+ *
+ * **知會**(B17,`WorkflowCcService`)跟著同兩個時點、同一個交易:`stepPassed` 之後通知該關的知會對象;
+ * 提交同步成完成 / 駁回之後通知整個流程的知會對象。
  */
 @Injectable()
 export class WorkflowEngineService {
@@ -124,6 +129,7 @@ export class WorkflowEngineService {
     private readonly transactions: TransactionService,
     private readonly realtime: RealtimePublisher,
     private readonly lifecycle: FormLifecycleService,
+    private readonly cc: WorkflowCcService,
   ) {}
 
   /**
@@ -304,7 +310,6 @@ export class WorkflowEngineService {
     definition: WorkflowDefinition,
     action: AdvanceAction,
   ): Promise<RoundResult> {
-    const tenantId = instance.tenantId;
     switch (action.kind) {
       case "resolveStepEntry": {
         // 兩段式已在 planOf 處理;走到這裡代表第二次呼叫仍要求解析,當作資料錯誤
@@ -334,46 +339,15 @@ export class WorkflowEngineService {
         return "done";
       }
       case "updateSubmission": {
-        const synced = await this.submissions.updateOne(
-          tenantId,
-          {
-            _id: toObjectId(action.condition.submissionId),
-            currentInstanceId: toObjectId(action.condition.currentInstanceId),
-            revision: action.condition.revision,
-            status: action.condition.status,
-          },
-          { ...action.set },
-          null,
-        );
-        const event =
-          action.set.status === undefined
-            ? undefined
-            : EFFECT_OF_SUBMISSION_STATUS[action.set.status];
-        if (synced && event !== undefined) {
-          await this.lifecycle.emit(event, effectSubjectOf(instance), {
-            stepKey:
-              event === "returned" || event === "rejected"
-                ? (instance.outcome?.stepKey ?? null)
-                : null,
-          });
-        }
+        await this.syncSubmission(instance, definition, action);
         return "done";
       }
       case "createTask": {
-        await this.createTask(instance, action);
+        await this.createTask(instance, definition, action);
         return "done";
       }
       case "syncTask": {
-        await this.tasks.updateOne(
-          systemContext(),
-          tenantId,
-          {
-            instanceId: instance._id,
-            taskKey: action.taskKey,
-            status: action.expectedStatus,
-          },
-          { $set: taskProjectionDocument(action.set) },
-        );
+        await this.syncTask(instance, definition, action);
         return "done";
       }
       case "notifyTaskCreated": {
@@ -413,6 +387,44 @@ export class WorkflowEngineService {
     }
   }
 
+  /**
+   * 提交依實例同步(條件:仍指向本實例 + 修訂號 + 讀到的狀態);真的命中且是終局 → 對應的事後動作,
+   * 完成 / 駁回再知會整個流程的知會對象(B17,同一個交易)。
+   */
+  private async syncSubmission(
+    instance: InstanceRecord,
+    definition: WorkflowDefinition,
+    action: Extract<AdvanceAction, { kind: "updateSubmission" }>,
+  ): Promise<void> {
+    const synced = await this.submissions.updateOne(
+      instance.tenantId,
+      {
+        _id: toObjectId(action.condition.submissionId),
+        currentInstanceId: toObjectId(action.condition.currentInstanceId),
+        revision: action.condition.revision,
+        status: action.condition.status,
+      },
+      { ...action.set },
+      null,
+    );
+    const event =
+      action.set.status === undefined
+        ? undefined
+        : EFFECT_OF_SUBMISSION_STATUS[action.set.status];
+    if (!synced || event === undefined) {
+      return;
+    }
+    await this.lifecycle.emit(event, effectSubjectOf(instance), {
+      stepKey:
+        event === "returned" || event === "rejected"
+          ? (instance.outcome?.stepKey ?? null)
+          : null,
+    });
+    if (event === "completed" || event === "rejected") {
+      await this.cc.outcome(instance, definition, event);
+    }
+  }
+
   /** 這次更新把哪些審核關卡改成完成 / 跳過 → 各觸發一次 `stepPassed`(匯合節點不是關卡,不觸發)。 */
   private async emitStepPassed(
     instance: InstanceRecord,
@@ -428,10 +440,13 @@ export class WorkflowEngineService {
       ) {
         continue;
       }
+      const skipped = step.status === "skipped";
       await this.lifecycle.emit("stepPassed", effectSubjectOf(instance), {
         stepKey,
-        skipped: step.status === "skipped",
+        skipped,
       });
+      // B17:關卡整關通過 / 被跳過 → 該關的知會對象(同一個交易)
+      await this.cc.stepPassed(instance, definition, stepKey, skipped);
     }
   }
 
@@ -442,6 +457,7 @@ export class WorkflowEngineService {
    */
   private async createTask(
     instance: InstanceRecord,
+    definition: WorkflowDefinition,
     action: Extract<AdvanceAction, { kind: "createTask" }>,
   ): Promise<void> {
     const existing = await this.tasks.findOne(instance.tenantId, {
@@ -466,6 +482,44 @@ export class WorkflowEngineService {
       status: action.projection.status,
       decidedAt: action.projection.decidedAt,
       comment: action.projection.comment,
+      // B16:派給承辦人的時點起算逾時提醒
+      ...overdueTimerOf(
+        stepOf(definition, action.stepKey),
+        action.projection.status,
+        new Date(),
+      ),
+    });
+  }
+
+  /**
+   * 投影同步(條件含讀到的狀態)。承辦人換了(改派)→ 一併重新計時(B16「任務改派 → 新任務重新計時」):
+   * 先讀一次這張任務比對承辦人,依序讀寫(TX-02)。
+   */
+  private async syncTask(
+    instance: InstanceRecord,
+    definition: WorkflowDefinition,
+    action: Extract<AdvanceAction, { kind: "syncTask" }>,
+  ): Promise<void> {
+    const filter = {
+      instanceId: instance._id,
+      taskKey: action.taskKey,
+      status: action.expectedStatus,
+    };
+    const current = await this.tasks.findOne(instance.tenantId, filter);
+    if (current === null) {
+      return;
+    }
+    const reassigned = String(current.assigneeId) !== action.set.assigneeId;
+    await this.tasks.updateOne(systemContext(), instance.tenantId, filter, {
+      $set: {
+        ...taskProjectionDocument(action.set),
+        ...(reassigned &&
+          overdueTimerOf(
+            stepOf(definition, current.stepKey),
+            action.set.status,
+            new Date(),
+          )),
+      },
     });
   }
 }

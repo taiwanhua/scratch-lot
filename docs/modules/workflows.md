@@ -233,6 +233,41 @@
 
 **admin**:個人設定(`/settings/personal?tab=delegations`,頁碼在 `?list=`)的「代理人」分頁 `DelegationsTab`(清單 + 刪除確認)與分頁列右側的「新增代理」→ `NewDelegationDialog`(代理人用 `UserPickerField` + `myDelegateCandidates`;日期以 `lib/base/delegation-period.ts` 換成時點)。迄日顯示成結束日 23:59。
 
+## 逾時提醒與知會
+
+《底座規格》3.8 B16、3.9 B17;現況說明見 `docs/concepts/workflow-engine.md`「逾時提醒與知會」。
+
+**定義**(`@repo/domain/workflow`;關卡的兩個屬性在 `workflow_versions.steps[]` 的 JSON,整個流程的知會存版本的 `cc` 欄位):
+
+| 位置                       | 形狀                                                                   | 省略 / `null` |
+| -------------------------- | ---------------------------------------------------------------------- | ------------- |
+| 關卡 `overdue`             | `{ reviewerAfterHours: N, audienceAfterHours: M, audience: Audience }` | 不檢查        |
+| 關卡 `cc`                  | `AssigneeSource`(同審核者:`audience` / `field` / `manager`)            | 這一關不知會  |
+| 版本 `cc`(`definition.cc`) | `AssigneeSource`                                                       | 單據層不知會  |
+
+- 設計器預設的通知對象是 `DEFAULT_OVERDUE_AUDIENCE`(權限 `system.workflows.blocked-page.reassign`)。
+- **檢查器**:N、M 不是正整數小時或 M ≤ N → `OVERDUE_INVALID`(`property: "overdue"` / `"overdue.audienceAfterHours"`)。通知對象與知會對象走審核者同一套檢查(`checkPeopleSource`):`AUDIENCE_INVALID`、`AUDIENCE_IN_SHARED`、`ROLE_NOT_IN_TENANT`、`ORG_NOT_IN_TENANT`、`USER_INVALID`、`FIELD_*`、`MANAGER_LEVEL_INVALID`、`ASSIGNEE_KIND_UNKNOWN`,`property` 指到 `overdue.audience…` / `cc…`;整個流程的知會沒有 `stepKey`(`property` 以 `cc` 開頭)。匯合節點帶了 `overdue` / `cc` 是 `JOIN_HAS_REVIEW_PROPS`。檢查器的表單 / 使用者目錄也收知會對象的 `field` 來源與指定的使用者。
+- **送出時檢查與綁定時檢查不看知會對象 / 通知對象**:執行時算不到人就不通知(知會對象的 `field` 來源指向別張表單 → 當作算不到人、`Logger.warn`)。
+- 受管定義:`definition` 多一個可選的 `cc`;`overdue` / `cc` 的 `null` 與省略同義(canonical 收斂,舊宣告的 hash 不變)。
+
+**逾時提醒**(`workflow-engine/workflow-overdue.service.ts`,`WorkflowOverdueService`):
+
+1. 計時在任務上(`workflow_tasks`):建任務時 `assignedAt` = 現在、`overdueLevel` = 0、`overdueDueAt` = `assignedAt` + N 小時(關卡沒開、或任務建出來就不是 `pending`(B5 自動通過)→ null)。推進同步投影時承辦人換了(改派)→ 三欄重設(`overdue-timer.ts`);被改派走的人不再收。
+2. 排程:`onModuleInit` 登記 `registerScheduledJob({ key: "workflow.overdue-reminders", every: "15m" })`,handler 呼叫 `sweep(now, 租戶們)`。每個租戶撈 `status = pending` 且 `overdueDueAt <= now` 的任務(依到期時點,一次最多 500 張,其餘下一輪)。
+3. **每張任務一個交易**:再讀一次(仍 `pending`、仍到期)→ 實例仍在跑且關卡仍進行中、這一關仍開著(否則 `overdueDueAt` 清成 null,不再排)→ 到 N 未通知 → 第 1 級給 `assigneeId`;到 M 未通知 → 第 2 級給通知對象(`resolveAudienceSource({ kind: "audience" })`,依這張單據代入動態組織;剔除審核者本人)→ 條件更新(條件含讀到的 `overdueLevel` 與 `assignedAt`)寫新級數與下一級到期時點(N → M → null)。排程晚到一次就過了 M 時兩級一起發。一張失敗只回復那一張、記 error log,下一輪重試。
+4. 不動任務狀態、關卡、實例(`editVersion` 不變)。通知 `workflow.overdue`(`params`:`subject`、`stepName`、`hours`),`dedupeKey` = `workflow.overdue:<taskId>:<assignedAt 毫秒>:<級數>` —— 規格的冪等鍵 `(taskId, level)` 以「這一次指派」為單位。
+
+**知會**(`workflow-engine/workflow-cc.service.ts`,`WorkflowCcService`):
+
+| 時機                | 呼叫處                                                                  | 收件人            | `event`                        |
+| ------------------- | ----------------------------------------------------------------------- | ----------------- | ------------------------------ |
+| 關卡整關通過 / 跳過 | 推進 `emitStepPassed`,`stepPassed` 事後動作之後                         | 該關 `cc`         | `step-passed` / `step-skipped` |
+| 單據完成 / 被駁回   | 推進 `updateSubmission` 同步命中、`completed` / `rejected` 事後動作之後 | 版本 `cc`         | `completed` / `rejected`       |
+| 單據被作廢          | `FormSubmissionsService.voidSubmission`,`voided` 事後動作之後           | 實例那一版的 `cc` | `voided`                       |
+
+- 都在觸發它的動作的交易內:依這張單據(實例的修訂值、單據所屬組織、申請人)以 `resolveAudienceSource` 算人 → 實例 `$addToSet ccRecipientIds`(不動 `editVersion`)→ `notify({ type: "workflow.cc", params: { subject, event, stepName } })`。`dedupeKey` = `workflow.cc:<實例 id>:step:<stepKey>` / `:<event>`;推進只在條件更新真的命中時走到這裡,重試推進不會重發。
+- **讀取授權**:`canReadSubmissionRevision` 的「任務持有者」那一列同時看實例的 `ccRecipientIds` —— 被知會的人只讀得到那個實例的修訂(`abilities` 全為 false,提交層現況不給);`formRuntimeVersion` 也讓他拿得到表單定義。他不是承辦人,`decideTask` 等動作照舊擋。
+
 ## 推進(`advance` 的執行器)
 
 `workflow-engine/workflow-engine.service.ts`。判斷表本體與**執行合約**在 `@repo/domain/workflow` 的 `advance.ts` 檔頭,這裡只執行:
@@ -444,6 +479,7 @@ input 欄位的缺席 / `null`:
 - `CreateWorkflowVersionDraftInput.baseVersion`:缺席 / `null` = 空白草稿。
 - `WorkflowDefinitionInput.edges`:缺席 / `null` / 空陣列 = 直線(存 `null`)。
 - `WorkflowDefinitionInput.checkFormKey`(存草稿):缺席 = 不動已存的值;`null` / 空字串 = 清掉(存 `null`)。
+- `WorkflowDefinitionInput.cc`(整個流程的知會對象,存草稿):缺席 = 不動已存的值;`null` = 清掉(存 `null`)。輸出 `WorkflowVersionModel.cc`:沒設 = null。
 - `ValidateWorkflowVersionInput.checkFormKey`:缺席 / `null` = 改看 `definition.checkFormKey`;兩者都沒有 = 跳過條件對第一個 `field` 來源的表單驗;也沒有 `field` 來源 → 只驗形狀。
 - `DecideTaskInput.comment`:缺席 / `null` / 空白 = 沒有理由(駁回 / 退回時 → `VALIDATION_FAILED` `comment`)。
 - `MyApplicationsInput` / `MyTasksInput` 的篩選欄位缺席 = 不篩;`MyTasksInput.done` 缺席 = 待處理。

@@ -86,12 +86,20 @@ export class WorkflowDefinitionChecker {
     const reviewSteps = definition.steps.filter((step) => isReviewStep(step));
     const formKeys = new Set<string>();
     const userIds: string[] = [];
-    for (const step of reviewSteps) {
-      if (step.assignee.kind === "field") {
-        formKeys.add(step.assignee.formKey);
-      } else if (step.assignee.kind === "audience") {
-        userIds.push(...userIdsOf(step.assignee.audience));
+    // 審核者、關卡與整個流程的知會對象、逾時通知對象:檢查器都要對到它們的表單與使用者
+    const sources = [
+      ...reviewSteps.flatMap((step) => [step.assignee, step.cc]),
+      definition.cc,
+    ];
+    for (const source of sources) {
+      if (source?.kind === "field") {
+        formKeys.add(source.formKey);
+      } else if (source?.kind === "audience") {
+        userIds.push(...userIdsOf(source.audience));
       }
+    }
+    for (const step of reviewSteps) {
+      userIds.push(...userIdsOf(step.overdue?.audience));
     }
     if (checkFormKey !== null) {
       formKeys.add(checkFormKey);

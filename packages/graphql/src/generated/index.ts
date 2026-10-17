@@ -3627,6 +3627,7 @@ export type WorkflowDecisionModel = {
 };
 
 export type WorkflowDefinitionInput = {
+  cc?: InputMaybe<Scalars['JSONObject']['input']>;
   checkFormKey?: InputMaybe<Scalars['ID']['input']>;
   edges?: InputMaybe<Array<WorkflowEdgeInput>>;
   steps: Array<Scalars['JSONObject']['input']>;
@@ -3858,6 +3859,7 @@ export type WorkflowValidationReport = {
 export type WorkflowVersionModel = {
   __typename?: 'WorkflowVersionModel';
   baseVersion?: Maybe<Scalars['Int']['output']>;
+  cc?: Maybe<Scalars['JSONObject']['output']>;
   changelog?: Maybe<Scalars['String']['output']>;
   checkFormKey?: Maybe<Scalars['ID']['output']>;
   draftRevision: Scalars['Int']['output'];
@@ -5068,7 +5070,7 @@ export type CopyUserOrgRolesMutation = { __typename?: 'Mutation', copyUserOrgRol
 
 export type WorkflowFieldsFragment = { __typename?: 'WorkflowModel', id: string, key: string, name: string, isShared: boolean, ownerOrgId?: string | null, ownerOrgName?: string | null, currentVersion?: number | null, hasDraft: boolean, createdAt: string, updatedAt: string, forkedFrom?: { __typename?: 'WorkflowForkSourceModel', workflowKey: string, version: number } | null, assignments: Array<{ __typename?: 'WorkflowAssignment', tenantOrgId: string, tenantName?: string | null }>, boundForms: Array<{ __typename?: 'WorkflowBoundForm', formKey: string, formName?: string | null, moduleKey?: string | null }>, abilities: { __typename?: 'WorkflowAbilities', canEdit: boolean, canPublish: boolean, canAssign: boolean, canFork: boolean } };
 
-export type WorkflowVersionFieldsFragment = { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null };
+export type WorkflowVersionFieldsFragment = { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null };
 
 export type WorkflowValidationFieldsFragment = { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> };
 
@@ -5127,14 +5129,14 @@ export type WorkflowVersionQueryVariables = Exact<{
 }>;
 
 
-export type WorkflowVersionQuery = { __typename?: 'Query', workflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
+export type WorkflowVersionQuery = { __typename?: 'Query', workflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
 
 export type WorkflowVersionsQueryVariables = Exact<{
   workflowKey: Scalars['ID']['input'];
 }>;
 
 
-export type WorkflowVersionsQuery = { __typename?: 'Query', workflowVersions: { __typename?: 'WorkflowVersionsPayload', totalCount: number, items: Array<{ __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }> } };
+export type WorkflowVersionsQuery = { __typename?: 'Query', workflowVersions: { __typename?: 'WorkflowVersionsPayload', totalCount: number, items: Array<{ __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }> } };
 
 export type ValidateWorkflowVersionQueryVariables = Exact<{
   input: ValidateWorkflowVersionInput;
@@ -5148,21 +5150,21 @@ export type CreateWorkflowVersionDraftMutationVariables = Exact<{
 }>;
 
 
-export type CreateWorkflowVersionDraftMutation = { __typename?: 'Mutation', createWorkflowVersionDraft: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
+export type CreateWorkflowVersionDraftMutation = { __typename?: 'Mutation', createWorkflowVersionDraft: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
 
 export type SaveWorkflowVersionDraftMutationVariables = Exact<{
   input: SaveWorkflowVersionDraftInput;
 }>;
 
 
-export type SaveWorkflowVersionDraftMutation = { __typename?: 'Mutation', saveWorkflowVersionDraft: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
+export type SaveWorkflowVersionDraftMutation = { __typename?: 'Mutation', saveWorkflowVersionDraft: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null }, validation?: { __typename?: 'WorkflowValidationReport', errors: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }>, warnings: Array<{ __typename?: 'WorkflowIssueModel', code: string, message: string, stepKey?: string | null, stepIndex?: number | null, edgeIndex?: number | null, property?: string | null, exprPath?: string | null }> } | null } };
 
 export type PublishWorkflowVersionMutationVariables = Exact<{
   input: PublishWorkflowVersionInput;
 }>;
 
 
-export type PublishWorkflowVersionMutation = { __typename?: 'Mutation', publishWorkflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
+export type PublishWorkflowVersionMutation = { __typename?: 'Mutation', publishWorkflowVersion: { __typename?: 'WorkflowVersionPayload', workflowVersion: { __typename?: 'WorkflowVersionModel', id: string, workflowKey: string, version?: number | null, status: WorkflowVersionStatus, draftRevision: number, baseVersion?: number | null, steps: Array<Record<string, unknown>>, checkFormKey?: string | null, cc?: Record<string, unknown> | null, changelog?: string | null, publishedAt?: string | null, edges?: Array<{ __typename?: 'WorkflowEdgeModel', from: string, to: string }> | null, publishedBy?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null } } };
 
 export type DeleteWorkflowVersionDraftMutationVariables = Exact<{
   input: DeleteWorkflowVersionDraftInput;
@@ -5888,6 +5890,7 @@ export const WorkflowVersionFieldsFragmentDoc = `
     to
   }
   checkFormKey
+  cc
   changelog
   publishedAt
   publishedBy {

@@ -985,6 +985,8 @@ export interface DefinitionShape {
   edges?: WorkflowEdge[] | null;
   /** 缺席 = 存草稿時不送(不動已存的值) */
   checkFormKey?: string | null;
+  /** 整個流程的知會對象;缺席 = 存草稿時不送(不動已存的值) */
+  cc?: Record<string, unknown> | null;
 }
 
 /** 租戶管理員建客製流程 → 開草稿 → 存定義 → 發布;回發布後的版本。 */
@@ -1051,6 +1053,7 @@ export async function saveWorkflowDraft(
         ...(definition.checkFormKey !== undefined && {
           checkFormKey: definition.checkFormKey,
         }),
+        ...(definition.cc !== undefined && { cc: definition.cc }),
       },
     },
   });

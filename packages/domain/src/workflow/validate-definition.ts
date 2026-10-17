@@ -22,6 +22,8 @@ import {
 import {
   APPROVAL_MODES,
   ASSIGNEE_KINDS,
+  type AssigneeSource,
+  type OverdueReminderDef,
   REVIEW_STEP_PROPS,
   type ReviewStepDef,
   SKIP_ORG_TENANT,
@@ -125,6 +127,15 @@ export function validateWorkflowDefinition(
       {},
     );
   }
+  if (definition.cc !== undefined && definition.cc !== null) {
+    checkPeopleSource(
+      definition.cc,
+      { owner: FLOW_OWNER, role: "知會對象", property: "cc", location: {} },
+      options,
+      skipFields,
+      collector,
+    );
+  }
   if (isGraph) {
     validateWorkflowStructure(steps, definition.edges, collector);
   }
@@ -217,6 +228,8 @@ function checkReviewStep(
   }
   checkSkipOrgs(step, options, collector, location);
   checkAutoApprove(step, collector, location);
+  checkOverdue(step, options, skipFields, collector, location);
+  checkStepCc(step, options, skipFields, collector, location);
 }
 
 /**
@@ -300,6 +313,35 @@ function checkAutoApprove(
   }
 }
 
+/**
+ * 一個「找人」的設定位置(審核者 / 知會對象 / 逾時通知對象),訊息與定位都從這裡來:
+ * `owner` = 「關卡 <key>」或「流程」;`role` = 畫面上的名詞;`property` = 屬性路徑前綴。
+ */
+interface PeopleSlot {
+  owner: string;
+  role: "審核者" | "知會對象" | "逾時通知對象";
+  property: string;
+  location: WorkflowIssueLocation;
+}
+
+const FLOW_OWNER = "流程";
+
+function stepSlot(
+  step: ReviewStepDef,
+  role: PeopleSlot["role"],
+  property: string,
+  location: WorkflowIssueLocation,
+): PeopleSlot {
+  return { owner: `關卡 ${step.key}`, role, property, location };
+}
+
+/** 「關卡 k 的審核者」/「流程的知會對象」。 */
+function slotLabel(slot: PeopleSlot): string {
+  return slot.owner === FLOW_OWNER
+    ? `${FLOW_OWNER}的${slot.role}`
+    : `${slot.owner} 的${slot.role}`;
+}
+
 function checkAssignee(
   step: ReviewStepDef,
   options: ValidateWorkflowOptions,
@@ -307,40 +349,59 @@ function checkAssignee(
   collector: WorkflowIssueCollector,
   location: WorkflowIssueLocation,
 ): void {
-  const { assignee } = step;
+  checkPeopleSource(
+    step.assignee,
+    stepSlot(step, "審核者", "assignee", location),
+    options,
+    checkFields,
+    collector,
+  );
+}
+
+/**
+ * 找人的來源(審核者三種:人員條件 / 表單欄位 / 主管;知會對象同這三種,《底座規格》3.9)。
+ * 審核者、知會對象共用這一份檢查,錯誤碼相同、`property` 指到各自的位置。
+ */
+function checkPeopleSource(
+  raw: unknown,
+  slot: PeopleSlot,
+  options: ValidateWorkflowOptions,
+  checkFields: readonly FieldDef[] | null,
+  collector: WorkflowIssueCollector,
+): void {
   const at = (property: string): WorkflowIssueLocation => ({
-    ...location,
-    property: `assignee.${property}`,
+    ...slot.location,
+    property: `${slot.property}.${property}`,
   });
-  if (!(ASSIGNEE_KINDS as readonly string[]).includes(assignee.kind)) {
+  const source = raw as AssigneeSource | null;
+  if (
+    typeof source !== "object" ||
+    source === null ||
+    !(ASSIGNEE_KINDS as readonly string[]).includes(source.kind)
+  ) {
     collector.error(
       "ASSIGNEE_KIND_UNKNOWN",
-      `關卡 ${step.key} 的審核者來源不明`,
+      `${slotLabel(slot)}來源不明`,
       at("kind"),
     );
     return;
   }
-  switch (assignee.kind) {
+  switch (source.kind) {
     case "audience": {
-      checkAudience(
-        step,
-        assignee.audience,
-        options,
-        checkFields,
-        collector,
-        at,
-      );
+      checkAudience(slot, source.audience, options, checkFields, collector, at);
       return;
     }
     case "field": {
-      checkFieldSource(step, assignee, options, collector, at);
+      checkFieldSource(slot, source, options, collector, at);
       return;
     }
     case "manager": {
-      if (!Number.isInteger(assignee.level) || assignee.level < 1) {
+      if (!Number.isInteger(source.level) || source.level < 1) {
         collector.error(
           "MANAGER_LEVEL_INVALID",
-          `關卡 ${step.key} 的主管層級必須是正整數`,
+          slot.role === "審核者"
+            ? `${slot.owner} 的主管層級必須是正整數`
+            : `${slotLabel(slot)}主管層級必須是正整數`,
           at("level"),
         );
       }
@@ -358,20 +419,22 @@ function audienceProperty(path: string): string {
  * 人員條件:先驗格式(`AUDIENCE_INVALID`,只報第一個);共用流程再找不能用的條件列
  * (`AUDIENCE_IN_SHARED`);客製流程的角色 / 指定組織要屬本租戶(`ROLE_NOT_IN_TENANT` /
  * `ORG_NOT_IN_TENANT`)、指定的使用者不在 / 停用 → 警告(解析時會被略過);表單組織欄位對檢查用表單驗。
+ * `at` 收的是相對於 `slot.property` 的路徑(`audience.filter…`)。
  */
 function checkAudience(
-  step: ReviewStepDef,
+  slot: PeopleSlot,
   raw: unknown,
   options: ValidateWorkflowOptions,
   checkFields: readonly FieldDef[] | null,
   collector: WorkflowIssueCollector,
   at: (property: string) => WorkflowIssueLocation,
 ): void {
+  const label = slotLabel(slot);
   const validation = validateAudience(raw, APPROVER_AUDIENCE_OPTIONS);
   if (!validation.ok) {
     collector.error(
       "AUDIENCE_INVALID",
-      `關卡 ${step.key} 的審核者條件不完整或格式不對:${validation.issue.message}`,
+      `${label}條件不完整或格式不對:${validation.issue.message}`,
       at(audienceProperty(validation.issue.path)),
     );
     return;
@@ -381,12 +444,14 @@ function checkAudience(
     for (const { path } of sharedAudienceViolations(audience)) {
       collector.error(
         "AUDIENCE_IN_SHARED",
-        `共用流程的審核者條件只能用權限與非指定的組織來源(關卡 ${step.key})`,
+        slot.owner === FLOW_OWNER
+          ? `共用流程的${slot.role}條件只能用權限與非指定的組織來源`
+          : `共用流程的${slot.role}條件只能用權限與非指定的組織來源(${slot.owner})`,
         at(audienceProperty(path)),
       );
     }
   } else {
-    checkAudienceTenant(step, audience, options, collector, at);
+    checkAudienceTenant(slot, audience, options, collector, at);
   }
   if (checkFields === null) {
     return;
@@ -397,8 +462,8 @@ function checkAudience(
       collector.error(
         problem,
         problem === "FIELD_MISSING"
-          ? `關卡 ${step.key} 的審核者條件用的組織欄位 ${fieldKey} 不在檢查用表單`
-          : `關卡 ${step.key} 的審核者條件用的欄位 ${fieldKey} 不是組織引用欄`,
+          ? `${label}條件用的組織欄位 ${fieldKey} 不在檢查用表單`
+          : `${label}條件用的欄位 ${fieldKey} 不是組織引用欄`,
         at(audienceProperty(path)),
       );
     }
@@ -407,12 +472,13 @@ function checkAudience(
 
 /** 客製流程:角色 / 指定組織要屬本租戶;指定使用者不存在 / 不在本租戶 / 停用 → 警告。 */
 function checkAudienceTenant(
-  step: ReviewStepDef,
+  slot: PeopleSlot,
   audience: Audience,
   options: ValidateWorkflowOptions,
   collector: WorkflowIssueCollector,
   at: (property: string) => WorkflowIssueLocation,
 ): void {
+  const label = slotLabel(slot);
   for (const { leaf, path } of audienceLeavesOf(audience)) {
     if (leaf.value.kind !== "static") {
       continue;
@@ -426,7 +492,7 @@ function checkAudienceTenant(
     ) {
       collector.error(
         "ROLE_NOT_IN_TENANT",
-        `關卡 ${step.key} 的審核者條件選的角色不是本租戶的角色`,
+        `${label}條件選的角色不是本租戶的角色`,
         at(property),
       );
     }
@@ -437,19 +503,19 @@ function checkAudienceTenant(
     ) {
       collector.error(
         "ORG_NOT_IN_TENANT",
-        `關卡 ${step.key} 的審核者條件選的組織不在本租戶`,
+        `${label}條件選的組織不在本租戶`,
         at(property),
       );
     }
     if (leaf.field === "user") {
-      checkUsers(step, ids, options, collector, () => at(property));
+      checkUsers(slot, ids, options, collector, () => at(property));
     }
   }
 }
 
 /** 指定使用者:不存在 / 不在本租戶 / 已停用 → 警告(發布後解析時會被略過)。 */
 function checkUsers(
-  step: ReviewStepDef,
+  slot: PeopleSlot,
   userIds: readonly string[],
   options: ValidateWorkflowOptions,
   collector: WorkflowIssueCollector,
@@ -459,14 +525,15 @@ function checkUsers(
   if (users === undefined) {
     return;
   }
+  const who = slot.role === "審核者" ? slot.owner : `${slotLabel(slot)}條件`;
   for (const userId of userIds) {
     const fact = users.get(userId);
     if (fact?.isEnabled !== true) {
       collector.warn(
         "USER_INVALID",
         fact === undefined
-          ? `關卡 ${step.key} 指定的使用者 ${userId} 不存在或不在本租戶`
-          : `關卡 ${step.key} 指定的使用者 ${userId} 已停用`,
+          ? `${who} 指定的使用者 ${userId} 不存在或不在本租戶`
+          : `${who} 指定的使用者 ${userId} 已停用`,
         at(),
       );
     }
@@ -474,8 +541,8 @@ function checkUsers(
 }
 
 function checkFieldSource(
-  step: ReviewStepDef,
-  assignee: { formKey: string; fieldKey: string },
+  slot: PeopleSlot,
+  source: { formKey: string; fieldKey: string },
   options: ValidateWorkflowOptions,
   collector: WorkflowIssueCollector,
   at: (property: string) => WorkflowIssueLocation,
@@ -483,25 +550,98 @@ function checkFieldSource(
   if (options.forms === undefined) {
     return;
   }
-  if (!options.forms.has(assignee.formKey)) {
+  const label = slotLabel(slot);
+  if (!options.forms.has(source.formKey)) {
     collector.error(
       "FIELD_FORM_MISSING",
-      `關卡 ${step.key} 的審核者欄位所屬表單 ${assignee.formKey} 不存在`,
+      `${label}欄位所屬表單 ${source.formKey} 不存在`,
       at("formKey"),
     );
     return;
   }
-  const fields = options.forms.get(assignee.formKey) ?? [];
-  const problem = assigneeFieldProblem(fields, assignee.fieldKey);
+  const fields = options.forms.get(source.formKey) ?? [];
+  const problem = assigneeFieldProblem(fields, source.fieldKey);
   if (problem !== null) {
     collector.error(
       problem,
       problem === "FIELD_MISSING"
-        ? `關卡 ${step.key} 的審核者欄位 ${assignee.fieldKey} 不在表單 ${assignee.formKey} 的目前版本`
-        : `關卡 ${step.key} 的審核者欄位 ${assignee.fieldKey} 不是使用者型引用欄`,
+        ? `${label}欄位 ${source.fieldKey} 不在表單 ${source.formKey} 的目前版本`
+        : `${label}欄位 ${source.fieldKey} 不是使用者型引用欄`,
       at("fieldKey"),
     );
   }
+}
+
+/** 正整數小時。 */
+function isWholeHours(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 1;
+}
+
+/**
+ * 逾時提醒(B16):N、M 是正整數小時且 M > N(`OVERDUE_INVALID`,設計器擋下、不能發布);
+ * 通知對象是人員條件,與審核者同一套檢查(`AUDIENCE_INVALID`、`AUDIENCE_IN_SHARED`…)。
+ */
+function checkOverdue(
+  step: ReviewStepDef,
+  options: ValidateWorkflowOptions,
+  checkFields: readonly FieldDef[] | null,
+  collector: WorkflowIssueCollector,
+  location: WorkflowIssueLocation,
+): void {
+  const raw: unknown = step.overdue;
+  if (raw === undefined || raw === null) {
+    return;
+  }
+  const candidate = raw as Partial<Record<keyof OverdueReminderDef, unknown>>;
+  if (
+    typeof raw !== "object" ||
+    Array.isArray(raw) ||
+    !isWholeHours(candidate.reviewerAfterHours) ||
+    !isWholeHours(candidate.audienceAfterHours)
+  ) {
+    collector.error(
+      "OVERDUE_INVALID",
+      `關卡 ${step.key} 的逾時提醒時數要是正整數小時`,
+      { ...location, property: "overdue" },
+    );
+    return;
+  }
+  if (candidate.audienceAfterHours <= candidate.reviewerAfterHours) {
+    collector.error(
+      "OVERDUE_INVALID",
+      `關卡 ${step.key} 的逾時提醒:通知對象的時數要大於通知審核者的時數`,
+      { ...location, property: "overdue.audienceAfterHours" },
+    );
+  }
+  const slot = stepSlot(step, "逾時通知對象", "overdue", location);
+  checkAudience(
+    slot,
+    candidate.audience,
+    options,
+    checkFields,
+    collector,
+    (property) => ({ ...location, property: `overdue.${property}` }),
+  );
+}
+
+/** 關卡的知會對象(B17;來源同審核者三種)。 */
+function checkStepCc(
+  step: ReviewStepDef,
+  options: ValidateWorkflowOptions,
+  checkFields: readonly FieldDef[] | null,
+  collector: WorkflowIssueCollector,
+  location: WorkflowIssueLocation,
+): void {
+  if (step.cc === undefined || step.cc === null) {
+    return;
+  }
+  checkPeopleSource(
+    step.cc,
+    stepSlot(step, "知會對象", "cc", location),
+    options,
+    checkFields,
+    collector,
+  );
 }
 
 /** `skipWhen` 要對照的表單欄位:檢查用表單優先,否則第一個 `field` 來源的表單目前版本。 */

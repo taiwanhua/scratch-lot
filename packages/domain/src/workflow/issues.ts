@@ -32,6 +32,8 @@ export const WORKFLOW_ERROR_CODES = [
   "SKIP_ORGS_INVALID",
   "SKIP_ORGS_IN_SHARED",
   "AUTO_APPROVE_INVALID",
+  // 逾時提醒(知會對象的來源沿用審核者的碼,`property` 指到 `cc…`)
+  "OVERDUE_INVALID",
   // 匯合節點
   "JOIN_IN_LINEAR",
   "JOIN_HAS_REVIEW_PROPS",
