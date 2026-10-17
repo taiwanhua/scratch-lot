@@ -9,13 +9,15 @@ import { ThemeProvider } from "@mui/material/styles";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 
+import { projectPublic } from "@repo/project-config/public";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { TextField } from "@repo/ui/text-field";
 import { createAppTheme, createBrandFromPrimary } from "@repo/ui/theme";
 
 const HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/;
-const DEFAULT_HEX = "#FB7B10";
+/** 起始色 = 專案目前的主色(與 preview.tsx 整個目錄用的同一份),從它開始調 */
+const DEFAULT_HEX = projectPublic.brand.primary;
 
 /**
  * Palette Lab:貼上一個主色,立即預覽所有元件換裝後的效果。
