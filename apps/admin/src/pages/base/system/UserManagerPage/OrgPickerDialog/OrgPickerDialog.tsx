@@ -7,8 +7,8 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { OrgTreePicker } from "@/components/OrgTreePicker/OrgTreePicker";
-import type { OrgNodeLike } from "@/lib/org-tree";
+import { OrgTreePicker } from "@/components/base/OrgTreePicker/OrgTreePicker";
+import type { OrgNodeLike } from "@/lib/base/org-tree";
 
 export interface OrgPickerDialogProps {
   title: string;

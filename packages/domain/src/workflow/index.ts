@@ -5,6 +5,7 @@
  * - `types.ts`:StepDef / edges、實例 / StepState / 派任計畫 / 決定 / 歷程、任務與提交的 6b 形狀
  * - `graph.ts`:`startStepKey` / `endStepKey` / `nextStepKeys` / `previousStepKeys`
  * - `validate-definition.ts` / `validate-structure.ts` / `issues.ts`:定義檢查器(含結構檢查)
+ * - `approver-audience.ts`:審核者來源「人員條件」的使用處選項與共用流程限制
  * - `form-refs.ts`、`submit-check.ts`:流程對表單欄位的引用檢查、送出時檢查
  * - `evaluate.ts`:`evaluateStep`(會簽模式的有效結果與 `late`)與全案終局選取
  * - `projection.ts`:任務投影規則(判斷表列 7)
@@ -13,6 +14,7 @@
  * - `managers.ts`:主管解析的純規則(從提交組織往上、上界租戶、剔除申請人)
  */
 export * from "./advance";
+export * from "./approver-audience";
 export * from "./evaluate";
 export * from "./form-refs";
 export * from "./graph";

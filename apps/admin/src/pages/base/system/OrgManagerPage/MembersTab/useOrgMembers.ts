@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { z } from "zod";
 
 import {
   type OrgMembersQueryVariables,
@@ -7,13 +8,22 @@ import {
   useOrgMembersQuery,
 } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
 
 import {
   type OrgManagerErrorCode,
   orgManagerErrorOf,
 } from "../org-manager-error";
 import { ORG_MEMBERS_PAGE_SIZE, type OrgMemberRow } from "../org-manager-types";
+
+/**
+ * 成員清單的頁碼存在網址 `?members=`(REACT-14),連同它屬於哪個組織:換了組織(`?detail=` 變了)頁碼自然回到第一頁,
+ * 不必由選組織的那一邊來清。
+ */
+const membersSchema = z
+  .object({ org: z.string(), page: z.number().int().min(1) })
+  .default({ org: "", page: 1 });
 
 /**
  * 「成員」頁籤的資料層(#377):`orgMembers` 清單 + 增量加入。
@@ -24,7 +34,12 @@ import { ORG_MEMBERS_PAGE_SIZE, type OrgMemberRow } from "../org-manager-types";
 export const useOrgMembers = (orgId: string, onAdded: () => void) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
+  const [members, setMembers] = useUrlState("members", membersSchema);
+  const page = members.org === orgId ? members.page : 1;
+  /** 第一頁寫回預設值(key 從網址拿掉)。 */
+  const setPage = (next: number) => {
+    setMembers(next === 1 ? { org: "", page: 1 } : { org: orgId, page: next });
+  };
   const [errorCode, setErrorCode] = useState<OrgManagerErrorCode | null>(null);
 
   const variables = useMemo<OrgMembersQueryVariables>(

@@ -6,14 +6,14 @@ import type {
 } from "@repo/domain/workflow";
 import { useValidateWorkflowVersionQuery } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
-import { definitionInputOf } from "@/lib/workflow/definition";
-import { definitionFingerprint } from "@/lib/workflow/flow-model";
-import { mergeReports } from "@/lib/workflow/validation";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionInputOf } from "@/lib/base/workflow/definition";
+import { definitionFingerprint } from "@/lib/base/workflow/flow-model";
+import { mergeReports } from "@/lib/base/workflow/validation";
 import {
   type WorkflowError,
   workflowErrorOf,
-} from "@/lib/workflow/workflow-errors";
+} from "@/lib/base/workflow/workflow-errors";
 
 /** 一次「檢查」的結果(按下當時的定義與檢查用表單)。 */
 export interface FlowCheckResult {

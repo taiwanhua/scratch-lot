@@ -4,14 +4,14 @@ import { useState } from "react";
 
 import { ModuleListColumnKind } from "@repo/graphql";
 
-import { formModulePages } from "@/components/form-engine/FormModulePages/form-module-pages";
+import { formModulePages } from "@/components/base/form-engine/FormModulePages/form-module-pages";
 import {
   SHOPPING_ALL,
   defaultRuntimeOptions,
-} from "@/components/form-engine/FormModulePages/form-module-test-support";
-import { FormSubmissionList } from "@/components/form-engine/FormSubmissionList";
-import { DEFAULT_FORM_MODULE_OPTIONS } from "@/lib/form-engine/form-module-options";
-import type { ModulePageProps } from "@/lib/module-tree";
+} from "@/components/base/form-engine/FormModulePages/form-module-test-support";
+import { FormSubmissionList } from "@/components/base/form-engine/FormSubmissionList";
+import { DEFAULT_FORM_MODULE_OPTIONS } from "@/lib/base/form-engine/form-module-options";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 import { authWorld } from "@/test/msw/auth-handlers";
 import {
   DEMO_FORM_KEY,
@@ -120,7 +120,9 @@ describe("底座來源 + 空專案(原版相容性)", () => {
         "system.field-manager",
         "system.forms",
         "system.module-manager",
+        "system.notification-settings",
         "system.org-manager",
+        "system.printers",
         "system.role-manager",
         "system.user-manager",
         "system.workflows",
@@ -129,11 +131,8 @@ describe("底座來源 + 空專案(原版相容性)", () => {
     );
   });
 
-  it("寬度照舊:表單管理與流程管理 xl,其餘用殼層預設", () => {
-    expect(baseOnly.pageMinWidths).toEqual({
-      "system.forms": "xl",
-      "system.workflows": "xl",
-    });
+  it("寬度:底座頁都沒宣告,一律用殼層預設(兩個設計器在 xl 以下自己換版,T48)", () => {
+    expect(baseOnly.pageMinWidths).toEqual({});
   });
 
   it("三個示範表單模組的設定取自同一份 forms 登記,模板用預設", () => {

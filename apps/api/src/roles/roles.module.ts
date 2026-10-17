@@ -28,6 +28,6 @@ import { RolesService } from "./roles.service";
     RolesResolver,
     OrgQualificationService,
   ],
-  exports: [RolesService],
+  exports: [RolesService, RoleMatrixService],
 })
 export class RolesModule {}

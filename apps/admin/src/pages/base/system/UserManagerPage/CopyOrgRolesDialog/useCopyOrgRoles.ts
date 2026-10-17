@@ -8,9 +8,9 @@ import {
   useCopyUserOrgRolesMutation,
 } from "@repo/graphql";
 
-import type { UserCandidate } from "@/components/UserPicker/useUserCandidates";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import type { UserCandidate } from "@/components/base/UserPicker/useUserCandidates";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 
 import {
   type UserManagerErrorCode,

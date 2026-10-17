@@ -13,8 +13,8 @@ import { Stack } from "@repo/ui/stack";
 import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
-import { newColumnOf, nextKey } from "@/lib/form-engine/designer-ops";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
+import { newColumnOf, nextKey } from "@/lib/base/form-engine/designer-ops";
 
 import { useRowIds } from "../useRowIds";
 

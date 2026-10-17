@@ -11,7 +11,7 @@ import type { ArrayColumnDef, ArrayRowValue, FieldDef } from "./types";
  * - 刪除:前一版有、後一版沒有的 `rowId`
  * - 移動:兩版都有的列裡,**真正被搬動的**那幾列 —— 共有的列取前一版順序的最長遞增子序列(LIS)當作沒動,
  *   其餘標移動;所以 `[a, b, c] → [c, a, b]` 只有 c 是移動(順序 = 陣列順序持久化)
- * - 改值:兩版都有的列,某些子欄的值不同(比識別:選項比 value、數字比數值、日期比時點)
+ * - 改值:兩版都有的列,某些子欄的值不同(比識別:選項比 value、引用比 id(label 快照不同不算)、數字比數值、日期比時點)
  *
  * 一列可以同時移動又改值。沒有任何變動的列不列出。
  */
@@ -43,6 +43,9 @@ function cellIdentity(column: ArrayColumnDef, value: unknown): string {
   if (column.type === "date" || column.type === "datetime") {
     const instant = toInstant(value);
     return instant === null ? JSON.stringify(value) : String(instant);
+  }
+  if (column.type === "reference") {
+    return JSON.stringify(isRecord(value) ? (value.id ?? null) : value);
   }
   if (isRecord(value)) {
     return JSON.stringify(value.value ?? value.id ?? value);

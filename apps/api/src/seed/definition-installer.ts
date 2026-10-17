@@ -84,9 +84,9 @@ function stepIndex(step: SeedInstallationStep): number {
  *
  * 表單與流程共用同一套判斷,差異收在 `DefinitionAdapter`;**所有身分 / 版本寫入都經原設計服務**,
  * 這裡只決定「要不要寫、接著哪一步」,並在第一筆寫入前把所有權(預配置的 id、預期前置狀態、兩個 hash)
- * 記進安裝紀錄。沒有交易:任何一步失敗就停在做到一半的樣子,重跑時以**實體的實際狀態**找接續點 ——
- * 預配置 id 的草稿還在就接著存 / 發布,已是 `publishing` 或已發布未切換就走原服務的重試,
- * 已切換只差紀錄就核對後補記,所以不會重試成第二個正式版本。
+ * 記進安裝紀錄。整次安裝不包成單一交易(每個原服務動作各自是一個交易,ADR-0013):任何一步失敗就停在
+ * 那一步之前,重跑時以**實體的實際狀態**找接續點 —— 預配置 id 的草稿還在就接著存 / 發布(發布是一個交易,
+ * 不會停在發布到一半),已發布只差紀錄就核對後補記,所以不會重試成第二個正式版本。
  */
 @Injectable()
 export class DefinitionInstaller {
@@ -197,12 +197,6 @@ export class DefinitionInstaller {
         installation,
         definition,
       );
-      if (version.status !== "published" && version.status !== "retired") {
-        throw new SeedConflictError(
-          "PUBLISH_IN_PROGRESS",
-          `${definitionSeedId(seed)} 對應的版本 ${String(installation.localVersion)} 發布尚未完成`,
-        );
-      }
       if (
         version.contentHashWith(installation.metadata) !==
         installation.storedContentHash
@@ -310,13 +304,6 @@ export class DefinitionInstaller {
       return { action: "publish", definition: null, mode: "created" };
     }
     this.assertOwnership(prepared, definition);
-    const interrupted = await adapter.findInterruptedPublish(facts, seed.key);
-    if (interrupted !== null) {
-      throw new SeedConflictError(
-        "PUBLISH_IN_PROGRESS",
-        `${id}:版本 ${String(interrupted.version)} 的發布尚未完成,請先在原畫面完成或重試發布`,
-      );
-    }
     // 這個 revision 還沒登記過,現場的任何草稿都不是這次安裝的:採納、退役、發新版都先報衝突
     await this.assertNoForeignDraft(run, prepared, null);
     const prior = await this.lastInstalled(run, seed, definition.id);
@@ -528,12 +515,6 @@ export class DefinitionInstaller {
       installation,
       definition,
     );
-    if ((await adapter.findInterruptedPublish(run.facts, seed.key)) !== null) {
-      throw new SeedConflictError(
-        "PUBLISH_IN_PROGRESS",
-        `${definitionSeedId(seed)}:有尚未完成的發布,請先在原畫面完成或重試發布`,
-      );
-    }
     // 已安裝的重跑也不略過別人的草稿(純 inspect 不走這裡)
     await this.assertNoForeignDraft(run, prepared, null);
     await this.assertSettled(run, prepared, definition, version);
@@ -746,7 +727,7 @@ export class DefinitionInstaller {
   /**
    * 未完成的安裝能不能接續(零寫入):整批預檢與每一輪續跑開頭都先過這一關,
    * 所以「改了名稱才發現有別人的草稿」不會發生 —— 身分、所有權、別人的草稿、`currentVersion`、
-   * 發布中斷、metadata 與自己草稿有沒有被改過,都在第一筆寫入之前判斷。
+   * metadata 與自己草稿有沒有被改過,都在第一筆寫入之前判斷。
    */
   private async assertResumable(
     run: SeedRun,
@@ -782,80 +763,47 @@ export class DefinitionInstaller {
           );
     await this.assertNoForeignDraft(run, prepared, installation.draftId);
     if (installation.draftId === null) {
-      // 照既有版本退役:那一版只能停在「還沒退役 / 退役到一半 / 已退役」
+      // 照既有版本退役:那一版只能是「還沒退役(目前版本)/ 已退役」
       const mapped = await this.requireMappedVersion(
         run,
         prepared,
         installation,
         definition,
       );
-      await this.assertLegalStep(run, prepared, installation, definition, {
-        version: mapped,
-        isOwnPublish: false,
-      });
+      await this.assertLegalStep(run, prepared, definition, mapped);
       return;
     }
     if (ours === null || ours.status === "draft") {
-      await this.assertPublishable(
-        run,
-        prepared,
-        installation,
-        definition,
-        ours,
-      );
+      this.assertPublishable(run, prepared, installation, definition, ours);
       return;
     }
-    await this.assertLegalStep(run, prepared, installation, definition, {
-      version: ours,
-      isOwnPublish: true,
-    });
+    await this.assertLegalStep(run, prepared, definition, ours);
   }
 
   /**
-   * 版本已有版號之後的續跑前提(零寫入):現場只能是**這次安裝自己合法步驟**留下的中間狀態 ——
-   * 發布中、已發布但 `currentVersion` 還是登記時的值、已切換、(目標是退役時)退役到一半或已退役。
-   * 其餘的 `currentVersion` / 版本狀態、別人的發布中斷、名稱 / 頁籤模板或凍結內容不是宣告的值,
-   * 都是外部漂移,在重試發布、退役或記成功之前就拒絕。
+   * 版本已有版號之後的續跑前提(零寫入):現場只能是**這次安裝自己合法步驟**留下的狀態 ——
+   * 已發布且是目前版本、(目標是退役時)已退役。發布與退役都是一個交易,不會停在半路;
+   * 其餘的 `currentVersion` / 版本狀態、名稱 / 頁籤模板或凍結內容不是宣告的值,
+   * 都是外部漂移,在退役或記成功之前就拒絕。
    */
   private async assertLegalStep(
     run: SeedRun,
     { adapter, seed, target }: Prepared<DefinitionSeedSet>,
-    installation: InstallationRecord,
     definition: DefinitionSnapshot,
-    step: { version: VersionSnapshot; isOwnPublish: boolean },
+    version: VersionSnapshot,
   ): Promise<void> {
     const id = definitionSeedId(seed);
-    const { version, isOwnPublish } = step;
     const current = definition.currentVersion;
     const isCurrent = current === version.version;
-    // 自己發布到一半:版號已配、目前版本還沒切過來(仍是登記時的那一個)
-    const isBeforeSwitch =
-      isOwnPublish &&
-      !isCurrent &&
-      current === installation.expected.currentVersion;
     const isLegal =
-      (version.status === "publishing" && isBeforeSwitch) ||
-      (version.status === "published" && (isCurrent || isBeforeSwitch)) ||
+      (version.status === "published" && isCurrent) ||
       (version.status === "retired" &&
         seed.desiredStatus === "retired" &&
-        (isCurrent || current === null));
+        current === null);
     if (!isLegal) {
       throw new SeedConflictError(
         "CURRENT_VERSION_DRIFT",
         `${id}:版本 ${String(version.version)} 是 ${version.status}、目前版本 ${String(current)};不是這次安裝留下的狀態,現場另外發布或退役過`,
-      );
-    }
-    const interrupted = await adapter.findInterruptedPublish(
-      run.facts,
-      seed.key,
-    );
-    if (
-      interrupted !== null &&
-      !(isOwnPublish && interrupted.id.equals(version.id))
-    ) {
-      throw new SeedConflictError(
-        "PUBLISH_IN_PROGRESS",
-        `${id}:有不是這次安裝的發布尚未完成`,
       );
     }
     // 走到這裡 metadata 已是宣告的值(發新版時先改好才發布;照既有版本退役時登記前就相符)
@@ -884,24 +832,18 @@ export class DefinitionInstaller {
   }
 
   /** 發布前(自己的版本還不存在或還是草稿)的現場前提;全部是讀取。 */
-  private async assertPublishable(
+  private assertPublishable(
     run: SeedRun,
     { adapter, seed, target }: Prepared<DefinitionSeedSet>,
     installation: InstallationRecord,
     definition: DefinitionSnapshot,
     ownDraft: VersionSnapshot | null,
-  ): Promise<void> {
+  ): void {
     const id = definitionSeedId(seed);
     if (definition.currentVersion !== installation.expected.currentVersion) {
       throw new SeedConflictError(
         "CURRENT_VERSION_DRIFT",
         `${id}:目前版本是 ${String(definition.currentVersion)},登記時是 ${String(installation.expected.currentVersion)};現場另外發布或退役過`,
-      );
-    }
-    if ((await adapter.findInterruptedPublish(run.facts, seed.key)) !== null) {
-      throw new SeedConflictError(
-        "PUBLISH_IN_PROGRESS",
-        `${id}:有不是這次安裝的發布尚未完成`,
       );
     }
     // metadata:已是目標值(含自己先前的寫入),或還是登記時看到的值;其餘是現場改過
@@ -963,7 +905,7 @@ export class DefinitionInstaller {
 
   /**
    * 讓預配置 id 的那一版成為已發布且 `currentVersion` 指向它(或已退役 —— 交給後面的步驟判斷)。
-   * 依那一版現在的狀態接續:不存在 / 草稿 → metadata、草稿、存檔、發布;發布到一半 → 原服務的重試。
+   * 依那一版現在的狀態接續:不存在 / 草稿 → metadata、草稿、存檔、發布(一個交易);已有版號 → 不再發布。
    */
   private async ensurePublished(
     run: SeedRun,
@@ -994,20 +936,6 @@ export class DefinitionInstaller {
         definitionId: installation.definitionId,
         currentVersion: installation.expected.currentVersion,
       });
-    } else if (
-      ours.status === "publishing" ||
-      (ours.status === "published" &&
-        definition.currentVersion !== ours.version)
-    ) {
-      const interrupted = await adapter.findInterruptedPublish(facts, seed.key);
-      if (interrupted?.id.equals(draftId) !== true) {
-        throw new SeedConflictError(
-          "PUBLISH_IN_PROGRESS",
-          `${id}:有不是這次安裝的發布尚未完成`,
-        );
-      }
-      await this.hooks.reached("retry-publish");
-      await adapter.retryPublish(facts, seed.key, draftId);
     }
     ours = await this.requireVersion(run, prepared, draftId);
     return [installation, ours];
@@ -1031,7 +959,7 @@ export class DefinitionInstaller {
     let installation = reserved;
     // 寫入之前再核對一次全部前提(續跑開頭查過;身分剛建好時這裡是第一次)
     await this.assertNoForeignDraft(run, prepared, draftId);
-    await this.assertPublishable(
+    this.assertPublishable(
       run,
       prepared,
       installation,
@@ -1092,11 +1020,8 @@ export class DefinitionInstaller {
     if (isDone) {
       return version;
     }
-    // 只有「還是目前版本」才退役(已發布,或上次退役做到一半);其餘是現場另外發布 / 退役過
-    if (
-      !isCurrent ||
-      (version.status !== "published" && version.status !== "retired")
-    ) {
+    // 只有「還是目前發布版」才退役(退役是一個交易,不會做到一半);其餘是現場另外發布 / 退役過
+    if (!isCurrent || version.status !== "published") {
       throw new SeedConflictError(
         "CURRENT_VERSION_DRIFT",
         `${id}:版本 ${String(version.version)} 不是目前版本(目前 ${String(definition?.currentVersion ?? null)}),不退役別的版本`,

@@ -6,7 +6,7 @@ import {
   findOrgNode,
   flattenOrgs,
   orgTrail,
-} from "@/lib/org-tree";
+} from "@/lib/base/org-tree";
 
 export interface UseMoveTargetsOptions {
   nodes: readonly OrgNodeLike[];

@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../database/database.module";
+import { ForeignFormPermissions } from "./foreign-form-permissions";
 import { MeModulesResolver } from "./me-modules.resolver";
 import { PermissionResolver } from "./permission-resolver";
 
@@ -12,7 +13,7 @@ import { PermissionResolver } from "./permission-resolver";
 @Global()
 @Module({
   imports: [DatabaseModule],
-  providers: [PermissionResolver, MeModulesResolver],
-  exports: [PermissionResolver],
+  providers: [PermissionResolver, ForeignFormPermissions, MeModulesResolver],
+  exports: [PermissionResolver, ForeignFormPermissions],
 })
 export class PermissionModule {}

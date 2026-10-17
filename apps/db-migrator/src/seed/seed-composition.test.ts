@@ -137,7 +137,7 @@ function moduleNode(
 }
 
 describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
-  it("普通種子的內容與搬檔前相同:8 類種子、38 個模組、114 筆權限、4 個資料範圍目標、68 筆模板綁定、root 初始帳號一份", () => {
+  it("普通種子的內容與搬檔前相同:8 類種子、41 個模組、124 筆權限、4 個資料範圍目標、74 筆模板綁定、root 初始帳號一份", () => {
     expect(
       baseRegistry.map((set) =>
         set.kind === "documents" ? set.collection : set.kind,
@@ -156,15 +156,15 @@ describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
       "data_scope_targets",
       "relations",
     ]);
-    expect(entryKeys(baseRegistry, "modules")).toHaveLength(38);
-    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(114);
+    expect(entryKeys(baseRegistry, "modules")).toHaveLength(41);
+    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(124);
     expect(entryKeys(baseRegistry, "data_scope_targets")).toHaveLength(4);
     expect(
       relationsOf(baseRegistry, "role_module", "tenant-admin"),
-    ).toHaveLength(34);
+    ).toHaveLength(37);
     expect(
       relationsOf(baseRegistry, "role_permission", "tenant-admin"),
-    ).toHaveLength(34);
+    ).toHaveLength(37);
     expect(baseRegistry.some((set) => isDefinitionSeedSet(set))).toBe(false);
   });
 
@@ -261,7 +261,7 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
       ],
     });
     const keys = entryKeys(projectRegistry, "modules");
-    expect(keys).toHaveLength(38 + 8);
+    expect(keys).toHaveLength(41 + 8);
     expect(keys.indexOf("demo")).toBeLessThan(keys.indexOf(PROJECT_REPORT_KEY));
     expect(keys.indexOf("system")).toBeLessThan(
       keys.indexOf(PROJECT_AUDIT_KEY),
@@ -294,9 +294,9 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
     }
     // 模板只綁 wildcard,不綁個別權限
     expect(boundPermissions).not.toContain(`${PROJECT_REPORT_KEY}.export`);
-    // 底座 34 個 + 專案報表 2 + 專案表單 4
-    expect(boundModules).toHaveLength(34 + 6);
-    expect(boundPermissions).toHaveLength(34 + 6);
+    // 底座 37 個 + 專案報表 2 + 專案表單 4
+    expect(boundModules).toHaveLength(37 + 6);
+    expect(boundPermissions).toHaveLength(37 + 6);
   });
 
   it("專案的個別權限與資料範圍目標由同一次推導產生(每個模組仍恰一筆 wildcard)", () => {
@@ -309,8 +309,8 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
         `${PROJECT_FORM_KEY}.create`,
       ]),
     );
-    // 底座 114 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
-    expect(permissionKeys).toHaveLength(114 + 8 + 7);
+    // 底座 124 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
+    expect(permissionKeys).toHaveLength(124 + 8 + 7);
     expect(entryKeys(projectRegistry, "data_scope_targets")).toEqual(
       expect.arrayContaining([PROJECT_REPORT_KEY, PROJECT_FORM_KEY]),
     );
@@ -375,7 +375,7 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
   });
 
   it("專案在底座既有的 collection 加種子:政策相同就並存", () => {
-    expect(entryKeys(projectRegistry, "fields")).toHaveLength(7 + 1);
+    expect(entryKeys(projectRegistry, "fields")).toHaveLength(10 + 1);
     expect(entryKeys(projectRegistry, "roles")).toEqual([
       "super-admin",
       "tenant-admin",
@@ -816,7 +816,25 @@ describe("版本化定義宣告的組裝", () => {
           {
             key: "named",
             name: "指定人",
-            assignee: { kind: "users", userIds: ["0123456789abcdef01234567"] },
+            assignee: {
+              kind: "audience",
+              audience: {
+                mode: "match",
+                filter: {
+                  op: "AND",
+                  children: [
+                    {
+                      field: "user",
+                      cond: "in",
+                      value: {
+                        kind: "static",
+                        values: ["0123456789abcdef01234567"],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
             mode: "any",
           },
         ],
@@ -832,7 +850,9 @@ describe("版本化定義宣告的組裝", () => {
       ),
     );
     expect(problems).toEqual([
-      expect.stringContaining("definition.steps.0.assignee.userIds"),
+      expect.stringContaining(
+        "definition.steps.0.assignee.audience.filter.children[0]",
+      ),
     ]);
     expect(problems[0]).toContain("ASSIGNEE_NOT_PORTABLE");
   });
@@ -919,8 +939,8 @@ describe("每個條目只排一次;自我引用是循環", () => {
   it("定義引用的底座模組不會被再排一次:正式組裝通過,模組文件各一筆,定義在最後", () => {
     const registry = withProject({ seeds: [orderForm] })();
     const moduleKeys = entryKeys(registry, "modules");
-    expect(moduleKeys).toHaveLength(38);
-    expect(new Set(moduleKeys).size).toBe(38);
+    expect(moduleKeys).toHaveLength(41);
+    expect(new Set(moduleKeys).size).toBe(41);
     expect(moduleKeys.filter((key) => key === "demo-form")).toEqual([
       "demo-form",
     ]);

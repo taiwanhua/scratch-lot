@@ -17,6 +17,7 @@ import {
   dataScopeWorld,
 } from "@/test/msw/data-scope-handlers";
 import { orgUsers, rootTree } from "@/test/msw/org-fixtures";
+import { matrixModules } from "@/test/msw/role-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
@@ -97,15 +98,19 @@ const modulesWith = (permissions: readonly string[]): TestModule[] => [
 export const renderPage = ({
   permissions = [...DATA_SCOPE_OWN_PERMISSIONS, ...PICKER_PERMISSIONS],
   world = {},
+  search = "",
 }: {
   permissions?: readonly string[];
   world?: DataScopeWorldOptions;
+  /** 起始網址的查詢字串(含 `?`;重新整理、帶參數打開用) */
+  search?: string;
 } = {}) => {
   const fake = dataScopeWorld({
     targets: dataScopeTargets,
     roles: dataScopeRoles,
     users: orgUsers,
     orgTree: rootTree,
+    permissionModules: matrixModules,
     ...world,
   });
   server.use(
@@ -115,7 +120,7 @@ export const renderPage = ({
       modules: modulesWith(permissions),
     }).handlers,
   );
-  return { ...renderApp({ path: "/system/data-scope" }), fake };
+  return { ...renderApp({ path: `/system/data-scope${search}` }), fake };
 };
 
 /** 右邊的規則編輯器(左清單也有目標名稱,查詢一律先收斂到其中一邊)。 */
@@ -182,6 +187,19 @@ export const comboboxes = (label: string) =>
 
 export const comboboxAt = (label: string, index = 0): Element => {
   const found = comboboxes(label);
+  expect(found.length).toBeGreaterThan(index);
+  return found[index];
+};
+
+/** 第 n 條規則的「套用對象」(AudiencePicker)與「條件組合」兩塊。 */
+export const audienceRegion = (index = 0): HTMLElement => {
+  const found = within(editor()).getAllByRole("region", { name: "套用對象" });
+  expect(found.length).toBeGreaterThan(index);
+  return found[index];
+};
+
+export const conditionsRegion = (index = 0): HTMLElement => {
+  const found = within(editor()).getAllByRole("region", { name: "條件組合" });
   expect(found.length).toBeGreaterThan(index);
   return found[index];
 };

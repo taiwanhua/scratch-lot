@@ -7,7 +7,7 @@ import { Link } from "@repo/ui/link";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import { SAMPLE_ONE_I18N } from "../demo-sample-one-config";
 import type { DemoItemDetail } from "../demo-sample-one-types";

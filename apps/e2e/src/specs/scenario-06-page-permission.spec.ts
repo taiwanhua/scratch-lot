@@ -36,7 +36,7 @@ test("劇本 6:填寫提示與變更歷程各綁自己那一頁的權限,少了�
   await signIn(page, tenant.member.account, tenant.member.password);
 
   // 兩個區塊都是 `<section aria-label=…>`(`FormTipsBlock` / `ItemHistoryBlock`),
-  // 範圍限在殼的 `<main>` 內(右上角 Snackbar 不在裡面,見 `fixtures/ui.ts`)
+  // 範圍限在殼的 `<main>` 內(右下角 Snackbar 不在裡面,見 `fixtures/ui.ts`)
   const tips = pageArea(page).getByRole("region", { name: TIPS_REGION });
   const history = pageArea(page).getByRole("region", { name: HISTORY_REGION });
 

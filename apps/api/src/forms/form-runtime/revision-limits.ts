@@ -49,7 +49,7 @@ export function assertSubmissionCapacity(
       "REVISION_LIMIT",
     );
   }
-  const next = { ...record, ...write.set, revisions };
+  const next = { ...plainOf(record), ...write.set, revisions };
   const bytes = mongo.BSON.calculateObjectSize(next);
   if (bytes > MAX_DOCUMENT_BYTES) {
     throw conflictError(
@@ -57,4 +57,13 @@ export function assertSubmissionCapacity(
       "DOCUMENT_TOO_LARGE",
     );
   }
+}
+
+/**
+ * 估算用的純資料:repository 回的是 hydrated 文件,展開會帶到 Mongoose 的內部狀態 —— 交易內讀的文件
+ * 內部掛著 `ClientSession`,BSON 算不了大小(拋錯)。有 `toObject` 就先轉成純物件。
+ */
+function plainOf(record: { revisions: readonly unknown[] }): object {
+  const toObject = (record as { toObject?: () => object }).toObject;
+  return typeof toObject === "function" ? toObject.call(record) : record;
 }

@@ -84,7 +84,17 @@ export class SaveFormDraftInput {
   touched?: string[] | null;
 }
 
-/** 送出草稿(以存的值全驗、重算、寫快照)。 */
+/**
+ * 新增頁的 [送出]:一個交易內建立 + 守門 + 送出,失敗時不留任何資料(不產生草稿)。
+ * 欄位語意同 `CreateFormDraftInput`;同 `(建立者, clientRequestId)` 重試回同一筆。
+ */
+@InputType()
+export class CreateAndSubmitFormSubmissionInput extends CreateFormDraftInput {}
+
+/**
+ * 送出草稿 / 被退回 / 撤回的單(全驗、重算、寫快照)。`values` 缺席 = 以存的值送出;
+ * 有值 = 這次畫面上的整張表單狀態(語意同 `SaveFormDraftInput.values`),與送出在同一個交易寫入。
+ */
 @InputType()
 export class SubmitFormSubmissionInput {
   @Field(() => ID)
@@ -92,6 +102,9 @@ export class SubmitFormSubmissionInput {
 
   @Field(() => Int)
   expectedEditVersion!: number;
+
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  values?: Record<string, unknown> | null;
 }
 
 /** 已完成後修改:修訂 +1 並存完整快照;`values` 語意同 `SaveFormDraftInput`。 */
@@ -143,6 +156,14 @@ export class FormLookupInput {
   @Field(() => String, { nullable: true })
   keyword?: string | null;
 
+  /**
+   * 連動篩選(`filter` 裡的 `{ var: "<欄位 key>" }`)引用欄位目前填的值:`{ <欄位 key>: 語意值 }`。
+   * 只取定義裡被引用的欄位、只收純量;api 只把它當成縮小範圍的條件(仍在操作者可見範圍內),
+   * 送出時再以存下的值重驗。缺了被引用欄位的值 → 查無。
+   */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
+
   @Field(() => Int, { nullable: true, defaultValue: 1 })
   page?: number;
 
@@ -188,6 +209,10 @@ export class FormLookupRecordInput {
 
   @Field(() => FormLookupTargetInput)
   target!: FormLookupTargetInput;
+
+  /** 同 `FormLookupInput.filterValues`。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  filterValues?: Record<string, unknown> | null;
 
   /** 來源資料的 id。 */
   @Field(() => ID)

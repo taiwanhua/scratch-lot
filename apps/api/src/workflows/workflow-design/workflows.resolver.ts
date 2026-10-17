@@ -244,23 +244,6 @@ export class WorkflowsResolver {
     };
   }
 
-  @RequirePermission(WORKFLOWS_PERMISSIONS.publish)
-  @Mutation(() => WorkflowVersionPayload)
-  async retryPublishWorkflowVersion(
-    @Args("input") input: WorkflowKeyInput,
-    @CurrentOperator() operator: OperatorContext,
-  ): Promise<WorkflowVersionPayload> {
-    const published = await this.publisher.retry(
-      await this.access.factsOf(operator),
-      input,
-    );
-    const names = await this.userNames.load(operator, [published.publishedBy]);
-    return {
-      workflowVersion: toWorkflowVersionModel(published, names),
-      validation: null,
-    };
-  }
-
   /** 退役目前版本(`currentVersion → null`):進行中的實例照常走完,只影響新送出。 */
   @RequirePermission(WORKFLOWS_PERMISSIONS.publish)
   @Mutation(() => WorkflowPayload)

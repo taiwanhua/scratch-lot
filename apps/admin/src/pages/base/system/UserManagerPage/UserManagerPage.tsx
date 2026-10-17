@@ -6,6 +6,7 @@ import {
   type SetUserEnabledMutation,
   useAssignUserRolesMutation,
   useSetUserEnabledMutation,
+  useUserQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
@@ -13,8 +14,9 @@ import { Pagination } from "@repo/ui/pagination";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
 
 import { AssignRolesDialog } from "./AssignRolesDialog/AssignRolesDialog";
 import { CopyOrgRolesDialog } from "./CopyOrgRolesDialog/CopyOrgRolesDialog";
@@ -44,10 +46,26 @@ export const UserManagerPage = () => {
   const { session } = useSession();
   const data = useUserManagerData();
 
-  /** 表單彈窗:null = 沒開;`{ user: null }` = 新增;`{ user }` = 編輯 */
-  const [formTarget, setFormTarget] = useState<{ user: UserRow | null } | null>(
-    null,
+  /** 新增彈窗(不進網址:內容全是未存輸入) */
+  const [isCreating, setIsCreating] = useState(false);
+  /**
+   * 編輯彈窗記在網址 `?edit=<id>`(REACT-14):打開時以 id 讀最新的單筆(與彈窗同一把查詢快取);
+   * 沒有編輯權限、或那一筆讀不到時清掉參數。
+   */
+  const edit = useUrlEdit();
+  const editTarget = useUserQuery(
+    session.client,
+    { id: edit.requestedId ?? "" },
+    {
+      enabled: edit.requestedId !== null && data.ability.canEdit,
+      retry: false,
+    },
   );
+  const editingId = useUrlEditGuard({
+    edit,
+    canEdit: data.ability.canEdit,
+    isMissing: editTarget.isError,
+  });
   const [rolesUser, setRolesUser] = useState<UserRow | null>(null);
   const [toggleUser, setToggleUser] = useState<UserRow | null>(null);
   /** 複製組織與角色的來源(列動作所在的那一列);null = 沒開 */
@@ -125,7 +143,7 @@ export const UserManagerPage = () => {
           onKeywordChange={data.setKeyword}
           canCreate={data.ability.canCreate}
           onCreate={() => {
-            setFormTarget({ user: null });
+            setIsCreating(true);
           }}
         />
         <Typography variant="caption" color="text.secondary">
@@ -150,7 +168,7 @@ export const UserManagerPage = () => {
               protectedOwnerUserId={data.protectedOwnerUserId}
               isOrgTreeAvailable={data.isOrgTreeAvailable}
               onEdit={(user) => {
-                setFormTarget({ user });
+                edit.open(user.id);
               }}
               onManageOrgs={orgsFlow.open}
               onAssignRoles={setRolesUser}
@@ -188,9 +206,10 @@ export const UserManagerPage = () => {
         )}
       </Stack>
 
-      {formTarget !== null && (
+      {(isCreating || editingId !== null) && (
         <UserFormDialog
-          user={formTarget.user}
+          key={isCreating ? "create" : (editingId ?? "")}
+          userId={isCreating ? null : editingId}
           defaultOrgIds={
             data.selectedOrgId === null ? [] : [data.selectedOrgId]
           }
@@ -198,11 +217,13 @@ export const UserManagerPage = () => {
           isOrgTreeAvailable={data.isOrgTreeAvailable}
           ability={data.ability}
           onClose={() => {
-            setFormTarget(null);
+            setIsCreating(false);
+            edit.close();
           }}
           onSaved={() => {
-            void data.invalidate(formTarget.user?.id);
-            setFormTarget(null);
+            void data.invalidate(editingId ?? undefined);
+            setIsCreating(false);
+            edit.close();
           }}
         />
       )}

@@ -8,10 +8,13 @@ import {
   type UsersQueryVariables,
 } from "@repo/graphql";
 
-import { rawOf } from "@/lib/form-engine/definition";
+import { rawOf } from "@/lib/base/form-engine/definition";
 
 import { formFragment } from "./form-fixtures";
+import { tenantTree } from "./org-fixtures";
+import { matrixModules } from "./role-fixtures";
 import { api } from "./server";
+import { FINANCE_ROLE_ID, HR_ROLE_ID } from "./workflow-audience-fixtures";
 import {
   APPLICANT,
   DEMO_GROUP_FORM_KEY,
@@ -39,12 +42,13 @@ export const catalogUsers = [
 ];
 
 export const catalogRoles = [
-  { id: "role-hr", name: "人資" },
-  { id: "role-finance", name: "財務" },
+  { id: HR_ROLE_ID, name: "人資" },
+  { id: FINANCE_ROLE_ID, name: "財務" },
 ];
 
 /**
- * 目錄的假 api(借的是表單管理 `forms` / `formVersion`、角色管理 `roles`、使用者管理 `users`):
+ * 目錄的假 api(借的是表單管理 `forms` / `formVersion`、角色管理 `roles`、使用者管理 `users`、
+ * 人員條件要的 `orgTree` / `audiencePermissionOptions`):
  * 只回設計器與改派跳窗要的形狀。mock 模式裡這幾個端點另有正本 world,這份只給流程頁的測試用。
  */
 export const workflowCatalogHandlers = (
@@ -120,6 +124,15 @@ export const workflowCatalogHandlers = (
         },
       });
     }),
+    // 人員條件(審核者)的摘要與對話框:組織樹、權限樹
+    api.query("OrgTree", () =>
+      HttpResponse.json({ data: { orgTree: tenantTree } }),
+    ),
+    api.query("AudiencePermissionOptions", () =>
+      HttpResponse.json({
+        data: { audiencePermissionOptions: { modules: matrixModules } },
+      }),
+    ),
     api.query("Users", ({ variables }) => {
       const { input } = variables as UsersQueryVariables;
       const keyword = input.keyword?.trim() ?? "";

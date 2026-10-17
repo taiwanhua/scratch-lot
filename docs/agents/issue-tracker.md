@@ -166,7 +166,7 @@ pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort
 - **細節不重複進 issue**:權限表、種子清單、schema 這類細節的正本在 repo 文件(`docs/modules/`、`docs/concepts/`、schema 檔),issue 只做精確指路;提到數量或清單時,同句附上正本檔案。
 - **spec 引用的內容若 repo 沒有正本,先補文件再發 spec** —— 只存在於對話或設計圖裡的細節,對接手者等於不存在。
 - 每份 spec issue 附「**接手指南**」節:無 session 的閱讀順序(`CLAUDE.md` 文件地圖 → `docs/README.md` → `docs/agents/domain.md` 概念導讀 → 本 spec 的資料來源表)。
-- **指路要能 grep 到**:引用 `docs/tmp/dis.md` 這類長備忘時給一個關鍵字(如「dis.md 搜『頁籤』」),編號不是標題、用 heading 搜不到。
+- **指路要能 grep 到**:引用 `docs/tmp/dis.md`(底座)或 `docs/tmp/project-dis.md`(專案)這類長備忘時,寫明哪一份並給一個關鍵字(如「dis.md 搜『populate』」「project-dis.md 搜『<條目關鍵字>』」),編號不是標題、用 heading 搜不到。
 - **指路要先開檔確認,不要憑記憶指先例**:指錯先例比不指更糟,實作者會照著一個不存在的東西做。寫到**檔案路徑**(例:列表 Switch 的先例是 `apps/admin/src/pages/base/system/FieldManagerPage/FieldOptionsPanel/FieldOptionsTable.tsx`,含無權限時退回 `Tag`;使用者管理的停用是 `Button`、啟用欄是 `Tag`,不是先例)。
 - **名字相近的元件 / 函式點名完整檔名**:例 `OrgPickerDialog`(勾選所屬組織)與 `OrgChangeDialog`(移除確認)只差一個詞,寫「組織彈窗」兩邊都對得上。
 - **引用慣例照實際寫法寫**:admin 的錯誤解讀是 `<ns>ErrorOf(error)` 取 code、再 `tErrors(code)` 取文案(DATA-06),沒有 `messageOf` 這種東西;訊息形狀與要顯示的文案一起對(例:`login` 的訊息要帶 `name` 才顯示得出「歡迎,某某」)。
@@ -185,6 +185,7 @@ pnpm --filter @repo/admin dev:mock --port <自選埠> --strictPort
 - **共用函式不指定「誰定義」,直接給簽章與所屬檔案**:例 `orgs/owner-protection.service.ts` 的 `assertTenantTopOperableBy(operator, org, action)`,誰先到誰寫、後到的 rebase 改用。
 - **要 root-only 就指定權限 key 掛在 `system.org-manager.tenant-ops` 容器底下**:`isRootOnly` 是模組的旗標、不是權限的旗標(模板複製時整個模組被扣除),寫「這個動作要 root-only」等於沒寫。先例:`tenant-ops.provision` / `revoke-provision` / `transfer-owner`。
 - **已知會超過 `max-lines` 400 的檔案,拆票時直接指定兩個檔名**。
+- **討論定案的行為,逐條寫進 spec,寫到實作者不用回來問**:寫 spec(含改寫、拆節、改名)時,對照討論紀錄把每一條已定的決定落到正文,不能只剩一句大概。行為類的規格寫成「操作 → 結果」情境表,邊界(重複開啟、錯誤參數、沒權限、空資料)各一列,並寫明保存在哪、沿用哪個既有機制;驗收寫「表的每一列一個測試」。「與 X 無關」「依現況」「實作時再定」這類句子不能代替行為描述。代價:實作者照字面做,漏掉的行為要到審查才發現,回頭補規格、補票、重做(例:頁籤記住網址參數早已定案,改名拆節時只剩「與 RouteTabs 無關」,實作完才被審查抓到)。
 
 ### 分工與依賴
 

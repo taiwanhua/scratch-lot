@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { isJoinStep } from "@repo/domain/workflow";
+import { type WorkflowIssue, isJoinStep } from "@repo/domain/workflow";
 import {
   type WorkflowFieldsFragment,
   useCreateWorkflowVersionDraftMutation,
@@ -14,15 +14,19 @@ import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { checkFormKeyOf, definitionOf } from "@/lib/workflow/definition";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { checkFormKeyOf, definitionOf } from "@/lib/base/workflow/definition";
+import { isFlowCcIssue } from "@/lib/base/workflow/validation";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
+import { designerPropertyPanelSx } from "../../designer-layout";
+import { BackToFlowButton } from "./BackToFlowButton";
 import { CheckFormField } from "./CheckFormField";
 import { FlowCanvas } from "./FlowCanvas";
 import { FlowCheckPanel } from "./FlowCheckPanel";
 import { FlowIssueList } from "./FlowIssueList";
+import { FlowSettingsPanel } from "./FlowSettingsPanel";
 import { JoinPanel } from "./JoinPanel";
 import { StepEditor } from "./StepEditor";
 import { useDesignerCatalog, useFormFields } from "./useDesignerCatalog";
@@ -61,6 +65,8 @@ export const FlowVersionViewer = ({
   const tErrors = useTranslations("admin.workflows.errors");
   const { session } = useSession();
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  /** 屬性面板(「回到整個流程設定」後把焦點放回這裡) */
+  const panelRef = useRef<HTMLElement>(null);
   const query = useWorkflowVersionQuery(
     session.client,
     { workflowKey: workflow.key, version },
@@ -82,12 +88,7 @@ export const FlowVersionViewer = ({
     checkFormFields,
   });
   const check = useFlowCheck(workflow.key);
-  const dataOf = useFlowNodeData(
-    definition,
-    report.errors,
-    catalog.forms,
-    catalog.roles,
-  );
+  const dataOf = useFlowNodeData(definition, report.errors, catalog.forms);
   const createDraft = useCreateWorkflowVersionDraftMutation(
     session.client,
     useMutationFeedback({
@@ -100,8 +101,7 @@ export const FlowVersionViewer = ({
     }),
   );
   const { canEdit } = workflow.abilities;
-  const canBaseOn =
-    canEdit && !workflow.publishInterrupted && !workflow.hasDraft;
+  const canBaseOn = canEdit && !workflow.hasDraft;
 
   if (query.isLoading) {
     return <CircularProgress aria-label={t("loading")} />;
@@ -120,19 +120,28 @@ export const FlowVersionViewer = ({
 
   const selected =
     definition.steps.find((step) => step.key === selectedKey) ?? null;
-  const issuesOf = (stepKey: string): string[] =>
-    [...report.errors, ...report.warnings]
-      .filter((issue) => issue.location.stepKey === stepKey)
-      .map((issue) => issue.message);
+  const allIssues = [...report.errors, ...report.warnings];
+  const issuesOf = (stepKey: string): WorkflowIssue[] =>
+    allIssues.filter((issue) => issue.location.stepKey === stepKey);
   const stepNameOf = (stepKey: string): string =>
     definition.steps.find((step) => step.key === stepKey)?.name ?? stepKey;
 
   const renderPanel = () => {
     if (selected === null) {
       return (
-        <Typography variant="body2" color="text.secondary">
-          {t("viewingSelectHint")}
-        </Typography>
+        <FlowSettingsPanel
+          cc={definition.cc ?? null}
+          onCcChange={ignore}
+          selectHint={t("viewingSelectHint")}
+          issues={allIssues
+            .filter((issue) => isFlowCcIssue(issue))
+            .map((issue) => issue.message)}
+          isShared={workflow.isShared}
+          forms={catalog.forms}
+          checkFormKey={checkFormKey}
+          checkFormFields={checkFormFields}
+          isReadonly
+        />
       );
     }
     if (isJoinStep(selected)) {
@@ -144,7 +153,7 @@ export const FlowVersionViewer = ({
             (definition.edges ?? []).filter((edge) => edge.to === selected.key)
               .length
           }
-          issues={issuesOf(selected.key)}
+          issues={issuesOf(selected.key).map((issue) => issue.message)}
           onRename={ignore}
           onAddBranch={ignore}
           onInsertAfter={ignore}
@@ -161,7 +170,6 @@ export const FlowVersionViewer = ({
         isKeyLocked
         isShared={workflow.isShared}
         forms={catalog.forms}
-        roles={catalog.roles}
         checkFormKey={checkFormKey}
         checkFormFields={checkFormFields}
         isReadonly
@@ -250,9 +258,22 @@ export const FlowVersionViewer = ({
         <Box
           component="section"
           aria-label={t("viewingProperties")}
-          sx={{ width: 360, flexShrink: 0 }}
+          ref={panelRef}
+          // 「回到整個流程設定」按下後按鈕會卸載:焦點移到屬性面板本身,不掉回 body
+          tabIndex={-1}
+          sx={designerPropertyPanelSx}
         >
-          {renderPanel()}
+          <Stack spacing={1}>
+            {selected !== null && (
+              <BackToFlowButton
+                onBack={() => {
+                  setSelectedKey(null);
+                  panelRef.current?.focus();
+                }}
+              />
+            )}
+            {renderPanel()}
+          </Stack>
         </Box>
       </Stack>
       <FlowIssueList

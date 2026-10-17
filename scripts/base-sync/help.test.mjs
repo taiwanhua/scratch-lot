@@ -19,6 +19,7 @@ const REQUIRED = {
   inspect: ["--project", "--from", "--to"],
   upgrade: ["--project", "--tag", "--worktree-root"],
   contribute: ["--project", "--commit", "--base", "--worktree-root"],
+  verify: ["--project", "--tag"],
 };
 
 function assertHelp(result, form) {
@@ -27,7 +28,7 @@ function assertHelp(result, form) {
   assert.match(result.stdout, CHINESE, form.join(" "));
 }
 
-test("說明:八種文件化寫法都以繁中用法成功結束,且不呼叫 gh 或網路 fetch;其他寫法維持原本的錯誤", async () => {
+test("說明:十種文件化寫法都以繁中用法成功結束,且不呼叫 gh 或網路 fetch;其他寫法維持原本的錯誤", async () => {
   const calls = [];
   const boundaries = {
     runExternal: (...args) => {
@@ -61,11 +62,25 @@ test("說明:八種文件化寫法都以繁中用法成功結束,且不呼叫 gh
       }
     }
   }
+  // 可省略、可重複的參數以方括號標示
+  const contributeHelp = await runBaseSync(
+    ["contribute", "--help"],
+    boundaries,
+  );
+  assert.match(contributeHelp.stdout, /\[--accept-mixed <[^>]+> \.\.\.\]/);
+  // verify:--out 可省略、不可重複;說明退出碼的意義與不含 Figma / CI
+  const verifyHelp = await runBaseSync(["verify", "--help"], boundaries);
+  assert.match(verifyHelp.stdout, /\[--out <out>\](?! \.\.\.)/);
+  assert.match(verifyHelp.stdout, /exit 0/);
+  assert.match(verifyHelp.stdout, /Figma/);
   assert.deepEqual(calls, []);
 
   const rejected = [
-    [["bogus", "--help"], "命令必須是 inspect / upgrade / contribute"],
-    [["--help", "inspect"], "命令必須是 inspect / upgrade / contribute"],
+    [["bogus", "--help"], "命令必須是 inspect / upgrade / contribute / verify"],
+    [
+      ["--help", "inspect"],
+      "命令必須是 inspect / upgrade / contribute / verify",
+    ],
     [
       ["inspect", "--unknown", "--help"],
       "inspect 不接受這個參數(只接受 --project / --from / --to)",

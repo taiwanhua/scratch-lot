@@ -19,11 +19,17 @@ import {
   type RetiredFormPermissionsQuery,
   type SaveFormVersionDraftMutationVariables,
   type SetModuleListColumnsMutationVariables,
+  type UpdateFormMutationVariables,
 } from "@repo/graphql";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import { fieldCategories } from "./field-fixtures";
 import type { FormFailure } from "./form-runtime-handlers";
+import { formUpdateHandler } from "./form-update-handler";
+import {
+  BASE_LOOKUP_PROVIDERS,
+  type LookupProviderFixture,
+} from "./lookup-provider-fixtures";
 import { formSeedExportHandler } from "./seed-export-handlers";
 import { api } from "./server";
 
@@ -34,12 +40,16 @@ export type FormDesignOperation =
   | "DeleteRetiredPermission"
   | "DeleteFormVersionDraft"
   | "SetModuleListColumns"
-  | "ExportFormSeed";
+  | "UpdateForm"
+  | "ExportFormSeed"
+  | "FormLookupProviders";
 
 type RetiredPermission =
   RetiredFormPermissionsQuery["retiredFormPermissions"]["items"][number];
 
 export interface FormDesignWorldOptions {
+  /** 設計器的 lookup 來源清單(沒給 = 底座三種) */
+  lookupProviders?: LookupProviderFixture[];
   forms?: FormFieldsFragment[];
   /** 表單 key → 全部版本(含草稿) */
   versions?: Record<string, FormVersionFieldsFragment[]>;
@@ -49,6 +59,8 @@ export interface FormDesignWorldOptions {
   failures?: Partial<Record<FormDesignOperation, FormFailure>>;
   /** `previewFormVersion` 的回應(沒給 = 回送來的值、全部顯示、沒有錯誤) */
   preview?: PreviewFormVersionQuery["previewFormVersion"];
+  /** 表單 key → 發布回的新建依表單新增權限(B9b;沒列 = null;api 只在第一次發布回) */
+  createdPermissions?: Record<string, { key: string; name: string }>;
 }
 
 export interface FormDesignWorld {
@@ -62,6 +74,7 @@ export interface FormDesignWorld {
     setModuleListColumns: SetModuleListColumnsMutationVariables["input"][];
     previewFormVersion: PreviewFormVersionQueryVariables["input"][];
     exportFormSeed: ExportFormSeedQueryVariables["input"][];
+    updateForm: UpdateFormMutationVariables["input"][];
   };
 }
 
@@ -88,6 +101,7 @@ export const formDesignWorld = (
     setModuleListColumns: [],
     previewFormVersion: [],
     exportFormSeed: [],
+    updateForm: [],
   };
 
   const fail = (operation: FormDesignOperation) => {
@@ -105,7 +119,22 @@ export const formDesignWorld = (
     versionsOf(formKey).find((item) => item.status === FormVersionStatus.Draft);
   const noIssues = { errors: [], warnings: [] };
 
+  const lookupProviders = options.lookupProviders ?? BASE_LOOKUP_PROVIDERS;
+
   const handlers = [
+    api.query(
+      "FormLookupProviders",
+      () =>
+        fail("FormLookupProviders") ??
+        HttpResponse.json({
+          data: {
+            formLookupProviders: {
+              items: lookupProviders,
+              totalCount: lookupProviders.length,
+            },
+          },
+        }),
+    ),
     // 屬性面板「欄位管理類別」的下拉(與欄位管理頁同一支查詢;設計器帶 `enabledOnly`,停用的類別不列)
     api.query("FieldCategories", ({ variables }) => {
       const { input } = variables as FieldCategoriesQueryVariables;
@@ -150,6 +179,11 @@ export const formDesignWorld = (
         },
       }),
     ),
+    formUpdateHandler({
+      findForm: (formKey) => forms.find((item) => item.key === formKey),
+      fail,
+      inputs,
+    }),
     api.query("FormVersions", ({ variables }) => {
       const { formKey } = variables as { formKey: string };
       const items = versionsOf(formKey);
@@ -291,8 +325,10 @@ export const formDesignWorld = (
         publishedAt: "2026-09-21T00:00:00.000Z",
       });
       Object.assign(form, { currentVersion: next, hasDraft: false });
+      // 沒列 = 欄位缺席(等同 null)
+      const createdPermission = options.createdPermissions?.[input.formKey];
       return HttpResponse.json({
-        data: { publishFormVersion: { formVersion: draft } },
+        data: { publishFormVersion: { formVersion: draft, createdPermission } },
       });
     }),
     formSeedExportHandler({

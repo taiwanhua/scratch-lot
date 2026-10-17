@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import { PasswordService } from "../auth/password/password.service";
 import {
   type AuthTestApp,
@@ -68,6 +69,7 @@ const PROVISION_TENANT = /* GraphQL */ `
       ownerUserId
       roleId
       moduleKeys
+      activationMailSent
     }
   }
 `;
@@ -179,6 +181,7 @@ interface ProvisionTenantData {
     ownerUserId: string;
     roleId: string;
     moduleKeys: string[];
+    activationMailSent: boolean;
   };
 }
 
@@ -754,6 +757,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
 
       expect(result.errors).toBeUndefined();
       const payload = result.data?.provisionTenant;
+      expect(payload?.activationMailSent).toBe(true);
       if (!payload) {
         throw new Error("provisionTenant 沒有回 payload");
       }
@@ -975,40 +979,66 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
       expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
     });
 
-    it("中途失敗全部回滾(補償刪除),同一組帳號可以重新開通", async () => {
+    it("中途失敗整個交易回復:沒有殘留組織 / 角色 / 使用者 / 關聯 / 稽核,同一組帳號可以重新開通", async () => {
       const account = nextAccount("rollback");
-      const passwords = api.app.get(PasswordService);
+      const audits = api.app.get(AuditService);
       const relations = api.connection.collection("core_relationships");
       const roles = api.connection.collection("roles");
       const relationsBefore = await relations.countDocuments({});
       const copiesBefore = await roles.countDocuments({
         "settings.templateKey": "tenant-admin",
       });
-      // 寄信是整段最後一步;讓它炸一次,驗前面每一步都被補償刪除掉
-      // (TEST-07 的第二個接縫:「供應商寄信失敗」在 GraphQL 端點上沒有辦法觸發,理由寫在 PR)
+      const mailsBefore = mail.sent.length;
+      // 稽核是交易內最後一筆寫入(組織、副本、使用者、關聯、ownerUserId 都已寫了);讓它炸一次
+      // (TEST-07 的第二個接縫:「資料庫寫到一半失敗」在 GraphQL 端點上沒有辦法觸發)
       const spy = jest
-        .spyOn(passwords, "sendActivationEmail")
-        .mockRejectedValueOnce(new Error("mail provider down"));
+        .spyOn(audits, "record")
+        .mockRejectedValueOnce(new Error("injected failure at audit"));
 
       const failed = await provision({ adminAccount: account });
       expect(failed.errors).toHaveLength(1);
-      // 使用者是硬刪除(不是軟刪除):account / email 唯一索引含已軟刪除的文件
       expect(await userRowByAccount(account)).toBeNull();
       expect(
         await api.connection
           .collection("orgs")
           .countDocuments({ name: `租戶 ${account}` }),
       ).toBe(0);
-      // 角色副本與全部關聯都不留(核心關聯本來就是硬刪除)
       expect(
         await roles.countDocuments({ "settings.templateKey": "tenant-admin" }),
       ).toBe(copiesBefore);
       expect(await relations.countDocuments({})).toBe(relationsBefore);
+      // 啟用信排在交易成功之後:交易回復就不寄
+      expect(mail.sent).toHaveLength(mailsBefore);
 
       spy.mockRestore();
       const retried = await provision({ adminAccount: account });
       expect(retried.errors).toBeUndefined();
       expect(await userRowByAccount(account)).not.toBeNull();
+    });
+
+    it("啟用信在交易提交後才寄;寄不出去只記 log,開通照樣成立、回 activationMailSent = false", async () => {
+      const account = nextAccount("mail-down");
+      const passwords = api.app.get(PasswordService);
+      let userAtSend: UserRow | null = null;
+      const spy = jest
+        .spyOn(passwords, "sendActivationEmail")
+        .mockImplementationOnce(async () => {
+          // 交易已提交:交易外讀得到首任管理員
+          userAtSend = await userRowByAccount(account);
+          throw new Error("mail provider down");
+        });
+
+      const result = await provision({ adminAccount: account });
+      expect(result.errors).toBeUndefined();
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(userAtSend).not.toBeNull();
+      const payload = result.data?.provisionTenant;
+      // 回傳告訴畫面信沒寄出(提示首任管理員走「忘記密碼」)
+      expect(payload?.activationMailSent).toBe(false);
+      expect(await orgRow(payload?.org.id ?? "")).toMatchObject({
+        ownerUserId: new Types.ObjectId(payload?.ownerUserId),
+      });
+      spy.mockRestore();
     });
   });
 
@@ -1235,7 +1265,14 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
         );
       const saved = await saveRule([
         {
-          audience: { type: "USER", ids: [String(rootOpsId)] },
+          audience: {
+            mode: "match",
+            filter: {
+              field: "user",
+              cond: "in",
+              value: { kind: "static", values: [String(rootOpsId)] },
+            },
+          },
           filter: {
             op: "AND",
             children: [

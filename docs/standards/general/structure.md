@@ -10,6 +10,17 @@
 
 被兩個以上 app 使用(或明確預期會被共用)的元件 → `@repo/ui`;單一 app 專用的元件留在該 app 內。搬移時機:第二個使用者出現的那個 PR。
 
+- **`@repo/ui` 只放底座的底層元件,每個都要有 stories**;Storybook 只收 `@repo/ui` 與工具頁。
+- **專案元件放 admin 的 `components/project/`**,用元件測試驗證,不進 Storybook。日後發現可共用 → 搬進 `@repo/ui`、補 stories、走底座回收。
+- **專案程式不能放進 `packages/ui`**(底座同步工具會把它當共用改良):`packages/ui` 不得 import `apps/` 的任何路徑或 app 套件、不得有 `project/` 目錄。lint:`@repo/eslint-config/frontend-style` 的 `uiOwnership`;負例與目錄掃描:`packages/ui/scripts/check-ownership-lint.mjs`(接在 ui 的 `lint` 後面)。
+- 已定的歸屬:
+
+  | 元件                                                           | 位置                        |
+  | -------------------------------------------------------------- | --------------------------- |
+  | Section、MonthCalendar、RosterGrid、Stepper、58mm 單據版面零件 | `@repo/ui`(有 stories)      |
+  | AudiencePicker、OrgTreeSelect、列印按鈕、通知鈴 / 清單         | admin `components/base/`    |
+  | 專案元件(只有專案用到的)                                       | admin `components/project/` |
+
 ## STRUCT-03 app 內分層:`app / pages / components / hooks / stores / lib / test`,import 只能往下
 
 (決策見 ADR-0012;lint:`@repo/eslint-config/frontend-style` 的 `import-x/no-restricted-paths`,正本 `packages/config-eslint/frontend-style.js`)
@@ -18,22 +29,24 @@
 apps/<app>/src/
 ├── app/          組裝層:main.tsx、routes.tsx、providers/、guards/(RequireAuth、ModuleRoute、ForbiddenPage)、
 │                 AdminShell/(AppBar / SideNav / RouteTabs 版面)、module-pages.tsx。不含業務內容
-├── pages/        admin 先分 base/ 與 project/,各自依功能分目錄:
+├── pages/        admin 分 base/ 與 project/,各自依功能分目錄:
 │                 base/auth/LoginPage/、base/OverviewPage/、base/system/OrgManagerPage/ …
 │                 一個頁面一個資料夾,只有這頁用的元件放在頁底下
 ├── components/   兩個以上頁面共用、但還不到進 @repo/ui 的元件;CRUD 共版型在 base/crud/
-├── hooks/        跨頁 hook(useMe、useSession)
-├── stores/       zustand store(useXxxStore.ts)
+├── hooks/        跨頁 hook(base/useMe、base/useSession)
+├── stores/       zustand store(base/useXxxStore.ts)
 ├── lib/          純工具、client、paths(不含 React)
 └── test/         MSW、renderApp 等測試支援
 ```
+
+admin 的 `components/`、`hooks/`、`stores/`、`lib/` 底下**只有 `base/`(底座維護)與 `project/`(專案內容)兩個子目錄**,不在層的根目錄放檔案(`app/`、`pages/` 的分法見 STRUCT-12);以下說的「放 `components/`」等,在 admin 指該層的 `base/` 或 `project/`。由 `apps/admin/scripts/check-ownership-lint.mjs` 檢查(接在 admin 的 `lint` 後面)。
 
 - **import 方向只能往下**:`app → pages → components → hooks / stores → lib`;下層不准 import 上層,同層的頁面之間不准互相 import(要共用就往上提到 `components/` 或 `hooks/`)。
 - **元件放在唯一使用它的那層**:只有一頁用 → 該頁資料夾底下;兩頁以上用 → `components/`;兩個 app 用 → `@repo/ui`(STRUCT-02)。殼(AdminShell)只被 `routes.tsx` 用,所以住 `app/`。
 - **頁面一律資料夾**(如 `pages/base/OverviewPage/OverviewPage.tsx`),即使目前只有一個檔;非頁面的單檔元件不開資料夾(GEN-01)。
 - **路由群組資料夾可放該群組共用的元件**:`pages/base/auth/AuthCard.tsx` 給四個登入線頁面用、之後 `pages/base/system/` 也可以放治理模組共用的東西;跨群組才上提到 `components/`。「同層頁面不互相 import」指的是頁面資料夾之間(`LoginPage/` 不 import `SetPasswordPage/` 的檔)。
-- **非 React 程式碼要碰 store**(如 `lib/auth/auth-fetch.ts` 要讀 access token、失效時 `clear()`):lib 不准 import `stores/`,改由 app 層把 store 實例注入(`createAuthSession(endpoint, useSessionStore)`),lib 只認 zustand 的 `StoreApi<T>` 介面(型別放 `lib/`)。先例 `apps/admin/src/lib/auth/auth-fetch.ts`。
-- **跨路由群組要共用就上提到 `components/`**,不要複製一份:`pages/base/auth/NewPasswordFields/` 的密碼欄位若要給 `pages/base/system/` 的新增使用者彈窗用,正確做法是搬到 `components/NewPasswordFields/`。已知的重複:使用者管理的 `UserManagerPage/UserFormDialog/ActivationFields.tsx` 另有一份單欄位版的密碼規則提示,與 `NewPasswordFields` 待合併。
+- **非 React 程式碼要碰 store**(如 `lib/base/auth/auth-fetch.ts` 要讀 access token、失效時 `clear()`):lib 不准 import `stores/`,改由 app 層把 store 實例注入(`createAuthSession(endpoint, useSessionStore)`),lib 只認 zustand 的 `StoreApi<T>` 介面(型別放 `lib/`)。先例 `apps/admin/src/lib/base/auth/auth-fetch.ts`。
+- **跨路由群組要共用就上提到 `components/`**,不要複製一份:`pages/base/auth/NewPasswordFields/` 的密碼欄位若要給 `pages/base/system/` 的新增使用者彈窗用,正確做法是搬到 `components/base/NewPasswordFields/`。已知的重複:使用者管理的 `UserManagerPage/UserFormDialog/ActivationFields.tsx` 另有一份單欄位版的密碼規則提示,與 `NewPasswordFields` 待合併。
 - **`pages/` 為什麼取代 `features/`**:admin 的業務單位是模組(側欄每一項),「一個頁面 = 一個模組」已是產品定義(ADR-0004),不需要再一層沒定義的 feature。
 
 底座與專案的所有權限制另見 STRUCT-12;`base/`、`project/` 不改變以上分層。注入用 context 與 hook 同檔放 `hooks/`,Provider 放 `app/providers/`(REACT-02),包括表單模組 options。
@@ -68,8 +81,9 @@ apps/<app>/src/
 | CLI 工具(`apps/db-migrator`) | `process.stdout.write` / `process.stderr.write` | 摘要輸出(新增 N / 更新 M / 認養 A / 未變 K)就是它的介面;tsx 直跑的腳本不該依賴需先 build 的套件 |
 | api(NestJS)                  | Nest 內建 `Logger`(`new Logger(ClassName)`)     | 框架自帶等級、前綴與輸出管道,與 Nest 的啟動 log 一致;不另接 `@repo/logger`                      |
 | front / admin(瀏覽器、Next)  | `@repo/logger`                                  | 全 repo 唯一允許碰 `console` 的地方,集中管理                                                    |
+| realtime(Cloudflare Worker)  | `@repo/logger`                                  | 輸出走 console 即進 Workers 日誌;沿用同一個豁免點,不另寫 console                                |
 
-`no-console` 一律開著;三種以外的寫法都算違規。
+`no-console` 一律開著;表列以外的寫法都算違規。
 
 ## STRUCT-07 前後端共用的純邏輯放 `@repo/domain`,按主題分資料夾,不一個共用開一個包
 
@@ -167,11 +181,11 @@ admin 每個環境各建一顆 image,正是最容易吃到這個坑的形狀(`VI
 ❌ rows.toSorted((a, b) => a.name.localeCompare(b.name));
 ```
 
-不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 通常退回 `en-US`**,中文字的先後跟著不一樣 —— 排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。先例與理由註解在 `apps/admin/src/lib/role-options.ts`(`COLLATION_LOCALE`)。同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
+不給語言時 `localeCompare` 吃的是執行環境的預設語言:開發機通常是 `zh-TW`、**CI runner 通常退回 `en-US`**,中文字的先後跟著不一樣 —— 排序斷言於是「本機綠、CI 紅」,而且看起來像偶發。先例與理由註解在 `apps/admin/src/lib/base/role-options.ts`(`COLLATION_LOCALE`)。同一支檔案裡排多處時抽成模組層常數,不要逐處重打字串。
 
 ## STRUCT-11 正式文件寫現況,完成的計畫歸回正本
 
-適用 `docs/**` 與根目錄的 `CLAUDE.md`、`CONTEXT.md`(給人與 AI 讀的文件)。`apps/admin/src/md/module-help/{base,project/additions,project/replacements}/` 的 `.help.md` 是租戶使用者說明,另守詞彙與受眾規則(FIGMA-04、`docs/agents/module-scaffold.md`),不在本條範圍 —— 但同樣不該出現票號。
+適用 `docs/**` 與根目錄的 `CLAUDE.md`、`CONTEXT.md`、`CONTEXT-PROJECT.md`(給人與 AI 讀的文件)。`apps/admin/src/md/module-help/{base,project/additions,project/replacements}/` 的 `.help.md` 是租戶使用者說明,另守詞彙與受眾規則(FIGMA-04、`docs/agents/module-scaffold.md`),不在本條範圍 —— 但同樣不該出現票號。
 
 - **不寫**「(2026-09-xx 裁決)」「第 N 段」、`#` 加票號、PR 號這類註記,也不寫「原本 A、後來改 B」:只寫 B。
 - **決策理由照寫**,寫進正文(「為什麼這樣做」「不這樣會怎樣」),但不帶時間與票號。理由是規則的一部分,刪了理由的規則沒人敢改也沒人知道能不能改。
@@ -208,13 +222,19 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 
 - 頁面分 `pages/base/` 與 `pages/project/`;其他層既有共用內容仍由底座維護,專案內容放該層 `project/`,不另開頂層 `src/project/`。專案頁不可引用底座頁內部,共用能力走 components/hooks/lib;CRUD 模板在 `components/base/crud/`。
 - `app/module-pages.tsx` 組裝 `app/base/module-pages.ts`、`app/project/module-pages.ts` 與 `app/project/page-replacements.ts`。專案新增或替換不改底座清單;表單 options 與四頁來自同一筆 `forms` 宣告。
-- `lib/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
+- 即時通道的信號類型登記同樣由 `app/module-pages.tsx` 組裝:`app/base/realtime-signals.ts` + `app/project/realtime-signals.ts`(信號類型 → 要 invalidate 的 query key;結尾 `:*` 為前綴登記,如 `badge:*`),類型重複載入即丟錯,`realtimeSignals` 由 `AdminShell` 交給 `RealtimeProvider`。
+- `lib/base/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
 - `src/test/**` 只豁免所有權方向,仍守 STRUCT-03 與循環依賴檢查。固定入口是個別檔案的例外,不放寬整個 app 層。
 
 ### api
 
 - 功能來源為 `base/api-modules.ts` 與 `project/api-modules.ts`,專案功能由 `project/project.module.ts` 掛載;`app.module.ts` 是底座讀取專案功能的固定入口,不提供核心 module/provider 替換。
 - 資料來源為 `database/base/registrations.ts` 與 `project/database/registrations.ts`,只由 `database/database.module.ts` 組裝。業務服務使用 repository,不自行以 Mongoose 注入或註冊 Model。
+- 專案 lookup 來源為 `project/lookup-providers.ts`(`{ declaration, repositoryToken }` 清單),同樣只由 `database/database.module.ts` 組裝:`repositoryToken` 必須是專案資料登記的 repository,清單以 `PROJECT_LOOKUP_SOURCES` 提供給 api 與受管定義 CLI;規則見 [forms](../../modules/forms.md#專案登記的來源)。
+- 專案看板頻道為 `project/realtime-boards.ts`(`{ key, moduleKey, permission }` 清單;換發時前端帶看板 key,資格只看那一筆的權限),同樣只由 `database/database.module.ts` 組裝(key 重複或空白載入即拋錯、app 起不來),以 `REALTIME_BOARDS` 提供給即時通道的 `RealtimeTicketService`(訂閱憑證要不要放 `board:<分店>`);規則見[部署](../../deployment.md#即時通道cloudflare-worker)與底座規格第 4 章。
+- 專案的表單 / 流程掛接點為 `project/form-lifecycles.ts`(`registerFormLifecycle({ moduleKey, formKey?, inject, guards, effects })` 清單),同樣只由 `database/database.module.ts` 組裝((moduleKey, formKey) 重複、同一模組同時登記整個模組與指定表單、`formKey` 為 `"*"`、名字不認得 → 載入即拋錯),以 `FORM_LIFECYCLES` 提供給 api 與受管定義 CLI;`inject` 的 token 在 api 啟動時解析(找不到 → 起不來),handler 只拿得到自己宣告的;規則見[審核流程](../../concepts/workflow-engine.md#掛接點守門與事後動作)。
+- 專案個人偏好為 `project/user-preferences.ts`(`{ key, type, defaultValue }` 清單),只由 `app.module.ts` 經 `UserPreferenceRegistryModule.forRoot` 與底座登記合成,key 不可與底座重複;規則見 [資料模型](../../data-model.md#個人偏好)。
+- 專案通知為 `project/notifications.ts`(`{ types, links }`:通知類型與連結登記),只由 `app.module.ts` 經 `NotificationRegistryModule.forRoot` 與底座登記合成(key / refType 重複或格式不對 → 起不來);每種類型 × 管道同時推導成個人偏好的開關,經 `UserPreferenceRegistryModule.forRoot` 的第二個參數合成。規則見 [通知](../../modules/notification-settings.md#登記)。
 - repository providers 與 Nest exports 由登記導出,不匯出 Model provider 或整個 MongooseModule。底座 repository 實作放 `database/base/` 等 leaf 檔,不回指組裝入口;`database.module.ts` 保留既有 repository 的 TypeScript re-export 相容出口。
 - 新專案租戶資料沿用 BaseRepository 與隔離 plugins,同時登記組織歸屬檢查;刪組織與撤銷開通共用 `OrgBusinessDataReader`,不能新增可繞過檢查的 callback。專案資料登記不提供略過隔離的開關。
 - 測試 fixture 只豁免所有權方向,不新增 raw query 或 Mongoose 任意注入的例外;正式來源不得引用 fixture。驗收入口見 TEST-07 / TEST-08。

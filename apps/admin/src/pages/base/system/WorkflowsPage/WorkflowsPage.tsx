@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
@@ -8,9 +8,10 @@ import { Card } from "@repo/ui/card";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useWorkflowDraftStore } from "@/stores/useWorkflowDraftStore";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useUrlEdit, useUrlEditGuard } from "@/hooks/base/useUrlEdit";
+import { useWorkflowDraftStore } from "@/stores/base/useWorkflowDraftStore";
 
 import {
   WORKFLOWS_BLOCKED_PAGE_KEY,
@@ -43,7 +44,38 @@ export const WorkflowsPage = () => {
     null;
   const { hasPermission } = usePermissions();
   const routeOf = useModuleRoutes();
-  const data = useWorkflowsPageData(forkKey);
+  /**
+   * 編輯彈窗記在網址 `?edit=<key>`(REACT-14):編的就是右欄選中的那一個,所以網址上的 key 同時是選中的;
+   * 清單查完還沒有 → 提示找不到,沒有編輯權限(`abilities.canEdit`)→ 停在它的詳情。
+   */
+  const edit = useUrlEdit();
+  const data = useWorkflowsPageData(forkKey, edit.requestedId);
+  const selectItem = data.select;
+  const keepDetail = useCallback(
+    (key: string) => {
+      selectItem(key);
+    },
+    [selectItem],
+  );
+  const editingKey = useUrlEditGuard({
+    edit,
+    canEdit:
+      data.selected !== null && data.selected.key === edit.requestedId
+        ? data.selected.abilities.canEdit
+        : undefined,
+    isMissing:
+      edit.requestedId !== null &&
+      data.isListSettled &&
+      data.selectedKey !== edit.requestedId,
+    onNoPermission: keepDetail,
+  });
+  /** 關掉編輯彈窗:停在剛編的那一個(網址 `?detail=` 記下它) */
+  const closeEdit = () => {
+    if (editingKey !== null) {
+      selectItem(editingKey);
+    }
+    edit.close();
+  };
   const [isCreating, setIsCreating] = useState(false);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const isDirty = useWorkflowDraftStore(
@@ -96,13 +128,18 @@ export const WorkflowsPage = () => {
         {data.selected === null ? (
           <Card sx={{ flex: 1, p: 3 }}>
             <Typography variant="body2" color="text.secondary">
-              {data.isLoading ? t("loading") : t("empty")}
+              {data.isLoading || data.isSelectionPending
+                ? t("loading")
+                : t("empty")}
             </Typography>
           </Card>
         ) : (
           <WorkflowDetailPanel
             key={data.selected.key}
             workflow={data.selected}
+            isEditing={editingKey === data.selected.key}
+            onEdit={edit.open}
+            onEditClose={closeEdit}
             isForkRequested={data.selected.key === forkKey}
             onChanged={() => {
               void data.invalidate(data.selectedKey);

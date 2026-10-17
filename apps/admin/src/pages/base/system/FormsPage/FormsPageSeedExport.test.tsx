@@ -293,7 +293,6 @@ describe("表單管理:版本面板的「匯出專案設定」", () => {
         tenantEnabled: true,
       }),
     ],
-    ["發布中斷的共用表單", formFragment({ publishInterrupted: true })],
   ])("不可用:%s 沒有匯出按鈕", async (_title, form) => {
     const { user } = renderFormsPage({
       ...defaultDesignOptions(),

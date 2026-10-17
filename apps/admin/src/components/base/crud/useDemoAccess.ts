@@ -1,5 +1,5 @@
-import { useMe } from "@/hooks/useMe";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useMe } from "@/hooks/base/useMe";
+import { usePermissions } from "@/hooks/base/usePermissions";
 
 import type {
   DemoAccess,

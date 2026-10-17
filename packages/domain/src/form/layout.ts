@@ -1,4 +1,4 @@
-import type { Layout } from "./types";
+import type { Layout, LayoutSection } from "./types";
 
 /** 版面換算(Spec §5 Layout):12 格制,桌機用 `span`、平板 `span × 2` 封頂 12、手機一律 12。 */
 export const LAYOUT_COLUMNS = 12;
@@ -44,4 +44,26 @@ export function layoutFieldKeys(layout: Layout): string[] {
   return layout.sections.flatMap((section) =>
     section.rows.flatMap((row) => row.cols.map((col) => col.fieldKey)),
   );
+}
+
+/** 分區的收合設定(補上預設值)。 */
+export interface SectionCollapse {
+  collapsible: boolean;
+  /** 不可收合時一律 false */
+  defaultCollapsed: boolean;
+  /** 不可收合時一律空陣列 */
+  summaryFieldKeys: string[];
+}
+
+/**
+ * 分區的收合設定:舊定義沒有這三欄 → 不可收合、一律展開;`defaultCollapsed` / `summaryFieldKeys` 只在 `collapsible` 時生效。
+ * 執行期(`FormRenderer`)與設計器都從這裡讀,不各自補預設。
+ */
+export function sectionCollapseOf(section: LayoutSection): SectionCollapse {
+  const collapsible = section.collapsible === true;
+  return {
+    collapsible,
+    defaultCollapsed: collapsible && section.defaultCollapsed === true,
+    summaryFieldKeys: collapsible ? (section.summaryFieldKeys ?? []) : [],
+  };
 }

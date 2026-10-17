@@ -53,6 +53,8 @@ export interface DemoWorldOptions {
 export interface DemoWorld {
   handlers: Parameters<typeof import("./server").server.use>;
   inputs: {
+    /** 清單查詢的條件(驗篩選、頁碼有照網址送出) */
+    demoItemsOne: DemoItemsOneQueryVariables["input"][];
     createDemoItemOne: CreateDemoItemOneMutationVariables["input"][];
     updateDemoItemOne: UpdateDemoItemOneMutationVariables["input"][];
     deleteDemoItemOne: DeleteDemoItemOneMutationVariables["input"][];
@@ -108,6 +110,7 @@ export const demoWorld = (options: DemoWorldOptions = {}): DemoWorld => {
 
   const state: TestDemoItem[] = structuredClone(items);
   const inputs: DemoWorld["inputs"] = {
+    demoItemsOne: [],
     createDemoItemOne: [],
     updateDemoItemOne: [],
     deleteDemoItemOne: [],
@@ -144,6 +147,7 @@ export const demoWorld = (options: DemoWorldOptions = {}): DemoWorld => {
     api.query("DemoItemsOne", ({ variables }) => {
       const { input } = variables as DemoItemsOneQueryVariables;
       calls.demoItemsOne += 1;
+      inputs.demoItemsOne.push(input);
       const keyword = input.keyword?.trim().toLowerCase() ?? "";
       const matched = state.filter((item) => {
         if (input.category != null && item.category !== input.category) {

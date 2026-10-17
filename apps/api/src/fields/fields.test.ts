@@ -122,7 +122,7 @@ describe("欄位管理(#206,GraphQL 端點 + 真 MongoDB)", () => {
   }, HOOK_TIMEOUT_MS);
 
   describe("讀", () => {
-    it("fieldCategories 回種子的兩個全域類別", async () => {
+    it("fieldCategories 回種子的三個全域類別", async () => {
       const result = await api.graphql<FieldCategoriesData>(
         FIELD_CATEGORIES,
         {},
@@ -130,8 +130,8 @@ describe("欄位管理(#206,GraphQL 端點 + 真 MongoDB)", () => {
       );
       expect(result.errors).toBeUndefined();
       const keys = result.data?.fieldCategories.items.map((row) => row.key);
-      expect(keys).toEqual(["gender", "demo-category"]);
-      expect(result.data?.fieldCategories.totalCount).toBe(2);
+      expect(keys).toEqual(["gender", "demo-category", "reprint-reason"]);
+      expect(result.data?.fieldCategories.totalCount).toBe(3);
     });
 
     it("fields 回全域種子,依 order 排序、每筆 ownerOrg=null 且不可編輯", async () => {

@@ -12,6 +12,7 @@ import type {
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import type { TestOrgNode, TestOrgUser } from "./org-manager-handlers";
+import type { TestMatrixModule } from "./role-fixtures";
 import { api } from "./server";
 
 export type TestDataScopeTarget =
@@ -35,6 +36,8 @@ export interface DataScopeWorldOptions {
   roles?: TestRole[];
   users?: TestOrgUser[];
   orgTree?: TestOrgNode[];
+  /** `audiencePermissionOptions` 回的權限樹(套用對象「權限」的選項;= 權限矩陣的顯示樹) */
+  permissionModules?: TestMatrixModule[];
   failures?: { SaveDataScopeRule?: DataScopeFailure };
 }
 
@@ -51,7 +54,8 @@ const fail = (code: string, extensions: Record<string, unknown> = {}) =>
   graphqlError(code as AuthErrorCode, code, extensions);
 
 /**
- * 資料範圍頁的假 api(#205 的三個端點 + 選擇器要用的 `roles` / `users` / `orgTree`)。
+ * 資料範圍頁的假 api(#205 的三個端點 + 選擇器要用的 `roles` / `users` / `orgTree`
+ * / `audiencePermissionOptions`)。
  *
  * `saveDataScopeRule` 是**整份覆蓋**:成功時把送進來的那份存進記憶體並原樣回傳,
  * 所以儲存後重新查詢會拿到新的規則(左清單的「已設規則」也才會亮)。
@@ -65,6 +69,7 @@ export const dataScopeWorld = (
     roles = [],
     users = [],
     orgTree = [],
+    permissionModules = [],
     failures = {},
   } = options;
 
@@ -146,6 +151,11 @@ export const dataScopeWorld = (
       });
     }),
     api.query("OrgTree", () => HttpResponse.json({ data: { orgTree } })),
+    api.query("AudiencePermissionOptions", () =>
+      HttpResponse.json({
+        data: { audiencePermissionOptions: { modules: permissionModules } },
+      }),
+    ),
   ];
 
   return { handlers, inputs };

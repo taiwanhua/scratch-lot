@@ -1,11 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 
 import { useMeQuery, useOrgQuery, useOrgTreeQuery } from "@repo/graphql";
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { type OrgNodeLike, rootOrgId } from "@/lib/org-tree";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
+import { type OrgNodeLike, findOrgNode, rootOrgId } from "@/lib/base/org-tree";
 
 import { ORG_MANAGER_PERMISSIONS } from "./org-manager-permissions";
 import type { OrgActionAbility } from "./org-manager-types";
@@ -17,7 +17,10 @@ import type { OrgActionAbility } from "./org-manager-types";
  * (`parentId === null`)、在租戶視角是租戶頂層(`parentId` 有值)。加上操作者有沒有
  * `tenant-ops.*` 那三筆權限,就足以決定畫面長什麼樣,不需要「我是不是超級管理員」這種旗標。
  */
-export const useOrgManagerData = () => {
+export const useOrgManagerData = (
+  /** 網址 `?edit=<id>` 要編輯的組織:有就以它為選中的組織(編輯彈窗編的就是選中的那一個) */
+  editOrgId: string | null = null,
+) => {
   const { session } = useSession();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
@@ -28,7 +31,6 @@ export const useOrgManagerData = () => {
     canToggleEnabled: hasPermission(ORG_MANAGER_PERMISSIONS.toggleEnabled),
     canMove: hasPermission(ORG_MANAGER_PERMISSIONS.move),
     canDelete: hasPermission(ORG_MANAGER_PERMISSIONS.delete),
-    canViewMembers: hasPermission(ORG_MANAGER_PERMISSIONS.viewMembers),
     canAddMembers: hasPermission(ORG_MANAGER_PERMISSIONS.addMembers),
     canProvision: hasPermission(ORG_MANAGER_PERMISSIONS.provision),
     canRevokeProvision: hasPermission(ORG_MANAGER_PERMISSIONS.revokeProvision),
@@ -37,14 +39,20 @@ export const useOrgManagerData = () => {
     canSetTimezone: hasPermission(ORG_MANAGER_PERMISSIONS.setTimezone),
   };
 
-  const [pickedOrgId, setPickedOrgId] = useState<string | null>(null);
+  /** 選中的組織存在網址 `?detail=<id>`(REACT-14);沒有 = 樹根。 */
+  const [urlPickedOrgId, setPickedOrgId] = useUrlSelectedId();
+  const pickedOrgId = editOrgId ?? urlPickedOrgId;
 
   const orgTree = useOrgTreeQuery(session.client);
   const orgNodes: readonly OrgNodeLike[] = orgTree.data?.orgTree ?? [];
   const treeRootId = rootOrgId(orgNodes);
 
   /** 還沒點過任何節點時預設選樹根(不在 effect 內 setState,REACT-06)。 */
-  const selectedOrgId = pickedOrgId ?? treeRootId;
+  // 網址上的組織不在樹裡(手改、換了組織、已刪除)→ 退回樹根
+  const selectedOrgId =
+    pickedOrgId !== null && findOrgNode(orgNodes, pickedOrgId) !== null
+      ? pickedOrgId
+      : treeRootId;
 
   const selected = useOrgQuery(
     session.client,
@@ -85,6 +93,8 @@ export const useOrgManagerData = () => {
     selectOrg: setPickedOrgId,
     org,
     isOrgLoading: selected.isLoading,
+    /** 樹已到手:網址上的組織不在樹裡就是不存在或看不到 */
+    isOrgTreeReady: orgTree.isSuccess,
     invalidate,
   };
 };

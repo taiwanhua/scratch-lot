@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from "@jest/globals";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 
-import { workflowFragment } from "@/test/msw/workflow-fixtures";
+import { HR_ROLE_ID } from "@/test/msw/workflow-audience-fixtures";
+import {
+  leaveWorkflowDefinition,
+  workflowFragment,
+  workflowVersionFragment,
+} from "@/test/msw/workflow-fixtures";
 import { setupReactFlowEnvironment } from "@/test/react-flow";
 import { findSnackbarAlert } from "@/test/snackbar";
 
@@ -50,18 +55,22 @@ describe("流程管理:清單與設計器", () => {
     ).toBeInTheDocument();
   });
 
-  // 審核者來源四種分三案驗(一案走完四種 + 存草稿,在全套並行的 CI 上會超過單一測試的 15 秒)
-  it("點關卡 → 屬性面板;角色與主管(第幾層)都能選", async () => {
+  // 審核者來源三種分案驗(一案走完 + 存草稿,在全套並行的 CI 上會超過單一測試的 15 秒)
+  it("點關卡 → 屬性面板;人員條件顯示摘要,換成主管能選第幾層", async () => {
     const { user } = renderWorkflows();
     const canvas = await findCanvas();
+    expect(within(canvas).getByText("審核者:人員條件")).toBeInTheDocument();
 
     clickNode(canvas, "人資");
     const panel = propertiesPanel();
     const kind = within(panel).getByRole("combobox", { name: "審核者來源" });
-
-    // 角色(客製流程:選本租戶的角色)
-    await user.click(within(panel).getByRole("combobox", { name: "角色" }));
-    await user.click(await screen.findByRole("option", { name: "人資" }));
+    expect(kind).toHaveTextContent("人員條件");
+    const reviewers = within(panel).getByRole("group", { name: "審核者條件" });
+    expect(
+      await within(reviewers).findByText(
+        "角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)",
+      ),
+    ).toBeInTheDocument();
     // 主管 → 第 2 層
     await user.click(kind);
     await user.click(await screen.findByRole("option", { name: "主管" }));
@@ -73,19 +82,144 @@ describe("流程管理:清單與設計器", () => {
     ).toHaveTextContent("第 2 層");
   });
 
-  it("指定使用者:客製流程可以選,出現使用者選擇器", async () => {
-    const { user } = renderWorkflows();
+  it("編輯條件:對話框用 AudiencePicker 編輯,套用後寫回關卡;存草稿帶人員條件", async () => {
+    const { user, world } = renderWorkflows();
     const canvas = await findCanvas();
-
     clickNode(canvas, "人資");
     const panel = propertiesPanel();
-    await user.click(
-      within(panel).getByRole("combobox", { name: "審核者來源" }),
-    );
-    await user.click(await screen.findByRole("option", { name: "指定使用者" }));
+
+    await user.click(within(panel).getByRole("button", { name: "編輯條件" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 人資",
+    });
+    // 刪掉「所屬組織」那一列(第二列)
+    const removes = within(dialog).getAllByRole("button", { name: "刪除" });
+    await user.click(removes[1]);
+    await user.click(within(dialog).getByRole("button", { name: "套用" }));
 
     expect(
-      within(panel).getByRole("combobox", { name: "使用者" }),
+      await within(panel).findByText("角色 屬於 人資"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "存草稿" }));
+    expect(await findSnackbarAlert()).toEqual({
+      severity: "success",
+      text: "已存草稿",
+    });
+    expect(world.inputs.saveDraft[0]?.definition.steps[1]).toMatchObject({
+      key: "hr",
+      assignee: {
+        kind: "audience",
+        audience: {
+          mode: "match",
+          filter: {
+            op: "AND",
+            children: [
+              {
+                field: "role",
+                cond: "in",
+                value: { kind: "static", values: [HR_ROLE_ID] },
+              },
+            ],
+          },
+        },
+      },
+    });
+  });
+
+  it("換成人員條件:先開條件對話框,[取消] 保留原本的來源與設定;[套用] 才換", async () => {
+    const { user } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "直屬主管");
+    const panel = propertiesPanel();
+    const kind = within(panel).getByRole("combobox", { name: "審核者來源" });
+
+    await user.click(kind);
+    await user.click(await screen.findByRole("option", { name: "人員條件" }));
+    let dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 直屬主管",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+
+    expect(kind).toHaveTextContent("主管");
+    expect(
+      within(panel).getByRole("combobox", { name: "第幾層" }),
+    ).toHaveTextContent("第 1 層");
+    expect(within(canvas).getByText("主管第 1 層")).toBeInTheDocument();
+
+    await user.click(kind);
+    await user.click(await screen.findByRole("option", { name: "人員條件" }));
+    dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 直屬主管",
+    });
+    const valueBox = within(dialog).getByRole("combobox", { name: "值" });
+    await waitFor(() => {
+      expect(valueBox).toBeEnabled();
+    });
+    await user.click(valueBox);
+    await user.click(await screen.findByRole("option", { name: /人資/ }));
+    await user.click(within(dialog).getByRole("button", { name: "套用" }));
+
+    expect(kind).toHaveTextContent("人員條件");
+    expect(
+      await within(panel).findByText("角色 屬於 人資"),
+    ).toBeInTheDocument();
+  });
+
+  it("人員條件還是空的:卡片顯示「審核者:未設定」", async () => {
+    const definition = leaveWorkflowDefinition();
+    renderWorkflows({
+      world: {
+        ...defaultDesignOptions(),
+        versions: {
+          leave_review: [
+            workflowVersionFragment(
+              {
+                ...definition,
+                steps: definition.steps.map((step) =>
+                  step.key === "hr"
+                    ? {
+                        ...step,
+                        assignee: {
+                          kind: "audience",
+                          audience: {
+                            mode: "match",
+                            filter: { op: "AND", children: [] },
+                          },
+                        },
+                      }
+                    : step,
+                ),
+              },
+              { baseVersion: 1 },
+            ),
+          ],
+        },
+      },
+    });
+    const canvas = await findCanvas();
+
+    expect(within(canvas).getByText("審核者:未設定")).toBeInTheDocument();
+  });
+
+  it("編輯條件:沒挑值就套用 → 標在那一列、不關閉;取消不改關卡", async () => {
+    const { user } = renderWorkflows();
+    const canvas = await findCanvas();
+    clickNode(canvas, "人資");
+    const panel = propertiesPanel();
+
+    await user.click(within(panel).getByRole("button", { name: "編輯條件" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 人資",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "+ 條件" }));
+    await user.click(within(dialog).getByRole("button", { name: "套用" }));
+
+    expect(within(dialog).getByText("請選擇值。")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "取消" }));
+    expect(
+      await within(panel).findByText(
+        "角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -124,7 +258,7 @@ describe("流程管理:清單與設計器", () => {
     expect(saved.definition.checkFormKey).toBe("sick_leave");
   });
 
-  it("共用流程不能選「指定使用者」,角色只能填佔位", async () => {
+  it("共用流程:審核者條件只能用權限與組織來源(沒有指定組織),對話框頂端說明", async () => {
     const { user } = renderWorkflows({
       world: {
         ...defaultDesignOptions(),
@@ -132,18 +266,26 @@ describe("流程管理:清單與設計器", () => {
       },
     });
     const canvas = await findCanvas();
-
     clickNode(canvas, "人資");
     const panel = propertiesPanel();
+
+    await user.click(within(panel).getByRole("button", { name: "編輯條件" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "審核者條件 · 人資(共用流程)",
+    });
     expect(
-      within(panel).getByRole("textbox", { name: "角色佔位" }),
-    ).toHaveValue("人資");
-    await user.click(
-      within(panel).getByRole("combobox", { name: "審核者來源" }),
-    );
-    expect(
-      await screen.findByRole("option", { name: "指定使用者" }),
-    ).toHaveAttribute("aria-disabled", "true");
+      within(dialog).getByText(/共用流程給所有租戶用/),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "+ 條件" }));
+    // 新加的那一列是第三列(既有:權限、所屬組織)
+    const fields = within(dialog).getAllByRole("combobox", { name: "欄位" });
+    expect(fields).toHaveLength(3);
+    await user.click(fields[2]);
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "權限",
+      "所屬組織",
+    ]);
   });
 
   it("草稿已被別人更新 → 存草稿回 CONFLICT,提示並可重新載入", async () => {
@@ -175,9 +317,38 @@ describe("流程管理:清單與設計器", () => {
   });
 
   it("檢查器即時跑:錯誤定位到關卡,點一下選中那一關", async () => {
-    const { user } = renderWorkflows();
+    const definition = leaveWorkflowDefinition();
+    const { user } = renderWorkflows({
+      world: {
+        ...defaultDesignOptions(),
+        versions: {
+          leave_review: [
+            workflowVersionFragment(
+              {
+                ...definition,
+                steps: definition.steps.map((step) =>
+                  step.key === "hr"
+                    ? {
+                        ...step,
+                        assignee: {
+                          kind: "audience",
+                          audience: {
+                            mode: "match",
+                            filter: { op: "AND", children: [] },
+                          },
+                        },
+                      }
+                    : step,
+                ),
+              },
+              { baseVersion: 1 },
+            ),
+          ],
+        },
+      },
+    });
     const canvas = await findCanvas();
-    // 客製流程的角色關卡沒選角色 → ROLE_ID_MISSING(domain 的檢查器)
+    // 人資關卡的人員條件是空的 → AUDIENCE_INVALID(domain 的檢查器)
     const issues = await screen.findByRole("region", { name: "檢查結果" });
     const issue = await within(issues).findByText(/人資/, {
       selector: ".MuiListItemText-secondary",
@@ -216,7 +387,7 @@ describe("流程管理:清單與設計器", () => {
     await findCanvas();
 
     expect(
-      await screen.findByText("表單或角色超過 100 筆,清單已截斷,請縮小範圍。"),
+      await screen.findByText("表單超過 100 張,清單已截斷,請縮小範圍。"),
     ).toBeInTheDocument();
   });
 });

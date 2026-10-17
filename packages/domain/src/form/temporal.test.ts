@@ -9,6 +9,7 @@ import {
   addLocalCalendar,
   compareLocalDay,
   formatTemporal,
+  instantOfLocalTime,
   localDateOf,
   parseLocalDate,
   sameLocalDay,
@@ -55,6 +56,31 @@ describe("@repo/domain/form toInstant:單一入口", () => {
     ]) {
       expect(toInstant(value)).toBeNull();
     }
+  });
+});
+
+describe("@repo/domain/form instantOfLocalTime", () => {
+  it("同一個當地日期的 08:00 在台北與紐約是不同時點", () => {
+    const date = { year: 2026, month: 10, day: 16 };
+    expect(toIso(instantOfLocalTime(date, 8, 0, TAIPEI))).toBe(
+      "2026-10-16T00:00:00.000Z",
+    );
+    expect(toIso(instantOfLocalTime(date, 8, 0, NEW_YORK))).toBe(
+      "2026-10-16T12:00:00.000Z",
+    );
+  });
+
+  it("夏令時間開始日不存在的 02:30 落在切換後(03:30 EDT);結束日重複的 01:30 取較早的一個", () => {
+    expect(
+      toIso(
+        instantOfLocalTime({ year: 2026, month: 3, day: 8 }, 2, 30, NEW_YORK),
+      ),
+    ).toBe("2026-03-08T07:30:00.000Z");
+    expect(
+      toIso(
+        instantOfLocalTime({ year: 2026, month: 11, day: 1 }, 1, 30, NEW_YORK),
+      ),
+    ).toBe("2026-11-01T05:30:00.000Z");
   });
 });
 

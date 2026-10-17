@@ -1,9 +1,10 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+
+import { runNode } from "../test/support/update-harness";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const MIGRATION = path.join(
@@ -31,8 +32,8 @@ try {
 }
 `;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
-let memoryServer: MongoMemoryServer | undefined;
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 const clients: MongoClient[] = [];
 
@@ -49,8 +50,7 @@ async function openDatabase(databaseUri: string): Promise<Db> {
 }
 
 function runUpDirectly(databaseUri: string, times: number) {
-  return spawnSync(
-    process.execPath,
+  return runNode(
     [
       "--input-type=module",
       "-e",
@@ -59,7 +59,7 @@ function runUpDirectly(databaseUri: string, times: number) {
       String(times),
       MIGRATION,
     ],
-    { cwd: PACKAGE_ROOT, encoding: "utf8" },
+    { cwd: PACKAGE_ROOT },
   );
 }
 
@@ -124,7 +124,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);
@@ -144,7 +144,7 @@ describe("遷移:修訂補上自己的版本", () => {
     const databaseUri = databaseUriOf("once");
     database = await openDatabase(databaseUri);
     await seedPreState(database);
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
   }, 600_000);
@@ -183,8 +183,8 @@ describe("遷移冪等", () => {
     await seedPreState(once);
     await seedPreState(twice);
 
-    runUpDirectly(onceUri, 1);
-    const result = runUpDirectly(twiceUri, 2);
+    await runUpDirectly(onceUri, 1);
+    const result = await runUpDirectly(twiceUri, 2);
 
     expect(result.status).toBe(0);
     expect(await snapshotOf(twice)).toEqual(await snapshotOf(once));

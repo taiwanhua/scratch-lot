@@ -5,6 +5,8 @@ import type {
 
 export const GENDER_CATEGORY_KEY = "gender";
 export const DEMO_CATEGORY_KEY = "demo-category";
+/** 補印原因(列印的補印對話框;`@repo/domain/printing` 的 `REPRINT_REASON_CATEGORY_KEY`)。 */
+export const REPRINT_REASON_CATEGORY_KEY = "reprint-reason";
 
 /**
  * 一個系統類別的宣告。名稱與說明是「每次都 seed 的欄位」—— 說明沒寫就同步成 `null`,
@@ -32,5 +34,10 @@ export const fieldCategories: SeedDocumentSet = {
   entries: [
     category(GENDER_CATEGORY_KEY, "性別"),
     category(DEMO_CATEGORY_KEY, "示範分類"),
+    category(
+      REPRINT_REASON_CATEGORY_KEY,
+      "補印原因",
+      "列印的補印原因;選「其他」時補印說明必填(docs/modules/printers.md)",
+    ),
   ],
 };

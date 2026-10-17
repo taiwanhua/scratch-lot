@@ -5,7 +5,7 @@ import type {
   DefinitionSeedSet,
   WorkflowDefinitionSeedSet,
 } from "@repo/domain/seed";
-import type { StepDef } from "@repo/domain/workflow";
+import { DEFAULT_OVERDUE_AUDIENCE, type StepDef } from "@repo/domain/workflow";
 
 import type { AuthTestApp } from "../../auth/test-support/auth-app";
 import { findRootOrgId } from "../../auth/test-support/fixtures";
@@ -47,10 +47,14 @@ import {
   RETIRE_WORKFLOW,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
+  audienceRow,
+  audienceSource,
   person,
   publishWorkflow,
   publishWorkflowDraft,
+  roleSource,
   setupWorld,
+  usersSource,
 } from "../test-support/workflow-fixtures";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
@@ -85,7 +89,10 @@ function portableSteps(): StepDef[] {
     {
       key: "hr",
       name: "人資",
-      assignee: { kind: "role", roleId: null, placeholder: "人資" },
+      assignee: audienceSource(
+        audienceRow("permission", ["hr.approve"]),
+        audienceRow("org", { kind: "dynamic", ref: "submission-org" }),
+      ),
       mode: "all",
     },
     {
@@ -284,6 +291,46 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
       expect(await installationsOf(connection, key)).toEqual([]);
     });
 
+    it("逾時提醒、關卡知會、整個流程的知會:匯出原樣帶出,換 key 安裝後版本上照樣保留", async () => {
+      const key = "exp_flow_overdue_cc";
+      const overdue = {
+        reviewerAfterHours: 24,
+        audienceAfterHours: 48,
+        audience: DEFAULT_OVERDUE_AUDIENCE,
+      };
+      const stepCc = { kind: "manager", level: 2 };
+      const flowCc = audienceSource(audienceRow("permission", ["hr.approve"]));
+      const steps = [
+        { ...bossOnly()[0], overdue, cc: stepCc },
+      ] as unknown as StepDef[];
+      await ok(api, world.root, CREATE_WORKFLOW, {
+        input: { key, name: `流程 ${key}` },
+      });
+      await publishWorkflowDraft(
+        world,
+        key,
+        { steps, cc: flowCc },
+        null,
+        world.root,
+      );
+
+      const file = await exportOk(designer.token, inputOf(key, 1));
+      const seed = evaluateSeedSource(file.source) as WorkflowDefinitionSeedSet;
+      expect(seed.definition).toEqual({
+        steps: [expect.objectContaining({ overdue, cc: stepCc })],
+        edges: null,
+        cc: flowCc,
+      });
+
+      const installedKey = `${key}_installed`;
+      await runSeed(app, { ...seed, key: installedKey });
+      const [installed] = await versionDocs(connection, WORKFLOW, installedKey);
+      expect(installed?.cc).toEqual(flowCc);
+      expect(installed?.steps).toEqual([
+        expect.objectContaining({ overdue, cc: stepCc }),
+      ]);
+    });
+
     it("版本由呼叫端指名:已退役、草稿、不存在的版本都拒絕,不拿目前版本代替;退役目前版本後也不能再匯出它", async () => {
       const key = "exp_flow_versions";
       await publishShared(key, bossOnly());
@@ -327,22 +374,6 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
       expect(
         extensionsOf(await exportSeed(world.root, inputOf(key, 2))),
       ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["version"] });
-    });
-
-    it("發布還沒切換完(版本已是 published、目前版本還沒指向它):不算已發布,拒絕", async () => {
-      const key = "exp_flow_interrupted";
-      await publishShared(key, bossOnly());
-      await connection
-        .collection("workflows")
-        .updateOne({ key }, { $set: { currentVersion: null } });
-
-      const result = await exportSeed(world.root, inputOf(key, 1));
-
-      expect(result.data).toBeNull();
-      expect(extensionsOf(result)).toMatchObject({
-        code: "CONFLICT",
-        reason: "PUBLISH_IN_PROGRESS",
-      });
     });
 
     it("租戶邊界是共用、擁有組織卻有值的流程(正常寫入不會產生):不當成共用流程,當不存在", async () => {
@@ -442,17 +473,13 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
         {
           key: "named",
           name: "指名",
-          assignee: { kind: "users", userIds: [String(world.manager.userId)] },
+          assignee: usersSource([world.manager]),
           mode: "any",
         },
         {
           key: "fixed_role",
           name: "寫死角色",
-          assignee: {
-            kind: "role",
-            roleId: String(world.hrRoleId),
-            placeholder: null,
-          },
+          assignee: roleSource(world.hrRoleId),
           mode: "any",
         },
         {
@@ -497,9 +524,8 @@ describe("exportWorkflowSeed:把共用流程的已發布版本匯出成專案設
           .map(({ code, path }) => `${path} ${code}`)
           .toSorted(byText),
       ).toEqual([
-        "definition.steps.0.assignee.userIds ASSIGNEE_NOT_PORTABLE",
-        "definition.steps.1.assignee.placeholder ASSIGNEE_NOT_PORTABLE",
-        "definition.steps.1.assignee.roleId ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.0.assignee.audience.filter.children[0] ASSIGNEE_NOT_PORTABLE",
+        "definition.steps.1.assignee.audience.filter.children[0] ASSIGNEE_NOT_PORTABLE",
         "definition.steps.2.assignee.formKey ASSIGNEE_NOT_PORTABLE",
         // 位置指到表達式裡寫死的那個運算元
         "definition.steps.3.skipWhen.==.1 ID_COMPARISON",

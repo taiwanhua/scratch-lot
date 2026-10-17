@@ -6,6 +6,11 @@ import { Box } from "@repo/ui/box";
 export interface SnackbarAnnouncerProps {
   /** 要念的那一則(與畫面上的 Snackbar 同一份文案) */
   message: ReactNode;
+  /**
+   * 那一則的標題(選填),念在訊息前面。與 `message` 分開傳:兩者都是 store 裡那一則的原值,
+   * 參照穩定;在呼叫端組成新的 fragment 會讓每次重繪都換一個值、補念重跑。
+   */
+  title?: ReactNode;
   /** 與 Snackbar 同一層的定位點:它被標了 `aria-hidden`,就代表 Snackbar 也念不到 */
   anchorRef: RefObject<HTMLElement | null>;
 }
@@ -44,22 +49,23 @@ const VISUALLY_HIDDEN_SX = {
  */
 export const SnackbarAnnouncer = ({
   message,
+  title,
   anchorRef,
 }: SnackbarAnnouncerProps) => {
-  const [announced, setAnnounced] = useState<ReactNode>(null);
+  const [isAnnounced, setIsAnnounced] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const isHidden =
         anchorRef.current?.closest('[aria-hidden="true"]') != null;
       if (isHidden) {
-        setAnnounced(message);
+        setIsAnnounced(true);
       }
     }, 0);
     return () => {
       clearTimeout(timer);
     };
-  }, [anchorRef, message]);
+  }, [anchorRef, title, message]);
 
   return createPortal(
     <Box
@@ -68,7 +74,12 @@ export const SnackbarAnnouncer = ({
       aria-atomic="true"
       sx={VISUALLY_HIDDEN_SX}
     >
-      {announced}
+      {isAnnounced && (
+        <>
+          {title !== undefined && <>{title} </>}
+          {message}
+        </>
+      )}
     </Box>,
     document.body,
   );

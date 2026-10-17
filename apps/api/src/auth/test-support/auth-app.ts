@@ -1,11 +1,13 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import path from "node:path";
 
 import type { INestApplication, Type } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { type Connection } from "mongoose";
 import request from "supertest";
+
+import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
 
 /** db-migrator 套件根目錄(以子行程跑其 seed 指令,不 import — STRUCT-01 禁 app 互 import)。 */
 const DB_MIGRATOR_ROOT = path.resolve(
@@ -41,6 +43,61 @@ export interface MigratorResult {
   stderr: string;
 }
 
+/**
+ * db-migrator 子行程的逾時:低於 hook 逾時(`HOOK_TIMEOUT_MS`),子行程卡住時由這裡先 kill 它,
+ * 並帶出 stderr 與 stdout 尾端報錯,不會被 beforeAll 的逾時蓋掉原因。一次 seed / update 正常只要數秒。
+ */
+export const MIGRATOR_TIMEOUT_MS = HOOK_TIMEOUT_MS - 15_000;
+
+/**
+ * 以非同步子行程跑 db-migrator 的指令(tsx 入口 + 參數),收齊 stdout / stderr 後回結果。
+ * 不用 spawnSync:本機的 mongodb-memory-server 是測試行程的子程序,它的輸出靠測試行程的事件迴圈讀;
+ * spawnSync 期間事件迴圈被擋住,mongod 的輸出管線塞滿後 mongod 停住,子行程連不上資料庫
+ * (`Server selection timed out`)。與 seed-cli.test.ts 的 CLI 子程序同一個理由。
+ */
+function runMigrator(
+  args: readonly string[],
+  databaseUri: string,
+): Promise<MigratorResult> {
+  return new Promise<MigratorResult>((resolve, reject) => {
+    const child = spawn(process.execPath, [TSX_CLI, ...args], {
+      cwd: DB_MIGRATOR_ROOT,
+      env: migratorEnv(databaseUri),
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(
+        new Error(
+          `db-migrator 子行程逾時:${stderr}
+${stdout.slice(-2000)}`,
+        ),
+      );
+    }, MIGRATOR_TIMEOUT_MS);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(
+        new Error(
+          `db-migrator 子行程失敗(${error.message}):${stderr}
+${stdout.slice(-2000)}`,
+        ),
+      );
+    });
+    child.on("close", (status) => {
+      clearTimeout(timer);
+      resolve({ status, stdout, stderr });
+    });
+  });
+}
+
 function migratorEnv(databaseUri: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -58,18 +115,8 @@ function migratorEnv(databaseUri: string): NodeJS.ProcessEnv {
 export function runMigratorUpdate(
   databaseUri: string,
   args: readonly string[],
-): MigratorResult {
-  const { status, stdout, stderr } = spawnSync(
-    process.execPath,
-    [TSX_CLI, UPDATE_ENTRY, BASE_ONLY_REGISTRY, ...args],
-    {
-      cwd: DB_MIGRATOR_ROOT,
-      env: migratorEnv(databaseUri),
-      encoding: "utf8",
-      timeout: 180_000,
-    },
-  );
-  return { status, stdout, stderr };
+): Promise<MigratorResult> {
+  return runMigrator([UPDATE_ENTRY, BASE_ONLY_REGISTRY, ...args], databaseUri);
 }
 
 /** 測試用 root 初始帳號(正式環境自 Secret Manager 注入,ADR-0002);密碼為測試假值。 */
@@ -115,9 +162,9 @@ export interface AuthTestApp {
    * 對**這個測試 app 自己的資料庫**再跑一次 seed(模擬一般部署的 update:migration → 種子),
    * 用來驗「人經 API 改過的值,重跑 seed 後還在」。資料庫由 harness 自己決定,不收外部 URI。
    */
-  reseed: () => void;
+  reseed: () => Promise<void>;
   /** 對這個測試 app 自己的資料庫跑 db-migrator 的 update 指令(帶參數),回結果不丟錯。 */
-  runUpdate: (args: readonly string[]) => MigratorResult;
+  runUpdate: (args: readonly string[]) => Promise<MigratorResult>;
   close: () => Promise<void>;
 }
 
@@ -135,28 +182,11 @@ export function buildDatabaseUri(
  * seed 是 update 的相容別名:同一次執行先跑尚未成功的 migration、再同步種子(與一般部署同一條路),
  * 自己取得並釋放整批互斥鎖。種的是空專案來源的夾具 registry:沒有登記受管定義,不需要 api 的建置產物。
  */
-export function seedDatabase(databaseUri: string): void {
-  const seedArgs = [TSX_CLI, SEED_ENTRY, BASE_ONLY_REGISTRY];
-  const result = spawnSync(process.execPath, seedArgs, {
-    cwd: DB_MIGRATOR_ROOT,
-    env: {
-      ...process.env,
-      MONGODB_URI: databaseUri,
-      ROOT_ADMIN_ACCOUNT: ROOT_ADMIN.account,
-      ROOT_ADMIN_EMAIL: ROOT_ADMIN.email,
-      ROOT_ADMIN_PASSWORD: ROOT_ADMIN.password,
-    },
-    encoding: "utf8",
-    // 子行程卡住會擋住整個 jest event loop(測試逾時觸發不了、也不會輸出),CI 曾因此掛好幾小時;
-    // 逾時就明確報錯,並把 stdout 尾端一起帶出來方便查
-    timeout: 180_000,
-  });
-  if (result.error !== undefined) {
-    throw new Error(
-      `seed 子行程失敗(${result.error.message}):${result.stderr}
-${result.stdout.slice(-2000)}`,
-    );
-  }
+export async function seedDatabase(databaseUri: string): Promise<void> {
+  const result = await runMigrator(
+    [SEED_ENTRY, BASE_ONLY_REGISTRY],
+    databaseUri,
+  );
   if (result.status !== 0) {
     throw new Error(
       `seed 失敗(status ${String(result.status)}):${result.stderr}`,
@@ -175,7 +205,7 @@ export function cookiePair(
 
 /**
  * 啟動對真 MongoDB 的完整 Nest app(#61 Testing Decisions):
- * 本地起 mongodb-memory-server;CI 沿用 MongoDB service container(MONGODB_URI)。
+ * 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。
  * 環境變數在 import AppModule 之前設定 — AppModule 載入時 ConfigModule 就讀 `.env`;
  * `MONGODB_URI` 則是連線 factory 執行時才讀。
  * `extraModules`:測試專用的額外 Nest module(如 #63 的 @RequirePermission 探針 resolver),與 AppModule 一起掛上。
@@ -185,10 +215,10 @@ export async function startAuthTestApp(
   env: Record<string, string> = {},
   extraModules: Type[] = [],
 ): Promise<AuthTestApp> {
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let baseUri = process.env.MONGODB_URI;
   if (!baseUri) {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
   try {
@@ -209,13 +239,13 @@ export async function startAuthTestApp(
 
 async function bootAuthTestApp(
   baseUri: string,
-  memoryServer: MongoMemoryServer | undefined,
+  memoryServer: MongoMemoryReplSet | undefined,
   databaseName: string,
   env: Record<string, string>,
   extraModules: Type[],
 ): Promise<AuthTestApp> {
   const databaseUri = buildDatabaseUri(baseUri, databaseName);
-  seedDatabase(databaseUri);
+  await seedDatabase(databaseUri);
 
   process.env.MONGODB_URI = databaseUri;
   process.env.JWT_SECRET = TEST_JWT_SECRET;
@@ -271,9 +301,7 @@ async function bootAuthTestApp(
     app,
     connection,
     graphql,
-    reseed: () => {
-      seedDatabase(databaseUri);
-    },
+    reseed: () => seedDatabase(databaseUri),
     runUpdate: (args) => runMigratorUpdate(databaseUri, args),
     close: async () => {
       await app.close();

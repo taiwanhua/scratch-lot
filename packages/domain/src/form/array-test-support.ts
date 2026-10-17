@@ -14,6 +14,7 @@ const COLUMN_WIDGET: Record<ArrayColumnType, string> = {
   datetime: "dateTimePicker",
   select: "dropdown",
   boolean: "checkbox",
+  reference: "referencePicker",
 };
 
 /** 一個最小可用的子欄;`overrides` 蓋掉任何屬性。 */

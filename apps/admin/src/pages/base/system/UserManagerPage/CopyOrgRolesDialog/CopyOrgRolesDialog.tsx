@@ -9,8 +9,8 @@ import { Radio, RadioGroup } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { UserPicker } from "@/components/UserPicker/UserPicker";
-import { useMe } from "@/hooks/useMe";
+import { UserPicker } from "@/components/base/UserPicker/UserPicker";
+import { useMe } from "@/hooks/base/useMe";
 
 import type { UserRow } from "../user-manager-types";
 import { CopyDiffPreview } from "./CopyDiffPreview";

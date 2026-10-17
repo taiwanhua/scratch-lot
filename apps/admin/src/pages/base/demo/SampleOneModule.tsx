@@ -27,8 +27,8 @@ import {
   useDemoItemCache,
   useDemoRows,
 } from "@/components/base/crud/useDemoQuery";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
 
 import { FormTipsBlock } from "./SampleOneFormPage/FormTipsBlock";
 import { ItemHistoryBlock } from "./SampleOneFormPage/ItemHistoryBlock";

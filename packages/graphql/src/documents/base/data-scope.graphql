@@ -32,7 +32,8 @@ query DataScopeTargets {
   }
 }
 
-# rule = null 代表這個目標尚無規則(查詢只受租戶保底);rules[].filter 是條件樹 JSON,形狀見 api 正本
+# rule = null 代表這個目標尚無規則(查詢只受租戶保底);rules[].filter 是條件樹 JSON,形狀見 api 正本;
+# rules[].audience 是人員條件 JSON({ mode: "all" } | { mode: "match", filter }),形狀正本 @repo/domain/audience
 query DataScopeRule($targetId: ID!) {
   dataScopeRule(targetId: $targetId) {
     rule {
@@ -42,10 +43,7 @@ query DataScopeRule($targetId: ID!) {
       combineOp
       updatedAt
       rules {
-        audience {
-          type
-          ids
-        }
+        audience
         filter
       }
     }
@@ -63,10 +61,7 @@ mutation SaveDataScopeRule($input: SaveDataScopeRuleInput!) {
       combineOp
       updatedAt
       rules {
-        audience {
-          type
-          ids
-        }
+        audience
         filter
       }
     }

@@ -27,7 +27,6 @@ import {
   UPLOAD_RULES,
   UploadPurpose,
 } from "../../storage/upload-rules";
-import { FormPublishHooks } from "../form-design/form-publish-hooks";
 import {
   CREATE_DRAFT,
   CREATE_FORM,
@@ -57,7 +56,6 @@ import {
   publishNewForm,
   rawSubmission,
   rootToken,
-  saveDefinition,
   showKey,
   submitDraft,
 } from "../test-support/form-fixtures";
@@ -752,52 +750,6 @@ describe("表單預設值、日期時間、上傳上限、型別檢查、刪除�
       await ok(api, root, CREATE_DRAFT, {
         input: { formKey: "delete_draft_form", baseVersion: 1 },
       });
-    });
-
-    it("發布中(發布中斷)不可刪:409 PUBLISH_IN_PROGRESS", async () => {
-      await publishNewForm(
-        api,
-        root,
-        "delete_publishing",
-        definitionOf([field("title", "text")]),
-      );
-      const draft = await ok<{
-        createFormVersionDraft: { formVersion: VersionRow };
-      }>(api, root, CREATE_DRAFT, {
-        input: { formKey: "delete_publishing", baseVersion: 1 },
-      });
-      const saved = await saveDefinition(
-        api,
-        root,
-        "delete_publishing",
-        definitionOf([field("title", "text"), field("note", "text")]),
-        draft.createFormVersionDraft.formVersion.draftRevision,
-      );
-      const hooks = api.app.get(FormPublishHooks);
-      jest
-        .spyOn(hooks, "reached")
-        .mockImplementation((checkpoint) =>
-          checkpoint === "publish-version"
-            ? Promise.reject(new Error("injected failure"))
-            : Promise.resolve(),
-        );
-      const failed = await call(api, root, PUBLISH, {
-        input: {
-          formKey: "delete_publishing",
-          expectedDraftRevision: saved.draftRevision,
-          changelog: "中斷",
-        },
-      });
-      expect(failed.errors).toBeDefined();
-      jest.restoreAllMocks();
-      const blocked = await call(api, root, DELETE_VERSION_DRAFT, {
-        input: {
-          formKey: "delete_publishing",
-          expectedDraftRevision: saved.draftRevision,
-        },
-      });
-      expect(codeOf(blocked)).toBe("CONFLICT");
-      expect(extensionsOf(blocked).reason).toBe("PUBLISH_IN_PROGRESS");
     });
 
     it("沒有 system.forms.edit 的人不能刪", async () => {

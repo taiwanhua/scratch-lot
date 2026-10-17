@@ -6,6 +6,7 @@ import { Badge } from "@repo/ui/badge";
 import { moduleIconOf } from "@repo/ui/icons";
 import { ListItemButton, ListItemIcon, ListItemText } from "@repo/ui/list";
 
+import { useNavLinkHref } from "../../useNavLinkHref";
 import { itemSx } from "./nav-item-styles";
 
 export interface NavLinkItemProps {
@@ -33,10 +34,11 @@ export const NavLinkItem = ({
   badge,
 }: NavLinkItemProps) => {
   const t = useTranslations("admin.shell");
+  const href = useNavLinkHref(to);
   return (
     <ListItemButton<typeof Link>
       component={Link}
-      to={to}
+      to={href}
       selected={isSelected}
       aria-current={isSelected ? "page" : undefined}
       onClick={onNavigate}

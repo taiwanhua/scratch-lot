@@ -107,17 +107,6 @@ export class WorkflowModel {
   @Field(() => Boolean)
   hasDraft!: boolean;
 
-  /** 發布中斷(有 `publishing` 版本,或已發布但還沒切換完):顯示「重試」。 */
-  @Field(() => Boolean)
-  publishInterrupted!: boolean;
-
-  /**
-   * 目前發布版的關卡含角色佔位(共用流程的 `role` 來源):租戶**不能直接綁**,要以它為基底建客製流程。
-   * 沒有發布版為 false。
-   */
-  @Field(() => Boolean)
-  hasRolePlaceholder!: boolean;
-
   /** root 視角的共用流程才有;其餘為空陣列。 */
   @Field(() => [WorkflowAssignment])
   assignments!: WorkflowAssignment[];
@@ -200,6 +189,10 @@ export class WorkflowVersionModel {
   /** 設計器的「檢查用表單」(表單 key);沒選 = null。發布快照保留、開草稿 / fork 帶過去。 */
   @Field(() => ID, { nullable: true })
   checkFormKey!: string | null;
+
+  /** 整個流程的知會對象(`AssigneeSource`);沒設 = null。發布快照保留、開草稿 / fork 帶過去。 */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  cc!: Record<string, unknown> | null;
 
   @Field(() => String, { nullable: true })
   changelog!: string | null;

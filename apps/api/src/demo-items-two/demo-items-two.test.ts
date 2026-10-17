@@ -512,7 +512,7 @@ describe("示範模組2(#319,GraphQL 端點 + 真 MongoDB)", () => {
               SAMPLE_ONE_MODULE_KEY,
             ),
             combineOp: "OR",
-            rules: [{ audience: { type: "ALL" }, filter: ONLY_MINE }],
+            rules: [{ audience: { mode: "all" }, filter: ONLY_MINE }],
           },
         },
         { accessToken: rootToken },

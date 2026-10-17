@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type SyntheticEvent, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import { PASSWORD_MIN_LENGTH } from "@repo/domain/password";
@@ -13,10 +13,11 @@ import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { useMe } from "@/hooks/useMe";
-import { useSession } from "@/hooks/useSession";
-import { passwordViolationsOf } from "@/lib/auth/graphql-errors";
-import { NEXT_PARAM, safeNextPath } from "@/lib/paths";
+import { useMe } from "@/hooks/base/useMe";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
+import { passwordViolationsOf } from "@/lib/base/auth/graphql-errors";
+import { NEXT_PARAM, safeNextPath, urlStringSchema } from "@/lib/base/paths";
 
 import { AuthCard } from "../AuthCard";
 import { NewPasswordFields } from "../NewPasswordFields/NewPasswordFields";
@@ -35,8 +36,8 @@ export const ChangePasswordPage = () => {
   const { session, snapshot } = useSession();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get(NEXT_PARAM));
+  const [next] = useUrlState(NEXT_PARAM, urlStringSchema);
+  const nextPath = safeNextPath(next);
 
   const me = useMe();
   const isForced =

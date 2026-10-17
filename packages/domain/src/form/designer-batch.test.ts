@@ -15,7 +15,8 @@ import { requiredIssueOf, validateFieldRules } from "./values";
 const CTX: ExpressionContext = {
   now: "2026-09-26T06:30:00.000Z",
   timezone: "Asia/Taipei",
-  user: { id: "user-1", orgId: "org-1" },
+  user: { id: "user-1", orgId: "org-1", orgIds: ["org-1"] },
+  tenant: { id: "tenant-1" },
 };
 
 /** 台北 2026-09-26 00:00 */

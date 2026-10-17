@@ -8,7 +8,9 @@ import {
   DECISIONS,
   type Decision,
   HISTORY_KINDS,
+  HISTORY_REASONS,
   type HistoryKind,
+  type HistoryReason,
   INSTANCE_STATUSES,
   type InstanceStatus,
   type NotifiedResult,
@@ -39,6 +41,13 @@ export class WorkflowPlanItem {
   /** `invalid` = 承辦人停用 / 移出租戶(阻擋的依據)。 */
   @Prop({ type: String, required: true, enum: ASSIGNEE_STATES })
   assigneeState!: AssigneeState;
+
+  /**
+   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的原審核者們;多位委託同一人時合成這一項。
+   * 沒有代理 / 流程管理者改派後為空陣列。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  delegatorIds!: Types.ObjectId[];
 }
 
 const WorkflowPlanItemSchema = SchemaFactory.createForClass(WorkflowPlanItem);
@@ -112,6 +121,21 @@ export class WorkflowHistoryEvent {
 
   @Prop({ type: String, default: null })
   result!: NotifiedResult | null;
+
+  /** 跳過 / 自動通過的原因(`step_skipped`:哪一項成立;`approved`:B5 自動通過);其他 null。 */
+  @Prop({ type: String, enum: [...HISTORY_REASONS, null], default: null })
+  reason!: HistoryReason | null;
+
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼。 */
+  @Prop({ type: String, default: null })
+  code!: string | null;
+
+  /**
+   * `task_created` 與決定(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <userId> 代理 <delegatorIds>」);其他事件空陣列。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  delegatorIds!: Types.ObjectId[];
 }
 
 const WorkflowHistoryEventSchema =
@@ -123,14 +147,6 @@ export interface WorkflowOutcome {
   stepKey: string;
   taskKey: string;
   historyIndex: number;
-}
-
-/** 這次送出所依據的草稿版本與流程版本(`linking` 重試時核對)。 */
-export interface WorkflowLinkSource {
-  submissionEditVersion: number;
-  formVersion: number;
-  workflowKey: string;
-  workflowVersion: number;
 }
 
 /**
@@ -177,10 +193,6 @@ export class WorkflowInstance {
   @Prop({ type: String, required: true, enum: INSTANCE_STATUSES })
   status!: InstanceStatus;
 
-  /** 送出第 2 步記下(`linking` 重試時核對;相同沿用、不同重置)。 */
-  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
-  linkSource!: WorkflowLinkSource | null;
-
   /** 目前進行中的關卡 key;直線時長度 ≤ 1,分流後多個,結束後為空。 */
   @Prop({ type: [String], default: [] })
   activeStepKeys!: string[];
@@ -201,6 +213,13 @@ export class WorkflowInstance {
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   outcome!: WorkflowOutcome | null;
 
+  /**
+   * 收過這個實例知會通知(B17,`workflow.cc`)的人:讀取授權以「任務持有者」同等規則讓他們唯讀
+   * 這個修訂(`canReadSubmissionRevision`)。與知會通知同一個交易追加(`$addToSet`),不動 `editVersion`。
+   */
+  @Prop({ type: [Types.ObjectId], default: [] })
+  ccRecipientIds!: Types.ObjectId[];
+
   /** 模組 key(`tenantScopePlugin` 的 `moduleData` 宣告;抄自提交)。 */
   moduleKey!: string;
 
@@ -219,6 +238,8 @@ WorkflowInstanceSchema.index(
 );
 // 阻擋清單 / 需要推進的查詢(以租戶為邊界)
 WorkflowInstanceSchema.index({ tenantId: 1, status: 1 });
+// 知會對象的讀取授權(這位讀者被知會過哪些實例)
+WorkflowInstanceSchema.index({ ccRecipientIds: 1 });
 // 基礎欄位(ADR-0007)+ 模組資料表的 moduleKey / tenantId(ADR-0005)
 WorkflowInstanceSchema.plugin(baseFieldsPlugin);
 WorkflowInstanceSchema.plugin(tenantScopePlugin, { moduleData: true });

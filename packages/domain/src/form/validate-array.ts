@@ -20,26 +20,30 @@ import type {
   ArrayColumnType,
   FieldDef,
   FieldRules,
+  PrefillMapping,
 } from "./types";
 import {
   type FieldValidationContext,
   validateColumnContent,
 } from "./validate-fields";
+import { checkPrefillEntry } from "./validate-structure";
 
 /**
  * 檢查器的明細列段(Spec 6a §5「明細列」的檢查器一條):至少一個子欄、子欄 key 格式與重複、
- * 白名單外的型別 / 元件 / 規則 / 設定、硬上限(每版明細欄 5、子欄 20、`maxRows` 200)、列數規則
+ * 白名單外的型別 / 元件 / 規則 / 設定、引用子欄的來源(同表單層引用欄)、硬上限(每版明細欄 5、子欄 20、`maxRows` 200)、列數規則
  * (`max(minRows, required ? 1 : 0) ≤ maxRows`)。版面 span、列內公式與彙總的引用、摘要槽 / 帶入 / 列表欄
  * 的禁用分別在版面段、表達式段與結構段檢查。
  */
 
-/** 子欄上不支援的設定(第一版):子欄級權限、顯示 / 鎖定條件、預設值、引用來源、巢狀子欄。 */
+/**
+ * 子欄上不支援的設定:子欄級權限、顯示 / 鎖定條件、預設值、巢狀子欄(權限與條件繼承整個明細欄)。
+ * 引用來源(`source`)只有引用子欄能設,另外檢查。
+ */
 const UNSUPPORTED_COLUMN_SETTINGS = [
   "permission",
   "visibleWhen",
   "readonlyWhen",
   "default",
-  "source",
   "columns",
 ] as const;
 
@@ -198,7 +202,7 @@ function validateColumn(
   if (!isArrayColumnType(type)) {
     collector.error(
       "ARRAY_COLUMN_TYPE",
-      `子欄位「${column.label}」不能用 ${String(type)} 型別(只能文字、數字、日期、日期時間、單選、是否)`,
+      `子欄位「${column.label}」不能用 ${String(type)} 型別(只能文字、數字、日期、日期時間、單選、是否、引用)`,
       { ...location, property: "type" },
     );
     return;
@@ -220,10 +224,61 @@ function validateColumn(
     return;
   }
   validateColumnContentAt(column, location, context, collector);
+  if (type === "reference") {
+    validateColumnPrefill(field, column, context, collector);
+  }
 }
 
-/** 子欄的值來源(使用者填 / 列內公式)、不支援的設定、寬度、規則白名單。 */
-function validateColumnSettings(
+/**
+ * 列內帶入(《底座規格》3.2 B2c;與表單層帶入規則共用一列的檢查 `checkPrefillEntry`):目標是同一明細的其他子欄、
+ * 只能使用者填且不是引用子欄;來源欄位要在子欄來源的可回欄位內、型別相容(`isPrefillCompatible`)。
+ */
+function validateColumnPrefill(
+  field: FieldDef,
+  column: ArrayColumnDef,
+  context: FieldValidationContext,
+  collector: IssueCollector,
+): void {
+  const mapping: unknown = column.prefill?.mapping;
+  if (column.prefill === undefined || column.prefill === null) {
+    return;
+  }
+  const location = { fieldKey: field.key, columnKey: column.key };
+  if (!Array.isArray(mapping)) {
+    collector.error(
+      "ARRAY_COLUMN_SETTING",
+      `子欄位「${column.label}」的帶入規則要有對應表`,
+      { ...location, property: "prefill.mapping" },
+    );
+    return;
+  }
+  const siblings = new Map(
+    arrayColumnsOf(field)
+      .filter((candidate) => candidate !== column)
+      .map((candidate) => [candidate.key, candidate]),
+  );
+  const providerKey = column.source?.provider;
+  const provider =
+    providerKey === undefined
+      ? undefined
+      : context.lookupProviders?.[providerKey];
+  for (const [index, entry] of (mapping as PrefillMapping[]).entries()) {
+    checkPrefillEntry(
+      entry,
+      siblings.get(entry.fieldKey),
+      provider,
+      {
+        location: { ...location, property: `prefill.mapping.${String(index)}` },
+        targetMessage: `帶入目標 ${entry.fieldKey} 必須是同一列使用者填寫的子欄位(不能是列內公式、引用或自己)`,
+        stopOnBadTarget: true,
+      },
+      collector,
+    );
+  }
+}
+
+/** 子欄的值來源:使用者填 / 列內公式(引用子欄只能使用者填);列內公式要有公式。 */
+function validateColumnValueSource(
   column: ArrayColumnDef,
   type: ArrayColumnType,
   location: DefinitionIssueLocation,
@@ -236,13 +291,39 @@ function validateColumnSettings(
       `子欄位「${column.label}」只能使用者填或列內公式`,
       { ...location, property: "valueSource" },
     );
+  } else if (type === "reference" && source.kind !== "input") {
+    // 同表單層引用欄:值來源固定是使用者從來源挑選,不能用公式算
+    collector.error(
+      "ARRAY_COLUMN_SETTING",
+      `引用子欄位「${column.label}」只能使用者填`,
+      { ...location, property: "valueSource" },
+    );
   } else if (source.kind === "computed" && source.expr === undefined) {
     collector.error("EXPR_MISSING", `子欄位「${column.label}」沒有公式`, {
       ...location,
       exprSlot: "valueSource.expr",
     });
   }
+}
+
+/** 子欄的值來源、不支援的設定、寬度、規則白名單。 */
+function validateColumnSettings(
+  column: ArrayColumnDef,
+  type: ArrayColumnType,
+  location: DefinitionIssueLocation,
+  collector: IssueCollector,
+): void {
+  validateColumnValueSource(column, type, location, collector);
   const record = column as unknown as Record<string, unknown>;
+  for (const setting of ["source", "prefill"] as const) {
+    if (type !== "reference" && isPresent(record[setting])) {
+      collector.error(
+        "ARRAY_COLUMN_SETTING",
+        `子欄位「${column.label}」不支援這個設定(${setting})`,
+        { ...location, property: setting },
+      );
+    }
+  }
   for (const setting of UNSUPPORTED_COLUMN_SETTINGS) {
     if (isPresent(record[setting])) {
       collector.error(

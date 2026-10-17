@@ -4,13 +4,17 @@ import { CurrentOperator } from "../../auth/decorators";
 import type { OperatorContext } from "../../database/operator-context";
 import { RequirePermission } from "../../permission/require-permission.decorator";
 import {
+  BatchApproveTasksPayload,
   WorkflowDecideResultEnum,
   WorkflowInstancePayload,
   WorkflowTaskPayload,
   WorkflowTasksPayload,
 } from "../models/workflow-instance.model";
 import { WorkflowAccessService } from "../workflow-access.service";
-import { DecideTaskInput } from "../workflow-engine/dto/workflow-engine.input";
+import {
+  BatchApproveTasksInput,
+  DecideTaskInput,
+} from "../workflow-engine/dto/workflow-engine.input";
 import { TaskActionsService } from "../workflow-engine/task-actions.service";
 import { WorkflowPresenter } from "../workflow-engine/workflow-presenter.service";
 import { APPLY_CENTER_VIEW_PERMISSION } from "../workflow-keys";
@@ -66,7 +70,7 @@ export class ApplyCenterResolver {
     return this.service.myTasks(await this.access.factsOf(operator), input);
   }
 
-  /** 頁籤與側欄 badge 的數字;權限同兩個列表。 */
+  /** 申請中心兩個頁籤的 badge 數字;權限同兩個列表(側欄的數字走 `sidebarBadges`,見 `apply-center-badge.ts`)。 */
   @RequirePermission(APPLY_CENTER_VIEW_PERMISSION)
   @Query(() => ApplyCenterCounts, { name: "applyCenterCounts" })
   async applyCenterCounts(
@@ -108,6 +112,23 @@ export class ApplyCenterResolver {
         result === "accepted"
           ? WorkflowDecideResultEnum.ACCEPTED
           : WorkflowDecideResultEnum.STEP_CLOSED,
+    };
+  }
+
+  /**
+   * 批次核准(底座規格 3.10 B18):授權同 `decideTask`(逐筆看「我是這個任務的有效承辦人」);
+   * 每一筆一個交易、各自經 `beforeApprove`,逐筆回 `{ taskId, ok, reason, projectReason }`。
+   */
+  @Mutation(() => BatchApproveTasksPayload)
+  async batchApproveTasks(
+    @Args("input") input: BatchApproveTasksInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<BatchApproveTasksPayload> {
+    return {
+      results: await this.actions.batchApprove(
+        await this.access.factsOf(operator),
+        input,
+      ),
     };
   }
 }

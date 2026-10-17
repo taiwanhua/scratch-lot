@@ -88,6 +88,26 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`tReasons(issue.reason)`,reason 是 `RuleInvalidReason`(`data-scope-issues.ts` / api 回傳)",
   },
   {
+    key: "admin.audiencePicker.fields.",
+    reason:
+      "`t(`fields.${field}`)`,field 取自 AudiencePicker 的 `fields`(`@repo/domain/audience` 的 `AUDIENCE_FIELDS`)",
+  },
+  {
+    key: "admin.audiencePicker.ranges.",
+    reason:
+      "`t(`ranges.${range}`)`,range 取自 `@repo/domain/audience` 的 `AUDIENCE_ORG_RANGES`",
+  },
+  {
+    key: "admin.audiencePicker.emptyGroup",
+    reason:
+      "資料範圍 `RuleCard` 的 `tPicker(issue.localReason)`,localReason 由 `data-scope-issues.ts` 本地驗證給(空群組)",
+  },
+  {
+    key: "admin.audiencePicker.emptyValue",
+    reason:
+      "資料範圍 `RuleCard` 的 `tPicker(issue.localReason)`,localReason 由 `data-scope-issues.ts` 本地驗證給(條件列沒挑值)",
+  },
+  {
     key: "admin.demoSampleOne.status.",
     reason: "`t(`status.${row.status}`)`,status 是示範模組1 的狀態列舉",
   },
@@ -168,6 +188,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.forms.options.sources.",
     reason: "`t(`sources.${kind}`)`,kind 是 `FieldOptions` 的三種來源",
+  },
+  {
+    key: "admin.forms.lookupSource.providers.",
+    reason:
+      "`t(`providers.${provider.key}`)`(`useLookupCatalog.ts` 的 `useProviderLabel`),key 是 api `formLookupProviders` 回的底座來源(`isBase`):user / org / form_submission",
   },
   {
     key: "admin.forms.lookupSource.fields.",
@@ -282,6 +307,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "`t(`kinds.${event.kind}`)`,kind 是實例 `history` 的事件種類",
   },
   {
+    key: "admin.approval.timeline.autoApproveBlocked.",
+    reason:
+      "`t(`autoApproveBlocked.${event.reason}`)`,自動通過被守門擋下:reason 是哪一種自動通過",
+  },
+  {
+    key: "admin.approval.timeline.reasons.",
+    reason:
+      "`t(`reasons.${event.reason}`)`,reason 取自 `HISTORY_REASONS`(跳過 / 自動通過的原因)",
+  },
+  {
     key: "admin.approval.decide.buttons.",
     reason: "`t(`buttons.${item}`)`,item 是 GraphQL 的 `WorkflowDecision`",
   },
@@ -341,6 +376,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "`t(`kinds.${kind}`)`,kind 取自 `ASSIGNEE_KINDS`",
   },
   {
+    key: "admin.workflows.assignee.purposes.",
+    reason:
+      "`t(`purposes.${purpose}.<文案>`)`,purpose 是流程設計器的 `PeoplePurpose`(審核者 / 知會對象 / 通知對象)",
+  },
+  {
     key: "admin.forms.binding.problems.",
     reason:
       "`t(`problems.${issue.problem}`)`,problem 是 api 綁定時檢查的 `BindingIssue.problem`",
@@ -383,6 +423,46 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     key: "admin.demoSampleOne.form.attachmentHint",
     reason:
       "`components/base/crud/DemoFormFields` 的 `t(definition.hintKey)`,值寫在 `pages/base/demo/SampleOneModule.tsx` 的附件上傳欄設定",
+  },
+  {
+    key: "admin.notifications.preferences.channels.",
+    reason:
+      "個人設定偏好分頁的 `t(`channels.${channel}`)`,channel 是 api `myNotificationPreferences` 回的管道 key(`in-app`、`email`;沒登記文案的管道顯示 key 本身)",
+  },
+  {
+    key: "admin.printers.jobStatus.",
+    reason:
+      "`PrintJobStatusTag` 的 `t(job.status)` 與列印紀錄的結果篩選,值是 GraphQL 的 `PrintJobStatus` 列舉",
+  },
+  {
+    key: "admin.printers.jobError.",
+    reason:
+      "`tJobError(job.error)`(列印紀錄的結果、測試列印與列印按鈕的失敗原因),值是 GraphQL 的 `PrintJobError` 列舉",
+  },
+  {
+    key: "admin.printButton.errors.",
+    reason:
+      "列印按鈕送出失敗的提示 `t(`errors.${printButtonErrorOf(error).code}`)`(錯誤碼表在 `lib/base/print-button.ts`)",
+  },
+  {
+    key: "admin.notifications.types.",
+    reason:
+      "`lib/base/notification-type-name.ts` 的 `t(`types.${type}`)`,type 是 api 回的通知類型 key(`workflow.task-created` 等;沒有文案的類型退回 api 的 `name`)",
+  },
+  {
+    key: "admin.approval.timeline.delegated.",
+    reason:
+      "`ApprovalTimeline` 的 `t(`delegated.${event.kind}`)`,kind 是帶了被代理者的 `task_created` / `approved` / `rejected` / `returned`",
+  },
+  {
+    key: "admin.personalSettings.delegations.statuses.",
+    reason:
+      "`t(`statuses.${row.status}`)`,status 逐一取自 GraphQL 的 `UserDelegationStatus` 列舉(`DelegationsTab`)",
+  },
+  {
+    key: "admin.personalSettings.delegations.errors.",
+    reason:
+      "`t(`errors.${delegationsErrorKey(error)}`)`,`delegations-error.ts` 把 api 錯誤換成 `<code>` 或 `reasons.<reason>`(碼與 reason 列舉見同檔)",
   },
 ];
 

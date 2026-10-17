@@ -12,6 +12,8 @@
 | `@repo/storybook`   | Storybook(react-vite)                                             | 設計系統目錄 + Palette Lab;元件的 stories 住在 `packages/ui`                                                                                                    | 6006              |
 | `@repo/db-migrator` | migrate-mongo + update / reset runner                             | 資料庫遷移、種子、還原工具;不部署、不常駐,CI 在部署 api 後呼叫(ADR-0002)                                                                                        | —                 |
 | `@repo/e2e`         | Playwright(只裝 chromium)                                         | 權限劇本的 E2E(`docs/testing/permission-scenarios.md`);不部署,**只手動觸發**(`pnpm e2e` / `e2e.yml`,TEST-05);harness 自己起 Mongo → update → api → admin 靜態檔 | 5101 / 4301(可改) |
+| `@repo/realtime`    | Cloudflare Workers + Durable Objects                              | 即時通道:Worker 驗證訂閱憑證(`/connect`)與送出信號簽章(`/publish`);每租戶一個 Durable Object `TenantHub` 保存連線並推送信號                                     | 8787              |
+| `@repo/print-agent` | Node 24(SEA 單一執行檔)                                           | 店內列印代理程式:接收列印工作、經 TCP 9100 送收據機;不部署,由 `print-agent-release.yml` 發布安裝檔                                                              | —                 |
 
 ### 技術棧版本
 
@@ -19,7 +21,7 @@
 
 | 類別     | 套件                                                                                                                                   |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 執行環境 | Node 22(CI / 部署;`engines` 下限 20)、pnpm 10、Turborepo 2、TypeScript 5.9                                                             |
+| 執行環境 | Node 24 LTS(本機 / CI / Docker 統一;`engines` 下限 24、`.nvmrc`)、pnpm 10、Turborepo 2、TypeScript 5.9                                 |
 | 後端     | NestJS 11、`@nestjs/graphql` 13、Apollo Server 5、graphql 16、Mongoose 9、migrate-mongo 14                                             |
 | 前端     | React 19、MUI 9、Vite 8、Next.js 16、React Router 8、TanStack Query 5、TanStack Table 9、graphql-request 7、`use-intl` / `next-intl` 4 |
 | 工具     | Storybook 10、Jest 30、Playwright 1、ESLint 9、Prettier 3、bunchee 6                                                                   |
@@ -32,14 +34,14 @@
 | `@repo/ui`                                                                                         | 設計系統:兩層 tokens(`src/theme/`:品牌層由呼叫端以 `createBrandFromPrimary` 傳入名稱與主色,`brands/default.ts` 是不讀專案設定的通用預設;加上語意層)、`createAppTheme`(MUI cssVariables、light / dark)、共用元件(元件 + 測試 + story 三件套同居),另含模組圖示白名單 `@repo/ui/icons` 與 `@repo/ui/module-icon-picker`。**子路徑清單不在此列舉**,正本是 `packages/ui/package.json` 的 `exports`(STRUCT-08 第 5 點)                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `@repo/logger`                                                                                     | 共用 logger(全 repo 唯一可用 `console` 的地方,其他地方被 `no-console` 擋)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `@repo/i18n`                                                                                       | 多語訊息檔(`messages/<locale>/<namespace>.json`)+ locale 定義;front 以 `next-intl`、admin 以 `use-intl` 消費(同生態);規範見 `standards/general/i18n.md`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `@repo/domain`                                                                                     | 前後端共用純邏輯(STRUCT-07)。子路徑:`/permission` 權限 key 與矩陣、`/password` 密碼規則、`/module-icon` 圖示白名單、`/form` 表單型別/驗證/表達式/摘要、`/form-regex-safety` 可按需載入的 ReDoS 檢查、`/form-keys` 不帶表達式依賴的輕量格式檢查、`/workflow` 流程型別/驗證/推進判斷、`/seed` 種子契約/可攜性驗證/穩定 hash/TypeScript 匯出。bunchee 輸出雙格式,api 走 cjs + `typesVersions`,admin 走 es;表單的 `regexSafety` 由呼叫端注入,admin 設計器懶載入。新增子路徑同步本列(STRUCT-08)。                                                                                                                                                                                                                                                                                                                                                                                          |
+| `@repo/domain`                                                                                     | 前後端共用純邏輯(STRUCT-07)。子路徑:`/permission` 權限 key 與矩陣、`/password` 密碼規則、`/module-icon` 圖示白名單、`/form` 表單型別/驗證/表達式/摘要、`/form-regex-safety` 可按需載入的 ReDoS 檢查、`/form-keys` 不帶表達式依賴的輕量格式檢查、`/workflow` 流程型別/驗證/推進判斷、`/seed` 種子契約/可攜性驗證/穩定 hash/TypeScript 匯出、`/realtime` 即時通道的訂閱憑證與協定、`/printing` 列印的常數、代理程式 HTTP 協定與安裝檔 manifest 格式。bunchee 輸出雙格式,api 走 cjs + `typesVersions`,admin 走 es;表單的 `regexSafety` 由呼叫端注入,admin 設計器懶載入。新增子路徑同步本列(STRUCT-08)。                                                                                                                                                                                                                                                                                  |
 | `@repo/project-config`                                                                             | 專案公開設定:`@repo/project-config/public`(`projectPublic`:slug、品牌名、主色、admin HTML title、前台 metadata、側欄舊鍵;`createAdminStorageKeys(slug)` 生成 admin 的瀏覽器儲存鍵;admin / front / Storybook 使用,可進瀏覽器)、`@repo/project-config/mail`(`projectMail`:寄件信箱、署名、品牌名;只給 api,不進瀏覽器、不含機密)。`src/base/` 是底座維護的契約、驗證與純函式,`src/project/` 是專案值;沒有匯總所有值的根出口,`/public` 不依賴 `/mail`、環境讀取或 Node API,`@repo/ui` 與 `@repo/i18n` 不反向依賴它。bunchee 雙格式:api 走 cjs + `typesVersions` 且放在 `dependencies`(image 建置後只裝正式依賴),admin / front / Storybook 走 es;Vite 設定檔載入時就會讀它的 dist,沒 build 會直接啟動失敗:admin 的 `dev:mock` script 自己先 build 本套件;其餘直接啟動(admin `dev`、Storybook `dev`)走 root 的 `turbo dev`(依賴先 build),或先 build 該 app 的依賴。**新增子路徑要補進本列** |
 | `@repo/eslint-config` / `@repo/prettier-config` / `@repo/typescript-config` / `@repo/jest-presets` | 共用開發設定(單一入口,各 app 不自訂規則)。jest-presets 三種:`node`(純邏輯 / api)、`browser`(純元件庫 `ui`)、`browser-esm`(admin:jsdom + MSW 需要的 Node 全域 + ts-jest ESM,TEST-08)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 ## 品質約束(三層)
 
 1. **機器強制**:ESLint(typescript-eslint strictTypeChecked + import-x + unicorn + sonarjs + jsx-a11y,入口 `@repo/eslint-config`)、TS strict(含 `noUncheckedIndexedAccess`)、Prettier(`@repo/prettier-config`,@trivago import 排序)。`only-warn` + `--max-warnings 0`:編輯器顯示警告,CI / CLI 全擋。
-2. **可審查清單**:`docs/standards/`(編號規則 GEN / STRUCT / REACT / STYLE / DATA / GQL / I18N / TEST / FIGMA)+ vercel-labs skills(`.agents/skills/`)。
+2. **可審查清單**:`docs/standards/`(編號規則 GEN / STRUCT / REACT / STYLE / DATA / GQL / I18N / TEST / FIGMA / RT)+ vercel-labs skills(`.agents/skills/`)。
 3. **原則層**:`CLAUDE.md`。
 
 ## 資料流
@@ -79,7 +81,7 @@ Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `pr
 
 ### 功能來源與組裝
 
-後台頁面在各層分 `base` 與 `project`,由 `app/module-pages.tsx` 組裝;頁面新增與替換分開登記,底座原版保留。Help 由 `lib/help-registry.ts` 讀底座、專案新增、專案替換三區。API 功能與資料分別經 AppModule、DatabaseModule 組裝,專案來源在 `src/project/`;新增租戶 model 的 repository 與組織資料檢查一起登記。登記不授權,既有路由及 API 守門仍生效。
+後台頁面在各層分 `base` 與 `project`,由 `app/module-pages.tsx` 組裝;頁面新增與替換分開登記,底座原版保留。Help 由 `lib/base/help-registry.ts` 讀底座、專案新增、專案替換三區。API 功能與資料分別經 AppModule、DatabaseModule 組裝,專案來源在 `src/project/`;新增租戶 model 的 repository 與組織資料檢查一起登記。登記不授權,既有路由及 API 守門仍生效。
 
 頁面、表單設定及 help 見[前端架構](concepts/frontend-architecture.md),API 登記與碰撞檢查見[資料層組裝](concepts/data-layer-and-isolation.md#底座與專案資料的組裝),固定入口與 import 方向見 STRUCT-12。新增模組照 [module scaffold](agents/module-scaffold.md)。
 
@@ -90,7 +92,7 @@ Figma 品牌同步讀取 `packages/project-config/src/project/public.ts` 的 `pr
 ## 本地開發
 
 ```bash
-docker compose up -d        # 啟動 MongoDB
+docker compose up -d        # 啟動 MongoDB(單一成員 replica set)
 pnpm install
 pnpm dev                    # turbo 同時啟動 api / front / admin / storybook
 pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
@@ -98,7 +100,7 @@ pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
 
 執行前先依各 app 的 `.env.example` 建立自己的 `.env`;已有檔案時核對內容,不要覆寫。API 的 `MONGODB_URI` 必填,缺值、空字串或純空白都會在連線 factory 拒絕,不使用內建 DB 預設。schema 產生器與測試 harness 自行提供隔離 URI。
 
-根 `.env.example` 提供 Compose 的 `LOCAL_MONGO_PORT`、`LOCAL_API_PORT`、`LOCAL_ADMIN_PORT`、`LOCAL_MONGO_DB`;複製為根 `.env` 後可覆寫。`COMPOSE_PROJECT_NAME` 決定容器、網路與 volume 前綴,新專案使用獨立名稱;既有專案保留原名與 `mongo-data` volume key,避免改接空庫。API 在主機執行時,其 `.env` 的 URI 必須對應 host port 與 DB;根 `.env` 不會自動替 API 設定連線。`--profile full` 的 admin build endpoint 會跟隨 host API port。變數清單見 `docs/env-registry.md`,新專案逐項檢查見[初始化索引](project-initialization.md#本機與測試環境)。
+根 `.env.example` 提供 Compose 的 `LOCAL_MONGO_PORT`、`LOCAL_API_PORT`、`LOCAL_ADMIN_PORT`、`LOCAL_MONGO_DB`;複製為根 `.env` 後可覆寫。`COMPOSE_PROJECT_NAME` 決定容器、網路與 volume 前綴,新專案使用獨立名稱;既有專案保留原名與 `mongo-data` volume key,避免改接空庫。API 在主機執行時,其 `.env` 的 URI 必須對應 host port 與 DB;根 `.env` 不會自動替 API 設定連線。`--profile full` 的 admin build endpoint 會跟隨 host API port。本機 mongo 是以 Compose 專案名命名的單一成員 replica set(交易需要,ADR-0013),`MONGODB_URI` 要帶 `?directConnection=true&replicaSet=<專案名>`;既有的單節點環境升級時,`docker compose up -d` 會重建容器、保留 `mongo-data` volume,再把 `apps/api/.env` 的 URI 補上這兩個參數(步驟見 [deployment](deployment.md#本地容器))。變數清單見 `docs/env-registry.md`,新專案逐項檢查見[初始化索引](project-initialization.md#本機與測試環境)。
 
 ## 技術選型
 
@@ -111,5 +113,5 @@ pnpm --filter @repo/storybook dev   # 只開設計系統(http://localhost:6006)
 - **程式碼是設計的唯一真實來源**:設計系統先存在於 `@repo/ui`(tokens + MUI theme + 元件),Figma 是它的投影。品牌同步沿用程式的品牌推導,共用元件的原生發布與接受另行驗證;不買現成 Figma kit 或模板。
 - **設計風格走 Minimal 方向**:以 MUI theme 客製(柔和陰影、大圓角、冷灰階)重現,不購買模板。
 - **版本統一**:同一套件全 repo 同一版本(見上面「技術棧版本」);已知例外 `eslint-plugin-unicorn` 釘 65(最後支援 ESLint 9 的版本)。
-- **TS 編譯目標統一**:`@repo/typescript-config` 各範本一律 `lib` ES2024、`target` ES2022(執行環境 Node 22 與現代瀏覽器都支援;不用 `ESNext`,因為它隨 TS 版本變動),各 app / package 不自訂這兩項,只補 `DOM` 之類的環境差異。
+- **TS 編譯目標統一**:`@repo/typescript-config` 各範本一律 `lib` ES2024、`target` ES2022(執行環境 Node 24 與現代瀏覽器都支援;不用 `ESNext`,因為它隨 TS 版本變動),各 app / package 不自訂這兩項,只補 `DOM` 之類的環境差異。
 - **apps 不直接 import MUI / Emotion,一律經 `@repo/ui`**:由 `@repo/eslint-config` 的 `designSystemWall`(`no-restricted-imports`)在 vite / next 設定裡強制(STYLE-05);缺的元件先到 `packages/ui` 包一層。

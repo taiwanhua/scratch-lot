@@ -10,6 +10,7 @@ import {
   shoppingDefinition,
   versionFragment,
 } from "@/test/msw/form-fixtures";
+import { BASE_LOOKUP_PROVIDERS } from "@/test/msw/lookup-provider-fixtures";
 
 import {
   addField,
@@ -130,6 +131,102 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
         },
       },
     });
+  });
+
+  it("專案登記的來源出現在資料來源下拉;換到它時顯示欄 / 值欄用宣告的預設、欄位用宣告的名稱", async () => {
+    const { user, world } = renderFormsPage({
+      ...defaultDesignOptions(),
+      lookupProviders: [
+        ...BASE_LOOKUP_PROVIDERS,
+        {
+          key: "lottery_game",
+          name: "遊戲",
+          isBase: false,
+          labelField: "title",
+          valueField: "code",
+          filterFields: [],
+          fields: [
+            { key: "title", type: "text", label: "遊戲名稱" },
+            { key: "code", type: "text", label: null },
+          ],
+        },
+      ],
+    });
+    await addField(user, "單選");
+    await pickOption(user, "選項來源", "資料來源");
+    expect(await openSelect(user, "資料來源")).toEqual([
+      "使用者",
+      "組織",
+      "表單提交",
+      "遊戲",
+    ]);
+    await user.click(screen.getByRole("option", { name: "遊戲" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", { name: "顯示欄" }),
+      ).toHaveTextContent("遊戲名稱");
+    });
+    // 沒宣告欄位名的用 key
+    expect(await openSelect(user, "顯示欄")).toEqual(["遊戲名稱", "code"]);
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("combobox", { name: "值欄" })).toHaveTextContent(
+      "code",
+    );
+    // 沒宣告 `enabled` 可當篩選:不出現「只列啟用中的」
+    expect(screen.queryByText("只列啟用中的")).not.toBeInTheDocument();
+
+    const fields = await savedFields(user, world);
+    expect(fields.at(-1)).toMatchObject({
+      options: {
+        kind: "lookup",
+        source: {
+          provider: "lottery_game",
+          labelField: "title",
+          valueField: "code",
+        },
+      },
+    });
+  });
+
+  it("來源清單查詢失敗:資料來源下方顯示錯誤", async () => {
+    const failed = renderFormsPage({
+      ...defaultDesignOptions(),
+      failures: { FormLookupProviders: { code: "FORBIDDEN" } },
+    });
+    await addField(failed.user, "單選");
+    await pickOption(failed.user, "選項來源", "資料來源");
+    expect(
+      await screen.findByText("你沒有執行這個動作的權限。"),
+    ).toBeInTheDocument();
+  });
+
+  it("專案來源的值欄只列文字欄位(與 api 檢查器同一條規則)", async () => {
+    const { user } = renderFormsPage({
+      ...defaultDesignOptions(),
+      lookupProviders: [
+        ...BASE_LOOKUP_PROVIDERS,
+        {
+          key: "lottery_game",
+          name: "遊戲",
+          isBase: false,
+          labelField: "title",
+          valueField: "id",
+          filterFields: [],
+          fields: [
+            { key: "title", type: "text", label: "遊戲名稱" },
+            { key: "bookAmount", type: "number", label: "訂購金額" },
+          ],
+        },
+      ],
+    });
+    await addField(user, "單選");
+    await pickOption(user, "選項來源", "資料來源");
+    await pickOption(user, "資料來源", "遊戲");
+    expect(await openSelect(user, "值欄")).toEqual([
+      "資料的 id(預設)",
+      "遊戲名稱",
+    ]);
   });
 
   it("帶入規則照四步排、全部下拉:本表單欄位只列使用者填的,來源欄位只列型別相容的", async () => {

@@ -27,10 +27,21 @@ import { DemoItemTwo, DemoItemTwoSchema } from "./demo-item-two.schema";
 import { FieldCategory, FieldCategorySchema } from "./field-category.schema";
 import { Field, FieldSchema } from "./field.schema";
 import { Module, ModuleSchema } from "./module.schema";
+import {
+  NotificationSetting,
+  NotificationSettingSchema,
+} from "./notification-setting.schema";
+import {
+  NOTIFICATION_RETENTION_DAYS,
+  Notification,
+  NotificationSchema,
+} from "./notification.schema";
 import { Org, OrgSchema } from "./org.schema";
 import { Permission, PermissionSchema } from "./permission.schema";
 import { RefreshToken, RefreshTokenSchema } from "./refresh-token.schema";
 import { Role, RoleSchema } from "./role.schema";
+import { UserDelegation, UserDelegationSchema } from "./user-delegation.schema";
+import { UserPreference, UserPreferenceSchema } from "./user-preference.schema";
 import { User, UserSchema } from "./user.schema";
 
 interface IndexInfo {
@@ -60,6 +71,10 @@ const REGISTRY: { name: string; schema: Schema }[] = [
   { name: RefreshToken.name, schema: RefreshTokenSchema },
   { name: ActionToken.name, schema: ActionTokenSchema },
   { name: AuditLog.name, schema: AuditLogSchema },
+  { name: UserPreference.name, schema: UserPreferenceSchema },
+  { name: UserDelegation.name, schema: UserDelegationSchema },
+  { name: Notification.name, schema: NotificationSchema },
+  { name: NotificationSetting.name, schema: NotificationSettingSchema },
 ];
 
 async function readIndexes(
@@ -107,7 +122,7 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
   }, HOOK_TIMEOUT_MS);
 
   it("全部 collection 皆已建模並可建立索引", () => {
-    expect(indexesByModel.size).toBe(17);
+    expect(indexesByModel.size).toBe(21);
   });
 
   it("orgs:unique(key sparse)+ unique(slug sparse)+(parentId)+(ancestors)", () => {
@@ -231,5 +246,36 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
     const indexes = indexesOf(AuditLog.name);
     expect(findIndex(indexes, { orgId: 1, createdAt: 1 })).toBeDefined();
     expect(findIndex(indexes, { targetType: 1, targetId: 1 })).toBeDefined();
+  });
+
+  it("user_preferences:userId 唯一(每個使用者一筆)", () => {
+    const indexes = indexesOf(UserPreference.name);
+    expect(findIndex(indexes, { userId: 1 })?.unique).toBe(true);
+  });
+
+  it("user_delegations:(userId, startAt)(個人清單、派任時查代理期間)", () => {
+    const indexes = indexesOf(UserDelegation.name);
+    expect(findIndex(indexes, { userId: 1, startAt: 1 })).toBeDefined();
+  });
+
+  it("notifications:(recipientId, dedupeKey) 唯一;createdAt 90 天 TTL;清單與未讀數的索引", () => {
+    const indexes = indexesOf(Notification.name);
+    expect(findIndex(indexes, { recipientId: 1, dedupeKey: 1 })?.unique).toBe(
+      true,
+    );
+    expect(findIndex(indexes, { createdAt: 1 })?.expireAfterSeconds).toBe(
+      NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60,
+    );
+    expect(
+      findIndex(indexes, { recipientId: 1, channels: 1, createdAt: -1 }),
+    ).toBeDefined();
+    expect(
+      findIndex(indexes, { recipientId: 1, channels: 1, readAt: 1 }),
+    ).toBeDefined();
+  });
+
+  it("notification_settings:(tenantId, type) 唯一", () => {
+    const indexes = indexesOf(NotificationSetting.name);
+    expect(findIndex(indexes, { tenantId: 1, type: 1 })?.unique).toBe(true);
   });
 });

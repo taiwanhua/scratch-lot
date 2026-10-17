@@ -46,7 +46,7 @@ registerEnumType(FormSubmissionSort, {
   description: "提交列表的排序(預設送出時間新到舊;草稿沒有送出時間,排在最後)",
 });
 
-/** 新增選單的一張表單(`moduleForms` 的交集結果)。 */
+/** 新增選單的一張表單(`moduleForms` 的交集結果;能不能用它新增看 `canCreate`)。 */
 @ObjectType()
 export class FormSummary {
   @Field(() => ID)
@@ -64,6 +64,17 @@ export class FormSummary {
 
   @Field(() => String, { nullable: true })
   tabLabelTemplate!: string | null;
+
+  /** 允許存草稿(表單設定;沒設過 = true):false 時新增頁不顯示 [存草稿]。 */
+  @Field(() => Boolean)
+  allowDraft!: boolean;
+
+  /**
+   * 讀者能不能用這張表單新增(`canCreateWithForm`;B9b 模組看 `create-<formKey>`,其餘看模組 `create`)。
+   * 列表的表單篩選、頁籤模板要整份清單;[+ 新增] 與新增頁只認 `canCreate = true` 的表單。
+   */
+  @Field(() => Boolean)
+  canCreate!: boolean;
 }
 
 /** 顯示名的一項(選項 / 引用):來源還在且讀者有權 → 現名;否則快照 + `available: false`。 */
@@ -91,7 +102,10 @@ export class FormDisplayValue {
   items!: FormDisplayItem[];
 }
 
-/** 一次送出 / 修改的上下文(唯讀檢視重算條件用;`at` / `timezone` / `userId` / `orgId`)。 */
+/**
+ * 一次送出 / 修改的上下文(唯讀檢視重算條件用;表達式的 `ctx.*`):`orgId` = 當時的目前組織、
+ * `orgIds` = 當時的所屬組織(全部;舊修訂 = 空陣列)、`tenantId` = 當時的租戶(根組織 / 舊修訂 = null)。
+ */
 @ObjectType()
 export class FormSubmissionContext {
   @Field(() => GraphQLISODateTime)
@@ -105,6 +119,12 @@ export class FormSubmissionContext {
 
   @Field(() => ID, { nullable: true })
   orgId!: string | null;
+
+  @Field(() => [ID])
+  orgIds!: string[];
+
+  @Field(() => ID, { nullable: true })
+  tenantId!: string | null;
 }
 
 /** 修訂紀錄的一筆(值要看時以 `formSubmission(id, revision)` 讀,差異由相鄰兩筆算)。 */
@@ -144,6 +164,13 @@ export class FormSubmissionAbilities {
   /** 草稿:建立者本人 + 模組 `create`;已完成:模組 `edit`。 */
   @Field(() => Boolean)
   canEdit!: boolean;
+
+  /**
+   * [存草稿]:草稿 / 被退回 / 撤回、建立者本人 + 模組 `create`,且表單允許存草稿(表單設定)。
+   * false 時編輯頁只有 [送出](關掉前已存在的草稿照樣可以送出、刪除)。
+   */
+  @Field(() => Boolean)
+  canSaveDraft!: boolean;
 
   /** 草稿:建立者本人 + 模組 `create`;不綁流程的已完成 / 已駁回:模組 `delete`。 */
   @Field(() => Boolean)

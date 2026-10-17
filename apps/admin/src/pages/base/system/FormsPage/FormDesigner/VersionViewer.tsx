@@ -14,12 +14,15 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
-import { FormRenderer } from "@/components/form-engine/FormRenderer/FormRenderer";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { definitionOf } from "@/lib/form-engine/definition";
-import { liveContextOf } from "@/lib/form-engine/expression-context";
-import { formErrorOf } from "@/lib/form-engine/form-errors";
+import { FormRenderer } from "@/components/base/form-engine/FormRenderer/FormRenderer";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf } from "@/lib/base/form-engine/definition";
+import {
+  NO_IDENTITY,
+  liveContextOf,
+} from "@/lib/base/form-engine/expression-context";
+import { formErrorOf } from "@/lib/base/form-engine/form-errors";
 
 import { DesignerPreview } from "./DesignerPreview";
 import type { DesignerMode } from "./DesignerToolbar";
@@ -33,7 +36,7 @@ export interface VersionViewerProps {
   onChanged: () => void;
 }
 
-const DESIGN_CONTEXT = liveContextOf(null, null, new Date(0));
+const DESIGN_CONTEXT = liveContextOf(NO_IDENTITY, new Date(0));
 
 /** 唯讀:畫布的格子不能拖(沒有感測器),點了也不選取。 */
 const NO_SENSORS: never[] = [];
@@ -73,8 +76,7 @@ export const VersionViewer = ({
       },
     }),
   );
-  const canBaseOn =
-    form.abilities.canEdit && !form.publishInterrupted && !form.hasDraft;
+  const canBaseOn = form.abilities.canEdit && !form.hasDraft;
 
   if (query.isLoading) {
     return <CircularProgress aria-label={t("loading")} />;

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Logger } from "@nestjs/common";
 
+import { assertOutsideTransaction } from "../database/transaction";
 import { storageError } from "./storage-error";
 import type { StorageConfig } from "./storage.config";
 import {
@@ -13,6 +14,24 @@ import {
   type UploadVisibility,
   isOwnedUploadPath,
 } from "./upload-rules";
+
+/**
+ * **發布檔**的路徑前綴:由 CI 發布 workflow 直接寫進私有 bucket(不是使用者上傳的),
+ * API 只讀、只簽下載網址。目前只有列印代理程式的安裝檔(`@repo/domain/printing` 的
+ * `PRINT_AGENT_RELEASE_PREFIX`;docs/modules/printers.md「下載」)。
+ */
+export const RELEASE_OBJECT_PREFIXES: readonly string[] = ["print-agent/"];
+
+const RELEASE_OBJECT_PATH = /^[\w-]+(?:\/[\w.-]+)+$/;
+
+/** 是不是發布檔的路徑(前綴在清單上、每一段只有英數 / 底線 / 連字號 / 點,不含 `..`)。 */
+export function isReleaseObjectPath(path: string): boolean {
+  return (
+    RELEASE_OBJECT_PATH.test(path) &&
+    !path.split("/").some((segment) => segment === ".." || segment === ".") &&
+    RELEASE_OBJECT_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
+}
 
 /** `createUploadUrl` 的輸入(GraphQL 形狀見 models/upload-url.model.ts)。 */
 export interface CreateUploadInput {
@@ -139,6 +158,7 @@ export abstract class StorageService {
    * (`updateOrg` 只記 warn:清不掉只是留一個孤兒物件,不該讓使用者的編輯失敗)。
    */
   async deleteObject(objectPath: string | null | undefined): Promise<boolean> {
+    assertOutsideTransaction("刪除 GCS 物件");
     const path = nonEmptyPath(objectPath);
     if (path === undefined) {
       return false;
@@ -152,13 +172,11 @@ export abstract class StorageService {
   }
 
   /**
-   * 複製一個**私有**物件到同前綴的新路徑(`<前綴>/<新 uuid>.<副檔名>`),回新路徑(Spec 6b §6「複製為新單」:
-   * 附件複製一份歸新單)。與 `readUrlOf` 同一道把關:路徑不是本 API 簽出來的一律不複製、回 null。
-   * **呼叫端負責先驗「這個人看得到這筆資料嗎」**。供應商端的失敗原樣往外拋。
+   * 複製一個**私有**物件時的新路徑(`<前綴>/<新 uuid>.<副檔名>`),只算路徑、不碰 bucket。
+   * 路徑不是本 API 簽出來的回 null(與 `readUrlOf` 同一道把關)。
+   * 用途:交易內先把新路徑寫進資料,交易成功後再以 `copyPrivateObject(from, to)` 真的複製(TX-03)。
    */
-  async copyPrivateObject(
-    objectPath: string | null | undefined,
-  ): Promise<string | null> {
+  privateCopyPathOf(objectPath: string | null | undefined): string | null {
     const path = nonEmptyPath(objectPath);
     if (path === undefined || !isOwnedUploadPath(path)) {
       return null;
@@ -167,9 +185,61 @@ export abstract class StorageService {
     const dot = path.lastIndexOf(".");
     const prefix = path.slice(0, slash);
     const extension = dot > slash ? path.slice(dot + 1) : "";
-    const copied = `${prefix}/${randomUUID()}.${extension}`;
+    return `${prefix}/${randomUUID()}.${extension}`;
+  }
+
+  /**
+   * 複製一個**私有**物件到同前綴的新路徑,回新路徑(Spec 6b §6「複製為新單」:附件複製一份歸新單)。
+   * `to` 給了就複製到那裡(須是 `privateCopyPathOf` 算出來的同前綴路徑),沒給就現算一個。
+   * 與 `readUrlOf` 同一道把關:路徑不是本 API 簽出來的一律不複製、回 null。
+   * **呼叫端負責先驗「這個人看得到這筆資料嗎」**。供應商端的失敗原樣往外拋。
+   */
+  async copyPrivateObject(
+    objectPath: string | null | undefined,
+    to?: string,
+  ): Promise<string | null> {
+    assertOutsideTransaction("複製 GCS 物件");
+    const path = nonEmptyPath(objectPath);
+    if (path === undefined || !isOwnedUploadPath(path)) {
+      return null;
+    }
+    const copied = to ?? this.privateCopyPathOf(path);
+    if (
+      copied === null ||
+      !isOwnedUploadPath(copied) ||
+      copied.slice(0, copied.indexOf("/")) !== path.slice(0, path.indexOf("/"))
+    ) {
+      return null;
+    }
     await this.duplicateObject(path, copied);
     return copied;
+  }
+
+  /**
+   * 讀一個**發布檔**的內容(如 `print-agent/manifest.json`);物件不存在回 null。
+   * 路徑不是發布檔前綴一律拒絕(回 null 並記 warn),不讓呼叫端讀到任意物件。只讀、無副作用。
+   */
+  async readReleaseObject(objectPath: string): Promise<Buffer | null> {
+    if (!isReleaseObjectPath(objectPath)) {
+      this.logger.warn(`物件路徑 ${objectPath} 不是發布檔,不讀`);
+      return null;
+    }
+    return this.downloadObject(objectPath);
+  }
+
+  /**
+   * 簽一個**發布檔**的下載網址(效期由呼叫端給:代理程式安裝檔是 1 小時)。
+   * 與 `readReleaseObject` 同一道把關;**呼叫端負責先驗權限**。
+   */
+  async releaseDownloadUrlOf(
+    objectPath: string,
+    ttlMs: number,
+  ): Promise<string | null> {
+    if (!isReleaseObjectPath(objectPath)) {
+      this.logger.warn(`物件路徑 ${objectPath} 不是發布檔,不簽下載網址`);
+      return null;
+    }
+    return this.signReadUrl(objectPath, new Date(Date.now() + ttlMs));
   }
 
   /** 簽一個只能以該 content type PUT 一次的上傳網址。 */
@@ -189,6 +259,9 @@ export abstract class StorageService {
 
   /** 把物件從 bucket 刪掉(路徑已由 `deleteObject` 驗過歸屬)。 */
   protected abstract removeObject(objectPath: string): Promise<void>;
+
+  /** 讀私有 bucket 上一個物件的內容;不存在回 null(路徑已由呼叫端驗過)。 */
+  protected abstract downloadObject(objectPath: string): Promise<Buffer | null>;
 }
 
 /** 空字串 / 未設定視同沒有檔案(去空白後判斷)。 */

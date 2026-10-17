@@ -1,12 +1,13 @@
 import { type OutcomeCandidate, selectOutcome } from "./evaluate";
 import { endStepKey, nextStepKeys, previousStepKeys, stepOf } from "./graph";
-import { buildPlan } from "./plan";
+import { type AutoApproval, type BlockedAutoApproval, buildPlan } from "./plan";
 import {
   evaluationOf,
   isProjectionInSync,
   projectAllTasks,
 } from "./projection";
 import {
+  type AcceptedDecision,
   type HistoryEvent,
   type InstanceOutcome,
   type InstanceSnapshot,
@@ -14,6 +15,7 @@ import {
   LIVE_INSTANCE_STATUSES,
   type NotifiedResult,
   type PlanItem,
+  type SkipReason,
   type StepState,
   type StepStatus,
   type SubmissionSnapshot,
@@ -31,9 +33,10 @@ import {
  * `advance(instance)` 的判斷表(Spec §6「冪等推進」),**純函式**:
  * 輸入(版本定義、實例、任務投影集合、提交、現在時間)→ 輸出「這一輪要做的動作清單」。
  * 不碰資料庫:api 依序執行動作(每個寫入都是條件更新),做完**重讀再呼叫一次**,直到 `row` 是
- * 「沒事可做」的 1 / 3 / 9。
+ * 「沒事可做」的 3 / 9。
  *
- * 由上往下找第一個成立的列:1 → 2 → 3 → 4 → 5 → 4b → 4c → 5b → 6 → 7 → 8 → 8b → 9。
+ * 由上往下找第一個成立的列:2 → 3 → 4 → 5 → 4b → 4c → 5b → 6 → 7 → 8 → 8b → 9。
+ * (原本的列 1「`linking` 沒事可做」已隨 `linking` 狀態移除;其他列號不變,文件與測試照舊引用。)
  * 列 4、5、5b、8 對 `activeStepKeys` 裡每一關各自判斷;4b、4c、7 看所有節點與任務。
  *
  * 列 5 需要查資料庫才知道「跳過條件成不成立、解析出誰」:第一次呼叫回 `resolveStepEntry`,
@@ -43,7 +46,7 @@ import {
  * 1. 依陣列順序執行;**`updateInstance` 的條件不成立(CAS 失敗)就中止本輪**,後面的動作一個都不做,
  *    重讀實例與任務再呼叫 `advance`。後面的動作(同步提交、寄信)是依「這筆更新成功」算出來的,
  *    CAS 失敗代表快照已過期,繼續做會把舊判斷寫進去。
- * 2. 其他動作的「條件不成立」都是**已做過**(冪等),照常往下:`createTask` 撞唯一鍵、`syncTask` 的狀態
+ * 2. 其他動作的「條件不成立」都是**已做過**(冪等),照常往下:`createTask` 的任務已存在、`syncTask` 的狀態
  *    已被改過、`updateSubmission` 沒有同步資格、`appendHistoryOnce` 事件已存在。
  * 3. `invalidState` = 權威資料自相矛盾,不寫任何東西、中止推進並記 log;它會一直出現在「需要推進」,
  *    等人工修資料。
@@ -53,9 +56,29 @@ import {
  * (`steps: { $elemMatch: { stepKey: N, status: "pending" } }`),元素不存在就永遠不成立。
  */
 
-/** 列 5 的外部輸入:跳過,或解析到的審核者(未剔除申請人也可,這裡會剔除)。 */
+/**
+ * 列 5 的外部輸入:跳過(帶原因,時間軸顯示是哪一項成立),或解析到的審核者(未剔除申請人也可,這裡會剔除)。
+ *
+ * `autoApprovals` = 已過 `beforeApprove` 的 B5 自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門):
+ * 進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 = 已核准);`any` 只記第一位(一人核准即過)。
+ * **申請人只有在自動通過成立時才留在計畫裡**,否則照一般規則剔除(剔除後沒人 → 阻擋)。
+ *
+ * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句剔除;其他人照常留一張待審任務。每位在時間軸記一筆
+ * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
+ *
+ * `delegatorOf` = B15 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
+ * 代理人 id → 原審核者 id 們(多位委託同一人時合成一項,代理人一票作用到所有被代理者)。派任計畫那一項記
+ * `delegatorIds`,`task_created` 與自動通過的 `approved` 事件帶它(時間軸「由 X 代理 Y、Z」)。
+ */
 export type StepEntry =
-  { kind: "skip" } | { kind: "assign"; assigneeIds: string[] };
+  | { kind: "skip"; reason?: SkipReason }
+  | {
+      kind: "assign";
+      assigneeIds: string[];
+      autoApprovals?: readonly AutoApproval[];
+      blockedAutoApprovals?: readonly BlockedAutoApproval[];
+      delegatorOf?: Readonly<Record<string, readonly string[]>>;
+    };
 
 export interface AdvanceInput {
   definition: WorkflowDefinition;
@@ -71,7 +94,6 @@ export interface AdvanceInput {
 
 /** 判斷表的列號(8b 是本實作補的恢復列:提交的阻擋標記與實例不符)。 */
 export type AdvanceRow =
-  | "1"
   | "2"
   | "3"
   | "4"
@@ -107,6 +129,8 @@ export interface StepUpdate {
   status?: StepStatus;
   blocked?: boolean;
   plan?: PlanItem[];
+  /** 整份取代(只有進關時的 B5 自動通過會寫;人按的決定由 api 以 `$push` 寫)。 */
+  decisions?: AcceptedDecision[];
 }
 
 export interface InstanceUpdate {
@@ -186,9 +210,6 @@ export interface AdvancePlan {
 /** 判斷表的入口:回第一個成立的列與它要做的動作。 */
 export function advance(input: AdvanceInput): AdvancePlan {
   const { instance } = input;
-  if (instance.status === "linking") {
-    return { row: "1", actions: [] };
-  }
   if (isTerminalInstanceStatus(instance.status)) {
     const finishing = finishingActions(input);
     return finishing.length > 0
@@ -380,6 +401,7 @@ function successorStart(
   input: AdvanceInput,
   nodeKey: string,
   mode: "completed" | "skipped" | "recover",
+  skipReason: SkipReason | null = null,
 ): AdvanceAction {
   const { definition, instance, now } = input;
   const statuses = statusMapOf(instance);
@@ -395,6 +417,9 @@ function successorStart(
       at: now,
       kind: mode === "completed" ? "step_completed" : "step_skipped",
       stepKey: nodeKey,
+      ...(mode === "skipped" && skipReason !== null
+        ? { reason: skipReason }
+        : {}),
     });
   }
   const { started, waiting } = startSuccessors(
@@ -634,9 +659,31 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
     return { row: "5", actions: [{ kind: "resolveStepEntry", stepKey }] };
   }
   if (entry.kind === "skip") {
-    return { row: "5", actions: [successorStart(input, stepKey, "skipped")] };
+    return {
+      row: "5",
+      actions: [
+        successorStart(input, stepKey, "skipped", entry.reason ?? null),
+      ],
+    };
   }
-  const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy);
+  const node = stepOf(definition, stepKey);
+  const reviewNode = node !== undefined && isReviewStep(node) ? node : null;
+  const plan = buildPlan(stepKey, entry.assigneeIds, instance.createdBy, {
+    keepApplicant: (entry.autoApprovals ?? []).some(
+      (approval) => approval.assigneeId === instance.createdBy,
+    ),
+    ...(entry.delegatorOf !== undefined && { delegatorOf: entry.delegatorOf }),
+  });
+  const blockedNotes: HistoryEvent[] = (entry.blockedAutoApprovals ?? []).map(
+    (blocked) => ({
+      at: now,
+      kind: "auto_approve_blocked",
+      stepKey,
+      userId: blocked.assigneeId,
+      reason: blocked.reason,
+      code: blocked.code,
+    }),
+  );
   const condition = liveCondition(instance, {
     stepStatus: { [stepKey]: "pending" },
   });
@@ -651,7 +698,10 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
           update: {
             steps: { [stepKey]: { status: "active", plan: [], blocked: true } },
             ...(instance.status === "blocked" ? {} : { status: "blocked" }),
-            pushHistory: [{ at: now, kind: "blocked", stepKey }],
+            pushHistory: [
+              ...blockedNotes,
+              { at: now, kind: "blocked", stepKey },
+            ],
             incEditVersion: true,
           },
         },
@@ -667,20 +717,120 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
       ],
     };
   }
+  const decisions = autoDecisionsOf(
+    reviewNode?.mode ?? "any",
+    plan,
+    entry.autoApprovals ?? [],
+    now,
+  );
+  const update: InstanceUpdate = {
+    steps: {
+      [stepKey]: {
+        status: "active",
+        plan,
+        blocked: false,
+        ...(decisions.length > 0
+          ? { decisions: decisions.map(({ decision }) => decision) }
+          : {}),
+      },
+    },
+    pushHistory: [
+      { at: now, kind: "step_entered", stepKey },
+      ...blockedNotes,
+      // 決定與它的 `approved` 事件同一次原子寫入(`historyIndexOf` 靠它排接受順序)
+      ...decisions.map(({ decision, reason }) => ({
+        at: now,
+        kind: "approved" as const,
+        stepKey,
+        taskKey: decision.taskKey,
+        userId: decision.userId,
+        comment: null,
+        reason,
+        ...delegatorsOf(
+          plan.find((item) => item.taskKey === decision.taskKey) ?? {},
+        ),
+      })),
+    ],
+    incEditVersion: true,
+  };
   return {
     row: "5",
     actions: [
-      {
-        kind: "updateInstance",
-        condition,
-        update: {
-          steps: { [stepKey]: { status: "active", plan, blocked: false } },
-          pushHistory: [{ at: now, kind: "step_entered", stepKey }],
-          incEditVersion: true,
-        },
-      },
+      { kind: "updateInstance", condition, update },
+      ...autoApprovedTasks(input, stepKey, update),
     ],
   };
+}
+
+/**
+ * B5 自動通過 → 進關時一併寫入的決定(記成那個人的核准,`comment = null`):只記計畫裡有的人;
+ * `any` 只記第一位(一人核准即過,多記的會變成「晚於結果」);`all` 每位各記一票,其他人照常審核。
+ */
+function autoDecisionsOf(
+  mode: "any" | "all",
+  plan: readonly PlanItem[],
+  approvals: readonly AutoApproval[],
+  now: Date,
+): { decision: AcceptedDecision; reason: AutoApproval["reason"] }[] {
+  const result: {
+    decision: AcceptedDecision;
+    reason: AutoApproval["reason"];
+  }[] = [];
+  const seen = new Set<string>();
+  for (const approval of approvals) {
+    const item = plan.find((entry) => entry.assigneeId === approval.assigneeId);
+    if (item === undefined || seen.has(item.taskKey)) {
+      continue;
+    }
+    seen.add(item.taskKey);
+    result.push({
+      decision: {
+        taskKey: item.taskKey,
+        userId: item.assigneeId,
+        decision: "approved",
+        comment: null,
+        at: now,
+      },
+      reason: approval.reason,
+    });
+    if (mode === "any") {
+      break;
+    }
+  }
+  return result;
+}
+
+/**
+ * 自動通過的人的任務:進關的 CAS 成功後立刻建(投影 = 已核准)。不能等列 6 —— 這一關可能在下一輪的列 4
+ * 就完成(連帶全案核准),列 6 只補進行中關卡的任務。`(instanceId, taskKey)` 唯一,重跑不重建。
+ */
+function autoApprovedTasks(
+  input: AdvanceInput,
+  stepKey: string,
+  update: InstanceUpdate,
+): AdvanceAction[] {
+  const patch = update.steps?.[stepKey];
+  const decided = new Set((patch?.decisions ?? []).map((one) => one.taskKey));
+  if (decided.size === 0) {
+    return [];
+  }
+  const instance = input.instance;
+  const next: InstanceSnapshot = {
+    ...instance,
+    steps: instance.steps.map((state) =>
+      state.stepKey === stepKey ? { ...state, ...patch } : state,
+    ),
+    history: [...instance.history, ...(update.pushHistory ?? [])],
+  };
+  const projections = projectAllTasks(input.definition, next);
+  const actions: AdvanceAction[] = [];
+  for (const taskKey of decided) {
+    const projection = projections.get(taskKey)?.projection;
+    if (projection !== undefined) {
+      actions.push({ kind: "createTask", stepKey, taskKey, projection });
+    }
+  }
+  return actions;
 }
 
 // ---- 列 4b:後繼啟動的恢復 ----
@@ -769,6 +919,14 @@ function createTasksRow6(input: AdvanceInput): AdvancePlan | null {
   return actions.length > 0 ? { row: "6", actions } : null;
 }
 
+/** B15:計畫項目有被代理者時,事件要帶的 `delegatorIds`;沒有 → 空物件(不帶欄位)。 */
+function delegatorsOf(
+  item: Pick<PlanItem, "delegatorIds">,
+): Pick<HistoryEvent, "delegatorIds"> {
+  const ids = item.delegatorIds ?? [];
+  return ids.length > 0 ? { delegatorIds: [...ids] } : {};
+}
+
 /**
  * 「有新任務」的信與 `task_created` 事件。任務已建、但事件還沒記(建完就中斷)也要補,
  * 否則這位審核者永遠收不到信;只通知還能審的人(有效承辦人、尚未決定)。
@@ -802,6 +960,7 @@ function announceActions(
         stepKey: state.stepKey,
         taskKey: item.taskKey,
         userId: item.assigneeId,
+        ...delegatorsOf(item),
       },
     },
   ];
@@ -908,7 +1067,7 @@ function syncSubmissionBlockedRow8b(input: AdvanceInput): AdvancePlan | null {
 
 /**
  * 新實例的 `steps[]`:版本的**每個節點**各一筆 `pending`(見檔頭「執行合約」的最後一段)。
- * 送出第 2 步建 `linking` 實例時寫入;之後只改欄位,不增刪元素。
+ * 送出建實例時寫入;之後只改欄位,不增刪元素。
  */
 export function initialStepStates(definition: WorkflowDefinition): StepState[] {
   return definition.steps.map((step) => ({

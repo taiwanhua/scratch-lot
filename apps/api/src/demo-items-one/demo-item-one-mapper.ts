@@ -1,9 +1,11 @@
 import { Types } from "mongoose";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import type { Persisted } from "../database/base.repository";
 import type { DemoItemOneDocument } from "../database/database.module";
+import {
+  type PermissionHolding,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import type { DemoCategoryOptions } from "./demo-category.service";
 import { validationError } from "./demo-items-one-error";
 import {
@@ -55,14 +57,12 @@ export interface DemoItemOneViewContext {
   publicUrlOf: (objectPath: string | null | undefined) => string | null;
 }
 
-export function abilitiesOf(
-  permissionKeys: ReadonlySet<string>,
-): DemoItemOneAbilities {
+export function abilitiesOf(holding: PermissionHolding): DemoItemOneAbilities {
   return {
-    canEdit: hasPermission(permissionKeys, SAMPLE_ONE_PERMISSIONS.edit),
-    canDelete: hasPermission(permissionKeys, SAMPLE_ONE_PERMISSIONS.delete),
-    canEditInternalNote: hasPermission(
-      permissionKeys,
+    canEdit: holdsPermission(holding, SAMPLE_ONE_PERMISSIONS.edit),
+    canDelete: holdsPermission(holding, SAMPLE_ONE_PERMISSIONS.delete),
+    canEditInternalNote: holdsPermission(
+      holding,
       SAMPLE_ONE_PERMISSIONS.editInternalNote,
     ),
   };

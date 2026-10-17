@@ -9,6 +9,7 @@ import {
   FormsRepository,
   ModulesRepository,
 } from "../../database/database.module";
+import { allowsDraft } from "../../database/schemas/form.schema";
 import {
   type SubmissionFilter,
   type SubmissionSnapshotRecord,
@@ -20,7 +21,6 @@ import {
   type FormOperatorFacts,
   toObjectId,
 } from "../../forms/form-access.service";
-import { formModulePermission } from "../../forms/form-permission-keys";
 import { FormSubmissionStatusEnum } from "../../forms/form-runtime/models/form-submission.model";
 import type {
   WorkflowInstanceModel,
@@ -159,7 +159,7 @@ export class ApplyCenterService {
     return { items, totalCount, page, pageSize };
   }
 
-  /** 新申請:我有 `create` 且可新增、而且本租戶綁了流程的表單,依模組分組。 */
+  /** 新申請:我有新增資格(`canCreateWithForm`)且可新增、而且本租戶綁了流程的表單,依模組分組。 */
   async applicableForms(
     facts: FormOperatorFacts,
   ): Promise<ApplicableModuleForms[]> {
@@ -174,20 +174,25 @@ export class ApplyCenterService {
     );
     const groups: ApplicableModuleForms[] = [];
     for (const module of modules) {
-      if (
-        !this.formAccess.has(facts, formModulePermission(module.key, "create"))
-      ) {
+      // 模組層連一張表單的新增資格都沒有 → 不查表單
+      if (!this.formAccess.canCreateInModule(facts, module.key)) {
         continue;
       }
       const available = await this.formAccess.availableForms(facts, module.key);
       const forms = available
-        .filter((form) => boundKeys.has(form.key))
+        .filter(
+          (form) =>
+            boundKeys.has(form.key) &&
+            this.formAccess.canCreateWithForm(facts, module.key, form.key),
+        )
         .map((form) => ({
           key: form.key,
           name: form.name,
           moduleKey: form.moduleKey,
           currentVersion: form.currentVersion ?? 0,
           tabLabelTemplate: form.tabLabelTemplate,
+          allowDraft: allowsDraft(form),
+          canCreate: true,
         }));
       if (forms.length > 0) {
         groups.push({ moduleKey: module.key, moduleName: module.name, forms });
@@ -240,7 +245,7 @@ export class ApplyCenterService {
       return { myTasks: 0, myApplications: 0 };
     }
     const [myTasks, myApplications] = await Promise.all([
-      this.tasks.count(tenantId, myTasksFilter(actorId, { done: false })),
+      this.myTaskCount(facts),
       this.boundFormKeys(tenantId).then((boundKeys) =>
         this.store.count(
           tenantId,
@@ -251,6 +256,19 @@ export class ApplyCenterService {
       ),
     ]);
     return { myTasks, myApplications };
+  }
+
+  /**
+   * 待我處理的任務數(`counts` 的 `myTasks`):側欄「申請中心」的數字只要這一項
+   * (登記在 `ApplyCenterBadge`,底座規格 10.4)。
+   */
+  async myTaskCount(facts: FormOperatorFacts): Promise<number> {
+    const tenantId = facts.tenantId;
+    const actorId = facts.operator.actorId;
+    if (tenantId === null || actorId === null) {
+      return 0;
+    }
+    return this.tasks.count(tenantId, myTasksFilter(actorId, { done: false }));
   }
 
   /** 實例詳情:授權同 `canReadSubmissionRevision`(申請人 / 模組讀者 / 任務持有者只看該修訂)。 */

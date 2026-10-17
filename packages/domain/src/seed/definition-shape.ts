@@ -36,7 +36,12 @@ const COMMON_KEYS = [
 const TOP_LEVEL_KEYS: Readonly<
   Record<DefinitionSeedSet["kind"], readonly string[]>
 > = {
-  "form-definition": [...COMMON_KEYS, "moduleKey", "tabLabelTemplate"],
+  "form-definition": [
+    ...COMMON_KEYS,
+    "moduleKey",
+    "tabLabelTemplate",
+    "allowDraft",
+  ],
   "workflow-definition": [...COMMON_KEYS, "checkFormKey"],
 };
 
@@ -44,7 +49,7 @@ const DEFINITION_KEYS: Readonly<
   Record<DefinitionSeedSet["kind"], readonly string[]>
 > = {
   "form-definition": ["fields", "layout", "summaryMap", "prefills"],
-  "workflow-definition": ["steps", "edges"],
+  "workflow-definition": ["steps", "edges", "cc"],
 };
 
 function isNonBlankString(value: unknown): value is string {
@@ -116,6 +121,12 @@ function nullableStringIssues(
 
 function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
   const issues = nullableStringIssues(seed, "tabLabelTemplate");
+  if (seed.allowDraft !== undefined && typeof seed.allowDraft !== "boolean") {
+    issues.push({
+      path: "allowDraft",
+      detail: "allowDraft 只能是 true / false;缺席 = 允許存草稿",
+    });
+  }
   if (!isNonBlankString(seed.moduleKey)) {
     issues.push({ path: "moduleKey", detail: "moduleKey 必填" });
   }

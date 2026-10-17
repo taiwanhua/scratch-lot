@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "@jest/globals";
 import {
   FORM_MODULE_HELP_KEY,
   composeHelpRegistry,
-} from "../src/lib/module-help.ts";
+} from "../src/lib/base/module-help.ts";
 import { HELP_SOURCES, readHelpSources } from "./help-sources.mjs";
 
 /**

@@ -2,10 +2,10 @@ import { useMemo } from "react";
 
 import { useOrgTreeQuery } from "@repo/graphql";
 
-import { useMe } from "@/hooks/useMe";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { type OrgOption, flattenOrgs } from "@/lib/org-tree";
+import { useMe } from "@/hooks/base/useMe";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { type OrgOption, flattenOrgs } from "@/lib/base/org-tree";
 
 import { ORG_MANAGER_VIEW_PERMISSION } from "./role-manager-permissions";
 

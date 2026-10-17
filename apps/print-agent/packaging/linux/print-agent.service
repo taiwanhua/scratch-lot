@@ -1,0 +1,23 @@
+[Unit]
+Description=Print agent (receipt printer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=print-agent
+Group=print-agent
+ExecStart=/opt/print-agent/print-agent run
+Restart=always
+RestartSec=10
+# 代理程式自己每天寫一個 log(/var/log/print-agent/,保留 14 天);stdout 是同一份,不再進 journald。
+# stderr(當掉時的訊息)仍進 journald:journalctl -u print-agent
+StandardOutput=null
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/etc/print-agent /var/log/print-agent
+
+[Install]
+WantedBy=multi-user.target

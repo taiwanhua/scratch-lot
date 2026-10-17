@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { z } from "zod";
 
 import {
   type UsersQueryVariables,
@@ -10,10 +11,11 @@ import {
   useUsersQuery,
 } from "@repo/graphql";
 
-import { useMe } from "@/hooks/useMe";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useSession } from "@/hooks/useSession";
-import { type OrgNodeLike, rootOrgId } from "@/lib/org-tree";
+import { useMe } from "@/hooks/base/useMe";
+import { usePermissions } from "@/hooks/base/usePermissions";
+import { useSession } from "@/hooks/base/useSession";
+import { useUrlState } from "@/hooks/base/useUrlState";
+import { type OrgNodeLike, findOrgNode, rootOrgId } from "@/lib/base/org-tree";
 
 import {
   ORG_MANAGER_VIEW_PERMISSION,
@@ -24,6 +26,18 @@ import {
   type UserActionAbility,
   type UserRow,
 } from "./user-manager-types";
+
+/**
+ * 清單的範圍與篩選存在網址 `?list=`(REACT-14):左樹選的組織(`org`,沒選 = 樹根)、搜尋、頁碼。
+ * 組織是清單的篩選條件(換組織回第一頁),所以和搜尋、頁碼放同一個 key。
+ */
+const listSchema = z
+  .object({
+    org: z.string().nullable().default(null),
+    keyword: z.string().default(""),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({ org: null, keyword: "", page: 1 });
 
 /**
  * 使用者管理頁的資料層:組織樹、清單、篩選與權限判斷(ADR-0011「頁內功能」)。
@@ -60,9 +74,8 @@ export const useUserManagerData = () => {
   };
   const isOrgTreeAvailable = hasPermission(ORG_MANAGER_VIEW_PERMISSION);
 
-  const [pickedOrgId, setPickedOrgId] = useState<string | null>(null);
-  const [keyword, setKeywordValue] = useState("");
-  const [page, setPage] = useState(1);
+  const [list, setList] = useUrlState("list", listSchema);
+  const { org: pickedOrgId, keyword, page } = list;
 
   const orgTree = useOrgTreeQuery(session.client, undefined, {
     enabled: isOrgTreeAvailable,
@@ -91,7 +104,11 @@ export const useUserManagerData = () => {
    * 初始選中樹根(與組織管理頁一致,#183 的 (a) 案;不在 effect 內 setState,REACT-06)。
    * 樹還沒回來時是 null — 那段時間不送 `users`(見下方 `enabled`)。
    */
-  const selectedOrgId = pickedOrgId ?? treeRootId;
+  // 網址上的組織不在樹裡(手改、換了組織)→ 退回樹根;樹不可用時不看網址上的組織(清單攤開整個可見範圍)
+  const selectedOrgId =
+    pickedOrgId !== null && findOrgNode(orgNodes, pickedOrgId) !== null
+      ? pickedOrgId
+      : treeRootId;
 
   /**
    * `orgId` 為 null 一律不送進 input:api 的 `UsersInput.orgId` 是「不給 = 整個可見範圍」,
@@ -119,12 +136,13 @@ export const useUserManagerData = () => {
 
   /** 換組織 / 換關鍵字都回到第一頁(否則會停在一個不存在的頁碼上看到空清單)。 */
   const selectOrg = (orgId: string | null) => {
-    setPickedOrgId(orgId);
-    setPage(1);
+    setList((current) => ({ ...current, org: orgId, page: 1 }));
   };
   const setKeyword = (value: string) => {
-    setKeywordValue(value);
-    setPage(1);
+    setList((current) => ({ ...current, keyword: value, page: 1 }));
+  };
+  const setPage = (value: number) => {
+    setList((current) => ({ ...current, page: value }));
   };
 
   /**

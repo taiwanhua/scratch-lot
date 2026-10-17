@@ -3,13 +3,13 @@ import type { ComponentType } from "react";
 import {
   formModulePageKeys,
   formModulePages,
-} from "@/components/form-engine/FormModulePages/form-module-pages";
+} from "@/components/base/form-engine/FormModulePages/form-module-pages";
 import {
   type FormModuleOptions,
   type FormModuleOptionsRegistry,
   composeFormModuleOptions,
-} from "@/lib/form-engine/form-module-options";
-import type { ModulePageProps } from "@/lib/module-tree";
+} from "@/lib/base/form-engine/form-module-options";
+import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import type { ShellMinWidth } from "./AdminShell/shell-geometry";
 import type { ModulePageRegistry } from "./guards/ModuleRoute/ModuleRoute";
@@ -56,6 +56,13 @@ export interface ModulePageSource {
 export interface ModulePageReplacement extends PagePresentation {
   readonly target: string;
 }
+
+/**
+ * 網址狀態的盤點(REACT-14 入口清單):頁面 key → 這一頁以 `useUrlState` 放進網址的 key(空陣列 = 沒有)。
+ * 底座的在 `app/base/url-state-inventory.ts`,專案的在 `app/project/url-state-inventory.ts`;
+ * 每一頁都要登記,入口清單測試(`app/url-state-inventory.test.ts`)比對登記表。
+ */
+export type UrlStateInventory = Readonly<Record<string, readonly string[]>>;
 
 export interface ComposeModulePagesInput {
   readonly base: ModulePageSource;

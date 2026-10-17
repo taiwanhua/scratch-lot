@@ -44,7 +44,7 @@ export class TenantOpsResolver {
     return this.tenantOps.moduleOptions(operator);
   }
 
-  /** 開通租戶:ADR-0009 四步 + 擁有者 + 啟用信,整段失敗以補償刪除回滾。 */
+  /** 開通租戶:ADR-0009 四步 + 擁有者是一個交易(失敗全部回復),啟用信在交易提交後寄。 */
   @RequirePermission(PERMISSIONS.provision)
   @Mutation(() => ProvisionTenantPayload)
   provisionTenant(

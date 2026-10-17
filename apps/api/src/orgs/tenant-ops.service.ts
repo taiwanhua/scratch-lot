@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { Injectable, Logger } from "@nestjs/common";
 import { hash } from "@node-rs/argon2";
-import { Types } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import { AuditService } from "../audit/audit.service";
 import { PasswordService } from "../auth/password/password.service";
@@ -21,6 +21,7 @@ import {
   type RelationLink,
   RelationService,
 } from "../database/relation.service";
+import { TransactionService, afterCommit } from "../database/transaction";
 import { ModuleSidebarType } from "../permission/models/me-module.model";
 import { isOwnedUploadPath } from "../storage/storage.service";
 import type { ProvisionTenantInput } from "./dto/provision-tenant.input";
@@ -57,10 +58,7 @@ const AUDIT_ACTIONS = {
   transferOwner: "org.transfer-owner",
 } as const;
 
-/**
- * 開通失敗時要補償刪除的東西(Mongo 單節點無 transaction,見 `provision` 的說明)。
- * 順序即「建立順序」,回滾時反向處理。
- */
+/** 撤銷開通要硬刪的東西(`revokeProvision`);刪除順序與建立順序相反。 */
 interface ProvisionedArtifacts {
   links: Omit<RelationLink, "meta">[];
   orgId?: Types.ObjectId;
@@ -186,6 +184,7 @@ export class TenantOpsService {
     private readonly passwords: PasswordService,
     private readonly ownerProtection: OwnerProtectionService,
     private readonly orgsService: OrgsService,
+    private readonly transactions: TransactionService,
   ) {}
 
   /**
@@ -202,13 +201,10 @@ export class TenantOpsService {
    * 開通租戶(ADR-0009):建租戶 Org → 複製租戶管理員模板(只綁勾選的模組 + 各該模組的 `*`)
    * → 建首任管理員(不設密碼)並綁 `org_user` / `user_role` → 設 `ownerUserId` → 寄啟用信。
    *
-   * **回滾**:Mongo 單節點沒有 transaction,整段以**補償刪除**實作 — 過程中建立的關聯、
-   * 使用者、角色副本、租戶組織逐一抹掉(`hardDeleteById`,不是軟刪除:`users` 的唯一索引含
-   * 已軟刪除的文件,留殭屍會讓同一組帳號永遠再也開不了)。
-   * 補償範圍**不含 `audit_logs`**(只增不改,ADR-0004):極端情況下會留一筆 `org.provision`
-   * 但資料已回滾 — 這是刻意取捨,寧可多一筆稽核痕跡,也不要漏記特權動作。
-   * 寄信放最後(唯一不可逆的外部副作用);信寄出後失敗的話 token 指向已刪除的使用者,
-   * 對方點連結得到 `ACTION_TOKEN_INVALID`,重新開通即可。
+   * **一個交易**(ADR-0013):建立的組織、角色副本、使用者、關聯、`ownerUserId` 與 `org.provision`
+   * 稽核一起提交;任一步失敗全部回復,不留任何東西,同一組帳號可以直接重新開通。
+   * 啟用信是外部副作用,排在交易成功之後(`afterCommit`):寄不出去只記 log、開通照樣成立,
+   * 首任管理員以「忘記密碼」自助取得設定連結(與啟用逾期同一條路,ADR-0009「Token 效期」)。
    */
   async provision(
     operator: OperatorContext,
@@ -234,94 +230,125 @@ export class TenantOpsService {
       selected,
     );
     const rootOrg = await this.rootOrg(operator);
+    // 不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;雜湊在交易外先算好,交易只做寫入
+    const passwordHash = await hash(randomBytes(32).toString("hex"));
+    const mail = { sent: false };
 
-    const created: ProvisionedArtifacts = { links: [] };
     try {
-      // 1. 租戶 Org:根組織的直接子組織
-      const org = await this.orgs.create(operator, {
-        name,
-        slug,
-        parentId: rootOrg._id,
-        ancestors: [rootOrg._id],
-        enabled: true,
-        isSystem: false,
-        settings: {},
-        ...(logoPath === undefined ? {} : { logoPath }),
-      });
-      created.orgId = org._id;
+      const payload = await this.transactions.withTransaction(
+        async (session) => {
+          // 1. 租戶 Org:根組織的直接子組織
+          const org = await this.orgs.create(
+            operator,
+            {
+              name,
+              slug,
+              parentId: rootOrg._id,
+              ancestors: [rootOrg._id],
+              enabled: true,
+              isSystem: false,
+              settings: {},
+              ...(logoPath === undefined ? {} : { logoPath }),
+            },
+            { session },
+          );
 
-      // 2. 租戶管理員副本:沒有 key(全庫唯一),以 settings.templateKey 標記來源(ADR-0009)
-      const role = await this.roles.create(operator, {
-        name: template.name,
-        ...(template.description === undefined
-          ? {}
-          : { description: template.description }),
-        enabled: true,
-        isSystem: false,
-        settings: { [TEMPLATE_KEY_SETTING]: TENANT_ADMIN_ROLE_KEY },
-      });
-      created.roleId = role._id;
-      await this.link(operator, created, [
-        { type: "org_role", firstId: org._id, secondId: role._id },
-        ...selected.map((module) => ({
-          type: "role_module" as const,
-          firstId: role._id,
-          secondId: module._id,
-        })),
-        ...permissionIds.map((permissionId) => ({
-          type: "role_permission" as const,
-          firstId: role._id,
-          secondId: permissionId,
-        })),
-      ]);
+          // 2. 租戶管理員副本:沒有 key(全庫唯一),以 settings.templateKey 標記來源(ADR-0009)
+          const role = await this.roles.create(
+            operator,
+            {
+              name: template.name,
+              ...(template.description === undefined
+                ? {}
+                : { description: template.description }),
+              enabled: true,
+              isSystem: false,
+              settings: { [TEMPLATE_KEY_SETTING]: TENANT_ADMIN_ROLE_KEY },
+            },
+            { session },
+          );
+          await this.relations.linkMany(operator, [
+            { type: "org_role", firstId: org._id, secondId: role._id },
+            ...selected.map((module) => ({
+              type: "role_module" as const,
+              firstId: role._id,
+              secondId: module._id,
+            })),
+            ...permissionIds.map((permissionId) => ({
+              type: "role_permission" as const,
+              firstId: role._id,
+              secondId: permissionId,
+            })),
+          ]);
 
-      // 3. 首任租戶管理員:不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定
-      const user = await this.users.create(operator, {
-        name: account,
-        account,
-        email,
-        passwordHash: await hash(randomBytes(32).toString("hex")),
-        enabled: true,
-        settings: { mustChangePassword: false },
-      });
-      created.userId = user._id;
-      await this.link(operator, created, [
-        { type: "org_user", firstId: org._id, secondId: user._id },
-        { type: "user_role", firstId: user._id, secondId: role._id },
-      ]);
+          // 3. 首任租戶管理員
+          const user = await this.users.create(
+            operator,
+            {
+              name: account,
+              account,
+              email,
+              passwordHash,
+              enabled: true,
+              settings: { mustChangePassword: false },
+            },
+            { session },
+          );
+          await this.relations.linkMany(operator, [
+            { type: "org_user", firstId: org._id, secondId: user._id },
+            { type: "user_role", firstId: user._id, secondId: role._id },
+          ]);
 
-      // 4. 租戶擁有者
-      const owned = await this.orgs.updateById(operator, org._id, {
-        $set: { ownerUserId: user._id },
-      });
+          // 4. 租戶擁有者
+          const owned = await this.orgs.updateById(
+            operator,
+            org._id,
+            { $set: { ownerUserId: user._id } },
+            { session },
+          );
 
-      await this.audit.record(operator, {
-        action: AUDIT_ACTIONS.provision,
-        targetType: AUDIT_TARGET_TYPE,
-        targetId: org._id,
-        after: {
-          name,
-          slug,
-          adminAccount: account,
-          adminEmail: email,
-          ownerUserId: String(user._id),
-          roleId: String(role._id),
-          moduleKeys: selected.map((module) => module.key),
-          ...(logoPath === undefined ? {} : { logoPath }),
+          await this.audit.record(operator, {
+            action: AUDIT_ACTIONS.provision,
+            targetType: AUDIT_TARGET_TYPE,
+            targetId: org._id,
+            after: {
+              name,
+              slug,
+              adminAccount: account,
+              adminEmail: email,
+              ownerUserId: String(user._id),
+              roleId: String(role._id),
+              moduleKeys: selected.map((module) => module.key),
+              ...(logoPath === undefined ? {} : { logoPath }),
+            },
+          });
+
+          // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄):交易成功之後才寄
+          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」
+          afterCommit(async () => {
+            try {
+              await this.passwords.sendActivationEmail(user._id);
+              mail.sent = true;
+            } catch (error) {
+              this.logger.error(
+                `開通租戶後寄啟用信失敗(開通已成立):user=${String(user._id)}`,
+                error instanceof Error ? error.stack : String(error),
+              );
+            }
+          });
+
+          return {
+            org: toOrg(owned ?? org),
+            ownerUserId: String(user._id),
+            roleId: String(role._id),
+            moduleKeys: selected.map((module) => module.key),
+            activationMailSent: false,
+          };
         },
-      });
-
-      // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄)
-      await this.passwords.sendActivationEmail(user._id);
-
-      return {
-        org: toOrg(owned ?? org),
-        ownerUserId: String(user._id),
-        roleId: String(role._id),
-        moduleKeys: selected.map((module) => module.key),
-      };
+      );
+      // 交易後動作在 withTransaction 回來之前已跑完
+      return { ...payload, activationMailSent: mail.sent };
     } catch (error) {
-      await this.rollback(operator, created);
       // 同時開通同一個短碼:事前查過沒人用,由唯一索引擋下 → 與事前檢查同一個錯誤
       throw slugConflictOr(error);
     }
@@ -340,11 +367,13 @@ export class TenantOpsService {
    * 無子組織 / 除擁有者外無其他成員 / 除副本外無其他擁有角色 / 無業務資料引用;
    * 任一不過即 `PROVISION_NOT_REVOKABLE` 附 reasons(前端逐項顯示)。
    *
-   * **抹除沿用開通回滾的同一支函式**(`hardDeleteArtifacts`,`hardDeleteById` 不是軟刪除:
+   * **抹除是硬刪除**(`hardDeleteArtifacts`,`hardDeleteById` 不是軟刪除:
    * `users` 的 account / email 唯一索引含已軟刪除文件,留殭屍會讓同一組帳號永遠再也開不了 —
-   * 撤銷的重點就是「同一組帳號可以重新開通」)。差別只在錯誤處理:開通回滾吞錯以免蓋掉原始錯誤,
-   * 撤銷沒有原始錯誤,抹除失敗就要讓呼叫端知道。
-   * 審計 `org.revoke-provision`(`audit_logs` 不在抹除範圍,ADR-0004 只增不改)。
+   * 撤銷的重點就是「同一組帳號可以重新開通」)。
+   * 抹除與審計 `org.revoke-provision` 是**一個交易**(ADR-0013):中途失敗什麼都不抹
+   * (`audit_logs` 不在抹除範圍,ADR-0004 只增不改)。前置檢查在交易前(它的業務資料查詢是平行讀,
+   * 不放進交易,TX-02)。**既有競態**:檢查之後、交易開始之前若有人在這個租戶建了子組織、成員或業務資料,
+   * 抹除照樣進行(硬刪只抹三樣與它們的關聯,新長出來的資料會失去上層);與交易前相同,未另外處理。
    */
   async revokeProvision(
     operator: OperatorContext,
@@ -363,32 +392,34 @@ export class TenantOpsService {
       throw provisionNotRevokableError(reasons);
     }
 
-    const artifacts: ProvisionedArtifacts = {
-      links: await this.linksOfProvisionedTenant(org._id, ownerUserId, copy),
-      orgId: org._id,
-      ...(copy === null ? {} : { roleId: copy._id }),
-      ...(ownerUserId === undefined ? {} : { userId: ownerUserId }),
-    };
-    await this.hardDeleteArtifacts(operator, artifacts);
+    return this.transactions.withTransaction(async (session) => {
+      const artifacts: ProvisionedArtifacts = {
+        links: await this.linksOfProvisionedTenant(org._id, ownerUserId, copy),
+        orgId: org._id,
+        ...(copy === null ? {} : { roleId: copy._id }),
+        ...(ownerUserId === undefined ? {} : { userId: ownerUserId }),
+      };
+      await this.hardDeleteArtifacts(operator, artifacts, session);
 
-    await this.audit.record(operator, {
-      action: AUDIT_ACTIONS.revokeProvision,
-      targetType: AUDIT_TARGET_TYPE,
-      targetId: org._id,
-      before: {
-        name: org.name,
-        ownerUserId: ownerUserId === undefined ? null : String(ownerUserId),
-        roleId: copy === null ? null : String(copy._id),
-      },
+      await this.audit.record(operator, {
+        action: AUDIT_ACTIONS.revokeProvision,
+        targetType: AUDIT_TARGET_TYPE,
+        targetId: org._id,
+        before: {
+          name: org.name,
+          ownerUserId: ownerUserId === undefined ? null : String(ownerUserId),
+          roleId: copy === null ? null : String(copy._id),
+        },
+      });
+
+      return {
+        success: true,
+        revokedOrgId: String(org._id),
+        revokedOwnerUserId:
+          ownerUserId === undefined ? null : String(ownerUserId),
+        revokedRoleId: copy === null ? null : String(copy._id),
+      };
     });
-
-    return {
-      success: true,
-      revokedOrgId: String(org._id),
-      revokedOwnerUserId:
-        ownerUserId === undefined ? null : String(ownerUserId),
-      revokedRoleId: copy === null ? null : String(copy._id),
-    };
   }
 
   /** 轉移擁有者(ADR-0009:v1 僅根組織可操作);轉移後擁有者保護的對象隨之換人。 */
@@ -590,22 +621,6 @@ export class TenantOpsService {
     }
   }
 
-  /** 建關聯並記進補償清單(回滾時逐筆移除)。 */
-  private async link(
-    operator: OperatorContext,
-    created: ProvisionedArtifacts,
-    links: RelationLink[],
-  ): Promise<void> {
-    await this.relations.linkMany(operator, links);
-    created.links.push(
-      ...links.map(({ type, firstId, secondId }) => ({
-        type,
-        firstId,
-        secondId,
-      })),
-    );
-  }
-
   /**
    * 這個租戶頂層底下的「租戶管理員副本」(`org_role` 擁有、`settings.templateKey` 標記;
    * 判準與擁有者保護同一條,ADR-0009 第 2 步)。找不到副本回 null —
@@ -644,67 +659,53 @@ export class TenantOpsService {
   ): Promise<Omit<RelationLink, "meta">[]> {
     const userIds = ownerUserId === undefined ? [] : [ownerUserId];
     const roleIds = copy === null ? [] : [copy._id];
-    const found = await Promise.all([
-      this.relations.listLinks("org_user", { firstIds: [orgId] }),
-      this.relations.listLinks("org_role", { firstIds: [orgId] }),
-      this.relations.listLinks("org_user", { secondIds: userIds }),
-      this.relations.listLinks("user_role", { firstIds: userIds }),
-      this.relations.listLinks("user_role", { secondIds: roleIds }),
-      this.relations.listLinks("org_role", { secondIds: roleIds }),
-      this.relations.listLinks("role_module", { firstIds: roleIds }),
-      this.relations.listLinks("role_permission", { firstIds: roleIds }),
-    ]);
+    const queries: [
+      RelationLink["type"],
+      Parameters<RelationService["listLinks"]>[1],
+    ][] = [
+      ["org_user", { firstIds: [orgId] }],
+      ["org_role", { firstIds: [orgId] }],
+      ["org_user", { secondIds: userIds }],
+      ["user_role", { firstIds: userIds }],
+      ["user_role", { secondIds: roleIds }],
+      ["org_role", { secondIds: roleIds }],
+      ["role_module", { firstIds: roleIds }],
+      ["role_permission", { firstIds: roleIds }],
+    ];
     const unique = new Map<string, Omit<RelationLink, "meta">>();
-    for (const link of found.flat()) {
-      const { type, firstId, secondId } = link;
-      unique.set(`${type}:${String(firstId)}:${String(secondId)}`, {
-        type,
-        firstId,
-        secondId,
-      });
+    // 交易內依序讀(TX-02:同一個 session 不平行讀寫)
+    for (const [type, ends] of queries) {
+      for (const link of await this.relations.listLinks(type, ends)) {
+        const { firstId, secondId } = link;
+        unique.set(`${type}:${String(firstId)}:${String(secondId)}`, {
+          type,
+          firstId,
+          secondId,
+        });
+      }
     }
     return [...unique.values()];
   }
 
   /**
-   * 補償刪除:反向抹掉已建立的東西。回滾自己失敗時只記 log 不蓋掉原始錯誤 —
-   * 呼叫端該看到的是「為什麼開通失敗」,殘留資料由 log 交給維運處理。
-   */
-  private async rollback(
-    operator: OperatorContext,
-    created: ProvisionedArtifacts,
-  ): Promise<void> {
-    try {
-      await this.hardDeleteArtifacts(operator, created);
-    } catch (error) {
-      this.logger.error(
-        `開通租戶回滾失敗,可能留下殘留資料:org=${String(created.orgId)} role=${String(created.roleId)} user=${String(created.userId)}`,
-        error instanceof Error ? error.stack : String(error),
-      );
-    }
-  }
-
-  /**
-   * 抹掉一組「開通建出來的東西」:關聯 → 使用者 → 角色 → 組織(建立順序的反向)。
+   * 撤銷開通:抹掉一組「開通建出來的東西」:關聯 → 使用者 → 角色 → 組織(建立順序的反向)。
    * **硬刪除**:`users` 的 account / email 唯一索引含已軟刪除的文件,留殭屍會讓同一組帳號
    * 永遠再也開不了(ADR-0007 的軟刪除針對「還看得到的歷史」,這裡要的是「當作沒發生過」)。
-   *
-   * 開通回滾(`rollback`)與撤銷開通(`revokeProvision`)共用這一支,錯誤處理各自決定:
-   * 回滾吞錯只記 log,撤銷讓錯誤往上丟。
    */
   private async hardDeleteArtifacts(
     operator: OperatorContext,
     artifacts: ProvisionedArtifacts,
+    session: ClientSession,
   ): Promise<void> {
     await this.relations.unlinkMany(operator, artifacts.links);
     if (artifacts.userId) {
-      await this.users.hardDeleteById(operator, artifacts.userId);
+      await this.users.hardDeleteById(operator, artifacts.userId, { session });
     }
     if (artifacts.roleId) {
-      await this.roles.hardDeleteById(operator, artifacts.roleId);
+      await this.roles.hardDeleteById(operator, artifacts.roleId, { session });
     }
     if (artifacts.orgId) {
-      await this.orgs.hardDeleteById(operator, artifacts.orgId);
+      await this.orgs.hardDeleteById(operator, artifacts.orgId, { session });
     }
   }
 }

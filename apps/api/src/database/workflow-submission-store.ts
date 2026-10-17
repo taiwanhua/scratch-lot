@@ -1,9 +1,11 @@
 /* eslint-disable @repo/no-raw-model-query -- 審核流程對 form_submissions 的系統讀寫:審核者 / 背景推進不在申請人組織的可見範圍內、也不該被資料範圍規則(含「全部操作者」對象的規則)擋掉,改以 tenantId 為邊界(fail-closed);只給引擎、授權判斷與申請中心用;到期條件:無 */
-import type { Model, Types, mongo } from "mongoose";
+import type { ClientSession, Model, Types, mongo } from "mongoose";
 
+import type { SessionOptions } from "./base.repository";
 import type { BaseFields } from "./plugins/base-fields.plugin";
 import type { FormSubmission } from "./schemas/form-submission.schema";
 import { assertTenantBoundary } from "./tenant-boundary";
+import { currentSession } from "./transaction";
 
 /** 已落庫的一筆提交(原生驅動讀出的形狀;含基礎欄位)。 */
 export type SubmissionSnapshotRecord = FormSubmission &
@@ -72,6 +74,9 @@ export interface SubmissionPage {
  * 而資料範圍規則可以對「全部操作者」生效,系統上下文也會被收窄。所以這裡直接用原生 collection,
  * **每個方法第一個參數就是 `tenantId`**(沒給拋錯),並一律排除軟刪除。
  *
+ * 原生 collection 不會自動加入進行中的交易(TX-02):每個方法的 `session` 沒給時用目前交易的 session
+ * (`currentSession()`,同 `BaseRepository`),明給 `null` = 刻意在交易外。
+ *
  * 呼叫端負責「這個人可不可以讀 / 寫這筆」:讀取授權是 `canReadSubmissionRevision`,
  * 寫入只有引擎的條件同步(提交仍指向本實例、修訂號相符、審核中)與作廢。
  */
@@ -85,9 +90,11 @@ export class WorkflowSubmissionStore {
   async findById(
     tenantId: Types.ObjectId | null | undefined,
     id: Types.ObjectId,
+    options: SessionOptions = {},
   ): Promise<SubmissionSnapshotRecord | null> {
     const stored = await this.collection.findOne(
       conditionOf(tenantId, { _id: id }),
+      sessionOptionOf(options),
     );
     return stored === null ? null : withDefaults(stored);
   }
@@ -96,12 +103,15 @@ export class WorkflowSubmissionStore {
     tenantId: Types.ObjectId | null | undefined,
     filter: SubmissionFilter,
     page?: SubmissionPage,
+    options: SessionOptions = {},
   ): Promise<SubmissionSnapshotRecord[]> {
     const stored = await this.collection
-      .find(
-        conditionOf(tenantId, filter),
-        page ? { sort: page.sort, skip: page.skip, limit: page.limit } : {},
-      )
+      .find(conditionOf(tenantId, filter), {
+        ...(page
+          ? { sort: page.sort, skip: page.skip, limit: page.limit }
+          : {}),
+        ...sessionOptionOf(options),
+      })
       .toArray();
     return stored.map((one) => withDefaults(one));
   }
@@ -109,8 +119,12 @@ export class WorkflowSubmissionStore {
   count(
     tenantId: Types.ObjectId | null | undefined,
     filter: SubmissionFilter,
+    options: SessionOptions = {},
   ): Promise<number> {
-    return this.collection.countDocuments(conditionOf(tenantId, filter));
+    return this.collection.countDocuments(
+      conditionOf(tenantId, filter),
+      sessionOptionOf(options),
+    );
   }
 
   /**
@@ -122,6 +136,7 @@ export class WorkflowSubmissionStore {
     filter: SubmissionFilter,
     set: Record<string, unknown>,
     actorId: Types.ObjectId | null,
+    options: SessionOptions = {},
   ): Promise<boolean> {
     const update: SubmissionUpdate = {
       $set: { ...set, updatedAt: new Date(), updatedBy: actorId },
@@ -129,9 +144,19 @@ export class WorkflowSubmissionStore {
     const result = await this.collection.updateOne(
       conditionOf(tenantId, filter),
       update,
+      sessionOptionOf(options),
     );
     return result.matchedCount > 0;
   }
+}
+
+/** 沒給 `session` → 目前交易的 session(不在交易內就不帶);`null` → 刻意在交易外。 */
+function sessionOptionOf(options: SessionOptions): {
+  session?: ClientSession;
+} {
+  const session =
+    options.session === undefined ? currentSession() : options.session;
+  return session ? { session } : {};
 }
 
 function conditionOf(

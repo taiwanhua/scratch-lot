@@ -9,8 +9,8 @@ import { Radio, RadioGroup } from "@repo/ui/radio";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import type { RemoveSectionMode } from "@/lib/form-engine/designer-ops";
-import type { FieldReference } from "@/lib/form-engine/field-references";
+import type { RemoveSectionMode } from "@/lib/base/form-engine/designer-ops";
+import type { FieldReference } from "@/lib/base/form-engine/field-references";
 
 import { FieldReferenceList } from "./FieldReferenceList";
 

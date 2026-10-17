@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 
 import { useModuleTreeQuery } from "@repo/graphql";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 import { authWorld, graphqlError } from "@/test/msw/auth-handlers";
 import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";

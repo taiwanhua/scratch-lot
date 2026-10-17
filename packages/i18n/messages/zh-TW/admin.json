@@ -85,10 +85,12 @@
         "system": "跟隨系統",
         "light": "亮",
         "dark": "暗"
-      }
+      },
+      "personalSettings": "個人設定",
+      "localeSaveFailed": "語言已切換,但沒有存到帳號;下次登入會回到原本的語言"
     },
     "sideNav": "主選單",
-    "navBadge": "{count} 筆待審核",
+    "navBadge": "{count} 筆待處理",
     "collapseNav": "收合側欄",
     "expandNav": "展開側欄",
     "currentOrg": "當前組織",
@@ -286,6 +288,7 @@
       "disableSuccess": "已停用這個組織。",
       "deleteSuccess": "已刪除這個組織。",
       "provisionSuccess": "已開通新租戶。",
+      "provisionMailNotSent": "已開通新租戶,但啟用信沒有寄出;請首任管理員在登入頁用「忘記密碼」設定密碼。",
       "revokeSuccess": "已撤銷這個租戶的開通。"
     },
     "errors": {
@@ -825,32 +828,14 @@
     "rule": {
       "title": "規則 {index}",
       "audience": "套用對象",
-      "audienceTargets": "對象",
-      "audienceAll": "全部",
-      "audienceRole": "角色",
-      "audienceOrg": "組織",
-      "audienceUser": "使用者",
-      "remove": "刪除規則",
-      "audienceEmpty": "沒有符合的對象",
-      "audienceNoOwnerOrg": "無擁有組織"
-    },
-    "group": {
-      "rootOp": "條件組合",
-      "nestedOp": "群組組合",
-      "nestedHint": "整個群組視為上一層的一個條件",
-      "opAnd": "AND — 全部成立才放行",
-      "opOr": "OR — 其中一個成立即可",
-      "addCondition": "+ 條件",
-      "addGroup": "+ 群組",
-      "remove": "刪除群組"
+      "conditions": "條件組合",
+      "remove": "刪除規則"
     },
     "condition": {
-      "field": "欄位",
       "cond": "條件",
       "value": "值",
       "valueFrom": "起日",
-      "valueTo": "迄日",
-      "remove": "刪除"
+      "valueTo": "迄日"
     },
     "conditions": {
       "in": "屬於",
@@ -877,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "這個比較方式不適用於該欄位的型別。",
       "VALUE_SOURCE_NOT_ALLOWED": "這個值來源不適用於該欄位的型別。",
       "VALUE_INVALID": "請填一個有效的值。",
-      "AUDIENCE_INVALID": "請選擇這條規則要套用給誰。"
+      "AUDIENCE_INVALID": "套用對象的這個條件不正確。"
     },
     "feedback": {
       "saveSuccess": "已儲存資料範圍規則。"
@@ -1184,7 +1169,8 @@
       "uploadRejected": "檔案類型或大小不符:可上傳 {types},{size} MB 以內。",
       "uploading": "上傳中…",
       "uploadFailed": "上傳失敗,請再試一次。",
-      "removeFile": "移除檔案"
+      "removeFile": "移除檔案",
+      "filterPending": "請先填「{fields}」"
     },
     "renderer": {
       "empty": "—",
@@ -1192,7 +1178,11 @@
       "no": "否",
       "sourceUnavailable": "(來源不可用)",
       "readonlyPermission": "你看得到這個欄位,但沒有修改它的權限。",
-      "readonlyCondition": "此欄位目前為唯讀。"
+      "readonlyCondition": "此欄位目前為唯讀。",
+      "summaryItem": "{label}:{value}",
+      "summarySeparator": " · ",
+      "linkedCleared": "已清空「{field}」(它依賴的欄位改了值)",
+      "linkedClearedRows": "已清空 {count} 列的「{field}」(它依賴的欄位改了值)"
     },
     "design": {
       "hasVisibleWhen": "有顯示條件",
@@ -1319,7 +1309,7 @@
     "errors": {
       "CONFLICT": "這筆資料已被別人更新,請重新載入。",
       "FIELD_FORBIDDEN": "你沒有修改其中某個欄位的權限,這次變更沒有存檔。",
-      "FORM_NOT_AVAILABLE": "這張表單目前不能新增(可能已停用、收回或沒有發布版本)。",
+      "FORM_NOT_AVAILABLE": "這張表單目前不能新增(可能已停用、收回、沒有發布版本,或你沒有這張表單的新增權限)。",
       "NOT_FORM_OWNER": "這張表單不屬於你的組織,不能修改。",
       "ROOT_ONLY": "只有平台能執行這個動作。",
       "FORBIDDEN": "你沒有執行這個動作的權限。",
@@ -1333,7 +1323,8 @@
       "REVISION_LIMIT": "修訂次數已達上限,請建立新的申請。",
       "DOCUMENT_TOO_LARGE": "修訂記錄已達容量上限,無法再修改。",
       "FORM_HAS_WORKFLOW": "這張表單在本組織綁了審核流程,舊版資料不能升級到新版。",
-      "VERSION_NOT_PUBLISHED": "只能升級到已發布的版本,請重新整理。"
+      "VERSION_NOT_PUBLISHED": "只能升級到已發布的版本,請重新整理。",
+      "DRAFT_DISABLED": "這張表單不允許存草稿,請直接送出。"
     },
     "array": {
       "addRow": "+ 新增一列",
@@ -1385,7 +1376,6 @@
       "version": "v{version}",
       "noVersion": "無發布版本",
       "disabled": "停用",
-      "interrupted": "發布中斷",
       "hasDraft": "有草稿",
       "workflow": "流程:{name}",
       "workflowInvalid": "綁定的流程已失效"
@@ -1401,6 +1391,10 @@
       "tenantEnabled": "在本組織啟用",
       "enabledOn": "已在本組織啟用這張表單。",
       "enabledOff": "已在本組織停用這張表單。",
+      "allowDraft": "允許存草稿",
+      "allowDraftHint": "關掉後,新增 / 編輯頁不顯示 [存草稿],只能直接送出。",
+      "allowDraftOn": "已允許存草稿。",
+      "allowDraftOff": "已關閉存草稿,之後只能直接送出。",
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",
@@ -1502,9 +1496,6 @@
       "diffChanged": "變更:{fields}",
       "newDraft": "開新草稿",
       "draftCreated": "已開新草稿。",
-      "interrupted": "上次發布沒有完成。請按「重試發布」完成它;完成前不能開新草稿、退役或再發布。",
-      "retry": "重試發布",
-      "retried": "已完成發布。",
       "publishedLine": "{at} · {user}",
       "upgrade": "將舊版資料升級到此版",
       "upgradeBlockedByWorkflow": "這張表單在本組織綁了審核流程,舊版資料不能升級到新版。"
@@ -1524,7 +1515,14 @@
       "confirm": "發布",
       "success": "已發布 v{version}。",
       "unsavedWarning": "設計器有未存的變更:發布的是上次存的草稿。",
-      "saveFirst": "先存草稿"
+      "saveFirst": "先存草稿",
+      "granted": {
+        "title": "發布成功",
+        "body": "「{form}」第 {version} 版已發布。",
+        "hint": "已建立權限「{permission}」,不會自動授予。請到角色管理授予需要的角色。",
+        "later": "稍後",
+        "goToRoles": "前往角色管理"
+      }
     },
     "retire": {
       "title": "退役目前版本?",
@@ -1587,7 +1585,9 @@
       "copyFailed": "複製失敗。",
       "regexChecking": "正則檢查中…",
       "regexUnavailable": "目前無法即時檢查正則的安全性;存草稿時會再檢查。",
-      "newColumn": "項目"
+      "newColumn": "項目",
+      "sectionSettings": "分區設定",
+      "sectionSettingsOf": "分區設定「{title}」"
     },
     "preview": {
       "region": "預覽",
@@ -1739,7 +1739,14 @@
       "labelTemplate": "顯示模板(選填)",
       "labelTemplateHint": "有填就用模板組顯示名(例:名稱 + Email),沒填用顯示欄",
       "insertPlaceholder": "插入欄位",
-      "insertPlaceholderHint": "挑一個欄位,把它插到模板最後"
+      "insertPlaceholderHint": "挑一個欄位,把它插到模板最後",
+      "linkedFilter": "連動篩選(選填)",
+      "linkedFilterHint": "依表單上另一欄目前的值縮小可選的資料;那一欄改值時,這裡已選的會被清空",
+      "linkedFilterField": "{field} 等於",
+      "linkedFilterNone": "不連動",
+      "filterFields": {
+        "enabled": "啟用狀態"
+      }
     },
     "rules": {
       "required": "必填",
@@ -1801,7 +1808,11 @@
           "timezone": "時區",
           "user": {
             "id": "填寫者",
-            "orgId": "填寫者的組織"
+            "orgId": "填寫者的目前組織",
+            "orgIds": "填寫者所屬的組織(全部)"
+          },
+          "tenant": {
+            "id": "最上層組織"
           }
         }
       },
@@ -1933,6 +1944,8 @@
         "amount": "金額"
       },
       "refPrefill": "帶入規則「{label}」",
+      "refLookupFilter": "欄位 {field} 的連動篩選",
+      "refLookupFilterColumn": "明細 {field} 的子欄位 {column} 的連動篩選",
       "refListColumn": "模組的列表欄位配置(草稿外,不會變動)",
       "cancel": "取消",
       "confirm": "刪除"
@@ -1967,13 +1980,14 @@
       "createCustom": "建客製流程",
       "issue": "第 {step} 關:{problem}",
       "problems": {
-        "ROLE_IN_SHARED": "審核者是角色佔位,要以它為基底建客製流程、指到本組織的角色",
-        "USERS_IN_SHARED": "共用流程不能指定使用者",
+        "AUDIENCE_IN_SHARED": "審核者條件用了使用者、角色或指定組織,要以它為基底建客製流程",
         "USER_NOT_IN_TENANT": "指定的使用者不在本組織",
         "ROLE_NOT_IN_TENANT": "指定的角色不是本組織的角色",
+        "ORG_NOT_IN_TENANT": "審核者條件指定的組織不在本組織",
         "FIELD_FORM_MISMATCH": "審核者來自別張表單的欄位",
         "FIELD_MISSING": "審核者欄位在這張表單的目前版本不存在",
-        "FIELD_NOT_USER_REFERENCE": "審核者欄位不是「使用者」引用欄"
+        "FIELD_NOT_USER_REFERENCE": "審核者欄位不是「使用者」引用欄",
+        "FIELD_NOT_ORG_REFERENCE": "審核者條件用的欄位不是「組織」引用欄"
       },
       "unbindDialog": {
         "title": "解除流程綁定",
@@ -2002,7 +2016,15 @@
         "computed": "列內公式"
       },
       "formula": "列內公式",
-      "rowField": "本列・{label}"
+      "rowField": "本列・{label}",
+      "prefill": "帶入同一列(選填)",
+      "prefillHint": "選定或改選時,把來源的欄位帶進同一列的子欄位(會覆蓋原值,之後仍可手動改)",
+      "prefillTarget": "本列子欄位",
+      "prefillTargetUnset": "請選子欄位",
+      "prefillSource": "來源欄位",
+      "prefillSourceUnset": "請選來源欄位",
+      "addPrefill": "+ 對應",
+      "removePrefill": "移除"
     },
     "upgrade": {
       "title": "將舊版資料升級到 v{version}",
@@ -2037,9 +2059,20 @@
       "confirm": "開始升級",
       "close": "關閉",
       "success": "升級完成。"
+    },
+    "sectionProperty": {
+      "title": "分區設定 — {title}",
+      "backToSettings": "← 表單設定",
+      "issues": "這個分區的檢查結果",
+      "collapsible": "可以收合",
+      "defaultCollapsed": "預設收合",
+      "summaryFields": "收合時標題列顯示的欄位",
+      "addSummaryField": "+ 欄位",
+      "summaryNeedsCollapsible": "打開「可以收合」後才能設定。"
     }
   },
   "approval": {
+    "nameSeparator": "、",
     "submissionStatus": {
       "DRAFT": "草稿",
       "REVIEWING": "審核中",
@@ -2059,7 +2092,6 @@
       "blocked": "有關卡找不到審核者或審核者已失效,正在等流程管理者處理。",
       "stepClosed": "此關已結束或任務已變更,已重新載入最新狀態。",
       "statuses": {
-        "LINKING": "送出中",
         "RUNNING": "審核中",
         "BLOCKED": "審核中(待處理)",
         "APPROVED": "已核准",
@@ -2080,6 +2112,7 @@
       "noAssignee": "找不到審核者",
       "assigneeDecided": "{name}({decision})",
       "assigneeInvalid": "{name}(已失效)",
+      "assigneeDelegated": "{name}(代理 {delegators})",
       "statuses": {
         "PENDING": "還沒到",
         "ACTIVE": "審核中",
@@ -2118,7 +2151,25 @@
         "assignee_added": "「{step}」新增審核者 {toUser}",
         "withdrawn": "申請人撤回",
         "completed": "審核完成",
-        "superseded": "已被再次送出的修訂取代"
+        "superseded": "已被再次送出的修訂取代",
+        "auto_approve_blocked": "「{step}」自動通過未成立:{message}"
+      },
+      "autoApproveBlocked": {
+        "auto_applicant": "「{step}」申請人自動通過未成立:{message}",
+        "auto_prior_approver": "「{step}」{user} 已在前關核准,自動通過未成立:{message}"
+      },
+      "autoApproveBlockedGeneric": "目前不符合自動通過的條件",
+      "delegated": {
+        "task_created": "「{step}」由 {user} 代理 {delegators}",
+        "approved": "「{step}」由 {user} 代理 {delegators} 核准",
+        "rejected": "「{step}」由 {user} 代理 {delegators} 駁回",
+        "returned": "「{step}」由 {user} 代理 {delegators} 退回修改"
+      },
+      "reasons": {
+        "skip_orgs": "「{step}」申請人屬於指定的組織,略過",
+        "skip_condition": "「{step}」符合跳過條件,略過",
+        "auto_applicant": "{user} 在「{step}」核准(申請人是審核者,自動通過)",
+        "auto_prior_approver": "{user} 在「{step}」核准(已在前關核准,自動通過)"
       }
     },
     "decide": {
@@ -2244,6 +2295,32 @@
         "BLOCKED": "待改派"
       }
     },
+    "batchApprove": {
+      "selectRow": "勾選「{label}」",
+      "selectPage": "全選本頁",
+      "selectedCount": "已選 {count} 筆",
+      "clear": "清除",
+      "hint": "只能批次核准;駁回、退回請逐筆處理",
+      "approve": "核准({count})",
+      "title": "批次核准",
+      "body": "將核准已選的 {count} 筆。每一筆各自處理,被擋下的不影響其他筆。",
+      "comment": "共同意見(選填)",
+      "cancel": "取消",
+      "confirm": "核准 {count} 筆",
+      "close": "關閉",
+      "summaryAll": "{approved} 筆已核准",
+      "summaryPartial": "{approved} 筆已核准,{failed} 筆未完成(其他筆不受影響)",
+      "columnTitle": "標題",
+      "columnResult": "結果",
+      "resultTableAria": "批次核准結果",
+      "results": {
+        "approved": "已核准",
+        "NOT_YOURS": "這件已不在你手上",
+        "BLOCKED": "被擋下:{message}",
+        "BLOCKED_GENERIC": "這張單目前不能核准",
+        "FAILED": "核准失敗,請稍後再逐筆處理"
+      }
+    },
     "newApplication": {
       "open": "新申請",
       "title": "新申請",
@@ -2267,7 +2344,6 @@
     "errors": {
       "CONFLICT": "這筆資料已被別人更新,請重新載入。",
       "DRAFT_REVISION_MISMATCH": "草稿已被別人更新,請重新載入。",
-      "PUBLISH_IN_PROGRESS": "上一次發布還沒完成,請先重試發布。",
       "HAS_DECISIONS": "已有審核意見,不能撤回。",
       "ALREADY_DECIDED": "此任務已決定,不能改派。",
       "ALREADY_IN_STEP": "此人已在本關。",
@@ -2298,7 +2374,6 @@
       "noVersion": "未發布",
       "version": "第 {version} 版",
       "assigned": "已分派 {count} 個",
-      "interrupted": "發布中斷",
       "hasDraft": "有草稿",
       "boundForms": "綁定表單:{forms}"
     },
@@ -2311,7 +2386,6 @@
       "edit": "改名稱",
       "fork": "以此為基底建流程",
       "assign": "分派",
-      "placeholderHint": "這個流程的角色關卡只存佔位,不能直接綁表單;請以它為基底建客製流程。",
       "assignedTo": "已分派給:{tenants}",
       "boundForms": "綁定的表單:{forms}",
       "tabs": "流程內容",
@@ -2331,7 +2405,6 @@
     },
     "fork": {
       "title": "以「{name}」為基底建流程",
-      "placeholderHint": "建好後,把角色關卡指到本組織的角色,才能發布與綁定。",
       "baseVersion": "基底版本",
       "versionOption": "第 {version} 版",
       "key": "新流程 key",
@@ -2371,10 +2444,10 @@
       "diffRemoved": "移除:{steps}",
       "diffChanged": "變更:{steps}",
       "diffStructure": "分流 / 匯合的結構有變更",
+      "diffFlowCcAdded": "整個流程的知會對象:新增",
+      "diffFlowCcRemoved": "整個流程的知會對象:移除",
+      "diffFlowCcChanged": "整個流程的知會對象:有變更",
       "draftCreated": "已開新草稿",
-      "interrupted": "上一次發布中斷了,請重試發布。",
-      "retry": "重試發布",
-      "retried": "已重試發布",
       "statuses": {
         "DRAFT": "草稿",
         "PUBLISHING": "發布中",
@@ -2434,7 +2507,7 @@
       "newStep": "關卡 {n}",
       "newJoin": "匯合",
       "moveToBranch": "移到「{join}」第 {n} 條分支",
-      "catalogTruncated": "表單或角色超過 100 筆,清單已截斷,請縮小範圍。",
+      "catalogTruncated": "表單超過 100 張,清單已截斷,請縮小範圍。",
       "check": "檢查",
       "checking": "檢查中…",
       "viewing": "檢視 v{version}(唯讀)",
@@ -2443,7 +2516,8 @@
       "viewingSelectHint": "點流程圖上的關卡或匯合節點看它的設定(唯讀)。",
       "viewingCanvas": "v{version} 的流程圖",
       "viewingProperties": "屬性(唯讀)",
-      "closeViewing": "關閉檢視"
+      "closeViewing": "關閉檢視",
+      "saveBlockedOverdue": "逾時提醒的時數不正確,修正後才能存草稿。"
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "分流前面一定要有一個審核關卡:先刪掉或移動整組分流。",
@@ -2453,8 +2527,7 @@
       "LAST_STEP": "流程至少要有一關。"
     },
     "node": {
-      "users": "指定使用者 {count} 人",
-      "role": "角色:{name}",
+      "audience": "審核者:{source}",
       "field": "表單欄位:{form} · {field}",
       "manager": "主管第 {level} 層",
       "unset": "未設定",
@@ -2480,7 +2553,6 @@
         "all": "每個人都核准才通過,一人駁回就駁回。"
       },
       "allowReturn": "允許退回修改",
-      "skipWhen": "跳過條件",
       "skipNeedsCheckForm": "請先選上方的「檢查用表單」:跳過條件的欄位來自它。",
       "actions": "關卡操作",
       "insertAfter": "在後面加一關",
@@ -2492,9 +2564,42 @@
       "moveTo": "移到分支",
       "moveToPlaceholder": "選擇分支",
       "needsCheckForm": "請先選檢查用表單",
-      "skipWhenUnset": "未設定",
       "checkFormLoading": "檢查用表單載入中…",
-      "noUsableFields": "此表單沒有可用欄位"
+      "noUsableFields": "此表單沒有可用欄位",
+      "skip": {
+        "title": "跳過這一關(符合任一項就跳過)",
+        "orgs": "申請人屬於這些組織",
+        "orgsPick": "指定組織",
+        "tenant": "最上層組織",
+        "includeDescendants": "包含下層",
+        "orgsHint": "看申請人所屬的組織(全部),不是只看目前組織。",
+        "sharedOrgsHint": "共用流程只能選最上層組織。",
+        "condition": "符合條件"
+      },
+      "autoApprove": {
+        "title": "自動通過",
+        "applicant": "申請人是這一關的審核者時",
+        "priorApprover": "審核者已在前面的關卡核准過時",
+        "normal": "照常審核",
+        "auto": "自動通過",
+        "hint": "自動通過 = 記成那個人核准(多人會簽只算他那一票),照樣經過核准前的檢查;沒通過就照常審核。"
+      },
+      "overdue": {
+        "title": "逾時提醒",
+        "enabled": "開啟逾時提醒",
+        "over": "超過",
+        "reviewerHours": "通知審核者的時數",
+        "reviewerSuffix": "小時未處理 → 通知審核者",
+        "audienceHours": "通知「通知對象」的時數",
+        "audienceSuffix": "小時 → 同時通知「通知對象」",
+        "hint": "只提醒,不自動核准或駁回。以日曆小時計(含夜間與假日),從任務派給目前的審核者起算。",
+        "invalid": "時數要是正整數,而且通知「通知對象」的時數要大於通知審核者的時數。"
+      },
+      "cc": {
+        "title": "知會",
+        "hint": "這一關通過或被跳過時通知知會對象(不用審核,可以唯讀查看這張單據)。要讓他也知道最後結果(完成、駁回、作廢),請把他加進「整個流程的知會對象」。",
+        "none": "不知會"
+      }
     },
     "join": {
       "region": "匯合節點「{name}」",
@@ -2520,25 +2625,14 @@
       "warning": "警告"
     },
     "assignee": {
-      "region": "審核者",
-      "kind": "審核者來源",
       "kinds": {
-        "users": "指定使用者",
-        "role": "角色",
+        "audience": "人員條件",
         "field": "表單欄位",
         "manager": "主管"
       },
-      "sharedHint": "共用流程不能指定使用者;角色只能填佔位。",
-      "users": "使用者",
-      "usersHint": "送出時這些人裡啟用中、仍在本組織的會收到任務。",
-      "placeholder": "角色佔位",
-      "placeholderHint": "例如「人資」:各組織以此為基底建客製流程後,再指到自己的角色。",
-      "placeholderFrom": "來源的佔位:{placeholder}",
-      "role": "角色",
-      "roleUnset": "未選擇",
+      "sharedHint": "共用流程給所有租戶用,條件只能用「權限」與組織來源(單據所屬組織、表單的組織欄位、最上層組織)。",
       "field": "欄位",
       "fieldUnset": "未選擇",
-      "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);審核者 = 送出時這個欄位選的人。",
       "level": "第幾層",
       "levelHint": "從申請所屬組織往上找,第 1 層 = 最近的一組主管。",
       "levelOption": "第 {level} 層",
@@ -2546,7 +2640,40 @@
       "fieldCurrent": "目前:{form} / {field}",
       "fieldNoChoices": "檢查用表單沒有「引用(使用者)」欄位;請先在表單設計器加一個資料來源為使用者的引用欄位並發布。",
       "fieldOtherForm": "這一關原本指向表單「{form}」;改選欄位會換成檢查用表單的欄位。",
-      "noCheckFormReadonly": "這一版沒有指定檢查用表單"
+      "noCheckFormReadonly": "這一版沒有指定檢查用表單",
+      "audienceEmpty": "尚未設定條件",
+      "audienceEdit": "編輯條件",
+      "dialogCancel": "取消",
+      "dialogApply": "套用",
+      "orgSubmission": "單據所屬組織",
+      "orgTenant": "最上層組織",
+      "orgFormField": "表單欄位:{field}",
+      "purposes": {
+        "approver": {
+          "kind": "審核者來源",
+          "region": "審核者",
+          "audienceTitle": "審核者",
+          "audienceRegion": "審核者條件",
+          "dialogTitle": "審核者條件 · {step}",
+          "dialogTitleShared": "審核者條件 · {step}(共用流程)",
+          "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);審核者 = 送出時這個欄位選的人。"
+        },
+        "cc": {
+          "kind": "知會對象",
+          "region": "知會對象",
+          "audienceTitle": "知會對象",
+          "audienceRegion": "知會對象條件",
+          "dialogTitle": "知會對象條件 · {step}",
+          "dialogTitleShared": "知會對象條件 · {step}(共用流程)",
+          "fieldHint": "從檢查用表單的「使用者」引用欄選(不列受保護欄位);知會對象 = 送出時這個欄位選的人。"
+        },
+        "overdue": {
+          "audienceTitle": "通知對象",
+          "audienceRegion": "通知對象條件",
+          "dialogTitle": "通知對象條件 · {step}",
+          "dialogTitleShared": "通知對象條件 · {step}(共用流程)"
+        }
+      }
     },
     "blocked": {
       "title": "阻擋清單",
@@ -2605,6 +2732,14 @@
       "error": "錯誤",
       "warning": "警告",
       "serverFailed": "完整檢查沒有跑完({reason}),下面只列即時檢查的結果。"
+    },
+    "flow": {
+      "title": "整個流程",
+      "region": "整個流程的設定",
+      "ccTitle": "整個流程的知會對象",
+      "ccHint": "單據完成、被駁回或被作廢時通知(不用審核,可以唯讀查看這張單據)。各關的知會對象只在那一關通過或被跳過時收到;退回修改、撤回都不知會。",
+      "issues": "整個流程的問題",
+      "backToFlow": "回到整個流程設定"
     }
   },
   "userPicker": {
@@ -2612,7 +2747,19 @@
     "loading": "載入中",
     "empty": "沒有符合的人",
     "forbidden": "你沒有檢視使用者清單的權限",
+    "loadFailed": "人員清單載入失敗,請稍後再試",
     "disabled": "已停用"
+  },
+  "orgTreeSelect": {
+    "search": "搜尋組織",
+    "empty": "沒有可選的組織",
+    "noMatch": "沒有符合的組織",
+    "limitCount": "已選 {count} / 上限 {max}",
+    "limitReached": "最多選 {max} 個",
+    "outOfScope": "不在你的管理範圍內",
+    "disabledOrg": "已停用",
+    "loadFailed": "組織清單載入失敗,請稍後再試。",
+    "confirm": "確定"
   },
   "seedExport": {
     "action": "匯出專案設定",
@@ -2635,10 +2782,446 @@
       "ROOT_ONLY": "只有系統管理員能匯出專案設定。",
       "NOT_FOUND": "找不到這個版本,請重新載入後再試。",
       "VERSION_NOT_PUBLISHED": "只能匯出已發布的版本。",
-      "PUBLISH_IN_PROGRESS": "這一版的發布還沒完成,請先在版本清單按「重試發布」。",
       "NOT_PORTABLE": "這一版還不能匯出。",
       "VALIDATION_FAILED": "版本識別或發布說明不符合格式,請修正後再試。",
       "UNEXPECTED": "匯出失敗,請稍後再試。"
+    }
+  },
+  "realtime": {
+    "live": "即時連線中",
+    "slow": "重新連線中(慢速模式,每 60 秒更新)"
+  },
+  "personalSettings": {
+    "title": "個人設定",
+    "tabs": "個人設定分頁",
+    "tabPreferences": "偏好",
+    "tabDelegations": "代理人",
+    "preferencesEmpty": "目前沒有可以調整的偏好。外觀與語言在右上角的頭像選單切換。",
+    "delegations": {
+      "create": "+ 新增代理",
+      "hint": "代理期間內,輪到你審核的任務改派給代理人。代理開始前已派給你的任務不會自動轉移。",
+      "tableAria": "我的代理",
+      "delegate": "代理人",
+      "startAt": "開始",
+      "endAt": "結束",
+      "note": "備註",
+      "status": "狀態",
+      "actions": "操作",
+      "statuses": {
+        "UPCOMING": "未開始",
+        "ACTIVE": "代理中",
+        "ENDED": "已結束"
+      },
+      "empty": "還沒有設定代理",
+      "loadFailed": "代理清單載入失敗,請重新整理",
+      "total": "共 {total} 筆",
+      "delete": "刪除",
+      "deleteOf": "刪除 {name} 的代理",
+      "deleteTitle": "刪除 {name} 的代理?",
+      "deleteBody": "刪除後,之後輪到你審核的任務不再改派給代理人;已經派給代理人的任務不會轉回來。",
+      "deleteConfirm": "刪除",
+      "deleted": "已刪除代理",
+      "dialogTitle": "新增代理",
+      "startDay": "開始",
+      "endDay": "結束",
+      "endBeforeStart": "結束不能早於開始",
+      "cancel": "取消",
+      "submit": "新增",
+      "created": "已新增代理",
+      "errors": {
+        "NOT_FOUND": "找不到這筆代理,請重新整理",
+        "VALIDATION_FAILED": "資料未通過驗證,請檢查後再試",
+        "UNEXPECTED": "操作失敗,請稍後再試",
+        "reasons": {
+          "DELEGATION_OVERLAP": "和你已設定的代理期間重疊",
+          "SELF_DELEGATION": "代理人不能是自己",
+          "DELEGATE_NOT_ELIGIBLE": "這位代理人已停用或不在你的最上層組織",
+          "INVALID_PERIOD": "結束必須晚於開始,而且不能已經過去",
+          "DELEGATION_ENDED": "已結束的代理不能修改或刪除"
+        }
+      }
+    }
+  },
+  "conditionTree": {
+    "rootOp": "組合",
+    "nestedOp": "群組組合",
+    "nestedHint": "整個群組視為上一層的一個條件",
+    "opAnd": "AND — 全部成立才放行",
+    "opOr": "OR — 其中一個成立即可",
+    "addCondition": "+ 條件",
+    "addGroup": "+ 群組",
+    "removeGroup": "刪除群組",
+    "field": "欄位",
+    "remove": "刪除"
+  },
+  "audiencePicker": {
+    "modeAll": "所有人",
+    "modeMatch": "符合條件",
+    "fields": {
+      "user": "使用者",
+      "role": "角色",
+      "org": "所屬組織",
+      "permission": "權限"
+    },
+    "cond": "條件",
+    "condIn": "屬於",
+    "condHold": "持有",
+    "value": "值",
+    "range": "範圍",
+    "ranges": {
+      "self": "本身",
+      "descendants": "含下層",
+      "ancestors": "含上層"
+    },
+    "orgSource": "值",
+    "orgStatic": "指定組織",
+    "orgPick": "組織",
+    "empty": "沒有符合的對象",
+    "noOwnerOrg": "無擁有組織",
+    "emptyGroup": "群組至少要有一個條件。",
+    "emptyValue": "請選擇值。",
+    "permissionSearch": "搜尋權限",
+    "permissionEmpty": "沒有符合的權限",
+    "permissionWildcard": "全部",
+    "permissionLoadFailed": "權限清單載入失敗,請稍後再試。",
+    "permissionConfirm": "確定",
+    "outOfList": "不在候選清單中",
+    "loading": "載入中…",
+    "summaryAnd": "且",
+    "summaryOr": "或",
+    "summaryUnset": "(未選)"
+  },
+  "urlState": {
+    "editNotFound": "找不到這筆資料"
+  },
+  "notifications": {
+    "bell": "通知",
+    "bellWithCount": "通知,{count} 則未讀",
+    "title": "通知",
+    "markAllRead": "全部標為已讀",
+    "filter": "通知篩選",
+    "filterAll": "全部",
+    "filterUnread": "未讀",
+    "empty": "目前沒有通知",
+    "emptyUnread": "沒有未讀的通知",
+    "unread": "未讀",
+    "loadFailed": "通知載入失敗",
+    "markReadFailed": "標為已讀失敗,請稍後再試",
+    "alert": {
+      "title": "新通知",
+      "many": "你有 {count} 則新通知"
+    },
+    "preferences": {
+      "heading": "通知管道",
+      "type": "通知類型",
+      "channels": {
+        "in-app": "站內通知",
+        "email": "Email"
+      },
+      "channelSwitch": "{type}:{channel}",
+      "locked": "這個管道不能關閉",
+      "save": "儲存",
+      "saved": "已儲存通知設定",
+      "saveFailed": "儲存失敗,請稍後再試",
+      "loadFailed": "通知設定載入失敗"
+    },
+    "types": {
+      "workflow": {
+        "task-created": "待你審核",
+        "result": "申請結果",
+        "overdue": "審核逾時",
+        "cc": "知會"
+      },
+      "printing": {
+        "job-failed": "列印失敗",
+        "agent-offline": "列印代理程式離線"
+      }
+    }
+  },
+  "notificationSettings": {
+    "intro": "這些提醒的收件人可以依使用者、角色與權限調整。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
+    "rootReadOnly": "目前所在的組織不屬於任何最上層組織:這裡只顯示預設收件人,不能調整;請先切換到要設定的組織。",
+    "search": "搜尋通知類型",
+    "searchPlaceholder": "名稱",
+    "tableLabel": "通知類型清單",
+    "empty": "沒有符合的通知類型",
+    "loadFailed": "通知設定載入失敗,請重新整理再試一次",
+    "total": "共 {total} 筆,每頁 {pageSize} 筆",
+    "columns": {
+      "type": "通知類型",
+      "orgScope": "組織範圍",
+      "audience": "收件人",
+      "actions": "操作"
+    },
+    "orgScope": "{origin, select, tenant {最上層組織} other {觸發事件的組織}}{range, select, descendants {含下層} ancestors {含上層} other {}}",
+    "defaultTag": "預設",
+    "actions": {
+      "edit": "編輯",
+      "reset": "還原預設"
+    },
+    "edit": {
+      "title": "編輯收件人:{name}",
+      "scopeHint": "組織範圍:{scope}(由通知類型決定,不能修改)。收件人 = 組織範圍內、而且符合下列條件的人。",
+      "audienceTitle": "收件人",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "reset": {
+      "title": "還原預設:{name}",
+      "body": "收件人會改回預設:{audience}。目前的調整會被移除。",
+      "cancel": "取消",
+      "confirm": "還原預設"
+    },
+    "feedback": {
+      "saveSuccess": "已更新收件人",
+      "resetSuccess": "已還原預設收件人"
+    },
+    "errors": {
+      "INVALID_AUDIENCE": "這個條件不能使用,請檢查後再儲存",
+      "OUT_OF_TENANT": "這個對象不在你的組織內",
+      "UNKNOWN_TYPE": "找不到這個通知類型,請重新整理再試一次",
+      "TENANT_ONLY": "這裡不能調整收件人,請先切換到要設定的組織",
+      "FORBIDDEN": "你沒有調整通知設定的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
+  },
+  "printers": {
+    "total": "共 {total} 筆",
+    "tabs": "印表機管理分頁",
+    "tabPrinters": "印表機",
+    "tabAgents": "代理程式",
+    "tabJobs": "列印紀錄",
+    "newPrinter": "+ 新增印表機",
+    "newAgent": "+ 新增代理程式",
+    "feedback": {
+      "createSuccess": "已新增印表機",
+      "updateSuccess": "已儲存印表機"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這項操作的權限",
+      "NOT_FOUND": "找不到這筆資料(可能不在你的管理範圍內,或還沒有可下載的安裝檔)",
+      "VALIDATION_FAILED": "資料未通過驗證,請檢查標示的欄位",
+      "CONFLICT": "這個代理程式已停用,不能重新配對;要再用請新增代理程式",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "printerStatus": {
+      "disabled": "已停用",
+      "agentOffline": "離線",
+      "unknown": "未回報",
+      "ok": "正常",
+      "paperOut": "缺紙",
+      "offline": "連不上",
+      "agentOfflineHint": "代理程式離線,無法得知印表機狀態"
+    },
+    "enabledFilter": {
+      "all": "全部",
+      "enabled": "啟用中",
+      "disabled": "已停用"
+    },
+    "printers": {
+      "name": "名稱",
+      "org": "所屬組織",
+      "address": "IP:Port",
+      "agent": "代理程式",
+      "isDefault": "預設",
+      "default": "預設",
+      "status": "狀態",
+      "actions": "操作",
+      "testPrint": "測試列印",
+      "testPrintOf": "測試列印「{name}」",
+      "edit": "編輯",
+      "editOf": "編輯「{name}」",
+      "orgFilter": "所屬組織",
+      "allOrgs": "全部",
+      "statusFilter": "狀態",
+      "empty": "還沒有印表機",
+      "tableAria": "印表機"
+    },
+    "printerForm": {
+      "createTitle": "新增印表機",
+      "editTitle": "編輯印表機",
+      "org": "所屬組織",
+      "orgHint": "只列有代理程式的組織;印表機由該組織的代理程式負責列印",
+      "noAgentOrg": "還沒有代理程式:請先到「代理程式」分頁新增",
+      "name": "名稱",
+      "host": "IP 位址",
+      "port": "Port",
+      "agent": "代理程式",
+      "paperWidth": "紙寬",
+      "paperWidthMm": "{width}mm",
+      "isDefault": "設為這個組織的預設印表機",
+      "enabled": "啟用",
+      "fixedIpHint": "建議在路由器保留 IP(把收據機 MAC 綁定固定 IP)。",
+      "required": "必填",
+      "hostInvalid": "請填收據機的 IP 位址",
+      "portInvalid": "請填 1–65535 的數字",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "agentStatus": {
+      "disabled": "已停用",
+      "unpaired": "等待配對",
+      "online": "已連線",
+      "offline": "離線"
+    },
+    "testPage": {
+      "title": "測試頁",
+      "large": "大字 ABC 123",
+      "normal": "一般字 ABC 123",
+      "small": "小字 ABC 123",
+      "bold": "粗體字 ABC 123",
+      "alignLeft": "靠左",
+      "alignCenter": "置中",
+      "alignRight": "靠右",
+      "rowLabel": "左欄",
+      "rowValue": "右欄",
+      "tableItem": "品項",
+      "tableQty": "數量",
+      "tableAmount": "金額",
+      "tableItemValue": "示範品項",
+      "longText": "長文字換行:這一行故意寫得很長,用來確認超過一行約 16 個中文字時會自動換到下一行,不會被截斷。",
+      "qrCaption": "掃描開啟印表機管理",
+      "cut": "切紙"
+    },
+    "testPrint": {
+      "title": "測試列印 · {name}",
+      "sending": "正在送出測試頁…",
+      "sent": "已送到印表機,等待列印結果…",
+      "printed": "已印出測試頁:請核對字體大小、對齊、條碼、QR code 與切紙。",
+      "paperOut": "失敗:缺紙。補紙後再按一次 [測試列印]。",
+      "agentOffline": "失敗:代理程式離線(最後連線 {lastSeenAt})。",
+      "agentOfflineNever": "失敗:代理程式離線(還沒連線過)。",
+      "failed": "失敗:{reason}。",
+      "rejected": "沒有送出:{reason}",
+      "retry": "重試",
+      "close": "關閉"
+    },
+    "jobError": {
+      "AGENT_OFFLINE": "代理程式離線",
+      "AGENT_DISABLED": "代理程式已停用",
+      "NO_RESULT": "未收到列印結果",
+      "PAPER_OUT": "缺紙",
+      "PRINTER_OFFLINE": "連不上收據機",
+      "OTHER": "其他原因"
+    },
+    "jobStatus": {
+      "PENDING": "等待中",
+      "SENT": "已送出",
+      "PRINTED": "已印出",
+      "FAILED": "失敗",
+      "failedWith": "失敗:{reason}"
+    },
+    "jobs": {
+      "createdAt": "時間",
+      "document": "單據",
+      "printer": "印表機",
+      "printNo": "次數",
+      "printNoValue": "第 {no} 次",
+      "reprintNo": "補印 第 {no} 次",
+      "status": "結果",
+      "requestedBy": "操作者",
+      "testPage": "測試頁",
+      "printerFilter": "印表機",
+      "allPrinters": "全部",
+      "statusFilter": "結果",
+      "allStatuses": "全部",
+      "empty": "還沒有列印紀錄",
+      "tableAria": "列印紀錄"
+    },
+    "agents": {
+      "name": "代理程式",
+      "org": "所屬組織",
+      "status": "狀態",
+      "lastSeenAt": "最後連線",
+      "version": "版本",
+      "updateAvailable": "請更新",
+      "actions": "操作",
+      "resetPairing": "重新配對",
+      "resetPairingOf": "重新配對「{name}」",
+      "disable": "停用",
+      "disableOf": "停用「{name}」",
+      "showDisabled": "顯示已停用",
+      "empty": "還沒有代理程式",
+      "tableAria": "代理程式"
+    },
+    "download": {
+      "title": "列印代理程式",
+      "titleWithVersion": "列印代理程式 · 最新版本 {version}",
+      "description": "裝在店內每天開著的電腦上(可以和收銀共用同一台),並關閉睡眠。一個代理程式可以負責同一個區域網路裡的所有收據機;收據機在不同網路,或想讓各收銀點各自獨立時,可以各裝一個。",
+      "notPublished": "還沒有可下載的安裝檔,請洽系統管理員。",
+      "button": "下載 {name}",
+      "buttonSuggested": "下載 {name}(建議)",
+      "windowsX64": "Windows x64",
+      "linuxX64": "Linux x64",
+      "linuxArm64": "Linux arm64",
+      "macosArm64": "macOS arm64"
+    },
+    "pairing": {
+      "serverUrl": "伺服器網址",
+      "code": "配對碼",
+      "copy": "複製",
+      "copyOf": "複製{label}",
+      "copied": "已複製{label}",
+      "copyFailed": "複製失敗,請手動選取文字複製",
+      "hint": "10 分鐘內有效(到 {expiresAt})。在店內電腦執行安裝程式,貼上伺服器網址與配對碼即可完成。"
+    },
+    "createAgent": {
+      "title": "新增代理程式",
+      "org": "所屬組織",
+      "name": "名稱",
+      "nameHint": "例:櫃台電腦",
+      "required": "必填",
+      "cancel": "取消",
+      "submit": "建立",
+      "done": "完成",
+      "success": "已新增代理程式"
+    },
+    "resetPairing": {
+      "title": "重新配對「{name}」",
+      "body": "舊的金鑰會立即失效,這台電腦要用新的配對碼重新配對;印表機設定保留。",
+      "doneBody": "換了電腦,或上次還沒裝好就過期:在那台電腦執行安裝程式,貼上伺服器網址與新的配對碼。同一台已裝好的電腦:以系統管理員身分執行 print-agent pair --server (伺服器網址) --code (新配對碼) --force,再重新啟動代理程式的服務(步驟見本頁說明「重新配對」)。",
+      "confirm": "重新配對",
+      "cancel": "取消",
+      "done": "完成",
+      "success": "已產生新的配對碼"
+    },
+    "disableAgent": {
+      "title": "停用「{name}」?",
+      "body": "停用後金鑰立即失效,旗下的印表機不能再選來列印,等待中與已送出的列印工作都會標為失敗。停用後無法再啟用;要再用請新增代理程式,再把印表機改掛過去。",
+      "confirm": "停用",
+      "cancel": "取消",
+      "success": "已停用代理程式"
+    }
+  },
+  "printButton": {
+    "print": "列印",
+    "reprint": "補印",
+    "sending": "已送到印表機…",
+    "printed": "已印出",
+    "failed": "失敗:{reason}",
+    "printedCount": "已印 {count} 次",
+    "noPrinter": "本店未設定印表機",
+    "noAvailablePrinter": "本店的印表機都已停用",
+    "printersLoadFailed": "印表機清單載入失敗,請重新整理後再試",
+    "choosePrinter": "選擇印表機",
+    "defaultPrinter": "{name}(預設)",
+    "noResultHint": "請先確認是否已出紙,再決定要不要補印",
+    "reprintDialog": {
+      "title": "補印",
+      "reason": "補印原因",
+      "note": "說明",
+      "submit": "送出",
+      "cancel": "取消",
+      "reasonRequired": "請選擇補印原因",
+      "noteRequired": "選「其他」時請填寫說明",
+      "reasonsUnavailable": "補印原因載入失敗,請稍後再試",
+      "noReasons": "尚未設定補印原因,請洽管理員新增"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有列印這張單據的權限",
+      "NOT_FOUND": "找不到這台印表機,請重新整理後再試",
+      "VALIDATION_FAILED": "印表機已停用或單據圖片不正確,無法列印",
+      "UNEXPECTED": "送出列印失敗,請稍後再試"
     }
   }
 }

@@ -1,0 +1,5 @@
+# 複製成 .dev.vars 給 `pnpm --filter @repo/realtime dev`(wrangler dev)使用;值只在本機,不入版控。
+# 雲端由 Wrangler secret 提供(deploy.yml 從 Secret Manager 讀出上傳;docs/deployment.md「即時通道」)。
+# api 本機要連它時,apps/api/.env 設 REALTIME_URL=http://localhost:8787 與同樣的兩把密鑰。
+REALTIME_TICKET_SECRET=local-ticket-secret
+REALTIME_PUBLISH_SECRET=local-publish-secret

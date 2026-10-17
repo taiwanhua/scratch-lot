@@ -16,11 +16,18 @@ import { FormSubmission } from "../schemas/form-submission.schema";
 import { FormVersion } from "../schemas/form-version.schema";
 import { Form } from "../schemas/form.schema";
 import { Module as ModuleEntity } from "../schemas/module.schema";
+import { NotificationSetting } from "../schemas/notification-setting.schema";
+import { Notification } from "../schemas/notification.schema";
 import { Org } from "../schemas/org.schema";
 import { Permission } from "../schemas/permission.schema";
+import { PrintAgent } from "../schemas/print-agent.schema";
+import { PrintJob } from "../schemas/print-job.schema";
+import { Printer } from "../schemas/printer.schema";
 import { RefreshToken } from "../schemas/refresh-token.schema";
 import { Role } from "../schemas/role.schema";
 import { SeedDefinitionInstallation } from "../schemas/seed-definition-installation.schema";
+import { UserDelegation } from "../schemas/user-delegation.schema";
+import { UserPreference } from "../schemas/user-preference.schema";
 import { User } from "../schemas/user.schema";
 import { WorkflowInstance } from "../schemas/workflow-instance.schema";
 import { WorkflowVersion } from "../schemas/workflow-version.schema";
@@ -53,6 +60,14 @@ export type WorkflowVersionDocument = HydratedDocument<WorkflowVersion>;
 export type SeedDefinitionInstallationDocument =
   HydratedDocument<SeedDefinitionInstallation>;
 export type WorkflowInstanceDocument = HydratedDocument<WorkflowInstance>;
+export type UserPreferenceDocument = HydratedDocument<UserPreference>;
+
+export type UserDelegationDocument = HydratedDocument<UserDelegation>;
+export type NotificationDocument = HydratedDocument<Notification>;
+export type NotificationSettingDocument = HydratedDocument<NotificationSetting>;
+export type PrintAgentDocument = HydratedDocument<PrintAgent>;
+export type PrinterDocument = HydratedDocument<Printer>;
+export type PrintJobDocument = HydratedDocument<PrintJob>;
 
 /** users(關聯歸屬資料:所屬組織走 org_user,資料層不自動過濾,ADR-0005)。 */
 @Injectable()
@@ -334,6 +349,104 @@ export class WorkflowInstancesRepository extends BaseRepository<
   constructor(
     @InjectModel(WorkflowInstance.name)
     model: RepositoryModel<WorkflowInstance, WorkflowInstanceDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** user_preferences(個人偏好;屬帳號、非租戶資料,同 refresh_tokens)。 */
+@Injectable()
+export class UserPreferencesRepository extends BaseRepository<
+  UserPreference,
+  UserPreferenceDocument
+> {
+  constructor(
+    @InjectModel(UserPreference.name)
+    model: RepositoryModel<UserPreference, UserPreferenceDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** user_delegations(代理人;屬帳號、非租戶資料,同 user_preferences)。 */
+@Injectable()
+export class UserDelegationsRepository extends BaseRepository<
+  UserDelegation,
+  UserDelegationDocument
+> {
+  constructor(
+    @InjectModel(UserDelegation.name)
+    model: RepositoryModel<UserDelegation, UserDelegationDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** notifications(通知;屬收件人、依 recipientId 讀寫,同 user_preferences 不掛 tenantScope)。 */
+@Injectable()
+export class NotificationsRepository extends BaseRepository<
+  Notification,
+  NotificationDocument
+> {
+  constructor(
+    @InjectModel(Notification.name)
+    model: RepositoryModel<Notification, NotificationDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** notification_settings(負責人提醒的收件人調整;以 tenantId 為邊界的租戶設定)。 */
+@Injectable()
+export class NotificationSettingsRepository extends BaseRepository<
+  NotificationSetting,
+  NotificationSettingDocument
+> {
+  constructor(
+    @InjectModel(NotificationSetting.name)
+    model: RepositoryModel<NotificationSetting, NotificationSettingDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** print_agents(店內代理程式;租戶資料,`orgId` = 分店;docs/modules/printers.md)。 */
+@Injectable()
+export class PrintAgentsRepository extends BaseRepository<
+  PrintAgent,
+  PrintAgentDocument
+> {
+  constructor(
+    @InjectModel(PrintAgent.name)
+    model: RepositoryModel<PrintAgent, PrintAgentDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** printers(收據機;只記到分店層)。 */
+@Injectable()
+export class PrintersRepository extends BaseRepository<
+  Printer,
+  PrinterDocument
+> {
+  constructor(
+    @InjectModel(Printer.name)
+    model: RepositoryModel<Printer, PrinterDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** print_jobs(列印工作;認領用條件更新 `findOneAndUpdate`)。 */
+@Injectable()
+export class PrintJobsRepository extends BaseRepository<
+  PrintJob,
+  PrintJobDocument
+> {
+  constructor(
+    @InjectModel(PrintJob.name)
+    model: RepositoryModel<PrintJob, PrintJobDocument>,
   ) {
     super(model);
   }

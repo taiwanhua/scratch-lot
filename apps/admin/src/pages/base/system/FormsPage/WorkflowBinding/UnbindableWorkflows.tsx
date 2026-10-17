@@ -8,8 +8,8 @@ import { Typography } from "@repo/ui/typography";
 type WorkflowOption =
   FormWorkflowOptionsQuery["formWorkflowOptions"]["items"][number];
 
-/** 以共用流程為基底建客製流程就能綁的兩種原因(角色佔位、指定使用者;Spec 6b §3「綁定時檢查」)。 */
-const FORKABLE_PROBLEMS = new Set(["ROLE_IN_SHARED", "USERS_IN_SHARED"]);
+/** 以共用流程為基底建客製流程就能綁的原因:審核者條件用了共用流程不能用的使用者 / 角色 / 指定組織。 */
+const FORKABLE_PROBLEMS = new Set(["AUDIENCE_IN_SHARED"]);
 
 export interface UnbindableWorkflowsProps {
   items: readonly WorkflowOption[];
@@ -18,8 +18,8 @@ export interface UnbindableWorkflowsProps {
 }
 
 /**
- * 看得到、但**不能直接綁**的流程與原因(哪一關、什麼問題)。共用流程因為角色只存佔位 / 指定了使用者而不能綁的,
- * 附「建客製流程」:到流程管理以它為基底建一個自己的,把角色指到本租戶的角色後再回來綁。
+ * 看得到、但**不能直接綁**的流程與原因(哪一關、什麼問題)。共用流程因為審核者條件用了使用者 / 角色 /
+ * 指定組織而不能綁的,附「建客製流程」:到流程管理以它為基底建一個自己的,改成本租戶的條件後再回來綁。
  */
 export const UnbindableWorkflows = ({
   items,

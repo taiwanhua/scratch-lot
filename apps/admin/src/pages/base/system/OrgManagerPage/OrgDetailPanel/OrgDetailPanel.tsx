@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Avatar } from "@repo/ui/avatar";
@@ -6,17 +5,14 @@ import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { Stack } from "@repo/ui/stack";
-import { Tabs } from "@repo/ui/tabs";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import { PageTabs } from "@/components/base/PageTabs/PageTabs";
+
 import { MembersTab } from "../MembersTab/MembersTab";
-import {
-  type OrgActionAbility,
-  type OrgDetail,
-  type OrgDetailTab,
-  isOrgDetailTab,
-} from "../org-manager-types";
+import { ORG_MANAGER_PERMISSIONS } from "../org-manager-permissions";
+import type { OrgActionAbility, OrgDetail } from "../org-manager-types";
 import { OrgActionBar } from "./OrgActionBar";
 import { OrgDetailRow } from "./OrgDetailRow";
 import { OrgManagersRow } from "./OrgManagersRow";
@@ -48,7 +44,8 @@ export interface OrgDetailPanelProps {
  *
  * **「成員」頁籤只在持 `system.org-manager.view-members` 時出現**(#377):沒有那筆權限的人
  * 看到的就是 #374 之前的樣子(沒有頁籤列,直接是組織資料),不是「出現但停用」——
- * 頁籤不是一個動作,給了空的頁籤只會讓人困惑。頁籤狀態不進 URL(REACT-02 第 2 點的 admin 例外)。
+ * 頁籤不是一個動作,給了空的頁籤只會讓人困惑。頁籤用 `PageTabs`,目前分頁記在網址 `?tab=`(REACT-14);
+ * 只剩「組織資料」一個分頁時 `PageTabs` 不顯示分頁籤。
  */
 export const OrgDetailPanel = ({
   org,
@@ -65,7 +62,6 @@ export const OrgDetailPanel = ({
   onRevokeProvision,
 }: OrgDetailPanelProps) => {
   const t = useTranslations("admin.orgManager.detail");
-  const [activeTab, setActiveTab] = useState<OrgDetailTab>("detail");
 
   if (org === undefined) {
     return (
@@ -86,8 +82,6 @@ export const OrgDetailPanel = ({
       </Card>
     );
   }
-
-  const showMembers = ability.canViewMembers && activeTab === "members";
 
   return (
     <Card
@@ -126,72 +120,75 @@ export const OrgDetailPanel = ({
         />
       </Stack>
 
-      {ability.canViewMembers && (
-        <Tabs
-          value={activeTab}
-          aria-label={t("tabs.label")}
-          items={[
-            { value: "detail", label: t("tabs.detail") },
-            { value: "members", label: t("tabs.members") },
-          ]}
-          onChange={(next) => {
-            if (isOrgDetailTab(next)) {
-              setActiveTab(next);
-            }
-          }}
-        />
-      )}
-
-      <Box
-        role={ability.canViewMembers ? "tabpanel" : undefined}
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-          overflow: showMembers ? "hidden" : "auto",
-          pt: ability.canViewMembers ? 1.5 : 0,
-        }}
-      >
-        {showMembers ? (
-          // 換組織時整個重來(分頁與已選的人不該跟著跑到別的組織)
-          <MembersTab
-            key={org.id}
-            orgId={org.id}
-            orgName={org.name}
-            canAdd={ability.canAddMembers}
-          />
-        ) : (
-          <Stack spacing={0}>
-            <OrgDetailRow label={t("parent")}>
-              <Typography variant="body2">{parentName ?? t("none")}</Typography>
-            </OrgDetailRow>
-            <OrgDetailRow label={t("description")}>
-              <Typography variant="body2">
-                {org.description ?? t("none")}
-              </Typography>
-            </OrgDetailRow>
-            {org.logoUrl !== null && org.logoUrl !== undefined && (
-              <OrgDetailRow label={t("logo")}>
-                <Avatar
-                  variant="rounded"
-                  src={org.logoUrl}
-                  alt={t("logoAlt", { name: org.name })}
+      {/* 間距沿用改版前:分頁列與內容之間 1.5 */}
+      <PageTabs
+        aria-label={t("tabs.label")}
+        spacing={1.5}
+        items={[
+          {
+            value: "detail",
+            label: t("tabs.detail"),
+            content: (
+              <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                <Stack spacing={0}>
+                  <OrgDetailRow label={t("parent")}>
+                    <Typography variant="body2">
+                      {parentName ?? t("none")}
+                    </Typography>
+                  </OrgDetailRow>
+                  <OrgDetailRow label={t("description")}>
+                    <Typography variant="body2">
+                      {org.description ?? t("none")}
+                    </Typography>
+                  </OrgDetailRow>
+                  {org.logoUrl !== null && org.logoUrl !== undefined && (
+                    <OrgDetailRow label={t("logo")}>
+                      <Avatar
+                        variant="rounded"
+                        src={org.logoUrl}
+                        alt={t("logoAlt", { name: org.name })}
+                      />
+                    </OrgDetailRow>
+                  )}
+                  {hasOwner && (
+                    <OrgDetailRow label={t("owner")}>
+                      <Typography variant="body2">
+                        {ownerName ?? t("ownerHidden")}
+                      </Typography>
+                    </OrgDetailRow>
+                  )}
+                  {/* 根組織不屬於任何租戶,不能設主管 */}
+                  {!org.isSystem && <OrgManagersRow orgId={org.id} />}
+                </Stack>
+              </Box>
+            ),
+          },
+          {
+            value: "members",
+            label: t("tabs.members"),
+            permission: ORG_MANAGER_PERMISSIONS.viewMembers,
+            content: (
+              <Box
+                sx={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                }}
+              >
+                {/* 換組織時整個重來(已選的人不該跟著跑到別的組織;頁碼在網址上以組織 id 對齊,見 useOrgMembers) */}
+                <MembersTab
+                  key={org.id}
+                  orgId={org.id}
+                  orgName={org.name}
+                  canAdd={ability.canAddMembers}
                 />
-              </OrgDetailRow>
-            )}
-            {hasOwner && (
-              <OrgDetailRow label={t("owner")}>
-                <Typography variant="body2">
-                  {ownerName ?? t("ownerHidden")}
-                </Typography>
-              </OrgDetailRow>
-            )}
-            {/* 根組織不屬於任何租戶,不能設主管 */}
-            {!org.isSystem && <OrgManagersRow orgId={org.id} />}
-          </Stack>
-        )}
-      </Box>
+              </Box>
+            ),
+          },
+        ]}
+      />
     </Card>
   );
 };

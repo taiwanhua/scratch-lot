@@ -85,10 +85,12 @@
         "system": "System",
         "light": "Light",
         "dark": "Dark"
-      }
+      },
+      "personalSettings": "Personal settings",
+      "localeSaveFailed": "Language switched, but it was not saved to your account; it will change back the next time you sign in"
     },
     "sideNav": "Main navigation",
-    "navBadge": "{count} pending review",
+    "navBadge": "{count} pending",
     "collapseNav": "Collapse sidebar",
     "expandNav": "Expand sidebar",
     "currentOrg": "Current organization",
@@ -286,6 +288,7 @@
       "disableSuccess": "Organization disabled.",
       "deleteSuccess": "Organization deleted.",
       "provisionSuccess": "Tenant provisioned.",
+      "provisionMailNotSent": "The tenant was provisioned, but the activation email was not sent. Ask the first admin to use \"Forgot password\" on the sign-in page.",
       "revokeSuccess": "Tenant provisioning revoked."
     },
     "errors": {
@@ -825,32 +828,14 @@
     "rule": {
       "title": "Rule {index}",
       "audience": "Applies to",
-      "audienceTargets": "Targets",
-      "audienceAll": "Everyone",
-      "audienceRole": "Roles",
-      "audienceOrg": "Organizations",
-      "audienceUser": "Users",
-      "remove": "Delete rule",
-      "audienceEmpty": "No matching targets",
-      "audienceNoOwnerOrg": "No owning organization"
-    },
-    "group": {
-      "rootOp": "Combine conditions",
-      "nestedOp": "Combine group",
-      "nestedHint": "The whole group counts as one condition of the level above",
-      "opAnd": "AND — all must hold",
-      "opOr": "OR — any one is enough",
-      "addCondition": "+ Condition",
-      "addGroup": "+ Group",
-      "remove": "Delete group"
+      "conditions": "Conditions",
+      "remove": "Delete rule"
     },
     "condition": {
-      "field": "Field",
       "cond": "Comparison",
       "value": "Value",
       "valueFrom": "From",
-      "valueTo": "To",
-      "remove": "Delete"
+      "valueTo": "To"
     },
     "conditions": {
       "in": "is one of",
@@ -877,7 +862,7 @@
       "CONDITION_NOT_ALLOWED": "This comparison does not apply to the field's type.",
       "VALUE_SOURCE_NOT_ALLOWED": "This value source does not apply to the field's type.",
       "VALUE_INVALID": "Please provide a valid value.",
-      "AUDIENCE_INVALID": "Please choose who this rule applies to."
+      "AUDIENCE_INVALID": "This applies-to condition is invalid."
     },
     "feedback": {
       "saveSuccess": "Data scope rule saved."
@@ -1184,7 +1169,8 @@
       "uploadRejected": "File type or size not allowed: {types}, up to {size} MB.",
       "uploading": "Uploading…",
       "uploadFailed": "Upload failed. Please try again.",
-      "removeFile": "Remove file"
+      "removeFile": "Remove file",
+      "filterPending": "Fill in {fields} first"
     },
     "renderer": {
       "empty": "—",
@@ -1192,7 +1178,11 @@
       "no": "No",
       "sourceUnavailable": " (source unavailable)",
       "readonlyPermission": "You can see this field but are not allowed to change it.",
-      "readonlyCondition": "This field is read-only right now."
+      "readonlyCondition": "This field is read-only right now.",
+      "summaryItem": "{label}: {value}",
+      "summarySeparator": " · ",
+      "linkedCleared": "Cleared {field} (a field it depends on changed)",
+      "linkedClearedRows": "Cleared {field} in {count} rows (a field it depends on changed)"
     },
     "design": {
       "hasVisibleWhen": "Has visibility condition",
@@ -1319,7 +1309,7 @@
     "errors": {
       "CONFLICT": "This record was updated by someone else. Please reload.",
       "FIELD_FORBIDDEN": "You are not allowed to change one of the fields; nothing was saved.",
-      "FORM_NOT_AVAILABLE": "This form cannot be filled in right now (it may be disabled, revoked or unpublished).",
+      "FORM_NOT_AVAILABLE": "This form cannot be filled in right now (it may be disabled, revoked or unpublished, or you lack permission to create with it).",
       "NOT_FORM_OWNER": "This form does not belong to your organization.",
       "ROOT_ONLY": "Only the platform can do this.",
       "FORBIDDEN": "You do not have permission to do this.",
@@ -1333,7 +1323,8 @@
       "REVISION_LIMIT": "This record has reached its revision limit. Please create a new application.",
       "DOCUMENT_TOO_LARGE": "The revision history has reached its size limit and can no longer be edited.",
       "FORM_HAS_WORKFLOW": "This form has an approval workflow in your organization; old data cannot be upgraded to a new version.",
-      "VERSION_NOT_PUBLISHED": "Data can only be upgraded to a published version. Please refresh."
+      "VERSION_NOT_PUBLISHED": "Data can only be upgraded to a published version. Please refresh.",
+      "DRAFT_DISABLED": "This form does not allow drafts. Please submit it directly."
     },
     "array": {
       "addRow": "+ Add row",
@@ -1385,7 +1376,6 @@
       "version": "v{version}",
       "noVersion": "Not published",
       "disabled": "Disabled",
-      "interrupted": "Publish interrupted",
       "hasDraft": "Draft",
       "workflow": "Workflow: {name}",
       "workflowInvalid": "Bound workflow is invalid"
@@ -1400,6 +1390,10 @@
       "listColumns": "List columns",
       "tenantEnabled": "Enabled in this organization",
       "enabledOn": "Form enabled in this organization.",
+      "allowDraft": "Allow drafts",
+      "allowDraftHint": "When off, the create and edit pages hide [Save draft]; entries can only be submitted directly.",
+      "allowDraftOn": "Drafts are now allowed.",
+      "allowDraftOff": "Drafts are turned off; entries can only be submitted directly.",
       "enabledOff": "Form disabled in this organization.",
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",
@@ -1502,9 +1496,6 @@
       "diffChanged": "Changed: {fields}",
       "newDraft": "New draft",
       "draftCreated": "Draft created.",
-      "interrupted": "The last publish did not finish. Use “Retry publish” to complete it; new drafts, retiring and publishing are blocked until then.",
-      "retry": "Retry publish",
-      "retried": "Publish completed.",
       "publishedLine": "{at} · {user}",
       "upgrade": "Upgrade old data to this version",
       "upgradeBlockedByWorkflow": "This form has an approval workflow in your organization; old data cannot be upgraded to a new version."
@@ -1524,7 +1515,14 @@
       "confirm": "Publish",
       "success": "v{version} published.",
       "unsavedWarning": "The designer has unsaved changes: the last saved draft will be published.",
-      "saveFirst": "Save draft first"
+      "saveFirst": "Save draft first",
+      "granted": {
+        "title": "Published",
+        "body": "Version {version} of \"{form}\" has been published.",
+        "hint": "The permission \"{permission}\" was created and is not granted automatically. Grant it to the roles that need it in Role management.",
+        "later": "Later",
+        "goToRoles": "Go to Role management"
+      }
     },
     "retire": {
       "title": "Retire the current version?",
@@ -1587,7 +1585,9 @@
       "copyFailed": "Copy failed.",
       "regexChecking": "Checking patterns…",
       "regexUnavailable": "Pattern safety can't be checked right now; it will be checked when you save the draft.",
-      "newColumn": "Item"
+      "newColumn": "Item",
+      "sectionSettings": "Section settings",
+      "sectionSettingsOf": "Section settings for “{title}”"
     },
     "preview": {
       "region": "Preview",
@@ -1739,7 +1739,14 @@
       "labelTemplate": "Display template (optional)",
       "labelTemplateHint": "When set, the display name is built from the template (e.g. name + email); otherwise the display field is used",
       "insertPlaceholder": "Insert a field",
-      "insertPlaceholderHint": "Pick a field to append it to the template"
+      "insertPlaceholderHint": "Pick a field to append it to the template",
+      "linkedFilter": "Linked filter (optional)",
+      "linkedFilterHint": "Narrow the choices by the current value of another field on this form; changing that field clears what was picked here",
+      "linkedFilterField": "{field} equals",
+      "linkedFilterNone": "Not linked",
+      "filterFields": {
+        "enabled": "Enabled"
+      }
     },
     "rules": {
       "required": "Required",
@@ -1801,7 +1808,11 @@
           "timezone": "Time zone",
           "user": {
             "id": "Filled by",
-            "orgId": "Filler's organization"
+            "orgId": "Filler's current organization",
+            "orgIds": "Filler's organizations (all)"
+          },
+          "tenant": {
+            "id": "Top-level organization"
           }
         }
       },
@@ -1933,6 +1944,8 @@
         "amount": "Amount"
       },
       "refPrefill": "Prefill rule “{label}”",
+      "refLookupFilter": "Linked filter of field {field}",
+      "refLookupFilterColumn": "Linked filter of column {column} in {field}",
       "refListColumn": "The module's list columns (outside the draft; not changed)",
       "cancel": "Cancel",
       "confirm": "Delete"
@@ -1967,13 +1980,14 @@
       "createCustom": "Create a custom workflow",
       "issue": "Step {step}: {problem}",
       "problems": {
-        "ROLE_IN_SHARED": "The reviewer is a role placeholder; create a custom workflow based on it and point it to your organization's role",
-        "USERS_IN_SHARED": "Shared workflows cannot name specific users",
+        "AUDIENCE_IN_SHARED": "The reviewer condition uses users, roles or specific organizations; create a custom workflow based on it",
         "USER_NOT_IN_TENANT": "A named user is not in your organization",
         "ROLE_NOT_IN_TENANT": "The role is not one of your organization's roles",
+        "ORG_NOT_IN_TENANT": "An organization in the reviewer condition is not in your organization",
         "FIELD_FORM_MISMATCH": "The reviewer comes from a field of another form",
         "FIELD_MISSING": "The reviewer field does not exist in the current version of this form",
-        "FIELD_NOT_USER_REFERENCE": "The reviewer field is not a user reference"
+        "FIELD_NOT_USER_REFERENCE": "The reviewer field is not a user reference",
+        "FIELD_NOT_ORG_REFERENCE": "The field used by the reviewer condition is not an \"Organization\" reference field"
       },
       "unbindDialog": {
         "title": "Remove workflow binding",
@@ -2002,7 +2016,15 @@
         "computed": "Row formula"
       },
       "formula": "Row formula",
-      "rowField": "This row · {label}"
+      "rowField": "This row · {label}",
+      "prefill": "Fill the same row (optional)",
+      "prefillHint": "When a record is picked, copy its fields into other columns of the same row (overwrites; still editable afterwards)",
+      "prefillTarget": "Column in this row",
+      "prefillTargetUnset": "Choose a column",
+      "prefillSource": "Source field",
+      "prefillSourceUnset": "Choose a source field",
+      "addPrefill": "+ Mapping",
+      "removePrefill": "Remove"
     },
     "upgrade": {
       "title": "Upgrade old data to v{version}",
@@ -2037,9 +2059,20 @@
       "confirm": "Upgrade",
       "close": "Close",
       "success": "Upgrade finished."
+    },
+    "sectionProperty": {
+      "title": "Section settings — {title}",
+      "backToSettings": "← Form settings",
+      "issues": "Issues in this section",
+      "collapsible": "Collapsible",
+      "defaultCollapsed": "Collapsed by default",
+      "summaryFields": "Fields shown in the header when collapsed",
+      "addSummaryField": "+ Field",
+      "summaryNeedsCollapsible": "Turn on “Collapsible” first."
     }
   },
   "approval": {
+    "nameSeparator": ", ",
     "submissionStatus": {
       "DRAFT": "Draft",
       "REVIEWING": "In review",
@@ -2059,7 +2092,6 @@
       "blocked": "A step has no valid reviewer; waiting for a workflow manager.",
       "stepClosed": "This step has closed or the task changed; the latest state has been reloaded.",
       "statuses": {
-        "LINKING": "Submitting",
         "RUNNING": "In review",
         "BLOCKED": "In review (needs attention)",
         "APPROVED": "Approved",
@@ -2080,6 +2112,7 @@
       "noAssignee": "No reviewer found",
       "assigneeDecided": "{name} ({decision})",
       "assigneeInvalid": "{name} (invalid)",
+      "assigneeDelegated": "{name} (on behalf of {delegators})",
       "statuses": {
         "PENDING": "Not reached",
         "ACTIVE": "In review",
@@ -2118,7 +2151,25 @@
         "assignee_added": "\"{step}\" reviewer {toUser} added",
         "withdrawn": "Withdrawn by the applicant",
         "completed": "Approval completed",
-        "superseded": "Superseded by a resubmitted revision"
+        "superseded": "Superseded by a resubmitted revision",
+        "auto_approve_blocked": "\"{step}\" automatic approval did not apply: {message}"
+      },
+      "autoApproveBlocked": {
+        "auto_applicant": "\"{step}\" automatic approval for the applicant did not apply: {message}",
+        "auto_prior_approver": "\"{step}\" {user} already approved at an earlier step, but automatic approval did not apply: {message}"
+      },
+      "autoApproveBlockedGeneric": "The conditions for automatic approval are not met right now",
+      "delegated": {
+        "task_created": "\"{step}\" assigned to {user} on behalf of {delegators}",
+        "approved": "{user} approved \"{step}\" on behalf of {delegators}",
+        "rejected": "{user} rejected \"{step}\" on behalf of {delegators}",
+        "returned": "{user} returned \"{step}\" for changes on behalf of {delegators}"
+      },
+      "reasons": {
+        "skip_orgs": "\"{step}\" skipped: the applicant belongs to a specified organization",
+        "skip_condition": "\"{step}\" skipped by its condition",
+        "auto_applicant": "{user} approved at \"{step}\" (the applicant is a reviewer, approved automatically)",
+        "auto_prior_approver": "{user} approved at \"{step}\" (already approved at an earlier step, approved automatically)"
       }
     },
     "decide": {
@@ -2244,6 +2295,32 @@
         "BLOCKED": "Awaiting reassignment"
       }
     },
+    "batchApprove": {
+      "selectRow": "Select \"{label}\"",
+      "selectPage": "Select all on this page",
+      "selectedCount": "{count} selected",
+      "clear": "Clear",
+      "hint": "Only approval can be done in bulk; reject or return one at a time",
+      "approve": "Approve ({count})",
+      "title": "Bulk approve",
+      "body": "Approve the {count} selected items. Each one is handled on its own; a blocked item does not affect the others.",
+      "comment": "Shared comment (optional)",
+      "cancel": "Cancel",
+      "confirm": "Approve {count}",
+      "close": "Close",
+      "summaryAll": "{approved} approved",
+      "summaryPartial": "{approved} approved, {failed} not completed (the others are not affected)",
+      "columnTitle": "Title",
+      "columnResult": "Result",
+      "resultTableAria": "Bulk approve results",
+      "results": {
+        "approved": "Approved",
+        "NOT_YOURS": "This is no longer assigned to you",
+        "BLOCKED": "Blocked: {message}",
+        "BLOCKED_GENERIC": "This item cannot be approved right now",
+        "FAILED": "Approval failed; try again later one at a time"
+      }
+    },
     "newApplication": {
       "open": "New application",
       "title": "New application",
@@ -2267,7 +2344,6 @@
     "errors": {
       "CONFLICT": "This record was updated by someone else. Please reload.",
       "DRAFT_REVISION_MISMATCH": "The draft was updated by someone else. Please reload.",
-      "PUBLISH_IN_PROGRESS": "The previous publish has not finished. Please retry publishing first.",
       "HAS_DECISIONS": "Someone has already reviewed it; it cannot be withdrawn.",
       "ALREADY_DECIDED": "This task has already been decided and cannot be reassigned.",
       "ALREADY_IN_STEP": "This person is already in this step.",
@@ -2298,7 +2374,6 @@
       "noVersion": "Unpublished",
       "version": "Version {version}",
       "assigned": "Assigned to {count}",
-      "interrupted": "Publish interrupted",
       "hasDraft": "Has draft",
       "boundForms": "Bound forms: {forms}"
     },
@@ -2311,7 +2386,6 @@
       "edit": "Rename",
       "fork": "Create based on this",
       "assign": "Assign",
-      "placeholderHint": "The role steps of this workflow only store placeholders, so forms cannot be bound to it directly; create a custom workflow based on it.",
       "assignedTo": "Assigned to: {tenants}",
       "boundForms": "Bound forms: {forms}",
       "tabs": "Workflow",
@@ -2331,7 +2405,6 @@
     },
     "fork": {
       "title": "Create a workflow based on \"{name}\"",
-      "placeholderHint": "After creating it, point the role steps to your organization's roles before publishing and binding.",
       "baseVersion": "Base version",
       "versionOption": "Version {version}",
       "key": "New workflow key",
@@ -2371,10 +2444,10 @@
       "diffRemoved": "Removed: {steps}",
       "diffChanged": "Changed: {steps}",
       "diffStructure": "The fork / join structure changed",
+      "diffFlowCcAdded": "Whole flow CC recipients: added",
+      "diffFlowCcRemoved": "Whole flow CC recipients: removed",
+      "diffFlowCcChanged": "Whole flow CC recipients: changed",
       "draftCreated": "New draft created",
-      "interrupted": "The previous publish was interrupted. Please retry.",
-      "retry": "Retry publish",
-      "retried": "Publish retried",
       "statuses": {
         "DRAFT": "Draft",
         "PUBLISHING": "Publishing",
@@ -2434,7 +2507,7 @@
       "newStep": "Step {n}",
       "newJoin": "Join",
       "moveToBranch": "Move to \"{join}\" branch {n}",
-      "catalogTruncated": "More than 100 forms or roles: the dropdowns are truncated. Please narrow the scope.",
+      "catalogTruncated": "More than 100 forms: the dropdowns are truncated. Please narrow the scope.",
       "check": "Check",
       "checking": "Checking…",
       "viewing": "Viewing v{version} (read-only)",
@@ -2443,7 +2516,8 @@
       "viewingSelectHint": "Click a step or merge node on the flow chart to see its settings (read-only).",
       "viewingCanvas": "Flow chart of v{version}",
       "viewingProperties": "Properties (read-only)",
-      "closeViewing": "Close"
+      "closeViewing": "Close",
+      "saveBlockedOverdue": "Overdue reminder hours are invalid; fix them before saving the draft."
     },
     "opErrors": {
       "FORK_NEEDS_SOURCE": "A fork needs a review step before it: delete or move the whole fork first.",
@@ -2453,8 +2527,7 @@
       "LAST_STEP": "A workflow needs at least one step."
     },
     "node": {
-      "users": "{count} named users",
-      "role": "Role: {name}",
+      "audience": "Reviewers: {source}",
       "field": "Form field: {form} · {field}",
       "manager": "Manager level {level}",
       "unset": "Not set",
@@ -2480,7 +2553,6 @@
         "all": "Everyone must approve; one rejection rejects."
       },
       "allowReturn": "Allow returning for changes",
-      "skipWhen": "Skip condition",
       "skipNeedsCheckForm": "Select the check form above first: skip condition fields come from it.",
       "actions": "Step actions",
       "insertAfter": "Add a step after",
@@ -2492,9 +2564,42 @@
       "moveTo": "Move to branch",
       "moveToPlaceholder": "Choose a branch",
       "needsCheckForm": "Select a check form first",
-      "skipWhenUnset": "Not set",
       "checkFormLoading": "Loading the check form…",
-      "noUsableFields": "This form has no usable fields"
+      "noUsableFields": "This form has no usable fields",
+      "skip": {
+        "title": "Skip this step (when any item matches)",
+        "orgs": "Applicant belongs to these organizations",
+        "orgsPick": "Specific organizations",
+        "tenant": "Top-level organization",
+        "includeDescendants": "Include sub-organizations",
+        "orgsHint": "Checks all organizations the applicant belongs to, not just the current one.",
+        "sharedOrgsHint": "Shared workflows can only choose the top-level organization.",
+        "condition": "Matches condition"
+      },
+      "autoApprove": {
+        "title": "Auto-approve",
+        "applicant": "When the applicant is a reviewer of this step",
+        "priorApprover": "When the reviewer already approved an earlier step",
+        "normal": "Review as usual",
+        "auto": "Auto-approve",
+        "hint": "Auto-approve records an approval by that person (only their vote in multi-reviewer steps) and still runs the pre-approval check; if it fails, they review as usual."
+      },
+      "overdue": {
+        "title": "Overdue reminders",
+        "enabled": "Turn on overdue reminders",
+        "over": "After",
+        "reviewerHours": "Hours before reminding the reviewer",
+        "reviewerSuffix": "hours unhandled → remind the reviewer",
+        "audienceHours": "Hours before notifying the reminder recipients",
+        "audienceSuffix": "hours → also notify the reminder recipients",
+        "hint": "Reminders only; nothing is approved or rejected automatically. Counted in calendar hours (nights and holidays included) from when the task was assigned to the current reviewer.",
+        "invalid": "Hours must be positive whole numbers, and the recipients' hours must be greater than the reviewer's."
+      },
+      "cc": {
+        "title": "CC",
+        "hint": "CC recipients are notified when this step passes or is skipped (no review needed; they can view the document read-only). To also tell them the final outcome (completed, rejected, voided), add them to the whole flow's CC recipients.",
+        "none": "No CC"
+      }
     },
     "join": {
       "region": "Join node \"{name}\"",
@@ -2520,25 +2625,14 @@
       "warning": "Warning"
     },
     "assignee": {
-      "region": "Reviewers",
-      "kind": "Reviewer source",
       "kinds": {
-        "users": "Named users",
-        "role": "Role",
+        "audience": "People condition",
         "field": "Form field",
         "manager": "Manager"
       },
-      "sharedHint": "Shared workflows cannot name users; roles are placeholders only.",
-      "users": "Users",
-      "usersHint": "On submit, the enabled users still in the organization receive tasks.",
-      "placeholder": "Role placeholder",
-      "placeholderHint": "e.g. \"HR\": each organization points it to its own role after creating a custom workflow.",
-      "placeholderFrom": "Placeholder from the source: {placeholder}",
-      "role": "Role",
-      "roleUnset": "Not selected",
+      "sharedHint": "Shared workflows are used by every tenant, so conditions can only use \"Permission\" and organization sources (the document's organization, an organization field on the form, the top-level organization).",
       "field": "Field",
       "fieldUnset": "Not selected",
-      "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the reviewer is whoever that field selects on submission.",
       "level": "Level",
       "levelHint": "Searched upward from the submission's organization; level 1 = the nearest managers.",
       "levelOption": "Level {level}",
@@ -2546,7 +2640,40 @@
       "fieldCurrent": "Current: {form} / {field}",
       "fieldNoChoices": "The check form has no “Reference (user)” field. Add a reference field whose data source is Users in the form designer, then publish it.",
       "fieldOtherForm": "This step points to the form “{form}”; choosing a field switches it to the check form's field.",
-      "noCheckFormReadonly": "This version has no check form"
+      "noCheckFormReadonly": "This version has no check form",
+      "audienceEmpty": "No condition yet",
+      "audienceEdit": "Edit condition",
+      "dialogCancel": "Cancel",
+      "dialogApply": "Apply",
+      "orgSubmission": "Document's organization",
+      "orgTenant": "Top-level organization",
+      "orgFormField": "Form field: {field}",
+      "purposes": {
+        "approver": {
+          "kind": "Reviewer source",
+          "region": "Reviewers",
+          "audienceTitle": "Reviewers",
+          "audienceRegion": "Reviewer condition",
+          "dialogTitle": "Reviewer condition · {step}",
+          "dialogTitleShared": "Reviewer condition · {step} (shared workflow)",
+          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the reviewer is whoever that field selects on submission."
+        },
+        "cc": {
+          "kind": "CC recipients",
+          "region": "CC recipients",
+          "audienceTitle": "CC recipients",
+          "audienceRegion": "CC recipient condition",
+          "dialogTitle": "CC recipient condition · {step}",
+          "dialogTitleShared": "CC recipient condition · {step} (shared workflow)",
+          "fieldHint": "Pick a user reference field of the check form (protected fields are not listed); the CC recipient is whoever that field selects on submission."
+        },
+        "overdue": {
+          "audienceTitle": "Reminder recipients",
+          "audienceRegion": "Reminder recipient condition",
+          "dialogTitle": "Reminder recipient condition · {step}",
+          "dialogTitleShared": "Reminder recipient condition · {step} (shared workflow)"
+        }
+      }
     },
     "blocked": {
       "title": "Blocked list",
@@ -2605,6 +2732,14 @@
       "error": "Error",
       "warning": "Warning",
       "serverFailed": "The full check did not finish ({reason}); only the live check results are listed."
+    },
+    "flow": {
+      "title": "Whole flow",
+      "region": "Whole-flow settings",
+      "ccTitle": "Whole flow's CC recipients",
+      "ccHint": "Notified when the document is completed, rejected or voided (no review needed; they can view the document read-only). Step CC recipients are only notified when that step passes or is skipped; returning for changes and withdrawing notify no one.",
+      "issues": "Whole-flow issues",
+      "backToFlow": "Back to whole-flow settings"
     }
   },
   "userPicker": {
@@ -2612,7 +2747,19 @@
     "loading": "Loading",
     "empty": "No matching people",
     "forbidden": "You don't have permission to view the user list",
+    "loadFailed": "Could not load the list of people. Please try again later",
     "disabled": "Disabled"
+  },
+  "orgTreeSelect": {
+    "search": "Search organizations",
+    "empty": "No organizations to choose from",
+    "noMatch": "No matching organizations",
+    "limitCount": "{count} selected / up to {max}",
+    "limitReached": "You can choose up to {max}",
+    "outOfScope": "Outside your management scope",
+    "disabledOrg": "Disabled",
+    "loadFailed": "Couldn't load organizations. Please try again later.",
+    "confirm": "Done"
   },
   "seedExport": {
     "action": "Export project settings",
@@ -2635,10 +2782,446 @@
       "ROOT_ONLY": "Only system administrators can export project settings.",
       "NOT_FOUND": "This version could not be found. Reload and try again.",
       "VERSION_NOT_PUBLISHED": "Only published versions can be exported.",
-      "PUBLISH_IN_PROGRESS": "Publishing this version has not finished. Use \"Retry publish\" in the version list first.",
       "NOT_PORTABLE": "This version can't be exported yet.",
       "VALIDATION_FAILED": "The revision or release notes are not valid. Fix them and try again.",
       "UNEXPECTED": "Export failed. Please try again later."
+    }
+  },
+  "realtime": {
+    "live": "Live",
+    "slow": "Reconnecting (slow mode, refreshes every 60 seconds)"
+  },
+  "personalSettings": {
+    "title": "Personal settings",
+    "tabs": "Personal settings tabs",
+    "tabPreferences": "Preferences",
+    "tabDelegations": "Delegates",
+    "preferencesEmpty": "There are no preferences to adjust yet. Switch appearance and language from the avatar menu at the top right.",
+    "delegations": {
+      "create": "+ Add delegate",
+      "hint": "During a delegation, tasks that would be assigned to you go to your delegate. Tasks already assigned to you before it starts are not moved.",
+      "tableAria": "My delegations",
+      "delegate": "Delegate",
+      "startAt": "Start",
+      "endAt": "End",
+      "note": "Note",
+      "status": "Status",
+      "actions": "Actions",
+      "statuses": {
+        "UPCOMING": "Upcoming",
+        "ACTIVE": "Active",
+        "ENDED": "Ended"
+      },
+      "empty": "No delegations yet",
+      "loadFailed": "Could not load delegations. Please refresh",
+      "total": "{total} in total",
+      "delete": "Delete",
+      "deleteOf": "Delete delegation to {name}",
+      "deleteTitle": "Delete delegation to {name}?",
+      "deleteBody": "After deleting, tasks assigned to you will no longer go to this delegate. Tasks already assigned to the delegate are not moved back.",
+      "deleteConfirm": "Delete",
+      "deleted": "Delegation deleted",
+      "dialogTitle": "Add delegate",
+      "startDay": "Start",
+      "endDay": "End",
+      "endBeforeStart": "End cannot be before start",
+      "cancel": "Cancel",
+      "submit": "Add",
+      "created": "Delegation added",
+      "errors": {
+        "NOT_FOUND": "This delegation was not found. Please refresh",
+        "VALIDATION_FAILED": "The data did not pass validation. Please check and try again",
+        "UNEXPECTED": "Something went wrong. Please try again later",
+        "reasons": {
+          "DELEGATION_OVERLAP": "Overlaps a delegation you already set",
+          "SELF_DELEGATION": "You cannot delegate to yourself",
+          "DELEGATE_NOT_ELIGIBLE": "This delegate is disabled or not in your top-level organization",
+          "INVALID_PERIOD": "End must be after start and not in the past",
+          "DELEGATION_ENDED": "Ended delegations cannot be changed or deleted"
+        }
+      }
+    }
+  },
+  "conditionTree": {
+    "rootOp": "Combine",
+    "nestedOp": "Combine group",
+    "nestedHint": "The whole group counts as one condition of the level above",
+    "opAnd": "AND — all must hold",
+    "opOr": "OR — any one is enough",
+    "addCondition": "+ Condition",
+    "addGroup": "+ Group",
+    "removeGroup": "Delete group",
+    "field": "Field",
+    "remove": "Delete"
+  },
+  "audiencePicker": {
+    "modeAll": "Everyone",
+    "modeMatch": "Matching conditions",
+    "fields": {
+      "user": "User",
+      "role": "Role",
+      "org": "Organization",
+      "permission": "Permission"
+    },
+    "cond": "Comparison",
+    "condIn": "is in",
+    "condHold": "holds",
+    "value": "Value",
+    "range": "Range",
+    "ranges": {
+      "self": "Itself",
+      "descendants": "Including children",
+      "ancestors": "Including parents"
+    },
+    "orgSource": "Value",
+    "orgStatic": "Specific organizations",
+    "orgPick": "Organizations",
+    "empty": "No matching targets",
+    "noOwnerOrg": "No owning organization",
+    "emptyGroup": "A group needs at least one condition.",
+    "emptyValue": "Please choose a value.",
+    "permissionSearch": "Search permissions",
+    "permissionEmpty": "No matching permissions",
+    "permissionWildcard": "All",
+    "permissionLoadFailed": "Failed to load permissions. Please try again later.",
+    "permissionConfirm": "Done",
+    "outOfList": "Not in the candidate list",
+    "loading": "Loading…",
+    "summaryAnd": "and",
+    "summaryOr": "or",
+    "summaryUnset": "(not selected)"
+  },
+  "urlState": {
+    "editNotFound": "This record could not be found"
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "bellWithCount": "Notifications, {count} unread",
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "filter": "Notification filter",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "empty": "No notifications",
+    "emptyUnread": "No unread notifications",
+    "unread": "Unread",
+    "loadFailed": "Couldn't load notifications",
+    "markReadFailed": "Couldn't mark as read. Please try again later",
+    "alert": {
+      "title": "New notification",
+      "many": "You have {count} new notifications"
+    },
+    "preferences": {
+      "heading": "Notification channels",
+      "type": "Notification type",
+      "channels": {
+        "in-app": "In-app",
+        "email": "Email"
+      },
+      "channelSwitch": "{type}: {channel}",
+      "locked": "This channel can't be turned off",
+      "save": "Save",
+      "saved": "Notification settings saved",
+      "saveFailed": "Couldn't save. Please try again later",
+      "loadFailed": "Couldn't load notification settings"
+    },
+    "types": {
+      "workflow": {
+        "task-created": "Awaiting your review",
+        "result": "Application result",
+        "overdue": "Review overdue",
+        "cc": "For your information"
+      },
+      "printing": {
+        "job-failed": "Print failed",
+        "agent-offline": "Print agent offline"
+      }
+    }
+  },
+  "notificationSettings": {
+    "intro": "Recipients of these reminders can be set by user, role and permission. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
+    "rootReadOnly": "The current organization is not under any top-level organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
+    "search": "Search notification types",
+    "searchPlaceholder": "Name",
+    "tableLabel": "Notification types",
+    "empty": "No matching notification types",
+    "loadFailed": "Notification settings failed to load. Refresh and try again.",
+    "total": "{total} in total, {pageSize} per page",
+    "columns": {
+      "type": "Notification type",
+      "orgScope": "Organization scope",
+      "audience": "Recipients",
+      "actions": "Actions"
+    },
+    "orgScope": "{origin, select, tenant {Top-level organization} other {Organization of the event}}{range, select, descendants { and its children} ancestors { and its parents} other {}}",
+    "defaultTag": "Default",
+    "actions": {
+      "edit": "Edit",
+      "reset": "Restore default"
+    },
+    "edit": {
+      "title": "Edit recipients: {name}",
+      "scopeHint": "Organization scope: {scope} (set by the notification type, cannot be changed). Recipients = people within the scope who also match the conditions below.",
+      "audienceTitle": "Recipients",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "reset": {
+      "title": "Restore default: {name}",
+      "body": "Recipients go back to the default: {audience}. Your current changes will be removed.",
+      "cancel": "Cancel",
+      "confirm": "Restore default"
+    },
+    "feedback": {
+      "saveSuccess": "Recipients updated",
+      "resetSuccess": "Default recipients restored"
+    },
+    "errors": {
+      "INVALID_AUDIENCE": "This condition cannot be used. Check it and save again.",
+      "OUT_OF_TENANT": "This person or role is not in your organization",
+      "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
+      "TENANT_ONLY": "Recipients cannot be changed here. Switch to the organization you want to set up first.",
+      "FORBIDDEN": "You do not have permission to change notification settings",
+      "UNEXPECTED": "Something went wrong. Please try again later."
+    }
+  },
+  "printers": {
+    "total": "{total} in total",
+    "tabs": "Printer management tabs",
+    "tabPrinters": "Printers",
+    "tabAgents": "Print agents",
+    "tabJobs": "Print log",
+    "newPrinter": "+ New printer",
+    "newAgent": "+ New print agent",
+    "feedback": {
+      "createSuccess": "Printer added",
+      "updateSuccess": "Printer saved"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to do this",
+      "NOT_FOUND": "Not found (it may be outside your scope, or no installer is available yet)",
+      "VALIDATION_FAILED": "Some fields are invalid. Please check the highlighted fields",
+      "CONFLICT": "This print agent is disabled and can't be paired again. Add a new print agent instead",
+      "UNEXPECTED": "Something went wrong. Please try again later"
+    },
+    "printerStatus": {
+      "disabled": "Disabled",
+      "agentOffline": "Offline",
+      "unknown": "Not reported",
+      "ok": "OK",
+      "paperOut": "Out of paper",
+      "offline": "Unreachable",
+      "agentOfflineHint": "The print agent is offline, so the printer status is unknown"
+    },
+    "enabledFilter": {
+      "all": "All",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "printers": {
+      "name": "Name",
+      "org": "Organization",
+      "address": "IP:Port",
+      "agent": "Print agent",
+      "isDefault": "Default",
+      "default": "Default",
+      "status": "Status",
+      "actions": "Actions",
+      "testPrint": "Test print",
+      "testPrintOf": "Test print \"{name}\"",
+      "edit": "Edit",
+      "editOf": "Edit \"{name}\"",
+      "orgFilter": "Organization",
+      "allOrgs": "All",
+      "statusFilter": "Status",
+      "empty": "No printers yet",
+      "tableAria": "Printers"
+    },
+    "printerForm": {
+      "createTitle": "New printer",
+      "editTitle": "Edit printer",
+      "org": "Organization",
+      "orgHint": "Only organizations with a print agent are listed; that agent prints for this printer",
+      "noAgentOrg": "No print agents yet. Add one in the Print agents tab first",
+      "name": "Name",
+      "host": "IP address",
+      "port": "Port",
+      "agent": "Print agent",
+      "paperWidth": "Paper width",
+      "paperWidthMm": "{width}mm",
+      "isDefault": "Set as this organization's default printer",
+      "enabled": "Enabled",
+      "fixedIpHint": "Reserve the IP on your router (bind the receipt printer's MAC to a fixed IP).",
+      "required": "Required",
+      "hostInvalid": "Enter the receipt printer's IP address",
+      "portInvalid": "Enter a number from 1 to 65535",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "agentStatus": {
+      "disabled": "Disabled",
+      "unpaired": "Waiting to pair",
+      "online": "Connected",
+      "offline": "Offline"
+    },
+    "testPage": {
+      "title": "Test page",
+      "large": "Large ABC 123",
+      "normal": "Normal ABC 123",
+      "small": "Small ABC 123",
+      "bold": "Bold ABC 123",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "alignRight": "Right",
+      "rowLabel": "Label",
+      "rowValue": "Value",
+      "tableItem": "Item",
+      "tableQty": "Qty",
+      "tableAmount": "Amount",
+      "tableItemValue": "Sample item",
+      "longText": "Line wrapping: this line is deliberately long to check that text longer than one line wraps onto the next line instead of being cut off.",
+      "qrCaption": "Scan to open printer management",
+      "cut": "Cut"
+    },
+    "testPrint": {
+      "title": "Test print · {name}",
+      "sending": "Sending the test page…",
+      "sent": "Sent to the printer, waiting for the result…",
+      "printed": "Test page printed. Check the font sizes, alignment, barcode, QR code and paper cut.",
+      "paperOut": "Failed: out of paper. Refill the paper and press [Test print] again.",
+      "agentOffline": "Failed: print agent offline (last seen {lastSeenAt}).",
+      "agentOfflineNever": "Failed: print agent offline (never connected).",
+      "failed": "Failed: {reason}.",
+      "rejected": "Not sent: {reason}",
+      "retry": "Retry",
+      "close": "Close"
+    },
+    "jobError": {
+      "AGENT_OFFLINE": "print agent offline",
+      "AGENT_DISABLED": "print agent disabled",
+      "NO_RESULT": "no print result received",
+      "PAPER_OUT": "out of paper",
+      "PRINTER_OFFLINE": "receipt printer unreachable",
+      "OTHER": "other reason"
+    },
+    "jobStatus": {
+      "PENDING": "Waiting",
+      "SENT": "Sent",
+      "PRINTED": "Printed",
+      "FAILED": "Failed",
+      "failedWith": "Failed: {reason}"
+    },
+    "jobs": {
+      "createdAt": "Time",
+      "document": "Document",
+      "printer": "Printer",
+      "printNo": "Print no.",
+      "printNoValue": "#{no}",
+      "reprintNo": "Reprint #{no}",
+      "status": "Result",
+      "requestedBy": "Requested by",
+      "testPage": "Test page",
+      "printerFilter": "Printer",
+      "allPrinters": "All",
+      "statusFilter": "Result",
+      "allStatuses": "All",
+      "empty": "No print records yet",
+      "tableAria": "Print log"
+    },
+    "agents": {
+      "name": "Print agent",
+      "org": "Organization",
+      "status": "Status",
+      "lastSeenAt": "Last seen",
+      "version": "Version",
+      "updateAvailable": "Update",
+      "actions": "Actions",
+      "resetPairing": "Pair again",
+      "resetPairingOf": "Pair \"{name}\" again",
+      "disable": "Disable",
+      "disableOf": "Disable \"{name}\"",
+      "showDisabled": "Show disabled",
+      "empty": "No print agents yet",
+      "tableAria": "Print agents"
+    },
+    "download": {
+      "title": "Print agent",
+      "titleWithVersion": "Print agent · latest version {version}",
+      "description": "Install it on a store computer that is on every day (it can share the checkout computer), with sleep turned off. One agent can serve every receipt printer on the same local network; if the printers are on different networks, or you want each checkout to work independently, install one for each.",
+      "notPublished": "No installer is available yet. Please contact your system administrator.",
+      "button": "Download {name}",
+      "buttonSuggested": "Download {name} (recommended)",
+      "windowsX64": "Windows x64",
+      "linuxX64": "Linux x64",
+      "linuxArm64": "Linux arm64",
+      "macosArm64": "macOS arm64"
+    },
+    "pairing": {
+      "serverUrl": "Server URL",
+      "code": "Pairing code",
+      "copy": "Copy",
+      "copyOf": "Copy {label}",
+      "copied": "{label} copied",
+      "copyFailed": "Couldn't copy. Please select the text and copy it manually",
+      "hint": "Valid for 10 minutes (until {expiresAt}). Run the installer on the store computer and paste the server URL and pairing code."
+    },
+    "createAgent": {
+      "title": "New print agent",
+      "org": "Organization",
+      "name": "Name",
+      "nameHint": "e.g. Checkout computer",
+      "required": "Required",
+      "cancel": "Cancel",
+      "submit": "Create",
+      "done": "Done",
+      "success": "Print agent added"
+    },
+    "resetPairing": {
+      "title": "Pair \"{name}\" again",
+      "body": "The old key stops working immediately and this computer must pair again with a new pairing code. Printer settings are kept.",
+      "doneBody": "New computer, or the code expired before setup finished: run the installer on that computer and paste the server URL and the new pairing code. Same computer that is already set up: as an administrator, run print-agent pair --server (server URL) --code (new code) --force, then restart the print agent service (see \"Pair again\" in this page help).",
+      "confirm": "Pair again",
+      "cancel": "Cancel",
+      "done": "Done",
+      "success": "New pairing code created"
+    },
+    "disableAgent": {
+      "title": "Disable \"{name}\"?",
+      "body": "Its key stops working immediately, its printers can no longer be chosen for printing, and waiting or sent print jobs are marked as failed. A disabled print agent can't be enabled again; to keep printing, add a new print agent and move the printers to it.",
+      "confirm": "Disable",
+      "cancel": "Cancel",
+      "success": "Print agent disabled"
+    }
+  },
+  "printButton": {
+    "print": "Print",
+    "reprint": "Reprint",
+    "sending": "Sent to printer…",
+    "printed": "Printed",
+    "failed": "Failed: {reason}",
+    "printedCount": "Printed {count, plural, one {# time} other {# times}}",
+    "noPrinter": "No printer set up for this store",
+    "noAvailablePrinter": "All printers for this store are disabled",
+    "printersLoadFailed": "Couldn't load printers. Refresh and try again.",
+    "choosePrinter": "Choose a printer",
+    "defaultPrinter": "{name} (default)",
+    "noResultHint": "Check whether the receipt came out before deciding to reprint",
+    "reprintDialog": {
+      "title": "Reprint",
+      "reason": "Reprint reason",
+      "note": "Note",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "reasonRequired": "Choose a reprint reason",
+      "noteRequired": "A note is required when the reason is Other",
+      "reasonsUnavailable": "Couldn't load reprint reasons. Try again later.",
+      "noReasons": "No reprint reasons are set up yet. Ask an administrator to add them."
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to print this document",
+      "NOT_FOUND": "Printer not found. Refresh and try again.",
+      "VALIDATION_FAILED": "Can't print: the printer is disabled or the document image is invalid",
+      "UNEXPECTED": "Couldn't send the print job. Try again later."
     }
   }
 }

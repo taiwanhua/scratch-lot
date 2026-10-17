@@ -12,13 +12,13 @@ import { Alert } from "@repo/ui/alert";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 
-import { useModuleRoutes } from "@/hooks/useModuleRoutes";
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
+import { useModuleRoutes } from "@/hooks/base/useModuleRoutes";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
 import {
   isBindingIssue,
   workflowErrorOf,
-} from "@/lib/workflow/workflow-errors";
+} from "@/lib/base/workflow/workflow-errors";
 
 import { WORKFLOWS_MODULE_KEY } from "../../workflows-permissions";
 import { UnbindWorkflowDialog } from "./UnbindWorkflowDialog";

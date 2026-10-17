@@ -2,8 +2,8 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor } from "@testing-library/react";
 import { HttpResponse } from "msw";
 
-import { SESSION_CHANNEL_NAME } from "@/lib/auth/session-channel";
-import { routeTabsStorageKey } from "@/lib/route-tabs";
+import { SESSION_CHANNEL_NAME } from "@/lib/base/auth/session-channel";
+import { routeTabsStorageKey } from "@/lib/base/route-tabs";
 import { authWorld, testUser } from "@/test/msw/auth-handlers";
 import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";

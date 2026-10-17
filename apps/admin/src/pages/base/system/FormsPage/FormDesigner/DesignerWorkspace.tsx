@@ -10,22 +10,26 @@ import {
 import { Box } from "@repo/ui/box";
 import { Stack } from "@repo/ui/stack";
 
-import { JsonPreview } from "@/components/JsonPreview";
-import { useSession } from "@/hooks/useSession";
-import { definitionOf, rawOf } from "@/lib/form-engine/definition";
-import type { DesignSection } from "@/lib/form-engine/design-definition";
-import type { DesignerIssue } from "@/lib/form-engine/designer-issues";
+import { JsonPreview } from "@/components/base/JsonPreview";
+import { useSession } from "@/hooks/base/useSession";
+import { definitionOf, rawOf } from "@/lib/base/form-engine/definition";
+import type { DesignSection } from "@/lib/base/form-engine/design-definition";
+import type { DesignerIssue } from "@/lib/base/form-engine/designer-issues";
 import {
   fieldById,
   fieldKeyProblemOf,
   sectionCols,
   spanOf,
-} from "@/lib/form-engine/designer-ops";
+} from "@/lib/base/form-engine/designer-ops";
 import {
   fieldReferences,
   sectionReferences,
-} from "@/lib/form-engine/field-references";
+} from "@/lib/base/form-engine/field-references";
 
+import {
+  designerPropertyPanelSx,
+  designerWorkspaceSx,
+} from "../../designer-layout";
 import { ComponentPalette } from "./ComponentPalette";
 import { DeleteFieldDialog } from "./DeleteFieldDialog";
 import { DeleteSectionDialog } from "./DeleteSectionDialog";
@@ -35,8 +39,12 @@ import { type DesignerMode, DesignerToolbar } from "./DesignerToolbar";
 import { FormSettingsPanel } from "./FormSettingsPanel/FormSettingsPanel";
 import { IssueList } from "./IssueList";
 import { FieldPropertyPanel } from "./PropertyPanel/FieldPropertyPanel";
+import { SectionPropertyPanel } from "./PropertyPanel/SectionPropertyPanel";
 import { useDesignerSave } from "./useDesignerSave";
 import { useDesignerState } from "./useDesignerState";
+
+/** 指到整個分區的版面位置(`sections.<n>`,不含列 / 格)。 */
+const SECTION_PATH = /^sections\.(\d+)$/;
 
 export interface DesignerWorkspaceProps {
   form: FormFieldsFragment;
@@ -82,14 +90,53 @@ export const DesignerWorkspace = ({
     .filter((column) => [null, undefined, form.key].includes(column.formKey))
     .map((column) => column.key);
   const selected = fieldById(definition, state.selectedFieldId) ?? null;
+  const selectedSectionIndex = definition.layout.sections.findIndex(
+    (section) => section.key === state.selectedSectionKey,
+  );
+  const selectedSection =
+    selectedSectionIndex === -1
+      ? undefined
+      : definition.layout.sections.at(selectedSectionIndex);
   const allIssues = [...report.errors, ...report.warnings];
 
-  /** 點檢查結果定位:有欄位就選它;其餘(摘要槽、帶入規則、版面格)回到表單設定。 */
+  /** 點檢查結果定位:分區收合設定的錯誤 → 分區設定;有欄位就選它;其餘(摘要槽、帶入規則、版面格)回到表單設定。 */
   const locate = (issue: DesignerIssue) => {
     setMode("design");
+    const sectionIndex = SECTION_PATH.exec(
+      issue.location.layoutPath ?? "",
+    )?.[1];
+    const section =
+      sectionIndex === undefined
+        ? undefined
+        : definition.layout.sections.at(Number(sectionIndex));
+    if (issue.code.startsWith("SECTION_") && section !== undefined) {
+      state.selectSection(section.key);
+      return;
+    }
     state.selectByKey(issue.location.fieldKey ?? null);
   };
   const deletingField = fieldById(definition, deleting);
+
+  // 選了分區(且沒有選欄位)→ 屬性面板顯示分區設定
+  const sectionPanel =
+    selected === null && selectedSection !== undefined ? (
+      <SectionPropertyPanel
+        key={selectedSection.key}
+        section={selectedSection}
+        fields={definition.fields}
+        issues={allIssues.filter(
+          (issue) =>
+            issue.location.layoutPath ===
+            `sections.${String(selectedSectionIndex)}`,
+        )}
+        onChange={(patch) => {
+          state.updateSection(selectedSection.key, patch);
+        }}
+        onBack={() => {
+          state.selectSection(null);
+        }}
+      />
+    ) : null;
 
   return (
     <Stack spacing={2}>
@@ -112,7 +159,7 @@ export const DesignerWorkspace = ({
           isDirty={state.isDirty}
         />
       ) : (
-        <Stack direction="row" spacing={2} sx={{ alignItems: "flex-start" }}>
+        <Stack direction="row" spacing={2} sx={designerWorkspaceSx}>
           <ComponentPalette
             onAddField={(type: FieldType) => {
               state.add(
@@ -131,6 +178,7 @@ export const DesignerWorkspace = ({
             formKey={form.key}
             definition={definition}
             selectedFieldId={state.selectedFieldId}
+            selectedSectionKey={state.selectedSectionKey}
             onSelectField={state.select}
             onAddField={(type, target) => {
               state.add(
@@ -143,49 +191,51 @@ export const DesignerWorkspace = ({
             }}
             onMoveField={state.move}
             onRenameSection={state.renameSection}
+            onSelectSection={state.selectSection}
             onRemoveSection={setRemovingSection}
           />
           <Box
             component="section"
             aria-label={t("properties")}
-            sx={{ width: 360, flexShrink: 0 }}
+            sx={designerPropertyPanelSx}
           >
-            {selected === null ? (
-              <FormSettingsPanel
-                definition={definition}
-                form={{ key: form.key, name: form.name }}
-                issues={allIssues.filter(
-                  (issue) => issue.location.fieldKey === undefined,
-                )}
-                onChange={state.patchSettings}
-              />
-            ) : (
-              <FieldPropertyPanel
-                key={selected._id}
-                field={selected}
-                fields={definition.fields}
-                formKey={form.key}
-                span={spanOf(definition, selected._id)}
-                issues={allIssues.filter(
-                  (issue) => issue.location.fieldKey === selected.key,
-                )}
-                keyProblemOf={(key) =>
-                  fieldKeyProblemOf(definition, selected._id, key)
-                }
-                onChange={(next) => {
-                  state.update(selected._id, next);
-                }}
-                onSpanChange={(span) => {
-                  state.setSpan(selected._id, span);
-                }}
-                onDelete={() => {
-                  setDeleting(selected._id);
-                }}
-                onBack={() => {
-                  state.select(null);
-                }}
-              />
-            )}
+            {sectionPanel ??
+              (selected === null ? (
+                <FormSettingsPanel
+                  definition={definition}
+                  form={{ key: form.key, name: form.name }}
+                  issues={allIssues.filter(
+                    (issue) => issue.location.fieldKey === undefined,
+                  )}
+                  onChange={state.patchSettings}
+                />
+              ) : (
+                <FieldPropertyPanel
+                  key={selected._id}
+                  field={selected}
+                  fields={definition.fields}
+                  formKey={form.key}
+                  span={spanOf(definition, selected._id)}
+                  issues={allIssues.filter(
+                    (issue) => issue.location.fieldKey === selected.key,
+                  )}
+                  keyProblemOf={(key) =>
+                    fieldKeyProblemOf(definition, selected._id, key)
+                  }
+                  onChange={(next) => {
+                    state.update(selected._id, next);
+                  }}
+                  onSpanChange={(span) => {
+                    state.setSpan(selected._id, span);
+                  }}
+                  onDelete={() => {
+                    setDeleting(selected._id);
+                  }}
+                  onBack={() => {
+                    state.select(null);
+                  }}
+                />
+              ))}
           </Box>
         </Stack>
       )}

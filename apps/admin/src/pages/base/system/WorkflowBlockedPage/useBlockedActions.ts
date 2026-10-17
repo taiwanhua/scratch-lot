@@ -10,10 +10,10 @@ import {
   useWorkflowInstanceQuery,
 } from "@repo/graphql";
 
-import { useInvalidateApplyCenterCounts } from "@/hooks/useApplyCenterCounts";
-import { useSnackbar } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { workflowErrorOf } from "@/lib/workflow/workflow-errors";
+import { useInvalidateApplyCenterCounts } from "@/hooks/base/useApplyCenterCounts";
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 /**
  * 阻擋清單的處置(權限 `system.workflows.blocked-page.reassign`):改派、新增審核者。

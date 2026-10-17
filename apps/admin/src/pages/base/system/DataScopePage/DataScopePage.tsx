@@ -76,9 +76,7 @@ export const DataScopePage = () => {
           target={data.target}
           rule={data.rule}
           canEdit={data.canEdit}
-          roleOptions={data.roleOptions}
           userOptions={data.userOptions}
-          orgNodes={data.orgNodes}
           orgOptions={data.orgOptions}
           onSaved={(targetId) => {
             void data.invalidate(targetId);

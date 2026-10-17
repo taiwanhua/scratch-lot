@@ -62,7 +62,7 @@
 - **勾選的模組會自動補上仍在選項內的上層模組**:模組樹就是側欄的樹,只綁下層不綁群組會讓側欄斷成孤兒(ADR-0004「勾下層模組必連動勾上層」)。前端矩陣本來就這樣送,API 這層不依賴前端做對。
 - **選項清單的判準是「模板有沒有綁」**,不是重算 `isRootOnly` —— `isRootOnly` 只存在於 seed 宣告層、不落庫(ADR-0004),種子造模板綁定時已扣除根組織專屬模組。
 - **副本的權限取自模板的 `role_permission`**(每模組一筆該模組的 `*`)再與勾選的模組取交集,不自己組 key —— 模板日後多綁 / 少綁什麼,副本自動跟著。副本要寫 `settings.templateKey = "tenant-admin"`,擁有者保護靠它認出那一筆。
-- **開通的回滾是補償刪除**:Mongo 單節點沒有 transaction,失敗時把已建立的關聯、使用者、角色副本、租戶組織逐一抹掉(`BaseRepository.hardDeleteById`,**不是軟刪除** —— `users` 的 account / email 唯一索引含已軟刪除的文件,留殭屍會讓同一組帳號永遠再也開不了)。補償範圍不含 `audit_logs`(只增不改,ADR-0004):極端情況下會留一筆 `org.provision` 但資料已回滾,寧可多一筆稽核痕跡也不漏記特權動作。寄信排在最後。
+- **開通是一個交易**(ADR-0013):組織、角色副本、使用者、關聯、`ownerUserId` 與稽核 `org.provision` 一起提交;任一步失敗全部回復,不留任何東西,同一組帳號可直接重新開通。啟用信排在交易成功之後(`afterCommit`),寄不出去只記 log、開通照樣成立,回傳 `activationMailSent: false`,畫面提示首任管理員走「忘記密碼」自助。撤銷開通的硬刪除與稽核同樣是一個交易(前置檢查在交易前)。
 
 **根組織專屬是執行期的第二道門**:租戶作業的 mutation 與 `tenantModuleOptions` 都先過 `@RequirePermission`,再由 service 確認**操作者的當前組織是根組織**,否則 `FORBIDDEN`。權限可能經角色被帶到別的組織,「站在哪裡」才是判準;判斷點是 `OwnerProtectionService.isRootOperator`(與擁有者保護的根組織例外同一個)。
 
@@ -188,7 +188,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 - **兩種視角不做兩套頁,全由資料決定**:`org(樹根).isSystem` 為真 = 操作者站在根組織(根組織視角),否則樹根就是租戶頂層(租戶視角)。加上手上有沒有 `tenant-ops` 那三筆權限,已足以決定畫面,不需要「我是不是超級管理員」這種旗標。Figma 87:3 / 92:694 只是同一支頁面的兩組資料。取 `org(樹根)` 時樹根沒被點掉就與選中的那一筆同一把 query key,不多發一次請求。
 - **「是不是租戶頂層」讀 `org.visibility !== null`**:api 只讓租戶頂層有 `visibility` 與 `ownerUserId`,前端不必自己數 `ancestors` 或比對樹的層數。
 - **「租戶」標籤只標父節點是平台根組織的節點**,不是「父節點是樹根」—— 租戶視角的樹根是租戶頂層,它的子組織不是租戶。實作上先以 `org(樹根).isSystem` 判斷「樹根就是平台根組織」,是的話它的直接子組織才掛標籤。停用的組織掛「停用」標籤。標籤走 `@repo/ui/tree` 的 `TreeNode.labelSuffix`(Figma Draft/OrgTreeItem 的 ShowTag 槽位),`label` 仍是純文字,搜尋與無障礙名稱不受影響;共用的 `OrgTreePicker` 以 `labelSuffixOf` 接出來。
-- **樹的葉節點在 admin 歸一化成 `children: undefined`**(`lib/org-tree.ts` 的 `toTreeNodes`):api 對葉節點回 `children: []`,而 `TreeNode.children` 的語意是「有沒有下一層」—— 不把「能不能展開」交給樹元件自己解讀。
+- **樹的葉節點在 admin 歸一化成 `children: undefined`**(`lib/base/org-tree.ts` 的 `toTreeNodes`):api 對葉節點回 `children: []`,而 `TreeNode.children` 的語意是「有沒有下一層」—— 不把「能不能展開」交給樹元件自己解讀。
 - **搬移是編輯彈窗裡的「上層組織」下拉,不是動作列上的按鈕**(Figma 88:182、help.md 沿用此說法);下拉文案用白話:「可以搬到你管理範圍內的任何組織底下,除了它自己和它底下的組織」。候選在前端先照三條規則濾過,api 仍會再驗一次。樹上有的就是管理範圍,所以「管理範圍內」= 在樹上走得到;「同租戶」的上限是**含自己的那一棵樹根**(管理範圍多根時 `orgTrail` 會找出是哪一棵),根組織視角要再往下一層取租戶頂層(`useMoveTargets.ts`)。租戶頂層自己的候選是空的 = 搬不動,與 api 的租戶頂層保護一致。
 - **根組織與租戶頂層的編輯彈窗不顯示「上層組織」下拉**:兩者都搬不動,而它原本的上層不在候選裡,渲染出來只是空白的下拉。租戶內的人編輯租戶頂層時,在那個位置改放租戶頂層提示(與停用 / 刪除按鈕同一句,樣式同欄位說明);根組織視角編輯租戶頂層時不放提示(那句話是對租戶內的人說的)。儲存時不送 `moveOrg`。
 - **編輯彈窗最多打六個 mutation**,依序 `updateOrg` → `moveOrg` → `transferOrgOwner` → `setOrgVisibility` → `setOrgTimezone` → `setOrgManagers`,**只送有變動的那幾個**(租戶短碼跟著 `updateOrg` 送)。任何一步失敗就停在那裡,前面已成功的不回滾 —— 它們各自是完整的動作、各自留了稽核;重新送出只會補上還沒做的那幾步。
@@ -197,7 +197,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 - **租戶頂層與根組織的保護是「按鈕出現但停用」**:停用 / 刪除按鈕 `disabled` 加提示(根組織用 `isSystem` 的提示、租戶頂層用租戶頂層提示)。「我做不到這個動作」(無權限,不給按鈕)與「這個組織不准被這樣動」(給按鈕、停用並說明)是兩回事。
 - **刪除不在前端預判**:前置四項全在 api,送出後收到 `ORG_NOT_DELETABLE` 才把 `extensions.reasons` 攤成清單並提示改用停用(撤銷開通同理,收到的是 `PROVISION_NOT_REVOKABLE`)。
 - **「撤銷開通」的出現條件是三者同時成立**:持有 `tenant-ops.revoke-provision`、**根組織視角**、且選中的是**租戶頂層**。它與停用 / 刪除不同,**不做「出現但停用」**—— 對非租戶頂層的組織它根本不是一個可想像的動作。確認彈窗比刪除嚴格:列出會被抹掉的三樣(租戶名、擁有者帳號、副本角色名),並要**照打租戶名稱**才按得下去(刪除是軟刪除、撤銷是硬刪除,嚴格度跟著不可逆性走)。擁有者帳號與副本角色名取自 `users` 那一支查詢(`useTenantOwner`:擁有者持有的角色中,擁有組織就是這個租戶頂層的那一筆),沒有 `system.user-manager.view` 時兩處顯示「(顯示不出來)」,彈窗照樣可用。
-- **資料區的頁籤**(`@repo/ui/tabs`,同角色管理的頁內頁籤):「組織資料」與「成員」。**頁籤只在持 `view-members` 時整列出現**,沒有那筆權限的人直接看到組織資料 —— 頁籤不是一個動作,給了空頁籤只會讓人困惑。頁籤狀態**不進 URL**(REACT-02 第 2 點的 admin 例外),換組織時以 `key={org.id}` 整個重來,分頁與已選的人不該跟著跑到別的組織。動作列(編輯 / 停用 / 刪除 / 撤銷開通)維持在頁籤**之上**,它們是對整個組織的動作。**這是頁內頁籤,不是路由頁籤**:「成員」沒有自己的網址,不進殼的路由頁籤列(判準見 ADR-0011「頁籤兩種」)。
+- **資料區的頁籤**(`PageTabs`):「組織資料」與「成員」。「成員」分頁設了 `view-members` 權限,**沒有那筆權限時只剩一個分頁、整列不顯示**,直接看到組織資料 —— 頁籤不是一個動作,給了空頁籤只會讓人困惑。目前分頁記在網址 `?tab=`,選中的組織在 `?detail=<id>`,成員清單的頁碼在 `?members=`(連同組織 id 一起存,換組織就回第一頁);成員頁籤以 `key={org.id}` 換組織時整個重來,已選的人不跟著跑到別的組織。動作列(編輯 / 停用 / 刪除 / 撤銷開通)維持在頁籤**之上**,它們是對整個組織的動作。**這是頁內頁籤,不是路由頁籤**:「成員」沒有自己的網址,不進殼的路由頁籤列(判準見 ADR-0011「頁籤兩種」)。
 - **成員列欄位**:姓名、帳號、狀態、其他所屬組織。「加入成員」彈窗是多選 `Autocomplete`,候選用 `orgMemberCandidates` 而不是 `users`;**關鍵字丟回 api 查**(候選有分頁上限,前端手上不會是全量),所以走 `onInputChange`,給了它就不再讓 Autocomplete 自己過濾一次,否則打第一個字就把「還沒換過來的那批 options」濾成空的。加完之後 `orgMembers` 與 `orgMemberCandidates` 兩把都要失效。成員頁籤沒有「移除」(見規則)。
 - **時區欄**(`EditOrgDialog/TimezoneField.tsx`):單選 `Autocomplete`,選項是瀏覽器 `Intl.supportedValuesOf("timeZone")` 的完整 IANA 清單(不自己列表、不裝套件),顯示時區名、輸入即過濾;已存的值不在清單裡(別名)時放在最前面。沒設時說明文字寫「未設定(使用預設 Asia/Taipei)」。根組織與租戶頂層的編輯彈窗一律顯示這一欄(可見範圍開關仍只在租戶頂層),沒有 `set-timezone` 時停用(唯讀顯示目前值)。儲存後照「成功後失效三把」重取 —— 改的是自己當前組織所屬的租戶(或根組織)時,`me.currentOrg.timezone` 換掉,畫面上的日期時間跟著換算。
 - **主管**:資料區有「主管」一列(`OrgManagersRow`,根組織不顯示);編輯彈窗的主管欄(`ManagerField`)是多選 `Autocomplete`,候選走 `orgManagerCandidates`、關鍵字丟回 api 查(同「加入成員」的做法);已選但不在這一批候選裡的人(停用的主管、換過關鍵字)仍留在值裡。
@@ -205,7 +205,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 - **彈窗裡的第一個 `TextField`**:MUI 有一條 `.MuiDialogTitle-root + .MuiDialogContent-root { padding-top: 0 }`,特異度贏過 `sx` 的單一 class,浮動標籤會被標題壓住;`@repo/ui/dialog` 以 `&&` 拉高特異度處理掉。
 - **與設計稿的差異**:Figma 的資料區有「建立時間」一列,`org(id)` 沒有這個欄位,故未做;可見範圍在 Figma 是核取方塊,依本檔與 ADR-0005 的說法改用開關(`Switch`)。
 
-正本:`apps/admin/src/pages/base/system/OrgManagerPage/`(`useOrgManagerData.ts`、`useMoveTargets.ts`、`useTenantOwner.ts`、`OrgDetailPanel/`、`MembersTab/`、`EditOrgDialog/`、`ProvisionTenantDialog/`、`RevokeProvisionDialog.tsx`)、`apps/admin/src/lib/org-tree.ts`、`apps/admin/src/components/OrgTreePicker/OrgTreePicker.tsx`
+正本:`apps/admin/src/pages/base/system/OrgManagerPage/`(`useOrgManagerData.ts`、`useMoveTargets.ts`、`useTenantOwner.ts`、`OrgDetailPanel/`、`MembersTab/`、`EditOrgDialog/`、`ProvisionTenantDialog/`、`RevokeProvisionDialog.tsx`)、`apps/admin/src/lib/base/org-tree.ts`、`apps/admin/src/components/base/OrgTreePicker/OrgTreePicker.tsx`
 
 ## 錯誤碼
 

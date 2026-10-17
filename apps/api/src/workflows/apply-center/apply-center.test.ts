@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import type { FieldDef } from "@repo/domain/form";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -27,7 +29,7 @@ import { RecordingMailService } from "../../mail/recording-mail.service";
 import { createRole } from "../../permission/test-support/fixtures";
 import { RecordingStorageService } from "../../storage/recording-storage.service";
 import { StorageService } from "../../storage/storage.service";
-import { interruptAt } from "../test-support/hooks-fixture";
+import { interleaveAt, interruptAt } from "../test-support/hooks-fixture";
 import {
   ADD_ASSIGNEE,
   APPLICABLE_FORMS,
@@ -42,7 +44,6 @@ import {
   REASSIGN,
   SAVE_SUBMISSION,
   SUBMISSION,
-  SUBMIT_SUBMISSION,
   type TaskRow,
   UNBIND,
   VOID,
@@ -55,20 +56,24 @@ import {
   bindForm,
   byText,
   currentInstance,
+  decide,
   decideOn,
   errorCode,
   errorReason,
+  joinStep,
   pendingTaskOf,
   person,
   rawTasks,
   retryAdvance,
   reviewStep,
+  roleSource,
   setupWorld,
   stepOfRow,
   submission,
   submissionStatus,
   submitExisting,
   submitLeave,
+  taskStatuses,
   tasksOf,
   uploadValue,
   useWorkflow,
@@ -178,14 +183,30 @@ describe("申請中心與讀取授權", () => {
    * 明細列的複製為新單:建一張有明細的表單、送出、核准、作廢;`nextColumns` 給了就先發布新版(子欄改了)
    * 再複製。回複製出的新單的列與原本的列。
    */
+  /**
+   * 建一張有明細的單、核准後作廢,再複製為新單。`setup` 可換子欄與列,`beforeCopy` 在複製前跑
+   * (例:刪掉被引用的人)。
+   */
   async function copyArraySubmission(
     nextColumns: ReturnType<typeof column>[] | null,
+    setup: {
+      columns?: ReturnType<typeof column>[];
+      rows?: ({ rowId: string } & Record<string, unknown>)[];
+      /** 表單層多加的欄位與它們的值(連動篩選引用的欄位) */
+      fields?: FieldDef[];
+      values?: Record<string, unknown>;
+      beforeCopy?: () => Promise<void>;
+    } = {},
   ): Promise<{
     rows: { rowId: string }[];
     copied: Record<string, unknown>[];
+    clearedFields: string[];
   }> {
     const formKey = nextKey("copy_array");
-    const columns = [column("name", "text"), column("qty", "number")];
+    const columns = setup.columns ?? [
+      column("name", "text"),
+      column("qty", "number"),
+    ];
     await ok(api, world.root, CREATE_FORM, {
       input: { key: formKey, moduleKey: WORKFLOW_MODULE, name: "明細複製" },
     });
@@ -195,6 +216,7 @@ describe("申請中心與讀取授權", () => {
       formKey,
       definitionOf([
         field("title", "text"),
+        ...(setup.fields ?? []),
         field("items", "array", { columns }),
       ]),
       null,
@@ -206,12 +228,13 @@ describe("申請中心與讀取授權", () => {
     const reviewer = await reviewerOnly();
     await useWorkflow(world, key, { steps: [usersStep("one", [reviewer])] });
     await bindForm(world, key, formKey);
-    const rows = [
+    const rows = setup.rows ?? [
       { rowId: randomUUID(), name: "甲", qty: 1 },
       { rowId: randomUUID(), name: "乙", qty: 2 },
     ];
     const draft = await createDraft(api, world.applicant.token, formKey, {
       title: "有明細的單",
+      ...setup.values,
       items: rows,
     });
     const submitted = await submitExisting(world, draft);
@@ -236,6 +259,7 @@ describe("申請中心與讀取授權", () => {
         1,
       );
     }
+    await setup.beforeCopy?.();
     const copied = await ok<{
       copySubmissionToDraft: { submission: WfSubmissionRow };
     }>(api, world.applicant.token, COPY, {
@@ -248,6 +272,7 @@ describe("申請中心與讀取授權", () => {
         string,
         unknown
       >[],
+      clearedFields: copied.copySubmissionToDraft.submission.clearedFields,
     };
   }
 
@@ -745,6 +770,85 @@ describe("申請中心與讀取授權", () => {
       ).toEqual([]);
     });
 
+    it("複製為新單:明細的引用子欄重驗來源,讀不到的格清空、明細欄列進 clearedFields,其他格照原值", async () => {
+      const [kept, gone] = await Promise.all([
+        person(api, world.connection, world.kitchen, world.tenant),
+        person(api, world.connection, world.kitchen, world.tenant),
+      ]);
+      const who = column("who", "reference", {
+        source: { provider: "user", labelField: "name" },
+      });
+      const { copied, clearedFields } = await copyArraySubmission(null, {
+        columns: [column("name", "text"), who],
+        rows: [
+          {
+            rowId: randomUUID(),
+            name: "甲",
+            who: { id: String(kept.userId), label: null },
+          },
+          {
+            rowId: randomUUID(),
+            name: "乙",
+            who: { id: String(gone.userId), label: null },
+          },
+        ],
+        beforeCopy: async () => {
+          await world.connection
+            .collection("users")
+            .updateOne(
+              { _id: gone.userId },
+              { $set: { deletedAt: new Date() } },
+            );
+        },
+      });
+      expect(clearedFields).toEqual(["items"]);
+      expect(copied.map((row) => [row.name, row.who])).toEqual([
+        ["甲", expect.objectContaining({ id: String(kept.userId) })],
+        ["乙", null],
+      ]);
+    });
+
+    it("複製為新單:列內帶入的子欄保留值、不重新帶入;帶連動篩選的引用只驗讀得到,不因篩選被擋", async () => {
+      const kept = await person(
+        api,
+        world.connection,
+        world.kitchen,
+        world.tenant,
+      );
+      const who = column("who", "reference", {
+        source: {
+          provider: "user",
+          labelField: "name",
+          filter: { enabled: { var: "active_only" } },
+        },
+        prefill: { mapping: [{ sourceField: "name", fieldKey: "note" }] },
+      });
+      const { copied, clearedFields } = await copyArraySubmission(null, {
+        fields: [
+          field("active_only", "boolean", { widget: { kind: "checkbox" } }),
+        ],
+        values: { active_only: true },
+        columns: [column("note", "text"), who],
+        rows: [
+          {
+            rowId: randomUUID(),
+            note: "手寫的備註",
+            who: { id: String(kept.userId), label: null },
+          },
+        ],
+        beforeCopy: async () => {
+          // 送出後被引用的人停用了:此刻已不符篩選(enabled = true),複製時仍保留
+          await world.connection
+            .collection("users")
+            .updateOne({ _id: kept.userId }, { $set: { enabled: false } });
+        },
+      });
+      expect(clearedFields).toEqual([]);
+      expect(copied.map((row) => [row.note, row.who])).toEqual([
+        ["手寫的備註", expect.objectContaining({ id: String(kept.userId) })],
+      ]);
+    });
+
     it("複製為新單:明細只留目標版本仍有且型別相同的子欄", async () => {
       // 新版:qty 改成文字、多一個 note;name 不變
       const { copied } = await copyArraySubmission([
@@ -964,13 +1068,7 @@ describe("申請中心與讀取授權", () => {
         ownerOrgId: world.tenant,
       });
       await useWorkflow(world, nextKey("empty"), {
-        steps: [
-          reviewStep(
-            "nobody",
-            { kind: "role", roleId: String(emptyRole), placeholder: null },
-            { mode: "all" },
-          ),
-        ],
+        steps: [reviewStep("nobody", roleSource(emptyRole), { mode: "all" })],
       });
       const submitted = await submitLeave(world);
       let instance = await currentInstance(world, submitted.id);
@@ -998,7 +1096,73 @@ describe("申請中心與讀取授權", () => {
       expect(await submissionStatus(world, submitted.id)).toBe("COMPLETED");
     });
 
-    it("阻擋中被接受的駁回照樣終局:推進前中斷 → 重試推進 → rejected", async () => {
+    it("新增審核者與審核者失效並發(失效先提交、寫同一份實例)→ 新增審核者的交易寫入衝突、重跑後照常加入;兩邊的變更都在", async () => {
+      const emptyRole = await createRole(api.app, world.connection, {
+        name: nextKey("空角色並發"),
+        ownerOrgId: world.tenant,
+      });
+      const [a, b, added] = [
+        await reviewerOnly(),
+        await reviewerOnly(),
+        await reviewerOnly(),
+      ];
+      await useWorkflow(world, nextKey("add_vs_invalidate"), {
+        steps: [
+          usersStep("init", [staff(0)]),
+          usersStep("pair", [a, b], { mode: "all" }),
+          reviewStep("nobody", roleSource(emptyRole), { mode: "all" }),
+          joinStep("merge"),
+        ],
+        edges: [
+          { from: "init", to: "pair" },
+          { from: "init", to: "nobody" },
+          { from: "pair", to: "merge" },
+          { from: "nobody", to: "merge" },
+        ],
+      });
+      const submitted = await submitLeave(world);
+      await decideOn(world, staff(0), submitted.id, "APPROVE");
+      const before = await currentInstance(world, submitted.id);
+      expect(before.status).toBe("BLOCKED");
+      expect(stepOfRow(before, "nobody").plan).toEqual([]);
+      const restore = interleaveAt(
+        api,
+        "add-assignee:before-write",
+        async () => {
+          await setEnabled(world, a, false);
+        },
+      );
+      try {
+        await ok(api, world.admin.token, ADD_ASSIGNEE, {
+          input: {
+            instanceId: before.id,
+            stepKey: "nobody",
+            userId: String(added.userId),
+          },
+        });
+      } finally {
+        restore();
+      }
+      const instance = await currentInstance(world, submitted.id);
+      expect(instance.status).toBe("BLOCKED");
+      expect(stepOfRow(instance, "nobody").plan).toHaveLength(1);
+      expect(stepOfRow(instance, "pair").blocked).toBe(true);
+      expect(
+        instance.history.filter((event) => event.kind === "assignee_added"),
+      ).toHaveLength(1);
+      expect(
+        instance.history.filter(
+          (event) => event.kind === "blocked" && event.stepKey === "pair",
+        ),
+      ).toHaveLength(1);
+      expect(await taskStatuses(world.connection, instance.id)).toMatchObject({
+        "nobody-1": "pending",
+        "pair-1": "blocked",
+        "pair-2": "pending",
+      });
+    });
+
+    it("阻擋中被接受的駁回照樣終局;推進前中斷 → 整個決定回復,再駁回一次 → rejected", async () => {
       const [a, b] = [await reviewerOnly(), await reviewerOnly()];
       await useWorkflow(world, nextKey("blocked_reject"), {
         steps: [usersStep("one", [a, b], { mode: "all" })],
@@ -1022,11 +1186,13 @@ describe("申請中心與讀取授權", () => {
       } finally {
         restore();
       }
-      const stuck = await currentInstance(world, submitted.id);
-      expect(stuck.status).toBe("BLOCKED");
-      expect(stepOfRow(stuck, "one").decisions).toHaveLength(1);
-      const retried = await retryAdvance(world, stuck.id);
-      expect(retried.status).toBe("REJECTED");
+      const rolledBack = await currentInstance(world, submitted.id);
+      expect(rolledBack.status).toBe("BLOCKED");
+      expect(stepOfRow(rolledBack, "one").decisions).toHaveLength(0);
+      const again = await decide(world, a, task, "REJECT", "阻擋中駁回");
+      expect(again.result).toBe("ACCEPTED");
+      const rejected = await currentInstance(world, submitted.id);
+      expect(rejected.status).toBe("REJECTED");
       expect(await submissionStatus(world, submitted.id)).toBe("REJECTED");
     });
 
@@ -1053,33 +1219,6 @@ describe("申請中心與讀取授權", () => {
       expect(ids).toContain(brokenInstance.id);
       const healthyInstance = await currentInstance(world, healthy.id);
       expect(ids).not.toContain(healthyInstance.id);
-      // linking 超過 10 分鐘(第 3 步從未成功)也列進來
-      const draft = await createDraft(api, world.applicant.token, FORM_KEY, {
-        title: "卡在 linking",
-        days: 2,
-      });
-      const restore = interruptAt(api, "submit:instance-created");
-      try {
-        await call(api, world.applicant.token, SUBMIT_SUBMISSION, {
-          input: { id: draft.id, expectedEditVersion: draft.editVersion },
-        });
-      } finally {
-        restore();
-      }
-      const stale = await world.connection
-        .collection("workflow_instances")
-        .findOneAndUpdate(
-          { submissionId: new Types.ObjectId(draft.id) },
-          { $set: { createdAt: new Date(Date.now() - 11 * 60 * 1000) } },
-        );
-      const relisted = await ok<{
-        blockedInstances: { items: InstanceRow[] };
-      }>(api, world.admin.token, BLOCKED_INSTANCES, {
-        input: { filter: "NEEDS_ADVANCE", pageSize: 100 },
-      });
-      expect(relisted.blockedInstances.items.map((item) => item.id)).toContain(
-        String(stale?._id),
-      );
     });
   });
 

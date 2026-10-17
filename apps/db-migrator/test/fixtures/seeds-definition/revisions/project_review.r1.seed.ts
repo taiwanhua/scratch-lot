@@ -34,9 +34,25 @@ export const seed = {
         key: "finance",
         name: "財務",
         assignee: {
-          kind: "role",
-          roleId: null,
-          placeholder: "財務",
+          kind: "audience",
+          audience: {
+            mode: "match",
+            filter: {
+              op: "AND",
+              children: [
+                {
+                  field: "permission",
+                  cond: "in",
+                  value: {
+                    kind: "static",
+                    values: [
+                      "finance.approve",
+                    ],
+                  },
+                },
+              ],
+            },
+          },
         },
         mode: "all",
         allowReturn: false,

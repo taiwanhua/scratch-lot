@@ -12,7 +12,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSession } from "@/hooks/useSession";
+import { useSession } from "@/hooks/base/useSession";
 
 import type { OrgManagerErrorCode } from "../org-manager-error";
 import { ORG_MEMBER_CANDIDATES_PAGE_SIZE } from "../org-manager-types";

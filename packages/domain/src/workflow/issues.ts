@@ -13,14 +13,14 @@ export const WORKFLOW_ERROR_CODES = [
   "MODE_INVALID",
   "ASSIGNEE_KIND_UNKNOWN",
   // 審核者來源
-  "USERS_IN_SHARED",
-  "ROLE_ID_MISSING",
-  "ROLE_ID_IN_SHARED",
+  "AUDIENCE_INVALID",
+  "AUDIENCE_IN_SHARED",
   "ROLE_NOT_IN_TENANT",
-  "ROLE_PLACEHOLDER_MISSING",
+  "ORG_NOT_IN_TENANT",
   "FIELD_FORM_MISSING",
   "FIELD_MISSING",
   "FIELD_NOT_USER_REFERENCE",
+  "FIELD_NOT_ORG_REFERENCE",
   "MANAGER_LEVEL_INVALID",
   // 跳過條件
   "CHECK_FORM_UNAVAILABLE",
@@ -28,6 +28,12 @@ export const WORKFLOW_ERROR_CODES = [
   "SKIP_INVALID",
   "SKIP_UNKNOWN_FIELD",
   "SKIP_PROTECTED_FIELD",
+  // 指定組織跳過、自動通過
+  "SKIP_ORGS_INVALID",
+  "SKIP_ORGS_IN_SHARED",
+  "AUTO_APPROVE_INVALID",
+  // 逾時提醒(知會對象的來源沿用審核者的碼,`property` 指到 `cc…`)
+  "OVERDUE_INVALID",
   // 匯合節點
   "JOIN_IN_LINEAR",
   "JOIN_HAS_REVIEW_PROPS",
@@ -65,7 +71,7 @@ export interface WorkflowIssueLocation {
   stepIndex?: number;
   /** `edges[]` 的索引。 */
   edgeIndex?: number;
-  /** 關卡上的哪個屬性出錯(`assignee.roleId`、`skipWhen`…)。 */
+  /** 關卡上的哪個屬性出錯(`assignee.audience.filter.children[0].value`、`skipWhen`…)。 */
   property?: string;
   /** 跳過條件表達式樹裡的節點位置(根為空字串)。 */
   exprPath?: string;

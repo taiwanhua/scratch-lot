@@ -136,7 +136,7 @@ export const PrefillEditor = ({
                 setMapping(position, { fieldKey });
               }}
               size="small"
-              sx={{ minWidth: 140 }}
+              sx={{ flex: 1, minWidth: 0 }}
             />
             <Typography aria-hidden>←</Typography>
             <SelectField
@@ -154,7 +154,7 @@ export const PrefillEditor = ({
                 setMapping(position, { sourceField });
               }}
               size="small"
-              sx={{ minWidth: 140 }}
+              sx={{ flex: 1, minWidth: 0 }}
             />
             <Button
               variant="text"

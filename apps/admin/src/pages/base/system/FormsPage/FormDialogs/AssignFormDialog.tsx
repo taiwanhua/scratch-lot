@@ -15,9 +15,12 @@ import { FormControlLabel } from "@repo/ui/form-control-label";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { useSnackbar } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { type FormError, formErrorOf } from "@/lib/form-engine/form-errors";
+import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import {
+  type FormError,
+  formErrorOf,
+} from "@/lib/base/form-engine/form-errors";
 
 export interface AssignFormDialogProps {
   form: FormFieldsFragment;

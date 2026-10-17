@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import type { INestApplicationContext } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { MONGOOSE_MODULE_OPTIONS } from "@nestjs/mongoose/dist/mongoose.constants";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { type Connection } from "mongoose";
 
 import {
@@ -160,7 +160,7 @@ function resultOf(
  * 鎖用共用契約的隔離夾具(不依賴 db-migrator 的 update)。
  */
 describe("受管定義的最小 Nest 組裝與 CLI 子程序", () => {
-  let memoryServer: MongoMemoryServer | undefined;
+  let memoryServer: MongoMemoryReplSet | undefined;
   let uriA: string;
   let uriB: string;
   let connectionA: Connection;
@@ -169,13 +169,13 @@ describe("受管定義的最小 Nest 組裝與 CLI 子程序", () => {
   beforeAll(async () => {
     let baseUri = process.env[MONGODB_URI_ENV];
     if (!baseUri) {
-      memoryServer = await MongoMemoryServer.create();
+      memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       baseUri = memoryServer.getUri();
     }
     uriA = buildDatabaseUri(baseUri, "cookhome-test-seed-cli-a");
     uriB = buildDatabaseUri(baseUri, "cookhome-test-seed-cli-b");
-    seedDatabase(uriA);
-    seedDatabase(uriB);
+    await seedDatabase(uriA);
+    await seedDatabase(uriB);
     connectionA = await mongoose.createConnection(uriA).asPromise();
     connectionB = await mongoose.createConnection(uriB).asPromise();
     await holdSeedLock(connectionA);

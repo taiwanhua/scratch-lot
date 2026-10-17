@@ -5,6 +5,7 @@ import {
   APPROVAL_MODES,
   type ApprovalMode,
   type ReviewStepDef,
+  type WorkflowIssue,
 } from "@repo/domain/workflow";
 import { Button } from "@repo/ui/button";
 import { FormControlLabel } from "@repo/ui/form-control-label";
@@ -14,13 +15,14 @@ import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { JsonPreview } from "@/components/JsonPreview";
-import { ExpressionPicker } from "@/components/form-engine/ExpressionPicker/ExpressionPicker";
-import { conditionFieldsOf } from "@/lib/form-engine/expression-options";
-import type { DropTarget } from "@/lib/workflow/flow-ops";
+import type { DropTarget } from "@/lib/base/workflow/flow-ops";
 
 import { AssigneeSourcePicker } from "./AssigneeSourcePicker";
-import type { CatalogForm, CatalogRole } from "./useDesignerCatalog";
+import { PeopleCcSection } from "./PeopleCcSection";
+import { StepAutoApproveSection } from "./StepAutoApproveSection";
+import { StepOverdueSection } from "./StepOverdueSection";
+import { StepSkipSection } from "./StepSkipSection";
+import type { CatalogForm } from "./useDesignerCatalog";
 
 export interface MoveOption {
   value: string;
@@ -35,14 +37,13 @@ export interface StepEditorProps {
   isKeyLocked: boolean;
   isShared: boolean;
   forms: readonly CatalogForm[];
-  roles: readonly CatalogRole[];
   /** 「檢查用表單」與它目前版本的欄位;跳過條件與「表單欄位」來源的欄位選項來自它 */
   checkFormKey: string | null;
   checkFormFields: readonly FieldDef[] | null;
   /** 唯讀檢視舊版本:看得到、改不了,也沒有關卡操作 */
   isReadonly?: boolean;
-  /** 這一關的檢查器錯誤 / 警告 */
-  issues: readonly string[];
+  /** 這一關的檢查器錯誤 / 警告(逾時提醒的時數錯誤另外標在欄位上) */
+  issues: readonly WorkflowIssue[];
   /** 主線上、還沒分流過的關卡才能「從此關分流」 */
   canFork: boolean;
   /** 在分支裡的關卡可以「多加一條分支」 */
@@ -56,33 +57,22 @@ export interface StepEditorProps {
   onDelete: () => void;
 }
 
-/**
- * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`):名稱、key、審核者來源(四種)、會簽、
- * 跳過條件(6a 表達式選擇器,欄位來自「檢查用表單」)、允許退回;以及加關卡 / 從此關分流 / 移動 / 刪除。
- * 移動也有按鈕版(上移、下移、移到某條分支),拖拉之外鍵盤也做得到。
- */
-/** 欄位下拉沒東西可選時說明為什麼:沒選檢查用表單 / 表單還在載入 / 選了但沒有可用欄位。 */
-const emptyFieldsReasonOf = (
-  checkFormKey: string | null,
-  checkFormFields: readonly FieldDef[] | null,
-  usableCount: number,
-): "needsCheckForm" | "checkFormLoading" | "noUsableFields" | null => {
-  if (checkFormKey === null) {
-    return "needsCheckForm";
-  }
-  if (checkFormFields === null) {
-    return "checkFormLoading";
-  }
-  return usableCount === 0 ? "noUsableFields" : null;
-};
+/** 逾時提醒的時數錯誤(`OVERDUE_INVALID`):標在時數欄位上,設計器擋存草稿。 */
+const isOverdueHoursIssue = (issue: WorkflowIssue): boolean =>
+  issue.code === "OVERDUE_INVALID";
 
+/**
+ * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`;Figma BS-02a / c、BS-03):名稱、key、審核者來源(三種)、
+ * 會簽、允許退回;「跳過這一關」(申請人屬於這些組織 / 符合條件)、自動通過、逾時提醒、知會;
+ * 以及加關卡 / 從此關分流 / 移動 / 刪除。移動也有按鈕版(上移、下移、移到某條分支),拖拉之外鍵盤也做得到。
+ * 呼叫端以關卡 key 當 `key` 掛載(換關卡 = 重掛,區塊內的勾選狀態不帶到別關)。
+ */
 export const StepEditor = ({
   step,
   onChange,
   isKeyLocked,
   isShared,
   forms,
-  roles,
   checkFormKey,
   checkFormFields,
   isReadonly = false,
@@ -98,13 +88,13 @@ export const StepEditor = ({
   onDelete,
 }: StepEditorProps) => {
   const t = useTranslations("admin.workflows.step");
-  const skipFields = conditionFieldsOf(checkFormFields ?? [], null, true);
-  const emptyReason = emptyFieldsReasonOf(
-    checkFormKey,
-    checkFormFields,
-    skipFields.length,
-  );
-  const emptyFieldsLabel = emptyReason === null ? undefined : t(emptyReason);
+  const messages = [
+    ...new Set(
+      issues
+        .filter((issue) => !isOverdueHoursIssue(issue))
+        .map((issue) => issue.message),
+    ),
+  ];
 
   return (
     <Stack
@@ -135,13 +125,16 @@ export const StepEditor = ({
         }}
       />
       <AssigneeSourcePicker
+        purpose="approver"
         value={step.assignee}
         onChange={(assignee) => {
-          onChange({ ...step, assignee });
+          if (assignee !== null) {
+            onChange({ ...step, assignee });
+          }
         }}
+        stepName={step.name}
         isShared={isShared}
         forms={forms}
-        roles={roles}
         checkFormKey={checkFormKey}
         checkFormFields={checkFormFields}
         isDisabled={isReadonly}
@@ -172,38 +165,42 @@ export const StepEditor = ({
           />
         }
       />
-      {isReadonly ? (
-        <Stack spacing={0.5} role="group" aria-label={t("skipWhen")}>
-          <Typography variant="body2">{t("skipWhen")}</Typography>
-          {step.skipWhen === undefined || step.skipWhen === null ? (
-            <Typography variant="body2" color="text.secondary">
-              {t("skipWhenUnset")}
-            </Typography>
-          ) : (
-            <JsonPreview value={step.skipWhen} label={t("skipWhen")} />
-          )}
-        </Stack>
-      ) : (
-        <>
-          {checkFormKey === null && (
-            <Typography variant="caption" color="text.secondary">
-              {t("skipNeedsCheckForm")}
-            </Typography>
-          )}
-          <ExpressionPicker
-            label={t("skipWhen")}
-            value={step.skipWhen ?? undefined}
-            fields={skipFields}
-            usage="condition"
-            formKey={checkFormKey ?? ""}
-            {...(emptyFieldsLabel !== undefined && { emptyFieldsLabel })}
-            onChange={(skipWhen) => {
-              onChange({ ...step, skipWhen });
-            }}
-          />
-        </>
-      )}
-      {issues.map((message) => (
+      <StepSkipSection
+        step={step}
+        onChange={onChange}
+        isShared={isShared}
+        checkFormKey={checkFormKey}
+        checkFormFields={checkFormFields}
+        isReadonly={isReadonly}
+      />
+      <StepAutoApproveSection
+        step={step}
+        onChange={onChange}
+        isReadonly={isReadonly}
+      />
+      <StepOverdueSection
+        step={step}
+        onChange={onChange}
+        isShared={isShared}
+        checkFormFields={checkFormFields}
+        hasHoursError={issues.some((issue) => isOverdueHoursIssue(issue))}
+        isReadonly={isReadonly}
+      />
+      <PeopleCcSection
+        title={t("cc.title")}
+        hint={t("cc.hint")}
+        value={step.cc ?? null}
+        onChange={(cc) => {
+          onChange({ ...step, cc });
+        }}
+        stepName={step.name}
+        isShared={isShared}
+        forms={forms}
+        checkFormKey={checkFormKey}
+        checkFormFields={checkFormFields}
+        isReadonly={isReadonly}
+      />
+      {messages.map((message) => (
         <Typography key={message} variant="caption" color="error">
           {message}
         </Typography>

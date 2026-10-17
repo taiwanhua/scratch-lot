@@ -263,6 +263,7 @@ export const workflowDesignWorld = (
         steps: base?.steps ?? [],
         edges: base?.edges ?? null,
         checkFormKey: base?.checkFormKey ?? null,
+        cc: base?.cc ?? null,
         changelog: null,
         publishedAt: null,
         publishedBy: null,
@@ -301,6 +302,7 @@ export const workflowDesignWorld = (
         ...(input.definition.checkFormKey !== undefined && {
           checkFormKey: input.definition.checkFormKey,
         }),
+        ...(input.definition.cc !== undefined && { cc: input.definition.cc }),
         draftRevision: draft.draftRevision + 1,
       });
       return HttpResponse.json({

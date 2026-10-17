@@ -9,6 +9,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tabs } from "@repo/ui/tabs";
 import { Typography } from "@repo/ui/typography";
 
+import { detailHeaderActionsSx, detailHeaderTitleSx } from "../designer-layout";
 import { FlowVersionViewer } from "./WorkflowDesigner/FlowVersionViewer";
 import { WorkflowDesigner } from "./WorkflowDesigner/WorkflowDesigner";
 import { AssignWorkflowDialog } from "./WorkflowDialogs/AssignWorkflowDialog";
@@ -22,10 +23,17 @@ export interface WorkflowDetailPanelProps {
   isForkRequested: boolean;
   onChanged: () => void;
   onForked: (workflowKey: string) => void;
+  /** 編輯彈窗開著(網址 `?edit=<key>`,由頁面保管) */
+  isEditing: boolean;
+  /** 按「編輯」:頁面把 `?edit=<key>` 寫進網址 */
+  onEdit: (key: string) => void;
+  /** 關掉編輯彈窗(取消、存完) */
+  onEditClose: () => void;
 }
 
 type DetailTab = "design" | "versions";
-type OpenDialog = "edit" | "fork" | "assign" | null;
+/** 不進網址的彈窗(fork、分派);編輯彈窗在網址 `?edit=`(頁面保管) */
+type OpenDialog = "fork" | "assign" | null;
 
 /**
  * 流程管理右欄(Spec 6b §8 畫面 2–5 的右側):流程資料、設計 / 版本兩個頁籤,以及改名稱、
@@ -36,6 +44,9 @@ export const WorkflowDetailPanel = ({
   isForkRequested,
   onChanged,
   onForked,
+  isEditing,
+  onEdit,
+  onEditClose,
 }: WorkflowDetailPanelProps) => {
   const t = useTranslations("admin.workflows.detail");
   const [tab, setTab] = useState<DetailTab>("design");
@@ -57,7 +68,8 @@ export const WorkflowDetailPanel = ({
           spacing={1}
           sx={{ alignItems: "flex-start", flexWrap: "wrap" }}
         >
-          <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+          {/* 標題欄以內容寬為底:放不下時操作鈕整組換到下一列,不把標題擠扁(`designer-layout.ts`) */}
+          <Stack spacing={0.5} sx={detailHeaderTitleSx}>
             <Typography variant="h6" component="h1">
               {workflow.name}
             </Typography>
@@ -77,42 +89,39 @@ export const WorkflowDetailPanel = ({
                 </Typography>
               )}
           </Stack>
-          {workflow.abilities.canEdit && (
-            <Button
-              variant="text"
-              onClick={() => {
-                setDialog("edit");
-              }}
-            >
-              {t("edit")}
-            </Button>
-          )}
-          {workflow.abilities.canFork && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("fork");
-              }}
-            >
-              {t("fork")}
-            </Button>
-          )}
-          {workflow.abilities.canAssign && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setDialog("assign");
-              }}
-            >
-              {t("assign")}
-            </Button>
-          )}
+          <Stack direction="row" spacing={1} sx={detailHeaderActionsSx}>
+            {workflow.abilities.canEdit && (
+              <Button
+                variant="text"
+                onClick={() => {
+                  onEdit(workflow.key);
+                }}
+              >
+                {t("edit")}
+              </Button>
+            )}
+            {workflow.abilities.canFork && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("fork");
+                }}
+              >
+                {t("fork")}
+              </Button>
+            )}
+            {workflow.abilities.canAssign && (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setDialog("assign");
+                }}
+              >
+                {t("assign")}
+              </Button>
+            )}
+          </Stack>
         </Stack>
-        {workflow.hasRolePlaceholder && !workflow.abilities.canAssign && (
-          <Typography variant="body2" color="warning.main">
-            {t("placeholderHint")}
-          </Typography>
-        )}
         {workflow.assignments.length > 0 && (
           <Typography variant="body2" color="text.secondary">
             {t("assignedTo", {
@@ -170,14 +179,14 @@ export const WorkflowDetailPanel = ({
           />
         </Box>
       </Stack>
-      {dialog === "edit" && (
+      {isEditing && (
         <WorkflowNameDialog
           workflow={workflow}
           onClose={() => {
-            setDialog(null);
+            onEditClose();
           }}
           onSaved={() => {
-            setDialog(null);
+            onEditClose();
             onChanged();
           }}
         />

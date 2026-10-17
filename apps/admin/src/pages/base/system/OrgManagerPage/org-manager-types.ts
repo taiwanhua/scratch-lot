@@ -14,13 +14,6 @@ export type TenantModuleOption =
 /** 成員清單的一列(`orgMembers` 的 item;欄位語意見 `docs/modules/org-manager.md`「api 介面」)。 */
 export type OrgMemberRow = OrgMembersQuery["orgMembers"]["items"][number];
 
-/** 右側資料區的兩個頁籤(「成員」只在持有 `view-members` 時出現)。 */
-export type OrgDetailTab = "detail" | "members";
-
-/** `@repo/ui/tabs` 回報的是字串(它不認得這一頁的頁籤有哪些),收窄回型別。 */
-export const isOrgDetailTab = (value: string): value is OrgDetailTab =>
-  value === "detail" || value === "members";
-
 /** 成員清單每頁筆數。 */
 export const ORG_MEMBERS_PAGE_SIZE = 10;
 
@@ -38,7 +31,6 @@ export interface OrgActionAbility {
   canToggleEnabled: boolean;
   canMove: boolean;
   canDelete: boolean;
-  canViewMembers: boolean;
   canAddMembers: boolean;
   canProvision: boolean;
   canRevokeProvision: boolean;

@@ -4,7 +4,7 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
-import { roleOptionLabel } from "@/lib/role-options";
+import { roleOptionLabel } from "@/lib/base/role-options";
 
 import type { RoleOption } from "./assignable-roles";
 

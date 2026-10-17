@@ -24,15 +24,17 @@ admin (nginx / Cloud Run) ├─> api (NestJS / Cloud Run) ─> MongoDB
 
 ### 資源清單
 
-| 項目                                             | 識別正本 / 建立位置                                   |
-| ------------------------------------------------ | ----------------------------------------------------- |
-| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用 |
-| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`            |
-| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                             |
-| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                              |
-| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                       |
-| front / Storybook                                | 專案自己的 Vercel 設定與網域                          |
-| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                |
+| 項目                                             | 識別正本 / 建立位置                                                                          |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| repo、看板                                       | `deploy/project/github.json`;看板由專案另建或明確停用                                        |
+| GCP、region、registry、WIF、部署 service account | `deploy/project/cloud.json` 啟用後的 `gcp`                                                   |
+| Cloud Run 服務、API URL、Secret 名稱、seed 帳號  | `cloud.json` 的各環境設定                                                                    |
+| API 明文變數、bucket、cookie 與後台網址          | `deploy/env/<環境>.yaml`                                                                     |
+| 真正密碼、連線字串與金鑰                         | Secret Manager;不進 repo 或文件                                                              |
+| 排程呼叫(Cloud Scheduler 工作、呼叫身分 SA)      | 專案自己的 GCP 設定;步驟見[Cloud Scheduler](#cloud-scheduler排程任務)                        |
+| 即時通道 Worker、Cloudflare 帳號、兩把密鑰名稱   | `cloud.json` 各環境的 `realtime`(可省略 = 停用);步驟見[即時通道](#即時通道cloudflare-worker) |
+| front / Storybook                                | 專案自己的 Vercel 設定與網域                                                                 |
+| DNS、寄件網域、資料庫與預算                      | 專案自己的外部服務設定                                                                       |
 
 值的用途與未設行為見 `docs/env-registry.md`,建立與驗證狀態依[初始化索引](project-initialization.md)記在 issue/PR。下文的 `project`、`example.invalid`、`<...>` 是操作示例,須換成該專案實際輸入。
 
@@ -95,6 +97,31 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 4. 依既有 PR 與環境流程驗收。各次合併使用 merge commit,以 `git merge-base --is-ancestor <底座commit> <結果commit>` 核對 ancestry;不得用 `merge -s ours`、squash 或 cherry-pick 代替向下同步。
 5. 等待期間若 `main` 前進,從新 `main` **重建升級分支**,重新合併同一底座版本並驗證專案保留;不對含底座 merge 的分支跑一般 rebase,也不把 main 合入舊升級分支。
 
+**資料預檢**:升級後的 `update`(與 `data` reset)在執行任何 migration / seed 之前,會擋下發布與退役交易化之前的舊版留下的三種中斷狀態(停在 `publishing`、`published` 卻不是目前版本、目前版本指到非 `published` 的版本),處理見下節。
+
+#### 舊版留下的發布 / 退役中斷
+
+底座的表單 / 流程發布與退役已是交易(ADR-0013),api 不再有「重試發布」;不清庫升級的引用專案,庫裡可能還留著舊版的中斷資料。預檢(`apps/db-migrator/src/update/interrupted-lifecycles.ts`)逐筆列出並附 `_id`,不自動修。以 mongosh 連上該環境的資料庫,依種類處理後重跑 `update`(表單:`forms` / `form_versions` / `formKey`;流程:`workflows` / `workflow_versions` / `workflowKey`;以下以表單為例):
+
+1. **停在 `publishing`**:改回草稿,之後在畫面重新發布(同一張表單此時不會另有草稿)。
+   `db.form_versions.updateOne({ _id: ObjectId("<版本 _id>"), status: "publishing" }, { $set: { status: "draft", version: null, changelog: null } })`
+2. **`published` 卻不是目前版本**(切換到一半):其餘已發布的版本改退役,目前版本指向它。
+   `db.form_versions.updateMany({ formKey: "<key>", status: "published", version: { $ne: <版號> } }, { $set: { status: "retired" } })`
+   `db.forms.updateOne({ _id: ObjectId("<身分 _id>") }, { $set: { currentVersion: <版號> } })`
+3. **目前版本指到非 `published` 的版本**(退役做到一半):清掉目前版本。
+   `db.forms.updateOne({ _id: ObjectId("<身分 _id>") }, { $set: { currentVersion: null } })`
+
+處理完以同一指令重跑,預檢通過才會往下執行;處理記錄寫進升級 PR。
+
+**升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分四節,任一節有項目即 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。四節皆為 0 才 exit 0,即「已去除重複」。第 2–4 節是靜態掃描,不執行專案程式;各節涵蓋與漏報 / 誤報範圍如下(報告頁尾也附「限制」):
+
+1. **非專案、非混合路徑與新底座仍不同**:`common`、`published-data`、`unknown` 三類的差異逐檔列出並標類別(沒回收到、漂移或改寫已發布資料)。混合路徑不列,另依下段核對。
+2. **客製替換登記**:`page-replacements.ts` 的 target、help `project/replacements/` 的檔、專案 `forms` 帶 options / pageOverrides 的那幾筆。其他登記方式不在範圍;spread、變數等讀不懂的寫法照列為「無法靜態解析」。
+3. **底座與專案 seed 同 collection + key**:key 只解析字串、常數(含 seed 執行器定義的常數)、`${常數}` 樣板、`permissionKey()`,以及 `formModuleDeclaration()` 依 helper 本身宣告推導的頁面與權限 key。其他寫法在專案端列為「無法解析的 key」,底座端只計數。collection 讀不出時只比 key,可能誤報。每模組自動產生的 wildcard 與 data_scope_targets 不另比,由模組 key 涵蓋。未被 import 的 revisions 快照不算目前宣告,其中的 key 不比。正式組裝 `seeds/registry.ts` 在載入時就拒絕底座與專案撞 key,這部分由 CI 把關。
+4. **專案路徑與底座同名或同匯出名稱**:只比 `project/` 路徑的程式檔(不含 STRUCT-12 的成對固定來源、專案值與 seed / migration)與底座 common 程式檔的檔名(不含 `index`)及具名匯出(不含 default)。常見名稱可能誤報;改了名的重複抓不到。
+
+verify 不涵蓋的仍由人執行並記在 PR:混合路徑以 `inspect --from <新底座 commit> --to HEAD` 的 `mixed` 清單逐段核對,底座段落與新底座一致、只剩專案段落;seed 所有權轉移時,已部署環境的模組與權限資料不重複、不遺失(見[發布前環境與資料核對](#發布前環境與資料核對));Figma 在專案 Screens 跑稽核腳本,本地草稿元件、指向本地草稿的實例與標示本輪草稿的節點皆為 0;專案與底座 CI 全綠。
+
 升級 PR 記錄底座來源、tag、完整 commit、專案保留項與驗收結果。首次接軌須確認中性化沒有帶走引用專案的品牌、業務與設定;相對原 main 的程式差異只包含明列的共用修正。資料轉換依既有 migration/update,不以 reset 代替升級。底座 tag 以獨立 upstream ref 保存,不覆蓋引用專案自己的同名 tag。
 
 PR 另列新增能力、客製治理頁與 API/權限的相容性,以及 wildcard 對種子模板、既有租戶副本、個別角色的不同影響。Figma Library 接受與品牌補套屬同次驗收;沒有來源/scope 變更時沿用有效證據,不重跑首次全量搬遷。agent 完成整合、更新採用記錄並檢查 Base ancestry 後,使用既有 gh 開 draft PR;同 head 已有 PR 就更新它,由使用者審查接受與發布。
@@ -103,9 +130,13 @@ PR 另列新增能力、客製治理頁與 API/權限的相容性,以及 wildcar
 
 先用 `node scripts/base-sync/run.mjs inspect --project <專案路徑> --from <基準commit> --to <目標commit>` 看完整差異與維護歸屬。共用路徑只是候選,仍須檢查是否含品牌、業務耦合、資料假設或客製行為,不等於已同意回收。
 
-選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、混合或未知路徑、merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
+選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、未知路徑、已發布 migration/seed 快照或 merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
 
-agent 核對 exact diff、處理相容性並測試後,沿現有 PR 流程交底座審查。PR 記錄來源 repo/commit、通用性與驗證;接受回收不等於立即同步,須等納入底座正式 tag/Release,再向下升級。
+混合檔(固定組裝入口、共用文件等)要回收時,agent 先在 commit 裡把它整理成**只含底座段落**,再以 `--accept-mixed <路徑>` 逐檔明列(可重複)。工具只接受明列的混合檔,並把它們的差異列進報告的 `mixedReview`(「混合檔:只含底座段落,請審查」);未明列的混合檔仍拒絕,明列的檔不在差異內、實際不是混合檔或是二進位檔也報錯(二進位無法逐段審查,須拆出人工處理)。審查時逐段確認這些差異沒有專案值。
+
+規格與 Figma 工作檔一律放進實作的 repo,不留在 repo 外:規格放 `docs/tmp/spec-<主題>.md`,Figma 重建腳本、稽核腳本與節點表放 `docs/tmp/figma-<主題>/`。從最新 `origin/main` 開 `feat/<主題>-spec` 分支 → commit → push 分支備份 → 依畫面修規格都在這條分支更新 → 定稿後 PR 走 dev → staging → main;實作的整合分支從合併後的 main 開出。該輪完工後規格與工作檔從 `docs/tmp/` 移除:節點表搬進 [FIGMA-09](standards/general/figma.md),做法寫進正式文件。
+
+agent 核對 exact diff、處理相容性並測試後,沿現有 PR 流程交底座審查。PR 記錄來源 repo/commit、通用性與驗證,以及 `--accept-mixed` 明列的混合檔;接受回收不等於立即同步,須等納入底座正式 tag/Release,再向下升級。
 
 ### 發布前環境與資料核對
 
@@ -140,10 +171,10 @@ project-settings             專案設定、發布前核對與底座同步 CLI �
 figma-sync                   建置 UI / project-config + Figma 同步離線測試(每次都跑,不碰 Figma)
 prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產物與 schema 一致(GQL-05)
          ├─ lint-typecheck   turbo run lint check-types
-         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自一個 MongoDB service container
+         ├─ test-api-1 / 2   api 的 jest 以 --shard=1/2、2/2 分兩片,各自由 jest globalSetup 起單一成員 replica set
          ├─ test-admin-1 / 2 admin 的 jest 同樣分兩片(先 turbo build admin 的依賴)
          ├─ test-others      api / admin 以外的 turbo run test(domain / ui / i18n / logger / db-migrator …)
-         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打)
+         └─ build            turbo run build(front 受影響時先 build 並啟動 api,給 ISR 預渲染打;Mongo 以 docker run 起單一成員 replica set)
 以上全部 ─→ verify           總結:任一 job failure / cancelled 就紅,skipped 算過
 ```
 
@@ -155,6 +186,9 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **Figma 同步**:`figma-sync` 獨立於 `prepare`,先建置 `@repo/ui` 與 `@repo/project-config`,再跑本機外掛與舊工具的離線測試(`scripts/figma-local/*.test.mjs`、`scripts/figma-sync/*.test.mjs`);結果納入 `verify`。CI 不讀 Figma token、不操作設計檔;離線通過不代表 Library 已發布或專案已接受更新。實際操作見 [toolbox](agents/toolbox.md#figma-品牌同步)。
 - **逾時**:`prepare` 10 分、`project-settings` / `verify` 5 分、`figma-sync` 15 分、`test-others` 30 分,其餘 20 分。
 - `build` job 起 api 時給假的 `JWT_SECRET`(api 缺它就啟動失敗)。
+- **MongoDB 一律是 replica set**(交易需要,ADR-0013):api / db-migrator 的測試由 jest globalSetup 起單一成員 `MongoMemoryReplSet`;`build` job 以 `docker run mongo:<版本> --replSet` 起並等到選出 PRIMARY。GitHub 的 service container 不能帶啟動參數,所以不用它。mongod 二進位以 `actions/cache` 快取 `~/.cache/mongodb-binaries`(key 跟 lockfile)。
+- **`build` job 的 MongoDB 容器**:容器沒起來(一啟動就退出,或 90 秒內沒選出 PRIMARY)時,該步驟印出 `docker inspect` 的狀態與退出碼(`status` / `exitCode` / `oomKilled` / `error`)和 `docker logs mongo`(收在「mongo 容器狀態與 logs」群組),先 `docker rm -f mongo` 再重起,最多 3 次;3 次都失敗才紅。查原因時展開各次的群組。
+- **MongoDB 版本**:CI 的 `build` job(`ci.yml` 的 `MONGO_IMAGE`)與本機 `docker-compose.yml` 用同一個固定 patch 版本的 `mongo` image(目前 `mongo:8.3.13`),升級時兩處一起改。jest 測試的 `MongoMemoryReplSet` 用 mongodb-memory-server 內建的預設 mongod 版本(`mongodb-memory-server@11.2.0` 為 8.2.6),跟著 lockfile 升級,與上述 image 不同步;兩者同屬 8.x,但小版本可能不同(8.3 對 8.2)。
 
 ### CD(deploy.yml)
 
@@ -168,16 +202,17 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **image**:tag = `<完整 Git SHA>-<環境>-<Actions run ID>-<attempt>`,每次 build 使用新 tag,不會移走其他環境或先前重跑所用 digest 的 tag。admin 的 `VITE_GRAPHQL_ENDPOINT` 由設定的 `apiUrl` 加 `/graphql`,以 `--build-arg` 烘入。舊版短 SHA tag 可由 preflight 解析,但已因重建失去 tag 的舊 digest 仍須人工查證,不可視為已核對。
 - **api 的環境變數**:非機密整包來自 `deploy/env/<環境>.yaml`(`--env-vars-file`),機密來自 Secret Manager(`--set-secrets`);見四、。
 - **部署成功後執行一次 `update`**:api 或 db-migrator 任一受影響就執行,只改專案 seed、快照或 migration 也會更新資料。runner 安裝 db-migrator、API 與其依賴,建置同一 checkout 的 API CLI 並確認可啟動,再讀該環境的資料庫與 root 初始密碼 Secret,執行 `pnpm --filter @repo/db-migrator run update`。完整順序、結果與失敗處理見下方「設定與資料更新」。
+- **即時通道(Cloudflare Worker)**:`cloud.json` 該環境寫了 `realtime` 才部署,而且每次都部署(Worker 沒有可比對的 image tag;`wrangler deploy` 冪等、免費方案不計次)。從 Secret Manager 讀兩把密鑰,以 `wrangler deploy --name <Worker> --secrets-file` 隨這一版上傳成 Wrangler secret;api 同時掛同兩把。見四、「即時通道」。
 - **front 不走 deploy.yml**:Vercel 在分支 push 時自動建置(`main` → production、`staging` / `dev` → 各自的分支網域);要不靠 commit 重建用 Deploy Hook(見四、「Vercel 補充設定」)。
 
 ### 專案部署設定(deploy/project)
 
 deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩份 JSON;workflow 只負責讀取、驗證與接線。換成另一個專案時改這兩份檔,不改 workflow。
 
-| 檔案                         | 內容                                                                                                                                                                              |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deploy/project/github.json` | `expectedRepository`(owner/repo 的唯一正本)、`projectStatus`(看板是否啟用、project 與 Status 欄位的 ID、十個狀態選項的 ID)                                                        |
-| `deploy/project/cloud.json`  | `gcp`(專案、區域、Artifact Registry、WIF provider、部署用 service account)、`environments.dev / staging / production`(api / admin 服務名、API 網址、seed 帳號與信箱、Secret 名稱) |
+| 檔案                         | 內容                                                                                                                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy/project/github.json` | `expectedRepository`(owner/repo 的唯一正本)、`projectStatus`(看板是否啟用、project 與 Status 欄位的 ID、十個狀態選項的 ID)                                                                                                                                            |
+| `deploy/project/cloud.json`  | `gcp`(專案、區域、Artifact Registry、WIF provider、部署用 service account)、`environments.dev / staging / production`(api / admin 服務名、API 網址、seed 帳號與信箱、Secret 名稱;可省略的 `realtime`:Worker 名稱、Cloudflare 帳號 id、兩把即時通道密鑰的 Secret 名稱) |
 
 - **只放非機密設定與 Secret「名稱」**;Secret 的值仍在 Secret Manager / GitHub Secrets。api 的非機密執行期變數仍只在 `deploy/env/<環境>.yaml`,不複製到這裡。
 - **讀取器**:`scripts/project-settings/config.mjs` 是唯一的讀取 / 驗證模組,CLI 是 `read-config.mjs`,只用 Node 內建模組(不需先 `pnpm install`)。兩個入口:
@@ -203,12 +238,13 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 
 ### 其他 workflow
 
-| workflow                                 | 觸發                                             | 做什麼                                                                                                                                             |
-| ---------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Reset DB**(`reset-db.yml`)             | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                            |
-| **E2E**(`e2e.yml`)                       | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫是拋棄式 service container,不碰任何環境與 Secret;時機見 TEST-05 |
-| **Docs**(`docs.yml`)                     | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                            |
-| **Project Status**(`project-status.yml`) | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                         |
+| workflow                                           | 觸發                                             | 做什麼                                                                                                                                                              |
+| -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Reset DB**(`reset-db.yml`)                       | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **E2E**(`e2e.yml`)                                 | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
+| **Docs**(`docs.yml`)                               | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
+| **Project Status**(`project-status.yml`)           | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
+| **Print Agent Release**(`print-agent-release.yml`) | 只能手動;production 只能從 `main`                | 列印代理程式四平台建置 → 上傳該環境私有 bucket `print-agent/<版本>/` → 更新 `manifest.json`、保留 3 版;見四、「列印代理程式發布」                                   |
 
 ### Release 步驟
 
@@ -269,6 +305,14 @@ feat 一律從 `main` 切,而 `dev` / `staging` 各自往前走一條線;同一�
 docker compose up -d                  # 日常開發:只起 MongoDB
 docker compose --profile full up -d   # 部署前驗證:mongo + api + admin 整套容器
 ```
+
+本機 mongo 是單一成員 replica set(api 的交易需要,ADR-0013),名稱 = Compose 專案名(`COMPOSE_PROJECT_NAME`,不設 = 資料夾名稱)。第一次起來由 healthcheck 初始化,選出 PRIMARY 才算健康(`docker compose ps` 顯示 `healthy`)。連線字串固定帶 `?directConnection=true&replicaSet=<專案名>`:成員位址登記為容器內的 `localhost:27017`,直接連才不受主機埠影響;`replicaSet` 讓連錯專案的 mongo 直接失敗。
+
+**從單節點升級**(之前起過舊版 compose 的本機環境):
+
+1. `docker compose up -d`:設定變了,Compose 會重建 `mongo` 容器;`mongo-data` volume 保留,資料都在。
+2. 等 `docker compose ps` 顯示 `healthy`(第一次會執行 `rs.initiate`)。
+3. `apps/api/.env` 的 `MONGODB_URI` 補上 `?directConnection=true&replicaSet=<專案名>`(範本見 `apps/api/.env.example`),重啟 api。沒補時交易會失敗,主機埠不是 27017 時還會連到別的容器。
 
 正本:`docker-compose.yml`
 
@@ -354,7 +398,7 @@ gh workflow run "Reset DB" --ref dev -f environment=dev -f mode=data -f confirma
 本機先依[設定與資料更新](#設定與資料更新)完成 CLI 建置並準備 `ROOT_ADMIN_*`,再執行:
 
 ```bash
-RESET_ALLOW_ENV=dev MONGODB_URI=mongodb://127.0.0.1:27017/project-dev \
+RESET_ALLOW_ENV=dev MONGODB_URI="mongodb://127.0.0.1:27017/project-dev?directConnection=true&replicaSet=<專案名>" \
   pnpm --filter @repo/db-migrator run reset --environment=dev --mode=data --confirm=reset:dev:project-dev:data
 ```
 
@@ -511,6 +555,132 @@ gcloud storage buckets describe gs://project-assets-dev --format="value(cors_con
 **驗證**(需要 Cloud Run 的執行身分,本地做不到):部署後以 GraphQL 要一張上傳票 → 用該網址 PUT 一張圖 → 讀回簽名網址能開。
 
 正本:`apps/api/src/storage/`、`deploy/env/<環境>.yaml`、ADR-0010
+
+### Cloud Scheduler(排程任務)
+
+api 的排程任務由**每個環境一個** Cloud Scheduler 工作驅動:每 15 分鐘以 OIDC token `POST <api-url>/internal/scheduled-jobs/run`,api 依程式裡的登記判斷哪些工作到期並執行。deploy.yml 不建立或更新這個工作;建一次即可,之後部署不必動它。底座三環境都沒有建立,`SCHEDULER_*` 未設時端點拒絕所有呼叫(403),排程等於關閉。
+
+- **登記工作**:功能模組(底座或專案)匯入 `ScheduledJobsModule`,在 `onModuleInit` 以 `ScheduledJobRegistry.registerScheduledJob({ key, every, handler })` 登記;`every` 是 `"15m"`、`"1h"` 或 `"daily@HH:mm"`。key 全域唯一,重複或頻率寫錯 api 啟動即失敗。
+- **到期判斷**:`15m` / `1h` 以 UTC 對齊區間(:00 / :15 / :30 / :45、整點),同一區間只跑一次,錯過的區間不補。`daily@HH:mm` 依各租戶時區(`orgs.settings.timezone`,未設用預設時區)換算當地 HH:mm;當地時刻過後 6 小時內的呼叫都算到期(錯過幾次呼叫仍補跑一次),超過就等下一天。handler 收到這次要處理的租戶(含根組織 `tenantId = null`,不含停用的租戶),時點相同的租戶併成一次。
+- **冪等**:每個 `(key, scheduledFor)` 在 `scheduled_job_runs` 只能插入一筆,插入成功的那次呼叫才執行(`docs/data-model.md`「排程任務執行紀錄」)。Scheduler 重送或多個 instance 同時收到都不會重複執行;失敗的時點不重跑。個別工作失敗、或某個工作讀寫執行紀錄時資料庫出錯,端點仍回 200,同一輪其他工作照跑,結果看回應 body、執行紀錄與 Cloud Run log。
+- **執行時間**:一次呼叫依序跑完所有到期工作,受 Cloud Run 300 秒請求逾時與 Scheduler 的 `--attempt-deadline=300s` 限制,**所有到期 handler 合計須遠小於 300 秒**;量大的工作分批處理,下一次呼叫再接續。被逾時中止或 instance 當掉時紀錄停在 `running`,`startedAt` 超過 15 分鐘後由之後的呼叫重新取得(原子更新,同時只有一個呼叫取得)。
+- **費用**:Cloud Scheduler 的免費額度以帳單帳戶計(目前每個帳單帳戶每月 3 個工作),同一帳單帳戶下所有專案共用,不同專案若在不同帳單帳戶則各自計算;超出照價計費。每個環境一個工作,不需要排程的環境可以不建。每 15 分鐘喚醒 api 一次(`min-instances=0` 時每次可能冷啟動)。
+
+**建立步驟**(每個環境各一次;`<api-url>` 是 `deploy/project/cloud.json` 該環境的 `apiUrl`,`<api-service>` 是該環境的 api 服務名):
+
+```bash
+gcloud services enable cloudscheduler.googleapis.com --project=<gcp-project>
+# 呼叫身分:只用來簽 OIDC token,不需要任何專案層級角色;三環境可共用一個或各建一個
+gcloud iam service-accounts create scheduler-invoker --display-name="Cloud Scheduler invoker" --project=<gcp-project>
+# 建立工作的人(或部署 SA)要能代用這個身分
+gcloud iam service-accounts add-iam-policy-binding <scheduler-sa> --member="user:<operator-email>" --role=roles/iam.serviceAccountUser --project=<gcp-project>
+gcloud scheduler jobs create http <api-service>-scheduled-jobs \
+  --project=<gcp-project> --location=<region> \
+  --schedule="*/15 * * * *" --time-zone="Etc/UTC" \
+  --http-method=POST --uri="<api-url>/internal/scheduled-jobs/run" \
+  --oidc-service-account-email=<scheduler-sa> --oidc-token-audience="<api-url>" \
+  --attempt-deadline=300s
+```
+
+`<scheduler-sa>` 是建立的完整 email。api 服務以 `--allow-unauthenticated` 部署,Cloud Run 不驗呼叫者,身分由 api 自己驗 OIDC token(Google 簽章、issuer、audience、email)。
+
+**接線**(走 PR):`deploy/env/<環境>.yaml` 加 `SCHEDULER_INVOKER_EMAIL: "<scheduler-sa>"` 與 `SCHEDULER_AUDIENCE: "<api-url>"`(與 `--oidc-token-audience` 完全相同,含結尾斜線與否),再手動 Deploy 該環境(改 `deploy/env/` 會讓 api 重新部署)。變數說明見 `docs/env-registry.md`。
+
+**驗證與維運**:
+
+```bash
+gcloud scheduler jobs run <api-service>-scheduled-jobs --project=<gcp-project> --location=<region>
+gcloud scheduler jobs describe <api-service>-scheduled-jobs --project=<gcp-project> --location=<region> --format="value(state,lastAttemptTime,status)"
+gcloud scheduler jobs pause <api-service>-scheduled-jobs --project=<gcp-project> --location=<region>    # 暫停;恢復用 resume
+```
+
+手動執行後在 Cloud Run log 看到該請求回 200 才算接通:401 是 token 無效(audience 與 `SCHEDULER_AUDIENCE` 不同最常見),403 是呼叫身分與 `SCHEDULER_INVOKER_EMAIL` 不同或該環境 YAML 沒填,503 是 api 取不到 Google 公鑰(5 秒逾時,Scheduler 下一次呼叫再試)。
+
+查卡住或失敗的執行紀錄(以該環境資料庫的 `mongosh` 連線執行):
+
+```js
+db.scheduled_job_runs
+  .find({
+    status: "running",
+    startedAt: { $lt: new Date(Date.now() - 15 * 60 * 1000) },
+  })
+  .sort({ startedAt: -1 });
+db.scheduled_job_runs
+  .find({ status: "failed" })
+  .sort({ scheduledFor: -1 })
+  .limit(20);
+```
+
+卡住的紀錄會在下一次呼叫被重新取得,通常不必手動處理;反覆卡住表示 handler 太慢,先看 Cloud Run log 的逾時紀錄。
+
+正本:`apps/api/src/scheduled-jobs/`、`deploy/env/<環境>.yaml`
+
+### 即時通道(Cloudflare Worker)
+
+即時通道 = `apps/realtime`(Worker + Durable Object `TenantHub`,底座規格第 4 章);**每個環境一個 Worker**,網域 `rt-dev.<網域>` / `rt-staging.<網域>` / `rt.<網域>`(登記 `docs/branding.md`)。全部用 Cloudflare 免費方案;用量看 Cloudflare 後台。未啟用的環境不部署 Worker,api 不簽發訂閱憑證,admin 以 60 秒輪詢運作(頭像選單黃點)。
+
+`cloud.json` 各環境的 `realtime`(省略或 `null` = 停用;寫了就要完整):
+
+```json
+"realtime": {
+  "worker": "<project>-realtime-dev",
+  "cloudflareAccountId": "<32 位 hex 帳號 id>",
+  "secrets": { "ticketSecret": "realtime-ticket-secret-dev", "publishSecret": "realtime-publish-secret-dev" }
+}
+```
+
+**啟用步驟**(每個環境各一次;deploy.yml 只負責部署,不建立任何資源):
+
+1. Secret Manager 建兩把密鑰(值各自隨機產生,三環境不同):`realtime-ticket-secret-<環境>`、`realtime-publish-secret-<環境>`,依「新增一個 Secret Manager 機密的標準步驟」授權 **api 執行身分**與**部署 SA**(部署時讀出上傳給 Worker)讀取。
+2. GitHub repo Secrets 加 `CLOUDFLARE_API_TOKEN`(權限見 `docs/env-registry.md`;三環境共用一把)。
+3. `cloud.json` 該環境寫 `realtime`;`deploy/env/<環境>.yaml` 加 `REALTIME_URL: "https://rt-<環境>.<網域>"`。兩者走 PR 一起改。
+4. 跑 Deploy:最後的「deploy realtime」步驟以 `pnpm --filter @repo/realtime exec wrangler deploy --name <worker> --secrets-file <暫存檔>` 部署(Durable Object 的 migration 隨 `wrangler.jsonc` 套用),api 部署時掛上兩把密鑰。
+5. Cloudflare 後台 → Workers → 該 Worker → Settings → Domains & Routes 加自訂網域 `rt-<環境>.<網域>`(一次即可;網域須在同一個 Cloudflare 帳號的 DNS)。
+6. 驗證:登入 admin,頭像選單的小圓點是綠色;Worker 的 log(`wrangler tail --name <worker>`)看得到連線。把 Worker 停掉(或 `REALTIME_URL` 拿掉再部署)時圓點變黃、資料每 60 秒更新。
+
+- **換密鑰**:在 Secret Manager 加新版本後重跑 Deploy(api 與 Worker 一起換);換的瞬間已連線的瀏覽器在下一次換發被拒,會自動重新連線。
+- **本機**:`apps/realtime/.dev.vars.example` 複製成 `.dev.vars`,`pnpm --filter @repo/realtime dev`(`wrangler dev`,`http://localhost:8787`);api 的 `.env` 設 `REALTIME_URL=http://localhost:8787` 與同樣的兩把密鑰。
+
+正本:`apps/realtime/wrangler.jsonc`、`.github/workflows/deploy.yml`「deploy realtime」、`apps/api/src/realtime/realtime.config.ts`
+
+### 列印代理程式發布(print-agent-release.yml)
+
+列印代理程式(`apps/print-agent`,底座規格第 6 章「發布」)的安裝檔放在**各環境自己的私有 bucket**(`deploy/env/<環境>.yaml` 的 `GCS_BUCKET_PRIVATE`,與 api 讀檔的是同一個),不用 GitHub Release(repo private 時店家下載不到):
+
+```
+<私有 bucket>/print-agent/
+ ├ manifest.json          最新版本、各版本、各檔案的 SHA-256(格式正本:@repo/domain/printing)
+ └ <版本>/                四個平台的壓縮檔
+```
+
+api 讀 `manifest.json`、以既有檔案服務簽 1 小時的下載網址(印表機管理頁的下載區);bucket 的讀取與簽名權限沿用上面「GCS bucket 與 IAM」的第 2、3 步,不必另設。
+
+**發布**(只能手動觸發,不進 PR CI):`gh workflow run "Print Agent Release" --ref main -f version=<x.y.z> -f environment=<dev|staging|production>`。順序同 Deploy:先 dev 試裝,再 staging、production;**production 只能從 `main` 發**,dev / staging 可指定其他分支。
+
+1. `build`:四種 runner(`windows-latest`、`ubuntu-latest`、`ubuntu-24.04-arm`、`macos-15`)各自打包單一執行檔與安裝檔(`apps/print-agent/scripts/package-sea.ts`;Windows 另下載 WinSW 並核對 SHA-256)。
+2. `publish`:以 Deploy 同一套 WIF + 部署 SA 認證 → 重算 SHA-256 → 先上傳四個檔到 `print-agent/<版本>/` → 換 `manifest.json`(`no-store`)→ 刪掉第 4 版以前的檔。版本必須是 `x.y.z`、大於目前的最新版本、不能重複發布;`manifest.json` 讀不懂時停下來不覆蓋。
+3. 驗證:run 的 Summary 印出新的 `manifest.json`(四個檔與 SHA-256);印表機管理 → 代理程式分頁的下載區顯示新版本,四個按鈕都能下載。
+
+**第一次發布前要準備的**(每個環境各一次;workflow 只上傳,不建立任何資源):
+
+| 項目                      | 內容                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 私有 bucket               | 已建立(uniform bucket-level access)且 `deploy/env/<環境>.yaml` 寫了 `GCS_BUCKET_PRIVATE`;步驟見「GCS bucket 與 IAM」       |
+| WIF 與部署 SA             | 沿用 `deploy/project/cloud.json` 的 `gcp`(Deploy 用的同一組),不建新身分、不建金鑰                                          |
+| 部署 SA 對 `print-agent/` | 物件讀寫刪(只限這個前綴),見下方指令                                                                                        |
+| GitHub                    | 不需要新的 Secret 或變數;repo 為 private 時 macOS runner 以 10 倍、Windows 以 2 倍計費,`ubuntu-24.04-arm` 要該帳號方案可用 |
+
+部署 SA 對 `print-agent/` 的寫入權限(IAM 條件只放行這個前綴;讀 `manifest.json`、上傳、覆蓋、刪舊版都靠它,不需要列出 bucket):
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://<私有 bucket> \
+  --member=serviceAccount:<deployer-sa> --role=roles/storage.objectUser \
+  --condition='expression=resource.name.startsWith("projects/_/buckets/<私有 bucket>/objects/print-agent/"),title=print-agent-release'
+```
+
+**workflow 還沒進 `main` 時想先驗一次**:照 `docs/agents/issue-tracker.md`「新增一個只手動觸發的 workflow 時怎麼驗」暫加 `push` trigger;`push` 事件沒有 inputs,驗證時要把兩個 job 讀 `inputs.version` / `inputs.environment` 的地方暫時寫死(例 `0.0.1` / `dev`),驗完一起改回。
+
+正本:`.github/workflows/print-agent-release.yml`、`apps/print-agent/README.md`、`apps/api/src/printing/print-agent-release.service.ts`
 
 ### Vercel 補充設定
 

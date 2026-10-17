@@ -14,7 +14,7 @@ import { server } from "@/test/msw/server";
 jest.unstable_mockModule("@dnd-kit/core", () => dndKitCoreDouble);
 jest.unstable_mockModule("@dnd-kit/sortable", () => dndKitSortableDouble);
 const { renderApp } = await import("@/test/render");
-const { routeTabsStorageKey } = await import("@/lib/route-tabs");
+const { routeTabsStorageKey } = await import("@/lib/base/route-tabs");
 
 const tabLabels = (list: HTMLElement) =>
   within(list)

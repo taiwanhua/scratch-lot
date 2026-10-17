@@ -78,7 +78,7 @@
 
 - 換檔即刪舊:`updateOrg` 把 `logoPath` 換掉或清空後,刪舊物件。刪不掉只記 log,不擋更新。
 - 「上傳了但沒送出」的物件沒有任何欄位指向它,api 也不知道它存在。不掃描、不做 TTL 清理。
-- 開通租戶失敗的補償刪除只抹自己建的東西。
+- 開通租戶失敗由交易整個回復(資料庫的寫入),不碰 bucket;已上傳的商標物件同上一條,沒有欄位指向它。
 - 真要清孤兒,在 bucket 設 lifecycle rule(前綴 + 年齡),不在 api 寫掃描器。
 
 正本:`apps/api/src/orgs/orgs.service.ts`、`apps/api/src/storage/storage.service.ts` 的 `deleteObject`
@@ -101,7 +101,7 @@
 | 品牌文字 | 登記在 `docs/branding.md`                                              |
 
 - 換供應商只換 adapter,呼叫端不動。
-- 審核流程的通知信另受 `WORKFLOW_MAIL_ENABLED` 開關控制(`docs/modules/workflows.md`)。
+- 通知的 email(含審核流程)另受總開關 `WORKFLOW_MAIL_ENABLED` 控制(`docs/modules/notification-settings.md`);啟用信 / 重設密碼信不受它管。
 - 連結效期與單次使用見 `docs/concepts/accounts-and-tenants.md`「啟用與重設密碼連結」。
 
 正本:`apps/api/src/mail/mail.service.ts`、`apps/api/src/mail/mail.config.ts`、`apps/api/src/mail/mail.module.ts`、`apps/api/src/mail/mail-templates.ts`

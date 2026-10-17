@@ -1,8 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { hasPermission } from "@repo/domain/permission";
-
 import { AuditService } from "../audit/audit.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -12,7 +10,10 @@ import {
   UsersRepository,
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
-import { PermissionResolver } from "../permission/permission-resolver";
+import {
+  PermissionResolver,
+  holdsPermission,
+} from "../permission/permission-resolver";
 import { notFoundError, validationError } from "./demo-items-two-error";
 import type { CreateDemoItemTwoInput } from "./dto/create-demo-item-two.input";
 import type { DeleteDemoItemTwoInput } from "./dto/delete-demo-item-two.input";
@@ -290,13 +291,13 @@ export class DemoItemsTwoService {
       // 防呆:全域 AuthGuard 已擋掉未登入,走不到這裡
       return { canEdit: false, canDelete: false };
     }
-    const { permissionKeys } = await this.permissions.resolve(
+    const resolution = await this.permissions.resolve(
       operator.actorId,
       operator.currentOrgId,
     );
     return {
-      canEdit: hasPermission(permissionKeys, PERMISSION.edit),
-      canDelete: hasPermission(permissionKeys, PERMISSION.delete),
+      canEdit: holdsPermission(resolution, PERMISSION.edit),
+      canDelete: holdsPermission(resolution, PERMISSION.delete),
     };
   }
 

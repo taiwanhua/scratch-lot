@@ -4,11 +4,14 @@ import { useTranslations } from "use-intl";
 import type { FormDefinition } from "@repo/domain/form";
 import { useSaveFormVersionDraftMutation } from "@repo/graphql";
 
-import { useMutationFeedback } from "@/hooks/useMutationFeedback";
-import { useSession } from "@/hooks/useSession";
-import { rawOf } from "@/lib/form-engine/definition";
-import { type FormError, formErrorOf } from "@/lib/form-engine/form-errors";
-import { useDesignerDraftStore } from "@/stores/useDesignerDraftStore";
+import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
+import { useSession } from "@/hooks/base/useSession";
+import { rawOf } from "@/lib/base/form-engine/definition";
+import {
+  type FormError,
+  formErrorOf,
+} from "@/lib/base/form-engine/form-errors";
+import { useDesignerDraftStore } from "@/stores/base/useDesignerDraftStore";
 
 export interface DesignerSaveInput {
   formKey: string;

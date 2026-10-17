@@ -14,7 +14,6 @@ import {
 
 /** 實例狀態(成員值即落庫字串;Spec 6b §4)。 */
 export enum WorkflowInstanceStatusEnum {
-  LINKING = "linking",
   RUNNING = "running",
   BLOCKED = "blocked",
   APPROVED = "approved",
@@ -27,7 +26,7 @@ export enum WorkflowInstanceStatusEnum {
 registerEnumType(WorkflowInstanceStatusEnum, {
   name: "WorkflowInstanceStatus",
   description:
-    "流程實例狀態:連結中 / 審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代",
+    "流程實例狀態:審核中 / 阻擋 / 核准 / 駁回 / 退回 / 撤回 / 被取代",
 });
 
 /** 關卡在實例內的狀態。 */
@@ -99,6 +98,13 @@ export class WorkflowPlanItemModel {
   /** `invalid` = 承辦人停用 / 移出租戶(等改派)。 */
   @Field(() => String)
   assigneeState!: string;
+
+  /**
+   * B15 代理人:這一項由 `assignee`(代理人)承接的原審核者們(多位委託同一人時都列;代理人本人也是審核者時
+   * 列他代理的人)。沒有代理 / 已改派 → 空陣列。
+   */
+  @Field(() => [FormUserRef])
+  delegators!: FormUserRef[];
 
   /**
    * 這一項對應的任務 id(`reassignTask` 要它)。**只給流程管理者**(`abilities.canManage`):
@@ -188,6 +194,25 @@ export class WorkflowHistoryEventModel {
   /** 只有 `notified`:結果通知的種類。 */
   @Field(() => String, { nullable: true })
   result!: string | null;
+
+  /**
+   * 跳過 / 自動通過的原因(`@repo/domain/workflow` 的 `HISTORY_REASONS`):`step_skipped` 帶
+   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);B5 自動記的 `approved` 帶
+   * `auto_applicant` / `auto_prior_approver`;`auto_approve_blocked` 帶同兩值(哪一種自動通過沒成立)。其他事件 null。
+   */
+  @Field(() => String, { nullable: true })
+  reason!: string | null;
+
+  /** 只有 `auto_approve_blocked`:守門擋下的專案錯誤碼(admin 以 `admin.lifecycle.<碼>` 顯示)。 */
+  @Field(() => String, { nullable: true })
+  code!: string | null;
+
+  /**
+   * `task_created` 與決定(`approved` / `rejected` / `returned`):這張任務代理的原審核者們
+   * (時間軸「由 <user> 代理 <delegators>」);其他事件空陣列。
+   */
+  @Field(() => [FormUserRef])
+  delegators!: FormUserRef[];
 }
 
 @ObjectType()
@@ -415,4 +440,43 @@ export class WorkflowTasksPayload {
 
   @Field(() => Int)
   pageSize!: number;
+}
+
+/** 批次核准一筆失敗的原因(底座規格 3.10 B18)。 */
+export enum WorkflowBatchApproveFailureEnum {
+  /** 任務已被處理、改派,或此關已結束(「這件已不在你手上」)。 */
+  NOT_YOURS = "notYours",
+  /** 被專案的 `beforeApprove` 守門擋下(錯誤碼在 `projectReason`)。 */
+  BLOCKED = "blocked",
+  /** 其他失敗(這一筆的交易回復,其他筆不受影響)。 */
+  FAILED = "failed",
+}
+
+registerEnumType(WorkflowBatchApproveFailureEnum, {
+  name: "WorkflowBatchApproveFailure",
+  description: "批次核准一筆失敗的原因:已不在你手上 / 被守門擋下 / 其他失敗",
+});
+
+/** 批次核准的一筆結果;順序同輸入(去重後)。 */
+@ObjectType()
+export class WorkflowBatchApproveResultModel {
+  @Field(() => ID)
+  taskId!: string;
+
+  @Field(() => Boolean)
+  ok!: boolean;
+
+  /** 失敗原因;成功時 `null`。 */
+  @Field(() => WorkflowBatchApproveFailureEnum, { nullable: true })
+  reason!: WorkflowBatchApproveFailureEnum | null;
+
+  /** `reason: BLOCKED` 時的專案錯誤碼(前端文案 `admin.lifecycle.<碼>`);其他情況 `null`。 */
+  @Field(() => String, { nullable: true })
+  projectReason!: string | null;
+}
+
+@ObjectType()
+export class BatchApproveTasksPayload {
+  @Field(() => [WorkflowBatchApproveResultModel])
+  results!: WorkflowBatchApproveResultModel[];
 }

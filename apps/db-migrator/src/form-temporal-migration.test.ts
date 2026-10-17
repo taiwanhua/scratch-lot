@@ -1,9 +1,10 @@
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { type Db, MongoClient, ObjectId } from "mongodb";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+
+import { runNode } from "../test/support/update-harness";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 const MIGRATION = path.join(
@@ -31,8 +32,8 @@ try {
 }
 `;
 
-/** 本地起 mongodb-memory-server;CI 沿用既有 MongoDB service container(MONGODB_URI)。 */
-let memoryServer: MongoMemoryServer | undefined;
+/** 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。 */
+let memoryServer: MongoMemoryReplSet | undefined;
 let baseUri: string;
 const clients: MongoClient[] = [];
 
@@ -53,8 +54,7 @@ function runUpDirectly(
   times: number,
   direction: "up" | "down" = "up",
 ) {
-  return spawnSync(
-    process.execPath,
+  return runNode(
     [
       "--input-type=module",
       "-e",
@@ -64,7 +64,7 @@ function runUpDirectly(
       MIGRATION,
       direction,
     ],
-    { cwd: PACKAGE_ROOT, encoding: "utf8" },
+    { cwd: PACKAGE_ROOT },
   );
 }
 
@@ -233,7 +233,7 @@ beforeAll(async () => {
   if (process.env.MONGODB_URI) {
     baseUri = process.env.MONGODB_URI;
   } else {
-    memoryServer = await MongoMemoryServer.create();
+    memoryServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     baseUri = memoryServer.getUri();
   }
 }, 600_000);
@@ -253,7 +253,7 @@ describe("遷移:表單提交的日期 / 日期時間字串 → Date", () => {
     const databaseUri = databaseUriOf("once");
     database = await openDatabase(databaseUri);
     await seedPreState(database);
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
   }, 600_000);
@@ -317,7 +317,7 @@ describe("遷移:版本定義裡的日期字串 → ISO(Asia/Taipei 00:00)", () 
     const databaseUri = databaseUriOf("definitions");
     const database = await openDatabase(databaseUri);
     await seedPreState(database);
-    const result = runUpDirectly(databaseUri, 1);
+    const result = await runUpDirectly(databaseUri, 1);
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
 
@@ -362,8 +362,8 @@ describe("遷移的 down:還原成改存 Date 之前的形狀(依版本定義的
     const databaseUri = databaseUriOf("down");
     const database = await openDatabase(databaseUri);
     await seedPreState(database);
-    expect(runUpDirectly(databaseUri, 1).status).toBe(0);
-    const reverted = runUpDirectly(databaseUri, 1, "down");
+    expect(await runUpDirectly(databaseUri, 1)).toMatchObject({ status: 0 });
+    const reverted = await runUpDirectly(databaseUri, 1, "down");
     expect(reverted.stderr).toBe("");
     expect(reverted.status).toBe(0);
 
@@ -411,10 +411,10 @@ describe("遷移本身冪等:直接呼叫 up 兩次,結果與一次相同", () =
     await seedPreState(once);
     await seedPreState(twice);
 
-    const first = runUpDirectly(onceUri, 1);
+    const first = await runUpDirectly(onceUri, 1);
     expect(first.stderr).toBe("");
     expect(first.status).toBe(0);
-    const second = runUpDirectly(twiceUri, 2);
+    const second = await runUpDirectly(twiceUri, 2);
     expect(second.stderr).toBe("");
     expect(second.status).toBe(0);
 

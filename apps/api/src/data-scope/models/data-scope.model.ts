@@ -12,7 +12,7 @@ import { GraphQLJSONObject } from "../json-object.scalar";
  * 「資料範圍」頁的回傳型別(ADR-0008;根組織專屬模組 `system.data-scope`)。
  *
  * enum 的 GraphQL 值用 SCREAMING_SNAKE_CASE(GQL-01),**內部值維持存進資料庫的小寫字串** —
- * 條件樹本身是 JSON,裡面的 `audience.type` 與這裡是同一套詞彙,不該因為經過 GraphQL 就換一套。
+ * 條件樹本身是 JSON,裡面的欄位型別與這裡是同一套詞彙,不該因為經過 GraphQL 就換一套。
  */
 
 export enum DataScopeFieldTypeEnum {
@@ -26,18 +26,6 @@ registerEnumType(DataScopeFieldTypeEnum, {
   name: "DataScopeFieldType",
   description:
     "可篩欄位的型別;決定 UI 出哪些運算子與值來源(ADR-0008 的表,翻譯器不認識個別欄位)",
-});
-
-export enum DataScopeAudienceTypeEnum {
-  ALL = "all",
-  ROLE = "role",
-  ORG = "org",
-  USER = "user",
-}
-
-registerEnumType(DataScopeAudienceTypeEnum, {
-  name: "DataScopeAudienceType",
-  description: "套用對象:全部人 / 指定角色 / 指定組織 / 指定使用者",
 });
 
 export enum DataScopeCombineOpEnum {
@@ -121,20 +109,11 @@ export class DataScopeTargetModel {
   hasRule!: boolean;
 }
 
-@ObjectType("DataScopeAudience")
-export class DataScopeAudienceModel {
-  @Field(() => DataScopeAudienceTypeEnum)
-  type!: DataScopeAudienceTypeEnum;
-
-  /** `ALL` 時為空陣列;其餘為該種類的 id 清單。 */
-  @Field(() => [ID])
-  ids!: string[];
-}
-
 @ObjectType("DataScopeRuleEntry")
 export class DataScopeRuleEntryModel {
-  @Field(() => DataScopeAudienceModel)
-  audience!: DataScopeAudienceModel;
+  /** 套用對象 = 人員條件(JSON;形狀正本 `@repo/domain/audience`)。 */
+  @Field(() => GraphQLJSONObject)
+  audience!: Record<string, unknown>;
 
   /** 巢狀 AND / OR 條件樹;形狀見 `apps/api/src/data-scope/data-scope-rule.ts`。 */
   @Field(() => GraphQLJSONObject)

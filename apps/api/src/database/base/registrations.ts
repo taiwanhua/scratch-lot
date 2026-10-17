@@ -10,6 +10,7 @@ import { BusinessRelationshipsRepository } from "../business-relationships.repos
 import { FormSubmissionUsageCounter } from "../form-submission-usage";
 import type { DatabaseRegistration } from "../registration";
 import { RelationService } from "../relation.service";
+import { ScheduledJobRunsStore } from "../scheduled-job-runs.store";
 import { ActionToken, ActionTokenSchema } from "../schemas/action-token.schema";
 import { AuditLog, AuditLogSchema } from "../schemas/audit-log.schema";
 import {
@@ -52,18 +53,58 @@ import {
 import { FormVersion, FormVersionSchema } from "../schemas/form-version.schema";
 import { FORMS_COLLECTION, Form, FormSchema } from "../schemas/form.schema";
 import { Module as ModuleEntity, ModuleSchema } from "../schemas/module.schema";
+import {
+  NOTIFICATION_SETTINGS_COLLECTION,
+  NotificationSetting,
+  NotificationSettingSchema,
+} from "../schemas/notification-setting.schema";
+import {
+  NOTIFICATIONS_COLLECTION,
+  Notification,
+  NotificationSchema,
+} from "../schemas/notification.schema";
 import { ORGS_COLLECTION, Org, OrgSchema } from "../schemas/org.schema";
 import { Permission, PermissionSchema } from "../schemas/permission.schema";
+import {
+  PRINT_AGENTS_COLLECTION,
+  PrintAgent,
+  PrintAgentSchema,
+} from "../schemas/print-agent.schema";
+import {
+  PRINT_JOBS_COLLECTION,
+  PrintJob,
+  PrintJobSchema,
+} from "../schemas/print-job.schema";
+import {
+  PRINTERS_COLLECTION,
+  Printer,
+  PrinterSchema,
+} from "../schemas/printer.schema";
 import {
   RefreshToken,
   RefreshTokenSchema,
 } from "../schemas/refresh-token.schema";
 import { Role, RoleSchema } from "../schemas/role.schema";
 import {
+  SCHEDULED_JOB_RUNS_COLLECTION,
+  ScheduledJobRun,
+  ScheduledJobRunSchema,
+} from "../schemas/scheduled-job-run.schema";
+import {
   SeedDefinitionInstallation,
   SeedDefinitionInstallationSchema,
 } from "../schemas/seed-definition-installation.schema";
 import { SeedLock, SeedLockSchema } from "../schemas/seed-lock.schema";
+import {
+  USER_DELEGATIONS_COLLECTION,
+  UserDelegation,
+  UserDelegationSchema,
+} from "../schemas/user-delegation.schema";
+import {
+  USER_PREFERENCES_COLLECTION,
+  UserPreference,
+  UserPreferenceSchema,
+} from "../schemas/user-preference.schema";
 import { User, UserSchema } from "../schemas/user.schema";
 import {
   WORKFLOW_INSTANCES_COLLECTION,
@@ -102,11 +143,18 @@ import {
   FormVersionsRepository,
   FormsRepository,
   ModulesRepository,
+  NotificationSettingsRepository,
+  NotificationsRepository,
   OrgsRepository,
   PermissionsRepository,
+  PrintAgentsRepository,
+  PrintJobsRepository,
+  PrintersRepository,
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
+  UserDelegationsRepository,
+  UserPreferencesRepository,
   UsersRepository,
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
@@ -441,5 +489,128 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
       },
     ],
     orgDataChecks: [],
+  },
+  {
+    // 排程任務的執行紀錄(系統紀錄,沒有組織歸屬):只經專用的 store 讀寫
+    key: "scheduled-jobs",
+    models: [
+      {
+        name: ScheduledJobRun.name,
+        collection: SCHEDULED_JOB_RUNS_COLLECTION,
+        schema: ScheduledJobRunSchema,
+      },
+    ],
+    repositories: [
+      {
+        modelName: ScheduledJobRun.name,
+        provider: {
+          provide: ScheduledJobRunsStore,
+          inject: [getModelToken(ScheduledJobRun.name)],
+          useFactory: (model: Model<ScheduledJobRun>) =>
+            new ScheduledJobRunsStore(model),
+        },
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 個人偏好(每個使用者一筆;屬帳號、沒有組織歸屬,同 refresh_tokens)
+    key: "user-preferences",
+    models: [
+      {
+        name: UserPreference.name,
+        collection: USER_PREFERENCES_COLLECTION,
+        schema: UserPreferenceSchema,
+      },
+    ],
+    repositories: [
+      { modelName: UserPreference.name, provider: UserPreferencesRepository },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 代理人(《底座規格》3.7 B15;屬帳號、沒有組織歸屬,同 user_preferences)
+    key: "user-delegations",
+    models: [
+      {
+        name: UserDelegation.name,
+        collection: USER_DELEGATIONS_COLLECTION,
+        schema: UserDelegationSchema,
+      },
+    ],
+    repositories: [
+      { modelName: UserDelegation.name, provider: UserDelegationsRepository },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 通知(底座規格第 5 章):收件人的通知屬帳號、不擋刪組織;通知設定是以 tenantId 為邊界的租戶設定
+    key: "notifications",
+    models: [
+      {
+        name: Notification.name,
+        collection: NOTIFICATIONS_COLLECTION,
+        schema: NotificationSchema,
+      },
+      {
+        name: NotificationSetting.name,
+        collection: NOTIFICATION_SETTINGS_COLLECTION,
+        schema: NotificationSettingSchema,
+      },
+    ],
+    repositories: [
+      { modelName: Notification.name, provider: NotificationsRepository },
+      {
+        modelName: NotificationSetting.name,
+        provider: NotificationSettingsRepository,
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 列印(docs/modules/printers.md):代理程式、印表機、列印工作;都掛在分店上
+    key: "printing",
+    models: [
+      {
+        name: PrintAgent.name,
+        collection: PRINT_AGENTS_COLLECTION,
+        schema: PrintAgentSchema,
+      },
+      {
+        name: Printer.name,
+        collection: PRINTERS_COLLECTION,
+        schema: PrinterSchema,
+      },
+      {
+        name: PrintJob.name,
+        collection: PRINT_JOBS_COLLECTION,
+        schema: PrintJobSchema,
+      },
+    ],
+    repositories: [
+      { modelName: PrintAgent.name, provider: PrintAgentsRepository },
+      { modelName: Printer.name, provider: PrintersRepository },
+      { modelName: PrintJob.name, provider: PrintJobsRepository },
+    ],
+    orgDataChecks: [
+      {
+        key: "base.print-agents",
+        modelName: PrintAgent.name,
+        repository: PrintAgentsRepository,
+        ownerField: "orgId",
+      },
+      {
+        key: "base.printers",
+        modelName: Printer.name,
+        repository: PrintersRepository,
+        ownerField: "orgId",
+      },
+      {
+        key: "base.print-jobs",
+        modelName: PrintJob.name,
+        repository: PrintJobsRepository,
+        ownerField: "orgId",
+      },
+    ],
   },
 ];

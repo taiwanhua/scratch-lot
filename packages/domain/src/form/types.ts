@@ -41,7 +41,13 @@ export interface ExpressionContext {
   now: string;
   /** IANA 時區(租戶時區),`dateDiff` 以它的日曆日計。 */
   timezone: string;
-  user: { id: string | null; orgId: string | null };
+  /**
+   * `id` = 填寫者;`orgId` = 填寫者的**目前組織**;`orgIds` = 填寫者的**所屬組織(全部)**
+   * (`org_user` 的直接關聯,不含下層;讀不到 = 空陣列)。
+   */
+  user: { id: string | null; orgId: string | null; orgIds: string[] };
+  /** 租戶(單據所屬租戶頂層組織的 id;根組織 / 讀不到 = null)。 */
+  tenant: { id: string | null };
 }
 
 /** lookup 來源描述(`options.source`、`prefills[].source`、`reference` 的 `source`)。 */
@@ -58,7 +64,10 @@ export interface LookupSourceDescriptor {
   labelTemplate?: string | null;
   /** 值欄,`options` 用;預設 `id`。 */
   valueField?: string;
-  /** 固定條件(provider 允許的欄位 = 值),後端套。 */
+  /**
+   * 固定條件(provider 允許的欄位 = 值),後端套。值也可以是連動篩選 `{ var: "<表單層欄位 key>" }`
+   * (只有引用欄位 / 明細引用子欄;執行時換成那一欄目前的值,`lookup-filter.ts`)。
+   */
   filter?: Record<string, unknown>;
   /** 只有 `provider = "form_submission"` 要:查哪張表單的提交。 */
   formKey?: string;
@@ -145,7 +154,7 @@ export type FieldDefault =
   | { kind: "constant"; value: unknown }
   | { kind: "expression"; expr: Expression };
 
-/** 明細列子欄可用的型別(第一版的白名單;不支援巢狀 `array`、多行、多選、上傳、引用)。 */
+/** 明細列子欄可用的型別(白名單;不支援巢狀 `array`、多行、多選、上傳)。 */
 export const ARRAY_COLUMN_TYPES = [
   "text",
   "number",
@@ -153,6 +162,7 @@ export const ARRAY_COLUMN_TYPES = [
   "datetime",
   "select",
   "boolean",
+  "reference",
 ] as const;
 
 export type ArrayColumnType = (typeof ARRAY_COLUMN_TYPES)[number];
@@ -161,6 +171,7 @@ export type ArrayColumnType = (typeof ARRAY_COLUMN_TYPES)[number];
  * 明細列的一個子欄(簡化的 FieldDef;結構上可當 `FieldDef` 用,值的正規化與規則驗證共用同一套):
  * - `valueSource` 只有使用者填或列內公式(`{ "var": "row.<子欄 key>" }` 引用同一列的子欄)
  * - 沒有子欄級權限、顯示 / 鎖定條件、預設值(整欄的設定套在明細欄上)
+ * - `reference`:存 `{ id, label }` 快照(同表單層引用欄),只能使用者填;`source` 必填
  * - `width`:表格欄的最小寬(px);手機卡片忽略
  */
 export interface ArrayColumnDef {
@@ -173,6 +184,13 @@ export interface ArrayColumnDef {
   valueSource: { kind: "input" } | { kind: "computed"; expr: Expression };
   /** 只有 select:靜態清單或欄位管理類別(沒有 lookup)。 */
   options?: FieldOptions | null;
+  /** 只有 reference:lookup 來源描述(同表單層引用欄的 `source`)。 */
+  source?: LookupSourceDescriptor | null;
+  /**
+   * 只有 reference:列內帶入(《底座規格》3.2 B2c)。選定 / 改選時把來源欄位帶入**同一列**的其他子欄
+   * (`mapping[].fieldKey` = 同一明細的子欄 key),覆蓋原值、之後可手動改;伺服器不強制。
+   */
+  prefill?: ColumnPrefill | null;
   rules?: FieldRules | null;
   help?: string | null;
   width?: number | null;
@@ -223,10 +241,20 @@ export interface LayoutRow {
   cols: LayoutCol[];
 }
 
+/**
+ * 版面區塊(分區)。收合三個設定都是選填:舊定義沒有這三欄 = 不可收合、一律展開(照舊渲染);
+ * 收合狀態的記憶不在定義裡,由 admin 依使用者存在瀏覽器(頁面 id `form:<formKey>`、區塊 key = `key`)。
+ */
 export interface LayoutSection {
   key: string;
   title: string;
   rows: LayoutRow[];
+  /** 可以收合(標題列可點);不給 = false */
+  collapsible?: boolean;
+  /** 預設收合(使用者沒改過時的狀態;只在 `collapsible` 時生效);不給 = false */
+  defaultCollapsed?: boolean;
+  /** 收合時標題列顯示的欄位(依序,須是放在本分區的非明細欄位;只在 `collapsible` 時生效);不給 = 不顯示 */
+  summaryFieldKeys?: string[];
 }
 
 export interface Layout {
@@ -245,6 +273,11 @@ export type SummarySlot = keyof SummaryMap;
 export interface PrefillMapping {
   sourceField: string;
   fieldKey: string;
+}
+
+/** 明細引用子欄的列內帶入:來源 = 子欄自己的 `source`,目標 = 同一列的子欄。 */
+export interface ColumnPrefill {
+  mapping: PrefillMapping[];
 }
 
 export interface Prefill {
