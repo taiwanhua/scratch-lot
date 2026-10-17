@@ -46,7 +46,6 @@ import {
  */
 export const NotificationSettingsPage = () => {
   const t = useTranslations("admin.notificationSettings");
-  const tErrors = useTranslations("admin.notificationSettings.errors");
   const { session } = useSession();
   const data = useNotificationSettingsData();
   const typeName = useNotificationTypeName();
@@ -80,7 +79,8 @@ export const NotificationSettingsPage = () => {
     session.client,
     useMutationFeedback<ResetNotificationSettingMutation>({
       success: t("feedback.resetSuccess"),
-      error: (error) => tErrors(notificationSettingsErrorOf(error).code),
+      // 失敗顯示在還原預設的確認框裡(`ResetDefaultDialog` 的 errorCode),不再跳提示
+      error: () => null,
       onSuccess: () => {
         setResetTarget(null);
         void data.invalidate();

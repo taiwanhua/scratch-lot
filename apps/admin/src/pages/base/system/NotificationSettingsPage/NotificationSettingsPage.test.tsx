@@ -1,7 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { inRoles } from "@/test/msw/notification-settings-handlers";
+import {
+  inRoles,
+  notificationTypes,
+} from "@/test/msw/notification-settings-handlers";
+import { findSnackbarAlert, querySnackbar } from "@/test/snackbar";
 
 import { NOTIFICATION_SETTINGS_PERMISSIONS } from "./notification-settings-permissions";
 import {
@@ -192,6 +196,8 @@ describe("通知設定頁", () => {
         "根組織不能調整收件人,請先切換到要設定的組織",
       ),
     ).toBeVisible();
+    // 錯誤已就地顯示在對話框裡,不再跳提示(同一句不出現兩次)
+    expect(querySnackbar()).toBeNull();
   });
 
   it("還原預設:先確認(顯示預設條件)→ 清單回到類型宣告的條件並標「預設」", async () => {
@@ -273,5 +279,50 @@ describe("通知設定頁", () => {
         "Organization of the event and its parents",
       ),
     ).toBeVisible();
+  });
+
+  it("網址帶 ?edit=<不存在的類型> → 不打開、清掉參數、提示「找不到這筆資料」", async () => {
+    renderPage({ search: "?edit=printing.gone" });
+
+    expect(await findSnackbarAlert()).toEqual({
+      text: "找不到這筆資料",
+      severity: "warning",
+    });
+    await waitFor(() => {
+      expect(globalThis.location.search).not.toContain("edit=");
+    });
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("還原預設失敗 → 錯誤顯示在確認框裡、不另跳提示", async () => {
+    const { user } = renderPage({
+      world: {
+        types: notificationTypes({
+          "printing.agent-offline": { audience: inRoles(["role-support"]) },
+        }),
+        failures: {
+          ResetNotificationSetting: {
+            code: "FORBIDDEN",
+            extensions: { reason: "TENANT_ONLY" },
+          },
+        },
+      },
+    });
+    await waitForRows();
+
+    await user.click(
+      within(rowOf("列印代理程式離線")).getByRole("button", {
+        name: "還原預設",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "還原預設" }));
+
+    expect(
+      await within(dialog).findByText(
+        "根組織不能調整收件人,請先切換到要設定的組織",
+      ),
+    ).toBeVisible();
+    expect(querySnackbar()).toBeNull();
   });
 });
