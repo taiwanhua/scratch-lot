@@ -374,7 +374,7 @@ const mockWorkflowRuntime = () => ({
           status: WorkflowStepStatus.Completed,
         }),
         instanceStep("finance", "財務部審核", {
-          status: WorkflowStepStatus.Completed,
+          status: WorkflowStepStatus.Skipped,
         }),
         instanceStep("legal", "法務部審核", {
           mode: "all",

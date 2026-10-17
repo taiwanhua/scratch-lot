@@ -46,7 +46,7 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 
 - 人員條件的所屬組織可以是指定組織,或在解析當下代入的來源:**單據所屬組織**(提交的組織)、**表單的組織欄位**(必須是組織引用欄,否則 `FIELD_NOT_ORG_REFERENCE`;送出時與綁定時同一套檢查)、**租戶**(畫面顯示「最上層組織」)。
 - **共用流程只能用權限與非指定的組織來源**;用了使用者、角色或指定組織 → `AUDIENCE_IN_SHARED`(發布擋、綁定擋)。客製流程裡指定的角色與組織要屬本租戶。
-- 名單只留啟用中、仍在本租戶的人,申請人本人剔除;一個人都沒有 → 該關「阻擋」,由流程管理者「新增審核者」。
+- 名單只留啟用中、仍在本租戶的人,申請人本人預設剔除(例外見「跳過與自動通過」);一個人都沒有 → 該關「阻擋」,由流程管理者「新增審核者」。
 - 解析是一個公開方法(`AudienceSourceService.resolveAudienceSource`),其他「依單據找人」的使用處直接呼叫它,不另寫一套。
 
 正本:`packages/domain/src/workflow/approver-audience.ts`、`apps/api/src/workflows/workflow-engine/audience-source.service.ts`

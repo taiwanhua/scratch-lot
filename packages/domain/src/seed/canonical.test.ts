@@ -196,6 +196,53 @@ describe("contentHash / snapshotHash", () => {
     ).not.toBe(hashesOf(implicit).contentHash);
   });
 
+  it("流程:skipOrgs / autoApprove 省略、null、{} 都是沒設(autoApprove 的 false = 照常審核);有設才是不同內容", () => {
+    const implicit = workflowSeed({ steps: [review("boss")] });
+    for (const unset of [null, {}]) {
+      expect(
+        hashesOf(
+          workflowSeed({
+            steps: [
+              review("boss", {
+                skipOrgs: unset as never,
+                autoApprove: unset as never,
+              }),
+            ],
+          }),
+        ),
+      ).toEqual(hashesOf(implicit));
+    }
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [
+            review("boss", {
+              autoApprove: { applicant: false, priorApprover: false },
+            }),
+          ],
+        }),
+      ),
+    ).toEqual(hashesOf(implicit));
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [review("boss", { autoApprove: { applicant: true } })],
+        }),
+      ).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+    expect(
+      hashesOf(
+        workflowSeed({
+          steps: [
+            review("boss", {
+              skipOrgs: { orgIds: ["tenant"], includeDescendants: true },
+            }),
+          ],
+        }),
+      ).contentHash,
+    ).not.toBe(hashesOf(implicit).contentHash);
+  });
+
   it("contentHash 的來源字串不含 revision、changelog 與 desiredStatus", () => {
     const canonical = definitionContentCanonical(
       formSeed(fields(), { revision: "rev-marker", changelog: "log-marker" }),

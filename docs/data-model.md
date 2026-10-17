@@ -124,7 +124,7 @@
 - **`forms` / `form_versions` 不掛租戶過濾**:表單沒有 `orgId`,誰看得到哪一張由 `forms.ownerOrgId` + `org_form` 決定(`apps/api/src/forms/form-access.service.ts`),版本跟著表單走。`forms.key` 全域唯一、建立後不可改;`currentVersion` 是填寫者唯一看的指標。
 - **`form_versions`**:兩條部分唯一索引 —— `(formKey, version)` 只在 `version` 是數字時唯一(草稿的 `null` 不算,正式版號在發布時配);`(formKey, status)` 限 `draft` 與 `publishing` 各一筆。定義四塊(`fields` / `layout` / `summaryMap` / `prefills`)存自由 JSON,形狀正本是 `@repo/domain/form` 的 `types.ts`。草稿刪除是**硬刪**(ADR-0007 的例外:軟刪的草稿會佔住部分唯一索引,讓這張表單永遠開不了新草稿;刪掉的定義留在稽核)。
 - **`form_submissions` 的值**:`values` 依欄位型別存,受保護欄位原值照存、讀取時投影為 `"[redacted]"`;`date` / `datetime` 與 `summary.date` 存 Mongo `Date`(兩者都是時點,`date` = 選的那天在租戶時區 00:00),GraphQL 回 ISO 字串。明細列(`array`)欄存列的陣列 `[{ rowId, <子欄 key>: 值 }]`:`rowId` 是前端建列時產生的 UUID(同一明細內唯一、修訂之間不變),陣列順序就是列的順序。
-- **`form_submissions` 的修訂**:`revisions[]` 每筆 `{ revision, version, values, ctx: { at, timezone, userId, orgId }, kind?, upgradedBy?, upgradedAt? }` 是**完整值快照**。`version` = 這一筆修訂綁的表單版本(讀取一律 `revisions[r].version ?? version`);提交本身的 `version` 只有舊版資料升級會改綁。`kind: "upgrade"` = 舊版資料升級產生的修訂,`ctx` 沿用上一筆,誰與何時升級記在 `upgradedBy` / `upgradedAt`。`editVersion` 是每次寫入的樂觀鎖;`(createdBy, clientRequestId)` 唯一(含已軟刪除的);`touched[]` 是使用者碰過的欄位 key(只對草稿有意義)。容量上限見 `docs/modules/forms.md`「提交的寫入規則」。
+- **`form_submissions` 的修訂**:`revisions[]` 每筆 `{ revision, version, values, ctx: { at, timezone, userId, orgId, orgIds, tenantId }, kind?, upgradedBy?, upgradedAt? }` 是**完整值快照**。`ctx.orgId` = 操作者當時的目前組織、`orgIds` = 當時的所屬組織(全部)、`tenantId` = 當時的租戶頂層(根組織 = null;舊修訂沒有這兩欄,讀成空陣列 / null)。`version` = 這一筆修訂綁的表單版本(讀取一律 `revisions[r].version ?? version`);提交本身的 `version` 只有舊版資料升級會改綁。`kind: "upgrade"` = 舊版資料升級產生的修訂,`ctx` 沿用上一筆,誰與何時升級記在 `upgradedBy` / `upgradedAt`。`editVersion` 是每次寫入的樂觀鎖;`(createdBy, clientRequestId)` 唯一(含已軟刪除的);`touched[]` 是使用者碰過的欄位 key(只對草稿有意義)。容量上限見 `docs/modules/forms.md`「提交的寫入規則」。
 - **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason` / `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
 
 ### 流程
@@ -133,7 +133,7 @@
 
 - **`workflows`**:`tenantId` = `ownerOrgId`,共用流程是 `null` —— 查共用要**明給 `null`**,沒給(`undefined`)一律拋錯。`key` 全域唯一、建立後不可改。
 - **`workflow_versions`**:與 `form_versions` 同一套部分唯一索引,草稿刪除同樣硬刪;`steps[]` / `edges[]` 存自由 JSON,形狀正本是 `@repo/domain/workflow` 的 `StepDef` / `WorkflowEdge`(沒有 `edges` = 直線,依 `steps[]` 順序);`checkFormKey` 是設計器的「檢查用表單」,只影響設計時的檢查。
-- **`workflow_instances` 是唯一權威**:建立時就為版本的每個節點各建一筆 `pending` 的 `StepState`,之後只改欄位、不增刪元素(推進的條件更新對 `steps` 陣列元素下條件,元素不存在就永遠不成立);`editVersion` 是 CAS 用;`summary` 是該修訂的摘要槽快照(任務列表 / 通知讀它,`summary.date` 同樣存 `Date`)。唯一 `(submissionId, revision)`;模組資料表的欄位抄自提交,資料範圍規則不套(沒有宣告資料目標)。
+- **`workflow_instances` 是唯一權威**:建立時就為版本的每個節點各建一筆 `pending` 的 `StepState`,之後只改欄位、不增刪元素(推進的條件更新對 `steps` 陣列元素下條件,元素不存在就永遠不成立);`editVersion` 是 CAS 用;`summary` 是該修訂的摘要槽快照(任務列表 / 通知讀它,`summary.date` 同樣存 `Date`)。`history[]` 每筆 `{ at, kind, stepKey, taskKey, userId, toUserId, comment, result, reason }`:`result` 只有 `notified`;`reason` 是跳過 / 自動通過的原因(`step_skipped` 帶 `skip_orgs` / `skip_condition`,B5 自動記的 `approved` 帶 `auto_applicant` / `auto_prior_approver`,其他 null)。唯一 `(submissionId, revision)`;模組資料表的欄位抄自提交,資料範圍規則不套(沒有宣告資料目標)。
 - **`workflow_tasks`**:實例派任計畫一項的投影,狀態由推進依實例同步;唯一 `(instanceId, taskKey)`,另有 `(assigneeId, status)`、`(tenantId, moduleKey, status)`、`(previousAssigneeIds)` 索引。
 
 ## 種子清單
