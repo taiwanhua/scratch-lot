@@ -186,7 +186,9 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **Figma 同步**:`figma-sync` 獨立於 `prepare`,先建置 `@repo/ui` 與 `@repo/project-config`,再跑本機外掛與舊工具的離線測試(`scripts/figma-local/*.test.mjs`、`scripts/figma-sync/*.test.mjs`);結果納入 `verify`。CI 不讀 Figma token、不操作設計檔;離線通過不代表 Library 已發布或專案已接受更新。實際操作見 [toolbox](agents/toolbox.md#figma-品牌同步)。
 - **逾時**:`prepare` 10 分、`project-settings` / `verify` 5 分、`figma-sync` 15 分、`test-others` 30 分,其餘 20 分。
 - `build` job 起 api 時給假的 `JWT_SECRET`(api 缺它就啟動失敗)。
-- **MongoDB 一律是 replica set**(交易需要,ADR-0013):api / db-migrator 的測試由 jest globalSetup 起單一成員 `MongoMemoryReplSet`;`build` job 以 `docker run mongo:8 --replSet` 起並等到選出 PRIMARY。GitHub 的 service container 不能帶啟動參數,所以不用它。mongod 二進位以 `actions/cache` 快取 `~/.cache/mongodb-binaries`(key 跟 lockfile)。
+- **MongoDB 一律是 replica set**(交易需要,ADR-0013):api / db-migrator 的測試由 jest globalSetup 起單一成員 `MongoMemoryReplSet`;`build` job 以 `docker run mongo:<版本> --replSet` 起並等到選出 PRIMARY。GitHub 的 service container 不能帶啟動參數,所以不用它。mongod 二進位以 `actions/cache` 快取 `~/.cache/mongodb-binaries`(key 跟 lockfile)。
+- **`build` job 的 MongoDB 容器**:容器沒起來(一啟動就退出,或 90 秒內沒選出 PRIMARY)時,該步驟印出 `docker inspect` 的狀態與退出碼(`status` / `exitCode` / `oomKilled` / `error`)和 `docker logs mongo`(收在「mongo 容器狀態與 logs」群組),先 `docker rm -f mongo` 再重起,最多 3 次;3 次都失敗才紅。查原因時展開各次的群組。
+- **MongoDB 版本**:CI 的 `build` job(`ci.yml` 的 `MONGO_IMAGE`)與本機 `docker-compose.yml` 用同一個固定 patch 版本的 `mongo` image(目前 `mongo:8.3.13`),升級時兩處一起改。jest 測試的 `MongoMemoryReplSet` 用 mongodb-memory-server 內建的預設 mongod 版本(`mongodb-memory-server@11.2.0` 為 8.2.6),跟著 lockfile 升級,與上述 image 不同步;兩者同屬 8.x,但小版本可能不同(8.3 對 8.2)。
 
 ### CD(deploy.yml)
 

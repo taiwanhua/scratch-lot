@@ -504,12 +504,51 @@ jobs:
         run: pnpm exec turbo run build --filter=@repo/api
 
       # 與本機 / 正式環境一致:單一成員 replica set(api 的交易需要)。service container 不能帶 --replSet,
-      # 所以用 docker run 起 mongo:8,初始化並等到選出 PRIMARY(可寫入)
+      # 所以用 docker run 起 mongo,初始化並等到選出 PRIMARY(可寫入)。
+      # image 固定 patch 版本(與 docker-compose.yml 同一個;版本差異見 docs/deployment.md「CI」)。
+      # 容器偶發一起來就退出:每次失敗印出退出狀態與容器 logs,先 docker rm -f 再重起,最多 3 次。
       - name: 啟動 MongoDB(單一成員 replica set,拋棄式)
         if: needs.prepare.outputs.front == 'true'
+        env:
+          MONGO_IMAGE: mongo:8.3.13
         run: |
-          docker run -d --name mongo -p 27017:27017 mongo:8 --replSet ci --bind_ip_all
-          timeout 90 bash -c 'until docker exec mongo mongosh --quiet --eval "try { rs.status() } catch (e) { rs.initiate({ _id: \"ci\", members: [{ _id: 0, host: \"localhost:27017\" }] }) } if (!db.hello().isWritablePrimary) { quit(1) }"; do sleep 2; done'
+          init_js='try { rs.status() } catch (e) { rs.initiate({ _id: "ci", members: [{ _id: 0, host: "localhost:27017" }] }) } if (!db.hello().isWritablePrimary) { quit(1) }'
+
+          # 等到 PRIMARY 回 0;容器已停止或逾時回 1
+          wait_primary() {
+            local deadline=$((SECONDS + 90))
+            local out
+            while :; do
+              if out=$(docker exec mongo mongosh --quiet --eval "$init_js" 2>&1); then
+                return 0
+              fi
+              if [ "$(docker container inspect -f '{{.State.Running}}' mongo 2>/dev/null)" != "true" ]; then
+                echo "容器已停止"
+                return 1
+              fi
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "90 秒內沒有選出 PRIMARY;最後一次 mongosh 輸出:"
+                echo "$out"
+                return 1
+              fi
+              sleep 2
+            done
+          }
+
+          for attempt in 1 2 3; do
+            docker rm -f mongo >/dev/null 2>&1 || true
+            if docker run -d --name mongo -p 27017:27017 "$MONGO_IMAGE" --replSet ci --bind_ip_all && wait_primary; then
+              echo "MongoDB 已就緒($MONGO_IMAGE,第 $attempt 次)"
+              exit 0
+            fi
+            echo "::warning::MongoDB 第 $attempt 次啟動失敗"
+            echo "::group::mongo 容器狀態與 logs(第 $attempt 次)"
+            docker inspect -f 'status={{.State.Status}} exitCode={{.State.ExitCode}} oomKilled={{.State.OOMKilled}} error={{.State.Error}}' mongo || true
+            docker logs mongo 2>&1 || true
+            echo "::endgroup::"
+          done
+          echo "::error::MongoDB 連續 3 次啟動失敗,原因見上面各次的 logs"
+          exit 1
 
       - name: 啟動 api(接 CI 的拋棄式 MongoDB,空資料庫)
         if: needs.prepare.outputs.front == 'true'
