@@ -15,7 +15,7 @@ export interface OrgActionBarProps {
    */
   isTenantTopProtected: boolean;
   /**
-   * 「撤銷開通」出不出現(#374):持有 `tenant-ops.revoke-provision`、站在根組織視角、
+   * 「撤銷開通」出不出現:持有 `tenant-ops.revoke-provision`、站在根組織視角、
    * 且選中的是租戶頂層 —— 三者都成立才給按鈕(判斷在 `OrgManagerPage`,這裡只負責畫)。
    */
   canRevokeProvision: boolean;
@@ -53,7 +53,7 @@ export const OrgActionBar = ({
           {t("edit")}
         </Button>
       )}
-      {/* 停用的按鈕收不到 hover,包 span 的事情交給 Tooltip 自己處理(#240) */}
+      {/* 停用的按鈕收不到 hover,包 span 的事情交給 Tooltip 自己處理 */}
       {ability.canToggleEnabled && (
         <Tooltip title={isLocked ? lockedHint : ""}>
           <Button
@@ -79,7 +79,7 @@ export const OrgActionBar = ({
           </Button>
         </Tooltip>
       )}
-      {/* 撤銷開通只在根組織視角 + 租戶頂層時出現(#374);不是「出現但停用」——
+      {/* 撤銷開通只在根組織視角 + 租戶頂層時出現;不是「出現但停用」——
           對非租戶頂層的組織它根本不是一個可想像的動作,給了按鈕只會讓人困惑 */}
       {canRevokeProvision && (
         <Button

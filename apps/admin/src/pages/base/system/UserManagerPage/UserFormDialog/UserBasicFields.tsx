@@ -52,8 +52,8 @@ export const UserBasicFields = ({
         <TextField {...field("nickname")} />
         {/*
          * 性別是下拉,但**照其他欄位一樣要有浮動標籤**(Figma 202:734 的「性別」;
-         * 驗收 #373:原本只有 `aria-label`,畫面上看不到欄位名)。表單下拉一律 `SelectField`
-         * (REACT-11,#429):標籤、`disabled` / `fullWidth` 與同列的 `TextField` 一致,
+         * 驗收時發現:原本只有 `aria-label`,畫面上看不到欄位名)。表單下拉一律 `SelectField`
+         * (REACT-11):標籤、`disabled` / `fullWidth` 與同列的 `TextField` 一致,
          * 「未填」是 `value: ""` 的空值項 + `displayEmpty`(標籤釘在上緣)。
          * 表單值是自由字串(api 的 `gender` 不是 enum),所以 `Value` 明示為 `string`。
          */}

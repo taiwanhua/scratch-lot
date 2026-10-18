@@ -1,5 +1,5 @@
 /**
- * 角色選單的顯示與分組(#261 的 8;#307 改用 `@repo/ui/autocomplete` 後收斂)。
+ * 角色選單的顯示與分組(改用 `@repo/ui/autocomplete` 後收斂)。
  *
  * 三個地方要能**分辨同名角色** —— 資料範圍頁的套用對象「指定角色」、使用者頁的指派角色、
  * 角色管理頁的清單:每個租戶都有自己的「租戶管理員」,只看角色名稱在根組織視角完全分不出來。
@@ -11,7 +11,7 @@
  *   只有一組的標題是雜訊)
  *
  * **關鍵字過濾不在這裡**:改用 Autocomplete 後,前端過濾由元件內建(比對主文字),
- * 跨頁的 `filterRoleOptions` 因此退場(#307)。
+ * 跨頁的 `filterRoleOptions` 因此退場。
  */
 
 /** 這些函式只吃 `Role` 的這幾個欄位;各頁的 codegen 型別結構上相容,不必轉一手。 */
@@ -65,7 +65,7 @@ export const roleMenuOptions = (
 ): RoleMenuOption[] => roles.map((role) => roleMenuOptionOf(role));
 
 /**
- * 以**擁有組織**分組 / 排序用的最小形狀(#372)。與上面的租戶頂層分組是兩件事:
+ * 以**擁有組織**分組 / 排序用的最小形狀。與上面的租戶頂層分組是兩件事:
  * 租戶頂層底下可以有很多個擁有組織,所以同一個標題底下還是會混著好幾個組織的角色。
  */
 export interface RoleOwnerOrgGroupable {
@@ -82,7 +82,7 @@ export interface RoleOwnerOrgGroupable {
 const COLLATION_LOCALE = "zh-Hant";
 
 /**
- * 依「擁有組織 → 角色名」排序,讓同一個擁有組織的角色**相鄰**(#372)。
+ * 依「擁有組織 → 角色名」排序,讓同一個擁有組織的角色**相鄰**。
  *
  * MUI 的 `groupBy` 只是「相鄰且同值就合成一組」,**它自己不排序** —— api 回的順序裡
  * 同組織的角色被別的組織隔開時,同一個標題就會出現兩次以上。沒有擁有組織的那幾筆殿後。
@@ -141,7 +141,7 @@ export interface RoleGroupable {
  * 這批選項該不該分組:**跨兩個以上租戶頂層才分**(根組織視角),否則只有一組、標題是雜訊。
  *
  * 回 `false` 時呼叫端就不要傳 `groupBy` 給 Autocomplete —— 之前是回一個「單一組」的結構,
- * 但 MUI 的 `groupBy` 只要給了就一定畫標題,所以判斷與取值拆成兩個函式(#307)。
+ * 但 MUI 的 `groupBy` 只要給了就一定畫標題,所以判斷與取值拆成兩個函式。
  */
 export const shouldGroupRoles = (
   options: readonly RoleGroupable[],
@@ -175,7 +175,7 @@ export interface RoleMenuGroup {
  * 組的順序 = 各組第一次出現的順序(= api 回的順序),沒有租戶頂層的一組殿後。
  *
  * **只剩角色管理頁的清單面板用**:那裡是自己畫的分段清單,不是選單。
- * 三個選單自 #307 起改用 Autocomplete,分組交給它的 `groupBy`(配
+ * 三個選單已改用 Autocomplete,分組交給它的 `groupBy`(配
  * `shouldGroupRoles` + `roleGroupNameOf`),不必先把資料切成巢狀結構。
  */
 export const groupRoleOptions = (

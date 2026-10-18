@@ -61,7 +61,7 @@ export interface FormSubmissionListProps {
 const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * 提交列表(Spec 6a §8 `<FormSubmissionList moduleKey columns? …>`,`DataTable` + REACT-13 `render(ctx)`)。
+ * 提交列表(`<FormSubmissionList moduleKey columns? …>`,`DataTable` + REACT-13 `render(ctx)`)。
  *
  * 欄位來自列表欄位配置(摘要槽或表單欄位);表單欄位的一格依**那一筆綁的版本**判斷:
  * 配置引用的欄位在那一版不存在(或是別張表單的欄位)→ 顯示「—」。表單欄位的表頭讀該表單**目前版本**的定義

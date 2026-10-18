@@ -21,6 +21,6 @@ export const ORG_MANAGER_VIEW_PERMISSION = "system.org-manager.view";
 
 /*
  * 這裡曾有 `USER_MANAGER_VIEW_PERMISSION`:「加入使用者」的候選清單借用 `users` query,
- * 連帶逼得這個彈窗需要使用者管理的檢視權限。#246 補了 `roleUserCandidates`
+ * 連帶逼得這個彈窗需要使用者管理的檢視權限。補了 `roleUserCandidates`
  * (掛 `assign-users`)之後這個相依消失,常數一併移除。
  */

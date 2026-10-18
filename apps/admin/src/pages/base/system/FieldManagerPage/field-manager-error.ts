@@ -15,7 +15,7 @@ const FIELD_MANAGER_ERROR_CODES = [
 ] as const;
 
 /**
- * `FORBIDDEN` 依 `extensions.reason` 再分一層(#264):`NOT_OWNER` 是「別的組織加的選項」,
+ * `FORBIDDEN` 依 `extensions.reason` 再分一層:`NOT_OWNER` 是「別的組織加的選項」,
  * 與種子選項的全域開關是兩回事,文案不同 —— 所以它在本頁被當成獨立的一碼。
  * 類別作業同理:`SYSTEM_CATEGORY`(系統類別不可停用)、`ROOT_ONLY`(類別只能在根組織管理)。
  */

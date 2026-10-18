@@ -5,7 +5,7 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 /**
- * 「成員」頁籤與「加入成員」候選清單共用的分頁 / 篩選(#377)。
+ * 「成員」頁籤與「加入成員」候選清單共用的分頁 / 篩選。
  *
  * **組織 id 不在這裡**:清單掛在某個實體底下時,那個實體的 id 是獨立參數(GQL-03,
  * 先例 `roleUsers(roleId: ID!, input: RoleUsersInput!)`),input 只放篩選與分頁。

@@ -1,8 +1,8 @@
-# 組織管理(#134;模組 system.org-manager,規則正本 docs/modules/org-manager.md)。
+# 組織管理(模組 system.org-manager,規則正本 docs/modules/org-manager.md)。
 # 樹以操作者可見範圍決定(ADR-0005):根組織視角以根組織為根、租戶視角以租戶頂層為根;
 # 可見範圍外的節點照樣回、標 outOfScope(樹不斷,但不能選也不能操作)。
 
-# ownerUserId 只有租戶頂層有值(#139:使用者管理頁靠它判斷哪一列是受保護的擁有者,不必逐筆查 org(id))
+# ownerUserId 只有租戶頂層有值(使用者管理頁靠它判斷哪一列是受保護的擁有者,不必逐筆查 org(id))
 fragment OrgNodeFields on OrgNode {
   id
   name
@@ -101,7 +101,7 @@ mutation DeleteOrg($input: DeleteOrgInput!) {
   }
 }
 
-# --- 租戶作業(#135;模組 system.org-manager.tenant-ops,根組織專屬) ---
+# --- 租戶作業(模組 system.org-manager.tenant-ops,根組織專屬) ---
 # 三個 mutation 的彈窗都開在組織管理頁上,但權限屬 tenant-ops;
 # 非根組織的操作者即使持有權限也會拿到 FORBIDDEN(ADR-0009)。
 
@@ -142,7 +142,7 @@ mutation ProvisionTenant($input: ProvisionTenantInput!) {
   }
 }
 
-# 撤銷開通(#374,根組織專屬):反向抹掉開通建出的租戶頂層、擁有者帳號、租戶管理員副本。
+# 撤銷開通(根組織專屬):反向抹掉開通建出的租戶頂層、擁有者帳號、租戶管理員副本。
 # 租戶底下還有別的東西 → PROVISION_NOT_REVOKABLE,errors[0].extensions.reasons 逐項列出
 # (語彙同 ORG_NOT_DELETABLE)。成功後組織樹要重查(少一個租戶節點),選取要清掉
 mutation RevokeTenantProvision($input: RevokeTenantProvisionInput!) {
@@ -185,7 +185,7 @@ mutation SetOrgTimezone($input: SetOrgTimezoneInput!) {
   }
 }
 
-# --- 成員頁籤(#377;權限 system.org-manager.view-members / .add-members) ---
+# --- 成員頁籤(權限 system.org-manager.view-members / .add-members) ---
 # 清單是這個組織**自己**的成員(org_user 直接關聯),不含下層組織的成員 ——
 # 「加入成員」加的就是一筆直接關聯,列表要跟它對得起來;要看整棵子樹是使用者管理的 users。
 # otherOrgs = 這位成員在本組織以外的所屬組織,只列操作者管理範圍內的(範圍外不露名稱也不露 id)。
@@ -212,7 +212,7 @@ query OrgMembers($orgId: ID!, $input: OrgMembersInput!) {
 }
 
 # 「加入成員」彈窗的候選:管理範圍內、**尚未加入**這個組織的使用者。
-# 守在 add-members 底下,不借 users —— 借了會讓這個彈窗連帶需要 system.user-manager.view(#246)。
+# 守在 add-members 底下,不借 users —— 借了會讓這個彈窗連帶需要 system.user-manager.view。
 query OrgMemberCandidates($orgId: ID!, $input: OrgMembersInput!) {
   orgMemberCandidates(orgId: $orgId, input: $input) {
     totalCount

@@ -37,21 +37,21 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   server.events.removeAllListeners();
-  // zustand store 是模組層單例(重構 #116 前登入狀態與語言各自掛在每次 renderApp 新建的物件上),每個測試後歸零;
+  // zustand store 是模組層單例(重構前登入狀態與語言各自掛在每次 renderApp 新建的物件上),每個測試後歸零;
   // 路由頁籤 store 不需要:殼 mount 時 `bind` 一律以 sessionStorage 覆蓋,測試各自 `sessionStorage.clear()`
   useSessionStore.setState(INITIAL_SESSION_SNAPSHOT);
   useLocaleStore.setState({ locale: defaultLocale });
   localStorage.removeItem(LOCALE_STORAGE_KEY);
-  // 側欄收合也是模組層單例(#289):收合過的測試不能讓下一個測試一開始就是圖示列
+  // 側欄收合也是模組層單例:收合過的測試不能讓下一個測試一開始就是圖示列
   useSideNavStore.setState({ isCollapsed: false });
   localStorage.removeItem(SIDE_NAV_STORAGE_KEY);
-  // 舊 key 也清:驗搬移的測試會塞它(#183 第 6 項),留著會被下一個測試搬進新 key
+  // 舊 key 也清:驗搬移的測試會塞它,留著會被下一個測試搬進新 key
   if (LEGACY_SIDE_NAV_STORAGE_KEY !== null) {
     localStorage.removeItem(LEGACY_SIDE_NAV_STORAGE_KEY);
   }
-  // 操作結果提示也是模組層單例(#376):上一個測試留下的那一則不能跟著進下一個測試
+  // 操作結果提示也是模組層單例:上一個測試留下的那一則不能跟著進下一個測試
   useSnackbarStore.getState().reset();
-  // 模組說明的假 registry 也是模組層單例(#197);改過的測試不影響下一個
+  // 模組說明的假 registry 也是模組層單例;改過的測試不影響下一個
   resetHelpFiles();
   // 表單設計器的「未存變更」回報也是模組層單例
   useDesignerDraftStore.setState({ formKey: null, isDirty: false, save: null });

@@ -17,7 +17,7 @@ export interface FormSubmissionUsage {
   completedVersions: number[];
 }
 
-/** 終局、內容不會再改的狀態(Spec 6b §6):與已完成同一層,警告確認後可刪。 */
+/** 終局、內容不會再改的狀態:與已完成同一層,警告確認後可刪。 */
 const HISTORICAL_STATUSES: ReadonlySet<string> = new Set([
   "completed",
   "rejected",
@@ -31,7 +31,7 @@ interface UsageRow {
 }
 
 /**
- * 退役權限清理(Spec 6a §6「root 清理」)的三層檢查要的計數。
+ * 退役權限清理的三層檢查要的計數。
  *
  * 為什麼不經 `BaseRepository`:那一層一定套可見範圍與資料範圍規則(ADR-0005 / ADR-0008),
  * 這裡的判斷卻必須 fail-closed —— 任何一筆沒被數到的草稿都會讓權限被誤刪、那一欄就只剩 root 看得到。

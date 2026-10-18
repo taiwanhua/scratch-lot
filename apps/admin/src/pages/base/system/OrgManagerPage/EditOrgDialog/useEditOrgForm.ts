@@ -19,7 +19,7 @@ export interface EditOrgFormState {
   /**
    * 使用者碰過商標欄(選了新檔或按了移除)。
    * 沒碰過就**不送 `logoPath`** — `UpdateOrgInput` 的 `logoPath: null` 在 api 是「清空」,
-   * 沒有這個旗標的話,只改名稱也會把既有商標連帶刪掉(#186 ②)。
+   * 沒有這個旗標的話,只改名稱也會把既有商標連帶刪掉。
    */
   isLogoTouched: boolean;
   ownerUserId: string;

@@ -66,7 +66,7 @@ const withMissing = <T extends { id: string }>(
 /**
  * 條件列的「值」:依欄位換控制項。
  * - 使用者:Autocomplete 多選
- * - 角色:Autocomplete 多選,依**擁有組織**分組(跨兩個以上擁有組織時才分;同 #372 的寫法)
+ * - 角色:Autocomplete 多選,依**擁有組織**分組(跨兩個以上擁有組織時才分;與角色選單同一種寫法)
  * - 所屬組織:使用處有動態來源時先選「指定組織 / 表單的組織欄位…」;指定組織用組織樹(`OrgTreeSelect`)
  * - 權限:可搜尋的模組 / 權限樹(`PermissionTreeSelect`)
  */

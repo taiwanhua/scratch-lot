@@ -25,7 +25,7 @@ import { formModuleKeyOf, useFormModuleAccess } from "./useFormModuleAccess";
 import { useTabLabelRenderer } from "./useTabLabelRenderer";
 
 /**
- * 表單模組編輯頁(預設組裝;Spec 6a §8 畫面 9)。網址 `/<模組>/edit-page/<id>`:
+ * 表單模組編輯頁(預設組裝)。網址 `/<模組>/edit-page/<id>`:
  * - 草稿:存草稿 / 送出(建立者本人)
  * - 已完成(沒走過流程):儲存修改(需 `edit` + `abilities.canEdit`),每改一次修訂 +1 並存完整快照
  * - 被退回 / 已撤回(申請人本人):同草稿,改完再送出 = 修訂 +1、重新審核

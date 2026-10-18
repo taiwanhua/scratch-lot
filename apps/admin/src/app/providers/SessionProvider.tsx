@@ -17,7 +17,7 @@ export interface SessionProviderProps {
  * - 開機時用 refresh cookie 換票(重新整理後 30 天內不必重登)
  * - 狀態變成未登入時清掉 react-query 快取(`me` 等不留給下一個人)
  *
- * 分頁之間的同步(其他分頁登出 / 登入了別的帳號)在 `MultiTabSession`(#375) —— 它要用到 `me` 與導向,
+ * 分頁之間的同步(其他分頁登出 / 登入了別的帳號)在 `MultiTabSession` —— 它要用到 `me` 與導向,
  * 所以掛在 context 裡面、與頁面同層。
  */
 export const SessionProvider = ({

@@ -179,7 +179,7 @@ async function applyDataScope(
   const provider = getDataScopeRuleProvider();
   if (!provider) {
     // 跑起來的 app 走不到這裡:`DatabaseModule.onApplicationBootstrap` 已斷言 provider
-    // 必定註冊(#246 的 6);剩下的呼叫端只有不起 Nest 的單元測試
+    // 必定註冊;剩下的呼叫端只有不起 Nest 的單元測試
     return;
   }
   // applyTenantScope 已在同一個中介層先跑過,沒有上下文的查詢在那裡就 fail-closed 了

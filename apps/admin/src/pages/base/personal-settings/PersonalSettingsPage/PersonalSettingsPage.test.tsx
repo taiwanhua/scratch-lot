@@ -8,7 +8,7 @@ import { renderApp } from "@/test/render";
 const PREFERENCES_EMPTY =
   "目前沒有可以調整的偏好。外觀與語言在右上角的頭像選單切換。";
 
-/** 個人設定(規格 10.6;殼層路由 `/settings/personal`,不是模組、不看權限)。 */
+/** 個人設定(殼層路由 `/settings/personal`,不是模組、不看權限)。 */
 describe("個人設定頁", () => {
   it("打開個人設定的偏好分頁:沒有語言選項", async () => {
     server.use(...authWorld({ hasRefreshCookie: true }).handlers);

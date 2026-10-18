@@ -40,7 +40,7 @@ import type {
 } from "./demo-sample-two-types";
 
 /**
- * 示範模組2 的設定物件 —— **對照組**那一支(#321;介面見 `shared/demo-module-config.ts`,
+ * 示範模組2 的設定物件 —— **對照組**那一支(介面見 `shared/demo-module-config.ts`,
  * 完整示範見 `SampleOneModule.tsx`)。
  *
  * 它存在的理由就是「拿掉所有可選的東西之後剩下什麼」:沒有欄位級權限、沒有上傳、

@@ -1,4 +1,4 @@
-/** 密碼最少長度(#61 User Story 14;以 JS 字串長度計)。 */
+/** 密碼最少長度(以 JS 字串長度計)。 */
 export const PASSWORD_MIN_LENGTH = 8;
 
 /**

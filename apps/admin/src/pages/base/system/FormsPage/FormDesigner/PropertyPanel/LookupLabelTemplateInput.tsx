@@ -29,7 +29,7 @@ const placeholderOf = (provider: string, field: string): string =>
     : `{{${field}}}`;
 
 /**
- * lookup 來源的顯示模板(`labelTemplate`,選填;Spec 6a §5「lookup 來源」):文字框 + 「插入欄位」下拉
+ * lookup 來源的顯示模板(`labelTemplate`,選填;`docs/concepts/form-engine.md`「lookup 來源」):文字框 + 「插入欄位」下拉
  * (欄位從來源可回的欄位挑,插到模板最後)。清空 = 拿掉 `labelTemplate`,顯示名回到顯示欄。
  * 顯示名由 api `formLookup` 在後端組好,這裡不預覽。
  */

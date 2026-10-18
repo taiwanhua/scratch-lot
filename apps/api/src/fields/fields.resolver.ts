@@ -11,7 +11,7 @@ import { FieldPayload, FieldsPayload } from "./models/field-payloads.model";
 import { FieldModel } from "./models/field.model";
 
 /**
- * 欄位管理的 GraphQL 端點(#206;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 欄位管理的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,合併範圍與種子保護全在 service(STRUCT-01);
  * 每個 key 對應 field-manager.md 權限表的同一行。類別清單與類別作業在 `field-categories.resolver.ts`。
  */

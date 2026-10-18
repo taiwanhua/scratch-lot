@@ -1,7 +1,7 @@
 import type { FieldType } from "./types";
 
 /**
- * 檢查器要的登錄表(Spec §5):widget、lookup 來源、欄位管理類別。
+ * 檢查器要的登錄表:widget、lookup 來源、欄位管理類別。
  * domain 只給 widget 的預設登錄表;lookup provider(api 的 `lookup-providers.ts`)與類別 key(資料庫)
  * 由呼叫端注入,沒注入就跳過那一項檢查。
  */

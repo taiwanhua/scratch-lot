@@ -125,7 +125,7 @@ export class NotificationSettingsService {
     );
     if (!validation.ok) {
       throw notificationSettingRejected(
-        "INVALID_AUDIENCE",
+        "AUDIENCE_INVALID",
         type.key,
         validation.issue.path,
       );

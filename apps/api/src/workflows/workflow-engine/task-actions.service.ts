@@ -86,7 +86,7 @@ type DecideOnceInput = Omit<DecideTaskInput, "expectedEditVersion"> & {
 };
 
 /**
- * 審核動作(Spec 6b §6「決定」「撤回、改派、新增審核者、審核者失效」)。**每個動作是一個交易**
+ * 審核動作。**每個動作是一個交易**
  * (ADR-0013):讀、寫實例與任務、稽核、推進全在同一個交易裡,任一步失敗全部回復。並發的兩個動作寫到同一份
  * 實例 → 後到的寫入衝突、整個交易由 driver 重跑,重讀後依當下狀態判斷(下列語意不變):
  *
@@ -306,7 +306,7 @@ export class TaskActionsService {
             taskKey: task.taskKey,
             userId: me,
             comment: comment === "" ? null : comment,
-            // B15:代理人的這一票作用到他代理的所有人,時間軸寫「由 X 代理 A、B 核准」
+            // 代理人的這一票作用到他代理的所有人,時間軸寫「由 X 代理 A、B 核准」
             delegatorIds: delegatorIdsOf(instance, task.stepKey, task.taskKey),
           },
         },
@@ -386,7 +386,7 @@ export class TaskActionsService {
         $set: {
           "steps.$[s].plan.$[p].assigneeId": toUserId,
           "steps.$[s].plan.$[p].assigneeState": "active",
-          // 改派後的承辦人不是代理(B15),不再記被代理者
+          // 改派後的承辦人不是代理,不再記被代理者
           "steps.$[s].plan.$[p].delegatorIds": [],
         },
         $push: {
@@ -595,7 +595,7 @@ export class TaskActionsService {
     return instance.tenantId;
   }
 
-  /** 決定的前置(Spec §6「決定」1):任務屬於提交目前的實例、實例進行中、關卡在 active 且為 active。 */
+  /** 決定的前置:任務屬於提交目前的實例、實例進行中、關卡在 active 且為 active。 */
   private async isDecidable(
     task: WorkflowTaskRecord,
     instance: InstanceRecord | null,

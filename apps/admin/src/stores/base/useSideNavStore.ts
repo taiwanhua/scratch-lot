@@ -9,17 +9,17 @@ import {
 /**
  * 側欄收合狀態的 localStorage key(登記於 `docs/branding.md`)。
  * 收合是**這台瀏覽器的偏好**,不分使用者也不分組織 —— 換人登入照樣維持,
- * 所以不像路由頁籤那樣以 `:<userId>` 分把鑰匙(#289)。
+ * 所以不像路由頁籤那樣以 `:<userId>` 分把鑰匙。
  *
  * kebab 是 admin 所有儲存鍵的統一寫法(`<slug>-admin-<用途>`,由專案設定的 slug 生成);
- * #289 當初寫成點分隔,#183 第 6 項改齊。
+ * 當初寫成點分隔,後來改齊。
  */
 export const SIDE_NAV_STORAGE_KEY = createAdminStorageKeys(
   projectPublic.slug,
 ).sideNav;
 
 /**
- * #289 時用的點分隔舊 key;只為了把既存的收合狀態搬過來,搬完就刪(見 `createSideNavItemReader`)。
+ * 早期用的點分隔舊 key;只為了把既存的收合狀態搬過來,搬完就刪(見 `createSideNavItemReader`)。
  * 由專案設定指定:只有當年用過舊 key 的專案有值,新專案是 null(完全不讀、不刪任何舊 key)。
  */
 export const LEGACY_SIDE_NAV_STORAGE_KEY: string | null =
@@ -60,7 +60,7 @@ export const createSideNavItemReader =
   };
 
 /**
- * 封包格式仍是 `persist` 預設的 `{ state, version }` JSON(#289 就是這個格式),
+ * 封包格式仍是 `persist` 預設的 `{ state, version }` JSON(早期就是這個格式),
  * 只在讀取那一步多墊一層搬移;語言與路由頁籤那兩支是為了保住**非 JSON 的**既存格式
  * 才自訂整個 `PersistStorage`(REACT-02 的注意①),這裡不需要。
  */
@@ -83,7 +83,7 @@ const sideNavStorage = createJSONStorage<SideNavPersisted>(() => ({
 }));
 
 /**
- * 側欄收合狀態(#289;REACT-02 第 4 點:跨元件、跨重新整理的用戶端狀態放 zustand + `persist`)。
+ * 側欄收合狀態(REACT-02 第 4 點:跨元件、跨重新整理的用戶端狀態放 zustand + `persist`)。
  */
 export const useSideNavStore = create<SideNavState>()(
   persist(

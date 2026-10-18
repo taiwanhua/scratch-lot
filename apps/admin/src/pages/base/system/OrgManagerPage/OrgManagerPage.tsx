@@ -100,7 +100,7 @@ export const OrgManagerPage = () => {
     setActionError(orgManagerErrorOf(error));
   };
 
-  /** 失敗的 Snackbar 文案與彈窗內那一條錯誤同一份解讀(#376)。 */
+  /** 失敗的 Snackbar 文案與彈窗內那一條錯誤同一份解讀。 */
   const feedbackError = (error: unknown) =>
     tErrors(orgManagerErrorOf(error).code);
 
@@ -134,7 +134,7 @@ export const OrgManagerPage = () => {
     }),
   );
 
-  /** 撤銷開通後那一節整個不見了,與刪除一樣要清掉選取再重查整棵樹(#374)。 */
+  /** 撤銷開通後那一節整個不見了,與刪除一樣要清掉選取再重查整棵樹。 */
   const revokeProvision = useRevokeTenantProvisionMutation(
     session.client,
     useMutationFeedback({
@@ -162,7 +162,7 @@ export const OrgManagerPage = () => {
     selectedNode !== undefined && !selectedNode.outOfScope;
 
   return (
-    // 撐滿殼給的內容區高度(#183 / Figma 87:214:左右兩塊等高、各自內部捲動)
+    // 撐滿殼給的內容區高度(Figma 87:214:左右兩塊等高、各自內部捲動)
     <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
       <OrgTreePanel
         nodes={data.orgNodes}

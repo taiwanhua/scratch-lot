@@ -43,20 +43,20 @@ const statColumns: DataTableColumn<DemoStaff>[] = [
   },
   {
     key: "shifts",
-    header: "班數",
+    header: "場數",
     accessor: "shifts",
     width: 80,
     align: "right",
   },
 ];
 
-/** 班別標籤(格子內容由使用的模組決定;這裡用 Tag 示範)。 */
+/** 時段標籤(格子內容由使用的模組決定;這裡用 Tag 示範)。 */
 const renderShift: RosterGridProps<DemoStaff>["renderCell"] = ({
   date,
   index,
 }) =>
   hasDemoShift(index, Number(date.slice(-2))) ? (
-    <Tag tone="primary" label="09:00–17:00 櫃台 A" />
+    <Tag tone="primary" label="09:00–17:00 場地 A" />
   ) : null;
 
 const staffingGroup = (
@@ -64,15 +64,15 @@ const staffingGroup = (
   onCollapsedChange: (collapsed: boolean) => void,
   onEmptyCellClick: (date: string, rowKey: string) => void,
 ): RosterTopGroup => ({
-  title: "人力需求",
+  title: "時段需求",
   collapsed,
   onCollapsedChange,
-  emptyCellHint: "+ 人力需求",
+  emptyCellHint: "+ 時段需求",
   onEmptyCellClick,
   rows: [
     {
       key: "morning",
-      label: "早班",
+      label: "上午場",
       cells: {
         "2026-10-01": <Tag label="負 1/1 協 1/1" />,
         "2026-10-02": <Tag tone="warning" label="負 1/1 協 0/1" />,
@@ -81,7 +81,7 @@ const staffingGroup = (
     },
     {
       key: "evening",
-      label: "晚班",
+      label: "晚場",
       cells: { "2026-10-01": <Tag label="負 1/1 協 1/1" /> },
     },
   ],
@@ -111,7 +111,7 @@ interface DemoOptions {
 const toggleable = [
   { key: "person", label: "人員" },
   { key: "hours", label: "時數" },
-  { key: "shifts", label: "班數" },
+  { key: "shifts", label: "場數" },
 ] as const;
 
 /** 扮演使用的模組:持有選取、欄位顯示、統計欄收合、頂部群組收合。 */
@@ -165,7 +165,7 @@ const ControlledRoster = ({
         topGroup={
           withTopGroup
             ? staffingGroup(topCollapsed, setTopCollapsed, (date, rowKey) => {
-                setLastAction(`新增人力需求:${date} / ${rowKey}`);
+                setLastAction(`新增時段需求:${date} / ${rowKey}`);
               })
             : undefined
         }
@@ -204,10 +204,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 沒有頂部群組(Figma Group=None);點格子選取,每週二店休整欄停用。 */
+/** 沒有頂部群組(Figma Group=None);點格子選取,每週二公休整欄停用。 */
 export const Default: Story = {};
 
-/** 頂部群組展開(Figma Group=Expanded):空白格滑過顯示「+ 人力需求」,點了回呼模組。 */
+/** 頂部群組展開(Figma Group=Expanded):空白格滑過顯示「+ 時段需求」,點了回呼模組。 */
 export const TopGroupExpanded: Story = {
   render: (args) => <ControlledRoster {...args} withTopGroup />,
 };

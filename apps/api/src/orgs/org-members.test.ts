@@ -114,13 +114,13 @@ const ORG_MANAGER_MODULE = "system.org-manager";
 const VIEW_MEMBERS = `${ORG_MANAGER_MODULE}.view-members`;
 
 /**
- * 組織詳情的「成員」頁籤(#377:清單 / 候選 / 加入成員;TEST-07,對真 Nest + 真 MongoDB)。
+ * 組織詳情的「成員」頁籤(清單 / 候選 / 加入成員;TEST-07,對真 Nest + 真 MongoDB)。
  *
  * 規則正本:docs/modules/org-manager.md(權限表與 api 介面)、
  * docs/modules/user-manager.md「所屬組織」(加入的寫入與稽核沿用那一支)、
  * ADR-0005(管理範圍)、ADR-0003(所屬組織與授予資格)。
  */
-describe("組織管理:成員頁籤(#377,GraphQL 端點 + 真 MongoDB)", () => {
+describe("組織管理:成員頁籤(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   /** 租戶 A > A 部門一 > A 部門一之一;租戶 B 是管理範圍外的對照 */
   let tenantAId: Types.ObjectId;

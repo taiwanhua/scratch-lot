@@ -69,8 +69,8 @@ describe("進入畫面自動捲動", () => {
   it("週模式:捲到最早的長條前 1 小時(每小時 36px)", () => {
     renderTimeline({
       groups: [
-        group("a", D4, 10, 14, "早班", "早", [bar("a1", D4, 9.5, 14, "甲")]),
-        group("b", D5, 12, 18, "午班", "午", [bar("b1", D5, 12, 18, "乙")]),
+        group("a", D4, 10, 14, "上午場", "早", [bar("a1", D4, 9.5, 14, "甲")]),
+        group("b", D5, 12, 18, "午場", "午", [bar("b1", D5, 12, 18, "乙")]),
       ],
     });
 
@@ -83,7 +83,7 @@ describe("進入畫面自動捲動", () => {
       mode: "day",
       dates: [{ date: D4 }],
       groups: [
-        group("a", D4, 7, 14, "早班", "早", [bar("a1", D4, 9, 14, "甲")]),
+        group("a", D4, 7, 14, "上午場", "早", [bar("a1", D4, 9, 14, "甲")]),
       ],
     });
 
@@ -99,7 +99,7 @@ describe("進入畫面自動捲動", () => {
 
   it("切換週會重新捲;同一週資料變動不搶捲動位置;先沒資料、資料到了再捲一次", () => {
     const early = [
-      group("a", D4, 10, 14, "早班", "早", [bar("a1", D4, 10, 14, "甲")]),
+      group("a", D4, 10, 14, "上午場", "早", [bar("a1", D4, 10, 14, "甲")]),
     ];
     const { rerender } = renderTimeline();
     const view = (props: Partial<ScheduleTimelineProps>) => (
@@ -118,7 +118,7 @@ describe("進入畫面自動捲動", () => {
       view({
         groups: [
           ...early,
-          group("b", D4, 6, 9, "加班", "加", [bar("b1", D4, 6, 9, "乙")]),
+          group("b", D4, 6, 9, "加開場", "加", [bar("b1", D4, 6, 9, "乙")]),
         ],
       }),
     );
@@ -145,18 +145,18 @@ describe("進入畫面自動捲動", () => {
     renderTimeline({
       groups: [
         tooWide,
-        group("a", D4, 9, 14, "早班", "早", [bar("a1", D4, 9, 14, "甲")]),
+        group("a", D4, 9, 14, "上午場", "早", [bar("a1", D4, 9, 14, "甲")]),
       ],
     });
 
-    // 5 條要 160 寬 > 157 → 整筆收起;只剩 09:00 的早班 → 08:00
+    // 5 條要 160 寬 > 157 → 整筆收起;只剩 09:00 的上午場 → 08:00
     expect(screen.getByText("+1")).toBeInTheDocument();
     expect(scrolled.top).toEqual([8 * 36]);
   });
 });
 
 describe("跨午夜", () => {
-  const night = group("n", D4, 20, 26, "夜班 · 倉庫", "夜", [
+  const night = group("n", D4, 20, 26, "夜間場 · 場地 C", "夜", [
     bar("n1", D4, 20, 26, "陳大文"),
   ]);
 
@@ -176,15 +176,15 @@ describe("跨午夜", () => {
   it("日模式顯示次日:容器標題也標「前日 →」", () => {
     renderTimeline({ mode: "day", dates: [{ date: D5 }], groups: [night] });
 
-    expect(screen.getByText(/前日 → *夜班 · 倉庫/)).toBeInTheDocument();
+    expect(screen.getByText(/前日 → *夜間場 · 場地 C/)).toBeInTheDocument();
   });
 });
 
 describe("回呼帶出的日期與時間", () => {
   const shift = bar("s1", D4, 8.5, 14.5, "王小明");
   const missing = vacancy("s2", "協同");
-  const early = group("early", D4, 8.5, 14.5, "早班", "早", [shift, missing]);
-  const night = group("night", D4, 20, 26, "夜班", "夜", [
+  const early = group("early", D4, 8.5, 14.5, "上午場", "早", [shift, missing]);
+  const night = group("night", D4, 20, 26, "夜間場", "夜", [
     bar("n1", D4, 20, 26, "陳大文"),
   ]);
 
@@ -243,7 +243,7 @@ describe("回呼帶出的日期與時間", () => {
 
     await user.click(screen.getByRole("button", { name: "缺協同 1" }));
     act(() => {
-      screen.getByRole("button", { name: /^早班/ }).focus();
+      screen.getByRole("button", { name: /^上午場/ }).focus();
     });
     await user.keyboard(" ");
 
@@ -264,12 +264,12 @@ describe("回呼帶出的日期與時間", () => {
       jest.fn<NonNullable<ScheduleTimelineProps["onEmptyClick"]>>();
     renderTimeline({
       onEmptyClick,
-      emptyHint: "+ 人力需求",
-      disabledRanges: [{ start: at(D3, 0), end: at(D3, 24), label: "店休" }],
+      emptyHint: "+ 時段需求",
+      disabledRanges: [{ start: at(D3, 0), end: at(D3, 24), label: "公休" }],
     });
 
     await user.click(
-      screen.getByRole("button", { name: "+ 人力需求 2026-11-04 15:00" }),
+      screen.getByRole("button", { name: "+ 時段需求 2026-11-04 15:00" }),
     );
 
     expect(onEmptyClick).toHaveBeenCalledWith({
@@ -278,7 +278,7 @@ describe("回呼帶出的日期與時間", () => {
       at: new Date(at(D4, 15)),
     });
     expect(within(dayColumn(D3)).queryAllByRole("button")).toEqual([]);
-    expect(within(dayColumn(D3)).getByText("店休")).toBeInTheDocument();
+    expect(within(dayColumn(D3)).getByText("公休")).toBeInTheDocument();
     expect(within(dayColumn(D4)).getAllByRole("button")).toHaveLength(24);
   });
 
@@ -286,7 +286,7 @@ describe("回呼帶出的日期與時間", () => {
     const onBarClick = jest.fn();
     renderTimeline({
       groups: [
-        group("g", D4, 8, 12, "早班", "早", [
+        group("g", D4, 8, 12, "上午場", "早", [
           bar("x", D4, 8, 12, "陳大文", { state: "disabled" }),
         ]),
       ],
@@ -296,7 +296,7 @@ describe("回呼帶出的日期與時間", () => {
     expect(screen.queryByRole("button", { name: "陳大文" })).toBeNull();
     fireEvent.click(screen.getByText("陳大文"));
     expect(onBarClick).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /^早班/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^上午場/ })).toBeNull();
   });
 
   it("週模式放不下的收進「+N」:點了帶日期與被收起的容器;已選取的標 aria-pressed", async () => {

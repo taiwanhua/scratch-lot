@@ -32,7 +32,7 @@ export interface AuthSession {
   /** 開機:記憶體沒 token 時用 cookie 換票;成功或失敗都會把 status 從 booting 移走 */
   restore: () => Promise<void>;
   /**
-   * 宣告「這個分頁現在是誰」(#375):`me` 查到登入者後由 `MultiTabSession` 呼叫。
+   * 宣告「這個分頁現在是誰」:`me` 查到登入者後由 `MultiTabSession` 呼叫。
    * 與上次宣告的是同一個人就不廣播;換人(登入、或跟著別的分頁換帳號)才發 `login` 給其他分頁。
    */
   announce: (identity: SessionIdentity) => void;

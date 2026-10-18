@@ -25,7 +25,7 @@ export interface RevisionDiffProps {
 }
 
 /**
- * 修訂差異(Spec 6a §4 `revisions[]`:每個修訂存完整快照,差異在讀取時由相鄰兩筆算)。
+ * 修訂差異(`revisions[]`:每個修訂存完整快照,差異在讀取時由相鄰兩筆算)。
  * 兩個快照都走 `formSubmission(id, revision)`,所以受保護欄位的投影照讀者現在的權限套 —— 看不到的欄位兩邊
  * 都是 `"[redacted]"`,不會以「有變動」的形式側漏。明細列另外以 `rowId` 對列列出每一列的變動
  * (`ArrayRevisionDiff`)。

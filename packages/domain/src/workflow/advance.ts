@@ -30,7 +30,7 @@ import {
 } from "./types";
 
 /**
- * `advance(instance)` 的判斷表(Spec §6「冪等推進」),**純函式**:
+ * `advance(instance)` 的判斷表(冪等推進),**純函式**:
  * 輸入(版本定義、實例、任務投影集合、提交、現在時間)→ 輸出「這一輪要做的動作清單」。
  * 不碰資料庫:api 依序執行動作(每個寫入都是條件更新),做完**重讀再呼叫一次**,直到 `row` 是
  * 「沒事可做」的 3 / 9。
@@ -59,14 +59,14 @@ import {
 /**
  * 列 5 的外部輸入:跳過(帶原因,時間軸顯示是哪一項成立),或解析到的審核者(未剔除申請人也可,這裡會剔除)。
  *
- * `autoApprovals` = 已過 `beforeApprove` 的 B5 自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門):
+ * `autoApprovals` = 已過 `beforeApprove` 的自動通過(api 依 `autoApprovalCandidates` 列出、逐一跑守門):
  * 進關的同一次 CAS 記成他們的核准,接著建好他們的任務(投影 = 已核准);`any` 只記第一位(一人核准即過)。
  * **申請人只有在自動通過成立時才留在計畫裡**,否則照一般規則剔除(剔除後沒人 → 阻擋)。
  *
  * `blockedAutoApprovals` = 被守門擋下的:申請人照上一句剔除;其他人照常留一張待審任務。每位在時間軸記一筆
  * `auto_approve_blocked`(`reason` = 哪一種自動通過、`code` = 專案錯誤碼)。
  *
- * `delegatorOf` = B15 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
+ * `delegatorOf` = 代理人(api 解析審核者後已把在代理期間的人換成代理人,`assigneeIds` 是換過的名單):
  * 代理人 id → 原審核者 id 們(多位委託同一人時合成一項,代理人一票作用到所有被代理者)。派任計畫那一項記
  * `delegatorIds`,`task_created` 與自動通過的 `approved` 事件帶它(時間軸「由 X 代理 Y、Z」)。
  */
@@ -129,7 +129,7 @@ export interface StepUpdate {
   status?: StepStatus;
   blocked?: boolean;
   plan?: PlanItem[];
-  /** 整份取代(只有進關時的 B5 自動通過會寫;人按的決定由 api 以 `$push` 寫)。 */
+  /** 整份取代(只有進關時的自動通過會寫;人按的決定由 api 以 `$push` 寫)。 */
   decisions?: AcceptedDecision[];
 }
 
@@ -763,7 +763,7 @@ function enterRow5(input: AdvanceInput): AdvancePlan | null {
 }
 
 /**
- * B5 自動通過 → 進關時一併寫入的決定(記成那個人的核准,`comment = null`):只記計畫裡有的人;
+ * 自動通過 → 進關時一併寫入的決定(記成那個人的核准,`comment = null`):只記計畫裡有的人;
  * `any` 只記第一位(一人核准即過,多記的會變成「晚於結果」);`all` 每位各記一票,其他人照常審核。
  */
 function autoDecisionsOf(
@@ -919,7 +919,7 @@ function createTasksRow6(input: AdvanceInput): AdvancePlan | null {
   return actions.length > 0 ? { row: "6", actions } : null;
 }
 
-/** B15:計畫項目有被代理者時,事件要帶的 `delegatorIds`;沒有 → 空物件(不帶欄位)。 */
+/** 代理人:計畫項目有被代理者時,事件要帶的 `delegatorIds`;沒有 → 空物件(不帶欄位)。 */
 function delegatorsOf(
   item: Pick<PlanItem, "delegatorIds">,
 ): Pick<HistoryEvent, "delegatorIds"> {

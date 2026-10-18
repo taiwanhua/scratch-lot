@@ -83,7 +83,7 @@ interface LookupRow {
 }
 
 /**
- * 值的語意(Spec 6a §5「值的存法」「表達式看到的是語意值」「顯示名怎麼決定」「lookup 來源」、§10「值」):
+ * 值的語意:
  * 真 GraphQL + 真 MongoDB(TEST-07)。
  */
 describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以定義為準", () => {

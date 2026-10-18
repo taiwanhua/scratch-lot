@@ -21,7 +21,7 @@ import { useFieldOptions } from "./useFieldOptions";
 import type { ChoiceOption, WidgetProps } from "./widget-types";
 
 /**
- * 單選欄(`select` → `dropdown` / `radio` / `autocomplete`;Spec 6a §5 型別 × widget 表)。
+ * 單選欄(`select` → `dropdown` / `radio` / `autocomplete`)。
  * 三種來源的選項由 `useFieldOptions` 統一;`rules.allowCustom` 只有 `autocomplete` 能開(= freeSolo):
  * 輸入的字不在清單內時多一個「使用「…」」選項,存 `{ value, label, custom: true }`。
  */

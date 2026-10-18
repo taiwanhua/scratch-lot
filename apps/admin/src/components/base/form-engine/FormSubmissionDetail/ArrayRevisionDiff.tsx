@@ -25,7 +25,7 @@ export interface ArrayRevisionDiffProps {
 }
 
 /**
- * 明細列的修訂差異(Spec 6a §5「明細列」):以 `rowId` 對列,每列標示新增 / 刪除 / 移動 / 改值
+ * 明細列的修訂差異:以 `rowId` 對列,每列標示新增 / 刪除 / 移動 / 改值
  * (一列可以同時移動又改值);改值的列逐格列出「前 → 後」。沒有變動的列不列。
  */
 export const ArrayRevisionDiff = ({

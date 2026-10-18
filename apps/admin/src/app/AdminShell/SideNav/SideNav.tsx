@@ -37,7 +37,7 @@ export interface SideNavProps {
  * 頂部租戶識別照 Figma 的 ShowLogo 變體:**有商標就顯示商標圖、沒有才顯示組織名稱**(兩者佔同一個位置);
  * 商標是 api 現簽的短效網址(ADR-0010),`alt` 用組織名,讓換成圖之後名稱仍讀得到。
  *
- * 收合狀態在 `useSideNavStore`(zustand + localStorage,#289):AppBar / 路由頁籤 / 內容區
+ * 收合狀態在 `useSideNavStore`(zustand + localStorage):AppBar / 路由頁籤 / 內容區
  * 是 `ShellLayout` 裡的 `flex: 1` 相鄰格,側欄一改寬度它們自己跟著變(STYLE-08,不必各自知道這件事)。
  */
 export const SideNav = ({
@@ -60,7 +60,7 @@ export const SideNav = ({
         width: (theme) =>
           theme.spacing(isCollapsed ? NAV_COLLAPSED_WIDTH : NAV_WIDTH),
         flexShrink: 0,
-        // 殼釘死 100vh(#183):側欄自己是 column flex,只有模組樹那一格捲動,底部開關永遠看得到
+        // 殼釘死 100vh:側欄自己是 column flex,只有模組樹那一格捲動,底部開關永遠看得到
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",

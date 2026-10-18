@@ -57,7 +57,7 @@ export const EmptyWithCustomMessage: Story = {
 export const Loading: Story = { args: { isLoading: true } };
 
 /**
- * 少列 + 窄寬(#299):容器撐滿外框高度,橫向捲軸落在框底而不是最後一列下方。
+ * 少列 + 窄寬:容器撐滿外框高度,橫向捲軸落在框底而不是最後一列下方。
  * 外框模擬頁面上的卡片區(STYLE-08 的 `flex: 1; minHeight: 0` 欄)。
  */
 export const FewRowsInNarrowPanel: Story = {

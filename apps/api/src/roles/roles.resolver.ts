@@ -27,7 +27,7 @@ import { RoleUsersService } from "./role-users.service";
 import { RolesService } from "./roles.service";
 
 /**
- * 角色管理的 GraphQL 端點(#203;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 角色管理的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,範圍與規則全在 service(STRUCT-01);
  * 每個 key 對應 docs/modules/role-manager.md 權限表的同一行。
  */
@@ -48,7 +48,7 @@ export class RolesResolver {
     return this.service.list(operator, input);
   }
 
-  /** 單筆(GQL-02:query 也回 payload type,形狀與寫入動作一致,#201 主流程裁決)。 */
+  /** 單筆(GQL-02:query 也回 payload type,形狀與寫入動作一致)。 */
   @RequirePermission("system.role-manager.view")
   @Query(() => RolePayload, { name: "role" })
   async role(
@@ -80,7 +80,7 @@ export class RolesResolver {
   }
 
   /**
-   * 「加入使用者」彈窗的候選(#246 的 4):管理範圍內、尚未持有這個角色的人,每筆附 `eligible`。
+   * 「加入使用者」彈窗的候選:管理範圍內、尚未持有這個角色的人,每筆附 `eligible`。
    * 掛 `assign-users`(不是 `view`):在此之前前端借 `users`,連帶要求
    * `system.user-manager.view` —— 能分配使用者的人不該被迫再要一個使用者管理的權限。
    */

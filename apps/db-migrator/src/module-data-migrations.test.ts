@@ -17,7 +17,7 @@ const MIGRATE_MONGO_BIN = path.join(
   "migrate-mongo.js",
 );
 
-/** 本票加的三支回填遷移(依檔名 = 執行順序)。 */
+/** 模組資料的三支回填遷移(依檔名 = 執行順序)。 */
 const BACKFILL_MIGRATIONS = readdirSync(MIGRATIONS_DIR)
   .filter((fileName) => fileName.startsWith("20260925"))
   // 檔名是 ASCII 的時間戳,字碼序即執行順序

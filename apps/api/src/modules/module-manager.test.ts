@@ -194,7 +194,7 @@ function byKey(nodes: ModuleAdminNode[], key: string): ModuleAdminNode {
   return found;
 }
 
-describe("模組與權限(#204 / #288:moduleTree / setModuleEnabled / setModuleIcon / setPermissionEnabled;根組織專屬,對真 Nest app + 真 MongoDB)", () => {
+describe("模組與權限(moduleTree / setModuleEnabled / setModuleIcon / setPermissionEnabled;根組織專屬,對真 Nest app + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let tenantId: Types.ObjectId;
   let rootToken: string;
@@ -396,7 +396,7 @@ describe("模組與權限(#204 / #288:moduleTree / setModuleEnabled / setModuleI
       );
     });
 
-    it("route 只回自己那一段;權限容器(hidden 且無 route)回 null(#246 的 7)", async () => {
+    it("route 只回自己那一段;權限容器(hidden 且無 route)回 null", async () => {
       const tree = await fetchTree();
 
       // 有畫面的節點:route 是自己那一段,不是完整路徑
@@ -526,7 +526,7 @@ describe("模組與權限(#204 / #288:moduleTree / setModuleEnabled / setModuleI
     });
   });
 
-  describe("setModuleIcon:側欄圖示(#288,根組織專屬)", () => {
+  describe("setModuleIcon:側欄圖示(根組織專屬)", () => {
     it("seed 給的初值進得了樹與 me.modules;隱藏頁沒給 → null(用預設圖示)", async () => {
       const tree = await fetchTree();
 
@@ -714,7 +714,7 @@ describe("模組與權限(#204 / #288:moduleTree / setModuleEnabled / setModuleI
     });
   });
 
-  describe("自鎖保護：system.module-manager 子樹不可切（#261 / #233）", () => {
+  describe("自鎖保護：system.module-manager 子樹不可切", () => {
     it("setModuleEnabled 對這一頁本身 → FORBIDDEN + reason SELF_LOCK，且沒有真的停用", async () => {
       const result = await setModuleEnabled(MODULE_MANAGER, false);
       expect(result.errors?.[0]?.extensions).toMatchObject({

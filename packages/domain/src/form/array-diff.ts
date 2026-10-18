@@ -4,7 +4,7 @@ import { toInstant } from "./temporal";
 import type { ArrayColumnDef, ArrayRowValue, FieldDef } from "./types";
 
 /**
- * 明細列的修訂差異(Spec 6a §5「明細列」:以 `rowId` 對列,列的新增 / 刪除 / 移動 / 某格改值分別標示)。
+ * 明細列的修訂差異(以 `rowId` 對列,列的新增 / 刪除 / 移動 / 某格改值分別標示)。
  * 兩個修訂都存完整快照,差異在讀取時算(admin 修訂差異畫面用;api 測試以它驗快照保留 `rowId`)。
  *
  * - 新增:後一版有、前一版沒有的 `rowId`

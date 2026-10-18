@@ -20,7 +20,7 @@ export interface ToggleRoleEnabledDialogProps {
 /**
  * 停用 / 啟用角色確認。停用後持有者的這個角色立即不生效(PermissionResolver 排除
  * `enabled=false`,ADR-0011 步驟 2),授予本身不動;種子角色與租戶副本照樣可停用(可逆)。
- * api 目前沒有「不能停用自己正在用的角色」這類保護,UI 也不自行加限制(另票 #233)。
+ * api 目前沒有「不能停用自己正在用的角色」這類保護,UI 也不自行加限制。
  */
 export const ToggleRoleEnabledDialog = ({
   role,

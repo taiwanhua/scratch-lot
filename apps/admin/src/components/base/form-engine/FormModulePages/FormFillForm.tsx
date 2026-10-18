@@ -62,7 +62,7 @@ export interface FormFillFormProps {
 }
 
 /**
- * 新增 / 編輯的表單本體(Spec 6a §8 畫面 9):`FormRenderer` + 「帶入資料」(版本有帶入規則時)+
+ * 新增 / 編輯的表單本體:`FormRenderer` + 「帶入資料」(版本有帶入規則時)+
  * 存草稿 / 送出(「送出」一個請求完成;表單關了「允許存草稿」時沒有 [存草稿];已完成的單只有「儲存修改」,修訂 +1)。
  *
  * 初始值由外層 gate 後帶進 `useState` 的初始化器(REACT-08);`values` 是整張表單的狀態,
@@ -114,7 +114,7 @@ export const FormFillForm = ({
 
   return (
     <Stack spacing={2.5}>
-      {/* 標題列:標題靠左、「帶入資料」同一列靠右(Spec 6a §8 畫面 9) */}
+      {/* 標題列:標題靠左、「帶入資料」同一列靠右 */}
       <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
         <Typography variant="h6" component="h1" sx={{ flex: 1, minWidth: 0 }}>
           {title}

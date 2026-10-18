@@ -53,7 +53,7 @@ const definition: FormDefinition = {
   prefills: [],
 };
 
-describe("刪欄位的確認清單:連動篩選(B2d)", () => {
+describe("刪欄位的確認清單:連動篩選", () => {
   it("表單層引用欄與明細引用子欄的 `{ var }` 引用都列出", () => {
     expect(fieldReferences(definition, "ship")).toEqual([
       { kind: "lookupFilter", fieldKey: "main_book" },

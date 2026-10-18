@@ -5,7 +5,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 上傳欄的檔型分組(設計器「檔型 / 大小上限」勾選用;Spec 6a §5 表 A)。一組 = 一種副檔名,
+ * 上傳欄的檔型分組(設計器「檔型 / 大小上限」勾選用)。一組 = 一種副檔名,
  * `.zip` 在 Windows 上會被申報成 `application/x-zip-compressed`,與 `application/zip` 同一組一起勾。
  * 正本是 `@repo/domain/form` 的 `FORM_UPLOAD_CONTENT_TYPES`(= api 的平台上限)。
  */

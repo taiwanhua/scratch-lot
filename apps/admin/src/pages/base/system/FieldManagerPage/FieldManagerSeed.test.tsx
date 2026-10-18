@@ -13,7 +13,7 @@ import {
   selectCategory,
 } from "./field-manager-test-support";
 
-/** 根組織視角 = api 對種子列回 `canToggleEnabled: true`(前端不再自己推視角,#252)。 */
+/** 根組織視角 = api 對種子列回 `canToggleEnabled: true`(前端不再自己推視角)。 */
 const rootView = {
   fieldsByCategory: {
     "cat-gender": genderFields,

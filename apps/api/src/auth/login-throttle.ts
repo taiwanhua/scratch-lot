@@ -9,7 +9,7 @@ interface AttemptRecord {
 }
 
 /**
- * 登入節流(#61):同帳號連續失敗 5 次鎖 1 分鐘。
+ * 登入節流:同帳號連續失敗 5 次鎖 1 分鐘。
  * 記憶體計數、單實例語意(v1 可接受;多實例一致的節流列為 out of scope)。
  */
 @Injectable()

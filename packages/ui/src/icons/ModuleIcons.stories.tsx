@@ -17,7 +17,7 @@ const cellSx = {
 } as const;
 
 /**
- * 白名單的全貌(#287):一頁列出 30 個,用來對照 Figma「Icons」頁的
+ * 白名單的全貌:一頁列出 30 個,用來對照 Figma「Icons」頁的
  * `Draft/ModuleIcon` 變體(變體名 `key=<name>`,與這裡的 key 同名同順序)。
  */
 const ModuleIconGallery = ({ color }: { color?: string }) => (

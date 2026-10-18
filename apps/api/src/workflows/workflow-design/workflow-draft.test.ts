@@ -67,7 +67,7 @@ function managerStep(key: string, overrides: Record<string, unknown> = {}) {
 }
 
 /**
- * 流程草稿的補票(#484,真 Mongo):刪除草稿(樂觀鎖、發布中不可、稽核、刪完可再開)、
+ * 流程草稿的補票(真 Mongo):刪除草稿(樂觀鎖、發布中不可、稽核、刪完可再開)、
  * 設計器「檢查用表單」`checkFormKey` 的存取、檢查器與發布檢查用它、發布快照保留、開草稿與 fork 帶過去。
  */
 describe("流程草稿:刪除與檢查用表單", () => {

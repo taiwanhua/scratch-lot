@@ -26,7 +26,7 @@ export interface ModuleIconPickerProps {
   /** 浮動標籤(如「圖示」);ui 不內建文案(I18N-01) */
   label?: ReactNode;
   /**
-   * 無障礙名稱(#297)。**放進「左標籤 + 右內容」版型時不給 `label`**,
+   * 無障礙名稱。**放進「左標籤 + 右內容」版型時不給 `label`**,
    * 那時 combobox 沒有任何名稱可言 —— 給這個,或用 `labelId` 指向版型自己那顆標籤。
    */
   "aria-label"?: string;
@@ -51,7 +51,7 @@ export interface ModuleIconPickerProps {
 }
 
 /**
- * 模組圖示選擇器(#287):下拉列出 `@repo/ui/icons` 白名單的 30 個 MUI Outlined 圖示,
+ * 模組圖示選擇器:下拉列出 `@repo/ui/icons` 白名單的 30 個 MUI Outlined 圖示,
  * 每列「圖示 + 短詞」,收合後顯示目前選中的那一個。模組與權限頁、角色/選單設定共用。
  *
  * 值域由登錄表決定,元件本身不認得任何圖示 —— 加圖示只改 `module-icon-registry.ts`。

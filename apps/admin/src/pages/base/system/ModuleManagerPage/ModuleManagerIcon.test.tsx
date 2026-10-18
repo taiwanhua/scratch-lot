@@ -9,7 +9,7 @@ import {
 } from "./module-manager-test-support";
 
 /**
- * 模組與權限頁的「圖示」欄位(#289 第 3 點;權限 `system.module-manager.set-icon`)。
+ * 模組與權限頁的「圖示」欄位(權限 `system.module-manager.set-icon`)。
  * 預設選中的是第一棵樹的根 —— 夾具裡是「總覽」,初始圖示 `dashboard`。
  */
 

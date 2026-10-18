@@ -337,7 +337,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    * 條件與更新在同一次寫入裡判斷,兩個請求同時來只有一個會命中。欄位保護與範圍與 `updateById` 相同。
    *
    * `options.arrayFilters`:更新陣列裡**特定元素**時用(`steps.$[cur].decisions` 配
-   * `[{ "cur.stepKey": k }]`;流程實例的決定原子寫入,Spec 6b §6「決定」)。
+   * `[{ "cur.stepKey": k }]`;流程實例的決定原子寫入)。
    */
   async findOneAndUpdate(
     operator: OperatorContext,

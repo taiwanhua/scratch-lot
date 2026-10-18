@@ -6,7 +6,7 @@
  * 租戶管理員模板拿不到;api 另守「站在根組織」。
  *
  * 「這一列能不能按」除了權限還要看組織關係(種子 / 上層 / 自己 / 下層),那一半由 **api**
- * 逐列算好成 `canEdit` / `canToggleEnabled`(#264),前端只跟權限取交集 —— 見 `field-source.ts`。
+ * 逐列算好成 `canEdit` / `canToggleEnabled`,前端只跟權限取交集 —— 見 `field-source.ts`。
  */
 export const FIELD_MANAGER_MODULE_KEY = "system.field-manager";
 

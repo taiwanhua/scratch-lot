@@ -72,7 +72,7 @@ function requireText(value: string, field: string): string {
 /**
  * 欄位管理(`system.field-manager`)。resolver 薄、service 厚(STRUCT-01)。
  *
- * **合併清單的定義**(規則表正本 field-manager.md,#264):一個類別下看得到的選項 =
+ * **合併清單的定義**(規則表正本 field-manager.md):一個類別下看得到的選項 =
  * 全域種子(`orgId = null`)+ **上層組織**自訂(祖先,不受可見性開關影響)+ 當前組織自訂
  * + **可見範圍內的下層**自訂;**只能編輯 / 停用自己這一層加的**。
  * 範圍怎麼算、一列能做什麼都在 `field-visibility.ts`,本檔只負責規則、審計與錯誤碼。

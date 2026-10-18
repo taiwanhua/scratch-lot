@@ -30,7 +30,7 @@ export interface WorkflowNameDialogProps {
 }
 
 /**
- * 建立流程 / 改名稱(Spec 6b §7 `createWorkflow` / `updateWorkflow`)。建立時填 key(全域唯一,格式同表單 key,
+ * 建立流程 / 改名稱(`createWorkflow` / `updateWorkflow`)。建立時填 key(全域唯一,格式同表單 key,
  * **建立後不可改**)與名稱;站在根組織建的是共用流程,站在租戶內建的是本租戶的客製流程(api 決定)。
  */
 export const WorkflowNameDialog = ({

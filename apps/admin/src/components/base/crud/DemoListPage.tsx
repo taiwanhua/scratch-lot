@@ -76,7 +76,7 @@ export const DemoListPage = <
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null);
   const [deleteError, setDeleteError] = useState<DemoErrorCode | null>(null);
   const [toggleError, setToggleError] = useState<DemoErrorCode | null>(null);
-  /** 正在切換的那一列 + 這次要切成什麼(提示文案要分「已啟用 / 已停用」,#376)。 */
+  /** 正在切換的那一列 + 這次要切成什麼(提示文案要分「已啟用 / 已停用」)。 */
   const [toggling, setToggling] = useState<{
     id: string;
     enabled: boolean;
@@ -88,7 +88,7 @@ export const DemoListPage = <
   /**
    * 共版型的兩個 mutation hook(`useDelete` / `useSetEnabled`)只收
    * `{ onSuccess(): void; onError(error): void }`,所以回饋在這一層自己報一次 ——
-   * 設定物件的介面不必為了回饋改形狀(#376)。
+   * 設定物件的介面不必為了回饋改形狀。
    */
   const feedbackError = (error: unknown) => tErrors(demoErrorOf(error).code);
   const deleteFeedback = useMutationFeedback({
@@ -192,7 +192,7 @@ export const DemoListPage = <
       <Card
         sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
       >
-        {/* 捲動責任在 Table 自己的容器(#299),這層只把剩下的高度傳下去 */}
+        {/* 捲動責任在 Table 自己的容器,這層只把剩下的高度傳下去 */}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <DemoListTable
             i18nNamespace={i18nNamespace}

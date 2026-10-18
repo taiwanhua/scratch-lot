@@ -45,7 +45,7 @@ export interface ApprovalSectionProps {
 }
 
 /**
- * 審核區塊(Spec 6b §8 畫面 9 / 10):掛在表單詳情(`FormSubmissionDetail`)下方,申請中心詳情頁也用它。
+ * 審核區塊:掛在表單詳情(`FormSubmissionDetail`)下方,申請中心詳情頁也用它。
  *
  * - 實例狀態與阻擋標示;流程管理者可「重試推進」
  * - 關卡進度 / 分支進度(每個節點一列)

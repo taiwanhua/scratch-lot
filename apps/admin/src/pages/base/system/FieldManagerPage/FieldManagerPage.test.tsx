@@ -11,9 +11,9 @@ import {
 } from "./field-manager-test-support";
 
 /**
- * 欄位管理頁的主流程(#211;Figma 90:2 + 新增選項 211:176)。
+ * 欄位管理頁的主流程(Figma 90:2 + 新增選項 211:176)。
  * 種子選項的唯讀規則在 `FieldManagerSeed.test.tsx`;上層 / 下層的可見範圍在
- * `FieldManagerVisibility.test.tsx`(#264 規則表)。
+ * `FieldManagerVisibility.test.tsx`(可見範圍規則表)。
  */
 describe("欄位管理頁(/system/field-manager)", () => {
   it("預設選第一個類別;換類別後右表格換成該類別的合併清單", async () => {

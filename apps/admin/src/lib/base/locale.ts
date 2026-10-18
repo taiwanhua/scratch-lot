@@ -5,7 +5,7 @@ import {
 } from "@repo/project-config/public";
 
 /**
- * admin 的語言跟著帳號(I18N-05;規格 10.6):正本是 `user_preferences.settings.locale`,
+ * admin 的語言跟著帳號(I18N-05):正本是 `user_preferences.settings.locale`,
  * 本機這一份是**快取** —— 登入前(登入頁、設定密碼頁)與登入後第一個畫面用它,不必等 api;
  * 登出後保留。key 由專案設定的 slug 生成(`<slug>-admin-locale`),登記於 docs/branding.md。
  */
@@ -45,7 +45,7 @@ export interface AccountLocaleDecision {
 }
 
 /**
- * 登入後該用哪個語言(規格 10.6 情境表):
+ * 登入後該用哪個語言:
  * - 帳號有語言設定(且是支援的語言)→ 用帳號的,並覆寫本機快取
  * - 帳號沒有(新帳號)或是認不得的值 → 用本機快取(沒有快取時快取就是預設語言),並寫回帳號
  */

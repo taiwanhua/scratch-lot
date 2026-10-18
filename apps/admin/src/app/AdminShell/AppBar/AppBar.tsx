@@ -43,7 +43,7 @@ export const AppBar = ({ me, title, module }: AppBarProps) => (
     <Typography variant="h6" component="div" noWrap>
       {title}
     </Typography>
-    {/* 「?」模組說明彈窗(dis #18;Figma help-button I44:119;81:51):只有模組路由才有 */}
+    {/* 「?」模組說明彈窗(Figma help-button I44:119;81:51):只有模組路由才有 */}
     {module !== undefined && (
       <HelpButton
         moduleKey={module.key}

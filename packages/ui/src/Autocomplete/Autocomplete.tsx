@@ -123,12 +123,12 @@ const StyledAutocomplete = styled(MuiAutocomplete)(({ theme }) => ({
 })) as typeof MuiAutocomplete;
 
 /**
- * 輸入即搜尋的選擇器(#307)。取代「MUI Select + 選單外一個搜尋框」的組合 ——
+ * 輸入即搜尋的選擇器。取代「MUI Select + 選單外一個搜尋框」的組合 ——
  * Select 會把選單裡的子元素一律 clone 成 `role="option"`,搜尋框塞不進選單裡。
  *
  * 三件事是這個元件存在的理由(根組織視角下角色清單跨很多租戶):
  * **輸入即過濾**、**依租戶頂層分組**、**每列主文字 + 次文字**分辨同名選項。
- * 不合格的選項**列出來但灰掉**並就地寫原因,不是直接不列(#261 的 6 / 7)。
+ * 不合格的選項**列出來但灰掉**並就地寫原因,不是直接不列。
  */
 export const Autocomplete = <
   Option,

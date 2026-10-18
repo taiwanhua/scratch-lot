@@ -39,7 +39,7 @@ const PERMISSIONS = {
   toggleEnabled: "system.org-manager.toggle-enabled",
   move: "system.org-manager.move",
   delete: "system.org-manager.delete",
-  // 2026-09-19 從根組織專屬的 tenant-ops 搬到這一層(#187 / ADR-0005):
+  // 2026-09-19 從根組織專屬的 tenant-ops 搬到這一層(ADR-0005):
   // 可見範圍開關是**租戶自己的資料政策**,租戶管理員模板拿到 `system.org-manager.*` 就會含它;
   // 能設哪些租戶頂層則由管理範圍決定(service 層),不是靠「站在根組織」。
   setVisibility: "system.org-manager.set-visibility",
@@ -48,7 +48,7 @@ const PERMISSIONS = {
 } as const;
 
 /**
- * 「讀組織樹 / 單筆組織」的多選一權限(#139 回饋):
+ * 「讀組織樹 / 單筆組織」的多選一權限:
  * 組織樹不只組織管理頁在用 — 使用者管理頁的左樹與「選擇所屬組織」彈窗也要它,
  * 而那些人未必持有組織管理的檢視權。管理範圍(ADR-0005)照樣把關看得到誰,
  * 這裡只決定「進不進得了這個端點」。
@@ -74,7 +74,7 @@ export class OrgsResolver {
     private readonly permissions: PermissionResolver,
   ) {}
 
-  /** **管理範圍**的組織樹(CONTEXT.md);根可能有多個,範圍外的組織不回傳(#187)。 */
+  /** **管理範圍**的組織樹(CONTEXT.md);根可能有多個,範圍外的組織不回傳。 */
   @Query(() => [OrgNode])
   async orgTree(
     @CurrentOperator() operator: OperatorContext,
@@ -103,7 +103,7 @@ export class OrgsResolver {
   }
 
   /**
-   * 組織的主管(`org_manager`,Spec 6b §4):讀得到這筆組織(`org` / `setOrgManagers` 已把關範圍)
+   * 組織的主管(`org_manager`):讀得到這筆組織(`org` / `setOrgManagers` 已把關範圍)
    * 就讀得到它的主管名單;名單含停用的主管(解析時不算,但管理者要看得到才移得掉)。
    */
   @ResolveField(() => [UserSummary])

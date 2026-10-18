@@ -31,7 +31,7 @@ const PURPOSE_PERMISSIONS: Readonly<Record<UploadPurpose, readonly string[]>> =
       "system.org-manager.edit",
       "system.org-manager.tenant-ops.provision",
     ],
-    // 示範模組1 的封面 / 附件都在「新增 / 編輯」兩個表單裡上傳(#318)
+    // 示範模組1 的封面 / 附件都在「新增 / 編輯」兩個表單裡上傳
     [UploadPurpose.DEMO_COVER]: SAMPLE_ONE_WRITE,
     [UploadPurpose.DEMO_ATTACHMENT]: SAMPLE_ONE_WRITE,
     // 表單的上傳欄:模組是執行期的,改由 `formModuleWriter` 判(任一表單模組的 create / edit)
@@ -73,7 +73,7 @@ export class StorageResolver {
       resolution.modules.some(
         (module) =>
           module.engine === "form" &&
-          // 新增資格走表單模組的同一份判準(B9b 模組看任一張表單的 `create-<formKey>`)
+          // 新增資格走表單模組的同一份判準(依表單分開新增權限的模組看任一張表單的 `create-<formKey>`)
           (canCreateInFormModule(resolution, module) ||
             holdsPermission(resolution, `${module.key}.edit`)),
       );

@@ -114,7 +114,7 @@ export async function expectDemoItems(
  * 頁面區域(`AdminShell/ShellLayout` 的 `<main>`)。
  *
  * **右下角的 Snackbar 不在這裡面** —— 它掛在 `app/providers/SnackbarProvider` 上、是整個
- * app 根層的兄弟節點。自 #376 起同一句錯誤文案會**同時**出現在頁內橫幅與 Snackbar 兩處
+ * app 根層的兄弟節點。同一句錯誤文案會**同時**出現在頁內橫幅與 Snackbar 兩處
  * (前者說明脈絡、後者是全站回饋,兩個都要留),所以驗頁內文案時一律從這個範圍往下找,
  * 否則 `getByText` 會撞上 strict mode。
  */
@@ -164,7 +164,7 @@ export async function signInAgain(
   await signIn(page, account, password);
 }
 
-/* ---- 劇本 8 / 9(#398):使用者管理的所屬組織彈窗、「組織外」標示 ---- */
+/* ---- 劇本 8 / 9:使用者管理的所屬組織彈窗、「組織外」標示 ---- */
 
 /** 「組織外」標籤的文案(使用者管理 / 分配使用者 / 指派角色三處同一句)。 */
 export const OUT_OF_SCOPE_TAG = "組織外";
@@ -263,7 +263,7 @@ export function removalOption(
   };
 }
 
-/* ---- 劇本 12(#399):可見性開關、治理頁不動 ---- */
+/* ---- 劇本 12:可見性開關、治理頁不動 ---- */
 
 /** 可見性開關的文案(`admin.orgManager.form.visibility`;文件寫的「使用者可見下層組織資料」是簡稱)。 */
 export const VISIBILITY_SWITCH = "使用者可見自身組織的下層組織資料";
@@ -335,7 +335,7 @@ export async function readGovernancePages(
   return { orgTree: orgLabels, userRows, roleList };
 }
 
-/* ---- 劇本 14(#400):管理範圍的樹根、搬移候選 ---- */
+/* ---- 劇本 14:管理範圍的樹根、搬移候選 ---- */
 
 /**
  * 組織樹**各個樹根**的標籤(依畫面順序)。
@@ -394,7 +394,7 @@ export async function readMoveTargets(
   return labels.filter((label) => label !== MOVE_TARGET_UNSET);
 }
 
-/* ---- 劇本 16 / 17(#401):開通租戶、撤銷開通、租戶頂層保護 ---- */
+/* ---- 劇本 16 / 17:開通租戶、撤銷開通、租戶頂層保護 ---- */
 
 /** 組織管理右側的資料區(`OrgDetailPanel` 的 `aria-label`);動作列(編輯 / 停用 / 刪除 / 撤銷開通)在裡面。 */
 export function orgDetail(page: Page): Locator {
@@ -463,7 +463,7 @@ export async function provisionTenantInUi(
 
 /**
  * 組織管理 → 選 `orgName` →「撤銷開通」,回傳確認彈窗(`RevokeProvisionDialog`)。
- * 按鈕只在 root 視角選中租戶頂層時出現(#374)。被擋之後彈窗裡就沒有「撤銷開通」鈕了,
+ * 按鈕只在 root 視角選中租戶頂層時出現。被擋之後彈窗裡就沒有「撤銷開通」鈕了,
  * 所以不用 `dialogWithButton` 認它 —— 畫面上同時只會有這一個彈窗。
  */
 export async function openRevokeProvisionDialog(
@@ -494,7 +494,7 @@ export async function confirmRevokeProvision(
   await clickAndReadData(confirm, "RevokeTenantProvision");
 }
 
-/* ---- 劇本 11 / 15(#402):上傳欄、圖片真的載得出來、側欄商標 ---- */
+/* ---- 劇本 11 / 15:上傳欄、圖片真的載得出來、側欄商標 ---- */
 
 /**
  * `@repo/ui/upload-field` 藏起來的 `<input type="file">`(無障礙名字 = 欄位標題)。

@@ -54,7 +54,7 @@ export interface MyApplicationsTabProps {
 }
 
 /**
- * 「我的申請」(Spec 6b §8 畫面 8):模組、表單、標題槽、狀態 chip、目前關卡(所有進行中的關卡名稱,
+ * 「我的申請」:模組、表單、標題槽、狀態 chip、目前關卡(所有進行中的關卡名稱,
  * 平行時多個)、送出時間;篩選模組 / 表單 / 狀態。檢視 → 申請中心詳情頁;草稿 / 退回 / 撤回 → 回該模組的編輯頁改。
  */
 export const MyApplicationsTab = ({ modules }: MyApplicationsTabProps) => {

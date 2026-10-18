@@ -93,7 +93,7 @@ function requireName(value: string): string {
 }
 
 /**
- * 流程(設計端,Spec 6b §3、§7):清單、建立、改名、以某版為基底建流程(fork)、分派 / 收回。
+ * 流程(設計端):清單、建立、改名、以某版為基底建流程(fork)、分派 / 收回。
  * 站在根組織建的是共用流程;站在租戶內建的是客製流程,**自動建本租戶的 `org_workflow`**。
  */
 @Injectable()
@@ -287,7 +287,7 @@ export class WorkflowsService {
 
   /**
    * root 收回分派(刪 `org_workflow`):進行中的實例照常走完;綁著它的表單之後送出會被擋
-   * (「審核流程已移除」,Spec §3),綁定本身不刪 —— 列表會顯示「綁定的流程已失效」。
+   * (「審核流程已移除」),綁定本身不刪 —— 列表會顯示「綁定的流程已失效」。
    */
   async revoke(
     facts: FormOperatorFacts,

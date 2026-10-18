@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Claude Code PostToolUse hook:AI 每次 Edit/Write 完檔案後,對該檔跑 `prettier --check`
- * (#195 起 CI 也守這一關),ts/tsx 再多跑 ESLint 與該檔所屬套件的 typecheck。
+ * (CI 也守這一關),ts/tsx 再多跑 ESLint 與該檔所屬套件的 typecheck。
  * 失敗時以 exit code 2 把錯誤回饋給 AI 當場修正 — 三層約束第一層的閉環。
  *
  * 速度(2026-09-19 調整):

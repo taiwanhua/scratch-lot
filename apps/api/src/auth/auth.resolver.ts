@@ -22,7 +22,7 @@ import { RefreshCookie } from "./refresh-cookie";
 import type { GraphqlContext, RequestUser } from "./request-context";
 
 /**
- * 登入線的 GraphQL 端點(#61;形式 GQL-02、錯誤 GQL-04)。
+ * 登入線的 GraphQL 端點(形式 GQL-02、錯誤 GQL-04)。
  * `refresh` / `logout` / `logoutAllDevices` 沒有輸入 — 身分來自 access token 與 refresh cookie,不做空 input。
  */
 @Resolver()

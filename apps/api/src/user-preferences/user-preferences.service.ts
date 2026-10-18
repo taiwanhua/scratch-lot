@@ -23,7 +23,7 @@ const isDuplicateKey = (error: unknown): boolean =>
   (error as { code?: unknown }).code === DUPLICATE_KEY;
 
 /**
- * 個人偏好(規格 10.6):每個使用者一筆 `user_preferences`,只能讀寫**自己的**(身分取自登入,不收 userId)。
+ * 個人偏好:每個使用者一筆 `user_preferences`,只能讀寫**自己的**(身分取自登入,不收 userId)。
  * 讀:每個登記的 key 都給值(存過的值,沒存過 = 預設值);存著但已不再登記的 key 不回。
  * 寫:逐 key 驗登記與型別,全部通過才寫;值 `null` = 拿掉這個 key。
  */

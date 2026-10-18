@@ -8,7 +8,7 @@ import type { FieldPermissionFacts } from "./field-states";
  * 1. **已有提交**(編輯、詳情):api 算好的 `fieldStates[].redacted` 與 `abilities.canEditField`,
  *    前端直接用 —— 權限列被刪、模組 `*` 不放行這類 mapper 規則只有 api 知道。
  * 2. **新增、草稿還沒建**:沒有提交可問,只能由操作者持有的權限 key 推
- *    (`<moduleKey>.show-<formKey>-<fieldKey>` / `edit-…`,Spec §6 命名);定義裡標 `redacted` 的骨架欄位
+ *    (`<moduleKey>.show-<formKey>-<fieldKey>` / `edit-…`);定義裡標 `redacted` 的骨架欄位
  *    (`formRuntimeVersion` 依讀者投影)直接算讀不到。推錯的代價只是畫面多顯示或
  *    少顯示一欄:寫入仍由 api 守(無權改的值送出去 → 403)。
  */

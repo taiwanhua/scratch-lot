@@ -13,7 +13,7 @@ import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
 
 /**
- * 語言跟著帳號(規格 10.6「裝置 vs 帳號」情境表;I18N-05):每一列一個測試。
+ * 語言跟著帳號(I18N-05):每一列一個測試。
  * 「打開個人設定的偏好分頁」「開 /settings/personal 不帶 tab」「沒有任何權限的使用者開個人設定」
  * 三列在 `PersonalSettingsPage.test.tsx`。
  */
@@ -78,7 +78,7 @@ const openUserMenu = async (
   await user.click(await screen.findByRole("button", { name }));
 };
 
-describe("語言跟著帳號(規格 10.6)", () => {
+describe("語言跟著帳號", () => {
   it("頭像選單切語言:立即生效,寫入帳號(settings.locale)與本機快取", async () => {
     const world = signedIn({ preferences: { locale: "zh-TW" } });
 

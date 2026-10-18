@@ -83,7 +83,7 @@ export class RoleGrant {
  *   `expandGrant`)。樹外(操作者觸及不到)的既有綁定不列出,`saveRoleMatrix` 也不動它們
  * - `shrinkOnly`:這個角色是租戶管理員副本,矩陣只能縮不能擴(ADR-0009)
  * - `ceiling`:預設角色(租戶副本)的**天花板** —— 內建「租戶管理員」模板角色目前的授予,
- *   展開後收到顯示樹內;其他種類的角色為 `null`(#283)
+ *   展開後收到顯示樹內;其他種類的角色為 `null`
  */
 @ObjectType()
 export class RoleMatrixPayload {
@@ -104,7 +104,7 @@ export class RoleMatrixPayload {
   shrinkOnly!: boolean;
 
   /**
-   * 預設角色(租戶副本)的矩陣上限(#283):**內建「租戶管理員」模板角色目前的授予**,
+   * 預設角色(租戶副本)的矩陣上限:**內建「租戶管理員」模板角色目前的授予**,
    * 已展開 `*`(同 `granted`)並收到顯示樹內。root 可在此範圍內放寬與收窄,
    * 非 root 另受 `shrinkOnly` 限制;超出 → `ROLE_OUT_OF_REACH` + `reason TEMPLATE_CEILING`。
    * 不是預設角色時為 `null` —— 前端據此決定要不要把天花板外的列鎖住。

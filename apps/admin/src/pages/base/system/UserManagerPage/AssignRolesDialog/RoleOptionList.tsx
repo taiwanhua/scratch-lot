@@ -14,7 +14,7 @@ export interface RoleOptionListProps {
 }
 
 /**
- * 已選角色的狀態清單(#307,取代原本每一列一個勾選框的 `RoleOptionRow`)。
+ * 已選角色的狀態清單(取代原本每一列一個勾選框的 `RoleOptionRow`)。
  *
  * 選取本身由 `@repo/ui/autocomplete` 負責,但**選中的 chip 只放得下一行字**,
  * 而「組織外 / 已停用 / 租戶副本 / 管理範圍外」這幾件事在按下儲存前必須看得到 ——

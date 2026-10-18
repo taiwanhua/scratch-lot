@@ -14,7 +14,7 @@ export interface SideNavToggleProps {
  * 同一顆按鈕兩種對齊:**展開態靠右、雙左箭頭**(Figma `Draft/AdminSideNav` 30:52 底部),
  * **收合態置中、雙右箭頭**。
  *
- * #297:圖示由 `@repo/ui/icons` 的 `ChevronDoubleLeft/Right` 供給(在此之前是文字字符
+ * 圖示由 `@repo/ui/icons` 的 `ChevronDoubleLeft/Right` 供給(在此之前是文字字符
  * 「«」「»」),外框與 40×40 由 `IconButton` 的 `variant="outlined"` 供給 ——
  * 這兩件事一起讓 STYLE-10 記錄在案的那一處例外(呼叫端用 `sx` 畫幾何)退場。
  */

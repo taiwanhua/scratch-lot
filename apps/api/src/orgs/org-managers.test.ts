@@ -108,7 +108,7 @@ async function resolveManagersOf(
 const ORG_MANAGER_MODULE = "system.org-manager";
 
 /**
- * 組織主管(`org_manager`,Spec 6b §4;對真 Nest + 真 MongoDB):
+ * 組織主管(`org_manager`;對真 Nest + 真 MongoDB):
  * `setOrgManagers` 整組取代與稽核、`org.managers`、候選人以租戶為界、權限守門,
  * 以及主管解析 `resolveManagers`(從提交組織往上、上界租戶、剔除申請人、只算啟用且仍在本租戶的人)。
  *

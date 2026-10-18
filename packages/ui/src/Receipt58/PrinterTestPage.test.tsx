@@ -92,7 +92,7 @@ describe("PrinterTestPage", () => {
     expect(screen.getByText("切紙")).toBeInTheDocument();
   });
 
-  it("各區塊依規格順序排列", () => {
+  it("各區塊依固定順序排列", () => {
     renderTestPage();
 
     const order = [

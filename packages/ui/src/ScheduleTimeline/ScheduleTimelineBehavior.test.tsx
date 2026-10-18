@@ -60,7 +60,7 @@ describe("長條狀態「較短」", () => {
       dates: [{ date: D4 }],
       onBarClick: jest.fn(),
       groups: [
-        group("g", D4, 8, 14, "早班", "早", [
+        group("g", D4, 8, 14, "上午場", "早", [
           bar("n", D4, 8, 14, "王小明", { subtitle: "正常副標" }),
           bar("s", D4, 9, 12, "張小芳", {
             state: "short",
@@ -87,7 +87,7 @@ describe("選取與鍵盤", () => {
   it("使用處沒給 selection:按鈕不標 aria-pressed", () => {
     renderTimeline({
       groups: [
-        group("g", D4, 8, 12, "早班", "早", [bar("x", D4, 8, 12, "陳大文")]),
+        group("g", D4, 8, 12, "上午場", "早", [bar("x", D4, 8, 12, "陳大文")]),
       ],
       onBarClick: jest.fn(),
       onGroupClick: jest.fn(),
@@ -96,7 +96,7 @@ describe("選取與鍵盤", () => {
     expect(screen.getByRole("button", { name: "陳大文" })).not.toHaveAttribute(
       "aria-pressed",
     );
-    expect(screen.getByRole("button", { name: /^早班/ })).not.toHaveAttribute(
+    expect(screen.getByRole("button", { name: /^上午場/ })).not.toHaveAttribute(
       "aria-pressed",
     );
   });

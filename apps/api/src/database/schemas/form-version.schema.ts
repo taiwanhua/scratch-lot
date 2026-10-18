@@ -6,7 +6,7 @@ import type { FieldDef, Layout, Prefill, SummaryMap } from "@repo/domain/form";
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 /**
- * 版本狀態(Spec 6a §6「表單版本」):
+ * 版本狀態:
  * - `draft`:設計中、可改,`version = null`;一張表單同時最多一筆
  * - `publishing`:只存在於發布交易內的搶鎖狀態(步驟 2 搶到鎖、還沒切換完,ADR-0013);部分唯一索引保證同一時間至多一筆,
  *   交易外看不到
@@ -74,7 +74,7 @@ FormVersionSchema.index(
   { formKey: 1, version: 1 },
   { unique: true, partialFilterExpression: { version: { $type: "number" } } },
 );
-// 一張表單同時最多一筆草稿、最多一筆發布中(Spec §4 的部分唯一索引 `(formKey, status)`)。
+// 一張表單同時最多一筆草稿、最多一筆發布中(部分唯一索引 `(formKey, status)`)。
 // 拆兩條只用等值條件的部分索引(key 方向不同以免同形索引互撞),不依賴 partialFilterExpression 的 `$in`
 FormVersionSchema.index(
   { formKey: 1, status: 1 },

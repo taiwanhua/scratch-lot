@@ -8,13 +8,13 @@ import { GraphQLError } from "graphql";
 export const USER_ERROR_CODES = [
   /** 最後一個所屬組織不可移除(使用者至少要有一個所屬組織,ADR-0003) */
   "LAST_ORG",
-  /** 防越權:操作者只能授予擁有組織在自己管理範圍內的角色(ADR-0003;#211 起與 grantRoleUsers 同判準) */
+  /** 防越權:操作者只能授予擁有組織在自己管理範圍內的角色(ADR-0003;與 grantRoleUsers 同判準) */
   "ROLE_OUT_OF_REACH",
   /** 擁有者保護:租戶擁有者不可停用 / 移出租戶 / 解除其租戶管理員授予(ADR-0009;根組織操作者例外) */
   "OWNER_PROTECTED",
   /**
    * 授予資格未過:該使用者的所屬組織皆不在角色擁有組織的子樹內(ADR-0003)。
-   * #261 起兩個入口(`assignUserRoles` / `grantRoleUsers`)共用同一個判斷與同一個碼 —
+   * 兩個入口(`assignUserRoles` / `grantRoleUsers`)共用同一個判斷與同一個碼 —
    * 在此之前使用者頁回的是 `VALIDATION_FAILED`,前端只講得出「資料未通過驗證」。
    */
   "USER_NOT_ELIGIBLE",
@@ -29,7 +29,7 @@ export function userError(code: UserErrorCode, message: string): GraphQLError {
 }
 
 /**
- * 授予資格未過(`USER_NOT_ELIGIBLE`,#261):`extensions` 附 `roleId` 與 `ownerOrgName`,
+ * 授予資格未過(`USER_NOT_ELIGIBLE`):`extensions` 附 `roleId` 與 `ownerOrgName`,
  * 前端據此顯示「此角色只能授予 <擁有組織> 及其下層的使用者」而不是一句空泛的驗證失敗。
  * `ownerOrgName` 在擁有組織落在操作者管理範圍外(名稱不外露)或角色沒有擁有組織時為 null。
  */

@@ -22,9 +22,9 @@ export const DEMO_CATEGORY_KEY = "demo-category";
 export type DemoCategoryOptions = ReadonlyMap<string, string>;
 
 /**
- * 示範項目的 `category` 是**欄位管理**的選項值,不是自由字串(#318)。
+ * 示範項目的 `category` 是**欄位管理**的選項值,不是自由字串。
  *
- * 可選的範圍 = 欄位管理的**合併範圍**(規則正本 `docs/modules/field-manager.md`,#264:
+ * 可選的範圍 = 欄位管理的**合併範圍**(規則正本 `docs/modules/field-manager.md`:
  * 全域種子 + 上層組織自訂 + 當前組織自訂 + 可見範圍內的下層自訂)且 `enabled` —— 判斷直接沿用
  * `fields/field-visibility.ts`,不在本模組重寫一份範圍規則(兩份一定會走偏)。
  *

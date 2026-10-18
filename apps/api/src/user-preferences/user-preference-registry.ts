@@ -1,5 +1,5 @@
 /**
- * 個人偏好的登記制(規格 10.6):`user_preferences.settings` 只收**登記過**的 key,
+ * 個人偏好的登記制:`user_preferences.settings` 只收**登記過**的 key,
  * 每個 key 宣告型別與預設值。底座的登記在本檔 `BASE_USER_PREFERENCES`,
  * 專案的在 `src/project/user-preferences.ts`(固定入口,由 `app.module.ts` 經
  * `UserPreferenceRegistryModule.forRoot` 組裝);兩份合成時驗 key 格式與不重複,不合就讓 app 起不來。
@@ -44,12 +44,12 @@ const KEY_PATTERN = /^[A-Za-z][\w-]*$/;
 /** BCP 47 語言標籤的寬鬆形狀(`zh-TW`、`en`):api 不列支援的語系,前端認不得的值視同沒有設定。 */
 const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[A-Za-z\d]{2,8})*$/;
 
-/** 語言:跟著帳號走(規格 10.6;規範 I18N-05);前端另存一份本機快取供登入前與第一個畫面使用。 */
+/** 語言:跟著帳號走(規範 I18N-05);前端另存一份本機快取供登入前與第一個畫面使用。 */
 export const LOCALE_PREFERENCE_KEY = "locale";
 
 /**
  * 底座登記的偏好。通知管道開關不寫在這裡:由通知類型登記推導(`notificationPreferenceDefinitions`,
- * `apps/api/src/notifications/notification-registry.ts`),經 `forRoot` 的第二個參數合成(規格 10.6)。
+ * `apps/api/src/notifications/notification-registry.ts`),經 `forRoot` 的第二個參數合成。
  */
 export const BASE_USER_PREFERENCES: readonly UserPreferenceDefinition[] = [
   {

@@ -18,13 +18,13 @@ export const allModuleIds = (nodes: readonly ModuleAdminNodeLike[]): string[] =>
   flattenModules(nodes).map((node) => node.id);
 
 /**
- * 這個節點只是**權限容器**,不是隱藏頁(#260)。
+ * 這個節點只是**權限容器**,不是隱藏頁。
  *
  * 權限容器 = `sidebarType = hidden` 且**沒有 route** 的節點(`api` 權限樹、
  * `system.org-manager.tenant-ops`):它不對應任何畫面,存在的理由是讓底下那幾條權限
  * 可以單獨授予 / 停用。樹上把它標成「隱藏頁」會讓人一直找那個找不到的頁面。
  *
- * 判準**直接讀 `moduleTree` 回的 `route`**(#246 的 7;語意正本
+ * 判準**直接讀 `moduleTree` 回的 `route`**(語意正本
  * `docs/modules/module-manager.md` 的 api 介面節)。在那之前 api 沒回 route,這裡改用
  * 「key 不以 `-page` 結尾」當等價判準 —— 它靠的是 seed 的命名規約,
  * 規約一鬆就悄悄失準;現在看的是同一件事本身。

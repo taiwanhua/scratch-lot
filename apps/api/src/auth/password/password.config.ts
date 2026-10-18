@@ -19,7 +19,7 @@ export const DEFAULT_ADMIN_APP_URL = "http://localhost:3001";
 export const DEFAULT_ACTIVATION_TOKEN_TTL = "7d";
 export const DEFAULT_PASSWORD_RESET_TOKEN_TTL = "30m";
 
-/** 每個變數都有內建預設值,不設也能跑(#61)。 */
+/** 每個變數都有內建預設值,不設也能跑。 */
 export function loadPasswordConfig(config: ConfigService): PasswordConfig {
   return {
     adminAppUrl: withoutTrailingSlash(

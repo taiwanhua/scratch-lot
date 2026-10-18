@@ -82,7 +82,7 @@ export const UserManagerPage = () => {
     setActionError(userManagerErrorOf(error).code);
   };
 
-  /** 失敗的 Snackbar 文案與頁面上那一行錯誤同一份解讀(#376)。 */
+  /** 失敗的 Snackbar 文案與頁面上那一行錯誤同一份解讀。 */
   const feedbackError = (error: unknown) =>
     tErrors(userManagerErrorOf(error).code);
 
@@ -118,7 +118,7 @@ export const UserManagerPage = () => {
   const pageCount = Math.max(1, Math.ceil(data.totalCount / USERS_PAGE_SIZE));
 
   /**
-   * 擁有者在「選擇所屬組織」裡鎖住的節點(#362):只鎖他擁有的租戶頂層 —— api 的
+   * 擁有者在「選擇所屬組織」裡鎖住的節點:只鎖他擁有的租戶頂層 —— api 的
    * `assertOwnedOrgsKept` 也只擋這一件,加入其他組織一直是允許的。其他人沒有鎖。
    */
   const lockedOrgIdsFor = (user: UserRow): string[] =>
@@ -127,7 +127,7 @@ export const UserManagerPage = () => {
       : [];
 
   return (
-    // 撐滿殼給的內容區高度(#183 / Figma 30:166:左右兩塊等高、各自內部捲動)
+    // 撐滿殼給的內容區高度(Figma 30:166:左右兩塊等高、各自內部捲動)
     <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
       <OrgTreePanel
         nodes={data.orgNodes}
@@ -149,7 +149,7 @@ export const UserManagerPage = () => {
         <Typography variant="caption" color="text.secondary">
           {t("outOfScopeHint")}
         </Typography>
-        {/* 表格吃掉剩下的高度、自己捲;分頁列永遠留在卡片底部(#183 / Figma 31:82 + 31:157) */}
+        {/* 表格吃掉剩下的高度、自己捲;分頁列永遠留在卡片底部(Figma 31:82 + 31:157) */}
         <Card
           sx={{
             flex: 1,
@@ -158,7 +158,7 @@ export const UserManagerPage = () => {
             flexDirection: "column",
           }}
         >
-          {/* 捲動責任在 Table 自己的容器(#299),這層只負責把剩下的高度給它,
+          {/* 捲動責任在 Table 自己的容器,這層只負責把剩下的高度給它,
               不要再開一層 overflow: auto,否則窄視窗下會出現兩條捲軸 */}
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <UserTable

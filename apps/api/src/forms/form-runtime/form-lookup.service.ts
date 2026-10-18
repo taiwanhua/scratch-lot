@@ -102,7 +102,7 @@ function targetOf(
       return {
         source: field.source,
         valueField: "id",
-        // 明細引用子欄的列內帶入(B2c):回對應表要的來源欄位,前端帶進同一列
+        // 明細引用子欄的列內帶入:回對應表要的來源欄位,前端帶進同一列
         mappedFields:
           (field as ArrayColumnDef).prefill?.mapping.map(
             (mapping) => mapping.sourceField,
@@ -129,7 +129,7 @@ function targetOf(
 }
 
 /**
- * `formLookup` / `formLookupRecord`(Spec 6a §5「lookup 來源」):前端只帶
+ * `formLookup` / `formLookupRecord`:前端只帶
  * `{ formKey, version, target }` + 關鍵字,**provider 與 `filter` 從版本定義取**,前端改不了;
  * 目標可以是明細的引用子欄(`fieldKey = "<明細 key>.<子欄 key>"`,權限看整個明細欄);
  * 再套操作者的可見範圍與欄位權限(`lookup-providers.ts`)。
@@ -255,7 +255,7 @@ export class FormLookupService {
       );
     }
     const target = targetOf(version.fields, version.prefills, input.target);
-    // 連動篩選(B2d):換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
+    // 連動篩選:換成前端送的目前值,只當縮小範圍的條件;被引用欄位沒有值 → 查無
     // 值依被引用欄位的型別收,型別不符當沒填(查無),不讓竄改的值撞上文件欄位的型別
     const source = resolveLookupSource(target.source, (fieldKey) =>
       filterScalarForField(

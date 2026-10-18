@@ -9,7 +9,7 @@ import {
   useSideNavStore,
 } from "./useSideNavStore";
 
-/** `persist` 預設的封包格式(#289 存下來的既存值就長這樣)。 */
+/** `persist` 預設的封包格式(早期存下來的既存值就長這樣)。 */
 const envelope = (isCollapsed: boolean) =>
   JSON.stringify({ state: { isCollapsed }, version: 0 });
 

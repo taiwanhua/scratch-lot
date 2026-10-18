@@ -114,7 +114,7 @@ describe("ModuleIconPicker", () => {
   });
 
   /**
-   * #297:放進「左標籤 + 右內容」版型時不會給 `label`,combobox 於是沒有無障礙名稱。
+   * 放進「左標籤 + 右內容」版型時不會給 `label`,combobox 於是沒有無障礙名稱。
    * 兩條直通管道各驗一次。
    */
   it("沒有 label 時,aria-label 就是 combobox 的無障礙名稱", () => {

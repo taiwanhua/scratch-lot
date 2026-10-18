@@ -30,7 +30,7 @@ async function generateSchema(): Promise<void> {
     await app.close();
   } finally {
     // finally 不可省:失敗時(例如 ts-node 編譯不過)沒關掉 mongod,process.exitCode 也退不出去,
-    // 本機與 CI 都會卡住直到逾時(#160 接 CI 時踩到)
+    // 本機與 CI 都會卡住直到逾時(接 CI 時踩到)
     await mongo.stop();
   }
 }

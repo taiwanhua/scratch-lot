@@ -72,7 +72,7 @@ export const ModuleManagerPage = () => {
     setActionError(moduleManagerErrorOf(error).code);
   };
 
-  /** 失敗的 Snackbar 文案與頁面上那一條 Alert 同一份解讀(#376)。 */
+  /** 失敗的 Snackbar 文案與頁面上那一條 Alert 同一份解讀。 */
   const feedbackError = (error: unknown) =>
     t(`errors.${moduleManagerErrorOf(error).code}`);
 
@@ -94,7 +94,7 @@ export const ModuleManagerPage = () => {
   );
 
   /**
-   * 換圖示(#288):不必確認也不連動任何東西,失敗就照一般錯誤顯示;
+   * 換圖示:不必確認也不連動任何東西,失敗就照一般錯誤顯示;
    * 成功後 invalidate `ModuleTree` + `me` —— 側欄吃的是 `me.modules[].icon`,
    * 操作者自己的側欄要立刻換圖。
    */

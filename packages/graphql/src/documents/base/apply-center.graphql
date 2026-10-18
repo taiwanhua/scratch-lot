@@ -86,7 +86,7 @@ fragment WorkflowInstanceFields on WorkflowInstanceModel {
         name
       }
       assigneeState
-      # B15 代理人:這一項由 assignee(代理人)承接的原審核者們;沒有代理 / 已改派 → 空陣列
+      # 代理人:這一項由 assignee(代理人)承接的原審核者們;沒有代理 / 已改派 → 空陣列
       delegators {
         id
         name

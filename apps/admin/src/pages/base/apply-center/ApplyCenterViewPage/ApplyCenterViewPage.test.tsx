@@ -228,7 +228,7 @@ describe("申請中心詳情頁(view-page)", () => {
     );
   });
 
-  it("時間軸寫出跳過是哪一項成立、自動通過的原因(B4 / B5)", async () => {
+  it("時間軸寫出跳過是哪一項成立、自動通過的原因", async () => {
     const event = (
       kind: string,
       stepKey: string,
@@ -326,7 +326,7 @@ describe("申請中心詳情頁(view-page)", () => {
       within(timeline).getByText("人資阿美 在「人資」核准"),
     ).toBeInTheDocument();
   });
-  it("代理派任(B15):兩位委託同一位代理人 → 進度寫「代理人(代理 A、B)」,時間軸派任與核准都寫「由代理人代理 A、B」", async () => {
+  it("代理派任:兩位委託同一位代理人 → 進度寫「代理人(代理 A、B)」,時間軸派任與核准都寫「由代理人代理 A、B」", async () => {
     renderApplyCenter({
       path: `${APPLY_VIEW_ROUTE}/inst-1`,
       runtime: {

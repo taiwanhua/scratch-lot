@@ -43,7 +43,7 @@ export class WorkflowPlanItem {
   assigneeState!: AssigneeState;
 
   /**
-   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的原審核者們;多位委託同一人時合成這一項。
+   * 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的原審核者們;多位委託同一人時合成這一項。
    * 沒有代理 / 流程管理者改派後為空陣列。
    */
   @Prop({ type: [Types.ObjectId], default: [] })
@@ -122,7 +122,7 @@ export class WorkflowHistoryEvent {
   @Prop({ type: String, default: null })
   result!: NotifiedResult | null;
 
-  /** 跳過 / 自動通過的原因(`step_skipped`:哪一項成立;`approved`:B5 自動通過);其他 null。 */
+  /** 跳過 / 自動通過的原因(`step_skipped`:哪一項成立;`approved`:自動通過);其他 null。 */
   @Prop({ type: String, enum: [...HISTORY_REASONS, null], default: null })
   reason!: HistoryReason | null;
 
@@ -150,7 +150,7 @@ export interface WorkflowOutcome {
 }
 
 /**
- * 流程實例(Spec 6b §4「workflow_instances」;`docs/data-model.md`):一筆提交的某個修訂號送出後的一次執行。
+ * 流程實例(`docs/data-model.md`):一筆提交的某個修訂號送出後的一次執行。
  * **唯一權威**:關卡進度、派任計畫、已接受的決定都在這份文件上,任務文件只是投影。
  *
  * 模組資料表(`tenantScopePlugin({ moduleData: true })`):`moduleKey` / `tenantId` / `orgId` /
@@ -214,7 +214,7 @@ export class WorkflowInstance {
   outcome!: WorkflowOutcome | null;
 
   /**
-   * 收過這個實例知會通知(B17,`workflow.cc`)的人:讀取授權以「任務持有者」同等規則讓他們唯讀
+   * 收過這個實例知會通知(`workflow.cc`)的人:讀取授權以「任務持有者」同等規則讓他們唯讀
    * 這個修訂(`canReadSubmissionRevision`)。與知會通知同一個交易追加(`$addToSet`),不動 `editVersion`。
    */
   @Prop({ type: [Types.ObjectId], default: [] })

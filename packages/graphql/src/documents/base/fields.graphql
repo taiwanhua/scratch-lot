@@ -1,4 +1,4 @@
-# 欄位管理(#206 / #264;模組 system.field-manager,規則正本 docs/modules/field-manager.md)。
+# 欄位管理(模組 system.field-manager,規則正本 docs/modules/field-manager.md)。
 # 合併清單 = 全域種子 + 上層組織自訂 + 當前組織自訂 + 可見範圍內的下層自訂,每筆帶:
 # ownerOrg(null = 全域種子,有值 = 加這筆的組織)、isOwn(是不是自己這一層加的)、
 # canEdit / canToggleEnabled(api 依操作者算好,前端只讀、不再自己推視角)。

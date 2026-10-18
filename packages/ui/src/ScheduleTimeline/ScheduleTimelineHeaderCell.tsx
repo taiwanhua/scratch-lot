@@ -13,7 +13,7 @@ export interface ScheduleTimelineHeaderCellProps {
   date?: string;
   /** 今天:日期畫成主色實心圓 */
   isToday?: boolean;
-  /** 日期後面的文字(例:「三 店慶」)/ 時間表頭的文字 */
+  /** 日期後面的文字(例:「三 活動日」)/ 時間表頭的文字 */
   label?: ReactNode;
 }
 

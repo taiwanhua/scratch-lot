@@ -80,7 +80,7 @@ export class Module {
   engine!: ModuleEngine;
 
   /**
-   * 表單模組依表單分開新增權限(B9b):true 時每張表單發布時建 `<模組>.create-<formKey>`,
+   * 表單模組依表單分開新增權限:true 時每張表單發布時建 `<模組>.create-<formKey>`,
    * 新增資格看它而不看模組 `create`(`FormAccessService.canCreateWithForm`)。
    * 與 `engine` 同屬「每次 seed 都同步」的欄位:只能在 seed 宣告,執行期不改。
    */

@@ -1,7 +1,7 @@
 import { Field, ID, InputType, Int } from "@nestjs/graphql";
 
 /**
- * 附件(#427):上傳票的物件路徑 + 前端選檔時就知道的原始檔名 / 大小 / 檔型。
+ * 附件:上傳票的物件路徑 + 前端選檔時就知道的原始檔名 / 大小 / 檔型。
  *
  * - `path`:`createUploadUrl`(purpose `DEMO_ATTACHMENT`)回的 `objectPath`;
  *   **只有它過 `isOwnedUploadPath`**(是不是本 API 簽出來的路徑)。

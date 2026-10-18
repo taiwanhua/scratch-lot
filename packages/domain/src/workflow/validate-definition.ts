@@ -69,7 +69,7 @@ export interface ValidateWorkflowOptions {
 }
 
 /**
- * 流程定義檢查器(Spec §5「定義檢查器」):發布前跑,設計器即時也跑。**有錯不能發布,警告可發布**。
+ * 流程定義檢查器:發布前跑,設計器即時也跑。**有錯不能發布,警告可發布**。
  * 有 `edges` 的版本另跑結構檢查;沒有 `edges` 的版本只允許審核關卡、不做結構檢查。
  */
 export function validateWorkflowDefinition(
@@ -233,7 +233,7 @@ function checkReviewStep(
 }
 
 /**
- * 「申請人屬於這些組織」(B4):形狀(`SKIP_ORGS_INVALID`:至少一個組織、id 是非空字串、「包含下層」是布林);
+ * 「申請人屬於這些組織」:形狀(`SKIP_ORGS_INVALID`:至少一個組織、id 是非空字串、「包含下層」是布林);
  * 共用流程只能選租戶(`SKIP_ORGS_IN_SHARED`);客製流程選的組織要在本租戶(`ORG_NOT_IN_TENANT`)。
  */
 function checkSkipOrgs(
@@ -286,7 +286,7 @@ function checkSkipOrgs(
   }
 }
 
-/** 自動通過(B5):兩項都是布林(省略 = 照常審核)。 */
+/** 自動通過:兩項都是布林(省略 = 照常審核)。 */
 function checkAutoApprove(
   step: ReviewStepDef,
   collector: WorkflowIssueCollector,
@@ -578,7 +578,7 @@ function isWholeHours(value: unknown): value is number {
 }
 
 /**
- * 逾時提醒(B16):N、M 是正整數小時且 M > N(`OVERDUE_INVALID`,設計器擋下、不能發布);
+ * 逾時提醒:N、M 是正整數小時且 M > N(`OVERDUE_INVALID`,設計器擋下、不能發布);
  * 通知對象是人員條件,與審核者同一套檢查(`AUDIENCE_INVALID`、`AUDIENCE_IN_SHARED`…)。
  */
 function checkOverdue(
@@ -624,7 +624,7 @@ function checkOverdue(
   );
 }
 
-/** 關卡的知會對象(B17;來源同審核者三種)。 */
+/** 關卡的知會對象(來源同審核者三種)。 */
 function checkStepCc(
   step: ReviewStepDef,
   options: ValidateWorkflowOptions,

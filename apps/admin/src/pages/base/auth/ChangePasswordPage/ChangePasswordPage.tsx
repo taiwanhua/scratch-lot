@@ -29,7 +29,7 @@ import {
 
 /**
  * 改密碼頁(已登入;無設計稿,沿用 LoginCard 版型):首登須改密碼者由路由守門帶 `next` 導來,
- * 成功後旗標清除、`me` 重取、回原頁(#61 / user-manager.md「密碼流程」)。
+ * 成功後旗標清除、`me` 重取、回原頁(user-manager.md「密碼流程」)。
  */
 export const ChangePasswordPage = () => {
   const t = useTranslations("admin.changePassword");

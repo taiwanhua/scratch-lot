@@ -26,7 +26,7 @@ export interface ReadOnlyFieldProps {
 }
 
 /**
- * widget 的唯讀分支共用的外框(Spec 6a §8 畫面 11:唯讀 = 同一套填寫元件走 `readOnly`):
+ * widget 的唯讀分支共用的外框(唯讀 = 同一套填寫元件走 `readOnly`):
  * 與填寫時同樣的有框輸入框、同樣的標籤位置,但**不是停用** —— 文字照一般顏色、可選取複製、不能改。
  * 內容 = 顯示文字:數字帶單位、選項 / 引用是 label(`displayValues` 的現名或快照 +「(來源不可用)」)、
  * 日期 / 日期時間以 `context.timezone`(讀者的租戶時區)印;空值「—」。多行文字欄是多行框(同填寫時),其餘單行。

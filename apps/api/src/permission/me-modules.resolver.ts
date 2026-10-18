@@ -29,7 +29,7 @@ function toMeModule(module: ResolvedModule): MeModule {
 }
 
 /**
- * `me.modules`(#63):以 field resolver 掛在登入線1 的 `Me` 上,登入線的 resolver 不動。
+ * `me.modules`:以 field resolver 掛在登入線1 的 `Me` 上,登入線的 resolver 不動。
  * 全域 guard 不作用於 field resolver(fieldResolverEnhancers 未開),登入由 `me` 本身把關;
  * 操作者上下文自 request 取得(@CurrentOperator)。
  */

@@ -29,7 +29,7 @@ export interface ExpressionPickerProps {
   /** 可引用的欄位(呼叫端依用途過濾:條件不含受保護欄位;顯示條件不含自己) */
   fields: readonly FieldDef[];
   /**
-   * 用途(Spec 6a §5 表 B):`condition`(顯示 / 鎖定條件、自訂驗證、流程跳過條件)根要回是 / 否,
+   * 用途:`condition`(顯示 / 鎖定條件、自訂驗證、流程跳過條件)根要回是 / 否,
    * 常數與系統值不能單獨當根;`formula`(計算欄位、預設值)根要回 `resultType`。
    */
   usage?: PickerUsage;
@@ -64,7 +64,7 @@ const rootTypesOf = (
 /**
  * 表達式欄位(公式、顯示條件、鎖定條件、自訂驗證、流程跳過條件):沒設定時一顆「設定」;設定後是
  * **型別導向**的結構化選擇器(每個位置只列型別對得上的欄位 / 系統值 / 常數 / 運算),下方附唯讀的
- * JSON 預覽(可複製,Spec 6a §5「右側 JSON 預覽唯讀可複製」)。
+ * JSON 預覽(唯讀、可複製)。
  */
 export const ExpressionPicker = ({
   label,

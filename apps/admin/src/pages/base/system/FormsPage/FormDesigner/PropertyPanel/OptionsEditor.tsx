@@ -49,7 +49,7 @@ const emptyOf = (kind: SourceKind): FieldOptions => {
 const UNSET = "";
 
 /**
- * 選項欄的三種來源(Spec 6a §5「`options` 三種來源」):靜態清單逐列加 value / label(可停用、依列順序排)、
+ * 選項欄的三種來源(`options`):靜態清單逐列加 value / label(可停用、依列順序排)、
  * 欄位管理類別**從啟用的類別清單下拉挑**(`fieldCategories(enabledOnly)`)、lookup 來源選 provider / 表單 / 顯示欄 / 值欄。
  * value 重複等由檢查器報錯。靜態清單的列以**穩定內部 id** 當 React key(`useRowIds`),改 value 不會整列重掛失焦。
  */

@@ -11,7 +11,7 @@ export interface ForbiddenPageProps {
 }
 
 /**
- * 無權限頁(#61 使用者故事 6):手打不在「可進入路由集合」內的網址時顯示,
+ * 無權限頁:手打不在「可進入路由集合」內的網址時顯示,
  * 明確告知是權限問題、不是系統壞掉;窗口統一「系統管理員」(FIGMA-04 / CONTEXT.md)。
  */
 export const ForbiddenPage = ({ isEntry = false }: ForbiddenPageProps) => {

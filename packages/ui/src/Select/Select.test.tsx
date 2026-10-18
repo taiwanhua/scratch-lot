@@ -29,7 +29,7 @@ describe("Select", () => {
     expect(handleChange.mock.calls[0]?.[0]).toBe("org-2");
   });
 
-  /** #260 的 disabled 盤點:停用的下拉要標成 disabled,而且點不開。 */
+  /** disabled 盤點:停用的下拉要標成 disabled,而且點不開。 */
   it("disabled 時標記為停用,點了也不會展開選單", () => {
     render(
       <Select
@@ -51,7 +51,7 @@ describe("Select", () => {
   });
 
   /**
-   * 資料範圍規則編輯器的「組織 / 使用者多選」直接用這個組合(#207 ②):
+   * 資料範圍規則編輯器的「組織 / 使用者多選」直接用這個組合:
    * `multiple` + `renderValue` 決定收合時顯示什麼,選項裡放 `Checkbox` 表示勾選狀態。
    */
   it("multiple + renderValue:收合時顯示自訂摘要,選取回傳整個陣列", () => {

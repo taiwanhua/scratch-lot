@@ -10,7 +10,7 @@ import { isRedactedValue } from "./definition";
 /**
  * 值 → 顯示文字(`renderValue(ctx)` 的純函式部分;元件在 `components/base/form-engine/FormValue.tsx`)。
  *
- * 顯示名(Spec 6a §5「顯示名怎麼決定」):
+ * 顯示名(`docs/concepts/form-engine.md`「顯示名:labelTemplate 與頁籤模板」):
  * - 靜態選項 → 該筆綁的那一版定義裡的 label
  * - 類別 / lookup 選項、引用 → api 的 `displayValues`(來源還在且讀者有權 → 現名;
  *   否則快照 label + 「(來源不可用)」)

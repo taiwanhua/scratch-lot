@@ -159,9 +159,9 @@ interface CreatedPermission {
   name: string;
 }
 
-const FORM_A = "b9b_a";
-const FORM_B = "b9b_b";
-const FORM_PLAIN = "b9b_plain";
+const FORM_A = "per_form_a";
+const FORM_B = "per_form_b";
+const FORM_PLAIN = "per_form_plain";
 const PLAIN_MODULE = "demo.form";
 const createKey = (formKey: string): string =>
   `${MODULE_KEY}.create-${formKey}`;
@@ -169,10 +169,10 @@ const createKey = (formKey: string): string =>
 const fields = [field("title", "text")];
 
 /**
- * 依表單分開新增權限(B9b,`docs/concepts/authorization.md`):把 `demo-form` 當成「開啟 B9b 的測試模組」
+ * 依表單分開新增權限(`docs/concepts/authorization.md`):把 `demo-form` 當成「開啟依表單分開新增權限的測試模組」
  * (底座示範模組本身不開,見 seed 測試),驗證發布建權限、`canCreateWithForm` 的每個入口、租戶客製表單不自動授予。
  */
-describe("依表單分開新增權限(B9b)", () => {
+describe("依表單分開新增權限", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let root: string;
@@ -217,7 +217,7 @@ describe("依表單分開新增權限(B9b)", () => {
       input: {
         formKey,
         expectedDraftRevision: saved.draftRevision,
-        changelog: "B9b",
+        changelog: "依表單分開新增權限",
       },
     });
     return published.publishFormVersion.createdPermission;
@@ -243,13 +243,13 @@ describe("依表單分開新增權限(B9b)", () => {
     api = await startAuthTestApp("cookhome-test-form-per-form-create");
     connection = api.connection;
     root = await rootToken(api);
-    tenant = await createOrg(connection, { name: "B9b 租戶" });
-    // 沒開 B9b 的模組:發布不建 create- 權限
+    tenant = await createOrg(connection, { name: "依表單新增測試租戶" });
+    // 沒開依表單分開新增權限的模組:發布不建 create- 權限
     await ok(api, root, CREATE_FORM, {
       input: { key: FORM_PLAIN, moduleKey: PLAIN_MODULE, name: "一般表單" },
     });
     plainPublish = await publishWith(root, FORM_PLAIN, null);
-    // seed 宣告的開關(執行期不改);測試直接改資料庫模擬「開啟 B9b 的模組」
+    // seed 宣告的開關(執行期不改);測試直接改資料庫模擬「開啟依表單分開新增權限的模組」
     await connection
       .collection("modules")
       .updateOne({ key: MODULE_KEY }, { $set: { perFormCreate: true } });
@@ -279,7 +279,7 @@ describe("依表單分開新增權限(B9b)", () => {
   }, HOOK_TIMEOUT_MS);
 
   describe("發布第 3 步建權限", () => {
-    it("開啟 B9b 的模組:第一次發布建 `<模組>.create-<formKey>`(名稱「<表單名> 新增」,dynamic),回在 `createdPermission`", async () => {
+    it("開啟依表單分開新增權限的模組:第一次發布建 `<模組>.create-<formKey>`(名稱「<表單名> 新增」,dynamic),回在 `createdPermission`", async () => {
       expect(firstPublish).toEqual({
         key: createKey(FORM_A),
         name: "請假單 新增",
@@ -291,7 +291,7 @@ describe("依表單分開新增權限(B9b)", () => {
       });
     });
 
-    it("沒開 B9b 的模組:不建、`createdPermission` 為 null", async () => {
+    it("沒開依表單分開新增權限的模組:不建、`createdPermission` 為 null", async () => {
       expect(plainPublish).toBeNull();
       expect(
         await permissionOf(`${PLAIN_MODULE}.create-${FORM_PLAIN}`),
@@ -463,22 +463,22 @@ describe("依表單分開新增權限(B9b)", () => {
         input: {
           sourceKey: FORM_A,
           sourceVersion: 2,
-          key: "b9b_a_custom",
+          key: "per_form_a_custom",
           name: "租戶請假單",
         },
       });
       const created = await publishWith(
         designer.token,
-        "b9b_a_custom",
+        "per_form_a_custom",
         "existing",
       );
       expect(created).toEqual({
-        key: createKey("b9b_a_custom"),
+        key: createKey("per_form_a_custom"),
         name: "租戶請假單 新增",
       });
       const permissionId = await findPermissionIdByKey(
         connection,
-        createKey("b9b_a_custom"),
+        createKey("per_form_a_custom"),
       );
       expect(
         await connection
@@ -490,7 +490,7 @@ describe("依表單分開新增權限(B9b)", () => {
         moduleForms: { key: string; canCreate: boolean }[];
       }>(api, moduleOnly.token, MODULE_FORMS, { moduleKey: MODULE_KEY });
       expect(data.moduleForms).toContainEqual({
-        key: "b9b_a_custom",
+        key: "per_form_a_custom",
         canCreate: false,
       });
     });

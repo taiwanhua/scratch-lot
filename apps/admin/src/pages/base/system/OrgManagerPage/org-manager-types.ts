@@ -23,7 +23,7 @@ export const ORG_MEMBER_CANDIDATES_PAGE_SIZE = 20;
 /**
  * 頁面上可執行的動作(ADR-0011「頁內判斷」)。
  * 前三個是任何組織都可能有的;租戶作業那三個只有根組織的操作者拿得到(ADR-0009);
- * 成員那兩個是組織管理層自己的(#377),租戶管理員靠 `system.org-manager.*` 取得。
+ * 成員那兩個是組織管理層自己的,租戶管理員靠 `system.org-manager.*` 取得。
  */
 export interface OrgActionAbility {
   canCreateChild: boolean;

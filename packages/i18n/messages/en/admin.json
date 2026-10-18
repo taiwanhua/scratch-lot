@@ -2977,7 +2977,7 @@
       "resetSuccess": "Default recipients restored"
     },
     "errors": {
-      "INVALID_AUDIENCE": "This condition cannot be used. Check it and save again.",
+      "AUDIENCE_INVALID": "This condition cannot be used. Check it and save again.",
       "OUT_OF_TENANT": "This person or role is not in your organization",
       "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
       "TENANT_ONLY": "Recipients cannot be changed here. Switch to the organization you want to set up first.",

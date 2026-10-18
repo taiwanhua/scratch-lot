@@ -22,7 +22,7 @@ export interface DesignFieldCellProps {
 }
 
 /**
- * 設計模式的一格(Spec 6a §8「設計模式 vs 預覽」):**不跑條件與計算**,只在欄位上標示
+ * 設計模式的一格:**不跑條件與計算**,只在欄位上標示
  * 「有顯示條件」「有唯讀條件」「計算欄位」「受保護」「因引用受保護欄位 X 而受保護」;可選取、可拖拉(dnd-kit)。
  */
 export const DesignFieldCell = ({

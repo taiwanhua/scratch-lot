@@ -31,13 +31,13 @@ export interface AddMembersDialogProps {
 }
 
 /**
- * 加入成員(#377)。清單來自 `orgMemberCandidates`:操作者**管理範圍**內、
+ * 加入成員。清單來自 `orgMemberCandidates`:操作者**管理範圍**內、
  * **尚未加入**這個組織的使用者 —— 守在 `system.org-manager.add-members` 底下,
- * 不借使用者管理的 `users`(借了會讓這個彈窗連帶需要 `system.user-manager.view`,#246 踩過)。
+ * 不借使用者管理的 `users`(借了會讓這個彈窗連帶需要 `system.user-manager.view`,踩過)。
  *
  * **關鍵字丟回 api 查**(候選有分頁上限,前端手上不會是全量),所以走 `onInputChange` 這條路 ——
  * 給了它 Autocomplete 就不再自己過濾一次,否則打第一個字就把「還沒換過來的那批 options」濾成空的
- * (#307 在角色的「加入使用者」踩過)。
+ * (角色的「加入使用者」踩過)。
  */
 export const AddMembersDialog = ({
   orgId,

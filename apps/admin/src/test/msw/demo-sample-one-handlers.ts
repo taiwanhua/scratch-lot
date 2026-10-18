@@ -88,7 +88,7 @@ const fieldForbidden = (
     : null;
 
 /**
- * 示範模組1 的假 api(#318 的四個 query + 四個 mutation;規則正本
+ * 示範模組1 的假 api(四個 query + 四個 mutation;規則正本
  * `docs/modules/demo.sub.sample-one.md`「api 介面」)。
  *
  * 有狀態:新增 / 編輯 / 刪除寫回同一份清單,所以「mutation → invalidate → 重新查」
@@ -222,7 +222,7 @@ export const demoWorld = (options: DemoWorldOptions = {}): DemoWorld => {
         internalNote: input.internalNote ?? null,
         coverPath: input.coverPath ?? null,
         coverUrl: null,
-        // 附件原樣存原始檔名 / 大小 / 檔型(#427),與 api 同
+        // 附件原樣存原始檔名 / 大小 / 檔型,與 api 同
         attachment: input.attachment ?? null,
         status: input.status ?? DemoItemOneStatus.Draft,
         enabled: true,

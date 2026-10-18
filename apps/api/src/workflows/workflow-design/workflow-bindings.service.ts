@@ -63,7 +63,7 @@ export interface BindableWorkflow {
 }
 
 /**
- * 流程綁定(Spec 6b §3「流程綁定」):`business_relationships` 的 `org_form_workflow`
+ * 流程綁定:`business_relationships` 的 `org_form_workflow`
  * (`tenantId` = `firstId` = 租戶頂層、`secondId` = 表單、`thirdId` = 流程)。
  * 唯一鍵 `(tenantId, type, firstId, secondId)` = 一張表單最多綁一個流程;多張表單可綁同一個流程。
  *
@@ -131,7 +131,7 @@ export class WorkflowBindingsService {
     return form.key;
   }
 
-  /** 解除綁定(刪 `org_form_workflow`);進過審核的單之後再送出會被擋(Spec §3)。回表單 key。 */
+  /** 解除綁定(刪 `org_form_workflow`);進過審核的單之後再送出會被擋。回表單 key。 */
   async unbind(
     facts: FormOperatorFacts,
     input: UnbindFormWorkflowInput,
@@ -268,7 +268,7 @@ export class WorkflowBindingsService {
     }
   }
 
-  /** 綁定時檢查(Spec §3 表);流程沒有發布版 → null。 */
+  /** 綁定時檢查;流程沒有發布版 → null。 */
   private async issuesOf(
     tenantId: Types.ObjectId,
     form: FormRecord,

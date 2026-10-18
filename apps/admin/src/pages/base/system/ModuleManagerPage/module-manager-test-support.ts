@@ -29,7 +29,7 @@ export const FULL_PERMISSIONS = [
   MODULE_MANAGER_PERMISSIONS.toggleEnabled,
   MODULE_MANAGER_PERMISSIONS.setIcon,
 ];
-/** 換圖示與停用是兩把鑰匙(#288):只有 `.toggle-enabled` 時圖示欄位仍是唯讀的 */
+/** 換圖示與停用是兩把鑰匙:只有 `.toggle-enabled` 時圖示欄位仍是唯讀的 */
 export const WITHOUT_SET_ICON = [
   MODULE_MANAGER_PERMISSIONS.view,
   MODULE_MANAGER_PERMISSIONS.toggleEnabled,
@@ -112,7 +112,7 @@ export const waitForTree = async () => {
 };
 
 /**
- * 點一個節點 = **只有選取**(`Tree` 自 #373 起 `expansionTrigger="iconContainer"`,
+ * 點一個節點 = **只有選取**(`Tree` 設了 `expansionTrigger="iconContainer"`,
  * 展開 / 收合只認名稱前面的箭頭),所以點過的節點不會收起來,子節點照樣找得到。
  */
 export const clickNode = async (

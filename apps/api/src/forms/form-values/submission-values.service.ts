@@ -81,7 +81,7 @@ interface OptionContext {
   facts: FormOperatorFacts;
   categories: Map<string, Promise<CategoryOptions>>;
   issues: ValueIssue[];
-  /** 連動篩選(B2d)引用的表單層欄位此刻的值(這次會存下的最終值)。 */
+  /** 連動篩選引用的表單層欄位此刻的值(這次會存下的最終值)。 */
   filterValueOf: (fieldKey: string) => LookupFilterScalar | null;
 }
 
@@ -119,7 +119,7 @@ const NO_REFERENCES: ReferenceLookup = {
   mismatched: new Set(),
 };
 
-/** 一欄落在 Spec §5「不能填的四種原因」的哪一列。 */
+/** 一欄落在「不能填的四種原因」的哪一種。 */
 type FieldClass = "hidden" | "computed" | "kept" | "readonly" | "input";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -127,7 +127,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * 提交寫入的後端規則(Spec 6a §5「不能填的四種原因,後端怎麼處理送來的值」),每欄**依序**判定、
+ * 提交寫入的後端規則(不能填的四種原因,後端怎麼處理送來的值;見 `docs/modules/forms.md`「提交的寫入規則」),每欄**依序**判定、
  * 命中第一個就照那列處理:
  *
  * 1. `visibleWhen` 算出 false → 清空(null),不算、不驗 —— 同一欄同時隱藏 + 受保護也是清空
@@ -433,8 +433,8 @@ export class SubmissionValuesService {
   }
 
   /**
-   * 送出 / 已完成修改:選項與引用**重取 label 寫快照**(Spec §7「提交時後端重驗 reference 的來源可讀、
-   * 重取 label;類別 / lookup 選項同樣」)。只處理這次會存下的「一般可填」欄位;
+   * 送出 / 已完成修改:選項與引用**重取 label 寫快照**(提交時後端重驗 reference 的來源可讀、
+   * 重取 label;類別 / lookup 選項同樣)。只處理這次會存下的「一般可填」欄位;
    * 值與上一個已完成修訂相同的保留原快照(來源停用或刪除不擋整筆修改)。
    */
   private async resolveSnapshots(
@@ -473,7 +473,7 @@ export class SubmissionValuesService {
         );
         continue;
       }
-      // 同值保留原快照;但連動篩選引用的欄位改了值 → 用最後的值重驗(B2d)
+      // 同值保留原快照;但連動篩選引用的欄位改了值 → 用最後的值重驗
       final[field.key] =
         previous !== undefined &&
         isSameStoredValue(field, value, previous) &&
@@ -607,7 +607,7 @@ export class SubmissionValuesService {
   }
 
   /**
-   * 引用的 id 一次查回(`publicOnly`)。來源有連動篩選(B2d)時以這次的最終值換成條件再查;
+   * 引用的 id 一次查回(`publicOnly`)。來源有連動篩選時以這次的最終值換成條件再查;
    * 查不到的 id 再以拿掉連動篩選的來源查一次(只查缺的):讀得到 = 不符篩選(`mismatched`),
    * 讀不到 = 來源不可用。被引用欄位沒有值 → 篩選查無,讀得到的一律算不符。
    */

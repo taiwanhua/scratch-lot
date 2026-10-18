@@ -147,7 +147,7 @@ export function submitBlockedError(
   return workflowForbiddenError(message, reason, { issues });
 }
 
-/** 綁定時檢查的一個問題(Spec 6b §3「綁定時檢查」表)。 */
+/** 綁定時檢查的一個問題。 */
 export interface BindingIssue {
   stepKey: string;
   stepNumber: number;

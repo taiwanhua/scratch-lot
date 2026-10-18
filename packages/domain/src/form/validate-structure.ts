@@ -13,7 +13,7 @@ import type {
 import { isPrefillCompatible, validateLookupSource } from "./validate-fields";
 
 /**
- * 檢查器的結構段(Spec §5「定義檢查器」):版面、摘要槽、帶入,以及警告清單。
+ * 檢查器的結構段:版面、摘要槽、帶入,以及警告清單。
  */
 
 export function validateLayout(

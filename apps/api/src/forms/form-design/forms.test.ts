@@ -116,7 +116,7 @@ const FORM_RUNTIME_VERSION = /* GraphQL */ `
 `;
 
 /**
- * 表單的可見、分派、啟用、客製副本(Spec 6a §3、§10「表單」):真 GraphQL + 真 MongoDB(TEST-07)。
+ * 表單的可見、分派、啟用、客製副本:真 GraphQL + 真 MongoDB(TEST-07)。
  */
 describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () => {
   let api: AuthTestApp;
@@ -399,7 +399,7 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
         ]),
         0,
       );
-      // 依表單新增權限(B9b 建立;這裡直接寫一筆,只驗解析與過濾認得 `create-`)
+      // 依表單新增權限(正式由表單發布建立;這裡直接寫一筆,只驗解析與過濾認得 `create-`)
       const module = await connection
         .collection("modules")
         .findOne<{ _id: Types.ObjectId }>({ key: MODULE_KEY });
@@ -424,7 +424,7 @@ describe("表單:副本、分派 / 啟用 / 收回的交集、租戶邊界", () 
     }, HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
-      // 測試直接寫入的依表單新增權限(B9b 未實作前沒有流程會建它),不留給後續測試
+      // 測試直接寫入的依表單新增權限,不留給後續測試
       await connection
         .collection("permissions")
         .deleteOne({ key: B_FORM_CREATE });

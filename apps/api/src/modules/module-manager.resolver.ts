@@ -21,7 +21,7 @@ const PERMISSIONS = {
   view: "system.module-manager.view",
   toggleEnabled: "system.module-manager.toggle-enabled",
   /**
-   * 換側欄圖示是獨立權限(#288 裁決):它與停用 / 啟用的後果差太遠 ——
+   * 換側欄圖示是獨立權限:它與停用 / 啟用的後果差太遠 ——
    * 一個只改長相、一個會讓所有租戶少掉整塊功能,不該用同一把鑰匙。
    */
   setIcon: "system.module-manager.set-icon",

@@ -61,7 +61,7 @@ type UploadPathField = "coverPath" | "attachment";
 /** 附件原始檔名的長度上限(一般檔案系統的單一檔名上限)。 */
 const MAX_ATTACHMENT_NAME_LENGTH = 255;
 
-/** 附件在 DB 的四個平行欄位(#427:同生同滅,換檔一起 `$set`、清空一起 `$unset`)。 */
+/** 附件在 DB 的四個平行欄位(同生同滅,換檔一起 `$set`、清空一起 `$unset`)。 */
 interface AttachmentFields {
   attachmentPath: string;
   attachmentName: string;
@@ -475,7 +475,7 @@ function trimToNull(value: string | null | undefined): string | null {
 }
 
 /**
- * 上傳路徑的守門(ADR-0010 / #134 的同一條):只收本 API 簽出來的路徑,
+ * 上傳路徑的守門(ADR-0010,與組織商標同一條):只收本 API 簽出來的路徑,
  * 不讓呼叫端把任意 bucket 物件塞進 DB。空字串 / null = 沒有檔案。
  */
 function uploadPathOf(
@@ -492,7 +492,7 @@ function uploadPathOf(
 }
 
 /**
- * 附件 input → DB 的四個平行欄位(#427);`null` / 缺席 = 沒有附件。
+ * 附件 input → DB 的四個平行欄位;`null` / 缺席 = 沒有附件。
  * 路徑照封面同一條守門(`isOwnedUploadPath`);檔名 / 大小 / 檔型是顯示用的中繼資料,
  * 只驗形狀(不驗與 bucket 物件一致),不合一律 `VALIDATION_FAILED`,`fields: ["attachment"]`。
  */
@@ -540,8 +540,8 @@ function attachmentFieldsOf(
 }
 
 /**
- * 附件的編輯(#427):四欄一起換或一起清。稽核只記路徑(`attachmentPath`)——
- * 歷程的欄位名沿用 #427 以前的那一個,檔名等中繼資料不進稽核。
+ * 附件的編輯:四欄一起換或一起清。稽核只記路徑(`attachmentPath`)——
+ * 歷程的欄位名沿用原本的那一個,檔名等中繼資料不進稽核。
  */
 function applyAttachment(
   patch: UpdatePatch,

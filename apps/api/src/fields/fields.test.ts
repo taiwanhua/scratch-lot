@@ -51,15 +51,15 @@ interface AuditRecord {
 }
 
 /**
- * 欄位管理(#206:類別 / 合併清單 / 新增 / 編輯 / 停用 / 唯一索引 / 租戶隔離)。
+ * 欄位管理(類別 / 合併清單 / 新增 / 編輯 / 停用 / 唯一索引 / 租戶隔離)。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);夾具沿用 auth / permission 的 test-support。
  *
  * 組織樹(root 為 seed 建的根組織):root ─┬─ 租戶甲  └─ 租戶乙 — 兩者互為兄弟,
- * 誰都不是誰的上層,所以看不到對方的自訂選項(#264 規則表:看得到的是上層與可見範圍內的下層)。
+ * 誰都不是誰的上層,所以看不到對方的自訂選項(規則表:看得到的是上層與可見範圍內的下層)。
  * **上層繼承 / 下層可見的六列規則表在 `field-visibility.test.ts`**。
  * 種子內容(field-manager.md「種子內容」):`gender` 4 個選項、`demo-category` 3 個。
  */
-describe("欄位管理(#206,GraphQL 端點 + 真 MongoDB)", () => {
+describe("欄位管理(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
 
@@ -421,7 +421,7 @@ describe("欄位管理(#206,GraphQL 端點 + 真 MongoDB)", () => {
       expect(seenByB.some((row) => row.id === ownOfA[0]?.id)).toBe(false);
     });
 
-    it("根組織操作者看得到全部租戶的自訂選項,但一筆都不是自己的(#264)", async () => {
+    it("根組織操作者看得到全部租戶的自訂選項,但一筆都不是自己的", async () => {
       const rows = await listFields(api, rootToken, demoCategoryId);
       const custom = customOf(rows);
       const owners = new Set(custom.map((row) => row.ownerOrg?.name));

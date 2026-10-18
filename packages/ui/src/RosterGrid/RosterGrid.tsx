@@ -42,7 +42,7 @@ export interface RosterGridProps<Person extends RowData> {
   leadingColumns: readonly DataTableColumn<Person>[];
   /** 右固定欄(統計欄…) */
   trailingColumns?: readonly DataTableColumn<Person>[];
-  /** 日期格的內容(班別標籤…),由使用的模組決定 */
+  /** 日期格的內容(時段標籤…),由使用的模組決定 */
   renderCell: (ctx: RosterCellContext<Person>) => ReactNode;
   /** 日期欄寬(px);預設 128 */
   dateColumnWidth?: number;

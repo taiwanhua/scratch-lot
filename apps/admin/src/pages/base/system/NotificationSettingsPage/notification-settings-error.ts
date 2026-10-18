@@ -6,7 +6,7 @@ import { type AdminError, parseAdminError } from "@/lib/base/errors";
  * 認不出來的一律 `UNEXPECTED`。文案在 `admin.notificationSettings.errors.*`。
  */
 export const NOTIFICATION_SETTINGS_ERROR_CODES = [
-  "INVALID_AUDIENCE",
+  "AUDIENCE_INVALID",
   "OUT_OF_TENANT",
   "UNKNOWN_TYPE",
   "TENANT_ONLY",
@@ -17,12 +17,12 @@ export type NotificationSettingsErrorCode =
   (typeof NOTIFICATION_SETTINGS_ERROR_CODES)[number] | "UNEXPECTED";
 
 const VALIDATION_REASONS = new Set([
-  "INVALID_AUDIENCE",
+  "AUDIENCE_INVALID",
   "OUT_OF_TENANT",
   "UNKNOWN_TYPE",
 ]);
 
-/** `path`(人員條件裡出錯的位置)只在 `INVALID_AUDIENCE` / `OUT_OF_TENANT` 才有。 */
+/** `path`(人員條件裡出錯的位置)只在 `AUDIENCE_INVALID` / `OUT_OF_TENANT` 才有。 */
 export type NotificationSettingsError =
   AdminError<NotificationSettingsErrorCode>;
 

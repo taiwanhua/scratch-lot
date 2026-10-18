@@ -47,7 +47,7 @@ function userIdsOf(audience: unknown): string[] {
 }
 
 /**
- * 流程定義檢查器的 api 端(Spec 6b §5「定義檢查器」):規則正本是 `@repo/domain/workflow` 的
+ * 流程定義檢查器的 api 端:規則正本是 `@repo/domain/workflow` 的
  * `validateWorkflowDefinition`,這裡只把它要的目錄從資料庫組好 ——
  * 共用 / 客製、本租戶的角色 / 組織與使用者、`field` 來源表單與「檢查用表單」的**目前版本**欄位。
  *

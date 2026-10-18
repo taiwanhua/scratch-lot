@@ -10,7 +10,7 @@ import {
 } from "@repo/domain/permission";
 
 /**
- * 權限矩陣的畫面狀態換算(#208;規則正本 ADR-0004、`docs/modules/role-manager.md`「權限矩陣規則」)。
+ * 權限矩陣的畫面狀態換算(規則正本 ADR-0004、`docs/modules/role-manager.md`「權限矩陣規則」)。
  *
  * **連動規則一律由 `@repo/domain/permission` 算**(前後端同一份):本檔只做兩件事 —
  * ①把一份授予換成 `Tree` 需要的三組 id(勾選 / 三態 / 不可取消)
@@ -183,7 +183,7 @@ export const allMatrixRowIds = (tree: MatrixModuleTree): string[] => {
 /**
  * 一份授予**涵蓋不到**的列。兩個呼叫端、同一種算法:
  * - `ungrantedMatrixRowIds`:目前沒有勾的列(`shrinkOnly` 只能縮不能擴)
- * - `outOfCeilingMatrixRowIds`:天花板外的列(`ceiling`,#283)
+ * - `outOfCeilingMatrixRowIds`:天花板外的列(`ceiling`)
  *
  * 兩者都是防呆不是把關:api 仍會回 `ROLE_OUT_OF_REACH`,前端先鎖住免得送出才吃錯誤。
  */
@@ -203,7 +203,7 @@ const rowIdsOutside = (
 export const ungrantedMatrixRowIds = rowIdsOutside;
 
 /**
- * **天花板之外**的列(`RoleMatrixPayload.ceiling`,#283):預設角色的矩陣上限是
+ * **天花板之外**的列(`RoleMatrixPayload.ceiling`):預設角色的矩陣上限是
  * 內建「租戶管理員」模板角色目前的授予,模板沒有的項目 root 與租戶都勾不動。
  */
 export const outOfCeilingMatrixRowIds = rowIdsOutside;

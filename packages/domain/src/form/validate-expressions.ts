@@ -21,7 +21,7 @@ import type {
 import type { ArrayColumnDef, Expression, FieldDef } from "./types";
 
 /**
- * 檢查器的表達式段(Spec §5「定義檢查器」表達式一列):形狀、引用、循環(含跨類型)、
+ * 檢查器的表達式段:形狀、引用、循環(含跨類型)、
  * `visibleWhen` 自我引用、條件引用受保護欄位,以及「顯示條件恆為 false 卻必填」。
  */
 

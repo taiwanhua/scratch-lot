@@ -36,7 +36,7 @@ const noop = () => {
 };
 
 /**
- * 使用處的示範精靈(規格 10.8 的分工):步驟與內容只放畫面 state,上一步 / 下一步的條件由頁面決定,
+ * 使用處的示範精靈(使用處與元件的分工):步驟與內容只放畫面 state,上一步 / 下一步的條件由頁面決定,
  * 元件只回報點了哪一個已完成的步驟。
  */
 const Wizard = ({ canLeave }: { canLeave: (step: number) => boolean }) => {
@@ -113,7 +113,7 @@ afterEach(() => {
   Reflect.deleteProperty(globalThis, "matchMedia");
 });
 
-describe("Stepper:規格 10.8 的操作表", () => {
+describe("Stepper:操作表", () => {
   it("按 [下一步]:頁面判斷可以前進 → 目前步驟標「已完成」,下一步標「進行中」", async () => {
     const user = userEvent.setup();
     render(<Wizard canLeave={() => true} />);

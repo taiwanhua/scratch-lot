@@ -89,9 +89,23 @@
   - 範圍外的來源不授予、範圍外的目標不因取代而解除 —— 這是權限邊界,不是選項。管理範圍是全部(根組織)時 `T − M` 為空,取代即完全取代。
 - **驗證**(預覽與正式送出都重算、重驗):來源 ≠ 目標;目標不能是操作者本人(`VALIDATION_FAILED`,`fields: ["targetUserId"]`;取代會把自己的管理角色解除、把自己鎖在門外);兩者都存在、未刪除、在管理範圍內;新增的角色以**複製後的所屬組織**判斷授予資格(`OrgQualificationService.assertEligible`);停用的角色不得新授予;複製後至少一個所屬組織;擁有者保護照常適用(不得把擁有者移出他擁有的組織、不得解除他的租戶管理員授予;根組織操作者例外)。
 - **範圍外的角色因取代失去資格**:允許執行,角色照樣留著(同「全部保留」的效果);預覽不把它列為擋下的原因,只回一個 `outOfScopeKept` 旗標讓彈窗多一行提示。**不沿用**「所屬組織」三檔的角色清理政策。
-- **寫入順序**:加組織 → 授角色 → 解除角色 → 移除組織(永遠不會先移到零組織)。沒有交易(ADR-0007):中途失敗就回錯、不回成功,已完成的步驟各自留有稽核;關聯寫入冪等(`RelationService.ensureLinks`),重跑不會產生重複關聯。
+- **寫入順序**:加組織 → 授角色 → 解除角色 → 移除組織(永遠不會先移到零組織)。正式送出是一個交易(見下方「交易」):中途任一步失敗,已加的組織與角色、各步的稽核整個回復,目標維持複製前;關聯寫入另以 `RelationService.ensureLinks` 冪等。
 - **不複製**:角色定義、個人資料、密碼、啟用狀態、settings、主管關係、擁有者身分、流程任務。
 - **已知限制**:目標使用者的權限在 API 端每次請求現算,複製後立即生效;但他開著的後台畫面(`me`)要重新整理才會更新。若取代移除了他目前所在的組織,API 自動退到他剩下的第一個所屬組織。取代時,目標原有、在範圍內且已是「組織外」狀態的角色不重驗資格(資格只在授予當下檢查,同 ADR-0003)。`LAST_ORG` 只有在根組織操作者、且來源沒有任何存活的所屬組織(全指向已刪除的組織)時取代才會發生 —— 其他情況來源一定在管理範圍內,S 至少有一個組織。查無角色文件(已刪除)的殘留授予不複製,也不列進差異、不會被取代解除。
+
+**交易**(ADR-0013):每個寫入動作是**一個交易** —— 讀取驗證(重算、重驗)與寫入(含稽核)都在 `TransactionService.withTransaction` 內,任一步失敗整個動作回復,不留半套關聯或稽核:
+
+| 動作                                        | 交易內                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------- |
+| 新增使用者(`createUser`)                    | 唯一性、組織與角色資格檢查 → 建使用者 → 所屬組織與角色關聯 → `user.create` |
+| 編輯(`updateUser`)                          | 欄位更新 → `user.edit`                                                     |
+| 停用 / 啟用(`setUserEnabled`)               | `enabled` → 停用時作廢全部 refresh token → `user.toggle-enabled`           |
+| 所屬組織(`setUserOrgs`,正式送出)            | 加 / 移組織 → 依三檔解除角色 → `user.add-org` / `user.remove-org`          |
+| 加入成員(組織管理,`addOrgs`)                | 這一批所有人的關聯與逐人 `user.add-org`(任何一位驗不過,整批不加)           |
+| 指派角色(`assignUserRoles`)                 | 授予 → 解除 → `user.grant-role` / `user.revoke-role`                       |
+| 複製組織與角色(`copyUserOrgRoles`,正式送出) | 讀來源 / 目標、試算、重驗 → 四步寫入與各自的稽核                           |
+
+交易外只有:密碼雜湊(交易前)、回傳形狀的組裝(提交後)、**啟用信**(`afterCommit`,提交後才建 token 並寄出;寄不出去只記 log、新增照樣成立,使用者以「忘記密碼」自助)、**審核者失效 hook**(停用、移出組織提交後才呼叫,每個實例各自一個交易;hook 失敗不回復停用 / 移出,再做一次即補上,見 `docs/concepts/workflow-engine.md`)。試算(`dryRun`)不開交易、不寫資料。
 
 **密碼流程**:「設定新密碼」頁共用三入口 —— 啟用信(7 天,`PasswordService.sendActivationEmail`,由本模組新增使用者與開通租戶時呼叫)、重設信(30 分鐘,`requestPasswordReset`)、首登強改(`mustChangePassword` → `changePassword`);啟用與重設都走同一個 `setPassword(input: { token, newPassword })`,成功直接發登入 token;連結失效(`ACTION_TOKEN_INVALID`)頁導向忘記密碼自助;`action_tokens` 見 ADR-0009 / 0010。啟用信逾期走忘記密碼自助,本模組不提供重寄。
 
@@ -186,6 +200,7 @@ copyUserOrgRoles(input: { sourceUserId, targetUserId, mode: MERGE | REPLACE, dry
 
 - api:`apps/api/src/users/users.test.ts`;密碼流程 `apps/api/src/auth/password/password.test.ts`
 - api:複製組織與角色 `apps/api/src/users/copy-user-org-roles.test.ts`
+- api:交易回復 —— 新增使用者在稽核那一步失敗(`users.test.ts`)、複製在解除角色那一步失敗(`copy-user-org-roles.test.ts`),都驗資料與稽核整個不留
 - admin:`apps/admin/src/pages/base/system/UserManagerPage/UserManagerPage.test.tsx`、`UserManagerFeedback.test.tsx`、`AssignRolesDialog/AssignRolesDialog.test.tsx`、`CopyOrgRolesDialog/CopyOrgRolesDialog.test.tsx`(共用 `user-manager-test-support.ts`)
 - 劇本(`docs/testing/permission-scenarios.md`):劇本 8 組織外、劇本 9 移除所屬組織的 dry-run 三檔、劇本 14 管理範圍 vs 可見範圍、劇本 17 擁有者保護;E2E 為 `apps/e2e/src/specs/scenario-08-out-of-scope.spec.ts`、`scenario-09-org-removal-policy.spec.ts`、`scenario-14-management-scope.spec.ts`、`scenario-17-owner-protection.spec.ts`
 

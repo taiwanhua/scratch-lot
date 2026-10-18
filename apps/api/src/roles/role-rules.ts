@@ -10,7 +10,7 @@ import { type RoleAbilities, RoleKind } from "./models/role.model";
 export type RoleRecord = Persisted<RoleDocument>;
 
 /**
- * **角色種類的判準與規則**(#261;規則表正本 `docs/modules/role-manager.md`)。
+ * **角色種類的判準與規則**(規則表正本 `docs/modules/role-manager.md`)。
  *
  * 三種角色、四個動作,整個平台只有這一份判斷:api 的四支寫入端點依它擋,
  * `Role.kind` / `Role.abilities` 也由它算給前端讀 —— **前端不重算**。
@@ -62,8 +62,8 @@ export interface RoleOperatorFacts {
 /**
  * 權限矩陣只能縮不能擴(ADR-0009):**非 root 且是預設角色**。
  *
- * #261 前是「只要是預設角色就只能縮」,結果 root 也放寬不了租戶的預設角色 ——
- * 而平台方本來就該能替租戶開新模組(dev 驗收 #212 的 5)。收窄的那一半照舊。
+ * 原本是「只要是預設角色就只能縮」,結果 root 也放寬不了租戶的預設角色 ——
+ * 而平台方本來就該能替租戶開新模組(驗收時提出)。收窄的那一半照舊。
  */
 export function isShrinkOnly(
   role: RoleRecord,

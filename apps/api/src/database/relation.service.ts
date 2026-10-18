@@ -119,7 +119,7 @@ export class RelationService {
 
   /**
    * 使用者的所屬組織,依加入時間(關聯建立時間)由早到晚 —
-   * 登入時的預設當前組織 = 第一個(#61);與 `listOrgIdsOfUser` 的差別只在保證順序。
+   * 登入時的預設當前組織 = 第一個;與 `listOrgIdsOfUser` 的差別只在保證順序。
    */
   async listOrgMembershipsOfUser(
     userId: Types.ObjectId,

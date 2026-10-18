@@ -191,7 +191,7 @@ function groupsOf(entries: readonly DisplayNameEntry[]): {
 }
 
 /**
- * 顯示名怎麼決定(Spec 6a §5「顯示名怎麼決定(現名 vs 快照)」):類別 / lookup 選項與引用 ——
+ * 顯示名怎麼決定(現名 vs 快照):類別 / lookup 選項與引用 ——
  * 來源還在且讀的人有權讀到 → **現名**;來源已刪或讀的人無權 → 快照 label + `available: false`。
  *
  * **批次**(DataLoader 的做法,不逐列查):先把整頁每一筆、每一欄要解析的值依來源分組,

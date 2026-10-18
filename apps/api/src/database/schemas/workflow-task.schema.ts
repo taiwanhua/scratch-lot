@@ -9,7 +9,7 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 export const WORKFLOW_TASKS_COLLECTION = "workflow_tasks";
 
 /**
- * 審核任務(Spec 6b §4「workflow_tasks」;`docs/data-model.md`):實例派任計畫一項的**投影**。
+ * 審核任務(`docs/data-model.md`):實例派任計畫一項的**投影**。
  * 狀態、承辦人都由 `advance` 依實例同步;「待我審核」列表與讀取授權直接用它。
  *
  * **不掛 `tenantScopePlugin`**:任務沒有 `orgId`,而審核者不一定在申請人組織的可見範圍內
@@ -68,17 +68,17 @@ export class WorkflowTask {
   editVersion!: number;
 
   /**
-   * 派給目前承辦人的時點(建任務、改派時寫;B16 逾時提醒從這裡起算)。這個欄位出現之前的任務為 null。
+   * 派給目前承辦人的時點(建任務、改派時寫;逾時提醒從這裡起算)。這個欄位出現之前的任務為 null。
    */
   @Prop({ type: Date, default: null })
   assignedAt!: Date | null;
 
-  /** B16 這一次指派已通知到第幾級(0 = 還沒、1 = 已通知審核者、2 = 已通知通知對象);改派歸 0。 */
+  /** 逾時提醒這一次指派已通知到第幾級(0 = 還沒、1 = 已通知審核者、2 = 已通知通知對象);改派歸 0。 */
   @Prop({ type: Number, default: 0 })
   overdueLevel!: number;
 
   /**
-   * B16 下一級該通知的時點(`assignedAt` + N / M 小時);關卡沒開逾時提醒、已通知完兩級 = null。
+   * 逾時提醒下一級該通知的時點(`assignedAt` + N / M 小時);關卡沒開逾時提醒、已通知完兩級 = null。
    * 排程只撈 `status = pending` 且這個時點已到的任務。
    */
   @Prop({ type: Date, default: null })
@@ -95,7 +95,7 @@ WorkflowTaskSchema.index({ assigneeId: 1, status: 1 });
 WorkflowTaskSchema.index({ tenantId: 1, moduleKey: 1, status: 1 });
 // 曾持有(被改派走)的人仍可讀該修訂
 WorkflowTaskSchema.index({ previousAssigneeIds: 1 });
-// B16 逾時提醒的排程(以租戶為邊界,只撈待處理且到期的)
+// 逾時提醒的排程(以租戶為邊界,只撈待處理且到期的)
 WorkflowTaskSchema.index({ tenantId: 1, status: 1, overdueDueAt: 1 });
 // 基礎欄位(ADR-0007);不掛 tenantScope(理由見 class 註解)
 WorkflowTaskSchema.plugin(baseFieldsPlugin);

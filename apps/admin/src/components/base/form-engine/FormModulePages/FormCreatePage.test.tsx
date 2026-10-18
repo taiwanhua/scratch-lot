@@ -116,7 +116,7 @@ describe("表單模組新增頁(預設組裝)", () => {
     expect(world.inputs.saveFormDraft).toHaveLength(0);
   });
 
-  it("沒有這張表單的新增權限(依表單分開新增權限 B9b,api `canCreate = false`):說明原因,不給填", async () => {
+  it("沒有這張表單的新增權限(依表單分開新增權限,api `canCreate = false`):說明原因,不給填", async () => {
     renderShopping({
       path: CREATE_PATH,
       world: {

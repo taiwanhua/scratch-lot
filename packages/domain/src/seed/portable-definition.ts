@@ -12,7 +12,7 @@
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
  * | 共用流程 assignee | `manager`、可解析的 `formKey` / `fieldKey`、只用權限與非指定組織來源的人員條件 | 人員條件的使用者 / 角色 / 指定組織、指向租戶客製表單 |
  *
- * filter 帶連動篩選 `{ var: "<欄位>" }`(B2d)的,目前也一律判為不可攜(`LOOKUP_FILTER_UNSUPPORTED`):
+ * filter 帶連動篩選 `{ var: "<欄位>" }`的,目前也一律判為不可攜(`LOOKUP_FILTER_UNSUPPORTED`):
  * 可攜的固定條件只有底座 `user` / `org` 的 boolean `enabled`,而連動篩選要跨環境驗證的是「被引用欄位的值
  * 不夾帶本地 id」,這需要把 `{ var }` 納入 ID 流向分析;等專案真的要交付帶連動篩選的共用定義時再放寬。
  *
@@ -311,7 +311,7 @@ class FormOrigins {
     return flows;
   }
 
-  /** 明細引用子欄的列內帶入(B2c):來源欄位的值寫進同一列的子欄(`<明細>.<子欄>`)。 */
+  /** 明細引用子欄的列內帶入:來源欄位的值寫進同一列的子欄(`<明細>.<子欄>`)。 */
   private columnPrefillFlowsOf(field: FieldDef): [string, number][] {
     return arrayColumnsOf(field).flatMap((column) => {
       const mapping: unknown = recordOf(column.prefill)?.mapping;

@@ -6,9 +6,9 @@ import type { TagTone } from "../Tag/tag-tones";
 export interface RosterDate {
   /** `YYYY-MM-DD` */
   date: string;
-  /** 表頭內容(例:「10/13」+「二 · 店休」),由使用的模組決定 */
+  /** 表頭內容(例:「10/13」+「二 · 公休」),由使用的模組決定 */
   header: ReactNode;
-  /** 不能操作的日子(例:店休):整欄停用色、格子不能點 */
+  /** 不能操作的日子(例:公休):整欄停用色、格子不能點 */
   disabled?: boolean;
 }
 
@@ -35,7 +35,7 @@ export interface RosterColumnGroup {
   columnKeys: readonly string[];
 }
 
-/** 頂部固定群組的一列(例:一種人力需求範本)。 */
+/** 頂部固定群組的一列(例:一種時段需求範本)。 */
 export interface RosterTopGroupRow {
   key: string;
   /** 左側人員欄位置顯示的列名 */
@@ -57,14 +57,14 @@ export interface RosterTopGroupSummary {
  * 收合狀態由使用的模組保存(受控)。
  */
 export interface RosterTopGroup {
-  /** 群組標題(例:「人力需求」) */
+  /** 群組標題(例:「時段需求」) */
   title: ReactNode;
   rows: readonly RosterTopGroupRow[];
   /** 收合時的每日彙總,key 是 `YYYY-MM-DD` */
   summary: Readonly<Partial<Record<string, RosterTopGroupSummary>>>;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  /** 空白格滑過時的淡色提示(例:「+ 人力需求」);沒給就不顯示 */
+  /** 空白格滑過時的淡色提示(例:「+ 時段需求」);沒給就不顯示 */
   emptyCellHint?: string;
   /** 點空白格:帶日期與那一列的 key;沒給時空白格不可點 */
   onEmptyCellClick?: (date: string, rowKey: string) => void;

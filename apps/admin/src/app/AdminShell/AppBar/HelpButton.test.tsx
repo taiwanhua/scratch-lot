@@ -13,14 +13,14 @@ import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
 /**
- * AppBar 的「?」模組說明(#197)。內容來自 build 時打包的 `src/md/module-help/*.help.md`;
+ * AppBar 的「?」模組說明。內容來自 build 時打包的 `src/md/module-help/*.help.md`;
  * jest 沒有 `import.meta.glob`,測試看到的是 `src/test/help-registry.ts` 的假 registry
  * (jest.config.mjs 的 moduleNameMapper),所以斷言針對「有 / 沒有說明」的行為,不是 md 正本的字句。
  *
- * 內文改成 `React.lazy(() => import("@repo/ui/markdown"))` 後(#215),彈窗開啟到 Markdown
+ * 內文改成 `React.lazy(() => import("@repo/ui/markdown"))` 後,彈窗開啟到 Markdown
  * 渲染之間多一個 `Suspense` 的 tick,所以第一筆內文斷言一律用 `findBy*` 等(TEST-08)。
  *
- * 先 preload 那支 chunk(#470):第一次 `import()` 要在 jest ESM 裡現載 react-markdown / micromark
+ * 先 preload 那支 chunk:第一次 `import()` 要在 jest ESM 裡現載 react-markdown / micromark
  * 整條依賴鏈,全套並行時 CPU 被搶,會把 `findBy*` 的 5 秒與單一測試的 15 秒吃光。放進 `beforeAll`
  * 先載完,元件裡的 `import()` 就直接拿到模組快取,測試只剩一個 `Suspense` tick 要等。
  */
@@ -93,7 +93,7 @@ describe("模組說明「?」", () => {
     });
 
     expect(help).toBeDisabled();
-    // 提示改用 @repo/ui 的 Tooltip(#240):停用的按鈕收不到 hover,
+    // 提示改用 @repo/ui 的 Tooltip:停用的按鈕收不到 hover,
     // 事件載體是 Tooltip 自己包的外層 span
     const hintCarrier = help.parentElement;
     if (hintCarrier === null) {
@@ -282,7 +282,7 @@ describe("模組說明「?」", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("模組說明 — 示範模組2");
-    // 內文要等 lazy 的 Markdown chunk 載完(#215)
+    // 內文要等 lazy 的 Markdown chunk 載完
     expect(
       await within(dialog).findByText("示範用的假模組。"),
     ).toBeInTheDocument();

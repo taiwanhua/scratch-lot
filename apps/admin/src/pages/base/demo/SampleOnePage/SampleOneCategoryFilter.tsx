@@ -9,9 +9,9 @@ import type { DemoCategoryOption } from "../demo-sample-one-types";
 import { useDemoCategoryOptions } from "../useDemoCategoryOptions";
 
 /**
- * 列表工具列上的分類篩選(設定物件的 `list.Filters`;Figma 176:489 之外,#320 加的)。
+ * 列表工具列上的分類篩選(設定物件的 `list.Filters`;Figma 176:489 之外另加的)。
  *
- * 用 `Autocomplete`(#307)而不是 Select:選項來自欄位管理,合併清單可能很長,
+ * 用 `Autocomplete`而不是 Select:選項來自欄位管理,合併清單可能很長,
  * 輸入即過濾比「選單外再掛一個搜尋框」好用(STYLE-05 的兩條記錄)。
  *
  * **拿不到選項時整個藏起來** —— 給一個永遠空的篩選器只會讓人以為沒有資料。

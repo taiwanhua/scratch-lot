@@ -13,7 +13,7 @@ import {
 
 const viewPath = (id: string) => `${SAMPLE_ONE_ROUTES.viewPage}/${id}`;
 
-/** 示範項目詳情(#320;Figma 175:318)。路由防守在 `SampleOneRoutes.test.tsx`。 */
+/** 示範項目詳情(Figma 175:318)。路由防守在 `SampleOneRoutes.test.tsx`。 */
 describe("示範項目詳情(/demo/sub/sample-one/view-page/:id)", () => {
   it("欄位表逐欄顯示;封面吃公開穩定網址直接顯示", async () => {
     renderSampleOne({ path: viewPath("demo-1") });
@@ -45,7 +45,7 @@ describe("示範項目詳情(/demo/sub/sample-one/view-page/:id)", () => {
     expect(screen.queryByText("成本試算尚未確認")).not.toBeInTheDocument();
   });
 
-  it("附件:顯示原始檔名與人類可讀大小(#427)", async () => {
+  it("附件:顯示原始檔名與人類可讀大小", async () => {
     renderSampleOne({ path: viewPath("demo-1") });
 
     expect(await screen.findByText("成本試算 2026.png")).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe("示範項目詳情(/demo/sub/sample-one/view-page/:id)", () => {
     expect(screen.queryByText("cost.png")).not.toBeInTheDocument();
   });
 
-  it("附件:#427 以前的舊資料(沒有原始檔名)退回路徑尾段、不顯示大小", async () => {
+  it("附件:早期的舊資料(沒有原始檔名)退回路徑尾段、不顯示大小", async () => {
     renderSampleOne({
       path: viewPath("demo-legacy"),
       world: {

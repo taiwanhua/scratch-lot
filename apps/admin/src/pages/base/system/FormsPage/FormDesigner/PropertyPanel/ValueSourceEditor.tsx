@@ -26,10 +26,10 @@ type SourceKind = ValueSource["kind"];
 const SOURCE_KINDS: readonly SourceKind[] = ["input", "computed", "constant"];
 
 /**
- * 值的來源(Spec 6a §5 `valueSource`):使用者填 / 計算(公式,結構化選擇器)/ 固定值(可不放進版面)。
+ * 值的來源(`valueSource`):使用者填 / 計算(公式,結構化選擇器)/ 固定值(可不放進版面)。
  * 計算與固定值欄位填寫時唯讀,送出時後端重算並以後端為準。公式是**型別導向**的:根要回這個欄位的型別
- * (表 B;選項欄的根是「選項」),可引用除自己以外的欄位(上傳欄不能進表達式,選擇器自己濾掉)。
- * 固定值用依型別的輸入元件(`TypedValueInput`),存正確型別。上傳 / 引用欄位不顯示本區塊(表 A)。
+ * (選項欄的根是「選項」),可引用除自己以外的欄位(上傳欄不能進表達式,選擇器自己濾掉)。
+ * 固定值用依型別的輸入元件(`TypedValueInput`),存正確型別。上傳 / 引用欄位不顯示本區塊。
  */
 export const ValueSourceEditor = ({
   field,

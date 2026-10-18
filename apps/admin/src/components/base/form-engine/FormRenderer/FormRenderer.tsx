@@ -97,7 +97,7 @@ const columnDisplayOf =
       ?.items ?? [];
 
 /**
- * 依版本畫表單(Spec 6a §8 `<FormRenderer version values mode>`)。五種 `mode` 的語意在
+ * 依版本畫表單(`<FormRenderer version values mode>`)。五種 `mode` 的語意在
  * `lib/base/form-engine/field-states.ts`;版面 12 格制見 `layout-grid.ts`。
  *
  * 欄位級三態:讀者沒有 show → 整格不渲染(不是顯示空值);有 show 沒有 edit → 唯讀並附說明;
@@ -198,7 +198,7 @@ export const FormRenderer = ({
     timezone: cellContext.timezone,
   });
 
-  // 連動篩選(B2d):被引用欄位的目前值給引用欄查詢;以內容當 memo 鍵,值沒變時同一份物件(明細格子不重繪)
+  // 連動篩選:被引用欄位的目前值給引用欄查詢;以內容當 memo 鍵,值沒變時同一份物件(明細格子不重繪)
   const links = useMemo(
     () => linkedReferencesOf(version.fields),
     [version.fields],
@@ -287,8 +287,8 @@ export const FormRenderer = ({
         });
 
         if (!isDesign) {
-          // 填寫 / 預覽 / 唯讀:分區一個有框的卡片 + 標題列,三種模式版面一致(Spec 6a §8 畫面 9 / 11);
-          // 設定了「可以收合」的分區可展開 / 收合(底座 10.3)
+          // 填寫 / 預覽 / 唯讀:分區一個有框的卡片 + 標題列,三種模式版面一致;
+          // 設定了「可以收合」的分區可展開 / 收合
           return (
             <FormSectionCard
               key={section.key}

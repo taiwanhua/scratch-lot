@@ -356,7 +356,7 @@ function toModuleDocument(
       icon: initial?.icon === undefined ? (node.icon ?? null) : initial.icon,
       // 每次都 seed 的欄位:頁面組裝方式由宣告決定,不在系統內改
       engine: node.engine ?? "fixed",
-      // 每次都 seed 的欄位:依表單分開新增權限(B9b)只能在宣告開關
+      // 每次都 seed 的欄位:依表單分開新增權限只能在宣告開關
       perFormCreate: node.perFormCreate === true,
       ...(node.description === undefined
         ? {}

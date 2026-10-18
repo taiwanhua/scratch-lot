@@ -4,7 +4,7 @@ import type {
   UsersQuery,
 } from "@repo/graphql";
 
-/** 清單的一列(`users` query 的 item;欄位見 `packages/graphql/src/documents/users.graphql`)。 */
+/** 清單的一列(`users` query 的 item;欄位見 `packages/graphql/src/documents/base/users.graphql`)。 */
 export type UserRow = UsersQuery["users"]["items"][number];
 
 export type UserOrgRef = UserRow["orgs"][number];

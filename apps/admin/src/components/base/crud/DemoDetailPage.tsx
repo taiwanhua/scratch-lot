@@ -75,7 +75,7 @@ export const DemoDetailPage = <
     void navigate(id === undefined ? tabHref(route) : `${route}/${id}`);
   };
 
-  /** `useDelete` 只收 `{ onSuccess(): void; … }`,所以回饋在這一層自己報一次(#376)。 */
+  /** `useDelete` 只收 `{ onSuccess(): void; … }`,所以回饋在這一層自己報一次。 */
   const feedback = useMutationFeedback({
     success: t("feedback.deleteSuccess"),
     error: (error: unknown) => tErrors(demoErrorOf(error).code),

@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 /**
- * 決定順序的判定(Spec §6 列 4「`evaluateStep`」與「全案終局」)。
+ * 決定順序的判定(`evaluateStep` 與全案終局)。
  *
  * 接受順序 = 決定被原子寫進實例的順序:同一關看 `decisions[]` 的陣列順序,
  * 跨關看同一次原子追加的 `history` 事件序號(`historyIndex`)。

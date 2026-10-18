@@ -18,7 +18,7 @@ describe("TextField", () => {
 
   /**
    * 有浮動標籤的下拉(Figma 資料範圍的「欄位 / 條件 / 值」)用 `TextField select` 就成立 —
-   * `Select` 是行內的下拉本體,標籤要靠 `FormControl` + `InputLabel`,而 `TextField` 已經把那組包好了(#207 ②)。
+   * `Select` 是行內的下拉本體,標籤要靠 `FormControl` + `InputLabel`,而 `TextField` 已經把那組包好了。
    * 多選一樣走這條路:`slotProps.select` 直通 MUI 的 `Select`。
    */
   it("select + 多選:浮動標籤照掛,選取回傳整個陣列", () => {

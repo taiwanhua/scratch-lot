@@ -1,8 +1,8 @@
-# 角色管理(#203;api 正本 apps/api/src/roles/、規則正本 docs/modules/role-manager.md)。
+# 角色管理(api 正本 apps/api/src/roles/、規則正本 docs/modules/role-manager.md)。
 # 清單範圍 = 擁有組織在操作者**管理範圍**內的角色(ADR-0003「擁有組織 = 角色的管轄邊界」、ADR-0005)。
 # 欄位語意的正本在 role-manager.md「api 介面」節(GQL-07),這裡不重複解釋。
 
-# kind / abilities 由 api 依操作者算好(#261 的角色種類規則),前端只讀不重算;
+# kind / abilities 由 api 依操作者算好(角色種類規則),前端只讀不重算;
 # abilities 不含權限 key 的判斷,顯示按鈕的條件是「權限 && abilities」兩者相乘。
 # ownerOrg.tenantTop 供角色選單依租戶分組(不同租戶各有一個「租戶管理員」,只看名稱分不出來)。
 fragment RoleFields on Role {
@@ -61,7 +61,7 @@ mutation CreateRole($input: CreateRoleInput!) {
 }
 
 # 只改名稱與描述;description 送 null = 清空、缺席 = 不動(GQL-06)。擁有組織建立後不可改。
-# 種子角色不可改 → FORBIDDEN + reason SYSTEM_ROLE(#261);前端讀 Role.abilities.canEdit
+# 種子角色不可改 → FORBIDDEN + reason SYSTEM_ROLE;前端讀 Role.abilities.canEdit
 mutation UpdateRole($input: UpdateRoleInput!) {
   updateRole(input: $input) {
     role {
@@ -71,7 +71,7 @@ mutation UpdateRole($input: UpdateRoleInput!) {
 }
 
 # 停用後持有者的該角色立即不生效(授予仍在;ADR-0011 步驟 2)。
-# 種類規則(#261)擋下的三種情形一律 FORBIDDEN + extensions.reason:
+# 種類規則擋下的三種情形一律 FORBIDDEN + extensions.reason:
 # SYSTEM_ROLE(種子角色)/ TEMPLATE_COPY_ROOT_ONLY(預設角色只有 root 能停用)/
 # SELF_LOCK(停用操作者自己正持有的角色)。前端顯示與否讀 Role.abilities.canToggleEnabled。
 mutation SetRoleEnabled($input: SetRoleEnabledInput!) {
@@ -119,7 +119,7 @@ fragment RoleMatrixFields on RoleMatrixPayload {
     moduleKeys
     permissionKeys
   }
-  # 預設角色(租戶副本)的天花板 = 內建「租戶管理員」模板角色目前的授予(#283);
+  # 預設角色(租戶副本)的天花板 = 內建「租戶管理員」模板角色目前的授予;
   # 其他種類為 null。已展開 `*`、已收到顯示樹內,前端直接拿來鎖天花板外的列。
   ceiling {
     moduleKeys
@@ -150,9 +150,9 @@ query RoleMatrix($roleId: ID!) {
 # 整份覆蓋;後端以 normalizeGrant 正規化後落庫(`*` 收斂、勾下層補上層)。
 # 送出不是操作者有效權限集的子集 → ROLE_OUT_OF_REACH;租戶副本擴權同碼(shrinkOnly = true 時先提示)。
 # 超過預設角色的天花板(內建租戶管理員沒有的項目)→ ROLE_OUT_OF_REACH + extensions.reason
-# TEMPLATE_CEILING,root 也擋(#283);前端讀 ceiling 先把那些列鎖住。
-# 種子角色的矩陣唯讀 → FORBIDDEN + reason SYSTEM_ROLE(#261);
-# shrinkOnly 自 #261 起是「非 root 且是預設角色」— root 替租戶放寬預設角色不再被擋。
+# TEMPLATE_CEILING,root 也擋;前端讀 ceiling 先把那些列鎖住。
+# 種子角色的矩陣唯讀 → FORBIDDEN + reason SYSTEM_ROLE;
+# shrinkOnly 是「非 root 且是預設角色」— root 替租戶放寬預設角色不再被擋。
 mutation SaveRoleMatrix($input: SaveRoleMatrixInput!) {
   saveRoleMatrix(input: $input) {
     ...RoleMatrixFields
@@ -189,10 +189,10 @@ query RoleUsers($roleId: ID!, $input: RoleUsersInput!) {
   }
 }
 
-# 「加入使用者」彈窗的候選清單(#246):操作者**管理範圍**內、**尚未持有**這個角色的人。
+# 「加入使用者」彈窗的候選清單:操作者**管理範圍**內、**尚未持有**這個角色的人。
 # 掛在 system.role-manager.assign-users 底下,不再需要 system.user-manager.view。
 # eligible = 所屬組織落在角色擁有組織子樹內(ADR-0003);**不合格的人照樣列出來**,
-# 由前端 disabled 並就地說明原因(#261 的決定:直接不列會讓人以為「這個人不見了」)。
+# 由前端 disabled 並就地說明原因(理由:直接不列會讓人以為「這個人不見了」)。
 query RoleUserCandidates($roleId: ID!, $input: RoleUserCandidatesInput!) {
   roleUserCandidates(roleId: $roleId, input: $input) {
     totalCount
@@ -214,7 +214,7 @@ query RoleUserCandidates($roleId: ID!, $input: RoleUserCandidatesInput!) {
 }
 
 # 增量加入(不是全量覆蓋);候選 = 所屬組織在角色擁有組織子樹內,否則 USER_NOT_ELIGIBLE
-# (#261 起 extensions 附 roleId / ownerOrgName,與使用者頁的 assignUserRoles 同一個 helper 與同一個碼)
+# (extensions 附 roleId / ownerOrgName,與使用者頁的 assignUserRoles 同一個 helper 與同一個碼)
 mutation GrantRoleUsers($input: GrantRoleUsersInput!) {
   grantRoleUsers(input: $input) {
     ...RoleUsersFields

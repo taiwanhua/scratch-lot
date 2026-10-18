@@ -42,7 +42,7 @@ export class PermissionAdmin {
  * `api` 權限樹,也含已停用的模組與權限;停用與否一律以 `enabled` 表示,不以「不回」表示。
  *
  * `isRootOnly` 只存在於 seed 宣告層、不落庫(`apps/db-migrator/seeds/base/module-declaration.ts`),
- * 執行期無從得知,故本型別不回該欄位(Spec #201 Interface design 已載明)。
+ * 執行期無從得知,故本型別不回該欄位。
  */
 @ObjectType()
 export class ModuleAdminNode {
@@ -67,7 +67,7 @@ export class ModuleAdminNode {
    * 路由**只有自己那段**(不是完整路徑;完整路徑由各層的 route 串起來)。
    * `null` = 這個節點不對應任何畫面 —— `sidebarType = HIDDEN` 且 `route` 為 `null` 就是
    * **權限容器**(`api` 權限樹、`system.org-manager.tenant-ops`):它存在的理由只是讓底下
-   * 那幾條權限可以單獨授予 / 停用。判準的正本在此,前端不以 key 結尾近似(#246 的 7)。
+   * 那幾條權限可以單獨授予 / 停用。判準的正本在此,前端不以 key 結尾近似。
    */
   @Field(() => String, { nullable: true })
   route!: string | null;

@@ -28,7 +28,7 @@ export const changedFieldsOf = (
   after === null || after === undefined ? [] : Object.keys(after);
 
 /**
- * 附件的顯示檔名(#427):api 回原始檔名;**#427 以前的舊資料 `name` 為 null**
+ * 附件的顯示檔名:api 回原始檔名;**早期的舊資料 `name` 為 null**
  * (當時只存路徑)→ 退回物件路徑的最後一段(`demo/<uuid>.pdf` → `<uuid>.pdf`)。
  * 欄位語意正本:`docs/modules/demo.sub.sample-one.md`「api 介面」。
  */

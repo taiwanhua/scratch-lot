@@ -17,7 +17,7 @@ export const COLLAPSED_GROUP_KEY_PREFIX = "roster-group:";
 /** 日期欄預設寬度(Figma Draft/RosterGrid 的日期欄 128) */
 export const DEFAULT_DATE_COLUMN_WIDTH = 128;
 /**
- * 停用日(店休)整欄的停用色:`action.disabledBackground` 是半透明,當成圖層疊在原底色上,
+ * 停用日(公休)整欄的停用色:`action.disabledBackground` 是半透明,當成圖層疊在原底色上,
  * 格子仍是不透明的 —— 表頭與頂部群組固定在上方時,捲過去的人員列才不會透出來。
  */
 const disabledLayerSx = {

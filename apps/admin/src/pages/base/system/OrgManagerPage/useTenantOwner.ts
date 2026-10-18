@@ -43,7 +43,7 @@ export const useTenantOwner = (org: OrgDetail | undefined) => {
   return {
     isAvailable,
     ownerName: owner?.name ?? null,
-    /** 擁有者帳號(撤銷開通的確認清單要列出「會被抹掉的帳號」,#374)。 */
+    /** 擁有者帳號(撤銷開通的確認清單要列出「會被抹掉的帳號」)。 */
     ownerAccount: owner?.account ?? null,
     /**
      * 這個租戶的「租戶管理員」角色副本名稱:擁有者持有的角色中,擁有組織就是這個租戶頂層的那一筆

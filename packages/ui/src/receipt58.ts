@@ -1,6 +1,6 @@
 "use client";
 
-/** `@repo/ui/receipt58` 的出口:58mm 單據的版面零件、測試頁與轉 384 點黑白 PNG(規格第 6 章 B8)。 */
+/** `@repo/ui/receipt58` 的出口:58mm 單據的版面零件、測試頁與轉 384 點黑白 PNG(列印流程見 `docs/modules/printers.md`)。 */
 export * from "./Receipt58/Receipt58";
 export * from "./Receipt58/Receipt58Header";
 export * from "./Receipt58/Receipt58Row";

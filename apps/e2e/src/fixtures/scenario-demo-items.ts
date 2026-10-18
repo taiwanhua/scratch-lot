@@ -5,7 +5,7 @@ import type { ScenarioTenant } from "./scenario-tenant";
  * 「劇本 2 / 12 的共同前置資料」(`docs/testing/permission-scenarios.md` 的同名小節):
  * 同一個可見範圍裡、**建立者與所屬組織都不同**的幾筆業務資料。
  *
- * **與 `scenario-tenant.ts` 分開一支**(#378 的裁決):租戶 fixture 做的是文件的
+ * **與 `scenario-tenant.ts` 分開一支**:租戶 fixture 做的是文件的
  * 「驗收前的準備」四步(組織 / 帳號 / 角色),劇本 1 / 5 / 7 根本不需要這幾筆業務資料 ——
  * 塞進去等於每條劇本都多付建資料的時間。要用的劇本自己在測試開頭叫一次。
  *

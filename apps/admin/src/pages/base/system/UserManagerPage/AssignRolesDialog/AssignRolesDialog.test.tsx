@@ -5,18 +5,18 @@ import { autocompleteOption, openAutocomplete } from "@/test/autocomplete";
 
 import { renderPage, rowOf } from "../user-manager-test-support";
 
-/** 彈窗裡的角色選擇器(`@repo/ui/autocomplete`,#307)。 */
+/** 彈窗裡的角色選擇器(`@repo/ui/autocomplete`)。 */
 const rolePicker = () => screen.getByRole("combobox", { name: "角色" });
 
-/** 打開選單並取目前列出的選項(#377 起共用 `@/test/autocomplete`,TEST-08)。 */
+/** 打開選單並取目前列出的選項(共用 `@/test/autocomplete`,TEST-08)。 */
 const openOptions = (actor: { click: (element: Element) => Promise<void> }) =>
   openAutocomplete(actor, "角色");
 
 /**
- * 指派角色彈窗(#211:候選改用正式的 `roles` query,擁有組織在操作者管理範圍內;
+ * 指派角色彈窗(候選改用正式的 `roles` query,擁有組織在操作者管理範圍內;
  * 第 3 段「查操作者自己持有的角色」的過渡做法退場)。
  *
- * #307:勾選列換成 Autocomplete —— 選項的「能不能選」從 `checkbox` 的 disabled
+ * 勾選列換成 Autocomplete —— 選項的「能不能選」從 `checkbox` 的 disabled
  * 變成 `option` 的 `aria-disabled`,原因從整列的說明文字變成選項內的次文字。
  */
 describe("指派角色彈窗", () => {
@@ -38,7 +38,7 @@ describe("指派角色彈窗", () => {
     expect(screen.getByText("內容管理相關權限")).toBeInTheDocument();
 
     await openOptions(actor);
-    // 每列主文字角色名、次文字「擁有組織:…」(#261 的 8:根組織視角靠它分辨同名角色)
+    // 每列主文字角色名、次文字「擁有組織:…」(根組織視角靠它分辨同名角色)
     const editor = autocompleteOption("編輯");
     expect(editor).toHaveAttribute("aria-selected", "true");
     expect(editor).not.toHaveAttribute("aria-disabled", "true");
@@ -65,7 +65,7 @@ describe("指派角色彈窗", () => {
     expect(fake.inputs.assignUserRoles[0].roleIds).toEqual([]);
   });
 
-  it("沒有授予資格的角色顯示但選不動,並就地說明只能授予哪個組織(#261 的 6)", async () => {
+  it("沒有授予資格的角色顯示但選不動,並就地說明只能授予哪個組織", async () => {
     const { user: actor } = renderPage();
 
     await screen.findByText("王小明");
@@ -93,7 +93,7 @@ describe("指派角色彈窗", () => {
     );
     await screen.findByRole("combobox", { name: "角色" });
 
-    // #307:搜尋回到選單內,彈窗上方那兩個欄位退場
+    // 搜尋回到選單內,彈窗上方那兩個欄位退場
     expect(screen.queryByLabelText("搜尋角色")).toBeNull();
     expect(
       screen.queryByRole("combobox", { name: "組織(列出該組織的角色)" }),

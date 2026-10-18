@@ -46,7 +46,7 @@ interface Dragging {
 }
 
 /**
- * 流程圖(React Flow `@xyflow/react` + `@dagrejs/dagre` 自動直式排版,Spec 6b §8 畫面 3):
+ * 流程圖(React Flow `@xyflow/react` + `@dagrejs/dagre` 自動直式排版):
  * 節點位置由排版決定,使用者不手擺;**不開放自由拉線**(連線由段落串產生)。
  * 拖一個審核關卡放開 = 依放開位置找最近的節點,插在它前 / 後(或匯合之後),再重新排版;
  * 不合法的放法(留下空分支、移走分流來源)由呼叫端拒絕,節點彈回原位。

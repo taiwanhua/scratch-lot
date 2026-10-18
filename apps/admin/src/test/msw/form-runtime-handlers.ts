@@ -73,7 +73,7 @@ export interface FormRuntimeWorldOptions {
   failures?: Partial<Record<FormRuntimeOperation, FormFailure>>;
   /**
    * 送出後的狀態:不綁流程 = 已完成(預設);綁了流程 = 審核中,並連上 `currentInstanceId`
-   * (Spec 6b §6「送審不經過 completed」)
+   * (送審不經過 completed)
    */
   submitAs?: { status: FormSubmissionStatus; instanceId?: string };
   /** `copySubmissionToDraft` 回報被清空的欄位(引用來源失效) */

@@ -30,7 +30,7 @@ const openDialog = async (actor: { click: (el: Element) => Promise<void> }) => {
 };
 
 /**
- * 撤銷開通(#374,根組織專屬):按鈕的出現條件、確認彈窗的嚴格度、被擋時的原因清單。
+ * 撤銷開通(根組織專屬):按鈕的出現條件、確認彈窗的嚴格度、被擋時的原因清單。
  * 與 `OrgManagerPage.test.tsx` 同一頁、同一組夾具,分檔只是為了行數上限(REACT-07)。
  */
 describe("組織管理頁:撤銷開通", () => {

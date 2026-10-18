@@ -61,7 +61,7 @@ export const FieldOptionsPanel = ({
     <Card
       component="section"
       aria-label={t("region")}
-      // 欄型 flex:標題列固定、選項表吃掉剩下的高度並自己捲(#299),
+      // 欄型 flex:標題列固定、選項表吃掉剩下的高度並自己捲,
       // 面板不再整塊捲,橫向捲軸才落在面板底部而不是最後一列下方
       sx={{
         flex: 1,

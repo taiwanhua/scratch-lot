@@ -28,7 +28,7 @@ const release = (version: string): PrintAgentRelease => ({
 });
 
 describe("發布:檔名與平台", () => {
-  it("壓縮檔名照規格:Windows zip、其他 tar.gz", () => {
+  it("壓縮檔名:Windows zip、其他 tar.gz", () => {
     expect(
       PRINT_AGENT_PLATFORMS.map((platform) => archiveName(platform)),
     ).toEqual([

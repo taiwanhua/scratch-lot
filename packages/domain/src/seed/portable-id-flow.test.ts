@@ -324,7 +324,7 @@ function lines(prefill: boolean): FieldDef {
   });
 }
 
-describe("明細引用子欄的列內帶入(B2c)也納入 ID 流向", () => {
+describe("明細引用子欄的列內帶入也納入 ID 流向", () => {
   it("由來源 id 帶進同一列的子欄,列內公式拿它比寫死的值 → ID_COMPARISON", () => {
     const errors = portableErrors(
       formSeed([field("subject", "text"), lines(true)]),

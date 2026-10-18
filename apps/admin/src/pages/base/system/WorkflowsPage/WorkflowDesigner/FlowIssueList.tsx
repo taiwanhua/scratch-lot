@@ -19,7 +19,7 @@ export interface FlowIssueListProps {
 }
 
 /**
- * 檢查器結果(Spec 6b §5「定義檢查器」;前後端同一份 `validateWorkflowDefinition`,設計器即時跑):
+ * 定義檢查器的結果(前後端同一份 `validateWorkflowDefinition`,設計器即時跑):
  * 每筆標出是哪一關,點一下選中那一關。**有錯不能發布、警告可以**。
  */
 export const FlowIssueList = ({

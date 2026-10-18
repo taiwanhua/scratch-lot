@@ -6,7 +6,7 @@ import { findSnackbarAlert, querySnackbar } from "@/test/snackbar";
 import { renderPage, rowOf } from "./user-manager-test-support";
 
 /**
- * 操作結果提示(#376):使用者管理頁的成功與失敗各一案。
+ * 操作結果提示:使用者管理頁的成功與失敗各一案。
  * 「一律跳一則」的規則在 `docs/standards/react/data-fetching.md` DATA-06。
  */
 describe("使用者管理頁的操作結果提示", () => {
@@ -33,7 +33,7 @@ describe("使用者管理頁的操作結果提示", () => {
   });
 
   /**
-   * #426:i18n 死鍵測試抓到的 —— 表單的 `t` 是 `admin.userManager.form`,
+   * i18n 死鍵測試抓到的 —— 表單的 `t` 是 `admin.userManager.form`,
    * 以前寫 `t("feedback.createSuccess")` 查的是不存在的 `form.feedback.*`,提示直接露出 key。
    */
   it("新增成功 → 跳「已新增使用者。」", async () => {
@@ -81,7 +81,7 @@ describe("使用者管理頁的操作結果提示", () => {
       severity: "error",
     });
     // Snackbar 不取代彈窗內的錯誤顯示:兩者並存(DATA-06)。只比全頁文字數不準 ——
-    // 彈窗開著時 provider 另有一份補念的 live region(#430),所以直接在彈窗裡找那一條
+    // 彈窗開著時 provider 另有一份補念的 live region,所以直接在彈窗裡找那一條
     expect(within(screen.getByRole("dialog")).getByText(message)).toBeVisible();
   });
 });

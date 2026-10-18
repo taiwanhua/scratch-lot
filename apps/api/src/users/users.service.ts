@@ -19,6 +19,7 @@ import {
 } from "../database/database.module";
 import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
+import { TransactionService, afterCommit } from "../database/transaction";
 import { OwnerProtectionService } from "../orgs/owner-protection.service";
 import {
   PermissionResolver,
@@ -92,7 +93,7 @@ type RoleRecord = Persisted<RoleDocument>;
 /**
  * `addOrgs`(增量加入所屬組織)的結果:實際加進去的、與「本來就已經是成員」被略過的。
  * 對外的 GraphQL 形狀是組織管理那一側的 `AddOrgMembersPayload`
- * (`apps/api/src/orgs/models/org-member.model.ts`,#377)。
+ * (`apps/api/src/orgs/models/org-member.model.ts`)。
  */
 export interface AddOrgsResult {
   addedUserIds: string[];
@@ -142,6 +143,7 @@ export class UsersService {
     private readonly ownerProtection: OwnerProtectionService,
     private readonly grantRules: UserGrantRulesService,
     private readonly assigneeInvalidation: AssigneeInvalidationService,
+    private readonly transactions: TransactionService,
   ) {}
 
   // ---- 讀 ----
@@ -200,8 +202,20 @@ export class UsersService {
   }
 
   // ---- 寫 ----
+  //
+  // 每個寫入動作是**一個交易**(ADR-0013、TX-01):讀取驗證與寫入(含稽核)都在 `withTransaction` 內,
+  // 任一步拋錯整個動作回復,不留半套關聯或稽核。交易外只做:
+  // - 純參數檢查與密碼雜湊(CPU,不碰資料庫)放在交易前
+  // - 回傳的 GraphQL 形狀(`decorateOne` 內部平行讀,TX-02 不在交易內平行讀)在提交後組
+  // - 啟用信排在 `afterCommit`(外部副作用,TX-03)
+  // - 審核者失效 hook(`assigneeInvalidation.onUserChanged`)在提交後呼叫:每個實例各自一個交易
+  //   (`docs/concepts/workflow-engine.md`「審核者失效」),hook 失敗不回復停用 / 移出,再做一次即補上
 
-  /** 新增使用者:啟用信 / 初始密碼二選一(ADR-0009);帳號與 Email 各自唯一(ADR-0003)。 */
+  /**
+   * 新增使用者:啟用信 / 初始密碼二選一(ADR-0009);帳號與 Email 各自唯一(ADR-0003)。
+   * 使用者、所屬組織與角色關聯、`user.create` 稽核一個交易;啟用信在提交後才寄,
+   * 寄不出去只記 log、新增照樣成立(使用者以「忘記密碼」自助取得設定連結,與開通租戶同)。
+   */
   async create(
     operator: OperatorContext,
     input: CreateUserInput,
@@ -209,303 +223,328 @@ export class UsersService {
     const name = requireText(input.name, "name");
     const account = requireText(input.account, "account");
     const email = requireText(input.email, "email");
-    await this.assertAccountAndEmailFree(operator, { account, email });
-
     const orgIds = uniqueIds(input.orgIds).map((id) =>
       toObjectId(id, "orgIds"),
     );
     if (orgIds.length === 0) {
       throw validationError("At least one member org is required", ["orgIds"]);
     }
-    await this.assertOrgsManaged(operator, orgIds);
-    // 新增時 `null` 與缺席同義(見 `optional`),沒帶值就不必要求欄位級權限
-    if (input.nationalId !== undefined && input.nationalId !== null) {
-      await this.assertCanEditNationalId(operator);
-    }
     const roleIds = uniqueIds(input.roleIds ?? []).map((id) =>
       toObjectId(id, "roleIds"),
     );
-    await this.assertRolesGrantable(operator, roleIds, orgIds, null);
-
     const mode = input.activation.mode;
+    // 雜湊在交易外先算好(CPU 工作,交易只做讀寫);初始密碼規則也在這裡檢查
     const passwordHash = await this.initialPasswordHash(input);
-    const user = await this.users.create(operator, {
-      name,
-      account,
-      email,
-      ...optional("nickname", input.nickname),
-      ...optional("gender", input.gender),
-      ...optional("phone", input.phone),
-      ...optional("address", input.address),
-      ...optional("nationalId", input.nationalId),
-      passwordHash,
-      enabled: true,
-      settings: { mustChangePassword: mode === UserActivationMode.PASSWORD },
-    });
 
-    await this.relations.linkMany(operator, [
-      ...orgIds.map((orgId) => ({
-        type: "org_user" as const,
-        firstId: orgId,
-        secondId: user._id,
-      })),
-      ...roleIds.map((roleId) => ({
-        type: "user_role" as const,
-        firstId: user._id,
-        secondId: roleId,
-      })),
-    ]);
+    const user = await this.transactions.withTransaction(async () => {
+      await this.assertAccountAndEmailFree(operator, { account, email });
+      await this.assertOrgsManaged(operator, orgIds);
+      // 新增時 `null` 與缺席同義(見 `optional`),沒帶值就不必要求欄位級權限
+      if (input.nationalId !== undefined && input.nationalId !== null) {
+        await this.assertCanEditNationalId(operator);
+      }
+      await this.assertRolesGrantable(operator, roleIds, orgIds, null);
 
-    await this.audit.record(operator, {
-      action: "user.create",
-      targetType: "user",
-      targetId: user._id,
-      after: {
+      const created = await this.users.create(operator, {
         name,
         account,
         email,
-        orgIds: orgIds.map(String),
-        roleIds: roleIds.map(String),
-        activationMode: mode,
-        ...(input.nationalId === undefined
-          ? {}
-          : { nationalId: NATIONAL_ID_AUDIT_PLACEHOLDER }),
-      },
-    });
+        ...optional("nickname", input.nickname),
+        ...optional("gender", input.gender),
+        ...optional("phone", input.phone),
+        ...optional("address", input.address),
+        ...optional("nationalId", input.nationalId),
+        passwordHash,
+        enabled: true,
+        settings: { mustChangePassword: mode === UserActivationMode.PASSWORD },
+      });
 
-    if (mode === UserActivationMode.EMAIL) {
-      await this.passwords.sendActivationEmail(user._id);
-    }
+      await this.relations.linkMany(operator, [
+        ...orgIds.map((orgId) => ({
+          type: "org_user" as const,
+          firstId: orgId,
+          secondId: created._id,
+        })),
+        ...roleIds.map((roleId) => ({
+          type: "user_role" as const,
+          firstId: created._id,
+          secondId: roleId,
+        })),
+      ]);
+
+      await this.audit.record(operator, {
+        action: "user.create",
+        targetType: "user",
+        targetId: created._id,
+        after: {
+          name,
+          account,
+          email,
+          orgIds: orgIds.map(String),
+          roleIds: roleIds.map(String),
+          activationMode: mode,
+          ...(input.nationalId === undefined
+            ? {}
+            : { nationalId: NATIONAL_ID_AUDIT_PLACEHOLDER }),
+        },
+      });
+
+      if (mode === UserActivationMode.EMAIL) {
+        // 建啟用 token 與寄信都在提交之後:交易回復就沒有這位使用者,也不該有信
+        afterCommit(() => this.passwords.sendActivationEmail(created._id));
+      }
+      return created;
+    });
     return this.decorateOne(operator, user);
   }
 
-  /** 編輯基本欄位;`nationalId` 需 `edit-national-id`(ADR-0007)。 */
+  /** 編輯基本欄位;`nationalId` 需 `edit-national-id`(ADR-0007)。欄位更新與稽核一個交易。 */
   async update(
     operator: OperatorContext,
     input: UpdateUserInput,
   ): Promise<UserModel> {
-    const user = await this.loadManagedUser(operator, input.id);
-    const before: Record<string, unknown> = {};
-    const after: Record<string, unknown> = {};
-    const update: Record<string, unknown> = {};
+    const saved = await this.transactions.withTransaction(async () => {
+      const user = await this.loadManagedUser(operator, input.id);
+      const before: Record<string, unknown> = {};
+      const after: Record<string, unknown> = {};
+      const update: Record<string, unknown> = {};
 
-    for (const field of EDITABLE_FIELDS) {
-      const given = input[field];
-      if (given === undefined) {
-        continue;
+      for (const field of EDITABLE_FIELDS) {
+        const given = input[field];
+        if (given === undefined) {
+          continue;
+        }
+        // 缺席 = 不動、`null` = 清空(GQL-06);清空落庫寫 `null` 而不是 `$unset`(ADR-0002)。
+        // 必填欄位送 `null` 與送空字串同義 —— 一律 VALIDATION_FAILED,不會把姓名清掉。
+        const value = isRequiredField(field)
+          ? requireText(given ?? "", field)
+          : (given?.trim() ?? null);
+        // 「沒填」有三種長相(欄位不存在 / `null` / 空字串),比對前一律收斂成空字串,
+        // 否則把本來就空的欄位再清一次會白寫一筆稽核
+        if ((value ?? "") === (user[field] ?? "")) {
+          continue;
+        }
+        before[field] = user[field] ?? null;
+        after[field] = value;
+        update[field] = value;
       }
-      // 缺席 = 不動、`null` = 清空(GQL-06);清空落庫寫 `null` 而不是 `$unset`(ADR-0002)。
-      // 必填欄位送 `null` 與送空字串同義 —— 一律 VALIDATION_FAILED,不會把姓名清掉。
-      const value = isRequiredField(field)
-        ? requireText(given ?? "", field)
-        : (given?.trim() ?? null);
-      // 「沒填」有三種長相(欄位不存在 / `null` / 空字串),比對前一律收斂成空字串,
-      // 否則把本來就空的欄位再清一次會白寫一筆稽核
-      if ((value ?? "") === (user[field] ?? "")) {
-        continue;
+      await this.assertAccountAndEmailFree(
+        operator,
+        {
+          account: after.account as string | undefined,
+          email: after.email as string | undefined,
+        },
+        user._id,
+      );
+
+      if (input.nationalId !== undefined) {
+        await this.assertCanEditNationalId(operator);
+        update.nationalId = input.nationalId;
+        // 身分證字號永不寫進 audit_logs(user-manager.md「審計」):只記「已變更」
+        before.nationalId = NATIONAL_ID_AUDIT_PLACEHOLDER;
+        after.nationalId = NATIONAL_ID_AUDIT_PLACEHOLDER;
       }
-      before[field] = user[field] ?? null;
-      after[field] = value;
-      update[field] = value;
-    }
-    await this.assertAccountAndEmailFree(
-      operator,
-      {
-        account: after.account as string | undefined,
-        email: after.email as string | undefined,
-      },
-      user._id,
-    );
+      if (Object.keys(update).length === 0) {
+        return user;
+      }
 
-    if (input.nationalId !== undefined) {
-      await this.assertCanEditNationalId(operator);
-      update.nationalId = input.nationalId;
-      // 身分證字號永不寫進 audit_logs(user-manager.md「審計」):只記「已變更」
-      before.nationalId = NATIONAL_ID_AUDIT_PLACEHOLDER;
-      after.nationalId = NATIONAL_ID_AUDIT_PLACEHOLDER;
-    }
-    if (Object.keys(update).length === 0) {
-      return this.decorateOne(operator, user);
-    }
-
-    const updated =
-      (await this.users.updateById(operator, user._id, { $set: update })) ??
-      user;
-    await this.audit.record(operator, {
-      action: "user.edit",
-      targetType: "user",
-      targetId: user._id,
-      before,
-      after,
+      const updated =
+        (await this.users.updateById(operator, user._id, { $set: update })) ??
+        user;
+      await this.audit.record(operator, {
+        action: "user.edit",
+        targetType: "user",
+        targetId: user._id,
+        before,
+        after,
+      });
+      return updated;
     });
-    return this.decorateOne(operator, updated);
+    return this.decorateOne(operator, saved);
   }
 
-  /** 停用 / 啟用;停用即刻作廢該使用者全部 refresh token(擁有者不可被停用,ADR-0009)。 */
+  /**
+   * 停用 / 啟用;停用即刻作廢該使用者全部 refresh token(擁有者不可被停用,ADR-0009)。
+   * `enabled`、作廢 refresh token 與稽核一個交易;審核者失效 hook 在提交後(見本段開頭)。
+   */
   async setEnabled(
     operator: OperatorContext,
     input: SetUserEnabledInput,
   ): Promise<UserModel> {
-    const user = await this.loadManagedUser(operator, input.id);
-    if (!input.enabled) {
-      await this.ownerProtection.assertNotProtectedOwner(
-        operator,
-        user,
-        "disable",
-      );
-    }
-    if (user.enabled === input.enabled) {
+    const saved = await this.transactions.withTransaction(async () => {
+      const user = await this.loadManagedUser(operator, input.id);
       if (!input.enabled) {
-        // 冪等補做:上一次停用後 hook 失敗時,再停用一次會把審核者失效補上
-        await this.assigneeInvalidation.onUserChanged(user._id);
+        await this.ownerProtection.assertNotProtectedOwner(
+          operator,
+          user,
+          "disable",
+        );
       }
-      return this.decorateOne(operator, user);
-    }
-    const updated =
-      (await this.users.updateById(operator, user._id, {
-        $set: { enabled: input.enabled },
-      })) ?? user;
-    if (!input.enabled) {
-      // 下一次請求即 UNAUTHENTICATED / ACCOUNT_DISABLED(登入線既有的「登出所有裝置」)
-      await this.auth.logoutAllDevices(user);
-    }
-    await this.audit.record(operator, {
-      action: "user.toggle-enabled",
-      targetType: "user",
-      targetId: user._id,
-      before: { enabled: user.enabled },
-      after: { enabled: input.enabled },
+      if (user.enabled === input.enabled) {
+        return user;
+      }
+      const updated =
+        (await this.users.updateById(operator, user._id, {
+          $set: { enabled: input.enabled },
+        })) ?? user;
+      if (!input.enabled) {
+        // 下一次請求即 UNAUTHENTICATED / ACCOUNT_DISABLED(登入線既有的「登出所有裝置」)
+        await this.auth.logoutAllDevices(user);
+      }
+      await this.audit.record(operator, {
+        action: "user.toggle-enabled",
+        targetType: "user",
+        targetId: user._id,
+        before: { enabled: user.enabled },
+        after: { enabled: input.enabled },
+      });
+      return updated;
     });
     if (!input.enabled) {
       // 審核流程:他手上還沒決定的審核任務 → 承辦人失效(該關依會簽模式阻擋,等改派)。
-      // 放在稽核之後:hook 失敗時停用與稽核都已寫入,再停用一次會補做 hook
-      await this.assigneeInvalidation.onUserChanged(user._id);
+      // 本來就是停用時也呼叫:上一次停用後 hook 失敗,再停用一次會把失效補上(hook 冪等)
+      await this.assigneeInvalidation.onUserChanged(saved._id);
     }
-    return this.decorateOne(operator, updated);
+    return this.decorateOne(operator, saved);
   }
 
-  /** 所屬組織增減:`dryRun` 先回失去資格清單,正式送出依 radio 三檔處理(ADR-0003)。 */
+  /**
+   * 所屬組織增減:`dryRun` 先回失去資格清單,正式送出依 radio 三檔處理(ADR-0003)。
+   * 正式送出時重算、重驗後寫入,加 / 移組織、解除角色與稽核一個交易;試算不開交易、不寫資料。
+   */
   async setOrgs(
     operator: OperatorContext,
     input: SetUserOrgsInput,
   ): Promise<SetUserOrgsPayload> {
-    const user = await this.loadManagedUser(operator, input.userId);
     const desired = uniqueIds(input.orgIds).map((id) =>
       toObjectId(id, "orgIds"),
     );
-    await this.assertOrgsManaged(operator, desired);
-    const currentIds = await this.relations.listOrgIdsOfUser(user._id);
-    const currentKeys = new Set(currentIds.map(String));
-    const desiredKeys = new Set(desired.map(String));
-    // 管理範圍外的既有所屬組織不受全量覆蓋影響(彈窗根本勾不到,ADR-0003)
-    const managedCurrent = await this.orgs.findMany(operator, {
-      _id: { $in: currentIds },
-    });
+    const run = async () => {
+      const user = await this.loadManagedUser(operator, input.userId);
+      await this.assertOrgsManaged(operator, desired);
+      const currentIds = await this.relations.listOrgIdsOfUser(user._id);
+      const currentKeys = new Set(currentIds.map(String));
+      const desiredKeys = new Set(desired.map(String));
+      // 管理範圍外的既有所屬組織不受全量覆蓋影響(彈窗根本勾不到,ADR-0003)
+      const managedCurrent = await this.orgs.findMany(operator, {
+        _id: { $in: currentIds },
+      });
 
-    const toAdd = desired.filter((orgId) => !currentKeys.has(String(orgId)));
-    const removed = managedCurrent.filter(
-      (org) => !desiredKeys.has(String(org._id)),
-    );
-    const removedKeys = new Set(removed.map((org) => String(org._id)));
-    const remaining = [
-      ...currentIds.filter((orgId) => !removedKeys.has(String(orgId))),
-      ...toAdd,
-    ];
-    if (remaining.length === 0) {
-      throw userError(
-        "LAST_ORG",
-        "A user must keep at least one member org; the last one cannot be removed",
+      const toAdd = desired.filter((orgId) => !currentKeys.has(String(orgId)));
+      const removed = managedCurrent.filter(
+        (org) => !desiredKeys.has(String(org._id)),
       );
-    }
-    await this.grantRules.assertOwnedOrgsKept(operator, user._id, removedKeys);
+      const removedKeys = new Set(removed.map((org) => String(org._id)));
+      const remaining = [
+        ...currentIds.filter((orgId) => !removedKeys.has(String(orgId))),
+        ...toAdd,
+      ];
+      if (remaining.length === 0) {
+        throw userError(
+          "LAST_ORG",
+          "A user must keep at least one member org; the last one cannot be removed",
+        );
+      }
+      await this.grantRules.assertOwnedOrgsKept(
+        operator,
+        user._id,
+        removedKeys,
+      );
 
-    const protectedRoleIds = await this.grantRules.protectedRoleIds(
-      operator,
-      user._id,
-    );
-    const unqualifiedRoles = await this.unqualifiedRolesOf(
-      operator,
-      user._id,
-      remaining,
-      removedKeys,
-      protectedRoleIds,
-    );
-    const removedOrgs: UserOrg[] = removed.map((org) => ({
-      id: String(org._id),
-      name: org.name,
-    }));
+      const protectedRoleIds = await this.grantRules.protectedRoleIds(
+        operator,
+        user._id,
+      );
+      const unqualifiedRoles = await this.unqualifiedRolesOf(
+        operator,
+        user._id,
+        remaining,
+        removedKeys,
+        protectedRoleIds,
+      );
+      const removedOrgs: UserOrg[] = removed.map((org) => ({
+        id: String(org._id),
+        name: org.name,
+      }));
 
-    if (input.dryRun === true) {
-      return {
-        user: await this.decorateOne(operator, user),
-        removedOrgs,
+      if (input.dryRun === true) {
+        return {
+          user,
+          removedOrgs,
+          unqualifiedRoles,
+          revokedRoleIds: [] as string[],
+        };
+      }
+
+      const revokedRoleIds = revokedByPolicy(
         unqualifiedRoles,
-        revokedRoleIds: [],
-      };
-    }
+        input.removalPolicy ?? UserOrgRemovalPolicy.REVOKE_ALL_UNQUALIFIED,
+      );
+      await this.relations.linkMany(
+        operator,
+        toAdd.map((orgId) => ({
+          type: "org_user" as const,
+          firstId: orgId,
+          secondId: user._id,
+        })),
+      );
+      await this.relations.unlinkMany(operator, [
+        ...removed.map((org) => ({
+          type: "org_user" as const,
+          firstId: org._id,
+          secondId: user._id,
+        })),
+        ...revokedRoleIds.map((roleId) => ({
+          type: "user_role" as const,
+          firstId: user._id,
+          secondId: new Types.ObjectId(roleId),
+        })),
+      ]);
 
-    const revokedRoleIds = revokedByPolicy(
-      unqualifiedRoles,
-      input.removalPolicy ?? UserOrgRemovalPolicy.REVOKE_ALL_UNQUALIFIED,
-    );
-    await this.relations.linkMany(
-      operator,
-      toAdd.map((orgId) => ({
-        type: "org_user" as const,
-        firstId: orgId,
-        secondId: user._id,
-      })),
-    );
-    await this.relations.unlinkMany(operator, [
-      ...removed.map((org) => ({
-        type: "org_user" as const,
-        firstId: org._id,
-        secondId: user._id,
-      })),
-      ...revokedRoleIds.map((roleId) => ({
-        type: "user_role" as const,
-        firstId: user._id,
-        secondId: new Types.ObjectId(roleId),
-      })),
-    ]);
+      if (toAdd.length > 0) {
+        await this.audit.record(operator, {
+          action: "user.add-org",
+          targetType: "user",
+          targetId: user._id,
+          after: { orgIds: toAdd.map(String) },
+        });
+      }
+      if (removed.length > 0) {
+        await this.audit.record(operator, {
+          action: "user.remove-org",
+          targetType: "user",
+          targetId: user._id,
+          before: { orgIds: currentIds.map(String) },
+          after: {
+            orgIds: [...removedKeys],
+            removalPolicy:
+              input.removalPolicy ??
+              UserOrgRemovalPolicy.REVOKE_ALL_UNQUALIFIED,
+            revokedRoleIds,
+          },
+        });
+      }
+      return { user, removedOrgs, unqualifiedRoles, revokedRoleIds };
+    };
 
-    if (toAdd.length > 0) {
-      await this.audit.record(operator, {
-        action: "user.add-org",
-        targetType: "user",
-        targetId: user._id,
-        after: { orgIds: toAdd.map(String) },
-      });
-    }
-    if (removed.length > 0) {
-      await this.audit.record(operator, {
-        action: "user.remove-org",
-        targetType: "user",
-        targetId: user._id,
-        before: { orgIds: currentIds.map(String) },
-        after: {
-          orgIds: [...removedKeys],
-          removalPolicy:
-            input.removalPolicy ?? UserOrgRemovalPolicy.REVOKE_ALL_UNQUALIFIED,
-          revokedRoleIds,
-        },
-      });
-    }
-    if (removed.length > 0) {
-      // 審核流程:被移出某個租戶(在那裡已沒有任何所屬組織)→ 他在那個租戶的待審任務承辦人失效。
-      // 放在稽核之後,hook 失敗不會留下「已移出卻沒稽核」
-      await this.assigneeInvalidation.onUserChanged(user._id);
+    const outcome =
+      input.dryRun === true
+        ? await run()
+        : await this.transactions.withTransaction(run);
+    if (input.dryRun !== true && outcome.removedOrgs.length > 0) {
+      // 審核流程:被移出某個租戶(在那裡已沒有任何所屬組織)→ 他在那個租戶的待審任務承辦人失效
+      await this.assigneeInvalidation.onUserChanged(outcome.user._id);
     }
     return {
-      user: await this.decorateOne(operator, user),
-      removedOrgs,
-      unqualifiedRoles,
-      revokedRoleIds,
+      user: await this.decorateOne(operator, outcome.user),
+      removedOrgs: outcome.removedOrgs,
+      unqualifiedRoles: outcome.unqualifiedRoles,
+      revokedRoleIds: outcome.revokedRoleIds,
     };
   }
 
   /**
-   * 所屬組織的**增量加入**:組織管理的「加入成員」(#377)走這一支,
+   * 所屬組織的**增量加入**:組織管理的「加入成員」走這一支,
    * 不在組織那一側另寫一套寫入 —— 被改的是使用者的所屬組織,正本就該在這裡。
    * 與 `setOrgs` 共用同一組資格判斷(組織經 `assertOrgsManaged`、使用者經 `loadManagedUser`,
    * 兩邊都必須在操作者的**管理範圍**內)與同一筆稽核動作 `user.add-org`。
@@ -514,120 +553,133 @@ export class UsersService {
    * 擁有者保護(ADR-0009 擋的是「移出」,加入一直是允許的)、失去資格的角色 dry-run ——
    * 只加不減,既有授予只會多拿到子樹支撐,不會失去(ADR-0003)。
    * 已經是成員的略過(冪等),回報在 `skippedUserIds`。
+   * 全部人的關聯與逐人稽核一個交易:任何一位驗不過或寫入失敗,這一批都不加。
    */
   async addOrgs(
     operator: OperatorContext,
     input: { orgId: string; userIds: readonly string[] },
   ): Promise<AddOrgsResult> {
     const orgId = toObjectId(input.orgId, "orgId");
-    await this.assertOrgsManaged(operator, [orgId]);
     const userIds = uniqueIds(input.userIds);
-    if (userIds.length === 0) {
-      return { addedUserIds: [], skippedUserIds: [] };
-    }
-    const users = await Promise.all(
-      userIds.map((id) => this.loadManagedUser(operator, id)),
-    );
-    const existing = await this.relations.listLinks("org_user", {
-      firstIds: [orgId],
-      secondIds: users.map((user) => user._id),
-    });
-    const members = new Set(existing.map((link) => String(link.secondId)));
-    const toAdd = users.filter((user) => !members.has(String(user._id)));
-    await this.relations.linkMany(
-      operator,
-      toAdd.map((user) => ({
-        type: "org_user" as const,
-        firstId: orgId,
-        secondId: user._id,
-      })),
-    );
-    // 稽核逐人一筆(targetId = 被加入的那位使用者),與使用者管理的「加入所屬組織」同形
-    for (const user of toAdd) {
-      await this.audit.record(operator, {
-        action: "user.add-org",
-        targetType: "user",
-        targetId: user._id,
-        after: { orgIds: [String(orgId)] },
+    return this.transactions.withTransaction(async () => {
+      await this.assertOrgsManaged(operator, [orgId]);
+      if (userIds.length === 0) {
+        return { addedUserIds: [], skippedUserIds: [] };
+      }
+      // 交易內依序讀(TX-02)
+      const users: UserRecord[] = [];
+      for (const id of userIds) {
+        users.push(await this.loadManagedUser(operator, id));
+      }
+      const existing = await this.relations.listLinks("org_user", {
+        firstIds: [orgId],
+        secondIds: users.map((user) => user._id),
       });
-    }
-    return {
-      addedUserIds: toAdd.map((user) => String(user._id)),
-      skippedUserIds: users
-        .filter((user) => members.has(String(user._id)))
-        .map((user) => String(user._id)),
-    };
+      const members = new Set(existing.map((link) => String(link.secondId)));
+      const toAdd = users.filter((user) => !members.has(String(user._id)));
+      await this.relations.linkMany(
+        operator,
+        toAdd.map((user) => ({
+          type: "org_user" as const,
+          firstId: orgId,
+          secondId: user._id,
+        })),
+      );
+      // 稽核逐人一筆(targetId = 被加入的那位使用者),與使用者管理的「加入所屬組織」同形
+      for (const user of toAdd) {
+        await this.audit.record(operator, {
+          action: "user.add-org",
+          targetType: "user",
+          targetId: user._id,
+          after: { orgIds: [String(orgId)] },
+        });
+      }
+      return {
+        addedUserIds: toAdd.map((user) => String(user._id)),
+        skippedUserIds: users
+          .filter((user) => members.has(String(user._id)))
+          .map((user) => String(user._id)),
+      };
+    });
   }
 
-  /** 指派角色(全量覆蓋);防越權 `ROLE_OUT_OF_REACH`、擁有者保護 `OWNER_PROTECTED`(ADR-0003 / 0009)。 */
+  /**
+   * 指派角色(全量覆蓋);防越權 `ROLE_OUT_OF_REACH`、擁有者保護 `OWNER_PROTECTED`(ADR-0003 / 0009)。
+   * 授予、解除與兩筆稽核一個交易。
+   */
   async assignRoles(
     operator: OperatorContext,
     input: AssignUserRolesInput,
   ): Promise<UserModel> {
-    const user = await this.loadManagedUser(operator, input.userId);
     const desired = uniqueIds(input.roleIds).map((id) =>
       toObjectId(id, "roleIds"),
     );
-    const currentIds = await this.relations.listRoleIdsOfUser(user._id);
-    const currentKeys = new Set(currentIds.map(String));
-    const desiredKeys = new Set(desired.map(String));
-    const reachable = await this.grantRules.reachableRoleIds(operator);
+    const user = await this.transactions.withTransaction(async () => {
+      const target = await this.loadManagedUser(operator, input.userId);
+      const currentIds = await this.relations.listRoleIdsOfUser(target._id);
+      const currentKeys = new Set(currentIds.map(String));
+      const desiredKeys = new Set(desired.map(String));
+      const reachable = await this.grantRules.reachableRoleIds(operator);
 
-    const toAdd = desired.filter((roleId) => !currentKeys.has(String(roleId)));
-    const memberOrgIds = await this.relations.listOrgIdsOfUser(user._id);
-    await this.assertRolesGrantable(
-      operator,
-      toAdd,
-      memberOrgIds,
-      user._id,
-      reachable,
-    );
-    await this.assertRolesEnabled(operator, toAdd);
+      const toAdd = desired.filter(
+        (roleId) => !currentKeys.has(String(roleId)),
+      );
+      const memberOrgIds = await this.relations.listOrgIdsOfUser(target._id);
+      await this.assertRolesGrantable(
+        operator,
+        toAdd,
+        memberOrgIds,
+        target._id,
+        reachable,
+      );
+      await this.assertRolesEnabled(operator, toAdd);
 
-    // 操作者觸及不到的既有授予不動(彈窗列不出來,不該被順手解除)
-    const toRemove = currentIds.filter(
-      (roleId) =>
-        !desiredKeys.has(String(roleId)) &&
-        (reachable === "all" || reachable.has(String(roleId))),
-    );
-    await this.grantRules.assertProtectedRolesKept(
-      operator,
-      user._id,
-      toRemove,
-    );
+      // 操作者觸及不到的既有授予不動(彈窗列不出來,不該被順手解除)
+      const toRemove = currentIds.filter(
+        (roleId) =>
+          !desiredKeys.has(String(roleId)) &&
+          (reachable === "all" || reachable.has(String(roleId))),
+      );
+      await this.grantRules.assertProtectedRolesKept(
+        operator,
+        target._id,
+        toRemove,
+      );
 
-    await this.relations.linkMany(
-      operator,
-      toAdd.map((roleId) => ({
-        type: "user_role" as const,
-        firstId: user._id,
-        secondId: roleId,
-      })),
-    );
-    await this.relations.unlinkMany(
-      operator,
-      toRemove.map((roleId) => ({
-        type: "user_role" as const,
-        firstId: user._id,
-        secondId: roleId,
-      })),
-    );
-    if (toAdd.length > 0) {
-      await this.audit.record(operator, {
-        action: "user.grant-role",
-        targetType: "user",
-        targetId: user._id,
-        after: { roleIds: toAdd.map(String) },
-      });
-    }
-    if (toRemove.length > 0) {
-      await this.audit.record(operator, {
-        action: "user.revoke-role",
-        targetType: "user",
-        targetId: user._id,
-        after: { roleIds: toRemove.map(String) },
-      });
-    }
+      await this.relations.linkMany(
+        operator,
+        toAdd.map((roleId) => ({
+          type: "user_role" as const,
+          firstId: target._id,
+          secondId: roleId,
+        })),
+      );
+      await this.relations.unlinkMany(
+        operator,
+        toRemove.map((roleId) => ({
+          type: "user_role" as const,
+          firstId: target._id,
+          secondId: roleId,
+        })),
+      );
+      if (toAdd.length > 0) {
+        await this.audit.record(operator, {
+          action: "user.grant-role",
+          targetType: "user",
+          targetId: target._id,
+          after: { roleIds: toAdd.map(String) },
+        });
+      }
+      if (toRemove.length > 0) {
+        await this.audit.record(operator, {
+          action: "user.revoke-role",
+          targetType: "user",
+          targetId: target._id,
+          after: { roleIds: toRemove.map(String) },
+        });
+      }
+      return target;
+    });
     return this.decorateOne(operator, user);
   }
 
@@ -637,10 +689,10 @@ export class UsersService {
    *
    * - 權限是三個 key 的 AND:resolver 掛 `view`,這裡再要 `manage-orgs` 與 `assign-roles`
    *   (裝飾器疊多個不是 AND;照身分證欄位的先例在 service 判斷)。
-   * - 試算與正式送出**都重算、重驗**;試算不寫資料、不寫稽核,擋下的原因列在 `blockers`。
-   * - 寫入順序固定:加組織 → 授角色 → 解除角色 → 移除組織(永遠不會先移到零組織)。
-   *   沒有交易(ADR-0007):中途失敗就回錯,已寫的那幾步各自有稽核;
-   *   關聯寫入用 `ensureLinks`,重跑不會產生重複關聯。
+   * - 試算與正式送出**都重算、重驗**;試算不開交易、不寫資料、不寫稽核,擋下的原因列在 `blockers`。
+   * - 正式送出是**一個交易**(ADR-0013):讀來源 / 目標、試算、重驗與寫入都在交易內,
+   *   順序固定為加組織 → 授角色 → 解除角色 → 移除組織(永遠不會先移到零組織);任一步失敗,
+   *   關聯與稽核整個回復,目標維持複製前。審核者失效 hook 在提交後(見本段開頭)。
    * - **不沿用** `setUserOrgs` 的角色清理政策:取代後範圍外的角色失去資格也照樣留著,
    *   只回 `outOfScopeKept` 給畫面提示。
    */
@@ -666,46 +718,62 @@ export class UsersService {
         "targetUserId",
       ]);
     }
-    const source = await this.loadManagedUser(operator, input.sourceUserId);
-    const target = await this.loadManagedUser(operator, input.targetUserId);
-    const plan = await this.planCopy(operator, source, target, input.mode);
+    const dryRun = input.dryRun !== false;
 
-    const summary = {
+    const run = async () => {
+      const source = await this.loadManagedUser(operator, input.sourceUserId);
+      const target = await this.loadManagedUser(operator, input.targetUserId);
+      const plan = await this.planCopy(operator, source, target, input.mode);
+      if (dryRun) {
+        return { target, plan, applied: false };
+      }
+
+      const [blocker] = plan.blockers;
+      if (blocker) {
+        throw copyBlockerError(blocker, plan.ownerOrgNameOfRole);
+      }
+      // 重驗授予資格:唯一的檢查點 `assertEligible`,以複製後的所屬組織判斷
+      await this.assertRolesGrantable(
+        operator,
+        plan.addedRoleIds.map((id) => objectIdOf(id)),
+        plan.finalOrgIds.map((id) => objectIdOf(id)),
+        target._id,
+        plan.reachable,
+      );
+      if (!plan.hasChanges) {
+        return { target, plan, applied: false };
+      }
+      await this.applyCopy(operator, source, target, input.mode, plan);
+      return { target, plan, applied: true };
+    };
+
+    const { target, plan, applied } = dryRun
+      ? await run()
+      : await this.transactions.withTransaction(run);
+    if (applied && plan.removedOrgIds.length > 0) {
+      // 與 `setOrgs` 同:被移出某個租戶 → 他在那裡的待審任務承辦人失效
+      await this.assigneeInvalidation.onUserChanged(target._id);
+    }
+    return {
+      user: await this.decorateOne(operator, target),
+      applied,
       mode: input.mode,
       orgs: plan.orgs,
       roles: plan.roles,
       blockers: plan.blockers,
       outOfScopeKept: plan.outOfScopeKept,
     };
-    if (input.dryRun !== false) {
-      return {
-        user: await this.decorateOne(operator, target),
-        applied: false,
-        ...summary,
-      };
-    }
+  }
 
-    const [blocker] = plan.blockers;
-    if (blocker) {
-      throw copyBlockerError(blocker, plan.ownerOrgNameOfRole);
-    }
-    // 重驗授予資格:唯一的檢查點 `assertEligible`,以複製後的所屬組織判斷
-    await this.assertRolesGrantable(
-      operator,
-      plan.addedRoleIds.map((id) => objectIdOf(id)),
-      plan.finalOrgIds.map((id) => objectIdOf(id)),
-      target._id,
-      plan.reachable,
-    );
-    if (!plan.hasChanges) {
-      return {
-        user: await this.decorateOne(operator, target),
-        applied: false,
-        ...summary,
-      };
-    }
-
-    const copied = { copiedFrom: String(source._id), mode: input.mode };
+  /** 複製的四步寫入與各自的稽核(在 `copyOrgRoles` 的交易內)。 */
+  private async applyCopy(
+    operator: OperatorContext,
+    source: UserRecord,
+    target: UserRecord,
+    mode: CopyUserOrgRolesMode,
+    plan: CopyPlan,
+  ): Promise<void> {
+    const copied = { copiedFrom: String(source._id), mode };
     if (plan.addedOrgIds.length > 0) {
       await this.relations.ensureLinks(
         operator,
@@ -770,14 +838,7 @@ export class UsersService {
         before: { orgIds: plan.currentOrgIds },
         after: { orgIds: plan.removedOrgIds, ...copied },
       });
-      // 與 `setOrgs` 同:被移出某個租戶 → 他在那裡的待審任務承辦人失效(放在稽核之後)
-      await this.assigneeInvalidation.onUserChanged(target._id);
     }
-    return {
-      user: await this.decorateOne(operator, target),
-      applied: true,
-      ...summary,
-    };
   }
 
   // ---- 內部 ----
@@ -792,24 +853,23 @@ export class UsersService {
     target: UserRecord,
     mode: CopyUserOrgRolesMode,
   ): Promise<CopyPlan> {
-    const [sourceOrgIds, currentOrgIds, sourceRoleIds, currentRoleIds] =
-      await Promise.all([
-        this.relations.listOrgIdsOfUser(source._id),
-        this.relations.listOrgIdsOfUser(target._id),
-        this.relations.listRoleIdsOfUser(source._id),
-        this.relations.listRoleIdsOfUser(target._id),
-      ]);
+    // 正式送出時在交易內跑:同一個 session 上依序讀,不用 Promise.all(TX-02)
+    const sourceOrgIds = await this.relations.listOrgIdsOfUser(source._id);
+    const currentOrgIds = await this.relations.listOrgIdsOfUser(target._id);
+    const sourceRoleIds = await this.relations.listRoleIdsOfUser(source._id);
+    const currentRoleIds = await this.relations.listRoleIdsOfUser(target._id);
     const reachable = await this.grantRules.reachableRoleIds(operator);
     const allRoleIds = uniqueObjectIds([...sourceRoleIds, ...currentRoleIds]);
-    const [managedOrgs, roleDocuments, ownerLinks] = await Promise.all([
-      this.orgs.findMany(operator, {
-        _id: { $in: uniqueObjectIds([...sourceOrgIds, ...currentOrgIds]) },
-      }),
+    const managedOrgs = await this.orgs.findMany(operator, {
+      _id: { $in: uniqueObjectIds([...sourceOrgIds, ...currentOrgIds]) },
+    });
+    const roleDocuments: RoleRecord[] =
       allRoleIds.length === 0
-        ? Promise.resolve<RoleRecord[]>([])
-        : this.roles.findMany(operator, { _id: { $in: allRoleIds } }),
-      this.relations.listLinks("org_role", { secondIds: allRoleIds }),
-    ]);
+        ? []
+        : await this.roles.findMany(operator, { _id: { $in: allRoleIds } });
+    const ownerLinks = await this.relations.listLinks("org_role", {
+      secondIds: allRoleIds,
+    });
     const orgNameById = new Map(
       managedOrgs.map((org) => [String(org._id), org.name]),
     );
@@ -840,15 +900,14 @@ export class UsersService {
     );
 
     const ownerOrgIds = uniqueObjectIds(ownerLinks.map((link) => link.firstId));
-    const [ancestry, ownerOrgs] = await Promise.all([
-      this.qualification.loadAncestry(
-        operator,
-        uniqueObjectIds([...currentOrgIds, ...sourceOrgIds, ...ownerOrgIds]),
-      ),
+    const ancestry = await this.qualification.loadAncestry(
+      operator,
+      uniqueObjectIds([...currentOrgIds, ...sourceOrgIds, ...ownerOrgIds]),
+    );
+    const ownerOrgs =
       ownerOrgIds.length === 0
-        ? Promise.resolve([])
-        : this.orgs.findMany(operator, { _id: { $in: ownerOrgIds } }),
-    ]);
+        ? []
+        : await this.orgs.findMany(operator, { _id: { $in: ownerOrgIds } });
     const ownerOrgNameById = new Map(
       ownerOrgs.map((org) => [String(org._id), org.name]),
     );
@@ -972,7 +1031,7 @@ export class UsersService {
   }
 
   /**
-   * 清單的使用者過濾條件:**管理範圍**內的組織的成員(ADR-0005 的分工表;#187 起不看可見範圍)。
+   * 清單的使用者過濾條件:**管理範圍**內的組織的成員(ADR-0005 的分工表;不看可見範圍)。
    * 選中的組織不在管理範圍(或子樹內沒有管理範圍內的組織)回 null = 空清單。
    * 組織一律經 `this.orgs`(治理類 collection,過濾自動吃 `managedOrgIds`),此處不自己比對範圍。
    */
@@ -1162,21 +1221,24 @@ export class UsersService {
     if (grantedRoleIds.length === 0) {
       return [];
     }
-    const [roleDocuments, ownerLinks] = await Promise.all([
-      this.roles.findMany(operator, { _id: { $in: grantedRoleIds } }),
-      this.relations.listLinks("org_role", { secondIds: grantedRoleIds }),
-    ]);
+    // 正式送出時在 `setOrgs` 的交易內跑:依序讀,不用 Promise.all(TX-02)
+    const roleDocuments = await this.roles.findMany(operator, {
+      _id: { $in: grantedRoleIds },
+    });
+    const ownerLinks = await this.relations.listLinks("org_role", {
+      secondIds: grantedRoleIds,
+    });
     const ownerOrgIdByRole = new Map(
       ownerLinks.map((link) => [String(link.secondId), String(link.firstId)]),
     );
     const ownerOrgIds = uniqueObjectIds(ownerLinks.map((link) => link.firstId));
-    const [ancestry, managedOrgs] = await Promise.all([
-      this.qualification.loadAncestry(operator, [
-        ...remainingOrgIds,
-        ...ownerOrgIds,
-      ]),
-      this.orgs.findMany(operator, { _id: { $in: ownerOrgIds } }),
+    const ancestry = await this.qualification.loadAncestry(operator, [
+      ...remainingOrgIds,
+      ...ownerOrgIds,
     ]);
+    const managedOrgs = await this.orgs.findMany(operator, {
+      _id: { $in: ownerOrgIds },
+    });
     const orgNameById = new Map(
       managedOrgs.map((org) => [String(org._id), org.name]),
     );
@@ -1234,7 +1296,7 @@ export class UsersService {
         );
       }
     }
-    // 授予資格共用 `OrgQualificationService.assertEligible`(#261):與角色頁的
+    // 授予資格共用 `OrgQualificationService.assertEligible`:與角色頁的
     // `grantRoleUsers` 同一份判斷、同一個 `USER_NOT_ELIGIBLE`(在此之前回的是
     // `VALIDATION_FAILED`,前端只講得出「資料未通過驗證」)
     const ownerLinks = await this.relations.listLinks("org_role", {
@@ -1358,8 +1420,8 @@ function requireText(value: string, field: string): string {
 
 /**
  * 新增時的選填欄位。**缺席與 `null` 同義**(都是「沒填」)—— 新增沒有「既有值要清掉」
- * 這回事,寫一個 `null` 進去只是多一個空欄位,所以兩者一律不落庫(#372;
- * 編輯端的 `null` = 清空見 `update`)。
+ * 這回事,寫一個 `null` 進去只是多一個空欄位,所以兩者一律不落庫
+ * (編輯端的 `null` = 清空見 `update`)。
  */
 function optional<TKey extends string>(
   key: TKey,

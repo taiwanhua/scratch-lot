@@ -133,7 +133,7 @@ export const sampleOneModule: ModuleSeedDeclaration = {
     description:
       "示範模組1 的資料(demo_items_one);規則示範與對照組(示範模組2 不宣告)",
     // `status` 是唯一的業務欄位:資料範圍的四種型別裡只有 enum 需要 seed 宣告固定選項,
-    // 沒有它「enum 固定選項」在 dev 驗不到(#246 的 2)。value 對應
+    // 沒有它「enum 固定選項」在 dev 驗不到。value 對應
     // `apps/api/src/database/schemas/demo-item-one.schema.ts` 的 `status` 存的值。
     fields: [
       {

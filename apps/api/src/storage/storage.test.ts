@@ -45,7 +45,7 @@ const FIXED_NOW = Date.UTC(2026, 0, 1, 0, 0, 0);
  *
  * 舊寫法是呼叫**前**取 `before = Date.now()`,再斷言 `expiresAt - before <= TTL`;但到期時間是
  * 簽名端以呼叫**當下**(較晚)的 `Date.now()` 加 TTL 算出來的,只要呼叫過程經過 ≥ 1 ms 就必然
- * 大於 TTL —— 本機幾乎同毫秒完成而僥倖綠,CI runner 慢一點就紅(#227)。
+ * 大於 TTL —— 本機幾乎同毫秒完成而僥倖綠,CI runner 慢一點就紅。
  *
  * 這裡用假時鐘而非容差:簽名路徑(`StorageService` + 記錄用 / 假 bucket adapter)只讀 `Date.now()`,
  * 沒有任何非同步計時器,`await` 走的是 promise microtask、不受假時鐘影響,所以不會卡住。
@@ -197,7 +197,7 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
     });
 
     /**
-     * 附件(#344):除了圖片還收 pdf / doc / docx / xls / xlsx / zip。
+     * 附件:除了圖片還收 pdf / doc / docx / xls / xlsx / zip。
      * `application/x-zip-compressed` 是 Windows 瀏覽器對 `.zip` 的申報值,與 `application/zip` 同副檔名。
      */
     it.each([
@@ -318,7 +318,7 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
       );
     });
 
-    /** 大小上限也依 purpose(#344):圖片類 2MB、附件 20MB,各自的邊界都要剛好過 / 剛好被拒。 */
+    /** 大小上限也依 purpose:圖片類 2MB、附件 20MB,各自的邊界都要剛好過 / 剛好被拒。 */
     it.each([
       ["ORG_LOGO", UploadPurpose.ORG_LOGO, MAX_IMAGE_UPLOAD_BYTES],
       ["DEMO_COVER", UploadPurpose.DEMO_COVER, MAX_IMAGE_UPLOAD_BYTES],
@@ -359,7 +359,7 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
     });
   });
 
-  describe("路徑歸屬 isOwnedUploadPath(供 #134 驗 logoPath)", () => {
+  describe("路徑歸屬 isOwnedUploadPath(供組織寫入端驗 logoPath)", () => {
     it.each([
       "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.png",
       "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.jpg",
@@ -377,7 +377,7 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
       ["跳出前綴", "org-logos/../secrets/x.png"],
       ["不是 uuid", "org-logos/logo.png"],
       ["副檔名不合", "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.exe"],
-      // 放寬的是附件用途,不是全站(#344):org-logos 底下仍然只收圖片
+      // 放寬的是附件用途,不是全站:org-logos 底下仍然只收圖片
       [
         "附件副檔名用在商標前綴",
         "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.pdf",
@@ -452,7 +452,7 @@ describe("檔案儲存(ADR-0010:StorageService 介面 + GCS adapter + 記錄用 
     });
   });
 
-  describe("刪物件 deleteObject(#161:換商標後清掉舊物件)", () => {
+  describe("刪物件 deleteObject(換商標後清掉舊物件)", () => {
     const OWNED = "org-logos/3f2504e0-4f89-41d3-9a0c-0305e82c3301.png";
 
     it("合法路徑:真的交給 adapter 刪,回 true", async () => {
@@ -663,7 +663,7 @@ describe("商標上傳線(GraphQL 端點,對真 Nest app + 真 MongoDB;未設 GC
     expect(result.errors?.[0]?.extensions?.code).toBe("UPLOAD_REJECTED");
   });
 
-  it("DEMO_ATTACHMENT:pdf 與 20MB 內的檔要得到票(#344 放寬)", async () => {
+  it("DEMO_ATTACHMENT:pdf 與 20MB 內的檔要得到票(附件放寬)", async () => {
     const result = await api.graphql<CreateUploadUrlData>(
       CREATE_UPLOAD_URL,
       {

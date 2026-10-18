@@ -45,13 +45,13 @@ const listSchema = z
  * 組織樹來自 `orgTree`,而 api 把它掛在 `system.org-manager.view` 底下 — 沒有那個權限時
  * 不送查詢,清單改成「不給 orgId」= 攤開整個管理範圍(治理模組慣例,ADR-0005 的分工表)。
  *
- * **初始狀態**(#183):樹可用時預設選中樹根 = 操作者可見範圍的根,與組織管理頁一致;
+ * **初始狀態**:樹可用時預設選中樹根 = 操作者可見範圍的根,與組織管理頁一致;
  * 樹根還沒到手前不送 `users`(`orgId` 為 null 的查詢會被 api 擋下),右區塊顯示載入中。
  *
  * 擁有者保護(ADR-0009)在前端只需要樹根這一筆:樹根就是「租戶頂層」(租戶視角)或「根組織」
  * (根組織視角)。樹根 `parentId === null` 代表操作者站在根組織 — 一律放行,不標保護;
  * 否則樹根的 `ownerUserId` 就是受保護的那一位(`protectedOwnerUserId`),
- * 而樹根自己就是他「不可被移出」的那個組織(`protectedOwnerOrgId`,#362)。
+ * 而樹根自己就是他「不可被移出」的那個組織(`protectedOwnerOrgId`)。
  */
 export const useUserManagerData = () => {
   const { session } = useSession();
@@ -94,14 +94,14 @@ export const useUserManagerData = () => {
       ? null
       : (rootOrg.ownerUserId ?? null);
   /**
-   * 擁有者「不可被移出」的那一個組織(#362):就是樹根 —— `protectedOwnerUserId`
+   * 擁有者「不可被移出」的那一個組織:就是樹根 —— `protectedOwnerUserId`
    * 本來就是從它的 `ownerUserId` 來的,所以不必為此向 api 多要欄位。
    * 沒有受保護的擁有者(根組織視角 / 樹根沒有擁有者)時是 null。
    */
   const protectedOwnerOrgId = protectedOwnerUserId === null ? null : treeRootId;
 
   /**
-   * 初始選中樹根(與組織管理頁一致,#183 的 (a) 案;不在 effect 內 setState,REACT-06)。
+   * 初始選中樹根(與組織管理頁一致;不在 effect 內 setState,REACT-06)。
    * 樹還沒回來時是 null — 那段時間不送 `users`(見下方 `enabled`)。
    */
   // 網址上的組織不在樹裡(手改、換了組織)→ 退回樹根;樹不可用時不看網址上的組織(清單攤開整個可見範圍)
@@ -112,7 +112,7 @@ export const useUserManagerData = () => {
 
   /**
    * `orgId` 為 null 一律不送進 input:api 的 `UsersInput.orgId` 是「不給 = 整個可見範圍」,
-   * 給 null 會在 `toObjectId` 炸 `orgId is not a valid id: null`(#183 第 4 項的直接原因)。
+   * 給 null 會在 `toObjectId` 炸 `orgId is not a valid id: null`。
    */
   const usersVariables = useMemo<UsersQueryVariables>(
     () => ({
@@ -148,7 +148,7 @@ export const useUserManagerData = () => {
   /**
    * 寫入成功後精準失效(DATA-02 / 04):目前這份清單 + 被改到的那一筆單筆。
    *
-   * **改到的是登入者本人時連 `me` 一起失效**(#372):所屬組織是 `me.orgs` 的來源,
+   * **改到的是登入者本人時連 `me` 一起失效**:所屬組織是 `me.orgs` 的來源,
    * AppBar 的「當前組織」可切換清單直接讀它 —— 不失效的話,剛把自己加進一個組織,
    * 選單裡還是沒有那一個(`me` 的 `staleTime` 是 Infinity,不會自己過期)。
    * 角色授予(權限)、停用與改名同理都是操作者立刻看得到的變化,所以不分 mutation 一起處理。

@@ -41,7 +41,7 @@ export type FormRecord = Persisted<FormDocument>;
  * - `isRoot`:當前組織是根組織(`parentId === null`;管共用表單、分派的判準)
  * - `tenantId`:當前組織的租戶頂層(根組織 = null → 看全部共用表單)
  * - `timezone`:租戶時區(`ctx.timezone`)
- * - `perFormCreateModuleKeys`:宣告 `perFormCreate: true`(B9b 依表單分開新增權限)的表單模組 key
+ * - `perFormCreateModuleKeys`:宣告 `perFormCreate: true`(依表單分開新增權限)的表單模組 key
  */
 export interface FormOperatorFacts {
   operator: OperatorContext;
@@ -64,7 +64,7 @@ function orgReader(operator: OperatorContext): OperatorContext {
 }
 
 /**
- * 表單的「誰看得到、誰改得動、誰能新增」(Spec 6a §3、§7)。設計端與執行端共用同一份判準:
+ * 表單的「誰看得到、誰改得動、誰能新增」。設計端與執行端共用同一份判準:
  *
  * | 操作者       | 設計端看得到                         | 設計端改得動          | 新增(`moduleForms`)                    |
  * | ------------ | ------------------------------------ | --------------------- | -------------------------------------- |
@@ -173,8 +173,8 @@ export class FormAccessService {
   }
 
   /**
-   * **新增資格的唯一判斷**(B9b):操作者能不能用這張表單在這個模組新增。
-   * 模組開啟 B9b(`perFormCreate`)→ 看 `<模組>.create-<formKey>`(模組 `create` 不算);否則看模組 `create`。
+   * **新增資格的唯一判斷**(依表單分開新增權限):操作者能不能用這張表單在這個模組新增。
+   * 模組開啟依表單分開新增權限(`perFormCreate`)→ 看 `<模組>.create-<formKey>`(模組 `create` 不算);否則看模組 `create`。
    * 入口(新增 API、`moduleForms` 的 `canCreate`、abilities、複製為新單、`formLookup` 版本存取、申請中心新申請、
    * 申請人改 / 送 / 刪自己的單)一律呼叫這裡,不自己拼 key。
    */
@@ -218,7 +218,7 @@ export class FormAccessService {
 
   /**
    * 在這個模組有沒有任何新增資格(不指定表單時用,例:執行端讀模組層資料)。
-   * 開啟 B9b 的模組:持有任一張表單的 `create-<formKey>`(或模組 `*`);否則看模組 `create`。
+   * 開啟依表單分開新增權限的模組:持有任一張表單的 `create-<formKey>`(或模組 `*`);否則看模組 `create`。
    */
   canCreateInModule(facts: FormOperatorFacts, moduleKey: string): boolean {
     return canCreateInFormModule(facts, this.createModuleOf(facts, moduleKey));
@@ -252,7 +252,7 @@ export class FormAccessService {
     facts: FormOperatorFacts,
   ): Promise<Record<string, unknown> | null> {
     if (facts.isRoot) {
-      // 客製表單只有擁有它的租戶看得到(Spec §1),root 也不例外
+      // 客製表單只有擁有它的租戶看得到,root 也不例外
       return { ownerOrgId: null };
     }
     if (facts.tenantId === null) {
@@ -352,7 +352,7 @@ export class FormAccessService {
   // ---- 執行端 ----
 
   /**
-   * 操作者在某模組**可以新增**的表單(Spec §3 的交集):有發布版本(`currentVersion` 非 null)且
+   * 操作者在某模組**可以新增**的表單:有發布版本(`currentVersion` 非 null)且
    * - 根組織使用者:全部共用表單
    * - 租戶內:本租戶 `org_form` 且 `meta.enabled = true` 的表單
    */

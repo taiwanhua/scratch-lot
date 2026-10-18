@@ -1,4 +1,4 @@
-# 模組與權限(#204 / #288;api 正本 apps/api/src/modules/、規則正本 docs/modules/module-manager.md)。
+# 模組與權限(api 正本 apps/api/src/modules/、規則正本 docs/modules/module-manager.md)。
 # 根組織專屬(ADR-0009):當前組織不是根組織 → 四個端點一律 FORBIDDEN,即使持有權限。
 # 與 me.modules 的差別:這裡是治理面的「平台宣告了什麼」— 全樹照回,含側欄看不到的 hidden
 # 節點與隱藏的 api 權限樹,也含**已停用**的模組與權限(狀態一律以 enabled 表示,不以「不回」表示)。
@@ -66,7 +66,7 @@ mutation SetModuleEnabled($input: SetModuleEnabledInput!) {
   }
 }
 
-# 模組的側欄圖示(#288,根組織專屬):icon 必須是白名單 @repo/domain/module-icon 的 key,
+# 模組的側欄圖示(根組織專屬):icon 必須是白名單 @repo/domain/module-icon 的 key,
 # 否則 VALIDATION_FAILED(extensions.fields = ["icon"]);icon: null(或不送)= 清回預設圖示。
 # 不連動、不自鎖 — 換圖示只影響長相,回的是這個模組這一枝的最新狀態(與 SetModuleEnabled 同 payload)。
 mutation SetModuleIcon($input: SetModuleIconInput!) {

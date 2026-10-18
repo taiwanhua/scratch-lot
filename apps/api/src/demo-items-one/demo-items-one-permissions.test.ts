@@ -32,14 +32,14 @@ import {
 const INTERNAL = "只給內部看的備註";
 
 /**
- * 示範模組1 的欄位級權限、頁面自有權限與雙路檔案(#318)。
+ * 示範模組1 的欄位級權限、頁面自有權限與雙路檔案。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);
  * `docs/testing/permission-scenarios.md` 劇本 5(欄位級,綁父)、6(頁面自有權限)、
  * 7 的 API 那一半(綁了頁但沒有 create 權限 → 送出被擋)、11(儲存雙路)。
  *
  * 全部操作者都在同一個組織裡 —— 這幾條驗的是**權限**,不是範圍(範圍見 scope 測試)。
  */
-describe("示範模組1 權限(#318,GraphQL 端點 + 真 MongoDB)", () => {
+describe("示範模組1 權限(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let org: Types.ObjectId;

@@ -97,11 +97,11 @@ function flatten(nodes: MatrixModuleNode[]): MatrixModuleNode[] {
 }
 
 /**
- * 權限矩陣(#203):`*` 正規化三案、勾下層補上層、subset-only 防越權、
+ * 權限矩陣:`*` 正規化三案、勾下層補上層、subset-only 防越權、
  * 租戶副本只能縮不能擴、停用的模組 / 權限不進矩陣(TEST-07,對真 MongoDB)。
  * 規則正本:ADR-0004、docs/modules/role-manager.md「權限矩陣規則」。
  */
-describe("角色管理:權限矩陣(#203,GraphQL 端點 + 真 MongoDB)", () => {
+describe("角色管理:權限矩陣(GraphQL 端點 + 真 MongoDB)", () => {
   let world: RolesWorld;
   let connection: Connection;
   let manager: Manager;

@@ -1,4 +1,4 @@
-# 檔案儲存(#137;api 正本 apps/api/src/storage/,規則見 ADR-0010)。
+# 檔案儲存(api 正本 apps/api/src/storage/,規則見 ADR-0010)。
 # 三步上傳:向 api 要一張簽名上傳票 → 瀏覽器直接 PUT 到 uploadUrl → 把 objectPath 交給
 # 業務 mutation 存欄位(組織商標 = updateOrg / provisionTenant 的 logoPath)。
 # 檔型限 png / jpg / webp、大小 ≤ 2MB(不合回 UPLOAD_REJECTED);uploadUrl 效期 10 分鐘。

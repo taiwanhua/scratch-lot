@@ -7,7 +7,7 @@ import { keysOf, namespacesOf } from "./message-keys";
 import { referencedKeys } from "./usage-scan";
 
 /**
- * 死鍵守門(#426):字典裡的鍵在 `apps/admin/src`、`apps/front/src` 沒有任何引用就失敗。
+ * 死鍵守門:字典裡的鍵在 `apps/admin/src`、`apps/front/src` 沒有任何引用就失敗。
  * 掃描做法(字面字串 × namespace 的配對、配對範圍、掃不到什麼)寫在 `usage-scan.ts` 檔頭。
  *
  * 失敗時二選一:①真的沒人用了 → 兩語系一起刪掉那個鍵;②鍵是執行期組出來的 → 加進下方
@@ -486,7 +486,7 @@ const allKeys = () => {
   return { leaves, branches };
 };
 
-describe("字典沒有死鍵(#426)", () => {
+describe("字典沒有死鍵", () => {
   const { leaves, branches } = allKeys();
 
   it("每個鍵都在 admin / front 的程式碼裡被引用(或列在 DYNAMIC_KEYS)", () => {

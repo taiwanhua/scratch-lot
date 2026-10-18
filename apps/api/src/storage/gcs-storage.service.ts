@@ -34,7 +34,7 @@ const PUBLIC_URL_BASE = "https://storage.googleapis.com";
 
 /**
  * `new Storage()` 的參數。**雲端環境一律回 `undefined`**(= 原本的 `new Storage()`,走 ADC);
- * 只有設了 `GCS_API_ENDPOINT`(劇本 E2E 的 fake GCS,#402)才帶端點與測試用假憑證 ——
+ * 只有設了 `GCS_API_ENDPOINT`(劇本 E2E 的 fake GCS)才帶端點與測試用假憑證 ——
  * 本機 / CI 沒有 ADC,V4 簽名要一把私鑰才算得出來;fake GCS 不驗簽章。
  * 有自訂端點時 SDK 的 JSON API 呼叫(刪物件)本來就不帶 OAuth token,不會去打 Google 換票。
  */
@@ -134,7 +134,7 @@ export class GcsStorageService extends StorageService {
     return `${base}/${bucketName ?? ""}/${objectPath}`;
   }
 
-  /** 刪除只對**私有** bucket(#161 的換商標清理);公開檔案目前沒有清理需求。 */
+  /** 刪除只對**私有** bucket(換商標後的清理);公開檔案目前沒有清理需求。 */
   protected override async removeObject(objectPath: string): Promise<void> {
     // ignoreNotFound:換圖的舊物件可能早就被清掉(重試、手動刪),不算失敗
     await this.bucket.file(objectPath).delete({ ignoreNotFound: true });

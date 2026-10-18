@@ -70,7 +70,7 @@ export class FormSummary {
   allowDraft!: boolean;
 
   /**
-   * 讀者能不能用這張表單新增(`canCreateWithForm`;B9b 模組看 `create-<formKey>`,其餘看模組 `create`)。
+   * 讀者能不能用這張表單新增(`canCreateWithForm`;依表單分開新增權限的模組看 `create-<formKey>`,其餘看模組 `create`)。
    * 列表的表單篩選、頁籤模板要整份清單;[+ 新增] 與新增頁只認 `canCreate = true` 的表單。
    */
   @Field(() => Boolean)
@@ -226,7 +226,7 @@ export class FormSubmissionModel {
   viewedRevision!: number;
 
   /**
-   * 值(欄位 key → 存值,形狀見 Spec §5「值的存法」)。讀者沒有 `show` 的欄位(含因依賴而受保護的
+   * 值(欄位 key → 存值,形狀見 `docs/modules/forms.md`「提交的寫入規則」)。讀者沒有 `show` 的欄位(含因依賴而受保護的
    * 計算欄位)為 `"[redacted]"`;唯讀讀取不重算、不清空存值。
    */
   @Field(() => GraphQLJSONObject)
@@ -394,7 +394,7 @@ export class FormLookupRecordPayload {
   record!: FormLookupRecord | null;
 }
 
-/** 選項欄的一個當前選項(存值時寫 `{ value, label }`,Spec §5「值的存法」)。 */
+/** 選項欄的一個當前選項(存值時寫 `{ value, label }`)。 */
 @ObjectType()
 export class FormFieldOption {
   @Field(() => String)

@@ -18,7 +18,7 @@ const READONLY_INTERNAL_NOTE = [
 ];
 
 /**
- * 新增 / 編輯共版型(#320;Figma 175:558)。
+ * 新增 / 編輯共版型(Figma 175:558)。
  * 兩個隱藏頁模組共用同一個元件,情境由 `module.key` 決定。
  */
 describe("新增 / 編輯示範項目(共版型)", () => {
@@ -179,7 +179,7 @@ describe("新增 / 編輯示範項目(共版型)", () => {
     expect(fake.calls.history).toBe(0);
   });
 
-  it("編輯:沒動的封面與附件不放進 input(缺席 = 不動,GQL-06;#427 起不再原樣送回)", async () => {
+  it("編輯:沒動的封面與附件不放進 input(缺席 = 不動,GQL-06;不再原樣送回)", async () => {
     const { user: actor, fake } = renderSampleOne({ path: editPath("demo-1") });
     await screen.findByLabelText("名稱 *");
 
@@ -196,7 +196,7 @@ describe("新增 / 編輯示範項目(共版型)", () => {
     expect(input).not.toHaveProperty("attachment");
   });
 
-  it("編輯頁顯示目前附件的原始檔名(#427)", async () => {
+  it("編輯頁顯示目前附件的原始檔名", async () => {
     renderSampleOne({ path: editPath("demo-1") });
 
     expect(
@@ -321,7 +321,7 @@ describe("新增 / 編輯示範項目(共版型)", () => {
     expect(fake.inputs.updateDemoItemOne[0].coverPath).toBe("demo/1.png");
   });
 
-  it("上傳附件:原始檔名 / 大小 / 檔型與 objectPath 一起送(#427)", async () => {
+  it("上傳附件:原始檔名 / 大小 / 檔型與 objectPath 一起送", async () => {
     const { user: actor, fake } = renderSampleOne({ path: editPath("demo-1") });
     await screen.findByLabelText("名稱 *");
 

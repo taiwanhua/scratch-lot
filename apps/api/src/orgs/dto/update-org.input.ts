@@ -2,7 +2,7 @@ import { Field, ID, InputType } from "@nestjs/graphql";
 
 /**
  * 編輯組織:名稱、描述、商標,以及租戶頂層的短碼(`slug`,只有根組織的操作者能改)。
- * 擁有者(`ownerUserId`)與可見範圍開關(`settings.visibility`)是租戶作業(#135)的欄位,
+ * 擁有者(`ownerUserId`)與可見範圍開關(`settings.visibility`)是租戶作業的欄位,
  * **刻意不在這個 input 裡** — 拿 `system.org-manager.edit` 也動不到這兩者。
  * 未給的欄位不動;明確給 null 代表清空(描述 / 商標)。
  */

@@ -6,7 +6,7 @@ import type {
 } from "./module-manager-handlers";
 
 /**
- * 模組與權限頁(#209)的夾具:`moduleTree` 的**治理面全樹**。
+ * 模組與權限頁的夾具:`moduleTree` 的**治理面全樹**。
  *
  * 與 `module-fixtures.ts` 是兩種相反的讀法,所以刻意分兩份:那邊是 `me.modules`
  * (「我能用什麼」,已被 enabled 過濾掉),這邊含側欄看不到的 hidden 節點、
@@ -50,11 +50,11 @@ const node = (
   name,
   parentId,
   sidebarType: ModuleSidebarType.Link,
-  /** 路由只有自己那一段(#246 的 7);權限容器以 `overrides` 設回 null */
+  /** 路由只有自己那一段;權限容器以 `overrides` 設回 null */
   route: key.split(".").at(-1) ?? null,
   order,
   description: null,
-  /** 側欄圖示(#288):預設不給,要對照初值表的節點各自用 `overrides` 指定 */
+  /** 側欄圖示:預設不給,要對照初值表的節點各自用 `overrides` 指定 */
   icon: null,
   enabled: true,
   /** 表單模組(`engine: FORM`)以 `overrides` 指定;其餘是固定欄位模組 */

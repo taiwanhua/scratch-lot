@@ -79,11 +79,11 @@ export const MEMBER_PASSWORD = text(
   "e2e-member-pw-2026",
 );
 
-/** api 沒有 JWT_SECRET 會啟動失敗(#62);e2e 給一個假值就夠。 */
+/** api 沒有 JWT_SECRET 會啟動失敗;e2e 給一個假值就夠。 */
 export const JWT_SECRET = text("E2E_JWT_SECRET", "e2e-only-jwt-secret");
 
 /**
- * fake GCS(`fsouza/fake-gcs-server`,#402):劇本 11 / 15 要真的把檔案傳上去、再讀回來。
+ * fake GCS(`fsouza/fake-gcs-server`):劇本 11 / 15 要真的把檔案傳上去、再讀回來。
  * harness 以 `apps/e2e/docker-compose.yml` 起容器,api 以 `GCS_API_ENDPOINT` 指過去。
  * 主機沿用 `HOST`:瀏覽器從 admin 的頁面直傳 / 讀圖,跟 api 同一個主機名最單純。
  */

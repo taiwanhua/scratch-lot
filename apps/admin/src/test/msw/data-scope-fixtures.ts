@@ -72,7 +72,7 @@ export const dataScopeTargets: TestDataScopeTarget[] = [
     moduleName: "示範模組1",
     name: "示範項目",
     description: "示範模組1 的資料",
-    // `hasRule` 由 handler 依目前存著的規則算(#246 的 1),夾具給預設值即可
+    // `hasRule` 由 handler 依目前存著的規則算,夾具給預設值即可
     hasRule: false,
     fields: [
       {
@@ -110,7 +110,7 @@ export const dataScopeTargets: TestDataScopeTarget[] = [
   },
 ];
 
-/** 自建角色的四個動作(#261;非 root 視角、沒人持有 → 全開)。 */
+/** 自建角色的四個動作(非 root 視角、沒人持有 → 全開)。 */
 const CUSTOM_ABILITIES = {
   canEdit: true,
   canEditMatrix: true,
@@ -136,7 +136,7 @@ const tenantB = {
   name: "租戶 B",
   tenantTop: { id: "org-tenant-b", name: "租戶 B" },
 };
-/** 租戶 A 底下的一個部門 —— 租戶頂層與擁有組織不同的那一種(#372)。 */
+/** 租戶 A 底下的一個部門 —— 租戶頂層與擁有組織不同的那一種。 */
 const salesOfA = {
   id: "org-sales-a",
   name: "租戶 A 業務部",
@@ -146,10 +146,10 @@ const salesOfA = {
 /**
  * 套用對象「指定角色」的清單(`roles` query;擁有組織在管理範圍內)。
  *
- * 刻意放兩個同名的「租戶管理員」分屬兩個租戶 —— 這正是 #261 的 8 要解決的情形:
+ * 刻意放兩個同名的「租戶管理員」分屬兩個租戶 —— 這正是角色選單分組要解決的情形:
  * 根組織視角下只看角色名稱完全分不出來,要靠「名稱 — 擁有組織」與分組。
  *
- * **順序刻意是亂的、而且擁有組織不等於租戶頂層**(#372):`api` 回的順序裡同一個擁有組織
+ * **順序刻意是亂的、而且擁有組織不等於租戶頂層**:`api` 回的順序裡同一個擁有組織
  * 的角色被別的組織隔開,選單若不先排序,MUI 的 `groupBy` 會讓同一個標題出現兩次。
  */
 export const dataScopeRoles: TestRole[] = [

@@ -39,8 +39,8 @@ export class DemoItemOneUserRef {
  * `path` 是物件路徑;**下載網址不在這裡** —— 要另外呼叫 `demoItemOneAttachmentUrl(id)` 現簽,
  * 才守得住「私有檔案的可取範圍 = 該筆資料的可查範圍」。
  *
- * `name` / `size` / `contentType` 是上傳時前端申報的原始值(#427),原樣回傳。
- * **#427 以前上傳的附件三者皆為 `null`**(當時只存路徑)—— 前端退回顯示路徑尾段、不顯示大小。
+ * `name` / `size` / `contentType` 是上傳時前端申報的原始值,原樣回傳。
+ * **早期上傳的附件三者皆為 `null`**(當時只存路徑)—— 前端退回顯示路徑尾段、不顯示大小。
  */
 @ObjectType()
 export class DemoItemOneAttachment {
@@ -63,7 +63,7 @@ export class DemoItemOneAttachment {
 /**
  * 這筆資料**對這位操作者**允許的動作,由 api 依有效權限集算好(GQL-07)。
  *
- * **每個旗標都已經含權限判斷**(#319 / #320 對齊):前端**直接用**,不要再與
+ * **每個旗標都已經含權限判斷**(與前端對齊):前端**直接用**,不要再與
  * `usePermissions` 相乘 —— 那會讓同一條規則在兩邊各算一次,對不起來就是畫面與 API 不一致。
  * (與角色頁的 `RoleAbilities` 不同:那組刻意不含權限 key,因為它表達的是「角色種類規則」。)
  */
@@ -98,7 +98,7 @@ export class DemoItemOneAbilities {
  * - `categoryLabel`:`category`(存 value)在欄位管理「示範分類」**操作者合併範圍**內對應的
  *   顯示名稱;分類已被停用 / 屬於看不到的組織時為 null(值仍原樣回在 `category`)
  * - `createdBy`:建立者;**查不到那位使用者時一律回 `null`,不拋錯** —— seed 的示範資料用假的
- *   ObjectId 當建立者(#319),真實環境也會有使用者被刪掉的情形,前端顯示「—」即可
+ *   ObjectId 當建立者,真實環境也會有使用者被刪掉的情形,前端顯示「—」即可
  */
 @ObjectType("DemoItemOne")
 export class DemoItemOneModel {

@@ -91,7 +91,7 @@ const uploadOf = (contentType: string, size: number, extension: string) => ({
 });
 
 /**
- * 6a 票 F(#482):欄位預設值、datetime、上傳欄檔型 / 大小上限、型別檢查擋發布、刪除表單草稿。
+ * 6a 票 F:欄位預設值、datetime、上傳欄檔型 / 大小上限、型別檢查擋發布、刪除表單草稿。
  * 真 GraphQL + 真 MongoDB(TEST-07)。
  */
 describe("表單預設值、日期時間、上傳上限、型別檢查、刪除草稿", () => {

@@ -16,7 +16,7 @@ import type { TestModule } from "./auth-handlers";
 
 /**
  * 表單引擎的測試夾具(形狀以 api 的回傳為準:`apps/api/src/forms/**\/*.test.ts` 的斷言、
- * `packages/graphql/src/documents/forms.graphql` / `form-submissions.graphql` 的 fragment;TEST-08 / TEST-12)。
+ * `packages/graphql/src/documents/base/forms.graphql` / `form-submissions.graphql` 的 fragment;TEST-08 / TEST-12)。
  *
  * 範例表單「購物單」(`shopping_list`,掛在 `demo-form` 模組):品項(必填)、數量、單價、
  * 總價(計算:數量 × 單價)、備註(數量 > 0 才顯示)、採購人(帶入目標)、內部備註(限定可改,帶入目標)。

@@ -24,8 +24,8 @@ export const PRINTERS_KEY = `${SYSTEM_GROUP_KEY}.printers`;
  * module-manager.md、field-manager.md、data-scope.md;模組 key 累加父 key(`system.` 前綴,2026-09-17 定案),
  * route 維持 key 末段。
  *
- * 六個治理模組的權限表皆已有正本(組織管理 / 使用者管理 #133;角色管理、模組與權限、欄位管理、
- * 資料範圍 2026-09-20 補於各 docs/modules/<key>.md「權限表」節,#202 種下),
+ * 六個治理模組的權限表皆已有正本(組織管理 / 使用者管理;角色管理、模組與權限、欄位管理、
+ * 資料範圍 2026-09-20 補於各 docs/modules/<key>.md「權限表」節),
  * 每個模組的 wildcard 由 seeds/base/modules.ts 自動產生。
  */
 export const systemModules: ModuleSeedDeclaration = {
@@ -139,7 +139,7 @@ export const systemModules: ModuleSeedDeclaration = {
         "表單的欄位、版本、發布、分派與啟用(表單模組的填報內容由此設計)",
     },
     {
-      // 流程管理(Spec 6b §8):root 管共用流程、租戶管客製流程,**不是**根組織專屬;
+      // 流程管理:root 管共用流程、租戶管客製流程,**不是**根組織專屬;
       // 分派 / 收回另由 api 以「站在根組織」守(同表單管理的判準)
       key: WORKFLOWS_KEY,
       name: "流程管理",
@@ -460,7 +460,7 @@ export const systemModules: ModuleSeedDeclaration = {
       description:
         "租戶內開關分派來的或自己的表單 + API(關了就不能新增,歷史照看)",
     },
-    // 流程管理(Spec 6b §8「固定模組 seed」)
+    // 流程管理
     {
       key: permissionKey(WORKFLOWS_KEY, "view"),
       moduleKey: WORKFLOWS_KEY,

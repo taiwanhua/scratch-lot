@@ -32,7 +32,7 @@ export const Outlined: Story = {};
 /** 行內無框:AppBar 的組織切換、工具列。 */
 export const Standard: Story = { args: { variant: "standard" } };
 
-/** 停用(#260):外框與文字一起反灰,和同列的日期欄、按鈕一致。 */
+/** 停用:外框與文字一起反灰,和同列的日期欄、按鈕一致。 */
 export const Disabled: Story = { args: { disabled: true } };
 
 export const DisabledStandard: Story = {

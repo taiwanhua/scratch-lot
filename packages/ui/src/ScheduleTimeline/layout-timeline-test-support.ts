@@ -38,7 +38,7 @@ export interface RuleCase {
   code: string;
   title: string;
   groups: CaseGroup[];
-  /** 平板欄另用的輸入(T-14 平板欄示範店休:不排容器)。 */
+  /** 平板欄另用的輸入(T-14 平板欄示範公休:不排容器)。 */
   tabletGroups?: CaseGroup[];
   expected: { 157: Expected; 125: Expected };
 }
@@ -222,7 +222,7 @@ export const RULE_CASES: RuleCase[] = [
   },
   {
     code: "T-14",
-    title: "特殊日(電腦)/ 店休不排容器(平板)",
+    title: "特殊日(電腦)/ 公休不排容器(平板)",
     groups: [early2()],
     tabletGroups: [],
     expected: {
@@ -266,7 +266,7 @@ export const RULE_CASES: RuleCase[] = [
   },
   {
     code: "T-18",
-    title: "一人負責兩個櫃台",
+    title: "一人負責兩個場地",
     groups: [g(1, "A", 14, 22, 1), g(2, "B", 14, 22, 1, 2)],
     expected: same({
       placed: [

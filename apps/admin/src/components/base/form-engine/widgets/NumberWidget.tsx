@@ -6,7 +6,7 @@ import { ReadOnlyField } from "./ReadOnlyField";
 import type { WidgetProps } from "./widget-types";
 
 /**
- * 數字欄(`number` → `number`)。存值是十進位字串(Spec §5「值的存法」),所以輸入框收原字、
+ * 數字欄(`number` → `number`)。存值是十進位字串,所以輸入框收原字、
  * 不在前端轉成 JS number(會失去精度);取到 `precision` 位由 api 在存檔時做。
  * `widget.unit`(「元」)只是長相,顯示在欄位尾端。
  */

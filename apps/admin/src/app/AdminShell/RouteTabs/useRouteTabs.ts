@@ -12,7 +12,7 @@ export interface UseRouteTabsOptions {
   routes: ReadonlyMap<string, ShellModule>;
   /** 目前網址(已正規化) */
   currentPath: string;
-  /** 目前的網址參數(`location.search`,含 `?`):目前頁籤記下它,切回來時帶回去(規格 10.1) */
+  /** 目前的網址參數(`location.search`,含 `?`):目前頁籤記下它,切回來時帶回去 */
   currentSearch: string;
 }
 
@@ -29,7 +29,7 @@ export interface RouteTabsState {
 }
 
 /**
- * 路由頁籤列的狀態(#67):把 `useRouteTabsStore` 接上目前的使用者、路由集合與網址,並把「關閉當前 tab」的落點轉成導向。
+ * 路由頁籤列的狀態:把 `useRouteTabsStore` 接上目前的使用者、路由集合與網址,並把「關閉當前 tab」的落點轉成導向。
  * 狀態本體在 store(zustand + sessionStorage);登出會卸載殼,換帳號登入時殼重新 mount、重新 `bind` 到新的一把 key。
  */
 export const useRouteTabs = ({
@@ -61,7 +61,7 @@ export const useRouteTabs = ({
   const activeRoute =
     matchModuleRoute(routes, currentPath) === undefined ? null : currentPath;
 
-  /** 切到頁籤 = 回到它記下的「路徑 + 網址參數」(規格 10.1) */
+  /** 切到頁籤 = 回到它記下的「路徑 + 網址參數」 */
   const select = useCallback(
     (route: string) => {
       const entry = entries.find((item) => item.route === route);

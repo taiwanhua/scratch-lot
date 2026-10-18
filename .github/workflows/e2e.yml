@@ -10,7 +10,7 @@ name: E2E
 # 拋棄式;api 的交易需要 replica set,而 service container 不能帶 --replSet 啟動參數),
 # 帳密用 apps/e2e/.env.example 的測試值,一個 Secret 都不讀。
 #
-# 檔案儲存(劇本 11 / 15,#402)走 fake GCS 容器(fsouza/fake-gcs-server),**不寫成下面的 `services:`**:
+# 檔案儲存(劇本 11 / 15)走 fake GCS 容器(fsouza/fake-gcs-server),**不寫成下面的 `services:`**:
 # service container 不能帶啟動參數,而這個映像不給參數就是 https + 自簽憑證 + 公開網址指向
 # storage.googleapis.com,瀏覽器與 api 都連不上。所以改由 harness 以 apps/e2e/docker-compose.yml
 # `up -d` / `down`(與本機 `pnpm e2e` 同一份,runner 內建 Docker);bucket 由 harness 建,

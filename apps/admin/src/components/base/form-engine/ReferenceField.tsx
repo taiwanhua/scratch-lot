@@ -36,14 +36,14 @@ const optionOfStored = (value: unknown): ReferenceOption | null => {
 };
 
 /**
- * 引用欄位的搜尋選擇器(Spec 6a §5「引用」;`reference` → `referencePicker`)。
+ * 引用欄位的搜尋選擇器(`reference` → `referencePicker`)。
  * 只能從清單選一筆或換選,存 `{ id, label }`;**provider 來自版本定義**:這裡只帶
  * 「哪個版本的哪個欄位」+ 關鍵字打 `formLookup`,api 依定義取 provider / filter 並套操作者的範圍。
  * 送出時 api 會重驗來源可讀、重取 label 寫快照,所以這裡存的 label 只是畫面用的暫值。
  *
- * - 連動篩選(B2d):來源 `filter` 引用其他欄位時,查詢一併送那些欄位目前的值(`filterValues`);
+ * - 連動篩選:來源 `filter` 引用其他欄位時,查詢一併送那些欄位目前的值(`filterValues`);
  *   被引用欄位還沒填 → 停用並提示先填
- * - 列內帶入(B2c):給了 `onReferencePick`(明細引用子欄有對應表)時,選定一筆改呼叫它,連同來源欄位的值
+ * - 列內帶入:給了 `onReferencePick`(明細引用子欄有對應表)時,選定一筆改呼叫它,連同來源欄位的值
  */
 export const ReferenceField = ({
   field,

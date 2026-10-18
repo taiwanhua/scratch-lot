@@ -53,7 +53,7 @@ export const TENANT_OPS_PERMISSIONS = [
 ];
 
 /**
- * 可見範圍開關 2026-09-19 從 tenant-ops 搬到組織管理層(#187):
+ * 可見範圍開關 2026-09-19 從 tenant-ops 搬到組織管理層:
  * 租戶管理員靠 `system.org-manager.*` 自動取得,所以它不在 `TENANT_OPS_PERMISSIONS` 裡。
  */
 export const SET_VISIBILITY_PERMISSION = ORG_MANAGER_PERMISSIONS.setVisibility;
@@ -179,7 +179,7 @@ export const waitForTree = async () => {
 };
 
 /**
- * 點一個節點 = **只有選取**(`Tree` 自 #373 起 `expansionTrigger="iconContainer"`,
+ * 點一個節點 = **只有選取**(`Tree` 設了 `expansionTrigger="iconContainer"`,
  * 展開 / 收合只認名稱前面的箭頭),所以點過的節點不會收起來,子節點照樣找得到。
  */
 export const clickNode = async (

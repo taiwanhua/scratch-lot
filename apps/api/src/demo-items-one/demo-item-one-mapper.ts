@@ -117,7 +117,7 @@ export function toDemoItemOneModel(
       : {}),
     coverPath: record.coverPath ?? null,
     coverUrl: context.publicUrlOf(record.coverPath),
-    // 中繼資料原樣回(#427);#427 以前的附件沒有這三欄 → null,前端退回顯示路徑尾段
+    // 中繼資料原樣回;早期的附件沒有這三欄 → null,前端退回顯示路徑尾段
     attachment:
       attachmentPath === null
         ? null

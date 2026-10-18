@@ -130,7 +130,7 @@ interface OrgRef {
 /** `roleMatrix` 的回傳,本檔只看種類規則相關的兩欄(樹與 granted 由 role-matrix.test.ts 顧)。 */
 interface MatrixRow {
   shrinkOnly: boolean;
-  /** 預設角色的天花板(#283);其他種類為 null */
+  /** 預設角色的天花板;其他種類為 null */
   ceiling: { moduleKeys: string[]; permissionKeys: string[] } | null;
 }
 
@@ -144,11 +144,11 @@ interface RoleRow {
 }
 
 /**
- * 角色種類規則、自鎖保護與 `abilities`(#261;規則表正本 ADR-0004 與
+ * 角色種類規則、自鎖保護與 `abilities`(規則表正本 ADR-0004 與
  * `docs/modules/role-manager.md`,純函式正本 `role-rules.ts`)。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);案名逐條對應規則表的一格。
  */
-describe("角色種類規則 + 自鎖保護(#261,GraphQL 端點 + 真 MongoDB)", () => {
+describe("角色種類規則 + 自鎖保護(GraphQL 端點 + 真 MongoDB)", () => {
   let world: RolesWorld;
   let connection: Connection;
   /** 租戶甲的管理員(非根組織);他自己持有 `manager.roleId` — 自鎖保護的對象 */
@@ -169,7 +169,7 @@ describe("角色種類規則 + 自鎖保護(#261,GraphQL 端點 + 真 MongoDB)",
     await connection
       .collection("users")
       .updateOne({ _id: userId }, { $set: { account } });
-    // 根組織專屬模組也給:天花板要測的是「操作者搆得到、但模板沒有」(#283),
+    // 根組織專屬模組也給:天花板要測的是「操作者搆得到、但模板沒有」,
     // 操作者自己就沒有的話會先被 subset-only 那一道擋掉,測不到天花板
     const roleId = await createRole(world.api.app, connection, {
       name: `根組織操作者-${account}`,
@@ -408,7 +408,7 @@ describe("角色種類規則 + 自鎖保護(#261,GraphQL 端點 + 真 MongoDB)",
     });
   });
 
-  describe("ownerOrg.tenantTop:角色選單依租戶分組用(#261 的 8)", () => {
+  describe("ownerOrg.tenantTop:角色選單依租戶分組用", () => {
     it("擁有組織在租戶底下 → 回該租戶頂層;擁有組織本身是租戶頂層 → 回自己", async () => {
       const deep = await createRole(world.api.app, connection, {
         name: "部門一的角色(tenantTop)",
@@ -545,7 +545,7 @@ describe("角色種類規則 + 自鎖保護(#261,GraphQL 端點 + 真 MongoDB)",
     });
   });
 
-  describe("shrinkOnly = 非 root 且是預設角色(#261 放寬 root)", () => {
+  describe("shrinkOnly = 非 root 且是預設角色(root 不受限)", () => {
     it("root 看到的 shrinkOnly = false,且加得了新模組", async () => {
       const roleId = await newTemplateCopy("預設角色(root 放寬)");
       expect(await shrinkOnlyAs(root.token, roleId)).toBe(false);
@@ -586,10 +586,10 @@ describe("角色種類規則 + 自鎖保護(#261,GraphQL 端點 + 真 MongoDB)",
   });
 
   /**
-   * 預設角色的天花板(#283):上限 = 內建「租戶管理員」模板角色目前的授予
+   * 預設角色的天花板:上限 = 內建「租戶管理員」模板角色目前的授予
    * (seed = 所有非根組織專屬模組各一筆 `*`)。root 在此範圍內放寬與收窄,**連 root 也開不出模板沒有的**。
    */
-  describe("預設角色的天花板 = 內建租戶管理員模板(#283)", () => {
+  describe("預設角色的天花板 = 內建租戶管理員模板", () => {
     it("root 勾模板外的「模組與權限」→ ROLE_OUT_OF_REACH + TEMPLATE_CEILING,且沒有寫進去", async () => {
       const roleId = await newTemplateCopy("預設角色(天花板外)");
 

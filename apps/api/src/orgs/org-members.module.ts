@@ -6,7 +6,7 @@ import { OrgMembersResolver } from "./org-members.resolver";
 import { OrgMembersService } from "./org-members.service";
 
 /**
- * 組織詳情的「成員」頁籤(#377;權限 `system.org-manager.view-members` / `.add-members`,
+ * 組織詳情的「成員」頁籤(權限 `system.org-manager.view-members` / `.add-members`,
  * 規則正本 docs/modules/org-manager.md)。
  *
  * **為什麼不直接住在 `OrgsModule`**:加入成員的寫入正本是 `UsersService.addOrgs`

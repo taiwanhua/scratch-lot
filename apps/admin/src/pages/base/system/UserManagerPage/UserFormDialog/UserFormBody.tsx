@@ -60,7 +60,7 @@ export const UserFormBody = ({
   onSaved,
 }: UserFormBodyProps) => {
   const t = useTranslations("admin.userManager.form");
-  // 成功提示在頁層級的 `admin.userManager.feedback`,不在 `form` 底下(#426 死鍵測試抓到的誤指)
+  // 成功提示在頁層級的 `admin.userManager.feedback`,不在 `form` 底下(死鍵測試抓到的誤指)
   const tFeedback = useTranslations("admin.userManager.feedback");
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -85,7 +85,7 @@ export const UserFormBody = ({
   };
 
   /**
-   * 失敗的 Snackbar 文案(#376):這裡的錯誤解讀比表單那一份粗一級 —— 欄位級的
+   * 失敗的 Snackbar 文案:這裡的錯誤解讀比表單那一份粗一級 —— 欄位級的
    * `VALIDATION_FAILED` 在表單內已經指名是哪幾欄,Snackbar 只講「這次沒存成功」。
    */
   const feedbackError = (error: unknown) => {
@@ -115,7 +115,7 @@ export const UserFormBody = ({
       onSuccess: (payload) => {
         /**
          * DATA-04 的 (a) 步:把回傳的欄位併進 `user(id)` 的快取,再由 `onSaved` 失效清單與單筆。
-         * 不寫的話,關掉彈窗馬上再按一次「編輯」看到的是舊值(#372)——
+         * 不寫的話,關掉彈窗馬上再按一次「編輯」看到的是舊值——
          * `UserFormDialog` 的初始值只取一次,重取回來時表單早就掛好了。
          * `updateUser` 的 payload 只有基本欄位(沒有 orgs / roles / enabled),所以是**併進**
          * 既有那一筆而不是整份覆寫;快取裡還沒有那一筆就什麼都不做(回 undefined)。

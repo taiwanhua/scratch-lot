@@ -8,7 +8,7 @@ export const USER_MANAGER_ERROR_CODES = [
   "OWNER_PROTECTED",
   "LAST_ORG",
   "ROLE_OUT_OF_REACH",
-  /** #261:使用者不在角色擁有組織的子樹內(在此之前回 VALIDATION_FAILED,只講得出「資料未通過驗證」) */
+  /** 使用者不在角色擁有組織的子樹內(在此之前回 VALIDATION_FAILED,只講得出「資料未通過驗證」) */
   "USER_NOT_ELIGIBLE",
   /** 停用的角色不可新授予(指派角色、複製組織與角色) */
   "ROLE_DISABLED",

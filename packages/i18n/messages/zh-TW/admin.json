@@ -2977,7 +2977,7 @@
       "resetSuccess": "已還原預設收件人"
     },
     "errors": {
-      "INVALID_AUDIENCE": "這個條件不能使用,請檢查後再儲存",
+      "AUDIENCE_INVALID": "這個條件不能使用,請檢查後再儲存",
       "OUT_OF_TENANT": "這個對象不在你的組織內",
       "UNKNOWN_TYPE": "找不到這個通知類型,請重新整理再試一次",
       "TENANT_ONLY": "這裡不能調整收件人,請先切換到要設定的組織",

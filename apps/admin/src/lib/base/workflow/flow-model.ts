@@ -7,7 +7,7 @@ import type {
 } from "@repo/domain/workflow";
 
 /**
- * 流程設計器的編輯模型(Spec 6b §5「流程結構」、§8 畫面 3)。
+ * 流程設計器的編輯模型(`docs/concepts/workflow-engine.md`「流程結構:直線與分流 / 匯合」)。
  *
  * 設計器不開放自由拉線,所以編輯的不是「節點 + 連線」,而是**一串段落**:
  *

@@ -39,7 +39,7 @@ export interface FormDraftState {
 }
 
 /**
- * 新增一筆提交(Spec 6a §6「提交」、10.10「直接送出」、docs/modules/forms.md):
+ * 新增一筆提交(`docs/modules/forms.md`):
  *
  * - **頁面開啟時**產生一次性的 `clientRequestId`:`createFormDraft` / `createAndSubmitFormSubmission` 重試
  *   (網路斷、連點)命中同一個 `(createdBy, clientRequestId)` 就回同一筆,不會建出兩筆;

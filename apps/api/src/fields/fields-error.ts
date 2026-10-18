@@ -35,14 +35,14 @@ export function notFoundError(message: string): GraphQLError {
 
 /**
  * `FORBIDDEN` 的細分原因(`extensions.reason`;先例 `RULE_INVALID` 的 reason)。
- * 三種擋法對使用者的說法完全不同,只回 `FORBIDDEN` 的話前端只講得出最常見的那一種(#264)。
+ * 三種擋法對使用者的說法完全不同,只回 `FORBIDDEN` 的話前端只講得出最常見的那一種。
  */
 export const FIELD_FORBIDDEN_REASONS = [
   /** 種子選項的 label / order / description 唯讀(只能 `setFieldEnabled`)。 */
   "SEED_READ_ONLY",
-  /** 種子選項的 `enabled` 是全域開關,限根組織操作者(#206)。 */
+  /** 種子選項的 `enabled` 是全域開關,限根組織操作者。 */
   "SEED_GLOBAL_SWITCH",
-  /** 看得到、但不是自己這一層加的自訂選項(上層或下層組織加的,#264)。 */
+  /** 看得到、但不是自己這一層加的自訂選項(上層或下層組織加的)。 */
   "NOT_OWNER",
   /** 改名 / 停用 seed 宣告的系統類別(由 seed 維護,畫面唯讀;啟用可以)。 */
   "SYSTEM_CATEGORY",

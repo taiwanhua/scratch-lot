@@ -6,22 +6,22 @@ import {
 import { type ShellModule, matchModuleRoute } from "./module-tree";
 
 /**
- * 一筆路由頁籤的紀錄(#67;dis #15:以路由 id 去重)。持久化到 sessionStorage 的就是這個形狀(`[{ route, itemLabel?, search? }]`),
+ * 一筆路由頁籤的紀錄(以路由 id 去重)。持久化到 sessionStorage 的就是這個形狀(`[{ route, itemLabel?, search? }]`),
  * 模組名一律回頭從 `me.modules` 解析,權限或名稱變了不會留下舊字;存下來的只有頁面給的 `itemLabel` 與網址參數 `search`。
  */
 export interface RouteTabEntry {
   /**
    * 頁籤的唯一 id = 網址(已正規化)。一般頁籤是模組路由本身(= `me.modules[].route`);
-   * 詳情子頁籤(#428)是隱藏頁模組路由 + 尾端識別碼(`/…/view-page/<id>`,`matchModuleRoute` 對得上的那種),每一筆各一個 tab。
+   * 詳情子頁籤是隱藏頁模組路由 + 尾端識別碼(`/…/view-page/<id>`,`matchModuleRoute` 對得上的那種),每一筆各一個 tab。
    */
   route: string;
   /**
-   * 詳情子頁籤的項目名(#428):由頁面經 `useRouteTabItemLabel` → store 的 `setItemLabel` 提供,
+   * 詳情子頁籤的項目名:由頁面經 `useRouteTabItemLabel` → store 的 `setItemLabel` 提供,
    * `resolveTabs` 顯示成「所屬模組名 — 項目名」。頁面每次進入都會重設,所以存檔裡的舊名只活到下次進入那一頁。
    */
   itemLabel?: string;
   /**
-   * 這個頁籤記下的網址參數(含開頭的 `?`;規格 10.1「頁籤記住網址參數」):頁面以 `useUrlState` 寫進網址的篩選、頁碼、頁內分頁。
+   * 這個頁籤記下的網址參數(含開頭的 `?`):頁面以 `useUrlState` 寫進網址的篩選、頁碼、頁內分頁。
    * 切回這個頁籤、從側欄點同一頁時帶回去;沒有參數(= 預設條件)時不存這個欄位。
    */
   search?: string;
@@ -41,7 +41,7 @@ export interface RouteTab extends RouteTabEntry {
   moduleKey: string;
 }
 
-/** 詳情子頁籤「所屬模組名」與「項目名」之間的分隔(#428)。 */
+/** 詳情子頁籤「所屬模組名」與「項目名」之間的分隔。 */
 export const ITEM_LABEL_SEPARATOR = " — ";
 
 /** 關閉時「切到相鄰」的落點;沒有 tab 可切時回首頁(`/` 由 ADR-0011 規則轉到側欄第一個能進的頁)。 */
@@ -112,9 +112,9 @@ const isEnterable = (
 /**
  * 與「可進入路由集合」對齊:進不去的路由(權限變了、換了組織)剔除;目前路徑能進而還沒有 tab → 追加到最後
  * (= 進入路由即生成 tab;重複進入不重複生成)。`/`、群組路由、無權限頁都不在集合內,不生成。
- * 詳情 / 編輯頁的 `/…/view-page/<id>` 也算能進(#428):每一筆各生成一個子頁籤。
+ * 詳情 / 編輯頁的 `/…/view-page/<id>` 也算能進:每一筆各生成一個子頁籤。
  *
- * 目前路徑的頁籤同時記下目前的網址參數(`currentSearch`,規格 10.1):改篩選、切頁內分頁、用帶參數的網址打開
+ * 目前路徑的頁籤同時記下目前的網址參數(`currentSearch`):改篩選、切頁內分頁、用帶參數的網址打開
  * (原本的條件直接換掉)、參數被清掉,都以網址為準。沒變化就回原陣列內容(逐筆同參考)。
  */
 export const syncEntries = (
@@ -146,7 +146,7 @@ export const syncEntries = (
 };
 
 /**
- * 設定詳情子頁籤的項目名(#428):有那個 tab → 換掉標籤(同名不動、回原陣列);還沒有 → 帶著標籤追加到最後。
+ * 設定詳情子頁籤的項目名:有那個 tab → 換掉標籤(同名不動、回原陣列);還沒有 → 帶著標籤追加到最後。
  * 追加是為了時序:子元件(頁面)的 effect 比殼的 `sync` 早跑,項目資料已在快取時頁面會先呼叫這裡;
  * 路由進不進得去仍由緊接著的 `sync` 把關(進不去的會被剔除)。空字串視同沒有標籤,不動。
  */

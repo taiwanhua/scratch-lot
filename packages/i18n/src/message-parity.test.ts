@@ -4,7 +4,7 @@ import { defaultLocale, locales } from ".";
 import { keysOf, localeDirs, namespacesOf } from "./message-keys";
 
 /**
- * I18N-02「新增 key 必須同時補齊所有語言」的守門(#426):每個語系的字典檔一樣多、
+ * I18N-02「新增 key 必須同時補齊所有語言」的守門:每個語系的字典檔一樣多、
  * 每份字典的鍵集合(葉節點 + 巢狀結構)完全一致。以預設語系為基準,差集直接印在失敗訊息裡。
  */
 describe("字典的語系一致性(I18N-02)", () => {

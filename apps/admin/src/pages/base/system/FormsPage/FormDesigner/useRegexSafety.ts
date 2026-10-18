@@ -48,7 +48,7 @@ const verdictsOf = (
 });
 
 /**
- * 設計器即時檢查器的 ReDoS 檢查(Spec 6a §5「正則」)。recheck **不進首屏 bundle**:
+ * 設計器即時檢查器的 ReDoS 檢查(正則)。recheck **不進首屏 bundle**:
  * 草稿裡出現 `rules.pattern` 才懶載入;正則改動後停手 300ms 才檢查,過期的結果丟掉。
  * 還沒有結果的正則先當安全(狀態 `checking`),載入失敗顯示警告(狀態 `failed`),
  * 存草稿與發布時 api 以同一顆引擎再驗,不安全的正則一定會被擋下。

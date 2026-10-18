@@ -27,7 +27,7 @@ const table = () =>
     { timeout: 10_000 },
   );
 
-describe("依表單分開新增權限(B9b):[+ 新增] 只列有新增權限的表單(api `canCreate`)", () => {
+describe("依表單分開新增權限:[+ 新增] 只列有新增權限的表單(api `canCreate`)", () => {
   const store = {
     ...shoppingForm,
     key: "shopping_list_store",

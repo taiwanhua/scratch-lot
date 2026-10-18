@@ -27,7 +27,7 @@ export interface OrgTreePickerProps {
   labelSuffixOf?: OrgLabelSuffix;
   /**
    * 勾選框鎖住的節點:已勾的維持勾選、未勾的勾不上,勾選狀態都改不動,但該列仍可展開。
-   * 兩種用法:#362 的「擁有者不可被移出自己擁有的租戶頂層」(鎖住已勾的),以及
+   * 兩種用法:「擁有者不可被移出自己擁有的租戶頂層」(鎖住已勾的),以及
    * `OrgTreeSelect` 多選到上限時鎖住其餘未勾的節點。與整個節點停用
    * (範圍外、`disabledReasons`)不同 —— 鎖住的只是勾選框,節點本身不灰。
    */
@@ -43,7 +43,7 @@ export interface OrgTreePickerProps {
 }
 
 /**
- * 組織樹選擇器(使用者管理 #139 的左側篩選樹與「選擇所屬組織」彈窗、組織管理 #138、
+ * 組織樹選擇器(使用者管理的左側篩選樹與「選擇所屬組織」彈窗、組織管理、
  * 欄位型的 `OrgTreeSelect` 共用,STRUCT-02)。
  * 預設整棵展開:展開狀態由「使用者收合過哪些節點」反推(REACT-06:不在 effect 內 setState,
  * 資料載入後新節點自動是展開的)。

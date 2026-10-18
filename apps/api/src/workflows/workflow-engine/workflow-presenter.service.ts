@@ -38,7 +38,7 @@ export interface InstanceViewer {
   canManage: boolean;
   /**
    * 只回標題槽(阻擋清單 / 流程管理者的處置回傳):流程管理者不一定讀得到提交內容,
-   * 摘要只給辨識用的標題,不給日期 / 金額(Spec §3「流程管理者:實例與任務摘要,不含提交內容」)。
+   * 摘要只給辨識用的標題,不給日期 / 金額(流程管理者只看實例與任務摘要,不含提交內容)。
    */
   titleOnly?: boolean;
 }
@@ -83,7 +83,7 @@ function refsOf(
 /**
  * 實例與任務的對外形狀(申請中心、審核區塊、阻擋清單共用)。**摘要一律讀實例快照**
  * (`workflow_instances.summary`,該修訂的標題槽),不讀提交最新的 `summary` ——
- * 否則只審過舊修訂的人會看到之後修訂的標題(Spec 6b §3)。不含提交內容。
+ * 否則只審過舊修訂的人會看到之後修訂的標題。不含提交內容。
  */
 @Injectable()
 export class WorkflowPresenter {

@@ -71,7 +71,7 @@ export interface UserWorldOptions {
   users?: TestUser[];
   orgTree?: TestOrgNode[];
   /**
-   * `roles` query 的回應:指派角色彈窗的候選來源(#211 起改用正式的 `roles`,
+   * `roles` query 的回應:指派角色彈窗的候選來源(正式的 `roles`,
    * 範圍 = 擁有組織在操作者管理範圍內;夾具型別與角色管理頁共用 `role-fixtures.ts`)。
    */
   roles?: TestRole[];
@@ -156,7 +156,7 @@ export interface UserWorld {
 }
 
 /**
- * 使用者管理頁的假 api(#136 的 `users` / `user` / 五個 mutation + #134 的 `orgTree` / `org`)。
+ * 使用者管理頁的假 api(`users` / `user` / 五個 mutation + 組織管理的 `orgTree` / `org`)。
  * 清單範圍照 ADR-0005:給 `orgId` 就是該組織子樹,不給就是全部;關鍵字比對姓名與 Email。
  */
 export const userWorld = (options: UserWorldOptions = {}): UserWorld => {

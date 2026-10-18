@@ -90,7 +90,7 @@ const Chevron = styled(ChevronDownIcon, {
 }));
 
 /**
- * 可收合區塊(底座 10.3):標題列 + 內容區,點標題列展開 / 收合。
+ * 可收合區塊:標題列 + 內容區,點標題列展開 / 收合。
  * 元件只管畫面與切換;收合狀態要不要記住、記在哪裡由使用處決定(admin 的 `Section` 包裝依頁面 id 與區塊 key 存進 localStorage)。
  *
  * 無障礙:可收合時標題列是一顆按鈕(`aria-expanded`、`aria-controls` 指向內容區),名稱就是標題(收合時加上摘要);

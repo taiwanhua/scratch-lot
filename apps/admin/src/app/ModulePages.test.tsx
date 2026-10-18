@@ -37,7 +37,7 @@ import {
 setupFakeViewport();
 
 /**
- * 客製頁組裝一例(Spec 6a §8「登記與客製」):列表頁自己排版、表單相關的部分用零件綁進去
+ * 客製頁組裝一例(`docs/concepts/frontend-architecture.md`「頁面登記與客製替換」):列表頁自己排版、表單相關的部分用零件綁進去
  * (這裡:自訂欄位的 `FormSubmissionList`),其餘三頁沿用預設。
  */
 const CustomShoppingPage = ({ module }: ModulePageProps) => {

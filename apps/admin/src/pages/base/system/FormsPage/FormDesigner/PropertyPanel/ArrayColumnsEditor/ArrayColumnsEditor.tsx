@@ -28,7 +28,7 @@ export interface ArrayColumnsEditorProps {
 }
 
 /**
- * 明細列的「子欄位」區塊(Spec 6a §5「明細列」設計器):子欄清單(key / 標題 / 型別 / 必填 / 寬度),
+ * 明細列的「子欄位」區塊(設計器):子欄清單(key / 標題 / 型別 / 必填 / 寬度),
  * 點一個子欄開同一個屬性面板的縮小版(`onOpen` → `ArrayColumnPanel`,只列白名單內的設定);可新增、刪除子欄。
  * 清單的列以穩定內部 id 當 React key(`useRowIds`),改 key 不會整列重掛。
  */

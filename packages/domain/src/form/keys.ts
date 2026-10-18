@@ -1,5 +1,5 @@
 /**
- * 表單 key、欄位 key、租戶短碼、欄位類別 key 的格式(Spec 6a §1「key 的格式」)。
+ * 表單 key、欄位 key、租戶短碼、欄位類別 key 的格式。
  *
  * **本檔不 import 任何外部套件**:admin 的租戶開通表單只要 `isValidOrgSlug`,
  * 不該因此把 JSONLogic / decimal / ReDoS 檢查器一起打包進來。

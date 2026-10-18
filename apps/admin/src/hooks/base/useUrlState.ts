@@ -16,11 +16,11 @@ const rawParser = parseAsString.withOptions({ shallow: false });
 export type SetUrlState<T> = (next: T | ((current: T) => T)) => void;
 
 /**
- * 頁面狀態存在網址(規格 10.1;frontend-architecture「頁面狀態放網址」):
+ * 頁面狀態存在網址(REACT-14;`docs/concepts/frontend-architecture.md`「頁面狀態放網址(useUrlState)與頁內分頁(PageTabs)」):
  * 一個 `key` 一包值,`schema` 驗證並以 `.default(…)` 給預設值。
  *
  * - 網址沒有這個 key、或值被改壞(不合 schema、JSON 壞掉、舊格式)→ 回預設值,不報錯;
- *   改壞的那一個 key 以 `replace` 從網址清掉(其他 key 不動),路由頁籤記下的參數跟著清掉(規格 10.1)
+ *   改壞的那一個 key 以 `replace` 從網址清掉(其他 key 不動),路由頁籤記下的參數跟著清掉
  * - 寫回預設值時把 key 從網址拿掉(網址只留跟預設不同的部分)
  * - 寫入用 `replace`:切篩選、換頁不堆瀏覽器上一頁紀錄
  * - 寫入走 react-router 的 navigate(nuqs `shallow: false`):`useLocation` 的讀者(殼、守門)看到的網址

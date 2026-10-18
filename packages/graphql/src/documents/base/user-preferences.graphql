@@ -1,4 +1,4 @@
-# 個人偏好(規格 10.6;api `apps/api/src/user-preferences/`):只讀寫自己的,所有登入者都能用。
+# 個人偏好(`docs/data-model.md` 的 user_preferences;api `apps/api/src/user-preferences/`):只讀寫自己的,所有登入者都能用。
 # settings = { <登記的 key>: 值 };每個登記的 key 都有值(沒存過 = 預設值,語言的預設是 null = 沒有設定)。
 query MyPreferences {
   myPreferences {

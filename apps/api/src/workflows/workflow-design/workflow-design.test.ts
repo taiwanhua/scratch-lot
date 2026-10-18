@@ -77,7 +77,7 @@ function issueCodes(result: IssueResult, key: "code" | "problem"): string[] {
 }
 
 /**
- * 流程設計與綁定(真 Mongo,Spec 6b §3、§5、§7):共用 / 客製、fork、四步發布(與表單共用的生命週期)、
+ * 流程設計與綁定(真 Mongo):共用 / 客製、fork、四步發布(與表單共用的生命週期)、
  * 定義檢查器、綁定時檢查四種來源、綁定唯一性、分派 / 收回 / 退役對進行中實例的影響、送出時檢查。
  */
 describe("流程設計與綁定", () => {

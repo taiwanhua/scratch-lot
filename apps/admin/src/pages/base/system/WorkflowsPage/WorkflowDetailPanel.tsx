@@ -36,7 +36,7 @@ type DetailTab = "design" | "versions";
 type OpenDialog = "fork" | "assign" | null;
 
 /**
- * 流程管理右欄(Spec 6b §8 畫面 2–5 的右側):流程資料、設計 / 版本兩個頁籤,以及改名稱、
+ * 流程管理右欄:流程資料、設計 / 版本兩個頁籤,以及改名稱、
  * 以此為基底建流程(fork)、分派租戶(root)。按鈕一律依 api 的 `workflow.abilities`。
  */
 export const WorkflowDetailPanel = ({

@@ -7,8 +7,8 @@ import type { FormFieldErrorLike } from "@/lib/base/form-engine/form-errors";
 import type { FormDisplayItemLike } from "@/lib/base/form-engine/value-text";
 
 /**
- * widget 登錄表的共同介面(Spec 6a §5:`type` 決定存什麼、`widget.kind` 決定怎麼畫)。
- * widget 收發的一律是**存值形狀**(§5「值的存法」):靜態選項存 value 字串、類別 / lookup 選項存
+ * widget 登錄表的共同介面(`type` 決定存什麼、`widget.kind` 決定怎麼畫)。
+ * widget 收發的一律是**存值形狀**:靜態選項存 value 字串、類別 / lookup 選項存
  * `{ value, label }`、`allowCustom` 自訂值多一個 `custom: true`、引用存 `{ id, label }`、上傳存
  * `{ path, name, size, contentType }`。數字存十進位字串(送出時 api 依 `precision` 取位)。
  */
@@ -57,12 +57,12 @@ export interface WidgetProps {
   /** 明細列唯讀:子欄的顯示名(`displayValues` 裡 `<明細 key>.<子欄 key>` 那一組) */
   columnDisplay?: (columnKey: string) => readonly FormDisplayItemLike[];
   /**
-   * 連動篩選(B2d):被引用欄位此刻的值與標題(引用欄查詢一併送、沒填就停用;明細往子欄傳)。
+   * 連動篩選:被引用欄位此刻的值與標題(引用欄查詢一併送、沒填就停用;明細往子欄傳)。
    * 只列有被引用的欄位;沒有連動篩選的表單不給。
    */
   filterLinks?: FilterLinkValues;
   /**
-   * 列內帶入(B2c):引用欄選定 / 改選一筆時,改呼叫它(連同來源回的欄位值),由明細把引用值與帶入的子欄
+   * 列內帶入:引用欄選定 / 改選一筆時,改呼叫它(連同來源回的欄位值),由明細把引用值與帶入的子欄
    * 一次寫進同一列。不給 = 照常 `onChange`。
    */
   onReferencePick?: (

@@ -51,7 +51,7 @@ const numberOf = (text: string, shape: TypedValueShape): unknown => {
 const textOf = (text: string): string | null => (text === "" ? null : text);
 
 /**
- * 依欄位型別給的**值輸入元件**(Spec 6a §5 表 B 末段:值來源「固定值」、日期上下限、表達式常數、
+ * 依欄位型別給的**值輸入元件**(值來源「固定值」、日期上下限、表達式常數、
  * 預設值共用):文字 / 數字打字、是 / 否下拉、日期 → DatePicker(送當地 00:00 的 ISO)、日期時間 →
  * DateTimePicker(ISO)、單選 / 多選 → 從該欄位的選項挑(`ChoiceValueInput`)。回傳**正確型別**:
  * 是 / 否是布林、多選是陣列、日期是 ISO。只收欄位屬性與 `onChange`,不綁設計器 store。

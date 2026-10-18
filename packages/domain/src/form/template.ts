@@ -4,7 +4,7 @@ import { DEFAULT_TENANT_TIMEZONE, formatTemporal } from "./temporal";
 import type { FieldDef, LookupSourceDescriptor } from "./types";
 
 /**
- * 顯示模板(頁籤 / 標題模板 `forms.tabLabelTemplate`、lookup 來源的 `labelTemplate`;Spec 6a §4、§5)的共用零件:
+ * 顯示模板(頁籤 / 標題模板 `forms.tabLabelTemplate`、lookup 來源的 `labelTemplate`)的共用零件:
  * 佔位符 `{{名稱}}` 的解析與套用、欄位值 → 模板文字的格式化、lookup 模板佔位符對到 provider 的哪個欄位。
  * 前端(頁籤即時算)與後端(`formLookup` 組 label)用同一套,結果一致。
  */
