@@ -1,6 +1,6 @@
 /**
  * 即時通道客戶端(admin 的 `RealtimeConnection`、代理程式的 `RealtimeLink`)共用的時間常數
- * (底座規格第 4 章「四個流程」:換發;「降級」:重連)。
+ * (換發與斷線重連)。
  */
 
 /** 到期前多久在原連線上換發(毫秒)。 */
@@ -15,7 +15,7 @@ export const RECONNECT_BACKOFF_MS: readonly number[] = [
 ];
 
 /**
- * 偵測半開連線(底座規格第 4 章「降級」):連上後每隔這麼久送一次 `REALTIME_PING`(毫秒)。
+ * 偵測半開連線:連上後每隔這麼久送一次 `REALTIME_PING`(毫秒)。
  * 目前只有代理程式的 `RealtimeLink` 採用;admin 不採用的理由見 `apps/admin` 的 `RealtimeConnection`。
  */
 export const REALTIME_PING_INTERVAL_MS = 30_000;

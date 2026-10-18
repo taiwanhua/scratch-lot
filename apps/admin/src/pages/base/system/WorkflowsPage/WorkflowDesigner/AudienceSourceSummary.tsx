@@ -24,7 +24,7 @@ export interface AudienceSourceSummaryProps {
 }
 
 /**
- * 關卡面板的人員條件框(Figma BS-02a / c、BS-03):條件摘要一行白話 + [編輯條件](開 `AudienceConditionDialog`;
+ * 關卡面板的人員條件框:條件摘要一行白話 + [編輯條件](開 `AudienceConditionDialog`;
  * [套用] 才寫回,[取消] 不動)。審核者、知會對象、逾時通知對象共用,標題依 `purpose`。
  * 欄位與組織來源見 `useApproverAudienceSetup`。
  */

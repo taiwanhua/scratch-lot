@@ -24,7 +24,7 @@ export const delegateCandidates: DelegateCandidateFixture[] = [
   { id: "user-wang", name: "王小明", account: "wang" },
 ];
 
-/** 代理清單的夾具(Figma BS-06a:一筆未開始、一筆已結束;時區 Asia/Taipei)。 */
+/** 代理清單的夾具(一筆未開始、一筆已結束;時區 Asia/Taipei)。 */
 export const delegationFixtures = (): UserDelegationFieldsFragment[] => [
   {
     id: "delegation-1",

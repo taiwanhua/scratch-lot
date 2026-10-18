@@ -21,7 +21,7 @@ registerEnumType(UserDelegationStatusEnum, {
   description: "代理狀態:未開始 / 代理中 / 已結束(已結束的唯讀)",
 });
 
-/** 我設定的一筆代理(《底座規格》3.7 B15)。 */
+/** 我設定的一筆代理。 */
 @ObjectType()
 export class UserDelegationModel {
   @Field(() => ID)

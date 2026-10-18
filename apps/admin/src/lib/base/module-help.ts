@@ -23,7 +23,7 @@ export const moduleKeyFromHelpPath = (path: string): string | null => {
 };
 
 /**
- * 去掉開頭那一層 `# 模組名`:彈窗標題已經寫了模組名(Figma Draft/HelpDialog 95:235 的內文
+ * 去掉開頭那一層 `# 模組名`:彈窗標題已經寫了模組名(Figma Draft/HelpDialog 的內文
  * 就是從 `## 這個模組做什麼` 開始),再渲染一次是重複。只拔開頭連續空行後的第一個 `# `,
  * 內文中間的 h1(實務上沒有)保留。
  */

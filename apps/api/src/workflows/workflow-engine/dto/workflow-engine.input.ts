@@ -82,7 +82,7 @@ export class BlockedInstancesInput {
   pageSize?: number;
 }
 
-/** 批次核准一次最多幾筆(底座規格 3.10 B18;前端勾選上限同值)。 */
+/** 批次核准一次最多幾筆(前端勾選上限同值)。 */
 export const BATCH_APPROVE_LIMIT = 50;
 
 /** 審核者一次核准多個任務(每一筆一個交易);只支援核准。 */

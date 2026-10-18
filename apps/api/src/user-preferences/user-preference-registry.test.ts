@@ -19,12 +19,9 @@ describe("個人偏好的登記", () => {
 
   it("專案可以追加 key", () => {
     const registry = composeUserPreferences(BASE_USER_PREFERENCES, [
-      { key: "lotteryView", type: "boolean", defaultValue: false },
+      { key: "demoView", type: "boolean", defaultValue: false },
     ]);
-    expect([...registry.keys()]).toEqual([
-      LOCALE_PREFERENCE_KEY,
-      "lotteryView",
-    ]);
+    expect([...registry.keys()]).toEqual([LOCALE_PREFERENCE_KEY, "demoView"]);
   });
 
   it("專案與底座的 key 重複 → 起不來", () => {
@@ -107,17 +104,14 @@ describe("個人偏好的登記", () => {
 
   it("推導出的登記(通知管道開關)與手寫登記一起驗:撞 key 也起不來", () => {
     const derived = [
-      { key: "lotteryView", type: "boolean", defaultValue: true },
+      { key: "demoView", type: "boolean", defaultValue: true },
     ] as const;
     const registry = composeUserPreferences(BASE_USER_PREFERENCES, [], derived);
-    expect([...registry.keys()]).toEqual([
-      LOCALE_PREFERENCE_KEY,
-      "lotteryView",
-    ]);
+    expect([...registry.keys()]).toEqual([LOCALE_PREFERENCE_KEY, "demoView"]);
     expect(() =>
       composeUserPreferences(
         BASE_USER_PREFERENCES,
-        [{ key: "lotteryView", type: "boolean", defaultValue: false }],
+        [{ key: "demoView", type: "boolean", defaultValue: false }],
         derived,
       ),
     ).toThrow(UserPreferenceRegistryError);

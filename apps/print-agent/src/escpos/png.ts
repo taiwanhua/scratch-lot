@@ -8,7 +8,7 @@ import {
 import type { MonoBitmap } from "./commands";
 
 /**
- * PNG → 單色點陣。用純 JavaScript 的 `pngjs`(不含原生模組,打包單一執行檔才簡單;底座規格第 6 章)。
+ * PNG → 單色點陣。用純 JavaScript 的 `pngjs`(不含原生模組,打包單一執行檔才簡單)。
  * 瀏覽器已轉成黑白,這裡只做保險的門檻判斷:透明當白底,亮度 < 128 為黑點。
  */
 export class PrintImageError extends Error {

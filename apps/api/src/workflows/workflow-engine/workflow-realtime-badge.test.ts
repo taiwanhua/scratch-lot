@@ -31,7 +31,7 @@ import { WorkflowEngineService } from "./workflow-engine.service";
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 /**
- * 流程任務的側欄計數信號(底座規格 10.4 的表格):任務建立 / 結束 / 改派時,交易提交後對相關審核者送
+ * 流程任務的側欄計數信號:任務建立 / 結束 / 改派時,交易提交後對相關審核者送
  * `badge:apply-center`,一次 `/publish` 帶多個 `user:` 頻道;交易回復不送。`badge:*` 不合併,每次都送。
  * 即時通道在測試裡是停用的(記錄用 adapter),這裡攔它的 `send`。
  */

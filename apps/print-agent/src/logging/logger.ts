@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 
 /**
- * 代理程式的紀錄(底座規格第 6 章「代理程式」):**每天一個 log 檔、保留 14 天**。
+ * 代理程式的紀錄:**每天一個 log 檔、保留 14 天**。
  * 檔名 `print-agent-YYYY-MM-DD.log`(本機日期);換日(與啟動)時刪掉超過保留天數的檔。
  * 量很小(每張工作幾行),同步寫入即可;絕不寫入代理程式金鑰。
  */

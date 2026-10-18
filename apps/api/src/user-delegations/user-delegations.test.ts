@@ -125,7 +125,7 @@ function rejection(result: GraphQLResult): {
 }
 
 /**
- * 代理設定(《底座規格》3.7 B15「誰能設定」與情況表;真 Mongo):只讀寫自己的、所有登入者都能用。
+ * 代理設定(「誰能設定」與情境表;真 Mongo):只讀寫自己的、所有登入者都能用。
  * 租戶「店家」下兩個分店的人都算本租戶;另一個租戶的人不能當代理人。
  */
 describe("代理設定(myDelegations / createMyDelegation …)", () => {

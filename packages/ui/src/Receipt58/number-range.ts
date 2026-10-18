@@ -8,7 +8,7 @@ export interface NumberRangeFormat {
 }
 
 /**
- * 把一串號碼寫成區段:連號以 `~` 連起來,不連號以分隔字隔開(Figma `Draft/Receipt58Range` 80:1509)。
+ * 把一串號碼寫成區段:連號以 `~` 連起來,不連號以分隔字隔開(Figma `Draft/Receipt58Range`)。
  * 重複的號碼只算一次,順序不拘。例:`[12, 13, 14, 15, 16, 20]` + `{ prefix: "#", digits: 3 }`
  * → `#012~016、#020`。
  */

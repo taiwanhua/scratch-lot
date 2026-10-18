@@ -230,7 +230,7 @@ function validateColumn(
 }
 
 /**
- * 列內帶入(《底座規格》3.2 B2c;與表單層帶入規則共用一列的檢查 `checkPrefillEntry`):目標是同一明細的其他子欄、
+ * 列內帶入(與表單層帶入規則共用一列的檢查 `checkPrefillEntry`):目標是同一明細的其他子欄、
  * 只能使用者填且不是引用子欄;來源欄位要在子欄來源的可回欄位內、型別相容(`isPrefillCompatible`)。
  */
 function validateColumnPrefill(

@@ -21,11 +21,11 @@ const XS = 0;
 const XL = 1536;
 
 /**
- * T48:流程管理頁原本宣告內容區最小寬度 `xl`,1440 / 1280 寬時 `<main>` 水平溢出。
+ * 流程管理頁原本宣告內容區最小寬度 `xl`,1440 / 1280 寬時 `<main>` 水平溢出。
  * 改成沿用殼層 `lg`(`ShellLayout.test.tsx` 守),設計器在 `xl` 以下收窄屬性面板
  * (與表單設計器共用 `pages/base/system/designer-layout.ts`)。實際寬度以 mock 模式量測為準。
  */
-describe("流程管理:設計器的響應式版面(T48)", () => {
+describe("流程管理:設計器的響應式版面", () => {
   it("屬性面板 xl 以下收窄(300)、xl 起 360", async () => {
     renderWorkflows();
     await findCanvas();

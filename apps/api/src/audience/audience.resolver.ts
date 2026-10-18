@@ -6,7 +6,7 @@ import { RoleMatrixService } from "../roles/role-matrix.service";
 import { AudiencePermissionOptionsPayload } from "./models/audience-permission-options.model";
 
 /**
- * 人員條件的 GraphQL 端點(《底座規格》3.0)。
+ * 人員條件的 GraphQL 端點。
  *
  * `audiencePermissionOptions` 沒有掛 `@RequirePermission`:它在資料範圍、流程設計、通知設定
  * 等多個使用處共用,而回傳的樹已是「操作者自己持有的」那一份(權限矩陣顯示樹 = 全樹 ∩ 有效權限集,

@@ -29,7 +29,7 @@ export interface AgentStatusTagProps {
   agent: Pick<PrintAgentFieldsFragment, "enabled" | "paired" | "online">;
 }
 
-/** 代理程式分頁「狀態」欄(Figma BS-19:已連線 / 離線)。 */
+/** 代理程式分頁「狀態」欄(已連線 / 離線)。 */
 export const AgentStatusTag = ({ agent }: AgentStatusTagProps) => {
   const t = useTranslations("admin.printers.agentStatus");
   const status = displayStatusOf(agent);

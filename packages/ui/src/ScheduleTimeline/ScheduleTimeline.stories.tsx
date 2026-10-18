@@ -128,7 +128,7 @@ const meta = {
     getMoreTone: moreTone,
     emptyHint: "+ 人力需求",
     containerSx: { height: 560 },
-    "aria-label": "班表時間軸",
+    "aria-label": "排程時間軸",
   },
 } satisfies Meta<typeof ScheduleTimeline>;
 

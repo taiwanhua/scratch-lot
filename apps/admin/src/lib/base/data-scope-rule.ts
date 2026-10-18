@@ -90,8 +90,8 @@ export type GroupDraft = ConditionTreeGroup<ConditionDraft>;
 export type NodeDraft = ConditionTreeNode<ConditionDraft>;
 
 /**
- * 套用對象(人員條件)可用的欄位:使用者 / 角色 / 所屬組織 / 權限全開,所屬組織只能指定組織
- * (《底座規格》3.0「組織來源依使用處」)。編輯器狀態與 JSON 互轉在 `audience-draft.ts`。
+ * 套用對象(人員條件)可用的欄位:使用者 / 角色 / 所屬組織 / 權限全開,所屬組織只能指定組織。
+ * 編輯器狀態與 JSON 互轉在 `audience-draft.ts`。
  */
 export const DATA_SCOPE_AUDIENCE_FIELDS: readonly AudienceField[] =
   AUDIENCE_FIELDS;

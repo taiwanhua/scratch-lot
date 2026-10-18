@@ -137,7 +137,7 @@ export function samplePrinter(
 }
 
 /**
- * 假 API:照 T33 的認領語意 —— 只有「等待中」的工作能認領(條件更新),第二次認領一律 409(這裡回 null)。
+ * 假 API:照 api 的認領語意 —— 只有「等待中」的工作能認領(條件更新),第二次認領一律 409(這裡回 null)。
  */
 export class FakeAgentApi implements AgentApi {
   readonly printers: PrintAgentPrinter[] = [samplePrinter()];

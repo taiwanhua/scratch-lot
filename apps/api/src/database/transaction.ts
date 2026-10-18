@@ -18,7 +18,7 @@ mongoose.set("transactionAsyncLocalStorage", true);
  *
  * 由這裡自己計時,**不交給 driver 的 `withTransaction({ timeoutMS })`**:mongodb 7.x 會把交易的
  * `timeoutMS` 套到交易內每個操作,游標的 getMore 也被加上 `maxTimeMS`,server 拒絕
- * (non-awaitData cursor 不能帶),交易內讀超過一批(101 筆)就失敗(T50)。
+ * (non-awaitData cursor 不能帶),交易內讀超過一批(101 筆)就失敗。
  * 連線字串與 MongoClient 也不要設 `timeoutMS`:session 會繼承它,交易又會啟用同一套逾時。
  * 每次嘗試開始前、`fn` 結束後(提交前)各檢查一次,超過就拋 `TransactionTimeoutError` 讓 driver 回復;
  * 單一操作卡住時由伺服器的 `transactionLifetimeLimitSeconds` 中止交易,之後的重試再被這裡擋下。

@@ -38,7 +38,7 @@ const STATUSES: readonly PrintJobStatus[] = [
 const PRINTER_OPTIONS_INPUT = { pageSize: 100 } as const;
 
 /**
- * 列印紀錄分頁(Figma BS-20 289:92768):新到舊;篩選印表機 / 結果。
+ * 列印紀錄分頁:新到舊;篩選印表機 / 結果。
  * 時間、單據、印表機、次數(補印標「補印」)、結果(失敗附原因)、操作者。
  */
 export const PrintJobsTab = () => {

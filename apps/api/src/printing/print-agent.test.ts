@@ -37,7 +37,7 @@ import {
 } from "./test-support/printing-fixtures";
 
 /**
- * 代理程式端(底座規格第 6 章「配對」「代理程式」「離線、逾時、重新配對與停用」):
+ * 代理程式端:
  * 配對碼換金鑰、認領(信號與輪詢競爭)、分店隔離、撤銷即時失效、離線與逾時。
  */
 describe("列印代理程式 API", () => {
@@ -567,7 +567,7 @@ describe("列印代理程式 API", () => {
     });
   });
 
-  describe("列印通知(底座規格第 5 章:printing.job-failed / printing.agent-offline)", () => {
+  describe("列印通知(printing.job-failed / printing.agent-offline)", () => {
     let own: { agent: AgentRow; key: string };
     let printer: PrinterRow;
 

@@ -12,8 +12,8 @@ import type {
 } from "./schedule-timeline-types";
 
 /**
- * stories 的示範資料(不是元件):照 Figma BS-22 示範卡 289:66462 的班表(11/1 起一週,週日開頭)。
- * 模組端的「班表」說法只在示範資料裡出現,元件本身不知道排班。
+ * stories 的示範資料(不是元件):照 Figma 的人員排程(11/1 起一週,週日開頭)。
+ * 模組端的「人員排程」說法只在示範資料裡出現,元件本身不知道排程。
  */
 
 export const WEEK = [
@@ -58,7 +58,7 @@ export const autoMark: ReactNode = createElement(
   "✦",
 );
 
-/** 「×2」徽章(示範:同一筆排班顧兩台)。 */
+/** 「×2」徽章(示範:同一筆排程顧兩台)。 */
 export const doubleBadge: ReactNode = createElement(
   Box,
   {

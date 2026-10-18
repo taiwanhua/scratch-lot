@@ -1,5 +1,5 @@
 /**
- * 時間軸的版面尺寸(px)。來源:Figma BS-22 ScheduleTimeline 示範卡 289:66462 與規則頁 401:805;
+ * 時間軸的版面尺寸(px)。來源:Figma ScheduleTimeline 示範卡與規則頁;
  * 只有本元件用到,依 STYLE-06 直寫在這裡。
  */
 

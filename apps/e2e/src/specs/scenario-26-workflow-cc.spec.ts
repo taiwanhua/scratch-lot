@@ -43,7 +43,7 @@ function sorted(...bodies: string[]): string[] {
 
 /**
  * 劇本 26 — 知會
- * 正本:`docs/testing/permission-scenarios.md`「劇本 26」;規則見《底座規格》3.9 B17。
+ * 正本:`docs/testing/permission-scenarios.md`「劇本 26」;規則見 `docs/concepts/workflow-engine.md`「逾時提醒與知會」。
  * 用哪一頁:申請中心詳情頁(主管審核)、頂端列的通知鈴(知會對象)、申請中心詳情頁(知會對象唯讀)。
  * 前置(走 api):客製流程「主管審核(南港主管;關卡知會 = 關卡知會人)→ 分店覆核(副理;申請人屬於南港店含下層就跳過;
  * 關卡知會 = 關卡知會人)」,整個流程的知會 = 流程知會人;並綁定。

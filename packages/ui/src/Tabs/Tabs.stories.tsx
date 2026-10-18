@@ -40,7 +40,7 @@ export const WithDisabled: Story = {
 export const NoneSelected: Story = { args: { value: "gone" } };
 
 /**
- * Figma BS-15b `260:68369`:放不下時單列橫向捲動,還有頁籤的那一側顯示漸層 + ‹ / ›;
+ * 放不下時單列橫向捲動,還有頁籤的那一側顯示漸層 + ‹ / ›;
  * 選中的頁籤(`修訂紀錄`)一開始就捲進可視範圍。外框模擬窄卡片。
  */
 export const Scrollable: Story = {

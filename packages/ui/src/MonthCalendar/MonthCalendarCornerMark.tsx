@@ -16,7 +16,7 @@ const cornerPosition = (theme: Theme) => ({
   right: { xs: theme.spacing(0.5), md: theme.spacing(1) },
 });
 
-/** 日期格右上角的角標:小圓點或 error badge(Figma BS-23 260:6356 的角標示範)。 */
+/** 日期格右上角的角標:小圓點或 error badge(Figma 的角標示範)。 */
 export const MonthCalendarCornerMark = ({
   corner,
 }: MonthCalendarCornerMarkProps) =>

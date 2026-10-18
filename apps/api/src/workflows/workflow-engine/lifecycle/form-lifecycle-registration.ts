@@ -8,7 +8,7 @@ import type { OperatorContext } from "../../../database/operator-context";
 import type { NotifyInput } from "../../../notifications/notification.service";
 
 /**
- * 表單 / 流程的生命週期掛接點(底座規格 3.1 B1;現況說明 `docs/concepts/workflow-engine.md`「掛接點」)。
+ * 表單 / 流程的生命週期掛接點(現況說明 `docs/concepts/workflow-engine.md`「掛接點」)。
  *
  * 專案在固定入口 `src/project/form-lifecycles.ts` 列出 `registerFormLifecycle({...})`(STRUCT-12 的靜態清單,
  * 同 `project/lookup-providers.ts`);清單只由 `database/database.module.ts` 經 `composeFormLifecycles`

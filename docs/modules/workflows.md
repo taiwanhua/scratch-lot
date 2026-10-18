@@ -192,7 +192,7 @@
 - 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(B5 自動記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
 - 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
 - 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
-- admin 時間軸(`ApprovalTimeline`)依 `history[].reason` 顯示 `admin.approval.timeline.reasons.*`。設計器的關卡面板見 #61(T46)。
+- admin 時間軸(`ApprovalTimeline`)依 `history[].reason` 顯示 `admin.approval.timeline.reasons.*`。設計器的關卡面板見下方 admin 的「屬性面板」。
 
 **錯誤碼**(檢查器;發布擋):
 
@@ -207,7 +207,7 @@
 
 ## 代理人
 
-《底座規格》3.7 B15;現況說明見 `docs/concepts/workflow-engine.md`「代理人」。
+現況說明見 `docs/concepts/workflow-engine.md`「代理人」。
 
 **資料**:`user_delegations { userId, delegateUserId, startAt, endAt, note }`(+ 基礎欄位;索引 `(userId, startAt)`;屬帳號、不掛 tenantScope)。迄不含(結束日 24:00)。
 
@@ -235,7 +235,7 @@
 
 ## 逾時提醒與知會
 
-《底座規格》3.8 B16、3.9 B17;現況說明見 `docs/concepts/workflow-engine.md`「逾時提醒與知會」。
+現況說明見 `docs/concepts/workflow-engine.md`「逾時提醒與知會」。
 
 **定義**(`@repo/domain/workflow`;關卡的兩個屬性在 `workflow_versions.steps[]` 的 JSON,整個流程的知會存版本的 `cc` 欄位):
 
@@ -392,7 +392,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回,以及四個區塊(Figma BS-03;`StepSkipSection` / `StepAutoApproveSection` / `StepOverdueSection` / `PeopleCcSection`):
   - **跳過這一關(符合任一項就跳過)**:☑ 申請人屬於這些組織(`skipOrgs`;勾了預設「最上層組織」= `SKIP_ORG_TENANT`、不含下層;客製流程另有「指定組織」`OrgTreeSelect`;共用流程不給組織樹、最上層組織固定勾著)+ 包含下層;☑ 符合條件(`skipWhen`,原本單獨的「跳過條件」欄位搬進來,表單引擎的結構化表達式選擇器;既有公式載入後就是勾著)。取消勾選清掉那一項;「符合條件」勾了但沒設公式不存東西。
   - **自動通過**:「申請人是這一關的審核者時」「審核者已在前面的關卡核准過時」各一組 照常審核(預設)/ 自動通過;兩項都照常 = 存 `null`。
-  - **逾時提醒**:開關預設關閉;開啟帶入 N = 24、M = 48、通知對象 `DEFAULT_OVERDUE_AUDIENCE`。N、M 是時數欄,通知對象是人員條件摘要 + [編輯條件](同審核者的對話框)。`OVERDUE_INVALID` → 時數欄標紅並說明,設計器擋下不讓存(api 存草稿照收、發布擋)。
+  - **逾時提醒**:開關預設關閉;開啟帶入 N = 24、M = 48、通知對象 `DEFAULT_OVERDUE_AUDIENCE`。N、M 是時數欄,通知對象是人員條件摘要 + 「編輯條件」(同審核者的對話框)。`OVERDUE_INVALID` → 時數欄標紅並說明,設計器擋下不讓存(api 存草稿照收、發布擋)。
   - **知會**:知會對象來源下拉(不知會(預設)/ 人員條件 / 表單欄位 / 主管,與審核者同一個 `AssigneeSourcePicker`,`purpose` 換標題與說明),說明「這一關通過或被跳過時通知;要知道最後結果請加進整個流程的知會對象」。
   - 審核者、知會對象、逾時通知對象共用 `AssigneeSourcePicker` / `AudienceSourceSummary` / `AudienceConditionDialog`,標題依用途(`PeoplePurpose`:`approver` / `cc` / `overdue`,文案 `admin.workflows.assignee.purposes.<用途>`)。
 - **整個流程**(`FlowSettingsPanel.tsx`):屬性面板沒選關卡時(點流程圖空白處)顯示 —— 整個流程的知會對象(`definition.cc`,同上的來源下拉),說明「單據完成、被駁回或被作廢時通知;各關的知會對象只在那一關通過或被跳過時收到」。它不在段落串裡,由 `useFlowDesignerState` 另存,一起算進「未存的變更」(`definitionFingerprint` 含 `cc`)。檢查結果裡整個流程的知會對象那幾筆(沒有 `stepKey`、`property` 以 `cc` 開頭)點了就取消選取、回到這裡。選了關卡或匯合節點時,屬性面板頂端有「回到整個流程設定」(`BackToFlowButton.tsx`,一般按鈕、鍵盤可達),點了取消選取、回到這裡;唯讀檢視同樣有。

@@ -15,7 +15,7 @@ import {
 } from "./notification-settings-test-support";
 
 /**
- * 通知設定頁(《底座規格》第 5 章「通知設定頁」;Figma BS-09a / BS-09b):
+ * 通知設定頁:
  * 清單、唯讀、編輯收件人、還原預設、網址上的編輯彈窗、錯誤標回條件列、類型名稱的語系。
  */
 describe("通知設定頁", () => {
@@ -27,7 +27,7 @@ describe("通知設定頁", () => {
     expect(within(agentRow).getByText("觸發事件的組織含上層")).toBeVisible();
     expect(within(agentRow).getByText(/權限 持有/)).toBeVisible();
     expect(within(agentRow).getByText("預設")).toBeVisible();
-    expect(within(rowOf("盤點提醒")).getByText("最上層組織")).toBeVisible();
+    expect(within(rowOf("到期提醒")).getByText("最上層組織")).toBeVisible();
     expect(screen.getByText("共 2 筆,每頁 20 筆")).toBeVisible();
   });
 
@@ -37,14 +37,14 @@ describe("通知設定頁", () => {
 
     await user.type(
       screen.getByRole("textbox", { name: "搜尋通知類型" }),
-      "盤點",
+      "到期",
     );
 
     await waitFor(() => {
       expect(within(table()).queryByText("列印代理程式離線")).toBeNull();
     });
-    expect(within(table()).getByText("盤點提醒")).toBeVisible();
-    expect(decodeURIComponent(globalThis.location.search)).toContain("盤點");
+    expect(within(table()).getByText("到期提醒")).toBeVisible();
+    expect(decodeURIComponent(globalThis.location.search)).toContain("到期");
   });
 
   it("編輯收件人:對話框說明組織範圍、不能選所有人、沒有所屬組織欄;儲存後清單顯示新條件", async () => {
@@ -230,7 +230,7 @@ describe("通知設定頁", () => {
       await within(englishTable).findByText("Print agent offline"),
     ).toBeVisible();
     // 專案類型沒有英文文案 → 顯示登記的名稱
-    expect(within(englishTable).getByText("盤點提醒")).toBeVisible();
+    expect(within(englishTable).getByText("到期提醒")).toBeVisible();
     expect(
       within(englishTable).getByText(
         "Organization of the event and its parents",

@@ -16,7 +16,7 @@ import type { Logger } from "../logging/logger";
 import { type Timers, sleep, systemTimers } from "../timers";
 
 /**
- * 佇列(底座規格第 6 章 `job-runner`):**同一台印表機一次一張、依序印**;不同印表機互不等待。
+ * 佇列(`job-runner`):**同一台印表機一次一張、依序印**;不同印表機互不等待。
  * 進來的工作都已經認領成功(等待中 → 已送出),這裡只負責:拿圖片 → ESC/POS → 送出 → 回報結果。
  * 心跳查印表機狀態:佇列空著才排進去查(不在列印中途插進另一條連線);佇列忙就直接用上次的狀態,
  * 心跳不會被一張卡住的單據拖住。

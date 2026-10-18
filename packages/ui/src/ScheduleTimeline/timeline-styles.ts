@@ -7,8 +7,8 @@ import type {
 } from "./schedule-timeline-types";
 
 /**
- * 時間軸各元素共用的樣式片段(Figma Draft/ScheduleTimelineBlock 259:4770、
- * Draft/ScheduleTimelineDemand 286:77949、Draft/ScheduleTimelineMore 408:8012)。
+ * 時間軸各元素共用的樣式片段(Figma Draft/ScheduleTimelineBlock、
+ * Draft/ScheduleTimelineDemand、Draft/ScheduleTimelineMore)。
  */
 
 /** 長條 / 缺額空位的色系:底 lighter、左框 / 虛線框 main、字 darker(primary 字用一般文字色)。 */

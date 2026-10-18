@@ -14,7 +14,7 @@ import type {
 /** 收合後那一個窄欄的 key 前綴(不會和日期 `YYYY-MM-DD` 或模組的欄位 key 撞名)。 */
 export const COLLAPSED_GROUP_KEY_PREFIX = "roster-group:";
 
-/** 日期欄預設寬度(Figma Draft/RosterGrid 366:7960 的日期欄 128) */
+/** 日期欄預設寬度(Figma Draft/RosterGrid 的日期欄 128) */
 export const DEFAULT_DATE_COLUMN_WIDTH = 128;
 /**
  * 停用日(店休)整欄的停用色:`action.disabledBackground` 是半透明,當成圖層疊在原底色上,
@@ -112,7 +112,7 @@ const applyGroups = <Person>(
   });
 
 /**
- * 把班表的三段欄位組成 `DataTable` 的欄位:左固定(人員)→ 日期(中間捲動)→ 右固定(統計)。
+ * 把人員排程的三段欄位組成 `DataTable` 的欄位:左固定(人員)→ 日期(中間捲動)→ 右固定(統計)。
  * 固定方向由所在段決定,模組不必自己標 `pinned`。純函式,每次 render 重算。
  */
 export const buildRosterColumns = <Person extends RowData>({

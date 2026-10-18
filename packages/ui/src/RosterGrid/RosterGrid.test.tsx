@@ -35,7 +35,7 @@ const renderRoster = (props: Partial<RosterGridProps<DemoStaff>> = {}) =>
       trailingColumns={statColumns}
       renderCell={({ person, date }) => `${person.name}@${date}`}
       formatCellLabel={(person, date) => `${person.name} ${date}`}
-      aria-label="班表"
+      aria-label="人員排程"
       {...props}
     />,
   );

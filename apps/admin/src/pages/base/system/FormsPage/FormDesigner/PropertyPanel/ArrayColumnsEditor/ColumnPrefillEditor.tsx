@@ -26,7 +26,7 @@ export interface ColumnPrefillEditorProps {
 const UNSET = "";
 
 /**
- * 明細引用子欄的列內帶入(《底座規格》3.2 B2c):沿用表單層帶入規則的對應表(`PrefillEditor`)——
+ * 明細引用子欄的列內帶入:沿用表單層帶入規則的對應表(`PrefillEditor`)——
  * 每列「本列子欄位 ← 來源欄位」;子欄位只列同一列使用者填、不是引用的,來源欄位只列型別相容的
  * (`isPrefillCompatible`,與檢查器同一支)。選定 / 改選時覆蓋同列目標,之後可手動改;伺服器不強制。
  */

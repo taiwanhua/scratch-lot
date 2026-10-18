@@ -43,7 +43,7 @@ const CREATABLE_OF: Record<PrintersTabValue, Creatable | null> = {
 };
 
 /**
- * 印表機管理(`system.printers`;底座規格第 6 章「印表機管理頁」,正本 docs/modules/printers.md「admin 頁面」):
+ * 印表機管理(`system.printers`,正本 docs/modules/printers.md「admin 頁面」):
  * 版面沿用申請中心的卡片 —— 頁內分頁(印表機 | 代理程式 | 列印紀錄)+ 右上新增按鈕 + 篩選 + 表格 + 頁碼。
  *
  * 右上按鈕跟著分頁換:印表機分頁 [新增印表機]、代理程式分頁 [新增代理程式](都要 `create`);

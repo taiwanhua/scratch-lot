@@ -21,7 +21,7 @@ export interface AudienceConditionRowProps {
 }
 
 /**
- * 人員條件的一條條件列(Figma `Draft/AudiencePicker` 45:248):欄位 → 條件 → 值 → (所屬組織)範圍 → 刪除。
+ * 人員條件的一條條件列(Figma `Draft/AudiencePicker`):欄位 → 條件 → 值 → (所屬組織)範圍 → 刪除。
  * 比較方式只有一種:「屬於」(權限欄顯示「持有」);換欄位就整條重建,不留上一個欄位的值。
  */
 export const AudienceConditionRow = ({

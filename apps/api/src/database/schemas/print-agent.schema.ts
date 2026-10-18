@@ -13,7 +13,7 @@ export const PRINT_AGENTS_COLLECTION = "print_agents";
 export const PRINTERS_MODULE_KEY = "system.printers";
 
 /**
- * 店內代理程式(底座規格第 6 章「配對」;docs/modules/printers.md):裝在分店電腦上,
+ * 店內代理程式(docs/modules/printers.md):裝在分店電腦上,
  * 主動向 API 拿列印工作。一家店通常一個;它只能領自己分店(`orgId`)印表機的工作。
  *
  * 金鑰與配對碼都**只存雜湊**(SHA-256;兩者都是高熵亂數,不需要慢雜湊):

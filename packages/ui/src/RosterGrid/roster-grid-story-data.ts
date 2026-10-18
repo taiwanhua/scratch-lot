@@ -1,6 +1,6 @@
 import type { RosterDate } from "./roster-grid-types";
 
-/** stories 與測試共用的假資料(班表示範:人 × 日期)。 */
+/** stories 與測試共用的假資料(人員排程示範:人 × 日期)。 */
 export interface DemoStaff {
   id: string;
   name: string;
@@ -50,6 +50,6 @@ export const demoStaff = (count: number): DemoStaff[] =>
     shifts: 15 + (index % 4),
   }));
 
-/** 有沒有排班:依人員與日期決定(穩定的假資料;店休日沒有)。 */
+/** 有沒有排程:依人員與日期決定(穩定的假資料;店休日沒有)。 */
 export const hasDemoShift = (staffIndex: number, day: number) =>
   !DEMO_CLOSED_DAYS.includes(day) && (staffIndex * 3 + day) % 4 !== 0;

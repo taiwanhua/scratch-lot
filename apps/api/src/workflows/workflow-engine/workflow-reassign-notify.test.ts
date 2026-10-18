@@ -84,7 +84,7 @@ interface RawHistoryEvent {
 }
 
 /**
- * 改派通知新承辦人(底座規格第 5 章 `workflow.task-created`;真 Mongo):改派不換 `taskKey`,
+ * 改派通知新承辦人(`workflow.task-created`;真 Mongo):改派不換 `taskKey`,
  * 推進以「任務 + 承辦人」的 `task_created` 標記判斷是否已通知 → 改派後的承辦人收一則「待你審核」,
  * 原承辦人不另外通知。改派的寫入只有 `reassignTask`(阻擋清單的處置);下面依觸發情境各一條。
  */

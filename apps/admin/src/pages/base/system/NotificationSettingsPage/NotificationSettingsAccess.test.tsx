@@ -76,10 +76,10 @@ describe("通知設定頁:唯讀與編輯網址", () => {
   });
 
   it("網址帶 ?edit=<類型> 重新整理 → 直接打開那一種類型的編輯彈窗", async () => {
-    renderPage({ search: "?edit=lottery.stocktake-reminder" });
+    renderPage({ search: "?edit=demo.expiry-reminder" });
 
     expect(
-      await screen.findByRole("dialog", { name: "編輯收件人:盤點提醒" }),
+      await screen.findByRole("dialog", { name: "編輯收件人:到期提醒" }),
     ).toBeVisible();
   });
 

@@ -20,7 +20,7 @@ const DEFAULT_SIZE = 160;
 /** QR 規範要求的四個模組安靜區(白邊;紙張本身是白底,只留位置不畫)。 */
 const QUIET_ZONE = 4;
 
-/** 單據底部的 QR code(Figma `Draft/Receipt58QR` 80:1517)。 */
+/** 單據底部的 QR code(Figma `Draft/Receipt58QR`)。 */
 export const Receipt58Qr = ({
   value,
   caption,

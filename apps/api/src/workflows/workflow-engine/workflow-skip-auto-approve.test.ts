@@ -99,7 +99,7 @@ function eventsOf(instance: RawInstance, kind: string): RawEvent[] {
 }
 
 /**
- * 每一關指定組織跳過(B4)與自動通過(B5)(《底座規格》3.4、3.5;真 Mongo):
+ * 每一關指定組織跳過(B4)與自動通過(B5)(真 Mongo):
  * 申請人在「台北店 → 廚房部」(租戶「流程租戶」底下);staff 都在租戶頂層。
  */
 describe("每一關指定組織跳過與自動通過", () => {

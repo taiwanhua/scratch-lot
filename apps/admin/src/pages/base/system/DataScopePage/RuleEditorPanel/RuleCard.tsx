@@ -29,7 +29,7 @@ export interface RuleCardProps {
 }
 
 /**
- * 一條規則(Figma `Draft/DataScopeRuleCard` 46:156,BS-01 289:82815):上下兩塊 ——
+ * 一條規則(Figma `Draft/DataScopeRuleCard`):上下兩塊 ——
  * 「套用對象」(AudiencePicker:這條規則套用到誰,選所有人時條件樹收起)與
  * 「條件組合」(套用到的人看得到哪些資料)。兩棵樹共用 `ConditionGroup`,根層下拉都叫「組合」。
  * 條件組合的根就是 api 的 `filter`,所以 `childPath` 從空陣列開始。

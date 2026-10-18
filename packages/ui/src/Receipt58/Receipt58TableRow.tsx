@@ -21,7 +21,7 @@ export interface Receipt58TableRowProps {
   kind?: "head" | "body";
 }
 
-/** 表格列(Figma `Draft/Receipt58TableRow` 80:1508);欄內太長自動換行。 */
+/** 表格列(Figma `Draft/Receipt58TableRow`);欄內太長自動換行。 */
 export const Receipt58TableRow = ({
   cells,
   kind = "body",

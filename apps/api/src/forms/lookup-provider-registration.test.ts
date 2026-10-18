@@ -37,27 +37,27 @@ function fakeRepository(collectionName: string): unknown {
   return repository;
 }
 
-class GamesRepository {}
+class ItemsRepository {}
 class ShopsRepository {}
 
-const REPOSITORIES = new Map<typeof GamesRepository, unknown>([
-  [GamesRepository, fakeRepository("lottery_games")],
-  [ShopsRepository, fakeRepository("lottery_shops")],
+const REPOSITORIES = new Map<typeof ItemsRepository, unknown>([
+  [ItemsRepository, fakeRepository("demo_items")],
+  [ShopsRepository, fakeRepository("demo_shops")],
 ]);
 
 const registration = (
   key: string,
   overrides: Partial<ProjectLookupDeclaration> = {},
-  repositoryToken: LookupProviderRegistration["repositoryToken"] = GamesRepository,
+  repositoryToken: LookupProviderRegistration["repositoryToken"] = ItemsRepository,
 ): LookupProviderRegistration => ({
   declaration: {
     key,
-    name: "遊戲",
+    name: "項目",
     permission: null,
     fields: {
       name: { type: "text" },
       code: { type: "text" },
-      bookAmount: { type: "number" },
+      quantity: { type: "number" },
     },
     filterFields: ["enabled"],
     labelField: "name",
@@ -68,22 +68,22 @@ const registration = (
 
 const resolve = (registrations: LookupProviderRegistration[]) =>
   resolveLookupRegistrations(registrations, BASE_KEYS, (token) =>
-    REPOSITORIES.get(token as typeof GamesRepository),
+    REPOSITORIES.get(token as typeof ItemsRepository),
   );
 
 describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () => {
   it("合法的登記依 key 收集", () => {
     const resolved = resolve([
-      registration("lottery_game"),
-      registration("lottery_shop", {}, ShopsRepository),
+      registration("demo_item"),
+      registration("demo_shop", {}, ShopsRepository),
     ]);
-    expect([...resolved.keys()]).toEqual(["lottery_game", "lottery_shop"]);
+    expect([...resolved.keys()]).toEqual(["demo_item", "demo_shop"]);
   });
 
   it("同 key 登記兩次 → 拒絕", () => {
     expect(() =>
-      resolve([registration("lottery_game"), registration("lottery_game")]),
-    ).toThrow(/lookup 來源 lottery_game:重複登記/);
+      resolve([registration("demo_item"), registration("demo_item")]),
+    ).toThrow(/lookup 來源 demo_item:重複登記/);
   });
 
   it("專案來源拿底座的 key → 拒絕", () => {
@@ -92,7 +92,7 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
     );
   });
 
-  it.each(["game", "Lottery_game", "lottery-game", "lottery_", "_game"])(
+  it.each(["item", "Demo_item", "demo-item", "demo_", "_item"])(
     "沒有專案前綴或格式不合的 key「%s」→ 拒絕",
     (key) => {
       expect(() => resolve([registration(key)])).toThrow(
@@ -101,18 +101,18 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
     },
   );
 
-  it("key 的前綴與資料表名第一段不同 → 拒絕(lottery_games 只能登記 lottery_…)", () => {
-    expect(() => resolve([registration("shop_game")])).toThrow(
-      /key 的前綴必須與資料表 lottery_games 的第一段相同/,
+  it("key 的前綴與資料表名第一段不同 → 拒絕(demo_items 只能登記 demo_…)", () => {
+    expect(() => resolve([registration("shop_item")])).toThrow(
+      /key 的前綴必須與資料表 demo_items 的第一段相同/,
     );
   });
 
   it("repositoryToken 指到的不是 BaseRepository → 拒絕", () => {
     expect(() =>
       resolveLookupRegistrations(
-        [registration("lottery_game")],
+        [registration("demo_item")],
         BASE_KEYS,
-        () => ({ collectionName: "lottery_games" }),
+        () => ({ collectionName: "demo_items" }),
       ),
     ).toThrow(/repositoryToken 必須指向 BaseRepository/);
   });
@@ -120,31 +120,31 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
   it("permission 必須是權限 key 或 null", () => {
     expect(() =>
       resolve([
-        registration("lottery_game", {
+        registration("demo_item", {
           permission: undefined as unknown as null,
         }),
       ]),
     ).toThrow(/permission 必須是權限 key 或 null/);
     expect(() =>
-      resolve([registration("lottery_game", { permission: " " })]),
+      resolve([registration("demo_item", { permission: " " })]),
     ).toThrow(/permission 必須是權限 key 或 null/);
   });
 
   it("顯示欄 / 值欄 / 關鍵字欄位不在可回欄位內 → 拒絕;值欄非 id 時只能是文字欄位", () => {
     expect(() =>
-      resolve([registration("lottery_game", { labelField: "title" })]),
+      resolve([registration("demo_item", { labelField: "title" })]),
     ).toThrow(/顯示欄 title 不在可回的欄位內/);
     expect(() =>
-      resolve([registration("lottery_game", { valueField: "serial" })]),
+      resolve([registration("demo_item", { valueField: "serial" })]),
     ).toThrow(/值欄 serial 不在可回的欄位內/);
     expect(() =>
-      resolve([registration("lottery_game", { keywordFields: ["serial"] })]),
+      resolve([registration("demo_item", { keywordFields: ["serial"] })]),
     ).toThrow(/關鍵字欄位 serial 不在可回的欄位內/);
     expect(() =>
-      resolve([registration("lottery_game", { valueField: "bookAmount" })]),
-    ).toThrow(/值欄 bookAmount 必須是 id 或文字欄位/);
+      resolve([registration("demo_item", { valueField: "quantity" })]),
+    ).toThrow(/值欄 quantity 必須是 id 或文字欄位/);
     expect(
-      resolve([registration("lottery_game", { valueField: "code" })]).size,
+      resolve([registration("demo_item", { valueField: "code" })]).size,
     ).toBe(1);
   });
 
@@ -152,14 +152,14 @@ describe("resolveLookupRegistrations:專案 lookup 來源的登記驗證", () =>
     for (const name of ["$where", "a.b", "id"]) {
       expect(() =>
         resolve([
-          registration("lottery_game", {
+          registration("demo_item", {
             fields: { name: { type: "text" }, [name]: { type: "text" } },
           }),
         ]),
       ).toThrow(LookupProviderRegistrationError);
     }
     expect(() =>
-      resolve([registration("lottery_game", { filterFields: ["$where"] })]),
+      resolve([registration("demo_item", { filterFields: ["$where"] })]),
     ).toThrow(/篩選欄位 \$where 不是合法的欄位名/);
   });
 });
@@ -214,14 +214,14 @@ async function bootstrap(registrations: LookupProviderRegistration[]) {
 describe("LookupProvidersService 啟動時解析專案來源", () => {
   it("同一個 key 登記兩次 → 啟動失敗", async () => {
     await expect(
-      bootstrap([registration("lottery_game"), registration("lottery_game")]),
-    ).rejects.toThrow(/lookup 來源 lottery_game:重複登記/);
+      bootstrap([registration("demo_item"), registration("demo_item")]),
+    ).rejects.toThrow(/lookup 來源 demo_item:重複登記/);
   });
 
   it("清單裡的來源都進設計器的來源清單(底座三種在前)", async () => {
     const app = await bootstrap([
-      registration("lottery_shop", {}, ShopsRepository),
-      registration("lottery_game"),
+      registration("demo_shop", {}, ShopsRepository),
+      registration("demo_item"),
     ]);
     const keys = app
       .get(LookupProvidersService)
@@ -231,8 +231,8 @@ describe("LookupProvidersService 啟動時解析專案來源", () => {
       "user",
       "org",
       "form_submission",
-      "lottery_game",
-      "lottery_shop",
+      "demo_item",
+      "demo_shop",
     ]);
     await app.close();
   });

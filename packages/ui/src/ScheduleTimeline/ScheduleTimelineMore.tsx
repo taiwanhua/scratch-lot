@@ -28,7 +28,7 @@ export interface ScheduleTimelineMoreProps {
 }
 
 /**
- * 「+N」長條(Figma Draft/ScheduleTimelineMore 408:8012):週模式有容器被收起時,當天欄最右邊一條,
+ * 「+N」長條(Figma Draft/ScheduleTimelineMore):週模式有容器被收起時,當天欄最右邊一條,
  * 高度佔滿 00:00–24:00;框色由模組依被收起內容決定(Neutral / Warning / Error)。點了回呼模組
  * (例:清單浮層)。
  */

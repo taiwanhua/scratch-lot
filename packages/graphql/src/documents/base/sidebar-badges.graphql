@@ -1,4 +1,4 @@
-# 側欄計數(底座規格 10.4):一次回傳使用者看得到的所有模組的數字(各模組以 registerBadge 登記);
+# 側欄計數:一次回傳使用者看得到的所有模組的數字(各模組以 registerBadge 登記);
 # 收到任何 badge:<模組 key> 信號都重抓這一支
 query SidebarBadges {
   sidebarBadges {

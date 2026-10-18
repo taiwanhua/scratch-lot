@@ -26,7 +26,7 @@ export interface NotificationSettingsTableProps {
 }
 
 /**
- * 負責人提醒類型清單(Figma BS-09a `289:86057`):通知類型 / 組織範圍(唯讀)/ 收件人(人員條件摘要)/ 操作。
+ * 負責人提醒類型清單:通知類型 / 組織範圍(唯讀)/ 收件人(人員條件摘要)/ 操作。
  * 收件人沒調整過的標「預設」;[還原預設] 只在調整過的那幾列可按。
  */
 export const NotificationSettingsTable = ({

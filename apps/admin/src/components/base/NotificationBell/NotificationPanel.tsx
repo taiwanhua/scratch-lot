@@ -17,7 +17,7 @@ import {
 
 import { NotificationItem } from "./NotificationItem";
 
-/** 清單浮層寬(px;Figma `Draft/NotificationPanel` 50:620)。 */
+/** 清單浮層寬(px;Figma `Draft/NotificationPanel`)。 */
 const PANEL_WIDTH = 360;
 /** 清單可捲動區的最大高度(px);超過就捲動,捲到底載入下一批。 */
 const LIST_MAX_HEIGHT = 480;
@@ -34,7 +34,7 @@ export interface NotificationPanelProps {
 }
 
 /**
- * 通知清單(Figma `Draft/NotificationPanel` 50:620;底座規格第 5 章「通知鈴與通知清單」):
+ * 通知清單(Figma `Draft/NotificationPanel`):
  * 標題列「通知」+「全部標為已讀」、「全部 / 未讀」切換、依時間新到舊一次 20 則,捲到底載入下一批,
  * 沒有更多時不再載入。
  */

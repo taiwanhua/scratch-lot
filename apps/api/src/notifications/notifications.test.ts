@@ -203,7 +203,7 @@ const usersAudience = (...ids: Types.ObjectId[]) => ({
 });
 
 /**
- * 通知(底座規格第 5 章):`notify()` 的交易、去重、偏好與 email 總開關,通知清單 API,
+ * 通知:`notify()` 的交易、去重、偏好與 email 總開關,通知清單 API,
  * 負責人提醒的通知設定。即時通道在測試裡是停用的(記錄用 adapter),這裡攔它的 `send`;
  * 信件走記錄用 adapter(`RecordingMailService.sent`)。
  */

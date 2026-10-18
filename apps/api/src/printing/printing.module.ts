@@ -16,7 +16,7 @@ import { PrintingNotifier } from "./printing-notifier";
 import { PrintingResolver } from "./printing.resolver";
 
 /**
- * 列印(底座規格第 6 章 B8;docs/modules/printers.md):
+ * 列印(docs/modules/printers.md):
  * 後台的 GraphQL(印表機管理、列印按鈕)+ 代理程式的 HTTP 端點(配對、拿工作、認領、回報、心跳、訂閱憑證)。
  */
 @Module({

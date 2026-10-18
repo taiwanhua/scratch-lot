@@ -1,9 +1,8 @@
 import { type TimelineLayoutGroup, layoutTimeline } from "./layout-timeline";
 
 /**
- * 規則頁「班表時間軸 · 各種情況」(Figma 401:805)每一格 = 一個固定輸入 / 預期輸出。
+ * 時間軸排列規則的各種情況:每一格 = 一個固定輸入 / 預期輸出。
  * 測試資料(不是測試檔):`layout-timeline.test.ts` 與 `layout-timeline-invariants.test.ts` 共用。
- * 輸入與預期照 `docs/tmp/figma-base-round/project/r6-timeline-cases.js` 的 CASES(畫圖用同一套資料)。
  */
 export interface CaseGroup extends TimelineLayoutGroup {
   /** 規則頁上的簡稱(早、晚、補…),預期輸出用它描述。 */
@@ -187,7 +186,7 @@ export const RULE_CASES: RuleCase[] = [
   },
   {
     code: "T-11",
-    title: "一人一筆排班掛兩筆需求",
+    title: "一人一筆排程掛兩筆需求",
     groups: [g(1, "補", 13, 17, 1, 2), g(2, "臨", 15, 18, 1, 3, 99)],
     expected: same({
       placed: [
@@ -199,7 +198,7 @@ export const RULE_CASES: RuleCase[] = [
   },
   {
     code: "T-12",
-    title: "同一天兩段排班",
+    title: "同一天兩段排程",
     groups: [early2(), late2()],
     expected: same({
       placed: [
@@ -267,7 +266,7 @@ export const RULE_CASES: RuleCase[] = [
   },
   {
     code: "T-18",
-    title: "一人顧兩個收銀點",
+    title: "一人負責兩個櫃台",
     groups: [g(1, "A", 14, 22, 1), g(2, "B", 14, 22, 1, 2)],
     expected: same({
       placed: [

@@ -27,7 +27,7 @@ export function documentNameOf(job: JobRecord): string {
 }
 
 /**
- * 列印的兩種通知(底座規格第 5 章「通知類型登記表」;範本參數見 `base-notification-types.ts`):
+ * 列印的兩種通知(範本參數見 `base-notification-types.ts`):
  *
  * - `printing.job-failed`(當事人通知):工作標失敗時通知要求人。來源:代理程式回報失敗、
  *   等待中逾時、代理程式停用、送出時代理程式已離線。**呼叫端在標失敗的同一個交易內呼叫**

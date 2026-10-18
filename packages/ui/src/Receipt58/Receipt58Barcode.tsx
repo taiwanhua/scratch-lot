@@ -22,7 +22,7 @@ const MAX_MODULE_DOTS = 2;
 const DEFAULT_HEIGHT = 64;
 
 /**
- * 一維條碼(Code128;Figma `Draft/Receipt58Barcode` 286:77797):條紋 + 下方印內容。
+ * 一維條碼(Code128;Figma `Draft/Receipt58Barcode`):條紋 + 下方印內容。
  * 單據本身用 QR code;一維條碼給測試頁確認機器支援。
  */
 export const Receipt58Barcode = ({

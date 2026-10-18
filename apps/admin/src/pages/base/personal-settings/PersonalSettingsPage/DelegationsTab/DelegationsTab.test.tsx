@@ -11,7 +11,7 @@ import { findSnackbarAlert } from "@/test/snackbar";
 const DAY_MS = 86_400_000;
 
 /**
- * 個人設定「代理人」分頁(《底座規格》3.7 B15;Figma BS-06a `257:5354`、BS-06b `257:5859`)。
+ * 個人設定「代理人」分頁。
  * 夾具:一筆未開始(李小華 10/20–10/24,備註「出國」)、一筆已結束(陳大文 9/1–9/3);時區 Asia/Taipei。
  */
 const renderDelegations = (

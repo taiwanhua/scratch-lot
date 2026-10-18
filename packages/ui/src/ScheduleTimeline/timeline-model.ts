@@ -174,7 +174,7 @@ export const startMinutesOf = (
 
 /**
  * 副標畫在長條裡嗎:只有日模式的正常 / 停用長條畫;週模式(窄長條)與「較短」的長條放不下,
- * 副標改放進滑過提示(Figma Draft/ScheduleTimelineBlock State=Short 259:4739 的副標要換行,
+ * 副標改放進滑過提示(Figma Draft/ScheduleTimelineBlock State=Short 的副標要換行,
  * 時間軸的長條高度固定、換不了行)。
  */
 export const showsSubtitleInBar = (

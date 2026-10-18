@@ -2,7 +2,7 @@ import { semanticValueOf } from "./semantic";
 import type { FieldDef, FieldType, LookupSourceDescriptor } from "./types";
 
 /**
- * 連動篩選(《底座規格》3.2 B2d):lookup 來源 `filter` 的值可以引用**表單層**欄位 `{ "var": "<欄位 key>" }`
+ * 連動篩選:lookup 來源 `filter` 的值可以引用**表單層**欄位 `{ "var": "<欄位 key>" }`
  * (例 `filter: { orgId: { var: "ship_org" } }`)。執行時換成那一欄目前的值再當等值條件:
  *
  * - 前端查 `formLookup` 時一併送引用欄位目前的值(`filterValues`);api 只把它當成**縮小範圍**的條件,

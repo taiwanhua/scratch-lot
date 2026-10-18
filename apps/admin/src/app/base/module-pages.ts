@@ -82,17 +82,17 @@ export const baseModulePages: ModulePageSource = {
     { key: ROLE_MANAGER_MODULE_KEY, Page: RoleManagerPage },
     { key: DATA_SCOPE_MODULE_KEY, Page: DataScopePage },
     // 表單管理:懶載入(設計器不進首屏 bundle);沿用殼層預設 `lg`,設計器在 `xl` 以下自己換版
-    // (`pages/base/system/designer-layout.ts`;T48)
+    // (`pages/base/system/designer-layout.ts`)
     { key: FORMS_MODULE_KEY, Page: LazyFormsPage },
     // 審核流程(Spec 6b §8):流程管理、阻擋清單、申請中心兩頁籤與詳情,全部懶載入(不進首屏 bundle);
-    // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `lg`、在 `xl` 以下收窄屬性面板(T48)
+    // 流程設計器(流程圖 + 關卡屬性)同表單管理沿用 `lg`、在 `xl` 以下收窄屬性面板
     { key: WORKFLOWS_MODULE_KEY, Page: LazyWorkflowsPage },
     { key: WORKFLOWS_BLOCKED_PAGE_KEY, Page: LazyWorkflowBlockedPage },
-    // 通知設定(底座規格第 5 章):負責人提醒的收件人
+    // 通知設定:負責人提醒的收件人
     { key: NOTIFICATION_SETTINGS_MODULE_KEY, Page: NotificationSettingsPage },
     { key: APPLY_CENTER_MODULE_KEY, Page: LazyApplyCenterPage },
     { key: APPLY_CENTER_VIEW_PAGE_KEY, Page: LazyApplyCenterViewPage },
-    // 印表機管理(底座規格第 6 章 B8):懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)
+    // 印表機管理:懶載入(測試頁的條碼 / QR code 零件不進首屏 bundle)
     { key: PRINTERS_MODULE_KEY, Page: LazyPrintersPage },
   ],
   // 三個示範表單模組(頂層 / 群組內 / 次群組內;Spec 6a §8「登記與客製」):四個 key 全用表單引擎的預設組裝;

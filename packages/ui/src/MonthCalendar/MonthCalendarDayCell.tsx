@@ -27,7 +27,7 @@ export interface MonthCalendarDayCellProps {
 const isActivationKey = (event: KeyboardEvent) =>
   event.key === "Enter" || event.key === " ";
 
-/** 月曆的一格(Figma Draft/MonthCalendarCell 48:359):日期數字、角標、註記、自訂內容。 */
+/** 月曆的一格(Figma Draft/MonthCalendarCell):日期數字、角標、註記、自訂內容。 */
 export const MonthCalendarDayCell = ({
   day,
   info,
@@ -60,7 +60,7 @@ export const MonthCalendarDayCell = ({
       sx={(theme) => ({
         position: "relative",
         minWidth: 0,
-        // 電腦大格、手機約 48px(《底座規格》10.5);寬度由容器七等分
+        // 電腦大格、手機約 48px;寬度由容器七等分
         minHeight: { xs: theme.spacing(6), md: theme.spacing(12) },
         p: { xs: 0.5, md: 1 },
         display: "flex",
@@ -72,8 +72,8 @@ export const MonthCalendarDayCell = ({
         borderBottom: 1,
         borderColor: "divider",
         outline: "none",
-        // 互動狀態(《底座規格》10.5 / 10.11):白底格,滑過疊灰(`action.hover`);
-        // 已選取疊 `primary.main` × `selectedOpacity` + 1px `primary.main` 框(Figma 48:360)
+        // 互動狀態:白底格,滑過疊灰(`action.hover`);
+        // 已選取疊 `primary.main` × `selectedOpacity` + 1px `primary.main` 框
         ...(selectable
           ? stateLayerSx(theme, { selected, selectedTone: "primary" })
           : { cursor: "default" }),

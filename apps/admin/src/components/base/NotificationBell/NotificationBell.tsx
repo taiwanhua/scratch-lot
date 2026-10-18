@@ -18,7 +18,7 @@ import { NOTIFICATION_BADGE_MAX } from "@/lib/base/notification-pages";
 import { NotificationPanel } from "./NotificationPanel";
 
 /**
- * 頂端列的通知鈴(Figma `Draft/NotificationBell` 50:567、BS-08 289:85622;底座規格第 5 章 UI):
+ * 頂端列的通知鈴(Figma `Draft/NotificationBell`):
  * 🔔 + 未讀數(超過 99 顯示「99+」),點開為通知清單。
  *
  * - 點一則通知:標已讀(未讀才送)並打開連結(api 依連結登記表換好的站內路徑);沒有連結只標已讀。

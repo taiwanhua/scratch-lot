@@ -41,7 +41,7 @@ const PANEL_TREE_MAX_HEIGHT = 320;
 const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
 
 /**
- * 組織欄位(底座規格 10.2;Figma `Draft/OrgTreeSelect` 47:409):輸入框顯示已選組織,
+ * 組織欄位(Figma `Draft/OrgTreeSelect`):輸入框顯示已選組織,
  * 點開是「搜尋 + 組織樹」;單選 / 多選、多選可設上限。
  *
  * - **候選 = 操作者的管理範圍**:自己查 `orgTree`(api 只回管理範圍內的組織,#187),

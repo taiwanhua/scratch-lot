@@ -83,7 +83,7 @@ function branchAs(provider: "user" | "org") {
   ]);
 }
 
-/** 審核者來源「人員條件」(《底座規格》3.0、3.3):派給誰、共用流程限制見 workflow-design.test.ts。 */
+/** 審核者來源「人員條件」:派給誰、共用流程限制見 workflow-design.test.ts。 */
 describe("審核者來源:人員條件", () => {
   let api: AuthTestApp;
   let world: World;

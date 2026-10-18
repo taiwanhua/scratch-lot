@@ -260,7 +260,7 @@ export class ApplyCenterService {
 
   /**
    * 待我處理的任務數(`counts` 的 `myTasks`):側欄「申請中心」的數字只要這一項
-   * (登記在 `ApplyCenterBadge`,底座規格 10.4)。
+   * (登記在 `ApplyCenterBadge`)。
    */
   async myTaskCount(facts: FormOperatorFacts): Promise<number> {
     const tenantId = facts.tenantId;

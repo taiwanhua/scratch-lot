@@ -18,7 +18,7 @@ export interface PrintJobStatusTagProps {
   job: Pick<PrintJobFieldsFragment, "status" | "error">;
 }
 
-/** 列印紀錄「結果」欄(Figma BS-20:已印出 / 失敗:<原因>)。 */
+/** 列印紀錄「結果」欄(已印出 / 失敗:<原因>)。 */
 export const PrintJobStatusTag = ({ job }: PrintJobStatusTagProps) => {
   const t = useTranslations("admin.printers.jobStatus");
   const tError = useTranslations("admin.printers.jobError");

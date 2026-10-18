@@ -10,7 +10,7 @@ export type Receipt58TextAlign = "left" | "center" | "right";
 
 export interface Receipt58TextProps {
   children: ReactNode;
-  /** 大 / 一般 / 小 / 粗體(Figma `Draft/Receipt58Text` 286:77796 的 Style 軸);預設 normal。 */
+  /** 大 / 一般 / 小 / 粗體(Figma `Draft/Receipt58Text` 的 Style 軸);預設 normal。 */
   variant?: Receipt58TextVariant;
   /** 靠左 / 置中 / 靠右;預設 left。 */
   align?: Receipt58TextAlign;

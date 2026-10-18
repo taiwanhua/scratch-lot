@@ -19,7 +19,7 @@ import {
 const D1 = "2026-11-04";
 const D2 = "2026-11-05";
 
-describe("initialScrollMinute(進入畫面自動捲動,《底座規格》10.11)", () => {
+describe("initialScrollMinute(進入畫面自動捲動)", () => {
   it("有長條:捲到最早的長條前 1 小時", () => {
     const models = groupsOfDay(
       [

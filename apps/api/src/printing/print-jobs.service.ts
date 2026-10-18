@@ -200,7 +200,7 @@ export function decodePrintImage(raw: string, paperWidth: number): Buffer {
 }
 
 /**
- * 列印工作(底座規格第 6 章「架構」「離線、逾時、重新配對與停用」;docs/modules/printers.md):
+ * 列印工作(docs/modules/printers.md):
  *
  * - **建立**(列印按鈕 / 測試列印):代理程式已離線 → 仍建立,但直接標失敗 `agent-offline`;
  *   否則等待中,交易提交後送 `print-job` 給 `print-agent:<代理程式>`。

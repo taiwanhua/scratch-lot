@@ -10,7 +10,7 @@ export interface RosterGroupSummaryCellProps {
 
 /**
  * 頂部群組收合時的每日彙總:主行 + 副行(例「需 4 · 已排 3」/「缺 1 · 可排 2」),
- * 底色與字色同 `Tag` 的色調(Figma Draft/RosterGrid Group=Collapsed 366:7806)。
+ * 底色與字色同 `Tag` 的色調(Figma Draft/RosterGrid Group=Collapsed)。
  */
 export const RosterGroupSummaryCell = ({
   summary,

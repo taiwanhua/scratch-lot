@@ -21,7 +21,7 @@ import {
 
 /**
  * 劇本 28 — 指定組織跳過與自動通過
- * 正本:`docs/testing/permission-scenarios.md`「劇本 28」;規則見《底座規格》3.4 B4、3.5 B5。
+ * 正本:`docs/testing/permission-scenarios.md`「劇本 28」;規則見 `docs/concepts/workflow-engine.md`「跳過與自動通過」。
  * 用哪一頁:申請中心詳情頁(關卡進度、審核歷程)。
  * 前置(走 api):申請人所屬 = 南港廚房(南港店的下層)。客製流程(直線):
  * 1. 分店初審(副理):申請人屬於「南港店」**含下層**就跳過 → 跳過

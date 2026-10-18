@@ -26,7 +26,7 @@ export interface PairingInfoProps {
 }
 
 /**
- * 配對資訊(Figma BS-10b 289:92651):伺服器網址與 8 碼配對碼,各附 [複製]。
+ * 配對資訊:伺服器網址與 8 碼配對碼,各附 [複製]。
  * 伺服器網址 = 後台自己打的 API origin(與 GraphQL 同一台,不另設環境變數;docs/modules/printers.md「配對」)。
  * 配對碼只在產生時回一次,關掉就看不到了,要再拿得 [重新配對]。
  */

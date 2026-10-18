@@ -18,7 +18,7 @@ import {
 import { TcpPrinterTransport } from "./tcp-printer";
 
 /**
- * 整合測試:測試內起一個**假的 9100 伺服器**(收據機),驗收到的位元組(底座規格第 6 章「代理程式」的測試)。
+ * 整合測試:測試內起一個**假的 9100 伺服器**(收據機),驗收到的位元組(的測試)。
  * 假伺服器對 `DLE EOT 4` 回 `paperByte`(null = 不回應,模擬關掉即時狀態的機型)。
  */
 interface FakePrinter {

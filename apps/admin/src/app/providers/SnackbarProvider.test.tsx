@@ -51,7 +51,7 @@ const show = (
 const showResult = (message: string) => {
   show("success", message);
 };
-/** 一則新通知提示(底座規格 BS-08:Info、有標題、沒有動作) */
+/** 一則新通知提示(Info、有標題、沒有動作) */
 const showNotification = (message: string) => {
   show("info", message, { title: "新通知" });
 };
@@ -120,8 +120,8 @@ const mediaValue = (
 const SPACING_24 = "calc(3 * var(--mui-spacing))";
 const SPACING_16 = "calc(2 * var(--mui-spacing))";
 
-/** 底座規格 10.12 的情境表:一列一個測試。 */
-describe("SnackbarProvider:位置與堆疊(底座規格 10.12)", () => {
+/** 一列一個測試。 */
+describe("SnackbarProvider:位置與堆疊", () => {
   afterEach(() => {
     jest.useRealTimers();
   });
@@ -149,12 +149,12 @@ describe("SnackbarProvider:位置與堆疊(底座規格 10.12)", () => {
 
     showUndoable("已售出 3 張");
     showNotification("你有 1 則新通知");
-    showUndoable("已兌獎 1 張");
+    showUndoable("已刪除 1 筆");
 
     expect(stackTexts()).toEqual([
       "已售出 3 張撤銷",
       "新通知你有 1 則新通知",
-      "已兌獎 1 張撤銷",
+      "已刪除 1 筆撤銷",
     ]);
   });
 

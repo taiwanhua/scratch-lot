@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 /**
- * 檢查器的連動篩選段(《底座規格》3.2 B2d):`filter` 值是 `{ var: "<欄位 key>" }` 的條件。
+ * 檢查器的連動篩選段:`filter` 值是 `{ var: "<欄位 key>" }` 的條件。
  *
  * - 只有引用欄位(表單層引用欄、明細引用子欄)能用;選項來源、帶入規則 → `LOOKUP_FILTER_VAR_INVALID`
  * - `var` 要是表單層欄位的 key(不能是自己、明細欄;明細子欄不能引用同一列的其他子欄)→ 否則 `LOOKUP_FILTER_VAR_INVALID`

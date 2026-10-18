@@ -53,7 +53,7 @@ export interface RosterTopGroupSummary {
 }
 
 /**
- * 頂部固定群組(《底座規格》10.5):日期表頭下方、人員列上方的一組列,和表頭、左右固定欄一起固定。
+ * 頂部固定群組:日期表頭下方、人員列上方的一組列,和表頭、左右固定欄一起固定。
  * 收合狀態由使用的模組保存(受控)。
  */
 export interface RosterTopGroup {

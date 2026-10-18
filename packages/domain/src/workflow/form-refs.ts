@@ -33,7 +33,7 @@ export function isOrgReferenceField(field: FieldDef | undefined): boolean {
 
 /**
  * 人員條件「表單的組織欄位」(`form-field:<key>`)對某版欄位的問題:欄位不存在、或不是組織引用欄。
- * 送出時、綁定時、設計時同一份檢查(《底座規格》3.0)。
+ * 送出時、綁定時、設計時同一份檢查。
  */
 export type AudienceOrgFieldProblem =
   "FIELD_MISSING" | "FIELD_NOT_ORG_REFERENCE";

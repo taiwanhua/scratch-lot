@@ -163,7 +163,7 @@ export const systemModules: ModuleSeedDeclaration = {
     },
     {
       // 通知設定(docs/modules/notification-settings.md):租戶管理員調整負責人提醒的收件人;
-      // 側欄順序固定:既有 8 項 → 通知設定 → 印表機管理(底座規格第 5 章)
+      // 側欄順序固定:既有 8 項 → 通知設定 → 印表機管理
       key: NOTIFICATION_SETTINGS_KEY,
       name: "通知設定",
       sidebarType: "link",

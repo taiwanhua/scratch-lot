@@ -36,7 +36,7 @@ const threeTasks = () => [
   }),
 ];
 
-describe("申請中心:批次核准(底座規格 3.10 B18,Figma BS-07a / BS-07b)", () => {
+describe("申請中心:批次核准", () => {
   it("勾選 3 筆 → [核准(3)] 填共同意見 → 結果逐筆列出;失敗的保持勾選、成功的離開清單", async () => {
     const { user, runtime } = renderApplyCenter({
       path: TASKS_ROUTE,

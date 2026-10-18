@@ -26,7 +26,7 @@ const ring = (color: string) => `inset 0 0 0 1px ${color}`;
 const layer = (color: string) => `linear-gradient(${color}, ${color})`;
 
 /**
- * 可點元素的互動狀態(《底座規格》10.11;MUI outlined / text 按鈕的做法):
+ * 可點元素的互動狀態(MUI outlined / text 按鈕的做法):
  * - 滑過:原底色上疊同色系 `main` × `action.hoverOpacity`(8%),邊框換成同色系 `main`;
  * - 已選取:疊 `main` × `action.selectedOpacity`(16%)+ 1px 同色系 `main` 邊框;
  * - 鍵盤焦點:`action.focus` 外框;

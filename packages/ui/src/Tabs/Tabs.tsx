@@ -31,7 +31,7 @@ export interface TabsProps {
   /** 整列頁籤的無障礙名稱(`role="tablist"` 上);ui 不內建文案(I18N-01) */
   "aria-label"?: string;
   /**
-   * 放不下時單列橫向捲動(Figma BS-15b):還有頁籤的那一側顯示漸層淡出 + ‹ / › 按鈕(點了捲一段),
+   * 放不下時單列橫向捲動:還有頁籤的那一側顯示漸層淡出 + ‹ / › 按鈕(點了捲一段),
    * 捲到底的那一側兩者都消失;選中的頁籤(含首次渲染)自動捲進可視範圍。窄寬(手機)同一行為。
    * 預設關閉:既有的頁內分頁都只有兩三格,不需要捲動容器。
    */
@@ -105,7 +105,7 @@ export const Tabs = ({
       {...(scrollable && {
         variant: "scrollable",
         scrollButtons: "auto",
-        // MUI 預設在手機寬藏按鈕;窄寬一樣要看得到 ‹ / ›(BS-15b 規則不分尺寸)
+        // MUI 預設在手機寬藏按鈕;窄寬一樣要看得到 ‹ / ›(規則不分尺寸)
         allowScrollButtonsMobile: true,
       })}
       sx={mergeSx({}, sx)}

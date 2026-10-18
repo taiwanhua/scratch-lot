@@ -1,6 +1,6 @@
 import type { RealtimeSignal } from "@repo/domain/realtime";
 
-/** 高頻信號(看板)同一頻道每 2 秒最多送一次(底座規格第 4 章「頻道」)。 */
+/** 高頻信號(看板)同一頻道每 2 秒最多送一次。 */
 export const SIGNAL_COALESCE_WINDOW_MS = 2000;
 
 /** 要合併的信號類型:只有看板。`badge:*`、`notification` 等一律照送。 */

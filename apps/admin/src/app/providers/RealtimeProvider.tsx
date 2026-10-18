@@ -47,7 +47,7 @@ export interface RealtimeProviderProps {
 }
 
 /**
- * 即時通道(殼層;底座規格第 4 章):登入後建立連線、到期前 1 分鐘在原連線換發、重連退避、
+ * 即時通道(殼層):登入後建立連線、到期前 1 分鐘在原連線換發、重連退避、
  * 看板頁換發;收到信號 → invalidate 登記表對應的 query key 並通知 `useRealtimeSignal`。
  *
  * **降級**:不是 `live` 的期間(連不上、Worker 關掉、即時通道停用)每 60 秒 invalidate 登記表全部 key;

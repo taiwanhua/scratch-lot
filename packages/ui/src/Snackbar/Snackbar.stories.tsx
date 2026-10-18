@@ -17,7 +17,7 @@ const cardWidthDecorator: Decorator = (Story) => (
 );
 
 /**
- * Figma `Draft/Snackbar+` 286:7200(Severity = Success / Error / Warning / Info)。
+ * Figma `Draft/Snackbar+`(Severity = Success / Error / Warning / Info)。
  * 卡片本身不定位;實際畫面上由 `SnackbarStack` 放在右下角(手機底部滿寬)並往上疊。
  * 暗色模式:工具列 Mode 切 dark,或看 `*Dark` 的 story。
  */

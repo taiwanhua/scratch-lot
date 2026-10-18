@@ -55,7 +55,7 @@ interface LookupData {
 }
 
 /**
- * 連動篩選與列內帶入(《底座規格》3.2 B2c / B2d):篩選值引用表單層欄位 `{ var }`(這裡用 `user` 來源的
+ * 連動篩選與列內帶入:篩選值引用表單層欄位 `{ var }`(這裡用 `user` 來源的
  * `enabled` ← 表單的是否欄位「只列啟用中的」);前端查詢送目前值、伺服器只當縮小範圍;送出以最後的值再驗
  * → `LOOKUP_FILTER_MISMATCH`。明細引用子欄的帶入規則讓 `formLookup` 回對應的來源欄位。
  * 真 GraphQL + 真 MongoDB(TEST-07)。
