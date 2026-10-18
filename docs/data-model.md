@@ -74,9 +74,9 @@
 
 ### 個人偏好
 
-`user_preferences` 只存跟著帳號的個人偏好(規格 10.6),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
+`user_preferences` 只存跟著帳號的個人偏好,每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
 
-跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。顯示密度不做(規格第 11 章 B 類),沒有對應的偏好。
+跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。不做顯示密度設定,沒有對應的偏好。
 
 每種通知類型 × 每個管道另有一個布林開關,key 是 `notification_<類型 key 的 . 換成 _>_<管道>`(例 `notification_workflow_task-created_in-app`),由通知類型登記推導、不必手寫;不能關的管道只收 `true`(`allowedValues`)。規則見 `docs/modules/notification-settings.md`「個人偏好的管道開關」。
 

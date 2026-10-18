@@ -1,7 +1,7 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 
 /**
- * 專案的表單 / 流程掛接點(底座規格 3.1 B1;`docs/concepts/workflow-engine.md`「掛接點」;STRUCT-12 api 的
+ * 專案的表單 / 流程掛接點(`docs/concepts/workflow-engine.md`「掛接點」;STRUCT-12 api 的
  * 固定入口之一,只由 `database/database.module.ts` 組裝)。同一個 (moduleKey, formKey) 只能一筆,重複 → app 起不來。
  *
  * ```ts

@@ -70,7 +70,7 @@
 
 ### 個人偏好的管道開關
 
-每種類型(底座 + 專案)的每個 `defaultChannels` 自動成為一個個人偏好(`user_preferences`,規格 10.6),由 `notificationPreferenceDefinitions` 推導、經 `UserPreferenceRegistryModule.forRoot` 的第二個參數合成:
+每種類型(底座 + 專案)的每個 `defaultChannels` 自動成為一個個人偏好(`user_preferences`,見 `docs/data-model.md`「個人偏好」),由 `notificationPreferenceDefinitions` 推導、經 `UserPreferenceRegistryModule.forRoot` 的第二個參數合成:
 
 - key:**`notification_<類型 key 的 . 換成 _>_<管道>`**,例 `workflow.task-created` × `in-app` → `notification_workflow_task-created_in-app`。偏好 key 不能含 `.`;類型與管道 key 都不含 `_`,以 `_` 切開就能還原。
 - 布林、預設 `true`(開)。`canDisable` 為否的管道登記 `allowedValues: [true]`:送 `false` → `VALIDATION_FAILED`(`reason: INVALID_VALUE`);`notify()` 也一律視為開著。
@@ -191,6 +191,19 @@ input ResetNotificationSettingInput {
 - `MarkNotificationsReadPayload.unreadCount` 是動作後的未讀數,前端拿來更新 🔔,不必再查一次。
 
 ## admin 頁面
+
+### 通知鈴與通知清單
+
+頂端列的 🔔(`components/base/NotificationBell/`)所有登入者都有,不看權限;只讀寫自己的通知。
+
+- **未讀數**:0 不顯示,超過 99 顯示 `99+`。
+- **清單**:依時間新到舊,一次 20 則(`hooks/base/useNotifications.ts`),捲到底載入下一批,沒有更多時不再載入;可切「全部 / 未讀」,另有「全部標為已讀」。
+- **點一則**:未讀的先標已讀,有連結就打開(api 依連結登記表換好的站內路徑),沒有連結只標已讀。連結頁面沒有權限或資料已不在 → 照常標已讀,由頁面顯示既有的無權限 / 找不到狀態。
+- **新通知提示**(`hooks/base/useNotificationAlerts.ts`):收到 `notification` 信號 → 一則統一的 Snackbar(Severity=Info、有標題、沒有動作)。1 秒內陸續到的信號算同時收到:只到 1 則時標題、內容取最新一則未讀通知(拿不到退回「你有 1 則新通知」);多則只跳一則「你有 N 則新通知」。送出端不合併信號,所以合併在這裡做。
+- 未讀數與開著的清單由信號登記表重抓(`docs/concepts/frontend-architecture.md`),提示只管跳出。
+- 通知超過 90 天由 TTL 刪除,清單不再出現。
+
+### 通知設定頁
 
 通知設定頁(`pages/base/system/NotificationSettingsPage/`;Figma BS-09a `289:86057`、BS-09b `289:86572`),版面沿用示範模組列表:說明 + 搜尋 + 表格卡片 + 頁碼。使用者說明在 `apps/admin/src/md/module-help/base/system.notification-settings.help.md`。
 

@@ -7,7 +7,7 @@
 | 東西                        | 位置                                                                                                                        |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | 專案規格(刮刮樂 + 排班出勤) | `docs/tmp/spec-project-lottery.md`(第 16 章畫面清單、16.10 入口 → 畫面)                                                     |
-| 底座規格(本輪底座更新)      | `docs/tmp/spec-base-round.md`(第 13 章畫面清單;10.13 Figma 規範與稽核腳本)                                                  |
+| 底座機制(已完成)            | 正式文件:`docs/concepts/`、`docs/modules/`、`docs/standards/`;Figma 規範 FIGMA-11~17;尚未實作的 S2 三項見專案規格第 18 章   |
 | Figma 畫圖紀錄              | `docs/tmp/figma-base-round/README.md`(畫圖檢查清單、每次改圖的固定流程、搬回底座的方法)、`nodes.md`(各輪節點 id 與修改紀錄) |
 | 班表流程走查                | `docs/tmp/figma-base-round/schedule-walkthrough.md`                                                                         |
 | 畫圖腳本                    | `docs/tmp/figma-base-round/*.js`(底座)、`docs/tmp/figma-base-round/project/*.js`(專案)                                      |
@@ -18,7 +18,7 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 ## 2. 實作怎麼進行(使用者 2026-10-13 定)
 
-1. **底座先做**:從最新 `origin/main` 開 `feat/base-round`,底座規格的所有票都做在這條分支。
+1. **底座先做**(已完成):底座的票都做在整合分支 `feat/base-round`,已 release 並回收成 wowgo-base v0.4.0;規則已寫進正式文件。
 2. **專案後做**:底座 release、在 scratch-lot 測完後,從新的 main 開 `feat/lottery-round` 做專案規格的票。
 3. **同步回底座**:`base-sync contribute` 回收到 `C:\project\wowgo-base` → release 新底座版本 → scratch-lot、cookhome 升級(去掉重複功能)。驗收準則:子專案修的底座問題能回到底座;底座新版升級能去掉重複功能並同步成功;整套用同步工具跑完。
 
@@ -38,7 +38,7 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 - **圖例和畫面標示一一對應**;圖例樣本用真實元件。
 - **互動狀態照 MUI**:滑過 = 同色系 main × 8%、已選取 = × 16% + 1px main 框;Figma 用 state layer 圖層。
 - **元件**:小標籤用標籤元件;共用元件設計 props 前先盤點所有使用處。
-- **時間軸(ScheduleTimeline)週模式排版**是純函式 `layoutTimeline`(規格 10.11),規則頁每格是測試案例;同樣輸入一定同樣輸出。
+- **時間軸(ScheduleTimeline)週模式排版**是純函式 `layoutTimeline`(`packages/ui/src/ScheduleTimeline/layout-timeline.ts`),規則頁每格是測試案例;同樣輸入一定同樣輸出。
 - **稽核要自己用完整腳本重跑**,不貼精簡版;一次跑一個,不要同時送多個 audit;大頁面按尺寸分段跑。
 - 提出問題前先查討論紀錄與規格,標明「已定 / 延伸 / 新問題」。
 
@@ -46,8 +46,8 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 在 Figma MCP `use_figma`(先載入 figma-use skill)貼上整份腳本、改檔頭的 `PAGE_ID`;每項要是 0,例外寫在各腳本檔頭。順序:`audit-layout` → `audit-legend` → `audit-sync` → `audit-roster`(班表頁)→ `audit.js`。如果 `use_figma` 連最簡單的 `return "ok"` 都回 `truncated to 20kb`,是 Figma 外掛卡住,請使用者重新載入檔案。
 
-## 5. 目前進度(2026-10-16)
+## 5. 目前進度(2026-10-19)
 
-- 兩份規格已定稿並進 main(PR #12 → #13 → #14,2026-10-16)。
-- 底座票 46 張、7 批,相依關係使用者 2026-10-16 確認;整合分支 `feat/base-round`(worktree `C:\project\sl-base-round`)。票號與進度見 Spec #15(票 #16–#61)。同時最多 5 個 agent。
-- 回收階段待辦:Draft 元件搬進 Library、`Draft/tagPalettes` 改綁 Library、Snackbar+ 取代 Snackbar、15 頁 Overlay 背景、spare-5;底座規格 10.13 的規則與腳本搬進 wowgo-base。
+- 底座階段完成:票 #16–#61(Spec #15)與後續修正都已 release;共用改良回收成 wowgo-base v0.4.0,scratch-lot 已升級。底座規格已退場,規則在正式文件。
+- 下一步:專案階段(`docs/tmp/spec-project-lottery.md`)。
+- Figma 回收待辦(還沒做):Draft 元件搬進 Library、`Draft/tagPalettes` 改綁 Library、Snackbar+ 取代 Snackbar、15 頁 Overlay 背景、spare-5;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」。設計稿與現況的差異見 `docs/tmp/project-dis.md`「Figma 待修清單」。

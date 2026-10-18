@@ -1,7 +1,7 @@
 import type { ProjectNotificationRegistrations } from "../notifications/notification-registry.module";
 
 /**
- * 專案登記的通知類型與連結(底座規格第 5 章;STRUCT-12 api 的固定入口之一,只由 `app.module.ts` 經
+ * 專案登記的通知類型與連結(`docs/modules/notification-settings.md`;STRUCT-12 api 的固定入口之一,只由 `app.module.ts` 經
  * `NotificationRegistryModule.forRoot` 組裝)。key / refType 不可與底座重複;每種類型的每個管道
  * 自動成為個人偏好的一個開關(`notification_<類型>_<管道>`)。
  *

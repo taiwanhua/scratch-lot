@@ -186,6 +186,7 @@ GraphQL 文件登記負例用 `pnpm --filter @repo/graphql test:documents`,CI �
 - 兩者只在流程管理頁用,頁面懶載入,不進首屏 bundle。
 - React Flow 在 jest(jsdom)要 `ResizeObserver` / `DOMMatrixReadOnly` 替身(`apps/admin/src/test/react-flow.ts` 的 `setupReactFlowEnvironment()`);點節點用 `fireEvent.click`(d3-drag 的指標事件在 jsdom 會炸)。
 - 表單設計器的拖拉是 dnd-kit(`@dnd-kit/core`、`@dnd-kit/sortable`,MIT),測試替身在 `apps/admin/src/test/dnd-kit-double.tsx`。
+- 月曆、人員排程、時間軸(`@repo/ui` 的 `MonthCalendar`、`RosterGrid`、`ScheduleTimeline`)不用第三方行事曆套件:資源排班表在常見套件屬於付費功能。這三個元件自己做,`RosterGrid` 建在既有的 `DataTable` 上。
 
 正本:`apps/admin/package.json`
 

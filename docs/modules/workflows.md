@@ -287,7 +287,7 @@
 
 - **`decideTask`**(`task-actions.service.ts`):前置(任務是我的且 `pending`、提交仍指向這個實例、實例進行中、關卡為 active、退回要 `allowReturn`、駁回 / 退回理由必填、任務 `expectedEditVersion`)後寫實例:條件含「關卡仍 active、我仍是這一項的有效承辦人、這個 `taskKey` 還沒有決定」→ `$push steps.$[cur].decisions` + `$push history` + `$inc editVersion`;**不比對** `editVersion`。寫決定、任務版號、稽核與推進是一個交易;兩人同時決定同一份實例 → 後到的寫入衝突、重跑後依當下狀態判(關卡已結束 → `STEP_CLOSED`;關卡仍進行中 → 照常接受)。條件不成立、任務已不是 `pending`、我已被改派走 → 回 `result: STEP_CLOSED`、任務不動。
 - **撤回**(申請人本人:看得到這張單但不是申請人 → `FORBIDDEN`(`NOT_APPLICANT`),先於狀態檢查;依可見範圍與資料範圍規則根本讀不到 → `NOT_FOUND`;提交要是 `reviewing` 且有實例,否則 `CONFLICT` `STATUS_MISMATCH`;`instance-withdraw.service.ts` 另以實例的 `createdBy` 再比一次):條件更新 `{ editVersion, 進行中, 所有關卡都沒有決定 }` → `withdrawn`、active 關卡 `terminated`;撤回、推進收尾(提交同步成 `withdrawn`)與稽核是一個交易。決定在撤回讀完之後先提交 → 撤回的寫入衝突、重跑看到決定 → `CONFLICT`(`HAS_DECISIONS`);「沒有決定」也寫在條件裡。
-- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進;推進在同一個交易給改派後的承辦人寫 `workflow.task-created`,見「通知信」)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。
+- **改派**:對 `pending` / `blocked` 任務指定新人(啟用、在本租戶、不是申請人,否則 `ASSIGNEE_NOT_ELIGIBLE`;已在本關的計畫裡 → `ALREADY_IN_STEP`);條件更新 `{ editVersion, 該 taskKey 尚無決定 }` → 計畫該項換人、原人進 `previousAssigneeIds`、`assigneeState = active`、`reassigned`(一個交易,含稽核與推進;推進在同一個交易給改派後的承辦人寫 `workflow.task-created`,見「通知信」)。決定先提交 → 改派寫入衝突、重跑讀到決定 → `ALREADY_DECIDED`。計畫固定:之後補建任務不會把原承辦人建回來。代理只在進關派任時套用:改派給正在代理期間的人,任務與「待你審核」通知仍給被選的人,不轉給他的代理人。
 - **新增審核者**:只對「解析為空」而阻擋的關卡(`blocked` 且計畫為空);條件更新追加一項(`taskKey` 接在最大序號之後)、`assignee_added`;推進建任務、解除阻擋(一個交易)。
 - **審核者失效 hook**(`AssigneeInvalidationService.onUserChanged`):使用者管理的三個入口在稽核之後呼叫 —— 停用(`setUserEnabled(false)`;已停用再停用一次也會補做)、所屬組織異動(`setUserOrgs` 移除組織)、複製組織與角色的取代模式移除組織(`copyUserOrgRoles`)。**每個實例一個交易**(標失效 + 推進),對「進行中關卡、尚無決定、此刻已不合格(停用或已不在該租戶)」的計畫項目條件更新 `assigneeState = invalid`、`history: blocked`;該關 `any` 且仍有有效未決定的項目 → 不阻擋,否則該關與實例 `blocked`。推進同步任務投影(→ `blocked`)與提交的 `blocked`。已被接受的決定不受影響。
 - **人員條件派單後不再符合的人(例如被移除角色)仍可審**(計畫固定);被停用 / 移出租戶走失效。
@@ -389,16 +389,16 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 - **流程圖**用 React Flow(`@xyflow/react`)畫,節點位置由 `@dagrejs/dagre` 自動直式排版(`lib/base/workflow/flow-layout.ts`),使用者不手擺、**不開放自由拉線**。兩種節點:審核關卡卡片(名稱、來源、會簽、跳過條件、不可退回;有錯標紅)與匯合節點菱形(系統節點)。
 - **操作**:在後面加一關、從此關分流(選分支數,只有主線上還沒分流的關卡可以)、加一條分支、在匯合後加一關、刪除此關(連線自動接上;刪掉分支最後一關 = 刪那條分支,剩一條時收成直線)、刪除整組分流(連同匯合節點)。**移動**:拖審核關卡放開,依放開位置找最近的節點插在它前 / 後或匯合之後(`lib/base/workflow/flow-drop.ts`);鍵盤也做得到:屬性面板的「上移 / 下移 / 移到分支」。分流來源不能移、會留下空分支的移動被拒。
 - **檢查用表單**(`CheckFormField`):設計時對照的表單 —— 列出可選的欄位、驗證審核者欄位與跳過條件;實際送出以綁定的表單為準,綁定時會再驗一次(這句說明就放在欄位旁)。隨草稿存(`checkFormKey`,換掉也算未存變更);新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值(存了 null = 明確不指定)。
-- **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回,以及四個區塊(Figma BS-03;`StepSkipSection` / `StepAutoApproveSection` / `StepOverdueSection` / `PeopleCcSection`):
+- **屬性面板**:名稱、key(已發布過的關卡 key 鎖定,以草稿的基底版本為準)、審核者來源三種(人員條件 / 表單欄位 / 主管)、會簽、允許退回,以及四個區塊(Figma BS-03 `289:84779`;`StepSkipSection` / `StepAutoApproveSection` / `StepOverdueSection` / `PeopleCcSection`):
   - **跳過這一關(符合任一項就跳過)**:☑ 申請人屬於這些組織(`skipOrgs`;勾了預設「最上層組織」= `SKIP_ORG_TENANT`、不含下層;客製流程另有「指定組織」`OrgTreeSelect`;共用流程不給組織樹、最上層組織固定勾著)+ 包含下層;☑ 符合條件(`skipWhen`,原本單獨的「跳過條件」欄位搬進來,表單引擎的結構化表達式選擇器;既有公式載入後就是勾著)。取消勾選清掉那一項;「符合條件」勾了但沒設公式不存東西。
   - **自動通過**:「申請人是這一關的審核者時」「審核者已在前面的關卡核准過時」各一組 照常審核(預設)/ 自動通過;兩項都照常 = 存 `null`。
   - **逾時提醒**:開關預設關閉;開啟帶入 N = 24、M = 48、通知對象 `DEFAULT_OVERDUE_AUDIENCE`。N、M 是時數欄,通知對象是人員條件摘要 + 「編輯條件」(同審核者的對話框)。`OVERDUE_INVALID` → 時數欄標紅並說明,設計器擋下不讓存(api 存草稿照收、發布擋)。
   - **知會**:知會對象來源下拉(不知會(預設)/ 人員條件 / 表單欄位 / 主管,與審核者同一個 `AssigneeSourcePicker`,`purpose` 換標題與說明),說明「這一關通過或被跳過時通知;要知道最後結果請加進整個流程的知會對象」。
   - 審核者、知會對象、逾時通知對象共用 `AssigneeSourcePicker` / `AudienceSourceSummary` / `AudienceConditionDialog`,標題依用途(`PeoplePurpose`:`approver` / `cc` / `overdue`,文案 `admin.workflows.assignee.purposes.<用途>`)。
 - **整個流程**(`FlowSettingsPanel.tsx`):屬性面板沒選關卡時(點流程圖空白處)顯示 —— 整個流程的知會對象(`definition.cc`,同上的來源下拉),說明「單據完成、被駁回或被作廢時通知;各關的知會對象只在那一關通過或被跳過時收到」。它不在段落串裡,由 `useFlowDesignerState` 另存,一起算進「未存的變更」(`definitionFingerprint` 含 `cc`)。檢查結果裡整個流程的知會對象那幾筆(沒有 `stepKey`、`property` 以 `cc` 開頭)點了就取消選取、回到這裡。選了關卡或匯合節點時,屬性面板頂端有「回到整個流程設定」(`BackToFlowButton.tsx`,一般按鈕、鍵盤可達),點了取消選取、回到這裡;唯讀檢視同樣有。
-- **與設計稿 BS-03 的差異**:知會拿掉「通過這一關時 / 流程完成時」單選鈕(收件時機已改成關卡 / 整個流程分開設定);逾時提醒多一個開關;整個流程的知會對象與「回到整個流程設定」按鈕設計稿沒有。待 Figma 對齊(`docs/tmp/dis.md`)。
+- **與設計稿 BS-03(`289:84779`)的差異**:知會拿掉「通過這一關時 / 流程完成時」單選鈕(收件時機已改成關卡 / 整個流程分開設定);逾時提醒多一個開關;整個流程的知會對象與「回到整個流程設定」按鈕設計稿沒有。待 Figma 對齊(`docs/tmp/dis.md`)。
   - 「表單欄位」來源與跳過條件的欄位都從檢查用表單的目前版本列(非受保護欄位;來源另限使用者型引用欄)。沒選檢查用表單時兩處欄位下拉顯示「請先選檢查用表單」;載入中、或選了但沒有可用欄位(「此表單沒有可用欄位」)也說明原因,已設的欄位值照樣顯示。檢查用表單沒有使用者引用欄時,「表單欄位」來源下方說明要先在表單設計器加一個資料來源為使用者的引用欄位並發布(唯讀檢視不提示)。
-  - **人員條件**(`AudienceSourceSummary.tsx`、`AudienceConditionDialog.tsx`;Figma BS-02a–d):面板只放一行白話摘要(「角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)」,`lib/base/audience-summary.ts`)與 [編輯條件];條件在對話框用 `AudiencePicker` 編輯,[套用] 前本地驗證空群組 / 沒挑值。所屬組織的來源:客製 = 指定組織 / 單據所屬組織 / 表單的組織欄位(檢查用表單的組織引用欄)/ 最上層組織;共用流程沒有指定組織、欄位只有權限與所屬組織,對話框頂端說明原因。換成人員條件時直接開對話框。流程圖卡片顯示「審核者:人員條件」;設了跳過(任一項)顯示「有跳過條件」。
+  - **人員條件**(`AudienceSourceSummary.tsx`、`AudienceConditionDialog.tsx`;Figma BS-02a–d `289:83620` / `289:83967` / `289:84199` / `289:84539`):面板只放一行白話摘要(「角色 屬於 人資 且 所屬組織 屬於 【單據所屬組織】(本身)」,`lib/base/audience-summary.ts`)與 [編輯條件];條件在對話框用 `AudiencePicker` 編輯,[套用] 前本地驗證空群組 / 沒挑值。所屬組織的來源:客製 = 指定組織 / 單據所屬組織 / 表單的組織欄位(檢查用表單的組織引用欄)/ 最上層組織;共用流程沒有指定組織、欄位只有權限與所屬組織,對話框頂端說明原因。換成人員條件時直接開對話框。流程圖卡片顯示「審核者:人員條件」;設了跳過(任一項)顯示「有跳過條件」。
   - 候選借既有查詢:角色 `roles`、使用者 `users`、組織 `orgTree`、權限樹 `audiencePermissionOptions`、表單 `forms` / `formVersion`,拿不到就是空清單(摘要顯示「不在候選清單中」),存草稿時 api 的檢查器照樣把關。
 - **即時檢查**:跑 `@repo/domain/workflow` 的 `validateWorkflowDefinition`(與 api 同一份;跳過條件與「表單欄位」來源對檢查用表單驗,`useLocalFlowReport.ts`),再併上次存草稿時 api 回的結果(api 有完整目錄;改過之後以即時為準,`lib/base/workflow/validation.ts`);每筆定位到關卡,點一下選中它。
 - **「檢查」鈕**(`useFlowCheck.ts`、`FlowCheckPanel.tsx`):把目前的定義與檢查用表單送 `validateWorkflowVersion`,併入即時檢查後依關卡列出錯誤 / 警告,點一筆選中那一關並打開屬性面板;之後又改過就提示重新檢查。沒選檢查用表單時提示:跳過條件沒有對照表單時只做結構檢查,審核者的表單欄位來源仍以各自的表單驗。api 失敗時降級只列即時結果並說明。
@@ -426,7 +426,7 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 模組 / 表單篩選的選項取自「新申請」的清單。零件:`hooks/base/useMyApplications.ts`、`useMyTasks.ts`、`useApplicableForms.ts`、`useApplyCenterCounts.ts`。
 
-**批次核准**(`MyTasksTab.tsx`、`BatchApproveDialog.tsx`、`BatchApproveResults.tsx`;Figma BS-07a / BS-07b):
+**批次核准**(`MyTasksTab.tsx`、`BatchApproveDialog.tsx`、`BatchApproveResults.tsx`;Figma BS-07a `257:5966` / BS-07b `257:6335`):
 
 - 「待處理」的 `DataTable` 開 `rowSelection`(`@repo/ui/data-table` 的選用列勾選):只有 `PENDING` 的列能勾、上限 50 筆(到上限時其他未勾的列停用)、表頭勾選框 = 全選本頁。勾選以任務 id 記在元件 state,換頁保留;**不放網址**(大量 id);換篩選條件(模組 / 表單 / 待處理 · 已處理)時清掉。「已處理」不開列勾選。
 - 有勾選時表格上方是「已選 N 筆 · 清除」+ 說明「只能批次核准;駁回、退回請逐筆處理」+ [核准(N)]。

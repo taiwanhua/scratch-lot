@@ -44,6 +44,7 @@
 - `permissions: [{ action, name, description? }]`(選填):頁內額外權限,掛在模組主節點,和固定四條一起產生 `<moduleKey>.<action>`。例:`permissions: [{ action: "sell", name: "銷售" }]` → `store.sell`。
 - `action` 和固定四條、`*` 或表單動態權限的前綴(`show-` / `edit-` / `create-`)撞形狀 → 宣告時丟錯。
 - `<moduleKey>.*` 照常由組裝器自動產生,自然涵蓋宣告的頁內權限。
+- 表單模組的列表節點固定 `sidebarType: link`,不提供隱藏的表單模組。要「從某個畫面發起」的表單,用一個表單模組綁多張表單,再以 `page-replacements` 替換列表頁。
 - `perFormCreate: true`(選填,預設關):依表單分開新增權限(B9b)。落庫 `modules.perFormCreate`,每次 seed 同步宣告值,沒有執行期開關;底座示範表單模組都不開。開啟後每張表單發布時建 `<moduleKey>.create-<formKey>`(見[四步發布](#四步發布)),新增資格看它而不看模組 `create`(`FormAccessService.canCreateWithForm`;入口清單見[授權](../concepts/authorization.md#依表單分開新增權限b9b))。已有表單的模組改為開啟要另寫 migration(補建權限、把原持有模組 `create` 的角色授予對應權限)。
 
 正本:`apps/db-migrator/seeds/base/form-module-declaration.ts`
