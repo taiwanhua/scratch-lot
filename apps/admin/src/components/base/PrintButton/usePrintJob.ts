@@ -55,7 +55,7 @@ const phaseOf = (
 };
 
 /**
- * 一張單據的列印進度(底座規格第 6 章「列印按鈕元件」):等結果交給共用的 `usePrintJobResult`
+ * 一張單據的列印進度:等結果交給共用的 `usePrintJobResult`
  * (`print-result` 信號 + 依即時通道狀態補查 `printJob`;docs/modules/printers.md「等列印結果」),
  * 這裡只把結果換成按鈕旁的進度,有結果後重抓這張單據的已印次數(按鈕變 [補印]、「已印 N 次」)。
  */

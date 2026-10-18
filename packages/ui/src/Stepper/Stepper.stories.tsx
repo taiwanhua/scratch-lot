@@ -4,7 +4,7 @@ import { type StepStatus, Stepper, type StepperStep } from "./Stepper";
 
 const LABELS = ["基本資料", "明細", "附件", "審核人", "確認"];
 
-/** 五步(Figma 示範卡 260:68477 的步驟名),狀態依序給。 */
+/** 五步(Figma 示範卡的步驟名),狀態依序給。 */
 const stepsOf = (...statuses: StepStatus[]): StepperStep[] =>
   statuses.map((status, index) => ({
     key: `step-${String(index + 1)}`,
@@ -38,10 +38,10 @@ export const WideFirstStep: Story = {
   args: { steps: stepsOf("current", "todo", "todo", "todo", "todo") },
 };
 
-/** 寬:Figma 79:1326,已完成 → 進行中 → 未開始(已完成的可點回)。 */
+/** 寬:已完成 → 進行中 → 未開始(已完成的可點回)。 */
 export const WideInProgress: Story = {};
 
-/** 寬:Figma 260:68477「有錯的步驟」,明細驗證失敗標「有錯」。 */
+/** 寬:Figma「有錯的步驟」,明細驗證失敗標「有錯」。 */
 export const WideWithError: Story = {
   args: { steps: stepsOf("done", "error", "current", "todo", "todo") },
 };
@@ -51,7 +51,7 @@ export const WideAllDone: Story = {
   args: { steps: stepsOf("done", "done", "done", "done", "done") },
 };
 
-/** 窄:Figma 79:1353,只顯示「第 n / N 步 · 名稱」+ 分段進度條。 */
+/** 窄:只顯示「第 n / N 步 · 名稱」+ 分段進度條。 */
 export const NarrowFirstStep: Story = {
   args: {
     variant: "narrow",

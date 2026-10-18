@@ -15,7 +15,7 @@ beforeAll(async () => {
   await import("./ApplyCenterPage");
 });
 
-describe("申請中心:分頁與篩選存在網址(REACT-14,Figma BS-15a)", () => {
+describe("申請中心:分頁與篩選存在網址(REACT-14)", () => {
   it("分頁用 PageTabs 記在 `?tab=`、篩選在 `?list=`;重新整理後都還在", async () => {
     const first = renderApplyCenter({ path: APPLY_CENTER_ROUTE });
     await screen.findByRole("table", { name: "我的申請" });

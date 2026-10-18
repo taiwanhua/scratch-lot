@@ -11,7 +11,7 @@ import { NotificationsCoreModule } from "./notifications-core.module";
 import { NotificationsResolver } from "./notifications.resolver";
 
 /**
- * 通知的 API 功能(底座規格第 5 章;`docs/modules/notification-settings.md`):
+ * 通知的 API 功能(`docs/modules/notification-settings.md`):
  * 我的通知清單 / 未讀數 / 標已讀 / 管道開關(所有登入者),與通知設定頁(`system.notification-settings`)。
  * 送通知的 `notify()` 在 `NotificationsCoreModule`,使用處匯入那一個。
  */

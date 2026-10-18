@@ -137,7 +137,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.formEngine.errors.",
     reason:
-      "`tErrors(code)`,code 由 `lib/form-engine/form-errors.ts` 的 `formErrorOf` 從 api 錯誤碼換算",
+      "`tErrors(code)`,code 由 `lib/base/form-engine/form-errors.ts` 的 `formErrorOf` 從 api 錯誤碼換算",
   },
   {
     key: "admin.formEngine.list.slots.",
@@ -258,7 +258,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.forms.rules.uploadTypes.",
     reason:
-      "`t(`uploadTypes.${group.key}`)`,key 取自 `lib/form-engine/upload-types.ts` 的 `UPLOAD_TYPE_GROUPS`",
+      "`t(`uploadTypes.${group.key}`)`,key 取自 `lib/base/form-engine/upload-types.ts` 的 `UPLOAD_TYPE_GROUPS`",
   },
   {
     key: "admin.forms.property.keyProblems.",
@@ -345,7 +345,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.workflows.errors.",
     reason:
-      "`tErrors(code)`,code 由 `lib/workflow/workflow-errors.ts` 的 `workflowErrorOf` 從 api 錯誤碼 / reason 換算",
+      "`tErrors(code)`,code 由 `lib/base/workflow/workflow-errors.ts` 的 `workflowErrorOf` 從 api 錯誤碼 / reason 換算",
   },
   {
     key: "admin.seedExport.errors.",
@@ -360,7 +360,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.workflows.opErrors.",
     reason:
-      "`tOp(state.opError)`,值是 `lib/workflow/flow-model.ts` 的 `FlowOpError`",
+      "`tOp(state.opError)`,值是 `lib/base/workflow/flow-model.ts` 的 `FlowOpError`",
   },
   {
     key: "admin.workflows.step.modes.",

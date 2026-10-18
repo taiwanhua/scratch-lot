@@ -3,8 +3,8 @@
   "private": true,
   "wowgoBase": {
     "repository": "https://github.com/taiwanhua/wowgo-base.git",
-    "tag": "v0.3.3",
-    "commit": "da45cdbae2e1c20d4bbc30d0936cd2c64739a9f9"
+    "tag": "v0.4.0",
+    "commit": "d183d4d1282a54938140d1f66f75dd1050378234"
   },
   "scripts": {
     "build": "turbo run build",

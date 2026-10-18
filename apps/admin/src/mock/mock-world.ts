@@ -161,12 +161,12 @@ export const mockHandlers = ({
   return [
     // 登入線:Login / Refresh / Me / SwitchOrg / 改密碼…(`hasRefreshCookie` 即「已登入」)
     ...auth.handlers,
-    // 通知鈴 / 通知清單 / 偏好分頁的管道開關(底座規格第 5 章)
+    // 通知鈴 / 通知清單 / 偏好分頁的管道開關
     ...notificationWorld({
       notifications: sampleNotifications(),
       preferences: auth.preferences,
     }).handlers,
-    // 個人設定的代理人分頁(底座規格 3.7 B15)
+    // 個人設定的代理人分頁
     ...delegationWorld().handlers,
     // 組織管理(#134 / #135 / #137):`users` 讓給 userWorld
     ...withoutOperations(
@@ -209,7 +209,7 @@ export const mockHandlers = ({
       }).handlers,
       ["Roles", "Users", "OrgTree", "AudiencePermissionOptions"],
     ),
-    // 通知設定(底座規格第 5 章;`mock-notification-settings.ts`):`Roles` 讓給 roleWorld,權限候選樹由它提供
+    // 通知設定(`mock-notification-settings.ts`):`Roles` 讓給 roleWorld,權限候選樹由它提供
     ...withoutOperations(
       notificationSettingsWorld(mockNotificationSettings()).handlers,
       ["Roles"],
@@ -305,7 +305,7 @@ export const mockHandlers = ({
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
     ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
-    // 印表機管理(底座規格第 6 章 B8):兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
+    // 印表機管理:兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
     // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
     ...printingWorld().handlers,
   ];
@@ -411,7 +411,7 @@ const mockWorkflowRuntime = () => ({
       ],
     }),
   ],
-  // 待我審核三筆(批次核准 BS-07a / b):「出差三天」核准時被專案守門擋下(錯誤碼沒有文案 → 通用句)
+  // 待我審核三筆(批次核准):「出差三天」核准時被專案守門擋下(錯誤碼沒有文案 → 通用句)
   tasks: [
     taskFragment({ id: "task-manager-1" }),
     taskFragment({

@@ -24,7 +24,7 @@ export type WeekSelectionState = "none" | "some" | "all" | "disabled";
 const parseMonth = (month: string) => dayjs(`${month}-01`);
 
 /**
- * 依月份排出整週的格子,**一週固定從星期日開始**(《底座規格》第 11 章 B 類)。
+ * 依月份排出整週的格子,**一週固定從星期日開始**。
  * 第一週往前補上個月、最後一週往後補下個月,每週都是 7 格;週數依月份而定(4–6 週)。
  */
 export const buildMonthWeeks = (month: string): CalendarDay[][] => {

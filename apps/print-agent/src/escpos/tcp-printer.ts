@@ -11,7 +11,7 @@ import {
 import type { PrintOutcome, PrinterTransport } from "./transport";
 
 /**
- * TCP 9100(RAW)送 ESC/POS 指令(底座規格第 6 章 `escpos`:TCP 9100 連線與逾時;`DLE EOT` 讀狀態)。
+ * TCP 9100(RAW)送 ESC/POS 指令(`escpos`:TCP 9100 連線與逾時;`DLE EOT` 讀狀態)。
  *
  * 一張單據一條連線:連線 → `DLE EOT 4` 查紙(缺紙就不送、回報 `paper-out`)→ 依序寫出各段 → 關閉。
  * 查紙沒有回應(有些機型關掉了即時狀態回傳)時照常列印,不當成錯誤;每台第一次遇到時記一次 warn。

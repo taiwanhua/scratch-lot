@@ -278,10 +278,10 @@ export const notificationTypes = (
     ...overrides["printing.agent-offline"],
   },
   {
-    type: "lottery.stocktake-reminder",
-    name: "盤點提醒",
+    type: "demo.expiry-reminder",
+    name: "到期提醒",
     orgScope: { ref: "tenant", range: "self" },
     defaultAudience: holdsPermission("system.notification-settings.edit"),
-    ...overrides["lottery.stocktake-reminder"],
+    ...overrides["demo.expiry-reminder"],
   },
 ];

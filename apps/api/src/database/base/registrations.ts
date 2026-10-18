@@ -529,7 +529,7 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
     orgDataChecks: [],
   },
   {
-    // 代理人(《底座規格》3.7 B15;屬帳號、沒有組織歸屬,同 user_preferences)
+    // 代理人(屬帳號、沒有組織歸屬,同 user_preferences)
     key: "user-delegations",
     models: [
       {
@@ -544,7 +544,7 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
     orgDataChecks: [],
   },
   {
-    // 通知(底座規格第 5 章):收件人的通知屬帳號、不擋刪組織;通知設定是以 tenantId 為邊界的租戶設定
+    // 通知:收件人的通知屬帳號、不擋刪組織;通知設定是以 tenantId 為邊界的租戶設定
     key: "notifications",
     models: [
       {

@@ -34,7 +34,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Figma `Draft/Receipt58` 51:633:用零件組成的示範(補印的收據),不是固定版面。 */
+/** Figma `Draft/Receipt58`:用零件組成的示範(補印的收據),不是固定版面。 */
 export const Demo: Story = {
   args: {
     children: (
@@ -77,7 +77,7 @@ export const Demo: Story = {
   },
 };
 
-/** 表頭(Figma 80:1491):租戶名稱、單據名稱、單號、時間。 */
+/** 表頭:租戶名稱、單據名稱、單號、時間。 */
 export const Header: Story = {
   args: {
     children: (
@@ -122,7 +122,7 @@ export const ReprintMark: Story = {
   },
 };
 
-/** 標籤值列(Figma 51:626);值太長在右側換行。 */
+/** 標籤值列;值太長在右側換行。 */
 export const Row: Story = {
   args: {
     children: (
@@ -137,7 +137,7 @@ export const Row: Story = {
   },
 };
 
-/** 最多 3 欄的表格(Figma 80:1508):表頭 + 內容列。 */
+/** 最多 3 欄的表格:表頭 + 內容列。 */
 export const Table: Story = {
   args: {
     children: (
@@ -152,7 +152,7 @@ export const Table: Story = {
   },
 };
 
-/** 號碼區段(Figma 80:1509)。 */
+/** 號碼區段。 */
 export const Range: Story = {
   args: {
     children: (
@@ -167,7 +167,7 @@ export const Range: Story = {
   },
 };
 
-/** 分隔線(Figma 80:1515)。 */
+/** 分隔線。 */
 export const Divider: Story = {
   args: {
     children: (
@@ -180,17 +180,17 @@ export const Divider: Story = {
   },
 };
 
-/** 合計列(Figma 80:1511)。 */
+/** 合計列。 */
 export const Total: Story = {
   args: { children: <Receipt58Total label="合計" value="3,400" /> },
 };
 
-/** 簽名欄(Figma 51:630)。 */
+/** 簽名欄。 */
 export const Signature: Story = {
   args: { children: <Receipt58Signature signer="經手人簽名" /> },
 };
 
-/** QR code(Figma 80:1517):內容 = 單據在後台的連結。 */
+/** QR code:內容 = 單據在後台的連結。 */
 export const Qr: Story = {
   args: {
     children: (
@@ -202,7 +202,7 @@ export const Qr: Story = {
   },
 };
 
-/** 文字列(Figma 286:77796):大 / 一般 / 小 / 粗體 × 靠左 / 置中 / 靠右,太長自動換行。 */
+/** 文字列:大 / 一般 / 小 / 粗體 × 靠左 / 置中 / 靠右,太長自動換行。 */
 export const Text: Story = {
   args: {
     children: (
@@ -222,12 +222,12 @@ export const Text: Story = {
   },
 };
 
-/** 一維條碼(Code128;Figma 286:77797)。 */
+/** 一維條碼(Code128)。 */
 export const Barcode: Story = {
   args: { children: <Receipt58Barcode value="D0031202610150001" /> },
 };
 
-/** 切紙位置(Figma 286:77820)。 */
+/** 切紙位置。 */
 export const Cut: Story = {
   args: { children: <Receipt58Cut label="切紙" /> },
 };

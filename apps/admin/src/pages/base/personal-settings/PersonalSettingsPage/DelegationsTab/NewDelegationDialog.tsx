@@ -32,7 +32,7 @@ export interface NewDelegationDialogProps {
 }
 
 /**
- * 新增代理(Figma BS-06b `257:5859`):代理人、開始日、結束日、備註。
+ * 新增代理:代理人、開始日、結束日、備註。
  * 選的是最上層組織時區的日期:起 = 當天 00:00、迄 = 結束日 24:00(「日期只有一種做法」)。
  * 重疊、代理人不可選等由 api 擋(`VALIDATION_FAILED` + reason),失敗跳提示、彈窗留著讓使用者改。
  */

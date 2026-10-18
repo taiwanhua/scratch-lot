@@ -18,7 +18,7 @@ interface PrintAgentRequest extends Request {
 }
 
 /**
- * 代理程式的 HTTP 端點守門(底座規格第 6 章「配對」):`Authorization: Bearer <代理程式金鑰>`。
+ * 代理程式的 HTTP 端點守門:`Authorization: Bearer <代理程式金鑰>`。
  * 每個請求都以金鑰雜湊查啟用中的代理程式 —— 重新配對 / 停用清掉雜湊後**立即**一律 401;
  * 查到即記一次 `lastSeenAt`(輪詢、心跳都算「看到」)。
  * 端點標 `@Public()` 跳過後台的登入守門(呼叫者不是後台使用者),改由本守門把關。

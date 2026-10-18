@@ -19,7 +19,7 @@ export const APPROVAL_MODES = ["any", "all"] as const;
 
 export type ApprovalMode = (typeof APPROVAL_MODES)[number];
 
-/** 審核者來源的三種(《底座規格》3.3):人員條件 / 表單欄位 / 主管。 */
+/** 審核者來源的三種:人員條件 / 表單欄位 / 主管。 */
 export const ASSIGNEE_KINDS = ["audience", "field", "manager"] as const;
 
 export type AssigneeKind = (typeof ASSIGNEE_KINDS)[number];
@@ -40,7 +40,7 @@ export type AssigneeSource =
 export const SKIP_ORG_TENANT = "tenant";
 
 /**
- * 「申請人屬於這些組織就跳過」(《底座規格》3.4 B4):比對申請人送出當下的**所屬組織(全部)**
+ * 「申請人屬於這些組織就跳過」:比對申請人送出當下的**所屬組織(全部)**
  * (修訂 `ctx` 快照的 `orgIds`),任一個在名單裡(勾「包含下層」時含名單組織的下層)就成立。
  * 共用流程只能用 `SKIP_ORG_TENANT`;指定組織只能用在租戶客製流程。
  */
@@ -52,7 +52,7 @@ export interface SkipOrgsDef {
 }
 
 /**
- * 自動通過(《底座規格》3.5 B5;兩項各自開關,省略 = 照常審核):
+ * 自動通過(兩項各自開關,省略 = 照常審核):
  * - `applicant`:申請人是這一關的審核者 → 記成申請人核准(預設照常 = 剔除申請人)
  * - `priorApprover`:審核者已在**這一輪**(同一實例)更早的關卡親自核准過 → 記成他核准
  *
@@ -64,7 +64,7 @@ export interface AutoApproveDef {
 }
 
 /**
- * 逾時提醒(《底座規格》3.8 B16;省略 / `null` = 不檢查、不通知)。時數以日曆小時計(含夜間與假日),
+ * 逾時提醒(省略 / `null` = 不檢查、不通知)。時數以日曆小時計(含夜間與假日),
  * 從任務派給目前承辦人起算(改派 = 重新計時):
  * - 超過 `reviewerAfterHours`(N)仍未處理 → 通知目前的審核者一次
  * - 超過 `audienceAfterHours`(M,必須 > N)→ 通知 `audience`(通知對象)一次;審核者不再重複收到
@@ -165,7 +165,7 @@ export interface WorkflowDefinition {
   cc?: AssigneeSource | null;
 }
 
-/** 知會的時機(`workflow.cc` 的 `event` 參數;《底座規格》3.9 的情境表)。 */
+/** 知會的時機(`workflow.cc` 的 `event` 參數)。 */
 export const CC_EVENTS = [
   "step-passed",
   "step-skipped",

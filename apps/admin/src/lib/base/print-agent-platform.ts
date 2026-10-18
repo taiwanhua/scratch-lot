@@ -1,6 +1,6 @@
 import { PrintAgentPlatform } from "@repo/graphql";
 
-/** 下載區四個按鈕的順序(底座規格「打包」表的順序)。 */
+/** 下載區四個按鈕的順序。 */
 export const PRINT_AGENT_PLATFORMS: readonly PrintAgentPlatform[] = [
   PrintAgentPlatform.WindowsX64,
   PrintAgentPlatform.LinuxX64,
@@ -19,7 +19,7 @@ export interface BrowserPlatformHints {
 const ARM_PATTERN = /aarch64|arm64|armv8|armv7/i;
 
 /**
- * 依瀏覽器偵測的系統,選出下載區要反白建議的平台(底座規格「下載與安裝」第 1 點);認不出來回 `null`
+ * 依瀏覽器偵測的系統,選出下載區要反白建議的平台;認不出來回 `null`
  * (四個按鈕都不反白)。只是建議:四個按鈕都可以按。
  *
  * - Windows → Windows x64;macOS → macOS arm64(不支援 Intel Mac,Apple 晶片也沒辦法從瀏覽器分辨)

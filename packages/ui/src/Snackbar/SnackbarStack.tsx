@@ -33,11 +33,11 @@ export interface SnackbarStackProps {
   sx?: SxProps<Theme>;
 }
 
-/** 電腦 / 平板的卡片寬(Figma `Draft/Snackbar+` 286:7200 的 360)。 */
+/** 電腦 / 平板的卡片寬(Figma `Draft/Snackbar+` 的 360)。 */
 const DESKTOP_WIDTH = 360;
 
 /**
- * 全站提示的位置與堆疊(底座規格 10.12):
+ * 全站提示的位置與堆疊:
  *
  * - **電腦 / 平板(`sm` 以上)**:右下角,距邊 24,寬 360。
  * - **手機(小於 `sm`)**:底部置中、左右 16 滿寬;有底部導覽時以 `mobileBottomOffset` 放在它上面。

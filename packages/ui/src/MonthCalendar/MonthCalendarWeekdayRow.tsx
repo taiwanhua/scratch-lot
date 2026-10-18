@@ -31,7 +31,7 @@ export const MonthCalendarWeekdayRow = ({
         minWidth: 0,
         display: "grid",
         gridTemplateColumns: WEEK_COLUMNS,
-        // 星期列灰底(Figma Draft/MonthCalendar 48:360)
+        // 星期列灰底(Figma Draft/MonthCalendar)
         bgcolor: "background.default",
       }}
     >

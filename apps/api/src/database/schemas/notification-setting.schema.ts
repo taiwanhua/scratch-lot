@@ -8,7 +8,7 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 export const NOTIFICATION_SETTINGS_COLLECTION = "notification_settings";
 
 /**
- * 通知設定(底座規格第 5 章「通知設定頁」):租戶對**負責人提醒**類型的收件人調整,
+ * 通知設定:租戶對**負責人提醒**類型的收件人調整,
  * 每個租戶、每種類型至多一筆。沒有這筆、或 `audience` 為 null = 用類型宣告的預設人員條件
  * (「還原預設」把 `audience` 寫回 null)。`updatedBy` / `updatedAt` 由基礎欄位提供。
  *

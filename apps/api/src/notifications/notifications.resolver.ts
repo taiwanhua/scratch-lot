@@ -15,7 +15,7 @@ import {
 import { NotificationInboxService } from "./notification-inbox.service";
 
 /**
- * 我的通知(底座規格第 5 章「通知鈴與通知清單」):只讀寫自己的,所有登入者都能用 ——
+ * 我的通知:只讀寫自己的,所有登入者都能用 ——
  * 不經模組權限(通知鈴在頂端列,不是模組;同個人偏好)。
  */
 @Resolver()

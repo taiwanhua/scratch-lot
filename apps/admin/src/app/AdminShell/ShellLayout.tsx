@@ -88,7 +88,7 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
       ? undefined
       : pageMinWidths[currentModule.key]) ?? DEFAULT_SHELL_MIN_WIDTH;
   const isNavCollapsed = useSideNavStore((state) => state.isCollapsed);
-  // 側欄計數登記制(底座規格 10.4):模組 key → 數字,來自 `sidebarBadges`(只含看得到的模組);
+  // 側欄計數登記制:模組 key → 數字,來自 `sidebarBadges`(只含看得到的模組);
   // 進站取一次,之後靠 `badge:<模組 key>` 信號重抓(斷線時跟即時通道降級每 60 秒一次)
   const navBadges = useSidebarBadges();
 

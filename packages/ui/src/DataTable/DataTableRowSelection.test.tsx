@@ -6,7 +6,7 @@ import { useState } from "react";
 import { setupFakeViewport } from "../test/viewport";
 import { DataTable, type DataTableColumn } from "./DataTable";
 
-/** `DataTable` 的選用列勾選(底座規格 3.10 B18):預設關閉;以列 key 記選取、換頁保留、上限、清除。 */
+/** `DataTable` 的選用列勾選:預設關閉;以列 key 記選取、換頁保留、上限、清除。 */
 
 interface Item {
   id: string;

@@ -20,7 +20,7 @@ import { renderApp } from "@/test/render";
 import { findLatestSnackbar, findSnackbarAlert } from "@/test/snackbar";
 
 /**
- * 通知鈴與通知清單(底座規格第 5 章「通知鈴與通知清單」情境表,每列一個測試)、新通知提示(10.12)。
+ * 通知鈴與通知清單(每列一個測試)、新通知提示。
  * 走真的殼、真的 `RealtimeProvider` 與信號登記表,只把瀏覽器的 WebSocket 換成假的
  * (測試預設的 `realtimeTicket` 是 null = 停用,這裡改發憑證)。
  */

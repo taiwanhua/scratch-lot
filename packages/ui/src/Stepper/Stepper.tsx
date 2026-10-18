@@ -10,7 +10,7 @@ import { CheckIcon } from "../icons/CheckIcon";
 import { mergeSx } from "../theme/sx";
 import { useBreakpointDown } from "../useBreakpointDown/useBreakpointDown";
 
-/** 一步的狀態(Figma `Draft/StepperStep` 79:1325 的 State 變體軸)。 */
+/** 一步的狀態(Figma `Draft/StepperStep` 的 State 變體軸)。 */
 export type StepStatus = "done" | "current" | "todo" | "error";
 
 export interface StepperStep {
@@ -48,7 +48,7 @@ export interface StepperProps {
 }
 
 /*
- * 幾何照 Figma `Draft/Stepper` 79:1361(Wide 79:1326 / Narrow 79:1353)與 `Draft/StepperStep` 79:1325:
+ * 幾何照 Figma `Draft/Stepper`(Wide / Narrow)與 `Draft/StepperStep`:
  * 編號圓 24、內字 12 半粗;圓與名稱間距 8;步驟之間的連線寬 32、2px,與兩側間距 12;
  * 已完成 / 進行中 = primary 實心白字(已完成畫勾),未開始 = grey.200 底 + 次要字,有錯 = error 實心「!」;
  * 進到某一步的連線:那一步不是「未開始」就是 primary(含有錯的前後),否則 divider。

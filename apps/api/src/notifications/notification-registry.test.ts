@@ -21,7 +21,7 @@ import {
 } from "./notification-registry";
 
 const PARTY: NotificationTypeDefinition = {
-  key: "lottery.stock-low",
+  key: "demo.stock-low",
   name: "庫存不足",
   defaultChannels: ["in-app"],
   canDisable: { "in-app": true },
@@ -68,8 +68,8 @@ describe("通知類型登記表", () => {
 
   it.each([
     ["key 只有一段", { key: "stock" }],
-    ["key 有底線", { key: "lottery.stock_low" }],
-    ["key 有大寫", { key: "lottery.StockLow" }],
+    ["key 有底線", { key: "demo.stock_low" }],
+    ["key 有大寫", { key: "demo.StockLow" }],
     ["沒有管道", { defaultChannels: [], canDisable: {} }],
     ["沒登記的管道", { defaultChannels: ["sms"], canDisable: { sms: true } }],
     [
@@ -119,9 +119,9 @@ describe("通知管道開關的偏好 key(規格 10.6)", () => {
     expect(notificationPreferenceKey(WORKFLOW_TASK_CREATED, "in-app")).toBe(
       "notification_workflow_task-created_in-app",
     );
-    expect(
-      notificationPreferenceKey("lottery.stocktake-reminder", "email"),
-    ).toBe("notification_lottery_stocktake-reminder_email");
+    expect(notificationPreferenceKey("demo.expiry-reminder", "email")).toBe(
+      "notification_demo_expiry-reminder_email",
+    );
   });
 
   it("可還原:以 _ 切開 = 前綴 + 類型的各段 + 管道(類型與管道 key 都不含 _)", () => {

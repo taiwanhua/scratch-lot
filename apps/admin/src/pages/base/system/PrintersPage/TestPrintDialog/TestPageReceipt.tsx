@@ -18,8 +18,8 @@ export interface TestPageReceiptProps {
 }
 
 /**
- * 要送去印的測試頁(`@repo/ui/receipt58` 的 `PrinterTestPage`,Figma BS-18d):掛在畫面外、不給人看,
- * 只當轉圖的來源(與預覽同一個元件,底座規格「版面零件」)。
+ * 要送去印的測試頁(`@repo/ui/receipt58` 的 `PrinterTestPage`):掛在畫面外、不給人看,
+ * 只當轉圖的來源(與預覽同一個元件)。
  * 表頭 = 最上層組織名稱(`me.currentOrg.tenantName`,不印分店名稱)+ 印表機名稱與 IP + 送出時間(租戶時區);
  * QR code = 本頁的網址。
  */

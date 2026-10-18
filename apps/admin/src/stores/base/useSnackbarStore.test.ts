@@ -9,7 +9,7 @@ const onClick = () => {
 const texts = (): unknown[] =>
   useSnackbarStore.getState().items.map((item) => item.message);
 
-describe("useSnackbarStore(底座規格 10.12 的堆疊)", () => {
+describe("useSnackbarStore", () => {
   it("新的一則放在最後;第 4 則進來時丟掉最舊的,維持 3 則", () => {
     const { show } = useSnackbarStore.getState();
     show("success", "一");

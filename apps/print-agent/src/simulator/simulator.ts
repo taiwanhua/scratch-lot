@@ -15,7 +15,7 @@ import { encodeMonoPng } from "../escpos/png";
 import type { PrintOutcome, PrinterTransport } from "../escpos/transport";
 
 /**
- * 模擬印表機(底座規格第 6 章 `simulator`):不送出,把收到的 ESC/POS 指令**解回點陣圖**存成 PNG。
+ * 模擬印表機(`simulator`):不送出,把收到的 ESC/POS 指令**解回點陣圖**存成 PNG。
  * 存的是「收據機會印出來的樣子」,不是原始圖片 —— 順便驗證指令本身排得對(開發、測試用)。
  * 啟用:`print-agent run --simulator <目錄>`(所有印表機都改送到這裡)。
  */

@@ -60,7 +60,7 @@ function isVisible(operator: OperatorContext, orgId: Types.ObjectId): boolean {
 }
 
 /**
- * 訂閱憑證的簽發(底座規格第 4 章「訂閱憑證」):
+ * 訂閱憑證的簽發:
  *
  * - **平常只放自己的頻道** `user:<操作者>`;通知、計數、列印結果都走它,與目前組織無關。
  * - **看板頻道按需換發**:帶 `board: { key, orgId }` 時,兩件事都成立才多放 `board:<那家店>`:
@@ -108,7 +108,7 @@ export class RealtimeTicketService {
   }
 
   /**
-   * 代理程式的訂閱憑證(底座規格第 6 章「代理程式」):只放自己的 `print-agent:<id>`,
+   * 代理程式的訂閱憑證:只放自己的 `print-agent:<id>`,
    * Durable Object 是代理程式分店所屬的租戶(根組織 = 平台)。呼叫端已用金鑰驗過身分。
    * 即時通道停用時回 null,代理程式改 60 秒輪詢。
    */

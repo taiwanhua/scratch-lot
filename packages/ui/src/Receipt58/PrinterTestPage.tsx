@@ -60,7 +60,7 @@ export interface PrinterTestPageProps {
 export const PRINTER_TEST_BARCODE = "TEST-0123456789";
 
 /**
- * 印表機的測試頁(`[測試列印]` 印這一張;規格第 6 章「測試頁」,Figma BS-18d 286:77824):
+ * 印表機的測試頁(`[測試列印]` 印這一張;規格第 6 章「測試頁」):
  * 用版面零件組成,涵蓋所有列印格式 —— 表頭、字體大小、對齊、欄位、換行、分隔線、條碼、切紙。
  */
 export const PrinterTestPage = ({

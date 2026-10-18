@@ -44,7 +44,7 @@ export interface PrinterStatusTagProps {
   printer: Pick<PrinterFieldsFragment, "enabled" | "agentOnline" | "status">;
 }
 
-/** 印表機分頁「狀態」欄的標籤(Figma BS-10a:正常 / 離線)。 */
+/** 印表機分頁「狀態」欄的標籤(正常 / 離線)。 */
 export const PrinterStatusTag = ({ printer }: PrinterStatusTagProps) => {
   const t = useTranslations("admin.printers.printerStatus");
   const status = displayStatusOf(printer);

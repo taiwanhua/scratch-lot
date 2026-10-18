@@ -50,7 +50,7 @@ type PartKind = "before" | "solid" | "after";
 const EDGE_INSET = { day: 4, week: 1 } as const;
 
 /**
- * 時間軸上的一條長條(Figma Draft/ScheduleTimelineBlock 259:4770):實線段 + 選用的前段 / 後段延伸
+ * 時間軸上的一條長條(Figma Draft/ScheduleTimelineBlock):實線段 + 選用的前段 / 後段延伸
  * (超出所屬容器的時間,淡色底 + 虛線框,和實線段相接的一側不畫框、不圓角)。延伸段疊在容器底下,
  * 不會蓋到相鄰容器的文字或長條。停用的長條灰色、不可點,游標維持箭頭。
  */

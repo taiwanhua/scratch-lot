@@ -61,7 +61,7 @@ export interface NotificationSettingPage {
 }
 
 /**
- * 通知設定(底座規格第 5 章「通知設定頁」;`docs/modules/notification-settings.md`):
+ * 通知設定(`docs/modules/notification-settings.md`):
  * 租戶管理員調整**負責人提醒**類型的收件人(人員條件),存在 `notification_settings`,唯一 `(tenantId, type)`。
  * 租戶 = 操作者目前組織所屬的租戶;站在根組織時只能看(預設),不能改(`FORBIDDEN` / `TENANT_ONLY`)。
  * 組織範圍由類型宣告、唯讀;人員條件不能選「所有人」、不含所屬組織欄,使用者與角色必須屬本租戶。

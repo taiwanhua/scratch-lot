@@ -52,7 +52,7 @@ const publish = async (user: ReturnType<typeof renderFormsPage>["user"]) => {
 };
 
 describe("表單管理:發布新建了依表單新增權限(B9b)", () => {
-  it("發布成功提示「不會自動授予」並附 [前往角色管理] 連結(BS-04b)", async () => {
+  it("發布成功提示「不會自動授予」並附 [前往角色管理] 連結", async () => {
     const { user } = renderFormsPage({
       ...defaultDesignOptions(),
       createdPermissions: { shopping_list: CREATED },

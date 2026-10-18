@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import type { SnackbarSeverity } from "@repo/ui/snackbar";
 
 /**
- * 全站短提示(#376、底座規格 10.12)的查詢 helper。
+ * 全站短提示(#376)的查詢 helper。
  *
  * **要用容器收斂,不能只 `findByText`**:失敗提示與頁面 / 彈窗上那一條錯誤是**同一份
  * 文案**(刻意的:同一份錯誤解讀),只比文字會同時抓到兩個節點,也證明不了提示真的跳了。

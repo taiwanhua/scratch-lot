@@ -74,7 +74,7 @@ export interface RosterGridProps<Person extends RowData> {
 }
 
 /**
- * 班表(人 × 日期矩陣,《底座規格》10.5;Figma Draft/RosterGrid 366:7960):建在 `DataTable` 上,
+ * 人員排程(人 × 日期矩陣;Figma Draft/RosterGrid):建在 `DataTable` 上,
  * 列虛擬捲動、左右固定欄(人員 / 統計)、中間日期區左右捲動、欄位顯示 / 隱藏、欄位群組收合成窄欄、
  * 頂部固定群組。格子內容由使用的模組決定;欄位顯示、群組收合、頂部群組收合都是受控值,
  * 元件不自己存(使用的模組存在瀏覽器)。

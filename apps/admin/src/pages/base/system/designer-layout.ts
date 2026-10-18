@@ -1,5 +1,5 @@
 /**
- * 兩個設計器頁(表單管理、流程管理)共用的響應式版面(T48;STYLE-03 只用 theme 斷點)。
+ * 兩個設計器頁(表單管理、流程管理)共用的響應式版面(STYLE-03 只用 theme 斷點)。
  *
  * 兩頁都沿用殼層預設的內容區最小寬度 `lg`(`app/base/module-pages.ts` 不另宣告 `xl`),
  * 所以視窗 1200–1535 時右側詳情卡片只有約 520–850px。設計器在 `xl` 以下自己換版,
@@ -14,7 +14,7 @@
  * 視窗比 `lg` 還窄(如 1024)時依殼層規則由 `<main>` 水平捲動(`docs/concepts/frontend-architecture.md`)。
  */
 
-/** 表單設計器元件面板在三欄版面的寬度(沿用 T48 之前 `ComponentPalette` 的原值 180)。 */
+/** 表單設計器元件面板在三欄版面的寬度(沿用 `ComponentPalette` 原本的 180)。 */
 const PALETTE_WIDTH = 180;
 
 /** 設計器屬性面板(表單設計器的欄位 / 表單設定、流程設計器的關卡屬性)。 */
@@ -42,7 +42,7 @@ export const designerPaletteSx = {
 
 /**
  * 詳情卡片標頭的標題欄:`xl` 以下以內容寬為底(`flex-basis: auto`),放不下時操作鈕整組換行、不把標題擠扁;
- * `xl` 起維持原本的 `flex: 1`(basis 0),與 T48 之前相同。
+ * `xl` 起維持原本的 `flex: 1`(basis 0),與改成響應式之前相同。
  */
 export const detailHeaderTitleSx = {
   flexGrow: 1,

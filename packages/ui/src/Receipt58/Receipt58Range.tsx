@@ -19,7 +19,7 @@ export interface Receipt58RangeProps extends NumberRangeFormat {
 }
 
 /**
- * 號碼區段(Figma `Draft/Receipt58Range` 80:1509):連號以 `~` 表示、不連號以分隔字隔開,
+ * 號碼區段(Figma `Draft/Receipt58Range`):連號以 `~` 表示、不連號以分隔字隔開,
  * 括號內為筆數;太長自動換行。
  */
 export const Receipt58Range = ({

@@ -19,7 +19,7 @@ export interface BatchApproveResultsProps {
 }
 
 /**
- * 批次核准的逐筆結果表(Figma BS-07b 257:6335):標題 + 結果。被守門擋下的顯示專案的錯誤訊息
+ * 批次核准的逐筆結果表:標題 + 結果。被守門擋下的顯示專案的錯誤訊息
  * (`admin.lifecycle.<碼>`;專案沒有文案時用中性的「這張單目前不能核准」,不用單筆核准的「沒有權限」)。
  */
 export const BatchApproveResults = ({

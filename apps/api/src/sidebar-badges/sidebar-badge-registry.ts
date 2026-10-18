@@ -22,7 +22,7 @@ export class SidebarBadgeRegistrationError extends Error {
 }
 
 /**
- * 側欄計數的登記處(底座規格 10.4):底座與專案的功能模組各自在 `onModuleInit` 呼叫
+ * 側欄計數的登記處:底座與專案的功能模組各自在 `onModuleInit` 呼叫
  * `registerBadge({ moduleKey, count })`;`sidebarBadges` 一次回傳操作者看得到的全部數字。
  * 數字變了由寫入端在交易後呼叫 `RealtimePublisher.publishBadge(tenantId, moduleKey, userIds)`。
  */

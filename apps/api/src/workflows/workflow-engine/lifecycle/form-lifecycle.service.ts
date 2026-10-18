@@ -89,7 +89,7 @@ function sessionOf(what: string): ClientSession {
 }
 
 /**
- * 掛接點的執行(底座規格 3.1 B1;登記見 `form-lifecycle-registration.ts`):
+ * 掛接點的執行(登記見 `form-lifecycle-registration.ts`):
  *
  * - `guard`:動作的交易內、寫入之前呼叫;沒登記 → 通過。擋下 → 拋 `lifecycleBlockedError`(交易回復,
  *   此時還沒有任何寫入)。守門的例外照樣往外拋(TX-04:不吞)

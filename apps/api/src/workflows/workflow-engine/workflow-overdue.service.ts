@@ -44,7 +44,7 @@ export const OVERDUE_RETRY_DELAY_MS = 15 * 60_000;
 const RETRY_DELAY_MS = OVERDUE_RETRY_DELAY_MS;
 
 /**
- * 逾時提醒(《底座規格》3.8 B16):B14 排程每 15 分鐘檢查一次,經 B7 `notify()` 發 `workflow.overdue`。
+ * 逾時提醒:B14 排程每 15 分鐘檢查一次,經 B7 `notify()` 發 `workflow.overdue`。
  * **只提醒,不改任務、關卡、實例的狀態**(不自動核准或駁回)。
  *
  * | 情況                   | 結果                                                                 |

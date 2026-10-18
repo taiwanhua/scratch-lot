@@ -12,7 +12,7 @@ import {
 
 preloadFormsPage();
 
-describe("表單管理:表單設定「允許存草稿」(BS-21)", () => {
+describe("表單管理:表單設定「允許存草稿」", () => {
   it("預設開;關掉 → updateForm 帶 allowDraft false,開關跟著關、提示只能直接送出", async () => {
     const { user, world } = renderFormsPage();
 

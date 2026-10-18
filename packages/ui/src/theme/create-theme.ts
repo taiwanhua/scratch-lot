@@ -41,7 +41,7 @@ export interface CreateAppThemeOptions {
 const GREY_500_CHANNELS = "147, 158, 169";
 
 /**
- * 互動狀態(《底座規格》10.11):全站一套,照 Minimal —— grey/500 疊 8% / 16% / 24% / 80% / 24%
+ * 互動狀態:全站一套,照 Minimal —— grey/500 疊 8% / 16% / 24% / 80% / 24%
  * (hover / selected / focus / disabled / disabledBackground),亮暗模式相同。
  * 有色元件的 state layer = 同色系 main × `hoverOpacity` / `selectedOpacity`,與白底元件同一組 8% / 16%。
  * MUI 亮色預設是 4% / 8%,這裡刻意統一成 8% / 16%。Figma 的 `action/*` 變數是同一組值。
@@ -150,8 +150,8 @@ export const createAppTheme = (
         styleOverrides: {
           /*
            * 開關與標籤之間留 8px:Checkbox / Radio 自帶 9px 內距所以標籤不貼,
-           * 但 `Switch` 為了對齊 Figma 幾何把內距歸零(Draft/Switch 88:216),標籤就貼在軌道上;
-           * 間距照 BS-12 的開關列(`289:86755`)補回來,只套在包了 Switch 的那種。
+           * 但 `Switch` 為了對齊 Figma 幾何把內距歸零(Draft/Switch),標籤就貼在軌道上;
+           * 間距照設計稿的開關列補回來,只套在包了 Switch 的那種。
            */
           root: ({ theme }) => ({
             marginLeft: 0,

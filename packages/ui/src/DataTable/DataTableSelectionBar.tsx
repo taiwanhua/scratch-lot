@@ -16,7 +16,7 @@ export interface DataTableSelectionBarProps {
 
 /**
  * 表格上方的「已選 N 筆 · 清除」列(`DataTable` 專用子元件;有勾選時才出現):
- * 左邊已選筆數、清除與說明,右邊呼叫端的動作(Figma BS-07a 257:5966)。
+ * 左邊已選筆數、清除與說明,右邊呼叫端的動作。
  */
 export const DataTableSelectionBar = ({
   count,

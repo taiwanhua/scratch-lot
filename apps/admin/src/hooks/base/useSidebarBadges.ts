@@ -6,7 +6,7 @@ import { type SidebarBadgesQuery, useSidebarBadgesQuery } from "@repo/graphql";
 import { useSession } from "./useSession";
 
 /**
- * 側欄計數(底座規格 10.4):`sidebarBadges` 一次回傳使用者看得到的所有模組的數字,轉成
+ * 側欄計數:`sidebarBadges` 一次回傳使用者看得到的所有模組的數字,轉成
  * 「模組 key → 數字」給 `SideNav`。api 只回有 `<模組 key>.view` 的模組,所以不必在前端看權限。
  * 進站取一次;之後靠 `badge:<模組 key>` 信號重抓(`app/base/realtime-signals.ts` 的 `badge:*`),
  * 即時通道斷線時跟 `RealtimeProvider` 每 60 秒重抓,不另外輪詢。

@@ -5,6 +5,7 @@ services:
   # 單一成員 replica set:api 用交易(`TransactionService.withTransaction`),單節點 mongod 不支援。
   # replica set 名稱 = Compose 專案名(`COMPOSE_PROJECT_NAME`),連線字串帶 `replicaSet=<專案名>`:
   # 同機多個專案時連錯埠會直接連不上,不會靜默寫進別的專案的資料庫。
+  # Compose 沒讀到 .env 時也會以專案名(不設 = 資料夾名)填入 `COMPOSE_PROJECT_NAME`;`:-wowgo-base` 只是保底。
   # 第一次起來由 healthcheck 執行 rs.initiate;選出 PRIMARY(可寫入)才算健康。
   # 成員位址登記成 localhost:27017,連線字串一律加 `directConnection=true`(容器內外、主機埠改過都連得到)。
   # 既有的 mongo-data volume 換成 replica set 啟動時資料保留(升級步驟見 docs/deployment.md「本地容器」)。
@@ -12,7 +13,8 @@ services:
   mongo:
     image: mongo:8.3.13
     restart: unless-stopped
-    command: ["--replSet", "${COMPOSE_PROJECT_NAME}", "--bind_ip_all"]
+    command:
+      ["--replSet", "${COMPOSE_PROJECT_NAME:-wowgo-base}", "--bind_ip_all"]
     ports:
       - "${LOCAL_MONGO_PORT:-27017}:27017"
     volumes:
@@ -23,7 +25,7 @@ services:
         - mongosh
         - --quiet
         - --eval
-        - "try { rs.status() } catch (e) { rs.initiate({ _id: '${COMPOSE_PROJECT_NAME}', members: [{ _id: 0, host: 'localhost:27017' }] }) } if (!db.hello().isWritablePrimary) { quit(1) }"
+        - "try { rs.status() } catch (e) { rs.initiate({ _id: '${COMPOSE_PROJECT_NAME:-wowgo-base}', members: [{ _id: 0, host: 'localhost:27017' }] }) } if (!db.hello().isWritablePrimary) { quit(1) }"
       interval: 5s
       timeout: 10s
       start_period: 10s
@@ -38,7 +40,7 @@ services:
       dockerfile: apps/api/Dockerfile
     profiles: ["full"]
     environment:
-      MONGODB_URI: mongodb://mongo:27017/${LOCAL_MONGO_DB:-wowgo-base}?directConnection=true&replicaSet=${COMPOSE_PROJECT_NAME}
+      MONGODB_URI: mongodb://mongo:27017/${LOCAL_MONGO_DB:-wowgo-base}?directConnection=true&replicaSet=${COMPOSE_PROJECT_NAME:-wowgo-base}
       PORT: "5001"
       # 本機專用的固定值(api 沒有 JWT_SECRET 就起不來);雲端的值在 Secret Manager
       JWT_SECRET: local-dev-jwt-secret-change-me

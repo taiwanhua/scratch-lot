@@ -44,7 +44,7 @@ export interface EditRecipientsDialogProps {
 const firstField = NOTIFICATION_AUDIENCE_FIELDS[0] ?? "role";
 
 /**
- * 編輯收件人(Figma BS-09b `289:86572`):頂端說明組織範圍(類型宣告、不能改),下面是 `AudiencePicker`
+ * 編輯收件人:頂端說明組織範圍(類型宣告、不能改),下面是 `AudiencePicker`
  * (不允許「所有人」、沒有所屬組織欄)。[儲存] 前先做本地驗證(空群組、沒挑值),api 擋下的
  * `INVALID_AUDIENCE` / `OUT_OF_TENANT` 依 `path` 標回出錯的那一列;其餘錯誤顯示在對話框裡。
  */

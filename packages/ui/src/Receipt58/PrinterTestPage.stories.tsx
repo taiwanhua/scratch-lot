@@ -25,7 +25,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Figma BS-18d 286:77824:`[測試列印]` 印的測試頁。 */
+/** `[測試列印]` 印的測試頁。 */
 export const Default: Story = {};
 
 /** 左邊預覽、右邊 `renderReceiptToPng` 的產出(與送到印表機的圖片相同),1:1 顯示。 */

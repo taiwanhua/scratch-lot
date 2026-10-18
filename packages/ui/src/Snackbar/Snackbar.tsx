@@ -12,7 +12,7 @@ import { CloseIcon } from "../icons/CloseIcon";
 import { mergeSx } from "../theme/sx";
 import { radius } from "../theme/tokens";
 
-/** 提示的語氣:操作結果(成功 / 失敗)、提醒、新通知(Figma `Draft/Snackbar+` 286:7200 的四種 Severity)。 */
+/** 提示的語氣:操作結果(成功 / 失敗)、提醒、新通知(Figma `Draft/Snackbar+` 的四種 Severity)。 */
 export type SnackbarSeverity = "success" | "error" | "warning" | "info";
 
 /** 一般提示自動消失的毫秒數。 */
@@ -51,7 +51,7 @@ export interface SnackbarProps {
 }
 
 /**
- * 卡片外觀(Figma `Draft/Snackbar+` 286:7200):寬度由 `SnackbarStack` 給(電腦 360)、
+ * 卡片外觀(Figma `Draft/Snackbar+`):寬度由 `SnackbarStack` 給(電腦 360)、
  * 底 `background.paper`、字 `text.primary`、左側 4px 色條取該語氣的 `main`、
  * 圓角 radius.md、陰影 `shadows[8]`(= Figma Shadow/z8)。顏色一律走 palette(有 CSS 變數時取 `theme.vars`),
  * 暗色模式自動換那一組(STYLE-04)。不顯示 MUI Alert 的語氣圖示,語氣只由色條表達。
@@ -124,7 +124,7 @@ const durationOf = (
 };
 
 /**
- * 全站統一的短提示卡片(底座規格 10.12):標題(選填)+ 訊息,右側 ✕;有動作時按鈕放在 ✕ 左邊。
+ * 全站統一的短提示卡片:標題(選填)+ 訊息,右側 ✕;有動作時按鈕放在 ✕ 左邊。
  *
  * **計時**:一般 4 秒、有動作 8 秒自動關(`autoHideDuration` 可調,但系統預設一致);
  * 滑鼠移上這一則、或鍵盤焦點在這一則裡(focus-within)就暫停;移開 / 焦點離開後**重新計時**

@@ -1,7 +1,7 @@
 import type { PrinterTestPageLabels } from "./PrinterTestPage";
 
 /**
- * 測試頁的繁中示範文字(Figma BS-18d 286:77824),給 story 與測試用。
+ * 測試頁的繁中示範文字,給 story 與測試用。
  * 正式使用處的文字來自 admin 的訊息檔(I18N-01),不從這裡取。
  */
 export const printerTestPageLabels = {

@@ -7,7 +7,7 @@ import {
 } from "./topic";
 
 /**
- * 即時通道的兩組協定(底座規格第 4 章「四個流程」):
+ * 即時通道的兩組協定:
  *
  * 1. API → Worker `POST /publish`:body 是 `RealtimePublishRequest` 的 JSON,
  *    header `x-realtime-signature` 帶「送出信號密鑰」對**原始 body 字串**的 HMAC-SHA256(base64url)。

@@ -94,7 +94,7 @@ function blockOn(name: FormGuardName): void {
 }
 
 /**
- * 表單 / 流程的掛接點(底座規格 3.1 B1,真 Mongo):守門擋下時沒有任何寫入、事後動作拋錯時整個動作回復、
+ * 表單 / 流程的掛接點(真 Mongo):守門擋下時沒有任何寫入、事後動作拋錯時整個動作回復、
  * 跳過的關卡觸發 `stepPassed(skipped)`、沒綁流程的送出依序觸發 `submitted` → `completed`。
  */
 describe("表單 / 流程的掛接點", () => {

@@ -6,7 +6,7 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 export const USER_DELEGATIONS_COLLECTION = "user_delegations";
 
 /**
- * 代理人(《底座規格》3.7 B15):`userId` 在 `[startAt, endAt)` 期間不在時,進關解析審核者時輪到他的
+ * 代理人:`userId` 在 `[startAt, endAt)` 期間不在時,進關解析審核者時輪到他的
  * 任務改派給 `delegateUserId`(`apps/api/src/workflows/workflow-engine/assignee-delegation.service.ts`)。
  * 只能設定自己的(個人設定的「代理人」分頁);同一個人的代理期間不重疊。
  *

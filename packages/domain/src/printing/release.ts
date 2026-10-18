@@ -1,5 +1,5 @@
 /**
- * 代理程式安裝檔的發布位置與 `manifest.json` 格式(底座規格第 6 章「發布」「下載與安裝」):
+ * 代理程式安裝檔的發布位置與 `manifest.json` 格式:
  *
  * ```
  * <私有 bucket>/print-agent/

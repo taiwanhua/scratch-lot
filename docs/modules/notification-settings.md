@@ -6,7 +6,7 @@
 
 本檔是通知的 api 正本:`notify()`、類型 / 管道 / 連結的登記、通知清單 API、通知設定 API 與權限。
 
-正本:`apps/api/src/notifications/`、底座規格第 5 章
+正本:`apps/api/src/notifications/`
 
 ## 模組 key 與畫面
 

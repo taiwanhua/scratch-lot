@@ -577,7 +577,7 @@ describe("TransactionService.withTransaction(對真 MongoDB replica set)", () =>
 
   /**
    * driver 一批預設回 101 筆,超過就要再發 getMore。交易帶 `timeoutMS` 時(mongodb 7.5),
-   * getMore 會被加上 `maxTimeMS`,server 拒絕(non-awaitData cursor 不能帶);T50 回歸。
+   * getMore 會被加上 `maxTimeMS`,server 拒絕(non-awaitData cursor 不能帶);回歸測試。
    */
   describe("交易內讀超過一批(> 101 筆,需要 getMore)", () => {
     const BEYOND_FIRST_BATCH = 150;

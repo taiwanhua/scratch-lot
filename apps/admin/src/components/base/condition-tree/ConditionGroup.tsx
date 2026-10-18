@@ -43,8 +43,8 @@ export interface ConditionGroupProps<L extends ConditionLeaf> {
 }
 
 /**
- * 條件樹的一個群組(資料範圍的條件組合與 AudiencePicker 共用;Figma `Draft/AudiencePicker` 45:248、
- * `Draft/DataScopeRuleCard` 46:156):一個 AND / OR 切換 + 底下的條件列與子群組 + 「+ 條件」「+ 群組」。
+ * 條件樹的一個群組(資料範圍的條件組合與 AudiencePicker 共用;Figma `Draft/AudiencePicker`、
+ * `Draft/DataScopeRuleCard`):一個 AND / OR 切換 + 底下的條件列與子群組 + 「+ 條件」「+ 群組」。
  *
  * - 根層下拉叫「組合」、巢狀群組叫「群組組合」;子群組整個被視為上一層的一個條件,
  *   所以根群組是 `bg/default` 底、巢狀群組是 `bg/paper` + 外框,把括號畫出來。

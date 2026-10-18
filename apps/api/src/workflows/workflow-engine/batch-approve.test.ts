@@ -75,7 +75,7 @@ interface BatchResult {
 }
 
 /**
- * 批次核准(底座規格 3.10 B18,真 Mongo):每一筆一個交易、各自經 `beforeApprove`;
+ * 批次核准(真 Mongo):每一筆一個交易、各自經 `beforeApprove`;
  * 被擋下 / 已不在手上 / 交易失敗的那一筆逐筆回報,不影響其他筆。
  */
 describe("批次核准 batchApproveTasks", () => {

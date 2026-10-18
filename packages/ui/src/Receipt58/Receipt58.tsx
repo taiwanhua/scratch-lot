@@ -26,7 +26,7 @@ export interface Receipt58Props {
 /**
  * 58mm 單據的紙張:固定寬 384 點、白底黑字,與裝置尺寸及深色模式無關。
  * 螢幕預覽與列印用同一個元件 —— 先渲染預覽,再把同一個節點交給 `renderReceiptToPng`。
- * Figma `Draft/Receipt58` 51:633 只是用零件組成的示範,不是固定版面。
+ * Figma `Draft/Receipt58` 只是用零件組成的示範,不是固定版面。
  */
 export const Receipt58 = ({ children, ref, sx }: Receipt58Props) => (
   <Box

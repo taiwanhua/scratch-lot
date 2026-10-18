@@ -8,7 +8,7 @@ import { Typography } from "@repo/ui/typography";
 import type { NotificationItem as NotificationItemData } from "@/hooks/base/useNotifications";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
-/** 未讀圓點直徑(px;Figma `Draft/NotificationItem` 50:582)。 */
+/** 未讀圓點直徑(px;Figma `Draft/NotificationItem`)。 */
 const UNREAD_DOT_SIZE = 8;
 
 export interface NotificationItemProps {
@@ -17,7 +17,7 @@ export interface NotificationItemProps {
 }
 
 /**
- * 通知清單的一則(Figma `Draft/NotificationItem` 50:582):未讀有主色圓點、標題粗體;
+ * 通知清單的一則(Figma `Draft/NotificationItem`):未讀有主色圓點、標題粗體;
  * 已讀的標題改一般字重、顏色淡一階。時間用全站唯一的日期顯示入口(`useTemporalText`)。
  */
 export const NotificationItem = ({

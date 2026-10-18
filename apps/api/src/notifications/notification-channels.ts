@@ -17,7 +17,7 @@ import {
 /** 本地 admin 的 dev server(同 `auth/password/password.config.ts` 的預設)。 */
 const DEFAULT_ADMIN_APP_URL = "http://localhost:3001";
 
-/** 通知信的總開關(底座規格第 5 章「開關三層」的環境層;`docs/env-registry.md`)。 */
+/** 通知信的總開關(「開關三層」的環境層;`docs/env-registry.md`)。 */
 export const NOTIFICATION_MAIL_SWITCH = "WORKFLOW_MAIL_ENABLED";
 
 /** 交給管道轉接器的一則(交易已提交、`notifications` 已寫入之後)。 */
@@ -35,7 +35,7 @@ export interface NotificationDelivery {
 }
 
 /**
- * 管道轉接器(底座規格第 5 章「管道可登記」):`notify()` 在交易**提交後**把該管道的這批交給 `deliver`。
+ * 管道轉接器:`notify()` 在交易**提交後**把該管道的這批交給 `deliver`。
  * 盡力而為:轉接器自己吞掉並記錄失敗,不讓錯誤影響觸發它的動作(那個動作早已提交)。
  */
 export interface NotificationChannelAdapter {

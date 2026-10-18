@@ -11,7 +11,7 @@ export interface Receipt58RowProps {
 }
 
 /**
- * 「標籤:值」列(Figma `Draft/Receipt58Row` 51:626):標籤靠左、值靠右;
+ * 「標籤:值」列(Figma `Draft/Receipt58Row`):標籤靠左、值靠右;
  * 標籤、值太長時各自在自己的欄內換行,不截斷(標籤最多佔一半寬)。
  */
 export const Receipt58Row = ({ label, value }: Receipt58RowProps) => (

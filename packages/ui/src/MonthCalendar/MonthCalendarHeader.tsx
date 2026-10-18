@@ -24,7 +24,7 @@ export interface MonthCalendarHeaderProps {
   };
 }
 
-/** 換月表頭「◀ 2026 年 11 月 ▶」與右側選用的 [今天](Figma Draft/MonthCalendar 48:360 的上緣)。 */
+/** 換月表頭「◀ 2026 年 11 月 ▶」與右側選用的 [今天](Figma Draft/MonthCalendar 的上緣)。 */
 export const MonthCalendarHeader = ({
   title,
   prevMonthLabel,

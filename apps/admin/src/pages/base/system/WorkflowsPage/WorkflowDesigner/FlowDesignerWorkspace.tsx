@@ -82,7 +82,7 @@ export const FlowDesignerWorkspace = ({
     checkFormKey,
     checkFormFields,
   });
-  // 逾時提醒 M ≤ N 或不是正整數:設計器擋下不讓存(《底座規格》3.8;api 存草稿照收、發布擋)
+  // 逾時提醒 M ≤ N 或不是正整數:設計器擋下不讓存(api 存草稿照收、發布擋)
   const blockedReason = local.errors.some(
     (issue) => issue.code === "OVERDUE_INVALID",
   )

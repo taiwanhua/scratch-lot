@@ -5,7 +5,7 @@ import { useSnackbarStore } from "@/stores/base/useSnackbarStore";
 /**
  * 送一則提示出去:`show(severity, message, { title?, action? })`。給少數自己控制時機的流程、
  * 可撤銷的動作(Success + [撤銷])、新通知提示(Info + 標題、沒有動作)用;mutation 一律走
- * `useMutationFeedback`。各模組不另寫提示元件(底座規格 10.12)。
+ * `useMutationFeedback`。各模組不另寫提示元件。
  */
 export const useSnackbar = () => useSnackbarStore((state) => state.show);
 

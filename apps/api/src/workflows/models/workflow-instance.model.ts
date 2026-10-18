@@ -442,7 +442,7 @@ export class WorkflowTasksPayload {
   pageSize!: number;
 }
 
-/** 批次核准一筆失敗的原因(底座規格 3.10 B18)。 */
+/** 批次核准一筆失敗的原因。 */
 export enum WorkflowBatchApproveFailureEnum {
   /** 任務已被處理、改派,或此關已結束(「這件已不在你手上」)。 */
   NOT_YOURS = "notYours",

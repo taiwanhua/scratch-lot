@@ -19,7 +19,7 @@ import {
 
 /**
  * 劇本 27 — 批次核准
- * 正本:`docs/testing/permission-scenarios.md`「劇本 27」;規則見《底座規格》3.10 B18。
+ * 正本:`docs/testing/permission-scenarios.md`「劇本 27」;規則見 `docs/modules/workflows.md`「批次核准」。
  * 用哪一頁:申請中心「待我審核」(列勾選 → 核准(N)→ 批次核准對話框 → 結果)。
  * 前置(走 api):客製流程只有一關「主管審核」(南港主管)並綁定;申請人送出三張。
  * 主管勾好三筆之後,+tenant 以 api 把其中一張改派給副理(「另一路改派」)。

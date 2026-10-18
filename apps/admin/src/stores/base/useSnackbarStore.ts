@@ -42,7 +42,7 @@ export interface SnackbarState {
 let nextId = 0;
 
 /**
- * 全站短提示的佇列(REACT-02:跨元件的用戶端狀態用 zustand;底座規格 10.12)。
+ * 全站短提示的佇列(REACT-02:跨元件的用戶端狀態用 zustand)。
  *
  * **堆疊規則:所有提示(操作結果、可撤銷、新通知)一律往上疊,新的在下面;最多 3 則,
  * 第 4 則出現時最舊的那則消失。** 截斷由 `@repo/ui/snackbar` 的 `enqueueSnackbar` 決定,

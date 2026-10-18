@@ -30,7 +30,7 @@ const PLATFORM_LABEL_KEY: Record<PrintAgentPlatform, string> = {
 };
 
 /**
- * 代理程式分頁上方的下載區(Figma BS-19 289:91989;底座規格「下載與安裝」第 1 點):
+ * 代理程式分頁上方的下載區:
  * 「最新版本 x.y.z」+ 四個下載按鈕,依瀏覽器偵測的系統反白建議的那個。
  * 按下時才向 api 要簽名網址(1 小時),所以不會拿到過期的網址。
  * 只在有 `system.printers.create` 時掛上(呼叫端判斷)。
