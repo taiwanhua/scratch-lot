@@ -3,7 +3,7 @@ import type { FieldDef, FieldType } from "./types";
 import { normalizeFieldValue } from "./values";
 
 /**
- * 檢查器的預設值段(Spec 6a §5「預設值」、表 A「預設值」列):
+ * 檢查器的預設值段:
  *
  * - 只有「使用者填」的欄位能設;`upload` 沒有預設值
  * - 各型別能用的種類:文字 / 多行 / 數字 / 日期 / 日期時間 = 固定或公式;單選 / 多選 = 從選項挑(固定);

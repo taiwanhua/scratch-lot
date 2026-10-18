@@ -29,7 +29,7 @@ Windows 的 PowerShell 沒有 `VAR=… 指令` 這種前綴,寫成 `$env:E2E_GRE
 本機反覆跑同一條時,`E2E_SKIP_BUILD=1` 省掉重建;接在自己手動起好的 stack 上除錯用 `E2E_SKIP_STACK=1`。
 變數清單見 `.env.example`。同機不同專案要分開 DB、各服務 port、bucket 與 `E2E_COMPOSE_PROJECT`;fake GCS 起停均以 `-p` 指定後者,不沿用 shell 的 `COMPOSE_PROJECT_NAME`。
 
-## 檔案儲存:fake GCS 容器(劇本 11 / 15,#402)
+## 檔案儲存:fake GCS 容器(劇本 11 / 15)
 
 劇本 11(封面公開 URL / 附件簽名下載)與 15(側欄商標繼承)要**真的**把檔案傳上去再讀回來,
 所以 harness 用 **Docker Compose** 起 [`fsouza/fake-gcs-server`](https://github.com/fsouza/fake-gcs-server)

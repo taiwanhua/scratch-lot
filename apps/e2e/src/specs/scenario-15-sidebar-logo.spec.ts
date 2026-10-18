@@ -25,7 +25,7 @@ import {
  * `docs/modules/org-manager.md`(商標上傳;`me.currentOrg.logoUrl` 沿 `ancestors` 由近到遠找)。
  * 用哪一頁:組織管理 → 編輯組織的商標欄(+tenant);結果看 +user 的側欄。
  *
- * 商標真的傳到 **fake GCS 容器**(#402),側欄的 `<img>` 讀的是 api 現簽的讀取網址。
+ * 商標真的傳到 **fake GCS 容器**,側欄的 `<img>` 讀的是 api 現簽的讀取網址。
  * 「顯示的是哪一張」用**讀回來的內容**比對原檔判斷(兩張測試圖顏色不同、內容不同),
  * 不比網址 —— 每次取 `me` 都會重簽,網址本來就一直在變。本機沒有 Docker 時整條 skip。
  *
@@ -92,7 +92,7 @@ test("劇本 15:下層沒設商標就沿上層繼承,自己設了顯示自己的
   await memberPage.reload();
   await expectSideNavLogo(memberPage, TENANT_LOGO);
 
-  // 附帶:「換圖即刪舊」(ADR-0010,#161)—— 清掉的那個物件真的從 bucket 刪了。
+  // 附帶:「換圖即刪舊」(ADR-0010)—— 清掉的那個物件真的從 bucket 刪了。
   // 步驟 2 簽的網址還在效期內,但物件已經不在(fake GCS 不驗簽章,所以 404 只可能是物件沒了)
   const removed = await fetchAnonymously(nangangLogoUrl);
   expect(removed.status).toBe(404);

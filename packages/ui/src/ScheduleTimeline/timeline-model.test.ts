@@ -23,10 +23,10 @@ describe("initialScrollMinute(進入畫面自動捲動)", () => {
   it("有長條:捲到最早的長條前 1 小時", () => {
     const models = groupsOfDay(
       [
-        group("a", D1, 10, 14, "早班", "早", [
+        group("a", D1, 10, 14, "上午場", "早", [
           bar("a1", D1, 9.5, 14, "王小明"),
         ]),
-        group("b", D1, 13, 18, "晚班", "晚", [bar("b1", D1, 13, 18, "陳大文")]),
+        group("b", D1, 13, 18, "晚場", "晚", [bar("b1", D1, 13, 18, "陳大文")]),
       ],
       D1,
     );
@@ -37,11 +37,11 @@ describe("initialScrollMinute(進入畫面自動捲動)", () => {
 
   it("容器比裡面的長條早開始:以容器的開始為準;不早於 00:00", () => {
     const early = groupsOfDay(
-      [group("a", D1, 7, 14, "早班", "早", [bar("a1", D1, 9, 14, "王小明")])],
+      [group("a", D1, 7, 14, "上午場", "早", [bar("a1", D1, 9, 14, "王小明")])],
       D1,
     );
     const midnight = groupsOfDay(
-      [group("n", D1, 0.5, 6, "夜班", "夜", [vacancy("n1", "負責")])],
+      [group("n", D1, 0.5, 6, "夜間場", "夜", [vacancy("n1", "負責")])],
       D1,
     );
 
@@ -58,11 +58,11 @@ describe("initialScrollMinute(進入畫面自動捲動)", () => {
 
   it("週模式取整週最早的時刻(各天的時刻比,不比日期)", () => {
     const day1 = groupsOfDay(
-      [group("a", D1, 10, 14, "早班", "早", [bar("a1", D1, 10, 14, "甲")])],
+      [group("a", D1, 10, 14, "上午場", "早", [bar("a1", D1, 10, 14, "甲")])],
       D1,
     );
     const day2 = groupsOfDay(
-      [group("b", D2, 7, 12, "早班", "早", [bar("b1", D2, 7, 12, "乙")])],
+      [group("b", D2, 7, 12, "上午場", "早", [bar("b1", D2, 7, 12, "乙")])],
       D2,
     );
 
@@ -91,7 +91,7 @@ describe("跨午夜:兩天各一段", () => {
   });
 
   it("跨午夜的容器與長條在兩天都有一段", () => {
-    const night = group("n", D1, 20, 26, "夜班", "夜", [
+    const night = group("n", D1, 20, 26, "夜間場", "夜", [
       bar("n1", D1, 20, 26, "陳大文"),
     ]);
 
@@ -114,7 +114,7 @@ describe("長條的前段 / 後段延伸", () => {
   it("超出容器的時間拆成延伸段,和實線段相接", () => {
     const [model] = groupsOfDay(
       [
-        group("a", D1, 8.5, 14.5, "早班", "早", [
+        group("a", D1, 8.5, 14.5, "上午場", "早", [
           bar("a1", D1, 7.5, 16, "王小明"),
           vacancy("a2", "協同"),
         ]),
@@ -137,14 +137,16 @@ describe("dayLanes(日模式往下排)", () => {
   it("時間不重疊的共用一列,重疊的往下開新列;延伸段也不能蓋到別的容器", () => {
     const models = groupsOfDay(
       [
-        group("early", D1, 8.5, 14.5, "早班", "早", [
+        group("early", D1, 8.5, 14.5, "上午場", "早", [
           bar("e", D1, 8.5, 14.5, "甲"),
         ]),
-        group("late", D1, 14.5, 22, "晚班", "晚", [
+        group("late", D1, 14.5, 22, "晚場", "晚", [
           bar("l", D1, 14.5, 22, "乙"),
         ]),
-        group("restock", D1, 9, 13, "補貨", "補", [bar("r", D1, 9, 13, "丙")]),
-        // 容器 15–17 和補貨不重疊,但長條延伸到 13:00 之前 → 不能和補貨同列
+        group("restock", D1, 9, 13, "加開場", "補", [
+          bar("r", D1, 9, 13, "丙"),
+        ]),
+        // 容器 15–17 和加開場不重疊,但長條延伸到 13:00 之前 → 不能和加開場同列
         group("extra", D1, 15, 17, "臨時", "臨", [bar("x", D1, 12, 17, "丁")]),
       ],
       D1,
@@ -161,11 +163,11 @@ describe("dayLanes(日模式往下排)", () => {
 describe("不能操作的時間與回呼的點", () => {
   it("範圍裁到當天;碰到範圍的小時格不能點", () => {
     const ranges = disabledRangesOfDay(
-      [{ start: at(D1, 18.5), end: at(D1, 30), label: "店休" }],
+      [{ start: at(D1, 18.5), end: at(D1, 30), label: "公休" }],
       D1,
     );
 
-    expect(ranges).toEqual([{ start: 18.5 * 60, end: 24 * 60, label: "店休" }]);
+    expect(ranges).toEqual([{ start: 18.5 * 60, end: 24 * 60, label: "公休" }]);
     expect(isHourDisabled(17, ranges)).toBe(false);
     expect(isHourDisabled(18, ranges)).toBe(true);
     expect(

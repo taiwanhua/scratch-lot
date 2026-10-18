@@ -38,7 +38,7 @@ const icons = [
 ] as const;
 
 /**
- * 通用操作圖示(#307):取自 `@mui/icons-material` 的 Outlined 單檔(Figma `Draft/ActionIcon`
+ * 通用操作圖示:取自 `@mui/icons-material` 的 Outlined 單檔(Figma `Draft/ActionIcon`
  * 253:3264 標明來源),所以 path 上**沒有**顏色屬性 —— 顏色來自 `SvgIcon` 根節點的
  * `fill: currentColor`。斷言因此改成「畫得出向量,且沒有任何寫死的色值」。
  */

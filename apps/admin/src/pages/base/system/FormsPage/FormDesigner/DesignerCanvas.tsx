@@ -54,7 +54,7 @@ export interface DesignerCanvasProps {
 const DESIGN_CONTEXT = liveContextOf(NO_IDENTITY, new Date(0));
 
 /**
- * 設計器畫布(Spec 6a §8 畫面 2):`FormRenderer` 的 `design` 模式(不跑條件與計算、只標示),
+ * 設計器畫布:`FormRenderer` 的 `design` 模式(不跑條件與計算、只標示),
  * dnd-kit 拖拉 —— 欄位換位置 / 換分區、從元件面板拖進新欄位、從「未放置」拖回版面。
  * 拖到某欄上 = 放在它前面;拖到分區尾端的放置區 = 放在分區最後。
  */

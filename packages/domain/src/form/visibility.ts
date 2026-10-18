@@ -4,7 +4,7 @@ import { semanticValuesOf } from "./semantic";
 import type { ExpressionContext, FieldDef, StoredValues } from "./types";
 
 /**
- * 顯示條件與計算的收斂(Spec §5「不能填的四種原因」順序 1:`visibleWhen` 為 false → 清空、不算、不驗)。
+ * 顯示條件與計算的收斂(「不能填的四種原因」的第一項:`visibleWhen` 為 false → 清空、不算、不驗)。
  * 前端即時預覽與 api 寫入共用同一套語意:隱藏的欄位在計算輸入裡當 null(明細整欄 null,彙總視為空),
  * 隱藏的計算欄位本身也是 null;條件再以這份值重算,直到哪些欄位隱藏不再改變。
  */

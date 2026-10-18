@@ -149,7 +149,7 @@ describe("明細引用子欄:快照 / 一次查詢 / 讀不到擋下 / 現名 / 
     root = await rootToken(api);
     tenant = await createOrg(connection, { name: "引用子欄租戶" });
     const otherTenant = await createOrg(connection, { name: "別的租戶" });
-    // 租戶成員數壓在一批游標(101)以內:超過時交易內的 getMore 會撞上既有的 driver 問題(見回報),與本票無關
+    // 租戶成員數壓在一批游標(101)以內:超過時交易內的 getMore 會撞上 driver 的逾時設定(見 `apps/api/src/database/transaction.ts` 的 TRANSACTION_TIMEOUT_MS 說明),與本測試無關
     users = await insertUsers(tenant, "staff_", DISTINCT_USERS);
     [outsider] = (await insertUsers(otherTenant, "outsider_", 1)) as [
       Types.ObjectId,

@@ -17,7 +17,7 @@ export interface OrgPickerDialogProps {
   /** 開啟時的既有所屬組織;元件內部自己記變動,確定才回報 */
   initialSelectedIds: readonly string[];
   /**
-   * 勾選框鎖住的組織(#362):擁有者不可被移出自己擁有的租戶頂層,
+   * 勾選框鎖住的組織:擁有者不可被移出自己擁有的租戶頂層,
    * 那一個節點維持勾選、取消不掉;其餘組織照常可勾可取消。空陣列 = 沒有鎖。
    */
   lockedOrgIds?: readonly string[];
@@ -30,7 +30,7 @@ export interface OrgPickerDialogProps {
 
 /**
  * 選擇所屬組織(Figma 92:222):樹勾選,範圍外節點灰掉不可選(`outOfScope`);
- * `lockedOrgIds` 的節點維持勾選、取消不掉(擁有者的租戶頂層,#362)。
+ * `lockedOrgIds` 的節點維持勾選、取消不掉(擁有者的租戶頂層)。
  * 只負責「勾了哪些」— 移除時的 dry-run 與三檔由呼叫端接著處理(`OrgChangeDialog`)。
  * 呼叫端在關閉時卸載本元件,重開即是新的一輪(初始值由 props 帶入,不需 effect 同步)。
  */

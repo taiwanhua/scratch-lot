@@ -5,7 +5,7 @@ import type { OperatorContext } from "../../database/operator-context";
 import { RelationService } from "../../database/relation.service";
 
 /**
- * 夾具(#63 驗收條件:「seed 後以 RelationService 建測試角色與使用者」):
+ * 夾具(驗收條件:「seed 後以 RelationService 建測試角色與使用者」):
  * 角色文件直接寫入測試資料庫,關聯一律走 RelationService 的具名方法(ADR-0001 唯一出口)。
  * 模組與權限來自 seed(apps/db-migrator/seeds/),以 key 查 id。
  */

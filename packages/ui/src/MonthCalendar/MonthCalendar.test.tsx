@@ -172,7 +172,7 @@ describe("MonthCalendar 不能選的日子", () => {
   it("點停用日沒有反應;滑過顯示原因", async () => {
     const { onSelectedDatesChange } = renderCalendar({
       selectionMode: "multiple",
-      days: { "2026-10-06": { disabled: true, disabledReason: "店休" } },
+      days: { "2026-10-06": { disabled: true, disabledReason: "公休" } },
     });
     const cell = day("2026-10-06");
 
@@ -182,7 +182,7 @@ describe("MonthCalendar 不能選的日子", () => {
     expect(cell).not.toHaveAttribute("tabindex");
 
     await userEvent.hover(cell);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("店休");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("公休");
   });
 
   it("點上 / 下個月的日期:只顯示,不能選", async () => {
@@ -206,7 +206,7 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
           corner: { variant: "dot", color: "warning", label: "有異動" },
         },
         "2026-10-12": {
-          corner: { variant: "badge", content: "缺下班卡" },
+          corner: { variant: "badge", content: "資料待補" },
           content: <span>09:00–17:00</span>,
         },
       },
@@ -217,7 +217,7 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
       within(day("2026-10-05")).getByRole("img", { name: "有異動" }),
     ).toBeInTheDocument();
     const badgeCell = day("2026-10-12");
-    expect(within(badgeCell).getByText("缺下班卡")).toBeInTheDocument();
+    expect(within(badgeCell).getByText("資料待補")).toBeInTheDocument();
     expect(within(badgeCell).getByText("09:00–17:00")).toBeInTheDocument();
   });
 

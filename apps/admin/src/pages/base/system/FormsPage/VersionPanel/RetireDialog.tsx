@@ -18,7 +18,7 @@ export interface RetireDialogProps {
 }
 
 /**
- * 退役目前版本(Spec 6a §6 `retireCurrentVersion`):已發布版改退役、`currentVersion → null`;
+ * 退役目前版本(`retireCurrentVersion`):已發布版改退役、`currentVersion → null`;
  * 之後**所有租戶**都不能新增這張表單,直到再發布新版。既有資料照常可看、既有草稿仍可送出。
  */
 export const RetireDialog = ({

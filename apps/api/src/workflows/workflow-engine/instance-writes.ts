@@ -22,7 +22,7 @@ import type { WorkflowSubmissionStore } from "../../database/workflow-submission
 import type { WorkflowTaskRecord } from "../../database/workflow-tasks.repository";
 
 /**
- * 引擎在「domain 的純資料形狀」與「Mongo 文件 / 條件 / 更新」之間的翻譯(Spec 6b §6;
+ * 引擎在「domain 的純資料形狀」與「Mongo 文件 / 條件 / 更新」之間的翻譯(
  * domain 端的動作合約見 `@repo/domain/workflow` 的 `advance.ts` 檔頭)。
  *
  * - 讀:實例 / 任務 / 提交文件 → `InstanceSnapshot` / `TaskSnapshot` / `SubmissionSnapshot`(id 一律轉字串)
@@ -319,7 +319,7 @@ export function instanceUpdateOf(update: InstanceUpdate): {
 }
 
 /**
- * B15:計畫裡這一項代理的原審核者們(決定事件帶著,時間軸寫「由 X 代理 A、B」;逾時提醒第 1 級連他們一起提醒);
+ * 代理人:計畫裡這一項代理的原審核者們(決定事件帶著,時間軸寫「由 X 代理 A、B」;逾時提醒第 1 級連他們一起提醒);
  * 沒有(或流程管理者改派後清空)→ 空陣列。
  */
 export function delegatorIdsOf(

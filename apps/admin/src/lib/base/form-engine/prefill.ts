@@ -3,7 +3,7 @@ import type { FieldDef, Prefill, StoredValues } from "@repo/domain/form";
 import { isEmptyDisplay } from "./value-text";
 
 /**
- * 帶入(Spec 6a §5「帶入」):**一次性複製、之後可改**,不記錄帶入來源。
+ * 帶入:**一次性複製、之後可改**,不記錄帶入來源。
  * lookup 回的是**語意值**(選項給 value、多選給 value[]、引用給 id);寫進本表單時換回本欄的存值形狀:
  * 類別 / lookup 選項欄存 `{ value, label: null }`(label 由 api 在送出時重取寫快照),其餘照原值。
  */

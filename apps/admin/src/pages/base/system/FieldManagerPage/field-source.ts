@@ -5,7 +5,7 @@ import type { FieldOptionLike } from "./field-manager-types";
  *
  * 可見範圍的規則(全域 + 上層繼承 + 可見範圍內的下層;只能改自己這一層加的)由 **api** 算完,
  * 逐列給 `canEdit` / `canToggleEnabled`(正本 `docs/modules/field-manager.md`「api 介面」);
- * 前端只把它和「操作者有沒有這個權限」取交集,不自己推組織關係、也不推視角(#264 / #252)。
+ * 前端只把它和「操作者有沒有這個權限」取交集,不自己推組織關係、也不推視角。
  */
 
 /** 加這筆的組織;`null` = 全域種子(codegen 的可空欄位會是 `undefined`,在此歸一)。 */

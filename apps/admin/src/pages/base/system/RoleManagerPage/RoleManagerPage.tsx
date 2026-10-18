@@ -90,7 +90,7 @@ export const RoleManagerPage = () => {
   const [pendingNav, setPendingNav] = useState<PendingNav | null>(null);
 
   const matrix = useRoleMatrix(data.selectedRole?.id ?? null, {
-    // 權限 × 角色種類規則(#261):種子角色即使有 edit-matrix 權限也整棵鎖住
+    // 權限 × 角色種類規則:種子角色即使有 edit-matrix 權限也整棵鎖住
     canEdit:
       data.selectedRole !== null &&
       rowAbilityOf(data.ability, data.selectedRole).canEditMatrix,
@@ -104,7 +104,7 @@ export const RoleManagerPage = () => {
     setActionError(roleManagerErrorOf(error));
   };
 
-  /** 失敗的 Snackbar 文案與彈窗內那一條錯誤同一份解讀(#376)。 */
+  /** 失敗的 Snackbar 文案與彈窗內那一條錯誤同一份解讀。 */
   const feedbackError = (error: unknown) =>
     tErrors(roleManagerErrorOf(error).code);
 

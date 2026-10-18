@@ -13,7 +13,7 @@ import type { OrgActionAbility } from "./org-manager-types";
 /**
  * 組織管理頁的資料層:組織樹、選中組織的單筆資料、權限判斷與失效。
  *
- * **視角完全由資料決定**(#138 不做兩套頁):`orgTree` 的樹根在根組織視角是根組織
+ * **視角完全由資料決定**(不做兩套頁):`orgTree` 的樹根在根組織視角是根組織
  * (`parentId === null`)、在租戶視角是租戶頂層(`parentId` 有值)。加上操作者有沒有
  * `tenant-ops.*` 那三筆權限,就足以決定畫面長什麼樣,不需要「我是不是超級管理員」這種旗標。
  */
@@ -64,7 +64,7 @@ export const useOrgManagerData = (
   /**
    * 樹根到底是平台根組織還是租戶頂層,**不能看 `OrgNode.parentId`** — api 的 `buildForest`
    * 把本棵樹的樹根一律對外回 `parentId: null`(`orgs.service.ts`),租戶視角的租戶頂層也是 null,
-   * 於是它的子組織被誤判成租戶、掛上「租戶」標籤(#186 ④)。
+   * 於是它的子組織被誤判成租戶、掛上「租戶」標籤。
    * `org(id).isSystem` 才是「這是平台根組織」的事實;樹根沒被點掉時與 `selected` 同一把 key,不多發一次請求。
    */
   const treeRoot = useOrgQuery(

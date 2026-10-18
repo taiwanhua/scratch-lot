@@ -23,7 +23,7 @@ export interface RoleOption {
   /** 已授予但使用者不在該角色擁有組織的子樹內(「組織外」) */
   isOutOfScope: boolean;
   /**
-   * 這位使用者有沒有資格被授予這個角色(ADR-0003;#261 的 6)。
+   * 這位使用者有沒有資格被授予這個角色(ADR-0003)。
    * 不合格的列**顯示但 disabled**、就地說明原因 —— 在此之前不合格的角色勾得下去,
    * 送出才吃到一句「資料未通過驗證」。判定正本仍在 api(`USER_NOT_ELIGIBLE`)。
    */
@@ -37,7 +37,7 @@ export interface RoleOption {
  * 清單 = `roles` query 回的角色(可勾)∪ 目標使用者已被授予的角色(管理範圍外的唯讀顯示)。
  *
  * 候選來自正式的 `roles` query —— 範圍是「擁有組織在操作者管理範圍內」,與 api 的
- * `assignUserRoles` 同一條判準(#211 起與 `grantRoleUsers` 統一;第 3 段「查操作者自己
+ * `assignUserRoles` 同一條判準(與 `grantRoleUsers` 統一;第 3 段「查操作者自己
  * 持有的角色」的過渡做法退場)。管理範圍外的既有授予仍要列出來:api 的全量覆蓋
  * 只作用在操作者觸及得到的角色上,列不出來的就不該被順手解除(user-manager.md
  * 「全量覆蓋的邊界」)。
@@ -92,7 +92,7 @@ export const buildRoleOptions = (
 /**
  * 這一列能不能被勾動:管理範圍外一律唯讀;**已停用的角色不可新勾**,
  * 但已經持有的還要能取消(不然停用的角色就永遠拔不掉了);
- * **沒有授予資格的不可新勾**(#261 的 6),同理已持有的仍可取消。
+ * **沒有授予資格的不可新勾**,同理已持有的仍可取消。
  */
 export const isRoleSelectable = (
   role: RoleOption,
@@ -101,6 +101,6 @@ export const isRoleSelectable = (
   !role.isOutOfReach && ((role.enabled && role.isEligible) || isChecked);
 
 /*
- * `ownerOrgOptions`(依擁有組織篩選的下拉)在 #307 退場:改用 Autocomplete 後,
+ * `ownerOrgOptions`(依擁有組織篩選的下拉)已退場:改用 Autocomplete 後,
  * 輸入組織名就能收斂到那一組,而分組標題已經把「哪些角色屬於誰」講清楚了。
  */

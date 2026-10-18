@@ -62,7 +62,7 @@ export class WorkflowPublishHooks {
 }
 
 /**
- * 流程版本的四步發布(Spec 6b §4「workflow_versions」:規則照 6a §6,**沒有欄位級權限那一步**)。
+ * 流程版本的四步發布(規則照表單版本,**沒有欄位級權限那一步**)。
  * 骨架與表單共用 `versioning/version-lifecycle.ts`:檢查器(交易前,只讀)→ 搶鎖配版號 → 三筆切換;
  * 後兩步與稽核是**一個交易**(ADR-0013),任何一步失敗全部回到發布前,沒有「發布中斷」與重試。
  */

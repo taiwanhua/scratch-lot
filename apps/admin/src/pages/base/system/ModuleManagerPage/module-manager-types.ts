@@ -16,12 +16,12 @@ export interface ModuleAdminNodeLike {
   sidebarType: ModuleSidebarType;
   /**
    * 路由**只有自己那一段**(不是完整路徑);`null` = 不對應任何畫面。
-   * `sidebarType = Hidden` 且 `route` 為 `null` ⇒ 權限容器(`isPermissionContainer`,#246 的 7)。
+   * `sidebarType = Hidden` 且 `route` 為 `null` ⇒ 權限容器(`isPermissionContainer`)。
    */
   route?: string | null;
   order: number;
   description?: string | null;
-  /** 側欄圖示 key(白名單 `@repo/domain/module-icon`,#288);`null` = 沒指定,側欄用預設圖示 */
+  /** 側欄圖示 key(白名單 `@repo/domain/module-icon`);`null` = 沒指定,側欄用預設圖示 */
   icon?: string | null;
   /** **這個節點自己的**停用狀態:停用連動子樹時子孫的值已一併落庫,不必回頭看祖先 */
   enabled: boolean;

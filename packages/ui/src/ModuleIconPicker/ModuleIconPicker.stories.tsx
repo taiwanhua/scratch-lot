@@ -27,7 +27,7 @@ export const UnknownValue: Story = {
   args: { value: "no-such-icon", emptyLabel: "未設定" },
 };
 
-/** 與同列的下拉、日期欄對齊時整列給 `small`(#260)。 */
+/** 與同列的下拉、日期欄對齊時整列給 `small`。 */
 export const Small: Story = {
   args: { size: "small" },
 };

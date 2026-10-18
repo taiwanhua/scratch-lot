@@ -17,8 +17,8 @@ import { RefreshCookie } from "./refresh-cookie";
 import { TokenService } from "./token.service";
 
 /**
- * 登入線(#61 第 2 段):登入 / token 生命週期 / 全域登入守門與操作者上下文(#62),
- * 以及密碼流程 — 忘記密碼 / 設定新密碼(啟用信、重設信共用)/ 改密碼(#64,`password/`)。
+ * 登入線:登入 / token 生命週期 / 全域登入守門與操作者上下文,
+ * 以及密碼流程 — 忘記密碼 / 設定新密碼(啟用信、重設信共用)/ 改密碼(`password/`)。
  */
 @Module({
   imports: [DatabaseModule, MailModule],

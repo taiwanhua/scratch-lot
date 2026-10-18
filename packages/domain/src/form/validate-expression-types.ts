@@ -31,7 +31,7 @@ import type { Expression, FieldDef } from "./types";
 import { expressionsOf } from "./validate-expressions";
 
 /**
- * 檢查器的**型別**段(Spec 6a §5「表達式選擇器:型別導向(表 B)」;與設計器的選擇器同一張表
+ * 檢查器的**型別**段(與設計器的選擇器同一張表
  * `expression-types.ts`,設計器過濾後兩邊不會打架):
  *
  * - 根節點:計算欄位公式 / 預設值公式 = 欄位型別;顯示條件 / 鎖定條件 / 自訂驗證 = 是 / 否

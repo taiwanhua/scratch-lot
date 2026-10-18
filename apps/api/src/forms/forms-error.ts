@@ -6,7 +6,7 @@ import type { DefinitionIssue, ValueIssue } from "@repo/domain/form";
  * 表單引擎(`forms/`)的錯誤。通用碼沿用 GQL-04(`NOT_FOUND` / `VALIDATION_FAILED` / `FORBIDDEN`),
  * 「為什麼」一律以 `extensions.reason` 表示;新增兩個 code(正本 `docs/modules/forms.md`「錯誤」):
  *
- * - `CONFLICT`:樂觀鎖 / 搶鎖沒搶到(Spec 寫的「409」)。前端提示「已被別人更新,請重新載入」
+ * - `CONFLICT`:樂觀鎖 / 搶鎖沒搶到(HTTP 語意的 409)。前端提示「已被別人更新,請重新載入」
  * - `PERMISSION_NOT_DELETABLE`:退役權限清理的前置檢查未過(同 `ORG_NOT_DELETABLE` 的形狀)
  *
  * message 給開發者看(英文);使用者文案由前端依 code / reason 對應。
@@ -50,7 +50,7 @@ export type FormConflictReason = (typeof FORM_CONFLICT_REASONS)[number];
 
 /** `FORBIDDEN` 的 `extensions.reason`(端點本身可用,擋的是這一筆 / 這一欄)。 */
 export const FORM_FORBIDDEN_REASONS = [
-  /** 欄位級權限:沒有該欄的 `edit`(或看不到它)卻送了與既有值不同的值(Spec §5 原因 3)。 */
+  /** 欄位級權限:沒有該欄的 `edit`(或看不到它)卻送了與既有值不同的值。 */
   "FIELD_FORBIDDEN",
   /** 這張表單不在操作者可新增的清單內(未分派 / 已停用 / 無發布版本 / 不在該模組)。 */
   "FORM_NOT_AVAILABLE",

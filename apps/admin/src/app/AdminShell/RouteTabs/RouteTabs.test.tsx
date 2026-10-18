@@ -36,7 +36,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-describe("RouteTabs:生成與去重(dis #15:開過的路由生成 tab、以路由去重)", () => {
+describe("RouteTabs:生成與去重(開過的路由生成 tab、以路由去重)", () => {
   it("進入兩個模組路由 → 兩個 tab;重複進入不重複生成;當前 tab 為選中", async () => {
     useSuperAdmin();
     const { user } = renderApp({ path: "/overview" });

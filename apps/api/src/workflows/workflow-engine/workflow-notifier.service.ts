@@ -17,7 +17,7 @@ import { systemContext } from "../tenant-directory.service";
 import type { InstanceRecord } from "./instance-writes";
 
 /**
- * 審核流程的通知(Spec 6b §7):任務建立(`workflow.task-created`,給審核者)、
+ * 審核流程的通知:任務建立(`workflow.task-created`,給審核者)、
  * 有結果(`workflow.result`:核准 / 駁回 / 退回,給申請人)。站內與 email 都由 `notify()` 這一個入口產生。
  *
  * - **與推進同一個交易**:推進在交易內呼叫這裡,通知寫進同一個交易;交易回復(含被自動重試丟掉的那一輪)

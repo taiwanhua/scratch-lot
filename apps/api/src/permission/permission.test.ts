@@ -455,7 +455,7 @@ describe("登入線2:me.modules(PermissionResolver,ADR-0011 七步)+ @RequirePer
         parentId: byKey(modules, "system.org-manager").id,
       });
       // 權限仍在(彈窗開在組織管理頁上,權限由這個容器模組承載)。
-      // 可見範圍開關 2026-09-19 搬到組織管理層(#187:它不是根組織專屬動作),不再在這裡。
+      // 可見範圍開關 2026-09-19 搬到組織管理層(它不是根組織專屬動作),不再在這裡。
       expectSameMembers(tenantOps.permissions, [
         "system.org-manager.tenant-ops.*",
         "system.org-manager.tenant-ops.provision",
@@ -471,7 +471,7 @@ describe("登入線2:me.modules(PermissionResolver,ADR-0011 七步)+ @RequirePer
     });
   });
 
-  describe("me.modules:icon 為側欄圖示 key(#288)", () => {
+  describe("me.modules:icon 為側欄圖示 key", () => {
     it("seed 給初值的節點回白名單 key、沒給的隱藏頁回 null;值都在 MODULE_ICON_KEYS 內", async () => {
       const login = await api.graphql<LoginData>(LOGIN, {
         input: { account: ROOT_ADMIN.account, password: ROOT_ADMIN.password },

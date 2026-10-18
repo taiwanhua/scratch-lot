@@ -22,7 +22,7 @@ export interface MembersTabProps {
 }
 
 /**
- * 組織詳情的「成員」頁籤(#377):成員表 + 加入成員。
+ * 組織詳情的「成員」頁籤:成員表 + 加入成員。
  *
  * 清單是**這個組織自己的成員**,不含下層組織的成員(org-manager.md「api 介面」)——
  * 「加入成員」加的就是一筆直接關聯,列表要跟它對得起來。
@@ -101,7 +101,7 @@ export const MembersTab = ({ orgId, orgName, canAdd }: MembersTabProps) => {
         <Alert severity="error">{tErrors(data.errorCode)}</Alert>
       )}
 
-      {/* 捲動責任在 Table 自己的容器(#299):這層只把剩下的高度給它,不再自己捲 */}
+      {/* 捲動責任在 Table 自己的容器:這層只把剩下的高度給它,不再自己捲 */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Table
           columns={columns}

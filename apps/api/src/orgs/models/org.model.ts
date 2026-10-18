@@ -2,7 +2,7 @@ import { Field, ID, ObjectType, registerEnumType } from "@nestjs/graphql";
 
 /**
  * 租戶頂層的「使用者可見下層組織資料」開關(`orgs.settings.visibility`,ADR-0005)。
- * 未設視為 `OWN`;設定動作屬租戶作業(#135),本模組只讀出來顯示。
+ * 未設視為 `OWN`;設定動作屬租戶作業,本模組只讀出來顯示。
  */
 export enum OrgVisibility {
   /** 使用者只看得到自己所屬組織的資料 */
@@ -35,7 +35,7 @@ export class OrgNode {
 
   /**
    * 租戶擁有者(僅租戶頂層有值,ADR-0009);其餘節點恆為 null。
-   * 樹上就給,讓使用者管理頁不必再逐筆查 `org(id)` 才知道哪些人受擁有者保護(#139 回饋)。
+   * 樹上就給,讓使用者管理頁不必再逐筆查 `org(id)` 才知道哪些人受擁有者保護。
    */
   @Field(() => ID, { nullable: true })
   ownerUserId!: string | null;
@@ -43,7 +43,7 @@ export class OrgNode {
   /**
    * 這個節點在操作者的可見範圍(ADR-0005)之外 — 樹上照樣顯示(不然樹會斷),
    * 但不可選取、不可操作(docs/modules/org-manager.md「組織樹」)。
-   * 與 `enabled`(組織自己的停用狀態)是兩件事;命名與使用者列的 `outOfScope` 一致(#136)。
+   * 與 `enabled`(組織自己的停用狀態)是兩件事;命名與使用者列的 `outOfScope` 一致。
    */
   @Field(() => Boolean)
   outOfScope!: boolean;
@@ -74,7 +74,7 @@ export class Org {
   @Field(() => Boolean)
   isSystem!: boolean;
 
-  /** 租戶擁有者(僅租戶頂層有值,ADR-0009);轉移屬租戶作業(#135)。 */
+  /** 租戶擁有者(僅租戶頂層有值,ADR-0009);轉移屬租戶作業。 */
   @Field(() => ID, { nullable: true })
   ownerUserId!: string | null;
 

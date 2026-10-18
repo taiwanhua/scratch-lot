@@ -13,7 +13,7 @@ import {
 } from "./models/password-payloads.model";
 import { PasswordService } from "./password.service";
 
-/** 密碼流程的 GraphQL 端點(#61;形式 GQL-02、錯誤 GQL-04)。 */
+/** 密碼流程的 GraphQL 端點(形式 GQL-02、錯誤 GQL-04)。 */
 @Resolver()
 export class PasswordResolver {
   constructor(

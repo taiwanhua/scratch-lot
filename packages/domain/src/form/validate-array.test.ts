@@ -155,7 +155,7 @@ describe("檢查器:明細列的定義", () => {
     expect(issue?.location.property).toBe("options");
   });
 
-  describe("引用子欄(B2b)", () => {
+  describe("引用子欄", () => {
     const store = column("store", "reference", {
       source: { provider: "user", labelField: "name" },
     });
@@ -461,7 +461,7 @@ function game(mapping: { sourceField: string; fieldKey: string }[]) {
   });
 }
 
-describe("檢查器:明細引用子欄的列內帶入(B2c)", () => {
+describe("檢查器:明細引用子欄的列內帶入", () => {
   const registry = {
     project_game: {
       fields: { title: "text" as const, bookAmount: "number" as const },

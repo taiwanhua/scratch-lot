@@ -31,7 +31,7 @@ function rowOf(rows: FieldRow[], value: string): FieldRow {
 }
 
 /**
- * 可見範圍的規則表(#264 使用者裁決,正本 `docs/modules/field-manager.md`):
+ * 可見範圍的規則表(正本 `docs/modules/field-manager.md`):
  *
  * **看得到 = 全域 + 我的上層(一路到租戶頂層,不受可見性開關影響)+ 自己
  * + 我可見範圍內的下層;只能編輯 / 停用自己這一層加的。**
@@ -43,7 +43,7 @@ function rowOf(rows: FieldRow[], value: string): FieldRow {
  * ```
  * 每一層各加一筆 order 相同的自訂選項,順便驗「同 order 依組織深度排序」。
  */
-describe("欄位選項的可見範圍:全域 + 上層繼承 + 可見範圍內的下層(#264)", () => {
+describe("欄位選項的可見範圍:全域 + 上層繼承 + 可見範圍內的下層", () => {
   let api: AuthTestApp;
   let connection: Connection;
 

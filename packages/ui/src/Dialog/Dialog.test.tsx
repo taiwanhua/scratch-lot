@@ -61,7 +61,7 @@ describe("Dialog", () => {
 
   /**
    * MUI 的 `.MuiDialogTitle-root + .MuiDialogContent-root { padding-top: 0 }` 特異度贏過
-   * `sx` 的單一 class,上內距被吃掉後,第一個 TextField 的浮動標籤會被標題壓住(#186 ①)。
+   * `sx` 的單一 class,上內距被吃掉後,第一個 TextField 的浮動標籤會被標題壓住。
    */
   it("標題 + 表單:內容區上內距沒被標題吃掉,第一個欄位的標籤看得到", () => {
     render(

@@ -7,7 +7,7 @@ import {
 import type { Expression, FieldDef, FieldType } from "./types";
 
 /**
- * 表達式的**型別表**(Spec 6a §5「表達式選擇器:型別導向(表 B)」):運算子的參數 / 回傳型別、
+ * 表達式的**型別表**:運算子的參數 / 回傳型別、
  * 欄位與系統值(`ctx.*`)在表達式裡的型別。純資料 + 純函式,設計器的選擇器(每個位置只列型別對得上的
  * 欄位 / 常數 / 系統值 / 運算)與檢查器共用這一張,兩邊不會各說各話。
  */
@@ -16,7 +16,7 @@ import type { Expression, FieldDef, FieldType } from "./types";
  * 表達式裡的值型別(語意值,不是存值;`list` = 常數清單):
  * - `option` / `optionList`:單選 / 多選欄的值(`value` 字串 / `value[]`)。它們能放進文字 / 清單的位置
  *   (`leave_type == "sick"`、`in`),但**反過來不行**:選項欄公式的根(與 `if` 的然後 / 否則)要回 `option` /
- *   `optionList`,只收 `if`、同選項來源的欄位、從目標欄位選項挑的常數(Spec 表 B「計算欄位公式」列)
+ *   `optionList`,只收 `if`、同選項來源的欄位、從目標欄位選項挑的常數。
  */
 export const EXPRESSION_VALUE_TYPES = [
   "text",
@@ -35,7 +35,7 @@ export type ExpressionValueType = (typeof EXPRESSION_VALUE_TYPES)[number];
 export type ExpectedTypes = readonly ExpressionValueType[] | null;
 
 /**
- * 欄位型別 → 表達式型別(`var` 讀到的語意值,Spec §5「表達式看到的是語意值」):
+ * 欄位型別 → 表達式型別(`var` 讀到的語意值):
  * 單選 = value 字串、多選 = `value[]`、引用 = 來源 id(文字)。**上傳欄不可進表達式**(null)。
  */
 export const FIELD_EXPRESSION_TYPES: Readonly<
@@ -189,7 +189,7 @@ const BINARY_ARITHMETIC: OperatorSignature = {
   returns: "number",
 };
 
-/** 每個運算子(`var` 以外)的簽章 —— 表 B。 */
+/** 每個運算子(`var` 以外)的簽章。 */
 export const OPERATOR_SIGNATURES: Readonly<
   Record<Exclude<ExpressionOperator, "var">, OperatorSignature>
 > = {
@@ -266,7 +266,7 @@ export function isOptionExpected(expected: ExpectedTypes): boolean {
 
 /**
  * `actual` 能不能放進要 `expected` 的位置:型別相同即可;日期與日期時間互通
- * (Spec 表 B:「現在時間」可放日期 / 日期時間位置,`dateDiff` / `dateAdd` 兩種都收;比較運算子兩邊也可混比 ——
+ * (「現在時間」可放日期 / 日期時間位置,`dateDiff` / `dateAdd` 兩種都收;比較運算子兩邊也可混比 ——
  * 兩者都是時點,計算器把日期時間換成當地日再比);選項放得進文字 / 清單位置,反過來不行。
  */
 export function isTypeAccepted(
@@ -485,8 +485,7 @@ function canonicalJson(
 }
 
 /**
- * 兩個選項欄是不是**同一個選項來源**(`options` 深比較相等;顯示用的 `labelTemplate` 與 `undefined` 的鍵不算):選項欄公式的根只收同來源的欄位
- * (Spec 表 B「計算欄位公式」列)。
+ * 兩個選項欄是不是**同一個選項來源**(`options` 深比較相等;顯示用的 `labelTemplate` 與 `undefined` 的鍵不算):選項欄公式的根只收同來源的欄位。
  */
 export function isSameOptionSource(
   left: Pick<FieldDef, "options">,

@@ -14,14 +14,14 @@ export const ALLOW_BEFORE_CREDENTIAL_CHANGE_KEY =
   "auth:allowBeforeCredentialChange";
 
 /**
- * 公開端點:不要求登入(#61:僅 login / refresh / 密碼流程 / 健康檢查)。
+ * 公開端點:不要求登入(僅 login / refresh / 密碼流程 / 健康檢查)。
  * 未標者一律由全域 guard 要求已登入。
  */
 export const Public = (): MethodDecorator & ClassDecorator =>
   SetMetadata(IS_PUBLIC_KEY, true);
 
 /**
- * 「首登須改密碼」旗標為 true 的使用者仍可使用的端點(#61:me / changePassword / logout / logoutAllDevices);
+ * 「首登須改密碼」旗標為 true 的使用者仍可使用的端點(me / changePassword / logout / logoutAllDevices);
  * 其餘受保護操作一律回 `MUST_CHANGE_PASSWORD`。
  */
 export const AllowMustChangePassword = (): MethodDecorator & ClassDecorator =>

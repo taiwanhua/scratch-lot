@@ -27,7 +27,7 @@ storybook-static
 .claude/hook-typecheck-off
 
 # Claude Code 的本機設定(每台機器自己的權限允許清單,不入版控;
-# 原本只靠使用者層的 global gitignore 擋住,換機器就會誤入版控 — #195 → #160)
+# 原本只靠使用者層的 global gitignore 擋住,換機器就會誤入版控)
 .claude/settings.local.json
 
 # Codex 本機設定與交接；正式決策留在版控文件及 issue/PR

@@ -26,7 +26,7 @@ export type ReadableRevisions =
   | { kind: "none" };
 
 /**
- * 「誰能看那筆提交」(Spec 6b §3 表)的唯一判準 `canReadSubmissionRevision(user, submission, revision)`:
+ * 「誰能看那筆提交」的唯一判準 `canReadSubmissionRevision(user, submission, revision)`:
  * `formSubmission(id, revision)`、`workflowInstance(id)`、附件簽名網址都走這一支。
  *
  * | 誰                                  | 能看什麼                                     |
@@ -34,7 +34,7 @@ export type ReadableRevisions =
  * | 模組 `view` + 可見範圍 + 資料範圍者 | 6a 原規則(全部修訂)                        |
  * | 申請人(`createdBy = 我`)            | 自己的提交,含所有修訂與歷程(單筆;列表不放寬) |
  * | 任務持有者(現在或曾經)              | **只有**那個實例對應的修訂快照 + 該實例的歷程 |
- * | 知會對象(B17,實例 `ccRecipientIds`)| 同任務持有者:只有被知會的那個實例的修訂      |
+ * | 知會對象(實例 `ccRecipientIds`)| 同任務持有者:只有被知會的那個實例的修訂      |
  *
  * 任務持有者以 `workflow_tasks.assigneeId` + `previousAssigneeIds` 判(含已取消、被改派走的);
  * 停用 / 移出租戶的人本來就進不來(租戶邊界),不靠舊任務。別人的草稿一律讀不到。
@@ -83,7 +83,7 @@ export class SubmissionReadAccess {
       submissionId: submission._id,
       $or: [{ assigneeId: actorId }, { previousAssigneeIds: actorId }],
     });
-    // B17 知會對象:與任務持有者同等規則,只讀被知會的那幾個修訂
+    // 知會對象:與任務持有者同等規則,只讀被知會的那幾個修訂
     const copied = await this.instances.findMany(systemContext(), {
       tenantId: submission.tenantId,
       submissionId: submission._id,
@@ -130,7 +130,7 @@ export class SubmissionReadAccess {
     if (count > 0) {
       return true;
     }
-    // 知會對象(B17)也要拿得到定義來渲染被知會的那筆
+    // 知會對象也要拿得到定義來渲染被知會的那筆
     const copied = await this.instances.count(systemContext(), {
       tenantId: facts.tenantId,
       formKey,
@@ -140,8 +140,8 @@ export class SubmissionReadAccess {
   }
 
   /**
-   * 某修訂的摘要快照(該修訂實例上的 `summary`):只審過舊修訂的人讀提交時,摘要不能用提交最新的
-   * (Spec §3)。該修訂沒有實例(沒走流程)→ null。
+   * 某修訂的摘要快照(該修訂實例上的 `summary`):只審過舊修訂的人讀提交時,摘要不能用提交最新的。
+   * 該修訂沒有實例(沒走流程)→ null。
    */
   async revisionSummaryOf(
     submissionId: Types.ObjectId,

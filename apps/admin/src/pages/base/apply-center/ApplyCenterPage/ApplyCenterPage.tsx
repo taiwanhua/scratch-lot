@@ -29,7 +29,7 @@ import {
 const urlListDefault = urlStateDefault(myApplicationsListSchema);
 
 /**
- * 申請中心(固定模組 `apply-center`,Spec 6b §8 畫面 8;正本 docs/modules/workflows.md「申請中心」):
+ * 申請中心(固定模組 `apply-center`;正本 docs/modules/workflows.md「申請中心」):
  * 兩個**跨模組**的頁籤 —— 「我的申請」「待我審核」;右上「新申請」選模組 → 選表單 → 進該模組的新增頁。
  * 內容以「我」為邊界(我送的、派給我的),不套可見範圍與資料範圍。
  * 頁籤右側的數字 = `applyCenterCounts`(我進行中的申請數 / 待我處理的任務數):進頁與切頁籤各重取一次。

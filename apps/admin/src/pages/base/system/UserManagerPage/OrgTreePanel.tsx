@@ -20,7 +20,7 @@ export interface OrgTreePanelProps {
 
 /**
  * 左欄組織樹(Figma OrgTree 91:263):選一個組織就把右側清單收斂到該組織子樹 ∩ 可見範圍。
- * 預設選中樹根(#183):樹根的子樹就是整個可見範圍,所以「還沒挑」與「挑了最外圈」是同一件事。
+ * 預設選中樹根:樹根的子樹就是整個可見範圍,所以「還沒挑」與「挑了最外圈」是同一件事。
  */
 export const OrgTreePanel = ({
   nodes,
@@ -48,7 +48,7 @@ export const OrgTreePanel = ({
           {isAvailable ? t("hint") : t("all")}
         </Typography>
         {isAvailable ? (
-          // 樹佔滿標題以外的高度,超出時自己捲(#183)
+          // 樹佔滿標題以外的高度,超出時自己捲
           <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
             <OrgTreePicker
               nodes={nodes}

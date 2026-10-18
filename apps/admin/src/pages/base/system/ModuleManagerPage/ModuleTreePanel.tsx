@@ -41,7 +41,7 @@ export const ModuleTreePanel = ({
      * 類型標籤只給群組與隱藏節點(Figma 89:223 / 89:243):連結是絕大多數節點的樣子,
      * 每一列都掛一個「連結」標籤只是噪音;三種類型完整的說法在右側「側欄類型」那一列。
      *
-     * 隱藏節點再分兩種(#260):有畫面的是「隱藏頁」,沒畫面的是「權限容器」
+     * 隱藏節點再分兩種:有畫面的是「隱藏頁」,沒畫面的是「權限容器」
      * (`isPermissionContainer`)—— 一律標成隱藏頁會讓人去找一個不存在的頁面。
      */
     const typeTagOf = (node: ModuleAdminNodeLike) => {
@@ -67,7 +67,7 @@ export const ModuleTreePanel = ({
             {!node.enabled && <Tag tone="error" label={t("disabledTag")} />}
           </Stack>
         ),
-        // 葉節點給 undefined 而不是空陣列,否則會長出不該有的展開箭頭(#186 ③)
+        // 葉節點給 undefined 而不是空陣列,否則會長出不該有的展開箭頭
         children:
           node.children === undefined || node.children.length === 0
             ? undefined

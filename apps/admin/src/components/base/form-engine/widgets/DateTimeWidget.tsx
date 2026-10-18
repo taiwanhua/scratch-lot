@@ -11,7 +11,7 @@ const limitOf = (raw: unknown): string | undefined =>
   temporalIsoOf(raw) ?? undefined;
 
 /**
- * 日期時間欄(`datetime` → `dateTimePicker`,Spec 6a §5):值是時點(收發 ISO 8601,api 存 Mongo `Date`),
+ * 日期時間欄(`datetime` → `dateTimePicker`):值是時點(收發 ISO 8601,api 存 Mongo `Date`),
  * 以**讀者現在的租戶時區**輸入與顯示(`context.timezone` = `me.currentOrg.timezone`;唯讀檢視也是)。
  * 唯讀檢視印 `YYYY-MM-DD HH:mm`(`useTemporalText`)。
  */

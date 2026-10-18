@@ -12,7 +12,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 頁籤 / 標題模板(Spec 6a §4 `forms.tabLabelTemplate`、§8「其他」):模組層模板,表單的 `tabLabelTemplate` 可覆寫。
+ * 頁籤 / 標題模板(`forms.tabLabelTemplate`):模組層模板,表單的 `tabLabelTemplate` 可覆寫。
  * **前端從那筆資料的欄位值即時算**(不讀後端存的 `summary`):摘要槽依那筆綁的版本 `summaryMap` 對到欄位取值,
  * 草稿與新增 / 編輯頁用正在輸入的值。所有頁(表單模組新增 / 編輯 / 檢視、申請中心詳情)走 `renderTabLabel`。
  *

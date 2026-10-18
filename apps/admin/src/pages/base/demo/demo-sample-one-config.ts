@@ -72,7 +72,7 @@ export const SAMPLE_ONE_STATUSES = [
  * 兩者的規則不同,而且要跟著 api 那一份走 —— 前端的 `accept` / `maxSize` 只是先擋一手,
  * 真正把關的是 `createUploadUrl`(不合就在那一步回 `UPLOAD_REJECTED`):
  * - **封面**:圖片 + 2MB(公開的東西刻意收得緊)
- * - **附件**:圖片 + pdf / doc(x) / xls(x) / zip + 20MB(#344 放寬;設計稿畫的 pdf 附件現在收得了)
+ * - **附件**:圖片 + pdf / doc(x) / xls(x) / zip + 20MB(已放寬;設計稿畫的 pdf 附件現在收得了)
  */
 export const SAMPLE_ONE_UPLOAD = {
   cover: {

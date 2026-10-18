@@ -1,5 +1,5 @@
 /**
- * 審核流程的型別(語意正本見 Spec 6b §4、§5 與 `docs/data-model.md`「workflow_*」)。
+ * 審核流程的型別(語意正本見 `docs/concepts/workflow-engine.md` 與 `docs/data-model.md`「流程」)。
  * 純型別,前後端共用:api 存取與推進、admin 設計器與審核區塊都吃同一份。
  *
  * id 一律是字串(domain 不認得 ObjectId);api 讀出文件後轉成字串再交給本套件的函式。
@@ -115,10 +115,10 @@ export interface ReviewStepDef {
   autoApprove?: AutoApproveDef | null;
   /** 審核者可否「退回修改」;省略 = true。 */
   allowReturn?: boolean;
-  /** 逾時提醒(B16);沒設 = 不檢查、不通知。 */
+  /** 逾時提醒;沒設 = 不檢查、不通知。 */
   overdue?: OverdueReminderDef | null;
   /**
-   * 知會對象(B17;來源同審核者三種,不需要審核):這一關**整關通過或被跳過**時通知
+   * 知會對象(來源同審核者三種,不需要審核):這一關**整關通過或被跳過**時通知
    * (`workflow.cc`),之後以任務持有者同等規則唯讀該修訂。沒設 = 不知會。
    */
   cc?: AssigneeSource | null;
@@ -159,7 +159,7 @@ export interface WorkflowDefinition {
   steps: StepDef[];
   edges?: WorkflowEdge[] | null;
   /**
-   * 整個流程的知會對象(B17;來源同審核者三種):單據**完成、被駁回、被作廢**時通知。
+   * 整個流程的知會對象(來源同審核者三種):單據**完成、被駁回、被作廢**時通知。
    * 關卡的知會另設在各關的 `cc`。沒設 = 不知會。
    */
   cc?: AssigneeSource | null;
@@ -191,7 +191,7 @@ export function allowsReturn(step: StepDef): boolean {
 
 // ---- 實例(`workflow_instances`,唯一權威) ----
 
-/** 實例狀態(Spec §4、§6)。 */
+/** 實例狀態。 */
 export const INSTANCE_STATUSES = [
   "running",
   "blocked",
@@ -255,7 +255,7 @@ export interface PlanItem {
   previousAssigneeIds: string[];
   assigneeState: AssigneeState;
   /**
-   * B15 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的**原審核者們**(依名單順序)。
+   * 代理人:進關時在代理期間、改由 `assigneeId`(代理人)承接的**原審核者們**(依名單順序)。
    * 多位審核者委託同一位代理人時合成這一項:代理人一票作用到所有被代理者;代理人本人原本就在名單時,
    * 這一項仍是他自己的、另記他代理的人。沒有代理 → 沒有這個欄位(或空陣列)。流程管理者改派後清空。
    */
@@ -292,7 +292,7 @@ export interface StepState {
   decisions: AcceptedDecision[];
 }
 
-/** 歷程事件種類(Spec §4 `history[]`)。 */
+/** 歷程事件種類(`history[]`)。 */
 export const HISTORY_KINDS = [
   "started",
   "step_entered",
@@ -322,7 +322,7 @@ export type HistoryKind = (typeof HISTORY_KINDS)[number];
  * 歷程事件的原因(時間軸顯示「是哪一項成立」):
  * - `step_skipped`:`skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件)
  * - `approved`:`auto_applicant`(申請人是審核者,自動通過)/ `auto_prior_approver`(已在前關核准,自動通過)
- * - `auto_approve_blocked`(B5 自動通過被 `beforeApprove` 擋下):同上兩個值,表示是哪一種自動通過沒成立
+ * - `auto_approve_blocked`(自動通過被 `beforeApprove` 擋下):同上兩個值,表示是哪一種自動通過沒成立
  *
  * 其他事件與人按的核准沒有原因(null)。
  */
@@ -429,7 +429,7 @@ export interface TaskProjection {
 
 // ---- 提交(`form_submissions` 的 6b 欄位) ----
 
-/** 提交狀態(6a 擴充,Spec §6)。 */
+/** 提交狀態(表單引擎的狀態加上審核流程的狀態)。 */
 export const SUBMISSION_STATUSES = [
   "draft",
   "reviewing",

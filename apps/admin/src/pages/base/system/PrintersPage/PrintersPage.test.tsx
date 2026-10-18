@@ -161,7 +161,7 @@ describe("印表機管理的權限(畫面列,每列一個測試)", () => {
 
 describe("印表機管理:側欄", () => {
   it("系統管理群組的順序:既有 8 項 → 通知設定 → 印表機管理", async () => {
-    // 通知設定頁不在本票範圍,側欄節點照 seed(order 9)放一個
+    // 通知設定頁不在本測試範圍,側欄節點照 seed(order 9)放一個
     const notificationSettings = {
       ...printersModule(),
       id: "m-notification-settings",

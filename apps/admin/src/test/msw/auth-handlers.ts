@@ -96,7 +96,7 @@ export interface AuthWorldOptions {
   modules?: TestModule[];
   /** `me.id`(預設 `testUser.id`);換人登入、依使用者分把的儲存鍵用 */
   userId?: string;
-  /** 所屬組織清單(預設只有平台根組織);當前組織預設 = 第一個(#66 組織切換器) */
+  /** 所屬組織清單(預設只有平台根組織);當前組織預設 = 第一個(組織切換器用) */
   orgs?: TestOrg[];
   /** 當前組織的商標網址(側欄有商標就顯示圖、沒有才顯示名稱);預設沒有 */
   currentOrgLogoUrl?: string | null;
@@ -350,7 +350,7 @@ export const authWorld = (options: AuthWorldOptions = {}): AuthWorld => {
       mustChangePassword = false;
       return HttpResponse.json({ data: { changePassword: { success: true } } });
     }),
-    // 個人偏好(規格 10.6):只讀寫自己的、不看權限;未登記的 key 回 VALIDATION_FAILED(api 只登記 locale)
+    // 個人偏好:只讀寫自己的、不看權限;未登記的 key 回 VALIDATION_FAILED(api 只登記 locale)
     api.query("MyPreferences", ({ request }) => {
       calls.myPreferences += 1;
       return (

@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from "react";
 import type { GraphQLClient, UploadPurpose } from "@repo/graphql";
 
 /**
- * 設定驅動的示範模組三頁(#321)。**這一份是 module-scaffold 的前端藍本**
+ * 設定驅動的示範模組三頁。**這一份是 module-scaffold 的前端藍本**
  * (`docs/agents/module-scaffold.md`,示範線 5 寫):新開一個 CRUD 模組時,
  * 要寫的就是一份 `DemoModuleConfig`,三頁本身(`DemoListPage` / `DemoDetailPage` /
  * `DemoFormPage`)一行都不用改。
@@ -160,7 +160,7 @@ export interface DemoDetailConfig<Detail extends DemoItemLike> {
 export type DemoFieldMode = "hidden" | "readonly" | "editable";
 
 /**
- * 上傳完成的一個檔案(#427):物件路徑 + 選檔時就知道的原始檔名 / 大小 / 檔型
+ * 上傳完成的一個檔案:物件路徑 + 選檔時就知道的原始檔名 / 大小 / 檔型
  * (`File.name` / `File.size` / `File.type`)。要不要把後三者送給 api 由設定物件決定。
  */
 export interface DemoUploadedFile {
@@ -315,7 +315,7 @@ export type DemoDeleteHook = (
  * 切換啟用 / 停用的 mutation hook(**選配**)。形狀比照 `useDelete`:兩支示範模組的 input
  * 同形(`{ id, enabled }`),所以直接收 codegen 的 hook,不必再包一層。
  *
- * **不給 = 這個模組沒有啟用 / 停用**,列表的 `enabled` 欄維持唯讀 Tag(#359 的裁決:
+ * **不給 = 這個模組沒有啟用 / 停用**,列表的 `enabled` 欄維持唯讀 Tag(理由:
  * 未來的模組不一定有這個欄位,共版型不強迫)。給了也不代表每一列都切得動 —— 開關只在
  * **那一列的 `abilities.canEdit` 為真**時出現,改不動的列仍然是 Tag(逐列的能力一律讀 api)。
  */

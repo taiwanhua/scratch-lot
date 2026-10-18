@@ -48,7 +48,7 @@ function itemRow(rowId: string, cells: Record<string, unknown>): Row {
 }
 
 /**
- * 明細列(Spec 6a §5「明細列」、§10 明細列測試):後端依完整依賴圖算列內公式與彙總、整欄套「不能填的
+ * 明細列(見 `docs/modules/forms.md`「明細列」):後端依完整依賴圖算列內公式與彙總、整欄套「不能填的
  * 四種原因」(隱藏清空、沒有 edit 保留)、整欄保護傳遞、錯誤定位 `明細 key + rowId + 子欄 key`、
  * 修訂以 `rowId` 對列。複製為新單換 `rowId` 在申請中心的複製測試(要走流程作廢)。
  */

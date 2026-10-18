@@ -48,7 +48,7 @@ const itemsOfStep = (step: InstanceStep): BlockedItem[] => {
 };
 
 /**
- * 一個實例裡「可處置」的項目(Spec 6b §6「改派、新增審核者」):進行中的審核關卡裡,
+ * 一個實例裡「可處置」的項目(改派、新增審核者):進行中的審核關卡裡,
  * 還沒決定的計畫項目(失效的排前面)、以及解析為空的關卡。阻擋的關卡先列。
  */
 export const blockedItemsOf = (

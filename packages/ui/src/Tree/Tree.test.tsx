@@ -36,7 +36,7 @@ const rowOf = (label: string): HTMLElement => {
  * 一列的左縮排(px)。MUI X v9 把縮排做成內容列的
  * `paddingLeft: calc(<基底> + var(--TreeView-itemChildrenIndentation) * var(--TreeView-itemDepth))`,
  * jsdom 不解析 `calc()` 與 CSS 變數,所以這裡把算式拆開自行代入:
- * 對不上這個形狀就直接失敗 —— 那正是 #260 的症狀(`padding` 簡寫把 `paddingLeft` 蓋掉)。
+ * 對不上這個形狀就直接失敗 —— 那正是曾經出過的症狀(`padding` 簡寫把 `paddingLeft` 蓋掉)。
  */
 const INDENT_PATTERN =
   /^calc\((?<base>[\d.]+)px \+ var\(--TreeView-itemChildrenIndentation\) \* var\(--TreeView-itemDepth\)\)$/;
@@ -84,7 +84,7 @@ describe("Tree", () => {
   });
 
   /**
-   * #260:`TreeRoot` 的 `padding` 簡寫曾把 MUI 的 `paddingLeft` 縮排算式蓋掉,
+   * `TreeRoot` 的 `padding` 簡寫曾把 MUI 的 `paddingLeft` 縮排算式蓋掉,
    * 三棵樹(模組與權限、角色矩陣、OrgTreePicker)的每一層都貼齊左緣。
    */
   it("子節點依深度縮排,第二層大於第一層、第一層大於根", () => {
@@ -171,7 +171,7 @@ describe("Tree", () => {
   });
 
   /**
-   * #373:MUI 預設「點內容區 = 選取 + 展開 / 收合」,於是選一個組織會順手把它收起來。
+   * MUI 預設「點內容區 = 選取 + 展開 / 收合」,於是選一個組織會順手把它收起來。
    * `expansionTrigger="iconContainer"` 把兩件事分開,這個測試釘住分工。
    */
   it("點文字只選取、不改變展開狀態,點展開箭頭才展開", () => {
@@ -278,7 +278,7 @@ describe("Tree", () => {
 
   /**
    * 呼叫端的資料來源常常對葉節點回 `children: []`(api 的 `orgTree` 就是),
-   * 那不該讓節點長出展開箭頭(#186 ③)。
+   * 那不該讓節點長出展開箭頭。
    */
   it("children 是空陣列的節點不可展開,沒有展開箭頭", () => {
     render(

@@ -79,7 +79,7 @@ function keywordCondition(
 }
 
 /**
- * 組織主管(`core_relationships` 的 `org_manager`,Spec 6b §4;docs/modules/org-manager.md「主管」):
+ * 組織主管(`core_relationships` 的 `org_manager`;docs/modules/org-manager.md「主管」):
  * 組織管理頁設定(整組取代、稽核 `org.set-managers`)、`org.managers` 讀取、主管候選人,
  * 以及審核流程的主管解析 `resolveManagers`(背景推進也會呼叫,不依賴操作者)。
  *
@@ -194,7 +194,7 @@ export class OrgManagersService {
   }
 
   /**
-   * 主管解析(Spec 6b §4「主管的解析」):起點 = **提交的 `orgId`**(不是申請人現在的當前組織)、
+   * 主管解析:起點 = **提交的 `orgId`**(不是申請人現在的當前組織)、
    * 往祖先走、上界 = **提交的 `tenantId`**;遇到第一個「剔除申請人後仍有主管」的組織 = 第 1 層,
    * `level = 2` 再往上找下一組。只算啟用中、仍在本租戶的使用者;到頂還是空 → 空陣列(該關阻擋)。
    * 名單以呼叫當下的主管關係為準,寫進派任計畫後由引擎固定,不再重算。

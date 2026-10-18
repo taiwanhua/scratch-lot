@@ -32,17 +32,17 @@ export interface AddUsersDialogProps {
 }
 
 /**
- * 加入使用者(Figma 69:697)。清單來自 `roleUserCandidates`(#246 的 4):
+ * 加入使用者(Figma 69:697)。清單來自 `roleUserCandidates`:
  * 操作者**管理範圍**內、**尚未持有**這個角色的人,每筆自帶 `eligible`。
  *
- * **範圍外的人也列出來,只是勾不動**(#261 的 7):直接不列的話,找不到人的人只會覺得
+ * **範圍外的人也列出來,只是勾不動**:直接不列的話,找不到人的人只會覺得
  * 「這個人不見了」,而不知道是資格不符。資格由 api 算(`eligible`),前端不再自己走組織樹。
  *
- * #307:改用 `@repo/ui/autocomplete`,**關鍵字仍然丟回 api 查**(候選有分頁上限,
+ * 改用 `@repo/ui/autocomplete`,**關鍵字仍然丟回 api 查**(候選有分頁上限,
  * 前端手上不會是全量),所以走 `onInputChange` 這條路 —— 給了它 Autocomplete 就不再
  * 自己過濾一次,否則打第一個字就把「還沒換過來的那批 options」濾成空的。
  *
- * 權限:這支 query 掛在 `system.role-manager.assign-users` 底下 —— 在 #246 之前這裡借
+ * 權限:這支 query 掛在 `system.role-manager.assign-users` 底下 —— 以前這裡借
  * `users`,連帶逼得這個彈窗需要 `system.user-manager.view`,能分配使用者的人卻打不開。
  * 判定權仍在 api:送出時 `grantRoleUsers` 會回 `USER_NOT_ELIGIBLE`。
  */

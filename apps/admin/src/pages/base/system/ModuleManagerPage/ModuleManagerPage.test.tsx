@@ -17,7 +17,7 @@ describe("模組與權限頁(/system/module-manager)", () => {
     await waitForTree();
     expect(treeLabel("系統管理")).toBe("系統管理群組");
     // 側欄看不到的 hidden 節點與沒有路由的 api 樹,在這裡照樣列出來;
-    // 沒有畫面的那種標「權限容器」而不是「隱藏頁」,不然會有人去找那個不存在的頁(#260)
+    // 沒有畫面的那種標「權限容器」而不是「隱藏頁」,不然會有人去找那個不存在的頁
     expect(treeLabel("API 能力")).toBe("API 能力權限容器");
     expect(treeLabel("租戶作業")).toBe("租戶作業權限容器");
     // 有畫面的隱藏節點仍是「隱藏頁」
@@ -51,7 +51,7 @@ describe("模組與權限頁(/system/module-manager)", () => {
     expect(rows[3]).toHaveTextContent("system.org-manager.view");
   });
 
-  /** #260:權限容器沒有畫面,右面板要講清楚它為什麼存在,不然只看到「隱藏」很難懂。 */
+  /** 權限容器沒有畫面,右面板要講清楚它為什麼存在,不然只看到「隱藏」很難懂。 */
   it("選到權限容器時,側欄類型那一列說明它只掛權限、沒有畫面", async () => {
     const { user: actor } = renderPage();
 

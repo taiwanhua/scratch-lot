@@ -76,7 +76,7 @@ interface AuditRecord {
 }
 
 /**
- * 示範模組2(#319:CRUD / 分頁與篩選 / abilities / 守門 / 審計 / 對照組)。
+ * 示範模組2(CRUD / 分頁與篩選 / abilities / 守門 / 審計 / 對照組)。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);夾具沿用 auth / permission 的 test-support。
  *
  * 組織樹(root 為 seed 建的根組織):root ─┬─ 租戶甲 ── 部門一
@@ -84,10 +84,10 @@ interface AuditRecord {
  *
  * **第二個接縫**(TEST-07 的例外,PR 有說明):最後一段的對照測試要先讓
  * `demo_items_one` 有資料、再證明規則只收縮它而不碰 `demo_items_two`。示範模組1 的
- * GraphQL 端點屬 #318、本票不依賴它,所以那幾筆用 `DemoItemsOneRepository` 直接建與查
+ * GraphQL 端點屬另一個模組、這裡不依賴它,所以那幾筆用 `DemoItemsOneRepository` 直接建與查
  * —— 走的仍是正式的執行路徑(BaseRepository 的查詢中介層)。
  */
-describe("示範模組2(#319,GraphQL 端點 + 真 MongoDB)", () => {
+describe("示範模組2(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
 

@@ -90,7 +90,7 @@ const Separator = () => (
  * AppBar 的使用者選單(頭像;Figma `Draft/AdminUserMenu` 278:77):
  * - **使用者卡**:頭像 + 姓名 + 「帳號 · 當前組織」,不可點
  * - **外觀**:跟隨系統 / 亮 / 暗(`@repo/ui` 的 `useColorMode`,選擇記在 localStorage,預設跟隨系統)
- * - **語言**:跟著帳號(I18N-05;規格 10.6):立即生效並寫本機快取,同時寫入帳號(`useChangeLocale`;寫入失敗跳提示、畫面維持新語言)
+ * - **語言**:跟著帳號(I18N-05):立即生效並寫本機快取,同時寫入帳號(`useChangeLocale`;寫入失敗跳提示、畫面維持新語言)
  * - **個人設定**:開殼層路由 `/settings/personal`(偏好 / 代理人分頁)
  * - 登出 / 登出所有裝置(api 打完先離開受保護路由再清狀態,登出不帶 next)
  *

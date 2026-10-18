@@ -4,7 +4,7 @@ import MuiSvgIcon from "@mui/material/SvgIcon";
 
 import type { IconProps } from "./icon-props";
 
-/** 說明(Figma Draft/AdminAppBar 的 help-button I44:119;81:51,18×18;AppBar 的「?」模組說明鈕,#197)。 */
+/** 說明(Figma Draft/AdminAppBar 的 help-button I44:119;81:51,18×18;AppBar 的「?」模組說明鈕)。 */
 export const HelpIcon = (props: IconProps) => (
   <MuiSvgIcon viewBox="0 0 18 18" fill="none" {...props}>
     <path

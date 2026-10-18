@@ -5,7 +5,7 @@
  * 深色模式、裝置寬度都不能改變它們 —— 電腦 / 平板 / 手機的預覽都顯示同寬的單據。
  *
  * 字級:Figma `Draft/Receipt58*`內文 14px,但那樣一行約 25 個中文字;
- * 規格(第 6 章「版面零件」)是「一行約 16 個中文字」:可用寬 352 ÷ 16 = 22 點。
+ * 58mm 單據的版面要「一行約 16 個中文字」:可用寬 352 ÷ 16 = 22 點。
  * 因此字級以內文 22 點為準,其他字級依 Figma 的比例(× 22/14)放大取整。
  */
 export const RECEIPT58_DOTS = 384;
@@ -19,7 +19,7 @@ export const RECEIPT58_PADDING_Y = 20;
 /** 可用寬度。 */
 export const RECEIPT58_CONTENT_WIDTH = RECEIPT58_DOTS - RECEIPT58_PADDING_X * 2;
 
-/** 一般字一行容納的中文字數(規格:約 16 個)。 */
+/** 一般字一行容納的中文字數(約 16 個)。 */
 export const RECEIPT58_CJK_PER_LINE = 16;
 
 /** 字級(點)與行高;Figma 對照:large 17/26、normal 14/22、small 12/18、title 16/24。 */

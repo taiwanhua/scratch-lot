@@ -19,7 +19,7 @@ import { TokenService } from "./token.service";
 const BEARER_PREFIX = /^Bearer\s+/i;
 
 /**
- * 全域登入守門(#61):未標 `@Public()` 的 resolver 一律要求已登入。
+ * 全域登入守門:未標 `@Public()` 的 resolver 一律要求已登入。
  * 1. 解 `Authorization: Bearer <access token>`(HS256、aud=admin;會員 aud=front 一律拒)
  * 2. 以 userId 現查使用者(停用 → ACCOUNT_DISABLED,下一請求即失效)
  * 3. 組操作者上下文(操作者 id、當前組織、可見範圍)附掛在 request 供 resolver / BaseRepository 使用

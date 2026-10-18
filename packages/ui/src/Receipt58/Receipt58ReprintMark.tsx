@@ -21,11 +21,11 @@ export interface Receipt58ReprintMarkProps {
   reprintedBy: ReactNode;
 }
 
-/** 四段之間的分隔(規格:「【補印】第 N 次 · 時間 · 原因 · 補印人」)。 */
+/** 四段之間的分隔(印成「【補印】第 N 次 · 時間 · 原因 · 補印人」)。 */
 const SEPARATOR = " · ";
 
 /**
- * 補印標示(規格第 6 章「版面零件」):外框粗體一行,依序印第幾次、時間、原因、補印人,太長自動換行。
+ * 補印標示:外框粗體一行,依序印第幾次、時間、原因、補印人,太長自動換行。
  * 只在補印的單據上出現;第一次列印不印。
  */
 export const Receipt58ReprintMark = ({

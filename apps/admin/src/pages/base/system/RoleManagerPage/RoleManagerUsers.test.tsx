@@ -28,12 +28,12 @@ describe("角色管理:分配使用者頁籤", () => {
     expect(within(owner).getByRole("button", { name: "移除" })).toBeDisabled();
   });
 
-  it("加入使用者:候選來自 roleUserCandidates,送出帶勾選的人(#246 的 4)", async () => {
+  it("加入使用者:候選來自 roleUserCandidates,送出帶勾選的人", async () => {
     const { user: actor, fake } = await openUsersTab();
 
     await actor.click(screen.getByRole("button", { name: "加入使用者" }));
-    // #246 的 4:改問專屬的候選端點(掛 assign-users),不再借 users query;
-    // 資格由 api 逐列算好(eligible),不合格的顯示但 disabled(#261 的 7)
+    // 改問專屬的候選端點(掛 assign-users),不再借 users query;
+    // 資格由 api 逐列算好(eligible),不合格的顯示但 disabled
     await waitFor(() => {
       expect(fake.inputs.roleUserCandidates).toHaveLength(1);
     });
@@ -42,7 +42,7 @@ describe("角色管理:分配使用者頁籤", () => {
     ).toBeInTheDocument();
 
     const dialog = screen.getByRole("dialog");
-    // #307:勾選列換成 Autocomplete,選項是「主文字 + 次文字」兩行,比對主文字前綴
+    // 勾選列換成 Autocomplete,選項是「主文字 + 次文字」兩行,比對主文字前綴
     await actor.click(within(dialog).getByRole("combobox", { name: "使用者" }));
     await actor.click(autocompleteOption("新同事"));
     expect(within(dialog).getByText("已選 1 人")).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("角色管理:分配使用者頁籤", () => {
     expect(await screen.findByText("新同事")).toBeInTheDocument();
   });
 
-  it("加入使用者:eligible = false 的人顯示但勾不動,並就地說明原因(#261 的 7)", async () => {
+  it("加入使用者:eligible = false 的人顯示但勾不動,並就地說明原因", async () => {
     const { user: actor } = await openUsersTab();
 
     await actor.click(screen.getByRole("button", { name: "加入使用者" }));

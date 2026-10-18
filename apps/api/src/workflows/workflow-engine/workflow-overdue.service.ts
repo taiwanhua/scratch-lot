@@ -44,7 +44,7 @@ export const OVERDUE_RETRY_DELAY_MS = 15 * 60_000;
 const RETRY_DELAY_MS = OVERDUE_RETRY_DELAY_MS;
 
 /**
- * 逾時提醒:B14 排程每 15 分鐘檢查一次,經 B7 `notify()` 發 `workflow.overdue`。
+ * 逾時提醒:排程每 15 分鐘檢查一次,經 `notify()` 發 `workflow.overdue`。
  * **只提醒,不改任務、關卡、實例的狀態**(不自動核准或駁回)。
  *
  * | 情況                   | 結果                                                                 |
@@ -342,7 +342,7 @@ function messageOf(error: unknown): string {
 
 /**
  * 第 1 級的收件人:目前承辦人,加上這張任務代理承接的被代理者(派任計畫該項的 `delegatorIds`,
- * B15)。流程管理者改派後計畫清空 `delegatorIds`,就只剩新承辦人。去重:同一人只收一則。
+ * 見 `docs/modules/workflows.md`「代理人」)。流程管理者改派後計畫清空 `delegatorIds`,就只剩新承辦人。去重:同一人只收一則。
  */
 function reviewersOf(
   instance: InstanceRecord,

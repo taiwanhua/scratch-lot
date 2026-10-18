@@ -8,7 +8,7 @@ export const NOTIFICATION_SETTING_REJECT_REASONS = [
   /** 類型沒有登記,或不是負責人提醒(當事人通知不在通知設定頁設定) */
   "UNKNOWN_TYPE",
   /** 人員條件格式不對(`extensions.path` 指到出錯的條件列) */
-  "INVALID_AUDIENCE",
+  "AUDIENCE_INVALID",
   /** 人員條件裡的使用者 / 角色不屬於本租戶(`extensions.path` 同上) */
   "OUT_OF_TENANT",
 ] as const;

@@ -8,7 +8,7 @@ import {
 
 const viewPath = (id: string) => `${SAMPLE_TWO_ROUTES.viewPage}/${id}`;
 
-/** 示範模組2 詳情(#321)。路由防守在 `SampleTwoRoutes.test.tsx`。 */
+/** 示範模組2 詳情。路由防守在 `SampleTwoRoutes.test.tsx`。 */
 describe("示範模組2 詳情(/demo/sample-two/view-page/:id)", () => {
   it("欄位表只有備註 / 啟用 / 建立者 —— 對照組沒有內部備註、封面與附件", async () => {
     renderSampleTwo({ path: viewPath("demo-two-1") });

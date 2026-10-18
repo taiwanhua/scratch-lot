@@ -9,7 +9,7 @@ import {
 } from "../demo-sample-one-test-support";
 
 /**
- * 示範模組1 列表(#320;Figma 175:3)。
+ * 示範模組1 列表(Figma 175:3)。
  * 詳情與共版型各有自己的測試檔;路由防守在 `SampleOneRoutes.test.tsx`。
  */
 describe("示範模組1 列表(/demo/sub/sample-one)", () => {

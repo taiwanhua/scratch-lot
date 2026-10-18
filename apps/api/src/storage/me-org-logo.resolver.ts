@@ -4,7 +4,7 @@ import { MeOrg } from "../auth/models/me.model";
 import { StorageService } from "./storage.service";
 
 /**
- * `me.currentOrg.logoUrl`(#137):側欄顯示當前組織商標用。
+ * `me.currentOrg.logoUrl`:側欄顯示當前組織商標用。
  * 以 field resolver 掛在登入線1 的 `MeOrg` 上(先例:`permission/me-modules.resolver.ts`),
  * 登入線的 resolver 不動;`logoPath` 由 `me` 帶出來(ADR-0010:DB 存路徑不存 URL,看時現簽)。
  * 只在客戶端有問 `logoUrl` 時才簽 — 簽名在 Cloud Run 上是一次 IAM signBlob 呼叫,不白簽。

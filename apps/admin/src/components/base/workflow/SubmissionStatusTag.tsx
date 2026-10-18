@@ -3,7 +3,7 @@ import { useTranslations } from "use-intl";
 import { FormSubmissionStatus } from "@repo/graphql";
 import { Tag, type TagTone } from "@repo/ui/tag";
 
-/** 提交狀態七值的色調(Spec 6b §6「提交狀態」);審核中被阻擋時另標「待處理」。 */
+/** 提交狀態七值的色調(`docs/concepts/workflow-engine.md`「提交的七個狀態」);審核中被阻擋時另標「待處理」。 */
 const STATUS_TONE: Record<FormSubmissionStatus, TagTone> = {
   [FormSubmissionStatus.Draft]: "grey",
   [FormSubmissionStatus.Reviewing]: "primary",

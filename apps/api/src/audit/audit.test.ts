@@ -32,7 +32,7 @@ const inOrgA: OperatorContext = {
 /**
  * 稽核(ADR-0004:授權變更由模組層寫、只增不改)。
  * 對真 MongoDB 驗證(TEST-07);AuditService 這一段還沒有 GraphQL 端點(orgs / users 的
- * resolver 是 #134–#136),故直接對服務這個接縫測,與 BaseRepository 的測試同一寫法。
+ * resolver 另有測試),故直接對服務這個接縫測,與 BaseRepository 的測試同一寫法。
  */
 describe("AuditService(ADR-0004:模組層寫稽核、只增不改;對真 MongoDB 驗證)", () => {
   let database: TestDatabase;

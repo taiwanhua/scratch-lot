@@ -54,7 +54,7 @@ export const BooleanWidget = ({
 
   return (
     <Stack spacing={0.25}>
-      {/* 標題在元件前面(Spec 6a §5 表 A 下方:是 / 否欄位的標題顯示在元件前面) */}
+      {/* 標題在元件前面(是 / 否欄位的標題顯示在元件前面) */}
       {hiddenLabel ? (
         control
       ) : (
@@ -62,7 +62,7 @@ export const BooleanWidget = ({
           control={control}
           label={field.label}
           labelPlacement="start"
-          // 必填 = 必須勾選(Spec 6a 表 A;未勾選送出由 api 以 REQUIRED 擋),標題帶必填記號
+          // 必填 = 必須勾選(未勾選送出由 api 以 REQUIRED 擋),標題帶必填記號
           required={field.rules?.required === true}
           sx={{ alignSelf: "flex-start" }}
         />

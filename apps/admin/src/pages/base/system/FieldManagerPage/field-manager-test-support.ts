@@ -45,7 +45,7 @@ export const CATEGORY_MANAGER = [
   FIELD_MANAGER_PERMISSIONS.manageCategories,
 ];
 
-/** 當前組織(`me.currentOrg`);來源欄的組織名稱改由 api 逐列帶回,不取自這裡(#264)。 */
+/** 當前組織(`me.currentOrg`);來源欄的組織名稱改由 api 逐列帶回,不取自這裡。 */
 export const currentOrg: TestOrg = currentOrgFixture;
 
 const systemGroup: TestModule = {

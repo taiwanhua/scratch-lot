@@ -1,5 +1,5 @@
 /**
- * 列表欄位配置(`modules.settings.list`,Spec 6a §4、§8 畫面 6)的內建欄開關:
+ * 列表欄位配置(`modules.settings.list`)的內建欄開關:
  * 表單模組的列表除了配置的欄(摘要槽 / 表單欄位)外,還有三個內建欄「表單 / 狀態 / 建立者」,各一個顯示開關。
  *
  * 落庫形狀:`modules.settings.list = { columns: [...], builtin: { form, status, createdBy } }`;

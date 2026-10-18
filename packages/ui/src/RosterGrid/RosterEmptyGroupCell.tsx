@@ -6,7 +6,7 @@ import { Box } from "../Box/Box";
 import { stateLayerSx } from "../theme/state-layer";
 
 export interface RosterEmptyGroupCellProps {
-  /** 淡色提示(例:「+ 人力需求」),滑過 / 鍵盤焦點時才顯示 */
+  /** 淡色提示(例:「+ 時段需求」),滑過 / 鍵盤焦點時才顯示 */
   hint: string | undefined;
   /** 無障礙名稱(提示 + 日期) */
   label: string;

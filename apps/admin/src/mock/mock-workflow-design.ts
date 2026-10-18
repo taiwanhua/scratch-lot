@@ -62,7 +62,7 @@ const sharedPurchaseDefinition = (): WorkflowDefinition => {
  * 病假審核草稿的「人資」關:跳過、自動通過、逾時提醒、知會四個區塊都設好;
  * 整個流程的知會對象 = 直屬主管(屬性面板沒選關卡時看得到)。
  */
-const bs03LeaveDefinition = (): WorkflowDefinition => {
+const configuredLeaveDefinition = (): WorkflowDefinition => {
   const definition = leaveWorkflowDefinition();
   return {
     ...definition,
@@ -107,7 +107,7 @@ export const mockWorkflowDesign = (): WorkflowDesignWorldOptions => ({
   ],
   versions: {
     leave_review: [
-      workflowVersionFragment(bs03LeaveDefinition(), {
+      workflowVersionFragment(configuredLeaveDefinition(), {
         baseVersion: 1,
         cc: { kind: "manager", level: 1 },
       }),

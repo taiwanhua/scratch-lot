@@ -35,7 +35,7 @@ const readPage = (storageKey: string | null, pageId: string | null) =>
     : (readSectionStore(storageKey)[pageId] ?? {});
 
 /**
- * 一頁可收合區塊的收合狀態(底座 10.3;規則與儲存格式在 `lib/base/section-collapse.ts`)。
+ * 一頁可收合區塊的收合狀態(規則與儲存格式在 `lib/base/section-collapse.ts`)。
  *
  * - `pageId` 為 null = 不記憶(例:設計器預覽,草稿的分區不該動到正式表單的紀錄):只用預設值與這次的手動切換
  * - 儲存 key 依登入者分把(`me.id`);還沒有登入者時一律用預設值、不寫入

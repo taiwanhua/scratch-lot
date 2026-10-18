@@ -50,7 +50,7 @@ export interface DemoTwoWorld {
 const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode, "NOT_FOUND");
 
 /**
- * 示範模組2 的假 api(#319 的兩個 query + 四個 mutation;規則正本
+ * 示範模組2 的假 api(兩個 query + 四個 mutation;規則正本
  * `docs/modules/demo.sample-two.md`「api 介面」)。
  *
  * 有狀態:新增 / 編輯 / 刪除寫回同一份清單,所以「mutation → invalidate → 重新查」

@@ -22,7 +22,7 @@ import { useSession } from "./useSession";
 
 /**
  * 以草稿方式存(`saveFormDraft`)的三種狀態:草稿,以及被退回 / 撤回後申請人改內容再送
- * (Spec 6b §6:狀態不變,再送出 = 修訂 +1)。其餘(沒走過流程的已完成)走「儲存修改」。
+ * (狀態不變,再送出 = 修訂 +1)。其餘(沒走過流程的已完成)走「儲存修改」。
  */
 const DRAFT_LIKE = new Set<FormSubmissionStatus>([
   FormSubmissionStatus.Draft,
@@ -56,7 +56,7 @@ export interface FormSubmissionState {
 }
 
 /**
- * 讀 / 寫一筆既有的提交(Spec 6a §6、docs/modules/forms.md「api 介面」)。
+ * 讀 / 寫一筆既有的提交(`docs/modules/forms.md`「api 介面」)。
  * `revision` 省略 = 目前;給了就是讀那個修訂的快照(唯讀,修訂差異用)。
  *
  * 每次寫入帶 `expectedEditVersion`(= 讀到的 `editVersion`),已完成修改另帶 `expectedRevision`;

@@ -14,7 +14,7 @@ import {
 } from "./field-manager-test-support";
 
 /**
- * 操作結果提示(#376):欄位管理頁的成功與失敗各一案。
+ * 操作結果提示:欄位管理頁的成功與失敗各一案。
  * 「一律跳一則」的規則在 `docs/standards/react/data-fetching.md` DATA-06。
  */
 describe("欄位管理頁的操作結果提示", () => {

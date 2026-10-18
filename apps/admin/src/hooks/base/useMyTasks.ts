@@ -12,7 +12,7 @@ export interface MyTasksFilters {
 }
 
 /**
- * 申請中心「待我審核」(Spec 6b §4):派給我的任務,跨模組、以租戶為邊界;
+ * 申請中心「待我審核」:派給我的任務,跨模組、以租戶為邊界;
  * 標題與申請人讀**實例快照**(該修訂的),單據重送後只審過舊修訂的人看到的仍是舊標題。
  */
 export const useMyTasks = (filters: MyTasksFilters) => {

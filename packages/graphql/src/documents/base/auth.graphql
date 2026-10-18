@@ -1,4 +1,4 @@
-# 登入線(#61 / #65):login / refresh / logout / logoutAllDevices / switchOrg / me
+# 登入線:login / refresh / logout / logoutAllDevices / switchOrg / me
 # access token 回 body(前端只放記憶體);refresh token 走 httpOnly cookie,不在 payload。
 
 mutation Login($input: LoginInput!) {
@@ -31,7 +31,7 @@ mutation SwitchOrg($input: SwitchOrgInput!) {
   }
 }
 
-# modules = PermissionResolver 算出的模組陣列(ADR-0011;#63):route 為完整路徑(api 樹為 null)、
+# modules = PermissionResolver 算出的模組陣列(ADR-0011):route 為完整路徑(api 樹為 null)、
 # permissions 為完整權限 key 字串(含展開後的 `<模組 key>.*`),前端據此組側欄、守路由、判斷頁內功能
 query Me {
   me {
@@ -41,7 +41,7 @@ query Me {
     email
     nickname
     mustChangePassword
-    # logoUrl 是 api 現簽的短效網址(ADR-0010;#137 的 StorageService),側欄用它顯示商標。
+    # logoUrl 是 api 現簽的短效網址(ADR-0010;StorageService),側欄用它顯示商標。
     # 只有當前組織要:組織切換器的清單不顯示商標,每一筆都簽一張是白付的成本
     currentOrg {
       id
@@ -66,7 +66,7 @@ query Me {
       sidebarType
       order
       route
-      # 側欄圖示 key(白名單 @repo/domain/module-icon;#288):null = 用預設圖示。
+      # 側欄圖示 key(白名單 @repo/domain/module-icon):null = 用預設圖示。
       # 值由根組織在「模組與權限」頁管理,前端以 key 查 @repo/ui 的登錄表,認不得就退回預設
       icon
       # FORM = 表單模組:沒有專屬說明檔時「?」退回表單模組通用說明(admin lib/base/help-registry)
@@ -76,7 +76,7 @@ query Me {
   }
 }
 
-# 密碼流程(#61 / #68;api 端 #64):三個入口共用「設定新密碼」頁(user-manager.md「密碼流程」)。
+# 密碼流程:三個入口共用「設定新密碼」頁(user-manager.md「密碼流程」)。
 # requestPasswordReset / setPassword 為公開端點(admin 用 session.publicClient);changePassword 要已登入。
 mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
   requestPasswordReset(input: $input) {

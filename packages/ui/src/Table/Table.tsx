@@ -52,7 +52,7 @@ export interface TableProps<Row> {
   onRowClick?: (row: Row) => void;
   /**
    * 表格最小寬度:容器比它窄時改成橫向捲動,而不是把欄位擠成折行
-   * (#183 第 5 項:1280 寬的使用者清單被擠到每格都折行)。未給則跟著容器縮。
+   * (1280 寬的使用者清單被擠到每格都折行)。未給則跟著容器縮。
    */
   minWidth?: number | string;
   size?: "small" | "medium";
@@ -85,7 +85,7 @@ export const Table = <Row,>({
 
   return (
     // 容器撐滿父層(STYLE-08 的 `flex: 1; minHeight: 0` 欄)而不是只包到內容高度:
-    // 列數少時橫向捲軸才落在面板底部,不會卡在最後一列下方(#299)。
+    // 列數少時橫向捲軸才落在面板底部,不會卡在最後一列下方。
     // 父層高度不確定時 `height: 100%` 自然退回 auto,維持原本的行為。
     <MuiTableContainer
       sx={mergeSx({ height: "100%", minHeight: 0 }, containerSx)}

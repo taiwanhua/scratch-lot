@@ -1,7 +1,7 @@
 import type { StepDef, WorkflowDefinition, WorkflowEdge } from "./types";
 
 /**
- * 流程的圖形查詢(Spec §5「流程結構」):起點、終點、後繼、前驅。
+ * 流程的圖形查詢:起點、終點、後繼、前驅。
  * 直線(沒有 `edges`)以 `steps[]` 的順序為準;有 `edges` 才看連線。
  * 這些函式**假設定義已過結構檢查**(`validateWorkflowDefinition`);不合法的定義只保證不丟錯。
  */

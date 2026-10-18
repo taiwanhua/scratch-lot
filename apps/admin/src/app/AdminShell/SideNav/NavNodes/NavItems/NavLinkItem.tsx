@@ -13,7 +13,7 @@ export interface NavLinkItemProps {
   to: string;
   label: string;
   /**
-   * `me.modules[].icon`(白名單 key,#288):icon-slot 畫的就是它;
+   * `me.modules[].icon`(白名單 key):icon-slot 畫的就是它;
    * 沒設定或認不得的值由 `moduleIconOf` 退回預設圖示(原本的圓點),畫面不會缺一塊。
    */
   icon?: string | null;

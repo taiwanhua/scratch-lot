@@ -26,7 +26,7 @@ export interface AssignUserDialogProps {
 }
 
 /**
- * 改派 / 新增審核者跳窗(Spec 6b §8 畫面 6):選一位啟用中、在本租戶的人;申請人自己與已在本關的人
+ * 改派 / 新增審核者跳窗:選一位啟用中、在本租戶的人;申請人自己與已在本關的人
  * 列出但不能選(api 也會擋:`ASSIGNEE_NOT_ELIGIBLE` / `ALREADY_IN_STEP`)。
  */
 export const AssignUserDialog = ({

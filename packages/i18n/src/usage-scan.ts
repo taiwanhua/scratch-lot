@@ -4,7 +4,7 @@ import path from "node:path";
 import * as ts from "typescript";
 
 /**
- * 死鍵測試的靜態掃描(#426;只給 `dead-keys.test.ts` 用)。做法寫在這裡,測試檔只放白名單。
+ * 死鍵測試的靜態掃描(只給 `dead-keys.test.ts` 用)。做法寫在這裡,測試檔只放白名單。
  *
  * ## 掃什麼
  *

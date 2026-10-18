@@ -21,7 +21,7 @@ export const FORM_SUBMISSION_STATUS_OPTIONS = [
   { value: "voided", label: "已作廢" },
 ];
 
-/** 表單模組頁內的額外權限(B9a):和固定四條一起掛在模組主節點,key = `<模組>.<action>`。 */
+/** 表單模組頁內的額外權限:和固定四條一起掛在模組主節點,key = `<模組>.<action>`。 */
 export interface FormModulePermissionSpec {
   /** kebab-case 動作段(例 `sell` → `<模組>.sell`)。 */
   action: string;
@@ -79,10 +79,10 @@ export interface FormModuleSpec {
   description: string;
   /** `modules.settings` 的初始值(如列表欄位配置 `list`);不給 = `{}`。建立後由 root 在畫面上改。 */
   settings?: Record<string, unknown>;
-  /** 頁內額外權限(選填,B9a);和固定四條 `view` / `create` / `edit` / `delete` 一起產生。 */
+  /** 頁內額外權限(選填);和固定四條 `view` / `create` / `edit` / `delete` 一起產生。 */
   permissions?: readonly FormModulePermissionSpec[];
   /**
-   * 依表單分開新增權限(B9b,選填,預設關):true 時每張表單發布時自動建 `<模組>.create-<formKey>`
+   * 依表單分開新增權限(選填,預設關):true 時每張表單發布時自動建 `<模組>.create-<formKey>`
    * (名稱「<表單名> 新增」),新增資格看它而不看模組 `create`。只能在這裡宣告;底座示範表單模組不開。
    */
   perFormCreate?: boolean;

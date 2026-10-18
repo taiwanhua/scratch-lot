@@ -14,7 +14,7 @@ import {
 } from "./condition-tree";
 
 /**
- * 資料範圍規則編輯器的**純模型**(#210):型別目錄、編輯器狀態 ↔ api JSON、條件樹的增刪改。
+ * 資料範圍規則編輯器的**純模型**:型別目錄、編輯器狀態 ↔ api JSON、條件樹的增刪改。
  * 本地驗證與 `RULE_INVALID` 的定位在 `data-scope-issues.ts`(同一份模型,分檔是為了 max-lines)。
  *
  * 規則形狀的正本是 `docs/modules/data-scope.md`「`rules[].filter` 的 JSON 形狀」

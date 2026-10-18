@@ -18,7 +18,7 @@ export interface IconButtonProps extends MuiIconButtonProps {
    * `outlined` = 加一圈 `divider` 外框、固定正方形(側欄收合開關、工具列的方形圖示鈕)。
    *
    * 幾何寫在元件內(STYLE-07),呼叫端不要再用 `sx` 重設 —— 這個變體就是為了讓
-   * `AdminShell/SideNavToggle` 那處 STYLE-10 例外退場(#295 → #297)。
+   * `AdminShell/SideNavToggle` 那處 STYLE-10 例外退場。
    */
   variant?: "plain" | "outlined";
 }

@@ -13,7 +13,7 @@ export interface JsonPreviewProps {
   maxHeight?: number;
 }
 
-/** 唯讀的 JSON 預覽 + 複製(設計器:整份定義、各表達式;Spec 6a §5 不做文字輸入,所以只給看、不給改)。 */
+/** 唯讀的 JSON 預覽 + 複製(設計器:整份定義、各表達式;設計器不做文字輸入,所以只給看、不給改)。 */
 export const JsonPreview = ({
   value,
   label,

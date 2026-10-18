@@ -149,7 +149,7 @@ const user = (
 });
 
 /**
- * 指派角色彈窗的候選來源(#211 起是正式的 `roles` query:擁有組織在操作者管理範圍內)。
+ * 指派角色彈窗的候選來源(正式的 `roles` query:擁有組織在操作者管理範圍內)。
  * 「審核員」刻意不在裡面 —— 它是王小明已持有、但操作者搆不到的既有授予。
  */
 const assignableRole = (
@@ -188,7 +188,7 @@ export const assignableRoles: TestRole[] = [
   }),
   /**
    * 擁有組織是「租戶 B」(租戶 A 底下的另一支),而王小明屬「租戶 A / 內容組」——
-   * 所以他**沒有被授予這一筆的資格**(ADR-0003)。#261 的 6:這種列照樣顯示、
+   * 所以他**沒有被授予這一筆的資格**(ADR-0003)。這種列照樣顯示、
    * 但勾不動並就地說明,不是勾得下去、送出才吃到錯。
    */
   assignableRole("role-branch-only", "分店專員", {
@@ -233,7 +233,7 @@ export const renderPage = ({
   /**
    * 登入者自己的所屬組織(`me.orgs`,AppBar 的「當前組織」可切換清單)。
    * **傳進來的陣列就是 handler 回的那一份**,測試在流程中間 `push` 一筆,
-   * 下一次重取 `me` 就看得到 —— 兩個 world 各自獨立,`setUserOrgs` 不會動到 `me`(#372)。
+   * 下一次重取 `me` 就看得到 —— 兩個 world 各自獨立,`setUserOrgs` 不會動到 `me`。
    */
   meOrgs?: TestMeOrg[];
 } = {}) => {

@@ -140,10 +140,10 @@ interface CandidatesData {
 }
 
 /**
- * 分配使用者(#203):候選規則、「組織外」標記、擁有者保護(TEST-07,對真 MongoDB)。
+ * 分配使用者:候選規則、「組織外」標記、擁有者保護(TEST-07,對真 MongoDB)。
  * 規則正本:ADR-0003「被授予角色的資格」/「從組織移除使用者」、ADR-0009 擁有者保護。
  */
-describe("角色管理:分配使用者(#203,GraphQL 端點 + 真 MongoDB)", () => {
+describe("角色管理:分配使用者(GraphQL 端點 + 真 MongoDB)", () => {
   let world: RolesWorld;
   let connection: Connection;
   let manager: Manager;
@@ -359,7 +359,7 @@ describe("角色管理:分配使用者(#203,GraphQL 端點 + 真 MongoDB)", () =
     });
   });
 
-  describe("候選清單(roleUserCandidates,#246 的 4)", () => {
+  describe("候選清單(roleUserCandidates)", () => {
     it("列管理範圍內的人:子樹內 eligible = true、子樹外 eligible = false(照列不隱藏)", async () => {
       const roleId = await createRole(world.api.app, connection, {
         name: nextAccount("候選:部門一的角色"),
@@ -441,7 +441,7 @@ describe("角色管理:分配使用者(#203,GraphQL 端點 + 真 MongoDB)", () =
       expect(code).toBe("NOT_FOUND");
     });
 
-    it("只需要 assign-users,不必 system.user-manager.view(#246 的 4)", async () => {
+    it("只需要 assign-users,不必 system.user-manager.view", async () => {
       const assigner = await createManager(world, {
         orgIds: [world.tenantA],
         ownerOrgId: world.tenantA,

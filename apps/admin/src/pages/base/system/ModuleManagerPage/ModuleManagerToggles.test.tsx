@@ -96,7 +96,7 @@ describe("模組與權限頁:enabled 切換", () => {
     ).toBeInTheDocument();
   });
 
-  it("自鎖保護:模組與權限自己的開關停用並附說明(api 端待 #233)", async () => {
+  it("自鎖保護:模組與權限自己的開關停用並附說明", async () => {
     const { user: actor } = renderPage();
 
     await waitForTree();
@@ -106,7 +106,7 @@ describe("模組與權限頁:enabled 切換", () => {
     expect(moduleSwitch("模組與權限")).toBeDisabled();
     expect(permissionSwitch("切換模組 / 權限啟用")).toBeDisabled();
 
-    // 提示改用 @repo/ui 的 Tooltip(#240):停用的開關收不到 hover,
+    // 提示改用 @repo/ui 的 Tooltip:停用的開關收不到 hover,
     // 事件載體是 Tooltip 自己包的外層 span
     const hintCarrier = moduleSwitch("模組與權限").closest(
       "span.MuiSwitch-root",

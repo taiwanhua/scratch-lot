@@ -71,7 +71,7 @@ export interface OrgWorldOptions {
   orgs?: TestOrg[];
   /** `users` 的來源(擁有者姓名與轉移候選人) */
   users?: TestOrgUser[];
-  /** `orgMembers` 的來源:orgId → 該組織**自己**的成員(不含下層,#377);加入成員後即時變動 */
+  /** `orgMembers` 的來源:orgId → 該組織**自己**的成員(不含下層);加入成員後即時變動 */
   members?: Record<string, TestOrgMember[]>;
   /** 管理範圍內的全部使用者;`orgMemberCandidates` = 這些人扣掉該組織的既有成員 */
   memberCandidates?: TestOrgMember[];
@@ -108,7 +108,7 @@ export interface OrgWorld {
 }
 
 /**
- * 組織管理頁的假 api(#134 組織 + #135 租戶作業 + #137 上傳票 + #136 的 `users`)。
+ * 組織管理頁的假 api(組織 + 租戶作業 + 上傳票 + 使用者管理的 `users`)。
  *
  * 商標上傳是三方的:`CreateUploadUrl` 發一張指向 `TEST_UPLOAD_ORIGIN` 的票、
  * 瀏覽器 `PUT` 上去(由 `http.put` 接住並記錄)、`objectPath` 再回到 `updateOrg` /
@@ -201,7 +201,7 @@ export const orgWorld = (options: OrgWorldOptions = {}): OrgWorld => {
     api.query("TenantModuleOptions", () =>
       HttpResponse.json({ data: { tenantModuleOptions: moduleOptions } }),
     ),
-    // 成員頁籤(#377):清單只回這個組織自己的成員,候選是「管理範圍內扣掉既有成員」,
+    // 成員頁籤:清單只回這個組織自己的成員,候選是「管理範圍內扣掉既有成員」,
     // 加入成員真的改到 `membersByOrg` —— 連動語意實作進 handler(TEST-08)
     api.query("OrgMembers", ({ variables }) => {
       const { orgId, input } = variables as OrgMembersQueryVariables;

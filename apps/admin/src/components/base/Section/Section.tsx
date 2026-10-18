@@ -21,7 +21,7 @@ export interface SectionProps {
 }
 
 /**
- * 一般頁面的可收合區塊(底座 10.3):`@repo/ui/section` + 收合狀態記憶。
+ * 一般頁面的可收合區塊:`@repo/ui/section` + 收合狀態記憶。
  * 使用者手動切換後依登入者記在 localStorage(`<頁面 id>.<區塊 key>`,只記與預設不同的);
  * 規則見 `lib/base/section-collapse.ts`。這個元件只管自己那一塊,不清別的區塊的紀錄。
  */

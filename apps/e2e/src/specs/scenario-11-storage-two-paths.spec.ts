@@ -30,7 +30,7 @@ import {
  * 正本:`docs/testing/permission-scenarios.md`「劇本 11」;規則見 ADR-0010(雙路儲存、簽名網址)。
  * 用哪一頁:示範模組1 的新增頁(上傳)+ 詳情頁(顯示與下載);帳號:+user。
  *
- * 檔案真的傳到 **fake GCS 容器**(#402;`apps/e2e/docker-compose.yml`),api 以
+ * 檔案真的傳到 **fake GCS 容器**(`apps/e2e/docker-compose.yml`),api 以
  * `GCS_API_ENDPOINT` 指過去、用假憑證簽 V4 網址。本機沒有 Docker 時整條 skip(原因寫在 skip 說明)。
  *
  * **fake GCS 不驗簽章、也不管 bucket 的公開 / 私有**,所以這裡驗得到的是「api 發了什麼網址」
@@ -85,7 +85,7 @@ test("劇本 11:封面走公開穩定 URL、附件走短效簽名網址,拿掉 v
 
   // 步驟 3:附件按「下載」才向 api 要一條**私有 bucket 的短效簽名網址**
   const attachmentPanel = pageArea(page);
-  // 附件顯示使用者選檔時的原始檔名(#427 起存原始檔名 / 大小;物件路徑仍是 `<uuid>.pdf`)
+  // 附件顯示使用者選檔時的原始檔名(存原始檔名 / 大小;物件路徑仍是 `<uuid>.pdf`)
   await expect(
     attachmentPanel.getByText("attachment.pdf", { exact: true }),
   ).toBeVisible();

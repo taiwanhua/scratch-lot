@@ -33,7 +33,7 @@ import {
 } from "../apply-center-keys";
 
 /**
- * 申請中心詳情頁(隱藏頁 `apply-center.view-page`,Spec 6b §8 畫面 9):網址
+ * 申請中心詳情頁(隱藏頁 `apply-center.view-page`):網址
  * `/apply-center/view-page/<實例 id>`(與通知信的連結同形狀)。**不經業務模組的頁面權限**:
  * 沒有該模組權限的審核者也從這裡看。
  *

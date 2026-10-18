@@ -79,7 +79,7 @@ export const useRuleEditor = ({
     session.client,
     useMutationFeedback<SaveDataScopeRuleMutation>({
       success: t("feedback.saveSuccess"),
-      // 失敗的 Snackbar 講「這次沒存成功」;`RULE_INVALID` 指到的那一條仍標在編輯器上(#376)
+      // 失敗的 Snackbar 講「這次沒存成功」;`RULE_INVALID` 指到的那一條仍標在編輯器上
       error: (failure) => tErrors(dataScopeErrorOf(failure).code),
       onSuccess: (payload) => {
         setDraft(toEditorDraft(payload.saveDataScopeRule.rule));

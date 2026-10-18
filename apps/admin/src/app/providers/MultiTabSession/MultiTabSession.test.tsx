@@ -8,7 +8,7 @@ import { authWorld, testUser } from "@/test/msw/auth-handlers";
 import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
-/** 另一個分頁登入的帳號(#375:分頁 A 是小華、分頁 B 登入小明)。 */
+/** 另一個分頁登入的帳號(分頁 A 是小華、分頁 B 登入小明)。 */
 const otherAccount = { ...testUser, id: "user-2", name: "小明" };
 
 /** 扮演「另一個分頁」:同名 channel 的另一端(BroadcastChannel 不會把訊息送回發送端)。 */

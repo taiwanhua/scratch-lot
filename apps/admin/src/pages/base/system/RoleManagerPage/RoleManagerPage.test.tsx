@@ -23,7 +23,7 @@ describe("角色管理頁(/system/role-manager)", () => {
     });
   });
 
-  it("擁有組織下拉與搜尋框並存,兩個條件一起送給 api(#246 的 3)", async () => {
+  it("擁有組織下拉與搜尋框並存,兩個條件一起送給 api", async () => {
     const { user: actor, fake } = renderRolePage();
 
     await screen.findByText("內容編輯");
@@ -74,7 +74,7 @@ describe("角色管理頁(/system/role-manager)", () => {
   });
 
   /**
-   * #254 / #307:列操作的「編輯」「刪除」改成圖示鈕 —— 沒有可見文字,所以名稱由
+   * 列操作的「編輯」「刪除」改成圖示鈕 —— 沒有可見文字,所以名稱由
    * `aria-label` 給、提示用 `describeChild={false}`(REACT-10 的「提示就是名字」那一類)。
    * 「啟用 / 停用」維持文字鈕(Figma Draft/ActionIcon 253:3264 沒有對應圖示)。
    */
@@ -149,7 +149,7 @@ describe("角色管理頁(/system/role-manager)", () => {
       },
     });
 
-    // 「內容編輯」已有人持有 ⇒ `abilities.canDelete` 為 false、列上沒有刪除鍵(#261);
+    // 「內容編輯」已有人持有 ⇒ `abilities.canDelete` 為 false、列上沒有刪除鍵;
     // 要驗這個彈窗得挑一個列得出刪除鍵的角色(審核員:自建、無人持有)
     await screen.findByText("內容編輯");
     await actor.click(screen.getByText("審核員"));
@@ -219,10 +219,10 @@ describe("角色管理頁(/system/role-manager)", () => {
   });
 
   /**
-   * 列上的動作 = 操作者的權限 × 這個角色的 `abilities`(#261;種類規則由 api 算)。
+   * 列上的動作 = 操作者的權限 × 這個角色的 `abilities`(種類規則由 api 算)。
    * 夾具的 `abilities` 照 api 的規則表推,見 `test/msw/role-fixtures.ts`。
    */
-  describe("角色種類規則:動作按鈕讀 abilities(#261)", () => {
+  describe("角色種類規則:動作按鈕讀 abilities", () => {
     it("種子角色:沒有編輯 / 停用 / 刪除,矩陣唯讀並說明內容隨版本更新", async () => {
       const { user: actor } = renderRolePage();
 
@@ -385,7 +385,7 @@ describe("角色管理頁(/system/role-manager)", () => {
         },
       });
 
-      // 兩筆同名角色靠租戶分組與「擁有組織」那一行分辨(#261 的 8)
+      // 兩筆同名角色靠租戶分組與「擁有組織」那一行分辨
       await screen.findAllByText("租戶管理員");
       expect(await screen.findByText("租戶 A · 持有 1 人")).toBeInTheDocument();
       expect(screen.getByText("租戶 B · 持有 1 人")).toBeInTheDocument();

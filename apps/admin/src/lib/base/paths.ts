@@ -2,11 +2,11 @@ import { z } from "zod";
 
 export const LOGIN_PATH = "/login";
 export const FORGOT_PASSWORD_PATH = "/forgot-password";
-/** 啟用信與重設信共用(#61):`/set-password?token=…` */
+/** 啟用信與重設信共用:`/set-password?token=…` */
 export const SET_PASSWORD_PATH = "/set-password";
 export const CHANGE_PASSWORD_PATH = "/change-password";
 /**
- * 個人設定(規格 10.6):殼層路由、不是模組 —— 不分配給角色,所有登入者都能開;
+ * 個人設定:殼層路由、不是模組 —— 不分配給角色,所有登入者都能開;
  * 分頁記在 `?tab=`(`preferences` 偏好 / `delegations` 代理人),不帶 = 偏好。
  */
 export const PERSONAL_SETTINGS_PATH = "/settings/personal";
@@ -19,7 +19,7 @@ export const TOKEN_PARAM = "token";
  */
 export const urlStringSchema = z.string().default("");
 
-/** 未登入時導向的登入頁網址,帶原路徑供登入後回去(#61:`/login?next=<原路徑>`)。 */
+/** 未登入時導向的登入頁網址,帶原路徑供登入後回去(`/login?next=<原路徑>`)。 */
 export const loginPathWithNext = (next: string): string =>
   `${LOGIN_PATH}?${NEXT_PARAM}=${encodeURIComponent(next)}`;
 

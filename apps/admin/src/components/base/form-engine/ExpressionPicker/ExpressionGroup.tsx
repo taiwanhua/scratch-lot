@@ -12,7 +12,7 @@ export interface ExpressionGroupProps {
 }
 
 /**
- * 表達式選擇器的**巢狀群組框**(Spec 6a §5 表 B 末段:巢狀運算子畫成帶框縮排群組,標頭是運算子名):
+ * 表達式選擇器的**巢狀群組框**(巢狀運算子畫成帶框縮排群組,標頭是運算子名):
  * 外框 + 標頭 + 縮排的內容。純外觀,不知道表達式;明細列的列內公式也用它。
  */
 export const ExpressionGroup = ({ title, children }: ExpressionGroupProps) => (

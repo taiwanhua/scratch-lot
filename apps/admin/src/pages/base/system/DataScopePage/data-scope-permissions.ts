@@ -13,7 +13,7 @@ export const DATA_SCOPE_PERMISSIONS = {
 
 /**
  * 選擇器借用別的模組的清單查詢,所以要各自的檢視權限;沒有時該選擇器是空清單,頁面其餘部分照常
- * (反向引用的寫法同 #138 / #139)。套用對象的角色 / 使用者候選由 AudiencePicker 查(同一組權限,
+ * (反向引用的寫法同組織管理)。套用對象的角色 / 使用者候選由 AudiencePicker 查(同一組權限,
  * 正本在 `useAudienceOptions.ts`);條件組合「使用者」欄的值也借使用者清單。
  * 組織樹(`orgTree`)沒有 `@RequirePermission`,只受管理範圍限制,不必在這裡判斷。
  */

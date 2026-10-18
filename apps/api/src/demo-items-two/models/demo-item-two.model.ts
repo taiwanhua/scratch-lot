@@ -19,7 +19,7 @@ export class DemoItemTwoUserModel {
  * 這一筆**對這位操作者**允許的兩個動作(與角色頁的 `Role.abilities` 同型,api 算好、前端只讀)。
  *
  * 示範模組2 沒有種類規則、沒有欄位級權限,所以這兩個布林就等於「操作者有沒有那個權限 key」;
- * 它仍然由 api 回,是為了讓 #321 的列表與詳情頁**不必自己拼權限判斷** —— 前端顯示按鈕的條件
+ * 它仍然由 api 回,是為了讓前端的列表與詳情頁**不必自己拼權限判斷** —— 前端顯示按鈕的條件
  * 就是 `item.abilities.canEdit`,不再 `usePermissions` 相乘(示範模組1 的欄位級 abilities 同型)。
  */
 @ObjectType("DemoItemTwoAbilities")

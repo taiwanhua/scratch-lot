@@ -21,7 +21,7 @@ export interface AttachmentFieldProps {
 /**
  * 附件欄(Figma 177:511):原始檔名 + 大小 + 下載。
  *
- * 檔名與大小的語意(舊資料為 null 時怎麼退)見 `attachmentNameOf` 與模組文件「api 介面」(#427)。
+ * 檔名與大小的語意(舊資料為 null 時怎麼退)見 `attachmentNameOf` 與模組文件「api 介面」。
  *
  * 附件在**私有** bucket(ADR-0010 的雙路),清單與單筆都只給路徑與中繼資料;
  * **按下「下載」才呼叫 `DemoItemOneAttachmentUrl` 現簽**一條短效網址 —— 預先取來放著等於

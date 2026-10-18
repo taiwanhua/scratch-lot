@@ -18,7 +18,7 @@ import {
 } from "./models/form.model";
 
 /**
- * 「模組與權限」頁的退役權限清理(根組織專屬,Spec 6a §6「root 清理」、§8 畫面 7)。
+ * 「模組與權限」頁的退役權限清理(根組織專屬)。
  * 權限守端點;「站在根組織」另外守(與模組與權限頁其他端點同一條判準)。
  */
 @Resolver(() => RetiredFormPermission)

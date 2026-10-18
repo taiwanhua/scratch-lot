@@ -14,7 +14,7 @@ import { tenantScopePlugin } from "../plugins/tenant-scope.plugin";
 export const FORM_SUBMISSIONS_COLLECTION = "form_submissions";
 
 /**
- * 提交狀態(Spec 6a §6 + 6b §6,單一欄位;正本是 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`):
+ * 提交狀態(單一欄位;正本是 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`):
  * - `draft` 存了沒送出、可改可刪
  * - `reviewing` 有進行中的實例(內容凍結在該修訂快照);`returned` / `withdrawn` 被退回 / 撤回,可改後再送
  * - `completed` 不綁流程:送出即此、可再修改;綁流程(`currentInstanceId` 有值):實例核准、鎖定只能作廢
@@ -95,7 +95,7 @@ export class FormSubmission {
   @Prop({ type: Number, required: true })
   version!: number;
 
-  /** 欄位 key → 存值(Spec §5「值的存法」);受保護欄位原值照存,讀取時投影為 `"[redacted]"`。 */
+  /** 欄位 key → 存值;受保護欄位原值照存,讀取時投影為 `"[redacted]"`。 */
   @Prop({ type: MongooseSchema.Types.Mixed, default: () => ({}) })
   values!: StoredValues;
 
@@ -118,7 +118,7 @@ export class FormSubmission {
   editVersion!: number;
 
   /**
-   * 使用者**碰過**的欄位 key(Spec 6a §5「預設值」):存草稿時由前端一併送來;沒碰過的欄位
+   * 使用者**碰過**的欄位 key:存草稿時由前端一併送來;沒碰過的欄位
    * 在填寫時會隨依賴重算預設值,碰過就停。只對草稿有意義,送出後不再變動。
    */
   @Prop({ type: [String], default: [] })

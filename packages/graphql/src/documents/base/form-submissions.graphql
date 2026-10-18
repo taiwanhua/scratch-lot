@@ -96,7 +96,7 @@ query ModuleForms($moduleKey: ID!) {
     tabLabelTemplate
     # 表單設定「允許存草稿」;false = 新增頁沒有 [存草稿]
     allowDraft
-    # 讀者能不能用這張表單新增(B9b 模組看 create-<formKey>);[+ 新增] 與新增頁只認 true 的
+    # 讀者能不能用這張表單新增(開啟依表單分開新增權限的模組看 create-<formKey>);[+ 新增] 與新增頁只認 true 的
     canCreate
   }
 }

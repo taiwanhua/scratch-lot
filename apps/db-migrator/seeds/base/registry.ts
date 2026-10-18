@@ -32,7 +32,7 @@ export function createBaseSeedRegistry(
       rootAdmin,
       fieldCategories,
       fields,
-      // 示範資料:orgId 引用組織、category 值對照欄位選項(#319)
+      // 示範資料:orgId 引用組織、category 值對照欄位選項
       demoItemsOne,
       demoItemsTwo,
     ],

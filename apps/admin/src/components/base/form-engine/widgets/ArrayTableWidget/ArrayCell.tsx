@@ -85,7 +85,7 @@ export const ArrayCell = memo(
         display,
         ...(errorMessage !== null && { helperText: errorMessage }),
         ...(column.type === "reference" && { filterLinks }),
-        // 列內帶入(B2c):有對應表的引用子欄改走一次寫整列
+        // 列內帶入:有對應表的引用子欄改走一次寫整列
         ...(column.type === "reference" &&
           (column.prefill?.mapping.length ?? 0) > 0 && {
             onReferencePick: (

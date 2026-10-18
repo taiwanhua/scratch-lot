@@ -33,7 +33,7 @@ export interface TooltipProps {
 /**
  * 文字提示(hover / focus 時出現)。外觀走 theme 的 `MuiTooltip` 覆寫
  * (`src/theme/create-theme.ts`:grey.800 底、`shape.borderRadius`);
- * Figma 目前沒有 Tooltip 稿,幾何照 MUI 預設(#240)。
+ * Figma 目前沒有 Tooltip 稿,幾何照 MUI 預設。
  *
  * **disabled 的元素收不到滑鼠事件**(瀏覽器行為,不是 MUI 的問題),
  * 所以提示要掛在外層的 `span` 上。這件事以前在每個呼叫端各包一次

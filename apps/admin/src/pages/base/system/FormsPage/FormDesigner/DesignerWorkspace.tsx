@@ -54,7 +54,7 @@ export interface DesignerWorkspaceProps {
 }
 
 /**
- * 設計器本體(Spec 6a §8 畫面 2):元件面板 / 畫布 / 屬性面板 / JSON 預覽 / 檢查結果;「預覽」切到 `preview` 模式。
+ * 設計器本體:元件面板 / 畫布 / 屬性面板 / JSON 預覽 / 檢查結果;「預覽」切到 `preview` 模式。
  * 存草稿帶 `expectedDraftRevision`(= 讀到或上次存完的 `draftRevision`);不符 → 提示「已被別人更新,請重新載入」。
  * 有沒有未存的變更回報給 `useDesignerDraftStore`(換表單攔截、發布跳窗提示都看它)。
  */

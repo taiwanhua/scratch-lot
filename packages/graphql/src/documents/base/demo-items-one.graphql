@@ -1,4 +1,4 @@
-# 示範模組1(#318;模組 demo.sub.sample-one,規則正本 docs/modules/demo.sub.sample-one.md)。
+# 示範模組1(模組 demo.sub.sample-one,規則正本 docs/modules/demo.sub.sample-one.md)。
 #
 # 三件事在這裡就要看得懂:
 # 1. `internalNote` 是**欄位級權限**欄:沒有 `demo.sub.sample-one.show-internal-note` 時
@@ -19,7 +19,7 @@ fragment DemoItemOneFields on DemoItemOne {
   internalNote
   coverPath
   coverUrl
-  # name / size / contentType 是上傳時申報的原始值(#427);#427 以前的舊資料三者為 null
+  # name / size / contentType 是上傳時申報的原始值;早期的舊資料三者為 null
   # → 顯示時檔名退回路徑尾段、不顯示大小
   attachment {
     path

@@ -32,7 +32,7 @@ import type { ArrayRowsViewProps } from "./array-rows-view";
 const NO_DISPLAY: readonly FormDisplayItemLike[] = [];
 
 /**
- * 明細列(`array` → `table`,Spec 6a §5「明細列」):一個欄位裝多列同結構的子欄位。
+ * 明細列(`array` → `table`):一個欄位裝多列同結構的子欄位。
  *
  * - 桌機是表格(每列一行、每格是子欄型別的填寫元件,列尾「上方插入一列」「上移」「下移」「複製」「刪除」);
  *   手機寬(< `sm`)每列一張卡片(子欄直排,同一組列動作在卡片標題列)

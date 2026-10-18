@@ -35,7 +35,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
   });
 
   /**
-   * #183 第 4 項:以前一開始沒選組織就送 `orgId: null`,api 回
+   * 以前一開始沒選組織就送 `orgId: null`,api 回
    * `orgId is not a valid id: null`。現在預設選中樹根,樹還沒到手就先不查。
    */
   it("初始狀態:預設選中樹根,送出的 orgId 一律不是 null", async () => {
@@ -76,7 +76,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
         within(rowOf("何家華")).getByRole("button", { name: "停用" }),
       ).toBeDisabled();
     });
-    // 提示改用 @repo/ui 的 Tooltip(REACT-10,#426):停用的按鈕收不到 hover,
+    // 提示改用 @repo/ui 的 Tooltip(REACT-10):停用的按鈕收不到 hover,
     // 事件載體是 Tooltip 自己包的外層 span
     const hintCarrier = within(rowOf("何家華")).getByRole("button", {
       name: "停用",
@@ -94,7 +94,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
   });
 
   /**
-   * #362:api 的 `assertOwnedOrgsKept` 只擋「把擁有者移出他擁有的租戶頂層」,
+   * api 的 `assertOwnedOrgsKept` 只擋「把擁有者移出他擁有的租戶頂層」,
    * 加入其他組織一直是允許的 —— 畫面以前把整個「所屬組織」按鈕停用,比 api 嚴,
    * 擁有者因此連把自己加進分店都做不到。鎖只在彈窗裡的那一個節點上。
    */
@@ -117,7 +117,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
     const tenantCheckbox = await orgCheckboxOf("租戶 A");
     expect(tenantCheckbox).toBeChecked();
     expect(tenantCheckbox).toBeDisabled();
-    // 鎖住節點的說明是彈窗專屬的那一句(#426),不是列上「無法執行此動作」那句
+    // 鎖住節點的說明是彈窗專屬的那一句,不是列上「無法執行此動作」那句
     expect(
       screen.getByText(
         "頂層組織的擁有者不能被移出頂層組織;其他組織可自由勾選或取消。",
@@ -146,7 +146,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
   });
 
   /**
-   * #372:改的是**登入者自己**的所屬組織時,`me` 也要失效 —— AppBar 的「當前組織」
+   * 改的是**登入者自己**的所屬組織時,`me` 也要失效 —— AppBar 的「當前組織」
    * 可切換清單讀的就是 `me.orgs`,而它的 `staleTime` 是 Infinity,不主動失效就不會更新。
    */
   it("改自己的所屬組織後,AppBar 的「當前組織」清單跟著更新", async () => {
@@ -236,7 +236,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
   });
 
   /**
-   * #373:性別欄原本是裸 `Select`,只掛 `aria-label` —— 畫面上那一格沒有欄位名,
+   * 性別欄原本是裸 `Select`,只掛 `aria-label` —— 畫面上那一格沒有欄位名,
    * 和同列的「暱稱」對不起來(Figma 202:734 是有浮動標籤的下拉)。
    */
   it("性別欄比照其他欄位有看得見的標籤,選項選得動", async () => {
@@ -373,9 +373,9 @@ describe("使用者管理頁(/system/user-manager)", () => {
   });
 
   /**
-   * #183 第 1 項:左樹 / 右清單撐滿殼給的內容區高度、各自內部捲動(Figma 30:105)。
+   * 左樹 / 右清單撐滿殼給的內容區高度、各自內部捲動(Figma 30:105)。
    * jsdom 不算版面,驗的是**高度鏈的宣告**(理由見 `test/height-chain.ts`);
-   * 右邊那條同時是 #299 的「捲動只留一層」—— 表格容器外面不能再包一層 `overflow: auto`。
+   * 右邊那條同時是「捲動只留一層」—— 表格容器外面不能再包一層 `overflow: auto`。
    */
   it("左樹與右清單各自一層捲動,中間每一層都 min-height: 0", async () => {
     renderPage();
@@ -392,7 +392,7 @@ describe("使用者管理頁(/system/user-manager)", () => {
       expect(chain.slice(1, -1).filter((link) => link.scrolls)).toEqual([]);
     }
 
-    // 清單捲的是 Table 自己的容器(#299),不是外面那層 Box 或 Card
+    // 清單捲的是 Table 自己的容器,不是外面那層 Box 或 Card
     expect(tableChain[0]?.label).toBe("DIV.MuiTableContainer-root");
   });
 });

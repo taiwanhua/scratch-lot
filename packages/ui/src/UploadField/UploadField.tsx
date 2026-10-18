@@ -29,7 +29,7 @@ export interface UploadFieldProps {
   value?: File | null;
   /**
    * 已經存在的圖片網址(編輯情境:組織現有的商標)。還沒選新檔之前就顯示它的預覽,
-   * 選了新檔即被新檔的預覽取代,按「移除」則一併清掉、回到空狀態(#186 ②)。
+   * 選了新檔即被新檔的預覽取代,按「移除」則一併清掉、回到空狀態。
    */
   initialPreviewUrl?: string | null;
   /** `initialPreviewUrl` 的預覽說明文字(既有圖片沒有檔名與大小可顯示) */

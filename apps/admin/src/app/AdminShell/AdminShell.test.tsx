@@ -213,7 +213,7 @@ describe("路由與導向(ADR-0011「路由與導向規則」:模組路由 / 群
         .handlers,
     );
 
-    // 沒登記頁面元件的模組驗佔位頁(示範家族自 #321 起全部有真頁面,改用專用夾具)
+    // 沒登記頁面元件的模組驗佔位頁(示範家族現在全部有真頁面,改用專用夾具)
     renderApp({ path: "/demo/not-implemented" });
 
     const heading = await screen.findByRole("heading", { name: "未實作模組" });

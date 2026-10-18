@@ -57,7 +57,7 @@ interface Handling {
 }
 
 /**
- * 阻擋清單(隱藏頁 `system.workflows.blocked-page`,Spec 6b §8 畫面 6;權限
+ * 阻擋清單(隱藏頁 `system.workflows.blocked-page`;權限
  * `system.workflows.blocked-page.reassign`):
  *
  * - 篩選「阻擋」(找不到審核者 / 審核者失效)與「需要推進」(中斷、投影不同步…,判斷表對候選實例 dry-run;

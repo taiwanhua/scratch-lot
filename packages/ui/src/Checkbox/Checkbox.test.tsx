@@ -52,7 +52,7 @@ describe("Checkbox", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  /** #260 的 disabled 盤點:方框自己要換成停用灰(Figma Draft/Checkbox 44:36 / 44:40)。 */
+  /** disabled 盤點:方框自己要換成停用灰(Figma Draft/Checkbox 44:36 / 44:40)。 */
   it.each([
     ["未勾選", false, "background-color"],
     ["已勾選", true, "background-color"],

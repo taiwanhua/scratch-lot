@@ -59,7 +59,7 @@ export interface FormDesignWorldOptions {
   failures?: Partial<Record<FormDesignOperation, FormFailure>>;
   /** `previewFormVersion` 的回應(沒給 = 回送來的值、全部顯示、沒有錯誤) */
   preview?: PreviewFormVersionQuery["previewFormVersion"];
-  /** 表單 key → 發布回的新建依表單新增權限(B9b;沒列 = null;api 只在第一次發布回) */
+  /** 表單 key → 發布回的新建依表單新增權限(沒列 = null;api 只在第一次發布回) */
   createdPermissions?: Record<string, { key: string; name: string }>;
 }
 

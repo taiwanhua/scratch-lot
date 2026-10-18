@@ -8,7 +8,7 @@ import type { FormOperatorFacts } from "./form-access.service";
 import { fieldPermissionKey } from "./form-permission-keys";
 
 /**
- * 欄位級權限的判定(Spec 6a §5「欄位級權限的四種組合」「受保護欄位的配套」、§6「權限不存在時的判定」)。
+ * 欄位級權限的判定。
  *
  * **mapper 規則,不走 `hasPermission`**:
  * - 非超級管理員:有效權限集合裡要有**那一個具體 key**。`PermissionResolver` 已把 `<模組>.*`

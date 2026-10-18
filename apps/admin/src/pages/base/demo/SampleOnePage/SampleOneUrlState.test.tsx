@@ -47,7 +47,7 @@ describe("示範模組1 列表:篩選存在網址(REACT-14)", () => {
     });
   });
 
-  it("詳情頁「返回列表」帶回列表頁籤記下的條件(規格 10.1)", async () => {
+  it("詳情頁「返回列表」帶回列表頁籤記下的條件", async () => {
     const listSearch = `?list=${encodeURIComponent('{"keyword":"紅茶"}')}`;
     sessionStorage.clear();
     sessionStorage.setItem(

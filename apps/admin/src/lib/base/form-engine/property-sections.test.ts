@@ -17,7 +17,7 @@ const sectionsOf = (target: FieldDef) =>
     ALLOW_CUSTOM_WIDGETS,
   );
 
-describe("屬性面板依型別(Spec 6a §5 表 A)", () => {
+describe("屬性面板依型別", () => {
   it("單行文字:長度、格式 / 正則、自訂驗證;沒有元件下拉、沒有數值 / 日期範圍", () => {
     expect(sectionsOf(field("name", "名稱", "text"))).toMatchObject({
       widget: false,

@@ -61,7 +61,7 @@ import type {
   FormVersionsPayload,
 } from "./models/form.model";
 
-/** 存草稿時就要擋的錯(Spec §5「正則」:存草稿與發布時驗過 ReDoS 才收);其餘錯誤草稿可以先存。 */
+/** 存草稿時就要擋的錯(正則:存草稿與發布時驗過 ReDoS 才收);其餘錯誤草稿可以先存。 */
 const DRAFT_BLOCKING_CODES = new Set(["PATTERN_INVALID", "PATTERN_UNSAFE"]);
 
 const EMPTY_DEFINITION: FormDefinition = {
@@ -478,7 +478,7 @@ export class FormVersionsService {
   }
 }
 
-/** 草稿 / 預覽用真正的現在與操作者本人(Spec §5「歷史檢視的上下文」的草稿那一半)。 */
+/** 草稿 / 預覽用真正的現在與操作者本人(草稿沒有修訂上下文,用現在)。 */
 export function contextOf(facts: FormOperatorFacts): ExpressionContext {
   return {
     now: new Date().toISOString(),

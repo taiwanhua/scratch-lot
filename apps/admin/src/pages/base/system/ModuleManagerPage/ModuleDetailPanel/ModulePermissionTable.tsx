@@ -13,7 +13,7 @@ export interface ModulePermissionTableProps {
   permissions: readonly ModuleAdminPermissionLike[];
   /** 持有 `system.module-manager.toggle-enabled` 才給開關,否則只讀狀態標籤 */
   canToggleEnabled: boolean;
-  /** 這個模組屬於自鎖的那一枝(#233):開關停用並附說明 */
+  /** 這個模組屬於自鎖的那一枝:開關停用並附說明 */
   isSelfLocked: boolean;
   /** 正在送出的那一筆權限 id(同時只會有一筆) */
   pendingPermissionId: string | null;
@@ -72,7 +72,7 @@ export const ModulePermissionTable = ({
       width: 96,
       render: (permission) =>
         canToggleEnabled ? (
-          /* 停用的開關收不到 hover,包 span 的事情交給 Tooltip 自己處理(#240) */
+          /* 停用的開關收不到 hover,包 span 的事情交給 Tooltip 自己處理 */
           <Tooltip title={isSelfLocked ? t("selfLockedHint") : ""}>
             <Switch
               checked={permission.enabled}
@@ -109,7 +109,7 @@ export const ModulePermissionTable = ({
         rows={sortPermissions(permissions)}
         getRowKey={(permission) => permission.id}
         size="small"
-        // 名稱 180 + 動作 96 之外還有 key 與描述兩欄要看得完整(STYLE-11,#283)
+        // 名稱 180 + 動作 96 之外還有 key 與描述兩欄要看得完整(STYLE-11)
         minWidth={720}
         emptyMessage={t("empty")}
         aria-label={t("title")}

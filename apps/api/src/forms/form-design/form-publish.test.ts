@@ -55,7 +55,7 @@ interface PermissionDoc {
 }
 
 /**
- * 四步發布(一個交易)與重試(Spec 6a §6、§10「發布」):打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
+ * 四步發布(一個交易)與重試:打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
  * 「中途失敗」以 `FormPublishHooks` 在指定檢查點丟錯模擬(TEST-07 的第二個接縫;理由見該檔註解)。
  */
 describe("表單發布(四步一個交易)與退役", () => {
@@ -459,7 +459,7 @@ describe("表單發布(四步一個交易)與退役", () => {
     });
   });
 
-  it("依表單分開新增權限(B9b):發布失敗 → 這次新建的 `create-<formKey>` 跟著回復;再發布才建", async () => {
+  it("依表單分開新增權限:發布失敗 → 這次新建的 `create-<formKey>` 跟著回復;再發布才建", async () => {
     const formKey = "pub_per_form_create";
     const createKey = `${MODULE_KEY}.create-${formKey}`;
     const countCreateKey = () =>

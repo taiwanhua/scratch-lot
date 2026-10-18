@@ -158,7 +158,7 @@ interface ApplicationRow {
 
 /**
  * 讀取授權(`canReadSubmissionRevision`)、申請中心、提交狀態的二值假設、作廢 / 複製為新單、
- * 審核者失效 / 改派 / 新增審核者、阻擋清單、通知關閉(真 Mongo,Spec 6b §3、§6、§7、§10)。
+ * 審核者失效 / 改派 / 新增審核者、阻擋清單、通知關閉(真 Mongo)。
  */
 describe("申請中心與讀取授權", () => {
   let api: AuthTestApp;

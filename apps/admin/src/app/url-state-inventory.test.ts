@@ -16,7 +16,7 @@ import { projectUrlStateCoverage } from "./module-pages";
 import { AppRoutes } from "./routes";
 
 /**
- * 入口清單測試(規格 10.1「既有頁面這一輪一起改」;REACT-14):每一個路由頁面都要登記它以 `useUrlState`
+ * 入口清單測試(REACT-14):每一個路由頁面都要登記它以 `useUrlState`
  * 放進網址的 key,新頁面沒登記 → 這裡失敗,提醒新頁面也照 REACT-14 做。
  * 「只有 `useUrlState` 能碰查詢字串」由 ESLint 擋(`apps/admin/eslint.config.js` 的 `no-restricted-imports`)。
  *

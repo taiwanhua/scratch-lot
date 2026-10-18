@@ -26,7 +26,7 @@ import { WorkflowPresenter } from "./workflow-presenter.service";
 export const NEEDS_ADVANCE_CANDIDATE_LIMIT = 200;
 
 /**
- * 阻擋清單(流程管理 → 阻擋,Spec 6b §6「需要推進」的識別、§8 畫面 6):以操作者的租戶為邊界。
+ * 阻擋清單(流程管理 → 阻擋;「需要推進」的識別):以操作者的租戶為邊界。
  *
  * - `blocked`:實例 `status = blocked`
  * - `needsAdvance`:對候選實例跑一次判斷表(**不寫入**,`WorkflowEngineService.planOf`),還有動作 = 需要推進

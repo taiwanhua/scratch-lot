@@ -2,7 +2,7 @@ import type { FieldDef } from "@repo/domain/form";
 import { ModuleListColumnKind } from "@repo/graphql";
 
 /**
- * 列表欄位配置(`modules.settings.list`,Spec 6a §4;docs/modules/forms.md「列表欄位配置」):
+ * 列表欄位配置(`modules.settings.list`;`docs/modules/forms.md`「列表欄位配置」):
  * root 在「模組與權限」設定全域預設;沒設定過(空陣列)時用 `DEFAULT_LIST_COLUMNS`。
  *
  * 表單改版後配置可能引用到**那一筆綁的版本沒有的欄位**(或別張表單的欄位):不自動清,

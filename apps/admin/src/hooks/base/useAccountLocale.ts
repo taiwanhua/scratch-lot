@@ -63,7 +63,7 @@ const useSetCachedAccountLocale = () => {
 const PREFERENCES_WRITE_SCOPE = { id: "update-my-preferences" };
 
 /**
- * 登入後把語言對齊帳號(規格 10.6;I18N-05):殼在偏好回來前顯示載入中(用本機快取的語言),
+ * 登入後把語言對齊帳號(I18N-05):殼在偏好回來前顯示載入中(用本機快取的語言),
  * 回來後依 `resolveAccountLocale` —— 帳號有設定就用帳號的並覆寫本機快取;沒有就沿用快取並寫回帳號
  * (背景寫回,成功失敗都不提示)。
  *
@@ -117,7 +117,7 @@ export const useAccountLocaleSync = (
 
 /**
  * 頭像選單的「語言」:立即生效(本機快取),同時寫入帳號;寫入失敗 → 畫面維持新語言、跳失敗提示,
- * 下次登入以帳號為準(規格 10.6 情境表)。成功不提示:畫面已經換好,沒有「還沒完成」的東西要告訴使用者。
+ * 下次登入以帳號為準。成功不提示:畫面已經換好,沒有「還沒完成」的東西要告訴使用者。
  */
 export const useChangeLocale = () => {
   const t = useTranslations("admin.shell.userMenu");

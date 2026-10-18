@@ -16,7 +16,7 @@ const REASON_TEXT_KEYS: ReadonlySet<string> = new Set(HISTORY_REASONS);
 
 type HistoryEvent = WorkflowInstanceFieldsFragment["history"][number];
 
-/** B5 自動通過被守門擋下(`auto_approve_blocked`):依哪一種自動通過沒成立選文案。 */
+/** 自動通過被守門擋下(`auto_approve_blocked`):依哪一種自動通過沒成立選文案。 */
 const BLOCKED_KIND = "auto_approve_blocked";
 
 const BLOCKED_REASONS: ReadonlySet<string> = new Set([
@@ -24,7 +24,7 @@ const BLOCKED_REASONS: ReadonlySet<string> = new Set([
   "auto_prior_approver",
 ]);
 
-/** B15 代理人:派任與人按的決定帶了被代理者時,寫「由 X 代理 A、B …」。 */
+/** 代理人:派任與人按的決定帶了被代理者時,寫「由 X 代理 A、B …」。 */
 const DELEGATED_KINDS: ReadonlySet<string> = new Set([
   "task_created",
   "approved",
@@ -56,9 +56,9 @@ export interface ApprovalTimelineProps {
 }
 
 /**
- * 審核時間軸(Spec 6b §8 零件 `<ApprovalTimeline>`):實例 `history` 依時間列出 ——
+ * 審核時間軸(`<ApprovalTimeline>`):實例 `history` 依時間列出 ——
  * 送出、進關、跳過(寫出是「申請人屬於指定的組織」還是「符合跳過條件」)、派任(代理派任寫「由 X 代理 Y」)、核准 / 駁回 / 退回(含理由;
- * B5 自動通過寫出原因;自動通過被守門擋下寫出專案文案)、阻擋 / 解除、改派、撤回、完成。
+ * 自動通過寫出原因;自動通過被守門擋下寫出專案文案)、阻擋 / 解除、改派、撤回、完成。
  */
 export const ApprovalTimeline = ({ instance }: ApprovalTimelineProps) => {
   const t = useTranslations("admin.approval.timeline");

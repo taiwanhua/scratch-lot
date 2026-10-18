@@ -72,7 +72,7 @@ const TreeRoot = styled("div")(({ theme }) => ({
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(CONTENT_PADDING),
     /*
-     * 依層級縮排(#260):MUI X Tree View v9 把縮排做在**內容列的 paddingLeft** —
+     * 依層級縮排:MUI X Tree View v9 把縮排做在**內容列的 paddingLeft** —
      * `calc(base + var(--TreeView-itemChildrenIndentation) * var(--TreeView-itemDepth))`
      * (`--TreeView-itemDepth` 由 `useTreeItem` 寫在該列 `li` 的 inline style,
      *  `--TreeView-itemChildrenIndentation` 寫在 `role="tree"` 的根)。
@@ -141,7 +141,7 @@ const EMPTY_IDS: readonly string[] = [];
  * **狀態**(`selectedIds`、`expandedIds`、`indeterminateIds`、`disabledCheckIds`)是 id 陣列,
  * 隨勾選即時變動而不必重建整棵 `items`。
  *
- * **展開 / 收合只由最前面的箭頭觸發**(`expansionTrigger="iconContainer"`,#373):
+ * **展開 / 收合只由最前面的箭頭觸發**(`expansionTrigger="iconContainer"`):
  * MUI 預設是點整個內容區,於是「選一個組織」順手把它收起來,選完要再點一次箭頭展開;
  * 這裡把兩件事分開 —— 點文字只選取,點箭頭只展開 / 收合。
  */
@@ -219,7 +219,7 @@ export const Tree = ({
           selectedItems={toSelectionValue(selectedIds)}
           defaultSelectedItems={toSelectionValue(defaultSelectedIds)}
           onSelectedItemsChange={handleSelectedItemsChange}
-          // 展開 / 收合只認最前面的箭頭,點文字是「選這一列」而已(#373)
+          // 展開 / 收合只認最前面的箭頭,點文字是「選這一列」而已
           expansionTrigger="iconContainer"
           expandedItems={expandedIds}
           defaultExpandedItems={defaultExpandedIds}

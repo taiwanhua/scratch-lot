@@ -24,7 +24,7 @@ import type {
 import { PATTERN_FLAGS } from "./validate-fields";
 
 /**
- * 提交的**值**(`form_submissions.values`)的型別正規化與規則驗證(Spec §5「值的存法」、`rules`)。
+ * 提交的**值**(`form_submissions.values`)的型別正規化與規則驗證(存法與 `rules`)。
  * 前後端共用:api 在存草稿 / 送出 / 已完成修改時跑,admin 在畫面上即時提示用同一份。
  *
  * 分兩層:
@@ -223,7 +223,7 @@ function normalizeNumber(field: FieldDef, raw: unknown): NormalizeResult {
 }
 
 /**
- * 日期 / 日期時間(Spec §5「值的存法」):收 `Date` 或帶時區的 ISO 8601 字串(沒有時區的字串、`YYYY-MM-DD` 拒收),
+ * 日期 / 日期時間:收 `Date` 或帶時區的 ISO 8601 字串(沒有時區的字串、`YYYY-MM-DD` 拒收),
  * 回 ISO 字串(`toIso`;api 存進 Mongo 前換成 `Date`)。`date` 有給 `timezone` 時收斂成當地那一天 00:00。
  */
 function normalizeTemporal(
@@ -342,7 +342,7 @@ const NORMALIZERS: Readonly<Record<FieldType, Normalizer>> = {
 };
 
 /**
- * 型別層的正規化:送來的值 → 存值形狀(`Spec §5「值的存法」`)。空值一律收成 `null`。
+ * 型別層的正規化:送來的值 → 存值形狀。空值一律收成 `null`。
  * number 取到 `precision` 位的十進位字串;date / datetime 收 `Date` 或帶時區的 ISO 8601、回 ISO 字串
  * (`date` 在給了 `timezone`(租戶時區)時收斂成當地 00:00);其餘見各型別。
  */
@@ -544,7 +544,7 @@ function textIssue(field: FieldDef, value: unknown): ValueIssue | null {
 
 /**
  * 必填欄位的值沒過必填時的錯誤(呼叫端已確認 `rules.required`):空值 → 必填(計算欄位算成空 = 無法計算);
- * 是 / 否欄位「必填 = 必須勾選」(Spec 表 A):`false` 與沒填都是「必須勾選」。
+ * 是 / 否欄位「必填 = 必須勾選」:`false` 與沒填都是「必須勾選」。
  * 表單層與明細子欄共用這一支。過了回 null。
  */
 export function requiredIssueOf(
@@ -564,7 +564,7 @@ export function requiredIssueOf(
 }
 
 /**
- * 完成資料所需的驗證(Spec §5 表的最右欄):必填(是 / 否欄位 = 必須勾選,`false` 不過)、範圍、長度、
+ * 完成資料所需的驗證:必填(是 / 否欄位 = 必須勾選,`false` 不過)、範圍、長度、
  * 正則 / 格式、`rules.custom`。
  * `value` 是**已正規化**的存值;計算欄位算成 null 且必填 → `NOT_COMPUTABLE`(「X 無法計算」)。
  * 回第一個違反的規則;全過回 null。

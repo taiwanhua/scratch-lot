@@ -28,7 +28,7 @@ export interface CreateFormDialogProps {
 }
 
 /**
- * 建立共用表單(只有站在根組織;Spec 6a §7 `createForm`)。表單 key **建立後不可改**,
+ * 建立共用表單(只有站在根組織;`createForm`)。表單 key **建立後不可改**,
  * 格式 `^[a-z][a-z0-9_]{0,39}$`(不准 `.` 與 `-`,欄位級權限 key 才拆得回來)。
  * 所屬模組只列表單模組(`engine = FORM`)。
  */

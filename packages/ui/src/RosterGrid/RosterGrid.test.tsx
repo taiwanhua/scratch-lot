@@ -22,7 +22,7 @@ const personColumn: DataTableColumn<DemoStaff> = {
 };
 const statColumns: DataTableColumn<DemoStaff>[] = [
   { key: "hours", header: "時數", accessor: "hours" },
-  { key: "shifts", header: "班數", accessor: "shifts" },
+  { key: "shifts", header: "場數", accessor: "shifts" },
 ];
 
 const renderRoster = (props: Partial<RosterGridProps<DemoStaff>> = {}) =>
@@ -57,10 +57,10 @@ describe("RosterGrid 版面", () => {
     expect(headerTexts()).toEqual([
       "人員",
       "10/1 四",
-      "10/2 五 · 店休",
+      "10/2 五 · 公休",
       "10/3 六",
       "時數",
-      "班數",
+      "場數",
     ]);
     expect(screen.getByText("王小明@2026-10-01")).toBeInTheDocument();
   });
@@ -103,7 +103,7 @@ describe("RosterGrid 選取", () => {
     ).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("停用的日期(店休)格子不能點", () => {
+  it("停用的日期(公休)格子不能點", () => {
     renderRoster({ onCellClick: jest.fn() });
 
     expect(
@@ -131,8 +131,8 @@ describe("RosterGrid 欄位顯示 / 隱藏(受控)", () => {
     expect(headerTexts()).toEqual([
       "人員",
       "10/1 四",
-      "10/2 五 · 店休",
-      "班數",
+      "10/2 五 · 公休",
+      "場數",
     ]);
   });
 
@@ -173,7 +173,7 @@ describe("RosterGrid 欄位群組收合成窄欄(受控)", () => {
     });
 
     expect(screen.getByText("時數")).toBeInTheDocument();
-    expect(screen.getByText("班數")).toBeInTheDocument();
+    expect(screen.getByText("場數")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "統計" }));
     expect(onChange).toHaveBeenCalledWith(["stats"]);
   });
@@ -186,7 +186,7 @@ describe("RosterGrid 欄位群組收合成窄欄(受控)", () => {
     });
 
     const toggle = screen.getByRole("button", { name: "統計" });
-    expect(toggle.closest("th")?.textContent).toBe("班數");
+    expect(toggle.closest("th")?.textContent).toBe("場數");
   });
 
   it("群組第一欄被隱藏、群組收合時,窄欄照樣出現", () => {
@@ -200,17 +200,19 @@ describe("RosterGrid 欄位群組收合成窄欄(受控)", () => {
       "aria-expanded",
       "false",
     );
-    expect(headerTexts()).not.toContain("班數");
+    expect(headerTexts()).not.toContain("場數");
   });
 });
 
-/** 頂部群組的預設內容(早班一列,10/1 有標籤)。 */
+/** 頂部群組的預設內容(上午場一列,10/1 有標籤)。 */
 const group = (patch: Partial<RosterTopGroup> = {}): RosterTopGroup => ({
-  title: "人力需求",
+  title: "時段需求",
   collapsed: false,
   onCollapsedChange: jest.fn(),
-  emptyCellHint: "+ 人力需求",
-  rows: [{ key: "morning", label: "早班", cells: { "2026-10-01": "負 1/1" } }],
+  emptyCellHint: "+ 時段需求",
+  rows: [
+    { key: "morning", label: "上午場", cells: { "2026-10-01": "負 1/1" } },
+  ],
   summary: {
     "2026-10-01": { primary: "需 4 · 已排 3", secondary: "缺 1 · 可排 2" },
   },
@@ -221,10 +223,10 @@ describe("RosterGrid 頂部固定群組", () => {
   it("展開:標題列 + 每一列;在表頭區塊裡,和表頭一起固定", () => {
     renderRoster({ topGroup: group() });
 
-    const title = screen.getByRole("button", { name: "人力需求" });
+    const title = screen.getByRole("button", { name: "時段需求" });
     expect(title).toHaveAttribute("aria-expanded", "true");
     expect(title.closest("thead")).not.toBeNull();
-    expect(screen.getByText("早班").closest("thead")).not.toBeNull();
+    expect(screen.getByText("上午場").closest("thead")).not.toBeNull();
     expect(screen.getByText("負 1/1")).toBeInTheDocument();
     expect(screen.queryByText("需 4 · 已排 3")).toBeNull();
   });
@@ -235,10 +237,10 @@ describe("RosterGrid 頂部固定群組", () => {
       topGroup: group({ onCollapsedChange }),
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "人力需求" }));
+    await userEvent.click(screen.getByRole("button", { name: "時段需求" }));
     expect(onCollapsedChange).toHaveBeenCalledWith(true);
     // 外部沒改 collapsed 之前,畫面不變
-    expect(screen.getByText("早班")).toBeInTheDocument();
+    expect(screen.getByText("上午場")).toBeInTheDocument();
 
     rerender(
       <RosterGrid
@@ -250,11 +252,11 @@ describe("RosterGrid 頂部固定群組", () => {
         topGroup={group({ collapsed: true, onCollapsedChange })}
       />,
     );
-    expect(screen.queryByText("早班")).toBeNull();
+    expect(screen.queryByText("上午場")).toBeNull();
     const summary = screen.getByText("需 4 · 已排 3");
     expect(summary.closest("thead")).not.toBeNull();
     expect(screen.getByText("缺 1 · 可排 2")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "人力需求" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "時段需求" })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -264,12 +266,12 @@ describe("RosterGrid 頂部固定群組", () => {
     const onEmptyCellClick = jest.fn();
     renderRoster({ topGroup: group({ onEmptyCellClick }) });
 
-    const empty = screen.getByRole("button", { name: "+ 人力需求 2026-10-03" });
-    expect(within(empty).getByText("+ 人力需求")).toBeInTheDocument();
+    const empty = screen.getByRole("button", { name: "+ 時段需求 2026-10-03" });
+    expect(within(empty).getByText("+ 時段需求")).toBeInTheDocument();
     await userEvent.click(empty);
     expect(onEmptyCellClick).toHaveBeenCalledWith("2026-10-03", "morning");
     expect(
-      screen.queryByRole("button", { name: "+ 人力需求 2026-10-02" }),
+      screen.queryByRole("button", { name: "+ 時段需求 2026-10-02" }),
     ).toBeNull();
   });
 });

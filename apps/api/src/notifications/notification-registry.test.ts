@@ -114,7 +114,7 @@ describe("通知類型登記表", () => {
   });
 });
 
-describe("通知管道開關的偏好 key(規格 10.6)", () => {
+describe("通知管道開關的偏好 key", () => {
   it("編碼:notification_<類型的 . 換成 _>_<管道>,符合偏好 key 的格式", () => {
     expect(notificationPreferenceKey(WORKFLOW_TASK_CREATED, "in-app")).toBe(
       "notification_workflow_task-created_in-app",

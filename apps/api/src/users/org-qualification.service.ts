@@ -75,13 +75,13 @@ export class OrgQualificationService {
   }
 
   /**
-   * **授予資格的唯一檢查點**(#261):每一組(使用者 × 角色)都要有資格,否則
+   * **授予資格的唯一檢查點**:每一組(使用者 × 角色)都要有資格,否則
    * `USER_NOT_ELIGIBLE` 並附 `roleId` / `ownerOrgName`。
    *
    * 兩個入口共用它 —— 使用者頁的 `assignUserRoles`(一個人、多個角色)與角色頁的
    * `grantRoleUsers`(一個角色、多個人)。在此之前兩邊各寫一份:同一件事從角色頁
    * 回 `USER_NOT_ELIGIBLE`、從使用者頁回 `VALIDATION_FAILED`,前端只講得出
-   * 「資料未通過驗證」(dev 驗收 #212 的 6)。
+   * 「資料未通過驗證」。
    *
    * 沒有擁有組織的角色一律無資格(`qualifies` 的定義):管轄邊界不明就不給授予。
    */

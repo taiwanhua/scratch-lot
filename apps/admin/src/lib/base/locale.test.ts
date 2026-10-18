@@ -2,7 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import { resolveAccountLocale } from "./locale";
 
-describe("resolveAccountLocale(登入後該用哪個語言;規格 10.6)", () => {
+describe("resolveAccountLocale(登入後該用哪個語言)", () => {
   it("帳號有支援的語言 → 用帳號的,不寫回", () => {
     expect(resolveAccountLocale("en", "zh-TW")).toEqual({
       locale: "en",

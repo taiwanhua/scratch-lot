@@ -27,7 +27,7 @@ export interface FormListToolbarProps {
 
 const ALL = "" as const;
 
-/** 狀態篩選的七值(Spec 6b §6「提交狀態」),依生命週期排。 */
+/** 狀態篩選的七值(`docs/concepts/workflow-engine.md`「提交的七個狀態」),依生命週期排。 */
 const STATUS_ORDER: readonly FormSubmissionStatus[] = [
   FormSubmissionStatus.Draft,
   FormSubmissionStatus.Reviewing,
@@ -40,7 +40,7 @@ const STATUS_ORDER: readonly FormSubmissionStatus[] = [
 
 type StatusFilter = typeof ALL | FormSubmissionStatus;
 
-/** 表單模組列表的工具列(Spec 6a §8 畫面 8):搜尋(摘要標題)、依表單 / 狀態篩選、新增。 */
+/** 表單模組列表的工具列:搜尋(摘要標題)、依表單 / 狀態篩選、新增。 */
 export const FormListToolbar = ({
   keyword,
   onKeywordChange,

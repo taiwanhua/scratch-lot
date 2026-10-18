@@ -21,7 +21,7 @@ export interface CategoryOption {
 export type CategoryOptions = ReadonlyMap<string, CategoryOption>;
 
 /**
- * 表單的「欄位管理類別」選項來源(`options.kind = "fieldCategory"`,Spec §5 `options` 三種來源)。
+ * 表單的「欄位管理類別」選項來源(`options.kind = "fieldCategory"`,`options` 三種來源之一)。
  *
  * 可選的範圍 = 欄位管理的**合併範圍**(`docs/modules/field-manager.md`:全域種子 + 上層組織自訂 +
  * 當前組織自訂 + 可見範圍內的下層自訂)——判斷直接沿用 `fields/field-visibility.ts`,不在這裡另寫一份。

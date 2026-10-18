@@ -19,7 +19,7 @@ import { WorkflowEngineService } from "./workflow-engine.service";
 const LIVE = [...LIVE_INSTANCE_STATUSES];
 
 /**
- * 審核者失效 hook(Spec 6b §6「審核者失效」):使用者被停用、或被移出某個租戶後,
+ * 審核者失效 hook:使用者被停用、或被移出某個租戶後,
  * 對他在該租戶所有「進行中關卡、尚無決定」的派任計畫項目 CAS 實例 `assigneeState = invalid`、
  * `history: blocked`、`$inc editVersion`;該關:`any` 且同關仍有有效未決定的項目 → 不變,
  * 否則 `blocked = true`、實例 `blocked`(其他 active 關卡照常)。之後 `advance` 同步任務投影

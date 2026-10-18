@@ -14,7 +14,7 @@ import {
 } from "./types";
 
 /**
- * 進關時要算的兩件事(Spec §6 列 5):跳過條件、派任計畫。
+ * 進關時要算的兩件事:跳過條件、派任計畫。
  * 審核者的**解析**要查資料庫(角色成員、主管、使用者狀態),由 api 做;
  * 這裡只負責「拿到名單之後」的純規則:去重、剔除申請人、編 `taskKey`。
  */
@@ -61,7 +61,7 @@ export interface ApplicantOrgFact {
 }
 
 /**
- * B4「申請人屬於這些組織」成不成立:申請人任一個所屬組織 = 名單裡的組織(`SKIP_ORG_TENANT` 代入 `tenantId`),
+ * 「申請人屬於這些組織」成不成立:申請人任一個所屬組織 = 名單裡的組織(`SKIP_ORG_TENANT` 代入 `tenantId`),
  * 或勾了「包含下層」且名單組織是它的祖先。沒有所屬組織 / 名單是空的 → 不成立。
  */
 export function isApplicantInSkipOrgs(
@@ -82,13 +82,13 @@ export function isApplicantInSkipOrgs(
   );
 }
 
-/** B5 自動通過的一位審核者與原因。 */
+/** 自動通過的一位審核者與原因。 */
 export interface AutoApproval {
   assigneeId: string;
   reason: AutoApproveReason;
 }
 
-/** B5 自動通過被 `beforeApprove` 擋下的一位(`code` = 專案錯誤碼;時間軸記 `auto_approve_blocked`)。 */
+/** 自動通過被 `beforeApprove` 擋下的一位(`code` = 專案錯誤碼;時間軸記 `auto_approve_blocked`)。 */
 export interface BlockedAutoApproval extends AutoApproval {
   code: string;
 }
@@ -114,7 +114,7 @@ function upstreamStepKeys(
 /**
  * 「已在前面的關卡核准過」的人(2026-10-16 定):只看**這個實例**(= 最近一次送出之後的
  * 這一輪)裡、這一關**上游**的關卡,決定紀錄**記在他名下**的有效核准 —— 代理人代為核准記在代理人名下,
- * 只算代理人;B5 自動通過記在他名下的也算。不同分支(不在上游)的核准不算。
+ * 只算代理人;自動通過記在他名下的也算。不同分支(不在上游)的核准不算。
  */
 export function priorApproverIds(
   definition: WorkflowDefinition,
@@ -141,7 +141,7 @@ export function priorApproverIds(
 }
 
 /**
- * B5 自動通過的候選人(還沒經守門;api 依序以本人身分跑 `checkApproveGuard`,結果放進 `StepEntry` 的
+ * 自動通過的候選人(還沒經守門;api 依序以本人身分跑 `checkApproveGuard`,結果放進 `StepEntry` 的
  * `autoApprovals` / `blockedAutoApprovals`):
  * - 申請人在名單裡:開了 `applicant` → `auto_applicant`;否則開了 `priorApprover` 且他已在前關核准過 →
  *   `auto_prior_approver`
@@ -176,8 +176,8 @@ export function autoApprovalCandidates(
 
 /**
  * 派任計畫:解析到的審核者去重、剔除申請人(不能自審),每人一項,`taskKey` 依序編。
- * `keepApplicant`(申請人的 B5 自動通過**成立**,已過守門)時申請人留在計畫裡。
- * `delegatorOf`(B15 代理人;代理人 id → 原審核者 id 們)有記的那一項帶 `delegatorIds`。
+ * `keepApplicant`(申請人的自動通過**成立**,已過守門)時申請人留在計畫裡。
+ * `delegatorOf`(代理人;代理人 id → 原審核者 id 們)有記的那一項帶 `delegatorIds`。
  * 剔除後為空 → 空陣列(呼叫端依來源決定:`manager` 往上一層在解析時就做完了,其餘阻擋)。
  */
 export function buildPlan(

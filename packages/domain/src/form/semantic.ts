@@ -3,7 +3,7 @@ import { temporalIsoOf } from "./temporal";
 import type { FieldDef, StoredValues } from "./types";
 
 /**
- * 儲存值 → **語意值**(表達式 `var` 拿到的東西;Spec §5「表達式看到的是語意值」):
+ * 儲存值 → **語意值**(表達式 `var` 拿到的東西):
  *
  * | type          | 存的值                        | 語意值    |
  * | ------------- | ----------------------------- | --------- |

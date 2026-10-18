@@ -1,7 +1,7 @@
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 
-/** 表單模組的四個頁面節點(seed 宣告,Spec 6a §2「seed 宣告(表單模組)」)。 */
+/** 表單模組的四個頁面節點(seed 宣告)。 */
 export const FORM_MODULE_PAGE_SUFFIXES = {
   viewPage: "view-page",
   createPage: "create-page",
@@ -15,7 +15,7 @@ export interface FormModuleAccess {
   createRoute: string | null;
   editRoute: string | null;
   /**
-   * 綁了新增頁、且有模組 `create`。依表單分開新增權限(B9b)的模組不看模組 `create`:
+   * 綁了新增頁、且有模組 `create`。依表單分開新增權限的模組不看模組 `create`:
    * 列表的 [+ 新增] 另外看 `useModuleForms` 的 `creatableForms`(`FormListPage`)。
    */
   canCreate: boolean;

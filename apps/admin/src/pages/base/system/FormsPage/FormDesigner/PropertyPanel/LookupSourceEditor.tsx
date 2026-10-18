@@ -35,7 +35,7 @@ export interface LookupSourceEditorProps {
   /** 目前在設計的表單:給了就能選自己當來源(帶入規則),欄位目錄用草稿的欄位 */
   selfForm?: SelfFormCatalog | null;
   /**
-   * 連動篩選(B2d)可引用的表單層欄位;給了才出現「連動篩選」(只有引用欄位、明細引用子欄)。
+   * 連動篩選可引用的表單層欄位;給了才出現「連動篩選」(只有引用欄位、明細引用子欄)。
    * 呼叫端已排除自己與明細欄。
    */
   linkFields?: readonly FieldDef[];
@@ -120,7 +120,7 @@ const withFixedFilter = (
 };
 
 /**
- * lookup 來源描述的編輯(`options.source`、`reference.source`、`prefills[].source`;Spec 6a §5「lookup 來源」)。
+ * lookup 來源描述的編輯(`options.source`、`reference.source`、`prefills[].source`;`docs/concepts/form-engine.md`「lookup 來源」)。
  * 照填表時的順序排:來源 → 表單(只有表單提交)→ 顯示欄 → 顯示模板(選填)→ 固定條件(選填)→ 值欄(只有選項來源);
  * 每一格中文標籤 + 一句說明,**全部用下拉選**(表單只列本租戶看得到且有已發布版本的,欄位從該表單目前版本挑,
  * `useLookupCatalog.ts`)。來源清單以 api 的登錄表為準(`formLookupProviders`,含專案登記的來源)。

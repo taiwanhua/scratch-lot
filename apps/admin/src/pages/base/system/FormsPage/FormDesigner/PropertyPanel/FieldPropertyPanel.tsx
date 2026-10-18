@@ -48,8 +48,8 @@ export interface FieldPropertyPanelProps {
 }
 
 /**
- * 屬性面板(Spec 6a §8 畫面 2):選中欄位的定義,**每種型別只出現該有的設定**(§5 表 A,
- * `lib/base/form-engine/property-sections.ts`)。表達式一律用型別導向的結構化選擇器(表 B);條件類不列受保護欄位。
+ * 屬性面板:選中欄位的定義,**每種型別只出現該有的設定**(
+ * `lib/base/form-engine/property-sections.ts`)。表達式一律用型別導向的結構化選擇器;條件類不列受保護欄位。
  * 每一塊的檢查器錯誤就地顯示(表達式槽依 `location.exprSlot` 分派),其餘列在最上方。
  */
 export const FieldPropertyPanel = ({

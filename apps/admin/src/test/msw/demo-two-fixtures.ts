@@ -1,7 +1,7 @@
 import type { TestDemoItemTwo } from "./demo-sample-two-handlers";
 
 /**
- * 示範模組2 的夾具(#321)。形狀以 `docs/modules/demo.sample-two.md`「api 介面」為準(TEST-08):
+ * 示範模組2 的夾具。形狀以 `docs/modules/demo.sample-two.md`「api 介面」為準(TEST-08):
  * 只有 name / note / enabled + 基礎欄位,`abilities` 由 api 逐筆算好(已含權限判斷),
  * `createdBy` 查不到人時是 null(示範資料的建立者是假 ObjectId)。
  *

@@ -13,7 +13,7 @@ export interface FormForkSource {
 }
 
 /**
- * 表單(Spec 6a §4「forms」;`docs/data-model.md`「forms」):一種填報的身分,掛在**一個**表單模組下。
+ * 表單(`docs/data-model.md`「forms」):一種填報的身分,掛在**一個**表單模組下。
  *
  * - 共用表單:`ownerOrgId = null`,root 管,以 `org_form`(`business_relationships`)分派給租戶
  * - 客製表單:`ownerOrgId = 租戶頂層`,以某共用表單某版本為基底建(`forkedFrom`),只有該租戶看得到

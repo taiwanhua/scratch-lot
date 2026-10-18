@@ -24,7 +24,7 @@ import {
 const tabSchema = z.string().default("");
 
 /**
- * 個人設定(規格 10.6):殼層路由 `/settings/personal`,
+ * 個人設定:殼層路由 `/settings/personal`,
  * 不是模組、不需要權限。分頁「偏好 | 代理人」記在網址 `?tab=`(PageTabs);代理人分頁的頁碼在 `?list=`,
  * 切分頁時清回預設。語言與外觀不在這裡 —— 兩者只放頭像選單,切了立即生效。
  */

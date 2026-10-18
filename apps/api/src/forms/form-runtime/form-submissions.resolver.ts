@@ -58,7 +58,7 @@ export class FormSubmissionsResolver {
     private readonly access: FormAccessService,
   ) {}
 
-  /** 新增選單:某模組此刻可以新增的表單(Spec §3 的交集)。 */
+  /** 新增選單:某模組此刻可以新增的表單。 */
   @Query(() => [FormSummary], { name: "moduleForms" })
   async moduleForms(
     @Args("moduleKey", { type: () => ID }) moduleKey: string,

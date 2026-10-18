@@ -8,7 +8,7 @@ import type {
 
 /**
  * GraphQL 的定義四塊(`fields` / `layout` / `summaryMap` / `prefills` 以 JSON 進出)→ `@repo/domain/form` 的型別。
- * 形狀正本在 domain(Spec 6a §5),api 存之前已驗過;這裡只補「缺了就給空」的預設,不重驗。
+ * 形狀正本在 domain(`@repo/domain/form`),api 存之前已驗過;這裡只補「缺了就給空」的預設,不重驗。
  */
 export interface RawDefinition {
   fields: readonly Record<string, unknown>[];

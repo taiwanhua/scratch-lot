@@ -112,7 +112,7 @@ const REF_ID_PLACEHOLDER = "{refId}";
 export const NOTIFICATION_PREFERENCE_PREFIX = "notification";
 
 /**
- * 「類型 × 管道」開關在個人偏好(`user_preferences.settings`)裡的 key(規格 10.6):
+ * 「類型 × 管道」開關在個人偏好(`user_preferences.settings`)裡的 key:
  * `notification_<類型 key 的 . 換成 _>_<管道>`,例 `workflow.task-created` × `in-app` →
  * `notification_workflow_task-created_in-app`。偏好 key 不能含 `.`;類型 key 與管道 key 都不含 `_`,
  * 所以以 `_` 切開就能還原(第一段是前綴、最後一段是管道、中間是類型的各段)。

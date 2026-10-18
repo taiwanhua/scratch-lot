@@ -18,7 +18,7 @@ import {
 const LIVE = [...LIVE_INSTANCE_STATUSES];
 
 /**
- * 撤回(Spec 6b §6「撤回」):只有申請人本人(實例的 `createdBy`,抄自提交)能撤回,別人 → `FORBIDDEN`
+ * 撤回:只有申請人本人(實例的 `createdBy`,抄自提交)能撤回,別人 → `FORBIDDEN`
  * (`NOT_APPLICANT`),先於狀態檢查。條件更新實例 `{ status ∈ [running, blocked], editVersion: 預期值,
  * 所有關卡的 decisions 都空 }` → `withdrawn`、所有 active 關卡 `terminated`、`$inc editVersion`,
  * 之後 `advance` 收尾(列 2:任務取消、提交 → `withdrawn`)。**整個撤回是一個交易**(ADR-0013;

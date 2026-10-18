@@ -110,7 +110,7 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView");
 });
 
-describe("表單分區收合(底座 10.3)", () => {
+describe("表單分區收合", () => {
   it("第一次進頁:依分區設定的預設", async () => {
     renderShopping({ path: CREATE_PATH, world: worldOf() });
 
@@ -217,7 +217,7 @@ describe("表單分區收合(底座 10.3)", () => {
       STORAGE_KEY,
       JSON.stringify({
         [PAGE_ID]: { removed: true, extra: false },
-        "dealers.detail": { contact: true },
+        "vendors.detail": { contact: true },
       }),
     );
     renderShopping({ path: CREATE_PATH, world: worldOf() });
@@ -225,7 +225,7 @@ describe("表單分區收合(底座 10.3)", () => {
     await waitFor(() => {
       expect(stored()).toEqual({
         [PAGE_ID]: { extra: false },
-        "dealers.detail": { contact: true },
+        "vendors.detail": { contact: true },
       });
     });
   });

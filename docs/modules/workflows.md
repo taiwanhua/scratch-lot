@@ -189,7 +189,7 @@
   4. 否則解析審核者 → domain `autoApprovalCandidates` 列候選 → 逐位以**本人**的操作者上下文(`OperatorContextService.resolve`,單據組織為目前組織)跑 `FormLifecycleService.checkApproveGuard`(同一個 `beforeApprove`,擋下以回傳值表示,不拋)。通過的放進 `autoApprovals`、擋下的放進 `blockedAutoApprovals`(帶專案錯誤碼);`any` 一位通過就停。
 - **寫入**(domain `advance` 列 5):進關的同一次 CAS 寫計畫與自動通過的決定(`decisions` 整份 + 每筆 `approved` 事件帶 `reason`:`auto_applicant` / `auto_prior_approver`),接著建那幾位的任務(投影 = `approved`,不寄「有新任務」)。之後照判斷表:`any` 下一輪列 4 完成、`all` 等其他人。
 - 申請人**只有在自動通過成立(過了守門)時**才留在計畫(`buildPlan` 的 `keepApplicant`);被擋下就照舊剔除,剔除後沒人 → 列 5 的阻擋。其他人被擋下照常留待審任務。每位被擋下的在同一次 CAS 記一筆 `auto_approve_blocked`(`userId`、`reason` = `auto_applicant` / `auto_prior_approver`、`code` = 專案錯誤碼;GraphQL `WorkflowHistoryEventModel.code`),時間軸以 `admin.approval.timeline.autoApproveBlocked.*` + `admin.lifecycle.<碼>`(沒有就用通用句)顯示。
-- 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(B5 自動記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
+- 「已在前關核准過」= `priorApproverIds`:同一實例、這一關**上游**(沿入線往回)的關卡裡,`evaluateStep` 算數的核准決定的 `userId`(自動通過記的也算;晚於結果的不算;不同分支不算)。退回後重送是新實例,自然從頭算。
 - 「需要推進」的識別(`blockedInstances` 的 `needsAdvance`,`planOf`)不跑自動通過的守門。
 - 修訂 `ctx` 快照另存 `orgIds`、`tenantId`(`revisionContext`;GraphQL `FormSubmissionContext.orgIds` / `tenantId`),對應表達式的 `ctx.user.orgIds`、`ctx.tenant.id`;填寫中的前端從 `me.orgs` 與 `me.currentOrg.tenantId` 取。
 - admin 時間軸(`ApprovalTimeline`)依 `history[].reason` 顯示 `admin.approval.timeline.reasons.*`。設計器的關卡面板見下方 admin 的「屬性面板」。
@@ -226,7 +226,7 @@
 
 1. 名單裡(不含申請人)此刻 `startAt <= now < endAt` 的人,讀他的代理人。
 2. 代理人以 `TenantDirectoryService.eligibleUserIds` 驗啟用、在本租戶;不合格 → 不換、`Logger.warn`。代理人是申請人 → 不換。
-3. 換過的名單交給 B5 候選與 `buildPlan`;`StepEntry.delegatorOf`(代理人 → 原審核者們)讓計畫那一項記 `delegatorIds`。多位原審核者委託同一位代理人 → 去重成代理人一項、記全部被代理者:代理人一張待辦、一票,一次決定作用到所有被代理者(引擎不改,一人一關一票);代理人本來就在名單裡 → 仍是他自己那一項,另記他代理的人。
+3. 換過的名單交給自動通過候選與 `buildPlan`;`StepEntry.delegatorOf`(代理人 → 原審核者們)讓計畫那一項記 `delegatorIds`。多位原審核者委託同一位代理人 → 去重成代理人一項、記全部被代理者:代理人一張待辦、一票,一次決定作用到所有被代理者(引擎不改,一人一關一票);代理人本來就在名單裡 → 仍是他自己那一項,另記他代理的人。
 4. 不讀代理人自己的代理(不做代理鏈);只在進關那一次看,之後代理刪除不動計畫。沒有改結束日的端點:提早結束 = 刪除,延長 = 刪除後重新設定。
 
 **寫入與顯示**:計畫項目 `delegatorIds`(GraphQL `WorkflowPlanItemModel.delegators`);`task_created`、`decideTask` 的決定事件與自動通過的 `approved` 帶 `delegatorIds`(`WorkflowHistoryEventModel.delegators`)。流程管理者改派(`reassignTask`)把 `delegatorIds` 清空。admin 時間軸用 `admin.approval.timeline.delegated.<kind>`(「「關卡」由 X 代理 A、B 核准」;有自動通過原因時照原因文案),關卡進度用 `admin.approval.progress.assigneeDelegated`,名字以 `admin.approval.nameSeparator` 串接。
@@ -252,10 +252,10 @@
 
 **逾時提醒**(`workflow-engine/workflow-overdue.service.ts`,`WorkflowOverdueService`):
 
-1. 計時在任務上(`workflow_tasks`):建任務時 `assignedAt` = 現在、`overdueLevel` = 0、`overdueDueAt` = `assignedAt` + N 小時(關卡沒開、或任務建出來就不是 `pending`(B5 自動通過)→ null)。推進同步投影時承辦人換了(改派)→ 三欄重設(`overdue-timer.ts`);被改派走的人不再收。
+1. 計時在任務上(`workflow_tasks`):建任務時 `assignedAt` = 現在、`overdueLevel` = 0、`overdueDueAt` = `assignedAt` + N 小時(關卡沒開、或任務建出來就不是 `pending`(自動通過)→ null)。推進同步投影時承辦人換了(改派)→ 三欄重設(`overdue-timer.ts`);被改派走的人不再收。
 2. 排程:`onModuleInit` 登記 `registerScheduledJob({ key: "workflow.overdue-reminders", every: "15m" })`,handler 呼叫 `sweep(now, 租戶們)`。每個租戶撈 `status = pending` 且 `overdueDueAt <= now` 的任務(依到期時點,一次最多 500 張,其餘下一輪)。
 3. **每張任務一個交易**:再讀一次(仍 `pending`、仍到期)→ 實例仍在跑且關卡仍進行中、這一關仍開著(否則 `overdueDueAt` 清成 null,不再排)→ 到 N 未通知 → 第 1 級給 `assigneeId` 與派任計畫該項的 `delegatorIds`(代理承接時連被代理者一起提醒;改派後計畫清空 `delegatorIds`,只剩新承辦人;去重);到 M 未通知 → 第 2 級給通知對象(`resolveAudienceSource({ kind: "audience" })`,依這張單據代入動態組織;剔除承辦人本人;被代理者在名單內照收)→ 條件更新(條件含讀到的 `overdueLevel` 與 `assignedAt`)寫新級數與下一級到期時點(N → M → null)。排程晚到一次就過了 M 時兩級一起發。一張失敗只回復那一張、記 error log,`overdueDueAt` 在交易外往後延一個排程週期(15 分鐘)再試 —— 失敗的任務不會一直排在最前面、讓超過一批上限後的其他任務輪不到。每個租戶各自 try/catch,一個租戶出錯不中斷其他租戶。
-4. 不動任務狀態、關卡、實例(`editVersion` 不變)。通知 `workflow.overdue`(`params`:`subject`、`stepName`、`hours`),`dedupeKey` = `workflow.overdue:<taskId>:<assignedAt 毫秒>:<級數>` —— 規格的冪等鍵 `(taskId, level)` 以「這一次指派」為單位。
+4. 不動任務狀態、關卡、實例(`editVersion` 不變)。通知 `workflow.overdue`(`params`:`subject`、`stepName`、`hours`),`dedupeKey` = `workflow.overdue:<taskId>:<assignedAt 毫秒>:<級數>` —— 冪等鍵是 `(taskId, level)`,以「這一次指派」為單位。
 
 **知會**(`workflow-engine/workflow-cc.service.ts`,`WorkflowCcService`):
 

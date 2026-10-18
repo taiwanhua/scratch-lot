@@ -36,7 +36,7 @@ export const Disabled: Story = {
 };
 
 /**
- * 與同列的 `TextField select` / `Select` 對齊(#260):
+ * 與同列的 `TextField select` / `Select` 對齊:
  * 條件列整列都用 `small`,不給的話日期欄會高一截。
  */
 export const Small: Story = {

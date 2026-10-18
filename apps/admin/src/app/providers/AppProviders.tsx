@@ -61,7 +61,7 @@ export const AppProviders = ({
       >
         <QueryClientProvider client={queryClient}>
           <SessionProvider session={session}>
-            {/* 操作結果提示掛在最內層:每一頁、每個彈窗共用同一個出口(#376) */}
+            {/* 操作結果提示掛在最內層:每一頁、每個彈窗共用同一個出口 */}
             <SnackbarProvider>{children}</SnackbarProvider>
           </SessionProvider>
         </QueryClientProvider>

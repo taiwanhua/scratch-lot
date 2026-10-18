@@ -360,7 +360,7 @@ describe("代理人:進關改派給代理人", () => {
     expect(delegatorsIn(plan[0])).toEqual([]);
   });
 
-  it("原審核者本人就是申請人 → 不換成他的代理人:沒開 B5 照規則剔除(阻擋);開了 B5 自動通過", async () => {
+  it("原審核者本人就是申請人 → 不換成他的代理人:沒開自動通過照規則剔除(阻擋);開了自動通過", async () => {
     const [deputy] = await freshStaff();
     const applicant = await person(
       api,

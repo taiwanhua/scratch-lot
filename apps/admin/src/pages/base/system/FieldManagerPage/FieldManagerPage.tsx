@@ -36,7 +36,7 @@ import { useFieldManagerData } from "./useFieldManagerData";
  *
  * 左欄是欄位類別(系統類別 + root 在本頁新增的;新增 / 改名 / 停用限 `manage-categories`),
  * 右欄是所選類別的**合併清單** = 全域種子 + 上層組織自訂
- * + 本組織自訂 + 可見範圍內的下層自訂(#264 規則表,正本見上述模組文件)。
+ * + 本組織自訂 + 可見範圍內的下層自訂(規則表正本見上述模組文件)。
  * 一列能做什麼由 api 逐列算好(`canEdit` / `canToggleEnabled`),前端只跟權限取交集;
  * 自訂選項可改 label / order / description,但 `value` 建立後不可改;選項一律不刪、只停用。
  * 解讀集中在 `field-source.ts`,表格與彈窗不自己推組織關係。
@@ -82,7 +82,7 @@ export const FieldManagerPage = () => {
         payload.setFieldEnabled.field.enabled
           ? t("feedback.enableSuccess")
           : t("feedback.disableSuccess"),
-      // 失敗的 Snackbar 文案與頁面上那一條 Alert 同一份解讀(#376)
+      // 失敗的 Snackbar 文案與頁面上那一條 Alert 同一份解讀
       error: (error) => t(`errors.${fieldManagerErrorOf(error).code}`),
       onSuccess: () => {
         setPendingFieldId(null);

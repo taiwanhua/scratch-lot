@@ -23,7 +23,7 @@ import { TaskActionsService } from "./task-actions.service";
 import { WorkflowPresenter } from "./workflow-presenter.service";
 
 /**
- * 流程管理者的阻擋清單與處置(`system.workflows.blocked-page`;Spec 6b §7):
+ * 流程管理者的阻擋清單與處置(`system.workflows.blocked-page`):
  * `blockedInstances`、`reassignTask`、`addStepAssignee`、`retryAdvanceInstance`。
  * 權限一律是隱藏頁自有的 `system.workflows.blocked-page.reassign`(不靠父模組 wildcard);
  * 範圍以操作者的租戶為邊界。摘要不含提交內容。

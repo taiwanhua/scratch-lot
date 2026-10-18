@@ -5,7 +5,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 修訂差異(Spec 6a §4 `revisions[]`):每個修訂號存的是**完整值快照**,差異在讀取時由相鄰兩筆算。
+ * 修訂差異(`revisions[]`):每個修訂號存的是**完整值快照**,差異在讀取時由相鄰兩筆算。
  * 比的是「識別」而不是整個物件(與 api 判「沒動」同一套,docs/modules/forms.md「提交的寫入規則」):
  * 選項比 value(多選比集合)、引用比 id、上傳比 path;受保護且讀者看不到的欄位兩邊都是 `"[redacted]"`,
  * 所以永遠不會被列成有變動(不從差異側漏)。明細列以 `rowId` 對列(`arrayRowChanges`:新增 / 刪除 / 移動 / 改值),

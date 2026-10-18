@@ -78,7 +78,7 @@ export interface DataTableProps<Row extends RowData> {
    */
   columnVisibility?: DataTableColumnVisibility;
   /**
-   * 表頭下方的固定列(例:人員排程的人力需求區):和表頭一起固定、不隨資料列捲動,
+   * 表頭下方的固定列(例:排程表上方的需求列):和表頭一起固定、不隨資料列捲動,
    * 依欄位對齊。給了的時候改成整個表頭區塊一起 sticky。
    */
   topRows?: readonly DataTableTopRow[];

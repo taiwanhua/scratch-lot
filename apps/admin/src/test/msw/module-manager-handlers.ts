@@ -48,7 +48,7 @@ const flatten = (nodes: readonly MutableNode[]): MutableNode[] =>
   nodes.flatMap((node) => [node, ...flatten(node.children ?? [])]);
 
 /**
- * 模組與權限頁的假 api(#204 的三個端點)。
+ * 模組與權限頁的假 api(三個端點)。
  *
  * 樹是**有狀態的**:切換後的 `enabled` 寫回同一份資料,所以「mutation → invalidate →
  * 重新查 `moduleTree`」在測試裡看得到新的值 —— 只回一個固定樹的 handler 驗不出失效有沒有發生。
@@ -101,7 +101,7 @@ export const moduleAdminWorld = (
       });
     }),
     /*
-     * 換圖示(#288):不連動任何東西,只把 `icon` 寫回同一份資料 —— 「換完 invalidate
+     * 換圖示:不連動任何東西,只把 `icon` 寫回同一份資料 —— 「換完 invalidate
      * 再查一次 moduleTree 要拿到新值」才驗得到。白名單外的值照 api 回 VALIDATION_FAILED
      * 並附 `extensions.fields`(正本 `docs/modules/module-manager.md`「api 介面」),
      * 不讓前端對著比 api 寬鬆的假伺服器寫測試。

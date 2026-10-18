@@ -29,7 +29,7 @@ export interface OrgDetailPanelProps {
   ability: OrgActionAbility;
   /** 租戶頂層對租戶內的人:停用 / 刪除 / 搬移停用並提示(ADR-0009) */
   isTenantTopProtected: boolean;
-  /** 根組織視角 + 租戶頂層 + 有 `tenant-ops.revoke-provision` 才給「撤銷開通」(#374) */
+  /** 根組織視角 + 租戶頂層 + 有 `tenant-ops.revoke-provision` 才給「撤銷開通」 */
   canRevokeProvision: boolean;
   onEdit: () => void;
   onToggleEnabled: () => void;
@@ -42,8 +42,8 @@ export interface OrgDetailPanelProps {
  * 商標只在有值時出現(`logoUrl` 是 api 現簽的短效網址,ADR-0010);
  * 擁有者只有租戶頂層有(ADR-0009),其餘組織連欄位都不渲染。
  *
- * **「成員」頁籤只在持 `system.org-manager.view-members` 時出現**(#377):沒有那筆權限的人
- * 看到的就是 #374 之前的樣子(沒有頁籤列,直接是組織資料),不是「出現但停用」——
+ * **「成員」頁籤只在持 `system.org-manager.view-members` 時出現**:沒有那筆權限的人
+ * 看到的就是沒有撤銷開通時的樣子(沒有頁籤列,直接是組織資料),不是「出現但停用」——
  * 頁籤不是一個動作,給了空的頁籤只會讓人困惑。頁籤用 `PageTabs`,目前分頁記在網址 `?tab=`(REACT-14);
  * 只剩「組織資料」一個分頁時 `PageTabs` 不顯示分頁籤。
  */

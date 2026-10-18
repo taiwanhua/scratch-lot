@@ -1,4 +1,4 @@
-# 劇本 11 / 15 用的 fake GCS(#402;`fsouza/fake-gcs-server`,只有 JSON / XML API 的模擬,不驗簽章)。
+# 劇本 11 / 15 用的 fake GCS(`fsouza/fake-gcs-server`,只有 JSON / XML API 的模擬,不驗簽章)。
 #
 # **不必自己起**:`pnpm e2e` 的 harness(src/harness/fake-gcs.ts)會以這個檔 `up -d`、跑完 `down`,
 # 本機與 CI 走同一份。bucket 由 harness 以 JSON API 建(名稱是 E2E_GCS_BUCKET_PUBLIC / _PRIVATE,

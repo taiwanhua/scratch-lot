@@ -26,7 +26,7 @@ import {
 
 /**
  * 擁有組織下拉(新增角色、清單上方的篩選)要 `system.org-manager.view`;
- * 加入使用者的候選自 #246 起掛在 `system.role-manager.assign-users` 底下,
+ * 加入使用者的候選掛在 `system.role-manager.assign-users` 底下,
  * 不再需要 `system.user-manager.view`。
  */
 export const ALL_PERMISSIONS = [

@@ -19,7 +19,7 @@ export interface ApplicantActionsProps {
 type OpenDialog = "withdraw" | "void" | null;
 
 /**
- * 申請人的撤回 / 作廢 / 複製為新單(Spec 6b §6):撤回要在還沒有任何審核意見前;
+ * 申請人的撤回 / 作廢 / 複製為新單:撤回要在還沒有任何審核意見前;
  * 作廢只對已核准的單(申請人自己可作廢,不需主管同意),理由必填;作廢後可「複製為新單」重送。
  */
 export const ApplicantActions = ({

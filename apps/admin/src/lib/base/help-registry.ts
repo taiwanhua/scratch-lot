@@ -5,7 +5,7 @@ import {
 } from "./module-help";
 
 /**
- * 打包進 bundle 的模組說明(#197):Vite 在 build 時把每份 `<模組 key>.help.md` 以原始字串內嵌,
+ * 打包進 bundle 的模組說明:Vite 在 build 時把每份 `<模組 key>.help.md` 以原始字串內嵌,
  * 不走執行期的 fetch — 說明跟著版本走,離線也讀得到。
  *
  * 三份來源各一個 glob,**全 app 只有這支寫 glob**:

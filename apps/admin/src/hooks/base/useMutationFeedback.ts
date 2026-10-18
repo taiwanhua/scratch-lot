@@ -44,11 +44,11 @@ export interface MutationFeedback<TData, TVariables> {
 }
 
 /**
- * mutation 的統一回饋(#376):**成功或失敗一律跳一則 Snackbar**。
+ * mutation 的統一回饋:**成功或失敗一律跳一則 Snackbar**。
  *
  * 回傳的 `{ onSuccess, onError }` 直接塞進 codegen mutation hook 的 options;
  * 兩支都**包住**呼叫端原本的 callback 而不是取代它 —— 先跳提示、再執行原本的
- * 快取寫回 / 失效(DATA-04)與關彈窗,所以 #372 的快取行為完全不動:
+ * 快取寫回 / 失效(DATA-04)與關彈窗,所以既有的快取行為完全不動:
  *
  * ```ts
  * const setOrgEnabled = useSetOrgEnabledMutation(

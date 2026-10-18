@@ -7,7 +7,7 @@ import { DataScopeResolver } from "./data-scope.resolver";
 import { DataScopeService } from "./data-scope.service";
 
 /**
- * 資料範圍(`system.data-scope`,#205 / ADR-0008)。
+ * 資料範圍(`system.data-scope`,ADR-0008)。
  *
  * 這個 module **必須被 AppModule 匯入**,不只是為了兩個 query 與一個 mutation:
  * `DataScopeService` 在 `onModuleInit` 把自己註冊成查詢中介層的規則提供者

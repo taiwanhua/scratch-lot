@@ -11,7 +11,7 @@ import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
 /**
- * 規格 10.1「頁籤(RouteTabs)記住網址參數」情境表:每一列一個測試。
+ * 頁籤記住網址參數(REACT-14):每一列一個測試。
  * 頁面的篩選以掛在殼旁邊的 `FilterProbe` 代表(它和頁面一樣經 `useUrlState` 讀寫目前網址的 `?list=`),
  * 這樣測的是殼與頁籤的行為,不綁某一頁的版面。
  */
@@ -92,7 +92,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-describe("RouteTabs:頁籤記住網址參數(規格 10.1 情境表)", () => {
+describe("RouteTabs:頁籤記住網址參數", () => {
   it("改篩選條件 → 網址參數以 replace 更新,頁籤同步記下「路徑 + 參數」", async () => {
     const { user } = renderShell(OVERVIEW);
     await findTabList();

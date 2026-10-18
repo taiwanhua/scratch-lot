@@ -110,8 +110,8 @@ interface RetiredItem {
 }
 
 /**
- * 欄位級權限(Spec 6a §5「欄位級權限的四種組合」「受保護欄位的配套」、§6「權限不存在時的判定」「root 清理」、
- * §10「權限」):投影、守門、依賴鏈、權限被刪、退役清理三層;資料範圍依 moduleKey 與建立者讀自己的單。
+ * 欄位級權限(見 `docs/concepts/form-engine.md`「欄位級權限與受保護依賴鏈」、
+ * `docs/modules/forms.md`「退役權限清理」):投影、守門、依賴鏈、權限被刪、退役清理三層;資料範圍依 moduleKey 與建立者讀自己的單。
  */
 describe("表單的欄位級權限:投影 / 守門 / 依賴鏈 / 權限被刪 / 退役清理", () => {
   let api: AuthTestApp;

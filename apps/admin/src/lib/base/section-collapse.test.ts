@@ -19,7 +19,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("可收合區塊的收合記憶:儲存規則(底座 10.3)", () => {
+describe("可收合區塊的收合記憶:儲存規則", () => {
   it("key 是 `<slug>-admin-sections:<userId>`;表單的頁面 id 是 `form:<formKey>`", () => {
     expect(KEY).toBe(`${projectPublic.slug}-admin-sections:user-1`);
     expect(formSectionPageId("purchase")).toBe("form:purchase");
@@ -28,7 +28,7 @@ describe("可收合區塊的收合記憶:儲存規則(底座 10.3)", () => {
   it("只記與預設不同的:和預設相同的切換不寫入", () => {
     const same = setSectionCollapsed(
       {},
-      "dealers.detail",
+      "vendors.detail",
       "contact",
       true,
       true,
@@ -37,32 +37,32 @@ describe("可收合區塊的收合記憶:儲存規則(底座 10.3)", () => {
 
     const different = setSectionCollapsed(
       {},
-      "dealers.detail",
+      "vendors.detail",
       "contact",
       false,
       true,
     );
-    expect(different).toEqual({ "dealers.detail": { contact: false } });
+    expect(different).toEqual({ "vendors.detail": { contact: false } });
   });
 
   it("改回預設就刪那一筆;同頁還有別筆時頁面保留", () => {
     const store = {
-      "dealers.detail": { license: false, rent: false },
+      "vendors.detail": { attachments: false, billing: false },
     };
     expect(
-      setSectionCollapsed(store, "dealers.detail", "license", true, true),
-    ).toEqual({ "dealers.detail": { rent: false } });
+      setSectionCollapsed(store, "vendors.detail", "attachments", true, true),
+    ).toEqual({ "vendors.detail": { billing: false } });
   });
 
   it("頁面空了刪頁面;整把 key 空了連 key 一起刪", () => {
     const store = {
-      "dealers.detail": { license: false },
+      "vendors.detail": { attachments: false },
       "form:purchase": { notes: true },
     };
     const next = setSectionCollapsed(
       store,
-      "dealers.detail",
-      "license",
+      "vendors.detail",
+      "attachments",
       true,
       true,
     );

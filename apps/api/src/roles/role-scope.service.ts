@@ -53,7 +53,7 @@ export class RoleScopeService {
   ) {}
 
   /**
-   * 角色種類規則要用的「操作者事實」(#261):誰站在根組織、他自己持有哪些角色。
+   * 角色種類規則要用的「操作者事實」:誰站在根組織、他自己持有哪些角色。
    * 一次請求取一次,`decorate` 與四支寫入端點共用同一組事實。
    *
    * 持有的角色以 `user_role` 直接查,不用 `operator.roleIds` —— 後者只含**啟用中**的角色
@@ -97,7 +97,7 @@ export class RoleScopeService {
    * 管理範圍是全部(超級管理員 / 擁有組織是根組織)→ 不必先攤開組織樹再反查。
    * 管理範圍內沒有任何組織擁有角色 → 回 null = 空清單。
    *
-   * `ownerOrgId`(#246 的 3)在管理範圍**之內**再收窄:只留擁有組織正好是它的角色
+   * `ownerOrgId`在管理範圍**之內**再收窄:只留擁有組織正好是它的角色
    * (不含子樹,見 `RolesInput.ownerOrgId`)。組織一律經 `this.orgs` 取,
    * 所以管理範圍外的 id 查不到 → 回 null = 空清單,不必另外比對範圍。
    */
@@ -180,7 +180,7 @@ export class RoleScopeService {
 
   /**
    * 把角色文件組成 GraphQL 形狀:擁有組織(名稱只給管理範圍內的)與它的租戶頂層、
-   * 種類與四個動作(#261,依操作者算好)、授予人數。
+   * 種類與四個動作(依操作者算好)、授予人數。
    */
   async decorate(
     operator: OperatorContext,

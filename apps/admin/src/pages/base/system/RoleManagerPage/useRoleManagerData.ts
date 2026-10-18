@@ -63,7 +63,7 @@ export const useRoleManagerData = () => {
   const { keyword, ownerOrgId, page } = list;
   const [pickedRoleId, setPickedRoleId] = useUrlSelectedId();
 
-  /** 下拉的候選 = 操作者的管理範圍(與新增角色的「擁有組織」同一份,#246 的 3)。 */
+  /** 下拉的候選 = 操作者的管理範圍(與新增角色的「擁有組織」同一份)。 */
   const ownerOrgs = useOwnerOrgOptions();
 
   const rolesVariables = useMemo<RolesQueryVariables>(
@@ -118,7 +118,7 @@ export const useRoleManagerData = () => {
           .slice(0, 1),
         exact: false,
       });
-      // 候選清單要排除剛加進去的人(#246 的 4);key 帶關鍵字,同樣以第一段當前綴
+      // 候選清單要排除剛加進去的人;key 帶關鍵字,同樣以第一段當前綴
       await queryClient.invalidateQueries({
         queryKey: useRoleUserCandidatesQuery
           .getKey({

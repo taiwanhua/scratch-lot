@@ -17,7 +17,7 @@ import {
 } from "./data-scope-rule";
 
 /**
- * 條件樹的問題定位(#210):**本地驗證**與 api 的 `RULE_INVALID` 走同一種 `RuleIssue`,
+ * 條件樹的問題定位:**本地驗證**與 api 的 `RULE_INVALID` 走同一種 `RuleIssue`,
  * 所以「送出前先擋」與「送出後標紅」是同一條顯示路徑,元件只認 `RuleIssue`。
  *
  * `reason` 的清單與語意正本:`docs/modules/data-scope.md`「`RULE_INVALID` 的 `extensions`」。

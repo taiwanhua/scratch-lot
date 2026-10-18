@@ -132,7 +132,7 @@ export interface MatchedModuleRoute {
  *
  * 先精準比對;對不上時**只對隱藏頁**再試一次「去掉最後一段」——
  * 詳情 / 編輯頁的模組路由本身不含識別碼(seed 的 route 是 `view-page` / `edit-page`),
- * 但實際網址是 `/demo/sub/sample-one/view-page/<id>`(#320)。
+ * 但實際網址是 `/demo/sub/sample-one/view-page/<id>`。
  *
  * 退路限定 hidden 的理由:link(列表頁)後面多一段就是打錯網址,仍應被擋;
  * 「可進 = 有那個模組路由」這條規則沒有放寬 —— 沒綁隱藏頁模組的人,父路徑查不到,一樣是無權限頁。

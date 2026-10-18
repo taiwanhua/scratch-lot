@@ -271,7 +271,7 @@ export class ExportWorkflowSeedPayload {
   source!: string;
 }
 
-/** 綁定時檢查的一個問題(Spec 6b §3 表;`problem` 正本 `workflows-error.ts` 的 `BindingIssue`)。 */
+/** 綁定時檢查的一個問題(`problem` 正本 `workflows-error.ts` 的 `BindingIssue`)。 */
 @ObjectType()
 export class WorkflowBindingIssueModel {
   @Field(() => String)
@@ -328,7 +328,7 @@ export class FormWorkflowBinding {
 
   /**
    * false = 「綁定的流程已失效」:流程已被收回分派、讀不到、或沒有已發布版本 ——
-   * 這時送出一律被擋(Spec 6b §3),列表要提示管理員重新綁定或解除。
+   * 這時送出一律被擋,列表要提示管理員重新綁定或解除。
    */
   @Field(() => Boolean)
   isValid!: boolean;

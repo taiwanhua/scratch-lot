@@ -14,7 +14,7 @@ import { moduleHelpMarkdown } from "@/lib/base/help-registry";
 
 /**
  * `@repo/ui/markdown`(react-markdown + remark-gfm 的 micromark / mdast 依賴鏈)約佔主 chunk
- * 170 kB,而模組說明彈窗不是每次載入頁面都會開(#215)。改成動態 import + `Suspense`,
+ * 170 kB,而模組說明彈窗不是每次載入頁面都會開。改成動態 import + `Suspense`,
  * 讓 Vite 切出獨立 chunk、只在第一次開啟彈窗時抓。
  * `React.lazy` 只收 default export,`@repo/ui/markdown` 是具名匯出,所以在這裡轉一手。
  */
@@ -33,7 +33,7 @@ export interface HelpButtonProps {
 }
 
 /**
- * AppBar 的「?」模組說明(#197;Figma Draft/AdminAppBar 的 help-button I44:119;81:51
+ * AppBar 的「?」模組說明(Figma Draft/AdminAppBar 的 help-button I44:119;81:51
  * + Overlay / 模組說明 81:241 的 Draft/HelpDialog 95:235)。
  * 內容是 build 時打包進來的 `src/md/module-help/<模組 key>.help.md`(`lib/base/help-registry`),
  * 表單模組沒有專屬檔時用 `form-module.help.md`;都沒有時按鈕 disabled 並在 hover 提示。
@@ -49,7 +49,7 @@ export const HelpButton = ({
 
   return (
     <>
-      {/* disabled 的按鈕不發 hover 事件,包 span 的事情交給 Tooltip 自己處理(#240) */}
+      {/* disabled 的按鈕不發 hover 事件,包 span 的事情交給 Tooltip 自己處理 */}
       <Tooltip title={markdown === undefined ? t("unavailable") : ""}>
         <IconButton
           aria-label={t("open")}
@@ -88,7 +88,7 @@ export const HelpButton = ({
             </Button>
           }
         >
-          {/* help.md 本身就是繁中,不進訊息檔、不翻譯(#197) */}
+          {/* help.md 本身就是繁中,不進訊息檔、不翻譯 */}
           <Suspense
             fallback={
               <Stack sx={{ alignItems: "center", py: 4 }}>

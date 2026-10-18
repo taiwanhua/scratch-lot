@@ -297,7 +297,7 @@ function nodeOf(nodes: TreeNode[], id: Types.ObjectId): TreeNode | undefined {
   return flatten(nodes).find((node) => node.id === String(id));
 }
 
-describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 / 搬移 / 刪除前置;對真 Nest + 真 MongoDB)", () => {
+describe("組織管理(樹查詢 / 新增子組織 / 編輯 / 停用連動 / 搬移 / 刪除前置;對真 Nest + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let rootOrgId: Types.ObjectId;
   let rootToken: string;
@@ -386,7 +386,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
     return storage;
   }
 
-  /** 以租戶管理員的身分改商標(#161 的清理案子共用;每次都確認 mutation 本身沒有錯)。 */
+  /** 以租戶管理員的身分改商標(換商標清理的案子共用;每次都確認 mutation 本身沒有錯)。 */
   async function setLogo(
     orgId: Types.ObjectId,
     logoPath: string | null,
@@ -630,7 +630,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
       expect(tree).toHaveLength(1);
       expect(tree[0]?.id).toBe(String(tenantAId));
       // 每棵樹的樹根對外一律回 parentId: null(它的上層不在樹上);
-      // 「樹根是不是平台根組織」由 org(樹根).isSystem 回答,不看這個欄位(#186 ④)
+      // 「樹根是不是平台根組織」由 org(樹根).isSystem 回答,不看這個欄位
       expect(tree[0]?.parentId).toBeNull();
       const ids = flatten(tree).map((node) => node.id);
       expect(ids).toEqual(
@@ -652,7 +652,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
       expect(tree).toHaveLength(1);
       expect(tree[0]?.id).toBe(String(deptOneId));
       expect(tree[0]?.parentId).toBeNull();
-      // 管理範圍外的組織不回傳(#187:`outOfScope` 的灰節點取消)
+      // 管理範圍外的組織不回傳(`outOfScope` 的灰節點取消)
       expect(nodeOf(tree, tenantAId)).toBeUndefined();
       expect(nodeOf(tree, deptTwoId)).toBeUndefined();
       // 自己這棵子樹完整
@@ -1152,7 +1152,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
       expect(await logoPathOf(orgId)).toBeUndefined();
     });
 
-    describe("換商標後的舊物件清理(#161:換圖即刪舊)", () => {
+    describe("換商標後的舊物件清理(換圖即刪舊)", () => {
       /** 每個案子各用一組路徑 —— 刪除清單在整個測試檔裡是累積的,共用常數會互相干擾。 */
       const FIRST = "org-logos/aaaaaaaa-1111-1111-1111-111111111111.png";
       const SECOND = "org-logos/bbbbbbbb-2222-2222-2222-222222222222.webp";
@@ -1219,7 +1219,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
       });
     });
 
-    it("動不到擁有者與可見範圍開關(那是租戶作業 #135:input 根本沒有這兩個欄位)", async () => {
+    it("動不到擁有者與可見範圍開關(那是租戶作業:input 根本沒有這兩個欄位)", async () => {
       const ownerUserId = new Types.ObjectId();
       await api.connection
         .collection("orgs")
@@ -1418,7 +1418,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
     });
   });
 
-  describe("setOrgVisibility:權限搬到組織管理層、範圍由管理範圍決定(#187 / ADR-0005)", () => {
+  describe("setOrgVisibility:權限搬到組織管理層、範圍由管理範圍決定(ADR-0005)", () => {
     it("租戶管理員設得了自己租戶的頂層(不再是根組織專屬):DB 寫入 + 審計", async () => {
       const result = await api.graphql<SetOrgVisibilityData>(
         SET_ORG_VISIBILITY,
@@ -1717,7 +1717,7 @@ describe("組織管理(#134:樹查詢 / 新增子組織 / 編輯 / 停用連動 
       });
     });
 
-    it("角色被軟刪除後不再算 OWNS_ROLES,組織就刪得掉(#246 的 5)", async () => {
+    it("角色被軟刪除後不再算 OWNS_ROLES,組織就刪得掉", async () => {
       const orgId = await newOrgUnderTenantA("角色已刪除");
       const roleId = await createRole(api.app, api.connection, {
         name: "等一下會被軟刪的角色",

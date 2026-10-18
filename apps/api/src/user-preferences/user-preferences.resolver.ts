@@ -10,7 +10,7 @@ import {
 import { UserPreferencesService } from "./user-preferences.service";
 
 /**
- * 個人偏好(規格 10.6):只讀寫自己的,所有登入者都能用 —— 不經模組權限
+ * 個人偏好:只讀寫自己的,所有登入者都能用 —— 不經模組權限
  * (個人設定是殼層路由、不是模組,不分配給角色)。
  */
 @Resolver()

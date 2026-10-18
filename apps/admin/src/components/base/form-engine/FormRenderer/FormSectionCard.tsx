@@ -23,7 +23,7 @@ export interface FormSectionCardProps {
 }
 
 /**
- * 填寫 / 預覽 / 唯讀模式的一個分區(Spec 6a §8 畫面 9 / 11;底座 10.3):
+ * 填寫 / 預覽 / 唯讀模式的一個分區:
  * 不可收合的(舊定義、沒勾「可以收合」)照舊是有框卡片 + 標題列;可以收合的改用 `@repo/ui/section`。
  */
 export const FormSectionCard = ({

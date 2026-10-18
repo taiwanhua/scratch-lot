@@ -24,14 +24,14 @@ describe("組織管理頁(/system/org-manager)", () => {
     renderPage();
 
     await waitForTree();
-    // 「租戶」標籤要等 `org(樹根)` 回來才確定(樹根是不是平台根組織看 `isSystem`,#186 ④)
+    // 「租戶」標籤要等 `org(樹根)` 回來才確定(樹根是不是平台根組織看 `isSystem`)
     await waitFor(() => {
       expect(treeLabel("租戶 A")).toBe("租戶 A租戶");
     });
     expect(treeLabel("A-2 台北分店")).toBe("A-2 台北分店停用");
     // 「租戶」標籤標的是**父節點是平台根組織**的節點,所以兩個租戶都有、下層組織沒有
     expect(treeLabel("租戶 B")).toBe("租戶 B租戶");
-    // #187 起管理範圍外的組織根本不回傳,樹上不再有「顯示但不可選」的灰節點
+    // 管理範圍外的組織根本不回傳,樹上不再有「顯示但不可選」的灰節點
     expect(treeItem("租戶 B")?.getAttribute("aria-disabled")).toBeNull();
     // 預設選中的樹根是根組織 → 它是系統組織,停用與刪除都停用
     expect(await within(detail()).findByText("啟用中")).toBeInTheDocument();
@@ -317,7 +317,7 @@ describe("組織管理頁(/system/org-manager)", () => {
     expect(input.adminEmail).toBe("admin@tenant-c.tw");
   });
 
-  /** #183 第 3 項:Figma 202:351 的每層 28px 縮排(= theme.spacing(3.5))。 */
+  /** Figma 202:351 的每層 28px 縮排(= theme.spacing(3.5))。 */
   it("開通彈窗:模組清單依層級縮排,每層 28px", async () => {
     const { user: actor } = renderPage();
 
@@ -343,7 +343,7 @@ describe("組織管理頁(/system/org-manager)", () => {
   });
 
   /**
-   * #183 第 1 項:左樹 / 右區塊撐滿殼給的內容區高度、各自內部捲動(Figma 87:3)。
+   * 左樹 / 右區塊撐滿殼給的內容區高度、各自內部捲動(Figma 87:3)。
    * jsdom 不算版面,所以驗的是**高度鏈的宣告**(`heightChainOf` 的註解說明為什麼這樣就夠)。
    */
   it("左樹與右區塊各自一層捲動,中間每一層都 min-height: 0", async () => {

@@ -57,7 +57,7 @@ describe("syncEntries(進入路由即生成、去重、剔除進不去的)", () 
   });
 });
 
-describe("詳情子頁籤(#428:隱藏頁 + 尾端識別碼,與路由防守同一條判斷)", () => {
+describe("詳情子頁籤(隱藏頁 + 尾端識別碼,與路由防守同一條判斷)", () => {
   const demoRoutes = enterableRouteMap([overviewModule, ...sampleOneModules]);
   const LIST = "/demo/sub/sample-one";
   const VIEW_1 = `${LIST}/view-page/demo-1`;

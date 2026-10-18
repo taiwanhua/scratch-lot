@@ -2,7 +2,7 @@ import type { FieldDef } from "./types";
 import type { ValueIssue } from "./values";
 
 /**
- * 上傳欄的檔型 / 大小上限(Spec 6a §5 表 A「檔型 / 大小上限」;設定放在 `rules.accept` / `rules.maxSizeMb`)。
+ * 上傳欄的檔型 / 大小上限(設定放在 `rules.accept` / `rules.maxSizeMb`)。
  *
  * 平台上限是 api `storage/upload-rules.ts` 的 `FORM_ATTACHMENT`(api 有測試釘住兩邊一致);
  * 欄位只能**收窄**:檔型必須是平台允許的子集、大小不能超過平台上限。

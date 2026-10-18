@@ -54,7 +54,7 @@ const fail = (code: string, extensions: Record<string, unknown> = {}) =>
   graphqlError(code as AuthErrorCode, code, extensions);
 
 /**
- * 資料範圍頁的假 api(#205 的三個端點 + 選擇器要用的 `roles` / `users` / `orgTree`
+ * 資料範圍頁的假 api(三個端點 + 選擇器要用的 `roles` / `users` / `orgTree`
  * / `audiencePermissionOptions`)。
  *
  * `saveDataScopeRule` 是**整份覆蓋**:成功時把送進來的那份存進記憶體並原樣回傳,
@@ -78,7 +78,7 @@ export const dataScopeWorld = (
 
   const handlers = [
     api.query("DataScopeTargets", () =>
-      // `hasRule` 由目前存著的規則算出來(#246 的 1;有規則文件且 rules 非空才算),
+      // `hasRule` 由目前存著的規則算出來(有規則文件且 rules 非空才算),
       // 不是夾具寫死的 —— 儲存後重查才會亮,與 api 同一條判準(TEST-08 的有狀態假伺服器)
       HttpResponse.json({
         data: {

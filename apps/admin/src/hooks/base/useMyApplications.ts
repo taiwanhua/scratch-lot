@@ -18,7 +18,7 @@ export interface MyApplicationsFilters {
 }
 
 /**
- * 申請中心「我的申請」(Spec 6b §4「申請中心的資料來源」):我送的、走過流程(或該表單目前綁了流程)的提交,
+ * 申請中心「我的申請」(`docs/concepts/workflow-engine.md`「申請中心與誰看得到什麼」):我送的、走過流程(或該表單目前綁了流程)的提交,
  * 跨模組、以租戶為邊界;`activeSteps` 是目前實例進行中的關卡(平行時多個)。
  */
 export const useMyApplications = (filters: MyApplicationsFilters) => {

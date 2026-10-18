@@ -41,7 +41,7 @@ export interface UseRoleMatrixOptions {
 }
 
 /**
- * 權限矩陣的狀態(#208;規則正本 ADR-0004 + `docs/modules/role-manager.md`「權限矩陣規則」)。
+ * 權限矩陣的狀態(規則正本 ADR-0004 + `docs/modules/role-manager.md`「權限矩陣規則」)。
  *
  * **連動一律呼叫 `@repo/domain/permission`**:本 hook 只保管「使用者改過的那份授予」,
  * 勾選換算、`*` 收斂 / 展開、整組切換全部交給純函式(`lib/base/role-matrix-208.ts` 是它的薄殼)。
@@ -88,7 +88,7 @@ export const useRoleMatrix = (
   /**
    * 不給勾的列(都是防呆,判準仍在 api):
    * - 沒有 `edit-matrix` 權限 → 整份鎖住
-   * - 預設角色的**天花板外**(`ceiling`,#283)→ root 與租戶都鎖
+   * - 預設角色的**天花板外**(`ceiling`)→ root 與租戶都鎖
    * - `shrinkOnly`(非 root 的預設角色)→ 目前沒勾的列再多鎖一層
    */
   const lockedIds = useMemo(() => {
@@ -124,7 +124,7 @@ export const useRoleMatrix = (
       onSuccess: (result) => {
         /**
          * 先把回傳的矩陣寫進 `roleMatrix` 的快取,再丟掉草稿(DATA-04 的 (a) 步)。
-         * 順序反過來就是驗收看到的「閃一下」(#372):草稿一沒了,`grant` 立刻退回
+         * 順序反過來就是驗收看到的「閃一下」:草稿一沒了,`grant` 立刻退回
          * `saved` —— 那還是**儲存前**的快取,畫面會先跳回舊勾選,等 `onSaved` 失效
          * 後重取回來才變新的。payload 與 `roleMatrix` 查詢同形,所以整份覆寫即可。
          */
@@ -145,7 +145,7 @@ export const useRoleMatrix = (
     isLoading: roleId !== null && query.isLoading,
     tree,
     shrinkOnly: payload?.shrinkOnly ?? false,
-    /** 預設角色才有天花板(#283):頁面據此多顯示一句「模板沒有的項目勾不動」 */
+    /** 預設角色才有天花板:頁面據此多顯示一句「模板沒有的項目勾不動」 */
     hasCeiling: ceiling !== null,
     selection,
     isDirty,

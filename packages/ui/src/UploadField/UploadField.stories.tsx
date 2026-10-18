@@ -24,7 +24,7 @@ export const WithoutHint: Story = { args: { hint: undefined } };
 
 export const Disabled: Story = { args: { isDisabled: true } };
 
-/** 編輯情境:一開啟就顯示既有的圖片,選新檔會取代它、按移除回到空狀態(#186 ②) */
+/** 編輯情境:一開啟就顯示既有的圖片,選新檔會取代它、按移除回到空狀態 */
 export const WithInitialPreview: Story = {
   args: {
     initialPreviewUrl:

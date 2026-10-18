@@ -9,7 +9,7 @@ import {
   worldOf,
 } from "./workflow-test-support";
 
-describe("B15 代理人:派任計畫記原審核者與代理人", () => {
+describe("代理人:派任計畫記原審核者與代理人", () => {
   it("buildPlan:delegatorOf 有記的那一項帶 delegatorIds,其他項沒有", () => {
     expect(
       buildPlan("boss", ["delegate", "u2"], APPLICANT, {

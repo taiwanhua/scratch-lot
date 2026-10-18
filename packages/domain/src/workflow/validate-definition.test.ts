@@ -320,7 +320,7 @@ const withOrgs = (skipOrgs: unknown): WorkflowDefinition => ({
   steps: [review("hr", { skipOrgs: skipOrgs as never })],
 });
 
-describe("validateWorkflowDefinition:指定組織跳過與自動通過(B4 / B5)", () => {
+describe("validateWorkflowDefinition:指定組織跳過與自動通過", () => {
   it("共用流程指定特定組織 → SKIP_ORGS_IN_SHARED;只選租戶可以", () => {
     expect(
       codesOf(withOrgs({ orgIds: [ORG_ID], includeDescendants: true }), SHARED),
@@ -419,7 +419,7 @@ describe("validateWorkflowDefinition:指定組織跳過與自動通過(B4 / B5)"
   });
 });
 
-describe("validateWorkflowDefinition:逾時提醒與知會(B16 / B17)", () => {
+describe("validateWorkflowDefinition:逾時提醒與知會", () => {
   const permissionAudience = DEFAULT_OVERDUE_AUDIENCE;
   const roleAudience: Audience = {
     mode: "match",

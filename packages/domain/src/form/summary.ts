@@ -3,7 +3,7 @@ import { temporalIsoOf } from "./temporal";
 import type { FieldDef, FormDefinition, StoredValues } from "./types";
 
 /**
- * 摘要槽快照(`form_submissions.summary`,Spec §4):送出時依該版 `summaryMap` 算,列表只讀它。
+ * 摘要槽快照(`form_submissions.summary`):送出時依該版 `summaryMap` 算,列表只讀它。
  */
 export interface SubmissionSummary {
   title: string | null;

@@ -30,7 +30,7 @@ import {
 } from "./test-support/fixtures";
 
 /**
- * 示範模組1 的 CRUD、分類驗證與稽核(#318)。
+ * 示範模組1 的 CRUD、分類驗證與稽核。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);夾具沿用 auth / permission / fields 的 test-support。
  *
  * 欄位級與頁面自有權限見 `demo-items-one-permissions.test.ts`;
@@ -39,7 +39,7 @@ import {
  * 組織樹(root 為 seed 建的根組織):root ─┬─ 租戶甲  └─ 租戶乙(互為兄弟,看不到對方的自訂選項)
  * 欄位管理種子:「示範分類」有 staple / side-dish / drink 三個全域選項。
  */
-describe("示範模組1 CRUD(#318,GraphQL 端點 + 真 MongoDB)", () => {
+describe("示範模組1 CRUD(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
 
@@ -153,7 +153,7 @@ describe("示範模組1 CRUD(#318,GraphQL 端點 + 真 MongoDB)", () => {
       });
     });
 
-    it("封面回公開穩定 URL(不帶簽名參數)、附件回路徑與原始檔名 / 大小 / 檔型(#427)", async () => {
+    it("封面回公開穩定 URL(不帶簽名參數)、附件回路徑與原始檔名 / 大小 / 檔型", async () => {
       const item = await createItem(api, operator.token, {
         name: "雙路檔案",
         coverPath: COVER_PATH,
@@ -180,7 +180,7 @@ describe("示範模組1 CRUD(#318,GraphQL 端點 + 真 MongoDB)", () => {
       );
     });
 
-    it("#427 以前的舊資料(只有 attachmentPath)→ 檔名 / 大小 / 檔型回 null,路徑照回", async () => {
+    it("早期的舊資料(只有 attachmentPath)→ 檔名 / 大小 / 檔型回 null,路徑照回", async () => {
       const item = await createItem(api, operator.token, {
         name: "舊附件",
         attachment: ATTACHMENT_INPUT,
@@ -268,7 +268,7 @@ describe("示範模組1 CRUD(#318,GraphQL 端點 + 真 MongoDB)", () => {
       expect(audit?.after).toEqual({ name: "改過的名稱", note: null });
     });
 
-    it("附件:換檔 = 四欄一起換、null = 四欄一起清;稽核只記路徑(#427)", async () => {
+    it("附件:換檔 = 四欄一起換、null = 四欄一起清;稽核只記路徑", async () => {
       const item = await createItem(api, operator.token, {
         name: "換附件",
         attachment: ATTACHMENT_INPUT,
@@ -479,7 +479,7 @@ describe("示範模組1 CRUD(#318,GraphQL 端點 + 真 MongoDB)", () => {
       ).resolves.toEqual(["停售品"]);
     });
 
-    it("建立者查不到那位使用者時回 null,不拋錯(seed 示範資料的假 ObjectId,#319)", async () => {
+    it("建立者查不到那位使用者時回 null,不拋錯(seed 示範資料的假 ObjectId)", async () => {
       const ghostOrg = await createOrg(connection, { name: "幽靈建立者組織" });
       const now = new Date();
       await connection.collection("demo_items_one").insertOne({

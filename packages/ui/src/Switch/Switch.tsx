@@ -38,7 +38,7 @@ export const Switch = ({ sx, ...rest }: SwitchProps) => (
             },
           },
           /*
-           * 停用態(#260):上面把軌道顏色與 `opacity: 1` 寫死是為了對 Figma 的幾何,
+           * 停用態:上面把軌道顏色與 `opacity: 1` 寫死是為了對 Figma 的幾何,
            * 但那也蓋掉了 MUI 自己的 `.Mui-disabled` 灰化 —— 開關按不動卻還是彩色的,
            * 使用者看不出「不是壞了,是不准改」。這裡把灰化補回來,而且要排在
            * `.Mui-checked` 之後,checked + disabled 才不會又被上面那條吃回去。

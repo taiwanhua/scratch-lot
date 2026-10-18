@@ -19,7 +19,7 @@ export interface NewApplicationDialogProps {
 }
 
 /**
- * 「新申請」(Spec 6b §8 畫面 8):選模組 → 選表單 → 進該模組的新增頁
+ * 「新申請」:選模組 → 選表單 → 進該模組的新增頁
  * (`/<模組>/create-page/<表單 key>`,表單都留在各自的業務模組)。只列我能新增且綁了流程的表單。
  */
 export const NewApplicationDialog = ({

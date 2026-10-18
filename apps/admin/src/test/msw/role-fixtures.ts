@@ -3,12 +3,12 @@ import { ModuleSidebarType, RoleKind } from "@repo/graphql";
 import type { TestOrgNode } from "./org-manager-handlers";
 
 /**
- * 角色管理頁的夾具(#208)。形狀對齊 api 的 payload(`docs/modules/role-manager.md`
+ * 角色管理頁的夾具。形狀對齊 api 的 payload(`docs/modules/role-manager.md`
  * 「api 介面」的 GQL-07 欄位語意):`RoleMatrixPayload.granted` 已是展開後的授予,
  * 可以直接餵 `@repo/domain/permission` 的連動純函式。
  */
 
-/** 角色種類規則算出來的四個動作(#261;api 依操作者算好,前端只讀)。 */
+/** 角色種類規則算出來的四個動作(api 依操作者算好,前端只讀)。 */
 export interface TestRoleAbilities {
   canEdit: boolean;
   canEditMatrix: boolean;
@@ -65,9 +65,9 @@ export interface TestRoleUser {
 }
 
 /**
- * `roleUserCandidates` 的一筆(加入使用者彈窗的候選;#246 的 4)。
+ * `roleUserCandidates` 的一筆(加入使用者彈窗的候選)。
  * `eligible` 由 api 算好 —— 所屬組織落在角色擁有組織子樹內才是 true;
- * false 的人**照樣回**,由前端 disabled 並說明原因(#261 的 7)。
+ * false 的人**照樣回**,由前端 disabled 並說明原因。
  */
 export interface TestCandidate {
   id: string;
@@ -280,7 +280,7 @@ export const candidates: TestCandidate[] = [
     eligible: true,
   },
   /**
-   * 所屬組織不在角色擁有組織的子樹內 —— #261 的 7:這種人**照樣列出來、但勾不動**,
+   * 所屬組織不在角色擁有組織的子樹內 —— 這種人**照樣列出來、但勾不動**,
    * 並就地說明原因(在此之前直接不列,找不到人的人只會覺得「這個人不見了」)。
    */
   {

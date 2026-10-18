@@ -6,7 +6,7 @@ import type { ExpressionContext, FieldDef, StoredValues } from "./types";
 import { isEmptyValue, normalizeFieldValue } from "./values";
 
 /**
- * 欄位預設值(Spec 6a §5「預設值」)的計算,前後端共用:
+ * 欄位預設值的計算,前後端共用:
  *
  * - api 建草稿(`createFormDraft` / `copySubmissionToDraft`)時算一次,只填**使用者沒碰過且還空著**的欄位
  *   (不覆蓋送來的值與複製來源的值)

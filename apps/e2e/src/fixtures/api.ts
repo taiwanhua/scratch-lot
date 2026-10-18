@@ -535,7 +535,7 @@ export function flattenMatrix(
   ]);
 }
 
-/* ---- 劇本 10 / 13(#397):防越權、總覽也是模組 ---- */
+/* ---- 劇本 10 / 13:防越權、總覽也是模組 ---- */
 
 const ME_MODULE_KEYS = `
 query Me { me { modules { key } } }`;
@@ -561,7 +561,7 @@ export function saveRoleMatrixRaw(
   return graphql(SAVE_ROLE_MATRIX, { input }, accessToken);
 }
 
-/* ---- 劇本 8 / 9(#398):多所屬組織、組織外、移除所屬組織三檔 ---- */
+/* ---- 劇本 8 / 9:多所屬組織、組織外、移除所屬組織三檔 ---- */
 
 const ADD_ORG_MEMBERS = `
 mutation AddOrgMembers($input: AddOrgMembersInput!) {
@@ -589,7 +589,7 @@ mutation SetUserOrgs($input: SetUserOrgsInput!) {
 }`;
 
 /**
- * 組織管理「成員」分頁的「加入成員」(#377):對每個人的所屬組織**加**一筆
+ * 組織管理「成員」分頁的「加入成員」:對每個人的所屬組織**加**一筆
  * (只加不減,所以沒有 dry-run;移除只有 `setUserOrgs` 一個入口)。
  */
 export async function addOrgMembers(
@@ -669,7 +669,7 @@ export async function setUserOrgsWithPolicy(
   return data.setUserOrgs;
 }
 
-/* ---- 劇本 12(#399):可見性開關 ---- */
+/* ---- 劇本 12:可見性開關 ---- */
 
 const DATA_SCOPE_RULE = `
 query DataScopeRule($targetId: ID!) {
@@ -721,7 +721,7 @@ export async function setOrgVisibility(
   );
 }
 
-/* ---- 劇本 14(#400):管理範圍 vs 可見範圍 ---- */
+/* ---- 劇本 14:管理範圍 vs 可見範圍 ---- */
 
 const ORG_TREE = `
 query OrgTree {
@@ -824,7 +824,7 @@ export async function setRoleEnabled(
   );
 }
 
-/* ---- 劇本 16 / 17(#401):租戶視角、擁有者保護、撤銷開通 ---- */
+/* ---- 劇本 16 / 17:租戶視角、擁有者保護、撤銷開通 ---- */
 
 const REVOKE_TENANT_PROVISION = `
 mutation RevokeTenantProvision($input: RevokeTenantProvisionInput!) {
@@ -866,7 +866,7 @@ export interface RevokeTenantProvisionResult {
 }
 
 /**
- * 原樣回傳的 `revokeTenantProvision`(根組織專屬,#374;要驗 `PROVISION_NOT_REVOKABLE`
+ * 原樣回傳的 `revokeTenantProvision`(根組織專屬;要驗 `PROVISION_NOT_REVOKABLE`
  * 與它的 `extensions.reasons`,所以不用 `graphqlOk`)。
  */
 export function revokeTenantProvisionRaw(
@@ -984,7 +984,7 @@ export function loginRaw(
   });
 }
 
-/* ---- 劇本 11 / 15(#402):上傳票、附件下載網址 ---- */
+/* ---- 劇本 11 / 15:上傳票、附件下載網址 ---- */
 
 const CREATE_UPLOAD_URL = `
 mutation CreateUploadUrl($input: CreateUploadUrlInput!) {
@@ -1031,7 +1031,7 @@ export function demoItemOneAttachmentUrlRaw(
 
 /* ---- 劇本 18 / 19:表單引擎 ---- */
 /**
- * 表單引擎的前置操作(劇本 18 / 19;正本 `packages/graphql/src/documents/forms.graphql`、
+ * 表單引擎的前置操作(劇本 18 / 19;正本 `packages/graphql/src/documents/base/forms.graphql`、
  * `form-submissions.graphql`,這裡只抄 e2e 用到的欄位)。前置一律走 api(TEST-11):
  * 劇本 19 的共用表單由 root 以 api 建好、發布、分派,畫面只跑客製與退役那一段。
  */

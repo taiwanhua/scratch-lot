@@ -21,7 +21,7 @@ export interface DerivedFieldCellProps {
 }
 
 /**
- * 計算 / 固定值欄位在設計畫布、填寫、預覽的樣子(Spec 6a §5 表 A 下方):**有框的唯讀輸入框**,
+ * 計算 / 固定值欄位在設計畫布、填寫、預覽的樣子:**有框的唯讀輸入框**,
  * 外觀與其他停用的欄位一致;內容是顯示值(數字帶單位、選項顯示名;計算欄位缺依賴時是「—」)。
  */
 export const DerivedFieldCell = ({

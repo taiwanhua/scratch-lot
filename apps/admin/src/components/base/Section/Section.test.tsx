@@ -40,13 +40,13 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
   it("第一次進頁:依 defaultCollapsed", async () => {
     await renderPage(
       <>
-        <Section pageId="dealers.detail" sectionKey="contact" title="聯絡方式">
+        <Section pageId="vendors.detail" sectionKey="contact" title="聯絡方式">
           內容一
         </Section>
         <Section
-          pageId="dealers.detail"
-          sectionKey="license"
-          title="證照"
+          pageId="vendors.detail"
+          sectionKey="attachments"
+          title="附件"
           defaultCollapsed
         >
           內容二
@@ -55,13 +55,13 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     );
 
     expect(header("聯絡方式")).toHaveAttribute("aria-expanded", "true");
-    expect(header("證照")).toHaveAttribute("aria-expanded", "false");
+    expect(header("附件")).toHaveAttribute("aria-expanded", "false");
     expect(stored()).toBeNull();
   });
 
   it("手動改成和預設不同:寫入 `<頁面 id>.<區塊 key>`", async () => {
     const { user } = await renderPage(
-      <Section pageId="dealers.detail" sectionKey="contact" title="聯絡方式">
+      <Section pageId="vendors.detail" sectionKey="contact" title="聯絡方式">
         內容
       </Section>,
     );
@@ -69,16 +69,16 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     await user.click(header("聯絡方式"));
 
     expect(header("聯絡方式")).toHaveAttribute("aria-expanded", "false");
-    expect(stored()).toEqual({ "dealers.detail": { contact: true } });
+    expect(stored()).toEqual({ "vendors.detail": { contact: true } });
   });
 
   it("手動改回預設:刪除那一筆;頁面底下沒資料就刪掉頁面", async () => {
     seed({
-      "dealers.detail": { contact: true },
-      "dealers.create": { contact: true },
+      "vendors.detail": { contact: true },
+      "vendors.create": { contact: true },
     });
     const { user } = await renderPage(
-      <Section pageId="dealers.detail" sectionKey="contact" title="聯絡方式">
+      <Section pageId="vendors.detail" sectionKey="contact" title="聯絡方式">
         內容
       </Section>,
     );
@@ -89,17 +89,17 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     await user.click(header("聯絡方式"));
 
     expect(header("聯絡方式")).toHaveAttribute("aria-expanded", "true");
-    expect(stored()).toEqual({ "dealers.create": { contact: true } });
+    expect(stored()).toEqual({ "vendors.create": { contact: true } });
   });
 
   it("同一模組的新增頁 / 詳情頁:各記各的,互不影響", async () => {
-    seed({ "dealers.create": { contact: true } });
+    seed({ "vendors.create": { contact: true } });
     await renderPage(
       <>
-        <Section pageId="dealers.create" sectionKey="contact" title="聯絡方式">
+        <Section pageId="vendors.create" sectionKey="contact" title="聯絡方式">
           新增頁
         </Section>
-        <Section pageId="dealers.detail" sectionKey="license" title="證照">
+        <Section pageId="vendors.detail" sectionKey="attachments" title="附件">
           詳情頁
         </Section>
       </>,
@@ -108,18 +108,18 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     await waitFor(() => {
       expect(header("聯絡方式")).toHaveAttribute("aria-expanded", "false");
     });
-    expect(header("證照")).toHaveAttribute("aria-expanded", "true");
+    expect(header("附件")).toHaveAttribute("aria-expanded", "true");
   });
 
   it("換使用者登入:讀另一個使用者的 key", async () => {
-    seed({ "dealers.detail": { contact: true } }, "user-1");
-    seed({ "dealers.detail": { license: true } }, "user-2");
+    seed({ "vendors.detail": { contact: true } }, "user-1");
+    seed({ "vendors.detail": { attachments: true } }, "user-2");
     await renderPage(
       <>
-        <Section pageId="dealers.detail" sectionKey="contact" title="聯絡方式">
+        <Section pageId="vendors.detail" sectionKey="contact" title="聯絡方式">
           一
         </Section>
-        <Section pageId="dealers.detail" sectionKey="license" title="證照">
+        <Section pageId="vendors.detail" sectionKey="attachments" title="附件">
           二
         </Section>
       </>,
@@ -127,7 +127,7 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     );
 
     await waitFor(() => {
-      expect(header("證照")).toHaveAttribute("aria-expanded", "false");
+      expect(header("附件")).toHaveAttribute("aria-expanded", "false");
     });
     expect(header("聯絡方式")).toHaveAttribute("aria-expanded", "true");
   });
@@ -141,7 +141,7 @@ describe("Section(一般頁面):收合狀態依頁面 id + 區塊 key 記在 loc
     });
     const { user } = await renderPage(
       <Section
-        pageId="dealers.detail"
+        pageId="vendors.detail"
         sectionKey="contact"
         title="聯絡方式"
         defaultCollapsed

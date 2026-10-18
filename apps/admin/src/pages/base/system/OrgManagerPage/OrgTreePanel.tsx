@@ -16,7 +16,7 @@ export interface OrgTreePanelProps {
   isLoading: boolean;
   /**
    * 樹根是**平台根組織**(`org(id).isSystem`)。租戶視角的樹根是租戶頂層,
-   * api 也把它的 `parentId` 回成 null,所以這個旗標不能從樹的資料推(#186 ④)。
+   * api 也把它的 `parentId` 回成 null,所以這個旗標不能從樹的資料推。
    */
   isRootPerspective: boolean;
   selectedOrgId: string | null;
@@ -50,7 +50,7 @@ export const OrgTreePanel = ({
   const t = useTranslations("admin.orgManager.tree");
 
   /**
-   * 「租戶」= **父節點是平台根組織**的節點,不是「父節點是樹根」(#186 ④)。
+   * 「租戶」= **父節點是平台根組織**的節點,不是「父節點是樹根」。
    * 租戶視角的樹根是租戶頂層,它的子組織只是部門 / 分店,不掛這個標籤。
    */
   const tenantTopIds = useMemo(
@@ -107,7 +107,7 @@ export const OrgTreePanel = ({
             </Button>
           )}
         </Stack>
-        {/* 樹佔滿標題列以外的高度,超出時自己捲(#183) */}
+        {/* 樹佔滿標題列以外的高度,超出時自己捲 */}
         <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
           <OrgTreePicker
             nodes={nodes}

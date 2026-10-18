@@ -8,7 +8,7 @@ import {
 } from "../database/base.repository";
 
 /**
- * 專案登記 lookup 來源的契約(Spec B2a;`docs/modules/forms.md`「lookup 登錄表」)。
+ * 專案登記 lookup 來源的契約(`docs/modules/forms.md`「lookup 登錄表」)。
  *
  * 專案在固定入口 `src/project/lookup-providers.ts` 列 `{ declaration, repositoryToken }`(同
  * `project/database/registrations.ts` 的靜態清單)。清單由 `database/database.module.ts` 組裝:

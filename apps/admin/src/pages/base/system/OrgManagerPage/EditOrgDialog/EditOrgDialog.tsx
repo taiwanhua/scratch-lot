@@ -84,7 +84,7 @@ export const EditOrgDialog = ({
 
   /**
    * 一次「儲存」會打好幾支 mutation,但對操作者而言只是一次操作 —— 所以回饋由整段
-   * try / catch 自己報一次,而不是掛在每一支 mutation 的 options 上(#376,
+   * try / catch 自己報一次,而不是掛在每一支 mutation 的 options 上(
    * 掛上去會一次跳四則)。
    */
   const feedback = useMutationFeedback({
@@ -135,7 +135,7 @@ export const EditOrgDialog = ({
       const { changes } = form;
       if (changes.hasProfileChange) {
         // 沒碰過商標欄就不送 `logoPath`:api 把 `null` 當成「清空商標」,
-        // 欄位缺席才是「不動它」(#186 ②)
+        // 欄位缺席才是「不動它」
         const logoPath = form.isLogoTouched
           ? await uploadLogo(form.logoFile)
           : undefined;
@@ -152,7 +152,7 @@ export const EditOrgDialog = ({
         /**
          * DATA-04 的 (a) 步:把回傳的欄位併進 `org(id)` 的快取,再由 `onSaved` 失效
          * 樹 / 單筆 / `me`。不寫的話,右邊的詳情面板與「再開一次編輯」在重取回來之前
-         * 都還是舊名稱(#372)。payload 只有 `name` / `description` / `logoUrl`,
+         * 都還是舊名稱。payload 只有 `name` / `description` / `logoUrl`,
          * 所以是**併進**既有那一筆;快取裡沒有那一筆就什麼都不做。
          */
         queryClient.setQueryData<OrgQuery>(

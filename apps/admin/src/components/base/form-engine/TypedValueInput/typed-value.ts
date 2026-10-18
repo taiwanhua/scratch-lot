@@ -8,7 +8,7 @@ export type TypedValueField = Pick<
 
 /**
  * 值的形狀:
- * - `stored`:存值(Spec §5「值的存法」)—— 固定值、預設值、日期上下限;數字存十進位字串、
+ * - `stored`:存值—— 固定值、預設值、日期上下限;數字存十進位字串、
  *   類別 / lookup 選項存 `{ value, label }`
  * - `expression`:表達式常數(語意值)—— 數字存 number、選項存 value 字串(多選 = value 陣列)
  */

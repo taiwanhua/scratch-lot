@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
 
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Connection, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import {
   type AuthTestApp,
   REFRESH_COOKIE_NAME,
@@ -288,7 +289,7 @@ function expectSameMembers(actual: string[], expected: string[]): void {
 }
 
 /**
- * 使用者管理(#136:清單 / 單筆投影 / 新增 / 編輯 / 停用 / 所屬組織三檔 / 指派角色 / 擁有者保護)。
+ * 使用者管理(清單 / 單筆投影 / 新增 / 編輯 / 停用 / 所屬組織三檔 / 指派角色 / 擁有者保護)。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);夾具沿用 auth / permission 的 test-support。
  *
  * 組織樹(root 為 seed 建的根組織):
@@ -296,7 +297,7 @@ function expectSameMembers(actual: string[], expected: string[]): void {
  *         │                                          └─ 部門二
  *         └─ 租戶乙(未設 visibility ⇒ "own")────────── 部門A
  */
-describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
+describe("使用者管理(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let mail: RecordingMailService;
@@ -374,7 +375,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
       );
   }
 
-  /** 直接讀 `users` 的那一筆(要看欄位是寫成 `null` 還是根本不存在,#372)。 */
+  /** 直接讀 `users` 的那一筆(要看欄位是寫成 `null` 還是根本不存在)。 */
   function rawUser(
     userId: Types.ObjectId,
   ): Promise<Record<string, unknown> | null> {
@@ -528,7 +529,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
       ownerOrgId: tenantId,
       assignTo: [ownerId],
     });
-    // 開通租戶複製模板時要寫的標記(#134 的 provisionTenant 照此),擁有者保護才認得出這筆授予
+    // 開通租戶複製模板時要寫的標記(provisionTenant 照此),擁有者保護才認得出這筆授予
     await connection
       .collection("roles")
       .updateOne(
@@ -631,7 +632,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
     });
     ownScopeManagerToken = ownScopeManager.token;
 
-    // 擁有組織在操作者**管理範圍外**的角色(防越權用;#211 起判準是擁有組織,不是「操作者持不持有」)
+    // 擁有組織在操作者**管理範圍外**的角色(防越權用;判準是擁有組織,不是「操作者持不持有」)
     outOfReachRoleId = await createRole(api.app, connection, {
       name: "管理範圍外的角色",
       ownerOrgId: tenantB,
@@ -702,7 +703,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
       expect(ids).not.toContain(String(inDeptTwo));
     });
 
-    it("可見性開關為 own 也列得出下層組織的成員:清單吃管理範圍,不吃可見範圍(#187 / ADR-0005)", async () => {
+    it("可見性開關為 own 也列得出下層組織的成員:清單吃管理範圍,不吃可見範圍(ADR-0005)", async () => {
       // 這位管理員的角色擁有組織 = 租戶乙頂層 → 管理範圍 = 整個租戶乙,與開關無關
       const page = await listAs(ownScopeManagerToken, {
         orgId: String(tenantB),
@@ -921,6 +922,48 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
       expect(sent[0]?.link).toContain("/set-password?token=");
     });
 
+    it("寫稽核那一步拋錯 → 整個回復:使用者、所屬組織與角色關聯都不留,也不寄啟用信(ADR-0013)", async () => {
+      const account = nextAccount("create-rollback");
+      const email = `${account}@example.com`;
+      const before = mail.sent.length;
+      const relationCounts = async () => ({
+        orgUser: await connection
+          .collection("core_relationships")
+          .countDocuments({ type: "org_user", firstId: deptOne }),
+        userRole: await connection
+          .collection("core_relationships")
+          .countDocuments({ type: "user_role", secondId: managerRoleId }),
+      });
+      const relationsBefore = await relationCounts();
+      const auditBefore = await countAudit("user.create");
+      // 使用者與關聯都已在交易內寫入,第三步稽核才拋錯(GraphQL 端點上做不到,經 app.get 接縫)
+      const spy = jest
+        .spyOn(api.app.get(AuditService), "record")
+        .mockRejectedValueOnce(new Error("模擬寫入失敗"));
+      const result = await api.graphql<CreateUserData>(
+        CREATE_USER,
+        {
+          input: {
+            name: "回復的使用者",
+            account,
+            email,
+            orgIds: [String(deptOne)],
+            roleIds: [String(managerRoleId)],
+            activation: { mode: "EMAIL" },
+          },
+        },
+        { accessToken: managerToken },
+      );
+      spy.mockRestore();
+      expect(result.data).toBeNull();
+      expect(
+        await connection.collection("users").countDocuments({ account }),
+      ).toBe(0);
+      expect(await relationCounts()).toEqual(relationsBefore);
+      expect(await countAudit("user.create")).toBe(auditBefore);
+      expect(mail.sent.slice(before)).toEqual([]);
+    });
+
     it("直接設定初始密碼:mustChangePassword 為 true,且該密碼可以登入", async () => {
       const account = nextAccount("activation-password");
       const result = await api.graphql<CreateUserData>(
@@ -1119,7 +1162,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
       expect(JSON.stringify(record)).not.toContain("C123456789");
     });
 
-    // #372:前端「沒填」送的是 null,原本的 `given.trim()` 直接炸
+    // 前端「沒填」送的是 null,原本的 `given.trim()` 直接炸
     // `Cannot read properties of null (reading 'trim')`。
     // 語意照 GQL-06:缺席 = 不動、null = 清空;落庫寫 null 而不是 $unset(ADR-0002)。
     describe("選填欄位的 null(GQL-06:缺席 = 不動、null = 清空)", () => {
@@ -1466,7 +1509,7 @@ describe("使用者管理(#136,GraphQL 端點 + 真 MongoDB)", () => {
         name: "小組一專屬角色",
         ownerOrgId: teamOne,
       });
-      // #261:與角色頁的 grantRoleUsers 同一個 helper、同一個碼(不再是 VALIDATION_FAILED);
+      // 與角色頁的 grantRoleUsers 同一個 helper、同一個碼(不再是 VALIDATION_FAILED);
       // extensions 帶著角色與擁有組織名稱,前端才講得出「只能授予 <擁有組織> 及其下層的使用者」
       const result = await api.graphql(
         ASSIGN_USER_ROLES,

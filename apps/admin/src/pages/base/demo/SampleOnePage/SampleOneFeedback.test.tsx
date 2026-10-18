@@ -6,7 +6,7 @@ import { findSnackbarAlert, querySnackbar } from "@/test/snackbar";
 import { findRowOf, renderSampleOne } from "../demo-sample-one-test-support";
 
 /**
- * 操作結果提示(#376):示範模組共版型的成功與失敗各一案(對照組 `demoSampleTwo`
+ * 操作結果提示:示範模組共版型的成功與失敗各一案(對照組 `demoSampleTwo`
  * 走同一份共版型與同一支 hook,文案各自一份)。
  * 「一律跳一則」的規則在 `docs/standards/react/data-fetching.md` DATA-06。
  */

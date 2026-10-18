@@ -15,7 +15,7 @@ import type { FieldCategoryLike, FieldOptionLike } from "./field-manager-types";
  * 兩個查詢串起來(類別 → 該類別的選項),所以選中的類別 id 在還沒點過任何一列時
  * 取第一個類別(在 render 期間推導,不在 effect 內 setState,REACT-06)。
  *
- * 來源組織名稱與「這一列能不能按」由 api 逐列帶回來(#264),所以這裡不再讀 `me` ——
+ * 來源組織名稱與「這一列能不能按」由 api 逐列帶回來,所以這裡不再讀 `me` ——
  * 合併清單含上層 / 下層組織加的選項,拿 session 的當前組織名去組字串會標錯來源。
  */
 export const useFieldManagerData = () => {

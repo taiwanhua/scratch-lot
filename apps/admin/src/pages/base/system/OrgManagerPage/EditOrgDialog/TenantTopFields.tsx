@@ -20,7 +20,7 @@ export interface TenantTopFieldsProps {
   form: EditOrgFormState;
   /** 持 `tenant-ops.transfer-owner` 才給「擁有者」欄 */
   canTransferOwner: boolean;
-  /** 持 `system.org-manager.set-visibility` 才給可見範圍開關(#187:不再是根組織專屬) */
+  /** 持 `system.org-manager.set-visibility` 才給可見範圍開關(不再是根組織專屬) */
   canSetVisibility: boolean;
   candidates: readonly OwnerCandidate[];
   isDisabled: boolean;
@@ -34,7 +34,7 @@ export interface TenantTopFieldsProps {
  * **且操作者持對應的權限**:
  * - 擁有者轉移是根組織專屬(`tenant-ops.transfer-owner`),租戶管理員拿不到;
  *   租戶短碼同樣只有根組織改得動(api 以「站在根組織」守門),跟著同一把權限出現
- * - 可見範圍開關 2026-09-19 搬到組織管理層(`system.org-manager.set-visibility`,#187):
+ * - 可見範圍開關 2026-09-19 搬到組織管理層(`system.org-manager.set-visibility`):
  *   租戶管理員模板自動取得,設得了自己的租戶;能設哪些由 api 以管理範圍守門
  *
  * 時區不在這裡:根組織也有自己的時區,由 `TimezoneField` 另外掛在彈窗上。

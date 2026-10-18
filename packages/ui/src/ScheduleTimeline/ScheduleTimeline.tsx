@@ -50,7 +50,7 @@ export interface ScheduleTimelineProps {
   dates: readonly ScheduleTimelineDate[];
   /** 群組(容器),各帶裡面的長條與缺額空位;跨午夜的兩天各畫一段 */
   groups: readonly ScheduleTimelineGroup[];
-  /** 不能操作的時間範圍(灰色;例:店休、已排於其他分店) */
+  /** 不能操作的時間範圍(灰色;例:公休、已排於其他場地) */
   disabledRanges?: readonly ScheduleTimelineDisabledRange[];
   /** 今天(`YYYY-MM-DD`;預設依瀏覽器時鐘,測試可固定):表頭的日期畫成主色實心圓 */
   today?: string;
@@ -75,7 +75,7 @@ export interface ScheduleTimelineProps {
   ) => void;
   /** 點空白處(每小時一格;不能操作的時間不可點);沒給時空白處不可點 */
   onEmptyClick?: (point: ScheduleTimelinePoint) => void;
-  /** 空白格滑過時的淡色提示(例:「+ 人力需求」) */
+  /** 空白格滑過時的淡色提示(例:「+ 時段需求」) */
   emptyHint?: string;
   /** 點週模式的「+N」長條:帶日期與被收起的容器(依完整排序) */
   onMoreClick?: (
@@ -106,6 +106,7 @@ export interface ScheduleTimelineProps {
  * 日模式往下排、不收起。進入畫面(或切換日期 / 週)時自動捲到最早的長條或容器的前 1 小時
  * (沒有資料時 08:00)。點容器 / 長條 / 缺額 / 空白處都回呼(帶點到的日期與時間);
  * hover 提示由模組提供;不做拖拉。期間切換列(含 [今天])由使用的頁面提供,不在本元件內。
+ * 手機不用本元件(沒有窄螢幕版面;手機畫面由使用的頁面另做)。
  */
 export const ScheduleTimeline = ({
   mode,

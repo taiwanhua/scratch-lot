@@ -3,7 +3,7 @@ import type { Query, Types } from "mongoose";
 /**
  * 操作者上下文(詞彙見 CONTEXT.md:操作者 / 當前組織 / 可見範圍 / 管理範圍)。
  * 資料層只**消費**這份上下文;其計算(org_user 聯集、可見性開關、角色的擁有組織子樹)
- * 屬登入線(#23 第 2 段,`auth/operator-context.service.ts`)。
+ * 屬登入線(`auth/operator-context.service.ts`)。
  *
  * **兩個範圍各管各的**(ADR-0005「管理範圍與可見範圍的分工」):
  * 治理類 collection 吃 `managedOrgIds`、業務類吃 `visibleOrgIds`,由 schema 上的
@@ -38,7 +38,7 @@ export interface OperatorContext {
    * 那些流程只碰非租戶資料,永遠走不到資料範圍規則。空集合時規則算出的對象是空集合,
    * `$in: []` 命中不到任何資料(fail-closed,不會放寬)。
    *
-   * **必填**(#246 的 6):原本可選,漏填與「刻意給空」在型別上長得一模一樣,
+   * **必填**:原本可選,漏填與「刻意給空」在型別上長得一模一樣,
    * 新增一個上下文時少寫一欄會靜默變成「不屬於任何組織」而不是編譯錯誤。
    */
   memberOrgIds: Types.ObjectId[];

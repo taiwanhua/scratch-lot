@@ -28,7 +28,7 @@ import {
 } from "./expression-tree";
 
 /**
- * 表達式選擇器的**型別導向過濾**(Spec 6a §5「表達式選擇器:型別導向(表 B)」):每個位置帶「期望型別」,
+ * 表達式選擇器的**型別導向過濾**:每個位置帶「期望型別」,
  * 只列型別對得上的欄位 / 系統值 / 常數 / 運算。型別表的正本在 `@repo/domain/form` 的 `expression-types.ts`
  * (檢查器與這裡共用同一張)。
  *
@@ -61,7 +61,7 @@ export interface PositionOptions {
   operators: PickerOperator[];
 }
 
-/** 公式能用的系統值(Spec 表 B「系統值可選」:時區只在條件裡用)。 */
+/** 公式能用的系統值(時區只在條件裡用)。 */
 const FORMULA_CONTEXTS = new Set<ContextPath>([
   "ctx.now",
   "ctx.user.id",

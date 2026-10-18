@@ -5,7 +5,7 @@ import type { TreeNode } from "@repo/ui/tree";
 /**
  * `orgTree` 的節點形狀(codegen 把遞迴展開成五層具名型別,無法直接遞迴走訪,
  * 這裡給一個結構相容的型別當走訪介面;`children` 在最深一層不存在,故為選填)。
- * `outOfScope`:#187 起管理範圍外的組織根本不回傳,這個欄位因此恆為 false;
+ * `outOfScope`:管理範圍外的組織根本不回傳,這個欄位因此恆為 false;
  * 留著是為了與使用者列的 `roles[].outOfScope` 一致、也讓舊資料(快取)不會炸。
  */
 export interface OrgNodeLike {
@@ -33,7 +33,7 @@ export type OrgLabelSuffix = (node: OrgNodeLike) => ReactNode;
  *
  * **葉節點一律給 `undefined`**:api 對沒有子組織的節點回 `children: []`,
  * 而 `TreeNode.children` 的語意是「有沒有下一層」— 空陣列把「能不能展開」
- * 交給樹元件自己解讀(比如搬走唯一的子組織後父節點還有不該有的展開箭頭,#186 ③)。
+ * 交給樹元件自己解讀(比如搬走唯一的子組織後父節點還有不該有的展開箭頭)。
  * 在這一層歸一化,不依賴 MUI 目前的判斷方式。
  */
 export const toTreeNodes = (
@@ -113,8 +113,8 @@ export const orgTrail = (
 
 /**
  * 預設選中的節點 = **第一棵樹的根**;空樹回 null。
- * 管理範圍可能有多個頂點(#187:持兩個沒有共同上層的角色就有兩棵樹),
- * 所以這是「第一個根」而不是「唯一的根」;「樹根是不是平台根組織」看 `org(樹根).isSystem`(#186 ④)。
+ * 管理範圍可能有多個頂點(持兩個沒有共同上層的角色就有兩棵樹),
+ * 所以這是「第一個根」而不是「唯一的根」;「樹根是不是平台根組織」看 `org(樹根).isSystem`。
  */
 export const rootOrgId = (nodes: readonly OrgNodeLike[]): string | null =>
   nodes[0]?.id ?? null;

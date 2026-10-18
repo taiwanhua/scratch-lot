@@ -35,7 +35,7 @@ function asAccount(userId: Types.ObjectId): OperatorContext {
     currentOrgId: null,
     visibleOrgIds: "all",
     managedOrgIds: "all",
-    // 這條路徑只碰帳號表,走不到資料範圍規則(ADR-0008);明寫空集合而非省略(#246 的 6)
+    // 這條路徑只碰帳號表,走不到資料範圍規則(ADR-0008);明寫空集合而非省略
     memberOrgIds: [],
     roleIds: [],
   };
@@ -207,7 +207,7 @@ export class AuthService {
 
   /**
    * 發一組登入 token(access + refresh)。公開給密碼流程用:設定新密碼(啟用 / 重設)成功後
-   * 直接發登入 token,免再登入(#61)。呼叫端須已確認使用者存在且未停用。
+   * 直接發登入 token,免再登入。呼叫端須已確認使用者存在且未停用。
    */
   async issueTokens(
     userId: Types.ObjectId,

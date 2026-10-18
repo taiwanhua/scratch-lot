@@ -58,7 +58,7 @@ type Story = StoryObj<typeof meta>;
 
 /**
  * 選取模式(單選):組織管理頁的主樹。
- * 點文字只選取;**展開 / 收合只認名稱前面的箭頭**(`expansionTrigger="iconContainer"`,#373)。
+ * 點文字只選取;**展開 / 收合只認名稱前面的箭頭**(`expansionTrigger="iconContainer"`)。
  */
 export const SingleSelect: Story = {
   args: { defaultSelectedIds: ["org-1"] },
@@ -165,7 +165,7 @@ export const PermissionMatrix: Story = {
 };
 
 /**
- * 依深度縮排(#260):每一層的縮排 = `childrenIndentation` × 深度,做在內容列的
+ * 依深度縮排:每一層的縮排 = `childrenIndentation` × 深度,做在內容列的
  * `paddingLeft` 上。四層一起看最容易發現縮排又被蓋掉。
  */
 export const DeepIndentation: Story = {

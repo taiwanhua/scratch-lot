@@ -11,7 +11,7 @@ import type { OperatorContext } from "../operator-context";
  * 沒有註冊實作時(如 `base.repository.test.ts` 那種不起 Nest 的單元測試)規則不套 —
  * 租戶保底仍然在,但**規則設了卻沒人執行**,在跑起來的 app 裡等同靜默擴權。
  * 所以「有沒有註冊」不再只靠 `AppModule` 的匯入清單自律:`DatabaseModule` 在
- * `onApplicationBootstrap` 斷言它已註冊,缺了就讓 app 起不來(#246 的 6)。
+ * `onApplicationBootstrap` 斷言它已註冊,缺了就讓 app 起不來。
  * 中介層裡仍保留「沒有 provider 就不套」的分支 —— 那條路只剩不起 Nest 的單元測試會走到。
  */
 export interface DataScopeRuleProvider {

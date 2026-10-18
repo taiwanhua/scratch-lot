@@ -62,7 +62,7 @@ test("劇本 7:沒綁新增頁 → 手打網址被擋;綁了頁沒有 create →
   ).toBeVisible();
   await page.getByLabel("名稱").fill(`擋下來-${tenant.slug}`);
   await page.getByRole("button", { name: "儲存" }).click();
-  // 同一句話會同時出現在頁內橫幅與右下角 Snackbar(#376),所以只看 `<main>` 裡的那一則
+  // 同一句話會同時出現在頁內橫幅與右下角 Snackbar,所以只看 `<main>` 裡的那一則
   await expect(pageAlert(page)).toHaveText(NO_PERMISSION);
 
   // 步驟 3:綁了詳情頁模組 → 手打帶 id 的網址進得去,解出來的就是那一筆

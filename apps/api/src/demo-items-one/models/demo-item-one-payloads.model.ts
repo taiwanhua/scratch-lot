@@ -90,7 +90,7 @@ export class DemoItemOneHistoryPayload {
 /**
  * 私有檔案的下載網址(ADR-0010:短效簽名,TTL `GCS_SIGNED_URL_TTL`)。
  * 每次要下載就再要一次,前端不要把它存進快取當成穩定連結。
- * 型別名帶模組前綴(GQL-02,#427 由 `SignedUrlPayload` 改名)。
+ * 型別名帶模組前綴(GQL-02,由 `SignedUrlPayload` 改名)。
  */
 @ObjectType()
 export class DemoItemOneAttachmentUrlPayload {

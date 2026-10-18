@@ -14,8 +14,8 @@ import type {
 import { normalizeFieldValue } from "./values";
 
 /**
- * 計算欄位與固定值欄位的值(Spec §5:前端即時算供預覽,送出時後端重算並以後端為準)。
- * 本檔只管「算」;受保護守門等寫入規則由 api 依 Spec §5「不能填的四種原因」處理。
+ * 計算欄位與固定值欄位的值(前端即時算供預覽,送出時後端重算並以後端為準)。
+ * 本檔只管「算」;受保護守門等寫入規則由 api 依「不能填的四種原因」處理。
  * 被顯示條件隱藏的欄位在計算輸入裡一律是 null(`ComputeInput.hidden`;哪些欄位隱藏由 `settleHidden` 收斂)。
  */
 
@@ -94,7 +94,7 @@ export interface ComputeInput {
   ctx: ExpressionContext;
   /**
    * 被 `visibleWhen` 隱藏的欄位 key:計算輸入裡當 null(明細整欄 null,彙總視為空),
-   * 它們自己也不算、結果一律 null(Spec §5「不能填的四種原因」順序 1)。不給 = 都顯示。
+   * 它們自己也不算、結果一律 null(「不能填的四種原因」的第一項)。不給 = 都顯示。
    */
   hidden?: ReadonlySet<string>;
 }

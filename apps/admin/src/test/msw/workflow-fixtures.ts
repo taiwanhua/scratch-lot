@@ -21,7 +21,7 @@ import { HR_ROLE_ID, roleInSubmissionOrg } from "./workflow-audience-fixtures";
 
 /**
  * 審核流程的測試夾具(形狀以 api 的回傳為準:`apps/api/src/workflows/**\/*.test.ts` 的斷言、
- * `packages/graphql/src/documents/workflows.graphql` / `apply-center.graphql` 的 fragment;TEST-08 / TEST-12)。
+ * `packages/graphql/src/documents/base/workflows.graphql` / `apply-center.graphql` 的 fragment;TEST-08 / TEST-12)。
  *
  * 兩個範例流程:
  * - 「病假審核」(直線):直屬主管(主管第 1 層)→ 人資(角色,`any`,天數 ≤ 1 跳過)

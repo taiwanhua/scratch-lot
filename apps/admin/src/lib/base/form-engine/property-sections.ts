@@ -1,7 +1,7 @@
 import type { FieldDef } from "@repo/domain/form";
 
 /**
- * 屬性面板每種型別該出現哪些設定(Spec 6a §5「欄位屬性面板:每種型別的設定(表 A)」)。
+ * 屬性面板每種型別該出現哪些設定。
  * 純函式,面板照它開關各區塊;規則改了只改這一張。
  */
 export interface PropertySections {
@@ -44,7 +44,7 @@ export interface PropertySections {
 const FIXED_SOURCE_TYPES = new Set<FieldDef["type"]>(["upload", "reference"]);
 
 /**
- * 明細列(Spec 6a §5 表 A 後):key、標題、說明、子欄位、列數上下限、顯示條件、欄位權限;
+ * 明細列:key、標題、說明、子欄位、列數上下限、顯示條件、欄位權限;
  * 沒有值來源 / 預設值 / 鎖定條件 / 自訂驗證(第一版)。
  */
 const ARRAY_SECTIONS: PropertySections = {

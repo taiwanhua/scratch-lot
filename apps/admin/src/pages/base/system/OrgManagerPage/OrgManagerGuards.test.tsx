@@ -16,11 +16,11 @@ import {
 stubObjectUrl();
 
 /**
- * #140 驗收收到的三個問題(#186 ②④⑤):既有商標、「租戶」標籤的歸屬、
+ * 驗收收到的三個問題:既有商標、「租戶」標籤的歸屬、
  * 租戶頂層保護。跟 `OrgManagerPage.test.tsx` 同一頁、同一組夾具,分檔只是為了行數上限。
  */
 describe("組織管理頁:標籤與租戶頂層保護", () => {
-  it("租戶視角:子組織不會被誤標「租戶」(#186 ④)", async () => {
+  it("租戶視角:子組織不會被誤標「租戶」", async () => {
     renderPage({
       permissions: OWN_PERMISSIONS,
       world: { orgTree: tenantTree },
@@ -32,7 +32,7 @@ describe("組織管理頁:標籤與租戶頂層保護", () => {
     expect(treeLabel("A-2 台北分店")).toBe("A-2 台北分店停用");
   });
 
-  it("租戶頂層保護:租戶內的人停用 / 刪除都停用並提示(#186 ⑤)", async () => {
+  it("租戶頂層保護:租戶內的人停用 / 刪除都停用並提示", async () => {
     const { user: actor } = renderPage({
       permissions: OWN_PERMISSIONS,
       world: { orgTree: tenantTree },
@@ -43,7 +43,7 @@ describe("組織管理頁:標籤與租戶頂層保護", () => {
       name: "停用",
     });
     expect(disableButton).toBeDisabled();
-    // 提示改用 @repo/ui 的 Tooltip(#240):停用的按鈕收不到 hover,
+    // 提示改用 @repo/ui 的 Tooltip:停用的按鈕收不到 hover,
     // 事件載體是 Tooltip 自己包的外層 span
     const hintCarrier = disableButton.parentElement;
     if (hintCarrier === null) {
@@ -90,7 +90,7 @@ describe("組織管理頁:標籤與租戶頂層保護", () => {
     expect(outOfRange).toEqual([]);
   });
 
-  it("編輯彈窗:一開啟就看得到既有商標;只改名稱不會把它清掉(#186 ②)", async () => {
+  it("編輯彈窗:一開啟就看得到既有商標;只改名稱不會把它清掉", async () => {
     const { user: actor, fake } = renderPage();
 
     await waitForTree();

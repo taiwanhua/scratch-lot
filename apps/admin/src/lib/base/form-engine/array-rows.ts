@@ -8,7 +8,7 @@ import {
 import { storedFromLookup } from "./prefill";
 
 /**
- * 明細列(`array`)填寫時的列操作(純函式;`ArrayTableWidget` 與測試共用,Spec 6a §5「明細列」):
+ * 明細列(`array`)填寫時的列操作(純函式;`ArrayTableWidget` 與測試共用):
  * 每列 `{ rowId, <子欄 key>: 值 }`,`rowId` 在建列時以 `crypto.randomUUID()` 產生、之後不變;
  * 「複製列」「上方插入一列」產生新的 `rowId`;順序 = 陣列順序(上移 / 下移只換位置、`rowId` 不變,不做拖拉排序)。
  */

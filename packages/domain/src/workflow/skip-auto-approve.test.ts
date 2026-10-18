@@ -26,7 +26,7 @@ import {
 const KITCHEN = { id: "kitchen", ancestorIds: ["root", "tenant", "store"] };
 const OTHER = { id: "other", ancestorIds: ["root", "tenant"] };
 
-describe("B4 申請人屬於這些組織(isApplicantInSkipOrgs)", () => {
+describe("申請人屬於這些組織(isApplicantInSkipOrgs)", () => {
   it("所屬組織本身在名單 → 成立;不勾含下層時上層組織不算", () => {
     expect(
       isApplicantInSkipOrgs(
@@ -102,7 +102,7 @@ describe("B4 申請人屬於這些組織(isApplicantInSkipOrgs)", () => {
   });
 });
 
-describe("B4 跳過:時間軸記是哪一項成立", () => {
+describe("跳過:時間軸記是哪一項成立", () => {
   const definition: WorkflowDefinition = {
     steps: [review("boss"), review("hr")],
   };
@@ -161,7 +161,7 @@ function atThird(
   return { ...instance, activeStepKeys: ["third"] };
 }
 
-describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandidates)", () => {
+describe("已在前面的關卡核准過(priorApproverIds / autoApprovalCandidates)", () => {
   it("審核者在這一輪更早的關卡親自核准過 → 候選(auto_prior_approver)", () => {
     const definition = linear({ autoApprove: { priorApprover: true } });
     const instance = atThird(definition, [{ stepKey: "first", userId: "u1" }]);
@@ -177,7 +177,7 @@ describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandi
     ).toEqual([{ assigneeId: "u1", reason: "auto_prior_approver" }]);
   });
 
-  it("更早那一票是 B5「申請人是審核者」自動通過、記在申請人名下 → 也算", () => {
+  it("更早那一票是「申請人是審核者」自動通過、記在申請人名下 → 也算", () => {
     const step = review("third", { autoApprove: { priorApprover: true } });
     const definition = linear({ autoApprove: { priorApprover: true } });
     const instance = atThird(definition, [
@@ -259,7 +259,7 @@ describe("B5 已在前面的關卡核准過(priorApproverIds / autoApprovalCandi
   });
 });
 
-describe("B5 自動通過:進關一次寫入核准", () => {
+describe("自動通過:進關一次寫入核准", () => {
   it("申請人是審核者、開了自動通過 → 申請人留在計畫,記成他的核准(時間軸帶原因),該關完成", () => {
     const definition: WorkflowDefinition = {
       steps: [review("boss", { autoApprove: { applicant: true } })],

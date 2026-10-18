@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 防回歸檢查(#259):確認每份模組說明的內容真的被打包進 `dist/assets/*.js`。
+ * 防回歸檢查:確認每份模組說明的內容真的被打包進 `dist/assets/*.js`。
  * 說明有三份來源(`scripts/help-sources.mjs` 的 `HELP_SOURCES`):底座、專案新增、專案替換;
  * 專案的兩個目錄可以是空的。
  *

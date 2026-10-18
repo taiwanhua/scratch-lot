@@ -1,5 +1,5 @@
 /**
- * `ScheduleTimeline` 週模式的排版(規格 10.11「週模式排版」):決定一天欄內每個容器的左邊位置,
+ * `ScheduleTimeline` 週模式的排版:決定一天欄內每個容器的左邊位置,
  * 或整個收起(收進當天欄最右邊的「+N」長條)。純函式,不含 React,元件與測試共用同一份。
  *
  * - 容器寬 = 20(直排標題)+ 28 × 條數。
@@ -17,13 +17,13 @@ export const TIMELINE_SLOT_WIDTH = 28;
 /** 有收起時,當天欄最右邊保留給「+N」長條的寬(px)。 */
 export const TIMELINE_MORE_WIDTH = 24;
 
-/** 排版需要的容器資料(模組的「群組」,例:一筆人力需求)。 */
+/** 排版需要的容器資料(模組的「群組」,例:一筆時段需求)。 */
 export interface TimelineLayoutGroup {
   /** 唯一識別;排序的最後一關,保證不平手。 */
   id: string;
   /**
    * 開始時間;與 `end`、`createdAt` 用同一種數值單位即可(例:epoch 毫秒)。
-   * 跨午夜的容器由呼叫端先裁到當天範圍再傳入(規格 10.11:當天畫到 24:00、次日從 00:00 接續)。
+   * 跨午夜的容器由呼叫端先裁到當天範圍再傳入(當天畫到 24:00、次日從 00:00 接續)。
    */
   start: number;
   /** 結束時間(不含):前一個在 14:30 結束、下一個在 14:30 開始不算重疊。 */
@@ -118,7 +118,7 @@ const placeAll = <G extends TimelineLayoutGroup>(
 
 /**
  * 週模式一天欄的排版。`dayWidth` 是當天欄寬(px,設計稿:電腦 157、平板 125);
- * 店休等不排容器的日子由呼叫端傳空陣列。
+ * 公休等不排容器的日子由呼叫端傳空陣列。
  */
 export const layoutTimeline = <G extends TimelineLayoutGroup>(
   groups: readonly G[],

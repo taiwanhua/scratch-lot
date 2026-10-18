@@ -99,7 +99,7 @@ function eventsOf(instance: RawInstance, kind: string): RawEvent[] {
 }
 
 /**
- * 每一關指定組織跳過(B4)與自動通過(B5)(真 Mongo):
+ * 每一關指定組織跳過與自動通過(真 Mongo):
  * 申請人在「台北店 → 廚房部」(租戶「流程租戶」底下);staff 都在租戶頂層。
  */
 describe("每一關指定組織跳過與自動通過", () => {
@@ -145,7 +145,7 @@ describe("每一關指定組織跳過與自動通過", () => {
     await api.close();
   });
 
-  describe("B4 申請人屬於這些組織", () => {
+  describe("申請人屬於這些組織", () => {
     it("送出時修訂 ctx 快照記下所屬組織(全部)與租戶", async () => {
       await bindNew({ steps: [usersStep("first", [staff(0)])] });
       const submitted = await submitLeave(world);
@@ -282,7 +282,7 @@ describe("每一關指定組織跳過與自動通過", () => {
     });
   });
 
-  describe("B5 自動通過", () => {
+  describe("自動通過", () => {
     it("申請人是這一關的審核者、開了自動通過 → 記成申請人核准(經 beforeApprove,本人身分),時間軸記原因", async () => {
       await bindNew({
         steps: [

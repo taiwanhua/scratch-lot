@@ -7,7 +7,7 @@ import { DatabaseModule } from "./database.module";
 import { HOOK_TIMEOUT_MS } from "./test-support/mongo-connection";
 
 /**
- * 資料範圍規則提供者的**啟動期斷言**(#246 的 6)。
+ * 資料範圍規則提供者的**啟動期斷言**。
  *
  * 在此之前查詢中介層找不到 provider 就只套租戶保底(fail-open):規則設了卻沒有人執行,
  * 而且不會有任何錯誤 —— 日後把 `DataScopeModule` 從 `AppModule` 拆掉就會靜默擴權。
@@ -16,7 +16,7 @@ import { HOOK_TIMEOUT_MS } from "./test-support/mongo-connection";
  * 這一檔刻意**不掛 `DataScopeModule`**(那才是被驗的缺失情境);
  * 「掛了就起得來」的正向情境由 `data-scope/data-scope.test.ts` 起整個 AppModule 覆蓋。
  */
-describe("DataScopeRuleProvider 未註冊時 app 起不來(#246 的 6)", () => {
+describe("DataScopeRuleProvider 未註冊時 app 起不來", () => {
   let memoryServer: MongoMemoryReplSet | undefined;
   let uri: string;
 

@@ -20,7 +20,7 @@ export interface ManagerFieldProps {
  * 組織的「主管」欄(`org_manager`;審核流程的主管來源從申請所屬組織往上找它):多選本租戶的使用者。
  *
  * 候選來自 `orgManagerCandidates`(該組織所屬租戶裡啟用中的使用者,關鍵字丟回 api 查),
- * 所以走 `onInputChange` 關掉 Autocomplete 的前端過濾(同「加入成員」,#307 踩過);
+ * 所以走 `onInputChange` 關掉 Autocomplete 的前端過濾(同「加入成員」,踩過);
  * 已選但不在這一批候選裡的人(停用的主管、關鍵字換過)仍留在值裡。
  */
 export const ManagerField = ({

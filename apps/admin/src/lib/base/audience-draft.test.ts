@@ -10,7 +10,7 @@ import {
   validateAudienceDraft,
 } from "./audience-draft";
 
-/** 規格 3.0 的示例:角色 AND(所屬組織含下層 OR 持有權限)。 */
+/** 人員條件的示例:角色 AND(所屬組織含下層 OR 持有權限)。 */
 const SPEC_EXAMPLE = {
   mode: "match",
   filter: {

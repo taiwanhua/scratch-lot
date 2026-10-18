@@ -13,7 +13,7 @@ export interface TestDatabase {
 export const HOOK_TIMEOUT_MS = 60_000;
 
 /**
- * 對真 MongoDB 的測試連線(#23 Testing Decisions):
+ * 對真 MongoDB 的測試連線:
  * 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。
  * 各測試檔用獨立 databaseName,避免與其他測試(如 db-migrator)互踩。
  */

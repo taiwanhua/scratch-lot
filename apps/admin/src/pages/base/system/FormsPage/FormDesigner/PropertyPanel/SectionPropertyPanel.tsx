@@ -27,7 +27,7 @@ export interface SectionPropertyPanelProps {
 }
 
 /**
- * 分區設定(底座 10.3):可以收合、預設收合、收合時標題列顯示的欄位。
+ * 分區設定:可以收合、預設收合、收合時標題列顯示的欄位。
  * 標題列欄位只能挑放在本分區的非明細欄位(檢查器同一條規則);關掉「可以收合」時另兩項停用並清掉。
  */
 export const SectionPropertyPanel = ({

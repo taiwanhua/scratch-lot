@@ -128,7 +128,7 @@ export class RoleMatrixService {
    * 1. 以**全樹**正規化送進來的授予(`normalizeGrant`:樹外丟棄、勾下層補上層、`*` 收斂)
    * 2. subset-only 防越權:正規化後要是操作者有效權限集的子集,否則 `ROLE_OUT_OF_REACH`
    * 3. 預設角色(租戶副本)的天花板:還要是**內建「租戶管理員」模板角色目前授予**的子集,
-   *    否則 `ROLE_OUT_OF_REACH` + `reason TEMPLATE_CEILING`(#283;root 也擋)
+   *    否則 `ROLE_OUT_OF_REACH` + `reason TEMPLATE_CEILING`(root 也擋)
    * 4. 租戶管理員副本只能縮不能擴:還要是**目前綁定**的子集,否則同樣 `ROLE_OUT_OF_REACH`
    * 5. 差集寫入 `role_module` / `role_permission`(刪只刪操作者搆得到的)
    */
@@ -138,7 +138,7 @@ export class RoleMatrixService {
   ): Promise<RoleMatrixPayload> {
     const role = await this.scope.loadManagedRole(operator, input.roleId);
     await this.assertNoForeignFieldPermissions(operator, input.permissionKeys);
-    // 種子角色的矩陣唯讀(#261 規則表):內容隨底座版本更新,改了會被下一次 seed 蓋回去
+    // 種子角色的矩陣唯讀(規則表):內容隨底座版本更新,改了會被下一次 seed 蓋回去
     if (isSeedRole(role)) {
       throw forbiddenError(
         `Role ${input.roleId} is a seed role; its permission matrix is read-only`,
@@ -160,7 +160,7 @@ export class RoleMatrixService {
         "The submitted matrix is not a subset of the operator's effective modules and permissions",
       );
     }
-    // 預設角色的天花板(#283):矩陣上限 = 內建「租戶管理員」模板角色目前的授予
+    // 預設角色的天花板:矩陣上限 = 內建「租戶管理員」模板角色目前的授予
     // (seed:所有非根組織專屬模組各一筆 `*`)。root 在此範圍內放寬與收窄,
     // **連 root 也開不出模板沒有的東西** —— 租戶作業 / 模組與權限 / 資料範圍是根組織專屬。
     const ceiling = await this.ceilingOf(operator, role, view);
@@ -171,7 +171,7 @@ export class RoleMatrixService {
         "TEMPLATE_CEILING",
       );
     }
-    // 預設角色(租戶副本)對**非根組織**的操作者只能縮不能擴(ADR-0009;#261 放寬 root):
+    // 預設角色(租戶副本)對**非根組織**的操作者只能縮不能擴(ADR-0009;root 不受此限):
     // 平台方本來就該能替租戶開新模組,租戶自己只能收窄
     if (
       isShrinkOnly(role, facts) &&
@@ -228,7 +228,7 @@ export class RoleMatrixService {
   }
 
   /**
-   * 預設角色(租戶副本)的天花板(#283):**內建「租戶管理員」模板角色目前的授予**,
+   * 預設角色(租戶副本)的天花板:**內建「租戶管理員」模板角色目前的授予**,
    * 對全樹正規化。其他種類的角色沒有天花板(回 `null`)—— 自建角色的上限是
    * 操作者自身的有效權限集(ADR-0004 subset-only),種子角色的矩陣根本唯讀。
    *
@@ -475,7 +475,7 @@ interface MatrixView {
 }
 
 /**
- * 一份授予 → 顯示用的形狀(`granted` 與 `ceiling` 同一套投影,#283):
+ * 一份授予 → 顯示用的形狀(`granted` 與 `ceiling` 同一套投影):
  * 先對**全樹**展開(`X.*` → 同層各筆;操作者搆不到的 `*` 也要讓他看到底下那幾列),
  * 再收到顯示樹內 —— 矩陣上沒有的列,回了前端也用不到。
  */

@@ -7,7 +7,7 @@ import { useMe } from "@/hooks/base/useMe";
 
 /**
  * 總覽(模組 key `overview`,正本 docs/modules/overview.md):登入後的第一頁。
- * 本輪只有佔位內容(問候 + 當前組織,沿用 #65 的驗證頁);統計卡等實際內容待後續票。
+ * 本輪只有佔位內容(問候 + 當前組織,沿用早期的驗證頁);統計卡等實際內容尚未實作。
  */
 export const OverviewPage = () => {
   const t = useTranslations("admin.session");

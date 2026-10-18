@@ -6,7 +6,7 @@ import {
   validatePassword,
 } from "./validate-password";
 
-describe("密碼規則(#61:8 碼以上、非純數字;前後端同一份)", () => {
+describe("密碼規則(8 碼以上、非純數字;前後端同一份)", () => {
   it("最少 8 碼", () => {
     expect(PASSWORD_MIN_LENGTH).toBe(8);
   });

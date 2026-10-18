@@ -20,7 +20,7 @@ import {
 import { DemoItemOneModel } from "./models/demo-item-one.model";
 
 /**
- * 示範模組1 的 GraphQL 端點(#318;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 示範模組1 的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,規則全在 service(STRUCT-01);
  * 每個 key 對應 `docs/modules/demo.sub.sample-one.md` 權限表的同一行。
  *
@@ -62,7 +62,7 @@ export class DemoItemsOneResolver {
 
   /**
    * 私有附件的下載網址(ADR-0010);看得到這筆資料的人才拿得到(`view`)。
-   * 名稱帶模組前綴(GQL-02;#427 由 `attachmentDownloadUrl` 改名,舊名不保留)。
+   * 名稱帶模組前綴(GQL-02;由 `attachmentDownloadUrl` 改名,舊名不保留)。
    */
   @RequirePermission(SAMPLE_ONE_PERMISSIONS.view)
   @Query(() => DemoItemOneAttachmentUrlPayload, {

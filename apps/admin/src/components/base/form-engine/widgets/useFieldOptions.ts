@@ -32,7 +32,7 @@ export interface UseFieldOptionsInput {
 }
 
 /**
- * 選項欄三種來源(Spec 6a §5「`options` 三種來源」)統一成 `ChoiceOption[]`:
+ * 選項欄三種來源(`options`)統一成 `ChoiceOption[]`:
  * - 靜態清單:定義裡的 items,停用的不列、依 `order` 排
  * - 欄位管理類別:打 `formFieldOptions`(只帶「哪個版本的哪個欄位」,類別 key 由 api 從定義取;
  *   合併範圍、只回啟用的);存 `{ value, label }`。不需要欄位管理的權限;超過 100 筆時搜尋改送 api

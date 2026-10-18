@@ -65,7 +65,7 @@ interface BuiltinData {
 }
 
 /**
- * 顯示模板(Spec 6a §5「lookup 來源」`labelTemplate`)與列表內建欄開關(§8 畫面 6):
+ * 顯示模板(`labelTemplate`)與列表內建欄開關:
  * 真 GraphQL + 真 MongoDB(TEST-07)。
  */
 describe("lookup 顯示模板與列表內建欄", () => {

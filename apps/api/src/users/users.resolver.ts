@@ -20,7 +20,7 @@ import { UserModel } from "./models/user.model";
 import { UsersService } from "./users.service";
 
 /**
- * 使用者管理的 GraphQL 端點(#136;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 使用者管理的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,範圍與規則全在 service(STRUCT-01);
  * 每個 key 對應 user-manager.md 權限表的同一行,欄位級的兩個 key 在 service 內判斷。
  */

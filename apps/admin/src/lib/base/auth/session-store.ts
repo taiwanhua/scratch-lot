@@ -25,7 +25,7 @@ export interface SessionActions {
   /** 清空 token 並標記為未登入(登出、refresh 失敗、其他分頁登出) */
   clear: () => void;
   /**
-   * 清空 token 並回到 `booting`(#375:其他分頁登入了別的帳號 → 本分頁丟掉舊身分、等重新用 cookie 換票)。
+   * 清空 token 並回到 `booting`(其他分頁登入了別的帳號 → 本分頁丟掉舊身分、等重新用 cookie 換票)。
    * 與 `clear` 的差別只在狀態:`clear` 是「確定沒登入」(守門導去登入頁),`reset` 是「還不知道自己是誰」(守門顯示恢復中)。
    */
   reset: () => void;

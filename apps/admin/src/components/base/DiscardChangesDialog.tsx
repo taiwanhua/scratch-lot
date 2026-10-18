@@ -19,7 +19,7 @@ export interface DiscardChangesDialogProps {
  * 放棄未儲存的變更(Figma 的 `Draft/ConfirmDialog`)。
  *
  * 跨路由群組共用(STRUCT-03):角色管理的權限矩陣與示範家族的表單頁都用這一份
- * (#321 之前各有一份)。關分頁 / 重新整理那一層由 `hooks/base/useUnsavedGuard` 接,
+ * (原本各有一份)。關分頁 / 重新整理那一層由 `hooks/base/useUnsavedGuard` 接,
  * 頁面攔不到瀏覽器自己的提示。
  *
  * 確認鈕是 error 色:按下去就丟資料,是破壞性操作。

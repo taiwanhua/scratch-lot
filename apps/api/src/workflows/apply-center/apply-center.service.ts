@@ -106,7 +106,7 @@ function pageOf(input: { page?: number; pageSize?: number }): {
 }
 
 /**
- * 申請中心(`apply-center`,Spec 6b §4「申請中心的資料來源」、§7):兩個跨模組頁籤 + 新申請入口 + 詳情。
+ * 申請中心(`apply-center`):兩個跨模組頁籤 + 新申請入口 + 詳情。
  * **都以 `tenantId` 為邊界**,不套可見範圍與資料範圍(內容以「我」為邊界:我送的、派給我的);
  * 任務列表與詳情的摘要一律讀**實例快照**。
  */

@@ -136,7 +136,7 @@ describe("UploadField", () => {
     expect(handleChange).toHaveBeenCalledTimes(1);
   });
 
-  describe("initialPreviewUrl(編輯情境的既有圖片,#186 ②)", () => {
+  describe("initialPreviewUrl(編輯情境的既有圖片)", () => {
     const LOGO_URL = "https://cdn.test/tenant-a.png";
 
     it("一開啟就顯示既有圖片的預覽,不是空狀態", () => {

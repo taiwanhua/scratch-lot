@@ -148,7 +148,7 @@ function startApi(uri: string, gcs: FakeGcsState): ChildProcess {
         RESEND_API_KEY: "",
         MAIL_ALLOWLIST: "",
         GRAPHQL_SANDBOX: "false",
-        // 檔案儲存:fake GCS 起得來就指過去(劇本 11 / 15),否則維持記錄用 adapter(#402)
+        // 檔案儲存:fake GCS 起得來就指過去(劇本 11 / 15),否則維持記錄用 adapter
         ...apiStorageEnv(gcs),
       },
     },

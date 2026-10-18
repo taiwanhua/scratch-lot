@@ -35,7 +35,7 @@ type ModuleRecord = Persisted<ModuleDocument>;
 type PermissionRecord = Persisted<PermissionDocument>;
 
 /**
- * 自鎖保護的那棵子樹(#261 / #233):模組與權限這一頁自己。
+ * 自鎖保護的那棵子樹:模組與權限這一頁自己。
  * key 的正本是 `apps/db-migrator/seeds/base/modules.ts`;這裡是唯一一處以 key 指名它的地方,
  * 子樹判定仍走 `ancestors`(ADR-0004「反向歸屬不解析字串」)。
  */
@@ -100,7 +100,7 @@ function buildTree(
       parentId: module.parentId === null ? null : String(module.parentId),
       // schema 的字串值與 GraphQL enum 的內部值相同(group / link / hidden)
       sidebarType: module.sidebarType as ModuleSidebarType,
-      // 只有自己那段;沒宣告 route 的節點回 null(= 權限容器的判準之一,#246 的 7)
+      // 只有自己那段;沒宣告 route 的節點回 null(= 權限容器的判準之一)
       route: module.route ?? null,
       order: module.order,
       description: module.description ?? null,
@@ -135,7 +135,7 @@ function buildTree(
  * 刻意不共用程式 — 共用會逼其中一邊長出「要不要過濾」的旗標參數。
  *
  * 模組樹本身(新增 / 刪除節點)走 code + PR 的 seed(ADR-0002),執行期可變的欄位只有兩個 ——
- * `enabled`(停用 / 啟用)與 `icon`(側欄圖示,#288),所以本服務只有一個查詢與三個寫入。
+ * `enabled`(停用 / 啟用)與 `icon`(側欄圖示),所以本服務只有一個查詢與三個寫入。
  * 兩者都是 ADR-0002 的「初始 seed 值的欄位」:seed 給初值,之後歸人管、重跑不覆蓋。
  */
 @Injectable()
@@ -342,7 +342,7 @@ export class ModuleManagerService {
   }
 
   /**
-   * 自鎖保護(#261 / #233):目標落在 `system.module-manager` 子樹內 → `FORBIDDEN`
+   * 自鎖保護:目標落在 `system.module-manager` 子樹內 → `FORBIDDEN`
    * + `reason: SELF_LOCK`。停用這一頁自己就再也沒有入口把它開回來 —— 與角色的
    * 「不可停用自己正持有的角色」是同一條原則,只是主體換成模組樹。
    *

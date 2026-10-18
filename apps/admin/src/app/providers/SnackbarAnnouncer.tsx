@@ -31,7 +31,7 @@ const VISUALLY_HIDDEN_SX = {
 } as const;
 
 /**
- * 彈窗開著時替 Snackbar 補念一次(#430)。
+ * 彈窗開著時替 Snackbar 補念一次。
  *
  * **為什麼需要**:MUI 的 modal manager 在 Dialog 開啟時把 body 底下**當時存在的**其他節點
  * 全標上 `aria-hidden`,Snackbar 跟著 app 根節點一起被藏,螢幕閱讀器念不到它的 `role="alert"`。

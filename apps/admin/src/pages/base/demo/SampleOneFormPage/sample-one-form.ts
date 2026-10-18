@@ -47,7 +47,7 @@ const orNull = (value: string): string | null =>
 
 /**
  * 上傳欄的結果 → input 的兩個檔案欄位。**沒動的上傳欄不放鍵**(缺席 = 不動,GQL-06):
- * 封面只送路徑(`coverPath`);附件把路徑與原始檔名 / 大小 / 檔型一起送(`attachment`,#427)。
+ * 封面只送路徑(`coverPath`);附件把路徑與原始檔名 / 大小 / 檔型一起送(`attachment`)。
  */
 const uploadInputOf = (
   uploads: DemoUploadResults,
@@ -82,7 +82,7 @@ export const toCreateInput = (
 
 /**
  * 表單 → `updateDemoItemOne` 的 input。缺席 = 不動、`null` = 清空(GQL-06):
- * 文字欄明確送值;封面 / 附件「不換檔」就不放那個鍵(#427 起,見 `uploadInputOf`)。
+ * 文字欄明確送值;封面 / 附件「不換檔」就不放那個鍵(見 `uploadInputOf`)。
  */
 export const toUpdateInput = (
   id: string,

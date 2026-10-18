@@ -67,7 +67,7 @@ export interface SubmissionPage {
 }
 
 /**
- * 審核流程要的 `form_submissions` 存取(Spec 6b §3「誰能看那筆提交」、§6 列 2 / 5 / 8 的提交同步)。
+ * 審核流程要的 `form_submissions` 存取(讀取授權 `canReadSubmissionRevision`,以及推進時的提交狀態同步)。
  *
  * **為什麼不經 `FormSubmissionsRepository`**:那一層一定套可見範圍與資料範圍規則(ADR-0005 / ADR-0008),
  * 但審核流程的讀寫者不一定看得到那筆提交 —— 上層主管、別部門的審核者、沒有操作者的背景推進;

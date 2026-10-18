@@ -28,7 +28,7 @@ import {
 } from "./apply-center.types";
 
 /**
- * 申請中心(`apply-center`,Spec 6b §7):兩個頁籤與新申請入口守 `apply-center.view`;
+ * 申請中心(`apply-center`):兩個頁籤與新申請入口守 `apply-center.view`;
  * 實例詳情與決定不經模組權限 —— 授權分別是 `canReadSubmissionRevision` 與「我是這個任務的有效承辦人」
  * (審核者不一定有申請中心或業務模組的頁面權限,例如從通知信的連結進來)。
  */
