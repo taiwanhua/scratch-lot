@@ -13,7 +13,7 @@ import { renderApp } from "@/test/render";
 import { findSnackbarAlert } from "@/test/snackbar";
 
 /**
- * 個人設定「偏好」分頁的通知管道開關(底座規格 10.6、第 5 章「開關三層」的個人層;Figma BS-05 257:4821)。
+ * 個人設定「偏好」分頁的通知管道開關(「開關三層」的個人層)。
  * 類型與 `canDisable` 照 api `base-notification-types.ts`;寫入走 `updateMyPreferences`,
  * key 由 api 給的 `preferenceKey`(`notification_<類型 . → _>_<管道>`)。
  */

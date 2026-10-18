@@ -19,7 +19,7 @@ export interface ActionEmailInput {
 }
 
 /**
- * 通知信(底座規格第 5 章;email 管道):標題 / 內容由通知類型的範本產生(與站內通知同一份),
+ * 通知信(email 管道):標題 / 內容由通知類型的範本產生(與站內通知同一份),
  * 連結是通知的連結登記換成的完整網址;沒有連結 = null。
  */
 export interface NotificationEmailInput {

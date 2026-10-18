@@ -32,7 +32,7 @@ export function realtimeHubOf(tenantId: RealtimeTenant): string {
   return tenantId === null ? REALTIME_PLATFORM_HUB : String(tenantId);
 }
 
-/** 側欄計數的信號類型:`badge:<模組 key>`(底座規格 10.4)。 */
+/** 側欄計數的信號類型:`badge:<模組 key>`。 */
 export function badgeSignalType(moduleKey: string): string {
   return `badge:${moduleKey}`;
 }
@@ -69,7 +69,7 @@ export function chunkTopics(
 }
 
 /**
- * 送出信號(底座規格第 4 章):API → Worker `/publish`,一次可帶多個頻道。
+ * 送出信號:API → Worker `/publish`,一次可帶多個頻道。
  *
  * - **交易後執行**:`publish` 是對外 adapter 的入口,先 `assertOutsideTransaction`(TX-03);
  *   交易內一律用 `publishAfterCommit`(掛 `afterCommit`,交易回復就不送)。

@@ -62,7 +62,7 @@ const isOverdueHoursIssue = (issue: WorkflowIssue): boolean =>
   issue.code === "OVERDUE_INVALID";
 
 /**
- * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`;Figma BS-02a / c、BS-03):名稱、key、審核者來源(三種)、
+ * 審核關卡的屬性面板(Spec 6b §8 零件 `<StepEditor>`):名稱、key、審核者來源(三種)、
  * 會簽、允許退回;「跳過這一關」(申請人屬於這些組織 / 符合條件)、自動通過、逾時提醒、知會;
  * 以及加關卡 / 從此關分流 / 移動 / 刪除。移動也有按鈕版(上移、下移、移到某條分支),拖拉之外鍵盤也做得到。
  * 呼叫端以關卡 key 當 `key` 掛載(換關卡 = 重掛,區塊內的勾選狀態不帶到別關)。

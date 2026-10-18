@@ -1,9 +1,9 @@
 /**
- * 列印(底座規格第 6 章 B8)的共用常數:api 與代理程式(`apps/print-agent`)同一份。
+ * 列印的共用常數:api 與代理程式(`apps/print-agent`)同一份。
  * 本檔只有常數與純函式,不依賴 Node / 瀏覽器 API。
  */
 
-/** 離線判斷:`lastSeenAt` 超過這段時間 = 離線(底座規格「離線、逾時、重新配對與停用」)。 */
+/** 離線判斷:`lastSeenAt` 超過這段時間 = 離線。 */
 export const PRINT_AGENT_OFFLINE_AFTER_MS = 2 * 60 * 1000;
 
 /** 工作逾時:「等待中」超過這段時間沒有被認領 → 標失敗「代理程式離線」。 */
@@ -18,7 +18,7 @@ export const PRINT_JOB_RESULT_TIMEOUT_MS = 2 * 60 * 1000;
  */
 export const PRINT_AGENT_HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
-/** 即時通道故障時的輪詢間隔(底座規格「架構」:降級為每 60 秒詢問)。 */
+/** 即時通道故障時的輪詢間隔(降級為每 60 秒詢問)。 */
 export const PRINT_AGENT_POLL_INTERVAL_MS = 60 * 1000;
 
 /** 配對碼效期(10 分鐘)。 */

@@ -20,7 +20,7 @@ export interface AllowDraftFieldProps {
 }
 
 /**
- * 表單設定「允許存草稿」(Spec 10.10,Figma BS-21):表單層的設定(不隨版本、不必發布),以 `updateForm` 存。
+ * 表單設定「允許存草稿」(Spec 10.10):表單層的設定(不隨版本、不必發布),以 `updateForm` 存。
  * 改得動 = `abilities.canEdit`(自己擁有的表單 + `system.forms.edit`);改不動的人看得到目前的設定但不能切。
  */
 export const AllowDraftField = ({ form, onChanged }: AllowDraftFieldProps) => {

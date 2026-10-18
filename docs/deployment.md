@@ -618,7 +618,7 @@ db.scheduled_job_runs
 
 ### 即時通道(Cloudflare Worker)
 
-即時通道 = `apps/realtime`(Worker + Durable Object `TenantHub`,底座規格第 4 章);**每個環境一個 Worker**,網域 `rt-dev.<網域>` / `rt-staging.<網域>` / `rt.<網域>`(登記 `docs/branding.md`)。全部用 Cloudflare 免費方案;用量看 Cloudflare 後台。未啟用的環境不部署 Worker,api 不簽發訂閱憑證,admin 以 60 秒輪詢運作(頭像選單黃點)。
+即時通道 = `apps/realtime`(Worker + Durable Object `TenantHub`);**每個環境一個 Worker**,網域 `rt-dev.<網域>` / `rt-staging.<網域>` / `rt.<網域>`(登記 `docs/branding.md`)。全部用 Cloudflare 免費方案;用量看 Cloudflare 後台。未啟用的環境不部署 Worker,api 不簽發訂閱憑證,admin 以 60 秒輪詢運作(頭像選單黃點)。
 
 `cloud.json` 各環境的 `realtime`(省略或 `null` = 停用;寫了就要完整):
 
@@ -646,7 +646,7 @@ db.scheduled_job_runs
 
 ### 列印代理程式發布(print-agent-release.yml)
 
-列印代理程式(`apps/print-agent`,底座規格第 6 章「發布」)的安裝檔放在**各環境自己的私有 bucket**(`deploy/env/<環境>.yaml` 的 `GCS_BUCKET_PRIVATE`,與 api 讀檔的是同一個),不用 GitHub Release(repo private 時店家下載不到):
+列印代理程式(`apps/print-agent`)的安裝檔放在**各環境自己的私有 bucket**(`deploy/env/<環境>.yaml` 的 `GCS_BUCKET_PRIVATE`,與 api 讀檔的是同一個),不用 GitHub Release(repo private 時店家下載不到):
 
 ```
 <私有 bucket>/print-agent/

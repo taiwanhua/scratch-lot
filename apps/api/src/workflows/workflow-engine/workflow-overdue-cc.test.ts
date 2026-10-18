@@ -127,7 +127,7 @@ function usersAudience(people: readonly Person[]): Record<string, unknown> {
 }
 
 /**
- * 逾時提醒(《底座規格》3.8 B16)與知會(3.9 B17)(真 Mongo):
+ * 逾時提醒與知會(3.9 B17)(真 Mongo):
  * 逾時提醒的排程以 `WorkflowOverdueService.sweep(now, 租戶)` 直接呼叫,時點由測試給(日曆小時);
  * 知會跟著推進 / 作廢的同一個交易。
  */

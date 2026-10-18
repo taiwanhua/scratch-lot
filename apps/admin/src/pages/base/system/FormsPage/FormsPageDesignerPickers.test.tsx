@@ -139,14 +139,14 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
       lookupProviders: [
         ...BASE_LOOKUP_PROVIDERS,
         {
-          key: "lottery_game",
-          name: "遊戲",
+          key: "demo_item",
+          name: "項目",
           isBase: false,
           labelField: "title",
           valueField: "code",
           filterFields: [],
           fields: [
-            { key: "title", type: "text", label: "遊戲名稱" },
+            { key: "title", type: "text", label: "項目名稱" },
             { key: "code", type: "text", label: null },
           ],
         },
@@ -158,17 +158,17 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
       "使用者",
       "組織",
       "表單提交",
-      "遊戲",
+      "項目",
     ]);
-    await user.click(screen.getByRole("option", { name: "遊戲" }));
+    await user.click(screen.getByRole("option", { name: "項目" }));
 
     await waitFor(() => {
       expect(
         screen.getByRole("combobox", { name: "顯示欄" }),
-      ).toHaveTextContent("遊戲名稱");
+      ).toHaveTextContent("項目名稱");
     });
     // 沒宣告欄位名的用 key
-    expect(await openSelect(user, "顯示欄")).toEqual(["遊戲名稱", "code"]);
+    expect(await openSelect(user, "顯示欄")).toEqual(["項目名稱", "code"]);
     await user.keyboard("{Escape}");
     expect(screen.getByRole("combobox", { name: "值欄" })).toHaveTextContent(
       "code",
@@ -181,7 +181,7 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
       options: {
         kind: "lookup",
         source: {
-          provider: "lottery_game",
+          provider: "demo_item",
           labelField: "title",
           valueField: "code",
         },
@@ -207,25 +207,25 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
       lookupProviders: [
         ...BASE_LOOKUP_PROVIDERS,
         {
-          key: "lottery_game",
-          name: "遊戲",
+          key: "demo_item",
+          name: "項目",
           isBase: false,
           labelField: "title",
           valueField: "id",
           filterFields: [],
           fields: [
-            { key: "title", type: "text", label: "遊戲名稱" },
-            { key: "bookAmount", type: "number", label: "訂購金額" },
+            { key: "title", type: "text", label: "項目名稱" },
+            { key: "quantity", type: "number", label: "數量" },
           ],
         },
       ],
     });
     await addField(user, "單選");
     await pickOption(user, "選項來源", "資料來源");
-    await pickOption(user, "資料來源", "遊戲");
+    await pickOption(user, "資料來源", "項目");
     expect(await openSelect(user, "值欄")).toEqual([
       "資料的 id(預設)",
-      "遊戲名稱",
+      "項目名稱",
     ]);
   });
 

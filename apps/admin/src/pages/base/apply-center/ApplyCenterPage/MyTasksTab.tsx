@@ -37,7 +37,7 @@ import {
 
 const PAGE_SIZE = 20;
 
-/** 批次核准一次最多勾幾筆(同 api 的 `BATCH_APPROVE_LIMIT`;底座規格 3.10 B18)。 */
+/** 批次核准一次最多勾幾筆(同 api 的 `BATCH_APPROVE_LIMIT`)。 */
 const BATCH_APPROVE_LIMIT = 50;
 
 const TASK_TONE: Record<WorkflowTaskStatus, TagTone> = {

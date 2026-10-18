@@ -4,7 +4,7 @@ import {
   permissionKey,
 } from "../module-declaration";
 
-/** 列印的純 API 能力(底座規格第 6 章「權限」;docs/modules/printers.md)。 */
+/** 列印的純 API 能力(docs/modules/printers.md)。 */
 export const API_PRINTING_KEY = `${API_MODULE_KEY}.printing`;
 
 /**

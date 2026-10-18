@@ -141,7 +141,7 @@ const scrollButtons = (container: HTMLElement) => [
   ...container.querySelectorAll(".MuiTabScrollButton-root"),
 ];
 
-/** `scrollable`(Figma BS-15b):放不下時單列捲動,還有頁籤的那一側才有 ‹ / ›(與漸層)。 */
+/** `scrollable`:放不下時單列捲動,還有頁籤的那一側才有 ‹ / ›(與漸層)。 */
 describe("Tabs scrollable", () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, "IntersectionObserver");

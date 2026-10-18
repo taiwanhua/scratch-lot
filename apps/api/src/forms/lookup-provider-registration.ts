@@ -48,7 +48,7 @@ export interface LookupProviderDeclaration {
  * 值以文件該欄原值回傳)。
  */
 export interface ProjectLookupDeclaration extends LookupProviderDeclaration {
-  /** `<前綴>_<名稱>`,前綴 = repository 所綁 collection 名的第一段(`lottery_game` ↔ `lottery_games`)。 */
+  /** `<前綴>_<名稱>`,前綴 = repository 所綁 collection 名的第一段(`demo_item` ↔ `demo_items`)。 */
   key: string;
   /** 讀這個來源要的權限(例:該業務模組的 `view`;沒有 → 一律查無);`null` = 在可見範圍內公開。 */
   permission: string | null;
@@ -103,7 +103,7 @@ function checkKnownField(
   }
 }
 
-/** 第一段(`lottery_game` → `lottery`)。 */
+/** 第一段(`demo_item` → `demo`)。 */
 function prefixOf(name: string): string {
   return name.split("_", 1)[0] ?? "";
 }

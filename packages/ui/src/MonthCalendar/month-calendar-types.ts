@@ -5,7 +5,7 @@ export type MonthCalendarCornerColor =
   "primary" | "info" | "success" | "warning" | "error";
 
 /**
- * 日期格右上角的角標(《底座規格》10.5):
+ * 日期格右上角的角標:
  * - `dot`:小圓點(例:有異動、缺卡),顏色由使用處決定;`label` 是給報讀器的說明。
  * - `badge`:error badge,內容由使用處決定(例:「缺下班卡」)。
  */

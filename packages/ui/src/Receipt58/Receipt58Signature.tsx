@@ -15,7 +15,7 @@ export interface Receipt58SignatureProps {
   signer: ReactNode;
 }
 
-/** 簽名欄(Figma `Draft/Receipt58Signature` 51:630):角色文字 + 下方留白 + 簽名線。 */
+/** 簽名欄(Figma `Draft/Receipt58Signature`):角色文字 + 下方留白 + 簽名線。 */
 export const Receipt58Signature = ({ signer }: Receipt58SignatureProps) => (
   <Box sx={{ display: "flex", flexDirection: "column", gap: dots(44) }}>
     <Box component="p" sx={receiptTextSx("normal")}>

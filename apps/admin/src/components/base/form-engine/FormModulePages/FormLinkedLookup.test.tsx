@@ -96,7 +96,7 @@ const pick = async (
   await user.click(await screen.findByRole("option", { name: label }));
 };
 
-describe("連動篩選與列內帶入(《底座規格》3.2 B2c / B2d,填寫)", () => {
+describe("連動篩選與列內帶入(填寫)", () => {
   it("出貨分店沒填 → 明細的「本」停用並提示先填;填了才查,查詢一併送出貨分店的值", async () => {
     const { user, world } = renderLinked();
     await user.click(await screen.findByRole("button", { name: "+ 新增一列" }));

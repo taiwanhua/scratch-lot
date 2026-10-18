@@ -20,7 +20,7 @@ export interface DisableAgentDialogProps {
 }
 
 /**
- * [停用] 的確認(底座規格「離線、逾時、重新配對與停用」表):金鑰失效、旗下印表機在列印按鈕上不可選、
+ * [停用] 的確認:金鑰失效、旗下印表機在列印按鈕上不可選、
  * 等待中與已送出的工作標失敗。停用是終態 —— 不能重新配對、不能再啟用,要再用就新增代理程式。
  */
 export const DisableAgentDialog = ({

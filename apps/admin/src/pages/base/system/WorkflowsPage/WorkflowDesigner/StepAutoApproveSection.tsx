@@ -34,7 +34,7 @@ const nextAutoApprove = (
 };
 
 /**
- * 關卡面板「自動通過」區塊(《底座規格》3.5 B5;Figma BS-03):
+ * 關卡面板「自動通過」區塊:
  * 「申請人是這一關的審核者時」「審核者已在前面的關卡核准過時」各一組 ● 照常審核(預設)○ 自動通過。
  */
 export const StepAutoApproveSection = ({

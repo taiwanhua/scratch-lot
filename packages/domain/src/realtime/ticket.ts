@@ -13,7 +13,7 @@ import {
 } from "./topic";
 
 /**
- * 訂閱憑證(底座規格第 4 章「訂閱憑證」):API `realtimeTicket` 簽發、Worker 與 Durable Object 驗證。
+ * 訂閱憑證:API `realtimeTicket` 簽發、Worker 與 Durable Object 驗證。
  *
  * - 內容:`{ tenantId, userId | agentId, exp, topics }`;`exp` 是 Unix 秒,效期 10 分鐘。
  * - 字串格式:`<base64url(JSON)>.<base64url(HMAC-SHA256)>`,簽章對象是第一段原字串。

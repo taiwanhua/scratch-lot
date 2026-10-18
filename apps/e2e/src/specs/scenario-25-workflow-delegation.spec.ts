@@ -62,7 +62,7 @@ function delegationRow(page: Page, delegate: WorkflowPerson) {
 
 /**
  * 劇本 25 — 代理人
- * 正本:`docs/testing/permission-scenarios.md`「劇本 25」;規則見《底座規格》3.7 B15。
+ * 正本:`docs/testing/permission-scenarios.md`「劇本 25」;規則見 `docs/concepts/workflow-engine.md`「代理人」。
  * 用哪一頁:個人設定 →「代理人」分頁(店長甲)、申請中心「待我審核」→ 詳情頁審核區塊(代理人丙)。
  * 前置(走 api):客製流程「店長審核(店長甲)→ 店長會簽(店長甲、店長乙,全部核准)」並綁定;
  * 店長乙以 api 設好「代理人丙、今天」的代理(會簽那半段要兩位都委託同一人)。

@@ -76,7 +76,7 @@ export function buildPasswordResetEmail(input: ActionEmailInput): MailMessage {
 }
 
 /**
- * 通知信(底座規格第 5 章;通知的 email 管道):主旨與內容就是通知的標題與內容(類型範本產生,
+ * 通知信(通知的 email 管道):主旨與內容就是通知的標題與內容(類型範本產生,
  * 與站內通知同一份),有連結時附上。
  */
 export function buildNotificationEmail(

@@ -6,7 +6,7 @@ import { Typography } from "../Typography/Typography";
 import { MonthCalendar, type MonthCalendarProps } from "./MonthCalendar";
 
 /**
- * **一週固定從星期日開始**(《底座規格》第 11 章 B 類):星期列與每一週都是「日 一 二 三 四 五 六」,
+ * **一週固定從星期日開始**:星期列與每一週都是「日 一 二 三 四 五 六」,
  * 不提供改成星期一開始的選項。
  *
  * 月份(`month` + `onMonthChange`)與選取(`selectedDates` + `onSelectedDatesChange`)都是受控值,
@@ -52,13 +52,13 @@ export const Default: Story = {};
 
 /**
  * 單選:點一天選定,再點另一天就換成另一天。已選日期疊 `primary.main` × `selectedOpacity`
- * + 1px `primary.main` 框(Figma Draft/MonthCalendar 48:360 的已選格);滑過仍是灰。
+ * + 1px `primary.main` 框(Figma Draft/MonthCalendar 的已選格);滑過仍是灰。
  */
 export const SingleSelection: Story = {
   args: { selectionMode: "single", selectedDates: ["2026-10-20"] },
 };
 
-/** 多選:點一下選取 / 取消;每週左側整週勾選框(Figma BS-23 260:6356)。 */
+/** 多選:點一下選取 / 取消;每週左側整週勾選框。 */
 export const MultipleSelection: Story = {
   args: {
     selectionMode: "multiple",

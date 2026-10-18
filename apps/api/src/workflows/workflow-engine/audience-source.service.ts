@@ -41,7 +41,7 @@ function referenceIdOf(stored: unknown): Types.ObjectId | null {
 }
 
 /**
- * 「依這張單據算出的人」(《底座規格》3.3;流程審核者與知會對象直接呼叫 `resolveAudienceSource`):
+ * 「依這張單據算出的人」(流程審核者與知會對象直接呼叫 `resolveAudienceSource`):
  *
  * | 來源     | 怎麼算                                                                                         |
  * | -------- | ---------------------------------------------------------------------------------------------- |

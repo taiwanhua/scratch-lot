@@ -11,7 +11,7 @@ import {
 import { defaultBrand } from "../theme/brands/default";
 import { MonthCalendar, type MonthCalendarProps } from "./MonthCalendar";
 
-/** 《底座規格》10.5 情境表 2026-10-17 新增的四列:[今天] 按鈕與已選日期的樣式。 */
+/** 2026-10-17 新增的四列:[今天] 按鈕與已選日期的樣式。 */
 
 const TODAY = "2026-10-16";
 

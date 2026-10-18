@@ -15,7 +15,7 @@ import type { Logger } from "../logging/logger";
 import { type Timers, systemTimers } from "../timers";
 
 /**
- * 代理程式的即時通道連線(底座規格第 4 章「四個流程」「降級」、第 6 章「代理程式」的 `realtime`):
+ * 代理程式的即時通道連線(`realtime` 模組):
  *
  * - **建立連線**:`POST /print-agent/realtime-ticket` 拿訂閱憑證(只含 `print-agent:<自己>`)→
  *   `wss://…/connect?ticket=`;Durable Object 初始訂閱 `print-agent:<自己>`,不必再送 `subscribe`。

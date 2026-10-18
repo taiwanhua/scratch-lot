@@ -26,7 +26,7 @@ import { useNotificationTypeName } from "@/lib/base/notification-type-name";
 type TypePreference =
   MyNotificationPreferencesQuery["myNotificationPreferences"]["items"][number];
 
-/** 管道欄寬(px;Figma BS-05 257:4821 的「站內通知」「Email」欄)。 */
+/** 管道欄寬(px;Figma 的「站內通知」「Email」欄)。 */
 const CHANNEL_COLUMN_WIDTH = 200;
 
 /** 各類型出現過的管道,依第一次出現的順序(底座:站內通知、Email;專案登記的新管道排在後面)。 */
@@ -74,7 +74,7 @@ const withSettings = (
 });
 
 /**
- * 「偏好」分頁(規格 10.6、第 5 章「開關三層」的個人層;Figma BS-05 257:4821 的管道開關):
+ * 「偏好」分頁(規格 10.6、第 5 章「開關三層」的個人層;Figma 的管道開關):
  * 每種通知類型一列、每個管道一欄的開關,只對類型的 `defaultChannels` 給開關(沒有的管道那格空白,
  * 使用者不能自行打開類型預設沒有的管道)。`canDisable = false` 的管道開關停用(api 也會擋)。
  * 改完按「儲存」一次寫入有變動的偏好 key(`updateMyPreferences`,key 由 api 給的 `preferenceKey`)。

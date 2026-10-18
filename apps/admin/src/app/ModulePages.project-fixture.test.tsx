@@ -82,7 +82,7 @@ describe("測試專案的登記表(真組裝入口)", () => {
   it("替換換掉同一個 key;明寫寬度的照寫(表單管理 xl),沒寫的沿用底座(角色管理、流程管理用殼層預設)", () => {
     expect(modulePages["system.role-manager"]).toBe(ProjectRolePage);
     expect(modulePages["system.forms"]).toBe(ProjectDesignerPage);
-    // 底座頁目前都沒宣告寬度(T48),「省略 = 繼承底座宣告值」的組合規則由 `module-page-registry.test.ts` 守
+    // 底座頁目前都沒宣告寬度,「省略 = 繼承底座宣告值」的組合規則由 `module-page-registry.test.ts` 守
     expect(modulePageMinWidths).toEqual({ "system.forms": "xl" });
   });
 

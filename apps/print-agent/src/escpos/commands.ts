@@ -1,5 +1,5 @@
 /**
- * ESC/POS 指令(收據機 XP-Q90EC,58mm;底座規格第 6 章「代理程式」的 `escpos`):
+ * ESC/POS 指令(收據機 XP-Q90EC,58mm;`escpos` 模組):
  *
  * ```
  * ESC @                      初始化

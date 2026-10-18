@@ -9,7 +9,7 @@ import { tenantIdOfOrg } from "../database/tenant-id";
 
 /**
  * `me.currentOrg.tenantName`:讀者當前組織所屬的**最上層組織名稱**(租戶頂層的名稱;根組織 = 根組織自己的名稱)。
- * 單據(58mm)上方印的租戶名稱用它(底座規格第 6 章「版面零件」:印租戶名稱、不印分店名稱),
+ * 單據(58mm)上方印的租戶名稱用它(印租戶名稱、不印分店名稱),
  * 印表機管理的測試頁是第一個使用處。
  *
  * 同 `me.currentOrg.timezone`(`forms/me-org-timezone.resolver.ts`)的讀法:租戶頂層是租戶的設定,

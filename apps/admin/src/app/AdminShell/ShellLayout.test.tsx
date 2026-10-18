@@ -73,7 +73,7 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
     expect(contentMinWidth()).not.toContain(`${String(XL)}px`);
   });
 
-  it("流程管理也沿用殼層預設 lg(T48)", async () => {
+  it("流程管理也沿用殼層預設 lg", async () => {
     renderWorkflows();
 
     await screen.findByRole("navigation", { name: "主選單" });

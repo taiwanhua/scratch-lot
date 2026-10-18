@@ -70,6 +70,8 @@ const COMMON = [
   /^scripts\//,
   // 底座帶的 repo 自製 Claude skill(module-scaffold、project-bootstrap…);專案自己的 skill 日後需要時另立 project/ 規則
   /^\.claude\/skills\//,
+  // 底座指定的 Node 版本(與根 package.json 的 engines、workflow 的 node-version 一致)
+  /^\.nvmrc$/,
 ];
 
 const isImmutableSource = (file) =>

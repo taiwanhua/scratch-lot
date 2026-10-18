@@ -34,7 +34,7 @@ const urlListDefault = urlStateDefault(myApplicationsListSchema);
  * 內容以「我」為邊界(我送的、派給我的),不套可見範圍與資料範圍。
  * 頁籤右側的數字 = `applyCenterCounts`(我進行中的申請數 / 待我處理的任務數):進頁與切頁籤各重取一次。
  *
- * 分頁用 `PageTabs`(`?tab=mine|tasks`,Figma BS-15a);列表篩選與頁碼在 `?list=`(兩個分頁共用,切分頁時清回預設)。
+ * 分頁用 `PageTabs`(`?tab=mine|tasks`);列表篩選與頁碼在 `?list=`(兩個分頁共用,切分頁時清回預設)。
  */
 export const ApplyCenterPage = () => {
   const t = useTranslations("admin.applyCenter");

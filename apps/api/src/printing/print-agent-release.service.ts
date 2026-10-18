@@ -26,7 +26,7 @@ export interface PrintAgentDownload {
 }
 
 /**
- * 代理程式安裝檔(底座規格第 6 章「下載與安裝」):讀私有 bucket 的 `print-agent/manifest.json`
+ * 代理程式安裝檔:讀私有 bucket 的 `print-agent/manifest.json`
  * (發布 workflow 寫的),用既有檔案服務簽 1 小時的下載網址。權限(`system.printers.create`)由 resolver 守。
  *
  * manifest 讀不到(還沒發布、格式壞掉、GCS 失敗)時回 null,不讓代理程式清單整頁失敗;

@@ -187,7 +187,7 @@ export interface ArrayColumnDef {
   /** 只有 reference:lookup 來源描述(同表單層引用欄的 `source`)。 */
   source?: LookupSourceDescriptor | null;
   /**
-   * 只有 reference:列內帶入(《底座規格》3.2 B2c)。選定 / 改選時把來源欄位帶入**同一列**的其他子欄
+   * 只有 reference:列內帶入。選定 / 改選時把來源欄位帶入**同一列**的其他子欄
    * (`mapping[].fieldKey` = 同一明細的子欄 key),覆蓋原值、之後可手動改;伺服器不強制。
    */
   prefill?: ColumnPrefill | null;

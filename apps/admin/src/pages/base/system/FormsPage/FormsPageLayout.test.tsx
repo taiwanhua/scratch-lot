@@ -17,11 +17,11 @@ const XS = 0;
 const XL = 1536;
 
 /**
- * T48:表單管理頁在 1440 寬水平溢出 —— 原因是頁面宣告內容區最小寬度 `xl`(三欄設計器放不下)。
+ * 表單管理頁在 1440 寬水平溢出 —— 原因是頁面宣告內容區最小寬度 `xl`(三欄設計器放不下)。
  * 改成沿用殼層 `lg`(`ShellLayout.test.tsx` 守),設計器在 `xl` 以下自己換版。這裡守換版的宣告;
  * 實際寬度以 mock 模式量 `<main>` 的 `scrollWidth === clientWidth` 為準(1440 / 1280)。
  */
-describe("表單管理:設計器的響應式版面(T48)", () => {
+describe("表單管理:設計器的響應式版面", () => {
   it("xl 以下元件面板佔滿一列、橫向換行,工作區換行;xl 起三欄並排", async () => {
     renderFormsPage(smallDesignOptions());
     const palette = await findDesigner();

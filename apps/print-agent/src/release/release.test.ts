@@ -108,8 +108,8 @@ describe("發布:manifest 更新", () => {
 describe("發布:目標 bucket", () => {
   it("讀 deploy/env 的 GCS_BUCKET_PRIVATE(引號、行尾註解都可)", () => {
     expect(
-      privateBucketOf('# x\nGCS_BUCKET_PRIVATE: "scratch-assets-dev"\n'),
-    ).toBe("scratch-assets-dev");
+      privateBucketOf('# x\nGCS_BUCKET_PRIVATE: "example-assets-dev"\n'),
+    ).toBe("example-assets-dev");
     expect(privateBucketOf("GCS_BUCKET_PRIVATE: assets-prod # 私有\r\n")).toBe(
       "assets-prod",
     );

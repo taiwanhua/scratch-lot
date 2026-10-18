@@ -18,7 +18,7 @@ export interface Receipt58CutProps {
 }
 
 /**
- * 切紙位置(Figma `Draft/Receipt58Cut` 286:77820):印完由收據機自動切紙,
+ * 切紙位置(Figma `Draft/Receipt58Cut`):印完由收據機自動切紙,
  * 這一列標出切刀的位置,讓測試頁確認切刀。
  */
 export const Receipt58Cut = ({ label }: Receipt58CutProps) => (

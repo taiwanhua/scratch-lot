@@ -25,7 +25,7 @@ const RESULT = "workflow.result";
 
 /**
  * 劇本 29 — 通知中心
- * 正本:`docs/testing/permission-scenarios.md`「劇本 29」;規則見《底座規格》第 5 章。
+ * 正本:`docs/testing/permission-scenarios.md`「劇本 29」;規則見 `docs/modules/notification-settings.md`。
  * 用哪一頁:頂端列的通知鈴(未讀數、清單、全部 / 未讀、標已讀、點一則開連結)。
  * 前置(走 api):客製流程只有一關「主管審核」(南港主管)並綁定;申請人送出。
  * E2E 不起即時通道:新通知由頁面重新載入(或斷線輪詢)取得,不靠信號。

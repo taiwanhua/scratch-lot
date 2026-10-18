@@ -5,7 +5,7 @@ import { useTranslations } from "use-intl";
 const NOTIFICATION_NAMESPACE = "admin.notifications";
 
 /**
- * 通知類型的顯示名稱(《底座規格》第 5 章「類型名稱的語系」):依類型 key 從訊息檔
+ * 通知類型的顯示名稱:依類型 key 從訊息檔
  * `admin.notifications.types.<key>` 取;沒有這個 key 就退回 api 回的 `name`(通知類型登記表的
  * 繁中名稱)。通知設定頁、個人設定的通知管道開關與 🔔 清單一律用這一支,不各自決定名稱。
  *

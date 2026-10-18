@@ -15,7 +15,7 @@ import { PRINTERS_MODULE_KEY } from "./print-agent.schema";
 export const PRINT_JOBS_COLLECTION = "print_jobs";
 
 /**
- * 列印工作(底座規格第 6 章「架構」「資料表」):瀏覽器把單據轉成 384 點寬的黑白 PNG 送來,
+ * 列印工作:瀏覽器把單據轉成 384 點寬的黑白 PNG 送來,
  * 代理程式認領(等待中 → 已送出)後拿圖片列印,再回報已印 / 失敗。
  *
  * 補印:`isReprint = true` 時 `reprintReason` 存欄位管理類別「補印原因」的選項值,

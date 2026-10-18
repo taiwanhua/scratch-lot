@@ -11,7 +11,7 @@ import {
 } from "@repo/domain/printing";
 
 /**
- * 發布(底座規格第 6 章「打包」「發布」):四個平台的壓縮檔名、執行平台對照,
+ * 發布:四個平台的壓縮檔名、執行平台對照,
  * 以及 `manifest.json` 的更新規則(格式正本:`@repo/domain/printing` 的 `PrintAgentManifest`)。
  * 由 `scripts/package-sea.ts`(打包)與 `scripts/update-manifest.ts`(發布 workflow)使用。
  */
@@ -19,7 +19,7 @@ import {
 /** 保留最近幾個版本(更舊的從 bucket 刪掉)。 */
 export const PRINT_AGENT_RELEASES_KEPT = 3;
 
-/** 壓縮檔名(底座規格「打包」表):Windows 是 zip,其他是 tar.gz。 */
+/** 壓縮檔名:Windows 是 zip,其他是 tar.gz。 */
 export function archiveName(platform: PrintAgentPlatform): string {
   return platform === "windows-x64"
     ? `print-agent-${platform}.zip`
@@ -126,7 +126,7 @@ const BUCKET_NAME = /^[a-z\d][\w.-]{1,220}[a-z\d]$/;
 
 /**
  * 發布目標 bucket = 該環境 `deploy/env/<環境>.yaml` 的 `GCS_BUCKET_PRIVATE`(與 api 讀 manifest 的是同一個;
- * 底座規格「發布」:不另設變數)。沒寫、被註解掉或不像 bucket 名稱都回 null(workflow 會停下來)。
+ * 不另設變數)。沒寫、被註解掉或不像 bucket 名稱都回 null(workflow 會停下來)。
  */
 export function privateBucketOf(envYaml: string): string | null {
   const prefix = "GCS_BUCKET_PRIVATE:";

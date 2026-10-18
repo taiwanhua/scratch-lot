@@ -16,7 +16,7 @@ import {
 } from "./print-button-test-support";
 
 /**
- * 列印按鈕(底座規格第 6 章「列印按鈕元件」「權限」;Figma `Draft/PrintButton` 51:625):
+ * 列印按鈕(Figma `Draft/PrintButton`):
  * 六種狀態(Default / Sending / Printed / Failed / Reprint / Disabled)各一個測試,
  * 加上權限、`print-result` 失敗原因、選印表機。等結果的節奏見 `PrintButtonTiming.test.tsx`,
  * 補印對話框見 `PrintButtonReprint.test.tsx`。

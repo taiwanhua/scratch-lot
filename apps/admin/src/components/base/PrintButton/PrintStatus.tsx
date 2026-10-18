@@ -16,7 +16,7 @@ export interface PrintStatusProps {
 const LINE_SX = { display: "flex", alignItems: "center", gap: 0.5 } as const;
 
 /**
- * 按鈕右邊的進度文字(Figma `Draft/PrintButton` 51:625):
+ * 按鈕右邊的進度文字(Figma `Draft/PrintButton`):
  * 已送到印表機… → ✓ 已印出 / ✗ 失敗:<原因>;平常印過的單據顯示「已印 N 次」。
  * 「未收到列印結果」可能已經出紙,另起一行提示先確認再決定要不要補印。
  * 以 `role="status"` 包住,進度變了螢幕閱讀器會念。

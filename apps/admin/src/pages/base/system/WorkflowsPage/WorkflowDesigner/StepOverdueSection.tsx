@@ -26,7 +26,7 @@ export interface StepOverdueSectionProps {
   isReadonly: boolean;
 }
 
-/** 開啟時的起點(Figma BS-03):24 小時提醒審核者、48 小時通知「通知對象」(預設 = 持有改派權限的人)。 */
+/** 開啟時的起點:24 小時提醒審核者、48 小時通知「通知對象」(預設 = 持有改派權限的人)。 */
 const DEFAULT_OVERDUE: OverdueReminderDef = {
   reviewerAfterHours: 24,
   audienceAfterHours: 48,
@@ -45,7 +45,7 @@ const textOf = (hours: number): string =>
   Number.isFinite(hours) && hours !== 0 ? String(hours) : "";
 
 /**
- * 關卡面板「逾時提醒」區塊(《底座規格》3.8 B16;Figma BS-03):預設關閉,開啟後
+ * 關卡面板「逾時提醒」區塊:預設關閉,開啟後
  * 「超過 N 小時未處理 → 通知審核者」「超過 M 小時 → 同時通知『通知對象』」+ 通知對象的人員條件
  * (摘要 + [編輯條件] 對話框,同審核者)。M 必須大於 N:不合法時欄位標紅,設計器擋下不讓存草稿。
  */

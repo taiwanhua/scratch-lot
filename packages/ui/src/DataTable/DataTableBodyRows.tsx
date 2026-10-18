@@ -31,7 +31,7 @@ export interface DataTableBodyRowsProps<Row extends RowData> {
 /**
  * 表身的資料列(`DataTable` 專用子元件):只渲染可視範圍內的列(`@tanstack/react-virtual`),
  * 上下以留白列撐高,原生表格版面(欄寬、sticky 固定欄)因此不受影響。
- * 每一列是 memo 過的 `DataTableBodyRow`:捲動時只畫新進入可視範圍的列(班表 1000 人 × 31 天)。
+ * 每一列是 memo 過的 `DataTableBodyRow`:捲動時只畫新進入可視範圍的列(人員排程 1000 人 × 31 天)。
  */
 export const DataTableBodyRows = <Row extends RowData>({
   table,

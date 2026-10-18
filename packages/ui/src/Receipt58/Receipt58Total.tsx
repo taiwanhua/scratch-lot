@@ -10,7 +10,7 @@ export interface Receipt58TotalProps {
   value: ReactNode;
 }
 
-/** 合計列(Figma `Draft/Receipt58Total` 80:1511):標籤與金額都用粗體大一級的字;太長各自換行。 */
+/** 合計列(Figma `Draft/Receipt58Total`):標籤與金額都用粗體大一級的字;太長各自換行。 */
 export const Receipt58Total = ({ label, value }: Receipt58TotalProps) => (
   <Box sx={{ display: "flex", alignItems: "flex-start", gap: dots(8) }}>
     <Box

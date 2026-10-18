@@ -97,7 +97,7 @@ type DecideOnceInput = Omit<DecideTaskInput, "expectedEditVersion"> & {
  *   決定先提交 → 重跑後讀到決定 → 「此任務已決定」。
  * - `retryAdvanceInstance`:寫 `advance_retried` 後推進。
  * - `batchApproveTasks`:逐筆依序核准,**每一筆是自己的交易**(同 `decideTask` 的核准,含 `runApproveGuard`);
- *   一筆失敗只回復那一筆,逐筆回報結果(底座規格 3.10 B18)。
+ *   一筆失敗只回復那一筆,逐筆回報結果。
  */
 @Injectable()
 export class TaskActionsService {

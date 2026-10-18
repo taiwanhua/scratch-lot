@@ -178,7 +178,7 @@ const ControlledRoster = ({
 };
 
 /**
- * 班表(人 × 日期):左固定人員欄、右固定統計欄,中間日期區左右捲動;列虛擬捲動。
+ * 人員排程(人 × 日期):左固定人員欄、右固定統計欄,中間日期區左右捲動;列虛擬捲動。
  * 欄位顯示、統計欄收合、頂部群組收合都是受控值:示範用 `useState` 扮演使用的模組
  * (正式使用時模組存在瀏覽器,key 照 `createAdminStorageKeys`)。
  */
@@ -196,7 +196,7 @@ const meta = {
     formatCellLabel: (person: DemoStaff, date: string) =>
       `${person.name} ${date}`,
     containerSx: { height: 520 },
-    "aria-label": "班表",
+    "aria-label": "人員排程",
   },
   render: (args) => <ControlledRoster {...args} />,
 } satisfies Meta<typeof RosterGrid<DemoStaff>>;
@@ -204,15 +204,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** 沒有頂部群組(Figma Group=None 49:494);點格子選取,每週二店休整欄停用。 */
+/** 沒有頂部群組(Figma Group=None);點格子選取,每週二店休整欄停用。 */
 export const Default: Story = {};
 
-/** 頂部群組展開(Figma Group=Expanded 366:7737):空白格滑過顯示「+ 人力需求」,點了回呼模組。 */
+/** 頂部群組展開(Figma Group=Expanded):空白格滑過顯示「+ 人力需求」,點了回呼模組。 */
 export const TopGroupExpanded: Story = {
   render: (args) => <ControlledRoster {...args} withTopGroup />,
 };
 
-/** 頂部群組收合(Figma Group=Collapsed 366:7806):一列彙總,主行 + 副行。 */
+/** 頂部群組收合(Figma Group=Collapsed):一列彙總,主行 + 副行。 */
 export const TopGroupCollapsed: Story = {
   render: (args) => (
     <ControlledRoster {...args} withTopGroup initialTopGroupCollapsed />

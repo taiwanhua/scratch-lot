@@ -38,7 +38,7 @@ export interface ScheduleTimelineGroupBoxProps {
 }
 
 /**
- * 容器(Figma Draft/ScheduleTimelineDemand 286:77949):一個群組(例:一筆人力需求)的底層,
+ * 容器(Figma Draft/ScheduleTimelineDemand):一個群組(例:一筆人力需求)的底層,
  * 比裡面所有長條大一點;標題由模組提供(日模式一行、週模式左側 20px 直排)。框色依 Tone。
  * 點容器(標題)回呼模組;互動狀態是白底元件那組(疊 grey/500)。
  */

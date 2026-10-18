@@ -40,7 +40,7 @@ const outcomeOf = (
 };
 
 /**
- * 測試列印的流程(底座規格「測試頁」;Figma BS-18a / b / c):
+ * 測試列印的流程:
  * 開窗即印 —— 測試頁節點轉圖 → `printPrinterTestPage` → 等結果(共用的 `usePrintJobResult`:`print-result` 信號 + 依即時通道狀態補查 `printJob`)。
  * [重試] = 下一輪(`attempt` + 1)再印一次。
  *

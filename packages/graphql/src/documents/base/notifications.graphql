@@ -1,4 +1,4 @@
-# 通知(底座規格第 5 章;api `apps/api/src/notifications/`):我的通知只讀寫自己的,所有登入者都能用;
+# 通知(api `apps/api/src/notifications/`):我的通知只讀寫自己的,所有登入者都能用;
 # 通知設定要 system.notification-settings.view / edit。欄位語意見 docs/modules/notification-settings.md「api 介面」。
 
 fragment NotificationItem on Notification {

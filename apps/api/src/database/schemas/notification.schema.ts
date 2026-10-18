@@ -5,11 +5,11 @@ import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 export const NOTIFICATIONS_COLLECTION = "notifications";
 
-/** 通知保留天數:`createdAt` 超過就由 TTL 索引自動刪除(底座規格第 5 章)。 */
+/** 通知保留天數:`createdAt` 超過就由 TTL 索引自動刪除。 */
 export const NOTIFICATION_RETENTION_DAYS = 90;
 
 /**
- * 通知(底座規格第 5 章;CONTEXT.md「通知」):一位收件人收到的一則,由 `NotificationService.notify`
+ * 通知(CONTEXT.md「通知」):一位收件人收到的一則,由 `NotificationService.notify`
  * 在觸發它的動作的同一個交易裡寫入。標題與內容在寫入當下依通知類型的範本、以收件人的語言產生。
  *
  * 屬收件人自己的資料:只由收件人經 API 讀取與標已讀(依 `recipientId`,與目前組織無關),

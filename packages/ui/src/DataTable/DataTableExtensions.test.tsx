@@ -9,7 +9,7 @@ import {
 import { setupFakeViewport } from "../test/viewport";
 import { DataTable, type DataTableColumn } from "./DataTable";
 
-/** `DataTable` 為班表(RosterGrid)打開的三個能力:欄位顯示 / 隱藏、表頭下方的固定列、欄位樣式。 */
+/** `DataTable` 為人員排程(RosterGrid)打開的三個能力:欄位顯示 / 隱藏、表頭下方的固定列、欄位樣式。 */
 
 interface Item {
   id: string;

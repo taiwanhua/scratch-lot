@@ -32,7 +32,7 @@ export interface SectionProps {
 }
 
 /*
- * 幾何照 Figma `Draft/Section` 41:5932(Expanded 41:5916 / Collapsed 41:5925):
+ * 幾何照 Figma `Draft/Section`(Expanded / Collapsed):
  * 外框白底、1px 分隔線色邊框、圓角 12(radius.md);標題列高 56、左右內距 16、元素間距 12;
  * 標題 subtitle1 半粗,摘要 body2 次要色;箭頭 16 在最右(展開朝上、收合朝下);
  * 內容區左右與下方內距 16、與標題列之間不畫分隔線。標題列高 56 只有這個元件用到,依 STYLE-06 直寫。

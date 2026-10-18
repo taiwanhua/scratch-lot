@@ -38,7 +38,7 @@ import {
 
 /**
  * 通知設定(模組 key `system.notification-settings`,正本 `docs/modules/notification-settings.md`
- * 「admin 頁面」;Figma BS-09a `289:86057` / BS-09b `289:86572`)。
+ * 「admin 頁面」)。
  *
  * 版面沿用示範模組列表(說明 + 搜尋 + 表格卡片 + 頁碼):列出所有**負責人提醒**類型的組織範圍(唯讀)
  * 與目前的收件人;[編輯] 開「編輯收件人」(網址 `?edit=<類型 key>`)、[還原預設] 先確認再送出。

@@ -6,7 +6,7 @@ import type {
 } from "./constants";
 
 /**
- * 代理程式 ↔ API 的 HTTP 協定(底座規格第 6 章「配對」「代理程式」)。
+ * 代理程式 ↔ API 的 HTTP 協定。
  *
  * - 伺服器網址 = API 的 origin(與後台打的 GraphQL 同一台);下面的路徑都接在它後面。
  * - 除了配對,每個請求都帶 `Authorization: Bearer <代理程式金鑰>`;金鑰被撤銷(重新配對、停用)後一律 401。

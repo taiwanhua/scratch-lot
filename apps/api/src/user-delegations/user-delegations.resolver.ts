@@ -17,7 +17,7 @@ import {
 import { UserDelegationsService } from "./user-delegations.service";
 
 /**
- * 代理人(《底座規格》3.7 B15):只讀寫自己的,所有登入者都能用 —— 不經模組權限
+ * 代理人:只讀寫自己的,所有登入者都能用 —— 不經模組權限
  * (個人設定是殼層路由、不是模組,不分配給角色;同 `UserPreferencesResolver`)。
  */
 @Resolver()

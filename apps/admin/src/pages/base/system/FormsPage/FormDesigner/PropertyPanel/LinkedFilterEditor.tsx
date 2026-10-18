@@ -40,7 +40,7 @@ const linkedKeyOf = (value: LookupSourceDescriptor, name: string): string => {
 };
 
 /**
- * 連動篩選(《底座規格》3.2 B2d)的設定:來源每個可當篩選的欄位一個下拉,選「等於表單上的哪一欄」
+ * 連動篩選的設定:來源每個可當篩選的欄位一個下拉,選「等於表單上的哪一欄」
  * (存 `filter.<欄位> = { var: "<欄位 key>" }`)。只列型別相符的欄位(`isFilterVarCompatible`,與檢查器同一支);
  * 引用不存在 / 型別不符 / 同一列子欄仍由檢查器把關。
  */

@@ -228,7 +228,7 @@ describe("realtimeTicket:只含操作者有權的頻道", () => {
   });
 });
 
-describe("代理程式的訂閱憑證(底座規格第 6 章)", () => {
+describe("代理程式的訂閱憑證", () => {
   const agentId = String(new Types.ObjectId());
 
   it("只含 print-agent:<自己>,租戶 = 代理程式分店所屬租戶;10 分鐘", async () => {

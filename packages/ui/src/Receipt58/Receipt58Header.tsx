@@ -22,7 +22,7 @@ export interface Receipt58HeaderProps {
   reprint?: Receipt58ReprintMarkProps;
 }
 
-/** 表頭(Figma `Draft/Receipt58Header` 80:1491):租戶名稱、單據名稱、補印標示、單號與時間。 */
+/** 表頭(Figma `Draft/Receipt58Header`):租戶名稱、單據名稱、補印標示、單號與時間。 */
 export const Receipt58Header = ({
   tenantName,
   title,

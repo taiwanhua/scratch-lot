@@ -249,7 +249,7 @@ export const modulesForView = (view: MockView): TestModule[] => [
   ).filter((module) => module.key !== "system"),
   ...applyCenterModules(),
   ...demoGroupFormModules(["demo.form.*"]),
-  // 通知設定(掛在系統管理群組下,排在既有 8 項之後;底座規格第 5 章)
+  // 通知設定(掛在系統管理群組下,排在既有 8 項之後)
   notificationSettingsModule,
   // 印表機管理(系統管理群組最後一項)
   printersModule(),

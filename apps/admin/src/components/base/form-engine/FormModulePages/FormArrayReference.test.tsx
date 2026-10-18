@@ -36,7 +36,7 @@ const referenceDefinition = (): FormDefinition => {
   };
 };
 
-/** 明細子欄支援引用(《底座規格》3.2 B2b):表格格子是自動完成,查詢目標是 `<明細 key>.<子欄 key>`。 */
+/** 明細子欄支援引用:表格格子是自動完成,查詢目標是 `<明細 key>.<子欄 key>`。 */
 describe("明細列的引用子欄(填寫)", () => {
   it("格子是自動完成;查 `lines.who`,選定後存 `{ id, label }`", async () => {
     const { user, world } = renderShopping({

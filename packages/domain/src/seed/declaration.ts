@@ -139,7 +139,7 @@ export interface FormDefinitionSeedSet extends DefinitionSeedBase {
   /** 頁籤 / 標題模板;必填,`null` = 清空(用模組層模板)。 */
   tabLabelTemplate: string | null;
   /**
-   * 表單設定「允許存草稿」(底座規格 10.10);缺席 = 開。只有要關掉時才寫 `allowDraft: false`
+   * 表單設定「允許存草稿」;缺席 = 開。只有要關掉時才寫 `allowDraft: false`
    * (開著的宣告不寫這個鍵,`contentHash` 也不含它,既有宣告的 hash 不變)。
    */
   allowDraft?: boolean;

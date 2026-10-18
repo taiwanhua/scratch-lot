@@ -157,7 +157,7 @@ function submittedRow(result: Result): Row {
 }
 
 /**
- * 表單設定「允許存草稿」與直接送出(底座規格 10.10,真 Mongo):情境表每一列一個測試,
+ * 表單設定「允許存草稿」與直接送出(真 Mongo):情境表每一列一個測試,
  * 另驗 `createAndSubmitFormSubmission` 走與 `submitFormSubmission` 同一條送出路徑(守門、事後動作、進流程)。
  */
 describe("表單設定:允許存草稿 / 直接送出", () => {

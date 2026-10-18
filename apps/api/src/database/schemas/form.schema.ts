@@ -50,7 +50,7 @@ export class Form {
   /**
    * 頁籤 / 標題模板(`{{名稱}}` 佔位符,套法是 `@repo/domain/form` 的 `renderTemplate`,前端從那筆的值即時算):
    * 摘要槽 `{{title}}` / `{{date}}` / `{{amount}}`、欄位值 `{{value.<欄位key>}}`、
-   * 系統 `{{applicant}}` / `{{form}}` / `{{module}}` / `{{action}}`(清單正本 admin 的 `lib/form-engine/tab-label.ts`)。
+   * 系統 `{{applicant}}` / `{{form}}` / `{{module}}` / `{{action}}`(清單正本 admin 的 `lib/base/form-engine/tab-label.ts`)。
    * null = 用模組層模板。
    */
   @Prop({ type: String, default: null })

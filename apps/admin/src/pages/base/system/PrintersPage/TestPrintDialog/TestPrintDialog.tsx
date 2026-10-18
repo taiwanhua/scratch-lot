@@ -26,7 +26,7 @@ export interface TestPrintDialogProps {
 }
 
 /**
- * [測試列印](底座規格「測試頁」;Figma BS-18a 成功 / BS-18b 缺紙 / BS-18c 離線):
+ * [測試列印]:
  * 開窗就送出測試頁,結果顯示在對話框裡 —— 成功提示核對項目;失敗顯示原因與 [重試]。
  */
 export const TestPrintDialog = ({

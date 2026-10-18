@@ -30,15 +30,15 @@ const TAG = "v0.3.0";
 
 /** 新底座 v0.3.0:有 key 的 seed、底座 hook 與 lib、空的專案登記(底座帶的預設)。 */
 const BASE_V3_CHANGES = {
-  "apps/db-migrator/seeds/base/modules/lottery.ts": [
-    'export const LOTTERY_MODULE_KEY = "lottery";',
-    "export const LOTTERY_HISTORY_KEY = `${LOTTERY_MODULE_KEY}.history-page`;",
-    "export const lotteryModule = {",
+  "apps/db-migrator/seeds/base/modules/demo.ts": [
+    'export const DEMO_MODULE_KEY = "demo";',
+    "export const DEMO_HISTORY_KEY = `${DEMO_MODULE_KEY}.history-page`;",
+    "export const demoModule = {",
     "  nodes: [",
-    "    { key: LOTTERY_MODULE_KEY, name: '刮刮樂', parentKey: null },",
-    "    { key: LOTTERY_HISTORY_KEY, name: '紀錄', parentKey: LOTTERY_MODULE_KEY },",
+    "    { key: DEMO_MODULE_KEY, name: '示範', parentKey: null },",
+    "    { key: DEMO_HISTORY_KEY, name: '紀錄', parentKey: DEMO_MODULE_KEY },",
     "  ],",
-    '  permissions: [{ key: permissionKey(LOTTERY_MODULE_KEY, "draw") }],',
+    '  permissions: [{ key: permissionKey(DEMO_MODULE_KEY, "draw") }],',
     "};",
     "// 底座的 helper 寫法:無法靜態解析,只計數",
     "export const helper = (key) => ({ key: key });",
@@ -257,16 +257,16 @@ test("不乾淨 2:頁面替換、help 替換與表單 options / pageOverrides �
 test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 節列出;無法解析的 key 也列;引用、別的 collection 與歷史快照不算", async () => {
   const result = await verifyScenario("seeds", {
     "apps/db-migrator/seeds/project/modules.ts": [
-      'import { LOTTERY_MODULE_KEY } from "../base/modules/lottery";',
+      'import { DEMO_MODULE_KEY } from "../base/modules/demo";',
       "export const projectModules = {",
       "  nodes: [",
-      "    { key: LOTTERY_MODULE_KEY, name: '刮刮樂(專案版)' },",
-      "    { key: `${LOTTERY_MODULE_KEY}.history-page`, name: '紀錄' },",
+      "    { key: DEMO_MODULE_KEY, name: '示範(專案版)' },",
+      "    { key: `${DEMO_MODULE_KEY}.history-page`, name: '紀錄' },",
       "    { key: 'own-module', name: '專案自己的' },",
       "    { key: makeKey('x'), name: '讀不懂' },",
       "  ],",
       "  permissions: [",
-      '    { key: permissionKey("lottery", "draw") },',
+      '    { key: permissionKey("demo", "draw") },',
       '    { key: "requests.view" },',
       "  ],",
       "};",
@@ -280,7 +280,7 @@ test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 �
     ].join("\n"),
     // 只給 migration 明示套用的歷史快照:不是目前宣告
     "apps/db-migrator/seeds/project/revisions/old.r1.seed.ts":
-      "export const seed = { collection: 'modules', entries: [{ key: 'lottery' }] };\n",
+      "export const seed = { collection: 'modules', entries: [{ key: 'demo' }] };\n",
     // 設計器匯出、被 registry import 的快照:是目前宣告
     "apps/db-migrator/seeds/project/revisions/roles.r1.seed.ts":
       'export const seed = { collection: "roles", entries: [{ key: "admin", data: {} }] };\n',
@@ -290,13 +290,13 @@ test("不乾淨 3:專案 seed 宣告了底座已有的 collection + key,第 3 �
       "",
     ].join("\n"),
   });
-  const lottery = "`apps/db-migrator/seeds/base/modules/lottery.ts`";
+  const demo = "`apps/db-migrator/seeds/base/modules/demo.ts`";
   const modules = "`apps/db-migrator/seeds/project/modules.ts`";
   assert.deepEqual(assertOnlySection(result, 3), [
     "- roles `admin`:底座 `apps/db-migrator/seeds/base/roles.ts`;專案 `apps/db-migrator/seeds/project/revisions/roles.r1.seed.ts`",
-    `- modules \`lottery\`:底座 ${lottery};專案 ${modules}`,
-    `- permissions \`lottery.draw\`:底座 ${lottery};專案 ${modules}`,
-    `- modules \`lottery.history-page\`:底座 ${lottery};專案 ${modules}`,
+    `- modules \`demo\`:底座 ${demo};專案 ${modules}`,
+    `- permissions \`demo.draw\`:底座 ${demo};專案 ${modules}`,
+    `- modules \`demo.history-page\`:底座 ${demo};專案 ${modules}`,
     `- permissions \`requests.view\`:底座 \`apps/db-migrator/seeds/base/modules/requests.ts\`;專案 ${modules}`,
     `- 無法解析的 key \`makeKey('x')\`(${modules})`,
   ]);

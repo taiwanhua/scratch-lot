@@ -26,7 +26,7 @@ export interface ResetPairingDialogProps {
 }
 
 /**
- * [重新配對](底座規格「離線、逾時、重新配對與停用」表):先確認(舊金鑰立即失效)→ 顯示新的
+ * [重新配對]:先確認(舊金鑰立即失效)→ 顯示新的
  * 伺服器網址與配對碼(10 分鐘);印表機設定保留。確認類彈窗,不進網址(REACT-14)。
  */
 export const ResetPairingDialog = ({

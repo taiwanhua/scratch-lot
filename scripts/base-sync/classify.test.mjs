@@ -65,6 +65,13 @@ test("專案的名詞表與討論紀錄判為 project,底座的仍是 mixed", ()
   assert.equal(classifyPath("docs/tmp/dis.md", "M"), "mixed");
 });
 
+test("根目錄的 .nvmrc 判為 common,其他位置的不因此改變", () => {
+  assert.equal(classifyPath(".nvmrc", "A"), "common");
+  assert.equal(classifyPath(".nvmrc", "M"), "common");
+  assert.equal(classifyPath("apps/front/.nvmrc", "A"), "project");
+  assert.equal(classifyPath("tools/.nvmrc", "A"), "unknown");
+});
+
 test(".claude/skills 底下的 skill 判為 common", () => {
   assert.equal(
     classifyPath(".claude/skills/module-scaffold/SKILL.md", "M"),

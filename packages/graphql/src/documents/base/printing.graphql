@@ -1,4 +1,4 @@
-# 印表機管理與列印(底座規格第 6 章;正本 docs/modules/printers.md「api 介面」)。
+# 印表機管理與列印(正本 docs/modules/printers.md「api 介面」)。
 # 欄位語意:
 #   PrintAgent.online — 啟用且 2 分鐘內看到過;updateAvailable — 版本比安裝檔最新版舊(讀不到 manifest 時 false)
 #   PrintAgent.paired — 有有效金鑰;pairingExpiresAt — 等待中的配對碼到期時間(配對碼只在產生時回一次)

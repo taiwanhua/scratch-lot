@@ -57,7 +57,7 @@ function cycleAt<T>(list: readonly T[], index: number): T {
 }
 
 /**
- * 明細子欄支援引用(《底座規格》3.2 B2b):存 `{ id, label }` 快照;送出重驗每一列並重取 label,
+ * 明細子欄支援引用:存 `{ id, label }` 快照;送出重驗每一列並重取 label,
  * **同一子欄的 id 合併成一次查詢**;讀不到 → `VALIDATION_FAILED`(錯誤定位到 `rowId` + 子欄);
  * `displayValues` 以 `<明細 key>.<子欄 key>` 回現名;修訂差異比 id;權限繼承整個明細欄。
  * 真 GraphQL + 真 MongoDB(TEST-07)。

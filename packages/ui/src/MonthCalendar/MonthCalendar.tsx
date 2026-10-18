@@ -88,7 +88,7 @@ export interface MonthCalendarProps {
 }
 
 /**
- * 月曆(《底座規格》10.5;Figma Draft/MonthCalendar 48:360、BS-23 260:6356)。
+ * 月曆(Figma Draft/MonthCalendar)。
  * **一週固定從星期日開始**;格子寬度由容器七等分,高度電腦大格、手機約 48px。
  * 月份與選取都是受控值,元件只回報操作,不自己存。
  */

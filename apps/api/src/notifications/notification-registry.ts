@@ -9,7 +9,7 @@ import {
 import type { UserPreferenceDefinition } from "../user-preferences/user-preference-registry";
 
 /**
- * 通知的登記制(底座規格第 5 章「通知類型登記表」「管道可登記」「連結登記表」):
+ * 通知的登記制:
  * 類型、管道、連結都在這裡定義型別與驗證;底座的登記在 `base-notification-types.ts`,
  * 專案的在 `src/project/notifications.ts`(固定入口,由 `app.module.ts` 經
  * `NotificationRegistryModule.forRoot` 組裝)。兩份合成時驗格式與不重複,不合就讓 app 起不來。

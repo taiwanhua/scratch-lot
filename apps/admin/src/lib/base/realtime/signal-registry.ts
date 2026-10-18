@@ -1,7 +1,7 @@
 import type { QueryKey } from "@tanstack/react-query";
 
 /**
- * 信號類型登記(底座規格第 4 章「頻道」):每種信號對應要 invalidate 的 TanStack Query key。
+ * 信號類型登記:每種信號對應要 invalidate 的 TanStack Query key。
  * 收到信號、斷線時的 60 秒輪詢、重新連線後的補抓,都 invalidate 這裡登記的 key(只重抓畫面上有在用的)。
  * 頁面要做額外的事(例:看板重排)用 `useRealtimeSignal(type, handler)`。
  */

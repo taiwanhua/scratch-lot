@@ -108,7 +108,7 @@ function checkPort(value: number, errors: PrintingFieldError[]): number {
 }
 
 /**
- * 印表機(底座規格第 6 章「資料表」「印表機管理頁」):只記到分店層,分店 = 代理程式的分店。
+ * 印表機:只記到分店層,分店 = 代理程式的分店。
  * 同一分店至多一台預設印表機(設新的預設時,同分店其他台改 false,同一個交易)。
  */
 @Injectable()

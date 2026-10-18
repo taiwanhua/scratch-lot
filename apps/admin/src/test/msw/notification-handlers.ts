@@ -110,7 +110,7 @@ export const notificationFixture = (
 const minutesAgo = (minutes: number) =>
   new Date(Date.now() - minutes * 60_000).toISOString();
 
-/** mock 開發模式的通知(照 Figma BS-08 289:85622 的三則:兩則未讀、一則已讀)。 */
+/** mock 開發模式的通知(照 Figma 的三則:兩則未讀、一則已讀)。 */
 export const sampleNotifications = (): TestNotification[] => [
   notificationFixture({
     id: "mock-n-1",

@@ -7,7 +7,7 @@ import {
 } from "./print-button-test-support";
 
 /**
- * 補印對話框(底座規格第 6 章「列印按鈕元件」補印表的畫面列,每列一個測試;
+ * 補印對話框(每列一個測試;
  * API 列見 `apps/api/src/printing/print-jobs.test.ts`)。
  */
 

@@ -7,7 +7,7 @@ import {
   ruleCase,
 } from "./layout-timeline-test-support";
 
-describe("layoutTimeline 規則頁案例(Figma 401:805)", () => {
+describe("layoutTimeline 規則頁案例", () => {
   for (const rule of RULE_CASES) {
     for (const dayWidth of [157, 125] as const) {
       const device = dayWidth === 157 ? "電腦" : "平板";

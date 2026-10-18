@@ -21,7 +21,7 @@ export interface BuildRosterTopRowsOptions {
   emptyCellLabel: (date: string, rowKey: string) => string;
 }
 
-/** 日期格的內容留一點內距(日期欄的表格格子本身是 0 內距,讓班表格子能貼滿)。 */
+/** 日期格的內容留一點內距(日期欄的表格格子本身是 0 內距,讓排程格子能貼滿)。 */
 const padded = (content: ReactNode) =>
   createElement(Box, { sx: { p: 0.5 } }, content);
 

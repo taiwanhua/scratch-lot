@@ -127,7 +127,7 @@ export const defaultPrinters = (): PrinterFieldsFragment[] => [
   }),
 ];
 
-/** 三筆列印紀錄(Figma BS-20):已印出、補印第 2 次、失敗(代理程式離線)。 */
+/** 三筆列印紀錄:已印出、補印第 2 次、失敗(代理程式離線)。 */
 export const defaultPrintJobs = (): PrintJobFieldsFragment[] => [
   printJobFragment(),
   printJobFragment({

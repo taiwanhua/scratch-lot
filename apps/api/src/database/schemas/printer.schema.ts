@@ -16,7 +16,7 @@ import { PRINTERS_MODULE_KEY } from "./print-agent.schema";
 export const PRINTERS_COLLECTION = "printers";
 
 /**
- * 收據機(底座規格第 6 章「資料表」):**只記到分店層**,`orgId` = 連它的代理程式所在分店。
+ * 收據機:**只記到分店層**,`orgId` = 連它的代理程式所在分店。
  * 專案要「收銀點的印表機」由專案自己加欄位。
  */
 @Schema({ collection: PRINTERS_COLLECTION, timestamps: true })

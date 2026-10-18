@@ -100,7 +100,7 @@ export interface ScheduleTimelineProps {
 }
 
 /**
- * 時間軸(《底座規格》10.11;Figma BS-22 289:66462、Draft/ScheduleTimeline 289:66461):
+ * 時間軸(Draft/ScheduleTimeline):
  * 時間固定 00:00–24:00、每小時一格,在時間方向捲動、表頭固定。容器模式:每個群組一個容器
  * (底層),裡面放長條與缺額空位;週模式依 `layoutTimeline` 排入、放不下的整個收進「+N」長條,
  * 日模式往下排、不收起。進入畫面(或切換日期 / 週)時自動捲到最早的長條或容器的前 1 小時

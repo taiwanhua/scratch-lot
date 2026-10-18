@@ -6,7 +6,7 @@ import { stateLayerSx } from "./state-layer";
 
 const theme = createAppTheme(defaultBrand);
 
-describe("stateLayerSx(《底座規格》10.11)", () => {
+describe("stateLayerSx", () => {
   it("主題的 hoverOpacity / selectedOpacity 是 8% / 16%", () => {
     expect(theme.palette.action.hoverOpacity).toBeCloseTo(0.08);
     expect(theme.palette.action.selectedOpacity).toBeCloseTo(0.16);

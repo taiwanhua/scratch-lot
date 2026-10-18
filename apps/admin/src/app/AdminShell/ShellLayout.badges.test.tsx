@@ -20,7 +20,7 @@ import { FakeSocket } from "@/test/realtime";
 import { renderApp } from "@/test/render";
 
 /**
- * 側欄計數登記制(底座規格 10.4):數字來自 `sidebarBadges`(api 只回看得到的模組),
+ * 側欄計數登記制:數字來自 `sidebarBadges`(api 只回看得到的模組),
  * 收到 `badge:<模組 key>` 信號就重抓 —— 走真的殼、真的 `RealtimeProvider` 與信號登記表,
  * 只把瀏覽器的 WebSocket 換成假的(測試預設的 `realtimeTicket` 是 null = 停用,這裡改發憑證)。
  */

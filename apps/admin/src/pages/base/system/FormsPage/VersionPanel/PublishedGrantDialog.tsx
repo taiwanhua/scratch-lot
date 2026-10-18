@@ -19,7 +19,7 @@ export interface PublishedGrantDialogProps {
 }
 
 /**
- * 發布成功、且這次發布新建了依表單新增權限(B9b)時的提示(BS-04b):權限**不會自動授予**,
+ * 發布成功、且這次發布新建了依表單新增權限(B9b)時的提示:權限**不會自動授予**,
  * 請到角色管理授予需要的角色。沒有角色管理(沒權限)→ 只有 [稍後],不給連結(ADR-0011)。
  */
 export const PublishedGrantDialog = ({

@@ -31,7 +31,7 @@ export const printersListSchema = z
   .default({ org: null, enabled: "all", page: 1 });
 
 /**
- * 代理程式分頁:「顯示已停用」開關(預設關 = 只列啟用中的,底座規格「離線、逾時、重新配對與停用」表)、頁碼。
+ * 代理程式分頁:「顯示已停用」開關(預設關 = 只列啟用中的)、頁碼。
  * 開關是列表的篩選,所以放網址。
  */
 export const agentsListSchema = z
