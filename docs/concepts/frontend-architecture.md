@@ -125,7 +125,7 @@ test/       測試支援
 ```
 
 - `RequireAuth`:未登入回登入頁;`me.mustChangePassword` 導去改密碼頁。
-- **殼層固定路由**(目前只有個人設定 `/settings/personal`):開在殼裡,但不是模組、不分配給角色、不經 `ModuleRoute`,所有登入者都能開。`lib/base/shell-routes.ts` 的 `withShellRoutes` 把它以一筆不在側欄的頁面形狀(`link`、精準比對)併進殼用的路由集合,AppBar 頁名、「?」說明(key `personal-settings`)與路由頁籤因此和模組頁走同一條路;`ModuleRoute` 的權限判斷不吃這份。
+- **殼層固定路由**(目前只有個人設定 `/settings/personal`):開在殼裡,但不是模組、不分配給角色、不經 `ModuleRoute`,所有登入者都能開。`lib/base/shell-routes.ts` 的 `withShellRoutes` 把它以一筆不在側欄的頁面形狀(`link`、精準比對)併進殼用的路由集合,AppBar 頁名、「?」說明(key `personal-settings`)與路由頁籤因此和模組頁走同一條路;`ModuleRoute` 的權限判斷不吃這份。做成殼層路由而不是模組,是因為個人設定只放本人的通知開關與代理人;做成模組就得分配給每個角色,漏掉的角色裡的人就不能設代理人。
 - `ModuleRoute`:把網址對上 `me.modules`,決定顯示哪一頁。
 - 模組 key → 頁面元件由 `app/module-pages.tsx` 組裝;有路由授權但沒登記元件的模組顯示佔位頁。登記不會新增路由授權。
 
@@ -313,15 +313,15 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 ## zustand store 與瀏覽器儲存
 
-| store                   | 內容                       | 保存位置                       |
-| ----------------------- | -------------------------- | ------------------------------ |
-| `useSessionStore`       | access token(只在記憶體)   | 記憶體                         |
-| `useLocaleStore`        | 語言                       | localStorage                   |
-| `useSideNavStore`       | 側欄收合                   | localStorage(不分使用者)       |
-| `useRouteTabsStore`     | 路由頁籤                   | sessionStorage(以使用者分 key) |
-| `useSnackbarStore`      | 目前那一則提示             | 記憶體                         |
-| `useDesignerDraftStore` | 表單設計器有沒有未存的變更 | 記憶體                         |
-| `useWorkflowDraftStore` | 流程設計器有沒有未存的變更 | 記憶體                         |
+| store                   | 內容                        | 保存位置                       |
+| ----------------------- | --------------------------- | ------------------------------ |
+| `useSessionStore`       | access token(只在記憶體)    | 記憶體                         |
+| `useLocaleStore`        | 語言                        | localStorage                   |
+| `useSideNavStore`       | 側欄收合                    | localStorage(不分使用者)       |
+| `useRouteTabsStore`     | 路由頁籤                    | sessionStorage(以使用者分 key) |
+| `useSnackbarStore`      | 畫面上的提示佇列(最多 3 則) | 記憶體                         |
+| `useDesignerDraftStore` | 表單設計器有沒有未存的變更  | 記憶體                         |
+| `useWorkflowDraftStore` | 流程設計器有沒有未存的變更  | 記憶體                         |
 
 - 外觀不在 zustand:由 `AppThemeProvider` 存 localStorage(見上方「外觀」)。
 - 儲存鍵由 `@repo/project-config/public` 的 `createAdminStorageKeys(projectPublic.slug)` 產生,格式是 `<slug>-admin-<用途>`;分使用者的鍵再加 `:<userId>`。slug 是專案的穩定識別,品牌更名不跟著改,變更 slug 會換掉整組瀏覽器儲存鍵。鍵與相容搬移設定登記在 `docs/branding.md`。

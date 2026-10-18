@@ -192,6 +192,19 @@ input ResetNotificationSettingInput {
 
 ## admin 頁面
 
+### 通知鈴與通知清單
+
+頂端列的 🔔(`components/base/NotificationBell/`)所有登入者都有,不看權限;只讀寫自己的通知。
+
+- **未讀數**:0 不顯示,超過 99 顯示 `99+`。
+- **清單**:依時間新到舊,一次 20 則(`hooks/base/useNotifications.ts`),捲到底載入下一批,沒有更多時不再載入;可切「全部 / 未讀」,另有「全部標為已讀」。
+- **點一則**:未讀的先標已讀,有連結就打開(api 依連結登記表換好的站內路徑),沒有連結只標已讀。連結頁面沒有權限或資料已不在 → 照常標已讀,由頁面顯示既有的無權限 / 找不到狀態。
+- **新通知提示**(`hooks/base/useNotificationAlerts.ts`):收到 `notification` 信號 → 一則統一的 Snackbar(Severity=Info、有標題、沒有動作)。1 秒內陸續到的信號算同時收到:只到 1 則時標題、內容取最新一則未讀通知(拿不到退回「你有 1 則新通知」);多則只跳一則「你有 N 則新通知」。送出端不合併信號,所以合併在這裡做。
+- 未讀數與開著的清單由信號登記表重抓(`docs/concepts/frontend-architecture.md`),提示只管跳出。
+- 通知超過 90 天由 TTL 刪除,清單不再出現。
+
+### 通知設定頁
+
 通知設定頁(`pages/base/system/NotificationSettingsPage/`;Figma BS-09a `289:86057`、BS-09b `289:86572`),版面沿用示範模組列表:說明 + 搜尋 + 表格卡片 + 頁碼。使用者說明在 `apps/admin/src/md/module-help/base/system.notification-settings.help.md`。
 
 - **清單**:一列一種負責人提醒類型,欄位是通知類型、組織範圍、收件人、操作。組織範圍唯讀,由 `orgScope` 換成一行白話(`ref`:觸發事件的組織 / 最上層組織;`range`:本身 / 含下層 / 含上層)。收件人是人員條件的一行摘要(與流程設計器的審核者框共用 `useAudienceSummary`);沒調整過的(`isDefault`)標「預設」。
