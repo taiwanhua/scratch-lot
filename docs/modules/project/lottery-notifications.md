@@ -1,0 +1,46 @@
+# 專案通知類型(刮刮樂、排班與出勤)
+
+本專案登記的通知類型。登記處是 `apps/api/src/project/notifications.ts`(`PROJECT_NOTIFICATIONS`,經底座 `NotificationRegistryModule.forRoot` 組裝);類型宣告的欄位、通知設定頁與 `notify()` 的用法照底座 [notification-settings.md](../notification-settings.md),這裡只寫本專案的類型。內容來源:專案規格 3.4。
+
+- **負責人提醒**的收件人 = 類型宣告的組織範圍 且 符合人員條件;租戶可在通知設定頁改人員條件(組織範圍不能改)。**當事人通知**的收件人由觸發的功能在 `notify()` 指定。
+- 管道:十種都是站內 + email,收件人可在個人偏好逐一關掉。
+- 可調的提醒時間(規格 3.5)不在本檔宣告;由各提醒票在自己那一筆加上(見下表「提醒時間」欄),加上之後的當事人通知才會出現在通知設定頁。
+- 連結(`links`):觸發的功能有詳情頁時,由該功能票在 `links` 追加 `refType`;還沒登記的類型通知沒有連結。
+
+## 類型
+
+| key                            | 名稱         | 類別       | 組織範圍                                                | 預設人員條件 / 收件人                   | 觸發(功能)                                           | 提醒時間(規格 3.5)         |
+| ------------------------------ | ------------ | ---------- | ------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------- | -------------------------- |
+| `lottery.daily-close-overdue`  | 日結逾期     | 負責人提醒 | 事件的組織本身(該分店)                                  | 持有 `store.bank-deposit`(代表店長,註1) | B14:有已送出交班結帳的班還沒被日結涵蓋計算(店面管理) | 逾期後每天 09:00           |
+| `lottery.transfer-shipped`     | 調貨出貨通知 | 負責人提醒 | 事件的組織本身(收貨店)                                  | 持有 `store.bank-deposit`(註1)          | 調貨單第一關通過,含跳過(調貨單)                      | —(發生時)                  |
+| `lottery.license-expiring`     | 證照到期     | 負責人提醒 | 事件的組織含上層(乙類:對應分店;甲類或沒有對應分店:租戶) | 持有 `store.bank-deposit`(註1)          | B14:到期日(經銷商管理)                               | 到期日前 30、7、0 天 09:00 |
+| `lottery.store-rent-due`       | 牌租繳費提醒 | 負責人提醒 | 事件的組織含上層(乙類對應分店;沒有對應分店:租戶)        | 持有 `store.bank-deposit`(註1)          | B14:每期繳費日(經銷商管理)                           | 繳費日前 3、0 天 09:00     |
+| `lottery.period-close-overdue` | 關帳逾期     | 負責人提醒 | 租戶本身                                                | 持有 `accounts.close-period`            | B14:上個月還沒關帳(帳戶管理)                         | 每月第 3 天 09:00          |
+| `lottery.purchase-wrong-store` | 進貨送錯分店 | 當事人通知 | —                                                       | 這張進貨單的建立者                      | 刷到的分店按 [通知總部更正](進貨單)                  | —(發生時)                  |
+| `schedule.day-off-open`        | 畫休開放     | 當事人通知 | —                                                       | 可以排這家店的排班人員                  | B14:排班規則「畫休開放期間」的開放日(班表管理)       | 開放日前 0 天 09:00(當天)  |
+| `schedule.day-off-closing`     | 畫休即將截止 | 當事人通知 | —                                                       | 可以排這家店的排班人員                  | B14:排班規則「畫休開放期間」的截止日(班表管理)       | 截止日前 1 天 09:00        |
+| `schedule.published`           | 排班發布     | 當事人通知 | —                                                       | 被排到的人                              | 發布(排班作業)                                       | —(發生時)                  |
+| `schedule.changed`             | 排班異動     | 當事人通知 | —                                                       | 異動牽涉的人                            | 發布後的異動(排班作業)                               | —(發生時)                  |
+
+註1:規格寫「角色 店長」。店長是開通時替每個租戶建立的一般角色(規格 3.3),類型宣告寫不了各租戶的角色 id,所以預設用店長才有的 `store.bank-deposit`(店員沒有;總部管理以 `*` 也有)。租戶要改成「角色 店長」時在通知設定頁調整。
+
+## 範本參數
+
+呼叫 `notify()` 時給的 `params`(值一律字串,沒有就 `null`;日期、金額由呼叫端先格式化)。
+
+| key                            | 參數                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `lottery.daily-close-overdue`  | `orgName`(分店名)、`since`(最早一張還沒被涵蓋的交班結帳送出日)                              |
+| `lottery.transfer-shipped`     | `subject`(調貨單的顯示名稱)、`fromOrgName`(出貨店)                                          |
+| `lottery.license-expiring`     | `dealerType`(甲類 / 乙類)、`dealerName`、`expiresOn`(到期日)、`daysLeft`(剩幾天,`0` = 當天) |
+| `lottery.store-rent-due`       | `dealerName`、`dueOn`(繳費日)、`amount`(選填)                                               |
+| `lottery.period-close-overdue` | `period`(月份,例 `2026-09`)                                                                 |
+| `lottery.purchase-wrong-store` | `subject`(進貨單的顯示名稱)、`orgName`(刷到的分店)                                          |
+| `schedule.day-off-open`        | `orgName`、`month`(畫休的月份)、`closesOn`(截止日)                                          |
+| `schedule.day-off-closing`     | `orgName`、`month`、`closesOn`                                                              |
+| `schedule.published`           | `orgName`、`month`                                                                          |
+| `schedule.changed`             | `orgName`、`date`(異動的日期)、`reason`(選填,排班異動原因)                                  |
+
+## 測試
+
+`apps/api/src/project/notifications.test.ts`:十種逐列比對上表的 key、名稱、類別、組織範圍與預設人員條件;與底座合成合法;通知設定頁列出的負責人提醒;範本兩種語系都有、缺參數也不空白。
