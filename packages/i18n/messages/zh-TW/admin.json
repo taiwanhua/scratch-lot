@@ -760,7 +760,16 @@
       "reasons": {
         "HAS_GRANTS": "還有使用者持有這個角色,請先把他們移除。",
         "SYSTEM_ROLE": "這是系統內建角色。",
-        "TEMPLATE_COPY": "這是系統在開通時幫你準備好的角色。"
+        "TEMPLATE_COPY": "這是系統在開通時幫你準備好的角色。",
+        "REFERENCED_BY_AUDIENCE": "下列設定的人員條件還用到這個角色,請先從這些設定移除:"
+      },
+      "references": {
+        "notification-setting": "通知設定「{name}」的收件人",
+        "workflow-approver": "流程「{name}」關卡「{step}」的審核者",
+        "workflow-step-cc": "流程「{name}」關卡「{step}」的知會對象",
+        "workflow-overdue": "流程「{name}」關卡「{step}」逾時提醒的通知對象",
+        "workflow-cc": "流程「{name}」整個流程的知會對象",
+        "data-scope": "資料範圍「{name}」的套用對象"
       },
       "useDisableInstead": "不能刪除時可以改用「停用」:持有者的這個角色立即失效,之後隨時可以再啟用。",
       "confirm": "刪除",

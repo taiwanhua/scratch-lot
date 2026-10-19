@@ -164,6 +164,65 @@ describe("角色管理頁(/system/role-manager)", () => {
     expect(screen.getByText(/不能刪除時可以改用「停用」/)).toBeInTheDocument();
   });
 
+  it("被人員條件引用:原因底下逐項列出引用處", async () => {
+    const { user: actor } = renderRolePage({
+      world: {
+        failures: {
+          DeleteRole: {
+            code: "ROLE_NOT_DELETABLE",
+            reasons: ["HAS_GRANTS", "REFERENCED_BY_AUDIENCE"],
+            references: [
+              { kind: "notification-setting", name: "列印代理程式離線" },
+              {
+                kind: "workflow-approver",
+                name: "請購單",
+                stepName: "財務審核",
+              },
+              {
+                kind: "workflow-step-cc",
+                name: "請假單",
+                stepName: "主管審核",
+              },
+              {
+                kind: "workflow-overdue",
+                name: "採購單",
+                stepName: "主管審核",
+              },
+              { kind: "workflow-cc", name: "出差單" },
+              { kind: "data-scope", name: "示範資料" },
+              { kind: "unknown-kind", name: "認不得的種類" },
+            ],
+          },
+        },
+      },
+    });
+
+    await screen.findByText("內容編輯");
+    await actor.click(screen.getByText("審核員"));
+    await actor.click(screen.getByRole("button", { name: "刪除" }));
+    const dialog = await screen.findByRole("dialog");
+    await actor.click(within(dialog).getByRole("button", { name: "刪除" }));
+
+    expect(
+      await screen.findByText(/下列設定的人員條件還用到這個角色/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("還有使用者持有這個角色,請先把他們移除。"),
+    ).toBeInTheDocument();
+    for (const text of [
+      "通知設定「列印代理程式離線」的收件人",
+      "流程「請購單」關卡「財務審核」的審核者",
+      "流程「請假單」關卡「主管審核」的知會對象",
+      "流程「採購單」關卡「主管審核」逾時提醒的通知對象",
+      "流程「出差單」整個流程的知會對象",
+      "資料範圍「示範資料」的套用對象",
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/認不得的種類/)).not.toBeInTheDocument();
+    expect(screen.getByText(/不能刪除時可以改用「停用」/)).toBeInTheDocument();
+  });
+
   it("停用角色:確認後送出 setRoleEnabled", async () => {
     const { user: actor, fake } = renderRolePage();
 

@@ -56,6 +56,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`t(`reasons.${reason}`)`,reason 是 api `ROLE_NOT_DELETABLE` 帶回的 `RoleNotDeletableReason`",
   },
   {
+    key: "admin.roleManager.delete.references.",
+    reason:
+      "`t(`references.${kind}`)`,kind 是 api `ROLE_NOT_DELETABLE` 帶回的 `extensions.references[].kind`",
+  },
+  {
     key: "admin.userManager.orgChange.reasons.",
     reason: "`t(`reasons.${reason}`)`,reason 是 `setUserOrgs` dry-run 回的列舉",
   },

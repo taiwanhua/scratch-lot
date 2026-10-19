@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 
+import { AudienceReferencesModule } from "../audience/audience-references.module";
 import { DatabaseModule } from "../database/database.module";
 import { OrgsModule } from "../orgs/orgs.module";
 import { OrgQualificationService } from "../users/org-qualification.service";
@@ -16,10 +17,11 @@ import { RolesService } from "./roles.service";
  * `OrgQualificationService`(「被授予角色的資格」,ADR-0003)住在 `users/`,
  * 是無狀態的純判斷,這裡直接註冊一份 provider — 不去改 `UsersModule` 的匯出,
  * 也不在本模組另寫一份同語意的函式(issue-tracker.md 的拆票教訓)。
+ * 刪除前置「沒被人員條件引用」用 `AudienceReferencesModule` 的 `AudienceReferencesService`。
  * 稽核與權限解析由 @Global 的 AuditModule / PermissionModule 提供,不必在此 import。
  */
 @Module({
-  imports: [DatabaseModule, OrgsModule],
+  imports: [DatabaseModule, OrgsModule, AudienceReferencesModule],
   providers: [
     RolesService,
     RoleScopeService,

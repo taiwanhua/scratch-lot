@@ -760,7 +760,16 @@
       "reasons": {
         "HAS_GRANTS": "Users still hold this role; remove them first.",
         "SYSTEM_ROLE": "This is a built-in role.",
-        "TEMPLATE_COPY": "This role was prepared for you during setup."
+        "TEMPLATE_COPY": "This role was prepared for you during setup.",
+        "REFERENCED_BY_AUDIENCE": "The people conditions of these settings still use this role; remove it from them first:"
+      },
+      "references": {
+        "notification-setting": "Recipients of the notification setting “{name}”",
+        "workflow-approver": "Reviewers of step “{step}” in workflow “{name}”",
+        "workflow-step-cc": "CC recipients of step “{step}” in workflow “{name}”",
+        "workflow-overdue": "Overdue reminder recipients of step “{step}” in workflow “{name}”",
+        "workflow-cc": "CC recipients of the whole workflow “{name}”",
+        "data-scope": "“Applies to” of the data scope “{name}”"
       },
       "useDisableInstead": "When it cannot be deleted you can disable it instead: holders lose it immediately and you can enable it again at any time.",
       "confirm": "Delete",
