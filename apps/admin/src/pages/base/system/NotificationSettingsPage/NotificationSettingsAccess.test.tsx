@@ -46,7 +46,7 @@ describe("通知設定頁:唯讀與編輯網址", () => {
     renderPage({ isAtRoot: true });
     await waitForRows();
 
-    expect(screen.getByText(/這裡只顯示預設收件人,不能調整/)).toBeVisible();
+    expect(screen.getByText(/這裡只顯示預設值,不能調整/)).toBeVisible();
     expect(within(table()).queryByRole("button", { name: "編輯" })).toBeNull();
   });
 
@@ -79,7 +79,7 @@ describe("通知設定頁:唯讀與編輯網址", () => {
     renderPage({ search: "?edit=demo.expiry-reminder" });
 
     expect(
-      await screen.findByRole("dialog", { name: "編輯收件人:到期提醒" }),
+      await screen.findByRole("dialog", { name: "編輯通知設定:到期提醒" }),
     ).toBeVisible();
   });
 

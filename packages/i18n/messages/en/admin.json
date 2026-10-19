@@ -2939,8 +2939,8 @@
     }
   },
   "notificationSettings": {
-    "intro": "Recipients of these reminders can be set by user, role and permission. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
-    "rootReadOnly": "The current organization is not under any top-level organization: default recipients are shown here and cannot be changed. Switch to the organization you want to set up first.",
+    "intro": "Recipients of these notifications can be set by user, role and permission; for those with a reminder time you can also set how many days ahead and when they are sent. Notifications such as reviews awaiting you or application results go straight to the people involved and are not set here.",
+    "rootReadOnly": "The current organization is not under any top-level organization: defaults are shown here and cannot be changed. Switch to the organization you want to set up first.",
     "search": "Search notification types",
     "searchPlaceholder": "Name",
     "tableLabel": "Notification types",
@@ -2951,36 +2951,76 @@
       "type": "Notification type",
       "orgScope": "Organization scope",
       "audience": "Recipients",
+      "schedule": "Reminder time",
       "actions": "Actions"
     },
     "orgScope": "{origin, select, tenant {Top-level organization} other {Organization of the event}}{range, select, descendants { and its children} ancestors { and its parents} other {}}",
+    "orgScopeByEvent": "—",
+    "partyRecipients": "Decided by the event",
+    "partyRecipientsWithNote": "Decided by the event ({note})",
     "defaultTag": "Default",
+    "scheduleSummary": {
+      "onEvent": "— (when it happens)",
+      "daysBefore": "{days} days before {label}, {time}",
+      "daysBeforeAndToday": "{days} days before and on {label}, {time}",
+      "today": "On {label}, {time}",
+      "dailyOverdue": "Daily from the next day, {time}",
+      "monthly": "Day {day} of each month, {time}",
+      "defaultDateLabel": "the date",
+      "separator": ", "
+    },
+    "scheduleEditor": {
+      "daysBeforeHint": "Days ahead: 0 = on the day; 0–365, up to 5, no duplicates. The date itself comes from each record.",
+      "daysBefore": "Days ahead {index}",
+      "removeDay": "Remove days ahead {index}",
+      "addDay": "+ Add one",
+      "dailyOverdueHint": "From the day after it becomes overdue, sent every day at this time until it is no longer overdue.",
+      "dayOfMonth": "Day of the month",
+      "dayOfMonthHint": "1–31; months without that day send on the last day",
+      "time": "Send time",
+      "timeHint": "In the top-level organization's time zone; sent within 15 minutes after the time",
+      "issues": {
+        "daysRange": "Enter a whole number from 0 to 365",
+        "daysDuplicate": "Days cannot repeat",
+        "daysEmpty": "Add at least one day",
+        "dayOfMonthRange": "Enter a whole number from 1 to 31",
+        "invalid": "Out of the allowed range"
+      }
+    },
     "actions": {
       "edit": "Edit",
       "reset": "Restore default"
     },
     "edit": {
-      "title": "Edit recipients: {name}",
+      "title": "{part, select, schedule {Edit reminder time} both {Edit notification settings} other {Edit recipients}}: {name}",
       "scopeHint": "Organization scope: {scope} (set by the notification type, cannot be changed). Recipients = people within the scope who also match the conditions below.",
       "audienceTitle": "Recipients",
+      "scheduleTitle": "Reminder time",
+      "resetPart": "Restore default",
       "cancel": "Cancel",
       "save": "Save"
     },
     "reset": {
       "title": "Restore default: {name}",
-      "body": "Recipients go back to the default: {audience}. Your current changes will be removed.",
+      "audienceLine": "Recipients go back to the default: {audience}.",
+      "scheduleLine": "Reminder time goes back to the default: {schedule}.",
+      "body": "Your current changes will be removed.",
       "cancel": "Cancel",
       "confirm": "Restore default"
     },
     "feedback": {
-      "saveSuccess": "Recipients updated",
-      "resetSuccess": "Default recipients restored"
+      "saveSuccess": "Notification settings updated",
+      "resetSuccess": "Defaults restored"
     },
     "errors": {
       "AUDIENCE_INVALID": "This condition cannot be used. Check it and save again.",
       "OUT_OF_TENANT": "This person or role is not in your organization",
       "UNKNOWN_TYPE": "This notification type no longer exists. Refresh and try again.",
-      "TENANT_ONLY": "Recipients cannot be changed here. Switch to the organization you want to set up first.",
+      "AUDIENCE_NOT_ADJUSTABLE": "Recipients of this notification are decided by the event and cannot be changed",
+      "SCHEDULE_NOT_ADJUSTABLE": "This notification is sent when the event happens and has no reminder time",
+      "SCHEDULE_INVALID": "The reminder time is out of the allowed range. Check it and save again.",
+      "NOTHING_TO_UPDATE": "There are no changes to save",
+      "TENANT_ONLY": "Notification settings cannot be changed here. Switch to the organization you want to set up first.",
       "FORBIDDEN": "You do not have permission to change notification settings",
       "UNEXPECTED": "Something went wrong. Please try again later."
     }

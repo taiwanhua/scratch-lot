@@ -2939,8 +2939,8 @@
     }
   },
   "notificationSettings": {
-    "intro": "這些提醒的收件人可以依使用者、角色與權限調整。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
-    "rootReadOnly": "目前所在的組織不屬於任何最上層組織:這裡只顯示預設收件人,不能調整;請先切換到要設定的組織。",
+    "intro": "這些通知的收件人可以依使用者、角色與權限調整;有提醒時間的,可以調整提前幾天、幾點寄。待你審核、申請結果這類通知會直接送給當事人,不在這裡設定。",
+    "rootReadOnly": "目前所在的組織不屬於任何最上層組織:這裡只顯示預設值,不能調整;請先切換到要設定的組織。",
     "search": "搜尋通知類型",
     "searchPlaceholder": "名稱",
     "tableLabel": "通知類型清單",
@@ -2951,36 +2951,76 @@
       "type": "通知類型",
       "orgScope": "組織範圍",
       "audience": "收件人",
+      "schedule": "提醒時間",
       "actions": "操作"
     },
     "orgScope": "{origin, select, tenant {最上層組織} other {觸發事件的組織}}{range, select, descendants {含下層} ancestors {含上層} other {}}",
+    "orgScopeByEvent": "—",
+    "partyRecipients": "由事件決定",
+    "partyRecipientsWithNote": "由事件決定({note})",
     "defaultTag": "預設",
+    "scheduleSummary": {
+      "onEvent": "—(發生時)",
+      "daysBefore": "{label}前 {days} 天 {time}",
+      "daysBeforeAndToday": "{label}前 {days} 天及當天 {time}",
+      "today": "{label}當天 {time}",
+      "dailyOverdue": "隔天起每天 {time}",
+      "monthly": "每月 {day} 號 {time}",
+      "defaultDateLabel": "日期",
+      "separator": "、"
+    },
+    "scheduleEditor": {
+      "daysBeforeHint": "提前天數:0 = 當天;0–365,最多 5 個,不能重複。日期本身照各筆資料。",
+      "daysBefore": "提前天數 {index}",
+      "removeDay": "移除第 {index} 個提前天數",
+      "addDay": "+ 加一個",
+      "dailyOverdueHint": "逾期的隔天起,每天在這個時間寄,直到不再逾期。",
+      "dayOfMonth": "每月第幾天",
+      "dayOfMonthHint": "1–31;那個月沒有這一天就在月底寄",
+      "time": "寄送時間",
+      "timeHint": "以最上層組織的時區計;時間到了之後最晚 15 分鐘內寄出",
+      "issues": {
+        "daysRange": "請填 0–365 的整數",
+        "daysDuplicate": "天數不能重複",
+        "daysEmpty": "至少要有一個提前天數",
+        "dayOfMonthRange": "請填 1–31 的整數",
+        "invalid": "超出可以填的範圍"
+      }
+    },
     "actions": {
       "edit": "編輯",
       "reset": "還原預設"
     },
     "edit": {
-      "title": "編輯收件人:{name}",
+      "title": "{part, select, schedule {編輯提醒時間} both {編輯通知設定} other {編輯收件人}}:{name}",
       "scopeHint": "組織範圍:{scope}(由通知類型決定,不能修改)。收件人 = 組織範圍內、而且符合下列條件的人。",
       "audienceTitle": "收件人",
+      "scheduleTitle": "提醒時間",
+      "resetPart": "還原預設",
       "cancel": "取消",
       "save": "儲存"
     },
     "reset": {
       "title": "還原預設:{name}",
-      "body": "收件人會改回預設:{audience}。目前的調整會被移除。",
+      "audienceLine": "收件人會改回預設:{audience}。",
+      "scheduleLine": "提醒時間會改回預設:{schedule}。",
+      "body": "目前的調整會被移除。",
       "cancel": "取消",
       "confirm": "還原預設"
     },
     "feedback": {
-      "saveSuccess": "已更新收件人",
-      "resetSuccess": "已還原預設收件人"
+      "saveSuccess": "已更新通知設定",
+      "resetSuccess": "已還原預設"
     },
     "errors": {
       "AUDIENCE_INVALID": "這個條件不能使用,請檢查後再儲存",
       "OUT_OF_TENANT": "這個對象不在你的組織內",
       "UNKNOWN_TYPE": "找不到這個通知類型,請重新整理再試一次",
-      "TENANT_ONLY": "這裡不能調整收件人,請先切換到要設定的組織",
+      "AUDIENCE_NOT_ADJUSTABLE": "這種通知的收件人由事件決定,不能調整",
+      "SCHEDULE_NOT_ADJUSTABLE": "這種通知在事件發生時就寄,沒有提醒時間可調整",
+      "SCHEDULE_INVALID": "提醒時間超出可以填的範圍,請檢查後再儲存",
+      "NOTHING_TO_UPDATE": "沒有要儲存的調整",
+      "TENANT_ONLY": "這裡不能調整通知設定,請先切換到要設定的組織",
       "FORBIDDEN": "你沒有調整通知設定的權限",
       "UNEXPECTED": "發生錯誤,請稍後再試"
     }

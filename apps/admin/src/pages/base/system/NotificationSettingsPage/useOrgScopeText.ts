@@ -7,7 +7,7 @@ import type { NotificationSettingItemFragment } from "@repo/graphql";
  * 文案是一個 ICU select(`admin.notificationSettings.orgScope`);認不得的值落在 `other`。
  */
 export const useOrgScopeText = (): ((
-  scope: NotificationSettingItemFragment["orgScope"],
+  scope: NonNullable<NotificationSettingItemFragment["orgScope"]>,
 ) => string) => {
   const t = useTranslations("admin.notificationSettings");
   return (scope) => t("orgScope", { origin: scope.ref, range: scope.range });
