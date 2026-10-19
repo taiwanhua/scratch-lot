@@ -1051,6 +1051,34 @@ describe("租戶作業(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("provisionTarget:開通的寫入目標(demo 指令比對確認字串用)", () => {
+    const PROVISION_TARGET = /* GraphQL */ `
+      query ProvisionTarget {
+        provisionTarget {
+          databaseName
+        }
+      }
+    `;
+
+    it("根組織:回這個 api 連到的資料庫名(只有資料庫名)", async () => {
+      const result = await api.graphql<{
+        provisionTarget: { databaseName: string };
+      }>(PROVISION_TARGET, {}, { accessToken: rootOpsToken });
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.provisionTarget).toEqual({
+        databaseName: api.connection.name,
+      });
+    });
+
+    it("非根組織即使持有權限也拒(FORBIDDEN);沒有 provision 權限也拒", async () => {
+      for (const accessToken of [tenantOpsToken, rootViewToken]) {
+        const result = await api.graphql(PROVISION_TARGET, {}, { accessToken });
+        expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
+      }
+    });
+  });
+
   describe("provisionTenant:示範機構(demo + adminInitialPassword)", () => {
     const DEMO_PASSWORD = ["demo", "only", "pass", "9"].join("-");
 

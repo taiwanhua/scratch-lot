@@ -9,6 +9,7 @@ import { TransferOrgOwnerInput } from "./dto/transfer-org-owner.input";
 import { OrgPayload } from "./models/org-payloads.model";
 import {
   ModuleOption,
+  ProvisionTarget,
   ProvisionTenantPayload,
   RevokeTenantProvisionPayload,
 } from "./models/tenant-ops.model";
@@ -42,6 +43,15 @@ export class TenantOpsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ModuleOption[]> {
     return this.tenantOps.moduleOptions(operator);
+  }
+
+  /** 開通的寫入目標:這個 api 連到的資料庫名(demo 指令比對確認字串用;根組織專屬)。 */
+  @RequirePermission(PERMISSIONS.provision)
+  @Query(() => ProvisionTarget)
+  provisionTarget(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<ProvisionTarget> {
+    return this.tenantOps.provisionTarget(operator);
   }
 
   /** 開通租戶:ADR-0009 四步 + 擁有者是一個交易(失敗全部回復),啟用信在交易提交後寄。 */

@@ -68,6 +68,17 @@ export class ProvisionTenantPayload {
 }
 
 /**
+ * 開通的寫入目標(`provisionTarget`,根組織專屬):這個 api 連到的資料庫名。
+ * demo 指令以它比對確認字串的資料庫名段,確認字串因此綁到實際寫入的資料庫,不靠操作者另給的連線字串。
+ * 只有資料庫名,不含連線字串、主機或帳密。
+ */
+@ObjectType()
+export class ProvisionTarget {
+  @Field(() => String)
+  databaseName!: string;
+}
+
+/**
  * 撤銷開通的回傳:三樣都已硬刪除,樹上不再有這一節,前端只需要知道「哪一個沒了」。
  *
  * 型別名帶模組前綴(GQL-02):`DeletePayload` 是 orgs 早期留下的通用名、屬先例不是標準,

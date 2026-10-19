@@ -4,6 +4,10 @@
  * - demo 指令以子行程跑入口,機密從標準輸入以管線送入(同 workflow)
  * - 開通腳本只透過 GraphQL 寫:最終狀態一律回資料庫查,操作紀錄的操作者 = 租戶管理員
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Document, ObjectId } from "mongodb";
 
@@ -23,6 +27,7 @@ import {
   withDatabase,
 } from "../../../test/support/update-harness";
 import { DEMO_TENANT, demoPlan } from "../demo";
+import { runOnboardCommand } from "./command";
 import { OnboardingStoppedError, runOnboarding } from "./run-onboarding";
 import { STORE_MANAGER_NOTIFICATION_TYPES } from "./steps/notification-recipients";
 
@@ -95,7 +100,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
   const mongo = new TestMongo("onboarding-api");
   let databaseUri: string;
   let databaseName: string;
-  let server: ApiServer;
+  let server: ApiServer | undefined;
+  let apiUrl = "";
   let api: GraphqlClient;
 
   function demoArgs(): string[] {
@@ -103,7 +109,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       "--environment=dev",
       "--mode=create",
       `--confirm=demo:dev:${databaseName}:create`,
-      `--api-url=${server.apiUrl}`,
+      `--api-url=${apiUrl}`,
     ];
   }
 
@@ -149,11 +155,12 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
     databaseUri = mongo.uri("main");
     databaseName = new URL(databaseUri).pathname.slice(1);
     server = await startApiServer(databaseUri);
-    api = createGraphqlClient({ apiUrl: server.apiUrl });
+    apiUrl = server.apiUrl;
+    api = createGraphqlClient({ apiUrl });
   }, SETUP_TIMEOUT_MS);
 
   afterAll(async () => {
-    await server.stop();
+    await server?.stop();
     await mongo.stop();
   });
 
@@ -331,7 +338,24 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       ).resolves.toBeDefined();
     });
 
-    it("同名機構沒有「示範」標記:拒絕執行,一筆都不寫", async () => {
+    it("確認字串的資料庫名不是 api 實際連的資料庫:不執行,一筆都不寫", async () => {
+      const before = await auditCount();
+      const result = await runDemoEntry(
+        [
+          "--environment=dev",
+          "--mode=create",
+          "--confirm=demo:dev:some-other-db:create",
+          `--api-url=${apiUrl}`,
+        ],
+        databaseUri,
+        [DEMO_PASSWORD, EMAIL_BASE],
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toMatch(/資料庫名段不符/);
+      expect(await auditCount()).toBe(before);
+    });
+
+    it("同短碼的機構沒有「示範」標記:拒絕執行,一筆都不寫", async () => {
       await withDatabase(databaseUri, (database) =>
         database
           .collection("orgs")
@@ -356,6 +380,108 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
     });
   });
 
+  describe("onboard 指令(真實租戶):--tenant 比對登入者的租戶、新建的人寄啟用信", () => {
+    const account = "email-admin@example.test";
+    let planPath: string;
+
+    function onboard(tenant: string, lines: string[]) {
+      return runOnboardCommand(
+        [
+          `--api-url=${apiUrl}`,
+          `--tenant=${tenant}`,
+          `--account=${account}`,
+          `--plan=${planPath}`,
+        ],
+        {
+          readSecret: () => Promise.resolve(DEMO_PASSWORD),
+          print: (line) => lines.push(line),
+        },
+      );
+    }
+
+    beforeAll(async () => {
+      const root = await rootClient();
+      const { tenantModuleOptions } = await root.request<{
+        tenantModuleOptions: { key: string }[];
+      }>(/* GraphQL */ `
+        query TestEmailModuleOptions {
+          tenantModuleOptions {
+            key
+          }
+        }
+      `);
+      // 測試用的租戶需要一位有密碼的租戶管理員:用示範開通的形式建立(開通腳本不看這個標記)
+      await root.request(
+        /* GraphQL */ `
+          mutation TestEmailProvision($input: ProvisionTenantInput!) {
+            provisionTenant(input: $input) {
+              ownerUserId
+            }
+          }
+        `,
+        {
+          input: {
+            name: "啟用信測試機構",
+            slug: "email_test",
+            adminAccount: account,
+            adminEmail: account,
+            moduleKeys: tenantModuleOptions.map((option) => option.key),
+            demo: true,
+            adminInitialPassword: DEMO_PASSWORD,
+          },
+        },
+      );
+      const directory = mkdtempSync(path.join(tmpdir(), "onboard-email-"));
+      planPath = path.join(directory, "plan.json");
+      writeFileSync(
+        planPath,
+        JSON.stringify({
+          branches: [{ name: "一店" }],
+          users: [
+            {
+              account: "email-clerk@example.test",
+              email: "email-clerk@example.test",
+              name: "一店店員",
+              branches: ["一店"],
+              roles: ["clerk"],
+            },
+          ],
+        }),
+      );
+    }, SETUP_TIMEOUT_MS);
+
+    it("--tenant 不是登入者所屬的租戶:停在第一步,一筆都不寫", async () => {
+      const before = await auditCount();
+      const lines: string[] = [];
+      await expect(onboard("demo_lottery", lines)).rejects.toThrow(
+        /不是要開通的 demo_lottery/,
+      );
+      expect(lines.join("\n")).toMatch(/✗ \[1\/7\] 租戶/);
+      expect(await auditCount()).toBe(before);
+    });
+
+    it("新建的使用者走啟用信:沒有可用密碼、首登不強改(本人用啟用信設定)", async () => {
+      await onboard("email_test", []);
+      const clerk = await findOne("users", {
+        account: "email-clerk@example.test",
+      });
+      expect(clerk.settings).toMatchObject({ mustChangePassword: false });
+      const tokens = await find("action_tokens", {
+        userId: clerk._id as ObjectId,
+      });
+      expect(tokens.map((token) => token.type as string)).toContain(
+        "activation",
+      );
+      await expect(
+        loginAs(
+          api,
+          { account: "email-clerk@example.test", password: DEMO_PASSWORD },
+          "店員",
+        ),
+      ).rejects.toThrow(/登入失敗/);
+    });
+  });
+
   describe("開通腳本某一步沒有權限:停在那一步,重跑從缺的開始補", () => {
     const account = "resume-admin@example.test";
     let root: GraphqlClient;
@@ -371,6 +497,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         client: tenantAdmin,
         plan,
         activation: { mode: "PASSWORD", password: DEMO_PASSWORD },
+        tenantSlug: "resume_test",
         print: (line) => lines.push(line),
       });
     }

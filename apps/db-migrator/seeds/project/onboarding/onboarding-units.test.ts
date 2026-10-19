@@ -103,13 +103,18 @@ describe("開通資料(真實租戶由開通 skill 寫成 JSON 檔)", () => {
   it("onboard 指令:密碼不從參數讀,多給任何參數(例 --password)直接拒絕", () => {
     const base = [
       "--api-url=https://api.example.test",
+      "--tenant=acme",
       "--account=admin@example.test",
       "--plan=plan.json",
     ];
     expect(parseOnboardArgs(base)).toMatchObject({
       apiUrl: "https://api.example.test",
+      tenant: "acme",
       account: "admin@example.test",
     });
+    expect(() =>
+      parseOnboardArgs(base.filter((arg) => !arg.startsWith("--tenant"))),
+    ).toThrow(/--tenant 必填/);
     expect(() => parseOnboardArgs([...base, "--password=x"])).toThrow(
       /無法辨識的參數/,
     );

@@ -6,7 +6,7 @@ import {
   findDemoSafetyViolation,
 } from "./demo-safety";
 
-const DATABASE = "scratch-lot-dev";
+const DATABASE = "wowgo-base-dev";
 
 function check(
   overrides: Partial<{
@@ -87,6 +87,30 @@ describe("demo 的安全閥(規格 2.2:安全規則同 reset)", () => {
   it("--environment 沒給或不是三個環境之一:不執行(不從資料庫名推測)", () => {
     expect(check({ environment: undefined })).toMatch(/--environment 必填/);
     expect(check({ environment: "prod" })).toMatch(/--environment 必填/);
+  });
+
+  it("還沒問 api(資料庫名 null):先檢查資料庫名以外的各段;問到之後再完整比對", () => {
+    const early = (confirm: string) =>
+      findDemoSafetyViolation({
+        databaseName: null,
+        environment: "dev",
+        mode: "create",
+        confirm,
+        allowEnv: "dev",
+      });
+    expect(early("demo:dev:any-db:create")).toBeNull();
+    expect(early("demo:dev:any-db:purge")).toMatch(/模式段不符/);
+    expect(early("demo:staging:any-db:create")).toMatch(/環境段不符/);
+    expect(early("demo:dev:create")).toMatch(/格式不是 demo:/);
+    expect(
+      findDemoSafetyViolation({
+        databaseName: DATABASE,
+        environment: "dev",
+        mode: "create",
+        confirm: "demo:dev:any-db:create",
+        allowEnv: "dev",
+      }),
+    ).toMatch(/資料庫名段不符/);
   });
 
   it("拒絕訊息不回顯收到的確認字串", () => {

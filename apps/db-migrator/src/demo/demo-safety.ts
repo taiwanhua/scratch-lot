@@ -1,9 +1,12 @@
 /**
  * demo 指令的安全閥(`docs/deployment.md`「示範資料(demo)」;規則同 reset 的 `reset-safety.ts`)。
  *
- * 純函式、不碰資料庫也不呼叫 api:目標環境由操作者以 `--environment` 指定(**不從資料庫名推測**),
- * 必須在 `DEMO_ALLOW_ENV` 的允許清單內,而且 `--confirm` 要與 `demo:<environment>:<實際資料庫名>:<mode>`
- * 完全相同。缺任何一項或任何一段不符即回傳拒絕原因(入口據此 exit 1,此時還沒有任何寫入)。
+ * 純函式:目標環境由操作者以 `--environment` 指定(**不從資料庫名推測**),必須在 `DEMO_ALLOW_ENV` 的
+ * 允許清單內,而且 `--confirm` 要與 `demo:<environment>:<實際資料庫名>:<mode>` 完全相同。
+ * 「實際資料庫名」是 `--api-url` 那個 api **自己回報**的資料庫名(`provisionTarget`),所以確認字串綁的是
+ * 實際寫入的資料庫:確認字串對、`--api-url` 卻指到別的環境 → 資料庫名段不符,不執行。
+ * 指令分兩次呼叫:還沒問 api 之前先以 `databaseName: null` 檢查其餘各段,以 root 登入讀到資料庫名後
+ * 再完整檢查一次;兩次都在任何寫入之前。
  * 三個環境(含 production)同一套規則。示範機構名稱固定,由專案的示範資料決定,不放進確認字串。
  *
  * 拒絕原因只帶資料庫名,不回顯收到的確認字串(操作者可能誤貼連線字串)。
@@ -43,8 +46,8 @@ export function demoConfirmationOf({
 }
 
 export interface DemoSafetyInput {
-  /** 連線字串裡的資料庫名。 */
-  databaseName: string;
+  /** api 回報的資料庫名;還沒問 api 時為 null(只檢查資料庫名以外的各段)。 */
+  databaseName: string | null;
   /** `--environment` 的值(未給為 undefined)。 */
   environment: string | undefined;
   mode: DemoMode;
@@ -71,8 +74,11 @@ export function findDemoSafetyViolation({
     return `${DEMO_ALLOW_ENV_NAME}(目前:${allowEnv ?? "(未設)"})不含目標環境 ${environment}`;
   }
 
-  const target = { environment, databaseName, mode };
-  const describe = `目標:環境 ${environment}、資料庫 ${databaseName}、模式 ${mode}`;
+  // 還不知道資料庫名:拿確認字串自己的資料庫名段來比(= 這一段先不檢查)
+  const knownName =
+    databaseName ?? (confirm ?? "").split(":").slice(2, -1).join(":");
+  const target = { environment, databaseName: knownName, mode };
+  const describe = `目標:環境 ${environment}、資料庫 ${databaseName ?? "(api 回報)"}、模式 ${mode}`;
   if (confirm === undefined || confirm === "") {
     return `--confirm 必填:請完整輸入 ${CONFIRM_FORMAT}(${describe})`;
   }

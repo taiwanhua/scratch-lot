@@ -1,6 +1,6 @@
 /**
  * 起一個真的 api(`apps/api/dist/main.js`,子行程;STRUCT-01 app 之間不互 import)接在測試資料庫上,
- * 給「只透過 GraphQL 寫資料」的 demo 指令與開通腳本做整合測試。
+ * 給「只透過 GraphQL 寫資料」的 demo 指令(與專案的 populate)做整合測試。
  *
  * 順序同部署:建置 api(turbo,快取命中只要幾秒)→ 以正式 registry 跑一次 update(migration → 種子 → 受管定義)
  * → 起 api → 等 GraphQL 回應。cwd 指到暫存目錄:schema 產物不弄髒 repo,也不讀開發者本機的 `apps/api/.env`。

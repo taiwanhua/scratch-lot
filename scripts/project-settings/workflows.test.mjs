@@ -1102,13 +1102,12 @@ for (const [environment, mode, suffix] of [
   ["production", "create", ""],
   ["production", "rebuild", ""],
 ]) {
-  test(`demo ${environment} / ${mode}:讀該環境的四把 Secret,示範密碼與基底信箱走標準輸入,人工確認原樣傳給指令`, async () => {
+  test(`demo ${environment} / ${mode}:讀該環境的三把 Secret(不讀連線字串),示範密碼與基底信箱走標準輸入,人工確認原樣傳給指令`, async () => {
     const job = await runDemo(environment, mode);
     assert.equal(job.failed, null, job.failed?.stderr);
     assert.deepEqual(commands(job.calls, "gcloud", "docker", "pnpm"), [
       "pnpm install --frozen-lockfile --filter @repo/db-migrator...",
       "pnpm --filter @repo/db-migrator^... run build",
-      `gcloud secrets versions access latest --secret=db-uri${suffix}`,
       `gcloud secrets versions access latest --secret=owner-password${suffix}`,
       `gcloud secrets versions access latest --secret=demo-pass${suffix}`,
       `gcloud secrets versions access latest --secret=demo-base${suffix}`,
@@ -1121,10 +1120,12 @@ for (const [environment, mode, suffix] of [
     assert.equal(lastEnv.ROOT_ADMIN_PASSWORD, "fake-secret-value");
     assert.equal("DEMO_PASSWORD" in lastEnv, false);
     assert.equal("DEMO_EMAIL_BASE" in lastEnv, false);
+    // 資料庫名由指令向 api 讀取:不需要連線字串
+    assert.equal(lastEnv.MONGODB_URI, "");
     assert.deepEqual(stdinOf(job.calls), [DEMO_STDIN]);
-    // 四把讀出來的機密都遮罩
+    // 三把讀出來的機密都遮罩
     const step = job.trace.find((entry) => entry.label === "demo");
-    assert.equal((step.stdout.match(/::add-mask::/g) ?? []).length, 4);
+    assert.equal((step.stdout.match(/::add-mask::/g) ?? []).length, 3);
   });
 }
 
@@ -1228,6 +1229,12 @@ for (const [environment, mode] of [
     );
     assert.deepEqual(stdinOf(job.calls), [DEMO_STDIN]);
     assert.equal("DEMO_PASSWORD" in exported(job.calls), false);
+    // 灌示範資料那一步不讀連線字串(只有 reset 那一步讀)
+    assert.equal(
+      commands(job.calls, "gcloud").filter((call) => call.includes("db-uri"))
+        .length,
+      1,
+    );
   });
 }
 

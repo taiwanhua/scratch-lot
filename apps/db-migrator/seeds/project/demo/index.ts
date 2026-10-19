@@ -52,6 +52,7 @@ export const lotteryDemoSource: DemoSource = {
       client,
       plan: demoPlan(emailBase),
       activation: { mode: "PASSWORD", password },
+      tenantSlug: DEMO_TENANT.slug,
       print,
     }),
 };

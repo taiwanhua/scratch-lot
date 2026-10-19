@@ -2,27 +2,24 @@
  * demo 指令(`docs/deployment.md`「示範資料(demo)」;形狀照 reset):
  *
  * ```
- * pnpm --filter @repo/db-migrator demo --environment=<dev|staging|production> --mode=<create|purge|rebuild> \
- *   --confirm=demo:<environment>:<資料庫名>:<mode> --api-url=<該環境的 api 網址>
+ * pnpm --filter @repo/db-migrator demo --environment=<dev|staging|production> --mode=<create|purge|rebuild>  *   --confirm=demo:<environment>:<資料庫名>:<mode> --api-url=<該環境的 api 網址>
  * ```
  *
- * 1. 安全閥(`demo-safety.ts`):環境允許清單 `DEMO_ALLOW_ENV` + 完整的確認字串(資料庫名取自 `MONGODB_URI`)。
- *    不過即結束,此時還沒有呼叫 api
- * 2. `purge` / `rebuild` 目前拒絕執行(清空示範機構另行實作),一筆都不寫也不刪
- * 3. 讀機密:root 沿用 `ROOT_ADMIN_ACCOUNT` / `ROOT_ADMIN_PASSWORD`(與 seed / reset 同一組環境變數);
- *    示範密碼與基底信箱**只從標準輸入讀**(終端機不回顯;workflow 以管線送入),不從參數、環境變數或檔案讀
- * 4. 以 root 登入 → 建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`)
- * 5. 以那位租戶管理員登入 → 交給專案登記的示範資料(`seeds/registry.ts` 的 `demoSource`),由開通腳本建出其餘內容
+ * 1. 安全閥第一段(`demo-safety.ts`):環境、`DEMO_ALLOW_ENV` 允許清單、確認字串的格式與環境 / mode 兩段。
+ *    不過即結束,此時還沒有呼叫 api;`purge` / `rebuild` 目前也在這裡拒絕(清空示範機構另行實作)
+ * 2. 以平台管理員登入(`ROOT_ADMIN_ACCOUNT`;密碼取 `ROOT_ADMIN_PASSWORD`,沒設就從標準輸入讀),
+ *    讀 api **自己回報**的資料庫名(`provisionTarget`),安全閥第二段比對確認字串的資料庫名段:
+ *    確認字串因此綁到實際寫入的資料庫,`--api-url` 指到別的環境就不執行。到這裡還沒有任何寫入
+ * 3. 示範密碼與基底信箱**只從標準輸入讀**(終端機不回顯;workflow 以管線送入),不從參數、環境變數或檔案讀
+ * 4. 建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`)
+ * 5. 以那位租戶管理員登入 → 交給專案登記的示範資料(`seeds/registry.ts` 的 `demoSource`)的 `populate`
  *
- * **全程走 api 的 GraphQL**:權限照常檢查、操作紀錄照常寫;本指令不連資料庫寫入(`MONGODB_URI` 只用來取資料庫名
- * 組確認字串)。`--api-url` 與 `MONGODB_URI` 要指向同一個環境,由操作者負責。冪等:重跑只補缺的。
- *
- * 輸出只有環境、資料庫名、模式與各步驟的結果,不含連線字串、密碼或真實信箱。
+ * **全程走 api 的 GraphQL**:權限照常檢查、操作紀錄照常寫;本指令不連資料庫,也不需要 `MONGODB_URI`。
+ * 冪等:重跑只補缺的。輸出只有環境、資料庫名、模式與各步驟的結果,不含密碼或真實信箱。
  * 本檔沒有載入時的副作用(入口檔才有)。
  */
 import { pathToFileURL } from "node:url";
 
-import { parseDatabaseName } from "../reset/reset-safety";
 import {
   DEMO_ALLOW_ENV_NAME,
   DEMO_ENVIRONMENTS,
@@ -34,6 +31,7 @@ import type { DemoSource } from "./demo-source";
 import { ensureDemoTenant } from "./demo-tenant";
 import {
   type FetchLike,
+  type GraphqlClient,
   createGraphqlClient,
   graphqlEndpointOf,
   loginAs,
@@ -44,11 +42,26 @@ const USAGE = `用法:demo --environment=<${DEMO_ENVIRONMENTS.join("|")}> --mode
 
 const MODE_RULE = `--mode 必須是 ${DEMO_MODES.join(" / ")}(${USAGE})`;
 
-/** 標準輸入要依序給的兩個值(workflow 以管線送入時也是這個順序)。 */
+/**
+ * 標準輸入要依序給的值:`ROOT_ADMIN_PASSWORD` 沒設時先給平台管理員密碼,
+ * 再給示範帳號密碼與基底信箱(workflow 以環境變數給 root 密碼,管線只送後兩個)。
+ */
 export const DEMO_SECRET_LABELS = {
+  rootPassword: "平台管理員密碼",
   password: "示範帳號密碼",
   emailBase: "基底信箱",
 } as const;
+
+/** 比這短的機密不在錯誤訊息裡逐字遮(太短會把一般文字也遮掉);真的密碼與信箱都比它長。 */
+export const MIN_REDACTED_SECRET_LENGTH = 8;
+
+const PROVISION_TARGET = /* GraphQL */ `
+  query DemoProvisionTarget {
+    provisionTarget {
+      databaseName
+    }
+  }
+`;
 
 interface DemoArgs {
   mode: DemoMode;
@@ -59,7 +72,7 @@ interface DemoArgs {
 
 export interface DemoCommandOptions {
   env?: NodeJS.ProcessEnv;
-  /** 讀示範密碼與基底信箱(預設:標準輸入)。 */
+  /** 讀機密(root 密碼沒在環境變數時、示範密碼、基底信箱;預設:標準輸入)。 */
   readSecret?: SecretReader;
   /** 專案登記的示範資料(入口檔給:`seeds/registry.ts` 的 `demoSource`,見 `loadRegisteredDemoSource`)。 */
   loadDemoSource: () => Promise<DemoSource | null>;
@@ -140,11 +153,20 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** 訊息裡若帶到任何一個機密(連線字串、root 密碼、示範密碼、基底信箱),一律遮掉。 */
-function redact(message: string, secrets: readonly (string | undefined)[]) {
+/**
+ * 訊息裡若帶到任何一個機密(root 密碼、示範密碼、基底信箱),一律遮掉。
+ * 短於 `MIN_REDACTED_SECRET_LENGTH` 的不逐字遮,以免把訊息裡的一般文字也換掉。
+ */
+export function redactSecrets(
+  message: string,
+  secrets: readonly (string | undefined)[],
+): string {
   let redacted = message;
   for (const secret of secrets) {
-    if (secret !== undefined && secret.trim() !== "") {
+    if (
+      secret !== undefined &&
+      secret.trim().length >= MIN_REDACTED_SECRET_LENGTH
+    ) {
       redacted = redacted.replaceAll(secret, "***");
     }
   }
@@ -153,16 +175,14 @@ function redact(message: string, secrets: readonly (string | undefined)[]) {
 
 interface DemoTarget {
   environment: string;
-  databaseName: string;
   mode: DemoMode;
   apiUrl: string;
 }
 
-/** 安全閥與參數:全部通過才回傳目標;任何一項不合就丟錯(此時還沒有呼叫 api)。 */
+/** 安全閥第一段與參數:全部通過才回傳目標;任何一項不合就丟錯(此時還沒有呼叫 api)。 */
 function resolveTarget(args: DemoArgs, env: NodeJS.ProcessEnv): DemoTarget {
-  const databaseName = parseDatabaseName(requireValue(env, "MONGODB_URI"));
   const violation = findDemoSafetyViolation({
-    databaseName,
+    databaseName: null,
     environment: args.environment,
     mode: args.mode,
     confirm: args.confirm,
@@ -184,10 +204,35 @@ function resolveTarget(args: DemoArgs, env: NodeJS.ProcessEnv): DemoTarget {
   graphqlEndpointOf(args.apiUrl);
   return {
     environment: args.environment,
-    databaseName,
     mode: args.mode,
     apiUrl: args.apiUrl,
   };
+}
+
+/**
+ * 安全閥第二段:以 api 回報的資料庫名完整比對確認字串(只讀,還沒有寫入)。回傳資料庫名。
+ */
+async function assertConfirmedTarget(
+  root: GraphqlClient,
+  args: DemoArgs,
+  env: NodeJS.ProcessEnv,
+): Promise<string> {
+  const { provisionTarget } = await root.request<{
+    provisionTarget: { databaseName: string };
+  }>(PROVISION_TARGET);
+  const violation = findDemoSafetyViolation({
+    databaseName: provisionTarget.databaseName,
+    environment: args.environment,
+    mode: args.mode,
+    confirm: args.confirm,
+    allowEnv: env[DEMO_ALLOW_ENV_NAME],
+  });
+  if (violation !== null) {
+    throw new Error(
+      `${violation};資料庫名是 --api-url 那個 api 回報的,確認 --api-url 指的是 ${args.environment ?? ""} 環境`,
+    );
+  }
+  return provisionTarget.databaseName;
 }
 
 /** 執行一次指令;失敗丟錯(訊息已遮掉機密,由入口檔印出並設定結束碼)。 */
@@ -197,12 +242,10 @@ export async function runDemoCommand(
 ): Promise<void> {
   const env = options.env ?? process.env;
   const output = options.print ?? printLine;
-  const secrets: (string | undefined)[] = [
-    env.MONGODB_URI,
-    env.ROOT_ADMIN_PASSWORD,
-  ];
+  const secrets: (string | undefined)[] = [env.ROOT_ADMIN_PASSWORD];
   try {
-    const target = resolveTarget(parseDemoArgs(argv), env);
+    const args = parseDemoArgs(argv);
+    const target = resolveTarget(args, env);
     const source = await options.loadDemoSource();
     if (source === null) {
       throw new Error(
@@ -210,17 +253,14 @@ export async function runDemoCommand(
       );
     }
     const rootAccount = requireValue(env, "ROOT_ADMIN_ACCOUNT");
-    const rootPassword = requireValue(env, "ROOT_ADMIN_PASSWORD");
     const readSecret = options.readSecret ?? createSecretReader();
-    const password = await readSecret(DEMO_SECRET_LABELS.password);
-    secrets.push(password);
-    const enteredBase = await readSecret(DEMO_SECRET_LABELS.emailBase);
-    const emailBase = enteredBase.trim();
-    secrets.push(emailBase);
+    const rootPassword =
+      env.ROOT_ADMIN_PASSWORD !== undefined &&
+      env.ROOT_ADMIN_PASSWORD.trim() !== ""
+        ? env.ROOT_ADMIN_PASSWORD
+        : await readSecret(DEMO_SECRET_LABELS.rootPassword);
+    secrets.push(rootPassword);
 
-    output(
-      `demo:環境 ${target.environment}、資料庫 ${target.databaseName}、模式 ${target.mode}、示範機構「${source.tenant.name}」`,
-    );
     const api = createGraphqlClient({
       apiUrl: target.apiUrl,
       ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
@@ -230,6 +270,17 @@ export async function runDemoCommand(
       { account: rootAccount, password: rootPassword },
       "平台管理員(ROOT_ADMIN_ACCOUNT)",
     );
+    const databaseName = await assertConfirmedTarget(root, args, env);
+    output(
+      `demo:環境 ${target.environment}、資料庫 ${databaseName}、模式 ${target.mode}、示範機構「${source.tenant.name}」`,
+    );
+
+    const password = await readSecret(DEMO_SECRET_LABELS.password);
+    secrets.push(password);
+    const enteredBase = await readSecret(DEMO_SECRET_LABELS.emailBase);
+    const emailBase = enteredBase.trim();
+    secrets.push(emailBase);
+
     const tenant = await ensureDemoTenant(
       root,
       source.tenant,
@@ -253,10 +304,12 @@ export async function runDemoCommand(
       print: output,
     });
     output(
-      `demo(create)完成:環境 ${target.environment}、資料庫 ${target.databaseName}、示範機構「${source.tenant.name}」`,
+      `demo(create)完成:環境 ${target.environment}、資料庫 ${databaseName}、示範機構「${source.tenant.name}」`,
     );
   } catch (error) {
-    throw new Error(redact(messageOf(error), secrets), { cause: error });
+    throw new Error(redactSecrets(messageOf(error), secrets), {
+      cause: error,
+    });
   }
 }
 

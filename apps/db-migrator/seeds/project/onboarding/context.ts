@@ -23,6 +23,8 @@ export interface OnboardingContext {
   client: GraphqlClient;
   plan: OnboardingPlan;
   activation: UserActivation;
+  /** 要開通的租戶短碼:登入者所屬的租戶不是它就停在第一步(防止用錯帳號開到別的租戶)。 */
+  tenantSlug: string;
   state: OnboardingState;
 }
 

@@ -4,7 +4,7 @@
  * 專案在 `seeds/project/registry.ts` 匯出 `projectDemoSource`,由固定入口 `seeds/registry.ts` 轉成
  * `demoSource`(STRUCT-12:底座不 import 專案)。示範資料是業務資料,不進一般 seed(ADR-0002):
  * 指令先以平台管理員(root)建立標「示範」的機構與首任租戶管理員,再把登入成那位管理員的 client
- * 交給 `populate`,由專案的開通腳本建出其餘內容 —— 與真正開通的租戶走同一套步驟。
+ * 交給專案的 `populate` 建出其餘內容(專案可讓示範機構和真正開通的租戶走同一套步驟)。
  */
 import type { GraphqlClient } from "./graphql-client";
 

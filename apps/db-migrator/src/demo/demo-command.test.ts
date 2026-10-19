@@ -1,31 +1,65 @@
 import { describe, expect, it } from "@jest/globals";
 
-import { type DemoCommandOptions, runDemoCommand } from "./command";
+import {
+  type DemoCommandOptions,
+  redactSecrets,
+  runDemoCommand,
+} from "./command";
 import type { DemoSource } from "./demo-source";
 import type { FetchLike } from "./graphql-client";
 
-const URI = "mongodb://127.0.0.1:27017/scratch-lot-dev";
-const DATABASE = "scratch-lot-dev";
+const DATABASE = "wowgo-base-dev";
 const API_URL = "http://127.0.0.1:1";
 const DEMO_PASSWORD = ["demo", "secret", "pass", "1"].join("-");
 const EMAIL_BASE = ["owner", "example.com"].join("@");
-const ROOT_PASSWORD = ["root", "secret", "2"].join("-");
+const ROOT_PASSWORD = ["root", "secret", "pass", "2"].join("-");
 
 interface Harness {
   options: DemoCommandOptions;
-  calls: string[];
+  /** 送出的 GraphQL 操作名(依序)。 */
+  operations: string[];
   secretsRead: string[];
   populated: number;
+}
+
+/** 回一個 GraphQL 回應的假 fetch。 */
+function reply(body: unknown): ReturnType<FetchLike> {
+  return Promise.resolve({
+    status: 200,
+    text: () => Promise.resolve(JSON.stringify(body)),
+  });
+}
+
+/** 假 api:root 登入成功、`provisionTarget` 回 `apiDatabase`;其他操作一律回錯(寫入不該走到)。 */
+function fakeApi(apiDatabase: string): FetchLike {
+  return (_url, init) => {
+    const { query } = JSON.parse(init.body) as { query: string };
+    if (query.includes("login(")) {
+      return reply({ data: { login: { accessToken: "token" } } });
+    }
+    if (query.includes("provisionTarget")) {
+      return reply({
+        data: { provisionTarget: { databaseName: apiDatabase } },
+      });
+    }
+    return reply({ errors: [{ message: "測試的假 api 不接受寫入" }] });
+  };
+}
+
+function secretFor(label: string): string {
+  if (label === "基底信箱") {
+    return EMAIL_BASE;
+  }
+  return label === "平台管理員密碼" ? ROOT_PASSWORD : DEMO_PASSWORD;
 }
 
 /** 假的 api / 機密輸入 / 示範資料:記下指令碰了哪些東西。 */
 function harness(
   env: Record<string, string | undefined> = {},
-  respond: FetchLike = () =>
-    Promise.resolve({ status: 200, text: () => Promise.resolve("{}") }),
+  respond: FetchLike = fakeApi(DATABASE),
 ): Harness {
   const state: Harness = {
-    calls: [],
+    operations: [],
     secretsRead: [],
     populated: 0,
     options: {} as DemoCommandOptions,
@@ -39,7 +73,6 @@ function harness(
   };
   state.options = {
     env: {
-      MONGODB_URI: URI,
       DEMO_ALLOW_ENV: "dev",
       ROOT_ADMIN_ACCOUNT: "root",
       ROOT_ADMIN_PASSWORD: ROOT_PASSWORD,
@@ -47,13 +80,12 @@ function harness(
     },
     readSecret: (label) => {
       state.secretsRead.push(label);
-      return Promise.resolve(
-        label === "示範帳號密碼" ? DEMO_PASSWORD : EMAIL_BASE,
-      );
+      return Promise.resolve(secretFor(label));
     },
     loadDemoSource: () => Promise.resolve(source),
     fetch: (url, init) => {
-      state.calls.push(init.body);
+      const { query } = JSON.parse(init.body) as { query: string };
+      state.operations.push(/(?:query|mutation) (\w+)/.exec(query)?.[1] ?? "");
       return respond(url, init);
     },
     print: () => true,
@@ -87,15 +119,37 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
       "確認字串的 mode 對不上",
       args({ confirm: `demo:dev:${DATABASE}:rebuild` }),
     ],
-    ["確認字串的資料庫名對不上", args({ confirm: "demo:dev:other-db:create" })],
   ])("%s:不執行,沒有呼叫 api、沒有讀機密", async (_case, argv) => {
     const state = harness();
     await expect(runDemoCommand(argv, state.options)).rejects.toThrow(
       /--confirm 與目標不符/,
     );
-    expect(state.calls).toEqual([]);
+    expect(state.operations).toEqual([]);
     expect(state.secretsRead).toEqual([]);
     expect(state.populated).toBe(0);
+  });
+
+  it("確認字串的資料庫名與 api 回報的不同(例:--api-url 指到別的環境):只做了 root 登入與讀目標,沒有寫入、沒讀示範機密", async () => {
+    const state = harness({}, fakeApi("wowgo-base-staging"));
+    await expect(runDemoCommand(args(), state.options)).rejects.toThrow(
+      /資料庫名段不符.*--api-url/,
+    );
+    expect(state.operations).toEqual(["DemoLogin", "DemoProvisionTarget"]);
+    expect(state.secretsRead).toEqual([]);
+    expect(state.populated).toBe(0);
+  });
+
+  it("不需要 MONGODB_URI:資料庫名一律以 api 回報的為準", async () => {
+    const state = harness({ MONGODB_URI: undefined });
+    // 確認字串通過後才往下,到第一個要寫入前的讀取才因假 api 停下
+    await expect(runDemoCommand(args(), state.options)).rejects.toThrow(
+      /假 api/,
+    );
+    expect(state.operations.slice(0, 2)).toEqual([
+      "DemoLogin",
+      "DemoProvisionTarget",
+    ]);
+    expect(state.secretsRead).toEqual(["示範帳號密碼", "基底信箱"]);
   });
 
   it("--environment 不在 DEMO_ALLOW_ENV:不執行", async () => {
@@ -103,7 +157,7 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     await expect(runDemoCommand(args(), state.options)).rejects.toThrow(
       /DEMO_ALLOW_ENV/,
     );
-    expect(state.calls).toEqual([]);
+    expect(state.operations).toEqual([]);
     expect(state.secretsRead).toEqual([]);
   });
 
@@ -114,7 +168,7 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
       await expect(
         runDemoCommand(args({ mode }), state.options),
       ).rejects.toThrow(/尚未提供/);
-      expect(state.calls).toEqual([]);
+      expect(state.operations).toEqual([]);
       expect(state.secretsRead).toEqual([]);
     },
   );
@@ -124,7 +178,7 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     await expect(
       runDemoCommand([...args(), `--password=${DEMO_PASSWORD}`], state.options),
     ).rejects.toThrow(/無法辨識的參數/);
-    expect(state.calls).toEqual([]);
+    expect(state.operations).toEqual([]);
   });
 
   it("沒給 --api-url:不執行", async () => {
@@ -132,24 +186,30 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     await expect(
       runDemoCommand(args().slice(0, 3), state.options),
     ).rejects.toThrow(/--api-url 必填/);
-    expect(state.calls).toEqual([]);
+    expect(state.operations).toEqual([]);
   });
 
-  it("示範密碼與基底信箱從機密輸入讀(依序兩個),api 的錯誤訊息裡若帶到機密一律遮掉", async () => {
+  it("沒設 ROOT_ADMIN_PASSWORD:平台管理員密碼也從標準輸入讀,而且排在最前面", async () => {
+    const state = harness({ ROOT_ADMIN_PASSWORD: undefined });
+    await expect(runDemoCommand(args(), state.options)).rejects.toThrow(
+      /假 api/,
+    );
+    expect(state.secretsRead).toEqual([
+      "平台管理員密碼",
+      "示範帳號密碼",
+      "基底信箱",
+    ]);
+  });
+
+  it("api 的錯誤訊息裡若帶到機密一律遮掉", async () => {
     const state = harness({}, () =>
-      Promise.resolve({
-        status: 200,
-        text: () =>
-          Promise.resolve(
-            JSON.stringify({
-              errors: [
-                {
-                  message: `echo ${ROOT_PASSWORD} ${DEMO_PASSWORD} ${EMAIL_BASE}`,
-                  extensions: { code: "UNAUTHENTICATED" },
-                },
-              ],
-            }),
-          ),
+      reply({
+        errors: [
+          {
+            message: `echo ${ROOT_PASSWORD} done`,
+            extensions: { code: "UNAUTHENTICATED" },
+          },
+        ],
       }),
     );
     const failure = runDemoCommand(args(), state.options);
@@ -157,12 +217,21 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     const message = await failure.catch((error: unknown) =>
       error instanceof Error ? error.message : "",
     );
-    expect(state.secretsRead).toEqual(["示範帳號密碼", "基底信箱"]);
     expect(message).not.toContain(ROOT_PASSWORD);
-    expect(message).not.toContain(DEMO_PASSWORD);
-    expect(message).not.toContain(EMAIL_BASE);
-    // 送出的請求只有 root 登入那一筆
-    expect(state.calls).toHaveLength(1);
+    expect(message).toContain("echo *** done");
+    expect(state.operations).toEqual(["DemoLogin"]);
     expect(state.populated).toBe(0);
+  });
+});
+
+describe("錯誤訊息的機密遮罩", () => {
+  it("8 個字以上的機密逐字遮掉;更短的不遮(以免把一般文字也換掉)", () => {
+    expect(
+      redactSecrets("連不上 api:secret-value 與 pw", ["secret-value", "pw"]),
+    ).toBe("連不上 api:*** 與 pw");
+    expect(redactSecrets("連不上 api(http://x)", ["p", "a", undefined])).toBe(
+      "連不上 api(http://x)",
+    );
+    expect(redactSecrets("x 12345678 y", ["12345678"])).toBe("x *** y");
   });
 });

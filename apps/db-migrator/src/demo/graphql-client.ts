@@ -1,7 +1,7 @@
 /**
  * 呼叫 api 的 GraphQL(`POST <api 網址>/graphql`,`Authorization: Bearer <access token>`)。
  *
- * 示範指令與開通腳本**只透過這支**寫資料:權限照常檢查、操作紀錄(audit_log)照常以登入的那個人寫,
+ * demo 指令(與專案的 populate)**只透過這支**寫資料:權限照常檢查、操作紀錄(audit_log)照常以登入的那個人寫,
  * 不直接連資料庫寫入。錯誤只帶 api 回的訊息與錯誤碼,不帶送出的變數(裡面可能有密碼)。
  */
 

@@ -2480,6 +2480,11 @@ export type PrintersPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ProvisionTarget = {
+  __typename?: 'ProvisionTarget';
+  databaseName: Scalars['String']['output'];
+};
+
 export type ProvisionTenantInput = {
   adminAccount: Scalars['String']['input'];
   adminEmail: Scalars['String']['input'];
@@ -2572,6 +2577,7 @@ export type Query = {
   printJobs: PrintJobsPayload;
   printablePrinters: PrintablePrintersPayload;
   printers: PrintersPayload;
+  provisionTarget: ProvisionTarget;
   realtimeTicket?: Maybe<RealtimeTicketPayload>;
   reprintReasons: ReprintReasonsPayload;
   retiredFormPermissions: RetiredFormPermissionsPayload;

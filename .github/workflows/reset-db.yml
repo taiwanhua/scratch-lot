@@ -135,7 +135,9 @@ jobs:
 
       # 勾了「重建後灌示範資料」才做(docs/deployment.md「示範資料(demo)」);沒勾就只有 reset,和以前一樣。
       # 確認字串:上一步的 reset 已核對過 reset:<environment>:<資料庫名>:<mode> 與實際資料庫相符,
-      # 這裡只把開頭換成 demo、結尾換成 create(不解析連線字串);指令端照樣再比對一次
+      # 這裡只把開頭換成 demo、結尾換成 create(不解析連線字串);指令端再以該環境 api 回報的資料庫名比對一次。
+      # 建置範圍:demo 只需要 db-migrator 的 workspace 依賴(@repo/domain),前面「建置 api 的受管定義 CLI」
+      # 的 `@repo/api...` 已涵蓋;demo 不需要 api 的建置產物,只打該環境的 api
       - name: 灌示範資料
         env:
           SEED_DEMO: ${{ inputs.seed_demo }}
@@ -145,7 +147,6 @@ jobs:
           MODE: ${{ inputs.mode }}
           CONFIRMATION: ${{ inputs.confirmation }}
           API_URL: ${{ steps.cfg.outputs.api_url }}
-          MONGODB_SECRET_NAME: ${{ steps.cfg.outputs.mongodb_secret }}
           ROOT_SECRET_NAME: ${{ steps.cfg.outputs.root_secret }}
           DEMO_PASSWORD_SECRET_NAME: ${{ steps.cfg.outputs.demo_password_secret }}
           DEMO_EMAIL_BASE_SECRET_NAME: ${{ steps.cfg.outputs.demo_email_base_secret }}
@@ -161,13 +162,11 @@ jobs:
           DATABASE_SEGMENT="${CONFIRMATION#"reset:$ENVIRONMENT:"}"
           DATABASE_SEGMENT="${DATABASE_SEGMENT%":$MODE"}"
           DEMO_CONFIRMATION="demo:$ENVIRONMENT:$DATABASE_SEGMENT:create"
-          MONGODB_URI=$(gcloud secrets versions access latest --secret="$MONGODB_SECRET_NAME")
           ROOT_ADMIN_PASSWORD=$(gcloud secrets versions access latest --secret="$ROOT_SECRET_NAME")
           DEMO_PASSWORD=$(gcloud secrets versions access latest --secret="$DEMO_PASSWORD_SECRET_NAME")
           DEMO_EMAIL_BASE=$(gcloud secrets versions access latest --secret="$DEMO_EMAIL_BASE_SECRET_NAME")
-          echo "::add-mask::$MONGODB_URI"
           echo "::add-mask::$ROOT_ADMIN_PASSWORD"
           echo "::add-mask::$DEMO_PASSWORD"
           echo "::add-mask::$DEMO_EMAIL_BASE"
-          export MONGODB_URI ROOT_ADMIN_PASSWORD
+          export ROOT_ADMIN_PASSWORD
           printf '%s\n%s\n' "$DEMO_PASSWORD" "$DEMO_EMAIL_BASE" | pnpm --filter @repo/db-migrator demo --environment="$ENVIRONMENT" --mode=create --confirm="$DEMO_CONFIRMATION" --api-url="$API_URL"

@@ -1818,6 +1818,10 @@ type PrintersPayload {
   totalCount: Int!
 }
 
+type ProvisionTarget {
+  databaseName: String!
+}
+
 input ProvisionTenantInput {
   adminAccount: String!
   adminEmail: String!
@@ -1908,6 +1912,7 @@ type Query {
   printJobs(input: PrintJobsInput!): PrintJobsPayload!
   printablePrinters(orgId: ID!): PrintablePrintersPayload!
   printers(input: PrintersInput!): PrintersPayload!
+  provisionTarget: ProvisionTarget!
   realtimeTicket(board: RealtimeBoardInput): RealtimeTicketPayload
   reprintReasons: ReprintReasonsPayload!
   retiredFormPermissions: RetiredFormPermissionsPayload!

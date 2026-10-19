@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { hash } from "@node-rs/argon2";
 import { type ClientSession, Types } from "mongoose";
 
@@ -17,6 +18,7 @@ import {
   RolesRepository,
   UsersRepository,
 } from "../database/database.module";
+import { MONGODB_URI_ENV, requireMongoDbUri } from "../database/mongodb-uri";
 import type { OperatorContext } from "../database/operator-context";
 import {
   type RelationLink,
@@ -31,6 +33,7 @@ import type { TransferOrgOwnerInput } from "./dto/transfer-org-owner.input";
 import type { Org } from "./models/org.model";
 import type {
   ModuleOption,
+  ProvisionTarget,
   ProvisionTenantPayload,
   RevokeTenantProvisionPayload,
 } from "./models/tenant-ops.model";
@@ -212,7 +215,21 @@ export class TenantOpsService {
     private readonly ownerProtection: OwnerProtectionService,
     private readonly orgsService: OrgsService,
     private readonly transactions: TransactionService,
+    private readonly config: ConfigService,
   ) {}
+
+  /**
+   * 開通的寫入目標:這個 api 連到的資料庫名(取自連線字串的路徑,與 db-migrator 取資料庫名同一個規則)。
+   * 只給根組織:demo 指令以它比對確認字串,讓確認字串綁到實際寫入的資料庫。不回連線字串的其他部分。
+   */
+  async provisionTarget(operator: OperatorContext): Promise<ProvisionTarget> {
+    await this.assertRootOperator(operator, "provisionTarget");
+    const uri = requireMongoDbUri(this.config.get<string>(MONGODB_URI_ENV));
+    const databaseName = decodeURIComponent(
+      new URL(uri).pathname.replace(/^\//, ""),
+    );
+    return { databaseName };
+  }
 
   /**
    * 開通彈窗的模組勾選清單 = 租戶管理員模板綁的模組(`tenant-ops.model.ts` 說明判準),

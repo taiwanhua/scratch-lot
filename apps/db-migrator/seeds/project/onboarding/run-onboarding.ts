@@ -34,6 +34,8 @@ export interface RunOnboardingInput {
   client: OnboardingContext["client"];
   plan: OnboardingPlan;
   activation: UserActivation;
+  /** 要開通的租戶短碼(登入者所屬的租戶要是它)。 */
+  tenantSlug: string;
   print: (line: string) => void;
   /** 預設 `ONBOARDING_STEPS`;測試可換。 */
   steps?: readonly OnboardingStep[];
@@ -61,6 +63,7 @@ export async function runOnboarding({
   client,
   plan,
   activation,
+  tenantSlug,
   print,
   steps = ONBOARDING_STEPS,
 }: RunOnboardingInput): Promise<void> {
@@ -68,6 +71,7 @@ export async function runOnboarding({
     client,
     plan,
     activation,
+    tenantSlug,
     state: emptyState(),
   };
   const total = String(steps.length);
