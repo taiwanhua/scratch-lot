@@ -1,3 +1,4 @@
+import { FIELD_MANAGER_MODULE_KEY } from "@/components/base/FieldManager/field-manager-permissions";
 import { OverviewPage } from "@/pages/base/OverviewPage/OverviewPage";
 import {
   APPLY_CENTER_MODULE_KEY,
@@ -18,7 +19,6 @@ import { SAMPLE_TWO_MODULE_KEYS } from "@/pages/base/demo/demo-sample-two-config
 import { DataScopePage } from "@/pages/base/system/DataScopePage/DataScopePage";
 import { DATA_SCOPE_MODULE_KEY } from "@/pages/base/system/DataScopePage/data-scope-permissions";
 import { FieldManagerPage } from "@/pages/base/system/FieldManagerPage/FieldManagerPage";
-import { FIELD_MANAGER_MODULE_KEY } from "@/pages/base/system/FieldManagerPage/field-manager-permissions";
 import { FORMS_MODULE_KEY } from "@/pages/base/system/FormsPage/forms-permissions";
 import { LazyFormsPage } from "@/pages/base/system/FormsPage/lazy-forms-page";
 import { ModuleManagerPage } from "@/pages/base/system/ModuleManagerPage/ModuleManagerPage";

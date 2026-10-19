@@ -25,6 +25,8 @@ export interface FieldOptionsTableProps {
   pendingFieldId: string | null;
   onToggleEnabled: (field: FieldOptionLike, enabled: boolean) => void;
   onEdit: (field: FieldOptionLike) => void;
+  /** 接在「顯示名稱」之後的擴充欄(客製替換頁用;底座頁為空) */
+  extraColumns?: readonly TableColumn<FieldOptionLike>[];
 }
 
 /**
@@ -47,6 +49,7 @@ export const FieldOptionsTable = ({
   pendingFieldId,
   onToggleEnabled,
   onEdit,
+  extraColumns = [],
 }: FieldOptionsTableProps) => {
   const t = useTranslations("admin.fieldManager.options");
 
@@ -85,6 +88,7 @@ export const FieldOptionsTable = ({
         </Typography>
       ),
     },
+    ...extraColumns,
     {
       key: "value",
       header: t("value"),

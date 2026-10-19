@@ -1,4 +1,5 @@
 import type { FieldCategoriesQuery, FieldsQuery } from "@repo/graphql";
+import type { TableColumn } from "@repo/ui/table";
 
 /**
  * 左欄的一個欄位類別。兩種來源(`isSystem`):開發者在 seed 宣告的系統類別(跨環境同步、不可停用),
@@ -28,3 +29,11 @@ export type FieldManagerErrorCode =
   | "NOT_FOUND"
   | "VALIDATION_FAILED"
   | "UNEXPECTED";
+
+/**
+ * 選項表的擴充欄:依選中的類別產生要多加的欄位(接在「顯示名稱」之後,依陣列順序)。
+ * 給客製替換頁用(例:專案的選項顏色欄);欄位內容自己決定能不能改,權限照樣只跟 api 給的列旗標取交集。
+ */
+export type FieldOptionColumnsSlot = (
+  category: FieldCategoryLike,
+) => readonly TableColumn<FieldOptionLike>[];

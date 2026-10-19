@@ -8,6 +8,7 @@ import { Typography } from "@repo/ui/typography";
 
 import type {
   FieldCategoryLike,
+  FieldOptionColumnsSlot,
   FieldOptionLike,
 } from "../field-manager-types";
 import { FieldOptionsTable } from "./FieldOptionsTable";
@@ -28,6 +29,8 @@ export interface FieldOptionsPanelProps {
   onCreate: () => void;
   onEdit: (field: FieldOptionLike) => void;
   onToggleEnabled: (field: FieldOptionLike, enabled: boolean) => void;
+  /** 客製頁多加的欄位(見 `FieldOptionColumnsSlot`);底座頁不給 */
+  extraOptionColumns?: FieldOptionColumnsSlot;
 }
 
 /**
@@ -51,6 +54,7 @@ export const FieldOptionsPanel = ({
   onCreate,
   onEdit,
   onToggleEnabled,
+  extraOptionColumns,
 }: FieldOptionsPanelProps) => {
   const t = useTranslations("admin.fieldManager.options");
   const tCategory = useTranslations("admin.fieldManager.categoryActions");
@@ -116,6 +120,7 @@ export const FieldOptionsPanel = ({
             pendingFieldId={pendingFieldId}
             onToggleEnabled={onToggleEnabled}
             onEdit={onEdit}
+            extraColumns={extraOptionColumns?.(category) ?? []}
           />
         </Box>
       )}
