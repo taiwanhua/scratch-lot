@@ -131,6 +131,10 @@ const NOTIFICATION_SETTINGS = /* GraphQL */ `
         audience
         isDefault
         defaultAudience
+        schedule {
+          kind
+        }
+        isScheduleDefault
       }
       totalCount
     }
@@ -727,7 +731,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
           totalCount: number;
         };
       }>(api, admin.token, NOTIFICATION_SETTINGS, { input: {} });
-      // 清單 = 底座 + 專案登記的負責人提醒(數量從 app 實際組裝的登記推出,專案加了類型這裡照樣綠)
+      // 清單 = 底座 + 專案登記的負責人提醒 + 宣告了可調時間的當事人通知(數量從 app 實際組裝的登記推出,專案加了類型這裡照樣綠)
       expect(notificationSettings.totalCount).toBe(
         [
           ...api.app
@@ -736,7 +740,10 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
               { strict: false },
             )
             .values(),
-        ].filter((type) => type.category === "responsible").length,
+        ].filter(
+          (type) =>
+            type.category === "responsible" || type.schedule !== undefined,
+        ).length,
       );
       const offline = notificationSettings.items.find(
         (item) => item.type === PRINTING_AGENT_OFFLINE,
@@ -745,6 +752,8 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
         type: PRINTING_AGENT_OFFLINE,
         isDefault: true,
         orgScope: { ref: "event-org", range: "ancestors" },
+        schedule: null,
+        isScheduleDefault: true,
       });
       expect(offline?.audience).toEqual(offline?.defaultAudience);
     });

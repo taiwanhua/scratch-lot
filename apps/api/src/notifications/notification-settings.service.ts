@@ -23,10 +23,15 @@ import {
 } from "../workflows/tenant-directory.service";
 import {
   NOTIFICATION_AUDIENCE_OPTIONS,
+  type NotificationCategory,
   type NotificationOrgScope,
   type NotificationTypeDefinition,
 } from "./notification-registry";
 import { NOTIFICATION_TYPES } from "./notification-registry.module";
+import {
+  type NotificationSchedule,
+  validateSchedule,
+} from "./notification-schedule";
 import {
   notificationSettingRejected,
   notificationSettingTenantOnly,
@@ -43,12 +48,23 @@ const MAX_PAGE_SIZE = 100;
 export interface NotificationSettingItem {
   type: string;
   name: string;
-  orgScope: NotificationOrgScope;
-  /** 目前生效的人員條件(租戶調整過的,或類型宣告的預設) */
-  audience: Audience;
-  /** true = 沒有調整(用類型宣告的預設) */
+  category: NotificationCategory;
+  /** 負責人提醒才有;當事人通知 = null */
+  orgScope: NotificationOrgScope | null;
+  /** 目前生效的人員條件(租戶調整過的,或類型宣告的預設);當事人通知 = null */
+  audience: Audience | null;
+  /** 收件人沒有調整(用類型宣告的預設);當事人通知一律 true */
   isDefault: boolean;
-  defaultAudience: Audience;
+  defaultAudience: Audience | null;
+  /** 當事人通知的收件人說明(類型宣告);負責人提醒或沒宣告 = null */
+  recipientNote: string | null;
+  /** 目前生效的提醒時間;沒宣告可調時間 = null(一發生就寄) */
+  schedule: NotificationSchedule | null;
+  defaultSchedule: NotificationSchedule | null;
+  /** 提醒時間沒有調整;沒宣告可調時間一律 true */
+  isScheduleDefault: boolean;
+  /** `days-before` 的日期稱呼(類型宣告,例「到期」);沒有 = null */
+  scheduleDateLabel: string | null;
   updatedAt: Date | null;
   updatedBy: string | null;
 }
@@ -60,11 +76,27 @@ export interface NotificationSettingPage {
   totalCount: number;
 }
 
+/** 還原預設的範圍:收件人或提醒時間;不給 = 這個類型可調的全部。 */
+export type NotificationSettingPart = "audience" | "schedule";
+
+interface StoredSetting {
+  _id: Types.ObjectId;
+  audience: Audience | null;
+  schedule: NotificationSchedule | null;
+  updatedAt: Date;
+  updatedBy: Types.ObjectId | null;
+}
+
 /**
  * 通知設定(`docs/modules/notification-settings.md`):
- * 租戶管理員調整**負責人提醒**類型的收件人(人員條件),存在 `notification_settings`,唯一 `(tenantId, type)`。
+ * 租戶管理員調整**負責人提醒**的收件人(人員條件),以及**宣告了可調時間的類型**(負責人提醒或當事人通知)
+ * 的提醒時間,存在 `notification_settings`,唯一 `(tenantId, type)`;兩個欄位 null = 用類型宣告的預設。
  * 租戶 = 操作者目前組織所屬的租戶;站在根組織時只能看(預設),不能改(`FORBIDDEN` / `TENANT_ONLY`)。
- * 組織範圍由類型宣告、唯讀;人員條件不能選「所有人」、不含所屬組織欄,使用者與角色必須屬本租戶。
+ * 組織範圍由類型宣告、唯讀;人員條件不能選「所有人」、不含所屬組織欄,使用者與角色必須屬本租戶;
+ * 當事人通知的收件人由事件決定,不能調整。
+ *
+ * 排程工作(B14)用 `effectiveSchedule` 取「這個租戶這個類型目前生效的提醒時間」,
+ * 再以 `scheduleHitAt`(`notification-schedule.ts`)判斷這個時點該不該寄。
  */
 @Injectable()
 export class NotificationSettingsService {
@@ -78,6 +110,7 @@ export class NotificationSettingsService {
     private readonly transactions: TransactionService,
   ) {}
 
+  /** 清單:所有負責人提醒 + 宣告了可調時間的當事人通知(依登記順序)。 */
   async list(
     operator: OperatorContext,
     input: { keyword?: string | null; page?: number; pageSize?: number },
@@ -88,7 +121,7 @@ export class NotificationSettingsService {
       Math.max(1, Math.trunc(input.pageSize ?? 20)),
     );
     const keyword = input.keyword?.trim().toLowerCase() ?? "";
-    const matched = this.responsibleTypes().filter(
+    const matched = this.listedTypes().filter(
       (type) =>
         keyword === "" ||
         type.name.toLowerCase().includes(keyword) ||
@@ -105,24 +138,98 @@ export class NotificationSettingsService {
     const byType = new Map(stored.map((setting) => [setting.type, setting]));
     const items = matched
       .slice((page - 1) * pageSize, page * pageSize)
-      .map((type) => {
-        const setting = byType.get(type.key);
-        return this.toItem(type, setting?.audience ?? null, setting ?? null);
-      });
+      .map((type) => this.toItem(type, byType.get(type.key) ?? null));
     return { items, page, pageSize, totalCount: matched.length };
   }
 
-  /** 改某個負責人提醒類型的收件人(人員條件);下一次觸發就依新條件。 */
+  /**
+   * 改某個類型的收件人(人員條件)及 / 或提醒時間;缺席或 null 的欄位不動,兩個都沒給 → `NOTHING_TO_UPDATE`。
+   * 下一次觸發 / 下一個時點就依新設定。
+   */
   async update(
     operator: OperatorContext,
-    input: { type: string; audience: unknown },
+    input: { type: string; audience?: unknown; schedule?: unknown },
   ): Promise<NotificationSettingItem> {
-    const type = this.responsibleType(input.type);
+    const type = this.listedType(input.type);
     const tenantId = await this.requireTenant(operator);
-    const validation = validateAudience(
-      input.audience,
-      NOTIFICATION_AUDIENCE_OPTIONS,
-    );
+    const changes: { audience?: Audience; schedule?: NotificationSchedule } =
+      {};
+    if (input.audience !== undefined && input.audience !== null) {
+      changes.audience = await this.checkedAudience(
+        tenantId,
+        type,
+        input.audience,
+      );
+    }
+    if (input.schedule !== undefined && input.schedule !== null) {
+      changes.schedule = checkedSchedule(type, input.schedule);
+    }
+    if (Object.keys(changes).length === 0) {
+      throw notificationSettingRejected("NOTHING_TO_UPDATE", type.key);
+    }
+    return this.write(operator, tenantId, type, changes, AUDIT_ACTION_EDIT);
+  }
+
+  /**
+   * 還原預設:`part` 那一欄寫回 null(之後用類型宣告的預設);不給 `part` = 這個類型可調的欄位全部還原。
+   */
+  async reset(
+    operator: OperatorContext,
+    input: { type: string; part?: NotificationSettingPart | null },
+  ): Promise<NotificationSettingItem> {
+    const type = this.listedType(input.type);
+    const tenantId = await this.requireTenant(operator);
+    const part = input.part ?? null;
+    if (part === "audience" && type.category !== "responsible") {
+      throw notificationSettingRejected("AUDIENCE_NOT_ADJUSTABLE", type.key);
+    }
+    if (part === "schedule" && type.schedule === undefined) {
+      throw notificationSettingRejected("SCHEDULE_NOT_ADJUSTABLE", type.key);
+    }
+    const changes: { audience?: null; schedule?: null } = {};
+    if (
+      part === "audience" ||
+      (part === null && type.category === "responsible")
+    ) {
+      changes.audience = null;
+    }
+    if (part === "schedule" || (part === null && type.schedule !== undefined)) {
+      changes.schedule = null;
+    }
+    return this.write(operator, tenantId, type, changes, AUDIT_ACTION_RESET);
+  }
+
+  /**
+   * 排程工作用:這個租戶這個類型目前生效的提醒時間(調整過的,或類型宣告的預設)。
+   * 類型沒登記或沒宣告可調時間 → 拋錯(程式錯誤)。根組織(`tenantId = null`)只有預設。
+   */
+  async effectiveSchedule(
+    tenantId: Types.ObjectId | null,
+    typeKey: string,
+  ): Promise<NotificationSchedule> {
+    const declaration = this.types.get(typeKey)?.schedule;
+    if (declaration === undefined) {
+      throw new Error(`通知類型「${typeKey}」沒有宣告可調時間`);
+    }
+    if (tenantId === null) {
+      return declaration.default;
+    }
+    const stored = await this.settings.findOne(systemContext(), {
+      tenantId,
+      type: typeKey,
+    });
+    return stored?.schedule ?? declaration.default;
+  }
+
+  private async checkedAudience(
+    tenantId: Types.ObjectId,
+    type: NotificationTypeDefinition,
+    value: unknown,
+  ): Promise<Audience> {
+    if (type.category !== "responsible") {
+      throw notificationSettingRejected("AUDIENCE_NOT_ADJUSTABLE", type.key);
+    }
+    const validation = validateAudience(value, NOTIFICATION_AUDIENCE_OPTIONS);
     if (!validation.ok) {
       throw notificationSettingRejected(
         "AUDIENCE_INVALID",
@@ -130,26 +237,18 @@ export class NotificationSettingsService {
         validation.issue.path,
       );
     }
-    const audience = validation.audience;
-    await this.assertInTenant(tenantId, type.key, audience);
-    return this.write(operator, tenantId, type, audience, AUDIT_ACTION_EDIT);
-  }
-
-  /** 還原預設:`audience` 寫回 null,之後用類型宣告的預設人員條件。 */
-  async reset(
-    operator: OperatorContext,
-    input: { type: string },
-  ): Promise<NotificationSettingItem> {
-    const type = this.responsibleType(input.type);
-    const tenantId = await this.requireTenant(operator);
-    return this.write(operator, tenantId, type, null, AUDIT_ACTION_RESET);
+    await this.assertInTenant(tenantId, type.key, validation.audience);
+    return validation.audience;
   }
 
   private async write(
     operator: OperatorContext,
     tenantId: Types.ObjectId,
     type: NotificationTypeDefinition,
-    audience: Audience | null,
+    changes: {
+      audience?: Audience | null;
+      schedule?: NotificationSchedule | null;
+    },
     action: string,
   ): Promise<NotificationSettingItem> {
     return this.transactions.withTransaction(async () => {
@@ -163,10 +262,12 @@ export class NotificationSettingsService {
           ? await this.settings.create(operator, {
               tenantId,
               type: type.key,
-              audience,
+              audience: null,
+              schedule: null,
+              ...changes,
             })
           : await this.settings.updateById(operator, existing._id, {
-              $set: { audience },
+              $set: changes,
             });
       if (saved === null) {
         throw new Error(`通知設定「${type.key}」寫入後讀不到`);
@@ -175,29 +276,44 @@ export class NotificationSettingsService {
         action,
         targetType: AUDIT_TARGET_TYPE,
         targetId: saved._id,
-        before: { type: type.key, audience: existing?.audience ?? null },
-        after: { type: type.key, audience },
+        before: {
+          type: type.key,
+          audience: existing?.audience ?? null,
+          schedule: existing?.schedule ?? null,
+        },
+        after: {
+          type: type.key,
+          audience: saved.audience,
+          schedule: saved.schedule,
+        },
       });
-      return this.toItem(type, audience, saved);
+      return this.toItem(type, saved);
     });
   }
 
   private toItem(
     type: NotificationTypeDefinition,
-    audience: Audience | null,
-    setting: { updatedAt: Date; updatedBy: Types.ObjectId | null } | null,
+    setting: StoredSetting | null,
   ): NotificationSettingItem {
-    const { orgScope, defaultAudience } = type;
-    if (orgScope === undefined || defaultAudience === undefined) {
-      throw new Error(`通知類型「${type.key}」不是負責人提醒`);
-    }
+    const isResponsible = type.category === "responsible";
+    const audience = isResponsible ? (setting?.audience ?? null) : null;
+    const defaultAudience = type.defaultAudience ?? null;
+    const defaultSchedule = type.schedule?.default ?? null;
+    const schedule =
+      defaultSchedule === null ? null : (setting?.schedule ?? null);
     return {
       type: type.key,
       name: type.name,
-      orgScope,
+      category: type.category,
+      orgScope: type.orgScope ?? null,
       audience: audience ?? defaultAudience,
       isDefault: audience === null,
       defaultAudience,
+      recipientNote: type.recipientNote ?? null,
+      schedule: schedule ?? defaultSchedule,
+      defaultSchedule,
+      isScheduleDefault: schedule === null,
+      scheduleDateLabel: type.schedule?.dateLabel ?? null,
       updatedAt: setting?.updatedAt ?? null,
       updatedBy:
         setting?.updatedBy === null || setting?.updatedBy === undefined
@@ -206,15 +322,14 @@ export class NotificationSettingsService {
     };
   }
 
-  private responsibleTypes(): NotificationTypeDefinition[] {
-    return [...this.types.values()].filter(
-      (type) => type.category === "responsible",
-    );
+  /** 通知設定頁上的類型:所有負責人提醒 + 宣告了可調時間的當事人通知。 */
+  private listedTypes(): NotificationTypeDefinition[] {
+    return [...this.types.values()].filter((type) => isListed(type));
   }
 
-  private responsibleType(key: string): NotificationTypeDefinition {
+  private listedType(key: string): NotificationTypeDefinition {
     const type = this.types.get(key);
-    if (type?.category !== "responsible") {
+    if (type === undefined || !isListed(type)) {
       throw notificationSettingRejected("UNKNOWN_TYPE", key);
     }
     return type;
@@ -293,6 +408,30 @@ export class NotificationSettingsService {
       }
     }
   }
+}
+
+function isListed(type: NotificationTypeDefinition): boolean {
+  return type.category === "responsible" || type.schedule !== undefined;
+}
+
+/** 提醒時間:類型要宣告了可調時間,值要是宣告的寫法且在範圍內。 */
+function checkedSchedule(
+  type: NotificationTypeDefinition,
+  value: unknown,
+): NotificationSchedule {
+  const declaration = type.schedule;
+  if (declaration === undefined) {
+    throw notificationSettingRejected("SCHEDULE_NOT_ADJUSTABLE", type.key);
+  }
+  const validation = validateSchedule(value, declaration.default.kind);
+  if (!validation.ok) {
+    throw notificationSettingRejected(
+      "SCHEDULE_INVALID",
+      type.key,
+      validation.issue.path,
+    );
+  }
+  return validation.schedule;
 }
 
 /** 條件樹的每個條件列與它的路徑(與 `validateAudience` 的 `path` 同一種寫法)。 */

@@ -1452,15 +1452,48 @@ type NotificationOrgScope {
   ref: String!
 }
 
+type NotificationSchedule {
+  dayOfMonth: Int
+  daysBefore: [Int!]
+  kind: NotificationScheduleKind!
+  time: String!
+}
+
+input NotificationScheduleInput {
+  dayOfMonth: Int
+  daysBefore: [Int!]
+  kind: NotificationScheduleKind!
+  time: String!
+}
+
+"""提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換"""
+enum NotificationScheduleKind {
+  DAILY_OVERDUE
+  DAYS_BEFORE
+  MONTHLY
+}
+
 type NotificationSetting {
-  audience: JSONObject!
-  defaultAudience: JSONObject!
+  audience: JSONObject
+  category: String!
+  defaultAudience: JSONObject
+  defaultSchedule: NotificationSchedule
   isDefault: Boolean!
+  isScheduleDefault: Boolean!
   name: String!
-  orgScope: NotificationOrgScope!
+  orgScope: NotificationOrgScope
+  recipientNote: String
+  schedule: NotificationSchedule
+  scheduleDateLabel: String
   type: String!
   updatedAt: DateTime
   updatedBy: ID
+}
+
+"""還原預設的範圍:收件人 / 提醒時間"""
+enum NotificationSettingPart {
+  AUDIENCE
+  SCHEDULE
 }
 
 type NotificationSettingPayload {
@@ -1925,6 +1958,7 @@ type RequestPasswordResetPayload {
 }
 
 input ResetNotificationSettingInput {
+  part: NotificationSettingPart
   type: String!
 }
 
@@ -2375,7 +2409,8 @@ type UpdateMyPreferencesPayload {
 }
 
 input UpdateNotificationSettingInput {
-  audience: JSONObject!
+  audience: JSONObject
+  schedule: NotificationScheduleInput
   type: String!
 }
 

@@ -2085,17 +2085,51 @@ export type NotificationOrgScope = {
   ref: Scalars['String']['output'];
 };
 
+export type NotificationSchedule = {
+  __typename?: 'NotificationSchedule';
+  dayOfMonth?: Maybe<Scalars['Int']['output']>;
+  daysBefore?: Maybe<Array<Scalars['Int']['output']>>;
+  kind: NotificationScheduleKind;
+  time: Scalars['String']['output'];
+};
+
+export type NotificationScheduleInput = {
+  dayOfMonth?: InputMaybe<Scalars['Int']['input']>;
+  daysBefore?: InputMaybe<Array<Scalars['Int']['input']>>;
+  kind: NotificationScheduleKind;
+  time: Scalars['String']['input'];
+};
+
+/** 提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換 */
+export enum NotificationScheduleKind {
+  DailyOverdue = 'DAILY_OVERDUE',
+  DaysBefore = 'DAYS_BEFORE',
+  Monthly = 'MONTHLY'
+}
+
 export type NotificationSetting = {
   __typename?: 'NotificationSetting';
-  audience: Scalars['JSONObject']['output'];
-  defaultAudience: Scalars['JSONObject']['output'];
+  audience?: Maybe<Scalars['JSONObject']['output']>;
+  category: Scalars['String']['output'];
+  defaultAudience?: Maybe<Scalars['JSONObject']['output']>;
+  defaultSchedule?: Maybe<NotificationSchedule>;
   isDefault: Scalars['Boolean']['output'];
+  isScheduleDefault: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
-  orgScope: NotificationOrgScope;
+  orgScope?: Maybe<NotificationOrgScope>;
+  recipientNote?: Maybe<Scalars['String']['output']>;
+  schedule?: Maybe<NotificationSchedule>;
+  scheduleDateLabel?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
   updatedBy?: Maybe<Scalars['ID']['output']>;
 };
+
+/** 還原預設的範圍:收件人 / 提醒時間 */
+export enum NotificationSettingPart {
+  Audience = 'AUDIENCE',
+  Schedule = 'SCHEDULE'
+}
 
 export type NotificationSettingPayload = {
   __typename?: 'NotificationSettingPayload';
@@ -2893,6 +2927,7 @@ export type RequestPasswordResetPayload = {
 };
 
 export type ResetNotificationSettingInput = {
+  part?: InputMaybe<NotificationSettingPart>;
   type: Scalars['String']['input'];
 };
 
@@ -3365,7 +3400,8 @@ export type UpdateMyPreferencesPayload = {
 };
 
 export type UpdateNotificationSettingInput = {
-  audience: Scalars['JSONObject']['input'];
+  audience?: InputMaybe<Scalars['JSONObject']['input']>;
+  schedule?: InputMaybe<NotificationScheduleInput>;
   type: Scalars['String']['input'];
 };
 
@@ -4575,28 +4611,30 @@ export type MyNotificationPreferencesQueryVariables = Exact<{ [key: string]: nev
 
 export type MyNotificationPreferencesQuery = { __typename?: 'Query', myNotificationPreferences: { __typename?: 'MyNotificationPreferencesPayload', items: Array<{ __typename?: 'NotificationTypePreference', type: string, name: string, channels: Array<{ __typename?: 'NotificationChannelPreference', channel: string, preferenceKey: string, enabled: boolean, canDisable: boolean }> }> } };
 
-export type NotificationSettingItemFragment = { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } };
+export type NotificationScheduleFieldsFragment = { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string };
+
+export type NotificationSettingItemFragment = { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null };
 
 export type NotificationSettingsQueryVariables = Exact<{
   input: NotificationSettingsInput;
 }>;
 
 
-export type NotificationSettingsQuery = { __typename?: 'Query', notificationSettings: { __typename?: 'NotificationSettingsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } }> } };
+export type NotificationSettingsQuery = { __typename?: 'Query', notificationSettings: { __typename?: 'NotificationSettingsPayload', page: number, pageSize: number, totalCount: number, items: Array<{ __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null }> } };
 
 export type UpdateNotificationSettingMutationVariables = Exact<{
   input: UpdateNotificationSettingInput;
 }>;
 
 
-export type UpdateNotificationSettingMutation = { __typename?: 'Mutation', updateNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+export type UpdateNotificationSettingMutation = { __typename?: 'Mutation', updateNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null } } };
 
 export type ResetNotificationSettingMutationVariables = Exact<{
   input: ResetNotificationSettingInput;
 }>;
 
 
-export type ResetNotificationSettingMutation = { __typename?: 'Mutation', resetNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, audience: Record<string, unknown>, isDefault: boolean, defaultAudience: Record<string, unknown>, updatedAt?: string | null, updatedBy?: string | null, orgScope: { __typename?: 'NotificationOrgScope', ref: string, range: string } } } };
+export type ResetNotificationSettingMutation = { __typename?: 'Mutation', resetNotificationSetting: { __typename?: 'NotificationSettingPayload', setting: { __typename?: 'NotificationSetting', type: string, name: string, category: string, audience?: Record<string, unknown> | null, isDefault: boolean, defaultAudience?: Record<string, unknown> | null, recipientNote?: string | null, isScheduleDefault: boolean, scheduleDateLabel?: string | null, updatedAt?: string | null, updatedBy?: string | null, orgScope?: { __typename?: 'NotificationOrgScope', ref: string, range: string } | null, schedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null, defaultSchedule?: { __typename?: 'NotificationSchedule', kind: NotificationScheduleKind, daysBefore?: Array<number> | null, dayOfMonth?: number | null, time: string } | null } } };
 
 export type OrgNodeFieldsFragment = { __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null };
 
@@ -5632,10 +5670,19 @@ export const NotificationItemFragmentDoc = `
   createdAt
 }
     `;
+export const NotificationScheduleFieldsFragmentDoc = `
+    fragment NotificationScheduleFields on NotificationSchedule {
+  kind
+  daysBefore
+  dayOfMonth
+  time
+}
+    `;
 export const NotificationSettingItemFragmentDoc = `
     fragment NotificationSettingItem on NotificationSetting {
   type
   name
+  category
   orgScope {
     ref
     range
@@ -5643,10 +5690,19 @@ export const NotificationSettingItemFragmentDoc = `
   audience
   isDefault
   defaultAudience
+  recipientNote
+  schedule {
+    ...NotificationScheduleFields
+  }
+  defaultSchedule {
+    ...NotificationScheduleFields
+  }
+  isScheduleDefault
+  scheduleDateLabel
   updatedAt
   updatedBy
 }
-    `;
+    ${NotificationScheduleFieldsFragmentDoc}`;
 export const OrgNodeFieldsFragmentDoc = `
     fragment OrgNodeFields on OrgNode {
   id

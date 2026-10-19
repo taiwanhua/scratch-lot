@@ -4,6 +4,7 @@ import {
   ID,
   Int,
   ObjectType,
+  registerEnumType,
 } from "@nestjs/graphql";
 
 import { GraphQLJSONObject } from "../../data-scope/json-object.scalar";
@@ -125,7 +126,41 @@ export class NotificationOrgScopeModel {
   range!: string;
 }
 
-/** 通知設定頁的一列(一種負責人提醒類型)。 */
+/**
+ * 提醒時間的寫法(GraphQL 值 SCREAMING_SNAKE_CASE,內部值是存進資料庫的字串;GQL-01)。
+ */
+export enum NotificationScheduleKindEnum {
+  DAYS_BEFORE = "days-before",
+  DAILY_OVERDUE = "daily-overdue",
+  MONTHLY = "monthly",
+}
+
+registerEnumType(NotificationScheduleKindEnum, {
+  name: "NotificationScheduleKind",
+  description:
+    "提醒時間的寫法:某日期前 N 天(可多個)/ 逾期後每天 / 每月第 N 天;由類型宣告,租戶不能換",
+});
+
+/** 提醒時間(時間一律以租戶時區計)。 */
+@ObjectType("NotificationSchedule")
+export class NotificationScheduleModel {
+  @Field(() => NotificationScheduleKindEnum)
+  kind!: NotificationScheduleKindEnum;
+
+  /** `DAYS_BEFORE` 才有:提前天數(0 = 當天);其他寫法 = null */
+  @Field(() => [Int], { nullable: true })
+  daysBefore!: number[] | null;
+
+  /** `MONTHLY` 才有:每月第幾天(1–31,沒有這一天用月底);其他寫法 = null */
+  @Field(() => Int, { nullable: true })
+  dayOfMonth!: number | null;
+
+  /** 寄送時間 `HH:mm`(15 分鐘一格) */
+  @Field()
+  time!: string;
+}
+
+/** 通知設定頁的一列:一種負責人提醒,或宣告了可調時間的當事人通知。 */
 @ObjectType("NotificationSetting")
 export class NotificationSettingModel {
   @Field()
@@ -134,20 +169,45 @@ export class NotificationSettingModel {
   @Field()
   name!: string;
 
-  @Field(() => NotificationOrgScopeModel)
-  orgScope!: NotificationOrgScopeModel;
+  /** `responsible`(負責人提醒)/ `party`(當事人通知) */
+  @Field()
+  category!: string;
 
-  /** 目前生效的人員條件(租戶調整過的,或類型宣告的預設) */
-  @Field(() => GraphQLJSONObject)
-  audience!: Record<string, unknown>;
+  /** 負責人提醒的組織範圍;當事人通知 = null */
+  @Field(() => NotificationOrgScopeModel, { nullable: true })
+  orgScope!: NotificationOrgScopeModel | null;
 
-  /** true = 沒有調整,用類型宣告的預設 */
+  /** 目前生效的人員條件(租戶調整過的,或類型宣告的預設);當事人通知 = null */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  audience!: Record<string, unknown> | null;
+
+  /** true = 收件人沒有調整,用類型宣告的預設;當事人通知一律 true */
   @Field()
   isDefault!: boolean;
 
-  /** 類型宣告的預設人員條件(「還原預設」後會變回它) */
-  @Field(() => GraphQLJSONObject)
-  defaultAudience!: Record<string, unknown>;
+  /** 類型宣告的預設人員條件(「還原預設」後會變回它);當事人通知 = null */
+  @Field(() => GraphQLJSONObject, { nullable: true })
+  defaultAudience!: Record<string, unknown> | null;
+
+  /** 當事人通知的收件人說明(類型宣告,例「可排這家店的排班人員」);沒有 = null */
+  @Field(() => String, { nullable: true })
+  recipientNote!: string | null;
+
+  /** 目前生效的提醒時間;沒宣告可調時間 = null(事件發生時就寄) */
+  @Field(() => NotificationScheduleModel, { nullable: true })
+  schedule!: NotificationScheduleModel | null;
+
+  /** 類型宣告的預設提醒時間;沒宣告 = null */
+  @Field(() => NotificationScheduleModel, { nullable: true })
+  defaultSchedule!: NotificationScheduleModel | null;
+
+  /** true = 提醒時間沒有調整;沒宣告可調時間一律 true */
+  @Field()
+  isScheduleDefault!: boolean;
+
+  /** `DAYS_BEFORE` 的日期稱呼(類型宣告,例「到期」);沒有 = null */
+  @Field(() => String, { nullable: true })
+  scheduleDateLabel!: string | null;
 
   /** 最後一次調整 / 還原的時間;從沒動過 = null */
   @Field(() => GraphQLISODateTime, { nullable: true })
