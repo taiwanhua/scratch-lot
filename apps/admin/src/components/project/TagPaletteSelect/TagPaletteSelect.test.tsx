@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from "@jest/globals";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { IntlProvider } from "use-intl";
@@ -66,57 +66,71 @@ describe("TagPaletteChip(色票標籤)", () => {
   });
 });
 
-describe("TagPaletteSelect(色票下拉)", () => {
+describe("TagPaletteSelect(標籤 + 色票面板)", () => {
+  const NAME = "「補貨」的顏色";
+
   const setup = (value: TagPaletteKey | null) => {
     const onChange = jest.fn<(next: TagPaletteKey | null) => void>();
     const user = userEvent.setup();
     render(
       <Providers>
-        <TagPaletteSelect
-          value={value}
-          onChange={onChange}
-          label="「補貨」的顏色"
-          hiddenLabel
-        />
+        <TagPaletteSelect value={value} onChange={onChange} label={NAME} />
       </Providers>,
     );
     return { onChange, user };
   };
 
-  it("只列「不設定」+ 十組色票,依固定順序;沒有可以輸入色碼的地方", async () => {
-    const { user } = setup(null);
-    await user.click(screen.getByRole("combobox", { name: "「補貨」的顏色" }));
-    const listbox = await screen.findByRole("listbox");
-    const options = within(listbox).getAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual([
+  const openPanel = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole("button", { name: NAME }));
+    return screen.findByRole("dialog", { name: "選擇顏色" });
+  };
+
+  it("觸發就是色票標籤本身(不是下拉框):有值顯示那一組", () => {
+    setup("cyan");
+    const trigger = screen.getByRole("button", { name: NAME });
+    expect(trigger).toHaveAttribute("data-palette", "cyan");
+    expect(within(trigger).getByText("青")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("無值時觸發是「不設定」", () => {
+    setup(null);
+    expect(screen.getByRole("button", { name: NAME })).toHaveTextContent(
       "不設定",
-      ...PALETTE_NAMES,
-    ]);
+    );
+  });
+
+  it("面板:標題「選擇顏色」、十組色票兩列各 5 個、下方「不設定」;沒有可以輸入色碼的地方", async () => {
+    const { user } = setup(null);
+    const panel = await openPanel(user);
+    const chips = [...panel.querySelectorAll("[data-palette]")];
+    expect(chips.map((chip) => chip.textContent)).toEqual(PALETTE_NAMES);
+    const rows = [...new Set(chips.map((chip) => chip.parentElement))];
+    expect(rows.map((row) => row?.children.length)).toEqual([5, 5]);
+    expect(
+      within(panel).getByRole("button", { name: "不設定" }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
-  it("選取一組色票 → onChange 收到代號", async () => {
+  it("在面板裡點一組色票 → onChange 收到代號,面板關閉", async () => {
     const { onChange, user } = setup(null);
-    await user.click(screen.getByRole("combobox", { name: "「補貨」的顏色" }));
-    await user.click(await screen.findByRole("option", { name: "橘" }));
+    const panel = await openPanel(user);
+    await user.click(within(panel).getByRole("button", { name: "橘" }));
     expect(onChange).toHaveBeenCalledWith("orange");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
-  it("有值時收合狀態顯示那一組;選「不設定」→ onChange 收到 null", async () => {
+  it("目前的那一組在面板裡標成已選;點「不設定」→ onChange 收到 null", async () => {
     const { onChange, user } = setup("cyan");
-    const combobox = screen.getByRole("combobox", { name: "「補貨」的顏色" });
-    expect(within(combobox).getByText("青")).toBeInTheDocument();
-    await user.click(combobox);
-    await user.click(await screen.findByRole("option", { name: "不設定" }));
+    const panel = await openPanel(user);
+    expect(within(panel).getByRole("button", { name: "青" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(within(panel).getByRole("button", { name: "不設定" }));
     expect(onChange).toHaveBeenCalledWith(null);
-  });
-
-  it("無值時收合狀態顯示「不設定」", () => {
-    setup(null);
-    expect(
-      within(
-        screen.getByRole("combobox", { name: "「補貨」的顏色" }),
-      ).getByText("不設定"),
-    ).toBeInTheDocument();
   });
 });

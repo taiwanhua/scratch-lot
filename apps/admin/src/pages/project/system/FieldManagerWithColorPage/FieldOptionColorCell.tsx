@@ -27,7 +27,7 @@ export interface FieldOptionColorCellProps {
  * 選項表「顏色」欄的一格(Figma BS-13 289:87534)。
  *
  * 誰能改 = 誰能停用 / 啟用這一筆(api 的 `canToggleEnabled`:自訂選項限加它的那一層、全域選項限根組織)
- * 再與 `system.field-manager.edit` 取交集;改得動 → 色票下拉,改不動 → 只顯示標籤(沒有顏色顯示「—」)。
+ * 再與 `system.field-manager.edit` 取交集;改得動 → 標籤本身可點、開色票面板;改不動 → 只顯示標籤,沒有顏色顯示「不設定」文字(Figma 289:87612)。
  * 同一類別的顏色只查一次(各格共用同一個 query)。
  */
 export const FieldOptionColorCell = ({
@@ -36,6 +36,7 @@ export const FieldOptionColorCell = ({
 }: FieldOptionColorCellProps) => {
   const t = useTranslations("admin.fieldOptionColors");
   const tErrors = useTranslations("admin.fieldManager.errors");
+  const tPalette = useTranslations("admin.tagPalettes.select");
   const { session } = useSession();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
@@ -60,8 +61,8 @@ export const FieldOptionColorCell = ({
     field.canToggleEnabled && hasPermission(FIELD_MANAGER_PERMISSIONS.edit);
   if (!canSet) {
     return paletteKey === null ? (
-      <Typography component="span" variant="body2" color="text.disabled">
-        {t("none")}
+      <Typography component="span" variant="body2" color="text.secondary">
+        {tPalette("none")}
       </Typography>
     ) : (
       <TagPaletteChip paletteKey={paletteKey} />
@@ -71,7 +72,6 @@ export const FieldOptionColorCell = ({
     <TagPaletteSelect
       value={paletteKey}
       label={t("selectAria", { name: field.label })}
-      hiddenLabel
       disabled={colors.isLoading || setColor.isPending}
       onChange={(next) => {
         setColor.mutate({ input: { fieldId: field.id, paletteKey: next } });

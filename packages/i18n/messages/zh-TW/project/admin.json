@@ -14,13 +14,13 @@
     },
     "select": {
       "label": "顏色",
-      "none": "不設定"
+      "none": "不設定",
+      "title": "選擇顏色"
     }
   },
   "fieldOptionColors": {
     "column": "顏色",
     "selectAria": "「{name}」的顏色",
-    "none": "—",
     "feedback": {
       "success": "已更新顏色"
     }

@@ -14,13 +14,13 @@
     },
     "select": {
       "label": "Color",
-      "none": "None"
+      "none": "None",
+      "title": "Choose a color"
     }
   },
   "fieldOptionColors": {
     "column": "Color",
     "selectAria": "Color of \"{name}\"",
-    "none": "—",
     "feedback": {
       "success": "Color updated"
     }
