@@ -2,7 +2,9 @@ import { HttpResponse } from "msw";
 
 import {
   ModuleSidebarType,
+  NotificationScheduleKind,
   type NotificationSettingItemFragment,
+  NotificationSettingPart,
   type NotificationSettingsQueryVariables,
   type ResetNotificationSettingMutationVariables,
   type RolesQueryVariables,
@@ -14,13 +16,33 @@ import type { TestRole } from "./data-scope-handlers";
 import type { TestMatrixModule, TestMatrixPermission } from "./role-fixtures";
 import { api } from "./server";
 
-/** 一種負責人提醒類型(登記表的宣告;`audience` 是租戶調整過的,null = 用預設)。 */
+/** api 回的一份提醒時間。 */
+export interface TestNotificationSchedule {
+  kind: NotificationScheduleKind;
+  daysBefore?: number[] | null;
+  dayOfMonth?: number | null;
+  time: string;
+}
+
+/**
+ * 通知設定頁上的一種類型(登記表的宣告):負責人提醒(預設)或宣告了可調時間的當事人通知。
+ * `audience` / `schedule` 是租戶調整過的,null = 用預設。
+ */
 export interface TestNotificationType {
   type: string;
   name: string;
-  orgScope: { ref: string; range: string };
-  defaultAudience: Record<string, unknown>;
+  /** 不給 = `responsible` */
+  category?: "responsible" | "party";
+  /** 當事人通知不給 */
+  orgScope?: { ref: string; range: string } | null;
+  defaultAudience?: Record<string, unknown> | null;
   audience?: Record<string, unknown> | null;
+  /** 當事人通知的收件人說明 */
+  recipientNote?: string | null;
+  /** 可調時間的預設;不給 = 沒宣告(發生時就寄) */
+  defaultSchedule?: TestNotificationSchedule | null;
+  schedule?: TestNotificationSchedule | null;
+  dateLabel?: string | null;
 }
 
 export interface NotificationSettingsFailure {
@@ -69,32 +91,65 @@ export const notificationSettingsWorld = (
     failures = {},
   } = options;
   const inputs: NotificationSettingsWorld["inputs"] = { update: [], reset: [] };
-  const stored = new Map(
+  interface StoredSetting {
+    audience: Record<string, unknown> | null;
+    schedule: TestNotificationSchedule | null;
+    updatedAt: string | null;
+  }
+  const stored = new Map<string, StoredSetting>(
     types.map((type) => [
       type.type,
       {
         audience: type.audience ?? null,
-        updatedAt: type.audience == null ? null : TIMESTAMP,
+        schedule: type.schedule ?? null,
+        updatedAt:
+          type.audience == null && type.schedule == null ? null : TIMESTAMP,
       },
     ]),
   );
+
+  const scheduleOf = (schedule: TestNotificationSchedule | null) =>
+    schedule === null
+      ? null
+      : {
+          kind: schedule.kind,
+          daysBefore: schedule.daysBefore ?? null,
+          dayOfMonth: schedule.dayOfMonth ?? null,
+          time: schedule.time,
+        };
 
   const toItem = (
     type: TestNotificationType,
   ): NotificationSettingItemFragment => {
     const setting = stored.get(type.type);
+    const category = type.category ?? "responsible";
     const audience = setting?.audience ?? null;
+    const defaultSchedule = type.defaultSchedule ?? null;
+    const schedule =
+      defaultSchedule === null ? null : (setting?.schedule ?? null);
     return {
       type: type.type,
       name: type.name,
-      orgScope: type.orgScope,
-      audience: audience ?? type.defaultAudience,
+      category,
+      orgScope: type.orgScope ?? null,
+      audience:
+        category === "responsible"
+          ? (audience ?? type.defaultAudience ?? null)
+          : null,
       isDefault: audience === null,
-      defaultAudience: type.defaultAudience,
+      defaultAudience: type.defaultAudience ?? null,
+      recipientNote: type.recipientNote ?? null,
+      schedule: scheduleOf(schedule ?? defaultSchedule),
+      defaultSchedule: scheduleOf(defaultSchedule),
+      isScheduleDefault: schedule === null,
+      scheduleDateLabel: type.dateLabel ?? null,
       updatedAt: setting?.updatedAt ?? null,
       updatedBy: setting?.updatedAt == null ? null : OPERATOR_ID,
     };
   };
+
+  const settingOf = (type: string): StoredSetting =>
+    stored.get(type) ?? { audience: null, schedule: null, updatedAt: null };
 
   const handlers = [
     api.query("NotificationSettings", ({ variables }) => {
@@ -132,8 +187,18 @@ export const notificationSettingsWorld = (
       if (type === undefined) {
         return fail("VALIDATION_FAILED", { reason: "UNKNOWN_TYPE" });
       }
+      const current = settingOf(type.type);
       stored.set(type.type, {
-        audience: input.audience,
+        audience: input.audience ?? current.audience,
+        schedule:
+          input.schedule == null
+            ? current.schedule
+            : {
+                kind: input.schedule.kind,
+                daysBefore: input.schedule.daysBefore ?? null,
+                dayOfMonth: input.schedule.dayOfMonth ?? null,
+                time: input.schedule.time,
+              },
         updatedAt: TIMESTAMP,
       });
       return HttpResponse.json({
@@ -151,7 +216,19 @@ export const notificationSettingsWorld = (
       if (type === undefined) {
         return fail("VALIDATION_FAILED", { reason: "UNKNOWN_TYPE" });
       }
-      stored.set(type.type, { audience: null, updatedAt: TIMESTAMP });
+      const current = settingOf(type.type);
+      const part = input.part ?? null;
+      stored.set(type.type, {
+        audience:
+          part === null || part === NotificationSettingPart.Audience
+            ? null
+            : current.audience,
+        schedule:
+          part === null || part === NotificationSettingPart.Schedule
+            ? null
+            : current.schedule,
+        updatedAt: TIMESTAMP,
+      });
       return HttpResponse.json({
         data: { resetNotificationSetting: { setting: toItem(type) } },
       });
@@ -266,7 +343,17 @@ export const inRoles = (roleIds: string[]): Record<string, unknown> => ({
   },
 });
 
-/** 底座的負責人提醒(`printing.agent-offline`)+ 一種專案類型(沒有英文文案,退回 api 的 name)。 */
+/** 到期提醒的預設提醒時間:到期前 30、7 天及當天 09:00。 */
+export const EXPIRY_DEFAULT_SCHEDULE: TestNotificationSchedule = {
+  kind: NotificationScheduleKind.DaysBefore,
+  daysBefore: [30, 7, 0],
+  time: "09:00",
+};
+
+/**
+ * 底座的負責人提醒(`printing.agent-offline`,沒宣告提醒時間)+ 一種專案類型
+ * (沒有英文文案,退回 api 的 name;宣告了「某日期前 N 天」)。
+ */
 export const notificationTypes = (
   overrides: Partial<Record<string, Partial<TestNotificationType>>> = {},
 ): TestNotificationType[] => [
@@ -282,6 +369,41 @@ export const notificationTypes = (
     name: "到期提醒",
     orgScope: { ref: "tenant", range: "self" },
     defaultAudience: holdsPermission("system.notification-settings.edit"),
+    defaultSchedule: EXPIRY_DEFAULT_SCHEDULE,
+    dateLabel: "到期",
     ...overrides["demo.expiry-reminder"],
   },
 ];
+
+/** 宣告了提醒時間的當事人通知(只有提醒時間一塊;收件人由事件決定)。 */
+export const partyScheduledType = (
+  override: Partial<TestNotificationType> = {},
+): TestNotificationType => ({
+  type: "demo.deadline-notice",
+  name: "截止提醒",
+  category: "party",
+  recipientNote: "表單的填寫人",
+  defaultSchedule: {
+    kind: NotificationScheduleKind.DaysBefore,
+    daysBefore: [1],
+    time: "09:00",
+  },
+  dateLabel: "截止日",
+  ...override,
+});
+
+/** 每月第 N 天的負責人提醒。 */
+export const monthlyType = (
+  override: Partial<TestNotificationType> = {},
+): TestNotificationType => ({
+  type: "demo.monthly-report",
+  name: "月報提醒",
+  orgScope: { ref: "tenant", range: "self" },
+  defaultAudience: holdsPermission("system.notification-settings.edit"),
+  defaultSchedule: {
+    kind: NotificationScheduleKind.Monthly,
+    dayOfMonth: 3,
+    time: "09:00",
+  },
+  ...override,
+});

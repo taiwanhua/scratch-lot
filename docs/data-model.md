@@ -26,7 +26,7 @@
 | `user_preferences`                  | 業務                                                     | 個人偏好(每個使用者一筆 `{ userId, settings: { <key>: 值 } }`,跟著帳號);key 須登記                       | 帳號           | `user-preference.schema.ts`       |
 | `user_delegations`                  | 業務                                                     | 代理人(`{ userId, delegateUserId, startAt, endAt, note }`;代理期間進關的任務改派給代理人)                | 流程           | `user-delegation.schema.ts`       |
 | `notifications`                     | 業務                                                     | 通知(一位收件人一筆;`(recipientId, dedupeKey)` 唯一;`createdAt` 90 天 TTL)                               | 流程           | `notification.schema.ts`          |
-| `notification_settings`             | 業務                                                     | 通知設定(租戶對負責人提醒類型的收件人調整;`(tenantId, type)` 唯一)                                       | 流程           | `notification-setting.schema.ts`  |
+| `notification_settings`             | 業務                                                     | 通知設定(租戶對負責人提醒的收件人、對宣告了可調時間的類型的提醒時間調整;`(tenantId, type)` 唯一)         | 流程           | `notification-setting.schema.ts`  |
 | `demo_items_one` / `demo_items_two` | 種子(宣告的幾筆)+ 業務                                   | 示範模組資料(模組資料表)                                                                                 | 各自的模組文件 | `demo-item-*.schema.ts`           |
 | `forms`                             | 設定(受管 seed 或各環境自建)                             | 表單(一種填報的身分;共用 `ownerOrgId = null`、客製 = 租戶頂層)                                           | 表單           | `form.schema.ts`                  |
 | `form_versions`                     | 設定(受管 seed 或各環境自建)                             | 表單版本(草稿 / 發布中 / 已發布 / 已退役;欄位、版面、摘要槽、帶入規則)                                   | 表單           | `form-version.schema.ts`          |
@@ -82,7 +82,7 @@
 
 ### 通知
 
-`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
+`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件,`schedule = null` 就用類型宣告的預設提醒時間。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
 
 ## 專案資料
 
