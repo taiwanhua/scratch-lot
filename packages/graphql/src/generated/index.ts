@@ -709,6 +709,24 @@ export type FieldCategoryPayload = {
   category: FieldCategory;
 };
 
+export type FieldOptionColor = {
+  __typename?: 'FieldOptionColor';
+  fieldId: Scalars['ID']['output'];
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  value: Scalars['String']['output'];
+};
+
+export type FieldOptionColorPayload = {
+  __typename?: 'FieldOptionColorPayload';
+  color: FieldOptionColor;
+};
+
+export type FieldOptionColorsPayload = {
+  __typename?: 'FieldOptionColorsPayload';
+  items: Array<FieldOptionColor>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type FieldOwnerOrg = {
   __typename?: 'FieldOwnerOrg';
   id: Scalars['ID']['output'];
@@ -1416,6 +1434,7 @@ export type Mutation = {
   setDemoItemTwoEnabled: DemoItemTwoPayload;
   setFieldCategoryEnabled: FieldCategoryPayload;
   setFieldEnabled: FieldPayload;
+  setFieldOptionColor: FieldOptionColorPayload;
   setModuleEnabled: ModuleAdminPayload;
   setModuleIcon: ModuleAdminPayload;
   setModuleListColumns: ModuleListColumnsPayload;
@@ -1795,6 +1814,11 @@ export type MutationSetFieldCategoryEnabledArgs = {
 
 export type MutationSetFieldEnabledArgs = {
   input: SetFieldEnabledInput;
+};
+
+
+export type MutationSetFieldOptionColorArgs = {
+  input: SetFieldOptionColorInput;
 };
 
 
@@ -2503,6 +2527,7 @@ export type Query = {
   exportFormSeed: ExportFormSeedPayload;
   exportWorkflowSeed: ExportWorkflowSeedPayload;
   fieldCategories: FieldCategoriesPayload;
+  fieldOptionColors: FieldOptionColorsPayload;
   fields: FieldsPayload;
   form: FormPayload;
   formFieldOptions: FormFieldOptionsPayload;
@@ -2623,6 +2648,11 @@ export type QueryExportWorkflowSeedArgs = {
 
 export type QueryFieldCategoriesArgs = {
   input?: InputMaybe<FieldCategoriesInput>;
+};
+
+
+export type QueryFieldOptionColorsArgs = {
+  categoryKey: Scalars['String']['input'];
 };
 
 
@@ -3216,6 +3246,11 @@ export type SetFieldCategoryEnabledInput = {
 export type SetFieldEnabledInput = {
   enabled: Scalars['Boolean']['input'];
   id: Scalars['ID']['input'];
+};
+
+export type SetFieldOptionColorInput = {
+  fieldId: Scalars['ID']['input'];
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type SetModuleEnabledInput = {
@@ -5274,6 +5309,22 @@ export type RetryAdvanceInstanceMutationVariables = Exact<{
 
 export type RetryAdvanceInstanceMutation = { __typename?: 'Mutation', retryAdvanceInstance: { __typename?: 'WorkflowInstancePayload', instance: { __typename?: 'WorkflowInstanceModel', id: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, formVersion: number, workflowKey: string, workflowName?: string | null, workflowVersion: number, status: WorkflowInstanceStatus, activeStepKeys: Array<string>, editVersion: number, createdAt: string, updatedAt: string, finishedAt?: string | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, steps: Array<{ __typename?: 'WorkflowInstanceStepModel', stepKey: string, name: string, kind: string, mode?: string | null, allowReturn: boolean, status: WorkflowStepStatus, blocked: boolean, plan: Array<{ __typename?: 'WorkflowPlanItemModel', taskKey: string, assigneeState: string, taskId?: string | null, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, previousAssignees: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }>, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, decisions: Array<{ __typename?: 'WorkflowDecisionModel', taskKey: string, decision: string, comment?: string | null, at: string, user: { __typename?: 'FormUserRef', id: string, name?: string | null } }> }>, history: Array<{ __typename?: 'WorkflowHistoryEventModel', at: string, kind: string, stepKey?: string | null, taskKey?: string | null, comment?: string | null, result?: string | null, reason?: string | null, code?: string | null, user?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, toUser?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, delegators: Array<{ __typename?: 'FormUserRef', id: string, name?: string | null }> }>, outcome?: { __typename?: 'WorkflowOutcomeModel', kind: string, stepKey: string, taskKey: string } | null, myTasks: Array<{ __typename?: 'WorkflowTaskModel', id: string, instanceId: string, submissionId: string, revision: number, moduleKey: string, moduleName?: string | null, formKey: string, formName?: string | null, stepKey: string, stepName: string, taskKey: string, status: WorkflowTaskStatus, instanceStatus: WorkflowInstanceStatus, decidedAt?: string | null, comment?: string | null, editVersion: number, createdAt: string, assignee: { __typename?: 'FormUserRef', id: string, name?: string | null }, applicant?: { __typename?: 'FormUserRef', id: string, name?: string | null } | null, summary?: { __typename?: 'FormSubmissionSummary', title?: string | null, date?: string | null, amount?: string | null } | null }>, abilities: { __typename?: 'WorkflowInstanceAbilities', canWithdraw: boolean, canManage: boolean } } } };
 
+export type FieldOptionColorFieldsFragment = { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null };
+
+export type FieldOptionColorsQueryVariables = Exact<{
+  categoryKey: Scalars['String']['input'];
+}>;
+
+
+export type FieldOptionColorsQuery = { __typename?: 'Query', fieldOptionColors: { __typename?: 'FieldOptionColorsPayload', totalCount: number, items: Array<{ __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null }> } };
+
+export type SetFieldOptionColorMutationVariables = Exact<{
+  input: SetFieldOptionColorInput;
+}>;
+
+
+export type SetFieldOptionColorMutation = { __typename?: 'Mutation', setFieldOptionColor: { __typename?: 'FieldOptionColorPayload', color: { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null } } };
+
 
 export const WorkflowTaskFieldsFragmentDoc = `
     fragment WorkflowTaskFields on WorkflowTaskModel {
@@ -5975,6 +6026,13 @@ export const WorkflowValidationFieldsFragmentDoc = `
     property
     exprPath
   }
+}
+    `;
+export const FieldOptionColorFieldsFragmentDoc = `
+    fragment FieldOptionColorFields on FieldOptionColor {
+  fieldId
+  value
+  paletteKey
 }
     `;
 export const MyApplicationsDocument = `
@@ -12283,3 +12341,67 @@ export const useRetryAdvanceInstanceMutation = <
 
 
 useRetryAdvanceInstanceMutation.fetcher = (client: GraphQLClient, variables: RetryAdvanceInstanceMutationVariables, headers?: RequestInit['headers']) => fetcher<RetryAdvanceInstanceMutation, RetryAdvanceInstanceMutationVariables>(client, RetryAdvanceInstanceDocument, variables, headers);
+
+export const FieldOptionColorsDocument = `
+    query FieldOptionColors($categoryKey: String!) {
+  fieldOptionColors(categoryKey: $categoryKey) {
+    items {
+      ...FieldOptionColorFields
+    }
+    totalCount
+  }
+}
+    ${FieldOptionColorFieldsFragmentDoc}`;
+
+export const useFieldOptionColorsQuery = <
+      TData = FieldOptionColorsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: FieldOptionColorsQueryVariables,
+      options?: Omit<UseQueryOptions<FieldOptionColorsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<FieldOptionColorsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<FieldOptionColorsQuery, TError, TData>(
+      {
+    queryKey: ['FieldOptionColors', variables],
+    queryFn: fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useFieldOptionColorsQuery.getKey = (variables: FieldOptionColorsQueryVariables) => ['FieldOptionColors', variables];
+
+
+useFieldOptionColorsQuery.fetcher = (client: GraphQLClient, variables: FieldOptionColorsQueryVariables, headers?: RequestInit['headers']) => fetcher<FieldOptionColorsQuery, FieldOptionColorsQueryVariables>(client, FieldOptionColorsDocument, variables, headers);
+
+export const SetFieldOptionColorDocument = `
+    mutation SetFieldOptionColor($input: SetFieldOptionColorInput!) {
+  setFieldOptionColor(input: $input) {
+    color {
+      ...FieldOptionColorFields
+    }
+  }
+}
+    ${FieldOptionColorFieldsFragmentDoc}`;
+
+export const useSetFieldOptionColorMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SetFieldOptionColorMutation, TError, SetFieldOptionColorMutationVariables, TContext>(
+      {
+    mutationKey: ['SetFieldOptionColor'],
+    mutationFn: (variables?: SetFieldOptionColorMutationVariables) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSetFieldOptionColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldOptionColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers);

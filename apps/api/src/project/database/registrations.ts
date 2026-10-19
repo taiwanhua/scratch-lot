@@ -1,4 +1,5 @@
 import type { DatabaseRegistration } from "../../database/registration";
+import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registration";
 
 /**
  * 專案的資料登記(docs/concepts/data-layer-and-isolation.md「底座與專案資料的組裝」)。
@@ -8,5 +9,6 @@ import type { DatabaseRegistration } from "../../database/registration";
  * repository 繼承 `BaseRepository`,並為每張 model 列一項歸屬欄為 `orgId` 的組織歸屬檢查 ——
  * 少任何一項 app 都起不來。這裡沒有任何「略過檢查」的旗標可用。
  */
-export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] =
-  [];
+export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
+  FIELD_OPTION_COLORS_REGISTRATION,
+];
