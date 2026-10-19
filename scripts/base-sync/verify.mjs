@@ -74,6 +74,8 @@ const PAIRED_PROJECT_SOURCES = new Set([
   "apps/api/src/project/user-preferences.ts",
   "apps/api/src/project/form-lifecycles.ts",
   "apps/api/src/project/notifications.ts",
+  "apps/admin/src/app/project/url-state-inventory.ts",
+  "apps/admin/src/mock/project/mock-world.ts",
 ]);
 const NOT_CODE_DUPLICATES = [
   /^packages\/project-config\/src\/project\//,

@@ -26,13 +26,13 @@ describe("composeAdminMessages", () => {
 
   it("新增:可加新的頂層 namespace,也可往底座既有分支加底座沒有的鍵", () => {
     const result = compose({
-      lotteryStore: { title: "門市", total: "共 {count} 張" },
+      sampleStore: { title: "門市", total: "共 {count} 筆" },
       app: { tagline: "專案標語" },
     });
     expect(result).toEqual({
       ...base,
       app: { subtitle: "後台管理", tagline: "專案標語" },
-      lotteryStore: { title: "門市", total: "共 {count} 張" },
+      sampleStore: { title: "門市", total: "共 {count} 筆" },
     });
   });
 

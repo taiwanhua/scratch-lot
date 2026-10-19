@@ -71,7 +71,7 @@ test("專案的名詞表與 docs/tmp 判為 project,底座的 CONTEXT.md 與 dis
   assert.equal(classifyPath("CONTEXT-PROJECT.md", "M"), "project");
   for (const file of [
     "docs/tmp/project-dis.md",
-    "docs/tmp/spec-project-lottery.md",
+    "docs/tmp/spec-project-x.md",
     "docs/tmp/handoff-round.md",
     "docs/tmp/figma-base-round/_kit.js",
     "docs/tmp/figma-base-round/project/r4-store.js",
@@ -131,7 +131,7 @@ test("底座名單裡的 skill 判為 common,其餘 skill 目錄判為 project",
       );
     }
     assert.equal(
-      classifyPath(`${root}/skills/scratch-lot-onboarding/SKILL.md`, "A"),
+      classifyPath(`${root}/skills/acme-onboarding/SKILL.md`, "A"),
       "project",
     );
     // 名稱只是以底座 skill 開頭的不算底座 skill
