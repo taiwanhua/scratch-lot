@@ -41,12 +41,12 @@ const SUMMARIES = {
   contribute: [
     "把專案一個 commit 相對其 parent 的精確差異,從底座最新 origin/main 準備成 contribution 分支(common 路徑與明列的混合檔),只 stage 不提交。",
     "--project 是來源專案根目錄、--commit 是完整 40 位 commit SHA、--base 是底座 repo 根目錄;工作樹建在已存在的 --worktree-root 目錄之下。",
-    "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕。",
+    "--accept-mixed 可省略、可重複:明列只含底座段落的混合檔才接受,其差異列進報告供審查;未明列的混合檔、未知路徑、已發布資料、專案路徑與 merge commit 一律拒絕;差異的新增行含專案字樣(與 verify 同一份詞表)也拒絕。",
   ],
   verify: [
-    "唯讀:升級 merge 提交後,核對專案的改動是否已被新底座包含,輸出 Markdown 報告:非專案、非混合路徑(common / published-data / unknown)與底座 --tag 仍不同的檔案、客製替換登記、底座與專案 seed 同 collection + key(含專案端無法解析的 key)、專案路徑與底座同名或同匯出名稱的檔案。",
+    "唯讀:升級 merge 提交後,核對專案的改動是否已被新底座包含,輸出 Markdown 報告:非專案、非混合路徑(common / published-data / unknown)與底座 --tag 仍不同的檔案、客製替換登記、底座與專案 seed 同 collection + key(含專案端無法解析的 key)、專案路徑與底座同名或同匯出名稱的檔案、共用與混合路徑新增的專案字樣、值行檔在值行以外的差異、專案 skill 的命名與成對;頂端另列全樹的未歸類路徑數。",
     "--project 是專案 repo(或升級工作樹)根目錄;--tag 須已由 upgrade 存進 refs/base/releases/ 且被 HEAD 包含;--out 可省略,另把報告寫到該檔。不 fetch、不寫任何 ref。",
-    "四節皆為 0 才 exit 0(已去除重複);任一節有項目 exit 1,人只判讀例外。第 2–4 節是靜態掃描,漏報 / 誤報範圍列在報告頁尾的「限制」。Figma 稽核與 CI 不在本指令內。",
+    "七節皆為 0 才 exit 0(已去除重複);任一節有項目 exit 1,人只判讀例外。第 2–7 節是靜態掃描,漏報 / 誤報範圍列在報告頁尾的「限制」。Figma 稽核與 CI 不在本指令內。",
   ],
 };
 

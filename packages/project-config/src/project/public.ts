@@ -1,7 +1,7 @@
 import type { ProjectPublicConfig } from "../base/public-config";
 
 /**
- * 專案的公開值(專案維護;底座升級不覆寫本檔)。登記於 docs/branding.md。
+ * 專案的公開值(專案維護;底座升級不覆寫本檔)。登記於 docs/project/branding.md。
  * `slug` 是建立專案時定下的穩定識別,品牌更名不跟著改 —— 改了等於換一組瀏覽器儲存鍵。
  */
 export const projectPublic = {

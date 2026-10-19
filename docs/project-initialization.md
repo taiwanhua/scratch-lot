@@ -10,13 +10,13 @@
 
 ## 品牌與公開設定
 
-| 項目                                                            | 現有正本                                                                                         | 初始化驗證                                                                                                         |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| 名稱、主色、HTML title、前台 metadata、穩定識別(slug)與側欄舊鍵 | `packages/project-config/src/project/public.ts`(逐項登記於 `docs/branding.md`)                   | `@repo/project-config` 的測試通過(格式驗證與專案值);admin、Storybook、front 讀到專案值;slug 不因顯示名稱修改而變動 |
-| 信件寄件信箱與署名                                              | `packages/project-config/src/project/mail.ts`                                                    | api 的信件測試通過(四類信件與 Resend 的 from);寄件網域在 Resend 的驗證屬外部資源,見下節                            |
-| 瀏覽器儲存鍵                                                    | 由 slug 生成(`packages/project-config/src/base/admin-storage-keys.ts`),清單見 `docs/branding.md` | 新專案的 `legacySideNavStorageKey` 為 null;不讀寫其他專案留在瀏覽器的鍵                                            |
-| 前台業務文案                                                    | `packages/i18n/messages/<locale>/front.json`(`meta` 以外;`meta` 由專案設定注入)                  | 支援語系完整,文案符合專案                                                                                          |
-| 前台風格與 favicon                                              | `apps/front/src/app/[locale]/styles.css`、各 app 的 public 目錄                                  | 資產可讀,前台風格由專案決定                                                                                        |
+| 項目                                                            | 現有正本                                                                                                                   | 初始化驗證                                                                                                         |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 名稱、主色、HTML title、前台 metadata、穩定識別(slug)與側欄舊鍵 | `packages/project-config/src/project/public.ts`(列的定義在 `docs/branding.md`,本專案的值登記在 `docs/project/branding.md`) | `@repo/project-config` 的測試通過(格式驗證與專案值);admin、Storybook、front 讀到專案值;slug 不因顯示名稱修改而變動 |
+| 信件寄件信箱與署名                                              | `packages/project-config/src/project/mail.ts`                                                                              | api 的信件測試通過(四類信件與 Resend 的 from);寄件網域在 Resend 的驗證屬外部資源,見下節                            |
+| 瀏覽器儲存鍵                                                    | 由 slug 生成(`packages/project-config/src/base/admin-storage-keys.ts`),清單見 `docs/branding.md`                           | 新專案的 `legacySideNavStorageKey` 為 null;不讀寫其他專案留在瀏覽器的鍵                                            |
+| 前台業務文案                                                    | `packages/i18n/messages/<locale>/front.json`(`meta` 以外;`meta` 由專案設定注入)                                            | 支援語系完整,文案符合專案                                                                                          |
+| 前台風格與 favicon                                              | `apps/front/src/app/[locale]/styles.css`、各 app 的 public 目錄                                                            | 資產可讀,前台風格由專案決定                                                                                        |
 
 專案值集中在 `packages/project-config/src/project/`:底座維護同套件 `src/base/` 的契約、驗證與各 app 的讀取接線,底座升級不覆寫專案值。換專案只改 `src/project/public.ts` 與 `src/project/mail.ts` 兩個值檔,共用測試不需要改:讀正式設定的測試只驗通用契約,既有專案的歷史值另以固定夾具驗。品牌名與 metadata 照寫原文,不必懂 ICU 語法(注入字典時自動編碼)。本節只指路,不貼設定值;上表的驗證只涵蓋本機測試與 build,部署後的畫面與信件仍依發布流程驗收。
 
@@ -24,18 +24,25 @@
 
 底座與專案分來源登記,由固定入口組裝;建立專案時新增或修改 project 來源,不覆寫底座原檔。頁面與資料契約見[前端架構](concepts/frontend-architecture.md)及[資料層組裝](concepts/data-layer-and-isolation.md#底座與專案資料的組裝)。
 
-| 項目           | 專案來源                                                                      | 初始化與升級驗證                                                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 後台新增頁     | `apps/admin/src/pages/project/`、`app/project/module-pages.ts`                | 與 `app/base/module-pages.ts` 一起組裝;固定頁與表單展開頁均驗 key,新增不碰底座清單                                                                             |
-| 客製治理頁     | `apps/admin/src/app/project/page-replacements.ts` 與 `pages/project/`         | 指定既有底座頁,原頁保留;同網址、授權與頁籤守門不變,省略 minWidth 繼承原版                                                                                      |
-| 表單模組設定   | 專案 module-pages 來源的 `forms`                                              | options 與四頁同一來源,經 RootProviders 注入;不同組裝互不污染,不寫全域 Map                                                                                     |
-| 模組說明       | `apps/admin/src/md/module-help/project/additions/`、`project/replacements/`   | 新增與替換分開,無替換則沿用底座;重複/未知/空白替換拒絕,三區真 build 與 help bundle check 通過                                                                  |
-| API 功能       | `apps/api/src/project/api-modules.ts`、`project.module.ts`、`project/<業務>/` | 真 AppModule 掛入普通 ProjectModule;feature key/module identity 不撞底座,核心 guards 不變                                                                      |
-| API 資料       | `apps/api/src/project/database/registrations.ts` 及該目錄的 schema/repository | 新租戶 model 的 schema、repository、org check 一起登記;驗 plugin、識別與實際綁定,資料不能漏掉刪組織/撤銷開通檢查                                               |
-| 詞彙與待辦     | `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md`                               | 初始化時建空檔(底座不帶內容);只新增專案名詞與專案待辦,不重新定義 `CONTEXT.md` 的底座名詞                                                                       |
-| GraphQL 文件   | `packages/graphql/src/documents/project/`                                     | 與 base 文件生成同一份型別/hooks;operation 名稱與 fragment 名稱各自全域唯一,拒絕匿名、根目錄散檔及 symlink                                                     |
-| 前台業務       | `apps/front/src/app/`、`components/` 及專案前台文案                           | 依專案設計完整畫面與風格;新增或替換業務內容時,一併核對 API 與 documents                                                                                        |
-| Figma 稽核設定 | `scripts/figma-audit/project/config.js`                                       | 專案 Screens 的頁 id、元件名稱、例外清單、專案名詞與跨畫面比對規則;不改共用腳本,`node --test scripts/figma-audit/*.test.mjs` 通過(共用腳本不含 `projectTerms`) |
+| 項目           | 專案來源                                                                                                                   | 初始化與升級驗證                                                                                                                                               |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 後台新增頁     | `apps/admin/src/pages/project/`、`app/project/module-pages.ts`                                                             | 與 `app/base/module-pages.ts` 一起組裝;固定頁與表單展開頁均驗 key,新增不碰底座清單                                                                             |
+| 客製治理頁     | `apps/admin/src/app/project/page-replacements.ts` 與 `pages/project/`                                                      | 指定既有底座頁,原頁保留;同網址、授權與頁籤守門不變,省略 minWidth 繼承原版                                                                                      |
+| 表單模組設定   | 專案 module-pages 來源的 `forms`                                                                                           | options 與四頁同一來源,經 RootProviders 注入;不同組裝互不污染,不寫全域 Map                                                                                     |
+| 模組說明       | `apps/admin/src/md/module-help/project/additions/`、`project/replacements/`                                                | 新增與替換分開,無替換則沿用底座;重複/未知/空白替換拒絕,三區真 build 與 help bundle check 通過                                                                  |
+| API 功能       | `apps/api/src/project/api-modules.ts`、`project.module.ts`、`project/<業務>/`                                              | 真 AppModule 掛入普通 ProjectModule;feature key/module identity 不撞底座,核心 guards 不變                                                                      |
+| API 資料       | `apps/api/src/project/database/registrations.ts` 及該目錄的 schema/repository                                              | 新租戶 model 的 schema、repository、org check 一起登記;驗 plugin、識別與實際綁定,資料不能漏掉刪組織/撤銷開通檢查                                               |
+| 詞彙與待辦     | `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md`                                                                            | 初始化時建空檔(底座不帶內容);只新增專案名詞與專案待辦,不重新定義 `CONTEXT.md` 的底座名詞                                                                       |
+| GraphQL 文件   | `packages/graphql/src/documents/project/`                                                                                  | 與 base 文件生成同一份型別/hooks;operation 名稱與 fragment 名稱各自全域唯一,拒絕匿名、根目錄散檔及 symlink                                                     |
+| 前台業務       | `apps/front/src/app/`、`components/` 及專案前台文案                                                                        | 依專案設計完整畫面與風格;新增或替換業務內容時,一併核對 API 與 documents                                                                                        |
+| 後台文案       | `packages/i18n/messages/<locale>/project/admin.json`(新增)、`project/admin.replacements.json`(替換底座字串)                | 併進 `admin` namespace;新增撞底座 key、替換不存在的 key 或 ICU 參數名與底座不同 → 載入即丟錯;兩語系鍵一致(I18N-06)                                             |
+| 共用純邏輯     | `packages/domain/src/project/<主題>/`(子路徑 `@repo/domain/project/<主題>`)                                                | 入包門檻同 STRUCT-07;底座主題不得 import 專案主題(domain 的 lint)                                                                                              |
+| mock 模式      | `apps/admin/src/mock/project/mock-world.ts`(模組清單與假 api)                                                              | 由 `mock/mock-world.ts` 併入;GraphQL 操作名不與底座重複(`mock-world.test.ts`)                                                                                  |
+| E2E            | 劇本與夾具 `apps/e2e/src/**/project/`、測試資產 `apps/e2e/fixtures/project/`、劇本說明 `docs/testing/project/scenarios.md` | 專案值只放 `apps/e2e/.env.example`,`src/config.ts` 的預設維持底座;劇本編號用專案前綴                                                                           |
+| 示範資料       | `apps/db-migrator/seeds/project/demo/`                                                                                     | 示範資料是業務資料,不進正式 seed(ADR-0002);載入的指令與 reset 選項由底座提供                                                                                   |
+| 專案文件       | 各目錄的 `project/`(`docs/modules/project/`、`docs/adr/project/`…)與 `docs/project/`,入口 `docs/project/README.md`         | 底座文件不寫專案內容;verify 第 1 節與第 5 節看得到底座文件的漂移與專案字樣                                                                                     |
+| 專案 skill     | `.claude/skills/<slug>-<名稱>/` 與 `.agents/skills/<slug>-<名稱>/` 成對                                                    | 名稱以 `projectPublic.slug` 開頭(verify 第 7 節);底座 skill 只有 `module-scaffold`、`project-bootstrap` 與底座 `skills-lock.json` 的外部 skill                 |
+| Figma 稽核設定 | `scripts/figma-audit/project/config.js`                                                                                    | 專案 Screens 的頁 id、元件名稱、例外清單、專案名詞與跨畫面比對規則;不改共用腳本,`node --test scripts/figma-audit/*.test.mjs` 通過(共用腳本不含 `projectTerms`) |
 
 API 的新租戶資料遵守 BaseRepository、baseFields 與 tenantScope 契約,不自行注入 raw Model 或繞過資料隔離。底座的 project 功能與資料登記預設為空,新模組沿既有租戶資料契約登記。底座不提供核心 module/provider 替換介面。
 
@@ -73,6 +80,7 @@ GraphQL 的 `generate` 在寫產物前檢查兩份文件來源,負例驗證使�
 - 根 `.env.example` 是 Compose 設定範本。新專案的根 `.env` 指定獨立 `COMPOSE_PROJECT_NAME`、`LOCAL_MONGO_DB` 及三個 `LOCAL_*_PORT`;容器、網路與 `mongo-data` volume 由 Compose 依專案名管理。既有專案維持原專案名與 volume key,不能因調整而改接空庫。離線 `docker compose config` 可核對渲染結果,實際啟動/停止的隔離另行驗證。
 - API 與受管定義 CLI 的 `MONGODB_URI` 必填,沒有本地 fallback。主機執行 API 時,在其 `.env` 對齊 Compose host port/DB;db-migrator 也要明確指定同一目標。reset 核對操作者指定的環境、實際 DB 名稱與模式,不以名稱尾碼推測環境。
 - E2E 在自己的 `.env` 設定 `E2E_COMPOSE_PROJECT`、DB 名、API/admin/GCS port 與 bucket namespace。fake GCS up/down 都以 `-p` 指定該名稱,不受 shell 的 `COMPOSE_PROJECT_NAME` 蓋過;Compose 檔的 name 使用相同 E2E 變數作為直接執行時的預設。
+- E2E harness 的預設值(`apps/e2e/src/config.ts`)與 compose 檔維持底座字樣,專案值只寫在 `.env.example`(verify 第 6 節核對)。
 - 測試環境變數與命令見 `docs/agents/toolbox.md`、`apps/e2e/.env.example`、`apps/e2e/src/config.ts`;測試使用隔離資料庫及各專案的 DB、port、bucket namespace,不沿用正式 URI,也不將測試假憑證當正式設定。
 
 不同專案同機開發時,須分別驗證資料庫與儲存資源隔離。
@@ -95,4 +103,5 @@ ROOT_ADMIN 輸入與欄位政策見[種子資料與遷移](concepts/data-layer-a
 - Figma 啟用時提供底座來源、本專案 Brand Library 與 Screens 的 fileKey、權限及維護者,登記見[品牌註冊表](branding.md);品牌值沿用 `projectPublic.brand`。操作見 [toolbox](agents/toolbox.md#figma-品牌同步):用本機外掛套用品牌庫與 Screens 主色,原生發布/接受 Library,另處理陰影與品牌示例文字。資源存在只算已建立,本專案的代表畫面與元件連結驗證通過才是已驗證;不靠來源 repo 或舊 receipt 冒認結果。未提供、停用與已驗證分開記錄。
 - `skills-lock.json` 的三個外部 skill 原檔在 `.agents/skills/`,Claude Code 的入口須由 `node scripts/project-settings/restore-claude-skills.mjs` 還原到 `.claude/skills/`;Windows 會建立 junction。新 clone、升級後與重跑初始化均執行並核對可讀,不以來源檔已版控代替 Claude 實際可用。
 - agent 入口為 `CLAUDE.md`,共同接手規則見 `docs/agents/collaboration.md`;必要設定不得僅存在某工具私有記憶。
-- skills、共用文件與專案文案的分離隨對應工作包維護。初始化 skill 指向[共同操作文件](agents/project-bootstrap.md),不能用「檔案都改完」取代完整建立/驗證紀錄。
+- skills、文件與文案的專案位置見上方「功能與專案內容」:專案內容一律放所在目錄的 `project/`(skill 以 slug 前綴),分類規則見 [deployment](deployment.md#共用改良回收)。初始化 skill 指向[共同操作文件](agents/project-bootstrap.md),不能用「檔案都改完」取代完整建立/驗證紀錄。
+- 專案文件入口 `docs/project/README.md` 在初始化時建立(至少含 `branding.md` 的本專案值)。

@@ -4,6 +4,7 @@
  * 不把專案分支 merge 回底座、不自動選 hunk。含 project / published-data / unknown 路徑一律拒絕,由 agent 先拆 commit。
  * mixed 只接受以 `--accept-mixed` 逐檔明列的檔案(agent 已整理成只含底座段落),其差異列進報告供審查;
  * 未明列的 mixed 仍拒絕,明列的檔不在差異內、不是 mixed 或是二進位也報錯(防止誤列;二進位無法逐段審查)。
+ * 差異的新增行含專案字樣(與 verify 第 5 節同一份詞表:slug、品牌名、底座沒有的專案名詞)也拒絕。
  * `common` 只是路徑候選,是否通用仍須讀 exact delta 判斷,由使用者決定納入。
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -33,6 +34,7 @@ import {
   writeSession,
 } from "./session.mjs";
 import { fetchOriginMain } from "./upgrade.mjs";
+import { addedLines, projectTermsAt, termHits } from "./verify.mjs";
 
 const SESSION_KEYS = ["kind", "source", "parent", "main", "worktree", "state"];
 
@@ -222,6 +224,23 @@ export function contribute(options, { fetchRemote }) {
   if (baseRepository !== project.adopted.repository) {
     fail(
       `--base 的 origin(${baseRepository})不是來源 commit 記錄的 wowgoBase.repository(${project.adopted.repository})`,
+    );
+  }
+  const hits = termHits(
+    addedLines(delta.patch),
+    projectTermsAt(projectRoot, commit, {
+      baseRoot,
+      baseCommit: mainCommit,
+    }),
+  );
+  if (hits.length > 0) {
+    fail(
+      `來源差異的新增行含專案字樣,請改成底座的中性文字或拆出:${hits
+        .map(
+          ({ path: file, line, terms }) =>
+            `${file}:${String(line)}（${terms.join("、")}）`,
+        )
+        .join("、")}`,
     );
   }
   const source = `${project.repository}@${commit}`;

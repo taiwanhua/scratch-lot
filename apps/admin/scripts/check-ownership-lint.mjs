@@ -38,6 +38,8 @@ const EXPECTATIONS = {
   "src/hooks/base/imports-project-hook.ts": { restricted: ["專案來源"] },
   "src/stores/base/imports-project-store.ts": { restricted: ["專案來源"] },
   "src/lib/base/imports-project-lib.ts": { restricted: ["專案來源"] },
+  // mock 模式:只有固定入口 mock-world.ts 讀專案 world,其他 mock 檔不行
+  "src/mock/imports-project-mock.ts": { restricted: ["專案來源"] },
   // 專案頁 → 底座頁內部:拒絕
   "src/pages/project/imports-base-page.ts": { restricted: ["底座頁的內部"] },
   // 原本的分層照舊(含專案自己的檔案):components → pages 仍拒絕
@@ -51,6 +53,8 @@ const EXPECTATIONS = {
   "src/app/base/module-pages.ts": {},
   "src/app/project/module-pages.ts": {},
   "src/app/project/page-replacements.ts": {},
+  "src/mock/mock-world.ts": {},
+  "src/mock/project/mock-world.ts": {},
   "src/pages/project/project-page.ts": {},
   "src/stores/project/imports-base-lib.ts": {},
   "src/test/imports-project.ts": {},

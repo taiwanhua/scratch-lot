@@ -94,7 +94,7 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 
 1. 從引用專案已發布的 `origin/main` 建立升級分支。核對 `upstream` 指向底座 repo,以 `git fetch upstream --no-tags refs/tags/<版本>:refs/base/releases/<版本>` 取得指定版本,核對 tag 解析出的完整 commit。
 2. 一般三方合併該版本並保留 merge commit。依[維護歸屬](architecture.md#底座與專案的維護歸屬)審查**全部差異**,包含 Git 沒有報衝突的專案值;底座改了專案未修改過的預設值,也可能被自動套入。專案來源、品牌、前台、部署、seed 值及 Figma Brand Library / Screens 身分保留,契約新增必填值則明確補齊;Figma 資源或檔案身分不符時依 [toolbox](agents/toolbox.md#figma-品牌同步)核對,不以 Git 合併覆蓋專案設計稿,也不整份選 ours/theirs。
-3. 固定組裝入口、workflow 與共用文件逐段整合;不能整個排除治理頁或檔案。引用專案若有經審查的資料層相容差異,須保留精確範圍,不能擴成任意跳過租戶隔離。schema/hooks 與 lockfile 在人工來源整合後重產,已發布 migration/seed 快照維持原檔。
+3. workflow、值行檔與其他混合檔逐段整合;固定組裝入口與底座文件是 common,照新底座版本(專案客製寫在 `project/` 來源與專案文件,不改它們)。不能整個排除治理頁或檔案。引用專案若有經審查的資料層相容差異,須保留精確範圍,不能擴成任意跳過租戶隔離。schema/hooks 與 lockfile 在人工來源整合後重產,已發布 migration/seed 快照維持原檔。
 4. 依既有 PR 與環境流程驗收。各次合併使用 merge commit,以 `git merge-base --is-ancestor <底座commit> <結果commit>` 核對 ancestry;不得用 `merge -s ours`、squash 或 cherry-pick 代替向下同步。
 5. 等待期間若 `main` 前進,從新 `main` **重建升級分支**,重新合併同一底座版本並驗證專案保留;不對含底座 merge 的分支跑一般 rebase,也不把 main 合入舊升級分支。
 
@@ -114,12 +114,15 @@ release 後:dev / staging reset 對齊 main;進行中的 feat 分支 rebase 到�
 
 處理完以同一指令重跑,預檢通過才會往下執行;處理記錄寫進升級 PR。
 
-**升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分四節,任一節有項目即 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。四節皆為 0 才 exit 0,即「已去除重複」。第 2–4 節是靜態掃描,不執行專案程式;各節涵蓋與漏報 / 誤報範圍如下(報告頁尾也附「限制」):
+**升級後檢查**:整合提交、更新採用記錄後,在升級工作樹執行 `node scripts/base-sync/run.mjs verify --project <升級工作樹> --tag <版本> [--out <檔案>]`,把報告貼進升級 PR。工具唯讀,以 upgrade 存的 `refs/base/releases/<版本>` 為底座、已提交的 HEAD 為專案(HEAD 須已包含該版本),報告分七節,任一節有項目即 exit 1,人只判讀例外:逐項說明是真正的專案客製,或是該回收、刪除的重複(例如升格後專案那份沒刪)。七節皆為 0 才 exit 0,即「已去除重複」。報告頂端另列全樹的未歸類(unknown)路徑數與本次的專案字樣詞表;unknown 應為 0,新增路徑時補分類規則(見[共用改良回收](#共用改良回收))。第 2–7 節是靜態掃描,不執行專案程式;各節涵蓋與漏報 / 誤報範圍如下(報告頁尾也附「限制」):
 
-1. **非專案、非混合路徑與新底座仍不同**:`common`、`published-data`、`unknown` 三類的差異逐檔列出並標類別(沒回收到、漂移或改寫已發布資料)。混合路徑不列,另依下段核對。
+1. **非專案、非混合路徑與新底座仍不同**:`common`、`published-data`、`unknown` 三類的差異逐檔列出並標類別(沒回收到、漂移或改寫已發布資料)。固定組裝入口與底座文件都是 `common`:專案只改 `project/` 來源與專案文件,入口或底座文件與底座不同就是漂移。已知例外:CookHome 的 `apps/api/src/database/database.module.ts` 保留審查過的 Recipe 舊資料例外(`LEGACY_UNSCOPED_MODELS`),會固定列在本節,升級 PR 逐次說明。混合路徑不列,另依下段核對。
 2. **客製替換登記**:`page-replacements.ts` 的 target、help `project/replacements/` 的檔、專案 `forms` 帶 options / pageOverrides 的那幾筆。其他登記方式不在範圍;spread、變數等讀不懂的寫法照列為「無法靜態解析」。
 3. **底座與專案 seed 同 collection + key**:key 只解析字串、常數(含 seed 執行器定義的常數)、`${常數}` 樣板、`permissionKey()`,以及 `formModuleDeclaration()` 依 helper 本身宣告推導的頁面與權限 key。其他寫法在專案端列為「無法解析的 key」,底座端只計數。collection 讀不出時只比 key,可能誤報。每模組自動產生的 wildcard 與 data_scope_targets 不另比,由模組 key 涵蓋。未被 import 的 revisions 快照不算目前宣告,其中的 key 不比。正式組裝 `seeds/registry.ts` 在載入時就拒絕底座與專案撞 key,這部分由 CI 把關。
 4. **專案路徑與底座同名或同匯出名稱**:只比 `project/` 路徑的程式檔(不含 STRUCT-12 的成對固定來源、專案值與 seed / migration)與底座 common 程式檔的檔名(不含 `index`)及具名匯出(不含 default)。常見名稱可能誤報;改了名的重複抓不到。
+5. **共用與混合路徑新增了專案字樣**:相對新底座新增的行(`common` 與 `mixed`,值行檔除外)逐行比對專案字樣詞表,不分大小寫。詞表取自既有來源、不另維護:`projectPublic.slug` 與 `brand.name` 一定列入;Figma 稽核設定的 `projectTerms`、專案 seed 宣告的模組 key 第一段、專案 API 程式的 collection 名稱第一段,在底座 tag 已出現的不列(那是底座自己的詞彙)。命中的行改回底座的中性寫法,或把內容搬到專案路徑;`contribute` 用同一份詞表,命中即停止。詞表沒有的業務用語抓不到。
+6. **值行檔在值行以外與底座不同**:根 `package.json` 只容許 `name`、`wowgoBase`;`.env.example` 只容許 `KEY=` 後面的值(key、註解與行數照底座);`CLAUDE.md`、`AGENTS.md` 只容許標題行;`README.md` 只容許第一個與底座共同的 `## ` 標題之前的專案介紹;`docker-compose.yml` 應與底座相同(專案值由根 `.env.example` 提供)。
+7. **專案 skill 的命名與成對**:判為 project 的 `.claude/skills/<名稱>/`、`.agents/skills/<名稱>/` 名稱須以 `<slug>-` 開頭,且兩邊成對;專案 `skills-lock.json` 登記的外部 skill 不檢查。
 
 verify 不涵蓋的仍由人執行並記在 PR:混合路徑以 `inspect --from <新底座 commit> --to HEAD` 的 `mixed` 清單逐段核對,底座段落與新底座一致、只剩專案段落;seed 所有權轉移時,已部署環境的模組與權限資料不重複、不遺失(見[發布前環境與資料核對](#發布前環境與資料核對));Figma 在專案 Screens 跑稽核腳本,本地草稿元件、指向本地草稿的實例與標示本輪草稿的節點皆為 0;專案與底座 CI 全綠。
 
@@ -133,11 +136,11 @@ PR 另列新增能力、客製治理頁與 API/權限的相容性,以及 wildcar
 
 選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、未知路徑、已發布 migration/seed 快照或 merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
 
-路徑分類的正本是 `scripts/base-sync/classify.mjs`(project / mixed / common / published-data / unknown)。新增 app、頂層目錄或專案專屬檔(如 `CONTEXT-PROJECT.md`)時,同一個 PR 補分類規則與 `classify` 測試;沒分類的路徑是 `unknown`,回收一律停止。共用文件盡量不放專案值,專案內容另開專案檔(同 `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md` 的拆法),讓多數文件維持純底座。
+路徑分類的正本是 `scripts/base-sync/classify.mjs`(project / mixed / common / published-data / unknown)。專案內容一律放所在目錄的 `project/` 子目錄,分類規則因此只看路徑:程式 `apps/<app>/src/**/project/`、共用純邏輯 `packages/domain/src/project/`、後台文案 `packages/i18n/messages/<locale>/project/`、E2E 資產 `apps/e2e/fixtures/project/`、文件 `docs/<目錄>/project/` 與 `docs/project/`(入口 [docs/project/README.md](project/README.md))、`docs/tmp/`(除底座的 `dis.md`)、`CONTEXT-PROJECT.md`;skill 以名單區分(底座的 `module-scaffold`、`project-bootstrap` 與底座 `skills-lock.json` 的外部 skill 是 common,其餘是專案的,名稱以 slug 開頭)。底座文件(`docs/**` 其餘、`CONTEXT.md`)與固定組裝入口是 common;值行檔、依賴宣告、生成產物、admin / common 語系、workflow 與根目錄設定(`turbo.json`、`.gitignore`、`.prettierignore`、`.dockerignore`、`skills-lock.json`、`.claude/settings.json`)是 mixed。新增 app、頂層目錄或根目錄檔時,同一個 PR 補分類規則與 `classify` 測試(測試另守全 repo 沒有 unknown);沒分類的路徑是 `unknown`,回收一律停止。
 
-混合檔(固定組裝入口、共用文件等)要回收時,agent 先在 commit 裡把它整理成**只含底座段落**,再以 `--accept-mixed <路徑>` 逐檔明列(可重複)。工具只接受明列的混合檔,並把它們的差異列進報告的 `mixedReview`(「混合檔:只含底座段落,請審查」);未明列的混合檔仍拒絕,明列的檔不在差異內、實際不是混合檔或是二進位檔也報錯(二進位無法逐段審查,須拆出人工處理)。審查時逐段確認這些差異沒有專案值。
+混合檔(workflow、語系檔、根目錄設定等)要回收時,agent 先在 commit 裡把它整理成**只含底座段落**,再以 `--accept-mixed <路徑>` 逐檔明列(可重複)。工具只接受明列的混合檔,並把它們的差異列進報告的 `mixedReview`(「混合檔:只含底座段落,請審查」);未明列的混合檔仍拒絕,明列的檔不在差異內、實際不是混合檔或是二進位檔也報錯(二進位無法逐段審查,須拆出人工處理)。審查時逐段確認這些差異沒有專案值。
 
-規格與 Figma 工作檔一律放進實作的 repo,不留在 repo 外:規格放 `docs/tmp/spec-<主題>.md`,Figma 重建腳本、稽核腳本與節點表放 `docs/tmp/figma-<主題>/`。從最新 `origin/main` 開 `feat/<主題>-spec` 分支 → commit → push 分支備份 → 依畫面修規格都在這條分支更新 → 定稿後 PR 走 dev → staging → main;實作的整合分支從合併後的 main 開出。該輪完工後規格與工作檔從 `docs/tmp/` 移除:節點表搬進 [FIGMA-09](standards/general/figma.md),做法寫進正式文件。
+規格與 Figma 工作檔一律放進實作的 repo,不留在 repo 外:規格放 `docs/tmp/spec-<主題>.md`,Figma 重建腳本、稽核腳本與節點表放 `docs/tmp/figma-<主題>/`。從最新 `origin/main` 開 `feat/<主題>-spec` 分支 → commit → push 分支備份 → 依畫面修規格都在這條分支更新 → 定稿後 PR 走 dev → staging → main;實作的整合分支從合併後的 main 開出。`docs/tmp/` 除底座的 `dis.md` 外都判 project,不隨 contribute 回到底座;底座要的內容在回收前寫進正式文件。該輪完工後規格與工作檔從 `docs/tmp/` 移除:底座元件與畫面的節點表搬進 [FIGMA-09](standards/general/figma.md),專案 Screens 的節點搬進[專案節點表](project/figma-nodes.md),做法寫進正式文件。
 
 agent 核對 exact diff、處理相容性並測試後,沿現有 PR 流程交底座審查。PR 記錄來源 repo/commit、通用性與驗證,以及 `--accept-mixed` 明列的混合檔;接受回收不等於立即同步,須等納入底座正式 tag/Release,再向下升級。
 
