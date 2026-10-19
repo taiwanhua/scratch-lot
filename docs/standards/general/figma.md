@@ -46,6 +46,8 @@ Figma MCP 的 `get_design_context(nodeId)` 對「頁(canvas)」的 id 會直接�
 
 **`get_metadata` 不帶 nodeId 只列得出 Cover 頁**(這個檔如此):各元件頁 / 畫面頁的 frame id 進不去就找不到,一律記在下表。一列一個節點;新畫一個元件或畫面,就在該頁最後一列後面追加一列。
 
+下表只登記底座 Design System 的節點。引用專案 Screens 的節點(專案畫面,以及底座模組在專案檔裡的畫面)寫在專案的 `docs/project/figma-nodes.md`,底座模組文件也不寫專案檔的節點。
+
 ### 底座共用元件與樣式
 
 下表使用 [wowgo-base Design System](https://www.figma.com/design/XKQ18kf6SkfAQYk7GmBkk5) 的節點。Library 採用狀態與品牌檔位置見 [設計資源登記](../../branding.md#設計資源登記)。

@@ -145,13 +145,28 @@ export const frontendStyle = defineConfig(
   layering,
 );
 
-/** 各層放專案內容的資料夾(`src/<層>/project/`);其餘都是底座維護的檔案。 */
-const PROJECT_LAYERS = ["app", "pages", "components", "hooks", "stores", "lib"];
+/**
+ * 各層放專案內容的資料夾(`src/<層>/project/`);其餘都是底座維護的檔案。
+ * `mock` 不是 STRUCT-03 的分層,但 mock 開發模式的專案 world(`src/mock/project/`)同樣是專案來源。
+ */
+const PROJECT_LAYERS = [
+  "app",
+  "pages",
+  "components",
+  "hooks",
+  "stores",
+  "lib",
+  "mock",
+];
+
+/** 同時看得到底座與專案來源的固定組裝入口(STRUCT-12)。 */
+const ASSEMBLY_ENTRIES = ["src/app/module-pages.tsx", "src/mock/mock-world.ts"];
 
 /**
  * 底座 / 專案的所有權方向(後台;接在 `frontendStyle` 之後):
  * - 底座的檔案不能 import 專案來源(`src/<層>/project/`)—— 否則底座更新時會被專案內容卡住。
- *   只有固定組裝入口 `src/app/module-pages.tsx` 同時看得到兩邊;`src/test/**` 的測試支援檔不受這條限制
+ *   只有固定組裝入口(`src/app/module-pages.tsx`、mock 模式的 `src/mock/mock-world.ts`)同時看得到兩邊;
+ *   `src/test/**` 的測試支援檔不受這條限制
  * - 專案頁(`src/pages/project/`)不能 import 底座頁(`src/pages/base/`)的內部;要共用就走 components / hooks / lib
  *
  * 同一條規則(`import-x/no-restricted-paths`)後寫的設定會整個取代先寫的 options,所以這裡每一組 zones 都把
@@ -163,7 +178,7 @@ export const projectOwnership = defineConfig(
     files: ["src/**/*.{ts,tsx}"],
     ignores: [
       ...PROJECT_LAYERS.map((layer) => `src/${layer}/project/**`),
-      "src/app/module-pages.tsx",
+      ...ASSEMBLY_ENTRIES,
       "src/test/**",
     ],
     rules: {
@@ -177,7 +192,7 @@ export const projectOwnership = defineConfig(
               target: "./",
               from: PROJECT_LAYERS.map((layer) => `./${layer}/project`),
               message:
-                "底座的檔案不能 import 專案來源(src/<層>/project/);只有固定組裝入口 app/module-pages.tsx 可以",
+                "底座的檔案不能 import 專案來源(src/<層>/project/);只有固定組裝入口 app/module-pages.tsx、mock/mock-world.ts 可以",
             },
           ],
         },

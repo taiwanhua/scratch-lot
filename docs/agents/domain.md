@@ -10,9 +10,10 @@ engineering skills 在探索 codebase 時,應如何使用本 repo 的領域文�
 /
 ├── CONTEXT.md        ← 底座詞彙表(隨底座版本同步)
 ├── CONTEXT-PROJECT.md ← 專案詞彙表(只新增專案名詞)
-├── docs/adr/         ← 決策、理由、取捨
+├── docs/adr/         ← 決策、理由、取捨(專案的在 docs/adr/project/,獨立編號)
 ├── docs/concepts/    ← 底座現況:是什麼、怎麼運作
-└── docs/modules/     ← 各模組的畫面、權限表、api 介面
+├── docs/modules/     ← 各模組的畫面、權限表、api 介面(專案模組在 docs/modules/project/)
+└── docs/project/     ← 專案文件入口(README.md)與單檔的專案版(品牌值、設計稿節點、資料表地圖…)
 ```
 
 沒有 `CONTEXT-MAP.md`,也沒有各 context 自己的 `docs/adr/`。詞彙表分兩份,同一個 context:
@@ -20,7 +21,7 @@ engineering skills 在探索 codebase 時,應如何使用本 repo 的領域文�
 - **`CONTEXT.md`**:底座名詞,隨底座版本同步到各引用專案;改這份等於改底座,要走共用改良回收。
 - **`CONTEXT-PROJECT.md`**:專案自己的名詞;**只能新增,不能重新定義底座名詞**。底座不帶內容,新專案初始化時建立空檔。
 
-`/domain-modeling` 在術語或決策真正敲定時新增或改寫詞條與 ADR:**專案名詞寫進 `CONTEXT-PROJECT.md`**,底座名詞才寫進 `CONTEXT.md`。待辦同樣分兩份:底座的在 `docs/tmp/dis.md`,專案的在 `docs/tmp/project-dis.md`。
+`/domain-modeling` 在術語或決策真正敲定時新增或改寫詞條與 ADR:**專案名詞寫進 `CONTEXT-PROJECT.md`、專案決策寫進 `docs/adr/project/`**,底座名詞與決策才寫進 `CONTEXT.md`、`docs/adr/`。底座文件不寫專案內容,專案文件的位置見 `docs/project/README.md`。待辦同樣分兩份:底座的在 `docs/tmp/dis.md`,專案的在 `docs/tmp/project-dis.md`。
 
 正式文件只描述目前行為與操作;開發計畫完成後精簡歸入既有正本並移除,不保留第二套需求文件。文件歸屬與生命週期見 [STRUCT-11](../standards/general/structure.md#struct-11-正式文件寫現況完成的計畫歸回正本)。
 
@@ -40,7 +41,7 @@ engineering skills 在探索 codebase 時,應如何使用本 repo 的領域文�
    7. `workflow-engine.md`:審核流程:流程 / 版本 / 分派 / 綁定、送出時檢查、實例是唯一權威與推進、分流 / 匯合、阻擋與改派、申請中心與讀取授權
 4. **需要「為什麼」時才讀 `docs/adr/`**:ADR 只記決策、理由、取捨與影響;每份檔頭指向對應的 concepts
 
-讀完 1–3 即有全貌。各模組的畫面、權限表、api 介面在 `docs/modules/<key>.md`。
+讀完 1–3 即有全貌。各模組的畫面、權限表、api 介面在 `docs/modules/<key>.md`(專案模組在 `docs/modules/project/<key>.md`)。
 
 正本:`docs/README.md`「閱讀路線」、`docs/concepts/`、`docs/adr/`
 

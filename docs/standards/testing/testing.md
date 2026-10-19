@@ -40,6 +40,8 @@ Playwright 的用途收斂成一件事:把 `docs/testing/permission-scenarios.md
 - **劇本以外的行為不寫 E2E**:一般頁面行為交給 admin 的元件測試(TEST-08)、api 的整合測試(TEST-07)。
   E2E 仍然是最貴的那一層,「數量是成本」這件事沒變。
 
+- **專案的劇本放專案路徑**:specs 與 fixtures 程式放 `apps/e2e/src/specs/project/`、`src/fixtures/project/`,上傳用的測試資產放 `apps/e2e/fixtures/project/`,劇本說明寫 `docs/testing/project/scenarios.md`。劇本編號用專案前綴(例「<slug> 劇本 1」),不接底座的序號,底座新增劇本時兩邊不撞號。專案值(DB 名、bucket、測試信箱)只寫在 `apps/e2e/.env.example`,`src/config.ts` 的預設維持底座字樣。
+
 寫法見 TEST-11;harness 與跑法見 `apps/e2e/README.md`。正本:`.github/workflows/e2e.yml`、`.github/workflows/ci.yml`
 
 ## TEST-06 測試檔與受測物同層
@@ -148,10 +150,11 @@ api 的功能測試只有一個接縫:用 supertest 對啟動起來的 Nest app 
 - **會自動關掉的東西**(操作結果提示 Snackbar 那類,DATA-06)截不到時,在 console 把 `setTimeout` 暫時攔掉(`window.setTimeout = ((fn, ms) => ms > 1000 ? 0 : 原本的(fn, ms))`)再觸發一次,它就會停著等你截
 - **MUI Dialog 裡的按鈕點不到**時不要跟合成點擊事件硬碰:瀏覽器工具的 `computer` 合成點擊會被 MUI 的 modal 攔截層吃掉,改用 `javascript_tool` 直接對該元素 `element.click()`
 
-實作面三件事,改動前先看懂再動:
+實作面四件事,改動前先看懂再動:
 
 - **入口完全獨立**:`mock.html` + `src/mock/` + `mock-public/mockServiceWorker.js` + `vite.mock.config.ts`,正式 build 只讀 `vite.config.ts` 與 `index.html`,所以產物不含 msw(驗收:`pnpm --filter @repo/admin build` 後 `grep -c msw dist/assets/*.js` 為 0)
 - **共用端點只留一份 handler**:`orgTree` / `org` / `users` / `roles` 有多個 world 各自實作,MSW 先列的先贏 —— `src/mock/mock-world.ts` 替每個共用端點指定正本、濾掉其餘同名 handler,不要改成單純串接
+- **專案模組另放 `src/mock/project/mock-world.ts`**(`projectMockWorld`:`modules` 與 `handlers`),由 `mock-world.ts` 併在底座的 world 之後;專案不改 `mock-world.ts`,GraphQL 操作名與底座重複時 `mock-world.test.ts` 會紅
 - **`msw/node` 在瀏覽器載不進去**:`src/test/msw/server.ts` 在模組層呼叫 `setupServer()`,mock 模式以 alias 換成 `src/mock/msw-node-stub.ts`(夾具只用到同檔的 `api`,`server` 僅出現在型別位置)。**不要為了 mock 模式去改 `src/test/msw/server.ts`** —— 那支是 jest 測試的正本
 
 正本:`apps/admin/package.json`(`dev:mock`)、`apps/admin/vite.mock.config.ts`、`apps/admin/src/mock/`

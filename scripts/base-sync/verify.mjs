@@ -1,11 +1,15 @@
 /**
  * `verify`:唯讀。升級完成(merge 已提交)後,核對專案的改動是否已被新底座包含,產出 Markdown 報告
- * (操作正本:docs/deployment.md「底座首次接軌與版本升級」的升級後檢查)。四節:
+ * (操作正本:docs/deployment.md「底座首次接軌與版本升級」的升級後檢查)。報告頂端另計全樹的未歸類路徑,七節:
  *
  *   1. 非專案、非混合路徑(common / published-data / unknown)與新底座 tag 仍不同的檔案:沒回收到、漂移或改寫已發布資料
+ *      (含固定組裝入口與底座文件:專案只改 project/ 來源)
  *   2. 所有客製替換登記:頁面替換、help 替換、專案表單模組的 options / pageOverrides
  *   3. 同一個 collection + key 同時宣告在底座 seed 與專案 seed,以及專案 seed 裡無法解析的 key
  *   4. 專案路徑內與底座同名或同匯出名稱的檔案
+ *   5. 共用與混合路徑相對底座新增的行裡出現專案字樣(詞表見 projectTermsOf;contribute 以同一份詞表擋下)
+ *   6. 值行檔在容許的值行以外與底座不同(VALUE_LINE_RULES)
+ *   7. 專案 skill 的名稱沒以 slug 開頭,或 `.claude/skills/` 與 `.agents/skills/` 沒成對
  *
  * 「底座」一律取新底座 tag 的 commit,「專案」一律取專案已提交的 HEAD;不讀工作樹、不 fetch、不寫任何 ref。
  * tag 取自 upgrade 存的 `refs/base/releases/<tag>`,且 HEAD 必須已包含它。任一節有項目即 exit 1,人只判讀例外。
@@ -28,7 +32,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { classifyPath } from "./classify.mjs";
+import { classifyPath, skillOf } from "./classify.mjs";
 import { fail } from "./errors.mjs";
 import {
   diffFiles,
@@ -36,6 +40,7 @@ import {
   isAncestor,
   requireRepositoryRoot,
   resolveRef,
+  runGit,
 } from "./git.mjs";
 import { isTagName, loadProject } from "./identity.mjs";
 
@@ -69,6 +74,8 @@ const PAIRED_PROJECT_SOURCES = new Set([
   "apps/api/src/project/user-preferences.ts",
   "apps/api/src/project/form-lifecycles.ts",
   "apps/api/src/project/notifications.ts",
+  "apps/admin/src/app/project/url-state-inventory.ts",
+  "apps/admin/src/mock/project/mock-world.ts",
 ]);
 const NOT_CODE_DUPLICATES = [
   /^packages\/project-config\/src\/project\//,
@@ -263,8 +270,8 @@ const UNCONTRIBUTED_CATEGORIES = new Set([
   "unknown",
 ]);
 
-function baseDifferences(root, tagCommit, head) {
-  return diffFiles(root, tagCommit, head)
+function baseDifferences(differences) {
+  return differences
     .map(({ path: file, status }) => ({
       path: file,
       status,
@@ -797,6 +804,284 @@ function nameDuplicates(projectFiles, headBlobs, baseFiles, baseBlobs) {
   return items;
 }
 
+// ---------------------------------------------------------------- 第 5 節
+
+export const PROJECT_PUBLIC = "packages/project-config/src/project/public.ts";
+export const FIGMA_PROJECT_CONFIG = "scripts/figma-audit/project/config.js";
+const PROJECT_API = "apps/api/src/project/";
+
+/** 詞表來源檔(專案端):公開設定、Figma 稽核設定、專案 seed 與專案 API 程式。 */
+const isTermSource = (file) =>
+  file === PROJECT_PUBLIC ||
+  file === FIGMA_PROJECT_CONFIG ||
+  (CODE_FILE.test(file) &&
+    (file.startsWith(PROJECT_SEEDS) || file.startsWith(PROJECT_API)));
+
+/** `pattern`(結尾是左大括號)之後的物件字面值原文;找不到回 null。 */
+function objectAfter(text, pattern) {
+  const match = pattern.exec(text);
+  if (!match) return null;
+  const open = match.index + match[0].length - 1;
+  const close = matchingClose(text, open);
+  return close === -1 ? null : text.slice(open, close + 1);
+}
+
+const COLLECTION_NAME =
+  /\bcollection\s*:\s*(["'`])([a-z][a-z0-9]*)[a-z0-9_]*\1/g;
+
+/**
+ * 專案字樣的詞表,全取自既有來源、不另維護(`{ term, source }`,term 不分大小寫比對):
+ * - 一定列入:`projectPublic.slug` 與 `brand.name`
+ * - 底座 tag 裡已出現的不列(那是底座自己的詞彙,例:Figma 稽核把「看板」當專案頁名,但看板頻道是底座機制):
+ *   Figma 稽核設定的 `projectTerms`、專案 seed 宣告的模組 key 第一段、專案 API 程式裡 collection 名稱的第一段
+ * `isBaseTerm(term)` 回答底座是否已有這個詞。
+ */
+export function projectTermsOf(blobs, isBaseTerm) {
+  const terms = new Map();
+  const add = (term, source, isFixed) => {
+    const key = term.trim().toLowerCase();
+    if (key.length < 2 || terms.has(key)) return;
+    if (!isFixed && isBaseTerm(term.trim())) return;
+    terms.set(key, { term: term.trim(), source });
+  };
+  const publicText = stripComments(blobs.get(PROJECT_PUBLIC) ?? "");
+  const slug = /\bslug\s*:\s*(["'`])([^"'`]+)\1/.exec(publicText)?.[2];
+  if (slug) add(slug, "projectPublic.slug", true);
+  const brand = objectAfter(publicText, /\bbrand\s*:\s*\{/);
+  const brandName = brand && literalValue(propertyValue(brand, "name") ?? "");
+  if (brandName) add(brandName, "projectPublic.brand.name", true);
+
+  const figma = stripComments(blobs.get(FIGMA_PROJECT_CONFIG) ?? "");
+  for (const element of arrayElements(figma, /\bprojectTerms\s*:\s*\[/) ?? []) {
+    const value = literalValue(element);
+    if (value) add(value, "figma-audit projectTerms", false);
+  }
+
+  const seedFiles = [...blobs.keys()].filter(
+    (file) => file.startsWith(PROJECT_SEEDS) && CODE_FILE.test(file),
+  );
+  const constants = constantTable(seedFiles.map((file) => blobs.get(file)));
+  for (const file of seedFiles) {
+    for (const { collection, key } of seedKeys(blobs.get(file), constants)
+      .declared) {
+      if (collection === "modules") {
+        add(key.split(".")[0], "專案 seed 模組 key", false);
+      }
+    }
+  }
+  for (const [file, text] of blobs) {
+    if (!file.startsWith(PROJECT_API) || !CODE_FILE.test(file)) continue;
+    for (const match of stripComments(text).matchAll(COLLECTION_NAME)) {
+      add(match[2], "專案 collection 前綴", false);
+    }
+  }
+  return [...terms.values()];
+}
+
+/** 讀 `commit` 的詞表來源並組詞表;`baseRoot` / `baseCommit` 決定哪些詞底座已有。 */
+export function projectTermsAt(root, commit, { baseRoot, baseCommit }) {
+  const blobs = readBlobs(
+    root,
+    commit,
+    listTree(root, commit).filter(isTermSource),
+  );
+  return projectTermsOf(
+    blobs,
+    (term) =>
+      runGit(baseRoot, ["grep", "-q", "-I", "-i", "-F", "-e", term, baseCommit])
+        .status === 0,
+  );
+}
+
+/** `git diff -U0` 的輸出 → 新增行 `{ path, line, text }`(刪除檔與二進位檔沒有新增行)。 */
+export function addedLines(diffText) {
+  const lines = [];
+  let file = null;
+  let next = 0;
+  for (const raw of diffText.split("\n")) {
+    if (raw.startsWith("diff --git ")) {
+      file = null;
+    } else if (raw.startsWith("+++ ")) {
+      file = raw === "+++ /dev/null" ? null : raw.slice(6);
+    } else if (raw.startsWith("@@")) {
+      next = Number(/\+(\d+)/.exec(raw)?.[1] ?? 0);
+    } else if (file !== null && raw.startsWith("+")) {
+      lines.push({ path: file, line: next, text: raw.slice(1) });
+      next += 1;
+    }
+  }
+  return lines;
+}
+
+/** 新增行裡出現的專案字樣:一行一筆(`{ path, line, terms }`)。 */
+export function termHits(lines, terms) {
+  const hits = [];
+  for (const { path: file, line, text } of lines) {
+    const lower = text.toLowerCase();
+    const found = terms
+      .filter(({ term }) => lower.includes(term.toLowerCase()))
+      .map(({ term }) => term);
+    if (found.length > 0) hits.push({ path: file, line, terms: found });
+  }
+  return hits;
+}
+
+/** `from..to` 的完整 `git diff -U0`(路徑不跳脫,供 addedLines 解析)。 */
+export const zeroContextDiff = (root, from, to) =>
+  git(root, [
+    "-c",
+    "core.quotePath=false",
+    "diff",
+    "-U0",
+    "--no-color",
+    "--no-renames",
+    "--no-ext-diff",
+    from,
+    to,
+  ]);
+
+/** 第 5 節掃的檔:common 與 mixed(值行檔另由第 6 節逐行核對)。 */
+const isScannedForTerms = (file) =>
+  ["common", "mixed"].includes(classifyPath(file, "M")) &&
+  !isValueLineFile(file);
+
+// ---------------------------------------------------------------- 第 6 節
+
+const linesOf = (text) => text.replace(/\r\n/g, "\n").split("\n");
+
+/** JSON 檔只容許列出的頂層欄位不同。 */
+const jsonExcept = (keys) => (base, head) => {
+  let baseJson;
+  let headJson;
+  try {
+    baseJson = JSON.parse(base);
+    headJson = JSON.parse(head);
+  } catch {
+    return "不是合法的 JSON";
+  }
+  for (const key of keys) {
+    delete baseJson[key];
+    delete headJson[key];
+  }
+  return JSON.stringify(baseJson) === JSON.stringify(headJson)
+    ? null
+    : `${keys.join("、")} 以外的欄位與底座不同`;
+};
+
+/** `.env.example`:key 與註解照底座,只有 `KEY=` 後面的值(含註解掉的範例行)可以不同。 */
+const envValues = (base, head) => {
+  const normalize = (line) =>
+    line.replace(/^(#\s*)?([A-Z][A-Z0-9_]*)=.*$/, "$1$2=");
+  const [baseLines, headLines] = [linesOf(base), linesOf(head)];
+  if (baseLines.length !== headLines.length) {
+    return "行數與底座不同(增刪了 key 或註解)";
+  }
+  const index = baseLines.findIndex(
+    (line, i) => normalize(line) !== normalize(headLines[i]),
+  );
+  return index === -1 ? null : `第 ${String(index + 1)} 行不是值的差異`;
+};
+
+/** 只有第一行(專案名稱的標題)可以不同。 */
+const titleLine = (base, head) =>
+  linesOf(base).slice(1).join("\n") === linesOf(head).slice(1).join("\n")
+    ? null
+    : "標題行以外與底座不同";
+
+/** README:專案門面(第一個與底座共同的 `## ` 標題之前)可以不同,之後照底座。 */
+const readmeIntro = (base, head) => {
+  const [baseLines, headLines] = [linesOf(base), linesOf(head)];
+  const baseHeadings = new Set(baseLines.filter((l) => l.startsWith("## ")));
+  const start = headLines.findIndex(
+    (line) => line.startsWith("## ") && baseHeadings.has(line),
+  );
+  if (start === -1) return "找不到與底座共同的 ## 標題";
+  const baseStart = baseLines.indexOf(headLines[start]);
+  return baseLines.slice(baseStart).join("\n") ===
+    headLines.slice(start).join("\n")
+    ? null
+    : `${headLines[start]} 起與底座不同(只有開頭的專案介紹可以不同)`;
+};
+
+const identical = (base, head) => (base === head ? null : "應與底座相同");
+
+/**
+ * 值行檔(V2):這些位置放專案值,其餘內容照底座。專案值另有正本的不在此列
+ * (例:compose 的預設值由根 `.env.example` 提供,compose 檔本身應與底座相同)。
+ */
+const VALUE_LINE_RULES = [
+  { pattern: /^package\.json$/, check: jsonExcept(["name", "wowgoBase"]) },
+  { pattern: /(?:^|\/)\.env\.example$/, check: envValues },
+  { pattern: /^(?:CLAUDE|AGENTS)\.md$/, check: titleLine },
+  { pattern: /^README\.md$/, check: readmeIntro },
+  { pattern: /(?:^|\/)docker-compose\.ya?ml$/, check: identical },
+];
+
+export const isValueLineFile = (file) =>
+  VALUE_LINE_RULES.some(({ pattern }) => pattern.test(file));
+
+function valueLineItems(differences, baseBlobs, headBlobs) {
+  const items = [];
+  for (const { path: file, status } of differences) {
+    const rule = VALUE_LINE_RULES.find(({ pattern }) => pattern.test(file));
+    if (!rule) continue;
+    if (status === "D" || status === "A") {
+      items.push({
+        path: file,
+        note: status === "D" ? "專案刪除了底座的檔" : "底座沒有這個檔",
+      });
+      continue;
+    }
+    const note = rule.check(
+      baseBlobs.get(file) ?? "",
+      headBlobs.get(file) ?? "",
+    );
+    if (note !== null) items.push({ path: file, note });
+  }
+  return items;
+}
+
+// ---------------------------------------------------------------- 第 7 節
+
+/**
+ * 專案 skill(V4):classify 判 project 的 skill 目錄名稱須以 `<slug>-` 開頭,且
+ * `.claude/skills/` 與 `.agents/skills/` 成對。專案 `skills-lock.json` 登記的外部 skill 不在此限
+ * (名稱由上游決定,只裝在 `.agents/`)。
+ */
+function skillItems(headFiles, headBlobs, slug) {
+  let external = new Set();
+  try {
+    external = new Set(
+      Object.keys(JSON.parse(headBlobs.get("skills-lock.json") ?? "{}").skills),
+    );
+  } catch {
+    // 讀不懂就當沒有外部 skill:專案 skill 照規則檢查
+  }
+  const roots = new Map();
+  for (const file of headFiles) {
+    const skill = skillOf(file);
+    if (!skill || classifyPath(file, "A") !== "project") continue;
+    if (external.has(skill.name)) continue;
+    roots.set(skill.name, (roots.get(skill.name) ?? new Set()).add(skill.root));
+  }
+  const items = [];
+  for (const [name, found] of [...roots].sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )) {
+    if (!slug) {
+      items.push({ name, note: "讀不出 projectPublic.slug,無法核對名稱" });
+    } else if (!name.startsWith(`${slug}-`)) {
+      items.push({ name, note: `名稱須以 ${slug}- 開頭` });
+    }
+    for (const root of ["claude", "agents"]) {
+      if (!found.has(root)) {
+        items.push({ name, note: `缺 .${root}/skills/${name}/(兩邊成對)` });
+      }
+    }
+  }
+  return items;
+}
+
 // ---------------------------------------------------------------- 報告
 
 const code = (text) =>
@@ -818,10 +1103,21 @@ const LIMITATIONS = [
   "第 2 節只認 page-replacements、help project/replacements/ 與專案 forms 的 options / pageOverrides;讀不懂的寫法照列為無法解析。",
   "第 3 節是靜態掃描:只認字串、常數、${常數} 樣板、permissionKey() 與 formModuleDeclaration() 推導的 key,其他寫法在專案端列為無法解析、底座端只計數;推導出的 wildcard 與 data_scope_targets 不另比(由模組 key 涵蓋);未被 import 的 revisions 快照不算;讀不出 collection 時只比 key。",
   "第 4 節只比專案 project/ 路徑的程式檔與底座 common 程式檔的檔名(不含 index)與具名匯出(不含 default);內容相同但名稱不同的重複抓不到。",
+  "第 5 節只比對新增行與詞表(slug、品牌名一定列入;Figma 稽核 projectTerms、專案模組 key、collection 前綴在底座已出現就不列),不分大小寫;詞表沒有的業務用語抓不到。",
+  "第 6 節只核對列出的值行檔(根 package.json、.env.example、CLAUDE.md / AGENTS.md 標題、README 開頭、docker-compose);其他混合檔仍以 inspect 逐段核對。",
+  "第 7 節只看判為 project 的 skill 目錄,專案 skills-lock.json 登記的外部 skill 不檢查。",
 ];
 
 function renderReport(report) {
-  const { project, base, adopted, sections, baseUnresolvedSeedKeys } = report;
+  const {
+    project,
+    base,
+    adopted,
+    sections,
+    baseUnresolvedSeedKeys,
+    terms,
+    unknownFiles,
+  } = report;
   const total = Object.values(sections).reduce(
     (sum, items) => sum + items.length,
     0,
@@ -834,9 +1130,13 @@ function renderReport(report) {
     `- 採用記錄(package.json wowgoBase):${adopted.tag} → ${code(adopted.commit)}`,
     `- 結果:${
       total === 0
-        ? "已去除重複(四節皆為 0)"
+        ? "已去除重複(七節皆為 0)"
         : `尚有 ${String(total)} 項待判讀;逐項說明是真正的專案客製或要回收 / 刪除`
     }`,
+    `- 未歸類路徑(unknown,全樹;與底座不同的另列第 1 節):${String(unknownFiles.length)}${
+      unknownFiles.length === 0 ? "" : `:${codeList(unknownFiles)}`
+    }`,
+    `- 專案字樣詞表:${terms.length === 0 ? "無" : codeList(terms.map(({ term }) => term))}`,
     "",
     ...section(
       `1. 非專案、非混合路徑與底座 ${base.tag} 仍不同`,
@@ -880,6 +1180,22 @@ function renderReport(report) {
         ];
         return `- ${code(item.path)}:${details.join(";")}`;
       },
+    ),
+    ...section(
+      "5. 共用與混合路徑新增了專案字樣",
+      sections.termHits,
+      (item) =>
+        `- ${code(item.path)} 第 ${String(item.line)} 行:${codeList(item.terms)}`,
+    ),
+    ...section(
+      "6. 值行檔在值行以外與底座不同",
+      sections.valueLines,
+      (item) => `- ${code(item.path)}:${item.note}`,
+    ),
+    ...section(
+      "7. 專案 skill 的命名與成對",
+      sections.skills,
+      (item) => `- ${code(item.name)}:${item.note}`,
     ),
     "Figma 稽核與 CI 不在本報告內,仍依 docs/deployment.md 由人執行。",
     "",
@@ -951,6 +1267,22 @@ export function verify(options) {
   ]);
 
   const seedFindings = seedKeyFindings(baseBlobs, headBlobs);
+  const differences = diffFiles(root, tagCommit, head);
+  const valueFiles = differences
+    .filter(({ path: file }) => isValueLineFile(file))
+    .map(({ path: file }) => file);
+  const baseValueBlobs = readBlobs(root, tagCommit, valueFiles);
+  const headValueBlobs = readBlobs(root, head, [
+    ...valueFiles,
+    ...headFiles.filter((file) => file === "skills-lock.json"),
+  ]);
+  const terms = projectTermsAt(root, head, {
+    baseRoot: root,
+    baseCommit: tagCommit,
+  });
+  const slug = terms.find(
+    ({ source }) => source === "projectPublic.slug",
+  )?.term;
   const report = {
     project: { repository: project.repository, root, commit: head },
     base: {
@@ -961,8 +1293,12 @@ export function verify(options) {
     },
     adopted: project.adopted,
     baseUnresolvedSeedKeys: seedFindings.baseUnresolved,
+    terms,
+    unknownFiles: headFiles.filter(
+      (file) => classifyPath(file, "A") === "unknown",
+    ),
     sections: {
-      baseDifferences: baseDifferences(root, tagCommit, head),
+      baseDifferences: baseDifferences(differences),
       customizations: customizationItems(headFiles, headBlobs),
       seedKeys: seedFindings.items,
       nameDuplicates: nameDuplicates(
@@ -971,6 +1307,14 @@ export function verify(options) {
         baseCode,
         baseBlobs,
       ),
+      termHits: termHits(
+        addedLines(zeroContextDiff(root, tagCommit, head)).filter(
+          ({ path: file }) => isScannedForTerms(file),
+        ),
+        terms,
+      ),
+      valueLines: valueLineItems(differences, baseValueBlobs, headValueBlobs),
+      skills: skillItems(headFiles, headValueBlobs, slug),
     },
   };
   const markdown = renderReport(report);

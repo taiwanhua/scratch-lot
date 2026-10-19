@@ -18,9 +18,9 @@
 
 寫或改程式碼前,先讀 `docs/standards/README.md` 的索引,只載入與改動範圍相關的規範檔;review 時引用規則編號(如 `REACT-02`)。review 中被採納的新決定要回寫進對應規範檔。
 
-凡新增或異動品牌文字、圖案、色彩、網域(程式碼或 Figma),必須同步更新 `docs/branding.md` 品牌註冊表。
+凡新增或異動品牌文字、圖案、色彩、網域(程式碼或 Figma),必須同步更新品牌註冊表:規則與列在 `docs/branding.md`(底座文件),專案的實際值在 `docs/project/branding.md`。
 
-凡新增或異動環境變數,必須同步更新 `docs/env-registry.md`(並依判準決定放 Secret Manager 或普通 env)。
+凡新增或異動環境變數,必須同步更新環境變數登記:底座變數在 `docs/env-registry.md`,專案自己的變數在 `docs/project/env-registry.md`(並依判準決定放 Secret Manager 或普通 env)。
 
 ## Agent skills
 
@@ -31,6 +31,10 @@
 ### 底座升級與共用改良回收
 
 共用 CLI、升級整合、回收與發布前環境/資料核對見 [deployment](docs/deployment.md#底座首次接軌與版本升級);指令速查見 [toolbox](docs/agents/toolbox.md#底座升級與回收)。Claude、Codex 與人員使用同一入口,各自可獨立接手;工具準備分支與報告,接受回收及發布沿既有審查流程。
+
+### 專案 skill
+
+專案自己的 skill 放 `.claude/skills/<slug>-<名稱>/`(slug = `projectPublic.slug`),Codex 入口 `.agents/skills/<slug>-<名稱>/` 同名成對;底座 skill 只有 `module-scaffold`、`project-bootstrap` 與 `skills-lock.json` 的外部 skill。命名與成對由 base-sync verify 檢查。
 
 ### Issue tracker
 
@@ -44,13 +48,13 @@ Issues 追蹤在目前 repo 的 GitHub Issues,透過 `gh` CLI 操作;repo 身分
 
 單一 context:repo 根目錄的 `CONTEXT.md`(底座詞彙)+ `CONTEXT-PROJECT.md`(專案詞彙,只新增、不重新定義底座名詞)+ `docs/adr/`(由 `/domain-modeling` 惰性建立)。見 `docs/agents/domain.md`。
 
-- 文件入口 → `docs/README.md`(系統地圖、七個核心概念、閱讀路線、文件目錄)
-- 底座現況(是什麼 / 怎麼運作)→ `docs/concepts/`(七份,順序見 `docs/agents/domain.md`「概念導讀」);決策理由 → `docs/adr/`
+- 文件入口 → `docs/README.md`(系統地圖、七個核心概念、閱讀路線、文件目錄);專案自己的文件入口 → `docs/project/README.md`(專案內容放各目錄的 `project/`,底座文件不寫專案內容)
+- 底座現況(是什麼 / 怎麼運作)→ `docs/concepts/`(七份,順序見 `docs/agents/domain.md`「概念導讀」);決策理由 → `docs/adr/`(專案的在 `docs/adr/project/`)
 - agent 的工具與環境須知 → `docs/agents/toolbox.md`
 - 跨工具分工、工作樹與接手 → `docs/agents/collaboration.md`(Claude、Codex 與人員共用)
 - **新增**一個後台 CRUD 模組 → `docs/agents/module-scaffold.md`(檔案清單 + 步驟 + 每步的正本;藍本是示範模組 1 / 2)
-- 開發/修改後台模組 → 先讀 `docs/modules/<key>.md`(內部技術文件)+ `apps/admin/src/md/module-help/{base,project/additions,project/replacements}/<key>.help.md`(租戶使用者說明:守詞彙表、不得出現平台視角詞彙;build 時打包進說明彈窗)
-- 設計稿與 Library → `docs/branding.md` 的設計資源登記;規範見 `docs/standards/general/figma.md`
+- 開發/修改後台模組 → 先讀 `docs/modules/<key>.md`(內部技術文件;專案模組在 `docs/modules/project/<key>.md`)+ `apps/admin/src/md/module-help/{base,project/additions,project/replacements}/<key>.help.md`(租戶使用者說明:守詞彙表、不得出現平台視角詞彙;build 時打包進說明彈窗)
+- 設計稿與 Library → `docs/branding.md` 的設計資源登記(專案的設計檔與節點在 `docs/project/branding.md`、`docs/project/figma-nodes.md`);規範見 `docs/standards/general/figma.md`
 - 進行中討論與待辦 → 底座的在 `docs/tmp/dis.md`,專案的在 `docs/tmp/project-dis.md`
-- 資料模型地圖 → `docs/data-model.md`;欄位/索引細節見 `apps/api/src/database/schemas/*.schema.ts`(逐欄有註解)
-- 環境變數 → `docs/env-registry.md`(用途/是否機密/放哪)
+- 資料模型地圖 → `docs/data-model.md`(專案資料表在 `docs/project/data-model.md`);欄位/索引細節見 `apps/api/src/database/schemas/*.schema.ts`(逐欄有註解)
+- 環境變數 → `docs/env-registry.md`(用途/是否機密/放哪;專案變數在 `docs/project/env-registry.md`)

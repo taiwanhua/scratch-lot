@@ -1,8 +1,4 @@
-import {
-  GraphQLHandler,
-  type RequestHandler,
-  type WebSocketHandler,
-} from "msw";
+import { GraphQLHandler } from "msw";
 
 import {
   FormSubmissionStatus,
@@ -85,7 +81,6 @@ import {
 import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
-  type MockView,
   mockRoles,
   mockUsers,
   modulesForView,
@@ -93,6 +88,8 @@ import {
 } from "./mock-fixtures";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
+import type { MockHandler, MockWorldOptions } from "./mock-world-source";
+import { projectMockWorld } from "./project/mock-world";
 
 /**
  * mock 開發模式的假 api:把 `src/test/msw/` 的各頁 world 併成**一份**瀏覽器端 handlers。
@@ -112,20 +109,12 @@ import { mockWorkflowDesign } from "./mock-workflow-design";
  *
  * 夾具一律取自 `src/test/msw/`(那一份對著 api 的斷言校準過,TEST-08),只有
  * 使用者清單在 `mock-fixtures.ts`。
+ *
+ * 這支是 mock 模式的**固定組裝入口**(STRUCT-12):底座的 world 在這裡,專案的模組與假 api 由
+ * `mock/project/mock-world.ts`(`projectMockWorld`)提供、在這裡併入;專案新增模組不改這支。
  */
 
-/**
- * `setupWorker()` / `server.use()` 收的 handler 型別(msw 內部叫 `AnyHandler`,
- * 沒有從套件根匯出,所以在這裡重寫一次)。
- */
-type MockHandler = RequestHandler | WebSocketHandler;
-
-export interface MockWorldOptions {
-  /** 視角:root(根組織,看得到全部模組)或 tenant(租戶管理員,少了兩個 `isRootOnly` 模組) */
-  view: MockView;
-  /** 一開機就有有效的 refresh cookie = 自動登入;false 會停在登入頁(任何帳密都能登入) */
-  authenticated: boolean;
-}
+export type { MockWorldOptions } from "./mock-world-source";
 
 /** 濾掉指定 GraphQL 操作的 handler(共用端點的去重;非 GraphQL 的 handler 一律留著)。 */
 const withoutOperations = (
@@ -151,7 +140,7 @@ export const mockHandlers = ({
   // 個人偏好先放好通知管道開關的 key(`UpdateMyPreferences` 只收已有的 key),通知假 api 讀同一份
   const auth = authWorld({
     hasRefreshCookie: authenticated,
-    modules: modulesForView(view),
+    modules: [...modulesForView(view), ...projectMockWorld.modules(view)],
     orgs: orgsForView(view),
     // 根組織視角站在根組織(`tenantId: null`);租戶視角站在租戶 A(切換組織後沿用,mock 不重算)
     currentOrgTenantId: view === "root" ? null : "org-tenant-a",
@@ -308,6 +297,8 @@ export const mockHandlers = ({
     // 印表機管理:兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
     // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
     ...printingWorld().handlers,
+    // 專案模組的假 api(`mock/project/mock-world.ts`;底座預設為空)
+    ...projectMockWorld.handlers({ view, authenticated }),
   ];
 };
 
