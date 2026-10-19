@@ -195,6 +195,7 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **MongoDB 一律是 replica set**(交易需要,ADR-0013):api / db-migrator 的測試由 jest globalSetup 起單一成員 `MongoMemoryReplSet`;`build` job 以 `docker run mongo:<版本> --replSet` 起並等到選出 PRIMARY。GitHub 的 service container 不能帶啟動參數,所以不用它。mongod 二進位以 `actions/cache` 快取 `~/.cache/mongodb-binaries`(key 跟 lockfile)。
 - **`build` job 的 MongoDB 容器**:容器沒起來(一啟動就退出,或 90 秒內沒選出 PRIMARY)時,該步驟印出 `docker inspect` 的狀態與退出碼(`status` / `exitCode` / `oomKilled` / `error`)和 `docker logs mongo`(收在「mongo 容器狀態與 logs」群組),先 `docker rm -f mongo` 再重起,最多 3 次;3 次都失敗才紅。查原因時展開各次的群組。
 - **MongoDB 版本**:CI 的 `build` job(`ci.yml` 的 `MONGO_IMAGE`)與本機 `docker-compose.yml` 用同一個固定 patch 版本的 `mongo` image(目前 `mongo:8.3.13`),升級時兩處一起改。jest 測試的 `MongoMemoryReplSet` 用 mongodb-memory-server 內建的預設 mongod 版本(`mongodb-memory-server@11.2.0` 為 8.2.6),跟著 lockfile 升級,與上述 image 不同步;兩者同屬 8.x,但小版本可能不同(8.3 對 8.2)。
+- **Linux 核心 6.19 與 MongoDB 8.x 不相容**(SERVER-121912,mongod 啟動即退出):`ci.yml`、`e2e.yml` 在 workflow 層設 `GLIBC_TUNABLES=glibc.pthread.rseq=1`(docker 的 mongo 以 `-e` 傳入;`turbo.json` 的 `globalPassThroughEnv` 讓 turbo 跑的測試拿得到)。這是緊急繞過,不是修正;runner 核心 ≥ 7.0.14 或 MongoDB 出修正版後拿掉。
 
 ### CD(deploy.yml)
 
