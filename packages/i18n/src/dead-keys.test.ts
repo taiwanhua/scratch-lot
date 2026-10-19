@@ -469,6 +469,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "`t(`errors.${delegationsErrorKey(error)}`)`,`delegations-error.ts` 把 api 錯誤換成 `<code>` 或 `reasons.<reason>`(碼與 reason 列舉見同檔)",
   },
+  {
+    key: "admin.tagPalettes.names.",
+    reason:
+      "專案 `components/project/TagPaletteChip` 的 `t(paletteKey)`(namespace `admin.tagPalettes.names`),paletteKey 逐一取自 `@repo/domain/project/tag-palette` 的 `TAG_PALETTE_KEYS`",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>
