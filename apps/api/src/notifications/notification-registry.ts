@@ -5,13 +5,13 @@ import {
   type AudienceOrgRange,
   validateAudience,
 } from "@repo/domain/audience";
-
-import type { UserPreferenceDefinition } from "../user-preferences/user-preference-registry";
 import {
   NOTIFICATION_SCHEDULE_KINDS,
   type NotificationSchedule,
   validateSchedule,
-} from "./notification-schedule";
+} from "@repo/domain/notification-schedule";
+
+import type { UserPreferenceDefinition } from "../user-preferences/user-preference-registry";
 
 /**
  * 通知的登記制:
@@ -73,7 +73,7 @@ export interface NotificationOrgScope {
 export interface NotificationScheduleDeclaration {
   readonly default: NotificationSchedule;
   /**
-   * `days-before` 才能給:日期的稱呼(例「到期」「繳費日」),通知設定頁的摘要寫成
+   * `days-before` 才能給:日期的稱呼(例「到期」「截止日」),通知設定頁的摘要寫成
    * 「到期前 30、7 天及當天 09:00」;沒給 = 「日期前 …」。
    */
   readonly dateLabel?: string;
@@ -95,7 +95,7 @@ export interface NotificationTypeDefinition {
   readonly orgScope?: NotificationOrgScope;
   /** 負責人提醒才有(且必填):預設人員條件(只能用使用者、角色、權限;組織範圍由 `orgScope` 決定) */
   readonly defaultAudience?: Audience;
-  /** 當事人通知才能給:收件人說明(通知設定頁顯示「由事件決定(<說明>)」),例「可排這家店的排班人員」 */
+  /** 當事人通知才能給:收件人說明(通知設定頁顯示「由事件決定(<說明>)」),例「處理這件事的人員」 */
   readonly recipientNote?: string;
   /** 選填:可調時間(三種寫法之一與預設值);當事人通知也可以宣告 */
   readonly schedule?: NotificationScheduleDeclaration;

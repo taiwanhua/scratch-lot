@@ -8,6 +8,10 @@ import {
   isAudienceGroup,
   validateAudience,
 } from "@repo/domain/audience";
+import {
+  type NotificationSchedule,
+  validateSchedule,
+} from "@repo/domain/notification-schedule";
 
 import { AuditService } from "../audit/audit.service";
 import {
@@ -28,10 +32,6 @@ import {
   type NotificationTypeDefinition,
 } from "./notification-registry";
 import { NOTIFICATION_TYPES } from "./notification-registry.module";
-import {
-  type NotificationSchedule,
-  validateSchedule,
-} from "./notification-schedule";
 import {
   notificationSettingRejected,
   notificationSettingTenantOnly,
@@ -76,6 +76,13 @@ export interface NotificationSettingPage {
   totalCount: number;
 }
 
+/** 排程用:目前生效的提醒時間與它的最後修改時間(`scheduleHitAt` 的 `modifiedAt`)。 */
+export interface EffectiveSchedule {
+  schedule: NotificationSchedule;
+  /** 提醒時間最後一次調整 / 還原的時間;沒動過(或用的是預設、存的寫法已不適用)= null */
+  modifiedAt: Date | null;
+}
+
 /** 還原預設的範圍:收件人或提醒時間;不給 = 這個類型可調的全部。 */
 export type NotificationSettingPart = "audience" | "schedule";
 
@@ -83,6 +90,7 @@ interface StoredSetting {
   _id: Types.ObjectId;
   audience: Audience | null;
   schedule: NotificationSchedule | null;
+  scheduleUpdatedAt?: Date | null;
   updatedAt: Date;
   updatedBy: Types.ObjectId | null;
 }
@@ -200,25 +208,29 @@ export class NotificationSettingsService {
   }
 
   /**
-   * 排程工作用:這個租戶這個類型目前生效的提醒時間(調整過的,或類型宣告的預設)。
+   * 排程工作用:這個租戶這個類型目前生效的提醒時間(調整過的,或類型宣告的預設)與最後修改時間。
    * 類型沒登記或沒宣告可調時間 → 拋錯(程式錯誤)。根組織(`tenantId = null`)只有預設。
    */
   async effectiveSchedule(
     tenantId: Types.ObjectId | null,
     typeKey: string,
-  ): Promise<NotificationSchedule> {
+  ): Promise<EffectiveSchedule> {
     const declaration = this.types.get(typeKey)?.schedule;
     if (declaration === undefined) {
       throw new Error(`通知類型「${typeKey}」沒有宣告可調時間`);
     }
     if (tenantId === null) {
-      return declaration.default;
+      return { schedule: declaration.default, modifiedAt: null };
     }
     const stored = await this.settings.findOne(systemContext(), {
       tenantId,
       type: typeKey,
     });
-    return stored?.schedule ?? declaration.default;
+    return {
+      schedule:
+        storedScheduleOf(declaration.default, stored) ?? declaration.default,
+      modifiedAt: stored?.scheduleUpdatedAt ?? null,
+    };
   }
 
   private async checkedAudience(
@@ -256,6 +268,11 @@ export class NotificationSettingsService {
         tenantId,
         type: type.key,
       });
+      // 只有提醒時間變動才記它的修改時間(排程補寄看這個,不看 updatedAt)
+      const fields =
+        changes.schedule === undefined
+          ? changes
+          : { ...changes, scheduleUpdatedAt: new Date() };
       // TX-04:先查再寫;並發的最終裁決交給唯一索引 (tenantId, type)
       const saved =
         existing === null
@@ -264,10 +281,11 @@ export class NotificationSettingsService {
               type: type.key,
               audience: null,
               schedule: null,
-              ...changes,
+              scheduleUpdatedAt: null,
+              ...fields,
             })
           : await this.settings.updateById(operator, existing._id, {
-              $set: changes,
+              $set: fields,
             });
       if (saved === null) {
         throw new Error(`通知設定「${type.key}」寫入後讀不到`);
@@ -300,7 +318,9 @@ export class NotificationSettingsService {
     const defaultAudience = type.defaultAudience ?? null;
     const defaultSchedule = type.schedule?.default ?? null;
     const schedule =
-      defaultSchedule === null ? null : (setting?.schedule ?? null);
+      defaultSchedule === null
+        ? null
+        : storedScheduleOf(defaultSchedule, setting);
     return {
       type: type.key,
       name: type.name,
@@ -408,6 +428,17 @@ export class NotificationSettingsService {
       }
     }
   }
+}
+
+/**
+ * 存著的提醒時間;寫法與類型目前宣告的不同(例:類型改了宣告的寫法)就當沒調整,退回預設。
+ */
+function storedScheduleOf(
+  declared: NotificationSchedule,
+  setting: { schedule?: NotificationSchedule | null } | null,
+): NotificationSchedule | null {
+  const stored = setting?.schedule ?? null;
+  return stored !== null && stored.kind === declared.kind ? stored : null;
 }
 
 function isListed(type: NotificationTypeDefinition): boolean {

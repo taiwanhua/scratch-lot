@@ -8,7 +8,10 @@ import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
 import { useAudienceSummary } from "@/components/base/AudiencePicker/useAudienceSummary";
-import { useNotificationTypeName } from "@/lib/base/notification-type-name";
+import {
+  useNotificationRecipientNote,
+  useNotificationTypeName,
+} from "@/lib/base/notification-type-name";
 
 import {
   NOTIFICATION_AUDIENCE_FIELDS,
@@ -46,14 +49,16 @@ export const NotificationSettingsTable = ({
     NOTIFICATION_AUDIENCE_ORG_SOURCES,
   );
   const scheduleOf = useScheduleSummary();
+  const recipientNoteOf = useNotificationRecipientNote();
 
   const recipientsOf = (row: NotificationSettingItemFragment) => {
     if (row.category !== "responsible" || row.audience == null) {
+      const note = recipientNoteOf(row.type, row.recipientNote);
       return (
         <Typography variant="body2" component="span" color="text.secondary">
-          {row.recipientNote
-            ? t("partyRecipientsWithNote", { note: row.recipientNote })
-            : t("partyRecipients")}
+          {note === null
+            ? t("partyRecipients")
+            : t("partyRecipientsWithNote", { note })}
         </Typography>
       );
     }

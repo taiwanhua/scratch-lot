@@ -40,8 +40,9 @@
 - **`notification_settings`**:`{ tenantId, type, audience, schedule }`,**`(tenantId, type)` 唯一**,`updatedBy` / `updatedAt` 由基礎欄位提供。`type` 是負責人提醒,或宣告了可調時間的當事人通知。
   - `audience`:人員條件;沒有這筆、或為 `null` = 用類型宣告的預設人員條件。當事人通知永遠是 `null`。
   - `schedule`:提醒時間(形狀見下方「可調時間」);沒有這筆、或為 `null` = 用類型宣告的預設。沒宣告可調時間的類型永遠是 `null`。
+  - `scheduleUpdatedAt`:提醒時間最後一次調整 / 還原的時間(只有 `schedule` 變動才寫;`updatedAt` 也會因收件人變動而動,排程不看它)。排程補寄時,早於它的應寄時點不補;從沒動過 = `null`。
   - 「還原預設」把指定的那一欄(或可調的全部)寫回 `null`(保留這筆,`updatedBy` / `updatedAt` 記下還原的人與時間)。
-  - 整個租戶一套(不分分店)。以 `tenantId` 為邊界的租戶設定,不掛 tenantScope。
+  - 整個租戶一套(不分下層組織)。以 `tenantId` 為邊界的租戶設定,不掛 tenantScope。
 
 正本:`apps/api/src/database/schemas/notification.schema.ts`、`notification-setting.schema.ts`
 
@@ -77,22 +78,26 @@
 | `monthly`       | `dayOfMonth`(1–31)、`time`                  | 每月第 N 天的 `time` 寄;那個月沒有這一天就用月底            |
 
 - `time` 是 `HH:mm`,只能落在 15 分鐘格子(00:00、00:15 … 23:45),與排程間隔一致。
-- `dateLabel`(只有 `days-before` 能給,例「到期」)是日期的稱呼,通知設定頁摘要寫成「到期前 30、7 天及當天 09:00」;沒給 = 「日期前 …」。
+- `dateLabel`(只有 `days-before` 能給,例「到期」)是日期的稱呼,通知設定頁摘要寫成「到期前 30、7 天及當天 09:00」;沒給 = 「日期前 …」。admin 先查 `admin.notifications.scheduleDateLabels.<類型 key>`。
+- `recipientNote`(當事人通知)同樣可在 admin 以 `admin.notifications.recipientNotes.<類型 key>` 覆寫,查不到才用登記的值。
+- 存著的 `schedule` 寫法與類型目前宣告的不同(類型改了宣告)→ 當沒調整,清單與排程都用預設。
+- 格式、範圍常數與 `validateSchedule` 的正本是 `@repo/domain/notification-schedule`(api 與 admin 共用);「該不該寄」的 `scheduleHitAt` 只在 api。
 - 預設值不合範圍或寫法不認得、`dateLabel` 給了別的寫法 → app 起不來(同其他登記)。
-- 日期本身(到期日、繳費日、開放日…)不在通知設定裡,由各自的資料與排程工作決定。
+- 日期本身(例:到期日)不在通知設定裡,由各自的資料與排程工作決定。
 
-正本:`apps/api/src/notifications/notification-schedule.ts`
+正本:`packages/domain/src/notification-schedule/`、`apps/api/src/notifications/notification-schedule.ts`
 
 ### 排程接口
 
 宣告了可調時間的提醒由專案的排程工作(`registerScheduledJob`,`every: "15m"`;`docs/deployment.md`「Cloud Scheduler」)觸發,每次對每個租戶:
 
-1. `NotificationSettingsService.effectiveSchedule(tenantId, type)`:這個租戶這個類型目前生效的提醒時間(調整過的,或類型宣告的預設;根組織 `tenantId = null` 只有預設)。類型沒宣告可調時間 → 拋錯(程式錯誤)。
-2. `scheduleHitAt(schedule, { scheduledFor, timezone, date? })`:寄送時點落在 `(scheduledFor − 15 分鐘, scheduledFor]` 就回 `{ at, localDate, daysBefore? }`,否則 `null`。`date` 是 `days-before` 的目標日或 `daily-overdue` 的逾期起算日(`monthly` 不用)。
-3. 命中就呼叫 `notify()`,`dedupeKey` 用 `localDate`(與 `daysBefore`)組,同一時點只寄一次。
+1. `NotificationSettingsService.effectiveSchedule(tenantId, type)` → `{ schedule, modifiedAt }`:這個租戶這個類型目前生效的提醒時間(調整過的,或類型宣告的預設;根組織 `tenantId = null` 只有預設)與提醒時間的最後修改時間(`scheduleUpdatedAt`;沒動過 = `null`)。類型沒宣告可調時間 → 拋錯(程式錯誤)。
+2. `scheduleHitAt(schedule, { scheduledFor, timezone, date?, modifiedAt })`:取 `(scheduledFor − 6 小時, scheduledFor]` 內**最近一個**應寄時點,回 `{ at, localDate, daysBefore?, occurrence }`;沒有、或那個時點早於 `modifiedAt` → `null`。`date` 是 `days-before` 的目標日或 `daily-overdue` 的逾期起算日(`monthly` 不用)。
+3. 命中就呼叫 `notify()`,`dedupeKey` 一定要含 `occurrence`(`YYYY-MM-DD`,`days-before` 另加 `#d<天數>`,所以 30 / 7 / 0 各自獨立):同一時點之後再被叫到會回同一個 `occurrence`,由 `notify()` 的去重擋掉,寄過就不再寄。
 
-- **實際寄出時間**:時間到了之後的第一次排程,最多晚 15 分鐘。
-- **錯過的時點不補**:改了時間之後,當天已經過了的新時點不會再落進之後的排程,從下一個時點照新設定(例:08:30 把 09:00 改成 08:00 → 今天不寄 08:00、今天 09:00 的舊時點也不再寄,明天起 08:00)。
+- **準時**:時間到了之後的第一次排程寄出(通常晚不到 15 分鐘)。
+- **漏跑補寄**:某幾格排程沒跑到(停機、Cloud Scheduler 呼叫失敗),之後第一次被叫到時,6 小時內最近一個應寄時點還沒寄就補寄(例:09:00 漏跑 → 09:15 補寄;09:30 再叫到不重寄)。補寄窗與排程工作的 `DAILY_CATCH_UP_MS` 同為 6 小時(`SCHEDULE_CATCH_UP_MS`),超過就放棄,免得新部署把昨天的時點補寄出去。
+- **改了時間不補**:應寄時點早於提醒時間的最後修改時間就不寄,從下一個時點照新設定(例:08:45 把 09:00 改成 08:30 → 今天 08:30 不補、今天 09:00 的舊時點也不再寄,明天起 08:30)。修改時間記在 `notification_settings.scheduleUpdatedAt`,只在提醒時間調整 / 還原時寫(只改收件人不動它)。
 
 正本:`apps/api/src/notifications/notification-settings.service.ts`、`notification-schedule.ts`
 
@@ -276,7 +281,7 @@ input ResetNotificationSettingInput {
 - **提醒時間那塊**(`ScheduleEditor`):寫法由類型決定;某日期前 N 天 = 提前天數一格一個(`[+ 加一個]` 到 5 個為止、每格旁 [×] 移除,剩一個時不能移)+ 寄送時間;逾期後每天 = 寄送時間;每月第 N 天 = 第幾天 + 寄送時間。寄送時間是 15 分鐘一格的下拉(96 個選項)。[儲存] 前本地驗證(0–365 整數、不重複、至少一個;1–31),api 擋下的 `SCHEDULE_INVALID` 依 `path`(例 `daysBefore[1]`)標回那一格。
 - **還原預設(清單)**:只在任何一塊調整過的列可按;確認框逐行寫出還原後的預設收件人與提醒時間。送出不帶 `part`(兩塊一起還原)。成功後清單回到類型宣告的值並標「預設」。
 - **類型名稱的語系**:畫面上的類型名稱一律經 `lib/base/notification-type-name.ts` 的 `useNotificationTypeName()`:有 `admin.notifications.types.<類型 key>`(key 的 `.` 就是巢狀層級)用它,沒有退回 api 的 `name`。底座 6 種類型兩個語系都有文案;專案的類型在專案字典加同樣的 key,沒加的顯示登記的名稱。通知設定頁與個人設定的通知管道開關(`PreferencesTab`)共用這一支;🔔 清單與新通知提示顯示的是通知的標題 / 內容(寫入當下依收件人的語言產生),不顯示類型名稱,之後要顯示也走這一支。
-- **與 Figma 的差異**:BS-09a / BS-09b 還沒畫「提醒時間」欄與編輯框的提醒時間區塊(規格第 19 章 Q12 待補畫),畫面依規格 3.5 實作。以下為刻意差異:通知類型清單的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);編輯收件人的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
+- **與 Figma 的差異(刻意)**:通知類型清單的「預設管道」欄不做(`NotificationSetting` 沒有管道欄位,管道由收件人在個人設定開關);編輯收件人的「所屬組織」條件不做(人員條件不含所屬組織,組織範圍由類型宣告);組織範圍用通用的「觸發事件的組織」,不逐類型寫「印表機所在組織」。
 - **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsSchedule.test.tsx`(提醒時間欄、編輯框的塊數、改值與各自還原、範圍檢查、時間選單)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
 正本:`apps/admin/src/pages/base/system/NotificationSettingsPage/`(提醒時間:`notification-schedule.ts`、`ScheduleEditor.tsx`)、`apps/admin/src/lib/base/notification-type-name.ts`、`apps/admin/src/test/msw/notification-settings-handlers.ts`
@@ -308,7 +313,7 @@ input ResetNotificationSettingInput {
 
 ## 測試
 
-- api:`apps/api/src/notifications/notifications.test.ts`(`notify()` 的去重、交易回復、偏好 × 總開關、通知清單、負責人提醒 × 通知設定、錯誤;只有底座類型時提醒時間全部 `null`)、`notification-registry.test.ts`(登記驗證含可調時間、偏好 key 編碼、範本語系、連結)、`notification-schedule.test.ts`(三種寫法「該不該寄」的表格測試、租戶時區、範圍驗證)、`notification-schedule-settings.test.ts`(規格 3.5 操作表:以 `jest.mock` 換上 `test-support/schedule-fixture.ts` 的測試類型)
+- api:`apps/api/src/notifications/notifications.test.ts`(`notify()` 的去重、交易回復、偏好 × 總開關、通知清單、負責人提醒 × 通知設定、錯誤;只有底座類型時提醒時間全部 `null`)、`notification-registry.test.ts`(登記驗證含可調時間、偏好 key 編碼、範本語系、連結)、`notification-schedule.test.ts`(三種寫法「該不該寄」的表格測試、租戶時區)、`notification-schedule-settings.test.ts`(通知設定的各種操作:以 `jest.mock` 換上 `test-support/schedule-fixture.ts` 的測試類型)
 - 流程通知:`apps/api/src/workflows/workflow-engine/workflow-engine.test.ts`(「通知信」那組)
 
 正本:上列檔案

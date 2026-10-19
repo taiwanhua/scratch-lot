@@ -2978,7 +2978,7 @@
       "dayOfMonth": "每月第幾天",
       "dayOfMonthHint": "1–31;那個月沒有這一天就在月底寄",
       "time": "寄送時間",
-      "timeHint": "以最上層組織的時區計;時間到了之後最晚 15 分鐘內寄出",
+      "timeHint": "以最上層組織的時區計;時間到了之後通常 15 分鐘內寄出",
       "issues": {
         "daysRange": "請填 0–365 的整數",
         "daysDuplicate": "天數不能重複",

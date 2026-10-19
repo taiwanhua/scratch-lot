@@ -2,13 +2,19 @@ import { useCallback } from "react";
 import { useTranslations } from "use-intl";
 
 import {
+  DAYS_BEFORE_MAX,
+  DAYS_BEFORE_MIN,
+  DAY_OF_MONTH_MAX,
+  DAY_OF_MONTH_MIN,
+} from "@repo/domain/notification-schedule";
+import {
   type NotificationScheduleInput,
   NotificationScheduleKind,
 } from "@repo/graphql";
 
 /**
- * 提醒時間的編輯草稿、本地驗證與摘要(api 正本 `apps/api/src/notifications/notification-schedule.ts`;
- * 範圍對齊它:提前天數 0–365、最多 5 個、不重複;每月第 N 天 1–31;時間 15 分鐘一格)。
+ * 提醒時間的編輯草稿、本地驗證與摘要。範圍常數與寄送時間選項的正本是 `@repo/domain/notification-schedule`
+ * (與 api 的 `validateSchedule` 同一份);這裡只把錯誤分到各格,api 擋下時仍以 `path` 標回。
  */
 
 /** api 回的一份提醒時間(`NotificationSchedule`)。 */
@@ -18,24 +24,6 @@ export interface NotificationScheduleValue {
   dayOfMonth?: number | null;
   time: string;
 }
-
-export const DAYS_BEFORE_MIN = 0;
-export const DAYS_BEFORE_MAX = 365;
-export const DAYS_BEFORE_MAX_COUNT = 5;
-export const DAY_OF_MONTH_MIN = 1;
-export const DAY_OF_MONTH_MAX = 31;
-const STEP_MINUTES = 15;
-
-const pad = (value: number) => String(value).padStart(2, "0");
-
-/** 寄送時間的選項:00:00、00:15 … 23:45(只有 15 分鐘一格,選不到 09:10)。 */
-export const SCHEDULE_TIME_OPTIONS: readonly string[] = Array.from(
-  { length: (24 * 60) / STEP_MINUTES },
-  (_, index) => {
-    const minutes = index * STEP_MINUTES;
-    return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
-  },
-);
 
 /** 編輯中的提醒時間:數字欄位先存輸入的字,送出前才轉數字。 */
 export interface ScheduleDraft {

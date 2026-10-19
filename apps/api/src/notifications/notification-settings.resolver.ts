@@ -1,5 +1,7 @@
 import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 
+import type { NotificationSchedule } from "@repo/domain/notification-schedule";
+
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
 import { RequirePermission } from "../permission/require-permission.decorator";
@@ -15,7 +17,6 @@ import {
   NotificationSettingPayload,
   NotificationSettingsPayload,
 } from "./models/notifications.model";
-import type { NotificationSchedule } from "./notification-schedule";
 import {
   type NotificationSettingItem,
   NotificationSettingsService,

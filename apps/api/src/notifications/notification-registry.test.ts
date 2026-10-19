@@ -115,7 +115,7 @@ describe("通知類型登記表", () => {
 });
 
 describe("可調時間的宣告", () => {
-  const LICENSE_SCHEDULE = {
+  const EXPIRY_SCHEDULE = {
     default: {
       kind: "days-before",
       daysBefore: [30, 7, 0],
@@ -127,7 +127,7 @@ describe("可調時間的宣告", () => {
   it("負責人提醒與當事人通知都可以宣告;當事人通知可加收件人說明", () => {
     const responsible: NotificationTypeDefinition = {
       ...PARTY,
-      key: "demo.license-expiry",
+      key: "demo.expiry-reminder",
       category: "responsible",
       orgScope: { ref: "event-org", range: "ancestors" },
       defaultAudience: {
@@ -138,30 +138,30 @@ describe("可調時間的宣告", () => {
           value: { kind: "static", values: ["demo.edit"] },
         },
       },
-      schedule: LICENSE_SCHEDULE,
+      schedule: EXPIRY_SCHEDULE,
     };
     const party: NotificationTypeDefinition = {
       ...PARTY,
-      key: "demo.day-off-open",
-      recipientNote: "可排這家店的排班人員",
+      key: "demo.deadline-notice",
+      recipientNote: "表單的填寫人",
       schedule: {
         default: { kind: "days-before", daysBefore: [0], time: "09:00" },
       },
     };
     const monthly: NotificationTypeDefinition = {
       ...PARTY,
-      key: "demo.close-overdue",
+      key: "demo.monthly-report",
       schedule: { default: { kind: "monthly", dayOfMonth: 3, time: "09:00" } },
     };
     const registry = composeNotificationTypes(
       [],
       [responsible, party, monthly],
     );
-    expect(registry.get("demo.license-expiry")?.schedule).toBe(
-      LICENSE_SCHEDULE,
+    expect(registry.get("demo.expiry-reminder")?.schedule).toBe(
+      EXPIRY_SCHEDULE,
     );
-    expect(registry.get("demo.day-off-open")?.recipientNote).toBe(
-      "可排這家店的排班人員",
+    expect(registry.get("demo.deadline-notice")?.recipientNote).toBe(
+      "表單的填寫人",
     );
   });
 

@@ -1,5 +1,9 @@
 import { useTranslations } from "use-intl";
 
+import {
+  DAYS_BEFORE_MAX_COUNT,
+  SCHEDULE_TIME_OPTIONS,
+} from "@repo/domain/notification-schedule";
 import { NotificationScheduleKind } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
@@ -10,8 +14,6 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import {
-  DAYS_BEFORE_MAX_COUNT,
-  SCHEDULE_TIME_OPTIONS,
   type ScheduleDraft,
   type ScheduleIssues,
 } from "./notification-schedule";

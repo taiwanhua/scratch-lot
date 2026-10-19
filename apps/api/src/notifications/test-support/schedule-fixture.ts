@@ -1,20 +1,21 @@
+import type { Audience } from "@repo/domain/audience";
+
 import type { ProjectNotificationRegistrations } from "../notification-registry.module";
 
 /**
  * 「可調時間」的測試類型(`notification-schedule-settings.test.ts` 以 `jest.mock` 換掉專案的
- * `src/project/notifications.ts`):模擬一個專案宣告了三種寫法、當事人通知與沒宣告的類型。
+ * `src/project/notifications.ts`):模擬專案入口宣告了三種寫法、當事人通知與沒宣告的類型。
  * 只在測試用;真正的專案類型由專案自己登記。
  */
 
-const permissionAudience = (permission: string) =>
-  ({
-    mode: "match",
-    filter: {
-      field: "permission",
-      cond: "in",
-      value: { kind: "static", values: [permission] },
-    },
-  }) as const;
+const permissionAudience = (permission: string): Audience => ({
+  mode: "match",
+  filter: {
+    field: "permission",
+    cond: "in",
+    value: { kind: "static", values: [permission] },
+  },
+});
 
 const template = {
   "zh-TW": () => ({ title: "測試提醒", body: "" }),
@@ -26,26 +27,26 @@ const common = {
   template,
 } as const;
 
-/** 負責人提醒 + 某日期前 N 天(證照到期的寫法)。 */
-export const TEST_LICENSE_EXPIRY = "test.license-expiry";
-/** 負責人提醒 + 每月第 N 天(關帳逾期的寫法)。 */
-export const TEST_CLOSE_OVERDUE = "test.close-overdue";
-/** 負責人提醒 + 逾期後每天(日結逾期的寫法)。 */
-export const TEST_SETTLE_OVERDUE = "test.settle-overdue";
-/** 負責人提醒、沒宣告可調時間(調貨出貨通知)。 */
-export const TEST_TRANSFER_SHIPPED = "test.transfer-shipped";
-/** 當事人通知 + 某日期前 N 天(畫休開放)。 */
-export const TEST_DAY_OFF_OPEN = "test.day-off-open";
-/** 當事人通知、沒宣告可調時間(排班發布):不在通知設定頁。 */
-export const TEST_ROSTER_PUBLISHED = "test.roster-published";
+/** 負責人提醒 + 某日期前 N 天。 */
+export const TEST_EXPIRY_REMINDER = "test.expiry-reminder";
+/** 負責人提醒 + 每月第 N 天。 */
+export const TEST_MONTHLY_REPORT = "test.monthly-report";
+/** 負責人提醒 + 逾期後每天。 */
+export const TEST_OVERDUE_REMINDER = "test.overdue-reminder";
+/** 負責人提醒、沒宣告可調時間。 */
+export const TEST_EVENT_ALERT = "test.event-alert";
+/** 當事人通知 + 某日期前 N 天。 */
+export const TEST_DEADLINE_NOTICE = "test.deadline-notice";
+/** 當事人通知、沒宣告可調時間:不在通知設定頁。 */
+export const TEST_RESULT_NOTICE = "test.result-notice";
 
 export const SCHEDULE_FIXTURE_NOTIFICATIONS: ProjectNotificationRegistrations =
   {
     types: [
       {
         ...common,
-        key: TEST_LICENSE_EXPIRY,
-        name: "證照到期",
+        key: TEST_EXPIRY_REMINDER,
+        name: "到期提醒",
         category: "responsible",
         orgScope: { ref: "event-org", range: "ancestors" },
         defaultAudience: permissionAudience("system.printers.edit"),
@@ -60,8 +61,8 @@ export const SCHEDULE_FIXTURE_NOTIFICATIONS: ProjectNotificationRegistrations =
       },
       {
         ...common,
-        key: TEST_CLOSE_OVERDUE,
-        name: "關帳逾期",
+        key: TEST_MONTHLY_REPORT,
+        name: "月報提醒",
         category: "responsible",
         orgScope: { ref: "tenant", range: "self" },
         defaultAudience: permissionAudience("system.printers.edit"),
@@ -71,8 +72,8 @@ export const SCHEDULE_FIXTURE_NOTIFICATIONS: ProjectNotificationRegistrations =
       },
       {
         ...common,
-        key: TEST_SETTLE_OVERDUE,
-        name: "日結逾期",
+        key: TEST_OVERDUE_REMINDER,
+        name: "逾期提醒",
         category: "responsible",
         orgScope: { ref: "event-org", range: "self" },
         defaultAudience: permissionAudience("system.printers.edit"),
@@ -80,27 +81,27 @@ export const SCHEDULE_FIXTURE_NOTIFICATIONS: ProjectNotificationRegistrations =
       },
       {
         ...common,
-        key: TEST_TRANSFER_SHIPPED,
-        name: "調貨出貨通知",
+        key: TEST_EVENT_ALERT,
+        name: "異常提醒",
         category: "responsible",
         orgScope: { ref: "event-org", range: "self" },
         defaultAudience: permissionAudience("system.printers.edit"),
       },
       {
         ...common,
-        key: TEST_DAY_OFF_OPEN,
-        name: "畫休開放",
+        key: TEST_DEADLINE_NOTICE,
+        name: "截止提醒",
         category: "party",
-        recipientNote: "可排這家店的排班人員",
+        recipientNote: "表單的填寫人",
         schedule: {
           default: { kind: "days-before", daysBefore: [0], time: "09:00" },
-          dateLabel: "開放日",
+          dateLabel: "截止日",
         },
       },
       {
         ...common,
-        key: TEST_ROSTER_PUBLISHED,
-        name: "排班發布",
+        key: TEST_RESULT_NOTICE,
+        name: "結果通知",
         category: "party",
       },
     ],
