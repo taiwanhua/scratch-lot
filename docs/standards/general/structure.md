@@ -96,6 +96,8 @@ packages/domain/src/permission/   → import { ownerModuleKey } from "@repo/doma
 
 入包門檻(三個都要符合):①純函式 / 純型別,不碰 React、Nest、Mongoose ②api 與 admin(或 front)都會用 ③規則只能有一份、兩邊漂移會出事。不符合的留在各自 app;只有一邊用的不進來。
 
+**專案的共用純邏輯放 `packages/domain/src/project/<主題>/`**(子路徑 `@repo/domain/project/<主題>`,出口照 STRUCT-08 補 `exports` / `typesVersions`):入包門檻相同;專案主題可以 import 底座主題,底座主題不得 import 專案主題(domain 的 `eslint.config.js` 擋)。放在 `src/project/` 以外會被底座同步工具當成共用改良。
+
 **同一個主題長到第二個檔時,`index.ts` 只當出口,實作檔不可回指 index**:
 `permission/` 從一個檔變成 `keys.ts` + `matrix.ts` 時,`matrix.ts` 要用 key 工具、`index.ts` 又要
 re-export `matrix.ts`,若 `matrix.ts` 寫 `from "./index"` 就是 `import-x/no-cycle`。規則:
@@ -224,6 +226,7 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 - `app/module-pages.tsx` 組裝 `app/base/module-pages.ts`、`app/project/module-pages.ts` 與 `app/project/page-replacements.ts`。專案新增或替換不改底座清單;表單 options 與四頁來自同一筆 `forms` 宣告。
 - 即時通道的信號類型登記同樣由 `app/module-pages.tsx` 組裝:`app/base/realtime-signals.ts` + `app/project/realtime-signals.ts`(信號類型 → 要 invalidate 的 query key;結尾 `:*` 為前綴登記,如 `badge:*`),類型重複載入即丟錯,`realtimeSignals` 由 `AdminShell` 交給 `RealtimeProvider`。
 - `lib/base/help-registry.ts` 組裝 `md/module-help/base/`、`project/additions/`、`project/replacements/`。原文由 Vite 打包,驗證與查詢放純函式,不以檔案順序決定覆蓋。
+- mock 開發模式的專案模組與假 api 放 `mock/project/mock-world.ts`(`projectMockWorld`),由固定入口 `mock/mock-world.ts` 與底座的 world 合成;GraphQL 操作名不可與底座重複(`mock-world.test.ts`)。
 - `src/test/**` 只豁免所有權方向,仍守 STRUCT-03 與循環依賴檢查。固定入口是個別檔案的例外,不放寬整個 app 層。
 
 ### api
@@ -238,6 +241,17 @@ grep -rnE "20[0-9]{2}-[0-9]{2}-[0-9]{2}|第 [0-9一二三四五六] 段|#[0-9]{2
 - repository providers 與 Nest exports 由登記導出,不匯出 Model provider 或整個 MongooseModule。底座 repository 實作放 `database/base/` 等 leaf 檔,不回指組裝入口;`database.module.ts` 保留既有 repository 的 TypeScript re-export 相容出口。
 - 新專案租戶資料沿用 BaseRepository 與隔離 plugins,同時登記組織歸屬檢查;刪組織與撤銷開通共用 `OrgBusinessDataReader`,不能新增可繞過檢查的 callback。專案資料登記不提供略過隔離的開關。
 - 測試 fixture 只豁免所有權方向,不新增 raw query 或 Mongoose 任意注入的例外;正式來源不得引用 fixture。驗收入口見 TEST-07 / TEST-08。
+
+### 文件、文案、skill 與其他專案內容
+
+專案內容一律放所在目錄的 `project/` 子目錄,與程式同一個形狀;底座同步工具只看路徑分類(`scripts/base-sync/classify.mjs`,規則與 verify 的檢查見 [deployment](../../deployment.md#共用改良回收))。
+
+- **文件**:專案模組文件 `docs/modules/project/<key>.md`、專案 ADR `docs/adr/project/`、專案劇本 `docs/testing/project/`;docs 根層單檔的專案版放 `docs/project/<同名>.md`(品牌值、資料表地圖、環境變數、設計稿節點),入口 `docs/project/README.md`。底座文件(`docs/**` 其餘、`CONTEXT.md`)不寫專案內容,底座模組在專案裡的補充也寫進 `docs/modules/project/`。`docs/tmp/` 除底座的 `dis.md` 外都是專案的。
+- **後台文案**:`packages/i18n/messages/<locale>/project/`(新增與替換,I18N-06);專案不改 `admin.json`。
+- **E2E**:`apps/e2e/src/**/project/` 與 `apps/e2e/fixtures/project/`(TEST-05)。
+- **示範資料**:`apps/db-migrator/seeds/project/demo/`。示範資料是業務資料,不登記進正式 seed(ADR-0002);載入它的指令與 reset 選項是底座機制。
+- **skill**:Claude Code 與 Codex 只掃 `skills/<名稱>/` 一層,不能放進 `project/`;專案 skill 改以名稱區分,放 `.claude/skills/<slug>-<名稱>/` 與 `.agents/skills/<slug>-<名稱>/`(slug = `projectPublic.slug`,兩邊成對)。底座 skill 只有 `module-scaffold`、`project-bootstrap` 與底座 `skills-lock.json` 的外部 skill。
+- **專案元件不進 Storybook**(STRUCT-02)。
 
 ## STRUCT-13 方案設計先核對現況,優先延伸既有機制
 

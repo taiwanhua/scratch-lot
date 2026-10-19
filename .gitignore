@@ -12,7 +12,7 @@ server/dist
 public/dist
 
 # 外部安裝 skill 的 symlink(機器特定,由 `npx skills add` / skills-lock.json 重建)
-# 自製的專案 skill 直接放 .claude/skills/<名稱>/,會正常版控
+# 自製的 skill 直接放 .claude/skills/<名稱>/,會正常版控;專案 skill 命名 <slug>-<名稱>(與 .agents/skills/ 成對)
 .claude/skills/vercel-react-best-practices
 .claude/skills/web-design-guidelines
 .claude/skills/writing-guidelines

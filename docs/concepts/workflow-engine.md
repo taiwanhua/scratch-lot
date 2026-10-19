@@ -218,7 +218,7 @@ api 的落地細節(寫入順序、推進執行器、決定的原子寫入、錯
 
 ## 掛接點:守門與事後動作
 
-專案可以在表單 / 流程的時間點檢查與寫入自己的資料(進貨點收、張數鎖定、記帳),**都在動作的同一個交易內**。登記在固定入口 `apps/api/src/project/form-lifecycles.ts`(`registerFormLifecycle({ moduleKey, formKey?, inject, guards, effects })` 的靜態清單,`formKey` 省略 = 整個模組),由 `database/database.module.ts` 組裝;同一個 (moduleKey, formKey) 重複、同一個模組同時登記整個模組與指定表單、`formKey` 為 `"*"`、名字不認得 → api 與受管定義 CLI 起不來。`inject` 列 handler 要用的 provider token,api 啟動時逐一解析(找不到 → 起不來);因為這個檔在資料層組裝時就載入,列的 class 不能(直接或間接)import `database.module.ts`,否則是循環 import,組裝時報「inject 有空的 token」。
+專案可以在表單 / 流程的時間點檢查與寫入自己的資料(收貨入庫、數量鎖定、記帳),**都在動作的同一個交易內**。登記在固定入口 `apps/api/src/project/form-lifecycles.ts`(`registerFormLifecycle({ moduleKey, formKey?, inject, guards, effects })` 的靜態清單,`formKey` 省略 = 整個模組),由 `database/database.module.ts` 組裝;同一個 (moduleKey, formKey) 重複、同一個模組同時登記整個模組與指定表單、`formKey` 為 `"*"`、名字不認得 → api 與受管定義 CLI 起不來。`inject` 列 handler 要用的 provider token,api 啟動時逐一解析(找不到 → 起不來);因為這個檔在資料層組裝時就載入,列的 class 不能(直接或間接)import `database.module.ts`,否則是循環 import,組裝時報「inject 有空的 token」。
 
 **守門**(8 個):寫入之前呼叫、只能讀,回 `null` = 通過、回 `{ code, message }` = 擋下 → `FORBIDDEN` + `reason` = 專案錯誤碼(大寫英數與底線),這個動作沒有任何寫入;前端(`apps/admin/src/lib/base/errors.ts` 的 `adminErrorText`)把這種認不得的 reason 對到專案字典 `admin.lifecycle.<錯誤碼>`(專案在 `admin.json` 加 `lifecycle` namespace),沒有這個 key 就顯示通用的「沒有權限」。收到:操作者(按下按鈕的人)、提交、這一版的值、關卡、`session`、`get`(只拿得到登記時 `inject` 宣告的 provider)。
 
