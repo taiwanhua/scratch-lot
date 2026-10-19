@@ -36,7 +36,7 @@ const DECISIONS = [
 ] as const;
 
 /**
- * 我的任務動作鈕(Spec 6b §8 零件 `<TaskActions task>`):核准 / 駁回 / 退回修改,理由在跳窗裡填
+ * 我的任務動作鈕(`<TaskActions task>`):核准 / 駁回 / 退回修改,理由在跳窗裡填
  * (駁回 / 退回必填)。送出帶任務的 `editVersion`;api 回 `STEP_CLOSED`(此關已結束或任務已變更)
  * 不是錯誤 —— 提示「此關已結束」並重載。
  */

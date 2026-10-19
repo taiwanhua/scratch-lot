@@ -293,7 +293,7 @@ function flatten(nodes: TreeNode[]): TreeNode[] {
 }
 
 /**
- * 租戶作業(#135:開通租戶 / 轉移擁有者 / 設定可見範圍),對真 Nest + 真 MongoDB(TEST-07)。
+ * 租戶作業(開通租戶 / 轉移擁有者 / 設定可見範圍),對真 Nest + 真 MongoDB(TEST-07)。
  * 夾具沿用 auth / permission 的 test-support;開通後的最終狀態一律回資料庫查,不信回傳值。
  *
  * 操作者:
@@ -301,7 +301,7 @@ function flatten(nodes: TreeNode[]): TreeNode[] {
  *   rootView   根組織但只有 org-manager.view(驗 @RequirePermission)
  *   tenantOps  既有租戶 + 同樣三筆權限(驗「非根組織即使持權限也拒」)
  */
-describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
+describe("租戶作業(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let mail: RecordingMailService;
 
@@ -462,7 +462,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
     );
   }
 
-  /** 開通一個租戶並回帳號與 payload(撤銷開通的測試前置都從這裡開始,#374)。 */
+  /** 開通一個租戶並回帳號與 payload(撤銷開通的測試前置都從這裡開始)。 */
   async function provisionOne(prefix: string) {
     const account = nextAccount(prefix);
     const result = await provision({ adminAccount: account });
@@ -608,7 +608,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
     });
     tenantManagerToken = await login(tenantManagerAccount);
 
-    // 只有使用者管理的檢視權(完全沒有組織管理的權限):使用者管理頁的左樹也要組織樹(#139)
+    // 只有使用者管理的檢視權(完全沒有組織管理的權限):使用者管理頁的左樹也要組織樹
     const userManagerOnlyAccount = nextAccount("user-manager-only");
     const userManagerOnlyId = await createUser(api.connection, {
       account: userManagerOnlyAccount,
@@ -689,7 +689,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  describe("orgTree / org:讀取權限多選一與 OrgNode.ownerUserId(#139 回饋)", () => {
+  describe("orgTree / org:讀取權限多選一與 OrgNode.ownerUserId", () => {
     it("只有 system.user-manager.view 也讀得到組織樹與單筆組織", async () => {
       const tree = await api.graphql<OrgTreeData>(
         ORG_TREE,
@@ -773,7 +773,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
       expect(String(org?.parentId)).toBe(String(rootOrgId));
       expect(org?.ancestors.map(String)).toEqual([String(rootOrgId)]);
 
-      // 2. 角色副本:沒有 key,以 settings.templateKey 標記來源(ADR-0009,#136 的擁有者保護靠它)
+      // 2. 角色副本:沒有 key,以 settings.templateKey 標記來源(ADR-0009,使用者管理的擁有者保護靠它)
       const role = await roleRow(payload.roleId);
       expect(role?.key).toBeUndefined();
       expect(role?.isSystem).toBe(false);
@@ -947,7 +947,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
       expect(await userRowByAccount(account)).toBeNull();
     });
 
-    it("站在根組織、但管理範圍只到某個租戶:FORBIDDEN(#187:不讓 ownerUserId 靜默漏寫)", async () => {
+    it("站在根組織、但管理範圍只到某個租戶:FORBIDDEN(不讓 ownerUserId 靜默漏寫)", async () => {
       // 刻意造一個怪設定:人在根組織,卻只持有擁有組織 = 既有租戶的角色 →
       // 管理範圍不是整個平台,租戶作業當場拒絕,而不是建完租戶卻寫不進擁有者
       const account = nextAccount("root-narrow-scope");
@@ -1042,7 +1042,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  describe("revokeTenantProvision:撤銷開通(#374,開通的反向動作)", () => {
+  describe("revokeTenantProvision:撤銷開通(開通的反向動作)", () => {
     it("撤銷後三樣都不見(硬刪除)、關聯不留孤兒,同一組帳號可以重新開通", async () => {
       const { account, payload } = await provisionOne("revoke-happy");
 
@@ -1439,7 +1439,7 @@ describe("租戶作業(#135,GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  describe("可見性開關與治理頁的分工(#187 / ADR-0005「管理範圍與可見範圍的分工」)", () => {
+  describe("可見性開關與治理頁的分工(ADR-0005「管理範圍與可見範圍的分工」)", () => {
     it("開關為 own 時:部門管理員照樣看得到子部門的樹節點與使用者(治理頁吃管理範圍)", async () => {
       // 這位管理員的角色擁有組織 = 既有部門 → 管理範圍 = 既有部門子樹,與開關無關
       const before = await orgRow(legacyTenantId);

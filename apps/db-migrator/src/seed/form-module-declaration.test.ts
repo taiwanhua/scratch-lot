@@ -21,7 +21,7 @@ function permissionKeysOf(spec: FormModuleSpec): string[] {
   );
 }
 
-describe("表單模組宣告的頁內權限(B9a)", () => {
+describe("表單模組宣告的頁內權限", () => {
   it("沒宣告 → 只有固定四條", () => {
     expect(permissionKeysOf(SPEC)).toEqual([
       "store.view",
@@ -80,7 +80,7 @@ function mainNode(spec: FormModuleSpec) {
   );
 }
 
-describe("表單模組依表單分開新增權限(B9b)的宣告", () => {
+describe("表單模組依表單分開新增權限的宣告", () => {
   it("沒宣告 → 主節點不帶 perFormCreate(落庫為 false),固定四條照舊", () => {
     expect(mainNode(SPEC)?.perFormCreate).toBeUndefined();
     expect(permissionKeysOf(SPEC)).toContain("store.create");

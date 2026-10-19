@@ -81,7 +81,7 @@ function toObjectId(value: string, field: string): Types.ObjectId {
  * 對它一律回 null(`plugins/tenant-scope.plugin.ts` 的 `applyDataScope`)——
  * 這就是 `permission-scenarios.md` 劇本 3 要證明的「規則機制不介入」。
  *
- * 唯一多做的一件事是 `abilities`:把「這位操作者對這一筆能做什麼」算好給前端(#321 只讀不重算)。
+ * 唯一多做的一件事是 `abilities`:把「這位操作者對這一筆能做什麼」算好給前端(前端只讀不重算)。
  */
 @Injectable()
 export class DemoItemsTwoService {

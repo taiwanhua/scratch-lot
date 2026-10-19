@@ -58,7 +58,7 @@ export interface SubmitContent {
 }
 
 /**
- * 綁流程時的送出(Spec 6b §6「送出(綁流程時)」),掛在 6a 的 `submitFormSubmission` 裡:
+ * 綁流程時的送出(見 `docs/modules/workflows.md`「送出(綁流程時)的寫入順序」),掛在表單引擎的 `submitFormSubmission` 裡:
  *
  * 1. 6a 的驗證與重算(呼叫端)→ 送出時檢查(`route`)→ 新修訂號 N
  * 2. 建實例:直接 `running`、`activeStepKeys = [startStepKey]`、`history: started`
@@ -114,7 +114,7 @@ export class WorkflowSubmitService {
   }
 
   /**
-   * 第 1 步的送出時檢查(Spec §3):這筆提交綁的表單版本 + 現在綁的流程目前發布版搭不搭。
+   * 第 1 步的送出時檢查:這筆提交綁的表單版本 + 現在綁的流程目前發布版搭不搭。
    * 擋下 → `FORBIDDEN` + reason(`WORKFLOW_REMOVED` / `WORKFLOW_UNPUBLISHED` / `WORKFLOW_MISCONFIGURED`)。
    */
   async route(record: SubmissionRecord): Promise<SubmitRoute> {

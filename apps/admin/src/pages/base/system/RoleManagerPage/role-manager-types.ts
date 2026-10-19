@@ -40,7 +40,7 @@ export const isRoleDetailTab = (value: string): value is RoleDetailTab =>
   value === "matrix" || value === "users";
 
 /**
- * 某一列**實際**顯示哪些動作 = 操作者的權限 × 這個角色的種類規則(#261)。
+ * 某一列**實際**顯示哪些動作 = 操作者的權限 × 這個角色的種類規則。
  *
  * 兩層各守各的,前端不重算種類規則:`ability` 來自 `usePermissions`(有沒有那個權限 key),
  * `role.abilities` 由 api 依角色種類與操作者算好(`docs/modules/role-manager.md` 規則表)。

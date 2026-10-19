@@ -106,7 +106,7 @@ export class WorkflowDefinitionInput {
   checkFormKey?: string | null;
 
   /**
-   * 整個流程的知會對象(B17;`AssigneeSource` 的 JSON,來源同審核者三種):單據完成、被駁回、被作廢時通知。
+   * 整個流程的知會對象(`AssigneeSource` 的 JSON,來源同審核者三種):單據完成、被駁回、被作廢時通知。
    * 存草稿:缺席 = 不動已存的值、`null` = 清掉。關卡的知會在各關的 `cc`。
    */
   @Field(() => GraphQLJSONObject, { nullable: true })

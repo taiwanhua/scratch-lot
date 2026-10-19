@@ -1,4 +1,4 @@
-# 使用者管理(#136;api 正本 apps/api/src/users/、規則正本 docs/modules/user-manager.md)。
+# 使用者管理(api 正本 apps/api/src/users/、規則正本 docs/modules/user-manager.md)。
 # 清單範圍 = 選中組織的子樹 ∩ 操作者可見組織集(ADR-0005);不給 orgId 即攤開整個可見範圍。
 # 每列的 roles.outOfScope = 「組織外」標記(使用者的所屬組織皆不在該角色擁有組織的子樹內,ADR-0003)。
 
@@ -130,7 +130,7 @@ mutation SetUserOrgs($input: SetUserOrgsInput!) {
 
 # 全量覆蓋:只能給擁有組織在操作者管理範圍內的角色(ROLE_OUT_OF_REACH);
 # 使用者不在角色擁有組織的子樹內 → USER_NOT_ELIGIBLE + extensions.roleId / ownerOrgName
-# (#261 起與角色頁的 grantRoleUsers 同一個 helper 與同一個碼,不再是 VALIDATION_FAILED);
+# (與角色頁的 grantRoleUsers 同一個 helper 與同一個碼,不再是 VALIDATION_FAILED);
 # 操作者觸及不到的既有授予不動;擁有者的租戶管理員授予不可解除(OWNER_PROTECTED)。
 mutation AssignUserRoles($input: AssignUserRolesInput!) {
   assignUserRoles(input: $input) {

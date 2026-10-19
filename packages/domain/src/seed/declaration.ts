@@ -27,7 +27,7 @@ export interface SeedDocumentSet {
   /**
    * 「初始 seed 值的欄位」:建立時寫入宣告值,之後**有值就永不覆寫**(由人在系統內管理,如 enabled 開關)。
    * 唯一例外:既有文件上**這一欄根本不存在**時補寫初值 — 讓「新增一個初始值欄位」能在已種過的環境落地
-   * (#288 的 `modules.icon`);清成 `null` 也算有值,不會被翻回宣告值。
+   * (如 `modules.icon`);清成 `null` 也算有值,不會被翻回宣告值。
    * 其餘欄位為「每次都 seed 的欄位」,每次同步回宣告值。未指定時採 runner 預設(`["enabled"]`)。
    */
   initialSeedValueFields?: string[];

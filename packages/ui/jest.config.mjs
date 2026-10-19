@@ -1,5 +1,5 @@
 /**
- * `packages/ui` 的 jest 設定(#197 從 package.json 的 `jest` 欄搬出來,才放得下註解)。
+ * `packages/ui` 的 jest 設定(從 package.json 的 `jest` 欄搬出來,才放得下註解)。
  *
  * - preset 用 `browser-esm`(不是 `browser`):`react-markdown` / `remark-gfm` 只出 ESM,
  *   CJS 模式的 ts-jest 一 require 就是 `Unexpected token 'export'`。執行時需

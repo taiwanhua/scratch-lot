@@ -34,7 +34,7 @@ export interface GuardInput {
   stepKey?: string | null;
 }
 
-/** `runApproveGuard` 的輸入:核准(某人按核准、批次核准的每一筆、B5 自動通過)都經它。 */
+/** `runApproveGuard` 的輸入:核准(某人按核准、批次核准的每一筆、自動通過)都經它。 */
 export interface ApproveGuardInput {
   operator: OperatorContext;
   submission: LifecycleSubmission;
@@ -94,7 +94,7 @@ function sessionOf(what: string): ClientSession {
  * - `guard`:動作的交易內、寫入之前呼叫;沒登記 → 通過。擋下 → 拋 `lifecycleBlockedError`(交易回復,
  *   此時還沒有任何寫入)。守門的例外照樣往外拋(TX-04:不吞)
  * - `runApproveGuard` / `checkApproveGuard`:`beforeApprove` 的入口(某人按核准、批次核准 → 擋下拋錯;
- *   B5 自動通過 → 擋下以回傳值表示,留給他照常審核)
+ *   自動通過 → 擋下以回傳值表示,留給他照常審核)
  * - `emit`:狀態改變後在同一個交易內呼叫事後動作(系統身分);拋錯往外拋 = 整個動作回復
  */
 @Injectable()
@@ -178,7 +178,7 @@ export class FormLifecycleService implements OnModuleInit {
   }
 
   /**
-   * 同一個 `beforeApprove`,但以回傳值表示擋下(B5 自動通過:擋下不是錯誤,是「停在這一關等人處理」,
+   * 同一個 `beforeApprove`,但以回傳值表示擋下(自動通過:擋下不是錯誤,是「停在這一關等人處理」,
    * 推進照常寫入)。
    */
   checkApproveGuard(input: ApproveGuardInput): Promise<GuardBlocked | null> {

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { type GraphqlResponse, graphql, graphqlOk } from "./graphql";
 
 /**
- * 劇本 20–29(審核流程、代理、知會、批次核准、通知)的前置操作。正本是 `packages/graphql/src/documents/workflows.graphql`、
+ * 劇本 20–29(審核流程、代理、知會、批次核准、通知)的前置操作。正本是 `packages/graphql/src/documents/base/workflows.graphql`、
  * `apply-center.graphql`、`forms.graphql`、`form-submissions.graphql`、`orgs.graphql`,
  * 這裡只抄 e2e 用到的欄位;前置一律走 api(TEST-11)。
  */
@@ -172,7 +172,7 @@ export type StepJson = Record<string, unknown>;
 export interface WorkflowDefinitionJson {
   steps: StepJson[];
   edges: { from: string; to: string }[] | null;
-  /** 整個流程的知會對象(B17;單據完成 / 駁回 / 作廢時通知);省略 = 不知會。 */
+  /** 整個流程的知會對象(單據完成 / 駁回 / 作廢時通知);省略 = 不知會。 */
   cc?: Record<string, unknown> | null;
 }
 

@@ -46,7 +46,7 @@ import {
 
 /** 開通出來的角色副本沿用模板名稱;角色清單上另掛「預設角色」標籤。 */
 const TENANT_ADMIN_ROLE_NAME = "租戶管理員";
-/** 所屬組織彈窗裡鎖住節點的說明(`admin.userManager.orgPicker.ownerLocked`,#426)。 */
+/** 所屬組織彈窗裡鎖住節點的說明(`admin.userManager.orgPicker.ownerLocked`)。 */
 const OWNER_LOCKED_HINT =
   "頂層組織的擁有者不能被移出頂層組織;其他組織可自由勾選或取消。";
 /** 分配使用者那一列的標籤(`admin.roleManager.users.ownerProtected`)。 */

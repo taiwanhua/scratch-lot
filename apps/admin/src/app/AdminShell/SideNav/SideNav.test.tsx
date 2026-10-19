@@ -11,7 +11,7 @@ import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
 /**
- * 側欄收合(#289):64px 圖示列、群組 flyout、狀態記憶,以及展開態改畫模組圖示。
+ * 側欄收合:64px 圖示列、群組 flyout、狀態記憶,以及展開態改畫模組圖示。
  * 樹的組法與路由導向在 `AdminShell.test.tsx`,這裡只驗收合這條線。
  */
 

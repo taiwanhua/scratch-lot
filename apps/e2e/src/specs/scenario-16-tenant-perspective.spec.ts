@@ -31,7 +31,7 @@ import {
 } from "../fixtures/ui";
 
 /**
- * 劇本 16 — 租戶視角(+ #374 撤銷開通)
+ * 劇本 16 — 租戶視角(+ 撤銷開通)
  * 正本:`docs/testing/permission-scenarios.md`「劇本 16」與該節的「開錯可撤銷」附註;
  * 開通 / 撤銷的規則見 ADR-0009、`docs/modules/org-manager.md`「開通租戶」「撤銷開通」。
  * 帳號:root 開通與撤銷(畫面)、新租戶的首任管理員登入(畫面)。

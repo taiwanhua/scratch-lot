@@ -19,7 +19,7 @@ export interface RecordedSignature {
  */
 export class RecordingStorageService extends StorageService {
   readonly signed: RecordedSignature[] = [];
-  /** 被刪掉的物件路徑(#161 的換圖清理;沒有真的 bucket,只記下來供測試斷言)。 */
+  /** 被刪掉的物件路徑(換圖清理;沒有真的 bucket,只記下來供測試斷言)。 */
   readonly deleted: string[] = [];
   /** 被複製的物件(`複製為新單` 的附件;只記下來供測試斷言)。 */
   readonly copied: { from: string; to: string }[] = [];

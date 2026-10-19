@@ -26,7 +26,7 @@ export interface ModuleIconFieldProps {
 }
 
 /**
- * 右面板的「圖示」欄位(#289;正本 `docs/modules/module-manager.md`「側欄圖示」)。
+ * 右面板的「圖示」欄位(正本 `docs/modules/module-manager.md`「側欄圖示」)。
  *
  * 可改時用 `@repo/ui/module-icon-picker`,選了就送出 —— 值域由 ui 的白名單登錄表決定,
  * 這一頁不認得任何圖示。29 個短詞的中英文在 `admin.moduleIcons.*`;
@@ -70,7 +70,7 @@ export const ModuleIconField = ({
         label={t("icon")}
         /* MUI 的 Select 把 `aria-labelledby` 指到「標籤 + 目前顯示的值」兩個節點,
            所以不給 `aria-label` 時這顆 combobox 的名稱會變成「圖示 使用者」 ——
-           會跟著選到的圖示變。明給一份穩定的名稱(#297) */
+           會跟著選到的圖示變。明給一份穩定的名稱 */
         aria-label={t("icon")}
         emptyLabel={t("iconEmpty")}
         labelOf={labelOf}

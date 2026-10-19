@@ -1,5 +1,33 @@
 # 本輪底座元件:Figma 草稿與搬回底座的方法
 
+> **底座規格已退場**:腳本、Figma 元件說明與 `nodes.md` 裡的「底座規格 N」指的是已刪除的 `docs/tmp/spec-base-round.md`(歷史查 git)。現況對照:3.0 人員條件 → `docs/modules/data-scope.md`、`docs/concepts/workflow-engine.md`;3.x 流程 / 表單 → `docs/concepts/workflow-engine.md`、`docs/modules/workflows.md`、`docs/modules/forms.md`;B7 / 第 5 章通知 → `docs/modules/notification-settings.md`;B8 / 第 6 章列印 → `docs/modules/printers.md`;10.1 → REACT-14;10.2–10.12 → `@repo/ui` 與 `apps/admin/src/components/base/` 的元件說明、`docs/concepts/frontend-architecture.md`;10.7 標籤色票(尚未實作)→ 專案規格第 18.5 節;10.13 → FIGMA-11~17。BS 編號的畫面名稱見下表,節點 id 見 `nodes.md`;設計稿與現況的差異見 `docs/tmp/project-dis.md`「Figma 待修清單」。
+
+| 編號               | 畫面                                                                  |
+| ------------------ | --------------------------------------------------------------------- |
+| BS-01              | 資料範圍:新規則卡(套用對象 + 條件組合)                                |
+| BS-02a / c         | 流程設計器:審核者來源改人員條件(客製 / 共用流程)                      |
+| BS-02b / d         | 審核者條件對話框(客製 / 共用流程)                                     |
+| BS-03              | 流程設計器:每一關跳過、自動通過、逾時提醒、知會                       |
+| BS-04a / b         | 表單模組 [+ 新增] 只列有新增權限的表單 / 表單發布成功提示授予新增權限 |
+| BS-05              | 個人設定:偏好分頁(只有通知管道開關)                                   |
+| BS-06a / b         | 個人設定:代理人分頁、新增代理                                         |
+| BS-07a / b         | 申請中心「待我審核」批次核准、核准結果                                |
+| BS-08              | 通知鈴、通知清單、通知提示                                            |
+| BS-09a / b         | 通知設定頁、編輯收件人                                                |
+| BS-10a / b         | 印表機管理:印表機分頁、新增代理程式(配對碼)                           |
+| BS-11              | 列印按鈕各狀態、58mm 版面零件示範                                     |
+| BS-12              | 表單設計器:分區的收合設定                                             |
+| BS-13              | 欄位管理:選項顏色(色票)                                               |
+| BS-14              | 側欄計數(展開 / 收合)                                                 |
+| BS-15a / b         | 頁內分頁 PageTabs + 網址參數 / 放不下時橫向捲動                       |
+| BS-16              | Stepper 各狀態                                                        |
+| BS-17              | 印表機管理:新增 / 編輯印表機                                          |
+| BS-18a / b / c / d | 印表機管理:測試列印結果(成功 / 缺紙 / 離線)/ 測試頁                   |
+| BS-19 / BS-20      | 印表機管理:代理程式分頁 / 列印紀錄分頁                                |
+| BS-21              | 表單設計器:「允許存草稿」開關                                         |
+| BS-22              | ScheduleTimeline 時間軸(容器模式)                                     |
+| BS-23              | MonthCalendar 多選日期與日期格角標                                    |
+
 ## 現況
 
 - 本輪底座新元件與參考畫面先畫在 [scratch-lot Screens](https://www.figma.com/design/sXOJkIX53eBMUyDE8yYUJm) 的頁「Base Draft / 本輪底座元件」(`41:5914`)。節點清單見 `nodes.md`。

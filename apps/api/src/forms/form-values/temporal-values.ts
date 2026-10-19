@@ -8,7 +8,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 日期 / 日期時間的存法(Spec 6a §5「值的存法」):兩者都是時點,Mongo 存 `Date`(和 `createdAt` 同型別)。
+ * 日期 / 日期時間的存法:兩者都是時點,Mongo 存 `Date`(和 `createdAt` 同型別)。
  *
  * - domain 的正規化 / 計算 / 摘要一律回 ISO 字串(JSON 形,前後端共用);api 寫進 Mongo 前在這裡換成 `Date`:
  *   `SubmissionValuesService` 的結果(`values`、`revisions[].values` 都由它產生)與摘要槽 `summary.date`

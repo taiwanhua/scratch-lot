@@ -20,7 +20,7 @@ export interface DecisionDialogProps {
 }
 
 /**
- * 審核決定的確認跳窗:核准的理由選填;**駁回與退回修改的理由必填**(Spec 6b §1「審核決定」)。
+ * 審核決定的確認跳窗:核准的理由選填;**駁回與退回修改的理由必填**。
  */
 export const DecisionDialog = ({
   decision,

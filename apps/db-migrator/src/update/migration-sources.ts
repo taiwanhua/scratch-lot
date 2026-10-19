@@ -25,7 +25,7 @@ export class MigrationSourceError extends Error {
   override name = "MigrationSourceError";
 }
 
-/** migration 模組的 export(函式簽章見規格;這裡只知道它們是函式)。 */
+/** migration 模組的 export(這裡只知道它們是函式,簽章由各 migration 自己定義)。 */
 export interface MigrationModule {
   up?: unknown;
   down?: unknown;

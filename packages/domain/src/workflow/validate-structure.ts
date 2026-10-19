@@ -2,7 +2,7 @@ import type { WorkflowIssueCollector } from "./issues";
 import { type StepDef, type WorkflowEdge, isJoinStep } from "./types";
 
 /**
- * 流程的**結構**檢查(Spec §5「流程結構」;只在版本有 `edges` 時跑,全部是錯誤):
+ * 流程的**結構**檢查(只在版本有 `edges` 時跑,全部是錯誤):
  * 6b 允許的形狀 = 直線上可以有多組「分流 → 分支 → 匯合」,不可巢狀、不可交叉、不可迴圈,
  * 審核關卡入線 ≤ 1、匯合入線 ≥ 2 且只接一個審核關卡或結束,分流與匯合明確配對。
  */

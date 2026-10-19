@@ -25,7 +25,7 @@ const fields = [
 const keysOf = (items: readonly { key: string }[]) =>
   items.map((item) => item.key);
 
-describe("表達式選擇器:根節點依用途過濾(Spec 6a §5 表 B)", () => {
+describe("表達式選擇器:根節點依用途過濾", () => {
   it("條件的根:只有回是 / 否的運算與是 / 否欄位;常數與系統值不能單獨當根", () => {
     const root = positionOptionsOf(
       {
@@ -178,7 +178,7 @@ const LEAVE_OPTIONS = {
   ],
 };
 
-describe("表達式選擇器:選項欄公式的根是「選項」(表 B)", () => {
+describe("表達式選擇器:選項欄公式的根是「選項」", () => {
   const leave = field("demo.form", "假別", "select", {
     options: LEAVE_OPTIONS,
   });

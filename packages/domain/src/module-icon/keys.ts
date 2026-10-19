@@ -1,7 +1,7 @@
 /**
  * 側欄模組圖示的 key 白名單(前後端同一份,STRUCT-07;規則正本:`docs/modules/module-manager.md`)。
  *
- * 為什麼是白名單而不是自由字串:圖示最終要對應到 ui 的登錄表(#287,`@repo/ui` 的
+ * 為什麼是白名單而不是自由字串:圖示最終要對應到 ui 的登錄表(`@repo/ui` 的
  * `moduleIcons`),登錄表以本檔為**型別來源** — 兩邊都吃 `ModuleIconKey`,
  * 少一個就 `check-types` 紅,不會出現「api 存得進去、admin 畫不出來」的值。
  *

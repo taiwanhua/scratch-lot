@@ -127,7 +127,7 @@ export const NotificationSettingsPage = () => {
           flexDirection: "column",
         }}
       >
-        {/* 捲動責任在 Table 自己的容器(#299),這層只把剩下的高度給它 */}
+        {/* 捲動責任在 Table 自己的容器,這層只把剩下的高度給它 */}
         <Box sx={{ flex: 1, minHeight: 0 }}>
           <NotificationSettingsTable
             rows={data.rows}

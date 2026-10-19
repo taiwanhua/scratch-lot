@@ -1,6 +1,6 @@
 import type { Layout, LayoutSection } from "./types";
 
-/** 版面換算(Spec §5 Layout):12 格制,桌機用 `span`、平板 `span × 2` 封頂 12、手機一律 12。 */
+/** 版面換算:12 格制,桌機用 `span`、平板 `span × 2` 封頂 12、手機一律 12。 */
 export const LAYOUT_COLUMNS = 12;
 
 export const LAYOUT_BREAKPOINTS = ["desktop", "tablet", "mobile"] as const;

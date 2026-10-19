@@ -18,7 +18,7 @@ import { FORMS_PERMISSIONS } from "./forms-permissions";
 import { useFormsPageData } from "./useFormsPageData";
 
 /**
- * 表單管理(模組 key `system.forms`,正本 `docs/modules/forms.md`;Spec 6a §8 畫面 1–5)。
+ * 表單管理(模組 key `system.forms`,正本 `docs/modules/forms.md`)。
  * 左欄是表單清單,右欄是選中表單的設計器與版本面板;分派、以此為基底建新表單、編輯名稱是右欄的跳窗。
  *
  * **不是**根組織專屬:root 管共用表單,租戶管理員管自己的客製表單、開關分派來的表單。

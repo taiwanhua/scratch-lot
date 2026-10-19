@@ -27,11 +27,11 @@ import { useTabLabelRenderer } from "./useTabLabelRenderer";
 const dialogSchema = z.enum(["none", "revisions"]).default("none");
 
 /**
- * 表單模組詳情頁(預設組裝;Spec 6a §8 畫面 11)。網址 `/<模組>/view-page/<id>`。
+ * 表單模組詳情頁(預設組裝)。網址 `/<模組>/view-page/<id>`。
  * 頁籤 / 標題 = 模組層模板(表單的 `tabLabelTemplate` 可覆寫)以這一筆的值即時算(`useTabLabelRenderer`);
  * 編輯 / 刪除依 api 的 `abilities`(已含權限)與「有沒有綁編輯頁」相乘;「修訂紀錄」在刪除左邊,
  * 點開跳窗看表單 / 版本 / 狀態 / 建立者與修訂清單(頁面主體只留標題列與表單內容)。
- * 走過流程的單(`currentInstanceId` 有值)在詳情下方掛審核區塊(Spec 6b §8 畫面 10;客製頁自己放)。
+ * 走過流程的單(`currentInstanceId` 有值)在詳情下方掛審核區塊(客製頁自己放)。
  */
 export const FormViewPage = ({ module, routeParam }: ModulePageProps) => {
   const moduleKey = formModuleKeyOf(module.key);

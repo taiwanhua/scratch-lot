@@ -13,7 +13,7 @@ import {
 import { createRole } from "../permission/test-support/fixtures";
 
 /**
- * 角色管理(#203)三個測試檔共用的世界與夾具(TEST-07;分檔方式同 admin 的
+ * 角色管理三個測試檔共用的世界與夾具(TEST-07;分檔方式同 admin 的
  * `<page>-test-support.ts` 慣例:共用的 world / 夾具 / helper 抽成 kebab 命名的非元件檔)。
  *
  * 組織樹(root 為 seed 建的根組織):
@@ -64,7 +64,7 @@ export const TENANT_WILDCARD_KEYS = TENANT_MODULE_KEYS.map((key) => `${key}.*`);
 
 /**
  * 根組織專屬模組(`isRootOnly`,ADR-0009):模板扣掉的就是這三個,
- * 所以它們正好是「預設角色天花板之外」的例子(#283)。
+ * 所以它們正好是「預設角色天花板之外」的例子。
  */
 export const ROOT_ONLY_MODULE_KEYS = [
   "system.org-manager.tenant-ops",

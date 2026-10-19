@@ -50,7 +50,7 @@ type DetailTab = "design" | "versions";
 type OpenDialog = "fork" | "assign" | "listColumns" | null;
 
 /**
- * 表單管理右欄(Spec 6a §8 畫面 1 的右側):表單資料、設計 / 版本兩個頁籤,以及
+ * 表單管理右欄:表單資料、設計 / 版本兩個頁籤,以及
  * 編輯名稱與頁籤模板、以此為基底建新表單、分派租戶與所屬模組的列表欄位配置(root)、在本組織啟用與流程綁定(租戶)。
  * 按鈕一律依 api 的 `form.abilities`(已含權限與「是不是自己的表單 / 站在哪裡」)。
  */
@@ -71,7 +71,7 @@ export const FormDetailPanel = ({
   const [viewing, setViewing] = useState<number | null>(null);
   const { hasPermission } = usePermissions();
   // 流程綁定是租戶自己的設定(root 沒有表單綁定,api 回 TENANT_ONLY),且只對本組織**啟用中**的表單設
-  // (Spec 6b §8 畫面 7「每張啟用表單一個下拉」):租戶視角才有 `tenantEnabled`,停用的不給綁
+  // (每張啟用表單一個下拉):租戶視角才有 `tenantEnabled`,停用的不給綁
   const canBindWorkflow = form.tenantEnabled === true;
   // 列表欄位配置是模組層的設定(`modules.settings.list`),只有站在根組織、能改表單的人設(api 另守 ROOT_ONLY)
   const canEditListColumns =

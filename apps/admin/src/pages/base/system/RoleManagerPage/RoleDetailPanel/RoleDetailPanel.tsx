@@ -70,7 +70,7 @@ export const RoleDetailPanel = ({
             {activeTab === "matrix" ? (
               <PermissionMatrixTab
                 roleName={role.name}
-                // 種子角色的矩陣唯讀(#261):權限有、但這個角色不給編 —
+                // 種子角色的矩陣唯讀:權限有、但這個角色不給編 —
                 // 兩層相乘的結果由 `rowAbilityOf` 算,前端不重算種類規則
                 canEdit={rowAbilityOf(ability, role).canEditMatrix}
                 isSeedRole={role.kind === RoleKind.System}

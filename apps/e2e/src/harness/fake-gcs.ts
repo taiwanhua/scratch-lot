@@ -17,7 +17,7 @@ import {
 import { log, run, waitUntil } from "./process";
 
 /**
- * fake GCS 容器(#402):劇本 11(封面 / 附件)與 15(側欄商標)要真的上傳、讀回檔案。
+ * fake GCS 容器:劇本 11(封面 / 附件)與 15(側欄商標)要真的上傳、讀回檔案。
  *
  * - 容器定義在 `apps/e2e/docker-compose.yml`,本機與 CI 都由這裡 `up -d` / `down`(同一份)。
  * - **本機沒有 Docker** → 不起容器、api 維持記錄用 adapter,這兩條 spec 讀狀態檔後 `test.skip`,

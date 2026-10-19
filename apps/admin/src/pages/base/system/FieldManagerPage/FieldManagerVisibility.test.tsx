@@ -14,7 +14,7 @@ import {
 } from "./field-manager-test-support";
 
 /**
- * 可見範圍(#264 規則表):**全域 + 上層繼承 + 自己 + 可見範圍內的下層;
+ * 可見範圍(規則表正本 `docs/modules/field-manager.md`):**全域 + 上層繼承 + 自己 + 可見範圍內的下層;
  * 只能編輯 / 停用自己這一層加的**。
  *
  * 夾具的組織樹:好食公司(上層)─ **南港店(當前組織)** ─ 子南港店。
@@ -102,7 +102,7 @@ describe("欄位管理頁:上層繼承與可見範圍內的下層", () => {
   });
 
   it("硬送上層組織的選項時 api 回 NOT_OWNER,畫面講「別的組織加的」", async () => {
-    // 前端已經把這一列鎖住,這條驗的是 fail-closed 在後端時的文案分流(#264)
+    // 前端已經把這一列鎖住,這條驗的是 fail-closed 在後端時的文案分流
     const { user: actor } = renderPage({
       world: { failures: { SetFieldEnabled: "FORBIDDEN" } },
     });

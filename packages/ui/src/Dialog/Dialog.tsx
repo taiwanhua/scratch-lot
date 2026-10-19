@@ -33,7 +33,7 @@ export const Dialog = ({ title, actions, children, ...rest }: DialogProps) => (
       sx={{
         // MUI 自己有一條 `.MuiDialogTitle-root + .MuiDialogContent-root { padding-top: 0 }`,
         // 兩個 class 的特異度贏過 `sx` 的單一 class,上內距會被吃成 0;內容區又是
-        // `overflow-y: auto`,於是第一個 TextField 的浮動標籤被標題壓住兼裁掉(#186 ①)。
+        // `overflow-y: auto`,於是第一個 TextField 的浮動標籤被標題壓住兼裁掉。
         // `&&` 把選擇器變成兩個 class,特異度打平後由後注入的 `sx` 勝出,間距節奏才留得住。
         // 沒有動作列時(按鈕放在內文裡,如列表欄位配置的編輯器),下內距補成與動作列相同的 20,
         // 最後一排按鈕才不會貼齊彈窗底邊

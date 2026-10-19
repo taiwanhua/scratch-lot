@@ -14,7 +14,7 @@ type FieldRecord = Persisted<FieldDocument>;
 const GLOBAL_DEPTH = -1;
 
 /**
- * 欄位選項的「看得到什麼、改得動什麼」(規則表正本 `docs/modules/field-manager.md`,#264):
+ * 欄位選項的「看得到什麼、改得動什麼」(規則表正本 `docs/modules/field-manager.md`):
  *
  * **看得到** = 全域 + 我的上層(一路到租戶頂層,**不受可見性開關影響**)+ 自己
  * + 我可見範圍內的下層;**只能編輯 / 停用自己這一層加的**。
@@ -196,7 +196,7 @@ function depthOf(field: FieldRecord, owners: OwnerOrgs): number {
 
 /**
  * 一筆選項的對外形狀:`ownerOrg` / `isOwn` / `canEdit` / `canToggleEnabled`
- * 全由 api 依操作者算好,前端只讀不再自己推(GQL-07;#252 的 `isRootPerspective` 近似法退場)。
+ * 全由 api 依操作者算好,前端只讀不再自己推(GQL-07;原本的 `isRootPerspective` 近似法退場)。
  */
 export function toFieldModel(
   field: FieldRecord,

@@ -56,14 +56,14 @@ const AUDIT_ACTIONS = {
 
 /**
  * 前置檢查的豁免名單(`orgContentReasons`):**這次動作會一併抹掉的東西**,因此不算「還有別的資料」。
- * 目前唯一的使用者是撤銷開通(#374):擁有者使用者 + 租戶管理員副本。
+ * 目前唯一的使用者是撤銷開通:擁有者使用者 + 租戶管理員副本。
  */
 export interface OrgContentExemptions {
   userIds?: Types.ObjectId[];
   roleIds?: Types.ObjectId[];
 }
 
-/** 編輯可動的欄位(擁有者屬租戶作業 #135、可見範圍開關另有 mutation,都不在此)。 */
+/** 編輯可動的欄位(擁有者屬租戶作業、可見範圍開關另有 mutation,都不在此)。 */
 type EditablePath = "name" | "description" | "logoPath" | "slug";
 
 /** 一個欄位的變動;`value` / `previous` 為 undefined 代表「沒有值 / 清空」。 */
@@ -80,7 +80,7 @@ interface OrgFieldChange {
  * 理由:管理範圍決定「動得了誰」(ADR-0005),但停用連動、搬移後的 `ancestors` 重算、
  * 刪除前置的「有沒有子組織」三件事的正確性以**整棵子樹**為準 —
  * 不能因為操作者的管理範圍只到某一層就只改一半、或誤判成沒有子組織。
- * 管理範圍換掉可見範圍成為治理類的過濾依據後(#187),兩個都要放開才擋得住漏改。
+ * 管理範圍換掉可見範圍成為治理類的過濾依據後,兩個都要放開才擋得住漏改。
  */
 function subtreeContext(operator: OperatorContext): OperatorContext {
   return { ...operator, visibleOrgIds: "all", managedOrgIds: "all" };
@@ -206,11 +206,11 @@ function byName(documents: OrgRecord[]): OrgRecord[] {
 }
 
 /**
- * 由平坦的組織清單組回樹(森林:`rootIds` 可能有多個根,#187)。
+ * 由平坦的組織清單組回樹(森林:`rootIds` 可能有多個根)。
  *
  * 每棵樹的樹根對外一律回 `parentId: null`(它的上層不在樹上,給了前端也查不到)。
  * 因此**前端不能拿 `parentId` 判斷「樹根是不是平台根組織」** — 租戶視角的樹根也是 null;
- * 那件事由 `org(樹根).isSystem` 回答(#186 ④,`useOrgManagerData.ts`)。
+ * 那件事由 `org(樹根).isSystem` 回答(`useOrgManagerData.ts`)。
  */
 function buildForest(
   operator: OperatorContext,
@@ -236,10 +236,10 @@ function buildForest(
         ? null
         : String(document.parentId),
     enabled: document.enabled,
-    // 僅租戶頂層有值(ADR-0009);樹上就給,前端不必逐筆查 org(id) 才判斷得出擁有者(#139)
+    // 僅租戶頂層有值(ADR-0009);樹上就給,前端不必逐筆查 org(id) 才判斷得出擁有者
     ownerUserId:
       document.ownerUserId === undefined ? null : String(document.ownerUserId),
-    // 管理範圍外的節點根本不會出現在樹上(#187),這個欄位因此恆為 false;
+    // 管理範圍外的節點根本不會出現在樹上,這個欄位因此恆為 false;
     // 保留是為了與使用者列的 `roles[].outOfScope` 命名一致、且不必同步改前端(GQL-05 相容)
     outOfScope: !isOrgManaged(operator, document._id),
     children: byName(childrenByParent.get(String(document._id)) ?? []).map(
@@ -384,7 +384,7 @@ export class OrgsService {
   }
 
   /**
-   * 換商標 / 清空商標之後,把**舊的**物件刪掉(#161:換圖即刪舊;ADR-0010)。
+   * 換商標 / 清空商標之後,把**舊的**物件刪掉(換圖即刪舊;ADR-0010)。
    *
    * 只在更新已經成功之後做,而且**刪不掉只記 warn、不往外拋** — 清不掉的後果是 bucket 裡
    * 留一個沒人引用的孤兒物件(幾百 KB),不該因此讓使用者的編輯失敗、更不該回滾已寫好的資料。
@@ -500,7 +500,7 @@ export class OrgsService {
   /**
    * 刪除:前置四項(無子組織 / 無成員 / 非角色擁有組織 / 無業務資料引用)全過才可;
    * 任一不過回 `ORG_NOT_DELETABLE` 附 reasons,前端提示改用停用。刪除 = 軟刪除(ADR-0007)。
-   * 「非角色擁有組織」**只算存活的角色**(#246 的 5,見 `ownsAliveRole`)。
+   * 「非角色擁有組織」**只算存活的角色**(見 `ownsAliveRole`)。
    */
   async remove(
     operator: OperatorContext,
@@ -547,7 +547,7 @@ export class OrgsService {
    * 可見範圍開關(ADR-0005):只掛**租戶頂層**、套用整棵子樹,改的是租戶自己的資料政策
    * (下層使用者看不看得到下層組織的**業務資料**),**不影響治理頁、角色資格與管理範圍**。
    *
-   * 2026-09-19 起不再是根組織專屬(#187):權限由 `system.org-manager.tenant-ops.set-visibility`
+   * 2026-09-19 起不再是根組織專屬:權限由 `system.org-manager.tenant-ops.set-visibility`
    * 搬到 `system.org-manager.set-visibility`,租戶管理員模板自動取得;
    * 能設哪些則由**管理範圍**決定 — 範圍外的租戶頂層查不到(`NOT_FOUND`),
    * 所以租戶管理員只設得了自己的租戶,根組織(範圍 = 全部)照樣設得了任何一個。
@@ -632,7 +632,7 @@ export class OrgsService {
   }
 
   /**
-   * 樹根 = **管理範圍的各個頂點**(#187):管理範圍是「各擁有組織的子樹」的聯集,
+   * 樹根 = **管理範圍的各個頂點**:管理範圍是「各擁有組織的子樹」的聯集,
    * 頂點就是那些「祖先鏈上沒有別的管理範圍內組織」的節點 — 一個角色一個頂點,
    * 上下包含關係的角色自動收斂成一個。`"all"`(超級管理員 / 擁有組織是根組織)= 根組織一棵。
    */
@@ -696,11 +696,11 @@ export class OrgsService {
 
   /**
    * 「這個組織底下還有沒有別的東西」的**唯一**判斷點:刪除(`remove`)與撤銷開通
-   * (`TenantOpsService.revokeProvision`)共用,不各寫一套(#374)。
+   * (`TenantOpsService.revokeProvision`)共用,不各寫一套。
    *
    * `exempt` 是「這次動作會一併抹掉的東西,因此不算數」:撤銷開通會連擁有者使用者與
    * 租戶管理員副本一起硬刪,所以那兩筆不該讓 `HAS_MEMBERS` / `OWNS_ROLES` 成立;
-   * 刪除不傳 `exempt`,行為與 #134 起完全相同。
+   * 刪除不傳 `exempt`,行為與原本完全相同。
    */
   async orgContentReasons(
     operator: OperatorContext,
@@ -735,7 +735,7 @@ export class OrgsService {
   }
 
   /**
-   * 「非角色擁有組織」前置:**只算存活的角色**(#246 的 5)。
+   * 「非角色擁有組織」前置:**只算存活的角色**。
    *
    * `org_role` 關聯在角色被軟刪除時刻意不動(ADR-0007 軟刪除、ADR-0001 關聯不連動),
    * 所以光看關聯會把「角色都刪光了」的組織永遠判成不可刪。角色文件經 `this.roles` 讀,

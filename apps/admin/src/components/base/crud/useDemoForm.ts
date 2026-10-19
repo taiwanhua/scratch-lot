@@ -16,7 +16,7 @@ import { useDemoUpload } from "./useDemoUpload";
  * 一個上傳欄的狀態。三種情形要分得開,因為送給 api 的值不一樣(GQL-06):
  * - 選了新檔(`file`)→ 上傳後送新檔案
  * - 按了移除(`isCleared`)→ 送 `null`(清空)
- * - 都沒動 → 不放進 input(缺席 = 不動;#427 起不再把原路徑原樣送回)
+ * - 都沒動 → 不放進 input(缺席 = 不動;不再把原路徑原樣送回)
  */
 export interface FileSlot {
   file: File | null;
@@ -26,7 +26,7 @@ export interface FileSlot {
 export const emptyFileSlot: FileSlot = { file: null, isCleared: false };
 
 export interface UseDemoFormOptions<Detail extends DemoItemLike, Values> {
-  /** 該模組的 i18n 命名空間(成功 / 失敗提示的文案都掛在它底下,#376) */
+  /** 該模組的 i18n 命名空間(成功 / 失敗提示的文案都掛在它底下) */
   i18nNamespace: string;
   form: DemoFormConfig<Detail, Values>;
   /** 編輯的那一筆;新增頁為 null。**外層已經 gate 過**(資料到了才掛,REACT-08) */
@@ -84,8 +84,8 @@ export const useDemoForm = <Detail extends DemoItemLike, Values>({
   const [isSaving, setIsSaving] = useState(false);
 
   /**
-   * 一次「儲存」= 上傳欄逐一上傳 + 設定物件的 create / update,所以回饋在這一層報一次
-   * (#376):`useSave` 只收 `{ onSuccess(): void; onError(error): void }`,而且上傳
+   * 一次「儲存」= 上傳欄逐一上傳 + 設定物件的 create / update,所以回饋在這一層報一次:
+   * `useSave` 只收 `{ onSuccess(): void; onError(error): void }`,而且上傳
    * 失敗那條路徑根本不經過 mutation —— 掛在 mutation 的 options 上會漏掉它。
    */
   const feedback = useMutationFeedback({
@@ -151,7 +151,7 @@ export const useDemoForm = <Detail extends DemoItemLike, Values>({
         }
         save.save(values, uploads satisfies DemoUploadResults);
       } catch (error_: unknown) {
-        // 上傳自己失敗(沒走到 mutation):一樣算這次儲存失敗,照跳提示(#376)
+        // 上傳自己失敗(沒走到 mutation):一樣算這次儲存失敗,照跳提示
         feedback.onError(error_);
         setIsSaving(false);
         setError(demoErrorOf(error_));

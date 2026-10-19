@@ -1,7 +1,7 @@
 import type { TestField, TestFieldCategory } from "./field-manager-handlers";
 
 /**
- * 欄位管理頁(#211 / #264)的夾具。
+ * 欄位管理頁的夾具。
  *
  * 形狀以 `docs/modules/field-manager.md`「api 介面」與 api 測試的斷言為準(TEST-08):
  * 類別全是**全域種子**(租戶不可自訂);選項是**合併清單** = 全域種子(`ownerOrg: null`)
@@ -123,7 +123,7 @@ export const fieldsByCategory: Record<string, TestField[]> = {
 
 /**
  * 「僅本組織」可見範圍的合併清單:下層(子南港店)加的那筆不見了,上層的還在
- * (可見性開關只管下層,上層繼承不受它影響 —— #264 規則表第 4 列)。
+ * (可見性開關只管下層,上層繼承不受它影響 —— 規則表第 4 列)。
  */
 export const demoCategoryFieldsOwnVisibility: TestField[] =
   demoCategoryFields.filter((field) => field.ownerOrg?.id !== lowerOrg.id);

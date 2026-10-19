@@ -27,7 +27,7 @@ const PICKER_PAGE = { page: 1, pageSize: 100 };
  * 以及條件組合的值選擇器要用的使用者、組織清單。套用對象的候選(角色 / 使用者 / 組織 / 權限)
  * 由 AudiencePicker 自己查(`components/base/AudiencePicker/useAudienceOptions.ts`)。
  *
- * 左清單的「已設規則」讀 `DataScopeTarget.hasRule`(#246 的 1)。在那之前這裡對每個目標
+ * 左清單的「已設規則」讀 `DataScopeTarget.hasRule`。在那之前這裡對每個目標
  * 各發一次 `dataScopeRule` 併進 `useQueries`,目標一多就是 N+1;現在只查選中的那一個。
  */
 export const useDataScopeData = () => {

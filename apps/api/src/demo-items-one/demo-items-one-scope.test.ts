@@ -36,9 +36,9 @@ const SAVE_DATA_SCOPE_RULE = /* GraphQL */ `
 
 /**
  * 示範模組1 的**範圍**:資料範圍規則(ADR-0008)與可見性開關(ADR-0005)
- * 在 GraphQL 端點上真的生效(#318)。打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
+ * 在 GraphQL 端點上真的生效。打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
  *
- * 規則的機制本身在 `data-scope/data-scope.test.ts` 已驗(#205,直接打 repository);
+ * 規則的機制本身在 `data-scope/data-scope.test.ts` 已驗(直接打 repository);
  * **這裡驗的是「經過示範模組的端點也一樣」**:列表與單筆一致、規則只會讓看到的變少。
  * `docs/testing/permission-scenarios.md` 劇本 2(規則命中 → 只見自建;刪規則恢復)、
  * 4(頂層合成 OR / AND)、12(可見性開關收縮業務資料)。
@@ -47,7 +47,7 @@ const SAVE_DATA_SCOPE_RULE = /* GraphQL */ `
  *   root ─┬─ 租戶甲 ── 部門一
  *         └─ 租戶乙(開關 subtree)── 部門乙
  */
-describe("示範模組1 範圍(#318,GraphQL 端點 + 真 MongoDB)", () => {
+describe("示範模組1 範圍(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let rootToken: string;

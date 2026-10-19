@@ -1,7 +1,7 @@
 import { ClientError } from "@repo/graphql";
 
 /**
- * admin 各頁錯誤解讀(`<ns>ErrorOf(error)`)**唯一的回傳形狀**(#430;DATA-06)。
+ * admin 各頁錯誤解讀(`<ns>ErrorOf(error)`)**唯一的回傳形狀**(DATA-06)。
  *
  * 在此之前七支 `*-error.ts` 各回各的:有的回裸字串碼、有的回 `{ code, fields }`、
  * 有的回 `{ code, reasons, fields }`,呼叫端要先記住「這頁回的是哪一種」。現在一律是這個物件,

@@ -64,7 +64,7 @@ function desiredPermissionsOf(
   return desired;
 }
 
-/** 發布步驟 3 這次新建的依表單新增權限(B9b);發布成功畫面提示「到角色管理授予」用。 */
+/** 發布步驟 3 這次新建的依表單新增權限;發布成功畫面提示「到角色管理授予」用。 */
 export interface CreatedFormCreatePermission {
   key: string;
   name: string;
@@ -74,9 +74,9 @@ export interface CreatedFormCreatePermission {
 type DeclareOutcome = "created" | "updated" | "unchanged";
 
 /**
- * 表單動態權限(`permissions.source = "dynamic"`,Spec 6a §6、B9b):
+ * 表單動態權限(`permissions.source = "dynamic"`):
  * - 發布步驟 3 的同步(`syncForVersion`):欄位級權限缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label;
- *   模組開啟 B9b(`perFormCreate`)時再確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」隨表單改名;不退役,
+ *   模組開啟依表單分開新增權限(`perFormCreate`)時再確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」隨表單改名;不退役,
  *   不自動授予任何角色)
  * - 「模組與權限」頁的退役權限清理(`retired` / `deleteRetired`):三層檢查
  */
@@ -96,7 +96,7 @@ export class FormFieldPermissionsService {
   /**
    * 發布步驟 3(在發布的交易內執行)。每一筆寫入都先看「已經是目標狀態就跳過」(重試發布接續舊資料時也一樣);
    * 同 key 欄位跨版本沿用同一筆權限(`_id` 不變,角色的授予跟著留下)。
-   * 回傳這次**新建**的依表單新增權限(B9b;已存在、或模組沒開 → null)。
+   * 回傳這次**新建**的依表單新增權限(已存在、或模組沒開 → null)。
    */
   async syncForVersion(
     operator: OperatorContext,
@@ -142,7 +142,7 @@ export class FormFieldPermissionsService {
   }
 
   /**
-   * 依表單新增權限(B9b):缺的建、`name` 隨表單名稱。表單不能刪,所以不退役;
+   * 依表單新增權限:缺的建、`name` 隨表單名稱。表單不能刪,所以不退役;
    * 欄位級權限的退役與清理只認 `show-` / `edit-`(`parseFieldPermissionKey`),碰不到它。
    */
   private async syncCreatePermission(
@@ -247,7 +247,7 @@ export class FormFieldPermissionsService {
   }
 
   /**
-   * 刪除一筆退役的欄位級權限(Spec 6a §6「root 清理」),不自動刪:
+   * 刪除一筆退役的欄位級權限,不自動刪:
    * 1. 有草稿(6b 起含審核中)的提交綁的版本仍宣告該欄位 → 擋下,回筆數與版本
    * 2. 只剩已完成的提交用到 → 要 `confirmCompletedUsage` 才刪(刪後這些單的該欄位只有 root 看得到)
    * 3. 沒有任何提交用到 → 直接刪

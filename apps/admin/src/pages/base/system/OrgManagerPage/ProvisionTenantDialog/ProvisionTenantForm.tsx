@@ -70,7 +70,7 @@ export const ProvisionTenantForm = ({
 
   /**
    * 一次「開通」= 商標上傳 + `provisionTenant`,所以回饋由整段 try / catch 自己報一次
-   * (#376 的多步流程做法),而不是掛在 mutation 的 options 上 ——
+   * (多步流程的做法),而不是掛在 mutation 的 options 上 ——
    * 掛上去的話上傳失敗那條路徑就沒有提示。
    */
   const feedback = useMutationFeedback<ProvisionTenantMutation>({

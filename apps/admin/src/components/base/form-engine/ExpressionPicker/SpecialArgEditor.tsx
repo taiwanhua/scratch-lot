@@ -35,7 +35,7 @@ export interface SpecialArgEditorProps {
 const SMALL = { size: "small", sx: { minWidth: 120 } } as const;
 
 /**
- * 不是一般值的參數位置(Spec 6a §5 表 B):`dateDiff` 的單位下拉(天 = 日曆日、小時 / 分鐘 = 精確差;
+ * 不是一般值的參數位置:`dateDiff` 的單位下拉(天 = 日曆日、小時 / 分鐘 = 精確差;
  * 缺參數視為天)、`dateAdd` 的方向(之前 / 之後)與日曆單位(天 / 週 / 月 / 年)下拉、
  * `optionLabel` 的選項欄位下拉(只列單選 / 多選欄,存欄位 key 字串)、彙總的明細欄 / 數字子欄下拉(存 key 字串)。
  */

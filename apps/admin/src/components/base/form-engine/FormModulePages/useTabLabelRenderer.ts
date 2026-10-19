@@ -49,7 +49,7 @@ export const useTabLabelRenderer = (
   const t = useTranslations("admin.formEngine.pages.actions");
   const tPages = useTranslations("admin.formEngine.pages");
   const tValue = useTranslations("admin.formEngine.renderer");
-  // 顯示一律用讀者現在的租戶時區(修訂的 `ctx.timezone` 只用於重算條件,Spec §5「值的存法」)
+  // 顯示一律用讀者現在的租戶時區(修訂的 `ctx.timezone` 只用於重算條件)
   const tenantTimezone = useTenantTimezone();
   const me = useMe();
   const { forms, isLoading: isFormsLoading } = useModuleForms(

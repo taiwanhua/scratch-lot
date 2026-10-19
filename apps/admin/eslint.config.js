@@ -10,7 +10,7 @@ const [, wallOptions] = designSystemWall.rules["no-restricted-imports"];
 
 /**
  * `@repo/ui/section` 只給兩個包裝用:一般頁面用 `components/base/Section`(依頁面 id + 區塊 key 記住收合狀態),
- * 表單分區用 `FormSectionCard`。直接用 ui 的 `Section` 會漏掉收合記憶(底座 10.3)。
+ * 表單分區用 `FormSectionCard`。直接用 ui 的 `Section` 會漏掉收合記憶。
  */
 const SECTION_WRAPPERS = [
   "src/components/base/Section/Section.tsx",
@@ -33,7 +33,7 @@ const URL_STATE_MESSAGE =
 const sectionPath = {
   name: "@repo/ui/section",
   message:
-    "頁面的可收合區塊用 @/components/base/Section/Section(會記住收合狀態);表單分區由 FormRenderer 處理(底座 10.3)",
+    "頁面的可收合區塊用 @/components/base/Section/Section(會記住收合狀態);表單分區由 FormRenderer 處理",
 };
 
 const urlStatePaths = [

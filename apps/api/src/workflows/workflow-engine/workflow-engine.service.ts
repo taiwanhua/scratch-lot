@@ -91,7 +91,7 @@ export class WorkflowEngineHooks {
 }
 
 /**
- * `advance(instance)` 的執行器(Spec 6b §6「冪等推進」;判斷表本體是 `@repo/domain/workflow` 的純函式
+ * `advance(instance)` 的執行器(冪等推進;判斷表本體是 `@repo/domain/workflow` 的純函式
  * `advance`,**執行合約**見它的檔頭):
  *
  * 1. 讀實例(權威)、它的全部任務、對應的提交 → `advance` → 列 5 需要時先解析進關結果再呼叫一次
@@ -105,13 +105,13 @@ export class WorkflowEngineHooks {
  * 呼叫端的交易。並發的另一個交易寫到同一份實例 → 寫入衝突、整個交易由 driver 重跑,重讀後再判斷。
  * 通知與推進同一個交易寫入,站內信號與 email 排在交易提交後(`WorkflowNotifier` → `notify()`)。
  *
- * 進關時的 B4 跳過與 B5 自動通過(含自動通過的 `beforeApprove` 守門)由 `StepEntryService` 算,同一個交易。
+ * 進關時的指定組織跳過與自動通過(含自動通過的 `beforeApprove` 守門)由 `StepEntryService` 算,同一個交易。
  *
  * **掛接點的事後動作**(`lifecycle/`)也在推進裡觸發、同一個交易:實例的條件更新成功且把審核關卡改成
  * `completed` / `skipped` → `stepPassed`(跳過帶 `skipped: true`);提交同步成完成 / 駁回 / 退回 / 撤回且
  * 真的命中 → `completed` / `rejected` / `returned` / `withdrawn`。事後動作拋錯 = 整個推進(與呼叫端的動作)回復。
  *
- * **知會**(B17,`WorkflowCcService`)跟著同兩個時點、同一個交易:`stepPassed` 之後通知該關的知會對象;
+ * **知會**(`WorkflowCcService`)跟著同兩個時點、同一個交易:`stepPassed` 之後通知該關的知會對象;
  * 提交同步成完成 / 駁回之後通知整個流程的知會對象。
  */
 @Injectable()
@@ -230,7 +230,7 @@ export class WorkflowEngineService {
   }
 
   /**
-   * 這一輪的判斷(不寫入);給「需要推進」的識別用。不跑 B5 自動通過的守門(識別可能不在交易內;
+   * 這一輪的判斷(不寫入);給「需要推進」的識別用。不跑自動通過的守門(識別可能不在交易內;
    * 列 5 一定有動作,守門結果不影響「需不需要推進」)。
    */
   planOf(
@@ -391,7 +391,7 @@ export class WorkflowEngineService {
 
   /**
    * 提交依實例同步(條件:仍指向本實例 + 修訂號 + 讀到的狀態);真的命中且是終局 → 對應的事後動作,
-   * 完成 / 駁回再知會整個流程的知會對象(B17,同一個交易)。
+   * 完成 / 駁回再知會整個流程的知會對象(同一個交易)。
    */
   private async syncSubmission(
     instance: InstanceRecord,
@@ -447,7 +447,7 @@ export class WorkflowEngineService {
         stepKey,
         skipped,
       });
-      // B17:關卡整關通過 / 被跳過 → 該關的知會對象(同一個交易)
+      // 知會:關卡整關通過 / 被跳過 → 該關的知會對象(同一個交易)
       await this.cc.stepPassed(instance, definition, stepKey, skipped);
     }
   }
@@ -484,7 +484,7 @@ export class WorkflowEngineService {
       status: action.projection.status,
       decidedAt: action.projection.decidedAt,
       comment: action.projection.comment,
-      // B16:派給承辦人的時點起算逾時提醒
+      // 從派給承辦人的時點起算逾時提醒
       ...overdueTimerOf(
         stepOf(definition, action.stepKey),
         action.projection.status,
@@ -494,7 +494,7 @@ export class WorkflowEngineService {
   }
 
   /**
-   * 投影同步(條件含讀到的狀態)。承辦人換了(改派)→ 一併重新計時(B16「任務改派 → 新任務重新計時」):
+   * 投影同步(條件含讀到的狀態)。承辦人換了(改派)→ 一併重新計時(逾時提醒:任務改派 = 新任務,重新計時):
    * 先讀一次這張任務比對承辦人,依序讀寫(TX-02)。
    */
   private async syncTask(

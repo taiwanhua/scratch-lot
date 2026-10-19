@@ -3,7 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import type { SnackbarSeverity } from "@repo/ui/snackbar";
 
 /**
- * 全站短提示(#376)的查詢 helper。
+ * 全站短提示的查詢 helper。
  *
  * **要用容器收斂,不能只 `findByText`**:失敗提示與頁面 / 彈窗上那一條錯誤是**同一份
  * 文案**(刻意的:同一份錯誤解讀),只比文字會同時抓到兩個節點,也證明不了提示真的跳了。
@@ -37,7 +37,7 @@ export const findLatestSnackbar = async (): Promise<HTMLElement> => {
 };
 
 /**
- * 螢幕閱讀器念得到的那一份文案(#430):沒有彈窗時是那一則自己的 `role="alert"`;
+ * 螢幕閱讀器念得到的那一份文案:沒有彈窗時是那一則自己的 `role="alert"`;
  * **彈窗開著時** app 根節點被 MUI 的 modal manager 標了 `aria-hidden`,alert 在無障礙樹上
  * 不存在,改由 `SnackbarProvider` 補的 `role="status"` 區域念(只念最新一則)。兩個查詢都
  * **不帶 `hidden: true`** —— 這個 helper 本身就是「提示念得到」的斷言,念不到就逾時失敗。

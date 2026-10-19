@@ -10,7 +10,7 @@ import {
 import type { FieldPermissionFacts } from "./field-states";
 
 /**
- * 填寫時的預設值(Spec 6a §5「預設值」;計算本體是 `@repo/domain/form` 的 `defaultValueOf`):
+ * 填寫時的預設值(計算本體是 `@repo/domain/form` 的 `defaultValueOf`):
  *
  * - 新增頁一打開就依預設值填好(建草稿時 api 也會算一次,只填空欄,結果一致)
  * - 使用者**沒碰過**的欄位,依賴的欄位變了就跟著重算;碰過(改過、清空、帶入)就停,之後照使用者的值送出

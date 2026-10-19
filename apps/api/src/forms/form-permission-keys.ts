@@ -33,8 +33,8 @@ export function formModulePermission(
 export type FieldPermissionAction = "show" | "edit";
 
 /**
- * 欄位級權限 key:`<moduleKey>.show-<formKey>-<fieldKey>` / `<moduleKey>.edit-<formKey>-<fieldKey>`
- * (Spec 6a §6)。formKey 與 fieldKey 不含 `-` / `.`,所以動作段一定能唯一拆回。
+ * 欄位級權限 key:`<moduleKey>.show-<formKey>-<fieldKey>` / `<moduleKey>.edit-<formKey>-<fieldKey>`。
+ * formKey 與 fieldKey 不含 `-` / `.`,所以動作段一定能唯一拆回。
  */
 export function fieldPermissionKey(
   moduleKey: string,
@@ -55,7 +55,7 @@ export function fieldPermissionPrefix(
 }
 
 /**
- * 依表單分開的新增權限 key(B9b):`<moduleKey>.create-<formKey>`。只有宣告 `perFormCreate: true` 的表單模組
+ * 依表單分開的新增權限 key:`<moduleKey>.create-<formKey>`。只有宣告 `perFormCreate: true` 的表單模組
  * 在發布步驟 3 建立;判斷一律走 `FormAccessService.canCreateWithForm`。
  */
 export function formCreatePermissionKey(
@@ -82,7 +82,7 @@ export interface ParsedFieldPermissionKey {
   fieldKey: string;
 }
 
-/** 依表單分開的新增權限 `<moduleKey>.create-<formKey>`(建立歸 B9b;此處只負責認得)。 */
+/** 依表單分開的新增權限 `<moduleKey>.create-<formKey>`(由表單發布建立;此處只負責認得)。 */
 export interface ParsedFormCreatePermissionKey {
   moduleKey: string;
   action: "create";

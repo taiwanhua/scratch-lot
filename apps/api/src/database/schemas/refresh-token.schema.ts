@@ -39,7 +39,7 @@ export class RefreshToken {
   deviceInfo?: Record<string, unknown>;
 
   /**
-   * 這個 session 的當前組織(#61 `switchOrg`):refresh 換發的 access token 沿用它,
+   * 這個 session 的當前組織(`switchOrg`):refresh 換發的 access token 沿用它,
    * 切換組織後不會因 access token 過期而跳回預設組織;會員(customer)為 null。
    */
   @Prop({ type: Types.ObjectId, default: null })

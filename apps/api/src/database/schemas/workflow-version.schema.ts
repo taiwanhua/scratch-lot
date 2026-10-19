@@ -10,7 +10,7 @@ import type {
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 /**
- * 版本狀態(同 `form_versions`,Spec 6a §6 的四步發布、冪等重試,少了欄位級權限那一步):
+ * 版本狀態(同 `form_versions` 的四步發布、冪等重試,少了欄位級權限那一步):
  * `draft` 設計中 / `publishing` 只存在於發布交易內的搶鎖狀態(部分唯一索引保證至多一筆,交易外看不到)/
  * `published` 凍結、供新送出 / `retired` 退役。
  */
@@ -57,7 +57,7 @@ export class WorkflowVersion {
   edges!: WorkflowEdge[] | null;
 
   /**
-   * 整個流程的知會對象(B17;`AssigneeSource`,來源同審核者三種):單據完成、被駁回、被作廢時通知。
+   * 整個流程的知會對象(`AssigneeSource`,來源同審核者三種):單據完成、被駁回、被作廢時通知。
    * null = 沒設(這個欄位出現之前的版本讀起來也是 null)。關卡的知會在 `steps[].cc`。
    */
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })

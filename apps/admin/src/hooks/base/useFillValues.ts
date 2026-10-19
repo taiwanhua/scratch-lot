@@ -27,7 +27,7 @@ export interface FillValuesOptions {
   ctx: ExpressionContext;
   permissions: FieldPermissionFacts;
   /**
-   * 預設值要不要跟著依賴重算(Spec 6a §5「預設值」):新增、以及還沒送出過的草稿要;
+   * 預設值要不要跟著依賴重算:新增、以及還沒送出過的草稿要;
    * 已送出過的單(已完成、被退回、撤回)不再動使用者的值
    */
   recomputeDefaults: boolean;
@@ -97,7 +97,7 @@ export const useFillValues = ({
             ...(systemLabels !== undefined && { systemLabels }),
           })
         : next;
-      // 連動篩選(B2d):被引用欄位(含帶入、預設值、計算欄位)的篩選值變了 → 清空依賴它的引用欄
+      // 連動篩選:被引用欄位(含帶入、預設值、計算欄位)的篩選值變了 → 清空依賴它的引用欄
       const { values, cleared } = clearLinkedReferences(
         fields,
         links,

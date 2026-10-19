@@ -4,14 +4,14 @@ import {
 } from "@repo/project-config/public";
 
 /**
- * 分頁間的登入狀態廣播(#61 登出同步、#375 換帳號同步)。
+ * 分頁間的登入狀態廣播(登出同步、換帳號同步)。
  *
  * access token 只活在各分頁的記憶體(ADR-0003),refresh cookie 卻是全分頁共用的一份 —— 所以「分頁 B 換帳號登入」
  * 在分頁 A 是看不見的,要等 A 的 access token 到期、用共用的 cookie 換票才會悄悄變成另一個人(混帳號)。
  * 這條 channel 就是補上那個缺口:誰是當前登入者由**廣播**告知,不靠各分頁自己去猜。
  *
  * 退路:不做 `storage` 事件退路(票面 2 由實作者決定)—— BroadcastChannel 是 Baseline「廣泛可用」
- * (Chrome 54 / Firefox 38 / Safari 15.4 / Edge 79),而 admin 自 #61 起的分頁登出同步本來就只靠它;
+ * (Chrome 54 / Firefox 38 / Safari 15.4 / Edge 79),而 admin 的分頁登出同步本來就只靠它;
  * 兩套路徑並存要多一份去重與清 key 的邏輯,換到的只有 Safari 15.4 以前的版本。
  *
  * channel 名稱由專案設定的 slug 生成(`<slug>-admin-session`,登記於 docs/branding.md):
@@ -82,7 +82,7 @@ export const createSessionChannel = (
    * 用到才開,關掉之後再用就重開一條。
    * `AuthSession` 活得比掛載它的 React 樹久(組裝根以 `useState` 只建一次),而 StrictMode 的開發模式會
    * 「掛載 → 卸載 → 再掛載」—— 中間那次卸載已經 `close()` 過,固定持有同一個 BroadcastChannel 的話,
-   * 再掛載後第一次廣播就會丟 `InvalidStateError: Channel is closed`(#375 在 mock 模式抓到)。
+   * 再掛載後第一次廣播就會丟 `InvalidStateError: Channel is closed`(在 mock 模式抓到過)。
    */
   const ensureChannel = (): BroadcastChannel => {
     channel ??= new BroadcastChannel(name);

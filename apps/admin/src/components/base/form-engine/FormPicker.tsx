@@ -13,7 +13,7 @@ export interface FormPickerProps {
 }
 
 /**
- * 多張表單時的選單(Spec 6a §8 `<FormPicker>`;§3:此刻可新增的表單一張 → 直接進、多張 → 先選)。
+ * 多張表單時的選單(`<FormPicker>`;此刻可新增的表單一張 → 直接進、多張 → 先選)。
  * 清單由呼叫端給 `useModuleForms` 的 `creatableForms`(已扣掉沒有新增權限的),這裡不再過濾。
  */
 export const FormPicker = ({ forms, onPick, onClose }: FormPickerProps) => {

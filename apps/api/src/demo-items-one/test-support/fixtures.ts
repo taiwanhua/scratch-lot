@@ -42,7 +42,7 @@ export const ALL_SAMPLE_ONE_PERMISSIONS = [
 export const COVER_PATH = "demo/11111111-2222-4333-8444-555555555555.png";
 export const ATTACHMENT_PATH = "demo/66666666-7777-4888-8999-aaaaaaaaaaaa.jpg";
 
-/** 附件 input(#427):路徑 + 前端申報的原始檔名 / 大小 / 檔型。 */
+/** 附件 input:路徑 + 前端申報的原始檔名 / 大小 / 檔型。 */
 export const ATTACHMENT_INPUT = {
   path: ATTACHMENT_PATH,
   name: "成本估算 2026 Q3.jpg",

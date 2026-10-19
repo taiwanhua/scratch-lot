@@ -68,7 +68,7 @@ export const OrgTreeSelectPanel = ({
   );
 
   /**
-   * 打開即聚焦搜尋框(規格 10.2「點欄位 → 搜尋框取得焦點」)。用穩定的 callback ref 只在掛上時聚焦一次,
+   * 打開即聚焦搜尋框(點欄位 → 搜尋框取得焦點)。用穩定的 callback ref 只在掛上時聚焦一次,
    * 不用 `autoFocus`(jsx-a11y/no-autofocus);之後重繪不會把焦點從樹上搶回來。
    */
   const focusOnMount = useCallback((input: HTMLInputElement | null) => {

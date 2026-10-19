@@ -67,10 +67,10 @@ export const MultipleSelection: Story = {
 };
 
 const closedDays: MonthCalendarProps["days"] = {
-  "2026-10-06": { disabled: true, disabledReason: "店休", note: "休息日" },
-  "2026-10-13": { disabled: true, disabledReason: "店休", note: "休息日" },
-  "2026-10-20": { disabled: true, disabledReason: "店休", note: "休息日" },
-  "2026-10-27": { disabled: true, disabledReason: "店休", note: "休息日" },
+  "2026-10-06": { disabled: true, disabledReason: "公休", note: "休息日" },
+  "2026-10-13": { disabled: true, disabledReason: "公休", note: "休息日" },
+  "2026-10-20": { disabled: true, disabledReason: "公休", note: "休息日" },
+  "2026-10-27": { disabled: true, disabledReason: "公休", note: "休息日" },
 };
 
 /** 停用日:停用色、點了沒反應、滑過顯示原因;整週勾選跳過停用日。 */
@@ -101,7 +101,7 @@ export const CornerMarks: Story = {
         corner: { variant: "dot", color: "error", label: "缺卡" },
       },
       "2026-10-12": {
-        corner: { variant: "badge", content: "缺下班卡" },
+        corner: { variant: "badge", content: "資料待補" },
         content: <Typography variant="caption">09:00–17:00</Typography>,
       },
     },
@@ -153,7 +153,7 @@ export const DarkMode: Story = {
     days: {
       ...closedDays,
       "2026-10-11": { note: "特殊日" },
-      "2026-10-12": { corner: { variant: "badge", content: "缺下班卡" } },
+      "2026-10-12": { corner: { variant: "badge", content: "資料待補" } },
       "2026-10-16": {
         corner: { variant: "dot", color: "warning", label: "有異動" },
       },

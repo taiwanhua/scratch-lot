@@ -35,7 +35,7 @@ describe("Switch", () => {
   });
 
   /**
-   * #260:幾何覆寫曾把 MUI 的 `.Mui-disabled` 灰化一起蓋掉,
+   * 幾何覆寫曾把 MUI 的 `.Mui-disabled` 灰化一起蓋掉,
    * 開關按不動卻還是彩色的。這兩案盯的就是「看得出來是停用的」。
    */
   it("disabled 時點擊不觸發 onChange", async () => {

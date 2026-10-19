@@ -1,6 +1,6 @@
 /**
  * `@repo/domain/workflow` 的出口檔(bunchee 由 `exports` 名反推本檔;GEN-01 的 packages 邊界例外)。
- * 審核流程引擎的純邏輯(Spec 6b §4–§6),前後端共用,不碰 Mongoose:
+ * 審核流程引擎的純邏輯(見 `docs/concepts/workflow-engine.md`),前後端共用,不碰 Mongoose:
  *
  * - `types.ts`:StepDef / edges、實例 / StepState / 派任計畫 / 決定 / 歷程、任務與提交的 6b 形狀
  * - `graph.ts`:`startStepKey` / `endStepKey` / `nextStepKeys` / `previousStepKeys`

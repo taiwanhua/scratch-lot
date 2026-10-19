@@ -126,7 +126,7 @@ function expectSameMembers(actual: string[], expected: string[]): void {
 
 /**
  * 複製使用者的組織與角色(`copyUserOrgRoles`):合併 / 取代、dryRun 預覽、只在管理範圍內。
- * 打真的 GraphQL 端點、對真 MongoDB(TEST-07)。「中途失敗」一案需要讓寫入在半途丟錯,
+ * 打真的 GraphQL 端點、對真 MongoDB(TEST-07)。「中途失敗」一案(正式送出是一個交易,失敗整個回復)需要讓寫入在半途丟錯,
  * GraphQL 端點上做不到,所以經 `app.get(RelationService)` 讓 `unlinkMany` 拋一次錯(TEST-07 的第二接縫)。
  *
  * 組織樹(root 為 seed 建的根組織):
@@ -789,12 +789,13 @@ describe("複製使用者的組織與角色(GraphQL 端點 + 真 MongoDB)", () =
   });
 
   describe("中途失敗", () => {
-    it("解除角色那一步拋錯 → 回錯;重跑完成且不產生重複關聯", async () => {
+    it("解除角色那一步拋錯 → 回錯、整個回復(已加的組織與角色、稽核都不留);重跑完成", async () => {
       const source = await member("fail-source", [deptOne]);
       const target = await member("fail-target", [deptTwo]);
       const r1 = await role("來源的角色", deptOne, [source]);
-      await role("目標的角色", deptTwo, [target]);
+      const r2 = await role("目標的角色", deptTwo, [target]);
       const relations = api.app.get(RelationService);
+      // 加組織、授角色(ensureLinks + 稽核)都已在交易內寫入,第三步解除角色才拋錯
       const spy = jest
         .spyOn(relations, "unlinkMany")
         .mockRejectedValueOnce(new Error("模擬寫入失敗"));
@@ -805,6 +806,9 @@ describe("複製使用者的組織與角色(GraphQL 端點 + 真 MongoDB)", () =
       });
       spy.mockRestore();
       expect(failed.data).toBeNull();
+      expect(await orgsOf(target)).toEqual([String(deptTwo)]);
+      expect(await rolesOf(target)).toEqual([String(r2)]);
+      expect(await auditsOf(target)).toEqual([]);
 
       const retried = await copy(source, target, {
         mode: "REPLACE",

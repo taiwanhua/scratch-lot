@@ -23,7 +23,7 @@ export interface StepProgressProps {
 }
 
 /**
- * 關卡進度 / 分支進度(Spec 6b §8 畫面 9 / 10):版本的每個節點一列 —— 進行中、已通過、已跳過、
+ * 關卡進度 / 分支進度:版本的每個節點一列 —— 進行中、已通過、已跳過、
  * 阻擋、還沒到;平行分支同時進行時就是「財務已通過、法務待審、採購待處理」這樣的幾列。
  * 審核關卡列出派任計畫的每個人與他被接受的決定;匯合節點只顯示「等待所有分支」/「已匯合」。
  */
@@ -56,7 +56,7 @@ export const StepProgress = ({ instance }: StepProgressProps) => {
           (entry) => entry.taskKey === item.taskKey,
         );
         const assignee = item.assignee.name ?? item.assignee.id;
-        // B15 代理人:代理派任的那一項寫出代理的是誰
+        // 代理人:代理派任的那一項寫出代理的是誰
         const name =
           item.delegators.length === 0
             ? assignee

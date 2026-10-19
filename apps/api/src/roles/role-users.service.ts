@@ -60,7 +60,7 @@ function keywordConditions(keyword: string): Record<string, unknown>[] {
  * 使用者的**所屬組織名稱**仍只露管理範圍內的(`this.orgs` 是治理類,過濾自動生效)。
  *
  * **候選清單(`candidates`)剛好相反,要套管理範圍**:那是「還沒授予、可以授予誰」的問題,
- * 答案不該超出操作者管得到的人。不合格的候選照列但標 `eligible: false`(#261 的決定)。
+ * 答案不該超出操作者管得到的人。不合格的候選照列但標 `eligible: false`。
  */
 @Injectable()
 export class RoleUsersService {
@@ -85,11 +85,11 @@ export class RoleUsersService {
   }
 
   /**
-   * 「加入使用者」彈窗的候選清單(#246 的 4):操作者**管理範圍**內、**尚未持有**這個角色的
+   * 「加入使用者」彈窗的候選清單:操作者**管理範圍**內、**尚未持有**這個角色的
    * 使用者,每筆附 `eligible`(所屬組織是否落在角色擁有組織的子樹內,ADR-0003)。
    *
    * 掛在 `system.role-manager.assign-users` 底下:在此之前前端借 `users(input:{orgId})`,
-   * 逼得分配使用者彈窗連帶需要 `system.user-manager.view`,而且排不掉已持有者(#246)。
+   * 逼得分配使用者彈窗連帶需要 `system.user-manager.view`,而且排不掉已持有者。
    *
    * 管理範圍的落實點只有一個:成員清單經 `this.orgs`(治理類 collection,過濾自動吃
    * `managedOrgIds`)反查 `org_user`,本方法不自己比對任何組織集合。
@@ -405,7 +405,7 @@ export class RoleUsersService {
   /**
    * 候選規則(ADR-0003):所屬組織至少一個落在角色擁有組織的子樹內。
    * 查不到的使用者一律 `NOT_FOUND`(不透露差別);資格判斷本身共用
-   * `OrgQualificationService.assertEligible`(#261:與使用者頁的 `assignUserRoles`
+   * `OrgQualificationService.assertEligible`(與使用者頁的 `assignUserRoles`
    * 同一份判斷、同一個 `USER_NOT_ELIGIBLE`),本檔不自己再算一次。
    */
   private async assertEligible(

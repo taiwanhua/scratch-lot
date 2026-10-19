@@ -127,7 +127,7 @@ function usersAudience(people: readonly Person[]): Record<string, unknown> {
 }
 
 /**
- * 逾時提醒與知會(3.9 B17)(真 Mongo):
+ * 逾時提醒與知會(真 Mongo):
  * 逾時提醒的排程以 `WorkflowOverdueService.sweep(now, 租戶)` 直接呼叫,時點由測試給(日曆小時);
  * 知會跟著推進 / 作廢的同一個交易。
  */
@@ -225,7 +225,7 @@ describe("逾時提醒與知會", () => {
     await api.close();
   });
 
-  describe("逾時提醒(B16)", () => {
+  describe("逾時提醒", () => {
     it("登記為每 15 分鐘的排程工作;預設通知對象是持有阻擋清單改派權限的人", () => {
       const job = api.app
         .get(ScheduledJobRegistry)
@@ -682,7 +682,7 @@ describe("逾時提醒與知會", () => {
     });
   });
 
-  describe("知會(B17)", () => {
+  describe("知會", () => {
     it("設定了知會的關卡整關通過 → 知會對象收到通知、讀得到該修訂(唯讀)、不能操作", async () => {
       const first = await fresh();
       const second = await fresh();
@@ -741,7 +741,7 @@ describe("逾時提醒與知會", () => {
       ).toBe("pending");
     });
 
-    it("設定了知會的關卡被跳過(B4)→ 知會", async () => {
+    it("設定了知會的關卡被跳過(申請人屬於這些組織)→ 知會", async () => {
       const first = await fresh();
       const second = await fresh();
       const watcher = await fresh();

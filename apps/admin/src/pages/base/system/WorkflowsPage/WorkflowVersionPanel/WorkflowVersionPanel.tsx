@@ -54,7 +54,7 @@ const FLOW_CC_CHANGE_KEYS = {
 type VersionRow = WorkflowVersionFieldsFragment;
 
 /**
- * 版本面板(Spec 6b §8 畫面 4,同表單版本面板):草稿 / 發布(含中斷重試)/ 退役目前版本、changelog、
+ * 版本面板(同表單版本面板):草稿 / 發布(含中斷重試)/ 退役目前版本、changelog、
  * 與上一版差異、以任一版本(已發布或已退役)為基底開新草稿、檢視某一版(唯讀)、刪除草稿、
  * 「匯出專案設定」(共用流程的目前發布版;下載 `.seed.ts`)。
  * 發布看 `abilities.canPublish`、開草稿與刪草稿看 `abilities.canEdit`;發布中斷時只剩「重試發布」。

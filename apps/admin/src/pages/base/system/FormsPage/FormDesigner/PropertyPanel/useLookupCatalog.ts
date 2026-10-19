@@ -18,14 +18,14 @@ import {
 import { useSession } from "@/hooks/base/useSession";
 
 /**
- * lookup 來源的「可挑的表單 / 欄位」(Spec 6a §5「lookup 來源」;表 A:類別與表單 / 欄位**用下拉選**,不打字)。
+ * lookup 來源的「可挑的表單 / 欄位」(類別與表單 / 欄位**用下拉選**,不打字)。
  *
  * - 來源清單與 `user` / `org` / 專案來源的欄位:api 登錄表(`apps/api/src/forms/lookup-providers.ts`)的宣告,
  *   經 `formLookupProviders` 取(含專案以 `LOOKUP_PROVIDER` 登記的來源);底座來源的名稱用 i18n,專案來源用宣告的名稱
  * - `form_submission`:表單 = 本租戶看得到(`forms` 查詢本來就依視角過濾)且**有已發布版本**的表單;
  *   欄位目錄 = 摘要槽 + 該表單**目前版本**的非受保護欄位(因引用而受保護的計算欄位也不列)—— 與 api 的
  *   `formSubmissionCatalog` 同一個判準
- * - 帶入規則另可選**目前這張表單**(`self`,即使還沒發布;Spec §5「帶入」:從本表單先前的提交帶入),
+ * - 帶入規則另可選**目前這張表單**(`self`,即使還沒發布:從本表單先前的提交帶入),
  *   它的欄位目錄用**目前草稿**的欄位(同一個判準)
  *
  * 每個欄位帶型別,帶入對應表用它只列型別相容的來源欄位(`isPrefillCompatible`,與檢查器同一支)。

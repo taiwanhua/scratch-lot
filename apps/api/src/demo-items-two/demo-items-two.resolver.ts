@@ -17,7 +17,7 @@ import {
 import { DemoItemTwoModel } from "./models/demo-item-two.model";
 
 /**
- * 示範模組2 的 GraphQL 端點(#319;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 示範模組2 的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,規則全在 service(STRUCT-01);
  * 每個 key 對應 `docs/modules/demo.sample-two.md` 權限表的同一行。
  *

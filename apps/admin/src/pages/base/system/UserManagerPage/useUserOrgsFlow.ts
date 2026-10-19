@@ -48,7 +48,7 @@ export const useUserOrgsFlow = (onSaved: (userId: string) => void) => {
 
   /**
    * 試算只是**預覽**(打開確認彈窗),成功不跳提示 —— 跳「已更新所屬組織」是騙人的,
-   * 真正的更新是下一步的 `submit`。試算失敗仍然是這次操作失敗,照跳(#376)。
+   * 真正的更新是下一步的 `submit`。試算失敗仍然是這次操作失敗,照跳。
    */
   const dryRun = useSetUserOrgsMutation(
     session.client,

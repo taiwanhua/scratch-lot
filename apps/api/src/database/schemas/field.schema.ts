@@ -49,7 +49,7 @@ export const FieldSchema = SchemaFactory.createForClass(Field);
 
 FieldSchema.index({ categoryId: 1, orgId: 1 });
 FieldSchema.index({ key: 1 }, { unique: true, sparse: true });
-// 同一類別、同一組織下 value 不可重複(field-manager.md「待辦」,#206);
+// 同一類別、同一組織下 value 不可重複(field-manager.md「待辦」);
 // 全域種子的 orgId 為 null,故「自訂選項與全域選項同 value」此索引擋不到 —
 // 那條是合併清單的語意需求,由 FieldsService 的表單驗證擋(FIELD_VALUE_DUPLICATE)。
 FieldSchema.index({ categoryId: 1, orgId: 1, value: 1 }, { unique: true });

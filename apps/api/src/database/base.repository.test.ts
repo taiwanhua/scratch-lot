@@ -40,7 +40,7 @@ function operator(
     currentOrgId: firstVisible ?? null,
     managedOrgIds: overrides.visibleOrgIds,
     // 本檔不起 Nest,資料範圍規則沒有 provider(見 plugins/data-scope-provider.ts);
-    // 兩欄仍必填(#246 的 6),預設空集合
+    // 兩欄仍必填,預設空集合
     memberOrgIds: [],
     roleIds: [],
     ...overrides,

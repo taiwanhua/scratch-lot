@@ -20,7 +20,7 @@ describe("Button", () => {
   });
 
   /**
-   * #183:MUI 預設 `line-height: 1.75`,行框高出字框的部分依字型的 ascent / descent 分配,
+   * MUI 預設 `line-height: 1.75`,行框高出字框的部分依字型的 ascent / descent 分配,
    * 中文標籤因此偏離按鈕中線(填色按鈕看得最明顯)。`line-height: 1` + 固定高度讓上下對稱。
    */
   it("文字用固定高度 + line-height 1 垂直置中,尺寸對齊 Figma 的 32 / 36 / 48", () => {

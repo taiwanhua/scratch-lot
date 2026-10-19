@@ -52,7 +52,7 @@ interface IndexInfo {
   partialFilterExpression?: Record<string, unknown>;
 }
 
-/** 索引的正本:各 schema 檔的 `.index(...)` 宣告(地圖見 docs/data-model.md)+ #23 索引段。 */
+/** 索引的正本:各 schema 檔的 `.index(...)` 宣告(地圖見 docs/data-model.md)。 */
 const REGISTRY: { name: string; schema: Schema }[] = [
   { name: Org.name, schema: OrgSchema },
   { name: User.name, schema: UserSchema },
@@ -213,7 +213,7 @@ describe("底座 collection 索引就位(對真 MongoDB 驗證)", () => {
     const fieldKey = findIndex(fieldIndexes, { key: 1 });
     expect(fieldKey?.unique).toBe(true);
     expect(fieldKey?.sparse).toBe(true);
-    // 同一類別、同一組織下 value 不可重複(field-manager.md「待辦」,#206)
+    // 同一類別、同一組織下 value 不可重複(field-manager.md「待辦」)
     expect(
       findIndex(fieldIndexes, { categoryId: 1, orgId: 1, value: 1 })?.unique,
     ).toBe(true);

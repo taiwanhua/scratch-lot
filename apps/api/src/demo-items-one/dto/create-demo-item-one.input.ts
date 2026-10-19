@@ -37,7 +37,7 @@ export class CreateDemoItemOneInput {
 
   /**
    * 附件(私有 bucket):`createUploadUrl` 以 purpose `DEMO_ATTACHMENT` 取得的路徑 +
-   * 原始檔名 / 大小 / 檔型(#427,形狀見 `DemoItemOneAttachmentInput`)。缺席 / `null` = 不設。
+   * 原始檔名 / 大小 / 檔型(形狀見 `DemoItemOneAttachmentInput`)。缺席 / `null` = 不設。
    */
   @Field(() => DemoItemOneAttachmentInput, { nullable: true })
   attachment?: DemoItemOneAttachmentInput | null;

@@ -42,7 +42,7 @@ function errorsOf(fields: FieldDef[], code: string): DefinitionIssue[] {
   }).errors.filter((issue) => issue.code === code);
 }
 
-describe("連動篩選(B2d)的純邏輯", () => {
+describe("連動篩選的純邏輯", () => {
   it("列出 `{ var }` 條件;固定條件不算", () => {
     expect(
       lookupFilterVarsOf({

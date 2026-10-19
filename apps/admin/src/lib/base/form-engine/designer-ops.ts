@@ -20,7 +20,7 @@ import type {
 } from "./design-definition";
 
 /**
- * 設計器對草稿定義的操作(純函式,設計器與測試共用;Spec 6a §5、§8「設計器其他規則」)。
+ * 設計器對草稿定義的操作(純函式,設計器與測試共用)。
  *
  * **欄位的身分是內部 id(`_id`,見 `design-definition.ts`)**,不是 key:選取、拖拉、改屬性、刪除都以 id
  * 找欄位,所以 key 重複或改到一半也不會改錯欄、刪不掉。版面以「每個分區一串欄位」操作:拖拉只改順序與
@@ -238,7 +238,7 @@ export const moveField = (
   };
 };
 
-/** 只從草稿的 `fields[]` 與 `layout` 移除;引用處不動(Spec §5「草稿裡刪欄位」)。 */
+/** 只從草稿的 `fields[]` 與 `layout` 移除;引用處不動。 */
 export const removeField = (
   definition: DesignDefinition,
   fieldId: string,
@@ -283,7 +283,7 @@ export type FieldKeyProblem =
   Extract<FieldKeyCheck, { valid: false }>["reason"] | "duplicate";
 
 /**
- * 改 key 當場擋(Spec 6a §5 表 A 下方:「改 `key` 時當場擋重複與格式錯誤,不等檢查器」):
+ * 改 key 當場擋重複與格式錯誤,不等檢查器:
  * 回 null = 可以寫入;否則回原因,呼叫端標紅、不寫入。
  */
 export const fieldKeyProblemOf = (
@@ -376,7 +376,7 @@ export const unplacedFields = (definition: DesignDefinition): DesignField[] => {
   );
 };
 
-/** 分區收合設定的一次修改(底座 10.3;設計器的「分區設定」)。 */
+/** 分區收合設定的一次修改(設計器的「分區設定」)。 */
 export type SectionCollapsePatch = Partial<
   Pick<LayoutSection, "collapsible" | "defaultCollapsed" | "summaryFieldKeys">
 >;

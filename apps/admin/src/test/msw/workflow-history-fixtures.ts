@@ -23,7 +23,7 @@ export const historyEvent = (
   delegators: [],
 });
 
-/** B5 自動通過被守門擋下(`auto_approve_blocked`;預設是「已在前關核准過」那一種,`code` = 專案錯誤碼)。 */
+/** 自動通過被守門擋下(`auto_approve_blocked`;預設是「已在前關核准過」那一種,`code` = 專案錯誤碼)。 */
 export const autoApproveBlockedEvent = (
   stepKey: string,
   who: typeof APPLICANT,

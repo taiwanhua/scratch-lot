@@ -204,11 +204,11 @@ export function cookiePair(
 }
 
 /**
- * 啟動對真 MongoDB 的完整 Nest app(#61 Testing Decisions):
+ * 啟動對真 MongoDB 的完整 Nest app:
  * 沿用 jest globalSetup 起的單一成員 replica set(MONGODB_URI);沒有時自起 MongoMemoryReplSet。
  * 環境變數在 import AppModule 之前設定 — AppModule 載入時 ConfigModule 就讀 `.env`;
  * `MONGODB_URI` 則是連線 factory 執行時才讀。
- * `extraModules`:測試專用的額外 Nest module(如 #63 的 @RequirePermission 探針 resolver),與 AppModule 一起掛上。
+ * `extraModules`:測試專用的額外 Nest module(如 @RequirePermission 的探針 resolver),與 AppModule 一起掛上。
  */
 export async function startAuthTestApp(
   databaseName: string,

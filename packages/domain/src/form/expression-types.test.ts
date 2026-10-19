@@ -26,7 +26,7 @@ const fields = [
 ];
 const typeOf = fieldTypeLookupOf(fields);
 
-describe("@repo/domain/form 表達式型別表(表 B)", () => {
+describe("@repo/domain/form 表達式型別表", () => {
   it("每個白名單運算子(var 以外)都有簽章", () => {
     const operators = EXPRESSION_OPERATORS.filter((item) => item !== "var");
     const signed = new Set(Object.keys(OPERATOR_SIGNATURES));

@@ -18,7 +18,7 @@ export interface MultiTabSessionState {
 }
 
 /**
- * 多分頁的登入狀態同步(#375)。refresh cookie 是全分頁共用的一份,access token 卻各分頁一份記憶體
+ * 多分頁的登入狀態同步。refresh cookie 是全分頁共用的一份,access token 卻各分頁一份記憶體
  * (ADR-0003),所以要靠廣播讓所有分頁對齊「現在登入的是誰」:
  *
  * - 本分頁查到 `me` → `announce`(同一個人不重發),讓其他分頁知道現在是誰

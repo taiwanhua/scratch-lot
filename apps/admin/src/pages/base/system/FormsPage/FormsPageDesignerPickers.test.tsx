@@ -298,7 +298,7 @@ describe("表單管理:類別 / 表單 / 欄位改用下拉選", () => {
   });
 });
 
-describe("表單管理:型別導向的表達式選擇器(表 B)", () => {
+describe("表單管理:型別導向的表達式選擇器", () => {
   it("自訂驗證的根只列回是 / 否的運算(沒有常數、系統值);填錯誤訊息存進 rules.customMessage", async () => {
     const { user, world } = renderFormsPage();
     await findDesigner();
@@ -362,7 +362,7 @@ describe("表單管理:型別導向的表達式選擇器(表 B)", () => {
       "運算",
     ]);
     await user.keyboard("{Escape}");
-    // 三種單位都開放(#482:天 = 日曆日、小時 / 分鐘 = 精確差)
+    // 三種單位都開放(天 = 日曆日、小時 / 分鐘 = 精確差)
     expect(await openSelect(user, "單位", formula)).toEqual([
       "天",
       "小時",

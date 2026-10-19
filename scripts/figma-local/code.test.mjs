@@ -143,7 +143,7 @@ function input() {
   return {
     schemaVersion: 1,
     targetFileKey: "testFile123",
-    project: { slug: "scratch-lot", primary: "#234567" },
+    project: { slug: "sample-project", primary: "#234567" },
     projection: {
       primary: Object.fromEntries(
         roles.map((role, index) => [
@@ -166,7 +166,7 @@ function input() {
 
 test("brand library creates six colors, aliases and shadow, then repeats as a no-op", async () => {
   const app = harness();
-  app.figma.root.name = "scratch-lot Brand Library";
+  app.figma.root.name = "sample-project Brand Library";
   const brand = input();
   const preview = await app.send("preview-brand", { input: brand });
   assert.equal(preview.type, "preview");
@@ -207,14 +207,14 @@ test("brand library creates six colors, aliases and shadow, then repeats as a no
 
 test("consumer updates only Base primary bindings and preserves unrelated content", async () => {
   const app = harness();
-  app.figma.root.name = "scratch-lot Screens";
+  app.figma.root.name = "sample-project Screens";
   app.library("wowgo-base Design System");
-  app.library("scratch-lot Brand Library");
+  app.library("sample-project Brand Library");
   const base = app.variables.find(
     (item) => item.key === "wowgo-base Design System-Color-main",
   );
   const target = app.variables.find(
-    (item) => item.key === "scratch-lot Brand Library-Color-main",
+    (item) => item.key === "sample-project Brand Library-Color-main",
   );
   const privateColor = { id: "private-id", key: "private-key" };
   app.variables.push(privateColor);
@@ -236,7 +236,7 @@ test("consumer updates only Base primary bindings and preserves unrelated conten
   const options = {
     fileKey: "testFile123",
     source: "wowgo-base Design System",
-    target: "scratch-lot Brand Library",
+    target: "sample-project Brand Library",
     scope: "selection",
   };
   const preview = await app.send("preview-screens", { options });
@@ -253,7 +253,7 @@ test("consumer updates only Base primary bindings and preserves unrelated conten
 
 test("consumer refuses a changed binding after preview", async () => {
   const app = harness();
-  app.figma.root.name = "scratch-lot Screens";
+  app.figma.root.name = "sample-project Screens";
   app.library("Base");
   app.library("Project");
   const main = app.variables.find((item) => item.key === "Base-Color-main");

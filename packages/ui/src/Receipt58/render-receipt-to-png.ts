@@ -39,7 +39,7 @@ const rasterizeWithCanvas: ReceiptRasterizer = async (node) => {
 };
 
 /**
- * 把 58mm 單據轉成寬 384 點的黑白 PNG(瀏覽器端;規格第 6 章「架構」):
+ * 把 58mm 單據轉成寬 384 點的黑白 PNG(瀏覽器端):
  * 預覽中的 `Receipt58` 節點 → 點陣化 → 縮放到 384 寬 → 二值化 → 1-bit PNG。
  * 回傳的 Blob 直接作為列印工作的圖片上傳。
  */

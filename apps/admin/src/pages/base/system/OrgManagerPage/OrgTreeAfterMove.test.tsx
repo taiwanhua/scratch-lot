@@ -13,7 +13,7 @@ import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
 /**
- * #186 ③「搬走子組織後父節點仍有展開箭頭」的重現 / 迴歸測試。
+ * 「搬走子組織後父節點仍有展開箭頭」的重現 / 迴歸測試。
  *
  * 重現時查過三層:`@repo/ui/tree`(`children: []` 與「葉節點 id 也在 expandedIds 裡」都不長箭頭)、
  * api(`moveOrg` 之後 `orgTree` 的舊父 `children` 已經是 `[]`),以及這一條 —
@@ -56,7 +56,7 @@ const PERMISSIONS = [
   "system.org-manager.move",
 ];
 
-describe("組織樹:搬走子組織之後(#186 ③)", () => {
+describe("組織樹:搬走子組織之後", () => {
   it("舊父節點不再有展開箭頭,子組織出現在新的上層底下", async () => {
     // 根 > 租戶 A > (內容組 > 小組, 台北分店)
     const team = node("org-team", "小組", "org-content");

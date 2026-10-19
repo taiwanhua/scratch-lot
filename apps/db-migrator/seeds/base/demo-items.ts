@@ -11,7 +11,7 @@ import { SAMPLE_ONE_KEY } from "./modules/demo.sub.sample-one";
 import { ROOT_ORG_KEY } from "./orgs";
 
 /**
- * 示範家族的**示範資料**(#319;模組定義見 docs/modules/demo.sub.sample-one.md、demo.sample-two.md)。
+ * 示範家族的**示範資料**(模組定義見 docs/modules/demo.sub.sample-one.md、demo.sample-two.md)。
  * 兩個 collection 各 5 筆,全環境灌同一份(seed 不分環境,ADR-0002)—— 示範資料本來就是種子:
  * 新環境 bootstrap 完登入就看得到東西,劇本 2 / 3 / 4 / 12 在畫面上有資料可比對。
  *
@@ -24,7 +24,7 @@ import { ROOT_ORG_KEY } from "./orgs";
  */
 
 /**
- * **示範資料的建立者是假 id**(#319 的已知限制):seed 目前只種一個帳號(root 初始帳號,
+ * **示範資料的建立者是假 id**(已知限制):seed 目前只種一個帳號(root 初始帳號,
  * `src/seed/root-admin.ts`),而它沒有 `key` 欄位 —— `seedRef` 只以 `key` 解析
  * (`seed-declaration.ts`),所以引用不到任何真的使用者。
  *
@@ -32,7 +32,7 @@ import { ROOT_ORG_KEY } from "./orgs";
  * (資料範圍規則「建立者 = 【操作者本人】」)有東西可以被濾掉 —— 示範資料一律屬於「別人」,
  * 規則一開,列表就只剩操作者自己新增的那幾筆。代價是詳情頁的建立者查無此人(顯示為空)。
  *
- * 真要在畫面上看到人名,就在該環境自己新增一筆(#321 的表單)。
+ * 真要在畫面上看到人名,就在該環境自己新增一筆(用示範模組的表單)。
  */
 const DEMO_CREATOR_IDS = {
   /** 假建立者甲 */
@@ -44,9 +44,9 @@ const DEMO_CREATOR_IDS = {
 } as const;
 
 /**
- * **示範資料全部落在根組織**(#319 的已知限制):`orgs` 種子只有根組織一筆
+ * **示範資料全部落在根組織**(已知限制):`orgs` 種子只有根組織一筆
  * (`orgs.ts`:「唯一以 key 種子的組織」,ADR-0005),租戶是由 root 在「開通租戶」建出來的,
- * 各環境 id 不同、seed 引用不到。因此票上「分布兩個租戶」在現有 seed 機制下做不到;
+ * 各環境 id 不同、seed 引用不到。因此要讓示範資料「分布兩個租戶」,在現有 seed 機制下做不到;
  * 跨租戶的差異(劇本 12 可見性開關)請在該環境用手動新增的資料驗。
  */
 const DEMO_ORG = seedRef("orgs", ROOT_ORG_KEY);

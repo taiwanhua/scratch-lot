@@ -111,7 +111,7 @@ test("劇本 27:勾三筆批次核准,其中一筆已被改派 → 兩筆成功�
   await dialog.getByRole("button", { name: "關閉" }).click();
   await expect(dialog).toBeHidden();
 
-  // 預期:成功的取消勾選;「已不在你手上」的也不保留勾選(規格的例外)→ 沒有已選列
+  // 預期:成功的取消勾選;「已不在你手上」的也一樣取消勾選(只有被擋下 / 其他失敗的才保持勾選)→ 沒有已選列
   await expect(page.getByRole("region", { name: /^已選 \d+ 筆$/ })).toHaveCount(
     0,
   );

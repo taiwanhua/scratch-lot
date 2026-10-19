@@ -241,7 +241,7 @@ describe("改派通知新承辦人", () => {
     expect(await taskNotices(original, instanceId)).toEqual([]);
   });
 
-  it("改派給有代理設定的人 → 改派不套用代理(3.7 / 3.8):任務與通知都給他本人,代理人不收", async () => {
+  it("改派給有代理設定的人 → 改派不套用代理:任務與通知都給他本人,代理人不收", async () => {
     const [first, chosen, chosenDeputy] = [
       await fresh(),
       await fresh(),

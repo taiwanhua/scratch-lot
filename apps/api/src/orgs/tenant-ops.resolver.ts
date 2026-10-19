@@ -18,7 +18,7 @@ import { TenantOpsService } from "./tenant-ops.service";
  * 權限 key(docs/modules/org-manager.md 權限表;種子 apps/db-migrator/seeds/base/modules/system.ts)。
  * 兩筆都屬 `system.org-manager.tenant-ops` — 一個 `isRootOnly` 的隱藏模組,
  * 租戶管理員模板複製時整個模組被扣除,所以租戶永遠拿不到(ADR-0009 第 3 步)。
- * (可見範圍開關 2026-09-19 搬到組織管理層 `system.org-manager.set-visibility`,#187:
+ * (可見範圍開關 2026-09-19 搬到組織管理層 `system.org-manager.set-visibility`:
  * 它是租戶自己的資料政策,不是根組織專屬動作。)
  */
 const PERMISSIONS = {
@@ -55,7 +55,7 @@ export class TenantOpsResolver {
   }
 
   /**
-   * 撤銷開通(#374):反向抹掉開通建出的三樣,只在租戶底下沒有其他資料時才允許。
+   * 撤銷開通:反向抹掉開通建出的三樣,只在租戶底下沒有其他資料時才允許。
    * 權限與 `provision` 同屬 `tenant-ops`(`isRootOnly` 模組),另立一筆 key —
    * 開通與撤銷是兩個風險等級不同的動作,不共用同一筆權限。
    */

@@ -28,7 +28,7 @@ function systemOperator(actorId: Types.ObjectId | null): OperatorContext {
     currentOrgId: null,
     visibleOrgIds: "all",
     managedOrgIds: "all",
-    // 這份上下文就是在「算出 memberOrgIds / roleIds」的過程中用的,當下還沒有值(#246 的 6)
+    // 這份上下文就是在「算出 memberOrgIds / roleIds」的過程中用的,當下還沒有值
     memberOrgIds: [],
     roleIds: [],
   };
@@ -98,7 +98,7 @@ export class OperatorContextService {
         ? currentOrgId
         : (memberOrgs[0]?.id ?? null);
 
-    // 依序讀(TX-02):B5 自動通過在推進的交易內以審核者本人的身分跑守門,也走這裡
+    // 依序讀(TX-02):自動通過在推進的交易內以審核者本人的身分跑守門,也走這裡
     const visibleOrgIds = await this.visibleOrgIdsOf(
       reader,
       memberOrgDocuments,

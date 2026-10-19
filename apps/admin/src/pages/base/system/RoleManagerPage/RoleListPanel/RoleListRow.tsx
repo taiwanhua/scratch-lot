@@ -29,7 +29,7 @@ export interface RoleListRowProps {
 /**
  * 角色清單的一列(Figma 44:630 ~ 44:648):名稱 + 狀態 / 來源標籤,第二行是擁有組織、
  * 持有人數與描述。動作只在選中的那一列出現(Figma 只在 active 列畫了圖示),
- * 並各自依「權限 × 角色種類規則」顯示(`rowAbilityOf`;#261 起種類規則由 api 算在
+ * 並各自依「權限 × 角色種類規則」顯示(`rowAbilityOf`;種類規則由 api 算在
  * `role.abilities`,前端不重算);動作列放在可點區塊之外,避免點動作連帶選取。
  */
 export const RoleListRow = ({

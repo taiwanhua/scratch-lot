@@ -168,7 +168,7 @@ export const mockHandlers = ({
     }).handlers,
     // 個人設定的代理人分頁
     ...delegationWorld().handlers,
-    // 組織管理(#134 / #135 / #137):`users` 讓給 userWorld
+    // 組織管理:`users` 讓給 userWorld
     ...withoutOperations(
       orgWorld({
         orgTree,
@@ -181,13 +181,13 @@ export const mockHandlers = ({
       }).handlers,
       ["Users"],
     ),
-    // 使用者管理(#136 / #211):`orgTree` / `org` 讓給 orgWorld、`roles` 讓給 roleWorld
+    // 使用者管理:`orgTree` / `org` 讓給 orgWorld、`roles` 讓給 roleWorld
     ...withoutOperations(userWorld({ users: mockUsers, orgTree }).handlers, [
       "OrgTree",
       "Org",
       "Roles",
     ]),
-    // 角色管理(#203 / #246 / #261);角色清單為何取 `mockRoles` 見 `mock-fixtures.ts`
+    // 角色管理;角色清單為何取 `mockRoles` 見 `mock-fixtures.ts`
     ...withoutOperations(
       roleWorld({
         roles: mockRoles,
@@ -198,9 +198,9 @@ export const mockHandlers = ({
       }).handlers,
       ["OrgTree"],
     ),
-    // 模組與權限(#204):有狀態的樹,切換後重查看得到新值
+    // 模組與權限:有狀態的樹,切換後重查看得到新值
     ...moduleAdminWorld({ tree: moduleAdminTree }).handlers,
-    // 資料範圍(#205 / #246):`savedRule` 讓左清單一開始就有一筆「已設規則」
+    // 資料範圍:`savedRule` 讓左清單一開始就有一筆「已設規則」
     ...withoutOperations(
       dataScopeWorld({
         targets: dataScopeTargets,
@@ -214,19 +214,19 @@ export const mockHandlers = ({
       notificationSettingsWorld(mockNotificationSettings()).handlers,
       ["Roles"],
     ),
-    // 欄位管理(#206 / #264):`currentOrg` 只決定新增選項的擁有組織標籤
+    // 欄位管理:`currentOrg` 只決定新增選項的擁有組織標籤
     ...fieldWorld({
       categories: fieldCategories,
       fieldsByCategory,
       currentOrg,
       upperOrgIds: [upperOrg.id],
     }).handlers,
-    // 示範模組1 三頁(#320):`CreateUploadUrl` 讓給 orgWorld(共用端點,正本只留一份)
+    // 示範模組1 三頁:`CreateUploadUrl` 讓給 orgWorld(共用端點,正本只留一份)
     ...withoutOperations(
       demoWorld({ items: demoItems, history: demoHistory }).handlers,
       ["CreateUploadUrl"],
     ),
-    // 示範模組2 三頁(#321):兩支示範模組的端點各自獨立,沒有共用端點要去重
+    // 示範模組2 三頁:兩支示範模組的端點各自獨立,沒有共用端點要去重
     ...demoTwoWorld({ items: demoTwoItems }).handlers,
     // 表單引擎:表單管理(一張共用表單,已發布 v1 + 一份草稿)與示範表單(頂層)(兩筆提交);
     // 設計器「類別」下拉的 `FieldCategories` 讓給欄位管理(共用端點,正本只留一份)
@@ -396,7 +396,7 @@ const mockWorkflowRuntime = () => ({
         }),
         instanceStep("confirm", "原部門確認"),
       ],
-      // 時間軸示範 B4 跳過、B5 自動通過的原因,與自動通過被守門擋下(錯誤碼沒有文案 → 通用句)
+      // 時間軸示範跳過、自動通過的原因,與自動通過被守門擋下(錯誤碼沒有文案 → 通用句)
       history: [
         historyEvent("started", null, null, APPLICANT),
         historyEvent("step_entered", "review", null),

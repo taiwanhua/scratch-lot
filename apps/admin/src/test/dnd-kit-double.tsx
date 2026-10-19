@@ -3,7 +3,7 @@ import { act } from "@testing-library/react";
 import { type ReactNode, useEffect } from "react";
 
 /**
- * dnd-kit 的測試替身(#67):jsdom 沒有版面幾何,真的指標拖曳測不出「放到哪」;
+ * dnd-kit 的測試替身:jsdom 沒有版面幾何,真的指標拖曳測不出「放到哪」;
  * 這裡把 `DndContext` 換成只記住 `onDragEnd` 的空殼,測試以 `dragEnd(active, over)` 直接送出「拖曳結束」事件,
  * 其餘(排序策略、`useSortable`)都退化成不動作。用法見 `app/AdminShell/RouteTabs/RouteTabs.drag.test.tsx`
  * (`jest.unstable_mockModule` 必須在動態 import 受測模組之前)。

@@ -36,7 +36,7 @@ export interface DesignerPreviewProps {
 type PreviewResult = PreviewFormVersionQuery["previewFormVersion"];
 
 /**
- * 預覽模式(Spec 6a §8「設計模式 vs 預覽」):`FormRenderer` 的 `preview` 模式 —— 條件與計算前端即時跑、
+ * 預覽模式:`FormRenderer` 的 `preview` 模式 —— 條件與計算前端即時跑、
  * 不套欄位級權限、輸入測試值、不建提交;「以後端重算」打 `previewFormVersion` 對**已存的草稿**
  * (唯讀檢視歷史版本時是**那一版**,帶 `version`)算一次(以後端為準:摘要槽、值錯誤)。
  * 預設值與填寫頁同一套:一打開就填好,沒碰過的欄位跟著依賴重算。

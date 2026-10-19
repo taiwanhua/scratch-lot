@@ -57,7 +57,7 @@ describe("表單模組詳情頁:唯讀檢視存在網址(REACT-14)", () => {
     expect(await screen.findByText("正在檢視修訂 1")).toBeInTheDocument();
   });
 
-  it("「返回列表」帶回列表頁籤記下的條件(規格 10.1)", async () => {
+  it("「返回列表」帶回列表頁籤記下的條件", async () => {
     const listSearch = `?list=${encodeURIComponent('{"keyword":"雞蛋"}')}`;
     sessionStorage.setItem(
       routeTabsStorageKey(testUser.id),

@@ -2,7 +2,7 @@ import { DEFAULT_TAB_LABEL_TEMPLATE } from "./tab-label";
 
 /**
  * 表單模組的**模組層**設定(`app/base/module-pages.ts`、`app/project/module-pages.ts` 的 `forms` 登記時給)。
- * 目前只有頁籤 / 標題模板:套摘要槽,表單自己的 `tabLabelTemplate` 可覆寫(Spec 6a §8「其他」)。
+ * 目前只有頁籤 / 標題模板:套摘要槽,表單自己的 `tabLabelTemplate` 可覆寫。
  *
  * 本檔只有型別與純合成:沒有模組層的可變狀態,同一個程序裡合成幾次、結果互不相干。
  * 合成結果由 `app/providers/RootProviders.tsx` 經 `FormModuleOptionsProvider` 注入,頁面以 `hooks/base/useFormModuleOptions.ts` 讀。

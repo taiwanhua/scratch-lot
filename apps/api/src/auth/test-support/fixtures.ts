@@ -4,7 +4,7 @@ import { type Connection, Types } from "mongoose";
 /**
  * 夾具:seed(子行程跑 db-migrator)建的是根組織、root 帳號、種子角色(super-admin / tenant-admin)、
  * 模組樹、權限、欄位種子;其餘測試資料(租戶、使用者、測試角色)由這裡直接寫入測試資料庫
- * (#61 Testing Decisions:「再視需要以 RelationService 加測試角色」— 測試檔不受裸查詢禁令約束;TEST-07)。
+ * (「再視需要以 RelationService 加測試角色」— 測試檔不受裸查詢禁令約束;TEST-07)。
  */
 
 export interface CreateOrgOptions {

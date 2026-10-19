@@ -125,7 +125,7 @@ export const SUBMISSION_AUDIT = {
   upgrade: "submission.upgrade",
 } as const;
 
-/** 申請人可以改內容(存草稿 / 再送出)的狀態:草稿、被退回、自己撤回(Spec 6b §6)。 */
+/** 申請人可以改內容(存草稿 / 再送出)的狀態:草稿、被退回、自己撤回。 */
 const APPLICANT_EDITABLE: readonly FormSubmissionStatus[] = [
   "draft",
   "returned",
@@ -208,7 +208,7 @@ export function definitionOf(version: FormVersionRecord): FormDefinition {
 }
 
 /**
- * 表單提交(執行端,Spec 6a §6「提交」):草稿 → 送出(即完成)→ 已完成後修改(修訂 +1、完整快照)。
+ * 表單提交(執行端):草稿 → 送出(即完成)→ 已完成後修改(修訂 +1、完整快照)。
  *
  * - 範圍:`form_submissions` 掛 `tenantScopePlugin({ moduleData: true })`,可見範圍與資料範圍規則
  *   (依 moduleKey)自動套用;草稿只屬於建立者本人(列表不列別人的草稿)
@@ -260,7 +260,7 @@ function isDeletableRecord(record: {
   );
 }
 
-/** 表單關了「允許存草稿」(Spec 10.10):建草稿、存草稿(狀態草稿)一律擋。 */
+/** 表單關了「允許存草稿」:建草稿、存草稿(狀態草稿)一律擋。 */
 function draftDisabledError(formKey: string): Error {
   return forbiddenError(
     `Form ${formKey} does not allow saving drafts`,
@@ -369,7 +369,7 @@ export class FormSubmissionsService {
   // ---- 讀 ----
 
   /**
-   * 新增選單(Spec §3 的交集):一張直接進、多張先選。每張附 `canCreate`(`canCreateWithForm`):
+   * 新增選單:一張直接進、多張先選。每張附 `canCreate`(`canCreateWithForm`):
    * 清單本身也給列表的表單篩選與頁籤模板用,所以不在這裡刪掉不能新增的表單。
    */
   async moduleForms(
@@ -611,7 +611,7 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 新增頁的 [送出](Spec 10.10「直接送出」,不論表單開不開草稿):**一個交易**內建立 + 守門 + 送出,
+   * 新增頁的 [送出](不論表單開不開草稿):**一個交易**內建立 + 守門 + 送出,
    * 走與 `submit` 同一條送出路徑(`submitRecord`:全驗、`beforeSubmit` 守門、`submitted` / `completed`
    * 事後動作或進流程)。任一步失敗整個交易回復,資料庫不留任何資料(不產生草稿)。
    *
@@ -700,7 +700,7 @@ export class FormSubmissionsService {
 
   /**
    * 建一筆草稿(新增 / 複製為新單共用):值照 6a 的寫入規則(草稿放寬完成資料所需的驗證);
-   * **預設值**(Spec §5「預設值」)在這裡算一次,只填使用者沒碰過、且送來 / 複製來的值是空的欄位。
+   * **預設值**在這裡算一次,只填使用者沒碰過、且送來 / 複製來的值是空的欄位。
    * 在呼叫端的交易內執行;同一次請求的重試同時到、另一個先建好了 → 唯一索引擋下、錯誤往外拋
    * (交易內不吞資料庫錯誤,TX-04),由呼叫端在交易外回那一筆(`orRetryWinner`)。
    */
@@ -839,8 +839,8 @@ export class FormSubmissionsService {
 
   /**
    * 送出(草稿 / 被退回 / 撤回;`input.values` 有值 = 以畫面上的值送出,與送出同一個交易寫入):
-   * 全驗、後端重算 computed、重取選項 / 引用 label、寫摘要,再依送出時檢查分兩條路(Spec 6b §3、§6;
-   * 本體見 `submitRecord`)。提交已是 `reviewing`(重複送出):對原實例再推進一次(連同稽核一個交易),
+   * 全驗、後端重算 computed、重取選項 / 引用 label、寫摘要,再依送出時檢查分兩條路(本體見
+   * `submitRecord`)。提交已是 `reviewing`(重複送出):對原實例再推進一次(連同稽核一個交易),
    * 不驗、不看綁定、不增加修訂。版本已退役的既有草稿仍可送出(寬鬆)。
    */
   async submit(
@@ -1019,7 +1019,7 @@ export class FormSubmissionsService {
       );
       if (record?.status !== "completed" || record.currentInstanceId !== null) {
         if (record) {
-          // 綁流程的已完成(走過流程)鎖定、只能作廢(Spec 6b §6)
+          // 綁流程的已完成(走過流程)鎖定、只能作廢
           throw conflictError(
             `Submission ${input.id} is not an editable completed submission`,
             "STATUS_MISMATCH",
@@ -1131,7 +1131,7 @@ export class FormSubmissionsService {
         if (!record || record.status === "draft") {
           throw notFoundError(`Form submission not found: ${input.id}`);
         }
-        // 可刪:不綁流程的已完成、已駁回(Spec 6b §6);審核中 / 綁流程的已完成 / 作廢不可刪,
+        // 可刪:不綁流程的已完成、已駁回;審核中 / 綁流程的已完成 / 作廢不可刪,
         // 退回 / 撤回只有申請人本人可刪(上一段)
         if (!isDeletableRecord(record)) {
           throw conflictError(
@@ -1159,7 +1159,7 @@ export class FormSubmissionsService {
     });
   }
 
-  // ---- 審核流程的提交動作(Spec 6b §6)----
+  // ---- 審核流程的提交動作 ----
 
   /**
    * 撤回(申請人本人;審核中、還沒有任何被接受的審核意見):實例 CAS → `withdrawn`,
@@ -1296,7 +1296,7 @@ export class FormSubmissionsService {
       );
     }
     await this.lifecycle.emit("voided", effectSubjectOf(updated));
-    // B17:單據被作廢 → 整個流程的知會對象(同一個交易)
+    // 知會:單據被作廢 → 整個流程的知會對象(同一個交易)
     await this.cc.voided(record.currentInstanceId);
     await this.audit.record(facts.operator, {
       action: SUBMISSION_AUDIT.void,
@@ -1466,7 +1466,7 @@ export class FormSubmissionsService {
 
   /**
    * 新草稿的預設值(只含這次要填的欄位):使用者沒碰過、送來的值是空的、操作者改得動的「使用者填」欄位。
-   * 公式引用到操作者讀不到的欄位(含依賴鏈)→ 不算、留空(Spec §5:引用受保護欄位的規則同計算欄位)。
+   * 公式引用到操作者讀不到的欄位(含依賴鏈)→ 不算、留空(引用受保護欄位的規則同計算欄位)。
    * 引用欄的預設值(填寫者 / 填寫者的組織)在這裡重驗來源可讀並取 label;讀不到就留空。
    */
   private async defaultsOf(
@@ -1767,7 +1767,7 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 單筆讀取的範圍(`canReadSubmissionRevision`,Spec 6b §3):
+   * 單筆讀取的範圍(`canReadSubmissionRevision`):
    *
    * 1. 一般路徑(可見範圍 + 資料範圍規則)或「自己建立的」路徑讀得到:建立者一律可讀(含所有修訂);
    *    別人的草稿一律不存在;其他人要模組 `view`

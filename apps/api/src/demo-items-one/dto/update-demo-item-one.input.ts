@@ -36,7 +36,7 @@ export class UpdateDemoItemOneInput {
   @Field(() => ID, { nullable: true })
   coverPath?: string | null;
 
-  /** 附件(#427):缺席 = 不動、`null` = 清空(路徑與中繼資料四欄一起 `$unset`)、有值 = 換檔。 */
+  /** 附件:缺席 = 不動、`null` = 清空(路徑與中繼資料四欄一起 `$unset`)、有值 = 換檔。 */
   @Field(() => DemoItemOneAttachmentInput, { nullable: true })
   attachment?: DemoItemOneAttachmentInput | null;
 }

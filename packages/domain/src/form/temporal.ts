@@ -1,5 +1,5 @@
 /**
- * 日期與日期時間(Spec 6a §5「值的存法」`date` / `datetime`、表達式 `dateDiff`)的單一入口。
+ * 日期與日期時間(值的存法 `date` / `datetime`、表達式 `dateDiff`)的單一入口。
  *
  * `date` 與 `datetime` 都是真實世界的一個**時點**(instant),差別只在顯示精度:
  * `date` = 時間固定在當地 00:00 的 `datetime`。

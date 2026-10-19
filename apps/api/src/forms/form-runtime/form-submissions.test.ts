@@ -89,7 +89,7 @@ function definition(staffId: string): FormDefinition {
 }
 
 /**
- * 表單提交(Spec 6a §5「不能填的四種原因」、§6「提交」、§10「提交」):真 GraphQL + 真 MongoDB(TEST-07)。
+ * 表單提交:真 GraphQL + 真 MongoDB(TEST-07)。
  */
 describe("表單提交:草稿 / 送出 / 修訂、四種寫入行為、樂觀鎖與冪等", () => {
   let api: AuthTestApp;

@@ -72,7 +72,7 @@ export abstract class StorageService {
   }
 
   /**
-   * 簽一張上傳票:先依 `purpose` 的規則(`UPLOAD_RULES`:允許的檔型與大小上限,#344 起兩者都依用途)
+   * 簽一張上傳票:先依 `purpose` 的規則(`UPLOAD_RULES`:允許的檔型與大小上限,兩者都依用途)
    * 驗檔型與大小(不合即 `UPLOAD_REJECTED`),再產 `<前綴>/<uuid>.<副檔名>`。
    * 路徑帶 uuid 而非組織 id — 簽票時資料可能還不存在(開通租戶的商標在租戶建立之前就上傳),
    * 歸屬改由 `isOwnedUploadPath` + 寫入端的權限把關。
@@ -151,7 +151,7 @@ export abstract class StorageService {
   }
 
   /**
-   * 刪掉一個存在資料欄位裡的物件(#161:換商標後清掉舊物件)。
+   * 刪掉一個存在資料欄位裡的物件(換商標後清掉舊物件)。
    * 與 `readUrlOf` 同一道把關:沒有路徑、或路徑不是本 API 簽出來的一律**不刪**並回 false,
    * 不讓呼叫端刪到任意 bucket 物件;真的交給 adapter 刪才回 true。
    * **供應商端的失敗原樣往外拋** — 要不要因此擋住主流程由呼叫端決定
@@ -189,7 +189,7 @@ export abstract class StorageService {
   }
 
   /**
-   * 複製一個**私有**物件到同前綴的新路徑,回新路徑(Spec 6b §6「複製為新單」:附件複製一份歸新單)。
+   * 複製一個**私有**物件到同前綴的新路徑,回新路徑(複製為新單:附件複製一份歸新單)。
    * `to` 給了就複製到那裡(須是 `privateCopyPathOf` 算出來的同前綴路徑),沒給就現算一個。
    * 與 `readUrlOf` 同一道把關:路徑不是本 API 簽出來的一律不複製、回 null。
    * **呼叫端負責先驗「這個人看得到這筆資料嗎」**。供應商端的失敗原樣往外拋。
@@ -270,5 +270,5 @@ function nonEmptyPath(value: string | null | undefined): string | undefined {
   return trimmed === "" ? undefined : trimmed;
 }
 
-/** 供寫入端(#134 的 `updateOrg` / `provisionTenant`)驗 `logoPath` 歸屬。 */
+/** 供寫入端(`updateOrg` / `provisionTenant`)驗 `logoPath` 歸屬。 */
 export { isOwnedUploadPath } from "./upload-rules";

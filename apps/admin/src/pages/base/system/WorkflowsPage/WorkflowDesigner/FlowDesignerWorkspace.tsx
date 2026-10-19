@@ -47,7 +47,7 @@ export interface FlowDesignerWorkspaceProps {
 }
 
 /**
- * 流程設計器本體(Spec 6b §8 畫面 3):流程圖 + 屬性面板 + 檢查器 + JSON 預覽。
+ * 流程設計器本體:流程圖 + 屬性面板 + 檢查器 + JSON 預覽。
  * 檢查器即時跑 `@repo/domain/workflow` 的 `validateWorkflowDefinition`(與 api 同一份),錯誤定位到關卡;
  * 「檢查」鈕另跑 api 的完整檢查、結果面板依關卡列出。「檢查用表單」隨草稿存(`checkFormKey`),
  * 新草稿(`draftRevision === 0`)沒有值時預設第一張綁定的表單;存過的草稿照存的值。

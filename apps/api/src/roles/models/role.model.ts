@@ -19,8 +19,8 @@ export class RoleOrgRef {
 export class RoleOwnerOrg extends RoleOrgRef {
   /**
    * 擁有組織所屬的**租戶頂層**(根組織的直接子組織;`orgs.ancestors[1]`,見 `org-mapper.ts`)。
-   * 根組織視角的角色選單靠它分組 —— 不同租戶各有一個「租戶管理員」,只看角色名稱分不出來
-   * (#261 的 8)。擁有組織本身就是租戶頂層時 = 它自己;擁有組織是根組織、或租戶頂層
+   * 根組織視角的角色選單靠它分組 —— 不同租戶各有一個「租戶管理員」,只看角色名稱分不出來。
+   * 擁有組織本身就是租戶頂層時 = 它自己;擁有組織是根組織、或租戶頂層
    * 落在操作者管理範圍外(名稱不外露)時為 `null`。
    */
   @Field(() => RoleOrgRef, { nullable: true })
@@ -28,7 +28,7 @@ export class RoleOwnerOrg extends RoleOrgRef {
 }
 
 /**
- * 角色種類(#261;判準與規則表正本 `docs/modules/role-manager.md`、程式正本 `role-rules.ts`)。
+ * 角色種類(判準與規則表正本 `docs/modules/role-manager.md`、程式正本 `role-rules.ts`)。
  * 由 api 依角色文件算出,前端只讀不重算。
  */
 export enum RoleKind {
@@ -47,7 +47,7 @@ registerEnumType(RoleKind, {
 });
 
 /**
- * 這個角色**依種類規則**允許的四個動作(#261),由 api 依操作者算好。
+ * 這個角色**依種類規則**允許的四個動作,由 api 依操作者算好。
  *
  * **不含權限 key 的判斷**:「有沒有 `system.role-manager.edit`」由 `@RequirePermission`
  * 與前端的 `usePermissions` 各守一層(ADR-0011「頁內功能」)。前端顯示按鈕的條件是
@@ -81,7 +81,7 @@ export class RoleAbilities {
  * api 介面(GQL-07:欄位語意的正本在此,前端段只引用):
  * - `ownerOrg`:擁有組織;清單只回擁有組織在操作者**管理範圍**內的角色,所以正常情況恆有值,
  *   資料損毀(沒有 `org_role`)時為 null。`ownerOrg.tenantTop` 供角色選單依租戶分組
- * - `kind`:角色種類(#261);`isSystem` / `isTemplateCopy` 是它的兩個布林投影,留著相容
+ * - `kind`:角色種類;`isSystem` / `isTemplateCopy` 是它的兩個布林投影,留著相容
  * - `abilities`:這個角色依種類規則允許的四個動作,**api 依操作者算好,前端不重算**
  * - `isSystem`:種子角色(`super-admin` / `tenant-admin` 模板),不可刪除
  * - `isTemplateCopy`:開通租戶時從「租戶管理員」模板複製出來的副本(`settings.templateKey`,ADR-0009);

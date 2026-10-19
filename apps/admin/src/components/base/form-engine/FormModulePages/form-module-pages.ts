@@ -39,7 +39,7 @@ export const formModulePageKeys = (moduleKey: string): FormModulePageKeys => ({
 });
 
 /**
- * 表單模組的預設組裝(Spec 6a §8「登記與客製」):產出四個 key 的預設元件。純函式,只回傳、不登記任何東西;
+ * 表單模組的預設組裝(`docs/concepts/form-engine.md`「前端:引擎零件與預設組裝」):產出四個 key 的預設元件。純函式,只回傳、不登記任何東西;
  * 登記在 `app/base/module-pages.ts`、`app/project/module-pages.ts` 的 `forms`(模組層設定也在那裡給),
  * 由 `app/module-page-registry.ts` 展開。單頁客製用該筆登記的 `pageOverrides`,其餘沿用這裡的預設。
  *

@@ -9,7 +9,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 刪欄位前的確認清單(Spec 6a §8「設計器其他規則」):先列出**草稿內**引用它的表達式、摘要槽、帶入規則、連動篩選,
+ * 刪欄位前的確認清單:先列出**草稿內**引用它的表達式、摘要槽、帶入規則、連動篩選,
  * 以及**草稿外**的列表欄位配置(只提示,不動)。確認後只從 `fields[]` / `layout` 移除,這些引用處
  * 會變成檢查器錯誤(`EXPR_UNKNOWN_FIELD`、`SUMMARY_UNMAPPED`、`PREFILL_…`、`LOOKUP_FILTER_VAR_INVALID`)由設計者手動修。
  */
@@ -17,7 +17,7 @@ export type FieldReference =
   | { kind: "expression"; fieldKey: string; slot: ExpressionSlot }
   | { kind: "summary"; slot: SummarySlot }
   | { kind: "prefill"; prefillIndex: number; label: string }
-  /** 引用欄位 / 明細引用子欄的連動篩選 `{ var }` 引用它(B2d) */
+  /** 引用欄位 / 明細引用子欄的連動篩選 `{ var }` 引用它 */
   | { kind: "lookupFilter"; fieldKey: string; columnKey?: string }
   | { kind: "listColumn" };
 

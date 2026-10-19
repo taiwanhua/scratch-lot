@@ -16,7 +16,7 @@ registerEnumType(UploadPurpose, {
 });
 
 /**
- * 把「依 purpose 而定」的規則寫成一行欄位說明(#344:檔型與大小上限都依用途)。
+ * 把「依 purpose 而定」的規則寫成一行欄位說明(檔型與大小上限都依用途)。
  * 規則相同的用途併成一組,說明才不會把同一份白名單抄三遍;文字由 `UPLOAD_RULES` 導出,不另寫死。
  */
 function describeByPurpose(describe: (rule: UploadRule) => string): string {

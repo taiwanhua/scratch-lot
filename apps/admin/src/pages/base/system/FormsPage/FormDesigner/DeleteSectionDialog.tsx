@@ -22,7 +22,7 @@ export interface DeleteSectionDialogProps {
   onConfirm: (mode: RemoveSectionMode) => void;
 }
 
-/** 刪分區二選一(Spec 6a §8):欄位移到「未放置」區,或連同欄位一起刪除(只動草稿)。 */
+/** 刪分區二選一:欄位移到「未放置」區,或連同欄位一起刪除(只動草稿)。 */
 export const DeleteSectionDialog = ({
   section,
   references,

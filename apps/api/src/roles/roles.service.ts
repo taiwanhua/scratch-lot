@@ -78,7 +78,7 @@ export class RolesService {
 
   /**
    * 清單:擁有組織在操作者**管理範圍**內的角色(ADR-0003 / ADR-0005);
-   * `ownerOrgId` 在那之內再篩一個擁有組織(#246 的 3),`keyword` 比對名稱與描述。
+   * `ownerOrgId` 在那之內再篩一個擁有組織,`keyword` 比對名稱與描述。
    */
   async list(
     operator: OperatorContext,
@@ -182,7 +182,7 @@ export class RolesService {
 
   /**
    * 編輯名稱 / 描述(GQL-06:`description` 缺席 = 不動、null = 清空)。
-   * 種子角色不可改(#261 規則表):它隨底座出貨,改了下一次 seed 又被蓋回去。
+   * 種子角色不可改(規則表):它隨底座出貨,改了下一次 seed 又被蓋回去。
    */
   async update(
     operator: OperatorContext,
@@ -236,7 +236,7 @@ export class RolesService {
   /**
    * 停用 / 啟用:停用後持有者的該角色立即不生效(授予仍在,PermissionResolver 排除,ADR-0011)。
    *
-   * 三道擋(#261 規則表;判準正本 `role-rules.ts` 的 `canToggleEnabled`):
+   * 三道擋(規則表;判準正本 `role-rules.ts` 的 `canToggleEnabled`):
    * 1. 種子角色一律不可切(`SYSTEM_ROLE`)
    * 2. 預設角色(租戶副本)只有根組織的操作者可切(`TEMPLATE_COPY_ROOT_ONLY`)
    * 3. **自鎖保護**:不可停用操作者自己正持有的角色(`SELF_LOCK`)—— 做得成就把自己

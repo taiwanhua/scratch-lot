@@ -2,7 +2,7 @@ import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
 
 import { RoleModel } from "./role.model";
 
-/** 清單分頁(GQL-03 的 `items` + `totalCount`;分頁參數依 #130 介面設計用 page / pageSize)。 */
+/** 清單分頁(GQL-03 的 `items` + `totalCount`;分頁參數用 page / pageSize)。 */
 @ObjectType()
 export class RolesPayload {
   @Field(() => [RoleModel])
@@ -75,13 +75,13 @@ export class RoleUser {
 }
 
 /**
- * 「加入使用者」彈窗的一位候選(#246 的 4)。
+ * 「加入使用者」彈窗的一位候選。
  *
  * api 介面(GQL-07):
  * - 清單範圍 = 操作者**管理範圍**內、**尚未持有這個角色**的使用者
  * - `orgs`:該使用者的所屬組織,只列操作者管理範圍內的(與 `RoleUser.orgs` 同一條)
  * - `eligible`:所屬組織至少一個落在角色擁有組織的子樹內(ADR-0003 的授予資格)。
- *   **不合格的人照樣列出來**,由前端 disabled 並就地說明原因(#261 的決定:
+ *   **不合格的人照樣列出來**,由前端 disabled 並就地說明原因(理由:
  *   直接不列會讓找不到人的人以為「這個人不見了」,而不知道是資格不符)。
  *   判定權仍在 api:硬送 `grantRoleUsers` 一樣回 `USER_NOT_ELIGIBLE`
  */

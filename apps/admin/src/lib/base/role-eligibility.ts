@@ -5,8 +5,8 @@ import type { OrgNodeLike } from "./org-tree";
  * `apps/api/src/users/org-qualification.service.ts`):使用者的所屬組織中,
  * 至少一個落在該角色擁有組織的子樹內。
  *
- * 前端為什麼也要算一次:兩個跳窗都改成「範圍外的照樣列出、但 disabled 並說明原因」
- * (#261 的 6 / 7)—— 不列出來的話,使用者只會覺得「我要的那個人 / 那個角色不見了」。
+ * 前端為什麼也要算一次:兩個跳窗都改成「範圍外的照樣列出、但 disabled 並說明原因」——
+ * 不列出來的話,使用者只會覺得「我要的那個人 / 那個角色不見了」。
  * **判定權仍在 api**:送出時 `assignUserRoles` / `grantRoleUsers` 會回 `USER_NOT_ELIGIBLE`,
  * 前端這一份只決定「列要不要灰掉」,算錯也不會放行。
  *

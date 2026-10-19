@@ -17,8 +17,8 @@ import { renderShopping, shoppingForm } from "./form-module-test-support";
 const CREATE_PATH = `${DEMO_FORM_ROUTES.createPage}/shopping_list`;
 
 /**
- * 購物單多一個表單層引用「出貨分店」;明細多一個引用子欄「本」:篩選引用出貨分店(連動篩選 B2d),
- * 選定時把來源的 `price` 帶進同一列的「單價」(列內帶入 B2c)。
+ * 購物單多一個表單層引用「出貨分店」;明細多一個引用子欄「本」:篩選引用出貨分店(連動篩選),
+ * 選定時把來源的 `price` 帶進同一列的「單價」(列內帶入)。
  */
 const linkedDefinition = (): FormDefinition => {
   const base = arrayDefinition();

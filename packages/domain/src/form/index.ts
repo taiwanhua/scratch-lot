@@ -1,6 +1,6 @@
 /**
  * `@repo/domain/form` 的出口檔(bunchee 由 `exports` 名反推本檔;GEN-01 的 packages 邊界例外)。
- * 表單引擎的純邏輯(Spec 6a §1、§4、§5),前後端共用:
+ * 表單引擎的純邏輯(見 `docs/concepts/form-engine.md`),前後端共用:
  *
  * - `types.ts`:FieldDef / Layout / SummaryMap / Prefill / lookup 來源描述 / 表達式與上下文
  * - `keys.ts`:表單 key、欄位 key(含保留字)、租戶短碼、欄位類別 key 的格式(不依賴外部套件)

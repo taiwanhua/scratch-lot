@@ -31,7 +31,7 @@ describe("layoutTimeline 寬度與排序", () => {
     ]);
   });
 
-  it("欄寬取整數 px:125.9 與 125 排法相同,跨過整數條才改變(T-17 平板若是 120,補貨收起)", () => {
+  it("欄寬取整數 px:125.9 與 125 排法相同,跨過整數條才改變(T-17 平板若是 120,加開場收起)", () => {
     const groups = ruleCase("T-17").groups;
     expect(describeLayout(groups, 125.9)).toEqual(describeLayout(groups, 125));
     expect(describeLayout(groups, 124)).toEqual(describeLayout(groups, 125));

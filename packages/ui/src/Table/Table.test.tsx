@@ -111,7 +111,7 @@ describe("Table", () => {
     expect(screen.queryByText("目前沒有資料")).toBeNull();
   });
 
-  /** #183:容器比 `minWidth` 窄時要橫向捲,而不是把欄位擠成折行。 */
+  /** 容器比 `minWidth` 窄時要橫向捲,而不是把欄位擠成折行。 */
   it("minWidth 給到表格上,未給時不設限", () => {
     const { container: withMin } = render(
       <Table
@@ -136,7 +136,7 @@ describe("Table", () => {
     ).toBe("");
   });
 
-  /** #299:容器撐滿父層高度,列數少時橫向捲軸才落在面板底部而不是最後一列下方。 */
+  /** 容器撐滿父層高度,列數少時橫向捲軸才落在面板底部而不是最後一列下方。 */
   it("捲動容器預設撐滿父層高度", () => {
     const { container } = render(
       <Table columns={columns} rows={rows} getRowKey={getRowKey} />,

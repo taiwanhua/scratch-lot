@@ -122,7 +122,7 @@ interface FieldDocument {
   [field: string]: unknown;
 }
 
-/** 示範資料的觀察欄位(#319;正本:apps/db-migrator/seeds/base/demo-items.ts)。 */
+/** 示範資料的觀察欄位(正本:apps/db-migrator/seeds/base/demo-items.ts)。 */
 interface DemoItemDocument {
   key?: string;
   orgId?: ObjectId;
@@ -745,7 +745,7 @@ describe("root 初始超級管理員帳號(ADR-0002)", () => {
   }, 120_000);
 });
 
-describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/*.md)", () => {
+describe("模組樹、權限、資料範圍目標種子(正本:docs/modules/*.md)", () => {
   it("示範家族 10 節點依正本落庫:parentId/ancestors 指向該環境的 _id、sidebarType、order;全部 enabled", async () => {
     const databaseUri = createTestDatabaseUri("module-tree");
 
@@ -822,7 +822,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
       siblingsOfDemo.length,
     );
 
-    // 樹全種(#29 留言定案):治理模組、資料範圍、隱藏 api 模組也在,且皆 enabled(D4:不分環境)
+    // 樹全種:治理模組、資料範圍、隱藏 api 模組也在,且皆 enabled(D4:不分環境)
     for (const key of [
       "overview",
       "system",
@@ -889,8 +889,8 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
       "demo.sample-two.edit": "demo.sample-two",
       "demo.sample-two.delete": "demo.sample-two",
       // 正本:docs/modules/org-manager.md 權限表(10 + 租戶作業 3;
-      // set-visibility 2026-09-19 從 tenant-ops 搬到組織管理層,#187 / ADR-0005;
-      // view-members / add-members 是「成員」頁籤,#377)
+      // set-visibility 2026-09-19 從 tenant-ops 搬到組織管理層,ADR-0005;
+      // view-members / add-members 是「成員」頁籤)
       "system.org-manager.view": "system.org-manager",
       "system.org-manager.create-child": "system.org-manager",
       "system.org-manager.edit": "system.org-manager",
@@ -955,7 +955,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
           ]),
         ),
       ),
-      // 流程管理(Spec 6b §8):6 個 + 阻擋清單頁自有的改派
+      // 流程管理:6 個 + 阻擋清單頁自有的改派
       "system.workflows.view": "system.workflows",
       "system.workflows.create": "system.workflows",
       "system.workflows.edit": "system.workflows",
@@ -1030,7 +1030,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
         ],
       });
     }
-    // 業務欄位目錄照宣告落庫(#246 的 2:enum 的固定選項);基礎欄位不入庫,由 api 查詢時附加
+    // 業務欄位目錄照宣告落庫(enum 的固定選項);基礎欄位不入庫,由 api 查詢時附加
     expect(dataScopeTargets[0]).toMatchObject({
       collection: "demo_items_one",
       moduleKey: "demo.sub.sample-one",
@@ -1052,7 +1052,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     expect(dataScopeTargets[0]).not.toHaveProperty("key");
   }, 120_000);
 
-  it("示範資料兩表各 5 筆(#319):以 key 冪等、掛根組織、各有一筆初始停用,重跑 0 / 0 / 5", async () => {
+  it("示範資料兩表各 5 筆:以 key 冪等、掛根組織、各有一筆初始停用,重跑 0 / 0 / 5", async () => {
     const databaseUri = createTestDatabaseUri("demo-items");
 
     expect(await runSeedCommand(databaseUri)).toMatchObject({ status: 0 });
@@ -1153,7 +1153,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
     expect(modules.find((module) => module.key === "demo")?.enabled).toBe(true);
   }, 120_000);
 
-  it("icon 初值依正本落庫;人在系統內改過(含清成 null)重跑不被覆蓋,欄位缺漏才補初值(#288)", async () => {
+  it("icon 初值依正本落庫;人在系統內改過(含清成 null)重跑不被覆蓋,欄位缺漏才補初值", async () => {
     const databaseUri = createTestDatabaseUri("module-icon");
 
     expect(await runSeedCommand(databaseUri)).toMatchObject({ status: 0 });
@@ -1178,7 +1178,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
       await database
         .collection("modules")
         .updateOne({ key: "system" }, { $set: { icon: null } });
-      // 舊環境的文件根本沒有這一欄(#288 之前種下的資料):重跑要補初值,否則新功能等於沒上線
+      // 舊環境的文件根本沒有這一欄(加這個欄位之前種下的資料):重跑要補初值,否則新功能等於沒上線
       await database
         .collection("modules")
         .updateOne({ key: "api" }, { $unset: { icon: "" } });
@@ -1275,7 +1275,7 @@ describe("模組樹、權限、資料範圍目標種子(#29;正本:docs/modules/
           .map((module) => module.key),
       ),
     ).toEqual(new Set(formModuleKeys));
-    // 底座示範表單模組不開啟依表單分開新增權限(B9b);每個模組都落庫 perFormCreate = false
+    // 底座示範表單模組不開啟依表單分開新增權限;每個模組都落庫 perFormCreate = false
     expect(modules.every((module) => module.perFormCreate === false)).toBe(
       true,
     );
@@ -1402,7 +1402,7 @@ describe("種子角色綁定(ADR-0004 wildcard 只存 *、ADR-0009 模板扣除�
     // (ADR-0009 第 3 步:整個 rootOnly 模組被扣除)
     expect(boundModuleKeys).not.toContain("system.org-manager.tenant-ops");
     expect(boundModuleKeys).not.toContain("system.field-manager.category-ops");
-    // 反面:可見範圍開關搬到組織管理層後,模板靠 `system.org-manager.*` 自動取得(#187 / ADR-0005)—
+    // 反面:可見範圍開關搬到組織管理層後,模板靠 `system.org-manager.*` 自動取得(ADR-0005)—
     // 模板不綁個別權限,所以這裡驗的是「它的擁有模組在模板綁的模組內」
     expect(boundModuleKeys).toContain("system.org-manager");
     const setVisibility = permissions.find(

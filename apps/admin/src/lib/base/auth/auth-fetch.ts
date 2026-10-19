@@ -28,7 +28,7 @@ const codeOf = async (response: Response) => {
 };
 
 /**
- * 受保護請求的 fetch 層(#61 / GQL-04):
+ * 受保護請求的 fetch 層(GQL-04):
  * 1. 記憶體沒 token → 先用 cookie 換票(開機中的請求會等同一個 refresh);換不到就回 UNAUTHENTICATED
  * 2. 帶 `Authorization: Bearer <access token>` 送出
  * 3. 回 `TOKEN_EXPIRED` → 靜默換票(單飛)後**只重送一次**

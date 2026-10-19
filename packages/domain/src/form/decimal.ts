@@ -3,7 +3,7 @@ import { Decimal } from "decimal.js";
 import { toInstant } from "./temporal";
 
 /**
- * 表達式的數值運算(Spec §5「數值」):中間過程**不取位**,只有最後依欄位 `precision` 四捨五入;
+ * 表達式的數值運算:中間過程**不取位**,只有最後依欄位 `precision` 四捨五入;
  * 除以零與空值 → `null`。另收比較(日期 / 日期時間比時點)與文字串接。
  */
 

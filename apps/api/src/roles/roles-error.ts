@@ -39,7 +39,7 @@ export type RoleNotDeletableReason =
   (typeof ROLE_NOT_DELETABLE_REASONS)[number];
 
 /**
- * `FORBIDDEN` 的 `extensions.reason`(#261 的角色種類規則;正本
+ * `FORBIDDEN` 的 `extensions.reason`(角色種類規則;正本
  * `docs/modules/role-manager.md` 的規則表與 `role-rules.ts`)。
  * `FORBIDDEN` 是通用碼,光看碼分不出「為什麼不行」— 前端要據此顯示不同的一句話。
  */
@@ -58,7 +58,7 @@ export const ROLE_FORBIDDEN_REASONS = [
 export type RoleForbiddenReason = (typeof ROLE_FORBIDDEN_REASONS)[number];
 
 /**
- * `ROLE_OUT_OF_REACH` 的 `extensions.reason`(#283)。
+ * `ROLE_OUT_OF_REACH` 的 `extensions.reason`。
  * 同一個碼有兩種來源,光看碼分不出「是我自己沒有,還是這個角色本來就上不去」:
  * 沒有 reason = 操作者自身權限集不足(ADR-0004 subset-only);
  * `TEMPLATE_CEILING` = 預設角色的天花板 —— 送出的項目**內建「租戶管理員」模板角色沒有**,

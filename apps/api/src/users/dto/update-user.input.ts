@@ -6,7 +6,7 @@ import { Field, ID, InputType } from "@nestjs/graphql";
  *
  * **缺席 = 不動、`null` = 清空**(GQL-06):選填欄位送 `null` 落庫寫 `null`(ADR-0002);
  * 必填欄位(`name` / `account` / `email`)送 `null` 與送空字串同義 → `VALIDATION_FAILED`。
- * 型別要寫成 `string | null`,否則 service 會對 `null` 直接 `.trim()`(#372)。
+ * 型別要寫成 `string | null`,否則 service 會對 `null` 直接 `.trim()`。
  */
 @InputType()
 export class UpdateUserInput {

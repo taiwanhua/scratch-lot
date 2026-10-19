@@ -46,7 +46,7 @@ import {
 } from "./lookup-provider-registration";
 
 /**
- * lookup 來源登錄表(Spec 6a §5「lookup 來源」):帶入(prefill)、引用(reference)、
+ * lookup 來源登錄表:帶入(prefill)、引用(reference)、
  * lookup 選項(`options.kind = "lookup"`)都用這一張。
  *
  * - **底座來源**(`user`、`org`、`form_submission`):宣告在 `LOOKUP_PROVIDERS`,實作在 `providerFor`。
@@ -186,7 +186,7 @@ export function hasLookupField(record: LookupRecord, field: string): boolean {
 }
 
 /**
- * 一筆的顯示名(Spec §5「lookup 來源」`labelTemplate`):來源描述有顯示模板就套(每個佔位符取該欄的顯示名 / 值);
+ * 一筆的顯示名(`labelTemplate`):來源描述有顯示模板就套(每個佔位符取該欄的顯示名 / 值);
  * 模板引用的欄位**有任何一個讀不到**(依這次讀取的權限被省略)、沒模板或套出空的 → 整串用 `labelField`。
  * 三處一致:`formLookup`(操作者權限)、引用 / lookup 選項的快照(`publicOnly`)、現名解析(讀者權限)。
  * 讀取時要的欄位用 `@repo/domain/form` 的 `lookupLabelFieldsOf(source)`。
@@ -896,7 +896,7 @@ export class LookupProvidersService implements OnModuleInit {
   }
 
   /**
-   * 每一筆依**它自己綁的版本**決定要的欄位能不能給(Spec §5 的表):
+   * 每一筆依**它自己綁的版本**決定要的欄位能不能給:
    * 存在且非受保護 → 語意值(+ 選項 / 引用的 label);存在但受保護且沒有 show → **省略**;
    * 那一版沒有這個欄位 → null。摘要槽照回。
    */

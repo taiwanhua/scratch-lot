@@ -30,7 +30,7 @@ import {
 const step = (key: string): ReviewStepDef => newReviewStep(key, key);
 const join = (key: string): JoinStepDef => ({ key, name: key, kind: "join" });
 
-/** 採購單(Spec 6b §2 平行分支的例子):初審 → 財務 / 法務 / 採購 → 匯合 → 原部門確認。 */
+/** 採購單(平行分支的例子):初審 → 財務 / 法務 / 採購 → 匯合 → 原部門確認。 */
 const purchaseFlow = (): Flow => [
   { type: "step", step: step("review") },
   {

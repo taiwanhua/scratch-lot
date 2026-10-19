@@ -5,7 +5,7 @@ import { PATTERN_FLAGS, type RegexSafetyCheck } from "../form/validate-fields";
 /**
  * `@repo/domain/form-regex-safety` 的出口檔(bunchee 由 `exports` 名反推本檔;GEN-01 的 packages 邊界例外)。
  *
- * 表單定義檢查器的 ReDoS 檢查(Spec 6a §5「正則」)。**與 `@repo/domain/form` 分開一個子路徑**:
+ * 表單定義檢查器的 ReDoS 檢查。**與 `@repo/domain/form` 分開一個子路徑**:
  * recheck 的瀏覽器版約 2.9 MB,放在 `form` 裡,admin 只要用到渲染器或值的正規化就會把它打進首屏 bundle。
  * 所以 `validateDefinition` 的 `regexSafety` 一律由呼叫端注入:api 直接 import 本檔,
  * admin 的設計器以動態 `import()` 懶載入。

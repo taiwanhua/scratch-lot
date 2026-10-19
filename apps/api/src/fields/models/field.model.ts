@@ -30,7 +30,7 @@ export class FieldCategoryModel {
 
 /**
  * 自訂選項的擁有組織(來源欄「<組織名稱> 自訂」的名稱來源)。
- * 上層 / 下層組織加的選項也會出現在合併清單裡(#264),所以組織名稱由 api 給 ——
+ * 上層 / 下層組織加的選項也會出現在合併清單裡,所以組織名稱由 api 給 ——
  * 前端拿 session 的當前組織名組字串會把別的組織標成自己的。
  */
 @ObjectType("FieldOwnerOrg")
@@ -46,7 +46,7 @@ export class FieldOwnerOrgModel {
  * 欄位選項(`system.field-manager` 的主要型別)。
  * `value` 建立後不可改(舊資料以它對照),所以 `updateField` 的 input 沒有這個欄位。
  *
- * 可見範圍與可操作性的規則正本:`docs/modules/field-manager.md`(#264 的規則表)。
+ * 可見範圍與可操作性的規則正本:`docs/modules/field-manager.md` 的規則表。
  * `ownerOrg` / `isOwn` / `canEdit` / `canToggleEnabled` 由 api 依操作者算好,前端只讀。
  */
 @ObjectType("Field")

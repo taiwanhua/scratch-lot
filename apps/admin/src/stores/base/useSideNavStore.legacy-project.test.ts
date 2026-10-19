@@ -13,7 +13,7 @@ import {
 const SIDE_NAV_STORAGE_KEY = "cookhome-admin-sidenav";
 const LEGACY_SIDE_NAV_STORAGE_KEY = "cookhome.admin.sidenav";
 
-/** `persist` 預設的封包格式(#289 存下來的既存值就長這樣)。 */
+/** `persist` 預設的封包格式(早期存下來的既存值就長這樣)。 */
 const envelope = (isCollapsed: boolean) =>
   JSON.stringify({ state: { isCollapsed }, version: 0 });
 
@@ -37,7 +37,7 @@ const reloadWith = async (stored: {
   await useSideNavStore.persist.rehydrate();
 };
 
-describe("useSideNavStore(CookHome 歷史鍵):localStorage key 統一為 kebab(#183 第 6 項)", () => {
+describe("useSideNavStore(CookHome 歷史鍵):localStorage key 統一為 kebab", () => {
   beforeEach(() => {
     localStorage.clear();
   });

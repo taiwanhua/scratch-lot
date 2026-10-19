@@ -24,7 +24,7 @@ export const useModuleManagerData = () => {
   const canToggleEnabled = hasPermission(
     MODULE_MANAGER_PERMISSIONS.toggleEnabled,
   );
-  /** 換圖示與停用是兩把鑰匙(#288);只有這一把時仍看得到目前圖示,只是不能換 */
+  /** 換圖示與停用是兩把鑰匙;只有這一把時仍看得到目前圖示,只是不能換 */
   const canSetIcon = hasPermission(MODULE_MANAGER_PERMISSIONS.setIcon);
 
   /** 選中的節點存在網址 `?detail=<id>`(REACT-14);沒有 = 第一棵樹的根。 */

@@ -23,7 +23,7 @@ describe("signalQueryKeys", () => {
   });
 
   it("只有前綴登記的類型(專案的 badge:<模組 key>)也收得到", () => {
-    expect(signalQueryKeys(table, "badge:dealers")).toEqual([SIDEBAR]);
+    expect(signalQueryKeys(table, "badge:vendors")).toEqual([SIDEBAR]);
   });
 
   it("前綴不吃到別的類型;沒登記的類型什麼都不做", () => {

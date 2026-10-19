@@ -60,7 +60,7 @@ export interface RoleWorldOptions {
   /** 租戶副本的矩陣只能縮不能擴 */
   shrinkOnly?: boolean;
   /**
-   * 預設角色的天花板(#283):內建「租戶管理員」模板角色目前的授予。
+   * 預設角色的天花板:內建「租戶管理員」模板角色目前的授予。
    * 未給 = 不是預設角色(api 回 null),天花板那把鎖不作用。
    */
   ceiling?: { moduleKeys: string[]; permissionKeys: string[] } | null;
@@ -91,7 +91,7 @@ export interface RoleWorld {
 }
 
 /**
- * 角色管理頁的假 api(#203 的端點 + 擁有組織下拉的 `orgTree` + 候選的 `roleUserCandidates`)。
+ * 角色管理頁的假 api(角色管理端點 + 擁有組織下拉的 `orgTree` + 候選的 `roleUserCandidates`)。
  * 清單範圍照 api 的規則由伺服器決定,這裡只做關鍵字比對與分頁;
  * `grantRoleUsers` / `revokeRoleUsers` 會真的改動持有人清單,
  * 候選清單也跟著排除已持有的人(有狀態的假伺服器,TEST-08),讓畫面測得到結果。
@@ -236,7 +236,7 @@ export const roleWorld = (options: RoleWorldOptions = {}): RoleWorld => {
         name: input.name,
         description: input.description ?? null,
         enabled: true,
-        // 新建的一律是自建角色:四個動作全開(#261 的種類規則)
+        // 新建的一律是自建角色:四個動作全開(種類規則)
         kind: RoleKind.Custom,
         abilities: {
           canEdit: true,

@@ -4,7 +4,7 @@ import {
 } from "@repo/domain/form";
 
 /**
- * 表達式的 `ctx`(Spec 6a §5「歷史檢視的上下文」):
+ * 表達式的 `ctx`(含歷史檢視的上下文):
  * - 填寫 / 預覽:真正的現在 + 填寫者本人(目前組織、所屬組織全部、租戶);時區 = 讀者的租戶時區
  *   (`me.currentOrg.timezone`,`useTenantTimezone`),還沒載到用預設的 `Asia/Taipei`(不用瀏覽器時區;
  *   api 送出時以租戶時區重算,以後端為準)

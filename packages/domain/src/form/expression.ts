@@ -43,7 +43,7 @@ import type {
 } from "./types";
 
 /**
- * 表達式計算器(Spec §5「表達式」):JSONLogic(`json-logic-js`,MIT)+ 擴充函式
+ * 表達式計算器:JSONLogic(`json-logic-js`,MIT)+ 擴充函式
  * `dateDiff` / `dateAdd` / `concat` / `optionLabel` / `now`、日期常數 `date` 與明細列的彙總
  * `sumOf` / `countOf` / `minOf` / `maxOf` / `avgOf`。
  *
@@ -268,7 +268,7 @@ function registerOperations(): void {
         : new FormDecimal(diff).dividedBy(MS_PER_UNIT[unit]);
     },
     /**
-     * 彙總(Spec §5「明細列」):略過空值;全空或明細為 null 時 `sumOf` 為 0、`minOf` / `maxOf` / `avgOf` 為 null;
+     * 彙總:略過空值;全空或明細為 null 時 `sumOf` 為 0、`minOf` / `maxOf` / `avgOf` 為 null;
      * `avgOf` 的分母 = 有值的筆數;`countOf` = 列數(明細為 null 為 0,空白列也算一列)。
      */
     sumOf(arrayKey, columnKey) {
@@ -359,7 +359,7 @@ const isMixedTemporal = (
   (left === "datetime" && right === "date");
 
 /**
- * 把「一邊日期、一邊日期時間」的比較節點改寫成 `$localDayCompare`(Spec §5「數值」:日期與日期時間混比
+ * 把「一邊日期、一邊日期時間」的比較節點改寫成 `$localDayCompare`(日期與日期時間混比
  * 換成租戶時區的日再比)。型別照 `inferExpressionType`(欄位定義 + 日期常數 `date` + `now`)推;推不出來不改。
  */
 function withLocalDayComparisons(

@@ -10,17 +10,17 @@ export type ScheduleTimelineMode = "day" | "week";
 export interface ScheduleTimelineDate {
   /** `YYYY-MM-DD` */
   date: string;
-  /** 表頭日期後面的文字(例:「三」「三 店慶」),由使用的模組決定 */
+  /** 表頭日期後面的文字(例:「三」「三 活動日」),由使用的模組決定 */
   label?: ReactNode;
   /** 日期背景色(例:特殊日;主題色票如 `info.lighter`,或行事曆設定的顏色) */
   background?: string;
 }
 
-/** 不能操作的時間範圍(灰色;例:店休整天、已排於其他分店)。跨午夜的範圍兩天各畫一段。 */
+/** 不能操作的時間範圍(灰色;例:公休整天、已排於其他場地)。跨午夜的範圍兩天各畫一段。 */
 export interface ScheduleTimelineDisabledRange {
   start: ScheduleTimelineTime;
   end: ScheduleTimelineTime;
-  /** 範圍中間的說明(例:「店休」) */
+  /** 範圍中間的說明(例:「公休」) */
   label?: ReactNode;
 }
 
@@ -77,13 +77,13 @@ export type ScheduleTimelineSlot =
 /** 容器框色(Figma Draft/ScheduleTimelineDemand 的 Tone)。 */
 export type ScheduleTimelineGroupTone = "neutral" | "warning" | "error";
 
-/** 一個群組(例:一筆人力需求),畫成容器;裡面放屬於它的長條與缺額空位。 */
+/** 一個群組(例:一筆時段需求),畫成容器;裡面放屬於它的長條與缺額空位。 */
 export interface ScheduleTimelineGroup {
   /** 唯一識別(排序的最後一關) */
   id: string;
   start: ScheduleTimelineTime;
   end: ScheduleTimelineTime;
-  /** 容器標題(日模式;例:「早班 · 櫃台 A 08:30–14:30 · 負責 1/1」) */
+  /** 容器標題(日模式;例:「上午場 · 場地 A 08:30–14:30 · 負責 1/1」) */
   title: ReactNode;
   /** 週模式左側 20px 的直排標題(例:「早 2/2」);預設同 `title` */
   shortTitle?: ReactNode;

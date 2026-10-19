@@ -60,7 +60,7 @@ describe("DatePicker", () => {
   });
 
   /**
-   * #260:沒有 `size` 時固定 medium,在 `size="small"` 的下拉旁邊高一截。
+   * 沒有 `size` 時固定 medium,在 `size="small"` 的下拉旁邊高一截。
    * MUI X 的日期欄不是一般的 `InputBase`,尺寸落在 `MuiPickersInputBase-inputSizeSmall`
    * 與標籤 / 圖示的 `sizeSmall` 上。
    */

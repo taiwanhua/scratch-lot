@@ -74,9 +74,9 @@
 
 ### 個人偏好
 
-`user_preferences` 只存跟著帳號的個人偏好(規格 10.6),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
+`user_preferences` 只存跟著帳號的個人偏好(語言跟著帳號見 I18N-05),每個使用者一筆、只能讀寫自己的(`myPreferences` / `updateMyPreferences`,不看模組權限)。`settings` 只收**登記過**的 key:底座登記在 `apps/api/src/user-preferences/user-preference-registry.ts` 的 `BASE_USER_PREFERENCES`(目前是語言 `locale`,預設 `null` = 沒有設定),專案登記在 `apps/api/src/project/user-preferences.ts`,由 `app.module.ts` 合成;每筆宣告 key、型別(字串 / 布林 / 數字)與預設值。未登記的 key 或值不合型別整筆拒寫(`VALIDATION_FAILED`,`extensions.reason` = `UNKNOWN_KEY` / `INVALID_VALUE`);值 `null` = 拿掉、回到預設。讀取時每個登記的 key 都有值,已不再登記的舊 key 不回。
 
-跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。顯示密度不做(規格第 11 章 B 類),沒有對應的偏好。
+跟著裝置的設定(外觀、側欄收合、區塊收合)不進這張表,存瀏覽器。顯示密度不做,沒有對應的偏好。
 
 每種通知類型 × 每個管道另有一個布林開關,key 是 `notification_<類型 key 的 . 換成 _>_<管道>`(例 `notification_workflow_task-created_in-app`),由通知類型登記推導、不必手寫;不能關的管道只收 `true`(`allowedValues`)。規則見 `docs/modules/notification-settings.md`「個人偏好的管道開關」。
 
@@ -104,7 +104,7 @@
 
 - **`modules` 執行期可改的欄位**(`module.schema.ts`):`enabled`(停用 / 啟用,連動子樹)、`icon`(側欄圖示 key)與 `settings`(表單模組的列表欄位配置)是**初始 seed 值的欄位** —— seed 只在建立時、或既有文件**沒有這一欄**時寫初值,有值就不覆蓋(`docs/concepts/data-layer-and-isolation.md`「種子資料與遷移」)。`icon` 的白名單正本是 `@repo/domain/module-icon` 的 `MODULE_ICON_KEYS`(schema 刻意不寫成 mongoose `enum` 以免抄成第二份),`null` = 側欄用預設圖示;規則見 `docs/modules/module-manager.md`。表單模組的 `settings.list` 是列表欄位配置,由 root 在畫面寫(見 `docs/modules/forms.md`「列表欄位配置」)。
 - **`modules.engine`**:`fixed`(固定欄位模組,預設)/ `form`(表單模組);由 seed 宣告,每次 seed 都同步宣告值,不在系統內改。
-- **`modules.perFormCreate`**:表單模組依表單分開新增權限(B9b;預設 `false`);由 seed 宣告(`formModuleDeclaration` 的 `perFormCreate`),每次 seed 都同步宣告值,不在系統內改。見[授權](concepts/authorization.md#依表單分開新增權限b9b)。
+- **`modules.perFormCreate`**:表單模組依表單分開新增權限(預設 `false`);由 seed 宣告(`formModuleDeclaration` 的 `perFormCreate`),每次 seed 都同步宣告值,不在系統內改。見[授權](concepts/authorization.md#依表單分開新增權限)。
 - **`permissions.source`**:`seed` = 模組 seed 宣告、`dynamic` = 執行期產生(表單發布建的欄位級權限,key `<moduleKey>.show-<formKey>-<fieldKey>` / `edit-…`)。seed runner 只比對 / 更新 `source` 不是 `dynamic` 的文件,不刪不認識的;`retiredAt` 是 `dynamic` 權限退役時間(`null` = 使用中),退役的只由「模組與權限」頁的清理硬刪(連同 `role_permission` 綁定)。
 - **`core_relationships`**(`core-relationship.schema.ts`,ADR-0001):單一 collection 裝底座實體的關聯,`type` 是封閉 enum,命名順序 Org > User > Role > Module > Permission 決定 `firstId` / `secondId`;唯一 `(type, firstId, secondId, thirdId)`,`org_role` 另在角色側唯一(一個角色只屬一個擁有組織)。存取只經 `RelationService`,不掛租戶過濾。`org_manager` 是命名規約的例外:`firstId` = 組織、`secondId` = 使用者,語意是「主管」而不是成員(主管不必是該組織的直接成員,但必須是本租戶的使用者),一個組織多筆 = 多位主管;規則見 `docs/modules/org-manager.md`(主管與主管解析)。
 - **`orgs.slug`**:只有租戶頂層有;格式 `^[a-z][a-z0-9_]{1,19}$`(正本 `@repo/domain/form-keys` 的 `ORG_SLUG_PATTERN`)、唯一稀疏索引;開通時填,根組織可在組織編輯改。
@@ -133,11 +133,11 @@
 細節見 `docs/modules/workflows.md`。
 
 - **`workflows`**:`tenantId` = `ownerOrgId`,共用流程是 `null` —— 查共用要**明給 `null`**,沒給(`undefined`)一律拋錯。`key` 全域唯一、建立後不可改。
-- **`workflow_versions`**:與 `form_versions` 同一套部分唯一索引,草稿刪除同樣硬刪;`steps[]` / `edges[]` 存自由 JSON,形狀正本是 `@repo/domain/workflow` 的 `StepDef` / `WorkflowEdge`(沒有 `edges` = 直線,依 `steps[]` 順序);`checkFormKey` 是設計器的「檢查用表單」,只影響設計時的檢查;`cc` 是整個流程的知會對象(`AssigneeSource`,null = 沒設;B17)。
-- **`workflow_instances` 是唯一權威**:建立時就為版本的每個節點各建一筆 `pending` 的 `StepState`,之後只改欄位、不增刪元素(推進的條件更新對 `steps` 陣列元素下條件,元素不存在就永遠不成立);`editVersion` 是 CAS 用;`summary` 是該修訂的摘要槽快照(任務列表 / 通知讀它,`summary.date` 同樣存 `Date`)。`history[]` 每筆 `{ at, kind, stepKey, taskKey, userId, toUserId, comment, result, reason, code, delegatorIds }`:`result` 只有 `notified`;`delegatorIds` 只有代理承接的 `task_created` 與決定事件(被代理者們);`code` 只有 `auto_approve_blocked`(B5 自動通過被守門擋下的專案錯誤碼,`reason` 記哪一種自動通過);`reason` 是跳過 / 自動通過的原因(`step_skipped` 帶 `skip_orgs` / `skip_condition`,B5 自動記的 `approved` 帶 `auto_applicant` / `auto_prior_approver`,其他 null)。唯一 `(submissionId, revision)`;模組資料表的欄位抄自提交,資料範圍規則不套(沒有宣告資料目標)。`ccRecipientIds` 是收過這個實例知會通知(B17)的人,讀取授權讓他們唯讀這個修訂,索引 `(ccRecipientIds)`。
+- **`workflow_versions`**:與 `form_versions` 同一套部分唯一索引,草稿刪除同樣硬刪;`steps[]` / `edges[]` 存自由 JSON,形狀正本是 `@repo/domain/workflow` 的 `StepDef` / `WorkflowEdge`(沒有 `edges` = 直線,依 `steps[]` 順序);`checkFormKey` 是設計器的「檢查用表單」,只影響設計時的檢查;`cc` 是整個流程的知會對象(`AssigneeSource`,null = 沒設)。
+- **`workflow_instances` 是唯一權威**:建立時就為版本的每個節點各建一筆 `pending` 的 `StepState`,之後只改欄位、不增刪元素(推進的條件更新對 `steps` 陣列元素下條件,元素不存在就永遠不成立);`editVersion` 是 CAS 用;`summary` 是該修訂的摘要槽快照(任務列表 / 通知讀它,`summary.date` 同樣存 `Date`)。`history[]` 每筆 `{ at, kind, stepKey, taskKey, userId, toUserId, comment, result, reason, code, delegatorIds }`:`result` 只有 `notified`;`delegatorIds` 只有代理承接的 `task_created` 與決定事件(被代理者們);`code` 只有 `auto_approve_blocked`(自動通過被守門擋下的專案錯誤碼,`reason` 記哪一種自動通過);`reason` 是跳過 / 自動通過的原因(`step_skipped` 帶 `skip_orgs` / `skip_condition`,自動通過記的 `approved` 帶 `auto_applicant` / `auto_prior_approver`,其他 null)。唯一 `(submissionId, revision)`;模組資料表的欄位抄自提交,資料範圍規則不套(沒有宣告資料目標)。`ccRecipientIds` 是收過這個實例知會通知的人,讀取授權讓他們唯讀這個修訂,索引 `(ccRecipientIds)`。
 - **派任計畫的一項** `{ taskKey, assigneeId, previousAssigneeIds, assigneeState, delegatorIds }`:`delegatorIds` = 由 `assigneeId`(代理人)承接的原審核者們(多位委託同一人時合成一項),沒有代理或被改派後為空陣列。
 - **`user_delegations`**:屬帳號、不掛 tenantScope(同 `user_preferences`),只能讀寫自己的;起訖是時點,迄不含(結束日 24:00)。同一個人的代理期間不重疊(建立時檢查,沒有唯一索引);不能改結束日(提早結束 = 刪除,延長 = 刪除後重設);未結束的刪除走軟刪除,已結束的唯讀。「代理人仍啟用、在本租戶」在派任當下判斷。
-- **`workflow_tasks`**:實例派任計畫一項的投影,狀態由推進依實例同步;唯一 `(instanceId, taskKey)`,另有 `(assigneeId, status)`、`(tenantId, moduleKey, status)`、`(previousAssigneeIds)` 索引。B16 逾時提醒的計時:`assignedAt`(派給目前承辦人的時點,建任務與改派時寫;較早的任務為 null)、`overdueLevel`(這一次指派已通知到第幾級,0 / 1 / 2)、`overdueDueAt`(下一級的到期時點;關卡沒開或兩級都通知過 = null),排程以 `(tenantId, status, overdueDueAt)` 索引撈到期的待處理任務。
+- **`workflow_tasks`**:實例派任計畫一項的投影,狀態由推進依實例同步;唯一 `(instanceId, taskKey)`,另有 `(assigneeId, status)`、`(tenantId, moduleKey, status)`、`(previousAssigneeIds)` 索引。逾時提醒的計時:`assignedAt`(派給目前承辦人的時點,建任務與改派時寫;較早的任務為 null)、`overdueLevel`(這一次指派已通知到第幾級,0 / 1 / 2)、`overdueDueAt`(下一級的到期時點;關卡沒開或兩級都通知過 = null),排程以 `(tenantId, status, overdueDueAt)` 索引撈到期的待處理任務。
 
 ## 種子清單
 

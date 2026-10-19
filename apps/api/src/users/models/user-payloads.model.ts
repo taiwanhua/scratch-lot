@@ -43,7 +43,7 @@ registerEnumType(UserActivationMode, {
   description: "新增使用者的啟用方式(ADR-0009:啟用信 / 初始密碼)",
 });
 
-/** 清單分頁(形狀同 GQL-03:`items` + `totalCount`;分頁參數依 #130 介面設計用 page / pageSize)。 */
+/** 清單分頁(形狀同 GQL-03:`items` + `totalCount`;分頁參數用 page / pageSize)。 */
 @ObjectType()
 export class UsersPayload {
   @Field(() => [User])

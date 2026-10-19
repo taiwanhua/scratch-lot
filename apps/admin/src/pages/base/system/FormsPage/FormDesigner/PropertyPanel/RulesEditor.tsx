@@ -58,7 +58,7 @@ const numberOrEmpty = (text: string): number | "" =>
   text.trim() === "" ? "" : Number(text);
 
 /**
- * 驗證規則(Spec 6a §5 `rules`,哪些出現照表 A `sections`):必填(是 / 否欄位 = 必須勾選)、範圍(數字打字;
+ * 驗證規則(`rules`,哪些出現照 `property-sections.ts` 的 `sections`):必填(是 / 否欄位 = 必須勾選)、範圍(數字打字;
  * 日期 / 日期時間用與固定值同一組輸入元件 `TypedValueInput`,以租戶時區輸入、存時點 ISO,日期時間兩格直排)、上傳的檔型 / 大小上限(`rules.accept` / `rules.maxSizeMb`)、長度(單行 / 多行文字)、
  * 內建格式或正則 + 訊息(只有單行文字)、`allowCustom`(只有可搜尋類 widget、值來源 = 使用者填)、
  * 自訂驗證(條件成立才通過,不成立顯示 `customMessage`)。

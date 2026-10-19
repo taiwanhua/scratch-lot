@@ -13,7 +13,7 @@ export interface WorkflowForkSource {
 }
 
 /**
- * 審核流程(Spec 6b §4「workflows」;`docs/data-model.md`「workflows」):一組依序的審核關卡的身分。
+ * 審核流程(`docs/data-model.md`「workflows」):一組依序的審核關卡的身分。
  *
  * - 共用流程:`ownerOrgId = null`、`tenantId = null`,root 管,以 `org_workflow` 分派給租戶
  * - 客製流程:`ownerOrgId = tenantId = 租戶頂層`,只有該租戶看得到

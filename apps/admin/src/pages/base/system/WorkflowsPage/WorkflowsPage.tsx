@@ -29,7 +29,7 @@ export interface WorkflowsPageLocationState {
 }
 
 /**
- * 流程管理(模組 key `system.workflows`,正本 `docs/modules/workflows.md`;Spec 6b §8 畫面 2–6):
+ * 流程管理(模組 key `system.workflows`,正本 `docs/modules/workflows.md`):
  * 左欄流程清單,右欄選中流程的設計器與版本面板;分派、fork、改名稱是右欄的跳窗;
  * 頁首「阻擋清單」進隱藏頁 `system.workflows.blocked-page`(有 `reassign` 才看得到)。
  *

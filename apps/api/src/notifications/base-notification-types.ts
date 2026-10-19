@@ -12,9 +12,9 @@ import {
 export const WORKFLOW_TASK_CREATED = "workflow.task-created";
 /** 審核流程:有結果(核准 / 駁回 / 退回)給申請人。 */
 export const WORKFLOW_RESULT = "workflow.result";
-/** 審核流程:逾時提醒給審核者 / 通知對象(B16)。 */
+/** 審核流程:逾時提醒給審核者 / 通知對象。 */
 export const WORKFLOW_OVERDUE = "workflow.overdue";
-/** 審核流程:知會對象(B17)。 */
+/** 審核流程:知會對象。 */
 export const WORKFLOW_CC = "workflow.cc";
 /** 列印:列印失敗給列印要求人。 */
 export const PRINTING_JOB_FAILED = "printing.job-failed";

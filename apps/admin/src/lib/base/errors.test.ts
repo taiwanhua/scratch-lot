@@ -16,7 +16,7 @@ const SPEC = {
   reasons: ["HAS_CHILDREN", "HAS_MEMBERS", "VALUE_TYPE"] as const,
 };
 
-/** #430:各頁 `<ns>ErrorOf` 共用的解讀器 —— 形狀 `{ code, reason?, reasons?, fields?, path?, message? }`。 */
+/** 各頁 `<ns>ErrorOf` 共用的解讀器 —— 形狀 `{ code, reason?, reasons?, fields?, path?, message? }`。 */
 describe("parseAdminError", () => {
   it("不是 ClientError(網路錯誤等)→ 只有 code: UNEXPECTED", () => {
     expect(parseAdminError(new Error("boom"), SPEC)).toEqual({

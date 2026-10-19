@@ -34,7 +34,7 @@ const tenantAdminB: Role = {
   tenant: "美味餐飲",
   eligible: true,
 };
-/** 不合格的那一列:列出來但灰掉,並就地說明原因(#261 的 6) */
+/** 不合格的那一列:列出來但灰掉,並就地說明原因 */
 const storeManager: Role = {
   id: "b-store",
   name: "門市主管",

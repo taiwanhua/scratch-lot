@@ -75,7 +75,7 @@ const CTX: ExpressionContext = {
 };
 const ref = (id: string) => ({ id, label: id });
 
-describe("連動篩選(B2d)填寫端", () => {
+describe("連動篩選填寫端", () => {
   it("列出依賴的引用欄(表單層與明細子欄)與被引用欄位的目前值", () => {
     expect(links.map((link) => [link.fieldKey, link.columnKey])).toEqual([
       ["main_book", undefined],
@@ -181,7 +181,7 @@ describe("連動篩選(B2d)填寫端", () => {
   });
 });
 
-describe("列內帶入(B2c)", () => {
+describe("列內帶入", () => {
   it("選定時寫引用值並把來源欄位帶入同一列(覆蓋);被省略的來源欄位不動、別列不動", () => {
     const rows = [
       { rowId: "r1", book: null, amount: "9" },

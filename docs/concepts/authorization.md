@@ -54,7 +54,7 @@
 - **別租戶的表單動態權限對操作者視同不存在**:表單的 `ownerOrgId` 不是 null、也不是操作者當前組織的租戶(根組織操作者只認共用表單),或表單已不存在(fail-closed)。過濾在 `PermissionResolver.resolve`(超級管理員同樣過濾),所以 `me.modules`、`@RequirePermission`、權限矩陣看到同一份;持該模組 `*` 也蓋不到這些 key:api 端的權限判斷一律用 `holdsPermission`(不直接呼叫 `hasPermission`);前端拿到的 `me.modules` 已過濾,照用 `hasPermission`。
 - 只有權限集裡有動態權限(持表單模組 `*`,或被授了動態權限)才查 `forms`;只持固定權限的操作者不多一次查詢。
 
-### 依表單分開新增權限(B9b)
+### 依表單分開新增權限
 
 一個表單模組綁多張表單時,預設「能不能新增」只看模組 `create`:有它就每張都能填。模組要讓每張表單各自授權時,在 seed 宣告 `perFormCreate: true`(`formModuleDeclaration` 的選填欄位,落庫 `modules.perFormCreate`,每次 seed 同步宣告值;沒有執行期開關)。底座示範表單模組都不開。
 

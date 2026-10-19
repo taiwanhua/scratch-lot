@@ -27,7 +27,7 @@ export const ORG_ERROR_CODES = [
    * 清單正本是 GQL-04 的表,不是其中任一個檔。
    */
   "OWNER_PROTECTED",
-  /** 有登入但做了不被允許的事:非根組織的操作者執行租戶作業(#135) */
+  /** 有登入但做了不被允許的事:非根組織的操作者執行租戶作業 */
   "FORBIDDEN",
 ] as const;
 

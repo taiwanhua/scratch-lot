@@ -18,12 +18,12 @@ import { RequireAuth } from "./guards/RequireAuth";
 import { modulePageMinWidths, modulePages } from "./module-pages";
 
 /**
- * 路由表(#61「admin — 三頁與殼」):
+ * 路由表(admin 的三頁與殼):
  * - 公開:/login、/forgot-password、/set-password(登入線7)
  * - 已登入者的 /change-password(首登強改也走它;守門在 RequireAuth)
  * - 受保護:殼(`AdminShell`)包住 `/` 與所有模組路由;路由由 `me.modules` 決定(ADR-0011「路由與導向規則」):
  *   `/` 轉到側欄第一個能進的頁、模組路由顯示該模組頁面(`module-pages.tsx` 登記,否則佔位頁)、其餘無權限頁
- * - 殼層路由 `/settings/personal`(個人設定;規格 10.6):不是模組、不看權限,所有登入者都能開
+ * - 殼層路由 `/settings/personal`(個人設定):不是模組、不看權限,所有登入者都能開
  */
 export const AppRoutes = () => (
   <Routes>

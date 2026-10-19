@@ -37,7 +37,7 @@ export interface SubmissionActions {
 }
 
 /**
- * 申請人對提交的三個審核動作(Spec 6b §6「撤回、作廢、複製為新單」):審核區塊與表單模組列表共用。
+ * 申請人對提交的三個審核動作(撤回、作廢、複製為新單):審核區塊與表單模組列表共用。
  * 寫入後先寫回單筆提交、再失效清單與實例(DATA-04);成功 / 失敗各跳一則提示(DATA-06:一次操作一則)。
  */
 export const useSubmissionActions = (): SubmissionActions => {

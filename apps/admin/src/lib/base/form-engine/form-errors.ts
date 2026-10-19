@@ -4,7 +4,7 @@ import { type AdminError, parseAdminError } from "@/lib/base/errors";
 
 /**
  * 表單引擎(設計端與執行端)會收到的錯誤(正本 docs/modules/forms.md「錯誤」):
- * 通用碼照 GQL-04,另有 `CONFLICT`(規格寫的「409」)與 `PERMISSION_NOT_DELETABLE`。
+ * 通用碼照 GQL-04,另有 `CONFLICT`(並行修改衝突)與 `PERMISSION_NOT_DELETABLE`。
  * 文案在 `admin.formEngine.errors.<code>`(設計端另有 `admin.forms.errors`),認不出來的一律 `UNEXPECTED`。
  *
  * `FORBIDDEN` 依 `reason` 細分:欄位級守門(`FIELD_FORBIDDEN`)、表單現在不能新增(`FORM_NOT_AVAILABLE`)、

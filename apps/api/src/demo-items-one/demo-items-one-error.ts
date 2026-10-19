@@ -3,7 +3,7 @@ import { GraphQLError } from "graphql";
 /**
  * 示範模組1(`demo.sub.sample-one`)的錯誤。
  *
- * **不新增 code**(#318):沿用 GQL-04 的通用碼 `FORBIDDEN` / `NOT_FOUND` / `VALIDATION_FAILED`;
+ * **不新增 code**:沿用 GQL-04 的通用碼 `FORBIDDEN` / `NOT_FOUND` / `VALIDATION_FAILED`;
  * 分歧的「為什麼」一律以 `extensions.reason` 表示(GQL-04「同一個 code 有多種說法時加 reason」)。
  * message 給開發者看(英文);使用者文案由前端依 code / reason 對應。
  */

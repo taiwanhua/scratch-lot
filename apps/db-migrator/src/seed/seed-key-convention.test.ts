@@ -339,10 +339,10 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
         "system.org-manager.toggle-enabled",
         "system.org-manager.move",
         "system.org-manager.delete",
-        // 組織詳情的「成員」頁籤(#377;移除成員仍走使用者管理的「選擇所屬組織」)
+        // 組織詳情的「成員」頁籤(移除成員仍走使用者管理的「選擇所屬組織」)
         "system.org-manager.view-members",
         "system.org-manager.add-members",
-        // 2026-09-19 從 tenant-ops 搬到組織管理層(#187 / ADR-0005:租戶自己的資料政策)
+        // 2026-09-19 從 tenant-ops 搬到組織管理層(ADR-0005:租戶自己的資料政策)
         "system.org-manager.set-visibility",
         "system.org-manager.set-timezone",
         "system.org-manager.tenant-ops.provision",
@@ -366,7 +366,7 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
         // 模組與權限、資料範圍是根組織專屬(模組層 isRootOnly,租戶模板整個模組被扣除)
         "system.module-manager.view",
         "system.module-manager.toggle-enabled",
-        // #288:換側欄圖示是獨立權限(與停用 / 啟用的後果差太遠,不共用一把鑰匙)
+        // 換側欄圖示是獨立權限(與停用 / 啟用的後果差太遠,不共用一把鑰匙)
         "system.module-manager.set-icon",
         // 表單發布產生、已退役的欄位級權限的清理(三層檢查)
         "system.module-manager.delete-retired-permission",
@@ -391,7 +391,7 @@ describe("底座宣告的靜態檢查(空的專案來源夾具:數量不隨引�
           `${key}.edit`,
           `${key}.delete`,
         ]),
-        // 流程管理(Spec 6b §8):6 個 + 阻擋清單頁自有的改派
+        // 流程管理:6 個 + 阻擋清單頁自有的改派
         "system.workflows.view",
         "system.workflows.create",
         "system.workflows.edit",

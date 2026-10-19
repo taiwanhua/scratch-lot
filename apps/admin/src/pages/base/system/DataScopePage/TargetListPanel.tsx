@@ -77,7 +77,7 @@ export const TargetListPanel = ({
                     <Typography variant="subtitle2">
                       {target.moduleName}
                     </Typography>
-                    {/* 「已設規則」直接讀 api 的 hasRule(#246 的 1) */}
+                    {/* 「已設規則」直接讀 api 的 hasRule */}
                     {target.hasRule && (
                       <Tag tone="primary" label={t("hasRule")} />
                     )}

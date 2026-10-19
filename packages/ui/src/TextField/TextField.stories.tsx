@@ -24,7 +24,7 @@ export const Disabled: Story = { args: { disabled: true } };
 
 /**
  * 有浮動標籤的下拉:`select` + `slotProps.select`(Figma 資料範圍的「欄位 / 條件 / 套用對象」)。
- * 多選用 `multiple` + `renderValue`,選項裡放 `Checkbox` 表示勾選狀態 — 規則編輯器不需要另一個新元件(#207 ②)。
+ * 多選用 `multiple` + `renderValue`,選項裡放 `Checkbox` 表示勾選狀態 — 規則編輯器不需要另一個新元件。
  */
 export const SelectMultiple: Story = {
   render: (args) => (

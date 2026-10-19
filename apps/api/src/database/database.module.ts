@@ -164,7 +164,7 @@ export class DatabaseModule implements OnModuleInit, OnApplicationBootstrap {
   }
 
   /**
-   * **資料範圍規則的提供者必須在啟動時就註冊好**(#246 的 6)。
+   * **資料範圍規則的提供者必須在啟動時就註冊好**。
    *
    * 查詢中介層找不到 provider 時只套租戶保底(`plugins/tenant-scope.plugin.ts`) ——
    * 那是為了不起 Nest 的單元測試(`base.repository.test.ts`)留的路,但在**跑起來的 app**

@@ -37,7 +37,7 @@ function keywordConditions(keyword: string): Record<string, unknown>[] {
 }
 
 /**
- * 組織的「成員」頁籤與「加入成員」(#377;權限 `system.org-manager.view-members` /
+ * 組織的「成員」頁籤與「加入成員」(權限 `system.org-manager.view-members` /
  * `.add-members`,正本 docs/modules/org-manager.md 權限表)。
  *
  * 三條規則,都不是本模組自創的:
@@ -48,7 +48,7 @@ function keywordConditions(keyword: string): Record<string, unknown>[] {
  * - **寫入沿用使用者管理那一支**(`UsersService.addOrgs`):被改的是使用者的所屬組織,
  *   資格判斷(組織 / 使用者都要在管理範圍內)與稽核(`user.add-org`)因此只有一份
  *
- * **候選清單要套管理範圍**(與 `roleUserCandidates` 同一個理由,#246):那是
+ * **候選清單要套管理範圍**(與 `roleUserCandidates` 同一個理由):那是
  * 「還沒加入、可以加誰」的問題,答案不該超出操作者管得到的人。
  */
 @Injectable()
@@ -75,7 +75,7 @@ export class OrgMembersService {
    * 「加入成員」彈窗的候選:操作者**管理範圍**內、**尚未加入**這個組織的使用者。
    *
    * 掛在 `system.org-manager.add-members` 底下而不是借 `users` —— 借了會逼得這個彈窗
-   * 連帶需要 `system.user-manager.view`,能管組織的人卻打不開它(#246 在角色那邊踩過同一個坑),
+   * 連帶需要 `system.user-manager.view`,能管組織的人卻打不開它(角色那邊踩過同一個坑),
    * 而且排不掉已經是成員的人。
    */
   async candidates(

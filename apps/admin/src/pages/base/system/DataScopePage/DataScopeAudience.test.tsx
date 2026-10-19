@@ -108,7 +108,7 @@ describe("套用對象(AudiencePicker)", () => {
     expect(within(audienceRegion()).getByText("客服")).toBeInTheDocument();
   });
 
-  it("角色依擁有組織分組,每個組織的標題只出現一次(#372)", async () => {
+  it("角色依擁有組織分組,每個組織的標題只出現一次", async () => {
     const { user: actor } = renderPage();
     await startMatchRule(actor);
     await chooseOption(actor, audienceCombobox("欄位"), "角色");

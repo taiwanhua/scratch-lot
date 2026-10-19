@@ -45,7 +45,7 @@ export interface DesignerState {
   /** 輸出形狀(丟掉內部 id):存草稿、JSON 預覽、預覽用 */
   output: FormDefinition;
   isDirty: boolean;
-  /** 前端即時檢查器(Spec 6a §5:設計器即時 + 發布時 api 再跑) */
+  /** 前端即時檢查器(設計器即時 + 發布時 api 再跑) */
   report: DesignerReport;
   /** 正則即時檢查的狀態(檢查結果區塊顯示「正則檢查中」/ 載入失敗的警告) */
   regexStatus: RegexCheckStatus;

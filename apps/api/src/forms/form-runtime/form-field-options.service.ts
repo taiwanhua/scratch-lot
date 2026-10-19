@@ -22,7 +22,7 @@ import type {
 } from "./models/form-submission.model";
 
 /**
- * `formFieldOptions`(Spec 6a §5「`options` 三種來源」的「欄位管理類別」):填寫者取類別選項的執行端查詢,
+ * `formFieldOptions`(`options` 三種來源的「欄位管理類別」):填寫者取類別選項的執行端查詢,
  * **不需要** `system.field-manager.view`。
  *
  * - 類別 key 從版本定義取(與 `formLookup` 同一原則),前端只帶「哪一版的哪一個欄位」

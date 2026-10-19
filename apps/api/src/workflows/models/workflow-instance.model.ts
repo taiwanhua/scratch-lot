@@ -12,7 +12,7 @@ import {
   FormUserRef,
 } from "../../forms/models/form-common.model";
 
-/** 實例狀態(成員值即落庫字串;Spec 6b §4)。 */
+/** 實例狀態(成員值即落庫字串)。 */
 export enum WorkflowInstanceStatusEnum {
   RUNNING = "running",
   BLOCKED = "blocked",
@@ -43,7 +43,7 @@ registerEnumType(WorkflowStepStatusEnum, {
   description: "關卡狀態:還沒進 / 跳過 / 進行中 / 完成 / 被終止",
 });
 
-/** 審核任務狀態(投影;Spec 6b §6「任務狀態」)。 */
+/** 審核任務狀態(投影)。 */
 export enum WorkflowTaskStatusEnum {
   PENDING = "pending",
   APPROVED = "approved",
@@ -100,7 +100,7 @@ export class WorkflowPlanItemModel {
   assigneeState!: string;
 
   /**
-   * B15 代理人:這一項由 `assignee`(代理人)承接的原審核者們(多位委託同一人時都列;代理人本人也是審核者時
+   * 代理人:這一項由 `assignee`(代理人)承接的原審核者們(多位委託同一人時都列;代理人本人也是審核者時
    * 列他代理的人)。沒有代理 / 已改派 → 空陣列。
    */
   @Field(() => [FormUserRef])
@@ -197,7 +197,7 @@ export class WorkflowHistoryEventModel {
 
   /**
    * 跳過 / 自動通過的原因(`@repo/domain/workflow` 的 `HISTORY_REASONS`):`step_skipped` 帶
-   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);B5 自動記的 `approved` 帶
+   * `skip_orgs`(申請人屬於指定組織)/ `skip_condition`(符合條件);自動通過記的 `approved` 帶
    * `auto_applicant` / `auto_prior_approver`;`auto_approve_blocked` 帶同兩值(哪一種自動通過沒成立)。其他事件 null。
    */
   @Field(() => String, { nullable: true })

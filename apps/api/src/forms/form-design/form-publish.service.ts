@@ -46,20 +46,20 @@ export const FORM_VERSION_AUDIT = {
 
 export const FORM_VERSION_TARGET = "form_version";
 
-/** 發布結果:發布後的版本 + 步驟 3 新建的依表單新增權限(B9b;沒有 = null)。 */
+/** 發布結果:發布後的版本 + 步驟 3 新建的依表單新增權限(沒有 = null)。 */
 export interface PublishedFormVersion {
   version: FormVersionRecord;
   createdPermission: CreatedFormCreatePermission | null;
 }
 
 /**
- * 四步發布(Spec 6a §6「發布」),整個動作是**一個交易**(ADR-0013):
+ * 四步發布,整個動作是**一個交易**(ADR-0013):
  *
  * 1. 跑檢查器,有錯就停(什麼都沒改)
  * 2. 條件更新 `{ status: "draft", draftRevision: 預期 } → publishing`,同時配正式版號(最大 + 1)、記 changelog;
  *    沒更新到 → 409(兩個發布同時來只有一個搶得到)
  * 3. 欄位級權限:缺的建、有 `retiredAt` 的復活、不再宣告的退役、`name` 隨 label;
- *    模組開啟 B9b(`perFormCreate`)時確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」,不退役、不自動授予)
+ *    模組開啟依表單分開新增權限(`perFormCreate`)時確保 `<模組>.create-<formKey>`(名稱「<表單名> 新增」,不退役、不自動授予)
  * 4. 切換三筆:這一版 `publishing → published` → 前一版 `published → retired` → `forms.currentVersion` 指向新版
  *
  * 任何一步失敗,版本、欄位級權限、`currentVersion` 與稽核一起回到發布前,草稿原封不動;

@@ -29,7 +29,7 @@ const BASE_FEATURE_MODULES = composeApiFeatures(
   PROJECT_API_MODULES,
 );
 
-// 通知管道開關:每種通知類型(底座 + 專案)× 每個管道一個個人偏好,由類型登記推導(規格 10.6)
+// 通知管道開關:每種通知類型(底座 + 專案)× 每個管道一個個人偏好,由類型登記推導
 const NOTIFICATION_PREFERENCES = notificationPreferenceDefinitions(
   composeAllNotificationTypes(PROJECT_NOTIFICATIONS),
 );

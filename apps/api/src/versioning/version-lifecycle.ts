@@ -9,7 +9,7 @@ import type { OperatorContext } from "../database/operator-context";
 import { isDuplicateKeyError } from "../forms/forms-error";
 
 /**
- * 版本生命週期(Spec 6a §6「發布」;6b 的流程版本複用同一份,少了欄位級權限那一步):
+ * 版本生命週期(審核流程的流程版本複用同一份,少了欄位級權限那一步):
  * 表單版本(`form_versions`)與流程版本(`workflow_versions`)共用的四步發布骨架與退役。
  * 這裡的函式不自己開交易:呼叫端(`FormPublishService`、`WorkflowPublishService`、兩邊的退役)把整個動作
  * 包在一個交易裡(ADR-0013),任一步失敗全部回復,所以交易外永遠看不到 `publishing` 或切換到一半的版本:
@@ -216,7 +216,7 @@ export async function switchToPublished<TVersion extends LifecycleVersion>(
 }
 
 /**
- * 退役目前版本(Spec 6a §6):呼叫端帶**當時看到的版本號** `expectedVersion`,固定順序兩步條件更新:
+ * 退役目前版本:呼叫端帶**當時看到的版本號** `expectedVersion`,固定順序兩步條件更新:
  *
  * 1. `{ version: expected, status: "published" } → retired`
  * 2. 擁有者 `{ currentVersion: expected } → null`

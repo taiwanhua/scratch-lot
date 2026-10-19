@@ -134,18 +134,18 @@ const ORG_MANAGER_MODULE = "system.org-manager";
 const TENANT_OPS_MODULE = "system.org-manager.tenant-ops";
 const USER_MANAGER_MODULE = "system.user-manager";
 
-/** 示範模組1 的三個隱藏頁與其父模組(#363 的操作對象)。 */
+/** 示範模組1 的三個隱藏頁與其父模組(本檔的操作對象)。 */
 const SAMPLE_ONE = "demo.sub.sample-one";
 
 /**
- * 驗收缺口 #363:**租戶擁有者(持租戶管理員副本)**為自建角色勾示範家族權限被
+ * 驗收缺口:**租戶擁有者(持租戶管理員副本)**為自建角色勾示範家族權限被
  * `ROLE_OUT_OF_REACH` 誤擋。既有的 `role-matrix.test.ts` 用手工組的「租戶管理員型」操作者,
  * 少了開通流程這一段;本檔照驗收劇本走真的 `provisionTenant`(TEST-07,真 Nest + 真 MongoDB)。
  *
  * 劇本:root 開通租戶A(模組全勾,含示範群組)→ 租戶管理員副本的首任管理員登入
  * (currentOrg = 租戶頂層)→ 建 CUSTOM 角色(ownerOrg = 租戶A)→ 儲存權限矩陣。
  */
-describe("權限矩陣:租戶擁有者為自建角色勾示範家族(#363)", () => {
+describe("權限矩陣:租戶擁有者為自建角色勾示範家族", () => {
   let api: AuthTestApp;
   let connection: Connection;
   let tenantOrgId: string;
@@ -354,7 +354,7 @@ describe("權限矩陣:租戶擁有者為自建角色勾示範家族(#363)", () 
   });
 
   /**
-   * 真正的缺口(#363 可疑點②):顯示樹上的模組**不保證**帶得出 `*` 列 ——
+   * 真正的缺口:顯示樹上的模組**不保證**帶得出 `*` 列 ——
    * 操作者只是因為「勾下層補上層」而看得到那個群組(`normalizeGrant` 會把祖先模組補進
    * 有效權限集),但他手上沒有該層的 `<群組>.*`,所以那一列被顯示樹剪掉了。
    * 這正是 ADR-0009「既有租戶的副本不會自動拿到新模組」之後的常態:底座新增了中間群組,

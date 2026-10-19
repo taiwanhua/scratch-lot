@@ -4,10 +4,9 @@ import { referencedFieldKeys, scanExpression } from "./expression-shape";
 import type { ArrayColumnDef, Expression, FieldDef } from "./types";
 
 /**
- * 欄位之間的依賴:計算順序(拓樸排序)與受保護依賴鏈(Spec §5「受保護欄位的配套」)。
+ * 欄位之間的依賴:計算順序(拓樸排序)與受保護依賴鏈(見 `docs/concepts/form-engine.md`「欄位級權限與受保護依賴鏈」)。
  *
- * 依賴圖的節點 = 表單層欄位 + 每個明細子欄(`items.subtotal`);列內公式引用表單層欄位、彙總引用子欄都是邊
- * (Spec §5「明細列」)。
+ * 依賴圖的節點 = 表單層欄位 + 每個明細子欄(`items.subtotal`);列內公式引用表單層欄位、彙總引用子欄都是邊。
  */
 
 /**

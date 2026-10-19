@@ -19,14 +19,14 @@ export interface StorageConfig {
   /** 簽名**讀取**網址效期(`GCS_SIGNED_URL_TTL`,預設 1h;ADR-0010 商標類)。 */
   signedUrlTtlMs: number;
   /**
-   * **只在測試用**的端點覆寫(`GCS_API_ENDPOINT`,#402):劇本 E2E 把 api 指到 fake GCS 容器。
+   * **只在測試用**的端點覆寫(`GCS_API_ENDPOINT`):劇本 E2E 把 api 指到 fake GCS 容器。
    * 未設(所有雲端環境)= 沒有這個欄位,GCS adapter 照原本 `new Storage()` 走 ADC。
    */
   endpointOverride?: GcsEndpointOverride;
 }
 
 /**
- * 測試用的 GCS 端點 + 假憑證(#402)。本機 / CI 沒有 ADC,V4 簽名要一把私鑰才算得出來;
+ * 測試用的 GCS 端點 + 假憑證。本機 / CI 沒有 ADC,V4 簽名要一把私鑰才算得出來;
  * fake GCS 不驗簽章,所以這把金鑰**沒有任何真實權限**,只為了讓簽名網址長得跟正式環境一樣。
  */
 export interface GcsEndpointOverride {
@@ -41,7 +41,7 @@ export interface GcsEndpointOverride {
 /** ADR-0010:商標類的讀取網址 TTL 1 小時(前端可快取)。 */
 export const DEFAULT_SIGNED_URL_TTL = "1h";
 
-/** 每個變數都有內建預設值,不設也能跑(#61)。 */
+/** 每個變數都有內建預設值,不設也能跑。 */
 export function loadStorageConfig(config: ConfigService): StorageConfig {
   const endpointOverride = loadEndpointOverride(config);
   return {

@@ -7,7 +7,7 @@ import { ModuleManagerService } from "./module-manager.service";
 
 /**
  * 模組與權限(`system.module-manager`,根組織專屬;`docs/modules/module-manager.md`):
- * 全樹查詢 + 模組 / 權限的 `enabled` 切換(#204)+ 模組側欄圖示的更換(#288)。
+ * 全樹查詢 + 模組 / 權限的 `enabled` 切換+ 模組側欄圖示的更換。
  *
  * 治理面,與 `permission/`(解析「我能用什麼」)刻意分開 — 兩邊對同一份資料的讀法相反
  * (一邊把 `enabled` 當過濾條件,一邊當可寫狀態),合在一起只會長出旗標參數。

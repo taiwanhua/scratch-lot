@@ -70,7 +70,7 @@ async function trySubmit(world: World, row: WfSubmissionRow): Promise<unknown> {
 }
 
 /**
- * 審核流程引擎(真 Mongo,Spec 6b §10「api 真 Mongo」):送出與決定各是一個交易(中斷 → 全部回復)、直線流程、
+ * 審核流程引擎(真 Mongo):送出與決定各是一個交易(中斷 → 全部回復)、直線流程、
  * 會簽模式與決定的交錯、跳過條件、再送出、通知信(開啟)。
  */
 describe("審核流程引擎", () => {

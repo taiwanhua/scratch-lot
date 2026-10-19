@@ -8,7 +8,7 @@ import {
 import type { ScenarioTenant } from "./scenario-tenant";
 
 /**
- * 劇本 8 / 9 的共同前置(#398):**多所屬組織的 +user** + **擁有組織不是租戶頂層的角色**。
+ * 劇本 8 / 9 的共同前置:**多所屬組織的 +user** + **擁有組織不是租戶頂層的角色**。
  *
  * 「組織外」與 dry-run 的「失去資格」都是同一份判斷(`OrgQualificationService`):
  * 角色擁有組織的子樹 ∩ 使用者(移除後)剩餘的所屬組織 = 空集合。所以:
@@ -19,7 +19,7 @@ import type { ScenarioTenant } from "./scenario-tenant";
  * 與 `scenario-tenant.ts` 分開一支,理由同 `scenario-demo-items.ts`:其他劇本用不到。
  */
 
-/** 讓 +user 同時屬南港店與內湖店(走組織管理「成員」分頁的那一支寫入,#377)。 */
+/** 讓 +user 同時屬南港店與內湖店(走組織管理「成員」分頁的那一支寫入)。 */
 export async function addMemberToNeihu(tenant: ScenarioTenant): Promise<void> {
   await addOrgMembers(tenant.tenantAdmin.token, tenant.neihuOrgId, [
     tenant.member.userId,

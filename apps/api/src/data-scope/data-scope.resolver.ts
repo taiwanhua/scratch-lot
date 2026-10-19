@@ -13,7 +13,7 @@ import {
 } from "./models/data-scope.model";
 
 /**
- * 資料範圍的 GraphQL 端點(#205;形式 GQL-02 / GQL-03、錯誤 GQL-04)。
+ * 資料範圍的 GraphQL 端點(形式 GQL-02 / GQL-03、錯誤 GQL-04)。
  * resolver 只做「守門 + 轉呼叫」,規則與範圍全在 service(STRUCT-01);
  * 每個 key 對應 `docs/modules/data-scope.md` 權限表的同一行。
  * 模組本身是**根組織專屬**(`isRootOnly`),站在租戶裡即使持有權限也被 service 擋下(`FORBIDDEN`)。

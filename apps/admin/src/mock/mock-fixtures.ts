@@ -69,7 +69,7 @@ import {
  * 全 mock 世界共用的角色清單。取 `data-scope-fixtures.ts` 的 `dataScopeRoles` 而不是
  * `role-fixtures.ts` 的 `roles`:資料範圍頁的 `savedRule` 指名 `role-support`,
  * 兩邊不同份的話那一頁的「指定角色」會顯示成生的 id。它同時含兩個租戶的同名「租戶管理員」,
- * 正是角色管理頁要看的分組畫面(#261 第 8 項)。
+ * 正是角色管理頁要看的分組畫面。
  *
  * `map` 只做一件事:codegen 的型別把欄位標成 optional,補成角色管理頁夾具的 `TestRole` 形狀。
  */
@@ -179,7 +179,7 @@ const permissionsByModuleKey: Record<string, readonly string[]> = {
   [MODULE_MANAGER_MODULE_KEY]: Object.values(MODULE_MANAGER_PERMISSIONS),
   [FIELD_MANAGER_MODULE_KEY]: Object.values(FIELD_MANAGER_PERMISSIONS),
   [DATA_SCOPE_MODULE_KEY]: Object.values(DATA_SCOPE_PERMISSIONS),
-  // 示範模組1(#320):同層的權限在列表頁那一層,兩個頁面自有權限掛在各自的隱藏頁
+  // 示範模組1:同層的權限在列表頁那一層,兩個頁面自有權限掛在各自的隱藏頁
   [SAMPLE_ONE_MODULE_KEYS.list]: [
     SAMPLE_ONE_PERMISSIONS.view,
     SAMPLE_ONE_PERMISSIONS.create,
@@ -188,7 +188,7 @@ const permissionsByModuleKey: Record<string, readonly string[]> = {
   ],
   [SAMPLE_ONE_MODULE_KEYS.createPage]: [SAMPLE_ONE_PERMISSIONS.showTips],
   [SAMPLE_ONE_MODULE_KEYS.editPage]: [SAMPLE_ONE_PERMISSIONS.showHistory],
-  // 示範模組2(#321):對照組的四筆全掛在列表頁那一層(沒有頁面自有權限)
+  // 示範模組2:對照組的四筆全掛在列表頁那一層(沒有頁面自有權限)
   [SAMPLE_TWO_MODULE_KEYS.list]: [
     SAMPLE_TWO_PERMISSIONS.view,
     SAMPLE_TWO_PERMISSIONS.create,
@@ -225,7 +225,7 @@ const notificationSettingsModule: TestModule = {
 /**
  * 側欄與路由的來源:總覽 + 系統管理群組 + 該視角看得到的治理模組 + 示範家族,權限給滿。
  *
- * 示範家族兩支都放(seed 就是兩支都灌):示範模組1(#320)與示範模組2(#321)的四頁都已實作,
+ * 示範家族兩支都放(seed 就是兩支都灌):示範模組1與示範模組2的四頁都已實作,
  * 兩者的隱藏頁都在,路由防守才有東西可看。
  */
 export const modulesForView = (view: MockView): TestModule[] => [

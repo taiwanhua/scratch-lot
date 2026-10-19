@@ -30,7 +30,7 @@ import {
 import { WorkflowBindingsService } from "./workflow-bindings.service";
 
 /**
- * 流程綁定(表單管理列表的流程綁定欄,Spec 6b §3、§7):`bindFormWorkflow` / `unbindFormWorkflow`
+ * 流程綁定(表單管理列表的流程綁定欄):`bindFormWorkflow` / `unbindFormWorkflow`
  * 與表單的 `workflowBinding` 欄位。站在租戶內、持 `system.forms.edit` 的租戶管理員才能綁;
  * 回傳沿用表單管理的 `FormPayload`。
  */

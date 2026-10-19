@@ -20,7 +20,7 @@ import {
 import { FORM_UPLOAD_CONTENT_TYPES, FORM_UPLOAD_MAX_SIZE_MB } from "./upload";
 
 /**
- * 檢查器的欄位段(Spec §5「定義檢查器」):key、精度、widget、選項、規則(含正則 ReDoS)、reference。
+ * 檢查器的欄位段:key、精度、widget、選項、規則(含正則 ReDoS)、reference。
  */
 
 /** 正則長度上限。 */
@@ -328,7 +328,7 @@ export function validateLookupSource(
     );
     return;
   }
-  // `form_submission` 來源要指定查哪張表單的提交(Spec §5「lookup 來源」)
+  // `form_submission` 來源要指定查哪張表單的提交
   if (
     source.provider === FORM_SUBMISSION_PROVIDER &&
     (source.formKey === undefined || source.formKey === "")

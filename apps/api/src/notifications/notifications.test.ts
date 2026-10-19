@@ -881,12 +881,12 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
       );
     });
 
-    it("人員條件不合法:所有人 / 所屬組織欄 → VALIDATION_FAILED(INVALID_AUDIENCE);別租戶的人 → OUT_OF_TENANT;當事人通知類型 → UNKNOWN_TYPE", async () => {
+    it("人員條件不合法:所有人 / 所屬組織欄 → VALIDATION_FAILED(AUDIENCE_INVALID);別租戶的人 → OUT_OF_TENANT;當事人通知類型 → UNKNOWN_TYPE", async () => {
       const all = await call(api, admin.token, UPDATE_SETTING, {
         input: { type: PRINTING_AGENT_OFFLINE, audience: { mode: "all" } },
       });
       expect(codeOf(all)).toBe("VALIDATION_FAILED");
-      expect(extensionsOf(all)).toMatchObject({ reason: "INVALID_AUDIENCE" });
+      expect(extensionsOf(all)).toMatchObject({ reason: "AUDIENCE_INVALID" });
 
       const org = await call(api, admin.token, UPDATE_SETTING, {
         input: {
@@ -902,7 +902,7 @@ describe("通知 notify() / 通知清單 / 通知設定", () => {
           },
         },
       });
-      expect(extensionsOf(org)).toMatchObject({ reason: "INVALID_AUDIENCE" });
+      expect(extensionsOf(org)).toMatchObject({ reason: "AUDIENCE_INVALID" });
 
       const otherTenant = await createOrg(api.connection, { name: "別的租戶" });
       const outsider = await createOperator(api, api.connection, {

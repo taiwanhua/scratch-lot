@@ -47,10 +47,10 @@ const listSchema = z
   .default({ keyword: "", formKey: null, status: null, page: 1 });
 
 /**
- * 表單模組列表頁(預設組裝;Spec 6a §8 畫面 8):搜尋、依表單 / 狀態篩選、分頁;
+ * 表單模組列表頁(預設組裝):搜尋、依表單 / 狀態篩選、分頁;
  * 新增鈕 —— 此刻可新增(且讀者有新增權限)的表單一張 → 直接進、多張 → 先選(`FormPicker`)。
  * 列操作依 api 的 `abilities`(已含權限)與「有沒有綁那一頁」相乘:綁流程且已核准的單鎖定 ——
- * 不出現「編輯」(api 的 `canEdit` 為 false)、改出現「作廢」(`canVoid`,Spec 6b §8 畫面 11)。
+ * 不出現「編輯」(api 的 `canEdit` 為 false)、改出現「作廢」(`canVoid`)。
  */
 export const FormListPage = ({ module }: ModulePageProps) => {
   const moduleKey = formModuleKeyOf(module.key);

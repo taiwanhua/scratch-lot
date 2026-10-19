@@ -128,7 +128,7 @@ export const AssignUsersTab = ({
         <Alert severity="error">{tErrors(data.errorCode)}</Alert>
       )}
 
-      {/* 捲動責任在 Table 自己的容器(#299):這層只把剩下的高度給它,不再自己捲 */}
+      {/* 捲動責任在 Table 自己的容器:這層只把剩下的高度給它,不再自己捲 */}
       <Box sx={{ flex: 1, minHeight: 0 }}>
         <Table
           columns={columns}
@@ -136,7 +136,7 @@ export const AssignUsersTab = ({
           getRowKey={(row) => row.id}
           isLoading={data.isLoading}
           emptyMessage={t("empty")}
-          // 四個欄位,組織欄要放得下「組織外」Tag + 多個組織名(STYLE-11,#283)
+          // 四個欄位,組織欄要放得下「組織外」Tag + 多個組織名(STYLE-11)
           minWidth={720}
           aria-label={t("tableLabel")}
         />

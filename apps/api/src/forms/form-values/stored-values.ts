@@ -41,7 +41,7 @@ function canonicalNumber(value: unknown): string | null {
  * 存值的小工具(寫入管線、投影、預覽共用)。
  */
 
-/** 受保護欄位對沒有 `show` 的讀者一律投影成這個字串(Spec §5「受保護欄位的配套」)。 */
+/** 受保護欄位對沒有 `show` 的讀者一律投影成這個字串。 */
 export const REDACTED = "[redacted]";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -58,7 +58,7 @@ function optionIdentity(value: unknown): unknown {
 }
 
 /**
- * 兩個存值是不是「同一個值」(Spec §5 原因 3:無 `edit` 者送來的值與既有不同 → 403):
+ * 兩個存值是不是「同一個值」(無 `edit` 者送來的值與既有不同 → 403):
  * 比的是**識別**而不是整個物件 —— 選項比 value、引用比 id、上傳比 path、數字比數值、日期 / 日期時間比時點
  * (存的是 `Date`、送來的是 ISO 字串);
  * 前端把 `{ value, label }` 送成 `"value"`、label 快照不同,都不算改動。

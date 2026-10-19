@@ -17,7 +17,7 @@ export interface ForkDialogProps {
 
 /**
  * 從此關分流:這一關完成後同時啟動 N 條分支(每條先有一關,之後可在分支內再加),
- * 全部通過才會在匯合節點會合(匯合固定「全部分支通過」,Spec 6b §1)。
+ * 全部通過才會在匯合節點會合(匯合固定「全部分支通過」)。
  */
 export const ForkDialog = ({
   stepName,

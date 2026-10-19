@@ -65,7 +65,7 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
     expect(collapsed.overflowY).toBe("auto");
   });
 
-  it("表單管理沿用殼層預設 lg(設計器在 xl 以下自己換版,T48:1440 寬不再水平溢出)", async () => {
+  it("表單管理沿用殼層預設 lg(設計器在 xl 以下自己換版,1440 寬不再水平溢出)", async () => {
     renderFormsPage();
 
     await screen.findByRole("navigation", { name: "主選單" });

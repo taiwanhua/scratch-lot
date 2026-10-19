@@ -18,7 +18,7 @@ import {
 stubObjectUrl();
 
 /**
- * 組織管理頁的**管理範圍**行為(#187;正本 CONTEXT.md「管理範圍」+ ADR-0005 的分工表)。
+ * 組織管理頁的**管理範圍**行為(正本 CONTEXT.md「管理範圍」+ ADR-0005 的分工表)。
  * 三種視角是同一支頁面的三組資料:管理範圍是全部 / 擁有組織是租戶頂層 / 擁有組織是兩個部門。
  * 其餘行為(彈窗、上傳、錯誤)在 `OrgManagerPage.test.tsx`,保護與提示在 `OrgManagerGuards.test.tsx`。
  */
@@ -30,7 +30,7 @@ describe("組織管理頁:管理範圍與視角(/system/org-manager)", () => {
     });
 
     await waitForTree();
-    // 樹根是租戶頂層(不是平台根組織),所以它不該掛「租戶」標籤(#186 ④)
+    // 樹根是租戶頂層(不是平台根組織),所以它不該掛「租戶」標籤
     await waitFor(() => {
       expect(treeLabel("租戶 A")).toBe("租戶 A");
     });

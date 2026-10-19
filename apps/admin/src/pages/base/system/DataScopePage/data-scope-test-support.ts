@@ -157,7 +157,7 @@ export const autocompleteOptions = () =>
 
 /**
  * Autocomplete 的分組標題(`groupBy` 產生的那幾行)。它們是 listbox 裡的標題、不是
- * `role="option"`,所以查不到角色,只能取 MUI 的 groupLabel(#372 要驗「每個組織只一行」)。
+ * `role="option"`,所以查不到角色,只能取 MUI 的 groupLabel(要驗「每個組織只一行」)。
  */
 export const autocompleteGroupLabels = () =>
   [

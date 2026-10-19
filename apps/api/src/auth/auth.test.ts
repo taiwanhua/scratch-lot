@@ -709,7 +709,7 @@ describe("登入線1:login / refresh / logout / switchOrg / me(GraphQL 端點,�
         visibleOrgIds: "all",
         // 這個人沒有任何角色 → 管理範圍是空的(所屬哪裡不給管理範圍,ADR-0003)
         managedOrgIds: [],
-        // 資料範圍規則的比對來源(#205 / ADR-0008):所屬組織是 org_user 的直接關聯
+        // 資料範圍規則的比對來源(ADR-0008):所屬組織是 org_user 的直接關聯
         memberOrgIds: [rootOrgId],
         roleIds: [],
       });

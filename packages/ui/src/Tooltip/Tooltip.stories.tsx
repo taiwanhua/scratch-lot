@@ -26,7 +26,7 @@ export const Bottom: Story = { args: { placement: "bottom" } };
 export const WithArrow: Story = { args: { arrow: true } };
 
 /**
- * 停用的元素(#240):瀏覽器不讓 disabled 的元素發滑鼠事件,
+ * 停用的元素:瀏覽器不讓 disabled 的元素發滑鼠事件,
  * 所以元件自動包一層 `span` 當事件載體 —— 呼叫端不必自己包。
  * 這正是組織管理動作列與模組與權限頁 self-lock 開關的情境。
  */
@@ -53,7 +53,7 @@ export const OnDisabledSwitch: Story = {
   },
 };
 
-/** AppBar 的「?」:沒有對應說明檔時按鈕停用,提示說明原因(#197)。 */
+/** AppBar 的「?」:沒有對應說明檔時按鈕停用,提示說明原因。 */
 export const OnDisabledIconButton: Story = {
   args: {
     title: "這個模組還沒有說明文件",

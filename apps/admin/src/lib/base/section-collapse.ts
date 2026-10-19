@@ -4,12 +4,12 @@ import {
 } from "@repo/project-config/public";
 
 /**
- * 可收合區塊(`Section`)的收合狀態記憶(底座 10.3)。
+ * 可收合區塊(`Section`)的收合狀態記憶。
  *
  * - localStorage key `<slug>-admin-sections:<userId>`(前綴由 `createAdminStorageKeys(slug).sectionsPrefix` 生成,
  *   登記於 docs/branding.md);每個使用者一把,換人登入讀另一把
  * - 內容依頁面分組 `{ "<頁面 id>": { "<區塊 key>": boolean } }`(值 = 是否收合),例
- *   `{ "dealers.detail": { "license": false }, "form:purchase": { "notes": true } }`
+ *   `{ "vendors.detail": { "attachments": false }, "form:purchase": { "notes": true } }`
  * - **只記與預設值不同的**;改回預設就刪那一筆,頁面底下空了就刪頁面;不設上限
  * - 清除該頁已不存在的區塊 key 由呼叫端決定時機(表單引擎只在渲染目前版本時清;一般頁面不自動清);讀不到(不可用、格式壞)一律當空 = 用預設值
  *

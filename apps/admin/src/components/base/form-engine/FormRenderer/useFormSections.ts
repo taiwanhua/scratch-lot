@@ -48,7 +48,7 @@ const pageIdOf = (formKey: string, mode: FormRendererMode): string | null =>
   REMEMBERED_MODES.has(mode) ? formSectionPageId(formKey) : null;
 
 /**
- * 表單分區的收合(底座 10.3):
+ * 表單分區的收合:
  * - 記憶:頁面 id `form:<formKey>`、區塊 key = `LayoutSection.key`(`useSectionCollapse`);
  *   只有渲染目前版本時(`pruneMissingSections`)才清掉已不存在的分區 —— 看綁舊版本的單不能清掉新版本的紀錄
  * - 送出有錯 → 有錯的分區全部展開、捲到版面順序第一個錯誤;這是暫時的,不寫入記憶(重新整理後回到記住的狀態)

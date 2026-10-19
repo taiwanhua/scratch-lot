@@ -29,7 +29,7 @@ import {
 import { checkPrefillEntry } from "./validate-structure";
 
 /**
- * 檢查器的明細列段(Spec 6a §5「明細列」的檢查器一條):至少一個子欄、子欄 key 格式與重複、
+ * 檢查器的明細列段:至少一個子欄、子欄 key 格式與重複、
  * 白名單外的型別 / 元件 / 規則 / 設定、引用子欄的來源(同表單層引用欄)、硬上限(每版明細欄 5、子欄 20、`maxRows` 200)、列數規則
  * (`max(minRows, required ? 1 : 0) ≤ maxRows`)。版面 span、列內公式與彙總的引用、摘要槽 / 帶入 / 列表欄
  * 的禁用分別在版面段、表達式段與結構段檢查。

@@ -74,12 +74,12 @@ const withSettings = (
 });
 
 /**
- * 「偏好」分頁(規格 10.6、第 5 章「開關三層」的個人層;Figma 的管道開關):
+ * 「偏好」分頁(通知管道開關的個人層,`docs/modules/notification-settings.md`「個人偏好的管道開關」):
  * 每種通知類型一列、每個管道一欄的開關,只對類型的 `defaultChannels` 給開關(沒有的管道那格空白,
  * 使用者不能自行打開類型預設沒有的管道)。`canDisable = false` 的管道開關停用(api 也會擋)。
  * 改完按「儲存」一次寫入有變動的偏好 key(`updateMyPreferences`,key 由 api 給的 `preferenceKey`)。
  *
- * 語言不在這裡(只放頭像選單);顯示密度不做(規格第 11 章 B 類)。
+ * 語言不在這裡(只放頭像選單);顯示密度不做。
  * 類型名稱經 `useNotificationTypeName`(訊息檔 `admin.notifications.types.<key>`,沒有退回 api 的 `name`)。
  */
 export const PreferencesTab = () => {

@@ -7,7 +7,7 @@ export const APPLY_CENTER_MODULE_KEY = "apply-center";
 
 export const APPLY_CENTER_VIEW_PAGE_KEY = `${APPLY_CENTER_MODULE_KEY}.view-page`;
 
-/** 表單模組的新增頁 / 編輯頁節點(表單引擎的四頁形狀,Spec 6a §2)。 */
+/** 表單模組的新增頁 / 編輯頁節點(表單引擎的四頁形狀)。 */
 export const formModulePageKey = (
   moduleKey: string,
   page: "create-page" | "edit-page" | "view-page",

@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * 頁面攔不到那一層,所以兩者一定成對出現。
  *
  * 跨路由群組共用(STRUCT-03):角色管理的權限矩陣與示範家族的表單頁都用這一份,
- * #321 之前各有一份、漂了兩個註解版本。
+ * 原本各有一份、漂了兩個註解版本。
  */
 export const useUnsavedGuard = (isDirty: boolean): void => {
   useEffect(() => {

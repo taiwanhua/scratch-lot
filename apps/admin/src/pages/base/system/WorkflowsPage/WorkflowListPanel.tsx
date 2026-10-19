@@ -22,7 +22,7 @@ export interface WorkflowListPanelProps {
 }
 
 /**
- * 流程管理左欄(Spec 6b §8 畫面 2):共用 / 客製、分派狀態(root 看分派給幾個租戶)、版本號、
+ * 流程管理左欄:共用 / 客製、分派狀態(root 看分派給幾個租戶)、版本號、
  * 綁了哪些表單(租戶看本租戶的綁定)、發布中斷、有草稿。範圍由 api 決定。
  */
 export const WorkflowListPanel = ({

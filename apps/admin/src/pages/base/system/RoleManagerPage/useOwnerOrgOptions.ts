@@ -16,7 +16,7 @@ const EMPTY_OPTIONS: readonly OrgOption[] = [];
  * 管理範圍就是 `orgTree` 回的那棵樹,但 api 把它掛在 `system.org-manager.view` 底下 —
  * 沒有那個權限時只留「當前組織」一個選項(`CreateRoleInput.ownerOrgId` 缺席即取當前組織,GQL-06)。
  *
- * 兩個地方用它,所以住在頁面根目錄而不是某個子資料夾(#246 的 3):
+ * 兩個地方用它,所以住在頁面根目錄而不是某個子資料夾:
  * 新增 / 編輯角色的「擁有組織」欄位,與左清單上方的「擁有組織」篩選下拉。
  */
 export const useOwnerOrgOptions = () => {

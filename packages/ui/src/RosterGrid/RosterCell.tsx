@@ -21,7 +21,7 @@ const isActivationKey = (event: KeyboardEvent) =>
  * 排程格子(Figma Draft/RosterCell):白底,互動狀態 ——
  * 滑過疊主題的 hover 圖層(grey/500 × `hoverOpacity`)並換邊框、已選取疊 selected 圖層
  * (grey/500 × `selectedOpacity`)+ 1px 邊框、鍵盤焦點 `action.focus` 外框(`stateLayerSx`)。
- * 內容(班別標籤…)由使用的模組決定。
+ * 內容(時段標籤…)由使用的模組決定。
  */
 export const RosterCell = ({
   onClick,

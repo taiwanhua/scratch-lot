@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 /**
- * 字典測試共用的讀檔工具(#426;只給 `*.test.ts` 用,不從 `index.ts` 匯出)。
+ * 字典測試共用的讀檔工具(只給 `*.test.ts` 用,不從 `index.ts` 匯出)。
  * 直接讀 `messages/` 底下的檔案而不是 `index.ts` 的 `messages`:新增一份字典卻忘了掛進
  * `index.ts` 時,測試也要看得到它。
  */

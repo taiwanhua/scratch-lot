@@ -11,7 +11,7 @@ export const MODULE_MANAGER_PERMISSIONS = {
   view: `${MODULE_MANAGER_MODULE_KEY}.view`,
   toggleEnabled: `${MODULE_MANAGER_MODULE_KEY}.toggle-enabled`,
   /**
-   * 側欄圖示(#288):**獨立於 `.toggle-enabled`** —— 換圖示只改側欄長相、隨時換得回來,
+   * 側欄圖示:**獨立於 `.toggle-enabled`** —— 換圖示只改側欄長相、隨時換得回來,
    * 停用卻會讓所有租戶少掉整塊功能(正本 `docs/modules/module-manager.md` 權限表)。
    */
   setIcon: `${MODULE_MANAGER_MODULE_KEY}.set-icon`,
@@ -26,11 +26,11 @@ export const MODULE_MANAGER_PERMISSIONS = {
 export const LIST_COLUMNS_PERMISSION = "system.forms.edit";
 
 /**
- * 自鎖保護(前端,#233 未定案前的低成本防呆):
+ * 自鎖保護(前端的低成本防呆):
  * api 目前**允許**停用 `system.module-manager` 自己 — 一旦關掉,這一頁與它的
  * `toggle-enabled` 權限同時失效,沒有任何畫面能把它開回來(只剩改資料庫)。
  * 在 api 補上防護之前,前端先把這一枝(模組本身、它底下的子模組、以及它們的權限)
- * 的開關停用,避免誤觸;真正的把關仍屬 api,見 #233。
+ * 的開關停用,避免誤觸;真正的把關仍屬 api。
  */
 export const isSelfLockedModuleKey = (key: string): boolean =>
   key === MODULE_MANAGER_MODULE_KEY ||

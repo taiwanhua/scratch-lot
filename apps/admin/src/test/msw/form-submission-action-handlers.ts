@@ -34,7 +34,7 @@ export interface SubmissionActionContext {
 const notFound = () => graphqlError("NOT_FOUND" as AuthErrorCode);
 
 /**
- * 申請人的撤回 / 作廢 / 複製為新單(Spec 6b §6):寫回表單執行端 world 的同一份清單,
+ * 申請人的撤回 / 作廢 / 複製為新單:寫回表單執行端 world 的同一份清單,
  * 回傳形狀同 api(`FormSubmissionFields`)。只做畫面需要的狀態變化,規則的正確性在 api 測試。
  */
 export const submissionActionHandlers = (ctx: SubmissionActionContext) => [

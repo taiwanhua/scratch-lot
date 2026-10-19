@@ -13,7 +13,7 @@ import {
 import { isRedactedValue } from "./definition";
 
 /**
- * `FormRenderer` 的五種模式(Spec 6a §8「設計模式 vs 預覽」):
+ * `FormRenderer` 的五種模式:
  *
  * | mode              | 條件 / 計算                                            | 權限     | 值           |
  * | ----------------- | ------------------------------------------------------ | -------- | ------------ |
@@ -67,7 +67,7 @@ export interface ResolveFormStateInput {
   permissions: FieldPermissionFacts;
   /**
    * 後端算的結果(預覽的 `previewFormVersion`):有就**以後端為準** —— 計算 / 固定值欄位用它的值,
-   * 顯示 / 唯讀條件用它的 `fieldStates`(Spec 6a §8「設計模式 vs 預覽」)。
+   * 顯示 / 唯讀條件用它的 `fieldStates`。
    */
   serverState?: ServerFormState | null;
 }

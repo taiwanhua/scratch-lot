@@ -7,7 +7,7 @@ export interface DemoStaff {
   role: string;
   /** 本月已排時數(統計欄) */
   hours: number;
-  /** 本月班數(統計欄) */
+  /** 本月場數(統計欄) */
   shifts: number;
 }
 
@@ -16,10 +16,10 @@ const NAMES = ["王小明", "李小華", "陳大文", "林美麗", "張小芳", 
 /** 2026-10-01 是星期四 */
 const FIRST_WEEKDAY = 4;
 
-/** 示範的店休日(每週二) */
+/** 示範的公休日(每週二) */
 export const DEMO_CLOSED_DAYS: readonly number[] = [6, 13, 20, 27];
 
-/** 2026-10 起連續 `count` 天;`closed` 裡的日子是店休(停用)。 */
+/** 2026-10 起連續 `count` 天;`closed` 裡的日子是公休(停用)。 */
 export const demoDates = (
   count: number,
   closed: readonly number[] = DEMO_CLOSED_DAYS,
@@ -31,7 +31,7 @@ export const demoDates = (
     const disabled = closed.includes(day);
     return {
       date,
-      header: `10/${String(day)} ${weekday}${disabled ? " · 店休" : ""}`,
+      header: `10/${String(day)} ${weekday}${disabled ? " · 公休" : ""}`,
       disabled,
     };
   });
@@ -45,11 +45,11 @@ export const demoStaff = (count: number): DemoStaff[] =>
   Array.from({ length: count }, (_, index) => ({
     id: `s${String(index + 1)}`,
     name: nameOf(index),
-    role: index === 0 ? "店長" : "店員",
+    role: index === 0 ? "組長" : "組員",
     hours: 120 + (index % 5) * 8,
     shifts: 15 + (index % 4),
   }));
 
-/** 有沒有排程:依人員與日期決定(穩定的假資料;店休日沒有)。 */
+/** 有沒有排程:依人員與日期決定(穩定的假資料;公休日沒有)。 */
 export const hasDemoShift = (staffIndex: number, day: number) =>
   !DEMO_CLOSED_DAYS.includes(day) && (staffIndex * 3 + day) % 4 !== 0;

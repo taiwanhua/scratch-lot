@@ -16,7 +16,7 @@ const TABS: readonly RoleDetailTab[] = ["matrix", "users"];
  * 單一角色的兩個頁籤(Figma `Draft/Tabs` 252:14:active 底線 + primary 字色)。
  * 目前頁籤記在網址 `?tab=`(由 `RoleManagerPage` 經 `useUrlState` 保管);切換要先被未存變更攔下,所以不用 `PageTabs`(REACT-14 的例外)。
  *
- * #254 / #307:原本是 `Button` 自組的 `role="tablist"`,現在用 `@repo/ui/tabs` ——
+ * 原本是 `Button` 自組的 `role="tablist"`,現在用 `@repo/ui/tabs` ——
  * 鍵盤巡覽(左右鍵、Home / End)與 `aria-controls` 都由 MUI 給,這裡只剩文案與回報。
  */
 export const DetailTabs = ({ active, onChange }: DetailTabsProps) => {

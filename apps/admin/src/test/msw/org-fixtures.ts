@@ -11,7 +11,7 @@ import type { TestUserSummary } from "./org-managers-handlers";
 
 /**
  * 組織管理頁的夾具(與 `module-fixtures.ts` 同一個位置的用意:一份形狀,測試檔只寫行為)。
- * 三棵樹是**同一份資料的三種管理範圍**(#187):管理範圍是全部 → 看得到根與所有租戶;
+ * 三棵樹是**同一份資料的三種管理範圍**:管理範圍是全部 → 看得到根與所有租戶;
  * 擁有組織是租戶頂層 → 樹根就是自己的頂層;擁有組織是兩個部門 → 兩個樹根。
  *
  * `parentId` 一律是真的上層,即使它不在樹上(api `buildForest` 的規則);
@@ -65,7 +65,7 @@ export const rootTree: TestOrgNode[] = [
 /**
  * 租戶視角:樹根就是租戶頂層。**樹根的 `parentId` 是 null** —
  * api 的 `buildForest` 把本棵樹的根一律對外回 null(`orgs.service.ts`,orgs.test.ts 亦有斷言),
- * 所以前端不能拿 `parentId` 判斷視角(#186 ④)。
+ * 所以前端不能拿 `parentId` 判斷視角。
  */
 export const tenantTree: TestOrgNode[] = [
   node("org-tenant-a", "租戶 A", null, {
@@ -75,7 +75,7 @@ export const tenantTree: TestOrgNode[] = [
 ];
 
 /**
- * 多根視角(#187):持有兩個擁有組織是部門、彼此沒有共同上層的角色 →
+ * 多根視角:持有兩個擁有組織是部門、彼此沒有共同上層的角色 →
  * 管理範圍 = 兩棵子樹的聯集,樹有**兩個根**,共同上層(租戶頂層)不在樹上。
  * 兩個根的 `parentId` 同樣是 null(`buildForest` 對每棵樹的根都這樣回)。
  */
@@ -144,7 +144,7 @@ const user = (
 
 /**
  * 租戶擁有者持有的「租戶管理員」角色副本(擁有組織 = 租戶頂層,ADR-0009 第 2 步)。
- * 撤銷開通的確認彈窗靠它列出「會被抹掉的角色名」(#374),不另開端點。
+ * 撤銷開通的確認彈窗靠它列出「會被抹掉的角色名」,不另開端點。
  */
 const tenantAdminCopy: TestOrgUser["roles"][number] = {
   id: "role-copy",
@@ -168,7 +168,7 @@ const member = (
 ): TestOrgMember => ({ id, account: id, name, enabled, otherOrgs });
 
 /**
- * 「成員」頁籤(#377):orgId → 該組織**自己**的成員(不含下層組織的成員 —— api 的規則)。
+ * 「成員」頁籤:orgId → 該組織**自己**的成員(不含下層組織的成員 —— api 的規則)。
  * `otherOrgs` 是本組織以外、且在管理範圍內的所屬組織。
  */
 export const orgMembersByOrg: Record<string, TestOrgMember[]> = {

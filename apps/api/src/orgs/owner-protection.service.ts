@@ -48,8 +48,8 @@ function protectionReader(operator: OperatorContext): OperatorContext {
  * 同一支服務也守**租戶頂層保護**(`assertTenantTopOperableBy`):租戶頂層本身的
  * 停用 / 刪除 / 搬移只有根組織能做 — 兩者都是「以組織為主體、以根組織為例外」的同一類判斷。
  *
- * 住在 `orgs/`(#135 定案):判斷的主體是組織(`orgs.ownerUserId`、根組織例外),
- * 使用者管理(#136)與租戶作業(#135 的轉移擁有者 / 開通租戶)兩邊都靠它,
+ * 住在 `orgs/`:判斷的主體是組織(`orgs.ownerUserId`、根組織例外),
+ * 使用者管理與租戶作業(轉移擁有者 / 開通租戶)兩邊都靠它,
  * 由 `OrgsModule` 匯出、`UsersModule` import — 單一判斷點,兩個模組不得各寫一套。
  * `isRootOperator` 同時是租戶作業「非根組織即使持權限也拒」的唯一判準。
  */

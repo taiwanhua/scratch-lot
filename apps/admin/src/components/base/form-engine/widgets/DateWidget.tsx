@@ -10,7 +10,7 @@ import { ReadOnlyField } from "./ReadOnlyField";
 import type { WidgetProps } from "./widget-types";
 
 /**
- * 日期欄(`date` → `datePicker`,Spec 6a §5「值的存法」):存的是**時點** —— 選的那一天在租戶時區 00:00。
+ * 日期欄(`date` → `datePicker`):存的是**時點** —— 選的那一天在租戶時區 00:00。
  * 選日 → `startOfLocalDay`(租戶時區)→ ISO 送出;顯示 → 時點換成租戶時區的 `YYYY-MM-DD` 給選擇器。
  * 時區 = `context.timezone`(讀者現在的租戶時區 `me.currentOrg.timezone`),沒給用預設時區。
  * 唯讀檢視印 `YYYY-MM-DD`(`useTemporalText`,同一個時區)。

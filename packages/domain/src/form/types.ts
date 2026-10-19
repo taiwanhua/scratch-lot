@@ -1,5 +1,5 @@
 /**
- * 表單定義的型別(`form_versions` 一版的內容;語意正本見 Spec 6a §4、§5 與 `docs/data-model.md`)。
+ * 表單定義的型別(`form_versions` 一版的內容;語意正本見 `docs/concepts/form-engine.md` 與 `docs/data-model.md`)。
  * 純型別,前後端共用:api 存取與驗證、admin 設計器與渲染器都吃同一份。
  */
 
@@ -34,7 +34,7 @@ export type Expression =
 
 /**
  * 表達式的上下文(`ctx.*`):草稿用真正的現在與填寫者;歷史檢視由 `revisions[r].ctx` 轉來,
- * 不拿讀者現在的身分或時間補值(Spec §5「歷史檢視的上下文」)。
+ * 不拿讀者現在的身分或時間補值。
  */
 export interface ExpressionContext {
   /** ISO 8601 時間字串。 */
@@ -144,7 +144,7 @@ export interface FieldPermission {
 }
 
 /**
- * 欄位預設值(Spec §5「預設值」):只有 `valueSource.kind = "input"` 的欄位有。
+ * 欄位預設值:只有 `valueSource.kind = "input"` 的欄位有。
  * - `constant`:固定值(存值形狀同該型別;單選 / 多選 = 選項值,靜態選項存 `value`、類別 / lookup 存 `{ value, label }`)
  * - `expression`:公式,根節點型別 = 欄位型別;`reference` 只能 `ctx.user.id` / `ctx.user.orgId`
  *
@@ -294,5 +294,5 @@ export interface FormDefinition {
   prefills: Prefill[];
 }
 
-/** `values` 的一格(存的值;形狀依型別,見 Spec §5「值的存法」)。 */
+/** `values` 的一格(存的值;形狀依型別)。 */
 export type StoredValues = Record<string, unknown>;

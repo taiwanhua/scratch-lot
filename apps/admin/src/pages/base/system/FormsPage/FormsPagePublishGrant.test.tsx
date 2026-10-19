@@ -51,7 +51,7 @@ const publish = async (user: ReturnType<typeof renderFormsPage>["user"]) => {
   await user.click(within(dialog).getByRole("button", { name: "發布" }));
 };
 
-describe("表單管理:發布新建了依表單新增權限(B9b)", () => {
+describe("表單管理:發布新建了依表單新增權限", () => {
   it("發布成功提示「不會自動授予」並附 [前往角色管理] 連結", async () => {
     const { user } = renderFormsPage({
       ...defaultDesignOptions(),

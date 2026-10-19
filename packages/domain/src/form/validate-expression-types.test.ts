@@ -20,7 +20,7 @@ const errorsOf = (...fields: FieldDef[]): DefinitionIssue[] =>
     { regexSafety: recheckRegexSafety },
   ).errors;
 
-describe("@repo/domain/form 檢查器:表達式型別(表 B)", () => {
+describe("@repo/domain/form 檢查器:表達式型別", () => {
   it("型別都對得上 → 沒有錯誤(日期與日期時間互通、if 然後 / 否則同型別、in 清單)", () => {
     expect(
       errorsOf(

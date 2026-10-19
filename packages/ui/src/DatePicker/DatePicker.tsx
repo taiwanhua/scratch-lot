@@ -45,7 +45,7 @@ export interface DatePickerProps {
   fullWidth?: boolean;
   name?: string;
   /**
-   * 輸入格高度,與 `TextField` / `Select` 同一組名字(#260)。
+   * 輸入格高度,與 `TextField` / `Select` 同一組名字。
    * 預設 `medium`(MUI 的原預設);和 `size="small"` 的下拉同列時要一起給 `small`,
    * 否則日期欄比隔壁高一截(資料範圍規則編輯器的條件列)。
    */

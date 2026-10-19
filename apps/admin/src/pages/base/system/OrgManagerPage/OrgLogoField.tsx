@@ -7,7 +7,7 @@ import { LOGO_ACCEPT, LOGO_MAX_SIZE } from "./org-manager-types";
 export interface OrgLogoFieldProps {
   file: File | null;
   onFileChange: (file: File | null) => void;
-  /** 編輯情境:組織現有的商標(`org.logoUrl`),彈窗一開就看得到(#186 ②) */
+  /** 編輯情境:組織現有的商標(`org.logoUrl`),彈窗一開就看得到 */
   initialPreviewUrl?: string | null;
   isDisabled: boolean;
 }

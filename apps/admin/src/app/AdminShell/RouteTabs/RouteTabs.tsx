@@ -38,7 +38,7 @@ export interface RouteTabsProps {
 }
 
 /**
- * 路由頁籤列(#67;Figma Draft/AdminRouteTabs 34:33):開過的模組路由各一個 tab(狀態在 `useRouteTabs`),
+ * 路由頁籤列(Figma Draft/AdminRouteTabs 34:33):開過的模組路由各一個 tab(狀態在 `useRouteTabs`),
  * 點 tab 切換路由、可關閉、可拖曳排序(dnd-kit sortable,指標)。
  * 鍵盤:左右方向鍵移動焦點(單一 tab stop)、Enter / Space 開啟、Shift+方向鍵調整順序、Delete / Backspace 關閉;
  * 說明文字經 dnd-kit 的隱藏說明節點(`aria-describedby`)提供給輔助科技,拖曳過程以 `announcements` 播報。

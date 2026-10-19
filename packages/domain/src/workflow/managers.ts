@@ -1,5 +1,5 @@
 /**
- * 主管的解析(Spec §4「主管(`org_manager`)的解析」)的純規則部分。
+ * 主管的解析(`org_manager`)的純規則部分。
  * api 的 `resolveManagers(applicantId, submissionOrgId, tenantId, level)` 負責讀資料
  * (提交組織的祖先鏈、各組織的 `org_manager`、使用者啟用與租戶歸屬),再交給這裡決定名單。
  */

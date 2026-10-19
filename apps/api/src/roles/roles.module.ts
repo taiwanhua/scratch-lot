@@ -10,7 +10,7 @@ import { RolesResolver } from "./roles.resolver";
 import { RolesService } from "./roles.service";
 
 /**
- * 角色管理(`system.role-manager`,#203;規則正本 docs/modules/role-manager.md)。
+ * 角色管理(`system.role-manager`;規則正本 docs/modules/role-manager.md)。
  *
  * `OrgsModule` 匯出的 `OwnerProtectionService`(擁有者保護,ADR-0009)與 `DeletePayload` 型別;
  * `OrgQualificationService`(「被授予角色的資格」,ADR-0003)住在 `users/`,

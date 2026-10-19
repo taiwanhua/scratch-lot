@@ -208,7 +208,7 @@ function dateRule(cond: string, values: string[]) {
   ];
 }
 
-/** 名稱排序後比對:查詢順序不是本票的斷言對象。 */
+/** 名稱排序後比對:查詢順序不是本測試的斷言對象。 */
 function sortedNames(rows: readonly { name: string }[]): string[] {
   return rows.map((row) => row.name).toSorted((a, b) => a.localeCompare(b));
 }
@@ -248,7 +248,7 @@ function staticOrgFilter(orgId: Types.ObjectId): Record<string, unknown> {
 }
 
 /**
- * 資料範圍(#205:目標目錄 / 規則讀寫 / DataScopeService + BaseRepository 執行)。
+ * 資料範圍(目標目錄 / 規則讀寫 / DataScopeService + BaseRepository 執行)。
  * 打真的 GraphQL 端點、對真 MongoDB(TEST-07);
  * `docs/testing/permission-scenarios.md` 劇本 2(規則命中 → 只見自建;刪規則恢復)、
  * 3(未宣告對照)、4(頂層合成 OR / AND)。
@@ -262,7 +262,7 @@ function staticOrgFilter(orgId: Types.ObjectId): Record<string, unknown> {
  *   root ── 租戶甲 ─┬─ 部門一
  *                   └─ 部門二
  */
-describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
+describe("資料範圍(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
 
@@ -344,7 +344,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
     );
   }
 
-  /** 示範模組1 這個目標目前的 `hasRule`(#246 的 1)。 */
+  /** 示範模組1 這個目標目前的 `hasRule`。 */
   async function hasRule(): Promise<boolean | undefined> {
     const result = await api.graphql<TargetsData>(
       DATA_SCOPE_TARGETS,
@@ -558,7 +558,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       ]);
     });
 
-    it("seed 宣告的 enum 業務欄位排在基礎欄位之前,並帶固定選項(#246 的 2)", async () => {
+    it("seed 宣告的 enum 業務欄位排在基礎欄位之前,並帶固定選項", async () => {
       const result = await api.graphql<TargetsData>(
         DATA_SCOPE_TARGETS,
         {},
@@ -581,7 +581,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
       ]);
     });
 
-    it("尚未設規則的目標 hasRule = false(#246 的 1)", async () => {
+    it("尚未設規則的目標 hasRule = false", async () => {
       const result = await api.graphql<TargetsData>(
         DATA_SCOPE_TARGETS,
         {},
@@ -793,7 +793,7 @@ describe("資料範圍(#205,GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  describe("已設規則的旗標(DataScopeTarget.hasRule,#246 的 1)", () => {
+  describe("已設規則的旗標(DataScopeTarget.hasRule)", () => {
     it("存了規則之後 → true", async () => {
       const result = await saveRule([
         { audience: { mode: "all" }, filter: ONLY_MINE },

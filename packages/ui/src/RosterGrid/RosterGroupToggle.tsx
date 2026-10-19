@@ -13,7 +13,7 @@ export interface RosterGroupToggleProps {
   hideLabel?: boolean;
   expanded: boolean;
   onToggle: () => void;
-  /** 文字在箭頭前([統計 ▸])或後(▾ 人力需求);預設在後 */
+  /** 文字在箭頭前([統計 ▸])或後(▾ 時段需求);預設在後 */
   iconPosition?: "start" | "end";
 }
 

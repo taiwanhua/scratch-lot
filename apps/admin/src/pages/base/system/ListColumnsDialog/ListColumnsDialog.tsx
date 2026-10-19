@@ -17,7 +17,7 @@ export interface ListColumnsDialogProps {
 }
 
 /**
- * 列表欄位配置(Spec 6a §8 畫面 6;root):「模組與權限」的模組右欄與「表單管理」的表單右欄共用這一個編輯器
+ * 列表欄位配置(root):「模組與權限」的模組右欄與「表單管理」的表單右欄共用這一個編輯器
  * (放在 `pages/base/system/` 群組資料夾,STRUCT-03),存的都是該模組的 `modules.settings.list` —— 所以編輯器頂端
  * 註明「此設定影響整個模組的列表」。外層 gate:目前的配置讀到了才掛編輯器(初始值只取一次,REACT-08)。
  */

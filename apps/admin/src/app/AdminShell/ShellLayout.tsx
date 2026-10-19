@@ -35,9 +35,9 @@ export interface ShellLayoutProps {
 }
 
 /**
- * 殼的排版:側欄 + AppBar + 路由頁籤列(#67)+ 內容區(`<Outlet>`);只給 `AdminShell` 用(`me` 已載入)。
+ * 殼的排版:側欄 + AppBar + 路由頁籤列 + 內容區(`<Outlet>`);只給 `AdminShell` 用(`me` 已載入)。
  *
- * **高度是殼給的**(#183):外框釘死 `100vh`,內容區 = 視窗高 − AppBar − RouteTabs,
+ * **高度是殼給的**:外框釘死 `100vh`,內容區 = 視窗高 − AppBar − RouteTabs,
  * 由 `flex: 1` + `minHeight: 0` 取得一個**確定的高度**並自己捲動。
  * 頁面因此可以用 `flex: 1` / `height: 100%` 撐滿(組織管理、使用者管理的左右兩欄就是這樣滿版);
  * 內容比視窗高的頁面照舊在內容區捲動,不會被裁掉。
@@ -73,7 +73,7 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
   });
   // 目前網址對上的模組(可進入路由集合,ADR-0011);非模組路由為 undefined。
   // 用 `matchModuleRoute` 而不是 `routes.get(path)`:隱藏的詳情 / 編輯頁網址尾端帶識別碼,
-  // 精準比對會落空,標題就會閃成「無權限」、「?」說明鈕也跟著不見(#320)
+  // 精準比對會落空,標題就會閃成「無權限」、「?」說明鈕也跟著不見
   const currentModule = matchModuleRoute(routes, path)?.module;
   // `/` 與群組路由由 ModuleRoute 轉到底下第一個能進的頁(與它同一條規則:`firstLinkRoute`),
   // 轉走前那一次 render 標題留空,不閃「無權限」;群組底下沒有能進的頁 → 停在無權限頁,標題照常

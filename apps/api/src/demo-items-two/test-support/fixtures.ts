@@ -6,7 +6,7 @@ import { createUser } from "../../auth/test-support/fixtures";
 import { createRole } from "../../permission/test-support/fixtures";
 
 /**
- * 示範模組2 測試的共用夾具(#319):GraphQL 文件、建操作者、列清單。
+ * 示範模組2 測試的共用夾具:GraphQL 文件、建操作者、列清單。
  * 測試檔只寫行為(TEST-08 的分檔原則,api 同理)。
  */
 

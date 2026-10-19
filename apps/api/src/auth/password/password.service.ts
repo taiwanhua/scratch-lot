@@ -160,7 +160,7 @@ export class PasswordService {
     });
   }
 
-  /** admin 的「設定新密碼」頁(#61:`/set-password?token=…`,啟用與重設共用)。 */
+  /** admin 的「設定新密碼」頁(`/set-password?token=…`,啟用與重設共用)。 */
   private setPasswordLink(token: string): string {
     return `${this.config.adminAppUrl}/set-password?token=${encodeURIComponent(token)}`;
   }

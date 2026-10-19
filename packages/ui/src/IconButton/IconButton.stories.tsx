@@ -23,7 +23,7 @@ export const Default: Story = {};
 
 export const Small: Story = { args: { size: "small" } };
 
-/** AppBar 的「?」說明鈕(#197):呼叫端用 `sx` 指定平時的顏色。 */
+/** AppBar 的「?」說明鈕:呼叫端用 `sx` 指定平時的顏色。 */
 export const Secondary: Story = {
   args: {
     "aria-label": "模組說明",
@@ -33,7 +33,7 @@ export const Secondary: Story = {
 };
 
 /**
- * 停用(#260):即使呼叫端給了 `sx.color`,停用色照樣蓋得過去 ——
+ * 停用:即使呼叫端給了 `sx.color`,停用色照樣蓋得過去 ——
  * `.Mui-disabled` 的 specificity 比 `sx` 產生的單一類別高一級。
  */
 export const Disabled: Story = {
@@ -46,7 +46,7 @@ export const Disabled: Story = {
 };
 
 /**
- * 外框變體(#297):側欄底部的收合開關(Figma collapse-toggle 246:97,40×40)。
+ * 外框變體:側欄底部的收合開關(Figma collapse-toggle 246:97,40×40)。
  * 外框與邊長由元件自己給,呼叫端不再用 `sx` 畫框(STYLE-10 的例外因此退場)。
  */
 export const Outlined: Story = {

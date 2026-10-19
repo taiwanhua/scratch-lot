@@ -77,7 +77,7 @@ const markdownSx = {
 };
 
 /**
- * 渲染一段 Markdown(GFM:表格、刪除線、工作清單;模組說明彈窗的內文,#197)。
+ * 渲染一段 Markdown(GFM:表格、刪除線、工作清單;模組說明彈窗的內文)。
  *
  * **不允許 raw HTML**:沒有掛 `rehype-raw`,所以原始碼裡的 `<script>`、`<img onerror>` 這類標籤
  * 一律不會變成 DOM 節點 — 內容是文件(help.md)不是使用者輸入,但渲染端不該相信這件事。

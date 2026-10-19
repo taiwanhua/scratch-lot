@@ -20,7 +20,7 @@ export interface IssueListProps {
 }
 
 /**
- * 檢查結果(Spec 6a §5「定義檢查器」):**有錯不能發布、警告可發布**;每筆帶定位,點擊定位到
+ * 定義檢查器的結果:**有錯不能發布、警告可發布**;每筆帶定位,點擊定位到
  * 欄位 / 表達式節點 / 版面格。
  */
 export const IssueList = ({

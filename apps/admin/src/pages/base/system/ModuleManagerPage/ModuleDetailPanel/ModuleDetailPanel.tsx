@@ -25,7 +25,7 @@ export interface ModuleDetailPanelProps {
   module: ModuleAdminNodeLike | null;
   isLoading: boolean;
   canToggleEnabled: boolean;
-  /** 依 `system.module-manager.set-icon`(與 `toggle-enabled` 各一把鑰匙,#288) */
+  /** 依 `system.module-manager.set-icon`(與 `toggle-enabled` 各一把鑰匙) */
   canSetIcon: boolean;
   isModulePending: boolean;
   isIconPending: boolean;
@@ -114,7 +114,7 @@ export const ModuleDetailPanel = ({
               <Typography variant="body2" color="text.secondary">
                 {t("enabled")}
               </Typography>
-              {/* 停用的開關收不到 hover,包 span 的事情交給 Tooltip 自己處理(#240) */}
+              {/* 停用的開關收不到 hover,包 span 的事情交給 Tooltip 自己處理 */}
               <Tooltip title={isSelfLocked ? t("selfLockedHint") : ""}>
                 <Switch
                   checked={module.enabled}
@@ -143,7 +143,7 @@ export const ModuleDetailPanel = ({
         </ModuleDetailRow>
         <ModuleDetailRow label={t("sidebarType")}>
           {isContainer ? (
-            /* 權限容器沒有畫面,只講「隱藏」不夠 —— 同一列補上它存在的理由(#260) */
+            /* 權限容器沒有畫面,只講「隱藏」不夠 —— 同一列補上它存在的理由 */
             <Stack spacing={0.25}>
               <Typography variant="body2">{t("sidebarContainer")}</Typography>
               <Typography variant="caption" color="text.secondary">

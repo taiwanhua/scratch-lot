@@ -12,7 +12,7 @@ import { type StorageConfig, loadStorageConfig } from "./storage.config";
 import { UploadPurpose } from "./upload-rules";
 
 /**
- * `GCS_API_ENDPOINT`(#402):**只在劇本 E2E 用**的端點覆寫。
+ * `GCS_API_ENDPOINT`:**只在劇本 E2E 用**的端點覆寫。
  * 兩條路徑都要釘住 —— 沒設 = 原本的 `new Storage()`(雲端環境走 ADC),
  * 有設 = 帶端點與測試用假憑證、簽名網址指向那個端點。
  *
@@ -50,7 +50,7 @@ const WITH_OVERRIDE: StorageConfig = {
   },
 };
 
-describe("GCS 端點覆寫(GCS_API_ENDPOINT,只在劇本 E2E 用;#402)", () => {
+describe("GCS 端點覆寫(GCS_API_ENDPOINT,只在劇本 E2E 用)", () => {
   describe("設定", () => {
     it("沒設 GCS_API_ENDPOINT:沒有 endpointOverride 這個欄位(雲端環境的樣子)", () => {
       const config = loadStorageConfig(

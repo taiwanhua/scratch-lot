@@ -133,6 +133,8 @@ PR 另列新增能力、客製治理頁與 API/權限的相容性,以及 wildcar
 
 選定後整理成只有共用改良的單一 commit,再執行 `node scripts/base-sync/run.mjs contribute --project <專案路徑> --commit <完整SHA> --base <底座路徑> --worktree-root <工作樹父目錄>`。工具以該 commit 的唯一 parent 為差異基準,從底座最新 `origin/main` 建 contribution 分支;含專案、未知路徑、已發布 migration/seed 快照或 merge commit 時先停止。不能把整個專案歷史 merge 回底座,也不能改寫已發布 migration/seed 快照。
 
+路徑分類的正本是 `scripts/base-sync/classify.mjs`(project / mixed / common / published-data / unknown)。新增 app、頂層目錄或專案專屬檔(如 `CONTEXT-PROJECT.md`)時,同一個 PR 補分類規則與 `classify` 測試;沒分類的路徑是 `unknown`,回收一律停止。共用文件盡量不放專案值,專案內容另開專案檔(同 `CONTEXT-PROJECT.md`、`docs/tmp/project-dis.md` 的拆法),讓多數文件維持純底座。
+
 混合檔(固定組裝入口、共用文件等)要回收時,agent 先在 commit 裡把它整理成**只含底座段落**,再以 `--accept-mixed <路徑>` 逐檔明列(可重複)。工具只接受明列的混合檔,並把它們的差異列進報告的 `mixedReview`(「混合檔:只含底座段落,請審查」);未明列的混合檔仍拒絕,明列的檔不在差異內、實際不是混合檔或是二進位檔也報錯(二進位無法逐段審查,須拆出人工處理)。審查時逐段確認這些差異沒有專案值。
 
 規格與 Figma 工作檔一律放進實作的 repo,不留在 repo 外:規格放 `docs/tmp/spec-<主題>.md`,Figma 重建腳本、稽核腳本與節點表放 `docs/tmp/figma-<主題>/`。從最新 `origin/main` 開 `feat/<主題>-spec` 分支 → commit → push 分支備份 → 依畫面修規格都在這條分支更新 → 定稿後 PR 走 dev → staging → main;實作的整合分支從合併後的 main 開出。該輪完工後規格與工作檔從 `docs/tmp/` 移除:節點表搬進 [FIGMA-09](standards/general/figma.md),做法寫進正式文件。
@@ -201,7 +203,7 @@ prepare ─┬─ format-codegen   prettier --check(每次都跑)+ codegen 產�
 - **部署目標讀專案設定**:checkout 之後、雲端認證之前,先以讀取器解析 `deploy/project/*.json` 並核對 repo 身分;不符或缺值就停在這一步(見下方「專案部署設定」)。
 - **只部署改到的 app**:讀 Cloud Run 上目前跑的 image tag 前段 Git SHA 當 base,`turbo ls --affected` 判斷 api / admin / db-migrator 有沒有受影響,沒受影響的步驟整個跳過。turbo 看不到的部署設定另外判斷(`scripts/project-settings/deploy-affected.mjs`):`deploy/project/` 或 `scripts/project-settings/` 有改時 api 與 admin 都重建(API 網址烘在 admin image,只改網址也要重建);`deploy/env/` 或 `deploy.yml` 本身有改時只有 api 視為受影響。判斷結果印在 run 的 notice。要全部重部署加 `-f force=true`;讀不到 tag(第一次部署)或 base 不在歷史裡(force push 過)時自動全部部署。
 - **image**:tag = `<完整 Git SHA>-<環境>-<Actions run ID>-<attempt>`,每次 build 使用新 tag,不會移走其他環境或先前重跑所用 digest 的 tag。admin 的 `VITE_GRAPHQL_ENDPOINT` 由設定的 `apiUrl` 加 `/graphql`,以 `--build-arg` 烘入。舊版短 SHA tag 可由 preflight 解析,但已因重建失去 tag 的舊 digest 仍須人工查證,不可視為已核對。
-- **api 的環境變數**:非機密整包來自 `deploy/env/<環境>.yaml`(`--env-vars-file`),機密來自 Secret Manager(`--set-secrets`);見四、。
+- **api 的環境變數**:非機密整包來自 `deploy/env/<環境>.yaml`(`--env-vars-file`),機密來自 Secret Manager(`--set-secrets`);見[四、環境變數管理](#四環境變數管理)。
 - **部署成功後執行一次 `update`**:api 或 db-migrator 任一受影響就執行,只改專案 seed、快照或 migration 也會更新資料。runner 安裝 db-migrator、API 與其依賴,建置同一 checkout 的 API CLI 並確認可啟動,再讀該環境的資料庫與 root 初始密碼 Secret,執行 `pnpm --filter @repo/db-migrator run update`。完整順序、結果與失敗處理見下方「設定與資料更新」。
 - **即時通道(Cloudflare Worker)**:`cloud.json` 該環境寫了 `realtime` 才部署,而且每次都部署(Worker 沒有可比對的 image tag;`wrangler deploy` 冪等、免費方案不計次)。從 Secret Manager 讀兩把密鑰,以 `wrangler deploy --name <Worker> --secrets-file` 隨這一版上傳成 Wrangler secret;api 同時掛同兩把。見四、「即時通道」。
 - **front 不走 deploy.yml**:Vercel 在分支 push 時自動建置(`main` → production、`staging` / `dev` → 各自的分支網域);要不靠 commit 重建用 Deploy Hook(見四、「Vercel 補充設定」)。
@@ -619,6 +621,8 @@ db.scheduled_job_runs
 ### 即時通道(Cloudflare Worker)
 
 即時通道 = `apps/realtime`(Worker + Durable Object `TenantHub`);**每個環境一個 Worker**,網域 `rt-dev.<網域>` / `rt-staging.<網域>` / `rt.<網域>`(登記 `docs/branding.md`)。全部用 Cloudflare 免費方案;用量看 Cloudflare 後台。未啟用的環境不部署 Worker,api 不簽發訂閱憑證,admin 以 60 秒輪詢運作(頭像選單黃點)。
+
+**免費方案的額度**:Worker 與 Durable Object 每天各 10 萬次請求;建立連線、送出一次信號(不論帶幾個頻道)各算 1 次,連線上的訊息(換發、訂閱、代理程式的 ping)每 20 則算 1 次,推送與閒置連線不計。超過時該操作失敗到 UTC 00:00(台灣 08:00),期間 admin 與代理程式照斷線處理,改 60 秒輪詢。用量只在 Cloudflare 後台看,不給租戶看。需要時改付費方案(整個帳號 US$5/月)。
 
 `cloud.json` 各環境的 `realtime`(省略或 `null` = 停用;寫了就要完整):
 

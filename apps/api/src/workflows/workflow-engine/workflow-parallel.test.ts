@@ -46,7 +46,7 @@ import { WorkflowEngineService } from "./workflow-engine.service";
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
 /**
- * 平行分支(真 Mongo,Spec 6b §5「流程結構」、§6 判斷表的後繼啟動 / 匯合 / 全案終局):
+ * 平行分支(真 Mongo;判斷表的後繼啟動 / 匯合 / 全案終局):
  * 採購單 = 原部門初審 → 分流(財務 any / 法務 all / 採購)→ 匯合 → 原部門確認。
  */
 describe("審核流程引擎:平行分支", () => {

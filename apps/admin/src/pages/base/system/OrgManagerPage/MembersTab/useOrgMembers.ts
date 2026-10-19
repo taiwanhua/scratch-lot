@@ -26,7 +26,7 @@ const membersSchema = z
   .default({ org: "", page: 1 });
 
 /**
- * 「成員」頁籤的資料層(#377):`orgMembers` 清單 + 增量加入。
+ * 「成員」頁籤的資料層:`orgMembers` 清單 + 增量加入。
  *
  * **移除不在這裡**:移除所屬組織會牽動失去資格的角色與 dry-run 三檔(ADR-0003),
  * 入口維持使用者管理的「選擇所屬組織」一處(org-manager.md「成員」節)。

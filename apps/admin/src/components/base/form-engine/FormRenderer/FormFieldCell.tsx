@@ -30,15 +30,15 @@ export interface FormFieldCellProps {
   columnDisplay?: (columnKey: string) => readonly FormDisplayItemLike[];
   display?: readonly FormDisplayItemLike[];
   onDownload?: (field: FieldDef) => void;
-  /** 連動篩選(B2d)被引用欄位的目前值;引用欄與明細欄才給 */
+  /** 連動篩選被引用欄位的目前值;引用欄與明細欄才給 */
   filterLinks?: FilterLinkValues;
 }
 
 /**
  * 一欄(欄位級三態之後的「看得到」那兩態):
- * - 唯讀模式(詳情)→ **同一個 widget 走 `isReadOnly`**(Spec 6a §8 畫面 11:不是停用 —— 文字不變灰、
+ * - 唯讀模式(詳情)→ **同一個 widget 走 `isReadOnly`**(不是停用 —— 文字不變灰、
  *   附件可下載、選項 / 引用顯示 label);計算 / 固定值欄位也一樣
- * - 計算 / 固定值欄位(設計畫布、填寫、預覽)→ **有框的唯讀輸入框**(同其他停用欄位的外觀,Spec 6a §5 表 A 下方),
+ * - 計算 / 固定值欄位(設計畫布、填寫、預覽)→ **有框的唯讀輸入框**(同其他停用欄位的外觀),
  *   內容是顯示值(計算欄位缺依賴時是「—」)
  * - 其餘 → 登錄表的 widget;唯讀(沒有欄位級 edit、`readonlyWhen`)時停用並附原因
  */

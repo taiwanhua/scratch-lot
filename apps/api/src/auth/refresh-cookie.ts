@@ -5,7 +5,7 @@ import { AUTH_CONFIG, type AuthConfig } from "./auth.config";
 
 export const REFRESH_COOKIE_NAME = "refresh_token";
 
-/** GraphQL 單一端點,cookie Path 只能限到 `/graphql`(#62 決策);靠 SameSite=Lax + Secure。 */
+/** GraphQL 單一端點,cookie Path 只能限到 `/graphql`(既定決策);靠 SameSite=Lax + Secure。 */
 const COOKIE_PATH = "/graphql";
 
 /** 從 Cookie 標頭取出指定名稱的值(token 為 base64url,無需解碼;仍容錯 URL 編碼)。 */
@@ -34,7 +34,7 @@ export function readCookieValue(
   return undefined;
 }
 
-/** refresh token 的 cookie 讀寫(#61:httpOnly、Secure、SameSite=Lax、Domain 由 COOKIE_DOMAIN 控制)。 */
+/** refresh token 的 cookie 讀寫(httpOnly、Secure、SameSite=Lax、Domain 由 COOKIE_DOMAIN 控制)。 */
 @Injectable()
 export class RefreshCookie {
   constructor(@Inject(AUTH_CONFIG) private readonly config: AuthConfig) {}

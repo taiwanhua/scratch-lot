@@ -62,7 +62,7 @@ function withoutNotificationSwitches(
   );
 }
 
-describe("個人偏好 user_preferences(規格 10.6)", () => {
+describe("個人偏好 user_preferences", () => {
   let api: AuthTestApp;
 
   /** 每次登入都是一個新的 session(= 另一台裝置)。 */

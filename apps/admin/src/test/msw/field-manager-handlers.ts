@@ -37,7 +37,7 @@ export interface FieldWorldOptions {
   /** 新增選項時寫進 `ownerOrg` 的組織(= 當前組織);預設不帶名稱 */
   currentOrg?: { id: string; name: string };
   /**
-   * **上層**組織的 id:`value` 不可與全域 / 上層 / 自己重複(#264 的繼承鏈),
+   * **上層**組織的 id:`value` 不可與全域 / 上層 / 自己重複(繼承鏈),
    * 但可以與旁支 / 下層重複 —— 假伺服器要跟 api 同一條規則,不然測試會比 api 寬鬆。
    */
   upperOrgIds?: string[];
@@ -60,7 +60,7 @@ export interface FieldWorld {
 }
 
 /**
- * 欄位管理頁的假 api(#206 的兩個 query + 三個 mutation;#264 的規則)。
+ * 欄位管理頁的假 api(兩個 query + 三個 mutation;可見範圍規則)。
  *
  * 清單是**有狀態的**:新增 / 編輯 / 切換寫回同一份資料,所以「mutation → invalidate →
  * 重新查 `fields`」在測試裡看得到新的值 —— 只回固定清單的 handler 驗不出失效有沒有發生。
@@ -115,7 +115,7 @@ export const fieldWorld = (options: FieldWorldOptions = {}): FieldWorld => {
       reason: field.ownerOrg ? "NOT_OWNER" : seedReason,
     });
 
-  /** 繼承鏈 = 全域 + 上層組織 + 自己這一層;旁支 / 下層不算(#264)。 */
+  /** 繼承鏈 = 全域 + 上層組織 + 自己這一層;旁支 / 下層不算。 */
   const isInherited = (field: TestField): boolean => {
     const owner = field.ownerOrg ?? null;
     return owner === null || field.isOwn || upperOrgIds.includes(owner.id);

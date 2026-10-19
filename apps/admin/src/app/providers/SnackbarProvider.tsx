@@ -19,7 +19,7 @@ export interface SnackbarProviderProps {
  * 位置與堆疊(電腦 / 平板右下、手機底部滿寬;往上疊、新的在下、最多 3 則)寫在
  * `@repo/ui/snackbar` 的 `SnackbarStack` 與 store 的 JSDoc。
  *
- * **彈窗開著時的無障礙(#430)**:MUI Dialog 開啟時會把 app 根節點標 `aria-hidden`,
+ * **彈窗開著時的無障礙**:MUI Dialog 開啟時會把 app 根節點標 `aria-hidden`,
  * Snackbar 在畫面上看得到、螢幕閱讀器卻念不到。`SnackbarAnnouncer` 在那種時候以一個
  * 視覺隱藏的 `role="status"` 區域補念**最新的那一則**(做法與取捨寫在它的 JSDoc;
  * 以 `key` 綁那一則的 id,每則新提示換一個節點)。

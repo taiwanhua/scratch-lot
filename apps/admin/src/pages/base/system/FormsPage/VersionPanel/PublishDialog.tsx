@@ -35,9 +35,9 @@ export interface PublishDialogProps {
 }
 
 /**
- * 發布草稿(Spec 6a §6 四步發布):`changelog` 必填;帶 `expectedDraftRevision`(草稿被別人改過 → `CONFLICT`)。
+ * 發布草稿:`changelog` 必填;帶 `expectedDraftRevision`(草稿被別人改過 → `CONFLICT`)。
  * 檢查器有錯 → `VALIDATION_FAILED` + `issues`,就地列出(改完草稿再發布);中斷則在版本面板顯示「重試」。
- * 這次發布新建了依表單新增權限(B9b,api `createdPermission`)→ 不跳成功提示,改換成
+ * 這次發布新建了依表單新增權限(api `createdPermission`)→ 不跳成功提示,改換成
  * `PublishedGrantDialog` 提醒到角色管理授予;關掉它才算發布流程結束(`onPublished`)。
  */
 export const PublishDialog = ({
