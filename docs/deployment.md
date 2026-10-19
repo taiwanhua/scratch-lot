@@ -248,6 +248,7 @@ deploy / reset 的雲端目標與看板識別不寫在 workflow 裡,正本是兩
 | workflow                                           | 觸發                                             | 做什麼                                                                                                                                                              |
 | -------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Reset DB**(`reset-db.yml`)                       | 只能手動;三環境皆須明確確認                      | 資料庫還原(`data` / `full`);操作見三、「資料庫還原」,規則正本是 ADR-0002「還原(reset)」                                                                             |
+| **Demo**(`demo.yml`)                               | 只能手動;三環境皆須明確確認                      | 建立 / 補齊示範機構(`create`;`purge` / `rebuild` 尚未提供);操作見三、「示範資料(demo)」                                                                             |
 | **E2E**(`e2e.yml`)                                 | 只能手動,不在 ci.yml 內                          | 權限劇本 E2E(`gh workflow run e2e.yml --ref <分支>`,可加 `-f grep="劇本 7"`);資料庫由 harness 自起單一成員 replica set(拋棄式),不碰任何環境與 Secret;時機見 TEST-05 |
 | **Docs**(`docs.yml`)                               | PR 與三分支 push,只在改到 `docs/**` 或任何 md 時 | `pnpm run format:check`                                                                                                                                             |
 | **Project Status**(`project-status.yml`)           | issue / PR 事件                                  | 自動移看板卡,規則見 `docs/agents/issue-tracker.md`「看板」                                                                                                          |
@@ -416,8 +417,56 @@ RESET_ALLOW_ENV=dev MONGODB_URI="mongodb://127.0.0.1:27017/project-dev?directCon
 - 只處理資料庫,不部署 Cloud Run、不清除 GCS 物件。流程引擎每次依資料庫讀取版本,重建同 key/版號後不會沿用程序中的舊定義。
 - `data` 保留根初始帳號與密碼;`full` 重建帳號,密碼使用該環境 Secret 的當前值。
 - job 掛在所選 GitHub environment 下,沿用該環境的審核設定。
+- **重建後灌示範資料**(勾選項 `seed_demo`,預設不勾):勾了就在 reset 成功後接著跑 `demo --mode=create`(見下一節)。確認字串不另外輸入:由這次 reset 的確認字串換頭尾得出 `demo:<environment>:<資料庫名>:create`(reset 已核對過資料庫名,workflow 仍不解析 URI),指令端照樣再比對一次。不勾時和以前一樣,只有底座基本資料(最上層組織、租戶管理員、欄位類別)。CLI:再加 `-f seed_demo=true`。
 
 正本:`.github/workflows/reset-db.yml`、`deploy/project/cloud.json`、`apps/db-migrator/src/reset/`、ADR-0002「還原(reset)」。
+
+### 示範資料(demo)
+
+demo 指令在指定環境建立一個標「示範」的機構(租戶頂層)與整套示範資料,給測試與展示用。示範資料是業務資料,不進一般 seed(ADR-0002);內容由專案登記(`apps/db-migrator/seeds/project/registry.ts` 的 `projectDemoSource`,經 `seeds/registry.ts` 交給指令)。dev、staging、production 都可執行,安全規則同 reset。
+
+| mode      | 結果                                                                           |
+| --------- | ------------------------------------------------------------------------------ |
+| `create`  | 建立 / 補齊示範機構;冪等,重跑只補缺的帳號與資料,不會把已改過的密碼或資料改回去 |
+| `purge`   | 清空示範機構(尚未提供:指令通過安全閥後拒絕執行,一筆都不寫也不刪)               |
+| `rebuild` | `purge` + `create`(同上,尚未提供)                                              |
+
+**全程走 api**:指令不連資料庫寫入,只呼叫該環境 api 的 GraphQL,權限照常檢查、操作紀錄照常寫:
+
+1. 以平台管理員(`ROOT_ADMIN_ACCOUNT` / `ROOT_ADMIN_PASSWORD`,與 seed / reset 同一組)登入,以 `provisionTenant`(`demo: true`)建立示範機構與首任租戶管理員 `<基底信箱>+<別名>@…`(密碼 = 示範密碼,只存雜湊;不寄啟用信、首登不強改)。根組織底下已有同名且標「示範」的機構就沿用;同名機構沒有「示範」標記 → 拒絕,一筆都不寫
+2. 以那位首任租戶管理員登入,把專案的示範資料交給開通腳本建出其餘內容(與真正開通的租戶走同一套步驟;內容與步驟見專案的開通清單 `docs/modules/project/lottery-onboarding.md`)
+
+「示範」標記(`orgs.isDemo`)只在開通時設定,之後沒有端點改得了它,真實租戶不會被當成示範機構。
+
+在 Actions → **Demo** 選擇執行版本、`environment`、`mode`,並手動填入 `confirmation`:
+
+```text
+demo:<environment>:<實際資料庫名>:<create|purge|rebuild>
+```
+
+CLI 範例:
+
+```bash
+gh workflow run Demo --ref dev -f environment=dev -f mode=create -f confirmation="demo:dev:project-dev:create"
+```
+
+- 確認字串的環境、資料庫名(取自 `MONGODB_URI`)與模式必須全部符合;打錯一個字就不執行。`DEMO_ALLOW_ENV` 必須包含所選環境,未設即拒絕(workflow 只放這次選的環境)。示範機構名稱固定,不放進確認字串。
+- **機密**:示範密碼與基底信箱在 Secret Manager `demo-password*`、`demo-email-base*`(與 `root-admin-password*` 同一處,三環境各一把),名稱登記在 `deploy/project/cloud.json` 各環境的 `secrets.demoPassword` / `secrets.demoEmailBase`(可省略;省略的環境跑 Demo 會在認證前停下,Reset DB 勾選灌示範資料時也是)。Secret 由使用者照[新增一個 Secret Manager 機密的標準步驟](#新增一個-secret-manager-機密的標準步驟)在自己的終端機建立,授權讀取者是部署 SA(`gcp.deployServiceAccount`)。workflow 讀出後 `::add-mask::`,經標準輸入以管線交給指令,不放進環境變數。
+- **信箱**:示範帳號的信箱一律由基底信箱加 `+` 別名產生,帳號同信箱;repo 不寫任何真實信箱或密碼。輸出不印信箱(只印別名)。
+- 指令要知道打哪個 api:`--api-url`(workflow 帶 `cloud.json` 的 `apiUrl`)。本機執行時 `--api-url` 與 `MONGODB_URI` 要指向同一個環境,由操作者負責。
+
+本機執行(密碼與基底信箱在終端機輸入、不回顯;不從參數、環境變數或檔案讀):
+
+```bash
+DEMO_ALLOW_ENV=dev MONGODB_URI="<該環境的連線字串>" ROOT_ADMIN_ACCOUNT=<root 帳號> ROOT_ADMIN_PASSWORD=<root 密碼> \
+  pnpm --filter @repo/db-migrator demo --environment=dev --mode=create --confirm=demo:dev:project-dev:create --api-url=https://api-dev.example.com
+```
+
+- 一般部署與 `update` 不跑示範資料。
+- 示範機構的首任租戶管理員密碼若已被改過,`create` 在以他登入那一步停下;由平台管理員重設成示範密碼後重跑。
+- 新建的示範帳號(總部人員、店長、店員)照一般使用者規則:首登要改密碼。改過的密碼重跑不會改回去。
+
+正本:`.github/workflows/demo.yml`、`.github/workflows/reset-db.yml`(勾選項)、`apps/db-migrator/src/demo/`、`apps/db-migrator/seeds/project/demo/`。
 
 ### 觀測與維運
 
