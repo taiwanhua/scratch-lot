@@ -1,4 +1,5 @@
 import type { SeedSource } from "../base/seed-source";
+import { projectFieldCategories, projectFields } from "./field-categories";
 
 /**
  * 專案的種子來源(正本:ADR-0002)。專案新增的內容登記在這裡,不改 `seeds/base/`:
@@ -13,5 +14,9 @@ import type { SeedSource } from "../base/seed-source";
  */
 export const projectSeedSource: SeedSource = {
   moduleDeclarations: [],
-  seeds: [],
+  seeds: [
+    // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
+    projectFieldCategories,
+    projectFields,
+  ],
 };

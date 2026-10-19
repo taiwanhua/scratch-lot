@@ -118,6 +118,36 @@
         "types": "./dist/cjs/printing.d.cts",
         "default": "./dist/cjs/printing.cjs"
       }
+    },
+    "./project/reason-note": {
+      "import": {
+        "types": "./dist/es/project/reason-note.d.ts",
+        "default": "./dist/es/project/reason-note.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/reason-note.d.cts",
+        "default": "./dist/cjs/project/reason-note.cjs"
+      }
+    },
+    "./project/lottery-fields": {
+      "import": {
+        "types": "./dist/es/project/lottery-fields.d.ts",
+        "default": "./dist/es/project/lottery-fields.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/lottery-fields.d.cts",
+        "default": "./dist/cjs/project/lottery-fields.cjs"
+      }
+    },
+    "./project/schedule-fields": {
+      "import": {
+        "types": "./dist/es/project/schedule-fields.d.ts",
+        "default": "./dist/es/project/schedule-fields.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/schedule-fields.d.cts",
+        "default": "./dist/cjs/project/schedule-fields.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -154,6 +184,15 @@
       ],
       "printing": [
         "./dist/es/printing.d.ts"
+      ],
+      "project/reason-note": [
+        "./dist/es/project/reason-note.d.ts"
+      ],
+      "project/lottery-fields": [
+        "./dist/es/project/lottery-fields.d.ts"
+      ],
+      "project/schedule-fields": [
+        "./dist/es/project/schedule-fields.d.ts"
       ]
     }
   },
