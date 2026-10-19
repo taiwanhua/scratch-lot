@@ -14,8 +14,7 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
  * 自動成為個人偏好的一個開關(`notification_<類型>_<管道>`)。
  *
  * 類型清單、範本參數與觸發的功能見 `docs/modules/project/lottery-notifications.md`(專案規格 3.4)。
- * 本檔由 P01 宣告十種類型;各提醒票只在自己那一筆加「可調時間」宣告,其他票只呼叫 `notify()`。
- * 連結(`links`)由觸發的功能票在有詳情頁時追加。
+ * 目前十種類型都沒有宣告可調時間;觸發的功能呼叫 `notify()`。`links` 目前沒有登記。
  */
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */

@@ -4,7 +4,7 @@
  * 排班是獨立模組:本主題不得 import 任何刮刮樂主題。
  */
 
-/** 排班的欄位管理類別 key(值固定,各功能票照用)。 */
+/** 排班的欄位管理類別 key(值固定,程式一律引用這裡的常數)。 */
 export const SCHEDULE_FIELD_CATEGORY_KEYS = {
   /** 崗位(人力需求、人力需求範本、收銀點、支援需求單;可帶顏色) */
   position: "schedule-position",

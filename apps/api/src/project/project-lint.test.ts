@@ -36,13 +36,33 @@ describe("ESLint 裸查禁令:專案來源的豁免清單", () => {
  * 排班表要顯示的刮刮樂資料(例:收銀點名稱)由刮刮樂以登記方式提供給排班。
  * 目錄約定見 `apps/api/src/project/README.md`、`apps/admin/src/pages/project/README.md`。
  */
-const SCHEDULE_ROOTS = [
-  "apps/api/src/project/schedule",
-  "apps/admin/src/pages/project/schedule",
-  "apps/admin/src/components/project/schedule",
-  "packages/graphql/src/documents/project/schedule",
-  "packages/domain/src/project/schedule-fields",
+/** 會放排班程式的專案目錄(整棵掃,再用 `isScheduleSource` 挑出排班的檔)。 */
+const PROJECT_ROOTS = [
+  "apps/api/src/project",
+  "apps/admin/src/pages/project",
+  "apps/admin/src/components/project",
+  "apps/admin/src/hooks/project",
+  "apps/admin/src/mock/project",
+  "packages/graphql/src/documents/project",
+  "packages/domain/src/project",
 ];
+
+/**
+ * 排班的檔(repo 相對路徑,`/` 分隔):api / admin(頁面、元件、hooks、mock)/ documents 的 `project/schedule/` 底下,
+ * 與 domain 的 `project/schedule-<主題>/`。
+ */
+const SCHEDULE_SOURCE_PATTERNS = [
+  /^apps\/api\/src\/project\/schedule\//,
+  /^apps\/admin\/src\/(?:pages|components|hooks|mock)\/project\/schedule\//,
+  /^packages\/graphql\/src\/documents\/project\/schedule\//,
+  /^packages\/domain\/src\/project\/schedule-[^/]+\//,
+];
+
+const isScheduleSource = (relativePath: string): boolean =>
+  SCHEDULE_SOURCE_PATTERNS.some((pattern) => pattern.test(relativePath));
+
+const repoRelative = (file: string): string =>
+  path.relative(REPO_ROOT, file).split(path.sep).join("/");
 
 const IMPORT_SPECIFIER =
   /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*)["']([^"']+)["']/g;
@@ -114,13 +134,42 @@ describe("依賴方向:排班不得 import 刮刮樂", () => {
     expect(lotteryImportsOf(scheduleFile, content)).toEqual([]);
   });
 
-  it("排班的程式(api、admin 頁面與元件、documents、domain 主題)沒有任何一處 import 刮刮樂", () => {
-    const violations = SCHEDULE_ROOTS.flatMap((root) =>
+  it.each([
+    "apps/api/src/project/schedule/entries/entries.service.ts",
+    "apps/admin/src/pages/project/schedule/manage/RosterPage.tsx",
+    "apps/admin/src/components/project/schedule/ShiftChip/ShiftChip.tsx",
+    "apps/admin/src/hooks/project/schedule/useRoster/useRoster.ts",
+    "apps/admin/src/mock/project/schedule/roster-handlers.ts",
+    "packages/graphql/src/documents/project/schedule/roster.graphql.ts",
+    "packages/domain/src/project/schedule-fields/index.ts",
+    "packages/domain/src/project/schedule-rules/index.ts",
+  ])("排班的檔:%s", (relativePath) => {
+    expect(isScheduleSource(relativePath)).toBe(true);
+  });
+
+  it.each([
+    "apps/api/src/project/lottery/store/store.service.ts",
+    "apps/api/src/project/notifications.ts",
+    "apps/admin/src/hooks/project/useScanner/useScanner.ts",
+    "apps/admin/src/mock/project/mock-world.ts",
+    "packages/domain/src/project/reason-note/index.ts",
+    "packages/domain/src/project/lottery-fields/index.ts",
+    "packages/domain/src/project/scheduler/index.ts",
+  ])("不是排班的檔:%s", (relativePath) => {
+    expect(isScheduleSource(relativePath)).toBe(false);
+  });
+
+  it("排班的程式(api、admin 頁面 / 元件 / hooks / mock、documents、domain 的 schedule- 主題)沒有任何一處 import 刮刮樂", () => {
+    const scheduleFiles = PROJECT_ROOTS.flatMap((root) =>
       codeFiles(path.join(REPO_ROOT, root)),
-    ).flatMap((file) =>
+    ).filter((file) => isScheduleSource(repoRelative(file)));
+    // 掃描清單沒有過期:現有的 domain 排班主題一定掃得到
+    expect(scheduleFiles.map((file) => repoRelative(file))).toContain(
+      "packages/domain/src/project/schedule-fields/index.ts",
+    );
+    const violations = scheduleFiles.flatMap((file) =>
       lotteryImportsOf(file, readFileSync(file, "utf8")).map(
-        (specifier) =>
-          `${path.relative(REPO_ROOT, file).split(path.sep).join("/")} → ${specifier}`,
+        (specifier) => `${repoRelative(file)} → ${specifier}`,
       ),
     );
     expect(violations).toEqual([]);
