@@ -56,6 +56,13 @@ export class Org {
   @Prop({ type: String })
   slug?: string;
 
+  /**
+   * 示範機構標記(只有租戶頂層、只在開通時由示範指令設定;`docs/deployment.md`「示範資料(demo)」)。
+   * 之後沒有任何端點改得了它:真實租戶永遠不會被當成示範機構清空。缺欄位與 `false` 同義。
+   */
+  @Prop({ type: Boolean })
+  isDemo?: boolean;
+
   /** 受控 JSON。租戶頂層專用:`visibility` = "own"(使用者只看自己所屬組織的資料)| "subtree"(含整棵下層);未設視為 "own";下層組織不看自己的(ADR-0005)。 */
   @Prop({ type: MongooseSchema.Types.Mixed, default: {} })
   settings!: Record<string, unknown>;

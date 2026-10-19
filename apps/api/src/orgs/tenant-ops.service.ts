@@ -5,6 +5,7 @@ import { hash } from "@node-rs/argon2";
 import { type ClientSession, Types } from "mongoose";
 
 import { AuditService } from "../audit/audit.service";
+import { assertPasswordRule } from "../auth/password/password-error";
 import { PasswordService } from "../auth/password/password.service";
 import type { Persisted } from "../database/base.repository";
 import {
@@ -91,6 +92,32 @@ function ownedLogoPath(value: string | null | undefined): string | undefined {
     );
   }
   return trimmed;
+}
+
+/**
+ * 示範機構的開通參數(`demo` + `adminInitialPassword`,兩者成對):一般租戶回 null。
+ * 只給密碼不給 `demo`、或 `demo` 卻沒給密碼 → `VALIDATION_FAILED`;密碼規則同 `createUser`。
+ */
+function demoProvisionOf(
+  input: ProvisionTenantInput,
+): { adminPassword: string } | null {
+  const password = input.adminInitialPassword ?? "";
+  if (input.demo !== true) {
+    if (password !== "") {
+      throw validationError(
+        "adminInitialPassword is only accepted when provisioning a demo org",
+        ["adminInitialPassword"],
+      );
+    }
+    return null;
+  }
+  if (password === "") {
+    throw validationError("A demo org requires adminInitialPassword", [
+      "adminInitialPassword",
+    ]);
+  }
+  assertPasswordRule(password);
+  return { adminPassword: password };
 }
 
 /** 模組文件 → 勾選選項;上層不在選項內時 `parentId` 為 null(該節點自成一棵根)。 */
@@ -205,6 +232,9 @@ export class TenantOpsService {
    * 稽核一起提交;任一步失敗全部回復,不留任何東西,同一組帳號可以直接重新開通。
    * 啟用信是外部副作用,排在交易成功之後(`afterCommit`):寄不出去只記 log、開通照樣成立,
    * 首任管理員以「忘記密碼」自助取得設定連結(與啟用逾期同一條路,ADR-0009「Token 效期」)。
+   *
+   * **示範機構**(`demo: true`,只有示範指令會送):組織加 `isDemo` 標記;首任管理員用 `adminInitialPassword`
+   * (只存雜湊)、首登不強改、不寄啟用信 —— 示範指令接著就以這位管理員登入跑開通腳本。
    */
   async provision(
     operator: OperatorContext,
@@ -216,6 +246,7 @@ export class TenantOpsService {
     const account = requireText(input.adminAccount, "adminAccount");
     const email = requireText(input.adminEmail, "adminEmail");
     const logoPath = ownedLogoPath(input.logoPath);
+    const demo = demoProvisionOf(input);
     await assertSlugFree(this.orgs, operator, slug);
     await this.assertAccountAndEmailFree(operator, account, email);
 
@@ -230,8 +261,11 @@ export class TenantOpsService {
       selected,
     );
     const rootOrg = await this.rootOrg(operator);
-    // 不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;雜湊在交易外先算好,交易只做寫入
-    const passwordHash = await hash(randomBytes(32).toString("hex"));
+    // 一般租戶不設可用密碼(隨機值雜湊,驗不過),由啟用信自行設定;示範機構用示範指令給的密碼。
+    // 雜湊在交易外先算好,交易只做寫入
+    const passwordHash = await hash(
+      demo === null ? randomBytes(32).toString("hex") : demo.adminPassword,
+    );
     const mail = { sent: false };
 
     try {
@@ -249,6 +283,7 @@ export class TenantOpsService {
               isSystem: false,
               settings: {},
               ...(logoPath === undefined ? {} : { logoPath }),
+              ...(demo === null ? {} : { isDemo: true }),
             },
             { session },
           );
@@ -320,12 +355,18 @@ export class TenantOpsService {
               roleId: String(role._id),
               moduleKeys: selected.map((module) => module.key),
               ...(logoPath === undefined ? {} : { logoPath }),
+              // 示範機構只記標記;密碼不進稽核
+              ...(demo === null ? {} : { isDemo: true }),
             },
           });
 
           // 5. 啟用信(7 天;逾期走忘記密碼自助,不重寄):交易成功之後才寄
-          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」
+          // 寄不出去只記 log、開通照樣成立;回傳 `activationMailSent: false` 讓畫面提示走「忘記密碼」。
+          // 示範機構的首任管理員已有密碼,不寄
           afterCommit(async () => {
+            if (demo !== null) {
+              return;
+            }
             try {
               await this.passwords.sendActivationEmail(user._id);
               mail.sent = true;

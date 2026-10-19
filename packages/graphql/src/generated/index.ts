@@ -2187,6 +2187,7 @@ export type Org = {
   description?: Maybe<Scalars['String']['output']>;
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
+  isDemo: Scalars['Boolean']['output'];
   isSystem: Scalars['Boolean']['output'];
   logoUrl?: Maybe<Scalars['String']['output']>;
   managers: Array<UserSummary>;
@@ -2482,6 +2483,8 @@ export type PrintersPayload = {
 export type ProvisionTenantInput = {
   adminAccount: Scalars['String']['input'];
   adminEmail: Scalars['String']['input'];
+  adminInitialPassword?: InputMaybe<Scalars['String']['input']>;
+  demo?: InputMaybe<Scalars['Boolean']['input']>;
   logoPath?: InputMaybe<Scalars['String']['input']>;
   moduleKeys: Array<Scalars['String']['input']>;
   name: Scalars['String']['input'];

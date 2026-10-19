@@ -82,6 +82,10 @@ export class Org {
   @Field(() => String, { nullable: true })
   slug!: string | null;
 
+  /** 示範機構(`orgs.isDemo`;只有示範指令開通的租戶頂層為 true,開通後不可改)。 */
+  @Field(() => Boolean)
+  isDemo!: boolean;
+
   /** 租戶頂層的可見範圍開關(ADR-0005);非租戶頂層恆為 null。 */
   @Field(() => OrgVisibility, { nullable: true })
   visibility!: OrgVisibility | null;

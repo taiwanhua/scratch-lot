@@ -1541,6 +1541,7 @@ type Org {
   description: String
   enabled: Boolean!
   id: ID!
+  isDemo: Boolean!
   isSystem: Boolean!
   logoUrl: String
   managers: [UserSummary!]!
@@ -1820,6 +1821,8 @@ type PrintersPayload {
 input ProvisionTenantInput {
   adminAccount: String!
   adminEmail: String!
+  adminInitialPassword: String
+  demo: Boolean = false
   logoPath: String
   moduleKeys: [String!]!
   name: String!
