@@ -39,6 +39,13 @@ concurrency:
 # 快取只加速、不改結果:turbo 的 hash 涵蓋輸入檔、env 與依賴,命中就是同一份產物。
 # E2E 不在這裡(e2e.yml 手動觸發)。
 
+# Linux 核心 6.19 以上與 MongoDB 8.x 的 TCMalloc 不相容(SERVER-121912):mongod 一啟動就自行退出。
+# GitHub 的 ubuntu-24.04 runner 已換到 6.19 核心,緊急繞過:glibc 的 rseq 交給 TCMalloc 自己用。
+# 套用到本 workflow 的所有行程(mongodb-memory-server 起的 mongod 繼承它;docker 的 mongo 另以 -e 傳入)。
+# 退場:runner 核心 ≥ 7.0.14,或 MongoDB 出修正版後拿掉(見 docs/deployment.md「CI」)。
+env:
+  GLIBC_TUNABLES: glibc.pthread.rseq=1
+
 jobs:
   # 算受影響的 package,結果用 outputs 給下游 job 決定跑什麼 / 要不要跳過
   prepare:
@@ -537,7 +544,7 @@ jobs:
 
           for attempt in 1 2 3; do
             docker rm -f mongo >/dev/null 2>&1 || true
-            if docker run -d --name mongo -p 27017:27017 "$MONGO_IMAGE" --replSet ci --bind_ip_all && wait_primary; then
+            if docker run -d --name mongo -e GLIBC_TUNABLES -p 27017:27017 "$MONGO_IMAGE" --replSet ci --bind_ip_all && wait_primary; then
               echo "MongoDB 已就緒($MONGO_IMAGE,第 $attempt 次)"
               exit 0
             fi
