@@ -1,1 +1,28 @@
-{}
+{
+  "tagPalettes": {
+    "names": {
+      "blue": "藍",
+      "cyan": "青",
+      "green": "綠",
+      "lime": "萊姆",
+      "yellow": "黃",
+      "orange": "橘",
+      "red": "紅",
+      "pink": "粉",
+      "purple": "紫",
+      "grey": "灰"
+    },
+    "select": {
+      "label": "顏色",
+      "none": "不設定"
+    }
+  },
+  "fieldOptionColors": {
+    "column": "顏色",
+    "selectAria": "「{name}」的顏色",
+    "none": "—",
+    "feedback": {
+      "success": "已更新顏色"
+    }
+  }
+}

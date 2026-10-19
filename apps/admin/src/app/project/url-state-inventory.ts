@@ -5,4 +5,7 @@ import type { UrlStateInventory } from "../module-page-registry";
  * 登記 `module-pages.ts` 的每一個固定頁、每個表單模組客製過的頁,以及 `page-replacements.ts` 換掉的底座頁
  * (換掉之後的頁放進網址的 key 以這裡為準):頁面 key → 這一頁以 `useUrlState` 放進網址的 key。
  */
-export const projectUrlStateInventory: UrlStateInventory = {};
+export const projectUrlStateInventory: UrlStateInventory = {
+  // 欄位管理換成帶「顏色」欄的客製頁:網址狀態與底座頁相同(選中的類別、編輯中的選項)
+  "system.field-manager": ["detail", "edit"],
+};

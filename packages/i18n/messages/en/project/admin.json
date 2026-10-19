@@ -1,1 +1,28 @@
-{}
+{
+  "tagPalettes": {
+    "names": {
+      "blue": "Blue",
+      "cyan": "Cyan",
+      "green": "Green",
+      "lime": "Lime",
+      "yellow": "Yellow",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "grey": "Grey"
+    },
+    "select": {
+      "label": "Color",
+      "none": "None"
+    }
+  },
+  "fieldOptionColors": {
+    "column": "Color",
+    "selectAria": "Color of \"{name}\"",
+    "none": "—",
+    "feedback": {
+      "success": "Color updated"
+    }
+  }
+}

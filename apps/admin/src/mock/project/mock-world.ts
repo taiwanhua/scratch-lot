@@ -1,4 +1,31 @@
+import { fieldsByCategory } from "@/test/msw/field-fixtures";
+import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
+
 import type { ProjectMockWorld } from "../mock-world-source";
+
+/** 欄位管理(客製替換頁)的選項顏色:示範分類三筆有顏色,其餘「不設定」。 */
+const fieldOptionColors = () =>
+  fieldOptionColorWorld({
+    colorsByCategory: {
+      "demo-category": [
+        { fieldId: "f-staple", value: "staple", paletteKey: "green" },
+        { fieldId: "f-side-dish", value: "side-dish", paletteKey: "yellow" },
+        { fieldId: "f-fried", value: "fried", paletteKey: "orange" },
+      ],
+    },
+    options: Object.fromEntries(
+      Object.values(fieldsByCategory)
+        .flat()
+        .map((field) => [
+          field.id,
+          {
+            categoryKey:
+              field.categoryId === "cat-gender" ? "gender" : "demo-category",
+            value: field.value,
+          },
+        ]),
+    ),
+  }).handlers;
 
 /**
  * 專案的 mock world:專案新增的模組在此登記 mock 模式的模組清單與假 api,底座更新不會動到這份。
@@ -8,5 +35,5 @@ import type { ProjectMockWorld } from "../mock-world-source";
  */
 export const projectMockWorld: ProjectMockWorld = {
   modules: () => [],
-  handlers: () => [],
+  handlers: () => [...fieldOptionColors()],
 };
