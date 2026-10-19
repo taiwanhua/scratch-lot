@@ -35,6 +35,9 @@ const ORIGINAL_SHARED = {
   deployer_sa: "github-deployer@cookhome-online.iam.gserviceaccount.com",
   root_account: "root",
   root_email: "a0987837233@gmail.com",
+  // 示範資料的兩把 Secret 是之後加的可省略欄位:舊設定沒有它們 = 空字串,其餘輸出逐值不變
+  demo_password_secret: "",
+  demo_email_base_secret: "",
   // 即時通道是之後加的可省略段落:舊設定沒有它 = 停用,其餘輸出逐值不變
   realtime: "false",
   realtime_worker: "",
@@ -170,14 +173,14 @@ test("正式設定:repo 身分不符時照樣被拒絕(不因為是正式檔而�
   );
 });
 
-test("cloud 輸出的鍵固定為契約的二十一個,且全是字串", () => {
+test("cloud 輸出的鍵固定為契約的二十三個,且全是字串", () => {
   const resolved = resolveCloudConfig({
     rootDir: makeProjectRoot(),
     environment: "staging",
     repository: REPO,
   });
   assert.deepEqual(Object.keys(resolved), CLOUD_OUTPUT_KEYS);
-  assert.equal(CLOUD_OUTPUT_KEYS.length, 21);
+  assert.equal(CLOUD_OUTPUT_KEYS.length, 23);
   for (const value of Object.values(resolved))
     assert.equal(typeof value, "string");
   assert.equal(resolved.api_service, "widgets-api-staging");
@@ -374,6 +377,34 @@ test("cloud 的每個必要欄位缺少時都拒絕,並指出欄位路徑", () =
       );
     }
   }
+});
+
+test("示範資料的兩把 Secret:省略 = 空字串;有寫就輸出名稱;只寫一把或格式錯即拒絕", () => {
+  const resolve = (cloud) =>
+    resolveCloudConfig({
+      rootDir: makeProjectRoot({ cloud }),
+      environment: "dev",
+      repository: REPO,
+    });
+  const omitted = resolve(sampleCloud());
+  assert.equal(omitted.demo_password_secret, "");
+  assert.equal(omitted.demo_email_base_secret, "");
+
+  const cloud = sampleCloud();
+  cloud.environments.dev.secrets.demoPassword = "demo-password-dev";
+  cloud.environments.dev.secrets.demoEmailBase = "demo-email-base-dev";
+  const resolved = resolve(cloud);
+  assert.equal(resolved.demo_password_secret, "demo-password-dev");
+  assert.equal(resolved.demo_email_base_secret, "demo-email-base-dev");
+
+  const onlyOne = sampleCloud();
+  onlyOne.environments.dev.secrets.demoPassword = "demo-password-dev";
+  expectError(() => resolve(onlyOne), /要一起設定/);
+
+  const invalid = sampleCloud();
+  invalid.environments.dev.secrets.demoPassword = "demo password";
+  invalid.environments.dev.secrets.demoEmailBase = "demo-email-base-dev";
+  expectError(() => resolve(invalid), /secrets\.demoPassword 格式不符/);
 });
 
 test("Resend 未啟用時仍能解析 cloud 設定,其他 secret 仍必填", () => {
