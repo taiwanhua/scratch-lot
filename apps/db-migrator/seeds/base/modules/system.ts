@@ -553,14 +553,14 @@ export const systemModules: ModuleSeedDeclaration = {
       key: permissionKey(NOTIFICATION_SETTINGS_KEY, "view"),
       moduleKey: NOTIFICATION_SETTINGS_KEY,
       name: "檢視",
-      description: "看負責人提醒類型、組織範圍與目前的收件人條件",
+      description: "看通知類型、組織範圍、目前的收件人條件與提醒時間",
     },
     {
       key: permissionKey(NOTIFICATION_SETTINGS_KEY, "edit"),
       moduleKey: NOTIFICATION_SETTINGS_KEY,
       name: "編輯",
       description:
-        "編輯收件人條件、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶)",
+        "編輯收件人條件與提醒時間、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶;提醒時間照範圍)",
     },
   ],
 };

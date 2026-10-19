@@ -82,7 +82,7 @@
 
 ### 通知
 
-`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件,`schedule = null` 就用類型宣告的預設提醒時間。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
+`notifications` 是收件人自己的資料(依 `recipientId` 讀寫、與目前組織無關,不掛 tenantScope),由 `notify()` 在觸發它的動作的同一個交易裡寫入;`(recipientId, dedupeKey)` 唯一防重複通知,`createdAt` 90 天後由 TTL 刪除。`channels` 記這則送出的管道,通知清單與未讀數只算含 `in-app` 的。`notification_settings` 是以 `tenantId` 為邊界的租戶設定:沒有資料或 `audience = null` 就用通知類型宣告的預設人員條件,`schedule = null` 就用類型宣告的預設提醒時間(`scheduleUpdatedAt` 記提醒時間的最後修改時間,排程補寄用)。兩張都不擋刪組織。細節見 `docs/modules/notification-settings.md`。
 
 ## 專案資料
 

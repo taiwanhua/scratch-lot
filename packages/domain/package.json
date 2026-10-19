@@ -89,6 +89,16 @@
         "default": "./dist/cjs/audience.cjs"
       }
     },
+    "./notification-schedule": {
+      "import": {
+        "types": "./dist/es/notification-schedule.d.ts",
+        "default": "./dist/es/notification-schedule.js"
+      },
+      "require": {
+        "types": "./dist/cjs/notification-schedule.d.cts",
+        "default": "./dist/cjs/notification-schedule.cjs"
+      }
+    },
     "./seed": {
       "import": {
         "types": "./dist/es/seed.d.ts",
@@ -175,6 +185,9 @@
       ],
       "audience": [
         "./dist/es/audience.d.ts"
+      ],
+      "notification-schedule": [
+        "./dist/es/notification-schedule.d.ts"
       ],
       "seed": [
         "./dist/es/seed.d.ts"

@@ -189,7 +189,7 @@ export class NotificationSettingModel {
   @Field(() => GraphQLJSONObject, { nullable: true })
   defaultAudience!: Record<string, unknown> | null;
 
-  /** 當事人通知的收件人說明(類型宣告,例「可排這家店的排班人員」);沒有 = null */
+  /** 當事人通知的收件人說明(類型宣告,例「處理這件事的人員」);沒有 = null */
   @Field(() => String, { nullable: true })
   recipientNote!: string | null;
 

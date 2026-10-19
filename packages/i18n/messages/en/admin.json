@@ -2978,7 +2978,7 @@
       "dayOfMonth": "Day of the month",
       "dayOfMonthHint": "1–31; months without that day send on the last day",
       "time": "Send time",
-      "timeHint": "In the top-level organization's time zone; sent within 15 minutes after the time",
+      "timeHint": "In the top-level organization's time zone; usually sent within 15 minutes after the time",
       "issues": {
         "daysRange": "Enter a whole number from 0 to 365",
         "daysDuplicate": "Days cannot repeat",

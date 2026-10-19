@@ -2,8 +2,8 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from "mongoose";
 
 import type { Audience } from "@repo/domain/audience";
+import type { NotificationSchedule } from "@repo/domain/notification-schedule";
 
-import type { NotificationSchedule } from "../../notifications/notification-schedule";
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 export const NOTIFICATION_SETTINGS_COLLECTION = "notification_settings";
@@ -39,6 +39,13 @@ export class NotificationSetting {
    */
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   schedule!: NotificationSchedule | null;
+
+  /**
+   * 提醒時間最後一次調整 / 還原的時間(只有 `schedule` 變動才寫;`updatedAt` 也會因收件人變動而動,
+   * 不能拿來判斷)。排程補寄時,早於它的應寄時點不補。從沒動過 = null。
+   */
+  @Prop({ type: Date, default: null })
+  scheduleUpdatedAt!: Date | null;
 }
 
 // 由 class 產生 Mongoose Schema(供 MongooseModule 註冊為 model,並掛下方索引)
