@@ -193,7 +193,7 @@ export const EXPECTED_V2_CATEGORIES = {
   "apps/e2e/docker-compose.yml": "mixed",
   "apps/api/schema.gql": "mixed",
   "packages/graphql/src/generated/graphql.ts": "mixed",
-  "apps/admin/src/app/module-pages.tsx": "mixed",
+  "apps/admin/src/app/module-pages.tsx": "common",
   "misc/notes.txt": "unknown",
 };
 

@@ -30,6 +30,12 @@ const TAG = "v0.3.0";
 
 /** 新底座 v0.3.0:有 key 的 seed、底座 hook 與 lib、空的專案登記(底座帶的預設)。 */
 const BASE_V3_CHANGES = {
+  // 值行檔(第 6 節):範本值、標題與 README 開頭是專案值,其餘照底座
+  ".env.example":
+    "# 本機的應用名稱\nAPP_NAME=base\n# APP_URL=http://base.test\n",
+  "CLAUDE.md": "# base\n\n規則\n",
+  "README.md": "# base\n\n底座介紹\n\n## 結構\n\n內容\n",
+  "docker-compose.yml": "services: {}\n",
   "apps/db-migrator/seeds/base/modules/demo.ts": [
     'export const DEMO_MODULE_KEY = "demo";',
     "export const DEMO_HISTORY_KEY = `${DEMO_MODULE_KEY}.history-page`;",
@@ -158,18 +164,18 @@ function sectionLines(markdown, number) {
   );
 }
 
-/** 只有 `number` 那一節有項目,其餘三節為 0。 */
+/** 只有 `number` 那一節有項目,其餘各節為 0。 */
 function assertOnlySection(result, number) {
   assert.equal(result.exitCode, 1, result.stdout);
   assert.equal(result.stderr, "");
-  for (const other of [1, 2, 3, 4]) {
+  for (const other of [1, 2, 3, 4, 5, 6, 7]) {
     if (other === number) continue;
     assert.deepEqual(sectionLines(result.stdout, other), [], `第 ${other} 節`);
   }
   return sectionLines(result.stdout, number);
 }
 
-test("乾淨:升級 merge 後四節皆為 0,exit 0 並註明已去除重複;--out 另寫同一份報告", async () => {
+test("乾淨:升級 merge 後七節皆為 0,exit 0 並註明已去除重複;--out 另寫同一份報告", async () => {
   const dir = mkdtempSync(path.join(tmpdir(), "base-sync-verify-out-"));
   try {
     const out = path.join(dir, "verify.md");
@@ -178,7 +184,7 @@ test("乾淨:升級 merge 後四節皆為 0,exit 0 並註明已去除重複;--ou
     assert.equal(result.stderr, "");
     assert.match(result.stdout, /已去除重複/);
     assert.match(result.stdout, new RegExp(`acme/gadgets 對照底座 ${TAG}`));
-    for (const number of [1, 2, 3, 4]) {
+    for (const number of [1, 2, 3, 4, 5, 6, 7]) {
       assert.deepEqual(sectionLines(result.stdout, number), []);
     }
     assert.equal(readFileSync(out, "utf8"), result.stdout);
@@ -212,7 +218,7 @@ test("不乾淨 1b:專案改寫了底座已發布的種子快照,第 1 節以 pu
 test("不乾淨 1c:專案多了無法歸類的路徑,第 1 節以 unknown 列出;混合路徑不列", async () => {
   const result = await verifyScenario("unknown", {
     "misc/project-notes.txt": "project only\n",
-    "docs/project-guide.md": "# 混合路徑由 inspect 核對\n",
+    ".github/project-guide.md": "# 混合路徑由 inspect 核對\n",
   });
   assert.deepEqual(assertOnlySection(result, 1), [
     "- unknown A `misc/project-notes.txt`",
@@ -327,6 +333,88 @@ test("不乾淨 4:專案路徑的檔案與底座同名或同匯出名稱,第 4 �
   assert.deepEqual(assertOnlySection(result, 4), [
     "- `apps/admin/src/hooks/project/useScanner.ts`:同名 `apps/admin/src/hooks/base/useScanner.ts`",
     "- `apps/admin/src/lib/project/period.ts`:同匯出 `reportPeriod`(`apps/admin/src/lib/base/report-period.ts`)",
+  ]);
+});
+
+const GADGETS_PUBLIC = {
+  "packages/project-config/src/project/public.ts":
+    'export const projectPublic = { slug: "gadgets", brand: { name: "Gadgets Co" } };\n',
+};
+
+test("不乾淨 5:共用與混合路徑新增了專案字樣,第 5 節逐行列出;底座已有的詞、專案路徑與值行不算", async () => {
+  const result = await verifyScenario("terms", {
+    ...GADGETS_PUBLIC,
+    "scripts/figma-audit/project/config.js":
+      'export default { projectTerms: ["抽獎", "scanner"] };\n',
+    "apps/db-migrator/seeds/project/modules.ts":
+      "export const m = { nodes: [{ key: 'raffle.draw', name: '抽' }] };\n",
+    "apps/api/src/project/raffle/raffle.schema.ts":
+      "export const options = { collection: 'prize_pools' };\n",
+    "packages/ui/src/promo.ts": [
+      "// 抽獎活動",
+      "export const key = 'GADGETS-admin-promo';",
+      // useScanner 在底座已有:不是專案字樣
+      "export const scanner = 'useScanner';",
+      "export const path = '/raffle/prize_pools';",
+      "",
+    ].join("\n"),
+    ".github/workflows/ci.yml": "name: Gadgets Co CI\n",
+    // 專案路徑與值行檔不掃
+    "apps/admin/src/pages/project/Raffle.tsx": "export const t = '抽獎';\n",
+    "CLAUDE.md": "# gadgets\n\n規則\n",
+  });
+  assert.equal(result.exitCode, 1, result.stdout);
+  assert.match(
+    result.stdout,
+    /專案字樣詞表:`gadgets`、`Gadgets Co`、`抽獎`、`raffle`、`prize`/,
+  );
+  assert.deepEqual(sectionLines(result.stdout, 1), [
+    "- common A `packages/ui/src/promo.ts`",
+  ]);
+  assert.deepEqual(sectionLines(result.stdout, 5), [
+    "- `.github/workflows/ci.yml` 第 1 行:`gadgets`、`Gadgets Co`",
+    "- `packages/ui/src/promo.ts` 第 1 行:`抽獎`",
+    "- `packages/ui/src/promo.ts` 第 2 行:`gadgets`",
+    "- `packages/ui/src/promo.ts` 第 4 行:`raffle`、`prize`",
+  ]);
+  for (const number of [2, 3, 4, 6, 7]) {
+    assert.deepEqual(
+      sectionLines(result.stdout, number),
+      [],
+      `第 ${number} 節`,
+    );
+  }
+});
+
+test("不乾淨 6:值行檔在值行以外與底座不同,第 6 節列出;範本值、標題與 README 開頭不算", async () => {
+  const result = await verifyScenario("values", {
+    ".env.example":
+      "# 本機的應用名稱\nAPP_NAME=gadgets\n# APP_URL=http://gadgets.test\n",
+    "CLAUDE.md": "# gadgets\n\n規則改了\n",
+    "README.md": "# gadgets\n\n專案介紹\n\n另一段\n\n## 結構\n\n內容\n",
+    "docker-compose.yml": "services: { mongo: {} }\n",
+  });
+  assert.deepEqual(assertOnlySection(result, 6), [
+    "- `CLAUDE.md`:標題行以外與底座不同",
+    "- `docker-compose.yml`:應與底座相同",
+  ]);
+});
+
+test("不乾淨 7:專案 skill 名稱沒以 slug 開頭或沒成對,第 7 節列出;底座 skill 與專案的外部 skill 不算", async () => {
+  const result = await verifyScenario("skills", {
+    ...GADGETS_PUBLIC,
+    ".claude/skills/gadgets-onboarding/SKILL.md": "# onboarding\n",
+    ".agents/skills/gadgets-onboarding/SKILL.md": "# onboarding\n",
+    ".claude/skills/helper/SKILL.md": "# helper\n",
+    ".agents/skills/gadgets-report/SKILL.md": "# report\n",
+    ".agents/skills/external-tool/SKILL.md": "# external\n",
+    "skills-lock.json": `${JSON.stringify({ version: 1, skills: { "external-tool": {} } })}\n`,
+    ".claude/skills/module-scaffold/SKILL.md": "# 底座 skill(common)\n",
+  });
+  assert.deepEqual(sectionLines(result.stdout, 7), [
+    "- `gadgets-report`:缺 .claude/skills/gadgets-report/(兩邊成對)",
+    "- `helper`:名稱須以 gadgets- 開頭",
+    "- `helper`:缺 .agents/skills/helper/(兩邊成對)",
   ]);
 });
 
