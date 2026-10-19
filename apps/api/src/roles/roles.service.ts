@@ -332,19 +332,25 @@ export class RolesService {
     return { reasons, references };
   }
 
-  /** 角色所屬的租戶 = 擁有組織所屬的租戶(根組織的角色 / 找不到擁有組織 = `null`)。 */
+  /**
+   * 角色所屬的租戶 = 擁有組織所屬的租戶(根組織的角色 = `null`)。找不到擁有組織是資料損毀
+   * (`loadManagedRole` 已先擋過),直接丟錯,不退成根組織 —— 退了會少掃租戶的引用。
+   */
   private async tenantIdOfRole(
     operator: OperatorContext,
     role: RoleRecord,
   ): Promise<Types.ObjectId | null> {
     const ownerOrgId = await this.scope.ownerOrgIdOf(role);
-    if (ownerOrgId === null) {
-      return null;
+    const org =
+      ownerOrgId === null
+        ? null
+        : await this.orgs.findById(operator, ownerOrgId);
+    if (org === null) {
+      throw new Error(
+        `Role ${String(role._id)} has no owner org; cannot resolve its tenant`,
+      );
     }
-    const org = await this.orgs.findById(operator, ownerOrgId);
-    return org === null
-      ? null
-      : tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors });
+    return tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors });
   }
 
   /**

@@ -366,7 +366,8 @@ export const systemModules: ModuleSeedDeclaration = {
       key: permissionKey(ROLE_MANAGER_KEY, "delete"),
       moduleKey: ROLE_MANAGER_KEY,
       name: "刪除",
-      description: "刪除角色 + API(前置:無授予、非種子角色、非租戶副本;軟刪除)",
+      description:
+        "刪除角色 + API(前置:無授予、非種子角色、非租戶副本、沒被人員條件引用;軟刪除)",
     },
     // 模組與權限(docs/modules/module-manager.md 權限表;模組本身 isRootOnly)
     {

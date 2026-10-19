@@ -8,9 +8,12 @@ import { PRINTING_AGENT_OFFLINE } from "../notifications/base-notification-types
 import { createRole } from "../permission/test-support/fixtures";
 import {
   type Manager,
+  ROLE_MANAGER_PERMISSIONS,
   type RolesWorld,
   createManager,
   createMember,
+  login,
+  nextAccount,
   startRolesWorld,
 } from "./roles-test-support";
 
@@ -120,6 +123,17 @@ function reviewStep(
   };
 }
 
+/** 流程的目前版本:有指定就用指定的,否則 `published` 的那一版。 */
+function currentVersionOf(
+  options: { status?: string; currentVersion?: number | null },
+  version: number | null,
+): number | null {
+  if (options.currentVersion !== undefined) {
+    return options.currentVersion;
+  }
+  return options.status === "published" ? version : null;
+}
+
 /**
  * 角色被人員條件引用時不能刪除(docs/modules/role-manager.md 權限表「刪除」):
  * 通知設定的收件人、流程的審核者 / 知會 / 逾時提醒的通知對象、資料範圍的套用對象。
@@ -129,6 +143,7 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
   let world: RolesWorld;
   let connection: Connection;
   let manager: Manager;
+  let rootToken: string;
 
   beforeAll(async () => {
     world = await startRolesWorld("cookhome-test-role-in-use");
@@ -137,6 +152,23 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
       orgIds: [world.tenantA],
       ownerOrgId: world.tenantA,
     });
+    const rootAccount = nextAccount("root-operator");
+    const rootUserId = await createMember(
+      world,
+      [world.rootOrgId],
+      "root-operator",
+    );
+    await connection
+      .collection("users")
+      .updateOne({ _id: rootUserId }, { $set: { account: rootAccount } });
+    await createRole(world.api.app, connection, {
+      name: `根組織操作者-${rootAccount}`,
+      ownerOrgId: world.rootOrgId,
+      moduleKeys: ["system", "system.role-manager"],
+      permissionKeys: ROLE_MANAGER_PERMISSIONS,
+      assignTo: [rootUserId],
+    });
+    rootToken = await login(world, rootAccount);
   }, HOOK_TIMEOUT_MS);
 
   afterAll(async () => {
@@ -184,30 +216,21 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     );
   }
 
-  /** 一個客製流程 + 一份版本(`status` 預設草稿;`published` 時同步設成目前版本)。 */
-  async function addWorkflow(options: {
-    tenantId: Types.ObjectId;
-    name: string;
+  interface VersionOptions {
     steps: Record<string, unknown>[];
     cc?: Record<string, unknown> | null;
     status?: "draft" | "published" | "retired";
     version?: number;
-  }): Promise<string> {
-    const key = `wf_${new Types.ObjectId().toHexString()}`;
+  }
+
+  /** 流程的一份版本(`status` 預設草稿;草稿沒有版號)。 */
+  async function addVersion(
+    key: string,
+    options: VersionOptions,
+  ): Promise<number | null> {
     const now = new Date();
     const status = options.status ?? "draft";
     const version = status === "draft" ? null : (options.version ?? 1);
-    await connection.collection("workflows").insertOne({
-      key,
-      name: options.name,
-      ownerOrgId: options.tenantId,
-      tenantId: options.tenantId,
-      forkedFrom: null,
-      currentVersion: status === "published" ? version : null,
-      createdAt: now,
-      updatedAt: now,
-      ...BASE_FIELDS,
-    });
     await connection.collection("workflow_versions").insertOne({
       workflowKey: key,
       version,
@@ -225,7 +248,62 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
       updatedAt: now,
       ...BASE_FIELDS,
     });
+    return version;
+  }
+
+  /**
+   * 一個流程 + 一份版本(`tenantId = null` = 共用流程);`published` 的版本同步設成目前版本,
+   * `currentVersion` 可另外指定(多版本時用)。
+   */
+  async function addWorkflow(
+    options: VersionOptions & {
+      tenantId: Types.ObjectId | null;
+      name: string;
+      currentVersion?: number | null;
+    },
+  ): Promise<string> {
+    const key = `wf_${new Types.ObjectId().toHexString()}`;
+    const now = new Date();
+    const version = await addVersion(key, options);
+    await connection.collection("workflows").insertOne({
+      key,
+      name: options.name,
+      ownerOrgId: options.tenantId,
+      tenantId: options.tenantId,
+      forkedFrom: null,
+      currentVersion: currentVersionOf(options, version),
+      createdAt: now,
+      updatedAt: now,
+      ...BASE_FIELDS,
+    });
     return key;
+  }
+
+  /** 一張用某版流程的單據實例(`running` / `blocked` = 進行中)。 */
+  async function addInstance(
+    key: string,
+    workflowVersion: number,
+    status: "running" | "blocked" | "approved",
+  ): Promise<void> {
+    const now = new Date();
+    await connection.collection("workflow_instances").insertOne({
+      submissionId: new Types.ObjectId(),
+      revision: 1,
+      formKey: "demo_form",
+      formVersion: 1,
+      workflowKey: key,
+      workflowVersion,
+      status,
+      activeStepKeys: [],
+      steps: [],
+      history: [],
+      moduleKey: "demo.form",
+      tenantId: world.tenantA,
+      orgId: world.deptTwo,
+      createdAt: now,
+      updatedAt: now,
+      ...BASE_FIELDS,
+    });
   }
 
   it("通知設定的收件人引用 → ROLE_NOT_DELETABLE,reasons 含 REFERENCED_BY_AUDIENCE 並帶引用處", async () => {
@@ -262,7 +340,12 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     expect(code).toBe("ROLE_NOT_DELETABLE");
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
     expect(references).toEqual([
-      { kind: "workflow-approver", name: "請購單", stepName: "財務審核" },
+      {
+        kind: "workflow-approver",
+        name: "請購單",
+        stepName: "財務審核",
+        source: "draft",
+      },
     ]);
   });
 
@@ -282,7 +365,12 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     const { reasons, references } = await deleteAs(manager.token, roleId);
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
     expect(references).toEqual([
-      { kind: "workflow-step-cc", name: "請假單", stepName: "主管審核" },
+      {
+        kind: "workflow-step-cc",
+        name: "請假單",
+        stepName: "主管審核",
+        source: "current",
+      },
     ]);
   });
 
@@ -297,7 +385,9 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
 
     const { reasons, references } = await deleteAs(manager.token, roleId);
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
-    expect(references).toEqual([{ kind: "workflow-cc", name: "出差單" }]);
+    expect(references).toEqual([
+      { kind: "workflow-cc", name: "出差單", source: "draft" },
+    ]);
   });
 
   it("逾時提醒的通知對象引用 → 擋下", async () => {
@@ -319,7 +409,12 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     const { reasons, references } = await deleteAs(manager.token, roleId);
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
     expect(references).toEqual([
-      { kind: "workflow-overdue", name: "採購單", stepName: "主管審核" },
+      {
+        kind: "workflow-overdue",
+        name: "採購單",
+        stepName: "主管審核",
+        source: "draft",
+      },
     ]);
   });
 
@@ -341,7 +436,12 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
     expect(references).toEqual([
       { kind: "notification-setting", name: "列印代理程式離線" },
-      { kind: "workflow-approver", name: "報銷單", stepName: "會計審核" },
+      {
+        kind: "workflow-approver",
+        name: "報銷單",
+        stepName: "會計審核",
+        source: "draft",
+      },
     ]);
   });
 
@@ -426,25 +526,7 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
         },
       ],
     });
-    const now = new Date();
-    await connection.collection("workflow_instances").insertOne({
-      submissionId: new Types.ObjectId(),
-      revision: 1,
-      formKey: "demo_form",
-      formVersion: 1,
-      workflowKey: key,
-      workflowVersion: 1,
-      status: "running",
-      activeStepKeys: [],
-      steps: [],
-      history: [],
-      moduleKey: "demo.form",
-      tenantId: world.tenantA,
-      orgId: world.deptTwo,
-      createdAt: now,
-      updatedAt: now,
-      ...BASE_FIELDS,
-    });
+    await addInstance(key, 1, "running");
     const { reasons, references } = await deleteAs(manager.token, inFlight);
     expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
     expect(references).toEqual([
@@ -452,8 +534,134 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
         kind: "workflow-approver",
         name: "還有單據在跑的流程",
         stepName: "審核",
+        source: "in-use",
+        inUseCount: 1,
       },
     ]);
+  });
+
+  it("進行中單據:blocked 也算;多個舊版本同一關合成一筆、張數相加;已結束的單據不算", async () => {
+    const roleId = await newRole("多版本進行中的角色");
+    const step = {
+      ...reviewStep("複核"),
+      assignee: { kind: "audience", audience: roleAudience(roleId) },
+    };
+    const key = await addWorkflow({
+      tenantId: world.tenantA,
+      name: "多版本流程",
+      status: "published",
+      version: 1,
+      currentVersion: 3,
+      steps: [step],
+    });
+    await addVersion(key, { status: "published", version: 2, steps: [step] });
+    await addVersion(key, {
+      status: "published",
+      version: 3,
+      steps: [reviewStep("複核")],
+    });
+    await addInstance(key, 1, "running");
+    await addInstance(key, 1, "blocked");
+    await addInstance(key, 2, "blocked");
+    await addInstance(key, 2, "approved");
+
+    const { reasons, references } = await deleteAs(manager.token, roleId);
+    expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
+    expect(references).toEqual([
+      {
+        kind: "workflow-approver",
+        name: "多版本流程",
+        stepName: "複核",
+        source: "in-use",
+        inUseCount: 3,
+      },
+    ]);
+  });
+
+  it("草稿與目前版本都引用同一關:各一筆(source 不同),目前版本有進行中單據時另列 in-use", async () => {
+    const roleId = await newRole("草稿與目前版本都用的角色");
+    const step = {
+      ...reviewStep("初審"),
+      assignee: { kind: "audience", audience: roleAudience(roleId) },
+    };
+    const key = await addWorkflow({
+      tenantId: world.tenantA,
+      name: "重複引用的流程",
+      status: "published",
+      steps: [step],
+    });
+    await addVersion(key, { steps: [step] });
+    await addInstance(key, 1, "running");
+
+    const { references } = await deleteAs(manager.token, roleId);
+    expect(references).toEqual([
+      {
+        kind: "workflow-approver",
+        name: "重複引用的流程",
+        stepName: "初審",
+        source: "draft",
+      },
+      {
+        kind: "workflow-approver",
+        name: "重複引用的流程",
+        stepName: "初審",
+        source: "current",
+      },
+      {
+        kind: "workflow-approver",
+        name: "重複引用的流程",
+        stepName: "初審",
+        source: "in-use",
+        inUseCount: 1,
+      },
+    ]);
+  });
+
+  it("根組織的角色:看共用流程(草稿)與資料範圍,不看租戶的通知設定", async () => {
+    const roleId = await createRole(world.api.app, connection, {
+      name: "根組織的角色",
+      ownerOrgId: world.rootOrgId,
+    });
+    await addWorkflow({
+      tenantId: null,
+      name: "共用流程",
+      steps: [
+        {
+          ...reviewStep("審核"),
+          assignee: { kind: "audience", audience: roleAudience(roleId) },
+        },
+      ],
+    });
+    await setNotificationAudience(world.tenantA, roleAudience(roleId));
+
+    const { reasons, references } = await deleteAs(rootToken, roleId);
+    expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
+    expect(references).toEqual([
+      {
+        kind: "workflow-approver",
+        name: "共用流程",
+        stepName: "審核",
+        source: "draft",
+      },
+    ]);
+    await setNotificationAudience(world.tenantA, null);
+  });
+
+  it("沒有登記的通知類型不算", async () => {
+    const roleId = await newRole("只在未登記類型的角色");
+    const now = new Date();
+    await connection.collection("notification_settings").insertOne({
+      tenantId: world.tenantA,
+      type: "removed.type",
+      audience: roleAudience(roleId),
+      createdAt: now,
+      updatedAt: now,
+      ...BASE_FIELDS,
+    });
+
+    const { code, deletedId } = await deleteAs(manager.token, roleId);
+    expect(code).toBeUndefined();
+    expect(deletedId).toBe(String(roleId));
   });
 
   it("引用移除後可以刪", async () => {

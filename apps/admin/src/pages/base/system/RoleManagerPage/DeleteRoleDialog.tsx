@@ -6,6 +6,7 @@ import { Dialog } from "@repo/ui/dialog";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { RoleReferenceLine } from "./RoleReferenceLine";
 import type {
   RoleManagerErrorCode,
   RoleNotDeletableReason,
@@ -28,7 +29,7 @@ export interface DeleteRoleDialogProps {
 /**
  * 刪除確認(Figma 57:720)。四個前置檢查(無授予 / 非種子角色 / 非租戶副本 / 沒被人員條件引用)在 api,
  * 前端不預判 — 送出後收到 `ROLE_NOT_DELETABLE` 才把 `reasons` 攤成清單並提示改用停用;
- * 被人員條件引用時,引用處(`references`)逐項列在那個原因底下。
+ * 被人員條件引用時,引用處(`references`)逐項列在那個原因底下,每一項說明為什麼與怎麼處置。
  */
 export const DeleteRoleDialog = ({
   role,
@@ -81,14 +82,11 @@ export const DeleteRoleDialog = ({
                       >
                         {references.map((reference) => (
                           <Typography
-                            key={`${reference.kind}:${reference.name}:${reference.stepName ?? ""}`}
+                            key={`${reference.kind}:${reference.name}:${reference.stepName ?? ""}:${reference.source ?? ""}`}
                             component="li"
                             variant="body2"
                           >
-                            {t(`references.${reference.kind}`, {
-                              name: reference.name,
-                              step: reference.stepName ?? "",
-                            })}
+                            <RoleReferenceLine reference={reference} />
                           </Typography>
                         ))}
                       </Stack>

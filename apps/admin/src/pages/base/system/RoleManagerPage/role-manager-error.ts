@@ -49,11 +49,21 @@ export const ROLE_REFERENCE_KINDS = [
 
 export type RoleReferenceKind = (typeof ROLE_REFERENCE_KINDS)[number];
 
-/** 一個引用處:哪一種設定、它的名稱(流程關卡另帶關卡名稱)。 */
+/**
+ * 流程引用出自哪裡(決定處置):草稿 / 目前版本 → 到流程管理修改並發布;
+ * 進行中單據用的版本(`in-use`)→ 等單據完成,或撤回 / 作廢。
+ */
+export const ROLE_REFERENCE_SOURCES = ["draft", "current", "in-use"] as const;
+
+export type RoleReferenceSource = (typeof ROLE_REFERENCE_SOURCES)[number];
+
+/** 一個引用處:哪一種設定、它的名稱(流程關卡另帶關卡名稱;流程另帶出處與進行中張數)。 */
 export interface RoleReference {
   kind: RoleReferenceKind;
   name: string;
   stepName?: string;
+  source?: RoleReferenceSource;
+  inUseCount?: number;
 }
 
 /**
@@ -72,11 +82,17 @@ const isReference = (value: unknown): value is RoleReference => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
-  const { kind, name, stepName } = value as Record<string, unknown>;
+  const { kind, name, stepName, source, inUseCount } = value as Record<
+    string,
+    unknown
+  >;
   return (
     (ROLE_REFERENCE_KINDS as readonly unknown[]).includes(kind) &&
     typeof name === "string" &&
-    (stepName === undefined || typeof stepName === "string")
+    (stepName === undefined || typeof stepName === "string") &&
+    (source === undefined ||
+      (ROLE_REFERENCE_SOURCES as readonly unknown[]).includes(source)) &&
+    (inUseCount === undefined || typeof inUseCount === "number")
   );
 };
 

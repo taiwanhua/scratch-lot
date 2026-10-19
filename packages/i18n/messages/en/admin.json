@@ -761,15 +761,27 @@
         "HAS_GRANTS": "Users still hold this role; remove them first.",
         "SYSTEM_ROLE": "This is a built-in role.",
         "TEMPLATE_COPY": "This role was prepared for you during setup.",
-        "REFERENCED_BY_AUDIENCE": "The people conditions of these settings still use this role; remove it from them first:"
+        "REFERENCED_BY_AUDIENCE": "The people conditions of these settings still use this role; handle each one as described before deleting:"
       },
       "references": {
-        "notification-setting": "Recipients of the notification setting “{name}”",
-        "workflow-approver": "Reviewers of step “{step}” in workflow “{name}”",
-        "workflow-step-cc": "CC recipients of step “{step}” in workflow “{name}”",
-        "workflow-overdue": "Overdue reminder recipients of step “{step}” in workflow “{name}”",
-        "workflow-cc": "CC recipients of the whole workflow “{name}”",
-        "data-scope": "“Applies to” of the data scope “{name}”"
+        "notification-setting": "The recipients of the notification setting “{name}” use this role → go to <link>Notification settings</link> and switch the recipients to another role.",
+        "workflow-approver": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the reviewers of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as reviewers → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-step-cc": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the CC recipients of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as CC recipients → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-overdue": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the overdue reminder recipients of step “{step}” use this role → go to <link>Workflows</link>, change this step and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose step “{step}” has this role as overdue reminder recipients → wait until they finish, or withdraw / void them, then delete."
+        },
+        "workflow-cc": {
+          "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the whole flow's CC recipients use this role → go to <link>Workflows</link>, change it and publish.",
+          "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose whole flow's CC recipients use this role → wait until they finish, or withdraw / void them, then delete."
+        },
+        "data-scope": "The data scope “{name}” is set by the system administrator and its “Applies to” uses this role → please contact the system administrator to change it."
       },
       "useDisableInstead": "When it cannot be deleted you can disable it instead: holders lose it immediately and you can enable it again at any time.",
       "confirm": "Delete",
