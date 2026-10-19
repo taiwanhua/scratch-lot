@@ -3,7 +3,12 @@ import path from "node:path";
 import { describe, expect, it } from "@jest/globals";
 
 import { defaultLocale } from ".";
-import { keysOf, namespacesOf } from "./message-keys";
+import {
+  flattenKeys,
+  keysOf,
+  namespacesOf,
+  readProjectFile,
+} from "./message-keys";
 import { referencedKeys } from "./usage-scan";
 
 /**
@@ -482,6 +487,14 @@ const allKeys = () => {
     for (const key of keys.branches) {
       branches.add(key);
     }
+  }
+  // 專案新增的後台文案併進 admin namespace,同樣要有引用(替換檔沒有自己的鍵)
+  const project = flattenKeys(readProjectFile(defaultLocale, "admin"), "admin");
+  for (const key of project.leaves) {
+    leaves.add(key);
+  }
+  for (const key of project.branches) {
+    branches.add(key);
   }
   return { leaves, branches };
 };
