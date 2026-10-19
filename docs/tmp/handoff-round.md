@@ -50,7 +50,7 @@ Figma 頁面:Base Draft 41:5914、刮刮樂元件 64:14、店面管理 65:14、�
 
 - 底座階段完成:票 #16–#61(Spec #15)與後續修正都已 release;共用改良回收成 wowgo-base v0.4.0,scratch-lot 已升級。底座規格已退場,規則在正式文件。
 - 下一步:專案階段(`docs/tmp/spec-project-lottery.md`)。
-- 10/19 開票前定案(規格第 19 章對照):31 張票;M1 + M2 合一次進 dev 給使用者測、M3 一次,staging / main 最後一次 release;欄位選項顏色先存專案臨時表 `project_field_option_colors`;示範租戶種子另做 `pnpm --filter @repo/db-migrator run demo`(不進一般 seed、拒絕 production、Reset DB 加勾選項);開通清單正本 `docs/modules/project/lottery-onboarding.md` + 專案 skill `scratch-lot-onboarding`;底座改動「通知提醒時間可設定」(規格第 3.5 節)本輪最後與 S2 升格一起回收。
+- 10/19 開票前定案(規格第 19 章對照):34 張票(原 31 張 + P32、P33、P34);M1 + M2 合一次進 dev 給使用者測、M3 一次,staging / main 最後一次 release;欄位選項顏色先存專案臨時表 `project_field_option_colors`;示範指令 `pnpm --filter @repo/db-migrator demo --environment --mode=create|purge|rebuild --confirm`(形狀同 reset、三環境都要確認字串、production 可用;workflow「Demo」與 Reset DB 勾選項);開通清單正本 `docs/modules/project/lottery-onboarding.md` + 專案 skill `scratch-lot-onboarding`;底座改動「通知提醒時間可設定」(規格第 3.5 節)本輪最後與 S2 升格一起回收。
 - 底座 / 專案路徑分離在 `chore/project-split` 做(專案文件 `docs/modules/project/`、`docs/project/`,專案文案 `messages/<語系>/project/`,專案 skill `scratch-lot-*`…,位置見規格第 0 章),合進 main 後才開專案票。
 - 待確認 Q1–Q11(規格第 15 章)要在對應的票開出前定。
 - Figma 回收待辦(還沒做):Draft 元件搬進 Library、`Draft/tagPalettes` 改綁 Library、Snackbar+ 取代 Snackbar、15 頁 Overlay 背景、spare-5;做法見 `docs/tmp/figma-base-round/README.md`「搬回底座的方法」。設計稿與現況的差異見 `docs/tmp/project-dis.md`「Figma 待修清單」。
