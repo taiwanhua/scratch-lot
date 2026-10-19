@@ -29,7 +29,7 @@ const other: FieldOption = { value: REASON_OTHER_VALUE, label: "其他" };
  * 專案的欄位管理系統類別(專案規格第 13 章;內容正本:`docs/modules/project/field-manager.md`)。
  * 類別 key 與程式要認得的選項代碼在 `@repo/domain/project/{lottery,schedule}-fields`;
  * 選項 value 一律英文 kebab-case,「其他」一律 `other`(選它時說明必填,`requiresReasonNote`)。
- * 崗位的顏色由欄位選項顏色(S2)另存,不在這裡;示範租戶另加的崗位(櫃台 A / B、彩券機旁)放示範資料。
+ * 種子不含選項顏色,也不含示範租戶自己的崗位。
  */
 export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
   {

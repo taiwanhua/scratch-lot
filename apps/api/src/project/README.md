@@ -1,6 +1,6 @@
 # api 的專案來源
 
-本目錄是本專案(scratch-lot)在 api 的程式;固定登記入口(`api-modules.ts`、`notifications.ts`、`database/registrations.ts`、`lookup-providers.ts`、`form-lifecycles.ts`、`realtime-boards.ts`、`user-preferences.ts`)由底座的組裝入口讀進來,每張票只追加自己的登記。專案與底座的分工見 `docs/project/README.md`、`docs/project-initialization.md`。
+本目錄是本專案(scratch-lot)在 api 的程式;固定登記入口(`api-modules.ts`、`notifications.ts`、`database/registrations.ts`、`lookup-providers.ts`、`form-lifecycles.ts`、`realtime-boards.ts`、`user-preferences.ts`)由底座的組裝入口讀進來,新功能只追加自己的登記。專案與底座的分工見 `docs/project/README.md`、`docs/project-initialization.md`。
 
 ## 目錄約定
 

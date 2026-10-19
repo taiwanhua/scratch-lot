@@ -4,7 +4,7 @@
  * api 查選項、admin 帶預設值都用這裡的常數,不另寫字面值。排班不得 import 本主題。
  */
 
-/** 刮刮樂的欄位管理類別 key(值固定,各功能票照用)。 */
+/** 刮刮樂的欄位管理類別 key(值固定,程式一律引用這裡的常數)。 */
 export const LOTTERY_FIELD_CATEGORY_KEYS = {
   /** 撤銷售出原因(撤銷售出申請) */
   saleReversalReason: "lottery-sale-reversal-reason",
