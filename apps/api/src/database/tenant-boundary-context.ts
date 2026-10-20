@@ -14,9 +14,12 @@ import { systemTenantReader } from "./system-tenant-reader";
  * - 沒有操作者(排程、系統重算):等同 `systemTenantReader(tenantId)`
  * - `tenantId = null`(根組織的資料,沒有租戶):只有根組織成員可用,直接回他自己的上下文(本來就看得到全部)
  *
+ * **不要把提升上下文(可見範圍寫成 `"all"` 的上下文)傳進來**:可見範圍是全部的操作者會被當成根組織成員,
+ * 不檢查租戶就放行。只傳登入線算出的操作者上下文,或 `null`(排程 / 系統重算)。
+ *
  * 前提:用它讀寫的表**不是資料範圍目標**(系統身分沒有角色,對全員生效的規則照樣收窄,ADR-0008)。
- * 呼叫端登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`(附用途),`tenant-boundary-context.test.ts` 掃 src 鎖定;
- * `systemTenantReader` 只准經這裡呼叫。
+ * 呼叫端登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`(附用途),`tenant-boundary-context.test.ts` 依 import 來源
+ * 掃 src 鎖定;`system-tenant-reader` 只准由這個檔 import。
  */
 export async function tenantBoundaryContext(
   orgs: OrgsRepository,
@@ -47,7 +50,7 @@ export async function tenantBoundaryContext(
 
 /** 用途分類(登記表的值;新增呼叫端前先確認屬於其中一種)。 */
 export type TenantBoundaryContextPurpose =
-  "反查" | "以人為準的資料" | "例外寫入" | "排程";
+  "反查" | "以人為準的資料" | "例外寫入" | "排程" | "系統重算";
 
 /**
  * **允許呼叫 `tenantBoundaryContext` 的檔案**(相對 `apps/api/src/`)與用途。新增前先在 ADR-0005
@@ -63,8 +66,8 @@ export const TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/dealers/dealer-view.service.ts": ["反查"],
   // 證照到期 / 牌租提醒逐租戶跑
   "project/lottery/dealers/dealer-reminders.service.ts": ["排程"],
-  // 批購日重算(進貨單 / 經銷商在交易內呼叫,沒有操作者)
-  "project/lottery/dealers/purchase-dates.ts": ["排程"],
+  // 批購日重算(進貨單 / 經銷商在交易內呼叫,沒有操作者;不是排程)
+  "project/lottery/dealers/purchase-dates.ts": ["系統重算"],
   // 畫休屬於人、守門文件掛在租戶頂層:跨店讀寫
   "project/schedule/day-offs/schedule-day-offs.service.ts": ["以人為準的資料"],
   // 畫休開放 / 截止提醒逐租戶跑
