@@ -126,7 +126,13 @@ export const ROSTER_PEOPLE: Person[] = [
     canLead: false,
     isPrimary: true,
     isCandidate: true,
-    stats: stats({ shiftCount: 17, dayOffDays: 9, fullDayOffDays: 9 }),
+    stats: stats({
+      shiftCount: 17,
+      leadShiftCount: 0,
+      workMinutes: 6630,
+      dayOffDays: 9,
+      fullDayOffDays: 9,
+    }),
   },
   {
     userId: "u-chang",

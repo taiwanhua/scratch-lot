@@ -88,7 +88,8 @@ const monthOf = (date: string) => date.slice(0, 7);
  *   (被收銀班次綁定的擋下,`blockedEntryIdsOf`)
  * - 排班:至少填進一筆;一筆執行任務只填一人、同一筆人力需求只能填一筆(唯一索引再擋同時送出);
  *   一個人同一時間只有一筆排班,跨店也不能重疊(`RosterPeopleReader.overlapping`)
- * - 同一家店同一個月的寫入在交易一開始碰 `schedule_periods.version`,同時送出的互相衝突、重跑
+ * - 同一家店同一個月的寫入在交易一開始碰 `schedule_periods.version`,同時送出的互相衝突、重跑;
+ *   寫排班另先碰這個人的守門文件(`schedule_entry_locks`),兩家店同時排同一人也互相衝突
  */
 @Injectable()
 export class ScheduleRosterWritesService {
@@ -326,9 +327,16 @@ export class ScheduleRosterWritesService {
       ]),
     ];
     await this.ensurePeriods(operator, scope, months);
+    await this.people.ensurePersonLock(operator, scope.org.tenantId, userId);
     const saved = await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
+          // 先碰這個人的守門文件(跨店同時排同一人互相衝突),再碰這家店這個月的
+          await this.people.touchPersonLock(
+            operator,
+            scope.org.tenantId,
+            userId,
+          );
           await this.touchPeriods(operator, scope, months);
           const current = existing
             ? await this.assignments.findMany(operator, {

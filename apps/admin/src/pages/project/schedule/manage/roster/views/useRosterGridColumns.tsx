@@ -18,7 +18,7 @@ import type { RosterData, RosterPerson } from "../roster-context";
 
 /** 人員欄寬(設計值,只有班表檢視用到,STYLE-06)。 */
 const PERSON_WIDTH = 120;
-const MOBILE_PERSON_WIDTH = 84;
+const MOBILE_PERSON_WIDTH = 72;
 
 /**
  * 班表檢視的左右固定欄:人員欄(姓名、僱用類型 · 可負責)與統計欄(依 [⚙ 顯示欄位];規格 14.5):
@@ -40,6 +40,8 @@ export const useRosterGridColumns = (
     key: "person",
     header: t("columns.person"),
     width: isMobile ? MOBILE_PERSON_WIDTH : PERSON_WIDTH,
+    // 手機欄窄:左右留白縮小(表頭、人力需求區的列名、人員格都套)
+    ...(isMobile ? { cellSx: { px: 0.5 }, headerSx: { px: 0.5 } } : {}),
     render: ({ row }) => (
       <Box>
         <Typography variant="subtitle2">{row.name}</Typography>

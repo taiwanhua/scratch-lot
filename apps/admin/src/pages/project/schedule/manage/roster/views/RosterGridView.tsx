@@ -45,8 +45,12 @@ const PAGE_ID = "schedule.roster";
 const DEMANDS_SECTION = "demands";
 const STATS_GROUP = "stats";
 
-/** 手機一次看 2 天:日期欄窄一點(設計值,只有班表檢視用到,STYLE-06)。 */
-const MOBILE_DATE_WIDTH = 92;
+/**
+ * 手機一次看 2 天(Figma SC-59):日期欄、[統計 ▸] 窄欄都窄一點(設計值,只有班表檢視用到,STYLE-06)。
+ * 390 寬扣掉側欄與卡片留白約剩 278px:人員 72 + 日期 74 × 2 + 統計 56。
+ */
+const MOBILE_DATE_WIDTH = 74;
+const MOBILE_STATS_WIDTH = 56;
 const DATE_WIDTH = 104;
 
 /**
@@ -61,15 +65,8 @@ const DATE_WIDTH = 104;
 export const RosterGridView = () => {
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
-  const {
-    data,
-    timezone,
-    canEdit,
-    openDemand,
-    openEntry,
-    removeDay,
-    flashKey,
-  } = useRoster();
+  const { data, timezone, canEdit, openDemand, openEntry, removeDay } =
+    useRoster();
   const isMobile = useBreakpointDown("sm");
   const sections = useSectionCollapse(PAGE_ID);
   const positions = useScheduleFieldOptions(
@@ -210,7 +207,14 @@ export const RosterGridView = () => {
         ),
     ).length;
   const topGroup: RosterTopGroup = {
-    title: t("demandArea"),
+    // 手機人員欄窄:標題用小一號的字,「▸ 人力需求」才不會被切掉
+    title: isMobile ? (
+      <Box component="span" sx={{ fontSize: "0.6875rem" }}>
+        {t("demandArea")}
+      </Box>
+    ) : (
+      t("demandArea")
+    ),
     collapsed: demandsCollapsed,
     onCollapsedChange: (collapsed) => {
       sections.setCollapsed(DEMANDS_SECTION, collapsed, isMobile);
@@ -287,6 +291,7 @@ export const RosterGridView = () => {
           },
         ]}
         collapsedColumnGroups={statsCollapsed ? [STATS_GROUP] : []}
+        {...(isMobile ? { collapsedGroupWidth: MOBILE_STATS_WIDTH } : {})}
         onCollapsedColumnGroupsChange={(groupIds) => {
           sections.setCollapsed(
             STATS_GROUP,
@@ -314,16 +319,7 @@ export const RosterGridView = () => {
         renderCell={({ person, date }) => (
           <Box
             data-roster-cell={rosterCellKey({ userId: person.userId, date })}
-            sx={[
-              { height: "100%" },
-              flashKey === rosterCellKey({ userId: person.userId, date })
-                ? {
-                    outline: 2,
-                    outlineColor: "warning.main",
-                    borderRadius: 1,
-                  }
-                : {},
-            ]}
+            sx={{ height: "100%" }}
           >
             <RosterPersonCell
               entries={entriesOf(person.userId, date)}

@@ -53,10 +53,14 @@ export interface RosterContextValue {
   openEntry: (target: RosterEntry | EntryPreset) => void;
   /** 日期欄 [⋯] → 移除這天所有排班 */
   removeDay: (date: string) => void;
-  /** 捲到那一格並閃爍(檢核面板 [查看] 用) */
+  /**
+   * 捲到那一格並閃爍(檢核面板 [查看] 用)。頁殼切到目標的月份、等格子畫出來再捲;
+   * **各檢視自己負責把目標帶進畫面**(週 / 日檢視依 `scrollTarget` 切到那一週 / 那一天),
+   * 而且每個檢視的格子都要帶 `data-roster-cell={rosterCellKey(...)}`(人 × 日:`userId|date`;只有日期:`|date`)
+   */
   scrollToCell: (target: RosterCellTarget) => void;
-  /** 正在閃爍的格子(`userId|date` 或 `|date`) */
-  flashKey: string | null;
+  /** 等著被捲到的格子(最多留 10 秒,之後回 null);週 / 日檢視據此切到那一週 / 那一天 */
+  scrollTarget: RosterCellTarget | null;
 }
 
 export const RosterContext = createContext<RosterContextValue | null>(null);

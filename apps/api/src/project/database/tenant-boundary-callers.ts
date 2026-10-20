@@ -57,6 +57,7 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/settlement/settlement-ledger.ts": ["反查"],
   // 收付歷程、帳戶名稱、付款帳戶的使用組織比對分店的上層、自動記帳讀單據租戶的帳戶(只讀;寫入一律照可見範圍)
   "project/lottery/settlement/settlement.service.ts": ["反查"],
-  // 一個人在整個租戶的排班:跨店不能重疊、別家店的班顯示灰色區塊
-  "project/schedule/roster/roster-people.ts": ["以人為準的資料"],
+  // 一個人在整個租戶的排班:跨店不能重疊、別家店的班顯示灰色區塊;
+  // 排班寫入的「人」守門文件掛在租戶頂層(兩家店同時排同一人互相衝突)
+  "project/schedule/roster/roster-people.ts": ["以人為準的資料", "例外寫入"],
 };

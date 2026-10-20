@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -44,6 +44,15 @@ const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/u;
 
 /** 閃爍多久(檢核 [查看] 捲到那一格)。 */
 const FLASH_MS = 2000;
+/** 要捲到的格子最多等多久出現。 */
+const SCROLL_REQUEST_TTL_MS = 10_000;
+/** 閃爍的樣子:外框亮兩下(主題的 warning 色以 CSS 變數取;沒有變數時退回 currentColor)。 */
+const FLASH_FRAMES: Keyframe[] = [
+  {
+    boxShadow: "inset 0 0 0 2px var(--mui-palette-warning-main, currentColor)",
+  },
+  { boxShadow: "inset 0 0 0 2px transparent" },
+];
 
 const currentMonth = (): string => {
   const now = new Date();
@@ -92,32 +101,64 @@ export const RosterPage = () => {
     isMobile,
   );
   const [dialog, setDialog] = useState<DialogState>(null);
-  const [flashKey, setFlashKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (flashKey === null) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      setFlashKey(null);
-    }, FLASH_MS);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [flashKey]);
+  /**
+   * 要捲到的格子(`scrollToCell`):`scrolled` = 已經找到格子捲過去、正在閃爍。還沒在畫面上
+   * (換月等資料、週 / 日檢視還在帶到那一天)時留著,每次重畫再找一次;閃完清掉。
+   */
+  const [scrollRequest, setScrollRequest] = useState<{
+    target: RosterCellTarget;
+    key: string;
+  } | null>(null);
+  /** 已經捲過的那一次請求(同一個物件就不再捲;新的請求是新物件) */
+  const handledRequest = useRef<object | null>(null);
 
   const query = useScheduleRosterQuery(session.client, {
     input: { month, ...(orgId === "" ? {} : { orgId }) },
   });
   const data = query.data?.scheduleRoster;
 
-  const scrollToCell = (target: RosterCellTarget) => {
-    const key = rosterCellKey(target);
-    setFlashKey(key);
-    const element = globalThis.document.querySelector(
-      `[data-roster-cell="${CSS.escape(key)}"]`,
+  // 目標格子畫出來之後才捲並閃爍(直接在元素上播動畫,不經狀態)
+  useEffect(() => {
+    if (scrollRequest === null || handledRequest.current === scrollRequest) {
+      return;
+    }
+    const element = globalThis.document.querySelector<HTMLElement>(
+      `[data-roster-cell="${CSS.escape(scrollRequest.key)}"]`,
     );
-    element?.scrollIntoView({ block: "center", inline: "center" });
+    if (element === null) {
+      return;
+    }
+    handledRequest.current = scrollRequest;
+    element.scrollIntoView({ block: "center", inline: "center" });
+    if (typeof element.animate === "function") {
+      element.animate(FLASH_FRAMES, { duration: FLASH_MS / 2, iterations: 2 });
+    }
+  });
+
+  // 請求最多留 10 秒(等換月的資料、等檢視帶到那一天);之後清掉,`scrollTarget` 回 null
+  useEffect(() => {
+    if (scrollRequest === null) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setScrollRequest(null);
+    }, SCROLL_REQUEST_TTL_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [scrollRequest]);
+
+  /**
+   * 捲到那一格並閃爍(檢核面板 [查看]):頁殼先切到目標日期的月份;其餘由**目前的檢視**負責把目標帶進畫面
+   * (週 / 日檢視讀 `scrollTarget` 切到那一週 / 那一天),並在格子上帶 `data-roster-cell`
+   * (`rosterCellKey`)。找到元素就捲過去並閃爍。
+   */
+  const scrollToCell = (target: RosterCellTarget) => {
+    const targetMonth = target.date.slice(0, 7);
+    if (targetMonth !== month) {
+      setMonth(targetMonth);
+    }
+    setScrollRequest({ target, key: rosterCellKey(target) });
   };
 
   const context: RosterContextValue | null =
@@ -145,7 +186,7 @@ export const RosterPage = () => {
             setDialog({ kind: "removeDay", date });
           },
           scrollToCell,
-          flashKey,
+          scrollTarget: scrollRequest?.target ?? null,
         };
 
   const applyTemplates = ROSTER_TOOLBAR_ACTIONS.find(

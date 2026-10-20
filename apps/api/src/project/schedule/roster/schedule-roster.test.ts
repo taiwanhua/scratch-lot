@@ -17,6 +17,7 @@ import {
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { SCHEDULE_DAY_OFFS_COLLECTION } from "../../database/schedule/schedule-day-off.schema";
+import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { ScheduleTaskAssignment } from "../../database/schedule/schedule-task-assignment.schema";
 import {
   clearEntryDeletionGuardsForTest,
@@ -406,6 +407,10 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         getModelToken(ScheduleTaskAssignment.name),
       )
       .init();
+    // 「人」守門文件一人一筆:唯一索引先建好,同時第一次寫同一人才不會建出兩筆
+    await api.app
+      .get<Model<ScheduleEntryLock>>(getModelToken(ScheduleEntryLock.name))
+      .init();
 
     tenantA = await createOrg(connection, {
       name: "租戶甲",
@@ -608,6 +613,44 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         assignments: [{ demandId: here.id, taskId: taskOf(here, "leader") }],
       });
       expect(adjacent.errors).toBeUndefined();
+    });
+
+    it("兩家店同時替同一人排重疊的班 → 只成功一筆(「人」守門文件互相衝突重跑)", async () => {
+      const date = "2026-12-03";
+      const here = await demandOn(date, "08:30", "14:30");
+      const there = await demandOn(date, "10:00", "16:00", 1, hsinchu);
+      const results = await Promise.all([
+        gql(hq, SAVE_ENTRY, {
+          input: {
+            orgId: String(zhongshan),
+            userId: String(chen.userId),
+            startAt: taipei(date, "08:30"),
+            endAt: taipei(date, "14:30"),
+            breakMinutes: 30,
+            assignments: [
+              { demandId: here.id, taskId: taskOf(here, "leader") },
+            ],
+          },
+        }),
+        gql(hq, SAVE_ENTRY, {
+          input: {
+            orgId: String(hsinchu),
+            userId: String(chen.userId),
+            startAt: taipei(date, "10:00"),
+            endAt: taipei(date, "16:00"),
+            breakMinutes: 30,
+            assignments: [
+              { demandId: there.id, taskId: taskOf(there, "leader") },
+            ],
+          },
+        }),
+      ]);
+      expect(
+        results.filter((result) => result.errors === undefined),
+      ).toHaveLength(1);
+      expect(results.map((result) => errorOf(result)?.fields)).toContainEqual([
+        "startAt",
+      ]);
     });
 
     it("零筆執行任務 → VALIDATION_FAILED(欄位 assignments)", async () => {
