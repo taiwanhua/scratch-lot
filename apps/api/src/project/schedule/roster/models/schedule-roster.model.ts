@@ -159,6 +159,10 @@ export class ScheduleDemandModel {
   /** `template` / `week-template` / `manual` / `auto` */
   @Field(() => String)
   source!: string;
+
+  /** 建立時間(時間軸排序:開始時間 → 崗位 → 範本之後的平手規則) */
+  @Field(() => GraphQLISODateTime)
+  createdAt!: Date;
 }
 
 /** 排班填進的一筆執行任務。 */
@@ -179,6 +183,10 @@ export class ScheduleEntryAssignmentModel {
   /** `manual` / `auto` */
   @Field(() => String)
   source!: string;
+
+  /** 自動填進的理由(自動排班寫;手動為 null),時間軸滑過提示用 */
+  @Field(() => String, { nullable: true })
+  reason!: string | null;
 }
 
 /** 排班。 */

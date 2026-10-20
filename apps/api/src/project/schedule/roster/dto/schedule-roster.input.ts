@@ -8,6 +8,16 @@ export class ScheduleRosterInput {
 
   @Field(() => String)
   month!: string;
+
+  /**
+   * 週檢視跨月時多讀的日期範圍(`YYYY-MM-DD`,含頭尾;要一起給):人力需求、排班、別家店的班、畫休、
+   * 行事曆改讀「這個月 ∪ from–to」;統計與發布狀態仍只算這個月。只能落在這個月前後 6 天內。
+   */
+  @Field(() => String, { nullable: true })
+  from?: string | null;
+
+  @Field(() => String, { nullable: true })
+  to?: string | null;
 }
 
 /** 人力需求的一筆執行任務;`taskId` 缺席 = 新的一筆(api 產生)。 */

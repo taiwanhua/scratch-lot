@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { isIsoMonth } from "@repo/domain/project/schedule-settings";
+import { isIsoDate, isIsoMonth } from "@repo/domain/project/schedule-settings";
 
 import { OrgsRepository } from "../../../database/database.module";
 import {
@@ -49,6 +49,51 @@ export function monthRange(month: string): { from: string; to: string } {
   const [year = 0, monthNumber = 0] = month.split("-").map(Number);
   const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
   return { from: `${month}-01`, to: `${month}-${String(lastDay)}` };
+}
+
+/** 週檢視跨月多讀的範圍最多超出這個月幾天(一週 7 天,跨月最多多 6 天)。 */
+const RANGE_MARGIN_DAYS = 6;
+
+const shiftIsoDate = (date: string, days: number): string => {
+  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
+};
+
+/**
+ * 讀取範圍 = 這個月 ∪ `from`–`to`(週檢視跨月)。兩個都沒給 = 只讀這個月;
+ * 只給一個、日期不合法、`from` 晚於 `to`、或超出這個月前後 6 天 → VALIDATION_FAILED。
+ */
+export function rosterReadRange(
+  month: string,
+  from: string | null | undefined,
+  to: string | null | undefined,
+): { from: string; to: string } {
+  const own = monthRange(month);
+  const hasFrom = from !== null && from !== undefined;
+  const hasTo = to !== null && to !== undefined;
+  if (!hasFrom && !hasTo) {
+    return own;
+  }
+  if (
+    !hasFrom ||
+    !hasTo ||
+    !isIsoDate(from) ||
+    !isIsoDate(to) ||
+    from > to ||
+    from < shiftIsoDate(own.from, -RANGE_MARGIN_DAYS) ||
+    to > shiftIsoDate(own.to, RANGE_MARGIN_DAYS)
+  ) {
+    throw validationError(`invalid range: ${String(from)}–${String(to)}`, [
+      "from",
+      "to",
+    ]);
+  }
+  return {
+    from: from < own.from ? from : own.from,
+    to: to > own.to ? to : own.to,
+  };
 }
 
 function amountOf(setting: EffectiveRuleSetting | undefined): number | null {
@@ -113,12 +158,15 @@ export class ScheduleRosterService {
     operator: OperatorContext,
     orgId: string | null | undefined,
     month: string,
+    range: { from?: string | null; to?: string | null } = {},
   ): Promise<ScheduleRosterPayload> {
     if (!isIsoMonth(month)) {
       throw validationError(`invalid month: ${String(month)}`, ["month"]);
     }
+    const { from, to } = rosterReadRange(month, range.from, range.to);
+    const own = monthRange(month);
+    const inMonth = (date: string) => date >= own.from && date <= own.to;
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
-    const { from, to } = monthRange(month);
     const holds = await this.permissions.holderOf(operator);
 
     const [
@@ -214,12 +262,17 @@ export class ScheduleRosterService {
         .map((item) => String(item.entryId)),
     );
 
+    // 統計只算這個月(週檢視跨月多讀的日子不算)
     const personOf = (
       userId: string,
       candidate?: (typeof candidates)[number],
     ): ScheduleRosterPersonModel => {
-      const own = entries.filter((entry) => String(entry.userId) === userId);
-      const days = unavailability.filter((item) => item.userId === userId);
+      const mine = entries.filter(
+        (entry) => String(entry.userId) === userId && inMonth(entry.date),
+      );
+      const days = unavailability.filter(
+        (item) => item.userId === userId && inMonth(item.date),
+      );
       return {
         userId,
         name: candidate?.name ?? names.get(userId) ?? "",
@@ -229,7 +282,7 @@ export class ScheduleRosterService {
         isCandidate: candidate !== undefined,
         stats: rosterStatsOf({
           userId,
-          entries: own.map((entry) => ({
+          entries: mine.map((entry) => ({
             date: entry.date,
             startAt: entry.startAt,
             endAt: entry.endAt,
@@ -237,7 +290,9 @@ export class ScheduleRosterService {
             isLead: leadEntryIds.has(String(entry._id)),
           })),
           allWorkDates: allEntries
-            .filter((entry) => String(entry.userId) === userId)
+            .filter(
+              (entry) => String(entry.userId) === userId && inMonth(entry.date),
+            )
             .map((entry) => entry.date),
           dayOffs: days.flatMap((day) => [
             ...(day.fullDay

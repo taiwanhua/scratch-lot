@@ -10,6 +10,7 @@ fragment ScheduleDemandFields on ScheduleDemand {
   positionNote
   templateId
   source
+  createdAt
   tasks {
     taskId
     role
@@ -34,6 +35,7 @@ fragment ScheduleEntryFields on ScheduleEntry {
     role
     taskKey
     source
+    reason
   }
 }
 
@@ -76,7 +78,8 @@ fragment ScheduleRosterTemplateFields on ScheduleRosterTemplate {
   }
 }
 
-# month = YYYY-MM;一次回這家店這個月排班表要的全部
+# month = YYYY-MM;一次回這家店這個月排班表要的全部。週檢視跨月時另給 from / to(YYYY-MM-DD,
+# 這個月前後 6 天內):人力需求、排班、別家店的班、畫休、行事曆多讀那幾天,統計仍只算這個月
 query ScheduleRoster($input: ScheduleRosterInput!) {
   scheduleRoster(input: $input) {
     orgId
