@@ -400,6 +400,34 @@
       }
     }
   },
+  "lotteryInventory": {
+    "ticketGrid": {
+      "states": {
+        "unsold": "Unsold",
+        "selected": "Selected",
+        "sold": "Sold",
+        "soldThisShift": "Sold this shift",
+        "otherCashPoint": "At another cash point",
+        "assigned": "Assigned",
+        "skipped": "Skipped",
+        "scrapped": "Scrapped",
+        "lost": "Investigating / lost"
+      },
+      "quickSelect": {
+        "label": "Select a run",
+        "from": "from",
+        "to": "to",
+        "fromAria": "First ticket number of the run",
+        "toAria": "Last ticket number of the run",
+        "add": "Add"
+      },
+      "selectedSummary": "Selected {ranges} ({count, plural, one {# ticket} other {# tickets}})",
+      "summarySeparator": " · ",
+      "shiftHint": "Shift-click to select a range",
+      "legendAria": "Ticket grid legend",
+      "gridAria": "Ticket grid"
+    }
+  },
   "lotteryReports": {
     "reports": {
       "operations": "Operations report",

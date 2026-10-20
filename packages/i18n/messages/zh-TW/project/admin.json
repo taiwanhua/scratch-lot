@@ -400,6 +400,34 @@
       }
     }
   },
+  "lotteryInventory": {
+    "ticketGrid": {
+      "states": {
+        "unsold": "未售",
+        "selected": "已選",
+        "sold": "已售",
+        "soldThisShift": "本班售出",
+        "otherCashPoint": "在別的收銀點",
+        "assigned": "已分配",
+        "skipped": "跳號",
+        "scrapped": "報廢",
+        "lost": "待查·遺失"
+      },
+      "quickSelect": {
+        "label": "連號快選",
+        "from": "從",
+        "to": "到",
+        "fromAria": "連號快選的起號",
+        "toAria": "連號快選的迄號",
+        "add": "加入"
+      },
+      "selectedSummary": "已選 {ranges}({count} 張)",
+      "summarySeparator": " · ",
+      "shiftHint": "Shift 可連選",
+      "legendAria": "格子圖例",
+      "gridAria": "張數格子"
+    }
+  },
   "lotteryReports": {
     "reports": {
       "operations": "營運報表",
