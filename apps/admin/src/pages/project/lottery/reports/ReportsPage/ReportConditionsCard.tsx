@@ -85,7 +85,7 @@ export const ReportConditionsCard = ({
         )}
         <OrgTreeSelect
           label={t("lotteryReports.conditions.orgs")}
-          // 業務頁:候選是操作者的可見範圍(查 `visibleOrgTree`),不是管理範圍
+          // 業務頁(用法表 ⑤):整棵租戶樹、可見範圍內的才能選,不是管理範圍
           scope="visible"
           isMultiSelect
           maxCount={report.conditions.orgs.max}

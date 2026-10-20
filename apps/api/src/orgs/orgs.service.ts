@@ -8,6 +8,7 @@ import { OrgsRepository, RolesRepository } from "../database/database.module";
 import {
   type OperatorContext,
   isOrgManaged,
+  isOrgVisible,
 } from "../database/operator-context";
 import { OrgBusinessDataReader } from "../database/org-business-data.reader";
 import { RelationService } from "../database/relation.service";
@@ -21,7 +22,7 @@ import type { SetOrgTimezoneInput } from "./dto/set-org-timezone.input";
 import type { SetOrgVisibilityInput } from "./dto/set-org-visibility.input";
 import type { UpdateOrgInput } from "./dto/update-org.input";
 import type { DeletePayload } from "./models/org-payloads.model";
-import { type Org, OrgNode } from "./models/org.model";
+import { type Org, OrgNode, type TenantOrgNode } from "./models/org.model";
 import {
   type OrgNotDeletableReason,
   orgError,
@@ -290,43 +291,64 @@ export class OrgsService {
   }
 
   /**
-   * **可見範圍**的組織樹(CONTEXT.md「可見範圍」;業務頁的組織選擇器用,`visibleOrgTree`):
-   * 根組織成員(`"all"`)= 整棵樹;其餘 = 可見範圍內、而且與當前組織同一個租戶的組織
-   * (釘在租戶上:所屬組織跨租戶時不混進別租戶的)。直接上層不在可見範圍內的是根(例:屬於最上層與孫層、不屬於中間層時,兩個都是根)。
-   * 只要登入,不要求治理權限(治理頁的 `orgTree` 是管理範圍,另有權限)。
+   * **整棵租戶樹**(組織選擇器的 `visible` / `tenant` 模式;`tenantOrgTree`):當前組織所屬租戶的整棵樹
+   * (租戶頂層與全部下層),每個節點帶「在可見範圍內」「在管理範圍內」兩個旗標,由前端依模式決定哪些能選;
+   * 名稱以外不多給。**釘在當前組織的租戶**:別的租戶不會出現。根組織成員(可見範圍 `"all"`)= 從根組織起的整棵樹。
+   * 只要登入,不要求治理權限。
    */
-  async visibleTree(operator: OperatorContext): Promise<OrgNode[]> {
+  async tenantTree(operator: OperatorContext): Promise<TenantOrgNode[]> {
     const reader = subtreeContext(operator);
+    let topId: Types.ObjectId;
     if (operator.visibleOrgIds === "all") {
       const root = await this.orgs.findOne(reader, { parentId: null });
       if (root === null) {
         return [];
       }
-      const documents = await this.orgs.findMany(reader, {
-        $or: [{ _id: root._id }, { ancestors: root._id }],
-      });
-      return buildForest(documents, [root._id], () => true);
+      topId = root._id;
+    } else {
+      if (operator.currentOrgId === null) {
+        return [];
+      }
+      const current = await this.orgs.findById(reader, operator.currentOrgId);
+      const tenantId = current === null ? null : tenantIdOfOrg(current);
+      if (tenantId === null) {
+        return [];
+      }
+      topId = tenantId;
     }
-    if (operator.currentOrgId === null || operator.visibleOrgIds.length === 0) {
-      return [];
-    }
-    const current = await this.orgs.findById(reader, operator.currentOrgId);
-    if (current === null) {
-      return [];
-    }
-    const tenantId = String(tenantIdOfOrg(current));
-    const visible = await this.orgs.findMany(reader, {
-      _id: { $in: operator.visibleOrgIds },
+    const documents = await this.orgs.findMany(reader, {
+      $or: [{ _id: topId }, { ancestors: topId }],
     });
-    const documents = visible.filter(
-      (org) => String(tenantIdOfOrg(org)) === tenantId,
+    const childrenByParent = new Map<string, OrgRecord[]>();
+    for (const document of documents) {
+      if (
+        String(document._id) === String(topId) ||
+        document.parentId === null
+      ) {
+        continue;
+      }
+      const key = String(document.parentId);
+      childrenByParent.set(key, [
+        ...(childrenByParent.get(key) ?? []),
+        document,
+      ]);
+    }
+    const toNode = (document: OrgRecord, isTop: boolean): TenantOrgNode => ({
+      id: String(document._id),
+      name: document.name,
+      parentId:
+        isTop || document.parentId === null ? null : String(document.parentId),
+      enabled: document.enabled,
+      isVisible: isOrgVisible(operator, document._id),
+      isManaged: isOrgManaged(operator, document._id),
+      children: byName(childrenByParent.get(String(document._id)) ?? []).map(
+        (child) => toNode(child, false),
+      ),
+    });
+    const top = documents.find(
+      (document) => String(document._id) === String(topId),
     );
-    const keys = new Set(documents.map((org) => String(org._id)));
-    const rootIds = documents
-      // 根 = 直接上層不在集合裡(`buildForest` 依直接上層掛子節點;只看祖先會漏掉跳一層的孫層)
-      .filter((org) => org.parentId === null || !keys.has(String(org.parentId)))
-      .map((org) => org._id);
-    return buildForest(documents, rootIds, () => true);
+    return top === undefined ? [] : [toNode(top, true)];
   }
 
   /** 單一組織:管理範圍外視為不存在(不透露差別)。 */

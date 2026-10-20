@@ -18,6 +18,7 @@
 | 任何程式碼                                          | `general/naming.md`、`general/structure.md`                                                                                         |
 | 前端檔名 / 資料夾分層 / 元件寫法(admin、front、ui)  | `general/naming.md` GEN-01、`general/structure.md` STRUCT-03、`react/components.md` REACT-01 / 02 / 07;決策見 ADR-0012              |
 | React 元件(front / admin / ui)                      | `react/components.md`、`react/styling.md`、`general/figma.md`(設計稿對照)                                                           |
+| 選組織(組織選擇器)                                  | `react/components.md` REACT-15、`docs/concepts/frontend-architecture.md`「組織選擇器」用法表                                        |
 | 新增 `@repo/ui` 元件 / 子路徑匯出                   | `general/structure.md` STRUCT-08 的四處清單、`general/naming.md` GEN-01、`react/styling.md` STYLE-05 / 07                           |
 | 前端資料存取(query / mutation)                      | `react/data-fetching.md`                                                                                                            |
 | api 的 GraphQL schema(resolver / model / input)     | `api/graphql-schema.md`                                                                                                             |

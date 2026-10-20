@@ -248,14 +248,23 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`、`packages/ui/src/Tabs/Tabs.tsx`、`docs/standards/react/components.md` REACT-14
 
-**組織選擇器 `OrgTreeSelect`**(`components/base/OrgTreeSelect/`)自己查候選,呼叫端不給清單;`scope` 決定範圍:
+### 組織選擇器
 
-| `scope`         | 查哪支                                 | 範圍                        | 用在                                                               |
-| --------------- | -------------------------------------- | --------------------------- | ------------------------------------------------------------------ |
-| `managed`(預設) | `orgTree`(要組織 / 使用者管理的檢視權) | 管理範圍                    | 底座治理:人員條件(`AudiencePicker` 的所屬組織)、資料範圍的套用對象 |
-| `visible`       | `visibleOrgTree`(只要登入)             | 可見範圍,釘在當前組織的租戶 | 業務頁選分店(專案的收銀點、報表的分店…),一律明寫                   |
+選組織一律照下表挑元件與設定(規範 REACT-15);不在表上的用途先補進這張表再做。
 
-正本:`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`、`docs/modules/org-manager.md`「api 介面」
+| #   | 用途           | 元件                                    | 設定                                                                                                                                                     | 例子                                                   |
+| --- | -------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| ①   | 切換目前組織   | `OrgSwitcher`(殼的頂列)                 | 列操作者的所屬組織;切換後整個 app 換當前組織                                                                                                             | 頂列「當前組織」                                       |
+| ②   | 治理頁的組織樹 | `OrgTreePicker`                         | 管理範圍(`orgTree`),樹本身就是頁面主體                                                                                                                   | 組織管理、使用者管理的左側樹                           |
+| ③   | 治理設定挑組織 | `OrgTreeSelect`,`scope="managed"`(預設) | 只列管理範圍(`orgTree`,要組織 / 使用者管理的檢視權),單選或多選                                                                                           | 人員條件的所屬組織、資料範圍的套用對象、流程的跳過組織 |
+| ④   | 業務表單欄位   | `OrgTreeSelect`,`scope="visible"`       | 列**整棵租戶樹**(`tenantOrgTree`),只有可見範圍內的能選,其他反灰並註明「不在你的可見範圍內」;單選;呼叫端的 `disabledReasons` 疊加(例「已由 王小明 對應」) | 收銀點的分店、乙類的對應分店、排班人員可以排的分店     |
+| ⑤   | 頁面篩選       | `OrgTreeSelect`,`scope="visible"`       | 同 ④;預設目前組織(值放網址),單選,或多選加 `maxCount` 上限                                                                                                | 報表的分店(多選、上限)、排班規則 / 行事曆的分店        |
+| ⑥   | 共用給其他組織 | `OrgTreeSelect`,`scope="tenant"`        | 整棵租戶樹都能選;多選、「含下層」選項(之後由資料共用的票做)                                                                                              | (之後)資料共用                                         |
+
+- `tenantOrgTree`:當前組織所屬租戶的整棵樹,每個節點只帶名稱、上層、停用狀態與「可見 / 可管理」兩個旗標;釘在當前組織的租戶(別的租戶不出現),根組織成員從根組織起整棵樹。只要登入。
+- 已選但樹上沒有的組織(別的租戶、範圍外)欄位顯示「不在你的管理範圍內」(`managed`)/「不在你的可見範圍內」(`visible` / `tenant`),可以取消。
+
+正本:`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`、`apps/admin/src/lib/base/org-tree.ts`(`tenantTreeToOrgNodes`)、`docs/modules/org-manager.md`「api 介面」
 
 **列表篩選 `FilterDrawer`**(`components/base/FilterDrawer/`;規格 RW-01 / RW-01b):電腦(≥ `lg`)把篩選欄位攤在列表上方、改了立刻套用;平板(`sm`–`lg`)[篩選 (N)] 從右側滑出抽屜、手機(< `sm`)從底部升起。抽屜裡是同一組欄位(`renderFields(value, change)`,呼叫端只寫一份)+ [清除] [套用]:改的是草稿,[套用] 才寫回(通常是 `useUrlState` 的篩選),關掉不套用;關鍵字搜尋框(`search`)一直留在外面。抽屜外框是 `@repo/ui/drawer`。先例:檔案管理的遊戲列表。
 

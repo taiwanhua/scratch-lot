@@ -2418,11 +2418,11 @@ type Query {
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
   sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
+  tenantOrgTree: [TenantOrgNode!]!
   user(id: ID!): User!
   users(input: UsersInput!): UsersPayload!
   validateFormVersion(input: ValidateFormVersionInput!): FormValidationReport!
   validateWorkflowVersion(input: ValidateWorkflowVersionInput!): WorkflowValidationReport!
-  visibleOrgTree: [OrgNode!]!
   workflow(key: ID!): WorkflowPayload!
   workflowInstance(id: ID!): WorkflowInstancePayload!
   workflowVersion(version: Int, workflowKey: ID!): WorkflowVersionPayload!
@@ -3098,6 +3098,16 @@ input SwitchOrgInput {
 
 type SwitchOrgPayload {
   accessToken: String!
+}
+
+type TenantOrgNode {
+  children: [TenantOrgNode!]!
+  enabled: Boolean!
+  id: ID!
+  isManaged: Boolean!
+  isVisible: Boolean!
+  name: String!
+  parentId: ID
 }
 
 input TransferOrgOwnerInput {

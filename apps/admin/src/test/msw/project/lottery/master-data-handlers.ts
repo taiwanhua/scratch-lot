@@ -19,6 +19,7 @@ import {
 
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
+import { toTenantTree } from "../../tenant-org-tree";
 import {
   ALL_MASTER_DATA_PERMISSIONS,
   cashPoint,
@@ -272,30 +273,15 @@ export const masterDataWorld = ({
 export const masterDataSharedLookupHandlers = (): Parameters<
   typeof server.use
 > => [
-  api.query("VisibleOrgTree", () =>
+  api.query("TenantOrgTree", () =>
     HttpResponse.json({
       data: {
-        visibleOrgTree: [
+        tenantOrgTree: toTenantTree([
           {
-            __typename: "OrgNode",
             ...masterDataOrgs.tenant,
-            parentId: null,
-            enabled: true,
-            outOfScope: false,
-            ownerUserId: null,
-            children: [masterDataOrgs.storeA, masterDataOrgs.storeB].map(
-              (org) => ({
-                __typename: "OrgNode",
-                ...org,
-                parentId: masterDataOrgs.tenant.id,
-                enabled: true,
-                outOfScope: false,
-                ownerUserId: null,
-                children: [],
-              }),
-            ),
+            children: [masterDataOrgs.storeA, masterDataOrgs.storeB],
           },
-        ],
+        ]),
       },
     }),
   ),

@@ -79,7 +79,7 @@
 
 ### 分店上限與範圍檢查
 
-- admin:`OrgTreeSelect` 多選、`scope="visible"`(候選是操作者的可見範圍,查 `visibleOrgTree`;預覽的分店名稱也取同一份)、`maxCount` = 報表的 `conditions.orgs.max`;沒選分店時 [匯出 Excel] [預覽] 都不能按。按鈕順序照 Figma RE-03:[匯出 Excel](主要)在左、[預覽](外框)在右。
+- admin:`OrgTreeSelect` 多選、`scope="visible"`(列整棵租戶樹 `tenantOrgTree`,只有可見範圍內的能選;預覽的分店名稱也取同一份)、`maxCount` = 報表的 `conditions.orgs.max`;沒選分店時 [匯出 Excel] [預覽] 都不能按。按鈕順序照 Figma RE-03:[匯出 Excel](主要)在左、[預覽](外框)在右。
 - api:每張報表的查詢在讀資料前呼叫 `assertReportRange`,不合格丟 `GraphQLError`:
 
 | 情況                                                                                     | 結果                                                      |

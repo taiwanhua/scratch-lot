@@ -4,6 +4,7 @@ import { HttpResponse } from "msw";
 
 import { dealerFixtures } from "@/test/msw/project/dealers-fixtures";
 import { api, server } from "@/test/msw/server";
+import { toTenantTree } from "@/test/msw/tenant-org-tree";
 import { setupFakeViewport } from "@/test/viewport";
 
 import { DEALERS_TEST_ROUTES, renderDealers } from "../dealers-test-support";
@@ -151,18 +152,18 @@ describe("經銷商新增 / 編輯頁", () => {
     ).toBeInTheDocument();
   });
 
-  it("對應分店:候選是可見範圍(visibleOrgTree,不查管理範圍的 orgTree);已對應的分店停用並註明", async () => {
-    const calls = { orgTree: 0, visibleOrgTree: 0 };
+  it("對應分店:候選是可見範圍(整棵租戶樹 tenantOrgTree,不查管理範圍的 orgTree);已對應的分店停用並註明", async () => {
+    const calls = { orgTree: 0, tenantOrgTree: 0 };
     server.use(
       api.query("OrgTree", () => {
         calls.orgTree += 1;
         return HttpResponse.json({ data: { orgTree: [] } });
       }),
-      api.query("VisibleOrgTree", () => {
-        calls.visibleOrgTree += 1;
+      api.query("TenantOrgTree", () => {
+        calls.tenantOrgTree += 1;
         return HttpResponse.json({
           data: {
-            visibleOrgTree: [
+            tenantOrgTree: toTenantTree([
               {
                 ...branch("org-tenant", "好運彩券行"),
                 parentId: null,
@@ -171,7 +172,7 @@ describe("經銷商新增 / 編輯頁", () => {
                   branch("org-branch-b", "信義店"),
                 ],
               },
-            ],
+            ]),
           },
         });
       }),
@@ -188,7 +189,7 @@ describe("經銷商新增 / 編輯頁", () => {
       await screen.findByText("已由 好運 2 號店 對應"),
     ).toBeInTheDocument();
     expect(screen.getByText("信義店")).toBeInTheDocument();
-    expect(calls.visibleOrgTree).toBeGreaterThan(0);
+    expect(calls.tenantOrgTree).toBeGreaterThan(0);
     expect(calls.orgTree).toBe(0);
   });
 });

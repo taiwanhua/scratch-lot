@@ -1,7 +1,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { useOrgTreeQuery, useVisibleOrgTreeQuery } from "@repo/graphql";
+import { useOrgTreeQuery, useTenantOrgTreeQuery } from "@repo/graphql";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Tag } from "@repo/ui/tag";
 
@@ -11,21 +11,26 @@ import {
 } from "@/components/base/TreeSelect/TreeSelectField";
 import { TreeSelectPopup } from "@/components/base/TreeSelect/TreeSelectPopup";
 import { useSession } from "@/hooks/base/useSession";
-import { type OrgNodeLike, flattenOrgs } from "@/lib/base/org-tree";
+import {
+  type OrgNodeLike,
+  flattenOrgs,
+  tenantTreeToOrgNodes,
+} from "@/lib/base/org-tree";
 
 import { OrgTreeSelectPanel } from "./OrgTreeSelectPanel";
 
 /**
- * 候選組織的範圍:
+ * 選組織的模式(用法表正本:`docs/concepts/frontend-architecture.md`「組織選擇器」):
  * - `managed`(預設):**管理範圍**(`orgTree`,要組織管理 / 使用者管理的檢視權限)—— 底座治理用途
- *   (人員條件 / `AudiencePicker` 的所屬組織、資料範圍的套用對象),預設值維持它,既有呼叫端不必改。
- * - `visible`:**可見範圍**(`visibleOrgTree`,只要登入、釘在當前組織的租戶)—— 業務頁選分店用
- *   (例:收銀點的分店、報表的分店)。業務頁一律明寫 `scope="visible"`。
+ *   (人員條件 / `AudiencePicker` 的所屬組織、資料範圍的套用對象、流程的跳過組織),行為維持原樣。
+ * - `visible`:**可見範圍** —— 業務頁選分店(收銀點、報表、行事曆、規則…)。樹列**整棵租戶樹**
+ *   (`tenantOrgTree`),只有可見範圍內的能選,其他反灰並註明「不在你的可見範圍內」。
+ * - `tenant`:**整個租戶**都能選(之後的資料共用用途);同樣列整棵租戶樹。
  */
-export type OrgTreeSelectScope = "managed" | "visible";
+export type OrgTreeSelectScope = "managed" | "visible" | "tenant";
 
 export interface OrgTreeSelectProps {
-  /** 候選組織的範圍;預設 `managed`(見 `OrgTreeSelectScope`) */
+  /** 選組織的模式;預設 `managed`(見 `OrgTreeSelectScope` 與用法表) */
   scope?: OrgTreeSelectScope;
   /** 浮動標籤,同時是欄位與面板的無障礙名稱 */
   label: string;
@@ -55,11 +60,12 @@ const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
  * 組織欄位(Figma `Draft/OrgTreeSelect`):輸入框顯示已選組織,
  * 點開是「搜尋 + 組織樹」;單選 / 多選、多選可設上限。
  *
- * - **候選 = 操作者的管理範圍(預設)或可見範圍(`scope="visible"`,業務頁)**:自己查 `orgTree` /
- *   `visibleOrgTree`(api 只回範圍內的組織),呼叫端不必、也不能另給一份清單。
+ * - **候選依模式(`scope`)**:`managed` 查 `orgTree`(只回管理範圍);`visible` / `tenant` 查
+ *   `tenantOrgTree`(整棵租戶樹 + 可見 / 可管理旗標),`visible` 把可見範圍外的反灰並註明原因。
+ *   呼叫端不必、也不能另給一份清單;呼叫端的 `disabledReasons` 照舊疊加在上面(呼叫端的原因優先)。
  * - **組織本身停用(`enabled: false`)照常可選**,樹上帶「已停用」標籤提示。
- * - **已選但樹上沒有的組織**(範圍外,api 不回):欄位顯示「不在你的管理範圍內」(`visible` 是「不在你的可見範圍內」),可以取消,計入上限。
- * - **停用有兩種來源**:範圍外(`outOfScope`,現況 api 不回、恆為 false,留著相容)與呼叫端的
+ * - **已選但樹上沒有的組織**(範圍外,api 不回):欄位顯示「不在你的管理範圍內」(`visible` / `tenant` 是「不在你的可見範圍內」),可以取消,計入上限。
+ * - **停用有兩種來源**:範圍外(`visible` 模式下可見範圍外的節點;`managed` 的 api 只回範圍內、恆為 false)與呼叫端的
  *   `disabledReasons`(例:專案的一對一對應把已占用的分店停用並註明「已由 王小明 對應」)。
  *   已選的組織之後變成停用時,欄位上的標籤仍在、可以取消,但在樹上勾不回來。
  * - **版面**:欄位與外殼共用 `components/base/TreeSelect/`(`TreeSelectField` / `TreeSelectPopup`):
@@ -86,26 +92,29 @@ export const OrgTreeSelect = ({
 }: OrgTreeSelectProps) => {
   const t = useTranslations("admin.orgTreeSelect");
   const { session } = useSession();
-  // 兩支 hook 都呼叫(hooks 規則),只有選到的範圍真的發請求
+  // 兩支 hook 都呼叫(hooks 規則),只有選到的模式真的發請求
+  const usesTenantTree = scope !== "managed";
   const managedTree = useOrgTreeQuery(session.client, undefined, {
-    enabled: scope === "managed",
+    enabled: !usesTenantTree,
   });
-  const visibleTree = useVisibleOrgTreeQuery(session.client, undefined, {
-    enabled: scope === "visible",
+  const tenantTree = useTenantOrgTreeQuery(session.client, undefined, {
+    enabled: usesTenantTree,
   });
-  const orgTree =
-    scope === "visible"
-      ? {
-          data: visibleTree.data && {
-            orgTree: visibleTree.data.visibleOrgTree,
-          },
-          isPending: visibleTree.isPending,
-          isLoading: visibleTree.isLoading,
-          isError: visibleTree.isError,
-        }
-      : managedTree;
+  const orgTree = usesTenantTree
+    ? {
+        data: tenantTree.data && {
+          orgTree: tenantTreeToOrgNodes(
+            tenantTree.data.tenantOrgTree,
+            scope === "visible",
+          ),
+        },
+        isPending: tenantTree.isPending,
+        isLoading: tenantTree.isLoading,
+        isError: tenantTree.isError,
+      }
+    : managedTree;
   const outOfScopeText =
-    scope === "visible" ? t("outOfVisibleScope") : t("outOfScope");
+    scope === "managed" ? t("outOfScope") : t("outOfVisibleScope");
   const isMobile = useBreakpointDown("sm");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = anchorEl !== null;

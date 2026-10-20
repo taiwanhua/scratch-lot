@@ -52,6 +52,38 @@ export class OrgNode {
   children!: OrgNode[];
 }
 
+/**
+ * 整棵租戶樹的一個節點(`tenantOrgTree`;組織選擇器 `OrgTreeSelect` 的 `visible` / `tenant` 模式用):
+ * 只帶畫樹需要的名稱與兩個旗標,名稱以外不多給(描述、擁有者、商標一律不在這裡)。
+ */
+@ObjectType()
+export class TenantOrgNode {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => String)
+  name!: string;
+
+  /** 上層組織;樹根(租戶頂層,根組織視角是根組織)為 null。 */
+  @Field(() => ID, { nullable: true })
+  parentId!: string | null;
+
+  /** 組織自己的停用狀態(停用連動整棵子樹)。 */
+  @Field(() => Boolean)
+  enabled!: boolean;
+
+  /** 在操作者的**可見範圍**內(業務資料看得到這個組織的)。 */
+  @Field(() => Boolean)
+  isVisible!: boolean;
+
+  /** 在操作者的**管理範圍**內(治理操作管得到這個組織的)。 */
+  @Field(() => Boolean)
+  isManaged!: boolean;
+
+  @Field(() => [TenantOrgNode])
+  children!: TenantOrgNode[];
+}
+
 /** 單一組織的資料(右側資料區):名稱、描述、商標、狀態、擁有者。 */
 @ObjectType()
 export class Org {

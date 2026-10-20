@@ -2,11 +2,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { useVisibleOrgTreeQuery } from "@repo/graphql";
+import { useTenantOrgTreeQuery } from "@repo/graphql";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
-import { flattenOrgs } from "@/lib/base/org-tree";
+import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
 import { type SheetData, downloadWorkbook } from "@/lib/project/reports/excel";
 import {
   REPORTS_PERMISSIONS,
@@ -61,17 +61,16 @@ export const useReportRun = ({
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   // 分店名稱:與分店選擇器同一份(可見範圍,`scope="visible"`)
-  const orgTree = useVisibleOrgTreeQuery(session.client);
+  const orgTree = useTenantOrgTreeQuery(session.client);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<unknown>(null);
 
   const orgIds = input?.orgIds;
   const orgs = useMemo(() => {
     const nameOf = new Map(
-      flattenOrgs(orgTree.data?.visibleOrgTree ?? []).map((org) => [
-        org.id,
-        org.name,
-      ]),
+      flattenOrgs(
+        tenantTreeToOrgNodes(orgTree.data?.tenantOrgTree ?? [], false),
+      ).map((org) => [org.id, org.name]),
     );
     return (orgIds ?? []).map((id) => ({ id, name: nameOf.get(id) ?? id }));
   }, [orgTree.data, orgIds]);

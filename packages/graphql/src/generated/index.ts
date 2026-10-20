@@ -40,6 +40,15 @@ export type AddOrgMembersPayload = {
   skippedUserIds: Array<Scalars['ID']['output']>;
 };
 
+export type AddScheduleStaffInput = {
+  userIds: Array<Scalars['ID']['input']>;
+};
+
+export type AddScheduleStaffPayload = {
+  __typename?: 'AddScheduleStaffPayload';
+  items: Array<ScheduleStaffRow>;
+};
+
 export type AddStepAssigneeInput = {
   instanceId: Scalars['ID']['input'];
   stepKey: Scalars['String']['input'];
@@ -408,6 +417,20 @@ export type CreateWorkflowVersionDraftInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
+export type CustomizeScheduleAutoRunInput = {
+  conditions: Array<ScheduleAutoRunConditionInput>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type CustomizeScheduleRuleInput = {
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  key: Scalars['String']['input'];
+  level?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Scalars['Int']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  value?: InputMaybe<Scalars['JSONObject']['input']>;
+};
+
 /** 多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集 */
 export enum DataScopeCombineOp {
   And = 'AND',
@@ -565,6 +588,25 @@ export type DeleteRetiredPermissionPayload = {
 
 export type DeleteRoleInput = {
   id: Scalars['ID']['input'];
+};
+
+export type DeleteScheduleCalendarDayInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleCalendarDayPayload = {
+  __typename?: 'DeleteScheduleCalendarDayPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleTemplateInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteScheduleTemplatePayload = {
+  __typename?: 'DeleteScheduleTemplatePayload';
+  id: Scalars['ID']['output'];
 };
 
 export type DeleteWorkflowVersionDraftInput = {
@@ -1809,6 +1851,7 @@ export type MoveOrgInput = {
 export type Mutation = {
   __typename?: 'Mutation';
   addOrgMembers: AddOrgMembersPayload;
+  addScheduleStaff: AddScheduleStaffPayload;
   addStepAssignee: WorkflowTaskPayload;
   assignFormToTenants: FormPayload;
   assignUserRoles: UserPayload;
@@ -1840,6 +1883,8 @@ export type Mutation = {
   createUser: UserPayload;
   createWorkflow: WorkflowPayload;
   createWorkflowVersionDraft: WorkflowVersionPayload;
+  customizeScheduleAutoRun: ScheduleRuleMutationPayload;
+  customizeScheduleRule: ScheduleRuleMutationPayload;
   decideTask: WorkflowTaskPayload;
   deleteDemoItemOne: DeleteDemoItemOnePayload;
   deleteDemoItemTwo: DeleteDemoItemTwoPayload;
@@ -1850,6 +1895,9 @@ export type Mutation = {
   deleteOrg: DeletePayload;
   deleteRetiredPermission: DeleteRetiredPermissionPayload;
   deleteRole: DeletePayload;
+  deleteScheduleCalendarDay: DeleteScheduleCalendarDayPayload;
+  deleteScheduleDemandTemplate: DeleteScheduleTemplatePayload;
+  deleteScheduleDemandWeekTemplate: DeleteScheduleTemplatePayload;
   deleteWorkflowVersionDraft: WorkflowPayload;
   disablePrintAgent: PrintAgentPayload;
   forkForm: FormPayload;
@@ -1871,6 +1919,7 @@ export type Mutation = {
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
+  restoreScheduleRule: ScheduleRuleMutationPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
@@ -1882,6 +1931,9 @@ export type Mutation = {
   saveFormDraft: FormSubmissionPayload;
   saveFormVersionDraft: FormVersionPayload;
   saveRoleMatrix: RoleMatrixPayload;
+  saveScheduleCalendarDay: ScheduleCalendarDayPayload;
+  saveScheduleDemandTemplate: ScheduleDemandTemplatePayload;
+  saveScheduleDemandWeekTemplate: ScheduleDemandWeekTemplatePayload;
   saveWorkflowVersionDraft: WorkflowVersionPayload;
   setDemoItemOneEnabled: DemoItemOnePayload;
   setDemoItemTwoEnabled: DemoItemTwoPayload;
@@ -1922,6 +1974,7 @@ export type Mutation = {
   updateOrg: OrgPayload;
   updatePrinter: PrinterPayload;
   updateRole: RolePayload;
+  updateScheduleStaff: ScheduleStaffPayload;
   updateUser: UserPayload;
   updateWorkflow: WorkflowPayload;
   upgradeFormSubmissions: FormUpgradePayload;
@@ -1932,6 +1985,11 @@ export type Mutation = {
 
 export type MutationAddOrgMembersArgs = {
   input: AddOrgMembersInput;
+};
+
+
+export type MutationAddScheduleStaffArgs = {
+  input: AddScheduleStaffInput;
 };
 
 
@@ -2090,6 +2148,16 @@ export type MutationCreateWorkflowVersionDraftArgs = {
 };
 
 
+export type MutationCustomizeScheduleAutoRunArgs = {
+  input: CustomizeScheduleAutoRunInput;
+};
+
+
+export type MutationCustomizeScheduleRuleArgs = {
+  input: CustomizeScheduleRuleInput;
+};
+
+
 export type MutationDecideTaskArgs = {
   input: DecideTaskInput;
 };
@@ -2137,6 +2205,21 @@ export type MutationDeleteRetiredPermissionArgs = {
 
 export type MutationDeleteRoleArgs = {
   input: DeleteRoleInput;
+};
+
+
+export type MutationDeleteScheduleCalendarDayArgs = {
+  input: DeleteScheduleCalendarDayInput;
+};
+
+
+export type MutationDeleteScheduleDemandTemplateArgs = {
+  input: DeleteScheduleTemplateInput;
+};
+
+
+export type MutationDeleteScheduleDemandWeekTemplateArgs = {
+  input: DeleteScheduleTemplateInput;
 };
 
 
@@ -2225,6 +2308,11 @@ export type MutationResetPrintAgentPairingArgs = {
 };
 
 
+export type MutationRestoreScheduleRuleArgs = {
+  input: RestoreScheduleRuleInput;
+};
+
+
 export type MutationRetireCurrentVersionArgs = {
   input: RetireCurrentVersionInput;
 };
@@ -2277,6 +2365,21 @@ export type MutationSaveFormVersionDraftArgs = {
 
 export type MutationSaveRoleMatrixArgs = {
   input: SaveRoleMatrixInput;
+};
+
+
+export type MutationSaveScheduleCalendarDayArgs = {
+  input: SaveScheduleCalendarDayInput;
+};
+
+
+export type MutationSaveScheduleDemandTemplateArgs = {
+  input: SaveScheduleDemandTemplateInput;
+};
+
+
+export type MutationSaveScheduleDemandWeekTemplateArgs = {
+  input: SaveScheduleDemandWeekTemplateInput;
 };
 
 
@@ -2477,6 +2580,11 @@ export type MutationUpdatePrinterArgs = {
 
 export type MutationUpdateRoleArgs = {
   input: UpdateRoleInput;
+};
+
+
+export type MutationUpdateScheduleStaffArgs = {
+  input: UpdateScheduleStaffInput;
 };
 
 
@@ -3110,13 +3218,19 @@ export type Query = {
   roleUserCandidates: RoleUserCandidatesPayload;
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
+  scheduleCalendar: ScheduleCalendarPayload;
+  scheduleDemandTemplates: ScheduleDemandTemplatesPayload;
+  scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload;
+  scheduleFieldOptions: ScheduleFieldOptionsPayload;
+  scheduleRules: ScheduleRulesPayload;
+  scheduleStaff: ScheduleStaffListPayload;
   sidebarBadges: Array<SidebarBadge>;
   tenantModuleOptions: Array<ModuleOption>;
+  tenantOrgTree: Array<TenantOrgNode>;
   user: User;
   users: UsersPayload;
   validateFormVersion: FormValidationReport;
   validateWorkflowVersion: WorkflowValidationReport;
-  visibleOrgTree: Array<OrgNode>;
   workflow: WorkflowPayload;
   workflowInstance: WorkflowInstancePayload;
   workflowVersion: WorkflowVersionPayload;
@@ -3447,6 +3561,31 @@ export type QueryRolesArgs = {
 };
 
 
+export type QueryScheduleCalendarArgs = {
+  input: ScheduleCalendarInput;
+};
+
+
+export type QueryScheduleDemandWeekTemplatesArgs = {
+  input?: InputMaybe<ScheduleDemandWeekTemplatesInput>;
+};
+
+
+export type QueryScheduleFieldOptionsArgs = {
+  categoryKey: Scalars['String']['input'];
+};
+
+
+export type QueryScheduleRulesArgs = {
+  input?: InputMaybe<ScheduleRulesInput>;
+};
+
+
+export type QueryScheduleStaffArgs = {
+  input?: InputMaybe<ScheduleStaffListInput>;
+};
+
+
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
 };
@@ -3552,6 +3691,11 @@ export type RequestPasswordResetPayload = {
 export type ResetNotificationSettingInput = {
   part?: InputMaybe<NotificationSettingPart>;
   type: Scalars['String']['input'];
+};
+
+export type RestoreScheduleRuleInput = {
+  key: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type RetireCurrentVersionInput = {
@@ -3815,10 +3959,255 @@ export type SaveRoleMatrixInput = {
   roleId: Scalars['ID']['input'];
 };
 
+export type SaveScheduleCalendarDayInput = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  date: Scalars['String']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type SaveScheduleDemandTemplateInput = {
+  endTime: Scalars['String']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name: Scalars['String']['input'];
+  paletteKey?: InputMaybe<Scalars['String']['input']>;
+  positionKey: Scalars['String']['input'];
+  shortName: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+  tasks: Array<ScheduleTemplateTaskInput>;
+};
+
+export type SaveScheduleDemandWeekTemplateInput = {
+  days: Array<Array<Scalars['ID']['input']>>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  id?: InputMaybe<Scalars['ID']['input']>;
+  name: Scalars['String']['input'];
+};
+
 export type SaveWorkflowVersionDraftInput = {
   definition: WorkflowDefinitionInput;
   expectedDraftRevision: Scalars['Int']['input'];
   workflowKey: Scalars['ID']['input'];
+};
+
+export type ScheduleAutoRunConditionInput = {
+  enabled: Scalars['Boolean']['input'];
+  key: Scalars['String']['input'];
+};
+
+export type ScheduleCalendarDay = {
+  __typename?: 'ScheduleCalendarDay';
+  canEdit: Scalars['Boolean']['output'];
+  category?: Maybe<Scalars['String']['output']>;
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name?: Maybe<Scalars['String']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  ownerOrg: ScheduleOwnerOrg;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type ScheduleCalendarDayPayload = {
+  __typename?: 'ScheduleCalendarDayPayload';
+  item: ScheduleCalendarDay;
+};
+
+export type ScheduleCalendarInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleCalendarPayload = {
+  __typename?: 'ScheduleCalendarPayload';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<ScheduleCalendarDay>;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
+export type ScheduleDemandTemplate = {
+  __typename?: 'ScheduleDemandTemplate';
+  canEdit: Scalars['Boolean']['output'];
+  endTime: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerOrg: ScheduleOwnerOrg;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  positionKey: Scalars['String']['output'];
+  shortName: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  tasks: Array<ScheduleTemplateTask>;
+};
+
+export type ScheduleDemandTemplatePayload = {
+  __typename?: 'ScheduleDemandTemplatePayload';
+  item: ScheduleDemandTemplate;
+};
+
+export type ScheduleDemandTemplatesPayload = {
+  __typename?: 'ScheduleDemandTemplatesPayload';
+  canCreate: Scalars['Boolean']['output'];
+  items: Array<ScheduleDemandTemplate>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleDemandWeekTemplate = {
+  __typename?: 'ScheduleDemandWeekTemplate';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<Array<Scalars['ID']['output']>>;
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerOrg: ScheduleOwnerOrg;
+};
+
+export type ScheduleDemandWeekTemplatePayload = {
+  __typename?: 'ScheduleDemandWeekTemplatePayload';
+  item: ScheduleDemandWeekTemplate;
+};
+
+export type ScheduleDemandWeekTemplatesInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleDemandWeekTemplatesPayload = {
+  __typename?: 'ScheduleDemandWeekTemplatesPayload';
+  canCreate: Scalars['Boolean']['output'];
+  items: Array<ScheduleDemandWeekTemplate>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleFieldOption = {
+  __typename?: 'ScheduleFieldOption';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type ScheduleFieldOptionsPayload = {
+  __typename?: 'ScheduleFieldOptionsPayload';
+  items: Array<ScheduleFieldOption>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleOwnerOrg = {
+  __typename?: 'ScheduleOwnerOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type ScheduleRule = {
+  __typename?: 'ScheduleRule';
+  effective: ScheduleRuleSetting;
+  group: Scalars['String']['output'];
+  hasLevel: Scalars['Boolean']['output'];
+  key: Scalars['ID']['output'];
+  parent?: Maybe<ScheduleRuleSetting>;
+  unit?: Maybe<Scalars['String']['output']>;
+  valueType: Scalars['String']['output'];
+};
+
+export type ScheduleRuleMutationPayload = {
+  __typename?: 'ScheduleRuleMutationPayload';
+  rules: ScheduleRulesPayload;
+};
+
+export type ScheduleRuleSetting = {
+  __typename?: 'ScheduleRuleSetting';
+  enabled: Scalars['Boolean']['output'];
+  level?: Maybe<Scalars['String']['output']>;
+  order: Scalars['Int']['output'];
+  source: ScheduleRuleSource;
+  sourceOrgName?: Maybe<Scalars['String']['output']>;
+  value: Scalars['JSONObject']['output'];
+};
+
+/** 規則生效值的來源:本層自訂 / 沿用上層 / 程式預設 */
+export enum ScheduleRuleSource {
+  Default = 'DEFAULT',
+  Inherited = 'INHERITED',
+  Own = 'OWN'
+}
+
+export type ScheduleRulesInput = {
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleRulesPayload = {
+  __typename?: 'ScheduleRulesPayload';
+  canEdit: Scalars['Boolean']['output'];
+  isTenantTop: Scalars['Boolean']['output'];
+  items: Array<ScheduleRule>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+};
+
+export type ScheduleStaffListInput = {
+  joined?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ScheduleStaffListPayload = {
+  __typename?: 'ScheduleStaffListPayload';
+  canEdit: Scalars['Boolean']['output'];
+  items: Array<ScheduleStaffRow>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type ScheduleStaffOrg = {
+  __typename?: 'ScheduleStaffOrg';
+  canLead: Scalars['Boolean']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  sortOrder: Scalars['Int']['output'];
+};
+
+export type ScheduleStaffOrgInput = {
+  canLead: Scalars['Boolean']['input'];
+  isPrimary: Scalars['Boolean']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
+export type ScheduleStaffPayload = {
+  __typename?: 'ScheduleStaffPayload';
+  item: ScheduleStaffRow;
+};
+
+export type ScheduleStaffProfile = {
+  __typename?: 'ScheduleStaffProfile';
+  employmentType: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  orgs: Array<ScheduleStaffOrg>;
+  primaryElsewhere: Scalars['Boolean']['output'];
+};
+
+export type ScheduleStaffRow = {
+  __typename?: 'ScheduleStaffRow';
+  account: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  staff?: Maybe<ScheduleStaffProfile>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleTemplateTask = {
+  __typename?: 'ScheduleTemplateTask';
+  role: Scalars['String']['output'];
+  taskId: Scalars['ID']['output'];
+  taskKey: Scalars['String']['output'];
+};
+
+export type ScheduleTemplateTaskInput = {
+  role: Scalars['String']['input'];
+  taskId?: InputMaybe<Scalars['ID']['input']>;
+  taskKey: Scalars['String']['input'];
 };
 
 export type SetDemoItemOneEnabledInput = {
@@ -3953,6 +4342,17 @@ export type SwitchOrgInput = {
 export type SwitchOrgPayload = {
   __typename?: 'SwitchOrgPayload';
   accessToken: Scalars['String']['output'];
+};
+
+export type TenantOrgNode = {
+  __typename?: 'TenantOrgNode';
+  children: Array<TenantOrgNode>;
+  enabled: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  isManaged: Scalars['Boolean']['output'];
+  isVisible: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  parentId?: Maybe<Scalars['ID']['output']>;
 };
 
 export type TransferOrgOwnerInput = {
@@ -4136,6 +4536,14 @@ export type UpdateRoleInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateScheduleStaffInput = {
+  employmentType?: InputMaybe<Scalars['String']['input']>;
+  enabled?: InputMaybe<Scalars['Boolean']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  orgs?: InputMaybe<Array<ScheduleStaffOrgInput>>;
+  staffId: Scalars['ID']['input'];
 };
 
 export type UpdateUserInput = {
@@ -5353,10 +5761,12 @@ export type OrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type OrgTreeQuery = { __typename?: 'Query', orgTree: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null }> }> }> }> }> };
 
-export type VisibleOrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
+export type TenantOrgNodeFieldsFragment = { __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean };
+
+export type TenantOrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type VisibleOrgTreeQuery = { __typename?: 'Query', visibleOrgTree: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null }> }> }> }> }> };
+export type TenantOrgTreeQuery = { __typename?: 'Query', tenantOrgTree: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean, children: Array<{ __typename?: 'TenantOrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, isVisible: boolean, isManaged: boolean }> }> }> }> }> };
 
 export type OrgQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -6170,6 +6580,135 @@ export type UpdateLotteryCashPointMutationVariables = Exact<{
 
 export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
 
+export type ScheduleFieldOptionsQueryVariables = Exact<{
+  categoryKey: Scalars['String']['input'];
+}>;
+
+
+export type ScheduleFieldOptionsQuery = { __typename?: 'Query', scheduleFieldOptions: { __typename?: 'ScheduleFieldOptionsPayload', totalCount: number, items: Array<{ __typename?: 'ScheduleFieldOption', value: string, label: string }> } };
+
+export type ScheduleRuleSettingFieldsFragment = { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null };
+
+export type ScheduleRulesFieldsFragment = { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> };
+
+export type ScheduleRulesQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleRulesInput>;
+}>;
+
+
+export type ScheduleRulesQuery = { __typename?: 'Query', scheduleRules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } };
+
+export type CustomizeScheduleRuleMutationVariables = Exact<{
+  input: CustomizeScheduleRuleInput;
+}>;
+
+
+export type CustomizeScheduleRuleMutation = { __typename?: 'Mutation', customizeScheduleRule: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type CustomizeScheduleAutoRunMutationVariables = Exact<{
+  input: CustomizeScheduleAutoRunInput;
+}>;
+
+
+export type CustomizeScheduleAutoRunMutation = { __typename?: 'Mutation', customizeScheduleAutoRun: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type RestoreScheduleRuleMutationVariables = Exact<{
+  input: RestoreScheduleRuleInput;
+}>;
+
+
+export type RestoreScheduleRuleMutation = { __typename?: 'Mutation', restoreScheduleRule: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
+
+export type ScheduleStaffRowFieldsFragment = { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null };
+
+export type ScheduleStaffQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleStaffListInput>;
+}>;
+
+
+export type ScheduleStaffQuery = { __typename?: 'Query', scheduleStaff: { __typename?: 'ScheduleStaffListPayload', totalCount: number, canEdit: boolean, items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+
+export type AddScheduleStaffMutationVariables = Exact<{
+  input: AddScheduleStaffInput;
+}>;
+
+
+export type AddScheduleStaffMutation = { __typename?: 'Mutation', addScheduleStaff: { __typename?: 'AddScheduleStaffPayload', items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+
+export type UpdateScheduleStaffMutationVariables = Exact<{
+  input: UpdateScheduleStaffInput;
+}>;
+
+
+export type UpdateScheduleStaffMutation = { __typename?: 'Mutation', updateScheduleStaff: { __typename?: 'ScheduleStaffPayload', item: { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null } } };
+
+export type ScheduleDemandTemplateFieldsFragment = { __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleDemandTemplatesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ScheduleDemandTemplatesQuery = { __typename?: 'Query', scheduleDemandTemplates: { __typename?: 'ScheduleDemandTemplatesPayload', totalCount: number, canCreate: boolean, items: Array<{ __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleDemandTemplateMutationVariables = Exact<{
+  input: SaveScheduleDemandTemplateInput;
+}>;
+
+
+export type SaveScheduleDemandTemplateMutation = { __typename?: 'Mutation', saveScheduleDemandTemplate: { __typename?: 'ScheduleDemandTemplatePayload', item: { __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleDemandTemplateMutationVariables = Exact<{
+  input: DeleteScheduleTemplateInput;
+}>;
+
+
+export type DeleteScheduleDemandTemplateMutation = { __typename?: 'Mutation', deleteScheduleDemandTemplate: { __typename?: 'DeleteScheduleTemplatePayload', id: string } };
+
+export type ScheduleDemandWeekTemplateFieldsFragment = { __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleDemandWeekTemplatesQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleDemandWeekTemplatesInput>;
+}>;
+
+
+export type ScheduleDemandWeekTemplatesQuery = { __typename?: 'Query', scheduleDemandWeekTemplates: { __typename?: 'ScheduleDemandWeekTemplatesPayload', totalCount: number, canCreate: boolean, items: Array<{ __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleDemandWeekTemplateMutationVariables = Exact<{
+  input: SaveScheduleDemandWeekTemplateInput;
+}>;
+
+
+export type SaveScheduleDemandWeekTemplateMutation = { __typename?: 'Mutation', saveScheduleDemandWeekTemplate: { __typename?: 'ScheduleDemandWeekTemplatePayload', item: { __typename?: 'ScheduleDemandWeekTemplate', id: string, name: string, days: Array<Array<string>>, enabled: boolean, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleDemandWeekTemplateMutationVariables = Exact<{
+  input: DeleteScheduleTemplateInput;
+}>;
+
+
+export type DeleteScheduleDemandWeekTemplateMutation = { __typename?: 'Mutation', deleteScheduleDemandWeekTemplate: { __typename?: 'DeleteScheduleTemplatePayload', id: string } };
+
+export type ScheduleCalendarDayFieldsFragment = { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
+
+export type ScheduleCalendarQueryVariables = Exact<{
+  input: ScheduleCalendarInput;
+}>;
+
+
+export type ScheduleCalendarQuery = { __typename?: 'Query', scheduleCalendar: { __typename?: 'ScheduleCalendarPayload', orgId: string, orgName: string, month: string, canEdit: boolean, days: Array<{ __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } }> } };
+
+export type SaveScheduleCalendarDayMutationVariables = Exact<{
+  input: SaveScheduleCalendarDayInput;
+}>;
+
+
+export type SaveScheduleCalendarDayMutation = { __typename?: 'Mutation', saveScheduleCalendarDay: { __typename?: 'ScheduleCalendarDayPayload', item: { __typename?: 'ScheduleCalendarDay', id: string, date: string, type: string, category?: string | null, name?: string | null, note?: string | null, paletteKey?: string | null, canEdit: boolean, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } } } };
+
+export type DeleteScheduleCalendarDayMutationVariables = Exact<{
+  input: DeleteScheduleCalendarDayInput;
+}>;
+
+
+export type DeleteScheduleCalendarDayMutation = { __typename?: 'Mutation', deleteScheduleCalendarDay: { __typename?: 'DeleteScheduleCalendarDayPayload', id: string } };
+
 
 export const WorkflowTaskFieldsFragmentDoc = `
     fragment WorkflowTaskFields on WorkflowTaskModel {
@@ -6609,6 +7148,16 @@ export const OrgNodeFieldsFragmentDoc = `
   ownerUserId
 }
     `;
+export const TenantOrgNodeFieldsFragmentDoc = `
+    fragment TenantOrgNodeFields on TenantOrgNode {
+  id
+  name
+  parentId
+  enabled
+  isVisible
+  isManaged
+}
+    `;
 export const OrgMemberFieldsFragmentDoc = `
     fragment OrgMemberFields on OrgMember {
   id
@@ -7042,6 +7591,108 @@ export const LotteryCashPointFieldsFragmentDoc = `
   abilities {
     canEdit
   }
+}
+    `;
+export const ScheduleRuleSettingFieldsFragmentDoc = `
+    fragment ScheduleRuleSettingFields on ScheduleRuleSetting {
+  enabled
+  value
+  level
+  order
+  source
+  sourceOrgName
+}
+    `;
+export const ScheduleRulesFieldsFragmentDoc = `
+    fragment ScheduleRulesFields on ScheduleRulesPayload {
+  orgId
+  orgName
+  isTenantTop
+  canEdit
+  items {
+    key
+    group
+    valueType
+    unit
+    hasLevel
+    effective {
+      ...ScheduleRuleSettingFields
+    }
+    parent {
+      ...ScheduleRuleSettingFields
+    }
+  }
+}
+    ${ScheduleRuleSettingFieldsFragmentDoc}`;
+export const ScheduleStaffRowFieldsFragmentDoc = `
+    fragment ScheduleStaffRowFields on ScheduleStaffRow {
+  userId
+  name
+  account
+  staff {
+    id
+    employmentType
+    enabled
+    note
+    primaryElsewhere
+    orgs {
+      orgId
+      orgName
+      canLead
+      isPrimary
+      sortOrder
+    }
+  }
+}
+    `;
+export const ScheduleDemandTemplateFieldsFragmentDoc = `
+    fragment ScheduleDemandTemplateFields on ScheduleDemandTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+    `;
+export const ScheduleDemandWeekTemplateFieldsFragmentDoc = `
+    fragment ScheduleDemandWeekTemplateFields on ScheduleDemandWeekTemplate {
+  id
+  name
+  days
+  enabled
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
+}
+    `;
+export const ScheduleCalendarDayFieldsFragmentDoc = `
+    fragment ScheduleCalendarDayFields on ScheduleCalendarDay {
+  id
+  date
+  type
+  category
+  name
+  note
+  paletteKey
+  ownerOrg {
+    id
+    name
+  }
+  canEdit
 }
     `;
 export const MyApplicationsDocument = `
@@ -10421,48 +11072,48 @@ useOrgTreeQuery.getKey = (variables?: OrgTreeQueryVariables) => variables === un
 
 useOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: OrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<OrgTreeQuery, OrgTreeQueryVariables>(client, OrgTreeDocument, variables, headers);
 
-export const VisibleOrgTreeDocument = `
-    query VisibleOrgTree {
-  visibleOrgTree {
-    ...OrgNodeFields
+export const TenantOrgTreeDocument = `
+    query TenantOrgTree {
+  tenantOrgTree {
+    ...TenantOrgNodeFields
     children {
-      ...OrgNodeFields
+      ...TenantOrgNodeFields
       children {
-        ...OrgNodeFields
+        ...TenantOrgNodeFields
         children {
-          ...OrgNodeFields
+          ...TenantOrgNodeFields
           children {
-            ...OrgNodeFields
+            ...TenantOrgNodeFields
           }
         }
       }
     }
   }
 }
-    ${OrgNodeFieldsFragmentDoc}`;
+    ${TenantOrgNodeFieldsFragmentDoc}`;
 
-export const useVisibleOrgTreeQuery = <
-      TData = VisibleOrgTreeQuery,
+export const useTenantOrgTreeQuery = <
+      TData = TenantOrgTreeQuery,
       TError = unknown
     >(
       client: GraphQLClient,
-      variables?: VisibleOrgTreeQueryVariables,
-      options?: Omit<UseQueryOptions<VisibleOrgTreeQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<VisibleOrgTreeQuery, TError, TData>['queryKey'] },
+      variables?: TenantOrgTreeQueryVariables,
+      options?: Omit<UseQueryOptions<TenantOrgTreeQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<TenantOrgTreeQuery, TError, TData>['queryKey'] },
       headers?: RequestInit['headers']
     ) => {
     
-    return useQuery<VisibleOrgTreeQuery, TError, TData>(
+    return useQuery<TenantOrgTreeQuery, TError, TData>(
       {
-    queryKey: variables === undefined ? ['VisibleOrgTree'] : ['VisibleOrgTree', variables],
-    queryFn: fetcher<VisibleOrgTreeQuery, VisibleOrgTreeQueryVariables>(client, VisibleOrgTreeDocument, variables, headers),
+    queryKey: variables === undefined ? ['TenantOrgTree'] : ['TenantOrgTree', variables],
+    queryFn: fetcher<TenantOrgTreeQuery, TenantOrgTreeQueryVariables>(client, TenantOrgTreeDocument, variables, headers),
     ...options
   }
     )};
 
-useVisibleOrgTreeQuery.getKey = (variables?: VisibleOrgTreeQueryVariables) => variables === undefined ? ['VisibleOrgTree'] : ['VisibleOrgTree', variables];
+useTenantOrgTreeQuery.getKey = (variables?: TenantOrgTreeQueryVariables) => variables === undefined ? ['TenantOrgTree'] : ['TenantOrgTree', variables];
 
 
-useVisibleOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: VisibleOrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<VisibleOrgTreeQuery, VisibleOrgTreeQueryVariables>(client, VisibleOrgTreeDocument, variables, headers);
+useTenantOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: TenantOrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<TenantOrgTreeQuery, TenantOrgTreeQueryVariables>(client, TenantOrgTreeDocument, variables, headers);
 
 export const OrgDocument = `
     query Org($id: ID!) {
@@ -14187,3 +14838,535 @@ export const useUpdateLotteryCashPointMutation = <
 
 
 useUpdateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers);
+
+export const ScheduleFieldOptionsDocument = `
+    query ScheduleFieldOptions($categoryKey: String!) {
+  scheduleFieldOptions(categoryKey: $categoryKey) {
+    items {
+      value
+      label
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useScheduleFieldOptionsQuery = <
+      TData = ScheduleFieldOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleFieldOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleFieldOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleFieldOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleFieldOptionsQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleFieldOptions', variables],
+    queryFn: fetcher<ScheduleFieldOptionsQuery, ScheduleFieldOptionsQueryVariables>(client, ScheduleFieldOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleFieldOptionsQuery.getKey = (variables: ScheduleFieldOptionsQueryVariables) => ['ScheduleFieldOptions', variables];
+
+
+useScheduleFieldOptionsQuery.fetcher = (client: GraphQLClient, variables: ScheduleFieldOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleFieldOptionsQuery, ScheduleFieldOptionsQueryVariables>(client, ScheduleFieldOptionsDocument, variables, headers);
+
+export const ScheduleRulesDocument = `
+    query ScheduleRules($input: ScheduleRulesInput) {
+  scheduleRules(input: $input) {
+    ...ScheduleRulesFields
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useScheduleRulesQuery = <
+      TData = ScheduleRulesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleRulesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleRulesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleRulesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleRulesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleRules'] : ['ScheduleRules', variables],
+    queryFn: fetcher<ScheduleRulesQuery, ScheduleRulesQueryVariables>(client, ScheduleRulesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleRulesQuery.getKey = (variables?: ScheduleRulesQueryVariables) => variables === undefined ? ['ScheduleRules'] : ['ScheduleRules', variables];
+
+
+useScheduleRulesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleRulesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleRulesQuery, ScheduleRulesQueryVariables>(client, ScheduleRulesDocument, variables, headers);
+
+export const CustomizeScheduleRuleDocument = `
+    mutation CustomizeScheduleRule($input: CustomizeScheduleRuleInput!) {
+  customizeScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useCustomizeScheduleRuleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CustomizeScheduleRuleMutation, TError, CustomizeScheduleRuleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CustomizeScheduleRuleMutation, TError, CustomizeScheduleRuleMutationVariables, TContext>(
+      {
+    mutationKey: ['CustomizeScheduleRule'],
+    mutationFn: (variables?: CustomizeScheduleRuleMutationVariables) => fetcher<CustomizeScheduleRuleMutation, CustomizeScheduleRuleMutationVariables>(client, CustomizeScheduleRuleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCustomizeScheduleRuleMutation.fetcher = (client: GraphQLClient, variables: CustomizeScheduleRuleMutationVariables, headers?: RequestInit['headers']) => fetcher<CustomizeScheduleRuleMutation, CustomizeScheduleRuleMutationVariables>(client, CustomizeScheduleRuleDocument, variables, headers);
+
+export const CustomizeScheduleAutoRunDocument = `
+    mutation CustomizeScheduleAutoRun($input: CustomizeScheduleAutoRunInput!) {
+  customizeScheduleAutoRun(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useCustomizeScheduleAutoRunMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CustomizeScheduleAutoRunMutation, TError, CustomizeScheduleAutoRunMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CustomizeScheduleAutoRunMutation, TError, CustomizeScheduleAutoRunMutationVariables, TContext>(
+      {
+    mutationKey: ['CustomizeScheduleAutoRun'],
+    mutationFn: (variables?: CustomizeScheduleAutoRunMutationVariables) => fetcher<CustomizeScheduleAutoRunMutation, CustomizeScheduleAutoRunMutationVariables>(client, CustomizeScheduleAutoRunDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCustomizeScheduleAutoRunMutation.fetcher = (client: GraphQLClient, variables: CustomizeScheduleAutoRunMutationVariables, headers?: RequestInit['headers']) => fetcher<CustomizeScheduleAutoRunMutation, CustomizeScheduleAutoRunMutationVariables>(client, CustomizeScheduleAutoRunDocument, variables, headers);
+
+export const RestoreScheduleRuleDocument = `
+    mutation RestoreScheduleRule($input: RestoreScheduleRuleInput!) {
+  restoreScheduleRule(input: $input) {
+    rules {
+      ...ScheduleRulesFields
+    }
+  }
+}
+    ${ScheduleRulesFieldsFragmentDoc}`;
+
+export const useRestoreScheduleRuleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RestoreScheduleRuleMutation, TError, RestoreScheduleRuleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RestoreScheduleRuleMutation, TError, RestoreScheduleRuleMutationVariables, TContext>(
+      {
+    mutationKey: ['RestoreScheduleRule'],
+    mutationFn: (variables?: RestoreScheduleRuleMutationVariables) => fetcher<RestoreScheduleRuleMutation, RestoreScheduleRuleMutationVariables>(client, RestoreScheduleRuleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRestoreScheduleRuleMutation.fetcher = (client: GraphQLClient, variables: RestoreScheduleRuleMutationVariables, headers?: RequestInit['headers']) => fetcher<RestoreScheduleRuleMutation, RestoreScheduleRuleMutationVariables>(client, RestoreScheduleRuleDocument, variables, headers);
+
+export const ScheduleStaffDocument = `
+    query ScheduleStaff($input: ScheduleStaffListInput) {
+  scheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+    totalCount
+    canEdit
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useScheduleStaffQuery = <
+      TData = ScheduleStaffQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleStaffQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleStaffQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleStaffQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleStaffQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleStaff'] : ['ScheduleStaff', variables],
+    queryFn: fetcher<ScheduleStaffQuery, ScheduleStaffQueryVariables>(client, ScheduleStaffDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleStaffQuery.getKey = (variables?: ScheduleStaffQueryVariables) => variables === undefined ? ['ScheduleStaff'] : ['ScheduleStaff', variables];
+
+
+useScheduleStaffQuery.fetcher = (client: GraphQLClient, variables?: ScheduleStaffQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleStaffQuery, ScheduleStaffQueryVariables>(client, ScheduleStaffDocument, variables, headers);
+
+export const AddScheduleStaffDocument = `
+    mutation AddScheduleStaff($input: AddScheduleStaffInput!) {
+  addScheduleStaff(input: $input) {
+    items {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useAddScheduleStaffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddScheduleStaffMutation, TError, AddScheduleStaffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddScheduleStaffMutation, TError, AddScheduleStaffMutationVariables, TContext>(
+      {
+    mutationKey: ['AddScheduleStaff'],
+    mutationFn: (variables?: AddScheduleStaffMutationVariables) => fetcher<AddScheduleStaffMutation, AddScheduleStaffMutationVariables>(client, AddScheduleStaffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddScheduleStaffMutation.fetcher = (client: GraphQLClient, variables: AddScheduleStaffMutationVariables, headers?: RequestInit['headers']) => fetcher<AddScheduleStaffMutation, AddScheduleStaffMutationVariables>(client, AddScheduleStaffDocument, variables, headers);
+
+export const UpdateScheduleStaffDocument = `
+    mutation UpdateScheduleStaff($input: UpdateScheduleStaffInput!) {
+  updateScheduleStaff(input: $input) {
+    item {
+      ...ScheduleStaffRowFields
+    }
+  }
+}
+    ${ScheduleStaffRowFieldsFragmentDoc}`;
+
+export const useUpdateScheduleStaffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateScheduleStaffMutation, TError, UpdateScheduleStaffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateScheduleStaffMutation, TError, UpdateScheduleStaffMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateScheduleStaff'],
+    mutationFn: (variables?: UpdateScheduleStaffMutationVariables) => fetcher<UpdateScheduleStaffMutation, UpdateScheduleStaffMutationVariables>(client, UpdateScheduleStaffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateScheduleStaffMutation.fetcher = (client: GraphQLClient, variables: UpdateScheduleStaffMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateScheduleStaffMutation, UpdateScheduleStaffMutationVariables>(client, UpdateScheduleStaffDocument, variables, headers);
+
+export const ScheduleDemandTemplatesDocument = `
+    query ScheduleDemandTemplates {
+  scheduleDemandTemplates {
+    items {
+      ...ScheduleDemandTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+    ${ScheduleDemandTemplateFieldsFragmentDoc}`;
+
+export const useScheduleDemandTemplatesQuery = <
+      TData = ScheduleDemandTemplatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDemandTemplatesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDemandTemplatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDemandTemplatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDemandTemplatesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDemandTemplates'] : ['ScheduleDemandTemplates', variables],
+    queryFn: fetcher<ScheduleDemandTemplatesQuery, ScheduleDemandTemplatesQueryVariables>(client, ScheduleDemandTemplatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDemandTemplatesQuery.getKey = (variables?: ScheduleDemandTemplatesQueryVariables) => variables === undefined ? ['ScheduleDemandTemplates'] : ['ScheduleDemandTemplates', variables];
+
+
+useScheduleDemandTemplatesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDemandTemplatesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDemandTemplatesQuery, ScheduleDemandTemplatesQueryVariables>(client, ScheduleDemandTemplatesDocument, variables, headers);
+
+export const SaveScheduleDemandTemplateDocument = `
+    mutation SaveScheduleDemandTemplate($input: SaveScheduleDemandTemplateInput!) {
+  saveScheduleDemandTemplate(input: $input) {
+    item {
+      ...ScheduleDemandTemplateFields
+    }
+  }
+}
+    ${ScheduleDemandTemplateFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandTemplateMutation, TError, SaveScheduleDemandTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandTemplateMutation, TError, SaveScheduleDemandTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemandTemplate'],
+    mutationFn: (variables?: SaveScheduleDemandTemplateMutationVariables) => fetcher<SaveScheduleDemandTemplateMutation, SaveScheduleDemandTemplateMutationVariables>(client, SaveScheduleDemandTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandTemplateMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandTemplateMutation, SaveScheduleDemandTemplateMutationVariables>(client, SaveScheduleDemandTemplateDocument, variables, headers);
+
+export const DeleteScheduleDemandTemplateDocument = `
+    mutation DeleteScheduleDemandTemplate($input: DeleteScheduleTemplateInput!) {
+  deleteScheduleDemandTemplate(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandTemplateMutation, TError, DeleteScheduleDemandTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandTemplateMutation, TError, DeleteScheduleDemandTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemandTemplate'],
+    mutationFn: (variables?: DeleteScheduleDemandTemplateMutationVariables) => fetcher<DeleteScheduleDemandTemplateMutation, DeleteScheduleDemandTemplateMutationVariables>(client, DeleteScheduleDemandTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandTemplateMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandTemplateMutation, DeleteScheduleDemandTemplateMutationVariables>(client, DeleteScheduleDemandTemplateDocument, variables, headers);
+
+export const ScheduleDemandWeekTemplatesDocument = `
+    query ScheduleDemandWeekTemplates($input: ScheduleDemandWeekTemplatesInput) {
+  scheduleDemandWeekTemplates(input: $input) {
+    items {
+      ...ScheduleDemandWeekTemplateFields
+    }
+    totalCount
+    canCreate
+  }
+}
+    ${ScheduleDemandWeekTemplateFieldsFragmentDoc}`;
+
+export const useScheduleDemandWeekTemplatesQuery = <
+      TData = ScheduleDemandWeekTemplatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDemandWeekTemplatesQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDemandWeekTemplatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDemandWeekTemplatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDemandWeekTemplatesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDemandWeekTemplates'] : ['ScheduleDemandWeekTemplates', variables],
+    queryFn: fetcher<ScheduleDemandWeekTemplatesQuery, ScheduleDemandWeekTemplatesQueryVariables>(client, ScheduleDemandWeekTemplatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDemandWeekTemplatesQuery.getKey = (variables?: ScheduleDemandWeekTemplatesQueryVariables) => variables === undefined ? ['ScheduleDemandWeekTemplates'] : ['ScheduleDemandWeekTemplates', variables];
+
+
+useScheduleDemandWeekTemplatesQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDemandWeekTemplatesQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDemandWeekTemplatesQuery, ScheduleDemandWeekTemplatesQueryVariables>(client, ScheduleDemandWeekTemplatesDocument, variables, headers);
+
+export const SaveScheduleDemandWeekTemplateDocument = `
+    mutation SaveScheduleDemandWeekTemplate($input: SaveScheduleDemandWeekTemplateInput!) {
+  saveScheduleDemandWeekTemplate(input: $input) {
+    item {
+      ...ScheduleDemandWeekTemplateFields
+    }
+  }
+}
+    ${ScheduleDemandWeekTemplateFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandWeekTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandWeekTemplateMutation, TError, SaveScheduleDemandWeekTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandWeekTemplateMutation, TError, SaveScheduleDemandWeekTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemandWeekTemplate'],
+    mutationFn: (variables?: SaveScheduleDemandWeekTemplateMutationVariables) => fetcher<SaveScheduleDemandWeekTemplateMutation, SaveScheduleDemandWeekTemplateMutationVariables>(client, SaveScheduleDemandWeekTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandWeekTemplateMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandWeekTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandWeekTemplateMutation, SaveScheduleDemandWeekTemplateMutationVariables>(client, SaveScheduleDemandWeekTemplateDocument, variables, headers);
+
+export const DeleteScheduleDemandWeekTemplateDocument = `
+    mutation DeleteScheduleDemandWeekTemplate($input: DeleteScheduleTemplateInput!) {
+  deleteScheduleDemandWeekTemplate(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandWeekTemplateMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandWeekTemplateMutation, TError, DeleteScheduleDemandWeekTemplateMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandWeekTemplateMutation, TError, DeleteScheduleDemandWeekTemplateMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemandWeekTemplate'],
+    mutationFn: (variables?: DeleteScheduleDemandWeekTemplateMutationVariables) => fetcher<DeleteScheduleDemandWeekTemplateMutation, DeleteScheduleDemandWeekTemplateMutationVariables>(client, DeleteScheduleDemandWeekTemplateDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandWeekTemplateMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandWeekTemplateMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandWeekTemplateMutation, DeleteScheduleDemandWeekTemplateMutationVariables>(client, DeleteScheduleDemandWeekTemplateDocument, variables, headers);
+
+export const ScheduleCalendarDocument = `
+    query ScheduleCalendar($input: ScheduleCalendarInput!) {
+  scheduleCalendar(input: $input) {
+    orgId
+    orgName
+    month
+    canEdit
+    days {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+    ${ScheduleCalendarDayFieldsFragmentDoc}`;
+
+export const useScheduleCalendarQuery = <
+      TData = ScheduleCalendarQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleCalendarQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleCalendarQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleCalendarQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleCalendarQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleCalendar', variables],
+    queryFn: fetcher<ScheduleCalendarQuery, ScheduleCalendarQueryVariables>(client, ScheduleCalendarDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleCalendarQuery.getKey = (variables: ScheduleCalendarQueryVariables) => ['ScheduleCalendar', variables];
+
+
+useScheduleCalendarQuery.fetcher = (client: GraphQLClient, variables: ScheduleCalendarQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleCalendarQuery, ScheduleCalendarQueryVariables>(client, ScheduleCalendarDocument, variables, headers);
+
+export const SaveScheduleCalendarDayDocument = `
+    mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
+  saveScheduleCalendarDay(input: $input) {
+    item {
+      ...ScheduleCalendarDayFields
+    }
+  }
+}
+    ${ScheduleCalendarDayFieldsFragmentDoc}`;
+
+export const useSaveScheduleCalendarDayMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleCalendarDayMutation, TError, SaveScheduleCalendarDayMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleCalendarDayMutation, TError, SaveScheduleCalendarDayMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleCalendarDay'],
+    mutationFn: (variables?: SaveScheduleCalendarDayMutationVariables) => fetcher<SaveScheduleCalendarDayMutation, SaveScheduleCalendarDayMutationVariables>(client, SaveScheduleCalendarDayDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleCalendarDayMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleCalendarDayMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleCalendarDayMutation, SaveScheduleCalendarDayMutationVariables>(client, SaveScheduleCalendarDayDocument, variables, headers);
+
+export const DeleteScheduleCalendarDayDocument = `
+    mutation DeleteScheduleCalendarDay($input: DeleteScheduleCalendarDayInput!) {
+  deleteScheduleCalendarDay(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleCalendarDayMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleCalendarDayMutation, TError, DeleteScheduleCalendarDayMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleCalendarDayMutation, TError, DeleteScheduleCalendarDayMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleCalendarDay'],
+    mutationFn: (variables?: DeleteScheduleCalendarDayMutationVariables) => fetcher<DeleteScheduleCalendarDayMutation, DeleteScheduleCalendarDayMutationVariables>(client, DeleteScheduleCalendarDayDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleCalendarDayMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleCalendarDayMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleCalendarDayMutation, DeleteScheduleCalendarDayMutationVariables>(client, DeleteScheduleCalendarDayDocument, variables, headers);

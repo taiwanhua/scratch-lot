@@ -118,7 +118,7 @@
 
 ```graphql
 orgTree: [OrgNode!]!              # 管理範圍的森林;根 = 管理範圍的各頂點(可多根),範圍外不回傳
-visibleOrgTree: [OrgNode!]!       # 可見範圍的森林(業務頁的組織選擇器);只要登入,釘在當前組織的租戶
+tenantOrgTree: [TenantOrgNode!]! # 整棵租戶樹 + 可見 / 可管理旗標(組織選擇器的 visible / tenant 模式);只要登入,釘在當前組織的租戶
 org(id: ID!): Org!                # 範圍外視為不存在(NOT_FOUND);logoUrl 為現簽的短效網址
 createChildOrg(input: { parentId, name, description }): OrgPayload!
 updateOrg(input: { id, name, description, logoPath, slug }): OrgPayload!
@@ -130,7 +130,7 @@ deleteOrg(input: { id }): DeletePayload!
 ```
 
 - **讀取類的兩個端點(`orgTree` / `org(id)`)是多選一守門**:持 `system.org-manager.view` **或** `system.user-manager.view` 任一即可。組織樹不只組織管理頁在用 —— 使用者管理頁的左樹與「選擇所屬組織」彈窗也要它,那些人未必持有組織管理的檢視權;管理範圍照樣決定看得到誰,這一條只決定進不進得了端點。寫法同 `storage.resolver.ts` 的多選一判斷(`@RequirePermission` 只能守單一 key)。寫入類的端點維持單一 `@RequirePermission`。
-- **`visibleOrgTree` 給業務頁選組織用**(`OrgTreeSelect` 的 `scope="visible"`):列操作者**可見範圍**內的組織,只要登入、不要求組織管理 / 使用者管理的權限。根組織的成員(可見範圍 `"all"`)= 從根組織開始的整棵樹;其餘 = 可見範圍內、與當前組織同一個租戶的組織(所屬組織跨租戶時不混進別的租戶),直接上層不在可見範圍內的是根(例:屬於最上層與孫層、不屬於中間層時,兩個都是根)。例:店長只屬於中山店 → 只有中山店;總部屬於最上層組織、開關「包含下層」→ 整個租戶;開關是預設 → 只有最上層組織本身。`outOfScope` 恆為 false。正本 `OrgsService.visibleTree`,測試 `apps/api/src/orgs/visible-org-tree.test.ts`。
+- **`tenantOrgTree` 給組織選擇器的 `visible` / `tenant` 模式用**(用法表見 `docs/concepts/frontend-architecture.md`「組織選擇器」):列**當前組織所屬租戶的整棵樹**(租戶頂層與全部下層),每個節點只帶 `id`、`name`、`parentId`、`enabled` 與兩個旗標 `isVisible`(在操作者的可見範圍內)、`isManaged`(在管理範圍內),名稱以外不多給;前端依模式決定哪些能選。只要登入、不要求組織管理 / 使用者管理的權限。釘在當前組織的租戶:別的租戶不出現(所屬組織跨租戶時只列當前組織那個租戶)。根組織的成員(可見範圍 `"all"`)= 從根組織開始的整棵樹。例:店長只屬於中山店 → 整個租戶都列出來、只有中山店 `isVisible`;總部屬於最上層組織、開關「包含下層」→ 全部 `isVisible`;開關是預設 → 只有最上層組織 `isVisible`。正本 `OrgsService.tenantTree`,測試 `apps/api/src/orgs/tenant-org-tree.test.ts`。
 - **`OrgNode.outOfScope` 恆為 false**:管理範圍外的組織根本不回傳;欄位保留是為了與使用者列的 `roles[].outOfScope` 命名一致、且不必同步改前端。`enabled` 是組織自己的停用狀態,兩者無關。
 - **每棵樹的樹根對外一律回 `parentId: null`**(它的上層不在樹上,給了前端也查不到),多根時每個根都是。因此前端**不能**拿 `OrgNode.parentId` 判斷「樹根是不是平台根組織」—— 那件事由 `org(樹根).isSystem` 回答。
 - **`OrgNode` 也帶 `ownerUserId`**(僅租戶頂層有值,其餘 null;同 `Org`):使用者管理頁靠它標出受擁有者保護的列,不必為了一個欄位再逐筆查 `org(id)`。

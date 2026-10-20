@@ -48,6 +48,41 @@ export interface OrgTreePickerProps {
  * 預設整棵展開:展開狀態由「使用者收合過哪些節點」反推(REACT-06:不在 effect 內 setState,
  * 資料載入後新節點自動是展開的)。
  */
+/** 停用、而且子孫裡有沒停用的節點 id。 */
+const parentsWithSelectableDescendant = (
+  nodes: readonly OrgNodeLike[],
+  disabledIds: ReadonlySet<string>,
+): Set<string> => {
+  const result = new Set<string>();
+  const visit = (node: OrgNodeLike): boolean => {
+    let hasSelectable = false;
+    for (const child of node.children ?? []) {
+      const childSelectable = visit(child);
+      hasSelectable ||=
+        childSelectable || !(child.outOfScope || disabledIds.has(child.id));
+    }
+    if (hasSelectable && (node.outOfScope || disabledIds.has(node.id))) {
+      result.add(node.id);
+    }
+    return hasSelectable;
+  };
+  for (const node of nodes) {
+    visit(node);
+  }
+  return result;
+};
+
+/** 上面那種節點在樹上不標範圍外(否則 MUI 連子孫一起停用);其餘照舊。 */
+const withOpenParents = (
+  nodes: readonly OrgNodeLike[],
+  openParentIds: ReadonlySet<string>,
+): OrgNodeLike[] =>
+  nodes.map((node) => ({
+    ...node,
+    outOfScope: node.outOfScope && !openParentIds.has(node.id),
+    children: withOpenParents(node.children ?? [], openParentIds),
+  }));
+
 export const OrgTreePicker = ({
   nodes,
   isLoading = false,
@@ -93,10 +128,49 @@ export const OrgTreePicker = ({
     () => filterOrgTree(nodes, keyword),
     [nodes, keyword],
   );
-  const items = useMemo(
-    () => toTreeNodes(visibleNodes, suffixOf, disabledIds),
-    [visibleNodes, suffixOf, disabledIds],
+  /**
+   * 停用、但底下還有能選的節點(例:店長看整棵租戶樹,上層看不到、自己的分店看得到):
+   * MUI 的樹會把停用節點的子孫一起停用,所以這種節點不在樹上標 disabled,
+   * 改成鎖住勾選框、並在選取變動時擋掉(見 `handleSelectedIdsChange`);原因照樣顯示。
+   */
+  const openParentIds = useMemo(
+    () => parentsWithSelectableDescendant(visibleNodes, disabledIds),
+    [visibleNodes, disabledIds],
   );
+  const treeDisabledIds = useMemo(
+    () => new Set([...disabledIds].filter((id) => !openParentIds.has(id))),
+    [disabledIds, openParentIds],
+  );
+  const items = useMemo(
+    () =>
+      toTreeNodes(
+        withOpenParents(visibleNodes, openParentIds),
+        suffixOf,
+        treeDisabledIds,
+      ),
+    [visibleNodes, openParentIds, suffixOf, treeDisabledIds],
+  );
+  const checkLockedIds = useMemo(
+    () => [...(lockedIds ?? []), ...openParentIds],
+    [lockedIds, openParentIds],
+  );
+
+  /** 停用的節點(含上面那種沒在樹上標停用的)選不了:只有原本就選著的可以留著 / 取消。 */
+  const handleSelectedIdsChange = (ids: string[]) => {
+    const allowed = ids.filter(
+      (id) =>
+        !(disabledIds.has(id) || openParentIds.has(id)) ||
+        selectedIds.includes(id),
+    );
+    const isBlocked =
+      allowed.length !== ids.length &&
+      allowed.length === selectedIds.length &&
+      allowed.every((id) => selectedIds.includes(id));
+    if (isBlocked) {
+      return;
+    }
+    onSelectedIdsChange(allowed);
+  };
   const expandedIds = useMemo(
     () => allOrgIds(visibleNodes).filter((id) => !collapsedIds.includes(id)),
     [visibleNodes, collapsedIds],
@@ -113,8 +187,8 @@ export const OrgTreePicker = ({
       multiSelect={isMultiSelect}
       checkboxSelection={isMultiSelect}
       selectedIds={selectedIds}
-      onSelectedIdsChange={onSelectedIdsChange}
-      disabledCheckIds={lockedIds}
+      onSelectedIdsChange={handleSelectedIdsChange}
+      disabledCheckIds={checkLockedIds}
       expandedIds={expandedIds}
       onExpandedIdsChange={handleExpandedIdsChange}
       sx={{

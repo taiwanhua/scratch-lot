@@ -234,7 +234,7 @@ describe("輸出報表:版面與分店範圍", () => {
     expect(buttons).toEqual(["匯出 Excel", "預覽"]);
   });
 
-  it("分店選擇器與預覽的分店名稱都查可見範圍(VisibleOrgTree),不查管理範圍", async () => {
+  it("分店選擇器與預覽的分店名稱都查整棵租戶樹(TenantOrgTree),不查管理範圍", async () => {
     const { user, fake } = renderReportsPage({
       permissions: ["reports.operations"],
       search: DAY_WITH_TWO_BRANCHES,

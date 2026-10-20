@@ -31,19 +31,28 @@ query OrgTree {
   }
 }
 
-# 業務頁的組織選擇器(OrgTreeSelect scope="visible"):操作者**可見範圍**內的組織,釘在當前組織的租戶;
-# 只要登入、不要求治理權限(治理頁用上面的 orgTree = 管理範圍)。深度同 OrgTree
-query VisibleOrgTree {
-  visibleOrgTree {
-    ...OrgNodeFields
+fragment TenantOrgNodeFields on TenantOrgNode {
+  id
+  name
+  parentId
+  enabled
+  isVisible
+  isManaged
+}
+
+# 組織選擇器的整棵租戶樹(OrgTreeSelect 的 visible / tenant 模式):當前組織所屬租戶的整棵樹,
+# 每個節點帶可見 / 可管理旗標,前端依模式決定哪些能選;只要登入。深度同 OrgTree
+query TenantOrgTree {
+  tenantOrgTree {
+    ...TenantOrgNodeFields
     children {
-      ...OrgNodeFields
+      ...TenantOrgNodeFields
       children {
-        ...OrgNodeFields
+        ...TenantOrgNodeFields
         children {
-          ...OrgNodeFields
+          ...TenantOrgNodeFields
           children {
-            ...OrgNodeFields
+            ...TenantOrgNodeFields
           }
         }
       }

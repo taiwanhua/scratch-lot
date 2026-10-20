@@ -9,6 +9,7 @@ import {
 } from "@/test/msw/auth-handlers";
 import type { TestOrgNode } from "@/test/msw/org-manager-handlers";
 import { api, server } from "@/test/msw/server";
+import { toTenantTree } from "@/test/msw/tenant-org-tree";
 import { renderApp } from "@/test/render";
 
 /**
@@ -55,7 +56,7 @@ const ORG_TREE: TestOrgNode[] = [
 export interface FixtureReportServer {
   inputs: Record<string, unknown>[];
   fail: { code: string; reason?: string } | undefined;
-  /** 兩種組織樹各被查了幾次(分店選擇器應查可見範圍 `VisibleOrgTree`,不查管理範圍 `OrgTree`) */
+  /** 兩種組織樹各被查了幾次(分店選擇器應查可見範圍(整棵租戶樹 `TenantOrgTree`),不查管理範圍 `OrgTree`) */
   orgTreeCalls: { managed: number; visible: number };
 }
 
@@ -82,9 +83,11 @@ export const renderReportsPage = ({
       fake.orgTreeCalls.managed += 1;
       return HttpResponse.json({ data: { orgTree: ORG_TREE } });
     }),
-    api.query("VisibleOrgTree", () => {
+    api.query("TenantOrgTree", () => {
       fake.orgTreeCalls.visible += 1;
-      return HttpResponse.json({ data: { visibleOrgTree: ORG_TREE } });
+      return HttpResponse.json({
+        data: { tenantOrgTree: toTenantTree(ORG_TREE) },
+      });
     }),
     api.query("FixtureReport", ({ variables }) => {
       fake.inputs.push(variables.input as Record<string, unknown>);
