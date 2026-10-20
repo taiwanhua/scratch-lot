@@ -19,6 +19,7 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantIdOfOrg } from "../../../database/tenant-id";
 import {
   type LotteryCashPointDocument,
   LotteryCashPointsRepository,
@@ -31,7 +32,6 @@ import {
   notFoundError,
   validationError,
 } from "../master-data-error";
-import { tenantReadContext } from "../master-data-tenant";
 import {
   cashPointSnapshotOf,
   checkCashPointName,
@@ -50,6 +50,14 @@ import type {
   LotteryPositionOptionsPayload,
 } from "./models/lottery-cash-point.model";
 import { type PositionOption, positionOptionsOf } from "./position-options";
+
+/**
+ * 業務用途讀組織(分店名稱):`orgs` 掛治理類過濾(吃管理範圍),改以**可見範圍**讀;
+ * 收銀點本身照可見範圍讀,它的分店一定在可見範圍內。
+ */
+function businessOrgReader(operator: OperatorContext): OperatorContext {
+  return { ...operator, managedOrgIds: operator.visibleOrgIds };
+}
 
 type CashPointRecord = Persisted<LotteryCashPointDocument>;
 type OrgRecord = Persisted<OrgDocument>;
@@ -202,7 +210,11 @@ export class LotteryCashPointsService {
         errors.fields,
       );
     }
-    await this.assertUnique(operator, org._id, { positionKey, name }, null);
+    await this.assertUnique(
+      operator,
+      { _id: org._id, tenantId: tenantIdOfOrg(org) },
+      { positionKey, name },
+    );
     const data = {
       positionKey: positionKey ?? "",
       name,
@@ -274,14 +286,13 @@ export class LotteryCashPointsService {
     }
     await this.assertUnique(
       operator,
-      current.orgId,
+      { _id: current.orgId, tenantId: current.tenantId },
       {
         positionKey: changed.includes("positionKey")
           ? (next.positionKey as string)
           : null,
         name: changed.includes("name") ? (next.name as string) : null,
       },
-      current._id,
     );
     const set: Record<string, unknown> = {};
     const before: Record<string, unknown> = {};
@@ -344,36 +355,34 @@ export class LotteryCashPointsService {
     return printer ? printer._id : errors.add("printerId");
   }
 
-  /** 同一家分店內崗位、名稱不重複(給 null 的那一項不查)。 */
+  /**
+   * 同一家分店內崗位、名稱不重複(給 null 的那一項不查;更新時只傳**變了的**值,命中的一定是別筆)。
+   * 以租戶邊界出口問「有沒有」(ADR-0005):資料範圍規則把別人的收銀點收掉時,仍要看得到占用。
+   * 根組織的分店(沒有租戶)不查,靠唯一索引守。
+   */
   private async assertUnique(
     operator: OperatorContext,
-    orgId: Types.ObjectId,
+    org: { _id: Types.ObjectId; tenantId: Types.ObjectId | null },
     values: { positionKey: string | null; name: string | null },
-    selfId: Types.ObjectId | null,
   ): Promise<void> {
-    const others = selfId === null ? {} : { _id: { $ne: selfId } };
-    const reader = tenantReadContext(operator);
+    const orgId = org._id;
+    const tenantId = org.tenantId;
+    const taken = async (equals: Record<string, unknown>): Promise<boolean> =>
+      tenantId !== null &&
+      (await this.cashPoints.existsInTenant(operator, tenantId, {
+        orgId,
+        ...equals,
+      }));
     const fields: string[] = [];
     let reason: string | undefined;
     if (
       values.positionKey !== null &&
-      (await this.cashPoints.findOne(reader, {
-        orgId,
-        positionKey: values.positionKey,
-        ...others,
-      }))
+      (await taken({ positionKey: values.positionKey }))
     ) {
       fields.push("positionKey");
       reason = MASTER_DATA_REASONS.positionDuplicate;
     }
-    if (
-      values.name !== null &&
-      (await this.cashPoints.findOne(reader, {
-        orgId,
-        name: values.name,
-        ...others,
-      }))
-    ) {
+    if (values.name !== null && (await taken({ name: values.name }))) {
       fields.push("name");
       reason ??= MASTER_DATA_REASONS.nameDuplicate;
     }
@@ -415,7 +424,8 @@ export class LotteryCashPointsService {
     if (orgId === null || !isOrgVisible(operator, orgId)) {
       return null;
     }
-    return this.orgs.findById(tenantReadContext(operator), orgId);
+    // 組織掛治理類過濾(吃管理範圍);這裡是業務用途,以可見範圍讀(已確認看得到)
+    return this.orgs.findById(businessOrgReader(operator), orgId);
   }
 
   private async mustFind(
@@ -453,9 +463,8 @@ export class LotteryCashPointsService {
     documents: CashPointRecord[],
     grant: MasterDataGrant,
   ): Promise<LotteryCashPointModel[]> {
-    const reader = tenantReadContext(operator);
     const orgIds = [...new Set(documents.map((doc) => String(doc.orgId)))];
-    const orgs = await this.orgs.findMany(reader, {
+    const orgs = await this.orgs.findMany(businessOrgReader(operator), {
       _id: { $in: orgIds.map((id) => new Types.ObjectId(id)) },
     });
     const printerIds = documents.flatMap((doc) =>
@@ -464,7 +473,7 @@ export class LotteryCashPointsService {
     const printers =
       printerIds.length === 0
         ? []
-        : await this.printers.findMany(reader, { _id: { $in: printerIds } });
+        : await this.printers.findMany(operator, { _id: { $in: printerIds } });
     const orgById = new Map(orgs.map((org) => [String(org._id), org]));
     const printerName = new Map(
       printers.map((printer) => [String(printer._id), printer.name]),

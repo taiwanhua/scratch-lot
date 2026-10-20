@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { getModelToken } from "@nestjs/mongoose";
-import type { Model, Types } from "mongoose";
+import { type Model, Types } from "mongoose";
 
 import { MASTER_DATA_PERMISSIONS as P } from "@repo/domain/project/lottery-master-data";
 
@@ -164,6 +164,8 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
   let managerB: string;
   /** 租戶甲:沒綁遊戲分頁。 */
   let outsiderA: string;
+  /** 甲分店的店長:三筆權限全有(看得到總部建的,但改不了;自己建的歸甲分店)。 */
+  let branchManagerA: string;
 
   /** app 裡的遊戲 model(等索引建好用)。 */
   function gameModel(): Model<LotteryGame> {
@@ -209,6 +211,12 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
       orgId: tenantA,
       moduleKeys: [],
       permissionKeys: [],
+    });
+    branchManagerA = await createMasterDataOperator(api, api.connection, {
+      orgId: branchA,
+      ownerOrgId: tenantA,
+      moduleKeys: GAME_MODULES,
+      permissionKeys: ALL_GAME_PERMISSIONS,
     });
   }, HOOK_TIMEOUT_MS);
 
@@ -383,6 +391,59 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
           input: { id: game.id, name: "改別人的" },
         }),
       ).toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("共用給全部分店:店長看得到總部建的,但改不了、刪不了(abilities 都是 false、寫入 NOT_FOUND)", async () => {
+      const game = await createGame(managerA, { name: "總部建的" });
+      const viewed = await ok<OneData>(api, branchManagerA, ONE, {
+        id: game.id,
+      });
+      expect(viewed.lotteryGame.item.abilities).toEqual({
+        canEdit: false,
+        canDelete: false,
+      });
+      expect(
+        await errorOf(api, branchManagerA, UPDATE, {
+          input: { id: game.id, name: "店長改總部的" },
+        }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      expect(
+        await errorOf(api, branchManagerA, DELETE, { input: { id: game.id } }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("建立歸當前組織:店長建的歸甲分店,總部看得到但改不了;店長自己改得到", async () => {
+      const game = await createGame(branchManagerA, { name: "店長建的" });
+      const stored = await gameModel().collection.findOne({
+        _id: new Types.ObjectId(game.id),
+      });
+      expect(String(stored?.orgId)).not.toBe(String(tenantA));
+      expect(stored?.shareOrgs).toEqual([
+        { orgId: tenantA, includeDescendants: true },
+      ]);
+      const seenByHq = await ok<OneData>(api, managerA, ONE, { id: game.id });
+      expect(seenByHq.lotteryGame.item.abilities.canEdit).toBe(false);
+      expect(
+        await errorOf(api, managerA, UPDATE, {
+          input: { id: game.id, name: "總部改店長的" },
+        }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      const edited = await ok<UpdateData>(api, branchManagerA, UPDATE, {
+        input: { id: game.id, name: "店長自己改" },
+      });
+      expect(edited.updateLotteryGame.item.name).toBe("店長自己改");
+    });
+
+    it("代號整個租戶唯一:店長不能用總部已用過的代號(GAME_CODE_DUPLICATE)", async () => {
+      const game = await createGame(managerA, { name: "代號已占用" });
+      expect(
+        await errorOf(api, branchManagerA, CREATE, {
+          input: gameInput({ gameCode: game.gameCode }),
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: "GAME_CODE_DUPLICATE",
+      });
     });
 
     it("別的租戶刪除 → NOT_FOUND,遊戲還在", async () => {

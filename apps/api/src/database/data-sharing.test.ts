@@ -648,55 +648,45 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
     it("existsInTenant:沒帶 tenantId 就拋錯", async () => {
       for (const tenantId of [null, undefined]) {
         await expect(
-          shareableItems.existsInTenant(
-            PEOPLE.單一分店人員,
-            tenantId,
-            "name",
-            "x",
-          ),
+          shareableItems.existsInTenant(PEOPLE.單一分店人員, tenantId, {
+            name: "x",
+          }),
         ).rejects.toThrow(TenantScopeError);
       }
     });
 
     it("existsInTenant:整個租戶都問得到(不看可見範圍),別租戶問不到", async () => {
       await expect(
-        shareableItems.existsInTenant(
-          PEOPLE.單一分店人員,
-          T,
-          "name",
-          "分店下層·不共用",
-        ),
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, {
+          name: "分店下層·不共用",
+        }),
       ).resolves.toBe(true);
       await expect(
-        shareableItems.existsInTenant(
-          PEOPLE.單一分店人員,
-          T,
-          "name",
-          "別租戶·全部分店",
-        ),
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, {
+          name: "別租戶·全部分店",
+        }),
       ).resolves.toBe(false);
       // 條件只能是「一個欄位等於一個值」:運算子物件、tenantId 欄位都拒收,放寬不了租戶邊界
       await expect(
-        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, "name", {
-          $ne: null,
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, {
+          name: {
+            $ne: null,
+          },
         }),
       ).rejects.toThrow(TenantScopeError);
       await expect(
-        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, "tenantId", U),
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, { tenantId: U }),
       ).rejects.toThrow(TenantScopeError);
       await expect(
-        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, "$where", "1"),
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, T, { $where: "1" }),
       ).rejects.toThrow(TenantScopeError);
     });
 
     it("租戶邊界出口只能用在操作者所屬的租戶(根組織除外)", async () => {
       await expect(
-        shareableItems.existsInTenant(
-          PEOPLE.單一分店人員,
-          U,
-          "name",
-          "別租戶·全部分店",
-        ),
+        shareableItems.existsInTenant(PEOPLE.單一分店人員, U, {
+          name: "別租戶·全部分店",
+        }),
       ).rejects.toThrow(TenantScopeError);
       await expect(
         shareableItems.findRefsInTenant(PEOPLE.單一分店人員, U, [
@@ -704,7 +694,7 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
         ]),
       ).rejects.toThrow(TenantScopeError);
       await expect(
-        shareableItems.existsInTenant(asRoot, U, "name", "別租戶·全部分店"),
+        shareableItems.existsInTenant(asRoot, U, { name: "別租戶·全部分店" }),
       ).resolves.toBe(true);
     });
 
@@ -715,12 +705,9 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
       try {
         await expect(shareableItems.count(PEOPLE.租戶管理員)).resolves.toBe(0);
         await expect(
-          shareableItems.existsInTenant(
-            PEOPLE.單一分店人員,
-            T,
-            "name",
-            "頂層·不共用",
-          ),
+          shareableItems.existsInTenant(PEOPLE.單一分店人員, T, {
+            name: "頂層·不共用",
+          }),
         ).resolves.toBe(true);
       } finally {
         setDataScopeRuleProvider(undefined);

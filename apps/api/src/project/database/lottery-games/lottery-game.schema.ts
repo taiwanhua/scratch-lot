@@ -9,7 +9,10 @@ import {
 import { TAG_PALETTE_KEYS } from "@repo/domain/project/tag-palette";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
-import { tenantScopePlugin } from "../../../database/plugins/tenant-scope.plugin";
+import {
+  type ShareOrg,
+  tenantScopePlugin,
+} from "../../../database/plugins/tenant-scope.plugin";
 
 export const LOTTERY_GAMES_COLLECTION = "lottery_games";
 
@@ -18,12 +21,12 @@ export const MASTER_DATA_MODULE_KEY = "master-data";
 
 /**
  * 遊戲(專案規格 5.1;欄位規則正本 `docs/modules/project/master-data.md`「資料」)。
- * 遊戲是**整個租戶共用的主檔**:`orgId` 一律是租戶頂層(根組織建的是根組織),
- * 讀取以 `tenantId` 釘在操作者的租戶上(`lottery/master-data-tenant.ts`)。
+ * 遊戲是**整個租戶共用的主檔**:資料共用宣告「可共用、預設全部分店、清單固定」(ADR-0014),
+ * `orgId` = 建立時的當前組織;整個租戶的分店都看得到,只有歸屬組織在可見範圍內的人改得到。
  */
 @Schema({ collection: LOTTERY_GAMES_COLLECTION, timestamps: true })
 export class LotteryGame {
-  /** 租戶頂層(租戶隔離,ADR-0005);根組織建的遊戲是根組織。 */
+  /** 建立時的當前組織(租戶隔離,ADR-0005;修改 / 刪除照它的可見範圍)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 
@@ -84,6 +87,9 @@ export class LotteryGame {
 
   /** 租戶頂層 id(plugin 宣告;`BaseRepository.create` 推導,根組織為 null)。 */
   tenantId!: Types.ObjectId | null;
+
+  /** 共用給(plugin 宣告;固定為全部分店 `[{ 租戶頂層, 含下層 }]`,一般更新改不了)。 */
+  shareOrgs!: ShareOrg[];
 }
 
 export const LotteryGameSchema = SchemaFactory.createForClass(LotteryGame);
@@ -96,5 +102,14 @@ LotteryGameSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
 );
 LotteryGameSchema.plugin(baseFieldsPlugin);
-LotteryGameSchema.plugin(tenantScopePlugin, { moduleData: true });
+// 可共用、預設全部分店、清單固定(ADR-0014);代號 / 名稱可經租戶內引用名稱出口讀
+LotteryGameSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: {
+    mode: "shareable",
+    defaultShareOrgs: "wholeTenant",
+    editable: false,
+  },
+  refFields: ["gameCode", "name"],
+});
 LotteryGameSchema.path("moduleKey").default(MASTER_DATA_MODULE_KEY);

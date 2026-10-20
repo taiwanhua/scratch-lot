@@ -11,8 +11,10 @@ import {
 
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";
-import { OrgsRepository } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import {
   type LotteryGameDocument,
   LotteryGamesRepository,
@@ -23,11 +25,7 @@ import {
   notFoundError,
   validationError,
 } from "../master-data-error";
-import {
-  type OperatorTenant,
-  tenantOfOperator,
-  tenantReadContext,
-} from "../master-data-tenant";
+import { type OperatorTenant, tenantOfOperator } from "../master-data-tenant";
 import type {
   CreateLotteryGameInput,
   DeleteLotteryGameInput,
@@ -84,8 +82,9 @@ function escapeRegex(value: string): string {
 /**
  * 遊戲(`master-data` → 遊戲分頁;專案規格 5.1,正本 `docs/modules/project/master-data.md`)。
  *
- * - **範圍**:遊戲是整個租戶共用的主檔,一律釘在操作者所在租戶(`master-data-tenant.ts`);
- *   別租戶的遊戲回 `NOT_FOUND`
+ * - **範圍**:遊戲宣告「可共用、預設全部分店、清單固定」(ADR-0014):建立歸當前組織,
+ *   整個租戶的分店都看得到;只有歸屬組織在自己可見範圍內的才改得到 / 刪得到(共用進來的只能看)。
+ *   查詢另釘在當前組織的租戶;別租戶的遊戲回 `NOT_FOUND`
  * - **讀取**:要綁 `master-data.games`(遊戲分頁);寫入另由 resolver 守 create / edit / delete
  * - **有庫存**(`isGameInUse`,P15 / P17 / P18 登記)後:代號、面額、張數不能改,不能刪除
  */
@@ -93,7 +92,6 @@ function escapeRegex(value: string): string {
 export class LotteryGamesService {
   constructor(
     private readonly games: LotteryGamesRepository,
-    private readonly orgs: OrgsRepository,
     private readonly access: MasterDataAccess,
     private readonly audit: AuditService,
   ) {}
@@ -113,7 +111,7 @@ export class LotteryGamesService {
       MAX_PAGE_SIZE,
       Math.max(1, input.pageSize ?? DEFAULT_PAGE_SIZE),
     );
-    const tenant = await tenantOfOperator(operator, this.orgs);
+    const tenant = tenantOfOperator(operator);
     if (tenant === null) {
       return { items: [], totalCount: 0, page, pageSize };
     }
@@ -133,15 +131,14 @@ export class LotteryGamesService {
           }
         : {}),
     };
-    const reader = tenantReadContext(operator);
-    const totalCount = await this.games.count(reader, filter);
-    const documents = await this.games.findMany(reader, filter, {
+    const totalCount = await this.games.count(operator, filter);
+    const documents = await this.games.findMany(operator, filter, {
       sort: { gameCode: -1, _id: -1 },
       skip: (page - 1) * pageSize,
       limit: pageSize,
     });
     const items = await Promise.all(
-      documents.map((document) => this.toModel(document, grant)),
+      documents.map((document) => this.toModel(operator, document, grant)),
     );
     return { items, totalCount, page, pageSize };
   }
@@ -155,7 +152,7 @@ export class LotteryGamesService {
       MASTER_DATA_MODULE_KEYS.games,
     );
     const { game } = await this.mustFind(operator, id);
-    return this.toModel(game, grant);
+    return this.toModel(operator, game, grant);
   }
 
   // ---- 寫 ----
@@ -164,7 +161,7 @@ export class LotteryGamesService {
     operator: OperatorContext,
     input: CreateLotteryGameInput,
   ): Promise<LotteryGameModel> {
-    const tenant = await this.mustTenant(operator);
+    const tenant = this.mustTenant(operator);
     const errors = new GameFieldErrors();
     const gameCode = checkGameCode(input.gameCode, errors);
     const name = checkName(input.name, errors);
@@ -184,7 +181,7 @@ export class LotteryGamesService {
     ) {
       throw validationError("lottery game input is invalid", errors.fields);
     }
-    await this.assertCodeAvailable(operator, tenant, gameCode, null);
+    await this.assertCodeAvailable(operator, tenant, gameCode);
     const data = {
       gameCode,
       name,
@@ -199,11 +196,9 @@ export class LotteryGamesService {
       claimDeadline: input.claimDeadline ?? null,
       note,
     };
+    // 歸當前組織(BaseRepository 寫入);共用清單固定為全部分店(schema 宣告)
     const created = await this.saving(gameCode, () =>
-      this.games.create(tenantReadContext(operator), {
-        ...data,
-        orgId: tenant.ownerOrgId,
-      }),
+      this.games.create(operator, data),
     );
     await this.audit.record(operator, {
       action: AUDIT.create,
@@ -211,7 +206,7 @@ export class LotteryGamesService {
       targetId: created._id,
       after: data,
     });
-    return this.toModel(created, await this.access.grantOf(operator));
+    return this.toModel(operator, created, await this.access.grantOf(operator));
   }
 
   async update(
@@ -240,15 +235,10 @@ export class LotteryGamesService {
       );
     }
     if (changed.includes("gameCode")) {
-      await this.assertCodeAvailable(
-        operator,
-        tenant,
-        next.gameCode as string,
-        game._id,
-      );
+      await this.assertCodeAvailable(operator, tenant, next.gameCode as string);
     }
     if (changed.length === 0) {
-      return this.toModel(game, await this.access.grantOf(operator));
+      return this.toModel(operator, game, await this.access.grantOf(operator));
     }
 
     const set: Record<string, unknown> = {};
@@ -267,7 +257,7 @@ export class LotteryGamesService {
     const updated = await this.saving(
       (set.gameCode as string | undefined) ?? game.gameCode,
       () =>
-        this.games.updateById(tenantReadContext(operator), game._id, {
+        this.games.updateById(operator, game._id, {
           $set: set,
         }),
     );
@@ -281,7 +271,7 @@ export class LotteryGamesService {
       before,
       after: set,
     });
-    return this.toModel(updated, await this.access.grantOf(operator));
+    return this.toModel(operator, updated, await this.access.grantOf(operator));
   }
 
   /** 刪除:軟刪除;只有從未被本、叫貨單、進貨單引用的遊戲可以刪(否則只能停售)。 */
@@ -297,10 +287,7 @@ export class LotteryGamesService {
         MASTER_DATA_REASONS.gameInUse,
       );
     }
-    const deleted = await this.games.softDeleteById(
-      tenantReadContext(operator),
-      game._id,
-    );
+    const deleted = await this.games.softDeleteById(operator, game._id);
     if (!deleted) {
       throw notFoundError(`lottery game not found: ${input.id}`);
     }
@@ -334,22 +321,22 @@ export class LotteryGamesService {
     }
   }
 
-  private async mustTenant(operator: OperatorContext): Promise<OperatorTenant> {
-    const tenant = await tenantOfOperator(operator, this.orgs);
+  private mustTenant(operator: OperatorContext): OperatorTenant {
+    const tenant = tenantOfOperator(operator);
     if (tenant === null) {
       throw notFoundError("operator has no current org");
     }
     return tenant;
   }
 
-  /** 操作者租戶裡的那一筆;別租戶、已刪除、id 不合法一律 `NOT_FOUND`。 */
+  /** 操作者看得到(含共用進來)、且在當前租戶的那一筆;別租戶、已刪除、id 不合法一律 `NOT_FOUND`。 */
   private async mustFind(
     operator: OperatorContext,
     id: string,
   ): Promise<{ game: GameRecord; tenant: OperatorTenant }> {
-    const tenant = await this.mustTenant(operator);
+    const tenant = this.mustTenant(operator);
     const game = Types.ObjectId.isValid(id)
-      ? await this.games.findOne(tenantReadContext(operator), {
+      ? await this.games.findOne(operator, {
           _id: new Types.ObjectId(id),
           tenantId: tenant.tenantId,
         })
@@ -364,13 +351,14 @@ export class LotteryGamesService {
     operator: OperatorContext,
     tenant: OperatorTenant,
     gameCode: string,
-    selfId: Types.ObjectId | null,
   ): Promise<void> {
-    const duplicate = await this.games.findOne(tenantReadContext(operator), {
-      tenantId: tenant.tenantId,
-      gameCode,
-      ...(selfId === null ? {} : { _id: { $ne: selfId } }),
-    });
+    // 代號是整個租戶唯一(含操作者看不到的分店建的):租戶邊界出口只回有無。
+    // 只在代號變了才查,所以命中的一定是別筆;根組織的遊戲(tenantId null)沒有租戶邊界,靠唯一索引守
+    const duplicate =
+      tenant.tenantId !== null &&
+      (await this.games.existsInTenant(operator, tenant.tenantId, {
+        gameCode,
+      }));
     if (duplicate) {
       throw validationError(
         `game code already exists: ${gameCode}`,
@@ -381,10 +369,13 @@ export class LotteryGamesService {
   }
 
   private async toModel(
+    operator: OperatorContext,
     game: GameRecord,
     grant: MasterDataGrant,
   ): Promise<LotteryGameModel> {
     const inUse = await isGameInUse(game.tenantId, game._id);
+    // 共用進來的(別的組織建的)只能看:修改 / 刪除照可見範圍(ADR-0014)
+    const owned = isOrgVisible(operator, game.orgId);
     return {
       id: String(game._id),
       gameCode: game.gameCode,
@@ -403,8 +394,9 @@ export class LotteryGamesService {
       createdAt: game.createdAt,
       updatedAt: game.updatedAt,
       abilities: {
-        canEdit: grant.has(MASTER_DATA_PERMISSIONS.gamesEdit),
-        canDelete: grant.has(MASTER_DATA_PERMISSIONS.gamesDelete) && !inUse,
+        canEdit: owned && grant.has(MASTER_DATA_PERMISSIONS.gamesEdit),
+        canDelete:
+          owned && grant.has(MASTER_DATA_PERMISSIONS.gamesDelete) && !inUse,
       },
     };
   }

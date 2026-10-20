@@ -61,7 +61,7 @@ describe("lookup 來源 lottery_game", () => {
   let api: AuthTestApp;
   let tenantA: Types.ObjectId;
   let staffA: string;
-  /** 只屬於甲分店(租戶可見性預設 own):看不到掛在最上層組織的遊戲。 */
+  /** 只屬於甲分店(租戶可見性預設 own):遊戲共用給全部分店,所以看得到總部建的。 */
   let branchStaffA: string;
 
   async function insertGame(
@@ -82,6 +82,8 @@ describe("lookup 來源 lottery_game", () => {
       note: null,
       orgId,
       tenantId: orgId,
+      // 遊戲宣告「可共用、預設全部分店」(ADR-0014):建立時由 BaseRepository 寫入,這裡直接寫同一份
+      shareOrgs: [{ orgId, includeDescendants: true }],
       moduleKey: MASTER_DATA_MODULE_KEY,
       createdAt: now,
       updatedAt: now,
@@ -153,7 +155,13 @@ describe("lookup 來源 lottery_game", () => {
     expect(await labels({ fieldKey: "any_game" })).toEqual(["舊彩", "金好運"]);
   });
 
-  it("現況:只屬於分店的人查不到遊戲(lookup 範圍 = 可見範圍,遊戲掛在最上層組織;待決定,改了範圍這個測試跟著改)", async () => {
-    expect(await labels({ fieldKey: "game" }, branchStaffA)).toEqual([]);
+  it("只屬於分店的人(店長)查得到總部建的遊戲(共用給全部分店);別租戶的仍查不到", async () => {
+    expect(await labels({ fieldKey: "game" }, branchStaffA)).toEqual([
+      "金好運",
+    ]);
+    expect(await labels({ fieldKey: "any_game" }, branchStaffA)).toEqual([
+      "舊彩",
+      "金好運",
+    ]);
   });
 });

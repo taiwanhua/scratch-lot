@@ -308,8 +308,8 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    *
    * - `tenantId` 必填(租戶頂層 ObjectId),沒給 / 給錯型別 → `TenantScopeError`;可見範圍不是 `"all"`
    *   的操作者,`tenantId` 必須是自己所屬的租戶(`memberTenants`),否則同樣拋錯
-   * - 條件只能是**一個欄位等於一個值**(`field` = 欄位路徑,`value` = 純量 / ObjectId / Date / null),
-   *   不收運算子物件;plugin 另釘 `tenantId`
+   * - 條件只能是**欄位等於值**的組合(`equals` = `{ 欄位路徑: 純量 / ObjectId / Date / null }`,
+   *   例:同一家分店內名稱唯一 `{ orgId, name }`),不收運算子物件;plugin 另釘 `tenantId`
    * - 不套可見範圍、共用與**資料範圍規則**;軟刪除照常排除
    * - 只回有無,不回筆數或文件;只給有 `tenantId` 的模組資料表
    * - 呼叫端登記在 `TENANT_BOUNDARY_CALLERS`,由測試掃 src 鎖定
@@ -317,12 +317,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   async existsInTenant(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null | undefined,
-    field: string,
-    value: unknown,
+    equals: Readonly<Record<string, unknown>>,
     options: SessionOptions = {},
   ): Promise<boolean> {
     const boundary = this.tenantBoundaryOf(operator, tenantId);
-    const filter = equalityFilterOf(this.model.modelName, field, value);
+    const filter = equalityFilterOf(this.model.modelName, equals);
     const found = await scopeQuery(this.model.countDocuments(filter).limit(1), {
       operator,
       tenantBoundary: boundary,
@@ -756,7 +755,10 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
  * ADR-0005「例外出口」)。`exists-any-callers.test.ts` 掃整個 src 斷言沒有其他檔案呼叫它們 ——
  * 新增呼叫端要先在 ADR-0005 登記、再加進這裡。
  */
-export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
+export const TENANT_BOUNDARY_CALLERS: readonly string[] = [
+  "project/lottery/cash-points/cash-points.service.ts",
+  "project/lottery/games/games.service.ts",
+];
 
 /**
  * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
@@ -820,25 +822,30 @@ const EQUALITY_FIELD_PATTERN = /^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)*$/;
  */
 function equalityFilterOf(
   modelName: string,
-  field: string,
-  value: unknown,
+  equals: Readonly<Record<string, unknown>>,
 ): Record<string, unknown> {
-  if (!EQUALITY_FIELD_PATTERN.test(field) || field === "tenantId") {
-    throw new TenantScopeError(
-      `${modelName}:existsInTenant 的欄位 ${field} 不合法`,
-    );
+  const entries = Object.entries(equals);
+  if (entries.length === 0) {
+    throw new TenantScopeError(`${modelName}:existsInTenant 至少要一個欄位`);
   }
-  const scalar =
-    value === null ||
-    ["string", "number", "boolean"].includes(typeof value) ||
-    value instanceof mongoose.Types.ObjectId ||
-    value instanceof Date;
-  if (!scalar) {
-    throw new TenantScopeError(
-      `${modelName}:existsInTenant 的值只能是純量、ObjectId、Date 或 null`,
-    );
+  for (const [field, value] of entries) {
+    if (!EQUALITY_FIELD_PATTERN.test(field) || field === "tenantId") {
+      throw new TenantScopeError(
+        `${modelName}:existsInTenant 的欄位 ${field} 不合法`,
+      );
+    }
+    const scalar =
+      value === null ||
+      ["string", "number", "boolean"].includes(typeof value) ||
+      value instanceof mongoose.Types.ObjectId ||
+      value instanceof Date;
+    if (!scalar) {
+      throw new TenantScopeError(
+        `${modelName}:existsInTenant 的值只能是純量、ObjectId、Date 或 null`,
+      );
+    }
   }
-  return { [field]: value };
+  return { ...equals };
 }
 
 function defaultShareOrgsOf(
