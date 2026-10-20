@@ -91,6 +91,8 @@ fragment ScheduleStaffRowFields on ScheduleStaffRow {
     enabled
     note
     primaryElsewhere
+    # 別店建的檔案、因為可以排的分店才看得到(資料共用,ADR-0014):只能看
+    isShared
     orgs {
       orgId
       orgName
@@ -206,7 +208,9 @@ mutation SaveScheduleDemandWeekTemplate(
   }
 }
 
-mutation DeleteScheduleDemandWeekTemplate($input: DeleteScheduleTemplateInput!) {
+mutation DeleteScheduleDemandWeekTemplate(
+  $input: DeleteScheduleTemplateInput!
+) {
   deleteScheduleDemandWeekTemplate(input: $input) {
     id
   }

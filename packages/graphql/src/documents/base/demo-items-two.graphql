@@ -21,6 +21,12 @@ fragment DemoItemTwoFields on DemoItemTwo {
     canEdit
     canDelete
   }
+  # 共用給(資料共用,ADR-0014);isShared = 共用進來的(只能看,abilities 都是 false)
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
 }
 
 # 列表:可見範圍內的項目(資料範圍規則不介入 — 這個 collection 沒宣告 dataScopeTarget)。

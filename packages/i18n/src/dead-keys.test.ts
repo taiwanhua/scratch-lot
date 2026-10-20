@@ -50,6 +50,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "詳情頁分頁標題 `t(`gameView.tabs.${labelKey}`)`,labelKey 取自 `game-detail-tabs.ts`",
   },
   {
+    key: "admin.lotteryDealers.badgeDescription",
+    reason:
+      "經銷商側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`dealer-badge.ts`),畫面在 `SidebarBadgeSettingsSection`",
+  },
+  {
     key: "admin.sidebarBadgeSettings.descriptions.",
     reason:
       "通知設定頁「側欄數字」的「數什麼」:完整 key 由 api 側欄計數登記的 `descriptionKey` 給(`SidebarBadgeSettingsSection`)",

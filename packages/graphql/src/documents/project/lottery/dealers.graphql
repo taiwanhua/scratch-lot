@@ -78,6 +78,12 @@ fragment LotteryDealerFields on LotteryDealer {
     canEditLastPurchaseBaseDate
     canEditLastSelfPurchaseBaseDate
   }
+  # 共用給(資料共用,ADR-0014);isShared = 共用進來的(含對應分店看到的),只能看
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  isShared
 }
 
 fragment LotteryDealerContactFields on LotteryDealerContact {

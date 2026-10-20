@@ -101,8 +101,12 @@ export const useDealerForm = (
       dealer?.abilities.canEditLastSelfPurchaseBaseDate,
     ),
   };
+  // 共用給:新增問權限集、編輯讀 api 算好的 abilities(共用進來的一律 false)
+  const canShare = isCreate
+    ? access.has(DEALERS_PERMISSIONS.edit)
+    : dealer.abilities.canEdit;
   const writable = (key: DealerFormKey): boolean =>
-    protectedFields[key]?.isWritable ?? true;
+    key === "shareOrgs" ? canShare : (protectedFields[key]?.isWritable ?? true);
 
   const change = <Key extends DealerFormKey>(
     key: Key,
@@ -159,6 +163,7 @@ export const useDealerForm = (
   };
 
   return {
+    canShare,
     values,
     change,
     touched,

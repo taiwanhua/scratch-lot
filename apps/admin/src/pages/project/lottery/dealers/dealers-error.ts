@@ -93,17 +93,32 @@ export interface ConflictRelationship {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-export const conflictRelationshipsOf = (
+const conflictExtensionsOf = (
   error: unknown,
-): ConflictRelationship[] => {
+): Record<string, unknown> | undefined => {
   if (!(error instanceof ClientError)) {
-    return [];
+    return undefined;
   }
   const { errors } = error.response as { errors?: unknown };
   const first: unknown = Array.isArray(errors) ? errors[0] : undefined;
   const extensions = isRecord(first) ? first.extensions : undefined;
-  const list = isRecord(extensions) ? extensions.relationships : undefined;
+  return isRecord(extensions) ? extensions : undefined;
+};
+
+export const conflictRelationshipsOf = (
+  error: unknown,
+): ConflictRelationship[] => {
+  const list = conflictExtensionsOf(error)?.relationships;
   return Array.isArray(list)
     ? list.filter((item): item is ConflictRelationship => isRecord(item))
     : [];
+};
+
+/**
+ * 另有幾筆操作者看不到的經銷商上的關聯(api `extensions.hiddenCount`;資料共用 ADR-0014):
+ * 只回筆數,確認後一起解除。沒有 → 0。
+ */
+export const conflictHiddenCountOf = (error: unknown): number => {
+  const count = conflictExtensionsOf(error)?.hiddenCount;
+  return typeof count === "number" && count > 0 ? count : 0;
 };

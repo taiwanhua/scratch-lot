@@ -7,6 +7,7 @@ import {
   type LotteryRentCycle,
 } from "@repo/graphql";
 
+import type { ShareOrgValue } from "@/components/base/ShareOrgsField/ShareOrgsField";
 import {
   localDayInstantOf,
   localDayTextOf,
@@ -47,6 +48,8 @@ export interface DealerFormValues {
   residentialAddress: string;
   residentialSameAsMailing: boolean;
   note: string;
+  /** 共用給(資料共用,ADR-0014);有 `dealers.edit` 才出現在表單上 */
+  shareOrgs: ShareOrgValue[];
 }
 
 export type DealerFormKey = keyof DealerFormValues;
@@ -104,6 +107,7 @@ export const emptyValues = (type: LotteryDealerType): DealerFormValues => {
     residentialAddress: "",
     residentialSameAsMailing: false,
     note: "",
+    shareOrgs: [],
   };
 };
 
@@ -147,6 +151,10 @@ export const valuesOf = (
     residentialAddress: text(dealer.residentialAddress),
     residentialSameAsMailing: dealer.residentialSameAsMailing,
     note: text(dealer.note),
+    shareOrgs: dealer.shareOrgs.map((entry) => ({
+      orgId: entry.orgId,
+      includeDescendants: entry.includeDescendants,
+    })),
   };
 };
 
@@ -219,6 +227,9 @@ const inputEntry = (
     case "rentFee":
     case "rentDueDay": {
       return [key, integer(values[key])];
+    }
+    case "shareOrgs": {
+      return [key, values.shareOrgs];
     }
     case "status":
     case "rentCycle":

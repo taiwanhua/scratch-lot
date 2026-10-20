@@ -287,6 +287,7 @@ export const scheduleSettingsWorld = (
                 enabled: true,
                 note: null,
                 primaryElsewhere: false,
+                isShared: false,
                 orgs: [],
               },
             }

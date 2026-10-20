@@ -20,6 +20,7 @@ import {
 
 import {
   type ConflictRelationship,
+  conflictHiddenCountOf,
   conflictRelationshipsOf,
   dealersErrorKey,
   dealersErrorOf,
@@ -112,7 +113,10 @@ export const useContactForm = (
   );
   const [invalidFields, setInvalidFields] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<ConflictRelationship[] | null>(null);
+  const [conflict, setConflict] = useState<{
+    relationships: ConflictRelationship[];
+    hiddenCount: number;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const create = useCreateLotteryDealerContactMutation(session.client);
   const update = useUpdateLotteryDealerContactMutation(session.client);
@@ -163,7 +167,10 @@ export const useContactForm = (
     } catch (error_) {
       const parsed = dealersErrorOf(error_);
       if (parsed.reason === "ROLE_IN_USE") {
-        setConflict(conflictRelationshipsOf(error_));
+        setConflict({
+          relationships: conflictRelationshipsOf(error_),
+          hiddenCount: conflictHiddenCountOf(error_),
+        });
         return;
       }
       setInvalidFields(parsed.fields ?? []);

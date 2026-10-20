@@ -1109,6 +1109,7 @@
     }
   },
   "demoSampleTwo": {
+    "sharedIn": "Shared with you (view only)",
     "emptyValue": "—",
     "emptyList": "No demo items yet",
     "loading": "Loading",
@@ -1128,7 +1129,8 @@
       "name": "Name",
       "note": "Note",
       "enabled": "Enabled",
-      "createdBy": "Created by"
+      "createdBy": "Created by",
+      "shareOrgs": "Share with"
     },
     "toolbar": {
       "search": "Search",
@@ -2791,6 +2793,13 @@
     "disabledOrg": "Disabled",
     "loadFailed": "Couldn't load organizations. Please try again later.",
     "confirm": "Done"
+  },
+  "shareOrgsField": {
+    "helper": "Shared orgs can view this record but cannot change it. Any org in the tree can be chosen.",
+    "includeDescendants": "Include orgs under {name}",
+    "withDescendants": "{name} (and below)",
+    "none": "Not shared",
+    "unknownOrg": "(An org no longer in the tree)"
   },
   "seedExport": {
     "action": "Export project settings",

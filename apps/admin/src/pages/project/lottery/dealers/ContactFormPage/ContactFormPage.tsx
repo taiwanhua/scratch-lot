@@ -266,7 +266,8 @@ const ContactFormBody = ({
         <ConflictDialog
           title={t("conflict.roleTitle")}
           message={t("conflict.roleBody")}
-          relationships={form.conflict}
+          relationships={form.conflict.relationships}
+          hiddenCount={form.conflict.hiddenCount}
           column="dealer"
           confirmLabel={t("actions.releaseAndSave")}
           isSubmitting={form.isSubmitting}

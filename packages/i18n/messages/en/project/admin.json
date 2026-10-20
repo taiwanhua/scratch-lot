@@ -257,6 +257,7 @@
       }
     },
     "fields": {
+      "shareOrgs": "Share with",
       "type": "Type (cannot be changed later)",
       "licenseNo": "License no.",
       "name": "Name",
@@ -354,6 +355,7 @@
       "nextYear": "Next year"
     },
     "conflict": {
+      "hiddenCount": "{count} more links you cannot see will also be removed.",
       "coSalesTitle": "Remove co-sales store",
       "coSalesBody": "{name} still has {count} agent(s). Class A needs a co-sales store before agents.",
       "roleTitle": "Remove roles",
@@ -518,6 +520,7 @@
       "joinedAll": "All (joined / not joined)",
       "joinedYes": "Joined",
       "joinedNo": "Not joined",
+      "sharedFromOtherOrg": "Another store’s staff (view only)",
       "joinedElsewhere": "Joined in another org",
       "add": "Add to scheduling ({count})",
       "columns": {

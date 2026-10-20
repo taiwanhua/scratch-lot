@@ -14,6 +14,8 @@ export interface ConflictDialogProps {
   message: string;
   /** 列出的關聯;`column` 決定第二欄顯示關係人還是經銷商 */
   relationships: readonly ConflictRelationship[];
+  /** 另有幾筆你看不到的關聯(只有筆數,確認後一起解除);0 = 不顯示 */
+  hiddenCount?: number;
   column: "contact" | "dealer";
   confirmLabel: string;
   isSubmitting: boolean;
@@ -29,6 +31,7 @@ export const ConflictDialog = ({
   title,
   message,
   relationships,
+  hiddenCount = 0,
   column,
   confirmLabel,
   isSubmitting,
@@ -54,6 +57,11 @@ export const ConflictDialog = ({
     >
       <Stack spacing={2}>
         <Alert severity="warning">{message}</Alert>
+        {hiddenCount > 0 && (
+          <Alert severity="info">
+            {t("conflict.hiddenCount", { count: hiddenCount })}
+          </Alert>
+        )}
         <DataTable
           size="small"
           aria-label={title}

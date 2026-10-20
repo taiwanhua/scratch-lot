@@ -15,6 +15,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { TextField } from "@repo/ui/text-field";
 
 import { Section } from "@/components/base/Section/Section";
+import { ShareOrgsField } from "@/components/base/ShareOrgsField/ShareOrgsField";
 
 import {
   DEALER_STATUSES,
@@ -34,7 +35,12 @@ import type { DealerForm } from "./useDealerForm";
 const LABELS: Record<
   Exclude<
     DealerFormKey,
-    "type" | "coSalesDealer" | "agents" | "trustees" | "introducers"
+    | "type"
+    | "coSalesDealer"
+    | "agents"
+    | "trustees"
+    | "introducers"
+    | "shareOrgs"
   >,
   string
 > = {
@@ -368,6 +374,18 @@ export const DealerFormSections = ({
             <Wide>{text("residentialAddress")}</Wide>
           )}
           <Wide>{text("note", { multiline: true })}</Wide>
+          {form.canShare && (
+            <Wide>
+              <ShareOrgsField
+                label={t("fields.shareOrgs")}
+                value={values.shareOrgs}
+                error={isInvalid("shareOrgs")}
+                onChange={(next) => {
+                  change("shareOrgs", next);
+                }}
+              />
+            </Wide>
+          )}
         </FieldGrid>
       </Section>
     </>

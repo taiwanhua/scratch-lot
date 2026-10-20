@@ -257,6 +257,7 @@
       }
     },
     "fields": {
+      "shareOrgs": "共用給",
       "type": "類型(建立後不能改)",
       "licenseNo": "證號",
       "name": "姓名",
@@ -354,6 +355,7 @@
       "nextYear": "下一年"
     },
     "conflict": {
+      "hiddenCount": "另有 {count} 筆你看不到的關聯也會一起解除。",
       "coSalesTitle": "移除共同銷售處所",
       "coSalesBody": "{name}還有 {count} 位代理人。甲類要先有共同銷售處所才能設代理人。",
       "roleTitle": "取消身分",
@@ -518,6 +520,7 @@
       "joinedAll": "全部(已加入 / 未加入)",
       "joinedYes": "已加入",
       "joinedNo": "未加入",
+      "sharedFromOtherOrg": "其他店的排班人員(只能看)",
       "joinedElsewhere": "已在其他組織加入",
       "add": "加入排班({count})",
       "columns": {

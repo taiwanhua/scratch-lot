@@ -112,6 +112,10 @@ export const StaffTab = () => {
       : "—";
 
   const statusOf = (row: Row) => {
+    // 別店建的檔案、因為可以排的分店有我看得到的店才看得到(資料共用):只能看
+    if (row.staff?.isShared === true) {
+      return <Tag label={t("sharedFromOtherOrg")} tone="primary" />;
+    }
     if (row.staff) {
       return <Tag label={t("joinedYes")} tone="success" />;
     }
@@ -247,7 +251,7 @@ export const StaffTab = () => {
       {editing?.staff && (
         <StaffDialog
           row={editing}
-          canEdit={canEdit}
+          canEdit={canEdit && !editing.staff.isShared}
           onClose={() => {
             setEditing(null);
           }}

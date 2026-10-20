@@ -133,6 +133,7 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
       enabled: true,
       note: null,
       primaryElsewhere: false,
+      isShared: false,
       orgs: [
         staffOrg(SCHEDULE_BRANCH, true, true, 1),
         staffOrg({ id: "org-content", name: "A-1 內容組" }, false, false, 2),
@@ -150,6 +151,7 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
       enabled: true,
       note: null,
       primaryElsewhere: false,
+      isShared: false,
       orgs: [staffOrg(SCHEDULE_BRANCH, false, true, 1)],
     },
   },

@@ -1109,6 +1109,7 @@
     }
   },
   "demoSampleTwo": {
+    "sharedIn": "共用進來的,只能看",
     "emptyValue": "—",
     "emptyList": "目前沒有示範項目",
     "loading": "載入中",
@@ -1128,7 +1129,8 @@
       "name": "名稱",
       "note": "備註",
       "enabled": "啟用",
-      "createdBy": "建立者"
+      "createdBy": "建立者",
+      "shareOrgs": "共用給"
     },
     "toolbar": {
       "search": "搜尋",
@@ -2791,6 +2793,13 @@
     "disabledOrg": "已停用",
     "loadFailed": "組織清單載入失敗,請稍後再試。",
     "confirm": "確定"
+  },
+  "shareOrgsField": {
+    "helper": "共用給的組織看得到這筆資料,但不能修改;可以選整個組織樹裡的組織。",
+    "includeDescendants": "{name}含下層",
+    "withDescendants": "{name}(含下層)",
+    "none": "不共用",
+    "unknownOrg": "(已不在組織樹上的組織)"
   },
   "seedExport": {
     "action": "匯出專案設定",

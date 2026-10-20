@@ -328,6 +328,8 @@ export const dealersWorld = ({
             contactId: current.id,
             contactName: current.name,
           })),
+          // 另有一筆操作者看不到的經銷商上的關聯(資料共用:只回筆數)
+          hiddenCount: 1,
         });
       }
       const updated: LotteryDealerContactFieldsFragment = {

@@ -52,6 +52,10 @@ describe("關係人詳情 / 編輯頁", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "取消身分" });
     expect(within(dialog).getByText("陳志明 #12345678")).toBeInTheDocument();
+    // 看不到的經銷商上的關聯只告訴筆數,確認後一起解除
+    expect(
+      within(dialog).getByText("另有 1 筆你看不到的關聯也會一起解除。"),
+    ).toBeInTheDocument();
 
     await user.click(
       within(dialog).getByRole("button", { name: "一併解除並儲存" }),

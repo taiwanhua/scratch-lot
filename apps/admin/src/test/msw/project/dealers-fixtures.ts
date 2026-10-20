@@ -223,6 +223,8 @@ const dealerBase = {
   createdAt: iso("2026-09-01"),
   updatedAt: iso("2026-09-01"),
   abilities,
+  shareOrgs: [],
+  isShared: false,
 } satisfies Partial<LotteryDealerFieldsFragment>;
 
 const storeTwo = {
