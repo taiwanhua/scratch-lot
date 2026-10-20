@@ -4,6 +4,8 @@ import type { Types } from "mongoose";
 import { localDateOf, localDateText, parseLocalDate } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
+import type { OperatorContext } from "../../../database/operator-context";
+import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { scheduleHitAt } from "../../../notifications/notification-schedule";
 import {
   type EffectiveSchedule,
@@ -20,7 +22,6 @@ import {
   SCHEDULE_DAY_OFF_OPEN,
 } from "../../notifications";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
-import { scheduleSystemReader } from "../shared/schedule-org";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import {
   type DayOffWindow,
@@ -99,7 +100,8 @@ export class DayOffRemindersService implements OnModuleInit {
     timezone: string,
     scheduledFor: Date,
   ): Promise<void> {
-    const reader = scheduleSystemReader();
+    // 排程的租戶系統身分:可見範圍 = 這個租戶的整棵組織樹(ADR-0005「例外出口」)
+    const reader = await systemTenantReader(this.orgs, tenantId);
     const links = await this.relationships.findMany(reader, {
       type: ORG_STAFF,
       tenantId,
@@ -133,6 +135,7 @@ export class DayOffRemindersService implements OnModuleInit {
           SCHEDULE_DAY_OFF_CLOSING,
         ] as const) {
           await this.remind(type, schedules[type], value, {
+            reader,
             tenantId,
             storeId,
             timezone,
@@ -153,6 +156,7 @@ export class DayOffRemindersService implements OnModuleInit {
     effective: EffectiveSchedule,
     value: DayOffWindowValue,
     at: {
+      reader: OperatorContext;
       tenantId: Types.ObjectId;
       storeId: Types.ObjectId;
       timezone: string;
@@ -163,7 +167,7 @@ export class DayOffRemindersService implements OnModuleInit {
     if (found === null) {
       return;
     }
-    const reader = scheduleSystemReader();
+    const reader = at.reader;
     const candidates = await this.staff.listScheduleCandidates(
       reader,
       at.storeId,

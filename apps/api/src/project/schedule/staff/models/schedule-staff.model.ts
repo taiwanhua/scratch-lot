@@ -44,6 +44,13 @@ export class ScheduleStaffProfileModel {
   /** 主要分店在操作者看不到的分店(這時不能在看得到的分店再設主要分店) */
   @Field(() => Boolean)
   primaryElsewhere!: boolean;
+
+  /**
+   * 別店建的檔案、因為「可以排的分店」有我看得到的店才看得到(資料共用,ADR-0014):只能看,
+   * 改了回 `FORBIDDEN`(`NOT_OWNER`)。
+   */
+  @Field(() => Boolean)
+  isShared!: boolean;
 }
 
 /** 排班人員頁的一列:使用者 + 排班檔案(未加入為 null)。 */
@@ -58,7 +65,10 @@ export class ScheduleStaffRowModel {
   @Field(() => String)
   account!: string;
 
-  /** 已被操作者看不到的組織加入排班(一人一份):不能再 [加入排班],`staff` 為 null */
+  /**
+   * 已被操作者**完全看不到**的檔案加入排班(一人一份;別店建、可以排的分店也沒有我看得到的店):
+   * 不能再 [加入排班],`staff` 為 null。看得到但不歸自己的,`staff.isShared = true`。
+   */
   @Field(() => Boolean)
   joinedElsewhere!: boolean;
 

@@ -43,8 +43,10 @@ export const ScheduleDemandWeekTemplateSchema = SchemaFactory.createForClass(
 
 ScheduleDemandWeekTemplateSchema.index({ orgId: 1, createdAt: 1 });
 ScheduleDemandWeekTemplateSchema.plugin(baseFieldsPlugin);
+// 上層沿用到下層(ADR-0014):下層看得到所屬組織上層鏈建的;修改 / 刪除只在自己可見範圍內
 ScheduleDemandWeekTemplateSchema.plugin(tenantScopePlugin, {
   moduleData: true,
+  sharing: { mode: "inheritDown" },
 });
 ScheduleDemandWeekTemplateSchema.path("moduleKey").default(
   SCHEDULE_SETTINGS_MODULE_KEY,

@@ -1,15 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
 import { getModelToken } from "@nestjs/mongoose";
-import type { Connection, Model, Types } from "mongoose";
+import { type Connection, type Model, Types } from "mongoose";
 
 import { SCHEDULE_RULE_DEFINITIONS } from "@repo/domain/project/schedule-settings";
 
+import { OperatorContextService } from "../../auth/operator-context.service";
 import {
   type AuthTestApp,
   type GraphqlResult,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
 import { createOrg } from "../../auth/test-support/fixtures";
+import type { OperatorContext } from "../../database/operator-context";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
 import {
   SCHEDULE_CALENDAR_DAYS_COLLECTION,
@@ -23,6 +25,8 @@ import {
   SCHEDULE_STAFF_COLLECTION,
   ScheduleStaff,
 } from "../database/schedule/schedule-staff.schema";
+import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
+import { ScheduleRulesService } from "./rules/schedule-rules.service";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
@@ -97,6 +101,7 @@ const STAFF_FIELDS = /* GraphQL */ `
     employmentType
     enabled
     primaryElsewhere
+    isShared
     orgs { orgId orgName canLead isPrimary sortOrder }
   }
 `;
@@ -261,6 +266,7 @@ interface StaffRow {
     employmentType: string;
     enabled: boolean;
     primaryElsewhere: boolean;
+    isShared: boolean;
     orgs: {
       orgId: string;
       orgName: string;
@@ -350,6 +356,18 @@ function ruleOf(rules: RulesRow, key: string): RuleRow {
  *               │                           └─ 新竹店
  *               └─ 租戶乙
  */
+/** 登入線算出的操作者上下文(直接呼叫給排班作業的 service 用)。 */
+async function operatorOf(
+  api: AuthTestApp,
+  user: ScheduleTestUser,
+  orgId: Types.ObjectId,
+): Promise<OperatorContext> {
+  const resolved = await api.app
+    .get(OperatorContextService)
+    .resolve(user.userId, orgId);
+  return resolved.operator;
+}
+
 describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
@@ -814,6 +832,34 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("給排班作業的生效值(effectiveSettingsForOrg / effectiveDays)", () => {
+    it("店要在操作者的可見範圍內:看不到的分店、別租戶的店 → NOT_FOUND;看得到的照常讀上層鏈", async () => {
+      const rules = api.app.get(ScheduleRulesService);
+      const calendar = api.app.get(ScheduleCalendarService);
+      const asManager = await operatorOf(api, manager, zhongshan);
+      const own = await rules.effectiveSettingsForOrg(asManager, zhongshan);
+      expect(own.size).toBeGreaterThan(0);
+      await expect(
+        rules.effectiveSettingsForOrg(asManager, hsinchu),
+      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
+      const asOther = await operatorOf(api, otherHq, tenantB);
+      await expect(
+        rules.effectiveSettingsForOrg(asOther, zhongshan),
+      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
+      await expect(
+        calendar.effectiveDays(asOther, zhongshan, "2026-11-01", "2026-11-30"),
+      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
+      await expect(
+        calendar.effectiveDays(
+          asManager,
+          zhongshan,
+          "2026-11-01",
+          "2026-11-30",
+        ),
+      ).resolves.toEqual(expect.any(Array));
+    });
+  });
+
   describe("排班人員(SC-08 / SC-26)", () => {
     it("候選使用者 = 看得到的組織的使用者;未加入的才能 [加入排班]", async () => {
       const managerView = await staffRows(manager);
@@ -1041,6 +1087,74 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         await service.listScheduleCandidates(system, hsinchu, new Date(0)),
       ).toEqual([]);
+    });
+
+    it("依可以排的分店共用:別店建的檔案,可以排的分店有我的店就看得到(isShared),但改不了(NOT_OWNER)", async () => {
+      const support = await createScheduleUser(
+        api,
+        connection,
+        [zhongshan, hsinchu],
+        [],
+        "跨店支援的人",
+      );
+      const added = await gql(manager, ADD_STAFF, {
+        input: { userIds: [String(support.userId)] },
+      });
+      expect(added.errors).toBeUndefined();
+      const hsinchuManager = await createScheduleUser(
+        api,
+        connection,
+        [hsinchu],
+        [P.settingsView, P.editStaff],
+      );
+      const rowOf = async (user: ScheduleTestUser) => {
+        const rows = await staffRows(user);
+        return rows.items.find(
+          (item) => item.userId === String(support.userId),
+        );
+      };
+      const before = await rowOf(hsinchuManager);
+      expect(before).toMatchObject({ joinedElsewhere: true, staff: null });
+
+      // 總部(看得到兩家)把新竹店加進可以排的分店:檔案上的副本跟著寫
+      const row = await rowOf(hq);
+      const staffId = row?.staff?.id ?? "";
+      const supported = await gql(hq, UPDATE_STAFF, {
+        input: {
+          staffId,
+          orgs: [
+            { orgId: String(zhongshan), canLead: false, isPrimary: true },
+            { orgId: String(hsinchu), canLead: false, isPrimary: false },
+          ],
+        },
+      });
+      expect(supported.errors).toBeUndefined();
+      const stored = await connection
+        .collection("schedule_staff")
+        .findOne({ _id: new Types.ObjectId(staffId) });
+      expect(
+        (stored?.orgIds as Types.ObjectId[])
+          .map(String)
+          .toSorted((left, right) => left.localeCompare(right)),
+      ).toEqual(
+        [String(zhongshan), String(hsinchu)].toSorted((left, right) =>
+          left.localeCompare(right),
+        ),
+      );
+
+      const after = await rowOf(hsinchuManager);
+      expect(after?.joinedElsewhere).toBe(false);
+      expect(after?.staff).toMatchObject({ id: staffId, isShared: true });
+      expect(
+        errorOf(
+          await gql(hsinchuManager, UPDATE_STAFF, {
+            input: { staffId, employmentType: "part-time" },
+          }),
+        ),
+      ).toMatchObject({ code: "FORBIDDEN", reason: "NOT_OWNER" });
+      // 建立的那一層看到的是自己的(不是共用進來的)
+      const own = await rowOf(manager);
+      expect(own?.staff?.isShared).toBe(false);
     });
 
     it("同時加入同一人:只成功一筆,另一筆 VALIDATION_FAILED(userIds)", async () => {

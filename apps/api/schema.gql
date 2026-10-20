@@ -3097,6 +3097,7 @@ type ScheduleStaffProfile {
   employmentType: String!
   enabled: Boolean!
   id: ID!
+  isShared: Boolean!
   note: String
   orgs: [ScheduleStaffOrg!]!
   primaryElsewhere: Boolean!

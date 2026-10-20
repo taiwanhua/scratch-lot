@@ -41,6 +41,15 @@ interface DealersData {
   lotteryDealers: { items: DealerRow[] };
 }
 
+/** 讀得到這一位經銷商嗎(單筆查詢沒有錯誤)。 */
+async function readableBy(
+  api: AuthTestApp,
+  token: string,
+  id: string,
+): Promise<boolean> {
+  return (await errorOf(api, token, DEALER, { id })) === undefined;
+}
+
 describe("經銷商管理(專案規格 5.2–5.4)", () => {
   let api: AuthTestApp;
   let tenantId: Types.ObjectId;
@@ -673,9 +682,6 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       });
     }, HOOK_TIMEOUT_MS);
 
-    const readable = async (token: string, id: string): Promise<boolean> =>
-      (await errorOf(api, token, DEALER, { id })) === undefined;
-
     it("對應分店的人看得到乙類(標示為共用進來、不能編輯、寫入 NOT_FOUND);換了對應分店,看得到的人跟著換", async () => {
       const b = await createDealer("B", { storeOrgId: String(branchB) });
       const seen = await ok<DealerData>(api, branchBViewer, DEALER, {
@@ -694,9 +700,9 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(
         await updateError({ id: b.id, name: "分店改總部的" }, branchBEditor),
       ).toMatchObject({ code: "NOT_FOUND" });
-      expect(await readable(branchAViewer, b.id)).toBe(false);
+      expect(await readableBy(api, branchAViewer, b.id)).toBe(false);
       await updateDealer({ id: b.id, storeOrgId: null });
-      expect(await readable(branchBViewer, b.id)).toBe(false);
+      expect(await readableBy(api, branchBViewer, b.id)).toBe(false);
     });
 
     it("共用給:總部共用給信義店 → 信義店看得到、中山店看不到;改回空清單就都看不到", async () => {
@@ -706,10 +712,10 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(a.shareOrgs).toEqual([
         { orgId: String(branchB), includeDescendants: false },
       ]);
-      expect(await readable(branchBViewer, a.id)).toBe(true);
-      expect(await readable(branchAViewer, a.id)).toBe(false);
+      expect(await readableBy(api, branchBViewer, a.id)).toBe(true);
+      expect(await readableBy(api, branchAViewer, a.id)).toBe(false);
       await updateDealer({ id: a.id, shareOrgs: [] });
-      expect(await readable(branchBViewer, a.id)).toBe(false);
+      expect(await readableBy(api, branchBViewer, a.id)).toBe(false);
     });
 
     it("共用給沒有 dealers.edit → FORBIDDEN;共用給別租戶的組織 → VALIDATION_FAILED", async () => {
@@ -736,7 +742,7 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(list.lotteryDealers.items.map((row) => row.id)).not.toContain(
         a.id,
       );
-      expect(await readable(otherHq, a.id)).toBe(false);
+      expect(await readableBy(api, otherHq, a.id)).toBe(false);
       const mine = await ok<CreateData>(api, otherHq, CREATE_DEALER, {
         input: dealerInput("A", { licenseNo: a.licenseNo }),
       });

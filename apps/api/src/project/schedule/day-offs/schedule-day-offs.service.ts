@@ -19,7 +19,10 @@ import {
   OrgsRepository,
   UsersRepository,
 } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -47,8 +50,8 @@ import {
 import {
   parseObjectId,
   resolveScheduleOrg,
-  scheduleReadContext,
-  scheduleSystemReader,
+  scheduleOrgReader,
+  scheduleTenantContext,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -97,6 +100,17 @@ type DayOffRecord = Persisted<ScheduleDayOffDocument>;
 const ORG_STAFF = "org_schedule_staff";
 const AUDIT_TARGET_TYPE = "schedule_day_off";
 const DAY_OFF_WINDOW_KEY = "dayOffWindow";
+
+/** 讀使用者名稱用的上下文:`users` 不掛租戶過濾,範圍在此無作用,只為讓 BaseRepository 收得到上下文。 */
+const NAMES_READER: OperatorContext = {
+  actorId: null,
+  currentOrgId: null,
+  visibleOrgIds: [],
+  managedOrgIds: [],
+  memberOrgIds: [],
+  roleIds: [],
+  memberTenants: [],
+};
 
 /** 某個人某天不能排的時間(`listUnavailable`;給排班表、自動排班)。 */
 export interface ScheduleUnavailability {
@@ -315,8 +329,9 @@ export class ScheduleDayOffsService implements OnModuleInit {
         violations: [],
       };
     }
+    // 畫休以人為準:主要分店不一定在操作者的可見範圍,以租戶為邊界讀它的生效設定
     const settings = await this.rules.effectiveSettingsForOrg(
-      operator,
+      await scheduleTenantContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     const window = windowModelOf(
@@ -346,7 +361,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       members: new Set(members),
     });
     const primaryOrg = await this.orgs.findById(
-      scheduleReadContext(operator),
+      await scheduleTenantContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     const primaryName = primaryOrg?.name ?? "";
@@ -521,22 +536,26 @@ export class ScheduleDayOffsService implements OnModuleInit {
   /**
    * 某家店的排班人員在一段日期(`YYYY-MM-DD`,含頭尾)每天的整天畫休 / 時段不可排
    * (給排班表、人力不足原因、自動排班;畫休屬於人,不分是在哪家店登記的)。
-   * 只列有畫休的那幾天;不看操作者的可見範圍(呼叫端已確認看得到這家店)。
+   * 只列有畫休的那幾天;這家店要在操作者的可見範圍內(看不到 → 空清單)。
    */
   async listUnavailable(
+    operator: OperatorContext,
     orgId: Types.ObjectId,
     from: string,
     to: string,
   ): Promise<ScheduleUnavailability[]> {
-    const reader = scheduleSystemReader();
-    const org = await this.orgs.findById(reader, orgId);
+    // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內;畫休屬於人,以租戶為邊界讀
+    if (!isOrgVisible(operator, orgId)) {
+      return [];
+    }
+    const org = await this.orgs.findById(scheduleOrgReader(operator), orgId);
     if (!org) {
       return [];
     }
     const [, tenantTop] = org.ancestors;
     const tenantId = tenantTop ?? org._id;
     const candidates = await this.staffService.listScheduleCandidates(
-      reader,
+      await scheduleTenantContext(this.orgs, null, tenantId),
       orgId,
     );
     const records = await this.recordsBetween(
@@ -598,7 +617,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     tenantId: Types.ObjectId,
     userId: Types.ObjectId,
   ): Promise<Types.ObjectId | null> {
-    const reader = scheduleSystemReader();
+    const reader = await scheduleTenantContext(this.orgs, null, tenantId);
     const profile = await this.staff.findOne(reader, { tenantId, userId });
     if (!profile) {
       return null;
@@ -617,7 +636,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     tenantId: Types.ObjectId,
     orgId: Types.ObjectId,
   ): Promise<string[]> {
-    const reader = scheduleSystemReader();
+    const reader = await scheduleTenantContext(this.orgs, null, tenantId);
     const links = await this.relationships.findMany(reader, {
       type: ORG_STAFF,
       tenantId,
@@ -647,8 +666,9 @@ export class ScheduleDayOffsService implements OnModuleInit {
         ["userId"],
       );
     }
+    // 畫休以人為準:主要分店不一定在操作者的可見範圍,以租戶為邊界讀它的生效設定
     const settings = await this.rules.effectiveSettingsForOrg(
-      operator,
+      await scheduleTenantContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     return {
@@ -736,10 +756,10 @@ export class ScheduleDayOffsService implements OnModuleInit {
     id: string,
     userIds: readonly string[],
   ): Promise<DayOffRecord> {
-    const record = await this.dayOffs.findOne(scheduleSystemReader(), {
-      _id: parseObjectId(id, "id"),
-      tenantId,
-    });
+    const record = await this.dayOffs.findOne(
+      await scheduleTenantContext(this.orgs, null, tenantId),
+      { _id: parseObjectId(id, "id"), tenantId },
+    );
     if (!record || !userIds.includes(String(record.userId))) {
       throw notFoundError(`day off not found: ${id}`);
     }
@@ -792,7 +812,11 @@ export class ScheduleDayOffsService implements OnModuleInit {
           const items: DayOffRecord[] = [];
           for (const row of rows) {
             const record = await this.dayOffs.create(
-              scheduleReadContext(operator),
+              await scheduleTenantContext(
+                this.orgs,
+                operator,
+                context.tenantId,
+              ),
               {
                 orgId: write.ownerOrgId,
                 userId: write.userId,
@@ -837,12 +861,16 @@ export class ScheduleDayOffsService implements OnModuleInit {
       reasonNote: string | null;
     } | null,
   ): Promise<string> {
-    const writer = scheduleReadContext(operator);
+    const writer = await scheduleTenantContext(
+      this.orgs,
+      operator,
+      context.tenantId,
+    );
     const lockMonths = [record.date.slice(0, 7)];
     await this.ensureLocks(operator, context, lockMonths);
     await this.transactions.withTransaction(async () => {
       await this.touchLocks(operator, context, lockMonths);
-      const current = await this.dayOffs.findOne(scheduleSystemReader(), {
+      const current = await this.dayOffs.findOne(writer, {
         _id: record._id,
         tenantId: context.tenantId,
       });
@@ -878,18 +906,23 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     months: readonly string[],
   ): Promise<void> {
+    const writer = await scheduleTenantContext(
+      this.orgs,
+      operator,
+      context.tenantId,
+    );
     for (const month of months) {
       const key = {
         orgId: context.tenantId,
         storeId: context.primaryOrgId,
         month,
       };
-      const existing = await this.locks.findOne(scheduleSystemReader(), key);
+      const existing = await this.locks.findOne(writer, key);
       if (existing) {
         continue;
       }
       try {
-        await this.locks.create(scheduleReadContext(operator), {
+        await this.locks.create(writer, {
           ...key,
           version: 0,
         });
@@ -910,9 +943,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     months: readonly string[],
   ): Promise<void> {
+    const writer = await scheduleTenantContext(
+      this.orgs,
+      operator,
+      context.tenantId,
+    );
     for (const month of months) {
       const touched = await this.locks.findOneAndUpdate(
-        scheduleReadContext(operator),
+        writer,
         { orgId: context.tenantId, storeId: context.primaryOrgId, month },
         { $inc: { version: 1 } },
       );
@@ -1038,11 +1076,14 @@ export class ScheduleDayOffsService implements OnModuleInit {
     if (userIds.length === 0) {
       return [];
     }
-    return this.dayOffs.findMany(scheduleSystemReader(), {
-      tenantId,
-      userId: { $in: userIds.map((id) => new Types.ObjectId(id)) },
-      date: { $gte: from, $lte: to },
-    });
+    return this.dayOffs.findMany(
+      await scheduleTenantContext(this.orgs, null, tenantId),
+      {
+        tenantId,
+        userId: { $in: userIds.map((id) => new Types.ObjectId(id)) },
+        date: { $gte: from, $lte: to },
+      },
+    );
   }
 
   /** 畫休的人與代改人的名稱。 */
@@ -1079,7 +1120,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
     if (missing.length === 0) {
       return;
     }
-    const users = await this.users.findMany(scheduleSystemReader(), {
+    // users 是關聯歸屬資料(不掛租戶過濾),條件釘死在明列的 id 上
+    const users = await this.users.findMany(NAMES_READER, {
       _id: { $in: missing.map((id) => new Types.ObjectId(id)) },
     });
     for (const user of users) {

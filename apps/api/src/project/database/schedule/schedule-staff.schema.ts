@@ -4,7 +4,10 @@ import { Schema as MongooseSchema, type Types } from "mongoose";
 import { SCHEDULE_EMPLOYMENT_TYPES } from "@repo/domain/project/schedule-settings";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
-import { tenantScopePlugin } from "../../../database/plugins/tenant-scope.plugin";
+import {
+  type ShareOrg,
+  tenantScopePlugin,
+} from "../../../database/plugins/tenant-scope.plugin";
 import { SCHEDULE_SETTINGS_MODULE_KEY } from "./schedule-module-keys";
 
 export const SCHEDULE_STAFF_COLLECTION = "schedule_staff";
@@ -19,7 +22,7 @@ export const SCHEDULE_STAFF_COLLECTION = "schedule_staff";
  */
 @Schema({ collection: SCHEDULE_STAFF_COLLECTION, timestamps: true })
 export class ScheduleStaff {
-  /** 建立它的組織(ADR-0005;不共用,照一般可見性讀)。 */
+  /** 建立它的組織(ADR-0005;修改照它的可見範圍 —— 可排分店的店看得到,但改不了)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 
@@ -48,6 +51,16 @@ export class ScheduleStaff {
 
   /** 租戶頂層 id(`BaseRepository.create` 推導)。 */
   tenantId!: Types.ObjectId | null;
+
+  /**
+   * 可以排的分店(`schedule_relationships` 的 `org_schedule_staff` 在本筆上的副本,同一個交易寫入):
+   * 資料共用的 `sharedByFields` —— 排得到這個人的店看得到他的檔案(ADR-0014)。
+   */
+  @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
+  orgIds!: Types.ObjectId[];
+
+  /** 共用給(plugin 宣告;不開放設定,一律空 —— 共用只靠可以排的分店)。 */
+  shareOrgs!: ShareOrg[];
 }
 
 export const ScheduleStaffSchema = SchemaFactory.createForClass(ScheduleStaff);
@@ -55,6 +68,16 @@ export const ScheduleStaffSchema = SchemaFactory.createForClass(ScheduleStaff);
 // 一個租戶一人一份(規格 14.1:使用者子檔,一對一;沒有軟刪除)
 ScheduleStaffSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
 ScheduleStaffSchema.index({ orgId: 1, createdAt: 1 });
+ScheduleStaffSchema.index({ tenantId: 1, orgIds: 1 });
 ScheduleStaffSchema.plugin(baseFieldsPlugin);
-ScheduleStaffSchema.plugin(tenantScopePlugin, { moduleData: true });
+// 可共用:排得到這個人的店(可以排的分店)看得到他的檔案;清單固定為空(ADR-0014)
+ScheduleStaffSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: {
+    mode: "shareable",
+    defaultShareOrgs: "none",
+    editable: false,
+    sharedByFields: [{ path: "orgIds", includeDescendants: false }],
+  },
+});
 ScheduleStaffSchema.path("moduleKey").default(SCHEDULE_SETTINGS_MODULE_KEY);

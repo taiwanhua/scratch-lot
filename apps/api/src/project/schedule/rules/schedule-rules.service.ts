@@ -17,7 +17,10 @@ import {
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import { TransactionService } from "../../../database/transaction";
 import {
   ScheduleDemandWeekTemplatesRepository,
@@ -36,7 +39,7 @@ import {
   isVisibleOrg,
   loadOrgNames,
   resolveScheduleOrg,
-  scheduleReadContext,
+  scheduleOrgReader,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -104,7 +107,7 @@ interface SettingWrite {
  *
  * - **讀**:某個組織的整份規則 = 定義清單 × 組織鏈上的自訂(`rule-resolution.ts`)
  * - **寫**:最上層組織的規則要 `edit-default-rules`、其他組織要 `edit-org-rules`(沒有 → `FORBIDDEN`)
- * - 檢查用的生效設定(`effectiveSettingsForOrg`)給排班作業的檢查共用,不看操作者的可見範圍
+ * - 檢查用的生效設定(`effectiveSettingsForOrg`)給排班作業的檢查共用(店要在可見範圍內,上層鏈照沿用讀)
  */
 @Injectable()
 export class ScheduleRulesService {
@@ -205,15 +208,12 @@ export class ScheduleRulesService {
         ? AUTO_RUN_DEFINITIONS.map((item) => item.key)
         : [definition.key];
     await this.transactions.withTransaction(async () => {
-      const own = await this.settings.findMany(scheduleReadContext(operator), {
+      const own = await this.settings.findMany(operator, {
         orgId: org.id,
         key: { $in: keys },
       });
       for (const record of own) {
-        await this.settings.softDeleteById(
-          scheduleReadContext(operator),
-          record._id,
-        );
+        await this.settings.softDeleteById(operator, record._id);
         await this.audit.record(operator, {
           action: "schedule-setting.restore",
           targetType: AUDIT_TARGET_TYPE,
@@ -227,13 +227,18 @@ export class ScheduleRulesService {
 
   /**
    * 某家店的檢查用生效設定(key → 設定):沿組織樹往上找、最後用程式預設。
-   * 排班作業的檢查(手動、自動、檢核面板、發布)都讀這一份;不看操作者看不看得到上層。
+   * 排班作業的檢查(手動、自動、檢核面板、發布)都讀這一份;這家店要在操作者的可見範圍內
+   * (排程以 `systemTenantReader` 呼叫 = 整個租戶),上層鏈的設定照「上層沿用到下層」讀。
    */
   async effectiveSettingsForOrg(
     operator: OperatorContext,
     orgId: Types.ObjectId,
   ): Promise<Map<string, EffectiveRuleSetting>> {
-    const org = await this.orgs.findById(scheduleReadContext(operator), orgId);
+    // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內 —— 可見範圍本身就以租戶為界
+    if (!isOrgVisible(operator, orgId)) {
+      throw notFoundError(`org not found: ${String(orgId)}`);
+    }
+    const org = await this.orgs.findById(scheduleOrgReader(operator), orgId);
     if (!org) {
       throw notFoundError(`org not found: ${String(orgId)}`);
     }
@@ -335,7 +340,7 @@ export class ScheduleRulesService {
     }
     const id = typeof weekTemplateId === "string" ? weekTemplateId : "";
     const found = Types.ObjectId.isValid(id)
-      ? await this.weekTemplates.findOne(scheduleReadContext(operator), {
+      ? await this.weekTemplates.findOne(operator, {
           _id: new Types.ObjectId(id),
           orgId: { $in: org.chain },
           enabled: true,
@@ -354,7 +359,7 @@ export class ScheduleRulesService {
     org: ScheduleOrg,
     writes: readonly SettingWrite[],
   ): Promise<void> {
-    const context = scheduleReadContext(operator);
+    const context = operator;
     // 兩個請求同時第一次自訂同一條:唯一索引擋下第二筆,回同一個 VALIDATION_FAILED
     await savingUnique(
       () =>
@@ -411,10 +416,9 @@ export class ScheduleRulesService {
     operator: OperatorContext,
     chain: readonly Types.ObjectId[],
   ): Promise<SettingRow[]> {
-    const records = await this.settings.findMany(
-      scheduleReadContext(operator),
-      { orgId: { $in: [...chain] } },
-    );
+    const records = await this.settings.findMany(operator, {
+      orgId: { $in: [...chain] },
+    });
     return records.map((record) => toRow(record));
   }
 

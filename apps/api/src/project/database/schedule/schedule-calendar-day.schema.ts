@@ -63,5 +63,9 @@ ScheduleCalendarDaySchema.index(
 );
 ScheduleCalendarDaySchema.index({ orgId: 1, createdAt: 1 });
 ScheduleCalendarDaySchema.plugin(baseFieldsPlugin);
-ScheduleCalendarDaySchema.plugin(tenantScopePlugin, { moduleData: true });
+// 上層沿用到下層(ADR-0014):下層看得到所屬組織上層鏈建的;修改 / 刪除只在自己可見範圍內
+ScheduleCalendarDaySchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: { mode: "inheritDown" },
+});
 ScheduleCalendarDaySchema.path("moduleKey").default(SCHEDULE_MANAGE_MODULE_KEY);

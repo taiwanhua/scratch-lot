@@ -13,7 +13,10 @@ import { isTagPaletteKey } from "@repo/domain/project/tag-palette";
 import { AuditService } from "../../../audit/audit.service";
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import {
   type ScheduleCalendarDayDocument,
   ScheduleCalendarDaysRepository,
@@ -30,7 +33,7 @@ import {
   loadOrgNames,
   parseObjectId,
   resolveScheduleOrg,
-  scheduleReadContext,
+  scheduleOrgReader,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -108,7 +111,7 @@ export class ScheduleCalendarService {
   ): Promise<ScheduleCalendarDayModel> {
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const data = validatedDay(input);
-    const context = scheduleReadContext(operator);
+    const context = operator;
     const existing =
       input.id === undefined || input.id === null
         ? null
@@ -162,7 +165,7 @@ export class ScheduleCalendarService {
   ): Promise<string> {
     const org = await resolveScheduleOrg(operator, this.orgs, input.orgId);
     const existing = await this.mustOwnDay(operator, org, input.id);
-    await this.days.softDeleteById(scheduleReadContext(operator), existing._id);
+    await this.days.softDeleteById(operator, existing._id);
     await this.audit.record(operator, {
       action: "schedule-calendar-day.delete",
       targetType: AUDIT_TARGET_TYPE,
@@ -174,7 +177,8 @@ export class ScheduleCalendarService {
 
   /**
    * 某家店一段日期(`YYYY-MM-DD`,含頭尾)的生效行事曆;排班作業(店休擋排班、特殊日背景)共用。
-   * 不看操作者的可見範圍(呼叫端已確認看得到這家店)。
+   * 這家店要在操作者的可見範圍內(排程以 `systemTenantReader` 呼叫 = 整個租戶),否則 `NOT_FOUND`;
+   * 上層鏈建的行事曆照「上層沿用到下層」讀。
    */
   async effectiveDays(
     operator: OperatorContext,
@@ -182,7 +186,11 @@ export class ScheduleCalendarService {
     from: string,
     to: string,
   ): Promise<DayRecord[]> {
-    const org = await this.orgs.findById(scheduleReadContext(operator), orgId);
+    // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內 —— 可見範圍本身就以租戶為界
+    if (!isOrgVisible(operator, orgId)) {
+      throw notFoundError(`org not found: ${String(orgId)}`);
+    }
+    const org = await this.orgs.findById(scheduleOrgReader(operator), orgId);
     if (!org) {
       throw notFoundError(`org not found: ${String(orgId)}`);
     }
@@ -197,7 +205,7 @@ export class ScheduleCalendarService {
     chain: readonly Types.ObjectId[],
     dateRange: { $gte: string; $lte: string },
   ): Promise<DayRecord[]> {
-    const records = await this.days.findMany(scheduleReadContext(operator), {
+    const records = await this.days.findMany(operator, {
       orgId: { $in: [...chain] },
       date: dateRange,
     });
@@ -215,7 +223,7 @@ export class ScheduleCalendarService {
     org: ScheduleOrg,
     id: string,
   ): Promise<DayRecord> {
-    const record = await this.days.findOne(scheduleReadContext(operator), {
+    const record = await this.days.findOne(operator, {
       _id: parseObjectId(id, "id"),
       orgId: { $in: org.chain },
     });

@@ -7,7 +7,4 @@
  * 就不要加在這裡;值寫一句「為什麼不能照可見範圍」。
  */
 export const PROJECT_ELEVATED_CONTEXT_FILES: Readonly<Record<string, string>> =
-  {
-    "project/schedule/shared/schedule-org.ts":
-      "排班讀上層鏈的範本 / 行事曆(scheduleReadContext)與排程的系統讀寫(scheduleSystemReader);待改用上層沿用到下層與 systemTenantReader",
-  };
+  {};

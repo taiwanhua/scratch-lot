@@ -341,6 +341,7 @@ export type CreateLotteryDealerInput = {
   rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
   residentialAddress?: InputMaybe<Scalars['String']['input']>;
   residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
   status?: InputMaybe<LotteryDealerStatus>;
   storeName?: InputMaybe<Scalars['String']['input']>;
   storeOrgId?: InputMaybe<Scalars['ID']['input']>;
@@ -1453,6 +1454,7 @@ export type LotteryDealer = {
   email?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   introducers: Array<LotteryDealerContactRef>;
+  isShared: Scalars['Boolean']['output'];
   lastPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
   lastPurchaseDate?: Maybe<Scalars['DateTime']['output']>;
   lastSelfPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
@@ -1474,6 +1476,7 @@ export type LotteryDealer = {
   rentStartMonth?: Maybe<Scalars['Int']['output']>;
   residentialAddress?: Maybe<Scalars['String']['output']>;
   residentialSameAsMailing: Scalars['Boolean']['output'];
+  shareOrgs: Array<ShareOrg>;
   status: LotteryDealerStatus;
   storeName?: Maybe<Scalars['String']['output']>;
   storeOrg?: Maybe<LotteryDealerOrgRef>;
@@ -4384,6 +4387,7 @@ export type ScheduleStaffProfile = {
   employmentType: Scalars['String']['output'];
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
+  isShared: Scalars['Boolean']['output'];
   note?: Maybe<Scalars['String']['output']>;
   orgs: Array<ScheduleStaffOrg>;
   primaryElsewhere: Scalars['Boolean']['output'];
@@ -4714,6 +4718,7 @@ export type UpdateLotteryDealerInput = {
   rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
   residentialAddress?: InputMaybe<Scalars['String']['input']>;
   residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
   status?: InputMaybe<LotteryDealerStatus>;
   storeName?: InputMaybe<Scalars['String']['input']>;
   storeOrgId?: InputMaybe<Scalars['ID']['input']>;

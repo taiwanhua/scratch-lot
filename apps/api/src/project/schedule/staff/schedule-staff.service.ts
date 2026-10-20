@@ -28,6 +28,7 @@ import {
   ScheduleStaffRepository,
 } from "../../database/schedule/schedule.repositories";
 import {
+  forbiddenError,
   notFoundError,
   savingUnique,
   validationError,
@@ -35,7 +36,8 @@ import {
 import {
   parseObjectId,
   resolveScheduleOrg,
-  scheduleReadContext,
+  scheduleOrgReader,
+  scheduleTenantContext,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -73,9 +75,10 @@ type VisibleOrgs = ReadonlyMap<string, string>;
  * 排班人員(規格 14.3;正本 `docs/modules/project/schedule.md`「排班人員」)。
  *
  * - **候選使用者** = 所屬組織落在操作者可見範圍內(且在同一個租戶)的使用者;不是新建人
- * - 排班檔案是使用者的子檔,**一個租戶一人一份**(唯一 `(tenantId, userId)`);建立時 `orgId` = 當前組織,
- *   讀取與修改照一般可見性(跨店支援由支援需求單把人加進那家店)。已被看不到的組織加入的人,
- *   列表標 `joinedElsewhere`、不能再加入
+ * - 排班檔案是使用者的子檔,**一個租戶一人一份**(唯一 `(tenantId, userId)`);建立時 `orgId` = 當前組織。
+ *   讀取:可見範圍,加上「可以排的分店」的店(資料共用的 sharedByFields,ADR-0014;跨店支援也看得到);
+ *   修改:只有歸屬組織在可見範圍內的(別店建的只能看,`staff.isShared = true`)。
+ *   完全看不到的組織加入的人,列表標 `joinedElsewhere`、不能再加入
  * - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`);看不到的分店的關聯保留不動
  * - 每人一家主要分店(有任何可以排的分店時恰好一家)
  */
@@ -198,6 +201,13 @@ export class ScheduleStaffService {
     if (!record || !user) {
       throw notFoundError(`schedule staff not found: ${input.staffId}`);
     }
+    // 共用進來的(別店建的檔案)只能看(ADR-0014)
+    if (!isOrgVisible(operator, record.orgId)) {
+      throw forbiddenError(
+        `schedule staff ${input.staffId} belongs to another org`,
+        "NOT_OWNER",
+      );
+    }
     if (
       input.employmentType !== undefined &&
       !isEmploymentType(input.employmentType)
@@ -225,13 +235,7 @@ export class ScheduleStaffService {
             set.note = input.note;
           }
           if (Object.keys(set).length > 0) {
-            await this.staff.updateById(
-              scheduleReadContext(operator),
-              record._id,
-              {
-                $set: set,
-              },
-            );
+            await this.staff.updateById(operator, record._id, { $set: set });
           }
           if (orgPlan !== null) {
             await this.applyOrgPlan(operator, record, orgPlan);
@@ -289,13 +293,19 @@ export class ScheduleStaffService {
     orgId: Types.ObjectId,
     at: Date = new Date(),
   ): Promise<ScheduleCandidate[]> {
-    const context = scheduleReadContext(operator);
-    // 多一層防線:關聯與排班檔案都釘在這家店的租戶上
-    const org = await this.orgs.findById(context, orgId);
+    // 這家店要在操作者(或排程的租戶系統身分)的可見範圍內;候選人以租戶為邊界讀(畫休、排班以人為準)
+    if (!isOrgVisible(operator, orgId)) {
+      return [];
+    }
+    const org = await this.orgs.findById(scheduleOrgReader(operator), orgId);
     if (!org) {
       return [];
     }
     const tenantId = tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors });
+    if (tenantId === null) {
+      return [];
+    }
+    const context = await scheduleTenantContext(this.orgs, null, tenantId);
     const links = await this.relationships.findMany(
       context,
       {
@@ -357,7 +367,8 @@ export class ScheduleStaffService {
     users: UserRecord[];
   }> {
     const org = await resolveScheduleOrg(operator, this.orgs, null);
-    const context = scheduleReadContext(operator);
+    // 候選使用者 = 所屬組織在可見範圍內的人:先以租戶為邊界列出組織樹,再依可見範圍篩
+    const context = await scheduleTenantContext(this.orgs, null, org.tenantId);
     const tenantOrgs = await this.orgs.findMany(context, {
       $or: [{ _id: org.tenantId }, { ancestors: org.tenantId }],
     });
@@ -412,10 +423,10 @@ export class ScheduleStaffService {
     if (users.length === 0) {
       return new Set();
     }
-    const records = await this.staff.findMany(scheduleReadContext(operator), {
-      tenantId,
-      userId: { $in: users.map((user) => user._id) },
-    });
+    const records = await this.staff.findMany(
+      await scheduleTenantContext(this.orgs, null, tenantId),
+      { tenantId, userId: { $in: users.map((user) => user._id) } },
+    );
     return new Set(records.map((record) => String(record.userId)));
   }
 
@@ -426,14 +437,17 @@ export class ScheduleStaffService {
     visibleOrgs: VisibleOrgs,
     joinedInTenant: ReadonlySet<string>,
   ): Promise<ScheduleStaffRowModel[]> {
-    const staffIds = [...staffByUser.values()].map((record) => record._id);
+    const records = [...staffByUser.values()];
+    const staffIds = records.map((record) => record._id);
+    // 一個租戶一人一份:這批檔案都在同一個租戶
+    const tenantId = records[0]?.tenantId ?? null;
     const links =
-      staffIds.length === 0
+      staffIds.length === 0 || tenantId === null
         ? []
-        : await this.relationships.findMany(scheduleReadContext(operator), {
-            type: ORG_STAFF,
-            secondId: { $in: staffIds },
-          });
+        : await this.relationships.findMany(
+            await scheduleTenantContext(this.orgs, null, tenantId),
+            { tenantId, type: ORG_STAFF, secondId: { $in: staffIds } },
+          );
     const linksByStaff = new Map<string, RelationRecord[]>();
     for (const link of links) {
       const key = String(link.secondId);
@@ -476,7 +490,7 @@ export class ScheduleStaffService {
       }
     }
     const all = await this.relationships.findMany(
-      scheduleReadContext(operator),
+      await scheduleTenantContext(this.orgs, null, tenantOfStaff(record)),
       {
         type: ORG_STAFF,
         secondId: record._id,
@@ -508,6 +522,8 @@ export class ScheduleStaffService {
       removals: visible.filter(
         (link) => !orgs.some((org) => org.orgId === String(link.firstId)),
       ),
+      // 存檔後可以排的分店 = 看不到的分店(保留)+ 這次送的
+      orgIds: [...hidden.map((link) => link.firstId), ...ids],
     };
   }
 
@@ -516,7 +532,12 @@ export class ScheduleStaffService {
     record: StaffRecord,
     plan: OrgPlan,
   ): Promise<void> {
-    const context = scheduleReadContext(operator);
+    // 關聯的 orgId = 分店;看不到的分店的關聯保留不動(只動 plan 裡的),寫入以租戶為邊界、保留操作者
+    const context = await scheduleTenantContext(
+      this.orgs,
+      operator,
+      tenantOfStaff(record),
+    );
     for (const link of plan.removals) {
       await this.relationships.softDeleteById(context, link._id);
     }
@@ -533,7 +554,19 @@ export class ScheduleStaffService {
             meta: upsert.meta,
           }));
     }
+    // 可以排的分店在檔案上的副本(資料共用的 sharedByFields,ADR-0014):與關聯同一個交易
+    await this.staff.updateById(operator, record._id, {
+      $set: { orgIds: plan.orgIds },
+    });
   }
+}
+
+/** 排班檔案的租戶(一律屬於某個租戶;根組織沒有排班)。 */
+function tenantOfStaff(record: StaffRecord): Types.ObjectId {
+  if (record.tenantId === null) {
+    throw notFoundError(`schedule staff has no tenant: ${String(record._id)}`);
+  }
+  return record.tenantId;
 }
 
 interface OrgPlan {
@@ -543,6 +576,8 @@ interface OrgPlan {
     existing: RelationRecord | null;
   }[];
   removals: RelationRecord[];
+  /** 存檔後的可以排的分店(檔案上的 `orgIds`)。 */
+  orgIds: Types.ObjectId[];
 }
 
 function profileOf(
@@ -569,5 +604,7 @@ function profileOf(
     primaryElsewhere: links.some(
       (link) => link.meta.isPrimary && !visibleOrgs.has(String(link.firstId)),
     ),
+    // 歸屬組織不在可見範圍 = 別店建的、因為可以排的分店才看得到(只能看)
+    isShared: !visibleOrgs.has(String(record.orgId)),
   };
 }

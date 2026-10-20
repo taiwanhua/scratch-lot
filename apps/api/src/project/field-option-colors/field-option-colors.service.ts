@@ -90,9 +90,12 @@ export class FieldOptionColorsService {
     if (options.length === 0) {
       return { items: [], totalCount: 0 };
     }
-    // 查詢釘死在合併清單的選項 id 上(見 `fieldReadContext`):顏色的擁有者可能是根組織或上層組織
+    // 查詢釘死在合併清單的選項 id 上(見 `fieldReadContext`):顏色的擁有者可能是根組織或上層組織;
+    // 另釘租戶 —— 只有全域選項的顏色(根組織設,tenantId = null)與自己租戶設的,別租戶的一律不讀
+    const tenantId = await this.tenantIdOf(operator);
     const colors = await this.colors.findMany(fieldReadContext(operator), {
       fieldId: { $in: options.map((option) => option._id) },
+      tenantId: { $in: tenantId === null ? [null] : [null, tenantId] },
     });
     const byField = new Map(
       colors.map((color) => [String(color.fieldId), color.paletteKey]),

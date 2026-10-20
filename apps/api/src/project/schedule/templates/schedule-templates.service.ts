@@ -33,7 +33,6 @@ import {
   loadOrgNames,
   parseObjectId,
   resolveScheduleOrg,
-  scheduleReadContext,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -119,7 +118,7 @@ export class ScheduleTemplatesService {
       input.id === undefined || input.id === null
         ? null
         : await this.mustOwnTemplate(operator, scope, input.id);
-    const context = scheduleReadContext(operator);
+    const context = operator;
     const saved = existing
       ? await this.templates.updateById(context, existing._id, { $set: data })
       : await this.templates.create(operator, {
@@ -145,10 +144,7 @@ export class ScheduleTemplatesService {
   async deleteTemplate(operator: OperatorContext, id: string): Promise<string> {
     const scope = await this.scopeOf(operator);
     const existing = await this.mustOwnTemplate(operator, scope, id);
-    await this.templates.softDeleteById(
-      scheduleReadContext(operator),
-      existing._id,
-    );
+    await this.templates.softDeleteById(operator, existing._id);
     await this.audit.record(operator, {
       action: "schedule-demand-template.delete",
       targetType: TEMPLATE_TARGET,
@@ -170,7 +166,7 @@ export class ScheduleTemplatesService {
   ): Promise<ScheduleDemandWeekTemplatesPayload> {
     const scope = await this.scopeOf(operator, orgId);
     const records = await this.weekTemplates.findMany(
-      scheduleReadContext(operator),
+      operator,
       { orgId: { $in: scope.org.chain } },
       { sort: { createdAt: 1 } },
     );
@@ -203,7 +199,7 @@ export class ScheduleTemplatesService {
       input.id === undefined || input.id === null
         ? null
         : await this.mustOwnWeekTemplate(operator, scope, input.id);
-    const context = scheduleReadContext(operator);
+    const context = operator;
     const set = {
       name,
       days,
@@ -242,10 +238,7 @@ export class ScheduleTemplatesService {
   ): Promise<string> {
     const scope = await this.scopeOf(operator);
     const existing = await this.mustOwnWeekTemplate(operator, scope, id);
-    await this.weekTemplates.softDeleteById(
-      scheduleReadContext(operator),
-      existing._id,
-    );
+    await this.weekTemplates.softDeleteById(operator, existing._id);
     await this.audit.record(operator, {
       action: "schedule-demand-week-template.delete",
       targetType: WEEK_TEMPLATE_TARGET,
@@ -275,7 +268,7 @@ export class ScheduleTemplatesService {
     org: ScheduleOrg,
   ): Promise<TemplateRecord[]> {
     return this.templates.findMany(
-      scheduleReadContext(operator),
+      operator,
       { orgId: { $in: org.chain } },
       { sort: { startTime: 1, createdAt: 1 } },
     );
@@ -295,7 +288,7 @@ export class ScheduleTemplatesService {
     scope: TemplateScope,
     id: string,
   ): Promise<TemplateRecord> {
-    const record = await this.templates.findOne(scheduleReadContext(operator), {
+    const record = await this.templates.findOne(operator, {
       _id: parseObjectId(id, "id"),
       orgId: { $in: scope.org.chain },
     });
@@ -311,10 +304,10 @@ export class ScheduleTemplatesService {
     scope: TemplateScope,
     id: string,
   ): Promise<WeekTemplateRecord> {
-    const record = await this.weekTemplates.findOne(
-      scheduleReadContext(operator),
-      { _id: parseObjectId(id, "id"), orgId: { $in: scope.org.chain } },
-    );
+    const record = await this.weekTemplates.findOne(operator, {
+      _id: parseObjectId(id, "id"),
+      orgId: { $in: scope.org.chain },
+    });
     if (!record) {
       throw notFoundError(`week template not found: ${id}`);
     }

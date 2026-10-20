@@ -16,6 +16,8 @@ import {
   startAuthTestApp,
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
+import { OrgsRepository } from "../../../database/database.module";
+import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
 import { ScheduleDayOffLock } from "../../database/schedule/schedule-day-off-lock.schema";
 import {
@@ -1084,7 +1086,13 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   describe("listUnavailable(給排班表與自動排班)", () => {
     it("某家店的排班人員每人每天的整天畫休 / 時段不可排(畫休屬於人,不分在哪家店)", async () => {
       const service = api.app.get(ScheduleDayOffsService);
+      // 排班表 / 自動排班以租戶系統身分呼叫(可見範圍 = 整個租戶)
+      const system = await systemTenantReader(
+        api.app.get(OrgsRepository),
+        tenantA,
+      );
       const items = await service.listUnavailable(
+        system,
         zhongshan,
         "2026-12-03",
         "2026-12-05",
@@ -1106,6 +1114,7 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       });
       // 新竹店的候選人只有林
       const hsinchuItems = await service.listUnavailable(
+        system,
         hsinchu,
         "2026-12-01",
         "2026-12-31",

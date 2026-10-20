@@ -5,36 +5,48 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { notFoundError, validationError } from "./schedule-error";
 
 /**
- * 排班設定「沿組織樹往上找」的共用部分(先例:欄位管理的 `fields/field-visibility.ts`)。
+ * 排班設定「沿組織樹往上找」的共用部分。
  *
- * 上層組織通常不在操作者的可見範圍裡(分店的人看不到最上層組織),掛在排班表上的
- * `tenantScopePlugin` 會把上層的範本、規則、行事曆濾掉 —— 所以讀「上層繼承」的資料時用
- * `scheduleReadContext`(範圍提升),並一律配**明列 orgId**(本檔算出的組織鏈)的條件。
+ * 範本、週範本、行事曆、規則設定都宣告「上層沿用到下層」(ADR-0014):分店的人看得到所屬組織上層鏈建的,
+ * 直接以操作者的上下文讀,條件另釘本檔算出的組織鏈。組織本身(`orgs` 掛治理類過濾)以
+ * `scheduleOrgReader` 讀:可見範圍 + 所屬組織的上層鏈,不提升成全部。
  */
-export function scheduleReadContext(
-  operator: OperatorContext,
-): OperatorContext {
-  return { ...operator, visibleOrgIds: "all", managedOrgIds: "all" };
+
+/**
+ * 讀組織(名稱、上層鏈)用的上下文:`orgs` 吃管理範圍,這裡是業務用途 ——
+ * 改成「可見範圍 ∪ 所屬組織的上層鏈」(上層鏈本來就看得到它們建的排班設定)。根組織成員照舊看全部。
+ */
+export function scheduleOrgReader(operator: OperatorContext): OperatorContext {
+  if (operator.visibleOrgIds === "all") {
+    return { ...operator, managedOrgIds: operator.visibleOrgIds };
+  }
+  const ids = new Map<string, Types.ObjectId>(
+    operator.visibleOrgIds.map((id) => [String(id), id]),
+  );
+  for (const tenant of operator.memberTenants) {
+    for (const id of tenant.ancestorOrgIds) {
+      ids.set(String(id), id);
+    }
+  }
+  return { ...operator, managedOrgIds: [...ids.values()] };
 }
 
 /**
- * 沒有登入主體的讀寫(排程、給其他功能的查詢):範圍放開為 `"all"`(同底座
- * `workflows/tenant-directory.service.ts` 的 `systemContext`),**只准搭配把查詢釘在某個租戶內的條件**
- * (`tenantId` 與明列的 id)。
+ * 以**租戶**為邊界的讀寫(ADR-0005 的 `systemTenantReader`:可見範圍 = 這個租戶的整棵組織樹)。
+ * 只給「以人為準、跨店」的資料:畫休(屬於人、不分在哪家店登記)、守門文件(掛在租戶頂層)、
+ * 排程與給其他功能的查詢;條件一律再釘 `tenantId`。有操作者時保留他的 id(基礎欄位與稽核記得是誰改的)。
  */
-export function scheduleSystemReader(): OperatorContext {
-  return {
-    actorId: null,
-    currentOrgId: null,
-    visibleOrgIds: "all",
-    managedOrgIds: "all",
-    memberOrgIds: [],
-    roleIds: [],
-    memberTenants: [],
-  };
+export async function scheduleTenantContext(
+  orgs: OrgsRepository,
+  operator: OperatorContext | null,
+  tenantId: Types.ObjectId,
+): Promise<OperatorContext> {
+  const reader = await systemTenantReader(orgs, tenantId);
+  return operator === null ? reader : { ...reader, actorId: operator.actorId };
 }
 
 export interface ScheduleOrg {
@@ -71,7 +83,7 @@ export async function resolveScheduleOrg(
   if (id === null || !isOrgVisible(operator, id)) {
     throw notFoundError(`org not found: ${String(orgId ?? id)}`);
   }
-  const org = await orgs.findById(scheduleReadContext(operator), id);
+  const org = await orgs.findById(scheduleOrgReader(operator), id);
   if (!org) {
     throw notFoundError(`org not found: ${String(id)}`);
   }
@@ -101,7 +113,7 @@ export async function loadOrgNames(
   if (unique.length === 0) {
     return new Map();
   }
-  const found = await orgs.findMany(scheduleReadContext(operator), {
+  const found = await orgs.findMany(scheduleOrgReader(operator), {
     _id: { $in: unique.map((id) => new Types.ObjectId(id)) },
   });
   return new Map(found.map((org) => [String(org._id), org.name]));
