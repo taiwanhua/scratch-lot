@@ -854,7 +854,7 @@
         "windowClosed": "登記期間 {start}–{end} 已結束",
         "windowBefore": "登記期間 {start}–{end} 還沒開始",
         "notRegistered": "尚未畫休 {count} 人:{names}",
-        "allRegistered": "大家都畫休了",
+        "allRegistered": "所有人都已登記畫休",
         "filterAria": "篩選",
         "filterAll": "全部",
         "filterNotRegistered": "尚未畫休 {count}",
