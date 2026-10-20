@@ -258,6 +258,33 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
       expect(other.gameCode).toBe(game.gameCode);
     });
 
+    it("同時送出兩筆相同代號:只成功一筆,另一筆 VALIDATION_FAILED(GAME_CODE_DUPLICATE)", async () => {
+      const gameCode = nextCode();
+      const results = await Promise.all(
+        [1, 2].map(() =>
+          api.graphql<CreateData>(
+            CREATE,
+            { input: gameInput({ gameCode }) },
+            { accessToken: managerA },
+          ),
+        ),
+      );
+      const succeeded = results.filter((result) => result.errors === undefined);
+      const failed = results.flatMap((result) => result.errors ?? []);
+      expect(succeeded).toHaveLength(1);
+      expect(failed.map((error) => error.extensions)).toEqual([
+        expect.objectContaining({
+          code: "VALIDATION_FAILED",
+          fields: ["gameCode"],
+          reason: "GAME_CODE_DUPLICATE",
+        }),
+      ]);
+      const list = await ok<ListData>(api, managerA, LIST, {
+        input: { keyword: gameCode, status: null },
+      });
+      expect(list.lotteryGames.totalCount).toBe(1);
+    });
+
     it("刪除後代號可以再用", async () => {
       const game = await createGame(managerA);
       await ok(api, managerA, DELETE, { input: { id: game.id } });
@@ -305,6 +332,15 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
           input: { id: game.id, name: "改別人的" },
         }),
       ).toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("別的租戶刪除 → NOT_FOUND,遊戲還在", async () => {
+      const game = await createGame(managerA, { name: "別租戶刪不到" });
+      expect(
+        await errorOf(api, managerB, DELETE, { input: { id: game.id } }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      const viewed = await ok<OneData>(api, managerA, ONE, { id: game.id });
+      expect(viewed.lotteryGame.item.id).toBe(game.id);
     });
 
     it("沒綁遊戲分頁 → 清單 FORBIDDEN", async () => {

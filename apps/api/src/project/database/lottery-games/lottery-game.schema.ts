@@ -89,7 +89,12 @@ export class LotteryGame {
 export const LotteryGameSchema = SchemaFactory.createForClass(LotteryGame);
 
 LotteryGameSchema.index({ orgId: 1, createdAt: 1 });
-LotteryGameSchema.index({ tenantId: 1, gameCode: 1 });
+// 代號租戶內唯一,只算未刪除的(軟刪除後代號可再用;刪除的 `deletedAt` 是時點,不在索引裡)。
+// service 先查,這裡守同時送出(`$type: "null"`:partial index 不收 `deletedAt: null` 的等值寫法)
+LotteryGameSchema.index(
+  { tenantId: 1, gameCode: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
+);
 LotteryGameSchema.plugin(baseFieldsPlugin);
 LotteryGameSchema.plugin(tenantScopePlugin, { moduleData: true });
 LotteryGameSchema.path("moduleKey").default(MASTER_DATA_MODULE_KEY);

@@ -56,18 +56,18 @@
 
 **`lottery_games`**(模組資料,`moduleKey = master-data`):
 
-| 欄位                                              | 規則                                                                                                     |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `gameCode`                                        | `^\d{4}$`;**租戶內唯一**(service 檢查,已刪除的不算);有庫存後鎖定                                         |
-| `name`                                            | 必填,30 字內                                                                                             |
-| `unitPrice`                                       | 正整數;預設面額 100 / 200 / 300 / 500 / 1,000 / 2,000,也可自填;有庫存後鎖定                              |
-| `ticketsPerBook`                                  | 1–999;選預設面額自動帶入 100 / 100 / 100 / 50 / 25 / 18(對照表 `denominations.ts`,只有一份);非標準只提示 |
-| `bookPrice`                                       | `unitPrice × ticketsPerBook`,api 計算後存(input 不收)                                                    |
-| `defaultRate`                                     | 整數 0–100(%)                                                                                            |
-| `color`                                           | 標籤色票代號(`@repo/domain/project/tag-palette`)或 null                                                  |
-| `status`                                          | `on_sale`(預設)/ `discontinued`                                                                          |
-| `launchedAt` / `discontinuedAt` / `claimDeadline` | 時點或 null(admin 以租戶時區的當天 00:00 送)                                                             |
-| `note`                                            | 1000 字內                                                                                                |
+| 欄位                                              | 規則                                                                                                                            |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `gameCode`                                        | `^\d{4}$`;**租戶內唯一**(service 先查;部分唯一索引 `(tenantId, gameCode)` 只算未刪除的,同時送出撞索引回同一個錯誤);有庫存後鎖定 |
+| `name`                                            | 必填,30 字內                                                                                                                    |
+| `unitPrice`                                       | 正整數;預設面額 100 / 200 / 300 / 500 / 1,000 / 2,000,也可自填;有庫存後鎖定                                                     |
+| `ticketsPerBook`                                  | 1–999;選預設面額自動帶入 100 / 100 / 100 / 50 / 25 / 18(對照表 `denominations.ts`,只有一份);非標準只提示                        |
+| `bookPrice`                                       | `unitPrice × ticketsPerBook`,api 計算後存(input 不收)                                                                           |
+| `defaultRate`                                     | 整數 0–100(%)                                                                                                                   |
+| `color`                                           | 標籤色票代號(`@repo/domain/project/tag-palette`)或 null                                                                         |
+| `status`                                          | `on_sale`(預設)/ `discontinued`                                                                                                 |
+| `launchedAt` / `discontinuedAt` / `claimDeadline` | 時點或 null(admin 以租戶時區的當天 00:00 送)                                                                                    |
+| `note`                                            | 1000 字內                                                                                                                       |
 
 - **遊戲是租戶共用的主檔**:`orgId` 一律是最上層組織(根組織建的是根組織),讀寫時把可見範圍提升、條件釘在操作者租戶的 `tenantId` 上(`lottery/master-data-tenant.ts`;先例 `fields/field-visibility.ts` 的 `fieldReadContext`)。分店人員的可見範圍不含上層,不提升就看不到。
 - 刪除是軟刪除(ADR-0007)。

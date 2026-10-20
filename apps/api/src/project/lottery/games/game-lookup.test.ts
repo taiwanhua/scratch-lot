@@ -61,6 +61,8 @@ describe("lookup 來源 lottery_game", () => {
   let api: AuthTestApp;
   let tenantA: Types.ObjectId;
   let staffA: string;
+  /** 只屬於甲分店(租戶可見性預設 own):看不到掛在最上層組織的遊戲。 */
+  let branchStaffA: string;
 
   async function insertGame(
     orgId: Types.ObjectId,
@@ -89,8 +91,11 @@ describe("lookup 來源 lottery_game", () => {
     });
   }
 
-  async function labels(target: Record<string, unknown>): Promise<string[]> {
-    const result = await call<LookupData>(api, staffA, FORM_LOOKUP, {
+  async function labels(
+    target: Record<string, unknown>,
+    token = staffA,
+  ): Promise<string[]> {
+    const result = await call<LookupData>(api, token, FORM_LOOKUP, {
       input: { formKey: FORM, version: 1, target, keyword: null },
     });
     expect(result.errors).toBeUndefined();
@@ -109,6 +114,16 @@ describe("lookup 來源 lottery_game", () => {
       permissionKeys: [M.view, M.create],
     });
     staffA = staff.token;
+    const branchA = await createOrg(api.connection, {
+      name: "甲分店",
+      parentId: tenantA,
+    });
+    const branchStaff = await createOperator(api, api.connection, {
+      orgId: branchA,
+      ownerOrgId: tenantA,
+      permissionKeys: [M.view, M.create],
+    });
+    branchStaffA = branchStaff.token;
     await insertGame(tenantA, {
       gameCode: "5201",
       name: "金好運",
@@ -136,5 +151,9 @@ describe("lookup 來源 lottery_game", () => {
 
   it("對照:不帶條件時停售的也列(依值取回舊單據要讀得到)", async () => {
     expect(await labels({ fieldKey: "any_game" })).toEqual(["舊彩", "金好運"]);
+  });
+
+  it("現況:只屬於分店的人查不到遊戲(lookup 範圍 = 可見範圍,遊戲掛在最上層組織;待決定,改了範圍這個測試跟著改)", async () => {
+    expect(await labels({ fieldKey: "game" }, branchStaffA)).toEqual([]);
   });
 });

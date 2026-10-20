@@ -66,6 +66,17 @@ const AUDIT = {
 /** 有庫存後鎖定的三個欄位。 */
 const LOCKED_FIELDS = ["gameCode", "unitPrice", "ticketsPerBook"] as const;
 
+/** MongoDB 唯一索引衝突。 */
+const DUPLICATE_KEY_ERROR = 11_000;
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === DUPLICATE_KEY_ERROR
+  );
+}
+
 function escapeRegex(value: string): string {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
@@ -188,10 +199,12 @@ export class LotteryGamesService {
       claimDeadline: input.claimDeadline ?? null,
       note,
     };
-    const created = await this.games.create(tenantReadContext(operator), {
-      ...data,
-      orgId: tenant.ownerOrgId,
-    });
+    const created = await this.saving(gameCode, () =>
+      this.games.create(tenantReadContext(operator), {
+        ...data,
+        orgId: tenant.ownerOrgId,
+      }),
+    );
     await this.audit.record(operator, {
       action: AUDIT.create,
       targetType: AUDIT_TARGET_TYPE,
@@ -251,10 +264,12 @@ export class LotteryGamesService {
       );
       before.bookPrice = game.bookPrice;
     }
-    const updated = await this.games.updateById(
-      tenantReadContext(operator),
-      game._id,
-      { $set: set },
+    const updated = await this.saving(
+      (set.gameCode as string | undefined) ?? game.gameCode,
+      () =>
+        this.games.updateById(tenantReadContext(operator), game._id, {
+          $set: set,
+        }),
     );
     if (!updated) {
       throw notFoundError(`lottery game not found: ${input.id}`);
@@ -299,6 +314,25 @@ export class LotteryGamesService {
   }
 
   // ---- 內部 ----
+
+  /** 寫入撞到代號唯一索引(兩個請求同時送出同一個代號)時,與事前檢查回同一個錯誤。 */
+  private async saving<T>(
+    gameCode: string,
+    write: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await write();
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+      throw validationError(
+        `game code already exists: ${gameCode}`,
+        ["gameCode"],
+        MASTER_DATA_REASONS.gameCodeDuplicate,
+      );
+    }
+  }
 
   private async mustTenant(operator: OperatorContext): Promise<OperatorTenant> {
     const tenant = await tenantOfOperator(operator, this.orgs);
