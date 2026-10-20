@@ -21,6 +21,16 @@ export function orgReassignValidationError(message: string): GraphQLError {
   });
 }
 
+/**
+ * 批次搬家核對後、寫入前資料被別人改了(寫入筆數與核對不同):`CONFLICT`(`EDIT_VERSION_MISMATCH`,
+ * 與其他樂觀鎖同一個 reason;前端照「已被別人更新」處理)。呼叫端的交易因此整個回復。
+ */
+export function orgReassignConflictError(message: string): GraphQLError {
+  return new GraphQLError(message, {
+    extensions: { code: "CONFLICT", reason: "EDIT_VERSION_MISMATCH" },
+  });
+}
+
 /** 組織的租戶(`tenantIdOfOrg`);組織不存在 / 已刪除 → null。 */
 async function tenantOf(
   connection: Connection,

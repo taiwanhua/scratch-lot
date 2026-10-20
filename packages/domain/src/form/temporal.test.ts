@@ -244,7 +244,7 @@ describe("@repo/domain/form formatTemporal", () => {
     ).toBe("2026-09-25");
   });
 
-  it("monthDay 印 MM/DD、monthDayTime 印 MM/DD HH:mm(依給的時區、月日補零)", () => {
+  it("monthDay 印 M/D、monthDayTime 印 M/D HH:mm(依給的時區;月日不補零、時分補零)", () => {
     const value = "2026-10-12T06:35:00Z";
     expect(formatTemporal(value, { type: "monthDay", timezone: TAIPEI })).toBe(
       "10/12",
@@ -258,7 +258,13 @@ describe("@repo/domain/form formatTemporal", () => {
         type: "monthDayTime",
         timezone: NEW_YORK,
       }),
-    ).toBe("09/04 22:00");
+    ).toBe("9/4 22:00");
+    expect(
+      formatTemporal("2026-03-05T01:05:00Z", {
+        type: "monthDayTime",
+        timezone: TAIPEI,
+      }),
+    ).toBe("3/5 09:05");
     expect(formatTemporal(null, { type: "monthDay", timezone: TAIPEI })).toBe(
       "",
     );

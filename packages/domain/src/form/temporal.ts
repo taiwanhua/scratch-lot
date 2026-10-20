@@ -384,8 +384,8 @@ export function startOfLocalDayOf(instant: number, timezone: string): number {
 }
 
 /**
- * 顯示格式:欄位型別(`date` / `datetime`),或省略年份的短格式 `monthDay`(`MM/DD`)/
- * `monthDayTime`(`MM/DD HH:mm`;行事曆格、卡片這類同年份內的密集顯示)。
+ * 顯示格式:欄位型別(`date` / `datetime`),或省略年份的短格式 `monthDay`(`M/D`,不補零)/
+ * `monthDayTime`(`M/D HH:mm`;行事曆格、卡片這類同年份內的密集顯示)。
  */
 export type FormatTemporalType = TemporalType | "monthDay" | "monthDayTime";
 
@@ -396,7 +396,7 @@ export interface FormatTemporalOptions {
 
 /**
  * 日期 / 日期時間的顯示文字:時點換成 `timezone` 的當地時間,`date` 印 `YYYY-MM-DD`、
- * `datetime` 印 `YYYY-MM-DD HH:mm`、`monthDay` 印 `MM/DD`、`monthDayTime` 印 `MM/DD HH:mm`(月日補零)。空值 → 空字串;不是時點的字串原樣回(不讓舊資料整格消失);
+ * `datetime` 印 `YYYY-MM-DD HH:mm`、`monthDay` 印 `M/D`、`monthDayTime` 印 `M/D HH:mm`(月日不補零,時分補零)。空值 → 空字串;不是時點的字串原樣回(不讓舊資料整格消失);
  * 時區不合法 → 以 UTC 顯示。admin 顯示與 api(信件、lookup label)共用。
  */
 export function formatTemporal(
@@ -410,7 +410,7 @@ export function formatTemporal(
   const timezone = isValidTimezone(options.timezone) ? options.timezone : "UTC";
   const wall = localDateTimeOf(instant, timezone);
   const time = `${pad(wall.hour)}:${pad(wall.minute)}`;
-  const monthDay = `${pad(wall.month)}/${pad(wall.day)}`;
+  const monthDay = `${String(wall.month)}/${String(wall.day)}`;
   switch (options.type) {
     case "date": {
       return localDateText(wall);

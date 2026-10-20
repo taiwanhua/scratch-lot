@@ -131,6 +131,7 @@
 | 設的類別不存在 / 格式不合                   | `updateForm` 回 `VALIDATION_FAILED`(`fields: ["voidReasonCategoryKey"]`)                                                                   |
 | 類別後來被刪 / 沒有選項                     | 作廢原因一律不合法(fail-closed);對話框提示請管理員到欄位管理新增選項                                                                       |
 
+- **作廢原因的選項依作廢者的範圍**:下拉列的與送出時驗的,都是按 [作廢] 那個人在欄位管理合併範圍內看得到的選項(全域 + 他的上層 + 他自己 + 他看得到的下層),不是單據所屬組織的範圍;有 `edit` 的人替別店的單作廢時,用的是他自己看得到的選項。
 - 「其他」固定是選項值 `other`(`@repo/domain/form` 的 `VOID_REASON_OTHER` = `REASON_OPTION_OTHER`);要有「其他」就在類別裡建一個值為 `other` 的選項。
 - 檢查用底座的 `FieldOptionsService.assertReason`(白名單 = 這張表單設的那一個類別;見 [field-manager](./field-manager.md)「給業務功能用的選項」),選項清單 `formVoidReasonOptions(formKey)` 用同一支的 `optionsOf`,列得出來的就送得進去。
 - 存在提交上:`voidReasonKey`(選項值)、`voidReasonLabel`(作廢當下的選項名稱)、`voidReason`(說明;沒設類別時就是理由)。詳情頁審核區塊顯示「作廢原因:選項名稱(說明)」,沒設類別的單照舊「作廢理由:…」;沒有其他可做的動作時也顯示。

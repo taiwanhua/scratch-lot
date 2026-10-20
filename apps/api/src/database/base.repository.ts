@@ -20,6 +20,7 @@ import {
   ORG_REASSIGN_AUDIT_ACTION,
   currentTenantOf,
   currentTenantsOf,
+  orgReassignConflictError,
   orgReassignValidationError,
   reassignTargetOf,
 } from "./org-reassign";
@@ -816,7 +817,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    * - 目標組織查一次、來源組織的租戶一次查完(不逐筆查)
    * - **全有或全無**:先在交易內逐筆核對(id 清單裡看不到 / 不存在的、不符 `options.expected` 各自條件的),
    *   任何一筆不符 → 不寫入、回 `mismatched`;都符合才以一次條件更新寫入(每筆帶自己的條件),
-   *   寫入筆數與核對結果不同(核對後被改)→ 拋 `TenantScopeError`,呼叫端的交易整個回復
+   *   寫入筆數與核對結果不同(核對後被別人改了)→ `CONFLICT`(`EDIT_VERSION_MISMATCH`,前端照「已被別人更新」處理),呼叫端的交易整個回復
    * - 已經在新組織的跳過(`skipped`,冪等);全部跳過 → 不寫入、不記稽核
    * - 只寫**一筆**稽核(`data.reassign-org`:`before.orgIds` = 來源組織、`after` = 新組織 + id 清單 + 筆數)
    * - 呼叫端登記與 `reassignOrg` 同一份清單(`ORG_REASSIGN_CALLERS` / `PROJECT_ORG_REASSIGN_CALLERS`)
@@ -938,8 +939,8 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       .session(session)
       .exec();
     if (modifiedCount !== toMove.length) {
-      throw new TenantScopeError(
-        `${this.model.modelName}:批次搬家核對後有資料被改(預期 ${String(toMove.length)} 筆、寫入 ${String(modifiedCount)} 筆),整批回復`,
+      throw orgReassignConflictError(
+        `${this.model.modelName}: batch reassign expected ${String(toMove.length)} writes but made ${String(modifiedCount)}; changed after the check`,
       );
     }
     const movedIds = toMove.map((found) => found._id);

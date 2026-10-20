@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { GraphQLError } from "graphql";
 import { type HydratedDocument, type Model, Schema, Types } from "mongoose";
 
 import { BaseRepository } from "./base.repository";
 import type { MemberTenant, OperatorContext } from "./operator-context";
-import { ORG_REASSIGN_AUDIT_ACTION } from "./org-reassign";
+import * as orgReassign from "./org-reassign";
 import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
 import {
   type ShareOrg,
@@ -17,7 +17,7 @@ import {
   type TestDatabase,
   openTestDatabase,
 } from "./test-support/mongo-connection";
-import { TransactionService } from "./transaction";
+import { TransactionService, currentSession } from "./transaction";
 
 /**
  * 搬家(`reassignOrg`)與一次寫多筆(`createMany`)對真 MongoDB replica set 的測試
@@ -182,7 +182,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
     // audit_logs 掛租戶過濾:測試直接以原生 collection 讀
     return database.connection
       .collection<AuditLog>("audit_logs")
-      .find({ targetId, action: ORG_REASSIGN_AUDIT_ACTION })
+      .find({ targetId, action: orgReassign.ORG_REASSIGN_AUDIT_ACTION })
       .toArray();
   }
 
@@ -215,7 +215,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
     return database.connection
       .collection<AuditLog>("audit_logs")
       .find({
-        action: ORG_REASSIGN_AUDIT_ACTION,
+        action: orgReassign.ORG_REASSIGN_AUDIT_ACTION,
         "after.ids": { $in: ids.map(String) },
       })
       .toArray();
@@ -437,6 +437,45 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
         reassignMany(asB1, ids, B2, { update: { $set: { tenantId: U } } }),
       ).rejects.toThrow(TenantScopeError);
       expect(await orgOf(asB1, firstOf(ids))).toBe(String(B1));
+    });
+
+    it("核對後、寫入前被別人改了 → CONFLICT(EDIT_VERSION_MISMATCH),整批與稽核都不留", async () => {
+      const ids = await createBatch("批次並發", 2);
+      const raced = firstOf(ids);
+      // 核對之後、寫入之前(查來源租戶那一步)模擬別人把其中一筆的版本改掉(同一個交易內寫,不觸發重試)
+      const original = orgReassign.currentTenantsOf;
+      const spy = jest
+        .spyOn(orgReassign, "currentTenantsOf")
+        .mockImplementation(async (...args) => {
+          await database.connection
+            .collection("reassign_items")
+            .updateOne(
+              { _id: raced },
+              { $inc: { editVersion: 1 } },
+              { session: currentSession() },
+            );
+          return original(...args);
+        });
+      try {
+        const error: unknown = await reassignMany(asB1, ids, B2, {
+          expected: Object.fromEntries(
+            ids.map((id) => [String(id), { editVersion: 0 }]),
+          ),
+        }).catch((error_: unknown) => error_);
+        expect(error).toBeInstanceOf(GraphQLError);
+        expect((error as GraphQLError).extensions).toMatchObject({
+          code: "CONFLICT",
+          reason: "EDIT_VERSION_MISMATCH",
+        });
+      } finally {
+        spy.mockRestore();
+      }
+      for (const id of ids) {
+        const unchanged = await items.findById(asB1, id);
+        expect(unchanged?.orgId.equals(B1)).toBe(true);
+        expect(unchanged?.editVersion).toBe(0);
+      }
+      expect(await batchAudits(ids)).toHaveLength(0);
     });
 
     it("交易回復時整批與稽核一起回復", async () => {
