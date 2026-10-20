@@ -160,5 +160,241 @@
       "CASH_POINT_IN_USE": "這個收銀點有開著的班或檯面上還有張數,不能停用",
       "UNEXPECTED": "發生錯誤,請稍後再試"
     }
+  },
+  "lotteryDealers": {
+    "tabs": {
+      "label": "經銷商管理分頁",
+      "classA": "甲類",
+      "classB": "乙類",
+      "contacts": "關係人"
+    },
+    "actions": {
+      "newDealer": "+ 新增經銷商",
+      "newContact": "+ 新增關係人",
+      "edit": "編輯",
+      "save": "儲存",
+      "cancel": "取消",
+      "clear": "清除",
+      "registerSignin": "登記見簽",
+      "register": "登記",
+      "releaseAndRemove": "一併解除並移除",
+      "releaseAndSave": "一併解除並儲存"
+    },
+    "types": {
+      "a": "甲類",
+      "b": "乙類"
+    },
+    "statuses": {
+      "active": "營業中",
+      "suspended": "暫停",
+      "terminated": "解約"
+    },
+    "roles": {
+      "trustee": "受託人",
+      "agent": "代理人",
+      "introducer": "介紹人"
+    },
+    "contactStatuses": {
+      "active": "啟用",
+      "disabled": "停用"
+    },
+    "rentCycles": {
+      "month": "月",
+      "quarter": "季",
+      "year": "年"
+    },
+    "common": {
+      "all": "全部",
+      "none": "—",
+      "noRecord": "無紀錄",
+      "days": "{days} 天",
+      "loading": "載入中",
+      "empty": "沒有資料",
+      "total": "共 {total} 筆"
+    },
+    "list": {
+      "quick": {
+        "over150": "逾 150 天",
+        "over180": "逾 180 天",
+        "unsignedThisQuarter": "本季未見簽"
+      },
+      "filters": {
+        "signin": "見簽狀態",
+        "signed": "本季已見簽",
+        "unsigned": "本季未見簽",
+        "purchase": "距上次批購",
+        "license": "證照",
+        "licenseExpiring": "30 天內到期",
+        "licenseExpired": "已過期",
+        "status": "狀態",
+        "role": "身分",
+        "contactKeyword": "關鍵字(姓名、手機、身分證)"
+      },
+      "columns": {
+        "licenseNo": "證號",
+        "name": "姓名",
+        "coSalesStore": "共同銷售處所",
+        "daysSincePurchase": "距批購",
+        "daysSinceSelfPurchase": "距本人批購",
+        "signedThisQuarter": "本季見簽",
+        "status": "狀態",
+        "storeName": "店名",
+        "storeOrg": "對應分店",
+        "coSellers": "共同銷售人",
+        "roles": "身分",
+        "mobile": "手機",
+        "dealerCount": "關聯經銷商"
+      },
+      "signed": "已見簽",
+      "unsigned": "未見簽",
+      "storeOrgMissing": "未選分店",
+      "coSellerCount": "{count} / 6",
+      "tableAria": {
+        "classA": "甲類清單",
+        "classB": "乙類清單",
+        "contacts": "關係人清單"
+      }
+    },
+    "fields": {
+      "type": "類型(建立後不能改)",
+      "licenseNo": "證號",
+      "name": "姓名",
+      "status": "狀態",
+      "licenseApprovedAt": "證照核准日",
+      "licenseExpiresAt": "證照到期日",
+      "coSalesDealerId": "共同銷售處所",
+      "agentIds": "代理人",
+      "trusteeIds": "受託人",
+      "introducerIds": "介紹人",
+      "lastPurchaseBaseDate": "最近一次批購基準日",
+      "lastSelfPurchaseBaseDate": "最近一次本人批購基準日",
+      "storeOrgId": "對應分店",
+      "storeName": "店名",
+      "businessAddress": "營業地址",
+      "storePhone": "店面電話",
+      "terminalNo": "終端機編號",
+      "rentFee": "費用(元)",
+      "rentCycle": "週期",
+      "rentStartMonth": "起算月份",
+      "rentDueDay": "繳費日(每期第一個月的第幾日)",
+      "nationalId": "身分證字號",
+      "birthday": "生日",
+      "phone": "電話",
+      "mobile": "手機",
+      "email": "Email",
+      "mailingAddress": "通訊地址",
+      "residentialAddress": "戶籍地址",
+      "residentialSameAsMailing": "戶籍地址同通訊地址",
+      "note": "備註",
+      "roles": "身分(至少一個)",
+      "month": "{month} 月"
+    },
+    "sections": {
+      "dealer": "經銷商資訊",
+      "store": "店面",
+      "rent": "牌租",
+      "basic": "基本資訊",
+      "system": "系統資訊",
+      "contactBasic": "基本資料",
+      "contactInfo": "聯絡資訊",
+      "note": "備註"
+    },
+    "summary": {
+      "rent": "{fee} 元 / {cycle}",
+      "rentDue": "{fee} 元 / {cycle} · 每期第 {day} 日",
+      "rentNone": "未設定",
+      "contacts": "代理人 {agents}、受託人 {trustees} · 證照到期 {expiresOn}",
+      "system": "建立 {date} {name}",
+      "classAHeader": "共同銷售處所:{store} · 最近一次批購 {lastPurchase} · 最近一次本人批購 {lastSelfPurchase}",
+      "classBHeader": "{name} · 對應分店:{store}",
+      "notSelected": "未選"
+    },
+    "form": {
+      "storeOrgHint": "還沒有選對應分店:可以先儲存,但請盡快選擇。",
+      "occupied": "已由 {name} 對應",
+      "pickContacts": "只列出有這個身分且啟用中的關係人",
+      "coSalesHint": "甲類要先有共同銷售處所才能設代理人",
+      "readOnlyField": "沒有修改權限"
+    },
+    "detail": {
+      "tabsLabel": "經銷商詳情分頁",
+      "coSellerWarning": "共同銷售人 {count} 位,超過 6 位(只警告)。",
+      "linkedDealers": "關聯的經銷商",
+      "dealer": "經銷商",
+      "dealerType": "類型",
+      "role": "身分"
+    },
+    "coSellers": {
+      "tab": "共同銷售人",
+      "licenseNo": "甲類證號",
+      "name": "姓名",
+      "registeredAt": "登記日",
+      "status": "狀態"
+    },
+    "signins": {
+      "tab": "見簽紀錄",
+      "title": "見簽紀錄",
+      "year": "{year} 年",
+      "quarter": "季別",
+      "signedAt": "見簽日",
+      "note": "備註",
+      "state": "狀態",
+      "states": {
+        "signed": "已見簽",
+        "missing": "未登記",
+        "open": "本季未登記",
+        "notStarted": "未到"
+      },
+      "dialogTitle": "登記見簽",
+      "yearField": "年度",
+      "quarterField": "季別",
+      "quarterOption": "Q{quarter}",
+      "prevYear": "上一年",
+      "nextYear": "下一年"
+    },
+    "conflict": {
+      "coSalesTitle": "移除共同銷售處所",
+      "coSalesBody": "{name}還有 {count} 位代理人。甲類要先有共同銷售處所才能設代理人。",
+      "roleTitle": "取消身分",
+      "roleBody": "要取消的身分還有關聯,一併解除後才能儲存。",
+      "relation": "關聯",
+      "dealer": "經銷商",
+      "contact": "姓名"
+    },
+    "feedback": {
+      "createSuccess": "已新增經銷商",
+      "updateSuccess": "已儲存",
+      "contactCreateSuccess": "已新增關係人",
+      "signinSuccess": "已登記見簽"
+    },
+    "errors": {
+      "FORBIDDEN": "沒有權限執行這個操作",
+      "NOT_FOUND": "找不到這筆資料,可能已不在你的可見範圍內",
+      "VALIDATION_FAILED": "資料未通過驗證,請檢查標示的欄位",
+      "CONFLICT": "還有關聯,請確認後再試",
+      "UNEXPECTED": "發生非預期的錯誤,請稍後再試",
+      "reasons": {
+        "FIELD_FORBIDDEN": "沒有修改這個欄位的權限",
+        "LICENSE_NO_DUPLICATE": "這個證號已經有經銷商使用",
+        "NATIONAL_ID_DUPLICATE": "這個身分證字號已經登記過",
+        "NOT_FOR_TYPE": "這個欄位不屬於這個類型",
+        "RENT_START_MONTH_REQUIRED": "週期是季或年時,起算月份必填",
+        "ROLE_LIMIT": "人數超過上限(甲類:代理人 2、受託人 2、介紹人 1;乙類:代理人 2、介紹人 1)",
+        "TRUSTEE_NOT_ALLOWED": "乙類不能有受託人",
+        "CONTACT_ROLE_MISMATCH": "選的關係人沒有這個身分",
+        "CONTACT_DISABLED": "選的關係人已停用,不能再被選取",
+        "SELF_RELATION": "經銷商本人不能登記成自己的關係人",
+        "AGENT_REQUIRES_CO_SALES": "甲類要先有共同銷售處所才能設代理人",
+        "CO_SALES_NOT_CLASS_B": "共同銷售處所只能選乙類",
+        "DEALER_TERMINATED": "選的經銷商已解約,不能再被選取",
+        "STORE_OCCUPIED": "這家分店已對應其他乙類",
+        "STORE_NOT_BRANCH": "對應分店要選最上層組織底下的分店",
+        "REFERENCE_NOT_FOUND": "選的資料不存在或看不到",
+        "SIGNIN_DUPLICATE": "這一季已經登記過見簽",
+        "SIGNIN_QUARTER_NOT_STARTED": "這一季還沒到,不能登記",
+        "AGENTS_REQUIRE_CO_SALES": "還有代理人,不能移除共同銷售處所",
+        "ROLE_IN_USE": "要取消的身分還有關聯"
+      }
+    }
   }
 }

@@ -13,4 +13,12 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "master-data.games.view-page": ["tab"],
   "master-data.games.create-page": [],
   "master-data.games.edit-page": [],
+  // 經銷商管理:列表的分頁與篩選(三個分頁共用 `list`)、詳情頁的分頁;新增 / 編輯頁沒有
+  dealers: ["tab", "list"],
+  "dealers.view-page": ["tab"],
+  "dealers.create-page": [],
+  "dealers.edit-page": [],
+  "dealers.contacts.view-page": [],
+  "dealers.contacts.create-page": [],
+  "dealers.contacts.edit-page": [],
 };

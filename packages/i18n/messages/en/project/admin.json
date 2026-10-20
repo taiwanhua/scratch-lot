@@ -160,5 +160,241 @@
       "CASH_POINT_IN_USE": "This cash point has an open shift or tickets on the counter and cannot be disabled",
       "UNEXPECTED": "Something went wrong, please try again later"
     }
+  },
+  "lotteryDealers": {
+    "tabs": {
+      "label": "Dealer tabs",
+      "classA": "Class A",
+      "classB": "Class B",
+      "contacts": "Contacts"
+    },
+    "actions": {
+      "newDealer": "+ New dealer",
+      "newContact": "+ New contact",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "clear": "Clear",
+      "registerSignin": "Register sign-in",
+      "register": "Register",
+      "releaseAndRemove": "Release and remove",
+      "releaseAndSave": "Release and save"
+    },
+    "types": {
+      "a": "Class A",
+      "b": "Class B"
+    },
+    "statuses": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "terminated": "Terminated"
+    },
+    "roles": {
+      "trustee": "Trustee",
+      "agent": "Agent",
+      "introducer": "Introducer"
+    },
+    "contactStatuses": {
+      "active": "Active",
+      "disabled": "Disabled"
+    },
+    "rentCycles": {
+      "month": "month",
+      "quarter": "quarter",
+      "year": "year"
+    },
+    "common": {
+      "all": "All",
+      "none": "—",
+      "noRecord": "No record",
+      "days": "{days} days",
+      "loading": "Loading",
+      "empty": "No data",
+      "total": "{total} in total"
+    },
+    "list": {
+      "quick": {
+        "over150": "Over 150 days",
+        "over180": "Over 180 days",
+        "unsignedThisQuarter": "Not signed this quarter"
+      },
+      "filters": {
+        "signin": "Sign-in",
+        "signed": "Signed this quarter",
+        "unsigned": "Not signed this quarter",
+        "purchase": "Since last purchase",
+        "license": "License",
+        "licenseExpiring": "Expiring within 30 days",
+        "licenseExpired": "Expired",
+        "status": "Status",
+        "role": "Role",
+        "contactKeyword": "Keyword (name, mobile, ID)"
+      },
+      "columns": {
+        "licenseNo": "License no.",
+        "name": "Name",
+        "coSalesStore": "Co-sales store",
+        "daysSincePurchase": "Since purchase",
+        "daysSinceSelfPurchase": "Since own purchase",
+        "signedThisQuarter": "This quarter",
+        "status": "Status",
+        "storeName": "Store",
+        "storeOrg": "Branch",
+        "coSellers": "Co-sellers",
+        "roles": "Roles",
+        "mobile": "Mobile",
+        "dealerCount": "Dealers"
+      },
+      "signed": "Signed",
+      "unsigned": "Not signed",
+      "storeOrgMissing": "No branch",
+      "coSellerCount": "{count} / 6",
+      "tableAria": {
+        "classA": "Class A dealers",
+        "classB": "Class B dealers",
+        "contacts": "Contacts"
+      }
+    },
+    "fields": {
+      "type": "Type (cannot be changed later)",
+      "licenseNo": "License no.",
+      "name": "Name",
+      "status": "Status",
+      "licenseApprovedAt": "License approved on",
+      "licenseExpiresAt": "License expires on",
+      "coSalesDealerId": "Co-sales store",
+      "agentIds": "Agents",
+      "trusteeIds": "Trustees",
+      "introducerIds": "Introducer",
+      "lastPurchaseBaseDate": "Last purchase base date",
+      "lastSelfPurchaseBaseDate": "Last own purchase base date",
+      "storeOrgId": "Branch",
+      "storeName": "Store name",
+      "businessAddress": "Business address",
+      "storePhone": "Store phone",
+      "terminalNo": "Terminal no.",
+      "rentFee": "Fee",
+      "rentCycle": "Cycle",
+      "rentStartMonth": "Starting month",
+      "rentDueDay": "Due day (of the first month of each period)",
+      "nationalId": "National ID",
+      "birthday": "Birthday",
+      "phone": "Phone",
+      "mobile": "Mobile",
+      "email": "Email",
+      "mailingAddress": "Mailing address",
+      "residentialAddress": "Residential address",
+      "residentialSameAsMailing": "Same as mailing address",
+      "note": "Note",
+      "roles": "Roles (at least one)",
+      "month": "Month {month}"
+    },
+    "sections": {
+      "dealer": "Dealer",
+      "store": "Store",
+      "rent": "Store rent",
+      "basic": "Basic info",
+      "system": "System info",
+      "contactBasic": "Basic",
+      "contactInfo": "Contact",
+      "note": "Note"
+    },
+    "summary": {
+      "rent": "{fee} / {cycle}",
+      "rentDue": "{fee} / {cycle} · day {day}",
+      "rentNone": "Not set",
+      "contacts": "Agents {agents}, trustees {trustees} · license expires {expiresOn}",
+      "system": "Created {date} by {name}",
+      "classAHeader": "Co-sales store: {store} · last purchase {lastPurchase} · last own purchase {lastSelfPurchase}",
+      "classBHeader": "{name} · branch: {store}",
+      "notSelected": "not selected"
+    },
+    "form": {
+      "storeOrgHint": "No branch yet: you can save now, but please choose one soon.",
+      "occupied": "Mapped to {name}",
+      "pickContacts": "Only active contacts with this role are listed",
+      "coSalesHint": "Class A needs a co-sales store before agents",
+      "readOnlyField": "No permission to change"
+    },
+    "detail": {
+      "tabsLabel": "Dealer detail tabs",
+      "coSellerWarning": "{count} co-sellers, more than 6 (warning only).",
+      "linkedDealers": "Linked dealers",
+      "dealer": "Dealer",
+      "dealerType": "Type",
+      "role": "Role"
+    },
+    "coSellers": {
+      "tab": "Co-sellers",
+      "licenseNo": "Class A license no.",
+      "name": "Name",
+      "registeredAt": "Registered on",
+      "status": "Status"
+    },
+    "signins": {
+      "tab": "Sign-ins",
+      "title": "Sign-ins",
+      "year": "{year}",
+      "quarter": "Quarter",
+      "signedAt": "Signed on",
+      "note": "Note",
+      "state": "Status",
+      "states": {
+        "signed": "Signed",
+        "missing": "Missing",
+        "open": "Not registered",
+        "notStarted": "Not started"
+      },
+      "dialogTitle": "Register sign-in",
+      "yearField": "Year",
+      "quarterField": "Quarter",
+      "quarterOption": "Q{quarter}",
+      "prevYear": "Previous year",
+      "nextYear": "Next year"
+    },
+    "conflict": {
+      "coSalesTitle": "Remove co-sales store",
+      "coSalesBody": "{name} still has {count} agent(s). Class A needs a co-sales store before agents.",
+      "roleTitle": "Remove roles",
+      "roleBody": "The roles being removed are still linked. Release them to save.",
+      "relation": "Relation",
+      "dealer": "Dealer",
+      "contact": "Name"
+    },
+    "feedback": {
+      "createSuccess": "Dealer created",
+      "updateSuccess": "Saved",
+      "contactCreateSuccess": "Contact created",
+      "signinSuccess": "Sign-in registered"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to do this",
+      "NOT_FOUND": "Not found; it may be outside your visible scope",
+      "VALIDATION_FAILED": "Please check the highlighted fields",
+      "CONFLICT": "Still linked; please confirm and try again",
+      "UNEXPECTED": "Something went wrong; please try again later",
+      "reasons": {
+        "FIELD_FORBIDDEN": "You don't have permission to change this field",
+        "LICENSE_NO_DUPLICATE": "This license number is already used",
+        "NATIONAL_ID_DUPLICATE": "This national ID is already registered",
+        "NOT_FOR_TYPE": "This field doesn't apply to this type",
+        "RENT_START_MONTH_REQUIRED": "Starting month is required for quarterly or yearly rent",
+        "ROLE_LIMIT": "Too many for this role (Class A: 2 agents, 2 trustees, 1 introducer; Class B: 2 agents, 1 introducer)",
+        "TRUSTEE_NOT_ALLOWED": "Class B cannot have trustees",
+        "CONTACT_ROLE_MISMATCH": "The contact doesn't have this role",
+        "CONTACT_DISABLED": "The contact is disabled and can't be selected",
+        "SELF_RELATION": "A dealer cannot be their own contact",
+        "AGENT_REQUIRES_CO_SALES": "Class A needs a co-sales store before agents",
+        "CO_SALES_NOT_CLASS_B": "The co-sales store must be Class B",
+        "DEALER_TERMINATED": "The dealer is terminated and can't be selected",
+        "STORE_OCCUPIED": "This branch is already mapped to another Class B dealer",
+        "STORE_NOT_BRANCH": "Choose a branch under the top organization",
+        "REFERENCE_NOT_FOUND": "The selected item doesn't exist or isn't visible",
+        "SIGNIN_DUPLICATE": "This quarter is already registered",
+        "SIGNIN_QUARTER_NOT_STARTED": "This quarter hasn't started yet",
+        "AGENTS_REQUIRE_CO_SALES": "Agents remain; the co-sales store can't be removed",
+        "ROLE_IN_USE": "The roles being removed are still linked"
+      }
+    }
   }
 }

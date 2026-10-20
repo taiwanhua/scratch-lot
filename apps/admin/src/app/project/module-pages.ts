@@ -1,3 +1,9 @@
+import { ContactFormPage } from "@/pages/project/lottery/dealers/ContactFormPage/ContactFormPage";
+import { ContactViewPage } from "@/pages/project/lottery/dealers/ContactViewPage/ContactViewPage";
+import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/DealerFormPage";
+import { DealerViewPage } from "@/pages/project/lottery/dealers/DealerViewPage/DealerViewPage";
+import { DealersPage } from "@/pages/project/lottery/dealers/DealersPage/DealersPage";
+import { DEALERS_MODULE_KEYS } from "@/pages/project/lottery/dealers/dealers-keys";
 import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/GameFormPage";
 import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
@@ -19,6 +25,14 @@ export const projectModulePages: ModulePageSource = {
     { key: MASTER_DATA_MODULE_KEYS.gameViewPage, Page: GameViewPage },
     { key: MASTER_DATA_MODULE_KEYS.gameCreatePage, Page: GameFormPage },
     { key: MASTER_DATA_MODULE_KEYS.gameEditPage, Page: GameFormPage },
+    // 經銷商管理(專案規格 5.2–5.4;新增與編輯同一個版型,情境由 module.key 判斷)
+    { key: DEALERS_MODULE_KEYS.list, Page: DealersPage },
+    { key: DEALERS_MODULE_KEYS.viewPage, Page: DealerViewPage },
+    { key: DEALERS_MODULE_KEYS.createPage, Page: DealerFormPage },
+    { key: DEALERS_MODULE_KEYS.editPage, Page: DealerFormPage },
+    { key: DEALERS_MODULE_KEYS.contactViewPage, Page: ContactViewPage },
+    { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
+    { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
   ],
   forms: [],
 };
