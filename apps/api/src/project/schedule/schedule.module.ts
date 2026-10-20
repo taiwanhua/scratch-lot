@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
+import { FieldOptionsModule } from "../../fields/field-options.module";
 import { NotificationsModule } from "../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
 import { ScheduleCalendarResolver } from "./calendar/schedule-calendar.resolver";
@@ -34,7 +35,12 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
  * 每人每天的畫休(`ScheduleDayOffsService.listUnavailable`)。
  */
 @Module({
-  imports: [DatabaseModule, NotificationsModule, ScheduledJobsModule],
+  imports: [
+    DatabaseModule,
+    FieldOptionsModule,
+    NotificationsModule,
+    ScheduledJobsModule,
+  ],
   providers: [
     SchedulePermissions,
     SchedulePersonLocks,
