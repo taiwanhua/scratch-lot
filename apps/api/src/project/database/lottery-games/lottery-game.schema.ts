@@ -19,7 +19,7 @@ export const MASTER_DATA_MODULE_KEY = "master-data";
 /**
  * 遊戲(專案規格 5.1;欄位規則正本 `docs/modules/project/master-data.md`「資料」)。
  * 遊戲是**整個租戶共用的主檔**:`orgId` 一律是租戶頂層(根組織建的是根組織),
- * 讀取以 `tenantId` 釘在操作者的租戶上(`lottery/games/game-tenant.ts`)。
+ * 讀取以 `tenantId` 釘在操作者的租戶上(`lottery/master-data-tenant.ts`)。
  */
 @Schema({ collection: LOTTERY_GAMES_COLLECTION, timestamps: true })
 export class LotteryGame {
