@@ -106,12 +106,15 @@ describe("排班作業:畫休總覽與代改", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("沒有 view-day-offs:看不到「畫休總覽」分頁(只剩行事曆)", async () => {
+  it("沒有 view-day-offs:看不到「畫休總覽」分頁(排班表、行事曆照常)", async () => {
     renderSchedulePage({
       path: `${OVERVIEW}&month=2026-11`,
       omit: ["schedule.manage.view-day-offs"],
     });
-    expect(await screen.findByText("店休 · 盤點日")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("tab", { name: "行事曆" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "排班表" })).toBeInTheDocument();
     expect(
       screen.queryByRole("tab", { name: "畫休總覽" }),
     ).not.toBeInTheDocument();

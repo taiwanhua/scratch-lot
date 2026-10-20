@@ -512,6 +512,7 @@
       "attendance": "出勤紀錄"
     },
     "tabs": {
+      "roster": "排班表",
       "staff": "排班人員",
       "templates": "人力需求範本",
       "weekTemplates": "人力需求週範本",
@@ -922,6 +923,219 @@
         "all": "全部"
       },
       "panelTitleWithSerial": "{serial} · {branch}"
+    },
+    "legend": {
+      "title": "圖例",
+      "sampleName": "王小明",
+      "tempMark": "臨",
+      "breakSample": "☕ 30",
+      "countSample": "負1/1",
+      "items": {
+        "leader": "負責人(名字或範本簡稱套綠底)",
+        "entry": "已排的班",
+        "temp": "沒有套用範本的人力需求",
+        "auto": "自動排入(手動改過就消失)",
+        "breakMinutes": "休息(分鐘)",
+        "unavailable": "店休 / 已排在其他分店 / 時段不可排",
+        "dayOff": "畫休(斜線)",
+        "missingLeader": "缺負責",
+        "missingHelper": "缺協同",
+        "full": "人力需求已滿",
+        "multi": "同一筆排班顧多台"
+      }
+    },
+    "roster": {
+      "org": "分店",
+      "loading": "載入中",
+      "loadError": "排班表載入失敗,請稍後再試",
+      "dateTitle": "{date}({weekday})",
+      "dateHeader": "{date} {weekday}",
+      "dayMenu": "{date} 的更多動作",
+      "canLead": "可負責",
+      "gridLabel": "排班表",
+      "statsGroup": "統計",
+      "cellAria": "{name} {date}",
+      "addDemandAria": "新增 {date} 的人力需求",
+      "demandArea": "人力需求",
+      "tempRow": "臨",
+      "addDemandHint": "+ 人力需求",
+      "demandAria": "{position} 人力需求 {count}",
+      "summaryPrimary": "需 {need} · 已排 {filled}",
+      "summarySecondary": "缺 {missing} · 可排 {available}",
+      "dayOffDetail": "整天畫休 {fullDay} 天 · 時段不可排 {timeRange} 天",
+      "dayOffDays": "{count} 天",
+      "streakDays": "{count} 天",
+      "count": {
+        "leader": "負",
+        "helper": "協"
+      },
+      "columns": {
+        "person": "人員",
+        "shiftCount": "班數",
+        "leadShiftCount": "負責班數",
+        "workMinutes": "總工時",
+        "dayOffDays": "畫休",
+        "longestStreak": "最長連續上班"
+      },
+      "views": {
+        "roster": "班表"
+      },
+      "status": {
+        "unpublished": "未發布",
+        "published": "已發布 · {date} {by}",
+        "unpublishedHint": "未發布:員工還看不到這個月的班表。每次儲存都會保存,按 [發布] 後才公開並通知被排到的人",
+        "publishedHint": "已發布:員工看得到。修改會直接生效,要填異動原因並通知當事人"
+      },
+      "toolbar": {
+        "addDemand": "+ 人力需求",
+        "addEntry": "+ 新增排班",
+        "addMenu": "+ 新增 ▾",
+        "more": "更多",
+        "views": "檢視",
+        "addSheet": "新增",
+        "moreSheet": "更多",
+        "closeSheet": "關閉",
+        "sheetDemand": "人力需求",
+        "sheetEntry": "排班"
+      },
+      "empty": {
+        "title": "{month} 月還沒有人力需求",
+        "description": "先套用人力需求範本或人力需求週範本建立這個月的人力需求,再排人或使用自動排班。"
+      },
+      "columnPicker": {
+        "button": "顯示欄位",
+        "title": "顯示欄位",
+        "hint": "跟著帳號記住,換一台裝置登入也一樣",
+        "options": {
+          "shiftCount": "班數",
+          "leadShiftCount": "負責班數",
+          "workMinutes": "總工時",
+          "dayOffDays": "畫休天數(和上下限比較)",
+          "longestStreak": "最長連續上班"
+        }
+      },
+      "cell": {
+        "closed": "店休",
+        "dayOff": "畫休",
+        "temp": "臨",
+        "multi": "{name} ×{count}",
+        "taskLine": "{role} · {task}",
+        "roles": {
+          "leader": "負責",
+          "helper": "協同"
+        },
+        "entryAria": "{name} {start}–{end}",
+        "break": "☕ {minutes}",
+        "range": "{start}–{end}",
+        "otherStore": "已排於{org}",
+        "otherStoreUnknown": "已排於其他分店",
+        "unavailable": "不可排"
+      },
+      "removeDay": {
+        "menu": "移除這天所有排班",
+        "title": "移除 {date} 所有排班",
+        "intro": "會刪除這些排班(填進的執行任務一起解除):",
+        "empty": "這天沒有可以移除的排班。",
+        "columns": {
+          "person": "人員",
+          "time": "時間"
+        },
+        "skipped": "略過 {count} 筆:{list}(已經有開班紀錄)",
+        "specialDayHint": "照常上班、雙倍薪水的日子不用移除,到行事曆標成特殊日。",
+        "confirm": "移除",
+        "feedback": "已移除 {count} 筆排班"
+      },
+      "demandDialog": {
+        "createTitle": "新增人力需求",
+        "editTitle": "人力需求 · {date}{name}",
+        "create": "新增",
+        "delete": "刪除人力需求",
+        "date": "日期",
+        "position": "崗位",
+        "startTime": "開始",
+        "endTime": "結束",
+        "task": "執行任務",
+        "roles": {
+          "leader": "負責人",
+          "helper": "協同"
+        },
+        "limits": {
+          "leader": "0–1 筆",
+          "helper": "0–10 筆"
+        },
+        "empty": {
+          "leader": "沒有負責人",
+          "helper": "沒有協同"
+        },
+        "add": {
+          "leader": "+ 負責人",
+          "helper": "+ 協同"
+        },
+        "unfilled": "還沒有人填",
+        "filledBy": "{name} 填進",
+        "saveAsTemplate": "同時存成人力需求範本",
+        "templateName": "範本名稱",
+        "templateShortName": "簡稱(1–2 字)",
+        "templateApplied": "已帶入「{name}」範本的時間、崗位與執行任務",
+        "blocked": "有排班已經有開班紀錄,不能刪除;要先改那筆排班。",
+        "deleteConfirmTitle": "刪除 {date}{name}?",
+        "removeConfirmTitle": "移除有人填的執行任務?",
+        "feedback": {
+          "created": "已新增人力需求",
+          "saved": "已儲存人力需求",
+          "deleted": "已刪除人力需求"
+        }
+      },
+      "impact": {
+        "releasedTitle": "會解除下面的人:",
+        "releasedLine": "{name} · {role} · {task}",
+        "roles": {
+          "leader": "負責",
+          "helper": "協同"
+        },
+        "deletedLine": "{name} {date} 的排班只填了這一筆,會一起刪除(每筆排班至少要填進一筆人力需求)。",
+        "blockedTitle": "這些排班已經有開班紀錄,不能刪除;要先改那筆排班:",
+        "blockedLine": "{name} {date}",
+        "delete": "刪除人力需求",
+        "deleteWithEntries": "刪除人力需求並刪除這 {count} 筆排班",
+        "remove": "移除",
+        "removeWithEntries": "移除並刪除這 {count} 筆排班",
+        "deleteEmpty": "目前沒有人填這筆人力需求。"
+      },
+      "entryDialog": {
+        "createTitle": "新增排班 · {date}",
+        "editTitle": "排班 · {name} {date}",
+        "person": "人員",
+        "date": "日期",
+        "startTime": "上班",
+        "endTime": "下班",
+        "breakMinutes": "休息(分)",
+        "demandsTitle": "加入這天的人力需求",
+        "addNewDemand": "新增一筆人力需求",
+        "noDemand": "這天沒有合適的人力需求",
+        "demand": "人力需求",
+        "task": "職責 · 執行任務",
+        "demandOption": "{name} {start}–{end} · {position}",
+        "taskOption": "{role} · {task}",
+        "taskOptionFilled": "{role} · {task}({name})",
+        "coverage": "上下班時間沒有涵蓋{name} {start}–{end}",
+        "extendEnd": "往後延長到 {time}",
+        "extendStart": "往前延長到 {time}",
+        "addRow": "+ 加入人力需求",
+        "atLeastOne": "至少要填進一筆人力需求;不要這筆排班請按 [刪除這筆排班]",
+        "delete": "刪除這筆排班",
+        "deleteConfirm": "刪除 {name} {date} 的排班?填進的執行任務一起解除。",
+        "errors": {
+          "time": "上下班時間和這個人其他的排班重疊(含其他分店),或這天店休",
+          "assignments": "選的執行任務已經有人填了、不在這一天,或這個人不能擔任負責人",
+          "locked": "這筆排班已經有開班紀錄,不能刪除;要調整請改時間"
+        },
+        "feedback": {
+          "created": "已新增排班",
+          "saved": "已儲存排班",
+          "deleted": "已刪除排班"
+        }
+      }
     }
   },
   "lotteryAccounts": {

@@ -600,6 +600,51 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`RuleValueEditor` 的 `t(`unitNames.${unit}`)`,unit 取自規則定義的 `unit`",
   },
   {
+    key: "admin.schedule.legend.items.",
+    reason:
+      "專案 `components/project/schedule/ScheduleLegend` 的 `t(`items.${item}`)`,item 取自呼叫端傳入的 `ScheduleLegendItem`",
+  },
+  {
+    key: "admin.schedule.roster.columns.",
+    reason:
+      "排班表統計欄表頭 `t(`columns.${column}`)`,column 取自 `@repo/domain/project/schedule-settings` 的 `SCHEDULE_ROSTER_STAT_COLUMNS`",
+  },
+  {
+    key: "admin.schedule.roster.columnPicker.options.",
+    reason:
+      "[⚙ 顯示欄位] 的 `t(`columnPicker.options.${column}`)`,column 同上(`SCHEDULE_ROSTER_STAT_COLUMNS`)",
+  },
+  {
+    key: "admin.schedule.roster.views.",
+    reason:
+      "排班表檢視切換 `t(`views.${labelKey}`)`,labelKey 取自 `pages/project/schedule/manage/roster/roster-views.ts`",
+  },
+  {
+    key: "admin.schedule.roster.cell.roles.",
+    reason:
+      "職責文字 `t(`roles.${role}`)` / `tRoster(`cell.roles.${role}`)`,role 是 api 回的 `leader` / `helper`(`SCHEDULE_TASK_ROLES`)",
+  },
+  {
+    key: "admin.schedule.roster.demandDialog.roles.",
+    reason: "人力需求對話框的職責區塊,role 同上(`DemandTaskList`)",
+  },
+  {
+    key: "admin.schedule.roster.demandDialog.limits.",
+    reason: "人力需求對話框的職責區塊,role 同上(`DemandTaskList`)",
+  },
+  {
+    key: "admin.schedule.roster.demandDialog.empty.",
+    reason: "人力需求對話框的職責區塊,role 同上(`DemandTaskList`)",
+  },
+  {
+    key: "admin.schedule.roster.demandDialog.add.",
+    reason: "人力需求對話框的職責區塊,role 同上(`DemandTaskList`)",
+  },
+  {
+    key: "admin.schedule.roster.impact.roles.",
+    reason: "解除確認的職責文字,role 同上(`DemandImpactDialog`)",
+  },
+  {
     key: "admin.tagPalettes.names.",
     reason:
       "專案 `components/project/TagPaletteChip` 的 `t(paletteKey)`(namespace `admin.tagPalettes.names`),paletteKey 逐一取自 `@repo/domain/project/tag-palette` 的 `TAG_PALETTE_KEYS`",

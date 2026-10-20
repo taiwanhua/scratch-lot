@@ -12,6 +12,7 @@ import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
+import { scheduleRosterWorld } from "@/test/msw/project/schedule-roster-handlers";
 import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 import {
   supportRequestFormWorld,
@@ -82,6 +83,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleCalendarWorld().handlers,
     ...scheduleDayOffsWorld().handlers,
     ...accountsWorld().handlers,
+    ...scheduleRosterWorld().handlers,
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world)
   formRuntime: () => supportRequestFormWorld(),

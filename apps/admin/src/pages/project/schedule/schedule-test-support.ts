@@ -15,6 +15,10 @@ import {
   scheduleDayOffsWorld,
 } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
+import {
+  type ScheduleRosterWorldOptions,
+  scheduleRosterWorld,
+} from "@/test/msw/project/schedule-roster-handlers";
 import { SCHEDULE_BRANCH } from "@/test/msw/project/schedule-settings-fixtures";
 import {
   type ScheduleSettingsWorldOptions,
@@ -39,6 +43,7 @@ export interface RenderScheduleOptions {
   forms?: FormRuntimeWorldOptions;
   /** 審核流程(支援需求單右側的審核區塊) */
   workflow?: WorkflowRuntimeWorldOptions;
+  roster?: ScheduleRosterWorldOptions;
 }
 
 /**
@@ -54,13 +59,16 @@ export const renderSchedulePage = ({
   dayOffs = {},
   forms = {},
   workflow = {},
+  roster = {},
 }: RenderScheduleOptions) => {
   const settingsFake = scheduleSettingsWorld(settings);
   const calendarFake = scheduleCalendarWorld(calendar);
   const dayOffsFake = scheduleDayOffsWorld(dayOffs);
   const formsFake = formRuntimeWorld(forms);
   const workflowFake = workflowRuntimeWorld(workflow);
+  const rosterFake = scheduleRosterWorld(roster);
   server.use(
+    ...rosterFake.handlers,
     ...settingsFake.handlers,
     ...calendarFake.handlers,
     ...dayOffsFake.handlers,
@@ -89,5 +97,6 @@ export const renderSchedulePage = ({
     dayOffsFake,
     formsFake,
     workflowFake,
+    rosterFake,
   };
 };

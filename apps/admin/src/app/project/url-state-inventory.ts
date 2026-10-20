@@ -36,6 +36,7 @@ export const projectUrlStateInventory: UrlStateInventory = {
     "support",
     "detail",
     "revision",
+    "view",
   ],
   "schedule.attendance": ["tab"],
   // 帳戶管理:分頁、即時現金帳的篩選(分店、日期、類型、收銀點)、58mm 流水單據 QR 帶的那一筆;

@@ -5,7 +5,7 @@
 ## 用途
 
 - **獨立的專案模組**:不引用刮刮樂的任何資料表或程式(依賴方向:刮刮樂 → 排班,`apps/api/src/project/project-lint.test.ts` 守)。刮刮樂要在排班畫面上顯示東西、或擋排班的刪除,經下方「給刮刮樂的登記接縫」登記。
-- 本文件目前寫到:模組宣告與權限、排班設定(排班人員、人力需求範本、人力需求週範本、規則)、行事曆、畫休(我的畫休、畫休總覽、代改、畫休規則、開放 / 截止通知)、支援需求單。排班表、打卡、出勤紀錄、補打卡申請由各自的功能追加小節。
+- 本文件目前寫到:模組宣告與權限、排班設定(排班人員、人力需求範本、人力需求週範本、規則)、行事曆、畫休(我的畫休、畫休總覽、代改、畫休規則、開放 / 截止通知)、支援需求單、排班表(人力需求、排班、填進執行任務、兩種對話框、班表檢視)。排班表的其他檢視、檢核與發布、自動排班、打卡、出勤紀錄、補打卡申請由各自的功能追加小節。
 
 ## 模組 key 與畫面
 
@@ -52,7 +52,7 @@
 
 唯一索引一律是 partial(`partialFilterExpression: { deletedAt: { $type: "null" } }`,軟刪除的不算);同時寫入撞到唯一索引時回與事前檢查同一個 `VALIDATION_FAILED`。
 
-八張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。範本、週範本、規則設定、行事曆宣告「上層沿用到下層」(ADR-0014);排班檔案宣告「可共用 + 依可以排的分店」;畫休、守門文件、關聯以人為準,以租戶為邊界讀寫(底座 `tenantBoundaryContext`)。
+十二張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`,排班設定與畫休八張)與 `roster-registration.ts`(`SCHEDULE_ROSTER_REGISTRATION`,排班表四張:人力需求、月份狀態、排班、填進執行任務;屬於分店、不共用,一個人在其他分店的排班以 `tenantBoundaryContext` 讀,見「排班表」)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。範本、週範本、規則設定、行事曆宣告「上層沿用到下層」(ADR-0014);排班檔案宣告「可共用 + 依可以排的分店」;畫休、守門文件、關聯以人為準,以租戶為邊界讀寫(底座 `tenantBoundaryContext`)。
 
 | collection                       | 一筆是                                    | 歸屬 `orgId`                                                    | 唯一 / 說明                                                                                                                                                                                                |
 | -------------------------------- | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -64,6 +64,10 @@
 | `schedule_calendar_days`         | 某組織某天的店休 / 特殊日                 | 設定它的組織                                                    | 唯一 `(orgId, date)`(只算未刪除的)                                                                                                                                                                         |
 | `schedule_day_offs`              | 畫休(讀取以人為準)                        | 登記時的組織:本人 = 當前組織、代改 = 畫休總覽選的那家店(不共用) | `kind` 整天畫休 `full-day` / 時段不可排 `time-range`(`startTime` / `endTime`);同一人同一天未刪除的整天畫休唯一 `(tenantId, userId, date)`(partial);代改記 `by`、`reason`、`reasonNote`;刪除 = 軟刪除       |
 | `schedule_day_off_locks`         | 畫休寫入的守門文件(一家店一個月一筆)      | 租戶頂層(鎖的店記在 `storeId`,不擋刪除分店)                     | 唯一 `(orgId, storeId, month)`;只用 `version` 製造寫入衝突                                                                                                                                                 |
+| `schedule_demands`               | 人力需求(某店某崗位某時間的一組執行任務)  | 分店                                                            | `tasks[] = { taskId, role, taskKey }`(`taskId` 在這筆內唯一);`date` = 開始時點的租戶當地日期;`templateId` null = 未套用範本;`source` 範本 / 週範本 / 手動 / 自動排班補上                                   |
+| `schedule_periods`               | 某家店某個月的排班狀態                    | 分店                                                            | 唯一 `(orgId, month)`;`status` 未發布 / 已發布;`version` 只用來製造寫入衝突(同一家店同一個月的人力需求 / 排班寫入互相重跑);這個月第一次寫入時建立(交易外先建好)                                            |
+| `schedule_entries`               | 排班(人、上下班時間、休息)                | 分店                                                            | 索引 `(userId, startAt)`;`date` = 上班時點的租戶當地日期(跨午夜算開始那天)                                                                                                                                 |
+| `schedule_task_assignments`      | 排班填進執行任務                          | 分店                                                            | 唯一 `(demandId, taskId)`(一筆執行任務只填一人)、`(entryId, demandId)`(同一筆人力需求只能填一筆);`source` 手動 / 自動(`autoRunId`、`reason` 只留著追查);解除 = 軟刪除                                      |
 
 ## 規則
 
@@ -117,6 +121,25 @@
 - **下拉值要是啟用中的選項**:「負責人 / 協同預設任務」的兩個 key 要是欄位管理「執行任務」啟用中的選項(否則 `VALIDATION_FAILED`,欄位 `value.<key>`)。
 - **來源顯示**:本層自訂 →「本店自訂」(最上層組織「本層自訂」),摘要寫「本店自訂:6 天」;沿用 →「沿用:<上層組織名稱>」,上層組織操作者看不到時 api 回 `sourceOrgName: null`、畫面寫「沿用上層設定」;都沒設 →「系統預設」。自訂的列下方灰字「上層:<值>」= 上層的生效值。
 - **檢查函式**(違反哪些規則)不在這裡:`apps/api/src/project/schedule/rules/rule-registry.ts` 的 `registerRuleEvaluator(key, evaluator)` 由各功能登記(畫休類規則、排班類規則);手動排班、自動排班、檢核面板、發布都呼叫同一個檢查函式、吃 `ScheduleRulesService.effectiveSettingsForOrg(operator, orgId)` 的生效設定。
+
+### 排班表(規格 14.4「手動新增」、14.5「排班表」)
+
+- **人力需求**(`schedule_demands`):日期、時間(開始 / 結束時點;結束不晚於開始 = 跨午夜,最長 24 小時)、崗位(「崗位」啟用中的選項,否則欄位 `positionKey`)、執行任務(負責人 0–1、協同 0–10,任務內容是「執行任務」啟用中的選項,否則欄位 `tasks`)。`date` 由 api 依租戶時區算(開始時點那一天)。沒有休息。
+  - 新增時可帶 `templateId`(班表人力需求區點某一列範本的空白格;要是這家店組織鏈上看得到的範本,否則欄位 `templateId`),那一筆就歸在那一列;沒帶 = 「臨」。
+  - **同時存成人力需求範本**(只在新增):要 `schedule.settings.edit-templates`(沒有 → `FORBIDDEN`,`MISSING_PERMISSION`);同一個交易裡經 `ScheduleTemplatesService.saveTemplate` 建立一筆屬於當前組織的範本(時間、崗位、執行任務照這筆),人力需求的 `templateId` 指向它。
+  - 修改:執行任務沿用既有的 `taskId`(職責不能改,改了 → 欄位 `tasks`)、沒有 `taskId` 的是新的一筆。**拿掉有人填的任務 = 解除那些人**;解除後一筆都沒填的排班一起刪除(回 `deletedEntryIds`);其中被收銀班次綁定的(`blockedEntryIdsOf`)→ 整筆擋下,`VALIDATION_FAILED` + `extensions.blockedEntryIds`。有人填的人力需求不能搬到別天(欄位 `startAt`)。
+  - [刪除人力需求] = 解除全部執行任務(同上規則)後軟刪除。
+- **排班**(`schedule_entries` + `schedule_task_assignments`):人員(新增時;要是這家店的候選人 `listScheduleCandidates`,否則欄位 `userId`;修改時不能改)、上下班時點(最長 24 小時)、休息分鐘數(整數、0 ≤ 休息 < 時長,否則欄位 `breakMinutes`)、填進的執行任務 `assignments[{ demandId, taskId }]`。
+  - **至少一筆**(零筆 → 欄位 `assignments`);同一筆人力需求只能一筆(重複 → 欄位 `assignments`);人力需求要是這家店、同一天(`date` 相同)的,任務要存在;負責人任務只能填這家店可擔任負責人的人(原本就填著的不再檢查);別筆排班已經填的 → 欄位 `assignments`。兩個請求同時填同一筆任務由唯一索引擋下,回同一個錯誤。
+  - **一個人同一時間只有一筆排班,跨店也不能重疊**(相接不算):以租戶為邊界讀這個人所有分店的排班(`roster/roster-people.ts`,`tenantBoundaryContext` 登記用途「以人為準的資料」),重疊 → 欄位 `startAt`。店休那天不能排(欄位 `startAt`)。
+  - 修改時填進紀錄改成送來的那份:拿掉的軟刪除、新的建立(來源手動);沒變的保留原來的來源(自動排入的被手動改過才變成手動)。
+  - **刪除**:被收銀班次綁定 → `VALIDATION_FAILED` + `extensions.blockedEntryIds`;否則軟刪除排班與它的填進紀錄。
+  - **移除這天所有排班**:被綁定的略過,回 `deletedIds` / `skippedIds`。已發布後才需要的異動原因由發布的功能加上。
+- **同時送出**:同一家店同一個月的寫入在交易一開始對 `schedule_periods.version` `$inc`(文件在交易外先建好),互相衝突、由 `TransactionService` 重跑。同一個人在**兩家店**同時被排、時間重疊的極端情形不在這個守門範圍內(兩家店的月份文件不同)。
+- **讀取**(`scheduleRoster`):這家店要在可見範圍內(`resolveScheduleOrg`;看不到 → `NOT_FOUND`),之後才呼叫「空清單分不出看不到」的 `listScheduleCandidates` / `listUnavailable`。人 = 候選人 + 這個月在這家店有排班、已不是候選人的人(`isCandidate = false`,依姓名 zh-Hant 排在後面)。一併回:人力需求(每筆執行任務帶填的人)、排班(`deletable` = 沒被綁定)、這些人在其他分店的班(看不到那家店 `orgName = null`,畫面寫「已排於其他分店」)、畫休、行事曆、這家店看得到的範本、規則的生效值(預設休息、負責人 / 協同預設任務、每月最多 / 最少畫休)、崗位註記(`positionAnnotationsOf`)。
+- **統計欄**(`roster/roster-stats.ts`,這家店這個月):班數、負責班數(以排班為單位:任一筆填進的是負責就算 1 班)、總工時(每筆下班 − 上班 − 休息,分鐘)、畫休天數(同畫休規則 `dayOffDates`:那天有任何畫休就算 1 天;另回整天畫休天數與只有時段不可排的日子與時段)、最長連續上班(有排班的日子,含其他分店)。
+- **[⚙ 顯示欄位]** 存個人偏好 `scheduleRosterColumns`(統計欄 key 逗號分隔,`apps/api/src/project/user-preferences.ts` 登記;定義在 `@repo/domain/project/schedule-settings` 的 `roster.ts`)。
+- 前後端共用的純函式(`@repo/domain/project/schedule-settings` 的 `roster.ts`):預設休息(`defaultBreakMinutes`:長度已達門檻的級距中最高的那一級)、選人力需求自動填第一個空的執行任務(`pickOpenTask`)、負責人時間涵蓋(`leaderCoverageGaps`)、總工時寫法(`formatWorkMinutes`)。
 
 ### 行事曆(規格 14.5)
 
@@ -173,7 +196,7 @@
 
 ## api 介面
 
-GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-settings.graphql`。`orgId` 缺席或 null = 當前組織(GQL-06)。
+GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-settings.graphql`、`schedule-day-offs.graphql`、`schedule-roster.graphql`。`orgId` 缺席或 null = 當前組織(GQL-06)。
 
 | 端點                                                                                                                                                                            | 守門                               | 說明                                                                                                                                                                                                                           |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -194,6 +217,11 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 | `addMyScheduleDayOffs(input: { date, kind, slots?, note? })` / `deleteMyScheduleDayOff(input: { id })`                                                                          | `schedule.my.edit-day-offs`        | 本人登記 / 刪除;回新增的畫休與存檔後的提醒                                                                                                                                                                                     |
 | `scheduleDayOffOverview(input: { orgId?, month? })`                                                                                                                             | `schedule.manage.view-day-offs`    | 畫休總覽:那家店的開放期間、`canEdit`(`edit-day-offs`)、候選人與這個月已畫天數、有畫休的日子                                                                                                                                    |
 | `addScheduleDayOffsOnBehalf(input: { orgId?, userId, date, kind, slots?, reason?, reasonNote? })` / `deleteScheduleDayOffOnBehalf(input: { orgId?, id, reason?, reasonNote? })` | `schedule.manage.edit-day-offs`    | 代改                                                                                                                                                                                                                           |
+| `scheduleRoster(input: { orgId?, month })`                                                                                                                                      | `schedule.manage.view`             | 排班表一個月(見「排班表」);`canEdit` = 有 `schedule.manage.edit`、`canSaveTemplate` = 有 `edit-templates`                                                                                                                      |
+| `saveScheduleDemand(input: { orgId?, id?, startAt, endAt, positionKey, tasks, templateId?, saveAsTemplate? })`                                                                  | `schedule.manage.edit`             | 整份送;回 `item` 與解除後一起刪的 `deletedEntryIds`                                                                                                                                                                            |
+| `deleteScheduleDemand(input: { orgId?, id })`                                                                                                                                   | `schedule.manage.edit`             | 回 `deletedEntryIds`                                                                                                                                                                                                           |
+| `saveScheduleEntry(input: { orgId?, id?, userId?, startAt, endAt, breakMinutes, assignments })`                                                                                 | `schedule.manage.edit`             | 新增要 `userId`;修改時人員不變                                                                                                                                                                                                 |
+| `deleteScheduleEntry(input: { orgId?, id })` / `removeScheduleDayEntries(input: { orgId?, date })`                                                                              | `schedule.manage.edit`             | 被綁定的擋下 / 略過                                                                                                                                                                                                            |
 
 ### 給其他功能的 service
 
@@ -213,6 +241,10 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 頁面:`apps/admin/src/pages/project/schedule/{my,manage,settings,attendance}/`,登記在 `app/project/module-pages.ts`(兩個表單模組只換列表頁);網址狀態登記在 `app/project/url-state-inventory.ts`。
 - 我的班表 → 我的畫休(SC-02 / SC-23,分頁 `day-offs`,要 `schedule.my.edit-day-offs`):登記畫休對話框 SC-41a / b、當天詳細 SC-42(ⓘ);開放期間外顯示提示與「到畫休總覽代改」(`canOverride`)。排班作業 → 畫休總覽(SC-06,分頁 `day-offs`,要 `view-day-offs`;`?org=`、`?month=`、`?dayOffFilter=`)與代改(SC-24,看 api 的 `canEdit`)。違反限制被擋下時對話框列出原因(`schedule-error.ts` 的 `dayOffViolationsOf`)。畫休格子、圖例、當天詳細在 `components/project/schedule/DayOffs/`;分店選擇器暫用 `OrgTreeSelect`。
 - 排班設定:排班人員(SC-08 / SC-26)、人力需求範本(SC-09a / SC-22a)、人力需求週範本(SC-09b / SC-22b)、規則(SC-10 / SC-27,分店選擇器 `?org=`;「預設人力需求週範本」的名稱與選項取那家店的週範本)。排班作業 → 行事曆(SC-07 / SC-28,`?org=`、`?month=`)。
+- 排班作業 → 排班表(SC-03,分頁 `roster`,排在第一個;`?org=`、`?month=`、`?view=`):頁殼 `pages/project/schedule/manage/roster/RosterPage.tsx`(工具列、檢視切換、`◀ 月 ▶`;每台裝置記住上次選的檢視,電腦預設班表、手機預設日)。擴充點:檢視登記 `roster-views.ts`(班表檢視 `views/RosterGridView.tsx`,其他檢視各自追加一列)、工具列按鈕 `roster-toolbar.ts`(`ROSTER_TOOLBAR_ACTIONS`:[+ 新增排班] 之後的按鈕,手機收進 [⋯];key `apply-templates` 也放在「這個月還沒有人力需求」的畫面;`ROSTER_TOOLBAR_END`:第二列最右邊的檢核按鈕)。各檢視與工具列功能用 `useRoster()`(`roster-context.ts`)拿同一份資料與動作:`openDemand`、`openEntry`、`removeDay`、`scrollToCell(target)`(捲到那一格並閃爍;格子以 `data-roster-cell="<userId>|<date>"` 定位)。
+- 兩種對話框:人力需求對話框 `DemandDialog`(SC-21a–d / SC-33b;移除有人填的列或刪除前的確認 `DemandImpactDialog`)、排班對話框 `EntryDialog`(SC-04a–c、e②③、f / SC-33a;「加入這天的人力需求」`EntryAssignmentRows`,[新增一筆人力需求] 疊開 `DemandDialog`),移除這天所有排班 `RemoveDayDialog`(SC-50),[⚙ 顯示欄位] `RosterColumnPicker`(SC-47)。電腦 / 平板置中、手機全螢幕;沒有 `edit` 時欄位停用、只剩 [關閉]。
+- 人力需求區收合、統計欄收成 [統計 ▸] 存在這台裝置(底座 `useSectionCollapse`,頁 id `schedule.roster`;手機預設收合)。
+- 圖例元件 `components/project/schedule/ScheduleLegend/`(班表管理所有頁面共用;外觀與格子同一份 `schedule-legend-styles.ts`),各功能追加自己的項目。
 - 分店選擇器一律 `OrgTreeSelect scope="visible"`(用法表 ④ ⑤:整棵租戶樹、可見範圍內的才能選):規則、行事曆的分店、排班人員可以排的分店。
 - 側欄排序:班表管理群組 `order` 80。
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
@@ -222,16 +254,16 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 ## 錯誤碼
 
-只用通用碼(GQL-04):`NOT_FOUND`(看不到)、`VALIDATION_FAILED`(`fields` 指到欄位)、`FORBIDDEN`(`reason`:`NOT_OWNER` 上層建立的、`MISSING_PERMISSION` 沒有這個組織要的規則權限、`OUTSIDE_DAY_OFF_WINDOW` 本人在畫休開放期間外修改)。畫休違反限制:`VALIDATION_FAILED` + `extensions.violations`。前端文案 `admin.schedule.errors.*`(`pages/project/schedule/schedule-error.ts`)。
+只用通用碼(GQL-04):`NOT_FOUND`(看不到)、`VALIDATION_FAILED`(`fields` 指到欄位)、`FORBIDDEN`(`reason`:`NOT_OWNER` 上層建立的、`MISSING_PERMISSION` 沒有這個組織要的規則權限、`OUTSIDE_DAY_OFF_WINDOW` 本人在畫休開放期間外修改)。畫休違反限制:`VALIDATION_FAILED` + `extensions.violations`。排班已被收銀班次綁定(刪排班、刪人力需求或解除任務連帶刪排班):`VALIDATION_FAILED` + `extensions.blockedEntryIds`(`roster/roster-error.ts`;前端 `pages/project/schedule/manage/roster/roster-error.ts`)。前端文案 `admin.schedule.errors.*`(`pages/project/schedule/schedule-error.ts`)。
 
 ## 稽核
 
-`schedule-staff.create` / `.edit`(`schedule_staff`)、`schedule-setting.customize` / `.restore`(`schedule_setting`)、`schedule-demand-template.create` / `.edit` / `.delete`、`schedule-demand-week-template.create` / `.edit` / `.delete`、`schedule-calendar-day.create` / `.edit` / `.delete`、`schedule-day-off.create` / `.delete`(`schedule_day_off`;代改的 `by`、`reason` 一併記)。
+`schedule-staff.create` / `.edit`(`schedule_staff`)、`schedule-setting.customize` / `.restore`(`schedule_setting`)、`schedule-demand-template.create` / `.edit` / `.delete`、`schedule-demand-week-template.create` / `.edit` / `.delete`、`schedule-calendar-day.create` / `.edit` / `.delete`、`schedule-day-off.create` / `.delete`(`schedule_day_off`;代改的 `by`、`reason` 一併記)、`schedule-demand.create` / `.edit` / `.delete`(`schedule_demand`;解除後一起刪的排班記在 `after.deletedEntries`)、`schedule-entry.create` / `.edit` / `.delete`(`schedule_entry`;填進的執行任務一併記)。
 
 ## 測試
 
-- api:`apps/api/src/project/schedule/schedule-settings.test.ts`(真 GraphQL + 真 MongoDB)、`rules/rule-resolution.test.ts`(生效值表格)、`day-offs/schedule-day-offs.test.ts`(畫休、代改、規則、`listUnavailable`、注入時鐘的開放 / 截止通知)、`day-offs/day-off-rules.test.ts`(畫休算法與開放期間表格)、`integration/integration.test.ts`;domain:`packages/domain/src/project/schedule-settings/schedule-settings.test.ts`(規則順序快照)。
-- admin:`pages/project/schedule/settings/ScheduleSettingsPage.test.tsx`、`manage/ScheduleManagePage.test.tsx`、`manage/SupportRequestsTab/SupportRequestsTab.test.tsx`(分頁權限、列表、右側審核、新增頁沒有 [存草稿]、手機卡片)、`settings/RulesTab/rule-display.test.ts`、`my/ScheduleMyDayOffs.test.tsx`、`manage/DayOffOverview.test.tsx`、`lib/project/schedule-day-offs.test.ts`;假 api `src/test/msw/project/schedule-*.ts`(mock 模式共用)。
+- api:`apps/api/src/project/schedule/schedule-settings.test.ts`(真 GraphQL + 真 MongoDB)、`rules/rule-resolution.test.ts`(生效值表格)、`day-offs/schedule-day-offs.test.ts`(畫休、代改、規則、`listUnavailable`、注入時鐘的開放 / 截止通知)、`day-offs/day-off-rules.test.ts`(畫休算法與開放期間表格)、`integration/integration.test.ts`、`roster/schedule-roster.test.ts`(排班表端點)、`roster/roster-stats.test.ts`(統計欄表格);domain:`packages/domain/src/project/schedule-settings/schedule-settings.test.ts`(規則順序快照)、`roster.test.ts`(預設休息、自動填執行任務、負責人時間涵蓋、統計欄偏好)。
+- admin:`pages/project/schedule/settings/ScheduleSettingsPage.test.tsx`、`manage/ScheduleManagePage.test.tsx`、`manage/SupportRequestsTab/SupportRequestsTab.test.tsx`(分頁權限、列表、右側審核、新增頁沒有 [存草稿]、手機卡片)、`settings/RulesTab/rule-display.test.ts`、`my/ScheduleMyDayOffs.test.tsx`、`manage/DayOffOverview.test.tsx`、`lib/project/schedule-day-offs.test.ts`、`manage/roster/RosterPage.test.tsx`、`lib/project/schedule-roster.test.ts`;假 api `src/test/msw/project/schedule-*.ts`(mock 模式共用)。
 - seed / 開通:`apps/db-migrator/seeds/project/schedule.test.ts`、`onboarding/schedule-onboarding.test.ts`;受管表單的安裝在 `src/seed/seed-formal-registry.test.ts`(正式 registry 對真 MongoDB);支援需求單的流程(demo create 分派受管表單、開通腳本建流程並綁定、重跑沿用、店長送出 → 審核者 = 總部管理且屬最上層組織的人)在 `onboarding/onboarding-api.test.ts`(真 api)。
 
 ## 使用者說明(help.md)

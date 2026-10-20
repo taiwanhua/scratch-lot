@@ -512,6 +512,7 @@
       "attendance": "Attendance"
     },
     "tabs": {
+      "roster": "Roster",
       "staff": "Staff",
       "templates": "Demand templates",
       "weekTemplates": "Week templates",
@@ -922,6 +923,219 @@
         "all": "All"
       },
       "panelTitleWithSerial": "{serial} · {branch}"
+    },
+    "legend": {
+      "title": "Legend",
+      "sampleName": "Wang",
+      "tempMark": "Ad hoc",
+      "breakSample": "☕ 30",
+      "countSample": "L1/1",
+      "items": {
+        "leader": "Lead (name or template short name on green)",
+        "entry": "Scheduled shift",
+        "temp": "Staffing need without a template",
+        "auto": "Auto-assigned (cleared after a manual change)",
+        "breakMinutes": "Break (minutes)",
+        "unavailable": "Closed / scheduled at another branch / unavailable hours",
+        "dayOff": "Day off (hatched)",
+        "missingLeader": "Lead missing",
+        "missingHelper": "Helper missing",
+        "full": "Staffing need filled",
+        "multi": "One shift covering several positions"
+      }
+    },
+    "roster": {
+      "org": "Branch",
+      "loading": "Loading",
+      "loadError": "Could not load the roster. Please try again later.",
+      "dateTitle": "{date} ({weekday})",
+      "dateHeader": "{date} {weekday}",
+      "dayMenu": "More actions for {date}",
+      "canLead": "Can lead",
+      "gridLabel": "Roster",
+      "statsGroup": "Stats",
+      "cellAria": "{name} {date}",
+      "addDemandAria": "Add a staffing need on {date}",
+      "demandArea": "Staffing needs",
+      "tempRow": "Ad hoc",
+      "addDemandHint": "+ Staffing need",
+      "demandAria": "{position} staffing need {count}",
+      "summaryPrimary": "Need {need} · Filled {filled}",
+      "summarySecondary": "Missing {missing} · Available {available}",
+      "dayOffDetail": "Full day off {fullDay} · Unavailable hours {timeRange}",
+      "dayOffDays": "{count} d",
+      "streakDays": "{count} d",
+      "count": {
+        "leader": "L",
+        "helper": "H"
+      },
+      "columns": {
+        "person": "Staff",
+        "shiftCount": "Shifts",
+        "leadShiftCount": "Lead shifts",
+        "workMinutes": "Hours",
+        "dayOffDays": "Days off",
+        "longestStreak": "Longest streak"
+      },
+      "views": {
+        "roster": "Roster"
+      },
+      "status": {
+        "unpublished": "Unpublished",
+        "published": "Published · {date} {by}",
+        "unpublishedHint": "Unpublished: staff cannot see this month yet. Every save is kept; staff are notified after you publish.",
+        "publishedHint": "Published: staff can see it. Changes take effect immediately and need a reason; the people affected are notified."
+      },
+      "toolbar": {
+        "addDemand": "+ Staffing need",
+        "addEntry": "+ Shift",
+        "addMenu": "+ Add ▾",
+        "more": "More",
+        "views": "View",
+        "addSheet": "Add",
+        "moreSheet": "More",
+        "closeSheet": "Close",
+        "sheetDemand": "Staffing need",
+        "sheetEntry": "Shift"
+      },
+      "empty": {
+        "title": "No staffing needs for month {month} yet",
+        "description": "Apply a staffing need template or week template to create this month's staffing needs, then schedule people or run auto-scheduling."
+      },
+      "columnPicker": {
+        "button": "Columns",
+        "title": "Columns",
+        "hint": "Saved to your account, so it follows you to other devices",
+        "options": {
+          "shiftCount": "Shifts",
+          "leadShiftCount": "Lead shifts",
+          "workMinutes": "Hours",
+          "dayOffDays": "Days off (compared with limits)",
+          "longestStreak": "Longest streak"
+        }
+      },
+      "cell": {
+        "closed": "Closed",
+        "dayOff": "Day off",
+        "temp": "Ad hoc",
+        "multi": "{name} ×{count}",
+        "taskLine": "{role} · {task}",
+        "roles": {
+          "leader": "Lead",
+          "helper": "Helper"
+        },
+        "entryAria": "{name} {start}–{end}",
+        "break": "☕ {minutes}",
+        "range": "{start}–{end}",
+        "otherStore": "Scheduled at {org}",
+        "otherStoreUnknown": "Scheduled at another branch",
+        "unavailable": "Unavailable"
+      },
+      "removeDay": {
+        "menu": "Remove all shifts on this day",
+        "title": "Remove all shifts on {date}",
+        "intro": "These shifts will be deleted (their tasks are released):",
+        "empty": "There are no shifts to remove on this day.",
+        "columns": {
+          "person": "Staff",
+          "time": "Time"
+        },
+        "skipped": "Skipped {count}: {list} (already has a cash shift)",
+        "specialDayHint": "For days worked as usual with double pay, keep the shifts and mark the day as a special day in the calendar.",
+        "confirm": "Remove",
+        "feedback": "Removed {count} shifts"
+      },
+      "demandDialog": {
+        "createTitle": "Add staffing need",
+        "editTitle": "Staffing need · {date} {name}",
+        "create": "Add",
+        "delete": "Delete staffing need",
+        "date": "Date",
+        "position": "Position",
+        "startTime": "Start",
+        "endTime": "End",
+        "task": "Task",
+        "roles": {
+          "leader": "Lead",
+          "helper": "Helpers"
+        },
+        "limits": {
+          "leader": "0–1",
+          "helper": "0–10"
+        },
+        "empty": {
+          "leader": "No lead",
+          "helper": "No helpers"
+        },
+        "add": {
+          "leader": "+ Lead",
+          "helper": "+ Helper"
+        },
+        "unfilled": "Not filled yet",
+        "filledBy": "Filled by {name}",
+        "saveAsTemplate": "Also save as a staffing need template",
+        "templateName": "Template name",
+        "templateShortName": "Short name (1–2 characters)",
+        "templateApplied": "Filled in the time, position and tasks from template \"{name}\"",
+        "blocked": "Some shifts already have a cash shift and cannot be deleted; change those shifts first.",
+        "deleteConfirmTitle": "Delete {date} {name}?",
+        "removeConfirmTitle": "Remove tasks that people are filling?",
+        "feedback": {
+          "created": "Staffing need added",
+          "saved": "Staffing need saved",
+          "deleted": "Staffing need deleted"
+        }
+      },
+      "impact": {
+        "releasedTitle": "These people will be released:",
+        "releasedLine": "{name} · {role} · {task}",
+        "roles": {
+          "leader": "Lead",
+          "helper": "Helper"
+        },
+        "deletedLine": "{name}'s shift on {date} only fills this need and will be deleted too (every shift must fill at least one staffing need).",
+        "blockedTitle": "These shifts already have a cash shift and cannot be deleted; change them first:",
+        "blockedLine": "{name} {date}",
+        "delete": "Delete staffing need",
+        "deleteWithEntries": "Delete staffing need and {count} shifts",
+        "remove": "Remove",
+        "removeWithEntries": "Remove and delete {count} shifts",
+        "deleteEmpty": "Nobody is filling this staffing need."
+      },
+      "entryDialog": {
+        "createTitle": "Add shift · {date}",
+        "editTitle": "Shift · {name} {date}",
+        "person": "Staff",
+        "date": "Date",
+        "startTime": "Start",
+        "endTime": "End",
+        "breakMinutes": "Break (min)",
+        "demandsTitle": "Staffing needs on this day",
+        "addNewDemand": "Add a staffing need",
+        "noDemand": "No suitable staffing need on this day",
+        "demand": "Staffing need",
+        "task": "Role · task",
+        "demandOption": "{name} {start}–{end} · {position}",
+        "taskOption": "{role} · {task}",
+        "taskOptionFilled": "{role} · {task} ({name})",
+        "coverage": "The shift does not cover {name} {start}–{end}",
+        "extendEnd": "Extend to {time}",
+        "extendStart": "Start from {time}",
+        "addRow": "+ Add staffing need",
+        "atLeastOne": "Fill at least one staffing need; to drop this shift use [Delete shift]",
+        "delete": "Delete shift",
+        "deleteConfirm": "Delete {name}'s shift on {date}? Its tasks are released.",
+        "errors": {
+          "time": "The time overlaps another shift of this person (including other branches), or the branch is closed that day",
+          "assignments": "A chosen task is already filled, is not on this day, or this person cannot lead",
+          "locked": "This shift already has a cash shift and cannot be deleted; change its time instead"
+        },
+        "feedback": {
+          "created": "Shift added",
+          "saved": "Shift saved",
+          "deleted": "Shift deleted"
+        }
+      }
     }
   },
   "lotteryAccounts": {
