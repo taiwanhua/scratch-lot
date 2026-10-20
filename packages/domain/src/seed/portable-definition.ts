@@ -62,7 +62,7 @@ export interface PortableCatalog {
   /** 已知存在、但屬於租戶客製的表單 key;只用來把錯誤講清楚。 */
   tenantFormKeys?: ReadonlySet<string>;
   /**
-   * 專案登記、可以跟著共用定義交付的 lookup 來源(例:刮刮樂的遊戲 `lottery_game`):來源 key → 它可用的固定條件。
+   * 專案登記、可以跟著共用定義交付的 lookup 來源(例:專案的商品主檔 `catalog_item`):來源 key → 它可用的固定條件。
    * 來源本身在每個環境都由同一份程式登記(不是本地資料),所以可攜;固定條件只收宣告過的穩定值(狀態代碼這類),
    * 不收 id。沒宣告 = 只有底座的三種來源。
    */
