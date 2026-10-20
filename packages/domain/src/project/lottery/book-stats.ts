@@ -31,12 +31,18 @@ export function pendingSkipCountOf(
   return Math.max(0, lastTicketNo - standardTickets - skippedCount);
 }
 
-/** 剩餘張數 = 未售的張(庫存、檯面、在途都算)。 */
+/**
+ * 剩餘張數 = 未售的張(庫存、檯面、在途都算)− 待標註張數(還沒標的跳號實體不存在;討論定案)。
+ * 例:迄號 103、標準 100、還沒標跳號 → 103 張未售 − 3 = 100。
+ */
 export function remainingCountOf(
   tickets: readonly BookTicketSnapshot[],
+  pendingSkipCount = 0,
 ): number {
-  return tickets.filter((ticket) => ticket.status === TICKET_STATUS.unsold)
-    .length;
+  const unsold = tickets.filter(
+    (ticket) => ticket.status === TICKET_STATUS.unsold,
+  ).length;
+  return Math.max(0, unsold - pendingSkipCount);
 }
 
 /**

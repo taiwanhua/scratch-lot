@@ -7,7 +7,10 @@ import {
   type InventoryWorldOptions,
   inventoryWorld,
 } from "@/test/msw/project/lottery/inventory-handlers";
-import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
+import {
+  masterDataModules,
+  masterDataOrgs,
+} from "@/test/msw/project/lottery/master-data-fixtures";
 import {
   masterDataSharedLookupHandlers,
   masterDataWorld,
@@ -23,11 +26,17 @@ export const renderInventory = ({
   path = "/inventory",
   permissions = ALL_INVENTORY_PERMISSIONS,
   bookPage = true,
+  inventory = true,
+  masterData = false,
   world = {},
 }: {
   path?: string;
   permissions?: readonly string[];
   bookPage?: boolean;
+  /** 綁不綁庫存管理 */
+  inventory?: boolean;
+  /** 另外綁檔案管理(遊戲詳情的庫存分頁) */
+  masterData?: boolean;
   world?: InventoryWorldOptions;
 } = {}) => {
   const fake = inventoryWorld({ permissions, ...world });
@@ -38,7 +47,11 @@ export const renderInventory = ({
     ...authWorld({
       hasRefreshCookie: true,
       orgs: [masterDataOrgs.storeA],
-      modules: [overviewModule, ...inventoryModules({ permissions, bookPage })],
+      modules: [
+        overviewModule,
+        ...(inventory ? inventoryModules({ permissions, bookPage }) : []),
+        ...(masterData ? masterDataModules() : []),
+      ],
     }).handlers,
   );
   return { ...renderApp({ path }), fake };

@@ -120,4 +120,54 @@ describe("庫存管理:分頁、查刮刮樂、預計要給本數", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("批購成本")).not.toBeInTheDocument();
   });
+
+  it("目前組織不是店:尋回要選「回到哪家店」(只列看得到的店)", async () => {
+    const { user, fake } = renderInventory({
+      world: { stores: [{ id: "org-store-b", name: "新竹店" }] },
+    });
+    await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
+    const [recover] = await screen.findAllByRole("button", { name: "尋回" });
+    await user.click(recover);
+    const dialog = await screen.findByRole("dialog", { name: "尋回 10 張" });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /尋回原因/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "店內找到" }));
+    await user.click(within(dialog).getByRole("button", { name: "尋回" }));
+    expect(fake.inputs.recover).toEqual([]);
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /回到哪家店/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "新竹店" }));
+    await user.click(within(dialog).getByRole("button", { name: "尋回" }));
+    await waitFor(() => {
+      expect(fake.inputs.recover[0]).toMatchObject({ orgId: "org-store-b" });
+    });
+  });
+
+  it("遊戲詳情:綁了庫存管理才有「庫存概況」「預計要給本數」分頁", async () => {
+    renderInventory({
+      path: "/master-data/game-view-page/g-5164",
+      masterData: true,
+    });
+    expect(
+      await screen.findByRole("tab", { name: "庫存概況" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("tab", { name: "預計要給本數" }),
+    ).toBeInTheDocument();
+  });
+
+  it("遊戲詳情:沒綁庫存管理 → 沒有庫存的兩個分頁", async () => {
+    renderInventory({
+      path: "/master-data/game-view-page/g-5164",
+      masterData: true,
+      inventory: false,
+    });
+    // 只剩基本資料一個分頁時不顯示分頁籤
+    expect(await screen.findAllByText(/發大財/)).not.toHaveLength(0);
+    expect(
+      screen.queryByRole("tab", { name: "庫存概況" }),
+    ).not.toBeInTheDocument();
+  });
 });

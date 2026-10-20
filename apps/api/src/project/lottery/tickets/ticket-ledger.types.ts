@@ -67,6 +67,8 @@ export interface TicketEventInput {
   at?: Date;
   patch: TicketStatePatch;
   amount?: number;
+  /** 當下的成本快照(報廢:這張的單張成本);不給 = null。 */
+  cost?: number | null;
   cashEffect?: TicketCashEffect;
   cashPointId?: Types.ObjectId | null;
   shiftId?: Types.ObjectId | null;

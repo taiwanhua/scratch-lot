@@ -9,6 +9,7 @@ import {
   DealerAllocationsTab,
   DealerStockTab,
 } from "@/components/project/lottery/InventoryDetailTabs/InventoryDetailTabs";
+import { hasInventoryModule } from "@/components/project/lottery/InventoryDetailTabs/inventory-module";
 
 import { CoSellersTab } from "./CoSellersTab";
 import { SigninsTab } from "./SigninsTab";
@@ -26,6 +27,8 @@ export interface DealerDetailTab {
   labelKey: string;
   /** 哪一類的詳情頁有這個分頁 */
   types: readonly LotteryDealerType[];
+  /** 看得到這個分頁的條件(依綁了哪些模組,`me.modules` 的 key);不給 = 都看得到 */
+  visible?: (moduleKeys: ReadonlySet<string>) => boolean;
   Content: ComponentType<DealerDetailTabProps>;
 }
 
@@ -53,12 +56,14 @@ export const DEALER_DETAIL_TABS: readonly DealerDetailTab[] = [
     value: "allocations",
     labelKey: "allocations.tab",
     types: [LotteryDealerType.B],
+    visible: hasInventoryModule,
     Content: DealerAllocationsTab,
   },
   {
     value: "stock",
     labelKey: "stock.tab",
     types: [LotteryDealerType.B],
+    visible: hasInventoryModule,
     Content: DealerStockTab,
   },
 ];

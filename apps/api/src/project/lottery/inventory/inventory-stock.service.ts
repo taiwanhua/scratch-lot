@@ -27,6 +27,7 @@ import type {
   LotteryAllocationCellModel,
   LotteryAllocationsPayload,
   LotteryInventoryGameModel,
+  LotteryInventoryRefModel,
   LotteryStockOverviewPayload,
   LotteryStockOverviewRowModel,
 } from "./models/lottery-inventory.model";
@@ -107,6 +108,16 @@ export class InventoryStockService {
       cells: cells.filter((cell) => storeIds.has(cell.orgId)),
       canEdit: grant.has(INVENTORY_PERMISSIONS.editAllocations),
     };
+  }
+
+  /** 操作者看得到的店(`isVisibleStore`;尋回「回到哪家店」的選項)。只要登入:店名不是機密。 */
+  async visibleStores(
+    operator: OperatorContext,
+  ): Promise<LotteryInventoryRefModel[]> {
+    const tenantOrgs = await this.names.tenantOrgs(operator);
+    return this.names
+      .storesOf(operator, tenantOrgs)
+      .map((org) => ({ id: String(org.id), name: org.name }));
   }
 
   /** 修改一格(`inventory.edit-allocations` 由 resolver 守;寫 audit_log)。 */

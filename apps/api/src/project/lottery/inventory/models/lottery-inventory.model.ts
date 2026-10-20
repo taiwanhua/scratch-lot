@@ -520,3 +520,10 @@ export class LotteryInventoryActionPayload {
   @Field(() => Int, { nullable: true })
   lossCost!: number | null;
 }
+
+/** 操作者看得到的店(尋回「回到哪家店」的選項)。 */
+@ObjectType("LotteryInventoryStoresPayload")
+export class LotteryInventoryStoresPayload {
+  @Field(() => [LotteryInventoryRefModel])
+  items!: LotteryInventoryRefModel[];
+}

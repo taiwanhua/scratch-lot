@@ -7,14 +7,19 @@ import {
   formatTicketRanges,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
-import { useRecoverLotteryTicketsMutation } from "@repo/graphql";
+import {
+  useLotteryInventoryStoresQuery,
+  useRecoverLotteryTicketsMutation,
+} from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
 import { useBreakpointDown } from "@repo/ui/media-query";
+import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useMe } from "@/hooks/base/useMe";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { inventoryErrorOf } from "@/lib/project/lottery/inventory-error";
@@ -44,8 +49,11 @@ export interface RecoverTicketDialogProps {
     bookNo: string;
   };
   tickets: readonly RecoverTicket[];
-  /** 回到哪家店(刷到的那家店;本的詳情頁、待查·遺失分頁 = 目前組織) */
-  store: { id: string; name: string };
+  /**
+   * 回到哪家店(刷到的那家店,例:店面看板)。不給 = 目前組織是店就回到它;目前組織不是店
+   * (最上層組織、區域)時讓使用者選「回到哪家店」(只列看得到的店)
+   */
+  store?: { id: string; name: string };
   onClose: () => void;
   /** 尋回成功(對話框已關閉;呼叫端重讀自己的資料) */
   onRecovered?: () => void;
@@ -60,7 +68,8 @@ const REFRESH_KEYS = [
 ];
 
 /**
- * 尋回(Figma IN-04b;規格 7.4,`inventory.recover`):待查 / 遺失的張回到 `store` 的庫存,
+ * 尋回(Figma IN-04b;規格 7.4,`inventory.recover`):待查 / 遺失的張回到一家**店**的庫存
+ * (`store`;沒給時用目前組織,目前組織不是店就選「回到哪家店」),
  * 原因必填(欄位管理「尋回原因」,選「其他」要填說明)。本的詳情頁、待查·遺失分頁、
  * 店面刷到待查或遺失的張(看板)共用。手機全螢幕。
  */
@@ -75,6 +84,20 @@ export const RecoverTicketDialog = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
+  const me = useMe();
+  const stores = useLotteryInventoryStoresQuery(
+    session.client,
+    {},
+    { enabled: store === undefined },
+  );
+  const storeOptions = stores.data?.lotteryInventoryStores.items ?? [];
+  const currentOrgId = me.data?.me.currentOrg?.id ?? "";
+  /** 目前組織就是一家店 → 直接回到它,不用選。 */
+  const currentStore =
+    storeOptions.find((option) => option.id === currentOrgId) ?? null;
+  const fixedStore = store ?? currentStore;
+  const [pickedStoreId, setPickedStoreId] = useState("");
+  const targetId = fixedStore?.id ?? pickedStoreId;
   const [reason, setReason] = useState<ReasonValue>(EMPTY_REASON);
   const [invalid, setInvalid] = useState<string[]>([]);
   const recover = useRecoverLotteryTicketsMutation(
@@ -96,7 +119,10 @@ export const RecoverTicketDialog = ({
   );
   const statuses = [...new Set(tickets.map((ticket) => ticket.status))];
   const submit = () => {
-    const missing = missingReasonFields(reason);
+    const missing: string[] = missingReasonFields(reason);
+    if (targetId === "") {
+      missing.push("orgId");
+    }
     setInvalid(missing);
     if (missing.length > 0) {
       return;
@@ -107,7 +133,7 @@ export const RecoverTicketDialog = ({
           ticketId: ticket.id,
           version: ticket.version,
         })),
-        orgId: store.id,
+        orgId: targetId,
         ...reasonInputOf(reason),
       },
     });
@@ -163,12 +189,29 @@ export const RecoverTicketDialog = ({
           onChange={setReason}
           invalid={invalid}
         />
-        <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-          <Typography variant="body2">{t("recover.backTo")}</Typography>
-          <Typography variant="body1" color="text.primary">
-            {t("recover.backToStore", { store: store.name })}
-          </Typography>
-        </Stack>
+        {fixedStore === null ? (
+          <SelectField
+            label={t("recover.pickStore")}
+            value={pickedStoreId}
+            required
+            fullWidth
+            error={invalid.includes("orgId")}
+            options={storeOptions.map((option) => ({
+              value: option.id,
+              label: option.name,
+            }))}
+            onChange={(next: string) => {
+              setPickedStoreId(next);
+            }}
+          />
+        ) : (
+          <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+            <Typography variant="body2">{t("recover.backTo")}</Typography>
+            <Typography variant="body1" color="text.primary">
+              {t("recover.backToStore", { store: fixedStore.name })}
+            </Typography>
+          </Stack>
+        )}
       </Stack>
     </Dialog>
   );

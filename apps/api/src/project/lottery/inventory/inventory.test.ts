@@ -25,6 +25,7 @@ import { TransactionService } from "../../../database/transaction";
 import { login } from "../../../demo-items-two/test-support/fixtures";
 import { createRole } from "../../../permission/test-support/fixtures";
 import { PASSWORD, errorOf, ok } from "../test-support/master-data-fixtures";
+import { LotteryAllocationsService } from "../tickets/allocations.service";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketEventInput } from "../tickets/ticket-ledger.types";
@@ -100,6 +101,16 @@ const RECOVER = /* GraphQL */ `
   mutation TestRecover($input: RecoverLotteryTicketsInput!) {
     recoverLotteryTickets(input: $input) {
       count
+    }
+  }
+`;
+
+const STORES = /* GraphQL */ `
+  query TestStores {
+    lotteryInventoryStores {
+      items {
+        name
+      }
     }
   }
 `;
@@ -736,6 +747,51 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(after?.status).toBe(TICKET_STATUS.unsold);
     });
 
+    it("回到的要是店:最上層組織(有下層)→ RECOVER_TARGET_NOT_STORE;店的選項只列看得到的店", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["002"], {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      const detail = await bookOf(bookId, hq);
+      expect(
+        await errorOf(api, hq, RECOVER, {
+          input: {
+            tickets: versionsOf(detail.tickets, ["002"]),
+            orgId: String(tenant),
+            reasonKey: "mistake",
+          },
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: "RECOVER_TARGET_NOT_STORE",
+        fields: ["orgId"],
+      });
+      const stores = await ok<{
+        lotteryInventoryStores: { items: { name: string }[] };
+      }>(api, hq, STORES);
+      expect(
+        stores.lotteryInventoryStores.items.map((item) => item.name),
+      ).not.toContain("租戶甲");
+      expect(
+        stores.lotteryInventoryStores.items.map((item) => item.name),
+      ).toEqual(expect.arrayContaining(["中山店", "新竹店", "台中店"]));
+      const own = await ok<{
+        lotteryInventoryStores: { items: { name: string }[] };
+      }>(api, managerA, STORES);
+      expect(own.lotteryInventoryStores.items).toEqual([{ name: "中山店" }]);
+      await ok(api, hq, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["002"]),
+          orgId: String(storeB),
+          reasonKey: "mistake",
+        },
+      });
+    });
+
     it("回到的分店要在自己的可見範圍內", async () => {
       const bookId = await receiveBook(storeA);
       await apply(storeA, bookId, ["001"], {
@@ -835,6 +891,12 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         .collection("lottery_ticket_events")
         .countDocuments({ bookId, type: TICKET_EVENT_TYPE.scrap });
       expect(events).toBe(3);
+      // 每筆報廢事件存當下的成本快照(報表的報廢損失讀這個欄位)
+      const snapshots = await api.connection
+        .collection<{ cost: number | null }>("lottery_ticket_events")
+        .find({ bookId, type: TICKET_EVENT_TYPE.scrap })
+        .toArray();
+      expect(snapshots.map((event) => event.cost)).toEqual([184, 184, 184]);
     });
 
     it("沒有 show-cost:損失與成本不回;沒有 recover 看不到 [尋回]", async () => {
@@ -967,6 +1029,13 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "FORBIDDEN" });
     });
 
+    it("allocationMatrix 防線:操作者看不到的分店不回", async () => {
+      const cells = await api.app
+        .get(LotteryAllocationsService)
+        .allocationMatrix(storeOperator(storeA), [storeA, storeC], [gameId]);
+      expect(cells.map((cell) => cell.orgId)).not.toContain(String(storeC));
+    });
+
     it("已給 = 進貨本數;分店只列看得到的", async () => {
       const data = await ok<AllocationsData>(api, managerA, ALLOCATIONS, {
         input: {},
@@ -1029,7 +1098,7 @@ describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
         id: String(pending),
         state: "unopened",
         pendingSkipCount: 3,
-        remainingCount: 103,
+        remainingCount: 100,
       },
     ]);
   });

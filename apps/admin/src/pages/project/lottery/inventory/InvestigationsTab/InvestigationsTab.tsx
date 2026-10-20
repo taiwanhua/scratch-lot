@@ -13,7 +13,6 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
 
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
-import { useMe } from "@/hooks/base/useMe";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
@@ -30,7 +29,6 @@ type Row = LotteryInvestigationRowFieldsFragment;
 export const InvestigationsTab = () => {
   const t = useTranslations("admin.lotteryInventory");
   const { session } = useSession();
-  const me = useMe();
   const navigate = useNavigate();
   const access = useInventoryAccess();
   const temporal = useTemporalText();
@@ -40,7 +38,6 @@ export const InvestigationsTab = () => {
   const rows = data?.items ?? [];
   const canRecover = data?.canRecover ?? false;
   const showCost = rows.some((row) => row.cost != null);
-  const currentOrg = me.data?.me.currentOrg ?? null;
 
   const columns: TableColumn<Row>[] = [
     {
@@ -93,7 +90,7 @@ export const InvestigationsTab = () => {
           },
         ]
       : []),
-    ...(canRecover && currentOrg !== null
+    ...(canRecover
       ? [
           {
             key: "actions",
@@ -136,7 +133,7 @@ export const InvestigationsTab = () => {
         minWidth={INVESTIGATIONS_TABLE_MIN_WIDTH}
         {...rowClick}
       />
-      {recovering === null || currentOrg === null ? null : (
+      {recovering === null ? null : (
         <RecoverTicketDialog
           book={{
             gameCode: recovering.gameCode,
@@ -150,7 +147,6 @@ export const InvestigationsTab = () => {
             ticketNo: ticket.ticketNo,
             status: ticket.status,
           }))}
-          store={{ id: currentOrg.id, name: currentOrg.name }}
           onClose={() => {
             setRecovering(null);
           }}

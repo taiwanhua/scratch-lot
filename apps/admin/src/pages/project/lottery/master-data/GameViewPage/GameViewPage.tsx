@@ -13,6 +13,7 @@ import {
   type PageTabItem,
   PageTabs,
 } from "@/components/base/PageTabs/PageTabs";
+import { useMe } from "@/hooks/base/useMe";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
@@ -32,6 +33,10 @@ export const GameViewPage = ({ routeParam }: ModulePageProps) => {
   const { session } = useSession();
   const navigate = useNavigate();
   const access = useMasterDataAccess();
+  const me = useMe();
+  const moduleKeys = new Set(
+    (me.data?.me.modules ?? []).map((module) => module.key),
+  );
   const id = routeParam ?? "";
   const query = useLotteryGameQuery(
     session.client,
@@ -57,14 +62,14 @@ export const GameViewPage = ({ routeParam }: ModulePageProps) => {
     );
   }
 
-  const tabs: PageTabItem[] = GAME_DETAIL_TABS.map(
-    ({ value, labelKey, permission, Content }) => ({
-      value,
-      label: t(`gameView.tabs.${labelKey}`),
-      ...(permission === undefined ? {} : { permission }),
-      content: <Content game={game} />,
-    }),
-  );
+  const tabs: PageTabItem[] = GAME_DETAIL_TABS.filter(
+    (tab) => tab.visible?.(moduleKeys) ?? true,
+  ).map(({ value, labelKey, permission, Content }) => ({
+    value,
+    label: t(`gameView.tabs.${labelKey}`),
+    ...(permission === undefined ? {} : { permission }),
+    content: <Content game={game} />,
+  }));
   const canEdit = game.abilities.canEdit && access.gameEditRoute !== null;
 
   return (

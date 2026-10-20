@@ -25,7 +25,7 @@
 
 ## 權限表
 
-規格 3.2 的 `inventory` **沒有 `view`**:讀取看模組有沒有綁(`InventoryAccess.assertModule`;遊戲詳情、乙類詳情的四個分頁也一樣,沒綁時分頁內只顯示說明)。
+規格 3.2 的 `inventory` **沒有 `view`**:讀取看模組有沒有綁(`InventoryAccess.assertModule`);遊戲詳情、乙類詳情的四個分頁在分頁登記加 `visible: hasInventoryModule`,沒綁庫存管理時不顯示。
 
 | 權限 key                     | moduleId 指向 | 它是哪一頁的什麼                                                                                           |
 | ---------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -59,17 +59,18 @@
 
 ### 尋回(IN-04b)
 
-- 待查 / 遺失的張 → 未售、庫存、`orgId` = 回到的分店(刷到的那家店;本的詳情與待查·遺失分頁 = 目前組織)、清掉責任分店;原因必填(「尋回原因」)。
+- 待查 / 遺失的張 → 未售、庫存、`orgId` = 回到的**店**、清掉責任分店;原因必填(「尋回原因」)。
+- 回到的要是操作者看得到的店(`store-orgs.ts` 的 `isVisibleStore`:沒有下層組織;與分店清單共用同一個認定),否則 `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`。畫面:呼叫端給了店(刷到的那家店)就用它;沒給時目前組織是店就回到它,不是店(最上層組織、區域)就選「回到哪家店」(`lotteryInventoryStores`)。
 - 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)。
 
 ### 報廢(IN-04c)
 
 - 只能報**未售**、沒被鎖定的張(位置不變);原因必填(「報廢原因」)。
-- 報廢事件的 `amount` 是 0;報表的報廢損失 = 報廢的張的單張成本加總(張的 `unitCost` 保留,四捨五入到元)。
+- 報廢事件存當下的成本快照 `cost`(= 那張的單張成本);**報表的報廢損失加總報廢事件的 `cost`**(四捨五入到元),`amount` 是 0。
 
 ### 預計要給本數(IN-06)
 
-- 列 = 操作者看得到的**分店**(租戶裡沒有下層組織的組織,加上有庫存或預計要給本數的組織);欄 = 販售中的遊戲 + 有資料的遊戲。每格「已給 / 預計」;已給 = 整本 N 本 + 零碎「+N 張」;已給超過預計用警告色(只警告)。
+- 列 = 操作者看得到的**分店**(看得到的店 `isVisibleStore`,加上有庫存或預計要給本數的組織);欄 = 販售中的遊戲 + 有資料的遊戲。每格「已給 / 預計」;已給 = 整本 N 本 + 零碎「+N 張」;已給超過預計用警告色(只警告)。
 - 遊戲詳情 = 一個遊戲、每家分店一列;乙類詳情 = 對應分店、每個遊戲一列(沒有對應分店時只顯示說明)。
 - 修改寫 audit_log `lottery-allocation.edit`。
 
@@ -93,6 +94,7 @@
 | `lotteryInvestigations`               | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                    |
 | `lotteryAllocations(input)`           | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                              |
 | `lotteryStockOverview(input)`         | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                     |
+| `lotteryInventoryStores`              | 登入即可                     | 看得到的店(尋回「回到哪家店」的選項)                                                          |
 | `lotteryFieldOptions(categoryKey)`    | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                      |
 | `setLotteryAllocation(input)`         | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                         |
 | `correctLotterySkippedTickets(input)` | `inventory.mark-skipped`     | `{ bookId, ticketNos, reasonKey, reasonNote? }`                                               |
@@ -134,7 +136,7 @@
 | `lockedTicketCount`                                       | 被單據鎖定的張數(lookup 篩「未被鎖定」= 0)                              |
 | `status`                                                  | `normal` / `revoked`(進貨單作廢)                                        |
 
-即時計算不存(`@repo/domain/project/lottery` 的 `book-stats.ts`;api `LotteryBooksService.statsOf`):待標註張數、剩餘張數(未售)、各分店持有張數(不算跳號)、未拆 / 檯面中 / 售完。
+即時計算不存(`@repo/domain/project/lottery` 的 `book-stats.ts`;api `LotteryBooksService.statsOf`):待標註張數、剩餘張數(未售 − 待標註;還沒標的跳號實體不存在)、各分店持有張數(不算跳號)、未拆 / 檯面中 / 售完。
 
 ### 張 `lottery_tickets`
 
@@ -155,7 +157,7 @@
 
 ### 張數事件 `lottery_ticket_events`(只新增)
 
-欄位:`eventId`、`ticketId`、`bookId`、`gameId`、`orgId`、`at`、`by`、`type`、`from`、`to`(狀態、位置、收銀點、所在分店的快照)、`quantity`(一筆一張)、`amount`(**一律正數**)、`cashEffect`(`none` / `increase` / `decrease`)、`cashPointId`、`shiftId`、`refType`、`refId`、`reasonKey`、`reasonNote`。索引 `eventId` 唯一、`(orgId, at)`、`(cashPointId, at)`、`(ticketId, at)`、`(orgId, gameId, type)`。
+欄位:`eventId`、`ticketId`、`bookId`、`gameId`、`orgId`、`at`、`by`、`type`、`from`、`to`(狀態、位置、收銀點、所在分店的快照)、`quantity`(一筆一張)、`amount`(**一律正數**)、`cost`(成本快照;報廢寫入)、`cashEffect`(`none` / `increase` / `decrease`)、`cashPointId`、`shiftId`、`refType`、`refId`、`reasonKey`、`reasonNote`。索引 `eventId` 唯一、`(orgId, at)`、`(cashPointId, at)`、`(ticketId, at)`、`(orgId, gameId, type)`。
 
 事件類型(`packages/domain/src/project/lottery/ticket-events.ts`):`purchase` 進貨、`purchase_void` 進貨作廢、`open` 拆本、`recall` 收回、`move` 移櫃、`sale` 售出、`sale_stocktake` 售出(盤點補登)、`sale_undo` 撤銷、`skip` 跳號、`unskip` 取消跳號、`scrap` 報廢、`transfer_out` 調出、`in_transit` 在途、`transfer_in` 調入、`investigate` 待查、`lose` 遺失、`recover` 尋回。
 
@@ -191,7 +193,7 @@
 `LotteryAllocationsService`(`allocations.service.ts`):
 
 - `allocationStatus(operator, orgId, gameId)`:已給 = 進貨 + 調入 − 調出(累計,售出不扣);每本在這家店的淨張數(扣掉跳號)≥ 標準張數算 1 本,否則算「+N 張」,零碎張數不湊成一本(例:進 2 本、調出 30 張 → 1 本 +70 張)。以操作者當前組織所在租戶的租戶邊界上下文讀整個租戶的事件(出貨店也算得出收貨店;反查),別的租戶的分店 → `NOT_FOUND`;權限由呼叫端判斷。叫貨單、進貨單、調貨單「超過只警告」與庫存管理的矩陣都用它。
-- `allocationMatrix(operator, orgIds, gameIds?)`:多家店 × 多個遊戲一次算(庫存管理的矩陣、遊戲詳情、乙類詳情);只回有設定預計或已給 > 0 的格子;分店要不要讓操作者看由呼叫端判斷。
+- `allocationMatrix(operator, orgIds, gameIds?)`:多家店 × 多個遊戲一次算(庫存管理的矩陣、遊戲詳情、乙類詳情);只回有設定預計或已給 > 0 的格子;操作者看不到的分店直接略過(防線)。
 - `setAllocation(operator, { orgId, gameId, plannedBooks, note })`:新增或修改(唯一 `(orgId, gameId)`),寫 audit_log `lottery-allocation.edit`;以操作者的範圍寫。
 
 ### lookup 來源 `lottery_book`
@@ -223,6 +225,7 @@
 | `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                | 更正跳號:這本沒有跳號                                                         |
 | `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`               | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                            |
 | `VALIDATION_FAILED` | `SKIP_UNCHANGED`                    | 更正跳號:跟目前的跳號一樣                                                     |
+| `VALIDATION_FAILED` | `RECOVER_TARGET_NOT_STORE`          | 尋回:回到的不是店(有下層組織,例:最上層組織)                                   |
 | `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`         | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`) |
 | `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`) | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                               |
 | `FORBIDDEN`         | —                                   | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                        |

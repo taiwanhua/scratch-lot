@@ -23,6 +23,8 @@ export const INVENTORY_REASONS = {
   skipUnchanged: "SKIP_UNCHANGED",
   /** 這個狀態的張不能做這件事(例:報廢只能報未售、尋回只能尋待查 / 遺失、新標的跳號要是未售) */
   ticketStatusNotAllowed: "TICKET_STATUS_NOT_ALLOWED",
+  /** 尋回:回到的組織不是店(有下層組織,例:最上層組織) */
+  recoverTargetNotStore: "RECOVER_TARGET_NOT_STORE",
 } as const;
 
 export type InventoryReason =

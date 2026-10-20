@@ -268,13 +268,14 @@ export class LotteryBooksService {
       locationKind: ticket.location.kind,
       storeOrgId: String(ticket.orgId),
     }));
+    const pendingSkipCount = pendingSkipCountOf(
+      Number(book.lastTicketNo),
+      book.standardTickets,
+      book.skippedTicketNos.length,
+    );
     return {
-      pendingSkipCount: pendingSkipCountOf(
-        Number(book.lastTicketNo),
-        book.standardTickets,
-        book.skippedTicketNos.length,
-      ),
-      remainingCount: remainingCountOf(snapshots),
+      pendingSkipCount,
+      remainingCount: remainingCountOf(snapshots, pendingSkipCount),
       totalCount: snapshots.filter(
         (ticket) => ticket.status !== TICKET_STATUS.skipped,
       ).length,

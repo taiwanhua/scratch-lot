@@ -16,6 +16,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { PageTabs } from "@/components/base/PageTabs/PageTabs";
 import { Section } from "@/components/base/Section/Section";
+import { useMe } from "@/hooks/base/useMe";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -70,6 +71,10 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
   const t = useTranslations("admin.lotteryDealers");
   const temporal = useTemporalText();
   const access = useDealersAccess();
+  const me = useMe();
+  const moduleKeys = new Set(
+    (me.data?.me.modules ?? []).map((module) => module.key),
+  );
   const isClassA = dealer.type === LotteryDealerType.A;
   const pageId = SECTION_PAGE_IDS.dealerDetail;
   const none = t("common.none");
@@ -107,8 +112,9 @@ const DealerView = ({ dealer }: { dealer: LotteryDealerFieldsFragment }) => {
         store: dealer.storeOrg?.name ?? t("summary.notSelected"),
       });
 
-  const tabs = DEALER_DETAIL_TABS.filter((tab) =>
-    tab.types.includes(dealer.type),
+  const tabs = DEALER_DETAIL_TABS.filter(
+    (tab) =>
+      tab.types.includes(dealer.type) && (tab.visible?.(moduleKeys) ?? true),
   ).map(({ value, labelKey, Content }) => ({
     value,
     label: t(labelKey),

@@ -6,6 +6,7 @@ import {
   GameAllocationsTab,
   GameStockTab,
 } from "@/components/project/lottery/InventoryDetailTabs/InventoryDetailTabs";
+import { hasInventoryModule } from "@/components/project/lottery/InventoryDetailTabs/inventory-module";
 
 import { GameBasicTab } from "./GameViewPage/GameBasicTab";
 
@@ -22,6 +23,8 @@ export interface GameDetailTab {
   labelKey: string;
   /** 看得到這個分頁要的權限(`hasPermission`);不給 = 看得到詳情頁就看得到 */
   permission?: string;
+  /** 看得到這個分頁的條件(依綁了哪些模組,`me.modules` 的 key);不給 = 都看得到 */
+  visible?: (moduleKeys: ReadonlySet<string>) => boolean;
   Content: ComponentType<GameDetailTabProps>;
 }
 
@@ -31,11 +34,17 @@ export interface GameDetailTab {
  */
 export const GAME_DETAIL_TABS: readonly GameDetailTab[] = [
   { value: "basic", labelKey: "basic", Content: GameBasicTab },
-  // 庫存管理(P20):讀同一份資料,沒綁庫存管理時分頁內只顯示說明;預計要給本數沒有 edit-allocations 時唯讀
-  { value: "stock", labelKey: "stock", Content: GameStockTab },
+  // 庫存管理(P20):讀同一份資料,綁了庫存管理才顯示;預計要給本數沒有 edit-allocations 時唯讀
+  {
+    value: "stock",
+    labelKey: "stock",
+    visible: hasInventoryModule,
+    Content: GameStockTab,
+  },
   {
     value: "allocations",
     labelKey: "allocations",
+    visible: hasInventoryModule,
     Content: GameAllocationsTab,
   },
 ];

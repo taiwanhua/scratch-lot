@@ -463,7 +463,8 @@
       "SKIP_COUNT_MISMATCH": "改完的跳號張數要等於待標註張數",
       "SKIP_UNCHANGED": "跳號沒有更動",
       "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
-      "UNEXPECTED": "發生錯誤,請稍後再試"
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "RECOVER_TARGET_NOT_STORE": "尋回要回到一家店,請選擇回到哪家店"
     },
     "ticketStatuses": {
       "unsold": "未售",
@@ -621,7 +622,8 @@
       "backTo": "回到",
       "backToStore": "{store} 庫存",
       "submit": "尋回",
-      "success": "已尋回 {count} 張"
+      "success": "已尋回 {count} 張",
+      "pickStore": "回到哪家店"
     },
     "allocations": {
       "aria": "預計要給本數",
@@ -651,7 +653,6 @@
       "empty": "沒有庫存"
     },
     "detailTabs": {
-      "noAccess": "這個分頁讀庫存管理的資料;需要的話,請洽系統管理員開放庫存管理。",
       "noStore": "這位乙類還沒有對應分店。"
     }
   },

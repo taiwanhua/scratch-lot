@@ -36,6 +36,10 @@ describe("本的即時計算(規格 7.1)", () => {
       ...tickets(3, { status: "skipped" }),
     ];
     expect(remainingCountOf(book)).toBe(90);
+    // 迄號 103、標準 100、還沒標跳號:未售 103 − 待標註 3 = 100
+    expect(
+      remainingCountOf(tickets(103), pendingSkipCountOf(103, 100, 0)),
+    ).toBe(100);
     expect(Object.fromEntries(holdingsOf(book))).toEqual({ a: 65, b: 30 });
   });
 

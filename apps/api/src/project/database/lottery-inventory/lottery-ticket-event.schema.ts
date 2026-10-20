@@ -87,6 +87,13 @@ export class LotteryTicketEvent {
   @Prop({ type: Number, default: 0, min: 0 })
   amount!: number;
 
+  /**
+   * 當下的成本快照(元,這張的單張成本;不四捨五入):報廢事件寫入,報表的報廢損失加總這個欄位
+   * (之後單張成本再變也不影響已報廢的損失)。其他事件為 null。
+   */
+  @Prop({ type: Number, default: null, min: 0 })
+  cost!: number | null;
+
   /** 對應有現金的影響:不影響 / 增加 / 減少。 */
   @Prop({ type: String, enum: TICKET_CASH_EFFECTS, default: "none" })
   cashEffect!: TicketCashEffect;

@@ -2086,6 +2086,11 @@ export type LotteryInventorySource = {
   type: Scalars['String']['output'];
 };
 
+export type LotteryInventoryStoresPayload = {
+  __typename?: 'LotteryInventoryStoresPayload';
+  items: Array<LotteryInventoryRef>;
+};
+
 export type LotteryInventoryTicket = {
   __typename?: 'LotteryInventoryTicket';
   cashPoint?: Maybe<LotteryInventoryRef>;
@@ -4010,6 +4015,7 @@ export type Query = {
   lotteryGames: LotteryGamesPayload;
   lotteryInventoryBook: LotteryInventoryBookPayload;
   lotteryInventoryBooks: LotteryInventoryBooksPayload;
+  lotteryInventoryStores: LotteryInventoryStoresPayload;
   lotteryInvestigations: LotteryInvestigationsPayload;
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
@@ -8143,6 +8149,11 @@ export type ScrapLotteryTicketsMutationVariables = Exact<{
 
 
 export type ScrapLotteryTicketsMutation = { __typename?: 'Mutation', scrapLotteryTickets: { __typename?: 'LotteryInventoryActionPayload', count: number, lossCost?: number | null } };
+
+export type LotteryInventoryStoresQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryInventoryStoresQuery = { __typename?: 'Query', lotteryInventoryStores: { __typename?: 'LotteryInventoryStoresPayload', items: Array<{ __typename?: 'LotteryInventoryRef', id: string, name: string }> } };
 
 export type LotteryGameFieldsFragment = { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } };
 
@@ -17829,6 +17840,39 @@ export const useScrapLotteryTicketsMutation = <
 
 
 useScrapLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: ScrapLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<ScrapLotteryTicketsMutation, ScrapLotteryTicketsMutationVariables>(client, ScrapLotteryTicketsDocument, variables, headers);
+
+export const LotteryInventoryStoresDocument = `
+    query LotteryInventoryStores {
+  lotteryInventoryStores {
+    items {
+      ...LotteryInventoryRefFields
+    }
+  }
+}
+    ${LotteryInventoryRefFieldsFragmentDoc}`;
+
+export const useLotteryInventoryStoresQuery = <
+      TData = LotteryInventoryStoresQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryInventoryStoresQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryInventoryStoresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryInventoryStoresQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryInventoryStoresQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryInventoryStores'] : ['LotteryInventoryStores', variables],
+    queryFn: fetcher<LotteryInventoryStoresQuery, LotteryInventoryStoresQueryVariables>(client, LotteryInventoryStoresDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryInventoryStoresQuery.getKey = (variables?: LotteryInventoryStoresQueryVariables) => variables === undefined ? ['LotteryInventoryStores'] : ['LotteryInventoryStores', variables];
+
+
+useLotteryInventoryStoresQuery.fetcher = (client: GraphQLClient, variables?: LotteryInventoryStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryInventoryStoresQuery, LotteryInventoryStoresQueryVariables>(client, LotteryInventoryStoresDocument, variables, headers);
 
 export const LotteryGamesDocument = `
     query LotteryGames($input: LotteryGamesInput!) {

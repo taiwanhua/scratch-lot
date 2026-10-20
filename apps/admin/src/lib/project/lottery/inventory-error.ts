@@ -15,6 +15,7 @@ export type InventoryErrorCode =
   | "SKIP_COUNT_MISMATCH"
   | "SKIP_UNCHANGED"
   | "TICKET_STATUS_NOT_ALLOWED"
+  | "RECOVER_TARGET_NOT_STORE"
   | "UNEXPECTED";
 
 export type InventoryError = AdminError<InventoryErrorCode, never>;
@@ -33,6 +34,7 @@ const REASON_CODES: readonly InventoryErrorCode[] = [
   "SKIP_COUNT_MISMATCH",
   "SKIP_UNCHANGED",
   "TICKET_STATUS_NOT_ALLOWED",
+  "RECOVER_TARGET_NOT_STORE",
 ];
 
 export const inventoryErrorOf = (error: unknown): InventoryError =>

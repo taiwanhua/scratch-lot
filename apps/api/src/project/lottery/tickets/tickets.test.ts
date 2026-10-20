@@ -415,7 +415,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         booksService.statsOf(operator, result.book._id),
       ).resolves.toMatchObject({
         pendingSkipCount: 3,
-        remainingCount: 103,
+        remainingCount: 100,
         state: "unopened",
         holdings: [{ orgId: String(storeA), count: 103 }],
       });

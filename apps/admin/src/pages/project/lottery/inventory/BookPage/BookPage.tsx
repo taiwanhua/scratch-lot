@@ -16,7 +16,6 @@ import { Typography } from "@repo/ui/typography";
 
 import { RecoverTicketDialog } from "@/components/project/lottery/RecoverTicketDialog/RecoverTicketDialog";
 import { TicketGrid } from "@/components/project/lottery/TicketGrid/TicketGrid";
-import { useMe } from "@/hooks/base/useMe";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
@@ -51,7 +50,6 @@ const ticketSchema = z.string().default("");
 export const BookPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryInventory");
   const { session } = useSession();
-  const me = useMe();
   const id = routeParam ?? "";
   const [ticketParam] = useUrlState("ticket", ticketSchema);
   const [selected, setSelected] = useState<string[]>(
@@ -96,7 +94,6 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
   const missingTickets = detail.tickets.filter(
     (ticket) => ticket.status === "investigating" || ticket.status === "lost",
   );
-  const currentOrg = me.data?.me.currentOrg ?? null;
   const clearSelection = () => {
     setSelected([]);
   };
@@ -116,7 +113,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
     >
       <BookHeader
         detail={detail}
-        canRecoverAll={abilities.canRecover && currentOrg !== null}
+        canRecoverAll={abilities.canRecover}
         onCorrect={() => {
           setDialog("correct");
         }}
@@ -133,9 +130,7 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
         <SelectionBar
           tickets={selectedTickets}
           canScrap={actions.canScrap && abilities.canScrap}
-          canRecover={
-            actions.canRecover && abilities.canRecover && currentOrg !== null
-          }
+          canRecover={actions.canRecover && abilities.canRecover}
           onScrap={() => {
             setDialog("scrap");
           }}
@@ -181,12 +176,10 @@ export const BookPage = ({ routeParam }: ModulePageProps) => {
           onScrapped={clearSelection}
         />
       ) : null}
-      {(dialog === "recover" || dialog === "recoverAll") &&
-      currentOrg !== null ? (
+      {dialog === "recover" || dialog === "recoverAll" ? (
         <RecoverTicketDialog
           book={book}
           tickets={recoverTickets}
-          store={{ id: currentOrg.id, name: currentOrg.name }}
           onClose={() => {
             setDialog(null);
           }}

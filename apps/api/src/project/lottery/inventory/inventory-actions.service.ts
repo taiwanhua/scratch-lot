@@ -43,8 +43,10 @@ import type {
   ScrapLotteryTicketsInput,
 } from "./dto/lottery-inventory.input";
 import { InventoryAccess } from "./inventory-access";
+import { InventoryNames } from "./inventory-names";
 import { InventoryViewService } from "./inventory-view.service";
 import type { LotteryInventoryActionPayload } from "./models/lottery-inventory.model";
+import { isVisibleStore } from "./store-orgs";
 
 type TicketRecord = Persisted<LotteryTicketDocument>;
 
@@ -97,6 +99,7 @@ export class InventoryActionsService {
     private readonly view: InventoryViewService,
     private readonly fieldOptions: LotteryFieldOptionsService,
     private readonly access: InventoryAccess,
+    private readonly names: InventoryNames,
     private readonly transactions: TransactionService,
   ) {}
 
@@ -196,7 +199,8 @@ export class InventoryActionsService {
   }
 
   /**
-   * 尋回(`inventory.recover`):待查 / 遺失的張回到 `orgId`(刷到的那家店;要在操作者的可見範圍內)的
+   * 尋回(`inventory.recover`):待查 / 遺失的張回到 `orgId`(刷到的那家店;要是操作者看得到的**店**,
+   * `isVisibleStore`;不是店 → `VALIDATION_FAILED` `RECOVER_TARGET_NOT_STORE`)的
    * 庫存,清掉責任分店。張可能還在別的分店:以帳本的跨店寫入(只准把張移進自己看得到的店)。
    */
   async recover(
@@ -207,6 +211,19 @@ export class InventoryActionsService {
     const orgId = parseId(input.orgId);
     if (orgId === null || !isOrgVisible(operator, orgId)) {
       throw notFoundError("分店不存在");
+    }
+    // 回到的要是店(規格 7.4「回到刷到的那家店」):沒有下層組織;最上層組織、區域不行
+    const tenantOrgs = await this.names.tenantOrgs(operator);
+    const target = tenantOrgs.find((org) => org.id.equals(orgId));
+    if (target === undefined) {
+      throw notFoundError("分店不存在");
+    }
+    if (!isVisibleStore(operator, target, tenantOrgs)) {
+      throw validationError(
+        "尋回要回到一家店",
+        ["orgId"],
+        INVENTORY_REASONS.recoverTargetNotStore,
+      );
     }
     const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
     if (tenantId === null) {
@@ -278,6 +295,9 @@ export class InventoryActionsService {
       );
       this.assertFound(refs, found);
       this.assertStatuses(found, [TICKET_STATUS.unsold], "只能報廢未售的張");
+      const unitCostOf = new Map(
+        found.map((ticket) => [String(ticket._id), ticket.unitCost]),
+      );
       const at = new Date();
       await this.ledger.applyTicketEvents(
         session,
@@ -288,6 +308,8 @@ export class InventoryActionsService {
           expectedStatuses: [TICKET_STATUS.unsold],
           type: TICKET_EVENT_TYPE.scrap,
           at,
+          // 報表的報廢損失讀這個快照(批購成本)
+          cost: unitCostOf.get(String(item.id)) ?? 0,
           patch: { status: TICKET_STATUS.scrapped },
           ...reason,
         })),

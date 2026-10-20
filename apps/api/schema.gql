@@ -1916,6 +1916,10 @@ type LotteryInventorySource {
   type: String!
 }
 
+type LotteryInventoryStoresPayload {
+  items: [LotteryInventoryRef!]!
+}
+
 type LotteryInventoryTicket {
   cashPoint: LotteryInventoryRef
   id: ID!
@@ -3032,6 +3036,7 @@ type Query {
   lotteryGames(input: LotteryGamesInput!): LotteryGamesPayload!
   lotteryInventoryBook(id: ID!): LotteryInventoryBookPayload!
   lotteryInventoryBooks(input: LotteryInventoryBooksInput!): LotteryInventoryBooksPayload!
+  lotteryInventoryStores: LotteryInventoryStoresPayload!
   lotteryInvestigations: LotteryInvestigationsPayload!
   lotteryOccupiedStores: LotteryOccupiedStoresPayload!
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!

@@ -463,7 +463,8 @@
       "SKIP_COUNT_MISMATCH": "The number of skipped tickets must equal the tickets to mark",
       "SKIP_UNCHANGED": "The skipped tickets did not change",
       "TICKET_STATUS_NOT_ALLOWED": "The selected tickets are not in a status that allows this",
-      "UNEXPECTED": "Something went wrong; try again later"
+      "UNEXPECTED": "Something went wrong; try again later",
+      "RECOVER_TARGET_NOT_STORE": "Recovered tickets must go back to a branch; pick one"
     },
     "ticketStatuses": {
       "unsold": "Unsold",
@@ -621,7 +622,8 @@
       "backTo": "Back to",
       "backToStore": "{store} stock",
       "submit": "Recover",
-      "success": "Recovered {count} tickets"
+      "success": "Recovered {count} tickets",
+      "pickStore": "Back to which branch"
     },
     "allocations": {
       "aria": "Planned books",
@@ -651,7 +653,6 @@
       "empty": "No stock"
     },
     "detailTabs": {
-      "noAccess": "This tab reads inventory data; ask your administrator for inventory access if you need it.",
       "noStore": "This class B dealer has no branch yet."
     }
   },

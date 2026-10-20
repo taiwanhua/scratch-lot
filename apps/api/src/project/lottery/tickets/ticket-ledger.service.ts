@@ -323,6 +323,7 @@ export class TicketLedgerService {
         to: snapshotOf(after),
         quantity: 1,
         amount,
+        cost: input.cost ?? null,
         cashEffect: input.cashEffect ?? "none",
         cashPointId: input.cashPointId ?? null,
         shiftId: input.shiftId ?? null,

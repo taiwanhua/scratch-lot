@@ -14,6 +14,9 @@ import { tenantBoundaryContext } from "../../../database/tenant-boundary-context
 import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
 import { tenantOfOperator } from "../master-data-tenant";
+import { type TenantOrg, isVisibleStore } from "./store-orgs";
+
+export type { TenantOrg } from "./store-orgs";
 
 const uniqueIds = (ids: readonly unknown[]): Types.ObjectId[] => [
   ...new Map(
@@ -24,14 +27,6 @@ const uniqueIds = (ids: readonly unknown[]): Types.ObjectId[] => [
       .map((id) => [id, new Types.ObjectId(id)]),
   ).values(),
 ];
-
-/** 租戶裡的一個組織(分店清單、子樹)。 */
-export interface TenantOrg {
-  id: Types.ObjectId;
-  name: string;
-  parentId: Types.ObjectId | null;
-  ancestors: Types.ObjectId[];
-}
 
 /**
  * 庫存管理顯示用的名稱對照與組織樹(一批列一次查完)。
@@ -72,7 +67,7 @@ export class InventoryNames {
   }
 
   /**
-   * 操作者看得到的**分店**:租戶裡看得到、沒有下層組織的(最上層組織沒有分店時算它自己),
+   * 操作者看得到的**分店**:看得到的店(`isVisibleStore`,沒有下層組織),
    * 再加上 `withData`(有庫存或預計要給本數的組織,例:總部本身也是一家店)。依名稱排序。
    */
   storesOf(
@@ -80,15 +75,11 @@ export class InventoryNames {
     tenantOrgs: readonly TenantOrg[],
     withData: ReadonlySet<string> = new Set(),
   ): TenantOrg[] {
-    const parents = new Set(
-      tenantOrgs.flatMap((org) =>
-        org.parentId === null ? [] : [String(org.parentId)],
-      ),
-    );
     return tenantOrgs
-      .filter((org) => isOrgVisible(operator, org.id))
       .filter(
-        (org) => !parents.has(String(org.id)) || withData.has(String(org.id)),
+        (org) =>
+          isVisibleStore(operator, org, tenantOrgs) ||
+          (isOrgVisible(operator, org.id) && withData.has(String(org.id))),
       )
       .toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
   }

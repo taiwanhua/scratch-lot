@@ -449,6 +449,11 @@ export class InventoryViewService {
         }))
         .toSorted((a, b) => b.count - a.count);
       const lastTicketNo = Number(record.lastTicketNo);
+      const pendingSkipCount = pendingSkipCountOf(
+        lastTicketNo,
+        record.standardTickets,
+        record.skippedTicketNos.length,
+      );
       return {
         id: String(record._id),
         bookKey: record.bookKey,
@@ -462,15 +467,11 @@ export class InventoryViewService {
         lastTicketNo: record.lastTicketNo,
         org: mustRef(record.orgId, orgNames),
         holdings,
-        remainingCount: remainingCountOf(snapshots),
+        remainingCount: remainingCountOf(snapshots, pendingSkipCount),
         totalCount: snapshots.filter(
           (ticket) => ticket.status !== TICKET_STATUS.skipped,
         ).length,
-        pendingSkipCount: pendingSkipCountOf(
-          lastTicketNo,
-          record.standardTickets,
-          record.skippedTicketNos.length,
-        ),
+        pendingSkipCount,
         requiredSkipCount: requiredSkipCountOf(
           lastTicketNo,
           record.standardTickets,

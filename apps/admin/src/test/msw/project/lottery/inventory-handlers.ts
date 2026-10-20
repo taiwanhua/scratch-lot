@@ -46,6 +46,8 @@ export interface InventoryWorldOptions {
   details?: LotteryInventoryBookDetailFieldsFragment[];
   investigations?: LotteryInvestigationRowFieldsFragment[];
   cells?: LotteryAllocationCellFieldsFragment[];
+  /** 看得到的店(尋回「回到哪家店」);預設三家 */
+  stores?: { id: string; name: string }[];
   permissions?: readonly string[];
 }
 
@@ -94,6 +96,7 @@ export const inventoryWorld = ({
   details = [sampleBookDetail(), sampleInvestigatingBookDetail()],
   investigations = sampleInvestigations(),
   cells = sampleAllocationCells(),
+  stores = Object.values(inventoryOrgs),
   permissions = ALL_INVENTORY_PERMISSIONS,
 }: InventoryWorldOptions = {}): InventoryWorld => {
   const has = (key: string) => permissions.includes(key);
@@ -250,6 +253,18 @@ export const inventoryWorld = ({
         .map((row) => (target === null ? row : { ...row, org: target.store }));
       return HttpResponse.json({ data: { lotteryStockOverview: { items } } });
     }),
+    api.query("LotteryInventoryStores", () =>
+      HttpResponse.json({
+        data: {
+          lotteryInventoryStores: {
+            items: stores.map((store) => ({
+              __typename: "LotteryInventoryRef" as const,
+              ...store,
+            })),
+          },
+        },
+      }),
+    ),
     api.query("LotteryFieldOptions", ({ variables }) => {
       const { categoryKey } = variables as LotteryFieldOptionsQueryVariables;
       const items = (sampleReasonOptions[categoryKey] ?? []).map((option) => ({

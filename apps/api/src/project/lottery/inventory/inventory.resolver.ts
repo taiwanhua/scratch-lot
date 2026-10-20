@@ -23,6 +23,7 @@ import {
   LotteryInventoryBookModel,
   LotteryInventoryBookPayload,
   LotteryInventoryBooksPayload,
+  LotteryInventoryStoresPayload,
   LotteryInvestigationsPayload,
   LotteryStockOverviewPayload,
   LotteryTicketLookupPayload,
@@ -87,6 +88,16 @@ export class LotteryInventoryResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStockOverviewPayload> {
     return this.stock.stockOverview(operator, input);
+  }
+
+  /** 看得到的店(尋回視窗「回到哪家店」);只要登入(店面刷到待查的張也會用)。 */
+  @Query(() => LotteryInventoryStoresPayload, {
+    name: "lotteryInventoryStores",
+  })
+  async lotteryInventoryStores(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryInventoryStoresPayload> {
+    return { items: await this.stock.visibleStores(operator) };
   }
 
   @RequirePermission("inventory.edit-allocations")
