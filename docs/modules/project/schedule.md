@@ -50,7 +50,7 @@
 
 唯一索引一律是 partial(`partialFilterExpression: { deletedAt: { $type: "null" } }`,軟刪除的不算);同時寫入撞到唯一索引時回與事前檢查同一個 `VALIDATION_FAILED`。
 
-八張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。範本、週範本、規則設定、行事曆宣告「上層沿用到下層」(ADR-0014);排班檔案宣告「可共用 + 依可以排的分店」;畫休、守門文件、關聯以人為準,以租戶為邊界讀寫(`scheduleTenantContext`,底座 `systemTenantReader`)。
+八張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。範本、週範本、規則設定、行事曆宣告「上層沿用到下層」(ADR-0014);排班檔案宣告「可共用 + 依可以排的分店」;畫休、守門文件、關聯以人為準,以租戶為邊界讀寫(底座 `tenantBoundaryContext`)。
 
 | collection                       | 一筆是                                    | 歸屬 `orgId`                                                    | 唯一 / 說明                                                                                                                                                                                                |
 | -------------------------------- | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -133,7 +133,7 @@
 - **開放期間**(規則 `dayOffWindow`,`apps/api/src/project/schedule/day-offs/day-off-window.ts`):目標月的開放期間 = 前一個月的 N 日至 M 日(超過月底用月底);今天(租戶時區,`ScheduleClock`)在期間內 = 開放中。這條規則沒有等級,只看值、不看開關,登記檢查與通知用同一個判斷(`dayOffWindowValueOf`)。**本人**只能在開放中登記 / 刪除那個目標月的畫休,其他時候 → `FORBIDDEN`(`reason: OUTSIDE_DAY_OFF_WINDOW`)。
 - **代改**(`edit-day-offs`):對象要是選的那家店(要看得到)的排班人員(否則 `NOT_FOUND`);不受開放期間限制;那個月的截止日(對象主要分店的開放期間)已過 → `reason` 必填(欄位管理「代改畫休原因」啟用中的選項),選「其他」`reasonNote` 必填(否則 `VALIDATION_FAILED`,欄位 `reason` / `reasonNote`);截止前原因選填。記代改人 `by`;代改刪除先寫入代改人與原因再軟刪除。代改一樣跑規則。
 - **畫休總覽**:候選人(可以排這家店的排班人員)這個月的畫休;同日畫休人數只計 `isPrimary` 的人;「尚未畫休」= 主要分店是這家、這個月還沒畫任何一天的候選人。
-- **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, from, to)` 回這家店的候選人每人每天的整天畫休 / 時段不可排(只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。
+- **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, from, to)` 回這家店的候選人每人每天的整天畫休 / 時段不可排(只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。**空清單分不出「沒有畫休」與「看不到這家店」**:呼叫端(排班表、自動排班)要先自己確認看得到這家店(例:`resolveScheduleOrg`,看不到 → `NOT_FOUND`),再呼叫它。
 
 ### 畫休開放 / 即將截止通知(規格 3.4、3.5、14.11)
 
@@ -167,7 +167,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 ### 給其他功能的 service
 
-`ScheduleModule` 匯出:`ScheduleStaffService.listScheduleCandidates`、`ScheduleRulesService.effectiveSettingsForOrg`、`ScheduleCalendarService.effectiveDays`、`ScheduleDayOffsService.listUnavailable`、`SchedulePermissions`。這四個給其他功能的查詢都要求那家店在操作者的可見範圍內(看不到 / 別租戶 → `NOT_FOUND` 或空清單);排程與自動排班以底座 `systemTenantReader(tenantId)` 呼叫(可見範圍 = 整個租戶)。
+`ScheduleModule` 匯出:`ScheduleStaffService.listScheduleCandidates`、`ScheduleRulesService.effectiveSettingsForOrg`、`ScheduleCalendarService.effectiveDays`、`ScheduleDayOffsService.listUnavailable`、`SchedulePermissions`。這四個給其他功能的查詢都要求那家店在操作者的可見範圍內(看不到 / 別租戶 → `NOT_FOUND` 或空清單);排程與自動排班以底座 `tenantBoundaryContext(orgs, null, tenantId)` 呼叫(可見範圍 = 整個租戶)。
 
 ### 給刮刮樂的登記接縫
 

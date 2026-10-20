@@ -14,6 +14,7 @@ import {
 } from "./plugins/tenant-scope.plugin";
 import { Org, OrgSchema } from "./schemas/org.schema";
 import { systemTenantReader } from "./system-tenant-reader";
+import { tenantBoundaryContext } from "./tenant-boundary-context";
 import {
   HOOK_TIMEOUT_MS,
   type TestDatabase,
@@ -819,6 +820,84 @@ describe("資料共用(ADR-0014):三種宣告 × 人 × 資料歸屬", () => {
       ).rejects.toThrow(TenantScopeError);
       await expect(
         systemTenantReader(orgsRepositoryOf(database), B1),
+      ).rejects.toThrow(TenantScopeError);
+    });
+  });
+
+  describe("tenantBoundaryContext(反查 / 以人為準 / 例外寫入 / 排程的租戶邊界上下文)", () => {
+    it("有操作者:租戶要是他所屬的、保留 actorId;別租戶 → TenantScopeError", async () => {
+      const orgs = orgsRepositoryOf(database);
+      const who = PEOPLE.單一分店人員;
+      const context = await tenantBoundaryContext(orgs, who, T);
+      expect(context.actorId).toEqual(who.actorId);
+      expect(sorted(await seenBy(privateItems, context))).toEqual(
+        sorted(TENANT_T_PRIVATE),
+      );
+      await expect(tenantBoundaryContext(orgs, who, U)).rejects.toThrow(
+        TenantScopeError,
+      );
+    });
+
+    it("沒有操作者 = 租戶系統身分;沒有租戶(null)只有根組織成員可用", async () => {
+      const orgs = orgsRepositoryOf(database);
+      const system = await tenantBoundaryContext(orgs, null, U);
+      expect(system.actorId).toBeNull();
+      expect(await seenBy(privateItems, system)).toEqual(["別租戶"]);
+      await expect(tenantBoundaryContext(orgs, asRoot, null)).resolves.toBe(
+        asRoot,
+      );
+      await expect(
+        tenantBoundaryContext(orgs, PEOPLE.單一分店人員, null),
+      ).rejects.toThrow(TenantScopeError);
+      await expect(tenantBoundaryContext(orgs, null, null)).rejects.toThrow(
+        TenantScopeError,
+      );
+    });
+  });
+
+  describe("tenantId 一律由 orgId 推導(自己宣告 tenantId 欄的表也一樣)", () => {
+    interface Link {
+      orgId: Types.ObjectId;
+      tenantId: Types.ObjectId | null;
+      name: string;
+    }
+    let links: BaseRepository<Link, HydratedDocument<Link>>;
+
+    beforeAll(() => {
+      const schema = new Schema<Link>(
+        {
+          orgId: { type: Schema.Types.ObjectId, required: true },
+          tenantId: { type: Schema.Types.ObjectId, default: null },
+          name: { type: String, required: true },
+        },
+        { collection: "sharing_links", timestamps: true },
+      );
+      schema.plugin(baseFieldsPlugin);
+      schema.plugin(tenantScopePlugin, { refFields: ["name"] });
+      links = new BaseRepository(
+        database.connection.model<Link>("SharingLink", schema),
+      );
+    });
+
+    it("呼叫端給錯的 tenantId 會被覆蓋;租戶邊界出口不會跨租戶命中;更新改不了 tenantId", async () => {
+      const created = await links.create(
+        { ...asRoot, currentOrgId: B1 },
+        { orgId: B1, tenantId: U, name: "給錯租戶的關聯" },
+      );
+      expect(created.tenantId).toEqual(T);
+      await expect(
+        links.existsInTenant(PEOPLE.別租戶, U, { name: "給錯租戶的關聯" }),
+      ).resolves.toBe(false);
+      await expect(
+        links.existsInTenant(PEOPLE.單一分店人員, T, {
+          name: "給錯租戶的關聯",
+        }),
+      ).resolves.toBe(true);
+      await expect(
+        links.findRefsInTenant(PEOPLE.別租戶, U, [created._id]),
+      ).resolves.toEqual([]);
+      await expect(
+        links.updateById(asRoot, created._id, { $set: { tenantId: U } }),
       ).rejects.toThrow(TenantScopeError);
     });
   });

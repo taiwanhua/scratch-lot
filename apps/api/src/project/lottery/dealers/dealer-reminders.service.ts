@@ -4,7 +4,7 @@ import type { Types } from "mongoose";
 import { type LocalDate, localDateText } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   type ScheduleHit,
   scheduleHitAt,
@@ -115,7 +115,7 @@ export class DealerRemindersService implements OnModuleInit {
       LOTTERY_STORE_RENT_DUE,
     );
     // 排程的租戶系統身分:可見範圍 = 這個租戶的整棵組織樹(ADR-0005「例外出口」)
-    const reader = await systemTenantReader(this.orgs, tenantId);
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const dealers = await this.dealers.findMany(reader, {
       tenantId,
       status: { $ne: "terminated" },

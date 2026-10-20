@@ -18,6 +18,7 @@ import {
   isOrgVisible,
 } from "../../../database/operator-context";
 import { RelationService } from "../../../database/relation.service";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantIdOfOrg } from "../../../database/tenant-id";
 import { TransactionService } from "../../../database/transaction";
 import type { ScheduleStaffOrgMeta } from "../../database/schedule/schedule-relationship.schema";
@@ -37,7 +38,6 @@ import {
   parseObjectId,
   resolveScheduleOrg,
   scheduleOrgReader,
-  scheduleTenantContext,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -305,7 +305,7 @@ export class ScheduleStaffService {
     if (tenantId === null) {
       return [];
     }
-    const context = await scheduleTenantContext(this.orgs, null, tenantId);
+    const context = await tenantBoundaryContext(this.orgs, null, tenantId);
     const links = await this.relationships.findMany(
       context,
       {
@@ -368,7 +368,7 @@ export class ScheduleStaffService {
   }> {
     const org = await resolveScheduleOrg(operator, this.orgs, null);
     // 候選使用者 = 所屬組織在可見範圍內的人:先以租戶為邊界列出組織樹,再依可見範圍篩
-    const context = await scheduleTenantContext(this.orgs, null, org.tenantId);
+    const context = await tenantBoundaryContext(this.orgs, null, org.tenantId);
     const tenantOrgs = await this.orgs.findMany(context, {
       $or: [{ _id: org.tenantId }, { ancestors: org.tenantId }],
     });
@@ -424,7 +424,7 @@ export class ScheduleStaffService {
       return new Set();
     }
     const records = await this.staff.findMany(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       { tenantId, userId: { $in: users.map((user) => user._id) } },
     );
     return new Set(records.map((record) => String(record.userId)));
@@ -445,7 +445,7 @@ export class ScheduleStaffService {
       staffIds.length === 0 || tenantId === null
         ? []
         : await this.relationships.findMany(
-            await scheduleTenantContext(this.orgs, null, tenantId),
+            await tenantBoundaryContext(this.orgs, null, tenantId),
             { tenantId, type: ORG_STAFF, secondId: { $in: staffIds } },
           );
     const linksByStaff = new Map<string, RelationRecord[]>();
@@ -490,7 +490,7 @@ export class ScheduleStaffService {
       }
     }
     const all = await this.relationships.findMany(
-      await scheduleTenantContext(this.orgs, null, tenantOfStaff(record)),
+      await tenantBoundaryContext(this.orgs, null, tenantOfStaff(record)),
       {
         type: ORG_STAFF,
         secondId: record._id,
@@ -533,7 +533,7 @@ export class ScheduleStaffService {
     plan: OrgPlan,
   ): Promise<void> {
     // 關聯的 orgId = 分店;看不到的分店的關聯保留不動(只動 plan 裡的),寫入以租戶為邊界、保留操作者
-    const context = await scheduleTenantContext(
+    const context = await tenantBoundaryContext(
       this.orgs,
       operator,
       tenantOfStaff(record),

@@ -89,7 +89,9 @@ LotteryDealerContactSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
 );
 LotteryDealerContactSchema.plugin(baseFieldsPlugin);
-// 名稱與關聯檢查要的欄位可經租戶內引用名稱出口讀(看得到經銷商就看得到它關聯的關係人名稱)
+// 名稱與關聯檢查要的欄位可經租戶內引用名稱出口讀(看得到經銷商就看得到它關聯的關係人名稱)。
+// `nationalId` / `roles` 只供 service 內部比對(本人不能登記成自己的關係人、身分是否相符),
+// **不得回傳前端**:對外只回 `name` / `status`(`dealer-view.service.ts` 的關係人參照)
 LotteryDealerContactSchema.plugin(tenantScopePlugin, {
   moduleData: true,
   refFields: ["name", "status", "nationalId", "roles"],

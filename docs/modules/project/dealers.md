@@ -72,12 +72,12 @@
 - **對應分店**:只有乙類;要是租戶底下的組織(不是最上層組織本身);一對一,已被其他乙類對應 → `STORE_OCCUPIED`。乙類可以不選(畫面提醒)。
 - **牌租**:有週期就要繳費日;週期是季或年時起算月份必填;由季 / 年改成月時起算月份寫回 null。繳費日 = 每期第一個月的第 N 日,那個月沒有這一天用月底。
 - **關係人取消身分**:那個身分還有關聯 → `CONFLICT`(`ROLE_IN_USE`,只列操作者看得到的經銷商上的關聯,看不到的只回筆數 `hiddenCount`,畫面提示「另有 N 筆你看不到的關聯也會一起解除」);帶 `releaseRelationships: true` 重送一併解除 —— 這是**例外寫入**:看不到的經銷商上的關聯以租戶為邊界解除(`dealer-links.service.ts` 的 `releaseContactRoles`)。
-- **資料共用(ADR-0014)**:經銷商看得到 = 可見範圍、共用給(`shareOrgs`,編輯頁「共用給」欄位,要 `dealers.edit`)、或乙類的對應分店。共用進來的只能看(`isShared`、`abilities` 全 false、寫入 `NOT_FOUND`)。看得到經銷商就看得到它的關聯與引用的名稱(關聯列以租戶為邊界讀;名稱經 `findRefsInTenant`)。租戶內唯一(證號、身分證字號)與對應分店是否已被占用以 `existsInTenant` 檢查;共同銷售人數、已被對應的分店、關係人掛在哪些經銷商以租戶為邊界反查(`dealer-tenant.ts`)。別租戶一律看不到。
+- **資料共用(ADR-0014)**:經銷商看得到 = 可見範圍、共用給(`shareOrgs`,編輯頁「共用給」欄位,要 `dealers.edit`)、或乙類的對應分店。共用進來的只能看(`isShared`、`abilities` 全 false、寫入 `NOT_FOUND`)。看得到經銷商就看得到它的關聯與引用的名稱(關聯列以租戶為邊界讀;名稱經 `findRefsInTenant`)。租戶內唯一(證號、身分證字號)與對應分店是否已被占用以 `existsInTenant` 檢查;共同銷售人數、已被對應的分店、關係人掛在哪些經銷商以租戶為邊界反查(`tenantBoundaryContext`)。別租戶一律看不到。
 - **沒有刪除**:經銷商只能解約、關係人只能停用;解約 / 停用後不能再被選取(挑選器帶 `selectable` / `status: ACTIVE`),既有關聯保留。
 - **主檔與關聯同一個交易**;每一筆關聯的新增 / 解除各寫一筆稽核。
 - **見簽**:每年每季一筆;見簽日不限定落在該季;已過沒登記的季別 `MISSING`(警告色)、本季沒登記 `OPEN`、未到 `NOT_STARTED`(不能登記)。
 - **側欄計數 `dealers`**:操作者可見範圍內、不是解約的經銷商中,證照到期日 ≤ 今天 + 30 天(含已過期),或甲類的最近一次批購日 / 本人批購日距今超過 180 天(都無紀錄的不算);同一位只算一次。「今天」以租戶時區計。新增 / 編輯後對操作者送 `badge:dealers`。
-- **提醒(B14)**:排程工作 `lottery.dealer-reminders`(每 15 分鐘;以 `systemTenantReader` 逐租戶讀)對每個租戶、每位不是解約的經銷商判斷 `scheduleHitAt`:證照到期(預設到期日前 30、7、0 天 09:00;過期後不再寄)、牌租繳費提醒(乙類,預設繳費日前 3、0 天 09:00)。事件組織 = 乙類的對應分店,甲類或沒有對應分店 = 租戶;`dedupeKey` 帶經銷商、目標日與時點。提醒時間由通知設定頁調整(規格 3.5)。
+- **提醒(B14)**:排程工作 `lottery.dealer-reminders`(每 15 分鐘;以 `tenantBoundaryContext` 逐租戶讀)對每個租戶、每位不是解約的經銷商判斷 `scheduleHitAt`:證照到期(預設到期日前 30、7、0 天 09:00;過期後不再寄)、牌租繳費提醒(乙類,預設繳費日前 3、0 天 09:00)。事件組織 = 乙類的對應分店,甲類或沒有對應分店 = 租戶;`dedupeKey` 帶經銷商、目標日與時點。提醒時間由通知設定頁調整(規格 3.5)。
 
 正本:`apps/api/src/project/lottery/dealers/dealer-links.service.ts`、`dealers.service.ts`、`dealer-reminders.service.ts`、`dealer-badge.ts`
 

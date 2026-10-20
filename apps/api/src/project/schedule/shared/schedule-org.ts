@@ -5,7 +5,6 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { notFoundError, validationError } from "./schedule-error";
 
 /**
@@ -33,20 +32,6 @@ export function scheduleOrgReader(operator: OperatorContext): OperatorContext {
     }
   }
   return { ...operator, managedOrgIds: [...ids.values()] };
-}
-
-/**
- * 以**租戶**為邊界的讀寫(ADR-0005 的 `systemTenantReader`:可見範圍 = 這個租戶的整棵組織樹)。
- * 只給「以人為準、跨店」的資料:畫休(屬於人、不分在哪家店登記)、守門文件(掛在租戶頂層)、
- * 排程與給其他功能的查詢;條件一律再釘 `tenantId`。有操作者時保留他的 id(基礎欄位與稽核記得是誰改的)。
- */
-export async function scheduleTenantContext(
-  orgs: OrgsRepository,
-  operator: OperatorContext | null,
-  tenantId: Types.ObjectId,
-): Promise<OperatorContext> {
-  const reader = await systemTenantReader(orgs, tenantId);
-  return operator === null ? reader : { ...reader, actorId: operator.actorId };
 }
 
 export interface ScheduleOrg {

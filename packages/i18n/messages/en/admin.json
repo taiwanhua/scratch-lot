@@ -2795,6 +2795,8 @@
     "confirm": "Done"
   },
   "shareOrgsField": {
+    "rootNotSharable": "The root org cannot be shared with",
+    "rootDisabled": "Records of the root org cannot be shared",
     "helper": "Shared orgs can view this record but cannot change it. Any org in the tree can be chosen.",
     "includeDescendants": "Include orgs under {name}",
     "withDescendants": "{name} (and below)",

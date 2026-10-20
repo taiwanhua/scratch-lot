@@ -177,7 +177,7 @@ export class ScheduleCalendarService {
 
   /**
    * 某家店一段日期(`YYYY-MM-DD`,含頭尾)的生效行事曆;排班作業(店休擋排班、特殊日背景)共用。
-   * 這家店要在操作者的可見範圍內(排程以 `systemTenantReader` 呼叫 = 整個租戶),否則 `NOT_FOUND`;
+   * 這家店要在操作者的可見範圍內(排程以 `tenantBoundaryContext` 呼叫 = 整個租戶),否則 `NOT_FOUND`;
    * 上層鏈建的行事曆照「上層沿用到下層」讀。
    */
   async effectiveDays(

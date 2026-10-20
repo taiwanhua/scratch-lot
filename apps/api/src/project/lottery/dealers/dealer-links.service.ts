@@ -5,6 +5,7 @@ import { AuditService } from "../../../audit/audit.service";
 import type { Persisted, TenantRef } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import type { ContactRole } from "../../database/lottery-dealers/lottery-dealer-contact.schema";
 import type { DealerType } from "../../database/lottery-dealers/lottery-dealer.schema";
 import {
@@ -15,7 +16,6 @@ import {
 } from "../../database/lottery-dealers/lottery-dealers.repository";
 import type { LotteryRelationshipType } from "../../database/lottery-dealers/lottery-relationship.schema";
 import { AUDIT_ACTIONS, AUDIT_TARGETS, CONTACT_LIMITS } from "./dealer-keys";
-import { dealerTenantReader } from "./dealer-tenant";
 import {
   type ConflictRelationship,
   DEALER_CONFLICT_REASONS,
@@ -184,7 +184,7 @@ export class DealerLinksService {
       return result;
     }
     // 呼叫端給的 dealerIds 一律是操作者看得到的經銷商;關聯列以租戶為邊界讀(共用進來的也讀得到)
-    const reader = await dealerTenantReader(this.orgs, operator, tenantId);
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
     const rows = await this.relationships.findMany(
       reader,
       {
@@ -227,7 +227,7 @@ export class DealerLinksService {
     dealerIds: readonly Types.ObjectId[],
   ): Promise<RelationshipRecord[]> {
     return this.relationships.findMany(
-      await dealerTenantReader(this.orgs, operator, tenantId),
+      await tenantBoundaryContext(this.orgs, operator, tenantId),
       { tenantId, type: DEALER_DEALER, secondId: { $in: [...dealerIds] } },
       { sort: { createdAt: 1, _id: 1 } },
     );
@@ -239,7 +239,7 @@ export class DealerLinksService {
     tenantId: Types.ObjectId | null,
   ): Promise<RelationshipRecord[]> {
     return this.relationships.findMany(
-      await dealerTenantReader(this.orgs, operator, tenantId),
+      await tenantBoundaryContext(this.orgs, operator, tenantId),
       {
         tenantId,
         type: ORG_DEALER,
@@ -254,7 +254,7 @@ export class DealerLinksService {
     contactIds: readonly Types.ObjectId[],
   ): Promise<RelationshipRecord[]> {
     return this.relationships.findMany(
-      await dealerTenantReader(this.orgs, operator, tenantId),
+      await tenantBoundaryContext(this.orgs, operator, tenantId),
       { tenantId, type: DEALER_CONTACT, secondId: { $in: [...contactIds] } },
       { sort: { createdAt: 1, _id: 1 } },
     );
@@ -469,7 +469,7 @@ export class DealerLinksService {
       owner.tenantId === null
         ? null
         : await this.orgs.findById(
-            await dealerTenantReader(this.orgs, operator, owner.tenantId),
+            await tenantBoundaryContext(this.orgs, operator, owner.tenantId),
             orgId,
           );
     if (
@@ -570,7 +570,7 @@ export class DealerLinksService {
     if (rows.length === 0) {
       return;
     }
-    const writer = await dealerTenantReader(this.orgs, operator, tenantId);
+    const writer = await tenantBoundaryContext(this.orgs, operator, tenantId);
     for (const row of rows) {
       await this.relationships.softDeleteById(writer, row._id);
       await this.recordAudit(operator, AUDIT_ACTIONS.relationshipDelete, row);

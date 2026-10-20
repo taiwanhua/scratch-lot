@@ -228,7 +228,7 @@ export class ScheduleRulesService {
   /**
    * 某家店的檢查用生效設定(key → 設定):沿組織樹往上找、最後用程式預設。
    * 排班作業的檢查(手動、自動、檢核面板、發布)都讀這一份;這家店要在操作者的可見範圍內
-   * (排程以 `systemTenantReader` 呼叫 = 整個租戶),上層鏈的設定照「上層沿用到下層」讀。
+   * (排程以 `tenantBoundaryContext` 呼叫 = 整個租戶),上層鏈的設定照「上層沿用到下層」讀。
    */
   async effectiveSettingsForOrg(
     operator: OperatorContext,

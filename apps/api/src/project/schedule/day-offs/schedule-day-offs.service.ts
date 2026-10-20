@@ -23,6 +23,7 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
@@ -51,7 +52,6 @@ import {
   parseObjectId,
   resolveScheduleOrg,
   scheduleOrgReader,
-  scheduleTenantContext,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -331,7 +331,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     }
     // 畫休以人為準:主要分店不一定在操作者的可見範圍,以租戶為邊界讀它的生效設定
     const settings = await this.rules.effectiveSettingsForOrg(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     const window = windowModelOf(
@@ -361,7 +361,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       members: new Set(members),
     });
     const primaryOrg = await this.orgs.findById(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     const primaryName = primaryOrg?.name ?? "";
@@ -555,7 +555,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     const [, tenantTop] = org.ancestors;
     const tenantId = tenantTop ?? org._id;
     const candidates = await this.staffService.listScheduleCandidates(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       orgId,
     );
     const records = await this.recordsBetween(
@@ -617,7 +617,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     tenantId: Types.ObjectId,
     userId: Types.ObjectId,
   ): Promise<Types.ObjectId | null> {
-    const reader = await scheduleTenantContext(this.orgs, null, tenantId);
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const profile = await this.staff.findOne(reader, { tenantId, userId });
     if (!profile) {
       return null;
@@ -636,7 +636,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     tenantId: Types.ObjectId,
     orgId: Types.ObjectId,
   ): Promise<string[]> {
-    const reader = await scheduleTenantContext(this.orgs, null, tenantId);
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const links = await this.relationships.findMany(reader, {
       type: ORG_STAFF,
       tenantId,
@@ -668,7 +668,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     }
     // 畫休以人為準:主要分店不一定在操作者的可見範圍,以租戶為邊界讀它的生效設定
     const settings = await this.rules.effectiveSettingsForOrg(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       primaryOrgId,
     );
     return {
@@ -757,7 +757,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     userIds: readonly string[],
   ): Promise<DayOffRecord> {
     const record = await this.dayOffs.findOne(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       { _id: parseObjectId(id, "id"), tenantId },
     );
     if (!record || !userIds.includes(String(record.userId))) {
@@ -812,7 +812,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
           const items: DayOffRecord[] = [];
           for (const row of rows) {
             const record = await this.dayOffs.create(
-              await scheduleTenantContext(
+              await tenantBoundaryContext(
                 this.orgs,
                 operator,
                 context.tenantId,
@@ -861,7 +861,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       reasonNote: string | null;
     } | null,
   ): Promise<string> {
-    const writer = await scheduleTenantContext(
+    const writer = await tenantBoundaryContext(
       this.orgs,
       operator,
       context.tenantId,
@@ -906,7 +906,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     months: readonly string[],
   ): Promise<void> {
-    const writer = await scheduleTenantContext(
+    const writer = await tenantBoundaryContext(
       this.orgs,
       operator,
       context.tenantId,
@@ -943,7 +943,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     months: readonly string[],
   ): Promise<void> {
-    const writer = await scheduleTenantContext(
+    const writer = await tenantBoundaryContext(
       this.orgs,
       operator,
       context.tenantId,
@@ -1077,7 +1077,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       return [];
     }
     return this.dayOffs.findMany(
-      await scheduleTenantContext(this.orgs, null, tenantId),
+      await tenantBoundaryContext(this.orgs, null, tenantId),
       {
         tenantId,
         userId: { $in: userIds.map((id) => new Types.ObjectId(id)) },

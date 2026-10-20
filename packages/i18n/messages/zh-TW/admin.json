@@ -2795,6 +2795,8 @@
     "confirm": "確定"
   },
   "shareOrgsField": {
+    "rootNotSharable": "根組織不能被共用",
+    "rootDisabled": "根組織的資料不能共用",
     "helper": "共用給的組織看得到這筆資料,但不能修改;可以選整個組織樹裡的組織。",
     "includeDescendants": "{name} 含下層組織",
     "withDescendants": "{name}(含下層)",

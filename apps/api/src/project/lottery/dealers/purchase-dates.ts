@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
 import { OrgsRepository } from "../../../database/database.module";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
 
 /** 一個批購日來源給的候選日期(沒有就 null)。 */
@@ -61,7 +61,7 @@ export class DealerPurchaseDates {
     }
     const options = session === null ? {} : { session };
     // 進貨單 / 經銷商在交易內呼叫:以租戶系統身分讀寫這一筆(條件另釘 `_id` + `tenantId`)
-    const writer = await systemTenantReader(this.orgs, tenantId);
+    const writer = await tenantBoundaryContext(this.orgs, null, tenantId);
     const dealer = await this.dealers.findOne(
       writer,
       { _id: dealerId, tenantId },

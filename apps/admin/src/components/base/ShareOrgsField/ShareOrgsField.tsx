@@ -7,6 +7,7 @@ import { FormControlLabel } from "@repo/ui/form-control-label";
 import { Stack } from "@repo/ui/stack";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
+import { useIsAtRootOrg } from "@/hooks/base/useIsAtRootOrg";
 import { useSession } from "@/hooks/base/useSession";
 import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
 
@@ -28,19 +29,26 @@ export interface ShareOrgsFieldProps {
   width?: number;
 }
 
-/** 已選組織的 id → 名稱(租戶組織樹;與 `OrgTreeSelect` 同一支查詢,共用快取)。 */
-const useTenantOrgNames = (): ReadonlyMap<string, string> => {
+/** 租戶組織樹攤平 + 根組織的 id(與 `OrgTreeSelect` 同一支查詢,共用快取)。 */
+const useTenantOrgs = () => {
   const { session } = useSession();
   const tree = useTenantOrgTreeQuery(session.client);
-  return useMemo(
-    () =>
-      new Map(
-        flattenOrgs(
-          tree.data ? tenantTreeToOrgNodes(tree.data.tenantOrgTree, false) : [],
-        ).map((org) => [org.id, org.name]),
-      ),
-    [tree.data],
-  );
+  return useMemo(() => {
+    const nodes = tree.data?.tenantOrgTree ?? [];
+    return {
+      orgs: flattenOrgs(tenantTreeToOrgNodes(nodes, false)),
+      // 根組織 = 沒有上層的那一個(租戶頂層的上層是根組織)
+      rootIds: nodes
+        .filter((node) => (node.parentId ?? null) === null)
+        .map((node) => node.id),
+    };
+  }, [tree.data]);
+};
+
+/** 已選組織的 id → 名稱。 */
+const useTenantOrgNames = (): ReadonlyMap<string, string> => {
+  const { orgs } = useTenantOrgs();
+  return useMemo(() => new Map(orgs.map((org) => [org.id, org.name])), [orgs]);
 };
 
 /**
@@ -60,8 +68,15 @@ export const ShareOrgsField = ({
   width,
 }: ShareOrgsFieldProps) => {
   const t = useTranslations("admin.shareOrgsField");
+  const { rootIds } = useTenantOrgs();
   const names = useTenantOrgNames();
   const ids = value.map((item) => item.orgId);
+  // 根組織不屬於任何租戶:樹上的根組織反灰;站在根組織時整欄停用(根組織的資料不能共用,api 也會擋)
+  const isAtRoot = useIsAtRootOrg() === true;
+  const rootReasons = useMemo(
+    () => Object.fromEntries(rootIds.map((id) => [id, t("rootNotSharable")])),
+    [rootIds, t],
+  );
 
   return (
     <Stack spacing={0.5} sx={{ width: width ?? "100%", maxWidth: "100%" }}>
@@ -72,9 +87,10 @@ export const ShareOrgsField = ({
         size="small"
         label={label}
         value={ids}
-        disabled={disabled}
+        disabled={disabled === true || isAtRoot}
+        disabledReasons={rootReasons}
         error={error}
-        helperText={helperText ?? t("helper")}
+        helperText={isAtRoot ? t("rootDisabled") : (helperText ?? t("helper"))}
         onChange={(next) => {
           onChange(
             next.map(
@@ -92,7 +108,7 @@ export const ShareOrgsField = ({
           {value.map((item) => (
             <FormControlLabel
               key={item.orgId}
-              disabled={disabled}
+              disabled={disabled === true || isAtRoot}
               label={t("includeDescendants", {
                 name: names.get(item.orgId) ?? t("unknownOrg"),
               })}

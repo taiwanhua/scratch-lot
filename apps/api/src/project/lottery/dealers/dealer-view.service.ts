@@ -9,6 +9,7 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   LotteryDealerContactsRepository,
   LotteryDealerSigninsRepository,
@@ -24,7 +25,7 @@ import {
   type DealerViewContext,
   toDealerModel,
 } from "./dealer-mapper";
-import { dealerRefFrom, dealerTenantReader } from "./dealer-tenant";
+import { dealerRefFrom } from "./dealer-tenant";
 import type { DealersGrant } from "./dealers-access";
 import type {
   LotteryDealerContactRef,
@@ -100,7 +101,7 @@ export class DealerViewService {
       orgIds.length === 0
         ? []
         : await this.orgs.findMany(
-            await dealerTenantReader(this.orgs, operator, tenantId),
+            await tenantBoundaryContext(this.orgs, operator, tenantId),
             { _id: { $in: orgIds } },
           );
     const coSellers =

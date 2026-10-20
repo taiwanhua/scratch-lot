@@ -5,7 +5,7 @@ import { localDateOf, localDateText, parseLocalDate } from "@repo/domain/form";
 
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { scheduleHitAt } from "../../../notifications/notification-schedule";
 import {
   type EffectiveSchedule,
@@ -101,7 +101,7 @@ export class DayOffRemindersService implements OnModuleInit {
     scheduledFor: Date,
   ): Promise<void> {
     // 排程的租戶系統身分:可見範圍 = 這個租戶的整棵組織樹(ADR-0005「例外出口」)
-    const reader = await systemTenantReader(this.orgs, tenantId);
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const links = await this.relationships.findMany(reader, {
       type: ORG_STAFF,
       tenantId,

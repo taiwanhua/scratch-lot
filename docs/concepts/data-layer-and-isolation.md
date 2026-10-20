@@ -105,7 +105,7 @@ service 呼叫 BaseRepository.xxx(operator, …)
   - `apps/api/src/database/workflow-submission-store.ts`:審核流程(引擎、讀取授權、申請中心)讀寫提交,不套可見範圍與資料範圍規則,以 `tenantId` 為邊界;允許呼叫它的檔案登記在該檔 `WORKFLOW_SUBMISSION_STORE_CALLERS`,由測試鎖定。
   - `BaseRepository.existsInTenant(operator, tenantId, equals)`:租戶內唯一 / 占用檢查。`tenantId` 必填且要是操作者所屬的租戶(根組織除外,否則拋 `TenantScopeError`),條件只能是欄位等於值的組合;由中介層以 `tenantBoundary` 旗標換成 `tenantId = 該值`、不套可見範圍 / 共用 / 資料範圍規則;只回有無,只給有 `tenantId` 欄的表。呼叫端登記在 `TENANT_BOUNDARY_CALLERS`(與 `findRefsInTenant` 共用),由測試掃 src 鎖定。
   - `BaseRepository.findRefsInTenant(operator, tenantId, ids)`:引用名稱。邊界同上,明列 id,只回 schema 的 `refFields` 與 `_id`。
-  - `systemTenantReader(orgs, tenantId)`(`database/system-tenant-reader.ts`):排程用的租戶系統身分,可見範圍 = 該租戶整棵組織樹。
+  - `tenantBoundaryContext(orgs, operator | null, tenantId)`(`database/tenant-boundary-context.ts`,底層 `systemTenantReader`):租戶邊界上下文,可見範圍 = 該租戶整棵組織樹。有操作者時租戶要是他所屬的、保留 `actorId`;用途限反查、以人為準的資料、排程與登記過的例外寫入,呼叫端與用途登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`(掃描測試鎖定);前提是那些表不是資料範圍目標。
 - **提升上下文要登記**:把可見範圍或管理範圍寫成 `"all"` 的上下文只准出現在 `database/elevated-contexts.ts`(底座)與 `project/database/elevated-contexts.ts`(專案)列出的檔案,`elevated-contexts.test.ts` 掃 src 斷言。
 - 對全員生效(套用對象「所有人」)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。
 

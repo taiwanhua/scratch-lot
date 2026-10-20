@@ -569,6 +569,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     return [
       ...PROTECTED_UPDATE_PATHS,
       ...(scope?.moduleData === true ? MODULE_DATA_PROTECTED_PATHS : []),
+      ...(scope !== undefined &&
+      !scope.moduleData &&
+      hasTenantIdPath(this.model.schema, scope)
+        ? ["tenantId"]
+        : []),
       ...(scope?.sharing.mode === "shareable" && !scope.sharing.editable
         ? [SHARE_ORGS_PATH]
         : []),
@@ -688,13 +693,16 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     data: Partial<TSchema>,
     session: ClientSession | null,
   ): Promise<Partial<TSchema>> {
-    if (getTenantScope(this.model.schema)?.moduleData !== true) {
+    const scope = getTenantScope(this.model.schema);
+    // 有 tenantId 欄的表(模組資料表,或自己宣告 tenantId 的表)一律由 orgId 推導、覆蓋呼叫端給的值:
+    // tenantId 是租戶邊界出口與共用分支的邊界,不能信任呼叫端
+    if (scope?.path !== "orgId" || !hasTenantIdPath(this.model.schema, scope)) {
       return data;
     }
     const orgId = (data as { orgId?: Types.ObjectId | string | null }).orgId;
     if (orgId === undefined || orgId === null) {
       throw new TenantScopeError(
-        `${this.model.modelName} 是模組資料,建立時需要所屬組織才能推導 tenantId`,
+        `${this.model.modelName} 有 tenantId 欄,建立時需要所屬組織才能推導 tenantId`,
       );
     }
     const org = await this.model.db

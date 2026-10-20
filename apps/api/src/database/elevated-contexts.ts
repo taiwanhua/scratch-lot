@@ -6,7 +6,7 @@
  * 所以只准出現在這份清單上的檔案,`elevated-contexts.test.ts` 掃整個 src 斷言(測試檔與 `test-support/` 除外)。
  *
  * 新增一處前先想:是否能改用登記過的出口 —— 租戶內唯一 / 占用檢查用 `BaseRepository.existsInTenant`、
- * 引用名稱用 `findRefsInTenant`、排程逐租戶跑用 `systemTenantReader(tenantId)`、跨組織看資料用
+ * 引用名稱用 `findRefsInTenant`、整個租戶的反查 / 以人為準的資料 / 排程用 `tenantBoundaryContext`、跨組織看資料用
  * 資料共用宣告(ADR-0014)。真的需要才加進來,值寫一句「為什麼不能照可見範圍」。
  * 專案的檔案登記在專案入口 `project/database/elevated-contexts.ts`,不改這份。
  */

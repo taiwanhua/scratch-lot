@@ -55,7 +55,7 @@
 
 **決策**:
 
-- 放寬範圍的出口只有 ADR-0005「例外出口」登記的那幾個。這次新增三個:`BaseRepository.existsInTenant`(租戶內唯一 / 占用檢查;條件只能是欄位等於值的組合)、`BaseRepository.findRefsInTenant`(看得到這筆就看得到它引用的名稱)、`systemTenantReader(tenantId)`(排程逐租戶跑)。前兩個只能用在操作者所屬的租戶,呼叫端登記在 `TENANT_BOUNDARY_CALLERS`。
+- 放寬範圍的出口只有 ADR-0005「例外出口」登記的那幾個。這次新增三個:`BaseRepository.existsInTenant`(租戶內唯一 / 占用檢查;條件只能是欄位等於值的組合)、`BaseRepository.findRefsInTenant`(看得到這筆就看得到它引用的名稱)、`tenantBoundaryContext(orgs, operator | null, tenantId)`(反查 / 以人為準的資料 / 排程 / 登記過的例外寫入;底層 `systemTenantReader`)。前兩個只能用在操作者所屬的租戶,呼叫端登記在 `TENANT_BOUNDARY_CALLERS`。
 - **讀進來的文件不能 `save()`**:`save()` 走 `collection.updateOne`、不經查詢中介層,共用分支讀到的文件存回去就等於繞過寫入範圍;plugin 的 save 中介層只放行新建,更新一律經 `BaseRepository` 的條件更新。
 - `aggregate` 拒收 `$lookup` / `$unionWith` / `$graphLookup` / `$out` / `$merge`,包含藏在 `$facet` 子管線或任何巢狀管線裡的。
 - **提升上下文**(可見範圍或管理範圍寫成 `"all"` 的操作者上下文)只准出現在登記清單的檔案:底座的在 `apps/api/src/database/elevated-contexts.ts`,專案的在 `apps/api/src/project/database/elevated-contexts.ts`;`elevated-contexts.test.ts` 掃整個 src,新增未登記的一處就失敗。新需求先用登記過的出口或共用宣告。
