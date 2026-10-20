@@ -34,6 +34,7 @@ import {
   ScheduleStaffRepository,
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
+import { RosterPeopleReader } from "../roster/roster-people";
 import type {
   EffectiveRuleSetting,
   ScheduleRuleViolation,
@@ -292,6 +293,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
     private readonly clock: ScheduleClock,
+    private readonly people: RosterPeopleReader,
   ) {}
 
   onModuleInit(): void {
@@ -906,6 +908,12 @@ export class ScheduleDayOffsService implements OnModuleInit {
     context: PersonContext,
     months: readonly string[],
   ): Promise<void> {
+    // 排班寫入的「人」守門文件也先建好(交易裡一起碰:畫休與排班同時寫同一人互相衝突)
+    await this.people.ensurePersonLock(
+      operator,
+      context.tenantId,
+      context.userId,
+    );
     const writer = await tenantBoundaryContext(
       this.orgs,
       operator,
@@ -947,6 +955,12 @@ export class ScheduleDayOffsService implements OnModuleInit {
       this.orgs,
       operator,
       context.tenantId,
+    );
+    // 同一個人的排班寫入(`schedule_entry_locks`)也在交易一開始碰:登記畫休與排班同時送出不會互相繞過
+    await this.people.touchPersonLock(
+      operator,
+      context.tenantId,
+      context.userId,
     );
     for (const month of months) {
       const touched = await this.locks.findOneAndUpdate(

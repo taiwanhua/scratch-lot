@@ -1,12 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { formatTemporal } from "@repo/domain/form";
+import {
+  addLocalCalendar,
+  formatTemporal,
+  instantOfLocalTime,
+  parseLocalDate,
+} from "@repo/domain/form";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_TASK_ROLES,
   exceededTaskRoles,
   isIsoDate,
+  minutesOfHhMm,
 } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
@@ -23,6 +29,7 @@ import {
 import type { ScheduleTemplateTask } from "../../database/schedule/schedule-demand-template.schema";
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
+import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
@@ -106,6 +113,7 @@ export class ScheduleRosterWritesService {
     private readonly fieldOptions: ScheduleFieldOptionsService,
     private readonly staff: ScheduleStaffService,
     private readonly calendar: ScheduleCalendarService,
+    private readonly dayOffs: ScheduleDayOffsService,
     private readonly templates: ScheduleTemplatesService,
     private readonly people: RosterPeopleReader,
   ) {}
@@ -350,6 +358,7 @@ export class ScheduleRosterWritesService {
             canLead: candidate?.canLead === true,
             excludeEntryId: existing?._id ?? null,
           });
+          await this.assertAvailable(operator, scope, userId, span);
           const overlap = await this.people.overlapping(
             operator,
             scope.org.tenantId,
@@ -453,6 +462,56 @@ export class ScheduleRosterWritesService {
   }
 
   // ---- 內部 ----
+
+  /**
+   * 畫休那段時間不能排(規格 14.5「可排 = 那段時間沒有畫休」;做法同店休):排班碰到的日子(跨午夜含隔天)
+   * 有整天畫休、或和時段不可排重疊(頭尾相接不算)→ `VALIDATION_FAILED`(欄位 `startAt`)。
+   * 這家店已由 `resolveScheduleOrg` 確認看得到,`listUnavailable` 的空清單就是真的沒有畫休。
+   */
+  private async assertAvailable(
+    operator: OperatorContext,
+    scope: RosterScope,
+    userId: Types.ObjectId,
+    span: { startAt: Date; endAt: Date },
+  ): Promise<void> {
+    const from = this.dateOf(scope, span.startAt);
+    const to = this.dateOf(scope, new Date(span.endAt.getTime() - 1));
+    const unavailable = await this.dayOffs.listUnavailable(
+      operator,
+      scope.org.id,
+      from,
+      to,
+    );
+    const days = unavailable.filter((day) => day.userId === String(userId));
+    const start = span.startAt.getTime();
+    const end = span.endAt.getTime();
+    const blocked = days.some((day) => {
+      const date = parseLocalDate(day.date);
+      if (date === null) {
+        return false;
+      }
+      const at = (time: string) => {
+        const minutes = minutesOfHhMm(time) ?? 0;
+        return instantOfLocalTime(
+          date,
+          Math.floor(minutes / 60),
+          minutes % 60,
+          scope.timezone,
+        );
+      };
+      if (day.fullDay) {
+        const dayStart = at("00:00");
+        const nextDay = addLocalCalendar(dayStart, 1, "days", scope.timezone);
+        return start < nextDay && end > dayStart;
+      }
+      return day.slots.some(
+        (slot) => start < at(slot.endTime) && end > at(slot.startTime),
+      );
+    });
+    if (blocked) {
+      throw validationError("overlaps a day off of this person", ["startAt"]);
+    }
+  }
 
   /**
    * 要填的執行任務:這家店這一天的人力需求裡真的有這筆任務;負責人任務要可以擔任負責人(原本就填著的不再檢查);

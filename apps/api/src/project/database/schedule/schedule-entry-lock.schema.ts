@@ -10,8 +10,9 @@ export const SCHEDULE_ENTRY_LOCKS_COLLECTION = "schedule_entry_locks";
 /**
  * 排班寫入的「人」守門文件(一個租戶裡一人一筆):新增 / 修改排班在交易一開始對它 `$inc version`,
  * 同一個人在**不同分店**同時被排的寫入也在這筆文件上互相衝突、由 `TransactionService` 重跑整段
- * 「讀這個人所有分店的排班 → 檢查重疊 → 寫入」—— 跨店不能重疊才不會被同時送出繞過
- * (先例:畫休的守門文件 `schedule_day_off_locks`)。
+ * 「讀這個人所有分店的排班與畫休 → 檢查重疊 → 寫入」—— 跨店不能重疊才不會被同時送出繞過
+ * (先例:畫休的守門文件 `schedule_day_off_locks`)。畫休的登記 / 代改 / 刪除也碰這一份,
+ * 排班與畫休同時寫同一人互相衝突。
  *
  * 歸屬欄 `orgId` = 租戶頂層(人不屬於某一家店;不擋刪除分店),人記在 `userId`。
  * 不放在 `schedule_staff` 上:那是使用者看得到、會被編輯的檔案,`$inc` 會連帶改它的 `updatedAt / updatedBy`。

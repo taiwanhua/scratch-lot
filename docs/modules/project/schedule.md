@@ -132,11 +132,11 @@
   - [刪除人力需求] = 解除全部執行任務(同上規則)後軟刪除。
 - **排班**(`schedule_entries` + `schedule_task_assignments`):人員(新增時;要是這家店的候選人 `listScheduleCandidates`,否則欄位 `userId`;修改時不能改)、上下班時點(最長 24 小時)、休息分鐘數(整數、0 ≤ 休息 < 時長,否則欄位 `breakMinutes`)、填進的執行任務 `assignments[{ demandId, taskId }]`。
   - **至少一筆**(零筆 → 欄位 `assignments`);同一筆人力需求只能一筆(重複 → 欄位 `assignments`);人力需求要是這家店、同一天(`date` 相同)的,任務要存在;負責人任務只能填這家店可擔任負責人的人(原本就填著的不再檢查);別筆排班已經填的 → 欄位 `assignments`。兩個請求同時填同一筆任務由唯一索引擋下,回同一個錯誤。
-  - **一個人同一時間只有一筆排班,跨店也不能重疊**(相接不算):以租戶為邊界讀這個人所有分店的排班(`roster/roster-people.ts`,`tenantBoundaryContext` 登記用途「以人為準的資料」),重疊 → 欄位 `startAt`。店休那天不能排(欄位 `startAt`)。
+  - **一個人同一時間只有一筆排班,跨店也不能重疊**(相接不算):以租戶為邊界讀這個人所有分店的排班(`roster/roster-people.ts`,`tenantBoundaryContext` 登記用途「以人為準的資料」),重疊 → 欄位 `startAt`。店休那天不能排(欄位 `startAt`)。**畫休那段時間不能排**:先 `resolveScheduleOrg` 再呼叫 `listUnavailable`,排班碰到的日子(跨午夜含隔天)有整天畫休、或和時段不可排重疊(頭尾相接不算)→ 欄位 `startAt`。先排班、後登記畫休的情形目前不處理(待決定)。
   - 修改時填進紀錄改成送來的那份:拿掉的軟刪除、新的建立(來源手動);沒變的保留原來的來源(自動排入的被手動改過才變成手動)。
   - **刪除**:被收銀班次綁定 → `VALIDATION_FAILED` + `extensions.blockedEntryIds`;否則軟刪除排班與它的填進紀錄。
   - **移除這天所有排班**:被綁定的略過,回 `deletedIds` / `skippedIds`。已發布後才需要的異動原因由發布的功能加上。
-- **同時送出**:同一家店同一個月的寫入在交易一開始對 `schedule_periods.version` `$inc`(文件在交易外先建好),互相衝突、由 `TransactionService` 重跑。新增 / 修改排班另先對這個人的守門文件 `schedule_entry_locks` `$inc`(一個租戶一人一筆,以 `tenantBoundaryContext` 寫,用途「例外寫入」):同一個人在**兩家店**同時被排、時間重疊時兩個交易在這筆文件上衝突,重跑的那一方讀到對方的排班而被擋下。不放在 `schedule_staff` 上,是因為那筆是使用者會看、會改的檔案,`$inc` 會連帶改它的 `updatedAt / updatedBy`。
+- **同時送出**:同一家店同一個月的寫入在交易一開始對 `schedule_periods.version` `$inc`(文件在交易外先建好),互相衝突、由 `TransactionService` 重跑。新增 / 修改排班另先對這個人的守門文件 `schedule_entry_locks` `$inc`(一個租戶一人一筆,以 `tenantBoundaryContext` 寫,用途「例外寫入」):同一個人在**兩家店**同時被排、時間重疊時兩個交易在這筆文件上衝突,重跑的那一方讀到對方的排班而被擋下。畫休的登記 / 代改 / 刪除也在交易一開始碰同一份「人」守門文件(`schedule-day-offs.service.ts` 的 `ensureLocks` / `touchLocks`),排班與畫休同時寫同一人互相衝突、不會互相繞過。不放在 `schedule_staff` 上,是因為那筆是使用者會看、會改的檔案,`$inc` 會連帶改它的 `updatedAt / updatedBy`。
 - **讀取**(`scheduleRoster`):這家店要在可見範圍內(`resolveScheduleOrg`;看不到 → `NOT_FOUND`),之後才呼叫「空清單分不出看不到」的 `listScheduleCandidates` / `listUnavailable`。人 = 候選人 + 這個月在這家店有排班、已不是候選人的人(`isCandidate = false`,依姓名 zh-Hant 排在後面)。一併回:人力需求(每筆執行任務帶填的人)、排班(`deletable` = 沒被綁定)、這些人在其他分店的班(看不到那家店 `orgName = null`,畫面寫「已排於其他分店」)、畫休、行事曆、這家店看得到的範本、規則的生效值(預設休息、負責人 / 協同預設任務、每月最多 / 最少畫休)、崗位註記(`positionAnnotationsOf`)。
 - **統計欄**(`roster/roster-stats.ts`,這家店這個月):班數、負責班數(以排班為單位:任一筆填進的是負責就算 1 班)、總工時(每筆下班 − 上班 − 休息,分鐘)、畫休天數(同畫休規則 `dayOffDates`:那天有任何畫休就算 1 天;另回整天畫休天數與只有時段不可排的日子與時段)、最長連續上班(有排班的日子,含其他分店)。
 - **[⚙ 顯示欄位]** 存個人偏好 `scheduleRosterColumns`(統計欄 key 逗號分隔,`apps/api/src/project/user-preferences.ts` 登記;定義在 `@repo/domain/project/schedule-settings` 的 `roster.ts`)。

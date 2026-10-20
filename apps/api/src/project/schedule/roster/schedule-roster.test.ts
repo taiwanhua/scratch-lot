@@ -379,6 +379,21 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     ).item;
   }
 
+  /** 李小華在中山店某天一筆排班(那天新建一筆人力需求,填協同)。 */
+  async function entryOn(
+    date: string,
+    start: string,
+    end: string,
+  ): Promise<GraphqlResult> {
+    const demand = await demandOn(date, start, end);
+    return saveEntry(hq, {
+      userId: String(li.userId),
+      startAt: taipei(date, start),
+      endAt: taipei(date, end),
+      assignments: [{ demandId: demand.id, taskId: taskOf(demand, "helper") }],
+    });
+  }
+
   async function joinSchedule(
     user: ScheduleTestUser,
     orgs: { orgId: Types.ObjectId; isPrimary: boolean; canLead: boolean }[],
@@ -651,6 +666,54 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(results.map((result) => errorOf(result)?.fields)).toContainEqual([
         "startAt",
       ]);
+    });
+
+    it("畫休那段時間不能排:整天畫休擋下、和時段不可排重疊擋下、頭尾相接可以排", async () => {
+      await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertMany(
+        [
+          {
+            date: "2026-12-10",
+            kind: "full-day",
+            startTime: null,
+            endTime: null,
+          },
+          {
+            date: "2026-12-11",
+            kind: "time-range",
+            startTime: "09:00",
+            endTime: "13:00",
+          },
+        ].map((item) => ({
+          orgId: zhongshan,
+          tenantId: tenantA,
+          userId: li.userId,
+          note: null,
+          by: null,
+          reason: null,
+          reasonNote: null,
+          moduleKey: "schedule.my",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          createdBy: null,
+          updatedBy: null,
+          deletedAt: null,
+          ...item,
+        })),
+      );
+      expect(
+        errorOf(await entryOn("2026-12-10", "13:00", "17:00")),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["startAt"],
+      });
+      expect(
+        errorOf(await entryOn("2026-12-11", "08:30", "10:00")),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["startAt"],
+      });
+      const adjacent = await entryOn("2026-12-11", "13:00", "17:00");
+      expect(adjacent.errors).toBeUndefined();
     });
 
     it("零筆執行任務 → VALIDATION_FAILED(欄位 assignments)", async () => {
