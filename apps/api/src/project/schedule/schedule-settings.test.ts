@@ -895,6 +895,15 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         (item) => item.userId === String(both.userId),
       );
       expect(row).toMatchObject({ joinedElsewhere: true, staff: null });
+      // 已在其他組織加入的人算「已加入」,不在「未加入」清單
+      const notJoined = await staffRows(hsinchuManager, { joined: false });
+      expect(notJoined.items.map((item) => item.userId)).not.toContain(
+        String(both.userId),
+      );
+      const joinedRows = await staffRows(hsinchuManager, { joined: true });
+      expect(joinedRows.items.map((item) => item.userId)).toContain(
+        String(both.userId),
+      );
       const again = await gql(hsinchuManager, ADD_STAFF, {
         input: { userIds: [String(both.userId)] },
       });

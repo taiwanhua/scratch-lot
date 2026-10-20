@@ -259,7 +259,7 @@ export const scheduleSettingsWorld = (
         (row) =>
           input?.joined === null ||
           input?.joined === undefined ||
-          (row.staff !== null) === input.joined,
+          (row.staff !== null || row.joinedElsewhere) === input.joined,
       );
       return HttpResponse.json({
         data: {

@@ -68,9 +68,7 @@ describe("OrgTreePicker", () => {
     async (_, isMultiSelect) => {
       const user = userEvent.setup();
       render(<Harness isMultiSelect={isMultiSelect} />);
-      await user.click(
-        within(rowOf("北區")).getAllByText("北區")[0],
-      );
+      await user.click(within(rowOf("北區")).getAllByText("北區")[0]);
       expect(screen.getByTestId("value").textContent).toBe("org-a");
     },
   );

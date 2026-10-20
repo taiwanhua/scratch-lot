@@ -52,6 +52,20 @@ describe("排班設定", () => {
       expect(screen.getByText("已在其他組織加入")).toBeInTheDocument();
     });
 
+    it("篩選「未加入」不列出已在其他組織加入的人;「已加入」才列出", async () => {
+      renderSchedulePage({ path: `${SETTINGS}?joined=no` });
+      expect(
+        await screen.findByRole("checkbox", { name: "選取「林新人」" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("陳支援")).not.toBeInTheDocument();
+    });
+
+    it("篩選「已加入」列出已在其他組織加入的人", async () => {
+      renderSchedulePage({ path: `${SETTINGS}?joined=yes` });
+      expect(await screen.findByText("陳支援")).toBeInTheDocument();
+      expect(screen.queryByText("林新人")).not.toBeInTheDocument();
+    });
+
     it("沒有 edit-staff:看不到 [加入排班]", async () => {
       renderSchedulePage({
         path: SETTINGS,

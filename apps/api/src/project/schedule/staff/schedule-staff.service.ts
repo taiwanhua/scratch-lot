@@ -107,9 +107,11 @@ export class ScheduleStaffService {
     );
     const keyword = input?.keyword?.trim().toLowerCase() ?? "";
     const joined = input?.joined ?? null;
+    // 「已在其他組織加入」(`joinedElsewhere`)算已加入:一人一份,不能再加入,不列在「未加入」
     const items = rows.filter(
       (row) =>
-        (joined === null || (row.staff !== null) === joined) &&
+        (joined === null ||
+          (row.staff !== null || row.joinedElsewhere) === joined) &&
         (keyword === "" ||
           row.name.toLowerCase().includes(keyword) ||
           row.account.toLowerCase().includes(keyword)),
