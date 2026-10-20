@@ -652,7 +652,7 @@ describe("叫貨單(規格 8.1)", () => {
         input: {
           id: requisition.id,
           expectedEditVersion: requisition.editVersion,
-          reason: "輸入錯誤",
+          reasonNote: "輸入錯誤",
         },
       });
       expect(extensionsOf(blocked)).toMatchObject({
@@ -673,7 +673,7 @@ describe("叫貨單(規格 8.1)", () => {
         input: {
           id: requisition.id,
           expectedEditVersion: requisition.editVersion,
-          reason: "輸入錯誤",
+          reasonNote: "輸入錯誤",
         },
       });
       const rows = await linesOf(requisition.id);

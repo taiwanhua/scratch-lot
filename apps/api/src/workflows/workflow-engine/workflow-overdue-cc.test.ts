@@ -784,7 +784,7 @@ describe("逾時提醒與知會", () => {
         input: {
           id: submitted.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重開",
+          reasonNote: "重開",
         },
       });
       const all = await notices(WORKFLOW_CC, watcher, instanceId);
@@ -819,7 +819,7 @@ describe("逾時提醒與知會", () => {
         input: {
           id: completed.id,
           expectedEditVersion: approved.editVersion,
-          reason: "重開",
+          reasonNote: "重開",
         },
       });
       await onlyStepPassed(completedInstance);
