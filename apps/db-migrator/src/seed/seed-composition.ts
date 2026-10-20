@@ -15,6 +15,7 @@ import { isDeepStrictEqual } from "node:util";
 import type { FormDefinition } from "@repo/domain/form";
 import {
   type PortableCatalog,
+  type PortableLookupProvider,
   SEED_DEFINITION_INSTALLATIONS_COLLECTION,
   SEED_UPDATE_RUNS_COLLECTION,
   definitionSeedId,
@@ -214,6 +215,14 @@ class RegistryPlan {
     references: SeedKeyReference[];
   }[] = [];
   private rootAdminOrigin: string | null = null;
+
+  /** 專案宣告的可攜 lookup 來源(`SeedSource.portableLookupProviders`);進可攜性目錄。 */
+  constructor(
+    private readonly lookupProviders: ReadonlyMap<
+      string,
+      PortableLookupProvider
+    > = new Map(),
+  ) {}
 
   add(origin: string, set: SeedSet): void {
     switch (set.kind) {
@@ -448,7 +457,12 @@ class RegistryPlan {
         sharedForms.set(set.key, set.definition);
       }
     }
-    return { formModuleKeys, fieldCategories, sharedForms };
+    return {
+      formModuleKeys,
+      fieldCategories,
+      sharedForms,
+      lookupProviders: this.lookupProviders,
+    };
   }
 
   private documentEntriesOf(collection: string): SeedDocument[] {
@@ -628,8 +642,36 @@ function regroup(ordered: readonly PlanNode[]): SeedRegistry {
   });
 }
 
-function planOf(sources: readonly SeedOriginSource[]): RegistryPlan {
-  const plan = new RegistryPlan();
+/** 組裝的選項(不屬於任何一份種子的設定)。 */
+export interface SeedCompositionOptions {
+  /** 專案登記、可以跟著共用定義交付的 lookup 來源(可攜性目錄的 `lookupProviders`)。 */
+  lookupProviders?: Readonly<Record<string, PortableLookupProvider>>;
+}
+
+/**
+ * 固定組裝入口(`seeds/registry.ts` 的 `assembleSeedRegistry`)最後一次登記的可攜 lookup 來源。
+ * seed / reset / update 都先載入 registry 檔(組裝時登記)再預檢同一份 registry,預檢沒帶選項時用它 ——
+ * 宣告跟著專案來源走,不必每個入口各傳一次;沒有組裝過 = 空(只有底座的三種來源)。
+ */
+let assembledLookupProviders: Readonly<Record<string, PortableLookupProvider>> =
+  {};
+
+/** 固定組裝入口登記專案宣告的可攜 lookup 來源(`SeedSource.portableLookupProviders`)。 */
+export function registerAssembledLookupProviders(
+  providers: Readonly<Record<string, PortableLookupProvider>> | undefined,
+): void {
+  assembledLookupProviders = providers ?? {};
+}
+
+function planOf(
+  sources: readonly SeedOriginSource[],
+  options: SeedCompositionOptions = {},
+): RegistryPlan {
+  const plan = new RegistryPlan(
+    new Map(
+      Object.entries(options.lookupProviders ?? assembledLookupProviders),
+    ),
+  );
   for (const { origin, seeds } of sources) {
     for (const set of seeds) {
       plan.add(origin, set);
@@ -646,8 +688,9 @@ function planOf(sources: readonly SeedOriginSource[]): RegistryPlan {
  */
 export function planSeedRegistry(
   sources: readonly SeedOriginSource[],
+  options: SeedCompositionOptions = {},
 ): SeedRegistry {
-  const plan = planOf(sources);
+  const plan = planOf(sources, options);
   // 一次排完:定義接在普通種子後面,它們引用的種子文件此時都已排過,不會被再排一次
   const ordered = orderNodes(
     [...plan.nodes, ...plan.definitionNodes],
@@ -660,8 +703,11 @@ export function planSeedRegistry(
 }
 
 /** 一份 registry 的可攜性目錄(模組、受管類別與選項、共用表單);給定義的檢查與匯出共用。 */
-export function portableCatalogOf(registry: SeedRegistry): PortableCatalog {
-  return planOf([{ origin: "registry", seeds: registry }]).catalog();
+export function portableCatalogOf(
+  registry: SeedRegistry,
+  options: SeedCompositionOptions = {},
+): PortableCatalog {
+  return planOf([{ origin: "registry", seeds: registry }], options).catalog();
 }
 
 /** 推導出來的模板綁定是誰的:`<type> <角色>`;其他來源不得再宣告同一個角色的這類綁定。 */
@@ -716,10 +762,11 @@ function derivedOverlapOf(
  */
 export function composeSeedRegistry(
   sources: readonly SeedOriginSource[],
+  options: SeedCompositionOptions = {},
 ): SeedRegistry {
   const problems = derivedOverlapProblems(sources);
   try {
-    const registry = planSeedRegistry(sources);
+    const registry = planSeedRegistry(sources, options);
     if (problems.length === 0) {
       return registry;
     }

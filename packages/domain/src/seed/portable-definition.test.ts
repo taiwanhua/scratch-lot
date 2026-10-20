@@ -513,6 +513,43 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     ]);
   });
 
+  it("專案宣告的可攜 lookup 來源:只收宣告過的固定條件與值;沒宣告的照舊拒絕", () => {
+    const game = (filter?: Record<string, unknown>) =>
+      field("game", "reference", {
+        source: {
+          provider: "lottery_game",
+          labelField: "name",
+          ...(filter && { filter }),
+        },
+      });
+    const seed = formSeed([
+      field("title", "text"),
+      game({ status: "on_sale" }),
+      game(),
+      game({ status: "discontinued" }),
+      game({ orgId: HEX_24 }),
+      field("dealer", "reference", {
+        source: { provider: "lottery_dealer", labelField: "name" },
+      }),
+    ]);
+    const catalog = catalogOf({
+      lookupProviders: new Map([
+        ["lottery_game", { filters: { status: ["on_sale"] } }],
+      ]),
+    });
+    expect(codesAt(errorsOf(seed, catalog))).toEqual([
+      ["LOOKUP_FILTER_UNSUPPORTED", "definition.fields.3.source.filter.status"],
+      ["LOOKUP_FILTER_UNSUPPORTED", "definition.fields.4.source.filter.orgId"],
+      ["LOOKUP_PROVIDER_UNSUPPORTED", "definition.fields.5.source.provider"],
+    ]);
+    // 目錄沒宣告 → 專案來源一律不可攜
+    expect(
+      codesAt(errorsOf(formSeed([field("title", "text"), game()]))),
+    ).toEqual([
+      ["LOOKUP_PROVIDER_UNSUPPORTED", "definition.fields.1.source.provider"],
+    ]);
+  });
+
   it("form_submission:formKey 要指向同一計畫可解析的共用表單(可以是自己);有 filter 一律拒絕", () => {
     const source = (formKey: string, filter?: Record<string, unknown>) =>
       field("ref", "reference", {

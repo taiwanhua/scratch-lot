@@ -2,6 +2,7 @@ import type { DemoSource } from "../src/demo/demo-source";
 import {
   SeedCompositionError,
   composeSeedRegistry,
+  registerAssembledLookupProviders,
 } from "../src/seed/seed-composition";
 import type { SeedRegistry } from "../src/seed/seed-declaration";
 import { findSeedKeyViolations } from "../src/seed/seed-key-convention";
@@ -35,20 +36,25 @@ export function assembleSeedRegistry(
     [...base.moduleDeclarations, ...project.moduleDeclarations],
     moduleInitialValues,
   );
-  const registry = composeSeedRegistry([
-    { origin: "base", seeds: base.seeds },
-    {
-      origin: "模組宣告推導",
-      isDerived: true,
-      seeds: [
-        moduleSeeds.modules,
-        moduleSeeds.permissions,
-        moduleSeeds.dataScopeTargets,
-        moduleSeeds.tenantAdminBindings,
-      ],
-    },
-    { origin: "project", seeds: project.seeds },
-  ]);
+  // 專案宣告的可攜 lookup 來源:之後 seed / reset / update 預檢同一份 registry 時也要認得
+  registerAssembledLookupProviders(project.portableLookupProviders);
+  const registry = composeSeedRegistry(
+    [
+      { origin: "base", seeds: base.seeds },
+      {
+        origin: "模組宣告推導",
+        isDerived: true,
+        seeds: [
+          moduleSeeds.modules,
+          moduleSeeds.permissions,
+          moduleSeeds.dataScopeTargets,
+          moduleSeeds.tenantAdminBindings,
+        ],
+      },
+      { origin: "project", seeds: project.seeds },
+    ],
+    { lookupProviders: project.portableLookupProviders },
+  );
   const violations = findSeedKeyViolations(registry);
   if (violations.length > 0) {
     throw new SeedCompositionError(violations);

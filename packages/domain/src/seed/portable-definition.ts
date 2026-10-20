@@ -6,7 +6,7 @@
  *
  * | 位置 | 允許 | 拒絕 |
  * | --- | --- | --- |
- * | lookup provider / filter | `user`、`org`:沒有 filter 或只有 boolean 的 `enabled`;`form_submission`:沒有 filter,`formKey` 指向可解析的共用定義 | 未知 provider、未知 filter、本地 id 條件 |
+ * | lookup provider / filter | `user`、`org`:沒有 filter 或只有 boolean 的 `enabled`;`form_submission`:沒有 filter,`formKey` 指向可解析的共用定義;專案宣告的可攜來源(`catalog.lookupProviders`):只有宣告過的固定條件與值 | 未知 provider、未知 filter、本地 id 條件 |
  * | reference / upload 固定值 | 缺席、null、空集合;reference 的 `ctx.user.id` / `ctx.user.orgId` 預設表達式 | 非空的 constant / default |
  * | lookup 選項的固定預設 | 缺席、null、空集合(選項在執行期查) | 任何非空固定值(改用 account / slug 當值也一樣),多選逐項驗 |
  * | 靜態選項 / 欄位類別 | 靜態 values;受管類別 key 與它的種子選項 | 不在同一計畫的類別或選項 |
@@ -61,6 +61,17 @@ export interface PortableCatalog {
   sharedForms: ReadonlyMap<string, FormDefinition>;
   /** 已知存在、但屬於租戶客製的表單 key;只用來把錯誤講清楚。 */
   tenantFormKeys?: ReadonlySet<string>;
+  /**
+   * 專案登記、可以跟著共用定義交付的 lookup 來源(例:刮刮樂的遊戲 `lottery_game`):來源 key → 它可用的固定條件。
+   * 來源本身在每個環境都由同一份程式登記(不是本地資料),所以可攜;固定條件只收宣告過的穩定值(狀態代碼這類),
+   * 不收 id。沒宣告 = 只有底座的三種來源。
+   */
+  lookupProviders?: ReadonlyMap<string, PortableLookupProvider>;
+}
+
+/** 一個專案 lookup 來源的可攜宣告:固定條件 key → 允許的值(字串代碼或 true / false)。 */
+export interface PortableLookupProvider {
+  filters: Readonly<Record<string, readonly (string | boolean)[]>>;
 }
 
 export const PORTABLE_ERROR_CODES = [
@@ -438,11 +449,43 @@ function unresolvedFormMessage(
     : `表單 ${formKey} 不在這次交付可解析的共用定義裡;請一併登記它,或改掉這個引用`;
 }
 
+/** 專案宣告的可攜來源的固定條件:只收宣告過的 key 與值。 */
+function checkDeclaredLookupFilter(
+  provider: string,
+  declared: PortableLookupProvider,
+  filter: Record<string, unknown>,
+  path: string,
+  collector: PortableCollector,
+): void {
+  for (const [key, value] of Object.entries(filter)) {
+    const allowed = Object.hasOwn(declared.filters, key)
+      ? declared.filters[key]
+      : undefined;
+    if (allowed === undefined) {
+      collector.error(
+        "LOOKUP_FILTER_UNSUPPORTED",
+        joinSeedPath(path, key),
+        `lookup 來源 ${provider} 的固定條件 ${key} 不可攜(本地 id 或未知條件);可用的只有:${Object.keys(declared.filters).join("、") || "無"}`,
+      );
+    } else if (
+      (typeof value !== "string" && typeof value !== "boolean") ||
+      !allowed.includes(value)
+    ) {
+      collector.error(
+        "LOOKUP_FILTER_UNSUPPORTED",
+        joinSeedPath(path, key),
+        `lookup 來源 ${provider} 的固定條件 ${key} 只能是:${allowed.map(String).join("、")}`,
+      );
+    }
+  }
+}
+
 function checkLookupFilter(
   provider: string,
   filter: unknown,
   path: string,
   collector: PortableCollector,
+  declared?: PortableLookupProvider,
 ): void {
   if (filter === undefined || filter === null) {
     return;
@@ -453,6 +496,10 @@ function checkLookupFilter(
       path,
       "lookup 的 filter 必須是物件",
     );
+    return;
+  }
+  if (declared !== undefined) {
+    checkDeclaredLookupFilter(provider, declared, filter, path, collector);
     return;
   }
   const allowed = PORTABLE_LOOKUP_FILTERS[provider] ?? [];
@@ -497,14 +544,24 @@ function checkLookupSource(
     }
   }
   const provider = source.provider;
+  const declared =
+    typeof provider === "string" &&
+    !Object.hasOwn(PORTABLE_LOOKUP_FILTERS, provider)
+      ? catalog.lookupProviders?.get(provider)
+      : undefined;
   if (
     typeof provider !== "string" ||
-    !Object.hasOwn(PORTABLE_LOOKUP_FILTERS, provider)
+    (!Object.hasOwn(PORTABLE_LOOKUP_FILTERS, provider) &&
+      declared === undefined)
   ) {
+    const supported = [
+      ...Object.keys(PORTABLE_LOOKUP_FILTERS),
+      ...(catalog.lookupProviders?.keys() ?? []),
+    ];
     collector.error(
       "LOOKUP_PROVIDER_UNSUPPORTED",
       joinSeedPath(path, "provider"),
-      `lookup 來源 ${String(provider)} 不在可攜範圍(只支援 ${Object.keys(PORTABLE_LOOKUP_FILTERS).join("、")})`,
+      `lookup 來源 ${String(provider)} 不在可攜範圍(只支援 ${supported.join("、")})`,
     );
     return;
   }
@@ -513,6 +570,7 @@ function checkLookupSource(
     source.filter,
     joinSeedPath(path, "filter"),
     collector,
+    declared,
   );
   if (provider !== FORM_SUBMISSION) {
     return;
