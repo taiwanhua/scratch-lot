@@ -24,5 +24,141 @@
     "feedback": {
       "success": "Color updated"
     }
+  },
+  "lotteryMasterData": {
+    "tabs": {
+      "aria": "Master data tabs",
+      "games": "Games",
+      "cashPoints": "Cash points"
+    },
+    "status": {
+      "on_sale": "On sale",
+      "discontinued": "Discontinued"
+    },
+    "games": {
+      "new": "+ New game",
+      "columns": {
+        "gameCode": "Code",
+        "name": "Name",
+        "color": "Color",
+        "unitPrice": "Price",
+        "ticketsPerBook": "Tickets",
+        "bookPrice": "Book price",
+        "defaultRate": "Default rate",
+        "status": "Status",
+        "launchedAt": "Launch date"
+      },
+      "filters": {
+        "status": "Status",
+        "unitPrice": "Price",
+        "keyword": "Keyword",
+        "all": "All"
+      },
+      "empty": "No games match the filters",
+      "total": "{total} in total",
+      "rate": "{rate}%",
+      "listAria": "Game list"
+    },
+    "gameForm": {
+      "createTitle": "New game",
+      "editTitle": "Edit game",
+      "sections": {
+        "info": "Game info",
+        "color": "Color",
+        "note": "Note"
+      },
+      "fields": {
+        "gameCode": "Game code",
+        "name": "Game name",
+        "status": "Status",
+        "unitPrice": "Ticket price",
+        "ticketsPerBook": "Tickets per book",
+        "bookPrice": "Book price",
+        "defaultRate": "Default purchase rate (%)",
+        "launchedAt": "Launch date",
+        "discontinuedAt": "Discontinued date",
+        "claimDeadline": "Claim deadline",
+        "note": "Note"
+      },
+      "colorHint": "Color (used on board cards; palette only)",
+      "gameCodeHint": "4 digits",
+      "nonStandard": "Non-standard: price {unitPrice} normally has {standard} tickets",
+      "nonStandardPrice": "Non-preset price, please check the ticket count",
+      "locked": "In stock: code, ticket price and tickets per book are locked.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "save": "Save",
+      "loading": "Loading",
+      "deleteDialog": {
+        "title": "Delete this game?",
+        "body": "\"{name}\" will be removed from every list. This cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
+    },
+    "gameView": {
+      "edit": "Edit",
+      "summary": "{unitPrice} × {tickets} tickets · book {bookPrice} · default rate {rate}%",
+      "tabs": {
+        "aria": "Game detail tabs",
+        "basic": "Basic info"
+      },
+      "empty": "—"
+    },
+    "cashPoints": {
+      "new": "+ New cash point",
+      "columns": {
+        "org": "Branch",
+        "name": "Name",
+        "position": "Position",
+        "order": "Order",
+        "printer": "Printer",
+        "enabled": "Status",
+        "actions": "Actions"
+      },
+      "edit": "Edit",
+      "printerDefault": "(Branch default)",
+      "enabled": {
+        "true": "Enabled",
+        "false": "Disabled"
+      },
+      "empty": "No cash points yet",
+      "total": "{total} in total",
+      "listAria": "Cash point list"
+    },
+    "cashPointForm": {
+      "createTitle": "New cash point",
+      "editTitle": "Edit cash point",
+      "fields": {
+        "orgId": "Branch",
+        "positionKey": "Position (required)",
+        "name": "Name",
+        "order": "Order",
+        "printerId": "Printer",
+        "enabled": "Enabled",
+        "note": "Note"
+      },
+      "printerDefault": "Branch default",
+      "positionMissing": "Not found? Add it in Field manager",
+      "orgFixed": "The branch cannot be changed after creation",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "feedback": {
+      "createSuccess": "Created",
+      "saveSuccess": "Saved",
+      "deleteSuccess": "Deleted"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission for this action",
+      "NOT_FOUND": "This record could not be found",
+      "VALIDATION_FAILED": "Some fields are invalid, please check the highlighted fields",
+      "GAME_CODE_DUPLICATE": "This game code is already used",
+      "GAME_IN_USE": "This game is in stock: code, ticket price and tickets per book cannot be changed and it cannot be deleted (you can discontinue it)",
+      "POSITION_DUPLICATE": "This branch already has a cash point for this position",
+      "NAME_DUPLICATE": "This branch already has a cash point with this name",
+      "CASH_POINT_IN_USE": "This cash point has an open shift or tickets on the counter and cannot be disabled",
+      "UNEXPECTED": "Something went wrong, please try again later"
+    }
   }
 }

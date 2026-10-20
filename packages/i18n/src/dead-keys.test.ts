@@ -31,6 +31,25 @@ const SOURCE_ROOTS = [
  */
 const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
+    key: "admin.lotteryMasterData.errors.",
+    reason:
+      "`t(`errors.${code}`)`,code 由 `pages/project/lottery/master-data/master-data-error.ts` 從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryMasterData.status.",
+    reason:
+      "`t(status)` / `t(`status.${status}`)`,status 是遊戲狀態 `GAME_STATUSES`",
+  },
+  {
+    key: "admin.lotteryMasterData.gameForm.fields.",
+    reason: "遊戲詳情的基本資料以欄位 key 組出標題(`GameBasicTab`)",
+  },
+  {
+    key: "admin.lotteryMasterData.gameView.tabs.",
+    reason:
+      "詳情頁分頁標題 `t(`gameView.tabs.${labelKey}`)`,labelKey 取自 `game-detail-tabs.ts`",
+  },
+  {
     key: "admin.shell.userMenu.modes.",
     reason:
       "`t(`modes.${mode}`)`,mode 逐一取自 `@repo/ui/app-theme-provider` 的 `COLOR_MODES`",

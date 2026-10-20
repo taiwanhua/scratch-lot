@@ -1,3 +1,8 @@
+import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/GameFormPage";
+import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
+import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
+import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
+
 import type { ModulePageSource } from "../module-page-registry";
 
 /**
@@ -8,6 +13,12 @@ import type { ModulePageSource } from "../module-page-registry";
  * - 登記不等於授權:進不進得去仍看 `me.modules`
  */
 export const projectModulePages: ModulePageSource = {
-  pages: [],
+  pages: [
+    // 檔案管理(遊戲 | 收銀點);遊戲的新增 / 編輯共版型
+    { key: MASTER_DATA_MODULE_KEYS.list, Page: MasterDataPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameViewPage, Page: GameViewPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameCreatePage, Page: GameFormPage },
+    { key: MASTER_DATA_MODULE_KEYS.gameEditPage, Page: GameFormPage },
+  ],
   forms: [],
 };

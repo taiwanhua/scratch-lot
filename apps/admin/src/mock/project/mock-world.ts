@@ -1,5 +1,7 @@
 import { fieldsByCategory } from "@/test/msw/field-fixtures";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
+import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
+import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
 
 import type { ProjectMockWorld } from "../mock-world-source";
 
@@ -34,6 +36,7 @@ const fieldOptionColors = () =>
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
 export const projectMockWorld: ProjectMockWorld = {
-  modules: () => [],
-  handlers: () => [...fieldOptionColors()],
+  // 檔案管理:權限給滿、兩個分頁都綁
+  modules: () => masterDataModules(),
+  handlers: () => [...fieldOptionColors(), ...masterDataWorld().handlers],
 };

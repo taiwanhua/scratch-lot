@@ -24,5 +24,141 @@
     "feedback": {
       "success": "已更新顏色"
     }
+  },
+  "lotteryMasterData": {
+    "tabs": {
+      "aria": "檔案管理分頁",
+      "games": "遊戲",
+      "cashPoints": "收銀點"
+    },
+    "status": {
+      "on_sale": "販售中",
+      "discontinued": "停售"
+    },
+    "games": {
+      "new": "+ 新增遊戲",
+      "columns": {
+        "gameCode": "代號",
+        "name": "名稱",
+        "color": "顏色",
+        "unitPrice": "面額",
+        "ticketsPerBook": "張數",
+        "bookPrice": "整本金額",
+        "defaultRate": "預設批購金額率",
+        "status": "狀態",
+        "launchedAt": "上市日"
+      },
+      "filters": {
+        "status": "狀態",
+        "unitPrice": "面額",
+        "keyword": "關鍵字",
+        "all": "全部"
+      },
+      "empty": "沒有符合條件的遊戲",
+      "total": "共 {total} 筆",
+      "rate": "{rate}%",
+      "listAria": "遊戲列表"
+    },
+    "gameForm": {
+      "createTitle": "新增遊戲",
+      "editTitle": "編輯遊戲",
+      "sections": {
+        "info": "遊戲資訊",
+        "color": "顏色",
+        "note": "備註"
+      },
+      "fields": {
+        "gameCode": "遊戲代號",
+        "name": "遊戲名稱",
+        "status": "狀態",
+        "unitPrice": "單張金額",
+        "ticketsPerBook": "整本張數",
+        "bookPrice": "整本金額",
+        "defaultRate": "預設批購金額率(%)",
+        "launchedAt": "上市日",
+        "discontinuedAt": "停售日",
+        "claimDeadline": "兌獎截止日",
+        "note": "備註"
+      },
+      "colorHint": "顏色(看板卡片使用,只能從色票選)",
+      "gameCodeHint": "4 碼數字",
+      "nonStandard": "非標準組合:面額 {unitPrice} 的標準張數是 {standard} 張",
+      "nonStandardPrice": "非預設面額,請確認張數",
+      "locked": "已有庫存:代號、單張金額、整本張數已鎖定。",
+      "cancel": "取消",
+      "delete": "刪除",
+      "save": "儲存",
+      "loading": "載入中",
+      "deleteDialog": {
+        "title": "刪除遊戲?",
+        "body": "刪除「{name}」後就不會出現在任何清單裡,這個動作不能復原。",
+        "confirm": "刪除",
+        "cancel": "取消"
+      }
+    },
+    "gameView": {
+      "edit": "編輯",
+      "summary": "{unitPrice} 元 × {tickets} 張 · 整本 {bookPrice} · 預設批購金額率 {rate}%",
+      "tabs": {
+        "aria": "遊戲詳情分頁",
+        "basic": "基本資料"
+      },
+      "empty": "—"
+    },
+    "cashPoints": {
+      "new": "+ 新增收銀點",
+      "columns": {
+        "org": "分店",
+        "name": "名稱",
+        "position": "對應崗位",
+        "order": "排序",
+        "printer": "印表機",
+        "enabled": "狀態",
+        "actions": "操作"
+      },
+      "edit": "編輯",
+      "printerDefault": "(用分店預設)",
+      "enabled": {
+        "true": "啟用",
+        "false": "停用"
+      },
+      "empty": "還沒有收銀點",
+      "total": "共 {total} 筆",
+      "listAria": "收銀點列表"
+    },
+    "cashPointForm": {
+      "createTitle": "新增收銀點",
+      "editTitle": "編輯收銀點",
+      "fields": {
+        "orgId": "分店",
+        "positionKey": "對應崗位(必填)",
+        "name": "名稱",
+        "order": "排序",
+        "printerId": "印表機",
+        "enabled": "啟用",
+        "note": "備註"
+      },
+      "printerDefault": "用分店預設",
+      "positionMissing": "找不到?到欄位管理新增",
+      "orgFixed": "建立後不能換分店",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "feedback": {
+      "createSuccess": "已新增",
+      "saveSuccess": "已儲存",
+      "deleteSuccess": "已刪除"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "GAME_CODE_DUPLICATE": "遊戲代號已被使用",
+      "GAME_IN_USE": "這個遊戲已有庫存:代號、單張金額、整本張數不能改,也不能刪除(可以改成停售)",
+      "POSITION_DUPLICATE": "這家分店已有這個崗位的收銀點",
+      "NAME_DUPLICATE": "這家分店已有同名的收銀點",
+      "CASH_POINT_IN_USE": "這個收銀點有開著的班或檯面上還有張數,不能停用",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
   }
 }
