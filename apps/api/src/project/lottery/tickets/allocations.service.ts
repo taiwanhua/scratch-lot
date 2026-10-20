@@ -11,7 +11,7 @@ import {
 import { AuditService } from "../../../audit/audit.service";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
 import {
   LotteryAllocationsRepository,
@@ -70,11 +70,16 @@ export class LotteryAllocationsService {
     orgId: Types.ObjectId,
     gameId: Types.ObjectId,
   ): Promise<AllocationStatus> {
-    const tenant = await tenantOfOperator(operator, this.orgs);
+    const tenant = tenantOfOperator(operator);
     if (tenant?.tenantId == null) {
       throw notFoundError("找不到所在租戶");
     }
-    const reader = await systemTenantReader(this.orgs, tenant.tenantId);
+    // 整個租戶的事件(出貨店也要算得出收貨店的已給;反查)
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      tenant.tenantId,
+    );
     if (
       reader.visibleOrgIds !== "all" &&
       !reader.visibleOrgIds.some((id) => id.equals(orgId))

@@ -8,22 +8,35 @@ import type {
   TicketStatus,
 } from "@repo/domain/project/lottery";
 
+import type { OperatorContext } from "../../../database/operator-context";
 import type { TicketLocation } from "../../database/lottery-inventory/lottery-ticket.schema";
+
+/**
+ * 帳本用哪個範圍讀寫:
+ *
+ * - 預設 = **操作者自己的範圍**(張要在他的可見範圍內,寫入不放大)
+ * - `crossStoreTenantId` = 這個租戶的**租戶邊界上下文**(例外寫入:調入、尋回到刷到的那家店這類
+ *   「張還在別的分店、由收貨 / 刷到的這家店的人寫」);仍記得是哪位操作者(基礎欄位與搬家稽核)
+ * - `operator: null` = 沒有操作者的系統寫入,一定要給 `crossStoreTenantId`,而且不能換店(搬家要寫稽核)
+ */
+export interface LedgerContext {
+  operator: OperatorContext | null;
+  crossStoreTenantId?: Types.ObjectId;
+}
 
 /** 這次事件要把張改成什麼(沒給的欄位不變)。 */
 export interface TicketStatePatch {
   status?: TicketStatus;
   location?: TicketLocation;
-  /** 目前所在分店(調入、尋回到刷到的那家店)。 */
-  storeOrgId?: Types.ObjectId;
+  /** 換到哪家分店(調入、尋回到刷到的那家店);以搬家入口 `reassignOrg` 寫。 */
+  orgId?: Types.ObjectId;
   /** 責任分店(待查或遺失時填;尋回時清成 null)。 */
   responsibleOrgId?: Types.ObjectId | null;
   /** 單張成本(調入時改成調貨單那一列的批購金額 ÷ 張數)。 */
   unitCost?: number;
-  /** 最近一次售出;null = 清掉(撤銷)。 */
+  /** 最近一次售出;null = 清掉(撤銷)。售出的「誰」一律是帳本的操作者。 */
   sold?: {
     at: Date;
-    by: Types.ObjectId | null;
     source: TicketSoldSource;
   } | null;
 }
@@ -40,18 +53,14 @@ export interface TicketLockRef {
  * - **條件**:張的 `version` 要等於 `expectedVersion`(呼叫端讀到的),給了 `expectedStatuses` 時狀態也要在其中;
  *   被鎖定的張只有 `allowLockedBy` 是同一個鎖時才能動(例:調貨單自己鎖住的張寫調出 / 調入)
  * - **事件 id** = `<ticketId>:<expectedVersion + 1>`:同一個 id 已寫過且內容相同 → 重送,不重複寫入
- * - 金額一律正數,方向看 `cashEffect`
+ * - 「誰」= 帳本的操作者(沒有操作者 = null);金額一律正數,方向看 `cashEffect`
  */
 export interface TicketEventInput {
-  /** 這張所在的租戶(租戶頂層 id;同一批事件必須同一個租戶)。 */
-  tenantId: Types.ObjectId;
   ticketId: Types.ObjectId;
   expectedVersion: number;
   expectedStatuses?: readonly TicketStatus[];
   allowLockedBy?: TicketLockRef;
   type: TicketEventType;
-  /** 誰(使用者 id;系統動作為 null)。 */
-  by: Types.ObjectId | null;
   /** 發生時間;不給 = 現在。 */
   at?: Date;
   patch: TicketStatePatch;
@@ -73,8 +82,10 @@ export interface TicketEventResult {
   applied: boolean;
 }
 
-/** `lockTickets` / `unlockTickets` 的鎖。 */
-export interface TicketLockInput extends TicketLockRef {
-  /** 這些張所在的租戶(租戶頂層 id)。 */
-  tenantId: Types.ObjectId;
+/** 鎖定 / 解除後每張的版本(鎖定與解除會用掉一個版本,不寫事件)。 */
+export interface TicketVersion {
+  ticketId: string;
+  version: number;
+  /** false = 已是要的狀態(重送),版本沒變。 */
+  changed: boolean;
 }

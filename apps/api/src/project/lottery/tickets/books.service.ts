@@ -21,7 +21,7 @@ import {
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import {
   type LotteryBookDocument,
@@ -29,6 +29,7 @@ import {
   LotteryTicketEventsRepository,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
+import { tenantOfOperator } from "../master-data-tenant";
 import {
   INVENTORY_REASONS,
   notFoundError,
@@ -40,10 +41,8 @@ type BookRecord = Persisted<LotteryBookDocument>;
 
 /** `createBook` 的輸入(進貨點收一本;P18 呼叫)。 */
 export interface CreateBookInput {
-  /** 租戶頂層 id。 */
-  tenantId: Types.ObjectId;
-  /** 點收的分店(這本的所在分店)。 */
-  storeOrgId: Types.ObjectId;
+  /** 點收的分店(這本的所在分店;要在操作者的可見範圍內)。 */
+  orgId: Types.ObjectId;
   gameId: Types.ObjectId;
   /** 本號:6 位(自動補 0)或 7 位。 */
   bookNo: string;
@@ -58,8 +57,6 @@ export interface CreateBookInput {
   purchaseSubmissionId?: Types.ObjectId | null;
   purchasedAt?: Date | null;
   purchaseDealerId?: Types.ObjectId | null;
-  /** 點收人(進貨事件的「誰」)。 */
-  by: Types.ObjectId | null;
   /** 點收時間;不給 = 現在。 */
   at?: Date;
 }
@@ -75,10 +72,18 @@ export interface BookStats {
 }
 
 /**
+ * 單張成本 = 成本 ÷ 標準張數(跳號的張實體不存在、不算成本)。**不四捨五入**:存除出來的值,
+ * 一本的單張成本加總 = 這本的成本;報表加總單張成本後再四捨五入到元。
+ */
+export function unitCostOf(cost: number, standardTickets: number): number {
+  return cost / standardTickets;
+}
+
+/**
  * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。
  *
- * - `createBook`:**只給進貨點收用**。本號補 0、本編號、迄號範圍、起號 001、建立全部的張(跳號待拆本時標註)、
- *   單張成本 = 成本 ÷ 標準張數,每張寫一筆「進貨」事件(版本 1);在呼叫端的交易裡
+ * - `createBook`:**只給進貨點收用**,以點收人(操作者)自己的範圍寫。本號補 0、本編號、迄號範圍、起號 001、
+ *   一次建立全部的張(跳號待拆本時標註)與每張一筆「進貨」事件(版本 1);在呼叫端的交易裡
  * - `statsOf`:待標註、剩餘、各分店持有、未拆 / 檯面中 / 售完(即時計算)
  */
 @Injectable()
@@ -93,12 +98,17 @@ export class LotteryBooksService {
 
   async createBook(
     session: ClientSession,
+    operator: OperatorContext,
     input: CreateBookInput,
   ): Promise<{ book: BookRecord; pendingSkipCount: number }> {
-    const ledger = await systemTenantReader(this.orgs, input.tenantId);
+    const tenant = tenantOfOperator(operator);
+    if (tenant?.tenantId == null) {
+      throw notFoundError("找不到所在租戶");
+    }
+    // 遊戲是全租戶共用的主檔(資料共用 wholeTenant),點收人讀得到
     const game = await this.games.findOne(
-      ledger,
-      { _id: input.gameId, tenantId: input.tenantId },
+      operator,
+      { _id: input.gameId },
       { session },
     );
     if (!game) {
@@ -120,20 +130,12 @@ export class LotteryBooksService {
         INVENTORY_REASONS.lastTicketNoOutOfRange,
       );
     }
-    const visible = ledger.visibleOrgIds;
-    if (
-      visible !== "all" &&
-      !visible.some((orgId) => orgId.equals(input.storeOrgId))
-    ) {
-      throw validationError("點收分店不在這個租戶", ["storeOrgId"]);
-    }
     const bookKey = bookKeyOf(game.gameCode, bookNo);
     if (
       await this.books.existsInTenant(
-        ledger,
-        input.tenantId,
-        "bookKey",
-        bookKey,
+        operator,
+        tenant.tenantId,
+        { bookKey },
         { session },
       )
     ) {
@@ -145,16 +147,15 @@ export class LotteryBooksService {
     }
     const cost = Math.round(input.cost);
     const book = await this.books.create(
-      ledger,
+      operator,
       {
-        orgId: input.tenantId,
+        orgId: input.orgId,
         gameId: game._id,
         gameCode: game.gameCode,
         bookNo,
         bookKey,
         printVersion: input.printVersion ?? "1",
-        storeOrgId: input.storeOrgId,
-        holderOrgIds: [input.storeOrgId],
+        holderOrgIds: [input.orgId],
         purchaseSubmissionId: input.purchaseSubmissionId ?? null,
         purchasedAt: input.purchasedAt ?? null,
         purchaseDealerId: input.purchaseDealerId ?? null,
@@ -169,52 +170,50 @@ export class LotteryBooksService {
       },
       { session },
     );
-    // 跳號的張實體不存在、不算成本:單張成本以標準張數分攤
-    const unitCost = cost / standardTickets;
-    const at = input.at ?? new Date();
-    for (let number = 1; number <= input.lastTicketNo; number += 1) {
-      const ticketNo = formatTicketNo(number);
-      const ticket = await this.tickets.create(
-        ledger,
-        {
-          orgId: input.tenantId,
+    const unitCost = unitCostOf(cost, standardTickets);
+    const tickets = await this.tickets.createMany(
+      operator,
+      Array.from({ length: input.lastTicketNo }, (_, index) => {
+        const ticketNo = formatTicketNo(index + 1);
+        return {
+          orgId: input.orgId,
           bookId: book._id,
           gameId: game._id,
           bookNo,
           ticketNo,
           ticketKey: ticketKeyOf(game.gameCode, bookNo, ticketNo),
-          storeOrgId: input.storeOrgId,
           status: TICKET_STATUS.unsold,
           location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
           lockedBy: null,
           responsibleOrgId: null,
           unitCost,
           version: 1,
-        },
-        { session },
-      );
-      await this.events.create(
-        ledger,
-        {
-          orgId: input.storeOrgId,
-          eventId: ticketEventIdOf(String(ticket._id), 1),
-          ticketId: ticket._id,
-          bookId: book._id,
-          gameId: game._id,
-          at,
-          by: input.by,
-          type: TICKET_EVENT_TYPE.purchase,
-          from: null,
-          to: snapshotOf(ticket),
-          quantity: 1,
-          amount: 0,
-          cashEffect: "none",
-          refType: input.purchaseSubmissionId ? "purchase" : null,
-          refId: input.purchaseSubmissionId ?? null,
-        },
-        { session },
-      );
-    }
+        };
+      }),
+      { session },
+    );
+    const at = input.at ?? new Date();
+    await this.events.createMany(
+      operator,
+      tickets.map((ticket) => ({
+        orgId: input.orgId,
+        eventId: ticketEventIdOf(String(ticket._id), 1),
+        ticketId: ticket._id,
+        bookId: book._id,
+        gameId: game._id,
+        at,
+        by: operator.actorId,
+        type: TICKET_EVENT_TYPE.purchase,
+        from: null,
+        to: snapshotOf(ticket),
+        quantity: 1,
+        amount: 0,
+        cashEffect: "none" as const,
+        refType: input.purchaseSubmissionId ? "purchase" : null,
+        refId: input.purchaseSubmissionId ?? null,
+      })),
+      { session },
+    );
     return {
       book,
       pendingSkipCount: pendingSkipCountOf(
@@ -227,7 +226,7 @@ export class LotteryBooksService {
 
   /**
    * 本的即時計算。本以操作者自己的範圍讀(讀取放行:所在分店或持有任何一張的分店看得到),
-   * 讀得到才以租戶系統身分讀這本全部的張來算(各分店持有要看整本)。讀不到 → `NOT_FOUND`。
+   * 讀得到才以租戶邊界上下文讀這本全部的張(各分店持有要看整本;反查)。讀不到 → `NOT_FOUND`。
    */
   async statsOf(
     operator: OperatorContext,
@@ -237,16 +236,20 @@ export class LotteryBooksService {
     if (!book?.tenantId) {
       throw notFoundError("本不存在");
     }
-    const ledger = await systemTenantReader(this.orgs, book.tenantId);
+    const whole = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      book.tenantId,
+    );
     const tickets = await this.tickets.findMany(
-      ledger,
+      whole,
       { bookId: book._id },
-      { select: "status location storeOrgId" },
+      { select: "status location orgId" },
     );
     const snapshots = tickets.map((ticket) => ({
       status: ticket.status,
       locationKind: ticket.location.kind,
-      storeOrgId: String(ticket.storeOrgId),
+      storeOrgId: String(ticket.orgId),
     }));
     return {
       pendingSkipCount: pendingSkipCountOf(

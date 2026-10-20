@@ -18,21 +18,25 @@ import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection
 import { TransactionService } from "../../../database/transaction";
 import { LotteryAllocation } from "../../database/lottery-inventory/lottery-allocation.schema";
 import { LotteryBook } from "../../database/lottery-inventory/lottery-book.schema";
-import { LotteryTicketEventsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
+import {
+  LotteryBooksRepository,
+  LotteryTicketEventsRepository,
+  LotteryTicketsRepository,
+} from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryTicketEvent } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { LotteryTicket } from "../../database/lottery-inventory/lottery-ticket.schema";
 import { isGameInUse } from "../games/game-usage";
 import { LotteryAllocationsService } from "./allocations.service";
 import { LotteryBooksService } from "./books.service";
 import { TicketLedgerService } from "./ticket-ledger.service";
-import type { TicketEventInput } from "./ticket-ledger.types";
+import type { LedgerContext, TicketEventInput } from "./ticket-ledger.types";
 
 interface TicketRow {
   _id: Types.ObjectId;
+  orgId: Types.ObjectId;
   ticketNo: string;
   status: string;
   version: number;
-  storeOrgId: Types.ObjectId;
   unitCost: number;
   lockedBy: unknown;
 }
@@ -41,7 +45,30 @@ function byText(left: string, right: string): number {
   return left.localeCompare(right);
 }
 
-/** 呼叫並取第一個錯誤的 extensions(GraphQLError)。 */
+function own(operator: OperatorContext): LedgerContext {
+  return { operator };
+}
+
+function saleOf(
+  ticket: TicketRow,
+  overrides: Partial<TicketEventInput> = {},
+): TicketEventInput {
+  return {
+    ticketId: ticket._id,
+    expectedVersion: ticket.version,
+    expectedStatuses: [TICKET_STATUS.unsold],
+    type: TICKET_EVENT_TYPE.sale,
+    amount: 200,
+    cashEffect: "increase",
+    patch: {
+      status: TICKET_STATUS.sold,
+      sold: { at: new Date(), source: "scan" },
+    },
+    ...overrides,
+  };
+}
+
+/** 呼叫並取錯誤的 extensions(GraphQLError)。 */
 async function extensionsOf(promise: Promise<unknown>): Promise<unknown> {
   try {
     await promise;
@@ -53,16 +80,26 @@ async function extensionsOf(promise: Promise<unknown>): Promise<unknown> {
 
 /**
  * 張數核心(專案規格 7.1、7.2、7.6、第 17 章共通原則):帳本服務、本的建立、預計要給本數,
- * 對真 MongoDB(replica set,交易)直接呼叫 service(TEST-07)。
- * 組織樹:root ─ 租戶甲 ─┬─ 甲一店
- *                         └─ 甲二店
+ * 對真 MongoDB(replica set,交易)直接呼叫 service(TEST-07)。操作者上下文手寫(形狀同登入線)。
+ *
+ * 組織樹:root ─┬─ 租戶甲 ─┬─ 北區 ─┬─ 甲一店
+ *              │          │        └─ 甲二店
+ *              │          └─ 甲三店
+ *              └─ 租戶乙 ─┬─ 乙一店
+ *                         └─ 乙二店
  */
 describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
   let api: AuthTestApp;
   let tenant: Types.ObjectId;
+  let region: Types.ObjectId;
   let storeA: Types.ObjectId;
   let storeB: Types.ObjectId;
+  let storeC: Types.ObjectId;
+  let tenantB: Types.ObjectId;
+  let storeB1: Types.ObjectId;
+  let storeB2: Types.ObjectId;
   let gameId: Types.ObjectId;
+  let gameOfTenantB: Types.ObjectId;
   let transactions: TransactionService;
   let ledger: TicketLedgerService;
   let booksService: LotteryBooksService;
@@ -73,8 +110,14 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
     return api.app.get<Model<T>>(getModelToken(name));
   }
 
-  /** 甲一店的店長(手寫的操作者上下文;只用於讀與預計要給本數)。 */
+  /** 分店人員(所屬 = 那家店,可見範圍 = 那家店)。 */
   function storeOperator(orgId: Types.ObjectId): OperatorContext {
+    const tenantOf = [storeB1, storeB2].some((id) => id.equals(orgId))
+      ? tenantB
+      : tenant;
+    const ancestors = [storeA, storeB].some((id) => id.equals(orgId))
+      ? [tenant, region]
+      : [tenantOf];
     return {
       actorId: newObjectId(),
       currentOrgId: orgId,
@@ -83,18 +126,23 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       memberOrgIds: [orgId],
       roleIds: [],
       memberTenants: [
-        { tenantId: tenant, memberOrgIds: [orgId], ancestorOrgIds: [tenant] },
+        {
+          tenantId: tenantOf,
+          memberOrgIds: [orgId],
+          ancestorOrgIds: ancestors,
+        },
       ],
     };
   }
 
-  /** 總部(租戶頂層 + 全部分店可見)。 */
+  /** 總部(最上層組織,可見範圍 = 整個租戶甲)。 */
   function headquarters(): OperatorContext {
+    const all = [tenant, region, storeA, storeB, storeC];
     return {
       actorId: newObjectId(),
       currentOrgId: tenant,
-      visibleOrgIds: [tenant, storeA, storeB],
-      managedOrgIds: [tenant, storeA, storeB],
+      visibleOrgIds: all,
+      managedOrgIds: all,
       memberOrgIds: [tenant],
       roleIds: [],
       memberTenants: [
@@ -103,20 +151,91 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
     };
   }
 
+  /** 中間層(北區)的人:可見範圍 = 北區與底下兩家店。 */
+  function regionManager(): OperatorContext {
+    return {
+      actorId: newObjectId(),
+      currentOrgId: region,
+      visibleOrgIds: [region, storeA, storeB],
+      managedOrgIds: [region, storeA, storeB],
+      memberOrgIds: [region],
+      roleIds: [],
+      memberTenants: [
+        { tenantId: tenant, memberOrgIds: [region], ancestorOrgIds: [tenant] },
+      ],
+    };
+  }
+
+  /** 同時屬於兩個租戶的人:甲一店與乙一店。 */
+  function twoTenantPerson(): OperatorContext {
+    return {
+      actorId: newObjectId(),
+      currentOrgId: storeA,
+      visibleOrgIds: [storeA, storeB1],
+      managedOrgIds: [],
+      memberOrgIds: [storeA, storeB1],
+      roleIds: [],
+      memberTenants: [
+        {
+          tenantId: tenant,
+          memberOrgIds: [storeA],
+          ancestorOrgIds: [tenant, region],
+        },
+        {
+          tenantId: tenantB,
+          memberOrgIds: [storeB1],
+          ancestorOrgIds: [tenantB],
+        },
+      ],
+    };
+  }
+
+  async function insertGame(
+    tenantId: Types.ObjectId,
+    gameCode: string,
+  ): Promise<Types.ObjectId> {
+    const now = new Date();
+    const { insertedId } = await api.connection
+      .collection("lottery_games")
+      .insertOne({
+        orgId: tenantId,
+        tenantId,
+        moduleKey: "master-data",
+        shareOrgs: [{ orgId: tenantId, includeDescendants: true }],
+        gameCode,
+        name: "發大財",
+        unitPrice: 200,
+        ticketsPerBook: 100,
+        bookPrice: 20_000,
+        defaultRate: 92,
+        color: null,
+        status: "on_sale",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+    return insertedId;
+  }
+
   async function receiveBook(
-    overrides: { lastTicketNo?: number; storeOrgId?: Types.ObjectId } = {},
+    overrides: {
+      lastTicketNo?: number;
+      orgId?: Types.ObjectId;
+      game?: Types.ObjectId;
+    } = {},
   ): Promise<Types.ObjectId> {
     bookSequence += 1;
+    const orgId = overrides.orgId ?? storeA;
     const { book } = await transactions.withTransaction((session) =>
-      booksService.createBook(session, {
-        tenantId: tenant,
-        storeOrgId: overrides.storeOrgId ?? storeA,
-        gameId,
+      booksService.createBook(session, storeOperator(orgId), {
+        orgId,
+        gameId: overrides.game ?? gameId,
         bookNo: String(bookSequence).padStart(6, "0"),
         lastTicketNo: overrides.lastTicketNo ?? 100,
         rate: 92,
         cost: 18_400,
-        by: null,
       }),
     );
     return book._id;
@@ -128,6 +247,14 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       .find({ bookId })
       .sort({ ticketNo: 1 })
       .toArray();
+  }
+
+  async function firstTicket(bookId: Types.ObjectId): Promise<TicketRow> {
+    const [ticket] = await ticketsOf(bookId);
+    if (!ticket) {
+      throw new Error("沒有張");
+    }
+    return ticket;
   }
 
   async function ticketById(id: Types.ObjectId): Promise<TicketRow | null> {
@@ -142,60 +269,79 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       .countDocuments({ ticketId });
   }
 
-  function saleOf(
-    ticket: TicketRow,
-    overrides: Partial<TicketEventInput> = {},
-  ): TicketEventInput {
-    return {
-      tenantId: tenant,
-      ticketId: ticket._id,
-      expectedVersion: ticket.version,
-      expectedStatuses: [TICKET_STATUS.unsold],
-      type: TICKET_EVENT_TYPE.sale,
-      by: null,
-      amount: 200,
-      cashEffect: "increase",
-      patch: {
-        status: TICKET_STATUS.sold,
-        sold: { at: new Date(), by: null, source: "scan" },
-      },
-      ...overrides,
-    };
+  /** 甲一店還在店裡的前 N 張調出 → 甲二店調入(調入由甲二店的人寫,張還在甲一店:跨店例外寫入)。 */
+  async function transfer(
+    bookId: Types.ObjectId,
+    count: number,
+  ): Promise<void> {
+    const inStoreA = await ticketsOf(bookId);
+    const moving = inStoreA
+      .filter((ticket) => ticket.orgId.equals(storeA))
+      .slice(0, count);
+    await transactions.withTransaction((session) =>
+      ledger.applyTicketEvents(
+        session,
+        own(storeOperator(storeA)),
+        moving.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version,
+          type: TICKET_EVENT_TYPE.transferOut,
+          patch: {
+            location: {
+              kind: TICKET_LOCATION_KIND.inTransit,
+              cashPointId: null,
+            },
+          },
+        })),
+      ),
+    );
+    await transactions.withTransaction((session) =>
+      ledger.applyTicketEvents(
+        session,
+        { operator: storeOperator(storeB), crossStoreTenantId: tenant },
+        moving.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version + 1,
+          type: TICKET_EVENT_TYPE.transferIn,
+          patch: {
+            orgId: storeB,
+            location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
+          },
+        })),
+      ),
+    );
   }
 
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-lottery-tickets");
     tenant = await createOrg(api.connection, { name: "租戶甲" });
+    region = await createOrg(api.connection, {
+      name: "北區",
+      parentId: tenant,
+    });
     storeA = await createOrg(api.connection, {
       name: "甲一店",
-      parentId: tenant,
+      parentId: region,
     });
     storeB = await createOrg(api.connection, {
       name: "甲二店",
+      parentId: region,
+    });
+    storeC = await createOrg(api.connection, {
+      name: "甲三店",
       parentId: tenant,
     });
-    const now = new Date();
-    const { insertedId } = await api.connection
-      .collection("lottery_games")
-      .insertOne({
-        orgId: tenant,
-        tenantId: tenant,
-        moduleKey: "master-data",
-        gameCode: "5164",
-        name: "發大財",
-        unitPrice: 200,
-        ticketsPerBook: 100,
-        bookPrice: 20_000,
-        defaultRate: 92,
-        color: null,
-        status: "on_sale",
-        createdAt: now,
-        updatedAt: now,
-        createdBy: null,
-        updatedBy: null,
-        deletedAt: null,
-      });
-    gameId = insertedId;
+    tenantB = await createOrg(api.connection, { name: "租戶乙" });
+    storeB1 = await createOrg(api.connection, {
+      name: "乙一店",
+      parentId: tenantB,
+    });
+    storeB2 = await createOrg(api.connection, {
+      name: "乙二店",
+      parentId: tenantB,
+    });
+    gameId = await insertGame(tenant, "5164");
+    gameOfTenantB = await insertGame(tenantB, "5164");
     transactions = api.app.get(TransactionService);
     ledger = api.app.get(TicketLedgerService);
     booksService = api.app.get(LotteryBooksService);
@@ -226,16 +372,15 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
     });
 
     it("迄號 103、標準 100 → 待標註 3;本號補 0、起號 001、單張成本 = 成本 ÷ 標準張數、每張一筆進貨事件", async () => {
+      const operator = storeOperator(storeA);
       const result = await transactions.withTransaction((session) =>
-        booksService.createBook(session, {
-          tenantId: tenant,
-          storeOrgId: storeA,
+        booksService.createBook(session, operator, {
+          orgId: storeA,
           gameId,
           bookNo: "056527",
           lastTicketNo: 103,
           rate: 92,
           cost: 18_400.4,
-          by: null,
         }),
       );
       expect(result.pendingSkipCount).toBe(3);
@@ -249,42 +394,41 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         cost: 18_400,
         status: "normal",
       });
+      expect(String(result.book.orgId)).toBe(String(storeA));
       const tickets = await ticketsOf(result.book._id);
       expect(tickets).toHaveLength(103);
       expect(tickets[0]?.ticketNo).toBe("001");
       expect(tickets[102]?.ticketNo).toBe("103");
       expect(tickets[0]?.unitCost).toBe(184);
-      expect(tickets.every((ticket) => ticket.version === 1)).toBe(true);
       expect(
-        await api.connection
-          .collection("lottery_ticket_events")
-          .countDocuments({
-            bookId: result.book._id,
-            type: TICKET_EVENT_TYPE.purchase,
-          }),
-      ).toBe(103);
-      const stats = await booksService.statsOf(
-        storeOperator(storeA),
-        result.book._id,
-      );
-      expect(stats).toMatchObject({
+        tickets.every(
+          (ticket) => ticket.version === 1 && ticket.orgId.equals(storeA),
+        ),
+      ).toBe(true);
+      const purchases = await api.connection
+        .collection("lottery_ticket_events")
+        .find({ bookId: result.book._id, type: TICKET_EVENT_TYPE.purchase })
+        .toArray();
+      expect(purchases).toHaveLength(103);
+      expect(String(purchases[0]?.by)).toBe(String(operator.actorId));
+      await expect(
+        booksService.statsOf(operator, result.book._id),
+      ).resolves.toMatchObject({
         pendingSkipCount: 3,
         remainingCount: 103,
         state: "unopened",
         holdings: [{ orgId: String(storeA), count: 103 }],
       });
-      // 同一本再點收一次 → 擋下
+      // 同一本再點收一次(別的分店也一樣)→ 擋下
       const duplicate = await extensionsOf(
         transactions.withTransaction((session) =>
-          booksService.createBook(session, {
-            tenantId: tenant,
-            storeOrgId: storeA,
+          booksService.createBook(session, storeOperator(storeB), {
+            orgId: storeB,
             gameId,
             bookNo: "0056527",
             lastTicketNo: 100,
             rate: 92,
             cost: 18_400,
-            by: null,
           }),
         ),
       );
@@ -293,43 +437,44 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       expect(await isGameInUse(tenant, gameId)).toBe(true);
     });
 
-    it("別的分店看不到這本;本所在的分店看得到", async () => {
-      const bookId = await receiveBook();
+    it("點收分店不在點收人的可見範圍 → 寫不進去", async () => {
       await expect(
-        booksService.statsOf(storeOperator(storeB), bookId),
-      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
-      await expect(
-        booksService.statsOf(storeOperator(storeA), bookId),
-      ).resolves.toMatchObject({ remainingCount: 100 });
+        transactions.withTransaction((session) =>
+          booksService.createBook(session, storeOperator(storeA), {
+            orgId: storeB,
+            gameId,
+            bookNo: "777777",
+            lastTicketNo: 100,
+            rate: 92,
+            cost: 18_400,
+          }),
+        ),
+      ).rejects.toThrow();
     });
   });
 
   describe("帳本(第 17 章共通原則)", () => {
     it("同一張同時兩個條件更新 → 一個成功、一個 CONFLICT", async () => {
-      const [ticket] = await ticketsOf(await receiveBook());
-      if (!ticket) {
-        throw new Error("沒有張");
-      }
+      const ticket = await firstTicket(await receiveBook());
       const results = await Promise.allSettled([
         transactions.withTransaction((session) =>
-          ledger.applyTicketEvents(session, [
-            saleOf(ticket, { by: newObjectId() }),
+          ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+            saleOf(ticket),
           ]),
         ),
         transactions.withTransaction((session) =>
-          ledger.applyTicketEvents(session, [
-            saleOf(ticket, { by: newObjectId() }),
+          ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+            saleOf(ticket),
           ]),
         ),
       ]);
-      const fulfilled = results.filter(
-        (result) => result.status === "fulfilled",
-      );
       const rejected = results.filter(
         (result): result is PromiseRejectedResult =>
           result.status === "rejected",
       );
-      expect(fulfilled).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === "fulfilled"),
+      ).toHaveLength(1);
       expect(rejected).toHaveLength(1);
       expect(rejected[0]?.reason).toMatchObject({
         extensions: {
@@ -338,23 +483,22 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
           ticketIds: [String(ticket._id)],
         },
       });
-      const reloaded = await ticketById(ticket._id);
-      expect(reloaded).toMatchObject({ status: "sold", version: 2 });
+      expect(await ticketById(ticket._id)).toMatchObject({
+        status: "sold",
+        version: 2,
+      });
       // 進貨 1 筆 + 售出 1 筆
       expect(await eventCount(ticket._id)).toBe(2);
     });
 
-    it("同一事件 id 重送 → 不重複寫入", async () => {
-      const [ticket] = await ticketsOf(await receiveBook());
-      if (!ticket) {
-        throw new Error("沒有張");
-      }
-      const by = newObjectId();
+    it("同一事件 id 重送 → 不重複寫入;同時重送時後到的回 CONFLICT", async () => {
+      const ticket = await firstTicket(await receiveBook());
+      const clerk = storeOperator(storeA);
       const first = await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(session, [saleOf(ticket, { by })]),
+        ledger.applyTicketEvents(session, own(clerk), [saleOf(ticket)]),
       );
       const resent = await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(session, [saleOf(ticket, { by })]),
+        ledger.applyTicketEvents(session, own(clerk), [saleOf(ticket)]),
       );
       expect(first).toEqual([
         {
@@ -366,15 +510,11 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       ]);
       expect(resent).toEqual([{ ...first[0], applied: false }]);
       expect(await eventCount(ticket._id)).toBe(2);
-      const reloaded = await ticketById(ticket._id);
-      expect(reloaded?.version).toBe(2);
+      expect(await ticketById(ticket._id)).toMatchObject({ version: 2 });
     });
 
     it("目前狀態與事件同一交易:事件寫入失敗 → 狀態不變", async () => {
-      const [ticket] = await ticketsOf(await receiveBook());
-      if (!ticket) {
-        throw new Error("沒有張");
-      }
+      const ticket = await firstTicket(await receiveBook());
       const events = api.app.get(LotteryTicketEventsRepository);
       const spy = jest
         .spyOn(events, "create")
@@ -382,25 +522,28 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       try {
         await expect(
           transactions.withTransaction((session) =>
-            ledger.applyTicketEvents(session, [saleOf(ticket)]),
+            ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+              saleOf(ticket),
+            ]),
           ),
         ).rejects.toThrow("注入的事件寫入失敗");
       } finally {
         spy.mockRestore();
       }
-      const reloaded = await ticketById(ticket._id);
-      expect(reloaded).toMatchObject({ status: "unsold", version: 1 });
+      expect(await ticketById(ticket._id)).toMatchObject({
+        status: "unsold",
+        version: 1,
+      });
       expect(await eventCount(ticket._id)).toBe(1);
     });
 
     it("金額不是正數 → 擋下", async () => {
-      const [ticket] = await ticketsOf(await receiveBook());
-      if (!ticket) {
-        throw new Error("沒有張");
-      }
+      const ticket = await firstTicket(await receiveBook());
       const extensions = await extensionsOf(
         transactions.withTransaction((session) =>
-          ledger.applyTicketEvents(session, [saleOf(ticket, { amount: -200 })]),
+          ledger.applyTicketEvents(session, own(storeOperator(storeA)), [
+            saleOf(ticket, { amount: -200 }),
+          ]),
         ),
       );
       expect(extensions).toMatchObject({
@@ -409,42 +552,51 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       });
     });
 
-    it("鎖定時不能賣;同一個鎖的單據可以動;解除後可以賣", async () => {
+    it("操作者自己的範圍:別家店的人動不到這張(CONFLICT)", async () => {
+      const ticket = await firstTicket(await receiveBook());
+      await expect(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(session, own(storeOperator(storeB)), [
+            saleOf(ticket),
+          ]),
+        ),
+      ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
+    });
+
+    it("鎖定時不能賣;鎖定 / 解除回新版本、用掉一個版本不寫事件;同一個鎖的單據可以動", async () => {
       const bookId = await receiveBook();
-      const [ticket] = await ticketsOf(bookId);
-      if (!ticket) {
-        throw new Error("沒有張");
-      }
-      const lock = {
-        tenantId: tenant,
-        refType: "transfer" as const,
-        refId: newObjectId(),
-      };
-      await transactions.withTransaction((session) =>
-        ledger.lockTickets(session, [ticket._id], lock),
+      const ticket = await firstTicket(bookId);
+      const clerk = own(storeOperator(storeA));
+      const lock = { refType: "transfer" as const, refId: newObjectId() };
+      const locked = await transactions.withTransaction((session) =>
+        ledger.lockTickets(session, clerk, [ticket._id], lock),
       );
-      // 重送鎖定不出錯
-      await transactions.withTransaction((session) =>
-        ledger.lockTickets(session, [ticket._id], lock),
+      expect(locked).toEqual([
+        { ticketId: String(ticket._id), version: 2, changed: true },
+      ]);
+      // 重送鎖定:版本不變
+      const again = await transactions.withTransaction((session) =>
+        ledger.lockTickets(session, clerk, [ticket._id], lock),
       );
+      expect(again).toEqual([
+        { ticketId: String(ticket._id), version: 2, changed: false },
+      ]);
+      expect(await eventCount(ticket._id)).toBe(1);
       const book = await api.connection
         .collection<{ lockedTicketCount: number }>("lottery_books")
         .findOne({ _id: bookId });
       expect(book?.lockedTicketCount).toBe(1);
-      const locked = await ticketById(ticket._id);
-      if (!locked) {
-        throw new Error("沒有張");
-      }
-      expect(locked.version).toBe(2);
       await expect(
         transactions.withTransaction((session) =>
-          ledger.applyTicketEvents(session, [saleOf(locked)]),
+          ledger.applyTicketEvents(session, clerk, [
+            saleOf({ ...ticket, version: 2 }),
+          ]),
         ),
       ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
       // 別的單據要鎖 → CONFLICT
       await expect(
         transactions.withTransaction((session) =>
-          ledger.lockTickets(session, [ticket._id], {
+          ledger.lockTickets(session, clerk, [ticket._id], {
             ...lock,
             refId: newObjectId(),
           }),
@@ -452,14 +604,12 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
       // 調貨單自己鎖住的張可以寫調出
       await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(session, [
+        ledger.applyTicketEvents(session, clerk, [
           {
-            tenantId: tenant,
-            ticketId: locked._id,
-            expectedVersion: locked.version,
-            allowLockedBy: { refType: lock.refType, refId: lock.refId },
+            ticketId: ticket._id,
+            expectedVersion: 2,
+            allowLockedBy: lock,
             type: TICKET_EVENT_TYPE.transferOut,
-            by: null,
             patch: {
               location: {
                 kind: TICKET_LOCATION_KIND.inTransit,
@@ -471,15 +621,97 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
           },
         ]),
       );
-      await transactions.withTransaction((session) =>
-        ledger.unlockTickets(session, [ticket._id], lock),
+      const unlocked = await transactions.withTransaction((session) =>
+        ledger.unlockTickets(session, clerk, [ticket._id], lock),
       );
-      const unlocked = await ticketById(ticket._id);
-      expect(unlocked).toMatchObject({ lockedBy: null, version: 4 });
+      expect(unlocked).toEqual([
+        { ticketId: String(ticket._id), version: 4, changed: true },
+      ]);
+      expect(await ticketById(ticket._id)).toMatchObject({
+        lockedBy: null,
+        version: 4,
+      });
       const afterUnlock = await api.connection
         .collection<{ lockedTicketCount: number }>("lottery_books")
         .findOne({ _id: bookId });
       expect(afterUnlock?.lockedTicketCount).toBe(0);
+    });
+  });
+
+  describe("換店與可見範圍", () => {
+    it("調入以搬家入口換店(寫稽核);持有分店跟著改;整本都過去 → 本也搬過去", async () => {
+      const bookId = await receiveBook();
+      await transfer(bookId, 30);
+      const tickets = await ticketsOf(bookId);
+      expect(
+        tickets.filter((ticket) => ticket.orgId.equals(storeB)),
+      ).toHaveLength(30);
+      expect(
+        await api.connection.collection("audit_logs").countDocuments({
+          action: "data.reassign-org",
+          targetType: "lottery_tickets",
+        }),
+      ).toBeGreaterThanOrEqual(30);
+      const book = await api.connection
+        .collection<{ holderOrgIds: Types.ObjectId[]; orgId: Types.ObjectId }>(
+          "lottery_books",
+        )
+        .findOne({ _id: bookId });
+      expect(book?.holderOrgIds.map(String).toSorted(byText)).toEqual(
+        [String(storeA), String(storeB)].toSorted(byText),
+      );
+      expect(String(book?.orgId)).toBe(String(storeA));
+
+      // 甲二店:持有幾張就讀得到那一本(讀取放行),張只看得到自己店的
+      const clerkB = storeOperator(storeB);
+      await expect(booksService.statsOf(clerkB, bookId)).resolves.toMatchObject(
+        { remainingCount: 100 },
+      );
+      const tickets2 = api.app.get(LotteryTicketsRepository);
+      expect(await tickets2.count(clerkB, { bookId })).toBe(30);
+      // 甲三店:沒有持有 → 讀不到
+      await expect(
+        booksService.statsOf(storeOperator(storeC), bookId),
+      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
+
+      // 剩下 70 張也調過去 → 本跟著搬到甲二店
+      await transfer(bookId, 100);
+      const moved = await api.connection
+        .collection<{ holderOrgIds: Types.ObjectId[]; orgId: Types.ObjectId }>(
+          "lottery_books",
+        )
+        .findOne({ _id: bookId });
+      expect(String(moved?.orgId)).toBe(String(storeB));
+      expect(moved?.holderOrgIds.map(String)).toEqual([String(storeB)]);
+    });
+
+    it("中間層(北區)的人看得到底下兩家店的本與張,看不到不在北區的店", async () => {
+      const bookA = await receiveBook();
+      const bookC = await receiveBook({ orgId: storeC });
+      const manager = regionManager();
+      const books = api.app.get(LotteryBooksRepository);
+      const tickets = api.app.get(LotteryTicketsRepository);
+      expect(await books.findById(manager, bookA)).not.toBeNull();
+      expect(await tickets.count(manager, { bookId: bookA })).toBe(100);
+      expect(await books.findById(manager, bookC)).toBeNull();
+      expect(await tickets.count(manager, { bookId: bookC })).toBe(0);
+      // 總部看得到全部
+      expect(await books.findById(headquarters(), bookC)).not.toBeNull();
+    });
+
+    it("同時屬於兩個租戶的人:只看得到自己所屬分店的本;預計要給本數只算當前組織的租戶", async () => {
+      const bookA = await receiveBook();
+      const bookB1 = await receiveBook({ orgId: storeB1, game: gameOfTenantB });
+      const bookB2 = await receiveBook({ orgId: storeB2, game: gameOfTenantB });
+      const person = twoTenantPerson();
+      const books = api.app.get(LotteryBooksRepository);
+      expect(await books.findById(person, bookA)).not.toBeNull();
+      expect(await books.findById(person, bookB1)).not.toBeNull();
+      expect(await books.findById(person, bookB2)).toBeNull();
+      // 當前組織在租戶甲:不能拿租戶乙的分店去算
+      await expect(
+        allocations.allocationStatus(person, storeB1, gameOfTenantB),
+      ).rejects.toMatchObject({ extensions: { code: "NOT_FOUND" } });
     });
   });
 
@@ -488,107 +720,32 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
 
     beforeAll(async () => {
       // 另一款遊戲,不受上面幾個測試點收的本影響
-      const now = new Date();
-      const { insertedId } = await api.connection
-        .collection("lottery_games")
-        .insertOne({
-          orgId: tenant,
-          tenantId: tenant,
-          moduleKey: "master-data",
-          gameCode: "5170",
-          name: "金好運",
-          unitPrice: 200,
-          ticketsPerBook: 100,
-          bookPrice: 20_000,
-          defaultRate: 92,
-          color: null,
-          status: "on_sale",
-          createdAt: now,
-          updatedAt: now,
-          createdBy: null,
-          updatedBy: null,
-          deletedAt: null,
-        });
-      gameOfAllocation = insertedId;
+      gameOfAllocation = await insertGame(tenant, "5170");
     });
 
-    it("進 2 本、調出 30 張 → 1 本 +70 張;收貨店 +30 張;持有分店跟著改", async () => {
-      const original = gameId;
-      gameId = gameOfAllocation;
-      let secondBook: Types.ObjectId;
-      try {
-        await receiveBook();
-        secondBook = await receiveBook();
-      } finally {
-        gameId = original;
-      }
-      const secondTickets = await ticketsOf(secondBook);
-      const moving = secondTickets.slice(0, 30);
-      await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(
-          session,
-          moving.map((ticket) => ({
-            tenantId: tenant,
-            ticketId: ticket._id,
-            expectedVersion: ticket.version,
-            type: TICKET_EVENT_TYPE.transferOut,
-            by: null,
-            patch: {
-              location: {
-                kind: TICKET_LOCATION_KIND.inTransit,
-                cashPointId: null,
-              },
-            },
-          })),
+    it("進 2 本、調出 30 張 → 1 本 +70 張;收貨店 +30 張", async () => {
+      await receiveBook({ game: gameOfAllocation });
+      const secondBook = await receiveBook({ game: gameOfAllocation });
+      await transfer(secondBook, 30);
+      await expect(
+        allocations.allocationStatus(
+          storeOperator(storeA),
+          storeA,
+          gameOfAllocation,
         ),
-      );
-      await transactions.withTransaction((session) =>
-        ledger.applyTicketEvents(
-          session,
-          moving.map((ticket) => ({
-            tenantId: tenant,
-            ticketId: ticket._id,
-            expectedVersion: ticket.version + 1,
-            type: TICKET_EVENT_TYPE.transferIn,
-            by: null,
-            patch: {
-              storeOrgId: storeB,
-              location: { kind: TICKET_LOCATION_KIND.stock, cashPointId: null },
-            },
-          })),
-        ),
-      );
-      const statusA = await allocations.allocationStatus(
-        storeOperator(storeA),
-        storeA,
-        gameOfAllocation,
-      );
-      expect(statusA).toMatchObject({ givenBooks: 1, givenExtraTickets: 70 });
+      ).resolves.toMatchObject({ givenBooks: 1, givenExtraTickets: 70 });
       // 調貨的出貨店也算得出收貨店的已給
-      const statusB = await allocations.allocationStatus(
-        storeOperator(storeA),
-        storeB,
-        gameOfAllocation,
-      );
-      expect(statusB).toMatchObject({
+      await expect(
+        allocations.allocationStatus(
+          storeOperator(storeA),
+          storeB,
+          gameOfAllocation,
+        ),
+      ).resolves.toMatchObject({
         givenBooks: 0,
         givenExtraTickets: 30,
         plannedBooks: null,
       });
-      const book = await api.connection
-        .collection<{
-          holderOrgIds: Types.ObjectId[];
-          storeOrgId: Types.ObjectId;
-        }>("lottery_books")
-        .findOne({ _id: secondBook });
-      expect(book?.holderOrgIds.map(String).toSorted(byText)).toEqual(
-        [String(storeA), String(storeB)].toSorted(byText),
-      );
-      expect(String(book?.storeOrgId)).toBe(String(storeA));
-      // 收貨店持有其中幾張,就讀得到那一本(讀取放行)
-      await expect(
-        booksService.statsOf(storeOperator(storeB), secondBook),
-      ).resolves.toMatchObject({ remainingCount: 100 });
     });
 
     it("設定預計要給本數寫 audit_log,已給一起回", async () => {

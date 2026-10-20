@@ -12,6 +12,9 @@ export const PROJECT_TENANT_BOUNDARY_CALLERS: readonly string[] = [
   "project/lottery/dealers/dealer-view.service.ts",
   "project/lottery/dealers/dealers.service.ts",
   "project/lottery/games/games.service.ts",
+  // 遊戲是否有本引用(整個租戶有沒有)、本編號租戶內唯一
+  "project/lottery/tickets/book-game-usage.ts",
+  "project/lottery/tickets/books.service.ts",
 ];
 
 /**
@@ -37,4 +40,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/schedule/day-offs/day-off-reminders.service.ts": ["排程"],
   // 候選使用者、排班檔案、可以排的分店關聯(以人為準,看不到的分店的關聯保留)
   "project/schedule/staff/schedule-staff.service.ts": ["以人為準的資料"],
+  // 張數帳本:跨店的寫入(調入、尋回到刷到的那家店)與換店後重算本的持有分店(要看整本的張)
+  "project/lottery/tickets/ticket-ledger.service.ts": ["例外寫入", "系統重算"],
+  // 本的即時計算要看整本的張(各分店持有)
+  "project/lottery/tickets/books.service.ts": ["反查"],
+  // 已給本數:出貨店也要算得出收貨店的(整個租戶的張數事件)
+  "project/lottery/tickets/allocations.service.ts": ["反查"],
+  // 遊戲是否有本引用:沒有操作者,問的是整個租戶
+  "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
 };

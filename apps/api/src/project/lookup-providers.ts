@@ -82,7 +82,7 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       },
       filterFields: [
         "gameId",
-        "storeOrgId",
+        "orgId",
         "holderOrgIds",
         "lockedTicketCount",
         "status",

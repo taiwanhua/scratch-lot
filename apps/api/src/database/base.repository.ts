@@ -1006,10 +1006,7 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
  * `exists-any-callers.test.ts` 合併兩份清單掃整個 src 斷言沒有其他檔案呼叫它們 ——
  * 新增呼叫端要先在 ADR-0005 確認用途、再加進對應的清單。
  */
-export const TENANT_BOUNDARY_CALLERS: readonly string[] = [
-  "project/lottery/tickets/book-game-usage.ts",
-  "project/lottery/tickets/books.service.ts",
-];
+export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
 
 /**
  * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。

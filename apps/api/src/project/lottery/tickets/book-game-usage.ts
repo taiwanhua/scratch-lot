@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 
 import { OrgsRepository } from "../../../database/database.module";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryBooksRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { registerGameUsageChecker } from "../games/game-usage";
 
@@ -15,7 +15,7 @@ export const BOOK_GAME_USAGE_CHECKER = "lottery-books";
 /**
  * 向檔案管理登記「有本引用這個遊戲」(專案規格 5.1:有庫存後代號、面額、張數鎖定,不能刪除)。
  * 問的是整個租戶有沒有(不是操作者看得到的那一部分),用租戶內存在性檢查 `existsInTenant`
- * (呼叫端登記在 `TENANT_BOUNDARY_CALLERS`);根組織建的遊戲沒有租戶,不會有本。
+ * (呼叫端登記在專案入口 `project/database/tenant-boundary-callers.ts`);根組織建的遊戲沒有租戶,不會有本。
  */
 @Injectable()
 export class BookGameUsage implements OnModuleInit, OnModuleDestroy {
@@ -33,8 +33,9 @@ export class BookGameUsage implements OnModuleInit, OnModuleDestroy {
         if (tenantId === null) {
           return false;
         }
-        const reader = await systemTenantReader(this.orgs, tenantId);
-        return this.books.existsInTenant(reader, tenantId, "gameId", gameId);
+        // 沒有操作者(遊戲的鎖定檢查問的是整個租戶):租戶邊界上下文的系統身分
+        const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+        return this.books.existsInTenant(reader, tenantId, { gameId });
       },
     );
   }

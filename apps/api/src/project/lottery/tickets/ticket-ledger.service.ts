@@ -6,7 +6,7 @@ import { TICKET_STATUS, ticketEventIdOf } from "@repo/domain/project/lottery";
 import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
-import { systemTenantReader } from "../../../database/system-tenant-reader";
+import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {
   LotteryBooksRepository,
   type LotteryTicketDocument,
@@ -16,14 +16,20 @@ import {
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
 import { ticketConflictError, validationError } from "./inventory-error";
 import type {
+  LedgerContext,
   TicketEventInput,
   TicketEventResult,
-  TicketLockInput,
   TicketLockRef,
   TicketStatePatch,
+  TicketVersion,
 } from "./ticket-ledger.types";
 
 type TicketRecord = Persisted<LotteryTicketDocument>;
+
+type MovedBooks = Map<
+  string,
+  { bookId: Types.ObjectId; tenantId: Types.ObjectId | null }
+>;
 
 function sameId(
   left: Types.ObjectId | null | undefined,
@@ -50,18 +56,21 @@ export function snapshotOf(ticket: {
     kind: TicketStateSnapshot["locationKind"];
     cashPointId: Types.ObjectId | null;
   };
-  storeOrgId: Types.ObjectId;
+  orgId: Types.ObjectId;
 }): TicketStateSnapshot {
   return {
     status: ticket.status,
     locationKind: ticket.location.kind,
     cashPointId: ticket.location.cashPointId ?? null,
-    storeOrgId: ticket.storeOrgId,
+    orgId: ticket.orgId,
   };
 }
 
-/** patch → `$set`(只放有給的欄位)。 */
-function setOf(patch: TicketStatePatch): Record<string, unknown> {
+/** patch → `$set`(只放有給的欄位;換店另走搬家入口)。 */
+function setOf(
+  patch: TicketStatePatch,
+  by: Types.ObjectId | null,
+): Record<string, unknown> {
   const set: Record<string, unknown> = {};
   if (patch.status !== undefined) {
     set.status = patch.status;
@@ -72,9 +81,6 @@ function setOf(patch: TicketStatePatch): Record<string, unknown> {
       cashPointId: patch.location.cashPointId ?? null,
     };
   }
-  if (patch.storeOrgId !== undefined) {
-    set.storeOrgId = patch.storeOrgId;
-  }
   if (patch.responsibleOrgId !== undefined) {
     set.responsibleOrgId = patch.responsibleOrgId;
   }
@@ -83,7 +89,7 @@ function setOf(patch: TicketStatePatch): Record<string, unknown> {
   }
   if (patch.sold !== undefined) {
     set.soldAt = patch.sold?.at ?? null;
-    set.soldBy = patch.sold?.by ?? null;
+    set.soldBy = patch.sold ? by : null;
     set.soldSource = patch.sold?.source ?? null;
   }
   return set;
@@ -119,10 +125,11 @@ function isSameEvent(
     amount: number;
   },
   input: TicketEventInput,
+  by: Types.ObjectId | null,
 ): boolean {
   return (
     existing.type === input.type &&
-    sameId(existing.by, input.by) &&
+    sameId(existing.by, by) &&
     (existing.refType ?? null) === (input.refType ?? null) &&
     sameId(existing.refId, input.refId) &&
     sameId(existing.shiftId, input.shiftId) &&
@@ -131,17 +138,24 @@ function isSameEvent(
   );
 }
 
+/** 解析好的帳本身分:讀寫用的上下文、操作者、「誰」。 */
+interface ResolvedLedger {
+  context: OperatorContext;
+  operator: OperatorContext | null;
+  by: Types.ObjectId | null;
+}
+
 /**
  * **張數帳本(唯一入口)**(專案規格 7.1、7.2、第 17 章共通原則;正本 `docs/modules/project/inventory.md`
  * 「資料與帳本」)。張的目前狀態與張數事件**只經這裡寫**,而且在呼叫端給的同一個交易裡:
  *
  * - 每張以「`version`(+ 狀態)」條件更新,`version` +1;不符 → `CONFLICT`(「已被處理」),整個交易回復
  * - 事件 id = `<ticketId>:<變動後的版本>`,重送(同 id、同內容)不重複寫入、回 `applied: false`
- * - 鎖定的張只有同一個鎖能動;鎖定 / 解除用 `lockTickets` / `unlockTickets`
- * - 張換分店後重算本的持有分店(讀取放行)與所在分店(所有可用的張都在同一家店 = 整本調貨)
+ * - 鎖定的張只有同一個鎖能動;鎖定 / 解除用 `lockTickets` / `unlockTickets`(用掉一個版本、不寫事件)
+ * - 換店走底座的搬家入口 `reassignOrg`;張換店後以租戶邊界上下文重算本的持有分店與所在分店
  *
- * 權限與業務規則(誰能賣、能不能撤銷)由呼叫端判斷;這裡以租戶系統身分(`systemTenantReader`)
- * 讀寫,範圍釘在事件給的租戶。呼叫端一律先 `TransactionService.withTransaction`,把 session 傳進來。
+ * 讀寫範圍見 `LedgerContext`:預設照操作者自己的範圍;跨店的例外寫入才用租戶邊界上下文。
+ * 權限與業務規則(誰能賣、能不能撤銷)由呼叫端判斷。呼叫端一律先 `TransactionService.withTransaction`。
  */
 @Injectable()
 export class TicketLedgerService {
@@ -154,58 +168,73 @@ export class TicketLedgerService {
 
   async applyTicketEvents(
     session: ClientSession,
+    ledger: LedgerContext,
     events: readonly TicketEventInput[],
   ): Promise<TicketEventResult[]> {
-    const [first] = events;
-    if (first === undefined) {
+    if (events.length === 0) {
       return [];
     }
-    const tenantId = first.tenantId;
-    if (events.some((event) => !sameId(event.tenantId, tenantId))) {
-      throw new Error("applyTicketEvents:同一批事件必須屬於同一個租戶");
-    }
-    const ledger = await this.ledgerContext(tenantId);
-    const movedBooks = new Map<string, Types.ObjectId>();
+    const resolved = await this.resolve(ledger);
+    const movedBooks: MovedBooks = new Map();
     const results: TicketEventResult[] = [];
     // 交易內依序 await(TX-02:不平行讀寫)
     for (const input of events) {
-      const result = await this.applyOne(ledger, session, input, movedBooks);
+      const result = await this.applyOne(resolved, session, input, movedBooks);
       results.push(result);
     }
-    for (const bookId of movedBooks.values()) {
-      await this.refreshBookHolders(ledger, session, bookId);
+    for (const { bookId, tenantId } of movedBooks.values()) {
+      await this.refreshBookHolders(resolved, session, bookId, tenantId);
     }
     return results;
   }
 
-  /** 鎖定(調貨單 / 撤銷售出申請):已是同一個鎖 → 不動;被別的鎖住或版本變了 → `CONFLICT`。 */
+  /**
+   * 鎖定(調貨單 / 撤銷售出申請):已是同一個鎖 → 不動;被別的鎖住或版本變了 → `CONFLICT`。
+   * 鎖定用掉一個版本(`version` +1)、不寫事件;回每張鎖定後的版本。
+   */
   async lockTickets(
     session: ClientSession,
+    ledger: LedgerContext,
     ticketIds: readonly Types.ObjectId[],
-    lock: TicketLockInput,
-  ): Promise<void> {
-    await this.changeLock(session, ticketIds, lock, "lock");
+    lock: TicketLockRef,
+  ): Promise<TicketVersion[]> {
+    return this.changeLock(session, ledger, ticketIds, null, lock);
   }
 
-  /** 解除鎖定:已沒有鎖 → 不動;被別的鎖住 → `CONFLICT`。 */
+  /** 解除自己的鎖:已沒有鎖 → 不動;被別的鎖住 → `CONFLICT`。同樣用掉一個版本、不寫事件。 */
   async unlockTickets(
     session: ClientSession,
+    ledger: LedgerContext,
     ticketIds: readonly Types.ObjectId[],
-    lock: TicketLockInput,
-  ): Promise<void> {
-    await this.changeLock(session, ticketIds, lock, "unlock");
+    lock: TicketLockRef,
+  ): Promise<TicketVersion[]> {
+    return this.changeLock(session, ledger, ticketIds, lock, null);
   }
 
-  /** 帳本的讀寫身分:這個租戶的系統身分(讀組織時自動用目前交易的 session,TX-02)。 */
-  private ledgerContext(tenantId: Types.ObjectId): Promise<OperatorContext> {
-    return systemTenantReader(this.orgs, tenantId);
+  private async resolve(ledger: LedgerContext): Promise<ResolvedLedger> {
+    const by = ledger.operator?.actorId ?? null;
+    if (ledger.crossStoreTenantId !== undefined) {
+      return {
+        context: await tenantBoundaryContext(
+          this.orgs,
+          ledger.operator,
+          ledger.crossStoreTenantId,
+        ),
+        operator: ledger.operator,
+        by,
+      };
+    }
+    if (ledger.operator === null) {
+      throw new Error("帳本:沒有操作者的系統寫入要給 crossStoreTenantId");
+    }
+    return { context: ledger.operator, operator: ledger.operator, by };
   }
 
   private async applyOne(
-    ledger: OperatorContext,
+    ledger: ResolvedLedger,
     session: ClientSession,
     input: TicketEventInput,
-    movedBooks: Map<string, Types.ObjectId>,
+    movedBooks: MovedBooks,
   ): Promise<TicketEventResult> {
     const amount = input.amount ?? 0;
     if (!Number.isFinite(amount) || amount < 0) {
@@ -215,54 +244,38 @@ export class TicketLedgerService {
     const version = input.expectedVersion + 1;
     const eventId = ticketEventIdOf(ticketId, version);
     const existing = await this.events.findOne(
-      ledger,
+      ledger.context,
       { eventId },
       { session },
     );
     if (existing) {
-      if (isSameEvent(existing, input)) {
+      if (isSameEvent(existing, input, ledger.by)) {
         return { ticketId, eventId, version, applied: false };
       }
       throw ticketConflictError([ticketId]);
     }
     const before = await this.tickets.findOne(
-      ledger,
+      ledger.context,
       { _id: input.ticketId },
       { session },
     );
     if (before?.version !== input.expectedVersion) {
       throw ticketConflictError([ticketId]);
     }
-    const after = await this.tickets.findOneAndUpdate(
-      ledger,
-      {
-        $and: [
-          {
-            _id: input.ticketId,
-            version: input.expectedVersion,
-            ...(input.expectedStatuses === undefined
-              ? {}
-              : { status: { $in: [...input.expectedStatuses] } }),
-          },
-          lockConditionOf(input.allowLockedBy),
-        ],
-      },
-      { $set: setOf(input.patch), $inc: { version: 1 } },
-      { session },
-    );
+    const after = await this.updateTicket(ledger, session, before, input);
     if (!after) {
       throw ticketConflictError([ticketId]);
     }
     await this.events.create(
-      ledger,
+      ledger.context,
       {
-        orgId: after.storeOrgId,
+        orgId: after.orgId,
         eventId,
         ticketId: after._id,
         bookId: after.bookId,
         gameId: after.gameId,
         at: input.at ?? new Date(),
-        by: input.by,
+        by: ledger.by,
         type: input.type,
         from: snapshotOf(before),
         to: snapshotOf(after),
@@ -280,123 +293,183 @@ export class TicketLedgerService {
     );
     // 持有分店只在換分店、或跳號進出時會變(一般售出不必重算)
     if (
-      !sameId(before.storeOrgId, after.storeOrgId) ||
+      !sameId(before.orgId, after.orgId) ||
       (before.status !== after.status &&
         (before.status === TICKET_STATUS.skipped ||
           after.status === TICKET_STATUS.skipped))
     ) {
-      movedBooks.set(String(after.bookId), after.bookId);
+      movedBooks.set(String(after.bookId), {
+        bookId: after.bookId,
+        tenantId: after.tenantId,
+      });
     }
     return { ticketId, eventId, version: after.version, applied: true };
   }
 
-  /** 重算本的持有分店;所有可用(非跳號)的張都在同一家店 → 所在分店跟著改(整本調貨)。 */
+  /** 條件更新一張;要換店時走搬家入口(同一次寫入順便改狀態與版本)。 */
+  private async updateTicket(
+    ledger: ResolvedLedger,
+    session: ClientSession,
+    before: TicketRecord,
+    input: TicketEventInput,
+  ): Promise<TicketRecord | null> {
+    const filter = {
+      $and: [
+        {
+          _id: input.ticketId,
+          version: input.expectedVersion,
+          ...(input.expectedStatuses === undefined
+            ? {}
+            : { status: { $in: [...input.expectedStatuses] } }),
+        },
+        lockConditionOf(input.allowLockedBy),
+      ],
+    };
+    const update = {
+      $set: setOf(input.patch, ledger.by),
+      $inc: { version: 1 },
+    };
+    const target = input.patch.orgId;
+    if (target === undefined || sameId(target, before.orgId)) {
+      return this.tickets.findOneAndUpdate(ledger.context, filter, update, {
+        session,
+      });
+    }
+    if (ledger.operator === null) {
+      throw new Error("帳本:換店要寫搬家稽核,需要操作者");
+    }
+    return this.tickets.reassignOrg(ledger.context, filter, target, {
+      update,
+      session,
+    });
+  }
+
+  /**
+   * 重算本的持有分店;所有可用(非跳號)的張都在同一家店 → 本搬到那家店(整本調貨)。
+   * 要看整本的張(不只操作者看得到的),所以以這本所在租戶的邊界上下文讀寫(仍記得操作者)。
+   */
   private async refreshBookHolders(
-    ledger: OperatorContext,
+    ledger: ResolvedLedger,
     session: ClientSession,
     bookId: Types.ObjectId,
+    tenantId: Types.ObjectId | null,
   ): Promise<void> {
+    const whole = await tenantBoundaryContext(
+      this.orgs,
+      ledger.operator,
+      tenantId,
+    );
     const tickets = await this.tickets.findMany(
-      ledger,
+      whole,
       { bookId, status: { $ne: TICKET_STATUS.skipped } },
-      { select: "storeOrgId", session },
+      { select: "orgId", session },
     );
     const holders = new Map<string, Types.ObjectId>();
     for (const ticket of tickets) {
-      holders.set(String(ticket.storeOrgId), ticket.storeOrgId);
+      holders.set(String(ticket.orgId), ticket.orgId);
     }
     const holderOrgIds = [...holders.values()];
-    const [onlyHolder] = holderOrgIds;
     await this.books.updateById(
-      ledger,
+      whole,
       bookId,
-      {
-        $set: {
-          holderOrgIds,
-          ...(holderOrgIds.length === 1 && onlyHolder !== undefined
-            ? { storeOrgId: onlyHolder }
-            : {}),
-        },
-      },
+      { $set: { holderOrgIds } },
       { session },
     );
+    const [onlyHolder] = holderOrgIds;
+    if (
+      holderOrgIds.length === 1 &&
+      onlyHolder !== undefined &&
+      ledger.operator !== null
+    ) {
+      // 已在那家店時搬家入口不寫入(冪等)
+      await this.books.reassignOrg(whole, { _id: bookId }, onlyHolder, {
+        session,
+      });
+    }
   }
 
   private async changeLock(
     session: ClientSession,
+    ledger: LedgerContext,
     ticketIds: readonly Types.ObjectId[],
-    lock: TicketLockInput,
-    action: "lock" | "unlock",
-  ): Promise<void> {
+    from: TicketLockRef | null,
+    to: TicketLockRef | null,
+  ): Promise<TicketVersion[]> {
     if (ticketIds.length === 0) {
-      return;
+      return [];
     }
-    const ledger = await this.ledgerContext(lock.tenantId);
-    const ref: TicketLockRef = { refType: lock.refType, refId: lock.refId };
+    const resolved = await this.resolve(ledger);
     const bookDeltas = new Map<
       string,
       { bookId: Types.ObjectId; delta: number }
     >();
+    const versions: TicketVersion[] = [];
     for (const ticketId of ticketIds) {
-      const bookId = await this.changeOneLock(
-        ledger,
+      const changed = await this.changeOneLock(
+        resolved.context,
         session,
         ticketId,
-        action === "lock" ? null : ref,
-        action === "lock" ? ref : null,
+        from,
+        to,
       );
-      if (bookId === null) {
+      versions.push({
+        ticketId: String(ticketId),
+        version: changed.version,
+        changed: changed.bookId !== null,
+      });
+      if (changed.bookId === null) {
         continue;
       }
-      const key = String(bookId);
-      const entry = bookDeltas.get(key) ?? { bookId, delta: 0 };
-      entry.delta += action === "lock" ? 1 : -1;
+      const key = String(changed.bookId);
+      const entry = bookDeltas.get(key) ?? { bookId: changed.bookId, delta: 0 };
+      entry.delta += to === null ? -1 : 1;
       bookDeltas.set(key, entry);
     }
     for (const { bookId, delta } of bookDeltas.values()) {
       await this.books.updateById(
-        ledger,
+        resolved.context,
         bookId,
         { $inc: { lockedTicketCount: delta } },
         { session },
       );
     }
+    return versions;
   }
 
   /**
-   * 一張的鎖從 `from` 改成 `target`(null = 沒有鎖);已是 `target` → 不動、回 null(重送)。
-   * 鎖定只能從「沒有鎖」開始、解除只能解自己的鎖;不符或版本變了 → `CONFLICT`。回這張的本 id。
+   * 一張的鎖從 `from` 改成 `to`(null = 沒有鎖);已是 `to` → 不動(重送,`bookId: null`)。
+   * 鎖定只能從「沒有鎖」開始、解除只能解自己的鎖;不符或版本變了 → `CONFLICT`。
    */
   private async changeOneLock(
-    ledger: OperatorContext,
+    context: OperatorContext,
     session: ClientSession,
     ticketId: Types.ObjectId,
     from: TicketLockRef | null,
-    target: TicketLockRef | null,
-  ): Promise<Types.ObjectId | null> {
-    const ticket: TicketRecord | null = await this.tickets.findOne(
-      ledger,
+    to: TicketLockRef | null,
+  ): Promise<{ bookId: Types.ObjectId | null; version: number }> {
+    const ticket = await this.tickets.findOne(
+      context,
       { _id: ticketId },
       { session },
     );
     if (!ticket) {
       throw ticketConflictError([String(ticketId)]);
     }
-    if (sameLock(ticket.lockedBy, target)) {
-      return null;
+    if (sameLock(ticket.lockedBy, to)) {
+      return { bookId: null, version: ticket.version };
     }
     if (!sameLock(ticket.lockedBy, from)) {
       throw ticketConflictError([String(ticketId)]);
     }
     const updated = await this.tickets.findOneAndUpdate(
-      ledger,
+      context,
       { _id: ticketId, version: ticket.version },
-      { $set: { lockedBy: target }, $inc: { version: 1 } },
+      { $set: { lockedBy: to }, $inc: { version: 1 } },
       { session },
     );
     if (!updated) {
       throw ticketConflictError([String(ticketId)]);
     }
-    return ticket.bookId;
+    return { bookId: ticket.bookId, version: updated.version };
   }
 }

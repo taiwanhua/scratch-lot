@@ -23,7 +23,8 @@ export interface TicketStateSnapshot {
   status: TicketStatus;
   locationKind: TicketLocationKind;
   cashPointId: Types.ObjectId | null;
-  storeOrgId: Types.ObjectId;
+  /** 所在分店。 */
+  orgId: Types.ObjectId;
 }
 
 const SNAPSHOT_TYPE = {
@@ -31,7 +32,7 @@ const SNAPSHOT_TYPE = {
   status: { type: String, enum: TICKET_STATUSES, required: true },
   locationKind: { type: String, enum: TICKET_LOCATION_KINDS, required: true },
   cashPointId: { type: MongooseSchema.Types.ObjectId, default: null },
-  storeOrgId: { type: MongooseSchema.Types.ObjectId, required: true },
+  orgId: { type: MongooseSchema.Types.ObjectId, required: true },
 };
 
 /**

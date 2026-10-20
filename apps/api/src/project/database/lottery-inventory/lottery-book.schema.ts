@@ -18,14 +18,13 @@ export type BookStatus = (typeof BOOK_STATUSES)[number];
  * 本(專案規格 7.1;正本 `docs/modules/project/inventory.md`「資料與帳本」)。只在進貨點收時建立
  * (`LotteryBooksService.createBook`),之後的狀態變化只經帳本服務。
  *
- * **歸屬與所在分店分開**:`orgId` 是歸屬(租戶頂層,建立後不能改 —— 底座的更新不准動 `orgId`),
- * 規格的「所在分店」是 `storeOrgId`(整本調貨時跟著改)。分店看得到這本,靠資料共用的
- * `sharedByFields`:所在分店,或持有這本任何一張的分店(`holderOrgIds`,規格「讀取放行」)。
+ * `orgId` = **所在分店**(整本調貨時由帳本服務以底座的搬家入口 `reassignOrg` 改)。持有這本任何一張的
+ * 分店也看得到這本(規格「讀取放行」):資料共用的 `sharedByFields: holderOrgIds`。
  * 待標註、剩餘、各分店持有張數、未拆 / 檯面中 / 售完都**即時計算不存**(`@repo/domain/project/lottery`)。
  */
 @Schema({ collection: LOTTERY_BOOKS_COLLECTION, timestamps: true })
 export class LotteryBook {
-  /** 歸屬:租戶頂層(租戶隔離,ADR-0005);建立後不變。 */
+  /** 所在分店(租戶隔離,ADR-0005);整本調貨時以 `reassignOrg` 改。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 
@@ -48,10 +47,6 @@ export class LotteryBook {
   /** 印刷版別,預設 "1"。 */
   @Prop({ type: String, default: "1" })
   printVersion!: string;
-
-  /** 所在分店:整本調貨時跟著改(帳本服務在所有可用的張都在同一家店時改)。 */
-  @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
-  storeOrgId!: Types.ObjectId;
 
   /** 持有這本任何一張(不算跳號)的分店:讀取放行用,帳本服務在張換分店時重算。 */
   @Prop({ type: [MongooseSchema.Types.ObjectId], default: [] })
@@ -107,7 +102,7 @@ export class LotteryBook {
   /** 租戶頂層 id(plugin 宣告)。 */
   tenantId!: Types.ObjectId | null;
 
-  /** 共用清單(plugin 宣告;本表固定空清單,分店靠 `sharedByFields` 看得到)。 */
+  /** 共用清單(plugin 宣告;本表固定空清單,持有分店靠 `sharedByFields` 看得到)。 */
   shareOrgs!: ShareOrg[];
 }
 
@@ -119,8 +114,8 @@ LotteryBookSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
 );
 LotteryBookSchema.index({ tenantId: 1, gameId: 1 });
+LotteryBookSchema.index({ orgId: 1, gameId: 1 });
 // 資料共用的 sharedByFields 要有 { tenantId, <欄位> } 開頭的索引
-LotteryBookSchema.index({ tenantId: 1, storeOrgId: 1 });
 LotteryBookSchema.index({ tenantId: 1, holderOrgIds: 1 });
 LotteryBookSchema.plugin(baseFieldsPlugin);
 LotteryBookSchema.plugin(tenantScopePlugin, {
@@ -129,10 +124,7 @@ LotteryBookSchema.plugin(tenantScopePlugin, {
     mode: "shareable",
     defaultShareOrgs: "none",
     editable: false,
-    sharedByFields: [
-      { path: "storeOrgId", includeDescendants: false },
-      { path: "holderOrgIds", includeDescendants: false },
-    ],
+    sharedByFields: [{ path: "holderOrgIds", includeDescendants: false }],
   },
 });
 LotteryBookSchema.path("moduleKey").default(INVENTORY_MODULE_KEY);

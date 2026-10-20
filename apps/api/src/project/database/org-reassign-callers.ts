@@ -3,4 +3,7 @@
  * 規則與底座清單見 `database/base.repository.ts` 的 `ORG_REASSIGN_CALLERS`)。
  * `database/exists-any-callers.test.ts` 合併兩份清單、以呼叫語法掃整個 src;這份只能列 `project/` 的檔案。
  */
-export const PROJECT_ORG_REASSIGN_CALLERS: readonly string[] = [];
+export const PROJECT_ORG_REASSIGN_CALLERS: readonly string[] = [
+  // 張換店(調入、尋回到刷到的那家店)、整本調貨時本跟著換店
+  "project/lottery/tickets/ticket-ledger.service.ts",
+];
