@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseModule } from "../database/database.module";
 import { StorageModule } from "../storage/storage.module";
+import { DemoTenantPurgeService } from "./demo-tenant-purge.service";
 import { OrgManagersService } from "./org-managers.service";
 import { OrgsResolver } from "./orgs.resolver";
 import { OrgsService } from "./orgs.service";
@@ -13,7 +14,7 @@ import { TenantOpsService } from "./tenant-ops.service";
 /**
  * 組織管理(`system.org-manager`,docs/modules/org-manager.md):樹查詢、新增子組織、編輯、
  * 停用 / 啟用連動、搬移、刪除前置,以及租戶作業(`tenant-ops`):
- * 開通租戶 / 轉移擁有者 / 設定可見範圍。
+ * 開通租戶 / 轉移擁有者 / 設定可見範圍,以及清空示範機構(`DemoTenantPurgeService`)。
  *
  * `AuthModule` 是為了開通時寄啟用信(`PasswordService.sendActivationEmail`)。
  * `OwnerProtectionService` 住在這裡、對外匯出:判斷的主體是組織(`ownerUserId`、根組織例外),
@@ -29,6 +30,7 @@ import { TenantOpsService } from "./tenant-ops.service";
     OwnerProtectionService,
     TenantOpsService,
     TenantOpsResolver,
+    DemoTenantPurgeService,
   ],
   exports: [OrgsService, OrgManagersService, OwnerProtectionService],
 })

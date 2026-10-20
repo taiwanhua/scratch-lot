@@ -2713,6 +2713,7 @@ export type Mutation = {
   publishFormVersion: FormVersionPayload;
   publishSchedule: PublishSchedulePayload;
   publishWorkflowVersion: WorkflowVersionPayload;
+  purgeDemoTenant: PurgeDemoTenantPayload;
   reassignTask: WorkflowTaskPayload;
   receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
   recordLotteryBankTransaction: LotteryBankTransactionPayload;
@@ -3149,6 +3150,11 @@ export type MutationPublishScheduleArgs = {
 
 export type MutationPublishWorkflowVersionArgs = {
   input: PublishWorkflowVersionInput;
+};
+
+
+export type MutationPurgeDemoTenantArgs = {
+  input: PurgeDemoTenantInput;
 };
 
 
@@ -4104,6 +4110,27 @@ export type PublishWorkflowVersionInput = {
   changelog: Scalars['String']['input'];
   expectedDraftRevision: Scalars['Int']['input'];
   workflowKey: Scalars['ID']['input'];
+};
+
+export type PurgeDemoTenantInput = {
+  slug: Scalars['String']['input'];
+};
+
+export type PurgeDemoTenantPayload = {
+  __typename?: 'PurgeDemoTenantPayload';
+  collections: Array<PurgedCollection>;
+  deletedDocuments: Scalars['Int']['output'];
+  deletedFiles: Scalars['Int']['output'];
+  deletedUsers: Scalars['Int']['output'];
+  detachedUsers: Scalars['Int']['output'];
+  orgId?: Maybe<Scalars['ID']['output']>;
+  purged: Scalars['Boolean']['output'];
+};
+
+export type PurgedCollection = {
+  __typename?: 'PurgedCollection';
+  collection: Scalars['String']['output'];
+  deleted: Scalars['Int']['output'];
 };
 
 export type Query = {

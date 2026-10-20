@@ -101,3 +101,46 @@ export class RevokeTenantProvisionPayload {
   @Field(() => ID, { nullable: true })
   revokedRoleId!: string | null;
 }
+
+/** 清空示範機構時一張 collection 刪掉的筆數(只列有刪到的)。 */
+@ObjectType()
+export class PurgedCollection {
+  @Field(() => String)
+  collection!: string;
+
+  @Field(() => Int)
+  deleted!: number;
+}
+
+/**
+ * 清空示範機構的回傳(`purgeDemoTenant`,根組織專屬;demo 指令 `purge` / `rebuild` 印出)。
+ * 找不到這個短碼的租戶 → `purged: false`、其餘為 0;沒有「示範」標記的租戶直接 `FORBIDDEN`,不會走到回傳。
+ */
+@ObjectType()
+export class PurgeDemoTenantPayload {
+  @Field(() => Boolean)
+  purged!: boolean;
+
+  /** 被清空的租戶頂層 id(已硬刪除);沒有清空時為 null。 */
+  @Field(() => ID, { nullable: true })
+  orgId!: string | null;
+
+  /** 刪掉的文件總數(含組織、使用者、角色、關聯)。 */
+  @Field(() => Int)
+  deletedDocuments!: number;
+
+  /** 只屬於這個租戶、被硬刪的使用者數。 */
+  @Field(() => Int)
+  deletedUsers!: number;
+
+  /** 也屬於其他組織、只移除了在這個租戶的所屬與角色的使用者數。 */
+  @Field(() => Int)
+  detachedUsers!: number;
+
+  /** 資料裡引用、交易提交後刪掉的檔案數(個別刪除失敗只記 log)。 */
+  @Field(() => Int)
+  deletedFiles!: number;
+
+  @Field(() => [PurgedCollection])
+  collections!: PurgedCollection[];
+}

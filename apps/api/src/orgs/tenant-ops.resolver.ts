@@ -3,7 +3,9 @@ import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
 import { CurrentOperator } from "../auth/decorators";
 import type { OperatorContext } from "../database/operator-context";
 import { RequirePermission } from "../permission/require-permission.decorator";
+import { DemoTenantPurgeService } from "./demo-tenant-purge.service";
 import { ProvisionTenantInput } from "./dto/provision-tenant.input";
+import { PurgeDemoTenantInput } from "./dto/purge-demo-tenant.input";
 import { RevokeTenantProvisionInput } from "./dto/revoke-tenant-provision.input";
 import { TransferOrgOwnerInput } from "./dto/transfer-org-owner.input";
 import { OrgPayload } from "./models/org-payloads.model";
@@ -11,6 +13,7 @@ import {
   ModuleOption,
   ProvisionTarget,
   ProvisionTenantPayload,
+  PurgeDemoTenantPayload,
   RevokeTenantProvisionPayload,
 } from "./models/tenant-ops.model";
 import { TenantOpsService } from "./tenant-ops.service";
@@ -34,7 +37,10 @@ const PERMISSIONS = {
  */
 @Resolver()
 export class TenantOpsResolver {
-  constructor(private readonly tenantOps: TenantOpsService) {}
+  constructor(
+    private readonly tenantOps: TenantOpsService,
+    private readonly demoPurge: DemoTenantPurgeService,
+  ) {}
 
   /** 開通彈窗的模組勾選清單(= 租戶管理員模板綁的模組;前端預設全勾)。 */
   @RequirePermission(PERMISSIONS.provision)
@@ -76,6 +82,21 @@ export class TenantOpsResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<RevokeTenantProvisionPayload> {
     return this.tenantOps.revokeProvision(operator, input);
+  }
+
+  /**
+   * 清空示範機構(demo 指令 `purge` / `rebuild`):只接受標「示範」的租戶頂層,刪掉它的全部資料
+   * (含只能新增的帳本)、只屬於它的使用者與它引用的檔案(`DemoTenantPurgeService`)。
+   * 與撤銷開通同屬「硬刪一個租戶」,沿用同一筆根組織專屬權限;
+   * 只對「示範」機構生效由服務層擋(沒有標記 → `FORBIDDEN`,一筆都不刪)。
+   */
+  @RequirePermission(PERMISSIONS.revokeProvision)
+  @Mutation(() => PurgeDemoTenantPayload)
+  purgeDemoTenant(
+    @Args("input") input: PurgeDemoTenantInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<PurgeDemoTenantPayload> {
+    return this.demoPurge.purge(operator, input.slug);
   }
 
   @RequirePermission(PERMISSIONS.transferOwner)

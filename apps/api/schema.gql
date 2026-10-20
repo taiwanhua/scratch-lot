@@ -2493,6 +2493,7 @@ type Mutation {
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishSchedule(input: PublishScheduleInput!): PublishSchedulePayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
+  purgeDemoTenant(input: PurgeDemoTenantInput!): PurgeDemoTenantPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
   recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
@@ -3098,6 +3099,25 @@ input PublishWorkflowVersionInput {
   changelog: String!
   expectedDraftRevision: Int!
   workflowKey: ID!
+}
+
+input PurgeDemoTenantInput {
+  slug: String!
+}
+
+type PurgeDemoTenantPayload {
+  collections: [PurgedCollection!]!
+  deletedDocuments: Int!
+  deletedFiles: Int!
+  deletedUsers: Int!
+  detachedUsers: Int!
+  orgId: ID
+  purged: Boolean!
+}
+
+type PurgedCollection {
+  collection: String!
+  deleted: Int!
 }
 
 type Query {
