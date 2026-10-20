@@ -148,7 +148,7 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
       key: "occurredAt",
       header: t("accountView.columns.occurredAt"),
       render: (row) =>
-        formatTemporal(row.occurredAt, { type: "datetime", timezone }).slice(5),
+        formatTemporal(row.occurredAt, { type: "monthDayTime", timezone }),
     },
     {
       key: "type",

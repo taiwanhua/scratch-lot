@@ -236,9 +236,9 @@ export const CashLedgerTab = () => {
               ? t("cash.vaultFromZero")
               : t("cash.vaultBaseline", {
                   date: formatTemporal(baselineAt, {
-                    type: "date",
+                    type: "monthDay",
                     timezone,
-                  }).slice(5),
+                  }),
                 })}
           </Typography>
         </Card>

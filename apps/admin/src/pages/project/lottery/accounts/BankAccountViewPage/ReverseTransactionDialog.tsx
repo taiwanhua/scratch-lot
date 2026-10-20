@@ -93,9 +93,9 @@ export const ReverseTransactionDialog = ({
           <Typography variant="body2">
             {t("reverseForm.originalValue", {
               date: formatTemporal(transaction.occurredAt, {
-                type: "date",
+                type: "monthDay",
                 timezone,
-              }).slice(5),
+              }),
               type: t(`transactionTypes.${transaction.type}`),
               amount: moneyText(transaction.amount),
             })}
