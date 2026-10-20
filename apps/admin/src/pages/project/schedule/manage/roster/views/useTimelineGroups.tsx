@@ -26,6 +26,7 @@ import {
   type DemandWording,
   type TimelineGroupPlan,
   type TimelineSlotPlan,
+  compareGroupPlans,
   dayGroupTitle,
   timelineGroupPlansOf,
   wallClockMs,
@@ -145,7 +146,7 @@ export const useTimelineGroups = (
         personOrder: (userId) =>
           personIndex.get(userId) ?? Number.MAX_SAFE_INTEGER,
       },
-    );
+    ).toSorted(compareGroupPlans);
 
   const roleLabel = (role: string) =>
     t(`cell.roles.${role === "leader" ? "leader" : "helper"}`);
