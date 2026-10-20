@@ -1,6 +1,109 @@
 # 庫存管理(技術)
 
-刮刮樂的本、張與張數事件,是進貨、調貨、店面、盤點、庫存管理共用的帳本(專案規格 7.1、7.2、7.5、7.6)。本檔目前只有「資料與帳本」;模組的用途、畫面與權限表由庫存管理的頁面寫入時補上。
+## 用途
+
+刮刮樂的本、張與張數事件(專案規格第 7 章):**庫存**(以本為單位的列表、查刮刮樂)、**本的詳情**(張數格子、事件時間軸、來源、成本;更正跳號、尋回、報廢)、**待查·遺失**、**預計要給本數**(分店 × 遊戲)。本、張、張數事件與預計要給本數四張表是進貨、調貨、店面、盤點、庫存管理共用的帳本(見「資料與帳本」)。
+
+遊戲詳情(檔案管理)的「庫存概況」「預計要給本數」與乙類詳情(經銷商管理)的「預計要給本數」「在店庫存」分頁讀同一份資料、守同一個權限。
+
+正本:`apps/db-migrator/seeds/project/inventory.ts`、`packages/domain/src/project/lottery/inventory.ts`
+
+## 模組 key 與畫面
+
+| key                   | 名稱     | sidebarType  | 路由                                | 說明                                                                                                                               |
+| --------------------- | -------- | ------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `inventory`           | 庫存管理 | link(列表頁) | `/inventory`                        | 分頁 庫存 \| 待查·遺失 \| 預計要給本數(Figma IN-01 91:17、IN-05 91:1109、IN-06 91:1375);右上 [查刮刮樂](IN-02)                     |
+| `inventory.book-page` | 本的詳情 | hidden       | `/inventory/book-page/<id>?ticket=` | 頁首、來源 / 所在 / 成本、張數格子與選張操作列、事件時間軸(IN-03 125:1159 / 125:1699);更正跳號 / 尋回 / 報廢是彈窗(IN-04a / b / c) |
+
+- 側欄順序 `order: 20`、圖示 `inventory`;沒有側欄數字。
+- 分頁**不是模組節點**:綁了模組三個分頁都看得到(本模組沒有 `view`)。
+- `?ticket=071`(查刮刮樂帶來的張號):打開本的詳情時把那一張選起來(標亮)。
+- 查刮刮樂開著時宣告掃描用途 `inventory-lookup`(`useScanner`;條碼槍讀到的碼填進輸入框)。
+- 共用元件(`apps/admin/src/components/project/lottery/`):`RecoverTicketDialog`(尋回;店面刷到待查或遺失的張也用它)、`AllocationsTable`(預計要給本數;三處共用)、`StockOverviewTable`(庫存概況 / 在店庫存)、`InventoryDetailTabs`(遊戲詳情、乙類詳情的四個分頁內容,登記在 `game-detail-tabs.ts` / `dealer-detail-tabs.ts`)、`ReasonFields`(原因下拉 + 說明)。
+
+正本:`apps/db-migrator/seeds/project/inventory.ts`、`apps/admin/src/app/project/module-pages.ts`
+
+## 權限表
+
+規格 3.2 的 `inventory` **沒有 `view`**:讀取看模組有沒有綁(`InventoryAccess.assertModule`;遊戲詳情、乙類詳情的四個分頁也一樣,沒綁時分頁內只顯示說明)。
+
+| 權限 key                     | moduleId 指向 | 它是哪一頁的什麼                                                                                           |
+| ---------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `<每個節點>.*`               | 各節點        | wildcard;seed 自動產生                                                                                     |
+| `inventory.mark-skipped`     | `inventory`   | 本的詳情 [更正跳號](這本有跳號時;`abilities.canCorrectSkips`)+ `correctLotterySkippedTickets`              |
+| `inventory.recover`          | `inventory`   | 本的詳情選張 [尋回]、[整本尋回]、待查·遺失分頁 [尋回]、店面刷到待查 / 遺失的提示 + `recoverLotteryTickets` |
+| `inventory.scrap`            | `inventory`   | 本的詳情選未售的張 [報廢] + `scrapLotteryTickets`                                                          |
+| `inventory.show-cost`        | `inventory`   | 本的詳情的成本卡、待查·遺失的批購成本、報廢的損失(沒有時 api 回 null、畫面不顯示)                          |
+| `inventory.edit-allocations` | `inventory`   | 預計要給本數點格子修改(庫存管理、遊戲詳情、乙類詳情三處;`canEdit`)+ `setLotteryAllocation`;沒有時唯讀      |
+
+開通時建立的角色(規格 3.3,`apps/db-migrator/seeds/project/onboarding/role-grants/inventory.ts`):總部管理全部;店長 `mark-skipped`、`recover`、`scrap`、`show-cost`(不含 `edit-allocations`);店員不給。
+
+## 頁面規則
+
+### 庫存分頁(IN-01)
+
+- 分店選擇器 `OrgTreeSelect scope="visible"`,預設目前組織,記在網址 `?stock=`;列出那個組織與它底下的分店**持有任何一張**的本(`holderOrgIds`)。
+- 欄位:本編號(開頭 0 顯示 6 位)、遊戲、面額、所在分店(拆開的本顯示「台北 70 / 新竹 30」)、剩餘 / 總張數、待標註、批購日、進貨甲類;篩選:遊戲、狀態(未拆 / 檯面中 / 售完 / 有待標註)、批購日起迄、本號。最多 500 本。
+
+### 本的詳情(IN-03)
+
+- 格子狀態:未售 / 已售 / 跳號 / 報廢 / 待查·遺失 / 已選;被單據鎖定的未售顯示「已售 / 不能選」。能選:未售、待查·遺失。
+- 選張後的操作列:全部未售 → [報廢];全部待查 / 遺失 → [尋回];混在一起只有 [取消選取]。
+- 整本(可用的張)都待查或遺失 → 頁首狀態列「這本待查中:日期 單號,責任分店 = …」+ [整本尋回]。
+- 事件時間軸:同一時間、類型、人、單據、原因、從 → 到的張合成一列(「#041–065」或「整本」);人 / 單據欄有單號顯示單號,否則顯示操作的人。
+
+### 更正跳號(IN-04a)
+
+- 只有已經有跳號的本(拆本時標過)能更正;改完的張數要等於**待標註張數 = 迄號 − 標準張數**;新標的要是未售、沒被鎖定;原因必填(欄位管理「更正跳號原因」,「其他」要說明)。
+- 寫「取消跳號」(原本是跳號、改完不是 → 未售)+「跳號」(新標的),同一個交易;帳本順便重算本的 `skippedTicketNos`。
+
+### 尋回(IN-04b)
+
+- 待查 / 遺失的張 → 未售、庫存、`orgId` = 回到的分店(刷到的那家店;本的詳情與待查·遺失分頁 = 目前組織)、清掉責任分店;原因必填(「尋回原因」)。
+- 張可能在別的分店:經帳本的跨店寫入(只能移進操作者看得到的店)。
+
+### 報廢(IN-04c)
+
+- 只能報**未售**、沒被鎖定的張(位置不變);原因必填(「報廢原因」)。
+- 報廢事件的 `amount` 是 0;報表的報廢損失 = 報廢的張的單張成本加總(張的 `unitCost` 保留,四捨五入到元)。
+
+### 預計要給本數(IN-06)
+
+- 列 = 操作者看得到的**分店**(租戶裡沒有下層組織的組織,加上有庫存或預計要給本數的組織);欄 = 販售中的遊戲 + 有資料的遊戲。每格「已給 / 預計」;已給 = 整本 N 本 + 零碎「+N 張」;已給超過預計用警告色(只警告)。
+- 遊戲詳情 = 一個遊戲、每家分店一列;乙類詳情 = 對應分店、每個遊戲一列(沒有對應分店時只顯示說明)。
+- 修改寫 audit_log `lottery-allocation.edit`。
+
+### 待查·遺失(IN-05)
+
+- 列出操作者看得到的分店裡有待查或遺失的張的本,一本 × 一種狀態一列:本、遊戲、狀態、責任分店、來源(最近一筆待查 / 遺失事件的單號與張數)、日期、批購成本、[尋回]。「確認遺失」在盤點確認申請(店面管理)。
+
+### 庫存概況 / 在店庫存
+
+- 分店 × 遊戲:未拆(本;這本在這家店的張全部未售且在庫存)、檯面(張;未售且在檯面)、已售(張)。張照操作者的範圍讀。
+
+## api 介面
+
+### GraphQL
+
+| 端點                                  | 權限                         | 說明                                                                                          |
+| ------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `lotteryInventoryBooks(input)`        | 綁了 `inventory`             | 庫存分頁;`orgId`(子樹)、`gameId`、`state`、`purchasedFrom` / `purchasedTo`、`bookNo`          |
+| `lotteryInventoryBook(id)`            | 綁了 `inventory`             | 本的詳情:本、全部的張(含版本)、所在、事件時間軸、來源、成本(`show-cost`)、狀態列、`abilities` |
+| `lotteryTicketLookup(input)`          | 綁了 `inventory`             | 查刮刮樂:`{ gameCode?, bookNo, ticketNo }`;沒有遊戲代號時列出本號對到的每一款                 |
+| `lotteryInvestigations`               | 綁了 `inventory`             | 待查·遺失分頁;`canRecover`                                                                    |
+| `lotteryAllocations(input)`           | 綁了 `inventory`             | 預計要給本數:`{ orgId?, gameId? }` → 分店、遊戲、格子、`canEdit`                              |
+| `lotteryStockOverview(input)`         | 綁了 `inventory`             | 庫存概況 / 在店庫存:`{ orgId?, gameId? }`                                                     |
+| `lotteryFieldOptions(categoryKey)`    | 登入即可                     | 刮刮樂的原因類別下拉(只收 `LOTTERY_FIELD_CATEGORY_KEYS`)                                      |
+| `setLotteryAllocation(input)`         | `inventory.edit-allocations` | 修改一格(0 以上的整數、備註 200 字內)                                                         |
+| `correctLotterySkippedTickets(input)` | `inventory.mark-skipped`     | `{ bookId, ticketNos, reasonKey, reasonNote? }`                                               |
+| `recoverLotteryTickets(input)`        | `inventory.recover`          | `{ tickets: [{ ticketId, version }], orgId, reasonKey, reasonNote? }`                         |
+| `scrapLotteryTickets(input)`          | `inventory.scrap`            | `{ tickets: [{ ticketId, version }], reasonKey, reasonNote? }` → `lossCost`(`show-cost`)      |
+
+- 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。
+- 組織、使用者名稱以租戶邊界讀(`inventory-names.ts`);收銀點、經銷商、單號照操作者的範圍讀(看不到的不顯示)。
+- 原因檢查:`LotteryFieldOptionsService.assertReason`(`apps/api/src/project/lottery/field-options/`;要是該類別啟用中的選項,「其他」說明必填)。
+
+正本:`apps/api/src/project/lottery/inventory/`、`packages/graphql/src/documents/project/lottery/inventory.graphql`
 
 ## 資料與帳本
 
@@ -77,7 +180,7 @@
 - **鎖定 / 解除會用掉一個版本、不寫事件**:鎖定之後要寫事件,用鎖定回傳的版本當 `expectedVersion`。
 - **同時重送時,後到的回 `CONFLICT`**:「重送不重複寫入」只在第一筆已提交之後成立;兩個相同的請求同時進來時,後到的那個在交易重跑後看到版本已變,回「已被處理」,呼叫端照「已被處理」處理(重讀後顯示已售出)。
 - 金額不是正數 → `VALIDATION_FAILED`(`fields: ["amount"]`)。
-- 張換分店後重算本的持有分店要看整本的張,以這本所在租戶的租戶邊界上下文讀寫(仍記得操作者)。
+- 張換分店或跳號進出後重算本的持有分店與跳號清單(`skippedTicketNos`),要看整本的張,以這本所在租戶的租戶邊界上下文讀寫(仍記得操作者)。
 
 ### 本的建立
 
@@ -88,6 +191,7 @@
 `LotteryAllocationsService`(`allocations.service.ts`):
 
 - `allocationStatus(operator, orgId, gameId)`:已給 = 進貨 + 調入 − 調出(累計,售出不扣);每本在這家店的淨張數(扣掉跳號)≥ 標準張數算 1 本,否則算「+N 張」,零碎張數不湊成一本(例:進 2 本、調出 30 張 → 1 本 +70 張)。以操作者當前組織所在租戶的租戶邊界上下文讀整個租戶的事件(出貨店也算得出收貨店;反查),別的租戶的分店 → `NOT_FOUND`;權限由呼叫端判斷。叫貨單、進貨單、調貨單「超過只警告」與庫存管理的矩陣都用它。
+- `allocationMatrix(operator, orgIds, gameIds?)`:多家店 × 多個遊戲一次算(庫存管理的矩陣、遊戲詳情、乙類詳情);只回有設定預計或已給 > 0 的格子;分店要不要讓操作者看由呼叫端判斷。
 - `setAllocation(operator, { orgId, gameId, plannedBooks, note })`:新增或修改(唯一 `(orgId, gameId)`),寫 audit_log `lottery-allocation.edit`;以操作者的範圍寫。
 
 ### lookup 來源 `lottery_book`
@@ -100,22 +204,28 @@
 
 ### 例外出口的登記
 
-| 登記檔(`apps/api/src/project/database/`) | 檔案與用途                                                                                                                          |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `org-reassign-callers.ts`                | `ticket-ledger.service.ts`:張換店、整本調貨                                                                                         |
-| `tenant-boundary-callers.ts`(邊界出口)   | `books.service.ts`(本編號租戶內唯一)、`book-game-usage.ts`(遊戲是否有本)                                                            |
-| `tenant-boundary-callers.ts`(邊界上下文) | `ticket-ledger.service.ts`(例外寫入、系統重算)、`books.service.ts` / `allocations.service.ts`(反查)、`book-game-usage.ts`(系統重算) |
+| 登記檔(`apps/api/src/project/database/`) | 檔案與用途                                                                                                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `org-reassign-callers.ts`                | `ticket-ledger.service.ts`:張換店、整本調貨                                                                                                                                                                                                      |
+| `tenant-boundary-callers.ts`(邊界出口)   | `books.service.ts`(本編號租戶內唯一)、`book-game-usage.ts`(遊戲是否有本)                                                                                                                                                                         |
+| `tenant-boundary-callers.ts`(邊界上下文) | `ticket-ledger.service.ts`(例外寫入、系統重算)、`books.service.ts` / `allocations.service.ts`(反查)、`book-game-usage.ts`(系統重算);庫存管理的 `inventory/inventory-view.service.ts`、`inventory-names.ts`、`inventory-actions.service.ts`(反查) |
 
 ### 錯誤碼
 
-| code                | reason                        | 什麼時候                                                                |
-| ------------------- | ----------------------------- | ----------------------------------------------------------------------- |
-| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`    | 條件更新沒命中(`extensions.ticketIds` 列出張)                           |
-| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`     | 跨店寫入不是把張移進自己看得到的店(`extensions.ticketIds` 列出不合的張) |
-| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`        | 點收分店不在操作者當前組織的租戶                                        |
-| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`          | 同一本點收兩次                                                          |
-| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE` | 迄號不在標準張數 ~ 999                                                  |
-| `NOT_FOUND`         | —                             | 遊戲、本或分店不存在 / 看不到                                           |
+| code                | reason                              | 什麼時候                                                                      |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`          | 條件更新沒命中(`extensions.ticketIds` 列出張)                                 |
+| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`           | 跨店寫入不是把張移進自己看得到的店(`extensions.ticketIds` 列出不合的張)       |
+| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`              | 點收分店不在操作者當前組織的租戶                                              |
+| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`                | 同一本點收兩次                                                                |
+| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE`       | 迄號不在標準張數 ~ 999                                                        |
+| `NOT_FOUND`         | —                                   | 遊戲、本或分店不存在 / 看不到                                                 |
+| `VALIDATION_FAILED` | `NO_SKIPPED_TICKETS`                | 更正跳號:這本沒有跳號                                                         |
+| `VALIDATION_FAILED` | `SKIP_COUNT_MISMATCH`               | 更正跳號:改完的張數不等於待標註張數,或張號不在這本                            |
+| `VALIDATION_FAILED` | `SKIP_UNCHANGED`                    | 更正跳號:跟目前的跳號一樣                                                     |
+| `VALIDATION_FAILED` | `TICKET_STATUS_NOT_ALLOWED`         | 報廢不是未售、尋回不是待查 / 遺失、新標的跳號不是未售(`extensions.ticketIds`) |
+| `VALIDATION_FAILED` | —(`fields: reasonKey / reasonNote`) | 原因沒選、不是啟用中的選項,或選「其他」沒寫說明                               |
+| `FORBIDDEN`         | —                                   | 沒綁庫存管理(讀取)或沒有那條權限(寫入)                                        |
 
 ### 前端共用
 
@@ -125,4 +235,8 @@
 
 ### 測試
 
-`apps/api/src/project/lottery/tickets/tickets.test.ts`(帳本、本的建立、預計要給本數)、`packages/domain/src/project/lottery/*.test.ts`、`TicketGrid.test.tsx`、`useScanner.test.tsx`。
+`apps/api/src/project/lottery/tickets/tickets.test.ts`(帳本、本的建立、預計要給本數)、`apps/api/src/project/lottery/inventory/inventory.test.ts`(庫存管理的端點:更正跳號、尋回、報廢、讀取放行、預計要給本數三處、庫存概況)、`apps/db-migrator/seeds/project/inventory.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/*.test.ts`、`TicketGrid.test.tsx`、`useScanner.test.tsx`。
+
+## 使用者說明(help.md)
+
+`apps/admin/src/md/module-help/project/additions/inventory.help.md`(租戶使用者看的說明;守詞彙表)。admin 元件測試:`InventoryPage.test.tsx`、`BookPage.test.tsx`;假 api `apps/admin/src/test/msw/project/lottery/inventory-handlers.ts`。
