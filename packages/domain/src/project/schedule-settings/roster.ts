@@ -153,3 +153,31 @@ export type ScheduleAssignmentSource =
 /** 月份的發布狀態(規格 14.1 `schedule_periods`):未發布 / 已發布(只會從未發布變成已發布)。 */
 export const SCHEDULE_PERIOD_STATUSES = ["unpublished", "published"] as const;
 export type SchedulePeriodStatus = (typeof SCHEDULE_PERIOD_STATUSES)[number];
+
+/**
+ * 自動排班的方式(規格 14.5「自動排班」):只填空位 / 重排自動排入的人 / 全部重排(連手動排的一起清掉)。
+ */
+export const SCHEDULE_AUTO_RUN_MODES = [
+  "fill-empty",
+  "redo-auto",
+  "redo-all",
+] as const;
+export type ScheduleAutoRunMode = (typeof SCHEDULE_AUTO_RUN_MODES)[number];
+
+/**
+ * 自動排班的排序條件(規格 14.5「排序條件的定義」):依勾選順序組成字典序比較候選人,前一個平手才比下一個;
+ * 全部平手或都不勾 → 隨機。另一個條件「允許同一人同時段填進多筆人力需求」(`allowOverlappingDemands`)不是排序條件。
+ */
+export const SCHEDULE_AUTO_RUN_SORT_CONDITIONS = [
+  "continuePreviousEntry",
+  "leaderCountFirst",
+  "monthlyShiftBalance",
+] as const;
+export type ScheduleAutoRunSortCondition =
+  (typeof SCHEDULE_AUTO_RUN_SORT_CONDITIONS)[number];
+
+/** 自動排班條件「允許同一人同時段填進多筆人力需求」(兼多個崗位,預設不勾)。 */
+export const SCHEDULE_AUTO_RUN_OVERLAP_CONDITION = "allowOverlappingDemands";
+
+/** 自動排班執行中的鎖定多久後自動解除(規格 14.1 `schedule_periods`:10 分鐘逾時)。 */
+export const SCHEDULE_AUTO_RUN_LOCK_MS = 10 * 60 * 1000;
