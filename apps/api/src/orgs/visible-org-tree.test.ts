@@ -145,4 +145,32 @@ describe("visibleOrgTree:業務頁列可見範圍內的組織", () => {
     expect(governance.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
     expect(await treeOf(token)).toHaveLength(1);
   });
+
+  it("開關 own、屬於最上層與孫層(不屬於中間層):兩個都出現,各自是根", async () => {
+    const tenantD = await createOrg(api.connection, { name: "租戶丁" });
+    const area = await createOrg(api.connection, {
+      name: "丁北區",
+      parentId: tenantD,
+    });
+    const store = await createOrg(api.connection, {
+      name: "丁一店",
+      parentId: area,
+    });
+    const tree = await treeOf(await memberOf([tenantD, store]));
+    expect(tree.map((node) => [node.name, node.parentId])).toEqual(
+      expect.arrayContaining([
+        ["租戶丁", null],
+        ["丁一店", null],
+      ]),
+    );
+    expect(new Set(namesOf(tree))).toEqual(new Set(["租戶丁", "丁一店"]));
+  });
+
+  it("屬於兩個租戶:只看到當前組織所屬的那個租戶", async () => {
+    const tenantE = await createOrg(api.connection, { name: "租戶戊" });
+    const tenantF = await createOrg(api.connection, { name: "租戶己" });
+    // 當前組織 = 第一個所屬組織(租戶戊)
+    const tree = await treeOf(await memberOf([tenantE, tenantF]));
+    expect(namesOf(tree)).toEqual(["租戶戊"]);
+  });
 });

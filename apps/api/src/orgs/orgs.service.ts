@@ -292,7 +292,7 @@ export class OrgsService {
   /**
    * **可見範圍**的組織樹(CONTEXT.md「可見範圍」;業務頁的組織選擇器用,`visibleOrgTree`):
    * 根組織成員(`"all"`)= 整棵樹;其餘 = 可見範圍內、而且與當前組織同一個租戶的組織
-   * (釘在租戶上:所屬組織跨租戶時不混進別租戶的)。可見範圍內最上面的那幾個是根。
+   * (釘在租戶上:所屬組織跨租戶時不混進別租戶的)。直接上層不在可見範圍內的是根(例:屬於最上層與孫層、不屬於中間層時,兩個都是根)。
    * 只要登入,不要求治理權限(治理頁的 `orgTree` 是管理範圍,另有權限)。
    */
   async visibleTree(operator: OperatorContext): Promise<OrgNode[]> {
@@ -323,7 +323,8 @@ export class OrgsService {
     );
     const keys = new Set(documents.map((org) => String(org._id)));
     const rootIds = documents
-      .filter((org) => !org.ancestors.some((id) => keys.has(String(id))))
+      // 根 = 直接上層不在集合裡(`buildForest` 依直接上層掛子節點;只看祖先會漏掉跳一層的孫層)
+      .filter((org) => org.parentId === null || !keys.has(String(org.parentId)))
       .map((org) => org._id);
     return buildForest(documents, rootIds, () => true);
   }

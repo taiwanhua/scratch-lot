@@ -58,7 +58,12 @@ export const Drawer = ({
                 borderTopLeftRadius: radius.lg,
                 borderTopRightRadius: radius.lg,
               }
-            : { width: SIDE_WIDTH, maxWidth: "100%" },
+            : {
+                width: SIDE_WIDTH,
+                maxWidth: "100%",
+                borderTopLeftRadius: radius.lg,
+                borderBottomLeftRadius: radius.lg,
+              },
         },
       }}
       {...rest}

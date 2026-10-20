@@ -130,7 +130,7 @@ deleteOrg(input: { id }): DeletePayload!
 ```
 
 - **讀取類的兩個端點(`orgTree` / `org(id)`)是多選一守門**:持 `system.org-manager.view` **或** `system.user-manager.view` 任一即可。組織樹不只組織管理頁在用 —— 使用者管理頁的左樹與「選擇所屬組織」彈窗也要它,那些人未必持有組織管理的檢視權;管理範圍照樣決定看得到誰,這一條只決定進不進得了端點。寫法同 `storage.resolver.ts` 的多選一判斷(`@RequirePermission` 只能守單一 key)。寫入類的端點維持單一 `@RequirePermission`。
-- **`visibleOrgTree` 給業務頁選組織用**(`OrgTreeSelect` 的 `scope="visible"`):列操作者**可見範圍**內的組織,只要登入、不要求組織管理 / 使用者管理的權限。根組織的成員(可見範圍 `"all"`)= 從根組織開始的整棵樹;其餘 = 可見範圍內、與當前組織同一個租戶的組織(所屬組織跨租戶時不混進別的租戶),可見範圍內最上面的那幾個是根。例:店長只屬於中山店 → 只有中山店;總部屬於最上層組織、開關「包含下層」→ 整個租戶;開關是預設 → 只有最上層組織本身。`outOfScope` 恆為 false。正本 `OrgsService.visibleTree`,測試 `apps/api/src/orgs/visible-org-tree.test.ts`。
+- **`visibleOrgTree` 給業務頁選組織用**(`OrgTreeSelect` 的 `scope="visible"`):列操作者**可見範圍**內的組織,只要登入、不要求組織管理 / 使用者管理的權限。根組織的成員(可見範圍 `"all"`)= 從根組織開始的整棵樹;其餘 = 可見範圍內、與當前組織同一個租戶的組織(所屬組織跨租戶時不混進別的租戶),直接上層不在可見範圍內的是根(例:屬於最上層與孫層、不屬於中間層時,兩個都是根)。例:店長只屬於中山店 → 只有中山店;總部屬於最上層組織、開關「包含下層」→ 整個租戶;開關是預設 → 只有最上層組織本身。`outOfScope` 恆為 false。正本 `OrgsService.visibleTree`,測試 `apps/api/src/orgs/visible-org-tree.test.ts`。
 - **`OrgNode.outOfScope` 恆為 false**:管理範圍外的組織根本不回傳;欄位保留是為了與使用者列的 `roles[].outOfScope` 命名一致、且不必同步改前端。`enabled` 是組織自己的停用狀態,兩者無關。
 - **每棵樹的樹根對外一律回 `parentId: null`**(它的上層不在樹上,給了前端也查不到),多根時每個根都是。因此前端**不能**拿 `OrgNode.parentId` 判斷「樹根是不是平台根組織」—— 那件事由 `org(樹根).isSystem` 回答。
 - **`OrgNode` 也帶 `ownerUserId`**(僅租戶頂層有值,其餘 null;同 `Org`):使用者管理頁靠它標出受擁有者保護的列,不必為了一個欄位再逐筆查 `org(id)`。

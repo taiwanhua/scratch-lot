@@ -43,6 +43,8 @@ export const FilterDrawer = <Value,>({
   const t = useTranslations("admin.filterDrawer");
   const isNarrow = useBreakpointDown("lg");
   const isMobile = useBreakpointDown("sm");
+  const [isOpen, setOpen] = useState(false);
+  /** 抽屜裡的草稿;關閉動畫結束才清掉(否則收起途中欄位會先消失) */
   const [draft, setDraft] = useState<Value | null>(null);
 
   if (!isNarrow) {
@@ -55,7 +57,7 @@ export const FilterDrawer = <Value,>({
   }
 
   const close = () => {
-    setDraft(null);
+    setOpen(false);
   };
 
   return (
@@ -66,6 +68,7 @@ export const FilterDrawer = <Value,>({
         sx={{ flexShrink: 0 }}
         onClick={() => {
           setDraft(value);
+          setOpen(true);
         }}
       >
         {activeCount > 0
@@ -73,7 +76,14 @@ export const FilterDrawer = <Value,>({
           : t("button")}
       </Button>
       <Drawer
-        open={draft !== null}
+        open={isOpen}
+        slotProps={{
+          transition: {
+            onExited: () => {
+              setDraft(null);
+            },
+          },
+        }}
         anchor={isMobile ? "bottom" : "right"}
         title={t("title")}
         closeLabel={t("close")}
