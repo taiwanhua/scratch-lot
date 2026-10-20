@@ -1,5 +1,6 @@
 import type { ApiFeatureRegistration } from "../base/api-feature-registration";
 import { FieldOptionColorsModule } from "./field-option-colors/field-option-colors.module";
+import { LotteryAccountsModule } from "./lottery/accounts/accounts.module";
 import { LotteryDealersModule } from "./lottery/dealers/dealers.module";
 import { LotteryMasterDataModule } from "./lottery/master-data.module";
 import { LotteryTicketsModule } from "./lottery/tickets/tickets.module";
@@ -16,4 +17,5 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "lottery-dealers", module: LotteryDealersModule },
   { key: "schedule", module: ScheduleModule },
   { key: "lottery-tickets", module: LotteryTicketsModule },
+  { key: "lottery-accounts", module: LotteryAccountsModule },
 ];

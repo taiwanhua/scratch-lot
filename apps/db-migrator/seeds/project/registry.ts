@@ -1,5 +1,6 @@
 import type { DemoSource } from "../../src/demo/demo-source";
 import type { SeedSource } from "../base/seed-source";
+import { accountsModule } from "./accounts";
 import { dealersModule } from "./dealers";
 import { lotteryDemoSource } from "./demo";
 import {
@@ -33,6 +34,8 @@ export const projectSeedSource: SeedSource = {
     reportsModule,
     // 班表管理群組與四個子模組(規格 3.1、3.2)
     ...scheduleModuleDeclarations,
+    // 帳戶管理(專案規格第 9 章、第 10 章)
+    accountsModule,
   ],
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)

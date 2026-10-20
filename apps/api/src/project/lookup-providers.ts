@@ -1,4 +1,5 @@
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
+import { LotteryBankAccountsRepository } from "./database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryDealersRepository } from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
@@ -91,5 +92,26 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       keywordFields: ["bookKey", "bookNo"],
     },
     repositoryToken: LotteryBooksRepository,
+  },
+  {
+    // 銀行帳戶(專案規格 10.1;`docs/modules/project/accounts.md`「lookup 來源」):戶名 + 帳號末 5 碼。
+    // 「只列使用中」由使用它的表單帶固定條件 `filter: { status: "active" }`(同遊戲的販售中);
+    // 依單據的分店篩:`filter: { usableBy: { var: <分店欄位> } }` 只列使用組織包含那家分店的(資料共用)
+    declaration: {
+      key: "lottery_bank_account",
+      name: "銀行帳戶",
+      permission: null,
+      fields: {
+        label: { type: "text", label: "帳戶" },
+        accountName: { type: "text", label: "戶名" },
+        bankCode: { type: "text", label: "銀行代碼" },
+        branchName: { type: "text", label: "分行" },
+      },
+      filterFields: ["status", "usableBy"],
+      labelField: "label",
+      keywordFields: ["label", "accountName"],
+      sharedToFilter: "usableBy",
+    },
+    repositoryToken: LotteryBankAccountsRepository,
   },
 ];

@@ -6,6 +6,7 @@ import type { TenantBoundaryContextPurpose } from "../../database/tenant-boundar
  * `database/exists-any-callers.test.ts` 合併兩份清單掃整個 src;這份只能列 `project/` 的檔案。
  */
 export const PROJECT_TENANT_BOUNDARY_CALLERS: readonly string[] = [
+  "project/lottery/accounts/bank-accounts.service.ts",
   "project/lottery/cash-points/cash-points.service.ts",
   "project/lottery/dealers/dealer-contacts.service.ts",
   "project/lottery/dealers/dealer-links.service.ts",
@@ -48,4 +49,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/tickets/allocations.service.ts": ["反查"],
   // 遊戲是否有本引用:沒有操作者,問的是整個租戶
   "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
+  // 看得到帳戶 / 單據 / 交易,就看得到它掛的分店名稱與登記人(使用組織可能是讀者看不到的組織)
+  "project/lottery/accounts/account-names.ts": ["反查"],
+  // 看得到帳戶就看得到它的交易(交易可能是別家分店登記的);存入被沖正時連結的存銀行流水自動反向
+  "project/lottery/accounts/bank-transactions.service.ts": ["反查", "例外寫入"],
+  // 看得到單據就看得到它的收付(另一邊可能是別家分店記的)
+  "project/lottery/settlement/settlement-ledger.ts": ["反查"],
+  // 收付歷程、帳戶名稱、付款帳戶的使用組織比對分店的上層;沖正現金收付時寫在單據那一邊的分店
+  "project/lottery/settlement/settlement.service.ts": ["反查", "例外寫入"],
 };

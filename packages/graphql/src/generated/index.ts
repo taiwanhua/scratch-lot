@@ -293,6 +293,17 @@ export type CreateFormVersionDraftInput = {
   formKey: Scalars['ID']['input'];
 };
 
+export type CreateLotteryBankAccountInput = {
+  accountName: Scalars['String']['input'];
+  accountNo: Scalars['String']['input'];
+  bankCode: Scalars['String']['input'];
+  branchName?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  openingBalance: Scalars['Int']['input'];
+  openingDate: Scalars['DateTime']['input'];
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+};
+
 export type CreateLotteryCashPointInput = {
   name: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
@@ -562,6 +573,11 @@ export type DeleteFormSubmissionPayload = {
 export type DeleteFormVersionDraftInput = {
   expectedDraftRevision: Scalars['Int']['input'];
   formKey: Scalars['ID']['input'];
+};
+
+export type DeleteLotteryBankAccountPayload = {
+  __typename?: 'DeleteLotteryBankAccountPayload';
+  id: Scalars['ID']['output'];
 };
 
 export type DeleteLotteryGameInput = {
@@ -1394,6 +1410,148 @@ export type LogoutPayload = {
   success: Scalars['Boolean']['output'];
 };
 
+export type LotteryAccountsRef = {
+  __typename?: 'LotteryAccountsRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryBankAccount = {
+  __typename?: 'LotteryBankAccount';
+  abilities: LotteryBankAccountAbilities;
+  accountName: Scalars['String']['output'];
+  accountNo: Scalars['String']['output'];
+  balance: Scalars['Int']['output'];
+  bankCode: Scalars['String']['output'];
+  branchName?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  hasTransactions: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  openingBalance: Scalars['Int']['output'];
+  openingDate: Scalars['DateTime']['output'];
+  shareOrgs: Array<ShareOrg>;
+  status: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  usageOrgs: Array<LotteryAccountsRef>;
+};
+
+export type LotteryBankAccountAbilities = {
+  __typename?: 'LotteryBankAccountAbilities';
+  canDelete: Scalars['Boolean']['output'];
+  canEdit: Scalars['Boolean']['output'];
+  canRecordTransaction: Scalars['Boolean']['output'];
+  canReverse: Scalars['Boolean']['output'];
+};
+
+export type LotteryBankAccountPayload = {
+  __typename?: 'LotteryBankAccountPayload';
+  item: LotteryBankAccount;
+};
+
+export type LotteryBankAccountsInput = {
+  page?: InputMaybe<Scalars['Int']['input']>;
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryBankAccountsPayload = {
+  __typename?: 'LotteryBankAccountsPayload';
+  items: Array<LotteryBankAccount>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryBankTransaction = {
+  __typename?: 'LotteryBankTransaction';
+  abilities: LotteryBankTransactionAbilities;
+  accountId: Scalars['ID']['output'];
+  amount: Scalars['Int']['output'];
+  balanceAfter: Scalars['Int']['output'];
+  branch?: Maybe<LotteryAccountsRef>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryAccountsRef>;
+  direction: Scalars['String']['output'];
+  handler?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  refId?: Maybe<Scalars['ID']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  settlementSide?: Maybe<Scalars['String']['output']>;
+  summary?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type LotteryBankTransactionAbilities = {
+  __typename?: 'LotteryBankTransactionAbilities';
+  canReverse: Scalars['Boolean']['output'];
+};
+
+export type LotteryBankTransactionPayload = {
+  __typename?: 'LotteryBankTransactionPayload';
+  item: LotteryBankTransaction;
+};
+
+export type LotteryBankTransactionsInput = {
+  accountId: Scalars['ID']['input'];
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  to?: InputMaybe<Scalars['DateTime']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryBankTransactionsPayload = {
+  __typename?: 'LotteryBankTransactionsPayload';
+  items: Array<LotteryBankTransaction>;
+  totalCount: Scalars['Int']['output'];
+  totalIn: Scalars['Int']['output'];
+  totalOut: Scalars['Int']['output'];
+};
+
+export type LotteryCashLedgerInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  orgId: Scalars['ID']['input'];
+  to?: InputMaybe<Scalars['DateTime']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryCashLedgerPayload = {
+  __typename?: 'LotteryCashLedgerPayload';
+  items: Array<LotteryCashMovement>;
+  totalCount: Scalars['Int']['output'];
+  vault: LotteryVaultExpected;
+};
+
+export type LotteryCashMovement = {
+  __typename?: 'LotteryCashMovement';
+  amount: Scalars['Int']['output'];
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  createdBy?: Maybe<LotteryAccountsRef>;
+  from: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  org: LotteryAccountsRef;
+  payee?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  refId?: Maybe<Scalars['ID']['output']>;
+  refType?: Maybe<Scalars['String']['output']>;
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  to: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type LotteryCashMovementPayload = {
+  __typename?: 'LotteryCashMovementPayload';
+  item: LotteryCashMovement;
+};
+
 export type LotteryCashPoint = {
   __typename?: 'LotteryCashPoint';
   abilities: LotteryCashPointAbilities;
@@ -1735,6 +1893,31 @@ export type LotteryOccupiedStoresPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryOutstandingSettlement = {
+  __typename?: 'LotteryOutstandingSettlement';
+  amount: Scalars['Int']['output'];
+  branch: LotteryAccountsRef;
+  button: Scalars['String']['output'];
+  canSettle: Scalars['Boolean']['output'];
+  counterparty: Scalars['String']['output'];
+  daysOutstanding: Scalars['Int']['output'];
+  docNo: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  moduleKey: Scalars['String']['output'];
+  net: Scalars['Int']['output'];
+  payable: Scalars['Int']['output'];
+  refId: Scalars['ID']['output'];
+  side: Scalars['String']['output'];
+  sideLabel: Scalars['String']['output'];
+};
+
+export type LotteryOutstandingSettlementsPayload = {
+  __typename?: 'LotteryOutstandingSettlementsPayload';
+  items: Array<LotteryOutstandingSettlement>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type LotteryPositionOption = {
   __typename?: 'LotteryPositionOption';
   label: Scalars['String']['output'];
@@ -1754,6 +1937,69 @@ export enum LotteryRentCycle {
   Year = 'YEAR'
 }
 
+export type LotterySettlement = {
+  __typename?: 'LotterySettlement';
+  counterparty: Scalars['String']['output'];
+  docNo: Scalars['String']['output'];
+  kind: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  moduleKey: Scalars['String']['output'];
+  payable: Scalars['Int']['output'];
+  pendingPayee: Scalars['Int']['output'];
+  records: Array<LotterySettlementRecord>;
+  refId: Scalars['ID']['output'];
+  sides: Array<LotterySettlementSide>;
+};
+
+export type LotterySettlementButton = {
+  __typename?: 'LotterySettlementButton';
+  button: Scalars['String']['output'];
+  canUse: Scalars['Boolean']['output'];
+  defaultAmount: Scalars['Int']['output'];
+};
+
+export type LotterySettlementCandidatesInput = {
+  branchOrgId?: InputMaybe<Scalars['ID']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type LotterySettlementPayload = {
+  __typename?: 'LotterySettlementPayload';
+  item: LotterySettlement;
+};
+
+export type LotterySettlementRecord = {
+  __typename?: 'LotterySettlementRecord';
+  accountLabel?: Maybe<Scalars['String']['output']>;
+  amount: Scalars['Int']['output'];
+  canReverse: Scalars['Boolean']['output'];
+  createdBy?: Maybe<LotteryAccountsRef>;
+  direction: Scalars['String']['output'];
+  handler?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  method: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  occurredAt: Scalars['DateTime']['output'];
+  reversalOf?: Maybe<Scalars['ID']['output']>;
+  reversedById?: Maybe<Scalars['ID']['output']>;
+  side: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type LotterySettlementSide = {
+  __typename?: 'LotterySettlementSide';
+  branch: LotteryAccountsRef;
+  buttons: Array<LotterySettlementButton>;
+  canSettle: Scalars['Boolean']['output'];
+  label: Scalars['String']['output'];
+  methods: Array<Scalars['String']['output']>;
+  net: Scalars['Int']['output'];
+  role: Scalars['String']['output'];
+  side: Scalars['String']['output'];
+  totalIn: Scalars['Int']['output'];
+  totalOut: Scalars['Int']['output'];
+};
+
 /** 見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用) */
 export enum LotterySigninState {
   Missing = 'MISSING',
@@ -1761,6 +2007,13 @@ export enum LotterySigninState {
   Open = 'OPEN',
   Signed = 'SIGNED'
 }
+
+export type LotteryVaultExpected = {
+  __typename?: 'LotteryVaultExpected';
+  amount: Scalars['Int']['output'];
+  baselineAmount: Scalars['Int']['output'];
+  baselineAt?: Maybe<Scalars['DateTime']['output']>;
+};
 
 export type MarkNotificationsReadInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -1928,6 +2181,7 @@ export type Mutation = {
   createForm: FormPayload;
   createFormDraft: FormSubmissionPayload;
   createFormVersionDraft: FormVersionPayload;
+  createLotteryBankAccount: LotteryBankAccountPayload;
   createLotteryCashPoint: LotteryCashPointPayload;
   createLotteryDealer: LotteryDealerPayload;
   createLotteryDealerContact: LotteryDealerContactPayload;
@@ -1948,6 +2202,7 @@ export type Mutation = {
   deleteDemoItemTwo: DeleteDemoItemTwoPayload;
   deleteFormSubmission: DeleteFormSubmissionPayload;
   deleteFormVersionDraft: FormPayload;
+  deleteLotteryBankAccount: DeleteLotteryBankAccountPayload;
   deleteLotteryGame: DeleteLotteryGamePayload;
   deleteMyDelegation: DeleteMyDelegationPayload;
   deleteMyScheduleDayOff: DeleteScheduleDayOffPayload;
@@ -1974,6 +2229,8 @@ export type Mutation = {
   publishFormVersion: FormVersionPayload;
   publishWorkflowVersion: WorkflowVersionPayload;
   reassignTask: WorkflowTaskPayload;
+  recordLotteryBankTransaction: LotteryBankTransactionPayload;
+  recordLotterySettlement: RecordLotterySettlementPayload;
   refresh: RefreshPayload;
   registerLotteryDealerSignin: LotteryDealerSigninPayload;
   requestPasswordReset: RequestPasswordResetPayload;
@@ -1984,6 +2241,8 @@ export type Mutation = {
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
   retryAdvanceInstance: WorkflowInstancePayload;
+  reverseLotteryBankTransaction: LotteryBankTransactionPayload;
+  reverseLotterySettlement: RecordLotterySettlementPayload;
   revokeFormFromTenant: FormPayload;
   revokeRoleUsers: RoleUsersPayload;
   revokeTenantProvision: RevokeTenantProvisionPayload;
@@ -2025,6 +2284,7 @@ export type Mutation = {
   updateFieldCategory: FieldCategoryPayload;
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
+  updateLotteryBankAccount: LotteryBankAccountPayload;
   updateLotteryCashPoint: LotteryCashPointPayload;
   updateLotteryDealer: LotteryDealerPayload;
   updateLotteryDealerContact: LotteryDealerContactPayload;
@@ -2155,6 +2415,11 @@ export type MutationCreateFormVersionDraftArgs = {
 };
 
 
+export type MutationCreateLotteryBankAccountArgs = {
+  input: CreateLotteryBankAccountInput;
+};
+
+
 export type MutationCreateLotteryCashPointArgs = {
   input: CreateLotteryCashPointInput;
 };
@@ -2252,6 +2517,11 @@ export type MutationDeleteFormSubmissionArgs = {
 
 export type MutationDeleteFormVersionDraftArgs = {
   input: DeleteFormVersionDraftInput;
+};
+
+
+export type MutationDeleteLotteryBankAccountArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -2370,6 +2640,16 @@ export type MutationReassignTaskArgs = {
 };
 
 
+export type MutationRecordLotteryBankTransactionArgs = {
+  input: RecordLotteryBankTransactionInput;
+};
+
+
+export type MutationRecordLotterySettlementArgs = {
+  input: RecordLotterySettlementInput;
+};
+
+
 export type MutationRegisterLotteryDealerSigninArgs = {
   input: RegisterLotteryDealerSigninInput;
 };
@@ -2412,6 +2692,16 @@ export type MutationRetireCurrentWorkflowVersionArgs = {
 
 export type MutationRetryAdvanceInstanceArgs = {
   input: RetryAdvanceInstanceInput;
+};
+
+
+export type MutationReverseLotteryBankTransactionArgs = {
+  input: ReverseLotteryBankTransactionInput;
+};
+
+
+export type MutationReverseLotterySettlementArgs = {
+  input: ReverseLotterySettlementInput;
 };
 
 
@@ -2617,6 +2907,11 @@ export type MutationUpdateFormArgs = {
 
 export type MutationUpdateFormSubmissionArgs = {
   input: UpdateFormSubmissionInput;
+};
+
+
+export type MutationUpdateLotteryBankAccountArgs = {
+  input: UpdateLotteryBankAccountInput;
 };
 
 
@@ -3282,6 +3577,11 @@ export type Query = {
   formVersions: FormVersionsPayload;
   formWorkflowOptions: FormWorkflowOptionsPayload;
   forms: FormsPayload;
+  lotteryBankAccount: LotteryBankAccountPayload;
+  lotteryBankAccounts: LotteryBankAccountsPayload;
+  lotteryBankTransactions: LotteryBankTransactionsPayload;
+  lotteryCashLedger: LotteryCashLedgerPayload;
+  lotteryCashMovement: LotteryCashMovementPayload;
   lotteryCashPoints: LotteryCashPointsPayload;
   lotteryDealer: LotteryDealerPayload;
   lotteryDealerCoSellers: LotteryDealerCoSellersPayload;
@@ -3292,7 +3592,10 @@ export type Query = {
   lotteryGame: LotteryGamePayload;
   lotteryGames: LotteryGamesPayload;
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
+  lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
   lotteryPositionOptions: LotteryPositionOptionsPayload;
+  lotterySettlement: LotterySettlementPayload;
+  lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
   me: Me;
   moduleForms: Array<FormSummary>;
   moduleListColumns: ModuleListColumnsPayload;
@@ -3493,6 +3796,31 @@ export type QueryFormsArgs = {
 };
 
 
+export type QueryLotteryBankAccountArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryBankAccountsArgs = {
+  input: LotteryBankAccountsInput;
+};
+
+
+export type QueryLotteryBankTransactionsArgs = {
+  input: LotteryBankTransactionsInput;
+};
+
+
+export type QueryLotteryCashLedgerArgs = {
+  input: LotteryCashLedgerInput;
+};
+
+
+export type QueryLotteryCashMovementArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type QueryLotteryCashPointsArgs = {
   input: LotteryCashPointsInput;
 };
@@ -3541,6 +3869,17 @@ export type QueryLotteryGamesArgs = {
 
 export type QueryLotteryPositionOptionsArgs = {
   orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotterySettlementArgs = {
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotterySettlementCandidatesArgs = {
+  input: LotterySettlementCandidatesInput;
 };
 
 
@@ -3778,6 +4117,39 @@ export type ReassignTaskInput = {
   toUserId: Scalars['ID']['input'];
 };
 
+export type RecordLotteryBankTransactionInput = {
+  accountId: Scalars['ID']['input'];
+  amount: Scalars['Int']['input'];
+  branchOrgId?: InputMaybe<Scalars['ID']['input']>;
+  direction?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  occurredAt: Scalars['DateTime']['input'];
+  refId?: InputMaybe<Scalars['ID']['input']>;
+  refType?: InputMaybe<Scalars['String']['input']>;
+  summary?: InputMaybe<Scalars['String']['input']>;
+  type: Scalars['String']['input'];
+};
+
+export type RecordLotterySettlementInput = {
+  accountId?: InputMaybe<Scalars['ID']['input']>;
+  amount: Scalars['Int']['input'];
+  button: Scalars['String']['input'];
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  cashSource?: InputMaybe<Scalars['String']['input']>;
+  handler?: InputMaybe<Scalars['String']['input']>;
+  method: Scalars['String']['input'];
+  moduleKey: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
+};
+
+export type RecordLotterySettlementPayload = {
+  __typename?: 'RecordLotterySettlementPayload';
+  item: LotterySettlement;
+  recordId: Scalars['ID']['output'];
+};
+
 export type RefreshPayload = {
   __typename?: 'RefreshPayload';
   accessToken: Scalars['String']['output'];
@@ -3859,6 +4231,17 @@ export type RetiredPermissionUsage = {
 
 export type RetryAdvanceInstanceInput = {
   instanceId: Scalars['ID']['input'];
+};
+
+export type ReverseLotteryBankTransactionInput = {
+  id: Scalars['ID']['input'];
+  reason: Scalars['String']['input'];
+};
+
+export type ReverseLotterySettlementInput = {
+  id: Scalars['ID']['input'];
+  method: Scalars['String']['input'];
+  reason: Scalars['String']['input'];
 };
 
 export type RevokeFormFromTenantInput = {
@@ -4681,6 +5064,19 @@ export type UpdateFormSubmissionInput = {
   expectedRevision: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
   values: Scalars['JSONObject']['input'];
+};
+
+export type UpdateLotteryBankAccountInput = {
+  accountName?: InputMaybe<Scalars['String']['input']>;
+  accountNo?: InputMaybe<Scalars['String']['input']>;
+  bankCode?: InputMaybe<Scalars['String']['input']>;
+  branchName?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  openingBalance?: InputMaybe<Scalars['Int']['input']>;
+  openingDate?: InputMaybe<Scalars['DateTime']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
+  status?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateLotteryCashPointInput = {
@@ -6707,6 +7103,122 @@ export type SetFieldOptionColorMutationVariables = Exact<{
 
 export type SetFieldOptionColorMutation = { __typename?: 'Mutation', setFieldOptionColor: { __typename?: 'FieldOptionColorPayload', color: { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null } } };
 
+export type LotteryAccountsRefFieldsFragment = { __typename?: 'LotteryAccountsRef', id: string, name: string };
+
+export type LotteryBankAccountFieldsFragment = { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } };
+
+export type LotteryBankTransactionFieldsFragment = { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } };
+
+export type LotteryCashMovementFieldsFragment = { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+
+export type LotterySettlementFieldsFragment = { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
+
+export type LotteryOutstandingSettlementFieldsFragment = { __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
+
+export type LotteryBankAccountsQueryVariables = Exact<{
+  input: LotteryBankAccountsInput;
+}>;
+
+
+export type LotteryBankAccountsQuery = { __typename?: 'Query', lotteryBankAccounts: { __typename?: 'LotteryBankAccountsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } }> } };
+
+export type LotteryBankAccountQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryBankAccountQuery = { __typename?: 'Query', lotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type LotteryBankTransactionsQueryVariables = Exact<{
+  input: LotteryBankTransactionsInput;
+}>;
+
+
+export type LotteryBankTransactionsQuery = { __typename?: 'Query', lotteryBankTransactions: { __typename?: 'LotteryBankTransactionsPayload', totalCount: number, totalIn: number, totalOut: number, items: Array<{ __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } }> } };
+
+export type CreateLotteryBankAccountMutationVariables = Exact<{
+  input: CreateLotteryBankAccountInput;
+}>;
+
+
+export type CreateLotteryBankAccountMutation = { __typename?: 'Mutation', createLotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type UpdateLotteryBankAccountMutationVariables = Exact<{
+  input: UpdateLotteryBankAccountInput;
+}>;
+
+
+export type UpdateLotteryBankAccountMutation = { __typename?: 'Mutation', updateLotteryBankAccount: { __typename?: 'LotteryBankAccountPayload', item: { __typename?: 'LotteryBankAccount', id: string, bankCode: string, branchName?: string | null, accountNo: string, accountName: string, label: string, openingBalance: number, openingDate: string, status: string, note?: string | null, balance: number, hasTransactions: boolean, createdAt: string, updatedAt: string, shareOrgs: Array<{ __typename?: 'ShareOrg', orgId: string, includeDescendants: boolean }>, usageOrgs: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }>, abilities: { __typename?: 'LotteryBankAccountAbilities', canEdit: boolean, canDelete: boolean, canRecordTransaction: boolean, canReverse: boolean } } } };
+
+export type DeleteLotteryBankAccountMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteLotteryBankAccountMutation = { __typename?: 'Mutation', deleteLotteryBankAccount: { __typename?: 'DeleteLotteryBankAccountPayload', id: string } };
+
+export type RecordLotteryBankTransactionMutationVariables = Exact<{
+  input: RecordLotteryBankTransactionInput;
+}>;
+
+
+export type RecordLotteryBankTransactionMutation = { __typename?: 'Mutation', recordLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+
+export type ReverseLotteryBankTransactionMutationVariables = Exact<{
+  input: ReverseLotteryBankTransactionInput;
+}>;
+
+
+export type ReverseLotteryBankTransactionMutation = { __typename?: 'Mutation', reverseLotteryBankTransaction: { __typename?: 'LotteryBankTransactionPayload', item: { __typename?: 'LotteryBankTransaction', id: string, accountId: string, occurredAt: string, type: string, direction: string, amount: number, balanceAfter: number, refType?: string | null, refId?: string | null, settlementSide?: string | null, summary?: string | null, handler?: string | null, note?: string | null, reversalOf?: string | null, reversedById?: string | null, createdAt: string, branch?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryBankTransactionAbilities', canReverse: boolean } } } };
+
+export type LotteryCashLedgerQueryVariables = Exact<{
+  input: LotteryCashLedgerInput;
+}>;
+
+
+export type LotteryCashLedgerQuery = { __typename?: 'Query', lotteryCashLedger: { __typename?: 'LotteryCashLedgerPayload', totalCount: number, vault: { __typename?: 'LotteryVaultExpected', amount: number, baselineAmount: number, baselineAt?: string | null }, items: Array<{ __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type LotteryCashMovementQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryCashMovementQuery = { __typename?: 'Query', lotteryCashMovement: { __typename?: 'LotteryCashMovementPayload', item: { __typename?: 'LotteryCashMovement', id: string, occurredAt: string, type: string, from: string, to: string, reason?: string | null, amount: number, payee?: string | null, note?: string | null, refType?: string | null, refId?: string | null, reversalOf?: string | null, reversedById?: string | null, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } } };
+
+export type LotterySettlementQueryVariables = Exact<{
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+}>;
+
+
+export type LotterySettlementQuery = { __typename?: 'Query', lotterySettlement: { __typename?: 'LotterySettlementPayload', item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type LotteryOutstandingSettlementsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryOutstandingSettlementsQuery = { __typename?: 'Query', lotteryOutstandingSettlements: { __typename?: 'LotteryOutstandingSettlementsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type LotterySettlementCandidatesQueryVariables = Exact<{
+  input: LotterySettlementCandidatesInput;
+}>;
+
+
+export type LotterySettlementCandidatesQuery = { __typename?: 'Query', lotterySettlementCandidates: { __typename?: 'LotteryOutstandingSettlementsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOutstandingSettlement', moduleKey: string, label: string, refId: string, docNo: string, side: string, sideLabel: string, counterparty: string, payable: number, net: number, kind: string, amount: number, button: string, daysOutstanding: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type RecordLotterySettlementMutationVariables = Exact<{
+  input: RecordLotterySettlementInput;
+}>;
+
+
+export type RecordLotterySettlementMutation = { __typename?: 'Mutation', recordLotterySettlement: { __typename?: 'RecordLotterySettlementPayload', recordId: string, item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type ReverseLotterySettlementMutationVariables = Exact<{
+  input: ReverseLotterySettlementInput;
+}>;
+
+
+export type ReverseLotterySettlementMutation = { __typename?: 'Mutation', reverseLotterySettlement: { __typename?: 'RecordLotterySettlementPayload', recordId: string, item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
 export type LotteryDealerRefFieldsFragment = { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus };
 
 export type LotteryDealerContactRefFieldsFragment = { __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus };
@@ -7797,6 +8309,167 @@ export const FieldOptionColorFieldsFragmentDoc = `
   paletteKey
 }
     `;
+export const LotteryAccountsRefFieldsFragmentDoc = `
+    fragment LotteryAccountsRefFields on LotteryAccountsRef {
+  id
+  name
+}
+    `;
+export const LotteryBankAccountFieldsFragmentDoc = `
+    fragment LotteryBankAccountFields on LotteryBankAccount {
+  id
+  bankCode
+  branchName
+  accountNo
+  accountName
+  label
+  openingBalance
+  openingDate
+  status
+  note
+  balance
+  hasTransactions
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  usageOrgs {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canDelete
+    canRecordTransaction
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryBankTransactionFieldsFragmentDoc = `
+    fragment LotteryBankTransactionFields on LotteryBankTransaction {
+  id
+  accountId
+  occurredAt
+  type
+  direction
+  amount
+  balanceAfter
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  refType
+  refId
+  settlementSide
+  summary
+  handler
+  note
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  abilities {
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryCashMovementFieldsFragmentDoc = `
+    fragment LotteryCashMovementFields on LotteryCashMovement {
+  id
+  org {
+    ...LotteryAccountsRefFields
+  }
+  occurredAt
+  type
+  from
+  to
+  reason
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  amount
+  payee
+  note
+  refType
+  refId
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotterySettlementFieldsFragmentDoc = `
+    fragment LotterySettlementFields on LotterySettlement {
+  moduleKey
+  label
+  kind
+  refId
+  docNo
+  counterparty
+  payable
+  pendingPayee
+  sides {
+    side
+    label
+    role
+    methods
+    branch {
+      ...LotteryAccountsRefFields
+    }
+    totalOut
+    totalIn
+    net
+    canSettle
+    buttons {
+      button
+      defaultAmount
+      canUse
+    }
+  }
+  records {
+    id
+    method
+    side
+    type
+    direction
+    amount
+    accountLabel
+    handler
+    note
+    occurredAt
+    createdBy {
+      ...LotteryAccountsRefFields
+    }
+    reversalOf
+    reversedById
+    canReverse
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryOutstandingSettlementFieldsFragmentDoc = `
+    fragment LotteryOutstandingSettlementFields on LotteryOutstandingSettlement {
+  moduleKey
+  label
+  refId
+  docNo
+  side
+  sideLabel
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  counterparty
+  payable
+  net
+  kind
+  amount
+  button
+  daysOutstanding
+  canSettle
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
 export const LotteryDealerRefFieldsFragmentDoc = `
     fragment LotteryDealerRefFields on LotteryDealerRef {
   id
@@ -14630,6 +15303,494 @@ export const useSetFieldOptionColorMutation = <
 
 
 useSetFieldOptionColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldOptionColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers);
+
+export const LotteryBankAccountsDocument = `
+    query LotteryBankAccounts($input: LotteryBankAccountsInput!) {
+  lotteryBankAccounts(input: $input) {
+    items {
+      ...LotteryBankAccountFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useLotteryBankAccountsQuery = <
+      TData = LotteryBankAccountsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankAccountsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankAccountsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankAccountsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankAccountsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankAccounts', variables],
+    queryFn: fetcher<LotteryBankAccountsQuery, LotteryBankAccountsQueryVariables>(client, LotteryBankAccountsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankAccountsQuery.getKey = (variables: LotteryBankAccountsQueryVariables) => ['LotteryBankAccounts', variables];
+
+
+useLotteryBankAccountsQuery.fetcher = (client: GraphQLClient, variables: LotteryBankAccountsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankAccountsQuery, LotteryBankAccountsQueryVariables>(client, LotteryBankAccountsDocument, variables, headers);
+
+export const LotteryBankAccountDocument = `
+    query LotteryBankAccount($id: ID!) {
+  lotteryBankAccount(id: $id) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useLotteryBankAccountQuery = <
+      TData = LotteryBankAccountQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankAccountQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankAccountQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankAccountQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankAccountQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankAccount', variables],
+    queryFn: fetcher<LotteryBankAccountQuery, LotteryBankAccountQueryVariables>(client, LotteryBankAccountDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankAccountQuery.getKey = (variables: LotteryBankAccountQueryVariables) => ['LotteryBankAccount', variables];
+
+
+useLotteryBankAccountQuery.fetcher = (client: GraphQLClient, variables: LotteryBankAccountQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankAccountQuery, LotteryBankAccountQueryVariables>(client, LotteryBankAccountDocument, variables, headers);
+
+export const LotteryBankTransactionsDocument = `
+    query LotteryBankTransactions($input: LotteryBankTransactionsInput!) {
+  lotteryBankTransactions(input: $input) {
+    items {
+      ...LotteryBankTransactionFields
+    }
+    totalCount
+    totalIn
+    totalOut
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useLotteryBankTransactionsQuery = <
+      TData = LotteryBankTransactionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryBankTransactionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryBankTransactionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryBankTransactionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryBankTransactionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryBankTransactions', variables],
+    queryFn: fetcher<LotteryBankTransactionsQuery, LotteryBankTransactionsQueryVariables>(client, LotteryBankTransactionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryBankTransactionsQuery.getKey = (variables: LotteryBankTransactionsQueryVariables) => ['LotteryBankTransactions', variables];
+
+
+useLotteryBankTransactionsQuery.fetcher = (client: GraphQLClient, variables: LotteryBankTransactionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryBankTransactionsQuery, LotteryBankTransactionsQueryVariables>(client, LotteryBankTransactionsDocument, variables, headers);
+
+export const CreateLotteryBankAccountDocument = `
+    mutation CreateLotteryBankAccount($input: CreateLotteryBankAccountInput!) {
+  createLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useCreateLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryBankAccountMutation, TError, CreateLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryBankAccountMutation, TError, CreateLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryBankAccount'],
+    mutationFn: (variables?: CreateLotteryBankAccountMutationVariables) => fetcher<CreateLotteryBankAccountMutation, CreateLotteryBankAccountMutationVariables>(client, CreateLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryBankAccountMutation, CreateLotteryBankAccountMutationVariables>(client, CreateLotteryBankAccountDocument, variables, headers);
+
+export const UpdateLotteryBankAccountDocument = `
+    mutation UpdateLotteryBankAccount($input: UpdateLotteryBankAccountInput!) {
+  updateLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+    ${LotteryBankAccountFieldsFragmentDoc}`;
+
+export const useUpdateLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryBankAccountMutation, TError, UpdateLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryBankAccountMutation, TError, UpdateLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryBankAccount'],
+    mutationFn: (variables?: UpdateLotteryBankAccountMutationVariables) => fetcher<UpdateLotteryBankAccountMutation, UpdateLotteryBankAccountMutationVariables>(client, UpdateLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryBankAccountMutation, UpdateLotteryBankAccountMutationVariables>(client, UpdateLotteryBankAccountDocument, variables, headers);
+
+export const DeleteLotteryBankAccountDocument = `
+    mutation DeleteLotteryBankAccount($id: ID!) {
+  deleteLotteryBankAccount(id: $id) {
+    id
+  }
+}
+    `;
+
+export const useDeleteLotteryBankAccountMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteLotteryBankAccountMutation, TError, DeleteLotteryBankAccountMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteLotteryBankAccountMutation, TError, DeleteLotteryBankAccountMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteLotteryBankAccount'],
+    mutationFn: (variables?: DeleteLotteryBankAccountMutationVariables) => fetcher<DeleteLotteryBankAccountMutation, DeleteLotteryBankAccountMutationVariables>(client, DeleteLotteryBankAccountDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteLotteryBankAccountMutation.fetcher = (client: GraphQLClient, variables: DeleteLotteryBankAccountMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteLotteryBankAccountMutation, DeleteLotteryBankAccountMutationVariables>(client, DeleteLotteryBankAccountDocument, variables, headers);
+
+export const RecordLotteryBankTransactionDocument = `
+    mutation RecordLotteryBankTransaction($input: RecordLotteryBankTransactionInput!) {
+  recordLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useRecordLotteryBankTransactionMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecordLotteryBankTransactionMutation, TError, RecordLotteryBankTransactionMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecordLotteryBankTransactionMutation, TError, RecordLotteryBankTransactionMutationVariables, TContext>(
+      {
+    mutationKey: ['RecordLotteryBankTransaction'],
+    mutationFn: (variables?: RecordLotteryBankTransactionMutationVariables) => fetcher<RecordLotteryBankTransactionMutation, RecordLotteryBankTransactionMutationVariables>(client, RecordLotteryBankTransactionDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecordLotteryBankTransactionMutation.fetcher = (client: GraphQLClient, variables: RecordLotteryBankTransactionMutationVariables, headers?: RequestInit['headers']) => fetcher<RecordLotteryBankTransactionMutation, RecordLotteryBankTransactionMutationVariables>(client, RecordLotteryBankTransactionDocument, variables, headers);
+
+export const ReverseLotteryBankTransactionDocument = `
+    mutation ReverseLotteryBankTransaction($input: ReverseLotteryBankTransactionInput!) {
+  reverseLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+    ${LotteryBankTransactionFieldsFragmentDoc}`;
+
+export const useReverseLotteryBankTransactionMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReverseLotteryBankTransactionMutation, TError, ReverseLotteryBankTransactionMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReverseLotteryBankTransactionMutation, TError, ReverseLotteryBankTransactionMutationVariables, TContext>(
+      {
+    mutationKey: ['ReverseLotteryBankTransaction'],
+    mutationFn: (variables?: ReverseLotteryBankTransactionMutationVariables) => fetcher<ReverseLotteryBankTransactionMutation, ReverseLotteryBankTransactionMutationVariables>(client, ReverseLotteryBankTransactionDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReverseLotteryBankTransactionMutation.fetcher = (client: GraphQLClient, variables: ReverseLotteryBankTransactionMutationVariables, headers?: RequestInit['headers']) => fetcher<ReverseLotteryBankTransactionMutation, ReverseLotteryBankTransactionMutationVariables>(client, ReverseLotteryBankTransactionDocument, variables, headers);
+
+export const LotteryCashLedgerDocument = `
+    query LotteryCashLedger($input: LotteryCashLedgerInput!) {
+  lotteryCashLedger(input: $input) {
+    vault {
+      amount
+      baselineAmount
+      baselineAt
+    }
+    items {
+      ...LotteryCashMovementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryCashMovementFieldsFragmentDoc}`;
+
+export const useLotteryCashLedgerQuery = <
+      TData = LotteryCashLedgerQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCashLedgerQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCashLedgerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCashLedgerQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCashLedgerQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCashLedger', variables],
+    queryFn: fetcher<LotteryCashLedgerQuery, LotteryCashLedgerQueryVariables>(client, LotteryCashLedgerDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCashLedgerQuery.getKey = (variables: LotteryCashLedgerQueryVariables) => ['LotteryCashLedger', variables];
+
+
+useLotteryCashLedgerQuery.fetcher = (client: GraphQLClient, variables: LotteryCashLedgerQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCashLedgerQuery, LotteryCashLedgerQueryVariables>(client, LotteryCashLedgerDocument, variables, headers);
+
+export const LotteryCashMovementDocument = `
+    query LotteryCashMovement($id: ID!) {
+  lotteryCashMovement(id: $id) {
+    item {
+      ...LotteryCashMovementFields
+    }
+  }
+}
+    ${LotteryCashMovementFieldsFragmentDoc}`;
+
+export const useLotteryCashMovementQuery = <
+      TData = LotteryCashMovementQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCashMovementQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCashMovementQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCashMovementQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCashMovementQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCashMovement', variables],
+    queryFn: fetcher<LotteryCashMovementQuery, LotteryCashMovementQueryVariables>(client, LotteryCashMovementDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCashMovementQuery.getKey = (variables: LotteryCashMovementQueryVariables) => ['LotteryCashMovement', variables];
+
+
+useLotteryCashMovementQuery.fetcher = (client: GraphQLClient, variables: LotteryCashMovementQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCashMovementQuery, LotteryCashMovementQueryVariables>(client, LotteryCashMovementDocument, variables, headers);
+
+export const LotterySettlementDocument = `
+    query LotterySettlement($moduleKey: String!, $refId: ID!) {
+  lotterySettlement(moduleKey: $moduleKey, refId: $refId) {
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useLotterySettlementQuery = <
+      TData = LotterySettlementQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlement', variables],
+    queryFn: fetcher<LotterySettlementQuery, LotterySettlementQueryVariables>(client, LotterySettlementDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementQuery.getKey = (variables: LotterySettlementQueryVariables) => ['LotterySettlement', variables];
+
+
+useLotterySettlementQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementQuery, LotterySettlementQueryVariables>(client, LotterySettlementDocument, variables, headers);
+
+export const LotteryOutstandingSettlementsDocument = `
+    query LotteryOutstandingSettlements {
+  lotteryOutstandingSettlements {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+
+export const useLotteryOutstandingSettlementsQuery = <
+      TData = LotteryOutstandingSettlementsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryOutstandingSettlementsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOutstandingSettlementsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOutstandingSettlementsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOutstandingSettlementsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryOutstandingSettlements'] : ['LotteryOutstandingSettlements', variables],
+    queryFn: fetcher<LotteryOutstandingSettlementsQuery, LotteryOutstandingSettlementsQueryVariables>(client, LotteryOutstandingSettlementsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOutstandingSettlementsQuery.getKey = (variables?: LotteryOutstandingSettlementsQueryVariables) => variables === undefined ? ['LotteryOutstandingSettlements'] : ['LotteryOutstandingSettlements', variables];
+
+
+useLotteryOutstandingSettlementsQuery.fetcher = (client: GraphQLClient, variables?: LotteryOutstandingSettlementsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOutstandingSettlementsQuery, LotteryOutstandingSettlementsQueryVariables>(client, LotteryOutstandingSettlementsDocument, variables, headers);
+
+export const LotterySettlementCandidatesDocument = `
+    query LotterySettlementCandidates($input: LotterySettlementCandidatesInput!) {
+  lotterySettlementCandidates(input: $input) {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+
+export const useLotterySettlementCandidatesQuery = <
+      TData = LotterySettlementCandidatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementCandidatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementCandidatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementCandidatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementCandidatesQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlementCandidates', variables],
+    queryFn: fetcher<LotterySettlementCandidatesQuery, LotterySettlementCandidatesQueryVariables>(client, LotterySettlementCandidatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementCandidatesQuery.getKey = (variables: LotterySettlementCandidatesQueryVariables) => ['LotterySettlementCandidates', variables];
+
+
+useLotterySettlementCandidatesQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementCandidatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementCandidatesQuery, LotterySettlementCandidatesQueryVariables>(client, LotterySettlementCandidatesDocument, variables, headers);
+
+export const RecordLotterySettlementDocument = `
+    mutation RecordLotterySettlement($input: RecordLotterySettlementInput!) {
+  recordLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useRecordLotterySettlementMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecordLotterySettlementMutation, TError, RecordLotterySettlementMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecordLotterySettlementMutation, TError, RecordLotterySettlementMutationVariables, TContext>(
+      {
+    mutationKey: ['RecordLotterySettlement'],
+    mutationFn: (variables?: RecordLotterySettlementMutationVariables) => fetcher<RecordLotterySettlementMutation, RecordLotterySettlementMutationVariables>(client, RecordLotterySettlementDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecordLotterySettlementMutation.fetcher = (client: GraphQLClient, variables: RecordLotterySettlementMutationVariables, headers?: RequestInit['headers']) => fetcher<RecordLotterySettlementMutation, RecordLotterySettlementMutationVariables>(client, RecordLotterySettlementDocument, variables, headers);
+
+export const ReverseLotterySettlementDocument = `
+    mutation ReverseLotterySettlement($input: ReverseLotterySettlementInput!) {
+  reverseLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+    ${LotterySettlementFieldsFragmentDoc}`;
+
+export const useReverseLotterySettlementMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReverseLotterySettlementMutation, TError, ReverseLotterySettlementMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReverseLotterySettlementMutation, TError, ReverseLotterySettlementMutationVariables, TContext>(
+      {
+    mutationKey: ['ReverseLotterySettlement'],
+    mutationFn: (variables?: ReverseLotterySettlementMutationVariables) => fetcher<ReverseLotterySettlementMutation, ReverseLotterySettlementMutationVariables>(client, ReverseLotterySettlementDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReverseLotterySettlementMutation.fetcher = (client: GraphQLClient, variables: ReverseLotterySettlementMutationVariables, headers?: RequestInit['headers']) => fetcher<ReverseLotterySettlementMutation, ReverseLotterySettlementMutationVariables>(client, ReverseLotterySettlementDocument, variables, headers);
 
 export const LotteryDealersDocument = `
     query LotteryDealers($input: LotteryDealersInput!) {

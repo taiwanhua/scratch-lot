@@ -198,6 +198,16 @@
         "types": "./dist/cjs/project/lottery.d.cts",
         "default": "./dist/cjs/project/lottery.cjs"
       }
+    },
+    "./project/lottery-accounts": {
+      "import": {
+        "types": "./dist/es/project/lottery-accounts.d.ts",
+        "default": "./dist/es/project/lottery-accounts.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/lottery-accounts.d.cts",
+        "default": "./dist/cjs/project/lottery-accounts.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -258,6 +268,9 @@
       ],
       "project/lottery": [
         "./dist/es/project/lottery.d.ts"
+      ],
+      "project/lottery-accounts": [
+        "./dist/es/project/lottery-accounts.d.ts"
       ]
     }
   },

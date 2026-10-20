@@ -1,0 +1,295 @@
+# 帳戶管理(模組 accounts,專案規格第 9 章、10.1–10.3;欄位語意正本 docs/modules/project/accounts.md「api 介面」)。
+# 分頁各自一條權限(view-bank-accounts / view-cash / view-outstanding);收付按鈕沿用單據的權限。
+
+fragment LotteryAccountsRefFields on LotteryAccountsRef {
+  id
+  name
+}
+
+fragment LotteryBankAccountFields on LotteryBankAccount {
+  id
+  bankCode
+  branchName
+  accountNo
+  accountName
+  label
+  openingBalance
+  openingDate
+  status
+  note
+  balance
+  hasTransactions
+  shareOrgs {
+    orgId
+    includeDescendants
+  }
+  usageOrgs {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canDelete
+    canRecordTransaction
+    canReverse
+  }
+}
+
+fragment LotteryBankTransactionFields on LotteryBankTransaction {
+  id
+  accountId
+  occurredAt
+  type
+  direction
+  amount
+  balanceAfter
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  refType
+  refId
+  settlementSide
+  summary
+  handler
+  note
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+  createdAt
+  abilities {
+    canReverse
+  }
+}
+
+fragment LotteryCashMovementFields on LotteryCashMovement {
+  id
+  org {
+    ...LotteryAccountsRefFields
+  }
+  occurredAt
+  type
+  from
+  to
+  reason
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  amount
+  payee
+  note
+  refType
+  refId
+  reversalOf
+  reversedById
+  createdBy {
+    ...LotteryAccountsRefFields
+  }
+}
+
+fragment LotterySettlementFields on LotterySettlement {
+  moduleKey
+  label
+  kind
+  refId
+  docNo
+  counterparty
+  payable
+  pendingPayee
+  sides {
+    side
+    label
+    role
+    methods
+    branch {
+      ...LotteryAccountsRefFields
+    }
+    totalOut
+    totalIn
+    net
+    canSettle
+    buttons {
+      button
+      defaultAmount
+      canUse
+    }
+  }
+  records {
+    id
+    method
+    side
+    type
+    direction
+    amount
+    accountLabel
+    handler
+    note
+    occurredAt
+    createdBy {
+      ...LotteryAccountsRefFields
+    }
+    reversalOf
+    reversedById
+    canReverse
+  }
+}
+
+fragment LotteryOutstandingSettlementFields on LotteryOutstandingSettlement {
+  moduleKey
+  label
+  refId
+  docNo
+  side
+  sideLabel
+  branch {
+    ...LotteryAccountsRefFields
+  }
+  counterparty
+  payable
+  net
+  kind
+  amount
+  button
+  daysOutstanding
+  canSettle
+}
+
+query LotteryBankAccounts($input: LotteryBankAccountsInput!) {
+  lotteryBankAccounts(input: $input) {
+    items {
+      ...LotteryBankAccountFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+
+query LotteryBankAccount($id: ID!) {
+  lotteryBankAccount(id: $id) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+
+query LotteryBankTransactions($input: LotteryBankTransactionsInput!) {
+  lotteryBankTransactions(input: $input) {
+    items {
+      ...LotteryBankTransactionFields
+    }
+    totalCount
+    totalIn
+    totalOut
+  }
+}
+
+mutation CreateLotteryBankAccount($input: CreateLotteryBankAccountInput!) {
+  createLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+
+mutation UpdateLotteryBankAccount($input: UpdateLotteryBankAccountInput!) {
+  updateLotteryBankAccount(input: $input) {
+    item {
+      ...LotteryBankAccountFields
+    }
+  }
+}
+
+mutation DeleteLotteryBankAccount($id: ID!) {
+  deleteLotteryBankAccount(id: $id) {
+    id
+  }
+}
+
+mutation RecordLotteryBankTransaction(
+  $input: RecordLotteryBankTransactionInput!
+) {
+  recordLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+
+mutation ReverseLotteryBankTransaction(
+  $input: ReverseLotteryBankTransactionInput!
+) {
+  reverseLotteryBankTransaction(input: $input) {
+    item {
+      ...LotteryBankTransactionFields
+    }
+  }
+}
+
+query LotteryCashLedger($input: LotteryCashLedgerInput!) {
+  lotteryCashLedger(input: $input) {
+    vault {
+      amount
+      baselineAmount
+      baselineAt
+    }
+    items {
+      ...LotteryCashMovementFields
+    }
+    totalCount
+  }
+}
+
+query LotteryCashMovement($id: ID!) {
+  lotteryCashMovement(id: $id) {
+    item {
+      ...LotteryCashMovementFields
+    }
+  }
+}
+
+query LotterySettlement($moduleKey: String!, $refId: ID!) {
+  lotterySettlement(moduleKey: $moduleKey, refId: $refId) {
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+
+query LotteryOutstandingSettlements {
+  lotteryOutstandingSettlements {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+
+query LotterySettlementCandidates($input: LotterySettlementCandidatesInput!) {
+  lotterySettlementCandidates(input: $input) {
+    items {
+      ...LotteryOutstandingSettlementFields
+    }
+    totalCount
+  }
+}
+
+mutation RecordLotterySettlement($input: RecordLotterySettlementInput!) {
+  recordLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
+
+mutation ReverseLotterySettlement($input: ReverseLotterySettlementInput!) {
+  reverseLotterySettlement(input: $input) {
+    recordId
+    item {
+      ...LotterySettlementFields
+    }
+  }
+}
