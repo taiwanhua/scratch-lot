@@ -41,6 +41,7 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
+import { compareScheduleNames } from "../shared/schedule-sort";
 import type {
   AddScheduleStaffInput,
   ScheduleStaffListInput,
@@ -343,7 +344,7 @@ export class ScheduleStaffService {
       .toSorted(
         (left, right) =>
           left.sortOrder - right.sortOrder ||
-          left.name.localeCompare(right.name),
+          compareScheduleNames(left.name, right.name),
       );
   }
 
@@ -380,7 +381,7 @@ export class ScheduleStaffService {
       tenantId: org.tenantId,
       visibleOrgs,
       users: users.toSorted((left, right) =>
-        left.name.localeCompare(right.name),
+        compareScheduleNames(left.name, right.name),
       ),
     };
   }

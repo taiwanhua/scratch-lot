@@ -54,6 +54,7 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
+import { compareScheduleNames } from "../shared/schedule-sort";
 import type { ScheduleCandidate } from "../staff/schedule-candidates";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import {
@@ -249,7 +250,7 @@ const byTime = (
 ) =>
   left.date.localeCompare(right.date) ||
   (left.startTime ?? "").localeCompare(right.startTime ?? "") ||
-  (left.name ?? "").localeCompare(right.name ?? "");
+  compareScheduleNames(left.name ?? "", right.name ?? "");
 
 /**
  * 畫休(規格 14.1 `schedule_day_offs`、14.2 畫休規則、14.5 畫休總覽、14.6 我的畫休;
