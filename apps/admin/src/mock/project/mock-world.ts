@@ -9,6 +9,7 @@ import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
+import { purchaseList } from "@/test/msw/project/lottery/purchasing-data-fixtures";
 import {
   purchasingModules,
   requisitionFormWorld,
@@ -90,7 +91,13 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleDayOffsWorld().handlers,
     ...accountsWorld().handlers,
     ...scheduleRosterWorld().handlers,
-    ...purchasingWorld().handlers,
+    // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)
+    ...purchasingWorld({
+      purchaseList: purchaseList({
+        storeA: { id: "org-store" },
+        storeB: { id: "org-content" },
+      }),
+    }).handlers,
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨)

@@ -95,64 +95,65 @@ const branch = (orgId: string, books: number) => ({
   books,
 });
 
-/** Figma PU-03 的採購清單。 */
-export const purchaseList =
-  (): LotteryPurchaseListQuery["lotteryPurchaseList"] => {
-    const { storeA, storeB } = masterDataOrgs;
-    return {
-      __typename: "LotteryPurchaseList",
-      orgIds: [storeA.id, storeB.id],
-      rows: [
-        {
-          __typename: "LotteryPurchaseListRow",
-          gameId: "game-5133",
-          gameCode: "5133",
-          name: "招財貓",
-          unitPrice: 1000,
-          branches: [branch(storeB.id, 1)],
-          totalBooks: 1,
-          estimatedAmount: 23_000,
-        },
-        {
-          __typename: "LotteryPurchaseListRow",
-          gameId: "game-5164",
-          gameCode: "5164",
-          name: "發大財",
-          unitPrice: 200,
-          branches: [branch(storeA.id, 1), branch(storeB.id, 3)],
-          totalBooks: 4,
-          estimatedAmount: 73_600,
-        },
-        {
-          __typename: "LotteryPurchaseListRow",
-          gameId: "game-5201",
-          gameCode: "5201",
-          name: "金好運",
-          unitPrice: 200,
-          branches: [branch(storeA.id, 2), branch(storeB.id, 1)],
-          totalBooks: 3,
-          estimatedAmount: 55_200,
-        },
-      ],
-      requisitions: [
-        {
-          __typename: "LotteryPendingRequisition",
-          requisitionId: "sub-req-0022",
-          serialNo: "R-0022",
-          orgId: storeB.id,
-          books: 3,
-          estimatedAmount: 55_200,
-          completedAt: "2026-10-18T02:00:00.000Z",
-        },
-        {
-          __typename: "LotteryPendingRequisition",
-          requisitionId: "sub-req-0019",
-          serialNo: "R-0019",
-          orgId: storeA.id,
-          books: 2,
-          estimatedAmount: 41_400,
-          completedAt: "2026-10-16T02:00:00.000Z",
-        },
-      ],
-    };
+/** Figma PU-03 的採購清單;`stores` 換分店 id(mock 模式用底座組織樹上的分店,名稱才解得出來)。 */
+export const purchaseList = (
+  stores: { storeA: { id: string }; storeB: { id: string } } = masterDataOrgs,
+): LotteryPurchaseListQuery["lotteryPurchaseList"] => {
+  const { storeA, storeB } = stores;
+  return {
+    __typename: "LotteryPurchaseList",
+    orgIds: [storeA.id, storeB.id],
+    rows: [
+      {
+        __typename: "LotteryPurchaseListRow",
+        gameId: "game-5133",
+        gameCode: "5133",
+        name: "招財貓",
+        unitPrice: 1000,
+        branches: [branch(storeB.id, 1)],
+        totalBooks: 1,
+        estimatedAmount: 23_000,
+      },
+      {
+        __typename: "LotteryPurchaseListRow",
+        gameId: "game-5164",
+        gameCode: "5164",
+        name: "發大財",
+        unitPrice: 200,
+        branches: [branch(storeA.id, 1), branch(storeB.id, 3)],
+        totalBooks: 4,
+        estimatedAmount: 73_600,
+      },
+      {
+        __typename: "LotteryPurchaseListRow",
+        gameId: "game-5201",
+        gameCode: "5201",
+        name: "金好運",
+        unitPrice: 200,
+        branches: [branch(storeA.id, 2), branch(storeB.id, 1)],
+        totalBooks: 3,
+        estimatedAmount: 55_200,
+      },
+    ],
+    requisitions: [
+      {
+        __typename: "LotteryPendingRequisition",
+        requisitionId: "sub-req-0022",
+        serialNo: "R-0022",
+        orgId: storeB.id,
+        books: 3,
+        estimatedAmount: 55_200,
+        completedAt: "2026-10-18T02:00:00.000Z",
+      },
+      {
+        __typename: "LotteryPendingRequisition",
+        requisitionId: "sub-req-0019",
+        serialNo: "R-0019",
+        orgId: storeA.id,
+        books: 2,
+        estimatedAmount: 41_400,
+        completedAt: "2026-10-16T02:00:00.000Z",
+      },
+    ],
   };
+};
