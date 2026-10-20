@@ -74,15 +74,12 @@ export const ReportWorkspace = ({
   const [preview, setPreview] = useUrlState("preview", reportPreviewSchema);
 
   const conditions = resolveConditions(report, state, today);
-  const input = reportQueryInputOf(conditions, timezone);
+  const input = reportQueryInputOf(report, conditions, timezone);
   const canExport = hasPermission(REPORTS_PERMISSIONS.export);
   const isPreviewOpen = preview.open && input !== null;
 
   const name = t(report.name);
   const period = periodText(conditions.period);
-  const closePreview = () => {
-    setPreview({ open: false, sheet: 0 });
-  };
   const run = useReportRun({
     report,
     input,
@@ -90,6 +87,11 @@ export const ReportWorkspace = ({
     timezone,
     fileLabel: { name, period },
   });
+  /** 關預覽(返回條件、換報表、改條件):上一次匯出失敗的提示跟著清掉 */
+  const closePreview = () => {
+    setPreview({ open: false, sheet: 0 });
+    run.clearExportError();
+  };
 
   const changeConditions = (next: ResolvedReportConditions) => {
     setState(next);

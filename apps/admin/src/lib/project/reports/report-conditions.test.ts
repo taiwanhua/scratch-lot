@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   type ReportConditionsState,
+  type ResolvedReportConditions,
   reportQueryInputOf,
   resolveConditions,
 } from "./report-conditions";
@@ -69,7 +70,7 @@ describe("resolveConditions", () => {
     ).toEqual(["a", "b"]);
   });
 
-  it("其他條件:只留這種期間類型下有的;值型別不合或不是選項 → 預設", () => {
+  it("其他條件:留這張報表宣告的全部(含別種期間類型的);值型別不合或不是選項 → 預設、沒宣告的丟掉", () => {
     expect(
       resolveConditions(
         { conditions },
@@ -79,14 +80,52 @@ describe("resolveConditions", () => {
         }),
         TODAY,
       ).extra,
-    ).toEqual({ cashPoint: "all" });
+    ).toEqual({ alignDailyClose: true, cashPoint: "all" });
     expect(
       resolveConditions(
         { conditions },
-        state({ extra: { alignDailyClose: true, cashPoint: "counter" } }),
+        state({ extra: { alignDailyClose: "yes", cashPoint: "counter" } }),
         TODAY,
       ).extra,
-    ).toEqual({ alignDailyClose: true, cashPoint: "counter" });
+    ).toEqual({ alignDailyClose: false, cashPoint: "counter" });
+  });
+
+  it("日勾選 → 切週 → 切回日:勾選仍在(頁面每次把整理後的條件寫回網址)", () => {
+    // 照 ReportWorkspace 的流程:網址狀態 → resolveConditions → 改一個值 → 整包寫回網址
+    let url: ReportConditionsState = state({
+      period: { kind: "day", date: "2026-10-16" },
+      orgIds: ["a"],
+    });
+    const change = (
+      patch: (resolved: ResolvedReportConditions) => ResolvedReportConditions,
+    ) => {
+      url = patch(resolveConditions({ conditions }, url, TODAY));
+    };
+
+    change((resolved) => ({
+      ...resolved,
+      extra: { ...resolved.extra, alignDailyClose: true },
+    }));
+    change((resolved) => ({
+      ...resolved,
+      period: { kind: "week", date: resolved.period.date },
+    }));
+    const week = resolveConditions({ conditions }, url, TODAY);
+    expect(week.extra.alignDailyClose).toBe(true);
+    // 週的查詢不送「對齊日結」
+    expect(
+      reportQueryInputOf({ conditions }, week, "Asia/Taipei"),
+    ).not.toHaveProperty("alignDailyClose");
+
+    change((resolved) => ({
+      ...resolved,
+      period: { kind: "day", date: resolved.period.date },
+    }));
+    const day = resolveConditions({ conditions }, url, TODAY);
+    expect(day.extra.alignDailyClose).toBe(true);
+    expect(
+      reportQueryInputOf({ conditions }, day, "Asia/Taipei"),
+    ).toMatchObject({ alignDailyClose: true });
   });
 });
 
@@ -94,6 +133,7 @@ describe("reportQueryInputOf", () => {
   it("起訖換成租戶時區的時點,其他條件攤平進 input", () => {
     expect(
       reportQueryInputOf(
+        { conditions },
         {
           period: { kind: "day", date: "2026-10-16" },
           orgIds: ["a"],
@@ -107,12 +147,15 @@ describe("reportQueryInputOf", () => {
       to: "2026-10-16T16:00:00.000Z",
       orgIds: ["a"],
       alignDailyClose: true,
+      // 沒值的條件送預設
+      cashPoint: "all",
     });
   });
 
   it("沒選分店 → null(不能查)", () => {
     expect(
       reportQueryInputOf(
+        { conditions },
         { period: { kind: "day", date: TODAY }, orgIds: [], extra: {} },
         "Asia/Taipei",
       ),

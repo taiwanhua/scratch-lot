@@ -149,4 +149,72 @@ describe("輸出報表:預覽與匯出", () => {
       await screen.findByText(/期間或分店數超過這張報表的上限/),
     ).toBeInTheDocument();
   });
+
+  it("先預覽再從預覽匯出:Excel 用預覽那一份,api 只查一次", async () => {
+    const { user, fake } = renderReportsPage({
+      permissions: ["reports.operations", "reports.export"],
+      search: DAY_WITH_TWO_BRANCHES,
+    });
+    await user.click(await screen.findByRole("button", { name: "預覽" }));
+    const preview = await screen.findByRole("region", {
+      name: "營運報表 · 2026-10-16",
+    });
+    await within(preview).findByText("300");
+
+    await user.click(
+      within(preview).getByRole("button", { name: "匯出 Excel" }),
+    );
+    await waitFor(() => {
+      expect(downloads).toHaveLength(1);
+    });
+    expect(fake.inputs).toHaveLength(1);
+  });
+});
+
+describe("輸出報表:匯出失敗的提示", () => {
+  const failedExport = { code: "VALIDATION_FAILED", reason: "RANGE_TOO_LARGE" };
+  const alertText = /期間或分店數超過這張報表的上限/;
+
+  it("改條件就清掉", async () => {
+    const { user } = renderReportsPage({
+      permissions: ["reports.operations", "reports.export"],
+      search: DAY_WITH_TWO_BRANCHES,
+      fail: failedExport,
+    });
+    await user.click(await screen.findByRole("button", { name: "匯出 Excel" }));
+    expect(await screen.findByText(alertText)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "昨天" }));
+    await waitFor(() => {
+      expect(screen.queryByText(alertText)).not.toBeInTheDocument();
+    });
+    expect(downloads).toEqual([]);
+  });
+
+  it("關掉預覽([返回條件])就清掉", async () => {
+    const { user, fake } = renderReportsPage({
+      permissions: ["reports.operations", "reports.export"],
+      search: DAY_WITH_TWO_BRANCHES,
+      fail: failedExport,
+    });
+    await user.click(await screen.findByRole("button", { name: "預覽" }));
+    const preview = await screen.findByRole("region", {
+      name: "營運報表 · 2026-10-16",
+    });
+    expect(await screen.findByText(alertText)).toBeInTheDocument();
+
+    // 在預覽裡匯出也失敗(預覽沒有資料可用,匯出重查)
+    await user.click(
+      within(preview).getByRole("button", { name: "匯出 Excel" }),
+    );
+    await waitFor(() => {
+      expect(fake.inputs).toHaveLength(2);
+    });
+    expect(screen.getByText(alertText)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "返回條件" }));
+    await screen.findByRole("region", { name: "營運報表 · 條件" });
+    expect(screen.queryByText(alertText)).not.toBeInTheDocument();
+    expect(downloads).toEqual([]);
+  });
 });

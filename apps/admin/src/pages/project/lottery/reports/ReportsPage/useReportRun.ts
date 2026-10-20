@@ -39,11 +39,14 @@ export interface ReportRun {
   errorCode: ReportsErrorCode | null;
   isExporting: boolean;
   exportExcel: () => Promise<void>;
+  /** 清掉匯出失敗的錯誤(改條件、關預覽時;預覽查詢的錯誤跟著條件走,不必清) */
+  clearExportError: () => void;
 }
 
 /**
  * 跑一張報表:預覽用 TanStack Query 查(key / fetcher 都取報表登記的 codegen 查詢,DATA-01 / DATA-02),
- * 匯出時 `fetchQuery` 同一個 key(預覽查過就直接用快取)→ 工作表 → Excel 下載。
+ * 匯出時 `fetchQuery` 同一個 key → 工作表 → Excel 下載:從預覽按的匯出直接用預覽那份快取
+ * (`staleTime: Infinity`,Excel 就是畫面上那一份、不重打 api);預覽沒開(從條件區按)時 `staleTime: 0`,每次重查。
  * 預覽與 Excel 用同一個 `sheets` 函式,看到的就是匯出的內容。
  */
 export const useReportRun = ({
@@ -108,7 +111,11 @@ export const useReportRun = ({
     setIsExporting(true);
     setExportError(null);
     try {
-      const data = await queryClient.fetchQuery(queryOptions);
+      const data = await queryClient.fetchQuery({
+        ...queryOptions,
+        // 預覽開著 = 匯出畫面上那一份(同一個 key 已查過);沒開就重查
+        staleTime: isPreviewOpen ? Number.POSITIVE_INFINITY : 0,
+      });
       const exported = toSheets(data);
       if (exported !== null) {
         await downloadWorkbook({
@@ -131,5 +138,8 @@ export const useReportRun = ({
     errorCode: failure === null ? null : reportsErrorOf(failure).code,
     isExporting,
     exportExcel,
+    clearExportError: () => {
+      setExportError(null);
+    },
   };
 };

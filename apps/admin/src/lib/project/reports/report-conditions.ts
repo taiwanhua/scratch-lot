@@ -8,6 +8,7 @@ import {
 } from "./report-period";
 import {
   type ReportDefinition,
+  type ReportExtraCondition,
   type ReportExtraValue,
   type ReportQueryInput,
   defaultExtraValue,
@@ -36,12 +37,15 @@ export type ReportConditionsState = z.infer<typeof reportConditionsSchema>;
 export interface ResolvedReportConditions {
   period: ReportPeriodValue;
   orgIds: string[];
-  /** 只含這種期間類型下要顯示的其他條件 */
+  /**
+   * 這張報表**全部**其他條件的值(含只在別種期間類型出現的,切回來時值還在);
+   * 送查詢時才依期間類型過濾(`reportQueryInputOf`)
+   */
   extra: Record<string, ReportExtraValue>;
 }
 
 const extraValueOf = (
-  condition: ReturnType<typeof extraConditionsFor>[number],
+  condition: ReportExtraCondition,
   raw: ReportExtraValue | undefined,
 ): ReportExtraValue => {
   if (condition.type === "boolean") {
@@ -55,7 +59,8 @@ const extraValueOf = (
 
 /**
  * 網址條件 → 這張報表合法的條件:期間類型不在這張報表的清單就換成第一種、日期整理成期間起點
- * (空的代入今天)、分店超過上限只留前面的、其他條件只留這種期間類型下有的(值不合就用預設)。
+ * (空的代入今天)、分店超過上限只留前面的、其他條件留這張報表有宣告的(值不合就用預設;
+ * 只在別種期間類型出現的也留著,例:日的「對齊日結」切到週再切回日,勾選還在)。
  */
 export const resolveConditions = (
   report: Pick<ReportDefinition, "conditions">,
@@ -70,7 +75,7 @@ export const resolveConditions = (
     period: normalizePeriod({ kind, date: state.period.date }, today),
     orgIds: [...new Set(state.orgIds)].slice(0, conditions.orgs.max),
     extra: Object.fromEntries(
-      extraConditionsFor(conditions, kind).map((condition) => [
+      conditions.extra.map((condition) => [
         condition.key,
         extraValueOf(condition, state.extra[condition.key]),
       ]),
@@ -78,15 +83,27 @@ export const resolveConditions = (
   };
 };
 
-/** 整理後的條件 → 報表查詢的 input(起訖換成租戶時區的時點);還沒選分店 → `null`(不能查)。 */
+/**
+ * 整理後的條件 → 報表查詢的 input(起訖換成租戶時區的時點;其他條件只送這種期間類型下有的);
+ * 還沒選分店 → `null`(不能查)。
+ */
 export const reportQueryInputOf = (
+  report: Pick<ReportDefinition, "conditions">,
   resolved: ResolvedReportConditions,
   timezone: string,
 ): ReportQueryInput | null => {
   const range = reportPeriodRange(resolved.period, timezone);
   if (range === null || resolved.orgIds.length === 0) return null;
+  const extra = Object.fromEntries(
+    extraConditionsFor(report.conditions, resolved.period.kind).map(
+      (condition) => [
+        condition.key,
+        resolved.extra[condition.key] ?? defaultExtraValue(condition),
+      ],
+    ),
+  );
   return {
-    ...resolved.extra,
+    ...extra,
     periodKind: resolved.period.kind,
     from: range.from,
     to: range.to,

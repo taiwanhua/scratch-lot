@@ -75,7 +75,7 @@
 
 ### 條件放網址
 
-`report`(報表 key)、`conditions`(期間、分店、其他條件)、`preview`(預覽開著沒、第幾個工作表)都經 `useUrlState`(REACT-14)。網址的條件可能來自別張報表或被手改,畫面先整理成這張報表合法的值:期間類型不在清單 → 第一種;分店去重、超過上限只留前面的;其他條件只留這種期間類型下有的,值不合用預設(勾選 = 不勾、下拉 = 第一個選項)。改條件會關掉預覽。
+`report`(報表 key)、`conditions`(期間、分店、其他條件)、`preview`(預覽開著沒、第幾個工作表)都經 `useUrlState`(REACT-14)。網址的條件可能來自別張報表或被手改,畫面先整理成這張報表合法的值:期間類型不在清單 → 第一種;分店去重、超過上限只留前面的;其他條件留這張報表宣告的全部(只在別種期間類型出現的也留著,例:日勾了「對齊日結」,切到週再切回日仍勾著),值不合用預設(勾選 = 不勾、下拉 = 第一個選項),送查詢時才依期間類型過濾。改條件會關掉預覽,上一次匯出失敗的提示也一併清掉(關掉預覽時同樣清掉)。
 
 ### 分店上限與範圍檢查
 
@@ -98,6 +98,7 @@
 - Excel:每個工作表 A4、縮放成一頁寬(`fitToWidth: 1`、`fitToHeight: 0`)、每頁重複標題列(`printTitlesRow` = 第 1 列到表頭那一列;有表頭說明 `notes` 時說明列一起重複)。
 - 工作表名稱依 Excel 限制整理:去掉 `\ / ? * : [ ]`、最多 31 字、重名加「 (2)」。
 - exceljs 只在匯出時才載入(動態 import,獨立 chunk)。
+- 匯出的資料:從預覽按 [匯出 Excel] 直接用預覽那一份(`fetchQuery` 帶 `staleTime: Infinity`,不重打 api,Excel 就是畫面上那一份);從條件區按(預覽沒開)時每次重查(`staleTime: 0`)。
 - 檔名「報表名稱\_期間.xlsx」(例 `營運報表_2026-10-16.xlsx`)。
 
 ### 預覽
@@ -159,13 +160,13 @@ registerReport({
 
 ## admin 頁面
 
-| 檔案                                                            | 內容                                                            |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| `pages/project/lottery/reports/ReportsPage/ReportsPage.tsx`     | 依權限過濾報表、選報表(網址 `report`)                           |
-| `pages/project/lottery/reports/ReportsPage/ReportWorkspace.tsx` | 條件 ↔ 預覽、網址狀態 `conditions` / `preview`                  |
-| `pages/project/lottery/reports/ReportsPage/useReportRun.ts`     | 預覽查詢、匯出(同一個 query key,預覽查過就用快取)               |
-| `components/project/ReportPeriodPicker/`                        | 期間選擇器(日 / 週 / 月 + 快捷;`monthCaption` 給月份格子加註記) |
-| `components/project/SheetPreview/`                              | 工作表 → 表格的預覽                                             |
+| 檔案                                                            | 內容                                                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `pages/project/lottery/reports/ReportsPage/ReportsPage.tsx`     | 依權限過濾報表、選報表(網址 `report`)                                                      |
+| `pages/project/lottery/reports/ReportsPage/ReportWorkspace.tsx` | 條件 ↔ 預覽、網址狀態 `conditions` / `preview`                                             |
+| `pages/project/lottery/reports/ReportsPage/useReportRun.ts`     | 預覽查詢、匯出(同一個 query key;從預覽按匯出用預覽那份快取、不重查,從條件區按匯出每次重查) |
+| `components/project/ReportPeriodPicker/`                        | 期間選擇器(日 / 週 / 月 + 快捷;`monthCaption` 給月份格子加註記)                            |
+| `components/project/SheetPreview/`                              | 工作表 → 表格的預覽                                                                        |
 
 錯誤顯示在頁面上方(`Alert`),文案 `admin.lotteryReports.errors.<code>`。
 

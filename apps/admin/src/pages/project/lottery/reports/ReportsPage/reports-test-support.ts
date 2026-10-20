@@ -51,9 +51,10 @@ const ORG_TREE: TestOrgNode[] = [
   },
 ];
 
-/** 假伺服器記下的報表查詢 input;`fail` 給了就回那個錯誤。 */
+/** 假伺服器記下的報表查詢 input;`fail` 有值時回那個錯誤(測試中途可改,模擬「預覽成功、匯出失敗」)。 */
 export interface FixtureReportServer {
   inputs: Record<string, unknown>[];
+  fail: { code: string; reason?: string } | undefined;
 }
 
 export const renderReportsPage = ({
@@ -65,7 +66,7 @@ export const renderReportsPage = ({
   search?: string;
   fail?: { code: string; reason?: string };
 }) => {
-  const fake: FixtureReportServer = { inputs: [] };
+  const fake: FixtureReportServer = { inputs: [], fail };
   server.use(
     ...authWorld({
       hasRefreshCookie: true,
@@ -76,9 +77,9 @@ export const renderReportsPage = ({
     ),
     api.query("FixtureReport", ({ variables }) => {
       fake.inputs.push(variables.input as Record<string, unknown>);
-      if (fail !== undefined) {
+      if (fake.fail !== undefined) {
         return HttpResponse.json({
-          errors: [{ message: "fail", extensions: fail }],
+          errors: [{ message: "fail", extensions: fake.fail }],
         });
       }
       const orgIds = (variables.input as { orgIds: string[] }).orgIds;
