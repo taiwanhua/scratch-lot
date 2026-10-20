@@ -12,7 +12,14 @@ import path from "node:path";
 
 import { describe, expect, it } from "@jest/globals";
 
+import { PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS } from "./database.module";
 import { TENANT_BOUNDARY_CONTEXT_CALLERS } from "./tenant-boundary-context";
+
+/** 底座與專案兩份登記合併(專案的登記在 `project/database/tenant-boundary-callers.ts`)。 */
+const ALL_CALLERS = {
+  ...TENANT_BOUNDARY_CONTEXT_CALLERS,
+  ...PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS,
+};
 
 const SRC_ROOT = path.resolve(__dirname, "..");
 
@@ -49,14 +56,27 @@ const byPath = (left: string, right: string): number =>
  * 排程 / 系統重算)。底層的 `systemTenantReader` 只准由 `tenant-boundary-context.ts` 引用。
  */
 describe("租戶邊界上下文的呼叫端登記(依 import 來源)", () => {
-  it("import tenant-boundary-context 的檔案都在登記清單內", () => {
+  it("import tenant-boundary-context 的檔案都在底座或專案的登記清單內", () => {
     expect(filesImporting(SRC_ROOT, "tenant-boundary-context")).toEqual(
-      Object.keys(TENANT_BOUNDARY_CONTEXT_CALLERS).toSorted(byPath),
+      Object.keys(ALL_CALLERS).toSorted(byPath),
     );
   });
 
+  it("底座清單不登記 project/ 的檔案;專案清單只登記 project/ 的檔案", () => {
+    expect(
+      Object.keys(TENANT_BOUNDARY_CONTEXT_CALLERS).filter((file) =>
+        file.startsWith("project/"),
+      ),
+    ).toEqual([]);
+    expect(
+      Object.keys(PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS).filter(
+        (file) => !file.startsWith("project/"),
+      ),
+    ).toEqual([]);
+  });
+
   it("每一筆都有用途", () => {
-    for (const purposes of Object.values(TENANT_BOUNDARY_CONTEXT_CALLERS)) {
+    for (const purposes of Object.values(ALL_CALLERS)) {
       expect(purposes.length).toBeGreaterThan(0);
     }
   });

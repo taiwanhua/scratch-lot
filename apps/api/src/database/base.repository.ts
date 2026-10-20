@@ -584,6 +584,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    * **必須在交易內**(`TransactionService.withTransaction`,或明給進行中交易的 session):底層是 ordered
    * `insertMany`,寫到一半撞到唯一索引時要靠交易回復前面已寫的,不在交易內 → `TenantScopeError`。
    * 同一個組織的租戶推導與同一份共用清單的檢查只查一次(1,000 筆不必查 1,000 次組織)。
+   *
+   * **schema 自訂了 `pre("save")` 的表不要用**:`insertMany` 不跑 save 中介層,那些 hook 不會執行
+   * (基礎欄位的建立者 / 更新者由這裡自己填;租戶 plugin 的 save hook 只擋「更新既有文件」,新建不受影響)。
    */
   async createMany(
     operator: OperatorContext,
@@ -676,7 +679,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    * - 有 `tenantId` 欄的表照新組織重新推導 `tenantId`(同租戶,值不變)
    * - 條件更新:`filter` 可帶版本 / 狀態等條件;`options.update` 同一次寫入順便改其他欄位
    * - 寫一筆稽核(`data.reassign-org`:誰、哪張表哪一筆、從哪個組織搬到哪個組織),與搬家同一個 session
-   * - 呼叫端登記在 `ORG_REASSIGN_CALLERS`,由測試掃 src 鎖定
+   * - **必須在交易內**(搬家與稽核要一起成功或一起回復),不在交易內 → `TenantScopeError`
+   * - 已經在新組織(搬到原本所在的組織):冪等,不寫入、不記稽核,直接回那一筆
+   * - 呼叫端登記在 `ORG_REASSIGN_CALLERS`(底座)/ `PROJECT_ORG_REASSIGN_CALLERS`(專案),由測試掃 src 鎖定
    */
   async reassignOrg(
     operator: OperatorContext,
@@ -695,21 +700,27 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
         `${this.model.modelName}:搬家要寫稽核,需要操作者`,
       );
     }
+    const session = sessionOf(options);
+    if (session?.inTransaction() !== true) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:reassignOrg 必須在交易內(搬家與稽核一起成功或一起回復)`,
+      );
+    }
     const extra: RepositoryUpdate<TSchema> = options.update ?? {};
     const shared = await this.prepareUpdate(operator, filter, extra, options);
-    const session = sessionOf(options);
     const target = await reassignTargetOf(this.model.db, newOrgId, session);
-    const current = await scopeQuery(
-      this.model
-        .findOne({ ...shared.filter }, { orgId: 1 })
-        .lean<{ _id: Types.ObjectId; orgId: Types.ObjectId } | null>(),
-      { operator },
-    )
+    const found = await scopeQuery(this.model.findOne({ ...shared.filter }), {
+      operator,
+    })
       .session(session)
       .exec();
-    if (!current) {
+    if (!found) {
       return null;
     }
+    const current = found as Persisted<TDocument> & {
+      _id: Types.ObjectId;
+      orgId: Types.ObjectId;
+    };
     const fromOrgId = current.orgId;
     const fromTenant = await currentTenantOf(
       this.model.db,
@@ -723,7 +734,8 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       );
     }
     if (fromOrgId.equals(target.orgId)) {
-      throw orgReassignValidationError("data already belongs to that org");
+      // 已經在那裡:冪等,不寫入、不記稽核(重送同一個搬家請求不會多一筆稽核)
+      return current;
     }
     const moved: Record<string, unknown> = {
       orgId: target.orgId,
@@ -989,18 +1001,12 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
 ];
 
 /**
- * **允許呼叫租戶邊界出口(`existsInTenant` / `findRefsInTenant`)的檔案**(相對 `apps/api/src/`;
- * ADR-0005「例外出口」)。`exists-any-callers.test.ts` 掃整個 src 斷言沒有其他檔案呼叫它們 ——
- * 新增呼叫端要先在 ADR-0005 登記、再加進這裡。
+ * **允許呼叫租戶邊界出口(`existsInTenant` / `findRefsInTenant`)的底座檔案**(相對 `apps/api/src/`;
+ * ADR-0005「例外出口」)。專案的呼叫端登記在專案入口 `project/database/tenant-boundary-callers.ts`,不改這份。
+ * `exists-any-callers.test.ts` 合併兩份清單掃整個 src 斷言沒有其他檔案呼叫它們 ——
+ * 新增呼叫端要先在 ADR-0005 確認用途、再加進對應的清單。
  */
-export const TENANT_BOUNDARY_CALLERS: readonly string[] = [
-  "project/lottery/cash-points/cash-points.service.ts",
-  "project/lottery/dealers/dealer-contacts.service.ts",
-  "project/lottery/dealers/dealer-links.service.ts",
-  "project/lottery/dealers/dealer-view.service.ts",
-  "project/lottery/dealers/dealers.service.ts",
-  "project/lottery/games/games.service.ts",
-];
+export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
 
 /**
  * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
@@ -1014,9 +1020,9 @@ function sessionOf(options: SessionOptions): ClientSession | null {
 }
 
 /**
- * **允許呼叫搬家(`reassignOrg`)的檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」)。
- * `exists-any-callers.test.ts` 以呼叫語法(`.reassignOrg(`)掃整個 src 斷言沒有其他檔案呼叫它 ——
- * 新增呼叫端要先在 ADR-0005 登記、再加進這裡(專案的呼叫端也登記在這份,同 `TENANT_BOUNDARY_CALLERS`)。
+ * **允許呼叫搬家(`reassignOrg`)的底座檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」)。
+ * 專案的呼叫端登記在專案入口 `project/database/org-reassign-callers.ts`,不改這份。
+ * `exists-any-callers.test.ts` 合併兩份清單、以呼叫語法(`.reassignOrg(`)掃整個 src 斷言沒有其他檔案呼叫它。
  */
 export const ORG_REASSIGN_CALLERS: readonly string[] = [];
 

@@ -172,7 +172,33 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
       .toArray();
   }
 
+  /** 搬家必須在交易內:測試一律包一層交易(同正式呼叫端)。 */
+  const reassign: Repo["reassignOrg"] = (...args) =>
+    transactions.withTransaction(() => items.reassignOrg(...args));
+
   describe("搬家(reassignOrg)", () => {
+    it("不在交易內 → TenantScopeError(搬家與稽核要一起成功或一起回復)", async () => {
+      const item = await items.create(asB1, { name: "交易外搬家" });
+      await expect(
+        items.reassignOrg(asB1, { _id: item._id }, B2),
+      ).rejects.toThrow(TenantScopeError);
+      expect(await orgOf(asB1, item._id)).toBe(String(B1));
+    });
+
+    it("搬到原本所在的組織:冪等,不寫入、不記稽核,回原文件", async () => {
+      const item = await items.create(asB1, { name: "原地搬家" });
+      const same = await reassign(asB1, { _id: item._id }, B1, {
+        update: { $inc: { editVersion: 1 } },
+      });
+      expect(String(same?._id)).toBe(String(item._id));
+      expect(String(same?.orgId)).toBe(String(B1));
+      expect(same?.editVersion).toBe(0);
+      const reread = await items.findById(asB1, item._id);
+      expect(reread?.editVersion).toBe(0);
+      expect(String(reread?.updatedAt)).toBe(String(item.updatedAt));
+      expect(await auditsOf(item._id)).toHaveLength(0);
+    });
+
     it("一般更新帶 orgId 仍拋錯", async () => {
       const item = await items.create(asB1, { name: "一般更新" });
       await expect(
@@ -184,13 +210,13 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
     });
 
     it("搬到看不到的同租戶分店可以:搬完舊店看不到、新店看得到,tenantId 不變,稽核一筆(誰、從哪到哪)", async () => {
-      const item = await items.create(asB1, { name: "調貨一" });
-      const moved = await items.reassignOrg(asB1, { _id: item._id }, B2);
+      const item = await items.create(asB1, { name: "搬家一" });
+      const moved = await reassign(asB1, { _id: item._id }, B2);
       expect(moved?.orgId.equals(B2)).toBe(true);
       expect(moved?.tenantId?.equals(T)).toBe(true);
       expect(await items.findById(asB1, item._id)).toBeNull();
       const atNewStore = await items.findById(asB2, item._id);
-      expect(atNewStore?.name).toBe("調貨一");
+      expect(atNewStore?.name).toBe("搬家一");
       const audits = await auditsOf(item._id);
       expect(audits).toHaveLength(1);
       expect(String(audits[0]?.actorId)).toBe(String(asB1.actorId));
@@ -201,7 +227,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
 
     it("可見範圍外的資料搬不了(回 null、不寫稽核)", async () => {
       const item = await items.create(asB2, { name: "別店的" });
-      expect(await items.reassignOrg(asB1, { _id: item._id }, B1)).toBeNull();
+      expect(await reassign(asB1, { _id: item._id }, B1)).toBeNull();
       expect(await orgOf(asB2, item._id)).toBe(String(B2));
       expect(await auditsOf(item._id)).toHaveLength(0);
     });
@@ -209,9 +235,11 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
     it("搬到別租戶、根組織、不存在的組織 → VALIDATION_FAILED(orgId),資料不動", async () => {
       const item = await items.create(asB1, { name: "不准搬" });
       for (const target of [U1, U, root, new Types.ObjectId(), "not-an-id"]) {
-        const error: unknown = await items
-          .reassignOrg(asB1, { _id: item._id }, target)
-          .catch((error_: unknown) => error_);
+        const error: unknown = await reassign(
+          asB1,
+          { _id: item._id },
+          target,
+        ).catch((error_: unknown) => error_);
         expect(isValidationFailed(error, "orgId")).toBe(true);
       }
       expect(await orgOf(asB1, item._id)).toBe(String(B1));
@@ -220,15 +248,15 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
 
     it("別租戶的人搬不到本租戶的資料(看不到 = null)", async () => {
       const item = await items.create(asB1, { name: "別租戶的人" });
-      expect(await items.reassignOrg(asU1, { _id: item._id }, B2)).toBeNull();
+      expect(await reassign(asU1, { _id: item._id }, B2)).toBeNull();
     });
 
     it("條件更新:版本不符回 null;符合時同一次寫入改其他欄位;options.update 不得碰 orgId / tenantId", async () => {
       const item = await items.create(asB1, { name: "條件搬" });
       expect(
-        await items.reassignOrg(asB1, { _id: item._id, editVersion: 9 }, B2),
+        await reassign(asB1, { _id: item._id, editVersion: 9 }, B2),
       ).toBeNull();
-      const moved = await items.reassignOrg(
+      const moved = await reassign(
         asB1,
         { _id: item._id, editVersion: 0 },
         B2,
@@ -238,7 +266,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
       expect(moved?.editVersion).toBe(1);
       const other = await items.create(asB1, { name: "偷改租戶" });
       await expect(
-        items.reassignOrg(asB1, { _id: other._id }, B2, {
+        reassign(asB1, { _id: other._id }, B2, {
           update: { $set: { tenantId: U } },
         }),
       ).rejects.toThrow(TenantScopeError);

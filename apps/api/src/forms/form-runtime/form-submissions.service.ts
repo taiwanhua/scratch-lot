@@ -943,7 +943,6 @@ export class FormSubmissionsService {
       submission: record,
       values,
     });
-    await this.assignSerialNo(facts, record, expectedEditVersion, at);
     if (route.kind === "workflow") {
       await this.workflowSubmit.submit(
         facts.operator,
@@ -952,6 +951,8 @@ export class FormSubmissionsService {
         { values, summary, ctx, at },
         route,
       );
+      // 單號放在最後才取(驗證、守門與送審的寫入都過了):持有計數器寫鎖的時間最短
+      await this.assignSerialNoAfterSubmit(facts, record, at);
       await this.audit.record(facts.operator, {
         action: SUBMISSION_AUDIT.submit,
         targetType: SUBMISSION_TARGET,
@@ -967,7 +968,9 @@ export class FormSubmissionsService {
       });
       return this.reloadOwn(facts, record);
     }
-    // 不走流程:完成、修訂、事後動作與稽核在同一個交易(走流程的寫入由 WorkflowSubmitService 負責)
+    // 不走流程:完成、修訂、事後動作與稽核在同一個交易(走流程的寫入由 WorkflowSubmitService 負責)。
+    // 單號在寫入前最後一步才取,與完成同一次寫入(持有計數器寫鎖的時間最短)
+    const serialNo = await this.serialNoToGive(facts, record, at);
     const updated = await this.submissions.findOwnAndUpdate(
       facts.operator,
       {
@@ -983,6 +986,7 @@ export class FormSubmissionsService {
           revision: 1,
           revisions: [{ revision: 1, version: record.version, values, ctx }],
           submittedAt: at,
+          ...(serialNo === null ? {} : { serialNo }),
         },
         $inc: { editVersion: 1 },
       },
@@ -1995,39 +1999,46 @@ export class FormSubmissionsService {
 
   /**
    * **單號**:表單設了單號格式、這筆還沒有號 → 第一次送出時給號(`SerialService`,`form:<formKey>`,
-   * 依提交歸屬組織的租戶計數、送出時點以租戶時區切期間)。與送出同一個交易:送出失敗,號碼一起回復。
-   * 已經有號(退回 / 撤回後再送)不換號;不動 `editVersion`(同一次送出後面的寫入照常帶預期值)。
+   * 依提交歸屬組織的租戶計數、送出時點以租戶時區切期間);已經有號(退回 / 撤回後再送)或表單沒設格式 → null。
+   * 在送出的交易內、**其他驗證與寫入之後**才呼叫(取號會持有計數器的寫鎖到交易結束);送出失敗,號碼一起回復。
    */
-  private async assignSerialNo(
+  private async serialNoToGive(
     facts: FormOperatorFacts,
     record: SubmissionRecord,
-    expectedEditVersion: number,
     at: Date,
-  ): Promise<void> {
+  ): Promise<string | null> {
     if ((record.serialNo ?? null) !== null) {
-      return;
+      return null;
     }
     const form = await this.forms.findOne(facts.operator, {
       key: record.formKey,
     });
     const format = normalizeSerialFormat(form?.serial ?? null);
     if (format === null) {
+      return null;
+    }
+    return this.serials.next(facts.operator, `form:${record.formKey}`, format, {
+      at,
+      orgId: record.orgId,
+    });
+  }
+
+  /**
+   * 走流程的送出:送審寫入(`WorkflowSubmitService`)之後才給號,另寫一次 `serialNo`
+   * (條件 `serialNo = null`,不動 `editVersion`)。同一個交易內,沒寫到 = 有人同時改了這一筆 → 409。
+   */
+  private async assignSerialNoAfterSubmit(
+    facts: FormOperatorFacts,
+    record: SubmissionRecord,
+    at: Date,
+  ): Promise<void> {
+    const serialNo = await this.serialNoToGive(facts, record, at);
+    if (serialNo === null) {
       return;
     }
-    const serialNo = await this.serials.next(
-      facts.operator,
-      `form:${record.formKey}`,
-      format,
-      { at, orgId: record.orgId },
-    );
     const updated = await this.submissions.findOwnAndUpdate(
       facts.operator,
-      {
-        _id: record._id,
-        status: record.status,
-        editVersion: expectedEditVersion,
-        serialNo: null,
-      },
+      { _id: record._id, serialNo: null },
       { $set: { serialNo } },
     );
     if (!updated) {
@@ -2036,7 +2047,6 @@ export class FormSubmissionsService {
         "EDIT_VERSION_MISMATCH",
       );
     }
-    record.serialNo = serialNo;
   }
 
   /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */

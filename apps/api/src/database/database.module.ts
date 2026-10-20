@@ -49,6 +49,18 @@ export * from "./base/repositories";
  */
 export { PROJECT_ELEVATED_CONTEXT_FILES } from "../project/database/elevated-contexts";
 
+/** 專案登記的搬家呼叫端(`project/database/org-reassign-callers.ts`):同上,只給 `exists-any-callers.test.ts` 比對。 */
+export { PROJECT_ORG_REASSIGN_CALLERS } from "../project/database/org-reassign-callers";
+
+/**
+ * 專案登記的租戶邊界出口 / 租戶邊界上下文呼叫端(`project/database/tenant-boundary-callers.ts`):
+ * 同上,只給 `exists-any-callers.test.ts`、`tenant-boundary-context.test.ts` 比對。
+ */
+export {
+  PROJECT_TENANT_BOUNDARY_CALLERS,
+  PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS,
+} from "../project/database/tenant-boundary-callers";
+
 /**
  * 無租戶原型的精確豁免清單(docs/concepts/data-layer-and-isolation.md「底座與專案資料的組裝」):
  * 底座沒有任何例外,每張專案 model 都要掛租戶 plugin、經 BaseRepository、有組織歸屬檢查。

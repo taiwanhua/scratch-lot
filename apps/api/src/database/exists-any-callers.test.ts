@@ -17,6 +17,10 @@ import {
   ORG_REASSIGN_CALLERS,
   TENANT_BOUNDARY_CALLERS,
 } from "./base.repository";
+import {
+  PROJECT_ORG_REASSIGN_CALLERS,
+  PROJECT_TENANT_BOUNDARY_CALLERS,
+} from "./database.module";
 
 const SRC_ROOT = path.resolve(__dirname, "..");
 
@@ -77,10 +81,21 @@ describe("租戶邊界出口的呼叫端登記", () => {
       .filter((file) => file !== "database/base.repository.ts")
       .toSorted((left, right) => left.localeCompare(right));
     expect(callers).toEqual(
-      [...TENANT_BOUNDARY_CALLERS].toSorted((left, right) =>
-        left.localeCompare(right),
+      [...TENANT_BOUNDARY_CALLERS, ...PROJECT_TENANT_BOUNDARY_CALLERS].toSorted(
+        (left, right) => left.localeCompare(right),
       ),
     );
+  });
+
+  it("底座清單不登記 project/ 的檔案;專案清單只登記 project/ 的檔案", () => {
+    expect(
+      TENANT_BOUNDARY_CALLERS.filter((file) => file.startsWith("project/")),
+    ).toEqual([]);
+    expect(
+      PROJECT_TENANT_BOUNDARY_CALLERS.filter(
+        (file) => !file.startsWith("project/"),
+      ),
+    ).toEqual([]);
   });
 
   it("略過可見範圍的租戶邊界旗標只在資料層內出現(只能經那兩個方法設定)", () => {
@@ -129,12 +144,23 @@ function reassignCallersUnder(root: string): string[] {
  * 以呼叫語法掃,只准登記過的檔案呼叫。
  */
 describe("搬家(reassignOrg)的呼叫端登記", () => {
-  it("正式程式碼裡呼叫 reassignOrg 的檔案都在登記清單內", () => {
+  it("正式程式碼裡呼叫 reassignOrg 的檔案都在底座或專案的登記清單內", () => {
     expect(reassignCallersUnder(SRC_ROOT)).toEqual(
-      [...ORG_REASSIGN_CALLERS].toSorted((left, right) =>
-        left.localeCompare(right),
+      [...ORG_REASSIGN_CALLERS, ...PROJECT_ORG_REASSIGN_CALLERS].toSorted(
+        (left, right) => left.localeCompare(right),
       ),
     );
+  });
+
+  it("底座清單不登記 project/ 的檔案;專案清單只登記 project/ 的檔案", () => {
+    expect(
+      ORG_REASSIGN_CALLERS.filter((file) => file.startsWith("project/")),
+    ).toEqual([]);
+    expect(
+      PROJECT_ORG_REASSIGN_CALLERS.filter(
+        (file) => !file.startsWith("project/"),
+      ),
+    ).toEqual([]);
   });
 
   it("新增一個未登記的呼叫端時掃描會抓到(暫存目錄裡放一份呼叫、一份只在註解提到)", () => {
