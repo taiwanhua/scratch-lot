@@ -150,7 +150,10 @@ export class FormSubmission {
   @Prop({ type: Boolean, default: false })
   blocked!: boolean;
 
-  /** 作廢時間 / 操作者 / 理由(`voided`)。 */
+  /**
+   * 作廢時間 / 操作者 / 理由(`voided`)。表單設了作廢原因類別時:`voidReasonKey` / `voidReasonLabel` = 選的選項值與
+   * 作廢當下的選項名稱,`voidReason` = 說明(可空;選「其他」時必填);沒設類別時只有 `voidReason`(自由文字,必填)。
+   */
   @Prop({ type: Date, default: null })
   voidedAt!: Date | null;
 
@@ -159,6 +162,12 @@ export class FormSubmission {
 
   @Prop({ type: String, default: null })
   voidReason!: string | null;
+
+  @Prop({ type: String, default: null })
+  voidReasonKey!: string | null;
+
+  @Prop({ type: String, default: null })
+  voidReasonLabel!: string | null;
 
   /** 「複製為新單」建出的那筆(選填)。 */
   @Prop({ type: Types.ObjectId, default: null })

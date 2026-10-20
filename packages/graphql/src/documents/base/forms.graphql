@@ -31,6 +31,8 @@ fragment FormFields on FormModel {
     digits
     separator
   }
+  # 作廢原因的欄位管理類別 key;null = 作廢原因自由填寫
+  voidReasonCategoryKey
   hasDraft
   # 站在租戶內時本租戶的開關;root 視角為 null
   tenantEnabled
@@ -121,8 +123,9 @@ mutation CreateForm($input: CreateFormInput!) {
   }
 }
 
-# UpdateFormInput: { key, name?, tabLabelTemplate?, allowDraft?, serial? };tabLabelTemplate 缺席 = 不動、null = 清空;
-# allowDraft 缺席 / null = 不動;serial 缺席 = 不動、null = 不給號(已給的號不收回)
+# UpdateFormInput: { key, name?, tabLabelTemplate?, allowDraft?, serial?, voidReasonCategoryKey? };tabLabelTemplate 缺席 = 不動、null = 清空;
+# allowDraft 缺席 / null = 不動;serial 缺席 = 不動、null = 不給號(已給的號不收回);
+# voidReasonCategoryKey 缺席 = 不動、null / 空白 = 清空(作廢原因自由填寫),要是存在的類別
 mutation UpdateForm($input: UpdateFormInput!) {
   updateForm(input: $input) {
     form {

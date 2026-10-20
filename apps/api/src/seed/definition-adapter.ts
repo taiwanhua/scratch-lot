@@ -67,6 +67,8 @@ export interface IdentityMetadata {
   allowDraft?: boolean;
   /** 單號格式;缺席 / null = 不給號(流程、這個欄位之前的安裝快照)。 */
   serial?: SerialFormat | null;
+  /** 作廢原因類別;缺席 / null = 自由填寫(流程、這個欄位之前的安裝快照)。 */
+  voidReasonCategoryKey?: string | null;
 }
 
 /** 條件更新 metadata 的前置狀態:哪一筆定義、當時的目前版本與 metadata。 */
@@ -85,7 +87,9 @@ export function isSameIdentityMetadata(
     (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null) &&
     (left.allowDraft ?? true) === (right.allowDraft ?? true) &&
     JSON.stringify(normalizeSerialFormat(left.serial ?? null)) ===
-      JSON.stringify(normalizeSerialFormat(right.serial ?? null))
+      JSON.stringify(normalizeSerialFormat(right.serial ?? null)) &&
+    (left.voidReasonCategoryKey ?? null) ===
+      (right.voidReasonCategoryKey ?? null)
   );
 }
 

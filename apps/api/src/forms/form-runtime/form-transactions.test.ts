@@ -120,7 +120,7 @@ describe("表單提交的交易(存草稿、刪除、複製為新單)", () => {
       input: {
         id: submitted.id,
         expectedEditVersion: approved.editVersion,
-        reason: "重來",
+        reasonNote: "重來",
       },
     });
     return approved;

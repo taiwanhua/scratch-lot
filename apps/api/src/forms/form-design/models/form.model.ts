@@ -129,6 +129,10 @@ export class FormModel {
   @Field(() => FormSerialFormat, { nullable: true })
   serial!: FormSerialFormat | null;
 
+  /** 作廢原因的欄位管理類別 key(表單設定);null = 作廢原因自由填寫。 */
+  @Field(() => String, { nullable: true })
+  voidReasonCategoryKey!: string | null;
+
   /** 有一份草稿(版本面板的「編輯草稿」)。 */
   @Field(() => Boolean)
   hasDraft!: boolean;

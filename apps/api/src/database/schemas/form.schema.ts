@@ -72,6 +72,21 @@ export class Form {
    */
   @Prop({ type: MongooseSchema.Types.Mixed, default: null })
   serial?: SerialFormat | null;
+
+  /**
+   * 作廢原因的欄位管理類別 key(表單設定;`docs/modules/forms.md`「作廢原因」):有值 = 作廢時原因從該類別的
+   * 啟用選項下拉挑(選項值 `other` = 「其他」,說明必填);null / 缺席 = 作廢原因自由填寫。
+   */
+  @Prop({ type: String, default: null })
+  voidReasonCategoryKey?: string | null;
+}
+
+/** 表單的作廢原因類別:缺席(舊資料)/ 空白 = 沒設(自由填寫)。 */
+export function voidReasonCategoryOf(form: {
+  voidReasonCategoryKey?: string | null;
+}): string | null {
+  const key = form.voidReasonCategoryKey?.trim() ?? "";
+  return key === "" ? null : key;
 }
 
 /** 表單允不允許存草稿:缺席(舊資料)視為開。 */

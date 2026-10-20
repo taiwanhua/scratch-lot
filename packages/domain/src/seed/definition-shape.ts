@@ -3,7 +3,7 @@
  * 來源可能是跨程序的 JSON 或手改的匯出檔,型別保證不了,所以輸入是 `unknown`。
  * 業務內容(欄位、關卡)的檢查在可攜性檢查與既有定義檢查器。
  */
-import { FORM_KEY_PATTERN } from "../form/keys";
+import { FORM_KEY_PATTERN, isValidFieldCategoryKey } from "../form/keys";
 import { serialFormatIssues } from "../form/serial";
 import {
   SeedSerializationError,
@@ -43,6 +43,7 @@ const TOP_LEVEL_KEYS: Readonly<
     "tabLabelTemplate",
     "allowDraft",
     "serial",
+    "voidReasonCategoryKey",
   ],
   "workflow-definition": [...COMMON_KEYS, "checkFormKey"],
 };
@@ -121,6 +122,20 @@ function nullableStringIssues(
     : [{ path: key, detail: `${key} 必填;要清空請明寫 null` }];
 }
 
+/** 作廢原因類別:缺席合格;有寫就要是欄位管理類別 key。 */
+function voidReasonCategoryIssues(value: unknown): DefinitionSeedShapeIssue[] {
+  return value === undefined ||
+    (typeof value === "string" && isValidFieldCategoryKey(value))
+    ? []
+    : [
+        {
+          path: "voidReasonCategoryKey",
+          detail:
+            "voidReasonCategoryKey 必須是欄位管理類別 key(小寫英數與連字號);缺席 = 作廢原因自由填寫",
+        },
+      ];
+}
+
 function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
   const issues = nullableStringIssues(seed, "tabLabelTemplate");
   if (seed.allowDraft !== undefined && typeof seed.allowDraft !== "boolean") {
@@ -137,6 +152,7 @@ function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
       });
     }
   }
+  issues.push(...voidReasonCategoryIssues(seed.voidReasonCategoryKey));
   if (!isNonBlankString(seed.moduleKey)) {
     issues.push({ path: "moduleKey", detail: "moduleKey 必填" });
   }

@@ -64,7 +64,11 @@ fragment FormSubmissionFields on FormSubmissionModel {
   # 實例被阻擋時 true(列表 chip「審核中(待處理)」)
   blocked
   voidedAt
+  # 作廢說明(表單沒設作廢原因類別時 = 自由文字理由)
   voidReason
+  # 作廢原因的選項值與作廢當下的名稱(表單設了作廢原因類別時)
+  voidReasonKey
+  voidReasonLabel
   replacedById
   copiedFrom
   # 使用者碰過的欄位(草稿填寫時:沒碰過的欄位依賴變動會重算預設值)
@@ -265,6 +269,17 @@ query FormFieldOptions($input: FormFieldOptionsInput!) {
     totalCount
     page
     pageSize
+  }
+}
+
+# 作廢對話框的原因選項:categoryKey = 表單設定的作廢原因類別(null = 自由填寫、items 為空);不需要欄位管理的權限
+query FormVoidReasonOptions($formKey: ID!) {
+  formVoidReasonOptions(formKey: $formKey) {
+    categoryKey
+    items {
+      value
+      label
+    }
   }
 }
 

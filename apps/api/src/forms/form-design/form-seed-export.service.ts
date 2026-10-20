@@ -4,7 +4,10 @@ import { type FormDefinition, normalizeSerialFormat } from "@repo/domain/form";
 import type { FormDefinitionSeedSet } from "@repo/domain/seed";
 
 import { FormVersionsRepository } from "../../database/database.module";
-import { allowsDraft } from "../../database/schemas/form.schema";
+import {
+  allowsDraft,
+  voidReasonCategoryOf,
+} from "../../database/schemas/form.schema";
 import {
   FormAccessService,
   type FormOperatorFacts,
@@ -80,6 +83,7 @@ export class FormSeedExportService {
       );
     }
     const serial = normalizeSerialFormat(form.serial ?? null);
+    const voidReasonCategory = voidReasonCategoryOf(form);
     const seed: FormDefinitionSeedSet = {
       kind: "form-definition",
       key: form.key,
@@ -93,6 +97,10 @@ export class FormSeedExportService {
       ...(allowsDraft(form) ? {} : { allowDraft: false }),
       // 單號格式:有設才寫(缺席 = 不給號)
       ...(serial === null ? {} : { serial }),
+      // 作廢原因類別:有設才寫(缺席 = 自由填寫)
+      ...(voidReasonCategory === null
+        ? {}
+        : { voidReasonCategoryKey: voidReasonCategory }),
       definition: toPlainJson<FormDefinition>({
         fields: version.fields,
         layout: version.layout,

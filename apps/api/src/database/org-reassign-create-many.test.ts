@@ -72,6 +72,20 @@ function staffOf(...orgs: Types.ObjectId[]): OperatorContext {
   };
 }
 
+/** 清單的第一筆;空清單 → 拋錯(測試資料沒建起來)。 */
+function firstOf<TValue>(values: readonly TValue[]): TValue {
+  const [value] = values;
+  if (value === undefined) {
+    throw new Error("清單是空的");
+  }
+  return value;
+}
+
+/** id 字串排序(比對「同一批」用,不看順序)。 */
+function sorted(values: readonly string[]): string[] {
+  return values.toSorted((left, right) => left.localeCompare(right));
+}
+
 function isValidationFailed(error: unknown, field: string): boolean {
   return (
     error instanceof GraphQLError &&
@@ -175,6 +189,37 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
   /** 搬家必須在交易內:測試一律包一層交易(同正式呼叫端)。 */
   const reassign: Repo["reassignOrg"] = (...args) =>
     transactions.withTransaction(() => items.reassignOrg(...args));
+
+  /** 批次搬家同樣一律包一層交易。 */
+  const reassignMany: Repo["reassignOrgMany"] = (...args) =>
+    transactions.withTransaction(() => items.reassignOrgMany(...args));
+
+  /** 分店一建一批資料(名稱 `<prefix>-0000` 起),回 id。 */
+  async function createBatch(
+    prefix: string,
+    count: number,
+  ): Promise<Types.ObjectId[]> {
+    const created = await transactions.withTransaction(() =>
+      items.createMany(
+        asB1,
+        Array.from({ length: count }, (_unused, index) => ({
+          name: `${prefix}-${String(index).padStart(4, "0")}`,
+        })),
+      ),
+    );
+    return created.map((document) => document._id);
+  }
+
+  /** 這批 id 的批次搬家稽核(`after.ids` 含其中任一)。 */
+  async function batchAudits(ids: Types.ObjectId[]): Promise<AuditLog[]> {
+    return database.connection
+      .collection<AuditLog>("audit_logs")
+      .find({
+        action: ORG_REASSIGN_AUDIT_ACTION,
+        "after.ids": { $in: ids.map(String) },
+      })
+      .toArray();
+  }
 
   describe("搬家(reassignOrg)", () => {
     it("不在交易內 → TenantScopeError(搬家與稽核要一起成功或一起回復)", async () => {
@@ -286,40 +331,12 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
   });
 
   describe("批次搬家(reassignOrgMany)", () => {
-    const reassignMany: Repo["reassignOrgMany"] = (...args) =>
-      transactions.withTransaction(() => items.reassignOrgMany(...args));
-
-    async function createBatch(
-      prefix: string,
-      count: number,
-    ): Promise<Types.ObjectId[]> {
-      const created = await transactions.withTransaction(() =>
-        items.createMany(
-          asB1,
-          Array.from({ length: count }, (_unused, index) => ({
-            name: `${prefix}-${String(index).padStart(4, "0")}`,
-          })),
-        ),
-      );
-      return created.map((document) => document._id);
-    }
-
-    async function batchAudits(ids: Types.ObjectId[]): Promise<AuditLog[]> {
-      return database.connection
-        .collection<AuditLog>("audit_logs")
-        .find({
-          action: ORG_REASSIGN_AUDIT_ACTION,
-          "after.ids": { $in: ids.map(String) },
-        })
-        .toArray();
-    }
-
     it("不在交易內 → TenantScopeError", async () => {
       const ids = await createBatch("批次交易外", 2);
       await expect(items.reassignOrgMany(asB1, ids, B2)).rejects.toThrow(
         TenantScopeError,
       );
-      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+      expect(await orgOf(asB1, firstOf(ids))).toBe(String(B1));
     });
 
     it("整批成功:全部搬到新店、各自帶版本條件與同一份 update,只寫一筆稽核(id 清單與筆數)", async () => {
@@ -331,9 +348,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
         update: { $set: { status: "moved" }, $inc: { editVersion: 1 } },
       });
       expect(result.mismatched).toEqual([]);
-      expect(result.moved.map(String).toSorted()).toEqual(
-        ids.map(String).toSorted(),
-      );
+      expect(sorted(result.moved.map(String))).toEqual(sorted(ids.map(String)));
       for (const id of ids) {
         expect(await items.findById(asB1, id)).toBeNull();
         const atNewStore = await items.findById(asB2, id);
@@ -348,14 +363,14 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
       expect(audits[0]?.targetType).toBe("reassign_items");
       expect(audits[0]?.after?.count).toBe(3);
       expect(String(audits[0]?.after?.orgId)).toBe(String(B2));
-      expect((audits[0]?.after?.ids as string[]).toSorted()).toEqual(
-        ids.map(String).toSorted(),
+      expect(sorted(audits[0]?.after?.ids as string[])).toEqual(
+        sorted(ids.map(String)),
       );
       expect((audits[0]?.before?.orgIds as unknown[]).map(String)).toEqual([
         String(B1),
       ]);
       // 單筆搬家的稽核查詢(targetId)不會誤把批次那筆算進去
-      expect(await auditsOf(ids[0] as Types.ObjectId)).toHaveLength(0);
+      expect(await auditsOf(firstOf(ids))).toHaveLength(0);
     });
 
     it("以條件(filter)選資料也可以;已在目標組織的跳過(冪等,不再寫稽核)", async () => {
@@ -364,8 +379,8 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
       expect(first.moved).toHaveLength(2);
       const again = await reassignMany(asB2, { name: /^批次條件-/ }, B2);
       expect(again.moved).toEqual([]);
-      expect(again.skipped.map(String).toSorted()).toEqual(
-        ids.map(String).toSorted(),
+      expect(sorted(again.skipped.map(String))).toEqual(
+        sorted(ids.map(String)),
       );
       expect(await batchAudits(ids)).toHaveLength(1);
     });
@@ -397,19 +412,17 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
 
     it("看不到 / 不存在的 id 算不符,整批不動", async () => {
       const ids = await createBatch("批次看不到", 1);
-      const [other] = await transactions.withTransaction(() =>
-        items.createMany(asB2, [{ name: "批次別店" }]),
+      const other = firstOf(
+        await transactions.withTransaction(() =>
+          items.createMany(asB2, [{ name: "批次別店" }]),
+        ),
       );
       const missing = new Types.ObjectId();
-      const result = await reassignMany(
-        asB1,
-        [...ids, other?._id as Types.ObjectId, missing],
-        B2,
+      const result = await reassignMany(asB1, [...ids, other._id, missing], B2);
+      expect(sorted(result.mismatched.map(String))).toEqual(
+        sorted([String(other._id), String(missing)]),
       );
-      expect(result.mismatched.map(String).toSorted()).toEqual(
-        [String(other?._id), String(missing)].toSorted(),
-      );
-      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+      expect(await orgOf(asB1, firstOf(ids))).toBe(String(B1));
     });
 
     it("搬到別租戶 / 根組織 → VALIDATION_FAILED(orgId);update 不得碰 tenantId", async () => {
@@ -423,7 +436,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
       await expect(
         reassignMany(asB1, ids, B2, { update: { $set: { tenantId: U } } }),
       ).rejects.toThrow(TenantScopeError);
-      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+      expect(await orgOf(asB1, firstOf(ids))).toBe(String(B1));
     });
 
     it("交易回復時整批與稽核一起回復", async () => {
@@ -434,7 +447,7 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
           throw new Error("後續步驟失敗");
         }),
       ).rejects.toThrow("後續步驟失敗");
-      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+      expect(await orgOf(asB1, firstOf(ids))).toBe(String(B1));
       expect(await batchAudits(ids)).toHaveLength(0);
     });
 

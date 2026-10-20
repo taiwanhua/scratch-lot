@@ -304,7 +304,7 @@ describe("表單單號(serialNo)", () => {
         input: {
           id: sent.id,
           expectedEditVersion: approved.editVersion,
-          reason: "填錯",
+          reasonNote: "填錯",
         },
       });
       const voided = await get(sent.id);

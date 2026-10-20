@@ -108,16 +108,21 @@ export function formContentHash(
     allowDraft?: boolean;
     /** 缺席 / null = 不給號 */
     serial?: SerialFormat | null;
+    /** 缺席 / null = 作廢原因自由填寫 */
+    voidReasonCategoryKey?: string | null;
   },
   definition: FormDefinition,
 ): string {
-  const { serial, ...rest } = identity;
+  const { serial, voidReasonCategoryKey, ...rest } = identity;
   const format = normalizeSerialFormat(serial ?? null);
   return hashesOfSeed({
     kind: "form-definition",
     ...CONTENT_ONLY,
     ...rest,
     ...(format === null ? {} : { serial: format }),
+    ...(voidReasonCategoryKey === null || voidReasonCategoryKey === undefined
+      ? {}
+      : { voidReasonCategoryKey }),
     definition: plain(definition),
   }).contentHash;
 }

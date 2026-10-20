@@ -845,17 +845,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       );
     }
     const extra: RepositoryUpdate<TSchema> = options.update ?? {};
-    const requested = isIdList(target) ? target.map(String) : null;
-    const selection: RepositoryFilter<TSchema> =
-      requested === null
-        ? (target as RepositoryFilter<TSchema>)
-        : ({
-            _id: {
-              $in: requested
-                .filter((id) => mongoose.isValidObjectId(id))
-                .map((id) => new mongoose.Types.ObjectId(id)),
-            },
-          } as RepositoryFilter<TSchema>);
+    const { requested, selection } = batchSelectionOf(target);
     const shared = await this.prepareUpdate(
       operator,
       selection,
@@ -867,56 +857,19 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       newOrgId,
       session,
     );
-    const candidates = (await scopeQuery(
-      this.model.find({ ...shared.filter }).select({ _id: 1, orgId: 1 }),
-      { operator },
-    )
-      .session(session)
-      .lean()
-      .exec()) as unknown as { _id: Types.ObjectId; orgId: Types.ObjectId }[];
+    const candidates = await this.leanIds<{
+      _id: Types.ObjectId;
+      orgId: Types.ObjectId;
+    }>(operator, shared.filter, { _id: 1, orgId: 1 }, session);
     const expected = options.expected ?? {};
-    const mismatched = new Set<string>(
-      requested === null
-        ? []
-        : requested.filter(
-            (id) => !candidates.some((found) => String(found._id) === id),
-          ),
+    const mismatched = await this.batchMismatchesOf(
+      operator,
+      shared.filter,
+      session,
+      { candidates, requested, expected },
     );
-    const expectedIds = Object.keys(expected);
-    if (expectedIds.length > 0) {
-      const satisfied = (await scopeQuery(
-        this.model
-          .find({
-            $and: [
-              { ...shared.filter },
-              {
-                $or: expectedIds.map((id) => ({
-                  $and: [
-                    { _id: mongoose.isValidObjectId(id) ? id : null },
-                    expected[id],
-                  ],
-                })),
-              },
-            ],
-          } as RepositoryFilter<TSchema>)
-          .select({ _id: 1 }),
-        { operator },
-      )
-        .session(session)
-        .lean()
-        .exec()) as unknown as { _id: Types.ObjectId }[];
-      for (const id of expectedIds) {
-        if (!satisfied.some((found) => String(found._id) === id)) {
-          mismatched.add(id);
-        }
-      }
-    }
-    if (mismatched.size > 0) {
-      return {
-        moved: [],
-        skipped: [],
-        mismatched: [...mismatched],
-      };
+    if (mismatched.length > 0) {
+      return { moved: [], skipped: [], mismatched };
     }
     const fromOrgIds = uniqueIds(candidates.map((found) => found.orgId));
     const tenants = await currentTenantsOf(
@@ -1013,6 +966,74 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
       skipped: skipped.map((found) => found._id),
       mismatched: [],
     };
+  }
+
+  /** 批次搬家的核對讀取:可見範圍內符合條件的那幾筆,只取指定欄位(lean)。 */
+  private async leanIds<TRow>(
+    operator: OperatorContext,
+    filter: RepositoryFilter<TSchema>,
+    projection: Record<string, 1>,
+    session: ClientSession,
+  ): Promise<TRow[]> {
+    const rows: unknown = await scopeQuery(
+      this.model.find({ ...filter }).select(projection),
+      { operator },
+    )
+      .session(session)
+      .lean()
+      .exec();
+    return rows as TRow[];
+  }
+
+  /**
+   * 批次搬家的不符清單(id 字串):id 清單裡沒選到的(看不到 / 不存在 / 已刪除 / 不是合法 id),
+   * 加上 `expected` 列了、卻不符各自條件(或不在這批)的。
+   */
+  private async batchMismatchesOf(
+    operator: OperatorContext,
+    filter: RepositoryFilter<TSchema>,
+    session: ClientSession,
+    batch: {
+      candidates: readonly { _id: Types.ObjectId }[];
+      requested: readonly string[] | null;
+      expected: Readonly<Record<string, RepositoryFilter<TSchema>>>;
+    },
+  ): Promise<string[]> {
+    const selected = new Set(
+      batch.candidates.map((found) => String(found._id)),
+    );
+    const mismatched = new Set(
+      (batch.requested ?? []).filter((id) => !selected.has(id)),
+    );
+    const expectedIds = Object.keys(batch.expected);
+    if (expectedIds.length === 0) {
+      return [...mismatched];
+    }
+    const satisfied = await this.leanIds<{ _id: Types.ObjectId }>(
+      operator,
+      {
+        $and: [
+          { ...filter },
+          {
+            $or: expectedIds.map((id) => ({
+              $and: [
+                { _id: mongoose.isValidObjectId(id) ? id : null },
+                batch.expected[id],
+              ],
+            })),
+          },
+        ],
+      } as RepositoryFilter<TSchema>,
+      { _id: 1 },
+      session,
+    );
+    const satisfiedIds = new Set(satisfied.map((found) => String(found._id)));
+    for (const id of expectedIds) {
+      if (!satisfiedIds.has(id)) {
+        mismatched.add(id);
+      }
+    }
+    return [...mismatched];
   }
 
   /**
@@ -1238,11 +1259,29 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
  */
 export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
 
-/** 批次搬家的 `target` 是 id 清單(否則是選取條件)。 */
-function isIdList<TSchema>(
+/**
+ * 批次搬家的 `target` → 選取條件:id 清單 → `_id ∈ 清單`(不是合法 id 的略過,核對時算不符),
+ * `requested` = 清單的 id 字串;選取條件 → 原樣,`requested` = null。
+ */
+function batchSelectionOf<TSchema>(
   target: readonly (Types.ObjectId | string)[] | RepositoryFilter<TSchema>,
-): target is readonly (Types.ObjectId | string)[] {
-  return Array.isArray(target);
+): { requested: string[] | null; selection: RepositoryFilter<TSchema> } {
+  if (!Array.isArray(target)) {
+    return { requested: null, selection: target };
+  }
+  const requested = (target as readonly (Types.ObjectId | string)[]).map(
+    String,
+  );
+  return {
+    requested,
+    selection: {
+      _id: {
+        $in: requested
+          .filter((id) => mongoose.isValidObjectId(id))
+          .map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    },
+  };
 }
 
 /** 去重(依 id 字串),保留第一次出現的順序。 */

@@ -510,7 +510,7 @@ describe("表單設定:允許存草稿 / 直接送出", () => {
         input: {
           id: approved.id,
           expectedEditVersion: latest.editVersion,
-          reason: "填錯",
+          reasonNote: "填錯",
         },
       });
       await setAllowDraft(false);

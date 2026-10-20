@@ -76,6 +76,7 @@ const TOP_LEVEL_KEY_ORDER: readonly string[] = [
   "tabLabelTemplate",
   "allowDraft",
   "serial",
+  "voidReasonCategoryKey",
   "checkFormKey",
   "collection",
   "keyField",

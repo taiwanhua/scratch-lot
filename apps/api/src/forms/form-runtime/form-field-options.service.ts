@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { arrayColumnsOf } from "@repo/domain/form";
 
 import { FormVersionsRepository } from "../../database/database.module";
+import { voidReasonCategoryOf } from "../../database/schemas/form.schema";
 import { FieldCategoryOptionsService } from "../field-category-options.service";
 import { fieldGateOf, requiredShowKeys } from "../field-permission-gate";
 import {
@@ -19,6 +20,7 @@ import {
 import type {
   FormFieldOption,
   FormFieldOptionsPayload,
+  FormVoidReasonOptionsPayload,
 } from "./models/form-submission.model";
 
 /**
@@ -104,6 +106,33 @@ export class FormFieldOptionsService {
       totalCount: matched.length,
       page,
       pageSize,
+    };
+  }
+
+  /**
+   * `formVoidReasonOptions`:作廢對話框的原因選項 = 表單設定 `voidReasonCategoryKey` 那個類別啟用中的選項
+   * (同 `options` 的合併範圍,作廢時驗值也用它)。守門同執行端(表單看得到 + 模組 `view` / `create` / `edit` 任一),
+   * 不需要欄位管理的權限;沒設類別 → `categoryKey: null`、沒有選項(作廢原因自由填寫)。
+   */
+  async voidReasonOptions(
+    facts: FormOperatorFacts,
+    formKey: string,
+  ): Promise<FormVoidReasonOptionsPayload> {
+    const form = await this.access.findRuntimeForm(facts, formKey);
+    if (!form) {
+      throw notFoundError(`Form not found: ${formKey}`);
+    }
+    this.access.assertRuntimeAccess(facts, form.moduleKey, form.key);
+    const categoryKey = voidReasonCategoryOf(form);
+    if (categoryKey === null) {
+      return { categoryKey: null, items: [] };
+    }
+    const found = await this.categories.options(facts.operator, categoryKey);
+    return {
+      categoryKey,
+      items: [...found]
+        .filter(([, option]) => option.enabled)
+        .map(([value, option]) => ({ value, label: option.label })),
     };
   }
 

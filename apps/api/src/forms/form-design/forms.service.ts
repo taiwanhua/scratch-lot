@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 import {
   type SerialFormat,
+  isValidFieldCategoryKey,
   isValidFormKey,
   normalizeSerialFormat,
   serialFormatIssues,
@@ -17,7 +18,11 @@ import {
   OrgsRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
-import { allowsDraft } from "../../database/schemas/form.schema";
+import {
+  allowsDraft,
+  voidReasonCategoryOf,
+} from "../../database/schemas/form.schema";
+import { FieldCategoryOptionsService } from "../field-category-options.service";
 import {
   FormAccessService,
   type FormOperatorFacts,
@@ -86,6 +91,8 @@ export interface UpdateFormInternalOptions {
     allowDraft: boolean;
     /** 單號格式(null / 缺席 = 不給號);缺席 = 不比對(這個欄位之前的呼叫端) */
     serial?: SerialFormat | null;
+    /** 作廢原因類別(null / 缺席 = 沒設);缺席 = 不比對(這個欄位之前的呼叫端) */
+    voidReasonCategoryKey?: string | null;
   };
 }
 
@@ -104,6 +111,15 @@ function formSettingsSetOf(input: UpdateFormInput): Record<string, unknown> {
   }
   if (input.serial !== undefined) {
     set.serial = serialFormatFromInput(input.serial);
+  }
+  if (input.voidReasonCategoryKey !== undefined) {
+    const key = input.voidReasonCategoryKey?.trim() ?? "";
+    if (key !== "" && !isValidFieldCategoryKey(key)) {
+      throw validationError(`Invalid void reason category key: ${key}`, [
+        "voidReasonCategoryKey",
+      ]);
+    }
+    set.voidReasonCategoryKey = key === "" ? null : key;
   }
   return set;
 }
@@ -170,6 +186,7 @@ export class FormsService {
     private readonly access: FormAccessService,
     private readonly versionsService: FormVersionsService,
     private readonly audit: AuditService,
+    private readonly categories: FieldCategoryOptionsService,
   ) {}
 
   async list(
@@ -255,6 +272,23 @@ export class FormsService {
     return this.toModel(facts, created);
   }
 
+  /** 要設的作廢原因類別要存在(不存在 → `VALIDATION_FAILED`,`fields: ["voidReasonCategoryKey"]`)。 */
+  private async assertVoidReasonCategory(
+    operator: OperatorContext,
+    set: Record<string, unknown>,
+  ): Promise<void> {
+    const key = set.voidReasonCategoryKey;
+    if (typeof key !== "string") {
+      return;
+    }
+    const keys = await this.categories.categoryKeys(operator);
+    if (!keys.has(key)) {
+      throw validationError(`Field category not found: ${key}`, [
+        "voidReasonCategoryKey",
+      ]);
+    }
+  }
+
   /** 改名稱 / 頁籤模板(key 建立後不可改;欄位級權限的 `name` 在下次發布時跟著更新)。 */
   async update(
     facts: FormOperatorFacts,
@@ -266,6 +300,7 @@ export class FormsService {
     if (Object.keys(set).length === 0) {
       return this.toModel(facts, form);
     }
+    await this.assertVoidReasonCategory(facts.operator, set);
     const { expected } = internal;
     const updated = await this.forms.findOneAndUpdate(
       facts.operator,
@@ -283,6 +318,12 @@ export class FormsService {
             ...(expected.serial === undefined
               ? {}
               : { serial: normalizeSerialFormat(expected.serial) }),
+            // 作廢原因類別:null 也比到「沒有這個欄位」的舊表單
+            ...(expected.voidReasonCategoryKey === undefined
+              ? {}
+              : {
+                  voidReasonCategoryKey: expected.voidReasonCategoryKey ?? null,
+                }),
           },
       { $set: set },
     );
@@ -303,6 +344,9 @@ export class FormsService {
         tabLabelTemplate: form.tabLabelTemplate,
         ...("allowDraft" in set ? { allowDraft: allowsDraft(form) } : {}),
         ...("serial" in set ? { serial: form.serial ?? null } : {}),
+        ...("voidReasonCategoryKey" in set
+          ? { voidReasonCategoryKey: voidReasonCategoryOf(form) }
+          : {}),
       },
       after: set,
     });
@@ -571,6 +615,7 @@ export class FormsService {
       tabLabelTemplate: form.tabLabelTemplate,
       allowDraft: allowsDraft(form),
       serial: serialModelOf(form.serial),
+      voidReasonCategoryKey: voidReasonCategoryOf(form),
       hasDraft: draft !== null,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,

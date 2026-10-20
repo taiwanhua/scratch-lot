@@ -10,6 +10,7 @@ import {
   type FormDefinition,
   type StoredValues,
   type SubmissionSummary,
+  VOID_REASON_OTHER,
   arrayColumnsOf,
   arrayRowsOf,
   computeSummary,
@@ -39,11 +40,15 @@ import {
   type FormSubmissionStatus,
   revisionVersionOf,
 } from "../../database/schemas/form-submission.schema";
-import { allowsDraft } from "../../database/schemas/form.schema";
+import {
+  allowsDraft,
+  voidReasonCategoryOf,
+} from "../../database/schemas/form.schema";
 import { TransactionService, afterCommit } from "../../database/transaction";
 import { SerialService } from "../../serials/serial.service";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
+import type { FormVoidReason } from "../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import {
   type EffectSubject,
   FormLifecycleService,
@@ -52,6 +57,7 @@ import { SubmissionReadAccess } from "../../workflows/workflow-engine/submission
 import { WorkflowCcService } from "../../workflows/workflow-engine/workflow-cc.service";
 import { WorkflowSubmitService } from "../../workflows/workflow-engine/workflow-submit.service";
 import { workflowForbiddenError } from "../../workflows/workflows-error";
+import { FieldCategoryOptionsService } from "../field-category-options.service";
 import { fieldGateOf } from "../field-permission-gate";
 import {
   FormAccessService,
@@ -306,6 +312,8 @@ function workflowFieldsOf(
     blocked: boolean;
     voidedAt: Date | null;
     voidReason: string | null;
+    voidReasonKey?: string | null;
+    voidReasonLabel?: string | null;
     replacedById: Types.ObjectId | null;
     copiedFrom: Types.ObjectId | null;
   },
@@ -316,6 +324,8 @@ function workflowFieldsOf(
   | "blocked"
   | "voidedAt"
   | "voidReason"
+  | "voidReasonKey"
+  | "voidReasonLabel"
   | "replacedById"
   | "copiedFrom"
 > {
@@ -325,6 +335,8 @@ function workflowFieldsOf(
       blocked: false,
       voidedAt: null,
       voidReason: null,
+      voidReasonKey: null,
+      voidReasonLabel: null,
       replacedById: null,
       copiedFrom: null,
     };
@@ -336,6 +348,8 @@ function workflowFieldsOf(
     blocked: record.blocked,
     voidedAt: record.voidedAt,
     voidReason: record.voidReason,
+    voidReasonKey: record.voidReasonKey ?? null,
+    voidReasonLabel: record.voidReasonLabel ?? null,
     replacedById: record.replacedById ? String(record.replacedById) : null,
     copiedFrom: record.copiedFrom ? String(record.copiedFrom) : null,
   };
@@ -367,6 +381,7 @@ export class FormSubmissionsService {
     private readonly lifecycle: FormLifecycleService,
     private readonly cc: WorkflowCcService,
     private readonly serials: SerialService,
+    private readonly categories: FieldCategoryOptionsService,
   ) {}
 
   // ---- 讀 ----
@@ -1236,8 +1251,9 @@ export class FormSubmissionsService {
   }
 
   /**
-   * 作廢(綁流程且已核准;申請人本人或有該模組 `edit` 者;理由必填;不需審核):提交 → `voided`,內容凍結。
-   * 一個交易(提交更新與稽核;ADR-0013)。
+   * 作廢(綁流程且已核准;申請人本人或有該模組 `edit` 者;原因必填;不需審核):提交 → `voided`,內容凍結。
+   * 原因:表單沒設作廢原因類別 → 自由文字(`reasonNote` 必填);設了 → `reasonKey` 必填且是該類別啟用中的選項、
+   * 選「其他」時 `reasonNote` 必填(`voidReasonOf`)。一個交易(提交更新與稽核;ADR-0013)。
    */
   async voidSubmission(
     facts: FormOperatorFacts,
@@ -1253,10 +1269,6 @@ export class FormSubmissionsService {
     facts: FormOperatorFacts,
     input: VoidSubmissionInput,
   ): Promise<SubmissionRecord> {
-    const reason = input.reason.trim();
-    if (reason === "") {
-      throw validationError("reason is required", ["reason"]);
-    }
     const id = toObjectId(input.id, "id");
     const own = await this.submissions.findOwnById(facts.operator, id);
     const record = own ?? (await this.submissions.findById(facts.operator, id));
@@ -1273,9 +1285,11 @@ export class FormSubmissionsService {
       );
     }
     this.assertEditVersion(record, input.expectedEditVersion);
+    const voidReason = await this.voidReasonOf(facts, record.formKey, input);
     await this.lifecycle.guard("beforeVoid", {
       operator: facts.operator,
       submission: record,
+      voidReason,
     });
     const filter = {
       _id: id,
@@ -1288,7 +1302,9 @@ export class FormSubmissionsService {
         status: "voided",
         voidedAt: new Date(),
         voidedBy: facts.operator.actorId,
-        voidReason: reason,
+        voidReason: voidReason.reasonNote,
+        voidReasonKey: voidReason.reasonKey,
+        voidReasonLabel: voidReason.reasonLabel,
       },
       $inc: { editVersion: 1 },
     };
@@ -1310,7 +1326,9 @@ export class FormSubmissionsService {
         "EDIT_VERSION_MISMATCH",
       );
     }
-    await this.lifecycle.emit("voided", effectSubjectOf(updated));
+    await this.lifecycle.emit("voided", effectSubjectOf(updated), {
+      voidReason,
+    });
     // 知會:單據被作廢 → 整個流程的知會對象(同一個交易)
     await this.cc.voided(record.currentInstanceId);
     await this.audit.record(facts.operator, {
@@ -1318,9 +1336,61 @@ export class FormSubmissionsService {
       targetType: SUBMISSION_TARGET,
       targetId: record._id,
       before: { status: record.status, revision: record.revision },
-      after: { status: "voided", reason },
+      after: {
+        status: "voided",
+        reason: voidReason.reasonNote,
+        ...(voidReason.reasonKey === null
+          ? {}
+          : { reasonKey: voidReason.reasonKey }),
+      },
     });
     return updated;
+  }
+
+  /**
+   * 作廢原因的驗證與整形:表單(`voidReasonCategoryKey`)沒設類別 → 自由文字,`reasonNote` 必填、不可帶
+   * `reasonKey`;設了 → `reasonKey` 必填且要是該類別在操作者合併範圍內啟用中的選項(同欄位管理,
+   * `FieldCategoryOptionsService`;類別不存在 = 沒有選項),選「其他」(`VOID_REASON_OTHER`)時 `reasonNote` 必填。
+   * 不合 → `VALIDATION_FAILED`(`fields` 指到 `reasonKey` / `reasonNote`)。
+   */
+  private async voidReasonOf(
+    facts: FormOperatorFacts,
+    formKey: string,
+    input: VoidSubmissionInput,
+  ): Promise<FormVoidReason> {
+    const note = input.reasonNote.trim();
+    const reasonKey = input.reasonKey?.trim() ?? "";
+    const form = await this.access.findForm(facts.operator, formKey);
+    const categoryKey = form === null ? null : voidReasonCategoryOf(form);
+    if (categoryKey === null) {
+      if (reasonKey !== "") {
+        throw validationError(`Form ${formKey} has no void reason options`, [
+          "reasonKey",
+        ]);
+      }
+      if (note === "") {
+        throw validationError("reasonNote is required", ["reasonNote"]);
+      }
+      return { reasonKey: null, reasonLabel: null, reasonNote: note };
+    }
+    if (reasonKey === "") {
+      throw validationError("reasonKey is required", ["reasonKey"]);
+    }
+    const options = await this.categories.options(facts.operator, categoryKey);
+    const option = options.get(reasonKey);
+    if (option?.enabled !== true) {
+      throw validationError(`Unknown void reason: ${reasonKey}`, ["reasonKey"]);
+    }
+    if (reasonKey === VOID_REASON_OTHER && note === "") {
+      throw validationError("reasonNote is required when the reason is other", [
+        "reasonNote",
+      ]);
+    }
+    return {
+      reasonKey,
+      reasonLabel: option.label,
+      reasonNote: note === "" ? null : note,
+    };
   }
 
   /**

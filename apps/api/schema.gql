@@ -1044,6 +1044,7 @@ type FormModel {
   tabLabelTemplate: String
   tenantEnabled: Boolean
   updatedAt: DateTime!
+  voidReasonCategoryKey: String
   workflowBinding: FormWorkflowBinding
 }
 
@@ -1126,6 +1127,8 @@ type FormSubmissionModel {
   viewedRevision: Int!
   viewedVersion: Int!
   voidReason: String
+  voidReasonKey: String
+  voidReasonLabel: String
   voidedAt: DateTime
 }
 
@@ -1261,6 +1264,11 @@ enum FormVersionStatus {
 type FormVersionsPayload {
   items: [FormVersionModel!]!
   totalCount: Int!
+}
+
+type FormVoidReasonOptionsPayload {
+  categoryKey: String
+  items: [FormFieldOption!]!
 }
 
 type FormWorkflowBinding {
@@ -3016,6 +3024,7 @@ type Query {
   formUpgradePlan(formKey: ID!, targetVersion: Int!): FormUpgradePlan!
   formVersion(formKey: ID!, version: Int): FormVersionPayload!
   formVersions(formKey: ID!): FormVersionsPayload!
+  formVoidReasonOptions(formKey: ID!): FormVoidReasonOptionsPayload!
   formWorkflowOptions(formKey: ID!): FormWorkflowOptionsPayload!
   forms(input: FormsInput!): FormsPayload!
   lotteryAllocations(input: LotteryAllocationsInput!): LotteryAllocationsPayload!
@@ -4247,6 +4256,7 @@ input UpdateFormInput {
   name: String
   serial: FormSerialFormatInput
   tabLabelTemplate: String
+  voidReasonCategoryKey: String
 }
 
 input UpdateFormSubmissionInput {
@@ -4554,7 +4564,8 @@ input ValidateWorkflowVersionInput {
 input VoidSubmissionInput {
   expectedEditVersion: Int!
   id: ID!
-  reason: String!
+  reasonKey: String
+  reasonNote: String!
 }
 
 input WithdrawSubmissionInput {

@@ -11,7 +11,10 @@ import {
   FormVersionsRepository,
   PermissionsRepository,
 } from "../database/database.module";
-import { allowsDraft } from "../database/schemas/form.schema";
+import {
+  allowsDraft,
+  voidReasonCategoryOf,
+} from "../database/schemas/form.schema";
 import type { SeedInstallationMetadata } from "../database/schemas/seed-definition-installation.schema";
 import {
   FormAccessService,
@@ -70,6 +73,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
       ...serialMetadataOf(seed.serial),
+      ...voidReasonMetadataOf(seed.voidReasonCategoryKey),
     };
   }
 
@@ -86,6 +90,9 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
       ...(seed.serial === undefined ? {} : { serial: seed.serial }),
+      ...(seed.voidReasonCategoryKey === undefined
+        ? {}
+        : { voidReasonCategoryKey: seed.voidReasonCategoryKey }),
     };
   }
 
@@ -106,6 +113,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
             tabLabelTemplate: form.tabLabelTemplate,
             allowDraft: allowsDraft(form),
             ...serialMetadataOf(form.serial),
+            ...voidReasonMetadataOf(voidReasonCategoryOf(form)),
           },
         };
   }
@@ -197,6 +205,11 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         JSON.stringify(normalizeSerialFormat(expected.metadata.serial ?? null))
           ? {}
           : { serial: seed.serial ?? null }),
+        // 作廢原因類別同理
+        ...((seed.voidReasonCategoryKey ?? null) ===
+        (expected.metadata.voidReasonCategoryKey ?? null)
+          ? {}
+          : { voidReasonCategoryKey: seed.voidReasonCategoryKey ?? null }),
       },
       {
         expected: {
@@ -206,6 +219,8 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           tabLabelTemplate: expected.metadata.tabLabelTemplate ?? null,
           allowDraft: expected.metadata.allowDraft ?? true,
           serial: expected.metadata.serial ?? null,
+          voidReasonCategoryKey:
+            expected.metadata.voidReasonCategoryKey ?? null,
         },
       },
     );
@@ -337,6 +352,7 @@ function toSnapshot(
           tabLabelTemplate: metadata.tabLabelTemplate ?? null,
           allowDraft: metadata.allowDraft ?? true,
           serial: metadata.serial ?? null,
+          voidReasonCategoryKey: metadata.voidReasonCategoryKey ?? null,
         },
         {
           fields: record.fields,
@@ -346,6 +362,15 @@ function toSnapshot(
         },
       ),
   };
+}
+
+/** 身分快照的作廢原因類別:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function voidReasonMetadataOf(
+  key: string | null | undefined,
+): Pick<IdentityMetadata, "voidReasonCategoryKey"> {
+  return key === null || key === undefined
+    ? {}
+    : { voidReasonCategoryKey: key };
 }
 
 /** 身分快照的單號格式:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
