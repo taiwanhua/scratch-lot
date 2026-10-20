@@ -164,18 +164,11 @@ export class InventoryStockService {
     const onlyGame = await this.gameOf(operator, input.gameId);
     const stores =
       onlyOrg === null ? this.names.storesOf(operator, tenantOrgs) : [onlyOrg];
-    // 進貨單作廢後的本(`revoked`)不算庫存(規格 7.1、8.2)
-    const revoked = await this.books.findMany(
-      operator,
-      { status: "revoked" },
-      { select: "_id" },
-    );
+    const notRevoked = await this.notRevokedFilter(operator);
     const rows = await this.tickets.aggregate(operator, [
       {
         $match: {
-          ...(revoked.length === 0
-            ? {}
-            : { bookId: { $nin: revoked.map((book) => book._id) } }),
+          ...notRevoked,
           ...(onlyOrg === null ? {} : { orgId: onlyOrg.id }),
           ...(onlyGame === null ? {} : { gameId: onlyGame.id }),
           status: { $ne: TICKET_STATUS.skipped },
@@ -294,6 +287,20 @@ export class InventoryStockService {
       throw notFoundError("分店不存在");
     }
     return org;
+  }
+
+  /** 進貨單作廢後的本(`revoked`)不算庫存(規格 7.1、8.2):張的條件排除那些本。 */
+  private async notRevokedFilter(
+    operator: OperatorContext,
+  ): Promise<Record<string, unknown>> {
+    const revoked = await this.books.findMany(
+      operator,
+      { status: "revoked" },
+      { select: "_id" },
+    );
+    return revoked.length === 0
+      ? {}
+      : { bookId: { $nin: revoked.map((book) => book._id) } };
   }
 
   private async gameOf(
