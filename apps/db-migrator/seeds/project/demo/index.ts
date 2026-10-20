@@ -15,6 +15,8 @@ import {
 } from "../../../src/demo/demo-source";
 import type { OnboardingPlan } from "../onboarding/plan";
 import { runOnboarding } from "../onboarding/run-onboarding";
+import { DEMO_CASH_POINTS } from "./cash-points";
+import { DEMO_GAMES } from "./games";
 import { DEMO_BRANCHES, DEMO_USERS } from "./organization";
 import { DEMO_POSITIONS } from "./positions";
 
@@ -42,6 +44,8 @@ export function demoPlan(emailBase: string): OnboardingPlan {
       };
     }),
     positions: [...DEMO_POSITIONS],
+    games: [...DEMO_GAMES],
+    cashPoints: [...DEMO_CASH_POINTS],
   };
 }
 

@@ -5,6 +5,7 @@
  * 之後的模組票若要開通時建資料(例:收銀點、乙類、銀行帳戶、排班人員),在這裡加自己的欄位
  * (選填、預設空清單)、在 `parseOnboardingPlan` 驗它,並在 `steps.ts` 追加自己的步驟。
  */
+import { GAME_CODE_PATTERN } from "@repo/domain/project/lottery-master-data";
 import {
   TAG_PALETTE_KEYS,
   type TagPaletteKey,
@@ -45,6 +46,28 @@ export interface OnboardingPosition {
   color: TagPaletteKey | null;
 }
 
+/** 遊戲(檔案管理;規格 5.1)。重跑時以代號找回,已存在就不改。 */
+export interface OnboardingGame {
+  /** 4 碼數字 */
+  gameCode: string;
+  name: string;
+  unitPrice: number;
+  ticketsPerBook: number;
+  /** 預設批購金額率(整數 %) */
+  defaultRate: number;
+  color: TagPaletteKey | null;
+}
+
+/** 收銀點(檔案管理;規格 5.5)。重跑時以「分店 + 崗位」找回,已存在就不改。 */
+export interface OnboardingCashPoint {
+  /** 分店名稱(須在 `branches` 內) */
+  branch: string;
+  /** 崗位選項值(專案預設或 `positions` 裡的) */
+  positionKey: string;
+  name: string;
+  order: number;
+}
+
 export interface OnboardingPlan {
   branches: OnboardingBranch[];
   /** 總部是某家分店時填那家店的名稱(須在 `branches` 內);總部就是租戶本身時為 null。 */
@@ -52,6 +75,10 @@ export interface OnboardingPlan {
   users: OnboardingUser[];
   /** 租戶自訂的崗位(專案 seed 的店內櫃台、店外攤位、補貨之外;沒有就空清單)。 */
   positions: OnboardingPosition[];
+  /** 開通時建立的遊戲(沒有就空清單)。 */
+  games: OnboardingGame[];
+  /** 開通時建立的收銀點(沒有就空清單)。 */
+  cashPoints: OnboardingCashPoint[];
 }
 
 const POSITION_VALUE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -129,6 +156,55 @@ function parseUser(raw: unknown, path: string, branches: Set<string>) {
   } satisfies OnboardingUser;
 }
 
+function integer(value: unknown, path: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    fail(path, "必須是整數");
+  }
+  return value;
+}
+
+function parseGame(raw: unknown, path: string): OnboardingGame {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const gameCode = text(raw.gameCode, `${path}.gameCode`);
+  if (!GAME_CODE_PATTERN.test(gameCode)) {
+    fail(`${path}.gameCode`, "必須是 4 碼數字");
+  }
+  const color = raw.color ?? null;
+  if (color !== null && !isTagPaletteKey(color)) {
+    fail(`${path}.color`, `必須是色票代號 ${TAG_PALETTE_KEYS.join(" / ")}`);
+  }
+  return {
+    gameCode,
+    name: text(raw.name, `${path}.name`),
+    unitPrice: integer(raw.unitPrice, `${path}.unitPrice`),
+    ticketsPerBook: integer(raw.ticketsPerBook, `${path}.ticketsPerBook`),
+    defaultRate: integer(raw.defaultRate, `${path}.defaultRate`),
+    color,
+  };
+}
+
+function parseCashPoint(
+  raw: unknown,
+  path: string,
+  branches: Set<string>,
+): OnboardingCashPoint {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const branch = text(raw.branch, `${path}.branch`);
+  if (!branches.has(branch)) {
+    fail(`${path}.branch`, `的「${branch}」不在 branches 內`);
+  }
+  return {
+    branch,
+    positionKey: text(raw.positionKey, `${path}.positionKey`),
+    name: text(raw.name, `${path}.name`),
+    order: raw.order === undefined ? 0 : integer(raw.order, `${path}.order`),
+  };
+}
+
 /** 驗開通資料(JSON 檔讀進來的值)並正規化;任何一欄不合就丟錯,此時還沒有呼叫 api。 */
 export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
   if (!isRecord(raw)) {
@@ -183,5 +259,28 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
     "positions 的 value",
   );
 
-  return { branches, headquartersBranch, users, positions };
+  const games = list(raw.games, "games").map((game, at) =>
+    parseGame(game, `games[${String(at)}]`),
+  );
+  unique(
+    games.map((game) => game.gameCode),
+    "games 的 gameCode",
+  );
+
+  const cashPoints = list(raw.cashPoints, "cashPoints").map((point, at) =>
+    parseCashPoint(point, `cashPoints[${String(at)}]`, branchNames),
+  );
+  unique(
+    cashPoints.map((point) => `${point.branch}/${point.positionKey}`),
+    "cashPoints 的分店 + 崗位",
+  );
+
+  return {
+    branches,
+    headquartersBranch,
+    users,
+    positions,
+    games,
+    cashPoints,
+  };
 }

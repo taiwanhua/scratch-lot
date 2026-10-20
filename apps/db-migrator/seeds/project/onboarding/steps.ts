@@ -1,5 +1,7 @@
 import type { OnboardingStep } from "./context";
 import { branchesStep } from "./steps/branches";
+import { cashPointsStep } from "./steps/cash-points";
+import { gamesStep } from "./steps/games";
 import { notificationRecipientsStep } from "./steps/notification-recipients";
 import { orgVisibilityStep } from "./steps/org-visibility";
 import { positionsStep } from "./steps/positions";
@@ -22,4 +24,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   usersStep,
   positionsStep,
   notificationRecipientsStep,
+  // 檔案管理:遊戲;收銀點要在分店、崗位之後
+  gamesStep,
+  cashPointsStep,
 ];

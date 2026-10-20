@@ -3,7 +3,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "@jest/globals";
 
+import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
+
 import { DEMO_TENANT, demoPlan } from ".";
+import { PROJECT_FIELD_CATEGORIES } from "../field-categories";
 import { parseOnboardingPlan } from "../onboarding/plan";
 
 const DEMO_DIR = __dirname;
@@ -71,6 +74,40 @@ describe("示範資料(seeds/project/demo/)不放機密", () => {
       ["櫃台 B", "purple"],
       ["彩券機旁", "pink"],
     ]);
+  });
+});
+
+describe("示範資料:檔案管理(遊戲、收銀點)", () => {
+  it("收銀點的崗位都在專案預設崗位或示範自訂崗位裡;彩券機旁對應彩券機旁", () => {
+    const plan = demoPlan("owner@example.test");
+    const seeded =
+      PROJECT_FIELD_CATEGORIES.find(
+        (category) => category.key === SCHEDULE_FIELD_CATEGORY_KEYS.position,
+      )?.options.map((option) => option.value) ?? [];
+    const known = new Set([
+      ...seeded,
+      ...plan.positions.map((position) => position.value),
+    ]);
+    for (const point of plan.cashPoints) {
+      expect({ point, known: known.has(point.positionKey) }).toEqual({
+        point,
+        known: true,
+      });
+    }
+    const machine = plan.positions.find(
+      (position) => position.label === "彩券機旁",
+    );
+    expect(
+      plan.cashPoints.find((point) => point.name === "彩券機旁")?.positionKey,
+    ).toBe(machine?.value);
+  });
+
+  it("遊戲:有示範遊戲,代號不重複", () => {
+    const plan = demoPlan("owner@example.test");
+    expect(plan.games.length).toBeGreaterThan(0);
+    expect(new Set(plan.games.map((game) => game.gameCode)).size).toBe(
+      plan.games.length,
+    );
   });
 });
 

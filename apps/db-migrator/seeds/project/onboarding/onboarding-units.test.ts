@@ -51,6 +51,8 @@ describe("開通資料(真實租戶由開通 skill 寫成 JSON 檔)", () => {
       headquartersBranch: null,
       users: [],
       positions: [],
+      games: [],
+      cashPoints: [],
     });
   });
 

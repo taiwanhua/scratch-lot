@@ -122,7 +122,7 @@ export const sampleCashPoints = (): LotteryCashPointFieldsFragment[] => [
   cashPoint({
     id: "cp-counter",
     name: "店內櫃台",
-    positionKey: "counter",
+    positionKey: "in-store-counter",
     positionLabel: "店內櫃台",
     printer: {
       __typename: "LotteryCashPointRef",
@@ -133,7 +133,7 @@ export const sampleCashPoints = (): LotteryCashPointFieldsFragment[] => [
   cashPoint({
     id: "cp-outdoor",
     name: "店外攤位",
-    positionKey: "outdoor",
+    positionKey: "outdoor-stall",
     positionLabel: "店外攤位",
     order: 2,
   }),
@@ -148,8 +148,8 @@ export const sampleCashPoints = (): LotteryCashPointFieldsFragment[] => [
 ];
 
 export const positionOptions = [
-  { value: "counter", label: "店內櫃台" },
-  { value: "outdoor", label: "店外攤位" },
+  { value: "in-store-counter", label: "店內櫃台" },
+  { value: "outdoor-stall", label: "店外攤位" },
   { value: "restock", label: "補貨" },
   { value: "lottery-machine", label: "彩券機旁" },
 ];

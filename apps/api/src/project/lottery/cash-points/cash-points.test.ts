@@ -215,8 +215,8 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
       orgId: String(storeA),
     });
     expect(data.lotteryPositionOptions.items).toEqual([
-      { value: "counter", label: "店內櫃台" },
-      { value: "outdoor", label: "店外攤位" },
+      { value: "in-store-counter", label: "店內櫃台" },
+      { value: "outdoor-stall", label: "店外攤位" },
       { value: "restock", label: "補貨" },
       { value: "lottery-machine", label: "彩券機旁" },
     ]);
@@ -225,14 +225,14 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
   it("新增:崗位顯示名、印表機名稱一起回;沒選印表機 = 用分店預設(null)", async () => {
     const withPrinter = await create({
       orgId: String(storeA),
-      positionKey: "counter",
+      positionKey: "in-store-counter",
       name: "店內櫃台",
       order: 1,
       printerId: String(printerA),
     });
     expect(withPrinter).toMatchObject({
       org: { id: String(storeA), name: "中山店" },
-      positionKey: "counter",
+      positionKey: "in-store-counter",
       positionLabel: "店內櫃台",
       enabled: true,
       printer: { id: String(printerA), name: "櫃台收據機" },
@@ -250,14 +250,14 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
   it("同分店崗位重複 → VALIDATION_FAILED(positionKey);名稱重複 → VALIDATION_FAILED(name);別的分店可以", async () => {
     await create({
       orgId: String(storeA),
-      positionKey: "outdoor",
+      positionKey: "outdoor-stall",
       name: "店外攤位",
     });
     expect(
       await errorOf(api, manager, CREATE, {
         input: {
           orgId: String(storeA),
-          positionKey: "outdoor",
+          positionKey: "outdoor-stall",
           name: "另一個名字",
         },
       }),
@@ -281,7 +281,7 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
     });
     const other = await create({
       orgId: String(storeB),
-      positionKey: "outdoor",
+      positionKey: "outdoor-stall",
       name: "店外攤位",
     });
     expect(other.org.name).toBe("新竹店");
@@ -290,7 +290,7 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
   it("編輯成與同分店另一筆相同的崗位 / 名稱 → VALIDATION_FAILED", async () => {
     const first = await create({
       orgId: String(storeB),
-      positionKey: "counter",
+      positionKey: "in-store-counter",
       name: "新竹櫃台",
     });
     const second = await create({
@@ -442,7 +442,7 @@ describe("檔案管理 → 收銀點(GraphQL 端點 + 真 MongoDB)", () => {
         await errorOf(api, manager, CREATE, {
           input: {
             orgId: String(otherTenant),
-            positionKey: "counter",
+            positionKey: "in-store-counter",
             name: "越界",
           },
         }),

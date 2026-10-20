@@ -27,6 +27,8 @@ import {
   withDatabase,
 } from "../../../test/support/update-harness";
 import { DEMO_TENANT, demoPlan } from "../demo";
+import { DEMO_CASH_POINTS } from "../demo/cash-points";
+import { DEMO_GAMES } from "../demo/games";
 import { runOnboardCommand } from "./command";
 import { OnboardingStoppedError, runOnboarding } from "./run-onboarding";
 import { STORE_MANAGER_NOTIFICATION_TYPES } from "./steps/notification-recipients";
@@ -265,6 +267,25 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       });
     });
 
+    it("檔案管理:示範遊戲與收銀點(收銀點「彩券機旁」對應自訂崗位「彩券機旁」)", async () => {
+      const games = await find("lottery_games", { tenantId });
+      expect(new Set(games.map((game) => game.gameCode as string))).toEqual(
+        new Set(DEMO_GAMES.map((game) => game.gameCode)),
+      );
+      const points = await find("lottery_cash_points", { tenantId });
+      expect(
+        new Set(
+          points.map(
+            (point) => `${point.name as string}/${point.positionKey as string}`,
+          ),
+        ),
+      ).toEqual(
+        new Set(
+          DEMO_CASH_POINTS.map((point) => `${point.name}/${point.positionKey}`),
+        ),
+      );
+    });
+
     it("三個角色在角色管理是一般角色,沒有「預設角色」標籤(規格 3.3)", async () => {
       const { roles } = await adminClient.request<{
         roles: { items: RoleItem[] };
@@ -475,7 +496,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       await expect(onboard("demo_lottery", lines)).rejects.toThrow(
         /不是要開通的 demo_lottery/,
       );
-      expect(lines.join("\n")).toMatch(/✗ \[1\/7\] 租戶/);
+      expect(lines.join("\n")).toMatch(/✗ \[1\/9\] 租戶/);
       expect(await auditCount()).toBe(before);
     });
 
@@ -615,7 +636,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       )) as OnboardingStoppedError;
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
-      expect(lines.join("\n")).toMatch(/✗ \[6\/7\] 崗位:.*FORBIDDEN/);
+      expect(lines.join("\n")).toMatch(/✗ \[6\/9\] 崗位:.*FORBIDDEN/);
       expect(lines.join("\n")).toContain("未執行:通知收件人");
 
       const users = await find("users", {
@@ -655,6 +676,9 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           "field.create",
           "field.set-color",
           "notification-settings.edit",
+          // 檔案管理的遊戲、收銀點排在通知收件人之後,第一次停在崗位時還沒建
+          "lottery-game.create",
+          "lottery-cash-point.create",
         ]),
       );
 

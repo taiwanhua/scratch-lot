@@ -86,7 +86,7 @@ describe("檔案管理:分頁與按鈕", () => {
     expect(fake.inputs.createCashPoint).toEqual([
       {
         orgId: "org-store-a",
-        positionKey: "outdoor",
+        positionKey: "outdoor-stall",
         name: "店外攤位",
         order: 0,
         printerId: null,

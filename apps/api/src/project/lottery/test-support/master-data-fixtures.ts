@@ -127,8 +127,8 @@ export async function seedPositionCategory(
     });
   await connection.collection("fields").insertMany(
     [
-      { value: "counter", label: "店內櫃台" },
-      { value: "outdoor", label: "店外攤位" },
+      { value: "in-store-counter", label: "店內櫃台" },
+      { value: "outdoor-stall", label: "店外攤位" },
       { value: "restock", label: "補貨" },
     ].map((option, index) => ({
       ...option,
