@@ -46,4 +46,8 @@ export const projectUrlStateInventory: UrlStateInventory = {
   // 叫貨、採購單:頁內分頁 `tab`、叫貨單列表的篩選 `requisitions`;新增頁的篩選只在畫面上(不進網址)
   "purchasing.requisition": ["tab", "requisitions"],
   "purchasing.requisition.create-page": [],
+  // 庫存管理:頁內分頁 `tab`、庫存分頁的篩選 `stock`(分店、遊戲、狀態、批購日、本號);
+  // 本的詳情:查刮刮樂帶來的張號 `ticket`(打開時標亮)
+  inventory: ["tab", "stock"],
+  "inventory.book-page": ["ticket"],
 };
