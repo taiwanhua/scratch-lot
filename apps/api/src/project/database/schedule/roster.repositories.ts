@@ -6,6 +6,7 @@ import {
   BaseRepository,
   type RepositoryModel,
 } from "../../../database/base.repository";
+import { ScheduleAttendancePunch } from "./schedule-attendance-punch.schema";
 import { ScheduleAutoRun } from "./schedule-auto-run.schema";
 import { ScheduleChange } from "./schedule-change.schema";
 import { ScheduleDemand } from "./schedule-demand.schema";
@@ -15,6 +16,8 @@ import { SchedulePeriod } from "./schedule-period.schema";
 import { ScheduleTaskAssignment } from "./schedule-task-assignment.schema";
 
 export type ScheduleAutoRunDocument = HydratedDocument<ScheduleAutoRun>;
+export type ScheduleAttendancePunchDocument =
+  HydratedDocument<ScheduleAttendancePunch>;
 export type ScheduleChangeDocument = HydratedDocument<ScheduleChange>;
 export type ScheduleDemandDocument = HydratedDocument<ScheduleDemand>;
 export type SchedulePeriodDocument = HydratedDocument<SchedulePeriod>;
@@ -119,6 +122,23 @@ export class ScheduleAutoRunsRepository extends BaseRepository<
   constructor(
     @InjectModel(ScheduleAutoRun.name)
     model: RepositoryModel<ScheduleAutoRun, ScheduleAutoRunDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** schedule_attendance_punches(打卡;只新增)。 */
+@Injectable()
+export class ScheduleAttendancePunchesRepository extends BaseRepository<
+  ScheduleAttendancePunch,
+  ScheduleAttendancePunchDocument
+> {
+  constructor(
+    @InjectModel(ScheduleAttendancePunch.name)
+    model: RepositoryModel<
+      ScheduleAttendancePunch,
+      ScheduleAttendancePunchDocument
+    >,
   ) {
     super(model);
   }

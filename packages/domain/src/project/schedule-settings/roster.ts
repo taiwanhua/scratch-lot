@@ -181,3 +181,10 @@ export const SCHEDULE_AUTO_RUN_OVERLAP_CONDITION = "allowOverlappingDemands";
 
 /** 自動排班執行中的鎖定多久後自動解除(規格 14.1 `schedule_periods`:10 分鐘逾時)。 */
 export const SCHEDULE_AUTO_RUN_LOCK_MS = 10 * 60 * 1000;
+/** 打卡的類型(規格 14.1 `schedule_attendance_punches.type`):上班 / 下班。 */
+export const SCHEDULE_PUNCH_TYPES = ["in", "out"] as const;
+export type SchedulePunchType = (typeof SCHEDULE_PUNCH_TYPES)[number];
+
+/** 打卡的來源(規格 14.1 `schedule_attendance_punches.source`):按鈕 / 補打卡。 */
+export const SCHEDULE_PUNCH_SOURCES = ["button", "makeup"] as const;
+export type SchedulePunchSource = (typeof SCHEDULE_PUNCH_SOURCES)[number];

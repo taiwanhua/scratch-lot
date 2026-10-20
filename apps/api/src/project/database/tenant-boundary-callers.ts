@@ -67,6 +67,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/settlement/settlement.service.ts": ["反查"],
   // 一個人在整個租戶的排班:跨店不能重疊、別家店的班顯示灰色區塊
   "project/schedule/roster/roster-people.ts": ["以人為準的資料"],
+  // 我的班表:我的班跨分店合併(分店不一定看得到)、打卡寫在班所在的分店
+  "project/schedule/my/my-schedule.service.ts": ["以人為準的資料", "例外寫入"],
   // 排班 / 畫休寫入的「人」守門文件掛在租戶頂層(兩家店同時排同一人、排班與畫休同時寫入互相衝突)
   "project/schedule/shared/schedule-person-locks.ts": ["例外寫入"],
   // 遊戲是否有叫貨單引用、某家店待購買的叫貨單本數(在途):沒有操作者,問的是整個租戶

@@ -17,6 +17,10 @@ import { ScheduleDayOffsResolver } from "./day-offs/schedule-day-offs.resolver";
 import { ScheduleDayOffsService } from "./day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsResolver } from "./field-options/schedule-field-options.resolver";
 import { ScheduleFieldOptionsService } from "./field-options/schedule-field-options.service";
+import { ScheduleEntryLookup } from "./integration/entry-lookup";
+import { MyScheduleResolver } from "./my/my-schedule.resolver";
+import { MyScheduleService } from "./my/my-schedule.service";
+import { PublishedEntries } from "./my/published-entries";
 import { RosterPeopleReader } from "./roster/roster-people";
 import { ScheduleRosterWritesService } from "./roster/schedule-roster-writes.service";
 import { ScheduleRosterResolver } from "./roster/schedule-roster.resolver";
@@ -38,7 +42,8 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
  *
  * 匯出的 service 給同模組的其他功能共用:候選人(`listScheduleCandidates`)、
  * 規則的生效設定(`effectiveSettingsForOrg`)、行事曆的生效日(`effectiveDays`)、
- * 每人每天的畫休(`ScheduleDayOffsService.listUnavailable`)。
+ * 每人每天的畫休(`ScheduleDayOffsService.listUnavailable`);給刮刮樂的排班查詢(`ScheduleEntryLookup`,
+ * `integration/entry-lookup.ts`)。
  */
 @Module({
   imports: [
@@ -74,6 +79,10 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleCheckResolver,
     ScheduleAutoRunService,
     ScheduleAutoRunResolver,
+    PublishedEntries,
+    MyScheduleService,
+    MyScheduleResolver,
+    ScheduleEntryLookup,
   ],
   exports: [
     SchedulePermissions,
@@ -82,6 +91,7 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleTemplatesService,
     ScheduleCalendarService,
     ScheduleDayOffsService,
+    ScheduleEntryLookup,
   ],
 })
 export class ScheduleModule {}

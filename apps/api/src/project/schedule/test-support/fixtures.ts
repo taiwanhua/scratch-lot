@@ -32,6 +32,8 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   viewDayOffs: "schedule.manage.view-day-offs",
   editDayOffs: "schedule.manage.edit-day-offs",
   myEditDayOffs: "schedule.my.edit-day-offs",
+  myView: "schedule.my.view",
+  myPunch: "schedule.my.punch",
   publish: "schedule.manage.publish",
   autoRun: "schedule.manage.auto-run",
 } as const;

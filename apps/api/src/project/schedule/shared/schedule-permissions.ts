@@ -16,6 +16,8 @@ export const SCHEDULE_PERMISSIONS = {
   manageView: "schedule.manage.view",
   editCalendar: "schedule.manage.edit-calendar",
   myEditDayOffs: "schedule.my.edit-day-offs",
+  myView: "schedule.my.view",
+  myPunch: "schedule.my.punch",
   viewDayOffs: "schedule.manage.view-day-offs",
   editDayOffs: "schedule.manage.edit-day-offs",
   publish: "schedule.manage.publish",
