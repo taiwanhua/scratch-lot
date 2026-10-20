@@ -3,7 +3,8 @@ import type { Types } from "mongoose";
 
 import { type LocalDate, localDateText } from "@repo/domain/form";
 
-import type { OperatorContext } from "../../../database/operator-context";
+import { OrgsRepository } from "../../../database/database.module";
+import { systemTenantReader } from "../../../database/system-tenant-reader";
 import {
   type ScheduleHit,
   scheduleHitAt,
@@ -37,19 +38,6 @@ import type { DealerRecord } from "./dealer-mapper";
 
 /** 排程工作 key(`docs/deployment.md`「Cloud Scheduler」;全域唯一)。 */
 export const DEALER_REMINDERS_JOB_KEY = "lottery.dealer-reminders";
-
-/** 排程讀整個租戶的經銷商:沒有登入主體,以 `tenantId` 釘住範圍。 */
-function schedulerReader(): OperatorContext {
-  return {
-    actorId: null,
-    currentOrgId: null,
-    visibleOrgIds: "all",
-    managedOrgIds: "all",
-    memberOrgIds: [],
-    roleIds: [],
-    memberTenants: [],
-  };
-}
 
 const DEALER_TYPE_NAMES = { a: "甲類", b: "乙類" } as const;
 
@@ -86,6 +74,7 @@ export class DealerRemindersService implements OnModuleInit {
     private readonly notifications: NotificationService,
     private readonly dealers: LotteryDealersRepository,
     private readonly relationships: LotteryRelationshipsRepository,
+    private readonly orgs: OrgsRepository,
   ) {}
 
   onModuleInit(): void {
@@ -125,14 +114,16 @@ export class DealerRemindersService implements OnModuleInit {
       tenantId,
       LOTTERY_STORE_RENT_DUE,
     );
-    const dealers = await this.dealers.findMany(schedulerReader(), {
+    // 排程的租戶系統身分:可見範圍 = 這個租戶的整棵組織樹(ADR-0005「例外出口」)
+    const reader = await systemTenantReader(this.orgs, tenantId);
+    const dealers = await this.dealers.findMany(reader, {
       tenantId,
       status: { $ne: "terminated" },
     });
     if (dealers.length === 0) {
       return;
     }
-    const stores = await this.relationships.findMany(schedulerReader(), {
+    const stores = await this.relationships.findMany(reader, {
       tenantId,
       type: ORG_DEALER,
     });

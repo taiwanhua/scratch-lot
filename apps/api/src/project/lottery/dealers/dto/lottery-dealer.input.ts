@@ -1,5 +1,6 @@
 import { Field, GraphQLISODateTime, ID, InputType, Int } from "@nestjs/graphql";
 
+import { ShareOrgInput } from "../../../../sharing/share-org.model";
 import {
   LotteryDealerStatusEnum,
   LotteryDealerTypeEnum,
@@ -150,6 +151,14 @@ abstract class LotteryDealerFieldsInput {
 
   @Field(() => String, { nullable: true })
   note?: string | null;
+
+  /**
+   * 共用給(資料共用,ADR-0014):整份清單;要有 `dealers.edit`(沒有 → `FORBIDDEN`)。
+   * 組織要在同一個租戶(可以是自己看不到的),否則 `VALIDATION_FAILED`(fields: ["shareOrgs"])。
+   * 新增:缺席 / `null` = 不共用;編輯:缺席 = 不動、`[]` = 不共用、`null` → `VALIDATION_FAILED`。
+   */
+  @Field(() => [ShareOrgInput], { nullable: true })
+  shareOrgs?: ShareOrgInput[] | null;
 }
 
 /**

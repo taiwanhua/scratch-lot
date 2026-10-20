@@ -2,7 +2,10 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
-import { tenantScopePlugin } from "../../../database/plugins/tenant-scope.plugin";
+import {
+  type ShareOrg,
+  tenantScopePlugin,
+} from "../../../database/plugins/tenant-scope.plugin";
 
 export const LOTTERY_DEALERS_COLLECTION = "lottery_dealers";
 
@@ -148,6 +151,16 @@ export class LotteryDealer {
 
   /** 租戶頂層 id(plugin 宣告;`BaseRepository.create` 推導,根組織為 null)。 */
   tenantId!: Types.ObjectId | null;
+
+  /**
+   * 對應分店(只有乙類;`lottery_relationships` 的 `org_lottery_dealer` 在本筆上的副本,同一個交易寫入):
+   * 資料共用的 `sharedByFields` —— 對應分店的人看得到這位經銷商(ADR-0014)。
+   */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  storeOrgId!: Types.ObjectId | null;
+
+  /** 共用給(plugin 宣告;預設不共用,有 `dealers.edit` 的人在編輯頁設定)。 */
+  shareOrgs!: ShareOrg[];
 }
 
 export const LotteryDealerSchema = SchemaFactory.createForClass(LotteryDealer);
@@ -162,6 +175,17 @@ LotteryDealerSchema.index(
   { tenantId: 1, nationalId: 1 },
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
 );
+LotteryDealerSchema.index({ tenantId: 1, storeOrgId: 1 });
 LotteryDealerSchema.plugin(baseFieldsPlugin);
-LotteryDealerSchema.plugin(tenantScopePlugin, { moduleData: true });
+// 可共用(預設不共用、可編輯),另給對應分店看(ADR-0014);名稱類欄位可經租戶內引用名稱出口讀
+LotteryDealerSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: {
+    mode: "shareable",
+    defaultShareOrgs: "none",
+    editable: true,
+    sharedByFields: [{ path: "storeOrgId", includeDescendants: false }],
+  },
+  refFields: ["type", "licenseNo", "name", "storeName", "status"],
+});
 LotteryDealerSchema.path("moduleKey").default(DEALERS_MODULE_KEY);

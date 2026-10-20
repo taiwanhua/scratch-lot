@@ -34,6 +34,12 @@ interface UpdateData {
 interface ContactData {
   createLotteryDealerContact: { item: { id: string } };
 }
+interface DealerData {
+  lotteryDealer: { item: DealerRow };
+}
+interface DealersData {
+  lotteryDealers: { items: DealerRow[] };
+}
 
 describe("經銷商管理(專案規格 5.2–5.4)", () => {
   let api: AuthTestApp;
@@ -619,6 +625,165 @@ describe("經銷商管理(專案規格 5.2–5.4)", () => {
       expect(
         await errorOf(api, branchViewer, DEALER, { id: a.id }),
       ).toMatchObject({ code: "NOT_FOUND" });
+    });
+  });
+
+  /**
+   * 資料共用(ADR-0014):經銷商「可共用、預設不共用、可編輯」,另給對應分店看(sharedByFields);
+   * 共用進來的只能看。別租戶的人透過列表、單筆、lookup 都看不到。
+   */
+  describe("資料共用與別租戶", () => {
+    let branchAViewer: string;
+    let branchBViewer: string;
+    let branchAEditor: string;
+    let otherHq: string;
+    let otherTenant: Types.ObjectId;
+    /** 只有 create(沒有 edit):不能設「共用給」。 */
+    let creatorOnly: string;
+
+    beforeAll(async () => {
+      branchAViewer = await dealersToken(api, api.connection, {
+        orgId: branchA,
+        ownerOrgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [],
+      });
+      branchBViewer = await dealersToken(api, api.connection, {
+        orgId: branchB,
+        ownerOrgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [],
+      });
+      branchAEditor = await dealersToken(api, api.connection, {
+        orgId: branchA,
+        ownerOrgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.all, P.contactsAll],
+      });
+      creatorOnly = await dealersToken(api, api.connection, {
+        orgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.create],
+      });
+      otherTenant = await createOrg(api.connection, { name: "別家彩券行" });
+      otherHq = await dealersToken(api, api.connection, {
+        orgId: otherTenant,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.all, P.contactsAll],
+      });
+    }, HOOK_TIMEOUT_MS);
+
+    const readable = async (token: string, id: string): Promise<boolean> =>
+      (await errorOf(api, token, DEALER, { id })) === undefined;
+
+    it("對應分店的人看得到乙類(標示為共用進來、不能編輯、寫入 NOT_FOUND);換了對應分店,看得到的人跟著換", async () => {
+      const b = await createDealer("B", { storeOrgId: String(branchB) });
+      const seen = await ok<DealerData>(api, branchBViewer, DEALER, {
+        id: b.id,
+      });
+      expect(seen.lotteryDealer.item).toMatchObject({
+        isShared: true,
+        abilities: { canEdit: false },
+      });
+      const branchBEditor = await dealersToken(api, api.connection, {
+        orgId: branchB,
+        ownerOrgId: tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.all],
+      });
+      expect(
+        await updateError({ id: b.id, name: "分店改總部的" }, branchBEditor),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      expect(await readable(branchAViewer, b.id)).toBe(false);
+      await updateDealer({ id: b.id, storeOrgId: null });
+      expect(await readable(branchBViewer, b.id)).toBe(false);
+    });
+
+    it("共用給:總部共用給信義店 → 信義店看得到、中山店看不到;改回空清單就都看不到", async () => {
+      const a = await createDealer("A", {
+        shareOrgs: [{ orgId: String(branchB) }],
+      });
+      expect(a.shareOrgs).toEqual([
+        { orgId: String(branchB), includeDescendants: false },
+      ]);
+      expect(await readable(branchBViewer, a.id)).toBe(true);
+      expect(await readable(branchAViewer, a.id)).toBe(false);
+      await updateDealer({ id: a.id, shareOrgs: [] });
+      expect(await readable(branchBViewer, a.id)).toBe(false);
+    });
+
+    it("共用給沒有 dealers.edit → FORBIDDEN;共用給別租戶的組織 → VALIDATION_FAILED", async () => {
+      expect(
+        await createError(
+          dealerInput("A", { shareOrgs: [{ orgId: String(branchB) }] }),
+          creatorOnly,
+        ),
+      ).toMatchObject({ code: "FORBIDDEN" });
+      expect(
+        await createError(
+          dealerInput("A", { shareOrgs: [{ orgId: String(otherTenant) }] }),
+        ),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["shareOrgs"] });
+    });
+
+    it("別租戶的人:列表、單筆、lookup 都看不到;證號可以與別租戶重複;共同銷售處所不能選別租戶的", async () => {
+      const a = await createDealer("A", {
+        shareOrgs: [{ orgId: String(branchB) }],
+      });
+      const list = await ok<DealersData>(api, otherHq, DEALERS, {
+        input: { type: "A" },
+      });
+      expect(list.lotteryDealers.items.map((row) => row.id)).not.toContain(
+        a.id,
+      );
+      expect(await readable(otherHq, a.id)).toBe(false);
+      const mine = await ok<CreateData>(api, otherHq, CREATE_DEALER, {
+        input: dealerInput("A", { licenseNo: a.licenseNo }),
+      });
+      expect(mine.createLotteryDealer.item.licenseNo).toBe(a.licenseNo);
+      const b = await createDealer("B");
+      expect(
+        await errorOf(api, otherHq, UPDATE_DEALER, {
+          input: {
+            id: mine.createLotteryDealer.item.id,
+            coSalesDealerId: b.id,
+          },
+        }),
+      ).toMatchObject({ reason: "REFERENCE_NOT_FOUND" });
+    });
+
+    it("關係人取消身分:別人看不到的經銷商上的關聯只回筆數(hiddenCount),確認後一起解除", async () => {
+      const contact = await ok<ContactData>(
+        api,
+        branchAEditor,
+        CREATE_CONTACT,
+        {
+          input: contactInput(["TRUSTEE", "INTRODUCER"]),
+        },
+      );
+      const contactId = contact.createLotteryDealerContact.item.id;
+      // 總部的甲類掛上中山店建的關係人(中山店的人看不到總部的經銷商)
+      await createDealer("A", { trusteeIds: [contactId] });
+      expect(
+        await errorOf(api, branchAEditor, UPDATE_CONTACT, {
+          input: { id: contactId, roles: ["INTRODUCER"] },
+        }),
+      ).toMatchObject({
+        code: "CONFLICT",
+        reason: "ROLE_IN_USE",
+        relationships: [],
+        hiddenCount: 1,
+      });
+      const released = await ok<{
+        updateLotteryDealerContact: { item: { dealerCount: number } };
+      }>(api, branchAEditor, UPDATE_CONTACT, {
+        input: {
+          id: contactId,
+          roles: ["INTRODUCER"],
+          releaseRelationships: true,
+        },
+      });
+      expect(released.updateLotteryDealerContact.item.dealerCount).toBe(0);
     });
   });
 });

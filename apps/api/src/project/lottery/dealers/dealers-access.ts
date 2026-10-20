@@ -6,12 +6,12 @@ import type { LocalDate } from "@repo/domain/form";
 import { authError } from "../../../auth/auth-error";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
-import { tenantIdOfOrg } from "../../../database/tenant-id";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   PermissionResolver,
   holdsPermission,
 } from "../../../permission/permission-resolver";
+import { tenantOfOperator } from "../master-data-tenant";
 import { localDayOf } from "./dealer-dates";
 import { DEALERS_KEY } from "./dealer-keys";
 
@@ -23,16 +23,6 @@ export interface DealersGrant {
   timezone: string;
   /** 租戶時區的今天。 */
   today: LocalDate;
-}
-
-/**
- * 讀租戶範圍(跨可見範圍)用的上下文:兩個範圍提升為 `"all"`(先例 `fields/field-visibility.ts`)。
- *
- * **只准搭配把查詢釘在 `tenantId` 上的條件**:租戶內唯一(證號、身分證字號)與「對應分店是否已被占用」
- * 問的是整個租戶,不是操作者看得到的那一部分。
- */
-export function tenantWideReader(operator: OperatorContext): OperatorContext {
-  return { ...operator, visibleOrgIds: "all", managedOrgIds: "all" };
 }
 
 /**
@@ -58,14 +48,8 @@ export class DealersAccess {
             operator.actorId,
             operator.currentOrgId,
           );
-    const org =
-      operator.currentOrgId === null
-        ? null
-        : await this.orgs.findById(
-            tenantWideReader(operator),
-            operator.currentOrgId,
-          );
-    const tenantId = org === null ? null : tenantIdOfOrg(org);
+    // 當前組織的租戶:登入線算好的 memberTenants 已依租戶分組,不必讀組織
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
     const timezone = await tenantTimezoneOf(this.orgs, operator, tenantId);
     return {
       modules: new Set(resolution?.modules.map((module) => module.key)),

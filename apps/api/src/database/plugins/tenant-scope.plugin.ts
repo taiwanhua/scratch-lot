@@ -255,12 +255,14 @@ function assertSharingDeclaration(schema: Schema, scope: TenantScope): void {
       `${subject}:資料共用只給業務類、path: orgId、allowGlobal: false 的表`,
     );
   }
-  if (
-    (scope.sharing.mode === "shareable" || scope.refFields.length > 0) &&
-    !scope.moduleData
-  ) {
+  if (scope.sharing.mode === "shareable" && !scope.moduleData) {
     throw new TenantScopeError(
-      `${subject}:可共用與引用名稱出口要以 tenantId 為邊界,必須是模組資料表(moduleData: true)`,
+      `${subject}:可共用要以 tenantId 為邊界,必須是模組資料表(moduleData: true)`,
+    );
+  }
+  if (scope.refFields.length > 0 && !hasTenantIdPath(schema, scope)) {
+    throw new TenantScopeError(
+      `${subject}:引用名稱出口要以 tenantId 為邊界,表要有 tenantId 欄(模組資料表或自己宣告的 ObjectId 欄)`,
     );
   }
   if (scope.sharing.mode === "shareable") {
@@ -275,6 +277,18 @@ function assertSharingDeclaration(schema: Schema, scope: TenantScope): void {
       );
     }
   }
+}
+
+/**
+ * 這張表有沒有 `tenantId` 欄可當租戶邊界:模組資料表由 plugin 宣告;其他表要自己宣告成 ObjectId
+ * (例:比照業務關聯、自己寫 tenantId 的關聯表)。租戶邊界出口(`existsInTenant` / `findRefsInTenant`)據此放行。
+ */
+export function hasTenantIdPath(schema: Schema, scope: TenantScope): boolean {
+  if (scope.moduleData) {
+    return true;
+  }
+  const path = schema.path("tenantId") as { instance?: string } | undefined;
+  return path?.instance === "ObjectId";
 }
 
 /** `sharedByFields` 的欄位:存在、是組織 id(或其陣列),且有 `{ tenantId, <欄位> }` 開頭的索引。 */

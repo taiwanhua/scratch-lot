@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import type { ClientSession, Types } from "mongoose";
 
-import type { OperatorContext } from "../../../database/operator-context";
+import { OrgsRepository } from "../../../database/database.module";
+import { systemTenantReader } from "../../../database/system-tenant-reader";
 import { LotteryDealersRepository } from "../../database/lottery-dealers/lottery-dealers.repository";
 
 /** 一個批購日來源給的候選日期(沒有就 null)。 */
@@ -19,19 +20,6 @@ export type PurchaseDateSource = (
   tenantId: Types.ObjectId | null,
   dealerId: Types.ObjectId,
 ) => Promise<PurchaseDateCandidates>;
-
-/** 內部讀寫用的上下文:只用在已以 `_id` + `tenantId` 釘住的那一筆。 */
-function internalWriter(): OperatorContext {
-  return {
-    actorId: null,
-    currentOrgId: null,
-    visibleOrgIds: "all",
-    managedOrgIds: "all",
-    memberOrgIds: [],
-    roleIds: [],
-    memberTenants: [],
-  };
-}
 
 const latest = (dates: readonly (Date | null)[]): Date | null =>
   dates.reduce<Date | null>(
@@ -53,7 +41,10 @@ const latest = (dates: readonly (Date | null)[]): Date | null =>
 export class DealerPurchaseDates {
   private readonly sources: PurchaseDateSource[] = [];
 
-  constructor(private readonly dealers: LotteryDealersRepository) {}
+  constructor(
+    private readonly dealers: LotteryDealersRepository,
+    private readonly orgs: OrgsRepository,
+  ) {}
 
   registerSource(source: PurchaseDateSource): void {
     this.sources.push(source);
@@ -64,9 +55,15 @@ export class DealerPurchaseDates {
     tenantId: Types.ObjectId | null,
     dealerId: Types.ObjectId,
   ): Promise<void> {
+    // 根組織沒有經銷商(經銷商一律屬於某個租戶)
+    if (tenantId === null) {
+      return;
+    }
     const options = session === null ? {} : { session };
+    // 進貨單 / 經銷商在交易內呼叫:以租戶系統身分讀寫這一筆(條件另釘 `_id` + `tenantId`)
+    const writer = await systemTenantReader(this.orgs, tenantId);
     const dealer = await this.dealers.findOne(
-      internalWriter(),
+      writer,
       { _id: dealerId, tenantId },
       options,
     );
@@ -86,7 +83,7 @@ export class DealerPurchaseDates {
       ...candidates.map((candidate) => candidate.lastSelfPurchaseDate),
     ]);
     await this.dealers.updateById(
-      internalWriter(),
+      writer,
       dealer._id,
       { $set: { lastPurchaseDate, lastSelfPurchaseDate } },
       options,

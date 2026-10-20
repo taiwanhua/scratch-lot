@@ -89,5 +89,9 @@ LotteryDealerContactSchema.index(
   { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
 );
 LotteryDealerContactSchema.plugin(baseFieldsPlugin);
-LotteryDealerContactSchema.plugin(tenantScopePlugin, { moduleData: true });
+// 名稱與關聯檢查要的欄位可經租戶內引用名稱出口讀(看得到經銷商就看得到它關聯的關係人名稱)
+LotteryDealerContactSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  refFields: ["name", "status", "nationalId", "roles"],
+});
 LotteryDealerContactSchema.path("moduleKey").default(DEALERS_MODULE_KEY);

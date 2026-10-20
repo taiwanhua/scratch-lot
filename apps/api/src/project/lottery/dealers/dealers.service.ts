@@ -4,9 +4,15 @@ import type { Types } from "mongoose";
 import { startOfLocalDay } from "@repo/domain/form";
 
 import { AuditService } from "../../../audit/audit.service";
-import type { OperatorContext } from "../../../database/operator-context";
+import { authError } from "../../../auth/auth-error";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
+import { normalizeShareOrgs } from "../../../database/share-orgs";
 import { TransactionService } from "../../../database/transaction";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
+import { toShareOrgModels } from "../../../sharing/share-org.model";
 import {
   LotteryDealerSigninsRepository,
   LotteryDealersRepository,
@@ -33,13 +39,10 @@ import {
   toObjectId,
 } from "./dealer-links.service";
 import { type DealerRecord, dealerRefOf } from "./dealer-mapper";
+import { dealerRefFrom } from "./dealer-tenant";
 import { type DealerValues, validateDealerDraft } from "./dealer-validation";
 import { DealerViewService } from "./dealer-view.service";
-import {
-  DealersAccess,
-  type DealersGrant,
-  tenantWideReader,
-} from "./dealers-access";
+import { DealersAccess, type DealersGrant } from "./dealers-access";
 import {
   DEALER_REASONS,
   fieldForbiddenError,
@@ -56,6 +59,7 @@ import {
 import type {
   LotteryDealerCoSellersPayload,
   LotteryDealerModel,
+  LotteryDealerRef,
   LotteryDealersPayload,
   LotteryOccupiedStoresPayload,
 } from "./models/lottery-dealer.model";
@@ -139,19 +143,16 @@ export class LotteryDealersService {
     const rows = await this.links.coSellerRows(operator, grant.tenantId, [
       record._id,
     ]);
-    const dealers =
-      rows.length === 0
-        ? []
-        : await this.dealers.findMany(tenantWideReader(operator), {
-            tenantId: grant.tenantId,
-            _id: { $in: rows.map((row) => row.firstId) },
-          });
-    const byId = new Map(dealers.map((dealer) => [String(dealer._id), dealer]));
+    const byId = await this.dealerRefs(
+      operator,
+      grant.tenantId,
+      rows.map((row) => row.firstId),
+    );
     const items = rows.flatMap((row) => {
       const dealer = byId.get(String(row.firstId));
       return dealer === undefined
         ? []
-        : [{ dealer: dealerRefOf(dealer), registeredAt: row.createdAt }];
+        : [{ dealer, registeredAt: row.createdAt }];
     });
     return { items, totalCount: items.length };
   }
@@ -162,19 +163,16 @@ export class LotteryDealersService {
   ): Promise<LotteryOccupiedStoresPayload> {
     const grant = await this.access.assertReadable(operator);
     const rows = await this.links.occupiedStoreRows(operator, grant.tenantId);
-    const dealers =
-      rows.length === 0
-        ? []
-        : await this.dealers.findMany(tenantWideReader(operator), {
-            tenantId: grant.tenantId,
-            _id: { $in: rows.map((row) => row.secondId) },
-          });
-    const byId = new Map(dealers.map((dealer) => [String(dealer._id), dealer]));
+    const byId = await this.dealerRefs(
+      operator,
+      grant.tenantId,
+      rows.map((row) => row.secondId),
+    );
     const items = rows.flatMap((row) => {
       const dealer = byId.get(String(row.secondId));
       return dealer === undefined
         ? []
-        : [{ orgId: String(row.firstId), dealer: dealerRefOf(dealer) }];
+        : [{ orgId: String(row.firstId), dealer }];
     });
     return { items, totalCount: items.length };
   }
@@ -198,10 +196,18 @@ export class LotteryDealersService {
     }
     const values = validateDealerDraft(newDraft(input));
     const desired = desiredLinks(emptyLinks(), input);
+    const shareOrgs = input.shareOrgs ?? [];
+    if (shareOrgs.length > 0 && !grant.has(DEALERS_PERMISSIONS.edit)) {
+      throw authError(
+        "FORBIDDEN",
+        `Missing permission ${DEALERS_PERMISSIONS.edit}`,
+      );
+    }
     const created = await this.transactions.withTransaction(async () => {
       await this.assertUnique(operator, grant, values, null);
       const record = await this.dealers.create(operator, {
         ...values,
+        shareOrgs: normalizeShareOrgs(shareOrgs),
         lastPurchaseDate: null,
         lastSelfPurchaseDate: null,
       });
@@ -242,15 +248,24 @@ export class LotteryDealersService {
       }
     }
     const current = await this.mustFind(operator, input.id);
+    // 共用進來的(歸屬組織不在可見範圍)只能看:寫入照可見範圍(ADR-0014)
+    if (!isOrgVisible(operator, current.orgId)) {
+      throw notFoundError(`dealer not found: ${input.id}`);
+    }
+    if (input.shareOrgs === null) {
+      throw validationError("shareOrgs cannot be null", ["shareOrgs"]);
+    }
     const before = draftOf(current);
     const values = validateDealerDraft(applyInput(before, input));
     const changes = changesOf(before, values);
-    const linksById = await this.links.linksOf(operator, [current._id]);
+    const linksById = await this.links.linksOf(operator, grant.tenantId, [
+      current._id,
+    ]);
     const currentLinks = linksById.get(String(current._id)) ?? emptyLinks();
     const desired = desiredLinks(currentLinks, input);
 
     await this.transactions.withTransaction(async () => {
-      await this.assertUnique(operator, grant, values, current._id);
+      await this.assertUnique(operator, grant, values, before);
       if (Object.keys(changes.set).length > 0) {
         const updated = await this.dealers.updateById(operator, current._id, {
           $set: changes.set,
@@ -278,6 +293,18 @@ export class LotteryDealersService {
           current.tenantId,
           current._id,
         );
+      }
+      if (input.shareOrgs !== undefined) {
+        const shared = await this.dealers.updateById(operator, current._id, {
+          $set: { shareOrgs: input.shareOrgs },
+        });
+        await this.audit.record(operator, {
+          action: AUDIT_ACTIONS.dealerEdit,
+          targetType: AUDIT_TARGETS.dealer,
+          targetId: current._id,
+          before: { shareOrgs: toShareOrgModels(current.shareOrgs) },
+          after: { shareOrgs: toShareOrgModels(shared?.shareOrgs) },
+        });
       }
       if (Object.keys(changes.set).length > 0) {
         await this.audit.record(operator, {
@@ -307,6 +334,32 @@ export class LotteryDealersService {
     return record;
   }
 
+  /** 被引用的經銷商(可能看不到)→ 參照;租戶內引用名稱出口。 */
+  private async dealerRefs(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    ids: readonly Types.ObjectId[],
+  ): Promise<Map<string, LotteryDealerRef>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+    let refs: LotteryDealerRef[];
+    if (tenantId === null) {
+      const found = await this.dealers.findMany(operator, {
+        _id: { $in: [...ids] },
+      });
+      refs = found.map((dealer) => dealerRefOf(dealer));
+    } else {
+      const found = await this.dealers.findRefsInTenant(
+        operator,
+        tenantId,
+        ids,
+      );
+      refs = found.map((ref) => dealerRefFrom(ref));
+    }
+    return new Map(refs.map((ref) => [ref.id, ref]));
+  }
+
   private async toModel(
     operator: OperatorContext,
     grant: DealersGrant,
@@ -319,21 +372,23 @@ export class LotteryDealersService {
     return model;
   }
 
-  /** 證號、身分證字號在租戶內唯一(整個租戶,不限操作者看得到的)。 */
+  /**
+   * 證號、身分證字號在租戶內唯一(整個租戶,不限操作者看得到的;租戶邊界出口只回有無)。
+   * 編輯時只查**變了的**那一欄(`before` = 改之前),命中的一定是別筆;根組織(沒有租戶)靠唯一索引守。
+   */
   private async assertUnique(
     operator: OperatorContext,
     grant: DealersGrant,
     values: DealerValues,
-    selfId: Types.ObjectId | null,
+    before: { licenseNo: string | null; nationalId: string | null } | null,
   ): Promise<void> {
-    const reader = tenantWideReader(operator);
-    const others = selfId === null ? {} : { _id: { $ne: selfId } };
+    const tenantId = grant.tenantId;
+    const taken = async (equals: Record<string, string>): Promise<boolean> =>
+      tenantId !== null &&
+      (await this.dealers.existsInTenant(operator, tenantId, equals));
     if (
-      (await this.dealers.count(reader, {
-        tenantId: grant.tenantId,
-        licenseNo: values.licenseNo,
-        ...others,
-      })) > 0
+      before?.licenseNo !== values.licenseNo &&
+      (await taken({ licenseNo: values.licenseNo }))
     ) {
       throw validationError(
         "license number already exists",
@@ -342,11 +397,8 @@ export class LotteryDealersService {
       );
     }
     if (
-      (await this.dealers.count(reader, {
-        tenantId: grant.tenantId,
-        nationalId: values.nationalId,
-        ...others,
-      })) > 0
+      before?.nationalId !== values.nationalId &&
+      (await taken({ nationalId: values.nationalId }))
     ) {
       throw validationError(
         "national id already exists",

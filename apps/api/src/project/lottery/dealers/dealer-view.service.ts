@@ -5,7 +5,10 @@ import {
   OrgsRepository,
   UsersRepository,
 } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import {
   LotteryDealerContactsRepository,
   LotteryDealerSigninsRepository,
@@ -19,12 +22,14 @@ import {
 import {
   type DealerRecord,
   type DealerViewContext,
-  contactRefOf,
-  dealerRefOf,
   toDealerModel,
 } from "./dealer-mapper";
-import { type DealersGrant, tenantWideReader } from "./dealers-access";
-import type { LotteryDealerModel } from "./models/lottery-dealer.model";
+import { dealerRefFrom, dealerTenantReader } from "./dealer-tenant";
+import type { DealersGrant } from "./dealers-access";
+import type {
+  LotteryDealerContactRef,
+  LotteryDealerModel,
+} from "./models/lottery-dealer.model";
 
 const uniqueIds = (ids: readonly Types.ObjectId[]): Types.ObjectId[] => [
   ...new Map(ids.map((id) => [String(id), id])).values(),
@@ -60,8 +65,7 @@ export class DealerViewService {
     records: readonly DealerRecord[],
   ): Promise<DealerViewContext> {
     const ids = records.map((record) => record._id);
-    const links = await this.links.linksOf(operator, ids);
-    const reader = tenantWideReader(operator);
+    const links = await this.links.linksOf(operator, grant.tenantId, ids);
     const linkValues = [...links.values()];
     const coSalesIds = uniqueIds(
       linkValues.flatMap((link) =>
@@ -81,24 +85,24 @@ export class DealerViewService {
     const classA = records.filter((record) => record.type === "a");
     const classB = records.filter((record) => record.type === "b");
 
+    // 看得到經銷商就看得到它引用的名稱(共同銷售處所、關係人;租戶內引用名稱出口)
+    const tenantId = grant.tenantId;
     const coSalesDealers =
-      coSalesIds.length === 0
+      coSalesIds.length === 0 || tenantId === null
         ? []
-        : await this.dealers.findMany(reader, {
-            tenantId: grant.tenantId,
-            _id: { $in: coSalesIds },
-          });
+        : await this.dealers.findRefsInTenant(operator, tenantId, coSalesIds);
     const contacts =
-      contactIds.length === 0
+      contactIds.length === 0 || tenantId === null
         ? []
-        : await this.contacts.findMany(reader, {
-            tenantId: grant.tenantId,
-            _id: { $in: contactIds },
-          });
+        : await this.contacts.findRefsInTenant(operator, tenantId, contactIds);
+    // 對應分店的名稱:分店可能不在讀者的可見範圍,以租戶的組織樹讀
     const orgs =
       orgIds.length === 0
         ? []
-        : await this.orgs.findMany(reader, { _id: { $in: orgIds } });
+        : await this.orgs.findMany(
+            await dealerTenantReader(this.orgs, operator, tenantId),
+            { _id: { $in: orgIds } },
+          );
     const coSellers =
       classB.length === 0
         ? []
@@ -136,16 +140,24 @@ export class DealerViewService {
       dealerRefs: new Map(
         coSalesDealers.map((dealer) => [
           String(dealer._id),
-          dealerRefOf(dealer),
+          dealerRefFrom(dealer),
         ]),
       ),
       contactRefs: new Map(
-        contacts.map((contact) => [String(contact._id), contactRefOf(contact)]),
+        contacts.map((contact) => [
+          String(contact._id),
+          {
+            id: String(contact._id),
+            name: typeof contact.name === "string" ? contact.name : "",
+            status: contact.status as LotteryDealerContactRef["status"],
+          },
+        ]),
       ),
       orgNames: new Map(orgs.map((org) => [String(org._id), org.name])),
       coSellerCounts,
       signedThisQuarter: new Set(signed.map((row) => String(row.dealerId))),
       users: new Map(users.map((user) => [String(user._id), user.name])),
+      owns: (orgId) => isOrgVisible(operator, orgId),
     };
   }
 

@@ -1,6 +1,9 @@
+import type { Types } from "mongoose";
+
 import { startOfLocalDay } from "@repo/domain/form";
 
 import type { Persisted } from "../../../database/base.repository";
+import { toShareOrgModels } from "../../../sharing/share-org.model";
 import type {
   LotteryDealerContactDocument,
   LotteryDealerDocument,
@@ -39,6 +42,8 @@ export interface DealerViewContext {
   signedThisQuarter: ReadonlySet<string>;
   /** 使用者 id → 名稱(建立者)。 */
   users: ReadonlyMap<string, string>;
+  /** 這個組織在讀者的可見範圍內嗎(歸屬組織看得到 = 自己的;否則是共用進來的,只能看)。 */
+  owns: (orgId: Types.ObjectId) => boolean;
 }
 
 export function dealerRefOf(record: DealerRecord): LotteryDealerRef {
@@ -72,6 +77,7 @@ export function toDealerModel(
 ): LotteryDealerModel {
   const { grant } = context;
   const isClassA = record.type === "a";
+  const owned = context.owns(record.orgId);
   const links = context.links.get(String(record._id)) ?? emptyLinks();
   const refsOf = (ids: readonly { toString(): string }[]) =>
     ids.flatMap((id) => {
@@ -168,12 +174,19 @@ export function toDealerModel(
           },
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+    shareOrgs: toShareOrgModels(record.shareOrgs),
+    isShared: !owned,
+    // 共用進來的只能看(ADR-0014):三個編輯能力都是 false
     abilities: {
-      canEdit: grant.has(DEALERS_PERMISSIONS.edit),
+      canEdit: owned && grant.has(DEALERS_PERMISSIONS.edit),
       canEditLastPurchaseBaseDate:
-        isClassA && grant.has(DEALERS_PERMISSIONS.editLastPurchaseBaseDate),
+        owned &&
+        isClassA &&
+        grant.has(DEALERS_PERMISSIONS.editLastPurchaseBaseDate),
       canEditLastSelfPurchaseBaseDate:
-        isClassA && grant.has(DEALERS_PERMISSIONS.editLastSelfPurchaseBaseDate),
+        owned &&
+        isClassA &&
+        grant.has(DEALERS_PERMISSIONS.editLastSelfPurchaseBaseDate),
     },
   };
 }

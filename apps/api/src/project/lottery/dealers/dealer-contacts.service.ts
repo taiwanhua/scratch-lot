@@ -1,5 +1,4 @@
 import { Injectable } from "@nestjs/common";
-import type { Types } from "mongoose";
 
 import { AuditService } from "../../../audit/audit.service";
 import type { OperatorContext } from "../../../database/operator-context";
@@ -22,7 +21,8 @@ import {
   DealerLinksService,
   toObjectId,
 } from "./dealer-links.service";
-import { type ContactRecord, dealerRefOf } from "./dealer-mapper";
+import type { ContactRecord } from "./dealer-mapper";
+import { dealerRefFrom } from "./dealer-tenant";
 import {
   FieldErrors,
   checkNationalId,
@@ -32,11 +32,7 @@ import {
   trimToNull,
 } from "./dealer-validation";
 import { DealerViewService } from "./dealer-view.service";
-import {
-  DealersAccess,
-  type DealersGrant,
-  tenantWideReader,
-} from "./dealers-access";
+import { DealersAccess, type DealersGrant } from "./dealers-access";
 import {
   DEALER_CONFLICT_REASONS,
   DEALER_REASONS,
@@ -268,7 +264,7 @@ export class DealerContactsService {
     const grant = await this.access.grantOf(operator);
     const values = validate(applyInput(blankDraft(), input));
     const created = await this.transactions.withTransaction(async () => {
-      await this.assertUnique(operator, grant, values.nationalId, null);
+      await this.assertUnique(operator, grant, values.nationalId);
       const record = await this.contacts.create(operator, values);
       await this.audit.record(operator, {
         action: AUDIT_ACTIONS.contactCreate,
@@ -308,10 +304,16 @@ export class DealerContactsService {
       removedRoles.includes(row.meta.role as ContactRole),
     );
     if (inUse.length > 0 && input.releaseRelationships !== true) {
+      const described = await this.links.describe(
+        operator,
+        grant.tenantId,
+        inUse,
+      );
       throw conflictError(
         "roles still in use",
         DEALER_CONFLICT_REASONS.roleInUse,
-        await this.links.describe(operator, grant.tenantId, inUse),
+        described.relationships,
+        described.hiddenCount,
       );
     }
     const set: Record<string, unknown> = {};
@@ -326,14 +328,9 @@ export class DealerContactsService {
     }
     await this.transactions.withTransaction(async () => {
       if (values.nationalId !== before.nationalId) {
-        await this.assertUnique(
-          operator,
-          grant,
-          values.nationalId,
-          current._id,
-        );
+        await this.assertUnique(operator, grant, values.nationalId);
       }
-      await this.links.releaseContactRoles(operator, inUse);
+      await this.links.releaseContactRoles(operator, grant.tenantId, inUse);
       if (Object.keys(set).length > 0) {
         await this.contacts.updateById(operator, current._id, { $set: set });
         await this.audit.record(operator, {
@@ -369,14 +366,15 @@ export class DealerContactsService {
     operator: OperatorContext,
     grant: DealersGrant,
     nationalId: string,
-    selfId: Types.ObjectId | null,
   ): Promise<void> {
-    const count = await this.contacts.count(tenantWideReader(operator), {
-      tenantId: grant.tenantId,
-      nationalId,
-      ...(selfId === null ? {} : { _id: { $ne: selfId } }),
-    });
-    if (count > 0) {
+    // 身分證字號整個租戶唯一(含操作者看不到的):租戶邊界出口只回有無。
+    // 呼叫端只在字號變了才查,命中的一定是別筆;根組織(沒有租戶)靠唯一索引守
+    const taken =
+      grant.tenantId !== null &&
+      (await this.contacts.existsInTenant(operator, grant.tenantId, {
+        nationalId,
+      }));
+    if (taken) {
       throw validationError(
         "national id already exists",
         ["nationalId"],
@@ -411,15 +409,17 @@ export class DealerContactsService {
             grant.tenantId,
             records.map((record) => record._id),
           );
+    // 看得到關係人就看得到他掛在哪些經銷商(名稱;租戶內引用名稱出口)
     const dealers =
-      rows.length === 0
+      rows.length === 0 || grant.tenantId === null
         ? []
-        : await this.dealers.findMany(tenantWideReader(operator), {
-            tenantId: grant.tenantId,
-            _id: { $in: rows.map((row) => row.firstId) },
-          });
+        : await this.dealers.findRefsInTenant(
+            operator,
+            grant.tenantId,
+            rows.map((row) => row.firstId),
+          );
     const dealerOf = new Map(
-      dealers.map((dealer) => [String(dealer._id), dealer]),
+      dealers.map((dealer) => [String(dealer._id), dealerRefFrom(dealer)]),
     );
     const users = await this.view.userNames(
       operator,
@@ -435,7 +435,7 @@ export class DealerContactsService {
             ? []
             : [
                 {
-                  dealer: dealerRefOf(dealer),
+                  dealer,
                   role: row.meta.role as LotteryContactRoleEnum,
                 },
               ];

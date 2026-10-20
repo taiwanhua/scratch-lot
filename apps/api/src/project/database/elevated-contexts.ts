@@ -8,12 +8,6 @@
  */
 export const PROJECT_ELEVATED_CONTEXT_FILES: Readonly<Record<string, string>> =
   {
-    "project/lottery/dealers/dealer-reminders.service.ts":
-      "排程讀整個租戶的經銷商(以 tenantId 釘住);待改用 systemTenantReader",
-    "project/lottery/dealers/dealers-access.ts":
-      "租戶內唯一 / 對應分店占用檢查;待改用 existsInTenant / findRefsInTenant",
-    "project/lottery/dealers/purchase-dates.ts":
-      "內部讀寫已以 _id + tenantId 釘住的那一筆;待改用登記過的出口",
     "project/schedule/shared/schedule-org.ts":
       "排班讀上層鏈的範本 / 行事曆(scheduleReadContext)與排程的系統讀寫(scheduleSystemReader);待改用上層沿用到下層與 systemTenantReader",
   };

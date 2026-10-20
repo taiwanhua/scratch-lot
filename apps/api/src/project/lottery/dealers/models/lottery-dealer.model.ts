@@ -7,6 +7,8 @@ import {
   registerEnumType,
 } from "@nestjs/graphql";
 
+import { ShareOrgModel } from "../../../../sharing/share-org.model";
+
 /** 經銷商類型(成員值即落庫的字串)。 */
 export enum LotteryDealerTypeEnum {
   A = "a",
@@ -297,6 +299,14 @@ export class LotteryDealerModel {
 
   @Field(() => LotteryDealerAbilities)
   abilities!: LotteryDealerAbilities;
+
+  /** 共用給(ADR-0014;空 = 不共用)。 */
+  @Field(() => [ShareOrgModel])
+  shareOrgs!: ShareOrgModel[];
+
+  /** 共用進來的(歸屬組織不在讀者的可見範圍,含對應分店看到的):只能看。 */
+  @Field(() => Boolean)
+  isShared!: boolean;
 }
 
 @ObjectType()

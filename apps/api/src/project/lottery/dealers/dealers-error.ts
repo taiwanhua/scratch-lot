@@ -97,12 +97,17 @@ export function fieldForbiddenError(field: string): GraphQLError {
 }
 
 /** 擋下並列出關聯(`extensions.relationships`)。 */
+/**
+ * `hiddenCount`:另有幾筆操作者看不到的經銷商上的關聯(只回筆數,不回內容);
+ * 畫面提示「另有 N 筆你看不到的關聯也會一起解除」。
+ */
 export function conflictError(
   message: string,
   reason: DealerConflictReason,
   relationships: readonly ConflictRelationship[],
+  hiddenCount = 0,
 ): GraphQLError {
   return new GraphQLError(message, {
-    extensions: { code: "CONFLICT", reason, relationships },
+    extensions: { code: "CONFLICT", reason, relationships, hiddenCount },
   });
 }

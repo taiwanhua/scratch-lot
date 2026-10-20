@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import { AuditService } from "../../../audit/audit.service";
-import type { Persisted } from "../../../database/base.repository";
+import type { Persisted, TenantRef } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import type { ContactRole } from "../../database/lottery-dealers/lottery-dealer-contact.schema";
@@ -15,7 +15,7 @@ import {
 } from "../../database/lottery-dealers/lottery-dealers.repository";
 import type { LotteryRelationshipType } from "../../database/lottery-dealers/lottery-relationship.schema";
 import { AUDIT_ACTIONS, AUDIT_TARGETS, CONTACT_LIMITS } from "./dealer-keys";
-import { tenantWideReader } from "./dealers-access";
+import { dealerTenantReader } from "./dealer-tenant";
 import {
   type ConflictRelationship,
   DEALER_CONFLICT_REASONS,
@@ -155,8 +155,10 @@ function checkContact(
 /**
  * 刮刮樂的關聯 `lottery_relationships`(專案規格 5.4;規則正本 `docs/modules/project/dealers.md`「規則」)。
  *
- * - 讀:看得到經銷商就看得到它的關聯(關聯的 `orgId` = 經銷商的 `orgId`)
- * - 跨可見範圍的問題(對應分店是否已被占用、共同銷售人數、關係人被誰關聯)以 `tenantId` 為邊界查整個租戶
+ * - 讀:看得到經銷商(含共用進來的)就看得到它的關聯;關聯列以租戶為邊界讀(`dealerTenantReader`),
+ *   條件一律釘在看得到的經銷商 id 上
+ * - 跨可見範圍的問題:對應分店是否已被占用 → `existsInTenant`;共同銷售人數、關係人被誰關聯 → 以租戶為邊界反查;
+ *   被引用的經銷商 / 關係人名稱 → `findRefsInTenant`
  * - 寫:由經銷商 / 關係人的 service 在**同一個交易**裡呼叫;每一筆新增、解除各寫一筆 audit_log
  */
 @Injectable()
@@ -172,6 +174,7 @@ export class DealerLinksService {
   /** 多位經銷商(作為 first)的關聯:dealerId → 關聯。 */
   async linksOf(
     operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
     dealerIds: readonly Types.ObjectId[],
   ): Promise<Map<string, DealerLinks>> {
     const result = new Map<string, DealerLinks>(
@@ -180,15 +183,19 @@ export class DealerLinksService {
     if (dealerIds.length === 0) {
       return result;
     }
+    // 呼叫端給的 dealerIds 一律是操作者看得到的經銷商;關聯列以租戶為邊界讀(共用進來的也讀得到)
+    const reader = await dealerTenantReader(this.orgs, operator, tenantId);
     const rows = await this.relationships.findMany(
-      operator,
+      reader,
       {
+        tenantId,
         type: { $in: [DEALER_CONTACT, DEALER_DEALER] },
         firstId: { $in: [...dealerIds] },
       },
       { sort: { createdAt: 1, _id: 1 } },
     );
-    const stores = await this.relationships.findMany(operator, {
+    const stores = await this.relationships.findMany(reader, {
+      tenantId,
       type: ORG_DEALER,
       secondId: { $in: [...dealerIds] },
     });
@@ -214,37 +221,40 @@ export class DealerLinksService {
   }
 
   /** 乙類的共同銷售人(整個租戶,反查 `lottery_dealer_lottery_dealer`)。 */
-  coSellerRows(
+  async coSellerRows(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     dealerIds: readonly Types.ObjectId[],
   ): Promise<RelationshipRecord[]> {
     return this.relationships.findMany(
-      tenantWideReader(operator),
+      await dealerTenantReader(this.orgs, operator, tenantId),
       { tenantId, type: DEALER_DEALER, secondId: { $in: [...dealerIds] } },
       { sort: { createdAt: 1, _id: 1 } },
     );
   }
 
   /** 整個租戶已對應乙類的分店。 */
-  occupiedStoreRows(
+  async occupiedStoreRows(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
   ): Promise<RelationshipRecord[]> {
-    return this.relationships.findMany(tenantWideReader(operator), {
-      tenantId,
-      type: ORG_DEALER,
-    });
+    return this.relationships.findMany(
+      await dealerTenantReader(this.orgs, operator, tenantId),
+      {
+        tenantId,
+        type: ORG_DEALER,
+      },
+    );
   }
 
   /** 關係人被哪些經銷商關聯(整個租戶)。 */
-  contactRows(
+  async contactRows(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     contactIds: readonly Types.ObjectId[],
   ): Promise<RelationshipRecord[]> {
     return this.relationships.findMany(
-      tenantWideReader(operator),
+      await dealerTenantReader(this.orgs, operator, tenantId),
       { tenantId, type: DEALER_CONTACT, secondId: { $in: [...contactIds] } },
       { sort: { createdAt: 1, _id: 1 } },
     );
@@ -366,12 +376,16 @@ export class DealerLinksService {
     if (allIds.length === 0) {
       return;
     }
-    const found = await this.contacts.findMany(tenantWideReader(operator), {
-      tenantId: owner.tenantId,
-      _id: { $in: allIds },
-    });
+    const found = await this.contactRefs(operator, owner.tenantId, allIds);
     const byId = new Map(
-      found.map((contact) => [String(contact._id), contact]),
+      found.map((contact) => [
+        String(contact._id),
+        {
+          nationalId: String(contact.nationalId),
+          roles: contact.roles as ContactRole[],
+          status: String(contact.status),
+        },
+      ]),
     );
     for (const role of CONTACT_ROLES_IN_ORDER) {
       for (const id of next.contacts[role]) {
@@ -402,11 +416,14 @@ export class DealerLinksService {
         DEALER_REASONS.notForType,
       );
     }
-    const dealer = await this.dealers.findOne(tenantWideReader(operator), {
-      tenantId: owner.tenantId,
-      _id: target,
-    });
-    if (dealer === null) {
+    // 共同銷售處所可以是操作者看不到的乙類:只讀判斷要的欄位(租戶內引用名稱出口)
+    const [dealer] =
+      owner.tenantId === null
+        ? []
+        : await this.dealers.findRefsInTenant(operator, owner.tenantId, [
+            target,
+          ]);
+    if (dealer === undefined) {
       throw validationError(
         "co-sales dealer not found",
         ["coSalesDealerId"],
@@ -447,7 +464,14 @@ export class DealerLinksService {
         DEALER_REASONS.notForType,
       );
     }
-    const org = await this.orgs.findById(tenantWideReader(operator), orgId);
+    // 對應分店可以是操作者看不到的分店:以租戶的組織樹讀(讀不到 = 不在這個租戶)
+    const org =
+      owner.tenantId === null
+        ? null
+        : await this.orgs.findById(
+            await dealerTenantReader(this.orgs, operator, owner.tenantId),
+            orgId,
+          );
     if (
       org === null ||
       owner.tenantId === null ||
@@ -460,13 +484,13 @@ export class DealerLinksService {
         DEALER_REASONS.storeNotBranch,
       );
     }
-    const taken = await this.relationships.findOne(tenantWideReader(operator), {
-      tenantId: owner.tenantId,
-      type: ORG_DEALER,
-      firstId: orgId,
-      secondId: { $ne: owner._id },
-    });
-    if (taken !== null) {
+    // 一對一:整個租戶有沒有別的乙類對應了這家店(現在對應的就是它的話,上面已經提早回了)
+    const taken = await this.relationships.existsInTenant(
+      operator,
+      owner.tenantId,
+      { type: ORG_DEALER, firstId: orgId },
+    );
+    if (taken) {
       throw validationError(
         "store already belongs to another class B dealer",
         ["storeOrgId"],
@@ -506,6 +530,12 @@ export class DealerLinksService {
       next.storeOrgId,
       (id) => ({ type: ORG_DEALER, firstId: id, secondId: owner._id }),
     );
+    if (!sameId(current.storeOrgId, next.storeOrgId)) {
+      // 對應分店在經銷商上的副本(資料共用的 sharedByFields,ADR-0014):與關聯同一個交易
+      await this.dealers.updateById(operator, owner._id, {
+        $set: { storeOrgId: next.storeOrgId },
+      });
+    }
   }
 
   /** 一對一的關聯(共同銷售處所、對應分店):換了就先解除舊的再新增新的。 */
@@ -529,56 +559,88 @@ export class DealerLinksService {
 
   /**
    * 關係人取消身分時一併解除那些關聯(關係人 service 已確認操作者同意,在同一個交易內)。
-   * 關聯的 `orgId` 屬各經銷商,可能在操作者的可見範圍外,所以以租戶為邊界查。
+   * **例外寫入**(`docs/modules/project/dealers.md`「規則」):關聯的 `orgId` 屬各經銷商,可能在操作者的
+   * 可見範圍外 —— 畫面先告訴他「另有 N 筆你看不到的關聯也會一起解除」,確認後以租戶為邊界解除。
    */
   async releaseContactRoles(
     operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
     rows: readonly RelationshipRecord[],
   ): Promise<void> {
+    if (rows.length === 0) {
+      return;
+    }
+    const writer = await dealerTenantReader(this.orgs, operator, tenantId);
     for (const row of rows) {
-      await this.relationships.softDeleteById(
-        tenantWideReader(operator),
-        row._id,
-      );
+      await this.relationships.softDeleteById(writer, row._id);
       await this.recordAudit(operator, AUDIT_ACTIONS.relationshipDelete, row);
     }
   }
 
-  /** 衝突清單:關聯 → 列給使用者看的經銷商與關係人名稱。 */
+  /**
+   * 衝突清單:關聯 → 列給使用者看的經銷商與關係人名稱。**只列操作者看得到的經銷商**上的關聯,
+   * 看不到的只回筆數(`hiddenCount`;畫面提示「另有 N 筆你看不到的關聯也會一起解除」)。
+   */
   async describe(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     rows: readonly RelationshipRecord[],
-  ): Promise<ConflictRelationship[]> {
+  ): Promise<{ relationships: ConflictRelationship[]; hiddenCount: number }> {
     const dealerIds = rows.map((row) => row.firstId);
-    const contactIds = rows.map((row) => row.secondId);
-    const [dealers, contacts] = await Promise.all([
-      this.dealers.findMany(tenantWideReader(operator), {
-        tenantId,
-        _id: { $in: dealerIds },
-      }),
-      this.contacts.findMany(tenantWideReader(operator), {
-        tenantId,
-        _id: { $in: contactIds },
-      }),
-    ]);
+    const visibleDealers =
+      dealerIds.length === 0
+        ? []
+        : await this.dealers.findMany(operator, { _id: { $in: dealerIds } });
     const dealerOf = new Map(
-      dealers.map((dealer) => [String(dealer._id), dealer]),
+      visibleDealers.map((dealer) => [String(dealer._id), dealer]),
+    );
+    const visible = rows.filter((row) => dealerOf.has(String(row.firstId)));
+    const contacts = await this.contactRefs(
+      operator,
+      tenantId,
+      visible.map((row) => row.secondId),
     );
     const contactOf = new Map(
-      contacts.map((contact) => [String(contact._id), contact.name]),
+      contacts.map((contact) => [String(contact._id), String(contact.name)]),
     );
-    return rows.map((row) => {
-      const dealer = dealerOf.get(String(row.firstId));
-      return {
-        role: String(row.meta.role),
-        dealerId: String(row.firstId),
-        dealerName: dealer?.name ?? "",
-        licenseNo: dealer?.licenseNo ?? "",
-        contactId: String(row.secondId),
-        contactName: contactOf.get(String(row.secondId)) ?? "",
-      };
-    });
+    return {
+      relationships: visible.map((row) => {
+        const dealer = dealerOf.get(String(row.firstId));
+        return {
+          role: String(row.meta.role),
+          dealerId: String(row.firstId),
+          dealerName: dealer?.name ?? "",
+          licenseNo: dealer?.licenseNo ?? "",
+          contactId: String(row.secondId),
+          contactName: contactOf.get(String(row.secondId)) ?? "",
+        };
+      }),
+      hiddenCount: rows.length - visible.length,
+    };
+  }
+
+  /** 關係人的判斷 / 顯示欄位(租戶內引用名稱出口:看得到經銷商就看得到它關聯的關係人)。 */
+  private async contactRefs(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    ids: readonly Types.ObjectId[],
+  ): Promise<TenantRef[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    if (tenantId === null) {
+      const found = await this.contacts.findMany(operator, {
+        _id: { $in: [...ids] },
+      });
+      return found.map((contact) => ({
+        _id: contact._id,
+        name: contact.name,
+        status: contact.status,
+        nationalId: contact.nationalId,
+        roles: contact.roles,
+      }));
+    }
+    return this.contacts.findRefsInTenant(operator, tenantId, ids);
   }
 
   private async contactNames(
@@ -586,11 +648,10 @@ export class DealerLinksService {
     owner: LinkOwner,
     ids: readonly Types.ObjectId[],
   ): Promise<Map<string, string>> {
-    const found = await this.contacts.findMany(tenantWideReader(operator), {
-      tenantId: owner.tenantId,
-      _id: { $in: [...ids] },
-    });
-    return new Map(found.map((contact) => [String(contact._id), contact.name]));
+    const found = await this.contactRefs(operator, owner.tenantId, ids);
+    return new Map(
+      found.map((contact) => [String(contact._id), String(contact.name)]),
+    );
   }
 
   private async link(
@@ -598,19 +659,16 @@ export class DealerLinksService {
     owner: LinkOwner,
     link: LinkSpec,
   ): Promise<void> {
-    // 關聯的 orgId = 經銷商的 orgId(看得到經銷商就看得到它的關聯);寫入範圍以租戶為邊界
-    const created = await this.relationships.create(
-      tenantWideReader(operator),
-      {
-        orgId: owner.orgId,
-        tenantId: owner.tenantId,
-        type: link.type,
-        firstId: link.firstId,
-        secondId: link.secondId,
-        thirdId: null,
-        meta: link.role === undefined ? {} : { role: link.role },
-      },
-    );
+    // 關聯的 orgId = 經銷商的 orgId(操作者正在改這位經銷商,一定在他的可見範圍內)
+    const created = await this.relationships.create(operator, {
+      orgId: owner.orgId,
+      tenantId: owner.tenantId,
+      type: link.type,
+      firstId: link.firstId,
+      secondId: link.secondId,
+      thirdId: null,
+      meta: link.role === undefined ? {} : { role: link.role },
+    });
     await this.recordAudit(operator, AUDIT_ACTIONS.relationshipCreate, created);
   }
 
@@ -619,7 +677,7 @@ export class DealerLinksService {
     owner: LinkOwner,
     link: LinkSpec,
   ): Promise<void> {
-    const row = await this.relationships.findOne(tenantWideReader(operator), {
+    const row = await this.relationships.findOne(operator, {
       tenantId: owner.tenantId,
       type: link.type,
       firstId: link.firstId,
@@ -629,10 +687,7 @@ export class DealerLinksService {
     if (row === null) {
       return;
     }
-    await this.relationships.softDeleteById(
-      tenantWideReader(operator),
-      row._id,
-    );
+    await this.relationships.softDeleteById(operator, row._id);
     await this.recordAudit(operator, AUDIT_ACTIONS.relationshipDelete, row);
   }
 

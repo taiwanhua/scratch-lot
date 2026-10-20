@@ -230,6 +230,11 @@ export const DEALER_FIELDS = /* GraphQL */ `
       canEditLastPurchaseBaseDate
       canEditLastSelfPurchaseBaseDate
     }
+    shareOrgs {
+      orgId
+      includeDescendants
+    }
+    isShared
   }
 `;
 
@@ -340,6 +345,8 @@ export interface DealerRow {
   nextRentDueAt: string | null;
   nationalId: string;
   residentialAddress: string | null;
+  shareOrgs: { orgId: string; includeDescendants: boolean }[];
+  isShared: boolean;
   abilities: {
     canEdit: boolean;
     canEditLastPurchaseBaseDate: boolean;

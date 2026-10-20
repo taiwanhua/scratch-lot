@@ -162,6 +162,7 @@
     }
   },
   "lotteryDealers": {
+    "badgeDescription": "證照快到期、批購逾期的經銷商人數",
     "tabs": {
       "label": "經銷商管理分頁",
       "classA": "甲類",

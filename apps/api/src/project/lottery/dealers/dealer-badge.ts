@@ -28,6 +28,8 @@ export class DealerBadge implements OnModuleInit {
   onModuleInit(): void {
     this.registry.registerBadge({
       moduleKey: DEALERS_KEY,
+      // 通知設定頁「側欄數字」的說明(專案字典)
+      descriptionKey: "admin.lotteryDealers.badgeDescription",
       count: (operator) => this.count(operator),
     });
   }

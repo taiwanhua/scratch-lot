@@ -162,6 +162,7 @@
     }
   },
   "lotteryDealers": {
+    "badgeDescription": "Dealers whose license is expiring or whose purchases are overdue",
     "tabs": {
       "label": "Dealer tabs",
       "classA": "Class A",

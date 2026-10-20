@@ -23,6 +23,7 @@ import {
   type TenantScope,
   TenantScopeError,
   getTenantScope,
+  hasTenantIdPath,
 } from "./plugins/tenant-scope.plugin";
 import { BUSINESS_RELATIONSHIPS_COLLECTION } from "./schemas/business-relationship.schema";
 import { CORE_RELATIONSHIPS_COLLECTION } from "./schemas/core-relationship.schema";
@@ -583,9 +584,10 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     tenantId: Types.ObjectId | null | undefined,
   ): Types.ObjectId {
     const boundary = assertTenantBoundary(tenantId, this.model.modelName);
-    if (getTenantScope(this.model.schema)?.moduleData !== true) {
+    const scope = getTenantScope(this.model.schema);
+    if (scope === undefined || !hasTenantIdPath(this.model.schema, scope)) {
       throw new TenantScopeError(
-        `${this.model.modelName}:租戶邊界出口只給有 tenantId 的模組資料表`,
+        `${this.model.modelName}:租戶邊界出口只給有 tenantId 欄的表`,
       );
     }
     if (
@@ -757,6 +759,10 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
  */
 export const TENANT_BOUNDARY_CALLERS: readonly string[] = [
   "project/lottery/cash-points/cash-points.service.ts",
+  "project/lottery/dealers/dealer-contacts.service.ts",
+  "project/lottery/dealers/dealer-links.service.ts",
+  "project/lottery/dealers/dealer-view.service.ts",
+  "project/lottery/dealers/dealers.service.ts",
   "project/lottery/games/games.service.ts",
 ];
 

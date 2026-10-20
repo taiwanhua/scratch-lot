@@ -302,6 +302,7 @@ input CreateLotteryDealerInput {
   rentStartMonth: Int
   residentialAddress: String
   residentialSameAsMailing: Boolean
+  shareOrgs: [ShareOrgInput!]
   status: LotteryDealerStatus
   storeName: String
   storeOrgId: ID
@@ -1338,6 +1339,7 @@ type LotteryDealer {
   email: String
   id: ID!
   introducers: [LotteryDealerContactRef!]!
+  isShared: Boolean!
   lastPurchaseBaseDate: DateTime
   lastPurchaseDate: DateTime
   lastSelfPurchaseBaseDate: DateTime
@@ -1359,6 +1361,7 @@ type LotteryDealer {
   rentStartMonth: Int
   residentialAddress: String
   residentialSameAsMailing: Boolean!
+  shareOrgs: [ShareOrg!]!
   status: LotteryDealerStatus!
   storeName: String
   storeOrg: LotteryDealerOrgRef
@@ -3419,6 +3422,7 @@ input UpdateLotteryDealerInput {
   rentStartMonth: Int
   residentialAddress: String
   residentialSameAsMailing: Boolean
+  shareOrgs: [ShareOrgInput!]
   status: LotteryDealerStatus
   storeName: String
   storeOrgId: ID
