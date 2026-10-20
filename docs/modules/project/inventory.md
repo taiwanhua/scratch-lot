@@ -192,7 +192,8 @@
 
 `LotteryAllocationsService`(`allocations.service.ts`):
 
-- `allocationStatus(operator, orgId, gameId)`:已給 = 進貨 + 調入 − 調出(累計,售出不扣);每本在這家店的淨張數(扣掉跳號)≥ 標準張數算 1 本,否則算「+N 張」,零碎張數不湊成一本(例:進 2 本、調出 30 張 → 1 本 +70 張)。以操作者當前組織所在租戶的租戶邊界上下文讀整個租戶的事件(出貨店也算得出收貨店;反查),別的租戶的分店 → `NOT_FOUND`;權限由呼叫端判斷。叫貨單、進貨單、調貨單「超過只警告」與庫存管理的矩陣都用它。
+- `allocationStatus(operator, orgId, gameId)`:已給 = 進貨 + 調入 − 調出(累計,售出不扣);每本在這家店的淨張數(扣掉跳號)≥ 標準張數算 1 本,否則算「+N 張」,零碎張數不湊成一本(例:進 2 本、調出 30 張 → 1 本 +70 張)。以操作者當前組織所在租戶的租戶邊界上下文讀整個租戶的事件(出貨店也算得出收貨店;反查),別的租戶的分店 → `NOT_FOUND`;權限由呼叫端判斷。叫貨單、進貨單、調貨單「超過只警告」用它。
+- `allocationStatuses(operator, orgId, gameIds)`:一家店 × 多個遊戲(叫貨單新增頁);同上的規則,回傳順序同 `gameIds`、沒有資料補 0 列;`allocationStatus` 取它的第一筆。三個方法與 `allocationMatrix` 共用同一份計算 `cellsOf`。
 - `allocationMatrix(operator, orgIds, gameIds?)`:多家店 × 多個遊戲一次算(庫存管理的矩陣、遊戲詳情、乙類詳情);只回有設定預計或已給 > 0 的格子;操作者看不到的分店直接略過(防線)。需要算操作者看不到的分店時(例:調貨單由出貨店算收貨店的已給),不要經過 `allocationMatrix`,改走內部的 `cellsOf`(租戶邊界上下文;**權限與可見性由呼叫端負責**)。
 - `setAllocation(operator, { orgId, gameId, plannedBooks, note })`:新增或修改(唯一 `(orgId, gameId)`),寫 audit_log `lottery-allocation.edit`;以操作者的範圍寫。
 
