@@ -1186,8 +1186,7 @@
         "moreError": "+N includes a missing lead (red)",
         "dotFull": "Fully staffed",
         "dotMissingHelper": "Helper missing",
-        "dotMissingLeader": "Lead missing",
-        "dotMissingPeople": "Staffing still missing"
+        "dotMissingLeader": "Lead missing"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N"
@@ -1420,11 +1419,12 @@
         "dateButton": "{date} ▾",
         "pickDateAria": "{date}, pick a date",
         "pickDate": "Pick a date",
-        "missingDot": "Staffing still missing",
         "today": "Today",
         "punch": "⏲ {count}",
         "punchAria": "{count} punches without a shift",
-        "nobody": "Nobody yet"
+        "nobody": "Nobody yet",
+        "missingLeaderDot": "Lead missing",
+        "missingHelperDot": "Only helper missing"
       }
     }
   },

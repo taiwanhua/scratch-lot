@@ -1186,8 +1186,7 @@
         "moreError": "+N 裡有缺負責(紅框)",
         "dotFull": "人力需求已滿",
         "dotMissingHelper": "缺協同",
-        "dotMissingLeader": "缺負責",
-        "dotMissingPeople": "有人力需求還缺人"
+        "dotMissingLeader": "缺負責"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N"
@@ -1420,11 +1419,12 @@
         "dateButton": "{date} ▾",
         "pickDateAria": "{date},選日期",
         "pickDate": "選日期",
-        "missingDot": "有人力需求還缺人",
         "today": "今天",
         "punch": "⏲ {count}",
         "punchAria": "{count} 張未對應排班的打卡",
-        "nobody": "還沒有人填"
+        "nobody": "還沒有人填",
+        "missingLeaderDot": "缺負責",
+        "missingHelperDot": "只缺協同"
       }
     }
   },

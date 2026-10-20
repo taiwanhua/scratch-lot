@@ -5,6 +5,7 @@ import {
   type DemandWording,
   dayCardTexts,
   dayGroupTitle,
+  dayWorstTones,
   entryOffsetsOf,
   monthTagLines,
   moreListLine,
@@ -43,7 +44,7 @@ const counts = (
 ) => ({ leaderFilled, leaderTotal, helperFilled, helperTotal });
 
 describe("人數寫法", () => {
-  it("月檢視標籤(電腦):簡稱 + 時間,下一行人數;只有一種職責時同一行", () => {
+  it("月檢視標籤(電腦):簡稱 + 時間,下一行人數;只有協同時同一行、只有負責仍兩行", () => {
     expect(
       monthTagLines(
         wording({ counts: counts(1, 1, 1, 2) }),
@@ -62,6 +63,17 @@ describe("人數寫法", () => {
         LABELS.short,
       ),
     ).toEqual(["補 13:00–17:00 協1/1"]);
+    expect(
+      monthTagLines(
+        wording({
+          shortName: "晚",
+          time: "14:30–22:00",
+          counts: counts(1, 1, 0, 0),
+        }),
+        "desktop",
+        LABELS.short,
+      ),
+    ).toEqual(["晚 14:30–22:00", "負1/1"]);
   });
 
   it("月檢視標籤(平板):有負責人且已滿只寫簡稱 + 已填 / 總筆數;未滿、只有協同、臨時寫完整兩行", () => {
@@ -184,5 +196,35 @@ describe("日期", () => {
     expect(rosterDateOf("2026-11-31", "2026-11", "2026-10-21")).toBe(
       "2026-11-01",
     );
+  });
+});
+
+/** 一筆人力需求:第一筆是負責、其餘協同;`filled` 依序表示有沒有人填。 */
+const dotDemand = (id: string, date: string, filled: boolean[]) => ({
+  id,
+  date,
+  startAt: at(8),
+  endAt: at(12),
+  positionKey: "p",
+  tasks: filled.map((isFilled, index) => ({
+    taskId: `${id}-${String(index)}`,
+    role: index === 0 ? "leader" : "helper",
+    entryId: isFilled ? `e-${id}-${String(index)}` : null,
+  })),
+});
+
+describe("選日期月曆的點", () => {
+  it("當天最嚴重的狀態:有缺負責紅、只缺協同橘、排滿不畫", () => {
+    const tones = dayWorstTones([
+      dotDemand("a", "2026-11-01", [true, false]),
+      dotDemand("b", "2026-11-01", [false, true]),
+      dotDemand("c", "2026-11-02", [true, false]),
+      dotDemand("d", "2026-11-02", [true, true]),
+      dotDemand("e", "2026-11-03", [true, true]),
+    ]);
+    expect([...tones.entries()]).toEqual([
+      ["2026-11-01", "error"],
+      ["2026-11-02", "warning"],
+    ]);
   });
 });

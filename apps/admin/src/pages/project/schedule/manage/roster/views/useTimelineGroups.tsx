@@ -9,6 +9,7 @@ import type {
   ScheduleTimelineSlot,
 } from "@repo/ui/schedule-timeline";
 
+import { tagPaletteBackground } from "@/components/project/TagPaletteChip/tag-palette-background";
 import {
   autoMarkSx,
   leaderMarkSx,
@@ -32,7 +33,7 @@ import {
   weekFullTitle,
   weekShortTitle,
 } from "@/lib/project/schedule-roster-views";
-import { isTagPaletteKey, tagPalettes } from "@/lib/project/tag-palettes";
+import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import {
   type EntryPreset,
@@ -315,7 +316,7 @@ export const useTimelineGroups = (
       ),
       ...(special === null
         ? {}
-        : { background: tagPalettes[special].light.bg }),
+        : { background: tagPaletteBackground(special) }),
     };
   });
 

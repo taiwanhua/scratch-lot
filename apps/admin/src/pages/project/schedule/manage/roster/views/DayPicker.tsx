@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { useScheduleRosterQuery } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { IconButton } from "@repo/ui/icon-button";
@@ -15,14 +16,15 @@ import { Typography } from "@repo/ui/typography";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
-import { daysMissingPeople } from "@/lib/project/schedule-roster-views";
+import { useSession } from "@/hooks/base/useSession";
+import { dayWorstTones } from "@/lib/project/schedule-roster-views";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import type { RosterData } from "../roster-context";
 
 export interface DayPickerProps {
   anchor: HTMLElement;
-  /** 排班表資料(紅點、店休、特殊日只標得出已讀到的這個月) */
+  /** 排班表目前讀到的那個月(月曆翻到別的月時另讀那個月) */
   data: RosterData | undefined;
   date: string;
   today: string;
@@ -34,7 +36,7 @@ export interface DayPickerProps {
 const PICKER_WIDTH = 296;
 
 /**
- * 日檢視的選日期月曆(SC-46):底座 `MonthCalendar` 單選;有人力需求還缺人的日子右上角紅點、
+ * 日檢視的選日期月曆(SC-46):底座 `MonthCalendar` 單選;右上角的點 = 當天最嚴重的狀態(缺負責紅、只缺協同橘、排滿不畫)、
  * 店休停用、特殊日寫名稱;[今天] 回到今天。電腦、平板、手機同一個浮層。
  */
 export const DayPicker = ({
@@ -48,18 +50,30 @@ export const DayPicker = ({
   const t = useTranslations("admin.schedule.roster");
   const tCalendar = useTranslations("admin.schedule.calendar");
   const [month, setMonth] = useState(date.slice(0, 7));
-  const missing = daysMissingPeople(data?.demands ?? []);
+  const { session } = useSession();
+  // 月曆翻到別的月:讀那家店那個月的排班表再標點、店休、特殊日
+  const other = useScheduleRosterQuery(
+    session.client,
+    { input: { month, ...(data === undefined ? {} : { orgId: data.orgId }) } },
+    { enabled: data !== undefined && month !== data.month },
+  );
+  const shown = month === data?.month ? data : other.data?.scheduleRoster;
   const days: Record<string, MonthCalendarDayInfo> = {};
-  for (const missingDate of missing) {
-    days[missingDate] = {
+  // 當天最嚴重的狀態:缺負責紅點、只缺協同橘點、排滿不畫(同手機月檢視的點)
+  for (const [date, tone] of dayWorstTones(shown?.demands ?? [])) {
+    days[date] = {
       corner: {
         variant: "dot",
-        color: "error",
-        label: t("timeline.missingDot"),
+        color: tone,
+        label: t(
+          tone === "error"
+            ? "timeline.missingLeaderDot"
+            : "timeline.missingHelperDot",
+        ),
       },
     };
   }
-  for (const day of data?.calendarDays ?? []) {
+  for (const day of shown?.calendarDays ?? []) {
     if (day.type === "closed") {
       days[day.date] = {
         ...days[day.date],
@@ -126,7 +140,9 @@ export const DayPicker = ({
           nextMonthLabel={tCalendar("nextMonth")}
           aria-label={t("timeline.pickDate")}
         />
-        <ScheduleLegend items={["dotMissingPeople", "closed", "special"]} />
+        <ScheduleLegend
+          items={["dotMissingLeader", "dotMissingHelper", "closed", "special"]}
+        />
         <Box>
           <Button
             variant="outlined"

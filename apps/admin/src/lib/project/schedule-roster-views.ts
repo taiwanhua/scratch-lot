@@ -119,7 +119,7 @@ export interface DemandWording {
 
 /**
  * 月檢視標籤(人數寫法表):
- * - 電腦:簡稱 + 時間,下一行「負x/y 協x/y」;只有一種職責時寫在同一行
+ * - 電腦:簡稱 + 時間,下一行「負x/y 協x/y」;只有協同時寫在同一行(只有負責仍是兩行)
  * - 平板:有負責人且已滿 → 只寫「簡稱 已填/總筆數」;其餘照電腦寫完整、一律兩行
  */
 export const monthTagLines = (
@@ -137,8 +137,8 @@ export const monthTagLines = (
     }
     return [head, count];
   }
-  const singleRole = counts.leaderTotal === 0 || counts.helperTotal === 0;
-  return singleRole ? [`${head} ${count}`] : [head, count];
+  // 只有協同(例:補貨)寫一行;有負責人的一律兩行(Figma SC-43:只有負責也是兩行)
+  return counts.leaderTotal === 0 ? [`${head} ${count}`] : [head, count];
 };
 
 /** 「+N」長條清單浮層的一列(同月檢視電腦,寫成一行):「晚 14:30–22:00 負1/1 協0/1」。 */
@@ -432,15 +432,21 @@ export const moreToneOf = (tones: readonly GroupTone[]): GroupTone => {
   return tones.includes("warning") ? "warning" : "neutral";
 };
 
-/** 那一天有沒有人力需求還缺人(日檢視選日期月曆的紅點)。 */
-export const daysMissingPeople = (
+/**
+ * 每一天最嚴重的人力狀態(日檢視選日期月曆的點,和手機月檢視的點同一個意思):
+ * 有缺負責 → `error`(紅)、只缺協同 → `warning`(橘);都排滿或沒有人力需求的日子不列(不畫點)。
+ */
+export const dayWorstTones = (
   demands: readonly RosterDemandLike[],
-): Set<string> =>
-  new Set(
-    demands
-      .filter((demand) => {
-        const counts = demandCountsOf(demand.tasks);
-        return filledTotalOf(counts).filled < filledTotalOf(counts).total;
-      })
-      .map((demand) => demand.date),
-  );
+): Map<string, "error" | "warning"> => {
+  const byDate = new Map<string, "error" | "warning">();
+  for (const demand of demands) {
+    const tone = demandToneOf(demandCountsOf(demand.tasks));
+    if (tone === "error") {
+      byDate.set(demand.date, "error");
+    } else if (tone === "warning" && byDate.get(demand.date) !== "error") {
+      byDate.set(demand.date, "warning");
+    }
+  }
+  return byDate;
+};

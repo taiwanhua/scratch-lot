@@ -5,6 +5,10 @@ import { Stack } from "@repo/ui/stack";
 import { Tag } from "@repo/ui/tag";
 import { Typography } from "@repo/ui/typography";
 
+import {
+  tagPaletteBackground,
+  tagPaletteBackgroundVarsSx,
+} from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import {
   demandToneOf,
@@ -18,7 +22,6 @@ import {
 import {
   type TagPaletteKey,
   isTagPaletteKey,
-  tagPalettes,
 } from "@/lib/project/tag-palettes";
 
 import { rosterCellKey, useRoster } from "../roster-context";
@@ -31,7 +34,7 @@ const rowBackground = (
   closed: boolean,
 ): string => {
   if (special !== null) {
-    return tagPalettes[special].light.bg;
+    return tagPaletteBackground(special);
   }
   return closed ? "action.disabledBackground" : "background.paper";
 };
@@ -56,7 +59,7 @@ export const WeekMobileList = ({ dates }: WeekMobileListProps) => {
   );
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={1.5} sx={tagPaletteBackgroundVarsSx}>
       <Stack spacing={1}>
         {dates.map((date) => {
           const day = calendarByDate.get(date);

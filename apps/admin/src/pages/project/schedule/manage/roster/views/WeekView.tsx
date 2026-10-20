@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
+import { Box } from "@repo/ui/box";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import {
   ScheduleTimeline,
@@ -8,6 +9,7 @@ import {
 } from "@repo/ui/schedule-timeline";
 import { Stack } from "@repo/ui/stack";
 
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 import { moreToneOf, weekDatesOf } from "@/lib/project/schedule-roster-views";
 
@@ -20,10 +22,17 @@ import {
   useTimelineGroups,
 } from "./useTimelineGroups";
 
+/**
+ * 週檢視的時間軸最窄的寬(px):時間欄 48 + 7 天 × 平板設計欄寬 125(Figma SC-44 平板;STYLE-06)。
+ * 比這窄(平板、檢核面板打開)時不再擠欄寬,改在外層區塊內左右捲動。
+ */
+const TIMELINE_MIN_WIDTH = 48 + 7 * 125;
+
 /** 週檢視的時間軸高度(版面由殼給,時間軸自己捲)。 */
 const TIMELINE_SX = {
   height: { xs: "60vh", md: "calc(100vh - 340px)" },
   minHeight: 360,
+  minWidth: TIMELINE_MIN_WIDTH,
 };
 
 const isRosterGroup = (
@@ -67,11 +76,16 @@ export const WeekView = () => {
 
   return (
     // 寬度由外層給:不讓時間軸 / 月曆的內容寬撐開頁面(時間軸依量到的寬度排版)
-    <Stack spacing={1.5} sx={{ minWidth: 0, contain: "inline-size" }}>
-      <Stack
+    <Stack
+      spacing={1.5}
+      sx={[{ minWidth: 0, contain: "inline-size" }, tagPaletteBackgroundVarsSx]}
+    >
+      {/* 時間軸在自己的區塊內左右捲動,不把卡片撐寬 */}
+      <Box
         onPointerDownCapture={(event) => {
           pointer.current = { top: event.clientY, left: event.clientX };
         }}
+        sx={{ minWidth: 0, overflowX: "auto" }}
       >
         <ScheduleTimeline
           mode="week"
@@ -131,7 +145,7 @@ export const WeekView = () => {
           nextDayLabel={t("timeline.nextDay")}
           containerSx={TIMELINE_SX}
         />
-      </Stack>
+      </Box>
       <ScheduleLegend
         items={[
           "leader",
