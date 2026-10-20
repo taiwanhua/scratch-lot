@@ -1008,12 +1008,15 @@ describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以�
           columns: [
             { kind: "FIELD", key: "title", width: 200, order: 2 },
             { kind: "SLOT", key: "date", width: 120, order: 1 },
+            // 單號(serialNo)與摘要槽同一種欄
+            { kind: "SLOT", key: "serialNo", width: 160, order: 3 },
           ],
         },
       });
       expect(saved.setModuleListColumns.columns.map((c) => c.key)).toEqual([
         "date",
         "title",
+        "serialNo",
       ]);
       const read = await ok<{
         moduleListColumns: { columns: { key: string; kind: string }[] };
@@ -1021,6 +1024,7 @@ describe("表單的值:語意值、引用快照、現名 / 快照、lookup 以�
       expect(read.moduleListColumns.columns).toEqual([
         expect.objectContaining({ kind: "SLOT", key: "date" }),
         expect.objectContaining({ kind: "FIELD", key: "title", formKey: null }),
+        expect.objectContaining({ kind: "SLOT", key: "serialNo" }),
       ]);
 
       const protectedColumn = await call(api, root, SET_COLUMNS, {

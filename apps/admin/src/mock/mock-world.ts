@@ -86,6 +86,10 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
+import {
+  MOCK_DEMO_FORM_LIST_COLUMNS,
+  MOCK_SHOPPING_SERIAL,
+} from "./mock-form-serial";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
@@ -221,7 +225,7 @@ export const mockHandlers = ({
     // 設計器「類別」下拉的 `FieldCategories` 讓給欄位管理(共用端點,正本只留一份)
     ...withoutOperations(
       formDesignWorld({
-        forms: [formFragment()],
+        forms: [formFragment({ serial: MOCK_SHOPPING_SERIAL })],
         versions: {
           [SHOPPING_FORM_KEY]: [
             versionFragment(shoppingDefinition(), { baseVersion: 1 }),
@@ -281,10 +285,12 @@ export const mockHandlers = ({
         [`${SHOPPING_FORM_KEY}@1`]: shoppingDefinition(),
         [`${LEAVE_FORM_KEY}@1`]: leaveDefinition(),
       },
+      listColumns: MOCK_DEMO_FORM_LIST_COLUMNS,
       submissions: [
-        submissionFragment(),
+        submissionFragment({ serialNo: "PU-202610-0001" }),
         submissionFragment({
           id: "sub-2",
+          serialNo: "PU-202610-0002",
           summary: { title: "牛奶", date: null, amount: "120" },
           values: { item: "牛奶", qty: "3", unit_price: "40", total: "120" },
         }),

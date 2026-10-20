@@ -18,8 +18,11 @@ registerEnumType(ModuleListColumnKind, {
   description: "列表欄位的種類:摘要槽 / 表單欄位",
 });
 
-/** 摘要槽 key(`form_submissions.summary` 的鍵)。 */
-export const LIST_SLOT_KEYS = ["title", "date", "amount"] as const;
+/**
+ * 摘要槽 key(`form_submissions.summary` 的鍵),加單號 `serialNo`(`form_submissions.serialNo`;
+ * 表單設了單號格式才有值)。
+ */
+export const LIST_SLOT_KEYS = ["title", "date", "amount", "serialNo"] as const;
 
 /** 欄寬上下限(px)。 */
 export const MIN_COLUMN_WIDTH = 40;

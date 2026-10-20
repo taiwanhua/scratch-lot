@@ -584,7 +584,8 @@
       "slots": {
         "title": "Title",
         "date": "Date",
-        "amount": "Amount"
+        "amount": "Amount",
+        "serialNo": "Serial no."
       },
       "field": "Form field",
       "missingField": "{key} (no longer in the current version)",
@@ -1251,7 +1252,8 @@
       "slots": {
         "title": "Title",
         "date": "Date",
-        "amount": "Amount"
+        "amount": "Amount",
+        "serialNo": "Serial no."
       }
     },
     "detail": {
@@ -1312,7 +1314,8 @@
         "edit": "Edit",
         "create": "New"
       },
-      "tabLabelWithAction": "{action} · {label}"
+      "tabLabelWithAction": "{action} · {label}",
+      "serialNo": "Serial no.: {serialNo}"
     },
     "fill": {
       "loading": "Loading",
@@ -1422,7 +1425,31 @@
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",
       "tabDesign": "Form design",
-      "tabVersions": "Form versions"
+      "tabVersions": "Form versions",
+      "serial": "Serial number",
+      "serialEnabled": "Give a serial number on first submit",
+      "serialHint": "Drafts get no number; a given number is kept (return, withdraw and void keep it). Each tenant counts separately and restarts per period.",
+      "serialPrefix": "Prefix",
+      "serialPrefixHint": "0–10 letters or digits; may be empty",
+      "serialPeriod": "Restart numbering",
+      "serialPeriods": {
+        "none": "Never",
+        "year": "Every year",
+        "month": "Every month"
+      },
+      "serialDigits": "Digits",
+      "serialSeparator": "Separator",
+      "serialSeparators": {
+        "dash": "-",
+        "underscore": "_",
+        "slash": "/",
+        "dot": ".",
+        "none": "None"
+      },
+      "serialPreview": "Example: {example}",
+      "serialSave": "Save serial format",
+      "serialSaved": "Serial format saved.",
+      "serialCleared": "Serial numbers turned off; given numbers are kept."
     },
     "create": {
       "title": "New form",

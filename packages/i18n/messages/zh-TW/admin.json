@@ -584,7 +584,8 @@
       "slots": {
         "title": "標題",
         "date": "日期",
-        "amount": "金額"
+        "amount": "金額",
+        "serialNo": "單號"
       },
       "field": "表單欄位",
       "missingField": "{key}(目前版本已沒有這個欄位)",
@@ -1251,7 +1252,8 @@
       "slots": {
         "title": "標題",
         "date": "日期",
-        "amount": "金額"
+        "amount": "金額",
+        "serialNo": "單號"
       }
     },
     "detail": {
@@ -1312,7 +1314,8 @@
         "edit": "編輯",
         "create": "新增"
       },
-      "tabLabelWithAction": "{action}・{label}"
+      "tabLabelWithAction": "{action}・{label}",
+      "serialNo": "單號:{serialNo}"
     },
     "fill": {
       "loading": "載入中",
@@ -1422,7 +1425,31 @@
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",
-      "tabVersions": "表單版本"
+      "tabVersions": "表單版本",
+      "serial": "單號",
+      "serialEnabled": "第一次送出時給單號",
+      "serialHint": "存草稿不給號;給了不收回(退回、撤回、作廢都保留原號)。流水號各租戶分開,依期間重新起算。",
+      "serialPrefix": "前綴",
+      "serialPrefixHint": "英數 0–10 字,可空",
+      "serialPeriod": "流水號重新起算",
+      "serialPeriods": {
+        "none": "不重新起算",
+        "year": "每年",
+        "month": "每月"
+      },
+      "serialDigits": "位數",
+      "serialSeparator": "分隔符",
+      "serialSeparators": {
+        "dash": "-",
+        "underscore": "_",
+        "slash": "/",
+        "dot": ".",
+        "none": "不分隔"
+      },
+      "serialPreview": "例:{example}",
+      "serialSave": "儲存單號格式",
+      "serialSaved": "已儲存單號格式。",
+      "serialCleared": "已停止給單號,已給的號碼保留。"
     },
     "create": {
       "title": "建立表單",
