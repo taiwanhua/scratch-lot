@@ -12,6 +12,14 @@ type AddOrgMembersPayload {
   skippedUserIds: [ID!]!
 }
 
+input AddScheduleStaffInput {
+  userIds: [ID!]!
+}
+
+type AddScheduleStaffPayload {
+  items: [ScheduleStaffRow!]!
+}
+
 input AddStepAssigneeInput {
   instanceId: ID!
   stepKey: String!
@@ -375,6 +383,20 @@ input CreateWorkflowVersionDraftInput {
   workflowKey: ID!
 }
 
+input CustomizeScheduleAutoRunInput {
+  conditions: [ScheduleAutoRunConditionInput!]!
+  orgId: ID
+}
+
+input CustomizeScheduleRuleInput {
+  enabled: Boolean
+  key: String!
+  level: String
+  order: Int
+  orgId: ID
+  value: JSONObject
+}
+
 """多條規則命中同一操作者時的頂層合成:OR = 聯集(命中越多看得越多)、AND = 交集"""
 enum DataScopeCombineOp {
   AND
@@ -522,6 +544,23 @@ type DeleteRetiredPermissionPayload {
 }
 
 input DeleteRoleInput {
+  id: ID!
+}
+
+input DeleteScheduleCalendarDayInput {
+  id: ID!
+  orgId: ID
+}
+
+type DeleteScheduleCalendarDayPayload {
+  id: ID!
+}
+
+input DeleteScheduleTemplateInput {
+  id: ID!
+}
+
+type DeleteScheduleTemplatePayload {
   id: ID!
 }
 
@@ -1664,6 +1703,7 @@ input MoveOrgInput {
 
 type Mutation {
   addOrgMembers(input: AddOrgMembersInput!): AddOrgMembersPayload!
+  addScheduleStaff(input: AddScheduleStaffInput!): AddScheduleStaffPayload!
   addStepAssignee(input: AddStepAssigneeInput!): WorkflowTaskPayload!
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
@@ -1695,6 +1735,8 @@ type Mutation {
   createUser(input: CreateUserInput!): UserPayload!
   createWorkflow(input: CreateWorkflowInput!): WorkflowPayload!
   createWorkflowVersionDraft(input: CreateWorkflowVersionDraftInput!): WorkflowVersionPayload!
+  customizeScheduleAutoRun(input: CustomizeScheduleAutoRunInput!): ScheduleRuleMutationPayload!
+  customizeScheduleRule(input: CustomizeScheduleRuleInput!): ScheduleRuleMutationPayload!
   decideTask(input: DecideTaskInput!): WorkflowTaskPayload!
   deleteDemoItemOne(input: DeleteDemoItemOneInput!): DeleteDemoItemOnePayload!
   deleteDemoItemTwo(input: DeleteDemoItemTwoInput!): DeleteDemoItemTwoPayload!
@@ -1705,6 +1747,9 @@ type Mutation {
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
+  deleteScheduleCalendarDay(input: DeleteScheduleCalendarDayInput!): DeleteScheduleCalendarDayPayload!
+  deleteScheduleDemandTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
+  deleteScheduleDemandWeekTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
@@ -1726,6 +1771,7 @@ type Mutation {
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
+  restoreScheduleRule(input: RestoreScheduleRuleInput!): ScheduleRuleMutationPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
   retryAdvanceInstance(input: RetryAdvanceInstanceInput!): WorkflowInstancePayload!
@@ -1737,6 +1783,9 @@ type Mutation {
   saveFormDraft(input: SaveFormDraftInput!): FormSubmissionPayload!
   saveFormVersionDraft(input: SaveFormVersionDraftInput!): FormVersionPayload!
   saveRoleMatrix(input: SaveRoleMatrixInput!): RoleMatrixPayload!
+  saveScheduleCalendarDay(input: SaveScheduleCalendarDayInput!): ScheduleCalendarDayPayload!
+  saveScheduleDemandTemplate(input: SaveScheduleDemandTemplateInput!): ScheduleDemandTemplatePayload!
+  saveScheduleDemandWeekTemplate(input: SaveScheduleDemandWeekTemplateInput!): ScheduleDemandWeekTemplatePayload!
   saveWorkflowVersionDraft(input: SaveWorkflowVersionDraftInput!): WorkflowVersionPayload!
   setDemoItemOneEnabled(input: SetDemoItemOneEnabledInput!): DemoItemOnePayload!
   setDemoItemTwoEnabled(input: SetDemoItemTwoEnabledInput!): DemoItemTwoPayload!
@@ -1777,6 +1826,7 @@ type Mutation {
   updateOrg(input: UpdateOrgInput!): OrgPayload!
   updatePrinter(input: UpdatePrinterInput!): PrinterPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
+  updateScheduleStaff(input: UpdateScheduleStaffInput!): ScheduleStaffPayload!
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
   upgradeFormSubmissions(input: UpgradeFormSubmissionsInput!): FormUpgradePayload!
@@ -2360,6 +2410,12 @@ type Query {
   roleUserCandidates(input: RoleUserCandidatesInput!, roleId: ID!): RoleUserCandidatesPayload!
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
+  scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
+  scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
+  scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload!
+  scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
+  scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
+  scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
   sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
   user(id: ID!): User!
@@ -2433,6 +2489,11 @@ type RequestPasswordResetPayload {
 input ResetNotificationSettingInput {
   part: NotificationSettingPart
   type: String!
+}
+
+input RestoreScheduleRuleInput {
+  key: String!
+  orgId: ID
 }
 
 input RetireCurrentVersionInput {
@@ -2679,10 +2740,229 @@ input SaveRoleMatrixInput {
   roleId: ID!
 }
 
+input SaveScheduleCalendarDayInput {
+  category: String
+  date: String!
+  id: ID
+  name: String
+  note: String
+  orgId: ID
+  paletteKey: String
+  type: String!
+}
+
+input SaveScheduleDemandTemplateInput {
+  endTime: String!
+  id: ID
+  name: String!
+  paletteKey: String
+  positionKey: String!
+  shortName: String!
+  startTime: String!
+  tasks: [ScheduleTemplateTaskInput!]!
+}
+
+input SaveScheduleDemandWeekTemplateInput {
+  days: [[ID!]!]!
+  enabled: Boolean
+  id: ID
+  name: String!
+}
+
 input SaveWorkflowVersionDraftInput {
   definition: WorkflowDefinitionInput!
   expectedDraftRevision: Int!
   workflowKey: ID!
+}
+
+input ScheduleAutoRunConditionInput {
+  enabled: Boolean!
+  key: String!
+}
+
+type ScheduleCalendarDay {
+  canEdit: Boolean!
+  category: String
+  date: String!
+  id: ID!
+  name: String
+  note: String
+  ownerOrg: ScheduleOwnerOrg!
+  paletteKey: String
+  type: String!
+}
+
+type ScheduleCalendarDayPayload {
+  item: ScheduleCalendarDay!
+}
+
+input ScheduleCalendarInput {
+  month: String!
+  orgId: ID
+}
+
+type ScheduleCalendarPayload {
+  canEdit: Boolean!
+  days: [ScheduleCalendarDay!]!
+  month: String!
+  orgId: ID!
+  orgName: String!
+}
+
+type ScheduleDemandTemplate {
+  canEdit: Boolean!
+  endTime: String!
+  id: ID!
+  name: String!
+  ownerOrg: ScheduleOwnerOrg!
+  paletteKey: String
+  positionKey: String!
+  shortName: String!
+  startTime: String!
+  tasks: [ScheduleTemplateTask!]!
+}
+
+type ScheduleDemandTemplatePayload {
+  item: ScheduleDemandTemplate!
+}
+
+type ScheduleDemandTemplatesPayload {
+  canCreate: Boolean!
+  items: [ScheduleDemandTemplate!]!
+  totalCount: Int!
+}
+
+type ScheduleDemandWeekTemplate {
+  canEdit: Boolean!
+  days: [[ID!]!]!
+  enabled: Boolean!
+  id: ID!
+  name: String!
+  ownerOrg: ScheduleOwnerOrg!
+}
+
+type ScheduleDemandWeekTemplatePayload {
+  item: ScheduleDemandWeekTemplate!
+}
+
+type ScheduleDemandWeekTemplatesPayload {
+  canCreate: Boolean!
+  items: [ScheduleDemandWeekTemplate!]!
+  totalCount: Int!
+}
+
+type ScheduleFieldOption {
+  label: String!
+  value: String!
+}
+
+type ScheduleFieldOptionsPayload {
+  items: [ScheduleFieldOption!]!
+  totalCount: Int!
+}
+
+type ScheduleOwnerOrg {
+  id: ID!
+  name: String!
+}
+
+type ScheduleRule {
+  effective: ScheduleRuleSetting!
+  group: String!
+  hasLevel: Boolean!
+  key: ID!
+  parent: ScheduleRuleSetting
+  unit: String
+  valueType: String!
+}
+
+type ScheduleRuleMutationPayload {
+  rules: ScheduleRulesPayload!
+}
+
+type ScheduleRuleSetting {
+  enabled: Boolean!
+  level: String
+  order: Int!
+  source: ScheduleRuleSource!
+  sourceOrgName: String
+  value: JSONObject!
+}
+
+"""規則生效值的來源:本層自訂 / 沿用上層 / 程式預設"""
+enum ScheduleRuleSource {
+  DEFAULT
+  INHERITED
+  OWN
+}
+
+input ScheduleRulesInput {
+  orgId: ID
+}
+
+type ScheduleRulesPayload {
+  canEdit: Boolean!
+  isTenantTop: Boolean!
+  items: [ScheduleRule!]!
+  orgId: ID!
+  orgName: String!
+}
+
+input ScheduleStaffListInput {
+  joined: Boolean
+  keyword: String
+}
+
+type ScheduleStaffListPayload {
+  canEdit: Boolean!
+  items: [ScheduleStaffRow!]!
+  totalCount: Int!
+}
+
+type ScheduleStaffOrg {
+  canLead: Boolean!
+  isPrimary: Boolean!
+  orgId: ID!
+  orgName: String!
+  sortOrder: Int!
+}
+
+input ScheduleStaffOrgInput {
+  canLead: Boolean!
+  isPrimary: Boolean!
+  orgId: ID!
+}
+
+type ScheduleStaffPayload {
+  item: ScheduleStaffRow!
+}
+
+type ScheduleStaffProfile {
+  employmentType: String!
+  enabled: Boolean!
+  id: ID!
+  note: String
+  orgs: [ScheduleStaffOrg!]!
+  primaryElsewhere: Boolean!
+}
+
+type ScheduleStaffRow {
+  account: String!
+  name: String!
+  staff: ScheduleStaffProfile
+  userId: ID!
+}
+
+type ScheduleTemplateTask {
+  role: String!
+  taskId: ID!
+  taskKey: String!
+}
+
+input ScheduleTemplateTaskInput {
+  role: String!
+  taskId: ID
+  taskKey: String!
 }
 
 input SetDemoItemOneEnabledInput {
@@ -2995,6 +3275,14 @@ input UpdateRoleInput {
   description: String
   id: ID!
   name: String
+}
+
+input UpdateScheduleStaffInput {
+  employmentType: String
+  enabled: Boolean
+  note: String
+  orgs: [ScheduleStaffOrgInput!]
+  staffId: ID!
 }
 
 input UpdateUserInput {

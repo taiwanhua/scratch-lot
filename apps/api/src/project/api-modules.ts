@@ -2,6 +2,7 @@ import type { ApiFeatureRegistration } from "../base/api-feature-registration";
 import { FieldOptionColorsModule } from "./field-option-colors/field-option-colors.module";
 import { LotteryDealersModule } from "./lottery/dealers/dealers.module";
 import { LotteryMasterDataModule } from "./lottery/master-data.module";
+import { ScheduleModule } from "./schedule/schedule.module";
 
 /**
  * 專案的 API 功能清單(docs/standards/general/structure.md「STRUCT-12」api)。
@@ -12,4 +13,5 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "field-option-colors", module: FieldOptionColorsModule },
   { key: "lottery-master-data", module: LotteryMasterDataModule },
   { key: "lottery-dealers", module: LotteryDealersModule },
+  { key: "schedule", module: ScheduleModule },
 ];

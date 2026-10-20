@@ -9,6 +9,7 @@ import {
 } from "./field-categories";
 import { masterDataModule } from "./master-data";
 import { reportsModule } from "./reports";
+import { scheduleModuleDeclarations } from "./schedule";
 
 /**
  * 專案的種子來源(正本:ADR-0002)。專案新增的內容登記在這裡,不改 `seeds/base/`:
@@ -29,6 +30,8 @@ export const projectSeedSource: SeedSource = {
     dealersModule,
     // 輸出報表(規格 3.1、3.2、第 11 章)
     reportsModule,
+    // 班表管理群組與四個子模組(規格 3.1、3.2)
+    ...scheduleModuleDeclarations,
   ],
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)

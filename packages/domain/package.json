@@ -159,6 +159,16 @@
         "default": "./dist/cjs/project/schedule-fields.cjs"
       }
     },
+    "./project/schedule-settings": {
+      "import": {
+        "types": "./dist/es/project/schedule-settings.d.ts",
+        "default": "./dist/es/project/schedule-settings.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/schedule-settings.d.cts",
+        "default": "./dist/cjs/project/schedule-settings.cjs"
+      }
+    },
     "./project/tag-palette": {
       "import": {
         "types": "./dist/es/project/tag-palette.d.ts",
@@ -226,6 +236,9 @@
       ],
       "project/schedule-fields": [
         "./dist/es/project/schedule-fields.d.ts"
+      ],
+      "project/schedule-settings": [
+        "./dist/es/project/schedule-settings.d.ts"
       ],
       "project/tag-palette": [
         "./dist/es/project/tag-palette.d.ts"
