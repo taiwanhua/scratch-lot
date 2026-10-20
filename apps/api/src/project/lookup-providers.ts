@@ -2,7 +2,10 @@ import { LOTTERY_PORTABLE_LOOKUP_PROVIDERS } from "@repo/domain/project/lottery"
 
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
 import { LotteryBankAccountsRepository } from "./database/lottery-accounts/lottery-accounts.repositories";
-import { LotteryDealersRepository } from "./database/lottery-dealers/lottery-dealers.repository";
+import {
+  LotteryDealerContactsRepository,
+  LotteryDealersRepository,
+} from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
 
@@ -68,8 +71,29 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       filterFields: ["status", "type"],
       labelField: "name",
       keywordFields: ["name", "licenseNo"],
+      // 進貨單的批購甲類(type = a、營業中)跟著受管表單交付
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_dealer,
     },
     repositoryToken: LotteryDealersRepository,
+  },
+  {
+    // 關係人(專案規格 5.3;`docs/modules/project/dealers.md`):進貨單的批購受託人。
+    // 固定條件 `status: "active"`、`roles: "trustee"`(身分多選,陣列等值 = 含受託人);「是這位甲類的受託人」
+    // 由進貨單送出前檢查(關聯在 `lottery_relationships`,lookup 不能 join)。範圍照可見範圍
+    declaration: {
+      key: "lottery_dealer_contact",
+      name: "關係人",
+      permission: null,
+      fields: {
+        name: { type: "text", label: "姓名" },
+        mobile: { type: "text", label: "手機" },
+      },
+      filterFields: ["status", "roles"],
+      labelField: "name",
+      keywordFields: ["name", "mobile"],
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_dealer_contact,
+    },
+    repositoryToken: LotteryDealerContactsRepository,
   },
   {
     // 本(專案規格 7.1;`docs/modules/project/inventory.md`「lookup 來源」):調貨單選本用(B2d 連動篩選)。
@@ -115,6 +139,8 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       labelField: "label",
       keywordFields: ["label", "accountName"],
       sharedToFilter: "usableBy",
+      // 進貨單的扣款帳戶(只列使用中)跟著受管表單交付
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_bank_account,
     },
     repositoryToken: LotteryBankAccountsRepository,
   },

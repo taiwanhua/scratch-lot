@@ -15,7 +15,7 @@ import {
 import {
   FormSubmissionsRepository,
   OrgsRepository,
-} from "../../../database/database.module";
+} from "../../../database/base/repositories";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import {

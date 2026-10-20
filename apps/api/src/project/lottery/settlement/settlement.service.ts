@@ -193,6 +193,44 @@ export class SettlementService {
       .map((account) => ({ id: String(account._id), label: account.label }));
   }
 
+  /**
+   * 單據還沒送出前(新增頁、送出前檢查)用:這家分店能用的使用中帳戶(使用組織包含它),依操作者看得到的帳戶。
+   * 權限由呼叫端判斷(例:進貨單新增頁看 `purchasing.purchase.create`)。
+   */
+  async usableAccountsOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    branchOrgId: Types.ObjectId,
+  ): Promise<{ id: string; label: string }[]> {
+    const isUsable = await this.usableBy(operator, tenantId, branchOrgId);
+    const accounts = await this.accounts.findMany(
+      operator,
+      { status: "active" },
+      { sort: { createdAt: 1, _id: 1 } },
+    );
+    return accounts
+      .filter((account) => isUsable(account))
+      .map((account) => ({ id: String(account._id), label: account.label }));
+  }
+
+  /**
+   * 帳戶使用中、而且使用組織包含這家分店(以租戶為邊界讀,不看操作者的範圍;守門與事後動作用)。
+   * 找不到 → false。
+   */
+  async isAccountUsable(
+    tenantId: Types.ObjectId | null,
+    accountId: Types.ObjectId,
+    branchOrgId: Types.ObjectId,
+  ): Promise<boolean> {
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const account = await this.accounts.findById(reader, accountId);
+    if (account?.status !== "active") {
+      return false;
+    }
+    const isUsable = await this.usableBy(null, tenantId, branchOrgId);
+    return isUsable(account);
+  }
+
   // ---- 寫 ----
 
   async record(

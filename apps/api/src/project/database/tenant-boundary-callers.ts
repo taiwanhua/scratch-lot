@@ -73,4 +73,13 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/requisition/requisition-registrations.ts": ["系統重算"],
   // 進貨單 / 調貨單引用叫貨單:系統身分只看得到單據所屬的店(調貨單是出貨店),叫貨單在收貨店
   "project/lottery/requisition/requisition-reference.ts": ["例外寫入"],
+  // 進貨單:本號和其他有效進貨單 / 既有的本重複、已點收的列、叫貨單 / 甲類 / 受託人(總部建的單,系統身分
+  // 只看得到單據的組織);作廢時撤銷點收過的本、寫「進貨作廢」事件
+  "project/lottery/purchase/purchase-rules.service.ts": ["反查", "例外寫入"],
+  // 遊戲是否有進貨單引用、在途本數、甲類的批購日來源:沒有操作者,問的是整個租戶
+  "project/lottery/purchase/purchase-registrations.ts": ["系統重算"],
+  // 點收:店長從申請中心進來,總部建的單不在他的可見範圍;送錯分店要查別家店的進貨單
+  "project/lottery/purchase/purchase-receiving.service.ts": ["反查"],
+  // 受託人的關聯(關係人可能是別的組織建的);點收進度讀點收紀錄
+  "project/lottery/purchase/purchase-query.service.ts": ["反查"],
 };

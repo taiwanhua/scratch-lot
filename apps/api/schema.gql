@@ -1675,6 +1675,18 @@ type LotteryDealerPayload {
   item: LotteryDealer!
 }
 
+type LotteryDealerPurchase {
+  books: Int!
+  branchName: String!
+  purchaseDate: DateTime
+  purchaseId: ID!
+  purchaseTotal: Int!
+  selfPurchase: Boolean!
+  serialNo: String
+  status: String!
+  trusteeName: String
+}
+
 type LotteryDealerRef {
   id: ID!
   licenseNo: String!
@@ -2019,6 +2031,16 @@ type LotteryPositionOptionsPayload {
   totalCount: Int!
 }
 
+type LotteryPurchaseGame {
+  bookPrice: Int!
+  defaultRate: Int!
+  gameCode: String!
+  id: ID!
+  name: String!
+  ticketsPerBook: Int!
+  unitPrice: Int!
+}
+
 type LotteryPurchaseList {
   orgIds: [ID!]!
   requisitions: [LotteryPendingRequisition!]!
@@ -2038,6 +2060,76 @@ type LotteryPurchaseListRow {
   name: String!
   totalBooks: Int!
   unitPrice: Int!
+}
+
+type LotteryPurchaseOption {
+  id: ID!
+  label: String!
+}
+
+type LotteryPurchaseOptions {
+  accounts: [LotteryPurchaseOption!]!
+  dealers: [LotteryPurchaseOption!]!
+  games: [LotteryPurchaseGame!]!
+  requisitions: [LotteryPurchaseRequisition!]!
+  trustees: [LotteryPurchaseTrustee!]!
+}
+
+type LotteryPurchaseProgress {
+  inSettlement: Boolean!
+  purchaseId: ID!
+  receivedCount: Int!
+  settlementAmount: Int!
+  settlementKind: String
+  totalCount: Int!
+}
+
+type LotteryPurchaseReceiving {
+  canReceive: Boolean!
+  groups: [LotteryPurchaseReceivingGroup!]!
+  receivedCount: Int!
+  submissionId: ID!
+  totalCount: Int!
+}
+
+type LotteryPurchaseReceivingGroup {
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  receivedBooks: Int!
+  requestedBooks: Int
+  rows: [LotteryPurchaseReceivingRow!]!
+  subtotal: Int!
+  unitPrice: Int!
+}
+
+type LotteryPurchaseReceivingRow {
+  amount: Int!
+  bookNo: String!
+  bookPrice: Int!
+  lastTicketNo: Int!
+  rate: Int!
+  received: Boolean!
+  receivedAt: DateTime
+  rowId: String!
+  tickets: Int!
+}
+
+type LotteryPurchaseRequisition {
+  id: ID!
+  lines: [LotteryPurchaseRequisitionLine!]!
+  serialNo: String
+}
+
+type LotteryPurchaseRequisitionLine {
+  books: Int!
+  gameId: ID!
+}
+
+type LotteryPurchaseTrustee {
+  dealerId: ID!
+  id: ID!
+  label: String!
 }
 
 """牌租週期:月 / 季 / 年"""
@@ -2393,11 +2485,13 @@ type Mutation {
   markAllNotificationsRead: MarkNotificationsReadPayload!
   markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
+  notifyLotteryPurchaseWrongStore(input: ReceiveLotteryPurchaseBookInput!): Boolean!
   printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
+  receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
   recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
   recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
   recoverLotteryTickets(input: RecoverLotteryTicketsInput!): LotteryInventoryActionPayload!
@@ -3038,6 +3132,7 @@ type Query {
   lotteryDealerCoSellers(dealerId: ID!): LotteryDealerCoSellersPayload!
   lotteryDealerContact(id: ID!): LotteryDealerContactPayload!
   lotteryDealerContacts(input: LotteryDealerContactsInput!): LotteryDealerContactsPayload!
+  lotteryDealerPurchases(dealerId: ID!): [LotteryDealerPurchase!]!
   lotteryDealerSignins(dealerId: ID!, year: Int!): LotteryDealerSigninsPayload!
   lotteryDealers(input: LotteryDealersInput!): LotteryDealersPayload!
   lotteryFieldOptions(categoryKey: String!): LotteryFieldOptionsPayload!
@@ -3051,6 +3146,9 @@ type Query {
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   lotteryPurchaseList: LotteryPurchaseList!
+  lotteryPurchaseOptions(orgId: ID!): LotteryPurchaseOptions!
+  lotteryPurchaseProgress(purchaseIds: [ID!]!): [LotteryPurchaseProgress!]!
+  lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
   lotteryRequisitionCandidates(orgId: ID!): [LotteryRequisitionCandidate!]!
   lotteryRequisitionStates(requisitionIds: [ID!]!): [LotteryRequisitionStateItem!]!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
@@ -3142,6 +3240,16 @@ type RealtimeTicketPayload {
 input ReassignTaskInput {
   taskId: ID!
   toUserId: ID!
+}
+
+input ReceiveLotteryPurchaseBookInput {
+  code: String!
+  submissionId: ID!
+}
+
+type ReceiveLotteryPurchaseBookPayload {
+  receiving: LotteryPurchaseReceiving!
+  rowId: String!
 }
 
 input RecordLotteryBankTransactionInput {

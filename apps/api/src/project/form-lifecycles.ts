@@ -1,4 +1,5 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
+import { purchaseLifecycle } from "./lottery/purchase/purchase-lifecycle";
 import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
 
 /**
@@ -30,4 +31,6 @@ import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycl
 export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
   // 叫貨單:送出前檢查停售、完成時寫副本、作廢補 voidedAt(專案規格 8.1)
   requisitionLifecycle,
+  // 進貨單:送出前檢查、送出後記批貨支出與批購日、點收守門、作廢撤銷本(專案規格 8.2)
+  purchaseLifecycle,
 ];

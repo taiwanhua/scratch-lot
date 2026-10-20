@@ -53,6 +53,8 @@ export interface SettlementSubmission {
   readonly revision: number;
   readonly values: StoredValues;
   readonly submittedAt: Date | null;
+  /** 單號(表單宣告了單號格式才有;`payable` 組 `docNo` 用)。 */
+  readonly serialNo?: string | null;
 }
 
 /** 單據的收付資訊(由登記從提交算出)。 */
