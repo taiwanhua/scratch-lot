@@ -35,7 +35,8 @@ export const systemModules: ModuleSeedDeclaration = {
       name: "系統管理",
       sidebarType: "group",
       parentKey: null,
-      order: 1,
+      // 頂層排在申請中心之後、隱藏的 api 模組(99)之前(docs/modules/module-manager.md「側欄順序」)
+      order: 95,
       route: "system",
       icon: "settings",
       description:
