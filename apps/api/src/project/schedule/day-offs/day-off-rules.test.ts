@@ -19,6 +19,7 @@ import {
   dayOffWindowFor,
   dayOffWindowState,
 } from "./day-off-window";
+import { dayOffLockMonths } from "./schedule-day-offs.service";
 
 const full = (userId: string, date: string): DayOffLike => ({
   userId,
@@ -284,5 +285,16 @@ describe("畫休開放期間(每月 N 日至 M 日,登記下個月)", () => {
 
   it("今天登記的是下個月(跨年)", () => {
     expect(dayOffTargetMonth("2026-12-20")).toBe("2027-01");
+  });
+});
+
+describe("守門文件要碰的月份", () => {
+  it("整天畫休另碰前後一個月(連續休假會跨月);時段不可排只碰那個月", () => {
+    expect(dayOffLockMonths("2027-01-01", "full-day")).toEqual([
+      "2026-12",
+      "2027-01",
+      "2027-02",
+    ]);
+    expect(dayOffLockMonths("2027-01-15", "time-range")).toEqual(["2027-01"]);
   });
 });

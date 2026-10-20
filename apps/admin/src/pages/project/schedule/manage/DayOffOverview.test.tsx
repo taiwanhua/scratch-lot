@@ -21,10 +21,12 @@ describe("排班作業:畫休總覽與代改", () => {
     expect(screen.getByText("3/2")).toBeInTheDocument();
   });
 
-  it("[尚未畫休] 篩選列出還沒畫任何一天的人", async () => {
+  it("[尚未畫休] 篩選列出還沒畫任何一天、主要分店是這家的人", async () => {
     const { user } = renderSchedulePage({ path: OVERVIEW });
     await user.click(await screen.findByRole("button", { name: "尚未畫休 1" }));
     expect(await screen.findByText("張小芳")).toBeInTheDocument();
+    // 支援人員(主要分店不是這家)沒畫休也不算
+    expect(screen.queryByText("趙支援")).not.toBeInTheDocument();
     expect(
       screen.queryByText("畫休 李小華、陳大文、林新人"),
     ).not.toBeInTheDocument();

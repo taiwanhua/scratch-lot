@@ -111,6 +111,8 @@ export interface ScheduleUnavailability {
 /** 一次要寫的畫休(登記 / 代改共用)。 */
 interface DayOffWrite {
   tenantId: Types.ObjectId;
+  /** 歸屬組織:本人登記 = 當前組織;代改 = 總覽選的那家店 */
+  ownerOrgId: Types.ObjectId;
   userId: Types.ObjectId;
   date: string;
   kind: ScheduleDayOffKind;
@@ -119,6 +121,17 @@ interface DayOffWrite {
   by: Types.ObjectId | null;
   reason: string | null;
   reasonNote: string | null;
+}
+
+/**
+ * 寫入要碰哪幾個月的守門文件:那天的月份;整天畫休另加前後一個月 ——「最多連續休假」會跨月,
+ * 月初 / 月底的整天畫休和相鄰月份的寫入要互相衝突。依月份順序。
+ */
+export function dayOffLockMonths(date: string, kind: string): string[] {
+  const month = date.slice(0, 7);
+  return kind === "full-day"
+    ? [shiftMonth(month, -1), month, shiftMonth(month, 1)]
+    : [month];
 }
 
 function blankToNull(value: string | null | undefined): string | null {
@@ -370,12 +383,13 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     input: AddMyScheduleDayOffsInput,
   ): Promise<SaveScheduleDayOffsPayload> {
-    const { tenantId, userId } = await this.self(operator);
+    const { tenantId, orgId, userId } = await this.self(operator);
     const write = validatedWrite(input, { tenantId, userId });
     const context = await this.personContext(operator, tenantId, userId);
     this.assertWindowOpen(context, write.date);
     return this.save(operator, context, {
       ...write,
+      ownerOrgId: orgId,
       note: blankToNull(input.note),
       by: null,
       reason: null,
@@ -452,7 +466,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     input: AddScheduleDayOffsOnBehalfInput,
   ): Promise<SaveScheduleDayOffsPayload> {
-    const { tenantId, userId } = await this.mustCandidate(
+    const { tenantId, orgId, userId } = await this.mustCandidate(
       operator,
       input.orgId,
       input.userId,
@@ -465,6 +479,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     });
     return this.save(operator, context, {
       ...write,
+      ownerOrgId: orgId,
       note: null,
       by: operator.actorId,
       ...reason,
@@ -553,15 +568,17 @@ export class ScheduleDayOffsService implements OnModuleInit {
 
   // ---- 內部 ----
 
-  /** 登入者本人(在當前組織的租戶裡)。 */
-  private async self(
-    operator: OperatorContext,
-  ): Promise<{ tenantId: Types.ObjectId; userId: Types.ObjectId }> {
+  /** 登入者本人(在當前組織的租戶裡);`orgId` = 當前組織(本人登記的畫休歸屬它)。 */
+  private async self(operator: OperatorContext): Promise<{
+    tenantId: Types.ObjectId;
+    orgId: Types.ObjectId;
+    userId: Types.ObjectId;
+  }> {
     const org = await resolveScheduleOrg(operator, this.orgs, null);
     if (operator.actorId === null) {
       throw forbiddenError("no actor", "MISSING_PERMISSION");
     }
-    return { tenantId: org.tenantId, userId: operator.actorId };
+    return { tenantId: org.tenantId, orgId: org.id, userId: operator.actorId };
   }
 
   private async today(
@@ -694,7 +711,11 @@ export class ScheduleDayOffsService implements OnModuleInit {
     operator: OperatorContext,
     orgId: string | null | undefined,
     userId: string,
-  ): Promise<{ tenantId: Types.ObjectId; userId: Types.ObjectId }> {
+  ): Promise<{
+    tenantId: Types.ObjectId;
+    orgId: Types.ObjectId;
+    userId: Types.ObjectId;
+  }> {
     const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const target = parseObjectId(userId, "userId");
     const candidates: ScheduleCandidate[] =
@@ -702,7 +723,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     if (!candidates.some((candidate) => candidate.userId === String(target))) {
       throw notFoundError(`schedule staff not found: ${userId}`);
     }
-    return { tenantId: org.tenantId, userId: target };
+    return { tenantId: org.tenantId, orgId: org.id, userId: target };
   }
 
   /** 這個租戶裡、屬於這些人的一筆畫休;否則 `NOT_FOUND`。 */
@@ -746,11 +767,12 @@ export class ScheduleDayOffsService implements OnModuleInit {
       ...entries.map((entry) => entry.like),
       ...added,
     ];
-    await this.ensureLock(operator, context, write.date);
+    const lockMonths = dayOffLockMonths(write.date, write.kind);
+    await this.ensureLocks(operator, context, lockMonths);
     const { created, after } = await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
-          await this.touchLock(operator, context, write.date);
+          await this.touchLocks(operator, context, lockMonths);
           const existing = await this.recordsBetween(
             context.tenantId,
             [String(context.userId)],
@@ -768,7 +790,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
             const record = await this.dayOffs.create(
               scheduleReadContext(operator),
               {
-                orgId: context.tenantId,
+                orgId: write.ownerOrgId,
                 userId: write.userId,
                 date: write.date,
                 kind: write.kind,
@@ -812,9 +834,10 @@ export class ScheduleDayOffsService implements OnModuleInit {
     } | null,
   ): Promise<string> {
     const writer = scheduleReadContext(operator);
-    await this.ensureLock(operator, context, record.date);
+    const lockMonths = [record.date.slice(0, 7)];
+    await this.ensureLocks(operator, context, lockMonths);
     await this.transactions.withTransaction(async () => {
-      await this.touchLock(operator, context, record.date);
+      await this.touchLocks(operator, context, lockMonths);
       const current = await this.dayOffs.findOne(scheduleSystemReader(), {
         _id: record._id,
         tenantId: context.tenantId,
@@ -846,47 +869,55 @@ export class ScheduleDayOffsService implements OnModuleInit {
    * 守門文件(主要分店 × 月份)先建好(交易外;兩個請求同時建,唯一索引擋下的那一個略過),
    * 交易裡只做 `$inc`,同時的寫入才會在既有文件上衝突、交給交易重跑。
    */
-  private async ensureLock(
+  private async ensureLocks(
     operator: OperatorContext,
     context: PersonContext,
-    date: string,
+    months: readonly string[],
   ): Promise<void> {
-    const key = {
-      orgId: context.tenantId,
-      storeId: context.primaryOrgId,
-      month: date.slice(0, 7),
-    };
-    const existing = await this.locks.findOne(scheduleSystemReader(), key);
-    if (existing) {
-      return;
-    }
-    try {
-      await this.locks.create(scheduleReadContext(operator), {
-        ...key,
-        version: 0,
-      });
-    } catch (error) {
-      if (!isDuplicateKeyError(error)) {
-        throw error;
+    for (const month of months) {
+      const key = {
+        orgId: context.tenantId,
+        storeId: context.primaryOrgId,
+        month,
+      };
+      const existing = await this.locks.findOne(scheduleSystemReader(), key);
+      if (existing) {
+        continue;
+      }
+      try {
+        await this.locks.create(scheduleReadContext(operator), {
+          ...key,
+          version: 0,
+        });
+      } catch (error) {
+        if (!isDuplicateKeyError(error)) {
+          throw error;
+        }
       }
     }
   }
 
-  /** 交易一開始對守門文件 `$inc`:之後讀到的畫休就是這一刻之後的快照,同時寫入的另一方會衝突重跑。 */
-  private async touchLock(
+  /**
+   * 交易一開始對守門文件 `$inc`(依月份順序):之後讀到的畫休就是這一刻之後的快照,同時寫入的另一方
+   * 會衝突重跑。碰不到文件(應該已在交易外建好)→ 丟錯,不靜默失去保護。
+   */
+  private async touchLocks(
     operator: OperatorContext,
     context: PersonContext,
-    date: string,
+    months: readonly string[],
   ): Promise<void> {
-    await this.locks.findOneAndUpdate(
-      scheduleReadContext(operator),
-      {
-        orgId: context.tenantId,
-        storeId: context.primaryOrgId,
-        month: date.slice(0, 7),
-      },
-      { $inc: { version: 1 } },
-    );
+    for (const month of months) {
+      const touched = await this.locks.findOneAndUpdate(
+        scheduleReadContext(operator),
+        { orgId: context.tenantId, storeId: context.primaryOrgId, month },
+        { $inc: { version: 1 } },
+      );
+      if (!touched) {
+        throw new Error(
+          `day-off lock missing: store ${String(context.primaryOrgId)} ${month}`,
+        );
+      }
+    }
   }
 
   /**

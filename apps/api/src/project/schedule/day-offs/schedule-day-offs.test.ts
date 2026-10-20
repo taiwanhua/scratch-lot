@@ -918,6 +918,27 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("歸屬組織(不共用;讀取以人為準)", () => {
+    it("本人登記歸當前組織、代改歸總覽選的那家店", async () => {
+      const orgOf = async (user: ScheduleTestUser, date: string) => {
+        const document = await connection
+          .collection(SCHEDULE_DAY_OFFS_COLLECTION)
+          .findOne<{ orgId: Types.ObjectId }>({
+            userId: user.userId,
+            date,
+            deletedAt: null,
+          });
+        return String(document?.orgId);
+      };
+      // 林(所屬新竹店)自己登記
+      expect(await orgOf(lin, "2026-12-03")).toBe(String(hsinchu));
+      // 王(所屬中山店)自己登記
+      expect(await orgOf(wang, "2026-12-05")).toBe(String(zhongshan));
+      // 店長在中山店的總覽替陳代改
+      expect(await orgOf(chen, "2026-12-09")).toBe(String(zhongshan));
+    });
+  });
+
   describe("同時送出不能繞過限制(守門文件 + 同一個交易)", () => {
     // 2027-02 的開放期間是 2027/1/15–1/25,今天 11/20 還沒開始:代改不受限制、不必填原因
     it("同日最多 2 人:3 人同時送出,只成功 2 筆", async () => {

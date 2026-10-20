@@ -22,6 +22,8 @@ export const DAY_OFF_STAFF = [
   { userId: "u-lin", name: "林美麗", isPrimary: true },
   { userId: "u-zhang", name: "張小芳", isPrimary: true },
   { userId: "u-new", name: "林新人", isPrimary: false },
+  // 支援人員、這個月還沒畫休:「尚未畫休」不算他
+  { userId: "u-support", name: "趙支援", isPrimary: false },
 ];
 
 const dayOff = (

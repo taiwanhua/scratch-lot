@@ -15,13 +15,14 @@ export const SCHEDULE_DAY_OFFS_COLLECTION = "schedule_day_offs";
  *
  * - `kind`:整天畫休 `full-day`(整天不可排的捷徑,一天一筆)/ 時段不可排 `time-range`
  *   (`startTime` / `endTime`,一天可以多段、不能重疊)
- * - `orgId`:租戶頂層(人的資料,整個租戶共用;先例 `schedule_staff`),讀取以 `tenantId` 為界
+ * - `orgId`:歸屬組織 = 登記時的組織(本人登記 = 當前組織;代改 = 畫休總覽選的那家店),不共用;
+ *   讀取以人為準(`tenantId` + `userId`),不看歸屬組織
  * - 代改:`by` 記代改人;截止後代改必填 `reason`(欄位管理「代改畫休原因」),選「其他」要填 `reasonNote`
  * - 唯一:同一人同一天只有一筆未刪除的整天畫休(partial index)
  */
 @Schema({ collection: SCHEDULE_DAY_OFFS_COLLECTION, timestamps: true })
 export class ScheduleDayOff {
-  /** 租戶頂層(ADR-0005;人的資料,整個租戶共用)。 */
+  /** 歸屬組織(ADR-0005):本人登記 = 當前組織;代改 = 畫休總覽選的那家店。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 

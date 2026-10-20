@@ -52,7 +52,8 @@ const WINDOW_KEY: Partial<
 
 /**
  * 排班作業 → 畫休總覽(SC-06;規格 14.5「畫休總覽」,`view-day-offs`):月曆每天顯示誰整天畫休、
- * 誰時段不可排(含時間)、同日畫休人數「2/2」(只計以這家店為主要分店的人);頂部開放期間與尚未畫休的人,
+ * 誰時段不可排(含時間)、同日畫休人數「2/2」(只計以這家店為主要分店的人);頂部開放期間與尚未畫休的人
+ * (只算主要分店是這家的人),
  * 篩選 [全部] [尚未畫休]。[代改](SC-24)要 `edit-day-offs`,點日期也會打開並帶入那天。
  *
  * 分店選擇器先用 `OrgTreeSelect`(之後改成可見範圍模式,同行事曆)。
@@ -77,7 +78,10 @@ export const DayOffOverviewTab = () => {
   }
   const { window, limits } = overview;
   const maxDaily = limits.maxDailyStaff ?? null;
-  const notRegistered = overview.staff.filter((item) => item.dayOffCount === 0);
+  // 畫休歸屬主要分店:「尚未畫休」只算以這家店為主要分店的人(支援人員不算)
+  const notRegistered = overview.staff.filter(
+    (item) => item.isPrimary && item.dayOffCount === 0,
+  );
   const separator = t("overview.nameSeparator");
   const { year, month } = dateParts(`${overview.month}-01`);
 
