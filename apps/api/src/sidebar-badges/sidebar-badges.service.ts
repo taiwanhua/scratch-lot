@@ -1,18 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 
-import { permissionKey } from "@repo/domain/permission";
-
 import type { OperatorContext } from "../database/operator-context";
-import {
-  PermissionResolver,
-  holdsPermission,
-} from "../permission/permission-resolver";
+import { PermissionResolver } from "../permission/permission-resolver";
 import type { SidebarBadge } from "./models/sidebar-badge.model";
 import { SidebarBadgeRegistry } from "./sidebar-badge-registry";
 
 /**
- * 算操作者的側欄計數:只算持有 `<模組 key>.view` 的模組(與 `@RequirePermission` 同一個判斷
- * `holdsPermission`),各模組並行;某一筆拋錯只略過那一筆並記 log,不讓整個側欄沒有數字。
+ * 算操作者的側欄計數:只算**角色綁了那個模組**的(與進得去那一頁同一個判斷,ADR-0011「可進 = 有那個模組」;
+ * 即 `me.modules` 裡有它,停用的模組連子樹不算),不另外要求 `<模組 key>.view` —— 沒有 view 權限的模組
+ * (例:只綁模組、讀取看模組的專案主檔)綁了就算得到。數字本身的範圍由各模組的 `count` 負責(可見範圍照套)。
+ * 各模組並行;某一筆拋錯只略過那一筆並記 log,不讓整個側欄沒有數字。
  */
 @Injectable()
 export class SidebarBadgesService {
@@ -31,11 +28,12 @@ export class SidebarBadgesService {
       operator.actorId,
       operator.currentOrgId,
     );
+    const boundModules = new Set(
+      resolution.modules.map((module) => module.key),
+    );
     const visible = this.registry
       .badges()
-      .filter((badge) =>
-        holdsPermission(resolution, permissionKey(badge.moduleKey, "view")),
-      );
+      .filter((badge) => boundModules.has(badge.moduleKey));
     const counted = await Promise.all(
       visible.map(async (badge): Promise<SidebarBadge | null> => {
         try {

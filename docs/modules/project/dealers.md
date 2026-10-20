@@ -41,7 +41,7 @@
 
 **開通時建立的角色**(規格 3.3;配方 `apps/db-migrator/seeds/project/onboarding/role-grants/dealers.ts`):總部管理 = 兩層 `*` 全部;店長 = 綁列表、詳情、關係人分頁與關係人詳情(看得到,不含主檔修改、不含兩個欄位級權限);店員 = 不給。
 
-**側欄計數**:底座只回持有 `dealers.view`(含同層 `*`)的人,本模組沒有 `view`,所以只有持有 `dealers.*` 的人(總部管理)看得到數字。
+**側欄計數**:角色綁了 `dealers` 就看得到數字(底座以模組綁定判斷,不要求 `view`);總部管理與店長都有,數字照各自的可見範圍。
 
 正本:`apps/db-migrator/seeds/project/dealers.ts`(`permissions`)
 

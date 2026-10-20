@@ -25,7 +25,7 @@ class ProbeBadges implements OnModuleInit {
   }
 }
 
-/** 測試專用(TEST-07 的 `extraModules`):登記兩筆探針計數,驗權限過濾與單筆失敗不拖垮整份。 */
+/** 測試專用(TEST-07 的 `extraModules`):登記兩筆探針計數,驗模組過濾(綁了模組才算)與單筆失敗不拖垮整份。 */
 @Module({
   imports: [SidebarBadgesModule],
   providers: [ProbeBadges],

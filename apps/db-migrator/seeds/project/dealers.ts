@@ -39,7 +39,7 @@ export const dealersModule: ModuleSeedDeclaration = {
       name: "經銷商管理",
       sidebarType: "link",
       parentKey: null,
-      order: 16,
+      order: 60,
       route: "dealers",
       icon: "people",
       description: "甲類、乙類經銷商與關係人",

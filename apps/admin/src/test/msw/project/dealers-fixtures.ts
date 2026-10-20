@@ -80,7 +80,7 @@ export const dealersModules = (
       "經銷商管理",
       null,
       ModuleSidebarType.Link,
-      16,
+      60,
       DEALERS_TEST_ROUTES.list,
       permissions,
     ),

@@ -369,6 +369,32 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
       expect(
         badges.sidebarBadges.find((badge) => badge.moduleKey === "dealers"),
       ).toEqual({ moduleKey: "dealers", count: 6 });
+      // 店長(只綁模組、沒有任何經銷商權限)也算得到:側欄計數看模組綁定,不看 view
+      const { token: manager } = await createDealersOperator(
+        api,
+        api.connection,
+        { orgId: t.tenantId, moduleKeys: ALL_MODULES, permissionKeys: [] },
+      );
+      const managerBadges = await ok<{
+        sidebarBadges: { moduleKey: string; count: number }[];
+      }>(api, manager, BADGES);
+      expect(
+        managerBadges.sidebarBadges.find(
+          (badge) => badge.moduleKey === "dealers",
+        ),
+      ).toEqual({ moduleKey: "dealers", count: 6 });
+      // 沒綁經銷商管理:沒有這一筆
+      const { token: outsider } = await createDealersOperator(
+        api,
+        api.connection,
+        { orgId: t.tenantId, moduleKeys: [], permissionKeys: [] },
+      );
+      const outsiderBadges = await ok<{
+        sidebarBadges: { moduleKey: string; count: number }[];
+      }>(api, outsider, BADGES);
+      expect(
+        outsiderBadges.sidebarBadges.map((badge) => badge.moduleKey),
+      ).not.toContain("dealers");
     });
   });
 });

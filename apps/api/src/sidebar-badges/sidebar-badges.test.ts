@@ -110,7 +110,7 @@ describe("側欄計數(sidebarBadges)", () => {
     });
   });
 
-  it("沒權限的模組不回傳數字:沒有 apply-center.view 的人拿不到申請中心那一筆", async () => {
+  it("沒綁模組就不回傳數字:沒綁申請中心的人拿不到申請中心那一筆", async () => {
     const outsider = await person(
       api,
       world.connection,
@@ -127,7 +127,21 @@ describe("側欄計數(sidebarBadges)", () => {
     expect(badges).toEqual({ [WORKFLOW_MODULE]: PROBE_BADGE_COUNT });
   });
 
-  it("持有 view 的模組都回傳;某一筆計算失敗只略過那一筆", async () => {
+  it("綁了模組就算,不必持有 view(與進得去那一頁同一個判斷)", async () => {
+    const boundOnly = await person(
+      api,
+      world.connection,
+      world.tenant,
+      world.tenant,
+      { moduleKeys: [WORKFLOW_MODULE], permissionKeys: [] },
+    );
+
+    await expect(badgesOf(boundOnly)).resolves.toEqual({
+      [WORKFLOW_MODULE]: PROBE_BADGE_COUNT,
+    });
+  });
+
+  it("持有 view 的模組(有綁)行為不變;某一筆計算失敗只略過那一筆", async () => {
     // 租戶管理員看得到 system.workflows(探針一律拋錯)、申請中心與 demo.form
     const badges = await badgesOf(world.admin);
 
