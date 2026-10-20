@@ -27,6 +27,13 @@ concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
+# Linux 核心 6.19 以上與 MongoDB 8.x 的 TCMalloc 不相容(SERVER-121912):mongod 一啟動就自行退出。
+# GitHub 的 ubuntu-24.04 runner 已換到 6.19 核心,緊急繞過:glibc 的 rseq 交給 TCMalloc 自己用。
+# 套用到本 workflow 的所有行程(mongodb-memory-server 起的 mongod 繼承它;docker 的 mongo 另以 -e 傳入)。
+# 退場:runner 核心 ≥ 7.0.14,或 MongoDB 出修正版後拿掉(見 docs/deployment.md「CI」)。
+env:
+  GLIBC_TUNABLES: glibc.pthread.rseq=1
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
