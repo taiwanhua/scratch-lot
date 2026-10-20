@@ -364,7 +364,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       );
       expect(byRoot.map((log) => log.action as string)).toEqual([
         "org.provision",
-        // 受管表單分派給示範機構(分派只有站在根組織做得到)
+        // 受管表單分派給示範機構(分派只有站在根組織做得到):支援需求單、叫貨單各一筆
+        "form.assign",
         "form.assign",
       ]);
       const byAdmin = new Set(
@@ -625,7 +626,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         });
         expect(workflow).toMatchObject({ tenantId, currentVersion: 1 });
         const version = await findOne("workflow_versions", {
-          workflowId: workflow._id as ObjectId,
+          workflowKey: `${DEMO_TENANT.slug}_requisition`,
           version: 1,
         });
         const [step] = version.steps as Document[];
