@@ -214,17 +214,25 @@ export class SettlementService {
   }
 
   /**
-   * 帳戶使用中、而且使用組織包含這家分店(以租戶為邊界讀,不看操作者的範圍;守門與事後動作用)。
-   * 找不到 → false。
+   * 帳戶使用中、而且使用組織包含這家分店(以租戶為邊界讀;守門用)。給了 `viewer` 時另要求他看得到這個帳戶
+   * (送出的人只能選自己看得到的帳戶)。找不到 → false。
    */
   async isAccountUsable(
     tenantId: Types.ObjectId | null,
     accountId: Types.ObjectId,
     branchOrgId: Types.ObjectId,
+    viewer?: OperatorContext,
   ): Promise<boolean> {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const account = await this.accounts.findById(reader, accountId);
     if (account?.status !== "active") {
+      return false;
+    }
+    if (
+      viewer !== undefined &&
+      (await this.accounts.findById(viewer, accountId, { select: "_id" })) ===
+        null
+    ) {
       return false;
     }
     const isUsable = await this.usableBy(null, tenantId, branchOrgId);
@@ -367,7 +375,8 @@ export class SettlementService {
 
   /**
    * **交易內的自動記帳**(進貨單送出時記第一筆「批貨支出」這類):不檢查按鈕權限、不看先填的金額,
-   * 沿用呼叫端的交易(不在交易內 → 拋錯)。`amount ≤ 0` 時不記(回 null)。
+   * 沿用呼叫端的交易(不在交易內 → 拋錯)。**金額 0 照記**(進貨單應付 0 也要留一筆,規格 8.2 / 9 驗算 ⑤;
+   * 人工登記仍要正數);負數或不是整數 → 不記(回 null)。
    * 帳戶要使用中、使用組織包含這一邊的分店;帳戶以單據的租戶為邊界讀(事後動作是系統身分,看不到共用進來的帳戶)。
    * 寫入者 = `operator`(事後動作給的系統身分,或按按鈕的人)。
    */
@@ -389,7 +398,7 @@ export class SettlementService {
     if (active?.inTransaction() !== true) {
       throw new CashLedgerOutsideTransactionError();
     }
-    if (!Number.isInteger(input.amount) || input.amount <= 0) {
+    if (!Number.isInteger(input.amount) || input.amount < 0) {
       return null;
     }
     const registration = settlementDocumentOf(input.moduleKey);

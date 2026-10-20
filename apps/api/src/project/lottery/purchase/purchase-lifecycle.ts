@@ -44,8 +44,8 @@ export const purchaseLifecycle = registerFormLifecycle({
   formKey: PURCHASE_FORM_KEY,
   inject: [PURCHASE_RULES, SettlementLedger],
   guards: {
-    beforeSubmit: ({ submission, values, get }) =>
-      rulesOf({ get }).beforeSubmit(submission, values),
+    beforeSubmit: ({ operator, submission, values, get }) =>
+      rulesOf({ get }).beforeSubmit(operator, submission, values),
     beforeApprove: ({ submission, get }) =>
       rulesOf({ get }).beforeApprove(submission),
     beforeReject: both(withoutReceipts, settlementClearedGuard),

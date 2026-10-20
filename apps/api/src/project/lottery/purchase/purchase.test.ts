@@ -50,6 +50,7 @@ import {
   insertRequisition,
   insertTrustee,
   purchaseDefinition,
+  seedInventoryModule,
   seedPurchaseAuthorization,
 } from "./test-support/purchase-fixtures";
 
@@ -172,6 +173,16 @@ const OPTIONS = /* GraphQL */ `
       }
       games {
         gameCode
+      }
+    }
+  }
+`;
+
+const STOCK = /* GraphQL */ `
+  query TestStock($input: LotteryStockOverviewInput!) {
+    lotteryStockOverview(input: $input) {
+      items {
+        unopenedBooks
       }
     }
   }
@@ -417,6 +428,19 @@ describe("進貨單(規格 8.2、8.3)", () => {
     };
   }
 
+  /** 中山店某個遊戲的未拆本數(庫存概況)。 */
+  async function unopenedOf(gameId: Types.ObjectId): Promise<number> {
+    const data = await ok<{
+      lotteryStockOverview: { items: { unopenedBooks: number }[] };
+    }>(api, hq.token, STOCK, {
+      input: { orgId: String(branchA), gameId: String(gameId) },
+    });
+    return data.lotteryStockOverview.items.reduce(
+      (sum, item) => sum + item.unopenedBooks,
+      0,
+    );
+  }
+
   async function badgeOf(who: Person): Promise<number> {
     const data = await ok<{
       sidebarBadges: { moduleKey: string; count: number }[];
@@ -438,6 +462,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
     api = await startAuthTestApp("scratch-lot-test-purchase");
     const { connection } = api;
     await seedPurchaseAuthorization(connection);
+    await seedInventoryModule(connection);
     publishBadge = jest.spyOn(api.app.get(RealtimePublisher), "publishBadge");
     const root = await rootToken(api);
     tenant = await createOrg(connection, {
@@ -466,7 +491,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       ],
     });
     hq = await person(api, connection, tenant, tenant, {
-      moduleKeys: purchaseModules,
+      moduleKeys: [...purchaseModules, "inventory"],
       permissionKeys: [
         ...Object.values(PURCHASE_PERMISSION_KEYS),
         "apply-center.view",
@@ -761,9 +786,16 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
     });
 
-    it("扣款金額 0:收付金額一律正數,不記任何一筆;應付 0 = 已結清", async () => {
+    it("扣款金額 0:照記一筆 0 元批貨支出(掛這張單);應付 0 = 已結清", async () => {
       const purchase = await submit([book(gameHot, { rate: 0 })]);
-      expect(await bankRowsOf(purchase.id)).toHaveLength(0);
+      const rows = await bankRowsOf(purchase.id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        type: "purchase_expense",
+        direction: "out",
+        amount: 0,
+        settlementSide: "hq",
+      });
       const settlement = await settlementOf(purchase.id);
       expect(settlement.payable).toBe(0);
       expect(defaultsOf(settlement)).toEqual({ out: 0, in: 0 });
@@ -844,9 +876,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
     });
 
-    it("⑤ 扣款金額 0 → 不記帳、已結清", async () => {
+    it("⑤ 扣款金額 0 → 記 0 元批貨支出、已結清", async () => {
       const purchase = await submit([book(gameGold, { rate: 0 })]);
-      expect(await bankRowsOf(purchase.id)).toHaveLength(0);
+      expect(await bankRowsOf(purchase.id)).toEqual([
+        expect.objectContaining({ amount: 0 }),
+      ]);
       expect(defaultsOf(await settlementOf(purchase.id))).toEqual({
         out: 0,
         in: 0,
@@ -939,6 +973,26 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
     });
 
+    it("同一本同時刷兩次:一個點收成功,另一個是「已點收」(撞唯一索引也一樣)", async () => {
+      const line = book(gameHot);
+      const purchase = await submit([line]);
+      const results = await Promise.all([
+        receive(managerA, purchase.id, codeOf(line)),
+        receive(managerA, purchase.id, codeOf(line)),
+      ]);
+      expect(results).toEqual(
+        expect.arrayContaining([
+          {},
+          expect.objectContaining({ reason: "PURCHASE_ALREADY_RECEIVED" }),
+        ]),
+      );
+      expect(
+        await db()
+          .collection("lottery_purchase_receipts")
+          .countDocuments({ submissionId: new Types.ObjectId(purchase.id) }),
+      ).toBe(1);
+    });
+
     it("單據不在審核中(退回)→ 不能點收", async () => {
       const line = book(gameHot);
       const purchase = await submit([line]);
@@ -983,6 +1037,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
         })
         .toArray();
       expect(notices).toHaveLength(1);
+      // 點進去是那張進貨單(B 店的)詳情頁
+      expect(notices[0]).toMatchObject({
+        refType: "lottery-purchase",
+        refId: forB.id,
+      });
       // B 店照常點收
       expect(await receive(managerB, forB.id, codeOf(lineB))).toEqual({});
     });
@@ -1158,6 +1217,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       });
       expect(extensionsOf(notCleared).reason).toBe("SETTLEMENT_NOT_CLEARED");
       await reverseAutomatic(purchase.id);
+      const stockBefore = await unopenedOf(gameHot);
       const fresh = await current(purchase.id);
       await ok(api, hq.token, FORM_VOID, {
         input: {
@@ -1170,6 +1230,8 @@ describe("進貨單(規格 8.2、8.3)", () => {
         .collection("lottery_books")
         .findOne({ bookNo: line.book_no });
       expect(voidedBook?.status).toBe("revoked");
+      // 作廢後這本移出庫存(規格 7.1、8.2)
+      expect(await unopenedOf(gameHot)).toBe(stockBefore - 1);
       expect(
         await db()
           .collection("lottery_ticket_events")

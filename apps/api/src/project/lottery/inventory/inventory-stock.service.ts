@@ -12,7 +12,10 @@ import {
   isOrgVisible,
 } from "../../../database/operator-context";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
-import { LotteryTicketsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
+import {
+  LotteryBooksRepository,
+  LotteryTicketsRepository,
+} from "../../database/lottery-inventory/lottery-inventory.repository";
 import { parseId } from "../accounts/accounts-util";
 import { LotteryAllocationsService } from "../tickets/allocations.service";
 import { notFoundError, validationError } from "../tickets/inventory-error";
@@ -57,6 +60,7 @@ interface BookStock {
 export class InventoryStockService {
   constructor(
     private readonly tickets: LotteryTicketsRepository,
+    private readonly books: LotteryBooksRepository,
     private readonly games: LotteryGamesRepository,
     private readonly allocations: LotteryAllocationsService,
     private readonly names: InventoryNames,
@@ -160,9 +164,18 @@ export class InventoryStockService {
     const onlyGame = await this.gameOf(operator, input.gameId);
     const stores =
       onlyOrg === null ? this.names.storesOf(operator, tenantOrgs) : [onlyOrg];
+    // 進貨單作廢後的本(`revoked`)不算庫存(規格 7.1、8.2)
+    const revoked = await this.books.findMany(
+      operator,
+      { status: "revoked" },
+      { select: "_id" },
+    );
     const rows = await this.tickets.aggregate(operator, [
       {
         $match: {
+          ...(revoked.length === 0
+            ? {}
+            : { bookId: { $nin: revoked.map((book) => book._id) } }),
           ...(onlyOrg === null ? {} : { orgId: onlyOrg.id }),
           ...(onlyGame === null ? {} : { gameId: onlyGame.id }),
           status: { $ne: TICKET_STATUS.skipped },

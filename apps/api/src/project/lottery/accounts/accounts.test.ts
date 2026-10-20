@@ -1462,21 +1462,36 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         service.recordAutomatic(undefined, { ...input, amount: 17_000 }),
       ).rejects.toBeInstanceOf(CashLedgerOutsideTransactionError);
       const transactions = api.app.get(TransactionService);
+      // 負數不記;0 元照記(應付 0 也留一筆,淨額不變)
+      expect(
+        await transactions.withTransaction((session) =>
+          service.recordAutomatic(session, { ...input, amount: -1 }),
+        ),
+      ).toBeNull();
       expect(
         await transactions.withTransaction((session) =>
           service.recordAutomatic(session, { ...input, amount: 0 }),
         ),
-      ).toBeNull();
+      ).not.toBeNull();
+      const zero = await settlement(TEST_PURCHASE, doc);
+      expect(zero.sides[0]).toMatchObject({ net: 0 });
+      expect(zero.records).toEqual([
+        expect.objectContaining({ direction: "out", amount: 0 }),
+      ]);
       await transactions.withTransaction((session) =>
         service.recordAutomatic(session, { ...input, amount: 17_000 }),
       );
       const after = await settlement(TEST_PURCHASE, doc);
       expect(after.sides[0]).toMatchObject({ net: 17_000 });
-      expect(after.records[0]).toMatchObject({
-        side: "hq",
-        direction: "out",
-        amount: 17_000,
-      });
+      expect(after.records).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            side: "hq",
+            direction: "out",
+            amount: 17_000,
+          }),
+        ]),
+      );
     });
   });
 });

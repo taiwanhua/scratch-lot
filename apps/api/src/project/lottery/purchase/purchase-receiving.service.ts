@@ -22,10 +22,14 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
 import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
+import { isDuplicateKeyError } from "../../../forms/forms-error";
 import { NotificationService } from "../../../notifications/notification.service";
 import { LotteryPurchaseReceiptsRepository } from "../../database/lottery-purchases/lottery-purchase-receipts.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
-import { LOTTERY_PURCHASE_WRONG_STORE } from "../../notifications";
+import {
+  LOTTERY_PURCHASE_REF,
+  LOTTERY_PURCHASE_WRONG_STORE,
+} from "../../notifications";
 import { tenantOfOperator } from "../master-data-tenant";
 import { LotteryBooksService } from "../tickets/books.service";
 import type {
@@ -45,6 +49,15 @@ import {
   PurchaseRules,
   toObjectId,
 } from "./purchase-rules.service";
+
+function alreadyReceivedError(rowId: string | null) {
+  return validationError(
+    "Book is already received",
+    ["code"],
+    PURCHASE_REASONS.alreadyReceived,
+    rowId === null ? {} : { rowId },
+  );
+}
 
 type SubmissionDoc = NonNullable<
   Awaited<ReturnType<FormSubmissionsRepository["findOne"]>>
@@ -105,61 +118,7 @@ export class PurchaseReceivingService {
     code: string,
   ): Promise<ReceiveLotteryPurchaseBookPayload> {
     const submission = await this.readable(operator, submissionIdText);
-    const rowId = await this.tx.withTransaction(async (session) => {
-      if (!(await this.canReceive(operator, submission))) {
-        throw forbiddenError(
-          "Purchase is not waiting for your receiving",
-          PURCHASE_REASONS.notReceivable,
-        );
-      }
-      const reader = await tenantBoundaryContext(
-        this.orgs,
-        null,
-        submission.tenantId,
-      );
-      const lines = purchaseLinesOf(submission.values);
-      const games = await this.rules.gamesOf(reader, lines);
-      const receipts = await this.rules.receiptsOf(
-        reader,
-        submission._id,
-        session,
-      );
-      const received = new Set(receipts.map((receipt) => receipt.rowId));
-      const result = matchReceiveScan(
-        lines,
-        received,
-        code,
-        (gameId) => games.get(gameId)?.gameCode,
-      );
-      if (result.kind === "invalid") {
-        throw validationError(
-          "Unknown code",
-          ["code"],
-          PURCHASE_REASONS.scanInvalid,
-        );
-      }
-      if (result.kind === "not_on_purchase") {
-        throw await this.notOnPurchaseError(submission, code);
-      }
-      if (result.kind === "already_received") {
-        throw validationError(
-          "Book is already received",
-          ["code"],
-          PURCHASE_REASONS.alreadyReceived,
-          { rowId: result.row.rowId },
-        );
-      }
-      if (result.kind === "last_ticket_mismatch") {
-        throw validationError(
-          "Last ticket number differs from the purchase; return it for correction",
-          ["code"],
-          PURCHASE_REASONS.lastTicketMismatch,
-          { rowId: result.row.rowId },
-        );
-      }
-      await this.receiveRow(operator, session, submission, result.row);
-      return result.row.rowId;
-    });
+    const rowId = await this.receiveInTransaction(operator, submission, code);
     return {
       rowId,
       receiving: await this.toModel(
@@ -167,6 +126,74 @@ export class PurchaseReceivingService {
         await this.readable(operator, submissionIdText),
       ),
     };
+  }
+
+  /**
+   * 點收一本的交易。同一本同時刷兩次:後到的那個重讀後是「已點收」;交易沒有重跑、撞到唯一索引
+   * `(submissionId, rowId)` 或本編號時,也一律當作已點收(`PURCHASE_ALREADY_RECEIVED`)。
+   */
+  private async receiveInTransaction(
+    operator: OperatorContext,
+    submission: SubmissionDoc,
+    code: string,
+  ): Promise<string> {
+    try {
+      return await this.tx.withTransaction(async (session) => {
+        if (!(await this.canReceive(operator, submission))) {
+          throw forbiddenError(
+            "Purchase is not waiting for your receiving",
+            PURCHASE_REASONS.notReceivable,
+          );
+        }
+        const reader = await tenantBoundaryContext(
+          this.orgs,
+          null,
+          submission.tenantId,
+        );
+        const lines = purchaseLinesOf(submission.values);
+        const games = await this.rules.gamesOf(reader, lines);
+        const receipts = await this.rules.receiptsOf(
+          reader,
+          submission._id,
+          session,
+        );
+        const received = new Set(receipts.map((receipt) => receipt.rowId));
+        const result = matchReceiveScan(
+          lines,
+          received,
+          code,
+          (gameId) => games.get(gameId)?.gameCode,
+        );
+        if (result.kind === "invalid") {
+          throw validationError(
+            "Unknown code",
+            ["code"],
+            PURCHASE_REASONS.scanInvalid,
+          );
+        }
+        if (result.kind === "not_on_purchase") {
+          throw await this.notOnPurchaseError(submission, code);
+        }
+        if (result.kind === "already_received") {
+          throw alreadyReceivedError(result.row.rowId);
+        }
+        if (result.kind === "last_ticket_mismatch") {
+          throw validationError(
+            "Last ticket number differs from the purchase; return it for correction",
+            ["code"],
+            PURCHASE_REASONS.lastTicketMismatch,
+            { rowId: result.row.rowId },
+          );
+        }
+        await this.receiveRow(operator, session, submission, result.row);
+        return result.row.rowId;
+      });
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw alreadyReceivedError(null);
+      }
+      throw error;
+    }
   }
 
   /** [通知總部更正]:這本若是別家店進貨單上的,通知那張單的建立者;不是 → `NOT_FOUND`。 */
@@ -194,6 +221,7 @@ export class PurchaseReceivingService {
         subject: hit.owner.serialNo ?? "",
         orgName: labelOf(values[PURCHASE_FIELD_KEYS.branch]),
       },
+      ref: { type: LOTTERY_PURCHASE_REF, id: String(hit.owner._id) },
       dedupeKey: `purchase-wrong-store:${String(hit.owner._id)}:${hit.line.rowId}:${String(submission._id)}`,
     });
     return true;

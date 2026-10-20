@@ -43,7 +43,7 @@ export class LotteryBankTransaction {
   @Prop({ type: String, required: true, enum: DIRECTIONS })
   direction!: Direction;
 
-  /** 金額(正整數)。 */
+  /** 金額(正整數;單據送出時的自動記帳可以是 0,例 進貨單應付 0)。 */
   @Prop({ type: Number, required: true })
   amount!: number;
 

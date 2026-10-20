@@ -181,6 +181,7 @@ export class PurchaseRules {
    * 既有的本)、已點收的列沒被改或刪、叫貨單有效、甲類營業中、受託人、扣款帳戶。
    */
   async beforeSubmit(
+    operator: OperatorContext,
     submission: LifecycleSubmission,
     values: StoredValues,
   ): Promise<FormGuardResult> {
@@ -234,7 +235,7 @@ export class PurchaseRules {
         "Book numbers are used by another purchase or an existing book",
       );
     }
-    return this.headerProblemOf(submission, record);
+    return this.headerProblemOf(operator, submission, record);
   }
 
   /** 核准前:還有沒點收的列 → 擋下。 */
@@ -303,7 +304,7 @@ export class PurchaseRules {
   // ---- 事後動作 ----
 
   /**
-   * 送出後:第一次送出自動記「批貨支出」= 扣款金額(0 不記:收付金額一律正數,應付 0 = 已結清);
+   * 送出後:第一次送出自動記「批貨支出」= 扣款金額(0 元也記一筆,規格 8.2 / 9 驗算 ⑤);
    * 重新送出不自動調整(結算區塊顯示待付 / 待退)。甲類批購日重算;叫貨單 → 已進貨(換了叫貨單的,舊的回到待購買)。
    */
   async onSubmitted(context: FormEffectContext): Promise<void> {
@@ -515,6 +516,7 @@ export class PurchaseRules {
   }
 
   private async headerProblemOf(
+    operator: OperatorContext,
     submission: LifecycleSubmission,
     values: Record<string, unknown>,
   ): Promise<FormGuardResult> {
@@ -581,7 +583,12 @@ export class PurchaseRules {
     const accountId = toObjectId(header.accountId);
     const isUsable =
       accountId !== null &&
-      (await this.settlement.isAccountUsable(tenantId, accountId, branchId));
+      (await this.settlement.isAccountUsable(
+        tenantId,
+        accountId,
+        branchId,
+        operator,
+      ));
     return isUsable
       ? null
       : block(

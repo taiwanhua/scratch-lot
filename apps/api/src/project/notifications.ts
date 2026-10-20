@@ -14,7 +14,7 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
  * 自動成為個人偏好的一個開關(`notification_<類型>_<管道>`)。
  *
  * 類型清單、範本參數與觸發的功能見 `docs/modules/project/lottery-notifications.md`(專案規格 3.4)。
- * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links` 目前沒有登記。
+ * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links`:進貨單詳情(`LOTTERY_PURCHASE_REF`)。
  */
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
@@ -29,6 +29,8 @@ export const LOTTERY_STORE_RENT_DUE = "lottery.store-rent-due";
 export const LOTTERY_PERIOD_CLOSE_OVERDUE = "lottery.period-close-overdue";
 /** 刮刮樂:分店刷到送錯的進貨,按 [通知總部更正] → 給進貨單建立者。 */
 export const LOTTERY_PURCHASE_WRONG_STORE = "lottery.purchase-wrong-store";
+/** 通知連結:進貨單詳情頁(送錯分店的通知點進去是那張進貨單)。 */
+export const LOTTERY_PURCHASE_REF = "lottery-purchase";
 /** 排班:這家店的畫休開放日(B14)。 */
 export const SCHEDULE_DAY_OFF_OPEN = "schedule.day-off-open";
 /** 排班:這家店的畫休截止日前(B14)。 */
@@ -287,5 +289,10 @@ const scheduleTypes: NotificationTypeDefinition[] = [
 
 export const PROJECT_NOTIFICATIONS: ProjectNotificationRegistrations = {
   types: [...lotteryTypes, ...scheduleTypes],
-  links: [],
+  links: [
+    {
+      refType: LOTTERY_PURCHASE_REF,
+      path: "/purchasing/purchase/view-page/{refId}",
+    },
+  ],
 };

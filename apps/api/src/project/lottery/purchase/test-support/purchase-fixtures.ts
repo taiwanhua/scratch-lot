@@ -91,6 +91,27 @@ export async function seedPurchaseAuthorization(
   );
 }
 
+/** 庫存管理的模組(讀庫存概況用;權限不必,看綁不綁模組)。 */
+export async function seedInventoryModule(
+  connection: Connection,
+): Promise<void> {
+  await connection.collection("modules").insertOne({
+    key: "inventory",
+    name: "庫存管理",
+    parentId: null,
+    ancestors: [],
+    route: "inventory",
+    sidebarType: "link",
+    order: 20,
+    enabled: true,
+    isSystem: false,
+    icon: null,
+    settings: {},
+    engine: "fixed",
+    ...baseFields(new Date()),
+  });
+}
+
 /** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r1.seed.ts`)。 */
 export function purchaseDefinition(): FormDefinition {
   return definitionOf([
