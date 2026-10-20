@@ -10,6 +10,8 @@ import {
   DealerStockTab,
 } from "@/components/project/lottery/InventoryDetailTabs/InventoryDetailTabs";
 import { hasInventoryModule } from "@/components/project/lottery/InventoryDetailTabs/inventory-module";
+import { DealerPurchasesTab } from "@/pages/project/lottery/purchasing/purchase/DealerPurchasesTab";
+import { hasPurchaseModule } from "@/pages/project/lottery/purchasing/purchase/purchase-keys";
 
 import { CoSellersTab } from "./CoSellersTab";
 import { SigninsTab } from "./SigninsTab";
@@ -39,6 +41,14 @@ export interface DealerDetailTab {
  * (順序照規格),分頁內容放各自的資料夾;不改別人的那一列。文案放 `admin.lotteryDealers` 底下自己的子物件。
  */
 export const DEALER_DETAIL_TABS: readonly DealerDetailTab[] = [
+  // 進貨單(P18):甲類的批購紀錄(有效進貨單)
+  {
+    value: "purchases",
+    labelKey: "purchases.tab",
+    types: [LotteryDealerType.A],
+    visible: hasPurchaseModule,
+    Content: DealerPurchasesTab,
+  },
   {
     value: "signins",
     labelKey: "signins.tab",

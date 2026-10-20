@@ -406,6 +406,9 @@
     },
     "stock": {
       "tab": "Stock in store"
+    },
+    "purchases": {
+      "tab": "Purchase records"
     }
   },
   "lotteryInventory": {
@@ -1736,11 +1739,160 @@
       "pendingEmpty": "No requisitions to purchase",
       "fileName": "purchase-list",
       "sheetName": "Purchase list"
+    },
+    "purchase": {
+      "badgeDescription": "Purchases waiting for my receiving",
+      "createFromRequisition": "Create purchase",
+      "list": {
+        "title": "Purchases",
+        "create": "+ New",
+        "progress": "Received",
+        "settlement": "Settlement",
+        "cleared": "Settled",
+        "kinds": {
+          "to_pay": "To pay {amount}",
+          "to_refund": "To refund {amount}"
+        },
+        "listAria": "Purchase list",
+        "empty": "No purchases match",
+        "loading": "Loading",
+        "total": "{total} in total",
+        "filters": {
+          "status": "Status",
+          "all": "All"
+        }
+      },
+      "create": {
+        "tabLabel": "New",
+        "title": "New purchase",
+        "loading": "Loading",
+        "unavailable": "Purchases cannot be created now (the form is not available or you cannot create)",
+        "fromRequisition": "From requisition {serialNo}: requested {requested}, scanned {scanned}",
+        "fields": {
+          "branch": "Receiving store",
+          "requisition": "Requisition (optional)",
+          "noRequisition": "None",
+          "dealer": "Class A dealer",
+          "pick": "Select",
+          "selfPurchase": "Purchased in person",
+          "yes": "Yes",
+          "no": "No",
+          "trustee": "Trustee",
+          "trusteeNotNeeded": "— (not needed in person)",
+          "purchaseDate": "Purchase date",
+          "account": "Debit account",
+          "note": "Note"
+        },
+        "lines": "Lines",
+        "fallbackGame": "Game for front barcodes",
+        "fallbackGameNone": "Scan back numbers",
+        "scan": "Scan to add",
+        "scanErrors": {
+          "invalid": "Unknown code; scan the back number or front barcode of the last ticket",
+          "no_game": "Front barcodes have no game code; pick the game first",
+          "unknown_game": "Game code {gameCode} is not on sale",
+          "duplicate": "Book {bookNo} is already on this purchase"
+        },
+        "pickBranch": "Pick the receiving store first",
+        "empty": "No books yet: scan the last ticket of a book",
+        "columns": {
+          "bookNo": "Book",
+          "lastTicketNo": "Last ticket",
+          "tickets": "Tickets",
+          "bookPrice": "Book price",
+          "rate": "Purchase rate",
+          "amount": "Purchase amount"
+        },
+        "rateOf": "Purchase rate of book {bookNo}",
+        "groupTitle": "{code} {name} · {price} ({books} books) subtotal {subtotal}",
+        "requested": "requested {requested}, scanned {scanned}",
+        "groupRate": "Rate for all",
+        "groupRateOf": "Purchase rate for all {code}",
+        "cardFacts": "Last ticket {lastTicketNo} · {amount}",
+        "remove": "Remove",
+        "purchaseTotal": "Purchase total",
+        "deductedAmount": "Debit amount",
+        "cancel": "Cancel",
+        "saveDraft": "Save draft",
+        "submit": "Submit",
+        "draftSaved": "Draft saved",
+        "submitted": "Purchase submitted"
+      },
+      "view": {
+        "title": "Purchase",
+        "titleWithNo": "Purchase {serialNo}",
+        "receiveHint": "{remaining} books are not received yet; receive all before approving. A different last ticket number is blocked; return it for correction."
+      },
+      "dealerTab": {
+        "serialNo": "No.",
+        "purchaseDate": "Purchase date",
+        "branch": "Store",
+        "who": "Purchased by",
+        "self": "In person",
+        "trustee": "Trustee {name}",
+        "books": "Books",
+        "purchaseTotal": "Purchase total",
+        "status": "Status",
+        "aria": "Purchase records",
+        "empty": "No purchase records yet"
+      }
+    },
+    "receive": {
+      "title": "Receiving",
+      "scan": "Scan to receive",
+      "complete": "Finish this receiving ({count})",
+      "completed": "Received {count} books this time",
+      "groupTitle": "{code} {name} · {price}",
+      "groupWithRequested": "{title} · requested {requested}, scanned {scanned}",
+      "received": "Received",
+      "notReceived": "Not received",
+      "cardFacts": "Last ticket {lastTicketNo} · {rate}% · {amount}",
+      "columns": {
+        "bookNo": "Book",
+        "lastTicketNo": "Last ticket",
+        "tickets": "Tickets",
+        "bookPrice": "Book price",
+        "rate": "Purchase rate",
+        "amount": "Purchase amount",
+        "received": "Receiving"
+      },
+      "errors": {
+        "PURCHASE_NOT_RECEIVABLE": "This purchase is not waiting for your receiving",
+        "PURCHASE_SCAN_INVALID": "Unknown code; scan the last ticket of the book",
+        "PURCHASE_ALREADY_RECEIVED": "This book is already received",
+        "PURCHASE_LAST_TICKET_MISMATCH": "The last ticket number differs from the purchase; return it for correction",
+        "PURCHASE_WRONG_STORE": "This book was not sent to this store",
+        "PURCHASE_BOOK_NOT_ON_PURCHASE": "This book is not on this purchase",
+        "BOOK_KEY_DUPLICATE": "This book is already in stock; return it for correction",
+        "UNEXPECTED": "Receiving failed, please try again"
+      },
+      "wrongStore": {
+        "title": "This book was not sent to this store",
+        "notify": "Ask HQ to correct",
+        "ok": "Got it",
+        "unitPrice": "{price}",
+        "facts": "Book {bookNo} · purchase {serialNo} · {branch}",
+        "message": "This book belongs to purchase #{serialNo} of {branch}. Hand it back to the courier for {branch}; this store does not receive it.",
+        "notified": "The creator of that purchase has been notified"
+      }
     }
   },
   "lifecycle": {
     "REQUISITION_GAME_DISCONTINUED": "Some games are discontinued; remove them before submitting",
     "REQUISITION_NO_LINES": "Order at least one book before submitting",
-    "REQUISITION_REFERENCED": "A purchase or transfer already uses this requisition; void that one first"
+    "REQUISITION_REFERENCED": "A purchase or transfer already uses this requisition; void that one first",
+    "PURCHASE_NO_LINES": "Add at least one book before submitting",
+    "PURCHASE_LINE_INVALID": "A line's book number, last ticket or amounts do not match its game",
+    "PURCHASE_GAME_DISCONTINUED": "Some games are discontinued; remove them before submitting",
+    "PURCHASE_BOOK_DUPLICATE": "A book number is already on another purchase or in stock",
+    "PURCHASE_RECEIVED_ROW_CHANGED": "Received books cannot be changed or removed",
+    "PURCHASE_REQUISITION_INVALID": "The requisition must be a pending requisition of the same store",
+    "PURCHASE_DEALER_INVALID": "The dealer must be an active class A dealer",
+    "PURCHASE_TRUSTEE_INVALID": "When not purchased in person, pick an active trustee of the dealer",
+    "PURCHASE_ACCOUNT_INVALID": "The debit account must be active and used by the receiving store",
+    "PURCHASE_UNRECEIVED_ROWS": "Some books are not received; receive all before approving",
+    "PURCHASE_HAS_RECEIPTS": "A purchase with received books cannot be rejected or deleted",
+    "PURCHASE_BOOKS_IN_USE": "Some tickets are sold, transferred or opened; it cannot be voided",
+    "SETTLEMENT_NOT_CLEARED": "The settlement is not cleared (the paid net is not 0); reverse or refund first"
   }
 }

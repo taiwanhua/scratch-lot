@@ -1,0 +1,257 @@
+import { useTranslations } from "use-intl";
+
+import { Box } from "@repo/ui/box";
+import { Button } from "@repo/ui/button";
+import { Card } from "@repo/ui/card";
+import { Stack } from "@repo/ui/stack";
+import { Table, type TableColumn } from "@repo/ui/table";
+import { TextField } from "@repo/ui/text-field";
+import { Typography } from "@repo/ui/typography";
+
+import { formatMoney } from "../purchase-keys";
+import { type BookGroup, type BookRow, parseRate } from "./purchase-form";
+
+export interface PurchaseLinesProps {
+  groups: readonly BookGroup[];
+  /** 平板 / 手機:每本一張卡片 */
+  isCompact: boolean;
+  onRate: (rowId: string, rate: number) => void;
+  onGroupRate: (gameId: string, rate: number) => void;
+  onRemove: (rowId: string) => void;
+}
+
+const lastTicketText = (value: number): string =>
+  String(value).padStart(3, "0");
+
+/** 批購金額率的輸入框:改過(和遊戲預設不同)標色。 */
+const RateInput = ({
+  label,
+  value,
+  isEdited,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  isEdited: boolean;
+  onChange: (rate: number) => void;
+}) => (
+  <TextField
+    size="small"
+    type="number"
+    value={String(value)}
+    onChange={(event) => {
+      const rate = parseRate(event.target.value);
+      if (rate !== null) {
+        onChange(rate);
+      }
+    }}
+    sx={{
+      width: 88,
+      "& input": { textAlign: "right" },
+      ...(isEdited && { "& .MuiInputBase-root": { bgcolor: "warning.light" } }),
+    }}
+    slotProps={{ htmlInput: { "aria-label": label, min: 0, max: 100 } }}
+  />
+);
+
+/**
+ * 進貨單新增頁的明細(規格 8.2 明細;Figma PU-05):依遊戲分組,組標題列顯示小計、「叫貨 N,已刷 M」與
+ * 整組的批購金額率;每本的批購金額率可逐本改(改過的標色)。電腦是表格,平板 / 手機是卡片。
+ */
+export const PurchaseLines = ({
+  groups,
+  isCompact,
+  onRate,
+  onGroupRate,
+  onRemove,
+}: PurchaseLinesProps) => {
+  const t = useTranslations("admin.lotteryPurchasing.purchase.create");
+  if (groups.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {t("empty")}
+      </Typography>
+    );
+  }
+  const columns: TableColumn<BookRow>[] = [
+    {
+      key: "bookNo",
+      header: t("columns.bookNo"),
+      render: (row) => row.displayBookNo,
+      isEmphasized: true,
+    },
+    {
+      key: "lastTicketNo",
+      header: t("columns.lastTicketNo"),
+      render: (row) => lastTicketText(row.lastTicketNo),
+    },
+    {
+      key: "tickets",
+      header: t("columns.tickets"),
+      align: "right",
+      render: (row) => formatMoney(row.tickets),
+    },
+    {
+      key: "bookPrice",
+      header: t("columns.bookPrice"),
+      align: "right",
+      render: (row) => formatMoney(row.bookPrice),
+    },
+    {
+      key: "rate",
+      header: t("columns.rate"),
+      align: "right",
+      render: (row) => (
+        <RateInput
+          label={t("rateOf", { bookNo: row.displayBookNo })}
+          value={row.rate}
+          isEdited={row.isRateEdited}
+          onChange={(rate) => {
+            onRate(row.rowId, rate);
+          }}
+        />
+      ),
+    },
+    {
+      key: "amount",
+      header: t("columns.amount"),
+      align: "right",
+      render: (row) => formatMoney(row.amount),
+    },
+    {
+      key: "remove",
+      header: "",
+      width: 72,
+      render: (row) => (
+        <Button
+          variant="text"
+          size="small"
+          color="error"
+          onClick={() => {
+            onRemove(row.rowId);
+          }}
+        >
+          {t("remove")}
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <Stack spacing={2}>
+      {groups.map((group) => {
+        const title = t("groupTitle", {
+          code: group.game.gameCode,
+          name: group.game.name,
+          price: group.game.unitPrice,
+          books: group.rows.length,
+          subtotal: formatMoney(group.subtotal),
+        });
+        return (
+          <Stack key={group.game.id} spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: "center", flexWrap: "wrap" }}
+            >
+              <Typography
+                variant="subtitle2"
+                component="h3"
+                sx={{ flex: 1, minWidth: 200 }}
+              >
+                {title}
+                {group.requestedBooks !== null && (
+                  <Typography
+                    component="span"
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ ml: 1 }}
+                  >
+                    {t("requested", {
+                      requested: group.requestedBooks,
+                      scanned: group.rows.length,
+                    })}
+                  </Typography>
+                )}
+              </Typography>
+              {group.rows.length > 0 && (
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {t("groupRate")}
+                  </Typography>
+                  <RateInput
+                    label={t("groupRateOf", { code: group.game.gameCode })}
+                    value={group.rows[0]?.rate ?? group.game.defaultRate}
+                    isEdited={false}
+                    onChange={(rate) => {
+                      onGroupRate(group.game.id, rate);
+                    }}
+                  />
+                </Stack>
+              )}
+            </Stack>
+            {isCompact ? (
+              <Stack spacing={1}>
+                {group.rows.map((row) => (
+                  <Card key={row.rowId} variant="outlined" sx={{ p: 1.5 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{ alignItems: "center" }}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {row.displayBookNo}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {t("cardFacts", {
+                            lastTicketNo: lastTicketText(row.lastTicketNo),
+                            amount: formatMoney(row.amount),
+                          })}
+                        </Typography>
+                      </Box>
+                      <RateInput
+                        label={t("rateOf", { bookNo: row.displayBookNo })}
+                        value={row.rate}
+                        isEdited={row.isRateEdited}
+                        onChange={(rate) => {
+                          onRate(row.rowId, rate);
+                        }}
+                      />
+                      <Button
+                        variant="text"
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          onRemove(row.rowId);
+                        }}
+                      >
+                        {t("remove")}
+                      </Button>
+                    </Stack>
+                  </Card>
+                ))}
+              </Stack>
+            ) : (
+              group.rows.length > 0 && (
+                <Table
+                  aria-label={title}
+                  size="small"
+                  columns={columns}
+                  rows={group.rows}
+                  getRowKey={(row) => row.rowId}
+                  minWidth={760}
+                  containerSx={{ height: "auto" }}
+                />
+              )
+            )}
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
+};

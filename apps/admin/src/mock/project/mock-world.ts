@@ -11,6 +11,11 @@ import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures"
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
+import {
+  purchaseFormWorld,
+  purchaseModules,
+} from "@/test/msw/project/lottery/purchase-fixtures";
+import { purchaseWorld } from "@/test/msw/project/lottery/purchase-handlers";
 import { purchaseList } from "@/test/msw/project/lottery/purchasing-data-fixtures";
 import {
   purchasingModules,
@@ -83,6 +88,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleModules(),
     ...accountsModules(),
     ...purchasingModules(),
+    ...purchaseModules(),
     ...inventoryModules(),
   ],
   handlers: () => [
@@ -102,25 +108,42 @@ export const projectMockWorld: ProjectMockWorld = {
       }),
     }).handlers,
     ...inventoryWorld().handlers,
+    ...purchaseWorld().handlers,
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
-  // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨)
+  // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
+  // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清)
   formRuntime: () => {
     const support = supportRequestFormWorld();
     const requisition = requisitionFormWorld();
+    const purchase = purchaseFormWorld();
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
         ...(requisition.moduleForms ?? []),
+        ...(purchase.moduleForms ?? []),
       ],
-      versions: { ...support.versions, ...requisition.versions },
+      versions: {
+        ...support.versions,
+        ...requisition.versions,
+        ...purchase.versions,
+      },
       submissions: [
         ...(support.submissions ?? []),
         ...(requisition.submissions ?? []),
+        ...(purchase.submissions ?? []),
       ],
       fieldOptions: { ...support.fieldOptions },
-      listColumns: { ...support.listColumns, ...requisition.listColumns },
-      listBuiltin: { ...support.listBuiltin, ...requisition.listBuiltin },
+      listColumns: {
+        ...support.listColumns,
+        ...requisition.listColumns,
+        ...purchase.listColumns,
+      },
+      listBuiltin: {
+        ...support.listBuiltin,
+        ...requisition.listBuiltin,
+        ...purchase.listBuiltin,
+      },
     };
   },
   workflowRuntime: supportRequestWorkflowWorld,

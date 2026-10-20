@@ -677,7 +677,27 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.lifecycle.",
     reason:
-      "專案掛接點擋下的錯誤碼(目前是叫貨單):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `project/lottery/requisition/requisition-error.ts` 的 `REQUISITION_REASONS`)",
+      "專案掛接點擋下的錯誤碼(叫貨單、進貨單、收付):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `requisition-error.ts` 的 `REQUISITION_REASONS`、`purchase-error.ts` 的 `PURCHASE_REASONS`、`accounts-error.ts` 的 `SETTLEMENT_NOT_CLEARED`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.purchase.badgeDescription",
+    reason:
+      "進貨單側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`purchase-registrations.ts`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.purchase.list.kinds.",
+    reason:
+      "進貨單列表的結算欄 `t(`kinds.${kind}`)`,kind 取自 api `lotteryPurchaseProgress.settlementKind`(`to_pay` / `to_refund`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.purchase.create.scanErrors.",
+    reason:
+      "進貨單新增頁刷條碼的 `t(`scanErrors.${kind}`)`,kind 取自 `PurchaseCreatePage/purchase-form.ts` 的 `addScannedBook` 結果",
+  },
+  {
+    key: "admin.lotteryPurchasing.receive.errors.",
+    reason:
+      "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts` 從 api 的 `extensions.reason` 換算(`RECEIVE_REASONS`)",
   },
   {
     key: "admin.lotteryInventory.errors.",

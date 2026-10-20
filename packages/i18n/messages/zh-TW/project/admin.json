@@ -406,6 +406,9 @@
     },
     "stock": {
       "tab": "在店庫存"
+    },
+    "purchases": {
+      "tab": "批購紀錄"
     }
   },
   "lotteryInventory": {
@@ -1736,11 +1739,160 @@
       "pendingEmpty": "目前沒有待購買的叫貨單",
       "fileName": "採購清單",
       "sheetName": "採購清單"
+    },
+    "purchase": {
+      "badgeDescription": "點收關卡在我手上、還沒點收完成的進貨單數",
+      "createFromRequisition": "建立進貨單",
+      "list": {
+        "title": "進貨單",
+        "create": "+ 新增",
+        "progress": "點收進度",
+        "settlement": "結算",
+        "cleared": "已結清",
+        "kinds": {
+          "to_pay": "待付 {amount}",
+          "to_refund": "待退 {amount}"
+        },
+        "listAria": "進貨單列表",
+        "empty": "沒有符合條件的進貨單",
+        "loading": "載入中",
+        "total": "共 {total} 筆",
+        "filters": {
+          "status": "狀態",
+          "all": "全部"
+        }
+      },
+      "create": {
+        "tabLabel": "新增",
+        "title": "新增進貨單",
+        "loading": "載入中",
+        "unavailable": "現在不能新增進貨單(表單沒有開放或沒有新增權限)",
+        "fromRequisition": "從叫貨單 {serialNo} 帶入:叫貨 {requested},已刷 {scanned}",
+        "fields": {
+          "branch": "進貨分店",
+          "requisition": "叫貨單(選填)",
+          "noRequisition": "不帶入",
+          "dealer": "批購甲類",
+          "pick": "請選擇",
+          "selfPurchase": "本人批購",
+          "yes": "是",
+          "no": "否",
+          "trustee": "批購受託人",
+          "trusteeNotNeeded": "—(本人批購不用填)",
+          "purchaseDate": "批購日期",
+          "account": "扣款帳戶",
+          "note": "備註"
+        },
+        "lines": "明細",
+        "fallbackGame": "正面條碼的遊戲",
+        "fallbackGameNone": "刷背面編號",
+        "scan": "刷條碼加入",
+        "scanErrors": {
+          "invalid": "看不懂這個碼,請刷這本最後一張的背面編號或正面條碼",
+          "no_game": "正面條碼沒有遊戲代號,請先選「正面條碼的遊戲」",
+          "unknown_game": "遊戲代號 {gameCode} 不是販售中的遊戲",
+          "duplicate": "本號 {bookNo} 已經在這張單上"
+        },
+        "pickBranch": "請先選進貨分店",
+        "empty": "還沒刷任何一本:刷這本最後一張的條碼加入",
+        "columns": {
+          "bookNo": "本號",
+          "lastTicketNo": "最後張號",
+          "tickets": "張數",
+          "bookPrice": "整本金額",
+          "rate": "批購金額率",
+          "amount": "批購金額"
+        },
+        "rateOf": "本號 {bookNo} 的批購金額率",
+        "groupTitle": "{code} {name} · {price} 元({books} 本)小計 {subtotal}",
+        "requested": "叫貨 {requested},已刷 {scanned}",
+        "groupRate": "整組批購金額率",
+        "groupRateOf": "{code} 整組的批購金額率",
+        "cardFacts": "最後張號 {lastTicketNo} · 批購 {amount}",
+        "remove": "移除",
+        "purchaseTotal": "批購合計",
+        "deductedAmount": "扣款金額",
+        "cancel": "取消",
+        "saveDraft": "存草稿",
+        "submit": "送出",
+        "draftSaved": "已存草稿",
+        "submitted": "進貨單已送出"
+      },
+      "view": {
+        "title": "進貨單",
+        "titleWithNo": "進貨單 {serialNo}",
+        "receiveHint": "還有 {remaining} 本沒點收;核准前要全部點收。刷到的最後張號和單上不同時會擋下,請退回更正。"
+      },
+      "dealerTab": {
+        "serialNo": "單號",
+        "purchaseDate": "批購日",
+        "branch": "進貨分店",
+        "who": "批購人",
+        "self": "本人",
+        "trustee": "受託人 {name}",
+        "books": "本數",
+        "purchaseTotal": "批購合計",
+        "status": "狀態",
+        "aria": "批購紀錄",
+        "empty": "還沒有批購紀錄"
+      }
+    },
+    "receive": {
+      "title": "點收",
+      "scan": "刷條碼點收",
+      "complete": "完成這次點收({count} 本)",
+      "completed": "這次點收了 {count} 本",
+      "groupTitle": "{code} {name} · {price} 元",
+      "groupWithRequested": "{title} · 叫貨 {requested},已刷 {scanned}",
+      "received": "已點收",
+      "notReceived": "未點收",
+      "cardFacts": "最後張號 {lastTicketNo} · {rate}% · 批購 {amount}",
+      "columns": {
+        "bookNo": "本號",
+        "lastTicketNo": "最後張號",
+        "tickets": "張數",
+        "bookPrice": "整本金額",
+        "rate": "批購金額率",
+        "amount": "批購金額",
+        "received": "點收"
+      },
+      "errors": {
+        "PURCHASE_NOT_RECEIVABLE": "這張進貨單現在不在你的點收關卡",
+        "PURCHASE_SCAN_INVALID": "看不懂這個碼,請刷這本最後一張",
+        "PURCHASE_ALREADY_RECEIVED": "這本已經點收過了",
+        "PURCHASE_LAST_TICKET_MISMATCH": "刷到的最後張號和單上不同,請退回更正",
+        "PURCHASE_WRONG_STORE": "這本不是送到這家店的",
+        "PURCHASE_BOOK_NOT_ON_PURCHASE": "這本不在這張進貨單上",
+        "BOOK_KEY_DUPLICATE": "這本已經在庫存裡,請退回更正",
+        "UNEXPECTED": "點收失敗,請再試一次"
+      },
+      "wrongStore": {
+        "title": "這本不是送到這家店",
+        "notify": "通知總部更正",
+        "ok": "知道了",
+        "unitPrice": "{price} 元",
+        "facts": "本號 {bookNo} · 進貨單 {serialNo} · {branch}",
+        "message": "這本屬於「{branch}」的進貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。",
+        "notified": "已通知這張進貨單的建立者更正"
+      }
     }
   },
   "lifecycle": {
     "REQUISITION_GAME_DISCONTINUED": "明細有已停售的遊戲,請拿掉後再送出",
     "REQUISITION_NO_LINES": "至少要叫一本才能送出",
-    "REQUISITION_REFERENCED": "這張叫貨單已經被進貨單或調貨單引用,請先作廢那張單"
+    "REQUISITION_REFERENCED": "這張叫貨單已經被進貨單或調貨單引用,請先作廢那張單",
+    "PURCHASE_NO_LINES": "至少要有一本才能送出",
+    "PURCHASE_LINE_INVALID": "明細的本號、最後張號或金額和遊戲不符,請檢查後再送出",
+    "PURCHASE_GAME_DISCONTINUED": "明細有已停售的遊戲,請拿掉後再送出",
+    "PURCHASE_BOOK_DUPLICATE": "有本號和其他進貨單或既有的本重複",
+    "PURCHASE_RECEIVED_ROW_CHANGED": "已點收的本不能修改或刪除",
+    "PURCHASE_REQUISITION_INVALID": "叫貨單要是同一家分店、待購買的叫貨單",
+    "PURCHASE_DEALER_INVALID": "批購甲類要是營業中的甲類",
+    "PURCHASE_TRUSTEE_INVALID": "本人批購為否時,要選這位甲類啟用中的受託人",
+    "PURCHASE_ACCOUNT_INVALID": "扣款帳戶要使用中,而且使用組織包含進貨分店",
+    "PURCHASE_UNRECEIVED_ROWS": "還有沒點收的本,全部點收後才能核准",
+    "PURCHASE_HAS_RECEIPTS": "已經點收過的進貨單不能駁回或刪除",
+    "PURCHASE_BOOKS_IN_USE": "有刮刮樂已售出、調出或拆本,不能作廢",
+    "SETTLEMENT_NOT_CLEARED": "結算還沒歸零(已付淨額不是 0),請先沖正或收到退款"
   }
 }

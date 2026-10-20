@@ -16,6 +16,9 @@ import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPa
 import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
 import { RequisitionCreatePage } from "@/pages/project/lottery/purchasing/RequisitionCreatePage/RequisitionCreatePage";
 import { RequisitionPage } from "@/pages/project/lottery/purchasing/RequisitionPage/RequisitionPage";
+import { PurchaseCreatePage } from "@/pages/project/lottery/purchasing/purchase/PurchaseCreatePage/PurchaseCreatePage";
+import { PurchasePage } from "@/pages/project/lottery/purchasing/purchase/PurchasePage/PurchasePage";
+import { PurchaseViewPage } from "@/pages/project/lottery/purchasing/purchase/PurchaseViewPage/PurchaseViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
 import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
@@ -78,6 +81,16 @@ export const projectModulePages: ModulePageSource = {
       pageOverrides: {
         list: { Page: RequisitionPage },
         createPage: { Page: RequisitionCreatePage },
+      },
+    },
+    // 進貨單(綁定 進貨單;規格 8.2):列表加點收進度與結算、新增頁換成刷條碼頁、檢視頁換成
+    // 引擎零件 + 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    {
+      moduleKey: "purchasing.purchase",
+      pageOverrides: {
+        list: { Page: PurchasePage },
+        createPage: { Page: PurchaseCreatePage },
+        viewPage: { Page: PurchaseViewPage },
       },
     },
   ],

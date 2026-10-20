@@ -1,0 +1,49 @@
+import { authWorld } from "@/test/msw/auth-handlers";
+import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
+import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
+import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
+import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
+import {
+  purchaseFormWorld,
+  purchaseModules,
+} from "@/test/msw/project/lottery/purchase-fixtures";
+import { purchaseWorld } from "@/test/msw/project/lottery/purchase-handlers";
+import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
+import { server } from "@/test/msw/server";
+import { renderApp } from "@/test/render";
+
+export interface RenderPurchaseOptions {
+  path: string;
+  /** 拿掉的進貨單權限 key(其餘給滿) */
+  omit?: readonly string[];
+  /** 當前組織:預設中山店(店長);`tenant` = 站在最上層組織(總部) */
+  currentOrg?: "storeA" | "tenant";
+}
+
+/**
+ * 進貨單的測試場景:路由、殼、守門都是真的,只有 api 是假的(進貨單走表單執行端的 world;選項、點收、
+ * 進度走 `purchaseWorld`;結算區塊走帳戶管理的 world)。
+ */
+export const renderPurchasePage = ({
+  path,
+  omit = [],
+  currentOrg = "storeA",
+}: RenderPurchaseOptions) => {
+  const purchaseFake = purchaseWorld();
+  const formsFake = formRuntimeWorld(purchaseFormWorld());
+  const accountsFake = accountsWorld();
+  const org = masterDataOrgs[currentOrg];
+  server.use(
+    ...purchaseFake.handlers,
+    ...formsFake.handlers,
+    ...accountsFake.handlers,
+    ...masterDataSharedLookupHandlers(),
+    ...authWorld({
+      hasRefreshCookie: true,
+      orgs: [{ id: org.id, name: org.name }],
+      currentOrgTenantId: masterDataOrgs.tenant.id,
+      modules: [...purchasingModules(), ...purchaseModules(omit)],
+    }).handlers,
+  );
+  return { ...renderApp({ path }), purchaseFake, formsFake, accountsFake };
+};
