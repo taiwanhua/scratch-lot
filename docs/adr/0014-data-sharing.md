@@ -55,7 +55,7 @@
 
 **決策**:
 
-- 放寬範圍的出口只有 ADR-0005「例外出口」登記的那幾個。這次新增三個:`BaseRepository.existsInTenant`(租戶內唯一 / 占用檢查;條件只能是一個欄位等於一個值)、`BaseRepository.findRefsInTenant`(看得到這筆就看得到它引用的名稱)、`systemTenantReader(tenantId)`(排程逐租戶跑)。前兩個只能用在操作者所屬的租戶,呼叫端登記在 `TENANT_BOUNDARY_CALLERS`。
+- 放寬範圍的出口只有 ADR-0005「例外出口」登記的那幾個。這次新增三個:`BaseRepository.existsInTenant`(租戶內唯一 / 占用檢查;條件只能是欄位等於值的組合)、`BaseRepository.findRefsInTenant`(看得到這筆就看得到它引用的名稱)、`systemTenantReader(tenantId)`(排程逐租戶跑)。前兩個只能用在操作者所屬的租戶,呼叫端登記在 `TENANT_BOUNDARY_CALLERS`。
 - **讀進來的文件不能 `save()`**:`save()` 走 `collection.updateOne`、不經查詢中介層,共用分支讀到的文件存回去就等於繞過寫入範圍;plugin 的 save 中介層只放行新建,更新一律經 `BaseRepository` 的條件更新。
 - `aggregate` 拒收 `$lookup` / `$unionWith` / `$graphLookup` / `$out` / `$merge`,包含藏在 `$facet` 子管線或任何巢狀管線裡的。
 - **提升上下文**(可見範圍或管理範圍寫成 `"all"` 的操作者上下文)只准出現在登記清單的檔案:底座的在 `apps/api/src/database/elevated-contexts.ts`,專案的在 `apps/api/src/project/database/elevated-contexts.ts`;`elevated-contexts.test.ts` 掃整個 src,新增未登記的一處就失敗。新需求先用登記過的出口或共用宣告。
@@ -71,5 +71,6 @@
 - 資料範圍規則仍會縮小共用資料(先放寬、再縮小),見 `docs/modules/data-scope.md`。
 - 操作者上下文多一個集合 `memberTenants`(依租戶分組的所屬組織與上層鏈),登入線計算;內部上下文明寫 `[]`。
 - 示範模組 2 是「可共用、預設不共用、可編輯」的示範表(權限劇本 30–35)。
+- 前端「共用給」欄位是底座 `ShareOrgsField`(`OrgTreeSelect` 的 `scope="tenant"` 多選 + 每個已選組織一個「含下層」勾選框),示範模組 2 與專案的可編輯共用清單都用它。
 
 正本:`apps/api/src/database/plugins/tenant-scope.plugin.ts`、`apps/api/src/database/base.repository.ts`、`apps/api/src/database/share-orgs.ts`、`apps/api/src/database/elevated-contexts.ts`、`apps/api/src/database/system-tenant-reader.ts`、`apps/api/src/database/data-sharing.test.ts`

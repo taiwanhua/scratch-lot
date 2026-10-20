@@ -2796,7 +2796,7 @@
   },
   "shareOrgsField": {
     "helper": "共用給的組織看得到這筆資料,但不能修改;可以選整個組織樹裡的組織。",
-    "includeDescendants": "{name}含下層",
+    "includeDescendants": "{name} 含下層組織",
     "withDescendants": "{name}(含下層)",
     "none": "不共用",
     "unknownOrg": "(已不在組織樹上的組織)"

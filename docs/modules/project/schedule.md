@@ -50,32 +50,32 @@
 
 唯一索引一律是 partial(`partialFilterExpression: { deletedAt: { $type: "null" } }`,軟刪除的不算);同時寫入撞到唯一索引時回與事前檢查同一個 `VALIDATION_FAILED`。
 
-八張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。
+八張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。範本、週範本、規則設定、行事曆宣告「上層沿用到下層」(ADR-0014);排班檔案宣告「可共用 + 依可以排的分店」;畫休、守門文件、關聯以人為準,以租戶為邊界讀寫(`scheduleTenantContext`,底座 `systemTenantReader`)。
 
-| collection                       | 一筆是                                    | 歸屬 `orgId`                                                    | 唯一 / 說明                                                                                                                                                                                          |
-| -------------------------------- | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schedule_staff`                 | 排班檔案(使用者子檔)                      | 建立它的組織(當前組織)                                          | 一人一份:唯一 `(tenantId, userId)`;讀取與修改照一般可見性                                                                                                                                            |
-| `schedule_relationships`         | `org_schedule_staff`:排班人員可以排某分店 | `firstId`(分店)                                                 | `meta = { canLead, isPrimary, sortOrder }`;唯一 `(type, firstId, secondId)`(只算未刪除的);拿掉一家店 = 軟刪除                                                                                        |
-| `schedule_settings`              | 某組織對某條規則的自訂                    | 自訂它的組織                                                    | 唯一 `(orgId, key)`(只算未刪除的);[還原] = 軟刪除                                                                                                                                                    |
-| `schedule_demand_templates`      | 人力需求範本                              | 建立它的組織                                                    | 執行任務 `tasks[] = { taskId, role, taskKey }`                                                                                                                                                       |
-| `schedule_demand_week_templates` | 人力需求週範本                            | 建立它的組織                                                    | `days` 7 格(0 = 星期日),每格是範本 id                                                                                                                                                                |
-| `schedule_calendar_days`         | 某組織某天的店休 / 特殊日                 | 設定它的組織                                                    | 唯一 `(orgId, date)`(只算未刪除的)                                                                                                                                                                   |
-| `schedule_day_offs`              | 畫休(讀取以人為準)                        | 登記時的組織:本人 = 當前組織、代改 = 畫休總覽選的那家店(不共用) | `kind` 整天畫休 `full-day` / 時段不可排 `time-range`(`startTime` / `endTime`);同一人同一天未刪除的整天畫休唯一 `(tenantId, userId, date)`(partial);代改記 `by`、`reason`、`reasonNote`;刪除 = 軟刪除 |
-| `schedule_day_off_locks`         | 畫休寫入的守門文件(一家店一個月一筆)      | 租戶頂層(鎖的店記在 `storeId`,不擋刪除分店)                     | 唯一 `(orgId, storeId, month)`;只用 `version` 製造寫入衝突                                                                                                                                           |
+| collection                       | 一筆是                                    | 歸屬 `orgId`                                                    | 唯一 / 說明                                                                                                                                                                                                |
+| -------------------------------- | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schedule_staff`                 | 排班檔案(使用者子檔)                      | 建立它的組織(當前組織)                                          | 一人一份:唯一 `(tenantId, userId)`;資料共用「可共用 + sharedByFields = 可以排的分店(`orgIds`,`org_schedule_staff` 的副本,同交易寫入)」:排得到這個人的店看得到他的檔案,但只有歸屬組織在可見範圍內的才改得到 |
+| `schedule_relationships`         | `org_schedule_staff`:排班人員可以排某分店 | `firstId`(分店)                                                 | `meta = { canLead, isPrimary, sortOrder }`;唯一 `(type, firstId, secondId)`(只算未刪除的);拿掉一家店 = 軟刪除                                                                                              |
+| `schedule_settings`              | 某組織對某條規則的自訂                    | 自訂它的組織                                                    | 唯一 `(orgId, key)`(只算未刪除的);[還原] = 軟刪除                                                                                                                                                          |
+| `schedule_demand_templates`      | 人力需求範本                              | 建立它的組織                                                    | 執行任務 `tasks[] = { taskId, role, taskKey }`                                                                                                                                                             |
+| `schedule_demand_week_templates` | 人力需求週範本                            | 建立它的組織                                                    | `days` 7 格(0 = 星期日),每格是範本 id                                                                                                                                                                      |
+| `schedule_calendar_days`         | 某組織某天的店休 / 特殊日                 | 設定它的組織                                                    | 唯一 `(orgId, date)`(只算未刪除的)                                                                                                                                                                         |
+| `schedule_day_offs`              | 畫休(讀取以人為準)                        | 登記時的組織:本人 = 當前組織、代改 = 畫休總覽選的那家店(不共用) | `kind` 整天畫休 `full-day` / 時段不可排 `time-range`(`startTime` / `endTime`);同一人同一天未刪除的整天畫休唯一 `(tenantId, userId, date)`(partial);代改記 `by`、`reason`、`reasonNote`;刪除 = 軟刪除       |
+| `schedule_day_off_locks`         | 畫休寫入的守門文件(一家店一個月一筆)      | 租戶頂層(鎖的店記在 `storeId`,不擋刪除分店)                     | 唯一 `(orgId, storeId, month)`;只用 `version` 製造寫入衝突                                                                                                                                                 |
 
 ## 規則
 
 ### 組織鏈與「看得到上層」
 
-範本、週範本、規則、行事曆都「沿組織樹往上找」:組織鏈 = 自己 → 上層 → … → 最上層組織(不含根組織)。上層組織通常不在操作者的可見範圍裡,讀這些資料時以提升範圍的讀取上下文、配**明列的組織鏈**條件查(`apps/api/src/project/schedule/shared/schedule-org.ts`,先例同欄位管理的 `fields/field-visibility.ts`)。根組織沒有排班(對根組織查 → `VALIDATION_FAILED`,欄位 `orgId`)。
+範本、週範本、規則、行事曆都「沿組織樹往上找」:組織鏈 = 自己 → 上層 → … → 最上層組織(不含根組織)。這幾張表宣告「上層沿用到下層」:分店的人直接看得到所屬組織上層鏈建的,查詢以操作者的上下文、配**明列的組織鏈**條件;組織名稱以 `scheduleOrgReader`(可見範圍 ∪ 上層鏈)讀(`apps/api/src/project/schedule/shared/schedule-org.ts`)。根組織沒有排班(對根組織查 → `VALIDATION_FAILED`,欄位 `orgId`)。
 
 ### 排班人員(規格 14.3)
 
-- **一人一份(規格 14.1:使用者子檔,一對一)**:同一租戶裡一個使用者只有一份排班檔案(唯一 `(tenantId, userId)`)。[加入排班] 建立時 `orgId` = 當前組織,讀取與修改照一般可見性(看不到那個組織的檔案 → `NOT_FOUND`、改不到);跨店支援由支援需求單把人加進那家店。
-- **候選使用者** = 所屬組織落在操作者可見範圍內(且在當前組織的租戶裡)的使用者;[加入排班] 只能加這些人、而且整個租戶裡還沒有他的檔案(已加入 → `VALIDATION_FAILED`,欄位 `userIds`,同時加入也一樣;看不到 → `NOT_FOUND`)。已被操作者看不到的組織加入的人,候選清單標「已在其他組織加入」(`joinedElsewhere`)、勾選框停用;篩選時算「已加入」(`joined: true` 列出、`joined: false` 不列)。
+- **一人一份(規格 14.1:使用者子檔,一對一)**:同一租戶裡一個使用者只有一份排班檔案(唯一 `(tenantId, userId)`)。[加入排班] 建立時 `orgId` = 當前組織。讀取:可見範圍,加上可以排的分店有我的店(跨店支援也看得到,`staff.isShared = true`、標「其他店的排班人員(只能看)」);修改只限歸屬組織在可見範圍內的(別店建的 → `FORBIDDEN`,`reason: NOT_OWNER`);跨店支援由支援需求單把人加進那家店。
+- **候選使用者** = 所屬組織落在操作者可見範圍內(且在當前組織的租戶裡)的使用者;[加入排班] 只能加這些人、而且整個租戶裡還沒有他的檔案(已加入 → `VALIDATION_FAILED`,欄位 `userIds`,同時加入也一樣;看不到 → `NOT_FOUND`)。檔案完全看不到的人(別店建的、可以排的分店也沒有我的店),候選清單標「已在其他組織加入」(`joinedElsewhere`)、勾選框停用;篩選時算「已加入」(`joined: true` 列出、`joined: false` 不列)。
 - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`)。存檔時 `orgs` 整份取代「操作者看得到的那幾家」;看不到的分店的關聯保留不動。
 - **主要分店每人一家**:有任何可以排的分店時恰好一家(含看不到的分店的關聯一起算),否則 `VALIDATION_FAILED`(欄位 `orgs`)。主要分店在看不到的分店時列表回 `primaryElsewhere = true`。
-- **候選人**(手動與自動排班同一份名單):`ScheduleStaffService.listScheduleCandidates(operator, orgId, at?)` —— 有排班檔案、啟用、帳號啟用、可以排的分店包含這家店的人;`at`(預設現在)只決定哪些關聯算數(那之前加入、那之後才拿掉的都算);回傳的 `canLead` / `isPrimary` / `sortOrder` 與排班檔案、帳號的啟用都是**現在的值**。不看操作者的可見範圍(呼叫端先確認看得到這家店)。
+- **候選人**(手動與自動排班同一份名單):`ScheduleStaffService.listScheduleCandidates(operator, orgId, at?)` —— 有排班檔案、啟用、帳號啟用、可以排的分店包含這家店的人;`at`(預設現在)只決定哪些關聯算數(那之前加入、那之後才拿掉的都算);回傳的 `canLead` / `isPrimary` / `sortOrder` 與排班檔案、帳號的啟用都是**現在的值**。這家店要在操作者的可見範圍內(排程以租戶系統身分呼叫 = 整個租戶),否則回空清單;候選人以租戶為邊界讀。
 
 ### 人力需求範本 / 週範本(規格 14.4)
 
@@ -133,7 +133,7 @@
 - **開放期間**(規則 `dayOffWindow`,`apps/api/src/project/schedule/day-offs/day-off-window.ts`):目標月的開放期間 = 前一個月的 N 日至 M 日(超過月底用月底);今天(租戶時區,`ScheduleClock`)在期間內 = 開放中。這條規則沒有等級,只看值、不看開關,登記檢查與通知用同一個判斷(`dayOffWindowValueOf`)。**本人**只能在開放中登記 / 刪除那個目標月的畫休,其他時候 → `FORBIDDEN`(`reason: OUTSIDE_DAY_OFF_WINDOW`)。
 - **代改**(`edit-day-offs`):對象要是選的那家店(要看得到)的排班人員(否則 `NOT_FOUND`);不受開放期間限制;那個月的截止日(對象主要分店的開放期間)已過 → `reason` 必填(欄位管理「代改畫休原因」啟用中的選項),選「其他」`reasonNote` 必填(否則 `VALIDATION_FAILED`,欄位 `reason` / `reasonNote`);截止前原因選填。記代改人 `by`;代改刪除先寫入代改人與原因再軟刪除。代改一樣跑規則。
 - **畫休總覽**:候選人(可以排這家店的排班人員)這個月的畫休;同日畫休人數只計 `isPrimary` 的人;「尚未畫休」= 主要分店是這家、這個月還沒畫任何一天的候選人。
-- **給其他功能**:`ScheduleDayOffsService.listUnavailable(orgId, from, to)` 回這家店的候選人每人每天的整天畫休 / 時段不可排(只列有畫休的日子;不看操作者的可見範圍)。
+- **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, from, to)` 回這家店的候選人每人每天的整天畫休 / 時段不可排(只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。
 
 ### 畫休開放 / 即將截止通知(規格 3.4、3.5、14.11)
 
@@ -167,7 +167,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 ### 給其他功能的 service
 
-`ScheduleModule` 匯出:`ScheduleStaffService.listScheduleCandidates`、`ScheduleRulesService.effectiveSettingsForOrg`、`ScheduleCalendarService.effectiveDays`、`ScheduleDayOffsService.listUnavailable`、`SchedulePermissions`。
+`ScheduleModule` 匯出:`ScheduleStaffService.listScheduleCandidates`、`ScheduleRulesService.effectiveSettingsForOrg`、`ScheduleCalendarService.effectiveDays`、`ScheduleDayOffsService.listUnavailable`、`SchedulePermissions`。這四個給其他功能的查詢都要求那家店在操作者的可見範圍內(看不到 / 別租戶 → `NOT_FOUND` 或空清單);排程與自動排班以底座 `systemTenantReader(tenantId)` 呼叫(可見範圍 = 整個租戶)。
 
 ### 給刮刮樂的登記接縫
 

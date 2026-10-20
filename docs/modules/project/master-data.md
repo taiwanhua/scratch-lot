@@ -69,10 +69,10 @@
 | `launchedAt` / `discontinuedAt` / `claimDeadline` | 時點或 null(admin 以租戶時區的當天 00:00 送)                                                                                    |
 | `note`                                            | 1000 字內                                                                                                                       |
 
-- **遊戲是租戶共用的主檔**:`orgId` 一律是最上層組織(根組織建的是根組織),讀寫時把可見範圍提升、條件釘在操作者租戶的 `tenantId` 上(`lottery/master-data-tenant.ts`;先例 `fields/field-visibility.ts` 的 `fieldReadContext`)。分店人員的可見範圍不含上層,不提升就看不到。
+- **遊戲是租戶共用的主檔**:資料共用宣告「可共用、預設全部分店、清單固定」(ADR-0014)—— 建立歸**當前組織**,`shareOrgs` 一律是 `[{ 最上層組織, 含下層 }]`,整個租戶的分店都看得到(含 lookup);修改 / 刪除只限歸屬組織在自己可見範圍內的(共用進來的 `abilities` 都是 false,寫入 `NOT_FOUND`)。代號整個租戶唯一以 `existsInTenant` 檢查(含看不到的分店建的);查詢另釘當前組織的租戶(`lottery/master-data-tenant.ts` 由 `memberTenants` 算,不讀資料庫)。
 - 刪除是軟刪除(ADR-0007)。
 
-**`lottery_cash_points`**(模組資料,`moduleKey = master-data`):`orgId`(分店,建立後不改)、`positionKey`(欄位管理「崗位」`schedule-position` 的選項值)、`name`(30 字內)、`order`(0 以上整數)、`enabled`、`printerId`(底座 `printers`,同分店、啟用中;null = 用分店預設)、`note`。唯一索引 `(orgId, positionKey)`、`(orgId, name)`(不能刪除,所以沒有軟刪除的資料)。範圍 = 操作者的可見範圍。
+**`lottery_cash_points`**(模組資料,`moduleKey = master-data`):`orgId`(分店,建立後不改)、`positionKey`(欄位管理「崗位」`schedule-position` 的選項值)、`name`(30 字內)、`order`(0 以上整數)、`enabled`、`printerId`(底座 `printers`,同分店、啟用中;null = 用分店預設)、`note`。唯一索引 `(orgId, positionKey)`、`(orgId, name)`(不能刪除,所以沒有軟刪除的資料)。範圍 = 操作者的可見範圍;同一家分店內崗位 / 名稱不重複以 `existsInTenant` 檢查(不被資料範圍規則收窄)。
 
 不宣告資料範圍目標。示範資料:`apps/db-migrator/seeds/project/demo/games.ts`、`cash-points.ts`(經開通腳本建立,見 [lottery-onboarding](./lottery-onboarding.md))。
 

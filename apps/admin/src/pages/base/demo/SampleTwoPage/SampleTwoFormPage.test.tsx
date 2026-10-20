@@ -47,7 +47,7 @@ describe("示範模組2 的新增 / 編輯(共版型)", () => {
     // 多選:勾節點左側的勾選框(面板不關),再按 Escape 關掉面板
     fireEvent.click(checkboxOf("中山店"));
     await actor.keyboard("{Escape}");
-    await actor.click(await screen.findByLabelText("中山店含下層"));
+    await actor.click(await screen.findByLabelText("中山店 含下層組織"));
     await actor.click(screen.getByRole("button", { name: "儲存" }));
     await waitFor(() => {
       expect(fake.inputs.createDemoItemTwo).toEqual([
