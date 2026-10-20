@@ -998,7 +998,6 @@
         "accountName": "Account name",
         "openingBalance": "Opening balance",
         "openingDate": "Opening date",
-        "note": "Note",
         "shareOrgs": "Organizations"
       },
       "usageTitle": "Used by (multiple allowed)",
@@ -1028,8 +1027,7 @@
         "branch": "Branch",
         "in": "In",
         "out": "Out",
-        "balanceAfter": "Balance",
-        "actions": "Actions"
+        "balanceAfter": "Balance"
       },
       "reverse": "Reverse",
       "reversed": "Reversed",
@@ -1061,14 +1059,11 @@
       "fields": {
         "type": "Type",
         "direction": "Direction",
-        "document": "Document",
         "documentRequired": "Document (required; only those to refund or receive)",
-        "documentOptional": "Document (optional)",
         "amount": "Amount",
         "occurredAt": "Time",
         "branchOrgId": "Branch",
-        "summary": "Summary",
-        "note": "Note"
+        "summary": "Summary"
       },
       "documentOption": "{docNo} {label} · {due}",
       "noDocument": "No documents to refund or receive",
@@ -1170,7 +1165,6 @@
       "historyAria": "Settlement history"
     },
     "settleForm": {
-      "document": "Document",
       "documentValue": "{docNo} {label}",
       "payable": "Payable",
       "transferAmount": "Transfer amount",

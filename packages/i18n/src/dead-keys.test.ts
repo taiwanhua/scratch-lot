@@ -55,6 +55,45 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "經銷商側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`dealer-badge.ts`),畫面在 `SidebarBadgeSettingsSection`",
   },
   {
+    key: "admin.lotteryAccounts.badgeDescription",
+    reason:
+      "帳戶管理側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`accounts-badge.ts`)",
+  },
+  {
+    key: "admin.lotteryAccounts.errors.",
+    reason:
+      "`t(`errors.${code}`)`,code 由 `lib/project/lottery/accounts-error.ts` 從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryAccounts.status.",
+    reason: "帳戶狀態 `BANK_ACCOUNT_STATUSES`(`status.${status}`)",
+  },
+  {
+    key: "admin.lotteryAccounts.transactionTypes.",
+    reason: "銀行交易類型 `BANK_TRANSACTION_TYPES`(`transactionTypes.${type}`)",
+  },
+  {
+    key: "admin.lotteryAccounts.movementTypes.",
+    reason: "現金流水類型 `CASH_MOVEMENT_TYPES`(`movementTypes.${type}`)",
+  },
+  {
+    key: "admin.lotteryAccounts.places.",
+    reason: "現金流水的從 / 到 `CASH_PLACES`(`places.${place}`)",
+  },
+  {
+    key: "admin.lotteryAccounts.withdrawReasons.",
+    reason: "出庫原因 `WITHDRAW_REASONS`(`withdrawReasons.${reason}`)",
+  },
+  {
+    key: "admin.lotteryAccounts.outstanding.kinds.",
+    reason: "待結清種類 `to_pay` / `to_refund` / `to_receive`(api 的 `kind`)",
+  },
+  {
+    key: "admin.lotteryAccounts.settlement.buttons.",
+    reason:
+      "收付按鈕 `settlement.buttons.${role}.${button}`(`components/project/lottery/SettlementPanel/settlement-text.ts`)",
+  },
+  {
     key: "admin.sidebarBadgeSettings.descriptions.",
     reason:
       "通知設定頁「側欄數字」的「數什麼」:完整 key 由 api 側欄計數登記的 `descriptionKey` 給(`SidebarBadgeSettingsSection`)",

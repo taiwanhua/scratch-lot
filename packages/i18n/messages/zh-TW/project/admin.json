@@ -998,7 +998,6 @@
         "accountName": "戶名",
         "openingBalance": "期初餘額",
         "openingDate": "期初日期",
-        "note": "備註",
         "shareOrgs": "組織"
       },
       "usageTitle": "使用組織(可以多個)",
@@ -1028,8 +1027,7 @@
         "branch": "歸屬分店",
         "in": "收",
         "out": "支",
-        "balanceAfter": "餘額",
-        "actions": "操作"
+        "balanceAfter": "餘額"
       },
       "reverse": "沖正",
       "reversed": "已沖正",
@@ -1061,14 +1059,11 @@
       "fields": {
         "type": "類型",
         "direction": "方向",
-        "document": "單據",
         "documentRequired": "單據(必填,只列有待退或待收的)",
-        "documentOptional": "單據(選填)",
         "amount": "金額",
         "occurredAt": "時間",
         "branchOrgId": "歸屬分店",
-        "summary": "摘要",
-        "note": "備註"
+        "summary": "摘要"
       },
       "documentOption": "{docNo} {label} · {due}",
       "noDocument": "沒有待退或待收的單據",
@@ -1170,7 +1165,6 @@
       "historyAria": "收付歷程"
     },
     "settleForm": {
-      "document": "單據",
       "documentValue": "{docNo} {label}",
       "payable": "應付",
       "transferAmount": "調貨金額",

@@ -225,7 +225,15 @@ export const BankAccountViewPage = ({ routeParam }: ModulePageProps) => {
   ];
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+    <Stack
+      spacing={2}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        overflow: "auto",
+        "& > *": { flexShrink: 0 },
+      }}
+    >
       <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
