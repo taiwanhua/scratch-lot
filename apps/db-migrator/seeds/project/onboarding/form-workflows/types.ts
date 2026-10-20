@@ -8,7 +8,7 @@ export type WorkflowStepJson = Record<string, unknown>;
  * 在 `./index.ts` 的清單加一行;建流程、發布、綁定由共用的一步(`../steps/form-workflows.ts`)做。
  *
  * 流程是**租戶客製流程**(共用流程不能用角色條件),key 全域唯一,所以帶租戶短碼:
- * `<租戶短碼>_<formKey>`(同底座「以此為基底建流程」的預設 key 形狀)。
+ * `<租戶短碼>_<formKey>`(短碼最多 20 字;本輪最長的 formKey `stocktake_confirm` 17 字,合計 38 字,在 key 的 40 字上限內)。
  */
 export interface FormWorkflowSpec {
   /** 綁定的表單(受管表單的 key)。 */
