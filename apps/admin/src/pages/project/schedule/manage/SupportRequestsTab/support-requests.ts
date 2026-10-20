@@ -38,32 +38,10 @@ export const SUPPORT_STATUS_ORDER: readonly FormSubmissionStatus[] = [
 
 export type SupportRequestRow = FormSubmissionFieldsFragment;
 
-const textOf = (value: unknown): string =>
-  typeof value === "string" || typeof value === "number" ? String(value) : "";
-
-/** 引用 / 選項欄的顯示名(api 的 `displayValues`;沒有就退回存的值)。 */
-const labelOf = (row: SupportRequestRow, fieldKey: string): string => {
-  const item = row.displayValues.find((entry) => entry.fieldKey === fieldKey)
+/** 分店欄的顯示名(api 的 `displayValues`;沒有就退回存的值)。 */
+export const branchLabelOf = (row: SupportRequestRow): string => {
+  const item = row.displayValues.find((entry) => entry.fieldKey === "branch")
     ?.items[0];
-  return item?.label ?? textOf(row.values[fieldKey]);
+  const value = row.values.branch;
+  return item?.label ?? (typeof value === "string" ? value : "");
 };
-
-/** 一筆支援需求單要顯示的欄位(列表、卡片共用)。 */
-export interface SupportRequestCells {
-  /** 日期(時點,交給 `useTemporalText` 以租戶時區格式化) */
-  date: unknown;
-  start: string;
-  end: string;
-  position: string;
-  headcount: string;
-  branch: string;
-}
-
-export const cellsOf = (row: SupportRequestRow): SupportRequestCells => ({
-  date: row.values.date,
-  start: textOf(row.values.start_time),
-  end: textOf(row.values.end_time),
-  position: labelOf(row, "position"),
-  headcount: textOf(row.values.headcount),
-  branch: labelOf(row, "branch"),
-});

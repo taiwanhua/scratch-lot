@@ -16,10 +16,8 @@ import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import { useModuleForms } from "@/hooks/base/useModuleForms";
 import { useSession } from "@/hooks/base/useSession";
-import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useUrlSelectedId } from "@/hooks/base/useUrlSelectedId";
 import { useUrlState } from "@/hooks/base/useUrlState";
 
@@ -33,9 +31,9 @@ import {
   SUPPORT_STATUS_ORDER,
   type SupportListFilters,
   type SupportRequestRow,
-  cellsOf,
   supportListSchema,
 } from "./support-requests";
+import { useSupportRequestColumns } from "./useSupportRequestColumns";
 
 const ALL = "all" as const;
 
@@ -54,7 +52,6 @@ export const SupportRequestsTab = () => {
   const tStatus = useTranslations("admin.approval.submissionStatus");
   const navigate = useNavigate();
   const { session } = useSession();
-  const temporal = useTemporalText();
   const isNarrow = useBreakpointDown("lg");
   const isMobile = useBreakpointDown("sm");
   const access = useFormModuleAccess(SCHEDULE_MANAGE_MODULE_KEY);
@@ -96,48 +93,20 @@ export const SupportRequestsTab = () => {
     }
   };
 
-  const columns: TableColumn<SupportRequestRow>[] = [
-    {
-      key: "date",
-      header: t("columns.date"),
-      render: (row) => temporal(cellsOf(row).date, "date"),
-    },
-    {
-      key: "time",
-      header: t("columns.time"),
-      render: (row) => {
-        const cells = cellsOf(row);
-        return t("timeRange", { start: cells.start, end: cells.end });
-      },
-    },
-    {
-      key: "position",
-      header: t("columns.position"),
-      render: (row) => cellsOf(row).position,
-    },
-    {
-      key: "headcount",
-      header: t("columns.headcount"),
-      align: "right",
-      render: (row) => cellsOf(row).headcount,
-    },
-    {
-      key: "branch",
-      header: t("columns.branch"),
-      render: (row) => cellsOf(row).branch,
-    },
-    {
-      key: "status",
-      header: t("columns.status"),
-      render: (row) => (
-        <SubmissionStatusTag status={row.status} blocked={row.blocked} />
-      ),
-    },
-  ];
+  // 欄位讀列表欄位配置(表格與手機卡片共用)
+  const listColumns = useSupportRequestColumns(rows);
+  const columns: TableColumn<SupportRequestRow>[] = listColumns.map(
+    (column) => ({
+      key: column.key,
+      header: column.header,
+      render: (row) => column.render(row),
+    }),
+  );
 
   const list = isMobile ? (
     <SupportRequestCards
       rows={rows}
+      columns={listColumns}
       isLoading={query.isLoading}
       onOpen={open}
     />

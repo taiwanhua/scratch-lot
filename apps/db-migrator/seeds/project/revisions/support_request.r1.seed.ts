@@ -8,7 +8,7 @@ export const seed = {
   key: "support_request",
   revision: "r1",
   name: "支援需求單",
-  changelog: "初版:分店人力不足時請總部協助(專案規格 14.10)",
+  changelog: "初版:分店人力不足時請總部協助(專案規格 14.10);時段 = 開始–結束(不跨午夜)",
   desiredStatus: "published",
   moduleKey: "schedule.manage",
   tabLabelTemplate: "{{form}} {{date}}",
@@ -93,6 +93,28 @@ export const seed = {
         },
       },
       {
+        key: "time_slot",
+        label: "時段",
+        type: "text",
+        widget: {
+          kind: "textField",
+        },
+        valueSource: {
+          kind: "computed",
+          expr: {
+            concat: [
+              {
+                var: "start_time",
+              },
+              "–",
+              {
+                var: "end_time",
+              },
+            ],
+          },
+        },
+      },
+      {
         key: "headcount",
         label: "需要人數",
         type: "number",
@@ -170,11 +192,15 @@ export const seed = {
               cols: [
                 {
                   fieldKey: "start_time",
-                  span: 6,
+                  span: 4,
                 },
                 {
                   fieldKey: "end_time",
-                  span: 6,
+                  span: 4,
+                },
+                {
+                  fieldKey: "time_slot",
+                  span: 4,
                 },
               ],
             },

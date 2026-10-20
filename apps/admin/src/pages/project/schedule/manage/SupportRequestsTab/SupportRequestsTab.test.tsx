@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { ModuleListColumnKind } from "@repo/graphql";
+
 import {
+  SUPPORT_REQUEST_FORM_KEY,
   supportRequestFormWorld,
   supportRequestWorkflowWorld,
 } from "@/test/msw/project/schedule-support-request-fixtures";
@@ -34,6 +37,12 @@ describe("排班作業:支援需求單", () => {
     ).toHaveAttribute("aria-selected", "true");
     const table = await screen.findByRole("table", { name: "支援需求單列表" });
     expect(await within(table).findByText("17:00–21:00")).toBeInTheDocument();
+    // 表頭照列表欄位配置(seed 初值):表單欄位的名稱 + 內建欄「狀態」
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["日期", "時段", "崗位", "需要人數", "分店", "狀態"]);
     const row = within(table).getByText("17:00–21:00").closest("tr");
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
@@ -42,6 +51,45 @@ describe("排班作業:支援需求單", () => {
     expect(cells.getByText("審核中")).toBeInTheDocument();
     expect(within(table).getByText("13:00–17:00")).toBeInTheDocument();
     expect(within(table).getByText("已退回")).toBeInTheDocument();
+  });
+
+  it("列表欄位照「列表欄位配置」:改了配置,表格跟著變", async () => {
+    renderSupport({
+      forms: supportRequestFormWorld({
+        listColumns: {
+          "schedule.manage": [
+            {
+              kind: ModuleListColumnKind.Field,
+              key: "note",
+              formKey: SUPPORT_REQUEST_FORM_KEY,
+              width: 200,
+              order: 0,
+            },
+            {
+              kind: ModuleListColumnKind.Field,
+              key: "position",
+              formKey: SUPPORT_REQUEST_FORM_KEY,
+              width: 120,
+              order: 1,
+            },
+          ],
+        },
+        listBuiltin: {
+          "schedule.manage": { form: false, status: false, createdBy: true },
+        },
+      }),
+    });
+    const table = await screen.findByRole("table", { name: "支援需求單列表" });
+    expect(
+      await within(table).findByText("颱風後補人,晚間人手不足"),
+    ).toBeInTheDocument();
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((header) => header.textContent),
+    ).toEqual(["說明", "崗位", "建立者"]);
+    expect(within(table).queryByText("17:00–21:00")).toBeNull();
+    expect(within(table).queryByText("審核中")).toBeNull();
   });
 
   it("只查支援需求單那一張表單;篩狀態帶給 api、回到第一頁", async () => {

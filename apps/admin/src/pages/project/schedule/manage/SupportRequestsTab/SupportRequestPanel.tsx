@@ -10,7 +10,7 @@ import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissi
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 
-import { cellsOf } from "./support-requests";
+import { branchLabelOf } from "./support-requests";
 
 export interface SupportRequestPanelProps {
   /** 選中的那一筆;null = 還沒選 */
@@ -76,7 +76,7 @@ const SelectedRequest = ({ id, viewRoute, onOpen }: SelectedRequestProps) => {
         <Typography variant="h6" component="h2" sx={{ flex: 1 }}>
           {submission === null
             ? t("panelTitleLoading")
-            : t("panelTitle", { branch: cellsOf(submission).branch })}
+            : t("panelTitle", { branch: branchLabelOf(submission) })}
         </Typography>
         {viewRoute !== null && (
           <Button

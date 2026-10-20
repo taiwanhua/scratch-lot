@@ -25,6 +25,8 @@ export const projectForms = (
     versions: { ...base.versions, ...extra.versions },
     submissions: [...(base.submissions ?? []), ...(extra.submissions ?? [])],
     fieldOptions: { ...base.fieldOptions, ...extra.fieldOptions },
+    listColumns: { ...base.listColumns, ...extra.listColumns },
+    listBuiltin: { ...base.listBuiltin, ...extra.listBuiltin },
   });
 };
 

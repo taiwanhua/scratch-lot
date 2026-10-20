@@ -142,10 +142,11 @@
 分店人力不足時請總部協助;總部在排班作業排好人後核准(支援指派單已取消:看得到兩家店的人直接在排班作業排人)。
 
 - **表單**:受管表單 `support_request`(`apps/db-migrator/seeds/project/revisions/support_request.r1.seed.ts`,在 `seeds/project/registry.ts` 登記;部署時由受管定義 CLI 發布成共用表單,掛在 `schedule.manage`)。表單、提交、修訂、流程都用底座的表單引擎與流程引擎(`form_submissions`),沒有自己的資料表。
-- **欄位**:日期(`date`,必填)、崗位(`position`,欄位管理「崗位」`schedule-position`,必填)、開始 / 結束(`start_time` / `end_time`,`HH:mm` 24 小時制,必填,結束要晚於開始)、需要人數(`headcount`,1–99 的整數)、分店(`branch`,組織引用,預設目前組織,必填;Figma SC-14 有這一欄,讓總部看得出是哪家店)、說明(`note`,200 字內)。摘要:標題 = 說明、日期 = 日期;頁籤標題「支援需求單 <日期>」。
+- **欄位**:日期(`date`,必填)、崗位(`position`,欄位管理「崗位」`schedule-position`,必填)、開始 / 結束(`start_time` / `end_time`,`HH:mm` 24 小時制,必填,結束要晚於開始;**不能跨午夜**,跨過午夜的需求拆成兩筆)、時段(`time_slot`,計算欄 = 開始–結束,給列表與摘要用)、需要人數(`headcount`,1–99 的整數)、分店(`branch`,組織引用,預設目前組織,必填;Figma SC-14 有這一欄,讓總部看得出是哪家店)、說明(`note`,200 字內)。摘要:標題 = 說明、日期 = 日期;頁籤標題「支援需求單 <日期>」。
 - **沒有草稿**:表單「允許存草稿」關(seed 宣告 `allowDraft: false`),新增頁只有 [送出](`docs/modules/forms.md`「允許存草稿」)。
 - **權限**:看列表與詳情 = `schedule.manage.view`(分頁也看它);新增 = `schedule.manage.create`;審核不看頁面權限(承辦人就能審,`docs/modules/workflows.md`)。
-- **表單要先分派**:受管表單是共用表單,租戶要平台管理員在表單管理「分派租戶」後才看得到、才能新增(分派是各環境的資料,不在 seed)。
+- **表單要先分派**:受管表單是共用表單,租戶要平台管理員在表單管理「分派租戶」後才看得到、才能新增(分派是各環境的資料,不在 seed)。示範指令 `demo create` 由平台管理員建完示範機構後自動分派 registry 登記的每張受管表單;真實租戶由平台管理員分派。
+- **列表欄位**:讀 `schedule.manage` 的列表欄位配置(`modules.settings.list`,平台管理員在「模組與權限」調整)。初值在 `apps/db-migrator/seeds/project/settings.ts`(初始 seed 值:模組的 settings 已存在就不覆寫):日期、時段、崗位、需要人數、分店 + 內建欄「狀態」。
 
 #### 建議流程設定
 
@@ -160,7 +161,7 @@
 | 退回     | 可退回修改                                                                                              |
 
 - 只算直接屬於最上層組織的總部管理(開通清單第 2 點:總部人員一律同時加入租戶本身);只屬於某家分店的總部管理角色不會被指派。
-- 表單還沒分派給這個租戶時,開通腳本的「流程」一步略過並提示「平台管理員分派後重跑」;表單已綁了流程(租戶自己換過)就沿用不改。
+- 表單還沒分派給這個租戶時(真實租戶在平台管理員分派之前),開通腳本的「流程」一步略過並提示;表單已綁了流程(租戶自己換過)就沿用不改。
 - 沒走開通腳本的租戶:租戶管理員在流程管理照上表建客製流程、發布,再到表單管理把「支援需求單」綁到它。
 
 ### 畫休開放 / 即將截止通知(規格 3.4、3.5、14.11)
@@ -216,7 +217,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。
-- 排班作業 → 支援需求單(SC-31,分頁 `support-requests`,要 `schedule.manage.view`;`pages/project/schedule/manage/SupportRequestsTab/`):狀態篩選(`?support=`)+ 列表(日期、時段、崗位、人數、分店、狀態;只查 `support_request`)+ [+ 新增](要 `create` 且 `moduleForms` 回這張表單可新增);電腦版點一筆在右側打開(`?detail=`):表單引擎的唯讀詳情 `FormSubmissionDetail` + 審核區塊 `ApprovalSection`(核准 / 駁回 / 退回修改依「我的任務」),「開啟完整頁面」到詳情頁。平板 / 手機點一筆進詳情頁(右側放不下),手機列表改卡片、篩選收進抽屜(RW-01)。新增頁 SC-14、詳情頁、編輯頁沿用表單引擎的預設組裝(`/schedule/manage/create-page/support_request`)。
+- 排班作業 → 支援需求單(SC-31,分頁 `support-requests`,要 `schedule.manage.view`;`pages/project/schedule/manage/SupportRequestsTab/`):狀態篩選(`?support=`)+ 列表(欄位讀列表欄位配置,算法同底座 `FormSubmissionList`,在 `useSupportRequestColumns`;表格與手機卡片共用;只查 `support_request`)+ [+ 新增](要 `create` 且 `moduleForms` 回這張表單可新增);電腦版點一筆在右側打開(`?detail=`):表單引擎的唯讀詳情 `FormSubmissionDetail` + 審核區塊 `ApprovalSection`(核准 / 駁回 / 退回修改依「我的任務」),「開啟完整頁面」到詳情頁。平板 / 手機點一筆進詳情頁(右側放不下),手機列表改卡片、篩選收進抽屜(RW-01)。新增頁 SC-14、詳情頁、編輯頁沿用表單引擎的預設組裝(`/schedule/manage/create-page/support_request`)。
 
 ## 錯誤碼
 
@@ -230,7 +231,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 - api:`apps/api/src/project/schedule/schedule-settings.test.ts`(真 GraphQL + 真 MongoDB)、`rules/rule-resolution.test.ts`(生效值表格)、`day-offs/schedule-day-offs.test.ts`(畫休、代改、規則、`listUnavailable`、注入時鐘的開放 / 截止通知)、`day-offs/day-off-rules.test.ts`(畫休算法與開放期間表格)、`integration/integration.test.ts`;domain:`packages/domain/src/project/schedule-settings/schedule-settings.test.ts`(規則順序快照)。
 - admin:`pages/project/schedule/settings/ScheduleSettingsPage.test.tsx`、`manage/ScheduleManagePage.test.tsx`、`manage/SupportRequestsTab/SupportRequestsTab.test.tsx`(分頁權限、列表、右側審核、新增頁沒有 [存草稿]、手機卡片)、`settings/RulesTab/rule-display.test.ts`、`my/ScheduleMyDayOffs.test.tsx`、`manage/DayOffOverview.test.tsx`、`lib/project/schedule-day-offs.test.ts`;假 api `src/test/msw/project/schedule-*.ts`(mock 模式共用)。
-- seed / 開通:`apps/db-migrator/seeds/project/schedule.test.ts`、`onboarding/schedule-onboarding.test.ts`;受管表單的安裝在 `src/seed/seed-formal-registry.test.ts`(正式 registry 對真 MongoDB);支援需求單的流程(分派後重跑開通腳本建流程並綁定、店長送出 → 審核者 = 總部管理且屬最上層組織的人)在 `onboarding/onboarding-api.test.ts`(真 api)。
+- seed / 開通:`apps/db-migrator/seeds/project/schedule.test.ts`、`onboarding/schedule-onboarding.test.ts`;受管表單的安裝在 `src/seed/seed-formal-registry.test.ts`(正式 registry 對真 MongoDB);支援需求單的流程(demo create 分派受管表單、開通腳本建流程並綁定、重跑沿用、店長送出 → 審核者 = 總部管理且屬最上層組織的人)在 `onboarding/onboarding-api.test.ts`(真 api)。
 
 ## 使用者說明(help.md)
 

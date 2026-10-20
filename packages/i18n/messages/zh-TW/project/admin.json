@@ -885,21 +885,10 @@
       "panelAria": "支援需求單檢視與審核",
       "create": "+ 新增",
       "total": "共 {total} 筆",
-      "timeRange": "{start}–{end}",
-      "cardTitle": "{date} · {start}–{end}",
-      "cardDetail": "{position} · {headcount} 人 · {branch}",
       "selectHint": "點一筆支援需求單,在這裡檢視與審核",
       "panelTitle": "支援需求單 · {branch}",
       "panelTitleLoading": "支援需求單",
       "openPage": "開啟完整頁面",
-      "columns": {
-        "date": "日期",
-        "time": "時段",
-        "position": "崗位",
-        "headcount": "人數",
-        "branch": "分店",
-        "status": "狀態"
-      },
       "filters": {
         "status": "狀態",
         "all": "全部"

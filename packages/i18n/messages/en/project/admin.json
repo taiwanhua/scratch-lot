@@ -885,21 +885,10 @@
       "panelAria": "Support request review",
       "create": "+ New",
       "total": "{total} in total",
-      "timeRange": "{start}–{end}",
-      "cardTitle": "{date} · {start}–{end}",
-      "cardDetail": "{position} · {headcount} people · {branch}",
       "selectHint": "Select a support request to view and review it here",
       "panelTitle": "Support request · {branch}",
       "panelTitleLoading": "Support request",
       "openPage": "Open full page",
-      "columns": {
-        "date": "Date",
-        "time": "Time",
-        "position": "Position",
-        "headcount": "People",
-        "branch": "Branch",
-        "status": "Status"
-      },
       "filters": {
         "status": "Status",
         "all": "All"

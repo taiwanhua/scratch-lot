@@ -37,7 +37,12 @@ export interface ProjectMockWorld {
    */
   formRuntime?: () => Pick<
     FormRuntimeWorldOptions,
-    "moduleForms" | "versions" | "submissions" | "fieldOptions"
+    | "moduleForms"
+    | "versions"
+    | "submissions"
+    | "fieldOptions"
+    | "listColumns"
+    | "listBuiltin"
   >;
   /** 同上:審核流程(申請中心、審核區塊)的實例與任務併進底座那一份 world(選填)。 */
   workflowRuntime?: () => Pick<

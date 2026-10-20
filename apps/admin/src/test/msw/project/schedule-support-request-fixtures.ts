@@ -1,6 +1,8 @@
 import type { FormDefinition } from "@repo/domain/form";
 import {
   FormSubmissionStatus,
+  type ModuleListColumn,
+  ModuleListColumnKind,
   WorkflowStepStatus,
   WorkflowTaskStatus,
 } from "@repo/graphql";
@@ -60,6 +62,12 @@ export const supportRequestDefinition = (): FormDefinition => ({
         customMessage: "結束時間要晚於開始時間",
       },
     }),
+    field("time_slot", "時段", "text", {
+      valueSource: {
+        kind: "computed",
+        expr: { concat: [{ var: "start_time" }, "–", { var: "end_time" }] },
+      },
+    }),
     field("headcount", "需要人數", "number", {
       precision: 0,
       widget: { kind: "number" },
@@ -87,8 +95,9 @@ export const supportRequestDefinition = (): FormDefinition => ({
           },
           {
             cols: [
-              { fieldKey: "start_time", span: 6 },
-              { fieldKey: "end_time", span: 6 },
+              { fieldKey: "start_time", span: 4 },
+              { fieldKey: "end_time", span: 4 },
+              { fieldKey: "time_slot", span: 4 },
             ],
           },
           {
@@ -158,6 +167,7 @@ const supportRequest = (
       date: values.date,
       position: values.position,
       start_time: values.start,
+      time_slot: `${values.start}–${values.end}`,
       end_time: values.end,
       headcount: values.headcount,
       branch: "org-store",
@@ -225,6 +235,33 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
   ),
 ];
 
+/**
+ * `schedule.manage` 的列表欄位配置(與 seed 初值 `apps/db-migrator/seeds/project/settings.ts` 同):
+ * 日期、時段、崗位、人數、分店 + 內建欄「狀態」。
+ */
+export const supportRequestListColumns = (): ModuleListColumn[] =>
+  (
+    [
+      ["date", 120],
+      ["time_slot", 140],
+      ["position", 140],
+      ["headcount", 80],
+      ["branch", 140],
+    ] as const
+  ).map(([key, width], order) => ({
+    kind: ModuleListColumnKind.Field,
+    key,
+    formKey: SUPPORT_REQUEST_FORM_KEY,
+    width,
+    order,
+  }));
+
+export const SUPPORT_REQUEST_LIST_BUILTIN = {
+  form: false,
+  status: true,
+  createdBy: false,
+};
+
 /** 表單執行端的假 api 選項(只有支援需求單)。 */
 export const supportRequestFormWorld = (
   overrides: Partial<FormRuntimeWorldOptions> = {},
@@ -234,6 +271,8 @@ export const supportRequestFormWorld = (
     [`${SUPPORT_REQUEST_FORM_KEY}@1`]: supportRequestDefinition(),
   },
   submissions: supportRequestSubmissions(),
+  listColumns: { [SCHEDULE_MANAGE_MODULE_KEY]: supportRequestListColumns() },
+  listBuiltin: { [SCHEDULE_MANAGE_MODULE_KEY]: SUPPORT_REQUEST_LIST_BUILTIN },
   fieldOptions: {
     position: POSITION_OPTIONS.map((option, index) => ({
       ...option,
