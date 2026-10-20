@@ -691,6 +691,7 @@
         "default": "System default"
       },
       "summary": "{source} {value}",
+      "summaryOwn": "{source}: {value}",
       "parent": "Upper: {value}",
       "unitNames": {
         "day": "days",

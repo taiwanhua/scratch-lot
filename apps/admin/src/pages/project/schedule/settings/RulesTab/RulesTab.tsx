@@ -59,8 +59,12 @@ export const RulesTab = () => {
   const queryClient = useQueryClient();
   const [orgId, setOrgId] = useUrlState("org", orgSchema);
   const tasks = useScheduleFieldOptions(SCHEDULE_FIELD_CATEGORY_KEYS.task);
-  const weekTemplates = useScheduleDemandWeekTemplatesQuery(session.client);
   const variables = { input: orgId === "" ? null : { orgId } };
+  // 週範本跟著規則看的那家店(那家店的組織鏈上建立的),不是當前組織
+  const weekTemplates = useScheduleDemandWeekTemplatesQuery(
+    session.client,
+    variables,
+  );
   const query = useScheduleRulesQuery(session.client, variables);
   const rules = query.data?.scheduleRules;
   const [editing, setEditing] = useState<Rule | null>(null);

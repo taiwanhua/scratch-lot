@@ -56,13 +56,13 @@ describe("規則頁的文字(規格 14.2)", () => {
       summary: "沿用:好運彩券行 8 天",
     },
     {
-      name: "分店自訂 6 → 本店自訂 6 天",
+      name: "分店自訂 6 → 本店自訂:6 天",
       setting: setting({
         value: { amount: 6 },
         source: ScheduleRuleSource.Own,
       }),
       isTenantTop: false,
-      summary: "本店自訂 6 天",
+      summary: "本店自訂:6 天",
     },
     {
       name: "看不到上層 → 沿用上層設定",
@@ -87,7 +87,7 @@ describe("規則頁的文字(規格 14.2)", () => {
         source: ScheduleRuleSource.Own,
       }),
       isTenantTop: true,
-      summary: "本層自訂 9 天",
+      summary: "本層自訂:9 天",
     },
   ])("$name", ({ setting: current, isTenantTop, summary }) => {
     expect(

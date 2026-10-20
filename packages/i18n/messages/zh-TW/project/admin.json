@@ -691,6 +691,7 @@
         "default": "系統預設"
       },
       "summary": "{source} {value}",
+      "summaryOwn": "{source}:{value}",
       "parent": "上層:{value}",
       "dialog": {
         "title": "規則 · {label}",

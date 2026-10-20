@@ -129,7 +129,7 @@ export const ruleSourceText = (
   }
 };
 
-/** 一列的摘要(手機卡片、報讀):「沿用:好運彩券行 8 天」「本店自訂:6 天」。 */
+/** 一列的摘要(對話框的「目前」):「沿用:好運彩券行 8 天」「本店自訂:6 天」。 */
 export const ruleSummaryText = (
   t: RuleTranslate,
   rule: RuleLike,
@@ -137,10 +137,14 @@ export const ruleSummaryText = (
   isTenantTop: boolean,
   lookups: RuleLookups,
 ): string => {
-  return t("summary", {
-    source: ruleSourceText(t, setting, isTenantTop),
-    value: ruleValueText(t, rule, setting, lookups),
-  });
+  // 規格 14.2:「沿用:<上層組織名稱> 8 天」「本店自訂:6 天」
+  return t(
+    setting.source === ScheduleRuleSource.Own ? "summaryOwn" : "summary",
+    {
+      source: ruleSourceText(t, setting, isTenantTop),
+      value: ruleValueText(t, rule, setting, lookups),
+    },
+  );
 };
 
 /** 自訂的列下方灰色小字:「上層:8 天」。 */
