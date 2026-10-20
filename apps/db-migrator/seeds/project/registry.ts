@@ -1,3 +1,5 @@
+import { LOTTERY_PORTABLE_LOOKUP_PROVIDERS } from "@repo/domain/project/lottery";
+
 import type { DemoSource } from "../../src/demo/demo-source";
 import type { SeedSource } from "../base/seed-source";
 import { accountsModule } from "./accounts";
@@ -41,11 +43,8 @@ export const projectSeedSource: SeedSource = {
     // 叫貨與進貨群組 + 叫貨、採購單(規格 3.1、3.2、8.1)
     ...purchasingModuleDeclarations,
   ],
-  // 受管表單引用的專案 lookup 來源(api 登記在 `apps/api/src/project/lookup-providers.ts`):
-  // 遊戲只收「只列販售中」這個固定條件(叫貨單、進貨單的明細;規格 5.1)
-  portableLookupProviders: {
-    lottery_game: { filters: { status: ["on_sale"] } },
-  },
+  // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲)
+  portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
     projectFieldCategories,

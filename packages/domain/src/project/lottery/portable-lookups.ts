@@ -1,0 +1,13 @@
+import type { PortableLookupProvider } from "../../seed/portable-definition";
+import { GAME_STATUS } from "../lottery-master-data/games";
+
+/**
+ * 刮刮樂可以跟著受管表單交付的 lookup 來源(`@repo/domain/seed` 的 `PortableCatalog.lookupProviders`):
+ * 來源 key → 允許的固定條件與值。db-migrator 的種子組裝(`seeds/project/registry.ts`)與 api 的 lookup 登記
+ * (`apps/api/src/project/lookup-providers.ts` 的 `portable`,匯出 seed 時進可攜性目錄)讀同一份。
+ *
+ * - `lottery_game`:只收「只列販售中」(叫貨單、進貨單的明細;專案規格 5.1)
+ */
+export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
+  lottery_game: { filters: { status: [GAME_STATUS.onSale] } },
+} as const satisfies Readonly<Record<string, PortableLookupProvider>>;

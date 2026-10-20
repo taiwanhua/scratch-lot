@@ -8,6 +8,8 @@
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import type { PortableLookupProvider } from "@repo/domain/seed";
+
 import type { SeedRegistry } from "./seed/seed-declaration";
 
 /** 預設的 registry:`apps/db-migrator/seeds/registry.ts`。 */
@@ -37,6 +39,32 @@ export function requireEnv(name: string): string {
     );
   }
   return value;
+}
+
+/**
+ * registry 檔(選填)具名匯出的 `seedLookupProviders`:專案宣告的可攜 lookup 來源,預檢 registry 時明確傳入。
+ * 沒有匯出 = 空(只有底座的三種來源)。
+ */
+export async function loadLookupProviders(
+  registryPath: string,
+): Promise<Readonly<Record<string, PortableLookupProvider>>> {
+  const loaded = (await import(pathToFileURL(registryPath).href)) as {
+    seedLookupProviders?: unknown;
+  };
+  const providers = loaded.seedLookupProviders;
+  if (providers === undefined) {
+    return {};
+  }
+  if (
+    typeof providers !== "object" ||
+    providers === null ||
+    Array.isArray(providers)
+  ) {
+    throw new TypeError(
+      `registry 檔的 seedLookupProviders 必須是物件:${registryPath}`,
+    );
+  }
+  return providers as Readonly<Record<string, PortableLookupProvider>>;
 }
 
 export async function loadRegistry(

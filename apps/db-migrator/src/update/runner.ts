@@ -255,6 +255,7 @@ class UpdateRun {
       await journal.setStage("seeds");
       this.seeds = await runSeeds(context.database, plan.registry, {
         env: context.env,
+        lookupProviders: plan.lookupProviders,
         definitionHandler: (seeds) => this.publishCurrent(seeds),
       });
       if (plan.definitions.length === 0) {

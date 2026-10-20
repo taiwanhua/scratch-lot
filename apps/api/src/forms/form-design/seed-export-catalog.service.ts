@@ -1,7 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 
 import type { FormDefinition } from "@repo/domain/form";
-import type { PortableCatalog } from "@repo/domain/seed";
+import type {
+  PortableCatalog,
+  PortableLookupProvider,
+} from "@repo/domain/seed";
 
 import {
   FieldCategoriesRepository,
@@ -11,7 +14,9 @@ import {
   ModulesRepository,
 } from "../../database/database.module";
 import type { OperatorContext } from "../../database/operator-context";
+import { PROJECT_LOOKUP_SOURCES } from "../../database/project-lookup-sources";
 import { fieldReadContext } from "../../fields/field-visibility";
+import type { LookupProviderRegistration } from "../lookup-provider-registration";
 import { toPlainJson } from "./seed-export";
 
 /**
@@ -21,6 +26,7 @@ import { toPlainJson } from "./seed-export";
  * - 受管欄位類別:seed 宣告的系統類別(`isSystem`)與它的全域種子選項;畫面上自建的類別與租戶自訂選項不算
  * - 共用表單:`ownerOrgId = null` 且有目前版本的表單,內容取**目前版本**(被匯出的那張表單自己由宣告本身解析)
  * - 租戶客製表單的 key:只用來把「引用了客製表單」講清楚,內容不讀
+ * - 可攜的專案 lookup 來源:專案 lookup 登記(`project/lookup-providers.ts`)宣告了 `portable` 的那幾個
  *
  * 只讀取,不寫入。目錄代表的是來源環境的現況;登記進 repo 時另由種子組裝以 registry 再驗一次。
  */
@@ -32,6 +38,8 @@ export class SeedExportCatalogService {
     private readonly modules: ModulesRepository,
     private readonly categories: FieldCategoriesRepository,
     private readonly fields: FieldsRepository,
+    @Inject(PROJECT_LOOKUP_SOURCES)
+    private readonly lookupSources: readonly LookupProviderRegistration[],
   ) {}
 
   async catalogOf(operator: OperatorContext): Promise<PortableCatalog> {
@@ -50,7 +58,22 @@ export class SeedExportCatalogService {
       tenantFormKeys: new Set(
         forms.filter((form) => form.ownerOrgId !== null).map(({ key }) => key),
       ),
+      lookupProviders: this.portableLookupProviders(),
     };
+  }
+
+  /** 宣告了 `portable` 的專案 lookup 來源(與種子組裝的 `portableLookupProviders` 同一份)。 */
+  private portableLookupProviders(): ReadonlyMap<
+    string,
+    PortableLookupProvider
+  > {
+    return new Map(
+      this.lookupSources.flatMap(({ declaration }) =>
+        declaration.portable === undefined
+          ? []
+          : [[declaration.key, declaration.portable] as const],
+      ),
+    );
   }
 
   private async formModuleKeys(

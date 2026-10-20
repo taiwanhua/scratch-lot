@@ -2,7 +2,6 @@ import type { DemoSource } from "../src/demo/demo-source";
 import {
   SeedCompositionError,
   composeSeedRegistry,
-  registerAssembledLookupProviders,
 } from "../src/seed/seed-composition";
 import type { SeedRegistry } from "../src/seed/seed-declaration";
 import { findSeedKeyViolations } from "../src/seed/seed-key-convention";
@@ -36,8 +35,6 @@ export function assembleSeedRegistry(
     [...base.moduleDeclarations, ...project.moduleDeclarations],
     moduleInitialValues,
   );
-  // 專案宣告的可攜 lookup 來源:之後 seed / reset / update 預檢同一份 registry 時也要認得
-  registerAssembledLookupProviders(project.portableLookupProviders);
   const registry = composeSeedRegistry(
     [
       { origin: "base", seeds: base.seeds },
@@ -73,3 +70,10 @@ export const seedRegistry: SeedRegistry = assembleSeedRegistry(
  * demo 指令以 api 建立示範機構後交給它(`src/demo/command.ts`)。
  */
 export const demoSource: DemoSource | null = projectDemoSource;
+
+/**
+ * 專案宣告的可攜 lookup 來源:seed / reset / update 載入 registry 檔時一起讀(`src/cli.ts` 的
+ * `loadLookupProviders`),預檢同一份 registry 時明確傳入(`SeedCompositionOptions.lookupProviders`)。
+ */
+export const seedLookupProviders =
+  projectSeedSource.portableLookupProviders ?? {};

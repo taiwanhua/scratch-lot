@@ -22,11 +22,16 @@ import path from "node:path";
 
 import { type Db, MongoClient } from "mongodb";
 
-import type { SeedLockOperation, SeedRegistry } from "@repo/domain/seed";
+import type {
+  PortableLookupProvider,
+  SeedLockOperation,
+  SeedRegistry,
+} from "@repo/domain/seed";
 
 import {
   DEFAULT_REGISTRY_PATH,
   PACKAGE_ROOT,
+  loadLookupProviders,
   loadRegistry,
   print,
   requireEnv,
@@ -196,6 +201,8 @@ export function resolveReleaseCommit(env: NodeJS.ProcessEnv): string {
 /** 一次指令讀到的全部來源(還沒對照資料庫)。 */
 export interface UpdateSources {
   registry: SeedRegistry;
+  /** 專案宣告的可攜 lookup 來源(registry 檔的 `seedLookupProviders`);預檢明確傳入。 */
+  lookupProviders: Readonly<Record<string, PortableLookupProvider>>;
   migrations: MigrationSource[];
   snapshots: SeedSnapshot[];
 }
@@ -209,6 +216,7 @@ export async function loadUpdateSources(
   registryPath: string,
 ): Promise<UpdateSources> {
   const registry = await loadRegistry(registryPath);
+  const lookupProviders = await loadLookupProviders(registryPath);
   const migrations = await collectMigrationSources(
     path.join(sourceRoot, "migrations"),
   );
@@ -216,7 +224,7 @@ export async function loadUpdateSources(
     path.join(sourceRoot, "seeds"),
     migrations.flatMap(({ seedDependencies }) => seedDependencies),
   );
-  return { registry, migrations, snapshots };
+  return { registry, lookupProviders, migrations, snapshots };
 }
 
 /** 以目前的 changelog 排出計畫(唯讀)。 */
@@ -226,6 +234,7 @@ export async function planUpdate(
 ): Promise<UpdatePlan> {
   return buildUpdatePlan({
     current: sources.registry,
+    lookupProviders: sources.lookupProviders,
     snapshots: sources.snapshots,
     migrations: sources.migrations,
     applied: await readAppliedMigrations(database),
@@ -301,6 +310,7 @@ async function runUpdate(
   // 與低階 seed 同一個預檢(root 初始帳號的環境變數);定義的發布由下面接上的處理器負責
   prepareSeedRun(sources.registry, {
     env,
+    lookupProviders: sources.lookupProviders,
     definitionHandler: () => Promise.resolve([]),
   });
   await withDatabase((client) =>

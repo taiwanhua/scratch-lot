@@ -9,7 +9,10 @@ import type {
   WithId,
 } from "mongodb";
 
-import { definitionSeedId } from "@repo/domain/seed";
+import {
+  type PortableLookupProvider,
+  definitionSeedId,
+} from "@repo/domain/seed";
 
 import { ensureRootAdmin, readRootAdminInput } from "./root-admin";
 import { planSeedRegistry } from "./seed-composition";
@@ -278,6 +281,8 @@ export interface SeedContext {
    * 定義既不會被當成一般文件寫入,也不會被靜默略過。
    */
   definitionHandler?: DefinitionSeedHandler;
+  /** 專案宣告的可攜 lookup 來源(registry 檔的 `seedLookupProviders`);預檢定義的可攜性時用。 */
+  lookupProviders?: Readonly<Record<string, PortableLookupProvider>>;
 }
 
 type PlainSeedSet = Exclude<SeedSet, DefinitionSeedSet>;
@@ -319,7 +324,9 @@ export function prepareSeedRun(
   registry: SeedRegistry,
   context: SeedContext,
 ): SeedRunPlan {
-  const plan = planSeedRegistry([{ origin: "registry", seeds: registry }]);
+  const plan = planSeedRegistry([{ origin: "registry", seeds: registry }], {
+    lookupProviders: context.lookupProviders ?? {},
+  });
   const definitions = plan.filter((set) => isDefinitionSeedSet(set));
   if (definitions.length > 0 && context.definitionHandler === undefined) {
     throw new Error(

@@ -648,29 +648,12 @@ export interface SeedCompositionOptions {
   lookupProviders?: Readonly<Record<string, PortableLookupProvider>>;
 }
 
-/**
- * 固定組裝入口(`seeds/registry.ts` 的 `assembleSeedRegistry`)最後一次登記的可攜 lookup 來源。
- * seed / reset / update 都先載入 registry 檔(組裝時登記)再預檢同一份 registry,預檢沒帶選項時用它 ——
- * 宣告跟著專案來源走,不必每個入口各傳一次;沒有組裝過 = 空(只有底座的三種來源)。
- */
-let assembledLookupProviders: Readonly<Record<string, PortableLookupProvider>> =
-  {};
-
-/** 固定組裝入口登記專案宣告的可攜 lookup 來源(`SeedSource.portableLookupProviders`)。 */
-export function registerAssembledLookupProviders(
-  providers: Readonly<Record<string, PortableLookupProvider>> | undefined,
-): void {
-  assembledLookupProviders = providers ?? {};
-}
-
 function planOf(
   sources: readonly SeedOriginSource[],
   options: SeedCompositionOptions = {},
 ): RegistryPlan {
   const plan = new RegistryPlan(
-    new Map(
-      Object.entries(options.lookupProviders ?? assembledLookupProviders),
-    ),
+    new Map(Object.entries(options.lookupProviders ?? {})),
   );
   for (const { origin, seeds } of sources) {
     for (const set of seeds) {

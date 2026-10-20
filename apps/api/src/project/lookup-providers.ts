@@ -1,3 +1,5 @@
+import { LOTTERY_PORTABLE_LOOKUP_PROVIDERS } from "@repo/domain/project/lottery";
+
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
 import { LotteryBankAccountsRepository } from "./database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryDealersRepository } from "./database/lottery-dealers/lottery-dealers.repository";
@@ -46,6 +48,8 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       filterFields: ["status"],
       labelField: "name",
       keywordFields: ["name", "gameCode"],
+      // 受管表單(叫貨單、進貨單)可以帶「只列販售中」交付;種子組裝讀同一份常數
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_game,
     },
     repositoryToken: LotteryGamesRepository,
   },

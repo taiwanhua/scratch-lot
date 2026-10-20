@@ -1,6 +1,7 @@
 import type { InjectionToken } from "@nestjs/common";
 
 import type { FieldType } from "@repo/domain/form";
+import type { PortableLookupProvider } from "@repo/domain/seed";
 
 import {
   BaseRepository,
@@ -63,6 +64,12 @@ export interface ProjectLookupDeclaration extends LookupProviderDeclaration {
    * 條件仍與操作者自己的讀取範圍 `$and`,放寬不了;值不是合法 id 或讀不到那個組織 → 查無。
    */
   sharedToFilter?: string;
+  /**
+   * 可以跟著受管表單交付(選填;`@repo/domain/seed` 的 `PortableLookupProvider`):允許的固定條件與值。
+   * 宣告了,匯出 seed 時這個來源進可攜性目錄(`SeedExportCatalogService`),種子組裝那邊要宣告同一份
+   * (db-migrator 的 `SeedSource.portableLookupProviders`;兩邊讀同一個 domain 常數)。條件 key 必須列在 `filterFields`。
+   */
+  portable?: PortableLookupProvider;
 }
 
 /** 固定入口 `project/lookup-providers.ts` 的一筆。 */
@@ -157,12 +164,25 @@ function checkDeclaration(
       fail(key, `共用篩選 ${sharedTo} 不能同時是可回的欄位`);
     }
   }
+  checkPortable(key, declaration);
   checkKnownField(declaration, "顯示欄", declaration.labelField);
   const valueField = declaration.valueField ?? "id";
   checkKnownField(declaration, "值欄", valueField);
   // 依值取回以字串比對:非 id 的值欄只能是文字欄位(同檢查器的規則)
   if (valueField !== "id" && declaration.fields[valueField]?.type !== "text") {
     fail(key, `值欄 ${valueField} 必須是 id 或文字欄位`);
+  }
+}
+
+/** `portable` 的固定條件 key 必須是宣告的篩選欄位。 */
+function checkPortable(
+  key: string,
+  declaration: ProjectLookupDeclaration,
+): void {
+  for (const name of Object.keys(declaration.portable?.filters ?? {})) {
+    if (!declaration.filterFields.includes(name)) {
+      fail(key, `可攜的固定條件 ${name} 必須列在 filterFields`);
+    }
   }
 }
 

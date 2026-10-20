@@ -22,7 +22,11 @@ import type {
 } from "../../seeds/base/seed-source";
 import { projectSeedSource } from "../../seeds/project/registry";
 import { projectSeedSettings } from "../../seeds/project/settings";
-import { assembleSeedRegistry, seedRegistry } from "../../seeds/registry";
+import {
+  assembleSeedRegistry,
+  seedLookupProviders,
+  seedRegistry,
+} from "../../seeds/registry";
 import {
   baseOnlyProjectSettings,
   baseOnlyProjectSource,
@@ -232,8 +236,18 @@ describe("固定組裝入口:正式 registry(專案來源由引用專案登記,�
     ]);
   });
 
-  it("重新驗一次已組裝的 registry 不改變順序(執行前的再檢查是冪等的)", () => {
-    expect(plan(...seedRegistry)).toEqual(seedRegistry);
+  it("重新驗一次已組裝的 registry 不改變順序(執行前的再檢查是冪等的;明確帶專案宣告的可攜 lookup 來源)", () => {
+    expect(
+      planSeedRegistry([{ origin: "test", seeds: seedRegistry }], {
+        lookupProviders: seedLookupProviders,
+      }),
+    ).toEqual(seedRegistry);
+  });
+
+  it("預檢沒帶專案宣告的可攜 lookup 來源:引用專案來源的受管表單判為不可攜(沒有隱含的全域狀態)", () => {
+    expect(problemsOf(() => plan(...seedRegistry)).join(" ")).toMatch(
+      /lookup 來源 lottery_game 不在可攜範圍.*LOOKUP_PROVIDER_UNSUPPORTED/,
+    );
   });
 });
 
