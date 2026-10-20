@@ -1,6 +1,7 @@
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
 import { supportRequestWorkflow } from "./support-request";
+import { transferWorkflow } from "./transfer";
 import type { FormWorkflowSpec } from "./types";
 
 /**
@@ -14,4 +15,6 @@ export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   requisitionWorkflow,
   // 叫貨與進貨:進貨單(規格 8.2)
   purchaseWorkflow,
+  // 叫貨與進貨:調貨單(規格 8.4)
+  transferWorkflow,
 ];

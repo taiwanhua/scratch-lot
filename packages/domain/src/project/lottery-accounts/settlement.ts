@@ -45,6 +45,10 @@ export function receivedNetOf(totals: SettlementSideTotals): number {
 /** 單據目前的收付狀態:應付(或調貨金額)與各邊的合計。 */
 export interface SettlementState {
   payable: number;
+  /**
+   * 付款方先填值的基準,和應付不同時才給(調貨單:已點收的批購金額;調貨金額照點收的本計算,規格 9)。
+   */
+  received?: number;
   sides: Readonly<Record<string, SettlementSideTotals>>;
 }
 

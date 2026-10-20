@@ -10,6 +10,8 @@ import { GAME_STATUS } from "../lottery-master-data/games";
  * - `lottery_dealer`:只收「甲類」「營業中」(進貨單的批購甲類;規格 8.2)
  * - `lottery_dealer_contact`:只收「啟用」「受託人」(進貨單的批購受託人;規格 8.2)
  * - `lottery_bank_account`:只收「使用中」(進貨單的扣款帳戶;規格 8.2)
+ * - `lottery_book`:只收「正常」(調貨單明細的本;規格 8.4。「在出貨店、未被鎖定」是連動 / 數字條件,不可攜,
+ *   由替換新增頁的選本與送出前檢查負責)
  */
 export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
   lottery_game: { filters: { status: [GAME_STATUS.onSale] } },
@@ -18,4 +20,5 @@ export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
     filters: { status: ["active"], roles: ["trustee"] },
   },
   lottery_bank_account: { filters: { status: ["active"] } },
+  lottery_book: { filters: { status: ["normal"] } },
 } as const satisfies Readonly<Record<string, PortableLookupProvider>>;

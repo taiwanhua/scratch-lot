@@ -118,6 +118,8 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       ],
       labelField: "bookKey",
       keywordFields: ["bookKey", "bookNo"],
+      // 調貨單明細的本(只列正常的)跟著受管表單交付
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_book,
     },
     repositoryToken: LotteryBooksRepository,
   },

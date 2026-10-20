@@ -17,6 +17,11 @@ function requisitionColumn(key: string, width: number, order: number) {
   return { kind: "field", key, formKey: "requisition", width, order };
 }
 
+/** 調貨單(`transfer`)的一個表單欄位欄。 */
+function transferColumn(key: string, width: number, order: number) {
+  return { kind: "field", key, formKey: "transfer", width, order };
+}
+
 /** 進貨單(`purchase`)的一個表單欄位欄。 */
 function purchaseColumn(key: string, width: number, order: number) {
   return { kind: "field", key, formKey: "purchase", width, order };
@@ -77,6 +82,22 @@ export const projectSeedSettings: ProjectSeedSettings = {
             purchaseColumn("dealer", 160, 2),
             purchaseColumn("purchase_date", 110, 3),
             purchaseColumn("deducted_amount", 110, 4),
+          ],
+          builtin: { form: false, status: true, createdBy: false },
+        },
+      },
+    },
+    // 叫貨與進貨 → 調貨單的列表欄位配置(規格 8.4;Figma PU-08):單號、出貨店、收貨店、調貨金額 + 內建欄「狀態」;
+    // 本數 / 張數、點收進度、結算由列表頁另外接(`lotteryTransferProgress`)。初始 seed 值,之後由平台管理員調整
+    "purchasing.transfer": {
+      settings: {
+        list: {
+          columns: [
+            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 T-0001)
+            { kind: "slot", key: "serialNo", width: 110, order: 0 },
+            transferColumn("from_branch", 120, 1),
+            transferColumn("to_branch", 120, 2),
+            transferColumn("transfer_total", 110, 3),
           ],
           builtin: { form: false, status: true, createdBy: false },
         },

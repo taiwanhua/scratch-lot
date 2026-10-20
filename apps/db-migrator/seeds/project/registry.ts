@@ -15,10 +15,12 @@ import { inventoryModule } from "./inventory";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
+import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
 import { seed as purchaseForm } from "./revisions/purchase.r1.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r2.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
+import { seed as transferForm } from "./revisions/transfer.r1.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 
 /**
@@ -48,11 +50,13 @@ export const projectSeedSource: SeedSource = {
     ...purchasingModuleDeclarations,
     // 叫貨與進貨 → 進貨單(規格 3.1、3.2、8.2)
     purchasingPurchaseModule,
+    // 叫貨與進貨 → 調貨單(規格 3.1、3.2、8.4)
+    purchasingTransferModule,
     // 庫存管理(專案規格第 7 章)
     inventoryModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲,
-  // 進貨單的單頭引用甲類、受託人、銀行帳戶)
+  // 進貨單的單頭引用甲類、受託人、銀行帳戶;調貨單的明細引用本)
   portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
@@ -68,6 +72,8 @@ export const projectSeedSource: SeedSource = {
     // 快照的推論型別把不同形狀的公式合成聯集(`{ var } | { sumOf }` 各帶對方的 `?: undefined`),
     // 在 exactOptionalPropertyTypes 下不能直接當 `SeedSet`;快照本身已 `satisfies SeedSet`,這裡只收窄型別
     purchaseForm as SeedSet,
+    // 叫貨與進貨 → 調貨單的受管表單(規格 8.4;流程不 seed,由開通腳本依租戶角色建)
+    transferForm,
   ],
 };
 

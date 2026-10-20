@@ -6,6 +6,7 @@ import { inventoryGrants } from "./inventory";
 import { masterDataGrants } from "./master-data";
 import { purchasingGrants } from "./purchasing";
 import { purchasingPurchaseGrants } from "./purchasing.purchase";
+import { purchasingTransferGrants } from "./purchasing.transfer";
 import { reportsGrants } from "./reports";
 import { scheduleGrants } from "./schedule";
 
@@ -29,4 +30,5 @@ export const ROLE_GRANT_SECTIONS: readonly ModuleRoleGrants[] = [
   purchasingGrants,
   inventoryGrants,
   purchasingPurchaseGrants,
+  purchasingTransferGrants,
 ];
