@@ -5,6 +5,7 @@ import {
   startAuthTestApp,
 } from "../auth/test-support/auth-app";
 import { ok } from "../forms/test-support/form-fixtures";
+import { setModuleEnabled } from "../permission/test-support/fixtures";
 import {
   type Person,
   WORKFLOW_MODULE,
@@ -139,6 +140,17 @@ describe("側欄計數(sidebarBadges)", () => {
     await expect(badgesOf(boundOnly)).resolves.toEqual({
       [WORKFLOW_MODULE]: PROBE_BADGE_COUNT,
     });
+  });
+
+  it("模組停用後(連子樹)不算:探針模組停用,這一筆不回傳", async () => {
+    await setModuleEnabled(api.connection, WORKFLOW_MODULE, false);
+    try {
+      const badges = await badgesOf(world.admin);
+      expect(badges).not.toHaveProperty(WORKFLOW_MODULE);
+      expect(badges).toHaveProperty("apply-center");
+    } finally {
+      await setModuleEnabled(api.connection, WORKFLOW_MODULE, true);
+    }
   });
 
   it("持有 view 的模組(有綁)行為不變;某一筆計算失敗只略過那一筆", async () => {

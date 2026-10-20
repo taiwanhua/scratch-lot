@@ -33,6 +33,7 @@ import {
   P,
   createDealersOperator,
   dealerInput,
+  dealersToken,
   errorOf,
   ok,
   seedDealersAuthorization,
@@ -100,7 +101,11 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
 
   /** 一個新租戶 + 一家分店 + 總部操作者(全部權限)。 */
   async function newTenant(name: string) {
-    const tenantId = await createOrg(api.connection, { name });
+    // 開通清單第 1 點:租戶的可見性設為「包含下層」(總部看得到分店的資料)
+    const tenantId = await createOrg(api.connection, {
+      name,
+      settings: { visibility: "subtree" },
+    });
     const branchId = await createOrg(api.connection, {
       name: `${name}分店`,
       parentId: tenantId,
@@ -363,38 +368,68 @@ describe("經銷商管理的排程、見簽與側欄計數", () => {
         lastPurchaseBaseDate: at(-300),
       });
 
-      const badges = await ok<{
-        sidebarBadges: { moduleKey: string; count: number }[];
-      }>(api, t.token, BADGES);
-      expect(
-        badges.sidebarBadges.find((badge) => badge.moduleKey === "dealers"),
-      ).toEqual({ moduleKey: "dealers", count: 6 });
-      // 店長(只綁模組、沒有任何經銷商權限)也算得到:側欄計數看模組綁定,不看 view
-      const { token: manager } = await createDealersOperator(
-        api,
-        api.connection,
-        { orgId: t.tenantId, moduleKeys: ALL_MODULES, permissionKeys: [] },
-      );
-      const managerBadges = await ok<{
-        sidebarBadges: { moduleKey: string; count: number }[];
-      }>(api, manager, BADGES);
-      expect(
-        managerBadges.sidebarBadges.find(
+      const badgeOf = async (token: string) => {
+        const data = await ok<{
+          sidebarBadges: { moduleKey: string; count: number }[];
+        }>(api, token, BADGES);
+        return data.sidebarBadges.find(
           (badge) => badge.moduleKey === "dealers",
-        ),
-      ).toEqual({ moduleKey: "dealers", count: 6 });
+        );
+      };
+      expect(await badgeOf(t.token)).toEqual({
+        moduleKey: "dealers",
+        count: 6,
+      });
+
+      // 只綁模組、沒有任何權限也算得到(側欄計數看模組綁定,不看 view;同在最上層組織,範圍同總部)
+      const boundOnly = await dealersToken(api, api.connection, {
+        orgId: t.tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [],
+      });
+      expect(await badgeOf(boundOnly)).toEqual({
+        moduleKey: "dealers",
+        count: 6,
+      });
+
+      // 店長(分店的人,只綁模組):總部建的 6 筆不在他的可見範圍 → 0,這一筆照樣回傳
+      const manager = await dealersToken(api, api.connection, {
+        orgId: t.branchId,
+        ownerOrgId: t.tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [],
+      });
+      expect(await badgeOf(manager)).toEqual({
+        moduleKey: "dealers",
+        count: 0,
+      });
+
+      // 分店當目前組織另建一筆符合條件的:店長 1、總部 7
+      const branchCreator = await dealersToken(api, api.connection, {
+        orgId: t.branchId,
+        ownerOrgId: t.tenantId,
+        moduleKeys: ALL_MODULES,
+        permissionKeys: [P.create],
+      });
+      await ok(api, branchCreator, CREATE_DEALER, {
+        input: dealerInput("B", { licenseExpiresAt: at(-2) }),
+      });
+      expect(await badgeOf(manager)).toEqual({
+        moduleKey: "dealers",
+        count: 1,
+      });
+      expect(await badgeOf(t.token)).toEqual({
+        moduleKey: "dealers",
+        count: 7,
+      });
+
       // 沒綁經銷商管理:沒有這一筆
-      const { token: outsider } = await createDealersOperator(
-        api,
-        api.connection,
-        { orgId: t.tenantId, moduleKeys: [], permissionKeys: [] },
-      );
-      const outsiderBadges = await ok<{
-        sidebarBadges: { moduleKey: string; count: number }[];
-      }>(api, outsider, BADGES);
-      expect(
-        outsiderBadges.sidebarBadges.map((badge) => badge.moduleKey),
-      ).not.toContain("dealers");
+      const outsider = await dealersToken(api, api.connection, {
+        orgId: t.tenantId,
+        moduleKeys: [],
+        permissionKeys: [],
+      });
+      expect(await badgeOf(outsider)).toBeUndefined();
     });
   });
 });
