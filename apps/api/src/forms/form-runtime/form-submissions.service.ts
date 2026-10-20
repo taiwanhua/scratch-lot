@@ -944,15 +944,22 @@ export class FormSubmissionsService {
       values,
     });
     if (route.kind === "workflow") {
+      // 單號在驗證與守門都過了之後、送審寫入之前才取,與送審同一次寫入:
+      // `submitted` 事後動作讀得到,持有計數器寫鎖的時間也最短
+      const serialNo = await this.serialNoToGive(facts, record, at);
       await this.workflowSubmit.submit(
         facts.operator,
         record,
         expectedEditVersion,
-        { values, summary, ctx, at },
+        {
+          values,
+          summary,
+          ctx,
+          at,
+          ...(serialNo === null ? {} : { serialNo }),
+        },
         route,
       );
-      // 單號放在最後才取(驗證、守門與送審的寫入都過了):持有計數器寫鎖的時間最短
-      await this.assignSerialNoAfterSubmit(facts, record, at);
       await this.audit.record(facts.operator, {
         action: SUBMISSION_AUDIT.submit,
         targetType: SUBMISSION_TARGET,
@@ -2000,7 +2007,8 @@ export class FormSubmissionsService {
   /**
    * **單號**:表單設了單號格式、這筆還沒有號 → 第一次送出時給號(`SerialService`,`form:<formKey>`,
    * 依提交歸屬組織的租戶計數、送出時點以租戶時區切期間);已經有號(退回 / 撤回後再送)或表單沒設格式 → null。
-   * 在送出的交易內、**其他驗證與寫入之後**才呼叫(取號會持有計數器的寫鎖到交易結束);送出失敗,號碼一起回復。
+   * 在送出的交易內、**其他驗證與守門都通過之後**、這次送出的寫入之前才呼叫(取號會持有計數器的寫鎖到交易結束),
+   * 號碼與送出 / 送審同一次寫入,`submitted` 事後動作讀得到;送出失敗,號碼一起回復。
    */
   private async serialNoToGive(
     facts: FormOperatorFacts,
@@ -2021,32 +2029,6 @@ export class FormSubmissionsService {
       at,
       orgId: record.orgId,
     });
-  }
-
-  /**
-   * 走流程的送出:送審寫入(`WorkflowSubmitService`)之後才給號,另寫一次 `serialNo`
-   * (條件 `serialNo = null`,不動 `editVersion`)。同一個交易內,沒寫到 = 有人同時改了這一筆 → 409。
-   */
-  private async assignSerialNoAfterSubmit(
-    facts: FormOperatorFacts,
-    record: SubmissionRecord,
-    at: Date,
-  ): Promise<void> {
-    const serialNo = await this.serialNoToGive(facts, record, at);
-    if (serialNo === null) {
-      return;
-    }
-    const updated = await this.submissions.findOwnAndUpdate(
-      facts.operator,
-      { _id: record._id, serialNo: null },
-      { $set: { serialNo } },
-    );
-    if (!updated) {
-      throw conflictError(
-        `Submission ${String(record._id)} was updated by someone else`,
-        "EDIT_VERSION_MISMATCH",
-      );
-    }
   }
 
   /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */

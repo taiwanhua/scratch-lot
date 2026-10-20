@@ -1,9 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { getConnectionToken } from "@nestjs/mongoose";
+import type { Connection } from "mongoose";
 
 import {
   type AuthTestApp,
   startAuthTestApp,
 } from "../../auth/test-support/auth-app";
+import {
+  lifecycleProbe,
+  resetLifecycleProbe,
+} from "../../workflows/test-support/lifecycle-fixture";
 import {
   COPY,
   FORM_KEY,
@@ -25,6 +31,14 @@ import {
   nextRequestId,
   ok,
 } from "../test-support/form-fixtures";
+
+/** 掛接點固定入口換成探針(病假表單登記全部事後動作;驗事後動作讀得到單號)。 */
+jest.mock("../../project/form-lifecycles", () => ({
+  PROJECT_FORM_LIFECYCLES: jest.requireActual<{
+    LIFECYCLE_FIXTURE_REGISTRATIONS: unknown;
+  }>("../../workflows/test-support/lifecycle-fixture")
+    .LIFECYCLE_FIXTURE_REGISTRATIONS,
+}));
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -218,6 +232,35 @@ describe("表單單號(serialNo)", () => {
     beforeAll(async () => {
       await useWorkflow(world, "serial_review", {
         steps: [usersStep("review", [world.staff[0] ?? world.manager])],
+      });
+    });
+
+    it("submitted 事後動作(同一個交易內)讀得到這次給的單號", async () => {
+      resetLifecycleProbe();
+      const seen: { event: string; serialNo: unknown }[] = [];
+      lifecycleProbe.onEffect = async (context) => {
+        // 用 app 自己的連線(session 只能用在開它的那個 client 上)
+        const row = await api.app
+          .get<Connection>(getConnectionToken())
+          .collection("form_submissions")
+          .findOne(
+            { _id: context.submissionId },
+            { session: context.session, projection: { serialNo: 1 } },
+          );
+        seen.push({ event: context.event, serialNo: row?.serialNo ?? null });
+      };
+      const draft = await createDraft(api, applicant(), FORM_KEY, {
+        title: "事後動作讀單號",
+        days: 1,
+      });
+      const sent = await submitExisting(world, draft).finally(() => {
+        resetLifecycleProbe();
+      });
+      const serialNo = await serialOf(sent.id);
+      expect(serialNo).toMatch(serialPattern());
+      expect(seen.find((entry) => entry.event === "submitted")).toEqual({
+        event: "submitted",
+        serialNo,
       });
     });
 
