@@ -9,6 +9,7 @@ import {
 } from "./field-categories";
 import { masterDataModule } from "./master-data";
 import { reportsModule } from "./reports";
+import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 
 /**
@@ -39,6 +40,8 @@ export const projectSeedSource: SeedSource = {
     projectFields,
     // 全域選項的初始顏色(目前只有崗位;規格 18.5)
     projectFieldOptionColors,
+    // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)
+    supportRequestForm,
   ],
 };
 
