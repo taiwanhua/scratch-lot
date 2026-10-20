@@ -25,7 +25,10 @@ import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers"
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
-import { scheduleRosterWorld } from "@/test/msw/project/schedule-roster-handlers";
+import {
+  type ScheduleRosterWorldOptions,
+  scheduleRosterWorld,
+} from "@/test/msw/project/schedule-roster-handlers";
 import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 import {
   supportRequestFormWorld,
@@ -57,6 +60,19 @@ const fieldOptionColors = () =>
         ]),
     ),
   }).handlers;
+
+/**
+ * 排班表的檢核情境(看檢核面板與發布的三種確認視窗用):網址加 `?rosterCheck=reminders` / `clear`
+ * 換檢核結果(預設 1 項限制 + 提醒),`?rosterPublished=1` 這個月一開始就已發布。
+ */
+const rosterOptions = (): ScheduleRosterWorldOptions => {
+  const params = new URLSearchParams(globalThis.location.search);
+  const check = params.get("rosterCheck");
+  return {
+    ...(check === "reminders" || check === "clear" ? { check } : {}),
+    isPublished: params.get("rosterPublished") === "1",
+  };
+};
 
 /** 輸出報表(seed `apps/db-migrator/seeds/project/reports.ts`;權限給滿)。 */
 const reportsModule: TestModule = {
@@ -99,7 +115,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleCalendarWorld().handlers,
     ...scheduleDayOffsWorld().handlers,
     ...accountsWorld().handlers,
-    ...scheduleRosterWorld().handlers,
+    ...scheduleRosterWorld(rosterOptions()).handlers,
     // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)
     ...purchasingWorld({
       purchaseList: purchaseList({
