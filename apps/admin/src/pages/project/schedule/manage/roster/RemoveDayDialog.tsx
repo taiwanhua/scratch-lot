@@ -19,6 +19,7 @@ import {
 } from "@/lib/project/schedule-roster";
 
 import { scheduleErrorOf } from "../../schedule-error";
+import { useChangeReason } from "./publish/useChangeReason";
 import { ROSTER_QUERY_ROOT, useRoster } from "./roster-context";
 
 export interface RemoveDayDialogProps {
@@ -29,7 +30,7 @@ export interface RemoveDayDialogProps {
 /**
  * 移除這天所有排班(SC-50;規格 14.5,颱風停班等):列出會刪除的排班(職責一起移除);
  * 已被開班綁定的略過並列出。照常上班、雙倍薪水的日子不用移除,到行事曆標成特殊日。
- * (已發布後才需要的「異動原因」由發布的功能加上。)
+ * 已發布後多一個「異動原因」(只填一次,每筆刪除的排班各記一筆異動;`useChangeReason`)。
  */
 export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
   const t = useTranslations("admin.schedule.roster.removeDay");
@@ -40,7 +41,8 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
-  const { data, timezone } = useRoster();
+  const { data, timezone, canEdit } = useRoster();
+  const changeReason = useChangeReason(canEdit);
   const entries = data.entries.filter((entry) => entry.date === date);
   const nameOf = (userId: string) =>
     data.people.find((person) => person.userId === userId)?.name ?? "";
@@ -63,6 +65,9 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
         onClose();
+      },
+      onError: (error) => {
+        changeReason.markFromError(error);
       },
     }),
   );
@@ -88,7 +93,12 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
           <Button
             disabled={remove.isPending || removable.length === 0}
             onClick={() => {
-              remove.mutate({ input: { orgId: data.orgId, date } });
+              const reason = changeReason.take();
+              if (reason !== null) {
+                remove.mutate({
+                  input: { ...reason, orgId: data.orgId, date },
+                });
+              }
             }}
           >
             {t("confirm")}
@@ -133,6 +143,7 @@ export const RemoveDayDialog = ({ date, onClose }: RemoveDayDialogProps) => {
             })}
           </Alert>
         )}
+        {removable.length > 0 && changeReason.fields}
         <Typography variant="caption" color="text.secondary">
           {t("specialDayHint")}
         </Typography>

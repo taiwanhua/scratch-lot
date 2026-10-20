@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
 
+import { CheckButton } from "./check-panel/CheckButton";
+import { PublishAction } from "./publish/PublishAction";
+
 /**
  * 排班表工具列的擴充點(規格 14.5 工具列:`[+ 人力需求] [+ 新增排班] [套用範本] [自動排班] [發布]`,
  * 第二列最右邊是檢核按鈕)。頁殼只放 [+ 人力需求] [+ 新增排班];其餘由各功能追加一列。
@@ -21,7 +24,14 @@ export interface RosterToolbarAction {
 }
 
 /** [+ 新增排班] 之後的按鈕(依規格順序追加)。 */
-export const ROSTER_TOOLBAR_ACTIONS: readonly RosterToolbarAction[] = [];
+export const ROSTER_TOOLBAR_ACTIONS: readonly RosterToolbarAction[] = [
+  // [發布](已發布的月份不顯示;排在 [自動排班] 之後,自動排班的功能插在它前面)
+  {
+    key: "publish",
+    permission: "schedule.manage.publish",
+    Action: PublishAction,
+  },
+];
 
 /** 第二列最右邊(檢核按鈕)。 */
-export const ROSTER_TOOLBAR_END: readonly ComponentType[] = [];
+export const ROSTER_TOOLBAR_END: readonly ComponentType[] = [CheckButton];

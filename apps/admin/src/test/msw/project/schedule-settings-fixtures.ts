@@ -44,6 +44,11 @@ export const SCHEDULE_TEST_OPTIONS: Record<
     { value: "event-day", label: "活動日" },
     { value: "other", label: "其他" },
   ],
+  [SCHEDULE_FIELD_CATEGORY_KEYS.changeReason]: [
+    { value: "shift-swap", label: "換班" },
+    { value: "sick-leave", label: "請病假" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 const tenantOwner = { id: SCHEDULE_TENANT.id, name: SCHEDULE_TENANT.name };

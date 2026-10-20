@@ -31,6 +31,7 @@ import {
 } from "@/lib/project/schedule-roster";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
+import { useRosterCheckPanelOpen } from "../check-panel/roster-check-context";
 import {
   type RosterDemand,
   type RosterEntry,
@@ -79,7 +80,18 @@ export const RosterGridView = () => {
   } | null>(null);
 
   const demandsCollapsed = sections.isCollapsed(DEMANDS_SECTION, isMobile);
-  const statsCollapsed = sections.isCollapsed(STATS_GROUP, isMobile);
+  // 檢核面板開著時統計欄暫時收成 [統計 ▸](點了展開,不記住);面板關上回到原本的狀態(規格 14.5)
+  const isCheckOpen = useRosterCheckPanelOpen();
+  const [statsDuringCheck, setStatsDuringCheck] = useState({
+    isCheckOpen,
+    expanded: false,
+  });
+  if (statsDuringCheck.isCheckOpen !== isCheckOpen) {
+    setStatsDuringCheck({ isCheckOpen, expanded: false });
+  }
+  const statsCollapsed = isCheckOpen
+    ? !statsDuringCheck.expanded
+    : sections.isCollapsed(STATS_GROUP, isMobile);
 
   const dates = datesOfMonth(data.month);
   const calendarByDate = new Map(
@@ -293,6 +305,13 @@ export const RosterGridView = () => {
         collapsedColumnGroups={statsCollapsed ? [STATS_GROUP] : []}
         {...(isMobile ? { collapsedGroupWidth: MOBILE_STATS_WIDTH } : {})}
         onCollapsedColumnGroupsChange={(groupIds) => {
+          if (isCheckOpen) {
+            setStatsDuringCheck({
+              isCheckOpen,
+              expanded: !groupIds.includes(STATS_GROUP),
+            });
+            return;
+          }
           sections.setCollapsed(
             STATS_GROUP,
             groupIds.includes(STATS_GROUP),

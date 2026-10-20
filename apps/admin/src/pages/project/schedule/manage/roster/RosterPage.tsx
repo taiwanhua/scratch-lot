@@ -19,6 +19,8 @@ import { DemandDialog } from "./DemandDialog";
 import { EntryDialog } from "./EntryDialog";
 import { RemoveDayDialog } from "./RemoveDayDialog";
 import { RosterToolbar } from "./RosterToolbar";
+import { RosterCheckLayout } from "./check-panel/RosterCheckLayout";
+import { RosterCheckProvider } from "./check-panel/RosterCheckProvider";
 import {
   type DemandPreset,
   type EntryPreset,
@@ -214,78 +216,86 @@ export const RosterPage = () => {
   const [, monthNumber = ""] = month.split("-");
 
   return (
-    <Stack spacing={2}>
-      <RosterToolbar
-        data={data}
-        month={month}
-        view={view}
-        onOrgChange={setOrgId}
-        onMonthChange={setMonth}
-        onViewChange={(next) => {
-          writeRosterView(next);
-          setView(next);
-        }}
-        onAddDemand={() => {
-          setDialog({ kind: "demand", demand: null, preset: {} });
-        }}
-        onAddEntry={() => {
-          setDialog({ kind: "entry", entry: null, preset: {} });
-        }}
-      />
-      {context === null && (
-        <Stack sx={{ alignItems: "center", py: 4 }}>
-          {query.isError ? (
-            <Typography color="text.secondary">{t("loadError")}</Typography>
-          ) : (
-            <CircularProgress size={24} aria-label={t("loading")} />
-          )}
-        </Stack>
-      )}
-      {context !== null && (
-        <RosterContext value={context}>
-          {context.data.demands.length === 0 ? (
-            <Card variant="outlined">
-              <Stack spacing={1.5} sx={{ alignItems: "center", py: 4, px: 2 }}>
-                <Typography variant="h6">
-                  {t("empty.title", { month: Number(monthNumber) })}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ textAlign: "center", maxWidth: 360 }}
-                >
-                  {t("empty.description")}
-                </Typography>
-                {applyTemplates !== undefined && context.canEdit && (
-                  <applyTemplates.Action
-                    variant="toolbar"
-                    onDone={closeDialog}
-                  />
-                )}
-              </Stack>
-            </Card>
-          ) : (
-            <Content />
-          )}
-          {dialog?.kind === "demand" && (
-            <DemandDialog
-              demand={dialog.demand}
-              preset={dialog.preset}
-              onClose={closeDialog}
-            />
-          )}
-          {dialog?.kind === "entry" && (
-            <EntryDialog
-              entry={dialog.entry}
-              preset={dialog.preset}
-              onClose={closeDialog}
-            />
-          )}
-          {dialog?.kind === "removeDay" && (
-            <RemoveDayDialog date={dialog.date} onClose={closeDialog} />
-          )}
-        </RosterContext>
-      )}
-    </Stack>
+    // 檢核面板與 [發布](check-panel/、publish/)包住整頁:工具列的按鈕與內容旁的面板共用同一份檢核
+    <RosterCheckProvider data={data} month={month} scrollToCell={scrollToCell}>
+      <Stack spacing={2}>
+        <RosterToolbar
+          data={data}
+          month={month}
+          view={view}
+          onOrgChange={setOrgId}
+          onMonthChange={setMonth}
+          onViewChange={(next) => {
+            writeRosterView(next);
+            setView(next);
+          }}
+          onAddDemand={() => {
+            setDialog({ kind: "demand", demand: null, preset: {} });
+          }}
+          onAddEntry={() => {
+            setDialog({ kind: "entry", entry: null, preset: {} });
+          }}
+        />
+        {context === null && (
+          <Stack sx={{ alignItems: "center", py: 4 }}>
+            {query.isError ? (
+              <Typography color="text.secondary">{t("loadError")}</Typography>
+            ) : (
+              <CircularProgress size={24} aria-label={t("loading")} />
+            )}
+          </Stack>
+        )}
+        {context !== null && (
+          <RosterCheckLayout>
+            <RosterContext value={context}>
+              {context.data.demands.length === 0 ? (
+                <Card variant="outlined">
+                  <Stack
+                    spacing={1.5}
+                    sx={{ alignItems: "center", py: 4, px: 2 }}
+                  >
+                    <Typography variant="h6">
+                      {t("empty.title", { month: Number(monthNumber) })}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ textAlign: "center", maxWidth: 360 }}
+                    >
+                      {t("empty.description")}
+                    </Typography>
+                    {applyTemplates !== undefined && context.canEdit && (
+                      <applyTemplates.Action
+                        variant="toolbar"
+                        onDone={closeDialog}
+                      />
+                    )}
+                  </Stack>
+                </Card>
+              ) : (
+                <Content />
+              )}
+              {dialog?.kind === "demand" && (
+                <DemandDialog
+                  demand={dialog.demand}
+                  preset={dialog.preset}
+                  onClose={closeDialog}
+                />
+              )}
+              {dialog?.kind === "entry" && (
+                <EntryDialog
+                  entry={dialog.entry}
+                  preset={dialog.preset}
+                  onClose={closeDialog}
+                />
+              )}
+              {dialog?.kind === "removeDay" && (
+                <RemoveDayDialog date={dialog.date} onClose={closeDialog} />
+              )}
+            </RosterContext>
+          </RosterCheckLayout>
+        )}
+      </Stack>
+    </RosterCheckProvider>
   );
 };

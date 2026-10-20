@@ -45,6 +45,7 @@ import {
   missingDemandFields,
   nextTaskKey,
 } from "./demand-dialog-state";
+import { useChangeReason } from "./publish/useChangeReason";
 import {
   type DemandPreset,
   ROSTER_QUERY_ROOT,
@@ -107,11 +108,13 @@ export const DemandDialog = ({
   const [invalid, setInvalid] = useState<DemandField[]>([]);
   const [confirm, setConfirm] = useState<"save" | "delete" | null>(null);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const changeReason = useChangeReason(canEdit);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
   const errorText = (error: unknown) => tErrors(scheduleErrorOf(error).code);
   const handleError = (error: unknown) => {
+    changeReason.markFromError(error);
     setBlockedIds(blockedEntryIdsOf(error));
     setInvalid(
       errorFieldsOf(error).flatMap((field) => {
@@ -202,7 +205,8 @@ export const DemandDialog = ({
       values.endTime,
       timezone,
     );
-    if (missing.length > 0 || span === null) {
+    const reason = changeReason.take();
+    if (missing.length > 0 || span === null || reason === null) {
       return;
     }
     if (!confirmed && impactOf(removedTasks).released.length > 0) {
@@ -211,6 +215,7 @@ export const DemandDialog = ({
     }
     save.mutate({
       input: {
+        ...reason,
         orgId: data.orgId,
         ...(demand === null ? {} : { id: demand.id }),
         ...span,
@@ -286,7 +291,9 @@ export const DemandDialog = ({
                 color="error"
                 sx={{ mr: "auto" }}
                 onClick={() => {
-                  setConfirm("delete");
+                  if (changeReason.take() !== null) {
+                    setConfirm("delete");
+                  }
                 }}
               >
                 {t("delete")}
@@ -377,6 +384,7 @@ export const DemandDialog = ({
             onChange={change}
           />
         )}
+        {changeReason.fields}
       </Stack>
       {confirm !== null && demand !== null && (
         <DemandImpactDialog
@@ -402,7 +410,12 @@ export const DemandDialog = ({
           }}
           onConfirm={() => {
             if (confirm === "delete") {
-              remove.mutate({ input: { orgId: data.orgId, id: demand.id } });
+              remove.mutate({
+                input: changeReason.withReason({
+                  orgId: data.orgId,
+                  id: demand.id,
+                }),
+              });
             } else {
               submit(true);
             }

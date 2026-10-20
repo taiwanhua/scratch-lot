@@ -1284,6 +1284,73 @@
         "otherStoreUnknown": "Scheduled at another branch",
         "unavailable": "Unavailable"
       },
+      "check": {
+        "title": "Check",
+        "close": "Close check",
+        "button": "Limits {limit} · Reminders {reminder}",
+        "buttonClear": "Check: no issues",
+        "loading": "Checking",
+        "loadError": "Could not load the check, please try again later",
+        "empty": "Everything follows the rules.",
+        "emptyFiltered": "Nothing in this group.",
+        "expand": "Expand the check panel",
+        "collapse": "Collapse the check panel",
+        "filters": {
+          "all": "All {count}",
+          "limit": "Limits {count}",
+          "reminder": "Reminders {count}"
+        },
+        "view": "View",
+        "viewAria": "View: {text}",
+        "blockedTitle": "Violates limit rules, cannot save:",
+        "items": {
+          "maxMonthlyDayOffs": "{name} has {actual} days off this month, over the maximum of {limit}",
+          "minMonthlyDayOffs": "{name} has {actual} days off this month, under the minimum of {limit}",
+          "maxConsecutiveDaysOff": "{name} {from}–{to}: {actual} days off in a row (max {limit})",
+          "maxDailyDayOffStaff": "Max staff off per day: {actual} off on {date} (max {limit})",
+          "maxConsecutiveWorkDays": "{name} {from}–{to}: works {actual} days in a row (max {limit})",
+          "minRestBetweenShifts": "{name} rests only {actual} hours from {from} {end} to {to} {start} (min {limit})",
+          "maxDailyWorkHours": "Max daily hours: {name} works {actual} hours on {date} (max {limit})",
+          "multiPositionOverlap": "Multiple positions at once: {name} {date} {start}–{end} fills {actual} staffing needs",
+          "understaffed": "Understaffed: {date} {demand} {start}–{end} missing {missing} ({role})",
+          "understaffedAvailable": " ({count} available)",
+          "understaffedNone": ": nobody available ({reasons})",
+          "dayOffEntryConflict": "Shift on a day off: {name} {date} {start}–{end}",
+          "dayOffEntryConflictOther": "Shift on a day off: {name} {date} {start}–{end} (at {org})",
+          "dayOffEntryConflictUnknown": "Shift on a day off: {name} {date} {start}–{end} (at another branch)"
+        },
+        "reasons": {
+          "dayOff": "{count} off",
+          "timeRange": "{count} unavailable then",
+          "occupied": "{count} on other shifts",
+          "cannotLead": "{count} cannot lead"
+        }
+      },
+      "publish": {
+        "button": "Publish",
+        "checking": "Checking",
+        "title": "Publish the schedule for month {month}?",
+        "blockedTitle": "Cannot publish",
+        "allClear": "Everything follows the rules. {count} scheduled people will be notified; later changes need a reason.",
+        "reminders": "{count} reminders, you can still publish.",
+        "blocked": "{count} limit violations, fix them before publishing.",
+        "footnote": "Checked with the latest rule settings.",
+        "cancel": "Cancel",
+        "close": "Close",
+        "confirm": "Publish",
+        "confirmAnyway": "Publish anyway",
+        "feedback": "Published month {month}, notified {count} scheduled people",
+        "errors": {
+          "HAS_LIMIT_VIOLATIONS": "Some shifts violate limits, cannot publish; please check again",
+          "ALREADY_PUBLISHED": "This month is already published",
+          "CHANGED_DURING_PUBLISH": "The schedule changed while publishing, please press [Publish] again"
+        }
+      },
+      "changeReason": {
+        "label": "Change reason",
+        "note": "Reason details",
+        "hint": "This month is published: changes take effect right away and the people involved are notified."
+      },
       "removeDay": {
         "menu": "Remove all shifts on this day",
         "title": "Remove all shifts on {date}",

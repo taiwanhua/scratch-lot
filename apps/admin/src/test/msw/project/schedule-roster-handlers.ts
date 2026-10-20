@@ -3,15 +3,18 @@ import { HttpResponse } from "msw";
 import type {
   DeleteScheduleDemandMutationVariables,
   DeleteScheduleEntryMutationVariables,
+  PublishScheduleMutationVariables,
   RemoveScheduleDayEntriesMutationVariables,
   SaveScheduleDemandMutationVariables,
   SaveScheduleEntryMutationVariables,
+  ScheduleCheckQueryVariables,
   ScheduleDemandFieldsFragment,
   ScheduleEntryFieldsFragment,
   ScheduleRosterQueryVariables,
 } from "@repo/graphql";
 
 import { api } from "../server";
+import { type CheckScenario, sampleCheck } from "./schedule-check-fixtures";
 import {
   ROSTER_ORG,
   ROSTER_PEOPLE,
@@ -30,6 +33,10 @@ export interface ScheduleRosterWorldOptions {
   canSaveTemplate?: boolean;
   /** 一律回這個月沒有人力需求(SC-35) */
   isEmpty?: boolean;
+  /** 檢核結果(預設 `limits`:1 項限制 + 提醒,Figma SC-18) */
+  check?: CheckScenario;
+  /** 這個月一開始就已發布(SC-15b) */
+  isPublished?: boolean;
 }
 
 const nameOf = (userId: string) =>
@@ -53,6 +60,19 @@ export const scheduleRosterWorld = (
   options: ScheduleRosterWorldOptions = {},
 ) => {
   const { canEdit = true, canSaveTemplate = true, isEmpty = false } = options;
+  let checkScenario: CheckScenario = options.check ?? "limits";
+  let period: {
+    status: string;
+    publishedAt: string | null;
+    publishedByName: string | null;
+  } =
+    options.isPublished === true
+      ? {
+          status: "published",
+          publishedAt: "2026-10-28T02:00:00.000Z",
+          publishedByName: "李店長",
+        }
+      : { status: "unpublished", publishedAt: null, publishedByName: null };
   let loadedMonth: string | null = null;
   let demands: TestRosterDemand[] = [];
   let entries: TestRosterEntry[] = [];
@@ -62,6 +82,10 @@ export const scheduleRosterWorld = (
     removedDays: [] as string[],
     /** 排班表查詢的 input(週檢視跨月多讀的 from / to) */
     queries: [] as ScheduleRosterQueryVariables["input"][],
+    removedDayInputs:
+      [] as RemoveScheduleDayEntriesMutationVariables["input"][],
+    deletedEntries: [] as DeleteScheduleEntryMutationVariables["input"][],
+    published: [] as PublishScheduleMutationVariables["input"][],
   };
 
   const ensure = (month: string) => {
@@ -140,11 +164,7 @@ export const scheduleRosterWorld = (
             orgId: input.orgId ?? ROSTER_ORG.id,
             orgName: ROSTER_ORG.name,
             month: input.month,
-            period: {
-              status: "unpublished",
-              publishedAt: null,
-              publishedByName: null,
-            },
+            period,
             canEdit,
             canSaveTemplate,
             settings: ROSTER_SETTINGS,
@@ -227,6 +247,7 @@ export const scheduleRosterWorld = (
     }),
     api.mutation("DeleteScheduleEntry", ({ variables }) => {
       const { input } = variables as DeleteScheduleEntryMutationVariables;
+      inputs.deletedEntries.push(input);
       entries = entries.filter((entry) => entry.id !== input.id);
       return HttpResponse.json({
         data: { deleteScheduleEntry: { id: input.id } },
@@ -235,6 +256,7 @@ export const scheduleRosterWorld = (
     api.mutation("RemoveScheduleDayEntries", ({ variables }) => {
       const { input } = variables as RemoveScheduleDayEntriesMutationVariables;
       inputs.removedDays.push(input.date);
+      inputs.removedDayInputs.push(input);
       const removed = entries.filter((entry) => entry.date === input.date);
       entries = entries.filter((entry) => entry.date !== input.date);
       return HttpResponse.json({
@@ -246,10 +268,56 @@ export const scheduleRosterWorld = (
         },
       });
     }),
+    api.query("ScheduleCheck", ({ variables }) => {
+      const { input } = variables as ScheduleCheckQueryVariables;
+      return HttpResponse.json({
+        data: {
+          scheduleCheck: {
+            ...sampleCheck(input.month, checkScenario),
+            orgId: input.orgId ?? ROSTER_ORG.id,
+          },
+        },
+      });
+    }),
+    api.mutation("PublishSchedule", ({ variables }) => {
+      const { input } = variables as PublishScheduleMutationVariables;
+      inputs.published.push(input);
+      if (checkScenario === "limits") {
+        return HttpResponse.json({
+          errors: [
+            {
+              message: "cannot publish",
+              extensions: {
+                code: "VALIDATION_FAILED",
+                fields: ["month"],
+                reason: "HAS_LIMIT_VIOLATIONS",
+              },
+            },
+          ],
+        });
+      }
+      period = {
+        status: "published",
+        publishedAt: new Date().toISOString(),
+        publishedByName: "何家華",
+      };
+      return HttpResponse.json({
+        data: {
+          publishSchedule: {
+            period,
+            notifiedCount: new Set(entries.map((entry) => entry.userId)).size,
+          },
+        },
+      });
+    }),
   ];
 
   return {
     handlers,
+    /** 換檢核結果(例:改好後重查) */
+    setCheck: (scenario: CheckScenario) => {
+      checkScenario = scenario;
+    },
     inputs,
     demandIds: () => demands.map((demand) => demand.id),
   };

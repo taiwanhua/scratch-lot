@@ -1284,6 +1284,73 @@
         "otherStoreUnknown": "已排於其他分店",
         "unavailable": "不可排"
       },
+      "check": {
+        "title": "檢核",
+        "close": "關閉檢核",
+        "button": "限制 {limit} · 提醒 {reminder}",
+        "buttonClear": "檢核:沒有問題",
+        "loading": "檢查中",
+        "loadError": "檢核載入失敗,請稍後再試",
+        "empty": "全部符合規則。",
+        "emptyFiltered": "這一類沒有項目。",
+        "expand": "拉高檢核面板",
+        "collapse": "收合檢核面板",
+        "filters": {
+          "all": "全部 {count}",
+          "limit": "限制 {count}",
+          "reminder": "提醒 {count}"
+        },
+        "view": "查看",
+        "viewAria": "查看:{text}",
+        "blockedTitle": "違反限制的規則,不能儲存:",
+        "items": {
+          "maxMonthlyDayOffs": "{name} 本月畫休 {actual} 天,超過上限 {limit} 天",
+          "minMonthlyDayOffs": "{name} 本月畫休 {actual} 天,少於下限 {limit} 天",
+          "maxConsecutiveDaysOff": "{name} {from}–{to} 連續休假 {actual} 天(最多 {limit} 天)",
+          "maxDailyDayOffStaff": "同日最多畫休人數:{date} 畫休 {actual} 人(最多 {limit} 人)",
+          "maxConsecutiveWorkDays": "{name} {from}–{to} 連續上班 {actual} 天(最多 {limit} 天)",
+          "minRestBetweenShifts": "{name} {from} {end} 下班到 {to} {start} 上班只休息 {actual} 小時(最少 {limit} 小時)",
+          "maxDailyWorkHours": "每天最多上班時數:{name} {date} 排 {actual} 小時(最多 {limit} 小時)",
+          "multiPositionOverlap": "同一時段兼多個崗位:{name} {date} {start}–{end} 同時填進 {actual} 筆人力需求",
+          "understaffed": "人力不足:{date} {demand} {start}–{end} 缺 {missing} 人({role})",
+          "understaffedAvailable": "(可排 {count} 人)",
+          "understaffedNone": ":沒有可排的人({reasons})",
+          "dayOffEntryConflict": "畫休日有排班:{name} {date} {start}–{end}",
+          "dayOffEntryConflictOther": "畫休日有排班:{name} {date} {start}–{end}(排於{org})",
+          "dayOffEntryConflictUnknown": "畫休日有排班:{name} {date} {start}–{end}(排於其他分店)"
+        },
+        "reasons": {
+          "dayOff": "{count} 人畫休",
+          "timeRange": "{count} 人時段不可排",
+          "occupied": "{count} 人已排其他班",
+          "cannotLead": "{count} 人不能擔任負責人"
+        }
+      },
+      "publish": {
+        "button": "發布",
+        "checking": "檢查中",
+        "title": "發布 {month} 月排班?",
+        "blockedTitle": "不能發布",
+        "allClear": "全部符合規則。發布後會通知 {count} 位被排到的人;之後修改要填異動原因。",
+        "reminders": "有 {count} 項提醒,可以照樣發布。",
+        "blocked": "有 {count} 項違反限制,改好才能發布。",
+        "footnote": "用發布當下最新的規則設定檢查。",
+        "cancel": "取消",
+        "close": "關閉",
+        "confirm": "發布",
+        "confirmAnyway": "仍要發布",
+        "feedback": "已發布 {month} 月排班,通知 {count} 位被排到的人",
+        "errors": {
+          "HAS_LIMIT_VIOLATIONS": "有違反限制的排班,不能發布;請重新檢核",
+          "ALREADY_PUBLISHED": "這個月已經發布過了",
+          "CHANGED_DURING_PUBLISH": "發布時排班剛好有人修改,請再按一次 [發布]"
+        }
+      },
+      "changeReason": {
+        "label": "異動原因",
+        "note": "原因說明",
+        "hint": "這個月已發布:修改會直接生效,並通知當事人。"
+      },
       "removeDay": {
         "menu": "移除這天所有排班",
         "title": "移除 {date} 所有排班",

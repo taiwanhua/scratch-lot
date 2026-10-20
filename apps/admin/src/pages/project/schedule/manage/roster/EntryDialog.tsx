@@ -37,6 +37,7 @@ import {
   initialEntryState,
   nextRowKey,
 } from "./entry-dialog-state";
+import { useChangeReason } from "./publish/useChangeReason";
 import {
   type EntryPreset,
   ROSTER_QUERY_ROOT,
@@ -98,6 +99,7 @@ export const EntryDialog = ({
   const [isAddingDemand, setIsAddingDemand] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const changeReason = useChangeReason(canEdit);
 
   const person = data.people.find((item) => item.userId === form.userId);
   const canLead = person?.canLead === true;
@@ -148,7 +150,9 @@ export const EntryDialog = ({
         onClose();
       },
       onError: (cause) => {
-        setError(saveErrorText(cause));
+        setError(
+          changeReason.markFromError(cause) ? null : saveErrorText(cause),
+        );
       },
     }),
   );
@@ -162,9 +166,10 @@ export const EntryDialog = ({
         onClose();
       },
       onError: (cause) => {
-        if (blockedEntryIdsOf(cause).length > 0) {
-          setError(t("errors.locked"));
-        }
+        changeReason.markFromError(cause);
+        setError(
+          blockedEntryIdsOf(cause).length > 0 ? t("errors.locked") : null,
+        );
       },
     }),
   );
@@ -178,11 +183,12 @@ export const EntryDialog = ({
     breakMinutes >= 0;
 
   const submit = () => {
-    if (!canSave) {
+    // 已發布的月份:異動原因沒填好 → 標紅、不送
+    if (!canSave || changeReason.take() === null) {
       return;
     }
     save.mutate({
-      input: {
+      input: changeReason.withReason({
         orgId: data.orgId,
         ...(entry === null ? { userId: form.userId } : { id: entry.id }),
         startAt: span.startAt,
@@ -192,7 +198,7 @@ export const EntryDialog = ({
           demandId: row.demandId,
           taskId: row.taskId,
         })),
-      },
+      }),
     });
   };
 
@@ -226,10 +232,10 @@ export const EntryDialog = ({
                 color="error"
                 sx={{ mr: "auto" }}
                 onClick={() => {
-                  if (entry.deletable) {
-                    setIsConfirmingDelete(true);
-                  } else {
+                  if (!entry.deletable) {
                     setError(t("errors.locked"));
+                  } else if (changeReason.take() !== null) {
+                    setIsConfirmingDelete(true);
                   }
                 }}
               >
@@ -252,6 +258,7 @@ export const EntryDialog = ({
     >
       <Stack spacing={2} sx={{ pt: 1 }}>
         {error !== null && <Alert severity="error">{error}</Alert>}
+        {changeReason.alert}
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           {isPersonFixed ? (
             <TextField
@@ -359,6 +366,7 @@ export const EntryDialog = ({
             }
           }}
         />
+        {changeReason.fields}
       </Stack>
       {isAddingDemand && (
         <DemandDialog
@@ -401,7 +409,12 @@ export const EntryDialog = ({
           })}
           isPending={remove.isPending}
           onConfirm={() => {
-            remove.mutate({ input: { orgId: data.orgId, id: entry.id } });
+            remove.mutate({
+              input: changeReason.withReason({
+                orgId: data.orgId,
+                id: entry.id,
+              }),
+            });
             setIsConfirmingDelete(false);
           }}
           onCancel={() => {
