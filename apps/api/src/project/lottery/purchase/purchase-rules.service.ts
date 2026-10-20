@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { type ClientSession, Types } from "mongoose";
 
-import type { StoredValues } from "@repo/domain/form";
+import { type StoredValues, formatTemporal } from "@repo/domain/form";
 import {
   LAST_TICKET_NO_MAX,
   PURCHASE_FORM_KEY,
@@ -23,6 +23,7 @@ import {
 } from "../../../database/base/repositories";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { afterCommit } from "../../../database/transaction";
 import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
@@ -330,10 +331,7 @@ export class PurchaseRules {
           button: "out",
           accountId,
           amount: purchasePayableOf(values),
-          note:
-            header.purchaseDate === null
-              ? null
-              : `批購日 ${header.purchaseDate.toISOString().slice(0, 10)}`,
+          note: await this.purchaseDateNoteOf(context, header.purchaseDate),
         });
       }
     }
@@ -369,6 +367,22 @@ export class PurchaseRules {
   }
 
   // ---- 內部 ----
+
+  /** 自動記帳的備註「批購日 2026-10-13」(租戶時區的日期)。 */
+  private async purchaseDateNoteOf(
+    context: FormEffectContext,
+    purchaseDate: Date | null,
+  ): Promise<string | null> {
+    if (purchaseDate === null) {
+      return null;
+    }
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      context.operator,
+      context.tenantId,
+    );
+    return `批購日 ${formatTemporal(purchaseDate, { type: "date", timezone })}`;
+  }
 
   private async submissionOf(context: FormEffectContext) {
     const submission = await this.submissions.findById(
