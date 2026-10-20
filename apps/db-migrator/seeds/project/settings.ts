@@ -12,6 +12,11 @@ function supportRequestColumn(key: string, width: number, order: number) {
   return { kind: "field", key, formKey: "support_request", width, order };
 }
 
+/** 叫貨單(`requisition`)的一個表單欄位欄。 */
+function requisitionColumn(key: string, width: number, order: number) {
+  return { kind: "field", key, formKey: "requisition", width, order };
+}
+
 export const projectSeedSettings: ProjectSeedSettings = {
   rootOrg: {
     name: "scratch-lot",
@@ -36,6 +41,22 @@ export const projectSeedSettings: ProjectSeedSettings = {
             supportRequestColumn("branch", 140, 6),
           ],
           builtin: { form: false, status: true, createdBy: false },
+        },
+      },
+    },
+    // 叫貨、採購單 → 叫貨單的列表欄位配置(規格 8.1;Figma PU-01):單號、叫貨分店、期望到貨日、本數
+    // + 內建欄「狀態」(畫面再細分 待購買 / 已進貨 / 已調貨)、「建立者」。初始 seed 值,之後由平台管理員調整
+    "purchasing.requisition": {
+      settings: {
+        list: {
+          columns: [
+            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 R-0001)
+            { kind: "slot", key: "serialNo", width: 110, order: 0 },
+            requisitionColumn("branch", 140, 1),
+            requisitionColumn("expected_date", 130, 2),
+            requisitionColumn("total_books", 90, 3),
+          ],
+          builtin: { form: false, status: true, createdBy: true },
         },
       },
     },

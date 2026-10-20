@@ -153,6 +153,32 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
     );
   }
 
+  /** 示範帳號首登要先改密碼(一般規則),改完再登入。 */
+  async function signIn(
+    account: string,
+    label: string,
+    changed = ["changed", "by", label, "9"].join("-"),
+  ) {
+    const first = await loginAs(
+      api,
+      { account, password: DEMO_PASSWORD },
+      label,
+    ).catch(() => null);
+    if (first !== null) {
+      await first.request(
+        /* GraphQL */ `
+          mutation TestRequisitionChangePassword($input: ChangePasswordInput!) {
+            changePassword(input: $input) {
+              success
+            }
+          }
+        `,
+        { input: { currentPassword: DEMO_PASSWORD, newPassword: changed } },
+      );
+    }
+    return loginAs(api, { account, password: changed }, label);
+  }
+
   beforeAll(async () => {
     await mongo.start();
     databaseUri = mongo.uri("main");
@@ -422,6 +448,31 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       }
     });
 
+    async function requisitionValues(clientRequestId: string) {
+      const branch = await findOne("orgs", {
+        parentId: tenantId,
+        name: "中山店",
+      });
+      const game = await findOne("lottery_games", {
+        tenantId,
+        gameCode: "5164",
+      });
+      return {
+        formKey: "requisition",
+        clientRequestId,
+        values: {
+          branch: String(branch._id),
+          lines: [
+            {
+              rowId: "00000000-0000-4000-8000-000000000001",
+              game: String(game._id),
+              books: 2,
+            },
+          ],
+        },
+      };
+    }
+
     describe("支援需求單的流程(規格 2.1、14.10)", () => {
       it("demo create:平台管理員把受管表單分派給示範機構,開通腳本建客製流程、發布、綁定", async () => {
         const form = await findOne("forms", { key: SUPPORT_REQUEST_FORM_KEY });
@@ -456,7 +507,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(lines.join("\n")).toContain(
           "「支援需求單」已綁定流程「支援需求單審核」,沿用",
         );
-        const workflows = await find("workflows", { tenantId });
+        const workflows = await find("workflows", {
+          tenantId,
+          key: `${DEMO_TENANT.slug}_support_request`,
+        });
         expect(workflows).toHaveLength(1);
       });
 
@@ -541,6 +595,108 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(tasks.map((task) => String(task.assigneeId))).toEqual([
           String(hq._id),
         ]);
+      });
+    });
+
+    describe("叫貨單的流程(規格 2.1、8.1)", () => {
+      const SUBMIT_REQUISITION = /* GraphQL */ `
+        mutation TestSubmitRequisition(
+          $input: CreateAndSubmitFormSubmissionInput!
+        ) {
+          createAndSubmitFormSubmission(input: $input) {
+            submission {
+              id
+              status
+              serialNo
+            }
+          }
+        }
+      `;
+
+      interface Submitted {
+        createAndSubmitFormSubmission: {
+          submission: { id: string; status: string; serialNo: string | null };
+        };
+      }
+
+      it("demo create:建客製流程「叫貨單審核」,一關 角色 總部管理、B4 跳過組織 = 租戶", async () => {
+        const workflow = await findOne("workflows", {
+          key: `${DEMO_TENANT.slug}_requisition`,
+        });
+        expect(workflow).toMatchObject({ tenantId, currentVersion: 1 });
+        const version = await findOne("workflow_versions", {
+          workflowId: workflow._id as ObjectId,
+          version: 1,
+        });
+        const [step] = version.steps as Document[];
+        expect(step).toMatchObject({
+          key: "hq",
+          skipOrgs: { orgIds: ["tenant"], includeDescendants: false },
+        });
+      });
+
+      it("總部人員(屬於租戶)替中山店送出 → 跳過審核直接完成,寫叫貨明細副本", async () => {
+        const hq = await signIn("owner+demo-hq@example.test", "hq");
+        const { createAndSubmitFormSubmission } = await hq.request<Submitted>(
+          SUBMIT_REQUISITION,
+          {
+            input: await requisitionValues("requisition-hq-1"),
+          },
+        );
+        expect(createAndSubmitFormSubmission.submission).toMatchObject({
+          status: "COMPLETED",
+          serialNo: "R-0001",
+        });
+        const branch = await findOne("orgs", {
+          parentId: tenantId,
+          name: "中山店",
+        });
+        const lines = await find("lottery_requisition_lines", {
+          requisitionId: new ObjectId(
+            createAndSubmitFormSubmission.submission.id,
+          ),
+        });
+        expect(lines).toEqual([
+          expect.objectContaining({
+            orgId: branch._id as ObjectId,
+            tenantId,
+            books: 2,
+            serialNo: "R-0001",
+            voidedAt: null,
+            referencedBy: null,
+          }),
+        ]);
+      });
+
+      it("中山店店長送出 → 審核中,任務派給總部管理(示範總部人員);還沒完成就沒有副本", async () => {
+        // 上面支援需求單的測試已經替中山店店長改過密碼
+        const manager = await signIn(
+          "owner+demo-manager-a@example.test",
+          "manager",
+          ["changed", "by", "manager", "8"].join("-"),
+        );
+        const { createAndSubmitFormSubmission } =
+          await manager.request<Submitted>(SUBMIT_REQUISITION, {
+            input: await requisitionValues("requisition-manager-1"),
+          });
+        expect(createAndSubmitFormSubmission.submission.status).toBe(
+          "REVIEWING",
+        );
+        const submissionId = new ObjectId(
+          createAndSubmitFormSubmission.submission.id,
+        );
+        const hq = await findOne("users", {
+          account: "owner+demo-hq@example.test",
+        });
+        const tasks = await find("workflow_tasks", { submissionId });
+        expect(tasks.map((task) => String(task.assigneeId))).toEqual([
+          String(hq._id),
+        ]);
+        expect(
+          await find("lottery_requisition_lines", {
+            requisitionId: submissionId,
+          }),
+        ).toEqual([]);
       });
     });
   });

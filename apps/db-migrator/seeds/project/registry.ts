@@ -9,7 +9,9 @@ import {
   projectFields,
 } from "./field-categories";
 import { masterDataModule } from "./master-data";
+import { purchasingModuleDeclarations } from "./purchasing";
 import { reportsModule } from "./reports";
+import { seed as requisitionForm } from "./revisions/requisition.r1.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 
@@ -36,7 +38,14 @@ export const projectSeedSource: SeedSource = {
     ...scheduleModuleDeclarations,
     // 帳戶管理(專案規格第 9 章、第 10 章)
     accountsModule,
+    // 叫貨與進貨群組 + 叫貨、採購單(規格 3.1、3.2、8.1)
+    ...purchasingModuleDeclarations,
   ],
+  // 受管表單引用的專案 lookup 來源(api 登記在 `apps/api/src/project/lookup-providers.ts`):
+  // 遊戲只收「只列販售中」這個固定條件(叫貨單、進貨單的明細;規格 5.1)
+  portableLookupProviders: {
+    lottery_game: { filters: { status: ["on_sale"] } },
+  },
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
     projectFieldCategories,
@@ -45,6 +54,8 @@ export const projectSeedSource: SeedSource = {
     projectFieldOptionColors,
     // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)
     supportRequestForm,
+    // 叫貨、採購單的受管表單:叫貨單(規格 8.1;流程不 seed,由開通腳本依租戶角色建)
+    requisitionForm,
   ],
 };
 

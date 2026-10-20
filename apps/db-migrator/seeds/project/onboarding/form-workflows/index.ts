@@ -1,3 +1,4 @@
+import { requisitionWorkflow } from "./requisition";
 import { supportRequestWorkflow } from "./support-request";
 import type { FormWorkflowSpec } from "./types";
 
@@ -8,4 +9,6 @@ import type { FormWorkflowSpec } from "./types";
 export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   // 排班作業:支援需求單(規格 14.10)
   supportRequestWorkflow,
+  // 叫貨、採購單:叫貨單(規格 8.1)
+  requisitionWorkflow,
 ];
