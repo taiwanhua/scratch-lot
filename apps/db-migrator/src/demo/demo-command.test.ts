@@ -119,6 +119,10 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
       "確認字串的 mode 對不上",
       args({ confirm: `demo:dev:${DATABASE}:rebuild` }),
     ],
+    [
+      "purge:確認字串少一個字",
+      args({ mode: "purge", confirm: `demo:dev:${DATABASE}:purg` }),
+    ],
   ])("%s:不執行,沒有呼叫 api、沒有讀機密", async (_case, argv) => {
     const state = harness();
     await expect(runDemoCommand(argv, state.options)).rejects.toThrow(
@@ -160,18 +164,6 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     expect(state.operations).toEqual([]);
     expect(state.secretsRead).toEqual([]);
   });
-
-  it.each(["purge", "rebuild"])(
-    "--mode=%s:安全閥通過也先拒絕(清空 / 重建另行實作),沒有呼叫 api",
-    async (mode) => {
-      const state = harness();
-      await expect(
-        runDemoCommand(args({ mode }), state.options),
-      ).rejects.toThrow(/尚未提供/);
-      expect(state.operations).toEqual([]);
-      expect(state.secretsRead).toEqual([]);
-    },
-  );
 
   it("密碼不從參數讀:多給任何參數(例 --password)直接拒絕", async () => {
     const state = harness();
@@ -221,6 +213,157 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
     expect(message).toContain("echo *** done");
     expect(state.operations).toEqual(["DemoLogin"]);
     expect(state.populated).toBe(0);
+  });
+});
+
+/** 假 api:清空 / 重建走得完的版本(`purgeResult` 決定清空的結果;回錯時以字串給 api 的錯誤訊息)。 */
+function rebuildApi(purgeResult: { purged: boolean } | string): FetchLike {
+  return (_url, init) => {
+    const { query, variables } = JSON.parse(init.body) as {
+      query: string;
+      variables?: { input?: { slug?: string } };
+    };
+    if (query.includes("login(")) {
+      return reply({ data: { login: { accessToken: "token" } } });
+    }
+    if (query.includes("provisionTarget")) {
+      return reply({ data: { provisionTarget: { databaseName: DATABASE } } });
+    }
+    if (query.includes("purgeDemoTenant(")) {
+      if (typeof purgeResult === "string") {
+        return reply({
+          errors: [{ message: purgeResult, extensions: { code: "FORBIDDEN" } }],
+        });
+      }
+      expect(variables?.input?.slug).toBe("demo_test");
+      return reply({
+        data: {
+          purgeDemoTenant: {
+            ...purgeResult,
+            deletedDocuments: purgeResult.purged ? 42 : 0,
+            deletedUsers: purgeResult.purged ? 3 : 0,
+            detachedUsers: 0,
+            deletedFiles: 0,
+            collections: purgeResult.purged
+              ? [{ collection: "audit_logs", deleted: 40 }]
+              : [],
+          },
+        },
+      });
+    }
+    if (query.includes("orgTree")) {
+      return reply({
+        data: { orgTree: [{ id: "root", parentId: null, children: [] }] },
+      });
+    }
+    if (query.includes("tenantModuleOptions")) {
+      return reply({ data: { tenantModuleOptions: [{ key: "system" }] } });
+    }
+    if (query.includes("provisionTenant(")) {
+      return reply({
+        data: { provisionTenant: { org: { id: "demo-org", isDemo: true } } },
+      });
+    }
+    return reply({ errors: [{ message: "測試的假 api 不認得這個操作" }] });
+  };
+}
+
+describe("demo 指令:清空 / 重建(規格 2.2 操作表 --mode=purge / --mode=rebuild)", () => {
+  it("--mode=purge:root 登入、核對資料庫名後以示範資料的短碼清空;不讀示範機密、不建立", async () => {
+    const lines: string[] = [];
+    const state = harness({}, rebuildApi({ purged: true }));
+    state.options.print = (line) => lines.push(line);
+    await runDemoCommand(args({ mode: "purge" }), state.options);
+    expect(state.operations).toEqual([
+      "DemoLogin",
+      "DemoProvisionTarget",
+      "DemoPurgeTenant",
+    ]);
+    expect(state.secretsRead).toEqual([]);
+    expect(state.populated).toBe(0);
+    expect(lines).toContainEqual(
+      expect.stringMatching(/已清空示範機構「示範機構」:刪除 42 筆/),
+    );
+    expect(lines.at(-1)).toMatch(/demo\(purge\)完成/);
+  });
+
+  it("--mode=purge:對到沒有「示範」標記的機構 → 拒絕,沒有建立任何東西", async () => {
+    const state = harness(
+      {},
+      rebuildApi(
+        "Org with slug demo_test is not marked as demo; nothing was deleted",
+      ),
+    );
+    await expect(
+      runDemoCommand(args({ mode: "purge" }), state.options),
+    ).rejects.toThrow(/沒有「示範」標記.*一筆都沒有刪除/);
+    expect(state.operations).toEqual([
+      "DemoLogin",
+      "DemoProvisionTarget",
+      "DemoPurgeTenant",
+    ]);
+    expect(state.populated).toBe(0);
+  });
+
+  it("--mode=purge:確認字串的資料庫名與 api 回報的不同 → 不清空", async () => {
+    const state = harness({}, fakeApi("wowgo-base-staging"));
+    await expect(
+      runDemoCommand(args({ mode: "purge" }), state.options),
+    ).rejects.toThrow(/資料庫名段不符/);
+    expect(state.operations).toEqual(["DemoLogin", "DemoProvisionTarget"]);
+  });
+
+  it("--mode=rebuild:先讀齊示範機密,再清空、再建立示範機構並灌示範資料", async () => {
+    const events: string[] = [];
+    const state = harness({}, rebuildApi({ purged: true }));
+    const read = state.options.readSecret;
+    const send = state.options.fetch;
+    state.options.readSecret = (label) => {
+      events.push(`讀:${label}`);
+      return read ? read(label) : Promise.resolve("");
+    };
+    state.options.fetch = (url, init) => {
+      const { query } = JSON.parse(init.body) as { query: string };
+      events.push(/(?:query|mutation) (\w+)/.exec(query)?.[1] ?? "");
+      return send ? send(url, init) : reply({});
+    };
+    await runDemoCommand(args({ mode: "rebuild" }), state.options);
+    expect(events).toEqual([
+      "DemoLogin",
+      "DemoProvisionTarget",
+      "讀:示範帳號密碼",
+      "讀:基底信箱",
+      "DemoPurgeTenant",
+      "DemoRootTenants",
+      "DemoTenantModuleOptions",
+      "DemoProvisionTenant",
+      "DemoLogin",
+    ]);
+    expect(state.populated).toBe(1);
+  });
+
+  it("--mode=rebuild:清空被拒(沒有「示範」標記)→ 不往下建立", async () => {
+    const state = harness(
+      {},
+      rebuildApi(
+        "Org with slug demo_test is not marked as demo; nothing was deleted",
+      ),
+    );
+    await expect(
+      runDemoCommand(args({ mode: "rebuild" }), state.options),
+    ).rejects.toThrow(/沒有「示範」標記/);
+    expect(state.operations.at(-1)).toBe("DemoPurgeTenant");
+    expect(state.populated).toBe(0);
+  });
+
+  it("--mode=rebuild:還沒有示範機構時清空什麼都不做,照樣建立", async () => {
+    const lines: string[] = [];
+    const state = harness({}, rebuildApi({ purged: false }));
+    state.options.print = (line) => lines.push(line);
+    await runDemoCommand(args({ mode: "rebuild" }), state.options);
+    expect(lines).toContainEqual(expect.stringMatching(/不用清空/));
+    expect(state.populated).toBe(1);
+    expect(lines.at(-1)).toMatch(/demo\(rebuild\)完成/);
   });
 });
 

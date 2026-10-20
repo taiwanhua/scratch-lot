@@ -6,21 +6,26 @@
  * ```
  *
  * 1. 安全閥第一段(`demo-safety.ts`):環境、`DEMO_ALLOW_ENV` 允許清單、確認字串的格式與環境 / mode 兩段。
- *    不過即結束,此時還沒有呼叫 api;`purge` / `rebuild` 目前也在這裡拒絕(清空示範機構另行實作)
+ *    不過即結束,此時還沒有呼叫 api
  * 2. 以平台管理員登入(`ROOT_ADMIN_ACCOUNT`;密碼取 `ROOT_ADMIN_PASSWORD`,沒設就從標準輸入讀),
  *    讀 api **自己回報**的資料庫名(`provisionTarget`),安全閥第二段比對確認字串的資料庫名段:
  *    確認字串因此綁到實際寫入的資料庫,`--api-url` 指到別的環境就不執行。到這裡還沒有任何寫入
- * 3. 示範密碼與基底信箱**只從標準輸入讀**(終端機不回顯;workflow 以管線送入),不從參數、環境變數或檔案讀
- * 4. 建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`),同一個平台管理員 session 把 registry 登記的
- *    每張受管表單分派給示範機構(`assignFormToTenants`;已分派的略過)——分派只有站在根組織做得到,開通腳本做不到
- * 5. 以那位租戶管理員登入 → 交給專案登記的示範資料(`seeds/registry.ts` 的 `demoSource`)的 `populate`
+ * 3. (`create` / `rebuild`)示範密碼與基底信箱**只從標準輸入讀**(終端機不回顯;workflow 以管線送入),
+ *    不從參數、環境變數或檔案讀;`rebuild` 在清空**之前**先讀齊,缺值就停在一筆都沒刪的時候
+ * 4. (`purge` / `rebuild`)清空示範機構(`demo-purge.ts`):以專案示範資料固定的短碼找機構,
+ *    api 端只接受標「示範」的機構,刪掉它的全部資料、只屬於它的使用者與檔案;沒有標記 → 拒絕,一筆都不刪
+ * 5. (`create` / `rebuild`)建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`),同一個平台管理員
+ *    session 把 registry 登記的每張受管表單分派給示範機構(`assignFormToTenants`;已分派的略過)——
+ *    分派只有站在根組織做得到,開通腳本做不到
+ * 6. (`create` / `rebuild`)以那位租戶管理員登入 → 交給專案登記的示範資料(`seeds/registry.ts` 的 `demoSource`)的 `populate`
  *
  * **全程走 api 的 GraphQL**:權限照常檢查、操作紀錄照常寫;本指令不連資料庫,也不需要 `MONGODB_URI`。
- * 冪等:重跑只補缺的。輸出只有環境、資料庫名、模式與各步驟的結果,不含密碼或真實信箱。
+ * `create` 冪等:重跑只補缺的。輸出只有環境、資料庫名、模式與各步驟的結果,不含密碼或真實信箱。
  * 本檔沒有載入時的副作用(入口檔才有)。
  */
 import { pathToFileURL } from "node:url";
 
+import { purgeDemoTenant } from "./demo-purge";
 import {
   DEMO_ALLOW_ENV_NAME,
   DEMO_ENVIRONMENTS,
@@ -244,11 +249,6 @@ function resolveTarget(args: DemoArgs, env: NodeJS.ProcessEnv): DemoTarget {
   if (violation !== null || args.environment === undefined) {
     throw new Error(violation ?? USAGE);
   }
-  if (args.mode !== "create") {
-    throw new Error(
-      `--mode=${args.mode}(清空 / 重建示範機構)尚未提供;目前只能 create,一筆都沒有寫入也沒有刪除`,
-    );
-  }
   if (args.apiUrl === undefined) {
     throw new Error(
       `--api-url 必填:${args.environment} 環境的 api 網址(${USAGE})`,
@@ -328,11 +328,27 @@ export async function runDemoCommand(
       `demo:環境 ${target.environment}、資料庫 ${databaseName}、模式 ${target.mode}、示範機構「${source.tenant.name}」`,
     );
 
-    const password = await readSecret(DEMO_SECRET_LABELS.password);
+    const creates = target.mode !== "purge";
+    // rebuild:清空之前先讀齊建立要用的機密,缺值就停在一筆都沒刪的時候
+    const password = creates
+      ? await readSecret(DEMO_SECRET_LABELS.password)
+      : "";
     secrets.push(password);
-    const enteredBase = await readSecret(DEMO_SECRET_LABELS.emailBase);
+    const enteredBase = creates
+      ? await readSecret(DEMO_SECRET_LABELS.emailBase)
+      : "";
     const emailBase = enteredBase.trim();
     secrets.push(emailBase);
+
+    if (target.mode !== "create") {
+      await purgeDemoTenant(root, source.tenant, output);
+    }
+    if (!creates) {
+      output(
+        `demo(purge)完成:環境 ${target.environment}、資料庫 ${databaseName}、示範機構「${source.tenant.name}」`,
+      );
+      return;
+    }
 
     const tenant = await ensureDemoTenant(
       root,
@@ -363,7 +379,7 @@ export async function runDemoCommand(
       print: output,
     });
     output(
-      `demo(create)完成:環境 ${target.environment}、資料庫 ${databaseName}、示範機構「${source.tenant.name}」`,
+      `demo(${target.mode})完成:環境 ${target.environment}、資料庫 ${databaseName}、示範機構「${source.tenant.name}」`,
     );
   } catch (error) {
     throw new Error(redactSecrets(messageOf(error), secrets), {

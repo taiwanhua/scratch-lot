@@ -24,7 +24,7 @@ export const DEMO_ENVIRONMENTS = RESET_ENVIRONMENTS;
 
 /**
  * `create` = 建立 / 補齊示範機構(冪等);`purge` = 清空示範機構;`rebuild` = `purge` + `create`。
- * `purge` / `rebuild` 的執行由 P34 補上:本指令先通過同一個安全閥,再拒絕執行(一筆都不寫也不刪)。
+ * 三種都先過同一個安全閥;`purge` 只清標「示範」的機構(`demo-purge.ts`)。
  */
 export const DEMO_MODES = ["create", "purge", "rebuild"] as const;
 

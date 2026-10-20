@@ -9,7 +9,8 @@ name: Demo
 # (apps/db-migrator/src/demo/demo-safety.ts),缺值或任何一段不符就一筆都不寫。指令不連資料庫,不讀連線字串。
 #
 # 指令全程走該環境 api 的 GraphQL(權限照常檢查、操作紀錄照常寫):root 帳號建立示範機構,
-# 再以示範機構的首任租戶管理員跑專案的 populate。示範密碼與基底信箱經標準輸入(管線)交給指令,不放進環境變數;
+# 再以示範機構的首任租戶管理員跑專案的 populate;purge 以 root 清空標「示範」的機構(rebuild = purge + create)。
+# 示範密碼與基底信箱經標準輸入(管線)交給指令,不放進環境變數(purge 不讀);
 # 讀出的機密一律 ::add-mask::,輸出只有環境、資料庫名、模式與各步驟的結果。
 #
 # 雲端目標、Secret 名稱與 root 帳號不寫在本檔:與 deploy.yml 同一份正本(deploy/project/cloud.json),
