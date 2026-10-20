@@ -55,6 +55,20 @@ export interface OnboardingCashPoint {
   order: number;
 }
 
+/** 開通時建立的乙類(開通清單第 6 點;規格 5.2)。日期 `YYYY-MM-DD`(以租戶時區那一天 00:00 寫入)。 */
+export interface OnboardingClassBDealer {
+  /** 證號 8 碼數字(租戶內唯一;重跑時以它找回,已存在就不動) */
+  licenseNo: string;
+  name: string;
+  /** 身分證字號 */
+  nationalId: string;
+  licenseApprovedOn: string;
+  licenseExpiresOn: string;
+  storeName: string | null;
+  /** 對應分店(名稱,須在 `branches` 內);沒有就 null */
+  branch: string | null;
+}
+
 export interface OnboardingPlan {
   branches: OnboardingBranch[];
   /** 總部是某家分店時填那家店的名稱(須在 `branches` 內);總部就是租戶本身時為 null。 */
@@ -64,6 +78,8 @@ export interface OnboardingPlan {
   positions: OnboardingPosition[];
   /** 開通時建立的收銀點(沒有就空清單)。 */
   cashPoints: OnboardingCashPoint[];
+  /** 乙類與對應分店(選填;沒給 = 這一步略過)。 */
+  classBDealers?: OnboardingClassBDealer[];
 }
 
 const POSITION_VALUE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -229,6 +245,22 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
     cashPoints.map((point) => `${point.branch}/${point.positionKey}`),
     "cashPoints 的分店 + 崗位",
   );
+  const classBDealers =
+    raw.classBDealers === undefined
+      ? undefined
+      : list(raw.classBDealers, "classBDealers").map((dealer, at) =>
+          parseClassBDealer(
+            dealer,
+            `classBDealers[${String(at)}]`,
+            branchNames,
+          ),
+        );
+  if (classBDealers !== undefined) {
+    unique(
+      classBDealers.map((dealer) => dealer.licenseNo),
+      "classBDealers 的 licenseNo",
+    );
+  }
 
   return {
     branches,
@@ -236,5 +268,49 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
     users,
     positions,
     cashPoints,
+    ...(classBDealers === undefined ? {} : { classBDealers }),
+  };
+}
+
+const LICENSE_NO = /^\d{8}$/;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseClassBDealer(
+  raw: unknown,
+  path: string,
+  branches: Set<string>,
+): OnboardingClassBDealer {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const licenseNo = text(raw.licenseNo, `${path}.licenseNo`);
+  if (!LICENSE_NO.test(licenseNo)) {
+    fail(`${path}.licenseNo`, "必須是 8 碼數字");
+  }
+  const date = (key: "licenseApprovedOn" | "licenseExpiresOn") => {
+    const value = text(raw[key], `${path}.${key}`);
+    if (!DATE.test(value)) {
+      fail(`${path}.${key}`, "必須是 YYYY-MM-DD");
+    }
+    return value;
+  };
+  const branch =
+    raw.branch === undefined || raw.branch === null
+      ? null
+      : text(raw.branch, `${path}.branch`);
+  if (branch !== null && !branches.has(branch)) {
+    fail(`${path}.branch`, `的「${branch}」不在 branches 內`);
+  }
+  return {
+    licenseNo,
+    name: text(raw.name, `${path}.name`),
+    nationalId: text(raw.nationalId, `${path}.nationalId`),
+    licenseApprovedOn: date("licenseApprovedOn"),
+    licenseExpiresOn: date("licenseExpiresOn"),
+    storeName:
+      raw.storeName === undefined || raw.storeName === null
+        ? null
+        : text(raw.storeName, `${path}.storeName`),
+    branch,
   };
 }

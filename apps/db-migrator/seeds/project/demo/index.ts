@@ -17,6 +17,7 @@ import type { OnboardingPlan } from "../onboarding/plan";
 import { runOnboarding } from "../onboarding/run-onboarding";
 import { ONBOARDING_STEPS } from "../onboarding/steps";
 import { DEMO_CASH_POINTS } from "./cash-points";
+import { DEMO_CLASS_B_DEALERS } from "./dealers";
 import { demoGamesStep } from "./games";
 import { DEMO_BRANCHES, DEMO_USERS } from "./organization";
 import { DEMO_POSITIONS } from "./positions";
@@ -46,6 +47,7 @@ export function demoPlan(emailBase: string): OnboardingPlan {
     }),
     positions: [...DEMO_POSITIONS],
     cashPoints: [...DEMO_CASH_POINTS],
+    classBDealers: [...DEMO_CLASS_B_DEALERS],
   };
 }
 

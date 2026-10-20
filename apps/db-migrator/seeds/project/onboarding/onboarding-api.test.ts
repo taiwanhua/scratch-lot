@@ -496,7 +496,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       await expect(onboard("demo_lottery", lines)).rejects.toThrow(
         /不是要開通的 demo_lottery/,
       );
-      expect(lines.join("\n")).toMatch(/✗ \[1\/8\] 租戶/);
+      expect(lines.join("\n")).toMatch(/✗ \[1\/9\] 租戶/);
       expect(await auditCount()).toBe(before);
     });
 
@@ -636,8 +636,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       )) as OnboardingStoppedError;
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
-      expect(lines.join("\n")).toMatch(/✗ \[6\/8\] 崗位:.*FORBIDDEN/);
-      expect(lines.join("\n")).toContain("未執行:通知收件人");
+      expect(lines.join("\n")).toMatch(/✗ \[6\/9\] 崗位:.*FORBIDDEN/);
+      expect(lines.join("\n")).toContain("未執行:乙類與對應分店、通知收件人");
 
       const users = await find("users", {
         account: { $in: plan.users.map((user) => user.account) },
@@ -663,6 +663,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(output).toContain("「店長」已存在,權限不覆蓋");
       expect(output).toContain("「中山店店員」已存在");
       expect(output).toContain("建立「櫃台 A」");
+      expect(output).toContain("建立乙類「示範彩券 中山店」,對應「中山店」");
       expect(output).toContain("「證照到期」租戶已調整過收件人,不動");
 
       const writes = await find("audit_logs", {
@@ -675,6 +676,9 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         new Set([
           "field.create",
           "field.set-color",
+          // 乙類與對應分店(經銷商管理):前一次停在「崗位」,這一步重跑時才建
+          "lottery-dealer.create",
+          "lottery-relationship.create",
           "notification-settings.edit",
           // 檔案管理的收銀點排在通知收件人之後,第一次停在崗位時還沒建(遊戲只有示範指令建)
           "lottery-cash-point.create",
