@@ -7,7 +7,15 @@ import { GAME_STATUS } from "../lottery-master-data/games";
  * (`apps/api/src/project/lookup-providers.ts` 的 `portable`,匯出 seed 時進可攜性目錄)讀同一份。
  *
  * - `lottery_game`:只收「只列販售中」(叫貨單、進貨單的明細;專案規格 5.1)
+ * - `lottery_dealer`:只收「甲類」「營業中」(進貨單的批購甲類;規格 8.2)
+ * - `lottery_dealer_contact`:只收「啟用」「受託人」(進貨單的批購受託人;規格 8.2)
+ * - `lottery_bank_account`:只收「使用中」(進貨單的扣款帳戶;規格 8.2)
  */
 export const LOTTERY_PORTABLE_LOOKUP_PROVIDERS = {
   lottery_game: { filters: { status: [GAME_STATUS.onSale] } },
+  lottery_dealer: { filters: { type: ["a"], status: ["active"] } },
+  lottery_dealer_contact: {
+    filters: { status: ["active"], roles: ["trustee"] },
+  },
+  lottery_bank_account: { filters: { status: ["active"] } },
 } as const satisfies Readonly<Record<string, PortableLookupProvider>>;

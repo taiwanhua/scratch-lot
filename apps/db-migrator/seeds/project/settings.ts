@@ -17,6 +17,11 @@ function requisitionColumn(key: string, width: number, order: number) {
   return { kind: "field", key, formKey: "requisition", width, order };
 }
 
+/** 進貨單(`purchase`)的一個表單欄位欄。 */
+function purchaseColumn(key: string, width: number, order: number) {
+  return { kind: "field", key, formKey: "purchase", width, order };
+}
+
 export const projectSeedSettings: ProjectSeedSettings = {
   rootOrg: {
     name: "scratch-lot",
@@ -57,6 +62,23 @@ export const projectSeedSettings: ProjectSeedSettings = {
             requisitionColumn("total_books", 90, 3),
           ],
           builtin: { form: false, status: true, createdBy: true },
+        },
+      },
+    },
+    // 叫貨與進貨 → 進貨單的列表欄位配置(規格 8.2;Figma PU-04):單號、進貨分店、甲類、批購日、扣款金額
+    // + 內建欄「狀態」;點收進度與結算由列表頁另外接(`lotteryPurchaseProgress`)。初始 seed 值,之後由平台管理員調整
+    "purchasing.purchase": {
+      settings: {
+        list: {
+          columns: [
+            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 P-0001)
+            { kind: "slot", key: "serialNo", width: 110, order: 0 },
+            purchaseColumn("branch", 120, 1),
+            purchaseColumn("dealer", 160, 2),
+            purchaseColumn("purchase_date", 110, 3),
+            purchaseColumn("deducted_amount", 110, 4),
+          ],
+          builtin: { form: false, status: true, createdBy: false },
         },
       },
     },
