@@ -2,6 +2,7 @@ import type { ModuleRoleGrants } from "../roles";
 import { accountsGrants } from "./accounts";
 import { baseModuleGrants } from "./base-modules";
 import { dealersGrants } from "./dealers";
+import { inventoryGrants } from "./inventory";
 import { masterDataGrants } from "./master-data";
 import { purchasingGrants } from "./purchasing";
 import { reportsGrants } from "./reports";
@@ -25,4 +26,5 @@ export const ROLE_GRANT_SECTIONS: readonly ModuleRoleGrants[] = [
   scheduleGrants,
   accountsGrants,
   purchasingGrants,
+  inventoryGrants,
 ];

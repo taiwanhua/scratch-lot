@@ -192,7 +192,8 @@ interface ResolvedLedger {
  * - 每張以「`version`(+ 狀態)」條件更新,`version` +1;不符 → `CONFLICT`(「已被處理」),整個交易回復
  * - 事件 id = `<ticketId>:<變動後的版本>`,重送(同 id、同內容)不重複寫入、回 `applied: false`
  * - 鎖定的張只有同一個鎖能動;鎖定 / 解除用 `lockTickets` / `unlockTickets`(用掉一個版本、不寫事件)
- * - 換店走底座的搬家入口 `reassignOrg`;張換店後以租戶邊界上下文重算本的持有分店與所在分店
+ * - 換店走底座的搬家入口 `reassignOrg`;張換店或跳號進出後以租戶邊界上下文重算本的持有分店、
+ *   所在分店與跳號清單(`skippedTicketNos`)
  *
  * 讀寫範圍見 `LedgerContext`:預設照操作者自己的範圍;跨店的例外寫入才用租戶邊界上下文。
  * 權限與業務規則(誰能賣、能不能撤銷)由呼叫端判斷。呼叫端一律先 `TransactionService.withTransaction`。
@@ -386,7 +387,7 @@ export class TicketLedgerService {
   }
 
   /**
-   * 重算本的持有分店;所有可用(非跳號)的張都在同一家店 → 本搬到那家店(整本調貨)。
+   * 重算本的持有分店與跳號清單;所有可用(非跳號)的張都在同一家店 → 本搬到那家店(整本調貨)。
    * 要看整本的張(不只操作者看得到的),所以以這本所在租戶的邊界上下文讀寫(仍記得操作者)。
    */
   private async refreshBookHolders(
@@ -402,18 +403,31 @@ export class TicketLedgerService {
     );
     const tickets = await this.tickets.findMany(
       whole,
-      { bookId, status: { $ne: TICKET_STATUS.skipped } },
-      { select: "orgId", session },
+      { bookId },
+      { select: "orgId status ticketNo", session },
     );
     const holders = new Map<string, Types.ObjectId>();
+    const skippedTicketNos: string[] = [];
     for (const ticket of tickets) {
+      if (ticket.status === TICKET_STATUS.skipped) {
+        skippedTicketNos.push(ticket.ticketNo);
+        continue;
+      }
       holders.set(String(ticket.orgId), ticket.orgId);
     }
     const holderOrgIds = [...holders.values()];
+    // 本的跳號清單跟著張的狀態(拆本標跳號、更正跳號都經帳本,這裡一起重算)
     await this.books.updateById(
       whole,
       bookId,
-      { $set: { holderOrgIds } },
+      {
+        $set: {
+          holderOrgIds,
+          skippedTicketNos: skippedTicketNos.toSorted((a, b) =>
+            a.localeCompare(b),
+          ),
+        },
+      },
       { session },
     );
     const [onlyHolder] = holderOrgIds;

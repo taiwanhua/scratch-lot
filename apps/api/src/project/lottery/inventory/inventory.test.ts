@@ -1,0 +1,1036 @@
+import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import type { Connection, Types } from "mongoose";
+
+import {
+  INVENTORY_MODULE_KEYS,
+  INVENTORY_PERMISSIONS as P,
+  TICKET_EVENT_TYPE,
+  TICKET_LOCATION_KIND,
+  TICKET_STATUS,
+} from "@repo/domain/project/lottery";
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
+
+import {
+  type AuthTestApp,
+  startAuthTestApp,
+} from "../../../auth/test-support/auth-app";
+import {
+  createOrg,
+  createUser,
+  newObjectId,
+} from "../../../auth/test-support/fixtures";
+import type { OperatorContext } from "../../../database/operator-context";
+import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { TransactionService } from "../../../database/transaction";
+import { login } from "../../../demo-items-two/test-support/fixtures";
+import { createRole } from "../../../permission/test-support/fixtures";
+import { PASSWORD, errorOf, ok } from "../test-support/master-data-fixtures";
+import { LotteryBooksService } from "../tickets/books.service";
+import { TicketLedgerService } from "../tickets/ticket-ledger.service";
+import type { TicketEventInput } from "../tickets/ticket-ledger.types";
+
+const BOOK = /* GraphQL */ `
+  query TestInventoryBook($id: ID!) {
+    lotteryInventoryBook(id: $id) {
+      item {
+        book {
+          id
+          bookKey
+          skippedTicketNos
+          requiredSkipCount
+          holdings {
+            org {
+              name
+            }
+            count
+          }
+        }
+        tickets {
+          id
+          ticketNo
+          status
+          version
+        }
+        events {
+          type
+          ticketNos
+          reasonKey
+          reasonNote
+        }
+        cost {
+          cost
+        }
+        investigation {
+          status
+        }
+        abilities {
+          canCorrectSkips
+          canRecover
+          canScrap
+          canShowCost
+        }
+      }
+    }
+  }
+`;
+
+const BOOKS = /* GraphQL */ `
+  query TestInventoryBooks($input: LotteryInventoryBooksInput!) {
+    lotteryInventoryBooks(input: $input) {
+      items {
+        id
+        state
+        remainingCount
+        pendingSkipCount
+      }
+      totalCount
+    }
+  }
+`;
+
+const CORRECT = /* GraphQL */ `
+  mutation TestCorrectSkips($input: CorrectLotterySkippedTicketsInput!) {
+    correctLotterySkippedTickets(input: $input) {
+      count
+    }
+  }
+`;
+
+const RECOVER = /* GraphQL */ `
+  mutation TestRecover($input: RecoverLotteryTicketsInput!) {
+    recoverLotteryTickets(input: $input) {
+      count
+    }
+  }
+`;
+
+const SCRAP = /* GraphQL */ `
+  mutation TestScrap($input: ScrapLotteryTicketsInput!) {
+    scrapLotteryTickets(input: $input) {
+      count
+      lossCost
+    }
+  }
+`;
+
+const ALLOCATIONS = /* GraphQL */ `
+  query TestAllocations($input: LotteryAllocationsInput!) {
+    lotteryAllocations(input: $input) {
+      stores {
+        id
+        name
+      }
+      games {
+        id
+      }
+      cells {
+        orgId
+        gameId
+        plannedBooks
+        givenBooks
+        givenExtraTickets
+      }
+      canEdit
+    }
+  }
+`;
+
+const SET_ALLOCATION = /* GraphQL */ `
+  mutation TestSetAllocation($input: SetLotteryAllocationInput!) {
+    setLotteryAllocation(input: $input) {
+      item {
+        plannedBooks
+        givenBooks
+      }
+    }
+  }
+`;
+
+const LOOKUP = /* GraphQL */ `
+  query TestLookup($input: LotteryTicketLookupInput!) {
+    lotteryTicketLookup(input: $input) {
+      items {
+        bookId
+        ticketNo
+        status
+      }
+    }
+  }
+`;
+
+const INVESTIGATIONS = /* GraphQL */ `
+  query TestInvestigations {
+    lotteryInvestigations {
+      items {
+        bookId
+        status
+        cost
+        responsibleOrg {
+          name
+        }
+        tickets {
+          ticketNo
+        }
+      }
+      canRecover
+    }
+  }
+`;
+
+const STOCK = /* GraphQL */ `
+  query TestStock($input: LotteryStockOverviewInput!) {
+    lotteryStockOverview(input: $input) {
+      items {
+        org {
+          name
+        }
+        unopenedBooks
+        counterTickets
+        soldTickets
+      }
+    }
+  }
+`;
+
+interface TicketView {
+  id: string;
+  ticketNo: string;
+  status: string;
+  version: number;
+}
+
+interface BookData {
+  lotteryInventoryBook: {
+    item: {
+      book: {
+        id: string;
+        bookKey: string;
+        skippedTicketNos: string[];
+        requiredSkipCount: number;
+        holdings: { org: { name: string }; count: number }[];
+      };
+      tickets: TicketView[];
+      events: {
+        type: string;
+        ticketNos: string[];
+        reasonKey: string | null;
+        reasonNote: string | null;
+      }[];
+      cost: { cost: number } | null;
+      investigation: { status: string } | null;
+      abilities: {
+        canCorrectSkips: boolean;
+        canRecover: boolean;
+        canScrap: boolean;
+        canShowCost: boolean;
+      };
+    };
+  };
+}
+
+interface AllocationsData {
+  lotteryAllocations: {
+    stores: { id: string; name: string }[];
+    games: { id: string }[];
+    cells: {
+      orgId: string;
+      gameId: string;
+      plannedBooks: number | null;
+      givenBooks: number;
+      givenExtraTickets: number;
+    }[];
+    canEdit: boolean;
+  };
+}
+
+function baseFields(now: Date): Record<string, unknown> {
+  return {
+    createdAt: now,
+    updatedAt: now,
+    createdBy: null,
+    updatedBy: null,
+    deletedAt: null,
+  };
+}
+
+/** 庫存管理的模組樹與權限(形狀同 seed `seeds/project/inventory.ts`;只寫進隔離的測試資料庫)。 */
+async function seedInventoryAuthorization(connection: Connection) {
+  const now = new Date();
+  const modules = connection.collection("modules");
+  const { insertedId: listId } = await modules.insertOne({
+    key: INVENTORY_MODULE_KEYS.list,
+    name: "庫存管理",
+    parentId: null,
+    ancestors: [],
+    route: "inventory",
+    sidebarType: "link",
+    order: 20,
+    enabled: true,
+    isSystem: false,
+    icon: null,
+    settings: {},
+    engine: "fixed",
+    ...baseFields(now),
+  });
+  await modules.insertOne({
+    key: INVENTORY_MODULE_KEYS.bookPage,
+    name: "本的詳情",
+    parentId: listId,
+    ancestors: [listId],
+    route: "book-page",
+    sidebarType: "hidden",
+    order: 1,
+    enabled: true,
+    isSystem: false,
+    icon: null,
+    settings: {},
+    engine: "fixed",
+    ...baseFields(now),
+  });
+  await connection.collection("permissions").insertMany(
+    Object.values(P).map((key) => ({
+      key,
+      moduleId: listId,
+      name: key,
+      enabled: true,
+      isSystem: false,
+      settings: {},
+      source: "seed",
+      retiredAt: null,
+      ...baseFields(now),
+    })),
+  );
+}
+
+/** 三個原因類別(全域),各有一個選項與「其他」。 */
+async function seedReasonCategories(connection: Connection) {
+  const now = new Date();
+  for (const key of [
+    LOTTERY_FIELD_CATEGORY_KEYS.skipCorrectionReason,
+    LOTTERY_FIELD_CATEGORY_KEYS.recoverReason,
+    LOTTERY_FIELD_CATEGORY_KEYS.scrapReason,
+  ]) {
+    const { insertedId: categoryId } = await connection
+      .collection("field_categories")
+      .insertOne({
+        key,
+        name: key,
+        isSystem: true,
+        enabled: true,
+        ...baseFields(now),
+      });
+    await connection.collection("fields").insertMany(
+      [
+        { value: "mistake", label: "標註錯誤" },
+        { value: "other", label: "其他" },
+      ].map((option, index) => ({
+        ...option,
+        key: `${key}.${option.value}`,
+        categoryId,
+        orgId: null,
+        order: index + 1,
+        enabled: true,
+        isSystem: true,
+        ...baseFields(now),
+      })),
+    );
+  }
+}
+
+let accountSequence = 0;
+
+/** 選到的張與讀到的版本(尋回 / 報廢的輸入)。 */
+function versionsOf(tickets: readonly TicketView[], nos: string[]) {
+  return tickets
+    .filter((ticket) => nos.includes(ticket.ticketNo))
+    .map((ticket) => ({ ticketId: ticket.id, version: ticket.version }));
+}
+
+/**
+ * 庫存管理(專案規格 7.3、7.4、7.6):打真的 GraphQL 端點、對真 MongoDB(TEST-07)。
+ * 張與本由帳本 / 本的服務直接建(進貨點收、拆本標跳號、待查是別的功能的入口)。
+ *
+ * 組織樹:root ─ 租戶甲(含下層可見)─┬─ 中山店
+ *                                  ├─ 新竹店
+ *                                  └─ 台中店
+ */
+describe("庫存管理(GraphQL 端點 + 真 MongoDB)", () => {
+  let api: AuthTestApp;
+  let tenant: Types.ObjectId;
+  let storeA: Types.ObjectId;
+  let storeB: Types.ObjectId;
+  let storeC: Types.ObjectId;
+  /** 只用在庫存概況的店(沒有別的測試動它)。 */
+  let storeD: Types.ObjectId;
+  let gameId: Types.ObjectId;
+  /** 總部:庫存管理全部。 */
+  let hq: string;
+  /** 中山店店長:除了 edit-allocations 全部。 */
+  let managerA: string;
+  /** 新竹店店長:同上。 */
+  let managerB: string;
+  /** 台中店店長:同上。 */
+  let managerC: string;
+  /** 中山店、只有報廢(沒有顯示成本、沒有更正跳號)。 */
+  let scrapOnly: string;
+  /** 中山店、沒綁庫存管理。 */
+  let outsider: string;
+  let bookSequence = 300_000;
+
+  const transactions = () => api.app.get(TransactionService);
+  const ledger = () => api.app.get(TicketLedgerService);
+
+  /** 分店人員的操作者上下文(帳本 / 本的服務用;權限由呼叫端判斷)。 */
+  function storeOperator(orgId: Types.ObjectId): OperatorContext {
+    return {
+      actorId: newObjectId(),
+      currentOrgId: orgId,
+      visibleOrgIds: [orgId],
+      managedOrgIds: [],
+      memberOrgIds: [orgId],
+      roleIds: [],
+      memberTenants: [
+        { tenantId: tenant, memberOrgIds: [orgId], ancestorOrgIds: [tenant] },
+      ],
+    };
+  }
+
+  async function operatorToken(
+    orgId: Types.ObjectId,
+    permissionKeys: readonly string[],
+    withModule = true,
+  ): Promise<string> {
+    accountSequence += 1;
+    const account = `inventory-${String(accountSequence)}`;
+    const userId = await createUser(api.connection, {
+      account,
+      password: PASSWORD,
+      orgIds: [orgId],
+    });
+    await createRole(api.app, api.connection, {
+      name: `庫存管理角色:${account}`,
+      ownerOrgId: tenant,
+      moduleKeys: withModule
+        ? [INVENTORY_MODULE_KEYS.list, INVENTORY_MODULE_KEYS.bookPage]
+        : [],
+      permissionKeys: [...permissionKeys],
+      assignTo: [userId],
+    });
+    return login(api, account, PASSWORD);
+  }
+
+  /** 點收一本到某家店(標準 100 張,成本 18,400 → 單張 184)。 */
+  async function receiveBook(
+    orgId: Types.ObjectId,
+    lastTicketNo = 100,
+  ): Promise<Types.ObjectId> {
+    bookSequence += 1;
+    const { book } = await transactions().withTransaction((session) =>
+      api.app
+        .get(LotteryBooksService)
+        .createBook(session, storeOperator(orgId), {
+          orgId,
+          gameId,
+          bookNo: String(bookSequence).padStart(6, "0"),
+          lastTicketNo,
+          rate: 92,
+          cost: 18_400,
+        }),
+    );
+    return book._id;
+  }
+
+  async function ticketsOf(bookId: Types.ObjectId) {
+    return api.connection
+      .collection<{
+        _id: Types.ObjectId;
+        orgId: Types.ObjectId;
+        ticketNo: string;
+        status: string;
+        version: number;
+        unitCost: number;
+        responsibleOrgId: Types.ObjectId | null;
+        location: { kind: string };
+      }>("lottery_tickets")
+      .find({ bookId })
+      .sort({ ticketNo: 1 })
+      .toArray();
+  }
+
+  async function ticketOf(bookId: Types.ObjectId, ticketNo: string) {
+    const all = await ticketsOf(bookId);
+    return all.find((ticket) => ticket.ticketNo === ticketNo);
+  }
+
+  /** 以帳本寫一批事件(店裡的人、自己的範圍)。 */
+  async function apply(
+    orgId: Types.ObjectId,
+    bookId: Types.ObjectId,
+    ticketNos: readonly string[],
+    event: Pick<TicketEventInput, "type" | "patch">,
+  ): Promise<void> {
+    const all = await ticketsOf(bookId);
+    const tickets = all.filter((ticket) => ticketNos.includes(ticket.ticketNo));
+    await transactions().withTransaction((session) =>
+      ledger().applyTicketEvents(
+        session,
+        { operator: storeOperator(orgId) },
+        tickets.map((ticket) => ({
+          ticketId: ticket._id,
+          expectedVersion: ticket.version,
+          ...event,
+        })),
+      ),
+    );
+  }
+
+  const bookOf = (bookId: Types.ObjectId, token = hq) =>
+    ok<BookData>(api, token, BOOK, { id: String(bookId) }).then(
+      (data) => data.lotteryInventoryBook.item,
+    );
+
+  beforeAll(async () => {
+    api = await startAuthTestApp("scratch-lot-test-lottery-inventory");
+    await seedInventoryAuthorization(api.connection);
+    await seedReasonCategories(api.connection);
+    tenant = await createOrg(api.connection, {
+      name: "租戶甲",
+      settings: { visibility: "subtree" },
+    });
+    storeA = await createOrg(api.connection, {
+      name: "中山店",
+      parentId: tenant,
+    });
+    storeB = await createOrg(api.connection, {
+      name: "新竹店",
+      parentId: tenant,
+    });
+    storeC = await createOrg(api.connection, {
+      name: "台中店",
+      parentId: tenant,
+    });
+    storeD = await createOrg(api.connection, {
+      name: "高雄店",
+      parentId: tenant,
+    });
+    const now = new Date();
+    ({ insertedId: gameId } = await api.connection
+      .collection("lottery_games")
+      .insertOne({
+        orgId: tenant,
+        tenantId: tenant,
+        moduleKey: "master-data",
+        shareOrgs: [{ orgId: tenant, includeDescendants: true }],
+        gameCode: "5164",
+        name: "發大財",
+        unitPrice: 200,
+        ticketsPerBook: 100,
+        bookPrice: 20_000,
+        defaultRate: 92,
+        color: null,
+        status: "on_sale",
+        ...baseFields(now),
+      }));
+    const manager = [P.markSkipped, P.recover, P.scrap, P.showCost];
+    hq = await operatorToken(tenant, Object.values(P));
+    managerA = await operatorToken(storeA, manager);
+    managerB = await operatorToken(storeB, manager);
+    managerC = await operatorToken(storeC, manager);
+    scrapOnly = await operatorToken(storeA, [P.scrap]);
+    outsider = await operatorToken(storeA, Object.values(P), false);
+  }, HOOK_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await api.close();
+  }, HOOK_TIMEOUT_MS);
+
+  describe("更正跳號(規格 7.3)", () => {
+    let bookId: Types.ObjectId;
+
+    beforeAll(async () => {
+      // 迄號 102、標準 100 → 待標註 2 張;拆本時標了 #037、#064
+      bookId = await receiveBook(storeA, 102);
+      await apply(storeA, bookId, ["037", "064"], {
+        type: TICKET_EVENT_TYPE.skip,
+        patch: { status: TICKET_STATUS.skipped },
+      });
+    });
+
+    it("改完張數 ≠ 待標註 → 擋下(SKIP_COUNT_MISMATCH)", async () => {
+      const extensions = await errorOf(api, managerA, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037"],
+          reasonKey: "mistake",
+        },
+      });
+      expect(extensions).toMatchObject({
+        code: "VALIDATION_FAILED",
+        reason: "SKIP_COUNT_MISMATCH",
+      });
+    });
+
+    it("沒有更動 → 擋下(SKIP_UNCHANGED)", async () => {
+      const extensions = await errorOf(api, managerA, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037", "064"],
+          reasonKey: "mistake",
+        },
+      });
+      expect(extensions).toMatchObject({ reason: "SKIP_UNCHANGED" });
+    });
+
+    it("原因必填;選「其他」要填說明", async () => {
+      const input = { bookId: String(bookId), ticketNos: ["037", "065"] };
+      expect(
+        await errorOf(api, managerA, CORRECT, {
+          input: { ...input, reasonKey: "" },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonKey"] });
+      expect(
+        await errorOf(api, managerA, CORRECT, {
+          input: { ...input, reasonKey: "other" },
+        }),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["reasonNote"] });
+    });
+
+    it("沒有 mark-skipped → FORBIDDEN;詳情頁沒有 [更正跳號]", async () => {
+      const extensions = await errorOf(api, scrapOnly, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037", "065"],
+          reasonKey: "mistake",
+        },
+      });
+      expect(extensions).toMatchObject({ code: "FORBIDDEN" });
+      const detail = await bookOf(bookId, scrapOnly);
+      expect(detail.abilities.canCorrectSkips).toBe(false);
+    });
+
+    it("#064 → #065:時間軸出現「取消跳號」+「跳號」,本的跳號清單跟著改", async () => {
+      await ok(api, managerA, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037", "065"],
+          reasonKey: "other",
+          reasonNote: "拆本時點錯格",
+        },
+      });
+      const detail = await bookOf(bookId, managerA);
+      expect(detail.book.skippedTicketNos).toEqual(["037", "065"]);
+      expect(detail.events.slice(0, 2)).toEqual(
+        expect.arrayContaining([
+          {
+            type: TICKET_EVENT_TYPE.unskip,
+            ticketNos: ["064"],
+            reasonKey: "other",
+            reasonNote: "拆本時點錯格",
+          },
+          {
+            type: TICKET_EVENT_TYPE.skip,
+            ticketNos: ["065"],
+            reasonKey: "other",
+            reasonNote: "拆本時點錯格",
+          },
+        ]),
+      );
+      const statusOf = (no: string) =>
+        detail.tickets.find((ticket) => ticket.ticketNo === no)?.status;
+      expect(statusOf("064")).toBe(TICKET_STATUS.unsold);
+      expect(statusOf("065")).toBe(TICKET_STATUS.skipped);
+    });
+
+    it("新標的跳號要是未售(已售 → TICKET_STATUS_NOT_ALLOWED)", async () => {
+      await apply(storeA, bookId, ["070"], {
+        type: TICKET_EVENT_TYPE.sale,
+        patch: { status: TICKET_STATUS.sold },
+      });
+      const extensions = await errorOf(api, managerA, CORRECT, {
+        input: {
+          bookId: String(bookId),
+          ticketNos: ["037", "070"],
+          reasonKey: "mistake",
+        },
+      });
+      expect(extensions).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+    });
+  });
+
+  describe("尋回(規格 7.4)", () => {
+    it("待查 → 回到刷到那家店的庫存、清掉責任分店", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["071"], {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      // 新竹店刷到這張(張還在中山店、新竹店看不到這本)
+      const lookup = await ok<{
+        lotteryTicketLookup: {
+          items: { bookId: string; ticketNo: string; status: string }[];
+        };
+      }>(api, hq, LOOKUP, {
+        input: {
+          gameCode: "5164",
+          bookNo: String(bookSequence),
+          ticketNo: "071",
+        },
+      });
+      expect(lookup.lotteryTicketLookup.items).toEqual([
+        { bookId: String(bookId), ticketNo: "071", status: "investigating" },
+      ]);
+      const ticket = await ticketOf(bookId, "071");
+      await ok(api, managerB, RECOVER, {
+        input: {
+          tickets: [
+            { ticketId: String(ticket?._id), version: ticket?.version },
+          ],
+          orgId: String(storeB),
+          reasonKey: "mistake",
+        },
+      });
+      const after = await ticketOf(bookId, "071");
+      expect(after).toMatchObject({
+        status: TICKET_STATUS.unsold,
+        location: { kind: TICKET_LOCATION_KIND.stock },
+        responsibleOrgId: null,
+      });
+      expect(after?.orgId.equals(storeB)).toBe(true);
+      // 新竹店持有 1 張 → 讀得到這本(讀取放行)
+      const detail = await bookOf(bookId, managerB);
+      expect(detail.book.holdings).toEqual(
+        expect.arrayContaining([{ org: { name: "新竹店" }, count: 1 }]),
+      );
+      expect(detail.events[0]).toMatchObject({
+        type: TICKET_EVENT_TYPE.recover,
+        ticketNos: ["071"],
+      });
+    });
+
+    it("遺失也能尋回;未售的不能尋回(TICKET_STATUS_NOT_ALLOWED)", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["010"], {
+        type: TICKET_EVENT_TYPE.lose,
+        patch: { status: TICKET_STATUS.lost, responsibleOrgId: storeA },
+      });
+      const detail = await bookOf(bookId, managerA);
+      const unsold = await errorOf(api, managerA, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["011"]),
+          orgId: String(storeA),
+          reasonKey: "mistake",
+        },
+      });
+      expect(unsold).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+      await ok(api, managerA, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["010"]),
+          orgId: String(storeA),
+          reasonKey: "mistake",
+        },
+      });
+      const after = await ticketOf(bookId, "010");
+      expect(after?.status).toBe(TICKET_STATUS.unsold);
+    });
+
+    it("回到的分店要在自己的可見範圍內", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["001"], {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      const detail = await bookOf(bookId, managerA);
+      const extensions = await errorOf(api, managerA, RECOVER, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["001"]),
+          orgId: String(storeB),
+          reasonKey: "mistake",
+        },
+      });
+      expect(extensions).toMatchObject({ code: "NOT_FOUND" });
+    });
+
+    it("整本待查 → 狀態列;待查·遺失分頁列出(責任分店、批購成本)", async () => {
+      const bookId = await receiveBook(storeA);
+      const rows = await ticketsOf(bookId);
+      const all = rows.map((ticket) => ticket.ticketNo);
+      await apply(storeA, bookId, all, {
+        type: TICKET_EVENT_TYPE.investigate,
+        patch: {
+          status: TICKET_STATUS.investigating,
+          responsibleOrgId: storeA,
+        },
+      });
+      const detail = await bookOf(bookId, managerA);
+      expect(detail.investigation).toEqual({ status: "investigating" });
+      const list = await ok<{
+        lotteryInvestigations: {
+          items: {
+            bookId: string;
+            status: string;
+            cost: number | null;
+            responsibleOrg: { name: string } | null;
+            tickets: { ticketNo: string }[];
+          }[];
+          canRecover: boolean;
+        };
+      }>(api, managerA, INVESTIGATIONS);
+      const row = list.lotteryInvestigations.items.find(
+        (item) => item.bookId === String(bookId),
+      );
+      expect(row).toMatchObject({
+        status: "investigating",
+        cost: 18_400,
+        responsibleOrg: { name: "中山店" },
+      });
+      expect(row?.tickets).toHaveLength(100);
+      expect(list.lotteryInvestigations.canRecover).toBe(true);
+    });
+  });
+
+  describe("報廢(規格 7.4)", () => {
+    it("只能報未售;損失 = 單張成本加總(批購成本);張保留單張成本給報表", async () => {
+      const bookId = await receiveBook(storeA);
+      await apply(storeA, bookId, ["001"], {
+        type: TICKET_EVENT_TYPE.sale,
+        patch: { status: TICKET_STATUS.sold },
+      });
+      const detail = await bookOf(bookId, managerA);
+      const sold = await errorOf(api, managerA, SCRAP, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["001", "090"]),
+          reasonKey: "mistake",
+        },
+      });
+      expect(sold).toMatchObject({ reason: "TICKET_STATUS_NOT_ALLOWED" });
+      const result = await ok<{
+        scrapLotteryTickets: { count: number; lossCost: number | null };
+      }>(api, managerA, SCRAP, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["090", "091", "092"]),
+          reasonKey: "mistake",
+        },
+      });
+      expect(result.scrapLotteryTickets).toEqual({ count: 3, lossCost: 552 });
+      const rows = await ticketsOf(bookId);
+      const scrapped = rows.filter(
+        (ticket) => ticket.status === TICKET_STATUS.scrapped,
+      );
+      expect(scrapped.map((ticket) => ticket.ticketNo)).toEqual([
+        "090",
+        "091",
+        "092",
+      ]);
+      // 報表(P29)的報廢損失 = 報廢的張的單張成本加總
+      expect(
+        Math.round(scrapped.reduce((sum, ticket) => sum + ticket.unitCost, 0)),
+      ).toBe(552);
+      const events = await api.connection
+        .collection("lottery_ticket_events")
+        .countDocuments({ bookId, type: TICKET_EVENT_TYPE.scrap });
+      expect(events).toBe(3);
+    });
+
+    it("沒有 show-cost:損失與成本不回;沒有 recover 看不到 [尋回]", async () => {
+      const bookId = await receiveBook(storeA);
+      const detail = await bookOf(bookId, scrapOnly);
+      expect(detail.cost).toBeNull();
+      expect(detail.abilities).toEqual({
+        canCorrectSkips: false,
+        canRecover: false,
+        canScrap: true,
+        canShowCost: false,
+      });
+      const result = await ok<{
+        scrapLotteryTickets: { lossCost: number | null };
+      }>(api, scrapOnly, SCRAP, {
+        input: {
+          tickets: versionsOf(detail.tickets, ["001"]),
+          reasonKey: "mistake",
+        },
+      });
+      expect(result.scrapLotteryTickets.lossCost).toBeNull();
+      const withCost = await bookOf(bookId, managerA);
+      expect(withCost.cost).toEqual({ cost: 18_400 });
+    });
+  });
+
+  describe("讀取放行(規格 7.1)", () => {
+    it("B 店持有 A 店某本的 1 張 → B 店讀得到那本詳情;C 店讀不到", async () => {
+      const bookId = await receiveBook(storeA);
+      const [moving] = await ticketsOf(bookId);
+      if (!moving) {
+        throw new Error("沒有張");
+      }
+      await transactions().withTransaction((session) =>
+        ledger().applyTicketEvents(
+          session,
+          { operator: storeOperator(storeB), crossStoreTenantId: tenant },
+          [
+            {
+              ticketId: moving._id,
+              expectedVersion: moving.version,
+              type: TICKET_EVENT_TYPE.transferIn,
+              patch: {
+                orgId: storeB,
+                location: {
+                  kind: TICKET_LOCATION_KIND.stock,
+                  cashPointId: null,
+                },
+              },
+            },
+          ],
+        ),
+      );
+      const detail = await bookOf(bookId, managerB);
+      expect(detail.book.id).toBe(String(bookId));
+      expect(detail.tickets).toHaveLength(100);
+      expect(
+        await errorOf(api, managerC, BOOK, { id: String(bookId) }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      // 庫存分頁:新竹店篩得到這本
+      const books = await ok<{
+        lotteryInventoryBooks: { items: { id: string }[] };
+      }>(api, managerB, BOOKS, { input: { orgId: String(storeB) } });
+      expect(
+        books.lotteryInventoryBooks.items.map((item) => item.id),
+      ).toContain(String(bookId));
+    });
+
+    it("沒綁庫存管理 → FORBIDDEN", async () => {
+      expect(await errorOf(api, outsider, BOOKS, { input: {} })).toMatchObject({
+        code: "FORBIDDEN",
+      });
+    });
+  });
+
+  describe("預計要給本數(規格 7.6)", () => {
+    it("改數字寫 audit_log;矩陣、遊戲詳情、乙類詳情讀同一份", async () => {
+      const result = await ok<{
+        setLotteryAllocation: {
+          item: { plannedBooks: number; givenBooks: number };
+        };
+      }>(api, hq, SET_ALLOCATION, {
+        input: {
+          orgId: String(storeC),
+          gameId: String(gameId),
+          plannedBooks: 8,
+          note: "週年慶",
+        },
+      });
+      expect(result.setLotteryAllocation.item.plannedBooks).toBe(8);
+      const audits = await api.connection
+        .collection("audit_logs")
+        .countDocuments({ action: "lottery-allocation.edit" });
+      expect(audits).toBe(1);
+      const cellOf = (data: AllocationsData) =>
+        data.lotteryAllocations.cells.find(
+          (cell) =>
+            cell.orgId === String(storeC) && cell.gameId === String(gameId),
+        );
+      for (const input of [
+        {},
+        { gameId: String(gameId) },
+        { orgId: String(storeC) },
+      ]) {
+        const data = await ok<AllocationsData>(api, hq, ALLOCATIONS, { input });
+        expect(cellOf(data)?.plannedBooks).toBe(8);
+        expect(data.lotteryAllocations.canEdit).toBe(true);
+      }
+    });
+
+    it("沒有 edit-allocations:三處都唯讀(canEdit = false),修改 → FORBIDDEN", async () => {
+      for (const input of [
+        {},
+        { gameId: String(gameId) },
+        { orgId: String(storeA) },
+      ]) {
+        const data = await ok<AllocationsData>(api, managerA, ALLOCATIONS, {
+          input,
+        });
+        expect(data.lotteryAllocations.canEdit).toBe(false);
+      }
+      expect(
+        await errorOf(api, managerA, SET_ALLOCATION, {
+          input: {
+            orgId: String(storeA),
+            gameId: String(gameId),
+            plannedBooks: 3,
+          },
+        }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+    });
+
+    it("已給 = 進貨本數;分店只列看得到的", async () => {
+      const data = await ok<AllocationsData>(api, managerA, ALLOCATIONS, {
+        input: {},
+      });
+      expect(data.lotteryAllocations.stores.map((store) => store.name)).toEqual(
+        ["中山店"],
+      );
+      const cell = data.lotteryAllocations.cells.find(
+        (item) => item.orgId === String(storeA),
+      );
+      expect(cell?.givenBooks).toBeGreaterThan(0);
+    });
+  });
+
+  describe("庫存概況(遊戲詳情 5.1、乙類詳情 5.2)", () => {
+    it("未拆(本)/ 檯面(張)/ 已售(張)", async () => {
+      const store = storeD;
+      const opened = await receiveBook(store);
+      await receiveBook(store);
+      await apply(store, opened, ["001", "002", "003"], {
+        type: TICKET_EVENT_TYPE.open,
+        patch: {
+          location: { kind: TICKET_LOCATION_KIND.counter, cashPointId: null },
+        },
+      });
+      await apply(store, opened, ["001"], {
+        type: TICKET_EVENT_TYPE.sale,
+        patch: { status: TICKET_STATUS.sold },
+      });
+      const data = await ok<{
+        lotteryStockOverview: {
+          items: {
+            org: { name: string };
+            unopenedBooks: number;
+            counterTickets: number;
+            soldTickets: number;
+          }[];
+        };
+      }>(api, hq, STOCK, { input: { orgId: String(store) } });
+      expect(data.lotteryStockOverview.items).toEqual([
+        {
+          org: { name: "高雄店" },
+          unopenedBooks: 1,
+          counterTickets: 2,
+          soldTickets: 1,
+        },
+      ]);
+    });
+  });
+
+  it("庫存分頁:狀態篩選(未拆 / 有待標註)", async () => {
+    const pending = await receiveBook(storeC, 103);
+    const data = await ok<{
+      lotteryInventoryBooks: {
+        items: { id: string; state: string; pendingSkipCount: number }[];
+      };
+    }>(api, managerC, BOOKS, { input: { state: "pending_skip" } });
+    expect(data.lotteryInventoryBooks.items).toEqual([
+      {
+        id: String(pending),
+        state: "unopened",
+        pendingSkipCount: 3,
+        remainingCount: 103,
+      },
+    ]);
+  });
+});

@@ -51,6 +51,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/tickets/allocations.service.ts": ["反查"],
   // 遊戲是否有本引用:沒有操作者,問的是整個租戶
   "project/lottery/tickets/book-game-usage.ts": ["系統重算"],
+  // 庫存管理:看得到本就看得到它全部的張與事件(格子、時間軸、各分店持有)
+  "project/lottery/inventory/inventory-view.service.ts": ["反查"],
+  // 庫存管理:分店與使用者名稱、組織樹(分店可能不在讀者的可見範圍)
+  "project/lottery/inventory/inventory-names.ts": ["反查"],
+  // 尋回:刷到的張可能還在別的分店(先讀狀態;寫入經帳本的跨店寫入)
+  "project/lottery/inventory/inventory-actions.service.ts": ["反查"],
   // 看得到帳戶 / 單據 / 交易,就看得到它掛的分店名稱與登記人(使用組織可能是讀者看不到的組織)
   "project/lottery/accounts/account-names.ts": ["反查"],
   // 看得到帳戶就看得到它的交易(交易可能是別家分店登記的);存入被沖正時連結的存銀行流水自動反向

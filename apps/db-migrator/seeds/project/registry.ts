@@ -10,6 +10,7 @@ import {
   projectFieldOptionColors,
   projectFields,
 } from "./field-categories";
+import { inventoryModule } from "./inventory";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { reportsModule } from "./reports";
@@ -42,6 +43,8 @@ export const projectSeedSource: SeedSource = {
     accountsModule,
     // 叫貨與進貨群組 + 叫貨、採購單(規格 3.1、3.2、8.1)
     ...purchasingModuleDeclarations,
+    // 庫存管理(專案規格第 7 章)
+    inventoryModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲)
   portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,

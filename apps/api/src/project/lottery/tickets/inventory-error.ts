@@ -15,6 +15,14 @@ export const INVENTORY_REASONS = {
   bookKeyDuplicate: "BOOK_KEY_DUPLICATE",
   /** 迄號不在「標準張數 ~ 999」之間 */
   lastTicketNoOutOfRange: "LAST_TICKET_NO_OUT_OF_RANGE",
+  /** 更正跳號:這本沒有跳號(跳號在拆本時標註) */
+  noSkippedTickets: "NO_SKIPPED_TICKETS",
+  /** 更正跳號:改完的張數不等於待標註張數,或張號不在這本 */
+  skipCountMismatch: "SKIP_COUNT_MISMATCH",
+  /** 更正跳號:跟目前的跳號一樣 */
+  skipUnchanged: "SKIP_UNCHANGED",
+  /** 這個狀態的張不能做這件事(例:報廢只能報未售、尋回只能尋待查 / 遺失、新標的跳號要是未售) */
+  ticketStatusNotAllowed: "TICKET_STATUS_NOT_ALLOWED",
 } as const;
 
 export type InventoryReason =
