@@ -1,5 +1,7 @@
 import type { DatabaseRegistration } from "../../database/registration";
 import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registration";
+import { LOTTERY_CASH_POINTS_REGISTRATION } from "./lottery-cash-points/registration";
+import { LOTTERY_GAMES_REGISTRATION } from "./lottery-games/registration";
 
 /**
  * 專案的資料登記(docs/concepts/data-layer-and-isolation.md「底座與專案資料的組裝」)。
@@ -11,4 +13,6 @@ import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registra
  */
 export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
   FIELD_OPTION_COLORS_REGISTRATION,
+  LOTTERY_GAMES_REGISTRATION,
+  LOTTERY_CASH_POINTS_REGISTRATION,
 ];

@@ -168,6 +168,16 @@
         "types": "./dist/cjs/project/tag-palette.d.cts",
         "default": "./dist/cjs/project/tag-palette.cjs"
       }
+    },
+    "./project/lottery-master-data": {
+      "import": {
+        "types": "./dist/es/project/lottery-master-data.d.ts",
+        "default": "./dist/es/project/lottery-master-data.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/lottery-master-data.d.cts",
+        "default": "./dist/cjs/project/lottery-master-data.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -219,6 +229,9 @@
       ],
       "project/tag-palette": [
         "./dist/es/project/tag-palette.d.ts"
+      ],
+      "project/lottery-master-data": [
+        "./dist/es/project/lottery-master-data.d.ts"
       ]
     }
   },

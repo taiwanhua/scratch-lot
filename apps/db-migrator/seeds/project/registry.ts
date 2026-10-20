@@ -6,6 +6,7 @@ import {
   projectFieldOptionColors,
   projectFields,
 } from "./field-categories";
+import { masterDataModule } from "./master-data";
 
 /**
  * 專案的種子來源(正本:ADR-0002)。專案新增的內容登記在這裡,不改 `seeds/base/`:
@@ -19,7 +20,10 @@ import {
  * 與底座撞 key 不會靜默覆蓋:組裝時直接拒絕。
  */
 export const projectSeedSource: SeedSource = {
-  moduleDeclarations: [],
+  moduleDeclarations: [
+    // 檔案管理(專案規格 5.1、5.5)
+    masterDataModule,
+  ],
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
     projectFieldCategories,

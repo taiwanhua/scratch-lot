@@ -161,8 +161,7 @@ describe("專案欄位管理類別的宣告(第 13 章)", () => {
     ]).toEqual(["customer-return", "scan-failed", "system-backfill"]);
   });
 
-  it("登記在專案種子來源(不宣告任何模組)", () => {
-    expect(projectSeedSource.moduleDeclarations).toEqual([]);
+  it("登記在專案種子來源", () => {
     const collections = projectSeedSource.seeds.map((set) =>
       set.kind === "documents" ? set.collection : set.kind,
     );

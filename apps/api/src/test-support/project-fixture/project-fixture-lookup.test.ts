@@ -76,18 +76,13 @@ jest.mock("../../project/database/registrations", () => {
     ],
   };
 });
+// lookup 來源只放測試專案的(不併入引用專案自己登記的來源):來源清單的斷言要與專案無關
 jest.mock("../../project/lookup-providers", () => {
-  const actual = jest.requireActual<
-    typeof import("../../project/lookup-providers")
-  >("../../project/lookup-providers");
   const fixture = jest.requireActual<typeof import("./project-fixture-lookup")>(
     "./project-fixture-lookup",
   );
   return {
-    PROJECT_LOOKUP_PROVIDERS: [
-      ...actual.PROJECT_LOOKUP_PROVIDERS,
-      ...fixture.PROJECT_FIXTURE_LOOKUP_PROVIDERS,
-    ],
+    PROJECT_LOOKUP_PROVIDERS: fixture.PROJECT_FIXTURE_LOOKUP_PROVIDERS,
   };
 });
 

@@ -228,6 +228,29 @@ input CreateFormVersionDraftInput {
   formKey: ID!
 }
 
+input CreateLotteryCashPointInput {
+  name: String!
+  note: String
+  order: Int
+  orgId: ID!
+  positionKey: String!
+  printerId: ID
+}
+
+input CreateLotteryGameInput {
+  claimDeadline: DateTime
+  color: String
+  defaultRate: Int!
+  discontinuedAt: DateTime
+  gameCode: String!
+  launchedAt: DateTime
+  name: String!
+  note: String
+  status: String
+  ticketsPerBook: Int!
+  unitPrice: Int!
+}
+
 input CreateMyDelegationInput {
   delegateUserId: ID!
   endAt: DateTime!
@@ -411,6 +434,15 @@ type DeleteFormSubmissionPayload {
 input DeleteFormVersionDraftInput {
   expectedDraftRevision: Int!
   formKey: ID!
+}
+
+input DeleteLotteryGameInput {
+  id: ID!
+}
+
+type DeleteLotteryGamePayload {
+  deletedId: ID!
+  success: Boolean!
 }
 
 input DeleteMyDelegationInput {
@@ -1113,6 +1145,103 @@ type LogoutPayload {
   success: Boolean!
 }
 
+type LotteryCashPoint {
+  abilities: LotteryCashPointAbilities!
+  createdAt: DateTime!
+  enabled: Boolean!
+  id: ID!
+  name: String!
+  note: String
+  order: Int!
+  org: LotteryCashPointRef!
+  positionKey: String!
+  positionLabel: String
+  printer: LotteryCashPointRef
+  updatedAt: DateTime!
+}
+
+type LotteryCashPointAbilities {
+  canEdit: Boolean!
+}
+
+type LotteryCashPointPayload {
+  item: LotteryCashPoint!
+}
+
+type LotteryCashPointRef {
+  id: ID!
+  name: String!
+}
+
+input LotteryCashPointsInput {
+  enabled: Boolean
+  keyword: String
+  orgId: ID
+  page: Int = 1
+  pageSize: Int = 20
+}
+
+type LotteryCashPointsPayload {
+  items: [LotteryCashPoint!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type LotteryGame {
+  abilities: LotteryGameAbilities!
+  bookPrice: Int!
+  claimDeadline: DateTime
+  color: String
+  createdAt: DateTime!
+  defaultRate: Int!
+  discontinuedAt: DateTime
+  gameCode: String!
+  id: ID!
+  inUse: Boolean!
+  launchedAt: DateTime
+  name: String!
+  note: String
+  status: String!
+  ticketsPerBook: Int!
+  unitPrice: Int!
+  updatedAt: DateTime!
+}
+
+type LotteryGameAbilities {
+  canDelete: Boolean!
+  canEdit: Boolean!
+}
+
+type LotteryGamePayload {
+  item: LotteryGame!
+}
+
+input LotteryGamesInput {
+  keyword: String
+  page: Int = 1
+  pageSize: Int = 20
+  status: String
+  unitPrice: Int
+}
+
+type LotteryGamesPayload {
+  items: [LotteryGame!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type LotteryPositionOption {
+  label: String!
+  value: String!
+}
+
+type LotteryPositionOptionsPayload {
+  items: [LotteryPositionOption!]!
+  totalCount: Int!
+}
+
 input MarkNotificationsReadInput {
   ids: [ID!]!
 }
@@ -1265,6 +1394,8 @@ type Mutation {
   createForm(input: CreateFormInput!): FormPayload!
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
   createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
+  createLotteryCashPoint(input: CreateLotteryCashPointInput!): LotteryCashPointPayload!
+  createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
   createPrintJob(input: CreatePrintJobInput!): PrintJobPayload!
@@ -1279,6 +1410,7 @@ type Mutation {
   deleteDemoItemTwo(input: DeleteDemoItemTwoInput!): DeleteDemoItemTwoPayload!
   deleteFormSubmission(input: DeleteFormSubmissionInput!): DeleteFormSubmissionPayload!
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
+  deleteLotteryGame(input: DeleteLotteryGameInput!): DeleteLotteryGamePayload!
   deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
@@ -1344,6 +1476,8 @@ type Mutation {
   updateFieldCategory(input: UpdateFieldCategoryInput!): FieldCategoryPayload!
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
+  updateLotteryCashPoint(input: UpdateLotteryCashPointInput!): LotteryCashPointPayload!
+  updateLotteryGame(input: UpdateLotteryGameInput!): LotteryGamePayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
   updateOrg(input: UpdateOrgInput!): OrgPayload!
@@ -1886,6 +2020,10 @@ type Query {
   formVersions(formKey: ID!): FormVersionsPayload!
   formWorkflowOptions(formKey: ID!): FormWorkflowOptionsPayload!
   forms(input: FormsInput!): FormsPayload!
+  lotteryCashPoints(input: LotteryCashPointsInput!): LotteryCashPointsPayload!
+  lotteryGame(id: ID!): LotteryGamePayload!
+  lotteryGames(input: LotteryGamesInput!): LotteryGamesPayload!
+  lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   me: Me!
   moduleForms(moduleKey: ID!): [FormSummary!]!
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
@@ -2428,6 +2566,31 @@ input UpdateFormSubmissionInput {
   expectedRevision: Int!
   id: ID!
   values: JSONObject!
+}
+
+input UpdateLotteryCashPointInput {
+  enabled: Boolean
+  id: ID!
+  name: String
+  note: String
+  order: Int
+  positionKey: String
+  printerId: ID
+}
+
+input UpdateLotteryGameInput {
+  claimDeadline: DateTime
+  color: String
+  defaultRate: Int
+  discontinuedAt: DateTime
+  gameCode: String
+  id: ID!
+  launchedAt: DateTime
+  name: String
+  note: String
+  status: String
+  ticketsPerBook: Int
+  unitPrice: Int
 }
 
 input UpdateMyPreferencesInput {
