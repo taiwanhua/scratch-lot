@@ -5,6 +5,7 @@ import { useBreakpointDown } from "@repo/ui/media-query";
 import { ScheduleTimeline } from "@repo/ui/schedule-timeline";
 import { Stack } from "@repo/ui/stack";
 
+import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
 
 import { useRoster } from "../roster-context";
@@ -40,7 +41,10 @@ export const DayView = () => {
 
   return (
     // 寬度由外層給:不讓時間軸 / 月曆的內容寬撐開頁面(時間軸依量到的寬度排版)
-    <Stack spacing={1.5} sx={{ minWidth: 0, contain: "inline-size" }}>
+    <Stack
+      spacing={1.5}
+      sx={[{ minWidth: 0, contain: "inline-size" }, tagPaletteBackgroundVarsSx]}
+    >
       <ScheduleTimeline
         mode="day"
         aria-label={t("timeline.dayAria")}

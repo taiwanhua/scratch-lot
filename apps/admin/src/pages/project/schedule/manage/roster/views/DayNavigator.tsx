@@ -14,7 +14,7 @@ import { useRosterDate } from "./useRosterDate";
 
 /**
  * 日檢視工具列的 `◀ 11/5(三)▾ ▶`(SC-45 / SC-46):◀ ▶ 前一天 / 後一天;點日期彈出整個月的月曆
- * (`DayPicker`,缺人的日子有紅點)。換到別的月份時排班表跟著換月份。
+ * (`DayPicker`,點 = 當天最嚴重的狀態:缺負責紅、只缺協同橘)。換到別的月份時排班表跟著換月份。
  */
 export const DayNavigator = ({ data, month }: RosterNavigatorProps) => {
   const t = useTranslations("admin.schedule.roster");

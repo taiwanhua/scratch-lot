@@ -89,7 +89,7 @@ describe("排班表:日檢視", () => {
     expect(within(dialog).getByLabelText(/開始/)).toHaveValue("05:00");
   });
 
-  it("工具列 ◀ ▶ 換前一天 / 後一天;點日期彈出月曆(缺人的日子有紅點),選一天 → 切到那天;重新整理保持", async () => {
+  it("工具列 ◀ ▶ 換前一天 / 後一天;點日期彈出月曆(點 = 當天最嚴重的狀態:缺負責紅、只缺協同橘),選一天 → 切到那天;重新整理保持", async () => {
     const first = renderSchedulePage({ path: dayPath("2026-11-02") });
     await findTimeline();
     await first.user.click(screen.getByRole("button", { name: "後一天" }));
@@ -103,13 +103,58 @@ describe("排班表:日檢視", () => {
     const picker = await screen.findByRole("dialog", { name: "選日期" });
     const fifth = within(picker).getByRole("gridcell", { name: "2026-11-05" });
     expect(
-      within(fifth).getByRole("img", { name: "有人力需求還缺人" }),
+      within(fifth).getByRole("img", { name: "缺負責" }),
+    ).toBeInTheDocument();
+    // 11/1 負責都有人、只缺協同 → 橘點
+    expect(
+      within(
+        within(picker).getByRole("gridcell", { name: "2026-11-01" }),
+      ).getByRole("img", { name: "只缺協同" }),
     ).toBeInTheDocument();
     // 店休不能選
     expect(
       within(picker).getByRole("gridcell", { name: "2026-11-03" }),
     ).toHaveAttribute("aria-disabled", "true");
     await first.user.click(fifth);
+    await waitFor(() => {
+      expect(searchParam("date")).toBe("2026-11-05");
+    });
+  });
+
+  it("選日期月曆翻到別的月:讀那個月的排班表再標點與店休", async () => {
+    const { user, rosterFake } = renderSchedulePage({
+      path: dayPath("2026-11-02"),
+    });
+    await findTimeline();
+    await user.click(screen.getByRole("button", { name: "11/2(一),選日期" }));
+    const picker = await screen.findByRole("dialog", { name: "選日期" });
+    await user.click(within(picker).getByRole("button", { name: "下個月" }));
+    const decemberFifth = await within(picker).findByRole("gridcell", {
+      name: "2026-12-05",
+    });
+    expect(
+      await within(decemberFifth).findByRole("img", {
+        name: "缺負責",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(picker).getByRole("gridcell", { name: "2026-12-03" }),
+    ).toHaveAttribute("aria-disabled", "true");
+    expect(rosterFake.inputs.queries).toContainEqual(
+      expect.objectContaining({ month: "2026-12" }),
+    );
+  });
+
+  it("選日期後重新整理保持", async () => {
+    const first = renderSchedulePage({ path: dayPath("2026-11-02") });
+    await findTimeline();
+    await first.user.click(
+      screen.getByRole("button", { name: "11/2(一),選日期" }),
+    );
+    const picker = await screen.findByRole("dialog", { name: "選日期" });
+    await first.user.click(
+      within(picker).getByRole("gridcell", { name: "2026-11-05" }),
+    );
     await waitFor(() => {
       expect(searchParam("date")).toBe("2026-11-05");
     });
