@@ -11,7 +11,8 @@
  *    讀 api **自己回報**的資料庫名(`provisionTarget`),安全閥第二段比對確認字串的資料庫名段:
  *    確認字串因此綁到實際寫入的資料庫,`--api-url` 指到別的環境就不執行。到這裡還沒有任何寫入
  * 3. 示範密碼與基底信箱**只從標準輸入讀**(終端機不回顯;workflow 以管線送入),不從參數、環境變數或檔案讀
- * 4. 建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`)
+ * 4. 建立或找回標「示範」的機構與首任租戶管理員(`demo-tenant.ts`),同一個平台管理員 session 把 registry 登記的
+ *    每張受管表單分派給示範機構(`assignFormToTenants`;已分派的略過)——分派只有站在根組織做得到,開通腳本做不到
  * 5. 以那位租戶管理員登入 → 交給專案登記的示範資料(`seeds/registry.ts` 的 `demoSource`)的 `populate`
  *
  * **全程走 api 的 GraphQL**:權限照常檢查、操作紀錄照常寫;本指令不連資料庫,也不需要 `MONGODB_URI`。
@@ -76,6 +77,11 @@ export interface DemoCommandOptions {
   readSecret?: SecretReader;
   /** 專案登記的示範資料(入口檔給:`seeds/registry.ts` 的 `demoSource`,見 `loadRegisteredDemoSource`)。 */
   loadDemoSource: () => Promise<DemoSource | null>;
+  /**
+   * 要分派給示範機構的受管表單 key(入口檔給:`seeds/registry.ts` 的 `seedRegistry` 裡目標為發布的表單定義,
+   * 見 `loadRegisteredManagedFormKeys`);不給 = 不分派。
+   */
+  loadManagedFormKeys?: () => Promise<readonly string[]>;
   /** 呼叫 api 用的 fetch(預設:全域 fetch)。 */
   fetch?: FetchLike;
   print?: (line: string) => void;
@@ -134,6 +140,53 @@ export async function loadRegisteredDemoSource(
     demoSource?: DemoSource | null;
   };
   return loaded.demoSource ?? null;
+}
+
+/** 固定入口 `seeds/registry.ts` 的 `seedRegistry` 裡,目標狀態為發布的受管表單 key(登記順序)。 */
+export async function loadRegisteredManagedFormKeys(
+  registryPath: string,
+): Promise<string[]> {
+  const loaded = (await import(pathToFileURL(registryPath).href)) as {
+    seedRegistry?: readonly {
+      kind: string;
+      key?: unknown;
+      desiredStatus?: unknown;
+    }[];
+  };
+  return (loaded.seedRegistry ?? []).flatMap((set) =>
+    set.kind === "form-definition" &&
+    set.desiredStatus === "published" &&
+    typeof set.key === "string"
+      ? [set.key]
+      : [],
+  );
+}
+
+const ASSIGN_FORM = /* GraphQL */ `
+  mutation DemoAssignForm($input: AssignFormToTenantsInput!) {
+    assignFormToTenants(input: $input) {
+      form {
+        key
+      }
+    }
+  }
+`;
+
+/** 平台管理員把受管表單分派給示範機構(api 端冪等:已分派的不重建、不留稽核)。 */
+async function assignManagedForms(
+  root: GraphqlClient,
+  tenantOrgId: string,
+  formKeys: readonly string[],
+  output: (line: string) => void,
+): Promise<void> {
+  for (const formKey of formKeys) {
+    await root.request(ASSIGN_FORM, {
+      input: { formKey, tenantOrgIds: [tenantOrgId] },
+    });
+  }
+  if (formKeys.length > 0) {
+    output(`受管表單分派給示範機構:${formKeys.join("、")}`);
+  }
 }
 
 // 指令介面本身就是 stdout/stderr(STRUCT-06)
@@ -285,6 +338,12 @@ export async function runDemoCommand(
       root,
       source.tenant,
       { emailBase, password },
+      output,
+    );
+    await assignManagedForms(
+      root,
+      tenant.orgId,
+      (await options.loadManagedFormKeys?.()) ?? [],
       output,
     );
     const admin = await loginAs(

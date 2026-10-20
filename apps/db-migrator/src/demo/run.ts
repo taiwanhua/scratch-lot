@@ -5,8 +5,14 @@
  * `--confirm=demo:<environment>:<資料庫名>:<mode>`;缺任何一項或任何一段不符即 exit 1,一筆都不寫。
  */
 import { DEFAULT_REGISTRY_PATH } from "../cli";
-import { loadRegisteredDemoSource, runDemoEntry } from "./command";
+import {
+  loadRegisteredDemoSource,
+  loadRegisteredManagedFormKeys,
+  runDemoEntry,
+} from "./command";
 
 await runDemoEntry(process.argv.slice(2), {
   loadDemoSource: () => loadRegisteredDemoSource(DEFAULT_REGISTRY_PATH),
+  loadManagedFormKeys: () =>
+    loadRegisteredManagedFormKeys(DEFAULT_REGISTRY_PATH),
 });

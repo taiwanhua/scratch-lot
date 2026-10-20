@@ -331,13 +331,15 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(closing?.isDefault).toBe(true);
     });
 
-    it("走 api:操作紀錄的操作者 = 租戶管理員(root 只有開通機構那一筆)", async () => {
+    it("走 api:操作紀錄的操作者 = 租戶管理員(root 只有開通機構與分派受管表單)", async () => {
       const logs = await find("audit_logs", { createdAt: { $gte: startedAt } });
       const byRoot = logs.filter(
         (log) => String(log.actorId) !== String(adminId),
       );
       expect(byRoot.map((log) => log.action as string)).toEqual([
         "org.provision",
+        // 受管表單分派給示範機構(分派只有站在根組織做得到)
+        "form.assign",
       ]);
       const byAdmin = new Set(
         logs
@@ -421,47 +423,14 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
     });
 
     describe("支援需求單的流程(規格 2.1、14.10)", () => {
-      it("表單還沒分派給示範機構:開通腳本的「流程」一步略過,不建流程", async () => {
-        const workflows = await find("workflows", {
-          key: `${DEMO_TENANT.slug}_support_request`,
+      it("demo create:平台管理員把受管表單分派給示範機構,開通腳本建客製流程、發布、綁定", async () => {
+        const form = await findOne("forms", { key: SUPPORT_REQUEST_FORM_KEY });
+        const assignments = await find("business_relationships", {
+          type: "org_form",
+          tenantId,
+          secondId: form._id as ObjectId,
         });
-        expect(workflows).toHaveLength(0);
-      });
-
-      it("平台管理員分派表單後重跑開通腳本:建客製流程、發布、綁定;再跑一次沿用", async () => {
-        const root = await rootClient();
-        await root.request(
-          /* GraphQL */ `
-            mutation TestAssignForm($input: AssignFormToTenantsInput!) {
-              assignFormToTenants(input: $input) {
-                form {
-                  key
-                }
-              }
-            }
-          `,
-          {
-            input: {
-              formKey: SUPPORT_REQUEST_FORM_KEY,
-              tenantOrgIds: [String(tenantId)],
-            },
-          },
-        );
-        const runOnce = async () => {
-          const lines: string[] = [];
-          await runOnboarding({
-            client: adminClient,
-            plan: demoPlan(EMAIL_BASE),
-            activation: { mode: "PASSWORD", password: DEMO_PASSWORD },
-            tenantSlug: DEMO_TENANT.slug,
-            print: (line) => lines.push(line),
-          });
-          return lines.join("\n");
-        };
-        expect(await runOnce()).toContain("建立並發布流程「支援需求單審核」");
-        expect(await runOnce()).toContain(
-          "「支援需求單」已綁定流程「支援需求單審核」,沿用",
-        );
+        expect(assignments).toHaveLength(1);
 
         const workflow = await findOne("workflows", {
           key: `${DEMO_TENANT.slug}_support_request`,
@@ -473,6 +442,22 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           thirdId: workflow._id as ObjectId,
         });
         expect(bindings).toHaveLength(1);
+      });
+
+      it("重跑開通腳本:表單已綁定流程就沿用,不另建", async () => {
+        const lines: string[] = [];
+        await runOnboarding({
+          client: adminClient,
+          plan: demoPlan(EMAIL_BASE),
+          activation: { mode: "PASSWORD", password: DEMO_PASSWORD },
+          tenantSlug: DEMO_TENANT.slug,
+          print: (line) => lines.push(line),
+        });
+        expect(lines.join("\n")).toContain(
+          "「支援需求單」已綁定流程「支援需求單審核」,沿用",
+        );
+        const workflows = await find("workflows", { tenantId });
+        expect(workflows).toHaveLength(1);
       });
 
       it("中山店店長送出 → 審核者 = 角色 總部管理 且屬於最上層組織的人(示範總部人員)", async () => {
