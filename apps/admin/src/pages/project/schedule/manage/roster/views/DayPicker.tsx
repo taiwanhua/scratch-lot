@@ -126,7 +126,7 @@ export const DayPicker = ({
           nextMonthLabel={tCalendar("nextMonth")}
           aria-label={t("timeline.pickDate")}
         />
-        <ScheduleLegend items={["dotMissingLeader", "closed", "special"]} />
+        <ScheduleLegend items={["dotMissingPeople", "closed", "special"]} />
         <Box>
           <Button
             variant="outlined"

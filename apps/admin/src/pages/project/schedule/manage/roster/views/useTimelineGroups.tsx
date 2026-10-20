@@ -17,7 +17,6 @@ import {
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import {
   localPartsOf,
-  monthDayOf,
   shiftDay,
   weekdayOf,
 } from "@/lib/project/schedule-roster";
@@ -309,10 +308,8 @@ export const useTimelineGroups = (
       date,
       label: (
         <Box component="span" data-roster-cell={rosterCellKey({ date })}>
-          {t("timeline.dateLabel", {
-            date: monthDayOf(date),
-            weekday: tCalendar(`weekdays.${String(weekdayOf(date))}`),
-          })}
+          {/* 表頭的日期由時間軸畫,這裡只寫星期與特殊日名稱 */}
+          {tCalendar(`weekdays.${String(weekdayOf(date))}`)}
           {special !== null && day?.name ? ` ${day.name}` : ""}
         </Box>
       ),
