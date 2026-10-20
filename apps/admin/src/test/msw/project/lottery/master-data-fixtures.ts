@@ -169,7 +169,7 @@ const module = (
   parentId,
   sidebarType,
   engine: ModuleEngine.Fixed,
-  order: 17,
+  order: 70,
   route,
   icon: "folder",
   permissions: [...permissions],

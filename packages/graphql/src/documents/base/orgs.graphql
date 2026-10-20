@@ -31,6 +31,26 @@ query OrgTree {
   }
 }
 
+# 業務頁的組織選擇器(OrgTreeSelect scope="visible"):操作者**可見範圍**內的組織,釘在當前組織的租戶;
+# 只要登入、不要求治理權限(治理頁用上面的 orgTree = 管理範圍)。深度同 OrgTree
+query VisibleOrgTree {
+  visibleOrgTree {
+    ...OrgNodeFields
+    children {
+      ...OrgNodeFields
+      children {
+        ...OrgNodeFields
+        children {
+          ...OrgNodeFields
+          children {
+            ...OrgNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+
 # 右側資料區;logoUrl 是現簽的短效網址(ADR-0010:DB 存路徑不存 URL),
 # ownerUserId / visibility / slug / timezone 只在租戶頂層有值;timezone 為 null = 沒設、使用預設時區
 query Org($id: ID!) {

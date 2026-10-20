@@ -11,6 +11,7 @@ import {
 } from "../database/operator-context";
 import { OrgBusinessDataReader } from "../database/org-business-data.reader";
 import { RelationService } from "../database/relation.service";
+import { tenantIdOfOrg } from "../database/tenant-id";
 import { StorageService, isOwnedUploadPath } from "../storage/storage.service";
 import type { CreateChildOrgInput } from "./dto/create-child-org.input";
 import type { DeleteOrgInput } from "./dto/delete-org.input";
@@ -213,9 +214,9 @@ function byName(documents: OrgRecord[]): OrgRecord[] {
  * 那件事由 `org(樹根).isSystem` 回答(`useOrgManagerData.ts`)。
  */
 function buildForest(
-  operator: OperatorContext,
   documents: OrgRecord[],
   rootIds: Types.ObjectId[],
+  isInScope: (id: Types.ObjectId) => boolean,
 ): OrgNode[] {
   const rootKeys = new Set(rootIds.map(String));
   const childrenByParent = new Map<string, OrgRecord[]>();
@@ -241,7 +242,7 @@ function buildForest(
       document.ownerUserId === undefined ? null : String(document.ownerUserId),
     // 管理範圍外的節點根本不會出現在樹上,這個欄位因此恆為 false;
     // 保留是為了與使用者列的 `roles[].outOfScope` 命名一致、且不必同步改前端(GQL-05 相容)
-    outOfScope: !isOrgManaged(operator, document._id),
+    outOfScope: !isInScope(document._id),
     children: byName(childrenByParent.get(String(document._id)) ?? []).map(
       (child) => toNode(child),
     ),
@@ -285,7 +286,46 @@ export class OrgsService {
     const documents = await this.orgs.findMany(subtreeContext(operator), {
       $or: [{ _id: { $in: rootIds } }, { ancestors: { $in: rootIds } }],
     });
-    return buildForest(operator, documents, rootIds);
+    return buildForest(documents, rootIds, (id) => isOrgManaged(operator, id));
+  }
+
+  /**
+   * **可見範圍**的組織樹(CONTEXT.md「可見範圍」;業務頁的組織選擇器用,`visibleOrgTree`):
+   * 根組織成員(`"all"`)= 整棵樹;其餘 = 可見範圍內、而且與當前組織同一個租戶的組織
+   * (釘在租戶上:所屬組織跨租戶時不混進別租戶的)。可見範圍內最上面的那幾個是根。
+   * 只要登入,不要求治理權限(治理頁的 `orgTree` 是管理範圍,另有權限)。
+   */
+  async visibleTree(operator: OperatorContext): Promise<OrgNode[]> {
+    const reader = subtreeContext(operator);
+    if (operator.visibleOrgIds === "all") {
+      const root = await this.orgs.findOne(reader, { parentId: null });
+      if (root === null) {
+        return [];
+      }
+      const documents = await this.orgs.findMany(reader, {
+        $or: [{ _id: root._id }, { ancestors: root._id }],
+      });
+      return buildForest(documents, [root._id], () => true);
+    }
+    if (operator.currentOrgId === null || operator.visibleOrgIds.length === 0) {
+      return [];
+    }
+    const current = await this.orgs.findById(reader, operator.currentOrgId);
+    if (current === null) {
+      return [];
+    }
+    const tenantId = String(tenantIdOfOrg(current));
+    const visible = await this.orgs.findMany(reader, {
+      _id: { $in: operator.visibleOrgIds },
+    });
+    const documents = visible.filter(
+      (org) => String(tenantIdOfOrg(org)) === tenantId,
+    );
+    const keys = new Set(documents.map((org) => String(org._id)));
+    const rootIds = documents
+      .filter((org) => !org.ancestors.some((id) => keys.has(String(id))))
+      .map((org) => org._id);
+    return buildForest(documents, rootIds, () => true);
   }
 
   /** 單一組織:管理範圍外視為不存在(不透露差別)。 */

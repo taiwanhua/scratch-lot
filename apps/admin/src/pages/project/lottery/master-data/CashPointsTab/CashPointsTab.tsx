@@ -1,11 +1,9 @@
-import { useMemo } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import {
   type LotteryCashPointFieldsFragment,
   useLotteryCashPointsQuery,
-  useOrgTreeQuery,
 } from "@repo/graphql";
 import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
@@ -24,7 +22,6 @@ import {
   useUrlEditGuard,
 } from "@/hooks/base/useUrlEdit";
 import { useUrlState } from "@/hooks/base/useUrlState";
-import { flattenOrgs } from "@/lib/base/org-tree";
 
 import { CashPointDialog } from "../CashPointDialog/CashPointDialog";
 import {
@@ -68,20 +65,6 @@ export const CashPointsTab = ({
   const totalCount = query.data?.lotteryCashPoints.totalCount ?? 0;
   const pageCount = Math.max(1, Math.ceil(totalCount / MASTER_DATA_PAGE_SIZE));
 
-  // 分店選單:管理範圍(orgTree)+ 自己的所屬組織(沒有治理角色的店長只看得到自己的分店)
-  const orgTree = useOrgTreeQuery(session.client);
-  const orgOptions = useMemo(() => {
-    const options = new Map<string, string>();
-    for (const org of flattenOrgs(orgTree.data?.orgTree ?? [])) {
-      options.set(org.id, org.path);
-    }
-    for (const org of me.data?.me.orgs ?? []) {
-      if (!options.has(org.id)) {
-        options.set(org.id, org.name);
-      }
-    }
-    return [...options].map(([value, label]) => ({ value, label }));
-  }, [orgTree.data, me.data]);
   const defaultOrgId = me.data?.me.currentOrg?.id ?? "";
 
   const requested = rows.find((row) => row.id === edit.requestedId);
@@ -178,7 +161,6 @@ export const CashPointsTab = ({
       {isCreating && (
         <CashPointDialog
           cashPoint={null}
-          orgOptions={orgOptions}
           defaultOrgId={defaultOrgId}
           access={access}
           onClose={onCloseCreate}
@@ -188,7 +170,6 @@ export const CashPointsTab = ({
         <CashPointDialog
           key={editing.id}
           cashPoint={editing}
-          orgOptions={orgOptions}
           defaultOrgId={defaultOrgId}
           access={access}
           onClose={edit.close}

@@ -20,7 +20,7 @@ export const masterDataModule: ModuleSeedDeclaration = {
       name: "檔案管理",
       sidebarType: "link",
       parentKey: null,
-      order: 17,
+      order: 70,
       route: "master-data",
       icon: "folder",
       description: "遊戲與收銀點",

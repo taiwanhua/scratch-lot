@@ -2767,6 +2767,7 @@ export type Query = {
   users: UsersPayload;
   validateFormVersion: FormValidationReport;
   validateWorkflowVersion: WorkflowValidationReport;
+  visibleOrgTree: Array<OrgNode>;
   workflow: WorkflowPayload;
   workflowInstance: WorkflowInstancePayload;
   workflowVersion: WorkflowVersionPayload;
@@ -4906,6 +4907,11 @@ export type OrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type OrgTreeQuery = { __typename?: 'Query', orgTree: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null }> }> }> }> }> };
+
+export type VisibleOrgTreeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type VisibleOrgTreeQuery = { __typename?: 'Query', visibleOrgTree: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null, children: Array<{ __typename?: 'OrgNode', id: string, name: string, parentId?: string | null, enabled: boolean, outOfScope: boolean, ownerUserId?: string | null }> }> }> }> }> };
 
 export type OrgQueryVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -9755,6 +9761,49 @@ useOrgTreeQuery.getKey = (variables?: OrgTreeQueryVariables) => variables === un
 
 
 useOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: OrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<OrgTreeQuery, OrgTreeQueryVariables>(client, OrgTreeDocument, variables, headers);
+
+export const VisibleOrgTreeDocument = `
+    query VisibleOrgTree {
+  visibleOrgTree {
+    ...OrgNodeFields
+    children {
+      ...OrgNodeFields
+      children {
+        ...OrgNodeFields
+        children {
+          ...OrgNodeFields
+          children {
+            ...OrgNodeFields
+          }
+        }
+      }
+    }
+  }
+}
+    ${OrgNodeFieldsFragmentDoc}`;
+
+export const useVisibleOrgTreeQuery = <
+      TData = VisibleOrgTreeQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: VisibleOrgTreeQueryVariables,
+      options?: Omit<UseQueryOptions<VisibleOrgTreeQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<VisibleOrgTreeQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<VisibleOrgTreeQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['VisibleOrgTree'] : ['VisibleOrgTree', variables],
+    queryFn: fetcher<VisibleOrgTreeQuery, VisibleOrgTreeQueryVariables>(client, VisibleOrgTreeDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useVisibleOrgTreeQuery.getKey = (variables?: VisibleOrgTreeQueryVariables) => variables === undefined ? ['VisibleOrgTree'] : ['VisibleOrgTree', variables];
+
+
+useVisibleOrgTreeQuery.fetcher = (client: GraphQLClient, variables?: VisibleOrgTreeQueryVariables, headers?: RequestInit['headers']) => fetcher<VisibleOrgTreeQuery, VisibleOrgTreeQueryVariables>(client, VisibleOrgTreeDocument, variables, headers);
 
 export const OrgDocument = `
     query Org($id: ID!) {

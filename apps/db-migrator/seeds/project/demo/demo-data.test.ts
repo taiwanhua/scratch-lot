@@ -8,6 +8,7 @@ import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fiel
 import { DEMO_TENANT, demoPlan } from ".";
 import { PROJECT_FIELD_CATEGORIES } from "../field-categories";
 import { parseOnboardingPlan } from "../onboarding/plan";
+import { DEMO_GAMES } from "./games";
 
 const DEMO_DIR = __dirname;
 const SOURCE_DIRS = [
@@ -103,10 +104,9 @@ describe("示範資料:檔案管理(遊戲、收銀點)", () => {
   });
 
   it("遊戲:有示範遊戲,代號不重複", () => {
-    const plan = demoPlan("owner@example.test");
-    expect(plan.games.length).toBeGreaterThan(0);
-    expect(new Set(plan.games.map((game) => game.gameCode)).size).toBe(
-      plan.games.length,
+    expect(DEMO_GAMES.length).toBeGreaterThan(0);
+    expect(new Set(DEMO_GAMES.map((game) => game.gameCode)).size).toBe(
+      DEMO_GAMES.length,
     );
   });
 });

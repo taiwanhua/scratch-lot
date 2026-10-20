@@ -83,6 +83,17 @@ export class OrgsResolver {
     return this.orgs.tree(operator);
   }
 
+  /**
+   * **可見範圍**的組織樹(業務頁的組織選擇器;`OrgTreeSelect` 的 `scope="visible"`):
+   * 只要登入,不要求治理權限;範圍與釘租戶的規則見 `OrgsService.visibleTree`。
+   */
+  @Query(() => [OrgNode])
+  visibleOrgTree(
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<OrgNode[]> {
+    return this.orgs.visibleTree(operator);
+  }
+
   @Query(() => Org)
   async org(
     @Args("id", { type: () => ID }) id: string,

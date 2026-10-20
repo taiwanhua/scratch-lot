@@ -1,7 +1,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { useOrgTreeQuery } from "@repo/graphql";
+import { useOrgTreeQuery, useVisibleOrgTreeQuery } from "@repo/graphql";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Tag } from "@repo/ui/tag";
 
@@ -15,7 +15,18 @@ import { type OrgNodeLike, flattenOrgs } from "@/lib/base/org-tree";
 
 import { OrgTreeSelectPanel } from "./OrgTreeSelectPanel";
 
+/**
+ * 候選組織的範圍:
+ * - `managed`(預設):**管理範圍**(`orgTree`,要組織管理 / 使用者管理的檢視權限)—— 底座治理用途
+ *   (人員條件 / `AudiencePicker` 的所屬組織、資料範圍的套用對象),預設值維持它,既有呼叫端不必改。
+ * - `visible`:**可見範圍**(`visibleOrgTree`,只要登入、釘在當前組織的租戶)—— 業務頁選分店用
+ *   (例:收銀點的分店、報表的分店)。業務頁一律明寫 `scope="visible"`。
+ */
+export type OrgTreeSelectScope = "managed" | "visible";
+
 export interface OrgTreeSelectProps {
+  /** 候選組織的範圍;預設 `managed`(見 `OrgTreeSelectScope`) */
+  scope?: OrgTreeSelectScope;
   /** 浮動標籤,同時是欄位與面板的無障礙名稱 */
   label: string;
   /** 受控的已選組織 id;單選傳 0 或 1 個 */
@@ -44,10 +55,10 @@ const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
  * 組織欄位(Figma `Draft/OrgTreeSelect`):輸入框顯示已選組織,
  * 點開是「搜尋 + 組織樹」;單選 / 多選、多選可設上限。
  *
- * - **候選 = 操作者的管理範圍**:自己查 `orgTree`(api 只回管理範圍內的組織),
- *   呼叫端不必、也不能另給一份清單。
+ * - **候選 = 操作者的管理範圍(預設)或可見範圍(`scope="visible"`,業務頁)**:自己查 `orgTree` /
+ *   `visibleOrgTree`(api 只回範圍內的組織),呼叫端不必、也不能另給一份清單。
  * - **組織本身停用(`enabled: false`)照常可選**,樹上帶「已停用」標籤提示。
- * - **已選但樹上沒有的組織**(管理範圍外,api 不回):欄位顯示「不在你的管理範圍內」,可以取消,計入上限。
+ * - **已選但樹上沒有的組織**(範圍外,api 不回):欄位顯示「不在你的管理範圍內」(`visible` 是「不在你的可見範圍內」),可以取消,計入上限。
  * - **停用有兩種來源**:範圍外(`outOfScope`,現況 api 不回、恆為 false,留著相容)與呼叫端的
  *   `disabledReasons`(例:專案的一對一對應把已占用的分店停用並註明「已由 王小明 對應」)。
  *   已選的組織之後變成停用時,欄位上的標籤仍在、可以取消,但在樹上勾不回來。
@@ -55,9 +66,11 @@ const EMPTY_REASONS: Readonly<Partial<Record<string, string>>> = {};
  *   sm 以上是欄位下方的浮動面板(寬度跟著欄位);< sm 改開全螢幕對話框
  *   (標題 + 搜尋 + 樹 + [確定])。兩者的選取都是即時生效,[確定] 只負責關閉。
  * - 內部沿用 `OrgTreePicker` 與 `lib/base/org-tree.ts`(STRUCT-13)。底座用在人員條件
- *   (`AudiencePicker` 的所屬組織,資料範圍的套用對象);專案頁面(報表的分店多選等)也引用它。
+ *   (`AudiencePicker` 的所屬組織,資料範圍的套用對象,`managed`);專案的業務頁面(收銀點的分店、
+ *   報表的分店多選等)用 `scope="visible"`。
  */
 export const OrgTreeSelect = ({
+  scope = "managed",
   label,
   value,
   onChange,
@@ -73,7 +86,26 @@ export const OrgTreeSelect = ({
 }: OrgTreeSelectProps) => {
   const t = useTranslations("admin.orgTreeSelect");
   const { session } = useSession();
-  const orgTree = useOrgTreeQuery(session.client);
+  // 兩支 hook 都呼叫(hooks 規則),只有選到的範圍真的發請求
+  const managedTree = useOrgTreeQuery(session.client, undefined, {
+    enabled: scope === "managed",
+  });
+  const visibleTree = useVisibleOrgTreeQuery(session.client, undefined, {
+    enabled: scope === "visible",
+  });
+  const orgTree =
+    scope === "visible"
+      ? {
+          data: visibleTree.data && {
+            orgTree: visibleTree.data.visibleOrgTree,
+          },
+          isPending: visibleTree.isPending,
+          isLoading: visibleTree.isLoading,
+          isError: visibleTree.isError,
+        }
+      : managedTree;
+  const outOfScopeText =
+    scope === "visible" ? t("outOfVisibleScope") : t("outOfScope");
   const isMobile = useBreakpointDown("sm");
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const isOpen = anchorEl !== null;
@@ -86,11 +118,11 @@ export const OrgTreeSelect = ({
       ...Object.fromEntries(
         orgs
           .filter((org) => org.outOfScope)
-          .map((org) => [org.id, t("outOfScope")]),
+          .map((org) => [org.id, outOfScopeText]),
       ),
       ...disabledReasons,
     }),
-    [orgs, disabledReasons, t],
+    [orgs, disabledReasons, outOfScopeText],
   );
   /**
    * 欄位上的已選組織。樹上找不到的 id(管理範圍外,api 根本不回)顯示成「不在你的管理範圍內」,
@@ -103,10 +135,10 @@ export const OrgTreeSelect = ({
         : value.map((id) => {
             const org = orgs.find((item) => item.id === id);
             return org === undefined
-              ? { id, name: t("outOfScope") }
+              ? { id, name: outOfScopeText }
               : { id, name: org.name };
           }),
-    [orgTree.isPending, orgs, value, t],
+    [orgTree.isPending, orgs, value, outOfScopeText],
   );
   /** 停用的組織照常可選,只在樹上帶「已停用」標籤(同組織管理頁) */
   const labelSuffixOf = useCallback(

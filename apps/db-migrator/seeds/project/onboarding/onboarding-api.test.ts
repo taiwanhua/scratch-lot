@@ -496,7 +496,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       await expect(onboard("demo_lottery", lines)).rejects.toThrow(
         /不是要開通的 demo_lottery/,
       );
-      expect(lines.join("\n")).toMatch(/✗ \[1\/9\] 租戶/);
+      expect(lines.join("\n")).toMatch(/✗ \[1\/8\] 租戶/);
       expect(await auditCount()).toBe(before);
     });
 
@@ -636,7 +636,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       )) as OnboardingStoppedError;
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
-      expect(lines.join("\n")).toMatch(/✗ \[6\/9\] 崗位:.*FORBIDDEN/);
+      expect(lines.join("\n")).toMatch(/✗ \[6\/8\] 崗位:.*FORBIDDEN/);
       expect(lines.join("\n")).toContain("未執行:通知收件人");
 
       const users = await find("users", {
@@ -676,8 +676,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           "field.create",
           "field.set-color",
           "notification-settings.edit",
-          // 檔案管理的遊戲、收銀點排在通知收件人之後,第一次停在崗位時還沒建
-          "lottery-game.create",
+          // 檔案管理的收銀點排在通知收件人之後,第一次停在崗位時還沒建(遊戲只有示範指令建)
           "lottery-cash-point.create",
         ]),
       );

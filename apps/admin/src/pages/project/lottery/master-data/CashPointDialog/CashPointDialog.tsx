@@ -16,6 +16,7 @@ import { Stack } from "@repo/ui/stack";
 import { Switch } from "@repo/ui/switch";
 import { TextField } from "@repo/ui/text-field";
 
+import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useSession } from "@/hooks/base/useSession";
 
 import type { MasterDataAccess } from "../useMasterDataAccess";
@@ -24,8 +25,6 @@ import { type CashPointFormField, useCashPointForm } from "./useCashPointForm";
 export interface CashPointDialogProps {
   /** 要編輯的那一筆;null = 新增 */
   cashPoint: LotteryCashPointFieldsFragment | null;
-  /** 分店選單(管理範圍 + 所屬組織) */
-  orgOptions: readonly { value: string; label: string }[];
   /** 新增時預設的分店(當前組織) */
   defaultOrgId: string;
   access: MasterDataAccess;
@@ -42,7 +41,6 @@ const DEFAULT_PRINTER = "";
  */
 export const CashPointDialog = ({
   cashPoint,
-  orgOptions,
   defaultOrgId,
   access,
   onClose,
@@ -112,24 +110,18 @@ export const CashPointDialog = ({
         {form.errorCode !== null && (
           <Alert severity="error">{tErrors(form.errorCode)}</Alert>
         )}
-        <SelectField
+        {/* 分店 = 可見範圍內的組織(業務頁,`scope="visible"`);建立後不能換 */}
+        <OrgTreeSelect
+          scope="visible"
           label={t("fields.orgId")}
-          value={values.orgId}
-          options={
-            cashPoint === null ||
-            orgOptions.some((option) => option.value === cashPoint.org.id)
-              ? orgOptions
-              : [
-                  { value: cashPoint.org.id, label: cashPoint.org.name },
-                  ...orgOptions,
-                ]
-          }
+          value={values.orgId === "" ? [] : [values.orgId]}
           disabled={isEditing}
           required
+          fullWidth
           error={isInvalid("orgId")}
           {...(isEditing ? { helperText: t("orgFixed") } : {})}
-          onChange={(value) => {
-            change("orgId", value);
+          onChange={(ids) => {
+            change("orgId", ids[0] ?? "");
             change("positionKey", "");
             change("printerId", DEFAULT_PRINTER);
           }}

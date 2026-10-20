@@ -266,16 +266,16 @@ export const masterDataWorld = ({
 };
 
 /**
- * 收銀點彈窗另外打的兩個**底座**端點(組織樹、可選印表機)的測試回應。mock 模式不登記它們
+ * 收銀點彈窗另外打的兩個**底座**端點(可見範圍的組織樹、可選印表機)的測試回應。mock 模式不登記它們
  * (底座 mock world 已有,操作名不可重複),只給元件測試用。
  */
 export const masterDataSharedLookupHandlers = (): Parameters<
   typeof server.use
 > => [
-  api.query("OrgTree", () =>
+  api.query("VisibleOrgTree", () =>
     HttpResponse.json({
       data: {
-        orgTree: [
+        visibleOrgTree: [
           {
             __typename: "OrgNode",
             ...masterDataOrgs.tenant,

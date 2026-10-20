@@ -248,6 +248,15 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/hooks/base/useUrlState.ts`、`apps/admin/src/lib/base/url-state.ts`、`apps/admin/src/components/base/PageTabs/`、`packages/ui/src/Tabs/Tabs.tsx`、`docs/standards/react/components.md` REACT-14
 
+**組織選擇器 `OrgTreeSelect`**(`components/base/OrgTreeSelect/`)自己查候選,呼叫端不給清單;`scope` 決定範圍:
+
+| `scope`         | 查哪支                                 | 範圍                        | 用在                                                               |
+| --------------- | -------------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| `managed`(預設) | `orgTree`(要組織 / 使用者管理的檢視權) | 管理範圍                    | 底座治理:人員條件(`AudiencePicker` 的所屬組織)、資料範圍的套用對象 |
+| `visible`       | `visibleOrgTree`(只要登入)             | 可見範圍,釘在當前組織的租戶 | 業務頁選分店(專案的收銀點、報表的分店…),一律明寫                   |
+
+正本:`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`、`docs/modules/org-manager.md`「api 介面」
+
 ## 頁內權限判斷
 
 - `usePermissions().hasPermission(key)`:`me.modules` 的 permissions 組成集合,判斷規則來自 `@repo/domain/permission`。
