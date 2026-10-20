@@ -599,6 +599,42 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return unavailabilityOf(records);
   }
 
+  /**
+   * 這些人的主要分店(userId → 分店 id;沒有排班檔案或沒有主要分店的不在結果裡)。
+   * 給排班檢核:人的規則用那個人主要分店的設定(規格 14.2)。以租戶為邊界讀(主要分店不一定看得到)。
+   */
+  async primaryOrgsOf(
+    tenantId: Types.ObjectId,
+    userIds: readonly string[],
+  ): Promise<Map<string, Types.ObjectId>> {
+    if (userIds.length === 0) {
+      return new Map();
+    }
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const profiles = await this.staff.findMany(reader, {
+      tenantId,
+      userId: { $in: userIds.map((id) => new Types.ObjectId(id)) },
+    });
+    if (profiles.length === 0) {
+      return new Map();
+    }
+    const links = await this.relationships.findMany(reader, {
+      type: ORG_STAFF,
+      tenantId,
+      secondId: { $in: profiles.map((profile) => profile._id) },
+      "meta.isPrimary": true,
+    });
+    const userOfStaff = new Map(
+      profiles.map((profile) => [String(profile._id), String(profile.userId)]),
+    );
+    return new Map(
+      links.flatMap((link) => {
+        const userId = userOfStaff.get(String(link.secondId));
+        return userId === undefined ? [] : [[userId, link.firstId] as const];
+      }),
+    );
+  }
+
   // ---- 內部 ----
 
   /** 登入者本人(在當前組織的租戶裡);`orgId` = 當前組織(本人登記的畫休歸屬它)。 */

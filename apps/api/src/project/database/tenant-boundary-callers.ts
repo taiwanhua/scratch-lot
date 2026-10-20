@@ -82,4 +82,6 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/purchase/purchase-receiving.service.ts": ["反查"],
   // 受託人的關聯(關係人可能是別的組織建的);點收進度讀點收紀錄
   "project/lottery/purchase/purchase-query.service.ts": ["反查"],
+  // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
+  "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

@@ -1,5 +1,20 @@
 import { Field, GraphQLISODateTime, ID, InputType, Int } from "@nestjs/graphql";
 
+/**
+ * 發布後的異動原因(規格 14.5:已發布的月份,兩種對話框都多一個「異動原因」,必填)。
+ * 未發布的月份不用給;給了也不記。
+ */
+@InputType()
+export class ScheduleChangeReasonInput {
+  /** 欄位管理「排班異動原因」的選項 value */
+  @Field(() => String)
+  reasonKey!: string;
+
+  /** 選「其他」必填 */
+  @Field(() => String, { nullable: true })
+  reasonNote?: string | null;
+}
+
 /** 某家店(缺席 = 當前組織)某個月(`YYYY-MM`)的排班表。 */
 @InputType()
 export class ScheduleRosterInput {
@@ -76,6 +91,10 @@ export class SaveScheduleDemandInput {
   /** 只在新增時:同時存成人力需求範本(要 `schedule.settings.edit-templates`) */
   @Field(() => ScheduleDemandTemplateCopyInput, { nullable: true })
   saveAsTemplate?: ScheduleDemandTemplateCopyInput | null;
+
+  /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
+  @Field(() => ScheduleChangeReasonInput, { nullable: true })
+  changeReason?: ScheduleChangeReasonInput | null;
 }
 
 @InputType()
@@ -85,6 +104,10 @@ export class DeleteScheduleDemandInput {
 
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
+
+  /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
+  @Field(() => ScheduleChangeReasonInput, { nullable: true })
+  changeReason?: ScheduleChangeReasonInput | null;
 }
 
 /** 排班填進的一筆執行任務。 */
@@ -124,6 +147,10 @@ export class SaveScheduleEntryInput {
 
   @Field(() => [ScheduleEntryAssignmentInput])
   assignments!: ScheduleEntryAssignmentInput[];
+
+  /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
+  @Field(() => ScheduleChangeReasonInput, { nullable: true })
+  changeReason?: ScheduleChangeReasonInput | null;
 }
 
 @InputType()
@@ -133,6 +160,10 @@ export class DeleteScheduleEntryInput {
 
   @Field(() => ID, { nullable: true })
   orgId?: string | null;
+
+  /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
+  @Field(() => ScheduleChangeReasonInput, { nullable: true })
+  changeReason?: ScheduleChangeReasonInput | null;
 }
 
 /** 移除這天所有排班(`YYYY-MM-DD`)。 */
@@ -143,4 +174,8 @@ export class RemoveScheduleDayEntriesInput {
 
   @Field(() => String)
   date!: string;
+
+  /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
+  @Field(() => ScheduleChangeReasonInput, { nullable: true })
+  changeReason?: ScheduleChangeReasonInput | null;
 }

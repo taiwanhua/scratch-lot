@@ -44,7 +44,32 @@ export interface ScheduleRuleViolation {
    * 選填:給畫面組自己的文案用的數字(`message` 是 api 端的中文說明)。
    * `actual` 實際值、`limit` 規則值;期間類的違反(連續 N 天)附 `from` / `to`(`YYYY-MM-DD`)。
    */
-  detail?: { actual?: number; limit?: number; from?: string; to?: string };
+  detail?: {
+    actual?: number;
+    limit?: number;
+    from?: string;
+    to?: string;
+    /** 違反的那段時間(兩班之間的休息、兼多個崗位的重疊、人力不足的時段) */
+    startAt?: Date;
+    endAt?: Date;
+    /** 人力不足:哪一筆人力需求、哪一種職責缺幾人、那段時間可排幾人與沒有可排的原因 */
+    understaffed?: UnderstaffedDetail;
+  };
+}
+
+/** 人力不足一段時間的明細(規格 14.2「人力不足」:依時間切段檢查空的執行任務,後面附原因)。 */
+export interface UnderstaffedDetail {
+  demandId: string;
+  /** `leader` 負責 / `helper` 協同 */
+  role: string;
+  missing: number;
+  /** 那段時間可以排的人(沒有畫休、沒被其他排班占用、可以排這家店;負責另要可擔任負責人) */
+  available: number;
+  /** 沒有可排的原因人數(可以排這家店的人裡):整天畫休、時段不可排、已排其他班、不能擔任負責人 */
+  dayOff: number;
+  timeRange: number;
+  occupied: number;
+  cannotLead: number;
 }
 
 export type ScheduleRuleEvaluator<TData = unknown> = (

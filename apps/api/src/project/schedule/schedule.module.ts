@@ -6,6 +6,10 @@ import { NotificationsModule } from "../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
 import { ScheduleCalendarResolver } from "./calendar/schedule-calendar.resolver";
 import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
+import { ScheduleChangesService } from "./changes/schedule-changes.service";
+import { ScheduleCheckResolver } from "./check/schedule-check.resolver";
+import { ScheduleCheckService } from "./check/schedule-check.service";
+import { SchedulePublishService } from "./check/schedule-publish.service";
 import { DayOffRemindersService } from "./day-offs/day-off-reminders.service";
 import { ScheduleDayOffsResolver } from "./day-offs/schedule-day-offs.resolver";
 import { ScheduleDayOffsService } from "./day-offs/schedule-day-offs.service";
@@ -62,6 +66,10 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleRosterService,
     ScheduleRosterWritesService,
     ScheduleRosterResolver,
+    ScheduleCheckService,
+    ScheduleChangesService,
+    SchedulePublishService,
+    ScheduleCheckResolver,
   ],
   exports: [
     SchedulePermissions,

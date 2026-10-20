@@ -6,12 +6,14 @@ import {
   BaseRepository,
   type RepositoryModel,
 } from "../../../database/base.repository";
+import { ScheduleChange } from "./schedule-change.schema";
 import { ScheduleDemand } from "./schedule-demand.schema";
 import { ScheduleEntryLock } from "./schedule-entry-lock.schema";
 import { ScheduleEntry } from "./schedule-entry.schema";
 import { SchedulePeriod } from "./schedule-period.schema";
 import { ScheduleTaskAssignment } from "./schedule-task-assignment.schema";
 
+export type ScheduleChangeDocument = HydratedDocument<ScheduleChange>;
 export type ScheduleDemandDocument = HydratedDocument<ScheduleDemand>;
 export type SchedulePeriodDocument = HydratedDocument<SchedulePeriod>;
 export type ScheduleEntryDocument = HydratedDocument<ScheduleEntry>;
@@ -87,6 +89,20 @@ export class ScheduleEntryLocksRepository extends BaseRepository<
   constructor(
     @InjectModel(ScheduleEntryLock.name)
     model: RepositoryModel<ScheduleEntryLock, ScheduleEntryLockDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** schedule_changes(發布後的排班異動)。 */
+@Injectable()
+export class ScheduleChangesRepository extends BaseRepository<
+  ScheduleChange,
+  ScheduleChangeDocument
+> {
+  constructor(
+    @InjectModel(ScheduleChange.name)
+    model: RepositoryModel<ScheduleChange, ScheduleChangeDocument>,
   ) {
     super(model);
   }

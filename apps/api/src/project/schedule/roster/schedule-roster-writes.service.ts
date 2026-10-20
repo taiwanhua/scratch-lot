@@ -29,6 +29,16 @@ import {
 import type { ScheduleTemplateTask } from "../../database/schedule/schedule-demand-template.schema";
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
+import {
+  type ChangeReason,
+  type ChangeReasonInputLike,
+  type ScheduleChangeRecord,
+  ScheduleChangesService,
+} from "../changes/schedule-changes.service";
+import {
+  ScheduleCheckService,
+  rosterRuleError,
+} from "../check/schedule-check.service";
 import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
@@ -98,6 +108,9 @@ const monthOf = (date: string) => date.slice(0, 7);
  *   一個人同一時間只有一筆排班,跨店也不能重疊(`RosterPeopleReader.overlapping`)
  * - 同一家店同一個月的寫入在交易一開始碰 `schedule_periods.version`,同時送出的互相衝突、重跑;
  *   寫排班另先碰這個人的守門文件(`schedule_entry_locks`),兩家店同時排同一人也互相衝突
+ * - 存排班時跑這個人的排班類規則:存檔後限制的違反比存檔前嚴重 → `VALIDATION_FAILED`(欄位 `rules`,
+ *   `extensions.violations`;`ScheduleCheckService.limitViolationsOfEntry`)
+ * - 已發布的月份:要給異動原因,每筆異動寫 `schedule_changes` 並通知牽涉的人(`ScheduleChangesService`)
  */
 @Injectable()
 export class ScheduleRosterWritesService {
@@ -118,6 +131,8 @@ export class ScheduleRosterWritesService {
     private readonly templates: ScheduleTemplatesService,
     private readonly people: RosterPeopleReader,
     private readonly personLocks: SchedulePersonLocks,
+    private readonly checks: ScheduleCheckService,
+    private readonly changes: ScheduleChangesService,
   ) {}
 
   // ---- 人力需求 ----
@@ -182,7 +197,13 @@ export class ScheduleRosterWritesService {
     const { saved, deletedEntryIds } = await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
-          await this.touchPeriods(operator, scope, months);
+          const published = await this.touchPeriods(operator, scope, months);
+          const reason = await this.reasonIfPublished(
+            operator,
+            published,
+            input.changeReason,
+          );
+          const fillersBefore = await this.fillersOf(operator, existing);
           if (existing && existing.date !== date) {
             const filled = await this.assignments.count(operator, {
               demandId: existing._id,
@@ -242,6 +263,15 @@ export class ScheduleRosterWritesService {
             before: existing ? demandAuditOf(existing) : undefined,
             after: { ...demandAuditOf(record), deletedEntries: released },
           });
+          await this.recordChange(operator, scope, reason, published, {
+            date,
+            previousDate: existing?.date ?? null,
+            action: existing ? "demand.edit" : "demand.create",
+            targetId: record._id,
+            userIds: fillersBefore,
+            before: existing ? demandAuditOf(existing) : null,
+            after: { ...demandAuditOf(record), deletedEntries: released },
+          });
           return { saved: record, deletedEntryIds: released };
         }),
       "task already assigned (concurrent write)",
@@ -263,7 +293,13 @@ export class ScheduleRosterWritesService {
     await this.ensurePeriods(operator, scope, months);
     const deletedEntryIds = await this.transactions.withTransaction(
       async () => {
-        await this.touchPeriods(operator, scope, months);
+        const published = await this.touchPeriods(operator, scope, months);
+        const reason = await this.reasonIfPublished(
+          operator,
+          published,
+          input.changeReason,
+        );
+        const fillers = await this.fillersOf(operator, existing);
         const released = await this.releaseTasks(
           operator,
           scope,
@@ -278,6 +314,17 @@ export class ScheduleRosterWritesService {
           before: demandAuditOf(existing),
           after: { deletedEntries: released },
         });
+        if (reason !== null) {
+          await this.changes.record(operator, scope.org, reason, {
+            month: monthOf(existing.date),
+            date: existing.date,
+            action: "demand.delete",
+            targetId: existing._id,
+            userIds: fillers,
+            before: demandAuditOf(existing),
+            after: null,
+          });
+        }
         return released;
       },
     );
@@ -346,7 +393,12 @@ export class ScheduleRosterWritesService {
         this.transactions.withTransaction(async () => {
           // 先碰這個人的守門文件(跨店同時排同一人互相衝突),再碰這家店這個月的
           await this.personLocks.touch(operator, scope.org.tenantId, userId);
-          await this.touchPeriods(operator, scope, months);
+          const published = await this.touchPeriods(operator, scope, months);
+          const reason = await this.reasonIfPublished(
+            operator,
+            published,
+            input.changeReason,
+          );
           const current = existing
             ? await this.assignments.findMany(operator, {
                 entryId: existing._id,
@@ -372,6 +424,29 @@ export class ScheduleRosterWritesService {
             throw validationError("overlaps another schedule entry", [
               "startAt",
             ]);
+          }
+          const ruleViolations = await this.checks.limitViolationsOfEntry(
+            operator,
+            scope.org,
+            {
+              userId,
+              entryId: existing?._id ?? null,
+              before: existing
+                ? {
+                    date: existing.date,
+                    demandIds: current.map((item) => item.demandId),
+                  }
+                : null,
+              after: {
+                ...span,
+                date,
+                breakMinutes: input.breakMinutes,
+                demandIds: wanted.map((item) => item.demandId),
+              },
+            },
+          );
+          if (ruleViolations.length > 0) {
+            throw rosterRuleError(ruleViolations);
           }
           const data = {
             date,
@@ -401,6 +476,15 @@ export class ScheduleRosterWritesService {
               : undefined,
             after: entryAuditOf(record, keysOf(wanted)),
           });
+          await this.recordChange(operator, scope, reason, published, {
+            date,
+            previousDate: existing?.date ?? null,
+            action: existing ? "entry.edit" : "entry.create",
+            targetId: record._id,
+            userIds: [userId],
+            before: existing ? entryAuditOf(existing, keysOf(current)) : null,
+            after: entryAuditOf(record, keysOf(wanted)),
+          });
           return record;
         }),
       "task already assigned (concurrent write)",
@@ -424,8 +508,16 @@ export class ScheduleRosterWritesService {
     const months = [monthOf(existing.date)];
     await this.ensurePeriods(operator, scope, months);
     await this.transactions.withTransaction(async () => {
-      await this.touchPeriods(operator, scope, months);
+      const published = await this.touchPeriods(operator, scope, months);
+      const reason = await this.reasonIfPublished(
+        operator,
+        published,
+        input.changeReason,
+      );
       await this.removeEntries(operator, [existing]);
+      if (reason !== null) {
+        await this.recordEntryDeletions(operator, scope, reason, [existing]);
+      }
     });
     return String(existing._id);
   }
@@ -442,7 +534,12 @@ export class ScheduleRosterWritesService {
     const months = [monthOf(input.date)];
     await this.ensurePeriods(operator, scope, months);
     return this.transactions.withTransaction(async () => {
-      await this.touchPeriods(operator, scope, months);
+      const published = await this.touchPeriods(operator, scope, months);
+      const reason = await this.reasonIfPublished(
+        operator,
+        published,
+        input.changeReason,
+      );
       const records = await this.entries.findMany(operator, {
         orgId: scope.org.id,
         date: input.date,
@@ -455,6 +552,9 @@ export class ScheduleRosterWritesService {
         (record) => !blocked.has(String(record._id)),
       );
       await this.removeEntries(operator, removable);
+      if (reason !== null) {
+        await this.recordEntryDeletions(operator, scope, reason, removable);
+      }
       return {
         deletedIds: removable.map((record) => String(record._id)),
         skippedIds: [...blocked],
@@ -758,12 +858,16 @@ export class ScheduleRosterWritesService {
     }
   }
 
-  /** 交易一開始碰狀態文件:同一家店同一個月同時進來的寫入互相衝突、由交易重跑。 */
+  /**
+   * 交易一開始碰狀態文件:同一家店同一個月同時進來的寫入互相衝突、由交易重跑(發布也碰同一份,
+   * 和寫入互相衝突)。回這幾個月裡已發布的。
+   */
   private async touchPeriods(
     operator: OperatorContext,
     scope: RosterScope,
     months: readonly string[],
-  ): Promise<void> {
+  ): Promise<Set<string>> {
+    const published = new Set<string>();
     for (const month of months.toSorted((left, right) =>
       left.localeCompare(right),
     )) {
@@ -777,6 +881,86 @@ export class ScheduleRosterWritesService {
           `schedule period missing: ${String(scope.org.id)} ${month}`,
         );
       }
+      if (touched.status === "published") {
+        published.add(month);
+      }
+    }
+    return published;
+  }
+
+  /** 牽涉到已發布的月份 → 異動原因必填(驗過的原因);都未發布 → null(不記異動)。 */
+  private async reasonIfPublished(
+    operator: OperatorContext,
+    published: ReadonlySet<string>,
+    input: ChangeReasonInputLike | null | undefined,
+  ): Promise<ChangeReason | null> {
+    return published.size === 0
+      ? null
+      : this.changes.validatedReason(operator, input);
+  }
+
+  /** 填這筆人力需求的人(userId;新增 = 沒有人)。 */
+  private async fillersOf(
+    operator: OperatorContext,
+    demand: DemandRecord | null,
+  ): Promise<Types.ObjectId[]> {
+    if (demand === null) {
+      return [];
+    }
+    const filled = await this.assignments.findMany(operator, {
+      demandId: demand._id,
+    });
+    if (filled.length === 0) {
+      return [];
+    }
+    const records = await this.entries.findMany(operator, {
+      _id: { $in: filled.map((item) => item.entryId) },
+    });
+    return records.map((record) => record.userId);
+  }
+
+  /**
+   * 已發布的月份記一筆異動並通知牽涉的人(未發布 = `reason` null,不記)。
+   * 月份 = 異動那天的月份;那個月未發布(改到別的月份)時用改之前那天的月份。
+   */
+  private async recordChange(
+    operator: OperatorContext,
+    scope: RosterScope,
+    reason: ChangeReason | null,
+    published: ReadonlySet<string>,
+    change: Omit<ScheduleChangeRecord, "month"> & {
+      previousDate: string | null;
+    },
+  ): Promise<void> {
+    if (reason === null) {
+      return;
+    }
+    const { previousDate, ...rest } = change;
+    await this.changes.record(operator, scope.org, reason, {
+      ...rest,
+      month: published.has(monthOf(change.date))
+        ? monthOf(change.date)
+        : monthOf(previousDate ?? change.date),
+    });
+  }
+
+  /** 刪掉的排班各記一筆異動(同一個原因)並通知那個人。 */
+  private async recordEntryDeletions(
+    operator: OperatorContext,
+    scope: RosterScope,
+    reason: ChangeReason,
+    records: readonly EntryRecord[],
+  ): Promise<void> {
+    for (const record of records) {
+      await this.changes.record(operator, scope.org, reason, {
+        month: monthOf(record.date),
+        date: record.date,
+        action: "entry.delete",
+        targetId: record._id,
+        userIds: [record.userId],
+        before: entryAuditOf(record, []),
+        after: null,
+      });
     }
   }
 

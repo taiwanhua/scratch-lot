@@ -32,6 +32,7 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   viewDayOffs: "schedule.manage.view-day-offs",
   editDayOffs: "schedule.manage.edit-day-offs",
   myEditDayOffs: "schedule.my.edit-day-offs",
+  publish: "schedule.manage.publish",
 } as const;
 
 export const ALL_SCHEDULE_TEST_PERMISSIONS = Object.values(
@@ -148,6 +149,11 @@ const SCHEDULE_TEST_OPTIONS: Record<
   "schedule-day-off-override-reason": [
     ["staff-late-notice", true],
     ["entry-error", true],
+    ["other", true],
+  ],
+  "schedule-change-reason": [
+    ["shift-swap", true],
+    ["retired-reason", false],
     ["other", true],
   ],
   "schedule-special-day-category": [

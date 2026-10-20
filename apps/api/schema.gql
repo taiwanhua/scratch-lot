@@ -613,6 +613,7 @@ type DeleteScheduleDayOffPayload {
 }
 
 input DeleteScheduleDemandInput {
+  changeReason: ScheduleChangeReasonInput
   id: ID!
   orgId: ID
 }
@@ -623,6 +624,7 @@ type DeleteScheduleDemandPayload {
 }
 
 input DeleteScheduleEntryInput {
+  changeReason: ScheduleChangeReasonInput
   id: ID!
   orgId: ID
 }
@@ -2489,6 +2491,7 @@ type Mutation {
   printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
+  publishSchedule(input: PublishScheduleInput!): PublishSchedulePayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
@@ -3081,6 +3084,16 @@ input PublishFormVersionInput {
   formKey: ID!
 }
 
+input PublishScheduleInput {
+  month: String!
+  orgId: ID
+}
+
+type PublishSchedulePayload {
+  notifiedCount: Int!
+  period: SchedulePeriod!
+}
+
 input PublishWorkflowVersionInput {
   changelog: String!
   expectedDraftRevision: Int!
@@ -3193,6 +3206,7 @@ type Query {
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
   scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
+  scheduleCheck(input: ScheduleRosterInput!): ScheduleCheckPayload!
   scheduleDayOffOverview(input: ScheduleDayOffOverviewInput): ScheduleDayOffOverviewPayload!
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
   scheduleDemandWeekTemplates(input: ScheduleDemandWeekTemplatesInput): ScheduleDemandWeekTemplatesPayload!
@@ -3304,6 +3318,7 @@ input RegisterLotteryDealerSigninInput {
 }
 
 input RemoveScheduleDayEntriesInput {
+  changeReason: ScheduleChangeReasonInput
   date: String!
   orgId: ID
 }
@@ -3617,6 +3632,7 @@ type SaveScheduleDayOffsPayload {
 }
 
 input SaveScheduleDemandInput {
+  changeReason: ScheduleChangeReasonInput
   endAt: DateTime!
   id: ID
   orgId: ID
@@ -3653,6 +3669,7 @@ input SaveScheduleDemandWeekTemplateInput {
 input SaveScheduleEntryInput {
   assignments: [ScheduleEntryAssignmentInput!]!
   breakMinutes: Int!
+  changeReason: ScheduleChangeReasonInput
   endAt: DateTime!
   id: ID
   orgId: ID
@@ -3702,6 +3719,49 @@ type ScheduleCalendarPayload {
   month: String!
   orgId: ID!
   orgName: String!
+}
+
+input ScheduleChangeReasonInput {
+  reasonKey: String!
+  reasonNote: String
+}
+
+type ScheduleCheckItem {
+  actual: Float
+  date: String!
+  endAt: DateTime
+  entryIds: [ID!]!
+  from: String
+  isOtherStore: Boolean!
+  key: String!
+  level: String!
+  limit: Float
+  message: String!
+  orgName: String
+  startAt: DateTime
+  to: String
+  understaffed: ScheduleCheckUnderstaffed
+  userId: ID
+  userName: String
+}
+
+type ScheduleCheckPayload {
+  items: [ScheduleCheckItem!]!
+  limitCount: Int!
+  month: String!
+  orgId: ID!
+  reminderCount: Int!
+}
+
+type ScheduleCheckUnderstaffed {
+  available: Int!
+  cannotLead: Int!
+  dayOff: Int!
+  demandId: ID!
+  missing: Int!
+  occupied: Int!
+  role: String!
+  timeRange: Int!
 }
 
 type ScheduleDayOff {

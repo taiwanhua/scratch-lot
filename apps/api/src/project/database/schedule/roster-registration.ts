@@ -1,11 +1,17 @@
 import type { DatabaseRegistration } from "../../../database/registration";
 import {
+  ScheduleChangesRepository,
   ScheduleDemandsRepository,
   ScheduleEntriesRepository,
   ScheduleEntryLocksRepository,
   SchedulePeriodsRepository,
   ScheduleTaskAssignmentsRepository,
 } from "./roster.repositories";
+import {
+  SCHEDULE_CHANGES_COLLECTION,
+  ScheduleChange,
+  ScheduleChangeSchema,
+} from "./schedule-change.schema";
 import {
   SCHEDULE_DEMANDS_COLLECTION,
   ScheduleDemand,
@@ -68,9 +74,16 @@ const TABLES = [
     schema: ScheduleEntryLockSchema,
     provider: ScheduleEntryLocksRepository,
   },
+  {
+    key: "schedule-changes",
+    name: ScheduleChange.name,
+    collection: SCHEDULE_CHANGES_COLLECTION,
+    schema: ScheduleChangeSchema,
+    provider: ScheduleChangesRepository,
+  },
 ] as const;
 
-/** 排班表的資料登記:人力需求、月份狀態、排班、排班填進執行任務四張租戶表(歸屬欄 `orgId` = 分店),加上排班寫入的「人」守門表(歸屬欄 = 租戶頂層)。 */
+/** 排班表的資料登記:人力需求、月份狀態、排班、排班填進執行任務四張租戶表(歸屬欄 `orgId` = 分店),加上排班寫入的「人」守門表(歸屬欄 = 租戶頂層)與發布後的排班異動(歸屬欄 = 分店)。 */
 export const SCHEDULE_ROSTER_REGISTRATION: DatabaseRegistration = {
   key: "schedule-roster",
   models: TABLES.map((table) => ({
