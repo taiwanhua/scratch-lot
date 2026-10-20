@@ -10,6 +10,7 @@ import {
 
 import type { Persisted } from "../../../database/base.repository";
 import type { OperatorContext } from "../../../database/operator-context";
+import { currentSession } from "../../../database/transaction";
 import {
   type LotteryCashMovementDocument,
   LotteryCashMovementsRepository,
@@ -89,7 +90,9 @@ const ZERO_BASELINE: VaultBaseline = { amount: 0, since: null };
  * 店面的出庫 / 投庫 / 存銀行、調貨的現金收付、退貨退款、現金更正都經這裡寫;流水只新增,
  * 記錯用 `reverseCashMovement` 寫一筆反向。應有現金只由流水加總(第 17 章共通原則)。
  *
- * - `session`:呼叫端交易的 session(null = 不在交易內;在 `TransactionService` 裡呼叫時也會自動帶上)
+ * - **必須在交易內**(比照 `BaseRepository.createMany`):`session` 給 `withTransaction` 的 session,
+ *   或缺席 / null = 用進行中的交易;不在交易內 → 拋 `CashLedgerOutsideTransactionError`。
+ *   流水與同一個動作的其他寫入(稽核、單據狀態)一起成功、一起回復
  * - 小金庫應有 = `vaultBaseline` 的清點金額 + 之後流水對小金庫的影響
  * - 抽屜應有由店面(P21)以 `sumShiftMovements(shiftId)` 加上班次的期初與售出計算
  */
@@ -98,9 +101,10 @@ export class CashLedgerService {
   constructor(private readonly movements: LotteryCashMovementsRepository) {}
 
   async recordCashMovement(
-    session: ClientSession | null,
+    session: ClientSession | null | undefined,
     input: CashMovementInput,
   ): Promise<CashMovementRecord> {
+    const active = activeSessionOf(session);
     checkMovement(input);
     return this.movements.create(
       input.operator,
@@ -124,7 +128,7 @@ export class CashLedgerService {
         reversalOf: null,
         bankTransactionId: input.bankTransactionId ?? null,
       },
-      { session },
+      { session: active },
     );
   }
 
@@ -134,12 +138,13 @@ export class CashLedgerService {
    * 兩個人同時沖正同一筆,由唯一索引擋下後到的那一個。
    */
   async reverseCashMovement(
-    session: ClientSession | null,
+    session: ClientSession | null | undefined,
     id: Types.ObjectId | string,
     by: { operator: OperatorContext; note?: string | null },
   ): Promise<CashMovementRecord> {
+    const active = activeSessionOf(session);
     const original = await this.movements.findById(by.operator, id, {
-      session,
+      session: active,
     });
     if (!original) {
       throw notFoundError(`cash movement not found: ${String(id)}`);
@@ -150,7 +155,7 @@ export class CashLedgerService {
     const reversed = await this.movements.findOne(
       by.operator,
       { reversalOf: original._id },
-      { session },
+      { session: active },
     );
     if (reversed) {
       throw alreadyReversed();
@@ -178,7 +183,7 @@ export class CashLedgerService {
           reversalOf: original._id,
           bankTransactionId: original.bankTransactionId,
         },
-        { session },
+        { session: active },
       );
     } catch (error) {
       if (isDuplicateKeyError(error)) {
@@ -270,4 +275,23 @@ function checkMovement(input: CashMovementInput): void {
     errors.add("reason");
   }
   errors.throwIfAny("cash movement input is invalid");
+}
+
+/** 現金流水寫在交易外(程式錯誤:流水要與同一個動作的其他寫入一起回復)。 */
+export class CashLedgerOutsideTransactionError extends Error {
+  constructor() {
+    super("現金流水必須在交易內寫入(TransactionService.withTransaction)");
+    this.name = "CashLedgerOutsideTransactionError";
+  }
+}
+
+/** 給的 session,或進行中交易的 session;都不在交易內 → 拋錯。 */
+function activeSessionOf(
+  session: ClientSession | null | undefined,
+): ClientSession {
+  const active = session ?? currentSession();
+  if (active?.inTransaction() !== true) {
+    throw new CashLedgerOutsideTransactionError();
+  }
+  return active;
 }

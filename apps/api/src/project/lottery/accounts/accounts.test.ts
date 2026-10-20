@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
 import {
@@ -8,6 +8,7 @@ import {
   totalsOf,
 } from "@repo/domain/project/lottery-accounts";
 
+import { AuditService } from "../../../audit/audit.service";
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -17,6 +18,7 @@ import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { TransactionService } from "../../../database/transaction";
 import type { FormGuardContext } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import {
   AppendOnlyLedgerError,
@@ -24,9 +26,17 @@ import {
   LotteryCashMovementsRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryCashMovementSchema } from "../../database/lottery-accounts/lottery-cash-movement.schema";
-import { CashLedgerService } from "../cash/cash-ledger.service";
+import {
+  CashLedgerOutsideTransactionError,
+  CashLedgerService,
+  type CashMovementInput,
+} from "../cash/cash-ledger.service";
 import { settlementClearedGuard } from "../settlement/settlement-guard";
-import { registerSettlementDocument } from "../settlement/settlement-registry";
+import {
+  type SettlementSubmission,
+  registerSettlementDocument,
+} from "../settlement/settlement-registry";
+import { SettlementService } from "../settlement/settlement.service";
 import { errorOf, ok } from "../test-support/master-data-fixtures";
 import {
   TEST_SETTLE_PERMISSION,
@@ -429,6 +439,24 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       refId: String(refId),
     }).then((data) => data.lotterySettlement.item);
 
+  /** 現金流水一律在交易內寫(`CashLedgerService` 不在交易內會拋錯)。 */
+  const recordCash = (input: CashMovementInput) =>
+    api.app
+      .get(TransactionService)
+      .withTransaction((session) =>
+        api.app.get(CashLedgerService).recordCashMovement(session, input),
+      );
+
+  const reverseCash = (
+    id: Types.ObjectId,
+    by: { operator: OperatorContext; note?: string | null },
+  ) =>
+    api.app
+      .get(TransactionService)
+      .withTransaction((session) =>
+        api.app.get(CashLedgerService).reverseCashMovement(session, id, by),
+      );
+
   beforeAll(async () => {
     api = await startAuthTestApp("scratch-lot-test-lottery-accounts");
     await seedAccountsAuthorization(api.connection);
@@ -826,9 +854,8 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         amount: 20_000,
         branchOrgId: String(storeA),
       });
-      const ledger = api.app.get(CashLedgerService);
       const operator = await operatorOf(api, tenantA);
-      const movement = await ledger.recordCashMovement(null, {
+      const movement = await recordCash({
         operator,
         orgId: storeA,
         type: "bank_deposit",
@@ -852,9 +879,8 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
 
   describe("即時現金帳", () => {
     it("小金庫應有只從流水計算(沒有日結從 0 起算);沖正反向抵銷", async () => {
-      const ledger = api.app.get(CashLedgerService);
       const operator = await operatorOf(api, tenantA);
-      await ledger.recordCashMovement(null, {
+      await recordCash({
         operator,
         orgId: storeB,
         type: "correction_increase",
@@ -862,7 +888,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         to: "vault",
         amount: 5000,
       });
-      const out = await ledger.recordCashMovement(null, {
+      const out = await recordCash({
         operator,
         orgId: storeB,
         type: "transfer_out",
@@ -884,7 +910,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         baselineAmount: 0,
         baselineAt: null,
       });
-      await ledger.reverseCashMovement(null, out._id, { operator });
+      await reverseCash(out._id, { operator });
       const second = await view(hq);
       expect(second.lotteryCashLedger.vault.amount).toBe(5000);
       // 分店看不到別家分店的現金帳
@@ -900,7 +926,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       ).toMatchObject({ code: "FORBIDDEN" });
       // 從 → 到不合類型、出庫沒原因、抽屜沒有班次 → 擋下
       await expect(
-        ledger.recordCashMovement(null, {
+        recordCash({
           operator,
           orgId: storeB,
           type: "withdraw",
@@ -910,7 +936,17 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         }),
       ).rejects.toMatchObject({
         extensions: { fields: expect.arrayContaining(["shiftId", "reason"]) },
-      });
+      }); // 不在交易內 → 拋錯(流水要與同一個動作的其他寫入一起回復)
+      await expect(
+        api.app.get(CashLedgerService).recordCashMovement(null, {
+          operator,
+          orgId: storeB,
+          type: "correction_increase",
+          from: "external",
+          to: "vault",
+          amount: 1,
+        }),
+      ).rejects.toBeInstanceOf(CashLedgerOutsideTransactionError);
     });
 
     it("應有現金沒有可改寫的數字欄位:schema 沒有餘額欄、帳本不能修改或刪除", async () => {
@@ -1251,6 +1287,196 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
           side.buttons.filter((button) => button.canUse),
         ),
       ).toEqual([]);
+    });
+
+    it("現金收付與稽核同一個交易:稽核寫入失敗 → 流水一起回復", async () => {
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_TRANSFER,
+        values: {
+          payable: 500,
+          store: String(storeA),
+          shipper: String(storeB),
+          docNo: "T-0009",
+        },
+      });
+      const audit = api.app.get(AuditService);
+      const spy = jest
+        .spyOn(audit, "record")
+        .mockRejectedValueOnce(new Error("audit down"));
+      try {
+        const result = await api.graphql(
+          RECORD_SETTLEMENT,
+          {
+            input: {
+              moduleKey: TEST_TRANSFER,
+              refId: String(doc),
+              side: "receiver",
+              button: "out",
+              method: "cash",
+              cashSource: "vault",
+              handler: "送貨人",
+              amount: 500,
+            },
+          },
+          { accessToken: hq },
+        );
+        expect(result.errors).toBeDefined();
+      } finally {
+        spy.mockRestore();
+      }
+      expect(
+        await api.connection
+          .collection("lottery_cash_movements")
+          .countDocuments({ refId: doc }),
+      ).toBe(0);
+    });
+
+    it("收付沖正不能跨店:記帳分店不在可見範圍 → NOT_FOUND;同一筆同時沖正只有一個成功", async () => {
+      const account = await create({
+        accountNo: "0005-00004",
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_TRANSFER,
+        values: {
+          payable: 1000,
+          store: String(storeA),
+          shipper: String(storeB),
+          docNo: "T-0010",
+        },
+      });
+      const pay = (side: string, button: string, amount: number) =>
+        ok<{ recordLotterySettlement: { recordId: string } }>(
+          api,
+          hq,
+          RECORD_SETTLEMENT,
+          {
+            input: {
+              moduleKey: TEST_TRANSFER,
+              refId: String(doc),
+              side,
+              button,
+              method: "bank",
+              accountId: account.id,
+              amount,
+            },
+          },
+        );
+      await pay("receiver", "out", 1000);
+      await pay("shipper", "in", 1000);
+      const paid = await settlement(TEST_TRANSFER, doc);
+      const shipperRecord = paid.records.find(
+        (record) => record.side === "shipper",
+      );
+      // 中山店的人看得到單據、有收付權限,但出貨店(新竹店)記的帳不能沖
+      expect(
+        await errorOf(api, managerA, REVERSE_SETTLEMENT, {
+          input: { method: "bank", id: shipperRecord?.id, reason: "跨店" },
+        }),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      // 同時沖正同一筆:只有一個成功,另一個 ALREADY_REVERSED
+      const reverse = () =>
+        api.graphql(
+          REVERSE_SETTLEMENT,
+          { input: { method: "bank", id: shipperRecord?.id, reason: "同時" } },
+          { accessToken: hq },
+        );
+      const results = await Promise.all([reverse(), reverse()]);
+      expect(results.filter((result) => !result.errors)).toHaveLength(1);
+      expect(
+        results.find((result) => result.errors)?.errors?.[0]?.extensions,
+      ).toMatchObject({ reason: "ALREADY_REVERSED" });
+      expect(
+        await api.connection
+          .collection("lottery_bank_transactions")
+          .countDocuments({
+            reversalOf: new Types.ObjectId(shipperRecord?.id),
+          }),
+      ).toBe(1);
+    });
+
+    it("付款視窗的帳戶選項要那一邊的收付權限;兌獎入帳掛在單據上但不算進淨額", async () => {
+      const account = await create({
+        accountNo: "0005-00005",
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_PURCHASE,
+        values: { payable: 3000, store: String(storeA), docNo: "P-0040" },
+      });
+      expect(
+        await errorOf(api, nobody, SETTLEMENT_ACCOUNTS, {
+          moduleKey: TEST_PURCHASE,
+          refId: String(doc),
+          side: "hq",
+        }),
+      ).toMatchObject({ code: "FORBIDDEN" });
+      const prize = await record({
+        accountId: account.id,
+        type: "redemption_income",
+        amount: 40_000,
+        refType: TEST_PURCHASE,
+        refId: String(doc),
+      });
+      expect(prize).toMatchObject({ settlementSide: null });
+      const after = await settlement(TEST_PURCHASE, doc);
+      expect(after.sides[0]).toMatchObject({ net: 0, totalIn: 0 });
+      expect(after.records).toEqual([]);
+      expect(after.sides[0]?.buttons[0]).toMatchObject({
+        button: "out",
+        defaultAmount: 3000,
+      });
+    });
+
+    it("交易內的自動記帳:不看按鈕權限;金額 0 不記;不在交易內拋錯", async () => {
+      const account = await create({
+        accountNo: "0005-00006",
+        shareOrgs: [{ orgId: String(tenantA), includeDescendants: true }],
+      });
+      const doc = await insertTestSubmission(api.connection, {
+        orgId: storeA,
+        tenantId: tenantA,
+        moduleKey: TEST_PURCHASE,
+        values: { payable: 17_000, store: String(storeA), docNo: "P-0041" },
+      });
+      const submission = await api.connection
+        .collection("form_submissions")
+        .findOne({ _id: doc });
+      const service = api.app.get(SettlementService);
+      const operator = await operatorOf(api, tenantA);
+      const input = {
+        operator,
+        moduleKey: TEST_PURCHASE,
+        submission: submission as unknown as SettlementSubmission,
+        side: "hq",
+        button: "out" as const,
+        accountId: new Types.ObjectId(account.id),
+      };
+      await expect(
+        service.recordAutomatic(null, { ...input, amount: 17_000 }),
+      ).rejects.toThrow("交易內");
+      const transactions = api.app.get(TransactionService);
+      expect(
+        await transactions.withTransaction((session) =>
+          service.recordAutomatic(session, { ...input, amount: 0 }),
+        ),
+      ).toBeNull();
+      await transactions.withTransaction((session) =>
+        service.recordAutomatic(session, { ...input, amount: 17_000 }),
+      );
+      const after = await settlement(TEST_PURCHASE, doc);
+      expect(after.sides[0]).toMatchObject({ net: 17_000 });
+      expect(after.records[0]).toMatchObject({
+        side: "hq",
+        direction: "out",
+        amount: 17_000,
+      });
     });
   });
 });

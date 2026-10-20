@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Types } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   ACCOUNTS_PERMISSIONS,
@@ -328,24 +328,29 @@ export class BankTransactionsService {
   async write(
     operator: OperatorContext,
     data: BankTransactionWrite,
+    options: { session?: ClientSession | null } = {},
   ): Promise<BankTransactionRecord> {
     assertActive(data.account);
-    return this.transactions.create(operator, {
-      accountId: data.account._id,
-      occurredAt: data.occurredAt,
-      type: data.type,
-      direction: data.direction,
-      amount: data.amount,
-      branchOrgId: data.branchOrgId,
-      refType: data.refType ?? null,
-      refId: data.refId ?? null,
-      refRevision: data.refRevision ?? null,
-      settlementSide: data.settlementSide ?? null,
-      reversalOf: null,
-      summary: data.summary ?? null,
-      handler: data.handler ?? null,
-      note: data.note ?? null,
-    });
+    return this.transactions.create(
+      operator,
+      {
+        accountId: data.account._id,
+        occurredAt: data.occurredAt,
+        type: data.type,
+        direction: data.direction,
+        amount: data.amount,
+        branchOrgId: data.branchOrgId,
+        refType: data.refType ?? null,
+        refId: data.refId ?? null,
+        refRevision: data.refRevision ?? null,
+        settlementSide: data.settlementSide ?? null,
+        reversalOf: null,
+        summary: data.summary ?? null,
+        handler: data.handler ?? null,
+        note: data.note ?? null,
+      },
+      options,
+    );
   }
 
   /**
@@ -399,7 +404,8 @@ export class BankTransactionsService {
         reversalOf: null,
       });
       for (const movement of linked) {
-        await this.cashLedger.reverseCashMovement(null, movement._id, {
+        // 沿用呼叫端進行中的交易(與這筆沖正一起成功、一起回復)
+        await this.cashLedger.reverseCashMovement(undefined, movement._id, {
           operator: reader,
           note: reason,
         });

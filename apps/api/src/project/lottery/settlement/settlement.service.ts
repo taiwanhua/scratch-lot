@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Types } from "mongoose";
+import { type ClientSession, Types } from "mongoose";
 
 import {
   ACCOUNTS_KEY,
@@ -15,9 +15,15 @@ import {
 import { AuditService } from "../../../audit/audit.service";
 import { authError } from "../../../auth/auth-error";
 import { OrgsRepository } from "../../../database/database.module";
-import type { OperatorContext } from "../../../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
-import { TransactionService } from "../../../database/transaction";
+import {
+  TransactionService,
+  currentSession,
+} from "../../../database/transaction";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
 import {
   LotteryBankAccountsRepository,
@@ -34,7 +40,10 @@ import {
   validationError,
 } from "../accounts/accounts-error";
 import { parseId, trimmed } from "../accounts/accounts-util";
-import { BankTransactionsService } from "../accounts/bank-transactions.service";
+import {
+  type BankTransactionRecord,
+  BankTransactionsService,
+} from "../accounts/bank-transactions.service";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { openShiftOf } from "../cash/open-shift";
 import type {
@@ -54,7 +63,11 @@ import {
   type SettlementSnapshot,
   bankTypeOf,
 } from "./settlement-ledger";
-import { sideOf } from "./settlement-registry";
+import {
+  type SettlementSubmission,
+  settlementDocumentOf,
+  sideOf,
+} from "./settlement-registry";
 
 const DAY_MS = 86_400_000;
 
@@ -141,8 +154,8 @@ export class SettlementService {
   }
 
   /**
-   * 付款視窗「帳戶」的選項:操作者看得到、使用中、使用組織包含這一邊的分店(規格 9);
-   * 看得到單據就能問(按鈕本身另看那一邊的權限)。
+   * 付款視窗「帳戶」的選項:操作者看得到、使用中、使用組織包含這一邊的分店(規格 9)。
+   * 要看得到單據、且有那一邊的權限(`side.permission`,沒有 → `FORBIDDEN`)。
    */
   async accountOptions(
     operator: OperatorContext,
@@ -154,6 +167,10 @@ export class SettlementService {
     const side = sideOf(snapshot.registration, sideKey);
     if (side === undefined) {
       return [];
+    }
+    const grant = await this.access.grantOf(operator);
+    if (!grant.has(side.permission)) {
+      throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
     }
     const branchOrgId =
       side.branchOf?.(snapshot.submission, snapshot.payable) ??
@@ -272,8 +289,8 @@ export class SettlementService {
         input,
         snapshot.submission.tenantId,
       );
-      const row = await this.tx.withTransaction(async () => {
-        const created = await this.cashLedger.recordCashMovement(null, {
+      const row = await this.tx.withTransaction(async (session) => {
+        const created = await this.cashLedger.recordCashMovement(session, {
           operator,
           orgId: branchOrgId,
           type: chosen === "out" ? "transfer_out" : "transfer_in",
@@ -307,41 +324,97 @@ export class SettlementService {
     };
   }
 
+  /**
+   * **交易內的自動記帳**(進貨單送出時記第一筆「批貨支出」這類):不檢查按鈕權限、不看先填的金額,
+   * 沿用呼叫端的交易(不在交易內 → 拋錯)。`amount ≤ 0` 時不記(回 null)。
+   * 帳戶要使用中、使用組織包含這一邊的分店;帳戶以單據的租戶為邊界讀(事後動作是系統身分,看不到共用進來的帳戶)。
+   * 寫入者 = `operator`(事後動作給的系統身分,或按按鈕的人)。
+   */
+  async recordAutomatic(
+    session: ClientSession | null | undefined,
+    input: {
+      operator: OperatorContext;
+      moduleKey: string;
+      submission: SettlementSubmission;
+      side: string;
+      button: Direction;
+      accountId: Types.ObjectId;
+      amount: number;
+      handler?: string | null;
+      note?: string | null;
+    },
+  ): Promise<Types.ObjectId | null> {
+    const active = session ?? currentSession();
+    if (active?.inTransaction() !== true) {
+      throw new Error("recordAutomatic 必須在交易內(沿用呼叫端的交易)");
+    }
+    if (!Number.isInteger(input.amount) || input.amount <= 0) {
+      return null;
+    }
+    const registration = settlementDocumentOf(input.moduleKey);
+    const side =
+      registration === undefined ? undefined : sideOf(registration, input.side);
+    const payable = registration?.payable(input.submission) ?? null;
+    if (registration === undefined || side === undefined || payable === null) {
+      throw validationError(
+        `settlement is not registered: ${input.moduleKey}/${input.side}`,
+        ["moduleKey"],
+        ACCOUNTS_REASONS.settlementUnknown,
+      );
+    }
+    const tenantId = input.submission.tenantId;
+    const branchOrgId =
+      side.branchOf?.(input.submission, payable) ?? payable.branchOrgId;
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const account = await this.accounts.findById(reader, input.accountId, {
+      session: active,
+    });
+    if (account?.status !== "active") {
+      throw validationError(
+        "bank account is inactive",
+        ["accountId"],
+        ACCOUNTS_REASONS.accountInactive,
+      );
+    }
+    const isUsable = await this.usableBy(null, tenantId, branchOrgId);
+    if (!isUsable(account)) {
+      throw validationError(
+        "bank account is not used by this branch",
+        ["accountId"],
+        ACCOUNTS_REASONS.accountNotUsable,
+      );
+    }
+    const created = await this.bankTransactions.write(
+      input.operator,
+      {
+        account,
+        type: bankTypeOf(registration.kind, input.button),
+        direction: input.button,
+        amount: input.amount,
+        occurredAt: new Date(),
+        branchOrgId,
+        refType: registration.moduleKey,
+        refId: input.submission._id,
+        refRevision: input.submission.revision,
+        settlementSide: side.side,
+        summary: `${registration.label} ${payable.docNo}`,
+        handler: input.handler ?? null,
+        note: input.note ?? null,
+      },
+      { session: active },
+    );
+    return created._id;
+  }
+
   async reverse(
     operator: OperatorContext,
     input: ReverseLotterySettlementInput,
   ): Promise<RecordLotterySettlementPayload> {
-    const id = parseId(input.id);
     const reason = trimmed(input.reason);
     if (reason === null) {
       throw validationError("reason is required", ["reason"]);
     }
-    const { tenantId } = await this.access.grantOf(operator);
-    const reader =
-      id === null
-        ? null
-        : await tenantBoundaryContext(this.orgs, operator, tenantId);
-    let original: {
-      _id: Types.ObjectId;
-      refType: string | null;
-      refId: Types.ObjectId | null;
-      settlementSide: string | null;
-    } | null = null;
-    if (reader !== null && id !== null) {
-      original =
-        input.method === "cash"
-          ? await this.cash.findById(reader, id)
-          : await this.bank.findById(reader, id);
-    }
-    if (
-      original === null ||
-      reader === null ||
-      original.refType === null ||
-      original.refId === null ||
-      original.settlementSide === null
-    ) {
-      throw notFoundError(`settlement record not found: ${input.id}`);
-    }
+    const original = await this.findReversible(operator, input);
     // 看得到單據才看得到它的收付;沖正要那一邊的權限
     const snapshot = await this.ledger.snapshotOf(
       operator,
@@ -356,38 +429,95 @@ export class SettlementService {
     if (!grant.has(side.permission)) {
       throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
     }
-    const target = original;
-    await this.tx.withTransaction(async () => {
-      if (input.method === "cash") {
-        // 現金在單據那一邊的分店;沖正的人照可見範圍寫不進去時以租戶邊界寫(例外寫入)
+    await this.tx.withTransaction(async (session) => {
+      if (original.method === "cash") {
+        // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫
         const created = await this.cashLedger.reverseCashMovement(
-          null,
-          target._id,
-          { operator: reader, note: reason },
+          session,
+          original._id,
+          { operator, note: reason },
         );
         await this.audit.record(operator, {
           action: ACCOUNTS_AUDIT.movementReverse,
           targetType: ACCOUNTS_AUDIT.movementTarget,
           targetId: created._id,
-          before: { reversalOf: String(target._id) },
+          before: { reversalOf: String(original._id) },
           after: { reason },
         });
       } else {
-        const row = await this.bank.findById(reader, target._id);
-        if (row === null) {
-          throw notFoundError(`settlement record not found: ${input.id}`);
-        }
-        await this.bankTransactions.reverseRecord(operator, row, reason);
+        await this.bankTransactions.reverseRecord(
+          operator,
+          original.bank,
+          reason,
+        );
       }
     });
     await this.publishBadge(operator, snapshot.submission.tenantId);
     return {
-      recordId: String(target._id),
+      recordId: String(original._id),
       item: await this.settlement(
         operator,
         snapshot.registration.moduleKey,
         String(snapshot.submission._id),
       ),
+    };
+  }
+
+  /**
+   * 要沖正的那一筆:收付的紀錄(有單據與那一邊)、**這一邊的記帳分店在操作者的可見範圍內**
+   * (現金 = 流水的分店;銀行 = 歸屬分店,沒有時看登記的組織),銀行另要求看得到那個帳戶。
+   * 不符合一律 `NOT_FOUND`(不透露別家店的紀錄存在與否)。
+   */
+  private async findReversible(
+    operator: OperatorContext,
+    input: ReverseLotterySettlementInput,
+  ): Promise<
+    {
+      _id: Types.ObjectId;
+      refType: string;
+      refId: Types.ObjectId;
+      settlementSide: string;
+    } & ({ method: "cash" } | { method: "bank"; bank: BankTransactionRecord })
+  > {
+    const notFound = () =>
+      notFoundError(`settlement record not found: ${input.id}`);
+    const id = parseId(input.id);
+    if (id === null) {
+      throw notFound();
+    }
+    const { tenantId } = await this.access.grantOf(operator);
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    if (input.method === "cash") {
+      // 流水照操作者的可見範圍讀:讀得到就表示那家分店在可見範圍內
+      const row = await this.cash.findById(operator, id);
+      if (!row?.refType || !row.refId || !row.settlementSide) {
+        throw notFound();
+      }
+      return {
+        _id: row._id,
+        refType: row.refType,
+        refId: row.refId,
+        settlementSide: row.settlementSide,
+        method: "cash",
+      };
+    }
+    const row = await this.bank.findById(reader, id);
+    if (
+      !row?.refType ||
+      !row.refId ||
+      !row.settlementSide ||
+      !isOrgVisible(operator, row.branchOrgId ?? row.orgId) ||
+      (await this.accounts.findById(operator, row.accountId)) === null
+    ) {
+      throw notFound();
+    }
+    return {
+      _id: row._id,
+      refType: row.refType,
+      refId: row.refId,
+      settlementSide: row.settlementSide,
+      method: "bank",
+      bank: row,
     };
   }
 
@@ -429,7 +559,7 @@ export class SettlementService {
 
   /** 「帳戶的使用組織包含這家分店」的判斷(歸屬是它、共用給它、或共用給它的上層並含下層)。 */
   private async usableBy(
-    operator: OperatorContext,
+    operator: OperatorContext | null,
     tenantId: Types.ObjectId | null,
     branchOrgId: Types.ObjectId,
   ): Promise<
