@@ -31,7 +31,6 @@ import {
   submissionFragment,
   versionFragment,
 } from "@/test/msw/form-fixtures";
-import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
 import { formUpgradeWorld } from "@/test/msw/form-upgrade-handlers";
 import { moduleAdminTree } from "@/test/msw/module-admin-fixtures";
 import { moduleAdminWorld } from "@/test/msw/module-manager-handlers";
@@ -78,7 +77,6 @@ import {
   autoApproveBlockedEvent,
   historyEvent,
 } from "@/test/msw/workflow-history-fixtures";
-import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 
 import {
   mockRoles,
@@ -93,6 +91,7 @@ import {
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
+import { projectForms, projectWorkflows } from "./project-form-worlds";
 import { projectMockWorld } from "./project/mock-world";
 
 /**
@@ -260,7 +259,7 @@ export const mockHandlers = ({
         ] as unknown as Record<string, unknown>[],
       },
     }).handlers,
-    ...formRuntimeWorld({
+    ...projectForms(projectMockWorld, {
       moduleForms: [
         {
           key: SHOPPING_FORM_KEY,
@@ -299,7 +298,7 @@ export const mockHandlers = ({
     }).handlers,
     // 審核流程:流程管理(假資料在 `mock-workflow-design.ts`)、申請中心與詳情、阻擋清單
     ...workflowDesignWorld(mockWorkflowDesign()).handlers,
-    ...workflowRuntimeWorld(mockWorkflowRuntime()).handlers,
+    ...projectWorkflows(projectMockWorld, mockWorkflowRuntime()).handlers,
     // 印表機管理:兩台代理程式 / 印表機、三筆列印紀錄;測試列印一律印成功。
     // 組織樹由 orgWorld 提供(printingWorld 本來就不含 `OrgTree`)
     ...printingWorld().handlers,
