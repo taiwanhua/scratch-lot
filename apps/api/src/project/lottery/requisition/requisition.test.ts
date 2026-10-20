@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
-import type { FormDefinition } from "@repo/domain/form";
+import { type FormDefinition, VOID_REASON_OTHER } from "@repo/domain/form";
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 import { SKIP_ORG_TENANT, type StepDef } from "@repo/domain/workflow";
 
 import {
@@ -16,6 +17,7 @@ import {
   CREATE_FORM,
   SUBMIT,
   type SubmissionRow,
+  UPDATE_FORM,
   call,
   codeOf,
   column,
@@ -42,6 +44,7 @@ import {
   roleSource,
 } from "../../../workflows/test-support/workflow-fixtures";
 import { isGameInUse } from "../games/game-usage";
+import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { RequisitionReference } from "./requisition-reference";
 import {
   PURCHASING_MODULE_KEYS,
@@ -135,7 +138,7 @@ interface PurchaseList {
   }[];
 }
 
-/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r1.seed.ts`)。 */
+/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r2.seed.ts`)。 */
 function requisitionDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),
@@ -319,6 +322,22 @@ describe("叫貨單(規格 8.1)", () => {
       },
     });
     await publishDefinition(api, root, FORM, requisitionDefinition(), null);
+    // 同受管表單:作廢原因用「作廢原因」類別(選項同 seeds/project/field-categories.ts)
+    await seedReasonCategory(
+      connection,
+      LOTTERY_FIELD_CATEGORY_KEYS.voidReason,
+      [
+        { value: "input-error", label: "輸入錯誤" },
+        { value: "duplicate", label: "重複建立" },
+        { value: VOID_REASON_OTHER, label: "其他" },
+      ],
+    );
+    await ok(api, root, UPDATE_FORM, {
+      input: {
+        key: FORM,
+        voidReasonCategoryKey: LOTTERY_FIELD_CATEGORY_KEYS.voidReason,
+      },
+    });
     await ok(api, root, ASSIGN, {
       input: { formKey: FORM, tenantOrgIds: [String(tenant)] },
     });
@@ -652,7 +671,8 @@ describe("叫貨單(規格 8.1)", () => {
         input: {
           id: requisition.id,
           expectedEditVersion: requisition.editVersion,
-          reasonNote: "輸入錯誤",
+          reasonKey: "input-error",
+          reasonNote: "",
         },
       });
       expect(extensionsOf(blocked)).toMatchObject({
@@ -668,12 +688,38 @@ describe("叫貨單(規格 8.1)", () => {
       expect(await stateOf(requisition.id)).toBe("pending");
     });
 
+    it("作廢原因要是「作廢原因」類別的選項:不在類別內 / 沒選 → VALIDATION_FAILED(reasonKey);選「其他」沒寫說明 → VALIDATION_FAILED(reasonNote)", async () => {
+      const voidWith = (reason: Record<string, unknown>) =>
+        call(api, hq.token, FORM_VOID, {
+          input: {
+            id: requisition.id,
+            expectedEditVersion: requisition.editVersion,
+            reasonNote: "",
+            ...reason,
+          },
+        });
+      for (const reason of [
+        { reasonKey: "not-a-void-reason" },
+        { reasonKey: "customer-return" },
+        { reasonNote: "沒選原因" },
+      ]) {
+        const result = await voidWith(reason);
+        expect(codeOf(result)).toBe("VALIDATION_FAILED");
+        expect(extensionsOf(result).fields).toEqual(["reasonKey"]);
+      }
+      const noNote = await voidWith({ reasonKey: VOID_REASON_OTHER });
+      expect(codeOf(noNote)).toBe("VALIDATION_FAILED");
+      expect(extensionsOf(noNote).fields).toEqual(["reasonNote"]);
+      expect(await stateOf(requisition.id)).toBe("pending");
+    });
+
     it("作廢 → 副本補 voidedAt(不刪除),不在採購清單、不算在途;作廢後不能被引用", async () => {
       await ok(api, hq.token, FORM_VOID, {
         input: {
           id: requisition.id,
           expectedEditVersion: requisition.editVersion,
-          reasonNote: "輸入錯誤",
+          reasonKey: "input-error",
+          reasonNote: "",
         },
       });
       const rows = await linesOf(requisition.id);

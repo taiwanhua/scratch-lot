@@ -14,7 +14,7 @@ import { inventoryModule } from "./inventory";
 import { masterDataModule } from "./master-data";
 import { purchasingModuleDeclarations } from "./purchasing";
 import { reportsModule } from "./reports";
-import { seed as requisitionForm } from "./revisions/requisition.r1.seed";
+import { seed as requisitionForm } from "./revisions/requisition.r2.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 

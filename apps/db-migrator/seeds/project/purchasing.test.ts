@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
+import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
+
 import { assembleSeedRegistry } from "../registry";
 import { FORM_WORKFLOWS } from "./onboarding/form-workflows";
 import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
@@ -10,7 +12,7 @@ import {
   purchasingRequisitionModule,
 } from "./purchasing";
 import { projectSeedSource } from "./registry";
-import { seed as requisitionForm } from "./revisions/requisition.r1.seed";
+import { seed as requisitionForm } from "./revisions/requisition.r2.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("叫貨與進貨的模組宣告(規格 3.1、3.2)", () => {
@@ -55,12 +57,13 @@ describe("叫貨與進貨的模組宣告(規格 3.1、3.2)", () => {
     ).not.toThrow();
   });
 
-  it("受管表單 叫貨單:允許存草稿、單號 R-0001、綁 purchasing.requisition", () => {
+  it("受管表單 叫貨單:允許存草稿、單號 R-0001、綁 purchasing.requisition、作廢原因用「作廢原因」類別", () => {
     expect(requisitionForm).toMatchObject({
       key: "requisition",
       moduleKey: "purchasing.requisition",
       allowDraft: true,
       serial: { prefix: "R", period: "none", digits: 4 },
+      voidReasonCategoryKey: LOTTERY_FIELD_CATEGORY_KEYS.voidReason,
     });
   });
 

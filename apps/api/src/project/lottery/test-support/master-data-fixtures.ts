@@ -144,6 +144,40 @@ export async function seedPositionCategory(
   return categoryId;
 }
 
+/**
+ * 全域的原因類別與種子選項(同 `seeds/project/field-categories.ts` 的形狀;測試 app 不跑專案 seed),回類別 id。
+ * 例:作廢原因 `LOTTERY_FIELD_CATEGORY_KEYS.voidReason` + 輸入錯誤 / 其他。
+ */
+export async function seedReasonCategory(
+  connection: Connection,
+  key: string,
+  options: readonly { value: string; label: string }[],
+): Promise<Types.ObjectId> {
+  const now = new Date();
+  const { insertedId: categoryId } = await connection
+    .collection("field_categories")
+    .insertOne({
+      key,
+      name: key,
+      isSystem: true,
+      enabled: true,
+      ...baseFields(now),
+    });
+  await connection.collection("fields").insertMany(
+    options.map((option, index) => ({
+      ...option,
+      key: `${key}.${option.value}`,
+      categoryId,
+      orgId: null,
+      order: index + 1,
+      enabled: true,
+      isSystem: true,
+      ...baseFields(now),
+    })),
+  );
+  return categoryId;
+}
+
 /** 某組織自訂的崗位選項(例:示範租戶的「彩券機旁」)。 */
 export async function addCustomPosition(
   connection: Connection,
