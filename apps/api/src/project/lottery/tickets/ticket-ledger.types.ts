@@ -19,11 +19,15 @@ import type { TicketLocation } from "../../database/lottery-inventory/lottery-ti
  *   「張還在別的分店、由收貨 / 刷到的這家店的人寫」);仍記得是哪位操作者(基礎欄位與搬家稽核)。
  *   **只能把張移進操作者看得到的店**:每一筆都要帶 `patch.orgId`、目標在他的可見範圍內,否則 `FORBIDDEN`;
  *   鎖定 / 解除不接受跨店
- * - `operator: null` = 沒有操作者的系統寫入,一定要給 `crossStoreTenantId`,而且不能換店(搬家要寫稽核)
+ * - `operator: null` = 沒有操作者的系統寫入,一定要給 `crossStoreTenantId`,而且不能換店(搬家要寫稽核);
+ *   給了 `systemActorId`(觸發這次系統寫入的人,例:作廢調貨單的人)才能換店,目標可以是租戶內任何一家店,
+ *   搬家稽核與事件的「誰」記這個人(事後動作的系統身分沒有操作者)
  */
 export interface LedgerContext {
   operator: OperatorContext | null;
   crossStoreTenantId?: Types.ObjectId;
+  /** 只配 `operator: null`:系統寫入代表誰(換店的稽核記他)。 */
+  systemActorId?: Types.ObjectId | null;
 }
 
 /** 這次事件要把張改成什麼(沒給的欄位不變)。 */

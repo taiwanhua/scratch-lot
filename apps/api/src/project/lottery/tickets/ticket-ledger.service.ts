@@ -253,18 +253,50 @@ export class TicketLedgerService {
     return this.changeLock(session, operator, ticketIds, lock, null);
   }
 
+  /**
+   * 系統鎖定 / 解除(事後動作用:系統身分只看得到單據的組織,張在別家店):以這個租戶的租戶邊界上下文改鎖。
+   * 只動 `lock` 這個鎖(鎖定從沒有鎖開始、解除只解自己的鎖),不換店、不寫事件;規則同 `lockTickets`。
+   */
+  async lockTicketsInTenant(
+    session: ClientSession,
+    tenantId: Types.ObjectId,
+    ticketIds: readonly Types.ObjectId[],
+    lock: TicketLockRef,
+  ): Promise<TicketVersion[]> {
+    const context = await tenantBoundaryContext(this.orgs, null, tenantId);
+    return this.changeLockIn(context, session, ticketIds, null, lock);
+  }
+
+  /** 系統解除自己的鎖(見 `lockTicketsInTenant`)。 */
+  async unlockTicketsInTenant(
+    session: ClientSession,
+    tenantId: Types.ObjectId,
+    ticketIds: readonly Types.ObjectId[],
+    lock: TicketLockRef,
+  ): Promise<TicketVersion[]> {
+    const context = await tenantBoundaryContext(this.orgs, null, tenantId);
+    return this.changeLockIn(context, session, ticketIds, lock, null);
+  }
+
   private async resolve(ledger: LedgerContext): Promise<ResolvedLedger> {
     const by = ledger.operator?.actorId ?? null;
     if (ledger.crossStoreTenantId !== undefined) {
-      return {
-        context: await tenantBoundaryContext(
-          this.orgs,
-          ledger.operator,
-          ledger.crossStoreTenantId,
-        ),
-        operator: ledger.operator,
-        by,
-      };
+      const context = await tenantBoundaryContext(
+        this.orgs,
+        ledger.operator,
+        ledger.crossStoreTenantId,
+      );
+      const systemActorId =
+        ledger.operator === null ? (ledger.systemActorId ?? null) : null;
+      if (systemActorId !== null) {
+        // 系統寫入代表觸發它的人:搬家稽核與事件的「誰」記他
+        return {
+          context: { ...context, actorId: systemActorId },
+          operator: null,
+          by: systemActorId,
+        };
+      }
+      return { context, operator: ledger.operator, by };
     }
     if (ledger.operator === null) {
       throw new Error("帳本:沒有操作者的系統寫入要給 crossStoreTenantId");
@@ -378,7 +410,7 @@ export class TicketLedgerService {
         session,
       });
     }
-    if (ledger.operator === null) {
+    if (ledger.context.actorId === null) {
       throw new Error("帳本:換店要寫搬家稽核,需要操作者");
     }
     return this.tickets.reassignOrg(ledger.context, filter, target, {
@@ -397,11 +429,11 @@ export class TicketLedgerService {
     bookId: Types.ObjectId,
     tenantId: Types.ObjectId | null,
   ): Promise<void> {
-    const whole = await tenantBoundaryContext(
-      this.orgs,
-      ledger.operator,
-      tenantId,
-    );
+    // 記得是誰(操作者,或系統寫入代表的人):整本搬家要寫稽核
+    const whole = {
+      ...(await tenantBoundaryContext(this.orgs, ledger.operator, tenantId)),
+      actorId: ledger.context.actorId,
+    };
     const tickets = await this.tickets.findMany(
       whole,
       { bookId },
@@ -435,7 +467,7 @@ export class TicketLedgerService {
     if (
       holderOrgIds.length === 1 &&
       onlyHolder !== undefined &&
-      ledger.operator !== null
+      ledger.context.actorId !== null
     ) {
       // 已在那家店時搬家入口不寫入(冪等)
       await this.books.reassignOrg(whole, { _id: bookId }, onlyHolder, {
@@ -456,6 +488,19 @@ export class TicketLedgerService {
     }
     // 鎖定只照操作者自己的範圍(不接受跨店):只能鎖自己看得到的張
     const resolved = await this.resolve({ operator });
+    return this.changeLockIn(resolved.context, session, ticketIds, from, to);
+  }
+
+  private async changeLockIn(
+    context: OperatorContext,
+    session: ClientSession,
+    ticketIds: readonly Types.ObjectId[],
+    from: TicketLockRef | null,
+    to: TicketLockRef | null,
+  ): Promise<TicketVersion[]> {
+    if (ticketIds.length === 0) {
+      return [];
+    }
     const bookDeltas = new Map<
       string,
       { bookId: Types.ObjectId; delta: number }
@@ -463,7 +508,7 @@ export class TicketLedgerService {
     const versions: TicketVersion[] = [];
     for (const ticketId of ticketIds) {
       const changed = await this.changeOneLock(
-        resolved.context,
+        context,
         session,
         ticketId,
         from,
@@ -484,7 +529,7 @@ export class TicketLedgerService {
     }
     for (const { bookId, delta } of bookDeltas.values()) {
       await this.books.updateById(
-        resolved.context,
+        context,
         bookId,
         { $inc: { lockedTicketCount: delta } },
         { session },

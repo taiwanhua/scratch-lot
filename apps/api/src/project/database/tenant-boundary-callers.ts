@@ -80,6 +80,17 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/purchase/purchase-rules.service.ts": ["反查", "例外寫入"],
   // 遊戲是否有進貨單引用、在途本數、甲類的批購日來源:沒有操作者,問的是整個租戶
   "project/lottery/purchase/purchase-registrations.ts": ["系統重算"],
+  // 調貨單:本 / 張 / 其他調貨單 / 叫貨單(單據可能是總部建的,系統身分只看得到單據的組織;張分在多家店)、
+  // 點收關卡是流程實例的最後一關
+  "project/lottery/transfer/transfer-rules.service.ts": ["反查"],
+  // 調貨單讀取放行:出貨店、收貨店兩邊都看得到;點收資格讀流程實例的最後一關
+  "project/lottery/transfer/transfer-access.ts": ["反查"],
+  // 調貨點收:送錯分店時查別家店的調貨單與本
+  "project/lottery/transfer/transfer-receiving.service.ts": ["反查"],
+  // 新增頁的選本與張數格子(本的張分在多家店)、列表進度(兩邊店都看得到)
+  "project/lottery/transfer/transfer-query.service.ts": ["反查"],
+  // 在途本數、收付的已點收金額、側欄計數讀流程實例:沒有操作者,問的是整個租戶
+  "project/lottery/transfer/transfer-registrations.ts": ["系統重算"],
   // 點收:店長從申請中心進來,總部建的單不在他的可見範圍;送錯分店要查別家店的進貨單
   "project/lottery/purchase/purchase-receiving.service.ts": ["反查"],
   // 受託人的關聯(關係人可能是別的組織建的);點收進度讀點收紀錄

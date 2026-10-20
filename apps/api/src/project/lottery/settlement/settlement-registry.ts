@@ -67,6 +67,8 @@ export interface SettlementPayable {
   docNo: string;
   /** 對象(例 甲類經銷商、出貨店);不用「對方」這種看情境才懂的字。 */
   counterparty: string;
+  /** 付款方先填值的基準,和應付不同時才給(調貨單:已點收的批購金額;進 `SettlementState.received`)。 */
+  received?: number;
 }
 
 export interface SettlementSideRegistration {
@@ -95,8 +97,18 @@ export interface SettlementDocumentRegistration {
   /** 類型名稱(例 進貨單)。 */
   label: string;
   kind: SettlementKind;
-  /** 這張單據的應付;回 null = 這張不參與收付(例 還沒送出的草稿)。 */
-  payable: (submission: SettlementSubmission) => SettlementPayable | null;
+  /**
+   * 這張單據的應付;回 null = 這張不參與收付(例 還沒送出的草稿)。可以是非同步的(調貨單要讀點收紀錄)。
+   */
+  payable: (
+    submission: SettlementSubmission,
+  ) => SettlementPayable | null | Promise<SettlementPayable | null>;
+  /**
+   * 單據存值裡「這幾家店也看得到這張單的收付」的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串):
+   * 單據歸屬看不到、但這些欄位是讀者可見範圍內的組織時,結算區塊與待結清款項照樣讀得到(調貨單的出貨店、
+   * 收貨店兩邊;同資料共用 `sharedByFields` 的意思,ADR-0014)。寫入仍照讀者自己的範圍(記在自己那一邊的分店)。
+   */
+  sharedByValues?: readonly string[];
   sides: readonly SettlementSideRegistration[];
 }
 

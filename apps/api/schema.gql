@@ -2302,6 +2302,75 @@ input LotteryTicketVersionInput {
   version: Int!
 }
 
+type LotteryTransferBook {
+  availableCount: Int!
+  bookId: ID!
+  bookNo: String!
+  bookPrice: Int!
+  gameCode: String!
+  gameId: ID!
+  gameName: String!
+  isWhole: Boolean!
+  rate: Int!
+  unitPrice: Int!
+}
+
+type LotteryTransferOptions {
+  books: [LotteryTransferBook!]!
+  requisitions: [LotteryTransferRequisition!]!
+}
+
+type LotteryTransferProgress {
+  inSettlement: Boolean!
+  inTransit: Boolean!
+  partialTickets: Int!
+  receivedCount: Int!
+  settlementAmount: Int!
+  settlementKind: String
+  totalCount: Int!
+  transferId: ID!
+  wholeBooks: Int!
+}
+
+type LotteryTransferReceiving {
+  canReceive: Boolean!
+  fromBranchName: String!
+  receivedCount: Int!
+  rows: [LotteryTransferRow!]!
+  submissionId: ID!
+  toBranchName: String!
+  totalCount: Int!
+  transferAmount: Int!
+}
+
+type LotteryTransferRequisition {
+  books: Int!
+  id: ID!
+  serialNo: String
+}
+
+type LotteryTransferRow {
+  amount: Int!
+  bookId: ID!
+  bookNo: String!
+  gameCode: String!
+  gameName: String!
+  mode: String!
+  purchaseAmount: Int!
+  rate: Int!
+  received: Boolean!
+  receivedAt: DateTime
+  rowId: String!
+  shipped: Boolean!
+  ticketNos: [String!]!
+  tickets: Int!
+}
+
+type LotteryTransferTicketCell {
+  state: String!
+  ticketNo: String!
+}
+
 type LotteryVaultExpected {
   amount: Int!
   baselineAmount: Int!
@@ -2521,6 +2590,7 @@ type Mutation {
   purgeDemoTenant(input: PurgeDemoTenantInput!): PurgeDemoTenantPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
+  receiveLotteryTransferBook(input: ReceiveLotteryTransferBookInput!): ReceiveLotteryTransferBookPayload!
   recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
   recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
   recoverLotteryTickets(input: RecoverLotteryTicketsInput!): LotteryInventoryActionPayload!
@@ -3295,6 +3365,10 @@ type Query {
   lotterySettlementCandidates(input: LotterySettlementCandidatesInput!): LotteryOutstandingSettlementsPayload!
   lotteryStockOverview(input: LotteryStockOverviewInput!): LotteryStockOverviewPayload!
   lotteryTicketLookup(input: LotteryTicketLookupInput!): LotteryTicketLookupPayload!
+  lotteryTransferBookTickets(bookId: ID!, fromOrgId: ID!): [LotteryTransferTicketCell!]!
+  lotteryTransferOptions(fromOrgId: ID!, toOrgId: ID): LotteryTransferOptions!
+  lotteryTransferProgress(transferIds: [ID!]!): [LotteryTransferProgress!]!
+  lotteryTransferReceiving(submissionId: ID!): LotteryTransferReceiving!
   me: Me!
   moduleForms(moduleKey: ID!): [FormSummary!]!
   moduleListColumns(moduleKey: String!): ModuleListColumnsPayload!
@@ -3393,6 +3467,16 @@ input ReceiveLotteryPurchaseBookInput {
 
 type ReceiveLotteryPurchaseBookPayload {
   receiving: LotteryPurchaseReceiving!
+  rowId: String!
+}
+
+input ReceiveLotteryTransferBookInput {
+  code: String!
+  submissionId: ID!
+}
+
+type ReceiveLotteryTransferBookPayload {
+  receiving: LotteryTransferReceiving!
   rowId: String!
 }
 

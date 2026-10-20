@@ -7,6 +7,7 @@ import { LotteryMasterDataModule } from "./lottery/master-data.module";
 import { LotteryPurchaseModule } from "./lottery/purchase/purchase.module";
 import { LotteryRequisitionModule } from "./lottery/requisition/requisition.module";
 import { LotteryTicketsModule } from "./lottery/tickets/tickets.module";
+import { LotteryTransferModule } from "./lottery/transfer/transfer.module";
 import { ScheduleModule } from "./schedule/schedule.module";
 
 /**
@@ -24,4 +25,5 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "lottery-requisition", module: LotteryRequisitionModule },
   { key: "lottery-inventory", module: LotteryInventoryModule },
   { key: "lottery-purchase", module: LotteryPurchaseModule },
+  { key: "lottery-transfer", module: LotteryTransferModule },
 ];

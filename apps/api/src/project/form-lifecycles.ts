@@ -1,6 +1,7 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { purchaseLifecycle } from "./lottery/purchase/purchase-lifecycle";
 import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
+import { transferLifecycle } from "./lottery/transfer/transfer-lifecycle";
 
 /**
  * 專案的表單 / 流程掛接點(`docs/concepts/workflow-engine.md`「掛接點」;STRUCT-12 api 的
@@ -33,4 +34,6 @@ export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
   requisitionLifecycle,
   // 進貨單:送出前檢查、送出後記批貨支出與批購日、點收守門、作廢撤銷本(專案規格 8.2)
   purchaseLifecycle,
+  // 調貨單:送出鎖定、第一關通過出貨在途、點收與收付守門、駁回 / 作廢回到出貨店(專案規格 8.4)
+  transferLifecycle,
 ];

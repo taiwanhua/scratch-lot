@@ -1,0 +1,86 @@
+# 調貨單(模組 purchasing.transfer,正本 docs/modules/project/purchasing.md「調貨單」)。
+# 調貨單本身的新增 / 存草稿 / 送出 / 審核 / 作廢走表單引擎;收付走 accounts.graphql 的收付端點。
+
+fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
+  submissionId
+  fromBranchName
+  toBranchName
+  transferAmount
+  canReceive
+  receivedCount
+  totalCount
+  rows {
+    rowId
+    bookId
+    gameCode
+    gameName
+    bookNo
+    mode
+    ticketNos
+    tickets
+    amount
+    rate
+    purchaseAmount
+    shipped
+    received
+    receivedAt
+  }
+}
+
+query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
+  lotteryTransferOptions(fromOrgId: $fromOrgId, toOrgId: $toOrgId) {
+    books {
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      bookPrice
+      rate
+      isWhole
+      availableCount
+    }
+    requisitions {
+      id
+      serialNo
+      books
+    }
+  }
+}
+
+query LotteryTransferBookTickets($fromOrgId: ID!, $bookId: ID!) {
+  lotteryTransferBookTickets(fromOrgId: $fromOrgId, bookId: $bookId) {
+    ticketNo
+    state
+  }
+}
+
+query LotteryTransferProgress($transferIds: [ID!]!) {
+  lotteryTransferProgress(transferIds: $transferIds) {
+    transferId
+    wholeBooks
+    partialTickets
+    receivedCount
+    totalCount
+    inTransit
+    settlementKind
+    settlementAmount
+    inSettlement
+  }
+}
+
+query LotteryTransferReceiving($submissionId: ID!) {
+  lotteryTransferReceiving(submissionId: $submissionId) {
+    ...LotteryTransferReceivingFields
+  }
+}
+
+mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
+  receiveLotteryTransferBook(input: $input) {
+    rowId
+    receiving {
+      ...LotteryTransferReceivingFields
+    }
+  }
+}

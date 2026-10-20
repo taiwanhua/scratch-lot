@@ -67,12 +67,33 @@ import {
   bankTypeOf,
 } from "./settlement-ledger";
 import {
+  type SettlementSideRegistration,
   type SettlementSubmission,
   settlementDocumentOf,
   sideOf,
 } from "./settlement-registry";
 
 const DAY_MS = 86_400_000;
+
+/**
+ * 兩邊店都看得到的單據(`sharedByValues`,調貨單):只能操作自己看得到的那一邊(這一邊的分店在可見範圍內);
+ * 其他單據不另外檢查。
+ */
+function assertSideVisible(
+  operator: OperatorContext,
+  snapshot: SettlementSnapshot,
+  side: SettlementSideRegistration,
+): void {
+  const sideBranch =
+    side.branchOf?.(snapshot.submission, snapshot.payable) ??
+    snapshot.payable.branchOrgId;
+  if (
+    snapshot.registration.sharedByValues !== undefined &&
+    !isOrgVisible(operator, sideBranch)
+  ) {
+    throw authError("FORBIDDEN", `Side ${side.side} is not visible`);
+  }
+}
 
 /**
  * 收付機制(專案規格第 9 章;正本 `docs/modules/project/accounts.md`「收付機制」)。
@@ -175,6 +196,7 @@ export class SettlementService {
     if (!grant.has(side.permission)) {
       throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
     }
+    assertSideVisible(operator, snapshot, side);
     const branchOrgId =
       side.branchOf?.(snapshot.submission, snapshot.payable) ??
       snapshot.payable.branchOrgId;
@@ -262,6 +284,7 @@ export class SettlementService {
     if (!grant.has(side.permission)) {
       throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
     }
+    assertSideVisible(operator, snapshot, side);
     const errors = new FieldErrors();
     const button = (DIRECTIONS as readonly string[]).includes(input.button)
       ? (input.button as Direction)
@@ -404,7 +427,10 @@ export class SettlementService {
     const registration = settlementDocumentOf(input.moduleKey);
     const side =
       registration === undefined ? undefined : sideOf(registration, input.side);
-    const payable = registration?.payable(input.submission) ?? null;
+    const payable =
+      registration === undefined
+        ? null
+        : await registration.payable(input.submission);
     if (registration === undefined || side === undefined || payable === null) {
       throw validationError(
         `settlement is not registered: ${input.moduleKey}/${input.side}`,
@@ -479,6 +505,7 @@ export class SettlementService {
     if (!grant.has(side.permission)) {
       throw authError("FORBIDDEN", `Missing permission ${side.permission}`);
     }
+    assertSideVisible(operator, snapshot, side);
     await this.tx.withTransaction(async (session) => {
       if (original.method === "cash") {
         // 現金在這一邊的分店(已確認在操作者的可見範圍內):以操作者自己的上下文寫
@@ -783,7 +810,11 @@ export class SettlementService {
       sides: registration.sides.map((side, index) => {
         const totals = state.sides[side.side] ?? { out: 0, in: 0 };
         const branchId = String(sideBranches[index]);
-        const canSettle = grant.has(side.permission);
+        // 兩邊店都看得到的單據(調貨單):這一邊的分店也要在讀者的可見範圍內才能按
+        const canSettle =
+          grant.has(side.permission) &&
+          (registration.sharedByValues === undefined ||
+            isOrgVisible(operator, sideBranches[index] ?? payable.branchOrgId));
         return {
           side: side.side,
           label: side.label,

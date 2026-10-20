@@ -2512,6 +2512,82 @@ export type LotteryTicketVersionInput = {
   version: Scalars['Int']['input'];
 };
 
+export type LotteryTransferBook = {
+  __typename?: 'LotteryTransferBook';
+  availableCount: Scalars['Int']['output'];
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  bookPrice: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  gameName: Scalars['String']['output'];
+  isWhole: Scalars['Boolean']['output'];
+  rate: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryTransferOptions = {
+  __typename?: 'LotteryTransferOptions';
+  books: Array<LotteryTransferBook>;
+  requisitions: Array<LotteryTransferRequisition>;
+};
+
+export type LotteryTransferProgress = {
+  __typename?: 'LotteryTransferProgress';
+  inSettlement: Scalars['Boolean']['output'];
+  inTransit: Scalars['Boolean']['output'];
+  partialTickets: Scalars['Int']['output'];
+  receivedCount: Scalars['Int']['output'];
+  settlementAmount: Scalars['Int']['output'];
+  settlementKind?: Maybe<Scalars['String']['output']>;
+  totalCount: Scalars['Int']['output'];
+  transferId: Scalars['ID']['output'];
+  wholeBooks: Scalars['Int']['output'];
+};
+
+export type LotteryTransferReceiving = {
+  __typename?: 'LotteryTransferReceiving';
+  canReceive: Scalars['Boolean']['output'];
+  fromBranchName: Scalars['String']['output'];
+  receivedCount: Scalars['Int']['output'];
+  rows: Array<LotteryTransferRow>;
+  submissionId: Scalars['ID']['output'];
+  toBranchName: Scalars['String']['output'];
+  totalCount: Scalars['Int']['output'];
+  transferAmount: Scalars['Int']['output'];
+};
+
+export type LotteryTransferRequisition = {
+  __typename?: 'LotteryTransferRequisition';
+  books: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryTransferRow = {
+  __typename?: 'LotteryTransferRow';
+  amount: Scalars['Int']['output'];
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  mode: Scalars['String']['output'];
+  purchaseAmount: Scalars['Int']['output'];
+  rate: Scalars['Int']['output'];
+  received: Scalars['Boolean']['output'];
+  receivedAt?: Maybe<Scalars['DateTime']['output']>;
+  rowId: Scalars['String']['output'];
+  shipped: Scalars['Boolean']['output'];
+  ticketNos: Array<Scalars['String']['output']>;
+  tickets: Scalars['Int']['output'];
+};
+
+export type LotteryTransferTicketCell = {
+  __typename?: 'LotteryTransferTicketCell';
+  state: Scalars['String']['output'];
+  ticketNo: Scalars['String']['output'];
+};
+
 export type LotteryVaultExpected = {
   __typename?: 'LotteryVaultExpected';
   amount: Scalars['Int']['output'];
@@ -2743,6 +2819,7 @@ export type Mutation = {
   purgeDemoTenant: PurgeDemoTenantPayload;
   reassignTask: WorkflowTaskPayload;
   receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
+  receiveLotteryTransferBook: ReceiveLotteryTransferBookPayload;
   recordLotteryBankTransaction: LotteryBankTransactionPayload;
   recordLotterySettlement: RecordLotterySettlementPayload;
   recoverLotteryTickets: LotteryInventoryActionPayload;
@@ -3208,6 +3285,11 @@ export type MutationReassignTaskArgs = {
 
 export type MutationReceiveLotteryPurchaseBookArgs = {
   input: ReceiveLotteryPurchaseBookInput;
+};
+
+
+export type MutationReceiveLotteryTransferBookArgs = {
+  input: ReceiveLotteryTransferBookInput;
 };
 
 
@@ -4338,6 +4420,10 @@ export type Query = {
   lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
   lotteryStockOverview: LotteryStockOverviewPayload;
   lotteryTicketLookup: LotteryTicketLookupPayload;
+  lotteryTransferBookTickets: Array<LotteryTransferTicketCell>;
+  lotteryTransferOptions: LotteryTransferOptions;
+  lotteryTransferProgress: Array<LotteryTransferProgress>;
+  lotteryTransferReceiving: LotteryTransferReceiving;
   me: Me;
   moduleForms: Array<FormSummary>;
   moduleListColumns: ModuleListColumnsPayload;
@@ -4703,6 +4789,28 @@ export type QueryLotteryTicketLookupArgs = {
 };
 
 
+export type QueryLotteryTransferBookTicketsArgs = {
+  bookId: Scalars['ID']['input'];
+  fromOrgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryTransferOptionsArgs = {
+  fromOrgId: Scalars['ID']['input'];
+  toOrgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryTransferProgressArgs = {
+  transferIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type QueryLotteryTransferReceivingArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
 export type QueryModuleFormsArgs = {
   moduleKey: Scalars['ID']['input'];
 };
@@ -4975,6 +5083,17 @@ export type ReceiveLotteryPurchaseBookInput = {
 export type ReceiveLotteryPurchaseBookPayload = {
   __typename?: 'ReceiveLotteryPurchaseBookPayload';
   receiving: LotteryPurchaseReceiving;
+  rowId: Scalars['String']['output'];
+};
+
+export type ReceiveLotteryTransferBookInput = {
+  code: Scalars['String']['input'];
+  submissionId: Scalars['ID']['input'];
+};
+
+export type ReceiveLotteryTransferBookPayload = {
+  __typename?: 'ReceiveLotteryTransferBookPayload';
+  receiving: LotteryTransferReceiving;
   rowId: Scalars['String']['output'];
 };
 
@@ -8786,6 +8905,45 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> };
+
+export type LotteryTransferOptionsQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+  toOrgId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }> } };
+
+export type LotteryTransferBookTicketsQueryVariables = Exact<{
+  fromOrgId: Scalars['ID']['input'];
+  bookId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferBookTicketsQuery = { __typename?: 'Query', lotteryTransferBookTickets: Array<{ __typename?: 'LotteryTransferTicketCell', ticketNo: string, state: string }> };
+
+export type LotteryTransferProgressQueryVariables = Exact<{
+  transferIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferProgressQuery = { __typename?: 'Query', lotteryTransferProgress: Array<{ __typename?: 'LotteryTransferProgress', transferId: string, wholeBooks: number, partialTickets: number, receivedCount: number, totalCount: number, inTransit: boolean, settlementKind?: string | null, settlementAmount: number, inSettlement: boolean }> };
+
+export type LotteryTransferReceivingQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryTransferReceivingQuery = { __typename?: 'Query', lotteryTransferReceiving: { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> } };
+
+export type ReceiveLotteryTransferBookMutationVariables = Exact<{
+  input: ReceiveLotteryTransferBookInput;
+}>;
+
+
+export type ReceiveLotteryTransferBookMutation = { __typename?: 'Mutation', receiveLotteryTransferBook: { __typename?: 'ReceiveLotteryTransferBookPayload', rowId: string, receiving: { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> } } };
+
 export type MyScheduleEntryFieldsFragment = { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> };
 
 export type MySchedulePunchFieldsFragment = { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean };
@@ -10406,6 +10564,33 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const LotteryTransferReceivingFieldsFragmentDoc = `
+    fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
+  submissionId
+  fromBranchName
+  toBranchName
+  transferAmount
+  canReceive
+  receivedCount
+  totalCount
+  rows {
+    rowId
+    bookId
+    gameCode
+    gameName
+    bookNo
+    mode
+    ticketNos
+    tickets
+    amount
+    rate
+    purchaseAmount
+    shipped
+    received
+    receivedAt
+  }
 }
     `;
 export const MyScheduleEntryFieldsFragmentDoc = `
@@ -19272,6 +19457,186 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const LotteryTransferOptionsDocument = `
+    query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
+  lotteryTransferOptions(fromOrgId: $fromOrgId, toOrgId: $toOrgId) {
+    books {
+      bookId
+      gameId
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      bookPrice
+      rate
+      isWhole
+      availableCount
+    }
+    requisitions {
+      id
+      serialNo
+      books
+    }
+  }
+}
+    `;
+
+export const useLotteryTransferOptionsQuery = <
+      TData = LotteryTransferOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferOptions', variables],
+    queryFn: fetcher<LotteryTransferOptionsQuery, LotteryTransferOptionsQueryVariables>(client, LotteryTransferOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferOptionsQuery.getKey = (variables: LotteryTransferOptionsQueryVariables) => ['LotteryTransferOptions', variables];
+
+
+useLotteryTransferOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferOptionsQuery, LotteryTransferOptionsQueryVariables>(client, LotteryTransferOptionsDocument, variables, headers);
+
+export const LotteryTransferBookTicketsDocument = `
+    query LotteryTransferBookTickets($fromOrgId: ID!, $bookId: ID!) {
+  lotteryTransferBookTickets(fromOrgId: $fromOrgId, bookId: $bookId) {
+    ticketNo
+    state
+  }
+}
+    `;
+
+export const useLotteryTransferBookTicketsQuery = <
+      TData = LotteryTransferBookTicketsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferBookTicketsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferBookTicketsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferBookTicketsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferBookTicketsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferBookTickets', variables],
+    queryFn: fetcher<LotteryTransferBookTicketsQuery, LotteryTransferBookTicketsQueryVariables>(client, LotteryTransferBookTicketsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferBookTicketsQuery.getKey = (variables: LotteryTransferBookTicketsQueryVariables) => ['LotteryTransferBookTickets', variables];
+
+
+useLotteryTransferBookTicketsQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferBookTicketsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferBookTicketsQuery, LotteryTransferBookTicketsQueryVariables>(client, LotteryTransferBookTicketsDocument, variables, headers);
+
+export const LotteryTransferProgressDocument = `
+    query LotteryTransferProgress($transferIds: [ID!]!) {
+  lotteryTransferProgress(transferIds: $transferIds) {
+    transferId
+    wholeBooks
+    partialTickets
+    receivedCount
+    totalCount
+    inTransit
+    settlementKind
+    settlementAmount
+    inSettlement
+  }
+}
+    `;
+
+export const useLotteryTransferProgressQuery = <
+      TData = LotteryTransferProgressQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferProgressQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferProgressQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferProgressQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferProgressQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferProgress', variables],
+    queryFn: fetcher<LotteryTransferProgressQuery, LotteryTransferProgressQueryVariables>(client, LotteryTransferProgressDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferProgressQuery.getKey = (variables: LotteryTransferProgressQueryVariables) => ['LotteryTransferProgress', variables];
+
+
+useLotteryTransferProgressQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferProgressQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferProgressQuery, LotteryTransferProgressQueryVariables>(client, LotteryTransferProgressDocument, variables, headers);
+
+export const LotteryTransferReceivingDocument = `
+    query LotteryTransferReceiving($submissionId: ID!) {
+  lotteryTransferReceiving(submissionId: $submissionId) {
+    ...LotteryTransferReceivingFields
+  }
+}
+    ${LotteryTransferReceivingFieldsFragmentDoc}`;
+
+export const useLotteryTransferReceivingQuery = <
+      TData = LotteryTransferReceivingQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryTransferReceivingQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryTransferReceivingQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryTransferReceivingQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryTransferReceivingQuery, TError, TData>(
+      {
+    queryKey: ['LotteryTransferReceiving', variables],
+    queryFn: fetcher<LotteryTransferReceivingQuery, LotteryTransferReceivingQueryVariables>(client, LotteryTransferReceivingDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryTransferReceivingQuery.getKey = (variables: LotteryTransferReceivingQueryVariables) => ['LotteryTransferReceiving', variables];
+
+
+useLotteryTransferReceivingQuery.fetcher = (client: GraphQLClient, variables: LotteryTransferReceivingQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryTransferReceivingQuery, LotteryTransferReceivingQueryVariables>(client, LotteryTransferReceivingDocument, variables, headers);
+
+export const ReceiveLotteryTransferBookDocument = `
+    mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
+  receiveLotteryTransferBook(input: $input) {
+    rowId
+    receiving {
+      ...LotteryTransferReceivingFields
+    }
+  }
+}
+    ${LotteryTransferReceivingFieldsFragmentDoc}`;
+
+export const useReceiveLotteryTransferBookMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReceiveLotteryTransferBookMutation, TError, ReceiveLotteryTransferBookMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReceiveLotteryTransferBookMutation, TError, ReceiveLotteryTransferBookMutationVariables, TContext>(
+      {
+    mutationKey: ['ReceiveLotteryTransferBook'],
+    mutationFn: (variables?: ReceiveLotteryTransferBookMutationVariables) => fetcher<ReceiveLotteryTransferBookMutation, ReceiveLotteryTransferBookMutationVariables>(client, ReceiveLotteryTransferBookDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReceiveLotteryTransferBookMutation.fetcher = (client: GraphQLClient, variables: ReceiveLotteryTransferBookMutationVariables, headers?: RequestInit['headers']) => fetcher<ReceiveLotteryTransferBookMutation, ReceiveLotteryTransferBookMutationVariables>(client, ReceiveLotteryTransferBookDocument, variables, headers);
 
 export const MyScheduleDocument = `
     query MySchedule($input: MyScheduleInput) {
