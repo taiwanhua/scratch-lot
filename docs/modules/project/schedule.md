@@ -5,7 +5,7 @@
 ## 用途
 
 - **獨立的專案模組**:不引用刮刮樂的任何資料表或程式(依賴方向:刮刮樂 → 排班,`apps/api/src/project/project-lint.test.ts` 守)。刮刮樂要在排班畫面上顯示東西、或擋排班的刪除,經下方「給刮刮樂的登記接縫」登記。
-- 本文件目前寫到:模組宣告與權限、排班設定(排班人員、人力需求範本、人力需求週範本、規則)、行事曆、畫休(我的畫休、畫休總覽、代改、畫休規則、開放 / 截止通知)。排班表、打卡、出勤紀錄、支援需求單、補打卡申請由各自的功能追加小節。
+- 本文件目前寫到:模組宣告與權限、排班設定(排班人員、人力需求範本、人力需求週範本、規則)、行事曆、畫休(我的畫休、畫休總覽、代改、畫休規則、開放 / 截止通知)、支援需求單。排班表、打卡、出勤紀錄、補打卡申請由各自的功能追加小節。
 
 ## 模組 key 與畫面
 
@@ -43,8 +43,10 @@
 
 | 表單       | formKey           | 綁定模組              | 開通時建立的流程                                                   |
 | ---------- | ----------------- | --------------------- | ------------------------------------------------------------------ |
-| 補打卡申請 | `makeup-punch`    | `schedule.attendance` | 一關:店長限定「分店」                                              |
-| 支援需求單 | `support-request` | `schedule.manage`     | 一關:人員條件「角色 總部管理 且 所屬組織屬於租戶(最上層組織本身)」 |
+| 補打卡申請 | `makeup_punch`    | `schedule.attendance` | 一關:店長限定「分店」                                              |
+| 支援需求單 | `support_request` | `schedule.manage`     | 一關:人員條件「角色 總部管理 且 所屬組織屬於租戶(最上層組織本身)」 |
+
+表單代號一律用底線(底座 `FORM_KEY_PATTERN` 不收 `-`;規格 2.1 寫的 `support-request` / `makeup-punch` 指的就是這兩個)。
 
 ## 資料
 
@@ -135,6 +137,32 @@
 - **畫休總覽**:候選人(可以排這家店的排班人員)這個月的畫休;同日畫休人數只計 `isPrimary` 的人;「尚未畫休」= 主要分店是這家、這個月還沒畫任何一天的候選人。
 - **給其他功能**:`ScheduleDayOffsService.listUnavailable(operator, orgId, from, to)` 回這家店的候選人每人每天的整天畫休 / 時段不可排(只列有畫休的日子;這家店要在操作者的可見範圍內,否則空清單)。**空清單分不出「沒有畫休」與「看不到這家店」**:呼叫端(排班表、自動排班)要先自己確認看得到這家店(例:`resolveScheduleOrg`,看不到 → `NOT_FOUND`),再呼叫它。
 
+### 支援需求單(規格 8.9、14.10)
+
+分店人力不足時請總部協助;總部在排班作業排好人後核准(支援指派單已取消:看得到兩家店的人直接在排班作業排人)。
+
+- **表單**:受管表單 `support_request`(`apps/db-migrator/seeds/project/revisions/support_request.r1.seed.ts`,在 `seeds/project/registry.ts` 登記;部署時由受管定義 CLI 發布成共用表單,掛在 `schedule.manage`)。表單、提交、修訂、流程都用底座的表單引擎與流程引擎(`form_submissions`),沒有自己的資料表。
+- **欄位**:日期(`date`,必填)、崗位(`position`,欄位管理「崗位」`schedule-position`,必填)、開始 / 結束(`start_time` / `end_time`,`HH:mm` 24 小時制,必填,結束要晚於開始)、需要人數(`headcount`,1–99 的整數)、分店(`branch`,組織引用,預設目前組織,必填;Figma SC-14 有這一欄,讓總部看得出是哪家店)、說明(`note`,200 字內)。摘要:標題 = 說明、日期 = 日期;頁籤標題「支援需求單 <日期>」。
+- **沒有草稿**:表單「允許存草稿」關(seed 宣告 `allowDraft: false`),新增頁只有 [送出](`docs/modules/forms.md`「允許存草稿」)。
+- **權限**:看列表與詳情 = `schedule.manage.view`(分頁也看它);新增 = `schedule.manage.create`;審核不看頁面權限(承辦人就能審,`docs/modules/workflows.md`)。
+- **表單要先分派**:受管表單是共用表單,租戶要平台管理員在表單管理「分派租戶」後才看得到、才能新增(分派是各環境的資料,不在 seed)。
+
+#### 建議流程設定
+
+流程不 seed(依租戶的角色 id 建客製流程;共用流程不能用角色條件),由開通腳本的「流程」一步建立(`apps/db-migrator/seeds/project/onboarding/form-workflows/support-request.ts`):
+
+| 項目     | 設定                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------- |
+| 流程     | 租戶客製流程「支援需求單審核」,key `<租戶短碼>_support_request`,綁定表單 `support_request`              |
+| 第 1 關  | 「總部審核」:審核者 = 人員條件「角色 總部管理」**且**「所屬組織屬於 租戶(最上層組織)、本身」;任一人核准 |
+| 跳過     | 無                                                                                                      |
+| 自動通過 | 無                                                                                                      |
+| 退回     | 可退回修改                                                                                              |
+
+- 只算直接屬於最上層組織的總部管理(開通清單第 2 點:總部人員一律同時加入租戶本身);只屬於某家分店的總部管理角色不會被指派。
+- 表單還沒分派給這個租戶時,開通腳本的「流程」一步略過並提示「平台管理員分派後重跑」;表單已綁了流程(租戶自己換過)就沿用不改。
+- 沒走開通腳本的租戶:租戶管理員在流程管理照上表建客製流程、發布,再到表單管理把「支援需求單」綁到它。
+
 ### 畫休開放 / 即將截止通知(規格 3.4、3.5、14.11)
 
 - 排程 `schedule.day-off-reminders`(每 15 分鐘,`apps/api/src/project/schedule/day-offs/day-off-reminders.service.ts`):逐租戶、逐家有排班人員的分店,依那家店規則「畫休開放期間」的生效值算出開放日 / 截止日,「這個時點該不該寄」用底座 `scheduleHitAt`(租戶時區;漏跑 6 小時內補寄;改了時間不補)。
@@ -188,6 +216,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。
+- 排班作業 → 支援需求單(SC-31,分頁 `support-requests`,要 `schedule.manage.view`;`pages/project/schedule/manage/SupportRequestsTab/`):狀態篩選(`?support=`)+ 列表(日期、時段、崗位、人數、分店、狀態;只查 `support_request`)+ [+ 新增](要 `create` 且 `moduleForms` 回這張表單可新增);電腦版點一筆在右側打開(`?detail=`):表單引擎的唯讀詳情 `FormSubmissionDetail` + 審核區塊 `ApprovalSection`(核准 / 駁回 / 退回修改依「我的任務」),「開啟完整頁面」到詳情頁。平板 / 手機點一筆進詳情頁(右側放不下),手機列表改卡片、篩選收進抽屜(RW-01)。新增頁 SC-14、詳情頁、編輯頁沿用表單引擎的預設組裝(`/schedule/manage/create-page/support_request`)。
 
 ## 錯誤碼
 
@@ -200,8 +229,8 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 ## 測試
 
 - api:`apps/api/src/project/schedule/schedule-settings.test.ts`(真 GraphQL + 真 MongoDB)、`rules/rule-resolution.test.ts`(生效值表格)、`day-offs/schedule-day-offs.test.ts`(畫休、代改、規則、`listUnavailable`、注入時鐘的開放 / 截止通知)、`day-offs/day-off-rules.test.ts`(畫休算法與開放期間表格)、`integration/integration.test.ts`;domain:`packages/domain/src/project/schedule-settings/schedule-settings.test.ts`(規則順序快照)。
-- admin:`pages/project/schedule/settings/ScheduleSettingsPage.test.tsx`、`manage/ScheduleManagePage.test.tsx`、`settings/RulesTab/rule-display.test.ts`、`my/ScheduleMyDayOffs.test.tsx`、`manage/DayOffOverview.test.tsx`、`lib/project/schedule-day-offs.test.ts`;假 api `src/test/msw/project/schedule-*.ts`(mock 模式共用)。
-- seed / 開通:`apps/db-migrator/seeds/project/schedule.test.ts`、`onboarding/schedule-onboarding.test.ts`。
+- admin:`pages/project/schedule/settings/ScheduleSettingsPage.test.tsx`、`manage/ScheduleManagePage.test.tsx`、`manage/SupportRequestsTab/SupportRequestsTab.test.tsx`(分頁權限、列表、右側審核、新增頁沒有 [存草稿]、手機卡片)、`settings/RulesTab/rule-display.test.ts`、`my/ScheduleMyDayOffs.test.tsx`、`manage/DayOffOverview.test.tsx`、`lib/project/schedule-day-offs.test.ts`;假 api `src/test/msw/project/schedule-*.ts`(mock 模式共用)。
+- seed / 開通:`apps/db-migrator/seeds/project/schedule.test.ts`、`onboarding/schedule-onboarding.test.ts`;受管表單的安裝在 `src/seed/seed-formal-registry.test.ts`(正式 registry 對真 MongoDB);支援需求單的流程(分派後重跑開通腳本建流程並綁定、店長送出 → 審核者 = 總部管理且屬最上層組織的人)在 `onboarding/onboarding-api.test.ts`(真 api)。
 
 ## 使用者說明(help.md)
 
