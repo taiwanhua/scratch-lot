@@ -16,11 +16,11 @@ restoreViewportAfterEach();
 
 const ROSTER = "/schedule/manage?tab=roster&month=2026-11";
 
-const scrollIntoView = jest.fn();
+const animate = jest.fn();
 
 beforeAll(() => {
-  // jsdom 沒有 scrollIntoView;[查看] 捲到格子時呼叫
-  Element.prototype.scrollIntoView = scrollIntoView;
+  // jsdom 沒有 Element.animate;[查看] 捲到格子後在格子上閃爍
+  Element.prototype.animate = animate as unknown as Element["animate"];
 });
 
 const openPanel = async (user: { click: (el: Element) => Promise<void> }) => {
@@ -62,15 +62,19 @@ describe("排班作業:檢核面板與發布", () => {
     await user.click(within(panel).getByRole("button", { name: "限制 1" }));
     expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
 
-    scrollIntoView.mockClear();
+    animate.mockClear();
     await user.click(
       within(panel).getByRole("button", {
         name: "查看:林美麗 本月畫休 5 天,超過上限 4 天",
       }),
     );
+    // 捲到林美麗 11/1 那一格並閃爍
     await waitFor(() => {
-      expect(scrollIntoView).toHaveBeenCalled();
+      expect(animate).toHaveBeenCalled();
     });
+    expect((animate.mock.contexts[0] as HTMLElement).dataset.rosterCell).toBe(
+      "u-lin|2026-11-01",
+    );
 
     await user.click(within(panel).getByRole("button", { name: "關閉檢核" }));
     expect(

@@ -36,6 +36,7 @@ import {
 import { ROSTER_TOOLBAR_ACTIONS } from "./roster-toolbar";
 import { readRosterView, writeRosterView } from "./roster-view-memory";
 import { ROSTER_VIEWS, type RosterViewEntry } from "./roster-views";
+import { scrollCellIntoView } from "./scroll-cell";
 import { ROSTER_DATE_SCHEMA, useTenantToday } from "./views/useRosterDate";
 
 const orgSchema = z.string().default("");
@@ -145,7 +146,8 @@ export const RosterPage = () => {
       return;
     }
     handledRequest.current = scrollRequest;
-    element.scrollIntoView({ block: "center", inline: "center" });
+    // 只捲檢視自己的捲動容器,不連 <main> 橫向一起捲(平板時整頁會偏移)
+    scrollCellIntoView(element);
     if (typeof element.animate === "function") {
       element.animate(FLASH_FRAMES, { duration: FLASH_MS / 2, iterations: 2 });
     }
