@@ -9,6 +9,10 @@ import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/G
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
 import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
+import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
+import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
+import { ScheduleMyPage } from "@/pages/project/schedule/my/ScheduleMyPage";
+import { ScheduleSettingsPage } from "@/pages/project/schedule/settings/ScheduleSettingsPage";
 
 import type { ModulePageSource } from "../module-page-registry";
 
@@ -36,6 +40,19 @@ export const projectModulePages: ModulePageSource = {
     { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
     // 輸出報表(規格第 11 章、18.4)
     { key: "reports", Page: ReportsPage },
+    // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
+    { key: "schedule.my", Page: ScheduleMyPage },
+    { key: "schedule.settings", Page: ScheduleSettingsPage },
   ],
-  forms: [],
+  forms: [
+    // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
+    {
+      moduleKey: "schedule.manage",
+      pageOverrides: { list: { Page: ScheduleManagePage } },
+    },
+    {
+      moduleKey: "schedule.attendance",
+      pageOverrides: { list: { Page: ScheduleAttendancePage } },
+    },
+  ],
 };

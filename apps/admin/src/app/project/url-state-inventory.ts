@@ -23,4 +23,9 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "dealers.contacts.edit-page": [],
   // 輸出報表:選的報表、條件(期間、分店、其他條件)、預覽(開著沒、第幾個工作表)
   reports: ["report", "conditions", "preview"],
+  // 班表管理:頁內分頁 `tab`;排班人員篩選 `joined`;規則 / 行事曆的分店 `org`;行事曆的月份 `month`
+  "schedule.my": ["tab"],
+  "schedule.settings": ["tab", "joined", "org"],
+  "schedule.manage": ["tab", "org", "month"],
+  "schedule.attendance": ["tab"],
 };

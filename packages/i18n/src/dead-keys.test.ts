@@ -494,6 +494,53 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "`t(`errors.${delegationsErrorKey(error)}`)`,`delegations-error.ts` 把 api 錯誤換成 `<code>` 或 `reasons.<reason>`(碼與 reason 列舉見同檔)",
   },
   {
+    key: "admin.schedule.tabs.",
+    reason:
+      "專案 `components/project/schedule/ScheduleTabsPage` 的 `t(`tabs.${labelKey}`)`,labelKey 取自各頁的分頁登記 `pages/project/schedule/<模組>/<模組>-tabs.ts`",
+  },
+  {
+    key: "admin.schedule.errors.",
+    reason:
+      "`tErrors(scheduleErrorOf(error).code)`,code 由 `pages/project/schedule/schedule-error.ts` 從 api 錯誤碼換算",
+  },
+  {
+    key: "admin.schedule.employment.",
+    reason:
+      "`tEmployment(employmentType)`,值取自 `@repo/domain/project/schedule-settings` 的 `SCHEDULE_EMPLOYMENT_TYPES`(api 回的 `employmentType`)",
+  },
+  {
+    key: "admin.schedule.weekTemplates.weekdays.",
+    reason: "`t(`weekdays.${day}`)`,day 為 0–6(`WEEK_DAY_COUNT`)",
+  },
+  {
+    key: "admin.schedule.weekTemplates.weekdayLong.",
+    reason: "`t(`weekdayLong.${day}`)`,day 為 0–6(`WEEK_DAY_COUNT`)",
+  },
+  {
+    key: "admin.schedule.calendar.weekdays.",
+    reason: "行事曆月曆的星期列 `t(`weekdays.${day}`)`,day 為 0–6",
+  },
+  {
+    key: "admin.schedule.rules.labels.",
+    reason:
+      "規則頁的 `t(`labels.${key}`)`,key 取自 api 回的規則(定義清單 `@repo/domain/project/schedule-settings` 的 `SCHEDULE_RULE_DEFINITIONS`)",
+  },
+  {
+    key: "admin.schedule.rules.levels.",
+    reason:
+      "`t(`levels.${level}`)`,level 為 `SCHEDULE_RULE_LEVELS`(limit / reminder)",
+  },
+  {
+    key: "admin.schedule.rules.units.",
+    reason:
+      "`rule-display.ts` 的 `t(`units.${unit}`)`,unit 取自規則定義的 `unit`",
+  },
+  {
+    key: "admin.schedule.rules.unitNames.",
+    reason:
+      "`RuleValueEditor` 的 `t(`unitNames.${unit}`)`,unit 取自規則定義的 `unit`",
+  },
+  {
     key: "admin.tagPalettes.names.",
     reason:
       "專案 `components/project/TagPaletteChip` 的 `t(paletteKey)`(namespace `admin.tagPalettes.names`),paletteKey 逐一取自 `@repo/domain/project/tag-palette` 的 `TAG_PALETTE_KEYS`",

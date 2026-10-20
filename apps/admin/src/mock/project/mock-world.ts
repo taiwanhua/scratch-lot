@@ -7,6 +7,9 @@ import { dealersWorld } from "@/test/msw/project/dealers-handlers";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
+import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
+import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
+import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 
 import type { ProjectMockWorld } from "../mock-world-source";
 
@@ -55,11 +58,19 @@ const reportsModule: TestModule = {
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
 export const projectMockWorld: ProjectMockWorld = {
-  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿
-  modules: () => [...masterDataModules(), ...dealersModules(), reportsModule],
+  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
+  // 班表管理(群組 + 四個子模組,權限給滿)
+  modules: () => [
+    ...masterDataModules(),
+    ...dealersModules(),
+    reportsModule,
+    ...scheduleModules(),
+  ],
   handlers: () => [
     ...fieldOptionColors(),
     ...masterDataWorld().handlers,
     ...dealersWorld().handlers,
+    ...scheduleSettingsWorld().handlers,
+    ...scheduleCalendarWorld().handlers,
   ],
 };

@@ -472,5 +472,305 @@
       "FORBIDDEN": "你沒有這張報表的權限。",
       "UNEXPECTED": "報表產生失敗,請稍後再試。"
     }
+  },
+  "schedule": {
+    "pages": {
+      "my": "我的班表",
+      "manage": "排班作業",
+      "settings": "排班設定",
+      "attendance": "出勤紀錄"
+    },
+    "tabs": {
+      "staff": "排班人員",
+      "templates": "人力需求範本",
+      "weekTemplates": "人力需求週範本",
+      "rules": "規則",
+      "calendar": "行事曆"
+    },
+    "shell": {
+      "empty": "這一頁目前沒有可用的分頁。"
+    },
+    "common": {
+      "cancel": "取消",
+      "save": "儲存",
+      "close": "關閉",
+      "remove": "移除"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料,可能已被刪除或你看不到它",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "NOT_OWNER": "這是上層組織建立的,只有建立的那一層能改",
+      "MISSING_PERMISSION": "你沒有修改這個組織規則的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "employment": {
+      "full-time": "正職",
+      "part-time": "兼職"
+    },
+    "staff": {
+      "keyword": "關鍵字",
+      "joinedFilter": "排班",
+      "joinedAll": "全部(已加入 / 未加入)",
+      "joinedYes": "已加入",
+      "joinedNo": "未加入",
+      "add": "加入排班({count})",
+      "columns": {
+        "name": "姓名",
+        "employmentType": "僱用類型",
+        "primary": "主要分店",
+        "orgs": "可以排的分店",
+        "status": "狀態"
+      },
+      "canLeadSuffix": "{name}(可負責)",
+      "selectAria": "選取「{name}」",
+      "notFound": "找不到人?先到使用者管理新增帳號",
+      "primaryElsewhere": "其他分店",
+      "dialog": {
+        "title": "排班人員設定 · {name}",
+        "employmentType": "僱用類型",
+        "orgs": "可以排的分店",
+        "canLead": "可擔任負責人",
+        "isPrimary": "主要分店",
+        "addOrg": "+ 加分店",
+        "noOrgs": "還沒有可以排的分店",
+        "primaryRequired": "要選一家主要分店",
+        "primaryElsewhere": "主要分店在你看不到的分店;這裡不能再設主要分店",
+        "alreadyAdded": "已加入"
+      },
+      "feedback": {
+        "addSuccess": "已加入排班",
+        "updateSuccess": "已更新排班人員"
+      }
+    },
+    "templates": {
+      "create": "+ 新增人力需求範本",
+      "hint": "上層組織建立的範本,底下各分店都能用,但只有建立它的那一層能改。",
+      "columns": {
+        "name": "名稱",
+        "shortName": "簡稱",
+        "time": "時間",
+        "position": "崗位",
+        "tasks": "負責 / 協同",
+        "color": "顏色",
+        "owner": "建立於"
+      },
+      "taskCount": "{leader} / {helper}",
+      "timeRange": "{start}–{end}",
+      "cardMeta": "{time} · {position} · 負責/協同 {tasks}",
+      "dialog": {
+        "createTitle": "新增人力需求範本",
+        "editTitle": "人力需求範本 · {name}",
+        "name": "名稱",
+        "shortName": "簡稱",
+        "shortNameHint": "1–2 字",
+        "startTime": "開始",
+        "endTime": "結束",
+        "timeHint": "結束比開始早 = 跨午夜",
+        "position": "崗位",
+        "leaders": "負責人(0–1 筆)",
+        "helpers": "協同(0–10 筆)",
+        "noLeader": "沒有負責人",
+        "noHelper": "沒有協同",
+        "task": "執行任務",
+        "addLeader": "+ 負責人",
+        "addHelper": "+ 協同",
+        "color": "顏色",
+        "colorAria": "範本的顏色",
+        "delete": "刪除人力需求範本",
+        "deleteConfirm": "刪除「{name}」?已用這個範本產生的人力需求不受影響。",
+        "readOnly": "這是「{org}」建立的範本,只有建立的那一層能改。"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存人力需求範本",
+        "deleteSuccess": "已刪除人力需求範本"
+      }
+    },
+    "weekTemplates": {
+      "create": "+ 新增人力需求週範本",
+      "columns": {
+        "name": "名稱",
+        "enabled": "啟用",
+        "owner": "建立於"
+      },
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "weekdayLong": {
+        "0": "星期日",
+        "1": "星期一",
+        "2": "星期二",
+        "3": "星期三",
+        "4": "星期四",
+        "5": "星期五",
+        "6": "星期六"
+      },
+      "none": "—",
+      "enabledAria": "啟用「{name}」",
+      "noTemplates": "還沒有人力需求範本,請先到「人力需求範本」建立。",
+      "dialog": {
+        "createTitle": "新增人力需求週範本",
+        "editTitle": "人力需求週範本 · {name}",
+        "name": "名稱",
+        "pick": "{day} 用「{template}」",
+        "delete": "刪除人力需求週範本",
+        "deleteConfirm": "刪除「{name}」?",
+        "readOnly": "這是「{org}」建立的週範本,只有建立的那一層能改。"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存人力需求週範本",
+        "deleteSuccess": "已刪除人力需求週範本",
+        "enableSuccess": "已啟用",
+        "disableSuccess": "已停用"
+      },
+      "dayCell": "{day} {templates}"
+    },
+    "rules": {
+      "org": "分店",
+      "customize": "自訂",
+      "restore": "還原",
+      "autoRunTitle": "自動排班條件(整組)",
+      "autoRunUnchecked": "(未勾)",
+      "autoRunItem": "{index}. {label}{unchecked}",
+      "autoRunSeparator": " · ",
+      "levels": {
+        "limit": "限制",
+        "reminder": "提醒"
+      },
+      "labels": {
+        "maxMonthlyDayOffs": "每月最多畫休",
+        "minMonthlyDayOffs": "每月最少畫休",
+        "maxConsecutiveWorkDays": "最多連續上班",
+        "maxConsecutiveDaysOff": "最多連續休假",
+        "minRestBetweenShifts": "兩班之間最少休息",
+        "maxDailyWorkHours": "每天最多上班時數",
+        "dayOffWindow": "畫休開放期間",
+        "maxDailyDayOffStaff": "同日最多畫休人數",
+        "understaffed": "人力不足",
+        "multiPositionOverlap": "同一時段兼多個崗位",
+        "entryMatchToleranceMinutes": "對應排班容許時間",
+        "autoDemandWeekTemplateId": "預設人力需求週範本",
+        "graceMinutes": "遲到 / 早退寬限",
+        "defaultBreaks": "預設休息",
+        "defaultTasks": "負責人 / 協同預設任務",
+        "continuePreviousEntry": "延續同一人的排班",
+        "leaderCountFirst": "負責人次數多者優先",
+        "monthlyShiftBalance": "本月班數平均",
+        "allowOverlappingDemands": "允許同一人同時段填進多筆人力需求"
+      },
+      "units": {
+        "day": "{n} 天",
+        "person": "{n} 人",
+        "hour": "{n} 小時",
+        "minute": "{n} 分鐘",
+        "none": "{n}"
+      },
+      "value": {
+        "dayRange": "每月 {start}–{end} 日",
+        "grace": "{late} 分鐘 / {early} 分鐘",
+        "breakTier": "滿 {hours} 小時{minutes, plural, =0 {} other { # 分}} {breakMinutes} 分",
+        "separator": "、",
+        "defaultTasks": "{leader} / {helper}",
+        "notSet": "不設定",
+        "unknownWeekTemplate": "(已刪除的週範本)",
+        "byDemand": "依人力需求",
+        "on": "開啟",
+        "off": "關閉"
+      },
+      "source": {
+        "own": "本店自訂",
+        "ownTop": "本層自訂",
+        "inherited": "沿用:{org}",
+        "inheritedHidden": "沿用上層設定",
+        "default": "系統預設"
+      },
+      "summary": "{source} {value}",
+      "parent": "上層:{value}",
+      "dialog": {
+        "title": "規則 · {label}",
+        "amount": "值",
+        "startDay": "每月開始日",
+        "endDay": "每月結束日",
+        "weekTemplate": "預設人力需求週範本",
+        "lateGraceMinutes": "遲到寬限(分鐘)",
+        "earlyLeaveGraceMinutes": "早退寬限(分鐘)",
+        "tierMinHours": "排班滿(小時)",
+        "tierBreak": "休息(分鐘)",
+        "addTier": "+ 加一級",
+        "leaderTask": "負責人預設任務",
+        "helperTask": "協同預設任務",
+        "enabled": "開啟這條規則",
+        "level": "違反時",
+        "levelLimit": "限制(不能存、不能發布)",
+        "levelReminder": "提醒(可以照樣存與發布)",
+        "order": "檢核清單排序",
+        "current": "目前:{summary}",
+        "restore": "還原成沿用",
+        "range": "{min}–{max}",
+        "amountWithUnit": "值({unit})"
+      },
+      "autoRunDialog": {
+        "title": "自動排班條件(整組)",
+        "hint": "勾選的條件依順序比較候選人,前一個平手才比下一個;都平手時隨機。",
+        "moveUp": "上移「{label}」",
+        "moveDown": "下移「{label}」"
+      },
+      "feedback": {
+        "saveSuccess": "已自訂規則",
+        "restoreSuccess": "已還原成沿用"
+      },
+      "unitNames": {
+        "day": "天",
+        "person": "人",
+        "hour": "小時",
+        "minute": "分鐘"
+      }
+    },
+    "calendar": {
+      "org": "分店",
+      "add": "新增",
+      "prevMonth": "上個月",
+      "nextMonth": "下個月",
+      "monthTitle": "{year} 年 {month} 月",
+      "closed": "店休",
+      "special": "特殊日",
+      "dayLabel": "{type} · {name}",
+      "legendClosed": "店休(不能排班)",
+      "legendSpecial": "特殊日(照常可以排,顏色可以選)",
+      "legendInherit": "↓ 上層組織設的會往下沿用",
+      "dialog": {
+        "createTitle": "新增店休 / 特殊日",
+        "editTitle": "店休 / 特殊日 · {date}",
+        "date": "日期",
+        "category": "類別",
+        "name": "名稱",
+        "note": "說明",
+        "color": "顏色",
+        "colorAria": "特殊日的顏色",
+        "delete": "刪除",
+        "inherited": "這天沿用「{org}」的設定,只有「{org}」能改。",
+        "add": "新增",
+        "deleteConfirm": "刪除 {date} 的設定?"
+      },
+      "feedback": {
+        "saveSuccess": "已儲存行事曆",
+        "deleteSuccess": "已刪除"
+      },
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      }
+    }
   }
 }

@@ -472,5 +472,305 @@
       "FORBIDDEN": "You don't have permission for this report.",
       "UNEXPECTED": "Couldn't generate the report. Please try again later."
     }
+  },
+  "schedule": {
+    "pages": {
+      "my": "My schedule",
+      "manage": "Scheduling",
+      "settings": "Schedule settings",
+      "attendance": "Attendance"
+    },
+    "tabs": {
+      "staff": "Staff",
+      "templates": "Demand templates",
+      "weekTemplates": "Week templates",
+      "rules": "Rules",
+      "calendar": "Calendar"
+    },
+    "shell": {
+      "empty": "No tabs are available on this page yet."
+    },
+    "common": {
+      "cancel": "Cancel",
+      "save": "Save",
+      "close": "Close",
+      "remove": "Remove"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to do this",
+      "NOT_FOUND": "This item was not found; it may have been deleted or you can't see it",
+      "VALIDATION_FAILED": "Some fields are invalid; please check the highlighted fields",
+      "NOT_OWNER": "This was created by an upper org; only that org can change it",
+      "MISSING_PERMISSION": "You don't have permission to change this org's rules",
+      "UNEXPECTED": "Something went wrong; please try again later"
+    },
+    "employment": {
+      "full-time": "Full-time",
+      "part-time": "Part-time"
+    },
+    "staff": {
+      "keyword": "Keyword",
+      "joinedFilter": "Scheduling",
+      "joinedAll": "All (joined / not joined)",
+      "joinedYes": "Joined",
+      "joinedNo": "Not joined",
+      "add": "Add to scheduling ({count})",
+      "columns": {
+        "name": "Name",
+        "employmentType": "Employment",
+        "primary": "Primary branch",
+        "orgs": "Branches",
+        "status": "Status"
+      },
+      "canLeadSuffix": "{name} (can lead)",
+      "selectAria": "Select “{name}”",
+      "notFound": "Can't find someone? Add the account in user management first",
+      "primaryElsewhere": "Another branch",
+      "dialog": {
+        "title": "Staff settings · {name}",
+        "employmentType": "Employment",
+        "orgs": "Branches",
+        "canLead": "Can lead",
+        "isPrimary": "Primary branch",
+        "addOrg": "+ Add branch",
+        "noOrgs": "No branches yet",
+        "primaryRequired": "Choose one primary branch",
+        "primaryElsewhere": "The primary branch is one you can't see; you can't set another primary branch here",
+        "alreadyAdded": "Added"
+      },
+      "feedback": {
+        "addSuccess": "Added to scheduling",
+        "updateSuccess": "Staff updated"
+      }
+    },
+    "templates": {
+      "create": "+ New demand template",
+      "hint": "Templates created by an upper org can be used by every branch below it, but only the org that created them can change them.",
+      "columns": {
+        "name": "Name",
+        "shortName": "Short name",
+        "time": "Time",
+        "position": "Position",
+        "tasks": "Lead / helper",
+        "color": "Color",
+        "owner": "Created by"
+      },
+      "taskCount": "{leader} / {helper}",
+      "timeRange": "{start}–{end}",
+      "cardMeta": "{time} · {position} · lead/helper {tasks}",
+      "dialog": {
+        "createTitle": "New demand template",
+        "editTitle": "Demand template · {name}",
+        "name": "Name",
+        "shortName": "Short name",
+        "shortNameHint": "1–2 characters",
+        "startTime": "Start",
+        "endTime": "End",
+        "timeHint": "An end earlier than the start crosses midnight",
+        "position": "Position",
+        "leaders": "Lead (0–1)",
+        "helpers": "Helpers (0–10)",
+        "noLeader": "No lead",
+        "noHelper": "No helpers",
+        "task": "Task",
+        "addLeader": "+ Lead",
+        "addHelper": "+ Helper",
+        "color": "Color",
+        "colorAria": "Template color",
+        "delete": "Delete demand template",
+        "deleteConfirm": "Delete “{name}”? Demands already created from this template are not affected.",
+        "readOnly": "This template was created by “{org}”; only that org can change it."
+      },
+      "feedback": {
+        "saveSuccess": "Demand template saved",
+        "deleteSuccess": "Demand template deleted"
+      }
+    },
+    "weekTemplates": {
+      "create": "+ New week template",
+      "columns": {
+        "name": "Name",
+        "enabled": "Enabled",
+        "owner": "Created by"
+      },
+      "weekdays": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "weekdayLong": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      },
+      "none": "—",
+      "enabledAria": "Enable “{name}”",
+      "noTemplates": "No demand templates yet. Create them under Demand templates first.",
+      "dayCell": "{day} {templates}",
+      "dialog": {
+        "createTitle": "New week template",
+        "editTitle": "Week template · {name}",
+        "name": "Name",
+        "pick": "Use “{template}” on {day}",
+        "delete": "Delete week template",
+        "deleteConfirm": "Delete “{name}”?",
+        "readOnly": "This week template was created by “{org}”; only that org can change it."
+      },
+      "feedback": {
+        "saveSuccess": "Week template saved",
+        "deleteSuccess": "Week template deleted",
+        "enableSuccess": "Enabled",
+        "disableSuccess": "Disabled"
+      }
+    },
+    "rules": {
+      "org": "Branch",
+      "customize": "Customize",
+      "restore": "Restore",
+      "autoRunTitle": "Auto-scheduling conditions (as a group)",
+      "autoRunUnchecked": " (off)",
+      "autoRunItem": "{index}. {label}{unchecked}",
+      "autoRunSeparator": " · ",
+      "levels": {
+        "limit": "Limit",
+        "reminder": "Reminder"
+      },
+      "labels": {
+        "maxMonthlyDayOffs": "Max days off per month",
+        "minMonthlyDayOffs": "Min days off per month",
+        "maxConsecutiveWorkDays": "Max consecutive work days",
+        "maxConsecutiveDaysOff": "Max consecutive days off",
+        "minRestBetweenShifts": "Min rest between shifts",
+        "maxDailyWorkHours": "Max work hours per day",
+        "dayOffWindow": "Day-off request window",
+        "maxDailyDayOffStaff": "Max staff off per day",
+        "understaffed": "Understaffed",
+        "multiPositionOverlap": "Covering several positions at once",
+        "entryMatchToleranceMinutes": "Entry matching tolerance",
+        "autoDemandWeekTemplateId": "Default week template",
+        "graceMinutes": "Late / early-leave grace",
+        "defaultBreaks": "Default breaks",
+        "defaultTasks": "Default lead / helper tasks",
+        "continuePreviousEntry": "Continue the same person's entry",
+        "leaderCountFirst": "Most lead shifts first",
+        "monthlyShiftBalance": "Balance shifts this month",
+        "allowOverlappingDemands": "Allow one person in overlapping demands"
+      },
+      "units": {
+        "day": "{n} days",
+        "person": "{n} people",
+        "hour": "{n} hours",
+        "minute": "{n} min",
+        "none": "{n}"
+      },
+      "value": {
+        "dayRange": "Day {start}–{end} of each month",
+        "grace": "{late} min / {early} min",
+        "breakTier": "{hours} h{minutes, plural, =0 {} other { # min}} → {breakMinutes} min",
+        "separator": ", ",
+        "defaultTasks": "{leader} / {helper}",
+        "notSet": "Not set",
+        "unknownWeekTemplate": "(deleted week template)",
+        "byDemand": "By demand",
+        "on": "On",
+        "off": "Off"
+      },
+      "source": {
+        "own": "Customized here",
+        "ownTop": "Customized here",
+        "inherited": "Inherited: {org}",
+        "inheritedHidden": "Inherited from upper org",
+        "default": "System default"
+      },
+      "summary": "{source} {value}",
+      "parent": "Upper: {value}",
+      "unitNames": {
+        "day": "days",
+        "person": "people",
+        "hour": "hours",
+        "minute": "minutes"
+      },
+      "dialog": {
+        "title": "Rule · {label}",
+        "amount": "Value",
+        "amountWithUnit": "Value ({unit})",
+        "startDay": "Start day of month",
+        "endDay": "End day of month",
+        "weekTemplate": "Default week template",
+        "lateGraceMinutes": "Late grace (min)",
+        "earlyLeaveGraceMinutes": "Early-leave grace (min)",
+        "tierMinHours": "Shift at least (hours)",
+        "tierBreak": "Break (min)",
+        "addTier": "+ Add tier",
+        "leaderTask": "Default lead task",
+        "helperTask": "Default helper task",
+        "enabled": "Turn on this rule",
+        "level": "When violated",
+        "levelLimit": "Limit (can't save or publish)",
+        "levelReminder": "Reminder (can still save and publish)",
+        "order": "Check list order",
+        "current": "Current: {summary}",
+        "restore": "Restore to inherited",
+        "range": "{min}–{max}"
+      },
+      "autoRunDialog": {
+        "title": "Auto-scheduling conditions (as a group)",
+        "hint": "Checked conditions compare candidates in order; the next one is used only on a tie. A full tie is broken at random.",
+        "moveUp": "Move “{label}” up",
+        "moveDown": "Move “{label}” down"
+      },
+      "feedback": {
+        "saveSuccess": "Rule customized",
+        "restoreSuccess": "Restored to inherited"
+      }
+    },
+    "calendar": {
+      "org": "Branch",
+      "add": "Add",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "monthTitle": "{month}/{year}",
+      "closed": "Closed",
+      "special": "Special day",
+      "dayLabel": "{type} · {name}",
+      "legendClosed": "Closed (no scheduling)",
+      "legendSpecial": "Special day (scheduling as usual; color selectable)",
+      "legendInherit": "↓ Days set by an upper org apply below",
+      "weekdays": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "dialog": {
+        "createTitle": "Add closed day / special day",
+        "editTitle": "Closed / special day · {date}",
+        "date": "Date",
+        "category": "Category",
+        "name": "Name",
+        "note": "Note",
+        "color": "Color",
+        "colorAria": "Special day color",
+        "delete": "Delete",
+        "deleteConfirm": "Delete the setting on {date}?",
+        "inherited": "This day comes from “{org}”; only “{org}” can change it.",
+        "add": "Add"
+      },
+      "feedback": {
+        "saveSuccess": "Calendar saved",
+        "deleteSuccess": "Deleted"
+      }
+    }
   }
 }

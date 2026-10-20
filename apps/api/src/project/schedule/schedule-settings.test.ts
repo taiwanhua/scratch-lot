@@ -280,16 +280,44 @@ function errorOf(result: GraphqlResult): Record<string, unknown> | undefined {
   return result.errors?.[0]?.extensions;
 }
 
-function dataOf<T>(
-  result: GraphqlResult<Record<string, unknown>>,
-  key: string,
-): T {
+interface WeekTemplateRow {
+  id: string;
+  name: string;
+  days: string[][];
+  enabled: boolean;
+  canEdit: boolean;
+}
+
+interface CalendarRow {
+  canEdit: boolean;
+  days: CalendarDayRow[];
+}
+
+/** 每個端點回的資料形狀(測試只取用到的欄位)。 */
+interface Payloads {
+  scheduleRules: RulesRow;
+  customizeScheduleRule: { rules: RulesRow };
+  restoreScheduleRule: { rules: RulesRow };
+  scheduleStaff: { canEdit: boolean; items: StaffRow[] };
+  addScheduleStaff: { items: StaffRow[] };
+  updateScheduleStaff: { item: StaffRow };
+  scheduleDemandTemplates: { canCreate: boolean; items: TemplateRow[] };
+  saveScheduleDemandTemplate: { item: TemplateRow };
+  scheduleDemandWeekTemplates: { items: WeekTemplateRow[] };
+  saveScheduleDemandWeekTemplate: { item: WeekTemplateRow };
+  scheduleCalendar: CalendarRow;
+}
+
+function dataOf<Key extends keyof Payloads>(
+  result: GraphqlResult,
+  key: Key,
+): Payloads[Key] {
   expect(result.errors).toBeUndefined();
   const value = result.data?.[key];
   if (value === undefined || value === null) {
     throw new Error(`${key} 沒有回資料`);
   }
-  return value as T;
+  return value as Payloads[Key];
 }
 
 function ruleOf(rules: RulesRow, key: string): RuleRow {
@@ -331,7 +359,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     user: ScheduleTestUser,
     query: string,
     variables: Record<string, unknown> = {},
-  ): Promise<GraphqlResult<Record<string, unknown>>> {
+  ): Promise<GraphqlResult> {
     return api.graphql(query, variables, { accessToken: user.token });
   }
 
@@ -339,7 +367,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     user: ScheduleTestUser,
     orgId?: Types.ObjectId,
   ): Promise<RulesRow> {
-    return dataOf<RulesRow>(
+    return dataOf(
       await gql(user, SCHEDULE_RULES, {
         input: orgId === undefined ? null : { orgId: String(orgId) },
       }),
@@ -365,10 +393,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
   }
 
   async function templatesOf(user: ScheduleTestUser): Promise<TemplateRow[]> {
-    return dataOf<{ items: TemplateRow[] }>(
-      await gql(user, TEMPLATES),
-      "scheduleDemandTemplates",
-    ).items;
+    return dataOf(await gql(user, TEMPLATES), "scheduleDemandTemplates").items;
   }
 
   function saveTemplate(
@@ -497,7 +522,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("分店自訂 6 → 6,並顯示上層 8;[還原] 回到沿用", async () => {
-      const customized = dataOf<{ rules: RulesRow }>(
+      const customized = dataOf(
         await customize(manager, zhongshan, {
           key: "maxMonthlyDayOffs",
           value: { amount: 6 },
@@ -520,7 +545,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         ruleOf(await rulesOf(hq, hsinchu), "maxMonthlyDayOffs").effective.value,
       ).toEqual({ amount: 8 });
 
-      const restored = dataOf<{ rules: RulesRow }>(
+      const restored = dataOf(
         await gql(manager, RESTORE_RULE, {
           input: { orgId: String(zhongshan), key: "maxMonthlyDayOffs" },
         }),
@@ -585,7 +610,8 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         [tenantA],
         [P.settingsView, P.editOrgRules],
       );
-      expect((await rulesOf(orgRulesOnly)).canEdit).toBe(false);
+      const orgRulesView = await rulesOf(orgRulesOnly);
+      expect(orgRulesView.canEdit).toBe(false);
       const forbidden = await customize(orgRulesOnly, tenantA, {
         key: "maxMonthlyDayOffs",
         value: { amount: 3 },
@@ -642,7 +668,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       }
       expect(ruleOf(inherited, "leaderCountFirst").effective.order).toBe(1);
 
-      const customized = dataOf<{ rules: RulesRow }>(
+      const customized = dataOf(
         await customize(manager, zhongshan, {
           key: "allowOverlappingDemands",
           enabled: true,
@@ -660,7 +686,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         ruleOf(customized.rules, "allowOverlappingDemands").effective.enabled,
       ).toBe(true);
 
-      const restored = dataOf<{ rules: RulesRow }>(
+      const restored = dataOf(
         await gql(manager, RESTORE_RULE, {
           input: { orgId: String(zhongshan), key: "leaderCountFirst" },
         }),
@@ -693,7 +719,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(names).not.toContain("林新人");
       expect(managerView.canEdit).toBe(true);
 
-      const added = dataOf<{ items: StaffRow[] }>(
+      const added = dataOf(
         await gql(manager, ADD_STAFF, {
           input: { userIds: [String(wang.userId)] },
         }),
@@ -728,11 +754,13 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         input: { userIds: [String(lin.userId)] },
       });
       expect(errorOf(noPermission)).toMatchObject({ code: "FORBIDDEN" });
-      expect((await staffRows(viewer)).canEdit).toBe(false);
+      const viewerStaff = await staffRows(viewer);
+      expect(viewerStaff.canEdit).toBe(false);
     });
 
     it("可以排的分店:主要分店每人一家;看不到的分店不能加;看不到的分店的關聯保留", async () => {
-      const row = (await staffRows(manager, { joined: true })).items[0];
+      const joinedRows = await staffRows(manager, { joined: true });
+      const row = joinedRows.items[0];
       const staffId = row?.staff?.id;
       if (staffId === undefined) {
         throw new Error("王小明沒有排班檔案");
@@ -759,7 +787,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       ]);
       expect(errorOf(noPrimary)).toMatchObject({ code: "VALIDATION_FAILED" });
 
-      const supported = dataOf<{ item: StaffRow }>(
+      const supported = dataOf(
         await update(hq, [
           { orgId: String(zhongshan), canLead: true, isPrimary: true },
           { orgId: String(hsinchu), canLead: false, isPrimary: false },
@@ -782,7 +810,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       ]);
 
       // 店長只看得到中山店:存檔時新竹店的支援關聯保留
-      const fromManager = dataOf<{ item: StaffRow }>(
+      const fromManager = dataOf(
         await gql(manager, UPDATE_STAFF, {
           input: {
             staffId,
@@ -798,9 +826,8 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(fromManager.item.staff?.orgs.map((org) => org.orgName)).toEqual([
         "中山店",
       ]);
-      const hqView = (await staffRows(hq, { joined: true })).items.find(
-        (item) => item.name === "王小明",
-      );
+      const hqRows = await staffRows(hq, { joined: true });
+      const hqView = hqRows.items.find((item) => item.name === "王小明");
       expect(hqView?.staff?.orgs.map((org) => org.orgName)).toEqual([
         "中山店",
         "新竹店",
@@ -843,7 +870,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     let tenantTemplateId: string;
 
     it("上層建立的範本下層看得到、改不了(FORBIDDEN / NOT_OWNER)", async () => {
-      const created = dataOf<{ item: TemplateRow }>(
+      const created = dataOf(
         await saveTemplate(hq, {}),
         "saveScheduleDemandTemplate",
       );
@@ -882,7 +909,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("下層建立的範本上層看不到;別的租戶看不到(NOT_FOUND)", async () => {
-      const branchTemplate = dataOf<{ item: TemplateRow }>(
+      const branchTemplate = dataOf(
         await saveTemplate(manager, {
           name: "補貨",
           shortName: "補",
@@ -895,7 +922,8 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         "saveScheduleDemandTemplate",
       );
       expect(branchTemplate.item.canEdit).toBe(true);
-      const hqIds = (await templatesOf(hq)).map((item) => item.id);
+      const hqTemplates = await templatesOf(hq);
+      const hqIds = hqTemplates.map((item) => item.id);
       expect(hqIds).toContain(tenantTemplateId);
       expect(hqIds).not.toContain(branchTemplate.item.id);
 
@@ -954,15 +982,16 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
 
     it("週範本:只能選這一層看得到的範本;上層的週範本下層改不了", async () => {
       const days = [[], [tenantTemplateId], [], [], [], [], []];
-      const created = dataOf<{ item: { id: string; days: string[][] } }>(
+      const created = dataOf(
         await gql(hq, SAVE_WEEK_TEMPLATE, { input: { name: "一般週", days } }),
         "saveScheduleDemandWeekTemplate",
       );
       expect(created.item.days).toEqual(days);
 
-      const fromBranch = dataOf<{
-        items: { id: string; canEdit: boolean }[];
-      }>(await gql(manager, WEEK_TEMPLATES), "scheduleDemandWeekTemplates");
+      const fromBranch = dataOf(
+        await gql(manager, WEEK_TEMPLATES),
+        "scheduleDemandWeekTemplates",
+      );
       expect(fromBranch.items).toContainEqual(
         expect.objectContaining({ id: created.item.id, canEdit: false }),
       );
@@ -998,7 +1027,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("沒有 edit-templates:canCreate = false,新增被擋", async () => {
-      const payload = dataOf<{ canCreate: boolean }>(
+      const payload = dataOf(
         await gql(viewer, TEMPLATES),
         "scheduleDemandTemplates",
       );
