@@ -9,8 +9,14 @@ import { Typography } from "@repo/ui/typography";
 import { dayOffHatchSx } from "../DayOffs/day-off-styles";
 import {
   autoMarkSx,
+  demandDotSx,
+  extensionSwatchSx,
   leaderMarkSx,
   legendSwatchSx,
+  moreSampleSx,
+  multiBadgeSx,
+  unmatchedPunchSx,
+  vacancySwatchSx,
 } from "./schedule-legend-styles";
 
 /**
@@ -28,7 +34,19 @@ export type ScheduleLegendItem =
   | "missingLeader"
   | "missingHelper"
   | "full"
-  | "multi";
+  | "multi"
+  | "closed"
+  | "special"
+  | "unmatchedPunch"
+  | "extension"
+  | "vacancyLeader"
+  | "vacancyHelper"
+  | "moreNeutral"
+  | "moreWarning"
+  | "moreError"
+  | "dotFull"
+  | "dotMissingHelper"
+  | "dotMissingLeader";
 
 const swatch = (children?: ReactNode, sx: object = {}) => (
   <Box component="span" aria-hidden sx={[legendSwatchSx, sx]}>
@@ -70,7 +88,19 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     missingLeader: <Tag tone="error" label={t("countSample")} />,
     missingHelper: <Tag tone="warning" label={t("countSample")} />,
     full: <Tag tone="grey" label={t("countSample")} />,
-    multi: mark("×2", { fontWeight: 600 }),
+    multi: mark("×2", multiBadgeSx),
+    closed: swatch(null, { bgcolor: "action.disabledBackground" }),
+    special: swatch(null, { borderColor: "text.secondary" }),
+    unmatchedPunch: mark(t("punchSample"), unmatchedPunchSx),
+    extension: swatch(null, extensionSwatchSx),
+    vacancyLeader: swatch(null, vacancySwatchSx("error")),
+    vacancyHelper: swatch(null, vacancySwatchSx("warning")),
+    moreNeutral: mark(t("moreSample"), moreSampleSx("neutral")),
+    moreWarning: mark(t("moreSample"), moreSampleSx("warning")),
+    moreError: mark(t("moreSample"), moreSampleSx("error")),
+    dotFull: mark("", demandDotSx("grey")),
+    dotMissingHelper: mark("", demandDotSx("warning")),
+    dotMissingLeader: mark("", demandDotSx("error")),
   };
   return (
     <Stack

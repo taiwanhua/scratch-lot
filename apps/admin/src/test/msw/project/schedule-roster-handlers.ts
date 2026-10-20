@@ -177,6 +177,7 @@ export const scheduleRosterWorld = (
         positionNote: null,
         templateId: existing?.templateId ?? input.templateId ?? null,
         source: existing?.source ?? "manual",
+        createdAt: existing?.createdAt ?? new Date().toISOString(),
         tasks,
       };
       demands = [...demands.filter((item) => item.id !== id), demand];

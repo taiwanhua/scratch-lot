@@ -1174,8 +1174,22 @@
         "missingLeader": "Lead missing",
         "missingHelper": "Helper missing",
         "full": "Staffing need filled",
-        "multi": "One shift covering several positions"
-      }
+        "multi": "One shift covering several positions",
+        "closed": "Closed",
+        "special": "Special day (calendar color)",
+        "unmatchedPunch": "Punches without a shift (count)",
+        "extension": "Time outside the staffing need (dashed extension)",
+        "vacancyLeader": "Lead missing (dashed slot)",
+        "vacancyHelper": "Helper missing (dashed slot)",
+        "moreNeutral": "+N collapsed staffing needs (click for the list)",
+        "moreWarning": "+N includes a missing helper (orange)",
+        "moreError": "+N includes a missing lead (red)",
+        "dotFull": "Fully staffed",
+        "dotMissingHelper": "Helper missing",
+        "dotMissingLeader": "Lead missing"
+      },
+      "punchSample": "⏲ 2",
+      "moreSample": "+N"
     },
     "roster": {
       "org": "Branch",
@@ -1211,7 +1225,10 @@
         "longestStreak": "Longest streak"
       },
       "views": {
-        "roster": "Roster"
+        "roster": "Roster",
+        "month": "Month",
+        "week": "Week",
+        "day": "Day"
       },
       "status": {
         "unpublished": "Unpublished",
@@ -1368,6 +1385,46 @@
           "saved": "Shift saved",
           "deleted": "Shift deleted"
         }
+      },
+      "timeline": {
+        "monthAria": "Month view",
+        "weekAria": "Week view",
+        "dayAria": "Day view",
+        "monthDayAria": "{date} (open the day view)",
+        "dateLabel": "{date} {weekday}",
+        "barTooltip": "{name} · {start}–{end} · ☕ {minutes} min",
+        "break": "☕ {minutes} min",
+        "missingLeader": "Lead missing 1",
+        "missingHelper": "Helper missing 1",
+        "addEntryHint": "+ Shift",
+        "vacancyAria": "{name} {label}",
+        "auto": "Auto-assigned",
+        "multi": "×{count}",
+        "moreLabel": "+{count}",
+        "prevDay": "Prev day →",
+        "nextDay": "→ Next day",
+        "moreTitle": "Collapsed staffing needs on {date}",
+        "moreShowDay": "View the whole day ›",
+        "showDayAria": "{date} {summary}, open the day view",
+        "noDemand": "No staffing needs on this day",
+        "cardMissing": "{count} missing {missing}",
+        "earlierStart": "{minutes} min earlier than needed",
+        "laterStart": "{minutes} min later than needed",
+        "earlierEnd": "Ends {minutes} min earlier than needed",
+        "laterEnd": "Ends {minutes} min later than needed",
+        "prevWeek": "Previous week",
+        "nextWeek": "Next week",
+        "weekTitle": "{from}–{to}",
+        "prevDate": "Previous day",
+        "nextDate": "Next day",
+        "dateButton": "{date} ▾",
+        "pickDateAria": "{date}, pick a date",
+        "pickDate": "Pick a date",
+        "missingDot": "Staffing still missing",
+        "today": "Today",
+        "punch": "⏲ {count}",
+        "punchAria": "{count} punches without a shift",
+        "nobody": "Nobody yet"
       }
     }
   },

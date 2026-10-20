@@ -18,12 +18,20 @@ export interface TestRosterEntry extends Omit<
   ScheduleEntryFieldsFragment,
   "assignments"
 > {
-  assignments: { demandId: string; taskId: string; source: string }[];
+  assignments: {
+    demandId: string;
+    taskId: string;
+    source: string;
+    reason?: string | null;
+  }[];
 }
 
 export type TestRosterDemand = Omit<ScheduleDemandFieldsFragment, "tasks"> & {
   tasks: { taskId: string; role: string; taskKey: string }[];
 };
+
+/** 夾具人力需求的建立時間(同一時間開始時,時間軸依崗位 → 範本 → 建立時間 → id 排)。 */
+const CREATED_AT = "2026-10-01T00:00:00.000Z";
 
 const at = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`).toISOString();
@@ -170,6 +178,7 @@ export const sampleRoster = (
       positionNote: null,
       templateId,
       source: templateId === null ? "manual" : "template",
+      createdAt: CREATED_AT,
       tasks: tasks.map((task, index) => ({
         taskId: `${id}-t${String(index + 1)}`,
         ...task,
@@ -200,6 +209,17 @@ export const sampleRoster = (
     );
   }
   addDemand("d-temp-4", day(4), null, "13:00", "17:00", [help]);
+  // 7 日:補貨 + 臨時加開(缺負責),張小芳一筆排班 13:00–18:00 同時填進兩筆(×2、延伸出補貨)
+  addDemand(
+    "d-restock-7",
+    day(7),
+    "tpl-restock",
+    "13:00",
+    "17:00",
+    [help],
+    "restock",
+  );
+  addDemand("d-temp-7", day(7), null, "15:00", "18:00", [lead, help]);
 
   const addEntry = (
     userId: string,
@@ -207,7 +227,12 @@ export const sampleRoster = (
     start: string,
     end: string,
     breakMinutes: number,
-    assignments: { demandId: string; taskId: string; source?: string }[],
+    assignments: {
+      demandId: string;
+      taskId: string;
+      source?: string;
+      reason?: string;
+    }[],
   ) => {
     entries.push({
       id: `e-${userId}-${String(n)}-${start}`,
@@ -232,7 +257,12 @@ export const sampleRoster = (
     ]);
   }
   addEntry("u-chen", 5, "14:30", "22:00", 30, [
-    { demandId: "d-late-5", taskId: "d-late-5-t1", source: "auto" },
+    {
+      demandId: "d-late-5",
+      taskId: "d-late-5-t1",
+      source: "auto",
+      reason: "負責人次數較多",
+    },
   ]);
   addEntry("u-lin", 2, "08:30", "14:30", 30, [
     { demandId: "d-early-2", taskId: "d-early-2-t2" },
@@ -242,6 +272,10 @@ export const sampleRoster = (
   ]);
   addEntry("u-chang", 4, "13:00", "17:00", 0, [
     { demandId: "d-temp-4", taskId: "d-temp-4-t1" },
+  ]);
+  addEntry("u-chang", 7, "13:00", "18:00", 30, [
+    { demandId: "d-restock-7", taskId: "d-restock-7-t1" },
+    { demandId: "d-temp-7", taskId: "d-temp-7-t2" },
   ]);
   return { demands, entries };
 };

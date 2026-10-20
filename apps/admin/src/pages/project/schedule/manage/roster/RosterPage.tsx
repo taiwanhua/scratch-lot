@@ -34,6 +34,7 @@ import {
 import { ROSTER_TOOLBAR_ACTIONS } from "./roster-toolbar";
 import { readRosterView, writeRosterView } from "./roster-view-memory";
 import { ROSTER_VIEWS, type RosterViewEntry } from "./roster-views";
+import { ROSTER_DATE_SCHEMA, useTenantToday } from "./views/useRosterDate";
 
 const orgSchema = z.string().default("");
 /** `?month=YYYY-MM`;空字串 / 格式不對 = 這個月。 */
@@ -100,6 +101,10 @@ export const RosterPage = () => {
     viewParam === "" ? (readRosterView() ?? "") : viewParam,
     isMobile,
   );
+  // 週 / 日檢視的日期(`?date=`);週檢視跨月時多讀那幾天(`readRangeOf`)
+  const [dateParam] = useUrlState("date", ROSTER_DATE_SCHEMA);
+  const today = useTenantToday();
+  const readRange = view.readRangeOf?.(dateParam, month, today) ?? null;
   const [dialog, setDialog] = useState<DialogState>(null);
   /**
    * 要捲到的格子(`scrollToCell`):`scrolled` = 已經找到格子捲過去、正在閃爍。還沒在畫面上
@@ -113,7 +118,11 @@ export const RosterPage = () => {
   const handledRequest = useRef<object | null>(null);
 
   const query = useScheduleRosterQuery(session.client, {
-    input: { month, ...(orgId === "" ? {} : { orgId }) },
+    input: {
+      month,
+      ...(orgId === "" ? {} : { orgId }),
+      ...readRange,
+    },
   });
   const data = query.data?.scheduleRoster;
 
