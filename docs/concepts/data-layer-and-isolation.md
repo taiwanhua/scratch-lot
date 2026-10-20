@@ -95,7 +95,8 @@ service 呼叫 BaseRepository.xxx(operator, …)
 - 讀、寫、刪的查詢中介層都套(`find`、`updateOne`、`deleteMany`…);`aggregate` 只經 `BaseRepository.aggregate`,同一套讀取條件放在 pipeline 最前面的 `$match`,會讀別張表或寫出的階段(`$lookup`、`$unionWith`、`$graphLookup`、`$out`、`$merge`)拒收,含 `$facet` 與任何巢狀管線裡的。讀進來的租戶文件不能 `save()`(plugin 的 save 中介層只放行新建)。
 - 條件以 `$and` 追加,呼叫端自己的條件只能再收窄。
 - 範圍是 `"all"`(根組織)時不加租戶條件。
-- `create` 自動寫入當前組織;寫到範圍外 → 拋錯。
+- `create` 自動寫入當前組織;寫到範圍外 → 拋錯。`createMany(operator, docs, { session })` 一次寫多筆:每筆照 `create` 同一條檢查(`withTenantOrg` → `withModuleTenant` → `withShareOrgs`;同一個組織的租戶推導、同一份共用清單只查一次),一筆不過整批不寫,底層 ordered `insertMany`,**必須在交易內**。
+- 一般更新不准改 `orgId`;改歸屬組織只有搬家 `reassignOrg`(見下方例外出口)。
 - api 內裸 `Model.find` 由 ESLint 規則 `@repo/no-raw-model-query` 擋下。
 - 已知限制:`populate()` 的子查詢不帶上下文,關聯資料分兩次查。
 - **登記在案的例外出口**(登記表在 ADR-0005「例外出口」):
@@ -105,6 +106,7 @@ service 呼叫 BaseRepository.xxx(operator, …)
   - `apps/api/src/database/workflow-submission-store.ts`:審核流程(引擎、讀取授權、申請中心)讀寫提交,不套可見範圍與資料範圍規則,以 `tenantId` 為邊界;允許呼叫它的檔案登記在該檔 `WORKFLOW_SUBMISSION_STORE_CALLERS`,由測試鎖定。
   - `BaseRepository.existsInTenant(operator, tenantId, equals)`:租戶內唯一 / 占用檢查。`tenantId` 必填且要是操作者所屬的租戶(根組織除外,否則拋 `TenantScopeError`),條件只能是欄位等於值的組合;由中介層以 `tenantBoundary` 旗標換成 `tenantId = 該值`、不套可見範圍 / 共用 / 資料範圍規則;只回有無,只給有 `tenantId` 欄的表。呼叫端登記在 `TENANT_BOUNDARY_CALLERS`(與 `findRefsInTenant` 共用),由測試掃 src 鎖定。
   - `BaseRepository.findRefsInTenant(operator, tenantId, ids)`:引用名稱。邊界同上,明列 id,只回 schema 的 `refFields` 與 `_id`。
+  - `BaseRepository.reassignOrg(operator, filter, newOrgId, { session, update })`:搬家。被搬的資料要在可見範圍內;新組織要存在、同租戶、不是根組織(不合法 → `VALIDATION_FAILED`,`fields: ["orgId"]`),可以是操作者看不到的;有 `tenantId` 欄的表照新組織重新推導;`filter` 可帶版本等條件、`update` 同一次寫入改其他欄位(欄位保護照舊);同一個 session 寫稽核 `data.reassign-org`。呼叫端登記在 `ORG_REASSIGN_CALLERS`,由測試以呼叫語法掃 src 鎖定。
   - `tenantBoundaryContext(orgs, operator | null, tenantId)`(`database/tenant-boundary-context.ts`,底層 `systemTenantReader`):租戶邊界上下文,可見範圍 = 該租戶整棵組織樹。有操作者時租戶要是他所屬的、保留 `actorId`;用途限反查、以人為準的資料、排程與登記過的例外寫入,呼叫端與用途登記在 `TENANT_BOUNDARY_CONTEXT_CALLERS`(掃描測試鎖定);前提是那些表不是資料範圍目標。
 - **提升上下文要登記**:把可見範圍或管理範圍寫成 `"all"` 的上下文只准出現在 `database/elevated-contexts.ts`(底座)與 `project/database/elevated-contexts.ts`(專案)列出的檔案,`elevated-contexts.test.ts` 掃 src 斷言。
 - 對全員生效(套用對象「所有人」)的資料範圍規則連系統上下文也會收窄,所以「必須看到全部」的系統讀取只能走上面登記過的出口(ADR-0008)。

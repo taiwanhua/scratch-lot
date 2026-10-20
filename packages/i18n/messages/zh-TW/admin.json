@@ -1428,7 +1428,7 @@
       "tabVersions": "表單版本",
       "serial": "單號",
       "serialEnabled": "第一次送出時給單號",
-      "serialHint": "存草稿不給號;給了不收回(退回、撤回、作廢都保留原號)。流水號各租戶分開,依期間重新起算。",
+      "serialHint": "存草稿不給號;給了不收回(退回、撤回、作廢都保留原號)。流水號依最上層組織分開計數,依期間重新起算。",
       "serialPrefix": "前綴",
       "serialPrefixHint": "英數 0–10 字,可空",
       "serialPeriod": "流水號重新起算",

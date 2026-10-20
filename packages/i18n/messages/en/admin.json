@@ -1428,7 +1428,7 @@
       "tabVersions": "Form versions",
       "serial": "Serial number",
       "serialEnabled": "Give a serial number on first submit",
-      "serialHint": "Drafts get no number; a given number is kept (return, withdraw and void keep it). Each tenant counts separately and restarts per period.",
+      "serialHint": "Drafts get no number; a given number is kept (return, withdraw and void keep it). Each top-level org counts separately and restarts per period.",
       "serialPrefix": "Prefix",
       "serialPrefixHint": "0–10 letters or digits; may be empty",
       "serialPeriod": "Restart numbering",

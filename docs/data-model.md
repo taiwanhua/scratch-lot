@@ -61,6 +61,14 @@
 
 執行紀錄是系統紀錄:沒有操作者與組織歸屬,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫。先插入 `running` 才執行 handler,插入撞到唯一索引就表示這個時點已有人跑過或正在跑;失敗的時點不重跑;中途當掉的紀錄停在 `running`,`startedAt` 超過 15 分鐘後以條件式原子更新重新取得。紀錄不自動清除。排程機制見 `docs/deployment.md`「Cloud Scheduler」。
 
+### 單號計數器
+
+| collection        | 用途                                                                                                                                                                                      | 存取正本                                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `serial_counters` | 單號的計數器(ADR-0015):`tenantId`(根組織自己的資料為 null)、`key`(表單 = `form:<formKey>`)、`period`(`none` / `2026` / `202610`)、`seq`(已給出的最後一號)。唯一 `(tenantId, key, period)` | `serial-counter.schema.ts`、`apps/api/src/database/serial-counters.store.ts`、`apps/api/src/serials/serial.service.ts` |
+
+計數器不是業務資料:沒有組織歸屬與操作者,不掛基礎欄位與租戶 plugin,只經專用 store 讀寫、每個方法明給 `tenantId`。取號以 `$inc` + upsert 原子完成,可在交易內(交易回復,號碼一起回復)。
+
 ### 列印
 
 `print_agents`、`printers`、`print_jobs` 是印表機管理模組(`system.printers`)的模組資料表(`moduleData`,`moduleKey` 固定 `system.printers`),都掛在**分店**(`orgId`)上;印表機的分店 = 它的代理程式的分店,工作的分店 = 印表機的分店。
@@ -128,6 +136,7 @@
 - **`form_versions`**:兩條部分唯一索引 —— `(formKey, version)` 只在 `version` 是數字時唯一(草稿的 `null` 不算,正式版號在發布時配);`(formKey, status)` 限 `draft` 與 `publishing` 各一筆。定義四塊(`fields` / `layout` / `summaryMap` / `prefills`)存自由 JSON,形狀正本是 `@repo/domain/form` 的 `types.ts`。草稿刪除是**硬刪**(ADR-0007 的例外:軟刪的草稿會佔住部分唯一索引,讓這張表單永遠開不了新草稿;刪掉的定義留在稽核)。
 - **`form_submissions` 的值**:`values` 依欄位型別存,受保護欄位原值照存、讀取時投影為 `"[redacted]"`;`date` / `datetime` 與 `summary.date` 存 Mongo `Date`(兩者都是時點,`date` = 選的那天在租戶時區 00:00),GraphQL 回 ISO 字串。明細列(`array`)欄存列的陣列 `[{ rowId, <子欄 key>: 值 }]`:`rowId` 是前端建列時產生的 UUID(同一明細內唯一、修訂之間不變),陣列順序就是列的順序。
 - **`form_submissions` 的修訂**:`revisions[]` 每筆 `{ revision, version, values, ctx: { at, timezone, userId, orgId, orgIds, tenantId }, kind?, upgradedBy?, upgradedAt? }` 是**完整值快照**。`ctx.orgId` = 操作者當時的目前組織、`orgIds` = 當時的所屬組織(全部)、`tenantId` = 當時的租戶頂層(根組織 = null;舊修訂沒有這兩欄,讀成空陣列 / null)。`version` = 這一筆修訂綁的表單版本(讀取一律 `revisions[r].version ?? version`);提交本身的 `version` 只有舊版資料升級會改綁。`kind: "upgrade"` = 舊版資料升級產生的修訂,`ctx` 沿用上一筆,誰與何時升級記在 `upgradedBy` / `upgradedAt`。`editVersion` 是每次寫入的樂觀鎖;`(createdBy, clientRequestId)` 唯一(含已軟刪除的);`touched[]` 是使用者碰過的欄位 key(只對草稿有意義)。容量上限見 `docs/modules/forms.md`「提交的寫入規則」。
+- **表單的單號**:`forms.serial`(`{ prefix, period, digits, separator? }`,null / 缺席 = 不給號)是表單設定;`form_submissions.serialNo` 在第一次送出時給(`SerialService`),之後不變(退回、撤回、作廢都保留),草稿與複製為新單的草稿為 null。
 - **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason` / `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
 
 ### 流程

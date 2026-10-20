@@ -181,7 +181,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.formEngine.list.slots.",
     reason:
-      "`t(`slots.${spec.key}`)`,key 是列表欄位配置的摘要槽(title / date / amount)",
+      "`t(`slots.${spec.key}`)`,key 是列表欄位配置的摘要槽(title / date / amount)與單號 serialNo",
   },
   {
     key: "admin.moduleManager.listColumns.builtinColumns.",
@@ -313,6 +313,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     key: "admin.forms.lookupSource.summarySlots.",
     reason:
       "`t(`summarySlots.${slot}`)`,slot 是 `form_submission` 欄位目錄裡的摘要槽",
+  },
+  {
+    key: "admin.forms.detail.serialPeriods.",
+    reason:
+      "`t(`serialPeriods.${period}`)`,period 取自 `SERIAL_PERIODS`(單號的期間 none / year / month)",
+  },
+  {
+    key: "admin.forms.detail.serialSeparators.",
+    reason:
+      "`t(`serialSeparators.${option.key}`)`,key 取自 `SerialFormatField` 的分隔符選項(dash / underscore / slash / dot / none)",
   },
   {
     key: "admin.moduleManager.listColumns.slots.",

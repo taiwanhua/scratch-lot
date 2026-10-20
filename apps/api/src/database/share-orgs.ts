@@ -1,7 +1,7 @@
 // 共用清單的租戶檢查讀原生 orgs(同 BaseRepository.withModuleTenant 推導 tenantId 的讀法):
 // orgs 掛治理類過濾,分享者不一定管得到要共用的組織;只取 ancestors、條件明列 id。
 //
-// **資料層直接丟 GraphQLError(VALIDATION_FAILED)的唯一例外**:其餘資料層錯誤都是程式錯誤
+// **資料層直接丟 GraphQLError(VALIDATION_FAILED)的例外**(另一個是搬家的目標組織,`org-reassign.ts`):其餘資料層錯誤都是程式錯誤
 // (`TenantScopeError`),只有「共用給」選錯組織是使用者輸入錯誤;檢查放在 BaseRepository 才能讓
 // 每個可共用的模組都繞不過,若改成丟內部錯誤,每個模組都要各自轉成同一個碼,漏一個就變成 INTERNAL。
 import { GraphQLError } from "graphql";

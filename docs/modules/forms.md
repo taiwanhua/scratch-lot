@@ -99,6 +99,24 @@
 - **受管表單**:seed 宣告寫 `allowDraft: false` 才關,沒寫 = 開。它和名稱、頁籤模板一樣是受管 metadata:只有關掉時才進 `contentHash`(開著的既有宣告 hash 不變)、寫進表單的方式同其他受管 metadata:首次安裝先以名稱建立身分,同一次安裝接著以條件更新寫入頁籤模板與允許存草稿(值和現場不同才帶);改版同樣以條件更新寫入;採納不寫入(現場已是宣告的值才採納);現場切過 → `METADATA_DRIFT`;「匯出專案設定」在關著時輸出 `allowDraft: false`(`packages/domain/src/seed/canonical.ts`、`apps/api/src/seed/form-definition.adapter.ts`)。
 - 正本測試:`apps/api/src/forms/form-runtime/form-allow-draft.test.ts`(情境表每列一個)。
 
+### 單號
+
+`forms.serial`(`FormModel.serial`):`{ prefix, period, digits, separator }`,null = 不給號(預設)。機制見 ADR-0015;形狀與檢查正本 `@repo/domain/form` 的 `SerialFormat` / `serialFormatIssues`(前綴英數 0–10 字、期間 `none` / `year` / `month`、位數 1–10、分隔符 `-` `_` `/` `.` 或空字串,缺席 = `-`)。畫面是表單管理右側「允許存草稿」下方的「單號」區塊(`pages/base/system/FormsPage/SerialFormatField.tsx`):開關、四個欄位與即時預覽,[儲存單號格式] 才寫入;關掉開關立刻存 null。
+
+| 情境                                 | 結果                                                                                                      |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| 存草稿                               | 不給號(`serialNo = null`)                                                                                 |
+| 第一次送出(草稿送出、直接送出、送審) | 同一個交易內給號(`SerialService`,key `form:<formKey>`,依提交歸屬組織的租戶計數、送出時點以租戶時區切期間) |
+| 被退回 / 撤回後再送出                | 不換號                                                                                                    |
+| 作廢                                 | 保留原號                                                                                                  |
+| 複製為新單                           | 新草稿沒有號,送出時另給                                                                                   |
+| 清掉格式(`serial: null`)             | 之後送出不給號;已給的號保留                                                                               |
+| 格式不合法                           | `VALIDATION_FAILED`,`fields` 指到 `serial.<鍵>`                                                           |
+
+- 列表欄位配置的「摘要槽」欄可選「單號」(`serialNo`);沒有號的那一格顯示「—」。詳情頁標題下顯示「單號:…」。
+- **受管表單**:seed 宣告可選填 `serial`(形狀同上),沒寫 = 不給號。它是受管 metadata:有宣告才進 `contentHash`(沒寫的既有宣告 hash 不變),寫入、改版、採納與 `METADATA_DRIFT` 的規則同允許存草稿;「匯出專案設定」在有設時輸出 `serial`。
+- 稽核:`form.update` 記前後值(`serial`)。
+
 ## 表單版本
 
 ### 狀態
@@ -343,7 +361,7 @@
 
 `modules.settings.list = { columns: [ { kind: "slot" | "field", key, formKey?, width, order } ], builtin: { form, status, createdBy } }`,root 整份覆蓋(`setModuleListColumns`,`form-design/module-list-columns.service.ts`)。
 
-- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount`;表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複;`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
+- 寫入時驗:摘要槽 key 只能是 `title` / `date` / `amount` / `serialNo`(單號,讀 `form_submissions.serialNo`);表單欄位要存在於該模組**共用表單**目前版本,且在那些版本裡都**不是受保護欄位**(`formKey` 給了就只看那一張,沒給就看模組內全部);欄寬 40–2000;同一欄不能重複;`builtin` 三個鍵都要是 boolean。空陣列 = 清掉配置、回前端預設欄。
 - 定義檢查器讀它出 `LIST_COLUMN_MISSING` 警告;表單改版後引用到不存在的欄位不自動清,前端顯示「—」。
 - `builtin`:內建欄「表單 / 狀態 / 建立者」各自顯不顯示;沒存過(或某個鍵不是 boolean)= 顯示(`listBuiltinColumnsOf`)。
 - 表單欄位欄的表頭讀該表單**目前版本**的定義(`moduleForms` 的 `currentVersion`;沒有資料列也顯示欄位名,欄位沒限定表單時取第一張有該欄位的),找不到再看這一頁資料列綁的版本,最後才顯示 key。
@@ -475,7 +493,7 @@ GraphQL 文件:`packages/graphql/src/documents/base/forms.graphql`(設計、升�
 input 欄位的缺席 / `null`:
 
 - `SetModuleListColumnsInput.builtin`:缺席 / `null` = 保留目前存的(沒存過 = 全開);有給就三個開關一起送(`form` / `status` / `createdBy`)。`ModuleListColumnsPayload.builtin` 一定有值(沒存過 = 全 `true`)。
-- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。`allowDraft`:缺席或 `null` = 不動。
+- `UpdateFormInput.name`:缺席或 `null` = 不動。`tabLabelTemplate`:缺席 = 不動、`null` 或空字串 = 清空(改回模組層模板)。`allowDraft`:缺席或 `null` = 不動。`serial`:缺席 = 不動、`null` = 不給號(已給的號不收回)。
 - `SubmitFormSubmissionInput.values`:缺席 / `null` = 以存的值送出;有值 = 畫面上的整張表單狀態(語意同 `SaveFormDraftInput.values`),與送出同一個交易寫入。
 - `CreateFormVersionDraftInput.baseVersion`:缺席 / `null` = 空白草稿。
 - `RetireCurrentVersionInput.expectedVersion`:必填,呼叫端當時看到的目前版本號。
