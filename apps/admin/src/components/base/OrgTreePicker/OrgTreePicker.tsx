@@ -155,21 +155,21 @@ export const OrgTreePicker = ({
     [lockedIds, openParentIds],
   );
 
-  /** 停用的節點(含上面那種沒在樹上標停用的)選不了:只有原本就選著的可以留著 / 取消。 */
+  /**
+   * 停用的節點(含上面那種沒在樹上標停用的)選不了:這次的選取裡只要有新點到的停用節點,
+   * 整個事件忽略(單選時 MUI 回的是「只剩被點的那個」,只濾掉會變成清空已選)。
+   * 上層 `Tree` 的 `disabledCheckIds` 已先擋一次;這裡不靠它,自己也守住。
+   */
   const handleSelectedIdsChange = (ids: string[]) => {
-    const allowed = ids.filter(
+    const isBlocked = ids.some(
       (id) =>
-        !(disabledIds.has(id) || openParentIds.has(id)) ||
-        selectedIds.includes(id),
+        (disabledIds.has(id) || openParentIds.has(id)) &&
+        !selectedIds.includes(id),
     );
-    const isBlocked =
-      allowed.length !== ids.length &&
-      allowed.length === selectedIds.length &&
-      allowed.every((id) => selectedIds.includes(id));
     if (isBlocked) {
       return;
     }
-    onSelectedIdsChange(allowed);
+    onSelectedIdsChange(ids);
   };
   const expandedIds = useMemo(
     () => allOrgIds(visibleNodes).filter((id) => !collapsedIds.includes(id)),

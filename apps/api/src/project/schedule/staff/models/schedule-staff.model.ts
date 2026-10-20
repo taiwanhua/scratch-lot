@@ -58,6 +58,10 @@ export class ScheduleStaffRowModel {
   @Field(() => String)
   account!: string;
 
+  /** 已被操作者看不到的組織加入排班(一人一份):不能再 [加入排班],`staff` 為 null */
+  @Field(() => Boolean)
+  joinedElsewhere!: boolean;
+
   @Field(() => ScheduleStaffProfileModel, { nullable: true })
   staff!: ScheduleStaffProfileModel | null;
 }

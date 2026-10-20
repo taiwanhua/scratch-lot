@@ -91,6 +91,7 @@ const CUSTOMIZE_AUTO_RUN = /* GraphQL */ `
 const STAFF_FIELDS = /* GraphQL */ `
   userId
   name
+  joinedElsewhere
   staff {
     id
     employmentType
@@ -254,6 +255,7 @@ interface RulesRow {
 interface StaffRow {
   userId: string;
   name: string;
+  joinedElsewhere: boolean;
   staff: {
     id: string;
     employmentType: string;
@@ -867,6 +869,46 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(joined.items.map((row) => row.name)).toEqual(["王小明"]);
       const notJoined = await staffRows(manager, { joined: false });
       expect(notJoined.items.map((row) => row.name)).not.toContain("王小明");
+    });
+
+    it("一人一份:被看不到的組織加入的人標「已在其他組織加入」,再加入 → VALIDATION_FAILED(userIds)", async () => {
+      const both = await createScheduleUser(
+        api,
+        connection,
+        [zhongshan, hsinchu],
+        [],
+        "兩店都在的人",
+      );
+      const added = await gql(manager, ADD_STAFF, {
+        input: { userIds: [String(both.userId)] },
+      });
+      expect(added.errors).toBeUndefined();
+
+      const hsinchuManager = await createScheduleUser(
+        api,
+        connection,
+        [hsinchu],
+        [P.settingsView, P.editStaff],
+      );
+      const hsinchuList = await staffRows(hsinchuManager);
+      const row = hsinchuList.items.find(
+        (item) => item.userId === String(both.userId),
+      );
+      expect(row).toMatchObject({ joinedElsewhere: true, staff: null });
+      const again = await gql(hsinchuManager, ADD_STAFF, {
+        input: { userIds: [String(both.userId)] },
+      });
+      expect(errorOf(again)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["userIds"],
+      });
+      // 加入的那一層看到的是自己的檔案,不標「其他組織」
+      const managerList = await staffRows(manager);
+      const own = managerList.items.find(
+        (item) => item.userId === String(both.userId),
+      );
+      expect(own?.joinedElsewhere).toBe(false);
+      expect(own?.staff).not.toBeNull();
     });
 
     it("看不到的使用者加不了(NOT_FOUND);沒有 edit-staff 加不了(FORBIDDEN)", async () => {

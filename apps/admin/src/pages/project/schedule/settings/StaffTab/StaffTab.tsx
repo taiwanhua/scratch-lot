@@ -111,17 +111,22 @@ export const StaffTab = () => {
           .join("、")
       : "—";
 
-  const statusOf = (row: Row) =>
-    row.staff ? (
-      <Tag label={t("joinedYes")} tone="success" />
+  const statusOf = (row: Row) => {
+    if (row.staff) {
+      return <Tag label={t("joinedYes")} tone="success" />;
+    }
+    // 已被看不到的組織加入(一人一份):不能再加入
+    return row.joinedElsewhere ? (
+      <Tag label={t("joinedElsewhere")} />
     ) : (
       <Tag label={t("joinedNo")} tone="warning" />
     );
+  };
 
   const checkboxOf = (row: Row) => (
     <Checkbox
       checked={selected.includes(row.userId)}
-      disabled={row.staff !== null || !canEdit}
+      disabled={row.staff !== null || row.joinedElsewhere || !canEdit}
       onChange={(_event, checked) => {
         toggle(row.userId, checked);
       }}

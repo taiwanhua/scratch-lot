@@ -120,6 +120,7 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
     userId: "u-wang",
     name: "王小明",
     account: "wang",
+    joinedElsewhere: false,
     staff: {
       id: "s-wang",
       employmentType: "full-time",
@@ -136,6 +137,7 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
     userId: "u-li",
     name: "李小華",
     account: "li",
+    joinedElsewhere: false,
     staff: {
       id: "s-li",
       employmentType: "full-time",
@@ -145,8 +147,28 @@ export const sampleScheduleStaff: ScheduleStaffRowFieldsFragment[] = [
       orgs: [staffOrg(SCHEDULE_BRANCH, false, true, 1)],
     },
   },
-  { userId: "u-lin", name: "林新人", account: "lin", staff: null },
-  { userId: "u-chang", name: "張工讀", account: "chang", staff: null },
+  {
+    userId: "u-lin",
+    name: "林新人",
+    account: "lin",
+    joinedElsewhere: false,
+    staff: null,
+  },
+  // 已被看不到的組織加入(一人一份):不能再加入
+  {
+    userId: "u-chen",
+    name: "陳支援",
+    account: "chen",
+    joinedElsewhere: true,
+    staff: null,
+  },
+  {
+    userId: "u-chang",
+    name: "張工讀",
+    account: "chang",
+    joinedElsewhere: false,
+    staff: null,
+  },
 ];
 
 export const sampleScheduleCalendarDays: TestCalendarDay[] = [

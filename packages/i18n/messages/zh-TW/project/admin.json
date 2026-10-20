@@ -514,6 +514,7 @@
       "joinedAll": "全部(已加入 / 未加入)",
       "joinedYes": "已加入",
       "joinedNo": "未加入",
+      "joinedElsewhere": "已在其他組織加入",
       "add": "加入排班({count})",
       "columns": {
         "name": "姓名",

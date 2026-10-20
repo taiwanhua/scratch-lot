@@ -2952,6 +2952,7 @@ type ScheduleStaffProfile {
 
 type ScheduleStaffRow {
   account: String!
+  joinedElsewhere: Boolean!
   name: String!
   staff: ScheduleStaffProfile
   userId: ID!

@@ -514,6 +514,7 @@
       "joinedAll": "All (joined / not joined)",
       "joinedYes": "Joined",
       "joinedNo": "Not joined",
+      "joinedElsewhere": "Joined in another org",
       "add": "Add to scheduling ({count})",
       "columns": {
         "name": "Name",

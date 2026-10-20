@@ -44,6 +44,14 @@ describe("排班設定", () => {
       expect(await screen.findByText("已加入排班")).toBeInTheDocument();
     });
 
+    it("已被看不到的組織加入的人:標「已在其他組織加入」,勾選框停用", async () => {
+      renderSchedulePage({ path: SETTINGS });
+      expect(
+        await screen.findByRole("checkbox", { name: "選取「陳支援」" }),
+      ).toBeDisabled();
+      expect(screen.getByText("已在其他組織加入")).toBeInTheDocument();
+    });
+
     it("沒有 edit-staff:看不到 [加入排班]", async () => {
       renderSchedulePage({
         path: SETTINGS,

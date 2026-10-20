@@ -79,6 +79,30 @@ describe("OrgTreeSelect visible / tenant(整棵租戶樹)", () => {
     expect(valueText()).toBe("org-a");
   });
 
+  it("visible 單選:已選 A 店時點反灰的上層(北區)→ 仍然是 A 店", async () => {
+    useTenantTree();
+    const { user } = renderSelect({ scope: "visible", initial: ["org-a"] });
+    useTenantTree();
+    await openPanel(user);
+    await screen.findByText("A 店");
+    await user.click(within(rowOf("北區")).getAllByText("北區")[0]);
+    expect(valueText()).toBe("org-a");
+  });
+
+  it("visible 多選:已選 A 店時點反灰的上層(北區)→ 仍然只有 A 店", async () => {
+    useTenantTree();
+    const { user } = renderSelect({
+      scope: "visible",
+      isMultiSelect: true,
+      initial: ["org-a"],
+    });
+    useTenantTree();
+    await openPanel(user);
+    await screen.findByText("北區");
+    await user.click(within(rowOf("北區")).getAllByText("北區")[0]);
+    expect(valueText()).toBe("org-a");
+  });
+
   it("tenant:整個租戶都能選", async () => {
     const { user } = renderSelect({ scope: "tenant" });
     useTenantTree();

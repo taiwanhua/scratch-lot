@@ -637,8 +637,9 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
       expect(lines.join("\n")).toMatch(/✗ \[6\/11\] 崗位:.*FORBIDDEN/);
-      expect(lines.join("\n")).toContain(
-        "未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人",
+      // 整行比對:後面的步驟一個都不能漏(收銀點是最後一步)
+      expect(lines).toContain(
+        "  未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人、收銀點",
       );
 
       const users = await find("users", {

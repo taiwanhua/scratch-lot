@@ -72,8 +72,9 @@ type VisibleOrgs = ReadonlyMap<string, string>;
  * 排班人員(規格 14.3;正本 `docs/modules/project/schedule.md`「排班人員」)。
  *
  * - **候選使用者** = 所屬組織落在操作者可見範圍內(且在同一個租戶)的使用者;不是新建人
- * - 排班檔案**歸當前組織、不共用**(跨店支援由支援需求單把人加進那家店):建立時 `orgId` = 當前組織,
- *   讀取照一般可見性;同一組織一人一筆(唯一 `(orgId, userId)`)
+ * - 排班檔案是使用者的子檔,**一個租戶一人一份**(唯一 `(tenantId, userId)`);建立時 `orgId` = 當前組織,
+ *   讀取與修改照一般可見性(跨店支援由支援需求單把人加進那家店)。已被看不到的組織加入的人,
+ *   列表標 `joinedElsewhere`、不能再加入
  * - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`);看不到的分店的關聯保留不動
  * - 每人一家主要分店(有任何可以排的分店時恰好一家)
  */
@@ -94,9 +95,16 @@ export class ScheduleStaffService {
     operator: OperatorContext,
     input: ScheduleStaffListInput | null,
   ): Promise<ScheduleStaffListPayload> {
-    const { visibleOrgs, users } = await this.candidatesOf(operator);
+    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
     const staffByUser = await this.staffByUser(operator, users);
-    const rows = await this.rowsOf(operator, users, staffByUser, visibleOrgs);
+    const joinedInTenant = await this.joinedInTenant(operator, tenantId, users);
+    const rows = await this.rowsOf(
+      operator,
+      users,
+      staffByUser,
+      visibleOrgs,
+      joinedInTenant,
+    );
     const keyword = input?.keyword?.trim().toLowerCase() ?? "";
     const joined = input?.joined ?? null;
     const items = rows.filter(
@@ -123,7 +131,7 @@ export class ScheduleStaffService {
       throw validationError("userIds is empty", ["userIds"]);
     }
     const ids = input.userIds.map((id) => parseObjectId(id, "userIds"));
-    const { visibleOrgs, users } = await this.candidatesOf(operator);
+    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
     const byId = new Map(users.map((user) => [String(user._id), user]));
     const picked = ids.map((id) => {
       const user = byId.get(String(id));
@@ -132,20 +140,14 @@ export class ScheduleStaffService {
       }
       return user;
     });
-    // 已加入 = 當前組織已經有這個人的排班檔案(排班檔案歸當前組織,不共用)
-    const visibleStaff = await this.staffByUser(operator, picked);
-    const existing = new Map(
-      [...visibleStaff.entries()].filter(
-        ([, record]) => String(record.orgId) === String(operator.currentOrgId),
-      ),
-    );
+    // 已加入 = 整個租戶裡已經有這個人的排班檔案(一人一份;含操作者看不到的組織加入的)
+    const existing = await this.joinedInTenant(operator, tenantId, picked);
     if (existing.size > 0) {
-      throw validationError(
-        `already joined: ${[...existing.keys()].join(", ")}`,
-        ["userIds"],
-      );
+      throw validationError(`already joined: ${[...existing].join(", ")}`, [
+        "userIds",
+      ]);
     }
-    // 兩個請求同時加入同一人:唯一索引 (orgId, userId) 擋下第二筆,回同一個錯誤
+    // 兩個請求同時加入同一人:唯一索引 (tenantId, userId) 擋下第二筆,回同一個錯誤
     await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
@@ -169,7 +171,13 @@ export class ScheduleStaffService {
       ["userIds"],
     );
     const staffByUser = await this.staffByUser(operator, picked);
-    return this.rowsOf(operator, picked, staffByUser, visibleOrgs);
+    return this.rowsOf(
+      operator,
+      picked,
+      staffByUser,
+      visibleOrgs,
+      await this.joinedInTenant(operator, tenantId, picked),
+    );
   }
 
   /** 排班人員設定:僱用類型、啟用、備註、可以排的分店(看得到的那幾家整份取代)。 */
@@ -178,7 +186,7 @@ export class ScheduleStaffService {
     input: UpdateScheduleStaffInput,
   ): Promise<ScheduleStaffRowModel> {
     const staffId = parseObjectId(input.staffId, "staffId");
-    const { visibleOrgs, users } = await this.candidatesOf(operator);
+    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
     // 一般可見性:看得到這份排班檔案所屬的組織才改得到
     const record = await this.staff.findOne(operator, { _id: staffId });
     const user = users.find(
@@ -252,7 +260,13 @@ export class ScheduleStaffService {
       ["orgs"],
     );
     const staffByUser = await this.staffByUser(operator, [user]);
-    const [row] = await this.rowsOf(operator, [user], staffByUser, visibleOrgs);
+    const [row] = await this.rowsOf(
+      operator,
+      [user],
+      staffByUser,
+      visibleOrgs,
+      await this.joinedInTenant(operator, tenantId, [user]),
+    );
     if (!row) {
       throw notFoundError(`schedule staff not found: ${input.staffId}`);
     }
@@ -369,10 +383,7 @@ export class ScheduleStaffService {
     };
   }
 
-  /**
-   * 這些使用者看得到的排班檔案(一般可見性);同一人在多個看得到的組織各有一份時,
-   * 優先當前組織那份,其次最早建立的。
-   */
+  /** 這些使用者看得到的排班檔案(一般可見性;一人一份)。 */
   private async staffByUser(
     operator: OperatorContext,
     users: readonly UserRecord[],
@@ -380,24 +391,29 @@ export class ScheduleStaffService {
     if (users.length === 0) {
       return new Map();
     }
-    const records = await this.staff.findMany(
-      operator,
-      { userId: { $in: users.map((user) => user._id) } },
-      { sort: { createdAt: 1 } },
-    );
-    const current = String(operator.currentOrgId);
-    const byUser = new Map<string, StaffRecord>();
-    for (const record of records) {
-      const key = String(record.userId);
-      const kept = byUser.get(key);
-      if (
-        kept === undefined ||
-        (String(kept.orgId) !== current && String(record.orgId) === current)
-      ) {
-        byUser.set(key, record);
-      }
+    const records = await this.staff.findMany(operator, {
+      userId: { $in: users.map((user) => user._id) },
+    });
+    return new Map(records.map((record) => [String(record.userId), record]));
+  }
+
+  /**
+   * 整個租戶裡已經有排班檔案的使用者(含操作者看不到的組織加入的;只回 userId,不讀檔案內容)。
+   * 查詢釘在租戶上(提升範圍的讀取,只問「有沒有」)。
+   */
+  private async joinedInTenant(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId,
+    users: readonly UserRecord[],
+  ): Promise<Set<string>> {
+    if (users.length === 0) {
+      return new Set();
     }
-    return byUser;
+    const records = await this.staff.findMany(scheduleReadContext(operator), {
+      tenantId,
+      userId: { $in: users.map((user) => user._id) },
+    });
+    return new Set(records.map((record) => String(record.userId)));
   }
 
   private async rowsOf(
@@ -405,6 +421,7 @@ export class ScheduleStaffService {
     users: readonly UserRecord[],
     staffByUser: ReadonlyMap<string, StaffRecord>,
     visibleOrgs: VisibleOrgs,
+    joinedInTenant: ReadonlySet<string>,
   ): Promise<ScheduleStaffRowModel[]> {
     const staffIds = [...staffByUser.values()].map((record) => record._id);
     const links =
@@ -425,6 +442,9 @@ export class ScheduleStaffService {
         userId: String(user._id),
         name: user.name,
         account: user.account,
+        // 已被操作者看不到的組織加入:不能再加入,檔案內容不給
+        joinedElsewhere:
+          record === undefined && joinedInTenant.has(String(user._id)),
         staff: record
           ? profileOf(
               record,

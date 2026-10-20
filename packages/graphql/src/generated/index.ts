@@ -4192,6 +4192,7 @@ export type ScheduleStaffProfile = {
 export type ScheduleStaffRow = {
   __typename?: 'ScheduleStaffRow';
   account: Scalars['String']['output'];
+  joinedElsewhere: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   staff?: Maybe<ScheduleStaffProfile>;
   userId: Scalars['ID']['output'];
@@ -6619,28 +6620,28 @@ export type RestoreScheduleRuleMutationVariables = Exact<{
 
 export type RestoreScheduleRuleMutation = { __typename?: 'Mutation', restoreScheduleRule: { __typename?: 'ScheduleRuleMutationPayload', rules: { __typename?: 'ScheduleRulesPayload', orgId: string, orgName: string, isTenantTop: boolean, canEdit: boolean, items: Array<{ __typename?: 'ScheduleRule', key: string, group: string, valueType: string, unit?: string | null, hasLevel: boolean, effective: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null }, parent?: { __typename?: 'ScheduleRuleSetting', enabled: boolean, value: Record<string, unknown>, level?: string | null, order: number, source: ScheduleRuleSource, sourceOrgName?: string | null } | null }> } } };
 
-export type ScheduleStaffRowFieldsFragment = { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null };
+export type ScheduleStaffRowFieldsFragment = { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null };
 
 export type ScheduleStaffQueryVariables = Exact<{
   input?: InputMaybe<ScheduleStaffListInput>;
 }>;
 
 
-export type ScheduleStaffQuery = { __typename?: 'Query', scheduleStaff: { __typename?: 'ScheduleStaffListPayload', totalCount: number, canEdit: boolean, items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+export type ScheduleStaffQuery = { __typename?: 'Query', scheduleStaff: { __typename?: 'ScheduleStaffListPayload', totalCount: number, canEdit: boolean, items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
 
 export type AddScheduleStaffMutationVariables = Exact<{
   input: AddScheduleStaffInput;
 }>;
 
 
-export type AddScheduleStaffMutation = { __typename?: 'Mutation', addScheduleStaff: { __typename?: 'AddScheduleStaffPayload', items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
+export type AddScheduleStaffMutation = { __typename?: 'Mutation', addScheduleStaff: { __typename?: 'AddScheduleStaffPayload', items: Array<{ __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null }> } };
 
 export type UpdateScheduleStaffMutationVariables = Exact<{
   input: UpdateScheduleStaffInput;
 }>;
 
 
-export type UpdateScheduleStaffMutation = { __typename?: 'Mutation', updateScheduleStaff: { __typename?: 'ScheduleStaffPayload', item: { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null } } };
+export type UpdateScheduleStaffMutation = { __typename?: 'Mutation', updateScheduleStaff: { __typename?: 'ScheduleStaffPayload', item: { __typename?: 'ScheduleStaffRow', userId: string, name: string, account: string, joinedElsewhere: boolean, staff?: { __typename?: 'ScheduleStaffProfile', id: string, employmentType: string, enabled: boolean, note?: string | null, primaryElsewhere: boolean, orgs: Array<{ __typename?: 'ScheduleStaffOrg', orgId: string, orgName: string, canLead: boolean, isPrimary: boolean, sortOrder: number }> } | null } } };
 
 export type ScheduleDemandTemplateFieldsFragment = { __typename?: 'ScheduleDemandTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, canEdit: boolean, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }>, ownerOrg: { __typename?: 'ScheduleOwnerOrg', id: string, name: string } };
 
@@ -7629,6 +7630,7 @@ export const ScheduleStaffRowFieldsFragmentDoc = `
   userId
   name
   account
+  joinedElsewhere
   staff {
     id
     employmentType

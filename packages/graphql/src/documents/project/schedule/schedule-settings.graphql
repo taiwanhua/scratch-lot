@@ -84,6 +84,7 @@ fragment ScheduleStaffRowFields on ScheduleStaffRow {
   userId
   name
   account
+  joinedElsewhere
   staff {
     id
     employmentType

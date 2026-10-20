@@ -10,12 +10,12 @@ import { SCHEDULE_SETTINGS_MODULE_KEY } from "./schedule-module-keys";
 export const SCHEDULE_STAFF_COLLECTION = "schedule_staff";
 
 /**
- * 排班檔案(規格 14.1、14.3):使用者的子檔,一個組織裡一人一筆;不是新建人,
+ * 排班檔案(規格 14.1、14.3):使用者的子檔,一個租戶裡一人一份;不是新建人,
  * 是從使用者管理已有的帳號 [加入排班] 建立。可以排哪些分店在 `schedule_relationships`。
  *
- * - `orgId`:建立它的組織(當前組織);排班檔案**歸那個組織、不共用**,讀取照一般可見性
+ * - `orgId`:建立它的組織(當前組織);讀取與修改照一般可見性
  *   (跨店支援由支援需求單把人加進那家店)
- * - 唯一 `(orgId, userId)`
+ * - 唯一 `(tenantId, userId)`:一個租戶一人一份
  */
 @Schema({ collection: SCHEDULE_STAFF_COLLECTION, timestamps: true })
 export class ScheduleStaff {
@@ -52,9 +52,8 @@ export class ScheduleStaff {
 
 export const ScheduleStaffSchema = SchemaFactory.createForClass(ScheduleStaff);
 
-// 同一組織一人一筆(排班檔案歸組織、不共用;沒有軟刪除)
-ScheduleStaffSchema.index({ orgId: 1, userId: 1 }, { unique: true });
-ScheduleStaffSchema.index({ tenantId: 1, userId: 1 });
+// 一個租戶一人一份(規格 14.1:使用者子檔,一對一;沒有軟刪除)
+ScheduleStaffSchema.index({ tenantId: 1, userId: 1 }, { unique: true });
 ScheduleStaffSchema.index({ orgId: 1, createdAt: 1 });
 ScheduleStaffSchema.plugin(baseFieldsPlugin);
 ScheduleStaffSchema.plugin(tenantScopePlugin, { moduleData: true });
