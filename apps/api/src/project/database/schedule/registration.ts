@@ -5,6 +5,11 @@ import {
   ScheduleCalendarDaySchema,
 } from "./schedule-calendar-day.schema";
 import {
+  SCHEDULE_DAY_OFFS_COLLECTION,
+  ScheduleDayOff,
+  ScheduleDayOffSchema,
+} from "./schedule-day-off.schema";
+import {
   SCHEDULE_DEMAND_TEMPLATES_COLLECTION,
   ScheduleDemandTemplate,
   ScheduleDemandTemplateSchema,
@@ -31,6 +36,7 @@ import {
 } from "./schedule-staff.schema";
 import {
   ScheduleCalendarDaysRepository,
+  ScheduleDayOffsRepository,
   ScheduleDemandTemplatesRepository,
   ScheduleDemandWeekTemplatesRepository,
   ScheduleRelationshipsRepository,
@@ -81,9 +87,16 @@ const TABLES = [
     schema: ScheduleCalendarDaySchema,
     provider: ScheduleCalendarDaysRepository,
   },
+  {
+    key: "schedule-day-offs",
+    name: ScheduleDayOff.name,
+    collection: SCHEDULE_DAY_OFFS_COLLECTION,
+    schema: ScheduleDayOffSchema,
+    provider: ScheduleDayOffsRepository,
+  },
 ] as const;
 
-/** 排班設定的資料登記:六張租戶表、各一個 BaseRepository、各一項組織歸屬檢查(歸屬欄 `orgId`)。 */
+/** 班表管理的資料登記:七張租戶表、各一個 BaseRepository、各一項組織歸屬檢查(歸屬欄 `orgId`)。 */
 export const SCHEDULE_SETTINGS_REGISTRATION: DatabaseRegistration = {
   key: "schedule-settings",
   models: TABLES.map((table) => ({

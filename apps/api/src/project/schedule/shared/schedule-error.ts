@@ -24,8 +24,10 @@ export function validationError(
  * `FORBIDDEN` 的細分原因(`extensions.reason`):
  * - `NOT_OWNER`:看得到、但不是這一層建立的(範本 / 週範本 / 行事曆只有建立它的那一層能改)
  * - `MISSING_PERMISSION`:這個組織要的權限沒有(規則:最上層組織要 `edit-default-rules`、其他要 `edit-org-rules`)
+ * - `OUTSIDE_DAY_OFF_WINDOW`:本人在畫休開放期間外登記 / 刪除(要調整請代改)
  */
-export type ScheduleForbiddenReason = "NOT_OWNER" | "MISSING_PERMISSION";
+export type ScheduleForbiddenReason =
+  "NOT_OWNER" | "MISSING_PERMISSION" | "OUTSIDE_DAY_OFF_WINDOW";
 
 export function forbiddenError(
   message: string,
@@ -33,6 +35,16 @@ export function forbiddenError(
 ): GraphQLError {
   return new GraphQLError(message, {
     extensions: { code: "FORBIDDEN", reason },
+  });
+}
+
+/**
+ * 畫休違反限制(規格 14.6「違反限制 → 不存,提示原因」):`VALIDATION_FAILED`(欄位 `date`),
+ * `extensions.violations` 列出擋下的違反(`key`、`level`、`message`、`dates`、`actual`、`limit`、`from`、`to`)。
+ */
+export function dayOffRuleError(violations: readonly object[]): GraphQLError {
+  return new GraphQLError("day off violates schedule rules", {
+    extensions: { code: "VALIDATION_FAILED", fields: ["date"], violations },
   });
 }
 

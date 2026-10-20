@@ -4,3 +4,4 @@
  */
 export const SCHEDULE_SETTINGS_MODULE_KEY = "schedule.settings";
 export const SCHEDULE_MANAGE_MODULE_KEY = "schedule.manage";
+export const SCHEDULE_MY_MODULE_KEY = "schedule.my";

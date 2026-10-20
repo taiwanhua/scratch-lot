@@ -2,6 +2,13 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddMyScheduleDayOffsInput {
+  date: String!
+  kind: String!
+  note: String
+  slots: [ScheduleDayOffSlotInput!]
+}
+
 input AddOrgMembersInput {
   orgId: ID!
   userIds: [ID!]!
@@ -10,6 +17,16 @@ input AddOrgMembersInput {
 type AddOrgMembersPayload {
   addedUserIds: [ID!]!
   skippedUserIds: [ID!]!
+}
+
+input AddScheduleDayOffsOnBehalfInput {
+  date: String!
+  kind: String!
+  orgId: ID
+  reason: String
+  reasonNote: String
+  slots: [ScheduleDayOffSlotInput!]
+  userId: ID!
 }
 
 input AddScheduleStaffInput {
@@ -523,6 +540,10 @@ type DeleteMyDelegationPayload {
   id: ID!
 }
 
+input DeleteMyScheduleDayOffInput {
+  id: ID!
+}
+
 input DeleteOrgInput {
   id: ID!
 }
@@ -553,6 +574,17 @@ input DeleteScheduleCalendarDayInput {
 }
 
 type DeleteScheduleCalendarDayPayload {
+  id: ID!
+}
+
+input DeleteScheduleDayOffOnBehalfInput {
+  id: ID!
+  orgId: ID
+  reason: String
+  reasonNote: String
+}
+
+type DeleteScheduleDayOffPayload {
   id: ID!
 }
 
@@ -1702,7 +1734,9 @@ input MoveOrgInput {
 }
 
 type Mutation {
+  addMyScheduleDayOffs(input: AddMyScheduleDayOffsInput!): SaveScheduleDayOffsPayload!
   addOrgMembers(input: AddOrgMembersInput!): AddOrgMembersPayload!
+  addScheduleDayOffsOnBehalf(input: AddScheduleDayOffsOnBehalfInput!): SaveScheduleDayOffsPayload!
   addScheduleStaff(input: AddScheduleStaffInput!): AddScheduleStaffPayload!
   addStepAssignee(input: AddStepAssigneeInput!): WorkflowTaskPayload!
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
@@ -1744,10 +1778,12 @@ type Mutation {
   deleteFormVersionDraft(input: DeleteFormVersionDraftInput!): FormPayload!
   deleteLotteryGame(input: DeleteLotteryGameInput!): DeleteLotteryGamePayload!
   deleteMyDelegation(input: DeleteMyDelegationInput!): DeleteMyDelegationPayload!
+  deleteMyScheduleDayOff(input: DeleteMyScheduleDayOffInput!): DeleteScheduleDayOffPayload!
   deleteOrg(input: DeleteOrgInput!): DeletePayload!
   deleteRetiredPermission(input: DeleteRetiredPermissionInput!): DeleteRetiredPermissionPayload!
   deleteRole(input: DeleteRoleInput!): DeletePayload!
   deleteScheduleCalendarDay(input: DeleteScheduleCalendarDayInput!): DeleteScheduleCalendarDayPayload!
+  deleteScheduleDayOffOnBehalf(input: DeleteScheduleDayOffOnBehalfInput!): DeleteScheduleDayOffPayload!
   deleteScheduleDemandTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
   deleteScheduleDemandWeekTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
@@ -1910,6 +1946,23 @@ type MyNotificationsPayload {
 
 type MyPreferencesPayload {
   settings: JSONObject!
+}
+
+input MyScheduleDayOffsInput {
+  month: String
+}
+
+type MyScheduleDayOffsPayload {
+  canEdit: Boolean!
+  canOverride: Boolean!
+  dayOffCount: Int!
+  days: [ScheduleDayOffDay!]!
+  limits: ScheduleDayOffLimits!
+  month: String!
+  myDayOffs: [ScheduleDayOff!]!
+  primaryOrg: ScheduleDayOffOrg
+  violations: [ScheduleDayOffViolation!]!
+  window: ScheduleDayOffWindow
 }
 
 input MyTasksInput {
@@ -2386,6 +2439,7 @@ type Query {
   myNotificationUnreadCount: MyNotificationUnreadCountPayload!
   myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!
   myPreferences: MyPreferencesPayload!
+  myScheduleDayOffs(input: MyScheduleDayOffsInput): MyScheduleDayOffsPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
   notificationSettings(input: NotificationSettingsInput!): NotificationSettingsPayload!
   org(id: ID!): Org!
@@ -2411,6 +2465,7 @@ type Query {
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
   scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
+  scheduleDayOffOverview(input: ScheduleDayOffOverviewInput): ScheduleDayOffOverviewPayload!
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
   scheduleDemandWeekTemplates(input: ScheduleDemandWeekTemplatesInput): ScheduleDemandWeekTemplatesPayload!
   scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
@@ -2751,6 +2806,11 @@ input SaveScheduleCalendarDayInput {
   type: String!
 }
 
+type SaveScheduleDayOffsPayload {
+  items: [ScheduleDayOff!]!
+  violations: [ScheduleDayOffViolation!]!
+}
+
 input SaveScheduleDemandTemplateInput {
   endTime: String!
   id: ID
@@ -2807,6 +2867,85 @@ type ScheduleCalendarPayload {
   month: String!
   orgId: ID!
   orgName: String!
+}
+
+type ScheduleDayOff {
+  byName: String
+  date: String!
+  endTime: String
+  id: ID!
+  isPrimary: Boolean!
+  kind: String!
+  name: String!
+  note: String
+  reason: String
+  reasonNote: String
+  startTime: String
+  userId: ID!
+}
+
+type ScheduleDayOffDay {
+  date: String!
+  dayOffs: [ScheduleDayOff!]!
+  staffCount: Int!
+}
+
+type ScheduleDayOffLimits {
+  maxDailyStaff: Int
+  maxMonthly: Int
+  minMonthly: Int
+}
+
+type ScheduleDayOffOrg {
+  id: ID!
+  name: String!
+}
+
+input ScheduleDayOffOverviewInput {
+  month: String
+  orgId: ID
+}
+
+type ScheduleDayOffOverviewPayload {
+  canEdit: Boolean!
+  days: [ScheduleDayOffDay!]!
+  limits: ScheduleDayOffLimits!
+  month: String!
+  orgId: ID!
+  orgName: String!
+  staff: [ScheduleDayOffStaff!]!
+  window: ScheduleDayOffWindow!
+}
+
+input ScheduleDayOffSlotInput {
+  endTime: String!
+  startTime: String!
+}
+
+type ScheduleDayOffStaff {
+  dayOffCount: Int!
+  isPrimary: Boolean!
+  name: String!
+  userId: ID!
+}
+
+type ScheduleDayOffViolation {
+  actual: Int
+  dates: [String!]!
+  from: String
+  key: String!
+  level: String!
+  limit: Int
+  message: String!
+  to: String
+}
+
+type ScheduleDayOffWindow {
+  daysLeft: Int!
+  endDate: String!
+  month: String!
+  startDate: String!
+  state: String!
 }
 
 type ScheduleDemandTemplate {

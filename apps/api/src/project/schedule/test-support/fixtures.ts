@@ -16,6 +16,7 @@ const MODULES: readonly [key: string, parentKey: string | null][] = [
   ["schedule", null],
   ["schedule.settings", "schedule"],
   ["schedule.manage", "schedule"],
+  ["schedule.my", "schedule"],
 ];
 
 /** 測試用到的權限:key → 所在模組。 */
@@ -27,6 +28,9 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   editOrgRules: "schedule.settings.edit-org-rules",
   manageView: "schedule.manage.view",
   editCalendar: "schedule.manage.edit-calendar",
+  viewDayOffs: "schedule.manage.view-day-offs",
+  editDayOffs: "schedule.manage.edit-day-offs",
+  myEditDayOffs: "schedule.my.edit-day-offs",
 } as const;
 
 export const ALL_SCHEDULE_TEST_PERMISSIONS = Object.values(
@@ -139,6 +143,11 @@ const SCHEDULE_TEST_OPTIONS: Record<
   "schedule-task": [
     ["store-and-accounts-lead", true],
     ["store-duties", true],
+  ],
+  "schedule-day-off-override-reason": [
+    ["staff-late-notice", true],
+    ["entry-error", true],
+    ["other", true],
   ],
   "schedule-special-day-category": [
     ["national-holiday", true],

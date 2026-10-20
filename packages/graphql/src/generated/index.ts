@@ -29,6 +29,13 @@ export type Scalars = {
   JSONObject: { input: Record<string, unknown>; output: Record<string, unknown>; }
 };
 
+export type AddMyScheduleDayOffsInput = {
+  date: Scalars['String']['input'];
+  kind: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  slots?: InputMaybe<Array<ScheduleDayOffSlotInput>>;
+};
+
 export type AddOrgMembersInput = {
   orgId: Scalars['ID']['input'];
   userIds: Array<Scalars['ID']['input']>;
@@ -38,6 +45,16 @@ export type AddOrgMembersPayload = {
   __typename?: 'AddOrgMembersPayload';
   addedUserIds: Array<Scalars['ID']['output']>;
   skippedUserIds: Array<Scalars['ID']['output']>;
+};
+
+export type AddScheduleDayOffsOnBehalfInput = {
+  date: Scalars['String']['input'];
+  kind: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  reason?: InputMaybe<Scalars['String']['input']>;
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  slots?: InputMaybe<Array<ScheduleDayOffSlotInput>>;
+  userId: Scalars['ID']['input'];
 };
 
 export type AddScheduleStaffInput = {
@@ -564,6 +581,10 @@ export type DeleteMyDelegationPayload = {
   id: Scalars['ID']['output'];
 };
 
+export type DeleteMyScheduleDayOffInput = {
+  id: Scalars['ID']['input'];
+};
+
 export type DeleteOrgInput = {
   id: Scalars['ID']['input'];
 };
@@ -597,6 +618,18 @@ export type DeleteScheduleCalendarDayInput = {
 
 export type DeleteScheduleCalendarDayPayload = {
   __typename?: 'DeleteScheduleCalendarDayPayload';
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleDayOffOnBehalfInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  reason?: InputMaybe<Scalars['String']['input']>;
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type DeleteScheduleDayOffPayload = {
+  __typename?: 'DeleteScheduleDayOffPayload';
   id: Scalars['ID']['output'];
 };
 
@@ -1850,7 +1883,9 @@ export type MoveOrgInput = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  addMyScheduleDayOffs: SaveScheduleDayOffsPayload;
   addOrgMembers: AddOrgMembersPayload;
+  addScheduleDayOffsOnBehalf: SaveScheduleDayOffsPayload;
   addScheduleStaff: AddScheduleStaffPayload;
   addStepAssignee: WorkflowTaskPayload;
   assignFormToTenants: FormPayload;
@@ -1892,10 +1927,12 @@ export type Mutation = {
   deleteFormVersionDraft: FormPayload;
   deleteLotteryGame: DeleteLotteryGamePayload;
   deleteMyDelegation: DeleteMyDelegationPayload;
+  deleteMyScheduleDayOff: DeleteScheduleDayOffPayload;
   deleteOrg: DeletePayload;
   deleteRetiredPermission: DeleteRetiredPermissionPayload;
   deleteRole: DeletePayload;
   deleteScheduleCalendarDay: DeleteScheduleCalendarDayPayload;
+  deleteScheduleDayOffOnBehalf: DeleteScheduleDayOffPayload;
   deleteScheduleDemandTemplate: DeleteScheduleTemplatePayload;
   deleteScheduleDemandWeekTemplate: DeleteScheduleTemplatePayload;
   deleteWorkflowVersionDraft: WorkflowPayload;
@@ -1983,8 +2020,18 @@ export type Mutation = {
 };
 
 
+export type MutationAddMyScheduleDayOffsArgs = {
+  input: AddMyScheduleDayOffsInput;
+};
+
+
 export type MutationAddOrgMembersArgs = {
   input: AddOrgMembersInput;
+};
+
+
+export type MutationAddScheduleDayOffsOnBehalfArgs = {
+  input: AddScheduleDayOffsOnBehalfInput;
 };
 
 
@@ -2193,6 +2240,11 @@ export type MutationDeleteMyDelegationArgs = {
 };
 
 
+export type MutationDeleteMyScheduleDayOffArgs = {
+  input: DeleteMyScheduleDayOffInput;
+};
+
+
 export type MutationDeleteOrgArgs = {
   input: DeleteOrgInput;
 };
@@ -2210,6 +2262,11 @@ export type MutationDeleteRoleArgs = {
 
 export type MutationDeleteScheduleCalendarDayArgs = {
   input: DeleteScheduleCalendarDayInput;
+};
+
+
+export type MutationDeleteScheduleDayOffOnBehalfArgs = {
+  input: DeleteScheduleDayOffOnBehalfInput;
 };
 
 
@@ -2692,6 +2749,24 @@ export type MyNotificationsPayload = {
 export type MyPreferencesPayload = {
   __typename?: 'MyPreferencesPayload';
   settings: Scalars['JSONObject']['output'];
+};
+
+export type MyScheduleDayOffsInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MyScheduleDayOffsPayload = {
+  __typename?: 'MyScheduleDayOffsPayload';
+  canEdit: Scalars['Boolean']['output'];
+  canOverride: Scalars['Boolean']['output'];
+  dayOffCount: Scalars['Int']['output'];
+  days: Array<ScheduleDayOffDay>;
+  limits: ScheduleDayOffLimits;
+  month: Scalars['String']['output'];
+  myDayOffs: Array<ScheduleDayOff>;
+  primaryOrg?: Maybe<ScheduleDayOffOrg>;
+  violations: Array<ScheduleDayOffViolation>;
+  window?: Maybe<ScheduleDayOffWindow>;
 };
 
 export type MyTasksInput = {
@@ -3194,6 +3269,7 @@ export type Query = {
   myNotificationUnreadCount: MyNotificationUnreadCountPayload;
   myNotifications: MyNotificationsPayload;
   myPreferences: MyPreferencesPayload;
+  myScheduleDayOffs: MyScheduleDayOffsPayload;
   myTasks: WorkflowTasksPayload;
   notificationSettings: NotificationSettingsPayload;
   org: Org;
@@ -3219,6 +3295,7 @@ export type Query = {
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
   scheduleCalendar: ScheduleCalendarPayload;
+  scheduleDayOffOverview: ScheduleDayOffOverviewPayload;
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload;
   scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload;
   scheduleFieldOptions: ScheduleFieldOptionsPayload;
@@ -3461,6 +3538,11 @@ export type QueryMyNotificationsArgs = {
 };
 
 
+export type QueryMyScheduleDayOffsArgs = {
+  input?: InputMaybe<MyScheduleDayOffsInput>;
+};
+
+
 export type QueryMyTasksArgs = {
   input: MyTasksInput;
 };
@@ -3563,6 +3645,11 @@ export type QueryRolesArgs = {
 
 export type QueryScheduleCalendarArgs = {
   input: ScheduleCalendarInput;
+};
+
+
+export type QueryScheduleDayOffOverviewArgs = {
+  input?: InputMaybe<ScheduleDayOffOverviewInput>;
 };
 
 
@@ -3970,6 +4057,12 @@ export type SaveScheduleCalendarDayInput = {
   type: Scalars['String']['input'];
 };
 
+export type SaveScheduleDayOffsPayload = {
+  __typename?: 'SaveScheduleDayOffsPayload';
+  items: Array<ScheduleDayOff>;
+  violations: Array<ScheduleDayOffViolation>;
+};
+
 export type SaveScheduleDemandTemplateInput = {
   endTime: Scalars['String']['input'];
   id?: InputMaybe<Scalars['ID']['input']>;
@@ -4029,6 +4122,93 @@ export type ScheduleCalendarPayload = {
   month: Scalars['String']['output'];
   orgId: Scalars['ID']['output'];
   orgName: Scalars['String']['output'];
+};
+
+export type ScheduleDayOff = {
+  __typename?: 'ScheduleDayOff';
+  byName?: Maybe<Scalars['String']['output']>;
+  date: Scalars['String']['output'];
+  endTime?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  kind: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  reason?: Maybe<Scalars['String']['output']>;
+  reasonNote?: Maybe<Scalars['String']['output']>;
+  startTime?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleDayOffDay = {
+  __typename?: 'ScheduleDayOffDay';
+  date: Scalars['String']['output'];
+  dayOffs: Array<ScheduleDayOff>;
+  staffCount: Scalars['Int']['output'];
+};
+
+export type ScheduleDayOffLimits = {
+  __typename?: 'ScheduleDayOffLimits';
+  maxDailyStaff?: Maybe<Scalars['Int']['output']>;
+  maxMonthly?: Maybe<Scalars['Int']['output']>;
+  minMonthly?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ScheduleDayOffOrg = {
+  __typename?: 'ScheduleDayOffOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type ScheduleDayOffOverviewInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleDayOffOverviewPayload = {
+  __typename?: 'ScheduleDayOffOverviewPayload';
+  canEdit: Scalars['Boolean']['output'];
+  days: Array<ScheduleDayOffDay>;
+  limits: ScheduleDayOffLimits;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  staff: Array<ScheduleDayOffStaff>;
+  window: ScheduleDayOffWindow;
+};
+
+export type ScheduleDayOffSlotInput = {
+  endTime: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+};
+
+export type ScheduleDayOffStaff = {
+  __typename?: 'ScheduleDayOffStaff';
+  dayOffCount: Scalars['Int']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleDayOffViolation = {
+  __typename?: 'ScheduleDayOffViolation';
+  actual?: Maybe<Scalars['Int']['output']>;
+  dates: Array<Scalars['String']['output']>;
+  from?: Maybe<Scalars['String']['output']>;
+  key: Scalars['String']['output'];
+  level: Scalars['String']['output'];
+  limit?: Maybe<Scalars['Int']['output']>;
+  message: Scalars['String']['output'];
+  to?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScheduleDayOffWindow = {
+  __typename?: 'ScheduleDayOffWindow';
+  daysLeft: Scalars['Int']['output'];
+  endDate: Scalars['String']['output'];
+  month: Scalars['String']['output'];
+  startDate: Scalars['String']['output'];
+  state: Scalars['String']['output'];
 };
 
 export type ScheduleDemandTemplate = {
@@ -6581,6 +6761,58 @@ export type UpdateLotteryCashPointMutationVariables = Exact<{
 
 export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
 
+export type ScheduleDayOffFieldsFragment = { __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null };
+
+export type ScheduleDayOffWindowFieldsFragment = { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number };
+
+export type ScheduleDayOffViolationFieldsFragment = { __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null };
+
+export type ScheduleDayOffDayFieldsFragment = { __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> };
+
+export type ScheduleDayOffLimitsFieldsFragment = { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null };
+
+export type MyScheduleDayOffsQueryVariables = Exact<{
+  input?: InputMaybe<MyScheduleDayOffsInput>;
+}>;
+
+
+export type MyScheduleDayOffsQuery = { __typename?: 'Query', myScheduleDayOffs: { __typename?: 'MyScheduleDayOffsPayload', month: string, canEdit: boolean, canOverride: boolean, dayOffCount: number, primaryOrg?: { __typename?: 'ScheduleDayOffOrg', id: string, name: string } | null, window?: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number } | null, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, myDayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+
+export type AddMyScheduleDayOffsMutationVariables = Exact<{
+  input: AddMyScheduleDayOffsInput;
+}>;
+
+
+export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+
+export type DeleteMyScheduleDayOffMutationVariables = Exact<{
+  input: DeleteMyScheduleDayOffInput;
+}>;
+
+
+export type DeleteMyScheduleDayOffMutation = { __typename?: 'Mutation', deleteMyScheduleDayOff: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
+
+export type ScheduleDayOffOverviewQueryVariables = Exact<{
+  input?: InputMaybe<ScheduleDayOffOverviewInput>;
+}>;
+
+
+export type ScheduleDayOffOverviewQuery = { __typename?: 'Query', scheduleDayOffOverview: { __typename?: 'ScheduleDayOffOverviewPayload', orgId: string, orgName: string, month: string, canEdit: boolean, window: { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number }, limits: { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null }, staff: Array<{ __typename?: 'ScheduleDayOffStaff', userId: string, name: string, isPrimary: boolean, dayOffCount: number }>, days: Array<{ __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> }> } };
+
+export type AddScheduleDayOffsOnBehalfMutationVariables = Exact<{
+  input: AddScheduleDayOffsOnBehalfInput;
+}>;
+
+
+export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+
+export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
+  input: DeleteScheduleDayOffOnBehalfInput;
+}>;
+
+
+export type DeleteScheduleDayOffOnBehalfMutation = { __typename?: 'Mutation', deleteScheduleDayOffOnBehalf: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
+
 export type ScheduleFieldOptionsQueryVariables = Exact<{
   categoryKey: Scalars['String']['input'];
 }>;
@@ -7592,6 +7824,59 @@ export const LotteryCashPointFieldsFragmentDoc = `
   abilities {
     canEdit
   }
+}
+    `;
+export const ScheduleDayOffWindowFieldsFragmentDoc = `
+    fragment ScheduleDayOffWindowFields on ScheduleDayOffWindow {
+  month
+  startDate
+  endDate
+  state
+  daysLeft
+}
+    `;
+export const ScheduleDayOffViolationFieldsFragmentDoc = `
+    fragment ScheduleDayOffViolationFields on ScheduleDayOffViolation {
+  key
+  level
+  message
+  dates
+  actual
+  limit
+  from
+  to
+}
+    `;
+export const ScheduleDayOffFieldsFragmentDoc = `
+    fragment ScheduleDayOffFields on ScheduleDayOff {
+  id
+  userId
+  name
+  date
+  kind
+  startTime
+  endTime
+  note
+  isPrimary
+  byName
+  reason
+  reasonNote
+}
+    `;
+export const ScheduleDayOffDayFieldsFragmentDoc = `
+    fragment ScheduleDayOffDayFields on ScheduleDayOffDay {
+  date
+  staffCount
+  dayOffs {
+    ...ScheduleDayOffFields
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}`;
+export const ScheduleDayOffLimitsFieldsFragmentDoc = `
+    fragment ScheduleDayOffLimitsFields on ScheduleDayOffLimits {
+  maxMonthly
+  minMonthly
+  maxDailyStaff
 }
     `;
 export const ScheduleRuleSettingFieldsFragmentDoc = `
@@ -14840,6 +15125,238 @@ export const useUpdateLotteryCashPointMutation = <
 
 
 useUpdateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers);
+
+export const MyScheduleDayOffsDocument = `
+    query MyScheduleDayOffs($input: MyScheduleDayOffsInput) {
+  myScheduleDayOffs(input: $input) {
+    month
+    primaryOrg {
+      id
+      name
+    }
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    canOverride
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    dayOffCount
+    myDayOffs {
+      ...ScheduleDayOffFields
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+    ${ScheduleDayOffWindowFieldsFragmentDoc}
+${ScheduleDayOffLimitsFieldsFragmentDoc}
+${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffDayFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}`;
+
+export const useMyScheduleDayOffsQuery = <
+      TData = MyScheduleDayOffsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyScheduleDayOffsQueryVariables,
+      options?: Omit<UseQueryOptions<MyScheduleDayOffsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyScheduleDayOffsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyScheduleDayOffsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyScheduleDayOffs'] : ['MyScheduleDayOffs', variables],
+    queryFn: fetcher<MyScheduleDayOffsQuery, MyScheduleDayOffsQueryVariables>(client, MyScheduleDayOffsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyScheduleDayOffsQuery.getKey = (variables?: MyScheduleDayOffsQueryVariables) => variables === undefined ? ['MyScheduleDayOffs'] : ['MyScheduleDayOffs', variables];
+
+
+useMyScheduleDayOffsQuery.fetcher = (client: GraphQLClient, variables?: MyScheduleDayOffsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyScheduleDayOffsQuery, MyScheduleDayOffsQueryVariables>(client, MyScheduleDayOffsDocument, variables, headers);
+
+export const AddMyScheduleDayOffsDocument = `
+    mutation AddMyScheduleDayOffs($input: AddMyScheduleDayOffsInput!) {
+  addMyScheduleDayOffs(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}`;
+
+export const useAddMyScheduleDayOffsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddMyScheduleDayOffsMutation, TError, AddMyScheduleDayOffsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddMyScheduleDayOffsMutation, TError, AddMyScheduleDayOffsMutationVariables, TContext>(
+      {
+    mutationKey: ['AddMyScheduleDayOffs'],
+    mutationFn: (variables?: AddMyScheduleDayOffsMutationVariables) => fetcher<AddMyScheduleDayOffsMutation, AddMyScheduleDayOffsMutationVariables>(client, AddMyScheduleDayOffsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddMyScheduleDayOffsMutation.fetcher = (client: GraphQLClient, variables: AddMyScheduleDayOffsMutationVariables, headers?: RequestInit['headers']) => fetcher<AddMyScheduleDayOffsMutation, AddMyScheduleDayOffsMutationVariables>(client, AddMyScheduleDayOffsDocument, variables, headers);
+
+export const DeleteMyScheduleDayOffDocument = `
+    mutation DeleteMyScheduleDayOff($input: DeleteMyScheduleDayOffInput!) {
+  deleteMyScheduleDayOff(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteMyScheduleDayOffMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteMyScheduleDayOffMutation, TError, DeleteMyScheduleDayOffMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteMyScheduleDayOffMutation, TError, DeleteMyScheduleDayOffMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteMyScheduleDayOff'],
+    mutationFn: (variables?: DeleteMyScheduleDayOffMutationVariables) => fetcher<DeleteMyScheduleDayOffMutation, DeleteMyScheduleDayOffMutationVariables>(client, DeleteMyScheduleDayOffDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteMyScheduleDayOffMutation.fetcher = (client: GraphQLClient, variables: DeleteMyScheduleDayOffMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteMyScheduleDayOffMutation, DeleteMyScheduleDayOffMutationVariables>(client, DeleteMyScheduleDayOffDocument, variables, headers);
+
+export const ScheduleDayOffOverviewDocument = `
+    query ScheduleDayOffOverview($input: ScheduleDayOffOverviewInput) {
+  scheduleDayOffOverview(input: $input) {
+    orgId
+    orgName
+    month
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    staff {
+      userId
+      name
+      isPrimary
+      dayOffCount
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+  }
+}
+    ${ScheduleDayOffWindowFieldsFragmentDoc}
+${ScheduleDayOffLimitsFieldsFragmentDoc}
+${ScheduleDayOffDayFieldsFragmentDoc}`;
+
+export const useScheduleDayOffOverviewQuery = <
+      TData = ScheduleDayOffOverviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: ScheduleDayOffOverviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleDayOffOverviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleDayOffOverviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleDayOffOverviewQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['ScheduleDayOffOverview'] : ['ScheduleDayOffOverview', variables],
+    queryFn: fetcher<ScheduleDayOffOverviewQuery, ScheduleDayOffOverviewQueryVariables>(client, ScheduleDayOffOverviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleDayOffOverviewQuery.getKey = (variables?: ScheduleDayOffOverviewQueryVariables) => variables === undefined ? ['ScheduleDayOffOverview'] : ['ScheduleDayOffOverview', variables];
+
+
+useScheduleDayOffOverviewQuery.fetcher = (client: GraphQLClient, variables?: ScheduleDayOffOverviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleDayOffOverviewQuery, ScheduleDayOffOverviewQueryVariables>(client, ScheduleDayOffOverviewDocument, variables, headers);
+
+export const AddScheduleDayOffsOnBehalfDocument = `
+    mutation AddScheduleDayOffsOnBehalf($input: AddScheduleDayOffsOnBehalfInput!) {
+  addScheduleDayOffsOnBehalf(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+    ${ScheduleDayOffFieldsFragmentDoc}
+${ScheduleDayOffViolationFieldsFragmentDoc}`;
+
+export const useAddScheduleDayOffsOnBehalfMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<AddScheduleDayOffsOnBehalfMutation, TError, AddScheduleDayOffsOnBehalfMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<AddScheduleDayOffsOnBehalfMutation, TError, AddScheduleDayOffsOnBehalfMutationVariables, TContext>(
+      {
+    mutationKey: ['AddScheduleDayOffsOnBehalf'],
+    mutationFn: (variables?: AddScheduleDayOffsOnBehalfMutationVariables) => fetcher<AddScheduleDayOffsOnBehalfMutation, AddScheduleDayOffsOnBehalfMutationVariables>(client, AddScheduleDayOffsOnBehalfDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useAddScheduleDayOffsOnBehalfMutation.fetcher = (client: GraphQLClient, variables: AddScheduleDayOffsOnBehalfMutationVariables, headers?: RequestInit['headers']) => fetcher<AddScheduleDayOffsOnBehalfMutation, AddScheduleDayOffsOnBehalfMutationVariables>(client, AddScheduleDayOffsOnBehalfDocument, variables, headers);
+
+export const DeleteScheduleDayOffOnBehalfDocument = `
+    mutation DeleteScheduleDayOffOnBehalf($input: DeleteScheduleDayOffOnBehalfInput!) {
+  deleteScheduleDayOffOnBehalf(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleDayOffOnBehalfMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDayOffOnBehalfMutation, TError, DeleteScheduleDayOffOnBehalfMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDayOffOnBehalfMutation, TError, DeleteScheduleDayOffOnBehalfMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDayOffOnBehalf'],
+    mutationFn: (variables?: DeleteScheduleDayOffOnBehalfMutationVariables) => fetcher<DeleteScheduleDayOffOnBehalfMutation, DeleteScheduleDayOffOnBehalfMutationVariables>(client, DeleteScheduleDayOffOnBehalfDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDayOffOnBehalfMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDayOffOnBehalfMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDayOffOnBehalfMutation, DeleteScheduleDayOffOnBehalfMutationVariables>(client, DeleteScheduleDayOffOnBehalfDocument, variables, headers);
 
 export const ScheduleFieldOptionsDocument = `
     query ScheduleFieldOptions($categoryKey: String!) {

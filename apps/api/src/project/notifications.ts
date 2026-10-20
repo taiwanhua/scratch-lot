@@ -14,7 +14,7 @@ import type { ProjectNotificationRegistrations } from "../notifications/notifica
  * 自動成為個人偏好的一個開關(`notification_<類型>_<管道>`)。
  *
  * 類型清單、範本參數與觸發的功能見 `docs/modules/project/lottery-notifications.md`(專案規格 3.4)。
- * 目前十種類型都沒有宣告可調時間;觸發的功能呼叫 `notify()`。`links` 目前沒有登記。
+ * 宣告了可調時間的類型見各筆的 `schedule`(排程在觸發的功能裡);觸發的功能呼叫 `notify()`。`links` 目前沒有登記。
  */
 
 /** 刮刮樂:有已送出交班結帳的班還沒被日結涵蓋計算(B14,逾期後每天)。 */
@@ -212,6 +212,12 @@ const scheduleTypes: NotificationTypeDefinition[] = [
     name: "畫休開放",
     ...CHANNELS,
     category: "party",
+    recipientNote: "可以排這家店的排班人員",
+    // 開放日當天 09:00(規格 3.4、3.5;日期照各店規則「畫休開放期間」,排程在 schedule/day-offs)
+    schedule: {
+      default: { kind: "days-before", daysBefore: [0], time: "09:00" },
+      dateLabel: "開放日",
+    },
     template: {
       "zh-TW": (params) => ({
         title: `畫休開放:${text(params, "orgName")}`,
@@ -228,6 +234,12 @@ const scheduleTypes: NotificationTypeDefinition[] = [
     name: "畫休即將截止",
     ...CHANNELS,
     category: "party",
+    recipientNote: "可以排這家店的排班人員",
+    // 截止日前 1 天 09:00(規格 3.4、3.5;日期照各店規則「畫休開放期間」,排程在 schedule/day-offs)
+    schedule: {
+      default: { kind: "days-before", daysBefore: [1], time: "09:00" },
+      dateLabel: "截止日",
+    },
     template: {
       "zh-TW": (params) => ({
         title: `畫休即將截止:${text(params, "orgName")}`,

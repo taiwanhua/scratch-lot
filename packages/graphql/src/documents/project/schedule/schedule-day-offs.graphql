@@ -1,0 +1,135 @@
+fragment ScheduleDayOffFields on ScheduleDayOff {
+  id
+  userId
+  name
+  date
+  kind
+  startTime
+  endTime
+  note
+  isPrimary
+  byName
+  reason
+  reasonNote
+}
+
+fragment ScheduleDayOffWindowFields on ScheduleDayOffWindow {
+  month
+  startDate
+  endDate
+  state
+  daysLeft
+}
+
+fragment ScheduleDayOffViolationFields on ScheduleDayOffViolation {
+  key
+  level
+  message
+  dates
+  actual
+  limit
+  from
+  to
+}
+
+fragment ScheduleDayOffDayFields on ScheduleDayOffDay {
+  date
+  staffCount
+  dayOffs {
+    ...ScheduleDayOffFields
+  }
+}
+
+fragment ScheduleDayOffLimitsFields on ScheduleDayOffLimits {
+  maxMonthly
+  minMonthly
+  maxDailyStaff
+}
+
+query MyScheduleDayOffs($input: MyScheduleDayOffsInput) {
+  myScheduleDayOffs(input: $input) {
+    month
+    primaryOrg {
+      id
+      name
+    }
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    canOverride
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    dayOffCount
+    myDayOffs {
+      ...ScheduleDayOffFields
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+
+mutation AddMyScheduleDayOffs($input: AddMyScheduleDayOffsInput!) {
+  addMyScheduleDayOffs(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+
+mutation DeleteMyScheduleDayOff($input: DeleteMyScheduleDayOffInput!) {
+  deleteMyScheduleDayOff(input: $input) {
+    id
+  }
+}
+
+query ScheduleDayOffOverview($input: ScheduleDayOffOverviewInput) {
+  scheduleDayOffOverview(input: $input) {
+    orgId
+    orgName
+    month
+    window {
+      ...ScheduleDayOffWindowFields
+    }
+    canEdit
+    limits {
+      ...ScheduleDayOffLimitsFields
+    }
+    staff {
+      userId
+      name
+      isPrimary
+      dayOffCount
+    }
+    days {
+      ...ScheduleDayOffDayFields
+    }
+  }
+}
+
+mutation AddScheduleDayOffsOnBehalf($input: AddScheduleDayOffsOnBehalfInput!) {
+  addScheduleDayOffsOnBehalf(input: $input) {
+    items {
+      ...ScheduleDayOffFields
+    }
+    violations {
+      ...ScheduleDayOffViolationFields
+    }
+  }
+}
+
+mutation DeleteScheduleDayOffOnBehalf(
+  $input: DeleteScheduleDayOffOnBehalfInput!
+) {
+  deleteScheduleDayOffOnBehalf(input: $input) {
+    id
+  }
+}

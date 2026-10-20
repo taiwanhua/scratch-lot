@@ -52,3 +52,7 @@ export function isTemplateShortName(value: string): boolean {
   const length = [...segmenter.segment(value.trim())].length;
   return length >= 1 && length <= TEMPLATE_SHORT_NAME_MAX;
 }
+
+/** 畫休種類:整天畫休 / 時段不可排(規格 14.1 `schedule_day_offs`、第 13 章「畫休種類」程式固定)。 */
+export const SCHEDULE_DAY_OFF_KINDS = ["full-day", "time-range"] as const;
+export type ScheduleDayOffKind = (typeof SCHEDULE_DAY_OFF_KINDS)[number];

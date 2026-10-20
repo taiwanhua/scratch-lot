@@ -1,12 +1,18 @@
 import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
+import { NotificationsModule } from "../../notifications/notifications.module";
+import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
 import { ScheduleCalendarResolver } from "./calendar/schedule-calendar.resolver";
 import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
+import { DayOffRemindersService } from "./day-offs/day-off-reminders.service";
+import { ScheduleDayOffsResolver } from "./day-offs/schedule-day-offs.resolver";
+import { ScheduleDayOffsService } from "./day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsResolver } from "./field-options/schedule-field-options.resolver";
 import { ScheduleFieldOptionsService } from "./field-options/schedule-field-options.service";
 import { ScheduleRulesResolver } from "./rules/schedule-rules.resolver";
 import { ScheduleRulesService } from "./rules/schedule-rules.service";
+import { ScheduleClock } from "./shared/schedule-clock";
 import { SchedulePermissions } from "./shared/schedule-permissions";
 import { ScheduleStaffResolver } from "./staff/schedule-staff.resolver";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
@@ -19,12 +25,14 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
  * 稽核與權限解析分別由 @Global 的 AuditModule / PermissionModule 提供。
  *
  * 匯出的 service 給同模組的其他功能共用:候選人(`listScheduleCandidates`)、
- * 規則的生效設定(`effectiveSettingsForOrg`)、行事曆的生效日(`effectiveDays`)。
+ * 規則的生效設定(`effectiveSettingsForOrg`)、行事曆的生效日(`effectiveDays`)、
+ * 每人每天的畫休(`ScheduleDayOffsService.listUnavailable`)。
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, NotificationsModule, ScheduledJobsModule],
   providers: [
     SchedulePermissions,
+    ScheduleClock,
     ScheduleFieldOptionsService,
     ScheduleFieldOptionsResolver,
     ScheduleRulesService,
@@ -35,6 +43,9 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleTemplatesResolver,
     ScheduleCalendarService,
     ScheduleCalendarResolver,
+    ScheduleDayOffsService,
+    ScheduleDayOffsResolver,
+    DayOffRemindersService,
   ],
   exports: [
     SchedulePermissions,
@@ -42,6 +53,7 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleStaffService,
     ScheduleTemplatesService,
     ScheduleCalendarService,
+    ScheduleDayOffsService,
   ],
 })
 export class ScheduleModule {}

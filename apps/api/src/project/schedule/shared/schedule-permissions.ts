@@ -15,6 +15,9 @@ export const SCHEDULE_PERMISSIONS = {
   editOrgRules: "schedule.settings.edit-org-rules",
   manageView: "schedule.manage.view",
   editCalendar: "schedule.manage.edit-calendar",
+  myEditDayOffs: "schedule.my.edit-day-offs",
+  viewDayOffs: "schedule.manage.view-day-offs",
+  editDayOffs: "schedule.manage.edit-day-offs",
 } as const;
 
 /**

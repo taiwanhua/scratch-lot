@@ -40,6 +40,11 @@ export interface ScheduleRuleViolation {
   /** 給人看的說明(例「本月畫休 9 天,上限 8 天」) */
   message: string;
   targets: { entryId?: string; userId?: string; date?: string }[];
+  /**
+   * 選填:給畫面組自己的文案用的數字(`message` 是 api 端的中文說明)。
+   * `actual` 實際值、`limit` 規則值;期間類的違反(連續 N 天)附 `from` / `to`(`YYYY-MM-DD`)。
+   */
+  detail?: { actual?: number; limit?: number; from?: string; to?: string };
 }
 
 export type ScheduleRuleEvaluator<TData = unknown> = (
