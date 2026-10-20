@@ -18,6 +18,7 @@ import {
   isOrgVisible,
 } from "../../../database/operator-context";
 import { RelationService } from "../../../database/relation.service";
+import { tenantIdOfOrg } from "../../../database/tenant-id";
 import { TransactionService } from "../../../database/transaction";
 import type { ScheduleStaffOrgMeta } from "../../database/schedule/schedule-relationship.schema";
 import {
@@ -137,24 +138,33 @@ export class ScheduleStaffService {
         ["userIds"],
       );
     }
-    await this.transactions.withTransaction(async () => {
-      for (const user of picked) {
-        // 排班檔案是整個租戶共用的:歸屬欄一律是租戶頂層(先例:遊戲)
-        const created = await this.staff.create(scheduleReadContext(operator), {
-          orgId: tenantId,
-          userId: user._id,
-          employmentType: "full-time",
-          enabled: true,
-          note: null,
-        });
-        await this.audit.record(operator, {
-          action: "schedule-staff.create",
-          targetType: AUDIT_TARGET_TYPE,
-          targetId: created._id,
-          after: { userId: user._id },
-        });
-      }
-    });
+    // 兩個請求同時加入同一人:唯一索引 (tenantId, userId) 擋下第二筆,回同一個錯誤
+    await savingUnique(
+      () =>
+        this.transactions.withTransaction(async () => {
+          for (const user of picked) {
+            // 排班檔案是整個租戶共用的:歸屬欄一律是租戶頂層(先例:遊戲)
+            const created = await this.staff.create(
+              scheduleReadContext(operator),
+              {
+                orgId: tenantId,
+                userId: user._id,
+                employmentType: "full-time",
+                enabled: true,
+                note: null,
+              },
+            );
+            await this.audit.record(operator, {
+              action: "schedule-staff.create",
+              targetType: AUDIT_TARGET_TYPE,
+              targetId: created._id,
+              after: { userId: user._id },
+            });
+          }
+        }),
+      "already joined (concurrent add)",
+      ["userIds"],
+    );
     const staffByUser = await this.staffByUser(operator, tenantId, picked);
     return this.rowsOf(operator, picked, staffByUser, visibleOrgs);
   }
@@ -262,10 +272,17 @@ export class ScheduleStaffService {
     at: Date = new Date(),
   ): Promise<ScheduleCandidate[]> {
     const context = scheduleReadContext(operator);
+    // 多一層防線:關聯與排班檔案都釘在這家店的租戶上
+    const org = await this.orgs.findById(context, orgId);
+    if (!org) {
+      return [];
+    }
+    const tenantId = tenantIdOfOrg({ _id: org._id, ancestors: org.ancestors });
     const links = await this.relationships.findMany(
       context,
       {
         type: ORG_STAFF,
+        tenantId,
         firstId: orgId,
         createdAt: { $lte: at },
         $or: [{ deletedAt: null }, { deletedAt: { $gt: at } }],
@@ -277,6 +294,7 @@ export class ScheduleStaffService {
     }
     const staff = await this.staff.findMany(context, {
       _id: { $in: links.map((link) => link.secondId) },
+      tenantId,
       enabled: true,
     });
     const users = await this.users.findMany(context, {

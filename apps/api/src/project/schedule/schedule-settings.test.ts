@@ -19,7 +19,10 @@ import {
   SCHEDULE_SETTINGS_COLLECTION,
   ScheduleSetting,
 } from "../database/schedule/schedule-setting.schema";
-import { SCHEDULE_STAFF_COLLECTION } from "../database/schedule/schedule-staff.schema";
+import {
+  SCHEDULE_STAFF_COLLECTION,
+  ScheduleStaff,
+} from "../database/schedule/schedule-staff.schema";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
@@ -950,6 +953,40 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         await service.listScheduleCandidates(system, hsinchu, new Date(0)),
       ).toEqual([]);
     });
+
+    it("同時加入同一人:只成功一筆,另一筆 VALIDATION_FAILED(userIds)", async () => {
+      // 先等唯一索引 (tenantId, userId) 建好
+      await modelOf<ScheduleStaff>(ScheduleStaff.name).init();
+      const newcomer = await createScheduleUser(
+        api,
+        connection,
+        [hsinchu],
+        [],
+        "同時加入的人",
+      );
+      const results = await Promise.all(
+        [1, 2].map(() =>
+          gql(hq, ADD_STAFF, {
+            input: { userIds: [String(newcomer.userId)] },
+          }),
+        ),
+      );
+      expect(
+        results.filter((result) => result.errors === undefined),
+      ).toHaveLength(1);
+      expect(results.flatMap((result) => result.errors ?? [])).toEqual([
+        expect.objectContaining({
+          extensions: expect.objectContaining({
+            code: "VALIDATION_FAILED",
+            fields: ["userIds"],
+          }),
+        }),
+      ]);
+      const documents = await connection
+        .collection(SCHEDULE_STAFF_COLLECTION)
+        .countDocuments({ userId: newcomer.userId });
+      expect(documents).toBe(1);
+    });
   });
 
   describe("人力需求範本 / 週範本(SC-09a / SC-09b / SC-22a / SC-22b)", () => {
@@ -1169,6 +1206,29 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         forZhongshan.find((item) => item.id === zhongshanWeek.id)?.canEdit,
       ).toBe(false);
+
+      // 看不到的組織、別的租戶的組織 → NOT_FOUND
+      expect(
+        errorOf(
+          await gql(manager, WEEK_TEMPLATES, {
+            input: { orgId: String(tenantA) },
+          }),
+        ),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      expect(
+        errorOf(
+          await gql(manager, WEEK_TEMPLATES, {
+            input: { orgId: String(hsinchu) },
+          }),
+        ),
+      ).toMatchObject({ code: "NOT_FOUND" });
+      expect(
+        errorOf(
+          await gql(otherHq, WEEK_TEMPLATES, {
+            input: { orgId: String(zhongshan) },
+          }),
+        ),
+      ).toMatchObject({ code: "NOT_FOUND" });
 
       // 沒帶 orgId = 當前組織(總部):看不到分店建立的
       const ownList = dataOf(
