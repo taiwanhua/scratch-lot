@@ -72,6 +72,44 @@ export async function reassignTargetOf(
 }
 
 /**
+ * 批次搬家(`reassignOrgMany`)用:一批資料目前歸屬組織各自的租戶,**一次查完**(id 字串 → 租戶;
+ * 根組織的資料 = null)。任何一個組織讀不到 → `TenantScopeError`(同 `currentTenantOf`)。
+ */
+export async function currentTenantsOf(
+  connection: Connection,
+  modelName: string,
+  orgIds: readonly Types.ObjectId[],
+  session: ClientSession | null,
+): Promise<ReadonlyMap<string, Types.ObjectId | null>> {
+  const found = await connection
+    .collection<{ ancestors?: Types.ObjectId[]; deletedAt?: Date | null }>(
+      ORGS_COLLECTION,
+    )
+    .find(
+      { _id: { $in: [...orgIds] }, deletedAt: null },
+      { projection: { ancestors: 1 }, session: session ?? undefined },
+    )
+    .toArray();
+  const tenants = new Map<string, Types.ObjectId | null>(
+    found.map((org) => [
+      String(org._id),
+      tenantIdOfOrg({
+        _id: new mongoose.Types.ObjectId(String(org._id)),
+        ancestors: org.ancestors ?? [],
+      }),
+    ]),
+  );
+  for (const orgId of orgIds) {
+    if (!tenants.has(String(orgId))) {
+      throw new TenantScopeError(
+        `${modelName}:所屬組織 ${String(orgId)} 不存在,無法判斷能不能搬`,
+      );
+    }
+  }
+  return tenants;
+}
+
+/**
  * 被搬資料目前歸屬組織的租戶;讀不到 → `TenantScopeError`(資料損毀,fail-closed)。
  * 根組織的資料回 null(呼叫端據此擋下:根組織的資料不屬於任何租戶,搬不進租戶)。
  */

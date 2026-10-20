@@ -130,20 +130,23 @@ describe("原生 aggregate 與原生 collection 存取的位置", () => {
   });
 });
 
-/** `root` 底下(測試檔除外)以呼叫語法 `.reassignOrg(` 呼叫搬家的檔案(相對 root、`/` 分隔、排序)。 */
+/** 搬家的呼叫語法:單筆 `.reassignOrg(`、批次 `.reassignOrgMany(`(同一份登記清單)。 */
+const REASSIGN_CALL = /\.reassignOrg(?:Many)?\(/;
+
+/** `root` 底下(測試檔除外)以呼叫語法(`REASSIGN_CALL`)呼叫搬家的檔案(相對 root、`/` 分隔、排序)。 */
 function reassignCallersUnder(root: string): string[] {
   return sourceFiles(root)
-    .filter((file) => readFileSync(file, "utf8").includes(".reassignOrg("))
+    .filter((file) => REASSIGN_CALL.test(readFileSync(file, "utf8")))
     .map((file) => path.relative(root, file).split(path.sep).join("/"))
     .filter((file) => file !== "database/base.repository.ts")
     .toSorted((left, right) => left.localeCompare(right));
 }
 
 /**
- * 搬家(`reassignOrg`)是 ADR-0005 登記的例外出口(一般更新不准改 `orgId`):
+ * 搬家(`reassignOrg` / 批次 `reassignOrgMany`)是 ADR-0005 登記的例外出口(一般更新不准改 `orgId`):
  * 以呼叫語法掃,只准登記過的檔案呼叫。
  */
-describe("搬家(reassignOrg)的呼叫端登記", () => {
+describe("搬家(reassignOrg / reassignOrgMany)的呼叫端登記", () => {
   it("正式程式碼裡呼叫 reassignOrg 的檔案都在底座或專案的登記清單內", () => {
     expect(reassignCallersUnder(SRC_ROOT)).toEqual(
       [...ORG_REASSIGN_CALLERS, ...PROJECT_ORG_REASSIGN_CALLERS].toSorted(
@@ -174,10 +177,21 @@ describe("搬家(reassignOrg)的呼叫端登記", () => {
         "transfer/transfer.service.ts",
         "await repo.reassignOrg(op, f, to);",
       );
-      write("notes/readme.ts", "// 搬家用 reassignOrg");
+      write(
+        "handover/handover.service.ts",
+        "await repo.reassignOrgMany(op, ids, to, { session });",
+      );
+      write("notes/readme.ts", "// 搬家用 reassignOrg 或 reassignOrgMany");
       write("transfer/transfer.test.ts", "await repo.reassignOrg(op, f, to);");
+      write(
+        "handover/handover.test.ts",
+        "await repo.reassignOrgMany(op, ids, to);",
+      );
       const found = reassignCallersUnder(root);
-      expect(found).toEqual(["transfer/transfer.service.ts"]);
+      expect(found).toEqual([
+        "handover/handover.service.ts",
+        "transfer/transfer.service.ts",
+      ]);
       expect(found).not.toEqual([...ORG_REASSIGN_CALLERS]);
     } finally {
       rmSync(root, { recursive: true, force: true });

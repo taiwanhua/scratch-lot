@@ -285,6 +285,178 @@ describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)
     });
   });
 
+  describe("批次搬家(reassignOrgMany)", () => {
+    const reassignMany: Repo["reassignOrgMany"] = (...args) =>
+      transactions.withTransaction(() => items.reassignOrgMany(...args));
+
+    async function createBatch(
+      prefix: string,
+      count: number,
+    ): Promise<Types.ObjectId[]> {
+      const created = await transactions.withTransaction(() =>
+        items.createMany(
+          asB1,
+          Array.from({ length: count }, (_unused, index) => ({
+            name: `${prefix}-${String(index).padStart(4, "0")}`,
+          })),
+        ),
+      );
+      return created.map((document) => document._id);
+    }
+
+    async function batchAudits(ids: Types.ObjectId[]): Promise<AuditLog[]> {
+      return database.connection
+        .collection<AuditLog>("audit_logs")
+        .find({
+          action: ORG_REASSIGN_AUDIT_ACTION,
+          "after.ids": { $in: ids.map(String) },
+        })
+        .toArray();
+    }
+
+    it("不在交易內 → TenantScopeError", async () => {
+      const ids = await createBatch("批次交易外", 2);
+      await expect(items.reassignOrgMany(asB1, ids, B2)).rejects.toThrow(
+        TenantScopeError,
+      );
+      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+    });
+
+    it("整批成功:全部搬到新店、各自帶版本條件與同一份 update,只寫一筆稽核(id 清單與筆數)", async () => {
+      const ids = await createBatch("批次成功", 3);
+      const result = await reassignMany(asB1, ids, B2, {
+        expected: Object.fromEntries(
+          ids.map((id) => [String(id), { editVersion: 0 }]),
+        ),
+        update: { $set: { status: "moved" }, $inc: { editVersion: 1 } },
+      });
+      expect(result.mismatched).toEqual([]);
+      expect(result.moved.map(String).toSorted()).toEqual(
+        ids.map(String).toSorted(),
+      );
+      for (const id of ids) {
+        expect(await items.findById(asB1, id)).toBeNull();
+        const atNewStore = await items.findById(asB2, id);
+        expect(atNewStore?.orgId.equals(B2)).toBe(true);
+        expect(atNewStore?.tenantId?.equals(T)).toBe(true);
+        expect(atNewStore?.status).toBe("moved");
+        expect(atNewStore?.editVersion).toBe(1);
+      }
+      const audits = await batchAudits(ids);
+      expect(audits).toHaveLength(1);
+      expect(String(audits[0]?.actorId)).toBe(String(asB1.actorId));
+      expect(audits[0]?.targetType).toBe("reassign_items");
+      expect(audits[0]?.after?.count).toBe(3);
+      expect(String(audits[0]?.after?.orgId)).toBe(String(B2));
+      expect((audits[0]?.after?.ids as string[]).toSorted()).toEqual(
+        ids.map(String).toSorted(),
+      );
+      expect((audits[0]?.before?.orgIds as unknown[]).map(String)).toEqual([
+        String(B1),
+      ]);
+      // 單筆搬家的稽核查詢(targetId)不會誤把批次那筆算進去
+      expect(await auditsOf(ids[0] as Types.ObjectId)).toHaveLength(0);
+    });
+
+    it("以條件(filter)選資料也可以;已在目標組織的跳過(冪等,不再寫稽核)", async () => {
+      const ids = await createBatch("批次條件", 2);
+      const first = await reassignMany(asB1, { name: /^批次條件-/ }, B2);
+      expect(first.moved).toHaveLength(2);
+      const again = await reassignMany(asB2, { name: /^批次條件-/ }, B2);
+      expect(again.moved).toEqual([]);
+      expect(again.skipped.map(String).toSorted()).toEqual(
+        ids.map(String).toSorted(),
+      );
+      expect(await batchAudits(ids)).toHaveLength(1);
+    });
+
+    it("其中一筆版本不符 → 整批不動、回傳不符的那幾筆、不寫稽核", async () => {
+      const ids = await createBatch("批次不符", 3);
+      const [first, second, third] = ids as [
+        Types.ObjectId,
+        Types.ObjectId,
+        Types.ObjectId,
+      ];
+      const result = await reassignMany(asB1, ids, B2, {
+        expected: {
+          [String(first)]: { editVersion: 0 },
+          [String(second)]: { editVersion: 7 },
+          [String(third)]: { editVersion: 0 },
+        },
+        update: { $inc: { editVersion: 1 } },
+      });
+      expect(result.mismatched.map(String)).toEqual([String(second)]);
+      expect(result.moved).toEqual([]);
+      for (const id of ids) {
+        const unchanged = await items.findById(asB1, id);
+        expect(unchanged?.orgId.equals(B1)).toBe(true);
+        expect(unchanged?.editVersion).toBe(0);
+      }
+      expect(await batchAudits(ids)).toHaveLength(0);
+    });
+
+    it("看不到 / 不存在的 id 算不符,整批不動", async () => {
+      const ids = await createBatch("批次看不到", 1);
+      const [other] = await transactions.withTransaction(() =>
+        items.createMany(asB2, [{ name: "批次別店" }]),
+      );
+      const missing = new Types.ObjectId();
+      const result = await reassignMany(
+        asB1,
+        [...ids, other?._id as Types.ObjectId, missing],
+        B2,
+      );
+      expect(result.mismatched.map(String).toSorted()).toEqual(
+        [String(other?._id), String(missing)].toSorted(),
+      );
+      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+    });
+
+    it("搬到別租戶 / 根組織 → VALIDATION_FAILED(orgId);update 不得碰 tenantId", async () => {
+      const ids = await createBatch("批次不准", 2);
+      for (const target of [U1, root]) {
+        const error: unknown = await reassignMany(asB1, ids, target).catch(
+          (error_: unknown) => error_,
+        );
+        expect(isValidationFailed(error, "orgId")).toBe(true);
+      }
+      await expect(
+        reassignMany(asB1, ids, B2, { update: { $set: { tenantId: U } } }),
+      ).rejects.toThrow(TenantScopeError);
+      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+    });
+
+    it("交易回復時整批與稽核一起回復", async () => {
+      const ids = await createBatch("批次回復", 2);
+      await expect(
+        transactions.withTransaction(async () => {
+          await items.reassignOrgMany(asB1, ids, B2);
+          throw new Error("後續步驟失敗");
+        }),
+      ).rejects.toThrow("後續步驟失敗");
+      expect(await orgOf(asB1, ids[0] as Types.ObjectId)).toBe(String(B1));
+      expect(await batchAudits(ids)).toHaveLength(0);
+    });
+
+    it("1,000 筆在一個交易內完成(記時間),一筆稽核", async () => {
+      const ids = await createBatch("批次千筆", 1000);
+      const started = Date.now();
+      const result = await reassignMany(asB1, ids, B2, {
+        expected: Object.fromEntries(
+          ids.map((id) => [String(id), { editVersion: 0 }]),
+        ),
+        update: { $inc: { editVersion: 1 } },
+      });
+      const elapsed = Date.now() - started;
+      // 記錄給 reviewer 看;上限放寬,只擋「每筆各查 / 各寫一次」那種退化
+      process.stdout.write(`reassignOrgMany 1,000 筆:${String(elapsed)} ms\n`);
+      expect(result.moved).toHaveLength(1000);
+      expect(await items.count(asB2, { name: /^批次千筆-/ })).toBe(1000);
+      expect(await batchAudits(ids.slice(0, 1))).toHaveLength(1);
+      expect(elapsed).toBeLessThan(20_000);
+    }, 60_000);
+  });
+
   describe("一次寫多筆(createMany)", () => {
     it("不在交易內 → TenantScopeError(一筆失敗整批不寫要靠交易)", async () => {
       await expect(

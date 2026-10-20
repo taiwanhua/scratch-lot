@@ -19,6 +19,7 @@ import {
 import {
   ORG_REASSIGN_AUDIT_ACTION,
   currentTenantOf,
+  currentTenantsOf,
   orgReassignValidationError,
   reassignTargetOf,
 } from "./org-reassign";
@@ -120,6 +121,27 @@ export interface ReassignOrgOptions<TSchema> extends UpdateOptions {
    * (不得碰 `orgId` / `tenantId` / 建立資訊)。
    */
   update?: RepositoryUpdate<TSchema>;
+}
+
+/** 批次搬家(`reassignOrgMany`)的選項。 */
+export interface ReassignOrgManyOptions<TSchema> extends SessionOptions {
+  /**
+   * 各筆自己的條件(id 字串 → 條件,例:各自的版本 `{ editVersion: 3 }`);沒列的那筆只照選取條件。
+   * 列了卻不在這批(看不到、不存在、不符選取條件)的 id 也算不符。
+   */
+  expected?: Readonly<Record<string, RepositoryFilter<TSchema>>>;
+  /** 每一筆同一次寫入順便改的其他欄位;欄位保護同 `reassignOrg`(不得碰 `orgId` / `tenantId` / 建立資訊)。 */
+  update?: RepositoryUpdate<TSchema>;
+}
+
+/** 批次搬家的結果:`mismatched` 非空 = **整批沒有寫入**(`moved` / `skipped` 為空)。 */
+export interface ReassignOrgManyResult {
+  /** 這次搬過去的 id。 */
+  moved: Types.ObjectId[];
+  /** 已經在目標組織、跳過的 id(冪等)。 */
+  skipped: Types.ObjectId[];
+  /** 不符的 id(字串,照呼叫端給的):id 清單裡看不到 / 不存在 / 已刪除 / 不是合法 id 的,或不符 `expected` 條件的。 */
+  mismatched: string[];
 }
 
 /**
@@ -786,6 +808,214 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
+   * **批次搬家**(同 `reassignOrg` 的例外出口,一次搬多筆):把 `target` 選到的資料改歸屬到 `newOrgId`。
+   * `target` = id 清單,或選取條件(可見範圍內符合的全部)。
+   *
+   * - 規則同 `reassignOrg`:必須在交易內、要有操作者、被搬的在可見範圍內(寫入範圍)、新組織同租戶且不是根組織
+   *   (可以是操作者看不到的)、有 `tenantId` 欄的照新組織重推、`options.update` 欄位保護照擋
+   * - 目標組織查一次、來源組織的租戶一次查完(不逐筆查)
+   * - **全有或全無**:先在交易內逐筆核對(id 清單裡看不到 / 不存在的、不符 `options.expected` 各自條件的),
+   *   任何一筆不符 → 不寫入、回 `mismatched`;都符合才以一次條件更新寫入(每筆帶自己的條件),
+   *   寫入筆數與核對結果不同(核對後被改)→ 拋 `TenantScopeError`,呼叫端的交易整個回復
+   * - 已經在新組織的跳過(`skipped`,冪等);全部跳過 → 不寫入、不記稽核
+   * - 只寫**一筆**稽核(`data.reassign-org`:`before.orgIds` = 來源組織、`after` = 新組織 + id 清單 + 筆數)
+   * - 呼叫端登記與 `reassignOrg` 同一份清單(`ORG_REASSIGN_CALLERS` / `PROJECT_ORG_REASSIGN_CALLERS`)
+   */
+  async reassignOrgMany(
+    operator: OperatorContext,
+    target: readonly (Types.ObjectId | string)[] | RepositoryFilter<TSchema>,
+    newOrgId: Types.ObjectId | string,
+    options: ReassignOrgManyOptions<TSchema> = {},
+  ): Promise<ReassignOrgManyResult> {
+    if (getTenantScope(this.model.schema)?.path !== "orgId") {
+      throw new TenantScopeError(
+        `${this.model.modelName}:搬家只給以 orgId 歸屬的租戶資料`,
+      );
+    }
+    const actorId = operator.actorId;
+    if (actorId === null) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:搬家要寫稽核,需要操作者`,
+      );
+    }
+    const session = sessionOf(options);
+    if (session?.inTransaction() !== true) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:reassignOrgMany 必須在交易內(整批與稽核一起成功或一起回復)`,
+      );
+    }
+    const extra: RepositoryUpdate<TSchema> = options.update ?? {};
+    const requested = isIdList(target) ? target.map(String) : null;
+    const selection: RepositoryFilter<TSchema> =
+      requested === null
+        ? (target as RepositoryFilter<TSchema>)
+        : ({
+            _id: {
+              $in: requested
+                .filter((id) => mongoose.isValidObjectId(id))
+                .map((id) => new mongoose.Types.ObjectId(id)),
+            },
+          } as RepositoryFilter<TSchema>);
+    const shared = await this.prepareUpdate(
+      operator,
+      selection,
+      extra,
+      options,
+    );
+    const destination = await reassignTargetOf(
+      this.model.db,
+      newOrgId,
+      session,
+    );
+    const candidates = (await scopeQuery(
+      this.model.find({ ...shared.filter }).select({ _id: 1, orgId: 1 }),
+      { operator },
+    )
+      .session(session)
+      .lean()
+      .exec()) as unknown as { _id: Types.ObjectId; orgId: Types.ObjectId }[];
+    const expected = options.expected ?? {};
+    const mismatched = new Set<string>(
+      requested === null
+        ? []
+        : requested.filter(
+            (id) => !candidates.some((found) => String(found._id) === id),
+          ),
+    );
+    const expectedIds = Object.keys(expected);
+    if (expectedIds.length > 0) {
+      const satisfied = (await scopeQuery(
+        this.model
+          .find({
+            $and: [
+              { ...shared.filter },
+              {
+                $or: expectedIds.map((id) => ({
+                  $and: [
+                    { _id: mongoose.isValidObjectId(id) ? id : null },
+                    expected[id],
+                  ],
+                })),
+              },
+            ],
+          } as RepositoryFilter<TSchema>)
+          .select({ _id: 1 }),
+        { operator },
+      )
+        .session(session)
+        .lean()
+        .exec()) as unknown as { _id: Types.ObjectId }[];
+      for (const id of expectedIds) {
+        if (!satisfied.some((found) => String(found._id) === id)) {
+          mismatched.add(id);
+        }
+      }
+    }
+    if (mismatched.size > 0) {
+      return {
+        moved: [],
+        skipped: [],
+        mismatched: [...mismatched],
+      };
+    }
+    const fromOrgIds = uniqueIds(candidates.map((found) => found.orgId));
+    const tenants = await currentTenantsOf(
+      this.model.db,
+      this.model.modelName,
+      fromOrgIds,
+      session,
+    );
+    if (
+      fromOrgIds.some(
+        (orgId) =>
+          tenants.get(String(orgId))?.equals(destination.tenantId) !== true,
+      )
+    ) {
+      throw orgReassignValidationError(
+        "data can only be moved to an org of the same tenant",
+      );
+    }
+    const skipped = candidates.filter((found) =>
+      found.orgId.equals(destination.orgId),
+    );
+    const toMove = candidates.filter(
+      (found) => !found.orgId.equals(destination.orgId),
+    );
+    if (toMove.length === 0) {
+      return {
+        moved: [],
+        skipped: skipped.map((found) => found._id),
+        mismatched: [],
+      };
+    }
+    const moved: Record<string, unknown> = {
+      orgId: destination.orgId,
+      ...(Object.hasOwn(this.model.schema.paths, "tenantId")
+        ? { tenantId: destination.tenantId }
+        : {}),
+    };
+    const { $set: extraSet, ...extraRest } = extra as Record<string, unknown>;
+    const update = {
+      ...extraRest,
+      $set: { ...(extraSet as Record<string, unknown> | undefined), ...moved },
+    } as RepositoryUpdate<TSchema>;
+    // 一次條件更新、每筆帶自己的條件(id + 核對時的組織 + `expected`):不逐筆來回,也不繞過查詢中介層
+    const { modifiedCount } = await scopeQuery(
+      this.model.updateMany(
+        {
+          $and: [
+            { ...shared.filter },
+            {
+              $or: toMove.map((found) => ({
+                $and: [
+                  { _id: found._id, orgId: found.orgId },
+                  ...(expected[String(found._id)] === undefined
+                    ? []
+                    : [expected[String(found._id)]]),
+                ],
+              })),
+            },
+          ],
+        } as RepositoryFilter<TSchema>,
+        update,
+        { runValidators: true },
+      ),
+      { operator },
+    )
+      .session(session)
+      .exec();
+    if (modifiedCount !== toMove.length) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:批次搬家核對後有資料被改(預期 ${String(toMove.length)} 筆、寫入 ${String(modifiedCount)} 筆),整批回復`,
+      );
+    }
+    const movedIds = toMove.map((found) => found._id);
+    await this.auditLogs().create(
+      operator,
+      {
+        actorId,
+        actorType: "user",
+        action: ORG_REASSIGN_AUDIT_ACTION,
+        targetType: this.model.collection.collectionName,
+        before: {
+          orgIds: uniqueIds(toMove.map((found) => found.orgId)),
+        },
+        after: {
+          orgId: destination.orgId,
+          ids: movedIds.map(String),
+          count: movedIds.length,
+        },
+      },
+      { session },
+    );
+    return {
+      moved: movedIds,
+      skipped: skipped.map((found) => found._id),
+      mismatched: [],
+    };
+  }
+
+  /**
    * 搬家的稽核寫進 `audit_logs`(同一條連線上已註冊的 model;沒註冊 → `TenantScopeError`,不靜默略過)。
    * 經 BaseRepository 寫:稽核的歸屬組織 = 操作者當前組織、建立者 = 操作者,與 `AuditService.record` 同形狀。
    */
@@ -1008,6 +1238,24 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
  */
 export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
 
+/** 批次搬家的 `target` 是 id 清單(否則是選取條件)。 */
+function isIdList<TSchema>(
+  target: readonly (Types.ObjectId | string)[] | RepositoryFilter<TSchema>,
+): target is readonly (Types.ObjectId | string)[] {
+  return Array.isArray(target);
+}
+
+/** 去重(依 id 字串),保留第一次出現的順序。 */
+function uniqueIds(ids: readonly Types.ObjectId[]): Types.ObjectId[] {
+  const seen = new Map<string, Types.ObjectId>();
+  for (const id of ids) {
+    if (!seen.has(String(id))) {
+      seen.set(String(id), id);
+    }
+  }
+  return [...seen.values()];
+}
+
 /**
  * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
  * 一律以明確值交給 Mongoose:交易已結束時,Mongoose 自己的 AsyncLocalStorage 可能還留著那個 session
@@ -1020,9 +1268,9 @@ function sessionOf(options: SessionOptions): ClientSession | null {
 }
 
 /**
- * **允許呼叫搬家(`reassignOrg`)的底座檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」)。
+ * **允許呼叫搬家(`reassignOrg` / 批次 `reassignOrgMany`)的底座檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」)。
  * 專案的呼叫端登記在專案入口 `project/database/org-reassign-callers.ts`,不改這份。
- * `exists-any-callers.test.ts` 合併兩份清單、以呼叫語法(`.reassignOrg(`)掃整個 src 斷言沒有其他檔案呼叫它。
+ * `exists-any-callers.test.ts` 合併兩份清單、以呼叫語法(`.reassignOrg(` / `.reassignOrgMany(`)掃整個 src 斷言沒有其他檔案呼叫它。
  */
 export const ORG_REASSIGN_CALLERS: readonly string[] = [];
 
