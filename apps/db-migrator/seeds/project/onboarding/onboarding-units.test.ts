@@ -37,6 +37,15 @@ describe("開通資料(真實租戶由開通 skill 寫成 JSON 檔)", () => {
   it("正規化:headquarters 預設 false、沒給的清單是空的", () => {
     const plan = parseOnboardingPlan(PLAN);
     expect(plan.users[1]?.headquarters).toBe(false);
+    expect(plan.positions).toEqual([
+      { value: "counter-a", label: "櫃台 A", color: null },
+    ]);
+    expect(
+      parseOnboardingPlan({
+        ...PLAN,
+        positions: [{ value: "counter-a", label: "櫃台 A", color: "cyan" }],
+      }).positions[0]?.color,
+    ).toBe("cyan");
     expect(parseOnboardingPlan({ branches: [{ name: "一店" }] })).toEqual({
       branches: [{ name: "一店" }],
       headquartersBranch: null,
@@ -70,6 +79,14 @@ describe("開通資料(真實租戶由開通 skill 寫成 JSON 檔)", () => {
       "帳號重複",
       { ...PLAN, users: [PLAN.users[1], PLAN.users[1]] },
       /有重複的值/,
+    ],
+    [
+      "崗位顏色不是色票代號(例:色碼)",
+      {
+        ...PLAN,
+        positions: [{ value: "counter-a", label: "櫃台 A", color: "#ff0000" }],
+      },
+      /必須是色票代號/,
     ],
     [
       "崗位代碼不是 kebab-case",

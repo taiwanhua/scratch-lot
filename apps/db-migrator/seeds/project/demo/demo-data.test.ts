@@ -64,10 +64,12 @@ describe("示範資料(seeds/project/demo/)不放機密", () => {
     const roles = new Set(plan.users.flatMap((user) => user.roles));
     expect(roles).toEqual(new Set(["clerk", "hq", "store-manager"]));
     expect(plan.users.some((user) => user.headquarters)).toBe(true);
-    expect(plan.positions.map((position) => position.label)).toEqual([
-      "櫃台 A",
-      "櫃台 B",
-      "彩券機旁",
+    expect(
+      plan.positions.map((position) => [position.label, position.color]),
+    ).toEqual([
+      ["櫃台 A", "cyan"],
+      ["櫃台 B", "purple"],
+      ["彩券機旁", "pink"],
     ]);
   });
 });

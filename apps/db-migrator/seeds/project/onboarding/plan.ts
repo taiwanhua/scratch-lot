@@ -6,6 +6,12 @@
  * (選填、預設空清單)、在 `parseOnboardingPlan` 驗它,並在 `steps.ts` 追加自己的步驟。
  */
 import {
+  TAG_PALETTE_KEYS,
+  type TagPaletteKey,
+  isTagPaletteKey,
+} from "@repo/domain/project/tag-palette";
+
+import {
   ONBOARDING_ROLE_KEYS,
   type OnboardingRoleKey,
   isOnboardingRoleKey,
@@ -32,6 +38,11 @@ export interface OnboardingPosition {
   /** 選項代碼(英文 kebab-case,同一類別內唯一)。 */
   value: string;
   label: string;
+  /**
+   * 選項顏色(標籤色票代號,同欄位管理的「顏色」;規格 18.5)。沒有就 null。
+   * 只在選項還沒有顏色時設定,租戶已選過的不動。
+   */
+  color: TagPaletteKey | null;
 }
 
 export interface OnboardingPlan {
@@ -161,7 +172,11 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
     if (!POSITION_VALUE.test(value)) {
       fail(`${path}.value`, "必須是英文 kebab-case(例:counter-a)");
     }
-    return { value, label: text(position.label, `${path}.label`) };
+    const color = position.color ?? null;
+    if (color !== null && !isTagPaletteKey(color)) {
+      fail(`${path}.color`, `必須是色票代號 ${TAG_PALETTE_KEYS.join(" / ")}`);
+    }
+    return { value, label: text(position.label, `${path}.label`), color };
   });
   unique(
     positions.map((position) => position.value),

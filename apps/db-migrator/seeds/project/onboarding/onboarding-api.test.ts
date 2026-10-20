@@ -244,6 +244,25 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(new Set(positions.map((field) => field.label as string))).toEqual(
         new Set(["彩券機旁", "櫃台 A", "櫃台 B"]),
       );
+      // 選項顏色(P02 的 project_field_option_colors:一筆 = 一個選項的色票代號)
+      const colors = await find("project_field_option_colors", {
+        fieldId: { $in: positions.map((field) => field._id as ObjectId) },
+      });
+      const labelOf = new Map(
+        positions.map((field) => [String(field._id), field.label as string]),
+      );
+      expect(
+        Object.fromEntries(
+          colors.map((color) => [
+            labelOf.get(String(color.fieldId)),
+            color.paletteKey as string,
+          ]),
+        ),
+      ).toEqual({
+        "櫃台 A": "cyan",
+        "櫃台 B": "purple",
+        彩券機旁: "pink",
+      });
     });
 
     it("三個角色在角色管理是一般角色,沒有「預設角色」標籤(規格 3.3)", async () => {
@@ -632,7 +651,11 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         expect(String(log.actorId)).toBe(tenantAdminId);
       }
       expect(new Set(writes.map((log) => log.action as string))).toEqual(
-        new Set(["field.create", "notification-settings.edit"]),
+        new Set([
+          "field.create",
+          "field.set-color",
+          "notification-settings.edit",
+        ]),
       );
 
       const { notificationSettings } = await tenantAdmin.request<{
