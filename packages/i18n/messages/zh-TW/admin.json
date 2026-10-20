@@ -2771,6 +2771,14 @@
     "loadFailed": "人員清單載入失敗,請稍後再試",
     "disabled": "已停用"
   },
+  "filterDrawer": {
+    "button": "篩選",
+    "buttonCount": "篩選 ({count})",
+    "title": "篩選",
+    "clear": "清除",
+    "apply": "套用",
+    "close": "關閉"
+  },
   "orgTreeSelect": {
     "search": "搜尋組織",
     "empty": "沒有可選的組織",

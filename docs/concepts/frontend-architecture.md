@@ -257,6 +257,10 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`、`docs/modules/org-manager.md`「api 介面」
 
+**列表篩選 `FilterDrawer`**(`components/base/FilterDrawer/`;規格 RW-01 / RW-01b):電腦(≥ `lg`)把篩選欄位攤在列表上方、改了立刻套用;平板(`sm`–`lg`)[篩選 (N)] 從右側滑出抽屜、手機(< `sm`)從底部升起。抽屜裡是同一組欄位(`renderFields(value, change)`,呼叫端只寫一份)+ [清除] [套用]:改的是草稿,[套用] 才寫回(通常是 `useUrlState` 的篩選),關掉不套用;關鍵字搜尋框(`search`)一直留在外面。抽屜外框是 `@repo/ui/drawer`。先例:檔案管理的遊戲列表。
+
+正本:`apps/admin/src/components/base/FilterDrawer/FilterDrawer.tsx`、`packages/ui/src/Drawer/Drawer.tsx`
+
 ## 頁內權限判斷
 
 - `usePermissions().hasPermission(key)`:`me.modules` 的 permissions 組成集合,判斷規則來自 `@repo/domain/permission`。

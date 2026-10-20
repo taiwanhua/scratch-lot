@@ -15,6 +15,7 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
+import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -27,7 +28,11 @@ import {
   MASTER_DATA_PAGE_SIZE,
 } from "../master-data-config";
 import { GameCards } from "./GameCards";
-import { GAMES_LIST_KEY, gamesListSchema } from "./games-list";
+import {
+  GAMES_LIST_KEY,
+  type GamesListFilters,
+  gamesListSchema,
+} from "./games-list";
 
 export interface GamesTabProps {
   /** 詳情頁的路由;沒綁詳情頁 → 列不能點 */
@@ -35,6 +40,12 @@ export interface GamesTabProps {
 }
 
 const ALL = "all";
+
+/** 抽屜的 [清除]:狀態與面額都是「全部」。 */
+const EMPTY_FILTERS: Pick<GamesListFilters, "status" | "unitPrice"> = {
+  status: "",
+  unitPrice: null,
+};
 
 /** 金額顯示千分位(與 Figma 一致)。 */
 const formatAmount = (value: number) => value.toLocaleString("en-US");
@@ -134,59 +145,68 @@ export const GamesTab = ({ viewRoute }: GamesTabProps) => {
 
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-      <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: "wrap" }}>
-        <SelectField
-          label={t("filters.status")}
-          size="small"
-          value={filters.status === "" ? ALL : filters.status}
-          options={[
-            { value: ALL, label: t("filters.all") },
-            { value: "on_sale", label: tStatus("on_sale") },
-            { value: "discontinued", label: tStatus("discontinued") },
-          ]}
-          onChange={(value) => {
-            setFilters((current) => ({
-              ...current,
-              status: value === ALL ? "" : value,
-              page: 1,
-            }));
-          }}
-          sx={{ minWidth: 140 }}
-        />
-        <SelectField
-          label={t("filters.unitPrice")}
-          size="small"
-          value={filters.unitPrice === null ? ALL : String(filters.unitPrice)}
-          options={[
-            { value: ALL, label: t("filters.all") },
-            ...STANDARD_UNIT_PRICES.map((price) => ({
-              value: String(price),
-              label: formatAmount(price),
-            })),
-          ]}
-          onChange={(value) => {
-            setFilters((current) => ({
-              ...current,
-              unitPrice: value === ALL ? null : Number(value),
-              page: 1,
-            }));
-          }}
-          sx={{ minWidth: 140 }}
-        />
-        <TextField
-          label={t("filters.keyword")}
-          size="small"
-          value={filters.keyword}
-          onChange={(event) => {
-            setFilters((current) => ({
-              ...current,
-              keyword: event.target.value,
-              page: 1,
-            }));
-          }}
-          sx={{ minWidth: 220 }}
-        />
-      </Stack>
+      <FilterDrawer
+        value={{ status: filters.status, unitPrice: filters.unitPrice }}
+        emptyValue={EMPTY_FILTERS}
+        activeCount={
+          (filters.status === "" ? 0 : 1) + (filters.unitPrice === null ? 0 : 1)
+        }
+        onApply={(next) => {
+          setFilters((current) => ({ ...current, ...next, page: 1 }));
+        }}
+        renderFields={(value, change) => (
+          <>
+            <SelectField
+              label={t("filters.status")}
+              size="small"
+              value={value.status === "" ? ALL : value.status}
+              options={[
+                { value: ALL, label: t("filters.all") },
+                { value: "on_sale", label: tStatus("on_sale") },
+                { value: "discontinued", label: tStatus("discontinued") },
+              ]}
+              onChange={(next) => {
+                change({ ...value, status: next === ALL ? "" : next });
+              }}
+              sx={{ minWidth: 140 }}
+            />
+            <SelectField
+              label={t("filters.unitPrice")}
+              size="small"
+              value={value.unitPrice === null ? ALL : String(value.unitPrice)}
+              options={[
+                { value: ALL, label: t("filters.all") },
+                ...STANDARD_UNIT_PRICES.map((price) => ({
+                  value: String(price),
+                  label: formatAmount(price),
+                })),
+              ]}
+              onChange={(next) => {
+                change({
+                  ...value,
+                  unitPrice: next === ALL ? null : Number(next),
+                });
+              }}
+              sx={{ minWidth: 140 }}
+            />
+          </>
+        )}
+        search={
+          <TextField
+            label={t("filters.keyword")}
+            size="small"
+            value={filters.keyword}
+            onChange={(event) => {
+              setFilters((current) => ({
+                ...current,
+                keyword: event.target.value,
+                page: 1,
+              }));
+            }}
+            sx={{ minWidth: 220, flex: { xs: 1, lg: "none" } }}
+          />
+        }
+      />
 
       <Box sx={{ flex: 1, minHeight: 0 }}>
         {isMobile ? (

@@ -2771,6 +2771,14 @@
     "loadFailed": "Could not load the list of people. Please try again later",
     "disabled": "Disabled"
   },
+  "filterDrawer": {
+    "button": "Filter",
+    "buttonCount": "Filter ({count})",
+    "title": "Filter",
+    "clear": "Clear",
+    "apply": "Apply",
+    "close": "Close"
+  },
   "orgTreeSelect": {
     "search": "Search organizations",
     "empty": "No organizations to choose from",
