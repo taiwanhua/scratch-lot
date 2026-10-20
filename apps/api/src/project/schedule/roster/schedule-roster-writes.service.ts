@@ -28,6 +28,10 @@ import {
 } from "../../database/schedule/roster.repositories";
 import type { ScheduleTemplateTask } from "../../database/schedule/schedule-demand-template.schema";
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
+import {
+  autoRunInProgressError,
+  isAutoRunLocked,
+} from "../auto-run/period-lock";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
 import {
   type ChangeReason,
@@ -43,6 +47,7 @@ import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
 import { positionAnnotationsOf } from "../integration/position-annotations";
+import { ScheduleClock } from "../shared/schedule-clock";
 import {
   forbiddenError,
   isDuplicateKeyError,
@@ -133,6 +138,7 @@ export class ScheduleRosterWritesService {
     private readonly personLocks: SchedulePersonLocks,
     private readonly checks: ScheduleCheckService,
     private readonly changes: ScheduleChangesService,
+    private readonly clock: ScheduleClock,
   ) {}
 
   // ---- 人力需求 ----
@@ -666,12 +672,18 @@ export class ScheduleRosterWritesService {
     }
   }
 
-  /** 填進紀錄改成 `wanted`:拿掉的軟刪除、新的建立(手動);沒變的保留原來的來源。 */
+  /**
+   * 填進紀錄改成 `wanted`:拿掉的軟刪除、新的建立(手動)。留下來的自動填進 → 來源改成手動
+   * (規格 14.1:自動填進的被手動改過 → source 改成手動,自動排入標記消失;`autoRunId` / `reason` 照留著追查)。
+   */
   private async syncAssignments(
     operator: OperatorContext,
     scope: RosterScope,
     entry: EntryRecord,
-    current: readonly (WantedAssignment & { _id: Types.ObjectId })[],
+    current: readonly (WantedAssignment & {
+      _id: Types.ObjectId;
+      source: string;
+    })[],
     wanted: readonly WantedAssignment[],
   ): Promise<void> {
     const wantedKeys = new Set(keysOf(wanted));
@@ -679,6 +691,10 @@ export class ScheduleRosterWritesService {
     for (const item of current) {
       if (!wantedKeys.has(assignmentKey(item))) {
         await this.assignments.softDeleteById(operator, item._id);
+      } else if (item.source === "auto") {
+        await this.assignments.updateById(operator, item._id, {
+          $set: { source: "manual" },
+        });
       }
     }
     for (const item of wanted) {
@@ -880,6 +896,10 @@ export class ScheduleRosterWritesService {
         throw new Error(
           `schedule period missing: ${String(scope.org.id)} ${month}`,
         );
+      }
+      // 自動排班執行中鎖定這個月(10 分鐘逾時自動解除;規格 14.1 `schedule_periods`)
+      if (isAutoRunLocked(touched, this.clock.now())) {
+        throw autoRunInProgressError();
       }
       if (touched.status === "published") {
         published.add(month);

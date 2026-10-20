@@ -75,6 +75,23 @@ type ApplyCenterCounts {
   myTasks: Int!
 }
 
+input ApplyScheduleTemplatesInput {
+  changeReason: ScheduleChangeReasonInput
+  dates: [String!]!
+  kind: String!
+  month: String!
+  orgId: ID
+  templateIds: [ID!]
+  weekTemplateId: ID
+}
+
+type ApplyScheduleTemplatesPayload {
+  createdCount: Int!
+  filledDays: Int!
+  skippedDays: Int!
+  skippedSlots: Int!
+}
+
 input AssignFormToTenantsInput {
   formKey: ID!
   tenantOrgIds: [ID!]!
@@ -131,6 +148,11 @@ input ChangePasswordInput {
 
 type ChangePasswordPayload {
   success: Boolean!
+}
+
+type ClearScheduleAutoAssignmentsPayload {
+  deletedEntryIds: [ID!]!
+  removedCount: Int!
 }
 
 input CopySubmissionToDraftInput {
@@ -2424,12 +2446,14 @@ type Mutation {
   addScheduleDayOffsOnBehalf(input: AddScheduleDayOffsOnBehalfInput!): SaveScheduleDayOffsPayload!
   addScheduleStaff(input: AddScheduleStaffInput!): AddScheduleStaffPayload!
   addStepAssignee(input: AddStepAssigneeInput!): WorkflowTaskPayload!
+  applyScheduleTemplates(input: ApplyScheduleTemplatesInput!): ApplyScheduleTemplatesPayload!
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
   assignWorkflowToTenants(input: AssignWorkflowToTenantsInput!): WorkflowPayload!
   batchApproveTasks(input: BatchApproveTasksInput!): BatchApproveTasksPayload!
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
+  clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
   correctLotterySkippedTickets(input: CorrectLotterySkippedTicketsInput!): LotteryInventoryActionPayload!
@@ -2516,6 +2540,7 @@ type Mutation {
   revokeRoleUsers(input: RevokeRoleUsersInput!): RoleUsersPayload!
   revokeTenantProvision(input: RevokeTenantProvisionInput!): RevokeTenantProvisionPayload!
   revokeWorkflowFromTenant(input: RevokeWorkflowFromTenantInput!): WorkflowPayload!
+  runScheduleAutoRun(input: RunScheduleAutoRunInput!): ScheduleAutoRunSummary!
   saveDataScopeRule(input: SaveDataScopeRuleInput!): SaveDataScopeRulePayload!
   saveFormDraft(input: SaveFormDraftInput!): FormSubmissionPayload!
   saveFormVersionDraft(input: SaveFormVersionDraftInput!): FormVersionPayload!
@@ -3225,6 +3250,8 @@ type Query {
   roleUserCandidates(input: RoleUserCandidatesInput!, roleId: ID!): RoleUserCandidatesPayload!
   roleUsers(input: RoleUsersInput!, roleId: ID!): RoleUsersPayload!
   roles(input: RolesInput!): RolesPayload!
+  scheduleAutoRunPreview(input: ScheduleAutoRunRangeInput!): ScheduleAutoRunPreviewPayload!
+  scheduleAutoRunStatus(input: ScheduleRosterInput!): ScheduleAutoRunStatusPayload!
   scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
   scheduleCheck(input: ScheduleRosterInput!): ScheduleCheckPayload!
   scheduleDayOffOverview(input: ScheduleDayOffOverviewInput): ScheduleDayOffOverviewPayload!
@@ -3234,6 +3261,7 @@ type Query {
   scheduleRoster(input: ScheduleRosterInput!): ScheduleRosterPayload!
   scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
+  scheduleTemplateApplyPreview(input: ApplyScheduleTemplatesInput!): ApplyScheduleTemplatesPayload!
   sidebarBadgeSettings: SidebarBadgeSettingsPayload!
   sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
@@ -3602,6 +3630,16 @@ type RolesPayload {
   totalCount: Int!
 }
 
+input RunScheduleAutoRunInput {
+  conditions: [ScheduleAutoRunConditionInput!]!
+  fillWeekTemplate: Boolean
+  from: String!
+  mode: String!
+  month: String!
+  orgId: ID
+  to: String!
+}
+
 input SaveDataScopeRuleInput {
   combineOp: DataScopeCombineOp! = OR
   rules: [DataScopeRuleEntryInput!]!
@@ -3707,9 +3745,55 @@ input SaveWorkflowVersionDraftInput {
   workflowKey: ID!
 }
 
+type ScheduleApplyWeekTemplate {
+  days: [[ID!]!]!
+  id: ID!
+  name: String!
+}
+
 input ScheduleAutoRunConditionInput {
   enabled: Boolean!
   key: String!
+}
+
+type ScheduleAutoRunConditionSetting {
+  enabled: Boolean!
+  key: String!
+}
+
+type ScheduleAutoRunPreviewPayload {
+  autoCount: Int!
+  demandCount: Int!
+  fillableDays: Int!
+  manualCount: Int!
+  weekTemplate: ScheduleApplyWeekTemplate
+}
+
+input ScheduleAutoRunRangeInput {
+  from: String!
+  month: String!
+  orgId: ID
+  to: String!
+}
+
+type ScheduleAutoRunStatusPayload {
+  canAutoRun: Boolean!
+  conditions: [ScheduleAutoRunConditionSetting!]!
+  latest: ScheduleAutoRunSummary
+  running: Boolean!
+  weekTemplates: [ScheduleApplyWeekTemplate!]!
+}
+
+type ScheduleAutoRunSummary {
+  addedDemandCount: Int!
+  addedDemandDays: Int!
+  at: DateTime!
+  byName: String
+  filledCount: Int!
+  from: String!
+  id: ID!
+  to: String!
+  unfilledCount: Int!
 }
 
 type ScheduleCalendarDay {

@@ -108,6 +108,24 @@ export type ApplyCenterCounts = {
   myTasks: Scalars['Int']['output'];
 };
 
+export type ApplyScheduleTemplatesInput = {
+  changeReason?: InputMaybe<ScheduleChangeReasonInput>;
+  dates: Array<Scalars['String']['input']>;
+  kind: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  templateIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  weekTemplateId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ApplyScheduleTemplatesPayload = {
+  __typename?: 'ApplyScheduleTemplatesPayload';
+  createdCount: Scalars['Int']['output'];
+  filledDays: Scalars['Int']['output'];
+  skippedDays: Scalars['Int']['output'];
+  skippedSlots: Scalars['Int']['output'];
+};
+
 export type AssignFormToTenantsInput = {
   formKey: Scalars['ID']['input'];
   tenantOrgIds: Array<Scalars['ID']['input']>;
@@ -165,6 +183,12 @@ export type ChangePasswordInput = {
 export type ChangePasswordPayload = {
   __typename?: 'ChangePasswordPayload';
   success: Scalars['Boolean']['output'];
+};
+
+export type ClearScheduleAutoAssignmentsPayload = {
+  __typename?: 'ClearScheduleAutoAssignmentsPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  removedCount: Scalars['Int']['output'];
 };
 
 export type CopySubmissionToDraftInput = {
@@ -2644,12 +2668,14 @@ export type Mutation = {
   addScheduleDayOffsOnBehalf: SaveScheduleDayOffsPayload;
   addScheduleStaff: AddScheduleStaffPayload;
   addStepAssignee: WorkflowTaskPayload;
+  applyScheduleTemplates: ApplyScheduleTemplatesPayload;
   assignFormToTenants: FormPayload;
   assignUserRoles: UserPayload;
   assignWorkflowToTenants: WorkflowPayload;
   batchApproveTasks: BatchApproveTasksPayload;
   bindFormWorkflow: FormPayload;
   changePassword: ChangePasswordPayload;
+  clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
   copySubmissionToDraft: FormSubmissionPayload;
   copyUserOrgRoles: CopyUserOrgRolesPayload;
   correctLotterySkippedTickets: LotteryInventoryActionPayload;
@@ -2736,6 +2762,7 @@ export type Mutation = {
   revokeRoleUsers: RoleUsersPayload;
   revokeTenantProvision: RevokeTenantProvisionPayload;
   revokeWorkflowFromTenant: WorkflowPayload;
+  runScheduleAutoRun: ScheduleAutoRunSummary;
   saveDataScopeRule: SaveDataScopeRulePayload;
   saveFormDraft: FormSubmissionPayload;
   saveFormVersionDraft: FormVersionPayload;
@@ -2823,6 +2850,11 @@ export type MutationAddStepAssigneeArgs = {
 };
 
 
+export type MutationApplyScheduleTemplatesArgs = {
+  input: ApplyScheduleTemplatesInput;
+};
+
+
 export type MutationAssignFormToTenantsArgs = {
   input: AssignFormToTenantsInput;
 };
@@ -2850,6 +2882,11 @@ export type MutationBindFormWorkflowArgs = {
 
 export type MutationChangePasswordArgs = {
   input: ChangePasswordInput;
+};
+
+
+export type MutationClearScheduleAutoAssignmentsArgs = {
+  input: ScheduleAutoRunRangeInput;
 };
 
 
@@ -3260,6 +3297,11 @@ export type MutationRevokeTenantProvisionArgs = {
 
 export type MutationRevokeWorkflowFromTenantArgs = {
   input: RevokeWorkflowFromTenantInput;
+};
+
+
+export type MutationRunScheduleAutoRunArgs = {
+  input: RunScheduleAutoRunInput;
 };
 
 
@@ -4239,6 +4281,8 @@ export type Query = {
   roleUserCandidates: RoleUserCandidatesPayload;
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
+  scheduleAutoRunPreview: ScheduleAutoRunPreviewPayload;
+  scheduleAutoRunStatus: ScheduleAutoRunStatusPayload;
   scheduleCalendar: ScheduleCalendarPayload;
   scheduleCheck: ScheduleCheckPayload;
   scheduleDayOffOverview: ScheduleDayOffOverviewPayload;
@@ -4248,6 +4292,7 @@ export type Query = {
   scheduleRoster: ScheduleRosterPayload;
   scheduleRules: ScheduleRulesPayload;
   scheduleStaff: ScheduleStaffListPayload;
+  scheduleTemplateApplyPreview: ApplyScheduleTemplatesPayload;
   sidebarBadgeSettings: SidebarBadgeSettingsPayload;
   sidebarBadges: Array<SidebarBadge>;
   tenantModuleOptions: Array<ModuleOption>;
@@ -4699,6 +4744,16 @@ export type QueryRolesArgs = {
 };
 
 
+export type QueryScheduleAutoRunPreviewArgs = {
+  input: ScheduleAutoRunRangeInput;
+};
+
+
+export type QueryScheduleAutoRunStatusArgs = {
+  input: ScheduleRosterInput;
+};
+
+
 export type QueryScheduleCalendarArgs = {
   input: ScheduleCalendarInput;
 };
@@ -4736,6 +4791,11 @@ export type QueryScheduleRulesArgs = {
 
 export type QueryScheduleStaffArgs = {
   input?: InputMaybe<ScheduleStaffListInput>;
+};
+
+
+export type QueryScheduleTemplateApplyPreviewArgs = {
+  input: ApplyScheduleTemplatesInput;
 };
 
 
@@ -5157,6 +5217,16 @@ export type RolesPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type RunScheduleAutoRunInput = {
+  conditions: Array<ScheduleAutoRunConditionInput>;
+  fillWeekTemplate?: InputMaybe<Scalars['Boolean']['input']>;
+  from: Scalars['String']['input'];
+  mode: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['String']['input'];
+};
+
 export type SaveDataScopeRuleInput = {
   combineOp?: DataScopeCombineOp;
   rules: Array<DataScopeRuleEntryInput>;
@@ -5266,9 +5336,60 @@ export type SaveWorkflowVersionDraftInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
+export type ScheduleApplyWeekTemplate = {
+  __typename?: 'ScheduleApplyWeekTemplate';
+  days: Array<Array<Scalars['ID']['output']>>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type ScheduleAutoRunConditionInput = {
   enabled: Scalars['Boolean']['input'];
   key: Scalars['String']['input'];
+};
+
+export type ScheduleAutoRunConditionSetting = {
+  __typename?: 'ScheduleAutoRunConditionSetting';
+  enabled: Scalars['Boolean']['output'];
+  key: Scalars['String']['output'];
+};
+
+export type ScheduleAutoRunPreviewPayload = {
+  __typename?: 'ScheduleAutoRunPreviewPayload';
+  autoCount: Scalars['Int']['output'];
+  demandCount: Scalars['Int']['output'];
+  fillableDays: Scalars['Int']['output'];
+  manualCount: Scalars['Int']['output'];
+  weekTemplate?: Maybe<ScheduleApplyWeekTemplate>;
+};
+
+export type ScheduleAutoRunRangeInput = {
+  from: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  to: Scalars['String']['input'];
+};
+
+export type ScheduleAutoRunStatusPayload = {
+  __typename?: 'ScheduleAutoRunStatusPayload';
+  canAutoRun: Scalars['Boolean']['output'];
+  conditions: Array<ScheduleAutoRunConditionSetting>;
+  latest?: Maybe<ScheduleAutoRunSummary>;
+  running: Scalars['Boolean']['output'];
+  weekTemplates: Array<ScheduleApplyWeekTemplate>;
+};
+
+export type ScheduleAutoRunSummary = {
+  __typename?: 'ScheduleAutoRunSummary';
+  addedDemandCount: Scalars['Int']['output'];
+  addedDemandDays: Scalars['Int']['output'];
+  at: Scalars['DateTime']['output'];
+  byName?: Maybe<Scalars['String']['output']>;
+  filledCount: Scalars['Int']['output'];
+  from: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  to: Scalars['String']['output'];
+  unfilledCount: Scalars['Int']['output'];
 };
 
 export type ScheduleCalendarDay = {
@@ -8566,6 +8687,52 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type ScheduleAutoRunSummaryFieldsFragment = { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number };
+
+export type ScheduleApplyTemplatesFieldsFragment = { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number };
+
+export type ScheduleAutoRunStatusQueryVariables = Exact<{
+  input: ScheduleRosterInput;
+}>;
+
+
+export type ScheduleAutoRunStatusQuery = { __typename?: 'Query', scheduleAutoRunStatus: { __typename?: 'ScheduleAutoRunStatusPayload', canAutoRun: boolean, running: boolean, latest?: { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number } | null, weekTemplates: Array<{ __typename?: 'ScheduleApplyWeekTemplate', id: string, name: string, days: Array<Array<string>> }>, conditions: Array<{ __typename?: 'ScheduleAutoRunConditionSetting', key: string, enabled: boolean }> } };
+
+export type ScheduleTemplateApplyPreviewQueryVariables = Exact<{
+  input: ApplyScheduleTemplatesInput;
+}>;
+
+
+export type ScheduleTemplateApplyPreviewQuery = { __typename?: 'Query', scheduleTemplateApplyPreview: { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number } };
+
+export type ApplyScheduleTemplatesMutationVariables = Exact<{
+  input: ApplyScheduleTemplatesInput;
+}>;
+
+
+export type ApplyScheduleTemplatesMutation = { __typename?: 'Mutation', applyScheduleTemplates: { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number } };
+
+export type ScheduleAutoRunPreviewQueryVariables = Exact<{
+  input: ScheduleAutoRunRangeInput;
+}>;
+
+
+export type ScheduleAutoRunPreviewQuery = { __typename?: 'Query', scheduleAutoRunPreview: { __typename?: 'ScheduleAutoRunPreviewPayload', demandCount: number, fillableDays: number, manualCount: number, autoCount: number, weekTemplate?: { __typename?: 'ScheduleApplyWeekTemplate', id: string, name: string } | null } };
+
+export type RunScheduleAutoRunMutationVariables = Exact<{
+  input: RunScheduleAutoRunInput;
+}>;
+
+
+export type RunScheduleAutoRunMutation = { __typename?: 'Mutation', runScheduleAutoRun: { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number } };
+
+export type ClearScheduleAutoAssignmentsMutationVariables = Exact<{
+  input: ScheduleAutoRunRangeInput;
+}>;
+
+
+export type ClearScheduleAutoAssignmentsMutation = { __typename?: 'Mutation', clearScheduleAutoAssignments: { __typename?: 'ClearScheduleAutoAssignmentsPayload', removedCount: number, deletedEntryIds: Array<string> } };
+
 export type ScheduleCheckItemFieldsFragment = { __typename?: 'ScheduleCheckItem', key: string, level: string, message: string, userId?: string | null, userName?: string | null, date: string, entryIds: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null, startAt?: string | null, endAt?: string | null, isOtherStore: boolean, orgName?: string | null, understaffed?: { __typename?: 'ScheduleCheckUnderstaffed', demandId: string, role: string, missing: number, available: number, dayOff: number, timeRange: number, occupied: number, cannotLead: number } | null };
 
 export type ScheduleCheckQueryVariables = Exact<{
@@ -10122,6 +10289,27 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const ScheduleAutoRunSummaryFieldsFragmentDoc = `
+    fragment ScheduleAutoRunSummaryFields on ScheduleAutoRunSummary {
+  id
+  at
+  byName
+  from
+  to
+  filledCount
+  unfilledCount
+  addedDemandCount
+  addedDemandDays
+}
+    `;
+export const ScheduleApplyTemplatesFieldsFragmentDoc = `
+    fragment ScheduleApplyTemplatesFields on ApplyScheduleTemplatesPayload {
+  createdCount
+  skippedSlots
+  filledDays
+  skippedDays
 }
     `;
 export const ScheduleCheckItemFieldsFragmentDoc = `
@@ -18935,6 +19123,204 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const ScheduleAutoRunStatusDocument = `
+    query ScheduleAutoRunStatus($input: ScheduleRosterInput!) {
+  scheduleAutoRunStatus(input: $input) {
+    canAutoRun
+    running
+    latest {
+      ...ScheduleAutoRunSummaryFields
+    }
+    weekTemplates {
+      id
+      name
+      days
+    }
+    conditions {
+      key
+      enabled
+    }
+  }
+}
+    ${ScheduleAutoRunSummaryFieldsFragmentDoc}`;
+
+export const useScheduleAutoRunStatusQuery = <
+      TData = ScheduleAutoRunStatusQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAutoRunStatusQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAutoRunStatusQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAutoRunStatusQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAutoRunStatusQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAutoRunStatus', variables],
+    queryFn: fetcher<ScheduleAutoRunStatusQuery, ScheduleAutoRunStatusQueryVariables>(client, ScheduleAutoRunStatusDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAutoRunStatusQuery.getKey = (variables: ScheduleAutoRunStatusQueryVariables) => ['ScheduleAutoRunStatus', variables];
+
+
+useScheduleAutoRunStatusQuery.fetcher = (client: GraphQLClient, variables: ScheduleAutoRunStatusQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAutoRunStatusQuery, ScheduleAutoRunStatusQueryVariables>(client, ScheduleAutoRunStatusDocument, variables, headers);
+
+export const ScheduleTemplateApplyPreviewDocument = `
+    query ScheduleTemplateApplyPreview($input: ApplyScheduleTemplatesInput!) {
+  scheduleTemplateApplyPreview(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+    ${ScheduleApplyTemplatesFieldsFragmentDoc}`;
+
+export const useScheduleTemplateApplyPreviewQuery = <
+      TData = ScheduleTemplateApplyPreviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleTemplateApplyPreviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleTemplateApplyPreviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleTemplateApplyPreviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleTemplateApplyPreviewQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleTemplateApplyPreview', variables],
+    queryFn: fetcher<ScheduleTemplateApplyPreviewQuery, ScheduleTemplateApplyPreviewQueryVariables>(client, ScheduleTemplateApplyPreviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleTemplateApplyPreviewQuery.getKey = (variables: ScheduleTemplateApplyPreviewQueryVariables) => ['ScheduleTemplateApplyPreview', variables];
+
+
+useScheduleTemplateApplyPreviewQuery.fetcher = (client: GraphQLClient, variables: ScheduleTemplateApplyPreviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleTemplateApplyPreviewQuery, ScheduleTemplateApplyPreviewQueryVariables>(client, ScheduleTemplateApplyPreviewDocument, variables, headers);
+
+export const ApplyScheduleTemplatesDocument = `
+    mutation ApplyScheduleTemplates($input: ApplyScheduleTemplatesInput!) {
+  applyScheduleTemplates(input: $input) {
+    ...ScheduleApplyTemplatesFields
+  }
+}
+    ${ScheduleApplyTemplatesFieldsFragmentDoc}`;
+
+export const useApplyScheduleTemplatesMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ApplyScheduleTemplatesMutation, TError, ApplyScheduleTemplatesMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ApplyScheduleTemplatesMutation, TError, ApplyScheduleTemplatesMutationVariables, TContext>(
+      {
+    mutationKey: ['ApplyScheduleTemplates'],
+    mutationFn: (variables?: ApplyScheduleTemplatesMutationVariables) => fetcher<ApplyScheduleTemplatesMutation, ApplyScheduleTemplatesMutationVariables>(client, ApplyScheduleTemplatesDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useApplyScheduleTemplatesMutation.fetcher = (client: GraphQLClient, variables: ApplyScheduleTemplatesMutationVariables, headers?: RequestInit['headers']) => fetcher<ApplyScheduleTemplatesMutation, ApplyScheduleTemplatesMutationVariables>(client, ApplyScheduleTemplatesDocument, variables, headers);
+
+export const ScheduleAutoRunPreviewDocument = `
+    query ScheduleAutoRunPreview($input: ScheduleAutoRunRangeInput!) {
+  scheduleAutoRunPreview(input: $input) {
+    demandCount
+    fillableDays
+    manualCount
+    autoCount
+    weekTemplate {
+      id
+      name
+    }
+  }
+}
+    `;
+
+export const useScheduleAutoRunPreviewQuery = <
+      TData = ScheduleAutoRunPreviewQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAutoRunPreviewQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAutoRunPreviewQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAutoRunPreviewQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAutoRunPreviewQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAutoRunPreview', variables],
+    queryFn: fetcher<ScheduleAutoRunPreviewQuery, ScheduleAutoRunPreviewQueryVariables>(client, ScheduleAutoRunPreviewDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAutoRunPreviewQuery.getKey = (variables: ScheduleAutoRunPreviewQueryVariables) => ['ScheduleAutoRunPreview', variables];
+
+
+useScheduleAutoRunPreviewQuery.fetcher = (client: GraphQLClient, variables: ScheduleAutoRunPreviewQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAutoRunPreviewQuery, ScheduleAutoRunPreviewQueryVariables>(client, ScheduleAutoRunPreviewDocument, variables, headers);
+
+export const RunScheduleAutoRunDocument = `
+    mutation RunScheduleAutoRun($input: RunScheduleAutoRunInput!) {
+  runScheduleAutoRun(input: $input) {
+    ...ScheduleAutoRunSummaryFields
+  }
+}
+    ${ScheduleAutoRunSummaryFieldsFragmentDoc}`;
+
+export const useRunScheduleAutoRunMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RunScheduleAutoRunMutation, TError, RunScheduleAutoRunMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RunScheduleAutoRunMutation, TError, RunScheduleAutoRunMutationVariables, TContext>(
+      {
+    mutationKey: ['RunScheduleAutoRun'],
+    mutationFn: (variables?: RunScheduleAutoRunMutationVariables) => fetcher<RunScheduleAutoRunMutation, RunScheduleAutoRunMutationVariables>(client, RunScheduleAutoRunDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRunScheduleAutoRunMutation.fetcher = (client: GraphQLClient, variables: RunScheduleAutoRunMutationVariables, headers?: RequestInit['headers']) => fetcher<RunScheduleAutoRunMutation, RunScheduleAutoRunMutationVariables>(client, RunScheduleAutoRunDocument, variables, headers);
+
+export const ClearScheduleAutoAssignmentsDocument = `
+    mutation ClearScheduleAutoAssignments($input: ScheduleAutoRunRangeInput!) {
+  clearScheduleAutoAssignments(input: $input) {
+    removedCount
+    deletedEntryIds
+  }
+}
+    `;
+
+export const useClearScheduleAutoAssignmentsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ClearScheduleAutoAssignmentsMutation, TError, ClearScheduleAutoAssignmentsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ClearScheduleAutoAssignmentsMutation, TError, ClearScheduleAutoAssignmentsMutationVariables, TContext>(
+      {
+    mutationKey: ['ClearScheduleAutoAssignments'],
+    mutationFn: (variables?: ClearScheduleAutoAssignmentsMutationVariables) => fetcher<ClearScheduleAutoAssignmentsMutation, ClearScheduleAutoAssignmentsMutationVariables>(client, ClearScheduleAutoAssignmentsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useClearScheduleAutoAssignmentsMutation.fetcher = (client: GraphQLClient, variables: ClearScheduleAutoAssignmentsMutationVariables, headers?: RequestInit['headers']) => fetcher<ClearScheduleAutoAssignmentsMutation, ClearScheduleAutoAssignmentsMutationVariables>(client, ClearScheduleAutoAssignmentsDocument, variables, headers);
 
 export const ScheduleCheckDocument = `
     query ScheduleCheck($input: ScheduleRosterInput!) {

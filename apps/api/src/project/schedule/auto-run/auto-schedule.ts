@@ -176,7 +176,10 @@ interface Option {
   random: number;
 }
 
-const PERSON_EVALUATORS: readonly [string, ScheduleRuleEvaluator<never>][] = [
+const PERSON_EVALUATORS: readonly [
+  string,
+  ScheduleRuleEvaluator<PersonWorkData>,
+][] = [
   ["maxConsecutiveWorkDays", maxConsecutiveWorkDaysEvaluator],
   ["minRestBetweenShifts", minRestBetweenShiftsEvaluator],
   ["maxDailyWorkHours", maxDailyWorkHoursEvaluator],

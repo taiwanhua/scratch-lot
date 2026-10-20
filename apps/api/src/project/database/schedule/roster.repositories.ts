@@ -6,6 +6,7 @@ import {
   BaseRepository,
   type RepositoryModel,
 } from "../../../database/base.repository";
+import { ScheduleAutoRun } from "./schedule-auto-run.schema";
 import { ScheduleChange } from "./schedule-change.schema";
 import { ScheduleDemand } from "./schedule-demand.schema";
 import { ScheduleEntryLock } from "./schedule-entry-lock.schema";
@@ -13,6 +14,7 @@ import { ScheduleEntry } from "./schedule-entry.schema";
 import { SchedulePeriod } from "./schedule-period.schema";
 import { ScheduleTaskAssignment } from "./schedule-task-assignment.schema";
 
+export type ScheduleAutoRunDocument = HydratedDocument<ScheduleAutoRun>;
 export type ScheduleChangeDocument = HydratedDocument<ScheduleChange>;
 export type ScheduleDemandDocument = HydratedDocument<ScheduleDemand>;
 export type SchedulePeriodDocument = HydratedDocument<SchedulePeriod>;
@@ -103,6 +105,20 @@ export class ScheduleChangesRepository extends BaseRepository<
   constructor(
     @InjectModel(ScheduleChange.name)
     model: RepositoryModel<ScheduleChange, ScheduleChangeDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** schedule_auto_runs(自動排班的執行紀錄)。 */
+@Injectable()
+export class ScheduleAutoRunsRepository extends BaseRepository<
+  ScheduleAutoRun,
+  ScheduleAutoRunDocument
+> {
+  constructor(
+    @InjectModel(ScheduleAutoRun.name)
+    model: RepositoryModel<ScheduleAutoRun, ScheduleAutoRunDocument>,
   ) {
     super(model);
   }

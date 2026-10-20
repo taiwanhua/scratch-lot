@@ -512,7 +512,7 @@ export class ScheduleCheckService implements OnModuleInit {
    * 每個人的規則設定(人的規則用他主要分店的設定;沒有主要分店用這家店的)。
    * 主要分店不一定在操作者的可見範圍:以租戶為邊界讀它的生效設定(同畫休)。
    */
-  private async personSettings(
+  async personSettings(
     org: ScheduleOrg,
     storeSettings: ReadonlyMap<string, EffectiveRuleSetting> | null,
     userIds: readonly string[],

@@ -33,6 +33,7 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   editDayOffs: "schedule.manage.edit-day-offs",
   myEditDayOffs: "schedule.my.edit-day-offs",
   publish: "schedule.manage.publish",
+  autoRun: "schedule.manage.auto-run",
 } as const;
 
 export const ALL_SCHEDULE_TEST_PERMISSIONS = Object.values(

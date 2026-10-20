@@ -4,6 +4,8 @@ import { DatabaseModule } from "../../database/database.module";
 import { FieldOptionsModule } from "../../fields/field-options.module";
 import { NotificationsModule } from "../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
+import { ScheduleAutoRunResolver } from "./auto-run/schedule-auto-run.resolver";
+import { ScheduleAutoRunService } from "./auto-run/schedule-auto-run.service";
 import { ScheduleCalendarResolver } from "./calendar/schedule-calendar.resolver";
 import { ScheduleCalendarService } from "./calendar/schedule-calendar.service";
 import { ScheduleChangesService } from "./changes/schedule-changes.service";
@@ -70,6 +72,8 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleChangesService,
     SchedulePublishService,
     ScheduleCheckResolver,
+    ScheduleAutoRunService,
+    ScheduleAutoRunResolver,
   ],
   exports: [
     SchedulePermissions,

@@ -1,5 +1,6 @@
 import type { DatabaseRegistration } from "../../../database/registration";
 import {
+  ScheduleAutoRunsRepository,
   ScheduleChangesRepository,
   ScheduleDemandsRepository,
   ScheduleEntriesRepository,
@@ -7,6 +8,11 @@ import {
   SchedulePeriodsRepository,
   ScheduleTaskAssignmentsRepository,
 } from "./roster.repositories";
+import {
+  SCHEDULE_AUTO_RUNS_COLLECTION,
+  ScheduleAutoRun,
+  ScheduleAutoRunSchema,
+} from "./schedule-auto-run.schema";
 import {
   SCHEDULE_CHANGES_COLLECTION,
   ScheduleChange,
@@ -81,9 +87,16 @@ const TABLES = [
     schema: ScheduleChangeSchema,
     provider: ScheduleChangesRepository,
   },
+  {
+    key: "schedule-auto-runs",
+    name: ScheduleAutoRun.name,
+    collection: SCHEDULE_AUTO_RUNS_COLLECTION,
+    schema: ScheduleAutoRunSchema,
+    provider: ScheduleAutoRunsRepository,
+  },
 ] as const;
 
-/** 排班表的資料登記:人力需求、月份狀態、排班、排班填進執行任務四張租戶表(歸屬欄 `orgId` = 分店),加上排班寫入的「人」守門表(歸屬欄 = 租戶頂層)與發布後的排班異動(歸屬欄 = 分店)。 */
+/** 排班表的資料登記:人力需求、月份狀態、排班、排班填進執行任務四張租戶表(歸屬欄 `orgId` = 分店),加上排班寫入的「人」守門表(歸屬欄 = 租戶頂層)、發布後的排班異動與自動排班的執行紀錄(歸屬欄 = 分店)。 */
 export const SCHEDULE_ROSTER_REGISTRATION: DatabaseRegistration = {
   key: "schedule-roster",
   models: TABLES.map((table) => ({

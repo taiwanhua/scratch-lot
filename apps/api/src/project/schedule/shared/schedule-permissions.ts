@@ -19,6 +19,8 @@ export const SCHEDULE_PERMISSIONS = {
   viewDayOffs: "schedule.manage.view-day-offs",
   editDayOffs: "schedule.manage.edit-day-offs",
   publish: "schedule.manage.publish",
+  autoRun: "schedule.manage.auto-run",
+  manageEdit: "schedule.manage.edit",
 } as const;
 
 /**

@@ -92,7 +92,8 @@ export function entryModelOf(
                 role: task.role,
                 taskKey: task.taskKey,
                 source: item.source,
-                reason: item.reason,
+                // 手動改過(來源變手動)的不再顯示自動排入的理由;資料庫照留著追查
+                reason: item.source === "auto" ? item.reason : null,
               },
             ];
       }),
