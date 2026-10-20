@@ -1940,6 +1940,7 @@ type LotteryInvestigationRow {
   responsibleOrg: LotteryInventoryRef
   status: String!
   tickets: [LotteryInventoryTicket!]!
+  unitPrice: Int!
 }
 
 type LotteryInvestigationsPayload {

@@ -324,9 +324,7 @@ export class InventoryViewService {
     const games = await this.games.findMany(operator, {
       _id: { $in: bookRecords.map((book) => book.gameId) },
     });
-    const gameName = new Map(
-      games.map((game) => [String(game._id), game.name]),
-    );
+    const gameOf = new Map(games.map((game) => [String(game._id), game]));
     const bookOf = new Map(bookRecords.map((book) => [String(book._id), book]));
     const names = await this.namesOf(operator, missing, events);
     const rows: LotteryInvestigationRowModel[] = [];
@@ -351,7 +349,8 @@ export class InventoryViewService {
           bookId,
           bookNo: book?.bookNo ?? first.bookNo,
           gameCode: book?.gameCode ?? "",
-          gameName: gameName.get(String(first.gameId)) ?? "",
+          gameName: gameOf.get(String(first.gameId))?.name ?? "",
+          unitPrice: gameOf.get(String(first.gameId))?.unitPrice ?? 0,
           status,
           responsibleOrg: ref(first.responsibleOrgId, names.orgs),
           refType: latest?.refType ?? null,

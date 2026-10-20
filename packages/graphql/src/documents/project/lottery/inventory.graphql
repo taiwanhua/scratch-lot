@@ -133,6 +133,7 @@ fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   bookNo
   gameCode
   gameName
+  unitPrice
   status
   responsibleOrg {
     ...LotteryInventoryRefFields

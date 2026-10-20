@@ -388,6 +388,9 @@ export class LotteryInvestigationRowModel {
   @Field(() => String)
   gameName!: string;
 
+  @Field(() => Int)
+  unitPrice!: number;
+
   /** `investigating` / `lost`。 */
   @Field(() => String)
   status!: string;
