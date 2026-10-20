@@ -152,7 +152,7 @@ export const SettlementPanel = ({ moduleKey, refId }: SettlementPanelProps) => {
     return typeLabel(record) + suffix;
   };
   const timeText = (record: SettlementRecord) =>
-    formatTemporal(record.occurredAt, { type: "datetime", timezone }).slice(5);
+    formatTemporal(record.occurredAt, { type: "monthDayTime", timezone });
   const pendingText = (row: Extract<HistoryRow, { kind: "pending" }>) =>
     t(buttonLabelKey(roleOf(row.side), row.button));
   const rowTitle = (row: HistoryRow) => {

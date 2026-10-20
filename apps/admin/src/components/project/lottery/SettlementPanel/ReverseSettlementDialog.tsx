@@ -92,9 +92,9 @@ export const ReverseSettlementDialog = ({
           <Typography variant="body2">
             {t("reverseForm.originalValue", {
               date: formatTemporal(record.occurredAt, {
-                type: "date",
+                type: "monthDay",
                 timezone,
-              }).slice(5),
+              }),
               type: typeLabel,
               amount: moneyText(record.amount),
             })}
