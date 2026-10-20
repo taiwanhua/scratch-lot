@@ -22,7 +22,7 @@ export class SerialCounter {
   @Prop({ type: Types.ObjectId, default: null })
   tenantId!: Types.ObjectId | null;
 
-  /** 哪一種單號(表單:`form:<formKey>`;其他資料由呼叫端自取,例 `lottery-purchase`)。 */
+  /** 哪一種單號(表單:`form:<formKey>`;其他資料由呼叫端自取,例 `purchase-order`)。 */
   @Prop({ type: String, required: true })
   key!: string;
 

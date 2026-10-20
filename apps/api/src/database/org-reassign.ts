@@ -1,5 +1,5 @@
 // 搬家(`BaseRepository.reassignOrg`)的組織檢查:讀原生 orgs(同 `share-orgs.ts` 與
-// `BaseRepository.withModuleTenant` 的讀法)—— 搬入的組織可以是操作者看不到的(調貨給別店),
+// `BaseRepository.withModuleTenant` 的讀法)—— 搬入的組織可以是操作者看不到的(把資料移給別的分店),
 // orgs 掛治理類過濾、操作者不一定管得到;只取 ancestors、條件明列 id。
 //
 // 資料層直接丟 GraphQLError(VALIDATION_FAILED)的第二個例外(第一個是共用清單,理由同 `share-orgs.ts`):

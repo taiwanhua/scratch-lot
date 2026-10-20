@@ -672,7 +672,7 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
    *
    * - 被搬的資料要在操作者的**可見範圍**內(寫入範圍:共用進來、只能看的不算)
    * - 新組織要存在、**同租戶**、不能是根組織,不合法 → `VALIDATION_FAILED`(`fields: ["orgId"]`);
-   *   新組織**可以**是操作者看不到的(調貨給別店)
+   *   新組織**可以**是操作者看不到的(把資料移給別的分店)
    * - 有 `tenantId` 欄的表照新組織重新推導 `tenantId`(同租戶,值不變)
    * - 條件更新:`filter` 可帶版本 / 狀態等條件;`options.update` 同一次寫入順便改其他欄位
    * - 寫一筆稽核(`data.reassign-org`:誰、哪張表哪一筆、從哪個組織搬到哪個組織),與搬家同一個 session

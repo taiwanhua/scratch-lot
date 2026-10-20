@@ -34,7 +34,7 @@ export interface AuditRecordInput {
 
 /**
  * 稽核(ADR-0004):授權相關變更由**執行動作的模組層**呼叫本服務寫入 `audit_logs`,
- * RelationService / BaseRepository 不自己記。只增不改 —
+ * RelationService / BaseRepository 不自己記(例外:`BaseRepository.reassignOrg` 自己寫搬家稽核,見 ADR-0005)。只增不改 —
  * 本服務只有 `record` 一個出口,資料層的更新 / 刪除也被 AuditLogsRepository 封死。
  *
  * 操作者一律由呼叫端傳入(與 BaseRepository 同一約定:每個公開方法以操作者上下文開頭),
