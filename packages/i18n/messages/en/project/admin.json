@@ -923,5 +923,295 @@
       },
       "panelTitleWithSerial": "{serial} · {branch}"
     }
+  },
+  "lotteryAccounts": {
+    "badgeDescription": "Number of outstanding settlements (documents to pay, refund or receive)",
+    "tabs": {
+      "aria": "Accounts tabs",
+      "bankAccounts": "Bank accounts",
+      "cash": "Cash ledger",
+      "outstanding": "Outstanding"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "direction": {
+      "in": "In",
+      "out": "Out"
+    },
+    "transactionTypes": {
+      "deposit": "Deposit",
+      "redemption_income": "Prize income",
+      "purchase_income": "Purchase income",
+      "transfer_income": "Transfer income",
+      "withdrawal": "Withdrawal",
+      "license_rent": "License rent",
+      "purchase_expense": "Purchase expense",
+      "transfer_expense": "Transfer expense",
+      "adjustment": "Adjustment",
+      "other": "Other"
+    },
+    "movementTypes": {
+      "withdraw": "Withdraw",
+      "deposit": "Deposit",
+      "bank_deposit": "Bank deposit",
+      "transfer_out": "Transfer expense",
+      "transfer_in": "Transfer income",
+      "refund": "Refund",
+      "correction_increase": "Cash correction (+)",
+      "correction_decrease": "Cash correction (−)"
+    },
+    "places": {
+      "drawer": "Drawer",
+      "vault": "Vault",
+      "bank": "Bank",
+      "external": "External"
+    },
+    "withdrawReasons": {
+      "opening_float": "Opening float",
+      "change": "Change",
+      "other": "Other"
+    },
+    "bankAccounts": {
+      "new": "+ New account",
+      "columns": {
+        "accountName": "Account name",
+        "bank": "Bank / branch",
+        "accountNo": "Account no.",
+        "usageOrgs": "Used by",
+        "balance": "Balance",
+        "status": "Status"
+      },
+      "accountNoTail": "…{tail}",
+      "includeDescendants": "{name} (and below)",
+      "empty": "No bank accounts yet",
+      "listAria": "Bank accounts",
+      "negative": "Negative balance"
+    },
+    "accountForm": {
+      "createTitle": "New account",
+      "fields": {
+        "bankCode": "Bank code",
+        "branchName": "Branch",
+        "accountNo": "Account no.",
+        "accountName": "Account name",
+        "openingBalance": "Opening balance",
+        "openingDate": "Opening date",
+        "note": "Note",
+        "shareOrgs": "Organizations"
+      },
+      "usageTitle": "Used by (multiple allowed)",
+      "lockHint": "Opening balance and date are locked once there are transactions.",
+      "bankCodeHint": "3 digits",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "accountView": {
+      "usage": "Used by: {names}",
+      "usageNone": "Used by: (not set)",
+      "setUsage": "Set organizations",
+      "record": "Record transaction",
+      "balance": "Balance",
+      "periodIn": "In (period)",
+      "periodOut": "Out (period)",
+      "filters": {
+        "from": "From",
+        "to": "To",
+        "type": "Type",
+        "all": "All"
+      },
+      "columns": {
+        "occurredAt": "Time",
+        "type": "Type",
+        "summary": "Summary",
+        "branch": "Branch",
+        "in": "In",
+        "out": "Out",
+        "balanceAfter": "Balance",
+        "actions": "Actions"
+      },
+      "reverse": "Reverse",
+      "reversed": "Reversed",
+      "reversal": "Reversal",
+      "empty": "No transactions in this period",
+      "listAria": "Transactions",
+      "settings": "Account settings",
+      "delete": "Delete account",
+      "deleteHint": "Accounts with transactions can only be deactivated",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "save": "Save",
+      "loading": "Loading",
+      "deleteDialog": {
+        "title": "Delete account?",
+        "body": "“{label}” will disappear from every list. This cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "usageDialog": {
+        "title": "Set organizations",
+        "hint": "Pick the top-level organization with “and below” = all branches",
+        "cancel": "Cancel",
+        "save": "Save"
+      }
+    },
+    "recordForm": {
+      "title": "Record transaction",
+      "fields": {
+        "type": "Type",
+        "direction": "Direction",
+        "document": "Document",
+        "documentRequired": "Document (required; only those to refund or receive)",
+        "documentOptional": "Document (optional)",
+        "amount": "Amount",
+        "occurredAt": "Time",
+        "branchOrgId": "Branch",
+        "summary": "Summary",
+        "note": "Note"
+      },
+      "documentOption": "{docNo} {label} · {due}",
+      "noDocument": "No documents to refund or receive",
+      "hint": "Adjustment and other need a direction and a summary.",
+      "cancel": "Cancel",
+      "submit": "Record"
+    },
+    "reverseForm": {
+      "title": "Reverse",
+      "original": "Original",
+      "originalValue": "{date} {type} {amount}",
+      "reason": "Reason (required)",
+      "hint": "Writes an opposite transaction of the same amount; the original is kept.",
+      "cancel": "Cancel",
+      "submit": "Reverse"
+    },
+    "cash": {
+      "org": "Branch",
+      "vault": "Vault",
+      "vaultBaseline": "From the {date} closing count",
+      "vaultFromZero": "No closing yet, counted from 0",
+      "filters": {
+        "type": "Type",
+        "cashPoint": "Cash point",
+        "date": "Date",
+        "all": "All"
+      },
+      "columns": {
+        "occurredAt": "Time",
+        "type": "Type",
+        "route": "From → to",
+        "cashPoint": "Cash point",
+        "amount": "Amount",
+        "document": "Document"
+      },
+      "route": "{from} → {to}",
+      "routeWithPayee": "{from} → {to} ({payee})",
+      "reversal": " (reversal)",
+      "empty": "No cash movements on this day",
+      "listAria": "Cash movements",
+      "pickOrg": "Pick a branch first"
+    },
+    "outstanding": {
+      "columns": {
+        "document": "Document",
+        "branch": "Branch",
+        "counterparty": "Counterparty",
+        "payable": "Payable",
+        "net": "Paid",
+        "diff": "Difference",
+        "days": "Days",
+        "actions": "Actions"
+      },
+      "documentLabel": "{docNo} {label}",
+      "kinds": {
+        "to_pay": "To pay {amount}",
+        "to_refund": "To refund {amount}",
+        "to_receive": "To receive {amount}"
+      },
+      "empty": "Nothing outstanding",
+      "listAria": "Outstanding settlements"
+    },
+    "settlement": {
+      "title": "Settlement",
+      "payable": "Payable",
+      "transferAmount": "Transfer amount",
+      "paid": "Paid (net)",
+      "received": "Received (net)",
+      "diff": "Difference",
+      "settled": "Settled",
+      "pendingPayee": "{amount} waiting for the shipping store",
+      "history": "History",
+      "historyColumns": {
+        "occurredAt": "Time",
+        "side": "Store",
+        "type": "Type",
+        "method": "Method",
+        "amount": "Amount",
+        "handler": "Handled by",
+        "createdBy": "Recorded by"
+      },
+      "notRecorded": "Not recorded yet",
+      "methods": {
+        "bank": "Bank",
+        "cash": "Cash"
+      },
+      "buttons": {
+        "payer": {
+          "out": "Pay",
+          "in": "Refund received"
+        },
+        "payee": {
+          "in": "Receive",
+          "out": "Refund"
+        }
+      },
+      "reverse": "Reverse",
+      "reversed": "Reversed",
+      "historyAria": "Settlement history"
+    },
+    "settleForm": {
+      "document": "Document",
+      "documentValue": "{docNo} {label}",
+      "payable": "Payable",
+      "transferAmount": "Transfer amount",
+      "net": "Paid / received (net)",
+      "fields": {
+        "method": "Method",
+        "accountId": "Account",
+        "cashSource": "Source",
+        "amount": "Amount",
+        "handler": "Handled by",
+        "handlerRequired": "Handled by (required for cash)",
+        "note": "Note"
+      },
+      "sources": {
+        "vault": "Vault",
+        "drawer": "Cash point drawer (open shift)"
+      },
+      "noAccount": "No account available for this branch",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
+    },
+    "feedback": {
+      "createSuccess": "Created",
+      "saveSuccess": "Saved",
+      "deleteSuccess": "Deleted",
+      "recordSuccess": "Recorded",
+      "reverseSuccess": "Reversed"
+    },
+    "errors": {
+      "FORBIDDEN": "You don't have permission to do this",
+      "NOT_FOUND": "Not found",
+      "VALIDATION_FAILED": "Some fields are invalid",
+      "BANK_ACCOUNT_DUPLICATE": "An account with this bank code and number already exists",
+      "BANK_ACCOUNT_HAS_TRANSACTIONS": "This account has transactions: the opening balance and date are locked and it cannot be deleted (deactivate it instead)",
+      "BANK_ACCOUNT_INACTIVE": "This account is inactive",
+      "ALREADY_REVERSED": "Already reversed",
+      "SETTLEMENT_UNKNOWN": "This document has no settlement",
+      "SETTLEMENT_NOTHING_DUE": "Nothing is due on this document; please refresh",
+      "BANK_ACCOUNT_NOT_USABLE": "This account is not used by this branch",
+      "NO_OPEN_SHIFT": "This cash point has no open shift",
+      "UNEXPECTED": "Something went wrong, please try again"
+    }
   }
 }

@@ -923,5 +923,295 @@
       },
       "panelTitleWithSerial": "{serial} · {branch}"
     }
+  },
+  "lotteryAccounts": {
+    "badgeDescription": "待結清款項的筆數(有待付、待退、待收的單據)",
+    "tabs": {
+      "aria": "帳戶管理分頁",
+      "bankAccounts": "銀行帳戶",
+      "cash": "即時現金帳",
+      "outstanding": "待結清款項"
+    },
+    "status": {
+      "active": "使用中",
+      "inactive": "停用"
+    },
+    "direction": {
+      "in": "收",
+      "out": "支"
+    },
+    "transactionTypes": {
+      "deposit": "存入",
+      "redemption_income": "兌獎入帳",
+      "purchase_income": "批貨收入",
+      "transfer_income": "調貨收入",
+      "withdrawal": "提領",
+      "license_rent": "牌租",
+      "purchase_expense": "批貨支出",
+      "transfer_expense": "調貨支出",
+      "adjustment": "調整",
+      "other": "其他"
+    },
+    "movementTypes": {
+      "withdraw": "出庫",
+      "deposit": "投庫",
+      "bank_deposit": "存銀行",
+      "transfer_out": "調貨支出",
+      "transfer_in": "調貨收入",
+      "refund": "退貨退款",
+      "correction_increase": "現金更正(增加)",
+      "correction_decrease": "現金更正(減少)"
+    },
+    "places": {
+      "drawer": "抽屜",
+      "vault": "小金庫",
+      "bank": "銀行",
+      "external": "外部"
+    },
+    "withdrawReasons": {
+      "opening_float": "開班零用金",
+      "change": "補零錢",
+      "other": "其他"
+    },
+    "bankAccounts": {
+      "new": "+ 新增帳戶",
+      "columns": {
+        "accountName": "戶名",
+        "bank": "銀行 / 分行",
+        "accountNo": "帳號",
+        "usageOrgs": "使用組織",
+        "balance": "餘額",
+        "status": "狀態"
+      },
+      "accountNoTail": "末 {tail}",
+      "includeDescendants": "{name}(含下層)",
+      "empty": "還沒有銀行帳戶",
+      "listAria": "銀行帳戶列表",
+      "negative": "餘額為負數"
+    },
+    "accountForm": {
+      "createTitle": "新增帳戶",
+      "fields": {
+        "bankCode": "銀行代碼",
+        "branchName": "分行",
+        "accountNo": "帳號",
+        "accountName": "戶名",
+        "openingBalance": "期初餘額",
+        "openingDate": "期初日期",
+        "note": "備註",
+        "shareOrgs": "組織"
+      },
+      "usageTitle": "使用組織(可以多個)",
+      "lockHint": "有交易後期初餘額、期初日期鎖定。",
+      "bankCodeHint": "3 碼數字",
+      "cancel": "取消",
+      "create": "新增"
+    },
+    "accountView": {
+      "usage": "使用組織:{names}",
+      "usageNone": "使用組織:(未設定)",
+      "setUsage": "設定使用組織",
+      "record": "登記交易",
+      "balance": "目前餘額",
+      "periodIn": "期間收",
+      "periodOut": "期間支",
+      "filters": {
+        "from": "期間起",
+        "to": "期間迄",
+        "type": "類型",
+        "all": "全部"
+      },
+      "columns": {
+        "occurredAt": "時間",
+        "type": "類型",
+        "summary": "摘要",
+        "branch": "歸屬分店",
+        "in": "收",
+        "out": "支",
+        "balanceAfter": "餘額",
+        "actions": "操作"
+      },
+      "reverse": "沖正",
+      "reversed": "已沖正",
+      "reversal": "沖正",
+      "empty": "這段期間沒有交易",
+      "listAria": "交易清單",
+      "settings": "帳戶設定",
+      "delete": "刪除帳戶",
+      "deleteHint": "有交易的帳戶不能刪除,只能停用",
+      "deactivate": "停用帳戶",
+      "activate": "重新啟用",
+      "save": "儲存",
+      "loading": "載入中",
+      "deleteDialog": {
+        "title": "刪除帳戶?",
+        "body": "刪除「{label}」後就不會出現在任何清單裡,這個動作不能復原。",
+        "confirm": "刪除",
+        "cancel": "取消"
+      },
+      "usageDialog": {
+        "title": "設定使用組織",
+        "hint": "選最上層組織並勾「含下層」= 全部分店",
+        "cancel": "取消",
+        "save": "儲存"
+      }
+    },
+    "recordForm": {
+      "title": "登記交易",
+      "fields": {
+        "type": "類型",
+        "direction": "方向",
+        "document": "單據",
+        "documentRequired": "單據(必填,只列有待退或待收的)",
+        "documentOptional": "單據(選填)",
+        "amount": "金額",
+        "occurredAt": "時間",
+        "branchOrgId": "歸屬分店",
+        "summary": "摘要",
+        "note": "備註"
+      },
+      "documentOption": "{docNo} {label} · {due}",
+      "noDocument": "沒有待退或待收的單據",
+      "hint": "調整、其他要選方向,說明必填。",
+      "cancel": "取消",
+      "submit": "登記"
+    },
+    "reverseForm": {
+      "title": "沖正",
+      "original": "原交易",
+      "originalValue": "{date} {type} {amount}",
+      "reason": "原因(必填)",
+      "hint": "會寫一筆相反方向、同金額的交易,原交易保留。",
+      "cancel": "取消",
+      "submit": "沖正"
+    },
+    "cash": {
+      "org": "分店",
+      "vault": "小金庫",
+      "vaultBaseline": "起算:{date} 日結清點",
+      "vaultFromZero": "起算:還沒有日結,從 0 起算",
+      "filters": {
+        "type": "類型",
+        "cashPoint": "收銀點",
+        "date": "日期",
+        "all": "全部"
+      },
+      "columns": {
+        "occurredAt": "時間",
+        "type": "類型",
+        "route": "從 → 到",
+        "cashPoint": "收銀點",
+        "amount": "金額",
+        "document": "單據"
+      },
+      "route": "{from} → {to}",
+      "routeWithPayee": "{from} → {to}({payee})",
+      "reversal": "(沖正)",
+      "empty": "這一天沒有流水",
+      "listAria": "現金流水",
+      "pickOrg": "請先選分店"
+    },
+    "outstanding": {
+      "columns": {
+        "document": "單據",
+        "branch": "分店",
+        "counterparty": "對象",
+        "payable": "應付",
+        "net": "已付",
+        "diff": "差額",
+        "days": "已過天數",
+        "actions": "操作"
+      },
+      "documentLabel": "{docNo} {label}",
+      "kinds": {
+        "to_pay": "待付 {amount}",
+        "to_refund": "待退 {amount}",
+        "to_receive": "待收 {amount}"
+      },
+      "empty": "沒有待結清的款項",
+      "listAria": "待結清款項"
+    },
+    "settlement": {
+      "title": "結算",
+      "payable": "應付",
+      "transferAmount": "調貨金額",
+      "paid": "已付淨額",
+      "received": "已收淨額",
+      "diff": "差額",
+      "settled": "已結清",
+      "pendingPayee": "{amount} 待出貨店入帳",
+      "history": "收付歷程",
+      "historyColumns": {
+        "occurredAt": "時間",
+        "side": "哪一店",
+        "type": "類型",
+        "method": "方式",
+        "amount": "金額",
+        "handler": "經手 / 收款人",
+        "createdBy": "登記人"
+      },
+      "notRecorded": "尚未登記",
+      "methods": {
+        "bank": "銀行",
+        "cash": "現金"
+      },
+      "buttons": {
+        "payer": {
+          "out": "付款",
+          "in": "收到退款"
+        },
+        "payee": {
+          "in": "收款",
+          "out": "退款"
+        }
+      },
+      "reverse": "沖正",
+      "reversed": "已沖正",
+      "historyAria": "收付歷程"
+    },
+    "settleForm": {
+      "document": "單據",
+      "documentValue": "{docNo} {label}",
+      "payable": "應付",
+      "transferAmount": "調貨金額",
+      "net": "已付 / 已收淨額",
+      "fields": {
+        "method": "付款方式",
+        "accountId": "帳戶",
+        "cashSource": "來源",
+        "amount": "金額",
+        "handler": "經手人 / 收款人",
+        "handlerRequired": "經手人 / 收款人(現金必填)",
+        "note": "備註"
+      },
+      "sources": {
+        "vault": "小金庫",
+        "drawer": "收銀點抽屜(開著的班)"
+      },
+      "noAccount": "沒有這家分店可用的帳戶",
+      "cancel": "取消",
+      "confirm": "確認"
+    },
+    "feedback": {
+      "createSuccess": "已新增",
+      "saveSuccess": "已儲存",
+      "deleteSuccess": "已刪除",
+      "recordSuccess": "已登記",
+      "reverseSuccess": "已沖正"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這筆資料",
+      "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
+      "BANK_ACCOUNT_DUPLICATE": "同一個銀行代碼與帳號已經有帳戶",
+      "BANK_ACCOUNT_HAS_TRANSACTIONS": "這個帳戶已有交易:期初餘額、期初日期不能改,也不能刪除(可以停用)",
+      "BANK_ACCOUNT_INACTIVE": "帳戶已停用,不能登記交易",
+      "ALREADY_REVERSED": "這筆已經沖正過了",
+      "SETTLEMENT_UNKNOWN": "這張單據沒有收付",
+      "SETTLEMENT_NOTHING_DUE": "這張單據目前沒有要結清的金額,請重新整理",
+      "BANK_ACCOUNT_NOT_USABLE": "這個帳戶的使用組織不含這家分店",
+      "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
   }
 }

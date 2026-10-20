@@ -1,3 +1,6 @@
+import { AccountsPage } from "@/pages/project/lottery/accounts/AccountsPage/AccountsPage";
+import { BankAccountViewPage } from "@/pages/project/lottery/accounts/BankAccountViewPage/BankAccountViewPage";
+import { ACCOUNTS_MODULE_KEYS } from "@/pages/project/lottery/accounts/accounts-config";
 import { ContactFormPage } from "@/pages/project/lottery/dealers/ContactFormPage/ContactFormPage";
 import { ContactViewPage } from "@/pages/project/lottery/dealers/ContactViewPage/ContactViewPage";
 import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/DealerFormPage";
@@ -43,6 +46,12 @@ export const projectModulePages: ModulePageSource = {
     // 班表管理(規格 3.1):我的班表、排班設定是固定頁(頁內分頁)
     { key: "schedule.my", Page: ScheduleMyPage },
     { key: "schedule.settings", Page: ScheduleSettingsPage },
+    // 帳戶管理(規格第 9 章、10.1–10.3):分頁頁 + 銀行帳戶詳情
+    { key: ACCOUNTS_MODULE_KEYS.list, Page: AccountsPage },
+    {
+      key: ACCOUNTS_MODULE_KEYS.bankAccountViewPage,
+      Page: BankAccountViewPage,
+    },
   ],
   forms: [
     // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
