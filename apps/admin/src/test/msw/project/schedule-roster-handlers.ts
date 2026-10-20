@@ -60,6 +60,8 @@ export const scheduleRosterWorld = (
     demands: [] as SaveScheduleDemandMutationVariables["input"][],
     entries: [] as SaveScheduleEntryMutationVariables["input"][],
     removedDays: [] as string[],
+    /** 排班表查詢的 input(週檢視跨月多讀的 from / to) */
+    queries: [] as ScheduleRosterQueryVariables["input"][],
   };
 
   const ensure = (month: string) => {
@@ -130,6 +132,7 @@ export const scheduleRosterWorld = (
   const handlers = [
     api.query("ScheduleRoster", ({ variables }) => {
       const { input } = variables as ScheduleRosterQueryVariables;
+      inputs.queries.push(input);
       ensure(input.month);
       return HttpResponse.json({
         data: {

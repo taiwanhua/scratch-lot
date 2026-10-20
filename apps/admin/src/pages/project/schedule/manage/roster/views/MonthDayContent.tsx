@@ -86,6 +86,7 @@ export const MonthDayContent = ({
               <Box
                 key={demand.id}
                 component="span"
+                data-demand-dot={dotToneOf(tone)}
                 sx={demandDotSx(dotToneOf(tone))}
               />
             );
