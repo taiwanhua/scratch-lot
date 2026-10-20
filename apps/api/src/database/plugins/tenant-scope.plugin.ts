@@ -12,7 +12,7 @@ import type {
   OperatorOrgScope,
   QueryScope,
 } from "../operator-context";
-import { getQueryScope, isCrossTenantAggregate } from "../operator-context";
+import { getQueryScope } from "../operator-context";
 import { getDataScopeRuleProvider } from "./data-scope-provider";
 
 /**
@@ -205,10 +205,6 @@ export function tenantScopePlugin(
   });
   // aggregate 沒有 Query 的 `$and`:同一套讀取條件放進 pipeline 最前面的 `$match`
   schema.pre("aggregate", async function () {
-    if (isCrossTenantAggregate(this)) {
-      // 登記過的跨租戶系統出口(`form-submission-usage.ts`,ADR-0005):不套任何範圍
-      return;
-    }
     const queryScope = getQueryScope(this);
     if (!queryScope) {
       throw new TenantScopeError(

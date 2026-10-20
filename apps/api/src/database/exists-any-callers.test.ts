@@ -78,15 +78,26 @@ describe("租戶邊界出口的呼叫端登記", () => {
 });
 
 /**
- * 跨租戶 aggregate 的標記(`markCrossTenantAggregate`)是 ADR-0005 登記的系統出口:
- * 只給退役權限清理的跨租戶計數,其他 aggregate 一律經 `BaseRepository.aggregate`。
+ * 原生驅動的 aggregate(`model.collection.aggregate`)不經 tenantScopePlugin 的 aggregate 中介層:
+ * 只准出現在 ADR-0005 登記的跨租戶計數 `form-submission-usage.ts`;其他 aggregate 一律經
+ * `BaseRepository.aggregate`(沒帶上下文就拋錯)。
  */
-describe("跨租戶 aggregate 出口的呼叫端登記", () => {
-  it("markCrossTenantAggregate 只出現在定義它的檔、plugin 與 form-submission-usage.ts", () => {
-    expect(filesMentioning("CrossTenantAggregate")).toEqual([
-      "database/form-submission-usage.ts",
-      "database/operator-context.ts",
-      "database/plugins/tenant-scope.plugin.ts",
-    ]);
+describe("原生 aggregate 與原生 collection 存取的位置", () => {
+  it("原生 aggregate(.collection 之後接 .aggregate)只出現在 form-submission-usage.ts", () => {
+    const pattern = /\.collection\s*\.aggregate\b/;
+    const files = sourceFiles(SRC_ROOT)
+      .filter((file) => pattern.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"));
+    expect(files).toEqual(["database/form-submission-usage.ts"]);
+  });
+
+  it("原生 collection 存取(`.collection(` 取 Connection 上的表)只出現在 database/(no-raw-model-query 只認 Model,抓不到 Connection)", () => {
+    const files = sourceFiles(SRC_ROOT)
+      // 測試輔助(`test-support/` 與 `*-test-support.ts`)只給測試用
+      .filter((file) => !file.includes("test-support"))
+      .filter((file) => readFileSync(file, "utf8").includes(".collection("))
+      .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"))
+      .filter((file) => !file.startsWith("database/"));
+    expect(files).toEqual([]);
   });
 });
