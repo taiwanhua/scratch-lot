@@ -128,6 +128,13 @@ export class FormSubmission {
   @Prop({ type: String, required: true })
   clientRequestId!: string;
 
+  /**
+   * 單號(表單設了單號格式才有):**第一次送出時給號**,存草稿不給;給了不收回
+   * (退回修改、撤回、作廢都保留原號;複製為新單的草稿沒有號)。null = 還沒給 / 表單沒設格式。
+   */
+  @Prop({ type: String, default: null })
+  serialNo!: string | null;
+
   /** 第一次送出時間(= `revisions[0].ctx.at`);索引與列表排序用。 */
   @Prop({ type: Date, default: null })
   submittedAt!: Date | null;

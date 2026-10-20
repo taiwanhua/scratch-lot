@@ -24,6 +24,13 @@ fragment FormFields on FormModel {
   tabLabelTemplate
   # 表單設定「允許存草稿」(沒設過 = true)
   allowDraft
+  # 單號格式(第一次送出時給號);null = 不給號
+  serial {
+    prefix
+    period
+    digits
+    separator
+  }
   hasDraft
   # 站在租戶內時本租戶的開關;root 視角為 null
   tenantEnabled
@@ -114,8 +121,8 @@ mutation CreateForm($input: CreateFormInput!) {
   }
 }
 
-# UpdateFormInput: { key, name?, tabLabelTemplate?, allowDraft? };tabLabelTemplate 缺席 = 不動、null = 清空;
-# allowDraft 缺席 / null = 不動
+# UpdateFormInput: { key, name?, tabLabelTemplate?, allowDraft?, serial? };tabLabelTemplate 缺席 = 不動、null = 清空;
+# allowDraft 缺席 / null = 不動;serial 缺席 = 不動、null = 不給號(已給的號不收回)
 mutation UpdateForm($input: UpdateFormInput!) {
   updateForm(input: $input) {
     form {

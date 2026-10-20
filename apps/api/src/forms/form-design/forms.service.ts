@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { isValidFormKey } from "@repo/domain/form";
+import {
+  type SerialFormat,
+  isValidFormKey,
+  normalizeSerialFormat,
+  serialFormatIssues,
+} from "@repo/domain/form";
 
 import { AuditService } from "../../audit/audit.service";
 import { BusinessRelationshipsRepository } from "../../database/business-relationships.repository";
@@ -79,7 +84,62 @@ export interface UpdateFormInternalOptions {
     tabLabelTemplate: string | null;
     /** 允許存草稿(缺席的舊資料 = 開) */
     allowDraft: boolean;
+    /** 單號格式(null / 缺席 = 不給號);缺席 = 不比對(這個欄位之前的呼叫端) */
+    serial?: SerialFormat | null;
   };
+}
+
+/** `updateForm` 要寫的欄位(缺席 = 不動;各欄的空值規則見 `UpdateFormInput`)。 */
+function formSettingsSetOf(input: UpdateFormInput): Record<string, unknown> {
+  const set: Record<string, unknown> = {};
+  if (input.name !== undefined && input.name !== null) {
+    set.name = requireName(input.name);
+  }
+  if (input.tabLabelTemplate !== undefined) {
+    const template = input.tabLabelTemplate?.trim() ?? "";
+    set.tabLabelTemplate = template === "" ? null : template;
+  }
+  if (input.allowDraft !== undefined && input.allowDraft !== null) {
+    set.allowDraft = input.allowDraft;
+  }
+  if (input.serial !== undefined) {
+    set.serial = serialFormatFromInput(input.serial);
+  }
+  return set;
+}
+
+/**
+ * 表單設定的單號格式:null = 不給號;有給就照 `serialFormatIssues` 驗,不合法 → `VALIDATION_FAILED`
+ * (`fields` 指到 `serial.<鍵>`)。存檔形狀 = `normalizeSerialFormat`(固定鍵順序,條件更新整份比對靠它)。
+ */
+function serialFormatFromInput(input: unknown): SerialFormat | null {
+  if (input === null) {
+    return null;
+  }
+  const issues = serialFormatIssues(input);
+  const format = normalizeSerialFormat(input);
+  if (issues.length > 0 || format === null) {
+    throw validationError(
+      `Invalid serial format: ${issues.map((issue) => issue.detail).join("; ")}`,
+      issues.map((issue) =>
+        issue.path === "" ? "serial" : `serial.${issue.path}`,
+      ),
+    );
+  }
+  return format;
+}
+
+/** 存的單號格式 → GraphQL 形狀(讀不懂的舊值當作沒設)。 */
+function serialModelOf(stored: unknown): FormModel["serial"] {
+  const format = normalizeSerialFormat(stored);
+  return format === null
+    ? null
+    : {
+        prefix: format.prefix,
+        period: format.period,
+        digits: format.digits,
+        separator: format.separator ?? null,
+      };
 }
 
 /** 讀組織只取名稱等判斷用欄位,不受管理範圍影響。 */
@@ -202,17 +262,7 @@ export class FormsService {
     internal: UpdateFormInternalOptions = {},
   ): Promise<FormModel> {
     const form = await this.access.requireWritableForm(facts, input.key);
-    const set: Record<string, unknown> = {};
-    if (input.name !== undefined && input.name !== null) {
-      set.name = requireName(input.name);
-    }
-    if (input.tabLabelTemplate !== undefined) {
-      const template = input.tabLabelTemplate?.trim() ?? "";
-      set.tabLabelTemplate = template === "" ? null : template;
-    }
-    if (input.allowDraft !== undefined && input.allowDraft !== null) {
-      set.allowDraft = input.allowDraft;
-    }
+    const set = formSettingsSetOf(input);
     if (Object.keys(set).length === 0) {
       return this.toModel(facts, form);
     }
@@ -229,6 +279,10 @@ export class FormsService {
             tabLabelTemplate: expected.tabLabelTemplate,
             // 缺席 = 開:預期開時「不是 false」都算
             allowDraft: expected.allowDraft ? { $ne: false } : false,
+            // 單號格式:null 也比到「沒有這個欄位」的舊表單;有值以存檔時的固定鍵順序整份比對
+            ...(expected.serial === undefined
+              ? {}
+              : { serial: normalizeSerialFormat(expected.serial) }),
           },
       { $set: set },
     );
@@ -248,6 +302,7 @@ export class FormsService {
         name: form.name,
         tabLabelTemplate: form.tabLabelTemplate,
         ...("allowDraft" in set ? { allowDraft: allowsDraft(form) } : {}),
+        ...("serial" in set ? { serial: form.serial ?? null } : {}),
       },
       after: set,
     });
@@ -515,6 +570,7 @@ export class FormsService {
       currentVersion: form.currentVersion,
       tabLabelTemplate: form.tabLabelTemplate,
       allowDraft: allowsDraft(form),
+      serial: serialModelOf(form.serial),
       hasDraft: draft !== null,
       tenantEnabled:
         tenantLink === null ? null : tenantLink.meta?.enabled === true,

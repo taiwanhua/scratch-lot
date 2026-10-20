@@ -17,6 +17,7 @@ import {
   defaultValueOf,
   isEmptyValue,
   lookupLabelFieldsOf,
+  normalizeSerialFormat,
   referencedFieldKeys,
   temporalIsoOf,
   upgradeValues,
@@ -40,6 +41,7 @@ import {
 } from "../../database/schemas/form-submission.schema";
 import { allowsDraft } from "../../database/schemas/form.schema";
 import { TransactionService, afterCommit } from "../../database/transaction";
+import { SerialService } from "../../serials/serial.service";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
 import {
@@ -364,6 +366,7 @@ export class FormSubmissionsService {
     private readonly transactions: TransactionService,
     private readonly lifecycle: FormLifecycleService,
     private readonly cc: WorkflowCcService,
+    private readonly serials: SerialService,
   ) {}
 
   // ---- 讀 ----
@@ -940,6 +943,7 @@ export class FormSubmissionsService {
       submission: record,
       values,
     });
+    await this.assignSerialNo(facts, record, expectedEditVersion, at);
     if (route.kind === "workflow") {
       await this.workflowSubmit.submit(
         facts.operator,
@@ -1989,6 +1993,52 @@ export class FormSubmissionsService {
     return version;
   }
 
+  /**
+   * **單號**:表單設了單號格式、這筆還沒有號 → 第一次送出時給號(`SerialService`,`form:<formKey>`,
+   * 依提交歸屬組織的租戶計數、送出時點以租戶時區切期間)。與送出同一個交易:送出失敗,號碼一起回復。
+   * 已經有號(退回 / 撤回後再送)不換號;不動 `editVersion`(同一次送出後面的寫入照常帶預期值)。
+   */
+  private async assignSerialNo(
+    facts: FormOperatorFacts,
+    record: SubmissionRecord,
+    expectedEditVersion: number,
+    at: Date,
+  ): Promise<void> {
+    if ((record.serialNo ?? null) !== null) {
+      return;
+    }
+    const form = await this.forms.findOne(facts.operator, {
+      key: record.formKey,
+    });
+    const format = normalizeSerialFormat(form?.serial ?? null);
+    if (format === null) {
+      return;
+    }
+    const serialNo = await this.serials.next(
+      facts.operator,
+      `form:${record.formKey}`,
+      format,
+      { at, orgId: record.orgId },
+    );
+    const updated = await this.submissions.findOwnAndUpdate(
+      facts.operator,
+      {
+        _id: record._id,
+        status: record.status,
+        editVersion: expectedEditVersion,
+        serialNo: null,
+      },
+      { $set: { serialNo } },
+    );
+    if (!updated) {
+      throw conflictError(
+        `Submission ${String(record._id)} was updated by someone else`,
+        "EDIT_VERSION_MISMATCH",
+      );
+    }
+    record.serialNo = serialNo;
+  }
+
   /** 這張表單允不允許存草稿(表單設定;缺席 = 開)。 */
   private async formAllowsDraft(
     facts: FormOperatorFacts,
@@ -2215,6 +2265,7 @@ export class FormSubmissionsService {
         editVersion: record.editVersion,
         orgId: String(record.orgId),
         createdBy: userRefOf(record.createdBy, names),
+        serialNo: record.serialNo ?? null,
         submittedAt: record.submittedAt,
         touched: record.touched,
         createdAt: record.createdAt,

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { normalizeSerialFormat } from "@repo/domain/form";
 import type {
   DefinitionSeedOperation,
   FormDefinitionSeedSet,
@@ -68,6 +69,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       name: seed.name,
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
+      ...serialMetadataOf(seed.serial),
     };
   }
 
@@ -83,6 +85,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
       moduleKey: seed.moduleKey,
       tabLabelTemplate: seed.tabLabelTemplate,
       allowDraft: seed.allowDraft ?? true,
+      ...(seed.serial === undefined ? {} : { serial: seed.serial }),
     };
   }
 
@@ -102,6 +105,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
             name: form.name,
             tabLabelTemplate: form.tabLabelTemplate,
             allowDraft: allowsDraft(form),
+            ...serialMetadataOf(form.serial),
           },
         };
   }
@@ -188,6 +192,11 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
         ...((seed.allowDraft ?? true) === (expected.metadata.allowDraft ?? true)
           ? {}
           : { allowDraft: seed.allowDraft ?? true }),
+        // 單號格式同理:只在和現場不同時才帶
+        ...(JSON.stringify(normalizeSerialFormat(seed.serial ?? null)) ===
+        JSON.stringify(normalizeSerialFormat(expected.metadata.serial ?? null))
+          ? {}
+          : { serial: seed.serial ?? null }),
       },
       {
         expected: {
@@ -196,6 +205,7 @@ export class FormDefinitionAdapter implements DefinitionAdapter<FormDefinitionSe
           name: expected.metadata.name,
           tabLabelTemplate: expected.metadata.tabLabelTemplate ?? null,
           allowDraft: expected.metadata.allowDraft ?? true,
+          serial: expected.metadata.serial ?? null,
         },
       },
     );
@@ -326,6 +336,7 @@ function toSnapshot(
           name: metadata.name,
           tabLabelTemplate: metadata.tabLabelTemplate ?? null,
           allowDraft: metadata.allowDraft ?? true,
+          serial: metadata.serial ?? null,
         },
         {
           fields: record.fields,
@@ -335,4 +346,10 @@ function toSnapshot(
         },
       ),
   };
+}
+
+/** 身分快照的單號格式:沒設不帶這個鍵(這個欄位之前的快照與現在的比對結果相同)。 */
+function serialMetadataOf(stored: unknown): Pick<IdentityMetadata, "serial"> {
+  const format = normalizeSerialFormat(stored ?? null);
+  return format === null ? {} : { serial: format };
 }

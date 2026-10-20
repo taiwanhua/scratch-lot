@@ -270,6 +270,10 @@ export class FormSubmissionModel {
   @Field(() => FormUserRef, { nullable: true })
   createdBy!: FormUserRef | null;
 
+  /** 單號(表單設了單號格式、第一次送出時給);null = 還沒給 / 表單沒設格式。 */
+  @Field(() => String, { nullable: true })
+  serialNo!: string | null;
+
   @Field(() => GraphQLISODateTime, { nullable: true })
   submittedAt!: Date | null;
 

@@ -16,6 +16,12 @@ import {
   scopeAggregate,
   scopeQuery,
 } from "./operator-context";
+import {
+  ORG_REASSIGN_AUDIT_ACTION,
+  currentTenantOf,
+  orgReassignValidationError,
+  reassignTargetOf,
+} from "./org-reassign";
 import type { BaseFields } from "./plugins/base-fields.plugin";
 import {
   SHARE_ORGS_PATH,
@@ -25,6 +31,7 @@ import {
   getTenantScope,
   hasTenantIdPath,
 } from "./plugins/tenant-scope.plugin";
+import { AuditLog } from "./schemas/audit-log.schema";
 import { BUSINESS_RELATIONSHIPS_COLLECTION } from "./schemas/business-relationship.schema";
 import { CORE_RELATIONSHIPS_COLLECTION } from "./schemas/core-relationship.schema";
 import { ORGS_COLLECTION } from "./schemas/org.schema";
@@ -104,6 +111,15 @@ export interface FindOptions extends SessionOptions {
 export interface UpdateOptions extends SessionOptions {
   /** 陣列元素的篩選(`$[識別名]` 指到哪幾個元素;Mongo `arrayFilters`)。 */
   arrayFilters?: Record<string, unknown>[];
+}
+
+/** 搬家(`reassignOrg`)的選項。 */
+export interface ReassignOrgOptions<TSchema> extends UpdateOptions {
+  /**
+   * 同一次寫入順便改的其他欄位(例:狀態、`$inc` 版本);欄位保護與 `findOneAndUpdate` 相同
+   * (不得碰 `orgId` / `tenantId` / 建立資訊)。
+   */
+  update?: RepositoryUpdate<TSchema>;
 }
 
 /**
@@ -561,6 +577,218 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
+   * **一次寫多筆**(ADR-0005「例外出口」表的 `createMany`):每一筆的檢查與 `create` 相同 ——
+   * 歸屬組織在可見範圍內(缺席 = 當前組織)、模組資料表推導 `tenantId` 並帶 `moduleKey`、可共用的表驗
+   * `shareOrgs`(別租戶 → `VALIDATION_FAILED`)、基礎欄位填操作者。任何一筆沒過就整批不寫(先全部檢查完才寫入)。
+   *
+   * **必須在交易內**(`TransactionService.withTransaction`,或明給進行中交易的 session):底層是 ordered
+   * `insertMany`,寫到一半撞到唯一索引時要靠交易回復前面已寫的,不在交易內 → `TenantScopeError`。
+   * 同一個組織的租戶推導與同一份共用清單的檢查只查一次(1,000 筆不必查 1,000 次組織)。
+   */
+  async createMany(
+    operator: OperatorContext,
+    data: readonly RepositoryCreate<TSchema>[],
+    options: SessionOptions = {},
+  ): Promise<Persisted<TDocument>[]> {
+    const session = sessionOf(options);
+    if (session?.inTransaction() !== true) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:createMany 必須在交易內(一筆失敗整批不寫)`,
+      );
+    }
+    if (data.length === 0) {
+      return [];
+    }
+    const shareable =
+      getTenantScope(this.model.schema)?.sharing.mode === "shareable";
+    const tenants = new Map<string, Promise<Partial<TSchema>>>();
+    const shares = new Map<string, Promise<Partial<TSchema>>>();
+    const prepared: Partial<TSchema>[] = [];
+    for (const item of data) {
+      const placed = this.withTenantOrg(operator, item);
+      const orgId = (placed as { orgId?: Types.ObjectId | string | null })
+        .orgId;
+      const orgKey = String(orgId ?? "");
+      let tenant = tenants.get(orgKey);
+      if (tenant === undefined) {
+        tenant = this.withModuleTenant(
+          { orgId } as unknown as Partial<TSchema>,
+          session,
+        );
+        tenants.set(orgKey, tenant);
+      }
+      const derived = await tenant;
+      const withTenant =
+        "tenantId" in derived
+          ? {
+              ...placed,
+              tenantId: (derived as { tenantId?: unknown }).tenantId,
+            }
+          : placed;
+      if (!shareable) {
+        prepared.push(withTenant);
+        continue;
+      }
+      const tenantId =
+        (withTenant as { tenantId?: Types.ObjectId | null }).tenantId ?? null;
+      const given = (withTenant as Record<string, unknown>)[SHARE_ORGS_PATH];
+      const shareKey = `${String(tenantId)}|${JSON.stringify(given ?? null)}`;
+      let share = shares.get(shareKey);
+      if (share === undefined) {
+        share = this.withShareOrgs(
+          { tenantId, [SHARE_ORGS_PATH]: given } as unknown as Partial<TSchema>,
+          session,
+        );
+        shares.set(shareKey, share);
+      }
+      const checked = await share;
+      prepared.push({
+        ...withTenant,
+        [SHARE_ORGS_PATH]: (checked as Record<string, unknown>)[
+          SHARE_ORGS_PATH
+        ],
+      });
+    }
+    // insertMany 不走 save 中介層:基礎欄位的建立者 / 更新者在這裡填(同 baseFieldsPlugin 的 save)
+    const documents = prepared.map((item) => {
+      const document = new this.model({
+        ...item,
+        createdBy: operator.actorId,
+        updatedBy: operator.actorId,
+      });
+      document.$locals[OPERATOR_LOCAL_KEY] = operator;
+      return document;
+    });
+    const inserted = await this.model.insertMany(documents, {
+      ordered: true,
+      session,
+    });
+    return inserted as unknown as Persisted<TDocument>[];
+  }
+
+  /**
+   * **搬家**(ADR-0005「例外出口」;一般更新不准改 `orgId`):把符合 `filter` 的**第一筆**資料改歸屬到
+   * `newOrgId`,回更新後的文件;沒有符合(可見範圍外、已刪除、條件不符、同時被搬走)回 null。
+   *
+   * - 被搬的資料要在操作者的**可見範圍**內(寫入範圍:共用進來、只能看的不算)
+   * - 新組織要存在、**同租戶**、不能是根組織,不合法 → `VALIDATION_FAILED`(`fields: ["orgId"]`);
+   *   新組織**可以**是操作者看不到的(調貨給別店)
+   * - 有 `tenantId` 欄的表照新組織重新推導 `tenantId`(同租戶,值不變)
+   * - 條件更新:`filter` 可帶版本 / 狀態等條件;`options.update` 同一次寫入順便改其他欄位
+   * - 寫一筆稽核(`data.reassign-org`:誰、哪張表哪一筆、從哪個組織搬到哪個組織),與搬家同一個 session
+   * - 呼叫端登記在 `ORG_REASSIGN_CALLERS`,由測試掃 src 鎖定
+   */
+  async reassignOrg(
+    operator: OperatorContext,
+    filter: RepositoryFilter<TSchema>,
+    newOrgId: Types.ObjectId | string,
+    options: ReassignOrgOptions<TSchema> = {},
+  ): Promise<Persisted<TDocument> | null> {
+    if (getTenantScope(this.model.schema)?.path !== "orgId") {
+      throw new TenantScopeError(
+        `${this.model.modelName}:搬家只給以 orgId 歸屬的租戶資料`,
+      );
+    }
+    const actorId = operator.actorId;
+    if (actorId === null) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:搬家要寫稽核,需要操作者`,
+      );
+    }
+    const extra: RepositoryUpdate<TSchema> = options.update ?? {};
+    const shared = await this.prepareUpdate(operator, filter, extra, options);
+    const session = sessionOf(options);
+    const target = await reassignTargetOf(this.model.db, newOrgId, session);
+    const current = await scopeQuery(
+      this.model
+        .findOne({ ...shared.filter }, { orgId: 1 })
+        .lean<{ _id: Types.ObjectId; orgId: Types.ObjectId } | null>(),
+      { operator },
+    )
+      .session(session)
+      .exec();
+    if (!current) {
+      return null;
+    }
+    const fromOrgId = current.orgId;
+    const fromTenant = await currentTenantOf(
+      this.model.db,
+      this.model.modelName,
+      fromOrgId,
+      session,
+    );
+    if (fromTenant?.equals(target.tenantId) !== true) {
+      throw orgReassignValidationError(
+        "data can only be moved to an org of the same tenant",
+      );
+    }
+    if (fromOrgId.equals(target.orgId)) {
+      throw orgReassignValidationError("data already belongs to that org");
+    }
+    const moved: Record<string, unknown> = {
+      orgId: target.orgId,
+      ...(Object.hasOwn(this.model.schema.paths, "tenantId")
+        ? { tenantId: target.tenantId }
+        : {}),
+    };
+    const { $set: extraSet, ...extraRest } = extra as Record<string, unknown>;
+    const update = {
+      ...extraRest,
+      $set: { ...(extraSet as Record<string, unknown> | undefined), ...moved },
+    } as RepositoryUpdate<TSchema>;
+    const document = await scopeQuery(
+      this.model.findOneAndUpdate(
+        {
+          $and: [{ ...shared.filter }, { _id: current._id, orgId: fromOrgId }],
+        },
+        update,
+        {
+          returnDocument: "after",
+          runValidators: true,
+          ...(options.arrayFilters === undefined
+            ? {}
+            : { arrayFilters: options.arrayFilters }),
+        },
+      ),
+      { operator },
+    )
+      .session(session)
+      .exec();
+    if (!document) {
+      return null;
+    }
+    await this.auditLogs().create(
+      operator,
+      {
+        actorId,
+        actorType: "user",
+        action: ORG_REASSIGN_AUDIT_ACTION,
+        targetType: this.model.collection.collectionName,
+        targetId: current._id,
+        before: { orgId: fromOrgId },
+        after: { orgId: target.orgId },
+      },
+      { session },
+    );
+    return document as Persisted<TDocument>;
+  }
+
+  /**
+   * 搬家的稽核寫進 `audit_logs`(同一條連線上已註冊的 model;沒註冊 → `TenantScopeError`,不靜默略過)。
+   * 經 BaseRepository 寫:稽核的歸屬組織 = 操作者當前組織、建立者 = 操作者,與 `AuditService.record` 同形狀。
+   */
+  private auditLogs(): BaseRepository<AuditLog, RepositoryDocument> {
+    const model = this.model.db.models[AuditLog.name] as
+      RepositoryModel<AuditLog, RepositoryDocument> | undefined;
+    if (model === undefined) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:搬家要寫稽核,但連線上沒有 ${AuditLog.name} model`,
+      );
+    }
+    return new BaseRepository(model);
+  }
+
+  /**
    * 模組資料表另外鎖住 `moduleKey` / `tenantId`:兩者建立後不可經一般更新改動;
    * 共用清單固定(`editable: false`)的表連 `shareOrgs` 也鎖住。
    */
@@ -784,6 +1012,13 @@ function sessionOf(options: SessionOptions): ClientSession | null {
     ? (currentSession() ?? null)
     : options.session;
 }
+
+/**
+ * **允許呼叫搬家(`reassignOrg`)的檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」)。
+ * `exists-any-callers.test.ts` 以呼叫語法(`.reassignOrg(`)掃整個 src 斷言沒有其他檔案呼叫它 ——
+ * 新增呼叫端要先在 ADR-0005 登記、再加進這裡(專案的呼叫端也登記在這份,同 `TENANT_BOUNDARY_CALLERS`)。
+ */
+export const ORG_REASSIGN_CALLERS: readonly string[] = [];
 
 /** 更新內容不得觸及的欄位:所屬組織(租戶隔離)與建立資訊(稽核)。 */
 const PROTECTED_UPDATE_PATHS: readonly string[] = [

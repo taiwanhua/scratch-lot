@@ -1,7 +1,11 @@
 /* eslint-disable unicorn/prefer-structured-clone -- 這裡要的是「轉成純 JSON 值」不是深拷貝:Mongoose 的陣列 / 子文件經 toJSON 才變成純陣列與純物件,structuredClone 做不到;到期條件:無 */
 import { createHash } from "node:crypto";
 
-import type { FormDefinition } from "@repo/domain/form";
+import {
+  type FormDefinition,
+  type SerialFormat,
+  normalizeSerialFormat,
+} from "@repo/domain/form";
 import {
   type DefinitionSeedHashes,
   type DefinitionSeedSet,
@@ -49,6 +53,10 @@ function shapeFormSeed(seed: FormDefinitionSeedSet): FormDefinitionSeedSet {
     ...seed,
     name: seed.name.trim(),
     tabLabelTemplate: blankToNull(seed.tabLabelTemplate),
+    // 單號格式存檔時正規化(固定鍵、分隔符缺席不存),hash 比對用同一個形狀
+    ...(seed.serial === undefined
+      ? {}
+      : { serial: normalizeSerialFormat(seed.serial) ?? seed.serial }),
     definition: plain(seed.definition),
   };
 }
@@ -98,13 +106,18 @@ export function formContentHash(
     tabLabelTemplate: string | null;
     /** 缺席 = 開 */
     allowDraft?: boolean;
+    /** 缺席 / null = 不給號 */
+    serial?: SerialFormat | null;
   },
   definition: FormDefinition,
 ): string {
+  const { serial, ...rest } = identity;
+  const format = normalizeSerialFormat(serial ?? null);
   return hashesOfSeed({
     kind: "form-definition",
     ...CONTENT_ONLY,
-    ...identity,
+    ...rest,
+    ...(format === null ? {} : { serial: format }),
     definition: plain(definition),
   }).contentHash;
 }

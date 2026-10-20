@@ -26,3 +26,27 @@ describe("表單定義宣告的形狀:allowDraft", () => {
     ]);
   });
 });
+
+describe("表單定義宣告的形狀:serial(單號格式)", () => {
+  it("缺席或合法的格式都合格(缺席 = 不給單號)", () => {
+    const fields = [field("title", "text")];
+    expect(definitionSeedShapeIssues(formSeed(fields))).toEqual([]);
+    expect(
+      definitionSeedShapeIssues(
+        formSeed(fields, {
+          serial: { prefix: "PU", period: "month", digits: 4 },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("格式不合法 → 指到 serial 的那個鍵", () => {
+    const seed = {
+      ...formSeed([field("title", "text")]),
+      serial: { prefix: "PU", period: "week", digits: 4 },
+    } as unknown;
+    expect(definitionSeedShapeIssues(seed)).toEqual([
+      expect.objectContaining({ path: "serial.period" }),
+    ]);
+  });
+});

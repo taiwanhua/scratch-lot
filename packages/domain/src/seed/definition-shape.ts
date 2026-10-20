@@ -4,6 +4,7 @@
  * 業務內容(欄位、關卡)的檢查在可攜性檢查與既有定義檢查器。
  */
 import { FORM_KEY_PATTERN } from "../form/keys";
+import { serialFormatIssues } from "../form/serial";
 import {
   SeedSerializationError,
   assertPureSeedData,
@@ -41,6 +42,7 @@ const TOP_LEVEL_KEYS: Readonly<
     "moduleKey",
     "tabLabelTemplate",
     "allowDraft",
+    "serial",
   ],
   "workflow-definition": [...COMMON_KEYS, "checkFormKey"],
 };
@@ -126,6 +128,14 @@ function formIssues(seed: Record<string, unknown>): DefinitionSeedShapeIssue[] {
       path: "allowDraft",
       detail: "allowDraft 只能是 true / false;缺席 = 允許存草稿",
     });
+  }
+  if (seed.serial !== undefined) {
+    for (const issue of serialFormatIssues(seed.serial)) {
+      issues.push({
+        path: issue.path === "" ? "serial" : `serial.${issue.path}`,
+        detail: `${issue.detail};缺席 = 不給單號`,
+      });
+    }
   }
   if (!isNonBlankString(seed.moduleKey)) {
     issues.push({ path: "moduleKey", detail: "moduleKey 必填" });

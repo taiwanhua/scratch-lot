@@ -105,6 +105,17 @@ describe("contentHash / snapshotHash", () => {
     expect(off.snapshotHash).not.toBe(base.snapshotHash);
   });
 
+  it("單號格式:缺席與這個欄位之前同一份內容;有宣告兩個 hash 都變", () => {
+    const base = hashesOf(formSeed(fields()));
+    const withSerial = hashesOf(
+      formSeed(fields(), {
+        serial: { prefix: "PU", period: "month", digits: 4 },
+      }),
+    );
+    expect(withSerial.contentHash).not.toBe(base.contentHash);
+    expect(withSerial.snapshotHash).not.toBe(base.snapshotHash);
+  });
+
   it("物件鍵的先後不影響 hash", () => {
     const reordered = fields().map(
       (item) =>

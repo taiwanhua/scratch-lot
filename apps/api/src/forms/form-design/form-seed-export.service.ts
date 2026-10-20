@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-import type { FormDefinition } from "@repo/domain/form";
+import { type FormDefinition, normalizeSerialFormat } from "@repo/domain/form";
 import type { FormDefinitionSeedSet } from "@repo/domain/seed";
 
 import { FormVersionsRepository } from "../../database/database.module";
@@ -79,6 +79,7 @@ export class FormSeedExportService {
         ["version"],
       );
     }
+    const serial = normalizeSerialFormat(form.serial ?? null);
     const seed: FormDefinitionSeedSet = {
       kind: "form-definition",
       key: form.key,
@@ -90,6 +91,8 @@ export class FormSeedExportService {
       tabLabelTemplate: form.tabLabelTemplate,
       // 允許存草稿:只有關掉才寫(缺席 = 開)
       ...(allowsDraft(form) ? {} : { allowDraft: false }),
+      // 單號格式:有設才寫(缺席 = 不給號)
+      ...(serial === null ? {} : { serial }),
       definition: toPlainJson<FormDefinition>({
         fields: version.fields,
         layout: version.layout,

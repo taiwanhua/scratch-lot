@@ -14,6 +14,7 @@
  * - `values.ts`:提交值的型別正規化與規則驗證(存草稿只驗型別、送出再驗規則)
  * - `template.ts`:顯示模板(頁籤 / 標題模板、lookup `labelTemplate`)的佔位符解析、套用與欄位值的模板文字
  * - `list-settings.ts`:列表欄位配置(`modules.settings.list`)的內建欄開關
+ * - `serial.ts`:單號格式(前綴 / 期間 / 位數 / 分隔符)的檢查、期間鍵與組字
  * - `temporal.ts`:日期 / 日期時間的單一入口(時點 `toInstant`、租戶時區的當地日期、日曆加減、`formatTemporal`)
  * - `defaults.ts`:欄位預設值的計算(api 建草稿填空欄、admin 沒碰過的欄位跟著重算)
  * - `upload.ts`:上傳欄的檔型 / 大小上限(平台上限 + 欄位收窄)
@@ -35,6 +36,7 @@ export * from "./list-settings";
 export * from "./lookup-filter";
 export * from "./registry";
 export * from "./semantic";
+export * from "./serial";
 export * from "./summary";
 export * from "./temporal";
 export * from "./template";

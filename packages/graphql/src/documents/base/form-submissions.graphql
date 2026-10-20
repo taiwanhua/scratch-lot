@@ -54,6 +54,8 @@ fragment FormSubmissionFields on FormSubmissionModel {
     id
     name
   }
+  # 單號(表單設了單號格式、第一次送出時給);null = 還沒給 / 沒設
+  serialNo
   submittedAt
   createdAt
   updatedAt

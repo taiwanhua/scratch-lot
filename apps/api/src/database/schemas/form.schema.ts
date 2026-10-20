@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, Types } from "mongoose";
 
+import type { SerialFormat } from "@repo/domain/form";
+
 import { baseFieldsPlugin } from "../plugins/base-fields.plugin";
 
 /** collection 名(退役權限清理的跨租戶計數等處共用)。 */
@@ -63,6 +65,13 @@ export class Form {
    */
   @Prop({ type: Boolean, default: true })
   allowDraft?: boolean;
+
+  /**
+   * 單號格式(表單設定;`docs/modules/forms.md`「單號」):有值 = 第一次送出時給號(存在提交的 `serialNo`),
+   * null / 缺席 = 不給號。格式形狀正本 `@repo/domain/form` 的 `SerialFormat`。
+   */
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  serial?: SerialFormat | null;
 }
 
 /** 表單允不允許存草稿:缺席(舊資料)視為開。 */

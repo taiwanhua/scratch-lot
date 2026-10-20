@@ -1,0 +1,368 @@
+import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { GraphQLError } from "graphql";
+import { type HydratedDocument, type Model, Schema, Types } from "mongoose";
+
+import { BaseRepository } from "./base.repository";
+import type { MemberTenant, OperatorContext } from "./operator-context";
+import { ORG_REASSIGN_AUDIT_ACTION } from "./org-reassign";
+import { baseFieldsPlugin } from "./plugins/base-fields.plugin";
+import {
+  type ShareOrg,
+  TenantScopeError,
+  tenantScopePlugin,
+} from "./plugins/tenant-scope.plugin";
+import { AuditLog, AuditLogSchema } from "./schemas/audit-log.schema";
+import {
+  HOOK_TIMEOUT_MS,
+  type TestDatabase,
+  openTestDatabase,
+} from "./test-support/mongo-connection";
+import { TransactionService } from "./transaction";
+
+/**
+ * 搬家(`reassignOrg`)與一次寫多筆(`createMany`)對真 MongoDB replica set 的測試
+ * (ADR-0005「例外出口」;權限劇本:搬出看得到 / 搬入看不到 / 別租戶擋下)。
+ */
+
+interface Item {
+  orgId: Types.ObjectId;
+  name: string;
+  status: string;
+  editVersion: number;
+  moduleKey: string;
+  tenantId: Types.ObjectId | null;
+  shareOrgs?: ShareOrg[];
+}
+
+type Repo = BaseRepository<Item, HydratedDocument<Item>>;
+
+// ---- 組織樹:根 → 租戶甲(T)→ 分店一(B1)、分店二(B2);根 → 租戶乙(U)→ U1 ----
+const root = new Types.ObjectId();
+const T = new Types.ObjectId();
+const B1 = new Types.ObjectId();
+const B2 = new Types.ObjectId();
+const U = new Types.ObjectId();
+const U1 = new Types.ObjectId();
+
+const ORGS = [
+  { _id: root, ancestors: [] as Types.ObjectId[] },
+  { _id: T, ancestors: [root] },
+  { _id: B1, ancestors: [root, T] },
+  { _id: B2, ancestors: [root, T] },
+  { _id: U, ancestors: [root] },
+  { _id: U1, ancestors: [root, U] },
+];
+
+/** 只看得到自己所屬組織的人(所屬租戶依組織樹推)。 */
+function staffOf(...orgs: Types.ObjectId[]): OperatorContext {
+  const tenants: MemberTenant[] = [];
+  for (const org of orgs) {
+    const chain = ORGS.find((item) => item._id.equals(org))?.ancestors ?? [];
+    const tenantId = chain[1] ?? org;
+    tenants.push({ tenantId, memberOrgIds: [org], ancestorOrgIds: [] });
+  }
+  return {
+    actorId: new Types.ObjectId(),
+    currentOrgId: orgs[0] ?? null,
+    visibleOrgIds: orgs,
+    managedOrgIds: [],
+    memberOrgIds: orgs,
+    roleIds: [],
+    memberTenants: tenants,
+  };
+}
+
+function isValidationFailed(error: unknown, field: string): boolean {
+  return (
+    error instanceof GraphQLError &&
+    error.extensions.code === "VALIDATION_FAILED" &&
+    Array.isArray(error.extensions.fields) &&
+    error.extensions.fields.includes(field)
+  );
+}
+
+describe("BaseRepository 的搬家與一次寫多筆(對真 MongoDB replica set)", () => {
+  let database: TestDatabase;
+  let items: Repo;
+  let shared: Repo;
+  let auditModel: Model<AuditLog>;
+  let transactions: TransactionService;
+
+  const asB1 = staffOf(B1);
+  const asB2 = staffOf(B2);
+  const asU1 = staffOf(U1);
+
+  beforeAll(async () => {
+    database = await openTestDatabase("cookhome-test-org-reassign");
+    await database.connection.collection("orgs").insertMany(
+      ORGS.map((org) => ({
+        ...org,
+        name: String(org._id),
+        parentId: org.ancestors.at(-1) ?? null,
+        deletedAt: null,
+      })),
+    );
+    const schemaOf = (collection: string, shareable: boolean): Schema => {
+      const schema = new Schema<Item>(
+        {
+          orgId: { type: Schema.Types.ObjectId, required: true },
+          name: { type: String, required: true },
+          status: { type: String, default: "open" },
+          editVersion: { type: Number, default: 0 },
+        },
+        { collection, timestamps: true },
+      );
+      schema.index({ tenantId: 1, name: 1 }, { unique: true });
+      schema.plugin(baseFieldsPlugin);
+      schema.plugin(tenantScopePlugin, {
+        moduleData: true,
+        ...(shareable
+          ? {
+              sharing: {
+                mode: "shareable",
+                defaultShareOrgs: "none",
+                editable: true,
+              },
+            }
+          : {}),
+      });
+      schema.path("moduleKey").default("reassign-test");
+      return schema;
+    };
+    const itemModel = database.connection.model<Item>(
+      "ReassignItem",
+      schemaOf("reassign_items", false),
+    );
+    const sharedModel = database.connection.model<Item>(
+      "ReassignSharedItem",
+      schemaOf("reassign_shared_items", true),
+    );
+    auditModel = database.connection.model<AuditLog>(
+      AuditLog.name,
+      AuditLogSchema,
+    );
+    // 交易內不能隱式建 collection:先把 collection 與索引建好(正式環境由 api 啟動時建)
+    await Promise.all([
+      itemModel.init(),
+      sharedModel.init(),
+      auditModel.init(),
+    ]);
+    items = new BaseRepository(itemModel);
+    shared = new BaseRepository(sharedModel);
+    transactions = new TransactionService(database.connection);
+  }, HOOK_TIMEOUT_MS);
+
+  afterAll(async () => {
+    await database.close();
+  }, HOOK_TIMEOUT_MS);
+
+  async function orgOf(
+    operator: OperatorContext,
+    id: Types.ObjectId,
+  ): Promise<string | null> {
+    const found = await items.findById(operator, id);
+    return found === null ? null : String(found.orgId);
+  }
+
+  async function auditsOf(targetId: Types.ObjectId): Promise<AuditLog[]> {
+    // audit_logs 掛租戶過濾:測試直接以原生 collection 讀
+    return database.connection
+      .collection<AuditLog>("audit_logs")
+      .find({ targetId, action: ORG_REASSIGN_AUDIT_ACTION })
+      .toArray();
+  }
+
+  describe("搬家(reassignOrg)", () => {
+    it("一般更新帶 orgId 仍拋錯", async () => {
+      const item = await items.create(asB1, { name: "一般更新" });
+      await expect(
+        items.updateById(asB1, item._id, { $set: { orgId: B2 } }),
+      ).rejects.toThrow(TenantScopeError);
+      await expect(
+        items.findOneAndUpdate(asB1, { _id: item._id }, { orgId: B2 }),
+      ).rejects.toThrow(TenantScopeError);
+    });
+
+    it("搬到看不到的同租戶分店可以:搬完舊店看不到、新店看得到,tenantId 不變,稽核一筆(誰、從哪到哪)", async () => {
+      const item = await items.create(asB1, { name: "調貨一" });
+      const moved = await items.reassignOrg(asB1, { _id: item._id }, B2);
+      expect(moved?.orgId.equals(B2)).toBe(true);
+      expect(moved?.tenantId?.equals(T)).toBe(true);
+      expect(await items.findById(asB1, item._id)).toBeNull();
+      const atNewStore = await items.findById(asB2, item._id);
+      expect(atNewStore?.name).toBe("調貨一");
+      const audits = await auditsOf(item._id);
+      expect(audits).toHaveLength(1);
+      expect(String(audits[0]?.actorId)).toBe(String(asB1.actorId));
+      expect(audits[0]?.targetType).toBe("reassign_items");
+      expect(String(audits[0]?.before?.orgId)).toBe(String(B1));
+      expect(String(audits[0]?.after?.orgId)).toBe(String(B2));
+    });
+
+    it("可見範圍外的資料搬不了(回 null、不寫稽核)", async () => {
+      const item = await items.create(asB2, { name: "別店的" });
+      expect(await items.reassignOrg(asB1, { _id: item._id }, B1)).toBeNull();
+      expect(await orgOf(asB2, item._id)).toBe(String(B2));
+      expect(await auditsOf(item._id)).toHaveLength(0);
+    });
+
+    it("搬到別租戶、根組織、不存在的組織 → VALIDATION_FAILED(orgId),資料不動", async () => {
+      const item = await items.create(asB1, { name: "不准搬" });
+      for (const target of [U1, U, root, new Types.ObjectId(), "not-an-id"]) {
+        const error: unknown = await items
+          .reassignOrg(asB1, { _id: item._id }, target)
+          .catch((error_: unknown) => error_);
+        expect(isValidationFailed(error, "orgId")).toBe(true);
+      }
+      expect(await orgOf(asB1, item._id)).toBe(String(B1));
+      expect(await auditsOf(item._id)).toHaveLength(0);
+    });
+
+    it("別租戶的人搬不到本租戶的資料(看不到 = null)", async () => {
+      const item = await items.create(asB1, { name: "別租戶的人" });
+      expect(await items.reassignOrg(asU1, { _id: item._id }, B2)).toBeNull();
+    });
+
+    it("條件更新:版本不符回 null;符合時同一次寫入改其他欄位;options.update 不得碰 orgId / tenantId", async () => {
+      const item = await items.create(asB1, { name: "條件搬" });
+      expect(
+        await items.reassignOrg(asB1, { _id: item._id, editVersion: 9 }, B2),
+      ).toBeNull();
+      const moved = await items.reassignOrg(
+        asB1,
+        { _id: item._id, editVersion: 0 },
+        B2,
+        { update: { $set: { status: "moved" }, $inc: { editVersion: 1 } } },
+      );
+      expect(moved?.status).toBe("moved");
+      expect(moved?.editVersion).toBe(1);
+      const other = await items.create(asB1, { name: "偷改租戶" });
+      await expect(
+        items.reassignOrg(asB1, { _id: other._id }, B2, {
+          update: { $set: { tenantId: U } },
+        }),
+      ).rejects.toThrow(TenantScopeError);
+    });
+
+    it("在交易內:交易回復時搬家與稽核一起回復", async () => {
+      const item = await items.create(asB1, { name: "交易回復" });
+      await expect(
+        transactions.withTransaction(async () => {
+          await items.reassignOrg(asB1, { _id: item._id }, B2);
+          throw new Error("後續步驟失敗");
+        }),
+      ).rejects.toThrow("後續步驟失敗");
+      expect(await orgOf(asB1, item._id)).toBe(String(B1));
+      expect(await auditsOf(item._id)).toHaveLength(0);
+    });
+  });
+
+  describe("一次寫多筆(createMany)", () => {
+    it("不在交易內 → TenantScopeError(一筆失敗整批不寫要靠交易)", async () => {
+      await expect(
+        items.createMany(asB1, [{ name: "交易外" }]),
+      ).rejects.toThrow(TenantScopeError);
+    });
+
+    it("每筆與 create 一樣:缺組織 = 當前組織、推導 tenantId、帶 moduleKey、填建立者", async () => {
+      const created = await transactions.withTransaction(() =>
+        items.createMany(asB1, [{ name: "多筆一" }, { name: "多筆二" }]),
+      );
+      expect(created).toHaveLength(2);
+      for (const document of created) {
+        expect(document.orgId.equals(B1)).toBe(true);
+        expect(document.tenantId?.equals(T)).toBe(true);
+        expect(document.moduleKey).toBe("reassign-test");
+        expect(String(document.createdBy)).toBe(String(asB1.actorId));
+      }
+      expect(await items.count(asB1, { name: /^多筆/ })).toBe(2);
+    });
+
+    it("批次裡給錯的 tenantId 一律依 orgId 推導覆蓋(同 create)", async () => {
+      const created = await transactions.withTransaction(() =>
+        items.createMany(asB1, [
+          { name: "錯租戶一", tenantId: U },
+          { name: "錯租戶二", tenantId: null },
+          { name: "錯租戶三", orgId: B1, tenantId: new Types.ObjectId() },
+        ]),
+      );
+      expect(created.map((document) => String(document.tenantId))).toEqual([
+        String(T),
+        String(T),
+        String(T),
+      ]);
+    });
+
+    it("範圍外的組織擋下、整批不寫", async () => {
+      await expect(
+        transactions.withTransaction(() =>
+          items.createMany(asB1, [
+            { name: "範圍內" },
+            { name: "範圍外", orgId: B2 },
+          ]),
+        ),
+      ).rejects.toThrow(TenantScopeError);
+      expect(await items.count(asB1, { name: "範圍內" })).toBe(0);
+    });
+
+    it("別租戶的 shareOrgs 擋下(VALIDATION_FAILED)、整批不寫;同租戶的照存", async () => {
+      const error: unknown = await transactions
+        .withTransaction(() =>
+          shared.createMany(asB1, [
+            {
+              name: "共用一",
+              shareOrgs: [{ orgId: B2, includeDescendants: false }],
+            },
+            {
+              name: "共用二",
+              shareOrgs: [{ orgId: U1, includeDescendants: false }],
+            },
+          ]),
+        )
+        .catch((error_: unknown) => error_);
+      expect(isValidationFailed(error, "shareOrgs")).toBe(true);
+      expect(await shared.count(asB1, {})).toBe(0);
+      const [ok] = await transactions.withTransaction(() =>
+        shared.createMany(asB1, [
+          {
+            name: "共用一",
+            shareOrgs: [{ orgId: B2, includeDescendants: false }],
+          },
+        ]),
+      );
+      expect(ok?.shareOrgs?.map((entry) => String(entry.orgId))).toEqual([
+        String(B2),
+      ]);
+    });
+
+    it("寫到一半撞唯一索引:交易回復,前面的也不留", async () => {
+      await transactions.withTransaction(() =>
+        items.createMany(asB1, [{ name: "已存在" }]),
+      );
+      await expect(
+        transactions.withTransaction(() =>
+          items.createMany(asB1, [{ name: "新的一筆" }, { name: "已存在" }]),
+        ),
+      ).rejects.toThrow();
+      expect(await items.count(asB1, { name: "新的一筆" })).toBe(0);
+    });
+
+    it("1,000 筆在一個交易內完成(記時間)", async () => {
+      const started = Date.now();
+      const created = await transactions.withTransaction(() =>
+        items.createMany(
+          asB1,
+          Array.from({ length: 1000 }, (_unused, index) => ({
+            name: `批次-${String(index).padStart(4, "0")}`,
+          })),
+        ),
+      );
+      const elapsed = Date.now() - started;
+      // 記錄給 reviewer 看(本機 / CI 的實際耗時);上限放寬,只擋「每筆各查一次組織」那種退化
+      process.stdout.write(`createMany 1,000 筆:${String(elapsed)} ms\n`);
+      expect(created).toHaveLength(1000);
+      expect(await items.count(asB1, { name: /^批次-/ })).toBe(1000);
+      expect(elapsed).toBeLessThan(20_000);
+    }, 60_000);
+  });
+});

@@ -1,9 +1,22 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "@jest/globals";
 
-import { EXISTS_ANY_CALLERS, TENANT_BOUNDARY_CALLERS } from "./base.repository";
+import {
+  EXISTS_ANY_CALLERS,
+  ORG_REASSIGN_CALLERS,
+  TENANT_BOUNDARY_CALLERS,
+} from "./base.repository";
 
 const SRC_ROOT = path.resolve(__dirname, "..");
 
@@ -99,5 +112,49 @@ describe("原生 aggregate 與原生 collection 存取的位置", () => {
       .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"))
       .filter((file) => !file.startsWith("database/"));
     expect(files).toEqual([]);
+  });
+});
+
+/** `root` 底下(測試檔除外)以呼叫語法 `.reassignOrg(` 呼叫搬家的檔案(相對 root、`/` 分隔、排序)。 */
+function reassignCallersUnder(root: string): string[] {
+  return sourceFiles(root)
+    .filter((file) => readFileSync(file, "utf8").includes(".reassignOrg("))
+    .map((file) => path.relative(root, file).split(path.sep).join("/"))
+    .filter((file) => file !== "database/base.repository.ts")
+    .toSorted((left, right) => left.localeCompare(right));
+}
+
+/**
+ * 搬家(`reassignOrg`)是 ADR-0005 登記的例外出口(一般更新不准改 `orgId`):
+ * 以呼叫語法掃,只准登記過的檔案呼叫。
+ */
+describe("搬家(reassignOrg)的呼叫端登記", () => {
+  it("正式程式碼裡呼叫 reassignOrg 的檔案都在登記清單內", () => {
+    expect(reassignCallersUnder(SRC_ROOT)).toEqual(
+      [...ORG_REASSIGN_CALLERS].toSorted((left, right) =>
+        left.localeCompare(right),
+      ),
+    );
+  });
+
+  it("新增一個未登記的呼叫端時掃描會抓到(暫存目錄裡放一份呼叫、一份只在註解提到)", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "reassign-scan-"));
+    try {
+      const write = (relative: string, content: string): void => {
+        mkdirSync(path.dirname(path.join(root, relative)), { recursive: true });
+        writeFileSync(path.join(root, relative), content);
+      };
+      write(
+        "transfer/transfer.service.ts",
+        "await repo.reassignOrg(op, f, to);",
+      );
+      write("notes/readme.ts", "// 搬家用 reassignOrg");
+      write("transfer/transfer.test.ts", "await repo.reassignOrg(op, f, to);");
+      const found = reassignCallersUnder(root);
+      expect(found).toEqual(["transfer/transfer.service.ts"]);
+      expect(found).not.toEqual([...ORG_REASSIGN_CALLERS]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

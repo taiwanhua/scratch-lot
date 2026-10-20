@@ -14,6 +14,26 @@ import {
   FormVersionModel,
 } from "../../models/form-common.model";
 
+/** 單號格式(`@repo/domain/form` 的 `SerialFormat`)。 */
+@ObjectType()
+export class FormSerialFormat {
+  /** 前綴(英數 0–10 字,可空)。 */
+  @Field(() => String)
+  prefix!: string;
+
+  /** 流水號多久重新起算:`none` / `year` / `month`(租戶時區)。 */
+  @Field(() => String)
+  period!: string;
+
+  /** 流水號補零的位數(1–10)。 */
+  @Field(() => Int)
+  digits!: number;
+
+  /** 分隔符(`-` `_` `/` `.` 或空字串);null = 預設 `-`。 */
+  @Field(() => String, { nullable: true })
+  separator!: string | null;
+}
+
 /** 客製表單的來源。 */
 @ObjectType()
 export class FormForkSourceModel {
@@ -104,6 +124,10 @@ export class FormModel {
   /** 允許存草稿(表單設定);沒設過的舊表單為 true。 */
   @Field(() => Boolean)
   allowDraft!: boolean;
+
+  /** 單號格式(第一次送出時給號);null = 不給號。 */
+  @Field(() => FormSerialFormat, { nullable: true })
+  serial!: FormSerialFormat | null;
 
   /** 有一份草稿(版本面板的「編輯草稿」)。 */
   @Field(() => Boolean)

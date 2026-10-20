@@ -1,5 +1,6 @@
 import type { Types } from "mongoose";
 
+import { type SerialFormat, normalizeSerialFormat } from "@repo/domain/form";
 import type {
   DefinitionSeedOperation,
   DefinitionSeedSet,
@@ -64,6 +65,8 @@ export interface IdentityMetadata {
   tabLabelTemplate?: string | null;
   /** 允許存草稿;缺席 = 開(流程、這個欄位之前的安裝快照)。 */
   allowDraft?: boolean;
+  /** 單號格式;缺席 / null = 不給號(流程、這個欄位之前的安裝快照)。 */
+  serial?: SerialFormat | null;
 }
 
 /** 條件更新 metadata 的前置狀態:哪一筆定義、當時的目前版本與 metadata。 */
@@ -80,7 +83,9 @@ export function isSameIdentityMetadata(
   return (
     left.name === right.name &&
     (left.tabLabelTemplate ?? null) === (right.tabLabelTemplate ?? null) &&
-    (left.allowDraft ?? true) === (right.allowDraft ?? true)
+    (left.allowDraft ?? true) === (right.allowDraft ?? true) &&
+    JSON.stringify(normalizeSerialFormat(left.serial ?? null)) ===
+      JSON.stringify(normalizeSerialFormat(right.serial ?? null))
   );
 }
 

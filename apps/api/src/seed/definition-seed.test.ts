@@ -509,6 +509,27 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       ).toMatchObject({ allowDraft: true });
     });
 
+    it("單號格式:宣告 → 安裝出來的表單帶格式,快照記下;重跑未變;現場清掉 → METADATA_DRIFT", async () => {
+      const serial = { prefix: "SD", period: "year", digits: 5 } as const;
+      const r1 = formSeed("seed_serial", "r1", { serial });
+      const created = await runSeed(app, r1);
+
+      expect(created).toMatchObject({ outcome: "created", conflict: null });
+      expect(
+        await definitionDoc(connection, FORM, "seed_serial"),
+      ).toMatchObject({ serial });
+      const installation = await installationOf(connection, r1);
+      expect(installation?.metadata).toMatchObject({ serial });
+      const rerun = await runSeed(app, r1);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_serial", serial: null },
+      });
+      const drifted = await runSeeds(app, [r1]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+    });
+
     it("允許存草稿沒變:改版的 metadata 更新不帶它(舊表單不寫進顯式 true,稽核不記)", async () => {
       const r1 = formSeed("seed_allow_draft_same", "r1");
       await runSeeds(app, [r1]);

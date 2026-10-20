@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
+import type { SerialFormat } from "@repo/domain/form";
 import {
   DEFINITION_DESIRED_STATUSES,
   DEFINITION_SEED_KINDS,
@@ -64,6 +65,8 @@ export interface SeedInstallationMetadata {
   tabLabelTemplate?: string | null;
   /** 表單才有:允許存草稿(缺席 = 開;這個欄位之前的快照沒有它)。 */
   allowDraft?: boolean;
+  /** 表單才有:單號格式(缺席 = 不給號;這個欄位之前的快照沒有它)。 */
+  serial?: SerialFormat | null;
   /** 流程才有。 */
   checkFormKey?: string | null;
 }
@@ -78,6 +81,7 @@ export interface SeedInstallationExpectation {
     name: string;
     tabLabelTemplate?: string | null;
     allowDraft?: boolean;
+    serial?: SerialFormat | null;
   } | null;
 }
 

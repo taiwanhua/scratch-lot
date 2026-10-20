@@ -999,6 +999,7 @@ type FormModel {
   name: String!
   ownerOrgId: ID
   ownerOrgName: String
+  serial: FormSerialFormat
   tabLabelTemplate: String
   tenantEnabled: Boolean
   updatedAt: DateTime!
@@ -1014,6 +1015,20 @@ type FormPreviewPayload {
   fieldStates: [FormFieldState!]!
   summary: FormSubmissionSummary!
   values: JSONObject!
+}
+
+type FormSerialFormat {
+  digits: Int!
+  period: String!
+  prefix: String!
+  separator: String
+}
+
+input FormSerialFormatInput {
+  digits: Int!
+  period: String!
+  prefix: String!
+  separator: String
 }
 
 type FormSubmissionAbilities {
@@ -1059,6 +1074,7 @@ type FormSubmissionModel {
   replacedById: ID
   revision: Int!
   revisions: [FormSubmissionRevisionMeta!]!
+  serialNo: String
   status: FormSubmissionStatus!
   submittedAt: DateTime
   summary: FormSubmissionSummary
@@ -3360,6 +3376,7 @@ input UpdateFormInput {
   allowDraft: Boolean
   key: ID!
   name: String
+  serial: FormSerialFormatInput
   tabLabelTemplate: String
 }
 
