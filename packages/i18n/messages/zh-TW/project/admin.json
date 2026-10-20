@@ -892,7 +892,8 @@
       "filters": {
         "status": "狀態",
         "all": "全部"
-      }
+      },
+      "panelTitleWithSerial": "{serial} · {branch}"
     }
   }
 }

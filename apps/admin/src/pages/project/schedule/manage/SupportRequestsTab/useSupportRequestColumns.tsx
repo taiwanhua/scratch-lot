@@ -28,10 +28,15 @@ import {
   type SupportRequestRow,
 } from "./support-requests";
 
+/** 內建欄(狀態、建立者)的欄寬。 */
+const BUILTIN_WIDTH = 110;
+
 /** 列表 / 卡片的一欄:表頭 + 一格怎麼畫。 */
 export interface SupportRequestColumn {
   key: string;
   header: string;
+  /** 欄寬(列表欄位配置的 `width`;內建欄固定) */
+  width: number;
   render: (row: SupportRequestRow) => ReactNode;
 }
 
@@ -129,6 +134,7 @@ export const useSupportRequestColumns = (
     ...specs.map((spec): SupportRequestColumn => ({
       key: columnIdOf(spec),
       header: headerOf(spec),
+      width: spec.width,
       render: (row) => cellOf(spec, row),
     })),
     ...(builtin.status
@@ -136,6 +142,7 @@ export const useSupportRequestColumns = (
           {
             key: "status",
             header: t("status"),
+            width: BUILTIN_WIDTH,
             render: (row: SupportRequestRow) => (
               <SubmissionStatusTag status={row.status} blocked={row.blocked} />
             ),
@@ -147,6 +154,7 @@ export const useSupportRequestColumns = (
           {
             key: "createdBy",
             header: t("createdBy"),
+            width: BUILTIN_WIDTH,
             render: (row: SupportRequestRow) =>
               row.createdBy?.name ?? valueText.empty,
           },

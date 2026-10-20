@@ -108,7 +108,7 @@ export const supportRequestDefinition = (): FormDefinition => ({
   prefills: [],
 });
 
-/** `moduleForms("schedule.manage")` 的那一張(受管表單關了「允許存草稿」)。 */
+/** `moduleForms("schedule.manage")` 的那一張(受管表單關了「允許存草稿」;單號格式 S-0001)。 */
 export const supportRequestForm = {
   key: SUPPORT_REQUEST_FORM_KEY,
   name: "支援需求單",
@@ -203,16 +203,21 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
     {
       status: FormSubmissionStatus.Reviewing,
       currentInstanceId: "inst-support-12",
+      serialNo: "S-0012",
     },
   ),
-  supportRequest("sub-support-11", {
-    date: "2026-11-07T16:00:00.000Z",
-    position: "restock",
-    start: "13:00",
-    end: "17:00",
-    headcount: "1",
-    note: "週末到貨補貨",
-  }),
+  supportRequest(
+    "sub-support-11",
+    {
+      date: "2026-11-07T16:00:00.000Z",
+      position: "restock",
+      start: "13:00",
+      end: "17:00",
+      headcount: "1",
+      note: "週末到貨補貨",
+    },
+    { serialNo: "S-0011" },
+  ),
   supportRequest(
     "sub-support-09",
     {
@@ -223,16 +228,23 @@ export const supportRequestSubmissions = (): MockSubmission[] => [
       headcount: "2",
       note: "店員請假",
     },
-    { status: FormSubmissionStatus.Returned },
+    { status: FormSubmissionStatus.Returned, serialNo: "S-0009" },
   ),
 ];
 
 /**
  * `schedule.manage` 的列表欄位配置(與 seed 初值 `apps/db-migrator/seeds/project/settings.ts` 同):
- * 日期、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」。
+ * 單號、日期、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」。
  */
-export const supportRequestListColumns = (): ModuleListColumn[] =>
-  (
+export const supportRequestListColumns = (): ModuleListColumn[] => [
+  {
+    kind: ModuleListColumnKind.Slot,
+    key: "serialNo",
+    formKey: null,
+    width: 100,
+    order: 0,
+  },
+  ...(
     [
       ["date", 120],
       ["start_time", 100],
@@ -246,8 +258,9 @@ export const supportRequestListColumns = (): ModuleListColumn[] =>
     key,
     formKey: SUPPORT_REQUEST_FORM_KEY,
     width,
-    order,
-  }));
+    order: order + 1,
+  })),
+];
 
 export const SUPPORT_REQUEST_LIST_BUILTIN = {
   form: false,

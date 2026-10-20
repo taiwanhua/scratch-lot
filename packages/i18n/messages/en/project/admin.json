@@ -892,7 +892,8 @@
       "filters": {
         "status": "Status",
         "all": "All"
-      }
+      },
+      "panelTitleWithSerial": "{serial} · {branch}"
     }
   }
 }

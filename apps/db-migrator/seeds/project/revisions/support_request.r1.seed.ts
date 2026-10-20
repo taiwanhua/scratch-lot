@@ -13,6 +13,11 @@ export const seed = {
   moduleKey: "schedule.manage",
   tabLabelTemplate: "{{form}} {{date}}",
   allowDraft: false,
+  serial: {
+    prefix: "S",
+    period: "none",
+    digits: 4,
+  },
   definition: {
     fields: [
       {

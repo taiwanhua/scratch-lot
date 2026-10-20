@@ -19,19 +19,21 @@ export const projectSeedSettings: ProjectSeedSettings = {
     settings: {},
   },
   moduleInitialValues: {
-    // 排班作業 → 支援需求單的列表欄位配置(規格 14.10;Figma SC-31):日期、開始、結束、崗位、需要人數、分店
+    // 排班作業 → 支援需求單的列表欄位配置(規格 14.10;Figma SC-31):單號、日期、開始、結束、崗位、需要人數、分店
     // + 內建欄「狀態」。初始 seed 值:模組的 settings 已存在就不覆寫,之後由平台管理員在「模組與權限」調整。
     // 注意:這裡的 settings 會整份取代 P06 在 `schedule.ts` 宣告裡的 `settings`(初值不逐鍵合併)
     "schedule.manage": {
       settings: {
         list: {
           columns: [
-            supportRequestColumn("date", 120, 0),
-            supportRequestColumn("start_time", 100, 1),
-            supportRequestColumn("end_time", 100, 2),
-            supportRequestColumn("position", 140, 3),
-            supportRequestColumn("headcount", 100, 4),
-            supportRequestColumn("branch", 140, 5),
+            // 單號(摘要槽 `serialNo`;受管表單宣告的單號格式 S-0001)
+            { kind: "slot", key: "serialNo", width: 100, order: 0 },
+            supportRequestColumn("date", 120, 1),
+            supportRequestColumn("start_time", 100, 2),
+            supportRequestColumn("end_time", 100, 3),
+            supportRequestColumn("position", 140, 4),
+            supportRequestColumn("headcount", 100, 5),
+            supportRequestColumn("branch", 140, 6),
           ],
           builtin: { form: false, status: true, createdBy: false },
         },

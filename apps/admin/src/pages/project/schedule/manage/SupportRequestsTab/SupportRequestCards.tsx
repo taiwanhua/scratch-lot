@@ -18,7 +18,7 @@ export interface SupportRequestCardsProps {
 }
 
 /** 卡片標題列放前幾欄。 */
-const HEADING_COUNT = 3;
+const HEADING_COUNT = 4;
 
 /** 幾格串成一行,以「 · 」分隔。 */
 const joined = (
@@ -34,7 +34,7 @@ const joined = (
 
 /**
  * 手機版的支援需求單列表(規格 16.0 / RW-01:表格在手機改成卡片)。欄位與表格同一份(列表欄位配置):
- * 前三欄(初值是日期、開始、結束)一行、狀態放右上,其餘一行;點卡片進詳情頁。
+ * 前四欄(初值是單號、日期、開始、結束)一行、狀態放右上,其餘一行;點卡片進詳情頁。
  */
 export const SupportRequestCards = ({
   rows,

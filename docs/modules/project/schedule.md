@@ -143,10 +143,11 @@
 
 - **表單**:受管表單 `support_request`(`apps/db-migrator/seeds/project/revisions/support_request.r1.seed.ts`,在 `seeds/project/registry.ts` 登記;部署時由受管定義 CLI 發布成共用表單,掛在 `schedule.manage`)。表單、提交、修訂、流程都用底座的表單引擎與流程引擎(`form_submissions`),沒有自己的資料表。
 - **欄位**:日期(`date`,必填)、崗位(`position`,欄位管理「崗位」`schedule-position`,必填)、開始 / 結束(`start_time` / `end_time`,`HH:mm` 24 小時制,必填,結束要晚於開始;**不能跨午夜**,跨過午夜的需求拆成兩筆)、需要人數(`headcount`,1–99 的整數)、分店(`branch`,組織引用,預設目前組織,必填;Figma SC-14 有這一欄,讓總部看得出是哪家店)、說明(`note`,200 字內)。摘要:標題 = 說明、日期 = 日期;頁籤標題「支援需求單 <日期>」。
+- **單號**:受管表單宣告 `serial: { prefix: "S", period: "none", digits: 4 }`,第一次送出時給號,例 `S-0001`(每個租戶各自計數、不分期間;存草稿不給號;機制見底座 `docs/modules/forms.md`「單號」、ADR-0015)。
 - **沒有草稿**:表單「允許存草稿」關(seed 宣告 `allowDraft: false`),新增頁只有 [送出](`docs/modules/forms.md`「允許存草稿」)。
 - **權限**:看列表與詳情 = `schedule.manage.view`(分頁也看它);新增 = `schedule.manage.create`;審核不看頁面權限(承辦人就能審,`docs/modules/workflows.md`)。
 - **表單要先分派**:受管表單是共用表單,租戶要平台管理員在表單管理「分派租戶」後才看得到、才能新增(分派是各環境的資料,不在 seed)。示範指令 `demo create` 由平台管理員建完示範機構後自動分派 registry 登記的每張受管表單;真實租戶由平台管理員分派。
-- **列表欄位**:讀 `schedule.manage` 的列表欄位配置(`modules.settings.list`,平台管理員在「模組與權限」調整)。初值在 `apps/db-migrator/seeds/project/settings.ts`(初始 seed 值:模組的 settings 已存在就不覆寫):日期、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」(這份初值整份取代 `schedule.ts` 宣告裡的 `settings`)。
+- **列表欄位**:讀 `schedule.manage` 的列表欄位配置(`modules.settings.list`,平台管理員在「模組與權限」調整)。初值在 `apps/db-migrator/seeds/project/settings.ts`(初始 seed 值:模組的 settings 已存在就不覆寫):單號(摘要槽 `serialNo`)、日期、開始、結束、崗位、需要人數、分店 + 內建欄「狀態」(這份初值整份取代 `schedule.ts` 宣告裡的 `settings`)。
 
 #### 建議流程設定
 
@@ -217,7 +218,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。
-- 排班作業 → 支援需求單(SC-31,分頁 `support-requests`,要 `schedule.manage.view`;`pages/project/schedule/manage/SupportRequestsTab/`):狀態篩選(`?support=`)+ 列表(欄位讀列表欄位配置,算法同底座 `FormSubmissionList`,在 `useSupportRequestColumns`;表格與手機卡片共用;只查 `support_request`)+ [+ 新增](要 `create` 且 `moduleForms` 回這張表單可新增);電腦版點一筆在右側打開(`?detail=`):表單引擎的唯讀詳情 `FormSubmissionDetail` + 審核區塊 `ApprovalSection`(核准 / 駁回 / 退回修改依「我的任務」),「開啟完整頁面」到詳情頁。平板 / 手機點一筆進詳情頁(右側放不下),手機列表改卡片、篩選收進抽屜(RW-01)。新增頁 SC-14、詳情頁、編輯頁沿用表單引擎的預設組裝(`/schedule/manage/create-page/support_request`)。
+- 排班作業 → 支援需求單(SC-31,分頁 `support-requests`,要 `schedule.manage.view`;`pages/project/schedule/manage/SupportRequestsTab/`):狀態篩選(`?support=`)+ 列表(欄位讀列表欄位配置,算法同底座 `FormSubmissionList`,在 `useSupportRequestColumns`;表格與手機卡片共用;只查 `support_request`)+ [+ 新增](要 `create` 且 `moduleForms` 回這張表單可新增);電腦版點一筆在右側打開(`?detail=`):表單引擎的唯讀詳情 `FormSubmissionDetail` + 審核區塊 `ApprovalSection`(核准 / 駁回 / 退回修改依「我的任務」),標題「<單號> · <分店>」(沒有單號的退回「支援需求單 · <分店>」),「開啟完整頁面」到詳情頁。手機卡片的標題列是配置的前四欄(初值:單號、日期、開始、結束)。平板 / 手機點一筆進詳情頁(右側放不下),手機列表改卡片、篩選收進抽屜(RW-01)。新增頁 SC-14、詳情頁、編輯頁沿用表單引擎的預設組裝(`/schedule/manage/create-page/support_request`)。
 
 ## 錯誤碼
 

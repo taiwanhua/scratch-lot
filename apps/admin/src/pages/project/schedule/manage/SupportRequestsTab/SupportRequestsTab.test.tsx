@@ -30,7 +30,7 @@ const renderSupport = (
 describe("排班作業:支援需求單", () => {
   restoreViewportAfterEach();
 
-  it("有 schedule.manage.view:分頁出現,列出日期、開始、結束、崗位、人數、分店與狀態", async () => {
+  it("有 schedule.manage.view:分頁出現,列出單號、日期、開始、結束、崗位、人數、分店與狀態", async () => {
     renderSupport();
     expect(
       await screen.findByRole("tab", { name: "支援需求單" }),
@@ -42,10 +42,20 @@ describe("排班作業:支援需求單", () => {
       within(table)
         .getAllByRole("columnheader")
         .map((header) => header.textContent),
-    ).toEqual(["日期", "開始", "結束", "崗位", "需要人數", "分店", "狀態"]);
+    ).toEqual([
+      "單號",
+      "日期",
+      "開始",
+      "結束",
+      "崗位",
+      "需要人數",
+      "分店",
+      "狀態",
+    ]);
     const row = within(table).getByText("21:00").closest("tr");
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
+    expect(cells.getByText("S-0012")).toBeInTheDocument();
     expect(cells.getByText("店內櫃台")).toBeInTheDocument();
     expect(cells.getByText("台北分店")).toBeInTheDocument();
     expect(cells.getByText("審核中")).toBeInTheDocument();
@@ -139,7 +149,7 @@ describe("排班作業:支援需求單", () => {
       name: "支援需求單檢視與審核",
     });
     expect(
-      await within(panel).findByText("支援需求單 · 台北分店"),
+      await within(panel).findByText("S-0012 · 台北分店"),
     ).toBeInTheDocument();
     expect(
       await within(panel).findByDisplayValue("颱風後補人,晚間人手不足"),
@@ -191,7 +201,7 @@ describe("排班作業:支援需求單", () => {
     setMobileViewport();
     const { user } = renderSupport();
     const card = await screen.findByRole("button", {
-      name: /2026-11-12/,
+      name: /S-0012 · 2026-11-12/,
     });
     expect(screen.queryByRole("table")).toBeNull();
     await user.click(card);

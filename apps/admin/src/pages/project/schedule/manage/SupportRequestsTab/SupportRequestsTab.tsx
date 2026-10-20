@@ -99,6 +99,7 @@ export const SupportRequestsTab = () => {
     (column) => ({
       key: column.key,
       header: column.header,
+      width: column.width,
       render: (row) => column.render(row),
     }),
   );
@@ -118,6 +119,8 @@ export const SupportRequestsTab = () => {
       getRowKey={(row) => row.id}
       isLoading={query.isLoading}
       emptyMessage={t("empty")}
+      // 欄寬照列表欄位配置;放不下(右側開著檢視)時橫向捲動,不把欄位擠成折行
+      minWidth={listColumns.reduce((sum, column) => sum + column.width, 0)}
       onRowClick={open}
     />
   );
