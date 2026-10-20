@@ -934,8 +934,10 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("可以排的分店:主要分店每人一家;看不到的分店不能加;看不到的分店的關聯保留", async () => {
+      // 已加入的不只王小明(前面的測試還加了「兩店都在的人」),依名字找,不靠排序
+      // (姓名排序用 localeCompare,本機與 CI 的 ICU 排出來的先後不同)
       const joinedRows = await staffRows(manager, { joined: true });
-      const row = joinedRows.items[0];
+      const row = joinedRows.items.find((item) => item.name === "王小明");
       const staffId = row?.staff?.id;
       if (staffId === undefined) {
         throw new Error("王小明沒有排班檔案");
