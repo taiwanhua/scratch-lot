@@ -29,6 +29,18 @@ const withoutBaseEdit = dealerFixtures.map((dealer) => ({
   },
 }));
 
+/** 可見範圍組織樹的一個節點(對應分店的候選)。 */
+const branch = (id: string, name: string) => ({
+  __typename: "OrgNode" as const,
+  id,
+  name,
+  parentId: "org-tenant",
+  enabled: true,
+  outOfScope: false,
+  ownerUserId: null,
+  children: [],
+});
+
 /** 新增 / 編輯經銷商(Figma DE-03、DE-06b)。 */
 describe("經銷商新增 / 編輯頁", () => {
   it("編輯:只送動過的欄位,存完回詳情頁", async () => {
@@ -137,5 +149,46 @@ describe("經銷商新增 / 編輯頁", () => {
     expect(
       screen.getByText("還沒有選對應分店:可以先儲存,但請盡快選擇。"),
     ).toBeInTheDocument();
+  });
+
+  it("對應分店:候選是可見範圍(visibleOrgTree,不查管理範圍的 orgTree);已對應的分店停用並註明", async () => {
+    const calls = { orgTree: 0, visibleOrgTree: 0 };
+    server.use(
+      api.query("OrgTree", () => {
+        calls.orgTree += 1;
+        return HttpResponse.json({ data: { orgTree: [] } });
+      }),
+      api.query("VisibleOrgTree", () => {
+        calls.visibleOrgTree += 1;
+        return HttpResponse.json({
+          data: {
+            visibleOrgTree: [
+              {
+                ...branch("org-tenant", "好運彩券行"),
+                parentId: null,
+                children: [
+                  branch("org-branch-a", "中山店"),
+                  branch("org-branch-b", "信義店"),
+                ],
+              },
+            ],
+          },
+        });
+      }),
+    );
+    const { user } = renderDealers({ path: DEALERS_TEST_ROUTES.createPage });
+    const typeGroup = await screen.findByRole("radiogroup", {
+      name: "類型(建立後不能改)",
+    });
+    await user.click(within(typeGroup).getByRole("radio", { name: "乙類" }));
+
+    await user.click(await screen.findByRole("combobox", { name: "對應分店" }));
+
+    expect(
+      await screen.findByText("已由 好運 2 號店 對應"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("信義店")).toBeInTheDocument();
+    expect(calls.visibleOrgTree).toBeGreaterThan(0);
+    expect(calls.orgTree).toBe(0);
   });
 });

@@ -18,6 +18,7 @@ export interface StoreOrgPickerProps {
 /**
  * 對應分店(`org_lottery_dealer`,一對一;規格 5.4):已由其他乙類對應的分店在樹上停用,
  * 右側註明「已由 某某 對應」(`OrgTreeSelect` 的 `disabledReasons`)。
+ * 業務頁:候選是操作者的可見範圍(`scope="visible"`),沒有治理權限的總部人員也打得開組織樹。
  */
 export const StoreOrgPicker = ({
   label,
@@ -43,6 +44,7 @@ export const StoreOrgPicker = ({
   return (
     <OrgTreeSelect
       label={label}
+      scope="visible"
       value={value === null ? [] : [value]}
       onChange={(ids) => {
         onChange(ids.at(0) ?? null);
