@@ -1,7 +1,11 @@
 import type { DemoSource } from "../../src/demo/demo-source";
 import type { SeedSource } from "../base/seed-source";
 import { lotteryDemoSource } from "./demo";
-import { projectFieldCategories, projectFields } from "./field-categories";
+import {
+  projectFieldCategories,
+  projectFieldOptionColors,
+  projectFields,
+} from "./field-categories";
 
 /**
  * 專案的種子來源(正本:ADR-0002)。專案新增的內容登記在這裡,不改 `seeds/base/`:
@@ -20,6 +24,8 @@ export const projectSeedSource: SeedSource = {
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
     projectFieldCategories,
     projectFields,
+    // 全域選項的初始顏色(目前只有崗位;規格 18.5)
+    projectFieldOptionColors,
   ],
 };
 

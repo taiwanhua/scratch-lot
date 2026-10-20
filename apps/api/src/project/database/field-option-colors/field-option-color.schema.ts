@@ -30,6 +30,17 @@ export class FieldOptionColor {
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   fieldId!: Types.ObjectId;
 
+  /**
+   * 專案 seed 種下的全域選項初始顏色才有(`seeds/project/field-categories.ts` 的 `projectFieldOptionColors`,
+   * 值 = 選項的 key);seed 以它冪等。之後由人在欄位管理改顏色,只動 `paletteKey`。
+   */
+  @Prop({ type: String })
+  key?: string;
+
+  /** seed 種下的那幾筆為 true(seed 的保護標記,ADR-0002);人設的為 false / 缺欄位。 */
+  @Prop({ type: Boolean, default: false })
+  isSystem!: boolean;
+
   /** 色票代號(`@repo/domain/project/tag-palette`);null = 不設定顏色。 */
   @Prop({ type: String, enum: [...TAG_PALETTE_KEYS], default: null })
   paletteKey!: string | null;

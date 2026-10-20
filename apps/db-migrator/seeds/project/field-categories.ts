@@ -1,6 +1,7 @@
 import { LOTTERY_FIELD_CATEGORY_KEYS as LOTTERY } from "@repo/domain/project/lottery-fields";
 import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS as SCHEDULE } from "@repo/domain/project/schedule-fields";
+import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
 
 import {
   type SeedDocument,
@@ -12,6 +13,8 @@ import { ROOT_ORG_KEY } from "../base/orgs";
 interface FieldOption {
   value: string;
   label: string;
+  /** 全域選項的初始顏色(標籤色票代號,規格 18.5);沒有就不設。 */
+  color?: TagPaletteKey;
 }
 
 /** 一個專案系統類別與它的全域預設選項(order 依宣告順序 1 起算)。 */
@@ -29,7 +32,7 @@ const other: FieldOption = { value: REASON_OTHER_VALUE, label: "其他" };
  * 專案的欄位管理系統類別(專案規格第 13 章;內容正本:`docs/modules/project/field-manager.md`)。
  * 類別 key 與程式要認得的選項代碼在 `@repo/domain/project/{lottery,schedule}-fields`;
  * 選項 value 一律英文 kebab-case,「其他」一律 `other`(選它時說明必填,`requiresReasonNote`)。
- * 種子不含選項顏色,也不含示範租戶自己的崗位。
+ * 有 `color` 的選項另由 `projectFieldOptionColors` 種下初始顏色(目前只有崗位);不含示範租戶自己的崗位。
  */
 export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
   {
@@ -157,9 +160,9 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     usedIn:
       "人力需求、人力需求範本、收銀點、支援需求單(同一家店崗位和收銀點 1:1)",
     options: [
-      { value: "in-store-counter", label: "店內櫃台" },
-      { value: "outdoor-stall", label: "店外攤位" },
-      { value: "restock", label: "補貨" },
+      { value: "in-store-counter", label: "店內櫃台", color: "blue" },
+      { value: "outdoor-stall", label: "店外攤位", color: "green" },
+      { value: "restock", label: "補貨", color: "orange" },
     ],
   },
   {
@@ -284,5 +287,37 @@ export const projectFields: SeedDocumentSet = {
         enabled: true,
       },
     })),
+  ),
+};
+
+/**
+ * 全域選項的初始顏色(S2 專案臨時表 `project_field_option_colors`,形狀同 P02 的全域選項顏色:
+ * `orgId` = 根組織、`tenantId` = null、一筆 = 一個選項的色票代號;正本 `docs/modules/project/field-manager.md`)。
+ * key 同選項的 key(`<類別 key>.<value>`)。
+ *
+ * `paletteKey` 是**初始 seed 值**:只在那個選項還沒有顏色時寫入;平台管理員之後在欄位管理改過(含清成「不設定」),
+ * 重跑 seed 不覆蓋。平台管理員在 seed 之前就設過的那一筆以 `fieldId` 認養,顏色同樣保留。
+ */
+export const projectFieldOptionColors: SeedDocumentSet = {
+  kind: "documents",
+  collection: "project_field_option_colors",
+  initialSeedValueFields: ["paletteKey"],
+  adoptBy: { fields: ["fieldId"], where: { tenantId: null } },
+  entries: PROJECT_FIELD_CATEGORIES.flatMap((category) =>
+    category.options.flatMap(({ value, color }): SeedDocument[] =>
+      color === undefined
+        ? []
+        : [
+            {
+              key: `${category.key}.${value}`,
+              data: {
+                orgId: seedRef("orgs", ROOT_ORG_KEY),
+                tenantId: null,
+                fieldId: seedRef("fields", `${category.key}.${value}`),
+                paletteKey: color,
+              },
+            },
+          ],
+    ),
   ),
 };

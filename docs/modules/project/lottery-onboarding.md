@@ -63,7 +63,7 @@
 
 - `roles`:`hq` = 總部管理、`store-manager` = 店長、`clerk` = 店員。
 - `headquartersBranch`:總部是某家分店時填那家店的名稱;總部就是租戶本身時為 `null`。
-- `positions`:專案預設崗位之外的自訂崗位(`value` 英文 kebab-case、`label` 顯示名稱、選填 `color` = 標籤色票代號 `blue` / `cyan` / `green` / `lime` / `yellow` / `orange` / `red` / `pink` / `purple` / `grey`);沒有就空清單。顏色只在這個租戶自己的選項還沒有顏色時設定,租戶已選過的不動;全域選項(店內櫃台、店外攤位、補貨)的顏色只有平台管理員能設,開通腳本不碰。
+- `positions`:專案預設崗位之外的自訂崗位(`value` 英文 kebab-case、`label` 顯示名稱、選填 `color` = 標籤色票代號 `blue` / `cyan` / `green` / `lime` / `yellow` / `orange` / `red` / `pink` / `purple` / `grey`);沒有就空清單。顏色只在這個租戶自己的選項還沒有顏色時設定,租戶已選過的不動;全域選項(店內櫃台 blue、店外攤位 green、補貨 orange)的顏色由專案 seed 種下初始值、之後只有平台管理員能改,開通腳本不碰。
 
 在**自己的終端機**執行(租戶管理員密碼在終端機輸入、不回顯;不從參數、環境變數或檔案讀):
 

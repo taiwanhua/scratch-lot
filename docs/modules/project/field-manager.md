@@ -4,7 +4,7 @@
 
 - 選項 value 一律英文 kebab-case;「其他」一律 `other`,選它時說明必填,全系統一致(`@repo/domain/project/reason-note` 的 `requiresReasonNote`)。
 - 選項依表中順序 1 起算(`order`);租戶可以再自己加選項。
-- 種子不含選項顏色;示範租戶另加的崗位(櫃台 A、櫃台 B、彩券機旁)放示範資料,不是系統選項。
+- 崗位的三個全域選項有初始顏色:店內櫃台 = blue、店外攤位 = green、補貨 = orange(專案 seed `projectFieldOptionColors`,見下方「選項顏色」);其餘選項沒有初始顏色。示範租戶另加的崗位(櫃台 A、櫃台 B、彩券機旁)放示範資料,不是系統選項。
 - 不放欄位管理(程式依值做事):銀行交易類型、現金流水類型、張的狀態 / 位置、經銷商類型與狀態、關係人身分、職責、行事曆類型。
 
 ## 類別與預設選項
@@ -43,6 +43,7 @@ S2 專案客製(規格 18.5):每個選項可以設一個標籤色票代號,欄�
 - **誰能設 = 誰能停用該選項**(底座 `canToggleFieldEnabled`)+ `system.field-manager.edit`:自訂選項限加它的那一層;全域種子限根組織(顏色對全平台生效)。每個選項只有一個擁有者,所以最多一筆顏色。
 - 存在 `project_field_option_colors`:`orgId` = 設定顏色的組織、`tenantId` 由它推導(根組織 = null)、唯一 `(tenantId, fieldId)`;第一次設定建一筆,之後更新同一筆。
 - `paletteKey` 為 null = 不設定(清除顏色只把它設成 null,不刪資料)。
+- 全域選項的初始顏色由專案 seed 種下(`apps/db-migrator/seeds/project/field-categories.ts` 的 `projectFieldOptionColors`:`orgId` = 根組織、`tenantId` = null、`key` = 選項的 key、`isSystem: true`)。`paletteKey` 是初始 seed 值:只在那個選項還沒有顏色時寫入,平台管理員之後改過(含清成不設定)重跑 seed 不覆蓋;seed 之前就設過的那一筆以 `fieldId` 認養,顏色保留。
 - 審計:`field.set-color`(`targetType = field`、`targetId` = 選項 id,before / after 記 `paletteKey`)。
 
 ### api 介面
