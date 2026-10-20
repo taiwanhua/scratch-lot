@@ -428,14 +428,16 @@ demo 指令在指定環境建立一個標「示範」的機構(租戶頂層)與�
 | mode      | 結果                                                                           |
 | --------- | ------------------------------------------------------------------------------ |
 | `create`  | 建立 / 補齊示範機構;冪等,重跑只補缺的帳號與資料,不會把已改過的密碼或資料改回去 |
-| `purge`   | 清空示範機構(尚未提供:指令通過安全閥後拒絕執行,一筆都不寫也不刪)               |
-| `rebuild` | `purge` + `create`(同上,尚未提供)                                              |
+| `purge`   | 清空示範機構(見下方「示範機構清空 / 重建」)                                    |
+| `rebuild` | `purge` + `create`                                                             |
 
 **全程走 api**:指令不連資料庫,只呼叫 `--api-url` 那個 api 的 GraphQL,權限照常檢查、操作紀錄照常寫:
 
 1. 以平台管理員(`ROOT_ADMIN_ACCOUNT`,密碼見下)登入,讀 api **自己回報**的資料庫名(`provisionTarget`,根組織專屬、只回資料庫名)並比對確認字串。到這裡還沒有任何寫入
 2. 以 `provisionTenant`(`demo: true`)建立示範機構與首任租戶管理員 `<基底信箱>+<別名>@…`(密碼 = 示範密碼,只存雜湊;不寄啟用信、首登不強改)。以**租戶短碼 + 「示範」標記**找回:同短碼且標「示範」的機構就沿用;同短碼卻沒有「示範」標記 → 拒絕,一筆都不寫
 3. 以那位首任租戶管理員登入,交給專案的 `populate` 建出其餘內容(內容與步驟見專案的開通文件)
+
+`purge` 只做第 1 步與清空;`rebuild` 在第 1 步之後先讀齊示範密碼與基底信箱(缺值就停在一筆都沒刪的時候),再清空、再做第 2、3 步。
 
 「示範」標記(`orgs.isDemo`)只在開通時設定,之後沒有端點改得了它,真實租戶不會被當成示範機構。
 
@@ -468,7 +470,27 @@ DEMO_ALLOW_ENV=dev ROOT_ADMIN_ACCOUNT=<root 帳號> \
 - 示範機構的首任租戶管理員密碼若已被改過,`create` 在以他登入那一步停下;由平台管理員重設成示範密碼後重跑。
 - 新建的示範帳號照一般使用者規則:首登要改密碼。改過的密碼重跑不會改回去。
 
-正本:`.github/workflows/demo.yml`、`.github/workflows/reset-db.yml`(勾選項)、`apps/db-migrator/src/demo/`;示範資料放專案的 `apps/db-migrator/seeds/project/demo/`(STRUCT-12)。
+#### 示範機構清空 / 重建
+
+`--mode=purge` 以平台管理員呼叫 api 的 `purgeDemoTenant`(根組織專屬,權限沿用 `system.org-manager.tenant-ops.revoke-provision`),把示範機構整個抹掉,讓 `rebuild` 從頭建一份乾淨的:
+
+- **只接受標「示範」的機構**:以專案示範資料固定的租戶短碼找根組織底下的租戶頂層。找不到 → 什麼都不做;找到卻沒有「示範」標記 → `FORBIDDEN`,一筆都不刪。確認字串與 `create` 同一套規則(`demo:<environment>:<資料庫名>:purge`,資料庫名段比對 api 回報的名稱)
+- **刪除範圍**:所有帶這個租戶 id 的資料,**包括只能新增的帳本**(稽核紀錄、流水、事件;清空 = 當作沒發生過);依組織或使用者歸屬的資料(欄位、客製表單與它的版本、會員、token、個人偏好);租戶頂層與它所有下層組織;它擁有的角色;**只屬於這個機構的使用者**硬刪(同一組帳號之後能重新建立),**也屬於其他組織的使用者只移除**在這個機構的所屬與角色;資料裡引用的檔案(商標、附件等本 API 簽出的物件路徑)在交易提交後刪掉,個別失敗只記 log
+- **一個交易**:刪除與稽核 `org.purge-demo`(記在根組織,不在刪除範圍)同一個交易,中途失敗全部回復
+- 不刪全平台共用的定義與紀錄(模組、權限、欄位類別、資料範圍設定、受管定義的安裝紀錄、排程紀錄);根組織做的開通紀錄也留著
+
+**刪除範圍用登記制**:資料層登記的每一張 collection 都要宣告刪法 —— 底座的在 `apps/api/src/database/base/tenant-purge.ts`,專案的在 `apps/api/src/project/database/tenant-purge.ts`,規則與驗證在 `apps/api/src/database/tenant-purge.ts`:
+
+| 刪法        | 用在                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `tenantId`  | 帶 `tenantId` 欄的表(**一律用這種**,不能改用別的)                                           |
+| `match`     | 依欄位歸屬:值是這個租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件(例:表單版本跟著表單) |
+| `dedicated` | 只給組織、使用者、角色、核心關聯,由清空服務自己算範圍                                       |
+| `keep`      | 不是租戶資料,不刪;要寫理由                                                                  |
+
+新增資料表時同 PR 加一筆登記;沒登記、或帶 `tenantId` 卻不是依 `tenantId` 刪,`apps/api/src/database/tenant-purge.test.ts` 的完整性測試就失敗,執行時也會在刪任何東西之前停下。
+
+正本:`.github/workflows/demo.yml`、`.github/workflows/reset-db.yml`(勾選項)、`apps/db-migrator/src/demo/`、`apps/api/src/orgs/demo-tenant-purge.service.ts`、`apps/api/src/database/tenant-purge.ts`;示範資料放專案的 `apps/db-migrator/seeds/project/demo/`(STRUCT-12)。
 
 ### 觀測與維運
 
