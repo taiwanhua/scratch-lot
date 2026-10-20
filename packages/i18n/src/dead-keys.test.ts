@@ -669,6 +669,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "專案輸出報表的 `t(`lotteryReports.errors.${code}`)`,code 由 `pages/project/lottery/reports/ReportsPage/reports-error.ts` 從 api 錯誤碼換算",
   },
+  {
+    key: "admin.lotteryPurchasing.states.",
+    reason:
+      "專案 `pages/project/lottery/purchasing/RequisitionsTab/RequisitionStatusTag.tsx` 的 `t(state)`,state 取自 api `lotteryRequisitionStates`(`@repo/domain/project/lottery` 的 `REQUISITION_STATES`)",
+  },
+  {
+    key: "admin.lifecycle.",
+    reason:
+      "專案掛接點擋下的錯誤碼(目前是叫貨單):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `project/lottery/requisition/requisition-error.ts` 的 `REQUISITION_REASONS`)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

@@ -1426,5 +1426,93 @@
       "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
       "UNEXPECTED": "發生錯誤,請稍後再試"
     }
+  },
+  "lotteryPurchasing": {
+    "tabs": {
+      "aria": "叫貨、採購單分頁",
+      "requisitions": "叫貨單",
+      "purchaseList": "採購清單"
+    },
+    "requisitions": {
+      "create": "+ 新增叫貨單",
+      "listAria": "叫貨單列表",
+      "empty": "沒有符合條件的叫貨單",
+      "loading": "載入中",
+      "total": "共 {total} 筆",
+      "filters": {
+        "status": "狀態",
+        "all": "全部"
+      }
+    },
+    "states": {
+      "pending": "待購買",
+      "purchased": "已進貨",
+      "transferred": "已調貨"
+    },
+    "create": {
+      "tabLabel": "新增",
+      "title": "新增叫貨單",
+      "loading": "載入中",
+      "unavailable": "現在不能新增叫貨單(表單沒有開放或沒有新增權限)",
+      "pickBranch": "先選叫貨分店",
+      "fields": {
+        "branch": "叫貨分店",
+        "expectedDate": "期望到貨日(選填)"
+      },
+      "filters": {
+        "keyword": "搜尋遊戲名稱或代號",
+        "unitPrice": "面額",
+        "all": "全部",
+        "onlyOrdered": "只看要叫的"
+      },
+      "unitPrice": "{price} 元",
+      "columns": {
+        "game": "遊戲",
+        "stock": "目前庫存(張)",
+        "inTransit": "在途(本)",
+        "sold7": "近 7 天",
+        "sold30": "近 30 天",
+        "books": "叫幾本"
+      },
+      "newGame": "新",
+      "gameLabel": "{code} {name} · {price} 元",
+      "overAllocation": "超過預計要給本數({excess})",
+      "listAria": "販售中的遊戲",
+      "empty": "沒有符合條件的遊戲",
+      "cardFacts": "庫存 {stock} 張 · 在途 {inTransit} 本 · 近 7 天 {sold7} · 近 30 天 {sold30}",
+      "totals": "共叫 {books} 本,預估批購 {amount} 元",
+      "totalsShort": "共叫 {books} 本 · 預估 {amount}",
+      "saveDraft": "存草稿",
+      "submit": "送出",
+      "draftSaved": "已存草稿",
+      "submitted": "叫貨單已送出"
+    },
+    "purchaseList": {
+      "export": "匯出 Excel",
+      "exportFailed": "匯出失敗,請再試一次",
+      "hint": "只列待購買的叫貨單(未作廢、未被進貨單或調貨單引用),依遊戲 × 分店加總。",
+      "listAria": "採購清單",
+      "empty": "目前沒有待購買的叫貨單",
+      "gameLabel": "{code} {name} {price}",
+      "columns": {
+        "game": "遊戲",
+        "totalBooks": "合計本數",
+        "estimatedAmount": "預估批購金額",
+        "serialNo": "單號",
+        "branch": "叫貨分店",
+        "books": "本數",
+        "estimatedShort": "預估批購"
+      },
+      "pendingTitle": "待購買的叫貨單",
+      "pendingAria": "待購買的叫貨單",
+      "pendingEmpty": "目前沒有待購買的叫貨單",
+      "fileName": "採購清單",
+      "sheetName": "採購清單"
+    }
+  },
+  "lifecycle": {
+    "REQUISITION_GAME_DISCONTINUED": "明細有已停售的遊戲,請拿掉後再送出",
+    "REQUISITION_NO_LINES": "至少要叫一本才能送出",
+    "REQUISITION_REFERENCED": "這張叫貨單已經被進貨單或調貨單引用,請先作廢那張單"
   }
 }

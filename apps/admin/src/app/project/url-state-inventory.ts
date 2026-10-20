@@ -43,4 +43,7 @@ export const projectUrlStateInventory: UrlStateInventory = {
   // 銀行帳戶詳情:交易清單的篩選(期間、類型)
   accounts: ["tab", "cash", "movementId"],
   "accounts.view-page": ["transactions"],
+  // 叫貨、採購單:頁內分頁 `tab`、叫貨單列表的篩選 `requisitions`;新增頁的篩選只在畫面上(不進網址)
+  "purchasing.requisition": ["tab", "requisitions"],
+  "purchasing.requisition.create-page": [],
 };

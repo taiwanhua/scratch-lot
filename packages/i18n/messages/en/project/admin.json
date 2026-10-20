@@ -1426,5 +1426,93 @@
       "NO_OPEN_SHIFT": "This cash point has no open shift",
       "UNEXPECTED": "Something went wrong, please try again"
     }
+  },
+  "lotteryPurchasing": {
+    "tabs": {
+      "aria": "Requisitions and purchase list tabs",
+      "requisitions": "Requisitions",
+      "purchaseList": "Purchase list"
+    },
+    "requisitions": {
+      "create": "+ New requisition",
+      "listAria": "Requisitions",
+      "empty": "No requisitions match the filters",
+      "loading": "Loading",
+      "total": "{total} in total",
+      "filters": {
+        "status": "Status",
+        "all": "All"
+      }
+    },
+    "states": {
+      "pending": "To purchase",
+      "purchased": "Purchased",
+      "transferred": "Transferred"
+    },
+    "create": {
+      "tabLabel": "New",
+      "title": "New requisition",
+      "loading": "Loading",
+      "unavailable": "You cannot create a requisition now (the form is not available or you lack the create permission)",
+      "pickBranch": "Pick the requesting branch first",
+      "fields": {
+        "branch": "Requesting branch",
+        "expectedDate": "Expected arrival (optional)"
+      },
+      "filters": {
+        "keyword": "Search game name or code",
+        "unitPrice": "Denomination",
+        "all": "All",
+        "onlyOrdered": "Only ordered"
+      },
+      "unitPrice": "{price}",
+      "columns": {
+        "game": "Game",
+        "stock": "In stock (tickets)",
+        "inTransit": "In transit (books)",
+        "sold7": "Last 7 days",
+        "sold30": "Last 30 days",
+        "books": "Books"
+      },
+      "newGame": "New",
+      "gameLabel": "{code} {name} · {price}",
+      "overAllocation": "Over planned books ({excess})",
+      "listAria": "Games on sale",
+      "empty": "No games match the filters",
+      "cardFacts": "Stock {stock} · in transit {inTransit} · 7 days {sold7} · 30 days {sold30}",
+      "totals": "{books} books, estimated purchase {amount}",
+      "totalsShort": "{books} books · est. {amount}",
+      "saveDraft": "Save draft",
+      "submit": "Submit",
+      "draftSaved": "Draft saved",
+      "submitted": "Requisition submitted"
+    },
+    "purchaseList": {
+      "export": "Export Excel",
+      "exportFailed": "Export failed, please try again",
+      "hint": "Only requisitions still to purchase (not voided, not used by a purchase or transfer), totalled by game and branch.",
+      "listAria": "Purchase list",
+      "empty": "No requisitions to purchase",
+      "gameLabel": "{code} {name} {price}",
+      "columns": {
+        "game": "Game",
+        "totalBooks": "Total books",
+        "estimatedAmount": "Estimated purchase amount",
+        "serialNo": "No.",
+        "branch": "Requesting branch",
+        "books": "Books",
+        "estimatedShort": "Estimated"
+      },
+      "pendingTitle": "Requisitions to purchase",
+      "pendingAria": "Requisitions to purchase",
+      "pendingEmpty": "No requisitions to purchase",
+      "fileName": "purchase-list",
+      "sheetName": "Purchase list"
+    }
+  },
+  "lifecycle": {
+    "REQUISITION_GAME_DISCONTINUED": "Some games are discontinued; remove them before submitting",
+    "REQUISITION_NO_LINES": "Order at least one book before submitting",
+    "REQUISITION_REFERENCED": "A purchase or transfer already uses this requisition; void that one first"
   }
 }

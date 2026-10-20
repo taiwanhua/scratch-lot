@@ -11,6 +11,8 @@ import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/G
 import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
 import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
+import { RequisitionCreatePage } from "@/pages/project/lottery/purchasing/RequisitionCreatePage/RequisitionCreatePage";
+import { RequisitionPage } from "@/pages/project/lottery/purchasing/RequisitionPage/RequisitionPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
 import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
@@ -62,6 +64,15 @@ export const projectModulePages: ModulePageSource = {
     {
       moduleKey: "schedule.attendance",
       pageOverrides: { list: { Page: ScheduleAttendancePage } },
+    },
+    // 叫貨、採購單(綁定 叫貨單;規格 8.1):列表頁換成分頁頁殼(叫貨單 | 採購清單)、新增頁換成
+    // 列出所有販售中遊戲的叫貨頁;詳情 / 編輯(草稿)沿用表單引擎
+    {
+      moduleKey: "purchasing.requisition",
+      pageOverrides: {
+        list: { Page: RequisitionPage },
+        createPage: { Page: RequisitionCreatePage },
+      },
     },
   ],
 };
