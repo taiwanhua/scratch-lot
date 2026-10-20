@@ -517,7 +517,7 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
     const game = (filter?: Record<string, unknown>) =>
       field("game", "reference", {
         source: {
-          provider: "lottery_game",
+          provider: "catalog_item",
           labelField: "name",
           ...(filter && { filter }),
         },
@@ -529,12 +529,12 @@ describe("validatePortableDefinition:lookup 來源與固定值", () => {
       game({ status: "discontinued" }),
       game({ orgId: HEX_24 }),
       field("dealer", "reference", {
-        source: { provider: "lottery_dealer", labelField: "name" },
+        source: { provider: "vendor", labelField: "name" },
       }),
     ]);
     const catalog = catalogOf({
       lookupProviders: new Map([
-        ["lottery_game", { filters: { status: ["on_sale"] } }],
+        ["catalog_item", { filters: { status: ["on_sale"] } }],
       ]),
     });
     expect(codesAt(errorsOf(seed, catalog))).toEqual([
