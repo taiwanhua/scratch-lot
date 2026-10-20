@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
-import type { Types } from "mongoose";
+import { getModelToken } from "@nestjs/mongoose";
+import type { Model, Types } from "mongoose";
 
 import { MASTER_DATA_PERMISSIONS as P } from "@repo/domain/project/lottery-master-data";
 
@@ -9,6 +10,11 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import {
+  LOTTERY_GAMES_COLLECTION,
+  LotteryGame,
+  MASTER_DATA_MODULE_KEY,
+} from "../../database/lottery-games/lottery-game.schema";
 import {
   GAME_MODULES,
   createMasterDataOperator,
@@ -159,6 +165,11 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
   /** 租戶甲:沒綁遊戲分頁。 */
   let outsiderA: string;
 
+  /** app 裡的遊戲 model(等索引建好用)。 */
+  function gameModel(): Model<LotteryGame> {
+    return api.app.get<Model<LotteryGame>>(getModelToken(LotteryGame.name));
+  }
+
   async function createGame(
     token: string,
     overrides: Record<string, unknown> = {},
@@ -259,6 +270,8 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
     });
 
     it("同時送出兩筆相同代號:只成功一筆,另一筆 VALIDATION_FAILED(GAME_CODE_DUPLICATE)", async () => {
+      // 先等唯一索引建好(先例 `database/scheduled-job-runs.store.ts`),否則兩筆可能都寫進去
+      await gameModel().init();
       const gameCode = nextCode();
       const results = await Promise.all(
         [1, 2].map(() =>
@@ -283,6 +296,44 @@ describe("檔案管理 → 遊戲(GraphQL 端點 + 真 MongoDB)", () => {
         input: { keyword: gameCode, status: null },
       });
       expect(list.lotteryGames.totalCount).toBe(1);
+    });
+
+    it("索引本身:同租戶同代號直接寫第二筆 → E11000;已軟刪除的同代號可以並存", async () => {
+      const model = gameModel();
+      await model.init();
+      const gameCode = nextCode();
+      const raw = (deletedAt: Date | null) => {
+        const now = new Date();
+        return {
+          gameCode,
+          name: "索引測試",
+          unitPrice: 100,
+          ticketsPerBook: 100,
+          bookPrice: 10_000,
+          defaultRate: 90,
+          color: null,
+          status: "on_sale",
+          orgId: tenantA,
+          tenantId: tenantA,
+          moduleKey: MASTER_DATA_MODULE_KEY,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: null,
+          updatedBy: null,
+          deletedAt,
+        };
+      };
+      const collection = api.connection.collection(LOTTERY_GAMES_COLLECTION);
+      await collection.insertOne(raw(null));
+      await expect(collection.insertOne(raw(null))).rejects.toMatchObject({
+        code: 11_000,
+      });
+      await expect(
+        collection.insertOne(raw(new Date())),
+      ).resolves.toMatchObject({ acknowledged: true });
+      expect(
+        await collection.countDocuments({ tenantId: tenantA, gameCode }),
+      ).toBe(2);
     });
 
     it("刪除後代號可以再用", async () => {
