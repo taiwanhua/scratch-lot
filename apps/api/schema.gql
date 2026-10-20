@@ -1810,6 +1810,7 @@ type Mutation {
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
+  resetSidebarBadgeSetting(input: ResetSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!
   restoreScheduleRule(input: RestoreScheduleRuleInput!): ScheduleRuleMutationPayload!
   retireCurrentVersion(input: RetireCurrentVersionInput!): FormPayload!
   retireCurrentWorkflowVersion(input: WorkflowKeyInput!): WorkflowPayload!
@@ -1866,6 +1867,7 @@ type Mutation {
   updatePrinter(input: UpdatePrinterInput!): PrinterPayload!
   updateRole(input: UpdateRoleInput!): RolePayload!
   updateScheduleStaff(input: UpdateScheduleStaffInput!): ScheduleStaffPayload!
+  updateSidebarBadgeSetting(input: UpdateSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!
   updateUser(input: UpdateUserInput!): UserPayload!
   updateWorkflow(input: UpdateWorkflowInput!): WorkflowPayload!
   upgradeFormSubmissions(input: UpgradeFormSubmissionsInput!): FormUpgradePayload!
@@ -2474,6 +2476,7 @@ type Query {
   scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
   scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
+  sidebarBadgeSettings: SidebarBadgeSettingsPayload!
   sidebarBadges: [SidebarBadge!]!
   tenantModuleOptions: [ModuleOption!]!
   tenantOrgTree: [TenantOrgNode!]!
@@ -2547,6 +2550,10 @@ type RequestPasswordResetPayload {
 input ResetNotificationSettingInput {
   part: NotificationSettingPart
   type: String!
+}
+
+input ResetSidebarBadgeSettingInput {
+  moduleKey: String!
 }
 
 input RestoreScheduleRuleInput {
@@ -3239,6 +3246,39 @@ type SidebarBadge {
   moduleKey: String!
 }
 
+type SidebarBadgeSetting {
+  """租戶調整過的人員條件(綁了模組之後再看它);沒調整 = null,用程式預設"""
+  audience: JSONObject
+
+  """「數什麼」的說明文字在 admin 訊息檔的 key(登記時給);沒有 = null"""
+  descriptionKey: String
+
+  """true = 沒有調整,用程式預設"""
+  isDefault: Boolean!
+
+  """模組 key"""
+  moduleKey: String!
+
+  """模組名稱;模組不存在時退回模組 key"""
+  moduleName: String!
+
+  """程式預設要求的權限 key(登記的 requires);沒有 = null"""
+  requires: String
+
+  """最後一次調整 / 還原的時間;從沒動過 = null"""
+  updatedAt: DateTime
+  updatedBy: ID
+}
+
+type SidebarBadgeSettingPayload {
+  setting: SidebarBadgeSetting!
+}
+
+type SidebarBadgeSettingsPayload {
+  items: [SidebarBadgeSetting!]!
+  totalCount: Int!
+}
+
 input SubmitFormSubmissionInput {
   expectedEditVersion: Int!
   id: ID!
@@ -3451,6 +3491,11 @@ input UpdateScheduleStaffInput {
   note: String
   orgs: [ScheduleStaffOrgInput!]
   staffId: ID!
+}
+
+input UpdateSidebarBadgeSettingInput {
+  audience: JSONObject!
+  moduleKey: String!
 }
 
 input UpdateUserInput {

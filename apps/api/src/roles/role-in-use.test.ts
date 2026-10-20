@@ -322,6 +322,37 @@ describe("角色刪除前置:被人員條件引用(REFERENCED_BY_AUDIENCE)", () 
     expect(deletedId).toBeUndefined();
   });
 
+  it("側欄數字的人員條件引用 → 擋下,引用處帶模組名稱;沒登記側欄數字的模組與別租戶的不算", async () => {
+    const roleId = await newRole("側欄數字角色");
+    const now = new Date();
+    const setting = (tenantId: Types.ObjectId, moduleKey: string) => ({
+      tenantId,
+      moduleKey,
+      audience: roleAudience(roleId),
+      createdAt: now,
+      updatedAt: now,
+      ...BASE_FIELDS,
+    });
+    await connection
+      .collection("sidebar_badge_settings")
+      .insertMany([
+        setting(world.tenantA, "apply-center"),
+        setting(world.tenantA, "removed.module"),
+        setting(world.tenantB, "apply-center"),
+      ]);
+
+    const { code, reasons, references } = await deleteAs(manager.token, roleId);
+    expect(code).toBe("ROLE_NOT_DELETABLE");
+    expect(reasons).toEqual(["REFERENCED_BY_AUDIENCE"]);
+    expect(references).toEqual([{ kind: "sidebar-badge", name: "申請中心" }]);
+
+    await connection
+      .collection("sidebar_badge_settings")
+      .deleteMany({ "audience.filter.value.values": String(roleId) });
+    const after = await deleteAs(manager.token, roleId);
+    expect(after.deletedId).toBe(String(roleId));
+  });
+
   it("流程關卡的審核者引用 → 擋下,引用處帶流程與關卡名稱", async () => {
     const roleId = await newRole("審核角色");
     await addWorkflow({

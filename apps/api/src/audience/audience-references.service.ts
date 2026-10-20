@@ -12,13 +12,16 @@ import {
 import {
   DataScopeRulesRepository,
   DataScopeTargetsRepository,
+  ModulesRepository,
   NotificationSettingsRepository,
+  SidebarBadgeSettingsRepository,
   WorkflowInstancesRepository,
   WorkflowVersionsRepository,
 } from "../database/database.module";
 import { WorkflowsRepository } from "../database/workflows.repository";
 import type { NotificationTypeDefinition } from "../notifications/notification-registry";
 import { NOTIFICATION_TYPES } from "../notifications/notification-registry.module";
+import { SidebarBadgeRegistry } from "../sidebar-badges/sidebar-badge-registry";
 import { systemContext } from "../workflows/tenant-directory.service";
 
 /**
@@ -32,6 +35,7 @@ import { systemContext } from "../workflows/tenant-directory.service";
  * | `workflow-overdue`     | `workflow_versions.steps[].overdue.audience` | 流程名稱 + 關卡名稱 |
  * | `workflow-cc`          | `workflow_versions.cc`(整個流程的知會)       | 流程名稱            |
  * | `data-scope`           | `data_scope_rules.rules[].audience`          | 資料範圍目標名稱    |
+ * | `sidebar-badge`        | `sidebar_badge_settings.audience`            | 模組名稱            |
  */
 export const AUDIENCE_REFERENCE_KINDS = [
   "notification-setting",
@@ -40,6 +44,7 @@ export const AUDIENCE_REFERENCE_KINDS = [
   "workflow-overdue",
   "workflow-cc",
   "data-scope",
+  "sidebar-badge",
 ] as const;
 
 export type AudienceReferenceKind = (typeof AUDIENCE_REFERENCE_KINDS)[number];
@@ -62,7 +67,7 @@ export type AudienceReferenceSource =
 /** 一個引用處:前端依 `kind` + `source` 組成「為什麼 + 怎麼做」的一句話。 */
 export interface AudienceReference {
   kind: AudienceReferenceKind;
-  /** 通知類型 / 流程 / 資料範圍目標的名稱 */
+  /** 通知類型 / 流程 / 資料範圍目標 / 模組(側欄數字)的名稱 */
   name: string;
   /** 流程關卡的名稱(只有關卡層級的三種有) */
   stepName?: string;
@@ -156,6 +161,7 @@ function merge(references: AudienceReference[]): AudienceReference[] {
  *
  * 掃描範圍(租戶 = 角色擁有組織所屬的租戶;根組織的角色 = `null`):
  * - 通知設定:該租戶的 `notification_settings`,只算目前有登記的通知類型
+ * - 側欄數字:該租戶的 `sidebar_badge_settings`,只算目前有登記側欄數字的模組
  * - 流程:該租戶的流程(租戶為 `null` 時是共用流程),看**草稿、目前版本、還有進行中單據的版本**
  *   —— 退役且沒有單據在跑的版本不會再派出審核,不算引用
  * - 資料範圍:所有規則(根組織設定、本來就跨租戶;角色 id 全域唯一,寫到就是真的引用)
@@ -171,6 +177,9 @@ export class AudienceReferencesService {
     private readonly dataScopeTargets: DataScopeTargetsRepository,
     @Inject(NOTIFICATION_TYPES)
     private readonly types: ReadonlyMap<string, NotificationTypeDefinition>,
+    private readonly sidebarBadgeSettings: SidebarBadgeSettingsRepository,
+    private readonly badges: SidebarBadgeRegistry,
+    private readonly modules: ModulesRepository,
   ) {}
 
   async referencesToRole(
@@ -178,12 +187,19 @@ export class AudienceReferencesService {
     roleId: Types.ObjectId,
   ): Promise<AudienceReference[]> {
     const id = String(roleId);
-    const [notifications, workflows, dataScopes] = await Promise.all([
-      tenantId === null ? [] : this.notificationReferences(tenantId, id),
-      this.workflowReferences(tenantId, id),
-      this.dataScopeReferences(id),
+    const [notifications, sidebarBadges, workflows, dataScopes] =
+      await Promise.all([
+        tenantId === null ? [] : this.notificationReferences(tenantId, id),
+        tenantId === null ? [] : this.sidebarBadgeReferences(tenantId, id),
+        this.workflowReferences(tenantId, id),
+        this.dataScopeReferences(id),
+      ]);
+    return merge([
+      ...notifications,
+      ...sidebarBadges,
+      ...workflows,
+      ...dataScopes,
     ]);
-    return merge([...notifications, ...workflows, ...dataScopes]);
   }
 
   private async notificationReferences(
@@ -201,6 +217,34 @@ export class AudienceReferencesService {
         ? [{ kind: "notification-setting" as const, name: type.name }]
         : [];
     });
+  }
+
+  /** 側欄數字「誰看得到」引用這個角色的模組(依模組 key 排序;沒登記側欄數字的模組不算)。 */
+  private async sidebarBadgeReferences(
+    tenantId: Types.ObjectId,
+    roleId: string,
+  ): Promise<AudienceReference[]> {
+    const settings = await this.sidebarBadgeSettings.findMany(
+      systemContext(),
+      { tenantId, audience: { $ne: null } },
+      { sort: { moduleKey: 1 }, select: { moduleKey: 1, audience: 1 } },
+    );
+    const hits = settings.filter(
+      (setting) =>
+        this.badges.badgeOf(setting.moduleKey) !== undefined &&
+        roleIdsIn(setting.audience).includes(roleId),
+    );
+    if (hits.length === 0) {
+      return [];
+    }
+    const modules = await this.modules.findMany(systemContext(), {
+      key: { $in: hits.map((setting) => setting.moduleKey) },
+    });
+    const nameOf = new Map(modules.map((module) => [module.key, module.name]));
+    return hits.map((setting) => ({
+      kind: "sidebar-badge" as const,
+      name: nameOf.get(setting.moduleKey) ?? setting.moduleKey,
+    }));
   }
 
   /** 進行中單據用到的版本與張數:`workflowKey` → (版號 → 張數)。 */

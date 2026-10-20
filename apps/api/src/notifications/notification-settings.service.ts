@@ -1,18 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import {
-  type Audience,
-  type AudienceLeaf,
-  type AudienceNode,
-  isAudienceGroup,
-  validateAudience,
-} from "@repo/domain/audience";
+import { type Audience, validateAudience } from "@repo/domain/audience";
 import {
   type NotificationSchedule,
   validateSchedule,
 } from "@repo/domain/notification-schedule";
 
+import { outOfTenantPath } from "../audience/audience-tenant-check";
 import { AuditService } from "../audit/audit.service";
 import {
   NotificationSettingsRepository,
@@ -387,45 +382,9 @@ export class NotificationSettingsService {
     typeKey: string,
     audience: Audience,
   ): Promise<void> {
-    if (audience.mode !== "match") {
-      return;
-    }
-    const leaves = leavesOf(audience.filter, "filter");
-    const userIds = leaves.flatMap(({ leaf }) =>
-      leaf.field === "user" && leaf.value.kind === "static"
-        ? leaf.value.values
-        : [],
-    );
-    const roleIds = leaves.flatMap(({ leaf }) =>
-      leaf.field === "role" && leaf.value.kind === "static"
-        ? leaf.value.values
-        : [],
-    );
-    const tenantUsers =
-      userIds.length === 0
-        ? new Map<string, unknown>()
-        : await this.directory.userFacts(tenantId, userIds);
-    const tenantRoles =
-      roleIds.length === 0
-        ? new Set<string>()
-        : await this.directory.tenantRoleIds(tenantId);
-    for (const { leaf, path } of leaves) {
-      if (leaf.value.kind !== "static") {
-        continue;
-      }
-      const values = leaf.value.values;
-      const outside = values.findIndex((value) =>
-        leaf.field === "user"
-          ? !tenantUsers.has(value)
-          : leaf.field === "role" && !tenantRoles.has(value),
-      );
-      if (outside !== -1) {
-        throw notificationSettingRejected(
-          "OUT_OF_TENANT",
-          typeKey,
-          `${path}.value.values[${String(outside)}]`,
-        );
-      }
+    const path = await outOfTenantPath(this.directory, tenantId, audience);
+    if (path !== null) {
+      throw notificationSettingRejected("OUT_OF_TENANT", typeKey, path);
     }
   }
 }
@@ -463,17 +422,4 @@ function checkedSchedule(
     );
   }
   return validation.schedule;
-}
-
-/** 條件樹的每個條件列與它的路徑(與 `validateAudience` 的 `path` 同一種寫法)。 */
-function leavesOf(
-  node: AudienceNode,
-  path: string,
-): { leaf: AudienceLeaf; path: string }[] {
-  if (!isAudienceGroup(node)) {
-    return [{ leaf: node, path }];
-  }
-  return node.children.flatMap((child, index) =>
-    leavesOf(child, `${path}.children[${String(index)}]`),
-  );
 }

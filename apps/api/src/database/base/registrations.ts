@@ -96,6 +96,11 @@ import {
 } from "../schemas/seed-definition-installation.schema";
 import { SeedLock, SeedLockSchema } from "../schemas/seed-lock.schema";
 import {
+  SIDEBAR_BADGE_SETTINGS_COLLECTION,
+  SidebarBadgeSetting,
+  SidebarBadgeSettingSchema,
+} from "../schemas/sidebar-badge-setting.schema";
+import {
   USER_DELEGATIONS_COLLECTION,
   UserDelegation,
   UserDelegationSchema,
@@ -153,6 +158,7 @@ import {
   RefreshTokensRepository,
   RolesRepository,
   SeedDefinitionInstallationsRepository,
+  SidebarBadgeSettingsRepository,
   UserDelegationsRepository,
   UserPreferencesRepository,
   UsersRepository,
@@ -563,6 +569,24 @@ export const BASE_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
       {
         modelName: NotificationSetting.name,
         provider: NotificationSettingsRepository,
+      },
+    ],
+    orgDataChecks: [],
+  },
+  {
+    // 側欄數字設定:誰看得到某模組的側欄數字(以 tenantId 為邊界的租戶設定,同通知設定)
+    key: "sidebar-badges",
+    models: [
+      {
+        name: SidebarBadgeSetting.name,
+        collection: SIDEBAR_BADGE_SETTINGS_COLLECTION,
+        schema: SidebarBadgeSettingSchema,
+      },
+    ],
+    repositories: [
+      {
+        modelName: SidebarBadgeSetting.name,
+        provider: SidebarBadgeSettingsRepository,
       },
     ],
     orgDataChecks: [],

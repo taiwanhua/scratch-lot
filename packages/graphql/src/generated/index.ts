@@ -1959,6 +1959,7 @@ export type Mutation = {
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
+  resetSidebarBadgeSetting: SidebarBadgeSettingPayload;
   restoreScheduleRule: ScheduleRuleMutationPayload;
   retireCurrentVersion: FormPayload;
   retireCurrentWorkflowVersion: WorkflowPayload;
@@ -2015,6 +2016,7 @@ export type Mutation = {
   updatePrinter: PrinterPayload;
   updateRole: RolePayload;
   updateScheduleStaff: ScheduleStaffPayload;
+  updateSidebarBadgeSetting: SidebarBadgeSettingPayload;
   updateUser: UserPayload;
   updateWorkflow: WorkflowPayload;
   upgradeFormSubmissions: FormUpgradePayload;
@@ -2368,6 +2370,11 @@ export type MutationResetPrintAgentPairingArgs = {
 };
 
 
+export type MutationResetSidebarBadgeSettingArgs = {
+  input: ResetSidebarBadgeSettingInput;
+};
+
+
 export type MutationRestoreScheduleRuleArgs = {
   input: RestoreScheduleRuleInput;
 };
@@ -2645,6 +2652,11 @@ export type MutationUpdateRoleArgs = {
 
 export type MutationUpdateScheduleStaffArgs = {
   input: UpdateScheduleStaffInput;
+};
+
+
+export type MutationUpdateSidebarBadgeSettingArgs = {
+  input: UpdateSidebarBadgeSettingInput;
 };
 
 
@@ -3304,6 +3316,7 @@ export type Query = {
   scheduleFieldOptions: ScheduleFieldOptionsPayload;
   scheduleRules: ScheduleRulesPayload;
   scheduleStaff: ScheduleStaffListPayload;
+  sidebarBadgeSettings: SidebarBadgeSettingsPayload;
   sidebarBadges: Array<SidebarBadge>;
   tenantModuleOptions: Array<ModuleOption>;
   tenantOrgTree: Array<TenantOrgNode>;
@@ -3781,6 +3794,10 @@ export type RequestPasswordResetPayload = {
 export type ResetNotificationSettingInput = {
   part?: InputMaybe<NotificationSettingPart>;
   type: Scalars['String']['input'];
+};
+
+export type ResetSidebarBadgeSettingInput = {
+  moduleKey: Scalars['String']['input'];
 };
 
 export type RestoreScheduleRuleInput = {
@@ -4524,6 +4541,36 @@ export type SidebarBadge = {
   moduleKey: Scalars['String']['output'];
 };
 
+export type SidebarBadgeSetting = {
+  __typename?: 'SidebarBadgeSetting';
+  /** 租戶調整過的人員條件(綁了模組之後再看它);沒調整 = null,用程式預設 */
+  audience?: Maybe<Scalars['JSONObject']['output']>;
+  /** 「數什麼」的說明文字在 admin 訊息檔的 key(登記時給);沒有 = null */
+  descriptionKey?: Maybe<Scalars['String']['output']>;
+  /** true = 沒有調整,用程式預設 */
+  isDefault: Scalars['Boolean']['output'];
+  /** 模組 key */
+  moduleKey: Scalars['String']['output'];
+  /** 模組名稱;模組不存在時退回模組 key */
+  moduleName: Scalars['String']['output'];
+  /** 程式預設要求的權限 key(登記的 requires);沒有 = null */
+  requires?: Maybe<Scalars['String']['output']>;
+  /** 最後一次調整 / 還原的時間;從沒動過 = null */
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedBy?: Maybe<Scalars['ID']['output']>;
+};
+
+export type SidebarBadgeSettingPayload = {
+  __typename?: 'SidebarBadgeSettingPayload';
+  setting: SidebarBadgeSetting;
+};
+
+export type SidebarBadgeSettingsPayload = {
+  __typename?: 'SidebarBadgeSettingsPayload';
+  items: Array<SidebarBadgeSetting>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type SubmitFormSubmissionInput = {
   expectedEditVersion: Scalars['Int']['input'];
   id: Scalars['ID']['input'];
@@ -4740,6 +4787,11 @@ export type UpdateScheduleStaffInput = {
   note?: InputMaybe<Scalars['String']['input']>;
   orgs?: InputMaybe<Array<ScheduleStaffOrgInput>>;
   staffId: Scalars['ID']['input'];
+};
+
+export type UpdateSidebarBadgeSettingInput = {
+  audience: Scalars['JSONObject']['input'];
+  moduleKey: Scalars['String']['input'];
 };
 
 export type UpdateUserInput = {
@@ -6322,6 +6374,27 @@ export type SidebarBadgesQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type SidebarBadgesQuery = { __typename?: 'Query', sidebarBadges: Array<{ __typename?: 'SidebarBadge', moduleKey: string, count: number }> };
 
+export type SidebarBadgeSettingItemFragment = { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null };
+
+export type SidebarBadgeSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SidebarBadgeSettingsQuery = { __typename?: 'Query', sidebarBadgeSettings: { __typename?: 'SidebarBadgeSettingsPayload', totalCount: number, items: Array<{ __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null }> } };
+
+export type UpdateSidebarBadgeSettingMutationVariables = Exact<{
+  input: UpdateSidebarBadgeSettingInput;
+}>;
+
+
+export type UpdateSidebarBadgeSettingMutation = { __typename?: 'Mutation', updateSidebarBadgeSetting: { __typename?: 'SidebarBadgeSettingPayload', setting: { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null } } };
+
+export type ResetSidebarBadgeSettingMutationVariables = Exact<{
+  input: ResetSidebarBadgeSettingInput;
+}>;
+
+
+export type ResetSidebarBadgeSettingMutation = { __typename?: 'Mutation', resetSidebarBadgeSetting: { __typename?: 'SidebarBadgeSettingPayload', setting: { __typename?: 'SidebarBadgeSetting', moduleKey: string, moduleName: string, descriptionKey?: string | null, requires?: string | null, audience?: Record<string, unknown> | null, isDefault: boolean, updatedAt?: string | null, updatedBy?: string | null } } };
+
 export type CreateUploadUrlMutationVariables = Exact<{
   input: CreateUploadUrlInput;
 }>;
@@ -7578,6 +7651,18 @@ export const RoleUsersFieldsFragmentDoc = `
   }
 }
     ${RoleFieldsFragmentDoc}`;
+export const SidebarBadgeSettingItemFragmentDoc = `
+    fragment SidebarBadgeSettingItem on SidebarBadgeSetting {
+  moduleKey
+  moduleName
+  descriptionKey
+  requires
+  audience
+  isDefault
+  updatedAt
+  updatedBy
+}
+    `;
 export const UserDelegationFieldsFragmentDoc = `
     fragment UserDelegationFields on UserDelegationModel {
   id
@@ -13021,6 +13106,100 @@ useSidebarBadgesQuery.getKey = (variables?: SidebarBadgesQueryVariables) => vari
 
 
 useSidebarBadgesQuery.fetcher = (client: GraphQLClient, variables?: SidebarBadgesQueryVariables, headers?: RequestInit['headers']) => fetcher<SidebarBadgesQuery, SidebarBadgesQueryVariables>(client, SidebarBadgesDocument, variables, headers);
+
+export const SidebarBadgeSettingsDocument = `
+    query SidebarBadgeSettings {
+  sidebarBadgeSettings {
+    items {
+      ...SidebarBadgeSettingItem
+    }
+    totalCount
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useSidebarBadgeSettingsQuery = <
+      TData = SidebarBadgeSettingsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: SidebarBadgeSettingsQueryVariables,
+      options?: Omit<UseQueryOptions<SidebarBadgeSettingsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<SidebarBadgeSettingsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<SidebarBadgeSettingsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['SidebarBadgeSettings'] : ['SidebarBadgeSettings', variables],
+    queryFn: fetcher<SidebarBadgeSettingsQuery, SidebarBadgeSettingsQueryVariables>(client, SidebarBadgeSettingsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useSidebarBadgeSettingsQuery.getKey = (variables?: SidebarBadgeSettingsQueryVariables) => variables === undefined ? ['SidebarBadgeSettings'] : ['SidebarBadgeSettings', variables];
+
+
+useSidebarBadgeSettingsQuery.fetcher = (client: GraphQLClient, variables?: SidebarBadgeSettingsQueryVariables, headers?: RequestInit['headers']) => fetcher<SidebarBadgeSettingsQuery, SidebarBadgeSettingsQueryVariables>(client, SidebarBadgeSettingsDocument, variables, headers);
+
+export const UpdateSidebarBadgeSettingDocument = `
+    mutation UpdateSidebarBadgeSetting($input: UpdateSidebarBadgeSettingInput!) {
+  updateSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useUpdateSidebarBadgeSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateSidebarBadgeSettingMutation, TError, UpdateSidebarBadgeSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateSidebarBadgeSettingMutation, TError, UpdateSidebarBadgeSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateSidebarBadgeSetting'],
+    mutationFn: (variables?: UpdateSidebarBadgeSettingMutationVariables) => fetcher<UpdateSidebarBadgeSettingMutation, UpdateSidebarBadgeSettingMutationVariables>(client, UpdateSidebarBadgeSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateSidebarBadgeSettingMutation.fetcher = (client: GraphQLClient, variables: UpdateSidebarBadgeSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateSidebarBadgeSettingMutation, UpdateSidebarBadgeSettingMutationVariables>(client, UpdateSidebarBadgeSettingDocument, variables, headers);
+
+export const ResetSidebarBadgeSettingDocument = `
+    mutation ResetSidebarBadgeSetting($input: ResetSidebarBadgeSettingInput!) {
+  resetSidebarBadgeSetting(input: $input) {
+    setting {
+      ...SidebarBadgeSettingItem
+    }
+  }
+}
+    ${SidebarBadgeSettingItemFragmentDoc}`;
+
+export const useResetSidebarBadgeSettingMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ResetSidebarBadgeSettingMutation, TError, ResetSidebarBadgeSettingMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ResetSidebarBadgeSettingMutation, TError, ResetSidebarBadgeSettingMutationVariables, TContext>(
+      {
+    mutationKey: ['ResetSidebarBadgeSetting'],
+    mutationFn: (variables?: ResetSidebarBadgeSettingMutationVariables) => fetcher<ResetSidebarBadgeSettingMutation, ResetSidebarBadgeSettingMutationVariables>(client, ResetSidebarBadgeSettingDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useResetSidebarBadgeSettingMutation.fetcher = (client: GraphQLClient, variables: ResetSidebarBadgeSettingMutationVariables, headers?: RequestInit['headers']) => fetcher<ResetSidebarBadgeSettingMutation, ResetSidebarBadgeSettingMutationVariables>(client, ResetSidebarBadgeSettingDocument, variables, headers);
 
 export const CreateUploadUrlDocument = `
     mutation CreateUploadUrl($input: CreateUploadUrlInput!) {

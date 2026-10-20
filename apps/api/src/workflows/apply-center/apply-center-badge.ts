@@ -22,6 +22,7 @@ export class ApplyCenterBadge implements OnModuleInit {
     this.registry.registerBadge({
       moduleKey: APPLY_CENTER_MODULE_KEY,
       requires: `${APPLY_CENTER_MODULE_KEY}.view`,
+      descriptionKey: "admin.sidebarBadgeSettings.descriptions.apply-center",
       count: async (operator) =>
         this.service.myTaskCount(await this.access.factsOf(operator)),
     });

@@ -213,4 +213,22 @@ describe("SidebarBadgeRegistry", () => {
     }
     expect(registry.badges()).toEqual([]);
   });
+
+  it("descriptionKey 給了就不可空白或前後有空白;沒給可以", () => {
+    const registry = new SidebarBadgeRegistry();
+    for (const descriptionKey of ["", " admin.orders"]) {
+      expect(() => {
+        registry.registerBadge({ moduleKey: "orders", count, descriptionKey });
+      }).toThrow(SidebarBadgeRegistrationError);
+    }
+    registry.registerBadge({
+      moduleKey: "orders",
+      count,
+      descriptionKey: "admin.orders.badge",
+    });
+    expect(registry.badgeOf("orders")?.descriptionKey).toBe(
+      "admin.orders.badge",
+    );
+    expect(registry.badgeOf("missing")).toBeUndefined();
+  });
 });
