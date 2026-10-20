@@ -27,7 +27,7 @@
 | `system.workflows.assign`                | 流程管理      | 分派 / 收回共用流程(另外要站在根組織)                                                                                                          |
 | `system.workflows.blocked-page.reassign` | 阻擋清單      | 阻擋清單查詢、改派、新增審核者、重試推進(隱藏頁自有權限,不靠父模組 wildcard)                                                                   |
 | `system.forms.edit`                      | 表單管理      | 表單的流程綁定 / 解除、流程下拉(`formWorkflowOptions`)—— 綁定掛在表單管理上                                                                    |
-| `apply-center.view`                      | 申請中心      | 我的申請、待我審核、新申請入口                                                                                                                 |
+| `apply-center.view`                      | 申請中心      | 我的申請、待我審核、新申請入口、badge 計數                                                                                                     |
 | (無)                                     | —             | `workflowInstance` / `decideTask` / `batchApproveTasks` / 撤回 / 作廢 / 複製:授權是「讀得到那個修訂」「我是承辦人」「我是申請人」,不看頁面權限 |
 
 申請中心另有隱藏頁 `apply-center.view-page`(詳情頁的路由節點兼權限容器),沒有自己的權限。

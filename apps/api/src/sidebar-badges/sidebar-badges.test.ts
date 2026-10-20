@@ -142,11 +142,40 @@ describe("側欄計數(sidebarBadges)", () => {
     });
   });
 
+  it("填了 requires:綁了申請中心但沒有 apply-center.view → 不回傳;持有 → 回傳", async () => {
+    const boundWithoutView = await person(
+      api,
+      world.connection,
+      world.tenant,
+      world.tenant,
+      {
+        moduleKeys: [WORKFLOW_MODULE, "apply-center"],
+        permissionKeys: [],
+      },
+    );
+    const withoutView = await badgesOf(boundWithoutView);
+    expect(withoutView).not.toHaveProperty("apply-center");
+    // 沒填 requires 的探針照樣回傳(綁了就算)
+    expect(withoutView).toEqual({ [WORKFLOW_MODULE]: PROBE_BADGE_COUNT });
+
+    const withView = await person(
+      api,
+      world.connection,
+      world.tenant,
+      world.tenant,
+      {
+        moduleKeys: ["apply-center"],
+        permissionKeys: ["apply-center.view"],
+      },
+    );
+    await expect(badgesOf(withView)).resolves.toEqual({ "apply-center": 0 });
+  });
+
   it("模組停用後(連子樹)不算:探針模組停用,這一筆不回傳", async () => {
     await setModuleEnabled(api.connection, WORKFLOW_MODULE, false);
     try {
       const badges = await badgesOf(world.admin);
-      expect(badges).not.toHaveProperty(WORKFLOW_MODULE);
+      expect(Object.keys(badges)).not.toContain(WORKFLOW_MODULE);
       expect(badges).toHaveProperty("apply-center");
     } finally {
       await setModuleEnabled(api.connection, WORKFLOW_MODULE, true);

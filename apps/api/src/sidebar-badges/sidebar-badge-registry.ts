@@ -6,14 +6,20 @@ import type { OperatorContext } from "../database/operator-context";
 export interface SidebarBadgeRegistration {
   /**
    * 模組 key(側欄節點與信號 `badge:<模組 key>` 用同一個);底座與專案共用一個命名空間。
-   * 操作者的角色綁了這個模組(`me.modules` 有它,同進得去那一頁的判斷)才算「看得到」,看不到就不算、不回傳。
+   * 操作者的角色綁了這個模組(`me.modules` 有它,同進得去那一頁的判斷)才算「看得到」;填了 `requires` 時還要持有那條權限。
+   * 看不到就不算、不回傳。
    */
   readonly moduleKey: string;
   /**
    * 這個操作者的數字;拋錯時這一筆不回傳(記 log),其他模組照常。
-   * 數字本身的租戶、可見範圍、資料範圍由 `count` 自己負責(用 BaseRepository 帶操作者查);底座只過濾有沒有綁這個模組。
+   * 數字本身的租戶、可見範圍、資料範圍由 `count` 自己負責(用 BaseRepository 帶操作者查);底座只依門檻(綁模組、`requires`)過濾。
    */
   readonly count: (operator: OperatorContext) => Promise<number>;
+  /**
+   * 選填:除了綁了模組,還要持有這條權限才算(`holdsPermission`,同層 `*` 照常展開)。
+   * 沒填(預設)= 綁了模組就算。要讓數字與列表一樣只給看得到列表的人時填(例:`apply-center.view`)。
+   */
+  readonly requires?: string;
 }
 
 /** 登記不合契約(key 空白、前後有空白或重複)時拋出;屬程式錯誤,讓 app 起不來。 */
