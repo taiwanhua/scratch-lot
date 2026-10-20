@@ -939,6 +939,59 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("主要分店的判斷(排班檔案一人一份或每個組織各一份都成立)", () => {
+    it("同一人有兩份排班檔案、各標一家主要分店 → 取最早建立的那一筆主要分店關聯", async () => {
+      travelTo("2026-11-20");
+      const now = new Date();
+      const base = {
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+        tenantId: tenantA,
+      };
+      // 王在中山店之外,另有一份歸新竹店的排班檔案,主要分店標新竹店(比原本的晚建立)
+      const { insertedId: staffId } = await connection
+        .collection("schedule_staff")
+        .insertOne({
+          ...base,
+          orgId: hsinchu,
+          userId: wang.userId,
+          employmentType: "part-time",
+          enabled: true,
+          note: null,
+          moduleKey: "schedule.settings",
+        });
+      const { insertedId: linkId } = await connection
+        .collection("schedule_relationships")
+        .insertOne({
+          ...base,
+          orgId: hsinchu,
+          type: "org_schedule_staff",
+          firstId: hsinchu,
+          secondId: staffId,
+          meta: { canLead: false, isPrimary: true, sortOrder: 0 },
+          moduleKey: "schedule.settings",
+        });
+      try {
+        const mine = await myDayOffs(wang);
+        expect(mine.primaryOrg?.name).toBe("中山店");
+        // 中山店的同日人數仍算王;新竹店不會再算他一次
+        const linPage = await myDayOffs(lin);
+        const day = linPage.days.find((item) => item.date === "2026-12-05");
+        expect(day).toBeUndefined();
+      } finally {
+        await connection
+          .collection("schedule_relationships")
+          .deleteOne({ _id: linkId });
+        await connection
+          .collection("schedule_staff")
+          .deleteOne({ _id: staffId });
+      }
+    });
+  });
+
   describe("同時送出不能繞過限制(守門文件 + 同一個交易)", () => {
     // 2027-02 的開放期間是 2027/1/15–1/25,今天 11/20 還沒開始:代改不受限制、不必填原因
     it("同日最多 2 人:3 人同時送出,只成功 2 筆", async () => {

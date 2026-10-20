@@ -21,6 +21,14 @@ describe("排班作業:畫休總覽與代改", () => {
     expect(screen.getByText("3/2")).toBeInTheDocument();
   });
 
+  it("分店選擇器是可見範圍模式:候選是整棵租戶樹裡看得到的組織", async () => {
+    // 假 api 只回 `TenantOrgTree`(可見範圍 / 租戶模式查的);管理範圍模式查的 `OrgTree` 沒有資料
+    const { user } = renderSchedulePage({ path: OVERVIEW });
+    await user.click(await screen.findByRole("combobox", { name: "分店" }));
+    expect(await screen.findByText("A-1 內容組")).toBeInTheDocument();
+    expect(screen.getByText("租戶 A")).toBeInTheDocument();
+  });
+
   it("[尚未畫休] 篩選列出還沒畫任何一天、主要分店是這家的人", async () => {
     const { user } = renderSchedulePage({ path: OVERVIEW });
     await user.click(await screen.findByRole("button", { name: "尚未畫休 1" }));

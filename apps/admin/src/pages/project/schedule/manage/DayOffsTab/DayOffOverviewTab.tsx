@@ -56,7 +56,7 @@ const WINDOW_KEY: Partial<
  * (只算主要分店是這家的人),
  * 篩選 [全部] [尚未畫休]。[代改](SC-24)要 `edit-day-offs`,點日期也會打開並帶入那天。
  *
- * 分店選擇器先用 `OrgTreeSelect`(之後改成可見範圍模式,同行事曆)。
+ * 分店選擇器是可見範圍模式(`scope="visible"`,同行事曆):業務頁,沒有組織治理權限的人也打得開。
  */
 export const DayOffOverviewTab = () => {
   const t = useTranslations("admin.schedule.dayOffs");
@@ -142,6 +142,7 @@ export const DayOffOverviewTab = () => {
         sx={{ alignItems: { sm: "center" } }}
       >
         <OrgTreeSelect
+          scope="visible"
           label={t("overview.org")}
           value={[overview.orgId]}
           size="small"
