@@ -130,6 +130,23 @@ export class LotteryBooksService {
         INVENTORY_REASONS.lastTicketNoOutOfRange,
       );
     }
+    // 本編號的租戶 = 點收分店的租戶:點收分店要在操作者當前組織的租戶裡(同時屬於兩個租戶的人
+    // 不能拿甲租戶的身分點收到乙租戶的店;反查整個租戶的組織樹)
+    const tenantTree = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      tenant.tenantId,
+    );
+    if (
+      tenantTree.visibleOrgIds !== "all" &&
+      !tenantTree.visibleOrgIds.some((id) => id.equals(input.orgId))
+    ) {
+      throw validationError(
+        "點收分店不在目前組織的租戶",
+        ["orgId"],
+        INVENTORY_REASONS.storeOutsideTenant,
+      );
+    }
     const bookKey = bookKeyOf(game.gameCode, bookNo);
     if (
       await this.books.existsInTenant(

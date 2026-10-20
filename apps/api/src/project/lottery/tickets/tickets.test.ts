@@ -566,17 +566,18 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
     it("鎖定時不能賣;鎖定 / 解除回新版本、用掉一個版本不寫事件;同一個鎖的單據可以動", async () => {
       const bookId = await receiveBook();
       const ticket = await firstTicket(bookId);
-      const clerk = own(storeOperator(storeA));
+      const operator = storeOperator(storeA);
+      const clerk = own(operator);
       const lock = { refType: "transfer" as const, refId: newObjectId() };
       const locked = await transactions.withTransaction((session) =>
-        ledger.lockTickets(session, clerk, [ticket._id], lock),
+        ledger.lockTickets(session, operator, [ticket._id], lock),
       );
       expect(locked).toEqual([
         { ticketId: String(ticket._id), version: 2, changed: true },
       ]);
       // 重送鎖定:版本不變
       const again = await transactions.withTransaction((session) =>
-        ledger.lockTickets(session, clerk, [ticket._id], lock),
+        ledger.lockTickets(session, operator, [ticket._id], lock),
       );
       expect(again).toEqual([
         { ticketId: String(ticket._id), version: 2, changed: false },
@@ -596,7 +597,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
       // 別的單據要鎖 → CONFLICT
       await expect(
         transactions.withTransaction((session) =>
-          ledger.lockTickets(session, clerk, [ticket._id], {
+          ledger.lockTickets(session, operator, [ticket._id], {
             ...lock,
             refId: newObjectId(),
           }),
@@ -622,7 +623,7 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         ]),
       );
       const unlocked = await transactions.withTransaction((session) =>
-        ledger.unlockTickets(session, clerk, [ticket._id], lock),
+        ledger.unlockTickets(session, operator, [ticket._id], lock),
       );
       expect(unlocked).toEqual([
         { ticketId: String(ticket._id), version: 4, changed: true },
@@ -683,6 +684,115 @@ describe("張數核心(帳本 + 本 + 預計要給本數)", () => {
         .findOne({ _id: bookId });
       expect(String(moved?.orgId)).toBe(String(storeB));
       expect(moved?.holderOrgIds.map(String)).toEqual([String(storeB)]);
+    });
+
+    it("跨店寫入只能把張移進自己看得到的店:賣掉別店的張、移到看不到的店 → FORBIDDEN", async () => {
+      const ticket = await firstTicket(await receiveBook());
+      const crossB = {
+        operator: storeOperator(storeB),
+        crossStoreTenantId: tenant,
+      };
+      // 甲二店的人跨店把甲一店的張賣掉
+      await expect(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(session, crossB, [saleOf(ticket)]),
+        ),
+      ).rejects.toMatchObject({
+        extensions: {
+          code: "FORBIDDEN",
+          reason: "CROSS_STORE_NOT_ALLOWED",
+          ticketIds: [String(ticket._id)],
+        },
+      });
+      // 甲二店的人跨店把甲一店的張移到甲三店(他看不到的店)
+      await expect(
+        transactions.withTransaction((session) =>
+          ledger.applyTicketEvents(session, crossB, [
+            {
+              ticketId: ticket._id,
+              expectedVersion: ticket.version,
+              type: TICKET_EVENT_TYPE.recover,
+              patch: { orgId: storeC },
+            },
+          ]),
+        ),
+      ).rejects.toMatchObject({ extensions: { code: "FORBIDDEN" } });
+      expect(await ticketById(ticket._id)).toMatchObject({
+        status: "unsold",
+        version: 1,
+      });
+      // 移進自己看得到的店(尋回到刷到的甲二店)可以
+      await transactions.withTransaction((session) =>
+        ledger.applyTicketEvents(session, crossB, [
+          {
+            ticketId: ticket._id,
+            expectedVersion: ticket.version,
+            type: TICKET_EVENT_TYPE.recover,
+            patch: { orgId: storeB },
+          },
+        ]),
+      );
+      const moved = await ticketById(ticket._id);
+      expect(String(moved?.orgId)).toBe(String(storeB));
+    });
+
+    it("鎖定只照操作者自己的範圍:別店的人鎖不到這張", async () => {
+      const ticket = await firstTicket(await receiveBook());
+      await expect(
+        transactions.withTransaction((session) =>
+          ledger.lockTickets(session, storeOperator(storeB), [ticket._id], {
+            refType: "transfer",
+            refId: newObjectId(),
+          }),
+        ),
+      ).rejects.toMatchObject({ extensions: { code: "CONFLICT" } });
+      expect(await ticketById(ticket._id)).toMatchObject({
+        lockedBy: null,
+        version: 1,
+      });
+    });
+
+    it("點收分店的租戶要和當前組織的租戶相同;本編號只在同一個租戶內唯一", async () => {
+      const person = twoTenantPerson();
+      // 當前組織在租戶甲,點收到乙一店(看得到,但在租戶乙)→ 擋下
+      const extensions = await extensionsOf(
+        transactions.withTransaction((session) =>
+          booksService.createBook(session, person, {
+            orgId: storeB1,
+            gameId: gameOfTenantB,
+            bookNo: "880001",
+            lastTicketNo: 100,
+            rate: 92,
+            cost: 18_400,
+          }),
+        ),
+      );
+      expect(extensions).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["orgId"],
+        reason: "STORE_OUTSIDE_TENANT",
+      });
+      // 兩個租戶各自點收同一個本號(同代號遊戲)→ 都可以
+      for (const [orgId, game] of [
+        [storeA, gameId],
+        [storeB1, gameOfTenantB],
+      ] as const) {
+        await transactions.withTransaction((session) =>
+          booksService.createBook(session, storeOperator(orgId), {
+            orgId,
+            gameId: game,
+            bookNo: "880002",
+            lastTicketNo: 100,
+            rate: 92,
+            cost: 18_400,
+          }),
+        );
+      }
+      expect(
+        await api.connection
+          .collection("lottery_books")
+          .countDocuments({ bookKey: "5164-0880002" }),
+      ).toBe(2);
     });
 
     it("中間層(北區)的人看得到底下兩家店的本與張,看不到不在北區的店", async () => {

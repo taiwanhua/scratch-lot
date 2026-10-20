@@ -1,12 +1,16 @@
 import { GraphQLError } from "graphql";
 
 /**
- * 張數帳本的業務錯誤(GQL-04):只用通用碼 `NOT_FOUND` / `VALIDATION_FAILED` / `CONFLICT`,
+ * 張數帳本的業務錯誤(GQL-04):只用通用碼 `NOT_FOUND` / `VALIDATION_FAILED` / `CONFLICT` / `FORBIDDEN`,
  * 細分原因放 `extensions.reason`(正本 `docs/modules/project/inventory.md`「錯誤碼」)。
  */
 export const INVENTORY_REASONS = {
   /** 張已被處理(狀態或版本不是呼叫端讀到的、被鎖定、或同一個事件 id 已寫過別的內容) */
   ticketAlreadyProcessed: "TICKET_ALREADY_PROCESSED",
+  /** 跨店寫入只能把張移進操作者看得到的店(調入、尋回) */
+  crossStoreNotAllowed: "CROSS_STORE_NOT_ALLOWED",
+  /** 點收分店不在操作者當前組織的租戶 */
+  storeOutsideTenant: "STORE_OUTSIDE_TENANT",
   /** 本編號在租戶內重複 */
   bookKeyDuplicate: "BOOK_KEY_DUPLICATE",
   /** 迄號不在「標準張數 ~ 999」之間 */
@@ -43,6 +47,19 @@ export function ticketConflictError(
     extensions: {
       code: "CONFLICT",
       reason: INVENTORY_REASONS.ticketAlreadyProcessed,
+      ticketIds,
+    },
+  });
+}
+
+/** 跨店寫入不是「把張移進自己看得到的店」(`extensions.ticketIds` 列出不合的張)。 */
+export function crossStoreForbiddenError(
+  ticketIds: readonly string[],
+): GraphQLError {
+  return new GraphQLError("跨店只能把張移進自己看得到的店", {
+    extensions: {
+      code: "FORBIDDEN",
+      reason: INVENTORY_REASONS.crossStoreNotAllowed,
       ticketIds,
     },
   });

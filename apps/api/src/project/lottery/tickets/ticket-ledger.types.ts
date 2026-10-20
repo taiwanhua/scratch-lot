@@ -16,7 +16,9 @@ import type { TicketLocation } from "../../database/lottery-inventory/lottery-ti
  *
  * - 預設 = **操作者自己的範圍**(張要在他的可見範圍內,寫入不放大)
  * - `crossStoreTenantId` = 這個租戶的**租戶邊界上下文**(例外寫入:調入、尋回到刷到的那家店這類
- *   「張還在別的分店、由收貨 / 刷到的這家店的人寫」);仍記得是哪位操作者(基礎欄位與搬家稽核)
+ *   「張還在別的分店、由收貨 / 刷到的這家店的人寫」);仍記得是哪位操作者(基礎欄位與搬家稽核)。
+ *   **只能把張移進操作者看得到的店**:每一筆都要帶 `patch.orgId`、目標在他的可見範圍內,否則 `FORBIDDEN`;
+ *   鎖定 / 解除不接受跨店
  * - `operator: null` = 沒有操作者的系統寫入,一定要給 `crossStoreTenantId`,而且不能換店(搬家要寫稽核)
  */
 export interface LedgerContext {

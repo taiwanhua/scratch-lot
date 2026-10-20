@@ -14,7 +14,11 @@ import {
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import type { TicketStateSnapshot } from "../../database/lottery-inventory/lottery-ticket-event.schema";
-import { ticketConflictError, validationError } from "./inventory-error";
+import {
+  crossStoreForbiddenError,
+  ticketConflictError,
+  validationError,
+} from "./inventory-error";
 import type {
   LedgerContext,
   TicketEventInput,
@@ -138,6 +142,42 @@ function isSameEvent(
   );
 }
 
+/** 目標組織在操作者的可見範圍內。 */
+function isVisibleTo(
+  operator: OperatorContext,
+  orgId: Types.ObjectId,
+): boolean {
+  return (
+    operator.visibleOrgIds === "all" ||
+    operator.visibleOrgIds.some((id) => id.equals(orgId))
+  );
+}
+
+/**
+ * 跨店寫入(`crossStoreTenantId` + 有操作者)只能「把張移進自己看得到的店」:每一筆都要換店
+ * (`patch.orgId`),而且目標在操作者的可見範圍內(調入、尋回到刷到的那家店)。跨店把別店的張賣掉、
+ * 報廢、移走 → `FORBIDDEN`。沒有操作者的系統寫入不在此限。
+ */
+function assertCrossStoreMovesIn(
+  ledger: LedgerContext,
+  events: readonly TicketEventInput[],
+): void {
+  const operator = ledger.operator;
+  if (ledger.crossStoreTenantId === undefined || operator === null) {
+    return;
+  }
+  const outside = events.filter(
+    (event) =>
+      event.patch.orgId === undefined ||
+      !isVisibleTo(operator, event.patch.orgId),
+  );
+  if (outside.length > 0) {
+    throw crossStoreForbiddenError(
+      outside.map((event) => String(event.ticketId)),
+    );
+  }
+}
+
 /** 解析好的帳本身分:讀寫用的上下文、操作者、「誰」。 */
 interface ResolvedLedger {
   context: OperatorContext;
@@ -174,6 +214,7 @@ export class TicketLedgerService {
     if (events.length === 0) {
       return [];
     }
+    assertCrossStoreMovesIn(ledger, events);
     const resolved = await this.resolve(ledger);
     const movedBooks: MovedBooks = new Map();
     const results: TicketEventResult[] = [];
@@ -190,25 +231,25 @@ export class TicketLedgerService {
 
   /**
    * 鎖定(調貨單 / 撤銷售出申請):已是同一個鎖 → 不動;被別的鎖住或版本變了 → `CONFLICT`。
-   * 鎖定用掉一個版本(`version` +1)、不寫事件;回每張鎖定後的版本。
+   * 鎖定用掉一個版本(`version` +1)、不寫事件;回每張鎖定後的版本。只照操作者自己的範圍(不接受跨店)。
    */
   async lockTickets(
     session: ClientSession,
-    ledger: LedgerContext,
+    operator: OperatorContext,
     ticketIds: readonly Types.ObjectId[],
     lock: TicketLockRef,
   ): Promise<TicketVersion[]> {
-    return this.changeLock(session, ledger, ticketIds, null, lock);
+    return this.changeLock(session, operator, ticketIds, null, lock);
   }
 
   /** 解除自己的鎖:已沒有鎖 → 不動;被別的鎖住 → `CONFLICT`。同樣用掉一個版本、不寫事件。 */
   async unlockTickets(
     session: ClientSession,
-    ledger: LedgerContext,
+    operator: OperatorContext,
     ticketIds: readonly Types.ObjectId[],
     lock: TicketLockRef,
   ): Promise<TicketVersion[]> {
-    return this.changeLock(session, ledger, ticketIds, lock, null);
+    return this.changeLock(session, operator, ticketIds, lock, null);
   }
 
   private async resolve(ledger: LedgerContext): Promise<ResolvedLedger> {
@@ -390,7 +431,7 @@ export class TicketLedgerService {
 
   private async changeLock(
     session: ClientSession,
-    ledger: LedgerContext,
+    operator: OperatorContext,
     ticketIds: readonly Types.ObjectId[],
     from: TicketLockRef | null,
     to: TicketLockRef | null,
@@ -398,7 +439,8 @@ export class TicketLedgerService {
     if (ticketIds.length === 0) {
       return [];
     }
-    const resolved = await this.resolve(ledger);
+    // 鎖定只照操作者自己的範圍(不接受跨店):只能鎖自己看得到的張
+    const resolved = await this.resolve({ operator });
     const bookDeltas = new Map<
       string,
       { bookId: Types.ObjectId; delta: number }

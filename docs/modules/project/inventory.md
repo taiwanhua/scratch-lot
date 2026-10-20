@@ -60,18 +60,19 @@
 
 張的目前狀態與事件**只經** `apps/api/src/project/lottery/tickets/ticket-ledger.service.ts` 的 `TicketLedgerService` 寫入,在呼叫端給的同一個交易裡(呼叫端先 `TransactionService.withTransaction`,把 session 傳進來)。第二個參數 `LedgerContext` 決定讀寫範圍:
 
-| `LedgerContext`                          | 範圍                                                  | 用在                                                    |
-| ---------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
-| `{ operator }`                           | 操作者自己的範圍(張要在他的可見範圍內)                | 一般情況:售出、拆本、移櫃、調出、盤點、報廢……           |
-| `{ operator, crossStoreTenantId }`       | 這個租戶的租戶邊界上下文(例外寫入,仍記得是哪位操作者) | 張還在別的分店、由這家店的人寫:調入、尋回到刷到的那家店 |
-| `{ operator: null, crossStoreTenantId }` | 租戶系統身分                                          | 沒有操作者的系統寫入;不能換店(搬家要寫稽核)             |
+| `LedgerContext`                          | 範圍                                                                                                                                                                                            | 用在                                                    |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `{ operator }`                           | 操作者自己的範圍(張要在他的可見範圍內)                                                                                                                                                          | 一般情況:售出、拆本、移櫃、調出、盤點、報廢……           |
+| `{ operator, crossStoreTenantId }`       | 這個租戶的租戶邊界上下文(例外寫入,仍記得是哪位操作者);**只能把張移進操作者看得到的店**:每一筆都要帶 `patch.orgId`、目標在他的可見範圍內,否則整批 `FORBIDDEN`(`reason: CROSS_STORE_NOT_ALLOWED`) | 張還在別的分店、由這家店的人寫:調入、尋回到刷到的那家店 |
+| `{ operator: null, crossStoreTenantId }` | 租戶系統身分                                                                                                                                                                                    | 沒有操作者的系統寫入;不能換店(搬家要寫稽核)             |
 
-| 方法                                              | 做什麼                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `applyTicketEvents(session, ledger, events)`      | 每筆以「`version` = `expectedVersion`(+ `expectedStatuses`)且沒被鎖定(或是 `allowLockedBy` 的同一個鎖)」條件更新,`version` +1,同時新增一筆事件;`patch.orgId` 換店時改走 `reassignOrg`(同一次寫入改狀態與版本)。不符 → `CONFLICT`(「已被處理」),整個交易回復。事件 id = `<ticketId>:<expectedVersion + 1>`:同 id 已寫過且內容相同 → 重送,回 `applied: false`、不重複寫入;內容不同 → `CONFLICT` |
-| `lockTickets(session, ledger, ticketIds, lock)`   | 設定 `lockedBy`(已是同一個鎖 → 不動;被別的鎖住 → `CONFLICT`),本的 `lockedTicketCount` 跟著加;回每張的新版本 `{ ticketId, version, changed }`                                                                                                                                                                                                                                                  |
-| `unlockTickets(session, ledger, ticketIds, lock)` | 解除自己的鎖(已沒有鎖 → 不動;別的鎖 → `CONFLICT`);回每張的新版本                                                                                                                                                                                                                                                                                                                              |
+| 方法                                                | 做什麼                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `applyTicketEvents(session, ledger, events)`        | 每筆以「`version` = `expectedVersion`(+ `expectedStatuses`)且沒被鎖定(或是 `allowLockedBy` 的同一個鎖)」條件更新,`version` +1,同時新增一筆事件;`patch.orgId` 換店時改走 `reassignOrg`(同一次寫入改狀態與版本)。不符 → `CONFLICT`(「已被處理」),整個交易回復。事件 id = `<ticketId>:<expectedVersion + 1>`:同 id 已寫過且內容相同 → 重送,回 `applied: false`、不重複寫入;內容不同 → `CONFLICT` |
+| `lockTickets(session, operator, ticketIds, lock)`   | 設定 `lockedBy`(已是同一個鎖 → 不動;被別的鎖住 → `CONFLICT`),本的 `lockedTicketCount` 跟著加;回每張的新版本 `{ ticketId, version, changed }`;只照操作者自己的範圍(不接受跨店)                                                                                                                                                                                                                 |
+| `unlockTickets(session, operator, ticketIds, lock)` | 解除自己的鎖(已沒有鎖 → 不動;別的鎖 → `CONFLICT`);回每張的新版本;只照操作者自己的範圍                                                                                                                                                                                                                                                                                                         |
 
+- **跨店寫入的限制**:目前只有「移進來」的用途(調入、尋回),所以規則寫成「每筆都要換店、目標看得到」;跨店把別店的張賣掉、報廢、移走一律 `FORBIDDEN`。之後若出現不需要換店的跨店用途,改成依事件類型列白名單,寫在這裡。沒有操作者的系統寫入不受此限(也不能換店)。
 - 「誰」(事件的 `by`、售出的 `soldBy`)一律是帳本的操作者;權限與業務規則(誰能賣、能不能撤銷)由呼叫端判斷。
 - **鎖定 / 解除會用掉一個版本、不寫事件**:鎖定之後要寫事件,用鎖定回傳的版本當 `expectedVersion`。
 - **同時重送時,後到的回 `CONFLICT`**:「重送不重複寫入」只在第一筆已提交之後成立;兩個相同的請求同時進來時,後到的那個在交易重跑後看到版本已變,回「已被處理」,呼叫端照「已被處理」處理(重讀後顯示已售出)。
@@ -80,7 +81,7 @@
 
 ### 本的建立
 
-`LotteryBooksService.createBook(session, operator, input)`(`books.service.ts`)**只給進貨點收用**,以點收人自己的範圍寫(點收分店要在他的可見範圍內):本號補 0、本編號(租戶內重複 → `VALIDATION_FAILED`,`reason: BOOK_KEY_DUPLICATE`)、迄號不在「標準張數 ~ 999」→ `VALIDATION_FAILED`(`reason: LAST_TICKET_NO_OUT_OF_RANGE`);以 `createMany` 一次建立 001 到迄號的每一張(未售、庫存、`version` 1)與每張一筆「進貨」事件;回待標註張數(跳號在拆本時標註)。
+`LotteryBooksService.createBook(session, operator, input)`(`books.service.ts`)**只給進貨點收用**,以點收人自己的範圍寫(點收分店要在他的可見範圍內,而且在他當前組織的租戶裡 —— 本編號以這個租戶判斷重複;不是 → `VALIDATION_FAILED`,`reason: STORE_OUTSIDE_TENANT`):本號補 0、本編號(租戶內重複 → `VALIDATION_FAILED`,`reason: BOOK_KEY_DUPLICATE`)、迄號不在「標準張數 ~ 999」→ `VALIDATION_FAILED`(`reason: LAST_TICKET_NO_OUT_OF_RANGE`);以 `createMany` 一次建立 001 到迄號的每一張(未售、庫存、`version` 1)與每張一筆「進貨」事件;回待標註張數(跳號在拆本時標註)。
 
 ### 預計要給本數
 
@@ -107,12 +108,14 @@
 
 ### 錯誤碼
 
-| code                | reason                        | 什麼時候                                      |
-| ------------------- | ----------------------------- | --------------------------------------------- |
-| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`    | 條件更新沒命中(`extensions.ticketIds` 列出張) |
-| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`          | 同一本點收兩次                                |
-| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE` | 迄號不在標準張數 ~ 999                        |
-| `NOT_FOUND`         | —                             | 遊戲、本或分店不存在 / 看不到                 |
+| code                | reason                        | 什麼時候                                                                |
+| ------------------- | ----------------------------- | ----------------------------------------------------------------------- |
+| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`    | 條件更新沒命中(`extensions.ticketIds` 列出張)                           |
+| `FORBIDDEN`         | `CROSS_STORE_NOT_ALLOWED`     | 跨店寫入不是把張移進自己看得到的店(`extensions.ticketIds` 列出不合的張) |
+| `VALIDATION_FAILED` | `STORE_OUTSIDE_TENANT`        | 點收分店不在操作者當前組織的租戶                                        |
+| `VALIDATION_FAILED` | `BOOK_KEY_DUPLICATE`          | 同一本點收兩次                                                          |
+| `VALIDATION_FAILED` | `LAST_TICKET_NO_OUT_OF_RANGE` | 迄號不在標準張數 ~ 999                                                  |
+| `NOT_FOUND`         | —                             | 遊戲、本或分店不存在 / 看不到                                           |
 
 ### 前端共用
 
