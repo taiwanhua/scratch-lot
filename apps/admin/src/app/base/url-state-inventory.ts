@@ -26,7 +26,7 @@ export const baseUrlStateInventory: UrlStateInventory = {
   "system.forms": ["list", "detail", "edit"],
   "system.workflows": ["list", "detail", "edit"],
   "system.workflows.blocked-page": ["list"],
-  "system.notification-settings": ["list", "edit"],
+  "system.notification-settings": ["list", "edit", "badge"],
   "apply-center": ["tab", "list"],
   "apply-center.view-page": [],
   "system.printers": ["tab", "list", "edit"],

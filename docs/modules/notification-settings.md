@@ -2,7 +2,7 @@
 
 ## 用途
 
-通知是存在 `notifications` 的一則訊息(CONTEXT.md「通知」),由業務程式碼(流程引擎、專案)經單一入口 `notify()` 產生:同一個入口寫站內通知、送 `notification` 信號、寄 email。收件人分兩類:**當事人通知**由事件決定(審核者、申請人…),**負責人提醒**由類型宣告的組織範圍 × 人員條件決定,租戶管理員在「通知設定」頁(`system.notification-settings`)調整人員條件。類型也可以宣告「可調時間」(某日期前 N 天 / 逾期後每天 / 每月第 N 天),租戶在同一頁調整提前天數與寄送時間,排程工作依它決定什麼時候寄。
+通知是存在 `notifications` 的一則訊息(CONTEXT.md「通知」),由業務程式碼(流程引擎、專案)經單一入口 `notify()` 產生:同一個入口寫站內通知、送 `notification` 信號、寄 email。收件人分兩類:**當事人通知**由事件決定(審核者、申請人…),**負責人提醒**由類型宣告的組織範圍 × 人員條件決定,租戶管理員在「通知設定」頁(`system.notification-settings`)調整人員條件。類型也可以宣告「可調時間」(某日期前 N 天 / 逾期後每天 / 每月第 N 天),租戶在同一頁調整提前天數與寄送時間,排程工作依它決定什麼時候寄。同一頁另有「側欄數字」區塊:租戶調整誰看得到各模組的側欄數字(人員條件,見「側欄數字」一節)。
 
 本檔是通知的 api 正本:`notify()`、類型 / 管道 / 連結的登記、可調時間與排程接口、通知清單 API、通知設定 API 與權限。
 
@@ -23,10 +23,10 @@
 
 每個模組固定有一筆 `<key>.*`(seed 自動產生,本表不列)。綁定原則:綁「按鈕 / 欄位所在的那一頁」(ADR-0004)。
 
-| 權限 key                            | 它是哪一頁的什麼                                                                                      |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `system.notification-settings.view` | 看通知類型、組織範圍、目前的收件人條件與提醒時間                                                      |
-| `system.notification-settings.edit` | 編輯收件人條件與提醒時間、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶;提醒時間照範圍) |
+| 權限 key                            | 它是哪一頁的什麼                                                                                                        |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `system.notification-settings.view` | 看通知類型、組織範圍、目前的收件人條件與提醒時間;看側欄數字清單與誰看得到                                               |
+| `system.notification-settings.edit` | 編輯收件人條件與提醒時間、側欄數字誰看得到、還原預設 + API(人員條件不能選所有人;使用者 / 角色須屬本租戶;提醒時間照範圍) |
 
 租戶管理員模板自動帶整個模組(`system.notification-settings.*`)。
 
@@ -285,6 +285,54 @@ input ResetNotificationSettingInput {
 - **測試**:`NotificationSettingsPage.test.tsx`(清單、搜尋、編輯、錯誤標回條件列、還原預設、英文名稱與退回)、`NotificationSettingsSchedule.test.tsx`(提醒時間欄、編輯框的塊數、改值與各自還原、範圍檢查、時間選單)、`NotificationSettingsAccess.test.tsx`(沒有 edit 權限、站在根組織、超級管理員站在租戶、`?edit=` 的開啟與清除;共用 `notification-settings-test-support.ts`),假 api 是有狀態的 `test/msw/notification-settings-handlers.ts`(mock 模式也用它)。
 
 正本:`apps/admin/src/pages/base/system/NotificationSettingsPage/`(提醒時間:`notification-schedule.ts`、`ScheduleEditor.tsx`)、`apps/admin/src/lib/base/notification-type-name.ts`、`apps/admin/src/test/msw/notification-settings-handlers.ts`
+
+## 側欄數字
+
+側欄模組名稱旁的數字由程式登記(`SidebarBadgeRegistry`,`docs/concepts/frontend-architecture.md`「側欄計數登記制」);**誰看得到**做成跟通知收件人一樣的人員條件,租戶在通知設定頁的「側欄數字」區塊調整。數什麼要寫程式,租戶不能新增列;之後每登記一個數字,區塊自動多一列。
+
+- **列出哪些**:程式有登記、**而且這個租戶有開通**的模組(租戶頂層擁有的租戶管理員副本綁了那個模組;ADR-0009 開通時勾選)。找不到副本(資料不完整)時不收窄、列出全部登記。站在根組織時列出全部登記、都是預設、不能改(`TENANT_ONLY`)。
+- **預設**:沒調整 = 程式登記(綁了模組就算;登記了 `requires` 時再要求那條權限,`holdsPermission`)。
+- **調整**:存租戶自己的人員條件,存法同通知設定(程式預設 + 租戶覆寫 + 還原預設)。人員條件與通知收件人同一套:不能「所有人」、只有使用者 / 角色 / 權限(`SIDEBAR_BADGE_AUDIENCE_OPTIONS`);使用者與角色要屬本租戶(與通知收件人共用 `audience/audience-tenant-check.ts`)。
+- **計算**(`sidebarBadges`):先判斷「綁了模組」(仍是前提),調整過的再用 `AudienceService.matchesAudience(operator, audience)` 判斷、**不再看 `requires`**;符合才算數字。數字本身照舊依操作者可見範圍(各模組的 `count`)。租戶 = 操作者目前組織所屬的租戶。
+- **角色刪除**:人員條件引用的角色不能刪,引用處 `kind = sidebar-badge`、`name` = 模組名稱(`docs/modules/role-manager.md`「被人員條件引用」)。
+
+**資料**:`sidebar_badge_settings`:`{ tenantId, moduleKey, audience }`,**`(tenantId, moduleKey)` 唯一**,`updatedBy` / `updatedAt` 由基礎欄位提供。`audience = null`(或沒有這筆)= 程式預設;還原預設把它寫回 `null`(保留這筆)。以 `tenantId` 為邊界的租戶設定,不掛 tenantScope;選這張新表、不擴充 `notification_settings` 的理由:那張表的 `type` 是通知類型 key,清單、引用掃描、排程都以「已登記的通知類型」過濾,把模組 key 混進去每一處都要加例外。
+
+```graphql
+# 側欄數字設定(system.notification-settings.view / edit)
+sidebarBadgeSettings: SidebarBadgeSettingsPayload!                                          # { items, totalCount },依登記順序、不分頁
+updateSidebarBadgeSetting(input: UpdateSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!   # { setting }
+resetSidebarBadgeSetting(input: ResetSidebarBadgeSettingInput!): SidebarBadgeSettingPayload!     # { setting }
+
+type SidebarBadgeSetting {
+  moduleKey: String!
+  moduleName: String! # modules.name;模組不存在時退回 key
+  descriptionKey: String # 「數什麼」在 admin 訊息檔的完整 key(登記時給);沒有 = null
+  requires: String # 程式預設要求的權限 key;沒有 = null
+  audience: JSONObject # 租戶調整過的人員條件;沒調整 = null(用程式預設)
+  isDefault: Boolean!
+  updatedAt: DateTime
+  updatedBy: ID
+}
+
+input UpdateSidebarBadgeSettingInput {
+  moduleKey: String!
+  audience: JSONObject! # 不能「所有人」、只有使用者 / 角色 / 權限
+}
+
+input ResetSidebarBadgeSettingInput {
+  moduleKey: String!
+}
+```
+
+- 錯誤:`VALIDATION_FAILED` + `reason` `UNKNOWN_BADGE`(沒登記、或這個租戶沒開通)/ `AUDIENCE_INVALID` / `OUT_OF_TENANT`(後兩者帶 `path`),`extensions.moduleKey` 帶模組 key;站在根組織 → `FORBIDDEN` + `TENANT_ONLY`。正本 `apps/api/src/sidebar-badges/sidebar-badges-error.ts`。
+- 稽核:`sidebar-badge-settings.edit` / `sidebar-badge-settings.reset`,`targetType = "sidebar_badge_setting"`,`before` / `after` 帶 `moduleKey` 與 `audience`。
+
+**admin**(`SidebarBadgeSettingsSection.tsx`,放在通知類型清單下方):一列一個數字,欄位是模組、數什麼(`descriptionKey` 查得到就顯示,否則「—」)、誰看得到、操作。誰看得到一律以「可進入這個模組」開頭:沒調整 =「可進入這個模組的人」(登記了 `requires` 則「可進入這個模組、且符合「權限 持有 …」的人」)並標「預設」;調整過 =「可進入這個模組、且符合「<人員條件摘要>」的人」(`useAudienceSummary`)。[修改] 開與通知收件人同一個 `AudiencePicker`(`EditSidebarBadgeDialog`,網址 `?badge=<模組 key>`;起始條件 = 調整過的那份,沒調整時從「持有 `requires`」或一列空的「角色」開始);[還原預設] 先確認、只在調整過的列可按。權限與唯讀判斷同通知類型清單(沒有 edit、站在根組織 = 沒有操作欄,`?badge=` 清掉)。存完同時失效 `SidebarBadgeSettings` 與 `SidebarBadges`。文案在 `admin.sidebarBadgeSettings.*`,底座登記的說明文字在 `admin.sidebarBadgeSettings.descriptions.<模組 key>`;專案登記的數字把說明寫進專案字典,`descriptionKey` 指到它。
+
+**測試**:api `apps/api/src/sidebar-badges/sidebar-badge-settings.test.ts`(預設行為不變、覆寫成角色後誰拿得到、覆寫取代 `requires`、還原預設、租戶隔離、開通的模組、各種擋下)、`roles/role-in-use.test.ts`(`sidebar-badge` 引用);admin `NotificationSettingsBadges.test.tsx`(假 api `test/msw/sidebar-badge-settings-handlers.ts`,mock 模式也用它)。
+
+正本:`apps/api/src/sidebar-badges/`、`apps/admin/src/pages/base/system/NotificationSettingsPage/SidebarBadgeSettingsSection.tsx`
 
 ## 錯誤
 

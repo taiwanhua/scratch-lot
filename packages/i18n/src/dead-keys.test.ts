@@ -50,6 +50,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "詳情頁分頁標題 `t(`gameView.tabs.${labelKey}`)`,labelKey 取自 `game-detail-tabs.ts`",
   },
   {
+    key: "admin.sidebarBadgeSettings.descriptions.",
+    reason:
+      "通知設定頁「側欄數字」的「數什麼」:完整 key 由 api 側欄計數登記的 `descriptionKey` 給(`SidebarBadgeSettingsSection`)",
+  },
+  {
     key: "admin.shell.userMenu.modes.",
     reason:
       "`t(`modes.${mode}`)`,mode 逐一取自 `@repo/ui/app-theme-provider` 的 `COLOR_MODES`",

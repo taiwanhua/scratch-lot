@@ -214,6 +214,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 | `workflow-overdue`     | `workflow_versions.steps[].overdue.audience`(逾時提醒的通知對象) | 同上                                                                           | 同上                             |
 | `workflow-cc`          | `workflow_versions.cc`(整個流程的知會對象)                       | 同上                                                                           | `name` = 流程                    |
 | `data-scope`           | `data_scope_rules.rules[].audience`(套用對象)                    | 全部規則(根組織設定、跨租戶)                                                   | `name` = 資料範圍目標            |
+| `sidebar-badge`        | `sidebar_badge_settings.audience`(誰看得到側欄數字)              | 角色所屬租戶;只算目前有登記側欄數字的模組                                      | `name` = 模組名稱                |
 
 角色所屬租戶 = 擁有組織所屬的租戶(根組織的角色只看共用流程與資料範圍;找不到擁有組織是資料損毀,直接丟錯)。退役且沒有進行中單據的版本不再派出審核,不算引用。
 
@@ -227,6 +228,7 @@ GQL-06 / GQL-07:可選輸入欄位的「缺席 / null」語意與回傳欄位語
 | 流程的草稿 / 目前版本        | 到「流程管理」修改這一關並發布(有流程管理的編輯權限才做成連結)     |
 | 進行中單據用的版本(`in-use`) | 等這些單據完成,或撤回 / 作廢後再刪除(帶張數)                       |
 | 資料範圍                     | 由系統管理員設定,請聯絡系統管理員修改                              |
+| 側欄數字                     | 到「通知設定」的「側欄數字」把條件改成其他角色(連結同通知設定)     |
 
 正本:`apps/api/src/audience/audience-references.service.ts`(`AudienceReferencesService`;條件樹走訪沿用 `@repo/domain/workflow` 的 `audienceStaticIdsOf`)
 

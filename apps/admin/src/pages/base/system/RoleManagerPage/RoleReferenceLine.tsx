@@ -71,10 +71,10 @@ const useReferenceText = (reference: RoleReference): ReactElement => {
   const t = useTranslations("admin.roleManager.delete.references");
   const routes = useFixRoutes();
   const { kind, name, stepName, source, inUseCount } = reference;
-  if (kind === "notification-setting") {
+  if (kind === "notification-setting" || kind === "sidebar-badge") {
     return (
       <>
-        {t.rich("notification-setting", {
+        {t.rich(kind, {
           name,
           link: function NotificationLink(chunks) {
             return <FixLink route={routes.notification}>{chunks}</FixLink>;

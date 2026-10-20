@@ -781,7 +781,8 @@
           "edit": "「{name}」流程{source, select, draft {的草稿} other {目前版本}}裡,整個流程的知會對象用了這個角色 → 到<link>流程管理</link>修改並發布。",
           "inUse": "「{name}」流程有 {count} 張進行中的單據使用的版本裡,整個流程的知會對象用了這個角色 → 等這些單據完成,或撤回 / 作廢後再刪除。"
         },
-        "data-scope": "資料範圍「{name}」由系統管理員設定,它的套用對象用了這個角色 → 請聯絡系統管理員修改。"
+        "data-scope": "資料範圍「{name}」由系統管理員設定,它的套用對象用了這個角色 → 請聯絡系統管理員修改。",
+        "sidebar-badge": "「{name}」的側欄數字設定用了這個角色 → 到<link>通知設定</link>的「側欄數字」把條件改成其他角色。"
       },
       "useDisableInstead": "不能刪除時可以改用「停用」:持有者的這個角色立即失效,之後隨時可以再啟用。",
       "confirm": "刪除",
@@ -3053,6 +3054,55 @@
       "TENANT_ONLY": "這裡不能調整通知設定,請先切換到要設定的組織",
       "FORBIDDEN": "你沒有調整通知設定的權限",
       "UNEXPECTED": "發生錯誤,請稍後再試"
+    }
+  },
+  "sidebarBadgeSettings": {
+    "title": "側欄數字",
+    "intro": "側欄模組名稱旁的數字(例:待你處理的件數)。要先能進入那個模組才看得到;調整過的,還要符合這裡的條件。要數什麼由系統決定,不能新增。",
+    "tableLabel": "側欄數字清單",
+    "empty": "目前沒有可以設定的側欄數字",
+    "loadFailed": "側欄數字設定載入失敗,請重新整理再試一次",
+    "columns": {
+      "module": "模組",
+      "description": "數什麼",
+      "audience": "誰看得到",
+      "actions": "操作"
+    },
+    "noDescription": "—",
+    "defaultAudience": "可進入這個模組的人",
+    "conditionAudience": "可進入這個模組、且符合「{condition}」的人",
+    "actions": {
+      "edit": "修改",
+      "reset": "還原預設"
+    },
+    "edit": {
+      "title": "修改誰看得到:{name}",
+      "hint": "要先能進入「{name}」才看得到數字;符合下列條件的人才看得到。",
+      "audienceTitle": "誰看得到",
+      "cancel": "取消",
+      "save": "儲存"
+    },
+    "reset": {
+      "title": "還原預設:{name}",
+      "line": "誰看得到會改回預設:{audience}。",
+      "body": "目前的調整會被移除。",
+      "cancel": "取消",
+      "confirm": "還原預設"
+    },
+    "feedback": {
+      "saveSuccess": "已更新側欄數字設定",
+      "resetSuccess": "已還原預設"
+    },
+    "errors": {
+      "AUDIENCE_INVALID": "這個條件不能使用,請檢查後再儲存",
+      "OUT_OF_TENANT": "這個對象不在你的組織內",
+      "UNKNOWN_BADGE": "找不到這個側欄數字,請重新整理再試一次",
+      "TENANT_ONLY": "這裡不能調整側欄數字,請先切換到要設定的組織",
+      "FORBIDDEN": "你沒有調整側欄數字的權限",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "descriptions": {
+      "apply-center": "待你處理的審核件數"
     }
   },
   "printers": {

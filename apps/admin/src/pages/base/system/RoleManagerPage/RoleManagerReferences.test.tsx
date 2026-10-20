@@ -27,6 +27,7 @@ const REFERENCES = [
   },
   { kind: "workflow-cc", name: "出差單", source: "current" },
   { kind: "data-scope", name: "示範資料" },
+  { kind: "sidebar-badge", name: "申請中心" },
   { kind: "unknown-kind", name: "認不得的種類" },
 ];
 
@@ -101,6 +102,12 @@ describe("角色管理:刪除被人員條件引用時的提示", () => {
         "資料範圍「示範資料」由系統管理員設定,它的套用對象用了這個角色 → 請聯絡系統管理員修改。",
       ),
     ).toBeInTheDocument();
+    // 側欄數字 → 到通知設定的「側欄數字」改條件
+    expect(
+      text(
+        "「申請中心」的側欄數字設定用了這個角色 → 到通知設定的「側欄數字」把條件改成其他角色。",
+      ),
+    ).toBeInTheDocument();
     expect(within(dialog).queryByText(/認不得的種類/)).not.toBeInTheDocument();
     expect(
       within(dialog).getByText(/不能刪除時可以改用「停用」/),
@@ -133,7 +140,8 @@ describe("角色管理:刪除被人員條件引用時的提示", () => {
     const notificationLinks = within(dialog).getAllByRole("link", {
       name: "通知設定",
     });
-    expect(notificationLinks).toHaveLength(1);
+    // 通知設定與側欄數字各一個
+    expect(notificationLinks).toHaveLength(2);
     expect(notificationLinks[0]).toHaveAttribute(
       "href",
       "/system/notification-settings",

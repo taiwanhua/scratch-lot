@@ -781,7 +781,8 @@
           "edit": "In the {source, select, draft {draft} other {current version}} of workflow “{name}”, the whole flow's CC recipients use this role → go to <link>Workflows</link>, change it and publish.",
           "inUse": "{count, plural, one {# in-progress request uses} other {# in-progress requests use}} a version of workflow “{name}” whose whole flow's CC recipients use this role → wait until they finish, or withdraw / void them, then delete."
         },
-        "data-scope": "The data scope “{name}” is set by the system administrator and its “Applies to” uses this role → please contact the system administrator to change it."
+        "data-scope": "The data scope “{name}” is set by the system administrator and its “Applies to” uses this role → please contact the system administrator to change it.",
+        "sidebar-badge": "Who sees the sidebar count of “{name}” uses this role → go to <link>Notification settings</link>, “Sidebar counts”, and switch it to another role."
       },
       "useDisableInstead": "When it cannot be deleted you can disable it instead: holders lose it immediately and you can enable it again at any time.",
       "confirm": "Delete",
@@ -3053,6 +3054,55 @@
       "TENANT_ONLY": "Notification settings cannot be changed here. Switch to the organization you want to set up first.",
       "FORBIDDEN": "You do not have permission to change notification settings",
       "UNEXPECTED": "Something went wrong. Please try again later."
+    }
+  },
+  "sidebarBadgeSettings": {
+    "title": "Sidebar counts",
+    "intro": "The number next to a module name in the sidebar (for example, items waiting for you). Only people who can open that module see it; once adjusted, they must also match the conditions here. What is counted is set by the system and cannot be added here.",
+    "tableLabel": "Sidebar counts",
+    "empty": "There are no sidebar counts to set",
+    "loadFailed": "Sidebar count settings failed to load. Refresh and try again.",
+    "columns": {
+      "module": "Module",
+      "description": "What it counts",
+      "audience": "Who sees it",
+      "actions": "Actions"
+    },
+    "noDescription": "—",
+    "defaultAudience": "People who can open this module",
+    "conditionAudience": "People who can open this module and match “{condition}”",
+    "actions": {
+      "edit": "Change",
+      "reset": "Restore default"
+    },
+    "edit": {
+      "title": "Change who sees it: {name}",
+      "hint": "Only people who can open “{name}” see the count; of them, people matching the conditions below see it.",
+      "audienceTitle": "Who sees it",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "reset": {
+      "title": "Restore default: {name}",
+      "line": "Who sees it goes back to the default: {audience}.",
+      "body": "Your current changes will be removed.",
+      "cancel": "Cancel",
+      "confirm": "Restore default"
+    },
+    "feedback": {
+      "saveSuccess": "Sidebar count settings updated",
+      "resetSuccess": "Defaults restored"
+    },
+    "errors": {
+      "AUDIENCE_INVALID": "This condition cannot be used. Check it and save again.",
+      "OUT_OF_TENANT": "This person or role is not in your organization",
+      "UNKNOWN_BADGE": "This sidebar count no longer exists. Refresh and try again.",
+      "TENANT_ONLY": "Sidebar counts cannot be changed here. Switch to the organization you want to set up first.",
+      "FORBIDDEN": "You do not have permission to change sidebar counts",
+      "UNEXPECTED": "Something went wrong. Please try again later."
+    },
+    "descriptions": {
+      "apply-center": "Reviews waiting for you"
     }
   },
   "printers": {

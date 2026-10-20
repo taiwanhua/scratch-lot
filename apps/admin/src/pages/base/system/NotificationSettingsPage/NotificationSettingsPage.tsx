@@ -22,6 +22,7 @@ import { useNotificationTypeName } from "@/lib/base/notification-type-name";
 import { EditNotificationSettingDialog } from "./EditNotificationSettingDialog";
 import { NotificationSettingsTable } from "./NotificationSettingsTable";
 import { ResetDefaultDialog } from "./ResetDefaultDialog";
+import { SidebarBadgeSettingsSection } from "./SidebarBadgeSettingsSection";
 import {
   NOTIFICATION_AUDIENCE_FIELDS,
   NOTIFICATION_AUDIENCE_ORG_SOURCES,
@@ -45,6 +46,7 @@ import {
  * **當事人通知**,組織範圍(唯讀)、目前的收件人與提醒時間;[編輯] 開編輯框(網址 `?edit=<類型 key>`,
  * 收件人 / 提醒時間有幾塊顯示幾塊)、[還原預設] 先確認再把可調的部分全部還原。
  * 沒有 `edit` 權限、或站在根組織 = 唯讀。
+ * 下方「側欄數字」區塊(`SidebarBadgeSettingsSection`)調整誰看得到各模組的側欄數字,權限與唯讀判斷同一份。
  */
 export const NotificationSettingsPage = () => {
   const t = useTranslations("admin.notificationSettings");
@@ -170,6 +172,8 @@ export const NotificationSettingsPage = () => {
           {t("loadFailed")}
         </Typography>
       )}
+
+      <SidebarBadgeSettingsSection canEdit={data.canEdit} />
 
       {editing !== null && (
         <EditNotificationSettingDialog

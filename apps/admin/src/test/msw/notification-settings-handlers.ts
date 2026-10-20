@@ -9,12 +9,22 @@ import {
   type ResetNotificationSettingMutationVariables,
   type RolesQueryVariables,
   type UpdateNotificationSettingMutationVariables,
+  type UpdateSidebarBadgeSettingMutationVariables,
 } from "@repo/graphql";
 
 import { type AuthErrorCode, graphqlError } from "./auth-handlers";
 import type { TestRole } from "./data-scope-handlers";
 import type { TestMatrixModule, TestMatrixPermission } from "./role-fixtures";
 import { api } from "./server";
+import {
+  type TestSidebarBadge,
+  sidebarBadgeSettingsHandlers,
+} from "./sidebar-badge-settings-handlers";
+
+export {
+  type TestSidebarBadge,
+  sidebarBadges,
+} from "./sidebar-badge-settings-handlers";
 
 /** api 回的一份提醒時間。 */
 export interface TestNotificationSchedule {
@@ -52,6 +62,8 @@ export interface NotificationSettingsFailure {
 
 export interface NotificationSettingsWorldOptions {
   types?: TestNotificationType[];
+  /** 「側欄數字」區塊的列;不給 = 沒有登記 */
+  badges?: TestSidebarBadge[];
   /** 人員條件「角色」的候選(`roles`);mock 模式由 roleWorld 提供,這裡不登記 */
   roles?: TestRole[];
   /** 人員條件「權限」的候選樹(`audiencePermissionOptions`) */
@@ -59,6 +71,8 @@ export interface NotificationSettingsWorldOptions {
   failures?: {
     UpdateNotificationSetting?: NotificationSettingsFailure;
     ResetNotificationSetting?: NotificationSettingsFailure;
+    UpdateSidebarBadgeSetting?: NotificationSettingsFailure;
+    ResetSidebarBadgeSetting?: NotificationSettingsFailure;
   };
 }
 
@@ -67,6 +81,8 @@ export interface NotificationSettingsWorld {
   inputs: {
     update: UpdateNotificationSettingMutationVariables["input"][];
     reset: ResetNotificationSettingMutationVariables["input"][];
+    badgeUpdate: UpdateSidebarBadgeSettingMutationVariables["input"][];
+    badgeReset: { moduleKey: string }[];
   };
 }
 
@@ -80,17 +96,25 @@ const fail = (code: string, extensions: Record<string, unknown> = {}) =>
  * 通知設定頁的假 api(`notificationSettings` / `updateNotificationSetting` / `resetNotificationSetting`
  * + 選擇器的 `roles` / `audiencePermissionOptions`)。有狀態(TEST-08):改了或還原後重查拿到新值;
  * `keyword` 比對名稱與類型 key、分頁照 api(`notification-settings.service.ts`)。
+ * 「側欄數字」區塊的 `sidebarBadgeSettings` / `updateSidebarBadgeSetting` / `resetSidebarBadgeSetting` 同樣有狀態。
  */
 export const notificationSettingsWorld = (
   options: NotificationSettingsWorldOptions = {},
 ): NotificationSettingsWorld => {
   const {
     types = [],
+    badges = [],
     roles = [],
     permissionModules = [],
     failures = {},
   } = options;
-  const inputs: NotificationSettingsWorld["inputs"] = { update: [], reset: [] };
+  const inputs: NotificationSettingsWorld["inputs"] = {
+    update: [],
+    reset: [],
+    badgeUpdate: [],
+    badgeReset: [],
+  };
+
   interface StoredSetting {
     audience: Record<string, unknown> | null;
     schedule: TestNotificationSchedule | null;
@@ -152,6 +176,14 @@ export const notificationSettingsWorld = (
     stored.get(type) ?? { audience: null, schedule: null, updatedAt: null };
 
   const handlers = [
+    ...sidebarBadgeSettingsHandlers({
+      badges,
+      inputs,
+      failures: {
+        update: failures.UpdateSidebarBadgeSetting,
+        reset: failures.ResetSidebarBadgeSetting,
+      },
+    }),
     api.query("NotificationSettings", ({ variables }) => {
       const { input } = variables as NotificationSettingsQueryVariables;
       const page = input.page ?? 1;
@@ -289,8 +321,13 @@ export const systemModule = (
   children: [],
 });
 
-/** 「權限」欄的候選樹:系統管理 → 印表機管理 / 通知設定(預設收件人用到的權限)。 */
+/** 「權限」欄的候選樹:系統管理 → 印表機管理 / 通知設定(預設收件人用到的權限)+ 申請中心(側欄數字的預設權限)。 */
 export const notificationPermissionModules: TestMatrixModule[] = [
+  {
+    ...systemModule("apply-center", "申請中心", [["view", "檢視"]]),
+    parentId: null,
+    order: 0,
+  },
   {
     id: "m-system",
     key: "system",

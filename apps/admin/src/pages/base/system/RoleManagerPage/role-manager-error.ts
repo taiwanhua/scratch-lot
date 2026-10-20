@@ -45,6 +45,7 @@ export const ROLE_REFERENCE_KINDS = [
   "workflow-overdue",
   "workflow-cc",
   "data-scope",
+  "sidebar-badge",
 ] as const;
 
 export type RoleReferenceKind = (typeof ROLE_REFERENCE_KINDS)[number];
