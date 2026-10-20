@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../database/database.module";
+import { FieldOptionsModule } from "../fields/field-options.module";
 import { FieldCategoryOptionsService } from "./field-category-options.service";
 import { FormAccessService } from "./form-access.service";
 import { FormUserNames } from "./form-mapper";
@@ -14,7 +15,7 @@ import { MeOrgTimezoneResolver } from "./me-org-timezone.resolver";
  * 權限解析與稽核由 @Global 的 PermissionModule / AuditModule 提供。
  */
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, FieldOptionsModule],
   providers: [
     FormAccessService,
     FieldCategoryOptionsService,
@@ -24,6 +25,7 @@ import { MeOrgTimezoneResolver } from "./me-org-timezone.resolver";
     MeOrgTimezoneResolver,
   ],
   exports: [
+    FieldOptionsModule,
     FormAccessService,
     FieldCategoryOptionsService,
     LookupProvidersService,

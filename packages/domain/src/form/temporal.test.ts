@@ -244,6 +244,26 @@ describe("@repo/domain/form formatTemporal", () => {
     ).toBe("2026-09-25");
   });
 
+  it("monthDay 印 MM/DD、monthDayTime 印 MM/DD HH:mm(依給的時區、月日補零)", () => {
+    const value = "2026-10-12T06:35:00Z";
+    expect(formatTemporal(value, { type: "monthDay", timezone: TAIPEI })).toBe(
+      "10/12",
+    );
+    expect(
+      formatTemporal(value, { type: "monthDayTime", timezone: TAIPEI }),
+    ).toBe("10/12 14:35");
+    // 跨日:紐約還是前一天
+    expect(
+      formatTemporal("2026-09-05T02:00:00Z", {
+        type: "monthDayTime",
+        timezone: NEW_YORK,
+      }),
+    ).toBe("09/04 22:00");
+    expect(formatTemporal(null, { type: "monthDay", timezone: TAIPEI })).toBe(
+      "",
+    );
+  });
+
   it("空值 → 空字串;不是時點的字串原樣回;時區不合法以 UTC 顯示", () => {
     expect(formatTemporal(null, { type: "date", timezone: TAIPEI })).toBe("");
     expect(

@@ -10,7 +10,6 @@ import {
   type FormDefinition,
   type StoredValues,
   type SubmissionSummary,
-  VOID_REASON_OTHER,
   arrayColumnsOf,
   arrayRowsOf,
   computeSummary,
@@ -45,6 +44,7 @@ import {
   voidReasonCategoryOf,
 } from "../../database/schemas/form.schema";
 import { TransactionService, afterCommit } from "../../database/transaction";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import { SerialService } from "../../serials/serial.service";
 import { StorageService } from "../../storage/storage.service";
 import { InstanceWithdrawService } from "../../workflows/workflow-engine/instance-withdraw.service";
@@ -57,7 +57,6 @@ import { SubmissionReadAccess } from "../../workflows/workflow-engine/submission
 import { WorkflowCcService } from "../../workflows/workflow-engine/workflow-cc.service";
 import { WorkflowSubmitService } from "../../workflows/workflow-engine/workflow-submit.service";
 import { workflowForbiddenError } from "../../workflows/workflows-error";
-import { FieldCategoryOptionsService } from "../field-category-options.service";
 import { fieldGateOf } from "../field-permission-gate";
 import {
   FormAccessService,
@@ -381,7 +380,7 @@ export class FormSubmissionsService {
     private readonly lifecycle: FormLifecycleService,
     private readonly cc: WorkflowCcService,
     private readonly serials: SerialService,
-    private readonly categories: FieldCategoryOptionsService,
+    private readonly fieldOptions: FieldOptionsService,
   ) {}
 
   // ---- 讀 ----
@@ -1349,8 +1348,8 @@ export class FormSubmissionsService {
 
   /**
    * 作廢原因的驗證與整形:表單(`voidReasonCategoryKey`)沒設類別 → 自由文字,`reasonNote` 必填、不可帶
-   * `reasonKey`;設了 → `reasonKey` 必填且要是該類別在操作者合併範圍內啟用中的選項(同欄位管理,
-   * `FieldCategoryOptionsService`;類別不存在 = 沒有選項),選「其他」(`VOID_REASON_OTHER`)時 `reasonNote` 必填。
+   * `reasonKey`;設了 → 底座原因檢查 `FieldOptionsService.assertReason`(`reasonKey` 必填且是該類別在操作者
+   * 合併範圍內啟用中的選項;類別不存在 = 沒有選項;選「其他」時 `reasonNote` 必填)。
    * 不合 → `VALIDATION_FAILED`(`fields` 指到 `reasonKey` / `reasonNote`)。
    */
   private async voidReasonOf(
@@ -1358,39 +1357,27 @@ export class FormSubmissionsService {
     formKey: string,
     input: VoidSubmissionInput,
   ): Promise<FormVoidReason> {
-    const note = input.reasonNote.trim();
-    const reasonKey = input.reasonKey?.trim() ?? "";
     const form = await this.access.findForm(facts.operator, formKey);
     const categoryKey = form === null ? null : voidReasonCategoryOf(form);
-    if (categoryKey === null) {
-      if (reasonKey !== "") {
-        throw validationError(`Form ${formKey} has no void reason options`, [
-          "reasonKey",
-        ]);
-      }
-      if (note === "") {
-        throw validationError("reasonNote is required", ["reasonNote"]);
-      }
-      return { reasonKey: null, reasonLabel: null, reasonNote: note };
+    if (categoryKey !== null) {
+      // 白名單只有這張表單設定的那一個類別
+      return this.fieldOptions.assertReason(
+        facts.operator,
+        categoryKey,
+        input,
+        [categoryKey],
+      );
     }
-    if (reasonKey === "") {
-      throw validationError("reasonKey is required", ["reasonKey"]);
-    }
-    const options = await this.categories.options(facts.operator, categoryKey);
-    const option = options.get(reasonKey);
-    if (option?.enabled !== true) {
-      throw validationError(`Unknown void reason: ${reasonKey}`, ["reasonKey"]);
-    }
-    if (reasonKey === VOID_REASON_OTHER && note === "") {
-      throw validationError("reasonNote is required when the reason is other", [
-        "reasonNote",
+    if ((input.reasonKey?.trim() ?? "") !== "") {
+      throw validationError(`Form ${formKey} has no void reason options`, [
+        "reasonKey",
       ]);
     }
-    return {
-      reasonKey,
-      reasonLabel: option.label,
-      reasonNote: note === "" ? null : note,
-    };
+    const note = input.reasonNote.trim();
+    if (note === "") {
+      throw validationError("reasonNote is required", ["reasonNote"]);
+    }
+    return { reasonKey: null, reasonLabel: null, reasonNote: note };
   }
 
   /**

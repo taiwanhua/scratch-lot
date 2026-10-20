@@ -4,6 +4,7 @@ import { arrayColumnsOf } from "@repo/domain/form";
 
 import { FormVersionsRepository } from "../../database/database.module";
 import { voidReasonCategoryOf } from "../../database/schemas/form.schema";
+import { FieldOptionsService } from "../../fields/field-options.service";
 import { FieldCategoryOptionsService } from "../field-category-options.service";
 import { fieldGateOf, requiredShowKeys } from "../field-permission-gate";
 import {
@@ -40,6 +41,7 @@ export class FormFieldOptionsService {
     private readonly versions: FormVersionsRepository,
     private readonly access: FormAccessService,
     private readonly categories: FieldCategoryOptionsService,
+    private readonly fieldOptions: FieldOptionsService,
   ) {}
 
   async options(
@@ -111,7 +113,7 @@ export class FormFieldOptionsService {
 
   /**
    * `formVoidReasonOptions`:作廢對話框的原因選項 = 表單設定 `voidReasonCategoryKey` 那個類別啟用中的選項
-   * (同 `options` 的合併範圍,作廢時驗值也用它)。守門同執行端(表單看得到 + 模組 `view` / `create` / `edit` 任一),
+   * (底座 `FieldOptionsService.optionsOf`,作廢時的 `assertReason` 用同一份)。守門同執行端(表單看得到 + 模組 `view` / `create` / `edit` 任一),
    * 不需要欄位管理的權限;沒設類別 → `categoryKey: null`、沒有選項(作廢原因自由填寫)。
    */
   async voidReasonOptions(
@@ -127,12 +129,11 @@ export class FormFieldOptionsService {
     if (categoryKey === null) {
       return { categoryKey: null, items: [] };
     }
-    const found = await this.categories.options(facts.operator, categoryKey);
     return {
       categoryKey,
-      items: [...found]
-        .filter(([, option]) => option.enabled)
-        .map(([value, option]) => ({ value, label: option.label })),
+      items: await this.fieldOptions.optionsOf(facts.operator, categoryKey, [
+        categoryKey,
+      ]),
     };
   }
 
