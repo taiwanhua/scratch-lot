@@ -5,6 +5,11 @@ import {
   LotteryDealerType,
 } from "@repo/graphql";
 
+import {
+  DealerAllocationsTab,
+  DealerStockTab,
+} from "@/components/project/lottery/InventoryDetailTabs/InventoryDetailTabs";
+
 import { CoSellersTab } from "./CoSellersTab";
 import { SigninsTab } from "./SigninsTab";
 
@@ -42,5 +47,18 @@ export const DEALER_DETAIL_TABS: readonly DealerDetailTab[] = [
     labelKey: "coSellers.tab",
     types: [LotteryDealerType.B],
     Content: CoSellersTab,
+  },
+  // 庫存管理(P20):對應分店的預計要給本數、在店庫存
+  {
+    value: "allocations",
+    labelKey: "allocations.tab",
+    types: [LotteryDealerType.B],
+    Content: DealerAllocationsTab,
+  },
+  {
+    value: "stock",
+    labelKey: "stock.tab",
+    types: [LotteryDealerType.B],
+    Content: DealerStockTab,
   },
 ];

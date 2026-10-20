@@ -7,6 +7,9 @@ import { DealerFormPage } from "@/pages/project/lottery/dealers/DealerFormPage/D
 import { DealerViewPage } from "@/pages/project/lottery/dealers/DealerViewPage/DealerViewPage";
 import { DealersPage } from "@/pages/project/lottery/dealers/DealersPage/DealersPage";
 import { DEALERS_MODULE_KEYS } from "@/pages/project/lottery/dealers/dealers-keys";
+import { BookPage } from "@/pages/project/lottery/inventory/BookPage/BookPage";
+import { InventoryPage } from "@/pages/project/lottery/inventory/InventoryPage/InventoryPage";
+import { INVENTORY_MODULE_KEYS } from "@/pages/project/lottery/inventory/inventory-config";
 import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/GameFormPage";
 import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
@@ -54,6 +57,9 @@ export const projectModulePages: ModulePageSource = {
       key: ACCOUNTS_MODULE_KEYS.bankAccountViewPage,
       Page: BankAccountViewPage,
     },
+    // 庫存管理(規格 7.3、7.4、7.6):分頁頁 + 本的詳情
+    { key: INVENTORY_MODULE_KEYS.list, Page: InventoryPage },
+    { key: INVENTORY_MODULE_KEYS.bookPage, Page: BookPage },
   ],
   forms: [
     // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎

@@ -679,6 +679,36 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "專案掛接點擋下的錯誤碼(目前是叫貨單):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `project/lottery/requisition/requisition-error.ts` 的 `REQUISITION_REASONS`)",
   },
+  {
+    key: "admin.lotteryInventory.errors.",
+    reason:
+      "庫存管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/inventory-error.ts` 從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryInventory.ticketStatuses.",
+    reason:
+      "`t(`ticketStatuses.${status}`)`,status 是張的狀態 `TICKET_STATUSES`(api 回的值)",
+  },
+  {
+    key: "admin.lotteryInventory.bookStates.",
+    reason:
+      "`t(`bookStates.${state}`)`,state 是本的狀態(api 回的 `state`)與篩選值 `INVENTORY_BOOK_FILTER_STATES`",
+  },
+  {
+    key: "admin.lotteryInventory.locations.",
+    reason:
+      "`t(`locations.${kind}`)`,kind 是張的位置 `TICKET_LOCATION_KINDS`(api 回的值)",
+  },
+  {
+    key: "admin.lotteryInventory.eventTypes.",
+    reason:
+      "事件時間軸的 `t(`eventTypes.${type}`)`,type 是張數事件類型 `TICKET_EVENT_TYPES`",
+  },
+  {
+    key: "admin.lotteryInventory.sources.",
+    reason:
+      "本的詳情「來源」的 `t(`sources.${type}`)`,type 是來源事件類型(進貨 / 調入)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

@@ -101,7 +101,9 @@
       "summary": "{unitPrice} 元 × {tickets} 張 · 整本 {bookPrice} · 預設批購金額率 {rate}%",
       "tabs": {
         "aria": "遊戲詳情分頁",
-        "basic": "基本資料"
+        "basic": "基本資料",
+        "stock": "庫存概況",
+        "allocations": "預計要給本數"
       },
       "empty": "—"
     },
@@ -398,6 +400,12 @@
         "AGENTS_REQUIRE_CO_SALES": "還有代理人,不能移除共同銷售處所",
         "ROLE_IN_USE": "要取消的身分還有關聯"
       }
+    },
+    "allocations": {
+      "tab": "預計要給本數"
+    },
+    "stock": {
+      "tab": "在店庫存"
     }
   },
   "lotteryInventory": {
@@ -426,6 +434,225 @@
       "shiftHint": "Shift 可連選",
       "legendAria": "格子圖例",
       "gridAria": "張數格子"
+    },
+    "tabs": {
+      "aria": "庫存管理分頁",
+      "stock": "庫存",
+      "investigations": "待查·遺失",
+      "allocations": "預計要給本數"
+    },
+    "common": {
+      "cancel": "取消",
+      "save": "儲存",
+      "unitPrice": "{price} 元",
+      "tickets": "{count} 張",
+      "amount": "{amount} 元"
+    },
+    "reason": {
+      "note": "說明",
+      "noteRequired": "說明(必填)"
+    },
+    "errors": {
+      "FORBIDDEN": "你沒有這個操作的權限",
+      "NOT_FOUND": "找不到這本,或你看不到它",
+      "VALIDATION_FAILED": "有欄位沒填好,請檢查標紅的欄位",
+      "CONFLICT": "這幾張已被處理,請重新整理後再試",
+      "TICKET_ALREADY_PROCESSED": "這幾張已被處理,請重新整理後再試",
+      "CROSS_STORE_NOT_ALLOWED": "只能把張移進你看得到的分店",
+      "NO_SKIPPED_TICKETS": "這本沒有跳號,不需要更正",
+      "SKIP_COUNT_MISMATCH": "改完的跳號張數要等於待標註張數",
+      "SKIP_UNCHANGED": "跳號沒有更動",
+      "TICKET_STATUS_NOT_ALLOWED": "選到的張的狀態不能做這件事",
+      "UNEXPECTED": "發生錯誤,請稍後再試"
+    },
+    "ticketStatuses": {
+      "unsold": "未售",
+      "sold": "已售",
+      "skipped": "跳號",
+      "scrapped": "報廢",
+      "investigating": "待查",
+      "lost": "遺失"
+    },
+    "bookStates": {
+      "unopened": "未拆",
+      "on_counter": "檯面中",
+      "sold_out": "售完",
+      "pending_skip": "有待標註"
+    },
+    "locations": {
+      "stock": "庫存",
+      "counter": "檯面",
+      "in_transit": "在途"
+    },
+    "eventTypes": {
+      "purchase": "進貨",
+      "purchase_void": "進貨作廢",
+      "open": "拆本",
+      "recall": "收回",
+      "move": "移櫃",
+      "sale": "售出",
+      "sale_stocktake": "售出(盤點補登)",
+      "sale_undo": "撤銷",
+      "skip": "跳號",
+      "unskip": "取消跳號",
+      "scrap": "報廢",
+      "transfer_out": "調出",
+      "in_transit": "在途",
+      "transfer_in": "調入",
+      "investigate": "待查",
+      "lose": "遺失",
+      "recover": "尋回"
+    },
+    "sources": {
+      "purchase": "進貨單",
+      "transfer_in": "調貨單"
+    },
+    "stock": {
+      "columns": {
+        "bookNo": "本編號",
+        "game": "遊戲",
+        "unitPrice": "面額",
+        "holdings": "所在分店",
+        "remaining": "剩餘 / 總張數",
+        "pendingSkip": "待標註",
+        "purchasedAt": "批購日",
+        "dealer": "進貨甲類"
+      },
+      "remaining": "{remaining} / {total}",
+      "none": "—",
+      "filters": {
+        "all": "全部",
+        "org": "分店",
+        "game": "遊戲",
+        "state": "狀態",
+        "purchasedFrom": "批購日起",
+        "purchasedTo": "批購日迄",
+        "bookNo": "本號"
+      },
+      "listAria": "庫存(以本為單位)",
+      "pickOrg": "請先選分店",
+      "empty": "沒有符合條件的本",
+      "total": "共 {count} 本"
+    },
+    "lookup": {
+      "open": "查刮刮樂",
+      "title": "查刮刮樂",
+      "submit": "查詢",
+      "input": "刷條碼或輸入背面編號",
+      "hint": "也可以輸入正面編號或正面條碼。",
+      "invalid": "編號格式不對",
+      "notFound": "找不到這張刮刮樂,或你看不到它",
+      "bookNo": "本號 {bookNo}",
+      "ticketNo": "張號 {ticketNo}",
+      "responsible": "責任分店 {store}"
+    },
+    "investigations": {
+      "columns": {
+        "book": "本",
+        "game": "遊戲",
+        "status": "狀態",
+        "responsible": "責任分店",
+        "source": "來源",
+        "at": "日期",
+        "cost": "批購成本"
+      },
+      "source": "{serial}({count} 張)",
+      "recover": "尋回",
+      "listAria": "待查·遺失",
+      "empty": "目前沒有待查或遺失的刮刮樂"
+    },
+    "book": {
+      "tabLabel": "本 {key}",
+      "loading": "載入本的詳情",
+      "title": "{game} · 本號 {bookNo}",
+      "subtitle": "{price} 元 · 張號 {first}–{last}",
+      "correctSkips": "更正跳號",
+      "recoverAll": "整本尋回",
+      "investigation": "這本{status}中:{date} {serial},責任分店 = {store}",
+      "sources": "來源",
+      "sourceValue": "{serial}({date})",
+      "dealer": "批購甲類",
+      "locations": "所在",
+      "cost": "成本",
+      "rate": "批購金額率",
+      "rateValue": "{rate}%",
+      "costValueLabel": "成本 / 單張成本",
+      "grid": "張數格子",
+      "selected": "已選 {count} 張 {ranges}",
+      "scrap": "報廢",
+      "recover": "尋回",
+      "clearSelection": "取消選取",
+      "timeline": "事件時間軸"
+    },
+    "timeline": {
+      "columns": {
+        "at": "時間",
+        "type": "事件",
+        "tickets": "張",
+        "route": "位置",
+        "by": "人 / 單據"
+      },
+      "wholeBook": "整本",
+      "aria": "事件時間軸",
+      "empty": "還沒有事件"
+    },
+    "correctSkips": {
+      "title": "更正跳號",
+      "required": "待標註",
+      "current": "目前跳號",
+      "changed": "改成",
+      "changedTo": "{ranges}({count} / {required})",
+      "reason": "更正原因",
+      "hint": "格子預選目前的跳號;改完的張數要等於待標註張數。",
+      "submit": "更正",
+      "success": "已更正跳號"
+    },
+    "scrap": {
+      "title": "報廢 {count} 張",
+      "reason": "報廢原因",
+      "loss": "損失(批購成本)",
+      "submit": "報廢",
+      "success": "已報廢 {count} 張"
+    },
+    "recover": {
+      "title": "尋回 {count} 張",
+      "ticketLine": "本號 {bookNo} · 張號 {ranges} · {statuses}",
+      "reason": "尋回原因",
+      "backTo": "回到",
+      "backToStore": "{store} 庫存",
+      "submit": "尋回",
+      "success": "已尋回 {count} 張"
+    },
+    "allocations": {
+      "aria": "預計要給本數",
+      "store": "分店",
+      "game": "遊戲",
+      "caption": "每格「已給 / 預計」。",
+      "captionEditable": "每格「已給 / 預計」;點格子修改預計。",
+      "cardTitle": "{name}(已給 / 預計)",
+      "extraTickets": "+{count} 張",
+      "none": "—",
+      "empty": "沒有分店或遊戲",
+      "editAria": "修改 {store} {game} 的預計要給本數",
+      "editTitle": "預計要給本數",
+      "editTarget": "{store} · {game}(已給 {given})",
+      "planned": "預計要給本數",
+      "plannedInvalid": "請填 0 以上的整數",
+      "note": "備註",
+      "saveSuccess": "已更新預計要給本數"
+    },
+    "stockOverview": {
+      "aria": "庫存概況",
+      "store": "分店",
+      "game": "遊戲",
+      "unopened": "未拆(本)",
+      "counter": "檯面(張)",
+      "sold": "已售(張)",
+      "empty": "沒有庫存"
+    },
+    "detailTabs": {
+      "noAccess": "這個分頁讀庫存管理的資料;需要的話,請洽系統管理員開放庫存管理。",
+      "noStore": "這位乙類還沒有對應分店。"
     }
   },
   "lotteryReports": {

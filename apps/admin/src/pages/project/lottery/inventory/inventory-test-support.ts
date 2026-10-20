@@ -1,0 +1,45 @@
+import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
+import {
+  ALL_INVENTORY_PERMISSIONS,
+  inventoryModules,
+} from "@/test/msw/project/lottery/inventory-fixtures";
+import {
+  type InventoryWorldOptions,
+  inventoryWorld,
+} from "@/test/msw/project/lottery/inventory-handlers";
+import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
+import {
+  masterDataSharedLookupHandlers,
+  masterDataWorld,
+} from "@/test/msw/project/lottery/master-data-handlers";
+import { server } from "@/test/msw/server";
+import { renderApp } from "@/test/render";
+
+/**
+ * 庫存管理測試的共用場景:路由、殼、守門都是真的,只有 api 是假的(`inventoryWorld`)。
+ * 當前組織 = 中山店。
+ */
+export const renderInventory = ({
+  path = "/inventory",
+  permissions = ALL_INVENTORY_PERMISSIONS,
+  bookPage = true,
+  world = {},
+}: {
+  path?: string;
+  permissions?: readonly string[];
+  bookPage?: boolean;
+  world?: InventoryWorldOptions;
+} = {}) => {
+  const fake = inventoryWorld({ permissions, ...world });
+  server.use(
+    ...fake.handlers,
+    ...masterDataWorld().handlers,
+    ...masterDataSharedLookupHandlers(),
+    ...authWorld({
+      hasRefreshCookie: true,
+      orgs: [masterDataOrgs.storeA],
+      modules: [overviewModule, ...inventoryModules({ permissions, bookPage })],
+    }).handlers,
+  );
+  return { ...renderApp({ path }), fake };
+};

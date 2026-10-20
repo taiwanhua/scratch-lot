@@ -2,6 +2,11 @@ import type { ComponentType } from "react";
 
 import type { LotteryGameFieldsFragment } from "@repo/graphql";
 
+import {
+  GameAllocationsTab,
+  GameStockTab,
+} from "@/components/project/lottery/InventoryDetailTabs/InventoryDetailTabs";
+
 import { GameBasicTab } from "./GameViewPage/GameBasicTab";
 
 /** 詳情頁分頁內容拿得到的東西。 */
@@ -26,4 +31,11 @@ export interface GameDetailTab {
  */
 export const GAME_DETAIL_TABS: readonly GameDetailTab[] = [
   { value: "basic", labelKey: "basic", Content: GameBasicTab },
+  // 庫存管理(P20):讀同一份資料,沒綁庫存管理時分頁內只顯示說明;預計要給本數沒有 edit-allocations 時唯讀
+  { value: "stock", labelKey: "stock", Content: GameStockTab },
+  {
+    value: "allocations",
+    labelKey: "allocations",
+    Content: GameAllocationsTab,
+  },
 ];

@@ -101,7 +101,9 @@
       "summary": "{unitPrice} × {tickets} tickets · book {bookPrice} · default rate {rate}%",
       "tabs": {
         "aria": "Game detail tabs",
-        "basic": "Basic info"
+        "basic": "Basic info",
+        "stock": "Stock overview",
+        "allocations": "Planned books"
       },
       "empty": "—"
     },
@@ -398,6 +400,12 @@
         "AGENTS_REQUIRE_CO_SALES": "Agents remain; the co-sales store can't be removed",
         "ROLE_IN_USE": "The roles being removed are still linked"
       }
+    },
+    "allocations": {
+      "tab": "Planned books"
+    },
+    "stock": {
+      "tab": "Stock in store"
     }
   },
   "lotteryInventory": {
@@ -426,6 +434,225 @@
       "shiftHint": "Shift-click to select a range",
       "legendAria": "Ticket grid legend",
       "gridAria": "Ticket grid"
+    },
+    "tabs": {
+      "aria": "Inventory tabs",
+      "stock": "Stock",
+      "investigations": "Investigating · Lost",
+      "allocations": "Planned books"
+    },
+    "common": {
+      "cancel": "Cancel",
+      "save": "Save",
+      "unitPrice": "NT${price}",
+      "tickets": "{count} tickets",
+      "amount": "NT${amount}"
+    },
+    "reason": {
+      "note": "Note",
+      "noteRequired": "Note (required)"
+    },
+    "errors": {
+      "FORBIDDEN": "You do not have permission for this action",
+      "NOT_FOUND": "This book was not found or is not visible to you",
+      "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
+      "CONFLICT": "These tickets were already processed; refresh and try again",
+      "TICKET_ALREADY_PROCESSED": "These tickets were already processed; refresh and try again",
+      "CROSS_STORE_NOT_ALLOWED": "Tickets can only be moved into a branch you can see",
+      "NO_SKIPPED_TICKETS": "This book has no skipped tickets to correct",
+      "SKIP_COUNT_MISMATCH": "The number of skipped tickets must equal the tickets to mark",
+      "SKIP_UNCHANGED": "The skipped tickets did not change",
+      "TICKET_STATUS_NOT_ALLOWED": "The selected tickets are not in a status that allows this",
+      "UNEXPECTED": "Something went wrong; try again later"
+    },
+    "ticketStatuses": {
+      "unsold": "Unsold",
+      "sold": "Sold",
+      "skipped": "Skipped",
+      "scrapped": "Scrapped",
+      "investigating": "Investigating",
+      "lost": "Lost"
+    },
+    "bookStates": {
+      "unopened": "Unopened",
+      "on_counter": "On counter",
+      "sold_out": "Sold out",
+      "pending_skip": "Skips to mark"
+    },
+    "locations": {
+      "stock": "Stock",
+      "counter": "Counter",
+      "in_transit": "In transit"
+    },
+    "eventTypes": {
+      "purchase": "Purchase",
+      "purchase_void": "Purchase voided",
+      "open": "Open book",
+      "recall": "Recall",
+      "move": "Move",
+      "sale": "Sale",
+      "sale_stocktake": "Sale (stocktake)",
+      "sale_undo": "Undo sale",
+      "skip": "Skip",
+      "unskip": "Unskip",
+      "scrap": "Scrap",
+      "transfer_out": "Transfer out",
+      "in_transit": "In transit",
+      "transfer_in": "Transfer in",
+      "investigate": "Investigating",
+      "lose": "Lost",
+      "recover": "Recover"
+    },
+    "sources": {
+      "purchase": "Purchase order",
+      "transfer_in": "Transfer order"
+    },
+    "stock": {
+      "columns": {
+        "bookNo": "Book no.",
+        "game": "Game",
+        "unitPrice": "Price",
+        "holdings": "Branch",
+        "remaining": "Remaining / total",
+        "pendingSkip": "To mark",
+        "purchasedAt": "Purchased",
+        "dealer": "Class A dealer"
+      },
+      "remaining": "{remaining} / {total}",
+      "none": "—",
+      "filters": {
+        "all": "All",
+        "org": "Branch",
+        "game": "Game",
+        "state": "Status",
+        "purchasedFrom": "Purchased from",
+        "purchasedTo": "Purchased to",
+        "bookNo": "Book no."
+      },
+      "listAria": "Stock (by book)",
+      "pickOrg": "Pick a branch first",
+      "empty": "No books match",
+      "total": "{count} books"
+    },
+    "lookup": {
+      "open": "Find ticket",
+      "title": "Find ticket",
+      "submit": "Find",
+      "input": "Scan or enter the back number",
+      "hint": "You can also enter the front number or front barcode.",
+      "invalid": "The number format is invalid",
+      "notFound": "This ticket was not found or is not visible to you",
+      "bookNo": "Book {bookNo}",
+      "ticketNo": "Ticket {ticketNo}",
+      "responsible": "Responsible {store}"
+    },
+    "investigations": {
+      "columns": {
+        "book": "Book",
+        "game": "Game",
+        "status": "Status",
+        "responsible": "Responsible branch",
+        "source": "Source",
+        "at": "Date",
+        "cost": "Cost"
+      },
+      "source": "{serial} ({count} tickets)",
+      "recover": "Recover",
+      "listAria": "Investigating · Lost",
+      "empty": "No investigating or lost tickets"
+    },
+    "book": {
+      "tabLabel": "Book {key}",
+      "loading": "Loading book",
+      "title": "{game} · Book {bookNo}",
+      "subtitle": "NT${price} · tickets {first}–{last}",
+      "correctSkips": "Correct skips",
+      "recoverAll": "Recover whole book",
+      "investigation": "This book is {status}: {date} {serial}, responsible branch = {store}",
+      "sources": "Source",
+      "sourceValue": "{serial} ({date})",
+      "dealer": "Class A dealer",
+      "locations": "Location",
+      "cost": "Cost",
+      "rate": "Purchase rate",
+      "rateValue": "{rate}%",
+      "costValueLabel": "Cost / per ticket",
+      "grid": "Ticket grid",
+      "selected": "{count} selected {ranges}",
+      "scrap": "Scrap",
+      "recover": "Recover",
+      "clearSelection": "Clear selection",
+      "timeline": "Event timeline"
+    },
+    "timeline": {
+      "columns": {
+        "at": "Time",
+        "type": "Event",
+        "tickets": "Tickets",
+        "route": "Location",
+        "by": "By / document"
+      },
+      "wholeBook": "Whole book",
+      "aria": "Event timeline",
+      "empty": "No events yet"
+    },
+    "correctSkips": {
+      "title": "Correct skips",
+      "required": "To mark",
+      "current": "Current skips",
+      "changed": "Change to",
+      "changedTo": "{ranges} ({count} / {required})",
+      "reason": "Correction reason",
+      "hint": "Current skips are preselected; the count must equal the tickets to mark.",
+      "submit": "Correct",
+      "success": "Skips corrected"
+    },
+    "scrap": {
+      "title": "Scrap {count} tickets",
+      "reason": "Scrap reason",
+      "loss": "Loss (purchase cost)",
+      "submit": "Scrap",
+      "success": "Scrapped {count} tickets"
+    },
+    "recover": {
+      "title": "Recover {count} tickets",
+      "ticketLine": "Book {bookNo} · tickets {ranges} · {statuses}",
+      "reason": "Recovery reason",
+      "backTo": "Back to",
+      "backToStore": "{store} stock",
+      "submit": "Recover",
+      "success": "Recovered {count} tickets"
+    },
+    "allocations": {
+      "aria": "Planned books",
+      "store": "Branch",
+      "game": "Game",
+      "caption": "Each cell shows given / planned.",
+      "captionEditable": "Each cell shows given / planned; click a cell to edit the plan.",
+      "cardTitle": "{name} (given / planned)",
+      "extraTickets": "+{count} tickets",
+      "none": "—",
+      "empty": "No branches or games",
+      "editAria": "Edit planned books for {store} {game}",
+      "editTitle": "Planned books",
+      "editTarget": "{store} · {game} (given {given})",
+      "planned": "Planned books",
+      "plannedInvalid": "Enter a whole number of 0 or more",
+      "note": "Note",
+      "saveSuccess": "Planned books updated"
+    },
+    "stockOverview": {
+      "aria": "Stock overview",
+      "store": "Branch",
+      "game": "Game",
+      "unopened": "Unopened (books)",
+      "counter": "Counter (tickets)",
+      "sold": "Sold (tickets)",
+      "empty": "No stock"
+    },
+    "detailTabs": {
+      "noAccess": "This tab reads inventory data; ask your administrator for inventory access if you need it.",
+      "noStore": "This class B dealer has no branch yet."
     }
   },
   "lotteryReports": {

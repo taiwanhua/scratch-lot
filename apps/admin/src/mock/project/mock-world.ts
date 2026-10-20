@@ -7,6 +7,8 @@ import { dealersWorld } from "@/test/msw/project/dealers-handlers";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
+import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
+import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
 import { purchaseList } from "@/test/msw/project/lottery/purchasing-data-fixtures";
@@ -73,7 +75,7 @@ const reportsModule: TestModule = {
  */
 export const projectMockWorld: ProjectMockWorld = {
   // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
-  // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理(權限給滿)
+  // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
   modules: () => [
     ...masterDataModules(),
     ...dealersModules(),
@@ -81,6 +83,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleModules(),
     ...accountsModules(),
     ...purchasingModules(),
+    ...inventoryModules(),
   ],
   handlers: () => [
     ...fieldOptionColors(),
@@ -98,6 +101,7 @@ export const projectMockWorld: ProjectMockWorld = {
         storeB: { id: "org-content" },
       }),
     }).handlers,
+    ...inventoryWorld().handlers,
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨)
