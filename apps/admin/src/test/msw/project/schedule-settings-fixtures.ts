@@ -32,6 +32,12 @@ export const SCHEDULE_TEST_OPTIONS: Record<
     { value: "store-and-accounts-lead", label: "店內事務與帳目負責" },
     { value: "store-duties", label: "店內事務" },
   ],
+  [SCHEDULE_FIELD_CATEGORY_KEYS.dayOffOverrideReason]: [
+    { value: "staff-late-notice", label: "員工臨時告知" },
+    { value: "entry-error", label: "登記錯誤" },
+    { value: "store-adjustment", label: "店務調整" },
+    { value: "other", label: "其他" },
+  ],
   [SCHEDULE_FIELD_CATEGORY_KEYS.specialDayCategory]: [
     { value: "national-holiday", label: "國定假日" },
     { value: "typhoon-day", label: "颱風假" },

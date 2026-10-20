@@ -7,6 +7,11 @@ export const SCHEDULE_PERMISSIONS = {
   editOrgRules: "schedule.settings.edit-org-rules",
   manageView: "schedule.manage.view",
   editCalendar: "schedule.manage.edit-calendar",
+  /** 我的畫休分頁(`schedule.my`) */
+  myEditDayOffs: "schedule.my.edit-day-offs",
+  /** 畫休總覽分頁 / [代改] */
+  viewDayOffs: "schedule.manage.view-day-offs",
+  editDayOffs: "schedule.manage.edit-day-offs",
   /** 「找不到人?」連到的使用者管理(有那個模組才顯示連結) */
   userManagerModule: "system.user-manager",
 } as const;

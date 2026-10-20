@@ -485,7 +485,9 @@
       "templates": "Demand templates",
       "weekTemplates": "Week templates",
       "rules": "Rules",
-      "calendar": "Calendar"
+      "calendar": "Calendar",
+      "dayOffs": "My day-offs",
+      "dayOffOverview": "Day-off overview"
     },
     "shell": {
       "empty": "No tabs are available on this page yet."
@@ -502,7 +504,8 @@
       "VALIDATION_FAILED": "Some fields are invalid; please check the highlighted fields",
       "NOT_OWNER": "This was created by an upper org; only that org can change it",
       "MISSING_PERMISSION": "You don't have permission to change this org's rules",
-      "UNEXPECTED": "Something went wrong; please try again later"
+      "UNEXPECTED": "Something went wrong; please try again later",
+      "OUTSIDE_DAY_OFF_WINDOW": "Day-off registration is not open now. Ask your store manager or scheduler to make changes."
     },
     "employment": {
       "full-time": "Full-time",
@@ -772,6 +775,102 @@
       "feedback": {
         "saveSuccess": "Calendar saved",
         "deleteSuccess": "Deleted"
+      }
+    },
+    "dayOffs": {
+      "monthTitle": "{month}/{year}",
+      "dateTitle": "{month}/{day} ({weekday})",
+      "fullDay": "Full day off",
+      "timeRange": "Unavailable hours",
+      "cellFullDay": "Day off",
+      "cellTimeRange": "{start}–{end} unavailable",
+      "count": "{count}/{limit}",
+      "infoAria": "Who is off on {date}",
+      "legend": {
+        "fullDay": "Full day off",
+        "timeRange": "Unavailable hours",
+        "count": "Staff off that day (red when over)",
+        "countOverview": "Staff off that day (only staff whose primary store is this one; unavailable hours count as 1; red when over)",
+        "limitBand": "Limit violated",
+        "reminderBand": "Reminder",
+        "info": "See who is off",
+        "mine": "My day-offs (hatched)"
+      },
+      "violations": {
+        "maxMonthlyDayOffs": "{actual} days off this month, max {limit}",
+        "minMonthlyDayOffs": "{actual} days off this month, min {limit}",
+        "maxConsecutiveDaysOff": "{from}–{to}: max {limit} consecutive days off, this run is {actual} days",
+        "maxDailyDayOffStaff": "{date}: max {limit} staff off per day, already {actual}"
+      },
+      "my": {
+        "summaryOpen": "Day-offs for month {month} · open {start}–{end} ({days} days left)",
+        "summaryClosed": "Day-offs for month {month} · registration {start}–{end} has ended",
+        "summaryBefore": "Day-offs for month {month} · registration {start}–{end} has not started",
+        "stats": "{count} days registered",
+        "statsMax": "max {limit}",
+        "statsMin": "min {limit}",
+        "register": "Register day-off",
+        "closedNotice": "Day-off registration ({start}–{end}) has ended, you can no longer change it yourself. Ask your store manager or scheduler.",
+        "beforeNotice": "Day-off registration ({start}–{end}) has not started, you cannot change it yourself yet. Ask your store manager or scheduler.",
+        "overrideLink": "Change it in the day-off overview",
+        "notJoined": "You have not joined the schedule yet. Ask your store manager or scheduler.",
+        "violationsTitle": "Rule violations ({count})",
+        "noViolations": "No rule violations",
+        "view": "View"
+      },
+      "dialog": {
+        "title": "Register day-off · {date}",
+        "titleNoDate": "Register day-off",
+        "date": "Date",
+        "start": "Start",
+        "end": "End",
+        "addSlot": "+ Add another",
+        "removeSlot": "Remove this range",
+        "registeredFullDay": "Registered: full day off",
+        "registeredTimeRange": "Registered: {start}–{end}",
+        "delete": "Delete",
+        "blocked": "Violates a limit, not saved:",
+        "saveSuccess": "Day-off registered",
+        "deleteSuccess": "Day-off deleted",
+        "savedWithReminders": "Day-off registered (with reminders)"
+      },
+      "detail": {
+        "fullDayTitle": "Day off",
+        "countSuffix": " ({count}/{limit})",
+        "countFull": " ({count}/{limit}, full)",
+        "countOver": " ({count}/{limit}, over)",
+        "timeRangeTitle": "Unavailable hours",
+        "timeRangeItem": "{name} {start}–{end}",
+        "rulesTitle": "Rules involved",
+        "ruleItem": "{label} {limit}",
+        "none": "None"
+      },
+      "overview": {
+        "org": "Store",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "override": "Change for staff",
+        "windowOpen": "Open: {start}–{end}, {days} days left",
+        "windowClosed": "Registration {start}–{end} has ended",
+        "windowBefore": "Registration {start}–{end} has not started",
+        "notRegistered": "{count} not registered yet: {names}",
+        "allRegistered": "Everyone has registered",
+        "filterAria": "Filter",
+        "filterAll": "All",
+        "filterNotRegistered": "Not registered {count}",
+        "cellFullDay": "Off: {names}",
+        "cellTimeRange": "Unavailable {name} {start}–{end}",
+        "nameSeparator": ", "
+      },
+      "override": {
+        "title": "Change day-off for staff",
+        "person": "Staff",
+        "kind": "Kind",
+        "reason": "Reason",
+        "reasonNote": "Details",
+        "reasonHint": "After the deadline a reason is required; \"Other\" needs details.",
+        "saveSuccess": "Day-off changed",
+        "deleteSuccess": "Day-off deleted"
       }
     }
   }

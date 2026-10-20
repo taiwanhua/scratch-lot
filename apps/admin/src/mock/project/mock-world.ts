@@ -8,6 +8,7 @@ import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-ha
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataWorld } from "@/test/msw/project/lottery/master-data-handlers";
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
+import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
 import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 
@@ -72,5 +73,6 @@ export const projectMockWorld: ProjectMockWorld = {
     ...dealersWorld().handlers,
     ...scheduleSettingsWorld().handlers,
     ...scheduleCalendarWorld().handlers,
+    ...scheduleDayOffsWorld().handlers,
   ],
 };

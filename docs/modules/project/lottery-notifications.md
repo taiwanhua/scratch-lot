@@ -4,7 +4,7 @@
 
 - **負責人提醒**的收件人 = 類型宣告的組織範圍 且 符合人員條件;租戶可在通知設定頁改人員條件(組織範圍不能改)。**當事人通知**的收件人由觸發的功能在 `notify()` 指定。
 - 管道:十種都是站內 + email,收件人可在個人偏好逐一關掉。
-- 目前沒有類型宣告可調時間;下表「提醒時間」欄是規格 3.5 的預設值。通知設定頁目前列出底座的負責人提醒與本專案的五種負責人提醒,當事人通知不列。
+- 下表「提醒時間」欄是規格 3.5 的預設值。已宣告可調時間的:畫休開放、畫休即將截止(排程在班表管理,`docs/modules/project/schedule.md`「畫休開放 / 即將截止通知」);其他類型由各自的提醒功能宣告。通知設定頁列出底座的負責人提醒、本專案的五種負責人提醒,以及宣告了可調時間的當事人通知(畫休開放、畫休即將截止,收件人唯讀「由事件決定」)。
 - 連結(`links`):目前沒有登記,通知沒有連結。
 
 ## 類型
@@ -36,8 +36,8 @@
 | `lottery.store-rent-due`       | `dealerName`、`dueOn`(繳費日)、`amount`(選填)                                               |
 | `lottery.period-close-overdue` | `period`(月份,例 `2026-09`)                                                                 |
 | `lottery.purchase-wrong-store` | `subject`(進貨單的顯示名稱)、`orgName`(刷到的分店)                                          |
-| `schedule.day-off-open`        | `orgName`、`month`(畫休的月份)、`closesOn`(截止日)                                          |
-| `schedule.day-off-closing`     | `orgName`、`month`、`closesOn`                                                              |
+| `schedule.day-off-open`        | `orgName`、`month`(畫休的月份 `YYYY-MM`)、`opensOn`(開放日)、`closesOn`(截止日)             |
+| `schedule.day-off-closing`     | `orgName`、`month`、`opensOn`、`closesOn`                                                   |
 | `schedule.published`           | `orgName`、`month`                                                                          |
 | `schedule.changed`             | `orgName`、`date`(異動的日期)、`reason`(選填,排班異動原因)                                  |
 

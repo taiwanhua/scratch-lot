@@ -1,6 +1,8 @@
 import type { ScheduleTabEntry } from "@/components/project/schedule/ScheduleTabsPage/ScheduleTabsPage";
 
+import { SCHEDULE_PERMISSIONS } from "../schedule-permissions";
 import { CalendarTab } from "./CalendarTab/CalendarTab";
+import { DayOffOverviewTab } from "./DayOffsTab/DayOffOverviewTab";
 
 /**
  * 排班作業(`schedule.manage`,表單模組:綁定 支援需求單)的分頁
@@ -8,5 +10,11 @@ import { CalendarTab } from "./CalendarTab/CalendarTab";
  * 依規格的順序插入。
  */
 export const MANAGE_TABS: readonly ScheduleTabEntry[] = [
+  {
+    value: "day-offs",
+    labelKey: "dayOffOverview",
+    permission: SCHEDULE_PERMISSIONS.viewDayOffs,
+    Content: DayOffOverviewTab,
+  },
   { value: "calendar", labelKey: "calendar", Content: CalendarTab },
 ];

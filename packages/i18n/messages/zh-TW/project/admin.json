@@ -485,7 +485,9 @@
       "templates": "人力需求範本",
       "weekTemplates": "人力需求週範本",
       "rules": "規則",
-      "calendar": "行事曆"
+      "calendar": "行事曆",
+      "dayOffs": "我的畫休",
+      "dayOffOverview": "畫休總覽"
     },
     "shell": {
       "empty": "這一頁目前沒有可用的分頁。"
@@ -502,7 +504,8 @@
       "VALIDATION_FAILED": "有欄位不正確,請檢查標示的欄位",
       "NOT_OWNER": "這是上層組織建立的,只有建立的那一層能改",
       "MISSING_PERMISSION": "你沒有修改這個組織規則的權限",
-      "UNEXPECTED": "發生錯誤,請稍後再試"
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "OUTSIDE_DAY_OFF_WINDOW": "現在不在畫休登記期間,不能自己修改。要調整請聯絡店長或排班負責人。"
     },
     "employment": {
       "full-time": "正職",
@@ -772,6 +775,102 @@
         "4": "四",
         "5": "五",
         "6": "六"
+      }
+    },
+    "dayOffs": {
+      "monthTitle": "{year} 年 {month} 月",
+      "dateTitle": "{month}/{day}({weekday})",
+      "fullDay": "整天畫休",
+      "timeRange": "時段不可排",
+      "cellFullDay": "畫休",
+      "cellTimeRange": "{start}–{end} 不可排",
+      "count": "{count}/{limit}",
+      "infoAria": "看 {date} 誰畫休",
+      "legend": {
+        "fullDay": "整天畫休",
+        "timeRange": "時段不可排",
+        "count": "同日畫休人數(超過變紅)",
+        "countOverview": "同日畫休人數(只算以這家店為主要分店的人,時段不可排也算 1 人;超過變紅)",
+        "limitBand": "違反限制",
+        "reminderBand": "提醒",
+        "info": "看當天誰畫休",
+        "mine": "我的畫休(斜線)"
+      },
+      "violations": {
+        "maxMonthlyDayOffs": "本月畫休 {actual} 天,上限 {limit} 天",
+        "minMonthlyDayOffs": "本月畫休 {actual} 天,下限 {limit} 天",
+        "maxConsecutiveDaysOff": "{from}–{to} 最多連續休假 {limit} 天:這段連續休 {actual} 天",
+        "maxDailyDayOffStaff": "{date} 同日最多畫休 {limit} 人:已有 {actual} 人"
+      },
+      "my": {
+        "summaryOpen": "登記 {month} 月的畫休 · 開放中 {start}–{end}(剩 {days} 天)",
+        "summaryClosed": "{month} 月的畫休 · 登記期間 {start}–{end} 已結束",
+        "summaryBefore": "{month} 月的畫休 · 登記期間 {start}–{end} 還沒開始",
+        "stats": "已畫 {count} 天",
+        "statsMax": "上限 {limit}",
+        "statsMin": "下限 {limit}",
+        "register": "登記畫休",
+        "closedNotice": "畫休登記期間({start}–{end})已結束,不能自己修改。要調整請聯絡店長或排班負責人。",
+        "beforeNotice": "畫休登記期間({start}–{end})還沒開始,不能自己修改。要調整請聯絡店長或排班負責人。",
+        "overrideLink": "到畫休總覽代改",
+        "notJoined": "你還沒有加入排班,不能登記畫休。請聯絡店長或排班負責人。",
+        "violationsTitle": "違反規則({count})",
+        "noViolations": "沒有違反規則",
+        "view": "查看"
+      },
+      "dialog": {
+        "title": "登記畫休 · {date}",
+        "titleNoDate": "登記畫休",
+        "date": "日期",
+        "start": "開始",
+        "end": "結束",
+        "addSlot": "+ 再加一段",
+        "removeSlot": "拿掉這一段",
+        "registeredFullDay": "已登記 整天畫休",
+        "registeredTimeRange": "已登記 {start}–{end}",
+        "delete": "刪除",
+        "blocked": "違反限制,不能儲存:",
+        "saveSuccess": "已登記畫休",
+        "deleteSuccess": "已刪除畫休",
+        "savedWithReminders": "已登記畫休(有提醒)"
+      },
+      "detail": {
+        "fullDayTitle": "畫休",
+        "countSuffix": "({count}/{limit})",
+        "countFull": "({count}/{limit} 已滿)",
+        "countOver": "({count}/{limit} 超過)",
+        "timeRangeTitle": "時段不可排",
+        "timeRangeItem": "{name} {start}–{end}",
+        "rulesTitle": "涉及的規則",
+        "ruleItem": "{label} {limit}",
+        "none": "沒有"
+      },
+      "overview": {
+        "org": "分店",
+        "prevMonth": "上一個月",
+        "nextMonth": "下一個月",
+        "override": "代改",
+        "windowOpen": "開放中:{start}–{end},剩 {days} 天",
+        "windowClosed": "登記期間 {start}–{end} 已結束",
+        "windowBefore": "登記期間 {start}–{end} 還沒開始",
+        "notRegistered": "尚未畫休 {count} 人:{names}",
+        "allRegistered": "大家都畫休了",
+        "filterAria": "篩選",
+        "filterAll": "全部",
+        "filterNotRegistered": "尚未畫休 {count}",
+        "cellFullDay": "畫休 {names}",
+        "cellTimeRange": "不可排 {name} {start}–{end}",
+        "nameSeparator": "、"
+      },
+      "override": {
+        "title": "代改畫休",
+        "person": "人員",
+        "kind": "種類",
+        "reason": "原因",
+        "reasonNote": "說明",
+        "reasonHint": "畫休截止後代改要選原因;選「其他」要填說明。",
+        "saveSuccess": "已代改畫休",
+        "deleteSuccess": "已刪除畫休"
       }
     }
   }
