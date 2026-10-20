@@ -17,6 +17,9 @@ export interface SupportRequestCardsProps {
   onOpen: (row: SupportRequestRow) => void;
 }
 
+/** 卡片標題列放前幾欄。 */
+const HEADING_COUNT = 3;
+
 /** 幾格串成一行,以「 · 」分隔。 */
 const joined = (
   row: SupportRequestRow,
@@ -31,7 +34,7 @@ const joined = (
 
 /**
  * 手機版的支援需求單列表(規格 16.0 / RW-01:表格在手機改成卡片)。欄位與表格同一份(列表欄位配置):
- * 前兩欄一行、狀態放右上,其餘一行;點卡片進詳情頁。
+ * 前三欄(初值是日期、開始、結束)一行、狀態放右上,其餘一行;點卡片進詳情頁。
  */
 export const SupportRequestCards = ({
   rows,
@@ -52,8 +55,8 @@ export const SupportRequestCards = ({
   }
   const status = columns.find((column) => column.key === "status");
   const others = columns.filter((column) => column.key !== "status");
-  const heading = others.slice(0, 2);
-  const detail = others.slice(2);
+  const heading = others.slice(0, HEADING_COUNT);
+  const detail = others.slice(HEADING_COUNT);
   return (
     <Stack spacing={1.5} sx={{ height: "100%", overflow: "auto" }}>
       {rows.map((row) => (

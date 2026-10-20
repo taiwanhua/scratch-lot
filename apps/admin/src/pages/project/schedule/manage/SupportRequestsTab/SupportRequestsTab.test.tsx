@@ -30,26 +30,26 @@ const renderSupport = (
 describe("排班作業:支援需求單", () => {
   restoreViewportAfterEach();
 
-  it("有 schedule.manage.view:分頁出現,列出日期、時段、崗位、人數、分店與狀態", async () => {
+  it("有 schedule.manage.view:分頁出現,列出日期、開始、結束、崗位、人數、分店與狀態", async () => {
     renderSupport();
     expect(
       await screen.findByRole("tab", { name: "支援需求單" }),
     ).toHaveAttribute("aria-selected", "true");
     const table = await screen.findByRole("table", { name: "支援需求單列表" });
-    expect(await within(table).findByText("17:00–21:00")).toBeInTheDocument();
+    expect(await within(table).findByText("21:00")).toBeInTheDocument();
     // 表頭照列表欄位配置(seed 初值):表單欄位的名稱 + 內建欄「狀態」
     expect(
       within(table)
         .getAllByRole("columnheader")
         .map((header) => header.textContent),
-    ).toEqual(["日期", "時段", "崗位", "需要人數", "分店", "狀態"]);
-    const row = within(table).getByText("17:00–21:00").closest("tr");
+    ).toEqual(["日期", "開始", "結束", "崗位", "需要人數", "分店", "狀態"]);
+    const row = within(table).getByText("21:00").closest("tr");
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
     expect(cells.getByText("店內櫃台")).toBeInTheDocument();
     expect(cells.getByText("台北分店")).toBeInTheDocument();
     expect(cells.getByText("審核中")).toBeInTheDocument();
-    expect(within(table).getByText("13:00–17:00")).toBeInTheDocument();
+    expect(within(table).getByText("13:00")).toBeInTheDocument();
     expect(within(table).getByText("已退回")).toBeInTheDocument();
   });
 
@@ -88,13 +88,13 @@ describe("排班作業:支援需求單", () => {
         .getAllByRole("columnheader")
         .map((header) => header.textContent),
     ).toEqual(["說明", "崗位", "建立者"]);
-    expect(within(table).queryByText("17:00–21:00")).toBeNull();
+    expect(within(table).queryByText("21:00")).toBeNull();
     expect(within(table).queryByText("審核中")).toBeNull();
   });
 
   it("只查支援需求單那一張表單;篩狀態帶給 api、回到第一頁", async () => {
     const { user, formsFake } = renderSupport();
-    await screen.findByText("17:00–21:00");
+    await screen.findByText("21:00");
     expect(formsFake.inputs.formSubmissions.at(-1)).toMatchObject({
       moduleKey: "schedule.manage",
       formKey: "support_request",
@@ -108,8 +108,8 @@ describe("排班作業:支援需求單", () => {
         page: 1,
       });
     });
-    expect(screen.queryByText("17:00–21:00")).toBeNull();
-    expect(await screen.findByText("14:30–22:00")).toBeInTheDocument();
+    expect(screen.queryByText("21:00")).toBeNull();
+    expect(await screen.findByText("14:30")).toBeInTheDocument();
   });
 
   it("沒有 schedule.manage.view:沒有支援需求單分頁", async () => {
@@ -134,7 +134,7 @@ describe("排班作業:支援需求單", () => {
 
   it("點一筆:右側檢視(表單內容)與審核(待我審核 → 核准 / 退回修改)", async () => {
     const { user } = renderSupport();
-    await user.click(await screen.findByText("17:00–21:00"));
+    await user.click(await screen.findByText("21:00"));
     const panel = await screen.findByRole("region", {
       name: "支援需求單檢視與審核",
     });
@@ -183,7 +183,7 @@ describe("排班作業:支援需求單", () => {
         ],
       }),
     });
-    await screen.findByText("17:00–21:00");
+    await screen.findByText("21:00");
     expect(screen.queryByRole("button", { name: "+ 新增" })).toBeNull();
   });
 
@@ -191,7 +191,7 @@ describe("排班作業:支援需求單", () => {
     setMobileViewport();
     const { user } = renderSupport();
     const card = await screen.findByRole("button", {
-      name: /17:00–21:00/,
+      name: /2026-11-12/,
     });
     expect(screen.queryByRole("table")).toBeNull();
     await user.click(card);
