@@ -7,7 +7,7 @@ import { ApplyCenterService } from "./apply-center.service";
 
 /**
  * 側欄「申請中心」的數字 = 待我處理的任務數:登記為 `apply-center` 的側欄計數。
- * 看得到與否同兩個列表(`apply-center.view`);`myApplications` 只出現在申請中心的頁籤(`applyCenterCounts`)。
+ * 看得到與否看角色有沒有綁 `apply-center`(底座側欄計數的規則,不另看 `apply-center.view`);`myApplications` 只出現在申請中心的頁籤(`applyCenterCounts`)。
  * 變動時由流程引擎對相關審核者送 `badge:apply-center`(`WorkflowEngineService`)。
  */
 @Injectable()
