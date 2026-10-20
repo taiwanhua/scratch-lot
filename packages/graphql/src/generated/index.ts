@@ -651,6 +651,27 @@ export type DeleteScheduleDayOffPayload = {
   id: Scalars['ID']['output'];
 };
 
+export type DeleteScheduleDemandInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleDemandPayload = {
+  __typename?: 'DeleteScheduleDemandPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+};
+
+export type DeleteScheduleEntryInput = {
+  id: Scalars['ID']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type DeleteScheduleEntryPayload = {
+  __typename?: 'DeleteScheduleEntryPayload';
+  id: Scalars['ID']['output'];
+};
+
 export type DeleteScheduleTemplateInput = {
   id: Scalars['ID']['input'];
 };
@@ -2217,8 +2238,10 @@ export type Mutation = {
   deleteRole: DeletePayload;
   deleteScheduleCalendarDay: DeleteScheduleCalendarDayPayload;
   deleteScheduleDayOffOnBehalf: DeleteScheduleDayOffPayload;
+  deleteScheduleDemand: DeleteScheduleDemandPayload;
   deleteScheduleDemandTemplate: DeleteScheduleTemplatePayload;
   deleteScheduleDemandWeekTemplate: DeleteScheduleTemplatePayload;
+  deleteScheduleEntry: DeleteScheduleEntryPayload;
   deleteWorkflowVersionDraft: WorkflowPayload;
   disablePrintAgent: PrintAgentPayload;
   forkForm: FormPayload;
@@ -2239,6 +2262,7 @@ export type Mutation = {
   recordLotterySettlement: RecordLotterySettlementPayload;
   refresh: RefreshPayload;
   registerLotteryDealerSignin: LotteryDealerSigninPayload;
+  removeScheduleDayEntries: RemoveScheduleDayEntriesPayload;
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
@@ -2258,8 +2282,10 @@ export type Mutation = {
   saveFormVersionDraft: FormVersionPayload;
   saveRoleMatrix: RoleMatrixPayload;
   saveScheduleCalendarDay: ScheduleCalendarDayPayload;
+  saveScheduleDemand: SaveScheduleDemandPayload;
   saveScheduleDemandTemplate: ScheduleDemandTemplatePayload;
   saveScheduleDemandWeekTemplate: ScheduleDemandWeekTemplatePayload;
+  saveScheduleEntry: SaveScheduleEntryPayload;
   saveWorkflowVersionDraft: WorkflowVersionPayload;
   setDemoItemOneEnabled: DemoItemOnePayload;
   setDemoItemTwoEnabled: DemoItemTwoPayload;
@@ -2571,6 +2597,11 @@ export type MutationDeleteScheduleDayOffOnBehalfArgs = {
 };
 
 
+export type MutationDeleteScheduleDemandArgs = {
+  input: DeleteScheduleDemandInput;
+};
+
+
 export type MutationDeleteScheduleDemandTemplateArgs = {
   input: DeleteScheduleTemplateInput;
 };
@@ -2578,6 +2609,11 @@ export type MutationDeleteScheduleDemandTemplateArgs = {
 
 export type MutationDeleteScheduleDemandWeekTemplateArgs = {
   input: DeleteScheduleTemplateInput;
+};
+
+
+export type MutationDeleteScheduleEntryArgs = {
+  input: DeleteScheduleEntryInput;
 };
 
 
@@ -2658,6 +2694,11 @@ export type MutationRecordLotterySettlementArgs = {
 
 export type MutationRegisterLotteryDealerSigninArgs = {
   input: RegisterLotteryDealerSigninInput;
+};
+
+
+export type MutationRemoveScheduleDayEntriesArgs = {
+  input: RemoveScheduleDayEntriesInput;
 };
 
 
@@ -2756,6 +2797,11 @@ export type MutationSaveScheduleCalendarDayArgs = {
 };
 
 
+export type MutationSaveScheduleDemandArgs = {
+  input: SaveScheduleDemandInput;
+};
+
+
 export type MutationSaveScheduleDemandTemplateArgs = {
   input: SaveScheduleDemandTemplateInput;
 };
@@ -2763,6 +2809,11 @@ export type MutationSaveScheduleDemandTemplateArgs = {
 
 export type MutationSaveScheduleDemandWeekTemplateArgs = {
   input: SaveScheduleDemandWeekTemplateInput;
+};
+
+
+export type MutationSaveScheduleEntryArgs = {
+  input: SaveScheduleEntryInput;
 };
 
 
@@ -3644,6 +3695,7 @@ export type Query = {
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload;
   scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload;
   scheduleFieldOptions: ScheduleFieldOptionsPayload;
+  scheduleRoster: ScheduleRosterPayload;
   scheduleRules: ScheduleRulesPayload;
   scheduleStaff: ScheduleStaffListPayload;
   sidebarBadgeSettings: SidebarBadgeSettingsPayload;
@@ -4052,6 +4104,11 @@ export type QueryScheduleFieldOptionsArgs = {
 };
 
 
+export type QueryScheduleRosterArgs = {
+  input: ScheduleRosterInput;
+};
+
+
 export type QueryScheduleRulesArgs = {
   input?: InputMaybe<ScheduleRulesInput>;
 };
@@ -4175,6 +4232,17 @@ export type RegisterLotteryDealerSigninInput = {
   quarter: Scalars['Int']['input'];
   signedAt: Scalars['DateTime']['input'];
   year: Scalars['Int']['input'];
+};
+
+export type RemoveScheduleDayEntriesInput = {
+  date: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type RemoveScheduleDayEntriesPayload = {
+  __typename?: 'RemoveScheduleDayEntriesPayload';
+  deletedIds: Array<Scalars['ID']['output']>;
+  skippedIds: Array<Scalars['ID']['output']>;
 };
 
 export type ReprintReason = {
@@ -4500,6 +4568,23 @@ export type SaveScheduleDayOffsPayload = {
   violations: Array<ScheduleDayOffViolation>;
 };
 
+export type SaveScheduleDemandInput = {
+  endAt: Scalars['DateTime']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  positionKey: Scalars['String']['input'];
+  saveAsTemplate?: InputMaybe<ScheduleDemandTemplateCopyInput>;
+  startAt: Scalars['DateTime']['input'];
+  tasks: Array<ScheduleDemandTaskInput>;
+  templateId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SaveScheduleDemandPayload = {
+  __typename?: 'SaveScheduleDemandPayload';
+  deletedEntryIds: Array<Scalars['ID']['output']>;
+  item: ScheduleDemand;
+};
+
 export type SaveScheduleDemandTemplateInput = {
   endTime: Scalars['String']['input'];
   id?: InputMaybe<Scalars['ID']['input']>;
@@ -4516,6 +4601,21 @@ export type SaveScheduleDemandWeekTemplateInput = {
   enabled?: InputMaybe<Scalars['Boolean']['input']>;
   id?: InputMaybe<Scalars['ID']['input']>;
   name: Scalars['String']['input'];
+};
+
+export type SaveScheduleEntryInput = {
+  assignments: Array<ScheduleEntryAssignmentInput>;
+  breakMinutes: Scalars['Int']['input'];
+  endAt: Scalars['DateTime']['input'];
+  id?: InputMaybe<Scalars['ID']['input']>;
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  startAt: Scalars['DateTime']['input'];
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SaveScheduleEntryPayload = {
+  __typename?: 'SaveScheduleEntryPayload';
+  item: ScheduleEntry;
 };
 
 export type SaveWorkflowVersionDraftInput = {
@@ -4648,6 +4748,35 @@ export type ScheduleDayOffWindow = {
   state: Scalars['String']['output'];
 };
 
+export type ScheduleDemand = {
+  __typename?: 'ScheduleDemand';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  positionKey: Scalars['String']['output'];
+  positionNote?: Maybe<Scalars['String']['output']>;
+  source: Scalars['String']['output'];
+  startAt: Scalars['DateTime']['output'];
+  tasks: Array<ScheduleDemandTask>;
+  templateId?: Maybe<Scalars['ID']['output']>;
+};
+
+export type ScheduleDemandTask = {
+  __typename?: 'ScheduleDemandTask';
+  entryId?: Maybe<Scalars['ID']['output']>;
+  role: Scalars['String']['output'];
+  taskId: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
+  userId?: Maybe<Scalars['ID']['output']>;
+  userName?: Maybe<Scalars['String']['output']>;
+};
+
+export type ScheduleDemandTaskInput = {
+  role: Scalars['String']['input'];
+  taskId?: InputMaybe<Scalars['String']['input']>;
+  taskKey: Scalars['String']['input'];
+};
+
 export type ScheduleDemandTemplate = {
   __typename?: 'ScheduleDemandTemplate';
   canEdit: Scalars['Boolean']['output'];
@@ -4660,6 +4789,11 @@ export type ScheduleDemandTemplate = {
   shortName: Scalars['String']['output'];
   startTime: Scalars['String']['output'];
   tasks: Array<ScheduleTemplateTask>;
+};
+
+export type ScheduleDemandTemplateCopyInput = {
+  name: Scalars['String']['input'];
+  shortName: Scalars['String']['input'];
 };
 
 export type ScheduleDemandTemplatePayload = {
@@ -4700,6 +4834,32 @@ export type ScheduleDemandWeekTemplatesPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ScheduleEntry = {
+  __typename?: 'ScheduleEntry';
+  assignments: Array<ScheduleEntryAssignment>;
+  breakMinutes: Scalars['Int']['output'];
+  date: Scalars['String']['output'];
+  deletable: Scalars['Boolean']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  startAt: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleEntryAssignment = {
+  __typename?: 'ScheduleEntryAssignment';
+  demandId: Scalars['ID']['output'];
+  role: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  taskId: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
+};
+
+export type ScheduleEntryAssignmentInput = {
+  demandId: Scalars['ID']['input'];
+  taskId: Scalars['String']['input'];
+};
+
 export type ScheduleFieldOption = {
   __typename?: 'ScheduleFieldOption';
   label: Scalars['String']['output'];
@@ -4712,10 +4872,126 @@ export type ScheduleFieldOptionsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ScheduleOtherStoreEntry = {
+  __typename?: 'ScheduleOtherStoreEntry';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  orgName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type ScheduleOwnerOrg = {
   __typename?: 'ScheduleOwnerOrg';
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
+};
+
+export type SchedulePeriod = {
+  __typename?: 'SchedulePeriod';
+  publishedAt?: Maybe<Scalars['DateTime']['output']>;
+  publishedByName?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+};
+
+export type ScheduleRosterBreakTier = {
+  __typename?: 'ScheduleRosterBreakTier';
+  breakMinutes: Scalars['Int']['output'];
+  minMinutes: Scalars['Int']['output'];
+};
+
+export type ScheduleRosterCalendarDay = {
+  __typename?: 'ScheduleRosterCalendarDay';
+  date: Scalars['String']['output'];
+  name?: Maybe<Scalars['String']['output']>;
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
+export type ScheduleRosterInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleRosterPayload = {
+  __typename?: 'ScheduleRosterPayload';
+  calendarDays: Array<ScheduleRosterCalendarDay>;
+  canEdit: Scalars['Boolean']['output'];
+  canSaveTemplate: Scalars['Boolean']['output'];
+  demands: Array<ScheduleDemand>;
+  entries: Array<ScheduleEntry>;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  otherStoreEntries: Array<ScheduleOtherStoreEntry>;
+  people: Array<ScheduleRosterPerson>;
+  period: SchedulePeriod;
+  settings: ScheduleRosterSettings;
+  templates: Array<ScheduleRosterTemplate>;
+  unavailability: Array<ScheduleRosterUnavailability>;
+};
+
+export type ScheduleRosterPerson = {
+  __typename?: 'ScheduleRosterPerson';
+  canLead: Scalars['Boolean']['output'];
+  employmentType?: Maybe<Scalars['String']['output']>;
+  isCandidate: Scalars['Boolean']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  stats: ScheduleRosterStats;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleRosterSettings = {
+  __typename?: 'ScheduleRosterSettings';
+  breakTiers: Array<ScheduleRosterBreakTier>;
+  defaultHelperTaskKey: Scalars['String']['output'];
+  defaultLeaderTaskKey: Scalars['String']['output'];
+  maxMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
+  minMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ScheduleRosterSlot = {
+  __typename?: 'ScheduleRosterSlot';
+  endTime: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+};
+
+export type ScheduleRosterStats = {
+  __typename?: 'ScheduleRosterStats';
+  dayOffDays: Scalars['Int']['output'];
+  fullDayOffDays: Scalars['Int']['output'];
+  leadShiftCount: Scalars['Int']['output'];
+  longestStreak: Scalars['Int']['output'];
+  shiftCount: Scalars['Int']['output'];
+  timeRangeDays: Array<ScheduleRosterTimeRangeDay>;
+  workMinutes: Scalars['Int']['output'];
+};
+
+export type ScheduleRosterTemplate = {
+  __typename?: 'ScheduleRosterTemplate';
+  endTime: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  paletteKey?: Maybe<Scalars['String']['output']>;
+  positionKey: Scalars['String']['output'];
+  shortName: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  tasks: Array<ScheduleTemplateTask>;
+};
+
+export type ScheduleRosterTimeRangeDay = {
+  __typename?: 'ScheduleRosterTimeRangeDay';
+  date: Scalars['String']['output'];
+  slots: Array<ScheduleRosterSlot>;
+};
+
+export type ScheduleRosterUnavailability = {
+  __typename?: 'ScheduleRosterUnavailability';
+  date: Scalars['String']['output'];
+  fullDay: Scalars['Boolean']['output'];
+  slots: Array<ScheduleRosterSlot>;
+  userId: Scalars['ID']['output'];
 };
 
 export type ScheduleRule = {
@@ -7459,6 +7735,56 @@ export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
 
 export type DeleteScheduleDayOffOnBehalfMutation = { __typename?: 'Mutation', deleteScheduleDayOffOnBehalf: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
 
+export type ScheduleDemandFieldsFragment = { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> };
+
+export type ScheduleEntryFieldsFragment = { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> };
+
+export type ScheduleRosterPersonFieldsFragment = { __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } };
+
+export type ScheduleRosterTemplateFieldsFragment = { __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> };
+
+export type ScheduleRosterQueryVariables = Exact<{
+  input: ScheduleRosterInput;
+}>;
+
+
+export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }> } };
+
+export type SaveScheduleDemandMutationVariables = Exact<{
+  input: SaveScheduleDemandInput;
+}>;
+
+
+export type SaveScheduleDemandMutation = { __typename?: 'Mutation', saveScheduleDemand: { __typename?: 'SaveScheduleDemandPayload', deletedEntryIds: Array<string>, item: { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> } } };
+
+export type DeleteScheduleDemandMutationVariables = Exact<{
+  input: DeleteScheduleDemandInput;
+}>;
+
+
+export type DeleteScheduleDemandMutation = { __typename?: 'Mutation', deleteScheduleDemand: { __typename?: 'DeleteScheduleDemandPayload', id: string, deletedEntryIds: Array<string> } };
+
+export type SaveScheduleEntryMutationVariables = Exact<{
+  input: SaveScheduleEntryInput;
+}>;
+
+
+export type SaveScheduleEntryMutation = { __typename?: 'Mutation', saveScheduleEntry: { __typename?: 'SaveScheduleEntryPayload', item: { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> } } };
+
+export type DeleteScheduleEntryMutationVariables = Exact<{
+  input: DeleteScheduleEntryInput;
+}>;
+
+
+export type DeleteScheduleEntryMutation = { __typename?: 'Mutation', deleteScheduleEntry: { __typename?: 'DeleteScheduleEntryPayload', id: string } };
+
+export type RemoveScheduleDayEntriesMutationVariables = Exact<{
+  input: RemoveScheduleDayEntriesInput;
+}>;
+
+
+export type RemoveScheduleDayEntriesMutation = { __typename?: 'Mutation', removeScheduleDayEntries: { __typename?: 'RemoveScheduleDayEntriesPayload', deletedIds: Array<string>, skippedIds: Array<string> } };
+
 export type ScheduleFieldOptionsQueryVariables = Exact<{
   categoryKey: Scalars['String']['input'];
 }>;
@@ -8713,6 +9039,85 @@ export const ScheduleDayOffLimitsFieldsFragmentDoc = `
   maxMonthly
   minMonthly
   maxDailyStaff
+}
+    `;
+export const ScheduleDemandFieldsFragmentDoc = `
+    fragment ScheduleDemandFields on ScheduleDemand {
+  id
+  date
+  startAt
+  endAt
+  positionKey
+  positionNote
+  templateId
+  source
+  tasks {
+    taskId
+    role
+    taskKey
+    entryId
+    userId
+    userName
+  }
+}
+    `;
+export const ScheduleEntryFieldsFragmentDoc = `
+    fragment ScheduleEntryFields on ScheduleEntry {
+  id
+  userId
+  date
+  startAt
+  endAt
+  breakMinutes
+  deletable
+  assignments {
+    demandId
+    taskId
+    role
+    taskKey
+    source
+  }
+}
+    `;
+export const ScheduleRosterPersonFieldsFragmentDoc = `
+    fragment ScheduleRosterPersonFields on ScheduleRosterPerson {
+  userId
+  name
+  employmentType
+  canLead
+  isPrimary
+  isCandidate
+  stats {
+    shiftCount
+    leadShiftCount
+    workMinutes
+    dayOffDays
+    fullDayOffDays
+    timeRangeDays {
+      date
+      slots {
+        startTime
+        endTime
+      }
+    }
+    longestStreak
+  }
+}
+    `;
+export const ScheduleRosterTemplateFieldsFragmentDoc = `
+    fragment ScheduleRosterTemplateFields on ScheduleRosterTemplate {
+  id
+  name
+  shortName
+  startTime
+  endTime
+  positionKey
+  paletteKey
+  tasks {
+    taskId
+    role
+    taskKey
+  }
 }
     `;
 export const ScheduleRuleSettingFieldsFragmentDoc = `
@@ -16810,6 +17215,240 @@ export const useDeleteScheduleDayOffOnBehalfMutation = <
 
 
 useDeleteScheduleDayOffOnBehalfMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDayOffOnBehalfMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDayOffOnBehalfMutation, DeleteScheduleDayOffOnBehalfMutationVariables>(client, DeleteScheduleDayOffOnBehalfDocument, variables, headers);
+
+export const ScheduleRosterDocument = `
+    query ScheduleRoster($input: ScheduleRosterInput!) {
+  scheduleRoster(input: $input) {
+    orgId
+    orgName
+    month
+    period {
+      status
+      publishedAt
+      publishedByName
+    }
+    canEdit
+    canSaveTemplate
+    settings {
+      breakTiers {
+        minMinutes
+        breakMinutes
+      }
+      defaultLeaderTaskKey
+      defaultHelperTaskKey
+      maxMonthlyDayOffs
+      minMonthlyDayOffs
+    }
+    people {
+      ...ScheduleRosterPersonFields
+    }
+    demands {
+      ...ScheduleDemandFields
+    }
+    entries {
+      ...ScheduleEntryFields
+    }
+    otherStoreEntries {
+      userId
+      date
+      startAt
+      endAt
+      orgName
+    }
+    unavailability {
+      userId
+      date
+      fullDay
+      slots {
+        startTime
+        endTime
+      }
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    templates {
+      ...ScheduleRosterTemplateFields
+    }
+  }
+}
+    ${ScheduleRosterPersonFieldsFragmentDoc}
+${ScheduleDemandFieldsFragmentDoc}
+${ScheduleEntryFieldsFragmentDoc}
+${ScheduleRosterTemplateFieldsFragmentDoc}`;
+
+export const useScheduleRosterQuery = <
+      TData = ScheduleRosterQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleRosterQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleRosterQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleRosterQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleRosterQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleRoster', variables],
+    queryFn: fetcher<ScheduleRosterQuery, ScheduleRosterQueryVariables>(client, ScheduleRosterDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleRosterQuery.getKey = (variables: ScheduleRosterQueryVariables) => ['ScheduleRoster', variables];
+
+
+useScheduleRosterQuery.fetcher = (client: GraphQLClient, variables: ScheduleRosterQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleRosterQuery, ScheduleRosterQueryVariables>(client, ScheduleRosterDocument, variables, headers);
+
+export const SaveScheduleDemandDocument = `
+    mutation SaveScheduleDemand($input: SaveScheduleDemandInput!) {
+  saveScheduleDemand(input: $input) {
+    item {
+      ...ScheduleDemandFields
+    }
+    deletedEntryIds
+  }
+}
+    ${ScheduleDemandFieldsFragmentDoc}`;
+
+export const useSaveScheduleDemandMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleDemandMutation, TError, SaveScheduleDemandMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleDemandMutation, TError, SaveScheduleDemandMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleDemand'],
+    mutationFn: (variables?: SaveScheduleDemandMutationVariables) => fetcher<SaveScheduleDemandMutation, SaveScheduleDemandMutationVariables>(client, SaveScheduleDemandDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleDemandMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleDemandMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleDemandMutation, SaveScheduleDemandMutationVariables>(client, SaveScheduleDemandDocument, variables, headers);
+
+export const DeleteScheduleDemandDocument = `
+    mutation DeleteScheduleDemand($input: DeleteScheduleDemandInput!) {
+  deleteScheduleDemand(input: $input) {
+    id
+    deletedEntryIds
+  }
+}
+    `;
+
+export const useDeleteScheduleDemandMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleDemandMutation, TError, DeleteScheduleDemandMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleDemandMutation, TError, DeleteScheduleDemandMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleDemand'],
+    mutationFn: (variables?: DeleteScheduleDemandMutationVariables) => fetcher<DeleteScheduleDemandMutation, DeleteScheduleDemandMutationVariables>(client, DeleteScheduleDemandDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleDemandMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleDemandMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleDemandMutation, DeleteScheduleDemandMutationVariables>(client, DeleteScheduleDemandDocument, variables, headers);
+
+export const SaveScheduleEntryDocument = `
+    mutation SaveScheduleEntry($input: SaveScheduleEntryInput!) {
+  saveScheduleEntry(input: $input) {
+    item {
+      ...ScheduleEntryFields
+    }
+  }
+}
+    ${ScheduleEntryFieldsFragmentDoc}`;
+
+export const useSaveScheduleEntryMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SaveScheduleEntryMutation, TError, SaveScheduleEntryMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SaveScheduleEntryMutation, TError, SaveScheduleEntryMutationVariables, TContext>(
+      {
+    mutationKey: ['SaveScheduleEntry'],
+    mutationFn: (variables?: SaveScheduleEntryMutationVariables) => fetcher<SaveScheduleEntryMutation, SaveScheduleEntryMutationVariables>(client, SaveScheduleEntryDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSaveScheduleEntryMutation.fetcher = (client: GraphQLClient, variables: SaveScheduleEntryMutationVariables, headers?: RequestInit['headers']) => fetcher<SaveScheduleEntryMutation, SaveScheduleEntryMutationVariables>(client, SaveScheduleEntryDocument, variables, headers);
+
+export const DeleteScheduleEntryDocument = `
+    mutation DeleteScheduleEntry($input: DeleteScheduleEntryInput!) {
+  deleteScheduleEntry(input: $input) {
+    id
+  }
+}
+    `;
+
+export const useDeleteScheduleEntryMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<DeleteScheduleEntryMutation, TError, DeleteScheduleEntryMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<DeleteScheduleEntryMutation, TError, DeleteScheduleEntryMutationVariables, TContext>(
+      {
+    mutationKey: ['DeleteScheduleEntry'],
+    mutationFn: (variables?: DeleteScheduleEntryMutationVariables) => fetcher<DeleteScheduleEntryMutation, DeleteScheduleEntryMutationVariables>(client, DeleteScheduleEntryDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useDeleteScheduleEntryMutation.fetcher = (client: GraphQLClient, variables: DeleteScheduleEntryMutationVariables, headers?: RequestInit['headers']) => fetcher<DeleteScheduleEntryMutation, DeleteScheduleEntryMutationVariables>(client, DeleteScheduleEntryDocument, variables, headers);
+
+export const RemoveScheduleDayEntriesDocument = `
+    mutation RemoveScheduleDayEntries($input: RemoveScheduleDayEntriesInput!) {
+  removeScheduleDayEntries(input: $input) {
+    deletedIds
+    skippedIds
+  }
+}
+    `;
+
+export const useRemoveScheduleDayEntriesMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RemoveScheduleDayEntriesMutation, TError, RemoveScheduleDayEntriesMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RemoveScheduleDayEntriesMutation, TError, RemoveScheduleDayEntriesMutationVariables, TContext>(
+      {
+    mutationKey: ['RemoveScheduleDayEntries'],
+    mutationFn: (variables?: RemoveScheduleDayEntriesMutationVariables) => fetcher<RemoveScheduleDayEntriesMutation, RemoveScheduleDayEntriesMutationVariables>(client, RemoveScheduleDayEntriesDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRemoveScheduleDayEntriesMutation.fetcher = (client: GraphQLClient, variables: RemoveScheduleDayEntriesMutationVariables, headers?: RequestInit['headers']) => fetcher<RemoveScheduleDayEntriesMutation, RemoveScheduleDayEntriesMutationVariables>(client, RemoveScheduleDayEntriesDocument, variables, headers);
 
 export const ScheduleFieldOptionsDocument = `
     query ScheduleFieldOptions($categoryKey: String!) {

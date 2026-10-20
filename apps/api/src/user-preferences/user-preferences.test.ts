@@ -8,6 +8,7 @@ import {
 import { createOrg, createUser } from "../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../database/test-support/mongo-connection";
 import { NOTIFICATION_PREFERENCE_PREFIX } from "../notifications/notification-registry";
+import { BASE_USER_PREFERENCES } from "./user-preference-registry";
 
 const LOGIN = /* GraphQL */ `
   mutation Login($input: LoginInput!) {
@@ -48,16 +49,23 @@ const PLAIN_USER = {
   password: ["pref", "secret", "123"].join("-"),
 };
 
+/** 底座手寫登記的 key:斷言不隨專案登記的偏好(`src/project/user-preferences.ts`)增減而變。 */
+const BASE_KEYS: ReadonlySet<string> = new Set(
+  BASE_USER_PREFERENCES.map((definition) => definition.key),
+);
+
 /**
  * 通知管道開關(`notification_<類型>_<管道>`)由通知類型登記推導,另由 `notifications.test.ts` 驗;
- * 這裡只看手寫登記的 key,讓斷言不隨通知類型增減而變。
+ * 這裡只看底座手寫登記的 key,讓斷言不隨通知類型與專案登記的偏好增減而變。
  */
 function withoutNotificationSwitches(
   settings: Record<string, unknown>,
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(settings).filter(
-      ([key]) => !key.startsWith(`${NOTIFICATION_PREFERENCE_PREFIX}_`),
+      ([key]) =>
+        !key.startsWith(`${NOTIFICATION_PREFERENCE_PREFIX}_`) &&
+        BASE_KEYS.has(key),
     ),
   );
 }

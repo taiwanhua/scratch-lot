@@ -6,6 +6,7 @@ import { LOTTERY_DEALERS_REGISTRATION } from "./lottery-dealers/registration";
 import { LOTTERY_GAMES_REGISTRATION } from "./lottery-games/registration";
 import { LOTTERY_INVENTORY_REGISTRATION } from "./lottery-inventory/registration";
 import { SCHEDULE_SETTINGS_REGISTRATION } from "./schedule/registration";
+import { SCHEDULE_ROSTER_REGISTRATION } from "./schedule/roster-registration";
 
 /**
  * 專案的資料登記(docs/concepts/data-layer-and-isolation.md「底座與專案資料的組裝」)。
@@ -23,4 +24,5 @@ export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
   SCHEDULE_SETTINGS_REGISTRATION,
   LOTTERY_INVENTORY_REGISTRATION,
   LOTTERY_ACCOUNTS_REGISTRATION,
+  SCHEDULE_ROSTER_REGISTRATION,
 ];

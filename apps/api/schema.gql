@@ -605,6 +605,25 @@ type DeleteScheduleDayOffPayload {
   id: ID!
 }
 
+input DeleteScheduleDemandInput {
+  id: ID!
+  orgId: ID
+}
+
+type DeleteScheduleDemandPayload {
+  deletedEntryIds: [ID!]!
+  id: ID!
+}
+
+input DeleteScheduleEntryInput {
+  id: ID!
+  orgId: ID
+}
+
+type DeleteScheduleEntryPayload {
+  id: ID!
+}
+
 input DeleteScheduleTemplateInput {
   id: ID!
 }
@@ -2045,8 +2064,10 @@ type Mutation {
   deleteRole(input: DeleteRoleInput!): DeletePayload!
   deleteScheduleCalendarDay(input: DeleteScheduleCalendarDayInput!): DeleteScheduleCalendarDayPayload!
   deleteScheduleDayOffOnBehalf(input: DeleteScheduleDayOffOnBehalfInput!): DeleteScheduleDayOffPayload!
+  deleteScheduleDemand(input: DeleteScheduleDemandInput!): DeleteScheduleDemandPayload!
   deleteScheduleDemandTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
   deleteScheduleDemandWeekTemplate(input: DeleteScheduleTemplateInput!): DeleteScheduleTemplatePayload!
+  deleteScheduleEntry(input: DeleteScheduleEntryInput!): DeleteScheduleEntryPayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
@@ -2067,6 +2088,7 @@ type Mutation {
   recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
   refresh: RefreshPayload!
   registerLotteryDealerSignin(input: RegisterLotteryDealerSigninInput!): LotteryDealerSigninPayload!
+  removeScheduleDayEntries(input: RemoveScheduleDayEntriesInput!): RemoveScheduleDayEntriesPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
@@ -2086,8 +2108,10 @@ type Mutation {
   saveFormVersionDraft(input: SaveFormVersionDraftInput!): FormVersionPayload!
   saveRoleMatrix(input: SaveRoleMatrixInput!): RoleMatrixPayload!
   saveScheduleCalendarDay(input: SaveScheduleCalendarDayInput!): ScheduleCalendarDayPayload!
+  saveScheduleDemand(input: SaveScheduleDemandInput!): SaveScheduleDemandPayload!
   saveScheduleDemandTemplate(input: SaveScheduleDemandTemplateInput!): ScheduleDemandTemplatePayload!
   saveScheduleDemandWeekTemplate(input: SaveScheduleDemandWeekTemplateInput!): ScheduleDemandWeekTemplatePayload!
+  saveScheduleEntry(input: SaveScheduleEntryInput!): SaveScheduleEntryPayload!
   saveWorkflowVersionDraft(input: SaveWorkflowVersionDraftInput!): WorkflowVersionPayload!
   setDemoItemOneEnabled(input: SetDemoItemOneEnabledInput!): DemoItemOnePayload!
   setDemoItemTwoEnabled(input: SetDemoItemTwoEnabledInput!): DemoItemTwoPayload!
@@ -2746,6 +2770,7 @@ type Query {
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
   scheduleDemandWeekTemplates(input: ScheduleDemandWeekTemplatesInput): ScheduleDemandWeekTemplatesPayload!
   scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
+  scheduleRoster(input: ScheduleRosterInput!): ScheduleRosterPayload!
   scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
   sidebarBadgeSettings: SidebarBadgeSettingsPayload!
@@ -2832,6 +2857,16 @@ input RegisterLotteryDealerSigninInput {
   quarter: Int!
   signedAt: DateTime!
   year: Int!
+}
+
+input RemoveScheduleDayEntriesInput {
+  date: String!
+  orgId: ID
+}
+
+type RemoveScheduleDayEntriesPayload {
+  deletedIds: [ID!]!
+  skippedIds: [ID!]!
 }
 
 type ReprintReason {
@@ -3136,6 +3171,22 @@ type SaveScheduleDayOffsPayload {
   violations: [ScheduleDayOffViolation!]!
 }
 
+input SaveScheduleDemandInput {
+  endAt: DateTime!
+  id: ID
+  orgId: ID
+  positionKey: String!
+  saveAsTemplate: ScheduleDemandTemplateCopyInput
+  startAt: DateTime!
+  tasks: [ScheduleDemandTaskInput!]!
+  templateId: ID
+}
+
+type SaveScheduleDemandPayload {
+  deletedEntryIds: [ID!]!
+  item: ScheduleDemand!
+}
+
 input SaveScheduleDemandTemplateInput {
   endTime: String!
   id: ID
@@ -3152,6 +3203,20 @@ input SaveScheduleDemandWeekTemplateInput {
   enabled: Boolean
   id: ID
   name: String!
+}
+
+input SaveScheduleEntryInput {
+  assignments: [ScheduleEntryAssignmentInput!]!
+  breakMinutes: Int!
+  endAt: DateTime!
+  id: ID
+  orgId: ID
+  startAt: DateTime!
+  userId: ID
+}
+
+type SaveScheduleEntryPayload {
+  item: ScheduleEntry!
 }
 
 input SaveWorkflowVersionDraftInput {
@@ -3273,6 +3338,33 @@ type ScheduleDayOffWindow {
   state: String!
 }
 
+type ScheduleDemand {
+  date: String!
+  endAt: DateTime!
+  id: ID!
+  positionKey: String!
+  positionNote: String
+  source: String!
+  startAt: DateTime!
+  tasks: [ScheduleDemandTask!]!
+  templateId: ID
+}
+
+type ScheduleDemandTask {
+  entryId: ID
+  role: String!
+  taskId: String!
+  taskKey: String!
+  userId: ID
+  userName: String
+}
+
+input ScheduleDemandTaskInput {
+  role: String!
+  taskId: String
+  taskKey: String!
+}
+
 type ScheduleDemandTemplate {
   canEdit: Boolean!
   endTime: String!
@@ -3284,6 +3376,11 @@ type ScheduleDemandTemplate {
   shortName: String!
   startTime: String!
   tasks: [ScheduleTemplateTask!]!
+}
+
+input ScheduleDemandTemplateCopyInput {
+  name: String!
+  shortName: String!
 }
 
 type ScheduleDemandTemplatePayload {
@@ -3319,6 +3416,30 @@ type ScheduleDemandWeekTemplatesPayload {
   totalCount: Int!
 }
 
+type ScheduleEntry {
+  assignments: [ScheduleEntryAssignment!]!
+  breakMinutes: Int!
+  date: String!
+  deletable: Boolean!
+  endAt: DateTime!
+  id: ID!
+  startAt: DateTime!
+  userId: ID!
+}
+
+type ScheduleEntryAssignment {
+  demandId: ID!
+  role: String!
+  source: String!
+  taskId: String!
+  taskKey: String!
+}
+
+input ScheduleEntryAssignmentInput {
+  demandId: ID!
+  taskId: String!
+}
+
 type ScheduleFieldOption {
   label: String!
   value: String!
@@ -3329,9 +3450,113 @@ type ScheduleFieldOptionsPayload {
   totalCount: Int!
 }
 
+type ScheduleOtherStoreEntry {
+  date: String!
+  endAt: DateTime!
+  orgName: String
+  startAt: DateTime!
+  userId: ID!
+}
+
 type ScheduleOwnerOrg {
   id: ID!
   name: String!
+}
+
+type SchedulePeriod {
+  publishedAt: DateTime
+  publishedByName: String
+  status: String!
+}
+
+type ScheduleRosterBreakTier {
+  breakMinutes: Int!
+  minMinutes: Int!
+}
+
+type ScheduleRosterCalendarDay {
+  date: String!
+  name: String
+  paletteKey: String
+  type: String!
+}
+
+input ScheduleRosterInput {
+  month: String!
+  orgId: ID
+}
+
+type ScheduleRosterPayload {
+  calendarDays: [ScheduleRosterCalendarDay!]!
+  canEdit: Boolean!
+  canSaveTemplate: Boolean!
+  demands: [ScheduleDemand!]!
+  entries: [ScheduleEntry!]!
+  month: String!
+  orgId: ID!
+  orgName: String!
+  otherStoreEntries: [ScheduleOtherStoreEntry!]!
+  people: [ScheduleRosterPerson!]!
+  period: SchedulePeriod!
+  settings: ScheduleRosterSettings!
+  templates: [ScheduleRosterTemplate!]!
+  unavailability: [ScheduleRosterUnavailability!]!
+}
+
+type ScheduleRosterPerson {
+  canLead: Boolean!
+  employmentType: String
+  isCandidate: Boolean!
+  isPrimary: Boolean!
+  name: String!
+  stats: ScheduleRosterStats!
+  userId: ID!
+}
+
+type ScheduleRosterSettings {
+  breakTiers: [ScheduleRosterBreakTier!]!
+  defaultHelperTaskKey: String!
+  defaultLeaderTaskKey: String!
+  maxMonthlyDayOffs: Int
+  minMonthlyDayOffs: Int
+}
+
+type ScheduleRosterSlot {
+  endTime: String!
+  startTime: String!
+}
+
+type ScheduleRosterStats {
+  dayOffDays: Int!
+  fullDayOffDays: Int!
+  leadShiftCount: Int!
+  longestStreak: Int!
+  shiftCount: Int!
+  timeRangeDays: [ScheduleRosterTimeRangeDay!]!
+  workMinutes: Int!
+}
+
+type ScheduleRosterTemplate {
+  endTime: String!
+  id: ID!
+  name: String!
+  paletteKey: String
+  positionKey: String!
+  shortName: String!
+  startTime: String!
+  tasks: [ScheduleTemplateTask!]!
+}
+
+type ScheduleRosterTimeRangeDay {
+  date: String!
+  slots: [ScheduleRosterSlot!]!
+}
+
+type ScheduleRosterUnavailability {
+  date: String!
+  fullDay: Boolean!
+  slots: [ScheduleRosterSlot!]!
+  userId: ID!
 }
 
 type ScheduleRule {

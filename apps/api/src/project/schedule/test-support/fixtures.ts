@@ -27,6 +27,7 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   editDefaultRules: "schedule.settings.edit-default-rules",
   editOrgRules: "schedule.settings.edit-org-rules",
   manageView: "schedule.manage.view",
+  manageEdit: "schedule.manage.edit",
   editCalendar: "schedule.manage.edit-calendar",
   viewDayOffs: "schedule.manage.view-day-offs",
   editDayOffs: "schedule.manage.edit-day-offs",

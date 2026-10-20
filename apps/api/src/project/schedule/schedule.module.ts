@@ -10,6 +10,10 @@ import { ScheduleDayOffsResolver } from "./day-offs/schedule-day-offs.resolver";
 import { ScheduleDayOffsService } from "./day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsResolver } from "./field-options/schedule-field-options.resolver";
 import { ScheduleFieldOptionsService } from "./field-options/schedule-field-options.service";
+import { RosterPeopleReader } from "./roster/roster-people";
+import { ScheduleRosterWritesService } from "./roster/schedule-roster-writes.service";
+import { ScheduleRosterResolver } from "./roster/schedule-roster.resolver";
+import { ScheduleRosterService } from "./roster/schedule-roster.service";
 import { ScheduleRulesResolver } from "./rules/schedule-rules.resolver";
 import { ScheduleRulesService } from "./rules/schedule-rules.service";
 import { ScheduleClock } from "./shared/schedule-clock";
@@ -46,6 +50,10 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     ScheduleDayOffsService,
     ScheduleDayOffsResolver,
     DayOffRemindersService,
+    RosterPeopleReader,
+    ScheduleRosterService,
+    ScheduleRosterWritesService,
+    ScheduleRosterResolver,
   ],
   exports: [
     SchedulePermissions,
