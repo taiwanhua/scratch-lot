@@ -63,3 +63,65 @@ export const legendSwatchSx: Sx = {
   borderRadius: 0.5,
   overflow: "hidden",
 };
+
+/** 「×2」:同一筆排班同一段時間填進兩筆以上人力需求(灰色小徽章;同底座 Tag 的 grey)。 */
+export const multiBadgeSx: Sx = {
+  bgcolor: "grey.200",
+  color: "grey.700",
+  borderRadius: 0.5,
+  px: 0.5,
+  fontSize: "0.6875rem",
+  fontWeight: 600,
+  lineHeight: 1.5,
+};
+
+/** 未對應排班的打卡(⏲ + 張數):橘框小膠囊(月檢視日期格右上角、圖例)。 */
+export const unmatchedPunchSx: Sx = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 0.25,
+  border: 1,
+  borderColor: "warning.main",
+  color: "warning.darker",
+  bgcolor: "warning.lighter",
+  borderRadius: 1,
+  px: 0.5,
+  fontSize: "0.6875rem",
+  fontWeight: 600,
+  lineHeight: 1.5,
+};
+
+/** 超出人力需求的時間(長條延伸的淡色虛線段;同底座 `ScheduleTimeline` 的延伸段)。 */
+export const extensionSwatchSx: Sx = {
+  bgcolor: "primary.lighter",
+  opacity: 0.7,
+  borderStyle: "dashed",
+  borderColor: "primary.main",
+};
+
+/** 缺額虛線空位:缺負責紅、缺協同橘。 */
+export const vacancySwatchSx = (tone: "error" | "warning"): Sx => ({
+  bgcolor: `${tone}.lighter`,
+  borderStyle: "dashed",
+  borderColor: `${tone}.main`,
+});
+
+/** 「+N」長條的樣本:框色依收起的需求(灰 / 橘 / 紅)。 */
+export const moreSampleSx = (tone: "neutral" | "warning" | "error"): Sx => ({
+  border: 1,
+  borderColor: tone === "neutral" ? "divider" : `${tone}.main`,
+  color: tone === "neutral" ? "text.secondary" : `${tone}.darker`,
+  bgcolor: "background.default",
+  borderRadius: 0.75,
+  px: 0.5,
+  fontWeight: 600,
+});
+
+/** 手機月檢視:每筆人力需求一顆實心點(三態:已滿灰、缺協同橘、缺負責紅)。 */
+export const demandDotSx = (tone: "grey" | "warning" | "error"): Sx => ({
+  display: "inline-block",
+  width: 6,
+  height: 6,
+  borderRadius: "50%",
+  bgcolor: tone === "grey" ? "grey.400" : `${tone}.main`,
+});

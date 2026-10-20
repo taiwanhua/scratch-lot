@@ -1177,8 +1177,22 @@
         "missingLeader": "缺負責",
         "missingHelper": "缺協同",
         "full": "人力需求已滿",
-        "multi": "同一筆排班顧多台"
-      }
+        "multi": "同一筆排班顧多台",
+        "closed": "店休",
+        "special": "特殊日(行事曆設定的顏色)",
+        "unmatchedPunch": "未對應排班的打卡(張數)",
+        "extension": "超出人力需求的時間(長條延伸的虛線段)",
+        "vacancyLeader": "缺負責(虛線空位)",
+        "vacancyHelper": "缺協同(虛線空位)",
+        "moreNeutral": "+N 收起的人力需求(點了看清單)",
+        "moreWarning": "+N 裡有缺協同(橘框)",
+        "moreError": "+N 裡有缺負責(紅框)",
+        "dotFull": "人力需求已滿",
+        "dotMissingHelper": "缺協同",
+        "dotMissingLeader": "缺負責"
+      },
+      "punchSample": "⏲ 2",
+      "moreSample": "+N"
     },
     "roster": {
       "org": "分店",
@@ -1214,7 +1228,10 @@
         "longestStreak": "最長連續上班"
       },
       "views": {
-        "roster": "班表"
+        "roster": "班表",
+        "month": "月",
+        "week": "週",
+        "day": "日"
       },
       "status": {
         "unpublished": "未發布",
@@ -1371,6 +1388,46 @@
           "saved": "已儲存排班",
           "deleted": "已刪除排班"
         }
+      },
+      "timeline": {
+        "monthAria": "月檢視",
+        "weekAria": "週檢視",
+        "dayAria": "日檢視",
+        "monthDayAria": "{date}(點了切到那天的日檢視)",
+        "dateLabel": "{date} {weekday}",
+        "barTooltip": "{name} · {start}–{end} · ☕ {minutes} 分",
+        "break": "☕ {minutes} 分",
+        "missingLeader": "缺負責 1",
+        "missingHelper": "缺協同 1",
+        "addEntryHint": "+ 排班",
+        "vacancyAria": "{name} {label}",
+        "auto": "自動排入",
+        "multi": "×{count}",
+        "moreLabel": "+{count}",
+        "prevDay": "前日 →",
+        "nextDay": "→ 次日",
+        "moreTitle": "{date}收起的人力需求",
+        "moreShowDay": "看整天(日檢視) ›",
+        "showDayAria": "{date} {summary},看這天的日檢視",
+        "noDemand": "這天沒有人力需求",
+        "cardMissing": "{count} 缺 {missing}",
+        "earlierStart": "比需求早 {minutes} 分",
+        "laterStart": "比需求晚 {minutes} 分",
+        "earlierEnd": "下班比需求早 {minutes} 分",
+        "laterEnd": "下班比需求晚 {minutes} 分",
+        "prevWeek": "上一週",
+        "nextWeek": "下一週",
+        "weekTitle": "{from}–{to}",
+        "prevDate": "前一天",
+        "nextDate": "後一天",
+        "dateButton": "{date} ▾",
+        "pickDateAria": "{date},選日期",
+        "pickDate": "選日期",
+        "missingDot": "有人力需求還缺人",
+        "today": "今天",
+        "punch": "⏲ {count}",
+        "punchAria": "{count} 張未對應排班的打卡",
+        "nobody": "還沒有人填"
       }
     }
   },

@@ -1,0 +1,94 @@
+import { useEffect } from "react";
+import { useTranslations } from "use-intl";
+
+import { useBreakpointDown } from "@repo/ui/media-query";
+import { ScheduleTimeline } from "@repo/ui/schedule-timeline";
+import { Stack } from "@repo/ui/stack";
+
+import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+
+import { useRoster } from "../roster-context";
+import { DayMobileCards } from "./DayMobileCards";
+import { useRosterDate } from "./useRosterDate";
+import { useTimelineGroups } from "./useTimelineGroups";
+
+/** 日檢視的時間軸高度(內容少,依內容長高但有上限)。 */
+const TIMELINE_SX = { maxHeight: { xs: "60vh", md: "calc(100vh - 340px)" } };
+
+/**
+ * 日檢視(SC-45、SC-46;規格 14.5 日):底座 `ScheduleTimeline` 日模式,每筆人力需求一個容器,
+ * 依時間由左往右,重疊的容器往下排、不收起;點擊同週檢視。
+ * 手機:人力需求卡片清單(`DayMobileCards`)。日期在網址 `?date=`;檢核 [查看] 的目標不是這一天 → 切到那一天。
+ */
+export const DayView = () => {
+  const t = useTranslations("admin.schedule.roster");
+  const { data, canEdit, openDemand, openEntry, scrollTarget } = useRoster();
+  const isMobile = useBreakpointDown("sm");
+  const { date, today, goTo } = useRosterDate(data.month);
+  const timeline = useTimelineGroups([date], "day");
+
+  const targetDate = scrollTarget?.date ?? null;
+  useEffect(() => {
+    if (targetDate !== null && targetDate !== date) {
+      goTo(targetDate);
+    }
+  }, [targetDate, date, goTo]);
+
+  if (isMobile) {
+    return <DayMobileCards date={date} timeline={timeline} />;
+  }
+
+  return (
+    <Stack spacing={1.5}>
+      <ScheduleTimeline
+        mode="day"
+        aria-label={t("timeline.dayAria")}
+        dates={timeline.dates}
+        groups={timeline.groups}
+        disabledRanges={timeline.disabledRanges}
+        today={today}
+        onGroupClick={(group) => {
+          const demand = timeline.demandOfGroup(group.id);
+          if (demand !== undefined) {
+            openDemand(demand);
+          }
+        }}
+        onBarClick={(bar) => {
+          const entry = timeline.entryOfSlot(bar.id);
+          if (entry !== undefined) {
+            openEntry(entry);
+          }
+        }}
+        {...(canEdit
+          ? {
+              onVacancyClick: (vacancy) => {
+                const preset = timeline.vacancyPresetOf(vacancy.id);
+                if (preset !== undefined) {
+                  openEntry(preset);
+                }
+              },
+              onEmptyClick: (point) => {
+                openDemand({ date: point.date, startTime: point.time });
+              },
+              emptyHint: t("addDemandHint"),
+            }
+          : {})}
+        prevDayLabel={t("timeline.prevDay")}
+        nextDayLabel={t("timeline.nextDay")}
+        containerSx={TIMELINE_SX}
+      />
+      <ScheduleLegend
+        items={[
+          "leader",
+          "entry",
+          "auto",
+          "multi",
+          "breakMinutes",
+          "extension",
+          "vacancyLeader",
+          "vacancyHelper",
+        ]}
+      />
+    </Stack>
+  );
+};

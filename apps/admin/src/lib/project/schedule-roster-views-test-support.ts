@@ -1,8 +1,8 @@
 import { layoutTimeline } from "@repo/ui/schedule-timeline";
 
-import type { RosterEntryLike } from "./schedule-roster";
 import {
   type TimelineDemandLike,
+  type TimelineEntryLike,
   type TimelineGroupPlan,
   type TimelineSlotPlan,
   timelineGroupPlansOf,
@@ -313,8 +313,8 @@ export type CaseDemand = TimelineDemandLike & { short: string };
 /** 規則頁的一格 → 排班表資料的形狀(人力需求 + 排班 + 填進紀錄)。 */
 const rosterOf = (
   groups: readonly CaseGroup[],
-): { demands: CaseDemand[]; entries: RosterEntryLike[] } => {
-  const entries = new Map<string, RosterEntryLike>();
+): { demands: CaseDemand[]; entries: TimelineEntryLike[] } => {
+  const entries = new Map<string, TimelineEntryLike>();
   const demands = groups.map((group): CaseDemand => {
     const demandId = `g${String(group.id)}`;
     const tasks = group.items.map((item, index) => {

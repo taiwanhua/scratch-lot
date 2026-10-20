@@ -72,7 +72,7 @@ export const RosterToolbar = ({
   const closeSheet = () => {
     setSheet(null);
   };
-  const { Tools } = view;
+  const { Tools, Navigator } = view;
 
   return (
     <Stack spacing={1.5}>
@@ -188,29 +188,33 @@ export const RosterToolbar = ({
             label: t(`views.${item.labelKey}`),
           }))}
         />
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-          <IconButton
-            size="small"
-            aria-label={tCalendar("prevMonth")}
-            onClick={() => {
-              onMonthChange(shiftMonthOf(month, -1));
-            }}
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {tCalendar("monthTitle", { year, month: Number(monthNumber) })}
-          </Typography>
-          <IconButton
-            size="small"
-            aria-label={tCalendar("nextMonth")}
-            onClick={() => {
-              onMonthChange(shiftMonthOf(month, 1));
-            }}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-        </Stack>
+        {Navigator === undefined ? (
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
+            <IconButton
+              size="small"
+              aria-label={tCalendar("prevMonth")}
+              onClick={() => {
+                onMonthChange(shiftMonthOf(month, -1));
+              }}
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              {tCalendar("monthTitle", { year, month: Number(monthNumber) })}
+            </Typography>
+            <IconButton
+              size="small"
+              aria-label={tCalendar("nextMonth")}
+              onClick={() => {
+                onMonthChange(shiftMonthOf(month, 1));
+              }}
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Stack>
+        ) : (
+          <Navigator data={data} month={month} />
+        )}
         <Stack sx={{ flex: 1 }} />
         {Tools !== undefined && <Tools />}
         {ROSTER_TOOLBAR_END.map((End, index) => (

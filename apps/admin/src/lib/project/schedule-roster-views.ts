@@ -221,6 +221,15 @@ export interface TimelineTaskLike {
   userId?: string | null;
 }
 
+export interface TimelineEntryLike extends RosterEntryLike {
+  assignments: readonly {
+    demandId: string;
+    taskId: string;
+    role: string;
+    source: string;
+  }[];
+}
+
 export interface TimelineDemandLike extends RosterDemandLike {
   createdAt: string;
   tasks: readonly TimelineTaskLike[];
@@ -293,7 +302,7 @@ const hasEntryId = (
 const barPlanOf = (
   task: TimelineTaskLike,
   role: Role,
-  entry: RosterEntryLike,
+  entry: TimelineEntryLike,
   demand: RosterDemandLike,
   demandById: ReadonlyMap<string, RosterDemandLike>,
 ): BarPlan => {
@@ -341,7 +350,7 @@ const compareBars =
 const roleSlotsOf = (
   demand: TimelineDemandLike,
   role: Role,
-  entryById: ReadonlyMap<string, RosterEntryLike>,
+  entryById: ReadonlyMap<string, TimelineEntryLike>,
   demandById: ReadonlyMap<string, RosterDemandLike>,
   orders: TimelineOrders,
 ): TimelineSlotPlan[] => {
@@ -369,7 +378,7 @@ const roleSlotsOf = (
  */
 export const timelineGroupPlansOf = <Demand extends TimelineDemandLike>(
   demands: readonly Demand[],
-  entries: readonly RosterEntryLike[],
+  entries: readonly TimelineEntryLike[],
   orders: TimelineOrders,
 ): TimelineGroupPlan<Demand>[] => {
   const entryById = new Map(entries.map((entry) => [entry.id, entry]));
@@ -403,6 +412,17 @@ export const timelineGroupPlansOf = <Demand extends TimelineDemandLike>(
     };
   });
 };
+
+/** 容器的完整排序(同底座 `layoutTimeline`):開始時間 → 崗位 → 範本 → 建立時間 → id(手機卡片清單用)。 */
+export const compareGroupPlans = (
+  left: TimelineGroupPlan<TimelineDemandLike>,
+  right: TimelineGroupPlan<TimelineDemandLike>,
+): number =>
+  Date.parse(left.demand.startAt) - Date.parse(right.demand.startAt) ||
+  left.sortKeys[0] - right.sortKeys[0] ||
+  left.sortKeys[1] - right.sortKeys[1] ||
+  left.createdAt - right.createdAt ||
+  (left.demand.id < right.demand.id ? -1 : 1);
 
 /** 「+N」長條的框色:收起的需求有缺負責紅、有缺協同橘、否則灰。 */
 export const moreToneOf = (tones: readonly GroupTone[]): GroupTone => {
