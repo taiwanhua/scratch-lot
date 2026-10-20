@@ -1785,6 +1785,15 @@ type LotteryOutstandingSettlementsPayload {
   totalCount: Int!
 }
 
+type LotteryPendingRequisition {
+  books: Int!
+  completedAt: DateTime!
+  estimatedAmount: Int!
+  orgId: ID!
+  requisitionId: ID!
+  serialNo: String
+}
+
 type LotteryPositionOption {
   label: String!
   value: String!
@@ -1795,11 +1804,54 @@ type LotteryPositionOptionsPayload {
   totalCount: Int!
 }
 
+type LotteryPurchaseList {
+  orgIds: [ID!]!
+  requisitions: [LotteryPendingRequisition!]!
+  rows: [LotteryPurchaseListRow!]!
+}
+
+type LotteryPurchaseListBranch {
+  books: Int!
+  orgId: ID!
+}
+
+type LotteryPurchaseListRow {
+  branches: [LotteryPurchaseListBranch!]!
+  estimatedAmount: Int!
+  gameCode: String!
+  gameId: ID!
+  name: String!
+  totalBooks: Int!
+  unitPrice: Int!
+}
+
 """牌租週期:月 / 季 / 年"""
 enum LotteryRentCycle {
   MONTH
   QUARTER
   YEAR
+}
+
+type LotteryRequisitionCandidate {
+  bookPrice: Int!
+  defaultRate: Int!
+  gameCode: String!
+  gameId: ID!
+  givenBooks: Int!
+  inTransitBooks: Int!
+  isNew: Boolean!
+  launchedAt: DateTime
+  name: String!
+  plannedBooks: Int
+  sold7: Int
+  sold30: Int
+  stockTickets: Int!
+  unitPrice: Int!
+}
+
+type LotteryRequisitionStateItem {
+  requisitionId: ID!
+  state: String!
 }
 
 type LotterySettlement {
@@ -2726,6 +2778,9 @@ type Query {
   lotteryOccupiedStores: LotteryOccupiedStoresPayload!
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
+  lotteryPurchaseList: LotteryPurchaseList!
+  lotteryRequisitionCandidates(orgId: ID!): [LotteryRequisitionCandidate!]!
+  lotteryRequisitionStates(requisitionIds: [ID!]!): [LotteryRequisitionStateItem!]!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
   lotterySettlementAccounts(moduleKey: String!, refId: ID!, side: String!): LotterySettlementAccountsPayload!
   lotterySettlementCandidates(input: LotterySettlementCandidatesInput!): LotteryOutstandingSettlementsPayload!

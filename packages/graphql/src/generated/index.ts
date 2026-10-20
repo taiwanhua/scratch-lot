@@ -1939,6 +1939,16 @@ export type LotteryOutstandingSettlementsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryPendingRequisition = {
+  __typename?: 'LotteryPendingRequisition';
+  books: Scalars['Int']['output'];
+  completedAt: Scalars['DateTime']['output'];
+  estimatedAmount: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+  requisitionId: Scalars['ID']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+};
+
 export type LotteryPositionOption = {
   __typename?: 'LotteryPositionOption';
   label: Scalars['String']['output'];
@@ -1951,12 +1961,60 @@ export type LotteryPositionOptionsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryPurchaseList = {
+  __typename?: 'LotteryPurchaseList';
+  orgIds: Array<Scalars['ID']['output']>;
+  requisitions: Array<LotteryPendingRequisition>;
+  rows: Array<LotteryPurchaseListRow>;
+};
+
+export type LotteryPurchaseListBranch = {
+  __typename?: 'LotteryPurchaseListBranch';
+  books: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryPurchaseListRow = {
+  __typename?: 'LotteryPurchaseListRow';
+  branches: Array<LotteryPurchaseListBranch>;
+  estimatedAmount: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  totalBooks: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
 /** 牌租週期:月 / 季 / 年 */
 export enum LotteryRentCycle {
   Month = 'MONTH',
   Quarter = 'QUARTER',
   Year = 'YEAR'
 }
+
+export type LotteryRequisitionCandidate = {
+  __typename?: 'LotteryRequisitionCandidate';
+  bookPrice: Scalars['Int']['output'];
+  defaultRate: Scalars['Int']['output'];
+  gameCode: Scalars['String']['output'];
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  isNew: Scalars['Boolean']['output'];
+  launchedAt?: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+  sold7?: Maybe<Scalars['Int']['output']>;
+  sold30?: Maybe<Scalars['Int']['output']>;
+  stockTickets: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryRequisitionStateItem = {
+  __typename?: 'LotteryRequisitionStateItem';
+  requisitionId: Scalars['ID']['output'];
+  state: Scalars['String']['output'];
+};
 
 export type LotterySettlement = {
   __typename?: 'LotterySettlement';
@@ -3651,6 +3709,9 @@ export type Query = {
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
   lotteryPositionOptions: LotteryPositionOptionsPayload;
+  lotteryPurchaseList: LotteryPurchaseList;
+  lotteryRequisitionCandidates: Array<LotteryRequisitionCandidate>;
+  lotteryRequisitionStates: Array<LotteryRequisitionStateItem>;
   lotterySettlement: LotterySettlementPayload;
   lotterySettlementAccounts: LotterySettlementAccountsPayload;
   lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
@@ -3928,6 +3989,16 @@ export type QueryLotteryGamesArgs = {
 
 export type QueryLotteryPositionOptionsArgs = {
   orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryRequisitionCandidatesArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryRequisitionStatesArgs = {
+  requisitionIds: Array<Scalars['ID']['input']>;
 };
 
 
@@ -7692,6 +7763,27 @@ export type UpdateLotteryCashPointMutationVariables = Exact<{
 
 export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
 
+export type LotteryRequisitionCandidateFieldsFragment = { __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number };
+
+export type LotteryRequisitionCandidatesQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryRequisitionCandidatesQuery = { __typename?: 'Query', lotteryRequisitionCandidates: Array<{ __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number }> };
+
+export type LotteryPurchaseListQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryPurchaseListQuery = { __typename?: 'Query', lotteryPurchaseList: { __typename?: 'LotteryPurchaseList', orgIds: Array<string>, rows: Array<{ __typename?: 'LotteryPurchaseListRow', gameId: string, gameCode: string, name: string, unitPrice: number, totalBooks: number, estimatedAmount: number, branches: Array<{ __typename?: 'LotteryPurchaseListBranch', orgId: string, books: number }> }>, requisitions: Array<{ __typename?: 'LotteryPendingRequisition', requisitionId: string, serialNo?: string | null, orgId: string, books: number, estimatedAmount: number, completedAt: string }> } };
+
+export type LotteryRequisitionStatesQueryVariables = Exact<{
+  requisitionIds: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
+}>;
+
+
+export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
+
 export type ScheduleDayOffFieldsFragment = { __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null };
 
 export type ScheduleDayOffWindowFieldsFragment = { __typename?: 'ScheduleDayOffWindow', month: string, startDate: string, endDate: string, state: string, daysLeft: number };
@@ -8997,6 +9089,24 @@ export const LotteryCashPointFieldsFragmentDoc = `
   abilities {
     canEdit
   }
+}
+    `;
+export const LotteryRequisitionCandidateFieldsFragmentDoc = `
+    fragment LotteryRequisitionCandidateFields on LotteryRequisitionCandidate {
+  gameId
+  gameCode
+  name
+  unitPrice
+  bookPrice
+  defaultRate
+  launchedAt
+  isNew
+  stockTickets
+  inTransitBooks
+  sold7
+  sold30
+  plannedBooks
+  givenBooks
 }
     `;
 export const ScheduleDayOffWindowFieldsFragmentDoc = `
@@ -17002,6 +17112,120 @@ export const useUpdateLotteryCashPointMutation = <
 
 
 useUpdateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers);
+
+export const LotteryRequisitionCandidatesDocument = `
+    query LotteryRequisitionCandidates($orgId: ID!) {
+  lotteryRequisitionCandidates(orgId: $orgId) {
+    ...LotteryRequisitionCandidateFields
+  }
+}
+    ${LotteryRequisitionCandidateFieldsFragmentDoc}`;
+
+export const useLotteryRequisitionCandidatesQuery = <
+      TData = LotteryRequisitionCandidatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryRequisitionCandidatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryRequisitionCandidatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryRequisitionCandidatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryRequisitionCandidatesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryRequisitionCandidates', variables],
+    queryFn: fetcher<LotteryRequisitionCandidatesQuery, LotteryRequisitionCandidatesQueryVariables>(client, LotteryRequisitionCandidatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryRequisitionCandidatesQuery.getKey = (variables: LotteryRequisitionCandidatesQueryVariables) => ['LotteryRequisitionCandidates', variables];
+
+
+useLotteryRequisitionCandidatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionCandidatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionCandidatesQuery, LotteryRequisitionCandidatesQueryVariables>(client, LotteryRequisitionCandidatesDocument, variables, headers);
+
+export const LotteryPurchaseListDocument = `
+    query LotteryPurchaseList {
+  lotteryPurchaseList {
+    orgIds
+    rows {
+      gameId
+      gameCode
+      name
+      unitPrice
+      branches {
+        orgId
+        books
+      }
+      totalBooks
+      estimatedAmount
+    }
+    requisitions {
+      requisitionId
+      serialNo
+      orgId
+      books
+      estimatedAmount
+      completedAt
+    }
+  }
+}
+    `;
+
+export const useLotteryPurchaseListQuery = <
+      TData = LotteryPurchaseListQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryPurchaseListQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseListQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseListQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseListQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryPurchaseList'] : ['LotteryPurchaseList', variables],
+    queryFn: fetcher<LotteryPurchaseListQuery, LotteryPurchaseListQueryVariables>(client, LotteryPurchaseListDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseListQuery.getKey = (variables?: LotteryPurchaseListQueryVariables) => variables === undefined ? ['LotteryPurchaseList'] : ['LotteryPurchaseList', variables];
+
+
+useLotteryPurchaseListQuery.fetcher = (client: GraphQLClient, variables?: LotteryPurchaseListQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseListQuery, LotteryPurchaseListQueryVariables>(client, LotteryPurchaseListDocument, variables, headers);
+
+export const LotteryRequisitionStatesDocument = `
+    query LotteryRequisitionStates($requisitionIds: [ID!]!) {
+  lotteryRequisitionStates(requisitionIds: $requisitionIds) {
+    requisitionId
+    state
+  }
+}
+    `;
+
+export const useLotteryRequisitionStatesQuery = <
+      TData = LotteryRequisitionStatesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryRequisitionStatesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryRequisitionStatesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryRequisitionStatesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryRequisitionStatesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryRequisitionStates', variables],
+    queryFn: fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQueryVariables) => ['LotteryRequisitionStates', variables];
+
+
+useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
 
 export const MyScheduleDayOffsDocument = `
     query MyScheduleDayOffs($input: MyScheduleDayOffsInput) {
