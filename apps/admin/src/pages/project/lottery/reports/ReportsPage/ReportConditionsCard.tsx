@@ -85,6 +85,8 @@ export const ReportConditionsCard = ({
         )}
         <OrgTreeSelect
           label={t("lotteryReports.conditions.orgs")}
+          // 業務頁:候選是操作者的可見範圍(查 `visibleOrgTree`),不是管理範圍
+          scope="visible"
           isMultiSelect
           maxCount={report.conditions.orgs.max}
           value={conditions.orgIds}
@@ -98,10 +100,8 @@ export const ReportConditionsCard = ({
           }
           fullWidth
         />
+        {/* Figma RE-03:[匯出 Excel](主要)在左、[預覽](外框)在右 */}
         <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-          <Button variant="outlined" disabled={!isReady} onClick={onPreview}>
-            {t("lotteryReports.conditions.preview")}
-          </Button>
           {canExport && (
             <Button
               variant="contained"
@@ -113,6 +113,9 @@ export const ReportConditionsCard = ({
                 : t("lotteryReports.conditions.export")}
             </Button>
           )}
+          <Button variant="outlined" disabled={!isReady} onClick={onPreview}>
+            {t("lotteryReports.conditions.preview")}
+          </Button>
         </Stack>
       </Stack>
     </Card>

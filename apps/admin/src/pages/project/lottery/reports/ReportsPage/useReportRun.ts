@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 
-import { useOrgTreeQuery } from "@repo/graphql";
+import { useVisibleOrgTreeQuery } from "@repo/graphql";
 
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
@@ -60,14 +60,18 @@ export const useReportRun = ({
   const { session } = useSession();
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
-  const orgTree = useOrgTreeQuery(session.client);
+  // 分店名稱:與分店選擇器同一份(可見範圍,`scope="visible"`)
+  const orgTree = useVisibleOrgTreeQuery(session.client);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<unknown>(null);
 
   const orgIds = input?.orgIds;
   const orgs = useMemo(() => {
     const nameOf = new Map(
-      flattenOrgs(orgTree.data?.orgTree ?? []).map((org) => [org.id, org.name]),
+      flattenOrgs(orgTree.data?.visibleOrgTree ?? []).map((org) => [
+        org.id,
+        org.name,
+      ]),
     );
     return (orgIds ?? []).map((id) => ({ id, name: nameOf.get(id) ?? id }));
   }, [orgTree.data, orgIds]);

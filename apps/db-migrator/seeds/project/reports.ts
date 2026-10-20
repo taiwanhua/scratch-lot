@@ -20,7 +20,7 @@ export const reportsModule: ModuleSeedDeclaration = {
       name: "輸出報表",
       sidebarType: "link",
       parentKey: null,
-      order: 14,
+      order: 50,
       route: "reports",
       icon: "chart",
       description: "選報表、設定期間與分店,預覽或匯出 Excel",

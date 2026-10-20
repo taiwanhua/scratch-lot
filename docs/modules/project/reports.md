@@ -16,7 +16,7 @@
 | --------- | -------- | ----------- | ---------- | -------- |
 | `reports` | 輸出報表 | link        | `/reports` | 見權限表 |
 
-一頁,沒有隱藏頁。側欄排序 `order: 14`(專案模組依規格 3.1 的順序從 10 起編)。
+一頁,沒有隱藏頁。側欄排序 `order: 50`(專案模組依規格 3.1 的順序每隔 10 一號:店面 10、庫存 20、叫貨與進貨 30、帳戶 40、報表 50、經銷商 60、檔案管理 70、班表 80)。
 
 **畫面**(Figma 報表頁 94:14;平板 / 手機照 RW-01–04 共用規則,不另畫):
 
@@ -79,7 +79,7 @@
 
 ### 分店上限與範圍檢查
 
-- admin:`OrgTreeSelect` 多選、`maxCount` = 報表的 `conditions.orgs.max`;沒選分店時 [預覽] [匯出 Excel] 都不能按。
+- admin:`OrgTreeSelect` 多選、`scope="visible"`(候選是操作者的可見範圍,查 `visibleOrgTree`;預覽的分店名稱也取同一份)、`maxCount` = 報表的 `conditions.orgs.max`;沒選分店時 [匯出 Excel] [預覽] 都不能按。按鈕順序照 Figma RE-03:[匯出 Excel](主要)在左、[預覽](外框)在右。
 - api:每張報表的查詢在讀資料前呼叫 `assertReportRange`,不合格丟 `GraphQLError`:
 
 | 情況                                                                                     | 結果                                                      |
@@ -223,6 +223,6 @@ registerReport({
 ## 平台視角備註
 
 - 外框沒有登記任何正式報表時,有 `reports` 模組的人看到的是「報表」選單的空狀態說明;這是外框交付時的正常畫面。
-- 側欄排序 `order` 不在規格裡:專案模組依規格 3.1 從 10 起編(`schedule` 17、`reports` 14),排在底座的總覽(0)、系統管理(1)、申請中心(4)之後。
+- 側欄順序:專案模組每隔 10 一號(見「模組 key 與畫面」),底座的總覽 0 在最前,申請中心 90、系統管理 95 排在業務模組之後(`docs/modules/module-manager.md`「側欄順序」)。
 
 正本:`apps/db-migrator/seeds/project/reports.ts`

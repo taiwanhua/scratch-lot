@@ -218,3 +218,38 @@ describe("輸出報表:匯出失敗的提示", () => {
     expect(downloads).toEqual([]);
   });
 });
+
+describe("輸出報表:版面與分店範圍", () => {
+  it("[匯出 Excel](主要)在左、[預覽](外框)在右(Figma RE-03)", async () => {
+    renderReportsPage({
+      permissions: ["reports.operations", "reports.export"],
+    });
+    const conditions = await screen.findByRole("region", {
+      name: "營運報表 · 條件",
+    });
+    const buttons = within(conditions)
+      .getAllByRole("button")
+      .map((button) => button.textContent)
+      .filter((text) => text === "匯出 Excel" || text === "預覽");
+    expect(buttons).toEqual(["匯出 Excel", "預覽"]);
+  });
+
+  it("分店選擇器與預覽的分店名稱都查可見範圍(VisibleOrgTree),不查管理範圍", async () => {
+    const { user, fake } = renderReportsPage({
+      permissions: ["reports.operations"],
+      search: DAY_WITH_TWO_BRANCHES,
+    });
+    await user.click(await screen.findByRole("combobox", { name: "分店" }));
+    await screen.findByText("好運彩券行");
+    await user.keyboard("{Escape}");
+    await user.click(await screen.findByRole("button", { name: "預覽" }));
+    const preview = await screen.findByRole("region", {
+      name: "營運報表 · 2026-10-16",
+    });
+    expect(
+      await within(preview).findByRole("tab", { name: "中山店" }),
+    ).toBeInTheDocument();
+    expect(fake.orgTreeCalls.visible).toBeGreaterThan(0);
+    expect(fake.orgTreeCalls.managed).toBe(0);
+  });
+});

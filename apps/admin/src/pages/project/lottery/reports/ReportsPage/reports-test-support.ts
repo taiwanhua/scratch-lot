@@ -12,7 +12,7 @@ import { api, server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
 
 /**
- * 輸出報表頁的渲染場景:`me.modules` 有輸出報表(權限由測試給)、組織樹兩家分店、
+ * 輸出報表頁的渲染場景:`me.modules` 有輸出報表(權限由測試給)、組織樹兩家分店(可見範圍與管理範圍同一棵,分別計次)、
  * 測試報表的查詢 `FixtureReport`(記下 input;`fail` 給了就回那個錯誤)。
  * 報表登記清單由測試檔以 `jest.unstable_mockModule` 換成 `reports-fixtures.ts`。
  */
@@ -24,7 +24,7 @@ const reportsModule = (permissions: readonly string[]): TestModule => ({
   parentId: null,
   sidebarType: ModuleSidebarType.Link,
   engine: ModuleEngine.Fixed,
-  order: 14,
+  order: 50,
   route: "/reports",
   icon: "chart",
   permissions: [...permissions],
@@ -55,6 +55,8 @@ const ORG_TREE: TestOrgNode[] = [
 export interface FixtureReportServer {
   inputs: Record<string, unknown>[];
   fail: { code: string; reason?: string } | undefined;
+  /** 兩種組織樹各被查了幾次(分店選擇器應查可見範圍 `VisibleOrgTree`,不查管理範圍 `OrgTree`) */
+  orgTreeCalls: { managed: number; visible: number };
 }
 
 export const renderReportsPage = ({
@@ -66,15 +68,24 @@ export const renderReportsPage = ({
   search?: string;
   fail?: { code: string; reason?: string };
 }) => {
-  const fake: FixtureReportServer = { inputs: [], fail };
+  const fake: FixtureReportServer = {
+    inputs: [],
+    fail,
+    orgTreeCalls: { managed: 0, visible: 0 },
+  };
   server.use(
     ...authWorld({
       hasRefreshCookie: true,
       modules: [overviewModule, reportsModule(permissions)],
     }).handlers,
-    api.query("OrgTree", () =>
-      HttpResponse.json({ data: { orgTree: ORG_TREE } }),
-    ),
+    api.query("OrgTree", () => {
+      fake.orgTreeCalls.managed += 1;
+      return HttpResponse.json({ data: { orgTree: ORG_TREE } });
+    }),
+    api.query("VisibleOrgTree", () => {
+      fake.orgTreeCalls.visible += 1;
+      return HttpResponse.json({ data: { visibleOrgTree: ORG_TREE } });
+    }),
     api.query("FixtureReport", ({ variables }) => {
       fake.inputs.push(variables.input as Record<string, unknown>);
       if (fake.fail !== undefined) {

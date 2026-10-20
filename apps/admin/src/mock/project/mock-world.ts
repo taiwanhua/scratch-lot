@@ -42,7 +42,7 @@ const reportsModule: TestModule = {
   parentId: null,
   sidebarType: ModuleSidebarType.Link,
   engine: ModuleEngine.Fixed,
-  order: 14,
+  order: 50,
   route: "/reports",
   icon: "chart",
   permissions: ["reports.*"],
