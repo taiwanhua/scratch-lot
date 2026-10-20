@@ -27,6 +27,9 @@ import type { RosterData } from "./roster-context";
 import { ROSTER_TOOLBAR_ACTIONS, ROSTER_TOOLBAR_END } from "./roster-toolbar";
 import { ROSTER_VIEWS, type RosterViewEntry } from "./roster-views";
 
+/** 檢視切換每個選項的寬度(px;Figma SC-03 [月|週|日|班表])。 */
+const VIEW_OPTION_WIDTH = 64;
+
 export interface RosterToolbarProps {
   data: RosterData | undefined;
   month: string;
@@ -175,6 +178,8 @@ export const RosterToolbar = ({
         sx={{ alignItems: "center", flexWrap: "wrap" }}
       >
         <SegmentedControl
+          // 底座 SegmentedControl 撐滿父層:依檢視數給寬度(每個選項 64px,設計值)
+          sx={{ width: ROSTER_VIEWS.length * VIEW_OPTION_WIDTH, flex: "none" }}
           aria-label={t("toolbar.views")}
           value={view.value}
           onChange={onViewChange}

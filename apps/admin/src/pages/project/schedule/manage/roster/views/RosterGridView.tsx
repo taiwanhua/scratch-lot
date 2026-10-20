@@ -46,8 +46,8 @@ const DEMANDS_SECTION = "demands";
 const STATS_GROUP = "stats";
 
 /** 手機一次看 2 天:日期欄窄一點(設計值,只有班表檢視用到,STYLE-06)。 */
-const MOBILE_DATE_WIDTH = 112;
-const DATE_WIDTH = 128;
+const MOBILE_DATE_WIDTH = 92;
+const DATE_WIDTH = 104;
 
 /**
  * 班表檢視(SC-03;規格 14.5 班表):人 × 日期(底座 `RosterGrid`):人員欄固定左、統計欄固定右、
