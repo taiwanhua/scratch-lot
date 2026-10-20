@@ -1,6 +1,7 @@
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
 import { LotteryDealersRepository } from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
+import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
 
 /**
  * 專案登記的 lookup 來源(`docs/modules/forms.md`「專案登記的來源」;STRUCT-12 api 的固定入口之一,
@@ -64,5 +65,31 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       keywordFields: ["name", "licenseNo"],
     },
     repositoryToken: LotteryDealersRepository,
+  },
+  {
+    // 本(專案規格 7.1;`docs/modules/project/inventory.md`「lookup 來源」):調貨單選本用(B2d 連動篩選)。
+    // 「在某店」= `holderOrgIds`(持有這本任何一張的分店,以表單的分店欄位換值);
+    // 「未被鎖定」= 固定條件 `lockedTicketCount: 0`;只列正常的本 = `status: "normal"`。範圍照可見範圍 + 共用
+    declaration: {
+      key: "lottery_book",
+      name: "本",
+      permission: null,
+      fields: {
+        bookKey: { type: "text", label: "本編號" },
+        gameCode: { type: "text", label: "遊戲代號" },
+        bookNo: { type: "text", label: "本號" },
+        lastTicketNo: { type: "text", label: "迄號" },
+      },
+      filterFields: [
+        "gameId",
+        "storeOrgId",
+        "holderOrgIds",
+        "lockedTicketCount",
+        "status",
+      ],
+      labelField: "bookKey",
+      keywordFields: ["bookKey", "bookNo"],
+    },
+    repositoryToken: LotteryBooksRepository,
   },
 ];

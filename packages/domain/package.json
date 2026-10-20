@@ -188,6 +188,16 @@
         "types": "./dist/cjs/project/lottery-master-data.d.cts",
         "default": "./dist/cjs/project/lottery-master-data.cjs"
       }
+    },
+    "./project/lottery": {
+      "import": {
+        "types": "./dist/es/project/lottery.d.ts",
+        "default": "./dist/es/project/lottery.js"
+      },
+      "require": {
+        "types": "./dist/cjs/project/lottery.d.cts",
+        "default": "./dist/cjs/project/lottery.cjs"
+      }
     }
   },
   "typesVersions": {
@@ -245,6 +255,9 @@
       ],
       "project/lottery-master-data": [
         "./dist/es/project/lottery-master-data.d.ts"
+      ],
+      "project/lottery": [
+        "./dist/es/project/lottery.d.ts"
       ]
     }
   },
