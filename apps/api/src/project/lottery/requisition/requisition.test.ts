@@ -585,11 +585,39 @@ describe("叫貨單(規格 8.1)", () => {
       requisition = await submitAs(hq, branchB, [line(gameOld, 4)]);
     });
 
+    it("拿別租戶的叫貨單 id 來引用 → 不是待購買,資料不動", async () => {
+      const otherTenant = await createOrg(api.connection, { name: "租戶乙" });
+      const requisitionId = new Types.ObjectId(requisition.id);
+      const before = await linesOf(requisition.id);
+      await expect(
+        transactions.withTransaction((session) =>
+          reference.markRequisitionReferenced(session, {
+            tenantId: otherTenant,
+            requisitionId,
+            type: "purchase",
+            submissionId: new Types.ObjectId(),
+          }),
+        ),
+      ).rejects.toMatchObject({
+        extensions: { reason: "REQUISITION_NOT_PENDING" },
+      });
+      await transactions.withTransaction((session) =>
+        reference.unmarkRequisitionReferenced(session, {
+          tenantId: otherTenant,
+          requisitionId,
+        }),
+      );
+      expect(await linesOf(requisition.id)).toEqual(before);
+      expect(await stateOf(requisition.id)).toBe("pending");
+    });
+
     it("被進貨單引用 → 已進貨、不在採購清單;第二張不能再引用;同一張重送不重複寫", async () => {
       const purchaseId = new Types.ObjectId();
       const requisitionId = new Types.ObjectId(requisition.id);
       await transactions.withTransaction((session) =>
-        reference.markRequisitionReferenced(session, requisitionId, {
+        reference.markRequisitionReferenced(session, {
+          tenantId: tenant,
+          requisitionId,
           type: "purchase",
           submissionId: purchaseId,
         }),
@@ -598,7 +626,9 @@ describe("叫貨單(規格 8.1)", () => {
       expect(await pendingIds()).not.toContain(requisition.id);
       await expect(
         transactions.withTransaction((session) =>
-          reference.markRequisitionReferenced(session, requisitionId, {
+          reference.markRequisitionReferenced(session, {
+            tenantId: tenant,
+            requisitionId,
             type: "transfer",
             submissionId: new Types.ObjectId(),
           }),
@@ -607,7 +637,9 @@ describe("叫貨單(規格 8.1)", () => {
         extensions: { code: "CONFLICT", reason: "REQUISITION_REFERENCED" },
       });
       await transactions.withTransaction((session) =>
-        reference.markRequisitionReferenced(session, requisitionId, {
+        reference.markRequisitionReferenced(session, {
+          tenantId: tenant,
+          requisitionId,
           type: "purchase",
           submissionId: purchaseId,
         }),
@@ -628,10 +660,10 @@ describe("叫貨單(規格 8.1)", () => {
         reason: "REQUISITION_REFERENCED",
       });
       await transactions.withTransaction((session) =>
-        reference.unmarkRequisitionReferenced(
-          session,
-          new Types.ObjectId(requisition.id),
-        ),
+        reference.unmarkRequisitionReferenced(session, {
+          tenantId: tenant,
+          requisitionId: new Types.ObjectId(requisition.id),
+        }),
       );
       expect(await stateOf(requisition.id)).toBe("pending");
     });
@@ -653,11 +685,12 @@ describe("叫貨單(規格 8.1)", () => {
       expect(old?.inTransitBooks).toBe(0);
       await expect(
         transactions.withTransaction((session) =>
-          reference.markRequisitionReferenced(
-            session,
-            new Types.ObjectId(requisition.id),
-            { type: "purchase", submissionId: new Types.ObjectId() },
-          ),
+          reference.markRequisitionReferenced(session, {
+            tenantId: tenant,
+            requisitionId: new Types.ObjectId(requisition.id),
+            type: "purchase",
+            submissionId: new Types.ObjectId(),
+          }),
         ),
       ).rejects.toMatchObject({
         extensions: { reason: "REQUISITION_NOT_PENDING" },
