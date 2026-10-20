@@ -66,13 +66,13 @@
 
 **欄位**(受管表單 `requisition` r1;允許存草稿;單號 `R-0001`,不分期間):
 
-| key             | 名稱       | 型別                                                                                                      |
-| --------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
-| `branch`        | 叫貨分店   | 組織引用,必填;預設 `ctx.user.orgId`                                                                       |
-| `expected_date` | 期望到貨日 | 日期,選填                                                                                                 |
-| `lines`         | 明細       | 明細表格,必填、最多 200 列:`game`(引用 `lottery_game`,固定條件 `status: on_sale`)、`books`(1–999)、`note` |
-| `total_books`   | 本數       | 計算欄 `sumOf(lines, books)`(列表的「本數」)                                                              |
-| `note`          | 備註       | 文字 200 字(摘要槽「標題」只能對單行文字,所以不是多行)                                                    |
+| key             | 名稱       | 型別                                                                                                         |
+| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `branch`        | 叫貨分店   | 組織引用,必填;預設 `ctx.user.orgId`                                                                          |
+| `expected_date` | 期望到貨日 | 日期,選填                                                                                                    |
+| `lines`         | 明細       | 明細表格,必填、最多 200 列:`game`(引用 `lottery_game`,固定條件 `status: on_sale`)、`books`(1–999)、`note`    |
+| `total_books`   | 本數       | 計算欄 `sumOf(lines, books)`(列表的「本數」)                                                                 |
+| `note`          | 備註       | 單行文字 200 字:對摘要槽「標題」(列表的關鍵字搜尋只比對標題),底座規定標題只能對單行文字,所以不是規格寫的多行 |
 
 **列表欄位配置**初值:單號、叫貨分店、期望到貨日、本數 + 內建欄「狀態」「建立者」(`seeds/project/settings.ts`)。不列印。
 
@@ -110,13 +110,22 @@
 
 **草稿**不影響任何統計:沒有副本,不進採購清單、不算在途、不算遊戲引用(遊戲引用檢查只看草稿以外的叫貨單)。
 
-**作廢原因**:底座的作廢對話框(理由必填,自由文字)。規格要的「作廢原因」欄位管理類別 `lottery-void-reason` 下拉需要底座作廢對話框支援選項,目前沒有(見回報「需要決定」)。
+**作廢原因**:規格定案要用欄位管理「作廢原因」(`lottery-void-reason`)的下拉。底座作廢對話框目前只收自由文字(必填),**已知缺口**:等底座小票替作廢對話框加上「作廢原因類別」設定併回後,在叫貨單補一行設定指向 `lottery-void-reason`。在那之前作廢理由是自由文字。
+
+**被引用的叫貨單不能作廢**:已被進貨單 / 調貨單引用的(已進貨 / 已調貨)作廢會被擋下,要先作廢引用它的那張單,叫貨單回到待購買後才能作廢。
 
 ### 採購清單(規格 8.1)
 
 - 取副本中 `voidedAt` 為空且未被引用的列,依遊戲 × 分店加總本數、預估批購金額;下半部列出每一張待購買的叫貨單(單號、叫貨分店、本數、預估批購)。
 - [匯出 Excel]:底座 B11 產生器(`lib/project/reports/excel.ts`),內容 = 畫面上的表(`purchase-list-sheet.ts`)。
 - 每張叫貨單的 [建立進貨單](帶入)與 [從其他分店調貨](開調貨單並引用)由進貨單、調貨單的功能在 `PurchaseListTab/purchase-list-actions.ts` 的 `PENDING_REQUISITION_ACTIONS` 各自追加一列;還沒有時不顯示動作欄。
+
+### 受管表單引用遊戲(可攜的 lookup 來源)
+
+受管表單的明細引用 `lottery_game`,要能跟著 seed 交付:可攜宣告放在 `@repo/domain/project/lottery` 的 `LOTTERY_PORTABLE_LOOKUP_PROVIDERS`(只收 `status: on_sale`),兩邊讀同一份 ——
+
+- 種子組裝:`seeds/project/registry.ts` 的 `portableLookupProviders`;固定入口 `seeds/registry.ts` 匯出 `seedLookupProviders`,seed / reset / update 預檢時明確傳入
+- api 匯出 seed:`project/lookup-providers.ts` 的 `lottery_game` 宣告 `portable`,`SeedExportCatalogService` 放進可攜性目錄
 
 ### 停售遊戲
 
@@ -137,9 +146,9 @@
 ### 給其他功能的介面
 
 - **引用介面**(`apps/api/src/project/lottery/requisition/requisition-reference.ts`,`LotteryRequisitionModule` 匯出的 `RequisitionReference`;進貨單、調貨單在自己的掛接點、同一個交易呼叫):
-  - `markRequisitionReferenced(session, requisitionId, { type: "purchase" | "transfer", submissionId })`:叫貨單 → 已進貨 / 已調貨。一張叫貨單只能對應一張;已被**別張**引用 → `CONFLICT`(`REQUISITION_REFERENCED`);同一張重送不重複寫;還沒完成、已作廢、找不到 → `VALIDATION_FAILED`(`REQUISITION_NOT_PENDING`)
-  - `unmarkRequisitionReferenced(session, requisitionId)`:引用的單駁回 / 作廢 → 回到待購買
-  - 介面只帶單據 id:以提升上下文只讀副本的 `tenantId` 找出所屬租戶(登記在 `project/database/elevated-contexts.ts`),之後一律用該租戶的租戶邊界上下文寫(調貨單的系統身分只看得到出貨店)
+  - `markRequisitionReferenced(session, { tenantId, requisitionId, type: "purchase" | "transfer", submissionId })`:叫貨單 → 已進貨 / 已調貨。一張叫貨單只能對應一張;已被**別張**引用 → `CONFLICT`(`REQUISITION_REFERENCED`);同一張重送不重複寫;還沒完成、已作廢、找不到、別的租戶的 → `VALIDATION_FAILED`(`REQUISITION_NOT_PENDING`)
+  - `unmarkRequisitionReferenced(session, { tenantId, requisitionId })`:引用的單駁回 / 作廢 → 回到待購買
+  - `tenantId` 由呼叫端傳引用單據的 `submission.tenantId`;讀寫用該租戶的租戶邊界上下文(調貨單的系統身分只看得到出貨店,叫貨單在收貨店),條件再釘 `tenantId`(登記在 `project/database/tenant-boundary-callers.ts`,用途「例外寫入」)
 - **在途來源**(`in-transit.ts`):`registerInTransitSource(name, ({ tenantId, orgId }) => Map<gameId, 本數>)`,`inTransitBooksOf` 加總。叫貨單(待購買的副本)由本模組登記;進貨單、調貨單各自登記「已建立還沒點收完成」的本數(草稿不算)。
 - **遊戲引用檢查**:向檔案管理登記 `lottery-requisitions`(`game-usage.ts`):草稿以外的叫貨單引用過的遊戲 = 有庫存(鎖定、不能刪)。
 
@@ -159,6 +168,7 @@
 
 - 列表頁 `RequisitionPage`:分頁頁殼。叫貨單分頁 `RequisitionsTab`:狀態篩選(含「草稿」,網址 `?requisitions=`)、欄位讀列表欄位配置(`useRequisitionColumns`,狀態欄把已完成細分 待購買 / 已進貨 / 已調貨);點一筆進詳情頁;手機改卡片、篩選收進抽屜(RW-01)。
 - 採購清單分頁 `PurchaseListTab`(資料 `usePurchaseList`;分店名稱與分店選擇器同一份組織樹)。
+- 採購清單在手機上照樣是表格(遊戲 × 分店的交叉表,欄數隨分店變),表格自己橫向捲動,不改卡片。
 - 新增頁 `RequisitionCreatePage`:電腦是表格、平板 / 手機是卡片(`CandidateTable` / `CandidateCards`);純函式在 `requisition-form.ts`。
 - 編輯頁(草稿、被退回)沿用表單引擎的預設編輯頁。
 
