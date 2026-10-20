@@ -44,6 +44,10 @@ export const formUpdateHandler = (state: FormUpdateState) =>
     if (input.allowDraft != null) {
       form.allowDraft = input.allowDraft;
     }
+    if (input.voidReasonCategoryKey !== undefined) {
+      form.voidReasonCategoryKey =
+        input.voidReasonCategoryKey === "" ? null : input.voidReasonCategoryKey;
+    }
     if (input.serial !== undefined) {
       form.serial =
         input.serial === null

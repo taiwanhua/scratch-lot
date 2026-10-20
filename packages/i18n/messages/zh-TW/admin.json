@@ -1422,6 +1422,10 @@
       "allowDraftHint": "關掉後,新增 / 編輯頁不顯示 [存草稿],只能直接送出。",
       "allowDraftOn": "已允許存草稿。",
       "allowDraftOff": "已關閉存草稿,之後只能直接送出。",
+      "voidReasonCategory": "作廢原因",
+      "voidReasonCategoryHint": "選欄位管理的類別後,作廢時要從該類別的選項挑原因(選「其他」要填說明);不設定 = 自由填寫理由。",
+      "voidReasonCategoryUnset": "不設定(自由填寫)",
+      "voidReasonCategorySaved": "已更新作廢原因設定。",
       "assignedTo": "已分派:{tenants}",
       "tabs": "表單設定頁籤",
       "tabDesign": "表單設計",
@@ -2262,6 +2266,8 @@
       "void": "作廢",
       "copy": "複製為新單",
       "voidedReason": "作廢理由:{reason}",
+      "voidedReasonOption": "作廢原因:{option}",
+      "voidedReasonOptionNote": "作廢原因:{option}({note})",
       "clearedFields": "新單已建立;以下欄位的來源已失效,已清空:{fields}"
     },
     "dialog": {
@@ -2276,6 +2282,11 @@
       "title": "作廢這張單",
       "body": "作廢後這張單不再生效、內容不能再改;需要的話可以「複製為新單」重新送出。",
       "reason": "作廢理由",
+      "reasonOption": "作廢原因",
+      "note": "說明",
+      "noteRequired": "選「其他」時請填寫說明",
+      "noOptions": "沒有可選的作廢原因,請洽管理員到欄位管理新增選項",
+      "optionsUnavailable": "作廢原因載入失敗,請稍後再試",
       "confirm": "作廢"
     },
     "retry": {

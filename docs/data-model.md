@@ -137,7 +137,7 @@
 - **`form_submissions` 的值**:`values` 依欄位型別存,受保護欄位原值照存、讀取時投影為 `"[redacted]"`;`date` / `datetime` 與 `summary.date` 存 Mongo `Date`(兩者都是時點,`date` = 選的那天在租戶時區 00:00),GraphQL 回 ISO 字串。明細列(`array`)欄存列的陣列 `[{ rowId, <子欄 key>: 值 }]`:`rowId` 是前端建列時產生的 UUID(同一明細內唯一、修訂之間不變),陣列順序就是列的順序。
 - **`form_submissions` 的修訂**:`revisions[]` 每筆 `{ revision, version, values, ctx: { at, timezone, userId, orgId, orgIds, tenantId }, kind?, upgradedBy?, upgradedAt? }` 是**完整值快照**。`ctx.orgId` = 操作者當時的目前組織、`orgIds` = 當時的所屬組織(全部)、`tenantId` = 當時的租戶頂層(根組織 = null;舊修訂沒有這兩欄,讀成空陣列 / null)。`version` = 這一筆修訂綁的表單版本(讀取一律 `revisions[r].version ?? version`);提交本身的 `version` 只有舊版資料升級會改綁。`kind: "upgrade"` = 舊版資料升級產生的修訂,`ctx` 沿用上一筆,誰與何時升級記在 `upgradedBy` / `upgradedAt`。`editVersion` 是每次寫入的樂觀鎖;`(createdBy, clientRequestId)` 唯一(含已軟刪除的);`touched[]` 是使用者碰過的欄位 key(只對草稿有意義)。容量上限見 `docs/modules/forms.md`「提交的寫入規則」。
 - **表單的單號**:`forms.serial`(`{ prefix, period, digits, separator? }`,null / 缺席 = 不給號)是表單設定;`form_submissions.serialNo` 在第一次送出時給(`SerialService`),之後不變(退回、撤回、作廢都保留),草稿與複製為新單的草稿為 null。
-- **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason` / `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
+- **`form_submissions` 的流程欄位**:`status` 七值(正本 `@repo/domain/workflow` 的 `SUBMISSION_STATUSES`);`currentInstanceId` 為 null = 沒走過流程(`completed` 後可修改),有值 = 走過(`completed` 後鎖定、只能作廢);`blocked` = 實例被阻擋;`voidedAt` / `voidedBy` / `voidReason`(說明)/ `voidReasonKey` / `voidReasonLabel`(作廢原因的選項值與作廢當下的名稱,表單設了 `forms.voidReasonCategoryKey` 時才有)/ `replacedById` 是作廢資訊;`copiedFrom` = 「複製為新單」的來源。
 
 ### 流程
 

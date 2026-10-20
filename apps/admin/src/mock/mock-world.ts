@@ -84,10 +84,8 @@ import {
   modulesForView,
   orgsForView,
 } from "./mock-fixtures";
-import {
-  MOCK_DEMO_FORM_LIST_COLUMNS,
-  MOCK_SHOPPING_SERIAL,
-} from "./mock-form-serial";
+import { MOCK_FORM_RUNTIME_SETTINGS } from "./mock-form-runtime-settings";
+import { MOCK_SHOPPING_SERIAL } from "./mock-form-serial";
 import { mockNotificationSettings } from "./mock-notification-settings";
 import { mockWorkflowDesign } from "./mock-workflow-design";
 import type { MockHandler, MockWorldOptions } from "./mock-world-source";
@@ -284,7 +282,7 @@ export const mockHandlers = ({
         [`${SHOPPING_FORM_KEY}@1`]: shoppingDefinition(),
         [`${LEAVE_FORM_KEY}@1`]: leaveDefinition(),
       },
-      listColumns: MOCK_DEMO_FORM_LIST_COLUMNS,
+      ...MOCK_FORM_RUNTIME_SETTINGS,
       submissions: [
         submissionFragment({ serialNo: "PU-202610-0001" }),
         submissionFragment({

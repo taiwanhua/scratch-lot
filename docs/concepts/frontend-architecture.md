@@ -277,6 +277,19 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 
 正本:`apps/admin/src/hooks/base/usePermissions.ts`、`packages/domain/src/permission/keys.ts`
 
+## 日期與時間的顯示
+
+日期 / 日期時間在 admin 一律是**時點**(api 只收時點),顯示一律經 `@repo/domain/form` 的 `formatTemporal(value, { type, timezone })`,時區用讀者當前租戶的時區(`me.currentOrg.timezone`),不各頁自己 `toLocaleString`。`type`:
+
+| type           | 輸出               | 用在                                      |
+| -------------- | ------------------ | ----------------------------------------- |
+| `date`         | `2026-10-12`       | 一般日期欄、列表                          |
+| `datetime`     | `2026-10-12 14:35` | 一般日期時間欄、紀錄時間                  |
+| `monthDay`     | `10/12`            | 同年份內的密集畫面(排班格、卡片),月日補零 |
+| `monthDayTime` | `10/12 14:35`      | 同上,帶時間                               |
+
+空值 → 空字串;不是時點的字串原樣回;時區不合法以 UTC 顯示。正本:`packages/domain/src/form/temporal.ts`;規則見 `docs/concepts/form-engine.md`「日期與日期時間都是時點」。
+
 ## 表格兩種
 
 | 種類        | 用在哪                                                    | 欄位渲染              | 入口                  |

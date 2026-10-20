@@ -1421,6 +1421,10 @@
       "allowDraftHint": "When off, the create and edit pages hide [Save draft]; entries can only be submitted directly.",
       "allowDraftOn": "Drafts are now allowed.",
       "allowDraftOff": "Drafts are turned off; entries can only be submitted directly.",
+      "voidReasonCategory": "Void reason",
+      "voidReasonCategoryHint": "With a Field manager category set, voiding requires picking a reason from its options (\"Other\" needs a note). Not set = free-text reason.",
+      "voidReasonCategoryUnset": "Not set (free text)",
+      "voidReasonCategorySaved": "Void reason setting updated.",
       "enabledOff": "Form disabled in this organization.",
       "assignedTo": "Assigned: {tenants}",
       "tabs": "Form settings tabs",
@@ -2262,6 +2266,8 @@
       "void": "Void",
       "copy": "Copy as new",
       "voidedReason": "Void reason: {reason}",
+      "voidedReasonOption": "Void reason: {option}",
+      "voidedReasonOptionNote": "Void reason: {option} ({note})",
       "clearedFields": "New submission created; these fields were cleared because their sources are no longer valid: {fields}"
     },
     "dialog": {
@@ -2276,6 +2282,11 @@
       "title": "Void this submission",
       "body": "A voided submission is no longer in effect and cannot be edited. You can \"Copy as new\" and submit again.",
       "reason": "Void reason",
+      "reasonOption": "Void reason",
+      "note": "Note",
+      "noteRequired": "A note is required when \"Other\" is selected",
+      "noOptions": "No void reasons are available. Ask an administrator to add options in Field manager",
+      "optionsUnavailable": "Couldn't load void reasons. Please try again later",
       "confirm": "Void"
     },
     "retry": {
