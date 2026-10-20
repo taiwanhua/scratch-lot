@@ -3,6 +3,7 @@ import type { ScheduleTabEntry } from "@/components/project/schedule/ScheduleTab
 import { SCHEDULE_PERMISSIONS } from "../schedule-permissions";
 import { CalendarTab } from "./CalendarTab/CalendarTab";
 import { DayOffOverviewTab } from "./DayOffsTab/DayOffOverviewTab";
+import { SupportRequestsTab } from "./SupportRequestsTab/SupportRequestsTab";
 
 /**
  * 排班作業(`schedule.manage`,表單模組:綁定 支援需求單)的分頁
@@ -17,4 +18,11 @@ export const MANAGE_TABS: readonly ScheduleTabEntry[] = [
     Content: DayOffOverviewTab,
   },
   { value: "calendar", labelKey: "calendar", Content: CalendarTab },
+  // 支援需求單(規格 14.10):有 schedule.manage.view 才看得到(列表 + 右側檢視 / 審核)
+  {
+    value: "support-requests",
+    labelKey: "supportRequests",
+    permission: SCHEDULE_PERMISSIONS.manageView,
+    Content: SupportRequestsTab,
+  },
 ];

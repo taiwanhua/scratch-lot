@@ -490,7 +490,8 @@
       "rules": "Rules",
       "calendar": "Calendar",
       "dayOffs": "My day-offs",
-      "dayOffOverview": "Day-off overview"
+      "dayOffOverview": "Day-off overview",
+      "supportRequests": "Support requests"
     },
     "shell": {
       "empty": "No tabs are available on this page yet."
@@ -875,6 +876,33 @@
         "reasonHint": "After the deadline a reason is required; \"Other\" needs details.",
         "saveSuccess": "Day-off changed",
         "deleteSuccess": "Day-off deleted"
+      }
+    },
+    "supportRequests": {
+      "loading": "Loading",
+      "empty": "No support requests yet",
+      "listAria": "Support requests",
+      "panelAria": "Support request review",
+      "create": "+ New",
+      "total": "{total} in total",
+      "timeRange": "{start}–{end}",
+      "cardTitle": "{date} · {start}–{end}",
+      "cardDetail": "{position} · {headcount} people · {branch}",
+      "selectHint": "Select a support request to view and review it here",
+      "panelTitle": "Support request · {branch}",
+      "panelTitleLoading": "Support request",
+      "openPage": "Open full page",
+      "columns": {
+        "date": "Date",
+        "time": "Time",
+        "position": "Position",
+        "headcount": "People",
+        "branch": "Branch",
+        "status": "Status"
+      },
+      "filters": {
+        "status": "Status",
+        "all": "All"
       }
     }
   }

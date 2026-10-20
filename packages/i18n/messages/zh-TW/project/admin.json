@@ -490,7 +490,8 @@
       "rules": "規則",
       "calendar": "行事曆",
       "dayOffs": "我的畫休",
-      "dayOffOverview": "畫休總覽"
+      "dayOffOverview": "畫休總覽",
+      "supportRequests": "支援需求單"
     },
     "shell": {
       "empty": "這一頁目前沒有可用的分頁。"
@@ -875,6 +876,33 @@
         "reasonHint": "畫休截止後代改要選原因;選「其他」要填說明。",
         "saveSuccess": "已代改畫休",
         "deleteSuccess": "已刪除畫休"
+      }
+    },
+    "supportRequests": {
+      "loading": "載入中",
+      "empty": "目前沒有支援需求單",
+      "listAria": "支援需求單列表",
+      "panelAria": "支援需求單檢視與審核",
+      "create": "+ 新增",
+      "total": "共 {total} 筆",
+      "timeRange": "{start}–{end}",
+      "cardTitle": "{date} · {start}–{end}",
+      "cardDetail": "{position} · {headcount} 人 · {branch}",
+      "selectHint": "點一筆支援需求單,在這裡檢視與審核",
+      "panelTitle": "支援需求單 · {branch}",
+      "panelTitleLoading": "支援需求單",
+      "openPage": "開啟完整頁面",
+      "columns": {
+        "date": "日期",
+        "time": "時段",
+        "position": "崗位",
+        "headcount": "人數",
+        "branch": "分店",
+        "status": "狀態"
+      },
+      "filters": {
+        "status": "狀態",
+        "all": "全部"
       }
     }
   }
