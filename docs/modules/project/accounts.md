@@ -105,7 +105,7 @@
 
 ### 即時現金帳
 
-- **流水一律在交易內寫**(比照 `BaseRepository.createMany`):`recordCashMovement` / `reverseCashMovement` 收 `withTransaction` 給的 session,缺席 / null = 用進行中的交易;不在交易內 → `CashLedgerOutsideTransactionError`。流水與同一個動作的稽核、單據寫入一起成功、一起回復(稽核寫入失敗 → 流水回復,有測試)。
+- **流水一律在交易內寫**(比照 `BaseRepository.createMany`):`recordCashMovement` / `reverseCashMovement` 收 `withTransaction` 給的 session,缺席(`undefined`)= 用進行中的交易(不收 `null`,同 `createMany`);不在交易內 → `CashLedgerOutsideTransactionError`。流水與同一個動作的稽核、單據寫入一起成功、一起回復(稽核寫入失敗 → 流水回復,有測試)。
 - 小金庫應有 = `vaultBaseline(orgId)` 的清點金額 + 之後流水對小金庫的加總;**只由流水算**,沒有可被改寫的數字欄位(帳本 repository 的修改 / 刪除方法一律拋 `AppendOnlyLedgerError`)。
 - 起算點由日結功能以 `registerVaultBaselineProvider` 登記;登記前一律從 0 起算。
 - 抽屜應有由店面(收銀班次)計算:本模組提供 `sumShiftMovements(operator, shiftId)`(流入抽屜 − 流出抽屜);畫面上的抽屜卡片待店面併回後加上。
@@ -117,7 +117,7 @@
 - 已付淨額 = 支出 − 收入;已收淨額 = 收入 − 支出;可以分次。沖正以反方向計入。
 - 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回批貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。
 - **沖正收付**(`reverseSettlement`):要看得到單據、有那一邊的權限,且**這一邊的記帳分店在操作者的可見範圍內**(現金 = 流水的分店;銀行 = 歸屬分店,沒有時看登記的組織),銀行另要求看得到那個帳戶;不符合一律 `NOT_FOUND`。現金沖正以操作者自己的上下文寫。同一筆同時沖正只有一個成功(唯一索引,有併發測試)。
-- **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「批貨支出」)。不檢查按鈕權限、不看先填的金額;`amount ≤ 0` 不記(回 null);沿用呼叫端的交易,不在交易內拋錯;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
+- **自動記帳**(`SettlementService.recordAutomatic(session, { operator, moduleKey, submission, side, button, accountId, amount })`):給單據在交易內記帳用(例:進貨單送出時記第一筆「批貨支出」)。不檢查按鈕權限、不看先填的金額;`amount ≤ 0` 不記(回 null);沿用呼叫端的交易,不在交易內拋 `CashLedgerOutsideTransactionError`;帳戶仍要使用中、使用組織包含這一邊的分店(帳戶以單據的租戶為邊界讀)。
 - 銀行:帳戶要使用中、使用組織包含這一邊的分店(`BANK_ACCOUNT_NOT_USABLE`)。現金(只有調貨):經手人 / 收款人必填;來源小金庫,或收銀點抽屜(要有開著的班,`NO_OPEN_SHIFT`;店面以 `registerOpenShiftResolver` 登記)。
 - 作廢 / 駁回前每一邊淨額都要是 0:單據在自己的 `registerFormLifecycle` 掛 `settlementClearedGuard`(`beforeVoid` / `beforeReject`,`inject: [SettlementLedger]`),擋下時 `FORBIDDEN` + `reason = SETTLEMENT_NOT_CLEARED`。
 - 參與收付的提交狀態:`reviewing` / `returned` / `withdrawn` / `completed`(草稿、作廢、駁回不算)。

@@ -91,7 +91,7 @@ const ZERO_BASELINE: VaultBaseline = { amount: 0, since: null };
  * 記錯用 `reverseCashMovement` 寫一筆反向。應有現金只由流水加總(第 17 章共通原則)。
  *
  * - **必須在交易內**(比照 `BaseRepository.createMany`):`session` 給 `withTransaction` 的 session,
- *   或缺席 / null = 用進行中的交易;不在交易內 → 拋 `CashLedgerOutsideTransactionError`。
+ *   或缺席(`undefined`)= 用進行中的交易(不收 `null`,同 `createMany`);不在交易內 → 拋 `CashLedgerOutsideTransactionError`。
  *   流水與同一個動作的其他寫入(稽核、單據狀態)一起成功、一起回復
  * - 小金庫應有 = `vaultBaseline` 的清點金額 + 之後流水對小金庫的影響
  * - 抽屜應有由店面(P21)以 `sumShiftMovements(shiftId)` 加上班次的期初與售出計算
@@ -101,7 +101,7 @@ export class CashLedgerService {
   constructor(private readonly movements: LotteryCashMovementsRepository) {}
 
   async recordCashMovement(
-    session: ClientSession | null | undefined,
+    session: ClientSession | undefined,
     input: CashMovementInput,
   ): Promise<CashMovementRecord> {
     const active = activeSessionOf(session);
@@ -138,7 +138,7 @@ export class CashLedgerService {
    * 兩個人同時沖正同一筆,由唯一索引擋下後到的那一個。
    */
   async reverseCashMovement(
-    session: ClientSession | null | undefined,
+    session: ClientSession | undefined,
     id: Types.ObjectId | string,
     by: { operator: OperatorContext; note?: string | null },
   ): Promise<CashMovementRecord> {
@@ -286,9 +286,7 @@ export class CashLedgerOutsideTransactionError extends Error {
 }
 
 /** 給的 session,或進行中交易的 session;都不在交易內 → 拋錯。 */
-function activeSessionOf(
-  session: ClientSession | null | undefined,
-): ClientSession {
+function activeSessionOf(session: ClientSession | undefined): ClientSession {
   const active = session ?? currentSession();
   if (active?.inTransaction() !== true) {
     throw new CashLedgerOutsideTransactionError();

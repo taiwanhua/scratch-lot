@@ -938,7 +938,7 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         extensions: { fields: expect.arrayContaining(["shiftId", "reason"]) },
       }); // 不在交易內 → 拋錯(流水要與同一個動作的其他寫入一起回復)
       await expect(
-        api.app.get(CashLedgerService).recordCashMovement(null, {
+        api.app.get(CashLedgerService).recordCashMovement(undefined, {
           operator,
           orgId: storeB,
           type: "correction_increase",
@@ -1459,8 +1459,8 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
         accountId: new Types.ObjectId(account.id),
       };
       await expect(
-        service.recordAutomatic(null, { ...input, amount: 17_000 }),
-      ).rejects.toThrow("交易內");
+        service.recordAutomatic(undefined, { ...input, amount: 17_000 }),
+      ).rejects.toBeInstanceOf(CashLedgerOutsideTransactionError);
       const transactions = api.app.get(TransactionService);
       expect(
         await transactions.withTransaction((session) =>

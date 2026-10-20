@@ -44,7 +44,10 @@ import {
   type BankTransactionRecord,
   BankTransactionsService,
 } from "../accounts/bank-transactions.service";
-import { CashLedgerService } from "../cash/cash-ledger.service";
+import {
+  CashLedgerOutsideTransactionError,
+  CashLedgerService,
+} from "../cash/cash-ledger.service";
 import { openShiftOf } from "../cash/open-shift";
 import type {
   LotterySettlementCandidatesInput,
@@ -331,7 +334,7 @@ export class SettlementService {
    * 寫入者 = `operator`(事後動作給的系統身分,或按按鈕的人)。
    */
   async recordAutomatic(
-    session: ClientSession | null | undefined,
+    session: ClientSession | undefined,
     input: {
       operator: OperatorContext;
       moduleKey: string;
@@ -346,7 +349,7 @@ export class SettlementService {
   ): Promise<Types.ObjectId | null> {
     const active = session ?? currentSession();
     if (active?.inTransaction() !== true) {
-      throw new Error("recordAutomatic 必須在交易內(沿用呼叫端的交易)");
+      throw new CashLedgerOutsideTransactionError();
     }
     if (!Number.isInteger(input.amount) || input.amount <= 0) {
       return null;
