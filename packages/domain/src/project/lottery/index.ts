@@ -5,7 +5,9 @@
  * - `ticket-code.ts`:編號解析(背面編號 / 正面編號 / 正面條碼)、本號補 0、本編號 / 張編號、張號區段
  * - `ticket-events.ts`:張的狀態、位置、鎖定與張數事件類型
  * - `book-stats.ts`:本的即時計算(待標註、剩餘、持有、未拆 / 檯面中 / 售完)與已給本數
+ * - `requisition.ts`:叫貨單的表單代號 / 欄位 key、新遊戲、銷售欄、排序、預估批購金額、超過預計要給本數
  */
 export * from "./book-stats";
+export * from "./requisition";
 export * from "./ticket-code";
 export * from "./ticket-events";
