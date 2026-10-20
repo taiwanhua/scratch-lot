@@ -115,6 +115,25 @@ export function scopeAggregate<TAggregate extends Aggregate<unknown>>(
   return aggregate;
 }
 
+const crossTenantAggregates = new WeakSet<object>();
+
+/**
+ * 標記一個 aggregate 為**跨租戶系統出口**:plugin 的 aggregate 中介層不套可見範圍、共用與資料範圍規則
+ * (軟刪除條件由呼叫端自己寫)。唯一的呼叫端是 `form-submission-usage.ts`(ADR-0005「例外出口」,
+ * 退役權限清理的跨租戶計數),由 `exists-any-callers.test.ts` 掃 src 鎖定。
+ */
+export function markCrossTenantAggregate<TAggregate extends Aggregate<unknown>>(
+  aggregate: TAggregate,
+): TAggregate {
+  crossTenantAggregates.add(aggregate);
+  return aggregate;
+}
+
+/** 這個 aggregate 是否標記為跨租戶系統出口(只給 plugin 讀)。 */
+export function isCrossTenantAggregate(aggregate: object): boolean {
+  return crossTenantAggregates.has(aggregate);
+}
+
 export function getQueryScope(query: object): QueryScope | undefined {
   return queryScopes.get(query);
 }

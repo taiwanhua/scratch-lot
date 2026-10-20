@@ -1,6 +1,7 @@
 /* eslint-disable @repo/no-raw-model-query -- 退役權限清理的跨租戶計數:必須數到**全部**租戶的提交(含操作者可見範圍 / 資料範圍規則之外的),少算就會把還有草稿在用的權限刪掉;只回計數、不回任何提交內容;到期條件:無 */
 import type { Model } from "mongoose";
 
+import { markCrossTenantAggregate } from "./operator-context";
 import type { FormSubmission } from "./schemas/form-submission.schema";
 
 /**
@@ -54,8 +55,9 @@ export class FormSubmissionUsageCounter {
       return usage;
     }
     const asked = [...versions];
-    const rows = await this.model
-      .aggregate<UsageRow>([
+    // 標記為登記過的跨租戶出口:tenantScopePlugin 的 aggregate 中介層對未帶上下文的 aggregate 一律拋錯
+    const rows = await markCrossTenantAggregate(
+      this.model.aggregate<UsageRow>([
         {
           $match: {
             formKey,
@@ -90,8 +92,8 @@ export class FormSubmissionUsageCounter {
             count: { $sum: 1 },
           },
         },
-      ])
-      .exec();
+      ]),
+    ).exec();
     const drafts = new Set<number>();
     const completed = new Set<number>();
     for (const row of rows) {

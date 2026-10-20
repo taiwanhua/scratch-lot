@@ -76,3 +76,17 @@ describe("租戶邊界出口的呼叫端登記", () => {
     ]);
   });
 });
+
+/**
+ * 跨租戶 aggregate 的標記(`markCrossTenantAggregate`)是 ADR-0005 登記的系統出口:
+ * 只給退役權限清理的跨租戶計數,其他 aggregate 一律經 `BaseRepository.aggregate`。
+ */
+describe("跨租戶 aggregate 出口的呼叫端登記", () => {
+  it("markCrossTenantAggregate 只出現在定義它的檔、plugin 與 form-submission-usage.ts", () => {
+    expect(filesMentioning("CrossTenantAggregate")).toEqual([
+      "database/form-submission-usage.ts",
+      "database/operator-context.ts",
+      "database/plugins/tenant-scope.plugin.ts",
+    ]);
+  });
+});
