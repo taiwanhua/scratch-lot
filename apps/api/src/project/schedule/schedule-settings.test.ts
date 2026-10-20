@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
-import type { Connection, Types } from "mongoose";
+import { getModelToken } from "@nestjs/mongoose";
+import type { Connection, Model, Types } from "mongoose";
 
 import { SCHEDULE_RULE_DEFINITIONS } from "@repo/domain/project/schedule-settings";
 
@@ -10,6 +11,15 @@ import {
 } from "../../auth/test-support/auth-app";
 import { createOrg } from "../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import {
+  SCHEDULE_CALENDAR_DAYS_COLLECTION,
+  ScheduleCalendarDay,
+} from "../database/schedule/schedule-calendar-day.schema";
+import {
+  SCHEDULE_SETTINGS_COLLECTION,
+  ScheduleSetting,
+} from "../database/schedule/schedule-setting.schema";
+import { SCHEDULE_STAFF_COLLECTION } from "../database/schedule/schedule-staff.schema";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import {
   ALL_SCHEDULE_TEST_PERMISSIONS,
@@ -17,6 +27,7 @@ import {
   type ScheduleTestUser,
   createScheduleUser,
   seedScheduleAuthorization,
+  seedScheduleFieldOptions,
 } from "./test-support/fixtures";
 
 // ---- GraphQL ----
@@ -135,8 +146,8 @@ const DELETE_TEMPLATE = /* GraphQL */ `
 `;
 
 const WEEK_TEMPLATES = /* GraphQL */ `
-  query ScheduleDemandWeekTemplates {
-    scheduleDemandWeekTemplates {
+  query ScheduleDemandWeekTemplates($input: ScheduleDemandWeekTemplatesInput) {
+    scheduleDemandWeekTemplates(input: $input) {
       items {
         id
         name
@@ -355,6 +366,10 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
   let wang: ScheduleTestUser;
   let lin: ScheduleTestUser;
 
+  function modelOf<T>(name: string): Model<T> {
+    return api.app.get<Model<T>>(getModelToken(name));
+  }
+
   function gql(
     user: ScheduleTestUser,
     query: string,
@@ -433,6 +448,10 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
     api = await startAuthTestApp("cookhome-test-schedule-settings");
     connection = api.connection;
     await seedScheduleAuthorization(connection);
+    await seedScheduleFieldOptions(connection);
+    // 先等唯一索引建好(先例:遊戲代號),同時寫入與直接寫入的測試才擋得到
+    await modelOf<ScheduleCalendarDay>(ScheduleCalendarDay.name).init();
+    await modelOf<ScheduleSetting>(ScheduleSetting.name).init();
 
     tenantA = await createOrg(connection, {
       name: "租戶甲",
@@ -697,6 +716,64 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       }
     });
 
+    it("存檔前只留定義裡的欄位:多送的 key 丟掉", async () => {
+      const result = await customize(manager, zhongshan, {
+        key: "entryMatchToleranceMinutes",
+        value: { amount: 30, extra: "x", nested: { a: 1 } },
+      });
+      expect(result.errors).toBeUndefined();
+      const stored = await connection
+        .collection(SCHEDULE_SETTINGS_COLLECTION)
+        .findOne<{ value: Record<string, unknown> }>({
+          orgId: zhongshan,
+          key: "entryMatchToleranceMinutes",
+          deletedAt: null,
+        });
+      expect(stored?.value).toEqual({ amount: 30 });
+    });
+
+    it("負責人 / 協同預設任務要是「執行任務」啟用中的選項", async () => {
+      const bad = await customize(manager, zhongshan, {
+        key: "defaultTasks",
+        value: {
+          defaultLeaderTaskKey: "not-a-task",
+          defaultHelperTaskKey: "store-duties",
+        },
+      });
+      expect(errorOf(bad)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["value.defaultLeaderTaskKey"],
+      });
+      const ok = await customize(manager, zhongshan, {
+        key: "defaultTasks",
+        value: {
+          defaultLeaderTaskKey: "store-duties",
+          defaultHelperTaskKey: "store-duties",
+        },
+      });
+      expect(ok.errors).toBeUndefined();
+    });
+
+    it("同一組織同一條規則只有一筆未刪除的自訂(唯一索引)", async () => {
+      const settings = connection.collection(SCHEDULE_SETTINGS_COLLECTION);
+      const row = {
+        orgId: hsinchu,
+        key: "minRestBetweenShifts",
+        enabled: true,
+        value: { amount: 10 },
+        level: "reminder",
+        order: 5,
+        deletedAt: null,
+      };
+      await settings.insertOne({ ...row });
+      await expect(settings.insertOne({ ...row })).rejects.toMatchObject({
+        code: 11_000,
+      });
+      // 軟刪除的不算
+      await settings.insertOne({ ...row, deletedAt: new Date() });
+      await settings.deleteMany({ orgId: hsinchu, key: row.key });
+    });
+
     it("整組自訂要列出每一條條件各一次", async () => {
       const result = await gql(manager, CUSTOMIZE_AUTO_RUN, {
         input: {
@@ -730,6 +807,15 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         enabled: true,
         orgs: [],
       });
+
+      // 排班檔案是整個租戶共用的:歸屬欄 = 租戶頂層(分店店長加的也一樣)
+      const document = await connection
+        .collection(SCHEDULE_STAFF_COLLECTION)
+        .findOne<{ orgId: Types.ObjectId; tenantId: Types.ObjectId }>({
+          userId: wang.userId,
+        });
+      expect(String(document?.orgId)).toBe(String(tenantA));
+      expect(String(document?.tenantId)).toBe(String(tenantA));
 
       const again = await gql(manager, ADD_STAFF, {
         input: { userIds: [String(wang.userId)] },
@@ -1026,6 +1112,79 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       expect(rule.errors).toBeUndefined();
     });
 
+    it("崗位、執行任務要是欄位管理啟用中的選項", async () => {
+      expect(
+        errorOf(await saveTemplate(hq, { positionKey: "nowhere" })),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["positionKey"] });
+      expect(
+        errorOf(await saveTemplate(hq, { positionKey: "retired-position" })),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["positionKey"] });
+      expect(
+        errorOf(
+          await saveTemplate(hq, {
+            tasks: [{ role: "helper", taskKey: "unknown-task" }],
+          }),
+        ),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["tasks"] });
+    });
+
+    it("週範本列表帶 orgId:總部看分店時,那家店建立的週範本名稱正確,兄弟分店的不出現", async () => {
+      const branchTemplate = dataOf(
+        await saveTemplate(manager, { name: "中山早", shortName: "中" }),
+        "saveScheduleDemandTemplate",
+      ).item;
+      const zhongshanWeek = dataOf(
+        await gql(manager, SAVE_WEEK_TEMPLATE, {
+          input: {
+            name: "中山週",
+            days: [[branchTemplate.id], [], [], [], [], [], []],
+          },
+        }),
+        "saveScheduleDemandWeekTemplate",
+      ).item;
+      const hsinchuManager = await createScheduleUser(
+        api,
+        connection,
+        [hsinchu],
+        [P.settingsView, P.editTemplates],
+      );
+      dataOf(
+        await gql(hsinchuManager, SAVE_WEEK_TEMPLATE, {
+          input: { name: "新竹週", days: [[], [], [], [], [], [], []] },
+        }),
+        "saveScheduleDemandWeekTemplate",
+      );
+
+      const forZhongshan = dataOf(
+        await gql(hq, WEEK_TEMPLATES, { input: { orgId: String(zhongshan) } }),
+        "scheduleDemandWeekTemplates",
+      ).items;
+      const names = forZhongshan.map((item) => item.name);
+      expect(names).toEqual(expect.arrayContaining(["一般週", "中山週"]));
+      expect(names).not.toContain("新竹週");
+      expect(
+        forZhongshan.find((item) => item.id === zhongshanWeek.id)?.days[0],
+      ).toEqual([branchTemplate.id]);
+      // 總部看分店時,分店建立的週範本不是總部這一層的,改不了
+      expect(
+        forZhongshan.find((item) => item.id === zhongshanWeek.id)?.canEdit,
+      ).toBe(false);
+
+      // 沒帶 orgId = 當前組織(總部):看不到分店建立的
+      const ownList = dataOf(
+        await gql(hq, WEEK_TEMPLATES),
+        "scheduleDemandWeekTemplates",
+      ).items;
+      expect(ownList.map((item) => item.name)).not.toContain("中山週");
+
+      // 規則的預設週範本選得到中山週
+      const rule = await customize(hq, zhongshan, {
+        key: "autoDemandWeekTemplateId",
+        value: { weekTemplateId: zhongshanWeek.id },
+      });
+      expect(rule.errors).toBeUndefined();
+    });
+
     it("沒有 edit-templates:canCreate = false,新增被擋", async () => {
       const payload = dataOf(
         await gql(viewer, TEMPLATES),
@@ -1126,6 +1285,63 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         code: "VALIDATION_FAILED",
         fields: ["category", "name"],
       });
+    });
+
+    it("特殊日類別要是「特殊日類別」啟用中的選項", async () => {
+      const result = await gql(manager, SAVE_CALENDAR_DAY, {
+        input: {
+          orgId: String(zhongshan),
+          date: "2026-11-21",
+          type: "special",
+          category: "no-such-category",
+          name: "活動",
+        },
+      });
+      expect(errorOf(result)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["category"],
+      });
+    });
+
+    it("唯一索引 (orgId, date):直接寫第二筆未刪除的 → E11000;軟刪除的不算", async () => {
+      const days = connection.collection(SCHEDULE_CALENDAR_DAYS_COLLECTION);
+      const row = {
+        orgId: hsinchu,
+        date: "2026-12-01",
+        type: "closed",
+        category: null,
+        name: null,
+        note: null,
+        paletteKey: null,
+        deletedAt: null,
+      };
+      await days.insertOne({ ...row });
+      await expect(days.insertOne({ ...row })).rejects.toMatchObject({
+        code: 11_000,
+      });
+      await days.insertOne({ ...row, deletedAt: new Date() });
+      await days.deleteMany({ orgId: hsinchu, date: row.date });
+    });
+
+    it("同時新增同一天:只成功一筆,另一筆 VALIDATION_FAILED(date)", async () => {
+      const input = {
+        orgId: String(zhongshan),
+        date: "2026-11-25",
+        type: "closed",
+      };
+      const results = await Promise.all(
+        [1, 2].map(() => gql(manager, SAVE_CALENDAR_DAY, { input })),
+      );
+      const succeeded = results.filter((result) => result.errors === undefined);
+      expect(succeeded).toHaveLength(1);
+      expect(results.flatMap((result) => result.errors ?? [])).toEqual([
+        expect.objectContaining({
+          extensions: expect.objectContaining({
+            code: "VALIDATION_FAILED",
+            fields: ["date"],
+          }),
+        }),
+      ]);
     });
 
     it("沒有 edit-calendar:canEdit = false,新增被擋", async () => {

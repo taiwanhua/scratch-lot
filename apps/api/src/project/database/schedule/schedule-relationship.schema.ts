@@ -57,7 +57,11 @@ export class ScheduleRelationship {
 export const ScheduleRelationshipSchema =
   SchemaFactory.createForClass(ScheduleRelationship);
 
-ScheduleRelationshipSchema.index({ type: 1, firstId: 1, secondId: 1 });
+// 同一人同一家店只有一筆未刪除的關聯(拿掉一家店是軟刪除,之後可以再加)
+ScheduleRelationshipSchema.index(
+  { type: 1, firstId: 1, secondId: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
+);
 ScheduleRelationshipSchema.index({ type: 1, secondId: 1 });
 ScheduleRelationshipSchema.index({ orgId: 1, createdAt: 1 });
 ScheduleRelationshipSchema.plugin(baseFieldsPlugin);

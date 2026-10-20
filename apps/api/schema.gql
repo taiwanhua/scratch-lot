@@ -2412,7 +2412,7 @@ type Query {
   roles(input: RolesInput!): RolesPayload!
   scheduleCalendar(input: ScheduleCalendarInput!): ScheduleCalendarPayload!
   scheduleDemandTemplates: ScheduleDemandTemplatesPayload!
-  scheduleDemandWeekTemplates: ScheduleDemandWeekTemplatesPayload!
+  scheduleDemandWeekTemplates(input: ScheduleDemandWeekTemplatesInput): ScheduleDemandWeekTemplatesPayload!
   scheduleFieldOptions(categoryKey: String!): ScheduleFieldOptionsPayload!
   scheduleRules(input: ScheduleRulesInput): ScheduleRulesPayload!
   scheduleStaff(input: ScheduleStaffListInput): ScheduleStaffListPayload!
@@ -2843,6 +2843,10 @@ type ScheduleDemandWeekTemplate {
 
 type ScheduleDemandWeekTemplatePayload {
   item: ScheduleDemandWeekTemplate!
+}
+
+input ScheduleDemandWeekTemplatesInput {
+  orgId: ID
 }
 
 type ScheduleDemandWeekTemplatesPayload {

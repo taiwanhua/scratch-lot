@@ -124,3 +124,56 @@ export async function createScheduleUser(
   const token = permissionKeys.length > 0 ? await login(api, account) : "";
   return { userId, account, token };
 }
+
+/** 測試用的排班下拉選項(正式環境由專案 seed 種;api 測試庫只有底座種子)。 */
+const SCHEDULE_TEST_OPTIONS: Record<
+  string,
+  [value: string, enabled: boolean][]
+> = {
+  "schedule-position": [
+    ["in-store-counter", true],
+    ["outdoor-stall", true],
+    ["restock", true],
+    ["retired-position", false],
+  ],
+  "schedule-task": [
+    ["store-and-accounts-lead", true],
+    ["store-duties", true],
+  ],
+  "schedule-special-day-category": [
+    ["national-holiday", true],
+    ["event-day", true],
+    ["other", true],
+  ],
+};
+
+/** 寫入排班用到的欄位管理類別與全域選項(`retired-position` 是停用的選項)。 */
+export async function seedScheduleFieldOptions(
+  connection: Connection,
+): Promise<void> {
+  const now = new Date();
+  for (const [key, options] of Object.entries(SCHEDULE_TEST_OPTIONS)) {
+    const { insertedId: categoryId } = await connection
+      .collection("field_categories")
+      .insertOne({
+        key,
+        name: key,
+        isSystem: true,
+        enabled: true,
+        ...baseFields(now),
+      });
+    await connection.collection("fields").insertMany(
+      options.map(([value, enabled], index) => ({
+        key: `${key}:${value}`,
+        categoryId,
+        orgId: null,
+        label: value,
+        value,
+        order: index + 1,
+        enabled,
+        isSystem: true,
+        ...baseFields(now),
+      })),
+    );
+  }
+}

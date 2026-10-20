@@ -8,6 +8,7 @@ import {
   isIsoMonth,
   isTemplateShortName,
   minutesOfHhMm,
+  pickScheduleRuleValue,
   scheduleRuleDefinitionOf,
   scheduleRuleValueErrors,
 } from "./index";
@@ -112,6 +113,26 @@ describe("排班規則定義(規格 14.2)", () => {
     ["understaffed", "8", ["value"]],
   ])("%s 的值 %j → 不合法欄位 %j", (key, value, errors) => {
     expect(scheduleRuleValueErrors(definition(key), value)).toEqual(errors);
+  });
+});
+
+describe("規則值只留定義裡的欄位", () => {
+  it("多送的 key 丟掉;預設休息每一級也只留兩欄", () => {
+    expect(
+      pickScheduleRuleValue(definition("maxMonthlyDayOffs"), {
+        amount: 8,
+        extra: "x",
+      }),
+    ).toEqual({ amount: 8 });
+    expect(
+      pickScheduleRuleValue(definition("defaultBreaks"), {
+        tiers: [{ minMinutes: 240, breakMinutes: 30, note: "x" }],
+        other: 1,
+      }),
+    ).toEqual({ tiers: [{ minMinutes: 240, breakMinutes: 30 }] });
+    expect(pickScheduleRuleValue(definition("understaffed"), { a: 1 })).toEqual(
+      {},
+    );
   });
 });
 

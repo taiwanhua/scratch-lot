@@ -15,7 +15,7 @@ export const SCHEDULE_SETTINGS_COLLECTION = "schedule_settings";
  * (`@repo/domain/project/schedule-settings` 的定義)。自動排班條件整組繼承:
  * 一個組織有任何一條自動排班條件的列,就整組以它為準。
  *
- * - `(orgId, key)` 只會有一筆未刪除的列(由 service 保證);[還原] = 軟刪除
+ * - 唯一 `(orgId, key)`(只算未刪除的,partial index);[還原] = 軟刪除
  * - `value` 的形狀依規則定義的 `valueType`
  */
 @Schema({ collection: SCHEDULE_SETTINGS_COLLECTION, timestamps: true })
@@ -51,7 +51,11 @@ export class ScheduleSetting {
 export const ScheduleSettingSchema =
   SchemaFactory.createForClass(ScheduleSetting);
 
-ScheduleSettingSchema.index({ orgId: 1, key: 1 });
+// 某組織某條規則只有一筆未刪除的自訂;[還原] 軟刪除後可以再自訂
+ScheduleSettingSchema.index(
+  { orgId: 1, key: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
+);
 ScheduleSettingSchema.index({ orgId: 1, createdAt: 1 });
 ScheduleSettingSchema.plugin(baseFieldsPlugin);
 ScheduleSettingSchema.plugin(tenantScopePlugin, { moduleData: true });

@@ -16,6 +16,13 @@ import {
 import { validationError } from "../shared/schedule-error";
 import type { ScheduleFieldOptionModel } from "./schedule-field-option.model";
 
+/** 一個要驗的下拉值:哪個類別、值、錯誤時標回哪個欄位。 */
+export interface ScheduleOptionCheck {
+  categoryKey: string;
+  value: string;
+  field: string;
+}
+
 const SCHEDULE_CATEGORY_KEYS: ReadonlySet<string> = new Set(
   Object.values(SCHEDULE_FIELD_CATEGORY_KEYS),
 );
@@ -58,5 +65,41 @@ export class ScheduleFieldOptionsService {
       value: option.value,
       label: option.label,
     }));
+  }
+
+  /**
+   * 驗下拉值:每個值都要是該類別(操作者看得到的合併清單裡)**啟用中**的選項;
+   * 不是的欄位一起回 `VALIDATION_FAILED`(欄位去重、照檢查的順序)。
+   */
+  async assertOptions(
+    operator: OperatorContext,
+    checks: readonly ScheduleOptionCheck[],
+  ): Promise<void> {
+    const byCategory = new Map<string, Set<string>>();
+    for (const categoryKey of new Set(
+      checks.map((check) => check.categoryKey),
+    )) {
+      const options = await this.options(operator, categoryKey);
+      byCategory.set(
+        categoryKey,
+        new Set(options.map((option) => option.value)),
+      );
+    }
+    const invalid = [
+      ...new Set(
+        checks
+          .filter(
+            (check) =>
+              byCategory.get(check.categoryKey)?.has(check.value) !== true,
+          )
+          .map((check) => check.field),
+      ),
+    ];
+    if (invalid.length > 0) {
+      throw validationError(
+        `not an enabled option: ${invalid.join(", ")}`,
+        invalid,
+      );
+    }
   }
 }

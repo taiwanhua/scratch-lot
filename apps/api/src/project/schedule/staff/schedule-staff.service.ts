@@ -26,7 +26,11 @@ import {
   type ScheduleStaffDocument,
   ScheduleStaffRepository,
 } from "../../database/schedule/schedule.repositories";
-import { notFoundError, validationError } from "../shared/schedule-error";
+import {
+  notFoundError,
+  savingUnique,
+  validationError,
+} from "../shared/schedule-error";
 import {
   parseObjectId,
   resolveScheduleOrg,
@@ -67,7 +71,7 @@ type VisibleOrgs = ReadonlyMap<string, string>;
  * 排班人員(規格 14.3;正本 `docs/modules/project/schedule.md`「排班人員」)。
  *
  * - **候選使用者** = 所屬組織落在操作者可見範圍內(且在同一個租戶)的使用者;不是新建人
- * - 排班檔案以租戶為界(`tenantId`),一個租戶一人一筆
+ * - 排班檔案是整個租戶共用的:歸屬欄 `orgId` = 租戶頂層、讀取以 `tenantId` 為界,一個租戶一人一筆
  * - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`);看不到的分店的關聯保留不動
  * - 每人一家主要分店(有任何可以排的分店時恰好一家)
  */
@@ -135,7 +139,9 @@ export class ScheduleStaffService {
     }
     await this.transactions.withTransaction(async () => {
       for (const user of picked) {
-        const created = await this.staff.create(operator, {
+        // 排班檔案是整個租戶共用的:歸屬欄一律是租戶頂層(先例:遊戲)
+        const created = await this.staff.create(scheduleReadContext(operator), {
+          orgId: tenantId,
           userId: user._id,
           employmentType: "full-time",
           enabled: true,
@@ -182,48 +188,58 @@ export class ScheduleStaffService {
       input.orgs === undefined
         ? null
         : await this.planOrgs(operator, record, input.orgs, visibleOrgs);
-    await this.transactions.withTransaction(async () => {
-      const set: Record<string, unknown> = {};
-      if (input.employmentType !== undefined) {
-        set.employmentType = input.employmentType;
-      }
-      if (input.enabled !== undefined) {
-        set.enabled = input.enabled;
-      }
-      if (input.note !== undefined) {
-        set.note = input.note;
-      }
-      if (Object.keys(set).length > 0) {
-        await this.staff.updateById(scheduleReadContext(operator), record._id, {
-          $set: set,
-        });
-      }
-      if (orgPlan !== null) {
-        await this.applyOrgPlan(operator, record, orgPlan);
-      }
-      await this.audit.record(operator, {
-        action: "schedule-staff.edit",
-        targetType: AUDIT_TARGET_TYPE,
-        targetId: record._id,
-        before: {
-          employmentType: record.employmentType,
-          enabled: record.enabled,
-          note: record.note,
-        },
-        after: {
-          ...set,
-          ...(input.orgs === undefined
-            ? {}
-            : {
-                orgs: input.orgs.map((org) => ({
-                  orgId: org.orgId,
-                  canLead: org.canLead,
-                  isPrimary: org.isPrimary,
-                })),
-              }),
-        },
-      });
-    });
+    // 兩個請求同時替同一人加同一家店:唯一索引擋下第二筆,回同一個 VALIDATION_FAILED
+    await savingUnique(
+      () =>
+        this.transactions.withTransaction(async () => {
+          const set: Record<string, unknown> = {};
+          if (input.employmentType !== undefined) {
+            set.employmentType = input.employmentType;
+          }
+          if (input.enabled !== undefined) {
+            set.enabled = input.enabled;
+          }
+          if (input.note !== undefined) {
+            set.note = input.note;
+          }
+          if (Object.keys(set).length > 0) {
+            await this.staff.updateById(
+              scheduleReadContext(operator),
+              record._id,
+              {
+                $set: set,
+              },
+            );
+          }
+          if (orgPlan !== null) {
+            await this.applyOrgPlan(operator, record, orgPlan);
+          }
+          await this.audit.record(operator, {
+            action: "schedule-staff.edit",
+            targetType: AUDIT_TARGET_TYPE,
+            targetId: record._id,
+            before: {
+              employmentType: record.employmentType,
+              enabled: record.enabled,
+              note: record.note,
+            },
+            after: {
+              ...set,
+              ...(input.orgs === undefined
+                ? {}
+                : {
+                    orgs: input.orgs.map((org) => ({
+                      orgId: org.orgId,
+                      canLead: org.canLead,
+                      isPrimary: org.isPrimary,
+                    })),
+                  }),
+            },
+          });
+        }),
+      "schedule staff branches changed at the same time",
+      ["orgs"],
+    );
     const staffByUser = await this.staffByUser(operator, tenantId, [user]);
     const [row] = await this.rowsOf(operator, [user], staffByUser, visibleOrgs);
     if (!row) {
@@ -235,8 +251,10 @@ export class ScheduleStaffService {
   /**
    * 某家店的候選人(規格 14.3:有排班檔案、啟用、可以排的分店包含這家店;手動與自動排班同一份名單)。
    * 不看操作者的可見範圍(呼叫端已確認看得到這家店)。
-   * `at`(缺席 = 現在):以「那個時間點可以排這家店」為準 —— 關聯在那之前加入、那之後才拿掉的都算
-   * (查過去的班表時,後來才加入的人不算、後來才拿掉的人照算);排班檔案與帳號的啟用看現在。
+   * `at`(缺席 = 現在):只決定**哪些關聯算數** —— 關聯在那之前加入、那之後才拿掉的都算
+   * (查過去的班表時,後來才加入的人不算、後來才拿掉的人照算)。
+   * 回傳的 `canLead` / `isPrimary` / `sortOrder`(關聯 meta)、排班檔案的啟用與帳號的啟用**都是現在的值**,
+   * 不是那個時間點的(這些欄位沒有歷史)。
    */
   async listScheduleCandidates(
     operator: OperatorContext,

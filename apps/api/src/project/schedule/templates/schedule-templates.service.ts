@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_TASK_ROLES,
   WEEK_DAY_COUNT,
@@ -21,6 +22,7 @@ import {
   type ScheduleDemandWeekTemplateDocument,
   ScheduleDemandWeekTemplatesRepository,
 } from "../../database/schedule/schedule.repositories";
+import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
   forbiddenError,
   notFoundError,
@@ -56,7 +58,10 @@ const WEEK_TEMPLATE_TARGET = "schedule_demand_week_template";
 
 /** 寫入前要做的判斷都需要的東西:當前組織(含鏈)與「能不能改」。 */
 interface TemplateScope {
+  /** 看哪一家店的範本(組織鏈) */
   org: ScheduleOrg;
+  /** 寫入一律寫在當前組織:建立者 = 它的才能改 */
+  editOrgId: string;
   canEdit: boolean;
 }
 
@@ -75,6 +80,7 @@ export class ScheduleTemplatesService {
     private readonly orgs: OrgsRepository,
     private readonly permissions: SchedulePermissions,
     private readonly audit: AuditService,
+    private readonly fieldOptions: ScheduleFieldOptionsService,
   ) {}
 
   // ---- 人力需求範本 ----
@@ -97,6 +103,18 @@ export class ScheduleTemplatesService {
   ): Promise<ScheduleDemandTemplateModel> {
     const scope = await this.scopeOf(operator);
     const data = validatedTemplate(input);
+    await this.fieldOptions.assertOptions(operator, [
+      {
+        categoryKey: SCHEDULE_FIELD_CATEGORY_KEYS.position,
+        value: data.positionKey,
+        field: "positionKey",
+      },
+      ...data.tasks.map((task) => ({
+        categoryKey: SCHEDULE_FIELD_CATEGORY_KEYS.task,
+        value: task.taskKey,
+        field: "tasks",
+      })),
+    ]);
     const existing =
       input.id === undefined || input.id === null
         ? null
@@ -142,10 +160,15 @@ export class ScheduleTemplatesService {
 
   // ---- 人力需求週範本 ----
 
+  /**
+   * 某家店(缺席 = 當前組織)看得到的週範本:那家店的組織鏈上建立的(同規則「預設人力需求週範本」的選項)。
+   * `canEdit` 只有建立它的那一層、有 `edit-templates` 才是 true。
+   */
   async listWeekTemplates(
     operator: OperatorContext,
+    orgId?: string | null,
   ): Promise<ScheduleDemandWeekTemplatesPayload> {
-    const scope = await this.scopeOf(operator);
+    const scope = await this.scopeOf(operator, orgId);
     const records = await this.weekTemplates.findMany(
       scheduleReadContext(operator),
       { orgId: { $in: scope.org.chain } },
@@ -234,10 +257,17 @@ export class ScheduleTemplatesService {
 
   // ---- 內部 ----
 
-  private async scopeOf(operator: OperatorContext): Promise<TemplateScope> {
-    const org = await resolveScheduleOrg(operator, this.orgs, null);
+  private async scopeOf(
+    operator: OperatorContext,
+    orgId: string | null = null,
+  ): Promise<TemplateScope> {
+    const org = await resolveScheduleOrg(operator, this.orgs, orgId);
     const holds = await this.permissions.holderOf(operator);
-    return { org, canEdit: holds(SCHEDULE_PERMISSIONS.editTemplates) };
+    return {
+      org,
+      editOrgId: String(operator.currentOrgId),
+      canEdit: holds(SCHEDULE_PERMISSIONS.editTemplates),
+    };
   }
 
   private visibleTemplates(
@@ -332,7 +362,7 @@ function templateModelOf(
     })),
     paletteKey: record.paletteKey,
     ownerOrg: ownerOf(record.orgId, names),
-    canEdit: scope.canEdit && String(record.orgId) === String(scope.org.id),
+    canEdit: scope.canEdit && String(record.orgId) === scope.editOrgId,
   };
 }
 
@@ -353,7 +383,7 @@ function weekTemplateModelOf(
     days,
     enabled: record.enabled,
     ownerOrg: ownerOf(record.orgId, names),
-    canEdit: scope.canEdit && String(record.orgId) === String(scope.org.id),
+    canEdit: scope.canEdit && String(record.orgId) === scope.editOrgId,
   };
 }
 

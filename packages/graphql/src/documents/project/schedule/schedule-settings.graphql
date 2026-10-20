@@ -184,8 +184,9 @@ fragment ScheduleDemandWeekTemplateFields on ScheduleDemandWeekTemplate {
   canEdit
 }
 
-query ScheduleDemandWeekTemplates {
-  scheduleDemandWeekTemplates {
+# 某家店(input.orgId 缺席 = 當前組織)看得到的週範本;canEdit 只看當前組織這一層建立的
+query ScheduleDemandWeekTemplates($input: ScheduleDemandWeekTemplatesInput) {
+  scheduleDemandWeekTemplates(input: $input) {
     items {
       ...ScheduleDemandWeekTemplateFields
     }

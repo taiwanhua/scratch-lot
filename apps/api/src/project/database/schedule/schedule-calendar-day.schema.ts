@@ -12,7 +12,7 @@ export const SCHEDULE_CALENDAR_DAYS_COLLECTION = "schedule_calendar_days";
 
 /**
  * 行事曆(規格 14.1、14.5「行事曆」):店休(擋下排班)/ 特殊日(只做背景色)。
- * `(orgId, date)` 只會有一筆未刪除的(由 service 保證);某家店某天的行事曆以**最接近的那一層**為準
+ * 唯一 `(orgId, date)`(只算未刪除的,partial index);某家店某天的行事曆以**最接近的那一層**為準
  * (自己 → 上層 → … → 最上層組織)。
  */
 @Schema({ collection: SCHEDULE_CALENDAR_DAYS_COLLECTION, timestamps: true })
@@ -56,7 +56,11 @@ export class ScheduleCalendarDay {
 export const ScheduleCalendarDaySchema =
   SchemaFactory.createForClass(ScheduleCalendarDay);
 
-ScheduleCalendarDaySchema.index({ orgId: 1, date: 1 });
+// 同一層同一天只有一筆未刪除的(規格 14.1);軟刪除的不算
+ScheduleCalendarDaySchema.index(
+  { orgId: 1, date: 1 },
+  { unique: true, partialFilterExpression: { deletedAt: { $type: "null" } } },
+);
 ScheduleCalendarDaySchema.index({ orgId: 1, createdAt: 1 });
 ScheduleCalendarDaySchema.plugin(baseFieldsPlugin);
 ScheduleCalendarDaySchema.plugin(tenantScopePlugin, { moduleData: true });

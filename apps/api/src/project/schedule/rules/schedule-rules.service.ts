@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
+import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_RULE_DEFINITIONS,
   SCHEDULE_RULE_LEVELS,
   type ScheduleRuleDefinition,
   type ScheduleRuleLevel,
   hasRuleLevel,
+  pickScheduleRuleValue,
   scheduleRuleDefinitionOf,
   scheduleRuleValueErrors,
 } from "@repo/domain/project/schedule-settings";
@@ -21,9 +23,11 @@ import {
   type ScheduleSettingDocument,
   ScheduleSettingsRepository,
 } from "../../database/schedule/schedule.repositories";
+import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
   forbiddenError,
   notFoundError,
+  savingUnique,
   validationError,
 } from "../shared/schedule-error";
 import {
@@ -110,6 +114,7 @@ export class ScheduleRulesService {
     private readonly permissions: SchedulePermissions,
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
+    private readonly fieldOptions: ScheduleFieldOptionsService,
   ) {}
 
   /** 規則頁:某個組織(缺席 = 當前組織)的整份規則。 */
@@ -272,8 +277,13 @@ export class ScheduleRulesService {
     operator: OperatorContext,
     org: ScheduleOrg,
     definition: ScheduleRuleDefinition,
-    write: SettingWrite,
+    given: SettingWrite,
   ): Promise<SettingWrite> {
+    // 只留定義裡有的欄位:多送的 key 不存
+    const write = {
+      ...given,
+      value: pickScheduleRuleValue(definition, given.value),
+    };
     const valueErrors = scheduleRuleValueErrors(definition, write.value);
     if (valueErrors.length > 0) {
       throw validationError(
@@ -291,6 +301,18 @@ export class ScheduleRulesService {
     }
     if (definition.valueType === "weekTemplate") {
       await this.assertWeekTemplate(operator, org, write.value.weekTemplateId);
+    }
+    if (definition.valueType === "defaultTasks") {
+      await this.fieldOptions.assertOptions(
+        operator,
+        (["defaultLeaderTaskKey", "defaultHelperTaskKey"] as const).map(
+          (field) => ({
+            categoryKey: SCHEDULE_FIELD_CATEGORY_KEYS.task,
+            value: String(write.value[field]),
+            field: `value.${field}`,
+          }),
+        ),
+      );
     }
     return write;
   }
@@ -326,47 +348,56 @@ export class ScheduleRulesService {
     writes: readonly SettingWrite[],
   ): Promise<void> {
     const context = scheduleReadContext(operator);
-    await this.transactions.withTransaction(async () => {
-      for (const write of writes) {
-        const existing = await this.settings.findOne(context, {
-          orgId: org.id,
-          key: write.key,
-        });
-        const saved = existing
-          ? await this.settings.updateById(context, existing._id, {
-              $set: {
+    // 兩個請求同時第一次自訂同一條:唯一索引擋下第二筆,回同一個 VALIDATION_FAILED
+    await savingUnique(
+      () =>
+        this.transactions.withTransaction(async () => {
+          for (const write of writes) {
+            const existing = await this.settings.findOne(context, {
+              orgId: org.id,
+              key: write.key,
+            });
+            const saved = existing
+              ? await this.settings.updateById(context, existing._id, {
+                  $set: {
+                    enabled: write.enabled,
+                    value: write.value,
+                    level: write.level,
+                    order: write.order,
+                  },
+                })
+              : await this.settings.create(operator, {
+                  orgId: org.id,
+                  ...write,
+                });
+            if (!saved) {
+              throw notFoundError(`schedule setting vanished: ${write.key}`);
+            }
+            await this.audit.record(operator, {
+              action: "schedule-setting.customize",
+              targetType: AUDIT_TARGET_TYPE,
+              targetId: saved._id,
+              before: existing
+                ? {
+                    enabled: existing.enabled,
+                    value: existing.value,
+                    level: existing.level,
+                    order: existing.order,
+                  }
+                : undefined,
+              after: {
+                key: write.key,
                 enabled: write.enabled,
                 value: write.value,
                 level: write.level,
                 order: write.order,
               },
-            })
-          : await this.settings.create(operator, { orgId: org.id, ...write });
-        if (!saved) {
-          throw notFoundError(`schedule setting vanished: ${write.key}`);
-        }
-        await this.audit.record(operator, {
-          action: "schedule-setting.customize",
-          targetType: AUDIT_TARGET_TYPE,
-          targetId: saved._id,
-          before: existing
-            ? {
-                enabled: existing.enabled,
-                value: existing.value,
-                level: existing.level,
-                order: existing.order,
-              }
-            : undefined,
-          after: {
-            key: write.key,
-            enabled: write.enabled,
-            value: write.value,
-            level: write.level,
-            order: write.order,
-          },
-        });
-      }
-    });
+            });
+          }
+        }),
+      "schedule setting customized twice at the same time",
+      ["key"],
+    );
   }
 
   private async rowsOf(

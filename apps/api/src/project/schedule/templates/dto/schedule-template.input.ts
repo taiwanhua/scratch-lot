@@ -66,3 +66,10 @@ export class DeleteScheduleTemplateInput {
   @Field(() => ID)
   id!: string;
 }
+
+/** 週範本列表:某家店(缺席或 null = 當前組織)看得到的週範本。 */
+@InputType()
+export class ScheduleDemandWeekTemplatesInput {
+  @Field(() => ID, { nullable: true })
+  orgId?: string | null;
+}

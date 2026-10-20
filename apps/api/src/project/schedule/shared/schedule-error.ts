@@ -35,3 +35,33 @@ export function forbiddenError(
     extensions: { code: "FORBIDDEN", reason },
   });
 }
+
+/** MongoDB 唯一索引衝突(兩個請求同時寫同一個唯一鍵)。 */
+const DUPLICATE_KEY_ERROR = 11_000;
+
+export function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === DUPLICATE_KEY_ERROR
+  );
+}
+
+/**
+ * 寫入撞到唯一索引時,回與事前檢查同一個 `VALIDATION_FAILED`(欄位 `fields`)。
+ * 只包在交易外層(交易內不吞錯誤,TX-04):撞到時整個交易已回復,這裡只換成使用者看得懂的錯誤。
+ */
+export async function savingUnique<T>(
+  write: () => Promise<T>,
+  message: string,
+  fields: string[],
+): Promise<T> {
+  try {
+    return await write();
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) {
+      throw error;
+    }
+    throw validationError(message, fields);
+  }
+}

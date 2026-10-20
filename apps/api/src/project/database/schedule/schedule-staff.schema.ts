@@ -13,12 +13,12 @@ export const SCHEDULE_STAFF_COLLECTION = "schedule_staff";
  * 排班檔案(規格 14.1、14.3):使用者的子檔,一個租戶裡一人一筆;不是新建人,
  * 是從使用者管理已有的帳號 [加入排班] 建立。可以排哪些分店在 `schedule_relationships`。
  *
- * - `orgId`:加入排班時操作者的當前組織(租戶隔離的歸屬欄);讀取以 `tenantId` 為界,不看 `orgId`
+ * - `orgId`:租戶頂層(最上層組織);排班檔案是整個租戶共用的(先例:遊戲 `lottery_games`),讀取以 `tenantId` 為界
  * - 唯一 `(tenantId, userId)`
  */
 @Schema({ collection: SCHEDULE_STAFF_COLLECTION, timestamps: true })
 export class ScheduleStaff {
-  /** 加入排班時的當前組織(ADR-0005)。 */
+  /** 租戶頂層(ADR-0005;整個租戶共用的檔案)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;
 

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
+import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
   SCHEDULE_CALENDAR_DAY_TYPES,
   type ScheduleCalendarDayType,
@@ -17,9 +18,11 @@ import {
   type ScheduleCalendarDayDocument,
   ScheduleCalendarDaysRepository,
 } from "../../database/schedule/schedule.repositories";
+import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
 import {
   forbiddenError,
   notFoundError,
+  savingUnique,
   validationError,
 } from "../shared/schedule-error";
 import {
@@ -62,7 +65,8 @@ function blankToNull(value: string | null | undefined): string | null {
  * - 讀:某家店某個月,每天以最接近的那一層為準(`calendar-resolution.ts`)
  * - 寫:要 `schedule.manage.edit-calendar`;寫在選的那家店那一層,只有那一層能改 / 刪
  *   (沿用上層的那一天在本店看得到、改不了 → `FORBIDDEN` / `NOT_OWNER`)
- * - 同一層同一天只有一筆(店休與特殊日擇一)
+ * - 同一層同一天只有一筆(店休與特殊日擇一;唯一索引兜底同時寫入)
+ * - 特殊日類別要是欄位管理「特殊日類別」啟用中的選項
  */
 @Injectable()
 export class ScheduleCalendarService {
@@ -71,6 +75,7 @@ export class ScheduleCalendarService {
     private readonly orgs: OrgsRepository,
     private readonly permissions: SchedulePermissions,
     private readonly audit: AuditService,
+    private readonly fieldOptions: ScheduleFieldOptionsService,
   ) {}
 
   async month(
@@ -117,9 +122,24 @@ export class ScheduleCalendarService {
         "date",
       ]);
     }
-    const saved = existing
-      ? await this.days.updateById(context, existing._id, { $set: data })
-      : await this.days.create(operator, { orgId: org.id, ...data });
+    if (data.category !== null) {
+      await this.fieldOptions.assertOptions(operator, [
+        {
+          categoryKey: SCHEDULE_FIELD_CATEGORY_KEYS.specialDayCategory,
+          value: data.category,
+          field: "category",
+        },
+      ]);
+    }
+    // 兩個請求同時新增同一天:唯一索引 `(orgId, date)` 擋下第二筆,回同一個錯誤
+    const saved = await savingUnique(
+      () =>
+        existing
+          ? this.days.updateById(context, existing._id, { $set: data })
+          : this.days.create(operator, { orgId: org.id, ...data }),
+      `org already has a calendar day on ${data.date}`,
+      ["date"],
+    );
     if (!saved) {
       throw notFoundError(`calendar day not found: ${String(input.id)}`);
     }

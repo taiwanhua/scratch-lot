@@ -7,6 +7,7 @@ import {
   DeleteScheduleTemplateInput,
   SaveScheduleDemandTemplateInput,
   SaveScheduleDemandWeekTemplateInput,
+  ScheduleDemandWeekTemplatesInput,
 } from "./dto/schedule-template.input";
 import {
   DeleteScheduleTemplatePayload,
@@ -56,9 +57,14 @@ export class ScheduleTemplatesResolver {
     name: "scheduleDemandWeekTemplates",
   })
   scheduleDemandWeekTemplates(
+    @Args("input", {
+      type: () => ScheduleDemandWeekTemplatesInput,
+      nullable: true,
+    })
+    input: ScheduleDemandWeekTemplatesInput | null,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ScheduleDemandWeekTemplatesPayload> {
-    return this.service.listWeekTemplates(operator);
+    return this.service.listWeekTemplates(operator, input?.orgId);
   }
 
   @RequirePermission("schedule.settings.edit-templates")

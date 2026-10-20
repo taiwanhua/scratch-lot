@@ -419,3 +419,47 @@ export function scheduleRuleValueErrors(
     }
   }
 }
+
+/** 每種 `valueType` 的值有哪些欄位(存檔前只保留這些,多送的丟掉)。 */
+const VALUE_FIELDS: Record<ScheduleRuleValueType, readonly string[]> = {
+  amount: ["amount"],
+  dayRange: ["startDay", "endDay"],
+  weekTemplate: ["weekTemplateId"],
+  grace: ["lateGraceMinutes", "earlyLeaveGraceMinutes"],
+  breakTiers: ["tiers"],
+  defaultTasks: ["defaultLeaderTaskKey", "defaultHelperTaskKey"],
+  none: [],
+};
+
+const TIER_FIELDS = ["minMinutes", "breakMinutes"] as const;
+
+/**
+ * 只留下規則定義裡有的欄位(預設休息的每一級也只留 `minMinutes` / `breakMinutes`);
+ * 沒送的欄位不補。驗證另用 `scheduleRuleValueErrors`。
+ */
+export function pickScheduleRuleValue(
+  definition: ScheduleRuleDefinition,
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  for (const field of VALUE_FIELDS[definition.valueType]) {
+    if (field in value) {
+      picked[field] = value[field];
+    }
+  }
+  if (definition.valueType === "breakTiers" && Array.isArray(picked.tiers)) {
+    picked.tiers = (picked.tiers as unknown[]).map((tier) => {
+      if (typeof tier !== "object" || tier === null) {
+        return tier;
+      }
+      const record = tier as Record<string, unknown>;
+      return Object.fromEntries(
+        TIER_FIELDS.filter((field) => field in record).map((field) => [
+          field,
+          record[field],
+        ]),
+      );
+    });
+  }
+  return picked;
+}
