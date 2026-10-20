@@ -385,7 +385,7 @@ export function startOfLocalDayOf(instant: number, timezone: string): number {
 
 /**
  * 顯示格式:欄位型別(`date` / `datetime`),或省略年份的短格式 `monthDay`(`MM/DD`)/
- * `monthDayTime`(`MM/DD HH:mm`;排班、卡片這類同年份內的密集顯示)。
+ * `monthDayTime`(`MM/DD HH:mm`;行事曆格、卡片這類同年份內的密集顯示)。
  */
 export type FormatTemporalType = TemporalType | "monthDay" | "monthDayTime";
 

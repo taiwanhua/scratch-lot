@@ -110,7 +110,7 @@
 
 ### 給業務功能用的選項
 
-業務功能(作廢原因、排班的崗位這類下拉)讀選項與驗「原因」用底座的 `FieldOptionsService`(`apps/api/src/fields/field-options.service.ts`;業務模組 import `FieldOptionsModule`),不自己寫一份:
+業務功能(作廢原因、各種原因 / 類別下拉)讀選項與驗「原因」用底座的 `FieldOptionsService`(`apps/api/src/fields/field-options.service.ts`;業務模組 import `FieldOptionsModule`),不自己寫一份:
 
 - `optionsOf(operator, categoryKey, allowedCategories)`:該類別**啟用中**的選項 `{ value, label }`,範圍同上方「自訂選項的可見範圍」的合併清單(全域 + 上層 + 自己 + 看得到的下層),依排序值、建立順序。不需要 `system.field-manager.view`。
 - `assertReason(operator, categoryKey, { reasonKey, reasonNote }, allowedCategories, names?)`:`reasonKey` 必填且是上面列得出來的選項;選「其他」(選項值 `other`,`@repo/domain/form` 的 `REASON_OPTION_OTHER`)時 `reasonNote` 必填。回 `{ reasonKey, reasonLabel, reasonNote }`(說明去空白,空 = null)。不合 → `VALIDATION_FAILED`,`fields` 預設指到 `reasonKey` / `reasonNote`(`names` 可改成呼叫端的欄位名)。
