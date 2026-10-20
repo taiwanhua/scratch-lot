@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { parseLocalDate } from "@repo/domain/form";
+import { Box } from "@repo/ui/box";
 import { MonthCalendar } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -51,28 +52,31 @@ export const WeekPeriodPicker = ({
 
   return (
     <Stack spacing={1.5}>
-      <MonthCalendar
-        aria-label={t("weekCalendarAria")}
-        month={shownMonth}
-        onMonthChange={setShownMonth}
-        selectionMode="single"
-        selectedDates={weekDaysOf(value)}
-        onSelectedDatesChange={(dates) => {
-          // 單選模式:回報的就是點的那一天
-          const date = dates.at(0);
-          if (date !== undefined) pick(periodStartOf("week", date));
-        }}
-        today={today}
-        weekdayLabels={WEEKDAYS.map((day) => t(`weekdays.${String(day)}`))}
-        formatMonthTitle={(month) =>
-          t("monthTitle", {
-            year: Number(month.slice(0, 4)),
-            month: Number(month.slice(5, 7)),
-          })
-        }
-        prevMonthLabel={t("prevMonth")}
-        nextMonthLabel={t("nextMonth")}
-      />
+      {/* 月曆限寬:條件卡很寬時不讓七格撐滿整列(Figma RE-03 的月曆約 370) */}
+      <Box sx={{ maxWidth: 560 }}>
+        <MonthCalendar
+          aria-label={t("weekCalendarAria")}
+          month={shownMonth}
+          onMonthChange={setShownMonth}
+          selectionMode="single"
+          selectedDates={weekDaysOf(value)}
+          onSelectedDatesChange={(dates) => {
+            // 單選模式:回報的就是點的那一天
+            const date = dates.at(0);
+            if (date !== undefined) pick(periodStartOf("week", date));
+          }}
+          today={today}
+          weekdayLabels={WEEKDAYS.map((day) => t(`weekdays.${String(day)}`))}
+          formatMonthTitle={(month) =>
+            t("monthTitle", {
+              year: Number(month.slice(0, 4)),
+              month: Number(month.slice(5, 7)),
+            })
+          }
+          prevMonthLabel={t("prevMonth")}
+          nextMonthLabel={t("nextMonth")}
+        />
+      </Box>
       <Typography variant="subtitle2" color="primary">
         {t("weekRange", {
           from: shortDate(value),

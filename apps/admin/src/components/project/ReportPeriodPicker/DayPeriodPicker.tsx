@@ -18,7 +18,12 @@ export const DayPeriodPicker = ({
   const t = useTranslations("admin.lotteryReports.periodPicker");
   const yesterday = shiftPeriod("day", today, -1);
   return (
-    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+    <Stack
+      direction="row"
+      spacing={1}
+      useFlexGap
+      sx={{ alignItems: "center", flexWrap: "wrap" }}
+    >
       <DatePicker
         label={t("date")}
         value={value}

@@ -32,11 +32,7 @@ export const ReportsPage = () => {
   );
 
   if (report === undefined) {
-    return (
-      <Stack spacing={2} sx={{ p: { xs: 2, md: 3 } }}>
-        {list(setReportKey)}
-      </Stack>
-    );
+    return <Stack spacing={2}>{list(setReportKey)}</Stack>;
   }
   return (
     <ReportWorkspace

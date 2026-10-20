@@ -53,10 +53,14 @@ export const ReportListCard = ({
                 key={report.key}
                 value={report.key}
                 control={<Radio size="small" />}
-                label={t("lotteryReports.reportList.option", {
-                  name: t(report.name),
-                  max: report.conditions.orgs.max,
-                })}
+                label={
+                  <Typography variant="body2">
+                    {t("lotteryReports.reportList.option", {
+                      name: t(report.name),
+                      max: report.conditions.orgs.max,
+                    })}
+                  </Typography>
+                }
               />
             ))}
           </RadioGroup>

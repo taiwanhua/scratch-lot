@@ -104,7 +104,7 @@ export const ReportWorkspace = ({
 
   if (isPreviewOpen) {
     return (
-      <Stack spacing={2} sx={{ p: { xs: 2, md: 3 } }}>
+      <Stack spacing={2}>
         {error}
         <ReportPreviewPanel
           title={t("lotteryReports.preview.title", { name, period })}
@@ -125,7 +125,7 @@ export const ReportWorkspace = ({
   }
 
   return (
-    <Stack spacing={2} sx={{ p: { xs: 2, md: 3 } }}>
+    <Stack spacing={2}>
       {error}
       <Stack
         direction={{ xs: "column", md: "row" }}
