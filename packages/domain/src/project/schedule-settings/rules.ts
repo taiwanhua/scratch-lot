@@ -463,3 +463,21 @@ export function pickScheduleRuleValue(
   }
   return picked;
 }
+
+/** 規則裡可以切換開關的(其他規則一律開著,只能改值、等級、排序)。 */
+const TOGGLEABLE_RULE_KEYS: ReadonlySet<string> = new Set([
+  "understaffed",
+  "multiPositionOverlap",
+]);
+
+/**
+ * 這條能不能關掉:規則只有「人力不足」「同一時段兼多個崗位」;自動排班條件的開關就是勾選,一律可以。
+ * 其他規則送 `enabled = false` → api 回 `VALIDATION_FAILED`(欄位 `enabled`)。
+ */
+export function isScheduleRuleToggleable(
+  definition: ScheduleRuleDefinition,
+): boolean {
+  return (
+    definition.group === "autoRun" || TOGGLEABLE_RULE_KEYS.has(definition.key)
+  );
+}

@@ -98,6 +98,8 @@ export const CalendarTab = () => {
         sx={{ alignItems: { sm: "center" } }}
       >
         <OrgTreeSelect
+          // 業務頁:可見範圍內的才能選(用法表 ④)
+          scope="visible"
           label={t("org")}
           value={calendar === undefined ? [] : [calendar.orgId]}
           size="small"

@@ -496,7 +496,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       await expect(onboard("demo_lottery", lines)).rejects.toThrow(
         /不是要開通的 demo_lottery/,
       );
-      expect(lines.join("\n")).toMatch(/✗ \[1\/9\] 租戶/);
+      expect(lines.join("\n")).toMatch(/✗ \[1\/11\] 租戶/);
       expect(await auditCount()).toBe(before);
     });
 
@@ -636,9 +636,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       )) as OnboardingStoppedError;
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
-      expect(lines.join("\n")).toMatch(/✗ \[6\/9\] 崗位:.*FORBIDDEN/);
-      expect(lines.join("
-")).toContain(
+      expect(lines.join("\n")).toMatch(/✗ \[6\/11\] 崗位:.*FORBIDDEN/);
+      expect(lines.join("\n")).toContain(
         "未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人",
       );
 

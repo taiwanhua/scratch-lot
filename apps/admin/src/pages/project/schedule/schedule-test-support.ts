@@ -13,6 +13,7 @@ import {
   scheduleSettingsWorld,
 } from "@/test/msw/project/schedule-settings-handlers";
 import { api, server } from "@/test/msw/server";
+import { toTenantTree } from "@/test/msw/tenant-org-tree";
 import { renderApp } from "@/test/render";
 
 export interface RenderScheduleOptions {
@@ -39,8 +40,15 @@ export const renderSchedulePage = ({
   server.use(
     ...settingsFake.handlers,
     ...calendarFake.handlers,
-    api.query("OrgTree", () =>
-      HttpResponse.json({ data: { orgTree: tenantTree } }),
+    // 分店選擇器(visible 模式)查整棵租戶樹;當前組織 A-2 台北分店與租戶 A 都看得到
+    api.query("TenantOrgTree", () =>
+      HttpResponse.json({
+        data: {
+          tenantOrgTree: toTenantTree(tenantTree, {
+            visibleIds: ["org-tenant-a", "org-store", "org-content"],
+          }),
+        },
+      }),
     ),
     ...authWorld({
       hasRefreshCookie: true,

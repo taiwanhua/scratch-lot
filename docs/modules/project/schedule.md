@@ -52,14 +52,14 @@
 
 六張租戶表,schema 在 `apps/api/src/project/database/schedule/`(逐欄註解),登記 `registration.ts`(`SCHEDULE_SETTINGS_REGISTRATION`)。都掛 `baseFieldsPlugin` 與 `tenantScopePlugin({ moduleData: true })`(`tenantId` 由建立時推導);沒有宣告資料範圍目標(只受可見範圍保底)。
 
-| collection                       | 一筆是                                    | 歸屬 `orgId`                        | 唯一 / 說明                                                                                                   |
-| -------------------------------- | ----------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `schedule_staff`                 | 排班檔案(使用者子檔)                      | 租戶頂層(整個租戶共用的檔案,同遊戲) | 唯一 `(tenantId, userId)`;讀取以 `tenantId` 為界                                                              |
-| `schedule_relationships`         | `org_schedule_staff`:排班人員可以排某分店 | `firstId`(分店)                     | `meta = { canLead, isPrimary, sortOrder }`;唯一 `(type, firstId, secondId)`(只算未刪除的);拿掉一家店 = 軟刪除 |
-| `schedule_settings`              | 某組織對某條規則的自訂                    | 自訂它的組織                        | 唯一 `(orgId, key)`(只算未刪除的);[還原] = 軟刪除                                                             |
-| `schedule_demand_templates`      | 人力需求範本                              | 建立它的組織                        | 執行任務 `tasks[] = { taskId, role, taskKey }`                                                                |
-| `schedule_demand_week_templates` | 人力需求週範本                            | 建立它的組織                        | `days` 7 格(0 = 星期日),每格是範本 id                                                                         |
-| `schedule_calendar_days`         | 某組織某天的店休 / 特殊日                 | 設定它的組織                        | 唯一 `(orgId, date)`(只算未刪除的)                                                                            |
+| collection                       | 一筆是                                    | 歸屬 `orgId`           | 唯一 / 說明                                                                                                   |
+| -------------------------------- | ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `schedule_staff`                 | 排班檔案(使用者子檔)                      | 建立它的組織(當前組織) | 唯一 `(orgId, userId)`;歸那個組織、不共用,讀取照一般可見性                                                    |
+| `schedule_relationships`         | `org_schedule_staff`:排班人員可以排某分店 | `firstId`(分店)        | `meta = { canLead, isPrimary, sortOrder }`;唯一 `(type, firstId, secondId)`(只算未刪除的);拿掉一家店 = 軟刪除 |
+| `schedule_settings`              | 某組織對某條規則的自訂                    | 自訂它的組織           | 唯一 `(orgId, key)`(只算未刪除的);[還原] = 軟刪除                                                             |
+| `schedule_demand_templates`      | 人力需求範本                              | 建立它的組織           | 執行任務 `tasks[] = { taskId, role, taskKey }`                                                                |
+| `schedule_demand_week_templates` | 人力需求週範本                            | 建立它的組織           | `days` 7 格(0 = 星期日),每格是範本 id                                                                         |
+| `schedule_calendar_days`         | 某組織某天的店休 / 特殊日                 | 設定它的組織           | 唯一 `(orgId, date)`(只算未刪除的)                                                                            |
 
 ## 規則
 
@@ -69,7 +69,8 @@
 
 ### 排班人員(規格 14.3)
 
-- **候選使用者** = 所屬組織落在操作者可見範圍內(且在當前組織的租戶裡)的使用者;[加入排班] 只能加這些人、而且還沒加入的(已加入 → `VALIDATION_FAILED`,欄位 `userIds`;看不到 → `NOT_FOUND`)。
+- **排班檔案歸當前組織、不共用**:[加入排班] 建立在當前組織(`orgId` = 當前組織),讀取與修改照一般可見性(看不到那個組織的檔案 → `NOT_FOUND`);跨店支援由支援需求單把人加進那家店。同一組織一人一筆(唯一 `(orgId, userId)`)。
+- **候選使用者** = 所屬組織落在操作者可見範圍內(且在當前組織的租戶裡)的使用者;[加入排班] 只能加這些人、而且當前組織還沒有他的檔案(已加入 → `VALIDATION_FAILED`,欄位 `userIds`,同時加入也一樣;看不到 → `NOT_FOUND`)。列表上同一人在多個看得到的組織都有檔案時,優先顯示當前組織那份。
 - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`)。存檔時 `orgs` 整份取代「操作者看得到的那幾家」;看不到的分店的關聯保留不動。
 - **主要分店每人一家**:有任何可以排的分店時恰好一家(含看不到的分店的關聯一起算),否則 `VALIDATION_FAILED`(欄位 `orgs`)。主要分店在看不到的分店時列表回 `primaryElsewhere = true`。
 - **候選人**(手動與自動排班同一份名單):`ScheduleStaffService.listScheduleCandidates(operator, orgId, at?)` —— 有排班檔案、啟用、帳號啟用、可以排的分店包含這家店的人;`at`(預設現在)只決定哪些關聯算數(那之前加入、那之後才拿掉的都算);回傳的 `canLead` / `isPrimary` / `sortOrder` 與排班檔案、帳號的啟用都是**現在的值**。不看操作者的可見範圍(呼叫端先確認看得到這家店)。
@@ -106,6 +107,7 @@
 自動排班條件(整組):`continuePreviousEntry` 延續同一人的排班(勾)、`leaderCountFirst` 負責人次數多者優先(勾)、`monthlyShiftBalance` 本月班數平均(不勾)、`allowOverlappingDemands` 允許同一人同時段填進多筆人力需求(不勾);勾選 = `enabled`、順序 = `order`。
 
 - **生效值**(`apps/api/src/project/schedule/rules/rule-resolution.ts`):每條規則沿組織鏈找第一個有自訂的組織,找不到用程式預設;一列自訂的開關、值、等級、排序一起覆寫。**自動排班條件整組繼承**:鏈上第一個有任何一條自動排班條件自訂的組織,整組以它為準(它沒寫到的條件用程式預設)。
+- **只有「人力不足」「同一時段兼多個崗位」可以關掉**(`isScheduleRuleToggleable`;自動排班條件的開關就是勾選);其他規則送 `enabled = false` → `VALIDATION_FAILED`(欄位 `enabled`)。
 - **寫入**:[自訂] 寫本層一列(沒送的欄位照抄目前的生效值);自動排班條件自訂其中一條 = 整組寫成本層自訂。[還原] = 刪掉本層那一條(自動排班條件:整組)。最上層組織要 `edit-default-rules`、其他組織要 `edit-org-rules`(沒有 → `FORBIDDEN`,`reason: MISSING_PERMISSION`);沒有等級的規則送 `level` → `VALIDATION_FAILED`。
 - **值只留定義裡的欄位**:存檔前丟掉多送的 key(預設休息每一級只留 `minMinutes` / `breakMinutes`;`pickScheduleRuleValue`)。
 - **下拉值要是啟用中的選項**:「負責人 / 協同預設任務」的兩個 key 要是欄位管理「執行任務」啟用中的選項(否則 `VALIDATION_FAILED`,欄位 `value.<key>`)。
@@ -155,6 +157,8 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 - 頁面:`apps/admin/src/pages/project/schedule/{my,manage,settings,attendance}/`,登記在 `app/project/module-pages.ts`(兩個表單模組只換列表頁);網址狀態登記在 `app/project/url-state-inventory.ts`。
 - 排班設定:排班人員(SC-08 / SC-26)、人力需求範本(SC-09a / SC-22a)、人力需求週範本(SC-09b / SC-22b)、規則(SC-10 / SC-27,分店選擇器 `?org=`;「預設人力需求週範本」的名稱與選項取那家店的週範本)。排班作業 → 行事曆(SC-07 / SC-28,`?org=`、`?month=`)。
+- 分店選擇器一律 `OrgTreeSelect scope="visible"`(用法表 ④ ⑤:整棵租戶樹、可見範圍內的才能選):規則、行事曆的分店、排班人員可以排的分店。
+- 側欄排序:班表管理群組 `order` 80。
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。

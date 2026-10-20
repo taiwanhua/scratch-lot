@@ -8,6 +8,7 @@ import {
   type ScheduleRuleDefinition,
   type ScheduleRuleLevel,
   hasRuleLevel,
+  isScheduleRuleToggleable,
   pickScheduleRuleValue,
   scheduleRuleDefinitionOf,
   scheduleRuleValueErrors,
@@ -290,6 +291,12 @@ export class ScheduleRulesService {
         `invalid value for ${definition.key}: ${valueErrors.join(", ")}`,
         valueErrors.map((field) => `value.${field}`),
       );
+    }
+    // 只有可以切換的規則能關(其他規則一律開著)
+    if (!write.enabled && !isScheduleRuleToggleable(definition)) {
+      throw validationError(`${definition.key} cannot be turned off`, [
+        "enabled",
+      ]);
     }
     if (
       hasRuleLevel(definition) ? !isLevel(write.level) : write.level !== null

@@ -777,6 +777,27 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
       await settings.deleteMany({ orgId: hsinchu, key: row.key });
     });
 
+    it("只有人力不足、同一時段兼多個崗位可以關掉;其他規則送 enabled=false → VALIDATION_FAILED", async () => {
+      const bad = await customize(manager, zhongshan, {
+        key: "maxMonthlyDayOffs",
+        enabled: false,
+      });
+      expect(errorOf(bad)).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["enabled"],
+      });
+      const ok = await customize(manager, zhongshan, {
+        key: "understaffed",
+        enabled: false,
+      });
+      expect(ok.errors).toBeUndefined();
+      const overlap = await customize(manager, zhongshan, {
+        key: "multiPositionOverlap",
+        enabled: true,
+      });
+      expect(overlap.errors).toBeUndefined();
+    });
+
     it("整組自訂要列出每一條條件各一次", async () => {
       const result = await gql(manager, CUSTOMIZE_AUTO_RUN, {
         input: {
@@ -811,14 +832,28 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         orgs: [],
       });
 
-      // 排班檔案是整個租戶共用的:歸屬欄 = 租戶頂層(分店店長加的也一樣)
+      // 排班檔案歸當前組織、不共用:分店店長加的歸中山店
       const document = await connection
         .collection(SCHEDULE_STAFF_COLLECTION)
         .findOne<{ orgId: Types.ObjectId; tenantId: Types.ObjectId }>({
           userId: wang.userId,
         });
-      expect(String(document?.orgId)).toBe(String(tenantA));
+      expect(String(document?.orgId)).toBe(String(zhongshan));
       expect(String(document?.tenantId)).toBe(String(tenantA));
+      // 新竹店的店長看不到中山店的排班檔案:王小明在他那裡不是候選(看不到),也改不到那份檔案
+      const hsinchuStaffManager = await createScheduleUser(
+        api,
+        connection,
+        [hsinchu],
+        [P.settingsView, P.editStaff],
+      );
+      const hsinchuView = await staffRows(hsinchuStaffManager);
+      expect(hsinchuView.items.map((row) => row.name)).not.toContain("王小明");
+      const wangStaffId = added.items[0]?.staff?.id;
+      const foreign = await gql(hsinchuStaffManager, UPDATE_STAFF, {
+        input: { staffId: wangStaffId, employmentType: "part-time" },
+      });
+      expect(errorOf(foreign)).toMatchObject({ code: "NOT_FOUND" });
 
       const again = await gql(manager, ADD_STAFF, {
         input: { userIds: [String(wang.userId)] },

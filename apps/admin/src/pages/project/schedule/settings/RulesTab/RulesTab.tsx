@@ -157,6 +157,8 @@ export const RulesTab = () => {
   return (
     <Stack spacing={2}>
       <OrgTreeSelect
+        // 業務頁:可見範圍內的才能選(用法表 ④)
+        scope="visible"
         label={t("org")}
         value={[rules.orgId]}
         size="small"

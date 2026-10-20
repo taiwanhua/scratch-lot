@@ -6,6 +6,7 @@ import {
   isHhMm,
   isIsoDate,
   isIsoMonth,
+  isScheduleRuleToggleable,
   isTemplateShortName,
   minutesOfHhMm,
   pickScheduleRuleValue,
@@ -113,6 +114,23 @@ describe("排班規則定義(規格 14.2)", () => {
     ["understaffed", "8", ["value"]],
   ])("%s 的值 %j → 不合法欄位 %j", (key, value, errors) => {
     expect(scheduleRuleValueErrors(definition(key), value)).toEqual(errors);
+  });
+});
+
+describe("哪些規則可以關掉", () => {
+  it("只有人力不足、同一時段兼多個崗位與自動排班條件", () => {
+    expect(
+      SCHEDULE_RULE_DEFINITIONS.filter((rule) =>
+        isScheduleRuleToggleable(rule),
+      ).map((rule) => rule.key),
+    ).toEqual([
+      "understaffed",
+      "multiPositionOverlap",
+      "continuePreviousEntry",
+      "leaderCountFirst",
+      "monthlyShiftBalance",
+      "allowOverlappingDemands",
+    ]);
   });
 });
 

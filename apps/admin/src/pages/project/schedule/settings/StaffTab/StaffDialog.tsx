@@ -5,8 +5,8 @@ import { useTranslations } from "use-intl";
 import { SCHEDULE_EMPLOYMENT_TYPES } from "@repo/domain/project/schedule-settings";
 import {
   type ScheduleStaffRowFieldsFragment,
-  useOrgTreeQuery,
   useScheduleStaffQuery,
+  useTenantOrgTreeQuery,
   useUpdateScheduleStaffMutation,
 } from "@repo/graphql";
 import { Button } from "@repo/ui/button";
@@ -21,7 +21,7 @@ import { Typography } from "@repo/ui/typography";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
-import { flattenOrgs } from "@/lib/base/org-tree";
+import { flattenOrgs, tenantTreeToOrgNodes } from "@/lib/base/org-tree";
 
 import { scheduleErrorOf } from "../../schedule-error";
 
@@ -52,9 +52,11 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const isMobile = useBreakpointDown("sm");
-  const orgTree = useOrgTreeQuery(session.client);
+  const orgTree = useTenantOrgTreeQuery(session.client);
   const orgNames = new Map(
-    flattenOrgs(orgTree.data?.orgTree ?? []).map((org) => [org.id, org.name]),
+    flattenOrgs(
+      tenantTreeToOrgNodes(orgTree.data?.tenantOrgTree ?? [], false),
+    ).map((org) => [org.id, org.name]),
   );
   const staff = row.staff;
   const [employmentType, setEmploymentType] = useState(
@@ -249,6 +251,8 @@ export const StaffDialog = ({ row, canEdit, onClose }: StaffDialogProps) => {
         )}
         {canEdit && (
           <OrgTreeSelect
+            // 業務頁:可見範圍內的才能選(用法表 ④)
+            scope="visible"
             label={t("addOrg")}
             value={[]}
             size="small"

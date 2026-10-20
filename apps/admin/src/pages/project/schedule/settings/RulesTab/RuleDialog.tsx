@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import {
   type ScheduleRuleDefinition,
   hasRuleLevel,
+  isScheduleRuleToggleable,
   scheduleRuleValueErrors,
 } from "@repo/domain/project/schedule-settings";
 import {
@@ -48,8 +49,6 @@ export interface RuleDialogProps {
   onRestore: () => void;
   onClose: () => void;
 }
-
-const SWITCH_RULES = new Set(["understaffed", "multiPositionOverlap"]);
 
 /**
  * 規則編輯對話框(SC-27;規格 14.2):值、違反時的等級(限制 / 提醒)、檢核清單排序。
@@ -148,20 +147,21 @@ export const RuleDialog = ({
             setInvalid([]);
           }}
         />
-        {SWITCH_RULES.has(definition.key) && (
-          <FormControlLabel
-            label={t("enabled")}
-            disabled={!canEdit}
-            control={
-              <Switch
-                checked={enabled}
-                onChange={(_event, checked) => {
-                  setEnabled(checked);
-                }}
-              />
-            }
-          />
-        )}
+        {definition.group === "rule" &&
+          isScheduleRuleToggleable(definition) && (
+            <FormControlLabel
+              label={t("enabled")}
+              disabled={!canEdit}
+              control={
+                <Switch
+                  checked={enabled}
+                  onChange={(_event, checked) => {
+                    setEnabled(checked);
+                  }}
+                />
+              }
+            />
+          )}
         {withLevel && (
           <>
             <Typography variant="subtitle2">{t("level")}</Typography>

@@ -81,7 +81,7 @@ export const scheduleModules = (omit: readonly string[] = []): TestModule[] => {
   const keep = (keys: readonly string[]) =>
     keys.filter((key) => !omit.includes(key));
   return [
-    node("schedule", "班表管理", null, 17, "/schedule", {
+    node("schedule", "班表管理", null, 80, "/schedule", {
       sidebarType: ModuleSidebarType.Group,
     }),
     node("schedule.my", "我的班表", "schedule", 1, "/schedule/my", {

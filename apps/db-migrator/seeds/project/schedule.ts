@@ -61,7 +61,7 @@ export const scheduleGroupModule: ModuleSeedDeclaration = {
       name: "班表管理",
       sidebarType: "group",
       parentKey: null,
-      order: 17,
+      order: 80,
       route: "schedule",
       icon: "calendar",
       description: "排班與出勤:我的班表、排班作業、排班設定、出勤紀錄",

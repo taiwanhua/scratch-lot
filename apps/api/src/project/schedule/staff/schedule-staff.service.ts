@@ -72,7 +72,8 @@ type VisibleOrgs = ReadonlyMap<string, string>;
  * 排班人員(規格 14.3;正本 `docs/modules/project/schedule.md`「排班人員」)。
  *
  * - **候選使用者** = 所屬組織落在操作者可見範圍內(且在同一個租戶)的使用者;不是新建人
- * - 排班檔案是整個租戶共用的:歸屬欄 `orgId` = 租戶頂層、讀取以 `tenantId` 為界,一個租戶一人一筆
+ * - 排班檔案**歸當前組織、不共用**(跨店支援由支援需求單把人加進那家店):建立時 `orgId` = 當前組織,
+ *   讀取照一般可見性;同一組織一人一筆(唯一 `(orgId, userId)`)
  * - 可以排的分店只能加操作者看得到的(看不到 → `NOT_FOUND`);看不到的分店的關聯保留不動
  * - 每人一家主要分店(有任何可以排的分店時恰好一家)
  */
@@ -93,8 +94,8 @@ export class ScheduleStaffService {
     operator: OperatorContext,
     input: ScheduleStaffListInput | null,
   ): Promise<ScheduleStaffListPayload> {
-    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
-    const staffByUser = await this.staffByUser(operator, tenantId, users);
+    const { visibleOrgs, users } = await this.candidatesOf(operator);
+    const staffByUser = await this.staffByUser(operator, users);
     const rows = await this.rowsOf(operator, users, staffByUser, visibleOrgs);
     const keyword = input?.keyword?.trim().toLowerCase() ?? "";
     const joined = input?.joined ?? null;
@@ -122,7 +123,7 @@ export class ScheduleStaffService {
       throw validationError("userIds is empty", ["userIds"]);
     }
     const ids = input.userIds.map((id) => parseObjectId(id, "userIds"));
-    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
+    const { visibleOrgs, users } = await this.candidatesOf(operator);
     const byId = new Map(users.map((user) => [String(user._id), user]));
     const picked = ids.map((id) => {
       const user = byId.get(String(id));
@@ -131,29 +132,31 @@ export class ScheduleStaffService {
       }
       return user;
     });
-    const existing = await this.staffByUser(operator, tenantId, picked);
+    // 已加入 = 當前組織已經有這個人的排班檔案(排班檔案歸當前組織,不共用)
+    const visibleStaff = await this.staffByUser(operator, picked);
+    const existing = new Map(
+      [...visibleStaff.entries()].filter(
+        ([, record]) => String(record.orgId) === String(operator.currentOrgId),
+      ),
+    );
     if (existing.size > 0) {
       throw validationError(
         `already joined: ${[...existing.keys()].join(", ")}`,
         ["userIds"],
       );
     }
-    // 兩個請求同時加入同一人:唯一索引 (tenantId, userId) 擋下第二筆,回同一個錯誤
+    // 兩個請求同時加入同一人:唯一索引 (orgId, userId) 擋下第二筆,回同一個錯誤
     await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
           for (const user of picked) {
-            // 排班檔案是整個租戶共用的:歸屬欄一律是租戶頂層(先例:遊戲)
-            const created = await this.staff.create(
-              scheduleReadContext(operator),
-              {
-                orgId: tenantId,
-                userId: user._id,
-                employmentType: "full-time",
-                enabled: true,
-                note: null,
-              },
-            );
+            // 排班檔案歸當前組織(不共用;跨店支援由支援需求單把人加進那家店)
+            const created = await this.staff.create(operator, {
+              userId: user._id,
+              employmentType: "full-time",
+              enabled: true,
+              note: null,
+            });
             await this.audit.record(operator, {
               action: "schedule-staff.create",
               targetType: AUDIT_TARGET_TYPE,
@@ -165,7 +168,7 @@ export class ScheduleStaffService {
       "already joined (concurrent add)",
       ["userIds"],
     );
-    const staffByUser = await this.staffByUser(operator, tenantId, picked);
+    const staffByUser = await this.staffByUser(operator, picked);
     return this.rowsOf(operator, picked, staffByUser, visibleOrgs);
   }
 
@@ -175,11 +178,9 @@ export class ScheduleStaffService {
     input: UpdateScheduleStaffInput,
   ): Promise<ScheduleStaffRowModel> {
     const staffId = parseObjectId(input.staffId, "staffId");
-    const { tenantId, visibleOrgs, users } = await this.candidatesOf(operator);
-    const record = await this.staff.findOne(scheduleReadContext(operator), {
-      _id: staffId,
-      tenantId,
-    });
+    const { visibleOrgs, users } = await this.candidatesOf(operator);
+    // 一般可見性:看得到這份排班檔案所屬的組織才改得到
+    const record = await this.staff.findOne(operator, { _id: staffId });
     const user = users.find(
       (candidate) => String(candidate._id) === String(record?.userId),
     );
@@ -250,7 +251,7 @@ export class ScheduleStaffService {
       "schedule staff branches changed at the same time",
       ["orgs"],
     );
-    const staffByUser = await this.staffByUser(operator, tenantId, [user]);
+    const staffByUser = await this.staffByUser(operator, [user]);
     const [row] = await this.rowsOf(operator, [user], staffByUser, visibleOrgs);
     if (!row) {
       throw notFoundError(`schedule staff not found: ${input.staffId}`);
@@ -368,19 +369,35 @@ export class ScheduleStaffService {
     };
   }
 
+  /**
+   * 這些使用者看得到的排班檔案(一般可見性);同一人在多個看得到的組織各有一份時,
+   * 優先當前組織那份,其次最早建立的。
+   */
   private async staffByUser(
     operator: OperatorContext,
-    tenantId: Types.ObjectId,
     users: readonly UserRecord[],
   ): Promise<Map<string, StaffRecord>> {
     if (users.length === 0) {
       return new Map();
     }
-    const records = await this.staff.findMany(scheduleReadContext(operator), {
-      tenantId,
-      userId: { $in: users.map((user) => user._id) },
-    });
-    return new Map(records.map((record) => [String(record.userId), record]));
+    const records = await this.staff.findMany(
+      operator,
+      { userId: { $in: users.map((user) => user._id) } },
+      { sort: { createdAt: 1 } },
+    );
+    const current = String(operator.currentOrgId);
+    const byUser = new Map<string, StaffRecord>();
+    for (const record of records) {
+      const key = String(record.userId);
+      const kept = byUser.get(key);
+      if (
+        kept === undefined ||
+        (String(kept.orgId) !== current && String(record.orgId) === current)
+      ) {
+        byUser.set(key, record);
+      }
+    }
+    return byUser;
   }
 
   private async rowsOf(
