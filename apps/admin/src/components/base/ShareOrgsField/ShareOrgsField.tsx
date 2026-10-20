@@ -37,8 +37,8 @@ const useTenantOrgs = () => {
     const nodes = tree.data?.tenantOrgTree ?? [];
     return {
       orgs: flattenOrgs(tenantTreeToOrgNodes(nodes, false)),
-      // 根組織 = 沒有上層的那一個(租戶頂層的上層是根組織)
-      rootIds: nodes
+      // 樹的頂層節點(parentId 一律 null):租戶的人看到的是租戶頂層,站在根組織時是根組織本身
+      topIds: nodes
         .filter((node) => (node.parentId ?? null) === null)
         .map((node) => node.id),
     };
@@ -68,14 +68,17 @@ export const ShareOrgsField = ({
   width,
 }: ShareOrgsFieldProps) => {
   const t = useTranslations("admin.shareOrgsField");
-  const { rootIds } = useTenantOrgs();
+  const { topIds } = useTenantOrgs();
   const names = useTenantOrgNames();
   const ids = value.map((item) => item.orgId);
   // 根組織不屬於任何租戶:樹上的根組織反灰;站在根組織時整欄停用(根組織的資料不能共用,api 也會擋)
   const isAtRoot = useIsAtRootOrg() === true;
   const rootReasons = useMemo(
-    () => Object.fromEntries(rootIds.map((id) => [id, t("rootNotSharable")])),
-    [rootIds, t],
+    () =>
+      isAtRoot
+        ? Object.fromEntries(topIds.map((id) => [id, t("rootNotSharable")]))
+        : {},
+    [isAtRoot, topIds, t],
   );
 
   return (
