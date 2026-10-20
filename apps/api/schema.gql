@@ -1796,6 +1796,11 @@ type LotterySettlement {
   sides: [LotterySettlementSide!]!
 }
 
+type LotterySettlementAccountsPayload {
+  items: [LotteryAccountsRef!]!
+  totalCount: Int!
+}
+
 type LotterySettlementButton {
   button: String!
   canUse: Boolean!
@@ -2698,6 +2703,7 @@ type Query {
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
+  lotterySettlementAccounts(moduleKey: String!, refId: ID!, side: String!): LotterySettlementAccountsPayload!
   lotterySettlementCandidates(input: LotterySettlementCandidatesInput!): LotteryOutstandingSettlementsPayload!
   me: Me!
   moduleForms(moduleKey: ID!): [FormSummary!]!

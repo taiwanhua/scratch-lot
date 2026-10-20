@@ -9,6 +9,7 @@ import {
 } from "./dto/lottery-settlement.input";
 import {
   LotteryOutstandingSettlementsPayload,
+  LotterySettlementAccountsPayload,
   LotterySettlementModel,
   LotterySettlementPayload,
   RecordLotterySettlementPayload,
@@ -53,6 +54,27 @@ export class LotterySettlementResolver {
   ): Promise<LotteryOutstandingSettlementsPayload> {
     const items = await this.settlement.candidates(operator, input);
     return { items, totalCount: items.length };
+  }
+
+  @Query(() => LotterySettlementAccountsPayload, {
+    name: "lotterySettlementAccounts",
+  })
+  async lotterySettlementAccounts(
+    @Args("moduleKey") moduleKey: string,
+    @Args("refId", { type: () => ID }) refId: string,
+    @Args("side") side: string,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotterySettlementAccountsPayload> {
+    const items = await this.settlement.accountOptions(
+      operator,
+      moduleKey,
+      refId,
+      side,
+    );
+    return {
+      items: items.map((item) => ({ id: item.id, name: item.label })),
+      totalCount: items.length,
+    };
   }
 
   @Mutation(() => RecordLotterySettlementPayload)

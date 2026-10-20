@@ -140,6 +140,39 @@ export class SettlementService {
     return this.toRowModels(operator, rows);
   }
 
+  /**
+   * 付款視窗「帳戶」的選項:操作者看得到、使用中、使用組織包含這一邊的分店(規格 9);
+   * 看得到單據就能問(按鈕本身另看那一邊的權限)。
+   */
+  async accountOptions(
+    operator: OperatorContext,
+    moduleKey: string,
+    refId: string,
+    sideKey: string,
+  ): Promise<{ id: string; label: string }[]> {
+    const snapshot = await this.ledger.snapshotOf(operator, moduleKey, refId);
+    const side = sideOf(snapshot.registration, sideKey);
+    if (side === undefined) {
+      return [];
+    }
+    const branchOrgId =
+      side.branchOf?.(snapshot.submission, snapshot.payable) ??
+      snapshot.payable.branchOrgId;
+    const isUsable = await this.usableBy(
+      operator,
+      snapshot.submission.tenantId,
+      branchOrgId,
+    );
+    const accounts = await this.accounts.findMany(
+      operator,
+      { status: "active" },
+      { sort: { createdAt: 1, _id: 1 } },
+    );
+    return accounts
+      .filter((account) => isUsable(account))
+      .map((account) => ({ id: String(account._id), label: account.label }));
+  }
+
   // ---- 寫 ----
 
   async record(
@@ -382,19 +415,8 @@ export class SettlementService {
         ACCOUNTS_REASONS.accountInactive,
       );
     }
-    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
-    const branch = await this.orgs.findById(reader, branchOrgId);
-    const chain = new Set([
-      String(branchOrgId),
-      ...(branch?.ancestors ?? []).map(String),
-    ]);
-    const usable =
-      account.orgId.equals(branchOrgId) ||
-      account.shareOrgs.some(
-        (entry) =>
-          entry.orgId.equals(branchOrgId) ||
-          (entry.includeDescendants && chain.has(String(entry.orgId))),
-      );
+    const isUsable = await this.usableBy(operator, tenantId, branchOrgId);
+    const usable = isUsable(account);
     if (!usable) {
       throw validationError(
         "bank account is not used by this branch",
@@ -403,6 +425,35 @@ export class SettlementService {
       );
     }
     return account;
+  }
+
+  /** 「帳戶的使用組織包含這家分店」的判斷(歸屬是它、共用給它、或共用給它的上層並含下層)。 */
+  private async usableBy(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    branchOrgId: Types.ObjectId,
+  ): Promise<
+    (account: {
+      orgId: Types.ObjectId;
+      shareOrgs: readonly {
+        orgId: Types.ObjectId;
+        includeDescendants: boolean;
+      }[];
+    }) => boolean
+  > {
+    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
+    const branch = await this.orgs.findById(reader, branchOrgId);
+    const chain = new Set([
+      String(branchOrgId),
+      ...(branch?.ancestors ?? []).map(String),
+    ]);
+    return (account) =>
+      account.orgId.equals(branchOrgId) ||
+      account.shareOrgs.some(
+        (entry) =>
+          entry.orgId.equals(branchOrgId) ||
+          (entry.includeDescendants && chain.has(String(entry.orgId))),
+      );
   }
 
   /** 現金來源:小金庫,或有開著班的收銀點抽屜。 */

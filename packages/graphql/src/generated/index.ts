@@ -1951,6 +1951,12 @@ export type LotterySettlement = {
   sides: Array<LotterySettlementSide>;
 };
 
+export type LotterySettlementAccountsPayload = {
+  __typename?: 'LotterySettlementAccountsPayload';
+  items: Array<LotteryAccountsRef>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type LotterySettlementButton = {
   __typename?: 'LotterySettlementButton';
   button: Scalars['String']['output'];
@@ -3595,6 +3601,7 @@ export type Query = {
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
   lotteryPositionOptions: LotteryPositionOptionsPayload;
   lotterySettlement: LotterySettlementPayload;
+  lotterySettlementAccounts: LotterySettlementAccountsPayload;
   lotterySettlementCandidates: LotteryOutstandingSettlementsPayload;
   me: Me;
   moduleForms: Array<FormSummary>;
@@ -3875,6 +3882,13 @@ export type QueryLotteryPositionOptionsArgs = {
 export type QueryLotterySettlementArgs = {
   moduleKey: Scalars['String']['input'];
   refId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotterySettlementAccountsArgs = {
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
 };
 
 
@@ -7218,6 +7232,15 @@ export type ReverseLotterySettlementMutationVariables = Exact<{
 
 
 export type ReverseLotterySettlementMutation = { __typename?: 'Mutation', reverseLotterySettlement: { __typename?: 'RecordLotterySettlementPayload', recordId: string, item: { __typename?: 'LotterySettlement', moduleKey: string, label: string, kind: string, refId: string, docNo: string, counterparty: string, payable: number, pendingPayee: number, sides: Array<{ __typename?: 'LotterySettlementSide', side: string, label: string, role: string, methods: Array<string>, totalOut: number, totalIn: number, net: number, canSettle: boolean, branch: { __typename?: 'LotteryAccountsRef', id: string, name: string }, buttons: Array<{ __typename?: 'LotterySettlementButton', button: string, defaultAmount: number, canUse: boolean }> }>, records: Array<{ __typename?: 'LotterySettlementRecord', id: string, method: string, side: string, type: string, direction: string, amount: number, accountLabel?: string | null, handler?: string | null, note?: string | null, occurredAt: string, reversalOf?: string | null, reversedById?: string | null, canReverse: boolean, createdBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type LotterySettlementAccountsQueryVariables = Exact<{
+  moduleKey: Scalars['String']['input'];
+  refId: Scalars['ID']['input'];
+  side: Scalars['String']['input'];
+}>;
+
+
+export type LotterySettlementAccountsQuery = { __typename?: 'Query', lotterySettlementAccounts: { __typename?: 'LotterySettlementAccountsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
 
 export type LotteryDealerRefFieldsFragment = { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus };
 
@@ -15791,6 +15814,40 @@ export const useReverseLotterySettlementMutation = <
 
 
 useReverseLotterySettlementMutation.fetcher = (client: GraphQLClient, variables: ReverseLotterySettlementMutationVariables, headers?: RequestInit['headers']) => fetcher<ReverseLotterySettlementMutation, ReverseLotterySettlementMutationVariables>(client, ReverseLotterySettlementDocument, variables, headers);
+
+export const LotterySettlementAccountsDocument = `
+    query LotterySettlementAccounts($moduleKey: String!, $refId: ID!, $side: String!) {
+  lotterySettlementAccounts(moduleKey: $moduleKey, refId: $refId, side: $side) {
+    items {
+      ...LotteryAccountsRefFields
+    }
+    totalCount
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+
+export const useLotterySettlementAccountsQuery = <
+      TData = LotterySettlementAccountsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotterySettlementAccountsQueryVariables,
+      options?: Omit<UseQueryOptions<LotterySettlementAccountsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotterySettlementAccountsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotterySettlementAccountsQuery, TError, TData>(
+      {
+    queryKey: ['LotterySettlementAccounts', variables],
+    queryFn: fetcher<LotterySettlementAccountsQuery, LotterySettlementAccountsQueryVariables>(client, LotterySettlementAccountsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotterySettlementAccountsQuery.getKey = (variables: LotterySettlementAccountsQueryVariables) => ['LotterySettlementAccounts', variables];
+
+
+useLotterySettlementAccountsQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementAccountsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementAccountsQuery, LotterySettlementAccountsQueryVariables>(client, LotterySettlementAccountsDocument, variables, headers);
 
 export const LotteryDealersDocument = `
     query LotteryDealers($input: LotteryDealersInput!) {

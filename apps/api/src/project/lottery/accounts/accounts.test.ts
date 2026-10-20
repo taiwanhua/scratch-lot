@@ -253,6 +253,25 @@ const REVERSE_SETTLEMENT = /* GraphQL */ `
   }
 `;
 
+const SETTLEMENT_ACCOUNTS = /* GraphQL */ `
+  query TestSettlementAccounts(
+    $moduleKey: String!
+    $refId: ID!
+    $side: String!
+  ) {
+    lotterySettlementAccounts(
+      moduleKey: $moduleKey
+      refId: $refId
+      side: $side
+    ) {
+      items {
+        id
+        name
+      }
+    }
+  }
+`;
+
 const OUTSTANDING = /* GraphQL */ `
   query TestOutstanding {
     lotteryOutstandingSettlements {
@@ -1093,6 +1112,19 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
       expect(
         await errorOf(api, hq, RECORD_SETTLEMENT, { input }),
       ).toMatchObject({ reason: "BANK_ACCOUNT_NOT_USABLE" });
+      // 付款視窗的帳戶選項:只列使用中、使用組織包含這一邊分店(中山店)的
+      const options = await ok<{
+        lotterySettlementAccounts: { items: { id: string; name: string }[] };
+      }>(api, hq, SETTLEMENT_ACCOUNTS, {
+        moduleKey: TEST_PURCHASE,
+        refId: String(doc),
+        side: "hq",
+      });
+      const optionIds = options.lotterySettlementAccounts.items.map(
+        (item) => item.id,
+      );
+      expect(optionIds).not.toContain(onlyB.id);
+      expect(optionIds.length).toBeGreaterThan(0);
       expect(
         await errorOf(api, nobody, RECORD_SETTLEMENT, { input }),
       ).toMatchObject({ code: "FORBIDDEN" });

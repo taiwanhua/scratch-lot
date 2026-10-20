@@ -230,3 +230,13 @@ export class RecordLotterySettlementPayload {
   @Field(() => LotterySettlementModel)
   item!: LotterySettlementModel;
 }
+
+/** 付款視窗「帳戶」的選項(使用中、使用組織包含這一邊的分店;`name` = 戶名 + 帳號末 5 碼)。 */
+@ObjectType()
+export class LotterySettlementAccountsPayload {
+  @Field(() => [LotteryAccountsRefModel])
+  items!: LotteryAccountsRefModel[];
+
+  @Field(() => Int)
+  totalCount!: number;
+}
