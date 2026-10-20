@@ -43,6 +43,7 @@ function operator(
     // 兩欄仍必填,預設空集合
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
     ...overrides,
   };
 }

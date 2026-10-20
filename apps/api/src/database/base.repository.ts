@@ -2,6 +2,7 @@
 import mongoose, {
   type ClientSession,
   type Model,
+  type PipelineStage,
   type QueryFilter,
   type SaveOptions,
   type Types,
@@ -12,10 +13,14 @@ import {
   OPERATOR_LOCAL_KEY,
   type OperatorContext,
   isOrgVisible,
+  scopeAggregate,
   scopeQuery,
 } from "./operator-context";
 import type { BaseFields } from "./plugins/base-fields.plugin";
 import {
+  SHARE_ORGS_PATH,
+  type ShareOrg,
+  type TenantScope,
   TenantScopeError,
   getTenantScope,
 } from "./plugins/tenant-scope.plugin";
@@ -24,6 +29,13 @@ import { CORE_RELATIONSHIPS_COLLECTION } from "./schemas/core-relationship.schem
 import { ORGS_COLLECTION } from "./schemas/org.schema";
 import { WORKFLOW_TASKS_COLLECTION } from "./schemas/workflow-task.schema";
 import { WORKFLOWS_COLLECTION } from "./schemas/workflow.schema";
+import {
+  assertShareOrgsInTenant,
+  normalizeShareOrgs,
+  shareOrgsValidationError,
+  tenantIdsOfShareOrgs,
+} from "./share-orgs";
+import { assertTenantBoundary } from "./tenant-boundary";
 import { tenantIdOfOrg } from "./tenant-id";
 import { currentSession } from "./transaction";
 
@@ -50,6 +62,9 @@ export type Persisted<TDocument> = TDocument & BaseFields;
 export type RepositoryFilter<TSchema> = QueryFilter<TSchema & BaseFields>;
 
 export type RepositoryUpdate<TSchema> = UpdateQuery<TSchema & BaseFields>;
+
+/** 租戶內引用名稱出口(`findRefsInTenant`)回的一筆:`_id` + schema 宣告的 `refFields`。 */
+export type TenantRef = { _id: Types.ObjectId } & Record<string, unknown>;
 
 /**
  * 建立資料的內容。`_id` 只給「先配好 id 再寫入」的內部流程用(受管定義的安裝紀錄要在第一筆寫入前
@@ -132,6 +147,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   /** 這個 repository 實際讀寫的 collection 名(只讀識別,同上)。 */
   get collectionName(): string {
     return this.model.collection.collectionName;
+  }
+
+  /** schema 上的租戶範圍宣告(只讀;lookup 登記據此驗證共用篩選,不暴露 Model)。 */
+  get tenantScope(): TenantScope | undefined {
+    return getTenantScope(this.model.schema);
   }
 
   async findMany(
@@ -230,14 +250,10 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     if (operator.actorId === null) {
       return null;
     }
-    assertUpdateLeavesProtectedPaths(
-      this.model.modelName,
-      update,
-      this.protectedUpdatePaths(),
-    );
+    const shared = await this.prepareUpdate(operator, filter, update, options);
     const document = await scopeQuery(
       this.model.findOneAndUpdate(
-        { ...filter, createdBy: operator.actorId },
+        { ...shared.filter, createdBy: operator.actorId },
         update,
         { returnDocument: "after", runValidators: true },
       ),
@@ -287,6 +303,99 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   }
 
   /**
+   * **租戶內存在性檢查**(ADR-0005「例外出口」):在**整個租戶**內問「有沒有符合條件的一筆」——
+   * 租戶內唯一(證號、代碼)、「這個組織是否已被占用」這類問的是整個租戶,不是操作者看得到的那一部分。
+   *
+   * - `tenantId` 必填(租戶頂層 ObjectId),沒給 / 給錯型別 → `TenantScopeError`;可見範圍不是 `"all"`
+   *   的操作者,`tenantId` 必須是自己所屬的租戶(`memberTenants`),否則同樣拋錯
+   * - 條件只能是**一個欄位等於一個值**(`field` = 欄位路徑,`value` = 純量 / ObjectId / Date / null),
+   *   不收運算子物件;plugin 另釘 `tenantId`
+   * - 不套可見範圍、共用與**資料範圍規則**;軟刪除照常排除
+   * - 只回有無,不回筆數或文件;只給有 `tenantId` 的模組資料表
+   * - 呼叫端登記在 `TENANT_BOUNDARY_CALLERS`,由測試掃 src 鎖定
+   */
+  async existsInTenant(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null | undefined,
+    field: string,
+    value: unknown,
+    options: SessionOptions = {},
+  ): Promise<boolean> {
+    const boundary = this.tenantBoundaryOf(operator, tenantId);
+    const filter = equalityFilterOf(this.model.modelName, field, value);
+    const found = await scopeQuery(this.model.countDocuments(filter).limit(1), {
+      operator,
+      tenantBoundary: boundary,
+    })
+      .session(sessionOf(options))
+      .exec();
+    return found > 0;
+  }
+
+  /**
+   * **租戶內引用名稱**(ADR-0005「例外出口」):「看得到這筆就看得到它引用的名稱」——
+   * 明列 id、只回 schema 宣告的 `refFields`(`tenantScopePlugin` 選項)與 `_id`。
+   * 規則同 `existsInTenant`:`tenantId` 必填且是操作者所屬的租戶、不套可見範圍 / 共用 / 資料範圍規則、
+   * 軟刪除照常排除;呼叫端同樣登記在 `TENANT_BOUNDARY_CALLERS`。
+   * 表沒宣告 `refFields` → `TenantScopeError`(這張表不提供這個出口)。
+   */
+  async findRefsInTenant(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null | undefined,
+    ids: readonly (Types.ObjectId | string)[],
+    options: SessionOptions = {},
+  ): Promise<TenantRef[]> {
+    const boundary = this.tenantBoundaryOf(operator, tenantId);
+    const refFields = getTenantScope(this.model.schema)?.refFields ?? [];
+    if (refFields.length === 0) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:沒有宣告 refFields,不提供租戶內引用名稱出口`,
+      );
+    }
+    const objectIds = ids
+      .map(String)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+    if (objectIds.length === 0) {
+      return [];
+    }
+    return scopeQuery(
+      this.model
+        .find({ _id: { $in: objectIds } }, refFields.join(" "))
+        .lean<TenantRef[]>(),
+      { operator, tenantBoundary: boundary },
+    )
+      .session(sessionOf(options))
+      .exec();
+  }
+
+  /**
+   * aggregate:plugin 在 pipeline 最前面放同一套讀取條件(可見範圍 + 共用 + 資料範圍規則 + 軟刪除)。
+   * 會讀別張表或寫出的階段(`$lookup` / `$unionWith` / `$graphLookup` / `$out` / `$merge`)一律拒收 ——
+   * 那些表的範圍不歸這支 repository 管。
+   */
+  async aggregate(
+    operator: OperatorContext,
+    pipeline: readonly Record<string, unknown>[],
+    options: Pick<FindOptions, "includeDeleted" | "session"> = {},
+  ): Promise<Record<string, unknown>[]> {
+    const forbidden = forbiddenStageIn(pipeline);
+    if (forbidden !== undefined) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:aggregate 不得使用 ${forbidden}(會讀寫範圍外的表)`,
+      );
+    }
+    return scopeAggregate(
+      this.model.aggregate<Record<string, unknown>>(
+        pipeline as unknown as PipelineStage[],
+      ),
+      { operator, includeDeleted: options.includeDeleted },
+    )
+      .session(sessionOf(options))
+      .exec();
+  }
+
+  /**
    * 建立資料:租戶資料自動寫入當前組織(ADR-0005),且不可寫入可見範圍外的組織。
    * 模組資料表(`moduleData`)另由後端推導 `tenantId`,呼叫端給的值一律忽略。
    */
@@ -297,7 +406,13 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
   ): Promise<Persisted<TDocument>> {
     const session = sessionOf(options);
     const document = new this.model(
-      await this.withModuleTenant(this.withTenantOrg(operator, data), session),
+      await this.withShareOrgs(
+        await this.withModuleTenant(
+          this.withTenantOrg(operator, data),
+          session,
+        ),
+        session,
+      ),
     );
     document.$locals[OPERATOR_LOCAL_KEY] = operator;
     await document.save({ session });
@@ -314,13 +429,14 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     update: RepositoryUpdate<TSchema>,
     options: SessionOptions = {},
   ): Promise<Persisted<TDocument> | null> {
-    assertUpdateLeavesProtectedPaths(
-      this.model.modelName,
+    const shared = await this.prepareUpdate(
+      operator,
+      { _id: id },
       update,
-      this.protectedUpdatePaths(),
+      options,
     );
     const document = await scopeQuery(
-      this.model.findOneAndUpdate({ _id: id }, update, {
+      this.model.findOneAndUpdate(shared.filter, update, {
         returnDocument: "after",
         runValidators: true,
       }),
@@ -345,13 +461,9 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     update: RepositoryUpdate<TSchema>,
     options: UpdateOptions = {},
   ): Promise<Persisted<TDocument> | null> {
-    assertUpdateLeavesProtectedPaths(
-      this.model.modelName,
-      update,
-      this.protectedUpdatePaths(),
-    );
+    const shared = await this.prepareUpdate(operator, filter, update, options);
     const document = await scopeQuery(
-      this.model.findOneAndUpdate({ ...filter }, update, {
+      this.model.findOneAndUpdate({ ...shared.filter }, update, {
         returnDocument: "after",
         runValidators: true,
         ...(options.arrayFilters === undefined
@@ -375,13 +487,11 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     update: RepositoryUpdate<TSchema>,
     options: SessionOptions = {},
   ): Promise<number> {
-    assertUpdateLeavesProtectedPaths(
-      this.model.modelName,
-      update,
-      this.protectedUpdatePaths(),
-    );
+    const shared = await this.prepareUpdate(operator, filter, update, options);
     const { modifiedCount } = await scopeQuery(
-      this.model.updateMany({ ...filter }, update, { runValidators: true }),
+      this.model.updateMany({ ...shared.filter }, update, {
+        runValidators: true,
+      }),
       { operator },
     )
       .session(sessionOf(options))
@@ -450,11 +560,119 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     return document as Persisted<TDocument> | null;
   }
 
-  /** 模組資料表另外鎖住 `moduleKey` / `tenantId`:兩者建立後不可經一般更新改動。 */
+  /**
+   * 模組資料表另外鎖住 `moduleKey` / `tenantId`:兩者建立後不可經一般更新改動;
+   * 共用清單固定(`editable: false`)的表連 `shareOrgs` 也鎖住。
+   */
   private protectedUpdatePaths(): readonly string[] {
-    return getTenantScope(this.model.schema)?.moduleData === true
-      ? [...PROTECTED_UPDATE_PATHS, ...MODULE_DATA_PROTECTED_PATHS]
-      : PROTECTED_UPDATE_PATHS;
+    const scope = getTenantScope(this.model.schema);
+    return [
+      ...PROTECTED_UPDATE_PATHS,
+      ...(scope?.moduleData === true ? MODULE_DATA_PROTECTED_PATHS : []),
+      ...(scope?.sharing.mode === "shareable" && !scope.sharing.editable
+        ? [SHARE_ORGS_PATH]
+        : []),
+    ];
+  }
+
+  /**
+   * 租戶邊界出口的前置:`tenantId` 必填、表要有 `tenantId` 欄(模組資料表),
+   * 而且操作者(可見範圍不是 `"all"` 時)要屬於那個租戶 —— 出口只放寬「自己租戶裡看不到的部分」。
+   */
+  private tenantBoundaryOf(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null | undefined,
+  ): Types.ObjectId {
+    const boundary = assertTenantBoundary(tenantId, this.model.modelName);
+    if (getTenantScope(this.model.schema)?.moduleData !== true) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:租戶邊界出口只給有 tenantId 的模組資料表`,
+      );
+    }
+    if (
+      operator.visibleOrgIds !== "all" &&
+      !operator.memberTenants.some((tenant) => tenant.tenantId.equals(boundary))
+    ) {
+      throw new TenantScopeError(
+        `${this.model.modelName}:租戶邊界出口只能用在操作者所屬的租戶`,
+      );
+    }
+    return boundary;
+  }
+
+  /**
+   * 更新的共同前置:受保護欄位檢查,加上共用清單(ADR-0014)——
+   * `shareOrgs` 只能以 `$set`(或頂層)整份替換;每個組織都要在**同一個租戶**,而且是操作者所屬的租戶
+   * (不是 → `VALIDATION_FAILED`);條件另釘 `tenantId = 那個租戶`,資料若在別的租戶就命中不到。
+   */
+  private async prepareUpdate(
+    operator: OperatorContext,
+    filter: RepositoryFilter<TSchema>,
+    update: RepositoryUpdate<TSchema>,
+    options: SessionOptions,
+  ): Promise<{ filter: RepositoryFilter<TSchema> }> {
+    assertUpdateLeavesProtectedPaths(
+      this.model.modelName,
+      update,
+      this.protectedUpdatePaths(),
+    );
+    const scope = getTenantScope(this.model.schema);
+    if (scope?.sharing.mode !== "shareable") {
+      return { filter };
+    }
+    const container = shareOrgsContainerOf(this.model.modelName, update);
+    if (container === null) {
+      return { filter };
+    }
+    const shareOrgs = normalizeShareOrgs(container[SHARE_ORGS_PATH]);
+    container[SHARE_ORGS_PATH] = shareOrgs;
+    const tenants = await tenantIdsOfShareOrgs(
+      this.model.db,
+      shareOrgs,
+      sessionOf(options),
+    );
+    const [tenantId] = tenants;
+    if (tenantId === undefined) {
+      return { filter };
+    }
+    if (
+      tenants.length > 1 ||
+      (operator.visibleOrgIds !== "all" &&
+        !operator.memberTenants.some((tenant) =>
+          tenant.tenantId.equals(tenantId),
+        ))
+    ) {
+      throw shareOrgsValidationError(
+        "shareOrgs can only include orgs of the same tenant",
+      );
+    }
+    return {
+      filter: { $and: [{ ...filter }, { tenantId }] },
+    };
+  }
+
+  /**
+   * 可共用的表建立時的共用清單:固定(`editable: false`)一律用預設、呼叫端給的忽略;
+   * 可編輯時呼叫端沒給才用預設。預設 `wholeTenant` = `[{ 租戶頂層, 含下層 }]`(根組織的資料沒有租戶 → 空)。
+   * 清單裡每個組織都要在這筆資料的租戶,否則 `VALIDATION_FAILED`。
+   */
+  private async withShareOrgs(
+    data: Partial<TSchema>,
+    session: ClientSession | null,
+  ): Promise<Partial<TSchema>> {
+    const scope = getTenantScope(this.model.schema);
+    if (scope?.sharing.mode !== "shareable") {
+      return data;
+    }
+    const tenantId =
+      (data as { tenantId?: Types.ObjectId | null }).tenantId ?? null;
+    const given = (data as Record<string, unknown>)[SHARE_ORGS_PATH];
+    const shareOrgs: ShareOrg[] =
+      scope.sharing.editable && given !== undefined && given !== null
+        ? normalizeShareOrgs(given)
+        : defaultShareOrgsOf(scope.sharing.defaultShareOrgs, tenantId);
+    await assertShareOrgsInTenant(this.model.db, shareOrgs, tenantId, session);
+    return { ...data, [SHARE_ORGS_PATH]: shareOrgs };
   }
 
   /**
@@ -534,6 +752,13 @@ export const EXISTS_ANY_CALLERS: readonly string[] = [
 ];
 
 /**
+ * **允許呼叫租戶邊界出口(`existsInTenant` / `findRefsInTenant`)的檔案**(相對 `apps/api/src/`;
+ * ADR-0005「例外出口」)。`exists-any-callers.test.ts` 掃整個 src 斷言沒有其他檔案呼叫它們 ——
+ * 新增呼叫端要先在 ADR-0005 登記、再加進這裡。
+ */
+export const TENANT_BOUNDARY_CALLERS: readonly string[] = [];
+
+/**
  * 明確給的 session(含 `null`)優先,否則用目前進行中交易的;都沒有 → null(一般讀寫)。
  * 一律以明確值交給 Mongoose:交易已結束時,Mongoose 自己的 AsyncLocalStorage 可能還留著那個 session
  * (`fn` 裡排出去的晚到工作),明給 null 才不會誤用已結束的 session。
@@ -550,6 +775,118 @@ const PROTECTED_UPDATE_PATHS: readonly string[] = [
   "createdBy",
   "createdAt",
 ];
+
+/** aggregate 不收的階段:讀別張表(範圍不歸本 repository)或寫出。 */
+const FORBIDDEN_AGGREGATE_STAGES: ReadonlySet<string> = new Set([
+  "$lookup",
+  "$unionWith",
+  "$graphLookup",
+  "$out",
+  "$merge",
+]);
+
+/** pipeline 裡(含 `$facet` 子管線、任何巢狀的陣列管線)第一個被禁的階段;沒有 → undefined。 */
+function forbiddenStageIn(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value as unknown[]) {
+      const found = forbiddenStageIn(item);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+  if (value === null || typeof value !== "object") {
+    return undefined;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    if (FORBIDDEN_AGGREGATE_STAGES.has(key)) {
+      return key;
+    }
+    const found = forbiddenStageIn(nested);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
+/** `existsInTenant` 的欄位路徑:英數與 `.` 分段,不是 `tenantId`、不以 `$` 開頭。 */
+const EQUALITY_FIELD_PATTERN = /^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)*$/;
+
+/**
+ * 「一個欄位等於一個值」的條件:值只能是純量、ObjectId、Date 或 null;
+ * 物件(含 `{ $ne: … }` 這類運算子)與陣列一律拒收,條件放寬不了。
+ */
+function equalityFilterOf(
+  modelName: string,
+  field: string,
+  value: unknown,
+): Record<string, unknown> {
+  if (!EQUALITY_FIELD_PATTERN.test(field) || field === "tenantId") {
+    throw new TenantScopeError(
+      `${modelName}:existsInTenant 的欄位 ${field} 不合法`,
+    );
+  }
+  const scalar =
+    value === null ||
+    ["string", "number", "boolean"].includes(typeof value) ||
+    value instanceof mongoose.Types.ObjectId ||
+    value instanceof Date;
+  if (!scalar) {
+    throw new TenantScopeError(
+      `${modelName}:existsInTenant 的值只能是純量、ObjectId、Date 或 null`,
+    );
+  }
+  return { [field]: value };
+}
+
+function defaultShareOrgsOf(
+  kind: "none" | "wholeTenant",
+  tenantId: Types.ObjectId | null,
+): ShareOrg[] {
+  return kind === "wholeTenant" && tenantId !== null
+    ? [{ orgId: tenantId, includeDescendants: true }]
+    : [];
+}
+
+/**
+ * update 裡放 `shareOrgs` 的那一層(頂層或 `$set`);沒碰 → null。
+ * 以其他運算子(`$push` / `$unset` / `$addToSet`…)或子路徑(`shareOrgs.0`)改 → `TenantScopeError`:
+ * 只能整份替換,租戶檢查才看得到最後的完整清單。
+ */
+function shareOrgsContainerOf(
+  modelName: string,
+  update: unknown,
+): Record<string, unknown> | null {
+  if (!update || typeof update !== "object") {
+    return null;
+  }
+  let container: Record<string, unknown> | null = null;
+  for (const [key, value] of Object.entries(update)) {
+    const isOperator = key.startsWith("$");
+    const holder = isOperator
+      ? ((value ?? {}) as Record<string, unknown>)
+      : (update as Record<string, unknown>);
+    const touched = (isOperator ? Object.keys(holder) : [key]).filter(
+      (path) =>
+        path === SHARE_ORGS_PATH || path.startsWith(`${SHARE_ORGS_PATH}.`),
+    );
+    if (touched.length === 0) {
+      continue;
+    }
+    if (
+      touched.some((path) => path !== SHARE_ORGS_PATH) ||
+      (isOperator && key !== "$set")
+    ) {
+      throw new TenantScopeError(
+        `${modelName}:${SHARE_ORGS_PATH} 只能以 $set 整份替換`,
+      );
+    }
+    container = holder;
+  }
+  return container;
+}
 
 /** 模組資料表另外不得經一般更新改動的欄位(`tenantScopePlugin` 的 `moduleData`)。 */
 const MODULE_DATA_PROTECTED_PATHS: readonly string[] = [

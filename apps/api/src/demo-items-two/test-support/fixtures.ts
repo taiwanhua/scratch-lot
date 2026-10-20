@@ -37,6 +37,11 @@ const DEMO_ITEM_TWO_FIELDS = /* GraphQL */ `
       canEdit
       canDelete
     }
+    shareOrgs {
+      orgId
+      includeDescendants
+    }
+    isShared
   }
 `;
 
@@ -121,6 +126,8 @@ export interface DemoItemTwoRow {
   createdAt: string;
   updatedAt: string;
   abilities: { canEdit: boolean; canDelete: boolean };
+  shareOrgs: { orgId: string; includeDescendants: boolean }[];
+  isShared: boolean;
 }
 
 export interface DemoItemsTwoData {

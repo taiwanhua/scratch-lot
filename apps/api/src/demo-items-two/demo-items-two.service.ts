@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import { AuditService } from "../audit/audit.service";
+import { authError } from "../auth/auth-error";
 import type { Persisted } from "../database/base.repository";
 import {
   type DemoItemTwoDocument,
@@ -9,11 +10,16 @@ import {
   type UserDocument,
   UsersRepository,
 } from "../database/database.module";
-import type { OperatorContext } from "../database/operator-context";
+import {
+  type OperatorContext,
+  isOrgVisible,
+} from "../database/operator-context";
+import { normalizeShareOrgs } from "../database/share-orgs";
 import {
   PermissionResolver,
   holdsPermission,
 } from "../permission/permission-resolver";
+import { toShareOrgModels } from "../sharing/share-org.model";
 import { notFoundError, validationError } from "./demo-items-two-error";
 import type { CreateDemoItemTwoInput } from "./dto/create-demo-item-two.input";
 import type { DeleteDemoItemTwoInput } from "./dto/delete-demo-item-two.input";
@@ -149,16 +155,29 @@ export class DemoItemsTwoService {
   ): Promise<DemoItemTwoModel> {
     const name = requireText(input.name, "name");
     const note = input.note?.trim();
+    const shareOrgs = input.shareOrgs ?? undefined;
+    if (shareOrgs !== undefined && shareOrgs.length > 0) {
+      await this.assertCanEditSharing(operator);
+    }
     const created = await this.items.create(operator, {
       name,
       ...(note ? { note } : {}),
       enabled: true,
+      ...(shareOrgs === undefined
+        ? {}
+        : { shareOrgs: normalizeShareOrgs(shareOrgs) }),
     });
     await this.audit.record(operator, {
       action: AUDIT.create,
       targetType: AUDIT_TARGET_TYPE,
       targetId: created._id,
-      after: { name, ...(note ? { note } : {}) },
+      after: {
+        name,
+        ...(note ? { note } : {}),
+        ...(created.shareOrgs.length > 0
+          ? { shareOrgs: toShareOrgModels(created.shareOrgs) }
+          : {}),
+      },
     });
     return this.decorateOne(operator, created);
   }
@@ -175,6 +194,13 @@ export class DemoItemsTwoService {
     if (input.name !== undefined) {
       set.name = requireText(input.name, "name");
       before.name = current.name;
+    }
+    if (input.shareOrgs !== undefined) {
+      if (input.shareOrgs === null) {
+        throw validationError("shareOrgs cannot be null", ["shareOrgs"]);
+      }
+      before.shareOrgs = toShareOrgModels(current.shareOrgs);
+      set.shareOrgs = input.shareOrgs;
     }
     if (input.note !== undefined) {
       before.note = current.note ?? null;
@@ -199,6 +225,9 @@ export class DemoItemsTwoService {
       before,
       after: {
         ...set,
+        ...(set.shareOrgs === undefined
+          ? {}
+          : { shareOrgs: toShareOrgModels(updated.shareOrgs) }),
         ...(unset.note === undefined ? {} : { note: null }),
       },
     });
@@ -266,7 +295,9 @@ export class DemoItemsTwoService {
   ): Promise<DemoItemTwoModel[]> {
     const abilities = await this.abilitiesOf(operator);
     const creators = await this.loadCreators(operator, documents);
-    return documents.map((document) => toModel(document, abilities, creators));
+    return documents.map((document) =>
+      toModel(operator, document, abilities, creators),
+    );
   }
 
   private async decorateOne(
@@ -301,6 +332,14 @@ export class DemoItemsTwoService {
     };
   }
 
+  /** 建立時給非空的「共用給」要有編輯權限(ADR-0014:有該模組修改權限的人才能改)。 */
+  private async assertCanEditSharing(operator: OperatorContext): Promise<void> {
+    const { canEdit } = await this.abilitiesOf(operator);
+    if (!canEdit) {
+      throw authError("FORBIDDEN", `Missing permission ${PERMISSION.edit}`);
+    }
+  }
+
   /** 建立者的 id → 使用者文件;查不到的(示範資料的假 id、已刪的帳號)不會出現在 Map 裡。 */
   private async loadCreators(
     operator: OperatorContext,
@@ -325,10 +364,13 @@ export class DemoItemsTwoService {
 }
 
 function toModel(
+  operator: OperatorContext,
   document: ItemRecord,
   abilities: DemoItemTwoAbilitiesModel,
   creators: Map<string, UserRecord>,
 ): DemoItemTwoModel {
+  // 共用進來的資料只能看(ADR-0014):寫入照可見範圍,按鈕也不給
+  const isShared = !isOrgVisible(operator, document.orgId);
   const creator =
     document.createdBy === null
       ? undefined
@@ -341,6 +383,8 @@ function toModel(
     createdBy: creator ? { id: String(creator._id), name: creator.name } : null,
     createdAt: document.createdAt,
     updatedAt: document.updatedAt,
-    abilities,
+    abilities: isShared ? { canEdit: false, canDelete: false } : abilities,
+    shareOrgs: toShareOrgModels(document.shareOrgs),
+    isShared,
   };
 }

@@ -75,54 +75,78 @@ const ALL_SCHEMAS: Record<string, Schema> = {
  * **只有 `orgs` 是治理類**(吃 `managedOrgIds`),其餘都是業務類(吃 `visibleOrgIds`)—
  * 這張表就是那條分界線的正本,新 collection 加進來時要在這裡決定自己屬哪一類。
  */
+/** 預設的共用宣告(不可共用)。 */
+const PRIVATE = { mode: "private" } as const;
+
 const TENANT_SCOPED: Record<string, TenantScope> = {
   orgs: {
     path: "_id",
     allowGlobal: false,
     kind: "governance",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   customers: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   fields: {
     path: "orgId",
     allowGlobal: true,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
   demo_items_one: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: PRIVATE,
+    refFields: [],
   },
   demo_items_two: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: {
+      mode: "shareable",
+      defaultShareOrgs: "none",
+      editable: true,
+      sharedByFields: [],
+    },
+    refFields: [],
   },
   form_submissions: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: PRIVATE,
+    refFields: [],
   },
   workflow_instances: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: true,
+    sharing: PRIVATE,
+    refFields: [],
   },
   audit_logs: {
     path: "orgId",
     allowGlobal: false,
     kind: "business",
     moduleData: false,
+    sharing: PRIVATE,
+    refFields: [],
   },
 };
 

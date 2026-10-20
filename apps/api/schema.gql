@@ -219,6 +219,7 @@ input CreateDemoItemOneInput {
 input CreateDemoItemTwoInput {
   name: String!
   note: String
+  shareOrgs: [ShareOrgInput!]
 }
 
 input CreateFieldCategoryInput {
@@ -679,8 +680,10 @@ type DemoItemTwo {
   createdBy: DemoItemTwoUser
   enabled: Boolean!
   id: ID!
+  isShared: Boolean!
   name: String!
   note: String
+  shareOrgs: [ShareOrg!]!
   updatedAt: DateTime!
 }
 
@@ -3218,6 +3221,16 @@ type SetUserOrgsPayload {
   user: User!
 }
 
+type ShareOrg {
+  includeDescendants: Boolean!
+  orgId: ID!
+}
+
+input ShareOrgInput {
+  includeDescendants: Boolean
+  orgId: ID!
+}
+
 type SidebarBadge {
   """數字;0 也回傳,前端只在大於 0 時顯示"""
   count: Int!
@@ -3283,6 +3296,7 @@ input UpdateDemoItemTwoInput {
   id: ID!
   name: String
   note: String
+  shareOrgs: [ShareOrgInput!]
 }
 
 input UpdateFieldCategoryInput {

@@ -34,6 +34,7 @@ const SYSTEM_READER: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 /**

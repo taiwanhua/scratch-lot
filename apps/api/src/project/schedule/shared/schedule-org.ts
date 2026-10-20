@@ -33,6 +33,7 @@ export function scheduleSystemReader(): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

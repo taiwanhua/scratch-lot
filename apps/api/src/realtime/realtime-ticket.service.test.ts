@@ -87,6 +87,7 @@ function operator(
     managedOrgIds: [],
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

@@ -92,6 +92,11 @@ CLAUDE.md 規定:動到環境變數同步環境變數登記(專案變數在 `doc
 - **兩個 plugin 一定要掛**:
   - `baseFieldsPlugin` —— 基礎欄位與軟刪除(ADR-0007)。
   - `tenantScopePlugin` —— 專案租戶資料使用 `business`(吃可見範圍)、`orgId`、`allowGlobal: false`;模組資料開 `moduleData: true`。判準寫在 schema 上,不在呼叫端切換。底座治理與全域資料的其他形狀見 ADR-0005,不是新增專案租戶模組的選項。
+- **選一種資料共用宣告**(`tenantScopePlugin` 的 `sharing`,ADR-0014;規格要寫明是哪一種):
+  - 不寫 = `private`(只照可見範圍)。
+  - `shareable`(只給模組資料表):定 `defaultShareOrgs`(`none` / `wholeTenant` = 全部分店)與 `editable`(`true` 才在新增 / 編輯頁放「共用給」,input 收 `ShareOrgInput[]`、model 回 `ShareOrg[]`,沿用 `apps/api/src/sharing/share-org.model.ts`;藍本示範模組 2);要「也給某欄位指到的組織看」就加 `sharedByFields`,並在掛 plugin **之前**建 `{ tenantId: 1, <欄位>: 1 }` 索引。
+  - `inheritDown`:下層看得到上層建的(上層訂、下層沿用的設定)。
+  - 共用只放寬讀;寫入照可見範圍,`abilities` 對共用進來的資料要回 `false`。需要「整個租戶有沒有」或「引用的名稱」時用 `existsInTenant` / `findRefsInTenant`(`refFields` 宣告在 schema),不要自己把上下文提升成 `"all"`(提升上下文要登記,`database/elevated-contexts.ts`)。
 - 在 `project/database/` 建 `XxxRepository extends BaseRepository<Entity, EntityDocument>`,型別別名與 repository 同居。到 `project/database/registrations.ts` 登記 model、repository 及組織資料檢查;repository 與 check 的 modelName 必須吻合。新增租戶資料沿用 business scope、orgId、allowGlobal=false,模組資料開 moduleData;collection 必須在掛 plugin 前設定。
 - 固定 `database/database.module.ts` 組裝底座與專案來源,驗 model/collection/provider/key 碰撞、plugin 與檢查關聯並導出 repository。一般專案 model 漏檢查或錯綁 repository 會失敗,不能自行另外 forFeature 或匯出 raw Model 規避。刪組織與撤銷開通會共用這份資料檢查,不再逐一修改 OrgsService。
 

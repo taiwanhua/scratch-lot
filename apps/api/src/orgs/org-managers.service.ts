@@ -39,6 +39,7 @@ function systemContext(actorId: Types.ObjectId | null): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

@@ -44,6 +44,12 @@ import { TransactionService } from "./transaction";
 export * from "./base/repositories";
 
 /**
+ * 專案登記的提升上下文檔案(`project/database/elevated-contexts.ts`):只經這個組裝入口轉出,
+ * 給 `elevated-contexts.test.ts` 的掃描比對(底座檔不得直接 import 專案來源)。
+ */
+export { PROJECT_ELEVATED_CONTEXT_FILES } from "../project/database/elevated-contexts";
+
+/**
  * 無租戶原型的精確豁免清單(docs/concepts/data-layer-and-isolation.md「底座與專案資料的組裝」):
  * 底座沒有任何例外,每張專案 model 都要掛租戶 plugin、經 BaseRepository、有組織歸屬檢查。
  * 專案登記沒有任何「略過檢查」的旗標 —— 要新增例外只能在這個底座入口逐筆列出

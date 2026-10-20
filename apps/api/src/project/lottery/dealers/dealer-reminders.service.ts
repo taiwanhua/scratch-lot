@@ -47,6 +47,7 @@ function schedulerReader(): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

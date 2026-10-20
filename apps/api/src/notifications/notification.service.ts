@@ -72,6 +72,7 @@ const NOTIFICATION_SYSTEM: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 /** 一位收件人這次要送的內容與管道。 */

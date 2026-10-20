@@ -28,6 +28,7 @@ function standingAt(orgId: Types.ObjectId): OperatorContext {
     managedOrgIds: [],
     memberOrgIds: [orgId],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

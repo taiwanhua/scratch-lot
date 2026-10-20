@@ -33,6 +33,7 @@ function operatorOf(orgId: Types.ObjectId): OperatorContext {
     managedOrgIds: [orgId],
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

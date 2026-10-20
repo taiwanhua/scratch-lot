@@ -258,6 +258,7 @@ export type CreateDemoItemOneInput = {
 export type CreateDemoItemTwoInput = {
   name: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
 };
 
 export type CreateFieldCategoryInput = {
@@ -734,8 +735,10 @@ export type DemoItemTwo = {
   createdBy?: Maybe<DemoItemTwoUser>;
   enabled: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
+  isShared: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
   note?: Maybe<Scalars['String']['output']>;
+  shareOrgs: Array<ShareOrg>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -4502,6 +4505,17 @@ export type SetUserOrgsPayload = {
   user: User;
 };
 
+export type ShareOrg = {
+  __typename?: 'ShareOrg';
+  includeDescendants: Scalars['Boolean']['output'];
+  orgId: Scalars['ID']['output'];
+};
+
+export type ShareOrgInput = {
+  includeDescendants?: InputMaybe<Scalars['Boolean']['input']>;
+  orgId: Scalars['ID']['input'];
+};
+
 export type SidebarBadge = {
   __typename?: 'SidebarBadge';
   /** 數字;0 也回傳,前端只在大於 0 時顯示 */
@@ -4570,6 +4584,7 @@ export type UpdateDemoItemTwoInput = {
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
+  shareOrgs?: InputMaybe<Array<ShareOrgInput>>;
 };
 
 export type UpdateFieldCategoryInput = {

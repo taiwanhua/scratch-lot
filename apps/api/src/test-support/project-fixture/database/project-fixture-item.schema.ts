@@ -2,7 +2,10 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Schema as MongooseSchema, type Types } from "mongoose";
 
 import { baseFieldsPlugin } from "../../../database/plugins/base-fields.plugin";
-import { tenantScopePlugin } from "../../../database/plugins/tenant-scope.plugin";
+import {
+  type ShareOrg,
+  tenantScopePlugin,
+} from "../../../database/plugins/tenant-scope.plugin";
 
 /** 測試專案模組的 key(模組樹、權限與資料範圍目標都由測試 harness 以這個 key 建立)。 */
 export const PROJECT_FIXTURE_MODULE_KEY = "project-fixture";
@@ -37,17 +40,34 @@ export class ProjectFixtureItem {
   @Prop({ type: Boolean, default: true })
   enabled!: boolean;
 
+  /** 對應分店(資料共用的 `sharedByFields`:也給這個組織的人看,ADR-0014)。 */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  branchId!: Types.ObjectId | null;
+
   /** 模組 key(由 `tenantScopePlugin({ moduleData: true })` 宣告;本表固定為 `PROJECT_FIXTURE_MODULE_KEY`)。 */
   moduleKey!: string;
 
   /** 租戶頂層 id(同上 plugin 宣告;`BaseRepository.create` 推導)。 */
   tenantId!: Types.ObjectId | null;
+
+  /** 共用給(`tenantScopePlugin` 的 `sharing: shareable` 宣告)。 */
+  shareOrgs!: ShareOrg[];
 }
 
 export const ProjectFixtureItemSchema =
   SchemaFactory.createForClass(ProjectFixtureItem);
 
 ProjectFixtureItemSchema.index({ orgId: 1, createdAt: 1 });
+ProjectFixtureItemSchema.index({ tenantId: 1, branchId: 1 });
 ProjectFixtureItemSchema.plugin(baseFieldsPlugin);
-ProjectFixtureItemSchema.plugin(tenantScopePlugin, { moduleData: true });
+// 可共用(ADR-0014):預設不共用、可編輯,另給「對應分店」欄位指到的組織看
+ProjectFixtureItemSchema.plugin(tenantScopePlugin, {
+  moduleData: true,
+  sharing: {
+    mode: "shareable",
+    defaultShareOrgs: "none",
+    editable: true,
+    sharedByFields: [{ path: "branchId", includeDescendants: false }],
+  },
+});
 ProjectFixtureItemSchema.path("moduleKey").default(PROJECT_FIXTURE_MODULE_KEY);

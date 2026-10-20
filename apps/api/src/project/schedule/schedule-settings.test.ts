@@ -1019,6 +1019,7 @@ describe("排班設定(GraphQL 端點 + 真 MongoDB)", () => {
         managedOrgIds: "all" as const,
         memberOrgIds: [],
         roleIds: [],
+        memberTenants: [],
       };
       const zhongshanCandidates = await service.listScheduleCandidates(
         system,

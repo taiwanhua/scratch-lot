@@ -22,6 +22,7 @@ function operator(actorId = new Types.ObjectId()): OperatorContext {
     managedOrgIds: "all",
     memberOrgIds: [],
     roleIds: [],
+    memberTenants: [],
   };
 }
 

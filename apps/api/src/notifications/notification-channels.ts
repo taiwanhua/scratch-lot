@@ -77,6 +77,7 @@ const RECIPIENT_READER: OperatorContext = {
   managedOrgIds: "all",
   memberOrgIds: [],
   roleIds: [],
+  memberTenants: [],
 };
 
 /**
