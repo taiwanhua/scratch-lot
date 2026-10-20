@@ -97,7 +97,7 @@ export function sortRequisitionCandidates<T extends RequisitionCandidateOrder>(
 ): T[] {
   const byCode = (left: T, right: T): number =>
     left.gameCode.localeCompare(right.gameCode, "zh-Hant");
-  return [...rows].sort((left, right) => {
+  return rows.toSorted((left, right) => {
     const leftNew = isNewGame(left.launchedAt, now);
     const rightNew = isNewGame(right.launchedAt, now);
     if (leftNew !== rightNew) {
