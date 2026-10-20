@@ -22,6 +22,7 @@ import {
   SCHEDULE_DAY_OFFS_COLLECTION,
   ScheduleDayOff,
 } from "../../database/schedule/schedule-day-off.schema";
+import { ScheduleStaff } from "../../database/schedule/schedule-staff.schema";
 import {
   SCHEDULE_DAY_OFF_CLOSING,
   SCHEDULE_DAY_OFF_OPEN,
@@ -403,6 +404,10 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
       .init();
     await api.app
       .get<Model<ScheduleDayOffLock>>(getModelToken(ScheduleDayOffLock.name))
+      .init();
+    // 排班檔案一人一份:唯一索引 (tenantId, userId) 先建好,「建第二份被擋下」才測得到
+    await api.app
+      .get<Model<ScheduleStaff>>(getModelToken(ScheduleStaff.name))
       .init();
 
     tenantA = await createOrg(connection, {
@@ -939,56 +944,28 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  describe("主要分店的判斷(排班檔案一人一份或每個組織各一份都成立)", () => {
-    it("同一人有兩份排班檔案、各標一家主要分店 → 取最早建立的那一筆主要分店關聯", async () => {
+  describe("主要分店的判斷(排班檔案一人一份)", () => {
+    it("同一人在租戶裡建第二份排班檔案 → 唯一索引 (tenantId, userId) 擋下;主要分店照唯一那一份", async () => {
       travelTo("2026-11-20");
       const now = new Date();
-      const base = {
-        createdAt: now,
-        updatedAt: now,
-        createdBy: null,
-        updatedBy: null,
-        deletedAt: null,
-        tenantId: tenantA,
-      };
-      // 王在中山店之外,另有一份歸新竹店的排班檔案,主要分店標新竹店(比原本的晚建立)
-      const { insertedId: staffId } = await connection
-        .collection("schedule_staff")
-        .insertOne({
-          ...base,
+      await expect(
+        connection.collection("schedule_staff").insertOne({
+          createdAt: now,
+          updatedAt: now,
+          createdBy: null,
+          updatedBy: null,
+          deletedAt: null,
+          tenantId: tenantA,
           orgId: hsinchu,
           userId: wang.userId,
           employmentType: "part-time",
           enabled: true,
           note: null,
           moduleKey: "schedule.settings",
-        });
-      const { insertedId: linkId } = await connection
-        .collection("schedule_relationships")
-        .insertOne({
-          ...base,
-          orgId: hsinchu,
-          type: "org_schedule_staff",
-          firstId: hsinchu,
-          secondId: staffId,
-          meta: { canLead: false, isPrimary: true, sortOrder: 0 },
-          moduleKey: "schedule.settings",
-        });
-      try {
-        const mine = await myDayOffs(wang);
-        expect(mine.primaryOrg?.name).toBe("中山店");
-        // 中山店的同日人數仍算王;新竹店不會再算他一次
-        const linPage = await myDayOffs(lin);
-        const day = linPage.days.find((item) => item.date === "2026-12-05");
-        expect(day).toBeUndefined();
-      } finally {
-        await connection
-          .collection("schedule_relationships")
-          .deleteOne({ _id: linkId });
-        await connection
-          .collection("schedule_staff")
-          .deleteOne({ _id: staffId });
-      }
+        }),
+      ).rejects.toMatchObject({ code: 11_000 });
+      const mine = await myDayOffs(wang);
+      expect(mine.primaryOrg?.name).toBe("中山店");
     });
   });
 

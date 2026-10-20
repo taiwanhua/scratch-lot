@@ -589,59 +589,29 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return localDateText(localDateOf(this.clock.now().getTime(), timezone));
   }
 
-  /** 這個人的主要分店(沒有排班檔案、或沒有可以排的分店 → null)。 */
+  /**
+   * 這個人的主要分店(沒有排班檔案、或沒有可以排的分店 → null)。
+   * 排班檔案一人一份(唯一 `(tenantId, userId)`),主要分店每人一家。
+   */
   private async primaryOrgOf(
     tenantId: Types.ObjectId,
     userId: Types.ObjectId,
   ): Promise<Types.ObjectId | null> {
-    const primary = await this.primaryOrgsOfUsers(tenantId, [userId]);
-    return primary.get(String(userId)) ?? null;
-  }
-
-  /**
-   * 這些人各自的主要分店(userId → 分店)。排班檔案不論是一人一份、還是每個組織各一份
-   * (同一人可能有好幾份、各標一家主要分店),一律取**最早建立的那一筆主要分店關聯**,
-   * 畫休的檢查與同日人數才不會把同一人算進兩家店。
-   */
-  private async primaryOrgsOfUsers(
-    tenantId: Types.ObjectId,
-    userIds: readonly Types.ObjectId[],
-  ): Promise<Map<string, Types.ObjectId>> {
     const reader = scheduleSystemReader();
-    if (userIds.length === 0) {
-      return new Map();
+    const profile = await this.staff.findOne(reader, { tenantId, userId });
+    if (!profile) {
+      return null;
     }
-    const profiles = await this.staff.findMany(reader, {
+    const link = await this.relationships.findOne(reader, {
+      type: ORG_STAFF,
       tenantId,
-      userId: { $in: [...userIds] },
+      secondId: profile._id,
+      "meta.isPrimary": true,
     });
-    if (profiles.length === 0) {
-      return new Map();
-    }
-    const userOfStaff = new Map(
-      profiles.map((profile) => [String(profile._id), String(profile.userId)]),
-    );
-    const links = await this.relationships.findMany(
-      reader,
-      {
-        type: ORG_STAFF,
-        tenantId,
-        secondId: { $in: profiles.map((profile) => profile._id) },
-        "meta.isPrimary": true,
-      },
-      { sort: { createdAt: 1, _id: 1 } },
-    );
-    const primary = new Map<string, Types.ObjectId>();
-    for (const link of links) {
-      const user = userOfStaff.get(String(link.secondId));
-      if (user !== undefined && !primary.has(user)) {
-        primary.set(user, link.firstId);
-      }
-    }
-    return primary;
+    return link?.firstId ?? null;
   }
 
-  /** 以這家店為主要分店的人(userId;主要分店照 `primaryOrgsOfUsers` 的判斷)。 */
+  /** 以這家店為主要分店的人(userId)。 */
   private async primaryMembersOf(
     tenantId: Types.ObjectId,
     orgId: Types.ObjectId,
@@ -660,13 +630,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       tenantId,
       _id: { $in: links.map((link) => link.secondId) },
     });
-    const primary = await this.primaryOrgsOfUsers(
-      tenantId,
-      profiles.map((profile) => profile.userId),
-    );
-    return [...primary]
-      .filter(([, store]) => String(store) === String(orgId))
-      .map(([user]) => user);
+    return profiles.map((profile) => String(profile.userId));
   }
 
   /** 檢查一個人的畫休要用的:主要分店、它的生效設定、今天。 */
