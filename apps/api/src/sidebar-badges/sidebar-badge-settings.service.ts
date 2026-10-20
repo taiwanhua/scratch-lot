@@ -15,10 +15,7 @@ import type { OperatorContext } from "../database/operator-context";
 import { RelationService } from "../database/relation.service";
 import { tenantIdOfOrg } from "../database/tenant-id";
 import { TransactionService } from "../database/transaction";
-import {
-  TEMPLATE_KEY_SETTING,
-  TENANT_ADMIN_ROLE_KEY,
-} from "../orgs/owner-protection.service";
+import { findTenantAdminCopy } from "../orgs/tenant-admin-copy";
 import {
   TenantDirectoryService,
   systemContext,
@@ -250,22 +247,17 @@ export class SidebarBadgeSettingsService {
 
   /**
    * 這個租戶開通的模組 key:租戶頂層擁有的「租戶管理員副本」綁的模組(開通時勾選、之後只能縮;
-   * 判準同 `tenant-ops.service.ts` 的 `tenantAdminCopyOf`)。找不到副本 = null(不收窄)。
+   * `orgs/tenant-admin-copy.ts`,與撤銷開通同一支)。找不到副本 = null(不收窄)。
    */
   private async openedModuleKeys(
     tenantId: Types.ObjectId,
   ): Promise<Set<string> | null> {
-    const ownedRoleIds = await this.relations.listRoleIdsOfOrg(tenantId);
-    if (ownedRoleIds.length === 0) {
-      return null;
-    }
-    const owned = await this.roles.findMany(systemContext(), {
-      _id: { $in: ownedRoleIds },
-    });
-    const copy = owned.find(
-      (role) => role.settings[TEMPLATE_KEY_SETTING] === TENANT_ADMIN_ROLE_KEY,
+    const copy = await findTenantAdminCopy(
+      { relations: this.relations, roles: this.roles },
+      systemContext(),
+      tenantId,
     );
-    if (copy === undefined) {
+    if (copy === null) {
       return null;
     }
     const moduleIds = await this.relations.listModuleIdsOfRoles([copy._id]);

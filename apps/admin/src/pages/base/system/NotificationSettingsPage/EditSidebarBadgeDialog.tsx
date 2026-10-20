@@ -9,6 +9,7 @@ import {
 import { Alert } from "@repo/ui/alert";
 import { Button } from "@repo/ui/button";
 import { Dialog } from "@repo/ui/dialog";
+import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
@@ -81,6 +82,8 @@ export const EditSidebarBadgeDialog = ({
   const tErrors = useTranslations("admin.sidebarBadgeSettings.errors");
   const tPicker = useTranslations("admin.audiencePicker");
   const { session } = useSession();
+  // RW-04:有表單欄位的彈窗在手機(< sm)全螢幕
+  const isMobile = useBreakpointDown("sm");
 
   const [draft, setDraft] = useState<AudienceDraft>(() =>
     initialDraftOf(setting),
@@ -143,6 +146,7 @@ export const EditSidebarBadgeDialog = ({
       open
       onClose={onClose}
       fullWidth
+      fullScreen={isMobile}
       maxWidth="md"
       title={t("edit.title", { name: setting.moduleName })}
       actions={

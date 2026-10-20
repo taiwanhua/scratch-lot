@@ -101,7 +101,7 @@ export const AudienceValueField = ({
         loading={isLoading}
         loadingText={t("loading")}
         noOptionsText={t("empty")}
-        sx={{ width: 300 }}
+        sx={{ width: 300, maxWidth: "100%" }}
         getOptionKey={(option) => option.id}
         getOptionLabel={(option) => option.label}
         onChange={(next) => {
@@ -139,7 +139,7 @@ export const AudienceValueField = ({
         loading={isLoading}
         loadingText={t("loading")}
         noOptionsText={t("empty")}
-        sx={{ width: 300 }}
+        sx={{ width: 300, maxWidth: "100%" }}
         groupBy={groupBy}
         getOptionKey={(option) => option.id}
         getOptionLabel={(option) => option.name}
@@ -208,7 +208,7 @@ export const AudienceValueField = ({
         />
       )}
       {condition.value.kind === "static" && (
-        <Box sx={{ width: 300 }}>
+        <Box sx={{ width: 300, maxWidth: "100%" }}>
           <OrgTreeSelect
             label={dynamicSources.length > 0 ? t("orgPick") : t("value")}
             value={ids}

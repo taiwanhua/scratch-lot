@@ -292,7 +292,7 @@ input ResetNotificationSettingInput {
 
 - **列出哪些**:程式有登記、**而且這個租戶有開通**的模組(租戶頂層擁有的租戶管理員副本綁了那個模組;ADR-0009 開通時勾選)。找不到副本(資料不完整)時不收窄、列出全部登記。站在根組織時列出全部登記、都是預設、不能改(`TENANT_ONLY`)。
 - **預設**:沒調整 = 程式登記(綁了模組就算;登記了 `requires` 時再要求那條權限,`holdsPermission`)。
-- **調整**:存租戶自己的人員條件,存法同通知設定(程式預設 + 租戶覆寫 + 還原預設)。人員條件與通知收件人同一套:不能「所有人」、只有使用者 / 角色 / 權限(`SIDEBAR_BADGE_AUDIENCE_OPTIONS`);使用者與角色要屬本租戶(與通知收件人共用 `audience/audience-tenant-check.ts`)。
+- **調整**:存租戶自己的人員條件,存法同通知設定(程式預設 + 租戶覆寫 + 還原預設)。人員條件與通知收件人同一套:不能「所有人」、只有使用者 / 角色 / 權限(`SIDEBAR_BADGE_AUDIENCE_OPTIONS`);使用者與角色要屬本租戶(與通知收件人共用 `audience/audience-tenant-check.ts`)。「權限」條件只算實際授予的權限,超級管理員也不例外(不走 `*` 同層回退、不套超級管理員的略過;與通知收件人同一套規則,`AudienceService`)。
 - **計算**(`sidebarBadges`):先判斷「綁了模組」(仍是前提),調整過的再用 `AudienceService.matchesAudience(operator, audience)` 判斷、**不再看 `requires`**;符合才算數字。數字本身照舊依操作者可見範圍(各模組的 `count`)。租戶 = 操作者目前組織所屬的租戶。
 - **角色刪除**:人員條件引用的角色不能刪,引用處 `kind = sidebar-badge`、`name` = 模組名稱(`docs/modules/role-manager.md`「被人員條件引用」)。
 

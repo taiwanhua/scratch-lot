@@ -50,6 +50,7 @@ import {
   TEMPLATE_KEY_SETTING,
   TENANT_ADMIN_ROLE_KEY,
 } from "./owner-protection.service";
+import { findTenantAdminCopy } from "./tenant-admin-copy";
 
 type ModuleRecord = Persisted<ModuleDocument>;
 type RoleRecord = Persisted<RoleDocument>;
@@ -679,29 +680,15 @@ export class TenantOpsService {
     }
   }
 
-  /**
-   * 這個租戶頂層底下的「租戶管理員副本」(`org_role` 擁有、`settings.templateKey` 標記;
-   * 判準與擁有者保護同一條,ADR-0009 第 2 步)。找不到副本回 null —
-   * 撤銷照樣走得下去,只是少抹一樣(該租戶的副本可能早被刪掉)。
-   *
-   * 副本不只一份時取第一份:多出來的那幾份不在豁免名單內,前置檢查會以 `OWNS_ROLES` 擋下,
-   * 不會被悄悄留下成為孤兒。
-   */
-  private async tenantAdminCopyOf(
+  /** 這個租戶頂層底下的「租戶管理員副本」(`findTenantAdminCopy`);找不到回 null,撤銷照樣走得下去,只是少抹一樣。 */
+  private tenantAdminCopyOf(
     operator: OperatorContext,
     org: OrgRecord,
   ): Promise<RoleRecord | null> {
-    const ownedRoleIds = await this.relations.listRoleIdsOfOrg(org._id);
-    if (ownedRoleIds.length === 0) {
-      return null;
-    }
-    const owned = await this.roles.findMany(operator, {
-      _id: { $in: ownedRoleIds },
-    });
-    return (
-      owned.find(
-        (role) => role.settings[TEMPLATE_KEY_SETTING] === TENANT_ADMIN_ROLE_KEY,
-      ) ?? null
+    return findTenantAdminCopy(
+      { relations: this.relations, roles: this.roles },
+      operator,
+      org._id,
     );
   }
 
