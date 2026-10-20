@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { MongooseModule } from "@nestjs/mongoose";
+import type { Schema } from "mongoose";
 
 // 固定組裝入口:底座檔不得 import 專案來源,只有這裡(與 app.module.ts)例外
 import { PROJECT_DATABASE_REGISTRATIONS } from "../project/database/registrations";
@@ -41,6 +42,7 @@ import {
   composeDatabaseRegistrations,
 } from "./registration";
 import { TENANT_PURGE_SOURCES, type TenantPurgeSources } from "./tenant-purge";
+import { TenantPurgeStore } from "./tenant-purge.store";
 import { TransactionService } from "./transaction";
 
 // 相容出口:功能模組一直從這裡拿 repository 與文件型別,搬到 leaf 檔後照舊可用
@@ -170,7 +172,7 @@ export const TENANT_PURGE: TenantPurgeSources = {
   models: DATABASE.composed.models.map((model) => ({
     name: model.name,
     collection: model.collection ?? model.name,
-    schema: model.schema,
+    schema: model.schema as Schema,
   })),
   registrations: [
     ...BASE_TENANT_PURGE_REGISTRATIONS,
@@ -189,12 +191,13 @@ export const TENANT_PURGE: TenantPurgeSources = {
     },
     { provide: FORM_LIFECYCLES, useValue: FORM_LIFECYCLE_LIST },
     { provide: TENANT_PURGE_SOURCES, useValue: TENANT_PURGE },
+    TenantPurgeStore,
   ],
   exports: [
     ...(DATABASE.metadata.exports ?? []),
     REALTIME_BOARDS,
     FORM_LIFECYCLES,
-    TENANT_PURGE_SOURCES,
+    TenantPurgeStore,
   ],
 })
 export class DatabaseModule implements OnModuleInit, OnApplicationBootstrap {

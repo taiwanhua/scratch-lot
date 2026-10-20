@@ -231,7 +231,7 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
         .insertOne(document);
       world.documents.set(step.collection, [
         ...(world.documents.get(step.collection) ?? []),
-        insertedId as Types.ObjectId,
+        insertedId,
       ]);
       if (!world.values.has(step.collection)) {
         world.values.set(step.collection, { ...document, _id: insertedId });
@@ -352,7 +352,8 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
     expect(result.errors?.[0]?.extensions?.code).toBe("FORBIDDEN");
     expect(await countAll()).toEqual(before);
     // 收尾:由根組織清掉,不影響後面的情境
-    expect((await purge("demo_self")).data?.purgeDemoTenant.purged).toBe(true);
+    const cleanup = await purge("demo_self");
+    expect(cleanup.data?.purgeDemoTenant.purged).toBe(true);
   });
 
   it("清空:這個租戶的資料 0 筆(含只能新增的帳本)、其他租戶筆數不變、兼屬其他機構的人保留、檔案刪掉", async () => {
@@ -510,8 +511,8 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
     ).toBe(0);
 
     // 檔案:示範機構的商標與資料裡的附件刪掉,另一個租戶的不動
-    expect(storage.deleted.toSorted()).toEqual(
-      [DEMO_ATTACHMENT, DEMO_LOGO].toSorted(),
+    expect(storage.deleted.toSorted((a, b) => a.localeCompare(b))).toEqual(
+      [DEMO_ATTACHMENT, DEMO_LOGO].toSorted((a, b) => a.localeCompare(b)),
     );
     expect(payload?.deletedFiles).toBe(2);
 
@@ -531,7 +532,8 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
       demo: true,
     });
     expect(again.org.id).toBeTruthy();
-    expect((await purge(DEMO_SLUG)).data?.purgeDemoTenant).toMatchObject({
+    const purged = await purge(DEMO_SLUG);
+    expect(purged.data?.purgeDemoTenant).toMatchObject({
       purged: true,
       orgId: again.org.id,
       deletedUsers: 1,

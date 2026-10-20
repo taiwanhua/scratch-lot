@@ -7,6 +7,7 @@ import {
   type TenantPurgeRegistration,
   TenantPurgeRegistrationError,
   filterOfStep,
+  hasPath,
   resolveTenantPurgePlan,
 } from "./tenant-purge";
 
@@ -48,13 +49,13 @@ describe("清空租戶的刪除登記:完整性(底座 + 專案,正式內容)", 
   it("所有帶 tenantId 欄的表都在刪除步驟裡(以 tenantId 為條件)", () => {
     const plan = resolveTenantPurgePlan(TENANT_PURGE);
     const withTenantId = TENANT_PURGE.models
-      .filter((entry) => entry.schema.path("tenantId") !== undefined)
+      .filter((entry) => hasPath(entry.schema, "tenantId"))
       .map((entry) => entry.collection)
-      .toSorted();
+      .toSorted((left, right) => left.localeCompare(right));
     const byTenantId = plan.steps
       .filter((step) => step.by === "tenantId")
       .map((step) => step.collection)
-      .toSorted();
+      .toSorted((left, right) => left.localeCompare(right));
     expect(withTenantId.length).toBeGreaterThan(0);
     expect(byTenantId).toEqual(withTenantId);
   });

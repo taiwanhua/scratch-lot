@@ -90,8 +90,9 @@ export interface TenantPurgePlan {
   readonly kept: readonly string[];
 }
 
-function hasPath(schema: Schema, field: string): boolean {
-  return field === "_id" || schema.path(field) !== undefined;
+/** schema 有沒有這個欄位(`_id` 一定有;巢狀物件的路徑也算)。 */
+export function hasPath(schema: Schema, field: string): boolean {
+  return field === "_id" || schema.pathType(field) !== "adhocOrUndefined";
 }
 
 function checkConditions(
@@ -132,6 +133,82 @@ function checkConditions(
     }
   }
   return problems;
+}
+
+/** 以 collection 索引登記;重複登記、資料層有卻沒登記的 collection 列為問題。 */
+function indexRegistrations(
+  models: readonly TenantPurgeModel[],
+  registrations: readonly TenantPurgeRegistration[],
+  problems: string[],
+): Map<string, TenantPurgeRegistration> {
+  const byCollection = new Map<string, TenantPurgeRegistration>();
+  for (const registration of registrations) {
+    if (byCollection.has(registration.collection)) {
+      problems.push(`${registration.collection}:重複登記`);
+    }
+    byCollection.set(registration.collection, registration);
+  }
+  for (const model of models) {
+    if (!byCollection.has(model.collection)) {
+      problems.push(
+        `${model.collection}:沒有登記刪法(底座加在 database/base/tenant-purge.ts,專案加在 project/database/tenant-purge.ts)`,
+      );
+    }
+  }
+  return byCollection;
+}
+
+/** 一筆登記本身的檢查;會刪的(`tenantId` / `match`)回它的刪除步驟。 */
+function checkRegistration(
+  registration: TenantPurgeRegistration,
+  model: TenantPurgeModel,
+  byCollection: ReadonlyMap<string, TenantPurgeRegistration>,
+  modelOf: ReadonlyMap<string, TenantPurgeModel>,
+): { problems: string[]; step?: TenantPurgeStep } {
+  const { collection, rule } = registration;
+  const hasTenantId = hasPath(model.schema, "tenantId");
+  if (hasTenantId && rule.by !== "tenantId") {
+    return {
+      problems: [`${collection}:帶 tenantId 欄,刪法必須是 by: "tenantId"`],
+    };
+  }
+  switch (rule.by) {
+    case "tenantId": {
+      return hasTenantId
+        ? { problems: [], step: { collection, by: "tenantId" } }
+        : { problems: [`${collection}:schema 沒有 tenantId 欄`] };
+    }
+    case "match": {
+      return {
+        problems: checkConditions(
+          { collection, rule },
+          model,
+          byCollection,
+          modelOf,
+        ),
+        step: { collection, by: "match", anyOf: rule.anyOf },
+      };
+    }
+    case "dedicated": {
+      const problems = (
+        DEDICATED_PURGE_COLLECTIONS as readonly string[]
+      ).includes(collection)
+        ? []
+        : [
+            `${collection}:dedicated 只給 ${DEDICATED_PURGE_COLLECTIONS.join(" / ")}`,
+          ];
+      if (rule.reason.trim() === "") {
+        problems.push(`${collection}:dedicated 要寫理由`);
+      }
+      return { problems };
+    }
+    case "keep": {
+      return {
+        problems:
+          rule.reason.trim() === "" ? [`${collection}:keep 要寫理由`] : [],
+      };
+    }
+  }
 }
 
 /** 依 `deleted` 依賴排序(被依賴的先刪 —— 要先讀到它這次刪掉了哪些);有循環就列為問題。 */
@@ -185,79 +262,28 @@ export function resolveTenantPurgePlan({
 }: TenantPurgeSources): TenantPurgePlan {
   const problems: string[] = [];
   const modelOf = new Map(models.map((model) => [model.collection, model]));
-  const byCollection = new Map<string, TenantPurgeRegistration>();
-  for (const registration of registrations) {
-    if (byCollection.has(registration.collection)) {
-      problems.push(`${registration.collection}:重複登記`);
-    }
-    byCollection.set(registration.collection, registration);
-  }
-
-  for (const model of models) {
-    if (!byCollection.has(model.collection)) {
-      problems.push(
-        `${model.collection}:沒有登記刪法(底座加在 database/base/tenant-purge.ts,專案加在 project/database/tenant-purge.ts)`,
-      );
-    }
-  }
+  const byCollection = indexRegistrations(models, registrations, problems);
 
   const steps: TenantPurgeStep[] = [];
   const kept: string[] = [];
   for (const registration of byCollection.values()) {
-    const { collection, rule } = registration;
-    const model = modelOf.get(collection);
+    const model = modelOf.get(registration.collection);
     if (model === undefined) {
-      problems.push(`${collection}:資料層沒有這張 collection`);
+      problems.push(`${registration.collection}:資料層沒有這張 collection`);
       continue;
     }
-    const hasTenantId = hasPath(model.schema, "tenantId");
-    if (hasTenantId && rule.by !== "tenantId") {
-      problems.push(`${collection}:帶 tenantId 欄,刪法必須是 by: "tenantId"`);
-      continue;
+    const checked = checkRegistration(
+      registration,
+      model,
+      byCollection,
+      modelOf,
+    );
+    problems.push(...checked.problems);
+    if (checked.step) {
+      steps.push(checked.step);
     }
-    switch (rule.by) {
-      case "tenantId": {
-        if (!hasTenantId) {
-          problems.push(`${collection}:schema 沒有 tenantId 欄`);
-          break;
-        }
-        steps.push({ collection, by: "tenantId" });
-        break;
-      }
-      case "match": {
-        problems.push(
-          ...checkConditions(
-            { collection, rule },
-            model,
-            byCollection,
-            modelOf,
-          ),
-        );
-        steps.push({ collection, by: "match", anyOf: rule.anyOf });
-        break;
-      }
-      case "dedicated": {
-        if (
-          !(DEDICATED_PURGE_COLLECTIONS as readonly string[]).includes(
-            collection,
-          )
-        ) {
-          problems.push(
-            `${collection}:dedicated 只給 ${DEDICATED_PURGE_COLLECTIONS.join(" / ")}`,
-          );
-        }
-        if (rule.reason.trim() === "") {
-          problems.push(`${collection}:dedicated 要寫理由`);
-        }
-        break;
-      }
-      case "keep": {
-        if (rule.reason.trim() === "") {
-          problems.push(`${collection}:keep 要寫理由`);
-        }
-        kept.push(collection);
-        break;
-      }
+    if (registration.rule.by === "keep") {
+      kept.push(registration.collection);
     }
   }
   for (const collection of DEDICATED_PURGE_COLLECTIONS) {
