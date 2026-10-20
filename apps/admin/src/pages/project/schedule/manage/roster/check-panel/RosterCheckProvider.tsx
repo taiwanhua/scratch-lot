@@ -4,7 +4,6 @@ import { useScheduleCheckQuery } from "@repo/graphql";
 import { useBreakpointDown } from "@repo/ui/media-query";
 
 import { useSession } from "@/hooks/base/useSession";
-import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
 import { PublishDialog } from "../publish/PublishDialog";
 import {
@@ -16,44 +15,11 @@ import {
   RosterCheckContext,
   type RosterCheckContextValue,
 } from "./roster-check-context";
-
-/**
- * 「側欄是面板收的」記在這個分頁的 sessionStorage:面板開著時重新整理(effect 的還原沒機會跑),
- * 下次進排班表時照這個記號把側欄展開回去,側欄偏好不會被面板汙染。
- */
-export const NAV_COLLAPSED_BY_CHECK_KEY = "schedule.roster.check-collapsed-nav";
-
-const readMark = (): boolean => {
-  try {
-    return sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY) === "1";
-  } catch {
-    return false;
-  }
-};
-
-const writeMark = (collapsed: boolean): void => {
-  try {
-    if (collapsed) {
-      sessionStorage.setItem(NAV_COLLAPSED_BY_CHECK_KEY, "1");
-    } else {
-      sessionStorage.removeItem(NAV_COLLAPSED_BY_CHECK_KEY);
-    }
-  } catch {
-    // sessionStorage 不可用:只是重新整理後不會自動展開回去
-  }
-};
-
-/** 上次面板收了側欄、還沒還原就離開(重新整理)→ 展開回去。 */
-const restoreNavFromMark = (): void => {
-  if (!readMark()) {
-    return;
-  }
-  writeMark(false);
-  const nav = useSideNavStore.getState();
-  if (nav.isCollapsed) {
-    nav.toggle();
-  }
-};
+import {
+  collapseNavForPanel,
+  restoreNavAfterPanel,
+  restoreNavFromMark,
+} from "./side-nav-mark";
 
 export interface RosterCheckProviderProps {
   data: RosterData | undefined;
@@ -96,18 +62,10 @@ export const RosterCheckProvider = ({
     if (!isOpen || isMobile) {
       return;
     }
-    const nav = useSideNavStore.getState();
-    if (!nav.isCollapsed) {
-      nav.toggle();
-      collapsedByPanel.current = true;
-      writeMark(true);
-    }
+    collapsedByPanel.current = collapseNavForPanel();
     return () => {
-      if (collapsedByPanel.current && useSideNavStore.getState().isCollapsed) {
-        useSideNavStore.getState().toggle();
-      }
+      restoreNavAfterPanel(collapsedByPanel.current);
       collapsedByPanel.current = false;
-      writeMark(false);
     };
   }, [isOpen, isMobile]);
 

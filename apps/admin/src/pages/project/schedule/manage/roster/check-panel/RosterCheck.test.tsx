@@ -2,17 +2,12 @@ import { beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
-import {
-  restoreViewportAfterEach,
-  setMobileViewport,
-  setupFakeViewport,
-} from "@/test/viewport";
+import { setupFakeViewport } from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
-import { NAV_COLLAPSED_BY_CHECK_KEY } from "./RosterCheckProvider";
+import { NAV_COLLAPSED_BY_CHECK_KEY } from "./side-nav-mark";
 
 setupFakeViewport();
-restoreViewportAfterEach();
 
 const ROSTER = "/schedule/manage?tab=roster&month=2026-11";
 
@@ -32,12 +27,17 @@ const openPanel = async (user: { click: (el: Element) => Promise<void> }) => {
 
 /**
  * 排班表的檢核面板與發布(SC-18、SC-15a–d、SC-19;規格 14.5「檢核面板」「發布」):
+ * 已發布後的異動原因與手機 [發布] 在 `RosterChangeReason.test.tsx`(拆檔讓 CI 平行跑)。
  * 假 api 見 `test/msw/project/schedule-roster-handlers.ts`(檢核結果 `schedule-check-fixtures.ts`)。
  */
 describe("排班作業:檢核面板與發布", () => {
   it("檢核按鈕「限制 1 · 提醒 6」→ 面板:限制在前、篩選、[查看] 捲到那一格;✕ 收合", async () => {
+    useSideNavStore.setState({ isCollapsed: false });
     const { user } = renderSchedulePage({ path: ROSTER });
     const panel = await openPanel(user);
+    // 面板打開:側欄收成圖示列,記下是面板收的(重新整理的還原見 side-nav-mark.test.ts)
+    expect(useSideNavStore.getState().isCollapsed).toBe(true);
+    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBe("1");
     const items = within(panel).getAllByRole("listitem");
     expect(items).toHaveLength(7);
     expect(items[0]).toHaveTextContent(
@@ -80,6 +80,9 @@ describe("排班作業:檢核面板與發布", () => {
     expect(
       screen.queryByRole("complementary", { name: "檢核" }),
     ).not.toBeInTheDocument();
+    // 關上:展開回去、清掉記號
+    expect(useSideNavStore.getState().isCollapsed).toBe(false);
+    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBeNull();
   });
 
   it("有違反限制 → 「不能發布」:列出違反,[發布] 停用", async () => {
@@ -147,106 +150,5 @@ describe("排班作業:檢核面板與發布", () => {
     expect(
       screen.queryByRole("button", { name: "發布" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("已發布:排班對話框多「異動原因」(必填);沒選不送,選了一起送", async () => {
-    const { user, rosterFake } = renderSchedulePage({
-      path: ROSTER,
-      roster: { isPublished: true },
-    });
-    expect(
-      await screen.findByText("已發布 · 10/28 李店長"),
-    ).toBeInTheDocument();
-    const wang = await screen.findByRole("button", { name: "王小明 11/1" });
-    await user.click(within(wang).getByRole("button", { name: /^早/ }));
-    const dialog = await screen.findByRole("dialog", {
-      name: "排班 · 王小明 11/1(日)",
-    });
-    const reason = within(dialog).getByRole("combobox", { name: /異動原因/ });
-    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
-    await waitFor(() => {
-      expect(reason).toHaveAttribute("aria-invalid", "true");
-    });
-    await user.click(reason);
-    await user.click(await screen.findByRole("option", { name: "換班" }));
-    await user.click(within(dialog).getByRole("button", { name: "儲存" }));
-    await waitFor(() => {
-      expect(rosterFake.inputs.entries.at(-1)?.changeReason).toEqual({
-        reasonKey: "shift-swap",
-      });
-    });
-  });
-
-  it("已發布:移除這天所有排班的原因只填一次", async () => {
-    const { user, rosterFake } = renderSchedulePage({
-      path: ROSTER,
-      roster: { isPublished: true },
-    });
-    await user.click(
-      await screen.findByRole("button", { name: "11/1 的更多動作" }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", { name: "移除這天所有排班" }),
-    );
-    const dialog = await screen.findByRole("dialog", {
-      name: /^移除 11\/1/u,
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: /異動原因/ }),
-    );
-    await user.click(await screen.findByRole("option", { name: "其他" }));
-    await user.click(within(dialog).getByRole("button", { name: "移除" }));
-    expect(rosterFake.inputs.removedDayInputs).toEqual([]);
-    await user.type(
-      within(dialog).getByRole("textbox", { name: /原因說明/ }),
-      "颱風停班",
-    );
-    await user.click(within(dialog).getByRole("button", { name: "移除" }));
-    await waitFor(() => {
-      expect(rosterFake.inputs.removedDayInputs.at(-1)?.changeReason).toEqual({
-        reasonKey: "other",
-        reasonNote: "颱風停班",
-      });
-    });
-  });
-
-  it("手機:[發布] 獨立成按鈕放在 [⋯] 右邊,不收進 [⋯] 選單", async () => {
-    setMobileViewport();
-    const { user } = renderSchedulePage({ path: ROSTER });
-    const publish = await screen.findByRole("button", { name: "發布" });
-    const more = screen.queryByRole("button", { name: "更多" });
-    // 目前 [⋯] 裡還沒有其他按鈕(套用範本、自動排班由之後的功能追加)
-    expect(more).not.toBeInTheDocument();
-    await user.click(publish);
-    expect(
-      await screen.findByRole("dialog", { name: "不能發布" }),
-    ).toBeInTheDocument();
-  });
-
-  it("側欄偏好不被汙染:面板收了側欄、沒關面板就重新整理 → 下次進頁面展開回去", async () => {
-    useSideNavStore.setState({ isCollapsed: false });
-    const first = renderSchedulePage({ path: ROSTER });
-    await openPanel(first.user);
-    expect(useSideNavStore.getState().isCollapsed).toBe(true);
-    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBe("1");
-
-    // 模擬重新整理:effect 的還原沒跑到,只剩 sessionStorage 的記號與收合的側欄
-    first.unmount();
-    useSideNavStore.setState({ isCollapsed: true });
-    sessionStorage.setItem(NAV_COLLAPSED_BY_CHECK_KEY, "1");
-    renderSchedulePage({ path: ROSTER });
-    await screen.findByRole("button", { name: "限制 1 · 提醒 6" });
-    expect(useSideNavStore.getState().isCollapsed).toBe(false);
-    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBeNull();
-  });
-
-  it("本來就收著的側欄不動", async () => {
-    useSideNavStore.setState({ isCollapsed: true });
-    sessionStorage.removeItem(NAV_COLLAPSED_BY_CHECK_KEY);
-    const { user } = renderSchedulePage({ path: ROSTER });
-    const panel = await openPanel(user);
-    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBeNull();
-    await user.click(within(panel).getByRole("button", { name: "關閉檢核" }));
-    expect(useSideNavStore.getState().isCollapsed).toBe(true);
   });
 });
