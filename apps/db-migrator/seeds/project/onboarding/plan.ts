@@ -6,6 +6,15 @@
  * (選填、預設空清單)、在 `parseOnboardingPlan` 驗它,並在 `steps.ts` 追加自己的步驟。
  */
 import {
+  SCHEDULE_EMPLOYMENT_TYPES,
+  SCHEDULE_TASK_ROLES,
+  type ScheduleEmploymentType,
+  type ScheduleTaskRole,
+  WEEK_DAY_COUNT,
+  isHhMm,
+  isTemplateShortName,
+} from "@repo/domain/project/schedule-settings";
+import {
   TAG_PALETTE_KEYS,
   type TagPaletteKey,
   isTagPaletteKey,
@@ -80,6 +89,47 @@ export interface OnboardingPlan {
   cashPoints: OnboardingCashPoint[];
   /** 乙類與對應分店(選填;沒給 = 這一步略過)。 */
   classBDealers?: OnboardingClassBDealer[];
+  /** 加入排班的人(開通清單第 11 點;沒有就空清單)。 */
+  scheduleStaff: OnboardingScheduleStaff[];
+  /** 最上層組織的人力需求範本(沒有就空清單;示範資料用)。 */
+  scheduleTemplates: OnboardingScheduleTemplate[];
+  /** 最上層組織的人力需求週範本(沒有就空清單;示範資料用)。 */
+  scheduleWeekTemplates: OnboardingScheduleWeekTemplate[];
+}
+
+export interface OnboardingScheduleStaffBranch {
+  /** 分店名稱(須在 `branches` 內)。 */
+  name: string;
+  canLead: boolean;
+  isPrimary: boolean;
+}
+
+export interface OnboardingScheduleStaff {
+  /** `users` 裡的帳號。 */
+  account: string;
+  /** `full-time` 正職 / `part-time` 兼職。 */
+  employmentType: ScheduleEmploymentType;
+  /** 可以排的分店;恰好一家主要分店。只在這個人還沒設定任何分店時寫入。 */
+  branches: OnboardingScheduleStaffBranch[];
+}
+
+export interface OnboardingScheduleTemplate {
+  name: string;
+  /** 1–2 字。 */
+  shortName: string;
+  /** `HH:mm`。 */
+  startTime: string;
+  endTime: string;
+  /** 崗位選項代碼(專案 seed 或 `positions` 的)。 */
+  positionKey: string;
+  tasks: { role: ScheduleTaskRole; taskKey: string }[];
+  color: TagPaletteKey | null;
+}
+
+export interface OnboardingScheduleWeekTemplate {
+  name: string;
+  /** 7 格(0 = 星期日),每格是 `scheduleTemplates` 的名稱。 */
+  days: string[][];
 }
 
 const POSITION_VALUE = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
@@ -261,6 +311,45 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
       "classBDealers 的 licenseNo",
     );
   }
+  const accounts = new Set(users.map((user) => user.account));
+  const scheduleStaff = list(raw.scheduleStaff, "scheduleStaff").map(
+    (staff, at) =>
+      parseScheduleStaff(
+        staff,
+        `scheduleStaff[${String(at)}]`,
+        accounts,
+        branchNames,
+      ),
+  );
+  unique(
+    scheduleStaff.map((staff) => staff.account),
+    "scheduleStaff 的 account",
+  );
+  const scheduleTemplates = list(
+    raw.scheduleTemplates,
+    "scheduleTemplates",
+  ).map((template, at) =>
+    parseScheduleTemplate(template, `scheduleTemplates[${String(at)}]`),
+  );
+  unique(
+    scheduleTemplates.map((template) => template.name),
+    "scheduleTemplates 的 name",
+  );
+  const templateNames = new Set(scheduleTemplates.map((item) => item.name));
+  const scheduleWeekTemplates = list(
+    raw.scheduleWeekTemplates,
+    "scheduleWeekTemplates",
+  ).map((week, at) =>
+    parseScheduleWeekTemplate(
+      week,
+      `scheduleWeekTemplates[${String(at)}]`,
+      templateNames,
+    ),
+  );
+  unique(
+    scheduleWeekTemplates.map((week) => week.name),
+    "scheduleWeekTemplates 的 name",
+  );
 
   return {
     branches,
@@ -269,6 +358,9 @@ export function parseOnboardingPlan(raw: unknown): OnboardingPlan {
     positions,
     cashPoints,
     ...(classBDealers === undefined ? {} : { classBDealers }),
+    scheduleStaff,
+    scheduleTemplates,
+    scheduleWeekTemplates,
   };
 }
 
@@ -313,4 +405,132 @@ function parseClassBDealer(
         : text(raw.storeName, `${path}.storeName`),
     branch,
   };
+}
+
+function flag(value: unknown, path: string): boolean {
+  if (typeof value !== "boolean") {
+    fail(path, "必須是 true 或 false");
+  }
+  return value;
+}
+
+function parseScheduleStaff(
+  raw: unknown,
+  path: string,
+  accounts: Set<string>,
+  branchNames: Set<string>,
+): OnboardingScheduleStaff {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const account = text(raw.account, `${path}.account`);
+  if (!accounts.has(account)) {
+    fail(`${path}.account`, `的「${account}」不在 users 內`);
+  }
+  const employmentType = raw.employmentType ?? "full-time";
+  if (
+    !(SCHEDULE_EMPLOYMENT_TYPES as readonly unknown[]).includes(employmentType)
+  ) {
+    fail(
+      `${path}.employmentType`,
+      `必須是 ${SCHEDULE_EMPLOYMENT_TYPES.join(" / ")}`,
+    );
+  }
+  const branches = list(raw.branches, `${path}.branches`).map((branch, at) => {
+    const branchPath = `${path}.branches[${String(at)}]`;
+    if (!isRecord(branch)) {
+      fail(branchPath, "必須是物件");
+    }
+    const name = text(branch.name, `${branchPath}.name`);
+    if (!branchNames.has(name)) {
+      fail(`${branchPath}.name`, `的「${name}」不在 branches 內`);
+    }
+    return {
+      name,
+      canLead: flag(branch.canLead ?? false, `${branchPath}.canLead`),
+      isPrimary: flag(branch.isPrimary ?? false, `${branchPath}.isPrimary`),
+    };
+  });
+  unique(
+    branches.map((branch) => branch.name),
+    `${path}.branches`,
+  );
+  if (
+    branches.length > 0 &&
+    branches.filter((branch) => branch.isPrimary).length !== 1
+  ) {
+    fail(`${path}.branches`, "要恰好一家主要分店");
+  }
+  return {
+    account,
+    employmentType: employmentType as ScheduleEmploymentType,
+    branches,
+  };
+}
+
+function parseScheduleTemplate(
+  raw: unknown,
+  path: string,
+): OnboardingScheduleTemplate {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const shortName = text(raw.shortName, `${path}.shortName`);
+  if (!isTemplateShortName(shortName)) {
+    fail(`${path}.shortName`, "必須是 1–2 字");
+  }
+  const startTime = text(raw.startTime, `${path}.startTime`);
+  const endTime = text(raw.endTime, `${path}.endTime`);
+  if (!isHhMm(startTime) || !isHhMm(endTime)) {
+    fail(path, "的開始 / 結束必須是 HH:mm");
+  }
+  const tasks = list(raw.tasks, `${path}.tasks`).map((task, at) => {
+    const taskPath = `${path}.tasks[${String(at)}]`;
+    if (!isRecord(task)) {
+      fail(taskPath, "必須是物件");
+    }
+    if (!(SCHEDULE_TASK_ROLES as readonly unknown[]).includes(task.role)) {
+      fail(`${taskPath}.role`, `必須是 ${SCHEDULE_TASK_ROLES.join(" / ")}`);
+    }
+    return {
+      role: task.role as ScheduleTaskRole,
+      taskKey: text(task.taskKey, `${taskPath}.taskKey`),
+    };
+  });
+  const color = raw.color ?? null;
+  if (color !== null && !isTagPaletteKey(color)) {
+    fail(`${path}.color`, `必須是色票代號 ${TAG_PALETTE_KEYS.join(" / ")}`);
+  }
+  return {
+    name: text(raw.name, `${path}.name`),
+    shortName,
+    startTime,
+    endTime,
+    positionKey: text(raw.positionKey, `${path}.positionKey`),
+    tasks,
+    color,
+  };
+}
+
+function parseScheduleWeekTemplate(
+  raw: unknown,
+  path: string,
+  templateNames: Set<string>,
+): OnboardingScheduleWeekTemplate {
+  if (!isRecord(raw)) {
+    fail(path, "必須是物件");
+  }
+  const days = list(raw.days, `${path}.days`).map((day, at) =>
+    list(day, `${path}.days[${String(at)}]`).map((name, index) => {
+      const value = text(name, `${path}.days[${String(at)}][${String(index)}]`);
+      if (!templateNames.has(value)) {
+        fail(`${path}.days`, `的「${value}」不在 scheduleTemplates 內`);
+      }
+      return value;
+    }),
+  );
+  if (days.length !== WEEK_DAY_COUNT) {
+    fail(`${path}.days`, "必須是 7 格(0 = 星期日)");
+  }
+  return { name: text(raw.name, `${path}.name`), days };
 }

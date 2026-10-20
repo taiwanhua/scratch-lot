@@ -637,7 +637,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
       expect(lines.join("\n")).toMatch(/✗ \[6\/9\] 崗位:.*FORBIDDEN/);
-      expect(lines.join("\n")).toContain("未執行:乙類與對應分店、通知收件人");
+      expect(lines.join("
+")).toContain(
+        "未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人",
+      );
 
       const users = await find("users", {
         account: { $in: plan.users.map((user) => user.account) },
@@ -645,7 +648,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(users).toHaveLength(plan.users.length);
     });
 
-    it("補好權限後重跑:前面的步驟回報已存在,只補崗位與通知收件人;租戶改過的收件人不動", async () => {
+    it("補好權限後重跑:前面的步驟回報已存在,只補崗位、排班人員與範本、通知收件人;租戶改過的收件人不動", async () => {
       await root.request(SAVE_ROLE_MATRIX, {
         input: { roleId: copyRoleId, ...originalGrant },
       });
@@ -679,6 +682,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
           // 乙類與對應分店(經銷商管理):前一次停在「崗位」,這一步重跑時才建
           "lottery-dealer.create",
           "lottery-relationship.create",
+          "schedule-staff.create",
+          "schedule-staff.edit",
+          "schedule-demand-template.create",
+          "schedule-demand-week-template.create",
           "notification-settings.edit",
           // 檔案管理的收銀點排在通知收件人之後,第一次停在崗位時還沒建(遊戲只有示範指令建)
           "lottery-cash-point.create",

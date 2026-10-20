@@ -6,6 +6,7 @@ import { notificationRecipientsStep } from "./steps/notification-recipients";
 import { orgVisibilityStep } from "./steps/org-visibility";
 import { positionsStep } from "./steps/positions";
 import { rolesStep } from "./steps/roles";
+import { scheduleStaffStep, scheduleTemplatesStep } from "./steps/schedule";
 import { tenantStep } from "./steps/tenant";
 import { usersStep } from "./steps/users";
 
@@ -24,6 +25,8 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   usersStep,
   positionsStep,
   classBDealersStep,
+  scheduleStaffStep,
+  scheduleTemplatesStep,
   notificationRecipientsStep,
   // 檔案管理:收銀點(要在分店、崗位之後)。遊戲不在開通清單裡,只有示範資料建(`demo/games.ts`)
   cashPointsStep,

@@ -21,6 +21,11 @@ import { DEMO_CLASS_B_DEALERS } from "./dealers";
 import { demoGamesStep } from "./games";
 import { DEMO_BRANCHES, DEMO_USERS } from "./organization";
 import { DEMO_POSITIONS } from "./positions";
+import {
+  DEMO_SCHEDULE_STAFF,
+  DEMO_SCHEDULE_TEMPLATES,
+  DEMO_SCHEDULE_WEEK_TEMPLATES,
+} from "./schedule";
 
 /** 示範機構:名稱固定(重跑以它找回同一個機構),短碼全域唯一。 */
 export const DEMO_TENANT: DemoTenant = {
@@ -48,6 +53,19 @@ export function demoPlan(emailBase: string): OnboardingPlan {
     positions: [...DEMO_POSITIONS],
     cashPoints: [...DEMO_CASH_POINTS],
     classBDealers: [...DEMO_CLASS_B_DEALERS],
+    scheduleStaff: DEMO_SCHEDULE_STAFF.map((staff) => ({
+      account: aliasEmail(emailBase, staff.alias),
+      employmentType: staff.employmentType,
+      branches: staff.branches.map((branch) => ({ ...branch })),
+    })),
+    scheduleTemplates: DEMO_SCHEDULE_TEMPLATES.map((template) => ({
+      ...template,
+      tasks: template.tasks.map((task) => ({ ...task })),
+    })),
+    scheduleWeekTemplates: DEMO_SCHEDULE_WEEK_TEMPLATES.map((week) => ({
+      name: week.name,
+      days: week.days.map((names) => [...names]),
+    })),
   };
 }
 

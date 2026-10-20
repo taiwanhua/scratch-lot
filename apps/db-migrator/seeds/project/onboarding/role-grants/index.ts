@@ -3,6 +3,7 @@ import { baseModuleGrants } from "./base-modules";
 import { dealersGrants } from "./dealers";
 import { masterDataGrants } from "./master-data";
 import { reportsGrants } from "./reports";
+import { scheduleGrants } from "./schedule";
 
 /**
  * 開通時建立的三個角色的權限配方(規格 3.3),**每個模組一段、一檔**。
@@ -19,4 +20,5 @@ export const ROLE_GRANT_SECTIONS: readonly ModuleRoleGrants[] = [
   masterDataGrants,
   dealersGrants,
   reportsGrants,
+  scheduleGrants,
 ];
