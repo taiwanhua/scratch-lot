@@ -237,6 +237,54 @@ input CreateLotteryCashPointInput {
   printerId: ID
 }
 
+input CreateLotteryDealerContactInput {
+  birthday: DateTime
+  email: String
+  mailingAddress: String
+  mobile: String
+  name: String
+  nationalId: String
+  note: String
+  phone: String
+  residentialAddress: String
+  residentialSameAsMailing: Boolean
+  roles: [LotteryContactRole!]
+  status: LotteryContactStatus
+}
+
+input CreateLotteryDealerInput {
+  agentIds: [ID!]
+  birthday: DateTime
+  businessAddress: String
+  coSalesDealerId: ID
+  email: String
+  introducerIds: [ID!]
+  lastPurchaseBaseDate: DateTime
+  lastSelfPurchaseBaseDate: DateTime
+  licenseApprovedAt: DateTime
+  licenseExpiresAt: DateTime
+  licenseNo: String
+  mailingAddress: String
+  mobile: String
+  name: String
+  nationalId: String
+  note: String
+  phone: String
+  rentCycle: LotteryRentCycle
+  rentDueDay: Int
+  rentFee: Int
+  rentStartMonth: Int
+  residentialAddress: String
+  residentialSameAsMailing: Boolean
+  status: LotteryDealerStatus
+  storeName: String
+  storeOrgId: ID
+  storePhone: String
+  terminalNo: String
+  trusteeIds: [ID!]
+  type: LotteryDealerType!
+}
+
 input CreateLotteryGameInput {
   claimDeadline: DateTime
   color: String
@@ -1188,6 +1236,214 @@ type LotteryCashPointsPayload {
   totalCount: Int!
 }
 
+"""關係人的身分:受託人 / 代理人 / 介紹人"""
+enum LotteryContactRole {
+  AGENT
+  INTRODUCER
+  TRUSTEE
+}
+
+"""關係人狀態:啟用 / 停用"""
+enum LotteryContactStatus {
+  ACTIVE
+  DISABLED
+}
+
+type LotteryDealer {
+  abilities: LotteryDealerAbilities!
+  agents: [LotteryDealerContactRef!]!
+  birthday: DateTime
+  businessAddress: String
+  coSalesDealer: LotteryDealerRef
+  coSellerCount: Int
+  createdAt: DateTime!
+  createdBy: LotteryDealerUserRef
+  currentQuarterSigned: Boolean
+  daysSinceLastPurchase: Int
+  daysSinceLastSelfPurchase: Int
+  email: String
+  id: ID!
+  introducers: [LotteryDealerContactRef!]!
+  lastPurchaseBaseDate: DateTime
+  lastPurchaseDate: DateTime
+  lastSelfPurchaseBaseDate: DateTime
+  lastSelfPurchaseDate: DateTime
+  licenseApprovedAt: DateTime!
+  licenseExpiresAt: DateTime!
+  licenseNo: String!
+  licenseState: LotteryLicenseState!
+  mailingAddress: String
+  mobile: String
+  name: String!
+  nationalId: String!
+  nextRentDueAt: DateTime
+  note: String
+  phone: String
+  rentCycle: LotteryRentCycle
+  rentDueDay: Int
+  rentFee: Int
+  rentStartMonth: Int
+  residentialAddress: String
+  residentialSameAsMailing: Boolean!
+  status: LotteryDealerStatus!
+  storeName: String
+  storeOrg: LotteryDealerOrgRef
+  storePhone: String
+  terminalNo: String
+  trustees: [LotteryDealerContactRef!]!
+  type: LotteryDealerType!
+  updatedAt: DateTime!
+}
+
+type LotteryDealerAbilities {
+  canEdit: Boolean!
+  canEditLastPurchaseBaseDate: Boolean!
+  canEditLastSelfPurchaseBaseDate: Boolean!
+}
+
+type LotteryDealerCoSellerModel {
+  dealer: LotteryDealerRef!
+  registeredAt: DateTime!
+}
+
+type LotteryDealerCoSellersPayload {
+  items: [LotteryDealerCoSellerModel!]!
+  totalCount: Int!
+}
+
+type LotteryDealerContact {
+  abilities: LotteryDealerContactAbilities!
+  birthday: DateTime
+  createdAt: DateTime!
+  createdBy: LotteryDealerUserRef
+  dealerCount: Int!
+  email: String
+  id: ID!
+  links: [LotteryDealerContactLink!]!
+  mailingAddress: String
+  mobile: String
+  name: String!
+  nationalId: String!
+  note: String
+  phone: String
+  residentialAddress: String
+  residentialSameAsMailing: Boolean!
+  roles: [LotteryContactRole!]!
+  status: LotteryContactStatus!
+  updatedAt: DateTime!
+}
+
+type LotteryDealerContactAbilities {
+  canEdit: Boolean!
+}
+
+type LotteryDealerContactLink {
+  dealer: LotteryDealerRef!
+  role: LotteryContactRole!
+}
+
+type LotteryDealerContactPayload {
+  item: LotteryDealerContact!
+}
+
+type LotteryDealerContactRef {
+  id: ID!
+  name: String!
+  status: LotteryContactStatus!
+}
+
+input LotteryDealerContactsInput {
+  keyword: String
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  role: LotteryContactRole
+  status: LotteryContactStatus
+}
+
+type LotteryDealerContactsPayload {
+  items: [LotteryDealerContact!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
+type LotteryDealerOrgRef {
+  id: ID!
+  name: String!
+}
+
+type LotteryDealerPayload {
+  item: LotteryDealer!
+}
+
+type LotteryDealerRef {
+  id: ID!
+  licenseNo: String!
+  name: String!
+  status: LotteryDealerStatus!
+  storeName: String
+  type: LotteryDealerType!
+}
+
+type LotteryDealerSigninModel {
+  id: ID
+  note: String
+  quarter: Int!
+  signedAt: DateTime
+  state: LotterySigninState!
+  year: Int!
+}
+
+type LotteryDealerSigninPayload {
+  item: LotteryDealerSigninModel!
+}
+
+type LotteryDealerSigninsPayload {
+  items: [LotteryDealerSigninModel!]!
+  totalCount: Int!
+}
+
+"""經銷商狀態:營業中 / 暫停 / 解約"""
+enum LotteryDealerStatus {
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+"""經銷商類型:甲類 A / 乙類 B(建立後唯讀)"""
+enum LotteryDealerType {
+  A
+  B
+}
+
+type LotteryDealerUserRef {
+  id: ID!
+  name: String!
+}
+
+input LotteryDealersInput {
+  currentQuarterSigned: Boolean
+  keyword: String
+  licenseState: LotteryLicenseState
+  page: Int = 1
+
+  """每頁筆數,上限 100"""
+  pageSize: Int = 20
+  purchaseOverDays: Int
+  selectable: Boolean
+  status: LotteryDealerStatus
+  type: LotteryDealerType!
+}
+
+type LotteryDealersPayload {
+  items: [LotteryDealer!]!
+  page: Int!
+  pageSize: Int!
+  totalCount: Int!
+}
+
 type LotteryGame {
   abilities: LotteryGameAbilities!
   bookPrice: Int!
@@ -1232,6 +1488,23 @@ type LotteryGamesPayload {
   totalCount: Int!
 }
 
+"""證照狀態(租戶時區的今天):正常 / 30 天內到期(含當天)/ 已過期"""
+enum LotteryLicenseState {
+  EXPIRED
+  EXPIRING
+  OK
+}
+
+type LotteryOccupiedStoreModel {
+  dealer: LotteryDealerRef!
+  orgId: ID!
+}
+
+type LotteryOccupiedStoresPayload {
+  items: [LotteryOccupiedStoreModel!]!
+  totalCount: Int!
+}
+
 type LotteryPositionOption {
   label: String!
   value: String!
@@ -1240,6 +1513,21 @@ type LotteryPositionOption {
 type LotteryPositionOptionsPayload {
   items: [LotteryPositionOption!]!
   totalCount: Int!
+}
+
+"""牌租週期:月 / 季 / 年"""
+enum LotteryRentCycle {
+  MONTH
+  QUARTER
+  YEAR
+}
+
+"""見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用)"""
+enum LotterySigninState {
+  MISSING
+  NOT_STARTED
+  OPEN
+  SIGNED
 }
 
 input MarkNotificationsReadInput {
@@ -1395,6 +1683,8 @@ type Mutation {
   createFormDraft(input: CreateFormDraftInput!): FormSubmissionPayload!
   createFormVersionDraft(input: CreateFormVersionDraftInput!): FormVersionPayload!
   createLotteryCashPoint(input: CreateLotteryCashPointInput!): LotteryCashPointPayload!
+  createLotteryDealer(input: CreateLotteryDealerInput!): LotteryDealerPayload!
+  createLotteryDealerContact(input: CreateLotteryDealerContactInput!): LotteryDealerContactPayload!
   createLotteryGame(input: CreateLotteryGameInput!): LotteryGamePayload!
   createMyDelegation(input: CreateMyDelegationInput!): MyDelegationPayload!
   createPrintAgent(input: CreatePrintAgentInput!): PrintAgentPairingPayload!
@@ -1432,6 +1722,7 @@ type Mutation {
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   refresh: RefreshPayload!
+  registerLotteryDealerSignin(input: RegisterLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
@@ -1477,6 +1768,9 @@ type Mutation {
   updateForm(input: UpdateFormInput!): FormPayload!
   updateFormSubmission(input: UpdateFormSubmissionInput!): FormSubmissionPayload!
   updateLotteryCashPoint(input: UpdateLotteryCashPointInput!): LotteryCashPointPayload!
+  updateLotteryDealer(input: UpdateLotteryDealerInput!): LotteryDealerPayload!
+  updateLotteryDealerContact(input: UpdateLotteryDealerContactInput!): LotteryDealerContactPayload!
+  updateLotteryDealerSignin(input: UpdateLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   updateLotteryGame(input: UpdateLotteryGameInput!): LotteryGamePayload!
   updateMyPreferences(input: UpdateMyPreferencesInput!): UpdateMyPreferencesPayload!
   updateNotificationSetting(input: UpdateNotificationSettingInput!): NotificationSettingPayload!
@@ -2021,8 +2315,15 @@ type Query {
   formWorkflowOptions(formKey: ID!): FormWorkflowOptionsPayload!
   forms(input: FormsInput!): FormsPayload!
   lotteryCashPoints(input: LotteryCashPointsInput!): LotteryCashPointsPayload!
+  lotteryDealer(id: ID!): LotteryDealerPayload!
+  lotteryDealerCoSellers(dealerId: ID!): LotteryDealerCoSellersPayload!
+  lotteryDealerContact(id: ID!): LotteryDealerContactPayload!
+  lotteryDealerContacts(input: LotteryDealerContactsInput!): LotteryDealerContactsPayload!
+  lotteryDealerSignins(dealerId: ID!, year: Int!): LotteryDealerSigninsPayload!
+  lotteryDealers(input: LotteryDealersInput!): LotteryDealersPayload!
   lotteryGame(id: ID!): LotteryGamePayload!
   lotteryGames(input: LotteryGamesInput!): LotteryGamesPayload!
+  lotteryOccupiedStores: LotteryOccupiedStoresPayload!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   me: Me!
   moduleForms(moduleKey: ID!): [FormSummary!]!
@@ -2102,6 +2403,14 @@ input ReassignTaskInput {
 
 type RefreshPayload {
   accessToken: String!
+}
+
+input RegisterLotteryDealerSigninInput {
+  dealerId: ID!
+  note: String
+  quarter: Int!
+  signedAt: DateTime!
+  year: Int!
 }
 
 type ReprintReason {
@@ -2577,6 +2886,63 @@ input UpdateLotteryCashPointInput {
   order: Int
   positionKey: String
   printerId: ID
+}
+
+input UpdateLotteryDealerContactInput {
+  birthday: DateTime
+  email: String
+  id: ID!
+  mailingAddress: String
+  mobile: String
+  name: String
+  nationalId: String
+  note: String
+  phone: String
+  releaseRelationships: Boolean
+  residentialAddress: String
+  residentialSameAsMailing: Boolean
+  roles: [LotteryContactRole!]
+  status: LotteryContactStatus
+}
+
+input UpdateLotteryDealerInput {
+  agentIds: [ID!]
+  birthday: DateTime
+  businessAddress: String
+  coSalesDealerId: ID
+  email: String
+  id: ID!
+  introducerIds: [ID!]
+  lastPurchaseBaseDate: DateTime
+  lastSelfPurchaseBaseDate: DateTime
+  licenseApprovedAt: DateTime
+  licenseExpiresAt: DateTime
+  licenseNo: String
+  mailingAddress: String
+  mobile: String
+  name: String
+  nationalId: String
+  note: String
+  phone: String
+  releaseAgents: Boolean
+  rentCycle: LotteryRentCycle
+  rentDueDay: Int
+  rentFee: Int
+  rentStartMonth: Int
+  residentialAddress: String
+  residentialSameAsMailing: Boolean
+  status: LotteryDealerStatus
+  storeName: String
+  storeOrgId: ID
+  storePhone: String
+  terminalNo: String
+  trusteeIds: [ID!]
+}
+
+input UpdateLotteryDealerSigninInput {
+  id: ID!
+  note: String
+  signedAt: DateTime
 }
 
 input UpdateLotteryGameInput {

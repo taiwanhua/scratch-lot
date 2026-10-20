@@ -1,4 +1,5 @@
 import type { LookupProviderRegistration } from "../forms/lookup-provider-registration";
+import { LotteryDealersRepository } from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 
 /**
@@ -45,5 +46,23 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       keywordFields: ["name", "gameCode"],
     },
     repositoryToken: LotteryGamesRepository,
+  },
+  {
+    // 經銷商(專案規格 5.2;`docs/modules/project/dealers.md`「lookup 來源」):名稱、證號、類型;
+    // 可篩 status(active / suspended / terminated)、type(a / b)。範圍照可見範圍
+    declaration: {
+      key: "lottery_dealer",
+      name: "經銷商",
+      permission: null,
+      fields: {
+        name: { type: "text", label: "姓名" },
+        licenseNo: { type: "text", label: "證號" },
+        type: { type: "text", label: "類型" },
+      },
+      filterFields: ["status", "type"],
+      labelField: "name",
+      keywordFields: ["name", "licenseNo"],
+    },
+    repositoryToken: LotteryDealersRepository,
   },
 ];

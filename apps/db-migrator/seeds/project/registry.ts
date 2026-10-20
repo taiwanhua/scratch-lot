@@ -1,5 +1,6 @@
 import type { DemoSource } from "../../src/demo/demo-source";
 import type { SeedSource } from "../base/seed-source";
+import { dealersModule } from "./dealers";
 import { lotteryDemoSource } from "./demo";
 import {
   projectFieldCategories,
@@ -23,6 +24,8 @@ export const projectSeedSource: SeedSource = {
   moduleDeclarations: [
     // 檔案管理(專案規格 5.1、5.5)
     masterDataModule,
+    // 經銷商管理(專案規格 5.2–5.4)
+    dealersModule,
   ],
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)

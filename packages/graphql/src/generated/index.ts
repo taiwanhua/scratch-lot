@@ -275,6 +275,54 @@ export type CreateLotteryCashPointInput = {
   printerId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+export type CreateLotteryDealerContactInput = {
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  roles?: InputMaybe<Array<LotteryContactRole>>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type CreateLotteryDealerInput = {
+  agentIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  businessAddress?: InputMaybe<Scalars['String']['input']>;
+  coSalesDealerId?: InputMaybe<Scalars['ID']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  introducerIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  lastPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  lastSelfPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseApprovedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseExpiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  rentCycle?: InputMaybe<LotteryRentCycle>;
+  rentDueDay?: InputMaybe<Scalars['Int']['input']>;
+  rentFee?: InputMaybe<Scalars['Int']['input']>;
+  rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
+  storeOrgId?: InputMaybe<Scalars['ID']['input']>;
+  storePhone?: InputMaybe<Scalars['String']['input']>;
+  terminalNo?: InputMaybe<Scalars['String']['input']>;
+  trusteeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  type: LotteryDealerType;
+};
+
 export type CreateLotteryGameInput = {
   claimDeadline?: InputMaybe<Scalars['DateTime']['input']>;
   color?: InputMaybe<Scalars['String']['input']>;
@@ -1298,6 +1346,230 @@ export type LotteryCashPointsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+/** 關係人的身分:受託人 / 代理人 / 介紹人 */
+export enum LotteryContactRole {
+  Agent = 'AGENT',
+  Introducer = 'INTRODUCER',
+  Trustee = 'TRUSTEE'
+}
+
+/** 關係人狀態:啟用 / 停用 */
+export enum LotteryContactStatus {
+  Active = 'ACTIVE',
+  Disabled = 'DISABLED'
+}
+
+export type LotteryDealer = {
+  __typename?: 'LotteryDealer';
+  abilities: LotteryDealerAbilities;
+  agents: Array<LotteryDealerContactRef>;
+  birthday?: Maybe<Scalars['DateTime']['output']>;
+  businessAddress?: Maybe<Scalars['String']['output']>;
+  coSalesDealer?: Maybe<LotteryDealerRef>;
+  coSellerCount?: Maybe<Scalars['Int']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryDealerUserRef>;
+  currentQuarterSigned?: Maybe<Scalars['Boolean']['output']>;
+  daysSinceLastPurchase?: Maybe<Scalars['Int']['output']>;
+  daysSinceLastSelfPurchase?: Maybe<Scalars['Int']['output']>;
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  introducers: Array<LotteryDealerContactRef>;
+  lastPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastPurchaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastSelfPurchaseBaseDate?: Maybe<Scalars['DateTime']['output']>;
+  lastSelfPurchaseDate?: Maybe<Scalars['DateTime']['output']>;
+  licenseApprovedAt: Scalars['DateTime']['output'];
+  licenseExpiresAt: Scalars['DateTime']['output'];
+  licenseNo: Scalars['String']['output'];
+  licenseState: LotteryLicenseState;
+  mailingAddress?: Maybe<Scalars['String']['output']>;
+  mobile?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  nationalId: Scalars['String']['output'];
+  nextRentDueAt?: Maybe<Scalars['DateTime']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  rentCycle?: Maybe<LotteryRentCycle>;
+  rentDueDay?: Maybe<Scalars['Int']['output']>;
+  rentFee?: Maybe<Scalars['Int']['output']>;
+  rentStartMonth?: Maybe<Scalars['Int']['output']>;
+  residentialAddress?: Maybe<Scalars['String']['output']>;
+  residentialSameAsMailing: Scalars['Boolean']['output'];
+  status: LotteryDealerStatus;
+  storeName?: Maybe<Scalars['String']['output']>;
+  storeOrg?: Maybe<LotteryDealerOrgRef>;
+  storePhone?: Maybe<Scalars['String']['output']>;
+  terminalNo?: Maybe<Scalars['String']['output']>;
+  trustees: Array<LotteryDealerContactRef>;
+  type: LotteryDealerType;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerAbilities = {
+  __typename?: 'LotteryDealerAbilities';
+  canEdit: Scalars['Boolean']['output'];
+  canEditLastPurchaseBaseDate: Scalars['Boolean']['output'];
+  canEditLastSelfPurchaseBaseDate: Scalars['Boolean']['output'];
+};
+
+export type LotteryDealerCoSellerModel = {
+  __typename?: 'LotteryDealerCoSellerModel';
+  dealer: LotteryDealerRef;
+  registeredAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerCoSellersPayload = {
+  __typename?: 'LotteryDealerCoSellersPayload';
+  items: Array<LotteryDealerCoSellerModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryDealerContact = {
+  __typename?: 'LotteryDealerContact';
+  abilities: LotteryDealerContactAbilities;
+  birthday?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  createdBy?: Maybe<LotteryDealerUserRef>;
+  dealerCount: Scalars['Int']['output'];
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  links: Array<LotteryDealerContactLink>;
+  mailingAddress?: Maybe<Scalars['String']['output']>;
+  mobile?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  nationalId: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  phone?: Maybe<Scalars['String']['output']>;
+  residentialAddress?: Maybe<Scalars['String']['output']>;
+  residentialSameAsMailing: Scalars['Boolean']['output'];
+  roles: Array<LotteryContactRole>;
+  status: LotteryContactStatus;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryDealerContactAbilities = {
+  __typename?: 'LotteryDealerContactAbilities';
+  canEdit: Scalars['Boolean']['output'];
+};
+
+export type LotteryDealerContactLink = {
+  __typename?: 'LotteryDealerContactLink';
+  dealer: LotteryDealerRef;
+  role: LotteryContactRole;
+};
+
+export type LotteryDealerContactPayload = {
+  __typename?: 'LotteryDealerContactPayload';
+  item: LotteryDealerContact;
+};
+
+export type LotteryDealerContactRef = {
+  __typename?: 'LotteryDealerContactRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  status: LotteryContactStatus;
+};
+
+export type LotteryDealerContactsInput = {
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  role?: InputMaybe<LotteryContactRole>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type LotteryDealerContactsPayload = {
+  __typename?: 'LotteryDealerContactsPayload';
+  items: Array<LotteryDealerContact>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
+export type LotteryDealerOrgRef = {
+  __typename?: 'LotteryDealerOrgRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryDealerPayload = {
+  __typename?: 'LotteryDealerPayload';
+  item: LotteryDealer;
+};
+
+export type LotteryDealerRef = {
+  __typename?: 'LotteryDealerRef';
+  id: Scalars['ID']['output'];
+  licenseNo: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  status: LotteryDealerStatus;
+  storeName?: Maybe<Scalars['String']['output']>;
+  type: LotteryDealerType;
+};
+
+export type LotteryDealerSigninModel = {
+  __typename?: 'LotteryDealerSigninModel';
+  id?: Maybe<Scalars['ID']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  quarter: Scalars['Int']['output'];
+  signedAt?: Maybe<Scalars['DateTime']['output']>;
+  state: LotterySigninState;
+  year: Scalars['Int']['output'];
+};
+
+export type LotteryDealerSigninPayload = {
+  __typename?: 'LotteryDealerSigninPayload';
+  item: LotteryDealerSigninModel;
+};
+
+export type LotteryDealerSigninsPayload = {
+  __typename?: 'LotteryDealerSigninsPayload';
+  items: Array<LotteryDealerSigninModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** 經銷商狀態:營業中 / 暫停 / 解約 */
+export enum LotteryDealerStatus {
+  Active = 'ACTIVE',
+  Suspended = 'SUSPENDED',
+  Terminated = 'TERMINATED'
+}
+
+/** 經銷商類型:甲類 A / 乙類 B(建立後唯讀) */
+export enum LotteryDealerType {
+  A = 'A',
+  B = 'B'
+}
+
+export type LotteryDealerUserRef = {
+  __typename?: 'LotteryDealerUserRef';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type LotteryDealersInput = {
+  currentQuarterSigned?: InputMaybe<Scalars['Boolean']['input']>;
+  keyword?: InputMaybe<Scalars['String']['input']>;
+  licenseState?: InputMaybe<LotteryLicenseState>;
+  page?: InputMaybe<Scalars['Int']['input']>;
+  /** 每頁筆數,上限 100 */
+  pageSize?: InputMaybe<Scalars['Int']['input']>;
+  purchaseOverDays?: InputMaybe<Scalars['Int']['input']>;
+  selectable?: InputMaybe<Scalars['Boolean']['input']>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  type: LotteryDealerType;
+};
+
+export type LotteryDealersPayload = {
+  __typename?: 'LotteryDealersPayload';
+  items: Array<LotteryDealer>;
+  page: Scalars['Int']['output'];
+  pageSize: Scalars['Int']['output'];
+  totalCount: Scalars['Int']['output'];
+};
+
 export type LotteryGame = {
   __typename?: 'LotteryGame';
   abilities: LotteryGameAbilities;
@@ -1346,6 +1618,25 @@ export type LotteryGamesPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+/** 證照狀態(租戶時區的今天):正常 / 30 天內到期(含當天)/ 已過期 */
+export enum LotteryLicenseState {
+  Expired = 'EXPIRED',
+  Expiring = 'EXPIRING',
+  Ok = 'OK'
+}
+
+export type LotteryOccupiedStoreModel = {
+  __typename?: 'LotteryOccupiedStoreModel';
+  dealer: LotteryDealerRef;
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryOccupiedStoresPayload = {
+  __typename?: 'LotteryOccupiedStoresPayload';
+  items: Array<LotteryOccupiedStoreModel>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type LotteryPositionOption = {
   __typename?: 'LotteryPositionOption';
   label: Scalars['String']['output'];
@@ -1357,6 +1648,21 @@ export type LotteryPositionOptionsPayload = {
   items: Array<LotteryPositionOption>;
   totalCount: Scalars['Int']['output'];
 };
+
+/** 牌租週期:月 / 季 / 年 */
+export enum LotteryRentCycle {
+  Month = 'MONTH',
+  Quarter = 'QUARTER',
+  Year = 'YEAR'
+}
+
+/** 見簽季別的狀態:已見簽 / 已過沒登記(警告)/ 本季還沒登記 / 未到(停用) */
+export enum LotterySigninState {
+  Missing = 'MISSING',
+  NotStarted = 'NOT_STARTED',
+  Open = 'OPEN',
+  Signed = 'SIGNED'
+}
 
 export type MarkNotificationsReadInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -1522,6 +1828,8 @@ export type Mutation = {
   createFormDraft: FormSubmissionPayload;
   createFormVersionDraft: FormVersionPayload;
   createLotteryCashPoint: LotteryCashPointPayload;
+  createLotteryDealer: LotteryDealerPayload;
+  createLotteryDealerContact: LotteryDealerContactPayload;
   createLotteryGame: LotteryGamePayload;
   createMyDelegation: MyDelegationPayload;
   createPrintAgent: PrintAgentPairingPayload;
@@ -1559,6 +1867,7 @@ export type Mutation = {
   publishWorkflowVersion: WorkflowVersionPayload;
   reassignTask: WorkflowTaskPayload;
   refresh: RefreshPayload;
+  registerLotteryDealerSignin: LotteryDealerSigninPayload;
   requestPasswordReset: RequestPasswordResetPayload;
   resetNotificationSetting: NotificationSettingPayload;
   resetPrintAgentPairing: PrintAgentPairingPayload;
@@ -1604,6 +1913,9 @@ export type Mutation = {
   updateForm: FormPayload;
   updateFormSubmission: FormSubmissionPayload;
   updateLotteryCashPoint: LotteryCashPointPayload;
+  updateLotteryDealer: LotteryDealerPayload;
+  updateLotteryDealerContact: LotteryDealerContactPayload;
+  updateLotteryDealerSignin: LotteryDealerSigninPayload;
   updateLotteryGame: LotteryGamePayload;
   updateMyPreferences: UpdateMyPreferencesPayload;
   updateNotificationSetting: NotificationSettingPayload;
@@ -1715,6 +2027,16 @@ export type MutationCreateFormVersionDraftArgs = {
 
 export type MutationCreateLotteryCashPointArgs = {
   input: CreateLotteryCashPointInput;
+};
+
+
+export type MutationCreateLotteryDealerArgs = {
+  input: CreateLotteryDealerInput;
+};
+
+
+export type MutationCreateLotteryDealerContactArgs = {
+  input: CreateLotteryDealerContactInput;
 };
 
 
@@ -1880,6 +2202,11 @@ export type MutationPublishWorkflowVersionArgs = {
 
 export type MutationReassignTaskArgs = {
   input: ReassignTaskInput;
+};
+
+
+export type MutationRegisterLotteryDealerSigninArgs = {
+  input: RegisterLotteryDealerSigninInput;
 };
 
 
@@ -2105,6 +2432,21 @@ export type MutationUpdateFormSubmissionArgs = {
 
 export type MutationUpdateLotteryCashPointArgs = {
   input: UpdateLotteryCashPointInput;
+};
+
+
+export type MutationUpdateLotteryDealerArgs = {
+  input: UpdateLotteryDealerInput;
+};
+
+
+export type MutationUpdateLotteryDealerContactArgs = {
+  input: UpdateLotteryDealerContactInput;
+};
+
+
+export type MutationUpdateLotteryDealerSigninArgs = {
+  input: UpdateLotteryDealerSigninInput;
 };
 
 
@@ -2723,8 +3065,15 @@ export type Query = {
   formWorkflowOptions: FormWorkflowOptionsPayload;
   forms: FormsPayload;
   lotteryCashPoints: LotteryCashPointsPayload;
+  lotteryDealer: LotteryDealerPayload;
+  lotteryDealerCoSellers: LotteryDealerCoSellersPayload;
+  lotteryDealerContact: LotteryDealerContactPayload;
+  lotteryDealerContacts: LotteryDealerContactsPayload;
+  lotteryDealerSignins: LotteryDealerSigninsPayload;
+  lotteryDealers: LotteryDealersPayload;
   lotteryGame: LotteryGamePayload;
   lotteryGames: LotteryGamesPayload;
+  lotteryOccupiedStores: LotteryOccupiedStoresPayload;
   lotteryPositionOptions: LotteryPositionOptionsPayload;
   me: Me;
   moduleForms: Array<FormSummary>;
@@ -2919,6 +3268,37 @@ export type QueryFormsArgs = {
 
 export type QueryLotteryCashPointsArgs = {
   input: LotteryCashPointsInput;
+};
+
+
+export type QueryLotteryDealerArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerCoSellersArgs = {
+  dealerId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerContactArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryDealerContactsArgs = {
+  input: LotteryDealerContactsInput;
+};
+
+
+export type QueryLotteryDealerSigninsArgs = {
+  dealerId: Scalars['ID']['input'];
+  year: Scalars['Int']['input'];
+};
+
+
+export type QueryLotteryDealersArgs = {
+  input: LotteryDealersInput;
 };
 
 
@@ -3139,6 +3519,14 @@ export type ReassignTaskInput = {
 export type RefreshPayload = {
   __typename?: 'RefreshPayload';
   accessToken: Scalars['String']['output'];
+};
+
+export type RegisterLotteryDealerSigninInput = {
+  dealerId: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  quarter: Scalars['Int']['input'];
+  signedAt: Scalars['DateTime']['input'];
+  year: Scalars['Int']['input'];
 };
 
 export type ReprintReason = {
@@ -3638,6 +4026,63 @@ export type UpdateLotteryCashPointInput = {
   order?: InputMaybe<Scalars['Int']['input']>;
   positionKey?: InputMaybe<Scalars['String']['input']>;
   printerId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type UpdateLotteryDealerContactInput = {
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  releaseRelationships?: InputMaybe<Scalars['Boolean']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  roles?: InputMaybe<Array<LotteryContactRole>>;
+  status?: InputMaybe<LotteryContactStatus>;
+};
+
+export type UpdateLotteryDealerInput = {
+  agentIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  birthday?: InputMaybe<Scalars['DateTime']['input']>;
+  businessAddress?: InputMaybe<Scalars['String']['input']>;
+  coSalesDealerId?: InputMaybe<Scalars['ID']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  introducerIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  lastPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  lastSelfPurchaseBaseDate?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseApprovedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseExpiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  licenseNo?: InputMaybe<Scalars['String']['input']>;
+  mailingAddress?: InputMaybe<Scalars['String']['input']>;
+  mobile?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nationalId?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  phone?: InputMaybe<Scalars['String']['input']>;
+  releaseAgents?: InputMaybe<Scalars['Boolean']['input']>;
+  rentCycle?: InputMaybe<LotteryRentCycle>;
+  rentDueDay?: InputMaybe<Scalars['Int']['input']>;
+  rentFee?: InputMaybe<Scalars['Int']['input']>;
+  rentStartMonth?: InputMaybe<Scalars['Int']['input']>;
+  residentialAddress?: InputMaybe<Scalars['String']['input']>;
+  residentialSameAsMailing?: InputMaybe<Scalars['Boolean']['input']>;
+  status?: InputMaybe<LotteryDealerStatus>;
+  storeName?: InputMaybe<Scalars['String']['input']>;
+  storeOrgId?: InputMaybe<Scalars['ID']['input']>;
+  storePhone?: InputMaybe<Scalars['String']['input']>;
+  terminalNo?: InputMaybe<Scalars['String']['input']>;
+  trusteeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+};
+
+export type UpdateLotteryDealerSigninInput = {
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  signedAt?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 export type UpdateLotteryGameInput = {
@@ -5560,6 +6005,104 @@ export type SetFieldOptionColorMutationVariables = Exact<{
 
 export type SetFieldOptionColorMutation = { __typename?: 'Mutation', setFieldOptionColor: { __typename?: 'FieldOptionColorPayload', color: { __typename?: 'FieldOptionColor', fieldId: string, value: string, paletteKey?: string | null } } };
 
+export type LotteryDealerRefFieldsFragment = { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus };
+
+export type LotteryDealerContactRefFieldsFragment = { __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus };
+
+export type LotteryDealerFieldsFragment = { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean } };
+
+export type LotteryDealerContactFieldsFragment = { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } };
+
+export type LotteryDealersQueryVariables = Exact<{
+  input: LotteryDealersInput;
+}>;
+
+
+export type LotteryDealersQuery = { __typename?: 'Query', lotteryDealers: { __typename?: 'LotteryDealersPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean } }> } };
+
+export type LotteryDealerQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerQuery = { __typename?: 'Query', lotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean } } } };
+
+export type LotteryDealerSigninsQueryVariables = Exact<{
+  dealerId: Scalars['ID']['input'];
+  year: Scalars['Int']['input'];
+}>;
+
+
+export type LotteryDealerSigninsQuery = { __typename?: 'Query', lotteryDealerSignins: { __typename?: 'LotteryDealerSigninsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState }> } };
+
+export type LotteryDealerCoSellersQueryVariables = Exact<{
+  dealerId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerCoSellersQuery = { __typename?: 'Query', lotteryDealerCoSellers: { __typename?: 'LotteryDealerCoSellersPayload', totalCount: number, items: Array<{ __typename?: 'LotteryDealerCoSellerModel', registeredAt: string, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }> } };
+
+export type LotteryOccupiedStoresQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryOccupiedStoresQuery = { __typename?: 'Query', lotteryOccupiedStores: { __typename?: 'LotteryOccupiedStoresPayload', totalCount: number, items: Array<{ __typename?: 'LotteryOccupiedStoreModel', orgId: string, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }> } };
+
+export type CreateLotteryDealerMutationVariables = Exact<{
+  input: CreateLotteryDealerInput;
+}>;
+
+
+export type CreateLotteryDealerMutation = { __typename?: 'Mutation', createLotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean } } } };
+
+export type UpdateLotteryDealerMutationVariables = Exact<{
+  input: UpdateLotteryDealerInput;
+}>;
+
+
+export type UpdateLotteryDealerMutation = { __typename?: 'Mutation', updateLotteryDealer: { __typename?: 'LotteryDealerPayload', item: { __typename?: 'LotteryDealer', id: string, type: LotteryDealerType, licenseNo: string, name: string, status: LotteryDealerStatus, licenseApprovedAt: string, licenseExpiresAt: string, licenseState: LotteryLicenseState, lastPurchaseBaseDate?: string | null, lastSelfPurchaseBaseDate?: string | null, lastPurchaseDate?: string | null, lastSelfPurchaseDate?: string | null, daysSinceLastPurchase?: number | null, daysSinceLastSelfPurchase?: number | null, currentQuarterSigned?: boolean | null, storeName?: string | null, businessAddress?: string | null, storePhone?: string | null, terminalNo?: string | null, coSellerCount?: number | null, rentFee?: number | null, rentCycle?: LotteryRentCycle | null, rentStartMonth?: number | null, rentDueDay?: number | null, nextRentDueAt?: string | null, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, note?: string | null, createdAt: string, updatedAt: string, coSalesDealer?: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } | null, agents: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, trustees: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, introducers: Array<{ __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus }>, storeOrg?: { __typename?: 'LotteryDealerOrgRef', id: string, name: string } | null, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerAbilities', canEdit: boolean, canEditLastPurchaseBaseDate: boolean, canEditLastSelfPurchaseBaseDate: boolean } } } };
+
+export type RegisterLotteryDealerSigninMutationVariables = Exact<{
+  input: RegisterLotteryDealerSigninInput;
+}>;
+
+
+export type RegisterLotteryDealerSigninMutation = { __typename?: 'Mutation', registerLotteryDealerSignin: { __typename?: 'LotteryDealerSigninPayload', item: { __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState } } };
+
+export type UpdateLotteryDealerSigninMutationVariables = Exact<{
+  input: UpdateLotteryDealerSigninInput;
+}>;
+
+
+export type UpdateLotteryDealerSigninMutation = { __typename?: 'Mutation', updateLotteryDealerSignin: { __typename?: 'LotteryDealerSigninPayload', item: { __typename?: 'LotteryDealerSigninModel', id?: string | null, year: number, quarter: number, signedAt?: string | null, note?: string | null, state: LotterySigninState } } };
+
+export type LotteryDealerContactsQueryVariables = Exact<{
+  input: LotteryDealerContactsInput;
+}>;
+
+
+export type LotteryDealerContactsQuery = { __typename?: 'Query', lotteryDealerContacts: { __typename?: 'LotteryDealerContactsPayload', totalCount: number, page: number, pageSize: number, items: Array<{ __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } }> } };
+
+export type LotteryDealerContactQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryDealerContactQuery = { __typename?: 'Query', lotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type CreateLotteryDealerContactMutationVariables = Exact<{
+  input: CreateLotteryDealerContactInput;
+}>;
+
+
+export type CreateLotteryDealerContactMutation = { __typename?: 'Mutation', createLotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
+export type UpdateLotteryDealerContactMutationVariables = Exact<{
+  input: UpdateLotteryDealerContactInput;
+}>;
+
+
+export type UpdateLotteryDealerContactMutation = { __typename?: 'Mutation', updateLotteryDealerContact: { __typename?: 'LotteryDealerContactPayload', item: { __typename?: 'LotteryDealerContact', id: string, name: string, roles: Array<LotteryContactRole>, nationalId: string, birthday?: string | null, phone?: string | null, mobile?: string | null, email?: string | null, mailingAddress?: string | null, residentialAddress?: string | null, residentialSameAsMailing: boolean, status: LotteryContactStatus, note?: string | null, dealerCount: number, createdAt: string, updatedAt: string, links: Array<{ __typename?: 'LotteryDealerContactLink', role: LotteryContactRole, dealer: { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus } }>, createdBy?: { __typename?: 'LotteryDealerUserRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryDealerContactAbilities', canEdit: boolean } } } };
+
 export type LotteryGameFieldsFragment = { __typename?: 'LotteryGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number, color?: string | null, status: string, launchedAt?: string | null, discontinuedAt?: string | null, claimDeadline?: string | null, note?: string | null, inUse: boolean, createdAt: string, updatedAt: string, abilities: { __typename?: 'LotteryGameAbilities', canEdit: boolean, canDelete: boolean } };
 
 export type LotteryGamesQueryVariables = Exact<{
@@ -6337,6 +6880,122 @@ export const FieldOptionColorFieldsFragmentDoc = `
   paletteKey
 }
     `;
+export const LotteryDealerRefFieldsFragmentDoc = `
+    fragment LotteryDealerRefFields on LotteryDealerRef {
+  id
+  type
+  licenseNo
+  name
+  storeName
+  status
+}
+    `;
+export const LotteryDealerContactRefFieldsFragmentDoc = `
+    fragment LotteryDealerContactRefFields on LotteryDealerContactRef {
+  id
+  name
+  status
+}
+    `;
+export const LotteryDealerFieldsFragmentDoc = `
+    fragment LotteryDealerFields on LotteryDealer {
+  id
+  type
+  licenseNo
+  name
+  status
+  licenseApprovedAt
+  licenseExpiresAt
+  licenseState
+  coSalesDealer {
+    ...LotteryDealerRefFields
+  }
+  agents {
+    ...LotteryDealerContactRefFields
+  }
+  trustees {
+    ...LotteryDealerContactRefFields
+  }
+  introducers {
+    ...LotteryDealerContactRefFields
+  }
+  lastPurchaseBaseDate
+  lastSelfPurchaseBaseDate
+  lastPurchaseDate
+  lastSelfPurchaseDate
+  daysSinceLastPurchase
+  daysSinceLastSelfPurchase
+  currentQuarterSigned
+  storeOrg {
+    id
+    name
+  }
+  storeName
+  businessAddress
+  storePhone
+  terminalNo
+  coSellerCount
+  rentFee
+  rentCycle
+  rentStartMonth
+  rentDueDay
+  nextRentDueAt
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  note
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+    canEditLastPurchaseBaseDate
+    canEditLastSelfPurchaseBaseDate
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
+export const LotteryDealerContactFieldsFragmentDoc = `
+    fragment LotteryDealerContactFields on LotteryDealerContact {
+  id
+  name
+  roles
+  nationalId
+  birthday
+  phone
+  mobile
+  email
+  mailingAddress
+  residentialAddress
+  residentialSameAsMailing
+  status
+  note
+  dealerCount
+  links {
+    role
+    dealer {
+      ...LotteryDealerRefFields
+    }
+  }
+  createdBy {
+    id
+    name
+  }
+  createdAt
+  updatedAt
+  abilities {
+    canEdit
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
 export const LotteryGameFieldsFragmentDoc = `
     fragment LotteryGameFields on LotteryGame {
   id
@@ -12798,6 +13457,447 @@ export const useSetFieldOptionColorMutation = <
 
 
 useSetFieldOptionColorMutation.fetcher = (client: GraphQLClient, variables: SetFieldOptionColorMutationVariables, headers?: RequestInit['headers']) => fetcher<SetFieldOptionColorMutation, SetFieldOptionColorMutationVariables>(client, SetFieldOptionColorDocument, variables, headers);
+
+export const LotteryDealersDocument = `
+    query LotteryDealers($input: LotteryDealersInput!) {
+  lotteryDealers(input: $input) {
+    items {
+      ...LotteryDealerFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useLotteryDealersQuery = <
+      TData = LotteryDealersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealersQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealersQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealers', variables],
+    queryFn: fetcher<LotteryDealersQuery, LotteryDealersQueryVariables>(client, LotteryDealersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealersQuery.getKey = (variables: LotteryDealersQueryVariables) => ['LotteryDealers', variables];
+
+
+useLotteryDealersQuery.fetcher = (client: GraphQLClient, variables: LotteryDealersQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealersQuery, LotteryDealersQueryVariables>(client, LotteryDealersDocument, variables, headers);
+
+export const LotteryDealerDocument = `
+    query LotteryDealer($id: ID!) {
+  lotteryDealer(id: $id) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useLotteryDealerQuery = <
+      TData = LotteryDealerQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealer', variables],
+    queryFn: fetcher<LotteryDealerQuery, LotteryDealerQueryVariables>(client, LotteryDealerDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerQuery.getKey = (variables: LotteryDealerQueryVariables) => ['LotteryDealer', variables];
+
+
+useLotteryDealerQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerQuery, LotteryDealerQueryVariables>(client, LotteryDealerDocument, variables, headers);
+
+export const LotteryDealerSigninsDocument = `
+    query LotteryDealerSignins($dealerId: ID!, $year: Int!) {
+  lotteryDealerSignins(dealerId: $dealerId, year: $year) {
+    items {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+    totalCount
+  }
+}
+    `;
+
+export const useLotteryDealerSigninsQuery = <
+      TData = LotteryDealerSigninsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerSigninsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerSigninsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerSigninsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerSigninsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerSignins', variables],
+    queryFn: fetcher<LotteryDealerSigninsQuery, LotteryDealerSigninsQueryVariables>(client, LotteryDealerSigninsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerSigninsQuery.getKey = (variables: LotteryDealerSigninsQueryVariables) => ['LotteryDealerSignins', variables];
+
+
+useLotteryDealerSigninsQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerSigninsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerSigninsQuery, LotteryDealerSigninsQueryVariables>(client, LotteryDealerSigninsDocument, variables, headers);
+
+export const LotteryDealerCoSellersDocument = `
+    query LotteryDealerCoSellers($dealerId: ID!) {
+  lotteryDealerCoSellers(dealerId: $dealerId) {
+    items {
+      dealer {
+        ...LotteryDealerRefFields
+      }
+      registeredAt
+    }
+    totalCount
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
+
+export const useLotteryDealerCoSellersQuery = <
+      TData = LotteryDealerCoSellersQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerCoSellersQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerCoSellersQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerCoSellersQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerCoSellersQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerCoSellers', variables],
+    queryFn: fetcher<LotteryDealerCoSellersQuery, LotteryDealerCoSellersQueryVariables>(client, LotteryDealerCoSellersDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerCoSellersQuery.getKey = (variables: LotteryDealerCoSellersQueryVariables) => ['LotteryDealerCoSellers', variables];
+
+
+useLotteryDealerCoSellersQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerCoSellersQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerCoSellersQuery, LotteryDealerCoSellersQueryVariables>(client, LotteryDealerCoSellersDocument, variables, headers);
+
+export const LotteryOccupiedStoresDocument = `
+    query LotteryOccupiedStores {
+  lotteryOccupiedStores {
+    items {
+      orgId
+      dealer {
+        ...LotteryDealerRefFields
+      }
+    }
+    totalCount
+  }
+}
+    ${LotteryDealerRefFieldsFragmentDoc}`;
+
+export const useLotteryOccupiedStoresQuery = <
+      TData = LotteryOccupiedStoresQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryOccupiedStoresQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryOccupiedStoresQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryOccupiedStoresQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryOccupiedStoresQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryOccupiedStores'] : ['LotteryOccupiedStores', variables],
+    queryFn: fetcher<LotteryOccupiedStoresQuery, LotteryOccupiedStoresQueryVariables>(client, LotteryOccupiedStoresDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryOccupiedStoresQuery.getKey = (variables?: LotteryOccupiedStoresQueryVariables) => variables === undefined ? ['LotteryOccupiedStores'] : ['LotteryOccupiedStores', variables];
+
+
+useLotteryOccupiedStoresQuery.fetcher = (client: GraphQLClient, variables?: LotteryOccupiedStoresQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryOccupiedStoresQuery, LotteryOccupiedStoresQueryVariables>(client, LotteryOccupiedStoresDocument, variables, headers);
+
+export const CreateLotteryDealerDocument = `
+    mutation CreateLotteryDealer($input: CreateLotteryDealerInput!) {
+  createLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useCreateLotteryDealerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryDealerMutation, TError, CreateLotteryDealerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryDealerMutation, TError, CreateLotteryDealerMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryDealer'],
+    mutationFn: (variables?: CreateLotteryDealerMutationVariables) => fetcher<CreateLotteryDealerMutation, CreateLotteryDealerMutationVariables>(client, CreateLotteryDealerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryDealerMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryDealerMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryDealerMutation, CreateLotteryDealerMutationVariables>(client, CreateLotteryDealerDocument, variables, headers);
+
+export const UpdateLotteryDealerDocument = `
+    mutation UpdateLotteryDealer($input: UpdateLotteryDealerInput!) {
+  updateLotteryDealer(input: $input) {
+    item {
+      ...LotteryDealerFields
+    }
+  }
+}
+    ${LotteryDealerFieldsFragmentDoc}`;
+
+export const useUpdateLotteryDealerMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerMutation, TError, UpdateLotteryDealerMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerMutation, TError, UpdateLotteryDealerMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealer'],
+    mutationFn: (variables?: UpdateLotteryDealerMutationVariables) => fetcher<UpdateLotteryDealerMutation, UpdateLotteryDealerMutationVariables>(client, UpdateLotteryDealerDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerMutation, UpdateLotteryDealerMutationVariables>(client, UpdateLotteryDealerDocument, variables, headers);
+
+export const RegisterLotteryDealerSigninDocument = `
+    mutation RegisterLotteryDealerSignin($input: RegisterLotteryDealerSigninInput!) {
+  registerLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+    `;
+
+export const useRegisterLotteryDealerSigninMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RegisterLotteryDealerSigninMutation, TError, RegisterLotteryDealerSigninMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RegisterLotteryDealerSigninMutation, TError, RegisterLotteryDealerSigninMutationVariables, TContext>(
+      {
+    mutationKey: ['RegisterLotteryDealerSignin'],
+    mutationFn: (variables?: RegisterLotteryDealerSigninMutationVariables) => fetcher<RegisterLotteryDealerSigninMutation, RegisterLotteryDealerSigninMutationVariables>(client, RegisterLotteryDealerSigninDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRegisterLotteryDealerSigninMutation.fetcher = (client: GraphQLClient, variables: RegisterLotteryDealerSigninMutationVariables, headers?: RequestInit['headers']) => fetcher<RegisterLotteryDealerSigninMutation, RegisterLotteryDealerSigninMutationVariables>(client, RegisterLotteryDealerSigninDocument, variables, headers);
+
+export const UpdateLotteryDealerSigninDocument = `
+    mutation UpdateLotteryDealerSignin($input: UpdateLotteryDealerSigninInput!) {
+  updateLotteryDealerSignin(input: $input) {
+    item {
+      id
+      year
+      quarter
+      signedAt
+      note
+      state
+    }
+  }
+}
+    `;
+
+export const useUpdateLotteryDealerSigninMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerSigninMutation, TError, UpdateLotteryDealerSigninMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerSigninMutation, TError, UpdateLotteryDealerSigninMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealerSignin'],
+    mutationFn: (variables?: UpdateLotteryDealerSigninMutationVariables) => fetcher<UpdateLotteryDealerSigninMutation, UpdateLotteryDealerSigninMutationVariables>(client, UpdateLotteryDealerSigninDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerSigninMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerSigninMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerSigninMutation, UpdateLotteryDealerSigninMutationVariables>(client, UpdateLotteryDealerSigninDocument, variables, headers);
+
+export const LotteryDealerContactsDocument = `
+    query LotteryDealerContacts($input: LotteryDealerContactsInput!) {
+  lotteryDealerContacts(input: $input) {
+    items {
+      ...LotteryDealerContactFields
+    }
+    totalCount
+    page
+    pageSize
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useLotteryDealerContactsQuery = <
+      TData = LotteryDealerContactsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerContactsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerContactsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerContactsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerContactsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerContacts', variables],
+    queryFn: fetcher<LotteryDealerContactsQuery, LotteryDealerContactsQueryVariables>(client, LotteryDealerContactsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerContactsQuery.getKey = (variables: LotteryDealerContactsQueryVariables) => ['LotteryDealerContacts', variables];
+
+
+useLotteryDealerContactsQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerContactsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerContactsQuery, LotteryDealerContactsQueryVariables>(client, LotteryDealerContactsDocument, variables, headers);
+
+export const LotteryDealerContactDocument = `
+    query LotteryDealerContact($id: ID!) {
+  lotteryDealerContact(id: $id) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useLotteryDealerContactQuery = <
+      TData = LotteryDealerContactQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryDealerContactQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryDealerContactQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryDealerContactQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryDealerContactQuery, TError, TData>(
+      {
+    queryKey: ['LotteryDealerContact', variables],
+    queryFn: fetcher<LotteryDealerContactQuery, LotteryDealerContactQueryVariables>(client, LotteryDealerContactDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryDealerContactQuery.getKey = (variables: LotteryDealerContactQueryVariables) => ['LotteryDealerContact', variables];
+
+
+useLotteryDealerContactQuery.fetcher = (client: GraphQLClient, variables: LotteryDealerContactQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryDealerContactQuery, LotteryDealerContactQueryVariables>(client, LotteryDealerContactDocument, variables, headers);
+
+export const CreateLotteryDealerContactDocument = `
+    mutation CreateLotteryDealerContact($input: CreateLotteryDealerContactInput!) {
+  createLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useCreateLotteryDealerContactMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CreateLotteryDealerContactMutation, TError, CreateLotteryDealerContactMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CreateLotteryDealerContactMutation, TError, CreateLotteryDealerContactMutationVariables, TContext>(
+      {
+    mutationKey: ['CreateLotteryDealerContact'],
+    mutationFn: (variables?: CreateLotteryDealerContactMutationVariables) => fetcher<CreateLotteryDealerContactMutation, CreateLotteryDealerContactMutationVariables>(client, CreateLotteryDealerContactDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCreateLotteryDealerContactMutation.fetcher = (client: GraphQLClient, variables: CreateLotteryDealerContactMutationVariables, headers?: RequestInit['headers']) => fetcher<CreateLotteryDealerContactMutation, CreateLotteryDealerContactMutationVariables>(client, CreateLotteryDealerContactDocument, variables, headers);
+
+export const UpdateLotteryDealerContactDocument = `
+    mutation UpdateLotteryDealerContact($input: UpdateLotteryDealerContactInput!) {
+  updateLotteryDealerContact(input: $input) {
+    item {
+      ...LotteryDealerContactFields
+    }
+  }
+}
+    ${LotteryDealerContactFieldsFragmentDoc}`;
+
+export const useUpdateLotteryDealerContactMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UpdateLotteryDealerContactMutation, TError, UpdateLotteryDealerContactMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UpdateLotteryDealerContactMutation, TError, UpdateLotteryDealerContactMutationVariables, TContext>(
+      {
+    mutationKey: ['UpdateLotteryDealerContact'],
+    mutationFn: (variables?: UpdateLotteryDealerContactMutationVariables) => fetcher<UpdateLotteryDealerContactMutation, UpdateLotteryDealerContactMutationVariables>(client, UpdateLotteryDealerContactDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUpdateLotteryDealerContactMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryDealerContactMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryDealerContactMutation, UpdateLotteryDealerContactMutationVariables>(client, UpdateLotteryDealerContactDocument, variables, headers);
 
 export const LotteryGamesDocument = `
     query LotteryGames($input: LotteryGamesInput!) {

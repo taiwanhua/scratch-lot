@@ -1,6 +1,7 @@
 import type { DatabaseRegistration } from "../../database/registration";
 import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registration";
 import { LOTTERY_CASH_POINTS_REGISTRATION } from "./lottery-cash-points/registration";
+import { LOTTERY_DEALERS_REGISTRATION } from "./lottery-dealers/registration";
 import { LOTTERY_GAMES_REGISTRATION } from "./lottery-games/registration";
 
 /**
@@ -15,4 +16,5 @@ export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
   FIELD_OPTION_COLORS_REGISTRATION,
   LOTTERY_GAMES_REGISTRATION,
   LOTTERY_CASH_POINTS_REGISTRATION,
+  LOTTERY_DEALERS_REGISTRATION,
 ];

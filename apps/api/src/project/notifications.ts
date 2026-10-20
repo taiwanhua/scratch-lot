@@ -126,6 +126,11 @@ const lotteryTypes: NotificationTypeDefinition[] = [
     // 乙類:對應分店含上層;甲類或沒有對應分店:觸發時以租戶頂層當事件的組織
     orgScope: { ref: "event-org", range: "ancestors" },
     defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 到期日前 30、7、0 天 09:00 各一次;過期後不再寄(規格 3.4、3.5;排程在經銷商管理)
+    schedule: {
+      default: { kind: "days-before", daysBefore: [30, 7, 0], time: "09:00" },
+      dateLabel: "到期",
+    },
     template: {
       "zh-TW": (params) => ({
         title: `證照到期:${text(params, "dealerName")}`,
@@ -149,6 +154,11 @@ const lotteryTypes: NotificationTypeDefinition[] = [
     // 乙類對應分店含上層;沒有對應分店:觸發時以租戶頂層當事件的組織
     orgScope: { ref: "event-org", range: "ancestors" },
     defaultAudience: STORE_MANAGER_AUDIENCE,
+    // 每期繳費日前 3、0 天 09:00(規格 3.4、3.5;排程在經銷商管理)
+    schedule: {
+      default: { kind: "days-before", daysBefore: [3, 0], time: "09:00" },
+      dateLabel: "繳費日",
+    },
     template: {
       "zh-TW": (params) => ({
         title: `牌租繳費:${text(params, "dealerName")}`,
