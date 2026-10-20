@@ -143,7 +143,8 @@ export const MonthView = () => {
   }
 
   return (
-    <Stack spacing={1.5}>
+    // 寬度由外層給:不讓時間軸 / 月曆的內容寬撐開頁面(時間軸依量到的寬度排版)
+    <Stack spacing={1.5} sx={{ minWidth: 0, contain: "inline-size" }}>
       <Stack sx={{ overflowX: "auto" }}>
         <MonthCalendar
           month={data.month}

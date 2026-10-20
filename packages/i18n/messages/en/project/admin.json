@@ -1186,7 +1186,8 @@
         "moreError": "+N includes a missing lead (red)",
         "dotFull": "Fully staffed",
         "dotMissingHelper": "Helper missing",
-        "dotMissingLeader": "Lead missing"
+        "dotMissingLeader": "Lead missing",
+        "dotMissingPeople": "Staffing still missing"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N"
@@ -1391,7 +1392,6 @@
         "weekAria": "Week view",
         "dayAria": "Day view",
         "monthDayAria": "{date} (open the day view)",
-        "dateLabel": "{date} {weekday}",
         "barTooltip": "{name} · {start}–{end} · ☕ {minutes} min",
         "break": "☕ {minutes} min",
         "missingLeader": "Lead missing 1",

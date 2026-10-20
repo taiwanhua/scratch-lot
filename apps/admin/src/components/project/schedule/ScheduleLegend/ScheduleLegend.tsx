@@ -46,7 +46,8 @@ export type ScheduleLegendItem =
   | "moreError"
   | "dotFull"
   | "dotMissingHelper"
-  | "dotMissingLeader";
+  | "dotMissingLeader"
+  | "dotMissingPeople";
 
 const swatch = (children?: ReactNode, sx: object = {}) => (
   <Box component="span" aria-hidden sx={[legendSwatchSx, sx]}>
@@ -101,6 +102,7 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     dotFull: mark("", demandDotSx("grey")),
     dotMissingHelper: mark("", demandDotSx("warning")),
     dotMissingLeader: mark("", demandDotSx("error")),
+    dotMissingPeople: mark("", demandDotSx("error")),
   };
   return (
     <Stack

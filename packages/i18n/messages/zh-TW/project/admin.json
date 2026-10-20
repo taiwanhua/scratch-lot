@@ -1186,7 +1186,8 @@
         "moreError": "+N 裡有缺負責(紅框)",
         "dotFull": "人力需求已滿",
         "dotMissingHelper": "缺協同",
-        "dotMissingLeader": "缺負責"
+        "dotMissingLeader": "缺負責",
+        "dotMissingPeople": "有人力需求還缺人"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N"
@@ -1391,7 +1392,6 @@
         "weekAria": "週檢視",
         "dayAria": "日檢視",
         "monthDayAria": "{date}(點了切到那天的日檢視)",
-        "dateLabel": "{date} {weekday}",
         "barTooltip": "{name} · {start}–{end} · ☕ {minutes} 分",
         "break": "☕ {minutes} 分",
         "missingLeader": "缺負責 1",

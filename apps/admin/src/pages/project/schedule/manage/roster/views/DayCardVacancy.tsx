@@ -17,10 +17,10 @@ const vacancySx = {
   borderRadius: 1,
   px: 1,
   py: 0.75,
+  font: "inherit",
   typography: "caption",
   fontWeight: 600,
   textAlign: "left",
-  font: "inherit",
 } as const;
 
 /** 手機日檢視卡片裡的缺額虛線空位(「缺負責 1」紅、「缺協同 1」橘)。 */
@@ -31,9 +31,10 @@ export const DayCardVacancy = ({
 }: DayCardVacancyProps) => {
   const t = useTranslations("admin.schedule.roster.timeline");
   const label = t(role === "leader" ? "missingLeader" : "missingHelper");
+  // 虛線框樣式放後面:`border: 1` 會蓋掉框的樣式與顏色
   const sx = [
-    vacancySwatchSx(role === "leader" ? "error" : "warning"),
     vacancySx,
+    vacancySwatchSx(role === "leader" ? "error" : "warning"),
   ];
   return canAdd ? (
     <Box component="button" onClick={onAdd} sx={[...sx, { cursor: "pointer" }]}>
