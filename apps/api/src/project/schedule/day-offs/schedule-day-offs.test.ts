@@ -17,6 +17,7 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { ScheduleDayOffLock } from "../../database/schedule/schedule-day-off-lock.schema";
 import {
   SCHEDULE_DAY_OFFS_COLLECTION,
   ScheduleDayOff,
@@ -279,6 +280,10 @@ const taipei = (date: string, time = "09:00") =>
  *                                          └─ 新竹店(主要分店:林;林也可以排中山店)
  * 中山店規則用預設:每月最多 8 / 最少 4(限制)、最多連續休假 3(提醒)、同日最多畫休 2 人(限制)、開放 15–25 日。
  */
+/** 同時送出的結果裡成功幾筆。 */
+const succeeded = (results: GraphqlResult[]) =>
+  results.filter((result) => result.errors === undefined).length;
+
 describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
   let api: AuthTestApp;
   let connection: Connection;
@@ -396,6 +401,9 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     await api.app
       .get<Model<ScheduleDayOff>>(getModelToken(ScheduleDayOff.name))
       .init();
+    await api.app
+      .get<Model<ScheduleDayOffLock>>(getModelToken(ScheduleDayOffLock.name))
+      .init();
 
     tenantA = await createOrg(connection, {
       name: "租戶甲",
@@ -494,6 +502,10 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
     users
       .map((user) => String(user.userId))
       .toSorted((left, right) => left.localeCompare(right));
+
+  function febFullDay(user: ScheduleTestUser, date: string) {
+    return onBehalf({ userId: String(user.userId), date, kind: "full-day" });
+  }
 
   afterEach(() => {
     jest.restoreAllMocks();
@@ -808,8 +820,17 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         date: "2026-12-03",
         kind: "full-day",
       });
+      // 代改違反限制一樣被擋下,回同一組原因
       expect(errorOf(onBehalfBlocked)).toMatchObject({
         code: "VALIDATION_FAILED",
+        fields: ["date"],
+        violations: [
+          expect.objectContaining({
+            key: "maxDailyDayOffStaff",
+            actual: 3,
+            limit: 2,
+          }),
+        ],
       });
 
       // 林的主要分店是新竹店:中山店的同日人數不算他
@@ -894,6 +915,72 @@ describe("畫休(GraphQL 端點 + 真 MongoDB)", () => {
         await gql(wang, DELETE_MINE, { input: { id } }),
         "deleteMyScheduleDayOff",
       );
+    });
+  });
+
+  describe("同時送出不能繞過限制(守門文件 + 同一個交易)", () => {
+    // 2027-02 的開放期間是 2027/1/15–1/25,今天 11/20 還沒開始:代改不受限制、不必填原因
+    it("同日最多 2 人:3 人同時送出,只成功 2 筆", async () => {
+      travelTo("2026-11-20");
+      const results = await Promise.all(
+        [wang, li, chen].map((user) => febFullDay(user, "2027-02-10")),
+      );
+      expect(succeeded(results)).toBe(2);
+      expect(
+        results.find((result) => result.errors !== undefined)?.errors?.[0]
+          ?.extensions,
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["date"] });
+      const count = await connection
+        .collection(SCHEDULE_DAY_OFFS_COLLECTION)
+        .countDocuments({ date: "2027-02-10", deletedAt: null });
+      expect(count).toBe(2);
+    });
+
+    it("同一人同時送兩次:不會超過每月最多畫休(本店自訂 6 天)", async () => {
+      travelTo("2026-11-20");
+      for (const day of ["01", "02", "03", "04", "05"]) {
+        dataOf(
+          await febFullDay(manager, `2027-02-${day}`),
+          "addScheduleDayOffsOnBehalf",
+        );
+      }
+      const results = await Promise.all([
+        febFullDay(manager, "2027-02-20"),
+        febFullDay(manager, "2027-02-21"),
+      ]);
+      expect(succeeded(results)).toBe(1);
+      const days = await connection
+        .collection(SCHEDULE_DAY_OFFS_COLLECTION)
+        .distinct("date", {
+          userId: manager.userId,
+          date: { $regex: "^2027-02-" },
+          deletedAt: null,
+        });
+      expect(days).toHaveLength(6);
+    });
+
+    it("同一人同時送兩段重疊的時段不可排:只寫進一段", async () => {
+      travelTo("2026-11-20");
+      const range = (startTime: string, endTime: string) =>
+        onBehalf({
+          userId: String(lin.userId),
+          date: "2027-02-15",
+          kind: "time-range",
+          slots: [{ startTime, endTime }],
+        });
+      const results = await Promise.all([
+        range("09:00", "12:00"),
+        range("11:00", "13:00"),
+      ]);
+      expect(succeeded(results)).toBe(1);
+      const count = await connection
+        .collection(SCHEDULE_DAY_OFFS_COLLECTION)
+        .countDocuments({
+          userId: lin.userId,
+          date: "2027-02-15",
+          deletedAt: null,
+        });
+      expect(count).toBe(1);
     });
   });
 

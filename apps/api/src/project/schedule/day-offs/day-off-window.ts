@@ -110,3 +110,19 @@ export function dayOffWindowDaysLeft(
 export function dayOffTargetMonth(today: string): string {
   return shiftMonth(today.slice(0, 7), 1);
 }
+
+const DEFAULT_WINDOW_VALUE: DayOffWindowValue = { startDay: 15, endDay: 25 };
+
+/**
+ * 規則「畫休開放期間」的值(登記檢查與開放 / 截止通知共用同一個判斷):只看值、不看開關 ——
+ * 這條規則沒有等級,一律生效;值不完整時用程式預設 15–25 日。
+ */
+export function dayOffWindowValueOf(
+  setting: { value: Record<string, unknown> } | undefined,
+): DayOffWindowValue {
+  const startDay = Number(setting?.value.startDay);
+  const endDay = Number(setting?.value.endDay);
+  return Number.isInteger(startDay) && Number.isInteger(endDay)
+    ? { startDay, endDay }
+    : DEFAULT_WINDOW_VALUE;
+}

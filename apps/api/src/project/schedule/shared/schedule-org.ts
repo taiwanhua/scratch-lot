@@ -20,6 +20,22 @@ export function scheduleReadContext(
   return { ...operator, visibleOrgIds: "all", managedOrgIds: "all" };
 }
 
+/**
+ * 沒有登入主體的讀寫(排程、給其他功能的查詢):範圍放開為 `"all"`(同底座
+ * `workflows/tenant-directory.service.ts` 的 `systemContext`),**只准搭配把查詢釘在某個租戶內的條件**
+ * (`tenantId` 與明列的 id)。
+ */
+export function scheduleSystemReader(): OperatorContext {
+  return {
+    actorId: null,
+    currentOrgId: null,
+    visibleOrgIds: "all",
+    managedOrgIds: "all",
+    memberOrgIds: [],
+    roleIds: [],
+  };
+}
+
 export interface ScheduleOrg {
   id: Types.ObjectId;
   name: string;

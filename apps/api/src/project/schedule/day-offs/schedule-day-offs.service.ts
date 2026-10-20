@@ -24,6 +24,7 @@ import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
   type ScheduleDayOffDocument,
+  ScheduleDayOffLocksRepository,
   ScheduleDayOffsRepository,
   ScheduleRelationshipsRepository,
   ScheduleStaffRepository,
@@ -38,6 +39,7 @@ import { ScheduleClock } from "../shared/schedule-clock";
 import {
   dayOffRuleError,
   forbiddenError,
+  isDuplicateKeyError,
   notFoundError,
   savingUnique,
   validationError,
@@ -46,6 +48,7 @@ import {
   parseObjectId,
   resolveScheduleOrg,
   scheduleReadContext,
+  scheduleSystemReader,
 } from "../shared/schedule-org";
 import {
   SCHEDULE_PERMISSIONS,
@@ -68,6 +71,7 @@ import {
   dayOffWindowDaysLeft,
   dayOffWindowFor,
   dayOffWindowState,
+  dayOffWindowValueOf,
   shiftMonth,
 } from "./day-off-window";
 import type {
@@ -92,7 +96,6 @@ type DayOffRecord = Persisted<ScheduleDayOffDocument>;
 const ORG_STAFF = "org_schedule_staff";
 const AUDIT_TARGET_TYPE = "schedule_day_off";
 const DAY_OFF_WINDOW_KEY = "dayOffWindow";
-const DEFAULT_WINDOW: DayOffWindowValue = { startDay: 15, endDay: 25 };
 
 /** 某個人某天不能排的時間(`listUnavailable`;給排班表、自動排班)。 */
 export interface ScheduleUnavailability {
@@ -118,18 +121,6 @@ interface DayOffWrite {
   reasonNote: string | null;
 }
 
-/** 排程與給其他功能的查詢沒有登入主體:以 `tenantId` 與明列的 id 釘住範圍。 */
-export function scheduleSystemReader(): OperatorContext {
-  return {
-    actorId: null,
-    currentOrgId: null,
-    visibleOrgIds: "all",
-    managedOrgIds: "all",
-    memberOrgIds: [],
-    roleIds: [],
-  };
-}
-
 function blankToNull(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
@@ -147,12 +138,7 @@ const overlaps = (
 function windowValueOf(
   settings: ReadonlyMap<string, EffectiveRuleSetting>,
 ): DayOffWindowValue {
-  const value = settings.get(DAY_OFF_WINDOW_KEY)?.value;
-  const startDay = Number(value?.startDay);
-  const endDay = Number(value?.endDay);
-  return Number.isInteger(startDay) && Number.isInteger(endDay)
-    ? { startDay, endDay }
-    : DEFAULT_WINDOW;
+  return dayOffWindowValueOf(settings.get(DAY_OFF_WINDOW_KEY));
 }
 
 function amountOrNull(
@@ -266,6 +252,7 @@ const byTime = (
 export class ScheduleDayOffsService implements OnModuleInit {
   constructor(
     private readonly dayOffs: ScheduleDayOffsRepository,
+    private readonly locks: ScheduleDayOffLocksRepository,
     private readonly staff: ScheduleStaffRepository,
     private readonly relationships: ScheduleRelationshipsRepository,
     private readonly users: UsersRepository,
@@ -734,18 +721,15 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return record;
   }
 
+  /**
+   * 登記 / 代改:「讀那天的畫休 → 檢查重疊 → 跑規則 → 寫入」整段在同一個交易裡;交易一開始先碰守門文件
+   * (主要分店 × 月份),同時進來的寫入互相衝突、由 `TransactionService` 重跑,不會被同時送出繞過限制。
+   */
   private async save(
     operator: OperatorContext,
     context: PersonContext,
     write: DayOffWrite,
   ): Promise<SaveScheduleDayOffsPayload> {
-    const existing = await this.recordsBetween(
-      context.tenantId,
-      [String(context.userId)],
-      write.date,
-      write.date,
-    );
-    assertNoConflict(existing, write);
     const added: DayOffLike[] =
       write.kind === "full-day"
         ? [{ userId: String(write.userId), date: write.date, kind: write.kind }]
@@ -754,17 +738,31 @@ export class ScheduleDayOffsService implements OnModuleInit {
             date: write.date,
             kind: write.kind,
           }));
-    const after = await this.assertRules(context, write.date, (entries) => [
-      ...entries.map((entry) => entry.like),
-      ...added,
-    ]);
     const rows =
       write.kind === "full-day"
         ? [{ startTime: null, endTime: null }]
         : write.slots;
-    const created = await savingUnique(
+    const withAdded = (entries: { like: DayOffLike }[]) => [
+      ...entries.map((entry) => entry.like),
+      ...added,
+    ];
+    await this.ensureLock(operator, context, write.date);
+    const { created, after } = await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
+          await this.touchLock(operator, context, write.date);
+          const existing = await this.recordsBetween(
+            context.tenantId,
+            [String(context.userId)],
+            write.date,
+            write.date,
+          );
+          assertNoConflict(existing, write);
+          const violations = await this.assertRules(
+            context,
+            write.date,
+            withAdded,
+          );
           const items: DayOffRecord[] = [];
           for (const row of rows) {
             const record = await this.dayOffs.create(
@@ -790,7 +788,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
             });
             items.push(record);
           }
-          return items;
+          return { created: items, after: violations };
         }),
       `already has a full-day day off on ${write.date}`,
       ["kind"],
@@ -802,6 +800,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     };
   }
 
+  /** 刪除:同登記,規則檢查與寫入在同一個交易、交易一開始先碰守門文件。 */
   private async remove(
     operator: OperatorContext,
     context: PersonContext,
@@ -812,13 +811,22 @@ export class ScheduleDayOffsService implements OnModuleInit {
       reasonNote: string | null;
     } | null,
   ): Promise<string> {
-    await this.assertRules(context, record.date, (entries) =>
-      entries
-        .filter((entry) => entry.id !== String(record._id))
-        .map((entry) => entry.like),
-    );
     const writer = scheduleReadContext(operator);
+    await this.ensureLock(operator, context, record.date);
     await this.transactions.withTransaction(async () => {
+      await this.touchLock(operator, context, record.date);
+      const current = await this.dayOffs.findOne(scheduleSystemReader(), {
+        _id: record._id,
+        tenantId: context.tenantId,
+      });
+      if (!current) {
+        throw notFoundError(`day off not found: ${String(record._id)}`);
+      }
+      await this.assertRules(context, record.date, (entries) =>
+        entries
+          .filter((entry) => entry.id !== String(record._id))
+          .map((entry) => entry.like),
+      );
       if (override !== null) {
         await this.dayOffs.updateById(writer, record._id, { $set: override });
       }
@@ -832,6 +840,53 @@ export class ScheduleDayOffsService implements OnModuleInit {
       });
     });
     return String(record._id);
+  }
+
+  /**
+   * 守門文件(主要分店 × 月份)先建好(交易外;兩個請求同時建,唯一索引擋下的那一個略過),
+   * 交易裡只做 `$inc`,同時的寫入才會在既有文件上衝突、交給交易重跑。
+   */
+  private async ensureLock(
+    operator: OperatorContext,
+    context: PersonContext,
+    date: string,
+  ): Promise<void> {
+    const key = {
+      orgId: context.tenantId,
+      storeId: context.primaryOrgId,
+      month: date.slice(0, 7),
+    };
+    const existing = await this.locks.findOne(scheduleSystemReader(), key);
+    if (existing) {
+      return;
+    }
+    try {
+      await this.locks.create(scheduleReadContext(operator), {
+        ...key,
+        version: 0,
+      });
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  /** 交易一開始對守門文件 `$inc`:之後讀到的畫休就是這一刻之後的快照,同時寫入的另一方會衝突重跑。 */
+  private async touchLock(
+    operator: OperatorContext,
+    context: PersonContext,
+    date: string,
+  ): Promise<void> {
+    await this.locks.findOneAndUpdate(
+      scheduleReadContext(operator),
+      {
+        orgId: context.tenantId,
+        storeId: context.primaryOrgId,
+        month: date.slice(0, 7),
+      },
+      { $inc: { version: 1 } },
+    );
   }
 
   /**

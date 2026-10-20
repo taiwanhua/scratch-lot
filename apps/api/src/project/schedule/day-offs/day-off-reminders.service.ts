@@ -20,15 +20,16 @@ import {
   SCHEDULE_DAY_OFF_OPEN,
 } from "../../notifications";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
+import { scheduleSystemReader } from "../shared/schedule-org";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import {
   type DayOffWindow,
   type DayOffWindowValue,
   dayOffWindowFor,
+  dayOffWindowValueOf,
   shiftDate,
   shiftMonth,
 } from "./day-off-window";
-import { scheduleSystemReader } from "./schedule-day-offs.service";
 
 /** 排程工作 key(`docs/deployment.md`「Cloud Scheduler」;全域唯一)。 */
 export const DAY_OFF_REMINDERS_JOB_KEY = "schedule.day-off-reminders";
@@ -125,14 +126,8 @@ export class DayOffRemindersService implements OnModuleInit {
           reader,
           storeId,
         );
-        const setting = settings.get("dayOffWindow");
-        if (setting?.enabled !== true) {
-          continue;
-        }
-        const value = {
-          startDay: Number(setting.value.startDay),
-          endDay: Number(setting.value.endDay),
-        };
+        // 與登記檢查同一個判斷:只看值、不看開關(`dayOffWindowValueOf`)
+        const value = dayOffWindowValueOf(settings.get("dayOffWindow"));
         for (const type of [
           SCHEDULE_DAY_OFF_OPEN,
           SCHEDULE_DAY_OFF_CLOSING,

@@ -7,6 +7,7 @@ import {
   type RepositoryModel,
 } from "../../../database/base.repository";
 import { ScheduleCalendarDay } from "./schedule-calendar-day.schema";
+import { ScheduleDayOffLock } from "./schedule-day-off-lock.schema";
 import { ScheduleDayOff } from "./schedule-day-off.schema";
 import { ScheduleDemandTemplate } from "./schedule-demand-template.schema";
 import { ScheduleDemandWeekTemplate } from "./schedule-demand-week-template.schema";
@@ -24,6 +25,7 @@ export type ScheduleDemandWeekTemplateDocument =
   HydratedDocument<ScheduleDemandWeekTemplate>;
 export type ScheduleCalendarDayDocument = HydratedDocument<ScheduleCalendarDay>;
 export type ScheduleDayOffDocument = HydratedDocument<ScheduleDayOff>;
+export type ScheduleDayOffLockDocument = HydratedDocument<ScheduleDayOffLock>;
 
 /** schedule_staff(排班檔案)。 */
 @Injectable()
@@ -124,6 +126,20 @@ export class ScheduleDayOffsRepository extends BaseRepository<
   constructor(
     @InjectModel(ScheduleDayOff.name)
     model: RepositoryModel<ScheduleDayOff, ScheduleDayOffDocument>,
+  ) {
+    super(model);
+  }
+}
+
+/** schedule_day_off_locks(畫休寫入的守門文件)。 */
+@Injectable()
+export class ScheduleDayOffLocksRepository extends BaseRepository<
+  ScheduleDayOffLock,
+  ScheduleDayOffLockDocument
+> {
+  constructor(
+    @InjectModel(ScheduleDayOffLock.name)
+    model: RepositoryModel<ScheduleDayOffLock, ScheduleDayOffLockDocument>,
   ) {
     super(model);
   }
