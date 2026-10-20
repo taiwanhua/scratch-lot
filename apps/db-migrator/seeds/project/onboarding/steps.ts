@@ -2,6 +2,7 @@ import type { OnboardingStep } from "./context";
 import { branchesStep } from "./steps/branches";
 import { cashPointsStep } from "./steps/cash-points";
 import { classBDealersStep } from "./steps/class-b-dealers";
+import { formWorkflowsStep } from "./steps/form-workflows";
 import { notificationRecipientsStep } from "./steps/notification-recipients";
 import { orgVisibilityStep } from "./steps/org-visibility";
 import { positionsStep } from "./steps/positions";
@@ -30,4 +31,6 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   notificationRecipientsStep,
   // 檔案管理:收銀點(要在分店、崗位之後)。遊戲不在開通清單裡,只有示範資料建(`demo/games.ts`)
   cashPointsStep,
+  // 流程:依開通時建立的角色建客製流程並綁定表單(要在「角色」之後;規格 2.1)
+  formWorkflowsStep,
 ];

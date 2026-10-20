@@ -30,6 +30,7 @@ import { DEMO_TENANT, demoPlan } from "../demo";
 import { DEMO_CASH_POINTS } from "../demo/cash-points";
 import { DEMO_GAMES } from "../demo/games";
 import { runOnboardCommand } from "./command";
+import { SUPPORT_REQUEST_FORM_KEY } from "./form-workflows/support-request";
 import { OnboardingStoppedError, runOnboarding } from "./run-onboarding";
 import { STORE_MANAGER_NOTIFICATION_TYPES } from "./steps/notification-recipients";
 
@@ -418,6 +419,140 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
         );
       }
     });
+
+    describe("支援需求單的流程(規格 2.1、14.10)", () => {
+      it("表單還沒分派給示範機構:開通腳本的「流程」一步略過,不建流程", async () => {
+        const workflows = await find("workflows", {
+          key: `${DEMO_TENANT.slug}_support_request`,
+        });
+        expect(workflows).toHaveLength(0);
+      });
+
+      it("平台管理員分派表單後重跑開通腳本:建客製流程、發布、綁定;再跑一次沿用", async () => {
+        const root = await rootClient();
+        await root.request(
+          /* GraphQL */ `
+            mutation TestAssignForm($input: AssignFormToTenantsInput!) {
+              assignFormToTenants(input: $input) {
+                form {
+                  key
+                }
+              }
+            }
+          `,
+          {
+            input: {
+              formKey: SUPPORT_REQUEST_FORM_KEY,
+              tenantOrgIds: [String(tenantId)],
+            },
+          },
+        );
+        const runOnce = async () => {
+          const lines: string[] = [];
+          await runOnboarding({
+            client: adminClient,
+            plan: demoPlan(EMAIL_BASE),
+            activation: { mode: "PASSWORD", password: DEMO_PASSWORD },
+            tenantSlug: DEMO_TENANT.slug,
+            print: (line) => lines.push(line),
+          });
+          return lines.join("\n");
+        };
+        expect(await runOnce()).toContain("建立並發布流程「支援需求單審核」");
+        expect(await runOnce()).toContain(
+          "「支援需求單」已綁定流程「支援需求單審核」,沿用",
+        );
+
+        const workflow = await findOne("workflows", {
+          key: `${DEMO_TENANT.slug}_support_request`,
+        });
+        expect(workflow).toMatchObject({ tenantId, currentVersion: 1 });
+        const bindings = await find("business_relationships", {
+          type: "org_form_workflow",
+          tenantId,
+          thirdId: workflow._id as ObjectId,
+        });
+        expect(bindings).toHaveLength(1);
+      });
+
+      it("中山店店長送出 → 審核者 = 角色 總部管理 且屬於最上層組織的人(示範總部人員)", async () => {
+        // 新建的示範帳號首登要先改密碼(一般規則),改完再登入
+        const account = `owner+demo-manager-a@example.test`;
+        const changed = ["changed", "by", "manager", "8"].join("-");
+        const firstLogin = await loginAs(
+          api,
+          { account, password: DEMO_PASSWORD },
+          "中山店店長",
+        );
+        await firstLogin.request(
+          /* GraphQL */ `
+            mutation TestManagerChangePassword($input: ChangePasswordInput!) {
+              changePassword(input: $input) {
+                success
+              }
+            }
+          `,
+          { input: { currentPassword: DEMO_PASSWORD, newPassword: changed } },
+        );
+        const manager = await loginAs(
+          api,
+          { account, password: changed },
+          "中山店店長",
+        );
+        const branch = await findOne("orgs", {
+          parentId: tenantId,
+          name: "中山店",
+        });
+        const { createAndSubmitFormSubmission } = await manager.request<{
+          createAndSubmitFormSubmission: {
+            submission: { id: string; status: string };
+          };
+        }>(
+          /* GraphQL */ `
+            mutation TestSubmitSupportRequest(
+              $input: CreateAndSubmitFormSubmissionInput!
+            ) {
+              createAndSubmitFormSubmission(input: $input) {
+                submission {
+                  id
+                  status
+                }
+              }
+            }
+          `,
+          {
+            input: {
+              formKey: SUPPORT_REQUEST_FORM_KEY,
+              clientRequestId: "support-request-1",
+              values: {
+                date: "2026-11-11T16:00:00.000Z",
+                position: "in-store-counter",
+                start_time: "17:00",
+                end_time: "21:00",
+                headcount: 1,
+                branch: String(branch._id),
+                note: "颱風後補人,晚間人手不足",
+              },
+            },
+          },
+        );
+        expect(createAndSubmitFormSubmission.submission.status).toBe(
+          "REVIEWING",
+        );
+
+        const hq = await findOne("users", {
+          account: `owner+demo-hq@example.test`,
+        });
+        const tasks = await find("workflow_tasks", {
+          submissionId: new ObjectId(
+            createAndSubmitFormSubmission.submission.id,
+          ),
+        });
+        expect(tasks.map((task) => String(task.assigneeId))).toEqual([
+          String(hq._id),
+        ]);
+      });
+    });
   });
 
   describe("onboard 指令(真實租戶):--tenant 比對登入者的租戶、新建的人寄啟用信", () => {
@@ -496,7 +631,7 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       await expect(onboard("demo_lottery", lines)).rejects.toThrow(
         /不是要開通的 demo_lottery/,
       );
-      expect(lines.join("\n")).toMatch(/✗ \[1\/11\] 租戶/);
+      expect(lines.join("\n")).toMatch(/✗ \[1\/12\] 租戶/);
       expect(await auditCount()).toBe(before);
     });
 
@@ -636,10 +771,10 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       )) as OnboardingStoppedError;
       expect(error.stepKey).toBe("positions");
       expect(error.code).toBe("FORBIDDEN");
-      expect(lines.join("\n")).toMatch(/✗ \[6\/11\] 崗位:.*FORBIDDEN/);
-      // 整行比對:後面的步驟一個都不能漏(收銀點是最後一步)
+      expect(lines.join("\n")).toMatch(/✗ \[6\/12\] 崗位:.*FORBIDDEN/);
+      // 整行比對:後面的步驟一個都不能漏(流程是最後一步)
       expect(lines).toContain(
-        "  未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人、收銀點",
+        "  未執行:乙類與對應分店、排班人員、人力需求範本、通知收件人、收銀點、流程",
       );
 
       const users = await find("users", {
