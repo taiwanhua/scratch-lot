@@ -21,6 +21,11 @@ export interface RosterToolbarAction {
   /** 看得到這顆按鈕要的權限 */
   permission: string;
   Action: ComponentType<RosterToolbarActionProps>;
+  /**
+   * 手機的放法(規格 SC-55 / 56):`menu`(缺席時的預設)= 收進 [⋯] 選單;
+   * `button` = 獨立一顆按鈕,放在 [⋯] 的右邊(例:[發布])。
+   */
+  mobile?: "button" | "menu";
 }
 
 /** [+ 新增排班] 之後的按鈕(依規格順序追加)。 */
@@ -30,6 +35,7 @@ export const ROSTER_TOOLBAR_ACTIONS: readonly RosterToolbarAction[] = [
     key: "publish",
     permission: "schedule.manage.publish",
     Action: PublishAction,
+    mobile: "button",
   },
 ];
 

@@ -46,6 +46,7 @@ export interface RosterToolbarProps {
  * [+ 人力需求] [+ 新增排班] 與各功能追加的按鈕(`roster-toolbar.ts`);第二列檢視切換、
  * `◀ 2026 年 11 月 ▶`、這個檢視的工具([⚙ 顯示欄位])與檢核按鈕。
  * 手機:[+ 新增 ▾](人力需求 / 排班)與 [⋯](其他按鈕)改成底部選單。沒有 `edit` 看不到新增類按鈕。
+ * 登記 `mobile: "button"` 的(例:[發布])在手機獨立成按鈕,放在 [⋯] 右邊。
  */
 export const RosterToolbar = ({
   data,
@@ -67,6 +68,9 @@ export const RosterToolbar = ({
   const actions = ROSTER_TOOLBAR_ACTIONS.filter((action) =>
     hasPermission(action.permission),
   );
+  // 手機:`mobile: "button"` 的獨立成按鈕放在 [⋯] 右邊,其餘收進 [⋯]
+  const menuActions = actions.filter((action) => action.mobile !== "button");
+  const buttonActions = actions.filter((action) => action.mobile === "button");
   const isPublished = data?.period.status === "published";
   const [year = "", monthNumber = ""] = month.split("-");
   const closeSheet = () => {
@@ -139,7 +143,7 @@ export const RosterToolbar = ({
                   {t("toolbar.addMenu")}
                 </Button>
               )}
-              {actions.length > 0 && (
+              {menuActions.length > 0 && (
                 <Button
                   variant="outlined"
                   size="small"
@@ -151,6 +155,9 @@ export const RosterToolbar = ({
                   ⋯
                 </Button>
               )}
+              {buttonActions.map(({ key, Action }) => (
+                <Action key={key} variant="toolbar" onDone={closeSheet} />
+              ))}
             </>
           ) : (
             <>
@@ -250,7 +257,7 @@ export const RosterToolbar = ({
             </MenuItem>,
           ]}
           {sheet === "more" &&
-            actions.map(({ key, Action }) => (
+            menuActions.map(({ key, Action }) => (
               <Action key={key} variant="menu" onDone={closeSheet} />
             ))}
         </MenuList>

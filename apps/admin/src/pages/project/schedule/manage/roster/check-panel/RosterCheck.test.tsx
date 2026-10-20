@@ -1,11 +1,18 @@
 import { beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
-import { setupFakeViewport } from "@/test/viewport";
+import { useSideNavStore } from "@/stores/base/useSideNavStore";
+import {
+  restoreViewportAfterEach,
+  setMobileViewport,
+  setupFakeViewport,
+} from "@/test/viewport";
 
 import { renderSchedulePage } from "../../../schedule-test-support";
+import { NAV_COLLAPSED_BY_CHECK_KEY } from "./RosterCheckProvider";
 
 setupFakeViewport();
+restoreViewportAfterEach();
 
 const ROSTER = "/schedule/manage?tab=roster&month=2026-11";
 
@@ -197,5 +204,45 @@ describe("排班作業:檢核面板與發布", () => {
         reasonNote: "颱風停班",
       });
     });
+  });
+
+  it("手機:[發布] 獨立成按鈕放在 [⋯] 右邊,不收進 [⋯] 選單", async () => {
+    setMobileViewport();
+    const { user } = renderSchedulePage({ path: ROSTER });
+    const publish = await screen.findByRole("button", { name: "發布" });
+    const more = screen.queryByRole("button", { name: "更多" });
+    // 目前 [⋯] 裡還沒有其他按鈕(套用範本、自動排班由之後的功能追加)
+    expect(more).not.toBeInTheDocument();
+    await user.click(publish);
+    expect(
+      await screen.findByRole("dialog", { name: "不能發布" }),
+    ).toBeInTheDocument();
+  });
+
+  it("側欄偏好不被汙染:面板收了側欄、沒關面板就重新整理 → 下次進頁面展開回去", async () => {
+    useSideNavStore.setState({ isCollapsed: false });
+    const first = renderSchedulePage({ path: ROSTER });
+    await openPanel(first.user);
+    expect(useSideNavStore.getState().isCollapsed).toBe(true);
+    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBe("1");
+
+    // 模擬重新整理:effect 的還原沒跑到,只剩 sessionStorage 的記號與收合的側欄
+    first.unmount();
+    useSideNavStore.setState({ isCollapsed: true });
+    sessionStorage.setItem(NAV_COLLAPSED_BY_CHECK_KEY, "1");
+    renderSchedulePage({ path: ROSTER });
+    await screen.findByRole("button", { name: "限制 1 · 提醒 6" });
+    expect(useSideNavStore.getState().isCollapsed).toBe(false);
+    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBeNull();
+  });
+
+  it("本來就收著的側欄不動", async () => {
+    useSideNavStore.setState({ isCollapsed: true });
+    sessionStorage.removeItem(NAV_COLLAPSED_BY_CHECK_KEY);
+    const { user } = renderSchedulePage({ path: ROSTER });
+    const panel = await openPanel(user);
+    expect(sessionStorage.getItem(NAV_COLLAPSED_BY_CHECK_KEY)).toBeNull();
+    await user.click(within(panel).getByRole("button", { name: "關閉檢核" }));
+    expect(useSideNavStore.getState().isCollapsed).toBe(true);
   });
 });
