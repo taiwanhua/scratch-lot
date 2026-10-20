@@ -21,4 +21,6 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "dealers.contacts.view-page": [],
   "dealers.contacts.create-page": [],
   "dealers.contacts.edit-page": [],
+  // 輸出報表:選的報表、條件(期間、分店、其他條件)、預覽(開著沒、第幾個工作表)
+  reports: ["report", "conditions", "preview"],
 };

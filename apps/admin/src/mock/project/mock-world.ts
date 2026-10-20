@@ -1,3 +1,6 @@
+import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
+
+import type { TestModule } from "@/test/msw/auth-handlers";
 import { fieldsByCategory } from "@/test/msw/field-fixtures";
 import { dealersModules } from "@/test/msw/project/dealers-fixtures";
 import { dealersWorld } from "@/test/msw/project/dealers-handlers";
@@ -31,6 +34,20 @@ const fieldOptionColors = () =>
     ),
   }).handlers;
 
+/** 輸出報表(seed `apps/db-migrator/seeds/project/reports.ts`;權限給滿)。 */
+const reportsModule: TestModule = {
+  id: "m-reports",
+  key: "reports",
+  name: "輸出報表",
+  parentId: null,
+  sidebarType: ModuleSidebarType.Link,
+  engine: ModuleEngine.Fixed,
+  order: 14,
+  route: "/reports",
+  icon: "chart",
+  permissions: ["reports.*"],
+};
+
 /**
  * 專案的 mock world:專案新增的模組在此登記 mock 模式的模組清單與假 api,底座更新不會動到這份。
  *
@@ -38,8 +55,8 @@ const fieldOptionColors = () =>
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
 export const projectMockWorld: ProjectMockWorld = {
-  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到
-  modules: () => [...masterDataModules(), ...dealersModules()],
+  // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿
+  modules: () => [...masterDataModules(), ...dealersModules(), reportsModule],
   handlers: () => [
     ...fieldOptionColors(),
     ...masterDataWorld().handlers,

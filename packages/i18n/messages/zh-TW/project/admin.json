@@ -396,5 +396,81 @@
         "ROLE_IN_USE": "要取消的身分還有關聯"
       }
     }
+  },
+  "lotteryReports": {
+    "reports": {
+      "operations": "營運報表",
+      "shift-checkouts": "班次結帳歷史報表"
+    },
+    "reportList": {
+      "title": "報表",
+      "option": "{name}(分店最多 {max} 家)",
+      "empty": "你目前沒有可以輸出的報表。需要的話,請洽系統管理員開放報表權限。"
+    },
+    "conditions": {
+      "title": "{name} · 條件",
+      "orgs": "分店",
+      "orgsRequired": "請至少選一家分店",
+      "preview": "預覽",
+      "export": "匯出 Excel",
+      "exporting": "匯出中…"
+    },
+    "periodPicker": {
+      "kindsAria": "期間類型",
+      "kinds": {
+        "day": "日",
+        "week": "週",
+        "month": "月"
+      },
+      "date": "日期",
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本週",
+      "lastWeek": "上週",
+      "thisMonth": "本月",
+      "lastMonth": "上月",
+      "weekCalendarAria": "選擇週",
+      "weekHint": "點任一天選整週(星期日起算)。",
+      "weekRange": "{from}({fromWeekday})~ {to}({toWeekday})",
+      "weekdays": {
+        "0": "日",
+        "1": "一",
+        "2": "二",
+        "3": "三",
+        "4": "四",
+        "5": "五",
+        "6": "六"
+      },
+      "monthTitle": "{year} 年 {month} 月",
+      "prevMonth": "上一個月",
+      "nextMonth": "下一個月",
+      "yearTitle": "{year} 年",
+      "prevYear": "上一年",
+      "nextYear": "下一年",
+      "monthGridAria": "選擇月份",
+      "monthLabel": "{month} 月"
+    },
+    "period": {
+      "day": "{date}",
+      "week": "{from} ~ {to}",
+      "month": "{year} 年 {month} 月"
+    },
+    "preview": {
+      "title": "{name} · {period}",
+      "back": "返回條件",
+      "loading": "報表產生中…"
+    },
+    "sheetPreview": {
+      "tabsAria": "工作表",
+      "empty": "這個工作表沒有資料"
+    },
+    "totalSheet": "全部分店合計",
+    "fileName": "{name}_{period}",
+    "errors": {
+      "RANGE_TOO_LARGE": "期間或分店數超過這張報表的上限,請縮小範圍後再試一次。",
+      "VALIDATION_FAILED": "條件不完整,請檢查期間與分店。",
+      "FORBIDDEN": "你沒有這張報表的權限。",
+      "UNEXPECTED": "報表產生失敗,請稍後再試。"
+    }
   }
 }

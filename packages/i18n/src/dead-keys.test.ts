@@ -498,6 +498,26 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "專案 `components/project/TagPaletteChip` 的 `t(paletteKey)`(namespace `admin.tagPalettes.names`),paletteKey 逐一取自 `@repo/domain/project/tag-palette` 的 `TAG_PALETTE_KEYS`",
   },
+  {
+    key: "admin.lotteryReports.reports.",
+    reason:
+      "專案輸出報表的報表名稱:`registerReport({ name })` 的訊息 key(`pages/project/lottery/reports/report-registrations.ts`),頁面以 `t(report.name)` 取用",
+  },
+  {
+    key: "admin.lotteryReports.periodPicker.kinds.",
+    reason:
+      "專案 `components/project/ReportPeriodPicker` 的 `t(`kinds.${kind}`)`,kind 取自報表登記的 `conditions.period`(`REPORT_PERIOD_KINDS`)",
+  },
+  {
+    key: "admin.lotteryReports.periodPicker.weekdays.",
+    reason:
+      "專案 `components/project/ReportPeriodPicker` 的 `t(`weekdays.${day}`)`,day 是 0(星期日)到 6",
+  },
+  {
+    key: "admin.lotteryReports.errors.",
+    reason:
+      "專案輸出報表的 `t(`lotteryReports.errors.${code}`)`,code 由 `pages/project/lottery/reports/ReportsPage/reports-error.ts` 從 api 錯誤碼換算",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

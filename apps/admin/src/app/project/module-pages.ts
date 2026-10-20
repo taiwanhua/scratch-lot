@@ -8,6 +8,7 @@ import { GameFormPage } from "@/pages/project/lottery/master-data/GameFormPage/G
 import { GameViewPage } from "@/pages/project/lottery/master-data/GameViewPage/GameViewPage";
 import { MasterDataPage } from "@/pages/project/lottery/master-data/MasterDataPage/MasterDataPage";
 import { MASTER_DATA_MODULE_KEYS } from "@/pages/project/lottery/master-data/master-data-config";
+import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 
 import type { ModulePageSource } from "../module-page-registry";
 
@@ -33,6 +34,8 @@ export const projectModulePages: ModulePageSource = {
     { key: DEALERS_MODULE_KEYS.contactViewPage, Page: ContactViewPage },
     { key: DEALERS_MODULE_KEYS.contactCreatePage, Page: ContactFormPage },
     { key: DEALERS_MODULE_KEYS.contactEditPage, Page: ContactFormPage },
+    // 輸出報表(規格第 11 章、18.4)
+    { key: "reports", Page: ReportsPage },
   ],
   forms: [],
 };
