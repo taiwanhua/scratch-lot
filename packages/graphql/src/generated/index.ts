@@ -5345,6 +5345,7 @@ export type ScheduleDayOffWindow = {
 
 export type ScheduleDemand = {
   __typename?: 'ScheduleDemand';
+  createdAt: Scalars['DateTime']['output'];
   date: Scalars['String']['output'];
   endAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
@@ -5444,6 +5445,7 @@ export type ScheduleEntry = {
 export type ScheduleEntryAssignment = {
   __typename?: 'ScheduleEntryAssignment';
   demandId: Scalars['ID']['output'];
+  reason?: Maybe<Scalars['String']['output']>;
   role: Scalars['String']['output'];
   source: Scalars['String']['output'];
   taskId: Scalars['String']['output'];
@@ -5504,8 +5506,10 @@ export type ScheduleRosterCalendarDay = {
 };
 
 export type ScheduleRosterInput = {
+  from?: InputMaybe<Scalars['String']['input']>;
   month: Scalars['String']['input'];
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  to?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ScheduleRosterPayload = {
@@ -8515,9 +8519,9 @@ export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
 
 export type DeleteScheduleDayOffOnBehalfMutation = { __typename?: 'Mutation', deleteScheduleDayOffOnBehalf: { __typename?: 'DeleteScheduleDayOffPayload', id: string } };
 
-export type ScheduleDemandFieldsFragment = { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> };
+export type ScheduleDemandFieldsFragment = { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> };
 
-export type ScheduleEntryFieldsFragment = { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> };
+export type ScheduleEntryFieldsFragment = { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> };
 
 export type ScheduleRosterPersonFieldsFragment = { __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } };
 
@@ -8528,14 +8532,14 @@ export type ScheduleRosterQueryVariables = Exact<{
 }>;
 
 
-export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }> } };
+export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }> } };
 
 export type SaveScheduleDemandMutationVariables = Exact<{
   input: SaveScheduleDemandInput;
 }>;
 
 
-export type SaveScheduleDemandMutation = { __typename?: 'Mutation', saveScheduleDemand: { __typename?: 'SaveScheduleDemandPayload', deletedEntryIds: Array<string>, item: { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> } } };
+export type SaveScheduleDemandMutation = { __typename?: 'Mutation', saveScheduleDemand: { __typename?: 'SaveScheduleDemandPayload', deletedEntryIds: Array<string>, item: { __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> } } };
 
 export type DeleteScheduleDemandMutationVariables = Exact<{
   input: DeleteScheduleDemandInput;
@@ -8549,7 +8553,7 @@ export type SaveScheduleEntryMutationVariables = Exact<{
 }>;
 
 
-export type SaveScheduleEntryMutation = { __typename?: 'Mutation', saveScheduleEntry: { __typename?: 'SaveScheduleEntryPayload', item: { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string }> } } };
+export type SaveScheduleEntryMutation = { __typename?: 'Mutation', saveScheduleEntry: { __typename?: 'SaveScheduleEntryPayload', item: { __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> } } };
 
 export type DeleteScheduleEntryMutationVariables = Exact<{
   input: DeleteScheduleEntryInput;
@@ -10074,6 +10078,7 @@ export const ScheduleDemandFieldsFragmentDoc = `
   positionNote
   templateId
   source
+  createdAt
   tasks {
     taskId
     role
@@ -10099,6 +10104,7 @@ export const ScheduleEntryFieldsFragmentDoc = `
     role
     taskKey
     source
+    reason
   }
 }
     `;

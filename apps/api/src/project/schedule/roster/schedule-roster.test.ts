@@ -1172,5 +1172,80 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       expect(errorOf(bad)).toMatchObject({ fields: ["month"] });
       expect(new Types.ObjectId(view.orgId)).toEqual(zhongshan);
     });
+
+    it("週檢視跨月:from / to 擴充讀取範圍(人力需求帶建立時間、填進紀錄帶理由),統計只算這個月;超出這個月前後 6 天 → VALIDATION_FAILED", async () => {
+      const next = await demandOn("2027-01-02", "08:30", "14:30");
+      await entryFor(wang, "2027-01-02", "08:30", "14:30", [
+        { demandId: next.id, taskId: taskOf(next, "leader") },
+      ]);
+      const RANGE = /* GraphQL */ `
+        query ScheduleRoster($input: ScheduleRosterInput!) {
+          scheduleRoster(input: $input) {
+            demands {
+              id
+              date
+              createdAt
+            }
+            entries {
+              date
+              assignments {
+                source
+                reason
+              }
+            }
+            people {
+              userId
+              stats {
+                shiftCount
+              }
+            }
+          }
+        }
+      `;
+      interface RangeRow {
+        demands: { id: string; date: string; createdAt: string }[];
+        entries: {
+          date: string;
+          assignments: { source: string; reason: string | null }[];
+        }[];
+        people: { userId: string; stats: { shiftCount: number } }[];
+      }
+      const read = async (input: Record<string, unknown>) => {
+        const result = await gql(hq, RANGE, {
+          input: { orgId: String(zhongshan), month: "2026-12", ...input },
+        });
+        expect(result.errors).toBeUndefined();
+        return result.data?.scheduleRoster as RangeRow;
+      };
+
+      const monthOnly = await read({});
+      expect(monthOnly.demands.map((item) => item.id)).not.toContain(next.id);
+
+      const week = await read({ from: "2026-12-27", to: "2027-01-02" });
+      const found = week.demands.find((item) => item.id === next.id);
+      expect(found?.date).toBe("2027-01-02");
+      expect(Number.isNaN(Date.parse(found?.createdAt ?? ""))).toBe(false);
+      expect(week.entries).toContainEqual({
+        date: "2027-01-02",
+        assignments: [{ source: "manual", reason: null }],
+      });
+      // 統計只算 12 月:王小明 12 月沒有班
+      expect(
+        week.people.find((person) => person.userId === String(wang.userId))
+          ?.stats.shiftCount,
+      ).toBe(0);
+
+      for (const range of [
+        { from: "2026-11-24", to: "2026-12-01" },
+        { from: "2026-12-27", to: "2027-01-07" },
+        { from: "2027-01-02", to: "2026-12-27" },
+        { from: "2026-12-27", to: "2027-02-30" },
+      ]) {
+        const result = await gql(hq, RANGE, {
+          input: { orgId: String(zhongshan), month: "2026-12", ...range },
+        });
+        expect(errorOf(result)).toMatchObject({ fields: ["from", "to"] });
+      }
+    });
   });
 });

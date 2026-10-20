@@ -42,6 +42,7 @@ export function demandModelOf(
         ? templateId
         : null,
     source: record.source,
+    createdAt: record.createdAt,
     tasks: record.tasks.map((task) => {
       const assignment = byTask.get(task.taskId);
       const entryId =
@@ -91,6 +92,7 @@ export function entryModelOf(
                 role: task.role,
                 taskKey: task.taskKey,
                 source: item.source,
+                reason: item.reason,
               },
             ];
       }),

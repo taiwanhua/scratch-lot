@@ -3791,6 +3791,7 @@ type ScheduleDayOffWindow {
 }
 
 type ScheduleDemand {
+  createdAt: DateTime!
   date: String!
   endAt: DateTime!
   id: ID!
@@ -3881,6 +3882,7 @@ type ScheduleEntry {
 
 type ScheduleEntryAssignment {
   demandId: ID!
+  reason: String
   role: String!
   source: String!
   taskId: String!
@@ -3934,8 +3936,10 @@ type ScheduleRosterCalendarDay {
 }
 
 input ScheduleRosterInput {
+  from: String
   month: String!
   orgId: ID
+  to: String
 }
 
 type ScheduleRosterPayload {

@@ -39,7 +39,10 @@ export class ScheduleRosterResolver {
     @Args("input") input: ScheduleRosterInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<ScheduleRosterPayload> {
-    return this.service.roster(operator, input.orgId, input.month);
+    return this.service.roster(operator, input.orgId, input.month, {
+      from: input.from,
+      to: input.to,
+    });
   }
 
   @RequirePermission(ROSTER_PERMISSIONS.edit)
