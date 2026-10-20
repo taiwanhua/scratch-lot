@@ -1,4 +1,5 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
+import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
 
 /**
  * 專案的表單 / 流程掛接點(`docs/concepts/workflow-engine.md`「掛接點」;STRUCT-12 api 的
@@ -26,4 +27,7 @@ import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lif
  * })
  * ```
  */
-export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [];
+export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
+  // 叫貨單:送出前檢查停售、完成時寫副本、作廢補 voidedAt(專案規格 8.1)
+  requisitionLifecycle,
+];

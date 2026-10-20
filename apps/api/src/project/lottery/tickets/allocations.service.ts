@@ -70,6 +70,22 @@ export class LotteryAllocationsService {
     orgId: Types.ObjectId,
     gameId: Types.ObjectId,
   ): Promise<AllocationStatus> {
+    const [status] = await this.allocationStatuses(operator, orgId, [gameId]);
+    if (status === undefined) {
+      throw notFoundError("遊戲不存在");
+    }
+    return status;
+  }
+
+  /**
+   * 一家店 × 多個遊戲的預計要給本數與已給本數(叫貨單新增頁一次列出所有販售中的遊戲;規格 8.1)。
+   * 規則同 `allocationStatus`;回傳順序同 `gameIds`。
+   */
+  async allocationStatuses(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+    gameIds: readonly Types.ObjectId[],
+  ): Promise<AllocationStatus[]> {
     const tenant = tenantOfOperator(operator);
     if (tenant?.tenantId == null) {
       throw notFoundError("找不到所在租戶");
@@ -86,19 +102,23 @@ export class LotteryAllocationsService {
     ) {
       throw notFoundError("分店不存在");
     }
+    if (gameIds.length === 0) {
+      return [];
+    }
     const inTypes = [...ALLOCATION_IN_EVENT_TYPES];
     const outTypes = [...ALLOCATION_OUT_EVENT_TYPES];
     const perBook = await this.events.aggregate(reader, [
       {
         $match: {
           orgId,
-          gameId,
+          gameId: { $in: [...gameIds] },
           type: { $in: [...inTypes, ...outTypes] },
         },
       },
       {
         $group: {
           _id: "$bookId",
+          gameId: { $first: "$gameId" },
           net: {
             $sum: { $cond: [{ $in: ["$type", inTypes] }, 1, -1] },
           },
@@ -112,7 +132,7 @@ export class LotteryAllocationsService {
         : await this.books.findMany(
             reader,
             { _id: { $in: bookIds }, status: "normal" },
-            { select: "standardTickets" },
+            { select: "standardTickets gameId" },
           );
     // 跳號的張實體不存在:這家店進貨時算進去的跳號要扣掉
     const skipped =
@@ -122,7 +142,7 @@ export class LotteryAllocationsService {
             {
               $match: {
                 bookId: { $in: bookIds },
-                storeOrgId: orgId,
+                orgId,
                 status: TICKET_STATUS.skipped,
               },
             },
@@ -134,26 +154,31 @@ export class LotteryAllocationsService {
     const netOf = new Map(
       perBook.map((row) => [String(row._id), Number(row.net)]),
     );
-    const given = allocationGivenOf(
-      books.map((book) => ({
-        netTickets:
-          (netOf.get(String(book._id)) ?? 0) -
-          (skippedOf.get(String(book._id)) ?? 0),
-        usableTickets: book.standardTickets,
-      })),
-    );
-    const allocation = await this.allocations.findOne(reader, {
+    const allocations = await this.allocations.findMany(reader, {
       orgId,
-      gameId,
+      gameId: { $in: [...gameIds] },
     });
-    return {
-      orgId: String(orgId),
-      gameId: String(gameId),
-      plannedBooks: allocation?.plannedBooks ?? null,
-      note: allocation?.note ?? null,
-      givenBooks: given.books,
-      givenExtraTickets: given.extraTickets,
-    };
+    return gameIds.map((gameId) => {
+      const given = allocationGivenOf(
+        books
+          .filter((book) => book.gameId.equals(gameId))
+          .map((book) => ({
+            netTickets:
+              (netOf.get(String(book._id)) ?? 0) -
+              (skippedOf.get(String(book._id)) ?? 0),
+            usableTickets: book.standardTickets,
+          })),
+      );
+      const allocation = allocations.find((row) => row.gameId.equals(gameId));
+      return {
+        orgId: String(orgId),
+        gameId: String(gameId),
+        plannedBooks: allocation?.plannedBooks ?? null,
+        note: allocation?.note ?? null,
+        givenBooks: given.books,
+        givenExtraTickets: given.extraTickets,
+      };
+    });
   }
 
   async setAllocation(

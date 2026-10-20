@@ -16,6 +16,8 @@ export const PROJECT_TENANT_BOUNDARY_CALLERS: readonly string[] = [
   // 遊戲是否有本引用(整個租戶有沒有)、本編號租戶內唯一
   "project/lottery/tickets/book-game-usage.ts",
   "project/lottery/tickets/books.service.ts",
+  // 遊戲是否有叫貨單引用(整個租戶有沒有)
+  "project/lottery/requisition/requisition-registrations.ts",
 ];
 
 /**
@@ -61,4 +63,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/schedule/roster/roster-people.ts": ["以人為準的資料"],
   // 排班 / 畫休寫入的「人」守門文件掛在租戶頂層(兩家店同時排同一人、排班與畫休同時寫入互相衝突)
   "project/schedule/shared/schedule-person-locks.ts": ["例外寫入"],
+  // 遊戲是否有叫貨單引用、某家店待購買的叫貨單本數(在途):沒有操作者,問的是整個租戶
+  "project/lottery/requisition/requisition-registrations.ts": ["系統重算"],
+  // 進貨單 / 調貨單引用叫貨單:系統身分只看得到單據所屬的店(調貨單是出貨店),叫貨單在收貨店
+  "project/lottery/requisition/requisition-reference.ts": ["例外寫入"],
 };
