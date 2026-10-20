@@ -25,6 +25,7 @@
     "@repo/ui": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "@xyflow/react": "^12.12.0",
+    "exceljs": "^4.4.0",
     "nuqs": "^2.10.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
