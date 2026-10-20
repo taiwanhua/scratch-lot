@@ -3167,6 +3167,7 @@ input SaveScheduleCalendarDayInput {
 }
 
 type SaveScheduleDayOffsPayload {
+  entryConflicts: [ScheduleDayOffEntryConflict!]!
   items: [ScheduleDayOff!]!
   violations: [ScheduleDayOffViolation!]!
 }
@@ -3278,6 +3279,13 @@ type ScheduleDayOffDay {
   date: String!
   dayOffs: [ScheduleDayOff!]!
   staffCount: Int!
+}
+
+type ScheduleDayOffEntryConflict {
+  date: String!
+  endAt: DateTime!
+  orgName: String
+  startAt: DateTime!
 }
 
 type ScheduleDayOffLimits {

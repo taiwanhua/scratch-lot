@@ -143,6 +143,24 @@ const UPDATE_STAFF = /* GraphQL */ `
   }
 `;
 
+const ADD_DAY_OFF_ON_BEHALF = /* GraphQL */ `
+  mutation AddScheduleDayOffsOnBehalf(
+    $input: AddScheduleDayOffsOnBehalfInput!
+  ) {
+    addScheduleDayOffsOnBehalf(input: $input) {
+      items {
+        id
+      }
+      entryConflicts {
+        date
+        startAt
+        endAt
+        orgName
+      }
+    }
+  }
+`;
+
 const SAVE_CALENDAR_DAY = /* GraphQL */ `
   mutation SaveScheduleCalendarDay($input: SaveScheduleCalendarDayInput!) {
     saveScheduleCalendarDay(input: $input) {
@@ -224,7 +242,18 @@ interface RosterRow {
   templates: { id: string; shortName: string }[];
 }
 
+interface DayOffSaveRow {
+  items: { id: string }[];
+  entryConflicts: {
+    date: string;
+    startAt: string;
+    endAt: string;
+    orgName: string | null;
+  }[];
+}
+
 interface Payloads {
+  addScheduleDayOffsOnBehalf: DayOffSaveRow;
   scheduleRoster: RosterRow;
   saveScheduleDemand: { item: DemandRow; deletedEntryIds: string[] };
   deleteScheduleDemand: { id: string; deletedEntryIds: string[] };
@@ -377,6 +406,67 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       }),
       "saveScheduleEntry",
     ).item;
+  }
+
+  /** 直接寫一筆畫休(不經規則;測排班擋畫休用)。 */
+  async function insertDayOff(
+    user: ScheduleTestUser,
+    date: string,
+    kind: "full-day" | "time-range",
+    slot: { startTime: string; endTime: string } | null = null,
+  ): Promise<void> {
+    const now = new Date();
+    await connection.collection(SCHEDULE_DAY_OFFS_COLLECTION).insertOne({
+      orgId: zhongshan,
+      tenantId: tenantA,
+      userId: user.userId,
+      date,
+      kind,
+      startTime: slot?.startTime ?? null,
+      endTime: slot?.endTime ?? null,
+      note: null,
+      by: null,
+      reason: null,
+      reasonNote: null,
+      moduleKey: "schedule.my",
+      createdAt: now,
+      updatedAt: now,
+      createdBy: null,
+      updatedBy: null,
+      deletedAt: null,
+    });
+  }
+
+  /** 李小華在中山店一筆跨午夜的排班(那天新建一筆同時段的人力需求,填協同)。 */
+  async function overnightEntry(date: string, nextDate: string, end: string) {
+    const demand = dataOf(
+      await saveDemand(hq, {
+        startAt: taipei(date, "22:00"),
+        endAt: taipei(nextDate, end),
+        tasks: [{ role: "helper", taskKey: DUTY }],
+      }),
+      "saveScheduleDemand",
+    ).item;
+    return saveEntry(hq, {
+      userId: String(li.userId),
+      startAt: taipei(date, "22:00"),
+      endAt: taipei(nextDate, end),
+      assignments: [{ demandId: demand.id, taskId: taskOf(demand, "helper") }],
+    });
+  }
+
+  function addDayOffOnBehalf(
+    user: ScheduleTestUser,
+    date: string,
+  ): Promise<GraphqlResult> {
+    return gql(hq, ADD_DAY_OFF_ON_BEHALF, {
+      input: {
+        orgId: String(zhongshan),
+        userId: String(user.userId),
+        date,
+        kind: "full-day",
+      },
+    });
   }
 
   /** 李小華在中山店某天一筆排班(那天新建一筆人力需求,填協同)。 */
@@ -714,6 +804,71 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
       });
       const adjacent = await entryOn("2026-12-11", "13:00", "17:00");
       expect(adjacent.errors).toBeUndefined();
+    });
+
+    it("跨午夜的班:碰到隔天的整天畫休 → 擋下;進到隔天店休 → 擋下", async () => {
+      await insertDayOff(li, "2026-12-13", "full-day");
+      expect(
+        errorOf(await overnightEntry("2026-12-12", "2026-12-13", "06:00")),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
+
+      const closed = await gql(hq, SAVE_CALENDAR_DAY, {
+        input: { orgId: String(zhongshan), date: "2026-12-15", type: "closed" },
+      });
+      expect(closed.errors).toBeUndefined();
+      expect(
+        errorOf(await overnightEntry("2026-12-14", "2026-12-15", "02:00")),
+      ).toMatchObject({ code: "VALIDATION_FAILED", fields: ["startAt"] });
+    });
+
+    it("排班和畫休同時送出:排班成功就一定出現在畫休的衝突清單,否則排班被擋(「人」守門文件互相衝突)", async () => {
+      const date = "2026-12-17";
+      const demand = await demandOn(date, "09:00", "13:00");
+      const [entry, dayOff] = await Promise.all([
+        saveEntry(hq, {
+          userId: String(li.userId),
+          startAt: taipei(date, "09:00"),
+          endAt: taipei(date, "13:00"),
+          assignments: [
+            { demandId: demand.id, taskId: taskOf(demand, "helper") },
+          ],
+        }),
+        addDayOffOnBehalf(li, date),
+      ]);
+      const saved = dataOf(dayOff, "addScheduleDayOffsOnBehalf");
+      if (entry.errors === undefined) {
+        expect(saved.entryConflicts).toHaveLength(1);
+      } else {
+        expect(errorOf(entry)).toMatchObject({ fields: ["startAt"] });
+        expect(saved.entryConflicts).toEqual([]);
+      }
+    });
+
+    it("先排班、後登記畫休:畫休照樣存,回應附上衝突清單(日期、時間、分店)", async () => {
+      const date = "2026-12-19";
+      const demand = await demandOn(date, "14:30", "22:00");
+      const entry = await saveEntry(hq, {
+        userId: String(li.userId),
+        startAt: taipei(date, "14:30"),
+        endAt: taipei(date, "22:00"),
+        assignments: [
+          { demandId: demand.id, taskId: taskOf(demand, "helper") },
+        ],
+      });
+      expect(entry.errors).toBeUndefined();
+      const saved = dataOf(
+        await addDayOffOnBehalf(li, date),
+        "addScheduleDayOffsOnBehalf",
+      );
+      expect(saved.items).toHaveLength(1);
+      expect(saved.entryConflicts).toEqual([
+        {
+          date,
+          startAt: taipei(date, "14:30"),
+          endAt: taipei(date, "22:00"),
+          orgName: "中山店",
+        },
+      ]);
     });
 
     it("零筆執行任務 → VALIDATION_FAILED(欄位 assignments)", async () => {

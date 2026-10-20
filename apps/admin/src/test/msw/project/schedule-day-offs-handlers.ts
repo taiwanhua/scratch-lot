@@ -31,6 +31,8 @@ export interface ScheduleDayOffsWorldOptions {
   dayOffs?: ScheduleDayOffFieldsFragment[];
   /** 登記這些日期會被擋下(回 `VALIDATION_FAILED` + 同日最多畫休人數的違反) */
   blockedDates?: string[];
+  /** 登記這些日期時回「這天已經有排班」的衝突清單(先排班、後登記畫休:照樣存,提醒) */
+  scheduledDates?: string[];
 }
 
 const MAX_DAILY = 2;
@@ -85,7 +87,20 @@ export const scheduleDayOffsWorld = (
     canOverride = true,
     canEditOverview = true,
     blockedDates = [],
+    scheduledDates = [],
   } = options;
+  /** 那天已有的排班(14:30–22:00,在本店) */
+  const entryConflictsOf = (date: string) =>
+    scheduledDates.includes(date)
+      ? [
+          {
+            date,
+            startAt: new Date(`${date}T14:30:00+08:00`).toISOString(),
+            endAt: new Date(`${date}T22:00:00+08:00`).toISOString(),
+            orgName: "A-2 台北分店",
+          },
+        ]
+      : [];
   let dayOffs = [...(options.dayOffs ?? sampleDayOffs)];
   const violations: ScheduleDayOffViolationFieldsFragment[] =
     sampleDayOffViolations;
@@ -165,7 +180,13 @@ export const scheduleDayOffsWorld = (
       }
       const items = add(input, null, {});
       return HttpResponse.json({
-        data: { addMyScheduleDayOffs: { items, violations: [] } },
+        data: {
+          addMyScheduleDayOffs: {
+            items,
+            violations: [],
+            entryConflicts: entryConflictsOf(input.date),
+          },
+        },
       });
     }),
     api.mutation("DeleteMyScheduleDayOff", ({ variables }) => {
@@ -206,7 +227,13 @@ export const scheduleDayOffsWorld = (
       inputs.addOnBehalf.push(input);
       const items = add(input, "李店長", input);
       return HttpResponse.json({
-        data: { addScheduleDayOffsOnBehalf: { items, violations: [] } },
+        data: {
+          addScheduleDayOffsOnBehalf: {
+            items,
+            violations: [],
+            entryConflicts: entryConflictsOf(input.date),
+          },
+        },
       });
     }),
     api.mutation("DeleteScheduleDayOffOnBehalf", ({ variables }) => {

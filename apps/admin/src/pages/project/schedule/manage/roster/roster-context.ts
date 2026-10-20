@@ -56,7 +56,9 @@ export interface RosterContextValue {
   /**
    * 捲到那一格並閃爍(檢核面板 [查看] 用)。頁殼切到目標的月份、等格子畫出來再捲;
    * **各檢視自己負責把目標帶進畫面**(週 / 日檢視依 `scrollTarget` 切到那一週 / 那一天),
-   * 而且每個檢視的格子都要帶 `data-roster-cell={rosterCellKey(...)}`(人 × 日:`userId|date`;只有日期:`|date`)
+   * 而且每個檢視的格子都要帶 `data-roster-cell={rosterCellKey(...)}`:**有人的格子一律帶 `userId|date`**
+   * (班表的人員格、週 / 日的長條),只有日期的格子帶 `|date`(月檢視的日期格、日期表頭)。
+   * 找不到 `userId|date` 時頁殼改找那一天的 `|date`。
    */
   scrollToCell: (target: RosterCellTarget) => void;
   /** 等著被捲到的格子(最多留 10 秒,之後回 null);週 / 日檢視據此切到那一週 / 那一天 */

@@ -1,7 +1,13 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 import { Types } from "mongoose";
 
-import { localDateOf, localDateText } from "@repo/domain/form";
+import {
+  addLocalCalendar,
+  instantOfLocalTime,
+  localDateOf,
+  localDateText,
+  parseLocalDate,
+} from "@repo/domain/form";
 import { requiresReasonNote } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
@@ -26,6 +32,7 @@ import {
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
+import { ScheduleEntriesRepository } from "../../database/schedule/roster.repositories";
 import {
   type ScheduleDayOffDocument,
   ScheduleDayOffLocksRepository,
@@ -34,7 +41,6 @@ import {
   ScheduleStaffRepository,
 } from "../../database/schedule/schedule.repositories";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
-import { RosterPeopleReader } from "../roster/roster-people";
 import type {
   EffectiveRuleSetting,
   ScheduleRuleViolation,
@@ -50,6 +56,7 @@ import {
   validationError,
 } from "../shared/schedule-error";
 import {
+  loadOrgNames,
   parseObjectId,
   resolveScheduleOrg,
   scheduleOrgReader,
@@ -58,6 +65,7 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
+import { SchedulePersonLocks } from "../shared/schedule-person-locks";
 import { compareScheduleNames } from "../shared/schedule-sort";
 import type { ScheduleCandidate } from "../staff/schedule-candidates";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
@@ -89,6 +97,7 @@ import type {
   MyScheduleDayOffsPayload,
   SaveScheduleDayOffsPayload,
   ScheduleDayOffDayModel,
+  ScheduleDayOffEntryConflictModel,
   ScheduleDayOffLimitsModel,
   ScheduleDayOffModel,
   ScheduleDayOffOverviewPayload,
@@ -293,7 +302,8 @@ export class ScheduleDayOffsService implements OnModuleInit {
     private readonly audit: AuditService,
     private readonly transactions: TransactionService,
     private readonly clock: ScheduleClock,
-    private readonly people: RosterPeopleReader,
+    private readonly personLocks: SchedulePersonLocks,
+    private readonly entries: ScheduleEntriesRepository,
   ) {}
 
   onModuleInit(): void {
@@ -566,26 +576,27 @@ export class ScheduleDayOffsService implements OnModuleInit {
       from,
       to,
     );
-    const byKey = new Map<string, ScheduleUnavailability>();
-    for (const record of records.toSorted(byTime)) {
-      const key = `${String(record.userId)}|${record.date}`;
-      const item = byKey.get(key) ?? {
-        userId: String(record.userId),
-        date: record.date,
-        fullDay: false,
-        slots: [],
-      };
-      if (record.kind === "full-day") {
-        item.fullDay = true;
-      } else if (record.startTime !== null && record.endTime !== null) {
-        item.slots.push({
-          startTime: record.startTime,
-          endTime: record.endTime,
-        });
-      }
-      byKey.set(key, item);
-    }
-    return [...byKey.values()];
+    return unavailabilityOf(records);
+  }
+
+  /**
+   * 一個人在一段日期(`YYYY-MM-DD`,含頭尾)每天的整天畫休 / 時段不可排,**以租戶與人為準**
+   * (不經「某家店的候選人」:修改舊排班時,那個人可能已經不能排這家店,仍要擋)。
+   * 給排班寫入檢查「畫休那段時間不能排」;租戶由呼叫端確認(操作者看得到的店所屬的租戶)。
+   */
+  async unavailableOfPerson(
+    tenantId: Types.ObjectId,
+    userId: Types.ObjectId,
+    from: string,
+    to: string,
+  ): Promise<ScheduleUnavailability[]> {
+    const records = await this.recordsBetween(
+      tenantId,
+      [String(userId)],
+      from,
+      to,
+    );
+    return unavailabilityOf(records);
   }
 
   // ---- 內部 ----
@@ -849,7 +860,84 @@ export class ScheduleDayOffsService implements OnModuleInit {
     return {
       items: created.map((record) => this.modelOf(record, names, true)),
       violations: after.map((violation) => violationModelOf(violation)),
+      entryConflicts: await this.entryConflictsOf(operator, context, write),
     };
+  }
+
+  /**
+   * 先排班、後登記畫休(使用者定案:照樣可以登記,但要提醒):這段畫休和這個人已有的排班(整個租戶,
+   * 跨店也算)重疊的,列出日期、時間與分店名稱(看不到的分店不帶名稱)。頭尾相接不算重疊。
+   */
+  private async entryConflictsOf(
+    operator: OperatorContext,
+    context: PersonContext,
+    write: DayOffWrite,
+  ): Promise<ScheduleDayOffEntryConflictModel[]> {
+    const day = parseLocalDate(write.date);
+    if (day === null) {
+      return [];
+    }
+    const timezone = await tenantTimezoneOf(
+      this.orgs,
+      operator,
+      context.tenantId,
+    );
+    const at = (time: string) => {
+      const minutes = minutesOfHhMm(time) ?? 0;
+      return instantOfLocalTime(
+        day,
+        Math.floor(minutes / 60),
+        minutes % 60,
+        timezone,
+      );
+    };
+    const dayStart = at("00:00");
+    const windows =
+      write.kind === "full-day"
+        ? [
+            {
+              start: dayStart,
+              end: addLocalCalendar(dayStart, 1, "days", timezone),
+            },
+          ]
+        : write.slots.map((slot) => ({
+            start: at(slot.startTime),
+            end: at(slot.endTime),
+          }));
+    const from = Math.min(...windows.map((window) => window.start));
+    const to = Math.max(...windows.map((window) => window.end));
+    const records = await this.entries.findMany(
+      await tenantBoundaryContext(this.orgs, operator, context.tenantId),
+      {
+        tenantId: context.tenantId,
+        userId: context.userId,
+        startAt: { $lt: new Date(to) },
+        endAt: { $gt: new Date(from) },
+      },
+      { sort: { startAt: 1 } },
+    );
+    const conflicts = records.filter((record) =>
+      windows.some(
+        (window) =>
+          record.startAt.getTime() < window.end &&
+          record.endAt.getTime() > window.start,
+      ),
+    );
+    const names = await loadOrgNames(
+      operator,
+      this.orgs,
+      conflicts
+        .map((record) => record.orgId)
+        .filter((orgId) => isOrgVisible(operator, orgId)),
+    );
+    return conflicts.map((record) => ({
+      date: record.date,
+      startAt: record.startAt,
+      endAt: record.endAt,
+      orgName: isOrgVisible(operator, record.orgId)
+        ? (names.get(String(record.orgId)) ?? null)
+        : null,
+    }));
   }
 
   /** 刪除:同登記,規則檢查與寫入在同一個交易、交易一開始先碰守門文件。 */
@@ -909,11 +997,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
     months: readonly string[],
   ): Promise<void> {
     // 排班寫入的「人」守門文件也先建好(交易裡一起碰:畫休與排班同時寫同一人互相衝突)
-    await this.people.ensurePersonLock(
-      operator,
-      context.tenantId,
-      context.userId,
-    );
+    await this.personLocks.ensure(operator, context.tenantId, context.userId);
     const writer = await tenantBoundaryContext(
       this.orgs,
       operator,
@@ -957,11 +1041,7 @@ export class ScheduleDayOffsService implements OnModuleInit {
       context.tenantId,
     );
     // 同一個人的排班寫入(`schedule_entry_locks`)也在交易一開始碰:登記畫休與排班同時送出不會互相繞過
-    await this.people.touchPersonLock(
-      operator,
-      context.tenantId,
-      context.userId,
-    );
+    await this.personLocks.touch(operator, context.tenantId, context.userId);
     for (const month of months) {
       const touched = await this.locks.findOneAndUpdate(
         writer,
@@ -1299,4 +1379,30 @@ function auditOf(record: DayOffRecord): Record<string, unknown> {
     reason: record.reason,
     reasonNote: record.reasonNote,
   };
+}
+
+/** 畫休紀錄 → 每人每天的整天畫休 / 時段不可排(時段依開始時間)。 */
+function unavailabilityOf(
+  records: readonly DayOffRecord[],
+): ScheduleUnavailability[] {
+  const byKey = new Map<string, ScheduleUnavailability>();
+  for (const record of records.toSorted(byTime)) {
+    const key = `${String(record.userId)}|${record.date}`;
+    const item = byKey.get(key) ?? {
+      userId: String(record.userId),
+      date: record.date,
+      fullDay: false,
+      slots: [],
+    };
+    if (record.kind === "full-day") {
+      item.fullDay = true;
+    } else if (record.startTime !== null && record.endTime !== null) {
+      item.slots.push({
+        startTime: record.startTime,
+        endTime: record.endTime,
+      });
+    }
+    byKey.set(key, item);
+  }
+  return [...byKey.values()];
 }

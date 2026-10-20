@@ -32,6 +32,14 @@ fragment ScheduleDayOffViolationFields on ScheduleDayOffViolation {
   to
 }
 
+# 畫休和這個人已有的排班重疊(跨店也算;畫休照樣存,提醒通知店長調整班表);看不到的分店 orgName = null
+fragment ScheduleDayOffEntryConflictFields on ScheduleDayOffEntryConflict {
+  date
+  startAt
+  endAt
+  orgName
+}
+
 fragment ScheduleDayOffDayFields on ScheduleDayOffDay {
   date
   staffCount
@@ -82,6 +90,9 @@ mutation AddMyScheduleDayOffs($input: AddMyScheduleDayOffsInput!) {
     violations {
       ...ScheduleDayOffViolationFields
     }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
+    }
   }
 }
 
@@ -122,6 +133,9 @@ mutation AddScheduleDayOffsOnBehalf($input: AddScheduleDayOffsOnBehalfInput!) {
     }
     violations {
       ...ScheduleDayOffViolationFields
+    }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
     }
   }
 }

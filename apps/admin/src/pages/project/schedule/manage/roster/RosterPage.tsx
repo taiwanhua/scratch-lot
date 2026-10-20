@@ -122,9 +122,14 @@ export const RosterPage = () => {
     if (scrollRequest === null || handledRequest.current === scrollRequest) {
       return;
     }
-    const element = globalThis.document.querySelector<HTMLElement>(
-      `[data-roster-cell="${CSS.escape(scrollRequest.key)}"]`,
-    );
+    // 先找 `userId|date`;這個檢視沒有人的格子(例:月檢視)就改找那一天 `|date`
+    const find = (key: string) =>
+      globalThis.document.querySelector<HTMLElement>(
+        `[data-roster-cell="${CSS.escape(key)}"]`,
+      );
+    const element =
+      find(scrollRequest.key) ??
+      find(rosterCellKey({ date: scrollRequest.target.date }));
     if (element === null) {
       return;
     }

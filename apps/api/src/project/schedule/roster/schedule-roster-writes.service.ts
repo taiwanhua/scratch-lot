@@ -49,6 +49,7 @@ import {
   SCHEDULE_PERMISSIONS,
   SchedulePermissions,
 } from "../shared/schedule-permissions";
+import { SchedulePersonLocks } from "../shared/schedule-person-locks";
 import { ScheduleStaffService } from "../staff/schedule-staff.service";
 import { ScheduleTemplatesService } from "../templates/schedule-templates.service";
 import type {
@@ -116,6 +117,7 @@ export class ScheduleRosterWritesService {
     private readonly dayOffs: ScheduleDayOffsService,
     private readonly templates: ScheduleTemplatesService,
     private readonly people: RosterPeopleReader,
+    private readonly personLocks: SchedulePersonLocks,
   ) {}
 
   // ---- 人力需求 ----
@@ -318,14 +320,17 @@ export class ScheduleRosterWritesService {
         "userId",
       ]);
     }
+    // 店休那天不能排;跨午夜的班連隔天一起看(同畫休)
     const calendarDays = await this.calendar.effectiveDays(
       operator,
       scope.org.id,
       date,
-      date,
+      this.dateOf(scope, new Date(span.endAt.getTime() - 1)),
     );
     if (calendarDays.some((day) => day.type === "closed")) {
-      throw validationError(`store is closed on ${date}`, ["startAt"]);
+      throw validationError("store is closed on a day of this entry", [
+        "startAt",
+      ]);
     }
 
     const months = [
@@ -335,16 +340,12 @@ export class ScheduleRosterWritesService {
       ]),
     ];
     await this.ensurePeriods(operator, scope, months);
-    await this.people.ensurePersonLock(operator, scope.org.tenantId, userId);
+    await this.personLocks.ensure(operator, scope.org.tenantId, userId);
     const saved = await savingUnique(
       () =>
         this.transactions.withTransaction(async () => {
           // 先碰這個人的守門文件(跨店同時排同一人互相衝突),再碰這家店這個月的
-          await this.people.touchPersonLock(
-            operator,
-            scope.org.tenantId,
-            userId,
-          );
+          await this.personLocks.touch(operator, scope.org.tenantId, userId);
           await this.touchPeriods(operator, scope, months);
           const current = existing
             ? await this.assignments.findMany(operator, {
@@ -466,7 +467,7 @@ export class ScheduleRosterWritesService {
   /**
    * 畫休那段時間不能排(規格 14.5「可排 = 那段時間沒有畫休」;做法同店休):排班碰到的日子(跨午夜含隔天)
    * 有整天畫休、或和時段不可排重疊(頭尾相接不算)→ `VALIDATION_FAILED`(欄位 `startAt`)。
-   * 這家店已由 `resolveScheduleOrg` 確認看得到,`listUnavailable` 的空清單就是真的沒有畫休。
+   * 以租戶 + 人查(`unavailableOfPerson`,不經這家店的候選人):修改舊排班時那個人已經不能排這家店,一樣要擋。
    */
   private async assertAvailable(
     operator: OperatorContext,
@@ -476,13 +477,12 @@ export class ScheduleRosterWritesService {
   ): Promise<void> {
     const from = this.dateOf(scope, span.startAt);
     const to = this.dateOf(scope, new Date(span.endAt.getTime() - 1));
-    const unavailable = await this.dayOffs.listUnavailable(
-      operator,
-      scope.org.id,
+    const days = await this.dayOffs.unavailableOfPerson(
+      scope.org.tenantId,
+      userId,
       from,
       to,
     );
-    const days = unavailable.filter((day) => day.userId === String(userId));
     const start = span.startAt.getTime();
     const end = span.endAt.getTime();
     const blocked = days.some((day) => {

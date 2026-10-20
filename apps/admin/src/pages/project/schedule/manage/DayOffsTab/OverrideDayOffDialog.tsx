@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 import {
+  type AddScheduleDayOffsOnBehalfMutation,
   type ScheduleDayOffDayFieldsFragment,
   useAddScheduleDayOffsOnBehalfMutation,
   useDeleteScheduleDayOffOnBehalfMutation,
@@ -22,6 +23,7 @@ import { DayOffKindRadios } from "@/components/project/schedule/DayOffs/DayOffKi
 import { DayOffSlotFields } from "@/components/project/schedule/DayOffs/DayOffSlotFields";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import {
   type DayOffKind,
@@ -92,13 +94,15 @@ export const OverrideDayOffDialog = ({
     setBlocked(dayOffViolationsOf(error));
     setInvalid((scheduleErrorOf(error).fields ?? []) as Field[]);
   };
+  const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddScheduleDayOffsOnBehalfMutation(
     session.client,
-    useMutationFeedback({
+    useMutationFeedback<AddScheduleDayOffsOnBehalfMutation>({
       success: t("override.saveSuccess"),
       error: errorOf,
-      onSuccess: () => {
+      onSuccess: (data) => {
         refresh();
+        noticeEntryConflicts(data.addScheduleDayOffsOnBehalf.entryConflicts);
         onClose();
       },
       onError,

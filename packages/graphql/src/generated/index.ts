@@ -4564,6 +4564,7 @@ export type SaveScheduleCalendarDayInput = {
 
 export type SaveScheduleDayOffsPayload = {
   __typename?: 'SaveScheduleDayOffsPayload';
+  entryConflicts: Array<ScheduleDayOffEntryConflict>;
   items: Array<ScheduleDayOff>;
   violations: Array<ScheduleDayOffViolation>;
 };
@@ -4682,6 +4683,14 @@ export type ScheduleDayOffDay = {
   date: Scalars['String']['output'];
   dayOffs: Array<ScheduleDayOff>;
   staffCount: Scalars['Int']['output'];
+};
+
+export type ScheduleDayOffEntryConflict = {
+  __typename?: 'ScheduleDayOffEntryConflict';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  orgName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
 };
 
 export type ScheduleDayOffLimits = {
@@ -7689,6 +7698,8 @@ export type ScheduleDayOffWindowFieldsFragment = { __typename?: 'ScheduleDayOffW
 
 export type ScheduleDayOffViolationFieldsFragment = { __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null };
 
+export type ScheduleDayOffEntryConflictFieldsFragment = { __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null };
+
 export type ScheduleDayOffDayFieldsFragment = { __typename?: 'ScheduleDayOffDay', date: string, staffCount: number, dayOffs: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }> };
 
 export type ScheduleDayOffLimitsFieldsFragment = { __typename?: 'ScheduleDayOffLimits', maxMonthly?: number | null, minMonthly?: number | null, maxDailyStaff?: number | null };
@@ -7705,7 +7716,7 @@ export type AddMyScheduleDayOffsMutationVariables = Exact<{
 }>;
 
 
-export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+export type AddMyScheduleDayOffsMutation = { __typename?: 'Mutation', addMyScheduleDayOffs: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
 
 export type DeleteMyScheduleDayOffMutationVariables = Exact<{
   input: DeleteMyScheduleDayOffInput;
@@ -7726,7 +7737,7 @@ export type AddScheduleDayOffsOnBehalfMutationVariables = Exact<{
 }>;
 
 
-export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }> } };
+export type AddScheduleDayOffsOnBehalfMutation = { __typename?: 'Mutation', addScheduleDayOffsOnBehalf: { __typename?: 'SaveScheduleDayOffsPayload', items: Array<{ __typename?: 'ScheduleDayOff', id: string, userId: string, name: string, date: string, kind: string, startTime?: string | null, endTime?: string | null, note?: string | null, isPrimary: boolean, byName?: string | null, reason?: string | null, reasonNote?: string | null }>, violations: Array<{ __typename?: 'ScheduleDayOffViolation', key: string, level: string, message: string, dates: Array<string>, actual?: number | null, limit?: number | null, from?: string | null, to?: string | null }>, entryConflicts: Array<{ __typename?: 'ScheduleDayOffEntryConflict', date: string, startAt: string, endAt: string, orgName?: string | null }> } };
 
 export type DeleteScheduleDayOffOnBehalfMutationVariables = Exact<{
   input: DeleteScheduleDayOffOnBehalfInput;
@@ -9007,6 +9018,14 @@ export const ScheduleDayOffViolationFieldsFragmentDoc = `
   limit
   from
   to
+}
+    `;
+export const ScheduleDayOffEntryConflictFieldsFragmentDoc = `
+    fragment ScheduleDayOffEntryConflictFields on ScheduleDayOffEntryConflict {
+  date
+  startAt
+  endAt
+  orgName
 }
     `;
 export const ScheduleDayOffFieldsFragmentDoc = `
@@ -17050,10 +17069,14 @@ export const AddMyScheduleDayOffsDocument = `
     violations {
       ...ScheduleDayOffViolationFields
     }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
+    }
   }
 }
     ${ScheduleDayOffFieldsFragmentDoc}
-${ScheduleDayOffViolationFieldsFragmentDoc}`;
+${ScheduleDayOffViolationFieldsFragmentDoc}
+${ScheduleDayOffEntryConflictFieldsFragmentDoc}`;
 
 export const useAddMyScheduleDayOffsMutation = <
       TError = unknown,
@@ -17163,10 +17186,14 @@ export const AddScheduleDayOffsOnBehalfDocument = `
     violations {
       ...ScheduleDayOffViolationFields
     }
+    entryConflicts {
+      ...ScheduleDayOffEntryConflictFields
+    }
   }
 }
     ${ScheduleDayOffFieldsFragmentDoc}
-${ScheduleDayOffViolationFieldsFragmentDoc}`;
+${ScheduleDayOffViolationFieldsFragmentDoc}
+${ScheduleDayOffEntryConflictFieldsFragmentDoc}`;
 
 export const useAddScheduleDayOffsOnBehalfMutation = <
       TError = unknown,

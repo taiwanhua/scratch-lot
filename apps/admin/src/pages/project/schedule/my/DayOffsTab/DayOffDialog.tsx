@@ -21,6 +21,7 @@ import { DayOffSlotFields } from "@/components/project/schedule/DayOffs/DayOffSl
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 import { useDayOffDateTitle } from "@/hooks/project/schedule/useDayOffDateTitle/useDayOffDateTitle";
+import { useDayOffEntryConflictNotice } from "@/hooks/project/schedule/useDayOffEntryConflictNotice/useDayOffEntryConflictNotice";
 import {
   type DayOffKind,
   type DayOffSlot,
@@ -75,6 +76,7 @@ export const DayOffDialog = ({
     void queryClient.invalidateQueries({ queryKey: [MY_DAY_OFFS_QUERY_KEY] });
   };
   const errorOf = (error: unknown) => tErrors(scheduleErrorOf(error).code);
+  const noticeEntryConflicts = useDayOffEntryConflictNotice();
   const save = useAddMyScheduleDayOffsMutation(
     session.client,
     useMutationFeedback<AddMyScheduleDayOffsMutation>({
@@ -83,8 +85,9 @@ export const DayOffDialog = ({
           ? t("dialog.savedWithReminders")
           : t("dialog.saveSuccess"),
       error: errorOf,
-      onSuccess: () => {
+      onSuccess: (data) => {
         refresh();
+        noticeEntryConflicts(data.addMyScheduleDayOffs.entryConflicts);
         onClose();
       },
       onError: (error) => {

@@ -905,6 +905,11 @@
         "reasonHint": "After the deadline a reason is required; \"Other\" needs details.",
         "saveSuccess": "Day-off changed",
         "deleteSuccess": "Day-off deleted"
+      },
+      "entryConflict": {
+        "message": "There are already shifts on this day ({list}). Please ask the store manager to adjust the roster.",
+        "item": "{date} {start}–{end} {org}",
+        "otherStore": "another branch"
       }
     },
     "supportRequests": {

@@ -905,6 +905,11 @@
         "reasonHint": "畫休截止後代改要選原因;選「其他」要填說明。",
         "saveSuccess": "已代改畫休",
         "deleteSuccess": "已刪除畫休"
+      },
+      "entryConflict": {
+        "message": "這天已經有排班({list}),請通知店長調整班表",
+        "item": "{date} {start}–{end} {org}",
+        "otherStore": "其他分店"
       }
     },
     "supportRequests": {

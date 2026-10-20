@@ -12,7 +12,13 @@ import { RosterPage } from "./roster/RosterPage";
  * 依規格的順序插入。
  */
 export const MANAGE_TABS: readonly ScheduleTabEntry[] = [
-  { value: "roster", labelKey: "roster", Content: RosterPage },
+  // 排班表(規格 14.5):`schedule.manage.view` 同時是排班表的檢視(api `scheduleRoster` 也守它)
+  {
+    value: "roster",
+    labelKey: "roster",
+    permission: SCHEDULE_PERMISSIONS.manageView,
+    Content: RosterPage,
+  },
   {
     value: "day-offs",
     labelKey: "dayOffOverview",

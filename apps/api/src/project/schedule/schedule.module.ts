@@ -18,6 +18,7 @@ import { ScheduleRulesResolver } from "./rules/schedule-rules.resolver";
 import { ScheduleRulesService } from "./rules/schedule-rules.service";
 import { ScheduleClock } from "./shared/schedule-clock";
 import { SchedulePermissions } from "./shared/schedule-permissions";
+import { SchedulePersonLocks } from "./shared/schedule-person-locks";
 import { ScheduleStaffResolver } from "./staff/schedule-staff.resolver";
 import { ScheduleStaffService } from "./staff/schedule-staff.service";
 import { ScheduleTemplatesResolver } from "./templates/schedule-templates.resolver";
@@ -36,6 +37,7 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
   imports: [DatabaseModule, NotificationsModule, ScheduledJobsModule],
   providers: [
     SchedulePermissions,
+    SchedulePersonLocks,
     ScheduleClock,
     ScheduleFieldOptionsService,
     ScheduleFieldOptionsResolver,

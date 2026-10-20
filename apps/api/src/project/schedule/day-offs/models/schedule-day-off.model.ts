@@ -1,4 +1,10 @@
-import { Field, ID, Int, ObjectType } from "@nestjs/graphql";
+import {
+  Field,
+  GraphQLISODateTime,
+  ID,
+  Int,
+  ObjectType,
+} from "@nestjs/graphql";
 
 /** 一段畫休(本人的,或總覽 / 當天詳細裡的某個人)。 */
 @ObjectType("ScheduleDayOff")
@@ -233,6 +239,24 @@ export class ScheduleDayOffOverviewPayload {
 }
 
 /** 登記 / 代改後:新增的畫休 + 存檔後仍有的提醒(限制不會存進來)。 */
+/** 登記的畫休和這個人已有的排班重疊(畫休照樣存;提醒通知店長調整班表)。 */
+@ObjectType("ScheduleDayOffEntryConflict")
+export class ScheduleDayOffEntryConflictModel {
+  /** 排班的日期 `YYYY-MM-DD` */
+  @Field(() => String)
+  date!: string;
+
+  @Field(() => GraphQLISODateTime)
+  startAt!: Date;
+
+  @Field(() => GraphQLISODateTime)
+  endAt!: Date;
+
+  /** 排班的分店;操作者看不到那家店時為 null(畫面寫「其他分店」) */
+  @Field(() => String, { nullable: true })
+  orgName!: string | null;
+}
+
 @ObjectType("SaveScheduleDayOffsPayload")
 export class SaveScheduleDayOffsPayload {
   @Field(() => [ScheduleDayOffModel])
@@ -240,6 +264,10 @@ export class SaveScheduleDayOffsPayload {
 
   @Field(() => [ScheduleDayOffViolationModel])
   violations!: ScheduleDayOffViolationModel[];
+
+  /** 和這個人已有的排班重疊的(跨店也算);畫休照樣存 */
+  @Field(() => [ScheduleDayOffEntryConflictModel])
+  entryConflicts!: ScheduleDayOffEntryConflictModel[];
 }
 
 @ObjectType("DeleteScheduleDayOffPayload")
