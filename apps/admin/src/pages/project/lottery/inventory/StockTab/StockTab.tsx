@@ -153,9 +153,7 @@ export const StockTab = () => {
       key: "purchasedAt",
       header: t("columns.purchasedAt"),
       render: (row) =>
-        row.purchasedAt
-          ? temporal(row.purchasedAt, "date").slice(5)
-          : t("none"),
+        row.purchasedAt ? temporal(row.purchasedAt, "monthDay") : t("none"),
     },
     {
       key: "dealer",

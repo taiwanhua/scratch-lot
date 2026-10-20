@@ -78,7 +78,7 @@ export const InvestigationsTab = () => {
     {
       key: "at",
       header: t("investigations.columns.at"),
-      render: (row) => (row.at ? temporal(row.at, "date").slice(5) : ""),
+      render: (row) => (row.at ? temporal(row.at, "monthDay") : ""),
     },
     ...(showCost
       ? [

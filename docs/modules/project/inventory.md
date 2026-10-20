@@ -103,7 +103,7 @@
 
 - 讀取範圍:**本**照操作者自己的範圍(所在分店或持有任何一張的分店,資料共用 `holderOrgIds`);讀得到本,就以租戶邊界上下文讀它全部的張與事件(反查,`inventory-view.service.ts`)。
 - 組織、使用者名稱以租戶邊界讀(`inventory-names.ts`);收銀點、經銷商、單號照操作者的範圍讀(看不到的不顯示)。
-- 原因檢查:`LotteryFieldOptionsService.assertReason`(`apps/api/src/project/lottery/field-options/`;要是該類別啟用中的選項,「其他」說明必填)。
+- 原因檢查:底座 `FieldOptionsService.assertReason`(`apps/api/src/fields/field-options.service.ts`;類別白名單 `LOTTERY_FIELD_CATEGORIES`,`apps/api/src/project/lottery/field-options/lottery-field-options.ts`;要是該類別啟用中的選項,「其他」說明必填)。下拉 `lotteryFieldOptions` 用同一支的 `optionsOf`。
 
 正本:`apps/api/src/project/lottery/inventory/`、`packages/graphql/src/documents/project/lottery/inventory.graphql`
 

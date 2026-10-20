@@ -23,7 +23,7 @@ describe("本的詳情", () => {
     expect(
       screen.getByRole("button", { name: "更正跳號" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("P-1016(10-12)")).toBeInTheDocument();
+    expect(screen.getByText("P-1016(10/12)")).toBeInTheDocument();
     expect(screen.getByText("中山店 · 店外攤位")).toBeInTheDocument();
     expect(screen.getByText("18,400 / 184")).toBeInTheDocument();
     expect(screen.getByText("#041–065")).toBeInTheDocument();
@@ -134,7 +134,7 @@ describe("本的詳情", () => {
       path: "/inventory/book-page/b-056420",
     });
     expect(
-      await screen.findByText("這本待查中:10-12 T-0007,責任分店 = 中山店"),
+      await screen.findByText("這本待查中:10/12 T-0007,責任分店 = 中山店"),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "整本尋回" }));
     expect(

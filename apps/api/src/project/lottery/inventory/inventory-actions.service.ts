@@ -22,12 +22,13 @@ import {
 } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
+import { FieldOptionsService } from "../../../fields/field-options.service";
 import {
   type LotteryTicketDocument,
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { parseId } from "../accounts/accounts-util";
-import { LotteryFieldOptionsService } from "../field-options/lottery-field-options.service";
+import { LOTTERY_FIELD_CATEGORIES } from "../field-options/lottery-field-options";
 import { tenantOfOperator } from "../master-data-tenant";
 import {
   INVENTORY_REASONS,
@@ -97,7 +98,7 @@ export class InventoryActionsService {
     private readonly orgs: OrgsRepository,
     private readonly ledger: TicketLedgerService,
     private readonly view: InventoryViewService,
-    private readonly fieldOptions: LotteryFieldOptionsService,
+    private readonly fieldOptions: FieldOptionsService,
     private readonly access: InventoryAccess,
     private readonly names: InventoryNames,
     private readonly transactions: TransactionService,
@@ -146,6 +147,7 @@ export class InventoryActionsService {
       operator,
       LOTTERY_FIELD_CATEGORY_KEYS.skipCorrectionReason,
       input,
+      LOTTERY_FIELD_CATEGORIES,
     );
     await this.transactions.withTransaction(async (session) => {
       const found = await this.tickets.findMany(
@@ -233,6 +235,7 @@ export class InventoryActionsService {
       operator,
       LOTTERY_FIELD_CATEGORY_KEYS.recoverReason,
       input,
+      LOTTERY_FIELD_CATEGORIES,
     );
     const missingStatuses: TicketStatus[] = [
       TICKET_STATUS.investigating,
@@ -284,6 +287,7 @@ export class InventoryActionsService {
       operator,
       LOTTERY_FIELD_CATEGORY_KEYS.scrapReason,
       input,
+      LOTTERY_FIELD_CATEGORIES,
     );
     const grant = await this.access.grantOf(operator);
     let loss = 0;

@@ -58,7 +58,7 @@ export const BookInfoCards = ({
       label: t(`sources.${source.type}`),
       value: t("book.sourceValue", {
         serial: source.refSerialNo ?? t("stock.none"),
-        date: temporal(source.at, "date").slice(5),
+        date: temporal(source.at, "monthDay"),
       }),
     })),
     ...(book.purchaseDealer

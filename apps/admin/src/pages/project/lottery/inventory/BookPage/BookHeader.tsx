@@ -86,7 +86,7 @@ export const BookHeader = ({
           {t("book.investigation", {
             status: t(`ticketStatuses.${investigation.status}`),
             date: investigation.at
-              ? temporal(investigation.at, "date").slice(5)
+              ? temporal(investigation.at, "monthDay")
               : "",
             serial: investigation.refSerialNo ?? "",
             store: investigation.responsibleOrg?.name ?? t("stock.none"),

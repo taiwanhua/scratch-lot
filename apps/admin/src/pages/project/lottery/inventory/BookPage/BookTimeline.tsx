@@ -85,7 +85,7 @@ export const BookTimeline = ({ events }: BookTimelineProps) => {
     {
       key: "at",
       header: t("timeline.columns.at"),
-      render: (event) => temporal(event.at, "datetime").slice(5),
+      render: (event) => temporal(event.at, "monthDayTime"),
     },
     {
       key: "type",
