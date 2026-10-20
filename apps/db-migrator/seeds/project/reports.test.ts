@@ -1,6 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { assembleSeedRegistry } from "../registry";
+import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
+import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
 import { reportsModule } from "./reports";
 import { projectSeedSettings } from "./settings";
@@ -36,5 +38,18 @@ describe("輸出報表的模組宣告(規格 3.1、3.2)", () => {
     expect(() =>
       assembleSeedRegistry(projectSeedSettings, projectSeedSource),
     ).not.toThrow();
+  });
+
+  it("開通時建立的角色(規格 3.3):總部管理、店長有輸出報表全部,店員沒有", () => {
+    for (const role of ["hq", "store-manager"] as const) {
+      const grant = roleGrantOf(role, ROLE_GRANT_SECTIONS);
+      expect(grant.moduleKeys).toContain("reports");
+      expect(grant.permissionKeys).toContain("reports.*");
+    }
+    const clerk = roleGrantOf("clerk", ROLE_GRANT_SECTIONS);
+    expect(clerk.moduleKeys).not.toContain("reports");
+    expect(
+      clerk.permissionKeys.filter((key) => key.startsWith("reports.")),
+    ).toEqual([]);
   });
 });
