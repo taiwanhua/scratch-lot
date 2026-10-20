@@ -48,7 +48,11 @@ export const GameCards = ({ rows, isLoading, onOpen }: GameCardsProps) => {
               onOpen?.(row);
             }
           }}
-          sx={{ p: 2, cursor: onOpen === undefined ? "default" : "pointer" }}
+          sx={{
+            p: 2,
+            flexShrink: 0,
+            cursor: onOpen === undefined ? "default" : "pointer",
+          }}
         >
           <Stack spacing={1}>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>

@@ -115,7 +115,15 @@ export const CashPointDialog = ({
         <SelectField
           label={t("fields.orgId")}
           value={values.orgId}
-          options={orgOptions}
+          options={
+            cashPoint === null ||
+            orgOptions.some((option) => option.value === cashPoint.org.id)
+              ? orgOptions
+              : [
+                  { value: cashPoint.org.id, label: cashPoint.org.name },
+                  ...orgOptions,
+                ]
+          }
           disabled={isEditing}
           required
           error={isInvalid("orgId")}

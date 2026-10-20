@@ -61,7 +61,14 @@ export const GameForm = ({ game, access }: GameFormProps) => {
     <Stack sx={{ flex: 1, minHeight: 0 }}>
       <Stack
         spacing={2}
-        sx={{ flex: 1, minHeight: 0, overflow: "auto", pb: 2 }}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
+          pb: 2,
+          // 區塊不被捲動容器壓扁(內容自己撐高,容器捲動)
+          "& > *": { flexShrink: 0 },
+        }}
       >
         <Typography variant="h6">
           {game === null ? t("gameForm.createTitle") : t("gameForm.editTitle")}
