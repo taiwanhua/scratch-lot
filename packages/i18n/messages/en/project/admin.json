@@ -2596,6 +2596,7 @@
       "ENTRY_NOT_AVAILABLE": "The entry is not this person's entry at this branch on that day",
       "OPENING_FLOAT_NOT_ALLOWED": "Only the first shift, with withdraw permission, can take a float from the vault",
       "AMOUNT_EXCEEDS_DRAWER": "The deposit cannot exceed the drawer's expected cash",
+      "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
       "UNEXPECTED": "Something went wrong. Please try again later."
     }
   }

@@ -12,9 +12,15 @@ import {
 import {
   LotteryShiftPersonLocksRepository,
   LotteryShiftsRepository,
+  LotteryVaultLocksRepository,
 } from "./lottery-shifts.repository";
+import {
+  LOTTERY_VAULT_LOCKS_COLLECTION,
+  LotteryVaultLock,
+  LotteryVaultLockSchema,
+} from "./lottery-vault-lock.schema";
 
-/** 收銀班次的資料登記:班次與開班的「人」守門文件兩張模組資料表,各一個 BaseRepository 與組織歸屬檢查。 */
+/** 收銀班次的資料登記:班次、開班的「人」守門文件、小金庫守門文件三張模組資料表,各一個 BaseRepository 與組織歸屬檢查。 */
 export const LOTTERY_STORE_REGISTRATION: DatabaseRegistration = {
   key: "lottery-store",
   models: [
@@ -28,6 +34,11 @@ export const LOTTERY_STORE_REGISTRATION: DatabaseRegistration = {
       collection: LOTTERY_SHIFT_PERSON_LOCKS_COLLECTION,
       schema: LotteryShiftPersonLockSchema,
     },
+    {
+      name: LotteryVaultLock.name,
+      collection: LOTTERY_VAULT_LOCKS_COLLECTION,
+      schema: LotteryVaultLockSchema,
+    },
   ],
   repositories: [
     { modelName: LotteryShift.name, provider: LotteryShiftsRepository },
@@ -35,6 +46,7 @@ export const LOTTERY_STORE_REGISTRATION: DatabaseRegistration = {
       modelName: LotteryShiftPersonLock.name,
       provider: LotteryShiftPersonLocksRepository,
     },
+    { modelName: LotteryVaultLock.name, provider: LotteryVaultLocksRepository },
   ],
   orgDataChecks: [
     {
@@ -47,6 +59,12 @@ export const LOTTERY_STORE_REGISTRATION: DatabaseRegistration = {
       key: "lottery-shift-person-locks",
       modelName: LotteryShiftPersonLock.name,
       repository: LotteryShiftPersonLocksRepository,
+      ownerField: "orgId",
+    },
+    {
+      key: "lottery-vault-locks",
+      modelName: LotteryVaultLock.name,
+      repository: LotteryVaultLocksRepository,
       ownerField: "orgId",
     },
   ],

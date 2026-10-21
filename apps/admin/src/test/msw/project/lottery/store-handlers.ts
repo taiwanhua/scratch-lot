@@ -40,7 +40,7 @@ const validation = (reason: string, fields: string[]) =>
 
 /**
  * 店面管理的假 api(夾具在 `store-fixtures.ts`;規則照 `docs/modules/project/store.md`):有狀態 ——
- * 開班後看板出現那一班、投庫 / 出庫後應有現金跟著變;投庫超過抽屜應有 → `AMOUNT_EXCEEDS_DRAWER`;
+ * 開班後看板出現那一班、投庫 / 出庫後應有現金跟著變;投庫超過抽屜應有 → `AMOUNT_EXCEEDS_DRAWER`;出庫 / 開班領零用金超過小金庫應有 → `AMOUNT_EXCEEDS_VAULT`;
  * 已開班的收銀點再開班 → `SHIFT_ALREADY_OPEN`。元件測試與 mock 模式共用。
  */
 export const storeWorld = ({
@@ -101,6 +101,9 @@ export const storeWorld = ({
         return validation("SHIFT_ALREADY_OPEN", ["cashPointId"]);
       }
       const float = input.floatFromVault ?? 0;
+      if (float > state.vaultExpected) {
+        return validation("AMOUNT_EXCEEDS_VAULT", ["floatFromVault"]);
+      }
       const shift = storeShift({
         id: `shift-${point.id}`,
         cashPoint: {
@@ -175,6 +178,9 @@ export const storeWorld = ({
       const shift = shiftById(input.shiftId);
       if (shift === null) {
         return graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" });
+      }
+      if (input.amount > state.vaultExpected) {
+        return validation("AMOUNT_EXCEEDS_VAULT", ["amount"]);
       }
       shift.expectedCash += input.amount;
       state.vaultExpected -= input.amount;

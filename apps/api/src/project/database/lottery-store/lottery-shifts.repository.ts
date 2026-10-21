@@ -8,8 +8,10 @@ import {
 } from "../../../database/base.repository";
 import { LotteryShiftPersonLock } from "./lottery-shift-person-lock.schema";
 import { LotteryShift } from "./lottery-shift.schema";
+import { LotteryVaultLock } from "./lottery-vault-lock.schema";
 
 export type LotteryShiftDocument = HydratedDocument<LotteryShift>;
+export type LotteryVaultLockDocument = HydratedDocument<LotteryVaultLock>;
 export type LotteryShiftPersonLockDocument =
   HydratedDocument<LotteryShiftPersonLock>;
 
@@ -39,6 +41,20 @@ export class LotteryShiftPersonLocksRepository extends BaseRepository<
       LotteryShiftPersonLock,
       LotteryShiftPersonLockDocument
     >,
+  ) {
+    super(model);
+  }
+}
+
+/** lottery_vault_locks(小金庫的守門文件)。 */
+@Injectable()
+export class LotteryVaultLocksRepository extends BaseRepository<
+  LotteryVaultLock,
+  LotteryVaultLockDocument
+> {
+  constructor(
+    @InjectModel(LotteryVaultLock.name)
+    model: RepositoryModel<LotteryVaultLock, LotteryVaultLockDocument>,
   ) {
     super(model);
   }

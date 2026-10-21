@@ -24,6 +24,7 @@ import type { LotteryStoreShiftModel } from "./models/lottery-store.model";
 import { type ShiftRecord, StoreShiftViews, parseId } from "./shift-views";
 import { publishStoreBoard } from "./store-board-signal";
 import { STORE_REASONS, notFoundError, validationError } from "./store-error";
+import { StoreVaultGuard } from "./store-vault-guard";
 
 /** 欄位管理「出庫原因」的「補零錢」(種子選項;程式要認得的代碼)。 */
 const WITHDRAW_CHANGE_REFILL = "change-refill";
@@ -49,7 +50,8 @@ function trimmed(value: string | null | undefined): string | null {
 
 /**
  * 投庫 / 出庫(專案規格 6.7;正本 `docs/modules/project/store.md`「投庫、出庫」):寫現金流水
- * (經 `CashLedgerService`,同一個交易),不用審核、做完就生效。班要開著;投庫不能超過抽屜目前的應有。
+ * (經 `CashLedgerService`,同一個交易),不用審核、做完就生效。班要開著;投庫不能超過抽屜目前的應有、
+ * 出庫不能超過小金庫目前的應有(`StoreVaultGuard`,使用者 10/21 定案)。
  * 同一班兩個動作同時送出:交易內先把班的 `drawerVersion` +1,讓兩個交易互相衝突、重試時依序檢查。
  * 「自動列印」由列印的票加在這裡的事後動作。
  */
@@ -63,6 +65,7 @@ export class StoreCashService {
     private readonly transactions: TransactionService,
     private readonly realtime: RealtimePublisher,
     private readonly views: StoreShiftViews,
+    private readonly vault: StoreVaultGuard,
   ) {}
 
   async deposit(
@@ -124,8 +127,17 @@ export class StoreCashService {
             .join(" · ") || null
         : trimmed(input.note);
     const shift = await this.mustShift(operator, input.shiftId);
+    await this.vault.prepare(operator, shift.orgId);
     const updated = await this.transactions.withTransaction(async () => {
       const locked = await this.lockOpenShift(operator, shift);
+      // 不能超過小金庫應有(同一家店同時兩筆出庫在小金庫守門文件上序列化)
+      await this.vault.assertCovers(
+        operator,
+        locked.tenantId,
+        locked.orgId,
+        input.amount,
+        "amount",
+      );
       await this.ledger.recordCashMovement(undefined, {
         operator,
         orgId: locked.orgId,

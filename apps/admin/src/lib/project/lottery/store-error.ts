@@ -15,6 +15,7 @@ export type StoreErrorCode =
   | "ENTRY_NOT_AVAILABLE"
   | "OPENING_FLOAT_NOT_ALLOWED"
   | "AMOUNT_EXCEEDS_DRAWER"
+  | "AMOUNT_EXCEEDS_VAULT"
   | "UNEXPECTED";
 
 export type StoreError = AdminError<StoreErrorCode, never>;
@@ -29,6 +30,7 @@ const REASON_CODES: readonly StoreErrorCode[] = [
   "ENTRY_NOT_AVAILABLE",
   "OPENING_FLOAT_NOT_ALLOWED",
   "AMOUNT_EXCEEDS_DRAWER",
+  "AMOUNT_EXCEEDS_VAULT",
 ];
 
 export const storeErrorOf = (error: unknown): StoreError =>

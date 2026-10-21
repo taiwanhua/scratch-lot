@@ -2596,6 +2596,7 @@
       "ENTRY_NOT_AVAILABLE": "選的排班不是這個人這天在這家店的排班",
       "OPENING_FLOAT_NOT_ALLOWED": "只有第一班、而且有出庫權限才能從小金庫領零用金",
       "AMOUNT_EXCEEDS_DRAWER": "投庫金額不能超過抽屜目前的應有現金",
+      "AMOUNT_EXCEEDS_VAULT": "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
       "UNEXPECTED": "操作失敗,請稍後再試"
     }
   }

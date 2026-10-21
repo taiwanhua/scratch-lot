@@ -1,0 +1,69 @@
+import { Injectable } from "@nestjs/common";
+import type { Types } from "mongoose";
+
+import type { OperatorContext } from "../../../database/operator-context";
+import { LotteryVaultLocksRepository } from "../../database/lottery-store/lottery-shifts.repository";
+import { isDuplicateKeyError } from "../accounts/accounts-error";
+import { CashLedgerService } from "../cash/cash-ledger.service";
+import { STORE_REASONS, validationError } from "./store-error";
+
+/**
+ * 從小金庫拿錢(出庫、開班從小金庫領零用金)不能超過小金庫應有(使用者 10/21 定案;規格 6.7)。
+ * 小金庫應有沿用 `CashLedgerService.vaultExpected`(日結起算點 + 之後流水)。
+ *
+ * 同一家店同時兩筆:交易外先建好守門文件(`prepare`),交易內先 `$inc` 它再算應有(`assertCovers`)——
+ * 兩個交易在守門文件上衝突、重跑的一方讀得到對方剛寫的流水(比照抽屜的 `drawerVersion`)。
+ */
+@Injectable()
+export class StoreVaultGuard {
+  constructor(
+    private readonly locks: LotteryVaultLocksRepository,
+    private readonly ledger: CashLedgerService,
+  ) {}
+
+  /** 交易外先建好這家店的守門文件(兩個請求同時建,唯一索引擋下的那一個略過)。 */
+  async prepare(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<void> {
+    if (await this.locks.findOne(operator, { orgId })) {
+      return;
+    }
+    try {
+      await this.locks.create(operator, { orgId, version: 0 });
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * 交易內:碰守門文件,再檢查小金庫應有 ≥ 這次要拿的金額;不夠 → `VALIDATION_FAILED`
+   * (`reason = AMOUNT_EXCEEDS_VAULT`,欄位 `field`)。
+   */
+  async assertCovers(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    orgId: Types.ObjectId,
+    amount: number,
+    field: string,
+  ): Promise<void> {
+    const touched = await this.locks.findOneAndUpdate(
+      operator,
+      { orgId },
+      { $inc: { version: 1 } },
+    );
+    if (!touched) {
+      throw new Error(`vault lock missing: org ${String(orgId)}`);
+    }
+    const vault = await this.ledger.vaultExpected(operator, tenantId, orgId);
+    if (amount > vault.amount) {
+      throw validationError(
+        "amount exceeds the vault's expected cash",
+        [field],
+        STORE_REASONS.amountExceedsVault,
+      );
+    }
+  }
+}

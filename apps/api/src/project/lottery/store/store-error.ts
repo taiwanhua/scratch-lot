@@ -19,6 +19,8 @@ export const STORE_REASONS = {
   openingFloatNotAllowed: "OPENING_FLOAT_NOT_ALLOWED",
   /** 投庫金額超過抽屜目前的應有現金 */
   amountExceedsDrawer: "AMOUNT_EXCEEDS_DRAWER",
+  /** 出庫(含開班從小金庫領零用金)超過小金庫目前的應有現金 */
+  amountExceedsVault: "AMOUNT_EXCEEDS_VAULT",
 } as const;
 
 export type StoreReason = (typeof STORE_REASONS)[keyof typeof STORE_REASONS];

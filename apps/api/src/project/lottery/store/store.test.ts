@@ -34,6 +34,7 @@ import {
   LOTTERY_SHIFTS_COLLECTION,
   LotteryShift,
 } from "../../database/lottery-store/lottery-shift.schema";
+import { LotteryVaultLock } from "../../database/lottery-store/lottery-vault-lock.schema";
 import { SCHEDULE_DEMANDS_COLLECTION } from "../../database/schedule/schedule-demand.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { SCHEDULE_ENTRIES_COLLECTION } from "../../database/schedule/schedule-entry.schema";
@@ -410,6 +411,9 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       )
       .init();
     await api.app
+      .get<Model<LotteryVaultLock>>(getModelToken(LotteryVaultLock.name))
+      .init();
+    await api.app
       .get<Model<ScheduleEntryLock>>(getModelToken(ScheduleEntryLock.name))
       .init();
     await seedScheduleAuthorization(connection);
@@ -473,6 +477,35 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
     lotteryDesk = await cashPoint(xinyi, "彩券機旁", "lottery-machine", 3);
     restockDesk = await cashPoint(xinyi, "補貨區", "restock-desk", 4);
     counterB = await cashPoint(banqiao, "店內櫃台", "in-store-counter", 1);
+    // 信義店小金庫有 3,000(還沒有日結,從 0 起算;以現金更正的流水放進去)
+    const funded = new Date();
+    await connection.collection(LOTTERY_CASH_MOVEMENTS_COLLECTION).insertOne({
+      orgId: xinyi,
+      tenantId: tenant,
+      occurredAt: taipei("2026-11-01", "09:00"),
+      type: "correction_increase",
+      from: "external",
+      to: "vault",
+      reason: null,
+      cashPointId: null,
+      shiftId: null,
+      attributedShiftId: null,
+      amount: 3000,
+      refType: null,
+      refId: null,
+      refRevision: null,
+      settlementSide: null,
+      payee: null,
+      note: null,
+      reversalOf: null,
+      bankTransactionId: null,
+      moduleKey: "accounts",
+      createdAt: funded,
+      updatedAt: funded,
+      createdBy: null,
+      updatedBy: null,
+      deletedAt: null,
+    });
 
     wang = await storeUser(
       [xinyi, banqiao],
@@ -633,7 +666,30 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
     ).toBe(0);
   });
 
-  it("開班:領零用金 3,000 → 期初 3,000、同一交易寫出庫(開班零用金);崗位一致記任務快照", async () => {
+  it("開班:領零用金超過小金庫應有(3,000)→ AMOUNT_EXCEEDS_VAULT,不開班", async () => {
+    now("2026-11-05", "08:10");
+    expect(
+      await errorOf(wang, OPEN, {
+        input: {
+          cashPointId: String(counter),
+          scheduleEntryId: String(wangMorning),
+          temporaryCover: false,
+          floatFromVault: 3001,
+        },
+      }),
+    ).toMatchObject({
+      code: "VALIDATION_FAILED",
+      fields: ["floatFromVault"],
+      reason: "AMOUNT_EXCEEDS_VAULT",
+    });
+    expect(
+      await connection
+        .collection(LOTTERY_SHIFTS_COLLECTION)
+        .countDocuments({ cashPointId: counter }),
+    ).toBe(0);
+  });
+
+  it("開班:領零用金 3,000(剛好等於小金庫應有)→ 期初 3,000、同一交易寫出庫(開班零用金);崗位一致記任務快照", async () => {
     now("2026-11-05", "08:10");
     const data = await ok<{ openLotteryShift: { item: ShiftRow } }>(
       wang,
@@ -904,11 +960,11 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       amount: 500,
     });
 
-    // 小金庫:−3,000(開班)+1,000(投庫)−500(出庫)= −2,500(日結前從 0 起算)
+    // 小金庫:3,000 −3,000(開班)+1,000(投庫)−500(出庫)= 500(日結前從 0 起算)
     const board = await ok<{
       lotteryStoreBoard: { item: { vaultExpected: number } };
     }>(wang, BOARD, { orgId: String(xinyi) });
-    expect(board.lotteryStoreBoard.item.vaultExpected).toBe(-2500);
+    expect(board.lotteryStoreBoard.item.vaultExpected).toBe(500);
   });
 
   it("同一班同時兩筆投庫,合計超過應有 → 只有一筆成功", async () => {
@@ -938,6 +994,54 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       ["店外攤位", 0],
       ["彩券機旁", 0],
     ]);
+  });
+
+  it("出庫:超過小金庫應有 → AMOUNT_EXCEEDS_VAULT;同時兩筆只過一筆;剛好等於可以", async () => {
+    // 小金庫:500 + 1,500(同時投庫成功的那一筆)= 2,000
+    expect(
+      await errorOf(wang, WITHDRAW, {
+        input: {
+          shiftId: counterShift,
+          amount: 2001,
+          reasonKey: "change-refill",
+        },
+      }),
+    ).toMatchObject({
+      code: "VALIDATION_FAILED",
+      fields: ["amount"],
+      reason: "AMOUNT_EXCEEDS_VAULT",
+    });
+    const results = await Promise.all(
+      [1200, 1200].map((amount) =>
+        gql(wang, WITHDRAW, {
+          input: { shiftId: counterShift, amount, reasonKey: "change-refill" },
+        }),
+      ),
+    );
+    expect(
+      results.filter((result) => result.errors === undefined),
+    ).toHaveLength(1);
+    expect(
+      results.find((result) => result.errors !== undefined)?.errors?.[0]
+        ?.extensions,
+    ).toMatchObject({ reason: "AMOUNT_EXCEEDS_VAULT" });
+    const exact = await ok<{ withdrawLotteryShiftCash: { item: ShiftRow } }>(
+      wang,
+      WITHDRAW,
+      {
+        input: {
+          shiftId: counterShift,
+          amount: 800,
+          reasonKey: "change-refill",
+        },
+      },
+    );
+    // 抽屜:1,000 + 1,200 + 800
+    expect(exact.withdrawLotteryShiftCash.item.expectedCash).toBe(3000);
+    const board = await ok<{
+      lotteryStoreBoard: { item: { vaultExpected: number } };
+    }>(wang, BOARD, { orgId: String(xinyi) });
+    expect(board.lotteryStoreBoard.item.vaultExpected).toBe(0);
   });
 
   it("收銀點停用守門:有開著的班、或檯面上還有未售的張 → 不能停用", async () => {

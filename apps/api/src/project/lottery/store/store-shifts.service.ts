@@ -60,6 +60,7 @@ import {
   validationError,
 } from "./store-error";
 import { StorePersonLocks } from "./store-person-locks";
+import { StoreVaultGuard } from "./store-vault-guard";
 
 type CashPointRecord = Persisted<LotteryCashPointDocument>;
 
@@ -149,6 +150,7 @@ export class StoreShiftsService {
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
     private readonly personLocks: StorePersonLocks,
+    private readonly vault: StoreVaultGuard,
   ) {}
 
   /** 開班視窗:期初零用金的來源、可以選的排班(系統找到的預選)、打卡狀態。 */
@@ -231,6 +233,9 @@ export class StoreShiftsService {
         STORE_REASONS.openingFloatNotAllowed,
       );
     }
+    if (float > 0) {
+      await this.vault.prepare(operator, point.orgId);
+    }
 
     const binding = await this.bindingOf(
       operator,
@@ -278,6 +283,14 @@ export class StoreShiftsService {
         if (float === 0) {
           return shift;
         }
+        // 從小金庫領零用金不能超過小金庫應有(同一家店同時拿錢在小金庫守門文件上序列化)
+        await this.vault.assertCovers(
+          operator,
+          tenantId,
+          point.orgId,
+          float,
+          "floatFromVault",
+        );
         const movement = await this.ledger.recordCashMovement(undefined, {
           operator,
           orgId: point.orgId,

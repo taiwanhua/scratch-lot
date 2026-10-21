@@ -195,7 +195,7 @@ describe("店面管理:看板", () => {
     });
   });
 
-  it("出庫:原因必填(欄位管理「出庫原因」)", async () => {
+  it("出庫:原因必填(欄位管理「出庫原因」);超過小金庫應有 → 擋下的提示", async () => {
     writeLocalCashPoint(STORE_A, "cp-counter");
     const { user, fake } = renderStore();
     const counter = await headerOf("店內櫃台");
@@ -212,17 +212,27 @@ describe("店面管理:看板", () => {
     expect(fake.inputs.withdraw).toEqual([]);
     await user.click(within(dialog).getByRole("combobox", { name: /原因/ }));
     await user.click(await screen.findByRole("option", { name: "補零錢" }));
+    // 超過小金庫應有(48,200)→ 擋下的提示
+    const amount = within(dialog).getByRole("textbox", { name: /金額/ });
+    await user.clear(amount);
+    await user.type(amount, "50000");
+    await user.click(within(dialog).getByRole("button", { name: "出庫" }));
+    expect(
+      await within(dialog).findByText(
+        "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
+      ),
+    ).toBeInTheDocument();
+    await user.clear(amount);
+    await user.type(amount, "500");
     await user.click(within(dialog).getByRole("button", { name: "出庫" }));
     await waitFor(() => {
-      expect(fake.inputs.withdraw).toEqual([
-        {
-          shiftId: "shift-counter",
-          amount: 500,
-          reasonKey: "change-refill",
-          reasonNote: null,
-          note: null,
-        },
-      ]);
+      expect(fake.inputs.withdraw.at(-1)).toEqual({
+        shiftId: "shift-counter",
+        amount: 500,
+        reasonKey: "change-refill",
+        reasonNote: null,
+        note: null,
+      });
     });
   });
 

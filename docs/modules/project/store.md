@@ -79,7 +79,7 @@
 
 ### 投庫 / 出庫(ST-12a / b)
 
-- 投庫:顯示這個收銀點的應有現金;金額超過 → api 擋下(`AMOUNT_EXCEEDS_DRAWER`)。出庫:顯示小金庫應有;原因必填(欄位管理「出庫原因」`lottery-withdraw-reason`)。不用審核,做完就生效;「自動列印」由列印的功能加上。
+- 投庫:顯示這個收銀點的應有現金;金額超過 → api 擋下(`AMOUNT_EXCEEDS_DRAWER`)。出庫:顯示小金庫應有;原因必填(欄位管理「出庫原因」`lottery-withdraw-reason`);金額超過小金庫應有 → api 擋下(`AMOUNT_EXCEEDS_VAULT`,提示先用現金更正單登記小金庫實際的錢;使用者 10/21 定案)。開班時「從小金庫領零用金」同一條規則。不用審核,做完就生效;「自動列印」由列印的功能加上。
 
 ## api 介面
 
@@ -119,6 +119,7 @@
 
 - 部分唯一索引 `(cashPointId)`(`closedAt`、`deletedAt` 為 null):同一個收銀點同時只能有一班;兩人同時開班由索引擋下後到的(`SHIFT_ALREADY_OPEN`)。
 - 一個人只能同時開同一家店的班:開班的交易一開始對這個人的守門文件 `lottery_shift_person_locks`(一個租戶一人一筆,歸屬租戶頂層)`$inc`,再以租戶邊界查他在別家店開著的班(`SHIFT_IN_OTHER_STORE`);同一人在兩家店同時開班,兩個交易在守門文件上衝突、重跑的一方被擋下(`store-person-locks.ts`)。
+- 從小金庫拿錢(出庫、開班領零用金)不能超過小金庫應有(`CashLedgerService.vaultExpected`):交易外先建好這家店的小金庫守門文件 `lottery_vault_locks`(一家店一筆),交易內先 `$inc` 再算應有;同一家店同時兩筆在守門文件上衝突、重跑的一方讀得到對方的流水(`store-vault-guard.ts`;比照抽屜的 `drawerVersion`)。存銀行、調貨付現等其他從小金庫拿錢的動作由各自的功能決定要不要接同一支。
 - 資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 第一班的判斷用兩個登記(`lottery/store/previous-shift.ts`):`registerHandoverAmount`(交班結帳登記「留給下一班」)、`registerDailyCloseCoverage`(日結登記「已被日結涵蓋」);沒有登記 = 留給下一班 0、沒被涵蓋。上一班的交班結帳被退回、修改留給下一班時,下一班的期初由結帳的功能更新。
 
@@ -159,18 +160,19 @@
 
 ### 錯誤碼
 
-| code                | reason                          | 什麼時候                                                   |
-| ------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `VALIDATION_FAILED` | `SHIFT_ALREADY_OPEN`            | 這個收銀點已經有開著的班(含兩人同時開班的後到者)           |
-| `VALIDATION_FAILED` | `SHIFT_IN_OTHER_STORE`          | 操作者在別家店還有開著的班                                 |
-| `VALIDATION_FAILED` | `SHIFT_CLOSED`                  | 這一班已送出交班結帳(改對應排班、投庫、出庫)               |
-| `VALIDATION_FAILED` | `CASH_POINT_DISABLED`           | 收銀點已停用                                               |
-| `VALIDATION_FAILED` | `ENTRY_NOT_AVAILABLE`           | 選的排班不是這個人那天在這家店的排班                       |
-| `VALIDATION_FAILED` | `OPENING_FLOAT_NOT_ALLOWED`     | 不是第一班、或沒有 `store.withdraw`,卻要從小金庫領零用金   |
-| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`         | 投庫金額超過抽屜目前的應有                                 |
-| `VALIDATION_FAILED` | —(`fields: scheduleEntryId` 等) | 沒選對應排班、金額不是正整數、原因沒選或選「其他」沒寫說明 |
-| `FORBIDDEN`         | —                               | 沒有那條權限;改對應排班不是負責人也不是店長                |
-| `NOT_FOUND`         | —                               | 分店、收銀點或班次不存在 / 看不到                          |
+| code                | reason                          | 什麼時候                                                                          |
+| ------------------- | ------------------------------- | --------------------------------------------------------------------------------- |
+| `VALIDATION_FAILED` | `SHIFT_ALREADY_OPEN`            | 這個收銀點已經有開著的班(含兩人同時開班的後到者)                                  |
+| `VALIDATION_FAILED` | `SHIFT_IN_OTHER_STORE`          | 操作者在別家店還有開著的班                                                        |
+| `VALIDATION_FAILED` | `SHIFT_CLOSED`                  | 這一班已送出交班結帳(改對應排班、投庫、出庫)                                      |
+| `VALIDATION_FAILED` | `CASH_POINT_DISABLED`           | 收銀點已停用                                                                      |
+| `VALIDATION_FAILED` | `ENTRY_NOT_AVAILABLE`           | 選的排班不是這個人那天在這家店的排班                                              |
+| `VALIDATION_FAILED` | `OPENING_FLOAT_NOT_ALLOWED`     | 不是第一班、或沒有 `store.withdraw`,卻要從小金庫領零用金                          |
+| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`         | 投庫金額超過抽屜目前的應有                                                        |
+| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_VAULT`          | 出庫或開班從小金庫領零用金超過小金庫目前的應有(`fields: amount / floatFromVault`) |
+| `VALIDATION_FAILED` | —(`fields: scheduleEntryId` 等) | 沒選對應排班、金額不是正整數、原因沒選或選「其他」沒寫說明                        |
+| `FORBIDDEN`         | —                               | 沒有那條權限;改對應排班不是負責人也不是店長                                       |
+| `NOT_FOUND`         | —                               | 分店、收銀點或班次不存在 / 看不到                                                 |
 
 ### 測試
 

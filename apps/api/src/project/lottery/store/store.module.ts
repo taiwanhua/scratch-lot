@@ -13,6 +13,7 @@ import { StoreClock } from "./store-clock";
 import { StorePersonLocks } from "./store-person-locks";
 import { StoreRegistrations } from "./store-registrations";
 import { StoreShiftsService } from "./store-shifts.service";
+import { StoreVaultGuard } from "./store-vault-guard";
 import { LotteryStoreResolver } from "./store.resolver";
 
 /**
@@ -34,6 +35,7 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreAccess,
     StoreClock,
     StorePersonLocks,
+    StoreVaultGuard,
     StoreShiftViews,
     StoreBoardService,
     StoreShiftsService,
