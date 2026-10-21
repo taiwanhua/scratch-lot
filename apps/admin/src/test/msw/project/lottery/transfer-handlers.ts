@@ -119,7 +119,8 @@ const settlementHandler = (mode: "own" | "all") =>
       return HttpResponse.json({ data: { lotterySettlement: { item } } });
     }
     if (mode === "own") {
-      return undefined;
+      // 不回 = 落到下一個 handler(帳戶管理的 world)
+      return;
     }
     const row = sampleOutstanding().find((one) => one.refId === refId);
     return row === undefined
