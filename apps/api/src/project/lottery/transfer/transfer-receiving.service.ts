@@ -27,8 +27,13 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
 import { isDuplicateKeyError } from "../../../forms/forms-error";
+import { NotificationService } from "../../../notifications/notification.service";
 import { LotteryBooksRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
+import {
+  LOTTERY_TRANSFER_REF,
+  LOTTERY_TRANSFER_WRONG_STORE,
+} from "../../notifications";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type {
   LotteryTransferReceivingModel,
@@ -38,11 +43,13 @@ import { TransferAccess, type TransferSubmission } from "./transfer-access";
 import {
   TRANSFER_REASONS,
   forbiddenError,
+  notFoundError,
   validationError,
 } from "./transfer-error";
 import {
   TRANSFER_OPEN_STATUSES,
   type TransferBook,
+  type TransferGame,
   TransferRules,
   type TransferTicket,
   labelOf,
@@ -99,6 +106,7 @@ export class TransferReceivingService {
     private readonly rules: TransferRules,
     private readonly access: TransferAccess,
     private readonly ledger: TicketLedgerService,
+    private readonly notifications: NotificationService,
     private readonly tx: TransactionService,
   ) {}
 
@@ -283,6 +291,34 @@ export class TransferReceivingService {
     submission: TransferSubmission,
     scan: TransferScan,
   ) {
+    const hit = await this.wrongStoreHit(submission, scan);
+    if (hit === null) {
+      return this.notOnTransferError();
+    }
+    const values = hit.owner.values as Record<string, unknown>;
+    return validationError(
+      "Book belongs to another store's transfer",
+      ["code"],
+      TRANSFER_REASONS.wrongStore,
+      {
+        ownerBranchName: labelOf(values[TRANSFER_FIELD_KEYS.toBranch]),
+        serialNo: hit.owner.serialNo ?? null,
+        gameName: hit.game?.name ?? null,
+        unitPrice: hit.game?.unitPrice ?? null,
+        bookNo: displayBookNo(scan.bookNo),
+      },
+    );
+  }
+
+  /** 這本在送往別家分店、還沒結束的調貨單上(送錯分店):那張單、那一列、遊戲;沒有 → null。 */
+  private async wrongStoreHit(
+    submission: TransferSubmission,
+    scan: TransferScan,
+  ): Promise<{
+    owner: TransferSubmission;
+    rowId: string;
+    game: TransferGame | undefined;
+  } | null> {
     const reader = await tenantBoundaryContext(
       this.orgs,
       null,
@@ -297,8 +333,9 @@ export class TransferReceivingService {
       { select: "gameId gameCode bookNo status" },
     );
     if (candidates.length === 0) {
-      return this.notOnTransferError();
+      return null;
     }
+    const candidateIds = new Set(candidates.map((book) => String(book._id)));
     const toBranch = transferHeaderOf(submission.values).toBranchId;
     const others = await this.submissions.findMany(
       reader,
@@ -307,38 +344,71 @@ export class TransferReceivingService {
         moduleKey: TRANSFER_MODULE_KEY,
         formKey: TRANSFER_FORM_KEY,
         status: { $in: [...TRANSFER_OPEN_STATUSES] },
-        "values.lines.book.id": {
-          $in: candidates.map((book) => String(book._id)),
-        },
+        "values.lines.book.id": { $in: [...candidateIds] },
       },
-      { select: "values serialNo", sort: { createdAt: -1 } },
+      {
+        select: "values serialNo createdBy orgId tenantId status",
+        sort: { createdAt: -1 },
+      },
     );
     const owner = others.find(
       (other) => transferHeaderOf(other.values).toBranchId !== toBranch,
     );
-    if (owner === undefined) {
-      return this.notOnTransferError();
+    const line =
+      owner === undefined
+        ? undefined
+        : transferLinesOf(owner.values).find((item) =>
+            candidateIds.has(item.bookId),
+          );
+    if (owner === undefined || line === undefined) {
+      return null;
     }
-    const [book] = candidates;
+    const book = candidates.find((item) => String(item._id) === line.bookId);
     const games = await this.rules.gamesOf(
       reader,
       book === undefined ? [] : [book.gameId],
     );
-    const game =
-      book === undefined ? undefined : games.get(String(book.gameId));
-    const values = owner.values as Record<string, unknown>;
-    return validationError(
-      "Book belongs to another store's transfer",
-      ["code"],
-      TRANSFER_REASONS.wrongStore,
-      {
-        ownerBranchName: labelOf(values[TRANSFER_FIELD_KEYS.toBranch]),
-        serialNo: owner.serialNo ?? null,
-        gameName: game?.name ?? null,
-        unitPrice: game?.unitPrice ?? null,
-        bookNo: displayBookNo(scan.bookNo),
+    return {
+      owner,
+      rowId: line.rowId,
+      game: book === undefined ? undefined : games.get(String(book.gameId)),
+    };
+  }
+
+  /**
+   * [通知總部更正](送錯分店同進貨單):刷到的本若在送往別家分店的調貨單上,通知那張調貨單的建立者
+   * (`lottery.transfer-wrong-store`);不是 → `NOT_FOUND`。讀得到這張調貨單才能按。
+   */
+  async notifyWrongStore(
+    operator: OperatorContext,
+    submissionIdText: string,
+    code: string,
+  ): Promise<boolean> {
+    const submission = await this.access.readable(operator, submissionIdText);
+    const scan = transferScanOf(code);
+    const hit =
+      scan === null ? null : await this.wrongStoreHit(submission, scan);
+    if (hit === null) {
+      throw notFoundError("這本不在送往別家分店的調貨單上");
+    }
+    const createdBy = hit.owner.createdBy ?? null;
+    if (createdBy === null) {
+      return false;
+    }
+    const values = submission.values as Record<string, unknown>;
+    await this.notifications.notify({
+      type: LOTTERY_TRANSFER_WRONG_STORE,
+      tenantId: hit.owner.tenantId,
+      orgId: hit.owner.orgId,
+      recipients: { kind: "users", userIds: [createdBy] },
+      params: {
+        subject: hit.owner.serialNo ?? "",
+        orgName: labelOf(values[TRANSFER_FIELD_KEYS.toBranch]),
       },
-    );
+      ref: { type: LOTTERY_TRANSFER_REF, id: String(hit.owner._id) },
+      dedupeKey: `transfer-wrong-store:${String(hit.owner._id)}:${hit.rowId}:${String(submission._id)}`,
+    });
+    return true;
   }
 
   async toModel(

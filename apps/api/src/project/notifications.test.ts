@@ -67,6 +67,11 @@ const EXPECTED = [
     name: "進貨送錯分店",
     category: "party",
   },
+  {
+    key: "lottery.transfer-wrong-store",
+    name: "調貨送錯分店",
+    category: "party",
+  },
   { key: "schedule.day-off-open", name: "畫休開放", category: "party" },
   { key: "schedule.day-off-closing", name: "畫休即將截止", category: "party" },
   { key: "schedule.published", name: "排班發布", category: "party" },
@@ -74,7 +79,7 @@ const EXPECTED = [
 ];
 
 describe("專案通知類型(專案規格 3.4)", () => {
-  it("十種類型逐列與 3.4 一致:key、名稱、類別、組織範圍、預設人員條件", () => {
+  it("十一種類型逐列與 3.4 一致(加調貨送錯分店):key、名稱、類別、組織範圍、預設人員條件", () => {
     expect(
       PROJECT_NOTIFICATIONS.types.map(
         ({ key, name, category, orgScope, defaultAudience }) => ({

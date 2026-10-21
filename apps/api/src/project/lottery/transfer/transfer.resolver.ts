@@ -94,4 +94,17 @@ export class TransferResolver {
   ): Promise<ReceiveLotteryTransferBookPayload> {
     return this.receiving.receive(operator, input.submissionId, input.code);
   }
+
+  /** 送錯分店的 [通知總部更正]:通知那張(送往別家分店的)調貨單的建立者。 */
+  @Mutation(() => Boolean)
+  notifyLotteryTransferWrongStore(
+    @Args("input") input: ReceiveLotteryTransferBookInput,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<boolean> {
+    return this.receiving.notifyWrongStore(
+      operator,
+      input.submissionId,
+      input.code,
+    );
+  }
 }

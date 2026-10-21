@@ -2131,7 +2131,7 @@
       "groupWithRequested": "{title} · requested {requested}, scanned {scanned}",
       "received": "Received",
       "notReceived": "Not received",
-      "cardFacts": "Last ticket {lastTicketNo} · {rate}% · {amount}",
+      "cardFacts": "{ticketLabel} {lastTicketNo} · {rate}% · {amount}",
       "columns": {
         "bookNo": "Book",
         "lastTicketNo": "Last ticket",
@@ -2253,7 +2253,9 @@
         "saveDraft": "Save draft",
         "submit": "Submit",
         "draftSaved": "Draft saved",
-        "submitted": "Transfer submitted"
+        "submitted": "Transfer submitted",
+        "toBranchHint": "Cannot find the to store? Headquarters opens transfers, or ask an admin to add you to the to store",
+        "toBranchUnavailable": "You cannot pick this to store: headquarters opens transfers, or ask an admin to add you to the to store"
       },
       "view": {
         "title": "Transfer",
@@ -2285,12 +2287,17 @@
           "shipper_unreceived": "The shipping store has not recorded receipt of {amount}; paid, received and transfer amount must match before approval",
           "shipper_overreceived": "The shipping store received {amount} too much; record a refund first",
           "receiver_overpaid": "The receiving store paid {amount} too much; record the refund received"
-        }
+        },
+        "wrongStoreNotified": "The creator of this transfer has been notified"
       },
       "wrongStore": {
         "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
         "message": "This book belongs to transfer #{serialNo} for {branch}. Hand it to the courier for {branch}; this store does not receive it."
       }
+    },
+    "allocation": {
+      "title": "Over the planned books (warning only; you can still submit):",
+      "item": "{game}: {excess} more"
     }
   },
   "lifecycle": {

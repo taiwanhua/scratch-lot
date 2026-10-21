@@ -2131,7 +2131,7 @@
       "groupWithRequested": "{title} · 叫貨 {requested},已刷 {scanned}",
       "received": "已點收",
       "notReceived": "未點收",
-      "cardFacts": "最後張號 {lastTicketNo} · {rate}% · 批購 {amount}",
+      "cardFacts": "{ticketLabel} {lastTicketNo} · {rate}% · 批購 {amount}",
       "columns": {
         "bookNo": "本號",
         "lastTicketNo": "最後張號",
@@ -2253,7 +2253,9 @@
         "saveDraft": "存草稿",
         "submit": "送出",
         "draftSaved": "已存草稿",
-        "submitted": "已送出調貨單"
+        "submitted": "已送出調貨單",
+        "toBranchHint": "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
+        "toBranchUnavailable": "你選不到這家收貨分店:調貨由總部開單,或請管理員把你加入收貨分店"
       },
       "view": {
         "title": "調貨單",
@@ -2285,12 +2287,17 @@
           "shipper_unreceived": "出貨店還沒記收款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
           "shipper_overreceived": "出貨店多收 {amount},請先記退款",
           "receiver_overpaid": "收貨店多付 {amount},請記收到退款"
-        }
+        },
+        "wrongStoreNotified": "已通知這張調貨單的建立者更正"
       },
       "wrongStore": {
         "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
         "message": "這本屬於送往「{branch}」的調貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。"
       }
+    },
+    "allocation": {
+      "title": "超過預計要給本數(只提醒,照樣可以送出):",
+      "item": "{game}:多 {excess} 本"
     }
   },
   "lifecycle": {

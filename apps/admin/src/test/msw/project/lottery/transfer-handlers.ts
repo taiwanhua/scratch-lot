@@ -5,6 +5,7 @@ import type {
   LotteryTransferProgressQueryVariables,
   LotteryTransferReceivingFieldsFragment,
   LotteryTransferReceivingQueryVariables,
+  NotifyLotteryTransferWrongStoreMutationVariables,
   ReceiveLotteryTransferBookMutationVariables,
 } from "@repo/graphql";
 
@@ -30,6 +31,8 @@ export interface TransferWorld {
   handlers: Parameters<typeof server.use>;
   /** 刷過的碼 */
   scanned: string[];
+  /** 按過 [通知總部更正] 的碼 */
+  notified: string[];
 }
 
 const PROGRESS = new Map([
@@ -148,12 +151,22 @@ export const transferWorld = ({
   settlement = "own",
 }: TransferWorldOptions = {}): TransferWorld => {
   const scanned: string[] = [];
+  const notified: string[] = [];
   const receivings = new Map<string, LotteryTransferReceivingFieldsFragment>();
   const receivingOf = (id: string) =>
     receivings.get(id) ?? transferReceiving(id);
   return {
     scanned,
+    notified,
     handlers: [
+      api.mutation("NotifyLotteryTransferWrongStore", ({ variables }) => {
+        const { input } =
+          variables as NotifyLotteryTransferWrongStoreMutationVariables;
+        notified.push(input.code);
+        return HttpResponse.json({
+          data: { notifyLotteryTransferWrongStore: true },
+        });
+      }),
       api.query("LotteryTransferOptions", () =>
         HttpResponse.json({
           data: { lotteryTransferOptions: transferOptions() },

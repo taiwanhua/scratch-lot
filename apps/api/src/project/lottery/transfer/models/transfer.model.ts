@@ -58,6 +58,25 @@ export class LotteryTransferRequisitionModel {
   books!: number;
 }
 
+/** 收貨店某個遊戲的預計要給本數與已給、在途(新增頁「超過預計要給本數只警告」;規格 7.6)。 */
+@ObjectType("LotteryTransferAllocation")
+export class LotteryTransferAllocationModel {
+  @Field(() => ID)
+  gameId!: string;
+
+  /** 預計要給本數;沒設定 = null(不警告)。 */
+  @Field(() => Int, { nullable: true })
+  plannedBooks!: number | null;
+
+  /** 已給(整本)。 */
+  @Field(() => Int)
+  givenBooks!: number;
+
+  /** 在途本數(叫貨單待購買 + 進貨 / 調貨還沒點收)。 */
+  @Field(() => Int)
+  inTransitBooks!: number;
+}
+
 /** 新增頁的選項(規格 8.4):出貨店能調的本、收貨店待購買的叫貨單。 */
 @ObjectType("LotteryTransferOptions")
 export class LotteryTransferOptionsModel {
@@ -66,6 +85,10 @@ export class LotteryTransferOptionsModel {
 
   @Field(() => [LotteryTransferRequisitionModel])
   requisitions!: LotteryTransferRequisitionModel[];
+
+  /** 收貨店的預計要給本數(出貨店能調的本的遊戲;沒給收貨分店 = 空)。 */
+  @Field(() => [LotteryTransferAllocationModel])
+  allocations!: LotteryTransferAllocationModel[];
 }
 
 /** 張數格子的一格(新增頁選張)。 */

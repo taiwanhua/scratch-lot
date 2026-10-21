@@ -251,7 +251,7 @@
 
 **列表欄位配置**初值:單號、出貨分店、收貨分店、調貨金額 + 內建欄「狀態」(`seeds/project/settings.ts`);列表頁另加本數 / 張數、點收進度、結算;審核中且有列在途時狀態顯示「在途」。
 
-**流程**(開通腳本建):兩關。第 1 關「出貨確認」(`ship`)角色 店長 且 所屬組織屬於「出貨分店」,跳過條件 `ctx.user.orgId == 出貨分店`;第 2 關「點收」(`receive`)角色 店長 且 所屬組織屬於「收貨分店」。**掛接點以流程實例的最後一關當點收關卡**(點收資格、核准前的全部檢查、側欄計數只認它);第一關核准不檢查點收與收付。
+**流程**(開通腳本建):兩關。第 1 關「出貨確認」(`ship`)角色 店長 且 所屬組織屬於「出貨分店」,跳過條件 `ctx.user.orgId == 出貨分店`;第 2 關「點收」(`receive`)角色 店長 且 所屬組織屬於「收貨分店」。**掛接點以流程實例的最後一關當點收關卡**(點收資格、核准前的全部檢查、側欄計數只認它);第一關核准不檢查點收與收付。**租戶改流程時,點收關卡一定要留在最後一關**:在它後面再加關卡,點收資格與核准前的檢查會跑到那一關,原本的點收關卡就能在沒點收、沒結清時核准。
 
 #### 建議流程設定
 
@@ -280,9 +280,13 @@
 
 **點收**(`TransferReceivingService`):收貨店店長刷這一列的任何一張(背面編號 / 正面編號 / 正面條碼;整本任何一張、選張要是列上的張號)。單據要在審核中、點收關卡的任務在他手上(`TRANSFER_NOT_RECEIVABLE`);這列還沒出貨 → `TRANSFER_NOT_SHIPPED`;已點收 → `TRANSFER_ALREADY_RECEIVED`。同一個交易:這列的張 → 收貨店庫存、寫「調入」事件(單張成本 = 該列批購金額 ÷ 張數,不四捨五入)、解除鎖定、寫 `lottery_transfer_receipts`(記調入前的單張成本)。整本都搬過去時,本跟著搬到收貨店(帳本重算持有分店)。
 
-**送錯分店**(同進貨單):單上沒有這本時,查同租戶其他未結束、送往別家分店的調貨單:有 → `TRANSFER_WRONG_STORE`(`extensions` 帶那張單的收貨分店、單號、遊戲、面額、本號),不入庫,畫面提示交給送貨人;沒有 → `TRANSFER_BOOK_NOT_ON_TRANSFER`。調貨單沒有 [通知總部更正](通知類型只有進貨單的;見「已知缺口」)。
+**送錯分店**(同進貨單):單上沒有這本時,查同租戶其他未結束、送往別家分店的調貨單:有 → `TRANSFER_WRONG_STORE`(`extensions` 帶那張單的收貨分店、單號、遊戲、面額、本號),不入庫,畫面提示交給送貨人;沒有 → `TRANSFER_BOOK_NOT_ON_TRANSFER`。[知道了] 不記錄;[通知總部更正] → `notifyLotteryTransferWrongStore`,通知那張調貨單的建立者(`lottery.transfer-wrong-store`,`dedupeKey` = 那張單 / 那一列 / 刷到的這張單,連到調貨單詳情頁)。
 
 **收付**(`registerSettlementDocument`):兩邊 —— 收貨店(`receiver`,付款方,`pay`,銀行或現金;現金來源這一輪只有小金庫,收銀點抽屜由店面的功能接)、出貨店(`shipper`,收款方,`receive`,一律銀行)。調貨金額 = 批購金額合計;收貨店 [付款] = **已點收**的批購金額 − 已付淨額、[收到退款] = 已付淨額 − 已點收的批購金額;出貨店 [收款] = 收貨店已付 − 出貨店已收(只有出貨店已收 < 調貨金額時)、[退款] = 出貨店已收 − 調貨金額;≤ 0 停用。兩邊店都看得到這張單的收付(`sharedByValues` = 出貨 / 收貨分店),但每一邊只有那一邊的分店在自己可見範圍內才能記(寫入不放大)。
+
+**超過預計要給本數只警告**(規格 7.6):`lotteryTransferOptions` 給收貨分店時一起回這些遊戲的預計要給本數、已給、在途;新增頁在「已給 + 在途 + 這張單整本調過去的本數 > 預計」時列出超過的遊戲(`AllocationWarnings`),照樣可以送出。零碎張數不湊成一本,不算進去。
+
+**收貨分店選不到時**:收貨分店照組織引用只列讀者可見範圍內的組織(規格 8.4「收貨店不發起調貨單」,調貨主要由總部開;開單的店長本來就屬於多家店)。新增頁的收貨分店欄下方說明「調貨由總部開單,或請管理員把你加入收貨分店」;送出時收貨分店讀不到(`SOURCE_UNAVAILABLE`)也改顯示這句。
 
 **草稿**不影響任何統計:不鎖定、不算在途、不參與收付。
 
@@ -292,11 +296,8 @@
 
 **報表**:調貨損益(調貨金額 − 原成本)由張數事件與單張成本算得出(調出前的單張成本在 `lottery_transfer_receipts.tickets`),報表歸輸出報表的功能。
 
-**已知缺口**:
+**還沒做**:
 
-- 收貨分店是組織引用,底座的 `org` lookup 只列**讀者可見範圍內**的組織:只屬於出貨店的店長選不到別家分店,出貨店自己開調貨單(第一關因此跳過)要讀者看得到收貨分店(總部、或同時屬於出貨店與上層的人)。要讓分店店長自己開,需要底座 `org` 來源的「整個租戶」選項或另設專案來源。
-- 調貨單的送錯分店沒有 [通知總部更正](`lottery.purchase-wrong-store` 的文案是進貨單,調貨單要另宣告通知類型)。
-- 新增頁「超過預計要給本數只警告」還沒做(規格 7.6)。
 - 列印「調貨出貨單」「調貨付款收據」由 58mm 的功能接。
 
 ## api 介面
@@ -308,17 +309,18 @@
 | `lotteryRequisitionCandidates(orgId)`                            | `purchasing.requisition.create`                                 | 新增頁的遊戲清單(已排序):`gameId`、代號、名稱、面額、整本金額、預設批購金額率、上市日、`isNew`、`stockTickets`、`inTransitBooks`、`sold7` / `sold30`(新遊戲沒賣過 = null)、`plannedBooks`(沒設定 = null)、`givenBooks`。分店不在可見範圍 → `NOT_FOUND` |
 | `lotteryPurchaseList`                                            | `purchasing.requisition.purchase-list`                          | `orgIds`(出現的分店)、`rows`(遊戲 × 分店本數、合計、預估批購金額)、`requisitions`(待購買的叫貨單,完成時間新到舊)                                                                                                                                       |
 | `lotteryRequisitionStates(requisitionIds)`                       | `purchasing.requisition.view`                                   | 已完成且未作廢的叫貨單 → `pending` / `purchased` / `transferred`;其他的不回                                                                                                                                                                            |
-| `lotteryPurchaseOptions(orgId)`                                  | `purchasing.purchase.create`                                    | 新增頁的選項:營業中的甲類、甲類啟用中的受託人、扣款帳戶(使用中、使用組織包含這家店)、這家店待購買的叫貨單(含每個遊戲叫幾本)、販售中的遊戲。分店不在可見範圍 → `NOT_FOUND`                                                                              |
+| `lotteryPurchaseOptions(orgId)`                                  | `purchasing.purchase.create`                                    | 新增頁的選項:營業中的甲類、甲類啟用中的受託人、扣款帳戶(使用中、使用組織包含這家店)、這家店待購買的叫貨單(含每個遊戲叫幾本)、販售中的遊戲、每個遊戲的預計要給本數 / 已給 / 在途(`allocations`)。分店不在可見範圍 → `NOT_FOUND`                         |
 | `lotteryPurchaseProgress(purchaseIds)`                           | `purchasing.purchase.view`                                      | 列表的點收進度(`receivedCount` / `totalCount`)與結算(`settlementKind`:`to_pay` / `to_refund` / null、`settlementAmount`、`inSettlement`)                                                                                                               |
 | `lotteryDealerPurchases(dealerId)`                               | `purchasing.purchase.view`                                      | 甲類詳情「批購紀錄」:有效進貨單(單號、進貨分店、批購日、本人 / 受託人、本數、批購合計、狀態),批購日新到舊                                                                                                                                              |
 | `lotteryPurchaseReceiving(submissionId)`                         | 讀得到單據(可見範圍、建立者、或持有任務)                        | 點收區塊:依遊戲分組、`requestedBooks`(叫貨單帶入)、每本點收了沒、`canReceive`                                                                                                                                                                          |
 | `receiveLotteryPurchaseBook(input: { submissionId, code })`      | 同上 + 點收任務在自己手上                                       | 點收一本;回點收的 `rowId` 與新的點收區塊                                                                                                                                                                                                               |
 | `notifyLotteryPurchaseWrongStore(input: { submissionId, code })` | 同上                                                            | [通知總部更正]                                                                                                                                                                                                                                         |
-| `lotteryTransferOptions(fromOrgId, toOrgId?)`                    | `purchasing.transfer.create`                                    | 新增頁:出貨店能調的本(有未售、沒鎖定、不在途的張;`isWhole` = 原封不動在出貨店、`availableCount`、成本率)、收貨店待購買的叫貨單。出貨店不在可見範圍 → `NOT_FOUND`                                                                                       |
+| `lotteryTransferOptions(fromOrgId, toOrgId?)`                    | `purchasing.transfer.create`                                    | 新增頁:出貨店能調的本(有未售、沒鎖定、不在途的張;`isWhole` = 原封不動在出貨店、`availableCount`、成本率)、收貨店待購買的叫貨單、收貨店這些遊戲的預計要給本數 / 已給 / 在途(`allocations`)。出貨店不在可見範圍 → `NOT_FOUND`                            |
 | `lotteryTransferBookTickets(fromOrgId, bookId)`                  | `purchasing.transfer.create`                                    | 張數格子:每一張 `available` / `sold` / `locked` / `skipped` / `elsewhere`                                                                                                                                                                              |
 | `lotteryTransferProgress(transferIds)`                           | `purchasing.transfer.view`                                      | 列表:整本幾本、選張幾張、點收進度、`inTransit`、結算(`to_pay` / `to_refund` / `to_receive`);兩邊店都讀得到                                                                                                                                             |
 | `lotteryTransferReceiving(submissionId)`                         | 讀得到單據(可見範圍、建立者、任務持有者、或出貨 / 收貨分店可見) | 出貨確認清單 / 點收區塊:出貨 / 收貨分店名稱、調貨金額、每一列(方式、張號、批購金額、`shipped`、`received`)、`canReceive`                                                                                                                               |
 | `receiveLotteryTransferBook(input: { submissionId, code })`      | 同上 + 點收關卡的任務在自己手上                                 | 點收一列;回點收的 `rowId` 與新的點收區塊                                                                                                                                                                                                               |
+| `notifyLotteryTransferWrongStore(input: { submissionId, code })` | 同上(讀得到這張調貨單)                                          | 送錯分店的 [通知總部更正]                                                                                                                                                                                                                              |
 
 叫貨單本身的新增 / 存草稿 / 送出 / 審核 / 作廢走表單引擎與審核流程的端點。GraphQL 文件:`packages/graphql/src/documents/project/lottery/requisition.graphql`、`purchase.graphql`、`transfer.graphql`。
 
@@ -361,9 +363,9 @@
 - 編輯頁(草稿、被退回)沿用表單引擎的預設編輯頁。
 - 進貨單列表 `PurchasePage`:欄位讀列表欄位配置(與叫貨單列表共用 `shared/useFormListColumns.tsx`)+ 點收進度、結算(`lotteryPurchaseProgress`);狀態篩選(網址 `?purchases=`);手機改卡片。
 - **已知缺口**:進貨單列表的「進貨分店」「期間」篩選(Figma PU-04)還沒做,叫貨單列表同:底座表單列表的查詢還不支援組織欄 / 日期區間條件,之後開底座票補上再接。
-- 進貨單新增頁 `PurchaseCreatePage`:單頭 `PurchaseHeaderFields`、明細 `PurchaseLines`(電腦表格、平板 / 手機卡片);刷條碼用 `useScanner`(B10)與輸入框 Enter;正面的碼沒有遊戲代號時用「正面條碼的遊戲」;純函式在 `purchase-form.ts`。採購清單的 [建立進貨單](`CreatePurchaseAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&branch=<分店>`。
+- 進貨單新增頁 `PurchaseCreatePage`:單頭 `PurchaseHeaderFields`、明細 `PurchaseLines`(電腦表格、平板 / 手機卡片);刷條碼用 `useScanner`(B10)與輸入框 Enter;正面的碼沒有遊戲代號時用「正面條碼的遊戲」;純函式在 `purchase-form.ts`。採購清單的 [建立進貨單](`CreatePurchaseAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&branch=<分店>`。超過預計要給本數只警告(規格 7.6):`lotteryPurchaseOptions` 回每個販售中遊戲的預計 / 已給 / 在途,「已給 + 在途 + 這張單這個遊戲刷了幾本 > 預計」時列出(`AllocationWarnings`,與調貨單共用),照樣可以送出。
 - 進貨單檢視頁 `PurchaseViewPage`:引擎的 `FormSubmissionDetail` + 點收區塊 + `SettlementPanel` + `ApprovalSection`;送錯分店彈窗 `WrongStoreDialog`。
-- 點收區塊 `components/project/lottery/ReceiveBooksPanel/`(進貨單、調貨單共用;資料與寫入由呼叫端給)。
+- 點收區塊 `components/project/lottery/ReceiveBooksPanel/`(進貨單、調貨單共用;資料與寫入由呼叫端給;欄名可由使用處覆寫 `columnLabels`,「最後張號」欄可改顯示 `ticketText` —— 調貨單用「張號」「金額」與張號區段)。
 - 甲類詳情「批購紀錄」分頁 `DealerPurchasesTab`(追加到 `dealer-detail-tabs.ts`;綁了 `purchasing.purchase` 才看得到)。
 - 調貨單列表 `TransferPage`:欄位讀列表欄位配置 + 本數 / 張數、點收進度、結算(`lotteryTransferProgress`);審核中且有列在途的狀態顯示「在途」;狀態篩選(網址 `?transfers=`);手機改卡片。
 - 調貨單新增頁 `TransferCreatePage`:單頭(出貨 / 收貨分店 `OrgTreeSelect scope="visible"`、收貨店待購買的叫貨單、備註)、左邊明細 `TransferLines`(電腦表格、平板 / 手機卡片;批購金額率逐本改)、右邊 `TransferBookPanel`(選本;原封不動的本 [整本加入],拆過的本用 `TicketGrid` 選張後 [加入選取],沒有 `partial-tickets` 不出現格子);刷條碼(`useScanner` 與輸入框 Enter):原封不動的本直接整本加入、拆過的本選起刷到的那張;純函式在 `transfer-form.ts`。採購清單的 [從其他分店調貨](`CreateTransferAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&to=<收貨分店>`。

@@ -15,6 +15,7 @@ import {
   type LotteryTransferReceivingFieldsFragment,
   useLotterySettlementQuery,
   useLotteryTransferReceivingQuery,
+  useNotifyLotteryTransferWrongStoreMutation,
   useReceiveLotteryTransferBookMutation,
 } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
@@ -102,9 +103,11 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const data = receiving.data?.lotteryTransferReceiving ?? null;
   const [thisTime, setThisTime] = useState<ReadonlySet<string>>(new Set());
   const [scanError, setScanError] = useState<string | null>(null);
-  const [wrongStore, setWrongStore] = useState<TransferWrongStoreInfo | null>(
-    null,
-  );
+  const [wrongStore, setWrongStore] = useState<{
+    code: string;
+    info: TransferWrongStoreInfo;
+  } | null>(null);
+  const notify = useNotifyLotteryTransferWrongStoreMutation(session.client);
   const receive = useReceiveLotteryTransferBookMutation(session.client);
 
   const isSubmitted =
@@ -138,7 +141,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
     } catch (error) {
       const parsed = transferReceiveErrorOf(error);
       if (parsed.wrongStore !== null) {
-        setWrongStore(parsed.wrongStore);
+        setWrongStore({ code, info: parsed.wrongStore });
         return;
       }
       setScanError(tReceive(`errors.${parsed.reason}`));
@@ -167,6 +170,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
         rowId: row.rowId,
         bookNo: displayBookNo(row.bookNo),
         lastTicketNo: Number(row.ticketNos.at(-1) ?? 0),
+        ticketText: ticketsText(row),
         tickets: row.tickets,
         bookPrice: row.amount,
         rate: row.rate,
@@ -360,6 +364,10 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
             }}
             isPending={receive.isPending}
             error={scanError}
+            columnLabels={{
+              lastTicketNo: t("columns.ticketNos"),
+              bookPrice: t("columns.amount"),
+            }}
           />
         )}
         {settlementItem !== null && (
@@ -387,9 +395,23 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
       </Stack>
       {wrongStore !== null && (
         <TransferWrongStoreDialog
-          info={wrongStore}
+          info={wrongStore.info}
+          isNotifying={notify.isPending}
           onClose={() => {
             setWrongStore(null);
+          }}
+          onNotify={() => {
+            void notify
+              .mutateAsync({
+                input: { submissionId: id, code: wrongStore.code },
+              })
+              .then(() => {
+                showSnackbar("success", t("wrongStoreNotified"));
+                setWrongStore(null);
+              })
+              .catch(() => {
+                showSnackbar("error", tReceive("errors.UNEXPECTED"));
+              });
           }}
         />
       )}

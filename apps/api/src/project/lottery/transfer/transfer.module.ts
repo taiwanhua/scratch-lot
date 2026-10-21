@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../../database/database.module";
+import { NotificationsModule } from "../../../notifications/notifications.module";
 import { RealtimeModule } from "../../../realtime/realtime.module";
 import { SidebarBadgesModule } from "../../../sidebar-badges/sidebar-badges.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
@@ -22,6 +23,7 @@ import { TransferResolver } from "./transfer.resolver";
 @Module({
   imports: [
     DatabaseModule,
+    NotificationsModule,
     RealtimeModule,
     SidebarBadgesModule,
     LotteryAccountsModule,

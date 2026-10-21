@@ -23,7 +23,7 @@ describe("調貨單檢視頁", () => {
     expect(within(table).getByText("1,840")).toBeInTheDocument();
   });
 
-  it("第二關點收:刷這一列的任何一張 → 已點收;送錯分店 → 擋下並提示是哪一家店的哪一張調貨單", async () => {
+  it("第二關點收:刷這一列的任何一張 → 已點收;送錯分店 → 擋下並提示是哪一家店的哪一張調貨單,[通知總部更正] 通知建立者", async () => {
     const user = userEvent.setup();
     const { transferFake } = renderTransferPage({
       path: "/purchasing/transfer/view-page/doc-t10",
@@ -37,6 +37,11 @@ describe("調貨單檢視頁", () => {
       ).toBeEnabled();
     });
     expect(transferFake.scanned).toEqual(["0060112050"]);
+    // 點收區塊的欄名用調貨單的詞(張號、金額)
+    expect(
+      screen.getAllByRole("columnheader", { name: "張號" }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("columnheader", { name: "最後張號" })).toBeNull();
     await user.type(scan, `${TRANSFER_WRONG_STORE_CODE}{Enter}`);
     const dialog = await screen.findByRole("dialog", {
       name: "這本不是送到這家店",
@@ -46,6 +51,12 @@ describe("調貨單檢視頁", () => {
         "這本屬於送往「台中店」的調貨單 #T-0011,請交給送貨人帶到台中店,本店不用點收。",
       ),
     ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "通知總部更正" }),
+    );
+    await waitFor(() => {
+      expect(transferFake.notified).toEqual([TRANSFER_WRONG_STORE_CODE]);
+    });
   });
 
   it("結算區塊:調貨金額、收貨店已付、出貨店已收與「N 待出貨店入帳」", async () => {

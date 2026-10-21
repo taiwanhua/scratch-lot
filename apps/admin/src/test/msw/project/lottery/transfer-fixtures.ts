@@ -279,6 +279,16 @@ export const transferOptions =
         books: 2,
       },
     ],
+    // 收貨店 5201:預計 3、已給 2、在途 1 → 再調 1 整本就超過(只警告)
+    allocations: [
+      {
+        __typename: "LotteryTransferAllocation",
+        gameId: "game-5201",
+        plannedBooks: 3,
+        givenBooks: 2,
+        inTransitBooks: 1,
+      },
+    ],
   });
 
 /** 拆過的那本的格子:#001–011、#032、#048 已售,其餘可以調。 */

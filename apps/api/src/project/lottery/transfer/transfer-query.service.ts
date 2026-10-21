@@ -27,12 +27,15 @@ import {
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import { LotteryTransferReceiptsRepository } from "../../database/lottery-transfers/lottery-transfer-receipts.repository";
 import { tenantOfOperator } from "../master-data-tenant";
+import { inTransitBooksOf } from "../requisition/in-transit";
 import {
   SettlementLedger,
   outstandingOf,
 } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
+import { LotteryAllocationsService } from "../tickets/allocations.service";
 import type {
+  LotteryTransferAllocationModel,
   LotteryTransferBookModel,
   LotteryTransferOptionsModel,
   LotteryTransferProgressModel,
@@ -85,6 +88,7 @@ export class TransferQueryService {
     private readonly receipts: LotteryTransferReceiptsRepository,
     private readonly rules: TransferRules,
     private readonly ledger: SettlementLedger,
+    private readonly allocations: LotteryAllocationsService,
   ) {}
 
   async optionsOf(
@@ -171,6 +175,14 @@ export class TransferQueryService {
       books,
       requisitions:
         toId === null ? [] : await this.requisitionsOf(reader, toId),
+      allocations:
+        toId === null
+          ? []
+          : await this.allocationsOf(
+              operator,
+              toId,
+              bookRows.map((book) => book.gameId),
+            ),
     };
   }
 
@@ -316,6 +328,34 @@ export class TransferQueryService {
       throw notFoundError("分店不存在");
     }
     return tenantBoundaryContext(this.orgs, null, tenantId);
+  }
+
+  /**
+   * 收貨店這些遊戲的預計要給本數、已給、在途(只警告用;規格 7.6)。收貨店可能不在操作者的可見範圍:
+   * 已給以操作者當前租戶計算(`allocationStatuses` 的權限與可見性由呼叫端判斷,這裡是 `create`)。
+   */
+  private async allocationsOf(
+    operator: OperatorContext,
+    toId: Types.ObjectId,
+    gameIdList: readonly Types.ObjectId[],
+  ): Promise<LotteryTransferAllocationModel[]> {
+    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
+    const gameIds = [
+      ...new Map(gameIdList.map((id) => [String(id), id])).values(),
+    ];
+    if (tenantId === null || gameIds.length === 0) {
+      return [];
+    }
+    const [inTransit, statuses] = await Promise.all([
+      inTransitBooksOf({ tenantId, orgId: toId }),
+      this.allocations.allocationStatuses(operator, toId, gameIds),
+    ]);
+    return statuses.map((status) => ({
+      gameId: status.gameId,
+      plannedBooks: status.plannedBooks,
+      givenBooks: status.givenBooks,
+      inTransitBooks: inTransit.get(status.gameId) ?? 0,
+    }));
   }
 
   /** 收貨店待購買的叫貨單(有效、未被引用的副本列,依叫貨單合計本數)。 */

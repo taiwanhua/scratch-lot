@@ -18,6 +18,10 @@ import { Typography } from "@repo/ui/typography";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import {
+  type AllocationWarningItem,
+  AllocationWarnings,
+} from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
@@ -29,8 +33,10 @@ import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScanner } from "@/hooks/project/useScanner/useScanner";
+import type { FormError } from "@/lib/base/form-engine/form-errors";
 
 import {
+  TRANSFER_FIELD_KEYS,
   TRANSFER_FORM_KEY,
   TRANSFER_FROM_REQUISITION,
   TRANSFER_MODULE_KEY,
@@ -56,6 +62,14 @@ const NONE = "none";
 
 /** 帶入的值(空字串 = 沒帶)。 */
 const fromSchema = z.string().default("");
+
+/** 送出時收貨分店讀不到(不在送出的人的可見範圍):改用看得懂的說明。 */
+const isToBranchUnavailable = (error: FormError): boolean =>
+  (error.fieldErrors ?? []).some(
+    (item) =>
+      item.fieldKey === TRANSFER_FIELD_KEYS.toBranch &&
+      item.code === "SOURCE_UNAVAILABLE",
+  );
 
 /** 明細列的 rowId。 */
 const newRowId = (): string => crypto.randomUUID();
@@ -120,6 +134,29 @@ export const TransferCreatePage = () => {
   const inLines =
     lines.find((line) => line.book.bookId === bookId)?.ticketNos ?? [];
   const total = transferTotalOf(lines);
+  // 超過收貨店的預計要給本數只警告(規格 7.6):整本一列算一本,零碎張數不湊成一本
+  const allocationItems: AllocationWarningItem[] = (
+    data?.allocations ?? []
+  ).flatMap((allocation) => {
+    const whole = lines.filter(
+      (line) =>
+        line.book.gameId === allocation.gameId &&
+        line.mode === TRANSFER_MODE.whole,
+    );
+    const [first] = whole;
+    return first === undefined
+      ? []
+      : [
+          {
+            key: allocation.gameId,
+            label: `${first.book.gameCode} ${first.book.gameName}`,
+            plannedBooks: allocation.plannedBooks ?? null,
+            givenBooks: allocation.givenBooks,
+            inTransitBooks: allocation.inTransitBooks,
+            books: whole.length,
+          },
+        ];
+  });
   const isSameBranch = fromBranchId !== "" && fromBranchId === toBranchId;
 
   const apply = (result: AddLineResult) => {
@@ -232,7 +269,7 @@ export const TransferCreatePage = () => {
               required
               fullWidth
               error={isSameBranch}
-              helperText={isSameBranch ? t("sameBranch") : undefined}
+              helperText={isSameBranch ? t("sameBranch") : t("toBranchHint")}
               onChange={(ids) => {
                 setToBranchId(ids[0] ?? "");
                 setRequisitionNo(null);
@@ -318,6 +355,7 @@ export const TransferCreatePage = () => {
                   />
                 </Stack>
                 {notice !== null && <Alert severity="warning">{notice}</Alert>}
+                <AllocationWarnings items={allocationItems} />
                 <TransferLines
                   lines={lines}
                   isCompact={isNarrow}
@@ -367,7 +405,11 @@ export const TransferCreatePage = () => {
             />
           </Box>
           {draft.error !== null && (
-            <Alert severity="error">{errorText(draft.error)}</Alert>
+            <Alert severity="error">
+              {isToBranchUnavailable(draft.error)
+                ? t("toBranchUnavailable")
+                : errorText(draft.error)}
+            </Alert>
           )}
         </Stack>
       </Box>

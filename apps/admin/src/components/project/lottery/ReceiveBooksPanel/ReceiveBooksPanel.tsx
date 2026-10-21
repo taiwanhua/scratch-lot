@@ -25,7 +25,19 @@ export interface ReceiveBookRow {
   rate: number;
   amount: number;
   received: boolean;
+  /** 「最後張號」欄改顯示的文字(例 調貨單的張號區段 `#045–056`);不給 = 最後張號 3 位 */
+  ticketText?: string;
 }
+
+/** 表格欄位(欄名可由使用處覆寫)。 */
+export type ReceiveBookColumn =
+  | "bookNo"
+  | "lastTicketNo"
+  | "tickets"
+  | "bookPrice"
+  | "rate"
+  | "amount"
+  | "received";
 
 /** 點收區塊的一組(同一個遊戲)。 */
 export interface ReceiveBookGroup {
@@ -51,6 +63,11 @@ export interface ReceiveBooksPanelProps {
   isPending: boolean;
   /** 刷條碼的錯誤文案 */
   error: string | null;
+  /**
+   * 覆寫欄名(使用處的詞;例 調貨單:「最後張號」→「張號」、「整本金額」→「金額」)。
+   * 手機卡片的說明也用同一組欄名。不給 = 進貨單的欄名。
+   */
+  columnLabels?: Partial<Record<ReceiveBookColumn, string>>;
 }
 
 /** 掃描用途(B10 全域掃描監聽;頁面宣告後,條碼槍讀到的碼交給這裡)。 */
@@ -71,8 +88,13 @@ export const ReceiveBooksPanel = ({
   onComplete,
   isPending,
   error,
+  columnLabels,
 }: ReceiveBooksPanelProps) => {
   const t = useTranslations("admin.lotteryPurchasing.receive");
+  const header = (column: ReceiveBookColumn): string =>
+    columnLabels?.[column] ?? t(`columns.${column}`);
+  const ticketTextOf = (row: ReceiveBookRow): string =>
+    row.ticketText ?? String(row.lastTicketNo).padStart(3, "0");
   const isMobile = useBreakpointDown("sm");
   const [code, setCode] = useState("");
 
@@ -92,42 +114,42 @@ export const ReceiveBooksPanel = ({
   const columns: TableColumn<ReceiveBookRow>[] = [
     {
       key: "bookNo",
-      header: t("columns.bookNo"),
+      header: header("bookNo"),
       render: (row) => row.bookNo,
       isEmphasized: true,
     },
     {
       key: "lastTicketNo",
-      header: t("columns.lastTicketNo"),
-      render: (row) => String(row.lastTicketNo).padStart(3, "0"),
+      header: header("lastTicketNo"),
+      render: ticketTextOf,
     },
     {
       key: "tickets",
-      header: t("columns.tickets"),
+      header: header("tickets"),
       align: "right",
       render: (row) => money(row.tickets),
     },
     {
       key: "bookPrice",
-      header: t("columns.bookPrice"),
+      header: header("bookPrice"),
       align: "right",
       render: (row) => money(row.bookPrice),
     },
     {
       key: "rate",
-      header: t("columns.rate"),
+      header: header("rate"),
       align: "right",
       render: (row) => `${String(row.rate)}%`,
     },
     {
       key: "amount",
-      header: t("columns.amount"),
+      header: header("amount"),
       align: "right",
       render: (row) => money(row.amount),
     },
     {
       key: "received",
-      header: t("columns.received"),
+      header: header("received"),
       render: (row) => (
         <Tag
           tone={row.received ? "success" : "grey"}
@@ -214,10 +236,8 @@ export const ReceiveBooksPanel = ({
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {t("cardFacts", {
-                            lastTicketNo: String(row.lastTicketNo).padStart(
-                              3,
-                              "0",
-                            ),
+                            ticketLabel: header("lastTicketNo"),
+                            lastTicketNo: ticketTextOf(row),
                             rate: row.rate,
                             amount: money(row.amount),
                           })}

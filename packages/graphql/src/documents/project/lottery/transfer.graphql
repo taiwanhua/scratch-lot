@@ -46,6 +46,12 @@ query LotteryTransferOptions($fromOrgId: ID!, $toOrgId: ID) {
       serialNo
       books
     }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
   }
 }
 
@@ -83,4 +89,10 @@ mutation ReceiveLotteryTransferBook($input: ReceiveLotteryTransferBookInput!) {
       ...LotteryTransferReceivingFields
     }
   }
+}
+
+mutation NotifyLotteryTransferWrongStore(
+  $input: ReceiveLotteryTransferBookInput!
+) {
+  notifyLotteryTransferWrongStore(input: $input)
 }

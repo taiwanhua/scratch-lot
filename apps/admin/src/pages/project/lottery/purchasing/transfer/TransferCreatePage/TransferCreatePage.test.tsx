@@ -24,6 +24,14 @@ describe("調貨單新增頁", () => {
     expect(within(table).getByText("5201-001233")).toBeInTheDocument();
     expect(within(table).getByText("整本")).toBeInTheDocument();
     expect(within(table).getByText("9,200")).toBeInTheDocument();
+    // 收貨店 5201 預計 3、已給 2、在途 1 → 超過 1 本,只警告(規格 7.6)
+    expect(screen.getByText("5201 金好運:多 1 本")).toBeInTheDocument();
+    // 收貨分店選不到時的說明
+    expect(
+      screen.getByText(
+        "看不到收貨分店時:調貨由總部開單,或請管理員把你加入收貨分店",
+      ),
+    ).toBeInTheDocument();
     // 同一本再刷 → 已經在明細裡
     await user.type(scan, "5201-1-001233-050-0-6{Enter}");
     expect(await screen.findByText("這本已經在明細裡")).toBeInTheDocument();

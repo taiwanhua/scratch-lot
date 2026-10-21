@@ -110,6 +110,12 @@ const OPTIONS = /* GraphQL */ `
         serialNo
         books
       }
+      allocations {
+        gameId
+        plannedBooks
+        givenBooks
+        inTransitBooks
+      }
     }
   }
 `;
@@ -163,6 +169,12 @@ const RECORD = /* GraphQL */ `
     recordLotterySettlement(input: $input) {
       recordId
     }
+  }
+`;
+
+const NOTIFY_WRONG_STORE = /* GraphQL */ `
+  mutation TestTransferWrongStore($input: ReceiveLotteryTransferBookInput!) {
+    notifyLotteryTransferWrongStore(input: $input)
   }
 `;
 
@@ -801,6 +813,12 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
             rate: number;
           }[];
           requisitions: { serialNo: string; books: number }[];
+          allocations: {
+            gameId: string;
+            plannedBooks: number | null;
+            givenBooks: number;
+            inTransitBooks: number;
+          }[];
         };
       }>(api, managerA.token, OPTIONS, {
         from: String(branchA),
@@ -822,6 +840,39 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         serialNo: "R-7001",
         books: 2,
       });
+      // 收貨店的預計要給本數 / 已給 / 在途(新增頁「超過只警告」用;規格 7.6)
+      await db().collection("lottery_allocations").insertOne({
+        orgId: branchB,
+        tenantId: tenant,
+        gameId: game,
+        plannedBooks: 3,
+        note: null,
+        moduleKey: "inventory",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      const withPlan = await ok<{
+        lotteryTransferOptions: {
+          allocations: {
+            gameId: string;
+            plannedBooks: number | null;
+            inTransitBooks: number;
+          }[];
+        };
+      }>(api, managerA.token, OPTIONS, {
+        from: String(branchA),
+        to: String(branchB),
+      });
+      expect(withPlan.lotteryTransferOptions.allocations).toEqual([
+        expect.objectContaining({
+          gameId: String(game),
+          plannedBooks: 3,
+          inTransitBooks: 2,
+        }),
+      ]);
       // 看不到的出貨店 → NOT_FOUND
       const hidden = await call(api, managerB.token, OPTIONS, {
         from: String(branchA),
@@ -1087,6 +1138,28 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
           ticket.orgId.equals(branchA),
         ),
       ).toBe(true);
+      // [通知總部更正] → 那張(送往台中店的)調貨單的建立者收到當事人通知,連到調貨單詳情
+      const before = notify.mock.calls.length;
+      await ok(api, managerB.token, NOTIFY_WRONG_STORE, {
+        input: { submissionId: toB, code: codeOf(book.bookNo) },
+      });
+      const sent = notify.mock.calls.slice(before).map(([input]) => input);
+      expect(sent).toEqual([
+        expect.objectContaining({
+          type: "lottery.transfer-wrong-store",
+          recipients: { kind: "users", userIds: [hq.userId] },
+          params: expect.objectContaining({ orgName: "新竹店" }),
+          ref: { type: "lottery-transfer", id: toC },
+          dedupeKey: expect.stringMatching(
+            new RegExp(`^transfer-wrong-store:${toC}:.+:${toB}$`),
+          ),
+        }),
+      ]);
+      // 不是別家店調貨單上的本 → NOT_FOUND
+      const missing = await call(api, managerB.token, NOTIFY_WRONG_STORE, {
+        input: { submissionId: toB, code: "0099999010" },
+      });
+      expect(extensionsOf(missing).code).toBe("NOT_FOUND");
     });
   });
 
