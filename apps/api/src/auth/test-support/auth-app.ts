@@ -9,6 +9,7 @@ import mongoose, { type Connection } from "mongoose";
 import request from "supertest";
 
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { waitForCollectionsAndIndexes } from "../../database/test-support/wait-for-indexes";
 import { applyTrustProxy } from "../../http-proxy";
 
 /** db-migrator 套件根目錄(以子行程跑其 seed 指令,不 import — STRUCT-01 禁 app 互 import)。 */
@@ -264,6 +265,7 @@ async function bootAuthTestApp(
   // 與 `main.ts` 同一份代理設定(`req.ip` 取 `X-Forwarded-For` 的客戶端 IP)
   applyTrustProxy(app);
   await app.init();
+  await waitForCollectionsAndIndexes(app);
 
   const connection = await mongoose.createConnection(databaseUri).asPromise();
 
