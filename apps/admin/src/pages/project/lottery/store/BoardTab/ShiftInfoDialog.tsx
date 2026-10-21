@@ -256,7 +256,11 @@ export const ShiftInfoDialog = ({ shiftId, onClose }: ShiftInfoDialogProps) => {
             spacing={2}
             sx={{ justifyContent: "space-between" }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+            >
               {row.label}
             </Typography>
             <Typography
