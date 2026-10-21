@@ -142,6 +142,17 @@ function isLockedBy(ticket: TransferTicket, submissionId: Types.ObjectId) {
 const isInTransit = (ticket: TransferTicket): boolean =>
   ticket.location.kind === TICKET_LOCATION_KIND.inTransit;
 
+/** 在途的列內容沒變:遊戲、本、方式、張號、張數都一樣(批購金額率等金額欄可以改)。 */
+const isSameShipment = (
+  before: TransferLineValue,
+  after: TransferLineValue,
+): boolean =>
+  before.gameId === after.gameId &&
+  before.bookId === after.bookId &&
+  before.mode === after.mode &&
+  before.tickets === after.tickets &&
+  before.ticketNos.join(",") === after.ticketNos.join(",");
+
 /**
  * 一列和它的本相符(規格 8.4 明細):本正常、遊戲相同、批購金額率 0–100 的整數、張數 = 這列的張;
  * 整本要原封不動(沒拆過、沒有張在別家店),選張要拆過、張號都在這本;金額 = 整本金額或面額 × 張數。
@@ -327,6 +338,54 @@ export class TransferRules {
   }
 
   /** 這張單鎖定的張(還沒點收的列)。 */
+  /**
+   * 上一次送出的列裡,已出貨、仍在途的(張都在途而且鎖在這張單上):rowId → 上一次的列。
+   * 退回 / 撤回後重送時,這些列保持在途,不再走「在出貨店、原封不動」的送出前檢查。
+   */
+  async shippedLinesOf(
+    reader: OperatorContext,
+    submissionId: Types.ObjectId,
+  ): Promise<Map<string, TransferLineValue>> {
+    const doc = await this.submissions.findOne(
+      reader,
+      { _id: submissionId },
+      { select: { revisions: { $slice: -1 } } },
+    );
+    const last = doc?.revisions.at(-1);
+    if (last === undefined) {
+      return new Map();
+    }
+    const locked = await this.lockedTicketsOf(reader, submissionId);
+    const inTransit = new Set(
+      locked
+        .filter((ticket) => isInTransit(ticket))
+        .map((ticket) => String(ticket._id)),
+    );
+    if (inTransit.size === 0) {
+      return new Map();
+    }
+    const shipped = new Map<string, TransferLineValue>();
+    const ticketsOf = new Map<string, TransferTicket[]>();
+    for (const line of transferLinesOf(last.values)) {
+      const bookId = toObjectId(line.bookId);
+      if (bookId === null) {
+        continue;
+      }
+      const bookTickets =
+        ticketsOf.get(line.bookId) ??
+        (await this.ticketsOfBook(reader, bookId));
+      ticketsOf.set(line.bookId, bookTickets);
+      const rowTickets = this.rowTicketsOf(line, bookTickets);
+      if (
+        rowTickets.length > 0 &&
+        rowTickets.every((ticket) => inTransit.has(String(ticket._id)))
+      ) {
+        shipped.set(line.rowId, line);
+      }
+    }
+    return shipped;
+  }
+
   async lockedTicketsOf(
     reader: OperatorContext,
     submissionId: Types.ObjectId,
@@ -441,7 +500,22 @@ export class TransferRules {
       );
     }
     const received = new Set(receipts.map((receipt) => receipt.rowId));
-    const pending = lines.filter((line) => !received.has(line.rowId));
+    // 已出貨、仍在途的列(退回 / 撤回後保持在途,規格 8.4):內容沒改 → 合法,不再檢查「在出貨店、原封不動」;
+    // 改了遊戲 / 本 / 方式 / 張號 → 擋下(在途的張不能換成別的)
+    const shipped = await this.shippedLinesOf(reader, submission._id);
+    const shippedChanged = lines.some((line) => {
+      const before = shipped.get(line.rowId);
+      return before !== undefined && !isSameShipment(before, line);
+    });
+    if (shippedChanged) {
+      return block(
+        TRANSFER_REASONS.lineInvalid,
+        "Shipped rows in transit cannot be changed",
+      );
+    }
+    const pending = lines.filter(
+      (line) => !received.has(line.rowId) && !shipped.has(line.rowId),
+    );
     const lineProblem = await this.lineProblemOf(reader, pending, fromId, {
       submissionId: submission._id,
     });

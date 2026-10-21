@@ -1272,10 +1272,7 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       };
       const first = await shippedAtOf();
       expect([...first.values()].every((at) => at !== null)).toBe(true);
-      // 5 本都點收了(在途沒點收的整本列重送會被送出前檢查擋下,另案)
-      for (const book of books.slice(0, 5)) {
-        expect(await receive(managerB, id, codeOf(book.bookNo))).toEqual({});
-      }
+      // 5 本還在途、沒點收就退回(退回後保持在途,規格 8.4)
 
       const resubmit = async (next: Line[]) => {
         await decideOn(world(), managerB, id, "RETURN");
@@ -1312,11 +1309,49 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         true,
       );
 
-      for (const book of books.slice(5)) {
-        expect(await receive(managerB, id, codeOf(book.bookNo))).toEqual({});
-      }
+      // 7 本都在途:沒新增就重送 → 送出成功、沒有新出貨
       await resubmit(lines);
       expect(await shippedAtOf()).toEqual(second);
+      for (const book of books) {
+        const tickets = await ticketsOf(book.bookId);
+        expect(
+          tickets.every(
+            (ticket) =>
+              ticket.location.kind === "in_transit" && ticket.lockedBy !== null,
+          ),
+        ).toBe(true);
+      }
+    });
+
+    it("退回後把在途的列換成別的本(改本號)→ 擋下 TRANSFER_LINE_INVALID", async () => {
+      const shippedBook = await newBook(branchA);
+      const otherBook = await newBook(branchA);
+      const line = whole(shippedBook.bookId);
+      const id = await submit(hq, [line]);
+      await ship(id);
+      await decideOn(world(), managerB, id, "RETURN");
+      const row = await current(id);
+      const saved = await call<{
+        saveFormDraft: { submission: { editVersion: number } };
+      }>(api, hq.token, SAVE_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: row.editVersion,
+          values: {
+            ...header(),
+            lines: [{ ...line, book: String(otherBook.bookId) }],
+          },
+        },
+      });
+      const result = await call(api, hq.token, SUBMIT_SUBMISSION, {
+        input: {
+          id,
+          expectedEditVersion: saved.data?.saveFormDraft.submission.editVersion,
+        },
+      });
+      expect(extensionsOf(result)).toMatchObject({
+        reason: "TRANSFER_LINE_INVALID",
+      });
     });
   });
 
