@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
@@ -27,7 +28,10 @@ export interface PurchaseLinesProps {
 const lastTicketText = (value: number): string =>
   String(value).padStart(3, "0");
 
-/** 批購金額率的輸入框:改過(和遊戲預設不同)標色。 */
+/**
+ * 批購金額率的輸入框:改過(和遊戲預設不同)標色。輸入中的文字自己記(清空、打到一半不會被
+ * `value` 蓋回去);是 0–100 的整數才回報,離開時還原成目前的值;`value` 從外面改(例:改整組)時跟著換。
+ */
 const RateInput = ({
   label,
   value,
@@ -38,25 +42,39 @@ const RateInput = ({
   value: number;
   isEdited: boolean;
   onChange: (rate: number) => void;
-}) => (
-  <TextField
-    size="small"
-    type="number"
-    value={String(value)}
-    onChange={(event) => {
-      const rate = parseRate(event.target.value);
-      if (rate !== null) {
-        onChange(rate);
-      }
-    }}
-    sx={{
-      width: 88,
-      "& input": { textAlign: "right" },
-      ...(isEdited && { "& .MuiInputBase-root": { bgcolor: "warning.light" } }),
-    }}
-    slotProps={{ htmlInput: { "aria-label": label, min: 0, max: 100 } }}
-  />
-);
+}) => {
+  const [text, setText] = useState(String(value));
+  const [shown, setShown] = useState(value);
+  if (shown !== value) {
+    setShown(value);
+    setText(String(value));
+  }
+  return (
+    <TextField
+      size="small"
+      type="number"
+      value={text}
+      onChange={(event) => {
+        setText(event.target.value);
+        const rate = parseRate(event.target.value);
+        if (rate !== null) {
+          onChange(rate);
+        }
+      }}
+      onBlur={() => {
+        setText(String(value));
+      }}
+      sx={{
+        width: 88,
+        "& input": { textAlign: "right" },
+        ...(isEdited && {
+          "& .MuiInputBase-root": { bgcolor: "warning.light" },
+        }),
+      }}
+      slotProps={{ htmlInput: { "aria-label": label, min: 0, max: 100 } }}
+    />
+  );
+};
 
 /**
  * 進貨單新增頁的明細(規格 8.2 明細;Figma PU-05):依遊戲分組,組標題列顯示小計、「叫貨 N,已刷 M」與
@@ -71,6 +89,10 @@ export const PurchaseLines = ({
   error,
 }: PurchaseLinesProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
+  // 整組框是獨立的值(遊戲 id → 最後一次改整組的率;沒改過 = 遊戲預設):改單本不會帶動整組框
+  const [groupRates, setGroupRates] = useState<ReadonlyMap<string, number>>(
+    () => new Map(),
+  );
   const errors = (
     <LineErrorAlerts error={error} fieldKey={PURCHASE_FIELD_KEYS.lines} />
   );
@@ -197,9 +219,14 @@ export const PurchaseLines = ({
                   </Typography>
                   <RateInput
                     label={t("groupRateOf", { code: group.game.gameCode })}
-                    value={group.rows[0]?.rate ?? group.game.defaultRate}
+                    value={
+                      groupRates.get(group.game.id) ?? group.game.defaultRate
+                    }
                     isEdited={false}
                     onChange={(rate) => {
+                      setGroupRates((current) =>
+                        new Map(current).set(group.game.id, rate),
+                      );
                       onGroupRate(group.game.id, rate);
                     }}
                   />

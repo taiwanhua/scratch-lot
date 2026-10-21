@@ -171,4 +171,36 @@ describe("進貨單新增頁", () => {
     // 明細的錯誤顯示在明細區
     expect(screen.getByText("批購金額率要在 0–100 之間")).toBeInTheDocument();
   });
+
+  it("整組批購金額率:改整組 → 同遊戲每一本都套用;之後改單本,整組框不跟著變", async () => {
+    const user = userEvent.setup();
+    renderPurchasePage({ path: `${CREATE}?branch=org-store-a` });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼加入" });
+    for (const bookNo of ["056527", "056528", "056529"]) {
+      await user.type(scan, `5164-1-${bookNo}-100-0-6{Enter}`);
+    }
+    const table = await screen.findByRole("table", { name: /5164 發大財/ });
+    await waitFor(() => {
+      expect(within(table).getAllByRole("row")).toHaveLength(4);
+    });
+    const group = screen.getByRole("spinbutton", {
+      name: "5164 整組的批購金額率",
+    });
+    const rateOf = (bookNo: string) =>
+      within(table).getByRole("spinbutton", {
+        name: `本號 ${bookNo} 的批購金額率`,
+      });
+    await user.clear(group);
+    await user.type(group, "90");
+    expect(group).toHaveValue(90);
+    for (const bookNo of ["056527", "056528", "056529"]) {
+      expect(rateOf(bookNo)).toHaveValue(90);
+    }
+    // 改第 1 本:只有那一本變,整組框維持 90
+    await user.clear(rateOf("056527"));
+    await user.type(rateOf("056527"), "88");
+    expect(rateOf("056527")).toHaveValue(88);
+    expect(rateOf("056528")).toHaveValue(90);
+    expect(group).toHaveValue(90);
+  });
 });
