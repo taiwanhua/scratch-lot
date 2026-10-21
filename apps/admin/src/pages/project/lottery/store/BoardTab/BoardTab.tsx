@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import {
   STORE_BOARD_KEY,
+  STORE_KEY,
   STORE_PERMISSIONS,
   STORE_SALE_SCAN_PURPOSE,
 } from "@repo/domain/project/lottery";
@@ -13,6 +15,7 @@ import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
+import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import type { CashPointHeaderAction } from "@/components/project/lottery/CashPointHeader/CashPointHeader";
 import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
@@ -25,6 +28,11 @@ import {
   writeLocalCashPoint,
 } from "@/lib/project/lottery/local-cash-point";
 
+import {
+  CHECKOUT_CONFIRM_FORM_KEY,
+  CHECKOUT_PREFILL,
+} from "../checkout/checkout-keys";
+import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { redemptionBoardActions } from "../redemption/redemption-board-actions";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { useStocktakeEntry } from "../stocktake/useStocktakeEntry";
@@ -49,7 +57,9 @@ export const BoardTab = () => {
   const t = useTranslations("admin.lotteryStore");
   const { session } = useSession();
   const me = useMe();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const access = useFormModuleAccess(STORE_KEY);
   const [orgParam, setOrgParam] = useUrlState("org", orgSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
   useRealtimeBoard(STORE_BOARD_KEY, orgId === "" ? null : orgId);
@@ -204,6 +214,30 @@ export const BoardTab = () => {
               label: t("header.split"),
               onClick: () => {
                 setSalesDialog({ kind: "splitPick" });
+              },
+            },
+          ]
+        : []),
+      // [交班結帳](規格 6.2、6.9):本機收銀點開班中、有 `store.checkout`,只有這一班的負責人或店長(`store.edit`)能按
+      ...(hasPermission(STORE_PERMISSIONS.checkout) &&
+      (shift.isMine || hasPermission(STORE_PERMISSIONS.edit)) &&
+      access.createRoute !== null
+        ? [
+            {
+              key: "checkout",
+              label: t("header.checkout"),
+              emphasis: "primary" as const,
+              onClick: () => {
+                void navigate(
+                  storeFormCreateHref(
+                    access.createRoute ?? "",
+                    CHECKOUT_CONFIRM_FORM_KEY,
+                    {
+                      [CHECKOUT_PREFILL.org]: orgId,
+                      [CHECKOUT_PREFILL.shift]: shift.id,
+                    },
+                  ),
+                );
               },
             },
           ]

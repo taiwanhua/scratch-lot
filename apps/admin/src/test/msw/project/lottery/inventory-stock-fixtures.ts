@@ -99,6 +99,18 @@ export const sampleReasonOptions: Record<
     { value: "damp", label: "受潮" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的交班結帳(規格 6.9):差額原因(審核中的單據由精靈自動帶入)、跳過盤點原因
+  [LOTTERY_FIELD_CATEGORY_KEYS.checkoutDiffReason]: [
+    { value: "wrong-change", label: "找錯錢" },
+    { value: "redemption-overpaid", label: "兌獎誤付" },
+    { value: "pending-documents", label: "審核中的單據" },
+    { value: "other", label: "其他" },
+  ],
+  [LOTTERY_FIELD_CATEGORY_KEYS.skipStocktakeReason]: [
+    { value: "short-staffed", label: "人力不足" },
+    { value: "system-error", label: "系統異常" },
+    { value: "other", label: "其他" },
+  ],
   // 店面管理的出庫(規格 6.7)
   [LOTTERY_FIELD_CATEGORY_KEYS.withdrawReason]: [
     { value: "opening-float", label: "開班零用金" },

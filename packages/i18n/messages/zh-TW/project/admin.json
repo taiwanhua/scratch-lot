@@ -2552,12 +2552,23 @@
     "STOCKTAKE_DIFF_UNHANDLED": "還有差異沒有處理,請在差異核對逐張處理",
     "STOCKTAKE_DRAFT_INVALID": "盤點內容不完整(或確認遺失沒有原因),請重新盤點",
     "STOCKTAKE_FORBIDDEN": "沒有盤點或確認遺失的權限",
-    "STOCKTAKE_VOID_FORBIDDEN": "盤點確認申請不能作廢;待查的張刷到時再尋回"
+    "STOCKTAKE_VOID_FORBIDDEN": "盤點確認申請不能作廢;待查的張刷到時再尋回",
+    "CHECKOUT_DRAFT_INVALID": "結帳內容和這一班對不上,請重新打開交班結帳",
+    "CHECKOUT_FORBIDDEN": "只有這一班的負責人或店長能交班結帳;跳過盤點另要跳過盤點的權限",
+    "CHECKOUT_SHIFT_CLOSED": "這一班已經送出交班結帳",
+    "CHECKOUT_PENDING_EXISTS": "這一班已有審核中的結帳確認申請",
+    "CHECKOUT_STOCKTAKE_NOT_REUSABLE": "這次盤點已超過 30 分鐘或不是這個收銀點的,請現在盤點",
+    "CHECKOUT_REASON_REQUIRED": "差額不為 0 或跳過盤點時,原因必填",
+    "CHECKOUT_LEFT_MUST_BE_ZERO": "沒有接班人時「留給下一班」必須是 0,請先把錢投庫",
+    "CHECKOUT_SUCCESSOR_INVALID": "接班人要是這家店的人",
+    "CHECKOUT_REJECT_FORBIDDEN": "結帳確認申請不能駁回,請改用退回",
+    "CHECKOUT_VOID_FORBIDDEN": "結帳確認申請不能作廢"
   },
   "lotteryStore": {
     "tabs": {
       "aria": "店面管理",
       "board": "看板",
+      "checkouts": "班次結帳歷史紀錄",
       "otherForms": "其他申請",
       "redemptions": "兌獎紀錄",
       "saleReversals": "撤銷售出",
@@ -2597,7 +2608,8 @@
       "recentSales": "最近售出",
       "split": "拆本",
       "redeem": "兌獎",
-      "recentRedemptions": "最近兌獎"
+      "recentRedemptions": "最近兌獎",
+      "checkout": "交班結帳"
     },
     "card": {
       "title": "{code} {name}",
@@ -3318,6 +3330,156 @@
           "keep": "繼續待查"
         },
         "loadFailed": "讀不到這張盤點單"
+      }
+    },
+    "checkout": {
+      "page": {
+        "tabLabel": "交班結帳",
+        "title": "交班結帳 · {cashPoint}",
+        "meta": "{name} · {time} 開班",
+        "cancel": "取消",
+        "loadFailed": "讀不到這一班的資料,請稍後再試",
+        "cannotSubmit": "只有這一班的負責人或店長能交班結帳。",
+        "returnedHint": "這張結帳確認申請已退回,修改後再送出。",
+        "progress": "第 {current} / {total} 步 · {label}",
+        "back": "上一步",
+        "next": "下一步",
+        "submit": "送出",
+        "stepperAria": "交班結帳的步驟"
+      },
+      "steps": {
+        "stocktake": "盤點",
+        "redemption": "兌獎",
+        "drawer": "抽屜",
+        "confirm": "確認"
+      },
+      "stocktake": {
+        "title": "① 盤點",
+        "reuse": "沿用 30 分鐘內的盤點",
+        "reuseDetail": "{time} · {scope} · 差異 {count}",
+        "wholeStore": "全店",
+        "noReusable": "30 分鐘內沒有可以沿用的盤點",
+        "new": "現在盤點",
+        "newHint": "只盤這個收銀點;被拆開的本只能點格子或掃描",
+        "skip": "跳過盤點",
+        "skipHint": "需要有跳過盤點的權限;原因必填,報表會標示「未盤點」。",
+        "skipReason": "跳過原因(必填)",
+        "review": "差異核對 →",
+        "reviewed": "差異已核對,可以到下一步"
+      },
+      "redemption": {
+        "title": "② 兌獎(本班 {count} 筆)",
+        "backfill": "補登兌獎",
+        "immediate": "立即生效",
+        "total": "兌獎合計",
+        "empty": "這一班還沒有兌獎",
+        "hint": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金時擋下。",
+        "rowAria": "兌獎 {ticket} {amount}"
+      },
+      "drawer": {
+        "expectedTitle": "應有現金",
+        "expectedHint": "只算已完成的單據;每一列可以點開看明細與單據。",
+        "countedTitle": "實點(依面額清點)",
+        "columns": {
+          "value": "面額",
+          "count": "張 / 枚",
+          "subtotal": "小計"
+        },
+        "countedTotal": "實點合計",
+        "difference": "差額 = 實點 − 應有",
+        "diffReason": "差額原因(必填)",
+        "pending": "審核中:{items} → 已自動帶入差額原因說明。",
+        "pendingItem": "{form} #{serialNo} {amount}",
+        "toggleAria": "展開 {item} 的明細",
+        "openEntry": "點開單據"
+      },
+      "items": {
+        "opening": "期初零用金",
+        "sales": "銷售",
+        "redemptions": "兌獎",
+        "deposits": "投庫",
+        "withdrawals": "出庫",
+        "transfer_out": "調貨支出(現金)",
+        "transfer_in": "調貨收入(現金)",
+        "refunds": "退貨退款",
+        "corrections": "現金更正"
+      },
+      "itemCount": {
+        "sales": "({count} 張)",
+        "other": "({count} 筆)"
+      },
+      "forms": {
+        "sale_reversal": "撤銷售出",
+        "cash_correction": "現金更正"
+      },
+      "confirm": {
+        "summaryTitle": "應有現金",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "handoverTitle": "交接",
+        "leftForNext": "留給下一班",
+        "successor": "接班人(選填)",
+        "noSuccessor": "(沒有接班人)",
+        "hint": "「留給下一班」大於 0 時接班人必填;接班人當面點過零用金後核准這張結帳單。",
+        "mustBeZero": "沒有接班人時必須是 0:請先把錢投庫",
+        "managerReview": "沒有接班人:這張結帳確認申請改由店長審核。",
+        "stocktakeReuse": "沿用 {time} {scope}盤點 {serial}",
+        "stocktakeNew": "現在盤點",
+        "stocktakeSkip": "跳過盤點({reason})",
+        "stocktake": "盤點"
+      },
+      "types": {
+        "shift": "交班",
+        "daily": "日結"
+      },
+      "list": {
+        "from": "期間(起)",
+        "to": "期間(迄)",
+        "cashPoint": "收銀點",
+        "type": "類型",
+        "status": "狀態",
+        "all": "全部",
+        "statuses": {
+          "reviewing": "待審核",
+          "returned": "已退回",
+          "withdrawn": "已撤回",
+          "completed": "已完成"
+        },
+        "columns": {
+          "serialNo": "單號",
+          "cashPoint": "收銀點",
+          "type": "類型",
+          "submittedBy": "交班人",
+          "expected": "應有",
+          "counted": "實點",
+          "difference": "差額",
+          "status": "狀態"
+        },
+        "total": "共 {count} 筆",
+        "empty": "沒有結帳紀錄",
+        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}"
+      },
+      "view": {
+        "title": "結帳確認申請",
+        "titleWithNo": "結帳確認申請 · {type} {serialNo}",
+        "meta": "申請人 {name} · 送出 {time}",
+        "backToList": "回列表",
+        "edit": "修改後再送出",
+        "sheetTitle": "結帳單",
+        "cashPoint": "收銀點",
+        "stocktake": "盤點",
+        "stocktakeSkipped": "跳過({reason})",
+        "stocktakeReuse": "沿用 {time} {scope}盤點 {serial}",
+        "stocktakeNew": "{time} 盤點",
+        "expected": "應有",
+        "counted": "實點",
+        "difference": "差額",
+        "handover": "留給下一班 / 接班人",
+        "noSuccessor": "(沒有接班人)",
+        "pending": "送出時審核中:{items}",
+        "hint": "每一項可以點開原本的單據。",
+        "loadFailed": "讀不到這張結帳單"
       }
     }
   }

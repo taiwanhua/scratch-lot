@@ -66,10 +66,11 @@ export const projectUrlStateInventory: UrlStateInventory = {
   inventory: ["tab", "stock"],
   // 店面管理:頁內分頁 `tab`、看板 / 撤銷售出 / 現金更正 / 兌獎紀錄的分店 `org`、其他申請(表單引擎的預設列表)的篩選 `list`、
   // 兌獎紀錄的篩選與頁碼 `redemptions`(期間、收銀點、狀態、登記人、頁碼);
-  // 盤點紀錄的篩選與頁碼 `stocktakes`(類型、狀態、頁碼);
-  // 新增頁:撤銷售出申請帶入的分店 `org` 與張 `ticket`(看板 [送撤銷售出申請]);臨時盤點的分店 `org` 與範圍 `scope`
-  store: ["tab", "org", "list", "redemptions", "stocktakes"],
-  "store.create-page": ["org", "ticket", "scope"],
+  // 盤點紀錄的篩選與頁碼 `stocktakes`(類型、狀態、頁碼);班次結帳歷史紀錄的篩選與頁碼 `checkouts`(期間、收銀點、類型、狀態、頁碼);
+  // 新增頁:撤銷售出申請帶入的分店 `org` 與張 `ticket`(看板 [送撤銷售出申請]);臨時盤點的分店 `org` 與範圍 `scope`;
+  // 交班結帳帶入的那一班 `shift`(看板 [交班結帳])
+  store: ["tab", "org", "list", "redemptions", "stocktakes", "checkouts"],
+  "store.create-page": ["org", "ticket", "scope", "shift"],
   // 檢視頁:盤點確認申請沒有網址狀態,其他表單沿用表單引擎的預設檢視頁(對話框、看的修訂)
   "store.view-page": ["dialog", "revision"],
   "store.edit-page": [],

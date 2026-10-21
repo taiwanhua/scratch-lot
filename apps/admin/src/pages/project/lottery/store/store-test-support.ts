@@ -1,5 +1,13 @@
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
 import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
+import {
+  checkoutFormWorld,
+  checkoutWorkflowWorld,
+} from "@/test/msw/project/lottery/checkout-form-fixtures";
+import {
+  type CheckoutWorldOptions,
+  checkoutWorld,
+} from "@/test/msw/project/lottery/checkout-handlers";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
@@ -49,6 +57,7 @@ export const renderStore = ({
   redemptionRows,
   forms = {},
   stocktakeOptions = {},
+  checkoutOptions = {},
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -61,28 +70,43 @@ export const renderStore = ({
   forms?: StoreFormsWorldOptions;
   /** 盤點的假 api 選項(補登售出時已被處理的張、看板提醒) */
   stocktakeOptions?: StocktakeWorldOptions;
+  /** 交班結帳的假 api 選項(精靈資料的覆寫) */
+  checkoutOptions?: CheckoutWorldOptions;
 } = {}) => {
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
   const redemptions = redemptionWorld(redemptionRows);
   const formsFake = storeFormsWorld(forms);
   const stocktakeForms = stocktakeFormWorld();
+  const checkoutForms = checkoutFormWorld();
   const runtime = formRuntimeWorld({
     ...formsFake.runtime,
     moduleForms: [
       ...(formsFake.runtime.moduleForms ?? []),
       ...(stocktakeForms.moduleForms ?? []),
+      ...(checkoutForms.moduleForms ?? []),
     ],
-    versions: { ...formsFake.runtime.versions, ...stocktakeForms.versions },
+    versions: {
+      ...formsFake.runtime.versions,
+      ...stocktakeForms.versions,
+      ...checkoutForms.versions,
+    },
     submissions: [
       ...(formsFake.runtime.submissions ?? []),
       ...(stocktakeForms.submissions ?? []),
+      ...(checkoutForms.submissions ?? []),
     ],
   });
+  const stocktakeFlow = stocktakeWorkflowWorld();
+  const checkoutFlow = checkoutWorkflowWorld();
   const stocktake = stocktakeWorld(stocktakeOptions);
   server.use(
     ...stocktake.handlers,
-    ...workflowRuntimeWorld(stocktakeWorkflowWorld()).handlers,
+    ...checkoutWorld(checkoutOptions).handlers,
+    ...workflowRuntimeWorld({
+      instances: [...stocktakeFlow.instances, ...checkoutFlow.instances],
+      tasks: [...stocktakeFlow.tasks, ...checkoutFlow.tasks],
+    }).handlers,
     ...formsFake.handlers,
     ...runtime.handlers,
     ...fake.handlers,

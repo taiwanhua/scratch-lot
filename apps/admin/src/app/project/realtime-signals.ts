@@ -7,6 +7,10 @@ import {
   STORE_RECENT_SALES_QUERY_KEY,
 } from "@/pages/project/lottery/store/BoardTab/sales/sales-queries";
 import {
+  STORE_CHECKOUTS_QUERY_KEY,
+  STORE_CHECKOUT_WIZARD_QUERY_KEY,
+} from "@/pages/project/lottery/store/checkout/checkout-keys";
+import {
   STORE_RECENT_REDEMPTIONS_QUERY_KEY,
   STORE_REDEMPTIONS_QUERY_KEY,
 } from "@/pages/project/lottery/store/redemption/redemption-shared";
@@ -33,6 +37,9 @@ export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
       STORE_REDEMPTIONS_QUERY_KEY,
       // 盤點頁的應有現金、「建議盤點一次」、盤點紀錄
       ...STOCKTAKE_QUERY_KEYS,
+      // 交班精靈(補登兌獎後的應有現金與兌獎清單)、班次結帳歷史紀錄
+      STORE_CHECKOUT_WIZARD_QUERY_KEY,
+      STORE_CHECKOUTS_QUERY_KEY,
     ],
   },
 ];

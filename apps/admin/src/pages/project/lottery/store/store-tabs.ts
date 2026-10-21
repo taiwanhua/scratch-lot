@@ -6,6 +6,7 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { BoardTab } from "./BoardTab/BoardTab";
 import { OtherFormsTab } from "./OtherFormsTab/OtherFormsTab";
+import { CheckoutsTab } from "./checkout/CheckoutsTab";
 import { CashCorrectionsTab } from "./forms/CashCorrectionsTab";
 import { SaleReversalsTab } from "./forms/SaleReversalsTab";
 import { RedemptionsTab } from "./redemption/RedemptionsTab";
@@ -34,6 +35,13 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     labelKey: "board",
     permission: STORE_PERMISSIONS.view,
     Content: BoardTab,
+  },
+  // 班次結帳歷史紀錄(規格 6.1、8.7;Figma ST-27):`store.view`(api `lotteryCheckouts` 也守它)
+  {
+    value: STORE_TABS.checkouts,
+    labelKey: "checkouts",
+    permission: STORE_PERMISSIONS.view,
+    Content: CheckoutsTab,
   },
   // 盤點紀錄(規格 6.1、8.6;Figma ST-29):`store.view`(api `lotteryStocktakes` 也守它)
   {

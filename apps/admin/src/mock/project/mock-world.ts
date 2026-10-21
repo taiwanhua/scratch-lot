@@ -11,6 +11,11 @@ import { dealersWorld } from "@/test/msw/project/dealers-handlers";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
 import { accountsModules } from "@/test/msw/project/lottery/accounts-fixtures";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
+import {
+  checkoutFormWorld,
+  checkoutWorkflowWorld,
+} from "@/test/msw/project/lottery/checkout-form-fixtures";
+import { checkoutWorld } from "@/test/msw/project/lottery/checkout-handlers";
 import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
@@ -208,6 +213,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...redemptionWorld().handlers,
     // 盤點:盤點頁(Figma ST-13)、差異核對、補登售出、盤點紀錄(ST-29)、盤點確認申請檢視頁(ST-30)
     ...stocktakeWorld().handlers,
+    // 交班結帳:交班精靈(Figma ST-17a–19b)、班次結帳歷史紀錄(ST-27)、結帳確認申請檢視頁(ST-28a)
+    ...checkoutWorld().handlers,
     // 店面管理的撤銷售出 / 現金更正分頁(Figma ST-31a / ST-32a 的列)與退款班次的選項
     ...storeFormsWorld().handlers,
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
@@ -230,6 +237,7 @@ export const projectMockWorld: ProjectMockWorld = {
     const transfer = transferFormWorld();
     const store = storeFormsWorld().runtime;
     const stocktake = stocktakeFormWorld();
+    const checkout = checkoutFormWorld();
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
@@ -239,6 +247,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(transfer.moduleForms ?? []),
         ...(store.moduleForms ?? []),
         ...(stocktake.moduleForms ?? []),
+        ...(checkout.moduleForms ?? []),
       ],
       versions: {
         ...support.versions,
@@ -248,6 +257,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...transfer.versions,
         ...store.versions,
         ...stocktake.versions,
+        ...checkout.versions,
       },
       submissions: [
         ...(support.submissions ?? []),
@@ -256,6 +266,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(purchase.submissions ?? []),
         ...(transfer.submissions ?? []),
         ...(stocktake.submissions ?? []),
+        ...(checkout.submissions ?? []),
       ],
       fieldOptions: { ...store.fieldOptions, ...support.fieldOptions },
       listColumns: {
@@ -272,18 +283,25 @@ export const projectMockWorld: ProjectMockWorld = {
       },
     };
   },
-  // 支援需求單、補打卡申請、盤點確認申請各自審核中的流程實例與待審任務
+  // 支援需求單、補打卡申請、盤點確認申請、結帳確認申請各自審核中的流程實例與待審任務
   workflowRuntime: () => {
     const support = supportRequestWorkflowWorld();
     const makeup = makeupPunchWorkflowWorld();
     const stocktake = stocktakeWorkflowWorld();
+    const checkout = checkoutWorkflowWorld();
     return {
       instances: [
         ...support.instances,
         ...makeup.instances,
         ...stocktake.instances,
+        ...checkout.instances,
       ],
-      tasks: [...support.tasks, ...makeup.tasks, ...stocktake.tasks],
+      tasks: [
+        ...support.tasks,
+        ...makeup.tasks,
+        ...stocktake.tasks,
+        ...checkout.tasks,
+      ],
     };
   },
 };

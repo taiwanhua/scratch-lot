@@ -2552,12 +2552,23 @@
     "STOCKTAKE_DIFF_UNHANDLED": "Some differences are not handled yet.",
     "STOCKTAKE_DRAFT_INVALID": "The stocktake is incomplete (or a loss has no reason). Please count again.",
     "STOCKTAKE_FORBIDDEN": "You do not have permission to stocktake or confirm losses.",
-    "STOCKTAKE_VOID_FORBIDDEN": "Stocktake confirmations cannot be voided; recover tickets when they are scanned."
+    "STOCKTAKE_VOID_FORBIDDEN": "Stocktake confirmations cannot be voided; recover tickets when they are scanned.",
+    "CHECKOUT_DRAFT_INVALID": "The checkout content does not match this shift. Reopen close shift.",
+    "CHECKOUT_FORBIDDEN": "Only the shift owner or a store manager can close the shift; skipping the stocktake also needs the skip permission.",
+    "CHECKOUT_SHIFT_CLOSED": "This shift has already been closed.",
+    "CHECKOUT_PENDING_EXISTS": "This shift already has a checkout confirmation under review.",
+    "CHECKOUT_STOCKTAKE_NOT_REUSABLE": "That stocktake is older than 30 minutes or not for this cash point. Count now instead.",
+    "CHECKOUT_REASON_REQUIRED": "A reason is required when the difference is not 0 or the stocktake is skipped.",
+    "CHECKOUT_LEFT_MUST_BE_ZERO": "Without a successor the amount left for the next shift must be 0. Deposit the cash first.",
+    "CHECKOUT_SUCCESSOR_INVALID": "The successor must be a member of this store.",
+    "CHECKOUT_REJECT_FORBIDDEN": "Checkout confirmations cannot be rejected. Return it instead.",
+    "CHECKOUT_VOID_FORBIDDEN": "Checkout confirmations cannot be voided."
   },
   "lotteryStore": {
     "tabs": {
       "aria": "Store",
       "board": "Board",
+      "checkouts": "Shift checkouts",
       "otherForms": "Other requests",
       "redemptions": "Redemptions",
       "saleReversals": "Sale reversals",
@@ -2597,7 +2608,8 @@
       "recentSales": "Recent sales",
       "split": "Open book",
       "redeem": "Redeem",
-      "recentRedemptions": "Recent redemptions"
+      "recentRedemptions": "Recent redemptions",
+      "checkout": "Close shift"
     },
     "card": {
       "title": "{code} {name}",
@@ -3318,6 +3330,156 @@
           "keep": "keep investigating"
         },
         "loadFailed": "Could not load this stocktake"
+      }
+    },
+    "checkout": {
+      "page": {
+        "tabLabel": "Close shift",
+        "title": "Close shift · {cashPoint}",
+        "meta": "{name} · opened {time}",
+        "cancel": "Cancel",
+        "loadFailed": "Could not load this shift. Try again later.",
+        "cannotSubmit": "Only the shift owner or a store manager can close the shift.",
+        "returnedHint": "This checkout confirmation was returned. Edit and submit again.",
+        "progress": "Step {current} / {total} · {label}",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit",
+        "stepperAria": "Close shift steps"
+      },
+      "steps": {
+        "stocktake": "Stocktake",
+        "redemption": "Redemptions",
+        "drawer": "Drawer",
+        "confirm": "Confirm"
+      },
+      "stocktake": {
+        "title": "① Stocktake",
+        "reuse": "Reuse a stocktake from the last 30 minutes",
+        "reuseDetail": "{time} · {scope} · {count} differences",
+        "wholeStore": "Whole store",
+        "noReusable": "No stocktake in the last 30 minutes to reuse",
+        "new": "Count now",
+        "newHint": "Counts this cash point only; opened books are counted by grid or scan",
+        "skip": "Skip stocktake",
+        "skipHint": "Requires the skip-stocktake permission; a reason is required and reports mark it as not counted.",
+        "skipReason": "Skip reason (required)",
+        "review": "Review differences →",
+        "reviewed": "Differences reviewed; continue to the next step"
+      },
+      "redemption": {
+        "title": "② Redemptions ({count} this shift)",
+        "backfill": "Backfill redemption",
+        "immediate": "Takes effect immediately",
+        "total": "Redemptions total",
+        "empty": "No redemptions in this shift yet",
+        "hint": "Prizes over 5,000 go to the bank; a prize over the drawer's expected cash is blocked.",
+        "rowAria": "Redemption {ticket} {amount}"
+      },
+      "drawer": {
+        "expectedTitle": "Expected cash",
+        "expectedHint": "Completed documents only; expand a row to see its entries and documents.",
+        "countedTitle": "Counted (by denomination)",
+        "columns": {
+          "value": "Denomination",
+          "count": "Count",
+          "subtotal": "Subtotal"
+        },
+        "countedTotal": "Counted total",
+        "difference": "Difference = counted − expected",
+        "diffReason": "Difference reason (required)",
+        "pending": "Under review: {items} → the difference reason was filled in automatically.",
+        "pendingItem": "{form} #{serialNo} {amount}",
+        "toggleAria": "Expand entries of {item}",
+        "openEntry": "Open document"
+      },
+      "items": {
+        "opening": "Opening float",
+        "sales": "Sales",
+        "redemptions": "Redemptions",
+        "deposits": "Deposits",
+        "withdrawals": "Withdrawals",
+        "transfer_out": "Transfer out (cash)",
+        "transfer_in": "Transfer in (cash)",
+        "refunds": "Refunds",
+        "corrections": "Cash corrections"
+      },
+      "itemCount": {
+        "sales": "({count} tickets)",
+        "other": "({count})"
+      },
+      "forms": {
+        "sale_reversal": "Sale reversal",
+        "cash_correction": "Cash correction"
+      },
+      "confirm": {
+        "summaryTitle": "Expected cash",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "handoverTitle": "Handover",
+        "leftForNext": "Left for next shift",
+        "successor": "Successor (optional)",
+        "noSuccessor": "(No successor)",
+        "hint": "A successor is required when the amount left is above 0; the successor approves this checkout after counting the float in person.",
+        "mustBeZero": "Must be 0 without a successor: deposit the cash first",
+        "managerReview": "No successor: this checkout confirmation goes to the store manager instead.",
+        "stocktakeReuse": "Reuse the {time} {scope}stocktake {serial}",
+        "stocktakeNew": "Count now",
+        "stocktakeSkip": "Skip stocktake ({reason})",
+        "stocktake": "Stocktake"
+      },
+      "types": {
+        "shift": "Shift",
+        "daily": "Daily close"
+      },
+      "list": {
+        "from": "From",
+        "to": "To",
+        "cashPoint": "Cash point",
+        "type": "Type",
+        "status": "Status",
+        "all": "All",
+        "statuses": {
+          "reviewing": "Under review",
+          "returned": "Returned",
+          "withdrawn": "Withdrawn",
+          "completed": "Completed"
+        },
+        "columns": {
+          "serialNo": "No.",
+          "cashPoint": "Cash point",
+          "type": "Type",
+          "submittedBy": "Closed by",
+          "expected": "Expected",
+          "counted": "Counted",
+          "difference": "Difference",
+          "status": "Status"
+        },
+        "total": "{count} total",
+        "empty": "No checkouts",
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}"
+      },
+      "view": {
+        "title": "Checkout confirmation",
+        "titleWithNo": "Checkout confirmation · {type} {serialNo}",
+        "meta": "Applicant {name} · submitted {time}",
+        "backToList": "Back to list",
+        "edit": "Edit and resubmit",
+        "sheetTitle": "Checkout sheet",
+        "cashPoint": "Cash point",
+        "stocktake": "Stocktake",
+        "stocktakeSkipped": "Skipped ({reason})",
+        "stocktakeReuse": "Reused the {time} {scope}stocktake {serial}",
+        "stocktakeNew": "Counted at {time}",
+        "expected": "Expected",
+        "counted": "Counted",
+        "difference": "Difference",
+        "handover": "Left for next / successor",
+        "noSuccessor": "(No successor)",
+        "pending": "Under review at submission: {items}",
+        "hint": "Each line opens the original document.",
+        "loadFailed": "Could not load this checkout sheet"
       }
     }
   }

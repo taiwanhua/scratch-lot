@@ -819,6 +819,31 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "盤點確認申請檢視頁的 `t(`lostActions.${action}`)`,action 是待查清單的處理(api 回的值)",
   },
+  {
+    key: "admin.lotteryStore.checkout.steps.",
+    reason:
+      "交班精靈 Stepper 的 `t(`steps.${step}`)`,step 是 `CHECKOUT_STEPS`(`checkout-keys.ts`)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.items.",
+    reason:
+      "應有現金逐項的 `t(`items.${item.kind}`)`,kind 是 `EXPECTED_CASH_ITEM_KINDS`(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.forms.",
+    reason:
+      "審核中的單據 `t(`forms.${impact.formKey}`)`,formKey 是撤銷售出申請 / 現金更正單的表單代號(api 回的值)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.types.",
+    reason:
+      "結帳類型 `t(`types.${type}`)`,type 是 `CHECKOUT_TYPES`(api 回的值、班次結帳歷史紀錄的篩選)",
+  },
+  {
+    key: "admin.lotteryStore.checkout.list.statuses.",
+    reason:
+      "班次結帳歷史紀錄的 `t(`list.statuses.${status}`)`,status 是申請的狀態(api 回的值、篩選)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>
