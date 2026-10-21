@@ -327,6 +327,7 @@ const row = (
   shipped: false,
   received: false,
   receivedAt: null,
+  shippedAt: null,
   ...overrides,
 });
 
@@ -353,6 +354,7 @@ export const transferReceiving = (
             amount: 20_000,
             purchaseAmount: 18_400,
             shipped: true,
+            shippedAt: "2026-10-16T01:10:00.000Z",
             received: true,
             receivedAt: "2026-10-16T07:20:00.000Z",
           }),
@@ -365,6 +367,7 @@ export const transferReceiving = (
             amount: 1200,
             purchaseAmount: 1104,
             shipped: true,
+            shippedAt: "2026-10-16T01:10:00.000Z",
           }),
         ],
       }

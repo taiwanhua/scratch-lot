@@ -53,7 +53,8 @@ const isFirstStepPassed = (
  * 調貨單的審核後 / 送出後動作(`app/project/workflow-extensions.ts` 登記;規格 8.4 / 第 12 章):
  * 第一關通過(含跳過)→ 自動印調貨出貨單,印出貨分店的印表機。不論從哪一頁做(調貨單檢視頁、申請中心詳情頁、
  * 申請中心批次核准、新增頁送出、引擎編輯頁重新送出)都會到這裡。
- * 印的列 = 在途(已出貨、還沒點收)的列。沒有列印權限、不是第一關通過、沒有在途的列 → 不印;
+ * 印的列 = 這次才出貨的在途列(出貨時間在這個審核實例開始之後;退回後重送時先前已在途的列不再印)。
+ * 沒有列印權限、不是第一關通過、沒有這次出貨的列 → 不印;
  * 任何失敗只記 log(`printReceiptAfterCommit`),做完就卸載。
  */
 export const TransferShipmentEffect = ({
@@ -103,8 +104,14 @@ export const TransferShipmentEffect = ({
       ]);
       const { values, serialNo } = submission.formSubmission.submission;
       const latest = receiving.lotteryTransferReceiving;
+      // 只印「這次」才出貨的列:出貨時間在這個審核實例開始之後(退回後重送,先前已在途的列不再印;使用者 10/21 定案)
+      const startedAt = Date.parse(instance.createdAt);
       const inTransit = latest.rows.filter(
-        (row) => row.shipped && !row.received,
+        (row) =>
+          row.shipped &&
+          !row.received &&
+          row.shippedAt != null &&
+          Date.parse(row.shippedAt) >= startedAt,
       );
       if (inTransit.length === 0) {
         return;

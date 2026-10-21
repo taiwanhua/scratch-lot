@@ -122,6 +122,8 @@ const shipAfterDecide = (
             rows: receiving.rows.map((row) => ({
               ...row,
               shipped: decided(),
+              // 這個審核實例(建立於 STAMP)之後才出貨
+              shippedAt: decided() ? "2026-09-20T03:00:00.000Z" : null,
             })),
           },
         },
