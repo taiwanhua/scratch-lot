@@ -49,7 +49,7 @@ test/       測試支援
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
 | SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;手機寬改成抽屜;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/base/useSideNavStore.ts`      |
 | AppBar    | 頁名、「?」模組說明、當前組織切換器、頭像選單                                                                                                                                                                      | `app/AdminShell/AppBar/`                                         |
-| RouteTabs | 開過的路由各一個頁籤;可關閉、可拖曳排序、鍵盤可操作                                                                                                                                                                | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
+| RouteTabs | 開過的路由各一個頁籤;可關閉、可批次關閉、可拖曳排序、鍵盤可操作                                                                                                                                                    | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
 | 內容區    | `<main>`:高度由殼給、自己捲動;`lg` 以上有最小寬度                                                                                                                                                                  | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
 
 - 殼的設計稿節點登記在 `docs/branding.md`。
@@ -199,6 +199,7 @@ Provider 內找不到模組設定時使用預設模板 `{{title}}`;缺少 Provid
 | 頁內分頁 | `PageTabs`;同一網址內切換區塊 | 不是路由、不進頁籤列;目前分頁記在網址參數(`?tab=`),重新整理、分享網址都回到同一頁                                              |
 
 - **路由頁籤記住網址參數**:頁面以 `useUrlState` 寫進網址的篩選、頁碼、頁內分頁,由殼的同步(`syncEntries`)記到目前頁籤上(`search`,與路徑存在同一筆、同一把 sessionStorage key)。切回頁籤、從側欄點已開著的那一頁,都回到它記下的參數(側欄連結的網址由 `SideNav/useNavLinkHref` 帶上);頁籤關掉後再從側欄打開是預設條件。頁面內的「返回列表 / 取消 / 存完離開」同樣帶回列表頁籤記下的參數(`hooks/base/useRouteTabHref`,與關閉頁籤、刪除後回列表同一個規則)。用帶參數的網址打開時以網址為準:頁籤已開著就換掉原本的條件,沒開就開新的;參數被 `useUrlState` 清掉(格式錯誤)時頁籤記下的也跟著清。
+- **批次關閉選單**(`RouteTabs/RouteTabMenu.tsx`):關閉左側 / 右側 / 其他所有分頁,沒有可關的那一項停用。叫出方式共用同一份選單:右鍵;觸控長按約 0.5 秒(按住不動才算,移動超過拖曳門檻 6px 就交給拖曳,長按放開後不切換頁籤);頁籤列最右的「⋯」(作用在目前頁籤,沒有目前頁籤時停用);焦點在頁籤時按選單鍵或 Shift+F10。目前頁沒被關 → 畫面不動;目前頁被關 → 切到按右鍵 / 長按的那一頁(帶回它記下的網址參數;用「⋯」時作用頁就是目前頁,不會被關)。單一關閉照舊切相鄰。狀態規則是 `lib/base/route-tabs.ts` 的 `closeLeftOf` / `closeRightOf` / `closeOthers`(回 `{ entries, navigateTo }`,同 `closeEntry`),store 的 `closeBatch` 呼叫它們。
 - 帶識別碼的詳情 / 編輯頁是**詳情子頁籤**:每筆一個,標籤「所屬模組名 — 項目名」。項目名由頁面拿到資料後經 `useRouteTabItemLabel` 提供,殼不查業務資料。
 - 項目名最前面接頁面種類(「檢視・項目名」「編輯・項目名」),同一筆的詳情與編輯分得出來。組法是字典 `admin.formEngine.pages.tabLabelWithAction`,文字是 `admin.formEngine.pages.actions`:
   - 固定欄位模組:頁面把頁面種類傳給 `useRouteTabItemLabel` 的第二個參數(`"view"` / `"edit"`),由它組。

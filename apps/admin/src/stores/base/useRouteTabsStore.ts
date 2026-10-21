@@ -3,6 +3,8 @@ import { type PersistStorage, persist } from "zustand/middleware";
 
 import type { ShellModule } from "../../lib/base/module-tree";
 import {
+  BATCH_CLOSE,
+  type BatchCloseKind,
   ROUTE_TABS_STORAGE_PREFIX,
   type RouteTabEntry,
   closeEntry,
@@ -39,6 +41,15 @@ export interface RouteTabsStoreState extends RouteTabsPersisted {
   setItemLabel: (route: string, itemLabel: string) => void;
   /** 關閉 tab;回傳關閉當前 tab 時要轉去的路由(非當前為 null) */
   close: (route: string, activeRoute: string | null) => string | null;
+  /**
+   * 批次關閉(頁籤選單):`route` 左側 / 右側 / 以外的所有頁籤。
+   * 回傳目前頁被關掉時要轉去的路由(= `route` 那一頁);目前頁沒被關為 null。
+   */
+  closeBatch: (
+    kind: BatchCloseKind,
+    route: string,
+    activeRoute: string | null,
+  ) => string | null;
   /**
    * 刪除成功後關掉同一筆的所有子頁籤(詳情、編輯;`itemRoutes` 以網址前綴比對):經 `hooks/base/useCloseItemTabs` 呼叫。
    * 回傳當前 tab 在其中時要轉去的路由(= `fallbackRoute`,所屬模組的列表頁);否則 null。
@@ -105,6 +116,11 @@ export const useRouteTabsStore = create<RouteTabsStoreState>()(
         },
         close: (route, activeRoute) => {
           const result = closeEntry(get().entries, route, activeRoute);
+          commit(result.entries);
+          return result.navigateTo;
+        },
+        closeBatch: (kind, route, activeRoute) => {
+          const result = BATCH_CLOSE[kind](get().entries, route, activeRoute);
           commit(result.entries);
           return result.navigateTo;
         },

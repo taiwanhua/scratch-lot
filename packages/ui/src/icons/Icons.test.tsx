@@ -22,6 +22,7 @@ import { HelpIcon } from "./HelpIcon";
 import { LightModeIcon } from "./LightModeIcon";
 import { LogoutIcon } from "./LogoutIcon";
 import { MenuIcon } from "./MenuIcon";
+import { MoreHorizIcon } from "./MoreHorizIcon";
 import { NotificationsIcon } from "./NotificationsIcon";
 import { SettingsIcon } from "./SettingsIcon";
 import { SystemModeIcon } from "./SystemModeIcon";
@@ -62,6 +63,7 @@ const actionIcons = [
   { name: "CheckCircleIcon", Icon: CheckCircleIcon },
   { name: "ErrorCircleIcon", Icon: ErrorCircleIcon },
   { name: "MenuIcon", Icon: MenuIcon },
+  { name: "MoreHorizIcon", Icon: MoreHorizIcon },
 ] as const;
 
 describe("icons", () => {

@@ -39,4 +39,5 @@ export * from "./NotificationsIcon";
 export * from "./CheckCircleIcon";
 export * from "./ErrorCircleIcon";
 export * from "./MenuIcon";
+export * from "./MoreHorizIcon";
 export * from "./module-icon-registry";

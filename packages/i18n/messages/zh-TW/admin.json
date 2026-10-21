@@ -107,12 +107,19 @@
     "tabs": {
       "label": "路由頁籤",
       "close": "關閉 {label}",
-      "keyboardHint": "左右方向鍵移動焦點、Enter 開啟頁籤;Shift 加方向鍵調整順序;Delete 關閉目前焦點的頁籤;也可用滑鼠拖曳排序。",
+      "keyboardHint": "左右方向鍵移動焦點、Enter 開啟頁籤;Shift 加方向鍵調整順序;Delete 關閉目前焦點的頁籤;選單鍵或 Shift+F10 開啟頁籤選單;也可用滑鼠拖曳排序。",
       "dragStart": "已拿起「{label}」",
       "dragOver": "「{label}」移到「{over}」的位置",
       "dragEnd": "「{label}」已放到「{over}」的位置",
       "dragEndNoTarget": "「{label}」已放回原位",
-      "dragCancel": "已取消拖曳「{label}」"
+      "dragCancel": "已取消拖曳「{label}」",
+      "menu": {
+        "open": "頁籤選單",
+        "label": "頁籤選單 — {label}",
+        "closeLeft": "關閉左側所有分頁",
+        "closeRight": "關閉右側所有分頁",
+        "closeOthers": "關閉其他所有分頁"
+      }
     },
     "forbidden": {
       "title": "沒有權限進入此頁面",

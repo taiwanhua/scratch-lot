@@ -123,6 +123,7 @@ export const ShellLayout = ({ me, pageMinWidths = {} }: ShellLayoutProps) => {
           activeRoute={routeTabs.activeRoute}
           onSelect={routeTabs.select}
           onClose={routeTabs.close}
+          onCloseBatch={routeTabs.closeBatch}
           onMove={routeTabs.move}
         />
         {/* `flex: 1` 的 basis 是 0,所以 AppBar / RouteTabs 不會被內容擠扁;

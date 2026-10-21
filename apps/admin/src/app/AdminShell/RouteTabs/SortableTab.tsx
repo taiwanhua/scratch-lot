@@ -1,5 +1,5 @@
 import { useSortable } from "@dnd-kit/sortable";
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent } from "react";
 
 import { Box } from "@repo/ui/box";
 import { IconButton } from "@repo/ui/icon-button";
@@ -7,6 +7,9 @@ import { CloseIcon } from "@repo/ui/icons";
 import { Typography } from "@repo/ui/typography";
 
 import type { RouteTab } from "@/lib/base/route-tabs";
+
+import type { RouteTabMenuAnchor } from "./RouteTabMenu";
+import { useLongPress } from "./useLongPress";
 
 /** 頁籤高 / 關閉圖示(theme.spacing 單位;Figma RouteTab 30 高、close 12)。 */
 const TAB_HEIGHT = 3.75;
@@ -21,6 +24,10 @@ export interface SortableTabProps {
   onSelect: () => void;
   onClose: () => void;
   onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
+  /** 叫出批次關閉選單(右鍵、觸控長按) */
+  onOpenMenu: (anchor: RouteTabMenuAnchor) => void;
+  /** 拖曳啟動的距離(px);長按移動超過它就取消,交給拖曳 */
+  dragStartDistance: number;
 }
 
 const stopPointerPropagation = (event: PointerEvent<HTMLButtonElement>) => {
@@ -31,6 +38,7 @@ const stopPointerPropagation = (event: PointerEvent<HTMLButtonElement>) => {
 /**
  * 單一頁籤(Figma Draft/RouteTab 26:48:State=Active 品牌淺色底 + 深色字、Default 底色 + 次要字;Closable 開關 = 關閉鈕)。
  * 整顆 tab 是 dnd-kit 的可拖曳節點(指標);鍵盤排序不走 dnd-kit,由 `RouteTabs` 的 keydown 直接搬(見 keyboardHint)。
+ * 右鍵或觸控長按(按住不動約 0.5 秒;一移動就交給拖曳)叫出批次關閉選單;長按放開後補來的那次點擊不切換頁籤。
  */
 export const SortableTab = ({
   tab,
@@ -40,7 +48,12 @@ export const SortableTab = ({
   onSelect,
   onClose,
   onKeyDown,
+  onOpenMenu,
+  dragStartDistance,
 }: SortableTabProps) => {
+  const longPress = useLongPress(({ x, y }) => {
+    onOpenMenu({ top: y, left: x });
+  }, dragStartDistance);
   const {
     attributes,
     listeners,
@@ -57,9 +70,29 @@ export const SortableTab = ({
       aria-selected={isActive}
       aria-describedby={attributes["aria-describedby"]}
       tabIndex={tabIndex}
-      onClick={onSelect}
       onKeyDown={onKeyDown}
       {...listeners}
+      onClick={() => {
+        if (!longPress.consumeLongPress()) {
+          onSelect();
+        }
+      }}
+      onContextMenu={(event: MouseEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        // 鍵盤的選單鍵也會送 contextmenu(座標 0, 0):改開在頁籤底下
+        onOpenMenu(
+          event.clientX === 0 && event.clientY === 0
+            ? { element: event.currentTarget }
+            : { top: event.clientY, left: event.clientX },
+        );
+      }}
+      onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+        longPress.onPointerDown(event);
+        listeners?.onPointerDown(event);
+      }}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={longPress.onPointerUp}
+      onPointerCancel={longPress.onPointerCancel}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -72,6 +105,8 @@ export const SortableTab = ({
         cursor: isDragging ? "grabbing" : "pointer",
         userSelect: "none",
         touchAction: "none",
+        // iOS 長按不跳出系統的連結 / 文字選單(長按交給頁籤選單)
+        WebkitTouchCallout: "none",
         bgcolor: isActive ? "primary.lighter" : "background.default",
         color: isActive ? "primary.dark" : "text.secondary",
         boxShadow: isDragging ? 2 : 0,
