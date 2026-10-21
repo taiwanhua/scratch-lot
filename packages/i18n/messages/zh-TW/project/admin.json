@@ -1194,7 +1194,8 @@
         "dotMissingLeader": "缺負責",
         "punchTimes": "上班 / 下班打卡",
         "changedDot": "有異動",
-        "missingDot": "缺卡"
+        "missingDot": "缺卡",
+        "specialTone": "特殊日(底色)"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N",

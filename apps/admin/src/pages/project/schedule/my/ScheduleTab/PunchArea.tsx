@@ -129,6 +129,11 @@ const PunchCard = ({
             {t("yesterdayTitle", { date: text.dateTitle(entry.date) })}
           </Typography>
           <EntryLine entry={entry} withTime />
+          {clockIn !== null && (
+            <Typography variant="body2" color="success.main">
+              {t("clockedIn", { time: clockIn })}
+            </Typography>
+          )}
           {canPunch && (
             <Button
               variant="outlined"
@@ -286,18 +291,16 @@ const NoScheduleBlock = ({ page, onPunch, disabled }: NoScheduleBlockProps) => {
 
 /**
  * 班表分頁最上方的打卡區(SC-01 / SC-25 / SC-32;規格 14.6 打卡):今天的班 + 昨天未打下班卡的班的卡片,
- * 下面是「沒有排班」區塊。沒有 `schedule.my.punch` → 不顯示任何打卡按鈕(只留今天的班的資訊)。
+ * 下面是「沒有排班」區塊。沒有 `schedule.my.punch` → 卡片照常顯示(班與打卡紀錄)但沒有 [打上班卡] [打下班卡],
+ * 「沒有排班」區塊不顯示。
  */
 export const PunchArea = ({ page }: { page: Page }) => {
   const t = useTranslations("admin.schedule.mySchedule.punch");
   const { punch, isPending } = usePunch();
-  const cards = page.punchCards.filter(
-    (card) => page.canPunch || card.day === "today",
-  );
   return (
     <Box component="section" aria-label={t("regionAria")}>
       <Stack spacing={1.5}>
-        {cards.map((card) => (
+        {page.punchCards.map((card) => (
           <PunchCard
             key={`${card.day}-${card.entry.id}`}
             day={card.day === "yesterday" ? "yesterday" : "today"}

@@ -1194,7 +1194,8 @@
         "dotMissingLeader": "Lead missing",
         "punchTimes": "Clock-in / clock-out",
         "changedDot": "Changed",
-        "missingDot": "Missing punch"
+        "missingDot": "Missing punch",
+        "specialTone": "Special day (shaded)"
       },
       "punchSample": "⏲ 2",
       "moreSample": "+N",

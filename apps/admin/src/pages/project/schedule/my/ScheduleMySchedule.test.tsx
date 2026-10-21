@@ -57,7 +57,7 @@ describe("我的班表 → 班表", () => {
     expect(await within(card).findByText("上班 10:00 已打卡")).toBeVisible();
   });
 
-  it("沒有 schedule.my.punch:看不到任何打卡按鈕", async () => {
+  it("沒有 schedule.my.punch:卡片與提醒照常顯示,沒有打卡按鈕、沒有「沒有排班」", async () => {
     renderSchedulePage({
       path: SCHEDULE,
       omit: ["schedule.my.punch"],
@@ -66,6 +66,10 @@ describe("我的班表 → 班表", () => {
     expect(
       await screen.findByText("今天 11/5(四)· 08:30–14:30"),
     ).toBeInTheDocument();
+    // 昨天未打下班卡的卡片照常顯示(含上班打卡紀錄),只是沒有按鈕
+    expect(screen.getByText("昨天 11/4(三)未打下班卡")).toBeInTheDocument();
+    expect(screen.getByText("上班 14:24 已打卡")).toBeInTheDocument();
+    expect(screen.getByText("最近 7 天有 2 班打卡不完整")).toBeInTheDocument();
     expect(queryButton("打上班卡")).toBeNull();
     expect(queryButton("打下班卡")).toBeNull();
     expect(screen.queryByText("沒有排班")).toBeNull();
@@ -112,6 +116,10 @@ describe("我的班表 → 班表", () => {
     expect(
       within(await findLabelled("2026-11-08")).getByLabelText("有異動"),
     ).toBeInTheDocument();
+    // 特殊日整格淡藍底(底座 MonthCalendar 的 tone)並寫名稱
+    const special = await findLabelled("2026-11-11");
+    expect(special).toHaveAttribute("data-tone", "special");
+    expect(within(special).getByText("店慶")).toBeInTheDocument();
     await user.click(nov2);
     const dialog = await findDialog("11/2(一)當天詳情");
     expect(within(dialog).getByText("07:56")).toBeInTheDocument();

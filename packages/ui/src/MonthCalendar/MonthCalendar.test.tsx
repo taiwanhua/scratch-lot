@@ -221,6 +221,24 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     expect(within(badgeCell).getByText("09:00–17:00")).toBeInTheDocument();
   });
 
+  it("底色語意:特殊日 / 休息日標在格子上;前後補的日子不套", () => {
+    renderCalendar({
+      days: {
+        "2026-10-11": { tone: "special", note: "店慶" },
+        "2026-10-12": { tone: "closed" },
+        "2026-09-30": { tone: "special" },
+        "2026-10-13": { tone: "special", disabled: true },
+      },
+    });
+
+    expect(day("2026-10-11")).toHaveAttribute("data-tone", "special");
+    expect(day("2026-10-12")).toHaveAttribute("data-tone", "closed");
+    expect(day("2026-09-30")).not.toHaveAttribute("data-tone");
+    expect(day("2026-10-14")).not.toHaveAttribute("data-tone");
+    // 停用優先:仍標語意,但底色是停用色
+    expect(day("2026-10-13")).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("前後補的日子不畫註記與角標", () => {
     renderCalendar({
       days: {

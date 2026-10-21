@@ -542,6 +542,30 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     expect(closed.openUnmatchedClockIn).toBeNull();
   });
 
+  it("經過 Cloud Run 前端代理:記下 X-Forwarded-For 最右邊的客戶端 IP", async () => {
+    now("2026-11-07", "09:00");
+    const result = await api.graphql(
+      PUNCH,
+      { input: { type: "in", entryId: null } },
+      {
+        accessToken: wang.token,
+        headers: {
+          "X-Forwarded-For": "198.51.100.9, 203.0.113.7",
+          "User-Agent": "punch-test",
+        },
+      },
+    );
+    expect(result.errors).toBeUndefined();
+    const id = (result.data?.punchMySchedule as PunchRow).id;
+    const stored = await connection
+      .collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION)
+      .findOne({ _id: new Types.ObjectId(id) });
+    expect(stored).toMatchObject({
+      ip: "203.0.113.7",
+      userAgent: "punch-test",
+    });
+  });
+
   it("沒有 schedule.my.punch:看不到打卡按鈕(canPunch = false),打卡被擋", async () => {
     now("2026-11-05", "09:00");
     const page = await mySchedule(lin);
@@ -660,6 +684,15 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
           meta,
         ),
       ).rejects.toThrow("can only punch for yourself");
+      // 沒有 schedule.my.punch(林只有 view):擋下
+      const linOperator = await operatorOf(lin);
+      await expect(
+        lookup.punchStart(
+          linOperator,
+          { userId: lin.userId, entryId: nov5 },
+          meta,
+        ),
+      ).rejects.toThrow("missing permission schedule.my.punch");
     });
   });
 });

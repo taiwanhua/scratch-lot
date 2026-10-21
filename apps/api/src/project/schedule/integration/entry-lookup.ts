@@ -14,8 +14,16 @@ import {
 import { PublishedEntries } from "../my/published-entries";
 import type { EntryRecord } from "../roster/roster-people";
 import { ScheduleRulesService } from "../rules/schedule-rules.service";
-import { notFoundError, validationError } from "../shared/schedule-error";
+import {
+  forbiddenError,
+  notFoundError,
+  validationError,
+} from "../shared/schedule-error";
 import { parseObjectId } from "../shared/schedule-org";
+import {
+  SCHEDULE_PERMISSIONS,
+  SchedulePermissions,
+} from "../shared/schedule-permissions";
 import {
   type FilledTask,
   closestEntryAt,
@@ -76,6 +84,7 @@ export class ScheduleEntryLookup {
     private readonly published: PublishedEntries,
     private readonly rules: ScheduleRulesService,
     private readonly mySchedule: MyScheduleService,
+    private readonly permissions: SchedulePermissions,
   ) {}
 
   /**
@@ -161,7 +170,8 @@ export class ScheduleEntryLookup {
   }
 
   /**
-   * 開班彈窗「你還沒打上班卡 [打卡]」:打這一班的上班卡(`schedule.my.punch`,由呼叫端的端點守)。
+   * 開班彈窗「你還沒打上班卡 [打卡]」:打這一班的上班卡。這裡再查一次 `schedule.my.punch`
+   * (呼叫端的端點守的是開班權限;沒有 → `FORBIDDEN`,`reason: MISSING_PERMISSION`)。
    * 只能替自己打(`userId` 要是操作者本人);排班要是自己的、已發布、今天的班。
    */
   async punchStart(
@@ -177,6 +187,13 @@ export class ScheduleEntryLookup {
       String(operator.actorId) !== String(input.userId)
     ) {
       throw validationError("can only punch for yourself", ["userId"]);
+    }
+    const holds = await this.permissions.holderOf(operator);
+    if (!holds(SCHEDULE_PERMISSIONS.myPunch)) {
+      throw forbiddenError(
+        "missing permission schedule.my.punch",
+        "MISSING_PERMISSION",
+      );
     }
     return this.mySchedule.punchStartOf(
       operator,

@@ -10,10 +10,8 @@ import {
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
 
-import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { leaderMarkSx } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { groupByDate } from "@/lib/project/schedule-my";
-import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
 import { type MyEntry, useMyEntryText } from "./useMyEntryText";
 
@@ -81,7 +79,7 @@ export interface MyMonthCalendarProps {
 /**
  * 月曆(SC-01;規格 14.6「月曆」):底座 `MonthCalendar`。每天顯示自己的排班(範本簡稱、時間;負責人綠底)與
  * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子橘點(同一天兩者都有時紅點優先);
- * 店休、特殊日寫在日期下方;整天畫休寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
+ * 店休寫在日期下方;特殊日整格淡藍底(底座 `MonthCalendar` 的 `tone`)並寫名稱;整天畫休寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
  */
 export const MyMonthCalendar = ({
   page,
@@ -108,19 +106,14 @@ export const MyMonthCalendar = ({
     const entries = byDate.get(date) ?? [];
     const calendarDay = calendarByDate.get(date);
     const hasMissing = entries.some((entry) => entry.missing.length > 0);
+    // 店休寫「店休」;特殊日整格淡藍底(底座 `tone: special`)並寫名稱
     let note: MonthCalendarDayInfo["note"];
+    let tone: MonthCalendarDayInfo["tone"];
     if (calendarDay?.type === "closed") {
       note = t("closed");
-    } else if (
-      calendarDay?.type === "special" &&
-      isTagPaletteKey(calendarDay.paletteKey)
-    ) {
-      note = (
-        <TagPaletteChip
-          paletteKey={calendarDay.paletteKey}
-          label={calendarDay.name ?? ""}
-        />
-      );
+    } else if (calendarDay?.type === "special") {
+      tone = "special";
+      note = calendarDay.name ?? undefined;
     }
     let corner: MonthCalendarDayInfo["corner"];
     if (hasMissing) {
@@ -130,6 +123,7 @@ export const MyMonthCalendar = ({
     }
     days[date] = {
       ...(note === undefined ? {} : { note }),
+      ...(tone === undefined ? {} : { tone }),
       ...(corner === undefined ? {} : { corner }),
       content: (
         <Stack spacing={0.5} data-my-day={date}>

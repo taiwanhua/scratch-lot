@@ -2,12 +2,14 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 
 import type { INestApplication, Type } from "@nestjs/common";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { type Connection } from "mongoose";
 import request from "supertest";
 
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { applyTrustProxy } from "../../http-proxy";
 
 /** db-migrator 套件根目錄(以子行程跑其 seed 指令,不 import — STRUCT-01 禁 app 互 import)。 */
 const DB_MIGRATOR_ROOT = path.resolve(
@@ -134,6 +136,8 @@ export const REFRESH_COOKIE_NAME = "refresh_token";
 export interface GraphqlCallOptions {
   accessToken?: string;
   cookie?: string;
+  /** 額外的請求標頭(例:`X-Forwarded-For` 模擬經過 Cloud Run 前端代理) */
+  headers?: Record<string, string>;
 }
 
 export interface GraphqlError {
@@ -256,7 +260,9 @@ async function bootAuthTestApp(
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule, ...extraModules],
   }).compile();
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication<NestExpressApplication>();
+  // 與 `main.ts` 同一份代理設定(`req.ip` 取 `X-Forwarded-For` 的客戶端 IP)
+  applyTrustProxy(app);
   await app.init();
 
   const connection = await mongoose.createConnection(databaseUri).asPromise();
@@ -275,6 +281,9 @@ async function bootAuthTestApp(
     }
     if (options.cookie) {
       call = call.set("Cookie", options.cookie);
+    }
+    for (const [name, value] of Object.entries(options.headers ?? {})) {
+      call = call.set(name, value);
     }
     const response = await call.send({ query, variables });
     const body = response.body as {

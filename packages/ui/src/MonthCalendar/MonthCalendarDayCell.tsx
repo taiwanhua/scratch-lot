@@ -8,7 +8,16 @@ import { stateLayerSx } from "../theme/state-layer";
 import { todayMarkSx } from "../theme/today-mark";
 import { MonthCalendarCornerMark } from "./MonthCalendarCornerMark";
 import type { CalendarDay } from "./month-calendar-grid";
-import type { MonthCalendarDayInfo } from "./month-calendar-types";
+import type {
+  MonthCalendarDayInfo,
+  MonthCalendarDayTone,
+} from "./month-calendar-types";
+
+/** 底色語意 → 主題 token(色碼由主題決定,深色模式跟著換)。 */
+const TONE_BACKGROUND: Record<MonthCalendarDayTone, string> = {
+  special: "info.lighter",
+  closed: "action.hover",
+};
 
 export interface MonthCalendarDayCellProps {
   day: CalendarDay;
@@ -40,6 +49,13 @@ export const MonthCalendarDayCell = ({
 }: MonthCalendarDayCellProps) => {
   const disabled = day.inMonth && info?.disabled === true;
   const muted = !day.inMonth || disabled;
+  const tone = day.inMonth ? info?.tone : undefined;
+  let background = "background.paper";
+  if (disabled) {
+    background = "action.disabledBackground";
+  } else if (tone !== undefined) {
+    background = TONE_BACKGROUND[tone];
+  }
   const select = () => {
     if (selectable) onSelect(day.date);
   };
@@ -50,6 +66,7 @@ export const MonthCalendarDayCell = ({
       aria-selected={selectionEnabled ? selected : undefined}
       aria-disabled={muted || undefined}
       data-date={day.date}
+      data-tone={tone}
       tabIndex={selectable ? 0 : undefined}
       onClick={select}
       onKeyDown={(event: KeyboardEvent) => {
@@ -66,7 +83,7 @@ export const MonthCalendarDayCell = ({
         display: "flex",
         flexDirection: "column",
         gap: 0.5,
-        bgcolor: disabled ? "action.disabledBackground" : "background.paper",
+        bgcolor: background,
         color: muted ? "text.disabled" : "text.primary",
         borderRight: 1,
         borderBottom: 1,
