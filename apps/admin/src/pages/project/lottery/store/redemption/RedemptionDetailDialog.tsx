@@ -18,9 +18,14 @@ import type { RedemptionRow } from "./redemption-shared";
 
 export interface RedemptionDetailDialogProps {
   id: string;
+  /**
+   * 已經讀到的那一筆(進貨單的兌獎區 / 檢視頁:讀取依據是讀得到那張進貨單,不另查 `lotteryRedemption`,
+   * 那要店面管理的 `store.view`);不給 = 依 `id` 讀
+   */
+  item?: RedemptionRow;
   onClose: () => void;
-  /** [撤銷兌獎](依 `revokeMode` 開自己撤銷或店長撤銷的視窗) */
-  onRevoke: (row: RedemptionRow) => void;
+  /** [撤銷兌獎](依 `revokeMode` 開自己撤銷或店長撤銷的視窗);不給 = 這個入口不能撤銷 */
+  onRevoke?: (row: RedemptionRow) => void;
 }
 
 const Line = ({ label, value }: { label: string; value: ReactNode }) => (
@@ -41,10 +46,12 @@ const Line = ({ label, value }: { label: string; value: ReactNode }) => (
 /**
  * 兌獎紀錄詳情(規格 6.5;Figma ST-39a / ST-39c):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態;
  * 已撤銷另列撤銷人與原因。[撤銷兌獎] 只在操作者能撤銷時出現(`revokeMode`,沒有權限不顯示);
- * 已送兌 → 按鈕停用、提示先撤回或退回進貨單。各入口(兌獎紀錄分頁、[最近兌獎]、進貨單兌獎區)共用。
+ * 已送兌 → 按鈕停用、提示先撤回或退回進貨單。各入口(兌獎紀錄分頁、[最近兌獎]、進貨單的兌獎區與檢視頁)共用;
+ * 進貨單的入口傳入已讀到的那一筆(`item`),不能撤銷。
  */
 export const RedemptionDetailDialog = ({
   id,
+  item,
   onClose,
   onRevoke,
 }: RedemptionDetailDialogProps) => {
@@ -52,8 +59,12 @@ export const RedemptionDetailDialog = ({
   const { session } = useSession();
   const temporal = useTemporalText();
   const isMobile = useBreakpointDown("sm");
-  const query = useLotteryRedemptionQuery(session.client, { id });
-  const row = query.data?.lotteryRedemption.item ?? null;
+  const query = useLotteryRedemptionQuery(
+    session.client,
+    { id },
+    { enabled: item === undefined },
+  );
+  const row = item ?? query.data?.lotteryRedemption.item ?? null;
   const serial = row?.purchase?.serialNo ?? "—";
 
   const statusText = (item: RedemptionRow): string =>
@@ -74,7 +85,7 @@ export const RedemptionDetailDialog = ({
           <Button variant="text" onClick={onClose}>
             {t("close")}
           </Button>
-          {row?.revokeMode == null ? null : (
+          {row?.revokeMode == null || onRevoke === undefined ? null : (
             <Button
               color="error"
               variant="outlined"

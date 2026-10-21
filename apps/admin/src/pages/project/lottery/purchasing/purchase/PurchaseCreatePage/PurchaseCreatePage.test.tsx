@@ -96,6 +96,12 @@ describe("進貨單新增頁", () => {
       within(table).getByRole("checkbox", { name: "勾選 5164-056527-012" }),
     );
     expect(screen.getByText("兌獎金額(勾選 2 筆)")).toBeInTheDocument();
+    // 點一列(勾選框以外)開兌獎紀錄詳情,不會改勾選
+    await user.click(within(table).getByText("5164 · 056527 · #012"));
+    const detail = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    expect(within(detail).getByText("1,000 元")).toBeInTheDocument();
+    await user.click(within(detail).getByRole("button", { name: "關閉" }));
+    expect(screen.getByText("兌獎金額(勾選 2 筆)")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "送出" }));
     await waitFor(() => {
       expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);

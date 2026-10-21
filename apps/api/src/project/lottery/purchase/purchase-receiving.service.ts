@@ -12,6 +12,7 @@ import {
   parseTicketInput,
   purchaseHeaderOf,
   purchaseLinesOf,
+  purchaseRedemptionsOf,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -25,12 +26,16 @@ import { WorkflowTasksRepository } from "../../../database/workflow-tasks.reposi
 import { isDuplicateKeyError } from "../../../forms/forms-error";
 import { NotificationService } from "../../../notifications/notification.service";
 import { LotteryPurchaseReceiptsRepository } from "../../database/lottery-purchases/lottery-purchase-receipts.repository";
+import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import {
   LOTTERY_PURCHASE_REF,
   LOTTERY_PURCHASE_WRONG_STORE,
 } from "../../notifications";
 import { tenantOfOperator } from "../master-data-tenant";
+import type { LotteryRedemptionModel } from "../redemption/models/redemption.model";
+import { RedemptionViews } from "../redemption/redemption-views";
+import type { StoreGrant } from "../store/store-access";
 import { LotteryBooksService } from "../tickets/books.service";
 import type {
   CompleteLotteryPurchaseReceivingPayload,
@@ -121,6 +126,9 @@ interface WrongStoreHit {
  * - `complete`:[完成這次點收] → 「這一次」點收的列標上同一個點收批次(`batchId`);
  *   「這一次」由畫面記(上次完成或打開頁面之後點收的列),已在別的批次的列不重收。進貨點收單照批次印
  */
+/** 從進貨單讀兌獎紀錄:不帶店面的權限(撤銷方式一律 null)。 */
+const NO_STORE_GRANT: StoreGrant = { has: () => false };
+
 @Injectable()
 export class PurchaseReceivingService {
   constructor(
@@ -133,7 +141,42 @@ export class PurchaseReceivingService {
     private readonly rules: PurchaseRules,
     private readonly notifications: NotificationService,
     private readonly tx: TransactionService,
+    private readonly redemptions: LotteryRedemptionsRepository,
+    private readonly redemptionViews: RedemptionViews,
   ) {}
+
+  /**
+   * 這張進貨單勾選的兌獎紀錄(兌獎紀錄詳情的入口之一,規格 6.5):讀取依據是**讀得到這張進貨單**
+   * (`readable`;總部不一定有 `store.view`),兌獎紀錄在分店,以租戶邊界讀(反查),只讀這張單存值裡勾的那幾筆。
+   * 回詳情欄位;撤銷方式一律 null(這個入口不能撤銷,撤銷走店面管理)。
+   */
+  async redemptionsOf(
+    operator: OperatorContext,
+    submissionIdText: string,
+  ): Promise<LotteryRedemptionModel[]> {
+    const submission = await this.readable(operator, submissionIdText);
+    const ids = purchaseRedemptionsOf(
+      submission.values as Record<string, unknown>,
+    ).flatMap((row) =>
+      Types.ObjectId.isValid(row.redemptionId)
+        ? [new Types.ObjectId(row.redemptionId)]
+        : [],
+    );
+    if (ids.length === 0) {
+      return [];
+    }
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      null,
+      submission.tenantId,
+    );
+    const rows = await this.redemptions.findMany(
+      reader,
+      { _id: { $in: ids }, tenantId: submission.tenantId },
+      { sort: { redeemedAt: 1, _id: 1 } },
+    );
+    return this.redemptionViews.toModels(operator, rows, NO_STORE_GRANT);
+  }
 
   async receivingOf(
     operator: OperatorContext,

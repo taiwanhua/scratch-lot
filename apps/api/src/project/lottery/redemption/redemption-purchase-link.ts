@@ -10,6 +10,7 @@ import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
+import { REDEMPTION_REASONS, validationError } from "./redemption-error";
 
 /** 進貨單送兌的對象。 */
 export interface RedemptionPurchaseRef {
@@ -24,11 +25,12 @@ const toId = (id: string) =>
  * 進貨單勾選兌獎(規格 8.2「兌獎」;`LotteryRedemptionModule` 匯出,進貨單的掛接點在同一個交易呼叫):
  *
  * - `problemOf`:送出前檢查勾選的兌獎紀錄 —— 都在進貨分店、「店內持有」(或已勾在這張單上)、金額和紀錄相同
- * - `markSent`:送出後勾選的改「已送兌」(記 `purchaseSubmissionId`、`sentAt`);這張單之前勾、這次沒勾的回到店內持有
+ * - `markSent`:送出後勾選的改「已送兌」(記 `purchaseSubmissionId`、`sentAt`);這張單之前勾、這次沒勾的回到店內持有;
+ *   被搶先撤銷 / 勾走 → `VALIDATION_FAILED`(`PURCHASE_REDEMPTION_INVALID`),交易回復
  * - `release`:撤回 / 退回 / 駁回 / 作廢 → 這張單勾的全部回到「店內持有」
  *
  * 進貨單是總部建的、掛接點以系統身分執行,兌獎紀錄在分店:讀寫以租戶邊界(登記在
- * `project/database/tenant-boundary-callers.ts`,用途「例外寫入」),條件再釘這張單。
+ * `project/database/tenant-boundary-callers.ts`,用途「反查」「例外寫入」),條件再釘這張單。
  */
 @Injectable()
 export class RedemptionPurchaseLink {
@@ -134,8 +136,10 @@ export class RedemptionPurchaseLink {
         { session },
       );
       if (next === null) {
-        throw new Error(
-          `兌獎紀錄 ${String(id)} 已不是店內持有,不能勾進進貨單 ${String(ref.submissionId)}`,
+        throw validationError(
+          `redemption ${String(id)} is no longer held in store`,
+          ["redemptions"],
+          REDEMPTION_REASONS.purchaseRedemptionInvalid,
         );
       }
     }

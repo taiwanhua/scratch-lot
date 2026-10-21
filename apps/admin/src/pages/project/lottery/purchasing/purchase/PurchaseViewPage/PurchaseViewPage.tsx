@@ -43,13 +43,15 @@ import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchas
 
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
 import { PurchaseReceiptPrint } from "./PurchaseReceiptPrint";
+import { PurchaseRedemptionRecords } from "./PurchaseRedemptionRecords";
 import { WrongStoreDialog } from "./WrongStoreDialog";
 import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
 
 /**
  * 進貨單的替換檢視頁(專案規格 8.2「頁面」;Figma PU-06 69:651 / 127:26619 / 127:26898、
  * PU-07 127:2714 / 127:26961 / 127:27369、PU-11 127:2993 / 127:26671 / 209:27875):
- * 引擎零件(唯讀)+ 點收區塊 + `SettlementPanel` + 審核區塊。
+ * 引擎零件(唯讀)+ 點收區塊 + 勾選的兌獎紀錄(`PurchaseRedemptionRecords`,點一列開兌獎紀錄詳情)+
+ * `SettlementPanel` + 審核區塊。
  *
  * - 點收:店長(點收任務在自己手上)逐本刷條碼;「這一次」= 上次 [完成這次點收](或打開這頁)之後點收的本。
  *   [完成這次點收] 結束這一次,自動印進貨點收單兩張(店鋪留存、送貨人留存;規格第 12 章)
@@ -244,6 +246,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             error={scanError}
           />
         )}
+        {isSubmitted && <PurchaseRedemptionRecords submissionId={id} />}
         {settlement.data !== undefined && (
           <SettlementPanel moduleKey={PURCHASE_MODULE_KEY} refId={id} />
         )}

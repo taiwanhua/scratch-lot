@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { displayBookNo } from "@repo/domain/project/lottery";
@@ -15,6 +16,7 @@ import { Typography } from "@repo/ui/typography";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
+import { RedemptionDetailDialog } from "../../../store/redemption/RedemptionDetailDialog";
 import { formatMoney } from "../purchase-keys";
 
 type Row = LotteryRedemptionFieldsFragment;
@@ -30,6 +32,7 @@ export interface PurchaseRedemptionsProps {
 /**
  * 進貨單新增頁的兌獎區(規格 8.2「兌獎」;Figma PU-05 兌獎區):勾選這次拿去兌獎的兌獎紀錄,只列進貨分店
  * 「店內持有」的(跨分店不做);兌獎金額 = 勾選的合計,不能手填。送出後勾選的改「已送兌」(api 的掛接點)。
+ * 點一列(勾選框以外)開兌獎紀錄詳情。
  */
 export const PurchaseRedemptions = ({
   branchId,
@@ -46,6 +49,8 @@ export const PurchaseRedemptions = ({
     { enabled: branchId !== "" },
   );
   const rows = query.data?.lotteryPurchaseRedemptions.items ?? [];
+  // 點一列(勾選框以外)開兌獎紀錄詳情(規格 6.5 的入口之一;用已讀到的那一筆)
+  const [opened, setOpened] = useState<Row | null>(null);
   const ticketOf = (row: Row) =>
     `${row.gameCode} · ${displayBookNo(row.bookNo)} · #${row.ticketNo}`;
 
@@ -59,6 +64,9 @@ export const PurchaseRedemptions = ({
           checked={pickedIds.has(row.id)}
           slotProps={{
             input: { "aria-label": t("pick", { ticket: row.ticketLabel }) },
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
           }}
           onChange={() => {
             onToggle(row);
@@ -119,9 +127,19 @@ export const PurchaseRedemptions = ({
             emptyMessage={t("empty")}
             minWidth={640}
             size="small"
+            onRowClick={setOpened}
           />
         )}
       </Stack>
+      {opened === null ? null : (
+        <RedemptionDetailDialog
+          id={opened.id}
+          item={opened}
+          onClose={() => {
+            setOpened(null);
+          }}
+        />
+      )}
     </Card>
   );
 };

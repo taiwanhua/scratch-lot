@@ -62,6 +62,21 @@ const SETTLEMENT = /* GraphQL */ `
   }
 `;
 
+const RECORDS = /* GraphQL */ `
+  query TestPurchaseRedemptionRecords($submissionId: ID!) {
+    lotteryPurchaseRedemptionRecords(submissionId: $submissionId) {
+      id
+      ticketLabel
+      prizeAmount
+      status
+      revokeMode
+      purchase {
+        id
+      }
+    }
+  }
+`;
+
 const OPTIONS = /* GraphQL */ `
   query TestPurchaseRedemptions($orgId: ID!, $submissionId: ID) {
     lotteryPurchaseRedemptions(orgId: $orgId, submissionId: $submissionId) {
@@ -92,6 +107,7 @@ describe("進貨單的兌獎(規格 8.2)", () => {
   let branchB: Types.ObjectId;
   let hq: Person;
   let managerA: Person;
+  let strangerB: Person;
   let game: Types.ObjectId;
   let dealer: Types.ObjectId;
   let account: Types.ObjectId;
@@ -254,6 +270,10 @@ describe("進貨單的兌獎(規格 8.2)", () => {
     managerA = await person(api, connection, branchA, tenant, {
       moduleKeys: purchaseModules,
       permissionKeys: [PURCHASE_PERMISSION_KEYS.view, "apply-center.view"],
+    });
+    strangerB = await person(api, connection, branchB, tenant, {
+      moduleKeys: purchaseModules,
+      permissionKeys: [PURCHASE_PERMISSION_KEYS.view],
     });
     const storeManager = await createRole(api.app, connection, {
       name: "店長",
@@ -424,6 +444,45 @@ describe("進貨單的兌獎(規格 8.2)", () => {
       code: "VALIDATION_FAILED",
       fields: ["redemptions"],
     });
+  });
+
+  it("檢視頁讀勾選的兌獎紀錄:讀得到這張進貨單就讀得到(店長沒有店面管理也行);讀不到單據 → NOT_FOUND;不能從這裡撤銷", async () => {
+    const picked = await redemption(branchA, 700);
+    const purchase = await submitDraft(
+      api,
+      hq.token,
+      await createDraft(
+        api,
+        hq.token,
+        FORM,
+        values([picked], () => 700),
+      ),
+    );
+    for (const who of [hq, managerA]) {
+      const data = await ok<{
+        lotteryPurchaseRedemptionRecords: {
+          id: string;
+          prizeAmount: number;
+          status: string;
+          revokeMode: string | null;
+          purchase: { id: string } | null;
+        }[];
+      }>(api, who.token, RECORDS, { submissionId: purchase.id });
+      expect(data.lotteryPurchaseRedemptionRecords).toEqual([
+        {
+          id: picked,
+          ticketLabel: expect.any(String),
+          prizeAmount: 700,
+          status: "sent",
+          revokeMode: null,
+          purchase: { id: purchase.id },
+        },
+      ]);
+    }
+    const denied = await call(api, strangerB.token, RECORDS, {
+      submissionId: purchase.id,
+    });
+    expect(extensionsOf(denied)).toMatchObject({ code: "NOT_FOUND" });
   });
 });
 

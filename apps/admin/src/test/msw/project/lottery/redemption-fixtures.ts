@@ -106,7 +106,8 @@ export const redemptionRow = (input: RedemptionInput): RedemptionFixture => {
   };
 };
 
-const PURCHASE = { id: "purchase-0034", serialNo: "P-0034" };
+// 進貨單假 api 的 `doc-p33`(檢視頁讀得到勾選的兌獎紀錄)
+const PURCHASE = { id: "doc-p33", serialNo: "P-0033" };
 const CLOSED_SHIFT = {
   id: "shift-old",
   name: "陳美玲",

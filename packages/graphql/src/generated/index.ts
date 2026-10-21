@@ -4929,6 +4929,7 @@ export type Query = {
   lotteryPurchaseOptions: LotteryPurchaseOptions;
   lotteryPurchaseProgress: Array<LotteryPurchaseProgress>;
   lotteryPurchaseReceiving: LotteryPurchaseReceiving;
+  lotteryPurchaseRedemptionRecords: Array<LotteryRedemption>;
   lotteryPurchaseRedemptions: LotteryPurchaseRedemptionsPayload;
   lotteryRecentRedemptions: Array<LotteryRedemption>;
   lotteryRedemption: LotteryRedemptionPayload;
@@ -5283,6 +5284,11 @@ export type QueryLotteryPurchaseProgressArgs = {
 
 
 export type QueryLotteryPurchaseReceivingArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryPurchaseRedemptionRecordsArgs = {
   submissionId: Scalars['ID']['input'];
 };
 
@@ -9783,6 +9789,13 @@ export type LotteryPurchaseRedemptionsQueryVariables = Exact<{
 
 
 export type LotteryPurchaseRedemptionsQuery = { __typename?: 'Query', lotteryPurchaseRedemptions: { __typename?: 'LotteryPurchaseRedemptionsPayload', items: Array<{ __typename?: 'LotteryRedemption', id: string, orgId: string, gameCode: string, gameName?: string | null, bookNo: string, ticketNo: string, ticketLabel: string, isOwnStore: boolean, prizeAmount: number, status: string, redeemedAt: string, sentAt?: string | null, revokedAt?: string | null, revokeReason?: string | null, revokeReasonKey?: string | null, revokeNote?: string | null, replacesId?: string | null, isPostClose: boolean, note?: string | null, revokeMode?: string | null, revokeBlockedBySent: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, shift: { __typename?: 'LotteryRedemptionShift', id: string, openedAt: string, closed: boolean, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }, redeemedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string }, purchase?: { __typename?: 'LotteryRedemptionPurchase', id: string, serialNo?: string | null } | null, revokedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type LotteryPurchaseRedemptionRecordsQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryPurchaseRedemptionRecordsQuery = { __typename?: 'Query', lotteryPurchaseRedemptionRecords: Array<{ __typename?: 'LotteryRedemption', id: string, orgId: string, gameCode: string, gameName?: string | null, bookNo: string, ticketNo: string, ticketLabel: string, isOwnStore: boolean, prizeAmount: number, status: string, redeemedAt: string, sentAt?: string | null, revokedAt?: string | null, revokeReason?: string | null, revokeReasonKey?: string | null, revokeNote?: string | null, replacesId?: string | null, isPostClose: boolean, note?: string | null, revokeMode?: string | null, revokeBlockedBySent: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, shift: { __typename?: 'LotteryRedemptionShift', id: string, openedAt: string, closed: boolean, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }, redeemedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string }, purchase?: { __typename?: 'LotteryRedemptionPurchase', id: string, serialNo?: string | null } | null, revokedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
 
 export type LotteryRequisitionCandidateFieldsFragment = { __typename?: 'LotteryRequisitionCandidate', gameId: string, gameCode: string, name: string, unitPrice: number, bookPrice: number, defaultRate: number, launchedAt?: string | null, isNew: boolean, stockTickets: number, inTransitBooks: number, sold7?: number | null, sold30?: number | null, plannedBooks?: number | null, givenBooks: number };
 
@@ -21064,6 +21077,37 @@ useLotteryPurchaseRedemptionsQuery.getKey = (variables: LotteryPurchaseRedemptio
 
 
 useLotteryPurchaseRedemptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseRedemptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseRedemptionsQuery, LotteryPurchaseRedemptionsQueryVariables>(client, LotteryPurchaseRedemptionsDocument, variables, headers);
+
+export const LotteryPurchaseRedemptionRecordsDocument = `
+    query LotteryPurchaseRedemptionRecords($submissionId: ID!) {
+  lotteryPurchaseRedemptionRecords(submissionId: $submissionId) {
+    ...LotteryRedemptionFields
+  }
+}
+    ${LotteryRedemptionFieldsFragmentDoc}`;
+
+export const useLotteryPurchaseRedemptionRecordsQuery = <
+      TData = LotteryPurchaseRedemptionRecordsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPurchaseRedemptionRecordsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPurchaseRedemptionRecordsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPurchaseRedemptionRecordsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPurchaseRedemptionRecordsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPurchaseRedemptionRecords', variables],
+    queryFn: fetcher<LotteryPurchaseRedemptionRecordsQuery, LotteryPurchaseRedemptionRecordsQueryVariables>(client, LotteryPurchaseRedemptionRecordsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPurchaseRedemptionRecordsQuery.getKey = (variables: LotteryPurchaseRedemptionRecordsQueryVariables) => ['LotteryPurchaseRedemptionRecords', variables];
+
+
+useLotteryPurchaseRedemptionRecordsQuery.fetcher = (client: GraphQLClient, variables: LotteryPurchaseRedemptionRecordsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPurchaseRedemptionRecordsQuery, LotteryPurchaseRedemptionRecordsQueryVariables>(client, LotteryPurchaseRedemptionRecordsDocument, variables, headers);
 
 export const LotteryRequisitionCandidatesDocument = `
     query LotteryRequisitionCandidates($orgId: ID!) {

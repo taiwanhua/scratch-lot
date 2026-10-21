@@ -195,6 +195,14 @@ export class RedemptionService {
           );
     const revoked = await this.transactions.withTransaction(async () => {
       const current = await this.lockShiftIfOpen(operator, shift);
+      // 自己撤銷只限班還開著:剛好在這時交班 → 擋下(不讓交班那一刻變成事後更正,改由店長撤銷)
+      if (mode === "self" && current.closedAt !== null) {
+        throw validationError(
+          "this shift has been checked out",
+          ["id"],
+          REDEMPTION_REASONS.shiftClosed,
+        );
+      }
       const next = await this.markRevoked(operator, row, current, reason);
       await publishStoreBoard(this.realtime, row.tenantId, row.orgId);
       return next;

@@ -6,6 +6,7 @@ import { PURCHASE_PERMISSIONS } from "@repo/domain/project/lottery";
 import { CurrentOperator } from "../../../auth/decorators";
 import type { OperatorContext } from "../../../database/operator-context";
 import { RequirePermission } from "../../../permission/require-permission.decorator";
+import { LotteryRedemptionModel } from "../redemption/models/redemption.model";
 import {
   CompleteLotteryPurchaseReceivingInput,
   CompleteLotteryPurchaseReceivingPayload,
@@ -75,6 +76,17 @@ export class PurchaseResolver {
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryPurchaseReceivingModel> {
     return this.receiving.receivingOf(operator, submissionId);
+  }
+
+  /** 這張進貨單勾選的兌獎紀錄(讀得到單據就讀得到;兌獎紀錄詳情的入口,規格 6.5)。 */
+  @Query(() => [LotteryRedemptionModel], {
+    name: "lotteryPurchaseRedemptionRecords",
+  })
+  lotteryPurchaseRedemptionRecords(
+    @Args("submissionId", { type: () => ID }) submissionId: string,
+    @CurrentOperator() operator: OperatorContext,
+  ): Promise<LotteryRedemptionModel[]> {
+    return this.receiving.redemptionsOf(operator, submissionId);
   }
 
   @Mutation(() => ReceiveLotteryPurchaseBookPayload)

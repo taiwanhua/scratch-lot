@@ -2245,6 +2245,7 @@
       },
       "redemption": {
         "title": "兌獎(勾選這次拿去兌獎的兌獎紀錄)",
+        "viewTitle": "兌獎(這張單勾選的兌獎紀錄)",
         "scope": "只列進貨分店「店內持有」的兌獎紀錄",
         "noBranch": "先選進貨分店",
         "empty": "這家店沒有店內持有的兌獎紀錄",
@@ -2965,7 +2966,6 @@
         "all": "全部",
         "empty": "這段期間沒有兌獎紀錄",
         "summary": "共 {count} 筆",
-        "truncated": "只列最近 {count} 筆;請縮短期間",
         "cardMeta": "{cashPoint} · {shift} · {time}",
         "cardBy": "登記 {name} · 進貨單 {purchase}"
       },

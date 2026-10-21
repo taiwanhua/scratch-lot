@@ -2245,6 +2245,7 @@
       },
       "redemption": {
         "title": "Redemptions (tick the winning tickets taken to redeem this time)",
+        "viewTitle": "Redemptions ticked on this purchase",
         "scope": "Only redemptions held in store at the purchasing branch",
         "noBranch": "Choose the purchasing branch first",
         "empty": "No redemptions held in store at this branch",
@@ -2965,7 +2966,6 @@
         "all": "All",
         "empty": "No redemptions in this period",
         "summary": "{count} records",
-        "truncated": "Showing the latest {count}; narrow the period",
         "cardMeta": "{cashPoint} · {shift} · {time}",
         "cardBy": "Registered by {name} · Purchase {purchase}"
       },

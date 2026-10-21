@@ -21,6 +21,11 @@ export const REDEMPTION_REASONS = {
   sent: "REDEMPTION_SENT",
   /** 已撤銷(兩人同時撤銷時後到的那一個) */
   alreadyRevoked: "REDEMPTION_ALREADY_REVOKED",
+  /**
+   * 進貨單送出時勾選的兌獎紀錄被搶先撤銷 / 勾走(送出前檢查之後才發生;同進貨單的
+   * `PURCHASE_REASONS.redemptionInvalid`,交易回復)
+   */
+  purchaseRedemptionInvalid: "PURCHASE_REDEMPTION_INVALID",
 } as const;
 
 export type RedemptionReason =

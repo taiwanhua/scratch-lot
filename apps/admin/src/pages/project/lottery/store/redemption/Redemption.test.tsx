@@ -155,13 +155,13 @@ describe("店面管理:兌獎", () => {
     await user.click(within(table).getByText("5150-042210-083"));
     const dialog = await screen.findByRole("dialog", { name: "兌獎紀錄" });
     expect(
-      await within(dialog).findByText("已送兌(進貨單 P-0034)"),
+      await within(dialog).findByText("已送兌(進貨單 P-0033)"),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "撤銷兌獎" }),
     ).toBeDisabled();
     expect(
-      within(dialog).getByText("已送兌,不能撤銷;要先撤回或退回進貨單 P-0034。"),
+      within(dialog).getByText("已送兌,不能撤銷;要先撤回或退回進貨單 P-0033。"),
     ).toBeInTheDocument();
   });
 
@@ -249,5 +249,25 @@ describe("店面管理:兌獎", () => {
     expect(
       within(detail).queryByRole("button", { name: "撤銷兌獎" }),
     ).toBeNull();
+  });
+
+  it("兌獎紀錄分頁的篩選在網址(`?redemptions=`):狀態 = 已送兌 → 只列已送兌的", async () => {
+    const filters = encodeURIComponent(
+      JSON.stringify({
+        from: "",
+        to: "",
+        cashPointId: "all",
+        status: "sent",
+        redeemedBy: "all",
+        page: 1,
+      }),
+    );
+    renderStore({ path: `/store?tab=redemptions&redemptions=${filters}` });
+    const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    expect(
+      await within(table).findByText("5150-042210-083"),
+    ).toBeInTheDocument();
+    expect(within(table).queryByText("5164-056527-031")).toBeNull();
+    expect(screen.getByText("共 1 筆")).toBeInTheDocument();
   });
 });

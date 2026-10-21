@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -21,6 +20,7 @@ import {
 import { Card } from "@repo/ui/card";
 import { DatePicker } from "@repo/ui/date-picker";
 import { useBreakpointDown } from "@repo/ui/media-query";
+import { Pagination } from "@repo/ui/pagination";
 import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Table, type TableColumn } from "@repo/ui/table";
@@ -40,8 +40,31 @@ import { useRedemptionFlow } from "./useRedemptionFlow";
 
 const orgSchema = z.string().default("");
 const ALL = "all";
+/** 一頁幾筆(api 上限 100)。 */
+export const REDEMPTIONS_PAGE_SIZE = 20;
 
 type StatusFilter = typeof ALL | RedemptionStatus;
+
+/**
+ * 網址 `?redemptions=`(REACT-14):期間(`YYYY-MM-DD`,空 = 預設這個月 1 日到今天)、收銀點、狀態、登記人、頁碼。
+ */
+const filtersSchema = z
+  .object({
+    from: z.string().default(""),
+    to: z.string().default(""),
+    cashPointId: z.string().default(ALL),
+    status: z.enum([ALL, ...REDEMPTION_STATUSES]).default(ALL),
+    redeemedBy: z.string().default(ALL),
+    page: z.number().int().min(1).default(1),
+  })
+  .default({
+    from: "",
+    to: "",
+    cashPointId: ALL,
+    status: ALL,
+    redeemedBy: ALL,
+    page: 1,
+  });
 
 interface Filters {
   cashPointId: string;
@@ -52,16 +75,8 @@ interface Filters {
   to: string | null;
 }
 
-const EMPTY: Filters = {
-  cashPointId: ALL,
-  status: ALL,
-  redeemedBy: ALL,
-  from: null,
-  to: null,
-};
-
 /** 預設期間:這個月 1 日到今天(租戶時區)。 */
-const defaultPeriodOf = (timezone: string): Pick<Filters, "from" | "to"> => {
+const defaultPeriodOf = (timezone: string): { from: string; to: string } => {
   const today = localDateOf(Date.now(), timezone);
   return {
     from: localDateText({ ...today, day: 1 }),
@@ -98,7 +113,7 @@ const rangeOf = (
 /**
  * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間;欄位 時間、收銀點、班次、
  * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片(Figma ST-40)、篩選收進抽屜。
- * 分店沿用看板的 `?org=`。登記人的選項取這段期間出現過的人(在畫面上篩)。
+ * 分店沿用看板的 `?org=`;篩選與頁碼在 `?redemptions=`(url-state-inventory)。登記人的選項取同一段期間出現過的人。
  */
 export const RedemptionsTab = () => {
   const t = useTranslations("admin.lotteryStore.redemption");
@@ -109,10 +124,26 @@ export const RedemptionsTab = () => {
   const isNarrow = useBreakpointDown("lg");
   const [orgParam] = useUrlState("org", orgSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
-  const [filters, setFilters] = useState<Filters>(() => ({
-    ...EMPTY,
-    ...defaultPeriodOf(timezone),
-  }));
+  const [stored, setStored] = useUrlState("redemptions", filtersSchema);
+  const period = defaultPeriodOf(timezone);
+  const filters: Filters = {
+    cashPointId: stored.cashPointId,
+    status: stored.status,
+    redeemedBy: stored.redeemedBy,
+    from: stored.from === "" ? period.from : stored.from,
+    to: stored.to === "" ? period.to : stored.to,
+  };
+  /** 改篩選回到第 1 頁;期間等於預設時不寫進網址。 */
+  const setFilters = (next: Filters) => {
+    setStored({
+      cashPointId: next.cashPointId,
+      status: next.status,
+      redeemedBy: next.redeemedBy,
+      from: next.from === period.from ? "" : (next.from ?? ""),
+      to: next.to === period.to ? "" : (next.to ?? ""),
+      page: 1,
+    });
+  };
   const flow = useRedemptionFlow();
 
   const board = useLotteryStoreBoardQuery(
@@ -121,29 +152,42 @@ export const RedemptionsTab = () => {
     { enabled: orgId !== "", retry: false },
   );
   const cashPoints = board.data?.lotteryStoreBoard.item.cashPoints ?? [];
+  const baseInput = {
+    orgId,
+    ...rangeOf(filters, timezone),
+    cashPointId: filters.cashPointId === ALL ? null : filters.cashPointId,
+    status: filters.status === ALL ? null : filters.status,
+  };
   const query = useLotteryRedemptionsQuery(
     session.client,
     {
       input: {
-        orgId,
-        ...rangeOf(filters, timezone),
-        cashPointId: filters.cashPointId === ALL ? null : filters.cashPointId,
-        status: filters.status === ALL ? null : filters.status,
+        ...baseInput,
+        redeemedBy: filters.redeemedBy === ALL ? null : filters.redeemedBy,
+        offset: (stored.page - 1) * REDEMPTIONS_PAGE_SIZE,
+        limit: REDEMPTIONS_PAGE_SIZE,
       },
     },
     { enabled: orgId !== "" },
   );
-  const fetched = query.data?.lotteryRedemptions.items ?? [];
+  // 登記人的選項:同一段期間 / 收銀點 / 狀態裡出現過的人(最近 100 筆)
+  const peopleQuery = useLotteryRedemptionsQuery(
+    session.client,
+    { input: { ...baseInput, limit: 100 } },
+    { enabled: orgId !== "" },
+  );
+  const rows = query.data?.lotteryRedemptions.items ?? [];
   const total = query.data?.lotteryRedemptions.total ?? 0;
   const people = [
-    ...new Map(fetched.map((row) => [row.redeemedBy.id, row.redeemedBy])),
+    ...new Map(
+      (peopleQuery.data?.lotteryRedemptions.items ?? []).map((row) => [
+        row.redeemedBy.id,
+        row.redeemedBy,
+      ]),
+    ),
   ]
     .map(([, person]) => person)
     .toSorted((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
-  const rows =
-    filters.redeemedBy === ALL
-      ? fetched
-      : fetched.filter((row) => row.redeemedBy.id === filters.redeemedBy);
 
   const shiftText = (row: RedemptionRow) =>
     `${row.shift.openedBy.name} ${temporal(row.shift.openedAt, "monthDayTime").split(" ").at(-1) ?? ""}`;
@@ -196,7 +240,13 @@ export const RedemptionsTab = () => {
       </Typography>
       <FilterDrawer
         value={filters}
-        emptyValue={{ ...EMPTY, from: filters.from, to: filters.to }}
+        emptyValue={{
+          cashPointId: ALL,
+          status: ALL,
+          redeemedBy: ALL,
+          from: filters.from,
+          to: filters.to,
+        }}
         activeCount={activeCount}
         onApply={setFilters}
         renderFields={(value, change) => (
@@ -257,24 +307,19 @@ export const RedemptionsTab = () => {
               label={t("tab.from")}
               value={filters.from}
               onChange={(next) => {
-                setFilters((current) => ({ ...current, from: next }));
+                setFilters({ ...filters, from: next });
               }}
             />
             <DatePicker
               label={t("tab.to")}
               value={filters.to}
               onChange={(next) => {
-                setFilters((current) => ({ ...current, to: next }));
+                setFilters({ ...filters, to: next });
               }}
             />
           </Stack>
         }
       />
-      <Typography variant="body2" color="text.secondary">
-        {total > fetched.length
-          ? t("tab.truncated", { count: fetched.length })
-          : t("tab.summary", { count: rows.length })}
-      </Typography>
       {isNarrow ? (
         <Stack spacing={1.5}>
           {rows.length === 0 && !query.isLoading ? (
@@ -334,6 +379,18 @@ export const RedemptionsTab = () => {
           }}
         />
       )}
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+          {t("tab.summary", { count: total })}
+        </Typography>
+        <Pagination
+          count={Math.max(1, Math.ceil(total / REDEMPTIONS_PAGE_SIZE))}
+          page={stored.page}
+          onChange={(_event, next) => {
+            setStored((current) => ({ ...current, page: next }));
+          }}
+        />
+      </Stack>
       {flow.element}
     </Stack>
   );

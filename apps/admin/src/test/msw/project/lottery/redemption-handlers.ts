@@ -5,6 +5,7 @@ import {
   parseTicketInput,
 } from "@repo/domain/project/lottery";
 import type {
+  LotteryPurchaseRedemptionRecordsQueryVariables,
   LotteryPurchaseRedemptionsQueryVariables,
   LotteryRecentRedemptionsQueryVariables,
   LotteryRedemptionPreviewQueryVariables,
@@ -221,17 +222,20 @@ export const redemptionWorld = (
     }),
     api.query("LotteryRedemptions", ({ variables }) => {
       const { input } = variables as LotteryRedemptionsQueryVariables;
-      const items = state.filter(
+      const matched = state.filter(
         (row) =>
           (input.status == null || row.status === input.status) &&
-          (input.cashPointId == null || row.cashPoint.id === input.cashPointId),
+          (input.cashPointId == null ||
+            row.cashPoint.id === input.cashPointId) &&
+          (input.redeemedBy == null || row.redeemedBy.id === input.redeemedBy),
       );
+      const offset = input.offset ?? 0;
       return HttpResponse.json({
         data: {
           lotteryRedemptions: {
             __typename: "LotteryRedemptionsPayload",
-            total: items.length,
-            items,
+            total: matched.length,
+            items: matched.slice(offset, offset + (input.limit ?? 100)),
           },
         },
       });
@@ -242,6 +246,17 @@ export const redemptionWorld = (
       return row === undefined
         ? graphqlError("FORBIDDEN", "NOT_FOUND", { code: "NOT_FOUND" })
         : HttpResponse.json({ data: { lotteryRedemption: { item: row } } });
+    }),
+    api.query("LotteryPurchaseRedemptionRecords", ({ variables }) => {
+      const { submissionId } =
+        variables as LotteryPurchaseRedemptionRecordsQueryVariables;
+      return HttpResponse.json({
+        data: {
+          lotteryPurchaseRedemptionRecords: state
+            .filter((row) => row.purchase?.id === submissionId)
+            .map((row) => ({ ...row, revokeMode: null })),
+        },
+      });
     }),
     api.query("LotteryPurchaseRedemptions", ({ variables }) => {
       const { submissionId } =

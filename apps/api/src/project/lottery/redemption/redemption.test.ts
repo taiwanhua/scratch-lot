@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { getModelToken } from "@nestjs/mongoose";
 import { type Connection, type Model, Types } from "mongoose";
 
@@ -20,6 +20,7 @@ import { LOTTERY_CASH_POINTS_COLLECTION } from "../../database/lottery-cash-poin
 import { LotteryRedemption } from "../../database/lottery-redemptions/lottery-redemption.schema";
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
+import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { RedemptionPurchaseLink } from "./redemption-purchase-link";
 import { redemptionPostCloseNet } from "./redemption-registrations";
@@ -731,5 +732,27 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     await ok(clerk, REVOKE, { input: { id: row.id } });
     expect(await expectedOf(xinyiShift)).toBe(5000);
     await closeShift(xinyiShift);
+  });
+
+  it("自己撤銷時那一班剛好交班 → 擋下(SHIFT_CLOSED),不變成事後更正", async () => {
+    const shiftId = await openShift(counter, clerk);
+    const row = await redeem(clerk, shiftId, back("009"), 300);
+    // 撤銷的交易鎖班那一刻,班剛好送出交班結帳
+    const shifts = api.app.get(LotteryShiftsRepository);
+    const original = shifts.findOneAndUpdate.bind(shifts);
+    const spy = jest
+      .spyOn(shifts, "findOneAndUpdate")
+      .mockImplementationOnce(async (...args) => {
+        await closeShift(shiftId);
+        return original(...args);
+      });
+    expect(
+      await errorOf(clerk, REVOKE, { input: { id: row.id } }),
+    ).toMatchObject({ reason: "SHIFT_CLOSED" });
+    spy.mockRestore();
+    expect(await detail(manager, row.id)).toMatchObject({
+      status: "in_store",
+      revokeMode: "manager",
+    });
   });
 });

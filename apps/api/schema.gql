@@ -3755,6 +3755,7 @@ type Query {
   lotteryPurchaseOptions(orgId: ID!): LotteryPurchaseOptions!
   lotteryPurchaseProgress(purchaseIds: [ID!]!): [LotteryPurchaseProgress!]!
   lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
+  lotteryPurchaseRedemptionRecords(submissionId: ID!): [LotteryRedemption!]!
   lotteryPurchaseRedemptions(orgId: ID!, submissionId: ID): LotteryPurchaseRedemptionsPayload!
   lotteryRecentRedemptions(shiftId: ID!): [LotteryRedemption!]!
   lotteryRedemption(id: ID!): LotteryRedemptionPayload!

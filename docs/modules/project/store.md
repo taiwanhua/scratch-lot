@@ -18,7 +18,7 @@
 - 側欄順序 `order: 10`、圖示 `store`;沒有側欄數字。
 - **開啟 B9b**(`perFormCreate`):每張表單發布時自動建 `store.create-<formKey>`(新增資格看它,不看模組 `create`)。
 - 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`)。
-- 網址狀態:`?tab=`、看板的分店 `?org=`、其他申請的篩選 `?list=`(`app/project/url-state-inventory.ts`)。
+- 網址狀態:`?tab=`、看板的分店 `?org=`、其他申請的篩選 `?list=`、兌獎紀錄的篩選與頁碼 `?redemptions=`(`app/project/url-state-inventory.ts`)。
 - 共用元件(`apps/admin/src/components/project/lottery/`):`CashPointHeader`(收銀點標題列;按鈕用 `actions` 陣列,各功能追加自己的按鈕)、`BoardBookCard`(看板卡片;`expanded` = 展開中的主色框)、`TicketGrid`(`flash` 讓刷到的那一格閃一下)。
 
 正本:`apps/db-migrator/seeds/project/store.ts`、`apps/admin/src/app/project/module-pages.ts`
@@ -113,11 +113,11 @@
 - 兌獎成功 → 提示「已兌獎 5164-056527-031 · 500 元 · 店內櫃台 [撤銷]」(能自己撤銷時才有 [撤銷],直接開那一筆的確認視窗);**不**自動打開 [最近兌獎]。
 - **[最近兌獎]**(`RecentRedemptionsDrawer`,`lotteryRecentRedemptions`):自己在這一班登記的(含已撤銷,標「已撤銷」);電腦 / 平板右側抽屜、手機底部面板;每列 [撤銷] 開確認視窗,撤銷後清單不關;點列的其他地方開兌獎紀錄詳情。
 - **撤銷兩層**(都不用審核;按鈕看 api 回的 `revokeMode`,沒有權限不顯示,`@repo/domain/project/lottery` 的 `redemptionRevokeStateOf` 前後端共用):
-  - `self`:自己登記、那一班還開著、有 `store.redeem` → 確認視窗(ST-41),不限時間、不用原因(原因代碼固定 `immediate`「當下撤銷」)。
+  - `self`:自己登記、那一班還開著、有 `store.redeem` → 確認視窗(ST-41),不限時間、不用原因(原因代碼固定 `immediate`「當下撤銷」)。交易內鎖班時那一班剛好已送出交班結帳 → 擋下(`SHIFT_CLOSED`),不讓交班那一刻變成事後更正,改由 `store.undo-redeem` 撤銷。
   - `manager`:那一班已結帳、或不是自己登記的,有 `store.undo-redeem` → 撤銷原因(必填,欄位管理「撤銷兌獎原因」`lottery-redemption-revoke-reason`)+ 說明(ST-39b);班開著 → 應有增加,已結帳 → 記成那一班的事後更正。另有 [撤銷並重新登記]:原因填好後開兌獎視窗(標題「重新登記 · 收銀點」),撤銷與新增在同一個請求(`replaceLotteryRedemption`),新的那筆算原班、`replacesId` 指向原紀錄。
   - 已送兌:[撤銷兌獎] 停用並提示「已送兌,不能撤銷;要先撤回或退回進貨單 P-xxxx」(ST-39c),api 也拒絕(`REDEMPTION_SENT`)。
-- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選 期間(預設這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取這段期間出現過的人,在畫面上篩);欄位 時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片、篩選收進抽屜;點一列開兌獎紀錄詳情。一次最多 100 筆(超過時提示縮短期間)。
-- **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
+- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選與頁碼存網址 `?redemptions=`(REACT-14):期間(空 = 這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取同一段期間出現過的人)、頁碼(一頁 20 筆);欄位 時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片、篩選收進抽屜;點一列開兌獎紀錄詳情。
+- **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]、進貨單的新增頁兌獎區與檢視頁(讀取依據是讀得到那張進貨單,`lotteryPurchaseRedemptionRecords`;這兩個入口不能撤銷)。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
 
 ### 投庫 / 出庫(ST-12a / b)
 

@@ -118,3 +118,9 @@ query LotteryPurchaseRedemptions($orgId: ID!, $submissionId: ID) {
     }
   }
 }
+
+query LotteryPurchaseRedemptionRecords($submissionId: ID!) {
+  lotteryPurchaseRedemptionRecords(submissionId: $submissionId) {
+    ...LotteryRedemptionFields
+  }
+}
