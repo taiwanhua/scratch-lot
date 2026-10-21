@@ -751,7 +751,8 @@
       "calendar": "行事曆",
       "dayOffs": "我的畫休",
       "dayOffOverview": "畫休總覽",
-      "supportRequests": "支援需求單"
+      "supportRequests": "支援需求單",
+      "mySchedule": "班表"
     },
     "shell": {
       "empty": "這一頁目前沒有可用的分頁。"
@@ -1190,10 +1191,14 @@
         "moreError": "+N 裡有缺負責(紅框)",
         "dotFull": "人力需求已滿",
         "dotMissingHelper": "缺協同",
-        "dotMissingLeader": "缺負責"
+        "dotMissingLeader": "缺負責",
+        "punchTimes": "上班 / 下班打卡",
+        "changedDot": "有異動",
+        "missingDot": "缺卡"
       },
       "punchSample": "⏲ 2",
-      "moreSample": "+N"
+      "moreSample": "+N",
+      "punchTimesSample": "08:24"
     },
     "roster": {
       "org": "分店",
@@ -1565,6 +1570,92 @@
         "clearBody": "只移除自動排入的人({count} 人次);手動排的、或自動排入後手動改過的,不會清除。",
         "clearConfirm": "清除",
         "clearFeedback": "已清除 {count} 人次自動排入的人"
+      }
+    },
+    "mySchedule": {
+      "loading": "載入中",
+      "changes": {
+        "banner": "你的班表有 {count} 項異動",
+        "expand": "展開",
+        "collapse": "收合",
+        "new": "新",
+        "created": "新增 {after}",
+        "deleted": "取消 {before}",
+        "edited": "{before} → {after}",
+        "reason": "原因:{reason}",
+        "reasonWithNote": "原因:{reason} · {note}"
+      },
+      "incomplete": {
+        "title": "最近 7 天有 {count} 班打卡不完整",
+        "row": "{date} {org} {time}",
+        "apply": "申請補卡",
+        "pending": "補卡審核中"
+      },
+      "missing": {
+        "missingIn": "缺上班卡",
+        "missingOut": "缺下班卡",
+        "missingBoth": "缺上下班卡"
+      },
+      "punch": {
+        "regionAria": "打卡",
+        "todayTitle": "今天 {date}· {time}",
+        "yesterdayTitle": "昨天 {date}未打下班卡",
+        "clockIn": "打上班卡",
+        "clockOut": "打下班卡",
+        "clockedIn": "上班 {time} 已打卡",
+        "clockedOut": "下班 {time} 已打卡",
+        "clockInSuccess": "已打上班卡",
+        "clockOutSuccess": "已打下班卡",
+        "breakAria": "休息 {minutes} 分鐘"
+      },
+      "noSchedule": {
+        "title": "沒有排班",
+        "hint": "沒有排到班但臨時來上班?",
+        "org": "分店:{name}",
+        "openClockIn": "你在 {time} 打了上班卡,還沒打下班卡",
+        "toggleAria": "展開或收合「沒有排班」"
+      },
+      "role": {
+        "leader": "負責人",
+        "helper": "協同"
+      },
+      "roleShort": {
+        "leader": "負責",
+        "helper": "協同"
+      },
+      "calendar": {
+        "title": "{year} 年 {month} 月",
+        "prevMonth": "上個月",
+        "nextMonth": "下個月",
+        "viewAria": "月曆或條列",
+        "viewCalendar": "月曆",
+        "viewList": "條列",
+        "temp": "臨",
+        "dayOff": "畫休",
+        "closed": "店休",
+        "changedDot": "有異動",
+        "missingDot": "缺卡",
+        "punchTimes": "{in} / {out}",
+        "noPunch": "—"
+      },
+      "list": {
+        "todaySuffix": "今天",
+        "empty": "這個月沒有班",
+        "changed": "有異動",
+        "punches": "上班 {in} · 下班 {out}"
+      },
+      "detail": {
+        "title": "{date}當天詳情",
+        "punch": "打卡",
+        "time": "時間",
+        "in": "上班",
+        "out": "下班",
+        "missingNote": "{cards}沒有打。可以申請補卡,由店長審核。",
+        "apply": "申請補卡",
+        "close": "關閉",
+        "none": "這天沒有班",
+        "dayOff": "這天整天畫休",
+        "breakMinutes": "休息 {minutes} 分鐘"
       }
     }
   },

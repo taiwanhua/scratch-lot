@@ -25,6 +25,7 @@ import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers"
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
+import { scheduleMyWorld } from "@/test/msw/project/schedule-my-handlers";
 import {
   type ScheduleRosterWorldOptions,
   scheduleRosterWorld,
@@ -119,6 +120,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleSettingsWorld().handlers,
     ...scheduleCalendarWorld().handlers,
     ...scheduleDayOffsWorld().handlers,
+    // 我的班表 → 班表分頁:今天固定 2026-11-05(SC-01 的示範資料)
+    ...scheduleMyWorld().handlers,
     ...accountsWorld().handlers,
     ...scheduleRosterWorld(rosterOptions()).handlers,
     // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)

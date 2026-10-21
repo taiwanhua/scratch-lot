@@ -7,6 +7,10 @@ export const SCHEDULE_PERMISSIONS = {
   editOrgRules: "schedule.settings.edit-org-rules",
   manageView: "schedule.manage.view",
   editCalendar: "schedule.manage.edit-calendar",
+  /** 我的班表的班表分頁(`schedule.my`) */
+  myView: "schedule.my.view",
+  /** 打卡按鈕 */
+  myPunch: "schedule.my.punch",
   /** 我的畫休分頁(`schedule.my`) */
   myEditDayOffs: "schedule.my.edit-day-offs",
   /** 畫休總覽分頁 / [代改] */

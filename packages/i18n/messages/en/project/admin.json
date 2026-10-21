@@ -751,7 +751,8 @@
       "calendar": "Calendar",
       "dayOffs": "My day-offs",
       "dayOffOverview": "Day-off overview",
-      "supportRequests": "Support requests"
+      "supportRequests": "Support requests",
+      "mySchedule": "Schedule"
     },
     "shell": {
       "empty": "No tabs are available on this page yet."
@@ -1190,10 +1191,14 @@
         "moreError": "+N includes a missing lead (red)",
         "dotFull": "Fully staffed",
         "dotMissingHelper": "Helper missing",
-        "dotMissingLeader": "Lead missing"
+        "dotMissingLeader": "Lead missing",
+        "punchTimes": "Clock-in / clock-out",
+        "changedDot": "Changed",
+        "missingDot": "Missing punch"
       },
       "punchSample": "⏲ 2",
-      "moreSample": "+N"
+      "moreSample": "+N",
+      "punchTimesSample": "08:24"
     },
     "roster": {
       "org": "Branch",
@@ -1565,6 +1570,92 @@
         "clearBody": "Removes only auto-assigned people ({count}); manual assignments and auto ones edited by hand are kept.",
         "clearConfirm": "Clear",
         "clearFeedback": "Cleared {count} auto-assigned people"
+      }
+    },
+    "mySchedule": {
+      "loading": "Loading",
+      "changes": {
+        "banner": "Your schedule has {count} changes",
+        "expand": "Expand",
+        "collapse": "Collapse",
+        "new": "New",
+        "created": "Added {after}",
+        "deleted": "Cancelled {before}",
+        "edited": "{before} → {after}",
+        "reason": "Reason: {reason}",
+        "reasonWithNote": "Reason: {reason} · {note}"
+      },
+      "incomplete": {
+        "title": "{count} shifts in the last 7 days have incomplete punches",
+        "row": "{date} {org} {time}",
+        "apply": "Request a make-up punch",
+        "pending": "Make-up punch under review"
+      },
+      "missing": {
+        "missingIn": "Missing clock-in",
+        "missingOut": "Missing clock-out",
+        "missingBoth": "Missing clock-in and clock-out"
+      },
+      "punch": {
+        "regionAria": "Punch",
+        "todayTitle": "Today {date} · {time}",
+        "yesterdayTitle": "Yesterday {date}: no clock-out yet",
+        "clockIn": "Clock in",
+        "clockOut": "Clock out",
+        "clockedIn": "Clocked in at {time}",
+        "clockedOut": "Clocked out at {time}",
+        "clockInSuccess": "Clocked in",
+        "clockOutSuccess": "Clocked out",
+        "breakAria": "{minutes}-minute break"
+      },
+      "noSchedule": {
+        "title": "No shift",
+        "hint": "Working today without a scheduled shift?",
+        "org": "Branch: {name}",
+        "openClockIn": "You clocked in at {time} and have not clocked out",
+        "toggleAria": "Expand or collapse \"No shift\""
+      },
+      "role": {
+        "leader": "Lead",
+        "helper": "Assistant"
+      },
+      "roleShort": {
+        "leader": "Lead",
+        "helper": "Assist"
+      },
+      "calendar": {
+        "title": "{month}/{year}",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "viewAria": "Calendar or list",
+        "viewCalendar": "Calendar",
+        "viewList": "List",
+        "temp": "Temp",
+        "dayOff": "Day off",
+        "closed": "Closed",
+        "changedDot": "Changed",
+        "missingDot": "Missing punch",
+        "punchTimes": "{in} / {out}",
+        "noPunch": "—"
+      },
+      "list": {
+        "todaySuffix": "Today",
+        "empty": "No shifts this month",
+        "changed": "Changed",
+        "punches": "In {in} · Out {out}"
+      },
+      "detail": {
+        "title": "{date} details",
+        "punch": "Punch",
+        "time": "Time",
+        "in": "Clock in",
+        "out": "Clock out",
+        "missingNote": "{cards}. You can request a make-up punch for the store manager to review.",
+        "apply": "Request a make-up punch",
+        "close": "Close",
+        "none": "No shift on this day",
+        "dayOff": "Full day off",
+        "breakMinutes": "{minutes}-minute break"
       }
     }
   },

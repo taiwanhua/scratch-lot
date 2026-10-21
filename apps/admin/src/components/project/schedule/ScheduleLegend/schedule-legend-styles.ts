@@ -125,3 +125,12 @@ export const demandDotSx = (tone: "grey" | "warning" | "error"): Sx => ({
   borderRadius: "50%",
   bgcolor: tone === "grey" ? "grey.400" : `${tone}.main`,
 });
+
+/** 月曆日期格右上角的小圓點(底座 `MonthCalendar` 的 `corner: dot`,8px):我的班表的有異動 / 缺卡。 */
+export const cornerDotSx = (tone: "warning" | "error"): Sx => ({
+  display: "inline-block",
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  bgcolor: `${tone}.main`,
+});

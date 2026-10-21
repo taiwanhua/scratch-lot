@@ -16,6 +16,10 @@ import {
 } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
 import {
+  type ScheduleMyWorldOptions,
+  scheduleMyWorld,
+} from "@/test/msw/project/schedule-my-handlers";
+import {
   type ScheduleRosterWorldOptions,
   scheduleRosterWorld,
 } from "@/test/msw/project/schedule-roster-handlers";
@@ -44,11 +48,13 @@ export interface RenderScheduleOptions {
   /** 審核流程(支援需求單右側的審核區塊) */
   workflow?: WorkflowRuntimeWorldOptions;
   roster?: ScheduleRosterWorldOptions;
+  /** 我的班表 → 班表分頁 */
+  my?: ScheduleMyWorldOptions;
 }
 
 /**
  * 班表管理頁的測試場景:路由、殼、守門都是真的,只有 api 是假的
- * (`scheduleSettingsWorld` / `scheduleCalendarWorld` / `scheduleDayOffsWorld`;表單與流程用底座的 world;分店選擇器的組織樹用租戶 A 的樹)。
+ * (`scheduleSettingsWorld` / `scheduleCalendarWorld` / `scheduleDayOffsWorld` / `scheduleMyWorld`;表單與流程用底座的 world;分店選擇器的組織樹用租戶 A 的樹)。
  * 當前組織 = A-2 台北分店。
  */
 export const renderSchedulePage = ({
@@ -60,6 +66,7 @@ export const renderSchedulePage = ({
   forms = {},
   workflow = {},
   roster = {},
+  my = {},
 }: RenderScheduleOptions) => {
   const settingsFake = scheduleSettingsWorld(settings);
   const calendarFake = scheduleCalendarWorld(calendar);
@@ -67,8 +74,10 @@ export const renderSchedulePage = ({
   const formsFake = formRuntimeWorld(forms);
   const workflowFake = workflowRuntimeWorld(workflow);
   const rosterFake = scheduleRosterWorld(roster);
+  const myFake = scheduleMyWorld(my);
   server.use(
     ...rosterFake.handlers,
+    ...myFake.handlers,
     ...settingsFake.handlers,
     ...calendarFake.handlers,
     ...dayOffsFake.handlers,
@@ -98,5 +107,6 @@ export const renderSchedulePage = ({
     formsFake,
     workflowFake,
     rosterFake,
+    myFake,
   };
 };

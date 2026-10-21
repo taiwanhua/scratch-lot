@@ -118,13 +118,13 @@ describe("我的畫休", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("沒有 schedule.my.edit-day-offs:看不到「我的畫休」分頁", async () => {
+  it("沒有 schedule.my.edit-day-offs:看不到「我的畫休」分頁(只剩班表分頁)", async () => {
     renderSchedulePage({
       path: DAY_OFFS,
       omit: ["schedule.my.edit-day-offs"],
     });
     expect(
-      await screen.findByText("這一頁目前沒有可用的分頁。"),
+      await screen.findByText("今天 11/5(四)· 08:30–14:30"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("tab", { name: "我的畫休" }),

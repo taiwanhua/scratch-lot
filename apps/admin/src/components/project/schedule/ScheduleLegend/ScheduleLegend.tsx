@@ -9,6 +9,7 @@ import { Typography } from "@repo/ui/typography";
 import { dayOffHatchSx } from "../DayOffs/day-off-styles";
 import {
   autoMarkSx,
+  cornerDotSx,
   demandDotSx,
   extensionSwatchSx,
   leaderMarkSx,
@@ -46,7 +47,10 @@ export type ScheduleLegendItem =
   | "moreError"
   | "dotFull"
   | "dotMissingHelper"
-  | "dotMissingLeader";
+  | "dotMissingLeader"
+  | "punchTimes"
+  | "changedDot"
+  | "missingDot";
 
 const swatch = (children?: ReactNode, sx: object = {}) => (
   <Box component="span" aria-hidden sx={[legendSwatchSx, sx]}>
@@ -101,6 +105,9 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     dotFull: mark("", demandDotSx("grey")),
     dotMissingHelper: mark("", demandDotSx("warning")),
     dotMissingLeader: mark("", demandDotSx("error")),
+    punchTimes: mark(t("punchTimesSample"), { color: "text.secondary" }),
+    changedDot: mark("", cornerDotSx("warning")),
+    missingDot: mark("", cornerDotSx("error")),
   };
   return (
     <Stack

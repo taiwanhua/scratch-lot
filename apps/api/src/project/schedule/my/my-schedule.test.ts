@@ -142,6 +142,17 @@ interface PunchRow {
   duplicate: boolean;
 }
 
+const base = () => {
+  const now = new Date();
+  return {
+    createdAt: now,
+    updatedAt: now,
+    createdBy: null,
+    updatedBy: null,
+    deletedAt: null,
+  };
+};
+
 const taipei = (date: string, time: string) =>
   new Date(`${date}T${time}:00+08:00`);
 
@@ -175,17 +186,6 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
   let nov4: Types.ObjectId;
   let nov5: Types.ObjectId;
   let dec3: Types.ObjectId;
-
-  const base = () => {
-    const now = new Date();
-    return {
-      createdAt: now,
-      updatedAt: now,
-      createdBy: null,
-      updatedBy: null,
-      deletedAt: null,
-    };
-  };
 
   function gql(
     user: ScheduleTestUser,
@@ -332,6 +332,13 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       }>({ entryId })
       .sort({ at: 1 })
       .toArray();
+
+  async function operatorOf(user: ScheduleTestUser) {
+    const resolved = await api.app
+      .get(OperatorContextService)
+      .resolve(user.userId, xinyi);
+    return resolved.operator;
+  }
 
   beforeAll(async () => {
     api = await startAuthTestApp("cookhome-test-schedule-my");
@@ -480,12 +487,12 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     const out1 = await punched("out", nov5);
     expect(out1.duplicate).toBe(false);
     now("2026-11-05", "14:36");
-    expect((await punched("out", nov5)).duplicate).toBe(false);
+    const out2 = await punched("out", nov5);
+    expect(out2.duplicate).toBe(false);
 
     // 較早的下班卡改標重複
-    expect(
-      (await punchesOf(nov5)).map((item) => [item.type, item.duplicate]),
-    ).toEqual([
+    const afterOut = await punchesOf(nov5);
+    expect(afterOut.map((item) => [item.type, item.duplicate])).toEqual([
       ["in", false],
       ["in", true],
       ["out", true],
@@ -531,7 +538,8 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     expect(page.openUnmatchedClockIn?.id).toBe(clockIn.id);
     now("2026-11-06", "13:00");
     await punched("out", null);
-    expect((await mySchedule(wang)).openUnmatchedClockIn).toBeNull();
+    const closed = await mySchedule(wang);
+    expect(closed.openUnmatchedClockIn).toBeNull();
   });
 
   it("沒有 schedule.my.punch:看不到打卡按鈕(canPunch = false),打卡被擋", async () => {
@@ -573,7 +581,9 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
     expect(
       page.changes
         .map((item) => [item.date, item.reason, item.reasonNote])
-        .toSorted(),
+        .toSorted((left, right) =>
+          String(left[0]).localeCompare(String(right[0])),
+        ),
     ).toEqual([
       ["2026-11-08", "shift-swap", null],
       ["2026-11-12", "other", "臨時請假"],
@@ -583,25 +593,15 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
   });
 
   describe("給刮刮樂的排班查詢(integration/entry-lookup.ts)", () => {
-    async function operatorOf(user: ScheduleTestUser) {
-      const { operator } = await api.app
-        .get(OperatorContextService)
-        .resolve(user.userId, xinyi);
-      return operator;
-    }
-
     it("findEntryForShift:容許範圍內取上班最接近;都超過 → null;未發布不算", async () => {
       const lookup = api.app.get(ScheduleEntryLookup);
       const operator = await operatorOf(wang);
       const scope = { tenantId: tenant, userId: wang.userId, orgId: xinyi };
-      expect(
-        (
-          await lookup.findEntryForShift(operator, {
-            ...scope,
-            at: taipei("2026-11-05", "07:45"),
-          })
-        )?.id,
-      ).toBe(String(nov5));
+      const early = await lookup.findEntryForShift(operator, {
+        ...scope,
+        at: taipei("2026-11-05", "07:45"),
+      });
+      expect(early?.id).toBe(String(nov5));
       expect(
         await lookup.findEntryForShift(operator, {
           ...scope,
@@ -646,7 +646,7 @@ describe("我的班表與打卡(GraphQL 端點 + 真 MongoDB)", () => {
       now("2026-11-05", "09:10");
       const lookup = api.app.get(ScheduleEntryLookup);
       const operator = await operatorOf(wang);
-      const meta = { ip: "10.0.0.1", userAgent: "pos" };
+      const meta = { ip: null, userAgent: "pos" };
       const result = await lookup.punchStart(
         operator,
         { userId: wang.userId, entryId: nov5 },
