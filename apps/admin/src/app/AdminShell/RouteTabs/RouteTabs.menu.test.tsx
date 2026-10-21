@@ -1,18 +1,11 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it } from "@jest/globals";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 
 import { LOCALE_STORAGE_KEY } from "@/lib/base/locale";
 import { authWorld } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
+import { setupPointerEvent } from "@/test/pointer-event";
 import { renderApp } from "@/test/render";
 
 import { LONG_PRESS_MS } from "./useLongPress";
@@ -62,36 +55,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 
-/**
- * jsdom 沒有 `PointerEvent`:`fireEvent.pointerDown` 退回一般 `Event`,`pointerType` / 座標都帶不進去。
- * 測試期間補一個以 `MouseEvent` 為底的替身(座標來自 MouseEvent,`pointerType` 自己帶)。
- */
-class TestPointerEvent extends MouseEvent {
-  readonly pointerType: string;
-
-  constructor(type: string, init: PointerEventInit = {}) {
-    super(type, init);
-    this.pointerType = init.pointerType ?? "";
-  }
-}
-const originalPointerEvent = Object.getOwnPropertyDescriptor(
-  globalThis,
-  "PointerEvent",
-);
-beforeAll(() => {
-  Object.defineProperty(globalThis, "PointerEvent", {
-    configurable: true,
-    writable: true,
-    value: TestPointerEvent,
-  });
-});
-afterAll(() => {
-  if (originalPointerEvent === undefined) {
-    Reflect.deleteProperty(globalThis, "PointerEvent");
-  } else {
-    Object.defineProperty(globalThis, "PointerEvent", originalPointerEvent);
-  }
-});
+setupPointerEvent();
 
 describe("RouteTabs:批次關閉選單", () => {
   it("右鍵叫出選單(role=menu,名稱帶頁籤名);關閉右側 → 目前頁被關,切到按右鍵的那一頁", async () => {
@@ -180,10 +144,14 @@ describe("RouteTabs:批次關閉選單", () => {
 
     const more = screen.getByRole("button", { name: "頁籤選單" });
     expect(more).toHaveAttribute("aria-haspopup", "menu");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).not.toHaveAttribute("aria-controls");
     await user.click(more);
     const menu = await screen.findByRole("menu", {
       name: "頁籤選單 — 組織管理",
     });
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(more).toHaveAttribute("aria-controls", menu.id);
     await user.click(
       within(menu).getByRole("menuitem", { name: "關閉左側所有分頁" }),
     );
@@ -258,6 +226,8 @@ describe("RouteTabs:批次關閉選單", () => {
     expect(within(menu).getAllByRole("menuitem")).toContain(
       document.activeElement,
     );
+    // Windows 放開選單鍵時才送 contextmenu(焦點已在選單上):擋掉,不讓瀏覽器原生選單疊上來
+    expect(fireEvent.contextMenu(document.activeElement ?? menu)).toBe(false);
     await user.keyboard("{Escape}");
     await waitFor(() => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();

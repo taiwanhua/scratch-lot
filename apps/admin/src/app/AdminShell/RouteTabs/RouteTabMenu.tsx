@@ -12,9 +12,13 @@ export interface RouteTabMenuTarget {
   /** 作用的那一頁(按右鍵 / 長按的頁籤;「⋯」是目前頁籤) */
   route: string;
   anchor: RouteTabMenuAnchor;
+  /** 由頁籤列最右的「⋯」叫出(那顆按鈕據此標 `aria-expanded`) */
+  isFromMoreButton?: boolean;
 }
 
 export interface RouteTabMenuProps {
+  /** 選單清單的 id(「⋯」按鈕的 `aria-controls`) */
+  id: string;
   tabs: RouteTab[];
   /** null = 選單關著 */
   target: RouteTabMenuTarget | null;
@@ -33,6 +37,7 @@ const ITEMS = [
  * 關閉左側 / 右側 / 其他所有分頁;沒有可關的那一項停用。選了就關選單,焦點由選單還給叫出它的元素。
  */
 export const RouteTabMenu = ({
+  id,
   tabs,
   target,
   onDismiss,
@@ -58,6 +63,11 @@ export const RouteTabMenu = ({
     <Menu
       open
       onClose={onDismiss}
+      // 鍵盤的選單鍵 / Shift+F10:我們在 keydown 就開了選單,Windows 的瀏覽器在放開按鍵時才送 contextmenu,
+      // 那時焦點已在選單項目上;不擋的話瀏覽器原生選單會疊在上面
+      onContextMenu={(event) => {
+        event.preventDefault();
+      }}
       {...("element" in anchor
         ? { anchorEl: anchor.element }
         : {
@@ -65,7 +75,7 @@ export const RouteTabMenu = ({
             anchorPosition: { top: anchor.top, left: anchor.left },
           })}
       slotProps={{
-        list: { "aria-label": t("menu.label", { label: tab.label }) },
+        list: { id, "aria-label": t("menu.label", { label: tab.label }) },
       }}
     >
       {ITEMS.map(({ kind, labelKey }) => (

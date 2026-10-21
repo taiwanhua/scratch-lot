@@ -11,6 +11,7 @@ import { NotificationBell } from "@/components/base/NotificationBell/Notificatio
 import type { ShellModule } from "@/lib/base/module-tree";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
+import { SIDE_NAV_DRAWER_ID } from "../SideNav/SideNav";
 import { HelpButton } from "./HelpButton";
 import { OrgSwitcher } from "./OrgSwitcher";
 import { UserMenu } from "./UserMenu";
@@ -58,6 +59,7 @@ export const AppBar = ({ me, title, module }: AppBarProps) => {
         <IconButton
           aria-label={t("openNav")}
           aria-expanded={isNavOpen}
+          aria-controls={SIDE_NAV_DRAWER_ID}
           onClick={() => {
             setNavOpen(true);
           }}

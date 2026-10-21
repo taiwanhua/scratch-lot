@@ -151,9 +151,13 @@ describe("手機寬(< sm)側欄改成抽屜", () => {
       screen.queryByRole("navigation", { name: "主選單" }),
     ).not.toBeInTheDocument();
     expect(open).toHaveAttribute("aria-expanded", "false");
+    expect(open).toHaveAttribute("aria-controls", "admin-side-nav-drawer");
 
     await user.click(open);
     const nav = await findSideNav();
+    // 主選單鈕指向抽屜裡的側欄
+    expect(nav).toHaveAttribute("id", "admin-side-nav-drawer");
+    expect(open).toHaveAttribute("aria-expanded", "true");
     // 抽屜裡一律展開、沒有收合開關
     expect(
       within(nav).queryByRole("button", { name: "收合側欄" }),
@@ -188,6 +192,37 @@ describe("手機寬(< sm)側欄改成抽屜", () => {
       expect(
         screen.queryByRole("navigation", { name: "主選單" }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  it("點遮罩關閉;關閉後焦點回到主選單鈕", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    const open = await screen.findByRole("button", { name: "開啟主選單" });
+    await user.click(open);
+    await findSideNav();
+
+    const backdrop = document.querySelector(".MuiBackdrop-root");
+    expect(backdrop).not.toBeNull();
+    if (backdrop !== null) {
+      await user.click(backdrop);
+    }
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(open).toHaveFocus();
+    });
+  });
+
+  it("抽屜開著時切到 sm 以上:開關重設為收起(之後回到手機寬不會自己打開)", async () => {
+    useSideNavStore.setState({ isMobileOpen: true });
+    renderShell();
+    await findSideNav();
+    await waitFor(() => {
+      expect(useSideNavStore.getState().isMobileOpen).toBe(false);
     });
   });
 

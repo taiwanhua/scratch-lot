@@ -78,7 +78,7 @@ test/       測試支援
 
 ### 內容區的寬度與內距
 
-- **最小寬度**:只在視窗 ≥ `lg` 時套用;平板以下(< `lg`)不設下限,內容隨視窗縮放,寬表格靠表格自己的橫向捲動。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"` 或 `"md"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。因為只在 ≥ `lg` 套用,`lg` 與 `md` 在那個寬度本來就放得下,實際會讓內容區水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間)。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
+- **最小寬度**:只在視窗 ≥ `lg` 時套用;平板以下(< `lg`)不設下限,內容隨視窗縮放,寬表格靠表格自己的橫向捲動。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。`lg` 在 ≥ `lg` 的視窗本來就放得下,實際會讓內容區水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間)。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
 - **內距**:手機寬(< `sm`)8px,其餘 24px(`MAIN_PADDING`)。
 - **高度**:殼外框固定 `100vh`,`<main>` 以 `flex: 1` + `minHeight: 0` 取得確定的高度,頁面可以撐滿(STYLE-08)。
 

@@ -62,6 +62,10 @@ export const SortableTab = ({
     transition,
     isDragging,
   } = useSortable({ id: tab.route });
+  // dnd-kit 的指標感測器掛在 onPointerDown;本元件也要接 pointerdown(長按),所以自己串起來。
+  // 型別是 `Record<string, Function>`,沒有哪個 key 一定在(換感測器就沒有),照可能不存在處理
+  const dndPointerDown = listeners?.onPointerDown as
+    ((event: PointerEvent<HTMLDivElement>) => void) | undefined;
 
   return (
     <Box
@@ -88,7 +92,7 @@ export const SortableTab = ({
       }}
       onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
         longPress.onPointerDown(event);
-        listeners?.onPointerDown(event);
+        dndPointerDown?.(event);
       }}
       onPointerMove={longPress.onPointerMove}
       onPointerUp={longPress.onPointerUp}

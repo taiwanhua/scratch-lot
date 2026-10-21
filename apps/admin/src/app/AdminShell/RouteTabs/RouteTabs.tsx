@@ -13,7 +13,7 @@ import {
   SortableContext,
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { type KeyboardEvent, useId, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
@@ -64,9 +64,15 @@ export const RouteTabs = ({
   const t = useTranslations("admin.shell.tabs");
   const listRef = useRef<HTMLDivElement>(null);
   const [menuTarget, setMenuTarget] = useState<RouteTabMenuTarget | null>(null);
-  const openMenu = (route: string, anchor: RouteTabMenuAnchor) => {
-    setMenuTarget({ route, anchor });
+  const menuId = useId();
+  const openMenu = (
+    route: string,
+    anchor: RouteTabMenuAnchor,
+    isFromMoreButton = false,
+  ) => {
+    setMenuTarget({ route, anchor, isFromMoreButton });
   };
+  const isMoreMenuOpen = menuTarget?.isFromMoreButton === true;
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: DRAG_START_DISTANCE },
@@ -178,6 +184,10 @@ export const RouteTabs = ({
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      // 長按叫出選單後手指再移動 → 拖曳啟動,選單隨之關閉(兩者不同時存在)
+      onDragStart={() => {
+        setMenuTarget(null);
+      }}
       onDragEnd={handleDragEnd}
       accessibility={{ announcements, screenReaderInstructions }}
     >
@@ -245,10 +255,16 @@ export const RouteTabs = ({
             size="small"
             aria-label={t("menu.open")}
             aria-haspopup="menu"
+            aria-expanded={isMoreMenuOpen}
+            aria-controls={isMoreMenuOpen ? menuId : undefined}
             disabled={activeTab === undefined}
             onClick={(event) => {
               if (activeTab !== undefined) {
-                openMenu(activeTab.route, { element: event.currentTarget });
+                openMenu(
+                  activeTab.route,
+                  { element: event.currentTarget },
+                  true,
+                );
               }
             }}
           >
@@ -257,6 +273,7 @@ export const RouteTabs = ({
         </Box>
       </SortableContext>
       <RouteTabMenu
+        id={menuId}
         tabs={tabs}
         target={menuTarget}
         onDismiss={() => {

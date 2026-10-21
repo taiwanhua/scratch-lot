@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { NavDrawer } from "@repo/ui/drawer";
 import { useBreakpointDown } from "@repo/ui/media-query";
 
@@ -6,6 +8,9 @@ import { useSideNavStore } from "@/stores/base/useSideNavStore";
 import { type SideNavContentProps, SideNavPanel } from "./SideNavPanel";
 
 export type SideNavProps = SideNavContentProps;
+
+/** 手機抽屜裡側欄的 id(AppBar 主選單鈕的 `aria-controls`)。 */
+export const SIDE_NAV_DRAWER_ID = "admin-side-nav-drawer";
 
 /**
  * 後台側欄:`sm` 以上是殼的左欄(可收合成 64px 圖示列);手機寬(< `sm`)改放進從左側滑出的抽屜
@@ -22,6 +27,13 @@ export const SideNav = (props: SideNavProps) => {
   const isMobileOpen = useSideNavStore((state) => state.isMobileOpen);
   const setMobileOpen = useSideNavStore((state) => state.setMobileOpen);
 
+  // 抽屜開著時視窗拉寬到 sm 以上:收掉,下次回到手機寬仍是收起的
+  useEffect(() => {
+    if (!isMobile && isMobileOpen) {
+      setMobileOpen(false);
+    }
+  }, [isMobile, isMobileOpen, setMobileOpen]);
+
   if (!isMobile) {
     return (
       <SideNavPanel {...props} isCollapsed={isCollapsed} onToggle={toggle} />
@@ -33,7 +45,12 @@ export const SideNav = (props: SideNavProps) => {
   };
   return (
     <NavDrawer open={isMobileOpen} onClose={close}>
-      <SideNavPanel {...props} isCollapsed={false} onNavigate={close} />
+      <SideNavPanel
+        {...props}
+        id={SIDE_NAV_DRAWER_ID}
+        isCollapsed={false}
+        onNavigate={close}
+      />
     </NavDrawer>
   );
 };

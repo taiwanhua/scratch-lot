@@ -19,6 +19,24 @@ describe("NavDrawer", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("呼叫端的 slotProps.paper(含 sx)保留,不被元件的排版蓋掉", () => {
+    render(
+      <NavDrawer
+        open
+        onClose={jest.fn()}
+        slotProps={{
+          paper: { "aria-label": "側欄抽屜", sx: { width: 300 } },
+        }}
+      >
+        選單內容
+      </NavDrawer>,
+    );
+    const paper = screen.getByLabelText("側欄抽屜");
+    const style = globalThis.getComputedStyle(paper);
+    expect(style.width).toBe("300px");
+    expect(style.flexDirection).toBe("column");
+  });
+
   it("open=false 時不渲染內容", () => {
     render(
       <NavDrawer open={false} onClose={jest.fn()}>

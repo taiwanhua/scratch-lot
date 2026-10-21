@@ -30,6 +30,8 @@ export interface SideNavContentProps {
 }
 
 export interface SideNavPanelProps extends SideNavContentProps {
+  /** `<nav>` 的 id(手機抽屜給,讓主選單鈕以 `aria-controls` 指向它) */
+  id?: string;
   /** 收成 64px 圖示列(手機抽屜裡一律展開) */
   isCollapsed: boolean;
   /** 底部收合開關;省略則不顯示(手機抽屜沒有收合) */
@@ -52,6 +54,7 @@ export const SideNavPanel = ({
   tree,
   currentPath,
   badges,
+  id,
   isCollapsed,
   onToggle,
   onNavigate,
@@ -62,6 +65,7 @@ export const SideNavPanel = ({
   return (
     <Box
       component="nav"
+      id={id}
       aria-label={t("sideNav")}
       sx={{
         width: (theme) =>

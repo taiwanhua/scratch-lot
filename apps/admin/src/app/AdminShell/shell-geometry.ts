@@ -10,11 +10,12 @@ export const MAIN_PADDING = { xs: 1, sm: 3 } as const;
 
 /**
  * 內容區的最小寬度以哪個主題斷點為準(**只在視窗 ≥ `lg` 時套用**;平板以下不設下限,內容隨視窗縮放):
- * 殼層預設 `lg`,頁面可在登記時以 `minWidth` 宣告更大的 `xl`,或更小的 `md`
- * (`app/base/module-pages.ts`;目前底座頁都沒宣告,專案頁可用),合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
- * 因為只在 ≥ `lg` 套用,`lg` 與 `md` 在那個寬度本來就放得下,實際會讓 `<main>` 水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間時)。
+ * 殼層預設 `lg`,頁面可在登記時以 `minWidth` 宣告更大的 `xl`
+ * (`app/base/module-pages.ts`;目前底座頁都沒宣告),合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
+ * 因為只在 ≥ `lg` 套用,`lg` 在那個寬度本來就放得下,實際會讓 `<main>` 水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間時)。
+ * 比 `lg` 小的斷點沒有意義(< `lg` 本來就不設下限),所以型別只收這兩個。
  */
-export type ShellMinWidth = "md" | "lg" | "xl";
+export type ShellMinWidth = "lg" | "xl";
 
 export const DEFAULT_SHELL_MIN_WIDTH: ShellMinWidth = "lg";
 
