@@ -59,7 +59,7 @@ export class ScheduleAttendancePunch {
   @Prop({ type: String, enum: [...SCHEDULE_PUNCH_SOURCES], required: true })
   source!: string;
 
-  /** 補打卡申請(表單提交 id);按鈕打的卡為 null。 */
+  /** 補打卡申請(表單提交 id);按鈕打的卡為 null。有值時唯一(部分唯一索引)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
   makeupRequestId!: Types.ObjectId | null;
 
@@ -78,6 +78,17 @@ export const ScheduleAttendancePunchSchema = SchemaFactory.createForClass(
 ScheduleAttendancePunchSchema.index({ userId: 1, at: 1 });
 ScheduleAttendancePunchSchema.index({ entryId: 1, type: 1 });
 ScheduleAttendancePunchSchema.index({ orgId: 1, at: 1 });
+// 一張補打卡申請只寫一張卡(完成的事後動作同時跑兩次時,第二次撞索引、整個動作回復)
+ScheduleAttendancePunchSchema.index(
+  { makeupRequestId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      makeupRequestId: { $type: "objectId" },
+      deletedAt: { $type: "null" },
+    },
+  },
+);
 ScheduleAttendancePunchSchema.plugin(baseFieldsPlugin);
 ScheduleAttendancePunchSchema.plugin(tenantScopePlugin, {
   moduleData: true,

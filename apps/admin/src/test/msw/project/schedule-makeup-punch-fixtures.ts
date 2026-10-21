@@ -28,7 +28,7 @@ import {
 
 /**
  * 出勤紀錄 → 補打卡申請(規格 14.8)的夾具:定義與受管表單同形
- * (正本 `apps/db-migrator/seeds/project/revisions/makeup_punch.r1.seed.ts`);兩筆審核中
+ * (正本 `apps/db-migrator/seeds/project/revisions/makeup_punch.r2.seed.ts`);兩筆審核中
  * (一筆對應的排班還在、一筆已被刪除),各有派給登入者(小華,店長)的待審任務。
  */
 
@@ -47,6 +47,7 @@ export const makeupPunchDefinition = (): FormDefinition => ({
     }),
     field("entry_label", "對應排班", "text", { rules: { required: true } }),
     field("entry", "對應排班(系統代碼)", "text", {
+      widget: { kind: "textField", hideWhenReadonly: true },
       rules: { required: true },
     }),
     field("punch_type", "類型", "select", {

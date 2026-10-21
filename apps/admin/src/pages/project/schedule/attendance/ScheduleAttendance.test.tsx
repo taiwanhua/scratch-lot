@@ -153,6 +153,26 @@ describe("出勤紀錄", () => {
     });
   });
 
+  it("補打卡新增頁:選「沒有排班(臨時代班)」→ 對應排班存 none、顯示文字照規格用詞", async () => {
+    const user = fastUser();
+    const { formsFake } = renderSchedulePage({
+      path: "/schedule/attendance/create-page/makeup_punch?date=2026-11-03&org=org-store&type=in",
+      forms: makeupPunchFormWorld(),
+    });
+    await user.click(await screen.findByRole("combobox", { name: /對應排班/ }));
+    await user.click(await findOption("沒有排班(臨時代班)"));
+    await user.type(screen.getByLabelText(/時間/), "09:02");
+    await user.click(screen.getByRole("combobox", { name: /原因/ }));
+    await user.click(await findOption("忘記打卡"));
+    await user.click(await findButton("送出"));
+    await waitFor(() => {
+      expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);
+    });
+    expect(
+      formsFake.inputs.createAndSubmitFormSubmission[0]?.values,
+    ).toMatchObject({ entry: "none", entry_label: "沒有排班(臨時代班)" });
+  });
+
   it("審核頁:選的排班已被刪除 → 警告、[核准] 停用;排班還在 → 可以核准", async () => {
     const workflow = makeupPunchWorkflowWorld();
     renderSchedulePage({

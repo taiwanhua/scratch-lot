@@ -15,6 +15,7 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { TransactionService } from "../../../database/transaction";
 import {
   ASSIGN,
   CREATE_FORM,
@@ -45,7 +46,10 @@ import {
   reviewStep,
   roleSource,
 } from "../../../workflows/test-support/workflow-fixtures";
-import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "../../database/schedule/schedule-attendance-punch.schema";
+import {
+  SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION,
+  ScheduleAttendancePunch,
+} from "../../database/schedule/schedule-attendance-punch.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { SCHEDULE_ENTRIES_COLLECTION } from "../../database/schedule/schedule-entry.schema";
 import { SCHEDULE_PERIODS_COLLECTION } from "../../database/schedule/schedule-period.schema";
@@ -54,7 +58,10 @@ import {
   seedScheduleAuthorization,
   seedScheduleFieldOptions,
 } from "../test-support/fixtures";
-import { MAKEUP_PUNCH_REASONS } from "./makeup-punch.service";
+import {
+  MAKEUP_PUNCH_REASONS,
+  MakeupPunchService,
+} from "./makeup-punch.service";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
 
@@ -81,7 +88,7 @@ const ENTRY_OPTIONS = /* GraphQL */ `
   }
 `;
 
-/** 補打卡申請的定義(欄位 key 同受管表單 `seeds/project/revisions/makeup_punch.r1.seed.ts`)。 */
+/** 補打卡申請的定義(欄位 key 同受管表單 `seeds/project/revisions/makeup_punch.r2.seed.ts`)。 */
 function makeupDefinition(): FormDefinition {
   return definitionOf([
     field("entry_label", "text", { rules: { required: true } }),
@@ -241,6 +248,12 @@ describe("補打卡申請(規格 14.8)", () => {
     await seedScheduleFieldOptions(connection);
     await api.app
       .get<Model<ScheduleEntryLock>>(getModelToken(ScheduleEntryLock.name))
+      .init();
+    // 「一張申請只寫一張卡」的部分唯一索引先建好,同時寫入才擋得到
+    await api.app
+      .get<Model<ScheduleAttendancePunch>>(
+        getModelToken(ScheduleAttendancePunch.name),
+      )
       .init();
     const root = await rootToken(api);
     tenant = await createOrg(connection, {
@@ -453,5 +466,27 @@ describe("補打卡申請(規格 14.8)", () => {
       }),
     ).toBe(0);
     await decideOn(world, manager, submitted.id, "RETURN");
+  });
+
+  it("同一張申請的完成同時跑兩次 → 只寫一張卡(makeupRequestId 部分唯一索引)", async () => {
+    const submitted = await submitAs(
+      wang,
+      values("2026-11-06", "none", { punch_type: "in", time: "10:00" }),
+    );
+    await decideOn(world, manager, submitted.id, "APPROVE");
+    const id = new Types.ObjectId(submitted.id);
+    // 拿掉核准時寫的那一張,模擬完成的事後動作同時跑兩次
+    await punches().deleteMany({ makeupRequestId: id });
+    const transactions = api.app.get(TransactionService);
+    const service = api.app.get(MakeupPunchService);
+    const results = await Promise.allSettled(
+      [0, 1].map(() =>
+        transactions.withTransaction((session) =>
+          service.complete(id, tenant, session),
+        ),
+      ),
+    );
+    expect(results.some((result) => result.status === "fulfilled")).toBe(true);
+    expect(await punches().countDocuments({ makeupRequestId: id })).toBe(1);
   });
 });
