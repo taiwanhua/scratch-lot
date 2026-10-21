@@ -122,7 +122,7 @@ const DEFAULT_LOST: LostChoice = {
   action: "keep",
   reasonKey: "",
   reasonNote: "",
-  scanned: false,
+  scannedTicketIds: [],
 };
 
 /**
@@ -145,6 +145,20 @@ export const LostSection = ({
     return group.source === "stocktake"
       ? t("sinceStocktake", { date })
       : t("since", { date });
+  };
+  /** 「找到了」的說明:整本刷一張就好;零碎的逐張刷,沒刷到的維持待查。 */
+  const foundText = (group: LostGroup, choice: LostChoice) => {
+    if (group.wholeBook) {
+      return choice.scannedTicketIds.length > 0
+        ? t("foundOk")
+        : t("scanToConfirm");
+    }
+    return choice.scannedTicketIds.length === 0
+      ? t("scanEach")
+      : t("foundSome", {
+          count: choice.scannedTicketIds.length,
+          total: group.tickets.length,
+        });
   };
   const actions: StocktakeLostAction[] = canConfirmLost
     ? ["found", "lost", "keep"]
@@ -211,10 +225,13 @@ export const LostSection = ({
                 <Typography
                   variant="body2"
                   sx={{
-                    color: choice.scanned ? "success.dark" : "warning.dark",
+                    color:
+                      choice.scannedTicketIds.length > 0
+                        ? "success.dark"
+                        : "warning.dark",
                   }}
                 >
-                  {choice.scanned ? t("foundOk") : t("scanToConfirm")}
+                  {foundText(group, choice)}
                 </Typography>
               ) : null}
               {choice.action === "lost" ? (

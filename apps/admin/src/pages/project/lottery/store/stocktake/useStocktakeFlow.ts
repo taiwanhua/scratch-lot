@@ -164,26 +164,46 @@ export const useStocktakeFlow = ({
       showSnackbar("success", t("book.scanned", { ticketNo: parsed.ticketNo }));
       return;
     }
+    // 待查清單:整本都待查 → 刷到這本任一張就算整本找到;零碎 → 刷到的那一張才算
     const group = lostGroups.find(
-      (item) => item.bookNo === bookNo && sameGame(item.gameCode),
+      (item) =>
+        item.bookNo === bookNo &&
+        sameGame(item.gameCode) &&
+        (item.wholeBook ||
+          item.tickets.some((ticket) => ticket.ticketNo === parsed.ticketNo)),
     );
     if (group === undefined) {
       showSnackbar("warning", t("book.scanNotHere"));
       return;
     }
-    update((before) => ({
-      ...before,
-      lost: {
-        ...before.lost,
-        [group.bookId]: {
-          action: "found",
-          reasonKey: "",
-          reasonNote: "",
-          scanned: true,
+    const ticketIds = group.wholeBook
+      ? group.tickets.map((ticket) => ticket.ticketId)
+      : group.tickets
+          .filter((ticket) => ticket.ticketNo === parsed.ticketNo)
+          .map((ticket) => ticket.ticketId);
+    update((before) => {
+      const previous = before.lost[group.bookId];
+      const scanned =
+        previous?.action === "found" ? previous.scannedTicketIds : [];
+      return {
+        ...before,
+        lost: {
+          ...before.lost,
+          [group.bookId]: {
+            action: "found",
+            reasonKey: "",
+            reasonNote: "",
+            scannedTicketIds: [...new Set([...scanned, ...ticketIds])],
+          },
         },
-      },
-    }));
-    showSnackbar("success", t("lost.foundOk"));
+      };
+    });
+    showSnackbar(
+      "success",
+      group.wholeBook
+        ? t("lost.foundOk")
+        : t("lost.foundTicket", { ticketNo: parsed.ticketNo }),
+    );
   };
   // 宣告盤點的掃描用途:盤點中刷到的碼記為「在」,不會被當成售出
   useScanner(STOCKTAKE_SCAN_PURPOSE, ({ code }) => {

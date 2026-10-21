@@ -46,8 +46,11 @@ export interface LostChoice {
   action: StocktakeLostAction;
   reasonKey: string;
   reasonNote: string;
-  /** 「找到了」要刷到這本任一張的條碼 */
-  scanned: boolean;
+  /**
+   * 「找到了」刷到的張(規格 6.8「要刷條碼」):整本都待查的一組刷到任一張就算整本找到;
+   * 零碎待查的一組只有刷到的張算找到,沒刷到的維持待查
+   */
+  scannedTicketIds: string[];
 }
 
 /**
@@ -102,11 +105,15 @@ export const stateOfDraft = (
   for (const item of draft.lostReview) {
     const bookId = bookOfTicket.get(item.ticketId);
     if (bookId !== undefined) {
+      const before = state.lost[bookId];
       state.lost[bookId] = {
         action: item.action,
         reasonKey: item.reasonKey ?? "",
         reasonNote: item.reasonNote ?? "",
-        scanned: item.action === "found",
+        scannedTicketIds:
+          item.action === "found"
+            ? [...(before?.scannedTicketIds ?? []), item.ticketId]
+            : [],
       };
     }
   }
@@ -194,7 +201,14 @@ export const draftOf = (
       if (choice === undefined || choice.action === "keep") {
         return [];
       }
-      return group.tickets.map((ticket) => ({
+      // 找到了:整本 → 整組;零碎 → 只有刷到的張(其他維持待查,不送)
+      const tickets =
+        choice.action === "found" && !group.wholeBook
+          ? group.tickets.filter((ticket) =>
+              choice.scannedTicketIds.includes(ticket.ticketId),
+            )
+          : group.tickets;
+      return tickets.map((ticket) => ({
         ticketId: ticket.ticketId,
         action: choice.action,
         reasonKey: choice.action === "lost" ? choice.reasonKey : null,
@@ -266,7 +280,7 @@ export const lostChoicesReady = (state: StocktakeState): boolean =>
   Object.values(state.lost).every(
     (choice) =>
       choice === undefined ||
-      (choice.action === "found" && choice.scanned) ||
+      (choice.action === "found" && choice.scannedTicketIds.length > 0) ||
       (choice.action === "lost" && missingReasonFields(choice).length === 0) ||
       choice.action === "keep",
   );

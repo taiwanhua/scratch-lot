@@ -3167,11 +3167,14 @@
           "lost": "Confirm lost (reason required)",
           "keep": "Keep investigating"
         },
-        "scanToConfirm": "Scan any ticket of this book to confirm it was found",
+        "scanToConfirm": "Whole book under investigation: scan any ticket of it to confirm the book was found",
         "foundOk": "Scanned, found",
         "lostReason": "Loss reason (required)",
         "hint": "Confirming a loss requires permission and a reason; you can also keep investigating.",
-        "empty": "No tickets under investigation"
+        "empty": "No tickets under investigation",
+        "foundTicket": "Scanned #{ticketNo}, found",
+        "scanEach": "Scan each ticket: only scanned tickets count as found; the rest stay under investigation",
+        "foundSome": "Scanned {count} / {total}; the rest stay under investigation"
       },
       "review": {
         "title": "Review differences",

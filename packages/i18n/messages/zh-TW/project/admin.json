@@ -3167,11 +3167,14 @@
           "lost": "確認遺失(原因必填)",
           "keep": "繼續待查"
         },
-        "scanToConfirm": "刷這本任一張的條碼,確認找到了",
+        "scanToConfirm": "整本都待查:刷這本任一張的條碼,確認整本找到了",
         "foundOk": "已刷到,找到了",
         "lostReason": "遺失原因(必填)",
         "hint": "確認遺失需要有權限,原因必填;也可以「繼續待查」。",
-        "empty": "沒有待查的張"
+        "empty": "沒有待查的張",
+        "foundTicket": "已刷到 #{ticketNo},找到了",
+        "scanEach": "逐張刷條碼:刷到的張才算找到了,沒刷到的維持待查",
+        "foundSome": "已刷到 {count} / {total} 張;沒刷到的維持待查"
       },
       "review": {
         "title": "差異核對",

@@ -131,17 +131,17 @@ export const sampleStocktakeSheet = (
       since: "2026-10-12T02:00:00.000Z",
       source: "transfer",
     })),
-    {
-      __typename: "LotteryStocktakeLostTicket",
-      ticketId: "b-l2-023",
+    ...["023", "024"].map((ticketNo) => ({
+      __typename: "LotteryStocktakeLostTicket" as const,
+      ticketId: `b-l2-${ticketNo}`,
       bookId: "b-l2",
       gameCode: "5201",
       bookNo: "0060090",
-      ticketNo: "023",
+      ticketNo,
       bookTicketCount: 100,
       since: "2026-10-05T02:00:00.000Z",
       source: "stocktake",
-    },
+    })),
   ],
 });
 

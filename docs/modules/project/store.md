@@ -145,7 +145,7 @@
 
 - **入口**:看板頂部 [盤點](`store.stocktake`)→ 盤點範圍(ST-16:全店 / 單一收銀點)→ 盤點頁 = 盤點確認申請的新增頁 `/store/create-page/stocktake_confirm?org=&scope=`。距離上次送出的盤點(不算已駁回)超過 24 小時,看板頂部提醒「建議盤點一次」(`lotteryStocktakeStatus`)。交班精靈第 ① 步、日結精靈第 ② 步以 `StocktakeWorkspace`(`scopeCashPointId`)嵌入同一個元件(結帳的功能)。
 - **沒有「盤點中」**:盤點過程只在畫面上(規格 6.0),重新整理或離開就從頭盤;[送出] 時才建立盤點單。[補登售出]、[補登兌獎] 例外,按下就立即生效,畫面註明「立即生效」。
-- **盤點頁**(ST-13;`StocktakeWorkspace` + `useStocktakeFlow`):左欄本清單依收銀點分組(每本 已盤 / 未盤 / 差異 N / 目前這本;手機改成上方的下拉),每個收銀點旁 [補登兌獎](`store.redeem`,沿用兌獎視窗;沒有開著的班停用並說明)與應有現金;右欄選中的本:點格子 / 掃描(不用數量;已選 = 在)、系統數字(開始盤這本那一刻)、實盤、差異;全店盤點另有「未拆的本(在 / 不在)」與「待查清單」(找到了要刷這本任一張的條碼 / 確認遺失要原因 / 繼續待查)。
+- **盤點頁**(ST-13;`StocktakeWorkspace` + `useStocktakeFlow`):左欄本清單依收銀點分組(每本 已盤 / 未盤 / 差異 N / 目前這本;手機改成上方的下拉),每個收銀點旁 [補登兌獎](`store.redeem`,沿用兌獎視窗;沒有開著的班停用並說明)與應有現金;右欄選中的本:點格子 / 掃描(不用數量;已選 = 在)、系統數字(開始盤這本那一刻)、實盤、差異;全店盤點另有「未拆的本(在 / 不在)」與「待查清單」(找到了要刷條碼:整本都待查的一組刷到任一張就算整本找到,零碎待查的一組只有刷到的張算找到、其他維持待查 / 確認遺失要原因 / 繼續待查)。
 - **掃描用途** `store-stocktake`(`STOCKTAKE_SCAN_PURPOSE`):盤點頁開著時刷到的碼記為「在」(或待查清單的「找到了」),不會被當成售出;掃描欄標 `data-scanner-field`。
 - **開始盤每本的時間 `countedAt`** = 盤點資料讀到的伺服器時間(`lotteryStocktakeSheet.serverNow`;重新盤點這本時重記),不受裝置時鐘影響。
 - **比對**(`stocktakeTicketFactsOf` / `stocktakeDiffsOf`):那一刻的狀態由張數事件倒推(`countedAt` 之後第一筆事件的 `from`);那一刻未售、實際不在 → 差異「未售不在」;那一刻已售、實際還在 → 「已售還在」。之後被別人處理過(售出、移櫃、待查…)的張不再是差異(第 17 章第 1、2 題);自己這次補登的售出照列。撤銷售出申請鎖定的張標「撤銷審核中」,不算差異(第 6 題);調貨鎖定的張不比對。
@@ -156,7 +156,7 @@
   - `beforeSubmit`:盤點內容讀得懂、分店一致;有 `store.stocktake`(確認遺失另要 `store.confirm-lost` 與原因);每筆差異都已處理且還對得到(`STOCKTAKE_DIFF_STALE` / `STOCKTAKE_DIFF_UNHANDLED`)
   - `submitted`:同一個交易建立盤點單(待核准;退回後再送出改寫同一筆)、再比對一次(不合 → 整個送出回復)
   - `returned` / `withdrawn` → 已退回;`rejected` → 已駁回(補登的售出不退,錯了用撤銷售出申請「盤點錯誤」)
-  - `completed`:依時間順序套用 —— 差異 [待查]、未拆的本不在(本店庫存裡未售的張)→ 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);各張以目前的版本條件更新,已不是要的狀態(被別的盤點或操作處理掉)就略過;標記異常只做記號。盤點單 → 已確認
+  - `completed`:依時間順序套用 —— 差異 [待查]、未拆的本不在(本店庫存裡未售的張)→ 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);各張以目前的版本條件更新;盤點之後被動過的張(差異看那本的 `countedAt`,未拆的本與待查清單看開始盤的時間,之後有任何張數事件)或已不是要的狀態就略過 —— 舊盤點晚完成不覆蓋新盤點的結果;標記異常只做記號。盤點單 → 已確認,`confirmedBy` = 這張申請目前流程實例裡最後核准的審核者(依決定時間;沒有已核准任務 = 申請人)
   - `beforeVoid`:一律擋下(`STOCKTAKE_VOID_FORBIDDEN`;待查錯誤刷到時尋回)
 - **交班 / 日結的盤點介面**(結帳的功能用):`StocktakeService`(token `STOCKTAKE_SERVICE`,`LotteryStocktakeModule` 匯出)的 `checkDraft(operator, draft)`(送出前守門)、`submitStocktakeDraft(session, draft, { type, submissionId, tenantId, submittedBy })`(在結帳確認申請的同一個交易建立盤點單)、`markStatus(session, tenantId, submissionId, "returned" | "rejected")`、`apply(session, tenantId, submissionId)`(核准完成時套用)。
 - **盤點紀錄分頁**(ST-29,`StocktakesTab`):篩選 類型、狀態(`?stocktakes=`);欄位 單號、類型、盤點時間、補登售出、新增待查、確認遺失、狀態;平板 / 手機改卡片;點一列開那張申請的檢視頁。
@@ -298,17 +298,17 @@
 
 ### 盤點單 `lottery_stocktakes`
 
-| 欄位                                                     | 說明                                                                                                                               |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `orgId`、`type`、`status`                                | 分店;交班 `shift` / 日結 `daily` / 臨時 `adhoc`;待核准 `pending` → 已確認 `confirmed` / 已駁回 `rejected`;退回 → 已退回 `returned` |
-| `scopeCashPointId`                                       | 只盤一個收銀點(單一收銀點的臨時盤點、交班);全店 = null                                                                             |
-| `startedAt`、`submittedBy`、`submittedAt`、`confirmedAt` | 開始盤(畫面上記下)、送出、核准完成                                                                                                 |
-| `submissionId`                                           | 帶盤點的申請(盤點確認申請 / 結帳確認申請);唯一                                                                                     |
-| `lines[]`                                                | 每本 × 收銀點:`countedAt`、方式、系統數字、實盤的張號、差異的張與各自的處理(補登售出記事件 id 與是否事後更正、金額)                |
-| `unopenedLines[]`                                        | 未拆的本:在 / 不在(張數)                                                                                                           |
-| `lostReviewLines[]`                                      | 待查清單的處理:找到了 / 確認遺失(原因代碼、名稱快照、說明)/ 繼續待查不記;單張成本                                                  |
-| `summary`                                                | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本)                                                             |
-| `version`                                                | 送出 / 退回 / 駁回 / 完成各 +1(條件更新)                                                                                           |
+| 欄位                                                                    | 說明                                                                                                                               |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `orgId`、`type`、`status`                                               | 分店;交班 `shift` / 日結 `daily` / 臨時 `adhoc`;待核准 `pending` → 已確認 `confirmed` / 已駁回 `rejected`;退回 → 已退回 `returned` |
+| `scopeCashPointId`                                                      | 只盤一個收銀點(單一收銀點的臨時盤點、交班);全店 = null                                                                             |
+| `startedAt`、`submittedBy`、`submittedAt`、`confirmedAt`、`confirmedBy` | 開始盤(畫面上記下)、送出、核准完成與核准的人                                                                                       |
+| `submissionId`                                                          | 帶盤點的申請(盤點確認申請 / 結帳確認申請);唯一                                                                                     |
+| `lines[]`                                                               | 每本 × 收銀點:`countedAt`、方式、系統數字、實盤的張號、差異的張與各自的處理(補登售出記事件 id 與是否事後更正、金額)                |
+| `unopenedLines[]`                                                       | 未拆的本:在 / 不在(張數)                                                                                                           |
+| `lostReviewLines[]`                                                     | 待查清單的處理:找到了 / 確認遺失(原因代碼、名稱快照、說明)/ 繼續待查不記;單張成本                                                  |
+| `summary`                                                               | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本)                                                             |
+| `version`                                                               | 送出 / 退回 / 駁回 / 完成各 +1(條件更新)                                                                                           |
 
 - 送出時才建立(沒有「盤點中」);盤點送出不影響現金帳與庫存,核准完成時才套用。資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 掛接點的寫入與審核者的讀取以租戶邊界上下文(`project/database/tenant-boundary-callers.ts`:`stocktake.service.ts` 反查 + 例外寫入、`stocktake-query.service.ts` 反查)。

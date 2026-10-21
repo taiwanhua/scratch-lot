@@ -242,4 +242,35 @@ describe("店面管理:盤點", () => {
     expect(screen.getByText("補登售出(事後更正)")).toBeInTheDocument();
     expect(screen.getByText("2 張 · 300 元")).toBeInTheDocument();
   });
+
+  it("待查清單「找到了」要刷條碼:整本都待查的刷一張就整本找到;零碎的只算刷到的張,其他維持待查", async () => {
+    const user = fastUser();
+    const { stocktake } = renderStore({
+      path: `/store/create-page/stocktake_confirm?org=${STORE_A}`,
+    });
+    await screen.findByText("5201 · 060090 · #023–024");
+    act(() => {
+      injectScan("0060090023");
+    });
+    expect(
+      await screen.findByText("已刷到 1 / 2 張;沒刷到的維持待查"),
+    ).toBeInTheDocument();
+    act(() => {
+      injectScan("0056420002");
+    });
+    expect(await screen.findByText("已刷到,找到了")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "下一本" }));
+    await user.click(screen.getByRole("button", { name: "差異核對 →" }));
+    await waitFor(() => {
+      expect(stocktake.inputs.reviews.length).toBeGreaterThan(0);
+    });
+    const draft = stocktake.inputs.reviews.at(-1);
+    expect(
+      draft?.lostReview
+        .filter((item) => item.action === "found")
+        .map((item) => item.ticketId)
+        .toSorted((a, b) => a.localeCompare(b)),
+    ).toEqual(["b-l1-001", "b-l1-002", "b-l1-003", "b-l2-023"]);
+  });
 });
