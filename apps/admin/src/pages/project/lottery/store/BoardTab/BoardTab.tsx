@@ -11,7 +11,6 @@ import {
 } from "@repo/domain/project/lottery";
 import { useLotteryStoreBoardQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
-import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -272,11 +271,22 @@ export const BoardTab = () => {
                 setSalesDialog({ kind: "camera" });
               }}
             />
-            <Box sx={{ flex: 1, display: { xs: "none", sm: "block" } }} />
-            {daily.lastClose}
-            {stocktake.button}
-            {daily.bankButton}
-            {daily.dailyButton}
+            {/* 上次日結與 [盤點] [存銀行] [日結] 一組靠右(Figma ST-01);放不下時整組換行 */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                ml: { sm: "auto" },
+                alignItems: "center",
+                flexWrap: "wrap",
+                rowGap: 1,
+              }}
+            >
+              {daily.lastClose}
+              {stocktake.button}
+              {daily.bankButton}
+              {daily.dailyButton}
+            </Stack>
           </>
         }
       />
