@@ -79,8 +79,7 @@ export const projectModulePages: ModulePageSource = {
     // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
     {
       moduleKey: "schedule.manage",
-      // 內容區最小寬度用 `md`:平板 1024 寬收合側欄時,排班表的工具列與檢核面板都放得下、不必左右捲
-      pageOverrides: { list: { Page: ScheduleManagePage, minWidth: "md" } },
+      pageOverrides: { list: { Page: ScheduleManagePage } },
     },
     // 出勤紀錄(綁定 補打卡申請;規格 14.7、14.8):列表頁換成分頁頁殼(依人員(月)| 依分店(日));
     // 新增 / 編輯頁換成有「對應排班」下拉的補打卡頁、檢視頁換成摘要 + 審核(排班被刪除時警告、不能核准)

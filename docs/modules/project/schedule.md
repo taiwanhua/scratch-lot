@@ -388,7 +388,6 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 圖例元件 `components/project/schedule/ScheduleLegend/`(班表管理所有頁面共用;外觀與格子同一份 `schedule-legend-styles.ts`),各功能追加自己的項目。
 - 分店選擇器一律 `OrgTreeSelect scope="visible"`(用法表 ④ ⑤:整棵租戶樹、可見範圍內的才能選):規則、行事曆的分店、排班人員可以排的分店。
 - 側欄排序:班表管理群組 `order` 80。
-- 排班作業的列表頁(分頁頁殼)登記內容區最小寬度 `minWidth: "md"`(`app/project/module-pages.ts`;殼層預設 `lg`):平板 1024 寬收合側欄時,排班表的工具列與檢核面板都在畫面內、不必左右捲(使用者 10/21 定案;其他頁照殼層預設)。
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。
