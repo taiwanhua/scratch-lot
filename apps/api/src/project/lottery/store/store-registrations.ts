@@ -34,6 +34,40 @@ export const STORE_REGISTRATION_NAME = "lottery-store";
 export const DRAWER_SOURCE_TICKET_EVENTS = "ticket-events";
 export const DRAWER_SOURCE_CASH_MOVEMENTS = "cash-movements";
 
+/**
+ * 那一班張數事件的**事後更正淨額**(規格 6.12;`postCloseOf` = 那一班):增加 +、減少 −
+ * (例:盤點補登售出時那個收銀點沒有開著的班)。交班結帳、報表把它加到「應有(含事後更正)」。
+ */
+export async function ticketEventsPostCloseNet(
+  events: LotteryTicketEventsRepository,
+  reader: OperatorContext,
+  shiftId: Types.ObjectId,
+): Promise<number> {
+  const rows = await events.aggregate(reader, [
+    {
+      $match: {
+        postCloseOf: shiftId,
+        cashEffect: { $in: ["increase", "decrease"] },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        amount: {
+          $sum: {
+            $cond: [
+              { $eq: ["$cashEffect", "increase"] },
+              "$amount",
+              { $multiply: [-1, "$amount"] },
+            ],
+          },
+        },
+      },
+    },
+  ]);
+  return Number(rows[0]?.amount ?? 0);
+}
+
 /** 排班與刮刮樂的登記只能加、不能撤(排班的登記表沒有撤銷函式):同一個行程只登記一次。 */
 let scheduleSeamsRegistered = false;
 
@@ -124,13 +158,22 @@ export class StoreRegistrations implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** 張數事件對抽屜的影響:「增加」(售出)+、「減少」(撤銷)−。 */
+  /**
+   * 張數事件對抽屜的影響:「增加」(售出)+、「減少」(撤銷)−。事後更正(`postCloseOf`,班已結帳之後才記到
+   * 那一班)不算結帳時的應有,另由 `ticketEventsPostCloseNet` 加總。
+   */
   private async ticketCashOf(
     reader: OperatorContext,
     shiftId: Types.ObjectId,
   ): Promise<number> {
     const rows = await this.events.aggregate(reader, [
-      { $match: { shiftId, cashEffect: { $in: ["increase", "decrease"] } } },
+      {
+        $match: {
+          shiftId,
+          postCloseOf: null,
+          cashEffect: { $in: ["increase", "decrease"] },
+        },
+      },
       {
         $group: {
           _id: null,

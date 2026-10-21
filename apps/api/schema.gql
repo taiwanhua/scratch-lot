@@ -111,6 +111,11 @@ type AudiencePermissionOptionsPayload {
   modules: [RoleMatrixModule!]!
 }
 
+input BackfillLotteryStocktakeSalesInput {
+  orgId: ID!
+  tickets: [LotteryStoreTicketRefInput!]!
+}
+
 input BatchApproveTasksInput {
   comment: String
 
@@ -2438,6 +2443,218 @@ type LotteryStockOverviewRow {
   unopenedBooks: Int!
 }
 
+type LotteryStocktakeBackfill {
+  amount: Int!
+  cashPointId: ID!
+  eventId: String!
+  postClose: Boolean!
+  shiftId: ID!
+  ticketId: ID!
+  ticketNo: String!
+}
+
+type LotteryStocktakeBackfillPayload {
+  items: [LotteryStocktakeBackfill!]!
+}
+
+type LotteryStocktakeBook {
+  bookId: ID!
+  bookNo: String!
+  cashPointId: ID!
+  gameCode: String!
+  gameName: String!
+  tickets: [LotteryStocktakeTicket!]!
+  unitPrice: Int!
+}
+
+type LotteryStocktakeCashPoint {
+  id: ID!
+  lastShift: LotteryStocktakeShift
+  name: String!
+  shift: LotteryStocktakeShift
+}
+
+type LotteryStocktakeDetail {
+  confirmedAt: DateTime
+  draft: String!
+  id: ID!
+  lines: [LotteryStocktakeDetailLine!]!
+  lostReview: [LotteryStocktakeDetailLostReview!]!
+  orgId: ID!
+  orgName: String!
+  scopeCashPoint: LotteryAccountsRef
+  startedAt: DateTime!
+  status: String!
+  submissionId: ID!
+  submittedAt: DateTime!
+  submittedBy: LotteryAccountsRef
+  summary: LotteryStocktakeSummary!
+  type: String!
+  unopened: [LotteryStocktakeDetailUnopened!]!
+}
+
+type LotteryStocktakeDetailDiff {
+  action: String!
+  amount: Int!
+  kind: String!
+  postClose: Boolean!
+  ticketNo: String!
+}
+
+type LotteryStocktakeDetailLine {
+  bookId: ID!
+  bookNo: String!
+  cashPointId: ID!
+  cashPointName: String!
+  countedAt: DateTime!
+  diffs: [LotteryStocktakeDetailDiff!]!
+  gameCode: String!
+  gameName: String!
+  method: String!
+  presentCount: Int!
+  systemCount: Int!
+}
+
+type LotteryStocktakeDetailLostReview {
+  action: String!
+  label: String!
+  reasonLabel: String
+  reasonNote: String
+}
+
+type LotteryStocktakeDetailUnopened {
+  bookNo: String!
+  gameCode: String!
+  gameName: String!
+  present: Boolean!
+  ticketCount: Int!
+}
+
+type LotteryStocktakeDiff {
+  backfilled: Boolean!
+  kind: String!
+  ticketId: ID!
+  ticketNo: String!
+  version: Int!
+}
+
+type LotteryStocktakeListItem {
+  id: ID!
+  serialNo: String
+  startedAt: DateTime!
+  status: String!
+  submissionId: ID!
+  submittedAt: DateTime!
+  summary: LotteryStocktakeSummary!
+  type: String!
+}
+
+type LotteryStocktakeLostTicket {
+  bookId: ID!
+  bookNo: String!
+  bookTicketCount: Int!
+  gameCode: String!
+  since: DateTime
+  source: String
+  ticketId: ID!
+  ticketNo: String!
+}
+
+type LotteryStocktakeReview {
+  lines: [LotteryStocktakeReviewLine!]!
+  staleCount: Int!
+  summary: LotteryStocktakeSummary!
+  unhandledCount: Int!
+}
+
+input LotteryStocktakeReviewInput {
+  draft: String!
+}
+
+type LotteryStocktakeReviewLine {
+  bookId: ID!
+  bookNo: String!
+  cashPointId: ID!
+  cashPointName: String!
+  diffs: [LotteryStocktakeDiff!]!
+  gameCode: String!
+  gameName: String!
+  pendingReversalTicketNos: [String!]!
+  presentCount: Int!
+  staleTicketNos: [String!]!
+  systemCount: Int!
+  unitPrice: Int!
+}
+
+type LotteryStocktakeSheet {
+  books: [LotteryStocktakeBook!]!
+  cashPoints: [LotteryStocktakeCashPoint!]!
+  lostTickets: [LotteryStocktakeLostTicket!]!
+  orgId: ID!
+  orgName: String!
+  serverNow: DateTime!
+  unopenedBooks: [LotteryStocktakeUnopenedBook!]!
+}
+
+input LotteryStocktakeSheetInput {
+  cashPointId: ID
+  orgId: ID!
+}
+
+type LotteryStocktakeShift {
+  closed: Boolean!
+  expectedCash: Int
+  id: ID!
+  openedAt: DateTime!
+  ownerName: String!
+}
+
+type LotteryStocktakeStatus {
+  lastSubmittedAt: DateTime
+  remind: Boolean!
+}
+
+type LotteryStocktakeSummary {
+  backfillAmount: Int!
+  backfillCount: Int!
+  books: Int!
+  confirmLost: Int!
+  confirmLostCost: Int
+  flagged: Int!
+  newInvestigate: Int!
+}
+
+type LotteryStocktakeTicket {
+  pendingReversal: Boolean!
+  status: String!
+  ticketId: ID!
+  ticketNo: String!
+  version: Int!
+}
+
+type LotteryStocktakeUnopenedBook {
+  bookId: ID!
+  bookNo: String!
+  gameCode: String!
+  gameName: String!
+  ticketCount: Int!
+}
+
+input LotteryStocktakesInput {
+  from: DateTime
+  limit: Int
+  offset: Int
+  orgId: ID!
+  status: String
+  to: DateTime
+  type: String
+}
+
+type LotteryStocktakesPayload {
+  items: [LotteryStocktakeListItem!]!
+  total: Int!
+}
+
 type LotteryStoreBoard {
   cashPoints: [LotteryStoreCashPoint!]!
   myOpenShifts: [LotteryStoreShift!]!
@@ -2939,6 +3156,7 @@ type Mutation {
   assignFormToTenants(input: AssignFormToTenantsInput!): FormPayload!
   assignUserRoles(input: AssignUserRolesInput!): UserPayload!
   assignWorkflowToTenants(input: AssignWorkflowToTenantsInput!): WorkflowPayload!
+  backfillLotteryStocktakeSales(input: BackfillLotteryStocktakeSalesInput!): LotteryStocktakeBackfillPayload!
   batchApproveTasks(input: BatchApproveTasksInput!): BatchApproveTasksPayload!
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
@@ -3814,6 +4032,11 @@ type Query {
   lotterySettlementCandidates(input: LotterySettlementCandidatesInput!): LotteryOutstandingSettlementsPayload!
   lotteryShiftInfo(id: ID!): LotteryShiftInfoPayload!
   lotteryStockOverview(input: LotteryStockOverviewInput!): LotteryStockOverviewPayload!
+  lotteryStocktake(submissionId: ID!): LotteryStocktakeDetail!
+  lotteryStocktakeReview(input: LotteryStocktakeReviewInput!): LotteryStocktakeReview!
+  lotteryStocktakeSheet(input: LotteryStocktakeSheetInput!): LotteryStocktakeSheet!
+  lotteryStocktakeStatus(orgId: ID!): LotteryStocktakeStatus!
+  lotteryStocktakes(input: LotteryStocktakesInput!): LotteryStocktakesPayload!
   lotteryStoreBoard(orgId: ID!): LotteryStoreBoardPayload!
   lotteryStoreBookCard(bookId: ID!, orgId: ID!): LotteryStoreBookCardPayload!
   lotteryStoreCashCorrections(orgId: ID!): LotteryStoreCashCorrectionsPayload!

@@ -122,6 +122,13 @@ export class LotteryTicketEvent {
   @Prop({ type: String, default: null })
   reasonNote!: string | null;
 
+  /**
+   * **事後更正**(規格 6.12):寫入時那一班已結帳 → 指向那一班(`shiftId` 同一班);不算進那一班結帳時的應有,
+   * 另算事後更正淨額(例:盤點補登售出時那個收銀點沒有開著的班,記到那個收銀點最近一班)。
+   */
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
+  postCloseOf!: Types.ObjectId | null;
+
   /** 模組 key(plugin 宣告;本表固定 `inventory`)。 */
   moduleKey!: string;
 
@@ -140,6 +147,8 @@ LotteryTicketEventSchema.index({ ticketId: 1, at: 1 });
 LotteryTicketEventSchema.index({ orgId: 1, gameId: 1, type: 1 });
 // 抽屜應有與本班已售:一班的售出 / 撤銷加總(店面)
 LotteryTicketEventSchema.index({ shiftId: 1, type: 1 });
+// 事後更正淨額:指向那一班的事件(盤點補登售出)
+LotteryTicketEventSchema.index({ postCloseOf: 1 });
 LotteryTicketEventSchema.plugin(baseFieldsPlugin);
 LotteryTicketEventSchema.plugin(tenantScopePlugin, { moduleData: true });
 LotteryTicketEventSchema.path("moduleKey").default(INVENTORY_MODULE_KEY);

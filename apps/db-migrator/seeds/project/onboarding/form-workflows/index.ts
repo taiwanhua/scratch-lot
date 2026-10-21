@@ -2,6 +2,7 @@ import { makeupPunchWorkflow } from "./makeup-punch";
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
 import { cashCorrectionWorkflow, saleReversalWorkflow } from "./store-forms";
+import { stocktakeConfirmWorkflow } from "./stocktake-confirm";
 import { supportRequestWorkflow } from "./support-request";
 import { transferWorkflow } from "./transfer";
 import type { FormWorkflowSpec } from "./types";
@@ -24,4 +25,6 @@ export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   // 店面管理:撤銷售出申請(規格 8.5)、現金更正單(規格 8.8)
   saleReversalWorkflow,
   cashCorrectionWorkflow,
+  // 店面管理:盤點確認申請(規格 8.6)
+  stocktakeConfirmWorkflow,
 ];

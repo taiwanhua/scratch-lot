@@ -80,6 +80,8 @@ export interface TicketEventInput {
   refId?: Types.ObjectId | null;
   reasonKey?: string | null;
   reasonNote?: string | null;
+  /** 事後更正:那一班已結帳時指向那一班(規格 6.12);不給 = null。 */
+  postCloseOf?: Types.ObjectId | null;
 }
 
 /** 一筆事件的結果:`applied: false` = 重送(同一個事件 id 已寫過),沒有再寫。 */

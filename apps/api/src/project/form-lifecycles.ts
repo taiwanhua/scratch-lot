@@ -5,6 +5,7 @@ import {
   cashCorrectionLifecycle,
   saleReversalLifecycle,
 } from "./lottery/store/store-forms-lifecycle";
+import { stocktakeConfirmLifecycle } from "./lottery/stocktake/stocktake-lifecycle";
 import { transferLifecycle } from "./lottery/transfer/transfer-lifecycle";
 import { makeupPunchLifecycle } from "./schedule/attendance/makeup-punch-lifecycle";
 
@@ -47,4 +48,6 @@ export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
   saleReversalLifecycle,
   // 現金更正單:完成時寫現金更正流水、作廢一律擋下(專案規格 8.8)
   cashCorrectionLifecycle,
+  // 盤點確認申請:送出前再檢查差異、送出建立盤點單、完成時套用庫存變動、作廢一律擋下(專案規格 6.8、8.6)
+  stocktakeConfirmLifecycle,
 ];

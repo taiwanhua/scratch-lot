@@ -1,0 +1,196 @@
+fragment LotteryStocktakeShiftFields on LotteryStocktakeShift {
+  id
+  ownerName
+  openedAt
+  closed
+  expectedCash
+}
+
+fragment LotteryStocktakeSummaryFields on LotteryStocktakeSummary {
+  books
+  backfillCount
+  backfillAmount
+  newInvestigate
+  flagged
+  confirmLost
+  confirmLostCost
+}
+
+query LotteryStocktakeSheet($input: LotteryStocktakeSheetInput!) {
+  lotteryStocktakeSheet(input: $input) {
+    orgId
+    orgName
+    serverNow
+    cashPoints {
+      id
+      name
+      shift {
+        ...LotteryStocktakeShiftFields
+      }
+      lastShift {
+        ...LotteryStocktakeShiftFields
+      }
+    }
+    books {
+      bookId
+      cashPointId
+      gameCode
+      gameName
+      unitPrice
+      bookNo
+      tickets {
+        ticketId
+        ticketNo
+        version
+        status
+        pendingReversal
+      }
+    }
+    unopenedBooks {
+      bookId
+      gameCode
+      gameName
+      bookNo
+      ticketCount
+    }
+    lostTickets {
+      ticketId
+      bookId
+      gameCode
+      bookNo
+      ticketNo
+      bookTicketCount
+      since
+      source
+    }
+  }
+}
+
+query LotteryStocktakeReview($input: LotteryStocktakeReviewInput!) {
+  lotteryStocktakeReview(input: $input) {
+    staleCount
+    unhandledCount
+    summary {
+      ...LotteryStocktakeSummaryFields
+    }
+    lines {
+      bookId
+      cashPointId
+      cashPointName
+      gameCode
+      gameName
+      bookNo
+      unitPrice
+      systemCount
+      presentCount
+      diffs {
+        ticketId
+        ticketNo
+        version
+        kind
+        backfilled
+      }
+      pendingReversalTicketNos
+      staleTicketNos
+    }
+  }
+}
+
+mutation BackfillLotteryStocktakeSales(
+  $input: BackfillLotteryStocktakeSalesInput!
+) {
+  backfillLotteryStocktakeSales(input: $input) {
+    items {
+      ticketId
+      ticketNo
+      eventId
+      amount
+      cashPointId
+      shiftId
+      postClose
+    }
+  }
+}
+
+query LotteryStocktakeStatus($orgId: ID!) {
+  lotteryStocktakeStatus(orgId: $orgId) {
+    lastSubmittedAt
+    remind
+  }
+}
+
+query LotteryStocktakes($input: LotteryStocktakesInput!) {
+  lotteryStocktakes(input: $input) {
+    total
+    items {
+      id
+      submissionId
+      serialNo
+      type
+      status
+      startedAt
+      submittedAt
+      summary {
+        ...LotteryStocktakeSummaryFields
+      }
+    }
+  }
+}
+
+query LotteryStocktake($submissionId: ID!) {
+  lotteryStocktake(submissionId: $submissionId) {
+    id
+    submissionId
+    type
+    status
+    orgId
+    orgName
+    scopeCashPoint {
+      id
+      name
+    }
+    startedAt
+    submittedAt
+    submittedBy {
+      id
+      name
+    }
+    confirmedAt
+    lines {
+      bookId
+      cashPointId
+      cashPointName
+      gameCode
+      gameName
+      bookNo
+      method
+      countedAt
+      systemCount
+      presentCount
+      diffs {
+        ticketNo
+        kind
+        action
+        postClose
+        amount
+      }
+    }
+    unopened {
+      gameCode
+      gameName
+      bookNo
+      ticketCount
+      present
+    }
+    lostReview {
+      label
+      action
+      reasonLabel
+      reasonNote
+    }
+    summary {
+      ...LotteryStocktakeSummaryFields
+    }
+    draft
+  }
+}

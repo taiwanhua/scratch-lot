@@ -14,6 +14,7 @@
  * - `store.ts`:店面管理的模組 key、權限 key、分頁、看板頻道、剩很少的門檻與期初零用金的規則
  * - `store-sales.ts`:店面的刷到時怎麼處理、當下撤銷的條件、拆本精靈的檢查
  * - `store-forms.ts`:撤銷售出申請、現金更正單的表單代號 / 欄位 key、存值解析與送出前檢查
+ * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容、與盤點那一刻比對的差異、送出前的檢查
  */
 export * from "./book-stats";
 export * from "./inventory";
@@ -23,6 +24,7 @@ export * from "./redemption";
 export * from "./requisition";
 export * from "./store";
 export * from "./store-forms";
+export * from "./stocktake";
 export * from "./store-sales";
 export * from "./ticket-code";
 export * from "./ticket-events";

@@ -22,6 +22,7 @@ import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r3.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
 import { seed as saleReversalForm } from "./revisions/sale_reversal.r1.seed";
+import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r1.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { seed as transferForm } from "./revisions/transfer.r2.seed";
 import { scheduleModuleDeclarations } from "./schedule";
@@ -86,6 +87,8 @@ export const projectSeedSource: SeedSource = {
     // 店面管理的受管表單:撤銷售出申請、現金更正單(規格 8.5、8.8;流程不 seed,由開通腳本依租戶角色建)
     saleReversalForm,
     cashCorrectionForm,
+    // 店面管理的受管表單:盤點確認申請(規格 8.6;流程不 seed,由開通腳本依租戶角色建)
+    stocktakeConfirmForm,
   ],
 };
 

@@ -126,6 +126,10 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
     "反查",
     "例外寫入",
   ],
+  // 盤點:掛接點以系統身分建立盤點單、核准完成時套用待查 / 遺失 / 尋回(盤點單與張在分店,申請可能是總部送的)
+  "project/lottery/stocktake/stocktake.service.ts": ["反查", "例外寫入"],
+  // 盤點紀錄 / 檢視頁:審核者從申請中心進來讀盤點單、申請的單號(分店不一定在他的可見範圍)
+  "project/lottery/stocktake/stocktake-query.service.ts": ["反查"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

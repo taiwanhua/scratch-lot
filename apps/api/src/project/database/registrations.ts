@@ -8,6 +8,7 @@ import { LOTTERY_INVENTORY_REGISTRATION } from "./lottery-inventory/registration
 import { LOTTERY_PURCHASES_REGISTRATION } from "./lottery-purchases/registration";
 import { LOTTERY_REDEMPTIONS_REGISTRATION } from "./lottery-redemptions/registration";
 import { LOTTERY_REQUISITIONS_REGISTRATION } from "./lottery-requisitions/registration";
+import { LOTTERY_STOCKTAKES_REGISTRATION } from "./lottery-stocktakes/registration";
 import { LOTTERY_STORE_REGISTRATION } from "./lottery-store/registration";
 import { LOTTERY_TRANSFERS_REGISTRATION } from "./lottery-transfers/registration";
 import { SCHEDULE_SETTINGS_REGISTRATION } from "./schedule/registration";
@@ -35,4 +36,5 @@ export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
   LOTTERY_TRANSFERS_REGISTRATION,
   LOTTERY_STORE_REGISTRATION,
   LOTTERY_REDEMPTIONS_REGISTRATION,
+  LOTTERY_STOCKTAKES_REGISTRATION,
 ];
