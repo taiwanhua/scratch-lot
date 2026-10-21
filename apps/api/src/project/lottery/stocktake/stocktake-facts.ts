@@ -210,4 +210,40 @@ export class StocktakeFacts {
     );
     return new Map(found.map((book) => [String(book._id), book]));
   }
+
+  /**
+   * 盤點之後有異動的張(核准完成時套用前檢查;比照比對的「之後被別人處理過就不是差異」):
+   * 每張給自己的時間點(差異 = 那本的 `countedAt`;未拆的本、待查清單 = 開始盤的時間),
+   * 那之後有任何張數事件 → 放進回傳的集合。
+   */
+  async changedAfter(
+    reader: OperatorContext,
+    entries: readonly { ticketId: Types.ObjectId; after: Date }[],
+    options: { session?: ClientSession } = {},
+  ): Promise<Set<string>> {
+    if (entries.length === 0) {
+      return new Set();
+    }
+    const earliest = Math.min(...entries.map((entry) => entry.after.getTime()));
+    const events = await this.events.findMany(
+      reader,
+      {
+        ticketId: { $in: entries.map((entry) => entry.ticketId) },
+        at: { $gt: new Date(earliest) },
+      },
+      { ...options, select: "ticketId at" },
+    );
+    const afterOf = new Map(
+      entries.map((entry) => [String(entry.ticketId), entry.after.getTime()]),
+    );
+    return new Set(
+      events
+        .filter(
+          (event) =>
+            event.at.getTime() >
+            (afterOf.get(String(event.ticketId)) ?? Number.POSITIVE_INFINITY),
+        )
+        .map((event) => String(event.ticketId)),
+    );
+  }
 }

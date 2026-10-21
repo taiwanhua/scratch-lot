@@ -1053,6 +1053,8 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     expect(await statusOf(missingBook, "002")).toBe("unsold");
     expect(await stocktakeOf(submitted.id)).toMatchObject({
       status: "confirmed",
+      // 核准的人 = 最後核准的審核者
+      confirmedBy: manager.userId,
     });
 
     // 檢視頁(審核者讀得到)與盤點紀錄
@@ -1100,6 +1102,78 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
       code: "FORBIDDEN",
       reason: STOCKTAKE_REASONS.voidForbidden,
     });
+  });
+
+  it("舊盤點晚完成不覆蓋新盤點的結果:盤點之後被動過的張略過", async () => {
+    const { bookId } = await counterBook(counter);
+    // A 22:30 盤到 #009 不在(待查),送出、還沒核准
+    now("22:31");
+    const older = await submitOk(
+      clerkA,
+      draftOf([
+        lineOf(bookId, counter, "22:30", allNos(["009"]), [
+          { ticketNo: "009", action: "investigate" },
+        ]),
+      ]),
+    );
+    // B 22:40 也盤到 #009 不在,先核准完成 → 待查
+    now("22:41");
+    const newer = await submitOk(
+      clerkB,
+      draftOf([
+        lineOf(bookId, counter, "22:40", allNos(["009"]), [
+          { ticketNo: "009", action: "investigate" },
+        ]),
+      ]),
+    );
+    now("22:42");
+    await decideOn(world, manager, newer.id, "APPROVE");
+    expect(await statusOf(bookId, "009")).toBe("investigating");
+    // C 22:50 待查清單「找到了」→ 尋回(回到庫存、未售)
+    const t009 = await ticketOf(bookId, "009");
+    now("22:51");
+    const found = await submitOk(
+      senior,
+      draftOf([], {
+        startedAt: taipei("22:50").toISOString(),
+        lostReview: [{ ticketId: String(t009._id), action: "found" }],
+      }),
+    );
+    now("22:52");
+    await decideOn(world, manager, found.id, "APPROVE");
+    expect(await statusOf(bookId, "009")).toBe("unsold");
+    // A 最後才核准:#009 在 A 盤點之後被動過 → 不再改成待查
+    now("22:53");
+    await decideOn(world, manager, older.id, "APPROVE");
+    expect(await statusOf(bookId, "009")).toBe("unsold");
+    expect(await stocktakeOf(older.id)).toMatchObject({ status: "confirmed" });
+  });
+
+  it("待查清單「找到了」逐張:零碎待查只尋回送出的那一張,另一張維持待查", async () => {
+    const { bookId } = await counterBook(counter);
+    await connection.collection(LOTTERY_TICKETS_COLLECTION).updateMany(
+      { bookId, ticketNo: { $in: ["011", "012"] } },
+      {
+        $set: {
+          status: "investigating",
+          responsibleOrgId: xinyi,
+          location: { kind: "stock", cashPointId: null },
+        },
+      },
+    );
+    const t011 = await ticketOf(bookId, "011");
+    now("23:01");
+    const submitted = await submitOk(
+      senior,
+      draftOf([], {
+        startedAt: taipei("23:00").toISOString(),
+        lostReview: [{ ticketId: String(t011._id), action: "found" }],
+      }),
+    );
+    now("23:02");
+    await decideOn(world, manager, submitted.id, "APPROVE");
+    expect(await statusOf(bookId, "011")).toBe("unsold");
+    expect(await statusOf(bookId, "012")).toBe("investigating");
   });
 
   it("駁回 → 已駁回、補登的售出不退;退回 → 已退回", async () => {

@@ -183,6 +183,10 @@ export class LotteryStocktake {
   @Prop({ type: Date, default: null })
   confirmedAt!: Date | null;
 
+  /** 核准的人(最後核准的審核者;申請人是審核者自動通過時 = 申請人)。 */
+  @Prop({ type: OBJECT_ID, default: null })
+  confirmedBy!: Types.ObjectId | null;
+
   /** 盤點確認申請 / 結帳確認申請的提交 id(一張單據一筆)。 */
   @Prop({ type: OBJECT_ID, required: true })
   submissionId!: Types.ObjectId;

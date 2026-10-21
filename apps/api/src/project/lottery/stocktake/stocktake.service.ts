@@ -27,6 +27,7 @@ import {
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { TransactionService } from "../../../database/transaction";
+import { WorkflowTasksRepository } from "../../../database/workflow-tasks.repository";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import type { FormGuardResult } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { LotteryTicketsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
@@ -109,6 +110,7 @@ export class StocktakeService {
     private readonly shifts: LotteryShiftsRepository,
     private readonly orgs: OrgsRepository,
     private readonly submissions: FormSubmissionsRepository,
+    private readonly workflowTasks: WorkflowTasksRepository,
     private readonly facts: StocktakeFacts,
     private readonly ledger: TicketLedgerService,
     private readonly fieldOptions: FieldOptionsService,
@@ -447,6 +449,7 @@ export class StocktakeService {
       submittedBy: options.submittedBy,
       submittedAt: this.clock.now(),
       confirmedAt: null,
+      confirmedBy: null,
       lines: built.lines,
       unopenedLines: built.unopenedLines,
       lostReviewLines: built.lostReviewLines,
@@ -534,11 +537,12 @@ export class StocktakeService {
     if (record === null || tenantId === null) {
       return;
     }
-    const investigate = record.lines.flatMap((line) =>
+    const investigateLines = record.lines.flatMap((line) =>
       line.diffs
         .filter((diff) => diff.action === "investigate")
-        .map((diff) => diff.ticketId),
+        .map((diff) => ({ ticketId: diff.ticketId, after: line.countedAt })),
     );
+    const investigate = investigateLines.map((entry) => entry.ticketId);
     const absentBooks = record.unopenedLines
       .filter((line) => !line.present)
       .map((line) => line.bookId);
@@ -573,6 +577,19 @@ export class StocktakeService {
       { session },
     );
     const byId = new Map(current.map((ticket) => [String(ticket._id), ticket]));
+    // 盤點之後被別的盤點或操作動過的張不套用(舊盤點晚完成不覆蓋新的結果)
+    const changed = await this.facts.changedAfter(
+      reader,
+      [
+        ...investigateLines,
+        ...[
+          ...unopened.map((ticket) => ticket._id),
+          ...lost.map((line) => line.ticketId),
+          ...found.map((line) => line.ticketId),
+        ].map((ticketId) => ({ ticketId, after: record.startedAt })),
+      ],
+      { session },
+    );
     const at = this.clock.now();
     const events: TicketEventInput[] = [];
     const push = (
@@ -586,6 +603,7 @@ export class StocktakeService {
       const ticket = byId.get(String(ticketId));
       if (
         ticket?.lockedBy !== null ||
+        changed.has(String(ticketId)) ||
         !expected.includes(ticket.status) ||
         events.some((event) => event.ticketId.equals(ticketId))
       ) {
@@ -640,11 +658,40 @@ export class StocktakeService {
       reader,
       { _id: record._id, version: record.version },
       {
-        $set: { status: STOCKTAKE_STATUS.confirmed, confirmedAt: at },
+        $set: {
+          status: STOCKTAKE_STATUS.confirmed,
+          confirmedAt: at,
+          confirmedBy: await this.approverOf(tenantId, submissionId, session),
+        },
         $inc: { version: 1 },
       },
       { session },
     );
+  }
+
+  /**
+   * 核准的人:這張申請目前的流程實例裡已核准的任務,依決定時間取最後一筆的審核者;
+   * 沒有(申請人是審核者、自動通過沒有留任務)= 申請人。
+   */
+  private async approverOf(
+    tenantId: Types.ObjectId,
+    submissionId: Types.ObjectId,
+    session: ClientSession,
+  ): Promise<Types.ObjectId | null> {
+    const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
+    const submission = await this.submissions.findById(reader, submissionId, {
+      session,
+    });
+    const instanceId = submission?.currentInstanceId ?? null;
+    const [last] =
+      instanceId === null
+        ? []
+        : await this.workflowTasks.findMany(
+            tenantId,
+            { instanceId, status: "approved" },
+            { sort: { decidedAt: -1 }, limit: 1 },
+          );
+    return last?.assigneeId ?? submission?.createdBy ?? null;
   }
 
   // ---- 組盤點單 ----
