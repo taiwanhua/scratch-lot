@@ -91,6 +91,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/store/store-shifts.service.ts": ["以人為準的資料"],
   // 店面:班次負責人的名稱(負責人可能是別家分店支援的人)
   "project/lottery/store/shift-views.ts": ["反查"],
+  // 店面刷到刮刮樂:待查 / 遺失的張可能還在別家店(任何一家店刷到都提示尋回)、不是本店的也要說得出來
+  "project/lottery/store/store-sales.service.ts": ["反查"],
   // 店面的登記:收付找開著的班、收銀點停用守門、崗位旁的收銀點名稱、被班次綁定的排班(沒有操作者)
   "project/lottery/store/store-registrations.ts": ["系統重算"],
   // 店面:開班的「人」守門文件掛在租戶頂層(兩家店同時開班互相衝突)

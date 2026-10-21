@@ -1,0 +1,153 @@
+fragment LotteryStoreScanItemFields on LotteryStoreScanItem {
+  ticketId
+  version
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  ticketNo
+  status
+  locationKind
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  counterShiftOwner {
+    ...LotteryAccountsRefFields
+  }
+  responsibleOrg {
+    ...LotteryAccountsRefFields
+  }
+  outcome
+  blockReason
+  soldAt
+  pendingSkipCount
+}
+
+fragment LotteryStoreSaleFields on LotteryStoreSale {
+  ticketId
+  version
+  ticketKey
+  amount
+  soldAt
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  shiftId
+  undone
+  undoBlock
+}
+
+fragment LotteryStoreCardTicketFields on LotteryStoreCardTicket {
+  id
+  ticketNo
+  version
+  status
+  locationKind
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  soldShiftId
+  locked
+}
+
+fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  firstTicketNo
+  lastTicketNo
+  pendingSkipCount
+  unopened
+  tickets {
+    ...LotteryStoreCardTicketFields
+  }
+}
+
+fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  firstTicketNo
+  lastTicketNo
+  ticketCount
+  pendingSkipCount
+}
+
+query LotteryStoreScan($input: LotteryStoreScanInput!) {
+  lotteryStoreScan(input: $input) {
+    items {
+      ...LotteryStoreScanItemFields
+    }
+  }
+}
+
+mutation SellLotteryTickets($input: SellLotteryTicketsInput!) {
+  sellLotteryTickets(input: $input) {
+    items {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+
+query LotteryStoreSale($ticketId: ID!) {
+  lotteryStoreSale(ticketId: $ticketId) {
+    item {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+
+query LotteryStoreRecentSales($shiftId: ID!) {
+  lotteryStoreRecentSales(shiftId: $shiftId) {
+    items {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+
+mutation UndoLotteryTicketSale($input: LotteryStoreTicketRefInput!) {
+  undoLotteryTicketSale(input: $input) {
+    item {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+
+query LotteryStoreBookCard($orgId: ID!, $bookId: ID!) {
+  lotteryStoreBookCard(orgId: $orgId, bookId: $bookId) {
+    item {
+      ...LotteryStoreBookCardFields
+    }
+  }
+}
+
+query LotteryStoreUnopenedBooks($orgId: ID!) {
+  lotteryStoreUnopenedBooks(orgId: $orgId) {
+    items {
+      ...LotteryStoreUnopenedBookFields
+    }
+  }
+}
+
+mutation SplitLotteryBook($input: SplitLotteryBookInput!) {
+  splitLotteryBook(input: $input) {
+    count
+  }
+}
+
+mutation MoveLotteryTickets($input: MoveLotteryTicketsInput!) {
+  moveLotteryTickets(input: $input) {
+    count
+  }
+}
+
+mutation RecallLotteryTickets($input: RecallLotteryTicketsInput!) {
+  recallLotteryTickets(input: $input) {
+    count
+  }
+}

@@ -2533,6 +2533,11 @@ export enum LotterySigninState {
   Signed = 'SIGNED'
 }
 
+export type LotterySplitAssignmentInput = {
+  cashPointId: Scalars['ID']['input'];
+  ticketNos: Array<Scalars['String']['input']>;
+};
+
 export type LotteryStockOverviewInput = {
   gameId?: InputMaybe<Scalars['ID']['input']>;
   orgId?: InputMaybe<Scalars['ID']['input']>;
@@ -2579,6 +2584,37 @@ export type LotteryStoreBoardPayload = {
   item: LotteryStoreBoard;
 };
 
+export type LotteryStoreBookCard = {
+  __typename?: 'LotteryStoreBookCard';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  firstTicketNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  lastTicketNo: Scalars['String']['output'];
+  pendingSkipCount: Scalars['Int']['output'];
+  tickets: Array<LotteryStoreCardTicket>;
+  unitPrice: Scalars['Int']['output'];
+  unopened: Scalars['Boolean']['output'];
+};
+
+export type LotteryStoreBookCardPayload = {
+  __typename?: 'LotteryStoreBookCardPayload';
+  item: LotteryStoreBookCard;
+};
+
+export type LotteryStoreCardTicket = {
+  __typename?: 'LotteryStoreCardTicket';
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  id: Scalars['ID']['output'];
+  locationKind: Scalars['String']['output'];
+  locked: Scalars['Boolean']['output'];
+  soldShiftId?: Maybe<Scalars['ID']['output']>;
+  status: Scalars['String']['output'];
+  ticketNo: Scalars['String']['output'];
+  version: Scalars['Int']['output'];
+};
+
 export type LotteryStoreCashPoint = {
   __typename?: 'LotteryStoreCashPoint';
   books: Array<LotteryStoreBoardBook>;
@@ -2586,6 +2622,11 @@ export type LotteryStoreCashPoint = {
   name: Scalars['String']['output'];
   positionKey: Scalars['String']['output'];
   shift?: Maybe<LotteryStoreShift>;
+};
+
+export type LotteryStoreCounterPayload = {
+  __typename?: 'LotteryStoreCounterPayload';
+  count: Scalars['Int']['output'];
 };
 
 export type LotteryStoreEntryOption = {
@@ -2630,6 +2671,61 @@ export type LotteryStorePunchPayload = {
   entryId?: Maybe<Scalars['ID']['output']>;
 };
 
+export type LotteryStoreSale = {
+  __typename?: 'LotteryStoreSale';
+  amount: Scalars['Int']['output'];
+  cashPoint: LotteryAccountsRef;
+  shiftId: Scalars['ID']['output'];
+  soldAt: Scalars['DateTime']['output'];
+  ticketId: Scalars['ID']['output'];
+  ticketKey: Scalars['String']['output'];
+  undoBlock?: Maybe<Scalars['String']['output']>;
+  undone: Scalars['Boolean']['output'];
+  version: Scalars['Int']['output'];
+};
+
+export type LotteryStoreSalePayload = {
+  __typename?: 'LotteryStoreSalePayload';
+  item: LotteryStoreSale;
+};
+
+export type LotteryStoreSalesPayload = {
+  __typename?: 'LotteryStoreSalesPayload';
+  items: Array<LotteryStoreSale>;
+};
+
+export type LotteryStoreScanInput = {
+  code: Scalars['String']['input'];
+  localCashPointId?: InputMaybe<Scalars['ID']['input']>;
+  orgId: Scalars['ID']['input'];
+};
+
+export type LotteryStoreScanItem = {
+  __typename?: 'LotteryStoreScanItem';
+  blockReason?: Maybe<Scalars['String']['output']>;
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  counterShiftOwner?: Maybe<LotteryAccountsRef>;
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  locationKind: Scalars['String']['output'];
+  outcome: Scalars['String']['output'];
+  pendingSkipCount: Scalars['Int']['output'];
+  responsibleOrg?: Maybe<LotteryAccountsRef>;
+  soldAt?: Maybe<Scalars['DateTime']['output']>;
+  status: Scalars['String']['output'];
+  ticketId: Scalars['ID']['output'];
+  ticketNo: Scalars['String']['output'];
+  unitPrice: Scalars['Int']['output'];
+  version: Scalars['Int']['output'];
+};
+
+export type LotteryStoreScanPayload = {
+  __typename?: 'LotteryStoreScanPayload';
+  items: Array<LotteryStoreScanItem>;
+};
+
 export type LotteryStoreShift = {
   __typename?: 'LotteryStoreShift';
   cashPoint: LotteryAccountsRef;
@@ -2647,6 +2743,29 @@ export type LotteryStoreShift = {
 export type LotteryStoreShiftPayload = {
   __typename?: 'LotteryStoreShiftPayload';
   item: LotteryStoreShift;
+};
+
+export type LotteryStoreTicketRefInput = {
+  ticketId: Scalars['ID']['input'];
+  version: Scalars['Int']['input'];
+};
+
+export type LotteryStoreUnopenedBook = {
+  __typename?: 'LotteryStoreUnopenedBook';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  firstTicketNo: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
+  lastTicketNo: Scalars['String']['output'];
+  pendingSkipCount: Scalars['Int']['output'];
+  ticketCount: Scalars['Int']['output'];
+  unitPrice: Scalars['Int']['output'];
+};
+
+export type LotteryStoreUnopenedBooksPayload = {
+  __typename?: 'LotteryStoreUnopenedBooksPayload';
+  items: Array<LotteryStoreUnopenedBook>;
 };
 
 export type LotteryTicketLookupInput = {
@@ -2915,6 +3034,12 @@ export enum ModuleSidebarType {
   Link = 'LINK'
 }
 
+export type MoveLotteryTicketsInput = {
+  orgId: Scalars['ID']['input'];
+  tickets: Array<LotteryStoreTicketRefInput>;
+  toCashPointId: Scalars['ID']['input'];
+};
+
 export type MoveOrgInput = {
   id: Scalars['ID']['input'];
   newParentId: Scalars['ID']['input'];
@@ -2993,6 +3118,7 @@ export type Mutation = {
   logoutAllDevices: LogoutAllDevicesPayload;
   markAllNotificationsRead: MarkNotificationsReadPayload;
   markNotificationsRead: MarkNotificationsReadPayload;
+  moveLotteryTickets: LotteryStoreCounterPayload;
   moveOrg: OrgPayload;
   notifyLotteryPurchaseWrongStore: Scalars['Boolean']['output'];
   notifyLotteryTransferWrongStore: Scalars['Boolean']['output'];
@@ -3008,6 +3134,7 @@ export type Mutation = {
   reassignLotteryShiftEntry: LotteryShiftInfoPayload;
   reassignSchedulePunch: ScheduleAttendancePunch;
   reassignTask: WorkflowTaskPayload;
+  recallLotteryTickets: LotteryStoreCounterPayload;
   receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
   receiveLotteryTransferBook: ReceiveLotteryTransferBookPayload;
   recordLotteryBankTransaction: LotteryBankTransactionPayload;
@@ -3042,6 +3169,7 @@ export type Mutation = {
   saveScheduleEntry: SaveScheduleEntryPayload;
   saveWorkflowVersionDraft: WorkflowVersionPayload;
   scrapLotteryTickets: LotteryInventoryActionPayload;
+  sellLotteryTickets: LotteryStoreSalesPayload;
   setDemoItemOneEnabled: DemoItemOnePayload;
   setDemoItemTwoEnabled: DemoItemTwoPayload;
   setFieldCategoryEnabled: FieldCategoryPayload;
@@ -3062,10 +3190,12 @@ export type Mutation = {
   setTenantFormEnabled: FormPayload;
   setUserEnabled: UserPayload;
   setUserOrgs: SetUserOrgsPayload;
+  splitLotteryBook: LotteryStoreCounterPayload;
   submitFormSubmission: FormSubmissionPayload;
   switchOrg: SwitchOrgPayload;
   transferOrgOwner: OrgPayload;
   unbindFormWorkflow: FormPayload;
+  undoLotteryTicketSale: LotteryStoreSalePayload;
   updateDemoItemOne: DemoItemOnePayload;
   updateDemoItemTwo: DemoItemTwoPayload;
   updateField: FieldPayload;
@@ -3434,6 +3564,11 @@ export type MutationMarkNotificationsReadArgs = {
 };
 
 
+export type MutationMoveLotteryTicketsArgs = {
+  input: MoveLotteryTicketsInput;
+};
+
+
 export type MutationMoveOrgArgs = {
   input: MoveOrgInput;
 };
@@ -3506,6 +3641,11 @@ export type MutationReassignSchedulePunchArgs = {
 
 export type MutationReassignTaskArgs = {
   input: ReassignTaskInput;
+};
+
+
+export type MutationRecallLotteryTicketsArgs = {
+  input: RecallLotteryTicketsInput;
 };
 
 
@@ -3674,6 +3814,11 @@ export type MutationScrapLotteryTicketsArgs = {
 };
 
 
+export type MutationSellLotteryTicketsArgs = {
+  input: SellLotteryTicketsInput;
+};
+
+
 export type MutationSetDemoItemOneEnabledArgs = {
   input: SetDemoItemOneEnabledInput;
 };
@@ -3774,6 +3919,11 @@ export type MutationSetUserOrgsArgs = {
 };
 
 
+export type MutationSplitLotteryBookArgs = {
+  input: SplitLotteryBookInput;
+};
+
+
 export type MutationSubmitFormSubmissionArgs = {
   input: SubmitFormSubmissionInput;
 };
@@ -3791,6 +3941,11 @@ export type MutationTransferOrgOwnerArgs = {
 
 export type MutationUnbindFormWorkflowArgs = {
   input: UnbindFormWorkflowInput;
+};
+
+
+export type MutationUndoLotteryTicketSaleArgs = {
+  input: LotteryStoreTicketRefInput;
 };
 
 
@@ -4659,7 +4814,12 @@ export type Query = {
   lotteryShiftInfo: LotteryShiftInfoPayload;
   lotteryStockOverview: LotteryStockOverviewPayload;
   lotteryStoreBoard: LotteryStoreBoardPayload;
+  lotteryStoreBookCard: LotteryStoreBookCardPayload;
   lotteryStoreOpenShiftForm: LotteryStoreOpenShiftFormPayload;
+  lotteryStoreRecentSales: LotteryStoreSalesPayload;
+  lotteryStoreSale: LotteryStoreSalePayload;
+  lotteryStoreScan: LotteryStoreScanPayload;
+  lotteryStoreUnopenedBooks: LotteryStoreUnopenedBooksPayload;
   lotteryTicketLookup: LotteryTicketLookupPayload;
   lotteryTransferBookTickets: Array<LotteryTransferTicketCell>;
   lotteryTransferOptions: LotteryTransferOptions;
@@ -5042,8 +5202,34 @@ export type QueryLotteryStoreBoardArgs = {
 };
 
 
+export type QueryLotteryStoreBookCardArgs = {
+  bookId: Scalars['ID']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
+
 export type QueryLotteryStoreOpenShiftFormArgs = {
   cashPointId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryStoreRecentSalesArgs = {
+  shiftId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryStoreSaleArgs = {
+  ticketId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryStoreScanArgs = {
+  input: LotteryStoreScanInput;
+};
+
+
+export type QueryLotteryStoreUnopenedBooksArgs = {
+  orgId: Scalars['ID']['input'];
 };
 
 
@@ -5381,6 +5567,11 @@ export type ReassignSchedulePunchInput = {
 export type ReassignTaskInput = {
   taskId: Scalars['ID']['input'];
   toUserId: Scalars['ID']['input'];
+};
+
+export type RecallLotteryTicketsInput = {
+  orgId: Scalars['ID']['input'];
+  tickets: Array<LotteryStoreTicketRefInput>;
 };
 
 export type ReceiveLotteryPurchaseBookInput = {
@@ -6592,6 +6783,16 @@ export type ScrapLotteryTicketsInput = {
   tickets: Array<LotteryTicketVersionInput>;
 };
 
+export type SellLotteryTicketsInput = {
+  confirmMove?: InputMaybe<Scalars['Boolean']['input']>;
+  localCashPointId: Scalars['ID']['input'];
+  orgId: Scalars['ID']['input'];
+  reasonKey?: InputMaybe<Scalars['String']['input']>;
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
+  source: Scalars['String']['input'];
+  tickets: Array<LotteryStoreTicketRefInput>;
+};
+
 export type SetDemoItemOneEnabledInput = {
   enabled: Scalars['Boolean']['input'];
   id: Scalars['ID']['input'];
@@ -6757,6 +6958,13 @@ export type SidebarBadgeSettingsPayload = {
   __typename?: 'SidebarBadgeSettingsPayload';
   items: Array<SidebarBadgeSetting>;
   totalCount: Scalars['Int']['output'];
+};
+
+export type SplitLotteryBookInput = {
+  assignments: Array<LotterySplitAssignmentInput>;
+  bookId: Scalars['ID']['input'];
+  orgId: Scalars['ID']['input'];
+  skippedTicketNos: Array<Scalars['String']['input']>;
 };
 
 export type SubmitFormSubmissionInput = {
@@ -9362,6 +9570,87 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type LotteryStoreScanItemFieldsFragment = { __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+
+export type LotteryStoreSaleFieldsFragment = { __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
+
+export type LotteryStoreCardTicketFieldsFragment = { __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, locked: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
+
+export type LotteryStoreBookCardFieldsFragment = { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, unopened: boolean, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, locked: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> };
+
+export type LotteryStoreUnopenedBookFieldsFragment = { __typename?: 'LotteryStoreUnopenedBook', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, ticketCount: number, pendingSkipCount: number };
+
+export type LotteryStoreScanQueryVariables = Exact<{
+  input: LotteryStoreScanInput;
+}>;
+
+
+export type LotteryStoreScanQuery = { __typename?: 'Query', lotteryStoreScan: { __typename?: 'LotteryStoreScanPayload', items: Array<{ __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type SellLotteryTicketsMutationVariables = Exact<{
+  input: SellLotteryTicketsInput;
+}>;
+
+
+export type SellLotteryTicketsMutation = { __typename?: 'Mutation', sellLotteryTickets: { __typename?: 'LotteryStoreSalesPayload', items: Array<{ __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type LotteryStoreSaleQueryVariables = Exact<{
+  ticketId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreSaleQuery = { __typename?: 'Query', lotteryStoreSale: { __typename?: 'LotteryStoreSalePayload', item: { __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+
+export type LotteryStoreRecentSalesQueryVariables = Exact<{
+  shiftId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreRecentSalesQuery = { __typename?: 'Query', lotteryStoreRecentSales: { __typename?: 'LotteryStoreSalesPayload', items: Array<{ __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } }> } };
+
+export type UndoLotteryTicketSaleMutationVariables = Exact<{
+  input: LotteryStoreTicketRefInput;
+}>;
+
+
+export type UndoLotteryTicketSaleMutation = { __typename?: 'Mutation', undoLotteryTicketSale: { __typename?: 'LotteryStoreSalePayload', item: { __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+
+export type LotteryStoreBookCardQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+  bookId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreBookCardQuery = { __typename?: 'Query', lotteryStoreBookCard: { __typename?: 'LotteryStoreBookCardPayload', item: { __typename?: 'LotteryStoreBookCard', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, pendingSkipCount: number, unopened: boolean, tickets: Array<{ __typename?: 'LotteryStoreCardTicket', id: string, ticketNo: string, version: number, status: string, locationKind: string, soldShiftId?: string | null, locked: boolean, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } } };
+
+export type LotteryStoreUnopenedBooksQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreUnopenedBooksQuery = { __typename?: 'Query', lotteryStoreUnopenedBooks: { __typename?: 'LotteryStoreUnopenedBooksPayload', items: Array<{ __typename?: 'LotteryStoreUnopenedBook', bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, firstTicketNo: string, lastTicketNo: string, ticketCount: number, pendingSkipCount: number }> } };
+
+export type SplitLotteryBookMutationVariables = Exact<{
+  input: SplitLotteryBookInput;
+}>;
+
+
+export type SplitLotteryBookMutation = { __typename?: 'Mutation', splitLotteryBook: { __typename?: 'LotteryStoreCounterPayload', count: number } };
+
+export type MoveLotteryTicketsMutationVariables = Exact<{
+  input: MoveLotteryTicketsInput;
+}>;
+
+
+export type MoveLotteryTicketsMutation = { __typename?: 'Mutation', moveLotteryTickets: { __typename?: 'LotteryStoreCounterPayload', count: number } };
+
+export type RecallLotteryTicketsMutationVariables = Exact<{
+  input: RecallLotteryTicketsInput;
+}>;
+
+
+export type RecallLotteryTicketsMutation = { __typename?: 'Mutation', recallLotteryTickets: { __typename?: 'LotteryStoreCounterPayload', count: number } };
+
 export type LotteryStoreShiftFieldsFragment = { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
 
 export type LotteryStoreBoardBookFieldsFragment = { __typename?: 'LotteryStoreBoardBook', bookId: string, gameCode: string, gameName: string, color?: string | null, unitPrice: number, bookNo: string, remaining: number, total: number, soldToday: number, isLowStock: boolean };
@@ -11167,6 +11456,91 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const LotteryStoreScanItemFieldsFragmentDoc = `
+    fragment LotteryStoreScanItemFields on LotteryStoreScanItem {
+  ticketId
+  version
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  ticketNo
+  status
+  locationKind
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  counterShiftOwner {
+    ...LotteryAccountsRefFields
+  }
+  responsibleOrg {
+    ...LotteryAccountsRefFields
+  }
+  outcome
+  blockReason
+  soldAt
+  pendingSkipCount
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryStoreSaleFieldsFragmentDoc = `
+    fragment LotteryStoreSaleFields on LotteryStoreSale {
+  ticketId
+  version
+  ticketKey
+  amount
+  soldAt
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  shiftId
+  undone
+  undoBlock
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryStoreCardTicketFieldsFragmentDoc = `
+    fragment LotteryStoreCardTicketFields on LotteryStoreCardTicket {
+  id
+  ticketNo
+  version
+  status
+  locationKind
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  soldShiftId
+  locked
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryStoreBookCardFieldsFragmentDoc = `
+    fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  firstTicketNo
+  lastTicketNo
+  pendingSkipCount
+  unopened
+  tickets {
+    ...LotteryStoreCardTicketFields
+  }
+}
+    ${LotteryStoreCardTicketFieldsFragmentDoc}`;
+export const LotteryStoreUnopenedBookFieldsFragmentDoc = `
+    fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
+  bookId
+  gameCode
+  gameName
+  unitPrice
+  bookNo
+  firstTicketNo
+  lastTicketNo
+  ticketCount
+  pendingSkipCount
 }
     `;
 export const LotteryStoreShiftFieldsFragmentDoc = `
@@ -20256,6 +20630,315 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const LotteryStoreScanDocument = `
+    query LotteryStoreScan($input: LotteryStoreScanInput!) {
+  lotteryStoreScan(input: $input) {
+    items {
+      ...LotteryStoreScanItemFields
+    }
+  }
+}
+    ${LotteryStoreScanItemFieldsFragmentDoc}`;
+
+export const useLotteryStoreScanQuery = <
+      TData = LotteryStoreScanQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreScanQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreScanQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreScanQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreScanQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreScan', variables],
+    queryFn: fetcher<LotteryStoreScanQuery, LotteryStoreScanQueryVariables>(client, LotteryStoreScanDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreScanQuery.getKey = (variables: LotteryStoreScanQueryVariables) => ['LotteryStoreScan', variables];
+
+
+useLotteryStoreScanQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreScanQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreScanQuery, LotteryStoreScanQueryVariables>(client, LotteryStoreScanDocument, variables, headers);
+
+export const SellLotteryTicketsDocument = `
+    mutation SellLotteryTickets($input: SellLotteryTicketsInput!) {
+  sellLotteryTickets(input: $input) {
+    items {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+    ${LotteryStoreSaleFieldsFragmentDoc}`;
+
+export const useSellLotteryTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SellLotteryTicketsMutation, TError, SellLotteryTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SellLotteryTicketsMutation, TError, SellLotteryTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['SellLotteryTickets'],
+    mutationFn: (variables?: SellLotteryTicketsMutationVariables) => fetcher<SellLotteryTicketsMutation, SellLotteryTicketsMutationVariables>(client, SellLotteryTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSellLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: SellLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<SellLotteryTicketsMutation, SellLotteryTicketsMutationVariables>(client, SellLotteryTicketsDocument, variables, headers);
+
+export const LotteryStoreSaleDocument = `
+    query LotteryStoreSale($ticketId: ID!) {
+  lotteryStoreSale(ticketId: $ticketId) {
+    item {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+    ${LotteryStoreSaleFieldsFragmentDoc}`;
+
+export const useLotteryStoreSaleQuery = <
+      TData = LotteryStoreSaleQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreSaleQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreSaleQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreSaleQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreSaleQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreSale', variables],
+    queryFn: fetcher<LotteryStoreSaleQuery, LotteryStoreSaleQueryVariables>(client, LotteryStoreSaleDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreSaleQuery.getKey = (variables: LotteryStoreSaleQueryVariables) => ['LotteryStoreSale', variables];
+
+
+useLotteryStoreSaleQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreSaleQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreSaleQuery, LotteryStoreSaleQueryVariables>(client, LotteryStoreSaleDocument, variables, headers);
+
+export const LotteryStoreRecentSalesDocument = `
+    query LotteryStoreRecentSales($shiftId: ID!) {
+  lotteryStoreRecentSales(shiftId: $shiftId) {
+    items {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+    ${LotteryStoreSaleFieldsFragmentDoc}`;
+
+export const useLotteryStoreRecentSalesQuery = <
+      TData = LotteryStoreRecentSalesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreRecentSalesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreRecentSalesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreRecentSalesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreRecentSalesQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreRecentSales', variables],
+    queryFn: fetcher<LotteryStoreRecentSalesQuery, LotteryStoreRecentSalesQueryVariables>(client, LotteryStoreRecentSalesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreRecentSalesQuery.getKey = (variables: LotteryStoreRecentSalesQueryVariables) => ['LotteryStoreRecentSales', variables];
+
+
+useLotteryStoreRecentSalesQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreRecentSalesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreRecentSalesQuery, LotteryStoreRecentSalesQueryVariables>(client, LotteryStoreRecentSalesDocument, variables, headers);
+
+export const UndoLotteryTicketSaleDocument = `
+    mutation UndoLotteryTicketSale($input: LotteryStoreTicketRefInput!) {
+  undoLotteryTicketSale(input: $input) {
+    item {
+      ...LotteryStoreSaleFields
+    }
+  }
+}
+    ${LotteryStoreSaleFieldsFragmentDoc}`;
+
+export const useUndoLotteryTicketSaleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<UndoLotteryTicketSaleMutation, TError, UndoLotteryTicketSaleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<UndoLotteryTicketSaleMutation, TError, UndoLotteryTicketSaleMutationVariables, TContext>(
+      {
+    mutationKey: ['UndoLotteryTicketSale'],
+    mutationFn: (variables?: UndoLotteryTicketSaleMutationVariables) => fetcher<UndoLotteryTicketSaleMutation, UndoLotteryTicketSaleMutationVariables>(client, UndoLotteryTicketSaleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useUndoLotteryTicketSaleMutation.fetcher = (client: GraphQLClient, variables: UndoLotteryTicketSaleMutationVariables, headers?: RequestInit['headers']) => fetcher<UndoLotteryTicketSaleMutation, UndoLotteryTicketSaleMutationVariables>(client, UndoLotteryTicketSaleDocument, variables, headers);
+
+export const LotteryStoreBookCardDocument = `
+    query LotteryStoreBookCard($orgId: ID!, $bookId: ID!) {
+  lotteryStoreBookCard(orgId: $orgId, bookId: $bookId) {
+    item {
+      ...LotteryStoreBookCardFields
+    }
+  }
+}
+    ${LotteryStoreBookCardFieldsFragmentDoc}`;
+
+export const useLotteryStoreBookCardQuery = <
+      TData = LotteryStoreBookCardQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreBookCardQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreBookCardQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreBookCardQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreBookCardQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreBookCard', variables],
+    queryFn: fetcher<LotteryStoreBookCardQuery, LotteryStoreBookCardQueryVariables>(client, LotteryStoreBookCardDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreBookCardQuery.getKey = (variables: LotteryStoreBookCardQueryVariables) => ['LotteryStoreBookCard', variables];
+
+
+useLotteryStoreBookCardQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreBookCardQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreBookCardQuery, LotteryStoreBookCardQueryVariables>(client, LotteryStoreBookCardDocument, variables, headers);
+
+export const LotteryStoreUnopenedBooksDocument = `
+    query LotteryStoreUnopenedBooks($orgId: ID!) {
+  lotteryStoreUnopenedBooks(orgId: $orgId) {
+    items {
+      ...LotteryStoreUnopenedBookFields
+    }
+  }
+}
+    ${LotteryStoreUnopenedBookFieldsFragmentDoc}`;
+
+export const useLotteryStoreUnopenedBooksQuery = <
+      TData = LotteryStoreUnopenedBooksQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreUnopenedBooksQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreUnopenedBooksQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreUnopenedBooksQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreUnopenedBooksQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreUnopenedBooks', variables],
+    queryFn: fetcher<LotteryStoreUnopenedBooksQuery, LotteryStoreUnopenedBooksQueryVariables>(client, LotteryStoreUnopenedBooksDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreUnopenedBooksQuery.getKey = (variables: LotteryStoreUnopenedBooksQueryVariables) => ['LotteryStoreUnopenedBooks', variables];
+
+
+useLotteryStoreUnopenedBooksQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreUnopenedBooksQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreUnopenedBooksQuery, LotteryStoreUnopenedBooksQueryVariables>(client, LotteryStoreUnopenedBooksDocument, variables, headers);
+
+export const SplitLotteryBookDocument = `
+    mutation SplitLotteryBook($input: SplitLotteryBookInput!) {
+  splitLotteryBook(input: $input) {
+    count
+  }
+}
+    `;
+
+export const useSplitLotteryBookMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<SplitLotteryBookMutation, TError, SplitLotteryBookMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<SplitLotteryBookMutation, TError, SplitLotteryBookMutationVariables, TContext>(
+      {
+    mutationKey: ['SplitLotteryBook'],
+    mutationFn: (variables?: SplitLotteryBookMutationVariables) => fetcher<SplitLotteryBookMutation, SplitLotteryBookMutationVariables>(client, SplitLotteryBookDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useSplitLotteryBookMutation.fetcher = (client: GraphQLClient, variables: SplitLotteryBookMutationVariables, headers?: RequestInit['headers']) => fetcher<SplitLotteryBookMutation, SplitLotteryBookMutationVariables>(client, SplitLotteryBookDocument, variables, headers);
+
+export const MoveLotteryTicketsDocument = `
+    mutation MoveLotteryTickets($input: MoveLotteryTicketsInput!) {
+  moveLotteryTickets(input: $input) {
+    count
+  }
+}
+    `;
+
+export const useMoveLotteryTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<MoveLotteryTicketsMutation, TError, MoveLotteryTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<MoveLotteryTicketsMutation, TError, MoveLotteryTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['MoveLotteryTickets'],
+    mutationFn: (variables?: MoveLotteryTicketsMutationVariables) => fetcher<MoveLotteryTicketsMutation, MoveLotteryTicketsMutationVariables>(client, MoveLotteryTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useMoveLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: MoveLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<MoveLotteryTicketsMutation, MoveLotteryTicketsMutationVariables>(client, MoveLotteryTicketsDocument, variables, headers);
+
+export const RecallLotteryTicketsDocument = `
+    mutation RecallLotteryTickets($input: RecallLotteryTicketsInput!) {
+  recallLotteryTickets(input: $input) {
+    count
+  }
+}
+    `;
+
+export const useRecallLotteryTicketsMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<RecallLotteryTicketsMutation, TError, RecallLotteryTicketsMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<RecallLotteryTicketsMutation, TError, RecallLotteryTicketsMutationVariables, TContext>(
+      {
+    mutationKey: ['RecallLotteryTickets'],
+    mutationFn: (variables?: RecallLotteryTicketsMutationVariables) => fetcher<RecallLotteryTicketsMutation, RecallLotteryTicketsMutationVariables>(client, RecallLotteryTicketsDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useRecallLotteryTicketsMutation.fetcher = (client: GraphQLClient, variables: RecallLotteryTicketsMutationVariables, headers?: RequestInit['headers']) => fetcher<RecallLotteryTicketsMutation, RecallLotteryTicketsMutationVariables>(client, RecallLotteryTicketsDocument, variables, headers);
 
 export const LotteryStoreBoardDocument = `
     query LotteryStoreBoard($orgId: ID!) {
