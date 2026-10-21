@@ -7,7 +7,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { projectSeedSource } from "./registry";
-import { seed as purchaseForm } from "./revisions/purchase.r4.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
@@ -73,6 +73,8 @@ describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
       moduleKey: "purchasing.purchase",
       allowDraft: true,
       voidReasonCategoryKey: "void-reason",
+      // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+      sharedByFieldKeys: ["branch"],
       serial: { prefix: "P", period: "none", digits: 4 },
     });
   });

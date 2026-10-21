@@ -197,7 +197,7 @@ const options = (items: [string, string][]) => ({
   },
 });
 
-/** 撤銷售出申請的定義(欄位 key 同受管表單 `seeds/project/revisions/sale_reversal.r1.seed.ts`)。 */
+/** 撤銷售出申請的定義(欄位 key 同受管表單 `seeds/project/revisions/sale_reversal.r2.seed.ts`)。 */
 function saleReversalDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),
@@ -242,7 +242,7 @@ function saleReversalDefinition(): FormDefinition {
   ]);
 }
 
-/** 現金更正單的定義(欄位 key 同受管表單 `seeds/project/revisions/cash_correction.r1.seed.ts`)。 */
+/** 現金更正單的定義(欄位 key 同受管表單 `seeds/project/revisions/cash_correction.r2.seed.ts`)。 */
 function cashCorrectionDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text", { rules: { required: true } }),

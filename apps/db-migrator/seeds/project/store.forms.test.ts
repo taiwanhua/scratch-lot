@@ -18,8 +18,8 @@ import {
 import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
-import { seed as cashCorrectionForm } from "./revisions/cash_correction.r1.seed";
-import { seed as saleReversalForm } from "./revisions/sale_reversal.r1.seed";
+import { seed as cashCorrectionForm } from "./revisions/cash_correction.r2.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r2.seed";
 import { projectSeedSettings } from "./settings";
 
 const keysOf = (form: { definition: { fields: readonly { key: string }[] } }) =>
@@ -47,6 +47,8 @@ describe("受管表單 撤銷售出申請(sale_reversal r1)、現金更正單(ca
         moduleKey: STORE_KEY,
         allowDraft: false,
         voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+        // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+        sharedByFieldKeys: ["branch"],
         serial: { prefix, period: "none", digits: 4 },
       });
     }

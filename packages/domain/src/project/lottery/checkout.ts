@@ -20,7 +20,7 @@ export const CHECKOUT_CONFIRM_FORM_KEY = "checkout_confirm";
 /** 結帳確認申請的 B9b 新增權限(表單發布時自動建立)。 */
 export const CHECKOUT_CREATE_PERMISSION = `${STORE_KEY}.create-${CHECKOUT_CONFIRM_FORM_KEY}`;
 
-/** 結帳確認申請的欄位 key(受管表單 `seeds/project/revisions/checkout_confirm.r1.seed.ts`)。 */
+/** 結帳確認申請的欄位 key(受管表單 `seeds/project/revisions/checkout_confirm.r2.seed.ts`)。 */
 export const CHECKOUT_FIELD_KEYS = {
   /** 分店(reference org;流程第 2 關「店長限定分店」的對象) */
   branch: "branch",

@@ -1,6 +1,7 @@
 import type { Connection } from "mongoose";
 
 import type { FormDefinition } from "@repo/domain/form";
+import { TRANSFER_FIELD_KEYS } from "@repo/domain/project/lottery";
 
 import {
   column,
@@ -22,6 +23,12 @@ export const TRANSFER_PERMISSION_KEYS = {
   pay: "purchasing.transfer.pay",
   receive: "purchasing.transfer.receive",
 } as const;
+
+/** 受管表單的依欄位共用(`transfer.r3.seed.ts` 的 `sharedByFieldKeys`):出貨店、收貨店都看得到這張單。 */
+export const TRANSFER_SHARED_BY_FIELD_KEYS = [
+  TRANSFER_FIELD_KEYS.fromBranch,
+  TRANSFER_FIELD_KEYS.toBranch,
+];
 
 export const TRANSFER_MODULE_KEYS = [
   "purchasing",
@@ -92,7 +99,7 @@ export async function seedTransferAuthorization(
   );
 }
 
-/** 調貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/transfer.r2.seed.ts`)。 */
+/** 調貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/transfer.r3.seed.ts`)。 */
 export function transferDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),

@@ -76,6 +76,7 @@ import {
 import {
   assertSideReversible,
   assertSideVisible,
+  isSideSettleable,
 } from "./settlement-side-access";
 
 const DAY_MS = 86_400_000;
@@ -764,7 +765,18 @@ export class SettlementService {
     );
     const canSideSettle = (sideKey: string) => {
       const side = sideOf(registration, sideKey);
-      return side !== undefined && grant.has(side.permission);
+      const index = registration.sides.findIndex(
+        (candidate) => candidate.side === sideKey,
+      );
+      return (
+        side !== undefined &&
+        grant.has(side.permission) &&
+        isSideSettleable(
+          operator,
+          { registration, submission },
+          sideBranches[index] ?? payable.branchOrgId,
+        )
+      );
     };
     const creator = (id: Types.ObjectId | null | undefined) =>
       id == null
@@ -843,11 +855,14 @@ export class SettlementService {
       sides: registration.sides.map((side, index) => {
         const totals = state.sides[side.side] ?? { out: 0, in: 0 };
         const branchId = String(sideBranches[index]);
-        // 兩邊店都看得到的單據(調貨單):這一邊的分店也要在讀者的可見範圍內才能按
+        // 兩邊店的單據(調貨單):這一邊的分店也要在讀者的可見範圍內才能按;其他單據:單據本身在可見範圍內
         const canSettle =
           grant.has(side.permission) &&
-          (registration.sharedByValues === undefined ||
-            isOrgVisible(operator, sideBranches[index] ?? payable.branchOrgId));
+          isSideSettleable(
+            operator,
+            { registration, submission },
+            sideBranches[index] ?? payable.branchOrgId,
+          );
         return {
           side: side.side,
           label: side.label,

@@ -122,7 +122,7 @@
 
 - 單據以 `registerSettlementDocument({ moduleKey, label, kind, payable(submission), sides })` 登記(`apps/api/src/project/lottery/settlement/settlement-registry.ts`);`sides[]`:`side`、`label`(總部 / 收貨店 / 出貨店)、`role`(`payer` 付款方 / `payee` 收款方)、`permission`、`methods`(`bank` / `cash`)、`defaultAmount(button, state)`、選填 `branchOf`。
 - `payable(submission)` 可以是非同步(調貨單要讀點收紀錄);回的 `received`(選填)是付款方先填值的基準,和應付不同時才給,進 `SettlementState.received`(調貨單:已點收的批購金額)。
-- 選填 `sharedByValues`:單據存值裡組織欄位的路徑(例 `values.to_branch.id`)。單據歸屬看不到、但這些欄位是讀者可見範圍內的組織時,結算區塊與待結清款項照樣讀得到(調貨單的出貨店、收貨店兩邊);記帳 / 沖正 / 帳戶選項仍要**那一邊的分店**在讀者的可見範圍內(`canSettle` 同),寫入不放大。
+- 選填 `sharedByValues`(**兩邊店的單據**):各邊分店的組織欄位路徑(例 `values.to_branch.id`;調貨單的出貨店、收貨店)。有宣告 = 記帳 / 沖正 / 帳戶選項要**那一邊的分店**在讀者的可見範圍內;沒宣告 = 單據本身要在讀者的可見範圍內(`canSettle`、`canReverse` 同),寫入不放大。結算區塊與待結清款項的**讀取**一律走一般讀取:單據歸屬看不到、但受管表單的依欄位共用指到讀者的所屬組織(進貨單的進貨分店、調貨單的出貨店 / 收貨店;底座 `docs/modules/forms.md`「依欄位共用」)時照樣讀得到,只是不能按。
 - 每一邊兩顆按鈕:`out`(付款 / 退款)、`in`(收到退款 / 收款);先填的金額 ≤ 0 的那一顆停用(`SETTLEMENT_NOTHING_DUE`)。帳一律以實際填的金額為準。預設值的算法在 `@repo/domain/project/lottery-accounts` 的 `payerDefaultAmount` / `payeeDefaultAmount`(規格 9 的驗算表都有測試)。
 - 已付淨額 = 支出 − 收入;已收淨額 = 收入 − 支出;可以分次。沖正以反方向計入。
 - 淨額只算 `settlementSide` 有值的交易 / 流水。**兌獎入帳**(`redemption_income`)可以掛單據(`refType` / `refId` / `refRevision`),但 `settlementSide` 一律是 null:不算進任何一邊的淨額、不出現在收付歷程;`bankTypeOf` 只會回批貨 / 調貨的支出與收入,不會回兌獎入帳(有測試)。

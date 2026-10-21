@@ -27,7 +27,6 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
-import { tenantOfOperator } from "../master-data-tenant";
 import {
   type SettlementDocumentRegistration,
   type SettlementPayable,
@@ -123,7 +122,11 @@ export class SettlementLedger {
     const submission =
       refId === null
         ? null
-        : await this.readableOf(operator, registration, refId);
+        : // 讀得到 = 可見範圍內,或依欄位共用給讀者的所屬組織(調貨單的出貨店、收貨店;ADR-0014)
+          await this.submissions.findOne(operator, {
+            _id: refId,
+            moduleKey: registration.moduleKey,
+          });
     if (!submission) {
       throw notFoundError(
         `settlement document not found: ${String(refIdText)}`,
@@ -177,20 +180,16 @@ export class SettlementLedger {
     return Object.values(bySide).every((side) => paidNetOf(side) === 0);
   }
 
-  /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍)。 */
+  /** 看得到的單據裡有待付 / 待退 / 待收的每一邊(依可見範圍 + 依欄位共用,同一般讀取)。 */
   async outstanding(operator: OperatorContext): Promise<OutstandingRow[]> {
     const rows: OutstandingRow[] = [];
     for (const registration of settlementDocuments()) {
       const live = { status: { $in: [...SETTLEMENT_LIVE_STATUSES] } };
-      const visible = (await this.submissions.findMany(
+      const submissions = (await this.submissions.findMany(
         operator,
         { moduleKey: registration.moduleKey, ...live },
         { sort: { submittedAt: 1, _id: 1 } },
       )) as unknown as SettlementSubmission[];
-      const seen = new Set(visible.map((row) => String(row._id)));
-      const sharedRows = await this.sharedOf(operator, registration, live);
-      const shared = sharedRows.filter((row) => !seen.has(String(row._id)));
-      const submissions = [...visible, ...shared];
       const snapshots = await this.snapshotsOf(
         operator,
         registration,
@@ -237,56 +236,6 @@ export class SettlementLedger {
       revision: snapshot.submission.revision,
       branchOrgId: due.branchOrgId,
     };
-  }
-
-  /** 讀者讀得到的這張單據:可見範圍內,或兩邊店看得到(`sharedByValues`)。 */
-  private async readableOf(
-    operator: OperatorContext,
-    registration: SettlementDocumentRegistration,
-    refId: Types.ObjectId,
-  ): Promise<SettlementSubmission | null> {
-    const visible = await this.submissions.findOne(operator, {
-      _id: refId,
-      moduleKey: registration.moduleKey,
-    });
-    if (visible !== null) {
-      return visible;
-    }
-    const [shared] = await this.sharedOf(operator, registration, {
-      _id: refId,
-    });
-    return shared ?? null;
-  }
-
-  /**
-   * 歸屬看不到、但登記的 `sharedByValues` 欄位是讀者可見範圍內組織的單據(調貨單的出貨店、收貨店);
-   * 以讀者當前組織所在租戶的邊界讀。沒有宣告 / 讀者看得到全部 → 空。
-   */
-  private async sharedOf(
-    operator: OperatorContext,
-    registration: SettlementDocumentRegistration,
-    filter: Record<string, unknown>,
-  ): Promise<SettlementSubmission[]> {
-    const paths = registration.sharedByValues ?? [];
-    const tenantId = tenantOfOperator(operator)?.tenantId ?? null;
-    if (
-      paths.length === 0 ||
-      tenantId === null ||
-      operator.visibleOrgIds === "all"
-    ) {
-      return [];
-    }
-    const orgIds = operator.visibleOrgIds.map(String);
-    const reader = await tenantBoundaryContext(this.orgs, operator, tenantId);
-    return this.submissions.findMany(
-      reader,
-      {
-        ...filter,
-        moduleKey: registration.moduleKey,
-        $or: paths.map((path) => ({ [path]: { $in: orgIds } })),
-      },
-      { sort: { submittedAt: 1, _id: 1 } },
-    );
   }
 
   /** 一批提交的現況(不參與收付的略過)。 */

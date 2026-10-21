@@ -19,7 +19,7 @@ import { formatTicketNo, parseTicketInput } from "./ticket-code";
 export const TRANSFER_MODULE_KEY = "purchasing.transfer";
 export const TRANSFER_FORM_KEY = "transfer";
 
-/** 受管表單 `transfer` 的欄位 key(`seeds/project/revisions/transfer.r2.seed.ts`)。 */
+/** 受管表單 `transfer` 的欄位 key(`seeds/project/revisions/transfer.r3.seed.ts`)。 */
 export const TRANSFER_FIELD_KEYS = {
   /** 出貨分店(組織引用) */
   fromBranch: "from_branch",

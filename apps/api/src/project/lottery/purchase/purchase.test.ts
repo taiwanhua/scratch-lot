@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
+import { PURCHASE_FIELD_KEYS } from "@repo/domain/project/lottery";
+
 import {
   type AuthTestApp,
   startAuthTestApp,
@@ -10,7 +12,10 @@ import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection
 import {
   ASSIGN,
   CREATE_FORM,
+  FORM_SUBMISSION,
+  FORM_SUBMISSIONS,
   type SubmissionRow,
+  UPDATE_FORM,
   call,
   createDraft,
   extensionsOf,
@@ -41,6 +46,7 @@ import {
 } from "../../../workflows/test-support/workflow-fixtures";
 import { isGameInUse } from "../games/game-usage";
 import { inTransitBooksOf } from "../requisition/in-transit";
+import { PURCHASE_REASONS } from "./purchase-error";
 import {
   PURCHASE_MODULE_KEYS,
   PURCHASE_PERMISSION_KEYS,
@@ -285,6 +291,8 @@ describe("進貨單(規格 8.2、8.3)", () => {
   let hqNoSettle: Person;
   let managerA: Person;
   let managerB: Person;
+  /** 分店 A、有進貨單 `view` + `settle`(依欄位共用進來的單:看得到收付、不能按) */
+  let settlerA: Person;
   let helperA: Person;
   let admin: Person;
   let gameHot: Types.ObjectId;
@@ -401,6 +409,16 @@ describe("進貨單(規格 8.2、8.3)", () => {
     return data.lotterySettlement.item;
   }
 
+  /** 進貨單列表(底座表單列表)裡這個人看得到的單。 */
+  async function listedTo(person: Person): Promise<string[]> {
+    const data = await ok<{
+      formSubmissions: { items: { id: string }[] };
+    }>(api, person.token, FORM_SUBMISSIONS, {
+      input: { moduleKey: MODULE, formKey: FORM, pageSize: 100 },
+    });
+    return data.formSubmissions.items.map((item) => item.id);
+  }
+
   async function bankRowsOf(submissionId: string) {
     return db()
       .collection("lottery_bank_transactions")
@@ -424,7 +442,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
     await decideOn({ api } as World, managerA, id, "RETURN");
   }
 
-  async function resubmit(id: string, lines: BookLine[]): Promise<string[]> {
+  async function resubmit(
+    id: string,
+    lines: BookLine[],
+    branch = branchA,
+  ): Promise<string[]> {
     const row = await current(id);
     const saved = await call<{
       saveFormDraft: { submission: { id: string; editVersion: number } };
@@ -432,7 +454,7 @@ describe("進貨單(規格 8.2、8.3)", () => {
       input: {
         id,
         expectedEditVersion: row.editVersion,
-        values: { ...header(branchA), lines },
+        values: { ...header(branch), lines },
       },
     });
     if (saved.errors) {
@@ -548,6 +570,13 @@ describe("進貨單(規格 8.2、8.3)", () => {
     };
     managerA = await person(api, connection, branchA, tenant, managerScope);
     managerB = await person(api, connection, branchB, tenant, managerScope);
+    settlerA = await person(api, connection, branchA, tenant, {
+      moduleKeys: purchaseModules,
+      permissionKeys: [
+        PURCHASE_PERMISSION_KEYS.view,
+        PURCHASE_PERMISSION_KEYS.settle,
+      ],
+    });
     helperA = await person(api, connection, branchA, tenant, managerScope);
     const storeManager = await createRole(api.app, connection, {
       name: "店長",
@@ -559,6 +588,10 @@ describe("進貨單(規格 8.2、8.3)", () => {
       input: { key: FORM, moduleKey: MODULE, name: "進貨單" },
     });
     await publishDefinition(api, root, FORM, purchaseDefinition(), null);
+    // 受管表單的依欄位共用(`purchase.r5.seed.ts`):進貨分店看得到這張單
+    await ok(api, root, UPDATE_FORM, {
+      input: { key: FORM, sharedByFieldKeys: [PURCHASE_FIELD_KEYS.branch] },
+    });
     await ok(api, root, ASSIGN, {
       input: { formKey: FORM, tenantOrgIds: [String(tenant)] },
     });
@@ -956,6 +989,41 @@ describe("進貨單(規格 8.2、8.3)", () => {
     });
   });
 
+  describe("依欄位共用(總部建的單,進貨分店看得到)", () => {
+    it("進貨分店 A:列表看得到、不能改;B 店看不到;收付看得到但不能按(單據歸屬總部)", async () => {
+      const purchase = await submit([book(gameHot)]);
+      expect(await listedTo(settlerA)).toContain(purchase.id);
+      expect(await listedTo(managerB)).not.toContain(purchase.id);
+      const viewed = await ok<{
+        formSubmission: {
+          submission: { abilities: { canEdit: boolean; canDelete: boolean } };
+        };
+      }>(api, settlerA.token, FORM_SUBMISSION, { id: purchase.id });
+      expect(viewed.formSubmission.submission.abilities).toMatchObject({
+        canEdit: false,
+        canDelete: false,
+      });
+      const data = await ok<{ lotterySettlement: { item: Settlement } }>(
+        api,
+        settlerA.token,
+        SETTLEMENT,
+        { moduleKey: MODULE, refId: purchase.id },
+      );
+      expect(data.lotterySettlement.item.sides[0]?.canSettle).toBe(false);
+      const forHq = await settlementOf(purchase.id);
+      expect(forHq.sides[0]?.canSettle).toBe(true);
+    });
+
+    it("改了進貨分店(退回後改成 B 再送出):看得到的店跟著變", async () => {
+      const lines = [book(gameHot)];
+      const purchase = await submit(lines);
+      await returnToHq(purchase.id);
+      expect(await resubmit(purchase.id, lines, branchB)).toEqual([]);
+      expect(await listedTo(managerB)).toContain(purchase.id);
+      expect(await listedTo(settlerA)).not.toContain(purchase.id);
+    });
+  });
+
   describe("點收一本(規格 8.2、8.3)", () => {
     it("寫點收紀錄、本、張與「進貨」事件;進度 1 / 2", async () => {
       const lines = [book(gameHot), book(gameHot)];
@@ -1119,9 +1187,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(await receive(managerA, purchase.id, codeOf(line))).toMatchObject({
         reason: "PURCHASE_ALREADY_RECEIVED",
       });
+      // 同店的另一個人:依欄位共用看得到這張單(進貨分店 = A),但點收任務不在他手上
       const another = await submit([book(gameHot)]);
       expect(await receive(helperA, another.id, codeOf(line))).toMatchObject({
-        code: "NOT_FOUND",
+        code: "FORBIDDEN",
+        reason: PURCHASE_REASONS.notReceivable,
       });
     });
 

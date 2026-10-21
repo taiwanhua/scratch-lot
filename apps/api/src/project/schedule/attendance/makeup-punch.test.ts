@@ -88,7 +88,7 @@ const ENTRY_OPTIONS = /* GraphQL */ `
   }
 `;
 
-/** 補打卡申請的定義(欄位 key 同受管表單 `seeds/project/revisions/makeup_punch.r2.seed.ts`)。 */
+/** 補打卡申請的定義(欄位 key 同受管表單 `seeds/project/revisions/makeup_punch.r3.seed.ts`)。 */
 function makeupDefinition(): FormDefinition {
   return definitionOf([
     field("entry_label", "text", { rules: { required: true } }),

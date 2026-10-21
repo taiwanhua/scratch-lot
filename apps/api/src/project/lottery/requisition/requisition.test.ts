@@ -138,7 +138,7 @@ interface PurchaseList {
   }[];
 }
 
-/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r3.seed.ts`)。 */
+/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r4.seed.ts`)。 */
 function requisitionDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),

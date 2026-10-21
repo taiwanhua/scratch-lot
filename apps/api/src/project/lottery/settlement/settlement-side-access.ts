@@ -16,14 +16,26 @@ import {
 
 /**
  * 掛在單據上的收付(`refType` / `settlementSide` 有值)要沖正:除了入口自己的權限,還要**那一邊的收付權限**
- * (登記的 `side.permission`,例 `purchasing.purchase.settle`),兩邊店都看得到的單據還要看得到那一邊的分店。
+ * (登記的 `side.permission`,例 `purchasing.purchase.settle`),且那一邊能操作(`isSideSettleable`)。
  * 單據結算區的 [沖正](`reverseLotterySettlement`)與帳戶的交易清單 / 現金流水 [沖正] 用同一個判準。
  */
 
 /**
- * 兩邊店都看得到的單據(`sharedByValues`,調貨單):只能操作自己看得到的那一邊(這一邊的分店在可見範圍內);
- * 其他單據不另外檢查。
+ * 這一邊能不能操作(收付寫入不放大,ADR-0014):
+ * - 兩邊店的單據(`sharedByValues`,調貨單):這一邊的分店要在可見範圍內(只能操作自己那一邊)
+ * - 其他單據:單據本身要在可見範圍內(依欄位共用進來的只能看,例 總部建的進貨單給進貨分店看)
  */
+export function isSideSettleable(
+  operator: OperatorContext,
+  snapshot: Pick<SettlementSnapshot, "registration" | "submission">,
+  sideBranch: Types.ObjectId,
+): boolean {
+  return snapshot.registration.sharedByValues === undefined
+    ? isOrgVisible(operator, snapshot.submission.orgId)
+    : isOrgVisible(operator, sideBranch);
+}
+
+/** 記帳 / 沖正前:這一邊要能操作(`isSideSettleable`),不能 → `FORBIDDEN`。 */
 export function assertSideVisible(
   operator: OperatorContext,
   snapshot: SettlementSnapshot,
@@ -32,10 +44,7 @@ export function assertSideVisible(
   const sideBranch =
     side.branchOf?.(snapshot.submission, snapshot.payable) ??
     snapshot.payable.branchOrgId;
-  if (
-    snapshot.registration.sharedByValues !== undefined &&
-    !isOrgVisible(operator, sideBranch)
-  ) {
+  if (!isSideSettleable(operator, snapshot, sideBranch)) {
     throw authError("FORBIDDEN", `Side ${side.side} is not visible`);
   }
 }

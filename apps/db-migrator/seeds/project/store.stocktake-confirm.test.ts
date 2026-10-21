@@ -12,7 +12,7 @@ import { FORM_WORKFLOWS } from "./onboarding/form-workflows";
 import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { projectSeedSource } from "./registry";
-import { seed as stocktakeForm } from "./revisions/stocktake_confirm.r1.seed";
+import { seed as stocktakeForm } from "./revisions/stocktake_confirm.r2.seed";
 import { projectSeedSettings } from "./settings";
 
 const fieldOf = (key: string) =>
@@ -33,6 +33,8 @@ describe("受管表單 盤點確認申請(stocktake_confirm r1)", () => {
       moduleKey: STORE_KEY,
       allowDraft: false,
       voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
+      // 依欄位共用:分店欄指到的分店也看得到(唯讀)
+      sharedByFieldKeys: ["branch"],
       serial: { prefix: "S", period: "none", digits: 4 },
     });
   });

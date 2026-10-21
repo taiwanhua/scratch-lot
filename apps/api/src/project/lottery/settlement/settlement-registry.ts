@@ -104,9 +104,10 @@ export interface SettlementDocumentRegistration {
     submission: SettlementSubmission,
   ) => SettlementPayable | null | Promise<SettlementPayable | null>;
   /**
-   * 單據存值裡「這幾家店也看得到這張單的收付」的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串):
-   * 單據歸屬看不到、但這些欄位是讀者可見範圍內的組織時,結算區塊與待結清款項照樣讀得到(調貨單的出貨店、
-   * 收貨店兩邊;同資料共用 `sharedByFields` 的意思,ADR-0014)。寫入仍照讀者自己的範圍(記在自己那一邊的分店)。
+   * **兩邊店的單據**:單據存值裡各邊分店的組織欄位路徑(例 `values.to_branch.id`,存組織 id 字串;調貨單的出貨店、
+   * 收貨店)。有宣告 = 每一邊只能由「這一邊的分店在可見範圍內」的人操作;沒宣告 = 單據本身要在可見範圍內才能操作。
+   * **讀取不靠它**:兩邊店看得到單據是受管表單的「依欄位共用」(`sharedByFieldKeys` → `sharedOrgIds`,ADR-0014),
+   * 結算區塊與待結清款項都走一般讀取。
    */
   sharedByValues?: readonly string[];
   sides: readonly SettlementSideRegistration[];

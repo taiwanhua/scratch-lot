@@ -14,6 +14,7 @@ import {
   CREATE_FORM,
   PASSWORD,
   type SubmissionRow,
+  UPDATE_FORM,
   call,
   createDraft,
   extensionsOf,
@@ -55,6 +56,7 @@ import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import {
   TRANSFER_MODULE_KEYS,
   TRANSFER_PERMISSION_KEYS,
+  TRANSFER_SHARED_BY_FIELD_KEYS,
   seedTransferAuthorization,
   transferDefinition,
 } from "./test-support/transfer-fixtures";
@@ -757,6 +759,10 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       input: { key: FORM, moduleKey: MODULE, name: "調貨單" },
     });
     await publishDefinition(api, root, FORM, transferDefinition(), null);
+    // 受管表單的依欄位共用(`transfer.r3.seed.ts`):出貨店、收貨店都看得到這張單
+    await ok(api, root, UPDATE_FORM, {
+      input: { key: FORM, sharedByFieldKeys: TRANSFER_SHARED_BY_FIELD_KEYS },
+    });
     await ok(api, root, ASSIGN, {
       input: { formKey: FORM, tenantOrgIds: [String(tenant)] },
     });
