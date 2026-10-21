@@ -24,6 +24,13 @@ export const LOTTERY_REDEMPTIONS_COLLECTION = "lottery_redemptions";
  */
 @Schema({ collection: LOTTERY_REDEMPTIONS_COLLECTION, timestamps: true })
 export class LotteryRedemption {
+  /**
+   * 單號 `RD-0001`(底座 `SerialService`,key `lottery_redemption`,各租戶各自連號、不分期;新增時在同一個交易內
+   * 取號,撤銷不收回)。加單號之前的舊資料 = null(畫面顯示「—」)。
+   */
+  @Prop({ type: String, default: null })
+  serialNo!: string | null;
+
   /** 分店(錢從這家店的抽屜付出)。 */
   @Prop({ type: MongooseSchema.Types.ObjectId, required: true })
   orgId!: Types.ObjectId;

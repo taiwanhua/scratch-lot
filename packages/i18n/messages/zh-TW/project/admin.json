@@ -2252,6 +2252,7 @@
         "aria": "兌獎紀錄",
         "pick": "勾選 {ticket}",
         "columns": {
+          "serialNo": "單號",
           "time": "兌獎時間",
           "cashPoint": "收銀點",
           "ticket": "遊戲 / 本 / 張",
@@ -2931,7 +2932,7 @@
       "cancel": "取消",
       "confirm": "確認兌獎",
       "successTitle": "已兌獎",
-      "successMessage": "{ticket} · {amount} 元 · {cashPoint}",
+      "successMessage": "{serial} · {ticket} · {amount} 元 · {cashPoint}",
       "undo": "撤銷",
       "revokeTitle": "撤銷兌獎?",
       "revokeLine": "{ticket} · {amount} 元 · {time} 登記",
@@ -2975,6 +2976,7 @@
         "revoked": "已撤銷"
       },
       "columns": {
+        "serialNo": "單號",
         "time": "時間",
         "cashPoint": "收銀點",
         "shift": "班次",

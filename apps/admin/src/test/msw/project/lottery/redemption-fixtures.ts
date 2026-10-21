@@ -26,6 +26,8 @@ const GAMES: Record<string, string> = {
 
 export interface RedemptionInput {
   id: string;
+  /** 單號 `RD-0218`;沒給 = null(加單號之前的舊資料,畫面顯示「—」) */
+  serialNo?: string | null;
   gameCode: string;
   bookNo: string;
   ticketNo: string;
@@ -64,6 +66,7 @@ export const redemptionRow = (input: RedemptionInput): RedemptionFixture => {
   return {
     __typename: "LotteryRedemption",
     id: input.id,
+    serialNo: input.serialNo ?? null,
     orgId: "org-store-a",
     gameCode: input.gameCode,
     gameName: GAMES[input.gameCode] ?? null,
@@ -115,10 +118,14 @@ const CLOSED_SHIFT = {
   closed: true,
 };
 
-/** Figma ST-38b / ST-40 的兌獎紀錄(新到舊)。 */
+/** 假 api 新增的兌獎接著這個號編(夾具最後一筆是 `RD-0218`,Figma ST-39a)。 */
+export const SAMPLE_LAST_SERIAL = 218;
+
+/** Figma ST-38b / ST-40 的兌獎紀錄(新到舊);單號 `RD-0214`–`RD-0218`,`rd-012` 沒有單號(舊資料,顯示「—」)。 */
 export const sampleRedemptions = (): RedemptionFixture[] => [
   redemptionRow({
     id: "rd-031",
+    serialNo: "RD-0218",
     gameCode: "5164",
     bookNo: "0056527",
     ticketNo: "031",
@@ -127,6 +134,7 @@ export const sampleRedemptions = (): RedemptionFixture[] => [
   }),
   redemptionRow({
     id: "rd-044",
+    serialNo: "RD-0217",
     gameCode: "5201",
     bookNo: "0060112",
     ticketNo: "044",
@@ -136,6 +144,7 @@ export const sampleRedemptions = (): RedemptionFixture[] => [
   }),
   redemptionRow({
     id: "rd-017",
+    serialNo: "RD-0216",
     gameCode: "5198",
     bookNo: "0088102",
     ticketNo: "017",
@@ -144,6 +153,7 @@ export const sampleRedemptions = (): RedemptionFixture[] => [
   }),
   redemptionRow({
     id: "rd-083",
+    serialNo: "RD-0215",
     gameCode: "5150",
     bookNo: "0042210",
     ticketNo: "083",

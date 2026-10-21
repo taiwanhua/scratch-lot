@@ -78,8 +78,10 @@ describe("進貨單檢視頁", () => {
     const user = userEvent.setup();
     renderPurchasePage({ path: VIEW });
     const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    expect(within(table).getByText("RD-0215")).toBeInTheDocument();
     await user.click(within(table).getByText("5150 · 042210 · #083"));
-    const dialog = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    const dialog = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
+    expect(within(dialog).getByText("RD-0215")).toBeInTheDocument();
     expect(
       within(dialog).getByText("已送兌(進貨單 P-0033)"),
     ).toBeInTheDocument();

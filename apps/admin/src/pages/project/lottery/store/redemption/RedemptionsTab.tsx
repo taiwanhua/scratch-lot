@@ -111,8 +111,9 @@ const rangeOf = (
 };
 
 /**
- * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間;欄位 時間、收銀點、班次、
- * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片(Figma ST-40)、篩選收進抽屜。
+ * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間;欄位 單號、時間、收銀點、班次、
+ * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片(Figma ST-40;
+ * 標題列 `單號 · 刮刮樂 · 金額`)、篩選收進抽屜。沒有關鍵字搜尋,單號只顯示、不搜尋。
  * 分店沿用看板的 `?org=`;篩選與頁碼在 `?redemptions=`(url-state-inventory)。登記人的選項取同一段期間出現過的人。
  */
 export const RedemptionsTab = () => {
@@ -195,8 +196,10 @@ export const RedemptionsTab = () => {
     <Tag tone={statusToneOf(row.status)} label={t(`status.${row.status}`)} />
   );
   const purchaseText = (row: RedemptionRow) => row.purchase?.serialNo ?? "—";
+  const serialText = (row: RedemptionRow) => row.serialNo ?? "—";
 
   const columns: TableColumn<RedemptionRow>[] = [
+    { key: "serialNo", header: t("columns.serialNo"), render: serialText },
     {
       key: "time",
       header: t("columns.time"),
@@ -346,7 +349,7 @@ export const RedemptionsTab = () => {
                 sx={{ justifyContent: "space-between", alignItems: "center" }}
               >
                 <Typography color="text.primary">
-                  {`${row.ticketLabel} · ${t("money", { amount: moneyText(row.prizeAmount) })}`}
+                  {`${serialText(row)} · ${row.ticketLabel} · ${t("money", { amount: moneyText(row.prizeAmount) })}`}
                 </Typography>
                 {statusTag(row)}
               </Stack>

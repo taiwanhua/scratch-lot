@@ -40,7 +40,7 @@ export interface RedemptionFlow {
 }
 
 /**
- * 兌獎的入口與視窗串接(規格 6.5;看板與兌獎紀錄分頁共用):兌獎成功 → 提示「已兌獎 … [撤銷]」
+ * 兌獎的入口與視窗串接(規格 6.5;看板與兌獎紀錄分頁共用):兌獎成功 → 提示「已兌獎 RD-0219 · … [撤銷]」
  * (能自己撤銷時才有 [撤銷],直接開那一筆的確認視窗;**不**自動打開 [最近兌獎]);撤銷依 `revokeMode`
  * 開自己撤銷(ST-41)或店長撤銷(ST-39b);[撤銷並重新登記] 接著開兌獎視窗(同一班)。
  */
@@ -69,6 +69,7 @@ export const useRedemptionFlow = (): RedemptionFlow => {
     showSnackbar(
       "success",
       t("successMessage", {
+        serial: row.serialNo ?? "—",
         ticket: row.ticketLabel,
         amount: moneyText(row.prizeAmount),
         cashPoint: cashPointName,

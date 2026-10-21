@@ -232,7 +232,7 @@
 
 **兌獎**(規格 8.2「兌獎」;Figma PU-05 兌獎區):
 
-- 新增頁的兌獎區(`PurchaseRedemptions`,`lotteryPurchaseRedemptions`)只列**進貨分店**「店內持有」的兌獎紀錄;勾選的合計 = 兌獎金額;合計五列(`PurchaseTotals`):批購合計、兌獎金額(勾選 N 筆)、兌獎折抵、扣款金額、兌獎剩餘(算法 `purchaseRedemptionTotalsOf`,和表單計算欄同一套)。跨分店選兌獎紀錄這一輪不做。
+- 新增頁的兌獎區(`PurchaseRedemptions`,`lotteryPurchaseRedemptions`)只列**進貨分店**「店內持有」的兌獎紀錄(第一欄是兌獎紀錄的單號 `RD-0218`,檢視頁的兌獎區同;舊資料「—」);勾選的合計 = 兌獎金額;合計五列(`PurchaseTotals`):批購合計、兌獎金額(勾選 N 筆)、兌獎折抵、扣款金額、兌獎剩餘(算法 `purchaseRedemptionTotalsOf`,和表單計算欄同一套)。跨分店選兌獎紀錄這一輪不做。
 - `beforeSubmit`:勾選的兌獎紀錄要在進貨分店、「店內持有」(或已勾在這張單上)、金額和紀錄相同 → 否則 `PURCHASE_REDEMPTION_INVALID`。已送兌的不在 lookup 的固定條件裡,表單引擎先擋(`VALIDATION_FAILED`,`fields: redemptions`)。
 - `submitted`(每次送出):勾選的改「已送兌」(`purchaseSubmissionId`、`sentAt`);這張單之前勾、這次沒勾的回到店內持有(`RedemptionPurchaseLink.markSent`,被別人搶先撤銷 → 交易回復)。**第一次送出**另在兌獎剩餘 > 0 時以 `SettlementService.recordAutomatic(…, { redemptionIncome: true })` 記銀行「兌獎入帳」= 兌獎剩餘(扣款帳戶、歸屬分店 = 進貨分店、`refType` 指回這張單、`settlementSide = null` → **不算進淨額、不算待結清**)。
 - `withdrawn` / `returned` / `rejected` / `voided`:這張單勾的全部回到「店內持有」(`RedemptionPurchaseLink.release`)。

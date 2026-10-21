@@ -115,6 +115,7 @@ export class RedemptionViews {
       });
       return {
         id: String(row._id),
+        serialNo: row.serialNo ?? null,
         orgId: String(row.orgId),
         gameCode: row.gameCode,
         gameName: gameOf.get(row.gameCode)?.name ?? null,

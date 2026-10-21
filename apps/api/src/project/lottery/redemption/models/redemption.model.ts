@@ -42,6 +42,10 @@ export class LotteryRedemptionModel {
   @Field(() => ID)
   id!: string;
 
+  /** 單號(例 `RD-0218`;各租戶各自連號);加單號之前的舊資料 = null(畫面顯示「—」)。 */
+  @Field(() => String, { nullable: true })
+  serialNo!: string | null;
+
   @Field(() => ID)
   orgId!: string;
 

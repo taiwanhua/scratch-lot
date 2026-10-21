@@ -49,6 +49,11 @@ export const PurchaseRedemptionRecords = ({
 
   const columns: TableColumn<Row>[] = [
     {
+      key: "serialNo",
+      header: t("columns.serialNo"),
+      render: (row) => row.serialNo ?? "—",
+    },
+    {
       key: "time",
       header: t("columns.time"),
       render: (row) => temporal(row.redeemedAt, "monthDayTime"),

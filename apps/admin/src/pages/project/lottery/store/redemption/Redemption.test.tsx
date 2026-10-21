@@ -88,7 +88,7 @@ describe("店面管理:兌獎", () => {
     ]);
     expect(await screen.findByText("已兌獎")).toBeInTheDocument();
     expect(
-      screen.getByText("5164-056527-099 · 500 元 · 店內櫃台"),
+      screen.getByText("RD-0219 · 5164-056527-099 · 500 元 · 店內櫃台"),
     ).toBeInTheDocument();
     expect(screen.queryByText("最近兌獎 · 店內櫃台")).toBeNull();
 
@@ -137,6 +137,8 @@ describe("店面管理:兌獎", () => {
     const table = await within(drawer).findByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(4);
     expect(within(table).getByText("已撤銷")).toBeInTheDocument();
+    // 每列刮刮樂下方是單號
+    expect(within(table).getByText("RD-0218")).toBeInTheDocument();
     const buttons = within(table).getAllByRole("button", { name: "撤銷" });
     await user.click(buttons.at(0) ?? table);
     const confirm = await screen.findByRole("dialog", { name: "撤銷兌獎?" });
@@ -150,14 +152,21 @@ describe("店面管理:兌獎", () => {
     expect(screen.getByText("最近兌獎 · 店內櫃台")).toBeInTheDocument();
   });
 
-  it("兌獎紀錄分頁:列表;已送兌 → 詳情的 [撤銷兌獎] 停用並提示先撤回或退回進貨單", async () => {
+  it("兌獎紀錄分頁:列表(單號欄;舊資料「—」);已送兌 → 詳情的 [撤銷兌獎] 停用並提示先撤回或退回進貨單", async () => {
     const { user } = renderStore({ path: "/store?tab=redemptions" });
     const table = await screen.findByRole("table", { name: "兌獎紀錄" });
     expect(
       await within(table).findByText("5150-042210-083"),
     ).toBeInTheDocument();
+    expect(within(table).getByText("RD-0215")).toBeInTheDocument();
+    // rd-012 是加單號之前的舊資料:單號欄與進貨單欄都是「—」
+    const legacy = within(table).getByText("5164-056527-012").closest("tr");
+    expect(legacy).not.toBeNull();
+    expect(within(legacy ?? table).getAllByText("—")).toHaveLength(2);
     await user.click(within(table).getByText("5150-042210-083"));
-    const dialog = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    const dialog = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
+    // 標題列右側是單號(Figma ST-39a)
+    expect(within(dialog).getByText("RD-0215")).toBeInTheDocument();
     expect(
       await within(dialog).findByText("已送兌(進貨單 P-0033)"),
     ).toBeInTheDocument();
@@ -175,7 +184,7 @@ describe("店面管理:兌獎", () => {
     });
     const table = await screen.findByRole("table", { name: "兌獎紀錄" });
     await user.click(await within(table).findByText("5164-056527-012"));
-    const detail = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    const detail = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
     await user.click(
       await within(detail).findByRole("button", { name: "撤銷兌獎" }),
     );
@@ -248,7 +257,7 @@ describe("店面管理:兌獎", () => {
     const table = await within(drawer).findByRole("table");
     expect(within(table).queryByRole("button", { name: "撤銷" })).toBeNull();
     await user.click(within(table).getByText("5164 · 056527 · #050"));
-    const detail = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    const detail = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
     expect(await within(detail).findByText("300 元")).toBeInTheDocument();
     expect(
       within(detail).queryByRole("button", { name: "撤銷兌獎" }),

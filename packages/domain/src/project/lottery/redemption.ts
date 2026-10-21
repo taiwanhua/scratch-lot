@@ -20,6 +20,18 @@ export function isRedemptionStatus(value: unknown): value is RedemptionStatus {
 /** 單張中獎金額上限:超過擋下(提示客人到銀行兌獎;規格 6.5)。 */
 export const REDEMPTION_MAX_PRIZE = 5000;
 
+/**
+ * 兌獎紀錄的單號(規格 6.5;底座單號機制 ADR-0015):`RD-0001` —— 前綴 RD、4 位數、不分期(`none`),
+ * 各租戶各自連號;新增兌獎時在同一個交易內取號,撤銷不收回,[撤銷並重新登記] 的新紀錄取新號。
+ * `REDEMPTION_SERIAL_KEY` 是計數器的 key(同一個租戶內唯一;表單的是 `form:<formKey>`)。
+ */
+export const REDEMPTION_SERIAL_KEY = "lottery_redemption";
+export const REDEMPTION_SERIAL_FORMAT = {
+  prefix: "RD",
+  period: "none",
+  digits: 4,
+} as const;
+
 /** 兌獎視窗的常見金額選項(Figma ST-11a;另可自由輸入)。 */
 export const REDEMPTION_PRIZE_PRESETS: readonly number[] = [
   200, 500, 1000, 2000,

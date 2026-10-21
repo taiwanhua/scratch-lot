@@ -1,7 +1,9 @@
 import { HttpResponse } from "msw";
 
+import { formatSerial } from "@repo/domain/form";
 import {
   REDEMPTION_MAX_PRIZE,
+  REDEMPTION_SERIAL_FORMAT,
   parseTicketInput,
 } from "@repo/domain/project/lottery";
 import type {
@@ -20,6 +22,7 @@ import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
 import {
   type RedemptionFixture,
+  SAMPLE_LAST_SERIAL,
   redemptionRow,
   sampleRedemptions,
 } from "./redemption-fixtures";
@@ -93,6 +96,12 @@ export const redemptionWorld = (
     sequence += 1;
     const row = redemptionRow({
       id: `rd-new-${String(sequence)}`,
+      // 單號接著夾具的最後一筆連號(撤銷不收回;[撤銷並重新登記] 的新紀錄也取新號)
+      serialNo: formatSerial(
+        REDEMPTION_SERIAL_FORMAT,
+        "none",
+        SAMPLE_LAST_SERIAL + sequence,
+      ),
       gameCode: ticket.gameCode,
       bookNo: ticket.bookNo,
       ticketNo: ticket.ticketNo,

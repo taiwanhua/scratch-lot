@@ -203,14 +203,14 @@
 
 - 標題列:開班中的本機收銀點、有 `store.redeem` → [兌獎](按鈕列最前面);本機收銀點、自己開的那一班 → [最近兌獎](文字按鈕,最後)。按鈕由 `redemption/redemption-board-actions.ts` 組,看板只追加。
 - **兌獎視窗**(`RedeemDialog`):刷背面編號(輸入後 Enter / 離開欄位)→ `lotteryRedemptionPreview` 顯示遊戲、面額、本號、張號、本店的刮刮樂與否、已兌過的提示「這張已兌過獎(10/13 18:02 店外攤位)」;常見金額 200 / 500 / 1,000 / 2,000 + 自由輸入。單張超過 5,000、超過抽屜應有在畫面先擋,api 再擋一次。
-- 兌獎成功 → 提示「已兌獎 5164-056527-031 · 500 元 · 店內櫃台 [撤銷]」(能自己撤銷時才有 [撤銷],直接開那一筆的確認視窗);**不**自動打開 [最近兌獎]。
-- **[最近兌獎]**(`RecentRedemptionsDrawer`,`lotteryRecentRedemptions`):自己在這一班登記的(含已撤銷,標「已撤銷」);電腦 / 平板右側抽屜、手機底部面板;每列 [撤銷] 開確認視窗,撤銷後清單不關;點列的其他地方開兌獎紀錄詳情。
+- 兌獎成功 → 提示「已兌獎 RD-0219 · 5164-056527-031 · 500 元 · 店內櫃台 [撤銷]」(能自己撤銷時才有 [撤銷],直接開那一筆的確認視窗);**不**自動打開 [最近兌獎]。
+- **[最近兌獎]**(`RecentRedemptionsDrawer`,`lotteryRecentRedemptions`):自己在這一班登記的(含已撤銷,標「已撤銷」);電腦 / 平板右側抽屜、手機底部面板;刮刮樂下方一行小字是單號;每列 [撤銷] 開確認視窗,撤銷後清單不關;點列的其他地方開兌獎紀錄詳情。
 - **撤銷兩層**(都不用審核;按鈕看 api 回的 `revokeMode`,沒有權限不顯示,`@repo/domain/project/lottery` 的 `redemptionRevokeStateOf` 前後端共用):
   - `self`:自己登記、那一班還開著、有 `store.redeem` → 確認視窗(ST-41),不限時間、不用原因(原因代碼固定 `immediate`「當下撤銷」)。交易內鎖班時那一班剛好已送出交班結帳 → 擋下(`SHIFT_CLOSED`),不讓交班那一刻變成事後更正,改由 `store.undo-redeem` 撤銷。
   - `manager`:那一班已結帳、或不是自己登記的,有 `store.undo-redeem` → 撤銷原因(必填,欄位管理「撤銷兌獎原因」`lottery-redemption-revoke-reason`)+ 說明(ST-39b);班開著 → 應有增加,已結帳 → 記成那一班的事後更正。另有 [撤銷並重新登記]:原因填好後開兌獎視窗(標題「重新登記 · 收銀點」),撤銷與新增在同一個請求(`replaceLotteryRedemption`),新的那筆算原班、`replacesId` 指向原紀錄。
   - 已送兌:[撤銷兌獎] 停用並提示「已送兌,不能撤銷;要先撤回或退回進貨單 P-xxxx」(ST-39c),api 也拒絕(`REDEMPTION_SENT`)。
-- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選與頁碼存網址 `?redemptions=`(REACT-14):期間(空 = 這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取同一段期間出現過的人)、頁碼(一頁 20 筆);欄位 時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片、篩選收進抽屜;點一列開兌獎紀錄詳情。
-- **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]、進貨單的新增頁兌獎區與檢視頁(讀取依據是讀得到那張進貨單,`lotteryPurchaseRedemptionRecords`;這兩個入口不能撤銷)。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
+- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選與頁碼存網址 `?redemptions=`(REACT-14):期間(空 = 這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取同一段期間出現過的人)、頁碼(一頁 20 筆);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片(標題列 單號 · 刮刮樂 · 金額)、篩選收進抽屜;點一列開兌獎紀錄詳情。沒有關鍵字搜尋,單號只顯示、不搜尋。
+- **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):標題列右側是單號(`RD-0218`;舊資料「—」),刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]、進貨單的新增頁兌獎區與檢視頁(讀取依據是讀得到那張進貨單,`lotteryPurchaseRedemptionRecords`;這兩個入口不能撤銷)。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
 
 ### 投庫 / 出庫(ST-12a / b)
 
@@ -292,19 +292,20 @@
 
 ### 兌獎 `lottery_redemptions`
 
-| 欄位                                                                      | 說明                                                                                 |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `orgId`、`shiftId`、`cashPointId`                                         | 錢從那一班的抽屜付出                                                                 |
-| `redeemedAt`、`redeemedBy`                                                | 登記時間、登記人                                                                     |
-| `gameCode`、`bookNo`、`ticketNo`、`ticketLabel`、`rawInput`               | 遊戲代號、本號 7 位、張號、顯示用張編號 `5164-056527-031`(lookup 的標籤)、刷到的原文 |
-| `ticketId`、`gameId`                                                      | 本店持有的那一張(不是本店的刮刮樂 = null)、遊戲(找不到代號 = null)                   |
-| `prizeAmount`                                                             | 中獎金額(正整數,≤ 5,000)                                                             |
-| `status`                                                                  | `in_store` 店內持有 / `sent` 已送兌 / `revoked` 已撤銷                               |
-| `purchaseSubmissionId`、`sentAt`                                          | 勾進哪一張進貨單、送兌時間                                                           |
-| `revokedAt`、`revokedBy`、`revokeReasonKey`、`revokeReason`、`revokeNote` | 撤銷時間、撤銷人、原因代碼(自己當下撤銷 = `immediate`)、原因名稱快照、說明           |
-| `replacesId`                                                              | [撤銷並重新登記] 的新紀錄指向被撤銷的那筆                                            |
-| `postCloseOf`、`revokePostCloseOf`                                        | **事後更正**:新增時 / 撤銷時那一班已結帳 → 指向那一班(見下方)                        |
-| `version`                                                                 | 狀態改變的條件更新(撤銷、送兌、回到店內持有各 +1)                                    |
+| 欄位                                                                      | 說明                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serialNo`                                                                | 單號 `RD-0001`:底座 `SerialService`(ADR-0015),key `lottery_redemption`、格式 `@repo/domain/project/lottery` 的 `REDEMPTION_SERIAL_FORMAT`(前綴 RD、4 位數、不分期),各租戶各自連號;新增時在同一個交易內取號(交易回復號碼一起回復),撤銷不收回,[撤銷並重新登記] 的新紀錄取新號;加單號之前的舊資料 = null(畫面「—」),正式環境無資料、不做 migration |
+| `orgId`、`shiftId`、`cashPointId`                                         | 錢從那一班的抽屜付出                                                                                                                                                                                                                                                                                                                            |
+| `redeemedAt`、`redeemedBy`                                                | 登記時間、登記人                                                                                                                                                                                                                                                                                                                                |
+| `gameCode`、`bookNo`、`ticketNo`、`ticketLabel`、`rawInput`               | 遊戲代號、本號 7 位、張號、顯示用張編號 `5164-056527-031`(lookup 的標籤)、刷到的原文                                                                                                                                                                                                                                                            |
+| `ticketId`、`gameId`                                                      | 本店持有的那一張(不是本店的刮刮樂 = null)、遊戲(找不到代號 = null)                                                                                                                                                                                                                                                                              |
+| `prizeAmount`                                                             | 中獎金額(正整數,≤ 5,000)                                                                                                                                                                                                                                                                                                                        |
+| `status`                                                                  | `in_store` 店內持有 / `sent` 已送兌 / `revoked` 已撤銷                                                                                                                                                                                                                                                                                          |
+| `purchaseSubmissionId`、`sentAt`                                          | 勾進哪一張進貨單、送兌時間                                                                                                                                                                                                                                                                                                                      |
+| `revokedAt`、`revokedBy`、`revokeReasonKey`、`revokeReason`、`revokeNote` | 撤銷時間、撤銷人、原因代碼(自己當下撤銷 = `immediate`)、原因名稱快照、說明                                                                                                                                                                                                                                                                      |
+| `replacesId`                                                              | [撤銷並重新登記] 的新紀錄指向被撤銷的那筆                                                                                                                                                                                                                                                                                                       |
+| `postCloseOf`、`revokePostCloseOf`                                        | **事後更正**:新增時 / 撤銷時那一班已結帳 → 指向那一班(見下方)                                                                                                                                                                                                                                                                                   |
+| `version`                                                                 | 狀態改變的條件更新(撤銷、送兌、回到店內持有各 +1)                                                                                                                                                                                                                                                                                               |
 
 - **同一張不能兌兩次**:部分唯一索引 `(tenantId, gameCode, bookNo, ticketNo)`(`revokedAt`、`deletedAt` 為 null);撤銷後可以重新登記同一張。別家店兌過也算(整個租戶)。同時兩個請求兌同一張 → 索引擋下後到的,回 `REDEMPTION_DUPLICATE`(`extensions` 帶第一筆的 `redeemedAt`、`cashPointName`)。
 - 兌獎、撤銷(班開著時)、[撤銷並重新登記] 在同一個交易先把班的 `drawerVersion` +1(同投庫 / 出庫),再檢查抽屜應有;撤銷以「店內持有 + 版本」條件更新,兩人同時撤銷只有一個成功(`REDEMPTION_ALREADY_REVOKED`)。

@@ -30,7 +30,7 @@ export interface RecentRedemptionsDrawerProps {
 
 /**
  * [最近兌獎](規格 6.2、6.5;Figma ST-38b):自己在這一班登記的兌獎(含已撤銷,標「已撤銷」);
- * 電腦 / 平板右側抽屜、手機底部面板。每列 [撤銷] 開確認視窗,撤銷後清單不關、那一筆改「已撤銷」;
+ * 電腦 / 平板右側抽屜、手機底部面板;刮刮樂欄下方一行小字是單號(`RD-0218`)。每列 [撤銷] 開確認視窗,撤銷後清單不關、那一筆改「已撤銷」;
  * 點列的其他地方開兌獎紀錄詳情。只在按標題列 [最近兌獎] 時打開,兌獎後不自動打開。
  */
 export const RecentRedemptionsDrawer = ({
@@ -57,9 +57,19 @@ export const RecentRedemptionsDrawer = ({
       key: "ticket",
       header: t("columns.ticket"),
       render: (row) => (
-        <Typography variant="body2" noWrap>
-          {ticketShortOf(row)}
-        </Typography>
+        <>
+          <Typography variant="body2" noWrap>
+            {ticketShortOf(row)}
+          </Typography>
+          <Typography
+            component="div"
+            variant="caption"
+            color="text.secondary"
+            noWrap
+          >
+            {row.serialNo ?? "—"}
+          </Typography>
+        </>
       ),
     },
     {

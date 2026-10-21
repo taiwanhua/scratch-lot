@@ -75,6 +75,11 @@ export const PurchaseRedemptions = ({
       ),
     },
     {
+      key: "serialNo",
+      header: t("columns.serialNo"),
+      render: (row) => row.serialNo ?? "—",
+    },
+    {
       key: "time",
       header: t("columns.time"),
       render: (row) => temporal(row.redeemedAt, "monthDayTime"),

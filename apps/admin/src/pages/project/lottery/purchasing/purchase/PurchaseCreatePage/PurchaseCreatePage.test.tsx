@@ -86,6 +86,7 @@ describe("進貨單新增頁", () => {
     const table = await screen.findByRole("table", { name: "兌獎紀錄" });
     // 夾具:店內持有 3 筆(500、100、1,000);已撤銷、已送兌的不列
     expect(await within(table).findAllByRole("checkbox")).toHaveLength(3);
+    expect(within(table).getByText("RD-0218")).toBeInTheDocument();
     const scan = screen.getByRole("textbox", { name: "刷條碼加入" });
     await user.type(scan, "5164-1-056527-100-0-6{Enter}");
     await screen.findByRole("table", { name: /5164 發大財/ });
@@ -98,7 +99,7 @@ describe("進貨單新增頁", () => {
     expect(screen.getByText("兌獎金額(勾選 2 筆)")).toBeInTheDocument();
     // 點一列(勾選框以外)開兌獎紀錄詳情,不會改勾選
     await user.click(within(table).getByText("5164 · 056527 · #012"));
-    const detail = await screen.findByRole("dialog", { name: "兌獎紀錄" });
+    const detail = await screen.findByRole("dialog", { name: /^兌獎紀錄/ });
     expect(within(detail).getByText("1,000 元")).toBeInTheDocument();
     await user.click(within(detail).getByRole("button", { name: "關閉" }));
     expect(screen.getByText("兌獎金額(勾選 2 筆)")).toBeInTheDocument();

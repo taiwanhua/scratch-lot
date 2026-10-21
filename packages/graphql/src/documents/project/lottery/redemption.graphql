@@ -1,5 +1,6 @@
 fragment LotteryRedemptionFields on LotteryRedemption {
   id
+  serialNo
   orgId
   gameCode
   gameName

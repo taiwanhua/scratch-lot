@@ -4,6 +4,8 @@ import type { Types } from "mongoose";
 import {
   REDEMPTION_IMMEDIATE_REVOKE_REASON,
   REDEMPTION_MAX_PRIZE,
+  REDEMPTION_SERIAL_FORMAT,
+  REDEMPTION_SERIAL_KEY,
   REDEMPTION_STATUS,
   STORE_PERMISSIONS,
   displayTicketKey,
@@ -22,6 +24,7 @@ import { tenantIdOfOrg } from "../../../database/tenant-id";
 import { TransactionService } from "../../../database/transaction";
 import { FieldOptionsService } from "../../../fields/field-options.service";
 import { RealtimePublisher } from "../../../realtime/realtime-publisher.service";
+import { SerialService } from "../../../serials/serial.service";
 import { LotteryCashPointsRepository } from "../../database/lottery-cash-points/lottery-cash-points.repository";
 import { LotteryGamesRepository } from "../../database/lottery-games/lottery-games.repository";
 import { LotteryTicketsRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
@@ -110,6 +113,7 @@ export class RedemptionService {
     private readonly audit: AuditService,
     private readonly access: StoreAccess,
     private readonly views: RedemptionViews,
+    private readonly serials: SerialService,
   ) {}
 
   /** 兌獎視窗的預覽(刷到編號後;`store.redeem`)。 */
@@ -412,7 +416,15 @@ export class RedemptionService {
     if (operator.actorId === null) {
       throw forbiddenError("redemption needs an operator");
     }
+    // 單號 `RD-0001`:在同一個交易內取號(交易回復就連號碼一起回復);撤銷不收回,[撤銷並重新登記] 的新紀錄取新號
+    const serialNo = await this.serials.next(
+      operator,
+      REDEMPTION_SERIAL_KEY,
+      REDEMPTION_SERIAL_FORMAT,
+      { orgId: shift.orgId },
+    );
     return this.redemptions.create(operator, {
+      serialNo,
       orgId: shift.orgId,
       shiftId: shift._id,
       cashPointId: shift.cashPointId,

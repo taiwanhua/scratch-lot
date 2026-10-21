@@ -44,8 +44,8 @@ const Line = ({ label, value }: { label: string; value: ReactNode }) => (
 );
 
 /**
- * 兌獎紀錄詳情(規格 6.5;Figma ST-39a / ST-39c):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態;
- * 已撤銷另列撤銷人與原因。[撤銷兌獎] 只在操作者能撤銷時出現(`revokeMode`,沒有權限不顯示);
+ * 兌獎紀錄詳情(規格 6.5;Figma ST-39a / ST-39c):標題列右側是單號(`RD-0218`;舊資料沒有 → 「—」),
+ * 內容 刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態;已撤銷另列撤銷人與原因。[撤銷兌獎] 只在操作者能撤銷時出現(`revokeMode`,沒有權限不顯示);
  * 已送兌 → 按鈕停用、提示先撤回或退回進貨單。各入口(兌獎紀錄分頁、[最近兌獎]、進貨單的兌獎區與檢視頁)共用;
  * 進貨單的入口傳入已讀到的那一筆(`item`),不能撤銷。
  */
@@ -79,7 +79,20 @@ export const RedemptionDetailDialog = ({
       fullWidth
       maxWidth="sm"
       fullScreen={isMobile}
-      title={t("detailTitle")}
+      title={
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{ justifyContent: "space-between", alignItems: "baseline" }}
+        >
+          <span>{t("detailTitle")}</span>
+          {row === null ? null : (
+            <Typography component="span" variant="body2" color="text.secondary">
+              {row.serialNo ?? "—"}
+            </Typography>
+          )}
+        </Stack>
+      }
       actions={
         <>
           <Button variant="text" onClick={onClose}>

@@ -2348,6 +2348,7 @@ type LotteryRedemption {
   revokedAt: DateTime
   revokedBy: LotteryAccountsRef
   sentAt: DateTime
+  serialNo: String
   shift: LotteryRedemptionShift!
   status: String!
   ticketLabel: String!

@@ -29,6 +29,7 @@ import { redemptionPostCloseNet } from "./redemption-registrations";
 
 const ITEM = /* GraphQL */ `
   id
+  serialNo
   ticketLabel
   prizeAmount
   status
@@ -119,6 +120,7 @@ const LIST = /* GraphQL */ `
 
 interface Row {
   id: string;
+  serialNo: string | null;
   ticketLabel: string;
   prizeAmount: number;
   status: string;
@@ -208,20 +210,21 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
   async function storeUser(
     permissionKeys: readonly string[],
     name: string,
+    orgId: Types.ObjectId = xinyi,
   ): Promise<StoreUser> {
     sequence += 1;
     const account = `redeem-user-${String(sequence)}`;
     const userId = await createUser(connection, {
       account,
       password: PASSWORD,
-      orgIds: [xinyi],
+      orgIds: [orgId],
     });
     await connection
       .collection("users")
       .updateOne({ _id: userId }, { $set: { name } });
     await createRole(api.app, connection, {
       name: `兌獎角色:${account}`,
-      ownerOrgId: xinyi,
+      ownerOrgId: orgId,
       moduleKeys: ["store"],
       permissionKeys: [...permissionKeys],
       assignTo: [userId],
@@ -233,12 +236,13 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     orgId: Types.ObjectId,
     name: string,
     order: number,
+    tenantId: Types.ObjectId = tenant,
   ): Promise<Types.ObjectId> {
     const { insertedId } = await connection
       .collection(LOTTERY_CASH_POINTS_COLLECTION)
       .insertOne({
         orgId,
-        tenantId: tenant,
+        tenantId,
         positionKey: `p-${String(order)}`,
         name,
         order,
@@ -255,12 +259,14 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
   async function openShift(
     cashPointId: Types.ObjectId,
     openedBy: StoreUser,
+    store?: { orgId: Types.ObjectId; tenantId: Types.ObjectId },
   ): Promise<string> {
+    const target = store ?? { orgId: xinyi, tenantId: tenant };
     const { insertedId } = await connection
       .collection(LOTTERY_SHIFTS_COLLECTION)
       .insertOne({
-        orgId: xinyi,
-        tenantId: tenant,
+        orgId: target.orgId,
+        tenantId: target.tenantId,
         cashPointId,
         openedBy: openedBy.userId,
         openedAt: new Date(),
@@ -659,6 +665,10 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
       shift: { id: shiftId, closed: true },
       redeemedBy: { name: "陳店長" },
     });
+    // [撤銷並重新登記] 的新紀錄取新號;原紀錄的號不收回
+    expect(revoked.serialNo).toBe(wrong.serialNo);
+    expect(item.serialNo).toMatch(/^RD-\d{4}$/);
+    expect(item.serialNo).not.toBe(wrong.serialNo);
 
     const reader = await tenantBoundaryContext(
       api.app.get(OrgsRepository),
@@ -732,6 +742,73 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     await ok(clerk, REVOKE, { input: { id: row.id } });
     expect(await expectedOf(xinyiShift)).toBe(5000);
     await closeShift(xinyiShift);
+  });
+
+  it("單號 RD-0001:同一租戶連號、撤銷不收回、下一筆接著編;另一個租戶自己從 1 起", async () => {
+    const serialNumberOf = (row: Row): number => {
+      expect(row.serialNo).toMatch(/^RD-\d{4}$/);
+      return Number(row.serialNo?.slice(3));
+    };
+    const shiftId = await openShift(counter, clerk);
+    const first = await redeem(clerk, shiftId, back("033"), 200);
+    const second = await redeem(clerk, shiftId, back("034"), 200);
+    const start = serialNumberOf(first);
+    expect(serialNumberOf(second)).toBe(start + 1);
+    await ok(clerk, REVOKE, { input: { id: first.id } });
+    // 撤銷不收回:下一筆接著編,同一張再登記也是新號
+    const third = await redeem(clerk, shiftId, back("033"), 200);
+    expect(serialNumberOf(third)).toBe(start + 2);
+    expect(await detail(clerk, first.id)).toMatchObject({
+      status: "revoked",
+      serialNo: first.serialNo,
+    });
+    // 兌獎失敗(超過抽屜應有)的交易回復,號碼一起回復、不跳號
+    expect(
+      await errorOf(clerk, REDEEM, {
+        input: { shiftId, code: back("035"), prizeAmount: 5000 },
+      }),
+    ).toMatchObject({ reason: "AMOUNT_EXCEEDS_DRAWER" });
+    const fourth = await redeem(clerk, shiftId, back("035"), 200);
+    expect(serialNumberOf(fourth)).toBe(start + 3);
+    await closeShift(shiftId);
+
+    // 租戶乙:自己的計數器,第一筆就是 RD-0001
+    const tenantB = await createOrg(connection, {
+      name: "租戶乙",
+      settings: { visibility: "subtree" },
+    });
+    const storeB = await createOrg(connection, {
+      name: "乙店",
+      parentId: tenantB,
+    });
+    const counterB = await cashPoint(storeB, "乙店櫃台", 1, tenantB);
+    const clerkB = await storeUser([S.view, S.redeem], "乙店員", storeB);
+    const shiftB = await openShift(counterB, clerkB, {
+      orgId: storeB,
+      tenantId: tenantB,
+    });
+    const rowB = await redeem(
+      clerkB,
+      shiftB,
+      back("001", "5164", "099999"),
+      200,
+    );
+    expect(rowB).toMatchObject({ serialNo: "RD-0001", isOwnStore: false });
+    const rowB2 = await redeem(
+      clerkB,
+      shiftB,
+      back("002", "5164", "099999"),
+      200,
+    );
+    expect(rowB2.serialNo).toBe("RD-0002");
+    // 沒有單號的舊資料 → null(畫面顯示「—」)
+    await connection
+      .collection("lottery_redemptions")
+      .updateOne(
+        { _id: new Types.ObjectId(rowB2.id) },
+        { $unset: { serialNo: "" } },
+      );
+    expect(await detail(clerkB, rowB2.id)).toHaveProperty("serialNo", null);
   });
 
   it("自己撤銷時那一班剛好交班 → 擋下(SHIFT_CLOSED),不變成事後更正", async () => {
