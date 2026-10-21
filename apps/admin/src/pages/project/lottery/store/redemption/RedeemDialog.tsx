@@ -27,9 +27,12 @@ import {
 } from "@/components/project/lottery/ReasonFields/reason-value";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
+import { SCANNER_FIELD_ATTRIBUTE } from "@/hooks/project/useScanner/scanner-registry";
+import { useScanner } from "@/hooks/project/useScanner/useScanner";
 
 import { moneyText } from "../store-text";
 import {
+  REDEMPTION_SCAN_PURPOSE,
   type RedemptionRow,
   invalidateRedemptions,
   prizeStateOf,
@@ -109,6 +112,14 @@ export const RedeemDialog = ({
   const [lookedUp, setLookedUp] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<unknown>(null);
+
+  // 視窗開著時條碼槍 / 相機讀到的碼交給兌獎(最後掛上的用途優先,蓋過看板的銷售 `store-sale`):
+  // 填進編號並預覽。編號欄本身標 `data-scanner-field`,在欄位裡打字或刷都由欄位自己處理(Enter 預覽)
+  useScanner(REDEMPTION_SCAN_PURPOSE, ({ code: scanned }) => {
+    setCode(scanned);
+    setError(null);
+    setLookedUp(scanned.trim());
+  });
 
   const preview = useLotteryRedemptionPreviewQuery(
     session.client,
@@ -221,6 +232,9 @@ export const RedeemDialog = ({
           helperText={t("codeHint")}
           onChange={(event) => {
             setCode(event.target.value);
+          }}
+          slotProps={{
+            htmlInput: { [SCANNER_FIELD_ATTRIBUTE]: REDEMPTION_SCAN_PURPOSE },
           }}
           onBlur={lookUp}
           onKeyDown={(event) => {

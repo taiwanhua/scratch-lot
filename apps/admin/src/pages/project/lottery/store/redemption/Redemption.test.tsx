@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "@jest/globals";
-import { screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { act, screen, waitFor, within } from "@testing-library/react";
 
 import { STORE_PERMISSIONS as P } from "@repo/domain/project/lottery";
 
+import { injectScan } from "@/hooks/project/useScanner/scanner-registry";
 import { writeLocalCashPoint } from "@/lib/project/lottery/local-cash-point";
 import {
   type RedemptionFixture,
@@ -65,10 +66,13 @@ describe("店面管理:兌獎", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "兌獎 · 店內櫃台",
     });
+    // 每個按鍵同一個時間 = 條碼槍的速度(CI 機器快時 user.type 就是這樣):編號欄自己處理,不交給看板的銷售
+    const now = jest.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
     await user.type(
       within(dialog).getByRole("textbox", { name: "刷背面編號" }),
       "5164-1-056527-099-0-6{Enter}",
     );
+    now.mockRestore();
     expect(await within(dialog).findByText("5164 發大財")).toBeInTheDocument();
     expect(
       within(dialog).getByText("本號 056527 · 張號 099 · 本店的刮刮樂"),
@@ -269,5 +273,23 @@ describe("店面管理:兌獎", () => {
     ).toBeInTheDocument();
     expect(within(table).queryByText("5164-056527-031")).toBeNull();
     expect(screen.getByText("共 1 筆")).toBeInTheDocument();
+  });
+
+  it("兌獎視窗開著時刷條碼(條碼槍 / 相機)→ 交給兌獎(填進編號並預覽),不會被看板的銷售吃掉", async () => {
+    const { user, salesFake } = renderStore();
+    const counter = await headerOf("店內櫃台");
+    await user.click(within(counter).getByRole("button", { name: "兌獎" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "兌獎 · 店內櫃台",
+    });
+    act(() => {
+      injectScan("5164-1-056527-099-0-6");
+    });
+    expect(await within(dialog).findByText("5164 發大財")).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("textbox", { name: "刷背面編號" }),
+    ).toHaveValue("5164-1-056527-099-0-6");
+    expect(salesFake.inputs.sell).toEqual([]);
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 });

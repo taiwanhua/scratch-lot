@@ -16,6 +16,12 @@ import { moneyText } from "../store-text";
 
 export type RedemptionRow = LotteryRedemptionFieldsFragment;
 
+/**
+ * 兌獎視窗的掃描用途(B10;`useScanner`):視窗開著時刷到的碼交給兌獎,不交給看板的銷售(`store-sale`)
+ * —— 否則刷中獎的那一張會被當成售出。
+ */
+export const REDEMPTION_SCAN_PURPOSE = "store-redemption";
+
 /** [最近兌獎] 的 query key 前綴(看板的 `board` 信號也重抓它,`app/project/realtime-signals.ts`)。 */
 export const STORE_RECENT_REDEMPTIONS_QUERY_KEY: QueryKey = [
   "LotteryRecentRedemptions",
