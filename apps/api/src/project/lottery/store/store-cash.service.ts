@@ -128,10 +128,11 @@ export class StoreCashService {
         : trimmed(input.note);
     const shift = await this.mustShift(operator, input.shiftId);
     await this.vault.prepare(operator, shift.orgId);
-    const updated = await this.transactions.withTransaction(async () => {
+    const updated = await this.transactions.withTransaction(async (session) => {
       const locked = await this.lockOpenShift(operator, shift);
       // 不能超過小金庫應有(同一家店同時兩筆出庫在小金庫守門文件上序列化)
       await this.vault.assertCovers(
+        session,
         operator,
         locked.tenantId,
         locked.orgId,

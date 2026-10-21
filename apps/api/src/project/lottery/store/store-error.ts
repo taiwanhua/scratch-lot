@@ -33,6 +33,16 @@ export function forbiddenError(message: string): GraphQLError {
   return new GraphQLError(message, { extensions: { code: "FORBIDDEN" } });
 }
 
+/** 資料在這段時間被改了 / 讀不到(例:單據完成時退款班次已不存在);`reason` 選填。 */
+export function conflictError(message: string, reason?: string): GraphQLError {
+  return new GraphQLError(message, {
+    extensions: {
+      code: "CONFLICT",
+      ...(reason === undefined ? {} : { reason }),
+    },
+  });
+}
+
 /** 輸入不合法;`fields` 讓前端把錯誤標回表單欄位,`reason` 選填。 */
 export function validationError(
   message: string,

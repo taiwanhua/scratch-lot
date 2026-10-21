@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { Types } from "mongoose";
+import type { ClientSession, Types } from "mongoose";
 
 import type { OperatorContext } from "../../../database/operator-context";
 import { LotteryVaultLocksRepository } from "../../database/lottery-store/lottery-shifts.repository";
@@ -39,10 +39,11 @@ export class StoreVaultGuard {
   }
 
   /**
-   * 交易內:碰守門文件,再檢查小金庫應有 ≥ 這次要拿的金額;不夠 → `VALIDATION_FAILED`
+   * 交易內(`session` = 呼叫端交易的 session):碰守門文件,再檢查小金庫應有 ≥ 這次要拿的金額;不夠 → `VALIDATION_FAILED`
    * (`reason = AMOUNT_EXCEEDS_VAULT`,欄位 `field`)。
    */
   async assertCovers(
+    session: ClientSession,
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
@@ -53,6 +54,7 @@ export class StoreVaultGuard {
       operator,
       { orgId },
       { $inc: { version: 1 } },
+      { session },
     );
     if (!touched) {
       throw new Error(`vault lock missing: org ${String(orgId)}`);
@@ -69,17 +71,22 @@ export class StoreVaultGuard {
 
   /**
    * 交易內只碰守門文件、不檢查應有(現金更正單完成時寫小金庫:增加不用檢查、減少是登記實際短少的錢,
-   * 不擋;規格 8.8)。讓同一家店同時動小金庫的動作照同一個守門文件序列化;守門文件不存在就先建。
+   * 不擋;規格 8.8)。讓同一家店同時動小金庫的動作照同一個守門文件序列化;守門文件不存在就在同一個交易裡先建
+   * (`session` = 掛接點的交易)。
    */
   async serialize(
     operator: OperatorContext,
     orgId: Types.ObjectId,
+    session: ClientSession,
   ): Promise<void> {
-    await this.prepare(operator, orgId);
+    if (!(await this.locks.findOne(operator, { orgId }, { session }))) {
+      await this.locks.create(operator, { orgId, version: 0 }, { session });
+    }
     await this.locks.findOneAndUpdate(
       operator,
       { orgId },
       { $inc: { version: 1 } },
+      { session },
     );
   }
 }

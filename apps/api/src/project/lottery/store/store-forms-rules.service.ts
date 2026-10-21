@@ -45,6 +45,7 @@ import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-sh
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketLockRef } from "../tickets/ticket-ledger.types";
+import { conflictError, validationError } from "./store-error";
 import { StoreVaultGuard } from "./store-vault-guard";
 
 /** 兩張表單掛接點擋下的代碼(`FORBIDDEN` + `reason`;模組文件「錯誤碼」)。 */
@@ -235,7 +236,13 @@ export class StoreFormsRules {
         };
   }
 
-  /** 送出:這張單的張全部鎖定(重送時先解掉不在單上的)。 */
+  /**
+   * 送出:這張單的張全部鎖定(重送時先解掉不在單上的)。
+   *
+   * **前提**:「本店已售、沒被別的單鎖定」已由同一個送出交易裡的 `beforeSubmit`(`beforeSubmitSaleReversal`)
+   * 檢查過,這裡不再檢查狀態,只鎖;檢查之後到鎖定之前有人動過(別的單先鎖住)→ 帳本的鎖定 `CONFLICT`,
+   * 整個送出回復。
+   */
   async onSaleReversalSubmitted(context: FormEffectContext): Promise<void> {
     const tenantId = context.tenantId;
     if (tenantId === null) {
@@ -376,8 +383,9 @@ export class StoreFormsRules {
         context.session,
       );
       if (shift === null) {
-        throw new Error(
-          `撤銷售出申請 ${String(context.submissionId)} 的退款班次讀不到`,
+        // 送出前檢查過;完成時讀不到 = 這段時間被刪了(不以 0 元或別的班代替)
+        throw conflictError(
+          `refund shift of sale reversal ${String(context.submissionId)} is gone`,
         );
       }
       await this.recordDrawer(reader, context, shift, {
@@ -436,14 +444,17 @@ export class StoreFormsRules {
     const parsed = cashCorrectionValuesOf(submission.values);
     const branchId = toObjectId(parsed.branchId);
     if (branchId === null || parsed.direction === null) {
-      throw new Error(`現金更正單 ${String(context.submissionId)} 的值不完整`);
+      throw validationError(
+        `cash correction ${String(context.submissionId)} has incomplete values`,
+        ["branch", "direction"],
+      );
     }
     const increase = parsed.direction === CASH_CORRECTION_DIRECTION.increase;
     const type = increase ? "correction_increase" : "correction_decrease";
     const attributedShiftId = toObjectId(parsed.attributedShiftId);
     if (parsed.place === CASH_CORRECTION_PLACE.vault) {
       // 小金庫:和出庫、開班領零用金在同一個守門文件上序列化(規格 6.7)
-      await this.vault.serialize(reader, branchId);
+      await this.vault.serialize(reader, branchId, context.session);
       await this.cash.recordCashMovement(context.session, {
         operator: reader,
         orgId: branchId,
@@ -460,8 +471,8 @@ export class StoreFormsRules {
     } else {
       const shift = await this.shiftOf(reader, parsed.shiftId, context.session);
       if (shift === null) {
-        throw new Error(
-          `現金更正單 ${String(context.submissionId)} 的位置那一班讀不到`,
+        throw conflictError(
+          `shift of cash correction ${String(context.submissionId)} is gone`,
         );
       }
       await this.recordDrawer(reader, context, shift, {
@@ -541,7 +552,7 @@ export class StoreFormsRules {
       { session: context.session },
     );
     if (!submission) {
-      throw new Error(`單據 ${String(context.submissionId)} 讀不到`);
+      throw conflictError(`submission ${String(context.submissionId)} is gone`);
     }
     return submission;
   }

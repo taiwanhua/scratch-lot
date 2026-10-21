@@ -261,7 +261,7 @@ export class StoreShiftsService {
     }
     let created: ShiftRecord;
     try {
-      created = await this.transactions.withTransaction(async () => {
+      created = await this.transactions.withTransaction(async (session) => {
         // 同一個人在兩家店同時開班:在「人」守門文件上衝突、重跑,重跑時讀得到對方剛開的班
         if (tenantId !== null) {
           await this.personLocks.touch(operator, tenantId, actorId);
@@ -296,6 +296,7 @@ export class StoreShiftsService {
         }
         // 從小金庫領零用金不能超過小金庫應有(同一家店同時拿錢在小金庫守門文件上序列化)
         await this.vault.assertCovers(
+          session,
           operator,
           tenantId,
           point.orgId,

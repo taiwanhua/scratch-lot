@@ -127,6 +127,10 @@
 |              | `completed`                           | 現金流水「現金更正」`correction_increase` / `correction_decrease`,另記 `attributedShiftId`:位置 = 某一班 → 那一班的抽屜(開著:`drawerVersion` +1、計入應有;已結帳:事後更正);位置 = 小金庫 → 小金庫(和出庫同一個守門文件序列化 `StoreVaultGuard.serialize`;減少不檢查小金庫應有,登記的是實際短少的錢) |
 |              | `beforeVoid`                          | 一律擋下                                                                                                                                                                                                                                                                                            |
 
+- **完成時不檢查應有夠不夠**:撤銷售出申請完成時退款班次開著、抽屜應有不夠退款 → 照記(應有可以變負),由那一班交班結帳的差額呈現;不在審核後擋下(錢已經當面退給客人,擋下只會讓帳和現實不符)。
+- **小金庫的現金更正「減少」不檢查小金庫應有**:現金更正單登記的是實際短少的錢(例:假鈔、存款短少),短少已經發生,擋下只會讓帳記不進去;出庫、存銀行這類「從小金庫拿錢」的動作才檢查應有(`StoreVaultGuard.assertCovers`)。現金更正只碰同一個守門文件(`StoreVaultGuard.serialize`,帶掛接點交易的 session)和它們序列化。
+- 完成時讀不到退款班次 / 位置那一班或單據(送出後被刪)→ `CONFLICT`;值不完整 → `VALIDATION_FAILED`;整個核准回復。
+
 流水的 `refType = "store"`、`refId` = 提交 id、`refRevision` = 修訂號。完成時對 `board:<分店>` 送 `board` 信號。「不能選已關帳月份」(退款班次、現金更正位置)由關帳的功能加在 `beforeSubmit`。
 
 **給交班結帳的查詢**:`StoreFormsQueryService.pendingCashImpacts(reader, shiftId)`(`LotteryStoreModule` 匯出)回審核中的現金更正單(位置 = 這一班,±金額)與撤銷售出申請(退款 = 是、退款班次 = 這一班,−退款金額),依送出時間排;交班精靈第 ③ 步列出並自動帶入差額原因(規格 6.9)。
