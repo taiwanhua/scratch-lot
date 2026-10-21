@@ -1,7 +1,9 @@
 import {
-  type LocalDate,
+  addLocalCalendar,
+  instantOfLocalTime,
   localDateOf,
-  startOfLocalDay,
+  localDateText,
+  localDayDiff,
 } from "../../form/temporal";
 import {
   CHECKOUT_TYPE,
@@ -188,51 +190,35 @@ export function bankDepositProblemOf(input: {
   return null;
 }
 
-// ---- 日期(租戶時區的當地日期;呼叫端先用 `localDateOf` 換好) ----
-
-const dayNumberOf = (date: LocalDate): number =>
-  Math.floor(Date.UTC(date.year, date.month - 1, date.day) / 86_400_000);
-
-const dateOfDayNumber = (day: number): LocalDate => {
-  const shifted = new Date(day * 86_400_000);
-  return {
-    year: shifted.getUTCFullYear(),
-    month: shifted.getUTCMonth() + 1,
-    day: shifted.getUTCDate(),
-  };
-};
-
-/** 當地日期 + N 天。 */
-export function addLocalDays(date: LocalDate, days: number): LocalDate {
-  return dateOfDayNumber(dayNumberOf(date) + days);
-}
-
-/** `to − from` 的日曆日數(頂部「上次日結:10/13(已 3 天)」)。 */
-export function localDaysBetween(from: LocalDate, to: LocalDate): number {
-  return dayNumberOf(to) - dayNumberOf(from);
-}
+// ---- 日期(一律用底座 `form/temporal.ts` 的時點與當地日期換算;租戶時區) ----
 
 /**
- * 涵蓋計算期間裡「沒有日結」的日子(畫面「涵蓋計算期間 10/14 09:02 至 現在(10/14、10/15 沒有日結)」):
+ * 涵蓋計算期間裡「沒有日結」的日子(`YYYY-MM-DD`;畫面「涵蓋計算期間 10/14 09:02 至 現在(10/14、10/15 沒有日結)」):
  * 上一次日結那天起、到今天的前一天(今天還沒過完不算);上一次日結就是今天 → 沒有。沒有上一次日結 → 沒有。
  */
 export function dailyCloseGapDates(
-  lastClose: LocalDate | null,
-  today: LocalDate,
-): LocalDate[] {
+  lastClose: Date | null,
+  now: Date,
+  timezone: string,
+): string[] {
   if (lastClose === null) {
     return [];
   }
-  const from = dayNumberOf(lastClose);
-  const to = dayNumberOf(today);
-  return Array.from({ length: Math.max(to - from, 0) }, (_, index) =>
-    dateOfDayNumber(from + index),
+  const days = localDayDiff(lastClose, now, timezone) ?? 0;
+  return Array.from({ length: Math.max(days, 0) }, (_, index) =>
+    localDateText(
+      localDateOf(
+        addLocalCalendar(lastClose.getTime(), index, "days", timezone),
+        timezone,
+      ),
+    ),
   );
 }
 
 /**
  * 日結逾期的時點(規格 3.4、6.10):這家店最早一張還沒被日結涵蓋計算的交班結帳,送出日的**隔天** `time`(`HH:mm`,
- * 租戶時區;通知設定頁可調,預設 09:00)。過了這個時點還沒日結 → 負責人提醒(之後每天一次)、側欄計數。
+ * 租戶時區;通知設定頁可調,預設 09:00)。過了這個時點還沒日結 → 負責人提醒(之後每天一次)、側欄計數
+ * (api 的提醒與側欄數字都經這一支判斷,時點一致)。
  */
 export function dailyCloseOverdueAt(
   earliestSubmittedAt: Date,
@@ -240,11 +226,9 @@ export function dailyCloseOverdueAt(
   time: string,
 ): Date {
   const [hour = 0, minute = 0] = time.split(":").map(Number);
-  const nextDay = addLocalDays(
-    localDateOf(earliestSubmittedAt.getTime(), timezone),
-    1,
+  const nextDay = localDateOf(
+    addLocalCalendar(earliestSubmittedAt.getTime(), 1, "days", timezone),
+    timezone,
   );
-  return new Date(
-    startOfLocalDay(nextDay, timezone) + (hour * 60 + minute) * 60_000,
-  );
+  return new Date(instantOfLocalTime(nextDay, hour, minute, timezone));
 }

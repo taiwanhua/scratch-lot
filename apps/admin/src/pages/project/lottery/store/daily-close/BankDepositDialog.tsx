@@ -30,7 +30,8 @@ export interface BankDepositDialogProps {
 
 /**
  * 存銀行(專案規格 6.11;Figma ST-26a、ST-26b):小金庫 → 銀行,不用審核、做完就生效。金額、存入帳戶
- * (使用中、使用組織包含這家分店;只有一個時自動帶入)、備註。金額超過小金庫應有 → 擋下(提示先用現金更正單補登);
+ * (使用中、使用組織包含這家分店;只有一個時自動帶入)、備註。金額超過小金庫應有(扣掉審核中日結要存入銀行的金額)→ 擋下
+ * (提示先用現金更正單補登);
  * 本店沒有可用的銀行帳戶 → 錯誤提示、不能存。「存款單」列印由列印的功能加上。
  */
 export const BankDepositDialog = ({
@@ -79,8 +80,9 @@ export const BankDepositDialog = ({
   const amountValue = Number(amount.trim());
   const isAmountValid =
     amount.trim() !== "" && Number.isInteger(amountValue) && amountValue > 0;
-  const exceeds =
-    isAmountValid && data !== null && amountValue > data.vaultExpected;
+  // 能存的上限 = 小金庫應有 − 審核中日結要存入銀行的金額
+  const available = data === null ? 0 : data.vaultExpected - data.reserved;
+  const exceeds = isAmountValid && data !== null && amountValue > available;
   const noAccount = data !== null && accounts.length === 0;
 
   const submit = () => {
@@ -137,6 +139,14 @@ export const BankDepositDialog = ({
             })}
           </Typography>
         )}
+        {data !== null && data.reserved > 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            {t("bankDeposit.reserved", {
+              amount: moneyText(data.reserved),
+              available: moneyText(available),
+            })}
+          </Typography>
+        ) : null}
         {noAccount ? (
           <Alert severity="error">{t("errors.BANK_DEPOSIT_NO_ACCOUNT")}</Alert>
         ) : null}
@@ -151,7 +161,7 @@ export const BankDepositDialog = ({
           helperText={
             exceeds
               ? t("bankDeposit.exceeds", {
-                  amount: moneyText(data.vaultExpected),
+                  amount: moneyText(available),
                 })
               : undefined
           }

@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
 
-import { STORE_KEY, dailyCloseOverdueAt } from "@repo/domain/project/lottery";
+import { STORE_KEY } from "@repo/domain/project/lottery";
 
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
@@ -11,6 +11,7 @@ import { SidebarBadgeRegistry } from "../../../sidebar-badges/sidebar-badge-regi
 import { LOTTERY_DAILY_CLOSE_OVERDUE } from "../../notifications";
 import { StoreClock } from "../store/store-clock";
 import { DailyCloseLedger } from "./daily-close-ledger";
+import { isDailyCloseOverdue } from "./daily-close-overdue";
 
 /**
  * 側欄「店面管理」的數字(專案規格 3.4、6.10;底座 10.4 登記制):**日結逾期的店數** —— 這家店最早一張還沒被
@@ -56,13 +57,9 @@ export class StoreBadge implements OnModuleInit {
       tenantTimezoneOf(this.orgs, operator, tenantId),
       this.settings.effectiveSchedule(tenantId, LOTTERY_DAILY_CLOSE_OVERDUE),
     ]);
-    const time =
-      effective.schedule.kind === "daily-overdue"
-        ? effective.schedule.time
-        : "09:00";
     const now = this.clock.now();
-    return [...earliest.values()].filter(
-      (submittedAt) => dailyCloseOverdueAt(submittedAt, timezone, time) <= now,
+    return [...earliest.values()].filter((submittedAt) =>
+      isDailyCloseOverdue(submittedAt, effective, timezone, now),
     ).length;
   }
 }

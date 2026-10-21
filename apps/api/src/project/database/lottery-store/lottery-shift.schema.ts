@@ -141,6 +141,8 @@ LotteryShiftSchema.index({ orgId: 1, openedAt: -1 });
 LotteryShiftSchema.index({ cashPointId: 1, openedAt: -1 });
 LotteryShiftSchema.index({ tenantId: 1, openedBy: 1, closedAt: 1 });
 LotteryShiftSchema.index({ tenantId: 1, scheduleEntryId: 1 });
+// 日結:涵蓋計算的班、還沒被涵蓋的最早一班(依送出交班結帳的時間)
+LotteryShiftSchema.index({ orgId: 1, closedAt: 1 });
 LotteryShiftSchema.plugin(baseFieldsPlugin);
 // 資料共用 private(ADR-0014):總部看得到分店的班靠可見範圍「包含下層」
 LotteryShiftSchema.plugin(tenantScopePlugin, {

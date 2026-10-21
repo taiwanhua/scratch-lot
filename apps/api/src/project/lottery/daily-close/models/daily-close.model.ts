@@ -171,6 +171,10 @@ export class LotteryBankDepositFormModel {
   @Field(() => Int)
   vaultExpected!: number;
 
+  /** 審核中 / 已退回的日結要存入銀行的金額(已清點、等核准後存入;這次能存的上限 = 應有 − 它) */
+  @Field(() => Int)
+  reserved!: number;
+
   /** 這家店可用的帳戶;沒有 → ST-26b「本店沒有銀行帳戶」 */
   @Field(() => [LotteryAccountsRefModel])
   accounts!: LotteryAccountsRefModel[];

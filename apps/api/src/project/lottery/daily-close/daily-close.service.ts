@@ -547,7 +547,8 @@ export class DailyCloseService {
         refId: record.submissionId,
         summary: "日結存入銀行",
       },
-      { session },
+      // 已送出單據的系統寫入:送出時已驗過帳戶,之後停用不影響這張日結(也不再檢查使用組織)
+      { session, allowInactiveAccount: true },
     );
     const movement = await this.cashLedger.recordCashMovement(session, {
       operator: writer,

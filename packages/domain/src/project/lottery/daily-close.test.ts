@@ -2,12 +2,10 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   type DailyCloseDraft,
-  addLocalDays,
   bankDepositProblemOf,
   checkoutDraftTypeOf,
   dailyCloseGapDates,
   dailyCloseOverdueAt,
-  localDaysBetween,
   parseDailyCloseDraft,
   serializeDailyCloseDraft,
 } from "./daily-close";
@@ -35,11 +33,6 @@ const draft: DailyCloseDraft = {
   diffReasonKey: null,
   diffReasonNote: null,
   bankDeposit: { amount: 20_000, accountId: "acc-1" },
-};
-
-const d = (text: string) => {
-  const [year, month, day] = text.split("-").map(Number);
-  return { year: year ?? 0, month: month ?? 0, day: day ?? 0 };
 };
 
 describe("日結的結帳內容", () => {
@@ -83,24 +76,35 @@ describe("存入銀行的檢查", () => {
 });
 
 describe("涵蓋計算期間沒有日結的日子", () => {
-  it("10/14 09:02 日結、今天 10/16 → 10/14、10/15 沒有日結", () => {
-    expect(dailyCloseGapDates(d("2026-10-14"), d("2026-10-16"))).toEqual([
-      d("2026-10-14"),
-      d("2026-10-15"),
-    ]);
+  const tz = "Asia/Taipei";
+  const at = (text: string) => new Date(`${text}+08:00`);
+
+  it("10/14 09:02 日結、現在 10/16 10:00 → 10/14、10/15 沒有日結", () => {
+    expect(
+      dailyCloseGapDates(
+        at("2026-10-14T09:02:00"),
+        at("2026-10-16T10:00:00"),
+        tz,
+      ),
+    ).toEqual(["2026-10-14", "2026-10-15"]);
   });
 
   it("上一次日結就是今天 → 沒有;從來沒日結 → 沒有;跨月", () => {
-    expect(dailyCloseGapDates(d("2026-10-16"), d("2026-10-16"))).toEqual([]);
-    expect(dailyCloseGapDates(null, d("2026-10-16"))).toEqual([]);
-    expect(dailyCloseGapDates(d("2026-10-31"), d("2026-11-01"))).toEqual([
-      d("2026-10-31"),
-    ]);
-  });
-
-  it("已幾天、加天數", () => {
-    expect(localDaysBetween(d("2026-10-13"), d("2026-10-16"))).toBe(3);
-    expect(addLocalDays(d("2026-12-31"), 1)).toEqual(d("2027-01-01"));
+    expect(
+      dailyCloseGapDates(
+        at("2026-10-16T09:02:00"),
+        at("2026-10-16T23:00:00"),
+        tz,
+      ),
+    ).toEqual([]);
+    expect(dailyCloseGapDates(null, at("2026-10-16T10:00:00"), tz)).toEqual([]);
+    expect(
+      dailyCloseGapDates(
+        at("2026-10-31T22:00:00"),
+        at("2026-11-01T08:00:00"),
+        tz,
+      ),
+    ).toEqual(["2026-10-31"]);
   });
 });
 

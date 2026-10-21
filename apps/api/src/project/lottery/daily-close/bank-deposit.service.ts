@@ -36,7 +36,8 @@ const NOTE_MAX = 200;
  * `store.bank-deposit`。不用審核、做完就生效(同投庫、出庫):同一個交易寫現金流水「存銀行」(小金庫 → 銀行)
  * + 銀行「存入」(歸屬分店 = 這家店),兩筆以 `bankTransactionId` 連起來。
  *
- * - 金額不能超過小金庫目前的應有(`StoreVaultGuard`,與出庫同一個守門文件序列化;`AMOUNT_EXCEEDS_VAULT`)
+ * - 金額不能超過小金庫目前的應有扣掉審核中日結要存入銀行的金額(`StoreVaultGuard`,與出庫同一個守門文件序列化;
+ *   `AMOUNT_EXCEEDS_VAULT`)
  * - 帳戶:使用中、使用組織包含這家店;這家店沒有任何可用的帳戶 → `BANK_DEPOSIT_NO_ACCOUNT`(Figma ST-26b)
  * - 記錯:到帳戶管理沖正那筆「存入」,連結的「存銀行」流水自動反向(`BankTransactionsService.reverseRecord`)
  */
@@ -64,12 +65,13 @@ export class BankDepositService {
     const store = await this.support.mustStore(operator, orgIdText);
     const [org, vault, accounts] = await Promise.all([
       this.orgs.findById(operator, store.orgId),
-      this.cashLedger.vaultExpected(operator, store.tenantId, store.orgId),
+      this.vault.available(operator, store.tenantId, store.orgId),
       this.settlement.usableAccountsOf(operator, store.tenantId, store.orgId),
     ]);
     return {
       org: { id: String(store.orgId), name: org?.name ?? "" },
-      vaultExpected: vault.amount,
+      vaultExpected: vault.expected,
+      reserved: vault.reserved,
       accounts: accounts.map((account) => ({
         id: account.id,
         name: account.label,

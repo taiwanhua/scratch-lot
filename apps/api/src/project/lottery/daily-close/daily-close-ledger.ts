@@ -144,6 +144,7 @@ export class DailyCloseLedger {
     from: Date | null,
     to: Date | null,
     session?: ClientSession,
+    limit?: number,
   ): Promise<ShiftRecord[]> {
     return this.shifts.findMany(
       reader,
@@ -155,7 +156,11 @@ export class DailyCloseLedger {
           ...(to === null ? {} : { $lte: to }),
         },
       },
-      { sort: { closedAt: 1, _id: 1 }, ...options(session) },
+      {
+        sort: { closedAt: 1, _id: 1 },
+        ...(limit === undefined ? {} : { limit }),
+        ...options(session),
+      },
     );
   }
 
@@ -219,7 +224,15 @@ export class DailyCloseLedger {
       if (covered !== null && latest <= covered) {
         continue;
       }
-      const [first] = await this.coveredShifts(reader, orgId, covered, null);
+      // 只要最早的一班(索引 `(orgId, closedAt)`)
+      const [first] = await this.coveredShifts(
+        reader,
+        orgId,
+        covered,
+        null,
+        undefined,
+        1,
+      );
       if (first?.closedAt != null) {
         result.set(String(orgId), first.closedAt);
       }

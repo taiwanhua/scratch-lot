@@ -1,14 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import type { Types } from "mongoose";
 
-import { localDateOf, localDateText } from "@repo/domain/form";
+import { localDayDiff } from "@repo/domain/form";
 import {
   CHECKOUT_STATUS,
   STOCKTAKE_STATUS,
   STORE_PERMISSIONS,
   dailyCloseGapDates,
   isStocktakeReusable,
-  localDaysBetween,
 } from "@repo/domain/project/lottery";
 
 import {
@@ -100,10 +99,7 @@ export class DailyCloseQueryService {
         operator,
         store.tenantId,
       );
-      daysSince = localDaysBetween(
-        localDateOf(lastClosedAt.getTime(), timezone),
-        localDateOf(this.clock.now().getTime(), timezone),
-      );
+      daysSince = localDayDiff(lastClosedAt, this.clock.now(), timezone);
     }
     return {
       lastClosedAt,
@@ -181,12 +177,7 @@ export class DailyCloseQueryService {
       org: { id: String(store.orgId), name: org?.name ?? "" },
       coveredFrom,
       coveredTo,
-      gapDates: dailyCloseGapDates(
-        coveredFrom === null
-          ? null
-          : localDateOf(coveredFrom.getTime(), timezone),
-        localDateOf((coveredTo ?? now).getTime(), timezone),
-      ).map((date) => localDateText(date)),
+      gapDates: dailyCloseGapDates(coveredFrom, coveredTo ?? now, timezone),
       openShifts: openRows,
       pending: await this.pendingModelOf(operator, store.tenantId, pending),
       shifts: rows,

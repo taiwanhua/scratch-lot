@@ -15,6 +15,7 @@ import {
 } from "../../../scheduled-jobs/scheduled-job-registry";
 import { LOTTERY_DAILY_CLOSE_OVERDUE } from "../../notifications";
 import { DailyCloseLedger } from "./daily-close-ledger";
+import { isDailyCloseOverdue } from "./daily-close-overdue";
 
 /** 排程工作 key(`docs/deployment.md`「Cloud Scheduler」;全域唯一)。 */
 export const DAILY_CLOSE_OVERDUE_JOB_KEY = "lottery.daily-close-overdue";
@@ -74,6 +75,17 @@ export class DailyCloseRemindersService implements OnModuleInit {
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
     const earliest = await this.dailyLedger.earliestUncovered(reader);
     for (const [orgIdText, submittedAt] of earliest) {
+      // 和側欄數字同一個逾期時點;之後每天的時點、漏跑補寄與去重照底座 `scheduleHitAt`
+      if (
+        !isDailyCloseOverdue(
+          submittedAt,
+          effective,
+          tenant.timezone,
+          scheduledFor,
+        )
+      ) {
+        continue;
+      }
       const since = localDateOf(submittedAt.getTime(), tenant.timezone);
       const hit = scheduleHitAt(effective.schedule, {
         scheduledFor,

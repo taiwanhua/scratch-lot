@@ -3510,11 +3510,12 @@
     "bankDeposit": {
       "title": "Bank deposit",
       "vault": "{store} · vault expected {amount}",
+      "reserved": "{amount} is reserved for a daily close under review; you can deposit up to {available} now",
       "amount": "Amount",
       "account": "Bank account",
       "note": "Note",
       "hint": "Only active accounts used by this store are listed. Takes effect immediately; to correct a mistake, reverse the deposit in Accounts.",
-      "exceeds": "Exceeds the vault expected cash {amount}. If there is more cash than recorded, register a cash correction first.",
+      "exceeds": "Exceeds the amount available now {amount} (vault expected minus deposits of daily closes under review). If there is more cash than recorded, register a cash correction first.",
       "cancel": "Cancel",
       "submit": "Deposit",
       "success": "Deposited to the bank"

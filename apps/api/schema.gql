@@ -1462,6 +1462,7 @@ type LotteryBankAccountsPayload {
 type LotteryBankDepositForm {
   accounts: [LotteryAccountsRef!]!
   org: LotteryAccountsRef!
+  reserved: Int!
   vaultExpected: Int!
 }
 

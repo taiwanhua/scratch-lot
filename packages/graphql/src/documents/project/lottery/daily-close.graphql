@@ -70,6 +70,7 @@ query LotteryBankDepositForm($orgId: ID!) {
       ...LotteryAccountsRefFields
     }
     vaultExpected
+    reserved
     accounts {
       ...LotteryAccountsRefFields
     }

@@ -211,6 +211,7 @@ export const sampleBankDepositForm = (
   __typename: "LotteryBankDepositForm",
   org: ref(orgId, DAILY_CLOSE_ORG.name),
   vaultExpected: 24_000,
+  reserved: 0,
   accounts,
 });
 

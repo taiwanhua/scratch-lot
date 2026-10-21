@@ -46,6 +46,7 @@ import {
 import { createRole } from "../../../permission/test-support/fixtures";
 import {
   type Person,
+  SUBMIT_SUBMISSION,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
   bindForm,
@@ -160,6 +161,7 @@ const DEPOSIT_FORM = /* GraphQL */ `
   query DepositForm($orgId: ID!) {
     lotteryBankDepositForm(orgId: $orgId) {
       vaultExpected
+      reserved
       accounts {
         id
         name
@@ -596,6 +598,35 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     return connection
       .collection<LotteryCheckout>(LOTTERY_CHECKOUTS_COLLECTION)
       .findOne({ submissionId: new Types.ObjectId(submissionId) });
+  }
+
+  async function editVersionOf(submissionId: string): Promise<number> {
+    const raw = await connection
+      .collection<{ editVersion: number }>("form_submissions")
+      .findOne({ _id: new Types.ObjectId(submissionId) });
+    return raw?.editVersion ?? 0;
+  }
+
+  /** 退回後修改再送出(表單引擎的 `submitFormSubmission`)。 */
+  async function resubmit(
+    who: Person,
+    submissionId: string,
+    draft: DailyCloseDraft,
+  ): Promise<GraphqlResult> {
+    return gql(who, SUBMIT_SUBMISSION, {
+      input: {
+        id: submissionId,
+        expectedEditVersion: await editVersionOf(submissionId),
+        values: {
+          [CHECKOUT_FIELD_KEYS.branch]: draft.orgId,
+          [CHECKOUT_FIELD_KEYS.type]: "daily",
+          [CHECKOUT_FIELD_KEYS.cashPoint]: null,
+          [CHECKOUT_FIELD_KEYS.successor]: null,
+          [CHECKOUT_FIELD_KEYS.leftForNext]: 0,
+          [CHECKOUT_FIELD_KEYS.draft]: serializeDailyCloseDraft(draft),
+        },
+      },
+    });
   }
 
   async function vaultOf(orgId: Types.ObjectId): Promise<number> {
@@ -1064,6 +1095,7 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     }>(manager, DEPOSIT_FORM, { orgId: String(store.orgId) });
     expect(form.lotteryBankDepositForm).toEqual({
       vaultExpected: 3000,
+      reserved: 0,
       accounts: [{ id: String(sharedAccount), name: expect.any(String) }],
     });
     const deposit = (amount: number, accountId = String(sharedAccount)) =>
@@ -1193,5 +1225,133 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     await pastDaily(store.orgId, taipei("21", "09:20"), 0);
     expect(await runAt("22", "09:00")).toEqual([]);
     expect(await storeBadge()).toBe(baseline);
+  });
+  it("退回後再送出:涵蓋計算期間與涵蓋的班照第一次送出;自己不算另一張審核中;退回期間新交班的班不納入;已退回的日結擋住新的日結", async () => {
+    const store = await newStore("北投店");
+    const first = await closedShift(
+      store.orgId,
+      store.counter,
+      taipei("23", "08:00"),
+    );
+    now("23", "10:00");
+    const id = await submitOk(lead, dailyDraftOf(store.orgId, 0));
+    await decideOn(world, manager, id, "RETURN");
+    expect(await checkoutOf(id)).toMatchObject({ status: "returned" });
+
+    // 退回期間:有一班送出交班;已退回的日結擋住新的日結
+    const later = await closedShift(
+      store.orgId,
+      store.stall,
+      taipei("23", "11:00"),
+    );
+    now("23", "12:00");
+    expect(await submitBlocked(lead, dailyDraftOf(store.orgId, 0))).toEqual(
+      expect.objectContaining({ reason: DAILY_CLOSE_REASONS.pendingExists }),
+    );
+    // 新的日結看到「另一張已退回」;退回後打開自己那張不算
+    expect((await wizard(store.orgId)).pending).toEqual({
+      submissionId: id,
+      status: "returned",
+    });
+    const own = await wizard(store.orgId, id);
+    expect(own.pending).toBeNull();
+    expect(own.coveredTo).toBe(taipei("23", "10:00").toISOString());
+    expect(own.shifts.map((row) => row.shiftId)).toEqual([String(first)]);
+
+    const result = await resubmit(lead, id, dailyDraftOf(store.orgId, 0));
+    expect(result.errors).toBeUndefined();
+    expect(await checkoutOf(id)).toMatchObject({
+      status: "pending",
+      coveredFrom: null,
+      coveredTo: taipei("23", "10:00"),
+      coveredShiftIds: [first],
+      submittedAt: taipei("23", "12:00"),
+    });
+    await decideOn(world, manager, id, "APPROVE");
+    // 退回期間送出交班的班算下一次日結
+    const next = await wizard(store.orgId);
+    expect(next.coveredFrom).toBe(taipei("23", "10:00").toISOString());
+    expect(next.shifts.map((row) => row.shiftId)).toEqual([String(later)]);
+  });
+
+  it("審核中日結的存入金額保留:[存銀行] 只能動用應有扣掉它;核准前帳戶被停用 → 完成時照樣存入", async () => {
+    const store = await newStore("石牌店");
+    const account = await bankAccount(store.orgId, "0055555", []);
+    await vaultMovement(store.orgId, "deposit", 9000, taipei("24", "09:00"));
+    now("24", "21:00");
+    const id = await submitOk(
+      lead,
+      dailyDraftOf(store.orgId, 9000, {
+        bankDeposit: { amount: 5000, accountId: String(account) },
+      }),
+    );
+
+    // 應有 9,000、審核中的日結要存 5,000 → 最多只能再存 4,000
+    now("24", "21:30");
+    const form = await ok<{
+      lotteryBankDepositForm: { vaultExpected: number; reserved: number };
+    }>(manager, DEPOSIT_FORM, { orgId: String(store.orgId) });
+    expect(form.lotteryBankDepositForm).toMatchObject({
+      vaultExpected: 9000,
+      reserved: 5000,
+    });
+    const deposit = (amount: number) =>
+      gql(manager, DEPOSIT, {
+        input: {
+          orgId: String(store.orgId),
+          amount,
+          accountId: String(account),
+        },
+      });
+    const tooMuch = await deposit(4500);
+    expect(tooMuch.errors?.[0]?.extensions).toMatchObject({
+      reason: "AMOUNT_EXCEEDS_VAULT",
+    });
+    const fits = await deposit(4000);
+    expect(fits.errors).toBeUndefined();
+
+    // 核准前帳戶停用:已送出的日結照樣存入(停用只是不能再被選用)
+    await connection
+      .collection(LOTTERY_BANK_ACCOUNTS_COLLECTION)
+      .updateOne({ _id: account }, { $set: { status: "inactive" } });
+    now("25", "09:00");
+    await decideOn(world, manager, id, "APPROVE");
+    const record = await checkoutOf(id);
+    expect(record).toMatchObject({ status: "confirmed" });
+    expect(
+      await connection
+        .collection(LOTTERY_BANK_TRANSACTIONS_COLLECTION)
+        .findOne({ _id: record?.bankTransactionId ?? undefined }),
+    ).toMatchObject({ type: "deposit", amount: 5000, accountId: account });
+    // 清點 9,000 − 21:30 存銀行 4,000 − 完成時存銀行 5,000 = 0,不會變負
+    expect(await vaultOf(store.orgId)).toBe(0);
+  });
+
+  it("日結逾期:6 小時內漏跑補寄(09:00 漏跑 → 14:00 補寄;15:30 不寄)", async () => {
+    const store = await newStore("天母店");
+    await closedShift(store.orgId, store.counter, taipei("24", "22:10"));
+    const calls: NotifyInput[] = [];
+    jest
+      .spyOn(api.app.get(NotificationService), "notify")
+      .mockImplementation((input: NotifyInput) => {
+        calls.push(input);
+        return Promise.resolve();
+      });
+    const runAt = async (day: string, time: string) => {
+      calls.length = 0;
+      await api.app.get(DailyCloseRemindersService).run({
+        key: DAILY_CLOSE_OVERDUE_JOB_KEY,
+        scheduledFor: taipei(day, time),
+        tenants: [{ tenantId: tenant, timezone: "Asia/Taipei" }],
+      });
+      return calls.filter((call) => String(call.orgId) === String(store.orgId));
+    };
+    const caughtUp = await runAt("25", "14:00");
+    expect(caughtUp).toHaveLength(1);
+    expect(caughtUp[0]?.params).toEqual({
+      orgName: "天母店",
+      since: "2026-10-24",
+    });
+    expect(await runAt("25", "15:30")).toEqual([]);
   });
 });

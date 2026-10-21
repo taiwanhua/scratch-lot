@@ -1588,6 +1588,7 @@ export type LotteryBankDepositForm = {
   __typename?: 'LotteryBankDepositForm';
   accounts: Array<LotteryAccountsRef>;
   org: LotteryAccountsRef;
+  reserved: Scalars['Int']['output'];
   vaultExpected: Scalars['Int']['output'];
 };
 
@@ -10085,7 +10086,7 @@ export type LotteryBankDepositFormQueryVariables = Exact<{
 }>;
 
 
-export type LotteryBankDepositFormQuery = { __typename?: 'Query', lotteryBankDepositForm: { __typename?: 'LotteryBankDepositForm', vaultExpected: number, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, accounts: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
+export type LotteryBankDepositFormQuery = { __typename?: 'Query', lotteryBankDepositForm: { __typename?: 'LotteryBankDepositForm', vaultExpected: number, reserved: number, org: { __typename?: 'LotteryAccountsRef', id: string, name: string }, accounts: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
 
 export type DepositLotteryVaultToBankMutationVariables = Exact<{
   input: DepositLotteryVaultToBankInput;
@@ -20574,6 +20575,7 @@ export const LotteryBankDepositFormDocument = `
       ...LotteryAccountsRefFields
     }
     vaultExpected
+    reserved
     accounts {
       ...LotteryAccountsRefFields
     }

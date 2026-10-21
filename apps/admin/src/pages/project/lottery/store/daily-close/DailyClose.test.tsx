@@ -94,7 +94,7 @@ describe("店面管理:日結與存銀行", () => {
     const amount = within(dialog).getByRole("textbox", { name: /金額/u });
     await user.type(amount, "30000");
     expect(
-      within(dialog).getByText(/超過小金庫目前應有金額 24,000/u),
+      within(dialog).getByText(/超過這次能存的金額 24,000/u),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "確認存入" }),
@@ -110,6 +110,28 @@ describe("店面管理:日結與存銀行", () => {
       amount: 20_000,
       accountId: "acc-1",
     });
+  });
+
+  it("存銀行:審核中的日結要存入銀行的金額保留,這次能存的上限扣掉它", async () => {
+    const user = fastUser();
+    renderStore({ dailyCloseOptions: { bankForm: { reserved: 5000 } } });
+    await user.click(await screen.findByRole("button", { name: "存銀行" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        "其中 5,000 是審核中的日結要存入銀行的,這次最多能存 19,000",
+      ),
+    ).toBeInTheDocument();
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /金額/u }),
+      "20000",
+    );
+    expect(
+      within(dialog).getByText(/超過這次能存的金額 19,000/u),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "確認存入" }),
+    ).toBeDisabled();
   });
 
   it("存銀行:本店沒有可用的銀行帳戶 → ST-26b 錯誤、不能存", async () => {
