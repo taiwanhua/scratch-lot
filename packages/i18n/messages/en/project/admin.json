@@ -2547,7 +2547,12 @@
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
-    "STORE_FORM_VOID_NOT_ALLOWED": "Sale reversals and cash corrections cannot be voided; create an opposite one instead"
+    "STORE_FORM_VOID_NOT_ALLOWED": "Sale reversals and cash corrections cannot be voided; create an opposite one instead",
+    "STOCKTAKE_DIFF_STALE": "These tickets were already processed. Please recheck.",
+    "STOCKTAKE_DIFF_UNHANDLED": "Some differences are not handled yet.",
+    "STOCKTAKE_DRAFT_INVALID": "The stocktake is incomplete (or a loss has no reason). Please count again.",
+    "STOCKTAKE_FORBIDDEN": "You do not have permission to stocktake or confirm losses.",
+    "STOCKTAKE_VOID_FORBIDDEN": "Stocktake confirmations cannot be voided; recover tickets when they are scanned."
   },
   "lotteryStore": {
     "tabs": {
@@ -2556,7 +2561,8 @@
       "otherForms": "Other requests",
       "redemptions": "Redemptions",
       "saleReversals": "Sale reversals",
-      "cashCorrections": "Cash corrections"
+      "cashCorrections": "Cash corrections",
+      "stocktakes": "Stocktakes"
     },
     "top": {
       "org": "Branch",
@@ -3061,6 +3067,255 @@
     },
     "undoRequest": {
       "send": "Send sale reversal request"
+    },
+    "stocktake": {
+      "entry": {
+        "button": "Stocktake",
+        "reminder": "It has been over 24 hours since the last stocktake. Consider counting now."
+      },
+      "scope": {
+        "title": "Start stocktake (ad hoc)",
+        "store": "Whole store",
+        "cashPoint": "One cash point",
+        "cashPointLabel": "Cash point",
+        "hint": "Sales continue during the count; submit a stocktake confirmation when done.",
+        "cancel": "Cancel",
+        "start": "Start"
+      },
+      "types": {
+        "shift": "Shift handover",
+        "daily": "Daily close",
+        "adhoc": "Ad hoc stocktake"
+      },
+      "statuses": {
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "rejected": "Rejected",
+        "returned": "Returned"
+      },
+      "totals": "Backfilled sales {backfill} · {amount}; new investigations {investigate}; flagged {flagged}; confirmed lost {lost}",
+      "page": {
+        "tabLabel": "Stocktake",
+        "title": "{heading} · {scope}",
+        "started": "Started {time} · {name}",
+        "wholeStore": "Whole store",
+        "cancel": "Cancel (discard)",
+        "progress": "Counted {done} / {total} books",
+        "diffCount": "{count} differences",
+        "footer": "Sales continue during the count; pending stocktakes do not block the next one.",
+        "review": "Review differences →",
+        "noBooks": "No books on the counters in this scope",
+        "loadFailed": "Could not load the stocktake data. Try again later.",
+        "pickBook": "Book to count",
+        "returnedHint": "This stocktake confirmation was returned. Edit and submit again."
+      },
+      "cashPoint": {
+        "expected": "Expected cash {amount}",
+        "immediate": "redemption backfills take effect immediately",
+        "noShift": "No open shift at this cash point",
+        "redeem": "Backfill redemption"
+      },
+      "bookStatus": {
+        "counted": "Counted",
+        "uncounted": "Not counted",
+        "current": "Current",
+        "diff": "{count} diff"
+      },
+      "book": {
+        "title": "{game} · Book {bookNo}",
+        "meta": "{cashPoint} · {price}",
+        "subtitle": "Book {bookNo} · {count} on counter",
+        "hint": "Select the tickets still on the counter (selected = present); system figures are as of when you started this book.",
+        "methodAria": "Count method",
+        "grid": "Tap cells",
+        "scan": "Scan",
+        "scanField": "Scan barcode",
+        "scanHint": "Scanned tickets are marked present, not sold.",
+        "scanned": "Marked #{ticketNo}",
+        "scanNotHere": "This ticket is not in this stocktake",
+        "system": "System ({time})",
+        "present": "Counted",
+        "diff": "Difference",
+        "tickets": "{count} tickets",
+        "none": "0 tickets",
+        "prev": "Previous",
+        "next": "Next",
+        "legendSelected": "Present (counted)",
+        "pendingReversal": "Reversal pending"
+      },
+      "unopened": {
+        "title": "Unopened books (present / missing)",
+        "book": "Book",
+        "game": "Game",
+        "count": "Tickets",
+        "state": "Present?",
+        "stateAria": "Is book {bookNo} present",
+        "present": "Present",
+        "absent": "Missing",
+        "hint": "Missing books are marked for investigation when the stocktake completes.",
+        "empty": "No unopened books"
+      },
+      "lost": {
+        "title": "Under investigation",
+        "action": "Action",
+        "wholeBook": "whole book",
+        "sinceTransfer": "{date} removed in transit",
+        "sinceStocktake": "{date} missing at stocktake",
+        "since": "{date} under investigation",
+        "actions": {
+          "found": "Found (scan barcode)",
+          "lost": "Confirm lost (reason required)",
+          "keep": "Keep investigating"
+        },
+        "scanToConfirm": "Scan any ticket of this book to confirm it was found",
+        "foundOk": "Scanned, found",
+        "lostReason": "Loss reason (required)",
+        "hint": "Confirming a loss requires permission and a reason; you can also keep investigating.",
+        "empty": "No tickets under investigation"
+      },
+      "review": {
+        "title": "Review differences",
+        "info": "Handle each ticket; select several to apply at once. [Backfill sale] takes effect immediately: open shift at that cash point → counted in that shift; closed → recorded as a post-close correction of its latest shift.",
+        "selected": "{count} selected",
+        "pickAria": "Select #{ticketNo}",
+        "actions": {
+          "sale_backfill": "Backfill sale",
+          "investigate": "Investigate",
+          "flag": "Flag"
+        },
+        "clear": "Clear selection",
+        "recount": "Recount this book",
+        "recheck": "Recheck",
+        "lineTitle": "{cashPoint} · {game} · Book {bookNo}",
+        "shiftOpen": "Shift of {name} is open",
+        "shiftClosed": "No open shift at this cash point",
+        "columns": {
+          "ticket": "Ticket",
+          "system": "System",
+          "actual": "Actual",
+          "action": "Action",
+          "result": "Result"
+        },
+        "system": {
+          "unsold": "Unsold",
+          "sold": "Sold"
+        },
+        "actual": {
+          "absent": "Missing",
+          "present": "Present"
+        },
+        "backfilled": "Sale backfilled (immediate)",
+        "extraHint": "Sold in the system but still present: can only be flagged.",
+        "pendingReversal": "Reversal pending: {tickets} (not a difference)",
+        "result": {
+          "backfillOpen": "Sale counted in the shift at {cashPoint}; expected cash {amount}",
+          "backfillClosed": "Post-close correction of the latest shift at {cashPoint} {amount}",
+          "investigate": "Under investigation; responsible store = {store}",
+          "flag": "Correct later with a sale reversal (stocktake error)",
+          "none": "Not handled"
+        },
+        "summary": {
+          "backfill": "Backfilled sales",
+          "backfillValue": "{count} · {amount}",
+          "newInvestigate": "New investigations",
+          "flagged": "Flagged",
+          "unhandled": "Not handled",
+          "count": "{count}"
+        },
+        "back": "Back to counting",
+        "submit": "Submit →",
+        "noDiff": "No differences",
+        "stale": "These tickets were already processed. Please recheck: {tickets}",
+        "alreadyProcessed": "These tickets were already processed. Please recheck.",
+        "noShift": "This cash point has never had a shift, so the sale cannot be backfilled",
+        "backfillDone": "Backfilled {count} sales · {amount} (immediate)",
+        "lostNotReady": "Finish the investigation list: found tickets must be scanned and losses need a reason"
+      },
+      "submit": {
+        "title": "Submit stocktake?",
+        "hint": "Details lock after submission and a stocktake confirmation goes to the store manager; sales continue meanwhile.",
+        "cashPoint": "Cash point / shift",
+        "backfill": "Backfilled",
+        "expected": "Expected cash",
+        "postClose": "Post-close +{amount}",
+        "shiftOpen": "{name} {time} (open)",
+        "shiftClosed": "{name} {time} (checked out)",
+        "newInvestigate": "New investigations",
+        "flagged": "Flagged",
+        "unopenedAbsent": "Unopened books missing",
+        "confirmLost": "Confirmed lost",
+        "lostCost": "{count} · cost {cost}",
+        "count": "{count}",
+        "books": "{count} books",
+        "uncounted": "{count} books were not counted and will not be compared.",
+        "note": "Note",
+        "back": "Back",
+        "confirm": "Submit stocktake confirmation"
+      },
+      "list": {
+        "type": "Type",
+        "status": "Status",
+        "all": "All",
+        "columns": {
+          "serialNo": "No.",
+          "type": "Type",
+          "time": "Counted at",
+          "backfill": "Backfilled",
+          "newInvestigate": "New investigations",
+          "confirmLost": "Confirmed lost",
+          "status": "Status"
+        },
+        "total": "{count} total",
+        "empty": "No stocktakes",
+        "backfillValue": "{count} · {amount}",
+        "cardFacts": "Backfilled {backfill} · new investigations {investigate} · lost {lost}"
+      },
+      "view": {
+        "title": "Stocktake confirmation",
+        "titleWithNo": "Stocktake confirmation {serialNo}",
+        "meta": "Applicant {name} · submitted {time} · {type} · {scope}",
+        "backToList": "Back to list",
+        "edit": "Edit and resubmit",
+        "columns": {
+          "book": "Book",
+          "cashPoint": "Cash point",
+          "method": "Method",
+          "system": "System",
+          "present": "Counted",
+          "diffNos": "Differences",
+          "action": "Action"
+        },
+        "methods": {
+          "grid": "Tap cells",
+          "scan": "Scan"
+        },
+        "actions": {
+          "sale_backfill": "Backfill sale",
+          "investigate": "Investigate",
+          "flag": "Flag"
+        },
+        "postClose": " (post-close)",
+        "noLines": "No counted books",
+        "summary": {
+          "backfill": "Backfilled sales",
+          "newInvestigate": "New investigations",
+          "flagged": "Flagged",
+          "confirmLost": "Confirmed lost"
+        },
+        "backfillValue": "{count} · {amount}",
+        "lostValue": "{count} · cost {cost}",
+        "count": "{count}",
+        "unopened": "Unopened book",
+        "lost": "Investigation",
+        "present": "present",
+        "absent": "missing → investigate",
+        "lostActions": {
+          "found": "found → recovered",
+          "lost": "confirmed lost",
+          "keep": "keep investigating"
+        },
+        "loadFailed": "Could not load this stocktake"
+      }
     }
   }
 }

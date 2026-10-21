@@ -1,8 +1,8 @@
 import {
   STORE_MODULE_KEYS as KEYS,
   STORE_PERMISSIONS as P,
-  STORE_FORM_PERMISSIONS,
   STOCKTAKE_CONFIRM_FORM_KEY,
+  STORE_FORM_PERMISSIONS,
   STORE_KEY,
 } from "@repo/domain/project/lottery";
 

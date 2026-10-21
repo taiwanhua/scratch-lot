@@ -1,8 +1,8 @@
 import { makeupPunchWorkflow } from "./makeup-punch";
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
-import { cashCorrectionWorkflow, saleReversalWorkflow } from "./store-forms";
 import { stocktakeConfirmWorkflow } from "./stocktake-confirm";
+import { cashCorrectionWorkflow, saleReversalWorkflow } from "./store-forms";
 import { supportRequestWorkflow } from "./support-request";
 import { transferWorkflow } from "./transfer";
 import type { FormWorkflowSpec } from "./types";

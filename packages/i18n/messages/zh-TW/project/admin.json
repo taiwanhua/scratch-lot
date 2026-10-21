@@ -2547,7 +2547,12 @@
     "STORE_FORM_SHIFT_NOT_IN_BRANCH": "選的班不是這家分店的班",
     "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "有張數不是本店已售,或已在其他還沒結束的撤銷售出申請上",
     "SALE_REVERSAL_AMOUNT_MISMATCH": "退款金額和這些張數的面額合計不符,請重新選張數",
-    "STORE_FORM_VOID_NOT_ALLOWED": "撤銷售出申請、現金更正單不能作廢;錯了請再開一張反向的"
+    "STORE_FORM_VOID_NOT_ALLOWED": "撤銷售出申請、現金更正單不能作廢;錯了請再開一張反向的",
+    "STOCKTAKE_DIFF_STALE": "這幾張已被處理,請重新核對",
+    "STOCKTAKE_DIFF_UNHANDLED": "還有差異沒有處理,請在差異核對逐張處理",
+    "STOCKTAKE_DRAFT_INVALID": "盤點內容不完整(或確認遺失沒有原因),請重新盤點",
+    "STOCKTAKE_FORBIDDEN": "沒有盤點或確認遺失的權限",
+    "STOCKTAKE_VOID_FORBIDDEN": "盤點確認申請不能作廢;待查的張刷到時再尋回"
   },
   "lotteryStore": {
     "tabs": {
@@ -2556,7 +2561,8 @@
       "otherForms": "其他申請",
       "redemptions": "兌獎紀錄",
       "saleReversals": "撤銷售出",
-      "cashCorrections": "現金更正"
+      "cashCorrections": "現金更正",
+      "stocktakes": "盤點紀錄"
     },
     "top": {
       "org": "分店",
@@ -3061,6 +3067,255 @@
     },
     "undoRequest": {
       "send": "送撤銷售出申請"
+    },
+    "stocktake": {
+      "entry": {
+        "button": "盤點",
+        "reminder": "距離上次盤點已超過 24 小時,建議盤點一次"
+      },
+      "scope": {
+        "title": "開始盤點(臨時)",
+        "store": "全店",
+        "cashPoint": "單一收銀點",
+        "cashPointLabel": "收銀點",
+        "hint": "盤點期間照常銷售;完成後送「盤點確認申請」。",
+        "cancel": "取消",
+        "start": "開始盤點"
+      },
+      "types": {
+        "shift": "交班",
+        "daily": "日結",
+        "adhoc": "臨時盤點"
+      },
+      "statuses": {
+        "pending": "待核准",
+        "confirmed": "已確認",
+        "rejected": "已駁回",
+        "returned": "已退回"
+      },
+      "totals": "補登售出 {backfill} 張 · {amount} 元;新增待查 {investigate} 張;標記異常 {flagged} 張;確認遺失 {lost} 張",
+      "page": {
+        "tabLabel": "盤點",
+        "title": "{heading} · {scope}",
+        "started": "{time} 開始 · {name}",
+        "wholeStore": "全店",
+        "cancel": "取消(不保留)",
+        "progress": "已盤 {done} / {total} 本",
+        "diffCount": "差異 {count} 張",
+        "footer": "盤點期間照常銷售;待核准的盤點不擋下一次盤點。",
+        "review": "差異核對 →",
+        "noBooks": "這個範圍沒有檯面上的本",
+        "loadFailed": "讀不到盤點資料,請稍後再試",
+        "pickBook": "選擇要盤的本",
+        "returnedHint": "這張盤點確認申請已退回,修改後再送出。"
+      },
+      "cashPoint": {
+        "expected": "應有現金 {amount}",
+        "immediate": "補登兌獎立即生效",
+        "noShift": "這個收銀點沒有開著的班",
+        "redeem": "補登兌獎"
+      },
+      "bookStatus": {
+        "counted": "已盤",
+        "uncounted": "未盤",
+        "current": "目前這本",
+        "diff": "差異 {count}"
+      },
+      "book": {
+        "title": "{game} · 本號 {bookNo}",
+        "meta": "{cashPoint} · {price} 元",
+        "subtitle": "本號 {bookNo} · 檯面 {count} 張",
+        "hint": "點出實際還在檯面上的張(已選 = 在);系統數字是開始盤這本那一刻的數字。",
+        "methodAria": "盤點方式",
+        "grid": "點格子",
+        "scan": "掃描",
+        "scanField": "刷條碼",
+        "scanHint": "刷到的張記為「在」,不會被當成售出。",
+        "scanned": "已點 #{ticketNo}",
+        "scanNotHere": "這張不在這次盤點的範圍",
+        "system": "系統({time})",
+        "present": "實盤",
+        "diff": "差異",
+        "tickets": "{count} 張",
+        "none": "0 張",
+        "prev": "上一本",
+        "next": "下一本",
+        "legendSelected": "在(已點)",
+        "pendingReversal": "撤銷審核中"
+      },
+      "unopened": {
+        "title": "未拆的本(在 / 不在)",
+        "book": "本",
+        "game": "遊戲",
+        "count": "張數",
+        "state": "在不在",
+        "stateAria": "本號 {bookNo} 在不在",
+        "present": "在",
+        "absent": "不在",
+        "hint": "不在的本:盤點完成時列為待查。",
+        "empty": "沒有未拆的本"
+      },
+      "lost": {
+        "title": "待查清單",
+        "action": "處理",
+        "wholeBook": "整本",
+        "sinceTransfer": "{date} 調貨在途刪除",
+        "sinceStocktake": "{date} 盤點時不在",
+        "since": "{date} 待查",
+        "actions": {
+          "found": "找到了(刷條碼)",
+          "lost": "確認遺失(原因必填)",
+          "keep": "繼續待查"
+        },
+        "scanToConfirm": "刷這本任一張的條碼,確認找到了",
+        "foundOk": "已刷到,找到了",
+        "lostReason": "遺失原因(必填)",
+        "hint": "確認遺失需要有權限,原因必填;也可以「繼續待查」。",
+        "empty": "沒有待查的張"
+      },
+      "review": {
+        "title": "差異核對",
+        "info": "每一張各自處理,可以多選後一次套用。[補登售出] 立即生效:那個收銀點有開著的班 → 算進那一班;已結帳 → 記成那個收銀點最近一班的事後更正。",
+        "selected": "已選 {count} 張",
+        "pickAria": "選取 #{ticketNo}",
+        "actions": {
+          "sale_backfill": "補登售出",
+          "investigate": "待查",
+          "flag": "標記異常"
+        },
+        "clear": "取消選取",
+        "recount": "重新盤點這本",
+        "recheck": "重新核對",
+        "lineTitle": "{cashPoint} · {game} · 本號 {bookNo}",
+        "shiftOpen": "{name} 的班開著",
+        "shiftClosed": "這個收銀點沒有開著的班",
+        "columns": {
+          "ticket": "張號",
+          "system": "系統",
+          "actual": "實際",
+          "action": "處理",
+          "result": "結果"
+        },
+        "system": {
+          "unsold": "未售",
+          "sold": "已售"
+        },
+        "actual": {
+          "absent": "不在",
+          "present": "還在"
+        },
+        "backfilled": "已補登售出(立即生效)",
+        "extraHint": "系統已售、實際還在:只能標記異常。",
+        "pendingReversal": "撤銷審核中:{tickets}(不算差異)",
+        "result": {
+          "backfillOpen": "售出算進{cashPoint}這一班,應有現金 {amount}",
+          "backfillClosed": "記成{cashPoint}最近一班的事後更正 {amount}",
+          "investigate": "待查,責任分店 = {store}",
+          "flag": "之後用撤銷售出申請「盤點錯誤」更正",
+          "none": "還沒處理"
+        },
+        "summary": {
+          "backfill": "補登售出",
+          "backfillValue": "{count} 張 · {amount} 元",
+          "newInvestigate": "新增待查",
+          "flagged": "標記異常",
+          "unhandled": "未處理",
+          "count": "{count} 張"
+        },
+        "back": "返回盤點",
+        "submit": "送出 →",
+        "noDiff": "沒有差異",
+        "stale": "這幾張已被處理,請重新核對:{tickets}",
+        "alreadyProcessed": "這幾張已被處理,請重新核對",
+        "noShift": "這個收銀點從來沒有開過班,沒有班可以記這筆補登售出",
+        "backfillDone": "已補登售出 {count} 張 · {amount} 元(立即生效)",
+        "lostNotReady": "待查清單還沒處理完:「找到了」要刷條碼,「確認遺失」要選原因"
+      },
+      "submit": {
+        "title": "送出盤點?",
+        "hint": "送出後明細鎖定,送「盤點確認申請」給店長核准;盤點期間照常銷售。",
+        "cashPoint": "收銀點 / 班",
+        "backfill": "補登售出",
+        "expected": "應有現金",
+        "postClose": "事後更正 +{amount}",
+        "shiftOpen": "{name} {time}(開著)",
+        "shiftClosed": "{name} {time}(已結帳)",
+        "newInvestigate": "新增待查",
+        "flagged": "標記異常",
+        "unopenedAbsent": "未拆的本不在",
+        "confirmLost": "確認遺失",
+        "lostCost": "{count} 張 · 批購成本 {cost} 元",
+        "count": "{count} 張",
+        "books": "{count} 本",
+        "uncounted": "還有 {count} 本沒有盤;沒盤的本不比對。",
+        "note": "說明",
+        "back": "返回",
+        "confirm": "送出盤點確認申請"
+      },
+      "list": {
+        "type": "類型",
+        "status": "狀態",
+        "all": "全部",
+        "columns": {
+          "serialNo": "單號",
+          "type": "類型",
+          "time": "盤點時間",
+          "backfill": "補登售出",
+          "newInvestigate": "新增待查",
+          "confirmLost": "確認遺失",
+          "status": "狀態"
+        },
+        "total": "共 {count} 筆",
+        "empty": "沒有盤點紀錄",
+        "backfillValue": "{count} 張 · {amount}",
+        "cardFacts": "補登售出 {backfill} · 新增待查 {investigate} · 確認遺失 {lost}"
+      },
+      "view": {
+        "title": "盤點確認申請",
+        "titleWithNo": "盤點確認申請 {serialNo}",
+        "meta": "申請人 {name} · 送出 {time} · {type} · {scope}",
+        "backToList": "回列表",
+        "edit": "修改後再送出",
+        "columns": {
+          "book": "本",
+          "cashPoint": "收銀點",
+          "method": "方式",
+          "system": "系統",
+          "present": "實盤",
+          "diffNos": "差異張號",
+          "action": "處理"
+        },
+        "methods": {
+          "grid": "點格子",
+          "scan": "掃描"
+        },
+        "actions": {
+          "sale_backfill": "補登售出",
+          "investigate": "待查",
+          "flag": "標記異常"
+        },
+        "postClose": "(事後更正)",
+        "noLines": "沒有盤點明細",
+        "summary": {
+          "backfill": "補登售出",
+          "newInvestigate": "新增待查",
+          "flagged": "標記異常",
+          "confirmLost": "確認遺失"
+        },
+        "backfillValue": "{count} 張 · {amount} 元",
+        "lostValue": "{count} 張 · 批購成本 {cost}",
+        "count": "{count} 張",
+        "unopened": "未拆的本",
+        "lost": "待查清單",
+        "present": "在",
+        "absent": "不在 → 待查",
+        "lostActions": {
+          "found": "找到了 → 尋回",
+          "lost": "確認遺失",
+          "keep": "繼續待查"
+        },
+        "loadFailed": "讀不到這張盤點單"
+      }
     }
   }
 }

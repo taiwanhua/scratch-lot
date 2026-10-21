@@ -27,6 +27,7 @@ import {
 
 import { redemptionBoardActions } from "../redemption/redemption-board-actions";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
+import { useStocktakeEntry } from "../stocktake/useStocktakeEntry";
 import { type BoardDialog, BoardDialogs } from "./BoardDialogs";
 import { BoardTopBar } from "./BoardTopBar";
 import { type BoardCashPoint, CashPointSection } from "./CashPointSection";
@@ -96,6 +97,8 @@ export const BoardTab = () => {
   });
   // 兌獎(P23):[兌獎] [最近兌獎]、兌獎提示的 [撤銷] 與兌獎紀錄詳情
   const redemption = useRedemptionFlow();
+  // 盤點(P24):頂部 [盤點]、距離上次盤點超過 24 小時的提醒、盤點範圍視窗
+  const stocktake = useStocktakeEntry(orgId, cashPoints);
 
   const applyLocal = (cashPointId: string) => {
     writeLocalCashPoint(orgId, cashPointId);
@@ -220,13 +223,17 @@ export const BoardTab = () => {
           (shift) => shift.cashPoint.name,
         )}
         extra={
-          <CameraScanButton
-            onOpen={() => {
-              setSalesDialog({ kind: "camera" });
-            }}
-          />
+          <>
+            <CameraScanButton
+              onOpen={() => {
+                setSalesDialog({ kind: "camera" });
+              }}
+            />
+            {stocktake.button}
+          </>
         }
       />
+      {stocktake.reminder}
       {board !== null && local === null && cashPoints.length > 0 ? (
         <Alert
           severity="warning"
@@ -332,6 +339,7 @@ export const BoardTab = () => {
       />
       {flow.element}
       {redemption.element}
+      {stocktake.element}
     </Stack>
   );
 };

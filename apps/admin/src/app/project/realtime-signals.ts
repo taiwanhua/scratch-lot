@@ -10,6 +10,7 @@ import {
   STORE_RECENT_REDEMPTIONS_QUERY_KEY,
   STORE_REDEMPTIONS_QUERY_KEY,
 } from "@/pages/project/lottery/store/redemption/redemption-shared";
+import { STOCKTAKE_QUERY_KEYS } from "@/pages/project/lottery/store/stocktake/stocktake-queries";
 
 /**
  * 專案的信號類型登記(組裝在 `app/module-pages.tsx`;類型不可與底座重複)。
@@ -30,6 +31,8 @@ export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
       STORE_RECENT_SALES_QUERY_KEY,
       STORE_RECENT_REDEMPTIONS_QUERY_KEY,
       STORE_REDEMPTIONS_QUERY_KEY,
+      // 盤點頁的應有現金、「建議盤點一次」、盤點紀錄
+      ...STOCKTAKE_QUERY_KEYS,
     ],
   },
 ];

@@ -784,6 +784,41 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason:
       "本的詳情「來源」的 `t(`sources.${type}`)`,type 是來源事件類型(進貨 / 調入)",
   },
+  {
+    key: "admin.lotteryStore.stocktake.types.",
+    reason:
+      "盤點的 `t(`types.${type}`)`,type 是盤點類型 `STOCKTAKE_TYPES`(api 回的值、盤點紀錄的篩選)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.statuses.",
+    reason:
+      "盤點紀錄的 `t(`statuses.${status}`)`,status 是盤點單狀態 `STOCKTAKE_STATUSES`(api 回的值、篩選)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.review.actions.",
+    reason:
+      "差異核對的 `t(`actions.${action}`)`,action 是差異的處理 `STOCKTAKE_DIFF_ACTIONS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.lost.actions.",
+    reason:
+      "待查清單的 `t(`actions.${action}`)`,action 是待查清單的處理 `STOCKTAKE_LOST_ACTIONS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.actions.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`actions.${action}`)`,action 是差異的處理(api 回的盤點單明細)",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.methods.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`methods.${method}`)`,method 是盤點方式 `STOCKTAKE_METHODS`",
+  },
+  {
+    key: "admin.lotteryStore.stocktake.view.lostActions.",
+    reason:
+      "盤點確認申請檢視頁的 `t(`lostActions.${action}`)`,action 是待查清單的處理(api 回的值)",
+  },
 ];
 
 const isCoveredByDynamicKeys = (key: string): boolean =>

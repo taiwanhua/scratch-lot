@@ -6,6 +6,14 @@ import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/maste
 import type { RedemptionFixture } from "@/test/msw/project/lottery/redemption-fixtures";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import {
+  stocktakeFormWorld,
+  stocktakeWorkflowWorld,
+} from "@/test/msw/project/lottery/stocktake-form-fixtures";
+import {
+  type StocktakeWorldOptions,
+  stocktakeWorld,
+} from "@/test/msw/project/lottery/stocktake-handlers";
+import {
   STORE_ALL_PERMISSIONS,
   storeModules,
 } from "@/test/msw/project/lottery/store-fixtures";
@@ -23,6 +31,7 @@ import {
 } from "@/test/msw/project/lottery/store-sales-handlers";
 import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 import { server } from "@/test/msw/server";
+import { workflowRuntimeWorld } from "@/test/msw/workflow-runtime-handlers";
 import { renderApp } from "@/test/render";
 
 /** 開班視窗的 [打卡] 看我的班表的打卡權限(給在店面管理的模組上,`hasPermission` 只看 key)。 */
@@ -39,6 +48,7 @@ export const renderStore = ({
   sales = {},
   redemptionRows,
   forms = {},
+  stocktakeOptions = {},
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -49,13 +59,30 @@ export const renderStore = ({
   redemptionRows?: RedemptionFixture[];
   /** 撤銷售出申請 / 現金更正單能不能新增(B9b) */
   forms?: StoreFormsWorldOptions;
+  /** 盤點的假 api 選項(補登售出時已被處理的張、看板提醒) */
+  stocktakeOptions?: StocktakeWorldOptions;
 } = {}) => {
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
   const redemptions = redemptionWorld(redemptionRows);
   const formsFake = storeFormsWorld(forms);
-  const runtime = formRuntimeWorld(formsFake.runtime);
+  const stocktakeForms = stocktakeFormWorld();
+  const runtime = formRuntimeWorld({
+    ...formsFake.runtime,
+    moduleForms: [
+      ...(formsFake.runtime.moduleForms ?? []),
+      ...(stocktakeForms.moduleForms ?? []),
+    ],
+    versions: { ...formsFake.runtime.versions, ...stocktakeForms.versions },
+    submissions: [
+      ...(formsFake.runtime.submissions ?? []),
+      ...(stocktakeForms.submissions ?? []),
+    ],
+  });
+  const stocktake = stocktakeWorld(stocktakeOptions);
   server.use(
+    ...stocktake.handlers,
+    ...workflowRuntimeWorld(stocktakeWorkflowWorld()).handlers,
     ...formsFake.handlers,
     ...runtime.handlers,
     ...fake.handlers,
@@ -76,5 +103,6 @@ export const renderStore = ({
     salesFake,
     redemptions,
     runtime,
+    stocktake,
   };
 };

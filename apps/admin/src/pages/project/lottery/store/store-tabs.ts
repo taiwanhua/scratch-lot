@@ -9,6 +9,7 @@ import { OtherFormsTab } from "./OtherFormsTab/OtherFormsTab";
 import { CashCorrectionsTab } from "./forms/CashCorrectionsTab";
 import { SaleReversalsTab } from "./forms/SaleReversalsTab";
 import { RedemptionsTab } from "./redemption/RedemptionsTab";
+import { StocktakesTab } from "./stocktake/StocktakesTab";
 
 /** 店面管理的一個分頁。 */
 export interface StoreTabEntry {
@@ -33,6 +34,13 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     labelKey: "board",
     permission: STORE_PERMISSIONS.view,
     Content: BoardTab,
+  },
+  // 盤點紀錄(規格 6.1、8.6;Figma ST-29):`store.view`(api `lotteryStocktakes` 也守它)
+  {
+    value: STORE_TABS.stocktakes,
+    labelKey: "stocktakes",
+    permission: STORE_PERMISSIONS.view,
+    Content: StocktakesTab,
   },
   // 撤銷售出(規格 8.5;Figma ST-31a):`store.view`(api `lotteryStoreSaleReversals` 也守它)
   {

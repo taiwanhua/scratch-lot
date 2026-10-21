@@ -25,6 +25,10 @@ import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/Tr
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
 import { StoreCreatePage } from "@/pages/project/lottery/store/forms/StoreCreatePage/StoreCreatePage";
+import {
+  StoreEditPage,
+  StoreViewPage,
+} from "@/pages/project/lottery/store/forms/StoreSubmissionPages/StoreSubmissionPages";
 import { MakeupPunchFormPage } from "@/pages/project/schedule/attendance/MakeupPunchFormPage/MakeupPunchFormPage";
 import { MakeupPunchViewPage } from "@/pages/project/schedule/attendance/MakeupPunchViewPage/MakeupPunchViewPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
@@ -125,6 +129,9 @@ export const projectModulePages: ModulePageSource = {
       pageOverrides: {
         list: { Page: StorePage },
         createPage: { Page: StoreCreatePage },
+        // 盤點確認申請的檢視頁(盤點單明細 + 審核)與退回後的編輯頁(盤點頁帶入原內容);其他表單沿用表單引擎
+        viewPage: { Page: StoreViewPage },
+        editPage: { Page: StoreEditPage },
       },
     },
   ],
