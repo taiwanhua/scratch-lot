@@ -9,6 +9,7 @@ import {
   useLotteryCashLedgerQuery,
   useLotteryCashMovementQuery,
 } from "@repo/graphql";
+import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
 import { DatePicker } from "@repo/ui/date-picker";
@@ -213,6 +214,9 @@ export const CashLedgerTab = () => {
           }}
         />
       </Box>
+      {query.isError ? (
+        <Alert severity="error">{t("cash.loadFailed")}</Alert>
+      ) : null}
       <Box
         sx={{
           display: "grid",

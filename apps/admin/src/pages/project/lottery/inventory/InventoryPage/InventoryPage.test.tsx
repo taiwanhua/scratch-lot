@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
 
 import { INVENTORY_PERMISSIONS as P } from "@repo/domain/project/lottery";
+
+import { api, server } from "@/test/msw/server";
 
 import { renderInventory } from "../inventory-test-support";
 
@@ -109,6 +112,19 @@ describe("庫存管理:分頁、查刮刮樂、預計要給本數", () => {
       reasonKey: "found-in-store",
       reasonNote: null,
     });
+  });
+
+  it("待查·遺失查詢失敗:顯示載入失敗提示,不是靜默空白", async () => {
+    const { user } = renderInventory();
+    server.use(
+      api.query("LotteryInvestigations", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+    await user.click(await screen.findByRole("tab", { name: "待查·遺失" }));
+    expect(
+      await screen.findByText("待查·遺失清單載入失敗,請稍後再試"),
+    ).toBeInTheDocument();
   });
 
   it("沒有 recover / show-cost:待查·遺失沒有 [尋回]、沒有批購成本欄", async () => {

@@ -62,7 +62,10 @@ export const DayOffsTab = () => {
   const page = query.data?.myScheduleDayOffs;
 
   if (page === undefined) {
-    return null;
+    // 載入中留白;查詢失敗要說出來,不能整頁空白
+    return query.isError ? (
+      <Alert severity="error">{t("loadFailed")}</Alert>
+    ) : null;
   }
   const { window, limits, violations } = page;
   if (page.primaryOrg === null || window === null || window === undefined) {

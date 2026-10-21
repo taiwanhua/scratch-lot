@@ -563,7 +563,8 @@
       "source": "{serial} ({count} tickets)",
       "recover": "Recover",
       "listAria": "Investigating · Lost",
-      "empty": "No investigating or lost tickets"
+      "empty": "No investigating or lost tickets",
+      "loadFailed": "Could not load investigating and lost tickets. Please try again later."
     },
     "book": {
       "tabLabel": "Book {key}",
@@ -1145,7 +1146,8 @@
         "message": "There are already shifts on this day ({list}). Please ask the store manager to adjust the roster.",
         "item": "{date} {start}–{end} {org}",
         "otherStore": "another branch"
-      }
+      },
+      "loadFailed": "Could not load day-off data. Please try again later."
     },
     "supportRequests": {
       "loading": "Loading",
@@ -1960,7 +1962,8 @@
       "listAria": "Cash movements",
       "pickOrg": "Pick a branch first",
       "drawer": "{name} drawer",
-      "drawerOwner": "Owner {name}"
+      "drawerOwner": "Owner {name}",
+      "loadFailed": "Could not load the cash ledger. Please try again later."
     },
     "outstanding": {
       "columns": {

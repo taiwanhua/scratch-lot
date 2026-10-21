@@ -11267,7 +11267,7 @@ export const WorkflowInstanceFieldsFragmentDoc = `
   updatedAt
   finishedAt
 }
-    ${WorkflowTaskFieldsFragmentDoc}`;
+    `;
 export const DemoItemOneFieldsFragmentDoc = `
     fragment DemoItemOneFields on DemoItemOne {
   id
@@ -11576,7 +11576,7 @@ export const NotificationSettingItemFragmentDoc = `
   updatedAt
   updatedBy
 }
-    ${NotificationScheduleFieldsFragmentDoc}`;
+    `;
 export const OrgNodeFieldsFragmentDoc = `
     fragment OrgNodeFields on OrgNode {
   id
@@ -11744,8 +11744,7 @@ export const RoleMatrixFieldsFragmentDoc = `
     }
   }
 }
-    ${RoleFieldsFragmentDoc}
-${RoleMatrixNodeFieldsFragmentDoc}`;
+    `;
 export const RoleUsersFieldsFragmentDoc = `
     fragment RoleUsersFields on RoleUsersPayload {
   role {
@@ -11768,7 +11767,7 @@ export const RoleUsersFieldsFragmentDoc = `
     }
   }
 }
-    ${RoleFieldsFragmentDoc}`;
+    `;
 export const SidebarBadgeSettingItemFragmentDoc = `
     fragment SidebarBadgeSettingItem on SidebarBadgeSetting {
   moduleKey
@@ -11916,7 +11915,7 @@ export const LotteryBankAccountFieldsFragmentDoc = `
     canReverse
   }
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryBankTransactionFieldsFragmentDoc = `
     fragment LotteryBankTransactionFields on LotteryBankTransaction {
   id
@@ -11945,7 +11944,7 @@ export const LotteryBankTransactionFieldsFragmentDoc = `
     canReverse
   }
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryCashMovementFieldsFragmentDoc = `
     fragment LotteryCashMovementFields on LotteryCashMovement {
   id
@@ -11971,7 +11970,7 @@ export const LotteryCashMovementFieldsFragmentDoc = `
     ...LotteryAccountsRefFields
   }
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotterySettlementFieldsFragmentDoc = `
     fragment LotterySettlementFields on LotterySettlement {
   moduleKey
@@ -12025,7 +12024,7 @@ export const LotterySettlementFieldsFragmentDoc = `
     canReverse
   }
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryOutstandingSettlementFieldsFragmentDoc = `
     fragment LotteryOutstandingSettlementFields on LotteryOutstandingSettlement {
   moduleKey
@@ -12046,7 +12045,7 @@ export const LotteryOutstandingSettlementFieldsFragmentDoc = `
   daysOutstanding
   canSettle
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryCheckoutCashItemFieldsFragmentDoc = `
     fragment LotteryCheckoutCashItemFields on LotteryCheckoutCashItem {
   kind
@@ -12164,8 +12163,7 @@ export const LotteryDealerFieldsFragmentDoc = `
   }
   isShared
 }
-    ${LotteryDealerRefFieldsFragmentDoc}
-${LotteryDealerContactRefFieldsFragmentDoc}`;
+    `;
 export const LotteryDealerContactFieldsFragmentDoc = `
     fragment LotteryDealerContactFields on LotteryDealerContact {
   id
@@ -12198,7 +12196,7 @@ export const LotteryDealerContactFieldsFragmentDoc = `
     canEdit
   }
 }
-    ${LotteryDealerRefFieldsFragmentDoc}`;
+    `;
 export const LotteryInventoryRefFieldsFragmentDoc = `
     fragment LotteryInventoryRefFields on LotteryInventoryRef {
   id
@@ -12238,7 +12236,7 @@ export const LotteryInventoryBookFieldsFragmentDoc = `
     ...LotteryInventoryRefFields
   }
 }
-    ${LotteryInventoryRefFieldsFragmentDoc}`;
+    `;
 export const LotteryInventoryTicketFieldsFragmentDoc = `
     fragment LotteryInventoryTicketFields on LotteryInventoryTicket {
   id
@@ -12257,7 +12255,7 @@ export const LotteryInventoryTicketFieldsFragmentDoc = `
   locked
   version
 }
-    ${LotteryInventoryRefFieldsFragmentDoc}`;
+    `;
 export const LotteryInventoryPlaceFieldsFragmentDoc = `
     fragment LotteryInventoryPlaceFields on LotteryInventoryPlace {
   org {
@@ -12268,7 +12266,7 @@ export const LotteryInventoryPlaceFieldsFragmentDoc = `
     ...LotteryInventoryRefFields
   }
 }
-    ${LotteryInventoryRefFieldsFragmentDoc}`;
+    `;
 export const LotteryInventoryBookDetailFieldsFragmentDoc = `
     fragment LotteryInventoryBookDetailFields on LotteryInventoryBookDetail {
   book {
@@ -12331,10 +12329,7 @@ export const LotteryInventoryBookDetailFieldsFragmentDoc = `
     canShowCost
   }
 }
-    ${LotteryInventoryBookFieldsFragmentDoc}
-${LotteryInventoryTicketFieldsFragmentDoc}
-${LotteryInventoryPlaceFieldsFragmentDoc}
-${LotteryInventoryRefFieldsFragmentDoc}`;
+    `;
 export const LotteryInvestigationRowFieldsFragmentDoc = `
     fragment LotteryInvestigationRowFields on LotteryInvestigationRow {
   bookId
@@ -12354,8 +12349,7 @@ export const LotteryInvestigationRowFieldsFragmentDoc = `
     ...LotteryInventoryTicketFields
   }
 }
-    ${LotteryInventoryRefFieldsFragmentDoc}
-${LotteryInventoryTicketFieldsFragmentDoc}`;
+    `;
 export const LotteryAllocationCellFieldsFragmentDoc = `
     fragment LotteryAllocationCellFields on LotteryAllocationCell {
   orgId
@@ -12384,7 +12378,7 @@ export const LotteryTicketLookupItemFieldsFragmentDoc = `
     ...LotteryInventoryRefFields
   }
 }
-    ${LotteryInventoryRefFieldsFragmentDoc}`;
+    `;
 export const LotteryGameFieldsFragmentDoc = `
     fragment LotteryGameFields on LotteryGame {
   id
@@ -12514,7 +12508,7 @@ export const LotteryRedemptionFieldsFragmentDoc = `
   revokeMode
   revokeBlockedBySent
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryRequisitionCandidateFieldsFragmentDoc = `
     fragment LotteryRequisitionCandidateFields on LotteryRequisitionCandidate {
   gameId
@@ -12617,7 +12611,7 @@ export const LotteryStoreScanItemFieldsFragmentDoc = `
   soldAt
   pendingSkipCount
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryStoreSaleFieldsFragmentDoc = `
     fragment LotteryStoreSaleFields on LotteryStoreSale {
   ticketId
@@ -12632,7 +12626,7 @@ export const LotteryStoreSaleFieldsFragmentDoc = `
   undone
   undoBlock
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryStoreCardTicketFieldsFragmentDoc = `
     fragment LotteryStoreCardTicketFields on LotteryStoreCardTicket {
   id
@@ -12646,7 +12640,7 @@ export const LotteryStoreCardTicketFieldsFragmentDoc = `
   soldShiftId
   locked
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryStoreBookCardFieldsFragmentDoc = `
     fragment LotteryStoreBookCardFields on LotteryStoreBookCard {
   bookId
@@ -12662,7 +12656,7 @@ export const LotteryStoreBookCardFieldsFragmentDoc = `
     ...LotteryStoreCardTicketFields
   }
 }
-    ${LotteryStoreCardTicketFieldsFragmentDoc}`;
+    `;
 export const LotteryStoreUnopenedBookFieldsFragmentDoc = `
     fragment LotteryStoreUnopenedBookFields on LotteryStoreUnopenedBook {
   bookId
@@ -12693,7 +12687,7 @@ export const LotteryStoreShiftFieldsFragmentDoc = `
   soldAmount
   unmatchedEntry
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}`;
+    `;
 export const LotteryStoreBoardBookFieldsFragmentDoc = `
     fragment LotteryStoreBoardBookFields on LotteryStoreBoardBook {
   bookId
@@ -12754,8 +12748,7 @@ export const LotteryShiftInfoFieldsFragmentDoc = `
     ...LotteryStoreEntryOptionFields
   }
 }
-    ${LotteryAccountsRefFieldsFragmentDoc}
-${LotteryStoreEntryOptionFieldsFragmentDoc}`;
+    `;
 export const LotteryTransferReceivingFieldsFragmentDoc = `
     fragment LotteryTransferReceivingFields on LotteryTransferReceiving {
   submissionId
@@ -12857,7 +12850,7 @@ export const ScheduleAttendanceRowFieldsFragmentDoc = `
     ...ScheduleAttendancePunchFields
   }
 }
-    ${ScheduleAttendancePunchFieldsFragmentDoc}`;
+    `;
 export const ScheduleAttendanceAbilitiesFieldsFragmentDoc = `
     fragment ScheduleAttendanceAbilitiesFields on ScheduleAttendanceAbilities {
   canViewAll
@@ -12980,7 +12973,7 @@ export const ScheduleDayOffDayFieldsFragmentDoc = `
     ...ScheduleDayOffFields
   }
 }
-    ${ScheduleDayOffFieldsFragmentDoc}`;
+    `;
 export const ScheduleDayOffLimitsFieldsFragmentDoc = `
     fragment ScheduleDayOffLimitsFields on ScheduleDayOffLimits {
   maxMonthly
@@ -13099,7 +13092,7 @@ export const ScheduleRulesFieldsFragmentDoc = `
     }
   }
 }
-    ${ScheduleRuleSettingFieldsFragmentDoc}`;
+    `;
 export const ScheduleStaffRowFieldsFragmentDoc = `
     fragment ScheduleStaffRowFields on ScheduleStaffRow {
   userId
@@ -13343,7 +13336,8 @@ export const WorkflowInstanceDocument = `
     }
   }
 }
-    ${WorkflowInstanceFieldsFragmentDoc}`;
+    ${WorkflowInstanceFieldsFragmentDoc}
+${WorkflowTaskFieldsFragmentDoc}`;
 
 export const useWorkflowInstanceQuery = <
       TData = WorkflowInstanceQuery,
@@ -16457,7 +16451,8 @@ export const NotificationSettingsDocument = `
     totalCount
   }
 }
-    ${NotificationSettingItemFragmentDoc}`;
+    ${NotificationSettingItemFragmentDoc}
+${NotificationScheduleFieldsFragmentDoc}`;
 
 export const useNotificationSettingsQuery = <
       TData = NotificationSettingsQuery,
@@ -16490,7 +16485,8 @@ export const UpdateNotificationSettingDocument = `
     }
   }
 }
-    ${NotificationSettingItemFragmentDoc}`;
+    ${NotificationSettingItemFragmentDoc}
+${NotificationScheduleFieldsFragmentDoc}`;
 
 export const useUpdateNotificationSettingMutation = <
       TError = unknown,
@@ -16520,7 +16516,8 @@ export const ResetNotificationSettingDocument = `
     }
   }
 }
-    ${NotificationSettingItemFragmentDoc}`;
+    ${NotificationSettingItemFragmentDoc}
+${NotificationScheduleFieldsFragmentDoc}`;
 
 export const useResetNotificationSettingMutation = <
       TError = unknown,
@@ -18016,7 +18013,9 @@ export const RoleMatrixDocument = `
     ...RoleMatrixFields
   }
 }
-    ${RoleMatrixFieldsFragmentDoc}`;
+    ${RoleMatrixFieldsFragmentDoc}
+${RoleFieldsFragmentDoc}
+${RoleMatrixNodeFieldsFragmentDoc}`;
 
 export const useRoleMatrixQuery = <
       TData = RoleMatrixQuery,
@@ -18047,7 +18046,9 @@ export const SaveRoleMatrixDocument = `
     ...RoleMatrixFields
   }
 }
-    ${RoleMatrixFieldsFragmentDoc}`;
+    ${RoleMatrixFieldsFragmentDoc}
+${RoleFieldsFragmentDoc}
+${RoleMatrixNodeFieldsFragmentDoc}`;
 
 export const useSaveRoleMatrixMutation = <
       TError = unknown,
@@ -18075,7 +18076,8 @@ export const RoleUsersDocument = `
     ...RoleUsersFields
   }
 }
-    ${RoleUsersFieldsFragmentDoc}`;
+    ${RoleUsersFieldsFragmentDoc}
+${RoleFieldsFragmentDoc}`;
 
 export const useRoleUsersQuery = <
       TData = RoleUsersQuery,
@@ -18151,7 +18153,8 @@ export const GrantRoleUsersDocument = `
     ...RoleUsersFields
   }
 }
-    ${RoleUsersFieldsFragmentDoc}`;
+    ${RoleUsersFieldsFragmentDoc}
+${RoleFieldsFragmentDoc}`;
 
 export const useGrantRoleUsersMutation = <
       TError = unknown,
@@ -18179,7 +18182,8 @@ export const RevokeRoleUsersDocument = `
     ...RoleUsersFields
   }
 }
-    ${RoleUsersFieldsFragmentDoc}`;
+    ${RoleUsersFieldsFragmentDoc}
+${RoleFieldsFragmentDoc}`;
 
 export const useRevokeRoleUsersMutation = <
       TError = unknown,
@@ -19535,7 +19539,8 @@ export const BlockedInstancesDocument = `
     truncated
   }
 }
-    ${WorkflowInstanceFieldsFragmentDoc}`;
+    ${WorkflowInstanceFieldsFragmentDoc}
+${WorkflowTaskFieldsFragmentDoc}`;
 
 export const useBlockedInstancesQuery = <
       TData = BlockedInstancesQuery,
@@ -19630,7 +19635,8 @@ export const RetryAdvanceInstanceDocument = `
     }
   }
 }
-    ${WorkflowInstanceFieldsFragmentDoc}`;
+    ${WorkflowInstanceFieldsFragmentDoc}
+${WorkflowTaskFieldsFragmentDoc}`;
 
 export const useRetryAdvanceInstanceMutation = <
       TError = unknown,
@@ -19727,7 +19733,8 @@ export const LotteryBankAccountsDocument = `
     pageSize
   }
 }
-    ${LotteryBankAccountFieldsFragmentDoc}`;
+    ${LotteryBankAccountFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryBankAccountsQuery = <
       TData = LotteryBankAccountsQuery,
@@ -19760,7 +19767,8 @@ export const LotteryBankAccountDocument = `
     }
   }
 }
-    ${LotteryBankAccountFieldsFragmentDoc}`;
+    ${LotteryBankAccountFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryBankAccountQuery = <
       TData = LotteryBankAccountQuery,
@@ -19796,7 +19804,8 @@ export const LotteryBankTransactionsDocument = `
     totalOut
   }
 }
-    ${LotteryBankTransactionFieldsFragmentDoc}`;
+    ${LotteryBankTransactionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryBankTransactionsQuery = <
       TData = LotteryBankTransactionsQuery,
@@ -19829,7 +19838,8 @@ export const CreateLotteryBankAccountDocument = `
     }
   }
 }
-    ${LotteryBankAccountFieldsFragmentDoc}`;
+    ${LotteryBankAccountFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useCreateLotteryBankAccountMutation = <
       TError = unknown,
@@ -19859,7 +19869,8 @@ export const UpdateLotteryBankAccountDocument = `
     }
   }
 }
-    ${LotteryBankAccountFieldsFragmentDoc}`;
+    ${LotteryBankAccountFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useUpdateLotteryBankAccountMutation = <
       TError = unknown,
@@ -19917,7 +19928,8 @@ export const RecordLotteryBankTransactionDocument = `
     }
   }
 }
-    ${LotteryBankTransactionFieldsFragmentDoc}`;
+    ${LotteryBankTransactionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useRecordLotteryBankTransactionMutation = <
       TError = unknown,
@@ -19947,7 +19959,8 @@ export const ReverseLotteryBankTransactionDocument = `
     }
   }
 }
-    ${LotteryBankTransactionFieldsFragmentDoc}`;
+    ${LotteryBankTransactionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useReverseLotteryBankTransactionMutation = <
       TError = unknown,
@@ -20028,7 +20041,8 @@ export const LotteryCashMovementDocument = `
     }
   }
 }
-    ${LotteryCashMovementFieldsFragmentDoc}`;
+    ${LotteryCashMovementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryCashMovementQuery = <
       TData = LotteryCashMovementQuery,
@@ -20061,7 +20075,8 @@ export const LotterySettlementDocument = `
     }
   }
 }
-    ${LotterySettlementFieldsFragmentDoc}`;
+    ${LotterySettlementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotterySettlementQuery = <
       TData = LotterySettlementQuery,
@@ -20095,7 +20110,8 @@ export const LotteryOutstandingSettlementsDocument = `
     totalCount
   }
 }
-    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryOutstandingSettlementsQuery = <
       TData = LotteryOutstandingSettlementsQuery,
@@ -20129,7 +20145,8 @@ export const LotterySettlementCandidatesDocument = `
     totalCount
   }
 }
-    ${LotteryOutstandingSettlementFieldsFragmentDoc}`;
+    ${LotteryOutstandingSettlementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotterySettlementCandidatesQuery = <
       TData = LotterySettlementCandidatesQuery,
@@ -20163,7 +20180,8 @@ export const RecordLotterySettlementDocument = `
     }
   }
 }
-    ${LotterySettlementFieldsFragmentDoc}`;
+    ${LotterySettlementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useRecordLotterySettlementMutation = <
       TError = unknown,
@@ -20194,7 +20212,8 @@ export const ReverseLotterySettlementDocument = `
     }
   }
 }
-    ${LotterySettlementFieldsFragmentDoc}`;
+    ${LotterySettlementFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useReverseLotterySettlementMutation = <
       TError = unknown,
@@ -20647,7 +20666,9 @@ export const LotteryDealersDocument = `
     pageSize
   }
 }
-    ${LotteryDealerFieldsFragmentDoc}`;
+    ${LotteryDealerFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
 
 export const useLotteryDealersQuery = <
       TData = LotteryDealersQuery,
@@ -20680,7 +20701,9 @@ export const LotteryDealerDocument = `
     }
   }
 }
-    ${LotteryDealerFieldsFragmentDoc}`;
+    ${LotteryDealerFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
 
 export const useLotteryDealerQuery = <
       TData = LotteryDealerQuery,
@@ -20826,7 +20849,9 @@ export const CreateLotteryDealerDocument = `
     }
   }
 }
-    ${LotteryDealerFieldsFragmentDoc}`;
+    ${LotteryDealerFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
 
 export const useCreateLotteryDealerMutation = <
       TError = unknown,
@@ -20856,7 +20881,9 @@ export const UpdateLotteryDealerDocument = `
     }
   }
 }
-    ${LotteryDealerFieldsFragmentDoc}`;
+    ${LotteryDealerFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}
+${LotteryDealerContactRefFieldsFragmentDoc}`;
 
 export const useUpdateLotteryDealerMutation = <
       TError = unknown,
@@ -20959,7 +20986,8 @@ export const LotteryDealerContactsDocument = `
     pageSize
   }
 }
-    ${LotteryDealerContactFieldsFragmentDoc}`;
+    ${LotteryDealerContactFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}`;
 
 export const useLotteryDealerContactsQuery = <
       TData = LotteryDealerContactsQuery,
@@ -20992,7 +21020,8 @@ export const LotteryDealerContactDocument = `
     }
   }
 }
-    ${LotteryDealerContactFieldsFragmentDoc}`;
+    ${LotteryDealerContactFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}`;
 
 export const useLotteryDealerContactQuery = <
       TData = LotteryDealerContactQuery,
@@ -21025,7 +21054,8 @@ export const CreateLotteryDealerContactDocument = `
     }
   }
 }
-    ${LotteryDealerContactFieldsFragmentDoc}`;
+    ${LotteryDealerContactFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}`;
 
 export const useCreateLotteryDealerContactMutation = <
       TError = unknown,
@@ -21055,7 +21085,8 @@ export const UpdateLotteryDealerContactDocument = `
     }
   }
 }
-    ${LotteryDealerContactFieldsFragmentDoc}`;
+    ${LotteryDealerContactFieldsFragmentDoc}
+${LotteryDealerRefFieldsFragmentDoc}`;
 
 export const useUpdateLotteryDealerContactMutation = <
       TError = unknown,
@@ -21086,7 +21117,8 @@ export const LotteryInventoryBooksDocument = `
     totalCount
   }
 }
-    ${LotteryInventoryBookFieldsFragmentDoc}`;
+    ${LotteryInventoryBookFieldsFragmentDoc}
+${LotteryInventoryRefFieldsFragmentDoc}`;
 
 export const useLotteryInventoryBooksQuery = <
       TData = LotteryInventoryBooksQuery,
@@ -21119,7 +21151,11 @@ export const LotteryInventoryBookDocument = `
     }
   }
 }
-    ${LotteryInventoryBookDetailFieldsFragmentDoc}`;
+    ${LotteryInventoryBookDetailFieldsFragmentDoc}
+${LotteryInventoryBookFieldsFragmentDoc}
+${LotteryInventoryRefFieldsFragmentDoc}
+${LotteryInventoryTicketFieldsFragmentDoc}
+${LotteryInventoryPlaceFieldsFragmentDoc}`;
 
 export const useLotteryInventoryBookQuery = <
       TData = LotteryInventoryBookQuery,
@@ -21152,7 +21188,8 @@ export const LotteryTicketLookupDocument = `
     }
   }
 }
-    ${LotteryTicketLookupItemFieldsFragmentDoc}`;
+    ${LotteryTicketLookupItemFieldsFragmentDoc}
+${LotteryInventoryRefFieldsFragmentDoc}`;
 
 export const useLotteryTicketLookupQuery = <
       TData = LotteryTicketLookupQuery,
@@ -21186,7 +21223,9 @@ export const LotteryInvestigationsDocument = `
     canRecover
   }
 }
-    ${LotteryInvestigationRowFieldsFragmentDoc}`;
+    ${LotteryInvestigationRowFieldsFragmentDoc}
+${LotteryInventoryRefFieldsFragmentDoc}
+${LotteryInventoryTicketFieldsFragmentDoc}`;
 
 export const useLotteryInvestigationsQuery = <
       TData = LotteryInvestigationsQuery,
@@ -22087,7 +22126,8 @@ export const RedeemLotteryTicketDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useRedeemLotteryTicketMutation = <
       TError = unknown,
@@ -22117,7 +22157,8 @@ export const RevokeLotteryRedemptionDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useRevokeLotteryRedemptionMutation = <
       TError = unknown,
@@ -22150,7 +22191,8 @@ export const ReplaceLotteryRedemptionDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useReplaceLotteryRedemptionMutation = <
       TError = unknown,
@@ -22181,7 +22223,8 @@ export const LotteryRedemptionsDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryRedemptionsQuery = <
       TData = LotteryRedemptionsQuery,
@@ -22212,7 +22255,8 @@ export const LotteryRecentRedemptionsDocument = `
     ...LotteryRedemptionFields
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryRecentRedemptionsQuery = <
       TData = LotteryRecentRedemptionsQuery,
@@ -22245,7 +22289,8 @@ export const LotteryRedemptionDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryRedemptionQuery = <
       TData = LotteryRedemptionQuery,
@@ -22278,7 +22323,8 @@ export const LotteryPurchaseRedemptionsDocument = `
     }
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryPurchaseRedemptionsQuery = <
       TData = LotteryPurchaseRedemptionsQuery,
@@ -22309,7 +22355,8 @@ export const LotteryPurchaseRedemptionRecordsDocument = `
     ...LotteryRedemptionFields
   }
 }
-    ${LotteryRedemptionFieldsFragmentDoc}`;
+    ${LotteryRedemptionFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryPurchaseRedemptionRecordsQuery = <
       TData = LotteryPurchaseRedemptionRecordsQuery,
@@ -22887,7 +22934,8 @@ export const LotteryStoreScanDocument = `
     }
   }
 }
-    ${LotteryStoreScanItemFieldsFragmentDoc}`;
+    ${LotteryStoreScanItemFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryStoreScanQuery = <
       TData = LotteryStoreScanQuery,
@@ -22920,7 +22968,8 @@ export const SellLotteryTicketsDocument = `
     }
   }
 }
-    ${LotteryStoreSaleFieldsFragmentDoc}`;
+    ${LotteryStoreSaleFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useSellLotteryTicketsMutation = <
       TError = unknown,
@@ -22950,7 +22999,8 @@ export const LotteryStoreSaleDocument = `
     }
   }
 }
-    ${LotteryStoreSaleFieldsFragmentDoc}`;
+    ${LotteryStoreSaleFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryStoreSaleQuery = <
       TData = LotteryStoreSaleQuery,
@@ -22983,7 +23033,8 @@ export const LotteryStoreRecentSalesDocument = `
     }
   }
 }
-    ${LotteryStoreSaleFieldsFragmentDoc}`;
+    ${LotteryStoreSaleFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryStoreRecentSalesQuery = <
       TData = LotteryStoreRecentSalesQuery,
@@ -23016,7 +23067,8 @@ export const UndoLotteryTicketSaleDocument = `
     }
   }
 }
-    ${LotteryStoreSaleFieldsFragmentDoc}`;
+    ${LotteryStoreSaleFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useUndoLotteryTicketSaleMutation = <
       TError = unknown,
@@ -23046,7 +23098,9 @@ export const LotteryStoreBookCardDocument = `
     }
   }
 }
-    ${LotteryStoreBookCardFieldsFragmentDoc}`;
+    ${LotteryStoreBookCardFieldsFragmentDoc}
+${LotteryStoreCardTicketFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useLotteryStoreBookCardQuery = <
       TData = LotteryStoreBookCardQuery,
@@ -23296,7 +23350,8 @@ export const OpenLotteryShiftDocument = `
     }
   }
 }
-    ${LotteryStoreShiftFieldsFragmentDoc}`;
+    ${LotteryStoreShiftFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useOpenLotteryShiftMutation = <
       TError = unknown,
@@ -23355,7 +23410,9 @@ export const LotteryShiftInfoDocument = `
     }
   }
 }
-    ${LotteryShiftInfoFieldsFragmentDoc}`;
+    ${LotteryShiftInfoFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}
+${LotteryStoreEntryOptionFieldsFragmentDoc}`;
 
 export const useLotteryShiftInfoQuery = <
       TData = LotteryShiftInfoQuery,
@@ -23388,7 +23445,9 @@ export const ReassignLotteryShiftEntryDocument = `
     }
   }
 }
-    ${LotteryShiftInfoFieldsFragmentDoc}`;
+    ${LotteryShiftInfoFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}
+${LotteryStoreEntryOptionFieldsFragmentDoc}`;
 
 export const useReassignLotteryShiftEntryMutation = <
       TError = unknown,
@@ -23418,7 +23477,8 @@ export const DepositLotteryShiftCashDocument = `
     }
   }
 }
-    ${LotteryStoreShiftFieldsFragmentDoc}`;
+    ${LotteryStoreShiftFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useDepositLotteryShiftCashMutation = <
       TError = unknown,
@@ -23448,7 +23508,8 @@ export const WithdrawLotteryShiftCashDocument = `
     }
   }
 }
-    ${LotteryStoreShiftFieldsFragmentDoc}`;
+    ${LotteryStoreShiftFieldsFragmentDoc}
+${LotteryAccountsRefFieldsFragmentDoc}`;
 
 export const useWithdrawLotteryShiftCashMutation = <
       TError = unknown,
@@ -23892,7 +23953,8 @@ export const ScheduleAttendanceExportDocument = `
     }
   }
 }
-    ${ScheduleAttendanceRowFieldsFragmentDoc}`;
+    ${ScheduleAttendanceRowFieldsFragmentDoc}
+${ScheduleAttendancePunchFieldsFragmentDoc}`;
 
 export const useScheduleAttendanceExportQuery = <
       TData = ScheduleAttendanceExportQuery,
@@ -24482,7 +24544,8 @@ export const ScheduleDayOffOverviewDocument = `
 }
     ${ScheduleDayOffWindowFieldsFragmentDoc}
 ${ScheduleDayOffLimitsFieldsFragmentDoc}
-${ScheduleDayOffDayFieldsFragmentDoc}`;
+${ScheduleDayOffDayFieldsFragmentDoc}
+${ScheduleDayOffFieldsFragmentDoc}`;
 
 export const useScheduleDayOffOverviewQuery = <
       TData = ScheduleDayOffOverviewQuery,
@@ -24857,7 +24920,8 @@ export const ScheduleRulesDocument = `
     ...ScheduleRulesFields
   }
 }
-    ${ScheduleRulesFieldsFragmentDoc}`;
+    ${ScheduleRulesFieldsFragmentDoc}
+${ScheduleRuleSettingFieldsFragmentDoc}`;
 
 export const useScheduleRulesQuery = <
       TData = ScheduleRulesQuery,
@@ -24890,7 +24954,8 @@ export const CustomizeScheduleRuleDocument = `
     }
   }
 }
-    ${ScheduleRulesFieldsFragmentDoc}`;
+    ${ScheduleRulesFieldsFragmentDoc}
+${ScheduleRuleSettingFieldsFragmentDoc}`;
 
 export const useCustomizeScheduleRuleMutation = <
       TError = unknown,
@@ -24920,7 +24985,8 @@ export const CustomizeScheduleAutoRunDocument = `
     }
   }
 }
-    ${ScheduleRulesFieldsFragmentDoc}`;
+    ${ScheduleRulesFieldsFragmentDoc}
+${ScheduleRuleSettingFieldsFragmentDoc}`;
 
 export const useCustomizeScheduleAutoRunMutation = <
       TError = unknown,
@@ -24950,7 +25016,8 @@ export const RestoreScheduleRuleDocument = `
     }
   }
 }
-    ${ScheduleRulesFieldsFragmentDoc}`;
+    ${ScheduleRulesFieldsFragmentDoc}
+${ScheduleRuleSettingFieldsFragmentDoc}`;
 
 export const useRestoreScheduleRuleMutation = <
       TError = unknown,

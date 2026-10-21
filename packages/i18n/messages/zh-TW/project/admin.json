@@ -563,7 +563,8 @@
       "source": "{serial}({count} 張)",
       "recover": "尋回",
       "listAria": "待查·遺失",
-      "empty": "目前沒有待查或遺失的刮刮樂"
+      "empty": "目前沒有待查或遺失的刮刮樂",
+      "loadFailed": "待查·遺失清單載入失敗,請稍後再試"
     },
     "book": {
       "tabLabel": "本 {key}",
@@ -1145,7 +1146,8 @@
         "message": "這天已經有排班({list}),請通知店長調整班表",
         "item": "{date} {start}–{end} {org}",
         "otherStore": "其他分店"
-      }
+      },
+      "loadFailed": "畫休資料載入失敗,請稍後再試"
     },
     "supportRequests": {
       "loading": "載入中",
@@ -1960,7 +1962,8 @@
       "listAria": "現金流水",
       "pickOrg": "請先選分店",
       "drawer": "{name} 抽屜",
-      "drawerOwner": "負責人 {name}"
+      "drawerOwner": "負責人 {name}",
+      "loadFailed": "即時現金帳載入失敗,請稍後再試"
     },
     "outstanding": {
       "columns": {

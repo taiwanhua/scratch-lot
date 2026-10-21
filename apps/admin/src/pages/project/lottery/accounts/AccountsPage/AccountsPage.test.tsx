@@ -1,7 +1,10 @@
 import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse } from "msw";
 
 import { ACCOUNTS_PERMISSIONS as P } from "@repo/domain/project/lottery-accounts";
+
+import { api, server } from "@/test/msw/server";
 
 import { renderAccounts } from "../accounts-test-support";
 
@@ -62,6 +65,19 @@ describe("帳戶管理:分頁與按鈕", () => {
     expect(screen.getByText("投庫")).toBeInTheDocument();
     expect(screen.getByText("出庫(開班零用金)")).toBeInTheDocument();
     expect(screen.getByText("抽屜 → 外部(王小明)")).toBeInTheDocument();
+  });
+
+  it("即時現金帳查詢失敗:顯示載入失敗提示,不是靜默空白", async () => {
+    const { user } = renderAccounts();
+    server.use(
+      api.query("LotteryCashLedger", () =>
+        HttpResponse.json({ errors: [{ message: "boom" }] }),
+      ),
+    );
+    await user.click(await screen.findByRole("tab", { name: "即時現金帳" }));
+    expect(
+      await screen.findByText("即時現金帳載入失敗,請稍後再試"),
+    ).toBeInTheDocument();
   });
 
   it("待結清款項:差額標籤與每列按鈕;沒有那一邊的收付權限 → 沒有按鈕", async () => {
