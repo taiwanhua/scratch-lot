@@ -163,7 +163,9 @@ describe("店面管理:盤點", () => {
     await user.click(submit);
     const dialog = await screen.findByRole("dialog", { name: /送出盤點?/u });
     expect(
-      within(dialog).getByText("還有 1 本沒有盤;沒盤的本不比對。"),
+      within(dialog).getByText(
+        "還有 1 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本。",
+      ),
     ).toBeInTheDocument();
     await user.click(
       within(dialog).getByRole("button", { name: "送出盤點確認申請" }),
@@ -233,6 +235,8 @@ describe("店面管理:盤點", () => {
     const serial = await screen.findByText("S-0032");
     expect(screen.getByText("待核准")).toBeInTheDocument();
     expect(screen.getByText("2 張 · 300")).toBeInTheDocument();
+    // 沒盤完送出的那一筆在狀態旁標「N 本未盤」;盤完的沒有標
+    expect(screen.getAllByText("3 本未盤")).toHaveLength(1);
     await user.click(serial);
     expect(
       await screen.findByRole("heading", { name: "盤點確認申請 S-0032" }),
@@ -241,6 +245,18 @@ describe("店面管理:盤點", () => {
     expect(screen.getByText("補登售出 1、待查 1")).toBeInTheDocument();
     expect(screen.getByText("補登售出(事後更正)")).toBeInTheDocument();
     expect(screen.getByText("2 張 · 300 元")).toBeInTheDocument();
+    // 檢視頁列出未盤的本(遊戲、本號、收銀點)與彙總
+    expect(
+      screen.getByText("未盤的本", { selector: "h6" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3 本未盤")).toBeInTheDocument();
+    expect(
+      screen.getByText("5164 發大財 · 056527 · 店內櫃台"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("5133 招財貓 · 071204 · 店外攤位"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3 本")).toBeInTheDocument();
   });
 
   it("待查清單「找到了」要刷條碼:整本都待查的刷一張就整本找到;零碎的只算刷到的張,其他維持待查", async () => {

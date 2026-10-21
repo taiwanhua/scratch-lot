@@ -164,6 +164,17 @@ export const stocktakeWorld = (
         0,
       );
     const lost = draft.lostReview.filter((item) => item.action === "lost");
+    // 範圍內(單一收銀點 / 全店)檯面上還沒盤的本(同 api:不比對,只記下來)
+    const uncountedCount = sheet.books.filter(
+      (book) =>
+        (draft.scopeCashPointId === null ||
+          book.cashPointId === draft.scopeCashPointId) &&
+        !draft.lines.some(
+          (line) =>
+            line.bookId === book.bookId &&
+            line.cashPointId === book.cashPointId,
+        ),
+    ).length;
     return {
       __typename: "LotteryStocktakeReview",
       lines,
@@ -176,6 +187,7 @@ export const stocktakeWorld = (
         backfillAmount,
         newInvestigate: investigate + unopenedAbsent,
         flagged,
+        uncountedCount,
         confirmLost: lost.length,
         confirmLostCost: lost.length * 184,
       },

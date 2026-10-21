@@ -97,8 +97,17 @@ export const StocktakesTab = () => {
           count: row.summary.backfillCount,
           amount: moneyText(row.summary.backfillAmount),
         });
+  // 狀態旁標示「N 本未盤」(沒盤完送出的盤點;規格 6.8,10/21 定案)
   const statusTag = (row: Row) => (
-    <Tag tone={statusTone(row.status)} label={t(`statuses.${row.status}`)} />
+    <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap" }}>
+      <Tag tone={statusTone(row.status)} label={t(`statuses.${row.status}`)} />
+      {row.summary.uncountedCount > 0 ? (
+        <Tag
+          tone="warning"
+          label={t("list.uncountedTag", { count: row.summary.uncountedCount })}
+        />
+      ) : null}
+    </Stack>
   );
   const columns: TableColumn<Row>[] = [
     {

@@ -159,6 +159,7 @@ const summary = (
   flagged: 0,
   confirmLost: 0,
   confirmLostCost: 0,
+  uncountedCount: 0,
   ...overrides,
 });
 
@@ -174,11 +175,13 @@ export const sampleStocktakeList = (): StocktakeListRow[] => [
     startedAt: "2026-10-16T13:40:00.000Z",
     submittedAt: "2026-10-16T14:02:00.000Z",
     summary: summary({
+      books: 3,
       backfillCount: 2,
       backfillAmount: 300,
       newInvestigate: 1,
       confirmLost: 1,
       confirmLostCost: 184,
+      uncountedCount: 3,
     }),
   },
   {
@@ -304,6 +307,36 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
       reasonNote: null,
     },
   ],
+  // 沒盤完就送出:檯面上 6 本盤了 3 本,其餘 3 本記為未盤(規格 6.8,10/21 定案)
+  uncountedBooks: [
+    {
+      __typename: "LotteryStocktakeDetailUncounted",
+      bookId: "b-1",
+      cashPointId: "cp-counter",
+      cashPointName: "店內櫃台",
+      gameCode: FA_DA_CAI[0],
+      gameName: FA_DA_CAI[1],
+      bookNo: "0056527",
+    },
+    {
+      __typename: "LotteryStocktakeDetailUncounted",
+      bookId: "b-4",
+      cashPointId: "cp-counter",
+      cashPointName: "店內櫃台",
+      gameCode: HAO_YUN[0],
+      gameName: HAO_YUN[1],
+      bookNo: "0042210",
+    },
+    {
+      __typename: "LotteryStocktakeDetailUncounted",
+      bookId: "b-6",
+      cashPointId: "cp-outdoor",
+      cashPointName: "店外攤位",
+      gameCode: ZHAO_CAI_MAO[0],
+      gameName: ZHAO_CAI_MAO[1],
+      bookNo: "0071204",
+    },
+  ],
   summary: summary({
     books: 3,
     backfillCount: 2,
@@ -312,6 +345,7 @@ export const sampleStocktakeDetail = (): StocktakeDetailFixture => ({
     flagged: 1,
     confirmLost: 1,
     confirmLostCost: 184,
+    uncountedCount: 3,
   }),
   draft: JSON.stringify({
     version: 1,

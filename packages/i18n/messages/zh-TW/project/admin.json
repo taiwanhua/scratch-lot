@@ -3264,7 +3264,7 @@
         "lostCost": "{count} 張 · 批購成本 {cost} 元",
         "count": "{count} 張",
         "books": "{count} 本",
-        "uncounted": "還有 {count} 本沒有盤;沒盤的本不比對。",
+        "uncounted": "還有 {count} 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本。",
         "note": "說明",
         "back": "返回",
         "confirm": "送出盤點確認申請"
@@ -3285,7 +3285,8 @@
         "total": "共 {count} 筆",
         "empty": "沒有盤點紀錄",
         "backfillValue": "{count} 張 · {amount}",
-        "cardFacts": "補登售出 {backfill} · 新增待查 {investigate} · 確認遺失 {lost}"
+        "cardFacts": "補登售出 {backfill} · 新增待查 {investigate} · 確認遺失 {lost}",
+        "uncountedTag": "{count} 本未盤"
       },
       "view": {
         "title": "盤點確認申請",
@@ -3317,11 +3318,15 @@
           "backfill": "補登售出",
           "newInvestigate": "新增待查",
           "flagged": "標記異常",
-          "confirmLost": "確認遺失"
+          "confirmLost": "確認遺失",
+          "uncounted": "未盤的本"
         },
         "backfillValue": "{count} 張 · {amount} 元",
         "lostValue": "{count} 張 · 批購成本 {cost}",
         "count": "{count} 張",
+        "books": "{count} 本",
+        "uncounted": "未盤的本",
+        "uncountedHint": "送出時還沒盤的本,不比對、不記差異;可另開一次盤點補盤。",
         "unopened": "未拆的本",
         "lost": "待查清單",
         "present": "在",

@@ -3264,7 +3264,7 @@
         "lostCost": "{count} · cost {cost}",
         "count": "{count}",
         "books": "{count} books",
-        "uncounted": "{count} books were not counted and will not be compared.",
+        "uncounted": "{count} books were not counted; they are not compared and the stocktake records them as uncounted.",
         "note": "Note",
         "back": "Back",
         "confirm": "Submit stocktake confirmation"
@@ -3285,7 +3285,8 @@
         "total": "{count} total",
         "empty": "No stocktakes",
         "backfillValue": "{count} · {amount}",
-        "cardFacts": "Backfilled {backfill} · new investigations {investigate} · lost {lost}"
+        "cardFacts": "Backfilled {backfill} · new investigations {investigate} · lost {lost}",
+        "uncountedTag": "{count} uncounted"
       },
       "view": {
         "title": "Stocktake confirmation",
@@ -3317,11 +3318,15 @@
           "backfill": "Backfilled sales",
           "newInvestigate": "New investigations",
           "flagged": "Flagged",
-          "confirmLost": "Confirmed lost"
+          "confirmLost": "Confirmed lost",
+          "uncounted": "Uncounted books"
         },
         "backfillValue": "{count} · {amount}",
         "lostValue": "{count} · cost {cost}",
         "count": "{count}",
+        "books": "{count} books",
+        "uncounted": "Uncounted book",
+        "uncountedHint": "Books not counted before submission; they are not compared and have no differences. Run another stocktake to count them.",
         "unopened": "Unopened book",
         "lost": "Investigation",
         "present": "present",

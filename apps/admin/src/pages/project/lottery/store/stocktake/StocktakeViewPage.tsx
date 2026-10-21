@@ -162,7 +162,12 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
                   cost: moneyText(summary.confirmLostCost),
                 }),
           ],
+          [
+            t("summary.uncounted"),
+            t("books", { count: summary.uncountedCount }),
+          ],
         ];
+  const uncounted = detail?.uncountedBooks ?? [];
 
   return (
     <Stack spacing={2} sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
@@ -231,6 +236,36 @@ export const StocktakeViewPage = ({ routeParam }: ModulePageProps) => {
               containerSx={{ height: "auto" }}
             />
           </Card>
+          {uncounted.length > 0 ? (
+            <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
+              <Stack spacing={1}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", flexWrap: "wrap" }}
+                >
+                  <Typography variant="subtitle2">{t("uncounted")}</Typography>
+                  <Tag
+                    tone="warning"
+                    label={tAll("list.uncountedTag", {
+                      count: uncounted.length,
+                    })}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    {t("uncountedHint")}
+                  </Typography>
+                </Stack>
+                {uncounted.map((book) => (
+                  <Typography
+                    key={`${book.bookId}:${book.cashPointId}`}
+                    variant="body2"
+                  >
+                    {`${book.gameCode} ${book.gameName} · ${displayBookNo(book.bookNo)} · ${book.cashPointName}`}
+                  </Typography>
+                ))}
+              </Stack>
+            </Card>
+          ) : null}
           {detail.unopened.length > 0 || detail.lostReview.length > 0 ? (
             <Card sx={{ px: { xs: 2, sm: 3 }, py: 2, flexShrink: 0 }}>
               <Stack spacing={1}>
