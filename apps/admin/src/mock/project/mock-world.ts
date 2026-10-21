@@ -26,7 +26,10 @@ import {
   transferFormWorld,
   transferModules,
 } from "@/test/msw/project/lottery/transfer-fixtures";
-import { transferWorld } from "@/test/msw/project/lottery/transfer-handlers";
+import {
+  transferWorld,
+  withoutSettlementHandler,
+} from "@/test/msw/project/lottery/transfer-handlers";
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
@@ -151,9 +154,9 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleDayOffsWorld().handlers,
     // 我的班表 → 班表分頁:今天固定 2026-11-05(SC-01 的示範資料);`?myBothDots=1` 讓 11/4 同時缺卡又有異動
     ...scheduleMyWorld(myOptions()).handlers,
-    // 調貨單:收付照帳戶管理的 world(一個操作只能有一個 handler)
-    ...transferWorld({ withSettlement: false }).handlers,
-    ...accountsWorld().handlers,
+    // 調貨單:收付端點由這裡一個 handler 回(調貨單兩邊 + 其他單據照帳戶管理夾具),帳戶管理那一個拿掉
+    ...transferWorld({ settlement: "all" }).handlers,
+    ...withoutSettlementHandler(accountsWorld().handlers),
     ...scheduleRosterWorld(rosterOptions()).handlers,
     // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)
     ...purchasingWorld({

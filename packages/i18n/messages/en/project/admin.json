@@ -2220,11 +2220,9 @@
           "partial": "Tickets"
         },
         "opened": "opened",
-        "wholeRange": "Whole book, {count} tickets",
         "cardFacts": "{mode} · {tickets} · {count} tickets · amount {amount} · purchase {purchase}",
         "columns": {
-          "game": "Game",
-          "book": "Book",
+          "book": "Game / book",
           "mode": "Mode",
           "ticketNos": "Tickets",
           "tickets": "Count",

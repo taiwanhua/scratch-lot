@@ -281,7 +281,7 @@ export const TransferCreatePage = () => {
               gap: 2,
               gridTemplateColumns: {
                 xs: "1fr",
-                lg: "minmax(0, 3fr) minmax(0, 2fr)",
+                lg: "minmax(0, 1fr) 420px",
               },
               alignItems: "start",
             }}

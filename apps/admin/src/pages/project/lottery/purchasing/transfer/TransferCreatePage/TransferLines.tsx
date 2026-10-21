@@ -50,7 +50,7 @@ export const TransferLines = ({
     line.mode === TRANSFER_MODE.whole ? t("modes.whole") : t("modes.partial");
   const ticketsText = (line: TransferDraftLine) =>
     line.mode === TRANSFER_MODE.whole
-      ? t("wholeRange", { count: lineTicketsOf(line) })
+      ? `#001–${String(lineTicketsOf(line)).padStart(3, "0")}`
       : formatTicketRanges(line.ticketNos);
   const rateField = (line: TransferDraftLine) => (
     <TextField
@@ -62,7 +62,7 @@ export const TransferLines = ({
           onRate(line.rowId, rate);
         }
       }}
-      sx={{ width: 72 }}
+      sx={{ width: 64 }}
       slotProps={{
         htmlInput: {
           inputMode: "numeric",
@@ -124,38 +124,50 @@ export const TransferLines = ({
 
   const columns: TableColumn<TransferDraftLine>[] = [
     {
-      key: "game",
-      header: t("columns.game"),
-      render: (line) => `${line.book.gameCode} ${line.book.gameName}`,
-    },
-    {
       key: "book",
+      width: 140,
       header: t("columns.book"),
-      render: (line) => bookLabelOf(line.book),
-      isEmphasized: true,
+      render: (line) => (
+        <Stack spacing={0.25}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {bookLabelOf(line.book)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {line.book.gameName}
+          </Typography>
+        </Stack>
+      ),
     },
-    { key: "mode", header: t("columns.mode"), render: modeText },
-    { key: "ticketNos", header: t("columns.ticketNos"), render: ticketsText },
+    { key: "mode", width: 64, header: t("columns.mode"), render: modeText },
+    {
+      key: "ticketNos",
+      width: 120,
+      header: t("columns.ticketNos"),
+      render: ticketsText,
+    },
     {
       key: "tickets",
+      width: 64,
       header: t("columns.tickets"),
       align: "right",
       render: (line) => formatMoney(lineTicketsOf(line)),
     },
     {
       key: "amount",
+      width: 90,
       header: t("columns.amount"),
       align: "right",
       render: (line) => formatMoney(lineAmountOf(line)),
     },
-    { key: "rate", header: t("columns.rate"), render: rateField },
+    { key: "rate", width: 96, header: t("columns.rate"), render: rateField },
     {
       key: "purchaseAmount",
+      width: 96,
       header: t("columns.purchaseAmount"),
       align: "right",
       render: (line) => formatMoney(linePurchaseAmountOf(line)),
     },
-    { key: "remove", header: "", render: removeButton },
+    { key: "remove", width: 72, header: "", render: removeButton },
   ];
   return (
     <Table
@@ -164,7 +176,7 @@ export const TransferLines = ({
       columns={columns}
       rows={lines}
       getRowKey={(line) => line.rowId}
-      minWidth={760}
+      minWidth={740}
       containerSx={{ height: "auto" }}
     />
   );

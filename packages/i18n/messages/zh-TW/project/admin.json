@@ -2220,11 +2220,9 @@
           "partial": "選張"
         },
         "opened": "拆過",
-        "wholeRange": "整本 {count} 張",
         "cardFacts": "{mode} · {tickets} · {count} 張 · 金額 {amount} · 批購金額 {purchase}",
         "columns": {
-          "game": "遊戲",
-          "book": "本",
+          "book": "遊戲 / 本",
           "mode": "方式",
           "ticketNos": "張號",
           "tickets": "張數",

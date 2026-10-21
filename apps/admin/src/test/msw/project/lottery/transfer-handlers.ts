@@ -10,6 +10,7 @@ import type {
 
 import { graphqlError } from "../../auth-handlers";
 import { api, type server } from "../../server";
+import { sampleOutstanding, settlementOf } from "./accounts-fixtures";
 import {
   transferBookTickets,
   transferOptions,
@@ -102,23 +103,48 @@ const wrongStore = () =>
 
 export interface TransferWorldOptions {
   /**
-   * 回調貨單自己的收付(兩邊;其他單據不回,交給帳戶管理的 world)。mock 開發模式一個操作只能有一個
-   * handler,關掉後收付全交給帳戶管理的 world(T-0008 照帳戶管理夾具的待收那一列)。
+   * 收付端點(`LotterySettlement`)怎麼回:`own`(預設)= 只回調貨單自己的(兩邊),其他單據落到帳戶管理的 world;
+   * `all` = 這裡一個 handler 回全部(調貨單用自己的,其他單據照帳戶管理夾具的待結清列;mock 開發模式一個操作
+   * 只能有一個 handler,帳戶管理那一個要拿掉,見 `withoutSettlementHandler`)。
    */
-  withSettlement?: boolean;
+  settlement?: "own" | "all";
 }
 
-/** 調貨單自己的收付(兩邊);其他單據不回(落到下一個 handler)。 */
-const settlementHandler = api.query("LotterySettlement", ({ variables }) => {
-  const { refId } = variables as LotterySettlementQueryVariables;
-  const item = transferSettlement(refId);
-  return item === null
-    ? undefined
-    : HttpResponse.json({ data: { lotterySettlement: { item } } });
-});
+/** 調貨單自己的收付(兩邊);其他單據:`all` 照帳戶管理夾具,`own` 不回(落到下一個 handler)。 */
+const settlementHandler = (mode: "own" | "all") =>
+  api.query("LotterySettlement", ({ variables }) => {
+    const { refId } = variables as LotterySettlementQueryVariables;
+    const item = transferSettlement(refId);
+    if (item !== null) {
+      return HttpResponse.json({ data: { lotterySettlement: { item } } });
+    }
+    if (mode === "own") {
+      return undefined;
+    }
+    const row = sampleOutstanding().find((one) => one.refId === refId);
+    return row === undefined
+      ? graphqlError("VALIDATION_FAILED", "NOT_FOUND", { code: "NOT_FOUND" })
+      : HttpResponse.json({
+          data: { lotterySettlement: { item: settlementOf(row) } },
+        });
+  });
+
+/** 拿掉一組 handler 裡的收付端點(mock 開發模式改由 `transferWorld({ settlement: "all" })` 回)。 */
+export const withoutSettlementHandler = (
+  handlers: Parameters<typeof server.use>,
+): Parameters<typeof server.use> =>
+  handlers.filter((handler) => {
+    const info: unknown = "info" in handler ? handler.info : null;
+    return !(
+      typeof info === "object" &&
+      info !== null &&
+      "operationName" in info &&
+      info.operationName === "LotterySettlement"
+    );
+  });
 
 export const transferWorld = ({
-  withSettlement = true,
+  settlement = "own",
 }: TransferWorldOptions = {}): TransferWorld => {
   const scanned: string[] = [];
   const receivings = new Map<string, LotteryTransferReceivingFieldsFragment>();
@@ -201,7 +227,7 @@ export const transferWorld = ({
           },
         });
       }),
-      ...(withSettlement ? [settlementHandler] : []),
+      settlementHandler(settlement),
     ],
   };
 };

@@ -239,7 +239,7 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
       : null;
 
   return (
-    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+    <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, overflow: "auto" }}>
       <Stack spacing={2}>
         <Card sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
           <Stack spacing={1}>
