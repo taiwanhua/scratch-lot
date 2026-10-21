@@ -47,6 +47,11 @@ export interface ApprovalSectionProps {
    * 只是畫面提示,api 的掛接點守門照樣擋。預設 false
    */
   approveDisabled?: boolean;
+  /**
+   * 我的任務決定(核准 / 駁回 / 退回)被接受之後(寫入已完成;「此關已結束」不算):
+   * 呼叫端要在交易後做事時用(例:專案單據頁在關卡通過後列印)
+   */
+  onDecided?: () => void;
 }
 
 /**
@@ -63,6 +68,7 @@ export const ApprovalSection = ({
   submission,
   onCopied,
   approveDisabled = false,
+  onDecided,
 }: ApprovalSectionProps) => {
   const t = useTranslations("admin.approval.section");
   const tErrors = useTranslations("admin.workflows.errors");
@@ -152,6 +158,9 @@ export const ApprovalSection = ({
             setIsStepClosed(closed);
             refresh(instance.id);
             void query.refetch();
+            if (!closed) {
+              onDecided?.();
+            }
           }}
         />
       ))}

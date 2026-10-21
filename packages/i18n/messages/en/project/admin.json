@@ -2410,7 +2410,9 @@
           "shipper_overreceived": "The shipping store received {amount} too much; record a refund first",
           "receiver_overpaid": "The receiving store paid {amount} too much; record the refund received"
         },
-        "wrongStoreNotified": "The creator of this transfer has been notified"
+        "wrongStoreNotified": "The creator of this transfer has been notified",
+        "printShipment": "Shipping slip",
+        "printPayment": "Payment receipt"
       },
       "wrongStore": {
         "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
@@ -2420,6 +2422,65 @@
     "allocation": {
       "title": "Over the planned books (warning only; you can still submit):",
       "item": "{game}: {excess} more"
+    },
+    "receipts": {
+      "documentNo": "No. {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "qrCaption": "Scan to open this document",
+      "purchaseReceiving": {
+        "title": "Purchase receiving slip",
+        "copyStore": "Copy 1 · Store copy",
+        "copyCourier": "Copy 2 · Courier copy",
+        "branch": "Receiving store",
+        "dealer": "Class A dealer",
+        "thisTime": "Received this time ({count} books)",
+        "receivedSoFar": "Received ({count} books)",
+        "missing": "Not yet arrived ({count} books)",
+        "noneMissing": "Not yet arrived: none",
+        "columns": {
+          "game": "Game",
+          "books": "Books",
+          "progress": "Received"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "Books: ",
+        "receiverSign": "Received by",
+        "courierSign": "Courier"
+      },
+      "transferShipment": {
+        "title": "Transfer shipping slip",
+        "route": "From → To",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "Game / Book",
+          "tickets": "Tickets",
+          "amount": "Amount"
+        },
+        "bookValue": "{gameCode} · {bookNo}",
+        "ticketNos": "Tickets: ",
+        "ticketCount": " ({count} tickets)",
+        "total": "Transfer amount",
+        "shipperSign": "Shipped by",
+        "courierSign": "Courier",
+        "receiverSign": "Received by"
+      },
+      "transferPayment": {
+        "title": "Transfer payment receipt",
+        "payer": "Paid by",
+        "payerValue": "{branch} · {source}",
+        "sources": {
+          "vault": "Vault",
+          "drawer": "Cash point drawer"
+        },
+        "payee": "Paid to",
+        "cash": "Cash",
+        "courierSign": "Courier signature"
+      },
+      "reprint": {
+        "heading": "[Reprint] #{printNo}",
+        "reason": "Reason: {reason}",
+        "reprintedBy": "Reprinted by: {name}"
+      }
     }
   },
   "lifecycle": {

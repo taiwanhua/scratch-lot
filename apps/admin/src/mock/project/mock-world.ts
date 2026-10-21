@@ -2,6 +2,10 @@ import { ModuleEngine, ModuleSidebarType } from "@repo/graphql";
 
 import type { TestModule } from "@/test/msw/auth-handlers";
 import { fieldsByCategory } from "@/test/msw/field-fixtures";
+import {
+  printButtonWorld,
+  printingModule,
+} from "@/test/msw/print-button-handlers";
 import { dealersModules } from "@/test/msw/project/dealers-fixtures";
 import { dealersWorld } from "@/test/msw/project/dealers-handlers";
 import { fieldOptionColorWorld } from "@/test/msw/project/field-option-colors-handlers";
@@ -153,6 +157,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...inventoryModules(),
     // 店面管理(表單模組,權限給滿)
     ...storeModules(),
+    // 58mm 單據的 [列印] / [補印](`api.printing`;底座 mock 沒有給)
+    printingModule(["api.printing.print", "api.printing.reprint"]),
   ],
   handlers: () => [
     ...fieldOptionColors(),
@@ -180,6 +186,11 @@ export const projectMockWorld: ProjectMockWorld = {
     ...purchaseWorld().handlers,
     // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份)
     ...storeWorld().handlers,
+    // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
+    // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
+    ...printButtonWorld().handlers.filter(
+      ({ info }) => info.operationName !== "PrintJob",
+    ),
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);

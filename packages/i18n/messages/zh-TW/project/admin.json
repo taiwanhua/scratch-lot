@@ -2410,7 +2410,9 @@
           "shipper_overreceived": "出貨店多收 {amount},請先記退款",
           "receiver_overpaid": "收貨店多付 {amount},請記收到退款"
         },
-        "wrongStoreNotified": "已通知這張調貨單的建立者更正"
+        "wrongStoreNotified": "已通知這張調貨單的建立者更正",
+        "printShipment": "調貨出貨單",
+        "printPayment": "調貨付款收據"
       },
       "wrongStore": {
         "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
@@ -2420,6 +2422,65 @@
     "allocation": {
       "title": "超過預計要給本數(只提醒,照樣可以送出):",
       "item": "{game}:多 {excess} 本"
+    },
+    "receipts": {
+      "documentNo": "單號 {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "qrCaption": "掃描開啟單據",
+      "purchaseReceiving": {
+        "title": "進貨點收單",
+        "copyStore": "第 1 張 · 店鋪留存",
+        "copyCourier": "第 2 張 · 送貨人留存",
+        "branch": "進貨分店",
+        "dealer": "甲類",
+        "thisTime": "這次點收({count} 本)",
+        "receivedSoFar": "已點收({count} 本)",
+        "missing": "尚未到的本({count} 本)",
+        "noneMissing": "尚未到的本:無",
+        "columns": {
+          "game": "遊戲",
+          "books": "本數",
+          "progress": "點收"
+        },
+        "progress": "{received} / {total}",
+        "bookNos": "本號:",
+        "receiverSign": "點收人簽名",
+        "courierSign": "送貨人簽名"
+      },
+      "transferShipment": {
+        "title": "調貨出貨單",
+        "route": "出貨店 → 收貨店",
+        "routeValue": "{from} → {to}",
+        "columns": {
+          "book": "遊戲 / 本",
+          "tickets": "張數",
+          "amount": "金額"
+        },
+        "bookValue": "{gameCode} · {bookNo}",
+        "ticketNos": "號碼:",
+        "ticketCount": "({count} 張)",
+        "total": "調貨金額",
+        "shipperSign": "出貨人簽名",
+        "courierSign": "送貨人簽名",
+        "receiverSign": "收貨人簽名"
+      },
+      "transferPayment": {
+        "title": "調貨付款收據",
+        "payer": "付款店",
+        "payerValue": "{branch} · {source}",
+        "sources": {
+          "vault": "小金庫",
+          "drawer": "收銀點抽屜"
+        },
+        "payee": "收款人",
+        "cash": "現金",
+        "courierSign": "送貨人簽收"
+      },
+      "reprint": {
+        "heading": "【補印】第 {printNo} 次",
+        "reason": "原因:{reason}",
+        "reprintedBy": "補印人:{name}"
+      }
     }
   },
   "lifecycle": {

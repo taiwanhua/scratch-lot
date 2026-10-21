@@ -34,6 +34,11 @@ export interface SettlementDialogProps {
   onClose: () => void;
   /** 寫入成功(呼叫端重抓自己的資料) */
   onDone?: () => void;
+  /** 寫入成功:這一筆收付的 id 與寫入後的收付現況(呼叫端在交易後列印付款收據) */
+  onRecorded?: (
+    recordId: string,
+    item: LotterySettlementFieldsFragment,
+  ) => void;
 }
 
 type Field = "method" | "accountId" | "cashSource" | "amount" | "handler";
@@ -58,6 +63,7 @@ export const SettlementDialog = ({
   button,
   onClose,
   onDone,
+  onRecorded,
 }: SettlementDialogProps) => {
   const t = useTranslations("admin.lotteryAccounts");
   const { session } = useSession();
@@ -91,7 +97,9 @@ export const SettlementDialog = ({
     useMutationFeedback({
       success: t("feedback.recordSuccess"),
       error: (error: unknown) => t(settlementErrorKey(error)),
-      onSuccess: () => {
+      onSuccess: (payload) => {
+        const { recordId, item } = payload.recordLotterySettlement;
+        onRecorded?.(recordId, item);
         onDone?.();
         onClose();
       },

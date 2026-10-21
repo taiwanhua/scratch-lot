@@ -1,5 +1,10 @@
 import { authWorld } from "@/test/msw/auth-handlers";
 import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
+import {
+  type PrintButtonWorldOptions,
+  printButtonWorld,
+  printingModule,
+} from "@/test/msw/print-button-handlers";
 import { accountsWorld } from "@/test/msw/project/lottery/accounts-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
@@ -18,6 +23,11 @@ export interface RenderPurchaseOptions {
   omit?: readonly string[];
   /** 當前組織:預設中山店(店長);`tenant` = 站在最上層組織(總部) */
   currentOrg?: "storeA" | "tenant";
+  /**
+   * 列印(58mm 單據):給了才有 `api.printing`(`permissions` 預設列印 + 補印)與列印的假伺服器;
+   * 不給 = 沒有收據機的租戶,列印按鈕不出現、不自動列印
+   */
+  printing?: PrintButtonWorldOptions & { permissions?: string[] };
 }
 
 /**
@@ -28,12 +38,16 @@ export const renderPurchasePage = ({
   path,
   omit = [],
   currentOrg = "storeA",
+  printing,
 }: RenderPurchaseOptions) => {
   const purchaseFake = purchaseWorld();
   const formsFake = formRuntimeWorld(purchaseFormWorld());
   const accountsFake = accountsWorld();
   const org = masterDataOrgs[currentOrg];
+  const printingFake =
+    printing === undefined ? null : printButtonWorld(printing);
   server.use(
+    ...(printingFake?.handlers ?? []),
     ...purchaseFake.handlers,
     ...formsFake.handlers,
     ...accountsFake.handlers,
@@ -42,8 +56,27 @@ export const renderPurchasePage = ({
       hasRefreshCookie: true,
       orgs: [{ id: org.id, name: org.name }],
       currentOrgTenantId: masterDataOrgs.tenant.id,
-      modules: [...purchasingModules(), ...purchaseModules(omit)],
+      modules: [
+        ...purchasingModules(),
+        ...purchaseModules(omit),
+        ...(printing === undefined
+          ? []
+          : [
+              printingModule(
+                printing.permissions ?? [
+                  "api.printing.print",
+                  "api.printing.reprint",
+                ],
+              ),
+            ]),
+      ],
     }).handlers,
   );
-  return { ...renderApp({ path }), purchaseFake, formsFake, accountsFake };
+  return {
+    ...renderApp({ path }),
+    printingFake,
+    purchaseFake,
+    formsFake,
+    accountsFake,
+  };
 };

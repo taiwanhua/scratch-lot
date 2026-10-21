@@ -222,7 +222,7 @@
 
 **作廢與撤銷的本**:作廢前只擋「任何一張已售、已調出或已拆本」(規格 8.2 掛接點表;「已有點收就擋」是駁回前 / 刪除前的規則),所以全部點收、原封不動的進貨單(例:已完成後發現整張批錯)可以作廢 —— 這時點收建的本標成 `revoked`、每張寫「進貨作廢」事件;庫存概況(`stockOverview`)與庫存分頁的本清單都排除 `revoked` 的本。
 
-**[完成這次點收]**:不寫資料。「這一次」由畫面記(上次按 [完成這次點收] 或打開這頁之後點收的本,`receivingSummaryOf`);進貨點收單的列印由 58mm 的功能接在檢視頁的 `completeReceiving`。
+**[完成這次點收]**:不寫資料。「這一次」由畫面記(上次按 [完成這次點收] 或打開這頁之後點收的本,`receivingSummaryOf`);按下時自動印進貨點收單兩張(見「列印」)。
 
 **收付**:`registerSettlementDocument` 登記一邊「總部」(付款方、`purchasing.purchase.settle`、只能銀行),應付 = 扣款金額(`purchasePayableOf`),參與收付的狀態 `reviewing` / `returned` / `withdrawn` / `completed`;[付款] = 應付 − 已付淨額、[收到退款] = 已付淨額 − 應付,最少 0。
 
@@ -296,9 +296,23 @@
 
 **報表**:調貨損益(調貨金額 − 原成本)由張數事件與單張成本算得出(調出前的單張成本在 `lottery_transfer_receipts.tickets`),報表歸輸出報表的功能。
 
-**還沒做**:
+### 列印(58mm 單據,規格第 12 章)
 
-- 列印「調貨出貨單」「調貨付款收據」由 58mm 的功能接。
+三張單據都用底座 B8 的列印流程(`docs/modules/printers.md`):瀏覽器把單據排版、轉成 384 點黑白 PNG,送 `createPrintJob`,由分店的列印代理程式印出。沒有 `api.printing.print` 的租戶(沒有收據機)不印、不出現 [列印];分店沒有可用的印表機時 [列印] 變灰並說明原因,自動列印不送。
+
+| 單據(Figma)                     | 什麼時候印                                                                                                     | 內容                                                                                                               | 簽名欄                 | 印表機的分店 |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------- | ------------ |
+| 進貨點收單(RC-08 `102:23526`)   | [完成這次點收] 自動印 2 張:第 1 張店鋪留存、第 2 張送貨人留存;檢視頁標頭 [列印] / [補印] 印一張                | 單號、進貨分店、甲類、這次點收的本(遊戲、本數、點收進度、本號區段;[列印] 改列到目前為止已點收的全部本)、尚未到的本 | 點收人、送貨人         | 進貨分店     |
+| 調貨出貨單(RC-06 `102:23446`)   | 第一關通過後(含跳過)自動印 1 張:在檢視頁核准第一關,或送出時第一關被跳過;檢視頁標頭 [列印]                      | 單號、出貨店 → 收貨店、每一列(遊戲 / 本、張數、金額、號碼區段與張數)、調貨金額;自動印只列這次調出的列              | 出貨人、送貨人、收貨人 | 出貨分店     |
+| 調貨付款收據(RC-07 `102:23493`) | 收貨店 [付款] 選現金、寫入成功後自動印 1 張(檢視頁的結算區塊與待結清款項分頁都會);檢視頁標頭 [列印] 印最近一筆 | 單號、付款店(分店 · 小金庫 / 收銀點抽屜)、收款人(付款視窗的經手 / 收款人)、現金金額;時間 = 付款時間                | 送貨人簽收             | 收貨分店     |
+
+- **版面**:單欄、「標籤:值」、表格最多三欄、號碼以區段表示(連號 `~`)、底部 QR code(這張單據在後台的詳情頁連結)、上方印最上層組織名稱(`me.currentOrg.tenantName`);時間依租戶時區。系統不記錄送貨人是誰、不標貨運單號。
+- **已印次數與補印**:列印工作的 `refType` 每種單據各一個(`lottery-purchase-receiving` / `lottery-transfer-shipment`,`refId` = 單據 id;`lottery-transfer-payment`,`refId` = 那一筆現金流水 id),所以同一張調貨單的出貨單與付款收據各算各的次數。補印走底座的補印對話框,單據上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」(原因選「其他」時印說明)。
+- **印表機**:單據所屬分店的預設印表機(`printablePrinters` 的 `defaultPrinterId`)→ 第一台可用的;單據可以給自己的預設(收銀點的印表機,店面的單據用)。
+- **自動列印只在寫入成功之後**:寫入失敗(送出、審核決定、付款被擋)不印;列印本身失敗(查印表機、轉圖、建立工作)只記 log,不打斷操作 —— 工作建立後的失敗(缺紙、代理程式離線)由底座的「列印失敗」通知告訴要求人。
+- **在哪裡觸發**:調貨出貨單由「做了這個動作的那一頁」判斷這次才調出的列(重抓點收區塊比對前後的 `shipped`):調貨單檢視頁的審核區塊(`ApprovalSection` 的 `onDecided`)、新增頁送出後。從申請中心詳情頁核准第一關、或用引擎的編輯頁重新送出時不會自動印,請在調貨單檢視頁按 [列印]。
+
+正本:`apps/admin/src/lib/project/lottery/receipts/`(每張單據一支版面函式 + `receipt-kinds.ts` 的單據種類)、`apps/admin/src/components/project/lottery/ReceiptPrint/`(`useReceiptPrinter` 的 `printReceiptAfterCommit(kind, payload)`、`ReceiptPrintButton`、`ReceiptDocument`)
 
 ## api 介面
 
@@ -364,12 +378,12 @@
 - 進貨單列表 `PurchasePage`:欄位讀列表欄位配置(與叫貨單列表共用 `shared/useFormListColumns.tsx`)+ 點收進度、結算(`lotteryPurchaseProgress`);狀態篩選(網址 `?purchases=`);手機改卡片。
 - **已知缺口**:進貨單列表的「進貨分店」「期間」篩選(Figma PU-04)還沒做,叫貨單列表同:底座表單列表的查詢還不支援組織欄 / 日期區間條件,之後開底座票補上再接。
 - 進貨單新增頁 `PurchaseCreatePage`:單頭 `PurchaseHeaderFields`、明細 `PurchaseLines`(電腦表格、平板 / 手機卡片);刷條碼用 `useScanner`(B10)與輸入框 Enter;正面的碼沒有遊戲代號時用「正面條碼的遊戲」;純函式在 `purchase-form.ts`。採購清單的 [建立進貨單](`CreatePurchaseAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&branch=<分店>`。超過預計要給本數只警告(規格 7.6):`lotteryPurchaseOptions` 回每個販售中遊戲的預計 / 已給 / 在途,「已給 + 在途 + 這張單這個遊戲刷了幾本 > 預計」時列出(`AllocationWarnings`,與調貨單共用),照樣可以送出。
-- 進貨單檢視頁 `PurchaseViewPage`:引擎的 `FormSubmissionDetail` + 點收區塊 + `SettlementPanel` + `ApprovalSection`;送錯分店彈窗 `WrongStoreDialog`。
+- 進貨單檢視頁 `PurchaseViewPage`:引擎的 `FormSubmissionDetail` + 點收區塊 + `SettlementPanel` + `ApprovalSection`;送錯分店彈窗 `WrongStoreDialog`;標頭 [列印] / [補印] 進貨點收單(`ReceiptPrintButton`)。
 - 點收區塊 `components/project/lottery/ReceiveBooksPanel/`(進貨單、調貨單共用;資料與寫入由呼叫端給;欄名可由使用處覆寫 `columnLabels`,「最後張號」欄可改顯示 `ticketText` —— 調貨單用「張號」「金額」與張號區段)。
 - 甲類詳情「批購紀錄」分頁 `DealerPurchasesTab`(追加到 `dealer-detail-tabs.ts`;綁了 `purchasing.purchase` 才看得到)。
 - 調貨單列表 `TransferPage`:欄位讀列表欄位配置 + 本數 / 張數、點收進度、結算(`lotteryTransferProgress`);審核中且有列在途的狀態顯示「在途」;狀態篩選(網址 `?transfers=`);手機改卡片。
 - 調貨單新增頁 `TransferCreatePage`:單頭(出貨 / 收貨分店 `OrgTreeSelect scope="visible"`、收貨店待購買的叫貨單、備註)、左邊明細 `TransferLines`(電腦表格、平板 / 手機卡片;批購金額率逐本改)、右邊 `TransferBookPanel`(選本;原封不動的本 [整本加入],拆過的本用 `TicketGrid` 選張後 [加入選取],沒有 `partial-tickets` 不出現格子);刷條碼(`useScanner` 與輸入框 Enter):原封不動的本直接整本加入、拆過的本選起刷到的那張;純函式在 `transfer-form.ts`。採購清單的 [從其他分店調貨](`CreateTransferAction`,追加到 `PENDING_REQUISITION_ACTIONS`)帶 `?requisition=<單號>&to=<收貨分店>`。
-- 調貨單檢視頁 `TransferViewPage`:標頭(關卡標籤、出貨店 → 收貨店、叫貨單、調貨金額、建立者)+ 還沒出貨時的出貨確認清單 / 出貨後的點收區塊(共用 `ReceiveBooksPanel`,一列一組)+ `SettlementPanel` + 核准前三個數字不相等的提示 + `ApprovalSection`;送錯分店彈窗 `TransferWrongStoreDialog`(只有 [知道了])。
+- 調貨單檢視頁 `TransferViewPage`:標頭(關卡標籤、出貨店 → 收貨店、叫貨單、調貨金額、建立者)+ 還沒出貨時的出貨確認清單 / 出貨後的點收區塊(共用 `ReceiveBooksPanel`,一列一組)+ `SettlementPanel` + 核准前三個數字不相等的提示 + `ApprovalSection`;送錯分店彈窗 `TransferWrongStoreDialog`(只有 [知道了])。標頭的 [列印] 兩顆(調貨出貨單、調貨付款收據,`TransferPrintButtons`);列印的資料與第一關通過後的自動列印在 `useTransferReceipts` / `../useShipmentReceipt.ts`(新增頁送出時共用)。
 
 ## 測試
 
@@ -381,6 +395,7 @@
 - 進貨單 seed:`seeds/project/purchasing.purchase.test.ts`;domain:`packages/domain/src/project/lottery/purchase.test.ts`
 - 調貨單 api:`apps/api/src/project/lottery/transfer/transfer.test.ts`(掛接點表每一列、送出前的本 / 張檢查、鎖定不能賣、第一關跳過也調出與通知、點收與單張成本、送錯分店、規格第 9 章 5 步驟例與分次付款例、核准前三個數字、兩邊權限、駁回 / 作廢回到出貨店、側欄計數四種情況、列表進度)
 - 調貨單 seed:`seeds/project/purchasing.transfer.test.ts`;domain:`packages/domain/src/project/lottery/transfer.test.ts`;admin:`pages/project/lottery/purchasing/transfer/**/*.test.ts(x)`
+- 列印(58mm 單據):版面 `lib/project/lottery/receipts/receipts.test.ts`(三張單據的版面快照、付款收據只印收貨店的現金、`refType`);admin `PurchaseViewPagePrint.test.tsx`(自動印兩張、沒有列印權限、分店沒有印表機時停用並說明、補印標示)、`TransferViewPagePrint.test.tsx`(第一關核准 → 一個工作、核准失敗不印、付現自動印付款收據 / 轉帳不印、[列印] 付款收據)、`TransferCreatePagePrint.test.tsx`(送出時第一關被跳過 → 印、沒跳過不印);api `transfer.test.ts` 的收付紀錄帶 `cashPlace`
 
 ## 使用者說明(help.md)
 

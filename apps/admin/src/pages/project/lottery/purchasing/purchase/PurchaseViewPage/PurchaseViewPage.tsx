@@ -21,6 +21,8 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissionDetail/FormSubmissionDetail";
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
+import { ReceiptPrintButton } from "@/components/project/lottery/ReceiptPrint/ReceiptPrintButton";
+import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   type ReceiveBookGroup,
   ReceiveBooksPanel,
@@ -32,6 +34,7 @@ import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import type { ModulePageProps } from "@/lib/base/module-tree";
+import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
 
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
 import { WrongStoreDialog } from "./WrongStoreDialog";
@@ -43,7 +46,8 @@ import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
  * 引擎零件(唯讀)+ 點收區塊 + `SettlementPanel` + 審核區塊。
  *
  * - 點收:店長(點收任務在自己手上)逐本刷條碼;「這一次」= 上次 [完成這次點收](或打開這頁)之後點收的本。
- *   [完成這次點收] 結束這一次(進貨點收單的列印由 58mm 的功能接在 `completeReceiving`)
+ *   [完成這次點收] 結束這一次,自動印進貨點收單兩張(店鋪留存、送貨人留存;規格第 12 章)
+ * - 標題列 [列印] / [補印]:進貨點收單(到目前為止已點收的本 + 尚未到的本;補印走底座補印對話框)
  * - 送錯分店:擋下、不入庫,彈窗提示;[知道了] 不記錄,[通知總部更正] 通知那張單的建立者
  * - 結算:送出之後才有(草稿不參與收付);按鈕要 `purchasing.purchase.settle`(api 回的 `canSettle`)
  */
@@ -81,6 +85,8 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     });
   };
   const receive = useReceiveLotteryPurchaseBookMutation(session.client);
+  const printer = useReceiptPrinter();
+  const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
   const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
 
   const onScan = async (code: string): Promise<void> => {
@@ -107,9 +113,18 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     }
   };
 
-  /** [完成這次點收]:結束這一次(不寫資料;列印由 58mm 的功能接在這裡)。 */
+  /**
+   * [完成這次點收]:結束這一次(不寫資料),自動印進貨點收單兩張 ——
+   * 這一次點收的本已在每次刷的時候各自寫入(交易已完成),列印失敗只記 log、點收照常完成。
+   */
   const completeReceiving = () => {
     showSnackbar("success", tReceive("completed", { count: thisTime.size }));
+    if (submission !== null && data !== null) {
+      void printer.printReceiptAfterCommit(
+        "purchase-receiving",
+        purchaseReceivingInputOf(submission, data, [...thisTime], documentUrl),
+      );
+    }
     setThisTime(new Set());
     refresh();
   };
@@ -148,7 +163,11 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
   return (
     <Card sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 3, py: 2.5 }}>
       <Stack spacing={2.25}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1 }}
+        >
           <Button
             variant="text"
             size="small"
@@ -161,6 +180,17 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             {tPages("backToList")}
           </Button>
           <Box sx={{ flex: 1 }} />
+          {submission !== null && data !== null && isSubmitted && (
+            <ReceiptPrintButton
+              kind="purchase-receiving"
+              payload={purchaseReceivingInputOf(
+                submission,
+                data,
+                null,
+                documentUrl,
+              )}
+            />
+          )}
           {access.editRoute !== null &&
             submission?.abilities.canEdit === true && (
               <Button
@@ -214,6 +244,7 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
       </Stack>
+      {printer.host}
       {wrongStore !== null && (
         <WrongStoreDialog
           info={wrongStore.info}

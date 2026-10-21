@@ -38,6 +38,7 @@ import {
   TRANSFER_PERMISSIONS,
   formatMoney,
 } from "../transfer-keys";
+import { useShipmentReceipt } from "../useShipmentReceipt";
 import { TransferBookPanel } from "./TransferBookPanel";
 import { TransferHeaderFields } from "./TransferHeaderFields";
 import { TransferLines } from "./TransferLines";
@@ -94,6 +95,8 @@ export const TransferCreatePage = () => {
     useModuleForms(TRANSFER_MODULE_KEY);
   const form = creatableForms.find((item) => item.key === TRANSFER_FORM_KEY);
   const draft = useFormDraft(TRANSFER_FORM_KEY);
+  // 送出時第一關被跳過(出貨分店的人自己送)= 送出當下就出貨 → 自動印調貨出貨單(規格第 12 章)
+  const shipmentReceipt = useShipmentReceipt();
   useRouteTabItemLabel(t("tabLabel"));
 
   const [fromRequisition] = useUrlState(
@@ -367,11 +370,20 @@ export const TransferCreatePage = () => {
         <Button
           disabled={!canSubmit}
           onClick={() => {
-            void draft.submit(valuesOf(), []).then((submitted) => {
+            void draft.submit(valuesOf(), []).then(async (submitted) => {
               if (submitted === null) {
                 return;
               }
               showSnackbar("success", t("submitted"));
+              // 先送列印再離開這頁(轉圖的節點掛在這頁);沒有出貨就不印,失敗只記 log
+              await shipmentReceipt.printNewlyShipped(
+                {
+                  submissionId: submitted.id,
+                  serialNo: submitted.serialNo ?? null,
+                  fromBranchId,
+                },
+                new Set(),
+              );
               if (access.viewRoute === null) {
                 backToList();
               } else {
@@ -383,6 +395,7 @@ export const TransferCreatePage = () => {
           {t("submit")}
         </Button>
       </Stack>
+      {shipmentReceipt.host}
     </Stack>
   );
 };

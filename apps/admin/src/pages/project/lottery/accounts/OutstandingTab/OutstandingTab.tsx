@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 
 import {
   type LotteryOutstandingSettlementFieldsFragment,
+  type LotterySettlementFieldsFragment,
   useLotteryOutstandingSettlementsQuery,
   useLotterySettlementQuery,
 } from "@repo/graphql";
@@ -14,6 +15,7 @@ import { Tag } from "@repo/ui/tag";
 
 import { SettlementDialog } from "@/components/project/lottery/SettlementPanel/SettlementDialog";
 import { buttonLabelKey } from "@/components/project/lottery/SettlementPanel/settlement-text";
+import { useSettlementReceipt } from "@/components/project/lottery/SettlementPanel/useSettlementReceipt";
 import { useSession } from "@/hooks/base/useSession";
 
 import { OUTSTANDING_TABLE_MIN_WIDTH, moneyText } from "../accounts-config";
@@ -35,10 +37,12 @@ const RowSettleDialog = ({
   row,
   onClose,
   onDone,
+  onRecorded,
 }: {
   row: Row;
   onClose: () => void;
   onDone: () => void;
+  onRecorded: (recordId: string, item: LotterySettlementFieldsFragment) => void;
 }) => {
   const { session } = useSession();
   const query = useLotterySettlementQuery(session.client, {
@@ -53,6 +57,7 @@ const RowSettleDialog = ({
       button={row.button === "in" ? "in" : "out"}
       onClose={onClose}
       onDone={onDone}
+      onRecorded={onRecorded}
     />
   );
 };
@@ -69,6 +74,8 @@ export const OutstandingTab = () => {
   const query = useLotteryOutstandingSettlementsQuery(session.client);
   const rows = query.data?.lotteryOutstandingSettlements.items ?? [];
   const [settling, setSettling] = useState<Row | null>(null);
+  // 收貨店付現金 → 調貨付款收據(付款視窗關掉之後才轉圖,所以掛在分頁上)
+  const receipt = useSettlementReceipt();
 
   const columns: TableColumn<Row>[] = [
     {
@@ -167,8 +174,10 @@ export const OutstandingTab = () => {
               queryKey: useLotteryOutstandingSettlementsQuery.getKey(),
             });
           }}
+          onRecorded={receipt.onRecorded}
         />
       )}
+      {receipt.host}
     </Box>
   );
 };
