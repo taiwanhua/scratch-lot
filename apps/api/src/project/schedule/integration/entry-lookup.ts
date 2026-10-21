@@ -5,7 +5,10 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
-import { ScheduleEntriesRepository } from "../../database/schedule/roster.repositories";
+import {
+  ScheduleAttendancePunchesRepository,
+  ScheduleEntriesRepository,
+} from "../../database/schedule/roster.repositories";
 import type { MySchedulePunchModel } from "../my/models/my-schedule.model";
 import {
   MyScheduleService,
@@ -81,6 +84,7 @@ const idOf = (value: Types.ObjectId | string, field: string) =>
 export class ScheduleEntryLookup {
   constructor(
     private readonly entries: ScheduleEntriesRepository,
+    private readonly punches: ScheduleAttendancePunchesRepository,
     private readonly published: PublishedEntries,
     private readonly rules: ScheduleRulesService,
     private readonly mySchedule: MyScheduleService,
@@ -200,6 +204,26 @@ export class ScheduleEntryLookup {
       String(idOf(input.entryId, "entryId")),
       meta,
     );
+  }
+
+  /**
+   * 開班彈窗的「你還沒打上班卡」:這一班有沒有(未標重複的)上班卡。讀取照操作者的可見範圍,
+   * 條件釘 `tenantId`;排班不存在或看不到 → false。
+   */
+  async hasStartPunch(
+    operator: OperatorContext,
+    input: {
+      tenantId: Types.ObjectId | string;
+      entryId: Types.ObjectId | string;
+    },
+  ): Promise<boolean> {
+    const found = await this.punches.findOne(operator, {
+      tenantId: idOf(input.tenantId, "tenantId"),
+      entryId: idOf(input.entryId, "entryId"),
+      type: "in",
+      duplicate: false,
+    });
+    return found !== null;
   }
 
   // ---- 內部 ----

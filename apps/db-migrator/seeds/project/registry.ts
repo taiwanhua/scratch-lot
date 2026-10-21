@@ -23,6 +23,7 @@ import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { seed as transferForm } from "./revisions/transfer.r2.seed";
 import { scheduleModuleDeclarations } from "./schedule";
+import { storeModule } from "./store";
 
 /**
  * 專案的種子來源(正本:ADR-0002)。專案新增的內容登記在這裡,不改 `seeds/base/`:
@@ -55,6 +56,8 @@ export const projectSeedSource: SeedSource = {
     purchasingTransferModule,
     // 庫存管理(專案規格第 7 章)
     inventoryModule,
+    // 店面管理(規格 3.1、3.2、第 6 章;表單模組、開啟 B9b)
+    storeModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲,
   // 進貨單的單頭引用甲類、受託人、銀行帳戶;調貨單的明細引用本)

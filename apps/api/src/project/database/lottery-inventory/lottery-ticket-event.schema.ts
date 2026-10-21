@@ -138,6 +138,8 @@ LotteryTicketEventSchema.index({ cashPointId: 1, at: 1 });
 LotteryTicketEventSchema.index({ ticketId: 1, at: 1 });
 // 已給本數(進貨 + 調入 − 調出)依分店 × 遊戲彙總
 LotteryTicketEventSchema.index({ orgId: 1, gameId: 1, type: 1 });
+// 抽屜應有與本班已售:一班的售出 / 撤銷加總(店面)
+LotteryTicketEventSchema.index({ shiftId: 1, type: 1 });
 LotteryTicketEventSchema.plugin(baseFieldsPlugin);
 LotteryTicketEventSchema.plugin(tenantScopePlugin, { moduleData: true });
 LotteryTicketEventSchema.path("moduleKey").default(INVENTORY_MODULE_KEY);

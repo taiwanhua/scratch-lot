@@ -1,3 +1,9 @@
+import {
+  STORE_BOARD_KEY,
+  STORE_KEY,
+  STORE_PERMISSIONS,
+} from "@repo/domain/project/lottery";
+
 import type { RealtimeBoardRegistration } from "../realtime/realtime-board-registration";
 
 /**
@@ -10,4 +16,11 @@ import type { RealtimeBoardRegistration } from "../realtime/realtime-board-regis
  * { key: "store-board", moduleKey: "store-board", permission: "store-board.view" }
  * ```
  */
-export const PROJECT_REALTIME_BOARDS: readonly RealtimeBoardRegistration[] = [];
+export const PROJECT_REALTIME_BOARDS: readonly RealtimeBoardRegistration[] = [
+  // 店面管理的看板(規格 6.1):看得到看板 = `store.view` 且那家店在可見範圍內;日結精靈訂閱同一個頻道
+  {
+    key: STORE_BOARD_KEY,
+    moduleKey: STORE_KEY,
+    permission: STORE_PERMISSIONS.view,
+  },
+];

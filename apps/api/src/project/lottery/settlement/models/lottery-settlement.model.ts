@@ -57,6 +57,10 @@ export class LotterySettlementSideModel {
   @Field(() => Boolean)
   canSettle!: boolean;
 
+  /** 用現金時可以選的抽屜:這一邊的分店開著班的收銀點(小金庫不在這份,一律可選)。 */
+  @Field(() => [LotteryAccountsRefModel])
+  cashDrawers!: LotteryAccountsRefModel[];
+
   @Field(() => [LotterySettlementButtonModel])
   buttons!: LotterySettlementButtonModel[];
 }

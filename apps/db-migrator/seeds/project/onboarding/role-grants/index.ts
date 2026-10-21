@@ -9,6 +9,7 @@ import { purchasingPurchaseGrants } from "./purchasing.purchase";
 import { purchasingTransferGrants } from "./purchasing.transfer";
 import { reportsGrants } from "./reports";
 import { scheduleGrants } from "./schedule";
+import { storeGrants } from "./store";
 
 /**
  * 開通時建立的三個角色的權限配方(規格 3.3),**每個模組一段、一檔**。
@@ -31,4 +32,5 @@ export const ROLE_GRANT_SECTIONS: readonly ModuleRoleGrants[] = [
   inventoryGrants,
   purchasingPurchaseGrants,
   purchasingTransferGrants,
+  storeGrants,
 ];

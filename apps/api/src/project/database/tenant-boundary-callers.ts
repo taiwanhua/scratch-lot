@@ -85,6 +85,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 進貨單:本號和其他有效進貨單 / 既有的本重複、已點收的列、叫貨單 / 甲類 / 受託人(總部建的單,系統身分
   // 只看得到單據的組織);作廢時撤銷點收過的本、寫「進貨作廢」事件
   "project/lottery/purchase/purchase-rules.service.ts": ["反查", "例外寫入"],
+  // 店面:一個人在整個租戶開著的班(只能同時開同一家店的班)
+  "project/lottery/store/store-shifts.service.ts": ["以人為準的資料"],
+  // 店面:班次負責人的名稱(負責人可能是別家分店支援的人)
+  "project/lottery/store/shift-views.ts": ["反查"],
+  // 店面的登記:收付找開著的班、收銀點停用守門、崗位旁的收銀點名稱、被班次綁定的排班(沒有操作者)
+  "project/lottery/store/store-registrations.ts": ["系統重算"],
   // 遊戲是否有進貨單引用、在途本數、甲類的批購日來源:沒有操作者,問的是整個租戶
   "project/lottery/purchase/purchase-registrations.ts": ["系統重算"],
   // 調貨單:本 / 張 / 其他調貨單 / 叫貨單(單據可能是總部建的,系統身分只看得到單據的組織;張分在多家店)、

@@ -15,6 +15,7 @@ import { LOTTERY_TICKET_EVENTS_COLLECTION } from "./lottery-inventory/lottery-ti
 import { LOTTERY_TICKETS_COLLECTION } from "./lottery-inventory/lottery-ticket.schema";
 import { LOTTERY_PURCHASE_RECEIPTS_COLLECTION } from "./lottery-purchases/lottery-purchase-receipt.schema";
 import { LOTTERY_REQUISITION_LINES_COLLECTION } from "./lottery-requisitions/lottery-requisition-line.schema";
+import { LOTTERY_SHIFTS_COLLECTION } from "./lottery-store/lottery-shift.schema";
 import { LOTTERY_TRANSFER_RECEIPTS_COLLECTION } from "./lottery-transfers/lottery-transfer-receipt.schema";
 import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "./schedule/schedule-attendance-punch.schema";
 import { SCHEDULE_AUTO_RUNS_COLLECTION } from "./schedule/schedule-auto-run.schema";
@@ -64,6 +65,7 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     LOTTERY_REQUISITION_LINES_COLLECTION,
     LOTTERY_PURCHASE_RECEIPTS_COLLECTION,
     LOTTERY_TRANSFER_RECEIPTS_COLLECTION,
+    LOTTERY_SHIFTS_COLLECTION,
     SCHEDULE_SETTINGS_COLLECTION,
     SCHEDULE_CALENDAR_DAYS_COLLECTION,
     SCHEDULE_DAY_OFFS_COLLECTION,

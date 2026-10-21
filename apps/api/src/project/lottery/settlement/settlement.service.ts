@@ -48,7 +48,7 @@ import {
   CashLedgerOutsideTransactionError,
   CashLedgerService,
 } from "../cash/cash-ledger.service";
-import { openShiftOf } from "../cash/open-shift";
+import { openDrawersOf, openShiftOf } from "../cash/open-shift";
 import type {
   LotterySettlementCandidatesInput,
   RecordLotterySettlementInput,
@@ -723,6 +723,15 @@ export class SettlementService {
     const sideBranches = registration.sides.map(
       (side) => side.branchOf?.(submission, payable) ?? payable.branchOrgId,
     );
+    // 現金來源的抽屜:這一邊的分店開著班的收銀點(看得到那家店才列;店面登記的清單)
+    const sideDrawers = await Promise.all(
+      registration.sides.map((side, index) => {
+        const branch = sideBranches[index] ?? payable.branchOrgId;
+        return side.methods.includes("cash") && isOrgVisible(operator, branch)
+          ? openDrawersOf(operator, branch)
+          : Promise.resolve([]);
+      }),
+    );
     const [orgNames, userNames] = await Promise.all([
       this.names.orgNames(operator, tenantId, sideBranches),
       this.names.userNames(operator, tenantId, [
@@ -828,6 +837,10 @@ export class SettlementService {
               ? totals.out - totals.in
               : totals.in - totals.out,
           canSettle,
+          cashDrawers: (sideDrawers[index] ?? []).map((drawer) => ({
+            id: String(drawer.cashPointId),
+            name: drawer.cashPointName,
+          })),
           buttons: (["out", "in"] as const).map((button) => {
             const defaultAmount = Math.max(
               0,

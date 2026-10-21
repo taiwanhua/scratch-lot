@@ -79,10 +79,34 @@ export class LotteryVaultExpectedModel {
   baselineAt!: Date | null;
 }
 
+/** 一個開著班的收銀點抽屜目前的應有金額(店面的收銀班次登記;沒開班的收銀點不列)。 */
+@ObjectType("LotteryDrawerExpected")
+export class LotteryDrawerExpectedModel {
+  @Field(() => LotteryAccountsRefModel)
+  cashPoint!: LotteryAccountsRefModel;
+
+  @Field(() => ID)
+  shiftId!: string;
+
+  /** 負責人。 */
+  @Field(() => LotteryAccountsRefModel)
+  openedBy!: LotteryAccountsRefModel;
+
+  @Field(() => GraphQLISODateTime)
+  openedAt!: Date;
+
+  @Field(() => Int)
+  amount!: number;
+}
+
 @ObjectType()
 export class LotteryCashLedgerPayload {
   @Field(() => LotteryVaultExpectedModel)
   vault!: LotteryVaultExpectedModel;
+
+  /** 各收銀點抽屜的應有(開著的班,依收銀點排序)。 */
+  @Field(() => [LotteryDrawerExpectedModel])
+  drawers!: LotteryDrawerExpectedModel[];
 
   @Field(() => [LotteryCashMovementModel])
   items!: LotteryCashMovementModel[];

@@ -25,7 +25,9 @@ import type {
   LotteryCashLedgerInput,
   LotteryCashLedgerPayload,
   LotteryCashMovementModel,
+  LotteryDrawerExpectedModel,
 } from "./models/lottery-cash-ledger.model";
+import { type OpenDrawer, openDrawersOf } from "./open-shift";
 
 type MovementRecord = Persisted<LotteryCashMovementDocument>;
 
@@ -34,7 +36,7 @@ const MAX_ROWS = 500;
 /**
  * 即時現金帳(`accounts` → 即時現金帳分頁,只能查看;專案規格 10.2)。要 `accounts.view-cash`;
  * 分店要在可見範圍內(看不到 → `NOT_FOUND`)。上方小金庫的應有只從流水算;各收銀點抽屜的應有
- * 由店面(收銀班次)併回後補上。
+ * 由店面(收銀班次)登記的清單提供(`open-shift.ts` 的 `openDrawersOf`,只列開著班的收銀點)。
  */
 @Injectable()
 export class CashLedgerViewService {
@@ -69,8 +71,9 @@ export class CashLedgerViewService {
       ...(input.type ? { type: input.type as CashMovementType } : {}),
       ...(cashPointId === null ? {} : { cashPointId }),
     };
-    const [vault, totalCount, rows] = await Promise.all([
+    const [vault, drawers, totalCount, rows] = await Promise.all([
       this.ledger.vaultExpected(operator, grant.tenantId, orgId),
+      openDrawersOf(operator, orgId),
       this.movements.count(operator, filter),
       this.movements.findMany(operator, filter, {
         sort: { occurredAt: -1, createdAt: -1, _id: -1 },
@@ -83,6 +86,7 @@ export class CashLedgerViewService {
         baselineAmount: vault.baseline.amount,
         baselineAt: vault.baseline.since,
       },
+      drawers: await this.drawerModels(operator, grant.tenantId, drawers),
       items: await this.toModels(operator, grant.tenantId, rows),
       totalCount,
     };
@@ -106,6 +110,31 @@ export class CashLedgerViewService {
       throw notFoundError(`cash movement not found: ${id}`);
     }
     return firstOf(await this.toModels(operator, grant.tenantId, [row]));
+  }
+
+  private async drawerModels(
+    operator: OperatorContext,
+    tenantId: Types.ObjectId | null,
+    drawers: readonly OpenDrawer[],
+  ): Promise<LotteryDrawerExpectedModel[]> {
+    const userNames = await this.names.userNames(
+      operator,
+      tenantId,
+      drawers.map((drawer) => drawer.openedBy),
+    );
+    return drawers.map((drawer) => ({
+      cashPoint: {
+        id: String(drawer.cashPointId),
+        name: drawer.cashPointName,
+      },
+      shiftId: String(drawer.shiftId),
+      openedBy: {
+        id: String(drawer.openedBy),
+        name: userNames.get(String(drawer.openedBy)) ?? "",
+      },
+      openedAt: drawer.openedAt,
+      amount: drawer.expected,
+    }));
   }
 
   private async toModels(
