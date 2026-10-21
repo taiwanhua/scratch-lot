@@ -4,6 +4,12 @@ import { DatabaseModule } from "../../database/database.module";
 import { FieldOptionsModule } from "../../fields/field-options.module";
 import { NotificationsModule } from "../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../scheduled-jobs/scheduled-jobs.module";
+import { ScheduleAttendanceResolver } from "./attendance/attendance.resolver";
+import { ScheduleAttendanceService } from "./attendance/attendance.service";
+import { MakeupPunchService } from "./attendance/makeup-punch.service";
+import { MAKEUP_PUNCH_SERVICE } from "./attendance/makeup-punch.token";
+import { SchedulePunchLedger } from "./attendance/punch-ledger";
+import { UnmatchedPunchesReader } from "./attendance/unmatched-punches";
 import { ScheduleAutoRunResolver } from "./auto-run/schedule-auto-run.resolver";
 import { ScheduleAutoRunService } from "./auto-run/schedule-auto-run.service";
 import { ScheduleCalendarResolver } from "./calendar/schedule-calendar.resolver";
@@ -83,6 +89,13 @@ import { ScheduleTemplatesService } from "./templates/schedule-templates.service
     MyScheduleService,
     MyScheduleResolver,
     ScheduleEntryLookup,
+    SchedulePunchLedger,
+    UnmatchedPunchesReader,
+    ScheduleAttendanceService,
+    ScheduleAttendanceResolver,
+    MakeupPunchService,
+    // 補打卡申請的掛接點以 token 取服務(避免登記檔 import 服務造成循環)
+    { provide: MAKEUP_PUNCH_SERVICE, useExisting: MakeupPunchService },
   ],
   exports: [
     SchedulePermissions,

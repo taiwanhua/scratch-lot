@@ -2613,6 +2613,11 @@ export type LotteryVaultExpected = {
   baselineAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
+export type MakeupPunchEntryOptionsInput = {
+  date: Scalars['String']['input'];
+  orgId: Scalars['ID']['input'];
+};
+
 export type MarkNotificationsReadInput = {
   ids: Array<Scalars['ID']['input']>;
 };
@@ -2836,6 +2841,7 @@ export type Mutation = {
   publishWorkflowVersion: WorkflowVersionPayload;
   punchMySchedule: MySchedulePunch;
   purgeDemoTenant: PurgeDemoTenantPayload;
+  reassignSchedulePunch: ScheduleAttendancePunch;
   reassignTask: WorkflowTaskPayload;
   receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
   receiveLotteryTransferBook: ReceiveLotteryTransferBookPayload;
@@ -3299,6 +3305,11 @@ export type MutationPunchMyScheduleArgs = {
 
 export type MutationPurgeDemoTenantArgs = {
   input: PurgeDemoTenantInput;
+};
+
+
+export type MutationReassignSchedulePunchArgs = {
+  input: ReassignSchedulePunchInput;
 };
 
 
@@ -4448,6 +4459,8 @@ export type Query = {
   lotteryTransferOptions: LotteryTransferOptions;
   lotteryTransferProgress: Array<LotteryTransferProgress>;
   lotteryTransferReceiving: LotteryTransferReceiving;
+  makeupPunchEntryExists: Scalars['Boolean']['output'];
+  makeupPunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
   me: Me;
   moduleForms: Array<FormSummary>;
   moduleListColumns: ModuleListColumnsPayload;
@@ -4458,6 +4471,7 @@ export type Query = {
   myNotificationPreferences: MyNotificationPreferencesPayload;
   myNotificationUnreadCount: MyNotificationUnreadCountPayload;
   myNotifications: MyNotificationsPayload;
+  myPendingMakeupPunchEntryIds: Array<Scalars['ID']['output']>;
   myPreferences: MyPreferencesPayload;
   mySchedule: MySchedulePayload;
   myScheduleDayOffs: MyScheduleDayOffsPayload;
@@ -4485,6 +4499,10 @@ export type Query = {
   roleUserCandidates: RoleUserCandidatesPayload;
   roleUsers: RoleUsersPayload;
   roles: RolesPayload;
+  scheduleAttendanceByPerson: ScheduleAttendanceByPersonPayload;
+  scheduleAttendanceByStore: ScheduleAttendanceByStorePayload;
+  scheduleAttendanceExport: ScheduleAttendanceExportPayload;
+  scheduleAttendancePunchEntryOptions: Array<ScheduleAttendanceEntryOption>;
   scheduleAutoRunPreview: ScheduleAutoRunPreviewPayload;
   scheduleAutoRunStatus: ScheduleAutoRunStatusPayload;
   scheduleCalendar: ScheduleCalendarPayload;
@@ -4835,6 +4853,16 @@ export type QueryLotteryTransferReceivingArgs = {
 };
 
 
+export type QueryMakeupPunchEntryExistsArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryMakeupPunchEntryOptionsArgs = {
+  input: MakeupPunchEntryOptionsInput;
+};
+
+
 export type QueryModuleFormsArgs = {
   moduleKey: Scalars['ID']['input'];
 };
@@ -4975,6 +5003,26 @@ export type QueryRolesArgs = {
 };
 
 
+export type QueryScheduleAttendanceByPersonArgs = {
+  input: ScheduleAttendanceByPersonInput;
+};
+
+
+export type QueryScheduleAttendanceByStoreArgs = {
+  input: ScheduleAttendanceByStoreInput;
+};
+
+
+export type QueryScheduleAttendanceExportArgs = {
+  input: ScheduleAttendanceExportInput;
+};
+
+
+export type QueryScheduleAttendancePunchEntryOptionsArgs = {
+  punchId: Scalars['ID']['input'];
+};
+
+
 export type QueryScheduleAutoRunPreviewArgs = {
   input: ScheduleAutoRunRangeInput;
 };
@@ -5092,6 +5140,13 @@ export type RealtimeTicketPayload = {
   ticket: Scalars['String']['output'];
   /** 憑證內的頻道:平常只有 `user:<自己>`,看板頁符合條件時多一個 `board:<店>` */
   topics: Array<Scalars['String']['output']>;
+};
+
+export type ReassignSchedulePunchInput = {
+  entryId?: InputMaybe<Scalars['ID']['input']>;
+  punchId: Scalars['ID']['input'];
+  reasonKey: Scalars['String']['input'];
+  reasonNote?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ReassignTaskInput = {
@@ -5563,7 +5618,9 @@ export type SaveScheduleEntryInput = {
   endAt: Scalars['DateTime']['input'];
   id?: InputMaybe<Scalars['ID']['input']>;
   orgId?: InputMaybe<Scalars['ID']['input']>;
+  punchIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   startAt: Scalars['DateTime']['input'];
+  usePunchTime?: InputMaybe<Scalars['Boolean']['input']>;
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -5583,6 +5640,126 @@ export type ScheduleApplyWeekTemplate = {
   days: Array<Array<Scalars['ID']['output']>>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
+};
+
+export type ScheduleAttendanceAbilities = {
+  __typename?: 'ScheduleAttendanceAbilities';
+  canCreate: Scalars['Boolean']['output'];
+  canExport: Scalars['Boolean']['output'];
+  canReassign: Scalars['Boolean']['output'];
+  canViewAll: Scalars['Boolean']['output'];
+};
+
+export type ScheduleAttendanceByPersonInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleAttendanceByPersonPayload = {
+  __typename?: 'ScheduleAttendanceByPersonPayload';
+  abilities: ScheduleAttendanceAbilities;
+  month: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  people: Array<ScheduleAttendancePerson>;
+  rows: Array<ScheduleAttendanceRow>;
+  unmatched: Array<ScheduleAttendancePunch>;
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleAttendanceByStoreInput = {
+  date: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  unmatchedOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type ScheduleAttendanceByStorePayload = {
+  __typename?: 'ScheduleAttendanceByStorePayload';
+  abilities: ScheduleAttendanceAbilities;
+  absentCount: Scalars['Int']['output'];
+  arrivedCount: Scalars['Int']['output'];
+  date: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  rows: Array<ScheduleAttendanceRow>;
+  scheduledCount: Scalars['Int']['output'];
+  unmatched: Array<ScheduleAttendancePunch>;
+};
+
+export type ScheduleAttendanceEntryOption = {
+  __typename?: 'ScheduleAttendanceEntryOption';
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  shortName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+};
+
+export type ScheduleAttendanceExportInput = {
+  month: Scalars['String']['input'];
+  orgId?: InputMaybe<Scalars['ID']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type ScheduleAttendanceExportPayload = {
+  __typename?: 'ScheduleAttendanceExportPayload';
+  month: Scalars['String']['output'];
+  sheets: Array<ScheduleAttendanceExportSheet>;
+};
+
+export type ScheduleAttendanceExportSheet = {
+  __typename?: 'ScheduleAttendanceExportSheet';
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  rows: Array<ScheduleAttendanceRow>;
+};
+
+export type ScheduleAttendancePerson = {
+  __typename?: 'ScheduleAttendancePerson';
+  name: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
+export type ScheduleAttendancePunch = {
+  __typename?: 'ScheduleAttendancePunch';
+  at: Scalars['DateTime']['output'];
+  duplicate: Scalars['Boolean']['output'];
+  entryId?: Maybe<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  source: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+  userName: Scalars['String']['output'];
+};
+
+export type ScheduleAttendanceRow = {
+  __typename?: 'ScheduleAttendanceRow';
+  breakMinutes: Scalars['Int']['output'];
+  clockIn?: Maybe<Scalars['DateTime']['output']>;
+  clockOut?: Maybe<Scalars['DateTime']['output']>;
+  date: Scalars['String']['output'];
+  earlyLeaveMinutes: Scalars['Int']['output'];
+  endAt: Scalars['DateTime']['output'];
+  entryId: Scalars['ID']['output'];
+  hasMakeup: Scalars['Boolean']['output'];
+  lateMinutes: Scalars['Int']['output'];
+  missing: Array<Scalars['String']['output']>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  punches: Array<ScheduleAttendancePunch>;
+  scheduledMinutes: Scalars['Int']['output'];
+  shortName?: Maybe<Scalars['String']['output']>;
+  specialDayCategory?: Maybe<Scalars['String']['output']>;
+  specialDayName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  status: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+  userName: Scalars['String']['output'];
+  workedMinutes?: Maybe<Scalars['Int']['output']>;
 };
 
 export type ScheduleAutoRunConditionInput = {
@@ -5981,6 +6158,7 @@ export type ScheduleRosterPayload = {
   calendarDays: Array<ScheduleRosterCalendarDay>;
   canEdit: Scalars['Boolean']['output'];
   canSaveTemplate: Scalars['Boolean']['output'];
+  canUsePunchTime: Scalars['Boolean']['output'];
   demands: Array<ScheduleDemand>;
   entries: Array<ScheduleEntry>;
   month: Scalars['String']['output'];
@@ -5992,6 +6170,7 @@ export type ScheduleRosterPayload = {
   settings: ScheduleRosterSettings;
   templates: Array<ScheduleRosterTemplate>;
   unavailability: Array<ScheduleRosterUnavailability>;
+  unmatchedPunches: Array<ScheduleRosterPunch>;
 };
 
 export type ScheduleRosterPerson = {
@@ -6005,11 +6184,21 @@ export type ScheduleRosterPerson = {
   userId: Scalars['ID']['output'];
 };
 
+export type ScheduleRosterPunch = {
+  __typename?: 'ScheduleRosterPunch';
+  at: Scalars['DateTime']['output'];
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  type: Scalars['String']['output'];
+  userId: Scalars['ID']['output'];
+};
+
 export type ScheduleRosterSettings = {
   __typename?: 'ScheduleRosterSettings';
   breakTiers: Array<ScheduleRosterBreakTier>;
   defaultHelperTaskKey: Scalars['String']['output'];
   defaultLeaderTaskKey: Scalars['String']['output'];
+  entryMatchToleranceMinutes: Scalars['Int']['output'];
   maxMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
   minMonthlyDayOffs?: Maybe<Scalars['Int']['output']>;
 };
@@ -8993,6 +9182,68 @@ export type PunchMyScheduleMutationVariables = Exact<{
 
 export type PunchMyScheduleMutation = { __typename?: 'Mutation', punchMySchedule: { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean } };
 
+export type ScheduleAttendancePunchFieldsFragment = { __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean };
+
+export type ScheduleAttendanceRowFieldsFragment = { __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> };
+
+export type ScheduleAttendanceAbilitiesFieldsFragment = { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean };
+
+export type ScheduleAttendanceEntryOptionFieldsFragment = { __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null };
+
+export type ScheduleAttendanceByPersonQueryVariables = Exact<{
+  input: ScheduleAttendanceByPersonInput;
+}>;
+
+
+export type ScheduleAttendanceByPersonQuery = { __typename?: 'Query', scheduleAttendanceByPerson: { __typename?: 'ScheduleAttendanceByPersonPayload', month: string, orgId: string, userId: string, people: Array<{ __typename?: 'ScheduleAttendancePerson', userId: string, name: string }>, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }>, unmatched: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }>, abilities: { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean } } };
+
+export type ScheduleAttendanceByStoreQueryVariables = Exact<{
+  input: ScheduleAttendanceByStoreInput;
+}>;
+
+
+export type ScheduleAttendanceByStoreQuery = { __typename?: 'Query', scheduleAttendanceByStore: { __typename?: 'ScheduleAttendanceByStorePayload', orgId: string, orgName: string, date: string, scheduledCount: number, arrivedCount: number, absentCount: number, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }>, unmatched: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }>, abilities: { __typename?: 'ScheduleAttendanceAbilities', canViewAll: boolean, canReassign: boolean, canExport: boolean, canCreate: boolean } } };
+
+export type ScheduleAttendanceExportQueryVariables = Exact<{
+  input: ScheduleAttendanceExportInput;
+}>;
+
+
+export type ScheduleAttendanceExportQuery = { __typename?: 'Query', scheduleAttendanceExport: { __typename?: 'ScheduleAttendanceExportPayload', month: string, sheets: Array<{ __typename?: 'ScheduleAttendanceExportSheet', orgId: string, orgName: string, rows: Array<{ __typename?: 'ScheduleAttendanceRow', entryId: string, userId: string, userName: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, clockIn?: string | null, clockOut?: string | null, status: string, lateMinutes: number, earlyLeaveMinutes: number, workedMinutes?: number | null, scheduledMinutes: number, missing: Array<string>, specialDayName?: string | null, specialDayCategory?: string | null, hasMakeup: boolean, punches: Array<{ __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean }> }> }> } };
+
+export type ScheduleAttendancePunchEntryOptionsQueryVariables = Exact<{
+  punchId: Scalars['ID']['input'];
+}>;
+
+
+export type ScheduleAttendancePunchEntryOptionsQuery = { __typename?: 'Query', scheduleAttendancePunchEntryOptions: Array<{ __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null }> };
+
+export type ReassignSchedulePunchMutationVariables = Exact<{
+  input: ReassignSchedulePunchInput;
+}>;
+
+
+export type ReassignSchedulePunchMutation = { __typename?: 'Mutation', reassignSchedulePunch: { __typename?: 'ScheduleAttendancePunch', id: string, userId: string, userName: string, orgId: string, orgName: string, type: string, at: string, entryId?: string | null, source: string, duplicate: boolean } };
+
+export type MakeupPunchEntryOptionsQueryVariables = Exact<{
+  input: MakeupPunchEntryOptionsInput;
+}>;
+
+
+export type MakeupPunchEntryOptionsQuery = { __typename?: 'Query', makeupPunchEntryOptions: Array<{ __typename?: 'ScheduleAttendanceEntryOption', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, shortName?: string | null }> };
+
+export type MyPendingMakeupPunchEntryIdsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyPendingMakeupPunchEntryIdsQuery = { __typename?: 'Query', myPendingMakeupPunchEntryIds: Array<string> };
+
+export type MakeupPunchEntryExistsQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type MakeupPunchEntryExistsQuery = { __typename?: 'Query', makeupPunchEntryExists: boolean };
+
 export type ScheduleAutoRunSummaryFieldsFragment = { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number };
 
 export type ScheduleApplyTemplatesFieldsFragment = { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number };
@@ -9122,7 +9373,7 @@ export type ScheduleRosterQueryVariables = Exact<{
 }>;
 
 
-export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }> } };
+export type ScheduleRosterQuery = { __typename?: 'Query', scheduleRoster: { __typename?: 'ScheduleRosterPayload', orgId: string, orgName: string, month: string, canEdit: boolean, canSaveTemplate: boolean, canUsePunchTime: boolean, period: { __typename?: 'SchedulePeriod', status: string, publishedAt?: string | null, publishedByName?: string | null }, settings: { __typename?: 'ScheduleRosterSettings', defaultLeaderTaskKey: string, defaultHelperTaskKey: string, maxMonthlyDayOffs?: number | null, minMonthlyDayOffs?: number | null, entryMatchToleranceMinutes: number, breakTiers: Array<{ __typename?: 'ScheduleRosterBreakTier', minMinutes: number, breakMinutes: number }> }, people: Array<{ __typename?: 'ScheduleRosterPerson', userId: string, name: string, employmentType?: string | null, canLead: boolean, isPrimary: boolean, isCandidate: boolean, stats: { __typename?: 'ScheduleRosterStats', shiftCount: number, leadShiftCount: number, workMinutes: number, dayOffDays: number, fullDayOffDays: number, longestStreak: number, timeRangeDays: Array<{ __typename?: 'ScheduleRosterTimeRangeDay', date: string, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }> } }>, demands: Array<{ __typename?: 'ScheduleDemand', id: string, date: string, startAt: string, endAt: string, positionKey: string, positionNote?: string | null, templateId?: string | null, source: string, createdAt: string, tasks: Array<{ __typename?: 'ScheduleDemandTask', taskId: string, role: string, taskKey: string, entryId?: string | null, userId?: string | null, userName?: string | null }> }>, entries: Array<{ __typename?: 'ScheduleEntry', id: string, userId: string, date: string, startAt: string, endAt: string, breakMinutes: number, deletable: boolean, assignments: Array<{ __typename?: 'ScheduleEntryAssignment', demandId: string, taskId: string, role: string, taskKey: string, source: string, reason?: string | null }> }>, otherStoreEntries: Array<{ __typename?: 'ScheduleOtherStoreEntry', userId: string, date: string, startAt: string, endAt: string, orgName?: string | null }>, unavailability: Array<{ __typename?: 'ScheduleRosterUnavailability', userId: string, date: string, fullDay: boolean, slots: Array<{ __typename?: 'ScheduleRosterSlot', startTime: string, endTime: string }> }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }>, templates: Array<{ __typename?: 'ScheduleRosterTemplate', id: string, name: string, shortName: string, startTime: string, endTime: string, positionKey: string, paletteKey?: string | null, tasks: Array<{ __typename?: 'ScheduleTemplateTask', taskId: string, role: string, taskKey: string }> }>, unmatchedPunches: Array<{ __typename?: 'ScheduleRosterPunch', id: string, userId: string, date: string, type: string, at: string }> } };
 
 export type SaveScheduleDemandMutationVariables = Exact<{
   input: SaveScheduleDemandInput;
@@ -10654,6 +10905,67 @@ export const MySchedulePunchFieldsFragmentDoc = `
   entryId
   orgId
   duplicate
+}
+    `;
+export const ScheduleAttendancePunchFieldsFragmentDoc = `
+    fragment ScheduleAttendancePunchFields on ScheduleAttendancePunch {
+  id
+  userId
+  userName
+  orgId
+  orgName
+  type
+  at
+  entryId
+  source
+  duplicate
+}
+    `;
+export const ScheduleAttendanceRowFieldsFragmentDoc = `
+    fragment ScheduleAttendanceRowFields on ScheduleAttendanceRow {
+  entryId
+  userId
+  userName
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  clockIn
+  clockOut
+  status
+  lateMinutes
+  earlyLeaveMinutes
+  workedMinutes
+  scheduledMinutes
+  missing
+  specialDayName
+  specialDayCategory
+  hasMakeup
+  punches {
+    ...ScheduleAttendancePunchFields
+  }
+}
+    ${ScheduleAttendancePunchFieldsFragmentDoc}`;
+export const ScheduleAttendanceAbilitiesFieldsFragmentDoc = `
+    fragment ScheduleAttendanceAbilitiesFields on ScheduleAttendanceAbilities {
+  canViewAll
+  canReassign
+  canExport
+  canCreate
+}
+    `;
+export const ScheduleAttendanceEntryOptionFieldsFragmentDoc = `
+    fragment ScheduleAttendanceEntryOptionFields on ScheduleAttendanceEntryOption {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  shortName
 }
     `;
 export const ScheduleAutoRunSummaryFieldsFragmentDoc = `
@@ -19809,6 +20121,287 @@ export const usePunchMyScheduleMutation = <
 
 usePunchMyScheduleMutation.fetcher = (client: GraphQLClient, variables: PunchMyScheduleMutationVariables, headers?: RequestInit['headers']) => fetcher<PunchMyScheduleMutation, PunchMyScheduleMutationVariables>(client, PunchMyScheduleDocument, variables, headers);
 
+export const ScheduleAttendanceByPersonDocument = `
+    query ScheduleAttendanceByPerson($input: ScheduleAttendanceByPersonInput!) {
+  scheduleAttendanceByPerson(input: $input) {
+    month
+    orgId
+    userId
+    people {
+      userId
+      name
+    }
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}
+${ScheduleAttendancePunchFieldsFragmentDoc}
+${ScheduleAttendanceAbilitiesFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceByPersonQuery = <
+      TData = ScheduleAttendanceByPersonQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceByPersonQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceByPersonQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceByPersonQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceByPersonQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceByPerson', variables],
+    queryFn: fetcher<ScheduleAttendanceByPersonQuery, ScheduleAttendanceByPersonQueryVariables>(client, ScheduleAttendanceByPersonDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceByPersonQuery.getKey = (variables: ScheduleAttendanceByPersonQueryVariables) => ['ScheduleAttendanceByPerson', variables];
+
+
+useScheduleAttendanceByPersonQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceByPersonQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceByPersonQuery, ScheduleAttendanceByPersonQueryVariables>(client, ScheduleAttendanceByPersonDocument, variables, headers);
+
+export const ScheduleAttendanceByStoreDocument = `
+    query ScheduleAttendanceByStore($input: ScheduleAttendanceByStoreInput!) {
+  scheduleAttendanceByStore(input: $input) {
+    orgId
+    orgName
+    date
+    rows {
+      ...ScheduleAttendanceRowFields
+    }
+    unmatched {
+      ...ScheduleAttendancePunchFields
+    }
+    scheduledCount
+    arrivedCount
+    absentCount
+    abilities {
+      ...ScheduleAttendanceAbilitiesFields
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}
+${ScheduleAttendancePunchFieldsFragmentDoc}
+${ScheduleAttendanceAbilitiesFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceByStoreQuery = <
+      TData = ScheduleAttendanceByStoreQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceByStoreQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceByStoreQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceByStoreQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceByStoreQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceByStore', variables],
+    queryFn: fetcher<ScheduleAttendanceByStoreQuery, ScheduleAttendanceByStoreQueryVariables>(client, ScheduleAttendanceByStoreDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceByStoreQuery.getKey = (variables: ScheduleAttendanceByStoreQueryVariables) => ['ScheduleAttendanceByStore', variables];
+
+
+useScheduleAttendanceByStoreQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceByStoreQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceByStoreQuery, ScheduleAttendanceByStoreQueryVariables>(client, ScheduleAttendanceByStoreDocument, variables, headers);
+
+export const ScheduleAttendanceExportDocument = `
+    query ScheduleAttendanceExport($input: ScheduleAttendanceExportInput!) {
+  scheduleAttendanceExport(input: $input) {
+    month
+    sheets {
+      orgId
+      orgName
+      rows {
+        ...ScheduleAttendanceRowFields
+      }
+    }
+  }
+}
+    ${ScheduleAttendanceRowFieldsFragmentDoc}`;
+
+export const useScheduleAttendanceExportQuery = <
+      TData = ScheduleAttendanceExportQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendanceExportQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendanceExportQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendanceExportQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendanceExportQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendanceExport', variables],
+    queryFn: fetcher<ScheduleAttendanceExportQuery, ScheduleAttendanceExportQueryVariables>(client, ScheduleAttendanceExportDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendanceExportQuery.getKey = (variables: ScheduleAttendanceExportQueryVariables) => ['ScheduleAttendanceExport', variables];
+
+
+useScheduleAttendanceExportQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendanceExportQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendanceExportQuery, ScheduleAttendanceExportQueryVariables>(client, ScheduleAttendanceExportDocument, variables, headers);
+
+export const ScheduleAttendancePunchEntryOptionsDocument = `
+    query ScheduleAttendancePunchEntryOptions($punchId: ID!) {
+  scheduleAttendancePunchEntryOptions(punchId: $punchId) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+    ${ScheduleAttendanceEntryOptionFieldsFragmentDoc}`;
+
+export const useScheduleAttendancePunchEntryOptionsQuery = <
+      TData = ScheduleAttendancePunchEntryOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: ScheduleAttendancePunchEntryOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<ScheduleAttendancePunchEntryOptionsQuery, TError, TData>(
+      {
+    queryKey: ['ScheduleAttendancePunchEntryOptions', variables],
+    queryFn: fetcher<ScheduleAttendancePunchEntryOptionsQuery, ScheduleAttendancePunchEntryOptionsQueryVariables>(client, ScheduleAttendancePunchEntryOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useScheduleAttendancePunchEntryOptionsQuery.getKey = (variables: ScheduleAttendancePunchEntryOptionsQueryVariables) => ['ScheduleAttendancePunchEntryOptions', variables];
+
+
+useScheduleAttendancePunchEntryOptionsQuery.fetcher = (client: GraphQLClient, variables: ScheduleAttendancePunchEntryOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<ScheduleAttendancePunchEntryOptionsQuery, ScheduleAttendancePunchEntryOptionsQueryVariables>(client, ScheduleAttendancePunchEntryOptionsDocument, variables, headers);
+
+export const ReassignSchedulePunchDocument = `
+    mutation ReassignSchedulePunch($input: ReassignSchedulePunchInput!) {
+  reassignSchedulePunch(input: $input) {
+    ...ScheduleAttendancePunchFields
+  }
+}
+    ${ScheduleAttendancePunchFieldsFragmentDoc}`;
+
+export const useReassignSchedulePunchMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<ReassignSchedulePunchMutation, TError, ReassignSchedulePunchMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<ReassignSchedulePunchMutation, TError, ReassignSchedulePunchMutationVariables, TContext>(
+      {
+    mutationKey: ['ReassignSchedulePunch'],
+    mutationFn: (variables?: ReassignSchedulePunchMutationVariables) => fetcher<ReassignSchedulePunchMutation, ReassignSchedulePunchMutationVariables>(client, ReassignSchedulePunchDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useReassignSchedulePunchMutation.fetcher = (client: GraphQLClient, variables: ReassignSchedulePunchMutationVariables, headers?: RequestInit['headers']) => fetcher<ReassignSchedulePunchMutation, ReassignSchedulePunchMutationVariables>(client, ReassignSchedulePunchDocument, variables, headers);
+
+export const MakeupPunchEntryOptionsDocument = `
+    query MakeupPunchEntryOptions($input: MakeupPunchEntryOptionsInput!) {
+  makeupPunchEntryOptions(input: $input) {
+    ...ScheduleAttendanceEntryOptionFields
+  }
+}
+    ${ScheduleAttendanceEntryOptionFieldsFragmentDoc}`;
+
+export const useMakeupPunchEntryOptionsQuery = <
+      TData = MakeupPunchEntryOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MakeupPunchEntryOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<MakeupPunchEntryOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MakeupPunchEntryOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MakeupPunchEntryOptionsQuery, TError, TData>(
+      {
+    queryKey: ['MakeupPunchEntryOptions', variables],
+    queryFn: fetcher<MakeupPunchEntryOptionsQuery, MakeupPunchEntryOptionsQueryVariables>(client, MakeupPunchEntryOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMakeupPunchEntryOptionsQuery.getKey = (variables: MakeupPunchEntryOptionsQueryVariables) => ['MakeupPunchEntryOptions', variables];
+
+
+useMakeupPunchEntryOptionsQuery.fetcher = (client: GraphQLClient, variables: MakeupPunchEntryOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<MakeupPunchEntryOptionsQuery, MakeupPunchEntryOptionsQueryVariables>(client, MakeupPunchEntryOptionsDocument, variables, headers);
+
+export const MyPendingMakeupPunchEntryIdsDocument = `
+    query MyPendingMakeupPunchEntryIds {
+  myPendingMakeupPunchEntryIds
+}
+    `;
+
+export const useMyPendingMakeupPunchEntryIdsQuery = <
+      TData = MyPendingMakeupPunchEntryIdsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyPendingMakeupPunchEntryIdsQueryVariables,
+      options?: Omit<UseQueryOptions<MyPendingMakeupPunchEntryIdsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyPendingMakeupPunchEntryIdsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyPendingMakeupPunchEntryIdsQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MyPendingMakeupPunchEntryIds'] : ['MyPendingMakeupPunchEntryIds', variables],
+    queryFn: fetcher<MyPendingMakeupPunchEntryIdsQuery, MyPendingMakeupPunchEntryIdsQueryVariables>(client, MyPendingMakeupPunchEntryIdsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyPendingMakeupPunchEntryIdsQuery.getKey = (variables?: MyPendingMakeupPunchEntryIdsQueryVariables) => variables === undefined ? ['MyPendingMakeupPunchEntryIds'] : ['MyPendingMakeupPunchEntryIds', variables];
+
+
+useMyPendingMakeupPunchEntryIdsQuery.fetcher = (client: GraphQLClient, variables?: MyPendingMakeupPunchEntryIdsQueryVariables, headers?: RequestInit['headers']) => fetcher<MyPendingMakeupPunchEntryIdsQuery, MyPendingMakeupPunchEntryIdsQueryVariables>(client, MyPendingMakeupPunchEntryIdsDocument, variables, headers);
+
+export const MakeupPunchEntryExistsDocument = `
+    query MakeupPunchEntryExists($submissionId: ID!) {
+  makeupPunchEntryExists(submissionId: $submissionId)
+}
+    `;
+
+export const useMakeupPunchEntryExistsQuery = <
+      TData = MakeupPunchEntryExistsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: MakeupPunchEntryExistsQueryVariables,
+      options?: Omit<UseQueryOptions<MakeupPunchEntryExistsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MakeupPunchEntryExistsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MakeupPunchEntryExistsQuery, TError, TData>(
+      {
+    queryKey: ['MakeupPunchEntryExists', variables],
+    queryFn: fetcher<MakeupPunchEntryExistsQuery, MakeupPunchEntryExistsQueryVariables>(client, MakeupPunchEntryExistsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMakeupPunchEntryExistsQuery.getKey = (variables: MakeupPunchEntryExistsQueryVariables) => ['MakeupPunchEntryExists', variables];
+
+
+useMakeupPunchEntryExistsQuery.fetcher = (client: GraphQLClient, variables: MakeupPunchEntryExistsQueryVariables, headers?: RequestInit['headers']) => fetcher<MakeupPunchEntryExistsQuery, MakeupPunchEntryExistsQueryVariables>(client, MakeupPunchEntryExistsDocument, variables, headers);
+
 export const ScheduleAutoRunStatusDocument = `
     query ScheduleAutoRunStatus($input: ScheduleRosterInput!) {
   scheduleAutoRunStatus(input: $input) {
@@ -20330,6 +20923,7 @@ export const ScheduleRosterDocument = `
     }
     canEdit
     canSaveTemplate
+    canUsePunchTime
     settings {
       breakTiers {
         minMinutes
@@ -20339,6 +20933,7 @@ export const ScheduleRosterDocument = `
       defaultHelperTaskKey
       maxMonthlyDayOffs
       minMonthlyDayOffs
+      entryMatchToleranceMinutes
     }
     people {
       ...ScheduleRosterPersonFields
@@ -20373,6 +20968,13 @@ export const ScheduleRosterDocument = `
     }
     templates {
       ...ScheduleRosterTemplateFields
+    }
+    unmatchedPunches {
+      id
+      userId
+      date
+      type
+      at
     }
   }
 }

@@ -8,6 +8,7 @@ import {
   type OperatorContext,
   isOrgVisible,
 } from "../../../database/operator-context";
+import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import {
   ScheduleDemandsRepository,
   ScheduleEntriesRepository,
@@ -15,6 +16,7 @@ import {
   ScheduleTaskAssignmentsRepository,
 } from "../../database/schedule/roster.repositories";
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
+import { UnmatchedPunchesReader } from "../attendance/unmatched-punches";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
 import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { blockedEntryIdsOf } from "../integration/entry-deletion-guards";
@@ -107,6 +109,9 @@ function amountOf(setting: EffectiveRuleSetting | undefined): number | null {
 const textOf = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
+/** 規則 `entryMatchToleranceMinutes` 讀不到時的預設(規格 14.2:60 分鐘)。 */
+const DEFAULT_TOLERANCE_MINUTES = 60;
+
 function settingsModelOf(
   settings: ReadonlyMap<string, EffectiveRuleSetting>,
 ): ScheduleRosterSettingsModel {
@@ -126,6 +131,9 @@ function settingsModelOf(
     defaultHelperTaskKey: textOf(tasks.defaultHelperTaskKey),
     maxMonthlyDayOffs: amountOf(settings.get("maxMonthlyDayOffs")),
     minMonthlyDayOffs: amountOf(settings.get("minMonthlyDayOffs")),
+    entryMatchToleranceMinutes:
+      amountOf(settings.get("entryMatchToleranceMinutes")) ??
+      DEFAULT_TOLERANCE_MINUTES,
   };
 }
 
@@ -152,6 +160,7 @@ export class ScheduleRosterService {
     private readonly calendar: ScheduleCalendarService,
     private readonly rules: ScheduleRulesService,
     private readonly people: RosterPeopleReader,
+    private readonly unmatched: UnmatchedPunchesReader,
   ) {}
 
   async roster(
@@ -200,6 +209,13 @@ export class ScheduleRosterService {
       this.rules.effectiveSettingsForOrg(operator, org.id),
       this.periods.findOne(operator, { orgId: org.id, month }),
     ]);
+    const timezone = await tenantTimezoneOf(this.orgs, operator, org.tenantId);
+    const unmatchedPunches = await this.unmatched.of(
+      operator,
+      org.id,
+      timezone,
+      { from, to },
+    );
 
     const assignments =
       entries.length === 0
@@ -343,6 +359,7 @@ export class ScheduleRosterService {
       },
       canEdit: holds(ROSTER_PERMISSIONS.edit),
       canSaveTemplate: holds(SCHEDULE_PERMISSIONS.editTemplates),
+      canUsePunchTime: holds(SCHEDULE_PERMISSIONS.usePunchTime),
       settings: settingsModelOf(settings),
       people,
       demands: demands.map((demand) =>
@@ -390,6 +407,7 @@ export class ScheduleRosterService {
           taskKey: task.taskKey,
         })),
       })),
+      unmatchedPunches,
     };
   }
 }

@@ -25,6 +25,7 @@ import {
   ScheduleEntriesRepository,
   ScheduleTaskAssignmentsRepository,
 } from "../../database/schedule/roster.repositories";
+import { UnmatchedPunchesReader } from "../attendance/unmatched-punches";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
 import {
   DAY_OFF_PERSON_RULE_KEYS,
@@ -67,6 +68,9 @@ import {
 
 /** 不屬於規則的檢核類別:畫休日有排班(先排班、後登記畫休;使用者 10/21 定案)。 */
 export const DAY_OFF_ENTRY_CONFLICT_KEY = "dayOffEntryConflict";
+
+/** 檢核類別「未對應排班的打卡」(規格 14.5:等級提醒,不影響發布;一人一天一項)。 */
+export const UNMATCHED_PUNCHES_KEY = "unmatchedPunches";
 
 /** 連續上班 / 休假、兩班之間的休息會跨月:前後各讀這麼多天。 */
 const WIDEN_DAYS = 31;
@@ -131,6 +135,7 @@ export class ScheduleCheckService implements OnModuleInit {
     private readonly calendar: ScheduleCalendarService,
     private readonly rules: ScheduleRulesService,
     private readonly people: RosterPeopleReader,
+    private readonly unmatched: UnmatchedPunchesReader,
   ) {}
 
   onModuleInit(): void {
@@ -375,6 +380,37 @@ export class ScheduleCheckService implements OnModuleInit {
         names,
       })),
     );
+
+    // ---- 未對應排班的打卡(提醒;人 × 日,這家店這個月打的卡) ----
+    const punches = await this.unmatched.of(operator, org.id, timezone, {
+      from,
+      to,
+    });
+    const punchNames = await this.people.namesOf(
+      punches.map((punch) => punch.userId),
+    );
+    const byPersonDay = new Map<string, typeof punches>();
+    for (const punch of punches) {
+      const key = `${punch.userId}|${punch.date}`;
+      byPersonDay.set(key, [...(byPersonDay.get(key) ?? []), punch]);
+    }
+    for (const list of byPersonDay.values()) {
+      const [first] = list;
+      if (first === undefined) {
+        continue;
+      }
+      items.push({
+        ...emptyItem(),
+        key: UNMATCHED_PUNCHES_KEY,
+        level: "reminder",
+        message: `${first.date} 有 ${String(list.length)} 張未對應排班的打卡`,
+        userId: first.userId,
+        userName:
+          names.get(first.userId) ?? punchNames.get(first.userId) ?? null,
+        date: first.date,
+        actual: list.length,
+      });
+    }
 
     const orderOf = (key: string) =>
       storeSettings.get(key)?.order ?? NON_RULE_ORDER;

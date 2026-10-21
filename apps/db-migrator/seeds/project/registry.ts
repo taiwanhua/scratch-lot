@@ -17,6 +17,7 @@ import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
+import { seed as makeupPunchForm } from "./revisions/makeup_punch.r1.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r1.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r2.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
@@ -66,6 +67,8 @@ export const projectSeedSource: SeedSource = {
     projectFieldOptionColors,
     // 排班作業的受管表單:支援需求單(規格 14.10;流程不 seed,由開通腳本依租戶角色建)
     supportRequestForm,
+    // 出勤紀錄的受管表單:補打卡申請(規格 14.8;流程不 seed,由開通腳本依租戶角色建)
+    makeupPunchForm,
     // 叫貨、採購單的受管表單:叫貨單(規格 8.1;流程不 seed,由開通腳本依租戶角色建)
     requisitionForm,
     // 叫貨與進貨 → 進貨單的受管表單(規格 8.2;流程不 seed,由開通腳本依租戶角色建)。

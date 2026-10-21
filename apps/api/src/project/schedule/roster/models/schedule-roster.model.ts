@@ -326,6 +326,31 @@ export class ScheduleRosterSettingsModel {
 
   @Field(() => Int, { nullable: true })
   minMonthlyDayOffs!: number | null;
+
+  /** 對應排班容許時間(分;排班對話框預設勾選排班時間前後這段時間內的打卡) */
+  @Field(() => Int)
+  entryMatchToleranceMinutes!: number;
+}
+
+/** 這家店未對應排班的一張打卡(規格 14.5「未對應排班的打卡」)。 */
+@ObjectType("ScheduleRosterPunch")
+export class ScheduleRosterPunchModel {
+  @Field(() => ID)
+  id!: string;
+
+  @Field(() => ID)
+  userId!: string;
+
+  /** 打卡時點的租戶當地日期 `YYYY-MM-DD` */
+  @Field(() => String)
+  date!: string;
+
+  /** `in` 上班 / `out` 下班 */
+  @Field(() => String)
+  type!: string;
+
+  @Field(() => GraphQLISODateTime)
+  at!: Date;
 }
 
 @ObjectType("ScheduleRosterPayload")
@@ -351,6 +376,10 @@ export class ScheduleRosterPayload {
   @Field(() => Boolean)
   canSaveTemplate!: boolean;
 
+  /** 排班對話框能不能勾「上下班時間改用打卡時間」(`schedule.manage.use-punch-time`) */
+  @Field(() => Boolean)
+  canUsePunchTime!: boolean;
+
   @Field(() => ScheduleRosterSettingsModel)
   settings!: ScheduleRosterSettingsModel;
 
@@ -374,6 +403,10 @@ export class ScheduleRosterPayload {
 
   @Field(() => [ScheduleRosterTemplateModel])
   templates!: ScheduleRosterTemplateModel[];
+
+  /** 讀取範圍內在這家店打的、未對應排班的卡(依時間;班表的時鐘圖示、排班對話框的區塊) */
+  @Field(() => [ScheduleRosterPunchModel])
+  unmatchedPunches!: ScheduleRosterPunchModel[];
 }
 
 @ObjectType("SaveScheduleDemandPayload")

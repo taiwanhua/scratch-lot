@@ -126,7 +126,7 @@ formKey 組成動態權限 `<模組>.create-<formKey>`(只有開啟 B9b 的 `sto
 | 叫貨單       | `requisition`       | `purchasing.requisition` | 一關:角色 總部管理;B4 跳過組織 = 租戶(總部是分店時改選那家店)                                                                                       | 自動     |
 | 進貨單       | `purchase`          | `purchasing.purchase`    | 一關「點收」:店長限定「進貨分店」                                                                                                                   | 自動     |
 | 調貨單       | `transfer`          | `purchasing.transfer`    | 兩關:第 1 關「出貨確認」店長限定「出貨分店」,跳過條件 `ctx.user.orgId == 出貨分店`;第 2 關「點收」店長限定「收貨分店」                              | 自動     |
-| 補打卡申請   | `makeup-punch`      | `schedule.attendance`    | 一關:店長限定「分店」                                                                                                                               | 尚未上線 |
+| 補打卡申請   | `makeup_punch`      | `schedule.attendance`    | 一關:店長限定「分店」                                                                                                                               | 自動     |
 | 支援需求單   | `support_request`   | `schedule.manage`        | 一關:人員條件「角色 總部管理 且 所屬組織屬於租戶(最上層組織本身)」                                                                                  | 自動     |
 
 - 開通腳本的「流程」一步(`onboarding/steps/form-workflows.ts`)逐張表單:表單還沒分派給這個租戶 → 略過並提示「平台管理員在表單管理分派後重跑」;表單已綁了流程 → 沿用(租戶自己換過的不改回去);否則建立租戶客製流程(key `<租戶短碼>_<formKey>`,全域唯一)、存定義、發布、綁定表單。流程已存在但還沒發布(上次中斷)→ 接續草稿發布。

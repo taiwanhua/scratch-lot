@@ -21,6 +21,7 @@ import type { OperatorContext } from "../../../database/operator-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
+  ScheduleAttendancePunchesRepository,
   ScheduleDemandsRepository,
   ScheduleEntriesRepository,
   SchedulePeriodsRepository,
@@ -28,6 +29,10 @@ import {
 } from "../../database/schedule/roster.repositories";
 import type { ScheduleTemplateTask } from "../../database/schedule/schedule-demand-template.schema";
 import { ScheduleDemandTemplatesRepository } from "../../database/schedule/schedule.repositories";
+import {
+  type PunchRecord,
+  SchedulePunchLedger,
+} from "../attendance/punch-ledger";
 import {
   autoRunInProgressError,
   isAutoRunLocked,
@@ -139,6 +144,8 @@ export class ScheduleRosterWritesService {
     private readonly checks: ScheduleCheckService,
     private readonly changes: ScheduleChangesService,
     private readonly clock: ScheduleClock,
+    private readonly punches: ScheduleAttendancePunchesRepository,
+    private readonly punchLedger: SchedulePunchLedger,
   ) {}
 
   // ---- 人力需求 ----
@@ -344,7 +351,23 @@ export class ScheduleRosterWritesService {
     input: SaveScheduleEntryInput,
   ): Promise<ScheduleEntryModel> {
     const scope = await this.scopeOf(operator, input.orgId);
-    const span = validatedSpan(input.startAt, input.endAt);
+    const wanted = validatedAssignments(input.assignments);
+    const isCreate = input.id === undefined || input.id === null;
+    const existing = isCreate
+      ? null
+      : await this.mustFindEntry(operator, scope, String(input.id));
+    const userId = existing
+      ? existing.userId
+      : parseObjectId(input.userId ?? "", "userId");
+    const chosenPunches = await this.chosenPunches(
+      operator,
+      scope,
+      userId,
+      input.punchIds,
+    );
+    const span = validatedSpan(
+      ...(await this.spanWithPunchTime(operator, input, chosenPunches)),
+    );
     const date = this.dateOf(scope, span.startAt);
     const spanMinutes =
       (span.endAt.getTime() - span.startAt.getTime()) / MS_PER_MINUTE;
@@ -355,14 +378,6 @@ export class ScheduleRosterWritesService {
     ) {
       throw validationError("invalid breakMinutes", ["breakMinutes"]);
     }
-    const wanted = validatedAssignments(input.assignments);
-    const isCreate = input.id === undefined || input.id === null;
-    const existing = isCreate
-      ? null
-      : await this.mustFindEntry(operator, scope, String(input.id));
-    const userId = existing
-      ? existing.userId
-      : parseObjectId(input.userId ?? "", "userId");
     const candidates = await this.staff.listScheduleCandidates(
       operator,
       scope.org.id,
@@ -473,6 +488,14 @@ export class ScheduleRosterWritesService {
             throw notFoundError(`entry not found: ${String(input.id)}`);
           }
           await this.syncAssignments(operator, scope, record, current, wanted);
+          if (chosenPunches.length > 0) {
+            await this.punchLedger.reassign(
+              operator,
+              scope.org.tenantId,
+              chosenPunches,
+              { entryId: record._id, orgId: scope.org.id },
+            );
+          }
           await this.audit.record(operator, {
             action: existing ? "schedule-entry.edit" : "schedule-entry.create",
             targetType: ENTRY_TARGET,
@@ -569,6 +592,63 @@ export class ScheduleRosterWritesService {
   }
 
   // ---- 內部 ----
+
+  /**
+   * 排班對話框勾選的未對應排班的打卡(規格 14.5「排班對話框的區塊」):要是這個人在這家店、還沒對應排班的卡;
+   * 有一張不是 → `VALIDATION_FAILED`(欄位 `punchIds`)。
+   */
+  private async chosenPunches(
+    operator: OperatorContext,
+    scope: RosterScope,
+    userId: Types.ObjectId,
+    punchIds: readonly string[] | null | undefined,
+  ): Promise<PunchRecord[]> {
+    const ids = [...new Set(punchIds ?? [])];
+    if (ids.length === 0) {
+      return [];
+    }
+    const found = await this.punches.findMany(operator, {
+      _id: { $in: ids.map((id) => parseObjectId(id, "punchIds")) },
+      orgId: scope.org.id,
+      userId,
+      entryId: null,
+    });
+    if (found.length !== ids.length) {
+      throw validationError("punch not found or already matched", ["punchIds"]);
+    }
+    return found;
+  }
+
+  /**
+   * 「上下班時間改用打卡時間」(要 `use-punch-time`,沒有 → `FORBIDDEN`):上班 = 勾選的上班卡中最早的、
+   * 下班 = 勾選的下班卡中最晚的;沒勾那一種就照送來的時間。
+   */
+  private async spanWithPunchTime(
+    operator: OperatorContext,
+    input: SaveScheduleEntryInput,
+    punches: readonly PunchRecord[],
+  ): Promise<[Date, Date]> {
+    if (input.usePunchTime !== true) {
+      return [input.startAt, input.endAt];
+    }
+    const holds = await this.permissions.holderOf(operator);
+    if (!holds(SCHEDULE_PERMISSIONS.usePunchTime)) {
+      throw forbiddenError(
+        "missing permission schedule.manage.use-punch-time",
+        "MISSING_PERMISSION",
+      );
+    }
+    const times = (type: string) =>
+      punches
+        .filter((punch) => punch.type === type)
+        .map((punch) => punch.at.getTime());
+    const ins = times("in");
+    const outs = times("out");
+    return [
+      ins.length === 0 ? input.startAt : new Date(Math.min(...ins)),
+      outs.length === 0 ? input.endAt : new Date(Math.max(...outs)),
+    ];
+  }
 
   /**
    * 畫休那段時間不能排(規格 14.5「可排 = 那段時間沒有畫休」;做法同店休):排班碰到的日子(跨午夜含隔天)

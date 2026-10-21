@@ -92,6 +92,7 @@ query ScheduleRoster($input: ScheduleRosterInput!) {
     }
     canEdit
     canSaveTemplate
+    canUsePunchTime
     settings {
       breakTiers {
         minMinutes
@@ -101,6 +102,7 @@ query ScheduleRoster($input: ScheduleRosterInput!) {
       defaultHelperTaskKey
       maxMonthlyDayOffs
       minMonthlyDayOffs
+      entryMatchToleranceMinutes
     }
     people {
       ...ScheduleRosterPersonFields
@@ -136,6 +138,13 @@ query ScheduleRoster($input: ScheduleRosterInput!) {
     templates {
       ...ScheduleRosterTemplateFields
     }
+    unmatchedPunches {
+      id
+      userId
+      date
+      type
+      at
+    }
   }
 }
 
@@ -157,7 +166,8 @@ mutation DeleteScheduleDemand($input: DeleteScheduleDemandInput!) {
   }
 }
 
-# assignments 至少一筆(否則 VALIDATION_FAILED,欄位 assignments);同一人跨店時間重疊 → 欄位 startAt
+# assignments 至少一筆(否則 VALIDATION_FAILED,欄位 assignments);同一人跨店時間重疊 → 欄位 startAt。
+# punchIds = 一起對應到這筆排班的未對應排班的卡;usePunchTime 要 use-punch-time(沒有 → FORBIDDEN)
 mutation SaveScheduleEntry($input: SaveScheduleEntryInput!) {
   saveScheduleEntry(input: $input) {
     item {

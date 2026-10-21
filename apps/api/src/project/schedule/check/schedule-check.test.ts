@@ -9,6 +9,7 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "../../database/schedule/schedule-attendance-punch.schema";
 import { SCHEDULE_CHANGES_COLLECTION } from "../../database/schedule/schedule-change.schema";
 import { SCHEDULE_DAY_OFFS_COLLECTION } from "../../database/schedule/schedule-day-off.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
@@ -550,6 +551,42 @@ describe("排班檢核與發布(GraphQL 端點 + 真 MongoDB)", () => {
         isOtherStore: false,
         orgName: "信義店",
       });
+    });
+
+    it("未對應排班的打卡:提醒,一人一天一項(張數);不影響發布", async () => {
+      const now = new Date();
+      for (const time of ["09:02", "15:10"]) {
+        await connection
+          .collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION)
+          .insertOne({
+            orgId: xinyi,
+            tenantId: tenant,
+            userId: wang.userId,
+            at: new Date(`2026-11-13T${time}:00+08:00`),
+            type: time === "09:02" ? "in" : "out",
+            entryId: null,
+            ip: null,
+            userAgent: null,
+            source: "button",
+            makeupRequestId: null,
+            duplicate: false,
+            moduleKey: "schedule.attendance",
+            createdAt: now,
+            updatedAt: now,
+            createdBy: null,
+            updatedBy: null,
+            deletedAt: null,
+          });
+      }
+      const { items } = await check("2026-11");
+      expect(items.filter((row) => row.key === "unmatchedPunches")).toEqual([
+        expect.objectContaining({
+          level: "reminder",
+          userName: "王小明",
+          date: "2026-11-13",
+          actual: 2,
+        }),
+      ]);
     });
 
     it("排序:限制在前、提醒在後", async () => {

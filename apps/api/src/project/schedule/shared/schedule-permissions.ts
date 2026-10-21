@@ -23,6 +23,12 @@ export const SCHEDULE_PERMISSIONS = {
   publish: "schedule.manage.publish",
   autoRun: "schedule.manage.auto-run",
   manageEdit: "schedule.manage.edit",
+  usePunchTime: "schedule.manage.use-punch-time",
+  attendanceView: "schedule.attendance.view",
+  attendanceCreate: "schedule.attendance.create",
+  attendanceViewAll: "schedule.attendance.view-all",
+  attendanceExport: "schedule.attendance.export",
+  reassignPunches: "schedule.attendance.reassign-punches",
 } as const;
 
 /**

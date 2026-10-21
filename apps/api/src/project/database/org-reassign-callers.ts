@@ -6,4 +6,6 @@
 export const PROJECT_ORG_REASSIGN_CALLERS: readonly string[] = [
   // 張換店(調入、尋回到刷到的那家店)、整本調貨時本跟著換店
   "project/lottery/tickets/ticket-ledger.service.ts",
+  // 打卡改對應到別家店的排班:卡的分店跟著排班(出勤紀錄的 [改對應排班])
+  "project/schedule/attendance/punch-ledger.ts",
 ];

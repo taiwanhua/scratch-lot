@@ -13,18 +13,21 @@ import {
   isIsoMonth,
 } from "@repo/domain/project/schedule-settings";
 
-import type { Persisted } from "../../../database/base.repository";
 import { OrgsRepository } from "../../../database/database.module";
 import type { OperatorContext } from "../../../database/operator-context";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
-  type ScheduleAttendancePunchDocument,
   ScheduleAttendancePunchesRepository,
   ScheduleChangesRepository,
   ScheduleEntriesRepository,
 } from "../../database/schedule/roster.repositories";
+import {
+  type PunchRecord,
+  SchedulePunchLedger,
+  punchLikeOf,
+} from "../attendance/punch-ledger";
 import { ScheduleCalendarService } from "../calendar/schedule-calendar.service";
 import { ScheduleDayOffsService } from "../day-offs/schedule-day-offs.service";
 import { ScheduleFieldOptionsService } from "../field-options/schedule-field-options.service";
@@ -53,15 +56,12 @@ import { type EntryDetail, PublishedEntries } from "./published-entries";
 import {
   type PunchLike,
   canPunchEntry,
-  duplicatePunchIdsOf,
   effectivePunchesOf,
   incompleteEntriesOf,
   missingPunchesOf,
   openUnmatchedClockInOf,
   punchableEntriesOf,
 } from "./punch-rules";
-
-type PunchRecord = Persisted<ScheduleAttendancePunchDocument>;
 
 /** 打卡不完整提醒看最近幾天(含今天)。 */
 export const INCOMPLETE_LOOKBACK_DAYS = 7;
@@ -81,13 +81,6 @@ function earlierDate(left: string, right: string): string {
   }
   return right;
 }
-
-const punchLikeOf = (record: PunchRecord): PunchLike => ({
-  id: String(record._id),
-  entryId: record.entryId === null ? null : String(record.entryId),
-  type: record.type,
-  at: record.at,
-});
 
 export function punchModelOf(record: PunchRecord): MySchedulePunchModel {
   return {
@@ -140,6 +133,7 @@ export class MyScheduleService {
     private readonly personLocks: SchedulePersonLocks,
     private readonly transactions: TransactionService,
     private readonly clock: ScheduleClock,
+    private readonly ledger: SchedulePunchLedger,
   ) {}
 
   async mySchedule(
@@ -361,36 +355,13 @@ export class MyScheduleService {
     return punchModelOf(created);
   }
 
-  /**
-   * 重算一班的「重複打卡」標記(只改有變的那幾張),回傳這班所有的卡(id → 重算後)。
-   * 在交易內呼叫;補打卡核准寫入時也呼叫同一支。
-   */
-  async markDuplicates(
+  /** 重算一班的「重複打卡」標記(`SchedulePunchLedger.markDuplicates`;在交易內呼叫)。 */
+  markDuplicates(
     writer: OperatorContext,
     tenantId: Types.ObjectId,
     entryId: Types.ObjectId,
   ): Promise<Map<string, PunchRecord>> {
-    const all = await this.punches.findMany(
-      writer,
-      { tenantId, entryId },
-      { sort: { at: 1, _id: 1 } },
-    );
-    const duplicates = duplicatePunchIdsOf(
-      all.map((record) => punchLikeOf(record)),
-    );
-    const result = new Map<string, PunchRecord>();
-    for (const record of all) {
-      const duplicate = duplicates.has(String(record._id));
-      if (record.duplicate === duplicate) {
-        result.set(String(record._id), record);
-        continue;
-      }
-      const updated = await this.punches.updateById(writer, record._id, {
-        $set: { duplicate },
-      });
-      result.set(String(record._id), updated ?? record);
-    }
-    return result;
+    return this.ledger.markDuplicates(writer, tenantId, entryId);
   }
 
   private async mustOwnPublishedEntry(

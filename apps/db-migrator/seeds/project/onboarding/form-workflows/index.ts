@@ -1,3 +1,4 @@
+import { makeupPunchWorkflow } from "./makeup-punch";
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
 import { supportRequestWorkflow } from "./support-request";
@@ -17,4 +18,6 @@ export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   purchaseWorkflow,
   // 叫貨與進貨:調貨單(規格 8.4)
   transferWorkflow,
+  // 出勤紀錄:補打卡申請(規格 14.8)
+  makeupPunchWorkflow,
 ];

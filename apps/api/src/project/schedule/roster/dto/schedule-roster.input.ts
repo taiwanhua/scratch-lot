@@ -148,6 +148,20 @@ export class SaveScheduleEntryInput {
   @Field(() => [ScheduleEntryAssignmentInput])
   assignments!: ScheduleEntryAssignmentInput[];
 
+  /**
+   * 一起對應到這筆排班的未對應排班的打卡(規格 14.5「排班對話框的區塊」:這個人那天在這家店的卡;
+   * 勾選的才給)。沒給 = 不動任何打卡
+   */
+  @Field(() => [ID], { nullable: true })
+  punchIds?: string[] | null;
+
+  /**
+   * 上下班時間改用打卡時間(要 `schedule.manage.use-punch-time`):上班 = 勾選的上班卡中最早的、
+   * 下班 = 勾選的下班卡中最晚的(沒勾那一種就照送來的時間)
+   */
+  @Field(() => Boolean, { nullable: true })
+  usePunchTime?: boolean | null;
+
   /** 已發布的月份必填(見 `ScheduleChangeReasonInput`) */
   @Field(() => ScheduleChangeReasonInput, { nullable: true })
   changeReason?: ScheduleChangeReasonInput | null;

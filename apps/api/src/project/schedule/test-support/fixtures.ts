@@ -17,7 +17,11 @@ const MODULES: readonly [key: string, parentKey: string | null][] = [
   ["schedule.settings", "schedule"],
   ["schedule.manage", "schedule"],
   ["schedule.my", "schedule"],
+  ["schedule.attendance", "schedule"],
 ];
+
+/** 表單模組(出勤紀錄綁定 補打卡申請);其他是固定頁。 */
+const FORM_MODULES = new Set(["schedule.attendance"]);
 
 /** 測試用到的權限:key → 所在模組。 */
 export const SCHEDULE_TEST_PERMISSIONS = {
@@ -36,6 +40,14 @@ export const SCHEDULE_TEST_PERMISSIONS = {
   myPunch: "schedule.my.punch",
   publish: "schedule.manage.publish",
   autoRun: "schedule.manage.auto-run",
+  usePunchTime: "schedule.manage.use-punch-time",
+  attendanceView: "schedule.attendance.view",
+  attendanceCreate: "schedule.attendance.create",
+  attendanceEdit: "schedule.attendance.edit",
+  attendanceDelete: "schedule.attendance.delete",
+  attendanceViewAll: "schedule.attendance.view-all",
+  attendanceExport: "schedule.attendance.export",
+  reassignPunches: "schedule.attendance.reassign-punches",
 } as const;
 
 export const ALL_SCHEDULE_TEST_PERMISSIONS = Object.values(
@@ -74,7 +86,7 @@ export async function seedScheduleAuthorization(
       isSystem: false,
       icon: null,
       settings: {},
-      engine: "fixed",
+      engine: FORM_MODULES.has(key) ? "form" : "fixed",
       ...baseFields(now),
     });
     ids.set(key, insertedId);
@@ -157,6 +169,15 @@ const SCHEDULE_TEST_OPTIONS: Record<
   "schedule-change-reason": [
     ["shift-swap", true],
     ["retired-reason", false],
+    ["other", true],
+  ],
+  "schedule-makeup-punch-reason": [
+    ["forgot-punch", true],
+    ["other", true],
+  ],
+  "schedule-entry-reassign-reason": [
+    ["shift-swap", true],
+    ["retired-reassign", false],
     ["other", true],
   ],
   "schedule-special-day-category": [

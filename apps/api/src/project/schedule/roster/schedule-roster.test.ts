@@ -16,6 +16,7 @@ import {
 } from "../../../auth/test-support/auth-app";
 import { createOrg } from "../../../auth/test-support/fixtures";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
+import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "../../database/schedule/schedule-attendance-punch.schema";
 import { SCHEDULE_DAY_OFFS_COLLECTION } from "../../database/schedule/schedule-day-off.schema";
 import { ScheduleEntryLock } from "../../database/schedule/schedule-entry-lock.schema";
 import { ScheduleTaskAssignment } from "../../database/schedule/schedule-task-assignment.schema";
@@ -64,7 +65,8 @@ const ROSTER = /* GraphQL */ `
       period { status }
       canEdit
       canSaveTemplate
-      settings { breakTiers { minMinutes breakMinutes } defaultLeaderTaskKey defaultHelperTaskKey maxMonthlyDayOffs minMonthlyDayOffs }
+      canUsePunchTime
+      settings { breakTiers { minMinutes breakMinutes } defaultLeaderTaskKey defaultHelperTaskKey maxMonthlyDayOffs minMonthlyDayOffs entryMatchToleranceMinutes }
       people {
         userId name canLead isCandidate
         stats { shiftCount leadShiftCount workMinutes dayOffDays fullDayOffDays longestStreak timeRangeDays { date slots { startTime endTime } } }
@@ -74,6 +76,7 @@ const ROSTER = /* GraphQL */ `
       otherStoreEntries { userId date orgName }
       unavailability { userId date fullDay }
       templates { id shortName }
+      unmatchedPunches { id userId date type at }
     }
   }
 `;
@@ -197,6 +200,8 @@ interface EntryRow {
   id: string;
   userId: string;
   date: string;
+  startAt: string;
+  endAt: string;
   breakMinutes: number;
   deletable: boolean;
   assignments: { demandId: string; taskId: string; role: string }[];
@@ -227,12 +232,14 @@ interface RosterRow {
   period: { status: string };
   canEdit: boolean;
   canSaveTemplate: boolean;
+  canUsePunchTime: boolean;
   settings: {
     breakTiers: { minMinutes: number; breakMinutes: number }[];
     defaultLeaderTaskKey: string;
     defaultHelperTaskKey: string;
     maxMonthlyDayOffs: number | null;
     minMonthlyDayOffs: number | null;
+    entryMatchToleranceMinutes: number;
   };
   people: PersonRow[];
   demands: DemandRow[];
@@ -240,6 +247,13 @@ interface RosterRow {
   otherStoreEntries: { userId: string; date: string; orgName: string | null }[];
   unavailability: { userId: string; date: string; fullDay: boolean }[];
   templates: { id: string; shortName: string }[];
+  unmatchedPunches: {
+    id: string;
+    userId: string;
+    date: string;
+    type: string;
+    at: string;
+  }[];
 }
 
 interface DayOffSaveRow {
@@ -1064,6 +1078,138 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
+  describe("未對應排班的打卡(規格 14.5)", () => {
+    const punches = () =>
+      connection.collection(SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION);
+
+    /** 李小華在中山店打的一張未對應排班的卡。 */
+    async function unmatchedPunch(
+      date: string,
+      time: string,
+      type: "in" | "out",
+      orgId = zhongshan,
+    ): Promise<Types.ObjectId> {
+      const now = new Date();
+      const { insertedId } = await punches().insertOne({
+        orgId,
+        tenantId: tenantA,
+        userId: li.userId,
+        at: new Date(taipei(date, time)),
+        type,
+        entryId: null,
+        ip: null,
+        userAgent: null,
+        source: "button",
+        makeupRequestId: null,
+        duplicate: false,
+        moduleKey: "schedule.attendance",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      return insertedId;
+    }
+
+    it("排班表回這家店未對應排班的卡(別家店的不列)、容許時間預設 60、use-punch-time 權限", async () => {
+      const own = await unmatchedPunch("2026-11-20", "09:02", "in");
+      await unmatchedPunch("2026-11-20", "09:05", "in", hsinchu);
+      const data = await roster(hq);
+      expect(data.unmatchedPunches).toContainEqual(
+        expect.objectContaining({
+          id: String(own),
+          userId: String(li.userId),
+          date: "2026-11-20",
+          type: "in",
+        }),
+      );
+      expect(
+        data.unmatchedPunches.filter((item) => item.date === "2026-11-20"),
+      ).toHaveLength(1);
+      expect(data.settings.entryMatchToleranceMinutes).toBe(60);
+      expect(data.canUsePunchTime).toBe(true);
+      expect((await roster(manager)).canUsePunchTime).toBe(false);
+    });
+
+    it("排班對話框:勾選的卡儲存後對應到這筆排班;不勾的不對應", async () => {
+      const checked = await unmatchedPunch("2026-11-21", "09:02", "in");
+      const unchecked = await unmatchedPunch("2026-11-21", "15:10", "out");
+      const demand = await demandOn("2026-11-21", "09:00", "15:00");
+      const saved = dataOf(
+        await saveEntry(manager, {
+          userId: String(li.userId),
+          startAt: taipei("2026-11-21", "09:00"),
+          endAt: taipei("2026-11-21", "15:00"),
+          assignments: [
+            { demandId: demand.id, taskId: taskOf(demand, "helper") },
+          ],
+          punchIds: [String(checked)],
+        }),
+        "saveScheduleEntry",
+      ).item;
+      expect(
+        (await punches().findOne({ _id: checked }))?.entryId?.toString(),
+      ).toBe(saved.id);
+      expect((await punches().findOne({ _id: unchecked }))?.entryId).toBeNull();
+      expect(
+        (await roster(hq)).unmatchedPunches.map((item) => item.id),
+      ).not.toContain(String(checked));
+    });
+
+    it("上下班時間改用打卡時間:沒有 use-punch-time → FORBIDDEN;有 → 最早的上班卡、最晚的下班卡", async () => {
+      const early = await unmatchedPunch("2026-11-22", "08:58", "in");
+      const late = await unmatchedPunch("2026-11-22", "09:03", "in");
+      const out = await unmatchedPunch("2026-11-22", "15:12", "out");
+      const demand = await demandOn("2026-11-22", "09:00", "15:00");
+      const input = {
+        userId: String(li.userId),
+        startAt: taipei("2026-11-22", "09:00"),
+        endAt: taipei("2026-11-22", "15:00"),
+        assignments: [
+          { demandId: demand.id, taskId: taskOf(demand, "helper") },
+        ],
+        punchIds: [String(early), String(late), String(out)],
+        usePunchTime: true,
+      };
+      const denied = await saveEntry(manager, input);
+      expect(denied.errors?.[0]?.extensions).toMatchObject({
+        code: "FORBIDDEN",
+        reason: "MISSING_PERMISSION",
+      });
+      const saved = dataOf(
+        await saveEntry(hq, input),
+        "saveScheduleEntry",
+      ).item;
+      expect(new Date(saved.startAt).toISOString()).toBe(
+        taipei("2026-11-22", "08:58"),
+      );
+      expect(new Date(saved.endAt).toISOString()).toBe(
+        taipei("2026-11-22", "15:12"),
+      );
+      // 同一班多張上班卡:取最早,其餘標重複打卡
+      expect((await punches().findOne({ _id: late }))?.duplicate).toBe(true);
+    });
+
+    it("勾的卡不是這個人在這家店的未對應卡 → VALIDATION_FAILED(punchIds)", async () => {
+      const other = await unmatchedPunch("2026-11-23", "09:00", "in", hsinchu);
+      const demand = await demandOn("2026-11-23", "09:00", "15:00");
+      const result = await saveEntry(hq, {
+        userId: String(li.userId),
+        startAt: taipei("2026-11-23", "09:00"),
+        endAt: taipei("2026-11-23", "15:00"),
+        assignments: [
+          { demandId: demand.id, taskId: taskOf(demand, "helper") },
+        ],
+        punchIds: [String(other)],
+      });
+      expect(result.errors?.[0]?.extensions).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["punchIds"],
+      });
+    });
+  });
+
   describe("排班表讀取", () => {
     it("統計欄:負責班數以排班為單位、總工時到分鐘、畫休天數同畫休算法;跨店的班只列分店名(看不到的寫 null)", async () => {
       const date = "2026-11-20";
@@ -1161,6 +1307,7 @@ describe("排班表(GraphQL 端點 + 真 MongoDB)", () => {
         defaultHelperTaskKey: DUTY,
         maxMonthlyDayOffs: 8,
         minMonthlyDayOffs: 4,
+        entryMatchToleranceMinutes: 60,
       });
       const hidden = await gql(manager, ROSTER, {
         input: { orgId: String(hsinchu), month: "2026-11" },
