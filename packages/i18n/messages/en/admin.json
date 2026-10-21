@@ -93,6 +93,7 @@
     "navBadge": "{count} pending",
     "collapseNav": "Collapse sidebar",
     "expandNav": "Expand sidebar",
+    "openNav": "Open main menu",
     "currentOrg": "Current organization",
     "placeholder": {
       "pending": "This page is not built yet"

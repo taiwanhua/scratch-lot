@@ -38,4 +38,5 @@ export * from "./DevicesIcon";
 export * from "./NotificationsIcon";
 export * from "./CheckCircleIcon";
 export * from "./ErrorCircleIcon";
+export * from "./MenuIcon";
 export * from "./module-icon-registry";

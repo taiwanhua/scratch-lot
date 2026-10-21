@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
 import {
@@ -9,6 +9,7 @@ import { authWorld } from "@/test/msw/auth-handlers";
 import { superAdminModules } from "@/test/msw/module-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
+import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 /**
  * 側欄收合:64px 圖示列、群組 flyout、狀態記憶,以及展開態改畫模組圖示。
@@ -133,5 +134,68 @@ describe("SideNav 收合(Figma Draft/AdminSideNavCollapsed 246:64)", () => {
         "SettingsOutlinedIcon",
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe("手機寬(< sm)側欄改成抽屜", () => {
+  restoreViewportAfterEach();
+  beforeEach(() => {
+    useSideNavStore.setState({ isMobileOpen: false, isCollapsed: false });
+  });
+
+  it("預設收起;AppBar 的主選單鈕打開,點了模組連結導向並自動關閉", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    const open = await screen.findByRole("button", { name: "開啟主選單" });
+    expect(
+      screen.queryByRole("navigation", { name: "主選單" }),
+    ).not.toBeInTheDocument();
+    expect(open).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(open);
+    const nav = await findSideNav();
+    // 抽屜裡一律展開、沒有收合開關
+    expect(
+      within(nav).queryByRole("button", { name: "收合側欄" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(within(nav).getByRole("link", { name: "組織管理" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("location")).toHaveTextContent(
+        "/system/org-manager",
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("點群組列只展開子項、不關抽屜;按 Esc 關閉", async () => {
+    setMobileViewport();
+    const { user } = renderShell();
+    await user.click(await screen.findByRole("button", { name: "開啟主選單" }));
+    const nav = await findSideNav();
+
+    await user.click(within(nav).getByRole("button", { name: "示範群組" }));
+    expect(
+      screen.getByRole("navigation", { name: "主選單" }),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("navigation", { name: "主選單" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("sm 以上沒有主選單鈕,側欄常駐", async () => {
+    renderShell();
+    await findSideNav();
+    expect(
+      screen.queryByRole("button", { name: "開啟主選單" }),
+    ).not.toBeInTheDocument();
   });
 });

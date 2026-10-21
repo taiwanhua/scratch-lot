@@ -32,6 +32,12 @@ interface SideNavPersisted {
 
 export interface SideNavState extends SideNavPersisted {
   toggle: () => void;
+  /**
+   * 手機寬(< `sm`)的側欄抽屜開著沒有。不存檔:每次進站都是收起的;
+   * AppBar 的主選單鈕打開,點遮罩 / Esc / 點了模組連結就關。
+   */
+  isMobileOpen: boolean;
+  setMobileOpen: (isOpen: boolean) => void;
 }
 
 /**
@@ -83,7 +89,8 @@ const sideNavStorage = createJSONStorage<SideNavPersisted>(() => ({
 }));
 
 /**
- * 側欄收合狀態(REACT-02 第 4 點:跨元件、跨重新整理的用戶端狀態放 zustand + `persist`)。
+ * 側欄收合狀態與手機抽屜開關(REACT-02 第 4 點:跨元件、跨重新整理的用戶端狀態放 zustand + `persist`)。
+ * 只有收合狀態存檔(`partialize`);抽屜開關是跨元件(AppBar 開、側欄關)但不跨重新整理。
  */
 export const useSideNavStore = create<SideNavState>()(
   persist(
@@ -91,6 +98,10 @@ export const useSideNavStore = create<SideNavState>()(
       isCollapsed: false,
       toggle: () => {
         set((state) => ({ isCollapsed: !state.isCollapsed }));
+      },
+      isMobileOpen: false,
+      setMobileOpen: (isOpen) => {
+        set({ isMobileOpen: isOpen });
       },
     }),
     {

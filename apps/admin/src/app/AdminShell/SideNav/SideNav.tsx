@@ -1,148 +1,39 @@
-import { useTranslations } from "use-intl";
+import { NavDrawer } from "@repo/ui/drawer";
+import { useBreakpointDown } from "@repo/ui/media-query";
 
-import { Avatar } from "@repo/ui/avatar";
-import { Box } from "@repo/ui/box";
-import { List } from "@repo/ui/list";
-import { Stack } from "@repo/ui/stack";
-import { Typography } from "@repo/ui/typography";
-
-import type { NavNode } from "@/lib/base/module-tree";
 import { useSideNavStore } from "@/stores/base/useSideNavStore";
 
-import { NAV_COLLAPSED_WIDTH, NAV_WIDTH } from "../shell-geometry";
-import { NavNodes } from "./NavNodes/NavNodes";
-import { NavRail } from "./NavRail/NavRail";
-import { SideNavToggle } from "./SideNavToggle";
+import { type SideNavContentProps, SideNavPanel } from "./SideNavPanel";
 
-/** 商標槽位的幾何(Figma AdminSideNav 的 logoImg 120:50:28×28、圓角 6)。 */
-const LOGO_SIZE = 28;
-const LOGO_RADIUS = "6px";
-
-export interface SideNavProps {
-  /** 頂部租戶識別:沒有商標時顯示的當前組織名稱 */
-  orgName: string;
-  /** 當前組織的商標(`me.currentOrg.logoUrl`,api 現簽的短效網址);沒有就顯示名稱 */
-  logoUrl?: string | null;
-  tree: NavNode[];
-  /** 目前網址(已正規化),決定哪一列為選中狀態 */
-  currentPath: string;
-  /** 模組 key → 該列的待辦數(展開態畫數字、收合態畫小圓點) */
-  badges?: Readonly<Record<string, number>>;
-}
+export type SideNavProps = SideNavContentProps;
 
 /**
- * 後台側欄(Figma Draft/AdminSideNav 30:52 / Draft/AdminSideNavCollapsed 246:64):
- * 頂部租戶識別 + 模組樹 + 底部收合開關,**同一個元件的兩種寬度**(240 / 64)。
- * Figma 第一列的「總覽」是模組(key `overview`,seeds/base/modules/overview.ts),和其他模組一樣從 `me.modules` 長出來、受權限過濾,不是固定列。
- * 頂部租戶識別照 Figma 的 ShowLogo 變體:**有商標就顯示商標圖、沒有才顯示組織名稱**(兩者佔同一個位置);
- * 商標是 api 現簽的短效網址(ADR-0010),`alt` 用組織名,讓換成圖之後名稱仍讀得到。
+ * 後台側欄:`sm` 以上是殼的左欄(可收合成 64px 圖示列);手機寬(< `sm`)改放進從左側滑出的抽屜
+ * (`@repo/ui/drawer` 的 `NavDrawer`):預設收起,AppBar 左側的主選單鈕打開,點遮罩、按 Esc、點了模組連結就關;
+ * 抽屜裡一律展開、沒有收合開關。
  *
- * 收合狀態在 `useSideNavStore`(zustand + localStorage):AppBar / 路由頁籤 / 內容區
+ * 收合狀態與抽屜開關都在 `useSideNavStore`(收合存 localStorage、抽屜不存):AppBar / 路由頁籤 / 內容區
  * 是 `ShellLayout` 裡的 `flex: 1` 相鄰格,側欄一改寬度它們自己跟著變(STYLE-08,不必各自知道這件事)。
  */
-export const SideNav = ({
-  orgName,
-  logoUrl,
-  tree,
-  currentPath,
-  badges,
-}: SideNavProps) => {
-  const t = useTranslations("admin.shell");
-  const tApp = useTranslations("admin.app");
+export const SideNav = (props: SideNavProps) => {
+  const isMobile = useBreakpointDown("sm");
   const isCollapsed = useSideNavStore((state) => state.isCollapsed);
   const toggle = useSideNavStore((state) => state.toggle);
+  const isMobileOpen = useSideNavStore((state) => state.isMobileOpen);
+  const setMobileOpen = useSideNavStore((state) => state.setMobileOpen);
 
+  if (!isMobile) {
+    return (
+      <SideNavPanel {...props} isCollapsed={isCollapsed} onToggle={toggle} />
+    );
+  }
+
+  const close = () => {
+    setMobileOpen(false);
+  };
   return (
-    <Box
-      component="nav"
-      aria-label={t("sideNav")}
-      sx={{
-        width: (theme) =>
-          theme.spacing(isCollapsed ? NAV_COLLAPSED_WIDTH : NAV_WIDTH),
-        flexShrink: 0,
-        // 殼釘死 100vh:側欄自己是 column flex,只有模組樹那一格捲動,底部開關永遠看得到
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        bgcolor: "background.paper",
-        borderRight: 1,
-        borderColor: "divider",
-        px: isCollapsed ? 1.5 : 2,
-        py: 3,
-      }}
-    >
-      {isCollapsed ? (
-        /* 收合態只留商標圖(Figma 246:65);沒有商標時 Avatar 以組織名首字代替,名稱仍由 alt / title 讀得到 */
-        <Box sx={{ display: "flex", justifyContent: "center", mb: 1.5 }}>
-          <Avatar
-            variant="rounded"
-            src={logoUrl ?? undefined}
-            alt={orgName}
-            sx={{
-              width: LOGO_SIZE,
-              height: LOGO_SIZE,
-              borderRadius: LOGO_RADIUS,
-            }}
-          >
-            {orgName.slice(0, 1)}
-          </Avatar>
-        </Box>
-      ) : (
-        <Stack spacing={0.5} sx={{ mb: 1.5 }}>
-          {logoUrl === null || logoUrl === undefined ? (
-            <Typography variant="h5" color="primary" noWrap>
-              {orgName}
-            </Typography>
-          ) : (
-            <Avatar
-              variant="rounded"
-              src={logoUrl}
-              alt={orgName}
-              sx={{
-                width: LOGO_SIZE,
-                height: LOGO_SIZE,
-                borderRadius: LOGO_RADIUS,
-              }}
-            />
-          )}
-          <Typography variant="caption" color="text.secondary">
-            {tApp("subtitle")}
-          </Typography>
-        </Stack>
-      )}
-
-      {/* 模組多到超過視窗時只有這一格垂直捲動(`minHeight: 0` 才拿得到確定的高度,STYLE-08)。
-          收合態兩軸都明確設:只寫 `overflow-y: auto` 會連帶把 `overflow-x` 算成 auto,而 64 寬扣掉內距與右邊框
-          比圖示格(40)窄 1px,就多出一條水平捲軸;捲軸本身也藏起來(64 寬放不下,滾輪 / 觸控照樣捲) */}
-      <Box
-        data-testid="side-nav-content"
-        sx={
-          isCollapsed
-            ? {
-                flex: 1,
-                minHeight: 0,
-                overflowX: "hidden",
-                overflowY: "auto",
-                scrollbarWidth: "none",
-                "&::-webkit-scrollbar": { display: "none" },
-              }
-            : { flex: 1, minHeight: 0, overflowY: "auto" }
-        }
-      >
-        {isCollapsed ? (
-          <NavRail nodes={tree} currentPath={currentPath} badges={badges} />
-        ) : (
-          <List
-            component="div"
-            disablePadding
-            sx={{ display: "grid", gap: 0.5 }}
-          >
-            <NavNodes nodes={tree} currentPath={currentPath} badges={badges} />
-          </List>
-        )}
-      </Box>
-
-      <SideNavToggle isCollapsed={isCollapsed} onToggle={toggle} />
-    </Box>
+    <NavDrawer open={isMobileOpen} onClose={close}>
+      <SideNavPanel {...props} isCollapsed={false} onNavigate={close} />
+    </NavDrawer>
   );
 };

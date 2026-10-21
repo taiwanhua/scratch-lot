@@ -45,12 +45,12 @@ test/       測試支援
 
 殼 = 側欄 + AppBar + 路由頁籤列 + 內容區。`AdminShell` 等 `me` 載入後交給 `ShellLayout` 排版。
 
-| 區塊      | 做什麼                                                                                                                                                                                              | 程式                                                             |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/base/useSideNavStore.ts`      |
-| AppBar    | 頁名、「?」模組說明、當前組織切換器、頭像選單                                                                                                                                                       | `app/AdminShell/AppBar/`                                         |
-| RouteTabs | 開過的路由各一個頁籤;可關閉、可拖曳排序、鍵盤可操作                                                                                                                                                 | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
-| 內容區    | `<main>`:高度由殼給、自己捲動;有最小寬度                                                                                                                                                            | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
+| 區塊      | 做什麼                                                                                                                                                                                                             | 程式                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| SideNav   | `me.modules` 以 `parentId` 組樹;`group` 可展開、`link` 可點、`hidden` 不顯示;頂部是當前組織的商標(自己沒有就沿 `ancestors` 由近到遠繼承上層的商標,整條鏈都沒有才顯示組織名);可收合;手機寬改成抽屜;模組列可掛待辦數 | `app/AdminShell/SideNav/`、`stores/base/useSideNavStore.ts`      |
+| AppBar    | 頁名、「?」模組說明、當前組織切換器、頭像選單                                                                                                                                                                      | `app/AdminShell/AppBar/`                                         |
+| RouteTabs | 開過的路由各一個頁籤;可關閉、可拖曳排序、鍵盤可操作                                                                                                                                                                | `app/AdminShell/RouteTabs/`、`stores/base/useRouteTabsStore.ts`  |
+| 內容區    | `<main>`:高度由殼給、自己捲動;`lg` 以上有最小寬度                                                                                                                                                                  | `app/AdminShell/ShellLayout.tsx`、`AdminShell/shell-geometry.ts` |
 
 - 殼的設計稿節點登記在 `docs/branding.md`。
 
@@ -59,6 +59,7 @@ test/       測試支援
 ### 側欄
 
 - **兩種寬度**:展開 240px、收合成 64px 圖示列(`NavRail`)。收合態的群組以浮層展開子項;圖示格的提示就是模組名稱(REACT-10 的例外)。
+- **手機寬(< `sm`)改成抽屜**:側欄放進從左側滑出的 `NavDrawer`(`@repo/ui/drawer`),預設收起;AppBar 最左的主選單鈕打開,點遮罩、按 Esc、點了模組連結就關(點群組列只展開子項)。抽屜裡一律展開、沒有收合開關;開關狀態在 `useSideNavStore`,不存檔。`sm` 以上維持左欄(含收合)。
 - 收合狀態存 localStorage,是這台瀏覽器的偏好,不分使用者。
 - 側欄只有模組樹那一格捲動,底部的收合開關永遠看得到。
 - **側欄計數(badges)採登記制**:`ShellLayout` 把「模組 key → 數字」傳給 `SideNav`,數字大於 0 才顯示;展開態畫數字(`@repo/ui/badge`,超過 99 顯示 `99+`)、收合態畫小圓點,手機抽屜沿用展開態。數字一律來自 `sidebarBadges`(`hooks/base/useSidebarBadges.ts`),前端不寫死任何模組。
@@ -77,7 +78,7 @@ test/       測試支援
 
 ### 內容區的寬度與內距
 
-- **最小寬度**:只在 `sm` 以上套用。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
+- **最小寬度**:只在視窗 ≥ `lg` 時套用;平板以下(< `lg`)不設下限,內容隨視窗縮放,寬表格靠表格自己的橫向捲動。內容區最小寬度 = 主題斷點 − 側欄寬(隨收合狀態)− 左右內距。殼層預設 `lg`;頁面可在 `app/base/module-pages.ts`(專案頁在 `app/project/`)的頁面宣告設定 `minWidth: "xl"` 或 `"md"`,組裝後由 `app/module-pages.tsx` 的 `modulePageMinWidths` 交給殼。因為只在 ≥ `lg` 套用,`lg` 與 `md` 在那個寬度本來就放得下,實際會讓內容區水平捲動的只有 `xl`(視窗介於 `lg` 與 `xl` 之間)。目前底座頁都沒有宣告 `xl`:表單管理與流程管理(兩個設計器)沿用 `lg`,在 `xl` 以下由設計器自己換版(`pages/base/system/designer-layout.ts`)。客製替換未寫 `minWidth` 時繼承底座值。視窗比斷點窄時由 `<main>` 水平捲動,不擠壓內容;document 本身不出現水平捲軸。
 - **內距**:手機寬(< `sm`)8px,其餘 24px(`MAIN_PADDING`)。
 - **高度**:殼外框固定 `100vh`,`<main>` 以 `flex: 1` + `minHeight: 0` 取得確定的高度,頁面可以撐滿(STYLE-08)。
 
