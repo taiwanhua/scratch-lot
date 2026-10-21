@@ -161,6 +161,8 @@ export const FormFillForm = ({
           <Alert severity="error">{errorText(error)}</Alert>
         ))}
       <FormActions
+        // FormCreatePage / FormEditPage 的捲動卡片是 `px: 3`
+        gutter={3}
         cancel={{ label: t("cancel"), onClick: onCancel }}
         {...(!isCompleted &&
           canSaveDraft && {

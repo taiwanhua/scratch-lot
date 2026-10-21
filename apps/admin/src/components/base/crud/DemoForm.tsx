@@ -140,6 +140,8 @@ export const DemoForm = <Detail extends DemoItemLike, Values>({
       {hasBannerError && <Alert severity="error">{tErrors(error.code)}</Alert>}
 
       <FormActions
+        // DemoFormPage 的捲動卡片是 `px: 3`
+        gutter={3}
         cancel={{ label: t("cancel"), onClick: handleCancel }}
         submit={{
           label: t("save"),

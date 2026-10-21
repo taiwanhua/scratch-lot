@@ -253,6 +253,8 @@ const MakeupPunchFormBody = ({
         />
         {errorText !== null && <Alert severity="error">{errorText}</Alert>}
         <FormActions
+          // 外層卡片 `p: { xs: 2, sm: 3 }`
+          gutter={{ xs: 2, sm: 3 }}
           cancel={{ label: t("cancel"), onClick: onCancel }}
           submit={{ label: t("submit"), disabled: isPending, onClick: submit }}
         />

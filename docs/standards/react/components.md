@@ -277,8 +277,9 @@ interface CellRenderContext<Row> {
 | 對話框        | `@repo/ui/dialog` 的 `actions`(靠右) | [取消](text)→[主要](contained;破壞性用 error)                                                                    |
 
 - **新增 / 編輯頁一律用 `FormActions`**,不自己排 `Stack` + `Button`:它固定順序與 variant(呼叫端只給文字、點擊、停用),合計文字、編輯頁的 [刪除] 這類不屬於送出流程的內容放 `start`(在左側)。
-- **手機(xs)動作列黏在可視範圍底部**:`FormActions` 在 xs 是 `position: sticky; bottom: 0`,並補背景(paper)、上邊框與 `zIndex: mobileStepper` —— 少了 z-index,輸入框的浮動標籤會捲到按鈕列上面。sticky 的參照是最近的捲動容器,所以 `FormActions` 放在表單的捲動區裡;頁面把動作列放在捲動區外(內容自己捲)時,它本來就固定在底部。sm 以上是一般位置。
+- **手機與平板(lg 以下)動作列黏在可視範圍底部**(RW-02):`FormActions` 在 lg 以下是 `position: sticky; bottom: 0`,並補背景(paper)、上邊框與 `zIndex: mobileStepper` —— 少了 z-index,輸入框的浮動標籤會捲到按鈕列上面。sticky 的參照是最近的捲動容器,所以 `FormActions` 放在表單的捲動區裡;頁面把動作列放在捲動區外(內容自己捲)時,它本來就固定在底部。電腦(lg 起)是一般位置。
+- **捲動容器有左右內距時給 `gutter`**(例:表單頁 Card 的 `px: 3` → `gutter={3}`,依斷點不同就給物件):黏底時以負 margin 撐滿內距、再用同值內距把按鈕放回原位,白底蓋滿卡片寬,捲過的欄位不會從兩側留白透出來。
 - **檢視頁不把動作鈕塞進標題卡**:標題卡只放名稱、狀態與摘要;返回、編輯、停用 / 刪除都在頂部列。設定卡這類頁內區塊只留自己的 [儲存]。
 - **審核區塊**(`ApprovalSection` 的我的任務):[退回修改]→[駁回]→[核准](contained),核准在最右。
-- **例外**:精靈(`Stepper`)的 [上一步] [下一步] 與標題列的 [取消精靈] 照精靈自己的版型;資訊型對話框(只有 [關閉] 加一個進下一步的入口)入口可用 outlined。
+- **例外**:精靈(`Stepper`)的 [上一步] [下一步] 與標題列的 [取消精靈] 照精靈自己的版型;資訊型對話框(只有 [關閉] 加一個進下一步的入口)入口可用 outlined;表單引擎的通用列表(一個模組多張表單,`FormListToolbar`)沒有單一名詞,新增鈕用「+ 新增」。
 - 測試以 `apps/admin/src/test/button-order.ts` 的 `expectButtonOrder([...])` 斷言順序,主要鈕再驗 `MuiButton-contained`。設計稿照同一套位置(FIGMA-18)。

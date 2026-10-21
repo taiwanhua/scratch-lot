@@ -11,7 +11,9 @@ import { mediaRulesOf } from "@/test/media-rules";
 import { FormActions } from "./FormActions";
 
 const XS = 0;
-const SM = 600;
+const SM_TABLET = 600;
+const MD_TABLET = 900;
+const LG = 1200;
 
 const noop = () => {
   // 回呼在本測試不觸發
@@ -76,7 +78,7 @@ describe("FormActions(新增 / 編輯頁的動作列,REACT-16)", () => {
     expect(row.lastElementChild).toHaveTextContent("儲存");
   });
 
-  it("手機(xs)黏在可視底部並補背景、上邊框、z-index;sm 以上回到一般位置", () => {
+  it("手機與平板(lg 以下)黏在可視底部並補背景、上邊框、z-index;lg 起回到一般位置", () => {
     renderActions(<FormActions submit={{ label: "儲存", onClick: noop }} />);
 
     const row = rowOf(screen.getByRole("button", { name: "儲存" }));
@@ -87,10 +89,44 @@ describe("FormActions(新增 / 編輯頁的動作列,REACT-16)", () => {
     expect(xs).toContain(
       "background-color: var(--mui-palette-background-paper);",
     );
-    const sm = mediaRulesOf(row, SM);
-    expect(sm).toContain("position: static;");
-    expect(sm).toContain("z-index: auto;");
-    expect(sm).toMatch(/border-top: 0/);
+    // 只宣告 xs 與 lg 兩段:sm / md(平板)沿用 xs 的黏底
+    expect(mediaRulesOf(row, SM_TABLET)).toBe("");
+    expect(mediaRulesOf(row, MD_TABLET)).toBe("");
+    const lg = mediaRulesOf(row, LG);
+    expect(lg).toContain("position: static;");
+    expect(lg).toContain("z-index: auto;");
+    expect(lg).toMatch(/border-top: 0/);
+  });
+
+  it("gutter:黏底時以負 margin 撐滿捲動卡片的左右內距,lg 起歸零", () => {
+    renderActions(
+      <FormActions gutter={3} submit={{ label: "儲存", onClick: noop }} />,
+    );
+
+    const row = rowOf(screen.getByRole("button", { name: "儲存" }));
+    const xs = mediaRulesOf(row, XS);
+    expect(xs).toContain("margin-left: calc(-3 * var(--mui-spacing));");
+    expect(xs).toContain("padding-left: calc(3 * var(--mui-spacing));");
+    const lg = mediaRulesOf(row, LG);
+    expect(lg).toMatch(/margin-left: (0|calc\(0 \* var\(--mui-spacing\)\));/);
+    expect(lg).toMatch(/padding-left: (0|calc\(0 \* var\(--mui-spacing\)\));/);
+  });
+
+  it("gutter 依斷點給:各斷點各自取負", () => {
+    renderActions(
+      <FormActions
+        gutter={{ xs: 2, sm: 3 }}
+        submit={{ label: "儲存", onClick: noop }}
+      />,
+    );
+
+    const row = rowOf(screen.getByRole("button", { name: "儲存" }));
+    expect(mediaRulesOf(row, XS)).toContain(
+      "margin-left: calc(-2 * var(--mui-spacing));",
+    );
+    expect(mediaRulesOf(row, SM_TABLET)).toContain(
+      "margin-left: calc(-3 * var(--mui-spacing));",
+    );
   });
 
   it("沒給的按鈕不出現;停用與點擊照傳入的值", async () => {

@@ -4,6 +4,10 @@ import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 
+/** 捲動容器的左右內距(spacing 單位;可依斷點給)。 */
+export type FormActionsGutter =
+  number | Partial<Record<"xs" | "sm" | "md", number>>;
+
 /** 動作列上的一顆按鈕:文字、點擊、停用(外觀由位置決定,呼叫端不選 variant)。 */
 export interface FormAction {
   label: ReactNode;
@@ -23,22 +27,42 @@ export interface FormActionsProps {
    * 按鈕群一律靠右,這一塊佔掉剩下的寬度。
    */
   start?: ReactNode;
+  /**
+   * 所在捲動容器的左右內距(例:表單頁 Card 的 `px: 3`)。黏底時(lg 以下)以負 margin 撐出去、
+   * 再用同值的內距把按鈕放回原位,白底才蓋滿整個卡片寬,捲過的欄位不會從兩側留白透出來。
+   * 容器沒有左右內距、或動作列不在捲動區裡時不給。
+   */
+  gutter?: FormActionsGutter;
 }
+
+/** 依斷點把內距取負(負 margin),lg 起歸零。 */
+const bleedOf = (gutter: FormActionsGutter | undefined) => {
+  if (gutter === undefined) {
+    return {};
+  }
+  const steps: Partial<Record<"xs" | "sm" | "md", number>> =
+    typeof gutter === "number" ? { xs: gutter } : gutter;
+  const negative = Object.fromEntries(
+    Object.entries(steps).map(([key, value]) => [key, -value]),
+  );
+  return { mx: { ...negative, lg: 0 }, px: { ...steps, lg: 0 } };
+};
 
 /**
  * 新增 / 編輯頁的動作列(REACT-16):放在表單底部、按鈕靠右,
  * 順序固定 [取消](text)→[存草稿](outlined)→[送出 / 儲存](contained)。
  *
- * 手機(xs)黏在可視範圍底部(`position: sticky`),並補背景、上邊框與 z-index ——
+ * 手機與平板(lg 以下)黏在可視範圍底部(`position: sticky`;RW-02),並補背景、上邊框與 z-index ——
  * 少了 z-index,輸入框的浮動標籤(MUI outlined label 自帶 z-index)會捲到按鈕列上面。
  * 黏住的參照是最近的捲動容器,所以本元件放在表單的捲動區裡;頁面把動作列放在捲動區外時,
- * 它本來就固定在底部,sticky 不影響。
+ * 它本來就固定在底部,sticky 不影響。電腦(lg 起)回到一般位置。
  */
 export const FormActions = ({
   cancel,
   draft,
   submit,
   start,
+  gutter,
 }: FormActionsProps) => (
   <Stack
     direction="row"
@@ -49,14 +73,15 @@ export const FormActions = ({
       alignItems: "center",
       justifyContent: "flex-end",
       flexShrink: 0,
-      position: { xs: "sticky", sm: "static" },
+      position: { xs: "sticky", lg: "static" },
       bottom: 0,
       // theme.zIndex.mobileStepper:蓋過欄位標籤,仍在彈窗、選單、Snackbar 之下
-      zIndex: { xs: "mobileStepper", sm: "auto" },
-      bgcolor: { xs: "background.paper", sm: "transparent" },
-      borderTop: { xs: 1, sm: 0 },
+      zIndex: { xs: "mobileStepper", lg: "auto" },
+      bgcolor: { xs: "background.paper", lg: "transparent" },
+      borderTop: { xs: 1, lg: 0 },
       borderColor: "divider",
-      py: { xs: 1.5, sm: 0 },
+      py: { xs: 1.5, lg: 0 },
+      ...bleedOf(gutter),
     }}
   >
     {start !== undefined && (
