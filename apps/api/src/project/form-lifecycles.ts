@@ -1,11 +1,11 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { purchaseLifecycle } from "./lottery/purchase/purchase-lifecycle";
 import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
+import { stocktakeConfirmLifecycle } from "./lottery/stocktake/stocktake-lifecycle";
 import {
   cashCorrectionLifecycle,
   saleReversalLifecycle,
 } from "./lottery/store/store-forms-lifecycle";
-import { stocktakeConfirmLifecycle } from "./lottery/stocktake/stocktake-lifecycle";
 import { transferLifecycle } from "./lottery/transfer/transfer-lifecycle";
 import { makeupPunchLifecycle } from "./schedule/attendance/makeup-punch-lifecycle";
 

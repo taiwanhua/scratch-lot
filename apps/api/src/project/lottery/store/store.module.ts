@@ -66,7 +66,14 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreFormsQueryService,
     LotteryStoreFormsResolver,
   ],
-  // 給交班結帳(結帳的功能)讀審核中的現金影響
-  exports: [StoreFormsQueryService],
+  // 給交班結帳(結帳的功能)讀審核中的現金影響;盤點(`stocktake/`)沿用店、收銀點、班與抽屜的讀取與
+  // 同一個「現在」(測試注入時間的是同一個實例)
+  exports: [
+    StoreFormsQueryService,
+    StoreAccess,
+    StoreClock,
+    StoreSalesSupport,
+    StoreShiftViews,
+  ],
 })
 export class LotteryStoreModule {}

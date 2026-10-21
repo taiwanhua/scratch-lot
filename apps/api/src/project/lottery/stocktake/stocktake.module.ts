@@ -5,10 +5,7 @@ import { FormsCoreModule } from "../../../forms/forms-core.module";
 import { RealtimeModule } from "../../../realtime/realtime.module";
 import { WorkflowEngineModule } from "../../../workflows/workflow-engine/workflow-engine.module";
 import { LotteryFieldOptionsModule } from "../field-options/lottery-field-options.module";
-import { StoreShiftViews } from "../store/shift-views";
-import { StoreAccess } from "../store/store-access";
-import { StoreClock } from "../store/store-clock";
-import { StoreSalesSupport } from "../store/store-sales-support";
+import { LotteryStoreModule } from "../store/store.module";
 import { LotteryTicketsModule } from "../tickets/tickets.module";
 import { StocktakeFacts } from "./stocktake-facts";
 import { StocktakeQueryService } from "./stocktake-query.service";
@@ -21,7 +18,7 @@ import { STOCKTAKE_SERVICE } from "./stocktake.token";
  * 盤點頁、差異核對、[補登售出](立即生效,經 `TicketLedgerService`)、盤點紀錄與檢視頁;盤點確認申請的掛接點
  * (`stocktake-lifecycle.ts`)以 `STOCKTAKE_SERVICE` 取服務。交班 / 日結的結帳確認申請(之後的功能)
  * 匯入本模組,以同一個 token 取 `submitStocktakeDraft` 等入口。
- * 店、收銀點、班與抽屜的讀取沿用店面的 `StoreSalesSupport` / `StoreShiftViews` / `StoreAccess` / `StoreClock`。
+ * 店、收銀點、班與抽屜的讀取沿用店面模組匯出的 `StoreSalesSupport` / `StoreShiftViews` / `StoreAccess` / `StoreClock`。
  */
 @Module({
   imports: [
@@ -31,12 +28,9 @@ import { STOCKTAKE_SERVICE } from "./stocktake.token";
     WorkflowEngineModule,
     LotteryFieldOptionsModule,
     LotteryTicketsModule,
+    LotteryStoreModule,
   ],
   providers: [
-    StoreAccess,
-    StoreClock,
-    StoreShiftViews,
-    StoreSalesSupport,
     StocktakeFacts,
     StocktakeService,
     StocktakeQueryService,
