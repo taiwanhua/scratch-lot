@@ -3,8 +3,10 @@ import { Types } from "mongoose";
 
 import {
   CHECKOUT_CONFIRM_FORM_KEY,
+  CHECKOUT_TYPE,
   CHECKOUT_TYPES,
   type CheckoutDraft,
+  type DailyCloseDraft,
   REDEMPTION_STATUS,
   STOCKTAKE_STATUS,
   STORE_KEY,
@@ -12,6 +14,7 @@ import {
   expectedCashTotalOf,
   isStocktakeReusable,
   serializeCheckoutDraft,
+  serializeDailyCloseDraft,
 } from "@repo/domain/project/lottery";
 
 import type { Persisted } from "../../../database/base.repository";
@@ -25,6 +28,7 @@ import { RelationService } from "../../../database/relation.service";
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import { FormAccessService } from "../../../forms/form-access.service";
 import { SubmissionReadAccess } from "../../../workflows/workflow-engine/submission-read-access.service";
+import { LotteryBankAccountsRepository } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import type {
   CheckoutCashItem,
   CheckoutPendingImpact,
@@ -114,6 +118,7 @@ const impactModelOf = (
 export class CheckoutQueryService {
   constructor(
     private readonly checkouts: LotteryCheckoutsRepository,
+    private readonly bankAccounts: LotteryBankAccountsRepository,
     private readonly stocktakes: LotteryStocktakesRepository,
     private readonly shifts: LotteryShiftsRepository,
     private readonly redemptions: LotteryRedemptionsRepository,
@@ -228,7 +233,7 @@ export class CheckoutQueryService {
     return this.stocktakeRefOf(operator, shift.tenantId, record);
   }
 
-  private async stocktakeRefOf(
+  async stocktakeRefOf(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     record: {
@@ -417,6 +422,7 @@ export class CheckoutQueryService {
         ? null
         : this.stocktakes.findById(reader, record.stocktakeId),
     ]);
+    const daily = await this.dailyFactsOf(reader, record, points);
     const nameRef = (id: Types.ObjectId | null) =>
       id === null
         ? null
@@ -461,7 +467,84 @@ export class CheckoutQueryService {
       submittedBy: nameRef(record.submittedBy),
       submittedAt: record.submittedAt,
       confirmedAt: record.confirmedAt,
-      draft: serializeCheckoutDraft(this.draftOf(record, stocktake)),
+      ...daily,
+      draft:
+        record.type === CHECKOUT_TYPE.daily
+          ? serializeDailyCloseDraft(this.dailyDraftOf(record, stocktake))
+          : serializeCheckoutDraft(this.draftOf(record, stocktake)),
+    };
+  }
+
+  /** 日結的檢視頁欄位:涵蓋計算期間、涵蓋的班(單號、收銀點)、存入銀行;交班 = 空。 */
+  private async dailyFactsOf(
+    reader: OperatorContext,
+    record: CheckoutRecord,
+    points: Map<string, { name: string }>,
+  ) {
+    if (record.type !== CHECKOUT_TYPE.daily) {
+      return {
+        coveredFrom: null,
+        coveredTo: null,
+        coveredShifts: [],
+        bankDepositAmount: 0,
+        bankAccount: null,
+      };
+    }
+    const [shiftCheckouts, account] = await Promise.all([
+      record.coveredShiftIds.length === 0
+        ? []
+        : this.checkouts.findMany(
+            reader,
+            {
+              shiftId: { $in: record.coveredShiftIds },
+              type: CHECKOUT_TYPE.shift,
+            },
+            { sort: { submittedAt: 1 } },
+          ),
+      record.bankAccountId === null
+        ? null
+        : this.bankAccounts.findById(reader, record.bankAccountId),
+    ]);
+    const serials = await this.submissionsOf(
+      reader,
+      record.tenantId,
+      shiftCheckouts,
+    );
+    return {
+      coveredFrom: record.coveredFrom,
+      coveredTo: record.coveredTo,
+      coveredShifts: shiftCheckouts.map((row) => ({
+        submissionId: String(row.submissionId),
+        serialNo: serials.get(String(row.submissionId))?.serialNo ?? null,
+        cashPointName: points.get(String(row.cashPointId))?.name ?? "",
+      })),
+      bankDepositAmount: record.bankDepositAmount,
+      bankAccount:
+        account === null
+          ? null
+          : { id: String(account._id), name: account.label },
+    };
+  }
+
+  /** 日結的結帳單 → 結帳內容(退回後打開日結精靈帶入)。 */
+  private dailyDraftOf(
+    record: CheckoutRecord,
+    stocktake: Persisted<LotteryStocktakeDocument> | null,
+  ): DailyCloseDraft {
+    const shiftShaped = this.draftOf(record, stocktake);
+    return {
+      version: 1,
+      type: CHECKOUT_TYPE.daily,
+      orgId: String(record.orgId),
+      stocktake: shiftShaped.stocktake,
+      denominations: shiftShaped.denominations,
+      diffReasonKey: record.diffReasonKey,
+      diffReasonNote: record.diffReasonNote,
+      bankDeposit: {
+        amount: record.bankDepositAmount,
+        accountId:
+          record.bankAccountId === null ? null : String(record.bankAccountId),
+      },
     };
   }
 

@@ -821,6 +821,13 @@ input DepositLotteryShiftCashInput {
   shiftId: ID!
 }
 
+input DepositLotteryVaultToBankInput {
+  accountId: ID!
+  amount: Int!
+  note: String
+  orgId: ID!
+}
+
 input DocumentPrintCountInput {
   refId: String!
   refType: String!
@@ -1452,6 +1459,18 @@ type LotteryBankAccountsPayload {
   totalCount: Int!
 }
 
+type LotteryBankDepositForm {
+  accounts: [LotteryAccountsRef!]!
+  org: LotteryAccountsRef!
+  vaultExpected: Int!
+}
+
+type LotteryBankDepositPayload {
+  movementId: ID!
+  transactionId: ID!
+  vaultExpected: Int!
+}
+
 type LotteryBankTransaction {
   abilities: LotteryBankTransactionAbilities!
   accountId: ID!
@@ -1592,15 +1611,26 @@ type LotteryCheckoutCashItem {
   kind: String!
 }
 
+type LotteryCheckoutCoveredShift {
+  cashPointName: String!
+  serialNo: String
+  submissionId: ID!
+}
+
 type LotteryCheckoutDenomination {
   count: Int!
   value: Int!
 }
 
 type LotteryCheckoutDetail {
+  bankAccount: LotteryAccountsRef
+  bankDepositAmount: Int!
   cashPoint: LotteryAccountsRef
   confirmedAt: DateTime
   counted: Int!
+  coveredFrom: DateTime
+  coveredShifts: [LotteryCheckoutCoveredShift!]!
+  coveredTo: DateTime
   denominations: [LotteryCheckoutDenomination!]!
   diffReason: String
   diffReasonNote: String
@@ -1706,6 +1736,58 @@ enum LotteryContactRole {
 enum LotteryContactStatus {
   ACTIVE
   DISABLED
+}
+
+type LotteryDailyCloseOpenShift {
+  cashPointName: String!
+  ownerName: String!
+}
+
+type LotteryDailyClosePending {
+  serialNo: String
+  status: String!
+  submissionId: ID!
+}
+
+type LotteryDailyCloseShiftRow {
+  cashPoint: LotteryAccountsRef!
+  counted: Int!
+  difference: Int!
+  expected: Int!
+  instanceId: ID
+  isMine: Boolean!
+  serialNo: String
+  shiftId: ID!
+  state: String!
+  submissionId: ID!
+  submittedAt: DateTime!
+  submittedBy: LotteryAccountsRef
+  waitingFor: [String!]!
+}
+
+type LotteryDailyCloseStatus {
+  daysSince: Int
+  lastClosedAt: DateTime
+  pending: LotteryDailyClosePending
+}
+
+type LotteryDailyCloseWizard {
+  bankAccounts: [LotteryAccountsRef!]!
+  canSkipStocktake: Boolean!
+  canSubmit: Boolean!
+  coveredFrom: DateTime
+  coveredTo: DateTime
+  differenceTotal: Int!
+  gapDates: [String!]!
+  openShifts: [LotteryDailyCloseOpenShift!]!
+  org: LotteryAccountsRef!
+  pending: LotteryDailyClosePending
+  reusableStocktake: LotteryCheckoutReusableStocktake
+  serverNow: DateTime!
+  shifts: [LotteryDailyCloseShiftRow!]!
+  vaultBaselineAt: DateTime
+  vaultExpected: Int!
+  vaultItems: [LotteryCheckoutCashItem!]!
 }
 
 type LotteryDealer {
@@ -3341,6 +3423,7 @@ type Mutation {
   deleteScheduleEntry(input: DeleteScheduleEntryInput!): DeleteScheduleEntryPayload!
   deleteWorkflowVersionDraft(input: DeleteWorkflowVersionDraftInput!): WorkflowPayload!
   depositLotteryShiftCash(input: DepositLotteryShiftCashInput!): LotteryStoreShiftPayload!
+  depositLotteryVaultToBank(input: DepositLotteryVaultToBankInput!): LotteryBankDepositPayload!
   disablePrintAgent(input: PrintAgentIdInput!): PrintAgentPayload!
   forkForm(input: ForkFormInput!): FormPayload!
   forkWorkflow(input: ForkWorkflowInput!): WorkflowPayload!
@@ -4125,6 +4208,7 @@ type Query {
   lotteryAllocations(input: LotteryAllocationsInput!): LotteryAllocationsPayload!
   lotteryBankAccount(id: ID!): LotteryBankAccountPayload!
   lotteryBankAccounts(input: LotteryBankAccountsInput!): LotteryBankAccountsPayload!
+  lotteryBankDepositForm(orgId: ID!): LotteryBankDepositForm!
   lotteryBankTransactions(input: LotteryBankTransactionsInput!): LotteryBankTransactionsPayload!
   lotteryCashLedger(input: LotteryCashLedgerInput!): LotteryCashLedgerPayload!
   lotteryCashMovement(id: ID!): LotteryCashMovementPayload!
@@ -4132,6 +4216,8 @@ type Query {
   lotteryCheckout(submissionId: ID!): LotteryCheckoutDetail!
   lotteryCheckoutWizard(shiftId: ID!): LotteryCheckoutWizard!
   lotteryCheckouts(input: LotteryCheckoutsInput!): LotteryCheckoutsPayload!
+  lotteryDailyCloseStatus(orgId: ID!): LotteryDailyCloseStatus!
+  lotteryDailyCloseWizard(orgId: ID!, submissionId: ID): LotteryDailyCloseWizard!
   lotteryDealer(id: ID!): LotteryDealerPayload!
   lotteryDealerCoSellers(dealerId: ID!): LotteryDealerCoSellersPayload!
   lotteryDealerContact(id: ID!): LotteryDealerContactPayload!

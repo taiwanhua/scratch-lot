@@ -7,6 +7,7 @@ import {
   CHECKOUT_REASONS,
   CHECKOUT_STATUS,
   type CheckoutDraft,
+  type CheckoutStocktakeChoice,
   STOCKTAKE_STATUS,
   STORE_PERMISSIONS,
   checkoutHandoverProblemOf,
@@ -46,6 +47,12 @@ import { StoreFormsQueryService } from "../store/store-forms-query.service";
 import { StoreSalesSupport } from "../store/store-sales-support";
 import { conflictError, validationError } from "./checkout-error";
 import { ExpectedCashItems } from "./expected-cash";
+
+/** 盤點的範圍:分店 + 收銀點(交班);日結是全店(`cashPointId = null`)。 */
+export interface StocktakeScope {
+  orgId: string;
+  cashPointId: string | null;
+}
 
 const block = (code: string, message: string): FormGuardResult => ({
   code,
@@ -132,7 +139,12 @@ export class CheckoutService {
     if (shiftState !== null) {
       return shiftState;
     }
-    const stocktake = await this.checkStocktakeChoice(operator, grant, draft);
+    const stocktake = await this.checkStocktakeChoice(
+      operator,
+      grant,
+      { orgId: draft.orgId, cashPointId: draft.cashPointId },
+      draft.stocktake,
+    );
     if (stocktake !== null) {
       return stocktake;
     }
@@ -262,12 +274,16 @@ export class CheckoutService {
     );
   }
 
-  private async checkStocktakeChoice(
+  /**
+   * 盤點方式的守門(交班:那個收銀點;日結:全店 `cashPointId = null`):跳過要 `store.skip-stocktake` + 原因;
+   * 沿用要 30 分鐘內、範圍對;現在盤點照盤點的守門、範圍要對。
+   */
+  async checkStocktakeChoice(
     operator: OperatorContext,
     grant: StoreGrant,
-    draft: CheckoutDraft,
+    scope: StocktakeScope,
+    choice: CheckoutStocktakeChoice,
   ): Promise<FormGuardResult> {
-    const choice = draft.stocktake;
     switch (choice.mode) {
       case "skip": {
         if (!grant.has(STORE_PERMISSIONS.skipStocktake)) {
@@ -289,7 +305,7 @@ export class CheckoutService {
           : null;
       }
       case "reuse": {
-        const reusable = await this.reusableStocktake(operator, draft, choice);
+        const reusable = await this.reusableStocktake(operator, scope, choice);
         return reusable === null
           ? block(
               CHECKOUT_REASONS.stocktakeNotReusable,
@@ -299,8 +315,8 @@ export class CheckoutService {
       }
       case "new": {
         if (
-          choice.draft.orgId !== draft.orgId ||
-          choice.draft.scopeCashPointId !== draft.cashPointId
+          choice.draft.orgId !== scope.orgId ||
+          choice.draft.scopeCashPointId !== scope.cashPointId
         ) {
           return block(
             CHECKOUT_REASONS.invalid,
@@ -312,10 +328,13 @@ export class CheckoutService {
     }
   }
 
-  /** 沿用的盤點:這家店的、範圍是這個收銀點或全店、待核准或已確認(已退回 / 已駁回不行)、開始盤的時間在 30 分鐘內。 */
+  /**
+   * 沿用的盤點:這家店的、範圍是這個收銀點或全店(日結只能沿用全店的)、待核准或已確認(已退回 / 已駁回不行)、
+   * 開始盤的時間在 30 分鐘內。
+   */
   private async reusableStocktake(
     reader: OperatorContext,
-    draft: Pick<CheckoutDraft, "orgId" | "cashPointId">,
+    draft: StocktakeScope,
     choice: { submissionId: string },
     session?: ClientSession,
   ) {
@@ -344,7 +363,7 @@ export class CheckoutService {
   }
 
   /** 原因檢查(欄位管理;其他要說明);不合 → null。 */
-  private async reasonOf(
+  async reasonOf(
     reader: OperatorContext,
     categoryKey: string,
     input: { reasonKey: string | null; reasonNote: string | null },
@@ -459,7 +478,9 @@ export class CheckoutService {
       reader,
       tenantId,
       submission,
-      draft,
+      { orgId: draft.orgId, cashPointId: draft.cashPointId },
+      draft.stocktake,
+      "shift",
     );
     // `orgId` 只在建立時寫(BaseRepository 不讓一般更新改它);退回後再送出改寫其餘欄位
     const content: Omit<
@@ -495,6 +516,13 @@ export class CheckoutService {
       submittedAt: now,
       confirmedAt: null,
       confirmedBy: null,
+      coveredFrom: null,
+      coveredTo: null,
+      coveredShiftIds: [],
+      bankDepositAmount: 0,
+      bankAccountId: null,
+      bankTransactionId: null,
+      bankMovementId: null,
       submissionId,
     };
     let checkoutId: Types.ObjectId;
@@ -551,13 +579,18 @@ export class CheckoutService {
     }
   }
 
-  /** 盤點方式 → 盤點單 id(現在盤點:同一個交易建立;沿用:那一筆;跳過:null + 原因)。 */
-  private async writeStocktake(
+  /**
+   * 盤點方式 → 盤點單 id(現在盤點:同一個交易建立;沿用:那一筆;跳過:null + 原因)。交班與日結共用
+   * (日結的範圍是全店、盤點單類型 = 日結)。
+   */
+  async writeStocktake(
     session: ClientSession,
     reader: OperatorContext,
     tenantId: Types.ObjectId | null,
     submission: { _id: Types.ObjectId; createdBy?: Types.ObjectId | null },
-    draft: CheckoutDraft,
+    scope: StocktakeScope,
+    choice: CheckoutStocktakeChoice,
+    type: "shift" | "daily",
   ): Promise<{
     stocktakeId: Types.ObjectId | null;
     skip: {
@@ -566,7 +599,6 @@ export class CheckoutService {
       reasonNote: string | null;
     } | null;
   }> {
-    const choice = draft.stocktake;
     switch (choice.mode) {
       case "skip": {
         const reason = await this.reasonOf(
@@ -587,7 +619,7 @@ export class CheckoutService {
       case "reuse": {
         const record = await this.reusableStocktake(
           reader,
-          draft,
+          scope,
           choice,
           session,
         );
@@ -606,7 +638,7 @@ export class CheckoutService {
           session,
           choice.draft,
           {
-            type: "shift",
+            type,
             submissionId: submission._id,
             tenantId,
             submittedBy: submission.createdBy ?? null,
@@ -685,7 +717,7 @@ export class CheckoutService {
   }
 
   /** 核准的人:目前流程實例裡最後核准的審核者;沒有(兩關都跳過)= 申請人。 */
-  private async approverOf(
+  async approverOf(
     tenantId: Types.ObjectId | null,
     submissionId: Types.ObjectId,
     session: ClientSession,

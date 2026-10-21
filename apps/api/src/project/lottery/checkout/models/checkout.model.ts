@@ -212,7 +212,23 @@ export class LotteryCheckoutsPayload {
   total!: number;
 }
 
-/** 結帳確認申請檢視頁(ST-28a):結帳單明細。 */
+/** 日結涵蓋計算的一班(檢視頁「涵蓋計算的班」)。 */
+@ObjectType("LotteryCheckoutCoveredShift")
+export class LotteryCheckoutCoveredShiftModel {
+  @Field(() => ID)
+  submissionId!: string;
+
+  @Field(() => String, { nullable: true })
+  serialNo!: string | null;
+
+  @Field(() => String)
+  cashPointName!: string;
+}
+
+/**
+ * 結帳確認申請檢視頁(交班 ST-28a / 日結 ST-28b):結帳單明細。日結時應有 / 實點 / 差額 / 面額 / 應有各項是**小金庫**,
+ * 另有涵蓋計算期間、涵蓋的班與存入銀行。
+ */
 @ObjectType("LotteryCheckoutDetail")
 export class LotteryCheckoutDetailModel {
   @Field(() => ID)
@@ -292,7 +308,25 @@ export class LotteryCheckoutDetailModel {
   @Field(() => GraphQLISODateTime, { nullable: true })
   confirmedAt!: Date | null;
 
-  /** 結帳內容(`serializeCheckoutDraft`;退回後打開精靈帶入)。 */
+  /** 日結:涵蓋計算期間(第一次日結的起點 = null) */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  coveredFrom!: Date | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  coveredTo!: Date | null;
+
+  /** 日結:涵蓋計算的班(交班結帳的單號、收銀點) */
+  @Field(() => [LotteryCheckoutCoveredShiftModel])
+  coveredShifts!: LotteryCheckoutCoveredShiftModel[];
+
+  /** 日結:存入銀行的金額(0 = 不存)與帳戶 */
+  @Field(() => Int)
+  bankDepositAmount!: number;
+
+  @Field(() => LotteryAccountsRefModel, { nullable: true })
+  bankAccount!: LotteryAccountsRefModel | null;
+
+  /** 結帳內容(交班 `serializeCheckoutDraft` / 日結 `serializeDailyCloseDraft`;退回後打開精靈帶入)。 */
   @Field(() => String)
   draft!: string;
 }

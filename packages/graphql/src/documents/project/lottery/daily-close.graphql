@@ -1,0 +1,85 @@
+query LotteryDailyCloseStatus($orgId: ID!) {
+  lotteryDailyCloseStatus(orgId: $orgId) {
+    lastClosedAt
+    daysSince
+    pending {
+      submissionId
+      serialNo
+      status
+    }
+  }
+}
+
+query LotteryDailyCloseWizard($orgId: ID!, $submissionId: ID) {
+  lotteryDailyCloseWizard(orgId: $orgId, submissionId: $submissionId) {
+    org {
+      ...LotteryAccountsRefFields
+    }
+    coveredFrom
+    coveredTo
+    gapDates
+    openShifts {
+      cashPointName
+      ownerName
+    }
+    pending {
+      submissionId
+      serialNo
+      status
+    }
+    shifts {
+      shiftId
+      submissionId
+      serialNo
+      instanceId
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      submittedBy {
+        ...LotteryAccountsRefFields
+      }
+      submittedAt
+      expected
+      counted
+      difference
+      state
+      waitingFor
+      isMine
+    }
+    differenceTotal
+    canSubmit
+    canSkipStocktake
+    reusableStocktake {
+      ...LotteryCheckoutStocktakeRefFields
+    }
+    vaultItems {
+      ...LotteryCheckoutCashItemFields
+    }
+    vaultExpected
+    vaultBaselineAt
+    bankAccounts {
+      ...LotteryAccountsRefFields
+    }
+    serverNow
+  }
+}
+
+query LotteryBankDepositForm($orgId: ID!) {
+  lotteryBankDepositForm(orgId: $orgId) {
+    org {
+      ...LotteryAccountsRefFields
+    }
+    vaultExpected
+    accounts {
+      ...LotteryAccountsRefFields
+    }
+  }
+}
+
+mutation DepositLotteryVaultToBank($input: DepositLotteryVaultToBankInput!) {
+  depositLotteryVaultToBank(input: $input) {
+    vaultExpected
+    movementId
+    transactionId
+  }
+}

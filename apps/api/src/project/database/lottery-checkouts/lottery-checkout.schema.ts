@@ -93,7 +93,8 @@ const PENDING_TYPE = {
  * 結帳單(專案規格 6.9、8.7;正本 `docs/modules/project/store.md`「交班結帳」)。交班精靈 [送出] 時由
  * 結帳確認申請的掛接點在同一個交易建立(一張申請一筆,`submissionId` 唯一;退回後再送出改寫同一筆);
  * 應有現金的各項在送出那一刻從紀錄加總並快照(之後的事後更正不改它)。
- * 日結的欄位(涵蓋計算期間、小金庫、存入銀行)由日結的功能追加。
+ * **日結**(`type = daily`,規格 6.10):沒有收銀點與班次;應有 / 實點 / 差額 / 面額 / 差額原因 / 應有各項記的是
+ * **小金庫**;另有涵蓋計算期間、涵蓋的班、存入銀行(完成時才寫銀行「存入」與「存銀行」流水)。
  */
 @Schema({ collection: LOTTERY_CHECKOUTS_COLLECTION, timestamps: true })
 export class LotteryCheckout {
@@ -185,6 +186,31 @@ export class LotteryCheckout {
   @Prop({ type: OBJECT_ID, default: null })
   confirmedBy!: Types.ObjectId | null;
 
+  /** 日結:涵蓋計算期間(上一次日結送出 至 這次送出;第一次日結 `coveredFrom = null`)。交班 = null。 */
+  @Prop({ type: Date, default: null })
+  coveredFrom!: Date | null;
+
+  @Prop({ type: Date, default: null })
+  coveredTo!: Date | null;
+
+  /** 日結:涵蓋計算的班(送出那一刻;交班結帳送出時間落在涵蓋計算期間的班)。 */
+  @Prop({ type: [OBJECT_ID], default: [] })
+  coveredShiftIds!: Types.ObjectId[];
+
+  /** 日結:存入銀行的金額(0 = 不存)與帳戶。 */
+  @Prop({ type: Number, default: 0 })
+  bankDepositAmount!: number;
+
+  @Prop({ type: OBJECT_ID, default: null })
+  bankAccountId!: Types.ObjectId | null;
+
+  /** 日結完成時寫的銀行「存入」與「存銀行」流水(沒存 = null)。 */
+  @Prop({ type: OBJECT_ID, default: null })
+  bankTransactionId!: Types.ObjectId | null;
+
+  @Prop({ type: OBJECT_ID, default: null })
+  bankMovementId!: Types.ObjectId | null;
+
   /** 結帳確認申請的提交 id(一張申請一筆)。 */
   @Prop({ type: OBJECT_ID, required: true })
   submissionId!: Types.ObjectId;
@@ -206,6 +232,8 @@ export const LotteryCheckoutSchema =
 LotteryCheckoutSchema.index({ submissionId: 1 }, { unique: true });
 LotteryCheckoutSchema.index({ orgId: 1, submittedAt: -1 });
 LotteryCheckoutSchema.index({ shiftId: 1, submittedAt: -1 });
+// 日結:這家店最近一張日結(涵蓋計算期間的起點、小金庫起算點、第一班的判斷)
+LotteryCheckoutSchema.index({ orgId: 1, type: 1, coveredTo: -1 });
 LotteryCheckoutSchema.plugin(baseFieldsPlugin);
 // 資料共用 private(ADR-0014):總部看得到分店的結帳靠可見範圍「包含下層」
 LotteryCheckoutSchema.plugin(tenantScopePlugin, {

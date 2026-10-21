@@ -40,6 +40,11 @@ import { ExpectedCashItems } from "./expected-cash";
     LotteryCheckoutResolver,
     { provide: CHECKOUT_SERVICE, useExisting: CheckoutService },
   ],
-  exports: [CHECKOUT_SERVICE, CheckoutService, ExpectedCashItems],
+  exports: [
+    CHECKOUT_SERVICE,
+    CheckoutService,
+    CheckoutQueryService,
+    ExpectedCashItems,
+  ],
 })
 export class LotteryCheckoutModule {}

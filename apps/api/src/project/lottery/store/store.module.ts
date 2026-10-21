@@ -74,6 +74,8 @@ import { LotteryStoreResolver } from "./store.resolver";
     StoreClock,
     StoreSalesSupport,
     StoreShiftViews,
+    // 存銀行 / 日結(`daily-close/`)動小金庫:同一個守門文件序列化
+    StoreVaultGuard,
   ],
 })
 export class LotteryStoreModule {}

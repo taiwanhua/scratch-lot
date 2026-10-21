@@ -133,6 +133,14 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
   "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
   "project/lottery/checkout/checkout-query.service.ts": ["反查"],
+  // 日結:掛接點以系統身分建立結帳單、全店盤點單,完成時寫銀行「存入」與「存銀行」流水(例外寫入);
+  // 精靈的人名、單號、流程任務反查
+  "project/lottery/daily-close/daily-close.service.ts": ["反查", "例外寫入"],
+  "project/lottery/daily-close/daily-close-query.service.ts": ["反查"],
+  // 小金庫起算點、上一班是否已被日結涵蓋:沒有操作者,問的是整個租戶
+  "project/lottery/daily-close/daily-close-registrations.ts": ["系統重算"],
+  // 日結逾期提醒逐租戶跑
+  "project/lottery/daily-close/daily-close-reminders.service.ts": ["排程"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

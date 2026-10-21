@@ -129,6 +129,17 @@ query LotteryCheckout($submissionId: ID!) {
     }
     submittedAt
     confirmedAt
+    coveredFrom
+    coveredTo
+    coveredShifts {
+      submissionId
+      serialNo
+      cashPointName
+    }
+    bankDepositAmount
+    bankAccount {
+      ...LotteryAccountsRefFields
+    }
     draft
   }
 }

@@ -41,7 +41,7 @@ export const CHECKOUT_FIELD_KEYS = {
   draft: "draft",
 } as const;
 
-/** 結帳類型:交班 / 日結(日結由日結的功能接上)。 */
+/** 結帳類型:交班 / 日結。 */
 export const CHECKOUT_TYPES = ["shift", "daily"] as const;
 export type CheckoutType = (typeof CHECKOUT_TYPES)[number];
 
@@ -75,6 +75,8 @@ export const CHECKOUT_DENOMINATIONS: readonly number[] = [
 /**
  * 應有現金的各項(規格 6.9 公式的順序):期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正。
  * 金額一律帶正負號(流入抽屜 +、流出 −),只算已完成的單據;事後更正不算。
+ * 日結的小金庫應有(規格 6.10 第 ③ 步)用同一組:期初(上次日結清點)+ 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行
+ * (金額以流入小金庫 +、流出 −;`daily-close.ts` 的 `VAULT_CASH_ITEM_KINDS`)。
  */
 export const EXPECTED_CASH_ITEM_KINDS = [
   "opening",
@@ -86,6 +88,9 @@ export const EXPECTED_CASH_ITEM_KINDS = [
   "transfer_in",
   "refunds",
   "corrections",
+  // 小金庫(日結第 ③ 步):調貨(現金,支出 / 收入合計)、存銀行
+  "transfers",
+  "bank_deposits",
 ] as const;
 export type ExpectedCashItemKind = (typeof EXPECTED_CASH_ITEM_KINDS)[number];
 
@@ -134,7 +139,7 @@ export type CheckoutStocktakeChoice =
 /** 交班精靈的結帳內容(結帳確認申請的 `draft` 欄位)。 */
 export interface CheckoutDraft {
   version: 1;
-  /** 本輪只有交班;日結由日結的功能擴充。 */
+  /** 交班(日結的結帳內容是 `DailyCloseDraft`,`daily-close.ts`) */
   type: "shift";
   orgId: string;
   shiftId: string;
@@ -165,7 +170,10 @@ const optionalText = (value: unknown): string | null =>
 const isCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
 
-function parseStocktakeChoice(value: unknown): CheckoutStocktakeChoice | null {
+/** 盤點方式(交班 / 日結的結帳內容共用);形狀不對 → null。 */
+export function parseStocktakeChoice(
+  value: unknown,
+): CheckoutStocktakeChoice | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -194,7 +202,10 @@ function parseStocktakeChoice(value: unknown): CheckoutStocktakeChoice | null {
   }
 }
 
-function parseDenominations(value: unknown): CheckoutDenomination[] | null {
+/** 依面額清點(交班 / 日結共用);形狀不對 → null。 */
+export function parseDenominations(
+  value: unknown,
+): CheckoutDenomination[] | null {
   if (!Array.isArray(value)) {
     return null;
   }
@@ -260,16 +271,20 @@ export function parseCheckoutDraft(raw: unknown): ParsedCheckoutDraft {
 export function serializeCheckoutDraft(draft: CheckoutDraft): string {
   return JSON.stringify({
     ...draft,
-    stocktake:
-      draft.stocktake.mode === "new"
-        ? {
-            mode: "new",
-            draft: JSON.parse(
-              serializeStocktakeDraft(draft.stocktake.draft),
-            ) as unknown,
-          }
-        : draft.stocktake,
+    stocktake: stocktakeChoiceJsonOf(draft.stocktake),
   });
+}
+
+/** 盤點方式 → 可 JSON 化的物件(現在盤點的盤點內容照盤點的序列化;交班 / 日結共用)。 */
+export function stocktakeChoiceJsonOf(
+  choice: CheckoutStocktakeChoice,
+): unknown {
+  return choice.mode === "new"
+    ? {
+        mode: "new",
+        draft: JSON.parse(serializeStocktakeDraft(choice.draft)) as unknown,
+      }
+    : choice;
 }
 
 // ---- 計算 ----
