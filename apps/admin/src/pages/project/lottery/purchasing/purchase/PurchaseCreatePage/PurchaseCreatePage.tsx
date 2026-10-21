@@ -17,6 +17,10 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import {
+  type AllocationWarningItem,
+  AllocationWarnings,
+} from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
@@ -145,6 +149,25 @@ export const PurchaseCreatePage = () => {
   const groups = groupBooks(books, games, requested);
   const total = purchaseTotalOf(groups);
   const progress = requisitionProgressOf(groups);
+  // 超過進貨分店的預計要給本數只警告(規格 7.6)
+  const allocationOf = new Map(
+    (data?.allocations ?? []).map((item) => [item.gameId, item]),
+  );
+  const allocationItems: AllocationWarningItem[] = groups.flatMap((group) => {
+    const allocation = allocationOf.get(group.game.id);
+    return allocation === undefined || group.rows.length === 0
+      ? []
+      : [
+          {
+            key: group.game.id,
+            label: `${group.game.gameCode} ${group.game.name}`,
+            plannedBooks: allocation.plannedBooks ?? null,
+            givenBooks: allocation.givenBooks,
+            inTransitBooks: allocation.inTransitBooks,
+            books: group.rows.length,
+          },
+        ];
+  });
 
   const scan = (raw: string) => {
     const result = addScannedBook(books, raw, games, fallbackGameId, () =>
@@ -284,6 +307,7 @@ export const PurchaseCreatePage = () => {
                   }}
                 />
               </Stack>
+              <AllocationWarnings items={allocationItems} />
               {scanError !== null && (
                 <Alert severity="warning">{scanError}</Alert>
               )}

@@ -28,12 +28,14 @@ import { LotteryGamesRepository } from "../../database/lottery-games/lottery-gam
 import { LotteryPurchaseReceiptsRepository } from "../../database/lottery-purchases/lottery-purchase-receipts.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import { tenantOfOperator } from "../master-data-tenant";
+import { inTransitBooksOf } from "../requisition/in-transit";
 import {
   SettlementLedger,
   outstandingOf,
 } from "../settlement/settlement-ledger";
 import { settlementDocumentOf } from "../settlement/settlement-registry";
 import { SettlementService } from "../settlement/settlement.service";
+import { LotteryAllocationsService } from "../tickets/allocations.service";
 import type {
   LotteryDealerPurchaseModel,
   LotteryPurchaseOptionsModel,
@@ -61,7 +63,8 @@ function labelOf(value: unknown): string {
 /**
  * 進貨單的讀取(專案規格 8.2;正本 `docs/modules/project/purchasing.md`「api 介面」):
  *
- * - `optionsOf`:新增頁的選項(營業中的甲類、受託人、扣款帳戶、這家店待購買的叫貨單、販售中的遊戲)
+ * - `optionsOf`:新增頁的選項(營業中的甲類、受託人、扣款帳戶、這家店待購買的叫貨單、販售中的遊戲、
+ *   每個遊戲的預計要給本數 / 已給 / 在途)
  * - `progressOf`:列表的點收進度(8/10)與結算(待付 / 待退)
  * - `dealerPurchasesOf`:甲類詳情「批購紀錄」分頁(有效進貨單)
  *
@@ -80,6 +83,7 @@ export class PurchaseQueryService {
     private readonly receipts: LotteryPurchaseReceiptsRepository,
     private readonly settlement: SettlementService,
     private readonly ledger: SettlementLedger,
+    private readonly allocations: LotteryAllocationsService,
   ) {}
 
   async optionsOf(
@@ -113,7 +117,21 @@ export class PurchaseQueryService {
         label: `${dealer.name} · ${dealer.licenseNo}`,
       }))
       .toSorted(byLabel);
+    const gameIds = games.map((game) => game._id);
+    const [inTransit, statuses] = await Promise.all([
+      inTransitBooksOf({ tenantId, orgId }),
+      gameIds.length === 0
+        ? Promise.resolve([])
+        : this.allocations.allocationStatuses(operator, orgId, gameIds),
+    ]);
     return {
+      // 超過預計要給本數只警告(規格 7.6)
+      allocations: statuses.map((status) => ({
+        gameId: status.gameId,
+        plannedBooks: status.plannedBooks,
+        givenBooks: status.givenBooks,
+        inTransitBooks: inTransit.get(status.gameId) ?? 0,
+      })),
       dealers: dealerOptions,
       trustees: await this.trusteesOf(
         tenantId,

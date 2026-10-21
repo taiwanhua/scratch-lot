@@ -77,6 +77,25 @@ export class LotteryPurchaseRequisitionModel {
   lines!: LotteryPurchaseRequisitionLineModel[];
 }
 
+/** 進貨分店某個遊戲的預計要給本數與已給、在途(新增頁「超過預計要給本數只警告」;規格 7.6)。 */
+@ObjectType("LotteryPurchaseAllocation")
+export class LotteryPurchaseAllocationModel {
+  @Field(() => ID)
+  gameId!: string;
+
+  /** 預計要給本數;沒設定 = null(不警告)。 */
+  @Field(() => Int, { nullable: true })
+  plannedBooks!: number | null;
+
+  /** 已給(整本)。 */
+  @Field(() => Int)
+  givenBooks!: number;
+
+  /** 在途本數(叫貨單待購買 + 進貨 / 調貨還沒點收)。 */
+  @Field(() => Int)
+  inTransitBooks!: number;
+}
+
 /** 新增頁的選項(規格 8.2 單頭):依進貨分店。 */
 @ObjectType("LotteryPurchaseOptions")
 export class LotteryPurchaseOptionsModel {
@@ -99,6 +118,10 @@ export class LotteryPurchaseOptionsModel {
   /** 販售中的遊戲。 */
   @Field(() => [LotteryPurchaseGameModel])
   games!: LotteryPurchaseGameModel[];
+
+  /** 進貨分店每個販售中遊戲的預計要給本數 / 已給 / 在途。 */
+  @Field(() => [LotteryPurchaseAllocationModel])
+  allocations!: LotteryPurchaseAllocationModel[];
 }
 
 /** 點收區塊的一本(明細一列)。 */

@@ -60,6 +60,12 @@ query LotteryPurchaseOptions($orgId: ID!) {
       bookPrice
       defaultRate
     }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
   }
 }
 

@@ -2055,6 +2055,13 @@ type LotteryPositionOptionsPayload {
   totalCount: Int!
 }
 
+type LotteryPurchaseAllocation {
+  gameId: ID!
+  givenBooks: Int!
+  inTransitBooks: Int!
+  plannedBooks: Int
+}
+
 type LotteryPurchaseGame {
   bookPrice: Int!
   defaultRate: Int!
@@ -2093,6 +2100,7 @@ type LotteryPurchaseOption {
 
 type LotteryPurchaseOptions {
   accounts: [LotteryPurchaseOption!]!
+  allocations: [LotteryPurchaseAllocation!]!
   dealers: [LotteryPurchaseOption!]!
   games: [LotteryPurchaseGame!]!
   requisitions: [LotteryPurchaseRequisition!]!
@@ -2302,6 +2310,13 @@ input LotteryTicketVersionInput {
   version: Int!
 }
 
+type LotteryTransferAllocation {
+  gameId: ID!
+  givenBooks: Int!
+  inTransitBooks: Int!
+  plannedBooks: Int
+}
+
 type LotteryTransferBook {
   availableCount: Int!
   bookId: ID!
@@ -2316,6 +2331,7 @@ type LotteryTransferBook {
 }
 
 type LotteryTransferOptions {
+  allocations: [LotteryTransferAllocation!]!
   books: [LotteryTransferBook!]!
   requisitions: [LotteryTransferRequisition!]!
 }
@@ -2581,6 +2597,7 @@ type Mutation {
   markNotificationsRead(input: MarkNotificationsReadInput!): MarkNotificationsReadPayload!
   moveOrg(input: MoveOrgInput!): OrgPayload!
   notifyLotteryPurchaseWrongStore(input: ReceiveLotteryPurchaseBookInput!): Boolean!
+  notifyLotteryTransferWrongStore(input: ReceiveLotteryTransferBookInput!): Boolean!
   printPrinterTestPage(input: PrintPrinterTestPageInput!): PrintJobPayload!
   provisionTenant(input: ProvisionTenantInput!): ProvisionTenantPayload!
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!

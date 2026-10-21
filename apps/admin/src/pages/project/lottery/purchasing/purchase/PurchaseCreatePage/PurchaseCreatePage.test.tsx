@@ -27,6 +27,9 @@ describe("進貨單新增頁", () => {
     expect(within(table).getByText("056527")).toBeInTheDocument();
     expect(within(table).getByText("102")).toBeInTheDocument();
     expect(within(table).getAllByText("18,400").length).toBeGreaterThan(0);
+    // 5164 預計 30、已給 26、在途 4 → 這張進 1 本就超過,只警告、照樣可以送出(規格 7.6)
+    expect(screen.getByText("5164 發大財:多 1 本")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "送出" })).toBeEnabled();
   });
 
   it("正面條碼沒有遊戲代號:沒先選遊戲 → 提示;同一本刷兩次 → 提示已經在單上", async () => {

@@ -174,6 +174,11 @@ const OPTIONS = /* GraphQL */ `
       games {
         gameCode
       }
+      allocations {
+        gameId
+        plannedBooks
+        inTransitBooks
+      }
     }
   }
 `;
@@ -591,6 +596,11 @@ describe("進貨單(規格 8.2、8.3)", () => {
           accounts: { id: string }[];
           requisitions: { serialNo: string; lines: { books: number }[] }[];
           games: { gameCode: string }[];
+          allocations: {
+            gameId: string;
+            plannedBooks: number | null;
+            inTransitBooks: number;
+          }[];
         };
       }>(api, hq.token, OPTIONS, { orgId: String(branchA) });
       const options = data.lotteryPurchaseOptions;
@@ -614,6 +624,12 @@ describe("進貨單(規格 8.2、8.3)", () => {
         "5164",
         "5201",
       ]);
+      // 超過預計要給本數只警告用:每個販售中遊戲的預計 / 在途(叫貨單待購買 5 本)
+      expect(options.allocations).toContainEqual({
+        gameId: String(gameHot),
+        plannedBooks: null,
+        inTransitBooks: 5,
+      });
     });
   });
 

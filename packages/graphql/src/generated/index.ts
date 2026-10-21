@@ -2240,6 +2240,14 @@ export type LotteryPositionOptionsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryPurchaseAllocation = {
+  __typename?: 'LotteryPurchaseAllocation';
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+};
+
 export type LotteryPurchaseGame = {
   __typename?: 'LotteryPurchaseGame';
   bookPrice: Scalars['Int']['output'];
@@ -2284,6 +2292,7 @@ export type LotteryPurchaseOption = {
 export type LotteryPurchaseOptions = {
   __typename?: 'LotteryPurchaseOptions';
   accounts: Array<LotteryPurchaseOption>;
+  allocations: Array<LotteryPurchaseAllocation>;
   dealers: Array<LotteryPurchaseOption>;
   games: Array<LotteryPurchaseGame>;
   requisitions: Array<LotteryPurchaseRequisition>;
@@ -2512,6 +2521,14 @@ export type LotteryTicketVersionInput = {
   version: Scalars['Int']['input'];
 };
 
+export type LotteryTransferAllocation = {
+  __typename?: 'LotteryTransferAllocation';
+  gameId: Scalars['ID']['output'];
+  givenBooks: Scalars['Int']['output'];
+  inTransitBooks: Scalars['Int']['output'];
+  plannedBooks?: Maybe<Scalars['Int']['output']>;
+};
+
 export type LotteryTransferBook = {
   __typename?: 'LotteryTransferBook';
   availableCount: Scalars['Int']['output'];
@@ -2528,6 +2545,7 @@ export type LotteryTransferBook = {
 
 export type LotteryTransferOptions = {
   __typename?: 'LotteryTransferOptions';
+  allocations: Array<LotteryTransferAllocation>;
   books: Array<LotteryTransferBook>;
   requisitions: Array<LotteryTransferRequisition>;
 };
@@ -2810,6 +2828,7 @@ export type Mutation = {
   markNotificationsRead: MarkNotificationsReadPayload;
   moveOrg: OrgPayload;
   notifyLotteryPurchaseWrongStore: Scalars['Boolean']['output'];
+  notifyLotteryTransferWrongStore: Scalars['Boolean']['output'];
   printPrinterTestPage: PrintJobPayload;
   provisionTenant: ProvisionTenantPayload;
   publishFormVersion: FormVersionPayload;
@@ -3240,6 +3259,11 @@ export type MutationMoveOrgArgs = {
 
 export type MutationNotifyLotteryPurchaseWrongStoreArgs = {
   input: ReceiveLotteryPurchaseBookInput;
+};
+
+
+export type MutationNotifyLotteryTransferWrongStoreArgs = {
+  input: ReceiveLotteryTransferBookInput;
 };
 
 
@@ -8847,7 +8871,7 @@ export type LotteryPurchaseOptionsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryPurchaseOptionsQuery = { __typename?: 'Query', lotteryPurchaseOptions: { __typename?: 'LotteryPurchaseOptions', dealers: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, trustees: Array<{ __typename?: 'LotteryPurchaseTrustee', dealerId: string, id: string, label: string }>, accounts: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, requisitions: Array<{ __typename?: 'LotteryPurchaseRequisition', id: string, serialNo?: string | null, lines: Array<{ __typename?: 'LotteryPurchaseRequisitionLine', gameId: string, books: number }> }>, games: Array<{ __typename?: 'LotteryPurchaseGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number }> } };
+export type LotteryPurchaseOptionsQuery = { __typename?: 'Query', lotteryPurchaseOptions: { __typename?: 'LotteryPurchaseOptions', dealers: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, trustees: Array<{ __typename?: 'LotteryPurchaseTrustee', dealerId: string, id: string, label: string }>, accounts: Array<{ __typename?: 'LotteryPurchaseOption', id: string, label: string }>, requisitions: Array<{ __typename?: 'LotteryPurchaseRequisition', id: string, serialNo?: string | null, lines: Array<{ __typename?: 'LotteryPurchaseRequisitionLine', gameId: string, books: number }> }>, games: Array<{ __typename?: 'LotteryPurchaseGame', id: string, gameCode: string, name: string, unitPrice: number, ticketsPerBook: number, bookPrice: number, defaultRate: number }>, allocations: Array<{ __typename?: 'LotteryPurchaseAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
 
 export type LotteryPurchaseReceivingQueryVariables = Exact<{
   submissionId: Scalars['ID']['input'];
@@ -8913,7 +8937,7 @@ export type LotteryTransferOptionsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }> } };
+export type LotteryTransferOptionsQuery = { __typename?: 'Query', lotteryTransferOptions: { __typename?: 'LotteryTransferOptions', books: Array<{ __typename?: 'LotteryTransferBook', bookId: string, gameId: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, bookPrice: number, rate: number, isWhole: boolean, availableCount: number }>, requisitions: Array<{ __typename?: 'LotteryTransferRequisition', id: string, serialNo?: string | null, books: number }>, allocations: Array<{ __typename?: 'LotteryTransferAllocation', gameId: string, plannedBooks?: number | null, givenBooks: number, inTransitBooks: number }> } };
 
 export type LotteryTransferBookTicketsQueryVariables = Exact<{
   fromOrgId: Scalars['ID']['input'];
@@ -8943,6 +8967,13 @@ export type ReceiveLotteryTransferBookMutationVariables = Exact<{
 
 
 export type ReceiveLotteryTransferBookMutation = { __typename?: 'Mutation', receiveLotteryTransferBook: { __typename?: 'ReceiveLotteryTransferBookPayload', rowId: string, receiving: { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null }> } } };
+
+export type NotifyLotteryTransferWrongStoreMutationVariables = Exact<{
+  input: ReceiveLotteryTransferBookInput;
+}>;
+
+
+export type NotifyLotteryTransferWrongStoreMutation = { __typename?: 'Mutation', notifyLotteryTransferWrongStore: boolean };
 
 export type MyScheduleEntryFieldsFragment = { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> };
 
@@ -19154,6 +19185,12 @@ export const LotteryPurchaseOptionsDocument = `
       bookPrice
       defaultRate
     }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
   }
 }
     `;
@@ -19478,6 +19515,12 @@ export const LotteryTransferOptionsDocument = `
       serialNo
       books
     }
+    allocations {
+      gameId
+      plannedBooks
+      givenBooks
+      inTransitBooks
+    }
   }
 }
     `;
@@ -19637,6 +19680,32 @@ export const useReceiveLotteryTransferBookMutation = <
 
 
 useReceiveLotteryTransferBookMutation.fetcher = (client: GraphQLClient, variables: ReceiveLotteryTransferBookMutationVariables, headers?: RequestInit['headers']) => fetcher<ReceiveLotteryTransferBookMutation, ReceiveLotteryTransferBookMutationVariables>(client, ReceiveLotteryTransferBookDocument, variables, headers);
+
+export const NotifyLotteryTransferWrongStoreDocument = `
+    mutation NotifyLotteryTransferWrongStore($input: ReceiveLotteryTransferBookInput!) {
+  notifyLotteryTransferWrongStore(input: $input)
+}
+    `;
+
+export const useNotifyLotteryTransferWrongStoreMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<NotifyLotteryTransferWrongStoreMutation, TError, NotifyLotteryTransferWrongStoreMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<NotifyLotteryTransferWrongStoreMutation, TError, NotifyLotteryTransferWrongStoreMutationVariables, TContext>(
+      {
+    mutationKey: ['NotifyLotteryTransferWrongStore'],
+    mutationFn: (variables?: NotifyLotteryTransferWrongStoreMutationVariables) => fetcher<NotifyLotteryTransferWrongStoreMutation, NotifyLotteryTransferWrongStoreMutationVariables>(client, NotifyLotteryTransferWrongStoreDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useNotifyLotteryTransferWrongStoreMutation.fetcher = (client: GraphQLClient, variables: NotifyLotteryTransferWrongStoreMutationVariables, headers?: RequestInit['headers']) => fetcher<NotifyLotteryTransferWrongStoreMutation, NotifyLotteryTransferWrongStoreMutationVariables>(client, NotifyLotteryTransferWrongStoreDocument, variables, headers);
 
 export const MyScheduleDocument = `
     query MySchedule($input: MyScheduleInput) {
