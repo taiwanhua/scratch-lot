@@ -27,6 +27,8 @@ export const STORE_SALES_REASONS = {
   bookAlreadyOpened: "BOOK_ALREADY_OPENED",
   /** 拆本:跳號沒點滿或沒分配完(`extensions.problem`) */
   splitPlanInvalid: "SPLIT_PLAN_INVALID",
+  /** 售出:讀不到這張的遊戲(面額不明,不能賣) */
+  gameNotFound: "GAME_NOT_FOUND",
   /** 移櫃 / 收回:張不是在檯面上的未售張 */
   ticketNotOnCounter: "TICKET_NOT_ON_COUNTER",
 } as const;
@@ -135,5 +137,14 @@ export function notOnCounterError(ticketIds: readonly string[]): GraphQLError {
     "only unsold tickets on a counter can be moved or recalled",
     STORE_SALES_REASONS.ticketNotOnCounter,
     { fields: ["tickets"], ticketIds },
+  );
+}
+
+export function gameNotFoundError(ticketId: string): GraphQLError {
+  return storeSalesError(
+    "VALIDATION_FAILED",
+    "the game of this ticket cannot be read",
+    STORE_SALES_REASONS.gameNotFound,
+    { fields: ["tickets"], ticketIds: [ticketId] },
   );
 }

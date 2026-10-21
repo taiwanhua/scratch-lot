@@ -21,7 +21,10 @@ import {
 import { createOrg, createUser } from "../../../auth/test-support/fixtures";
 import type { OperatorContext } from "../../../database/operator-context";
 import { HOOK_TIMEOUT_MS } from "../../../database/test-support/mongo-connection";
-import { TransactionService } from "../../../database/transaction";
+import {
+  TransactionService,
+  currentSession,
+} from "../../../database/transaction";
 import { PASSWORD, login } from "../../../fields/test-support/fixtures";
 import { createRole } from "../../../permission/test-support/fixtures";
 import { LOTTERY_CASH_POINTS_COLLECTION } from "../../database/lottery-cash-points/lottery-cash-point.schema";
@@ -34,6 +37,7 @@ import { seedReasonCategory } from "../test-support/master-data-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import { StoreClock } from "./store-clock";
+import { StoreSalesSupport } from "./store-sales-support";
 
 // ---- GraphQL ----
 
@@ -932,6 +936,52 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
       ).toMatchObject({ undoBlock: "shift_closed" });
     });
 
+    it("版本由伺服器從售出事件推:畫面傳來的版本不影響;檢查之後到寫入之前有人移櫃 → 擋下", async () => {
+      now("12:00");
+      await sell(wang, await ticketOf(bookId, "007"));
+      const sold = await ticketOf(bookId, "007");
+      // 畫面帶了錯的版本也照樣撤銷(用的是售出那一版)
+      await ok(wang, UNDO, {
+        input: { ticketId: String(sold._id), version: 999 },
+      });
+      const undone = await ticketOf(bookId, "007");
+      expect(undone.status).toBe("unsold");
+
+      await sell(wang, await ticketOf(bookId, "008"));
+      const ticket = await ticketOf(bookId, "008");
+      const support = api.app.get(StoreSalesSupport);
+      const original = support.lockDrawer.bind(support);
+      // 撤銷的條件檢查已通過,交易裡鎖住抽屜的那一刻有人把這張移櫃
+      jest
+        .spyOn(support, "lockDrawer")
+        .mockImplementationOnce(async (operator, shiftId) => {
+          const session = currentSession();
+          if (session === undefined) {
+            throw new Error("要在交易裡");
+          }
+          await api.app
+            .get(TicketLedgerService)
+            .applyTicketEvents(session, { operator: storeOperator(xinyi) }, [
+              {
+                ticketId: ticket._id,
+                expectedVersion: ticket.version,
+                type: "move",
+                patch: { location: { kind: "counter", cashPointId: stall } },
+              },
+            ]);
+          return original(operator, shiftId);
+        });
+      const before = await expectedOf(counter);
+      expect(
+        await errorOf(wang, UNDO, {
+          input: { ticketId: String(ticket._id), version: ticket.version },
+        }),
+      ).toMatchObject({ code: "CONFLICT" });
+      const after = await ticketOf(bookId, "008");
+      expect(after.status).toBe("sold");
+      expect(await expectedOf(counter)).toBe(before);
+    });
+
     it("沒有 store.undo-sale → FORBIDDEN", async () => {
       now("12:00");
       const noUndo = await storeUser([xinyi], [S.view, S.sell], "沒撤銷權");
@@ -1179,6 +1229,39 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
         blockReason: "in_stock",
       });
     });
+  });
+
+  it("讀不到遊戲(面額不明)→ 擋下,不以 0 元售出", async () => {
+    now("16:30");
+    const { insertedId: hiddenGame } = await connection
+      .collection("lottery_games")
+      .insertOne({
+        orgId: tenant,
+        tenantId: tenant,
+        moduleKey: "master-data",
+        shareOrgs: [{ orgId: tenant, includeDescendants: true }],
+        gameCode: "5999",
+        name: "下架遊戲",
+        unitPrice: 300,
+        ticketsPerBook: 100,
+        bookPrice: 30_000,
+        defaultRate: 92,
+        color: null,
+        status: "on_sale",
+        ...base(),
+      });
+    const { bookId } = await receiveBook(100, hiddenGame);
+    await openTo(bookId, counter);
+    await connection
+      .collection("lottery_games")
+      .updateOne({ _id: hiddenGame }, { $set: { deletedAt: new Date() } });
+    const ticket = await ticketOf(bookId, "001");
+    expect(await errorOf(wang, SELL, sellInput(ticket))).toMatchObject({
+      code: "VALIDATION_FAILED",
+      reason: "GAME_NOT_FOUND",
+    });
+    const still = await ticketOf(bookId, "001");
+    expect(still.status).toBe("unsold");
   });
 
   it("手動標記售出:原因必選;本班售出在卡片標 soldShiftId", async () => {

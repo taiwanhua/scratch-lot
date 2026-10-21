@@ -40,6 +40,7 @@ export const SALES_ERROR_KEYS: Record<StoreSalesErrorCode, string> = {
   BOOK_ALREADY_OPENED: "salesErrors.BOOK_ALREADY_OPENED",
   SPLIT_PLAN_INVALID: "salesErrors.SPLIT_PLAN_INVALID",
   TICKET_NOT_ON_COUNTER: "salesErrors.TICKET_NOT_ON_COUNTER",
+  GAME_NOT_FOUND: "salesErrors.GAME_NOT_FOUND",
   CONFLICT: "salesErrors.CONFLICT",
 };
 

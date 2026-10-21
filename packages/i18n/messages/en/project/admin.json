@@ -2859,7 +2859,8 @@
       "BOOK_ALREADY_OPENED": "This book has already been opened",
       "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
       "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
-      "CONFLICT": "These tickets have been processed; please check again"
+      "CONFLICT": "These tickets have been processed; please check again",
+      "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold"
     }
   }
 }

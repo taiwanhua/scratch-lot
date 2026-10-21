@@ -54,6 +54,7 @@ import { StoreClock } from "./store-clock";
 import { notFoundError, validationError } from "./store-error";
 import {
   alreadySoldError,
+  gameNotFoundError,
   localShiftNotOpenError,
   moveConfirmRequiredError,
   moveNotAllowedError,
@@ -77,6 +78,10 @@ function ref(id: Types.ObjectId | string, name: string) {
 }
 
 type BookRecord = Persisted<LotteryBookDocument>;
+
+/** 事件 id `<ticketId>:<寫入後的版本>` → 版本(`ticketEventIdOf` 的反向)。 */
+const versionOfEvent = (eventId: string): number =>
+  Number(eventId.split(":").at(-1));
 
 const isMissing = (ticket: TicketRecord): boolean =>
   ticket.status === TICKET_STATUS.investigating ||
@@ -507,6 +512,11 @@ export class StoreSalesService {
       if (ticket === undefined) {
         throw notSellableError(String(item.id), "not_this_store");
       }
+      // 金額 = 遊戲面額;讀不到遊戲(主檔沒共用到這家店、或已刪)不能用 0 元賣掉
+      const game = games.get(String(ticket.gameId));
+      if (game === undefined) {
+        throw gameNotFoundError(String(ticket._id));
+      }
       const target = saleTargetOf(plan, ticket, openShifts, localShift);
       const shiftKey = String(target.shift._id);
       if (!locked.has(shiftKey)) {
@@ -519,7 +529,7 @@ export class StoreSalesService {
         }
         locked.add(shiftKey);
       }
-      const amount = games.get(String(ticket.gameId))?.unitPrice ?? 0;
+      const amount = game.unitPrice;
       const version = target.move ? item.version + 1 : item.version;
       if (target.move) {
         events.push(moveEventOf(ticket, item.version, plan.localId, now));
@@ -689,7 +699,9 @@ export class StoreSalesService {
       await this.ledger.applyTicketEvents(session, { operator }, [
         {
           ticketId: ticket._id,
-          expectedVersion: input.version,
+          // 只撤銷「售出之後沒有其他異動」的那個版本:由售出事件推(事件 id = `<張>:<售出後的版本>`),
+          // 不用畫面傳來的版本;檢查之後到寫入之前有人動過這張(例:移櫃)→ 帳本擋下(已被處理)
+          expectedVersion: versionOfEvent(sale.eventId),
           expectedStatuses: [TICKET_STATUS.sold],
           type: TICKET_EVENT_TYPE.saleUndo,
           at: this.clock.now(),
@@ -820,9 +832,9 @@ export class StoreSalesService {
       { ticketId: ticket._id, _id: { $ne: sale._id } },
       { select: "type eventId" },
     );
-    const saleVersion = Number(sale.eventId.split(":").at(-1));
+    const saleVersion = versionOfEvent(sale.eventId);
     const after = later.filter(
-      (event) => Number(event.eventId.split(":").at(-1)) > saleVersion,
+      (event) => versionOfEvent(event.eventId) > saleVersion,
     );
     const undone = after.some(
       (event) => event.type === TICKET_EVENT_TYPE.saleUndo,

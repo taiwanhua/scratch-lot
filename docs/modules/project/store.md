@@ -84,10 +84,10 @@
 
 本號在本店對到兩款以上遊戲 → 每款一筆,畫面先選遊戲(ST-05c)。
 
-- **錢算在哪一班**:`sellLotteryTickets` 依上表決定;售出寫「售出」事件(金額 = 遊戲面額、`cashEffect` 增加、`shiftId` = 那一班),移櫃並售出另先寫「移櫃」。張的狀態與事件經帳本(條件更新,`TicketLedgerService`);要動的那一班在交易內先 `drawerVersion` +1(和投庫 / 出庫互相序列化),班已結帳 → `LOCAL_SHIFT_NOT_OPEN`。
+- **錢算在哪一班**:`sellLotteryTickets` 依上表決定;售出寫「售出」事件(金額 = 遊戲面額,讀不到遊戲 → `GAME_NOT_FOUND`、`cashEffect` 增加、`shiftId` = 那一班),移櫃並售出另先寫「移櫃」。張的狀態與事件經帳本(條件更新,`TicketLedgerService`);要動的那一班在交易內先 `drawerVersion` +1(和投庫 / 出庫互相序列化),班已結帳 → `LOCAL_SHIFT_NOT_OPEN`。
 - **同時兩次售出**(第 17 章第 3 題看板一側):帳本的條件更新只讓一個成功;失敗方收到 `ALREADY_SOLD`(`extensions.soldAt`),畫面顯示「這張刮刮樂已於 hh:mm 售出」。
 - **售出提示**:底座 Snackbar「已售出 5164-056527-012 200 元 · 店內櫃台 [撤銷]」(ST-35a);標題列 [最近售出](ST-35b,`lotteryStoreRecentSales`):自己在這一班 30 分鐘內賣的張,撤銷後那一筆顯示「已撤銷」。電腦 / 平板右側抽屜、手機底部面板。
-- **當下撤銷**(ST-08a / b):條件 = 自己賣的、30 分鐘內、那一班還開著、售出之後那張沒有其他事件(`saleUndoBlockOf`)。確認視窗先讀 `lotteryStoreSale`(`undoBlock`),符合 → `undoLotteryTicketSale` 寫「撤銷」(`cashEffect` 減少、同一班);不符 → 「請改送撤銷售出申請」。[送撤銷售出申請] 由撤銷售出申請的功能接上,之前視窗只有 [取消]。
+- **當下撤銷**(ST-08a / b):條件 = 自己賣的、30 分鐘內、那一班還開著、售出之後那張沒有其他事件(`saleUndoBlockOf`)。確認視窗先讀 `lotteryStoreSale`(`undoBlock`),符合 → `undoLotteryTicketSale` 寫「撤銷」(`cashEffect` 減少、同一班;條件更新的版本由伺服器從售出事件推,不用畫面傳來的版本,檢查之後有人動過這張 → `CONFLICT`);不符 → 「請改送撤銷售出申請」。[送撤銷售出申請] 由撤銷售出申請的功能接上,之前視窗只有 [取消]。
 - **手動標記售出**(ST-07):展開卡片選本機收銀點檯面上未售的張 → 確認視窗(張號區段、單張金額、合計、原因);原因必選(欄位管理「手動標記原因」`lottery-manual-sale-reason`,預設「刷不到條碼」)。`source = manual`,只收本機收銀點檯面上的張。
 - **卡片原地展開**(ST-36a/b/c;`lotteryStoreBookCard`):電腦 / 平板在那張卡片後面占滿整列(CSS grid `dense`)、主色框;手機底部面板。一次只展開一張;再點同一張、[收合] 收起。格子:這個收銀點的未售 / 已售 / 本班售出(售出算進這個收銀點目前這一班)/ 在別的收銀點(含收回到庫存的張,tooltip 寫在哪)/ 已選。操作列依選到的狀態與收銀點(共同可用的按鈕):本機 · 未售 → [標記售出] [移櫃] [收回];本機 · 本班售出(一張)→ [撤銷售出];本機 · 待查 / 遺失 → [尋回];其他收銀點 · 未售 → [移櫃] [移櫃並售出]。[本的詳情] 連到庫存管理的本的詳情頁(沒綁就不顯示)。刷到展開中的這本時,那一格閃一下。
 - **拆本**(ST-37 → ST-09):[拆本] 先列本店還沒拆的本(`lotteryStoreUnopenedBooks`,未售的張全在庫存;可刷條碼或輸入本號選中,開著時宣告掃描用途 `store-split`)→ 精靈:① 標跳號(只有待標註 > 0 才出現,點滿才能 [下一步])② 全部放到一個收銀點(預設本機)或分放到多個收銀點(每一張都分配完才能 [確認拆本])。`splitLotteryBook` 寫「跳號」與「拆本」事件(檢查 `splitPlanProblemOf`);跳號的張不算庫存(看板總張數不含)。拆本分放到多個收銀點算拆本,不需要 `store.move`。
@@ -213,6 +213,7 @@
 | `VALIDATION_FAILED` | `LOCAL_SHIFT_NOT_OPEN`          | 售出時本機收銀點(或那一班)沒有開著的班                                            |
 | `VALIDATION_FAILED` | `TICKET_NOT_SELLABLE`           | 這張不能賣(`extensions.blockReason`);手動標記只收本機收銀點檯面上的張             |
 | `VALIDATION_FAILED` | `ALREADY_SOLD`                  | 這張已經賣掉(`extensions.soldAt`;同時兩次售出的失敗方)                            |
+| `VALIDATION_FAILED` | `GAME_NOT_FOUND`                | 售出:讀不到這張的遊戲(面額不明),不以 0 元賣                                       |
 | `VALIDATION_FAILED` | `MOVE_CONFIRM_REQUIRED`         | 刮刮樂在別人的班的檯面,沒有 `confirmMove`                                         |
 | `FORBIDDEN`         | `MOVE_NOT_ALLOWED`              | 同上、沒有 `store.move`                                                           |
 | `VALIDATION_FAILED` | `UNDO_NOT_ALLOWED`              | 不符合當下撤銷的條件(`extensions.undoBlock`)                                      |

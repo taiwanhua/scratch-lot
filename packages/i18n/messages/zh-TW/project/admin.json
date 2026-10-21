@@ -2859,7 +2859,8 @@
       "BOOK_ALREADY_OPENED": "這本已經拆過了",
       "SPLIT_PLAN_INVALID": "跳號還沒點滿,或還有張沒分配",
       "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
-      "CONFLICT": "這幾張已被處理,請重新核對"
+      "CONFLICT": "這幾張已被處理,請重新核對",
+      "GAME_NOT_FOUND": "讀不到這張刮刮樂的遊戲(面額不明),不能賣;請洽系統管理員"
     }
   }
 }
