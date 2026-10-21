@@ -1056,6 +1056,41 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(extensionsOf(await complete(hq, [third.rowId]))).toMatchObject({
         reason: "PURCHASE_NOT_RECEIVABLE",
       });
+      // 以點收人自己的身分寫:更新者記點收人
+      const stamped = await db()
+        .collection("lottery_purchase_receipts")
+        .findOne({
+          submissionId: new Types.ObjectId(purchase.id),
+          rowId: third.rowId,
+        });
+      expect(stamped?.updatedBy).toEqual(managerA.userId);
+    });
+
+    it("[完成這次點收] 只收這張單的列:別的 rowId 不算;送的列數超過這張單的列數 → 擋下", async () => {
+      const lines = [book(gameHot)];
+      const purchase = await submit(lines);
+      const [only] = [nth(lines, 0)];
+      await receiveAll(purchase.id, [only]);
+      const tooMany = await call(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [only.rowId, "x", "y"] },
+      });
+      expect(extensionsOf(tooMany)).toMatchObject({
+        code: "VALIDATION_FAILED",
+      });
+      const foreign = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: ["not-on-this-purchase"] },
+      });
+      expect(foreign.completeLotteryPurchaseReceiving.batch).toBeNull();
+      const done = await ok<{
+        completeLotteryPurchaseReceiving: CompletePayload;
+      }>(api, managerA.token, COMPLETE, {
+        input: { submissionId: purchase.id, rowIds: [only.rowId] },
+      });
+      expect(done.completeLotteryPurchaseReceiving.batch?.rowIds).toEqual([
+        only.rowId,
+      ]);
     });
 
     it("刷到的最後張號和單上不同 → 擋下「請退回更正」,不入庫", async () => {

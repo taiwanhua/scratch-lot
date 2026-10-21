@@ -222,7 +222,7 @@
 
 **作廢與撤銷的本**:作廢前只擋「任何一張已售、已調出或已拆本」(規格 8.2 掛接點表;「已有點收就擋」是駁回前 / 刪除前的規則),所以全部點收、原封不動的進貨單(例:已完成後發現整張批錯)可以作廢 —— 這時點收建的本標成 `revoked`、每張寫「進貨作廢」事件;庫存概況(`stockOverview`)與庫存分頁的本清單都排除 `revoked` 的本。
 
-**[完成這次點收]**(`completeLotteryPurchaseReceiving`):「這一次」由畫面記(上次按 [完成這次點收] 或打開這頁之後點收的本),送出這些列;已點收、還沒有批次的列標上同一個點收批次(`batchId`、`batchedAt`),已在別的批次的列不重收,沒有可收的列 → 不給批次(不印)。要點收任務在自己手上(`PURCHASE_NOT_RECEIVABLE`)。點收區塊回每一次點收(`batches`:依完成時間第 1、2… 次與它的列)。寫入成功後印這一次的進貨點收單兩張(見「列印」)。
+**[完成這次點收]**(`completeLotteryPurchaseReceiving`):「這一次」由畫面記(上次按 [完成這次點收] 或打開這頁之後點收的本),送出這些列;這張單上、自己點收、還沒有批次的列標上同一個點收批次(`batchId`、`batchedAt`;以點收人自己的身分寫,送的列數超過這張單的列數 → `VALIDATION_FAILED`),已在別的批次的列不重收,沒有可收的列 → 不給批次(不印)。要點收任務在自己手上(`PURCHASE_NOT_RECEIVABLE`)。點收區塊回每一次點收(`batches`:依完成時間第 1、2… 次與它的列)。寫入成功後印這一次的進貨點收單兩張(見「列印」)。
 
 **收付**:`registerSettlementDocument` 登記一邊「總部」(付款方、`purchasing.purchase.settle`、只能銀行),應付 = 扣款金額(`purchasePayableOf`),參與收付的狀態 `reviewing` / `returned` / `withdrawn` / `completed`;[付款] = 應付 − 已付淨額、[收到退款] = 已付淨額 − 應付,最少 0。
 

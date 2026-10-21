@@ -228,7 +228,7 @@ export class PurchaseReceivingService {
   }
 
   /**
-   * [完成這次點收]:這一次點收的列(`rowIds` 裡已點收、還沒有批次的)標上新的點收批次。
+   * [完成這次點收]:這一次點收的列(`rowIds` 裡這張單的、自己點收的、還沒有批次的)標上新的點收批次。
    * 要點收任務在自己手上(跟刷條碼同一個資格);沒有可收進批次的列 → `batch` 為 null。
    */
   async complete(
@@ -243,17 +243,21 @@ export class PurchaseReceivingService {
         PURCHASE_REASONS.notReceivable,
       );
     }
-    const batchId = new Types.ObjectId();
-    const reader = await tenantBoundaryContext(
-      this.orgs,
-      null,
-      submission.tenantId,
+    // 只收這張單的列(上限 = 列數;送超過的是壞請求)
+    const lineRowIds = new Set(
+      purchaseLinesOf(submission.values).map((line) => line.rowId),
     );
+    if (rowIds.length > lineRowIds.size) {
+      throw validationError("Too many rows", ["rowIds"]);
+    }
+    const batchId = new Types.ObjectId();
+    // 以點收人自己的身分寫(點收紀錄是他寫的、在他的分店):只收他自己點收的列,更新者記他
     const updated = await this.receipts.updateMany(
-      reader,
+      operator,
       {
         submissionId: submission._id,
-        rowId: { $in: [...rowIds] },
+        rowId: { $in: rowIds.filter((rowId) => lineRowIds.has(rowId)) },
+        receivedBy: operator.actorId,
         batchId: null,
       },
       { $set: { batchId, batchedAt: new Date() } },
