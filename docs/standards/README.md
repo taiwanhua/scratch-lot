@@ -23,6 +23,7 @@
 | 前端資料存取(query / mutation)                      | `react/data-fetching.md`                                                                                                            |
 | api 的 GraphQL schema(resolver / model / input)     | `api/graphql-schema.md`                                                                                                             |
 | api 的多步驟寫入 / 對外 adapter(寄信、GCS、HTTP)    | `api/transactions.md`(TX-01~05);決策見 ADR-0013                                                                                     |
+| api 的資料層(Mongoose 連線、model、原生 collection) | `api/data-layer.md`(DATA-01)                                                                                                        |
 | 測試                                                | `testing/testing.md`(api 整合測試 TEST-07、admin 元件測試與 mock 開發模式 TEST-08、ui 元件測試 TEST-09、劇本 E2E TEST-05 / TEST-11) |
 | 新增 workspace 套件(`packages/<name>`)              | `general/structure.md` STRUCT-07 / STRUCT-08                                                                                        |
 | 新增 app workspace(`apps/<name>`)                   | `general/structure.md` STRUCT-08 的「新增一個 app workspace」與「build 時烘進產物的變數」兩節                                       |

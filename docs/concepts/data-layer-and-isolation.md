@@ -32,11 +32,13 @@ repository token 不能與 model token、組裝器內部 token 或 Nest 全域 g
 
 每張一般新增專案 model 都須登記歸屬欄為 `orgId` 的業務資料存在檢查。reader 建立時再核對 repository 確為 BaseRepository,且其只讀 modelName / collection 識別與登記相符;錯綁另一張表會使啟動失敗。`DatabaseModule` 也保留 DataScopeRuleProvider 的啟動檢查,缺少規則提供者不能正常啟動。
 
+每張登記的 collection 另要宣告「清空租戶時怎麼刪」(示範機構清空 / 重建用,見 [deployment](../deployment.md#示範機構清空--重建)):底座的在 `database/base/tenant-purge.ts`,專案的在 `project/database/tenant-purge.ts`,由 `database.module.ts` 組裝。刪法四種:帶 `tenantId` 欄的表一律 `tenantId`;依組織或使用者歸屬的用 `match`(值是租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件);`dedicated` 只給組織、使用者、角色、核心關聯;不是租戶資料的 `keep` 並寫理由。少登記一張、或帶 `tenantId` 卻用別的刪法,`resolveTenantPurgePlan` 拋錯,完整性測試 `database/tenant-purge.test.ts` 擋在合併前;執行時也在刪任何東西之前停下。登記不在載入時驗,替換專案登記的測試夾具不必跟著登記刪法。清空以原生 collection 硬刪,出口只有 `TenantPurgeStore`(資料層),判斷能不能刪、交易與審計在呼叫端。
+
 底座預設沒有專案業務資料,專案登記沒有 unsafe 或略過檢查開關。新增資料種類須先擴充並審查契約,不能用裸 Model 查詢繞過租戶隔離。
 
 這是受審查程式的組裝契約。來源限制、裸 Model 查詢 lint 與 review 共同守住邊界;登記驗證不代替 RBAC,也不宣稱能稽核任意 Nest module 內部的私自註冊。
 
-正本:`apps/api/src/app.module.ts`、`apps/api/src/base/api-feature-registration.ts`、`apps/api/src/database/database.module.ts`、`apps/api/src/database/registration.ts`、`apps/api/src/database/org-business-data.reader.ts`;新增步驟見[模組 scaffold](../agents/module-scaffold.md)。
+正本:`apps/api/src/app.module.ts`、`apps/api/src/base/api-feature-registration.ts`、`apps/api/src/database/database.module.ts`、`apps/api/src/database/registration.ts`、`apps/api/src/database/org-business-data.reader.ts`、`apps/api/src/database/tenant-purge.ts`;新增步驟見[模組 scaffold](../agents/module-scaffold.md)。
 
 ### 組織業務資料檢查
 
