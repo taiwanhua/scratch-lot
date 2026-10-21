@@ -871,6 +871,31 @@ describe("店面(二):銷售、當下撤銷、拆本、移櫃(GraphQL 端點 + �
       ).toMatchObject({ undone: true });
     });
 
+    it("同一張 賣出 → 撤銷 → 再賣出:當下撤銷看的是最新那次售出(可以再撤銷一次)", async () => {
+      now("12:00");
+      await sell(wang, await ticketOf(bookId, "009"));
+      now("12:05");
+      const first = await ticketOf(bookId, "009");
+      await ok(wang, UNDO, {
+        input: { ticketId: String(first._id), version: first.version },
+      });
+      now("12:10");
+      await sell(wang, await ticketOf(bookId, "009"));
+      now("12:15");
+      const again = await ticketOf(bookId, "009");
+      const data = await ok<{ undoLotteryTicketSale: { item: SaleRow } }>(
+        wang,
+        UNDO,
+        { input: { ticketId: String(again._id), version: again.version } },
+      );
+      expect(data.undoLotteryTicketSale.item).toMatchObject({
+        undone: true,
+        undoBlock: "already_undone",
+      });
+      const undone = await ticketOf(bookId, "009");
+      expect(undone.status).toBe("unsold");
+    });
+
     it("31 分鐘 → 改送申請", async () => {
       now("12:00");
       await sell(wang, await ticketOf(bookId, "002"));

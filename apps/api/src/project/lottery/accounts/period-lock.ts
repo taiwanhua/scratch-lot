@@ -37,13 +37,12 @@ export class PeriodLock {
       return null;
     }
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
-    // `findOne` 不收排序:取最後一筆用 `findMany` + `limit`
-    const [last] = await this.closes.findMany(
+    const last = await this.closes.findOne(
       reader,
       {},
-      { sort: { periodEnd: -1 }, limit: 1, select: "month periodEnd" },
+      { sort: { periodEnd: -1 }, select: "month periodEnd" },
     );
-    return last === undefined
+    return last === null
       ? null
       : { month: last.month, periodEnd: last.periodEnd };
   }

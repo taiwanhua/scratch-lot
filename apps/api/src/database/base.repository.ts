@@ -217,17 +217,27 @@ export class BaseRepository<TSchema, TDocument extends RepositoryDocument> {
     return documents as Persisted<TDocument>[];
   }
 
+  /**
+   * 讀一筆。`sort` / `skip` 照套(多筆符合時依排序取第一筆,例:最近一次售出 `{ at: -1 }`);
+   * `limit` 對單筆讀取沒有意義,忽略。
+   */
   async findOne(
     operator: OperatorContext,
     filter: RepositoryFilter<TSchema>,
     options: FindOptions = {},
   ): Promise<Persisted<TDocument> | null> {
-    const document = await scopeQuery(
+    // 同 `findMany`:鏈式設定在同一個 Query 實例上,不會換掉 scopeQuery 掛上的上下文
+    const query = scopeQuery(
       this.model.findOne({ ...filter }, options.select),
       { operator, includeDeleted: options.includeDeleted },
-    )
-      .session(sessionOf(options))
-      .exec();
+    ).session(sessionOf(options));
+    if (options.sort) {
+      query.sort(options.sort);
+    }
+    if (options.skip !== undefined) {
+      query.skip(options.skip);
+    }
+    const document = await query.exec();
     return document as Persisted<TDocument> | null;
   }
 

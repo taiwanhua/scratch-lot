@@ -141,6 +141,32 @@ describe("BaseRepository(ADR-0005 租戶隔離 / ADR-0007 基礎欄位;對真 Mo
     });
   });
 
+  describe("findOne / findById 照套 sort / skip(多筆符合時取排序後的第一筆)", () => {
+    const orgS = new Types.ObjectId();
+    const asS = operator({ visibleOrgIds: [orgS] });
+
+    beforeAll(async () => {
+      await registerOrgs(orgS);
+      // 依名稱字母順序 a < b < c,建立順序故意打亂(自然順序 ≠ 排序)
+      for (const name of ["sort-b", "sort-a", "sort-c"]) {
+        await demoItems.create(asS, { name });
+      }
+    });
+
+    it("sort 遞增 / 遞減各取到對的那一筆;skip 跳過排序後的前幾筆", async () => {
+      const filter = { name: { $regex: "^sort-" } };
+      await expect(
+        demoItems.findOne(asS, filter, { sort: { name: 1 } }),
+      ).resolves.toMatchObject({ name: "sort-a" });
+      await expect(
+        demoItems.findOne(asS, filter, { sort: { name: -1 } }),
+      ).resolves.toMatchObject({ name: "sort-c" });
+      await expect(
+        demoItems.findOne(asS, filter, { sort: { name: 1 }, skip: 1 }),
+      ).resolves.toMatchObject({ name: "sort-b" });
+    });
+  });
+
   describe("基礎欄位(ADR-0007):建立 / 更新自動填 createdBy、updatedBy 與時間", () => {
     const org = new Types.ObjectId();
     const creator = new Types.ObjectId();
