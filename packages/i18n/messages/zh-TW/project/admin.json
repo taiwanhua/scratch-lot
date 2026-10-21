@@ -2242,6 +2242,26 @@
         "status": "狀態",
         "aria": "批購紀錄",
         "empty": "還沒有批購紀錄"
+      },
+      "redemption": {
+        "title": "兌獎(勾選這次拿去兌獎的中獎彩券)",
+        "scope": "只列進貨分店「店內持有」的兌獎紀錄",
+        "noBranch": "先選進貨分店",
+        "empty": "這家店沒有店內持有的兌獎紀錄",
+        "aria": "兌獎紀錄",
+        "pick": "勾選 {ticket}",
+        "columns": {
+          "time": "兌獎時間",
+          "cashPoint": "收銀點",
+          "ticket": "遊戲 / 本 / 張",
+          "prize": "中獎金額",
+          "status": "狀態"
+        },
+        "totals": {
+          "redemption": "兌獎金額(勾選 {count} 筆)",
+          "offset": "兌獎折抵",
+          "remainder": "兌獎剩餘"
+        }
       }
     },
     "receive": {
@@ -2526,7 +2546,8 @@
     "tabs": {
       "aria": "店面管理",
       "board": "看板",
-      "otherForms": "其他申請"
+      "otherForms": "其他申請",
+      "redemptions": "兌獎紀錄"
     },
     "top": {
       "org": "分店",
@@ -2559,7 +2580,9 @@
       "withdraw": "出庫",
       "switchTo": "切換到這個收銀點",
       "recentSales": "最近售出",
-      "split": "拆本"
+      "split": "拆本",
+      "redeem": "兌獎",
+      "recentRedemptions": "最近兌獎"
     },
     "card": {
       "title": "{code} {name}",
@@ -2861,6 +2884,105 @@
       "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
       "CONFLICT": "這幾張已被處理,請重新核對",
       "GAME_NOT_FOUND": "讀不到這張刮刮樂的遊戲(面額不明),不能賣;請洽系統管理員"
+    },
+    "redemption": {
+      "redeemTitle": "兌獎 · {name}",
+      "replaceTitle": "重新登記 · {name}",
+      "code": "刷背面編號",
+      "codeHint": "條碼槍刷背面編號,或輸入後按 Enter",
+      "own": "本店的刮刮樂",
+      "other": "不是本店的刮刮樂",
+      "previewMeta": "本號 {bookNo} · 張號 {ticketNo} · {source}",
+      "money": "{amount} 元",
+      "existing": "這張已兌過獎({time} {cashPoint})",
+      "prize": "中獎金額",
+      "rule": "單張超過 5,000 元請到銀行兌獎;超過抽屜目前應有現金({expected})時擋下。",
+      "overLimit": "單張超過 5,000 元:請客人到銀行兌獎",
+      "overDrawer": "超過抽屜目前應有現金 {expected}",
+      "cancel": "取消",
+      "confirm": "確認兌獎",
+      "successTitle": "已兌獎",
+      "successMessage": "{ticket} · {amount} 元 · {cashPoint}",
+      "undo": "撤銷",
+      "revokeTitle": "撤銷兌獎?",
+      "revokeLine": "{ticket} · {amount} 元 · {time} 登記",
+      "revokeHint": "撤銷後 {amount} 元退回{cashPoint}的抽屜應有金額。",
+      "revoke": "撤銷",
+      "revokeSuccess": "已撤銷兌獎",
+      "managerTitle": "撤銷兌獎",
+      "managerSubtitle": "{ticket} · {amount} 元",
+      "reason": "撤銷原因(必填)",
+      "closedHint": "這一班已結帳:撤銷後記成那一班的事後更正,應有現金 +{amount}。",
+      "openHint": "這一班還開著:撤銷後 {amount} 元退回{cashPoint}的抽屜應有金額。",
+      "replaceHint": "[撤銷並重新登記]:撤銷後直接開兌獎視窗登記正確的那筆,算在同一班。",
+      "replace": "撤銷並重新登記",
+      "revokeRedemption": "撤銷兌獎",
+      "replaceSuccess": "已撤銷並重新登記",
+      "recentTitle": "最近兌獎 · {name}",
+      "recentHint": "自己在這一班登記的兌獎;點一列看詳情。",
+      "recentEmpty": "這一班還沒有兌獎",
+      "close": "關閉",
+      "detailTitle": "兌獎紀錄",
+      "detail": {
+        "ticket": "刮刮樂",
+        "prize": "獎金",
+        "shift": "收銀點 / 班",
+        "redeemed": "登記",
+        "status": "狀態",
+        "revoked": "撤銷",
+        "reason": "撤銷原因"
+      },
+      "ticketValue": "{game} · {bookNo} · #{ticketNo}",
+      "shiftValue": "{cashPoint} · {name} {time}",
+      "shiftClosed": "{cashPoint} · {name} {time}(已交班)",
+      "personTime": "{name} · {time}",
+      "sentValue": "已送兌(進貨單 {serial})",
+      "sentBlocked": "已送兌,不能撤銷;要先撤回或退回進貨單 {serial}。",
+      "immediate": "當下撤銷",
+      "postClose": "事後更正",
+      "status": {
+        "in_store": "店內持有",
+        "sent": "已送兌",
+        "revoked": "已撤銷"
+      },
+      "columns": {
+        "time": "時間",
+        "cashPoint": "收銀點",
+        "shift": "班次",
+        "ticket": "刮刮樂",
+        "prize": "金額",
+        "status": "狀態",
+        "redeemedBy": "登記人",
+        "purchase": "進貨單"
+      },
+      "tab": {
+        "title": "兌獎紀錄",
+        "cashPoint": "收銀點",
+        "status": "狀態",
+        "redeemedBy": "登記人",
+        "from": "期間起",
+        "to": "期間迄",
+        "all": "全部",
+        "empty": "這段期間沒有兌獎紀錄",
+        "summary": "共 {count} 筆",
+        "truncated": "只列最近 {count} 筆;請縮短期間",
+        "cardMeta": "{cashPoint} · {shift} · {time}",
+        "cardBy": "登記 {name} · 進貨單 {purchase}"
+      },
+      "errors": {
+        "FORBIDDEN": "沒有權限做這件事",
+        "NOT_FOUND": "找不到這筆兌獎紀錄,可能已被別人變更",
+        "VALIDATION_FAILED": "有欄位不正確,請檢查標紅的欄位",
+        "REDEMPTION_CODE_INVALID": "看不懂這個編號,請刷背面編號",
+        "REDEMPTION_CODE_NEEDS_BACK": "對不到本店的刮刮樂,請刷背面編號",
+        "REDEMPTION_OVER_LIMIT": "單張超過 5,000 元:請客人到銀行兌獎",
+        "AMOUNT_EXCEEDS_DRAWER": "超過抽屜目前的應有現金",
+        "REDEMPTION_DUPLICATE": "這張已兌過獎",
+        "SHIFT_CLOSED": "這一班已送出交班結帳",
+        "REDEMPTION_SENT": "已送兌,要先撤回或退回進貨單才能撤銷",
+        "REDEMPTION_ALREADY_REVOKED": "這筆兌獎已撤銷",
+        "UNEXPECTED": "操作失敗,請稍後再試"
+      }
     }
   }
 }

@@ -2,6 +2,8 @@ import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
+import type { RedemptionFixture } from "@/test/msw/project/lottery/redemption-fixtures";
+import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import {
   STORE_ALL_PERMISSIONS,
   storeModules,
@@ -30,18 +32,23 @@ export const renderStore = ({
   permissions = [...STORE_ALL_PERMISSIONS, MY_PUNCH],
   world = {},
   sales = {},
+  redemptionRows,
 }: {
   path?: string;
   permissions?: readonly string[];
   world?: StoreWorldOptions;
   /** 銷售的假 api 選項(看板狀態一律用 `storeWorld` 那一份) */
   sales?: Omit<StoreSalesWorldOptions, "board">;
+  /** 兌獎紀錄的起始資料(預設 `sampleRedemptions()`) */
+  redemptionRows?: RedemptionFixture[];
 } = {}) => {
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
+  const redemptions = redemptionWorld(redemptionRows);
   server.use(
     ...fake.handlers,
     ...salesFake.handlers,
+    ...redemptions.handlers,
     ...inventoryWorld().handlers,
     ...scheduleSettingsWorld().handlers,
     ...masterDataSharedLookupHandlers(),
@@ -51,5 +58,5 @@ export const renderStore = ({
       modules: [overviewModule, ...storeModules(permissions)],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake, salesFake };
+  return { ...renderApp({ path }), fake, salesFake, redemptions };
 };

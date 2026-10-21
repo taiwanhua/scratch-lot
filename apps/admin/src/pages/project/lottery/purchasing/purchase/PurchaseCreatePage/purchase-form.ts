@@ -208,10 +208,33 @@ export interface PurchaseHeaderState {
   note: string;
 }
 
-/** 表單存值(受管表單 `purchase`):單頭 + 明細(張數、整本金額照遊戲;批購金額由列內公式算)。 */
+/** 勾選的一筆兌獎紀錄(規格 8.2「兌獎」;`rowId` 在勾選時產生)。 */
+export interface PickedRedemption {
+  rowId: string;
+  id: string;
+  /** 張編號 `5164-056527-031`(引用欄的標籤) */
+  label: string;
+  prizeAmount: number;
+}
+
+/** 勾 / 取消勾一筆(同一筆再按 = 取消)。 */
+export const toggleRedemption = (
+  picked: readonly PickedRedemption[],
+  row: Omit<PickedRedemption, "rowId">,
+  newRowId: () => string,
+): PickedRedemption[] =>
+  picked.some((item) => item.id === row.id)
+    ? picked.filter((item) => item.id !== row.id)
+    : [...picked, { ...row, rowId: newRowId() }];
+
+/**
+ * 表單存值(受管表單 `purchase` r3):單頭 + 明細(張數、整本金額照遊戲;批購金額由列內公式算)+
+ * 勾選的兌獎紀錄(合計三列與扣款金額由計算欄算)。
+ */
 export const purchaseValuesOf = (
   header: PurchaseHeaderState,
   groups: readonly BookGroup[],
+  redemptions: readonly PickedRedemption[] = [],
 ): StoredValues => ({
   [K.branch]: header.branchId === "" ? null : header.branchId,
   [K.requisition]: header.requisitionNo,
@@ -232,6 +255,11 @@ export const purchaseValuesOf = (
       [K.rate]: row.rate,
     })),
   ),
+  [K.redemptions]: redemptions.map((item) => ({
+    rowId: item.rowId,
+    [K.redemption]: { id: item.id, label: item.label },
+    [K.prizeAmount]: item.prizeAmount,
+  })),
 });
 
 /** 扣款帳戶只有一個時自動帶入。 */

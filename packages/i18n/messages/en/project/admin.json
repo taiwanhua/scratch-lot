@@ -2242,6 +2242,26 @@
         "status": "Status",
         "aria": "Purchase records",
         "empty": "No purchase records yet"
+      },
+      "redemption": {
+        "title": "Redemptions (tick the winning tickets taken to redeem this time)",
+        "scope": "Only redemptions held in store at the purchasing branch",
+        "noBranch": "Choose the purchasing branch first",
+        "empty": "No redemptions held in store at this branch",
+        "aria": "Redemptions",
+        "pick": "Tick {ticket}",
+        "columns": {
+          "time": "Redeemed",
+          "cashPoint": "Cash point",
+          "ticket": "Game / book / ticket",
+          "prize": "Prize",
+          "status": "Status"
+        },
+        "totals": {
+          "redemption": "Redemptions ({count} ticked)",
+          "offset": "Redemption offset",
+          "remainder": "Redemption remainder"
+        }
       }
     },
     "receive": {
@@ -2526,7 +2546,8 @@
     "tabs": {
       "aria": "Store",
       "board": "Board",
-      "otherForms": "Other requests"
+      "otherForms": "Other requests",
+      "redemptions": "Redemptions"
     },
     "top": {
       "org": "Branch",
@@ -2559,7 +2580,9 @@
       "withdraw": "Withdraw",
       "switchTo": "Switch to this cash point",
       "recentSales": "Recent sales",
-      "split": "Open book"
+      "split": "Open book",
+      "redeem": "Redeem",
+      "recentRedemptions": "Recent redemptions"
     },
     "card": {
       "title": "{code} {name}",
@@ -2861,6 +2884,105 @@
       "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
       "CONFLICT": "These tickets have been processed; please check again",
       "GAME_NOT_FOUND": "The game of this ticket cannot be read, so it cannot be sold"
+    },
+    "redemption": {
+      "redeemTitle": "Redeem · {name}",
+      "replaceTitle": "Re-register · {name}",
+      "code": "Scan the back code",
+      "codeHint": "Scan the back code, or type it and press Enter",
+      "own": "Ticket from this store",
+      "other": "Not a ticket from this store",
+      "previewMeta": "Book {bookNo} · Ticket {ticketNo} · {source}",
+      "money": "{amount}",
+      "existing": "Already redeemed ({time} {cashPoint})",
+      "prize": "Prize",
+      "rule": "Prizes over 5,000 are redeemed at the bank; prizes over the drawer's expected cash ({expected}) are blocked.",
+      "overLimit": "Over 5,000: ask the customer to redeem at the bank",
+      "overDrawer": "Over the drawer's expected cash {expected}",
+      "cancel": "Cancel",
+      "confirm": "Redeem",
+      "successTitle": "Redeemed",
+      "successMessage": "{ticket} · {amount} · {cashPoint}",
+      "undo": "Undo",
+      "revokeTitle": "Revoke this redemption?",
+      "revokeLine": "{ticket} · {amount} · registered {time}",
+      "revokeHint": "{amount} goes back to the expected cash of the {cashPoint} drawer.",
+      "revoke": "Revoke",
+      "revokeSuccess": "Redemption revoked",
+      "managerTitle": "Revoke redemption",
+      "managerSubtitle": "{ticket} · {amount}",
+      "reason": "Reason (required)",
+      "closedHint": "This shift is checked out: the revoke is recorded as a post-close correction of that shift, expected cash +{amount}.",
+      "openHint": "This shift is open: {amount} goes back to the expected cash of the {cashPoint} drawer.",
+      "replaceHint": "[Revoke and re-register]: revoke, then register the correct one in the same shift.",
+      "replace": "Revoke and re-register",
+      "revokeRedemption": "Revoke redemption",
+      "replaceSuccess": "Revoked and re-registered",
+      "recentTitle": "Recent redemptions · {name}",
+      "recentHint": "Redemptions you registered in this shift; select a row for details.",
+      "recentEmpty": "No redemptions in this shift yet",
+      "close": "Close",
+      "detailTitle": "Redemption",
+      "detail": {
+        "ticket": "Ticket",
+        "prize": "Prize",
+        "shift": "Cash point / shift",
+        "redeemed": "Registered",
+        "status": "Status",
+        "revoked": "Revoked",
+        "reason": "Revoke reason"
+      },
+      "ticketValue": "{game} · {bookNo} · #{ticketNo}",
+      "shiftValue": "{cashPoint} · {name} {time}",
+      "shiftClosed": "{cashPoint} · {name} {time} (checked out)",
+      "personTime": "{name} · {time}",
+      "sentValue": "Sent (purchase {serial})",
+      "sentBlocked": "Sent; withdraw or return purchase {serial} before revoking.",
+      "immediate": "Revoked on the spot",
+      "postClose": "Post-close correction",
+      "status": {
+        "in_store": "In store",
+        "sent": "Sent",
+        "revoked": "Revoked"
+      },
+      "columns": {
+        "time": "Time",
+        "cashPoint": "Cash point",
+        "shift": "Shift",
+        "ticket": "Ticket",
+        "prize": "Amount",
+        "status": "Status",
+        "redeemedBy": "Registered by",
+        "purchase": "Purchase"
+      },
+      "tab": {
+        "title": "Redemptions",
+        "cashPoint": "Cash point",
+        "status": "Status",
+        "redeemedBy": "Registered by",
+        "from": "From",
+        "to": "To",
+        "all": "All",
+        "empty": "No redemptions in this period",
+        "summary": "{count} records",
+        "truncated": "Showing the latest {count}; narrow the period",
+        "cardMeta": "{cashPoint} · {shift} · {time}",
+        "cardBy": "Registered by {name} · Purchase {purchase}"
+      },
+      "errors": {
+        "FORBIDDEN": "You do not have permission to do this",
+        "NOT_FOUND": "This redemption was not found; it may have been changed",
+        "VALIDATION_FAILED": "Some fields are invalid; check the highlighted fields",
+        "REDEMPTION_CODE_INVALID": "Unknown code; scan the back code",
+        "REDEMPTION_CODE_NEEDS_BACK": "No ticket from this store matches; scan the back code",
+        "REDEMPTION_OVER_LIMIT": "Over 5,000: ask the customer to redeem at the bank",
+        "AMOUNT_EXCEEDS_DRAWER": "Over the drawer's expected cash",
+        "REDEMPTION_DUPLICATE": "This ticket has already been redeemed",
+        "SHIFT_CLOSED": "This shift has been checked out",
+        "REDEMPTION_SENT": "Sent; withdraw or return the purchase before revoking",
+        "REDEMPTION_ALREADY_REVOKED": "This redemption has been revoked",
+        "UNEXPECTED": "Something went wrong; try again later"
+      }
     }
   }
 }

@@ -26,6 +26,7 @@ import {
   requisitionFormWorld,
 } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
+import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import { storeModules } from "@/test/msw/project/lottery/store-fixtures";
 import { storeWorld } from "@/test/msw/project/lottery/store-handlers";
 import { storeSalesWorld } from "@/test/msw/project/lottery/store-sales-handlers";
@@ -197,6 +198,8 @@ export const projectMockWorld: ProjectMockWorld = {
     // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份);
     // 銷售、展開卡片、拆本、移櫃共用同一份看板狀態(售出後本班已售跟著變)
     ...storeAndSalesHandlers(),
+    // 兌獎:[最近兌獎]、兌獎紀錄分頁、進貨單新增頁的兌獎區(Figma ST-38b / ST-40 / PU-05)
+    ...redemptionWorld().handlers,
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
     // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
     ...printButtonWorld().handlers.filter(

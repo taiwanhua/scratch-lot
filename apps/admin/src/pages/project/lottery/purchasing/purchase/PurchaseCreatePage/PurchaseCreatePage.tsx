@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
+import { purchaseRedemptionTotalsOf } from "@repo/domain/project/lottery";
 import { useLotteryPurchaseOptionsQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
@@ -39,14 +40,16 @@ import {
   PURCHASE_FORM_KEY,
   PURCHASE_FROM_REQUISITION,
   PURCHASE_MODULE_KEY,
-  formatMoney,
 } from "../purchase-keys";
 import {
   type PurchaseHeaderDraft,
   PurchaseHeaderFields,
 } from "./PurchaseHeaderFields";
 import { PurchaseLines } from "./PurchaseLines";
+import { PurchaseRedemptions } from "./PurchaseRedemptions";
+import { PurchaseTotals } from "./PurchaseTotals";
 import {
+  type PickedRedemption,
   type ScannedBook,
   addScannedBook,
   defaultAccountOf,
@@ -57,6 +60,7 @@ import {
   requisitionProgressOf,
   setBookRate,
   setGroupRate,
+  toggleRedemption,
 } from "./purchase-form";
 
 const NONE = "none";
@@ -72,7 +76,8 @@ export const PURCHASE_CREATE_SCAN_PURPOSE = "purchase-create";
  * 單頭(進貨分店、叫貨單、批購甲類、本人批購、批購受託人、批購日期、扣款帳戶、備註)→ 刷條碼加一本
  * (依遊戲分組;從叫貨單帶入時顯示「叫貨 5,已刷 4」;批購金額率逐本 / 整組改,改過的列標色)→ 合計、
  * [存草稿] [送出]。存值交給表單引擎(`useFormDraft`),送出前的檢查在 api 的掛接點。
- * 兌獎區由兌獎的功能加。從採購清單 [建立進貨單] 進來時帶 `?requisition=<單號>&branch=<分店>`。
+ * 兌獎區(`PurchaseRedemptions`):勾選進貨分店店內持有的兌獎紀錄,合計多三列(兌獎金額 / 兌獎折抵 / 兌獎剩餘),
+ * 扣款金額 = 批購合計 − 兌獎折抵。從採購清單 [建立進貨單] 進來時帶 `?requisition=<單號>&branch=<分店>`。
  */
 export const PurchaseCreatePage = () => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
@@ -125,6 +130,7 @@ export const PurchaseCreatePage = () => {
   const [code, setCode] = useState("");
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [redemptions, setRedemptions] = useState<PickedRedemption[]>([]);
 
   const options = useLotteryPurchaseOptionsQuery(
     session.client,
@@ -147,6 +153,10 @@ export const PurchaseCreatePage = () => {
   const groups = groupBooks(books, games, requested);
   const total = purchaseTotalOf(groups);
   const progress = requisitionProgressOf(groups);
+  const totals = purchaseRedemptionTotalsOf(
+    total,
+    redemptions.reduce((sum, item) => sum + item.prizeAmount, 0),
+  );
   // 超過進貨分店的預計要給本數只警告(規格 7.6)
   const allocationOf = new Map(
     (data?.allocations ?? []).map((item) => [item.gameId, item]),
@@ -209,6 +219,7 @@ export const PurchaseCreatePage = () => {
         note: header.note,
       },
       groups,
+      redemptions,
     );
   const backToList = () => {
     if (access.listRoute !== null) {
@@ -259,6 +270,7 @@ export const PurchaseCreatePage = () => {
                 accountId: null,
               }));
               setBooks([]);
+              setRedemptions([]);
             }}
           />
           <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -330,24 +342,28 @@ export const PurchaseCreatePage = () => {
               )}
             </Stack>
           </Card>
-          <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
-            <Stack spacing={1}>
-              <Stack direction="row">
-                <Typography variant="body2" sx={{ flex: 1 }}>
-                  {t("purchaseTotal")}
-                </Typography>
-                <Typography variant="body2">{formatMoney(total)}</Typography>
-              </Stack>
-              <Stack direction="row">
-                <Typography variant="body2" sx={{ flex: 1, fontWeight: 700 }}>
-                  {t("deductedAmount")}
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                  {formatMoney(total)}
-                </Typography>
-              </Stack>
-            </Stack>
-          </Card>
+          <PurchaseRedemptions
+            branchId={branchId}
+            pickedIds={new Set(redemptions.map((item) => item.id))}
+            onToggle={(row) => {
+              setRedemptions((current) =>
+                toggleRedemption(
+                  current,
+                  {
+                    id: row.id,
+                    label: row.ticketLabel,
+                    prizeAmount: row.prizeAmount,
+                  },
+                  () => crypto.randomUUID(),
+                ),
+              );
+            }}
+          />
+          <PurchaseTotals
+            purchaseTotal={total}
+            totals={totals}
+            pickedCount={redemptions.length}
+          />
           {draft.error !== null && (
             <Alert severity="error">{errorText(draft.error)}</Alert>
           )}

@@ -25,6 +25,8 @@ import {
   writeLocalCashPoint,
 } from "@/lib/project/lottery/local-cash-point";
 
+import { redemptionBoardActions } from "../redemption/redemption-board-actions";
+import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { type BoardDialog, BoardDialogs } from "./BoardDialogs";
 import { BoardTopBar } from "./BoardTopBar";
 import { type BoardCashPoint, CashPointSection } from "./CashPointSection";
@@ -92,6 +94,8 @@ export const BoardTab = () => {
   useScanner(STORE_SALE_SCAN_PURPOSE, ({ code }) => {
     flow.handleCode(code);
   });
+  // 兌獎(P23):[兌獎] [最近兌獎]、兌獎提示的 [撤銷] 與兌獎紀錄詳情
+  const redemption = useRedemptionFlow();
 
   const applyLocal = (cashPointId: string) => {
     writeLocalCashPoint(orgId, cashPointId);
@@ -152,6 +156,17 @@ export const BoardTab = () => {
         setDialog({ kind, shift, cashPointName: point.name });
       },
     });
+    const redeem = redemptionBoardActions({
+      orgId,
+      cashPointName: point.name,
+      shift,
+      canRedeem: hasPermission(STORE_PERMISSIONS.redeem),
+      labels: {
+        redeem: t("header.redeem"),
+        recent: t("header.recentRedemptions"),
+      },
+      flow: redemption,
+    });
     return [
       // [最近售出] 只在本機收銀點、自己開的班(規格 6.2)
       ...(shift.isMine
@@ -170,6 +185,9 @@ export const BoardTab = () => {
             },
           ]
         : []),
+      // [最近兌獎](自己的班)接在 [最近售出] 後面;[兌獎] 在按鈕列最前面(Figma ST-01)
+      ...redeem.trailing,
+      ...redeem.leading,
       ...(hasPermission(STORE_PERMISSIONS.deposit)
         ? [cashAction("deposit")]
         : []),
@@ -313,6 +331,7 @@ export const BoardTab = () => {
         onUndo={flow.openUndo}
       />
       {flow.element}
+      {redemption.element}
     </Stack>
   );
 };

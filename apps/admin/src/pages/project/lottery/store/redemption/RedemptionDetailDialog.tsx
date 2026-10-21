@@ -1,0 +1,156 @@
+import type { ReactNode } from "react";
+import { useTranslations } from "use-intl";
+
+import { displayBookNo } from "@repo/domain/project/lottery";
+import { useLotteryRedemptionQuery } from "@repo/graphql";
+import { Alert } from "@repo/ui/alert";
+import { Button } from "@repo/ui/button";
+import { Dialog } from "@repo/ui/dialog";
+import { useBreakpointDown } from "@repo/ui/media-query";
+import { Stack } from "@repo/ui/stack";
+import { Typography } from "@repo/ui/typography";
+
+import { useSession } from "@/hooks/base/useSession";
+import { useTemporalText } from "@/hooks/base/useTemporalText";
+
+import { moneyText } from "../store-text";
+import type { RedemptionRow } from "./redemption-shared";
+
+export interface RedemptionDetailDialogProps {
+  id: string;
+  onClose: () => void;
+  /** [撤銷兌獎](依 `revokeMode` 開自己撤銷或店長撤銷的視窗) */
+  onRevoke: (row: RedemptionRow) => void;
+}
+
+const Line = ({ label, value }: { label: string; value: ReactNode }) => (
+  <Stack
+    direction="row"
+    spacing={2}
+    sx={{ justifyContent: "space-between", alignItems: "baseline" }}
+  >
+    <Typography variant="body2" color="text.secondary">
+      {label}
+    </Typography>
+    <Typography color="text.primary" sx={{ textAlign: "right" }}>
+      {value}
+    </Typography>
+  </Stack>
+);
+
+/**
+ * 兌獎紀錄詳情(規格 6.5;Figma ST-39a / ST-39c):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態;
+ * 已撤銷另列撤銷人與原因。[撤銷兌獎] 只在操作者能撤銷時出現(`revokeMode`,沒有權限不顯示);
+ * 已送兌 → 按鈕停用、提示先撤回或退回進貨單。各入口(兌獎紀錄分頁、[最近兌獎]、進貨單兌獎區)共用。
+ */
+export const RedemptionDetailDialog = ({
+  id,
+  onClose,
+  onRevoke,
+}: RedemptionDetailDialogProps) => {
+  const t = useTranslations("admin.lotteryStore.redemption");
+  const { session } = useSession();
+  const temporal = useTemporalText();
+  const isMobile = useBreakpointDown("sm");
+  const query = useLotteryRedemptionQuery(session.client, { id });
+  const row = query.data?.lotteryRedemption.item ?? null;
+  const serial = row?.purchase?.serialNo ?? "—";
+
+  const statusText = (item: RedemptionRow): string =>
+    item.status === "sent"
+      ? t("sentValue", { serial })
+      : t(`status.${item.status}`);
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      fullScreen={isMobile}
+      title={t("detailTitle")}
+      actions={
+        <>
+          <Button variant="text" onClick={onClose}>
+            {t("close")}
+          </Button>
+          {row?.revokeMode == null ? null : (
+            <Button
+              color="error"
+              variant="outlined"
+              disabled={row.revokeBlockedBySent}
+              onClick={() => {
+                onRevoke(row);
+              }}
+            >
+              {t("revokeRedemption")}
+            </Button>
+          )}
+        </>
+      }
+    >
+      {row === null ? null : (
+        <Stack spacing={1.5} sx={{ pt: 1 }}>
+          <Line
+            label={t("detail.ticket")}
+            value={t("ticketValue", {
+              game:
+                row.gameName == null
+                  ? row.gameCode
+                  : `${row.gameCode} ${row.gameName}`,
+              bookNo: displayBookNo(row.bookNo),
+              ticketNo: row.ticketNo,
+            })}
+          />
+          <Line
+            label={t("detail.prize")}
+            value={t("money", { amount: moneyText(row.prizeAmount) })}
+          />
+          <Line
+            label={t("detail.shift")}
+            value={t(row.shift.closed ? "shiftClosed" : "shiftValue", {
+              cashPoint: row.cashPoint.name,
+              name: row.shift.openedBy.name,
+              time: temporal(row.shift.openedAt, "monthDayTime"),
+            })}
+          />
+          <Line
+            label={t("detail.redeemed")}
+            value={t("personTime", {
+              name: row.redeemedBy.name,
+              time: temporal(row.redeemedAt, "monthDayTime"),
+            })}
+          />
+          <Line
+            label={t("detail.status")}
+            value={
+              row.isPostClose
+                ? `${statusText(row)} · ${t("postClose")}`
+                : statusText(row)
+            }
+          />
+          {row.revokedAt == null ? null : (
+            <>
+              <Line
+                label={t("detail.revoked")}
+                value={t("personTime", {
+                  name: row.revokedBy?.name ?? "",
+                  time: temporal(row.revokedAt, "monthDayTime"),
+                })}
+              />
+              <Line
+                label={t("detail.reason")}
+                value={[row.revokeReason ?? t("immediate"), row.revokeNote]
+                  .filter((part) => part != null && part !== "")
+                  .join(" · ")}
+              />
+            </>
+          )}
+          {row.revokeMode != null && row.revokeBlockedBySent ? (
+            <Alert severity="warning">{t("sentBlocked", { serial })}</Alert>
+          ) : null}
+        </Stack>
+      )}
+    </Dialog>
+  );
+};

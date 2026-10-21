@@ -745,6 +745,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "店面管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/store-error.ts`(`storeErrorKey`)從 api 錯誤碼與 reason 換算",
   },
   {
+    key: "admin.lotteryStore.redemption.errors.",
+    reason:
+      "兌獎的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/redemption-error.ts`(`redemptionErrorOf`)從 api 錯誤碼與 reason 換算",
+  },
+  {
+    key: "admin.lotteryStore.redemption.status.",
+    reason:
+      "兌獎紀錄的 `t(`status.${status}`)`,status 是兌獎狀態 `REDEMPTION_STATUSES`(api 回的值)",
+  },
+  {
     key: "admin.lotteryInventory.errors.",
     reason:
       "庫存管理的 `t(`errors.${code}`)`,code 由 `lib/project/lottery/inventory-error.ts` 從 api 錯誤碼與 reason 換算",

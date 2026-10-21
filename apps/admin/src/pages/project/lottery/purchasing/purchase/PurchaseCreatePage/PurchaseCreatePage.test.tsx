@@ -77,4 +77,41 @@ describe("進貨單新增頁", () => {
       ],
     });
   });
+
+  it("兌獎區:只列店內持有的;勾選 → 合計(兌獎金額 / 折抵 / 扣款 / 兌獎剩餘)與存值", async () => {
+    const user = userEvent.setup();
+    const { formsFake } = renderPurchasePage({
+      path: `${CREATE}?branch=org-store-a`,
+    });
+    const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    // 夾具:店內持有 3 筆(500、100、1,000);已撤銷、已送兌的不列
+    expect(await within(table).findAllByRole("checkbox")).toHaveLength(3);
+    const scan = screen.getByRole("textbox", { name: "刷條碼加入" });
+    await user.type(scan, "5164-1-056527-100-0-6{Enter}");
+    await screen.findByRole("table", { name: /5164 發大財/ });
+    await user.click(
+      within(table).getByRole("checkbox", { name: "勾選 5164-056527-031" }),
+    );
+    await user.click(
+      within(table).getByRole("checkbox", { name: "勾選 5164-056527-012" }),
+    );
+    expect(screen.getByText("兌獎金額(勾選 2 筆)")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "送出" }));
+    await waitFor(() => {
+      expect(formsFake.inputs.createAndSubmitFormSubmission).toHaveLength(1);
+    });
+    const [sent] = formsFake.inputs.createAndSubmitFormSubmission;
+    expect(sent.values).toMatchObject({
+      redemptions: [
+        expect.objectContaining({
+          redemption: { id: "rd-031", label: "5164-056527-031" },
+          prize_amount: 500,
+        }),
+        expect.objectContaining({
+          redemption: { id: "rd-012", label: "5164-056527-012" },
+          prize_amount: 1000,
+        }),
+      ],
+    });
+  });
 });

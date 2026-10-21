@@ -111,6 +111,12 @@ export const sampleReasonOptions: Record<
     { value: "system-backfill", label: "系統異常補登" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的撤銷兌獎(規格 6.5)
+  [LOTTERY_FIELD_CATEGORY_KEYS.redemptionRevokeReason]: [
+    { value: "entry-error", label: "登記錯誤" },
+    { value: "wrong-amount", label: "金額錯誤" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 /** Figma IN-05 的三列。 */

@@ -6,6 +6,7 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { BoardTab } from "./BoardTab/BoardTab";
 import { OtherFormsTab } from "./OtherFormsTab/OtherFormsTab";
+import { RedemptionsTab } from "./redemption/RedemptionsTab";
 
 /** 店面管理的一個分頁。 */
 export interface StoreTabEntry {
@@ -30,6 +31,13 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     labelKey: "board",
     permission: STORE_PERMISSIONS.view,
     Content: BoardTab,
+  },
+  // 兌獎紀錄(規格 6.5;ST-40):`store.view`(api `lotteryRedemptions` 也守它)
+  {
+    value: STORE_TABS.redemptions,
+    labelKey: "redemptions",
+    permission: STORE_PERMISSIONS.view,
+    Content: RedemptionsTab,
   },
   // 其他申請:租戶自己綁到本模組的表單,用表單引擎的預設列表
   {
