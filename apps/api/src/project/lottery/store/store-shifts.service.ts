@@ -5,6 +5,7 @@ import { localDateOf, localDateText } from "@repo/domain/form";
 import {
   STORE_PERMISSIONS,
   openingFloatPlanOf,
+  shiftLabelOf,
 } from "@repo/domain/project/lottery";
 import { SCHEDULE_FIELD_CATEGORY_KEYS } from "@repo/domain/project/schedule-fields";
 
@@ -245,6 +246,15 @@ export class StoreShiftsService {
       this.clock.now(),
     );
     const openedAt = this.clock.now();
+    const label = shiftLabelOf({
+      cashPointName: point.name,
+      ownerName:
+        (await this.views.userNames(operator, tenantId, [actorId])).get(
+          String(actorId),
+        ) ?? "",
+      openedAt,
+      timezone: await tenantTimezoneOf(this.orgs, operator, tenantId),
+    });
     let openingFloatSource: "vault" | "none" | "handover" = "handover";
     if (plan.kind === "first") {
       openingFloatSource = float > 0 ? "vault" : "none";
@@ -278,6 +288,7 @@ export class StoreShiftsService {
           closedAt: null,
           checkoutId: null,
           drawerVersion: 0,
+          label,
         });
         await publishStoreBoard(this.realtime, tenantId, point.orgId);
         if (float === 0) {

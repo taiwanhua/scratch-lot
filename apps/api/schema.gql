@@ -2490,6 +2490,23 @@ type LotteryStoreCardTicket {
   version: Int!
 }
 
+type LotteryStoreCashCorrectionRow {
+  amount: Int!
+  attributedShiftLabel: String
+  direction: String!
+  id: ID!
+  place: String!
+  placeShiftLabel: String
+  reasonLabel: String!
+  serialNo: String
+  status: String!
+  submittedAt: DateTime
+}
+
+type LotteryStoreCashCorrectionsPayload {
+  items: [LotteryStoreCashCorrectionRow!]!
+}
+
 type LotteryStoreCashPoint {
   books: [LotteryStoreBoardBook!]!
   id: ID!
@@ -2555,6 +2572,23 @@ type LotteryStoreSalePayload {
   item: LotteryStoreSale!
 }
 
+type LotteryStoreSaleReversalRow {
+  id: ID!
+  reasonLabel: String!
+  refund: Boolean!
+  refundAmount: Int!
+  refundShiftLabel: String
+  serialNo: String
+  status: String!
+  submittedAt: DateTime
+  ticketCount: Int!
+  ticketGroups: [String!]!
+}
+
+type LotteryStoreSaleReversalsPayload {
+  items: [LotteryStoreSaleReversalRow!]!
+}
+
 type LotteryStoreSalesPayload {
   items: [LotteryStoreSale!]!
 }
@@ -2600,6 +2634,18 @@ type LotteryStoreShift {
   soldAmount: Int!
   soldCount: Int!
   unmatchedEntry: Boolean!
+}
+
+type LotteryStoreShiftOption {
+  id: ID!
+  label: String!
+  mine: Boolean!
+  open: Boolean!
+  openedAt: DateTime!
+}
+
+type LotteryStoreShiftOptionsPayload {
+  items: [LotteryStoreShiftOption!]!
 }
 
 type LotteryStoreShiftPayload {
@@ -3770,10 +3816,13 @@ type Query {
   lotteryStockOverview(input: LotteryStockOverviewInput!): LotteryStockOverviewPayload!
   lotteryStoreBoard(orgId: ID!): LotteryStoreBoardPayload!
   lotteryStoreBookCard(bookId: ID!, orgId: ID!): LotteryStoreBookCardPayload!
+  lotteryStoreCashCorrections(orgId: ID!): LotteryStoreCashCorrectionsPayload!
   lotteryStoreOpenShiftForm(cashPointId: ID!): LotteryStoreOpenShiftFormPayload!
   lotteryStoreRecentSales(shiftId: ID!): LotteryStoreSalesPayload!
   lotteryStoreSale(ticketId: ID!): LotteryStoreSalePayload!
+  lotteryStoreSaleReversals(orgId: ID!): LotteryStoreSaleReversalsPayload!
   lotteryStoreScan(input: LotteryStoreScanInput!): LotteryStoreScanPayload!
+  lotteryStoreShiftOptions(orgId: ID!): LotteryStoreShiftOptionsPayload!
   lotteryStoreUnopenedBooks(orgId: ID!): LotteryStoreUnopenedBooksPayload!
   lotteryTicketLookup(input: LotteryTicketLookupInput!): LotteryTicketLookupPayload!
   lotteryTransferBookTickets(bookId: ID!, fromOrgId: ID!): [LotteryTransferTicketCell!]!

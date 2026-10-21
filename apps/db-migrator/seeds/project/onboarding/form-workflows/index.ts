@@ -1,6 +1,7 @@
 import { makeupPunchWorkflow } from "./makeup-punch";
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
+import { cashCorrectionWorkflow, saleReversalWorkflow } from "./store-forms";
 import { supportRequestWorkflow } from "./support-request";
 import { transferWorkflow } from "./transfer";
 import type { FormWorkflowSpec } from "./types";
@@ -20,4 +21,7 @@ export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   transferWorkflow,
   // 出勤紀錄:補打卡申請(規格 14.8)
   makeupPunchWorkflow,
+  // 店面管理:撤銷售出申請(規格 8.5)、現金更正單(規格 8.8)
+  saleReversalWorkflow,
+  cashCorrectionWorkflow,
 ];

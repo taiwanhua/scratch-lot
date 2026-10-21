@@ -17,9 +17,11 @@ import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
+import { seed as cashCorrectionForm } from "./revisions/cash_correction.r1.seed";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r3.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
+import { seed as saleReversalForm } from "./revisions/sale_reversal.r1.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { seed as transferForm } from "./revisions/transfer.r2.seed";
 import { scheduleModuleDeclarations } from "./schedule";
@@ -60,7 +62,8 @@ export const projectSeedSource: SeedSource = {
     storeModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲,
-  // 進貨單的單頭引用甲類、受託人、銀行帳戶、兌獎區引用兌獎紀錄;調貨單的明細引用本)
+  // 進貨單的單頭引用甲類、受託人、銀行帳戶、兌獎區引用兌獎紀錄;調貨單的明細引用本;
+  // 撤銷售出申請 / 現金更正單引用本與收銀班次)
   portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)
@@ -80,6 +83,9 @@ export const projectSeedSource: SeedSource = {
     purchaseForm as SeedSet,
     // 叫貨與進貨 → 調貨單的受管表單(規格 8.4;流程不 seed,由開通腳本依租戶角色建)
     transferForm,
+    // 店面管理的受管表單:撤銷售出申請、現金更正單(規格 8.5、8.8;流程不 seed,由開通腳本依租戶角色建)
+    saleReversalForm,
+    cashCorrectionForm,
   ],
 };
 

@@ -66,4 +66,20 @@ export class StoreVaultGuard {
       );
     }
   }
+
+  /**
+   * 交易內只碰守門文件、不檢查應有(現金更正單完成時寫小金庫:增加不用檢查、減少是登記實際短少的錢,
+   * 不擋;規格 8.8)。讓同一家店同時動小金庫的動作照同一個守門文件序列化;守門文件不存在就先建。
+   */
+  async serialize(
+    operator: OperatorContext,
+    orgId: Types.ObjectId,
+  ): Promise<void> {
+    await this.prepare(operator, orgId);
+    await this.locks.findOneAndUpdate(
+      operator,
+      { orgId },
+      { $inc: { version: 1 } },
+    );
+  }
 }

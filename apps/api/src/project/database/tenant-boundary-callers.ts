@@ -97,6 +97,8 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/store/store-registrations.ts": ["系統重算"],
   // 店面:開班的「人」守門文件掛在租戶頂層(兩家店同時開班互相衝突)
   "project/lottery/store/store-person-locks.ts": ["例外寫入"],
+  // 撤銷售出申請 / 現金更正單:單據可能是總部建的,系統身分只看得到單據的組織;完成時寫分店的流水與班
+  "project/lottery/store/store-forms-rules.service.ts": ["反查", "例外寫入"],
   // 遊戲是否有進貨單引用、在途本數、甲類的批購日來源:沒有操作者,問的是整個租戶
   "project/lottery/purchase/purchase-registrations.ts": ["系統重算"],
   // 調貨單:本 / 張 / 其他調貨單 / 叫貨單(單據可能是總部建的,系統身分只看得到單據的組織;張分在多家店)、

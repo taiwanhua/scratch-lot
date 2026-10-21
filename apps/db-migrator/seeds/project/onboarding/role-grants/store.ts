@@ -1,6 +1,7 @@
 import {
   STORE_MODULE_KEYS as KEYS,
   STORE_PERMISSIONS as P,
+  STORE_FORM_PERMISSIONS,
   STORE_KEY,
 } from "@repo/domain/project/lottery";
 
@@ -19,8 +20,8 @@ const HQ: RoleGrant = {
 const STORE_MANAGER: RoleGrant = HQ;
 
 /**
- * 店員(規格 3.3):看板 + 銷售、當下撤銷、拆本、移櫃、兌獎、開班、投庫、出庫、盤點、結帳;**不含** `bank-deposit`。
- * 「撤銷售出與現金更正的新增」是表單發布時才建立的 `store.create-<formKey>`,由那兩張表單的票追加。
+ * 店員(規格 3.3):看板 + 銷售、當下撤銷、拆本、移櫃、兌獎、開班、投庫、出庫、盤點、結帳、
+ * 撤銷售出與現金更正的新增(表單發布時建立的 `store.create-<formKey>`);**不含** `bank-deposit`。
  */
 const CLERK: RoleGrant = {
   moduleKeys: [STORE_KEY, KEYS.viewPage, KEYS.createPage],
@@ -36,6 +37,8 @@ const CLERK: RoleGrant = {
     P.withdraw,
     P.stocktake,
     P.checkout,
+    STORE_FORM_PERMISSIONS.createSaleReversal,
+    STORE_FORM_PERMISSIONS.createCashCorrection,
   ],
 };
 

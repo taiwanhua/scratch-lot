@@ -2720,6 +2720,25 @@ export type LotteryStoreCardTicket = {
   version: Scalars['Int']['output'];
 };
 
+export type LotteryStoreCashCorrectionRow = {
+  __typename?: 'LotteryStoreCashCorrectionRow';
+  amount: Scalars['Int']['output'];
+  attributedShiftLabel?: Maybe<Scalars['String']['output']>;
+  direction: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  place: Scalars['String']['output'];
+  placeShiftLabel?: Maybe<Scalars['String']['output']>;
+  reasonLabel: Scalars['String']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  submittedAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type LotteryStoreCashCorrectionsPayload = {
+  __typename?: 'LotteryStoreCashCorrectionsPayload';
+  items: Array<LotteryStoreCashCorrectionRow>;
+};
+
 export type LotteryStoreCashPoint = {
   __typename?: 'LotteryStoreCashPoint';
   books: Array<LotteryStoreBoardBook>;
@@ -2794,6 +2813,25 @@ export type LotteryStoreSalePayload = {
   item: LotteryStoreSale;
 };
 
+export type LotteryStoreSaleReversalRow = {
+  __typename?: 'LotteryStoreSaleReversalRow';
+  id: Scalars['ID']['output'];
+  reasonLabel: Scalars['String']['output'];
+  refund: Scalars['Boolean']['output'];
+  refundAmount: Scalars['Int']['output'];
+  refundShiftLabel?: Maybe<Scalars['String']['output']>;
+  serialNo?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  submittedAt?: Maybe<Scalars['DateTime']['output']>;
+  ticketCount: Scalars['Int']['output'];
+  ticketGroups: Array<Scalars['String']['output']>;
+};
+
+export type LotteryStoreSaleReversalsPayload = {
+  __typename?: 'LotteryStoreSaleReversalsPayload';
+  items: Array<LotteryStoreSaleReversalRow>;
+};
+
 export type LotteryStoreSalesPayload = {
   __typename?: 'LotteryStoreSalesPayload';
   items: Array<LotteryStoreSale>;
@@ -2843,6 +2881,20 @@ export type LotteryStoreShift = {
   soldAmount: Scalars['Int']['output'];
   soldCount: Scalars['Int']['output'];
   unmatchedEntry: Scalars['Boolean']['output'];
+};
+
+export type LotteryStoreShiftOption = {
+  __typename?: 'LotteryStoreShiftOption';
+  id: Scalars['ID']['output'];
+  label: Scalars['String']['output'];
+  mine: Scalars['Boolean']['output'];
+  open: Scalars['Boolean']['output'];
+  openedAt: Scalars['DateTime']['output'];
+};
+
+export type LotteryStoreShiftOptionsPayload = {
+  __typename?: 'LotteryStoreShiftOptionsPayload';
+  items: Array<LotteryStoreShiftOption>;
 };
 
 export type LotteryStoreShiftPayload = {
@@ -4944,10 +4996,13 @@ export type Query = {
   lotteryStockOverview: LotteryStockOverviewPayload;
   lotteryStoreBoard: LotteryStoreBoardPayload;
   lotteryStoreBookCard: LotteryStoreBookCardPayload;
+  lotteryStoreCashCorrections: LotteryStoreCashCorrectionsPayload;
   lotteryStoreOpenShiftForm: LotteryStoreOpenShiftFormPayload;
   lotteryStoreRecentSales: LotteryStoreSalesPayload;
   lotteryStoreSale: LotteryStoreSalePayload;
+  lotteryStoreSaleReversals: LotteryStoreSaleReversalsPayload;
   lotteryStoreScan: LotteryStoreScanPayload;
+  lotteryStoreShiftOptions: LotteryStoreShiftOptionsPayload;
   lotteryStoreUnopenedBooks: LotteryStoreUnopenedBooksPayload;
   lotteryTicketLookup: LotteryTicketLookupPayload;
   lotteryTransferBookTickets: Array<LotteryTransferTicketCell>;
@@ -5368,6 +5423,11 @@ export type QueryLotteryStoreBookCardArgs = {
 };
 
 
+export type QueryLotteryStoreCashCorrectionsArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
 export type QueryLotteryStoreOpenShiftFormArgs = {
   cashPointId: Scalars['ID']['input'];
 };
@@ -5383,8 +5443,18 @@ export type QueryLotteryStoreSaleArgs = {
 };
 
 
+export type QueryLotteryStoreSaleReversalsArgs = {
+  orgId: Scalars['ID']['input'];
+};
+
+
 export type QueryLotteryStoreScanArgs = {
   input: LotteryStoreScanInput;
+};
+
+
+export type QueryLotteryStoreShiftOptionsArgs = {
+  orgId: Scalars['ID']['input'];
 };
 
 
@@ -9818,6 +9888,33 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type LotteryStoreShiftOptionFieldsFragment = { __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean };
+
+export type LotteryStoreSaleReversalRowFieldsFragment = { __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: string, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null };
+
+export type LotteryStoreCashCorrectionRowFieldsFragment = { __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: string, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null };
+
+export type LotteryStoreShiftOptionsQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreShiftOptionsQuery = { __typename?: 'Query', lotteryStoreShiftOptions: { __typename?: 'LotteryStoreShiftOptionsPayload', items: Array<{ __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean }> } };
+
+export type LotteryStoreSaleReversalsQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreSaleReversalsQuery = { __typename?: 'Query', lotteryStoreSaleReversals: { __typename?: 'LotteryStoreSaleReversalsPayload', items: Array<{ __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: string, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null }> } };
+
+export type LotteryStoreCashCorrectionsQueryVariables = Exact<{
+  orgId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryStoreCashCorrectionsQuery = { __typename?: 'Query', lotteryStoreCashCorrections: { __typename?: 'LotteryStoreCashCorrectionsPayload', items: Array<{ __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: string, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null }> } };
+
 export type LotteryStoreScanItemFieldsFragment = { __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
 
 export type LotteryStoreSaleFieldsFragment = { __typename?: 'LotteryStoreSale', ticketId: string, version: number, ticketKey: string, amount: number, soldAt: string, shiftId: string, undone: boolean, undoBlock?: string | null, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string } };
@@ -11750,6 +11847,43 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const LotteryStoreShiftOptionFieldsFragmentDoc = `
+    fragment LotteryStoreShiftOptionFields on LotteryStoreShiftOption {
+  id
+  label
+  openedAt
+  open
+  mine
+}
+    `;
+export const LotteryStoreSaleReversalRowFieldsFragmentDoc = `
+    fragment LotteryStoreSaleReversalRowFields on LotteryStoreSaleReversalRow {
+  id
+  serialNo
+  status
+  ticketGroups
+  ticketCount
+  reasonLabel
+  refund
+  refundAmount
+  refundShiftLabel
+  submittedAt
+}
+    `;
+export const LotteryStoreCashCorrectionRowFieldsFragmentDoc = `
+    fragment LotteryStoreCashCorrectionRowFields on LotteryStoreCashCorrectionRow {
+  id
+  serialNo
+  status
+  direction
+  amount
+  place
+  placeShiftLabel
+  attributedShiftLabel
+  reasonLabel
+  submittedAt
 }
     `;
 export const LotteryStoreScanItemFieldsFragmentDoc = `
@@ -21222,6 +21356,105 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const LotteryStoreShiftOptionsDocument = `
+    query LotteryStoreShiftOptions($orgId: ID!) {
+  lotteryStoreShiftOptions(orgId: $orgId) {
+    items {
+      ...LotteryStoreShiftOptionFields
+    }
+  }
+}
+    ${LotteryStoreShiftOptionFieldsFragmentDoc}`;
+
+export const useLotteryStoreShiftOptionsQuery = <
+      TData = LotteryStoreShiftOptionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreShiftOptionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreShiftOptionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreShiftOptionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreShiftOptionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreShiftOptions', variables],
+    queryFn: fetcher<LotteryStoreShiftOptionsQuery, LotteryStoreShiftOptionsQueryVariables>(client, LotteryStoreShiftOptionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreShiftOptionsQuery.getKey = (variables: LotteryStoreShiftOptionsQueryVariables) => ['LotteryStoreShiftOptions', variables];
+
+
+useLotteryStoreShiftOptionsQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreShiftOptionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreShiftOptionsQuery, LotteryStoreShiftOptionsQueryVariables>(client, LotteryStoreShiftOptionsDocument, variables, headers);
+
+export const LotteryStoreSaleReversalsDocument = `
+    query LotteryStoreSaleReversals($orgId: ID!) {
+  lotteryStoreSaleReversals(orgId: $orgId) {
+    items {
+      ...LotteryStoreSaleReversalRowFields
+    }
+  }
+}
+    ${LotteryStoreSaleReversalRowFieldsFragmentDoc}`;
+
+export const useLotteryStoreSaleReversalsQuery = <
+      TData = LotteryStoreSaleReversalsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreSaleReversalsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreSaleReversalsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreSaleReversalsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreSaleReversalsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreSaleReversals', variables],
+    queryFn: fetcher<LotteryStoreSaleReversalsQuery, LotteryStoreSaleReversalsQueryVariables>(client, LotteryStoreSaleReversalsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreSaleReversalsQuery.getKey = (variables: LotteryStoreSaleReversalsQueryVariables) => ['LotteryStoreSaleReversals', variables];
+
+
+useLotteryStoreSaleReversalsQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreSaleReversalsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreSaleReversalsQuery, LotteryStoreSaleReversalsQueryVariables>(client, LotteryStoreSaleReversalsDocument, variables, headers);
+
+export const LotteryStoreCashCorrectionsDocument = `
+    query LotteryStoreCashCorrections($orgId: ID!) {
+  lotteryStoreCashCorrections(orgId: $orgId) {
+    items {
+      ...LotteryStoreCashCorrectionRowFields
+    }
+  }
+}
+    ${LotteryStoreCashCorrectionRowFieldsFragmentDoc}`;
+
+export const useLotteryStoreCashCorrectionsQuery = <
+      TData = LotteryStoreCashCorrectionsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryStoreCashCorrectionsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryStoreCashCorrectionsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryStoreCashCorrectionsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryStoreCashCorrectionsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryStoreCashCorrections', variables],
+    queryFn: fetcher<LotteryStoreCashCorrectionsQuery, LotteryStoreCashCorrectionsQueryVariables>(client, LotteryStoreCashCorrectionsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryStoreCashCorrectionsQuery.getKey = (variables: LotteryStoreCashCorrectionsQueryVariables) => ['LotteryStoreCashCorrections', variables];
+
+
+useLotteryStoreCashCorrectionsQuery.fetcher = (client: GraphQLClient, variables: LotteryStoreCashCorrectionsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryStoreCashCorrectionsQuery, LotteryStoreCashCorrectionsQueryVariables>(client, LotteryStoreCashCorrectionsDocument, variables, headers);
 
 export const LotteryStoreScanDocument = `
     query LotteryStoreScan($input: LotteryStoreScanInput!) {

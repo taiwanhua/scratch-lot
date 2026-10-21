@@ -9,6 +9,7 @@ import {
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
 import { LotteryRedemptionsRepository } from "./database/lottery-redemptions/lottery-redemptions.repository";
+import { LotteryShiftsRepository } from "./database/lottery-store/lottery-shifts.repository";
 
 /**
  * 專案登記的 lookup 來源(`docs/modules/forms.md`「專案登記的來源」;STRUCT-12 api 的固定入口之一,
@@ -165,5 +166,24 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_redemption,
     },
     repositoryToken: LotteryRedemptionsRepository,
+  },
+  {
+    // 收銀班次(專案規格 6.6;`docs/modules/project/store.md`「撤銷售出申請與現金更正單」):撤銷售出申請的
+    // 退款班次、現金更正單的位置 / 歸屬班次。顯示欄 = 開班時存的 `label`(收銀點 · 負責人 開班時間);
+    // 「本店的班」是送出前檢查(`orgId` 連動篩選不可攜);讀取要 `store.view`,範圍照可見範圍
+    declaration: {
+      key: "lottery_shift",
+      name: "收銀班次",
+      permission: "store.view",
+      fields: {
+        label: { type: "text", label: "班次" },
+        openedAt: { type: "datetime", label: "開班時間" },
+      },
+      filterFields: ["orgId", "cashPointId"],
+      labelField: "label",
+      keywordFields: ["label"],
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_shift,
+    },
+    repositoryToken: LotteryShiftsRepository,
   },
 ];

@@ -110,6 +110,13 @@ export class LotteryShift {
   @Prop({ type: Number, required: true, default: 0 })
   drawerVersion!: number;
 
+  /**
+   * 顯示名稱 `店內櫃台 · 李小華 10/21 13:00`(開班時存;`shiftLabelOf`):lookup 來源 `lottery_shift` 的顯示欄
+   * (撤銷售出申請的退款班次、現金更正單的位置 / 歸屬班次)。之前開的班沒有 = 空字串。
+   */
+  @Prop({ type: String, default: "" })
+  label!: string;
+
   /** 模組 key(plugin 宣告;本表固定 `store`)。 */
   moduleKey!: string;
 

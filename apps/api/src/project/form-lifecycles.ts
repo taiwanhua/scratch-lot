@@ -1,6 +1,10 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
 import { purchaseLifecycle } from "./lottery/purchase/purchase-lifecycle";
 import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
+import {
+  cashCorrectionLifecycle,
+  saleReversalLifecycle,
+} from "./lottery/store/store-forms-lifecycle";
 import { transferLifecycle } from "./lottery/transfer/transfer-lifecycle";
 import { makeupPunchLifecycle } from "./schedule/attendance/makeup-punch-lifecycle";
 
@@ -39,4 +43,8 @@ export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
   transferLifecycle,
   // 補打卡申請:送出檢查對應排班、核准前排班被刪除就擋、完成時寫補打卡(專案規格 14.8)
   makeupPunchLifecycle,
+  // 撤銷售出申請:送出鎖定、完成時撤銷售出並記退貨退款、作廢一律擋下(專案規格 8.5)
+  saleReversalLifecycle,
+  // 現金更正單:完成時寫現金更正流水、作廢一律擋下(專案規格 8.8)
+  cashCorrectionLifecycle,
 ];

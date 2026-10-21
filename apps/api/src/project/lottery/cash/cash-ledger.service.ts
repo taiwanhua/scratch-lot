@@ -44,6 +44,8 @@ export interface CashMovementInput {
   shiftId?: Types.ObjectId | null;
   /** 現金更正的歸屬班次。 */
   attributedShiftId?: Types.ObjectId | null;
+  /** 事後更正:發生班次已送出交班結帳 → 那一班(規格 6.12)。 */
+  postCloseOf?: Types.ObjectId | null;
   refType?: string | null;
   refId?: Types.ObjectId | null;
   refRevision?: number | null;
@@ -118,6 +120,7 @@ export class CashLedgerService {
         cashPointId: input.cashPointId ?? null,
         shiftId: input.shiftId ?? null,
         attributedShiftId: input.attributedShiftId ?? null,
+        postCloseOf: input.postCloseOf ?? null,
         amount: input.amount,
         refType: input.refType ?? null,
         refId: input.refId ?? null,
@@ -173,6 +176,7 @@ export class CashLedgerService {
           cashPointId: original.cashPointId,
           shiftId: original.shiftId,
           attributedShiftId: original.attributedShiftId,
+          postCloseOf: original.postCloseOf ?? null,
           amount: original.amount,
           refType: original.refType,
           refId: original.refId,
@@ -217,12 +221,26 @@ export class CashLedgerService {
     return { amount: baseline.amount + sum, baseline };
   }
 
-  /** 一個班次的抽屜流水淨額(流入抽屜 − 流出抽屜);抽屜應有由店面加上期初與售出。 */
+  /**
+   * 一個班次的抽屜流水淨額(流入抽屜 − 流出抽屜);抽屜應有由店面加上期初與售出。
+   * 不含事後更正(`postCloseOf`,規格 6.12:結帳時的應有不變)。
+   */
   sumShiftMovements(
     operator: OperatorContext,
     shiftId: Types.ObjectId,
   ): Promise<number> {
-    return this.sumPlace(operator, "drawer", { shiftId });
+    return this.sumPlace(operator, "drawer", { shiftId, postCloseOf: null });
+  }
+
+  /**
+   * 一個班次現金流水的**事後更正淨額**(規格 6.12;退貨退款 −、現金更正 ±):那一班的應有(含事後更正)=
+   * 結帳時的應有 + 各來源的事後更正淨額。交班結帳、報表由那些功能加總。
+   */
+  postCloseNet(
+    operator: OperatorContext,
+    shiftId: Types.ObjectId,
+  ): Promise<number> {
+    return this.sumPlace(operator, "drawer", { postCloseOf: shiftId });
   }
 
   private async sumPlace(
