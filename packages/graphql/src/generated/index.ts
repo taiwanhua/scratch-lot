@@ -2739,6 +2739,7 @@ export type Mutation = {
   publishFormVersion: FormVersionPayload;
   publishSchedule: PublishSchedulePayload;
   publishWorkflowVersion: WorkflowVersionPayload;
+  punchMySchedule: MySchedulePunch;
   purgeDemoTenant: PurgeDemoTenantPayload;
   reassignTask: WorkflowTaskPayload;
   receiveLotteryPurchaseBook: ReceiveLotteryPurchaseBookPayload;
@@ -3187,6 +3188,11 @@ export type MutationPublishScheduleArgs = {
 
 export type MutationPublishWorkflowVersionArgs = {
   input: PublishWorkflowVersionInput;
+};
+
+
+export type MutationPunchMyScheduleArgs = {
+  input: PunchMyScheduleInput;
 };
 
 
@@ -3681,6 +3687,21 @@ export type MyPreferencesPayload = {
   settings: Scalars['JSONObject']['output'];
 };
 
+export type MyScheduleChange = {
+  __typename?: 'MyScheduleChange';
+  action: Scalars['String']['output'];
+  afterEndAt?: Maybe<Scalars['DateTime']['output']>;
+  afterStartAt?: Maybe<Scalars['DateTime']['output']>;
+  beforeEndAt?: Maybe<Scalars['DateTime']['output']>;
+  beforeStartAt?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  date: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  reason: Scalars['String']['output'];
+  reasonNote?: Maybe<Scalars['String']['output']>;
+};
+
 export type MyScheduleDayOffsInput = {
   month?: InputMaybe<Scalars['String']['input']>;
 };
@@ -3697,6 +3718,73 @@ export type MyScheduleDayOffsPayload = {
   primaryOrg?: Maybe<ScheduleDayOffOrg>;
   violations: Array<ScheduleDayOffViolation>;
   window?: Maybe<ScheduleDayOffWindow>;
+};
+
+export type MyScheduleEntry = {
+  __typename?: 'MyScheduleEntry';
+  breakMinutes: Scalars['Int']['output'];
+  clockIn?: Maybe<Scalars['DateTime']['output']>;
+  clockOut?: Maybe<Scalars['DateTime']['output']>;
+  date: Scalars['String']['output'];
+  endAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  isLead: Scalars['Boolean']['output'];
+  missing: Array<Scalars['String']['output']>;
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  positionKey?: Maybe<Scalars['String']['output']>;
+  shortName?: Maybe<Scalars['String']['output']>;
+  startAt: Scalars['DateTime']['output'];
+  tasks: Array<MyScheduleTask>;
+};
+
+export type MyScheduleInput = {
+  month?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MyScheduleOrg = {
+  __typename?: 'MyScheduleOrg';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type MySchedulePayload = {
+  __typename?: 'MySchedulePayload';
+  calendarDays: Array<ScheduleRosterCalendarDay>;
+  canPunch: Scalars['Boolean']['output'];
+  changes: Array<MyScheduleChange>;
+  currentOrg: MyScheduleOrg;
+  dayOffDates: Array<Scalars['String']['output']>;
+  entries: Array<MyScheduleEntry>;
+  hasEntryToday: Scalars['Boolean']['output'];
+  incomplete: Array<MyScheduleEntry>;
+  month: Scalars['String']['output'];
+  openUnmatchedClockIn?: Maybe<MySchedulePunch>;
+  punchCards: Array<MySchedulePunchCard>;
+  today: Scalars['String']['output'];
+};
+
+export type MySchedulePunch = {
+  __typename?: 'MySchedulePunch';
+  at: Scalars['DateTime']['output'];
+  duplicate: Scalars['Boolean']['output'];
+  entryId?: Maybe<Scalars['ID']['output']>;
+  id: Scalars['ID']['output'];
+  orgId: Scalars['ID']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type MySchedulePunchCard = {
+  __typename?: 'MySchedulePunchCard';
+  day: Scalars['String']['output'];
+  entry: MyScheduleEntry;
+};
+
+export type MyScheduleTask = {
+  __typename?: 'MyScheduleTask';
+  positionKey: Scalars['String']['output'];
+  role: Scalars['String']['output'];
+  taskKey: Scalars['String']['output'];
 };
 
 export type MyTasksInput = {
@@ -4154,6 +4242,11 @@ export type PublishWorkflowVersionInput = {
   workflowKey: Scalars['ID']['input'];
 };
 
+export type PunchMyScheduleInput = {
+  entryId?: InputMaybe<Scalars['ID']['input']>;
+  type: Scalars['String']['input'];
+};
+
 export type PurgeDemoTenantInput = {
   slug: Scalars['String']['input'];
 };
@@ -4256,6 +4349,7 @@ export type Query = {
   myNotificationUnreadCount: MyNotificationUnreadCountPayload;
   myNotifications: MyNotificationsPayload;
   myPreferences: MyPreferencesPayload;
+  mySchedule: MySchedulePayload;
   myScheduleDayOffs: MyScheduleDayOffsPayload;
   myTasks: WorkflowTasksPayload;
   notificationSettings: NotificationSettingsPayload;
@@ -4636,6 +4730,11 @@ export type QueryMyDelegationsArgs = {
 
 export type QueryMyNotificationsArgs = {
   input: MyNotificationsInput;
+};
+
+
+export type QueryMyScheduleArgs = {
+  input?: InputMaybe<MyScheduleInput>;
 };
 
 
@@ -8687,6 +8786,24 @@ export type LotteryRequisitionStatesQueryVariables = Exact<{
 
 export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequisitionStates: Array<{ __typename?: 'LotteryRequisitionStateItem', requisitionId: string, state: string }> };
 
+export type MyScheduleEntryFieldsFragment = { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> };
+
+export type MySchedulePunchFieldsFragment = { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean };
+
+export type MyScheduleQueryVariables = Exact<{
+  input?: InputMaybe<MyScheduleInput>;
+}>;
+
+
+export type MyScheduleQuery = { __typename?: 'Query', mySchedule: { __typename?: 'MySchedulePayload', month: string, today: string, canPunch: boolean, hasEntryToday: boolean, dayOffDates: Array<string>, currentOrg: { __typename?: 'MyScheduleOrg', id: string, name: string }, entries: Array<{ __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> }>, punchCards: Array<{ __typename?: 'MySchedulePunchCard', day: string, entry: { __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> } }>, openUnmatchedClockIn?: { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean } | null, incomplete: Array<{ __typename?: 'MyScheduleEntry', id: string, orgId: string, orgName: string, date: string, startAt: string, endAt: string, breakMinutes: number, shortName?: string | null, isLead: boolean, positionKey?: string | null, clockIn?: string | null, clockOut?: string | null, missing: Array<string>, tasks: Array<{ __typename?: 'MyScheduleTask', role: string, taskKey: string, positionKey: string }> }>, changes: Array<{ __typename?: 'MyScheduleChange', id: string, date: string, action: string, orgName: string, beforeStartAt?: string | null, beforeEndAt?: string | null, afterStartAt?: string | null, afterEndAt?: string | null, reason: string, reasonNote?: string | null, createdAt: string }>, calendarDays: Array<{ __typename?: 'ScheduleRosterCalendarDay', date: string, type: string, name?: string | null, paletteKey?: string | null }> } };
+
+export type PunchMyScheduleMutationVariables = Exact<{
+  input: PunchMyScheduleInput;
+}>;
+
+
+export type PunchMyScheduleMutation = { __typename?: 'Mutation', punchMySchedule: { __typename?: 'MySchedulePunch', id: string, type: string, at: string, entryId?: string | null, orgId: string, duplicate: boolean } };
+
 export type ScheduleAutoRunSummaryFieldsFragment = { __typename?: 'ScheduleAutoRunSummary', id: string, at: string, byName?: string | null, from: string, to: string, filledCount: number, unfilledCount: number, addedDemandCount: number, addedDemandDays: number };
 
 export type ScheduleApplyTemplatesFieldsFragment = { __typename?: 'ApplyScheduleTemplatesPayload', createdCount: number, skippedSlots: number, filledDays: number, skippedDays: number };
@@ -10289,6 +10406,38 @@ export const LotteryRequisitionCandidateFieldsFragmentDoc = `
   sold30
   plannedBooks
   givenBooks
+}
+    `;
+export const MyScheduleEntryFieldsFragmentDoc = `
+    fragment MyScheduleEntryFields on MyScheduleEntry {
+  id
+  orgId
+  orgName
+  date
+  startAt
+  endAt
+  breakMinutes
+  shortName
+  isLead
+  positionKey
+  tasks {
+    role
+    taskKey
+    positionKey
+  }
+  clockIn
+  clockOut
+  missing
+}
+    `;
+export const MySchedulePunchFieldsFragmentDoc = `
+    fragment MySchedulePunchFields on MySchedulePunch {
+  id
+  type
+  at
+  entryId
+  orgId
+  duplicate
 }
     `;
 export const ScheduleAutoRunSummaryFieldsFragmentDoc = `
@@ -19123,6 +19272,108 @@ useLotteryRequisitionStatesQuery.getKey = (variables: LotteryRequisitionStatesQu
 
 
 useLotteryRequisitionStatesQuery.fetcher = (client: GraphQLClient, variables: LotteryRequisitionStatesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryRequisitionStatesQuery, LotteryRequisitionStatesQueryVariables>(client, LotteryRequisitionStatesDocument, variables, headers);
+
+export const MyScheduleDocument = `
+    query MySchedule($input: MyScheduleInput) {
+  mySchedule(input: $input) {
+    month
+    today
+    canPunch
+    currentOrg {
+      id
+      name
+    }
+    entries {
+      ...MyScheduleEntryFields
+    }
+    punchCards {
+      day
+      entry {
+        ...MyScheduleEntryFields
+      }
+    }
+    hasEntryToday
+    openUnmatchedClockIn {
+      ...MySchedulePunchFields
+    }
+    incomplete {
+      ...MyScheduleEntryFields
+    }
+    changes {
+      id
+      date
+      action
+      orgName
+      beforeStartAt
+      beforeEndAt
+      afterStartAt
+      afterEndAt
+      reason
+      reasonNote
+      createdAt
+    }
+    calendarDays {
+      date
+      type
+      name
+      paletteKey
+    }
+    dayOffDates
+  }
+}
+    ${MyScheduleEntryFieldsFragmentDoc}
+${MySchedulePunchFieldsFragmentDoc}`;
+
+export const useMyScheduleQuery = <
+      TData = MyScheduleQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: MyScheduleQueryVariables,
+      options?: Omit<UseQueryOptions<MyScheduleQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<MyScheduleQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<MyScheduleQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['MySchedule'] : ['MySchedule', variables],
+    queryFn: fetcher<MyScheduleQuery, MyScheduleQueryVariables>(client, MyScheduleDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useMyScheduleQuery.getKey = (variables?: MyScheduleQueryVariables) => variables === undefined ? ['MySchedule'] : ['MySchedule', variables];
+
+
+useMyScheduleQuery.fetcher = (client: GraphQLClient, variables?: MyScheduleQueryVariables, headers?: RequestInit['headers']) => fetcher<MyScheduleQuery, MyScheduleQueryVariables>(client, MyScheduleDocument, variables, headers);
+
+export const PunchMyScheduleDocument = `
+    mutation PunchMySchedule($input: PunchMyScheduleInput!) {
+  punchMySchedule(input: $input) {
+    ...MySchedulePunchFields
+  }
+}
+    ${MySchedulePunchFieldsFragmentDoc}`;
+
+export const usePunchMyScheduleMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<PunchMyScheduleMutation, TError, PunchMyScheduleMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<PunchMyScheduleMutation, TError, PunchMyScheduleMutationVariables, TContext>(
+      {
+    mutationKey: ['PunchMySchedule'],
+    mutationFn: (variables?: PunchMyScheduleMutationVariables) => fetcher<PunchMyScheduleMutation, PunchMyScheduleMutationVariables>(client, PunchMyScheduleDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+usePunchMyScheduleMutation.fetcher = (client: GraphQLClient, variables: PunchMyScheduleMutationVariables, headers?: RequestInit['headers']) => fetcher<PunchMyScheduleMutation, PunchMyScheduleMutationVariables>(client, PunchMyScheduleDocument, variables, headers);
 
 export const ScheduleAutoRunStatusDocument = `
     query ScheduleAutoRunStatus($input: ScheduleRosterInput!) {
