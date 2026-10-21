@@ -151,6 +151,8 @@ export const NotificationSettingsTable = ({
       size="small"
       minWidth={960}
       aria-label={t("tableLabel")}
+      // 頁面不釘高(STYLE-08):表格依內容長高,交給 <main> 捲;預設的 height: 100% 會解析成卡片高度
+      containerSx={{ height: "auto" }}
     />
   );
 };

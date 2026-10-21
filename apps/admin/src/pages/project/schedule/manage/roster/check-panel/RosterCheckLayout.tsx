@@ -7,6 +7,8 @@ import { Card } from "@repo/ui/card";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { Stack } from "@repo/ui/stack";
 
+import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
+
 import { CheckPanel } from "./CheckPanel";
 import { useRosterCheck } from "./roster-check-context";
 
@@ -15,6 +17,12 @@ const PANEL_WIDTH = { sm: 288, lg: 360 } as const;
 /** 手機底部面板:拉高時的高度、收合時只剩把手與標題列的高度。 */
 const SHEET_EXPANDED_HEIGHT = "60vh";
 const SHEET_COLLAPSED_HEIGHT = 96;
+
+/**
+ * 內容欄(檢視的內層捲動區塊量「下面還有多少內容」的邊界;`useFitMainHeight`):只含內容、不含右側面板,
+ * 高度跟著內容長 —— 含了比內容高的面板,捲動區塊的上限會被面板撐著來回跳。
+ */
+export const ROSTER_CONTENT_SELECTOR = "[data-roster-content]";
 
 /**
  * 排班表內容與檢核面板的排版(規格 14.5:persistent、不遮擋):
@@ -28,13 +36,21 @@ export const RosterCheckLayout = ({ children }: { children: ReactNode }) => {
   const [isSheetCollapsed, setSheetCollapsed] = useState(false);
   const showSheet = isOpen && isMobile;
   const showSide = isOpen && !isMobile;
+  // 右側面板最高到 <main> 底(不比內容區高,開著面板也只有一層垂直捲動);量不到時退回原本的上限
+  const [sideHeight, setRowTarget] = useFitMainHeight({ minHeight: 0 });
   const sheetHeight = isSheetCollapsed
     ? `${String(SHEET_COLLAPSED_HEIGHT)}px`
     : SHEET_EXPANDED_HEIGHT;
 
   return (
-    <Stack direction="row" spacing={2} sx={{ alignItems: "flex-start" }}>
+    <Stack
+      ref={setRowTarget}
+      direction="row"
+      spacing={2}
+      sx={{ alignItems: "flex-start" }}
+    >
       <Box
+        data-roster-content=""
         sx={{
           flex: 1,
           minWidth: 0,
@@ -53,7 +69,7 @@ export const RosterCheckLayout = ({ children }: { children: ReactNode }) => {
             width: PANEL_WIDTH,
             position: "sticky",
             top: 16,
-            maxHeight: "calc(100vh - 200px)",
+            maxHeight: sideHeight ?? "calc(100vh - 200px)",
             display: "flex",
             flexDirection: "column",
             p: 2,

@@ -11,12 +11,13 @@ import { Stack } from "@repo/ui/stack";
 
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { moreToneOf, weekDatesOf } from "@/lib/project/schedule-roster-views";
 
+import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRoster } from "../roster-context";
 import { WeekMobileList } from "./WeekMobileList";
 import { WeekMoreList } from "./WeekMoreList";
-import { useFitMainHeight } from "./useFitMainHeight";
 import { useRosterDate } from "./useRosterDate";
 import {
   type RosterTimelineGroup,
@@ -56,7 +57,9 @@ export const WeekView = () => {
   } | null>(null);
   const pointer = useRef({ top: 0, left: 0 });
   // 時間軸自己捲(sticky 表頭、橫向捲軸看得到),高度 = <main> 扣掉工具列與圖例後剩下的
-  const [fitHeight, setFitTarget] = useFitMainHeight();
+  const [fitHeight, setFitTarget] = useFitMainHeight({
+    boundarySelector: ROSTER_CONTENT_SELECTOR,
+  });
 
   // 檢核 [查看]:目標日期不在這一週 → 切到那一週(格子畫出來後頁殼捲過去)
   const targetDate = scrollTarget?.date ?? null;

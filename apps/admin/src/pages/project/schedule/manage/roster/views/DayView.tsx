@@ -8,10 +8,11 @@ import { Stack } from "@repo/ui/stack";
 
 import { tagPaletteBackgroundVarsSx } from "@/components/project/TagPaletteChip/tag-palette-background";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 
+import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRoster } from "../roster-context";
 import { DayMobileCards } from "./DayMobileCards";
-import { useFitMainHeight } from "./useFitMainHeight";
 import { useRosterDate } from "./useRosterDate";
 import { useTimelineGroups } from "./useTimelineGroups";
 
@@ -27,7 +28,9 @@ export const DayView = () => {
   const { date, today, goTo } = useRosterDate(data.month);
   const timeline = useTimelineGroups([date], "day");
   // 時間軸依內容長高,上限 = <main> 扣掉工具列與圖例後剩下的(超過時自己捲)
-  const [fitHeight, setFitTarget] = useFitMainHeight();
+  const [fitHeight, setFitTarget] = useFitMainHeight({
+    boundarySelector: ROSTER_CONTENT_SELECTOR,
+  });
 
   const targetDate = scrollTarget?.date ?? null;
   useEffect(() => {

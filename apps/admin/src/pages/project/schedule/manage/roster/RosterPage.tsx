@@ -220,8 +220,7 @@ export const RosterPage = () => {
   return (
     // 檢核面板與 [發布](check-panel/、publish/)包住整頁:工具列的按鈕與內容旁的面板共用同一份檢核
     <RosterCheckProvider data={data} month={month} scrollToCell={scrollToCell}>
-      {/* 根節點:檢視內層捲動區塊量「下面還有多少內容」的邊界(useFitMainHeight) */}
-      <Stack spacing={2} data-roster-root="">
+      <Stack spacing={2}>
         <RosterToolbar
           data={data}
           month={month}

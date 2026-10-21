@@ -6,7 +6,6 @@ import {
   type ResetNotificationSettingMutation,
   useResetNotificationSettingMutation,
 } from "@repo/graphql";
-import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
 import { Pagination } from "@repo/ui/pagination";
 import { Stack } from "@repo/ui/stack";
@@ -125,21 +124,19 @@ export const NotificationSettingsPage = () => {
           data.setKeyword(event.target.value);
         }}
       />
-      <Card sx={{ flexShrink: 0, display: "flex", flexDirection: "column" }}>
-        <Box>
-          <NotificationSettingsTable
-            rows={data.rows}
-            isLoading={data.isLoading}
-            canEdit={data.canEdit === true}
-            onEdit={(row) => {
-              edit.open(row.type);
-            }}
-            onReset={(row) => {
-              setResetError(null);
-              setResetTarget(row);
-            }}
-          />
-        </Box>
+      <Card sx={{ flexShrink: 0 }}>
+        <NotificationSettingsTable
+          rows={data.rows}
+          isLoading={data.isLoading}
+          canEdit={data.canEdit === true}
+          onEdit={(row) => {
+            edit.open(row.type);
+          }}
+          onReset={(row) => {
+            setResetError(null);
+            setResetTarget(row);
+          }}
+        />
         <Stack
           direction="row"
           spacing={1}

@@ -17,6 +17,7 @@ import { Typography } from "@repo/ui/typography";
 
 import { TagPaletteChip } from "@/components/project/TagPaletteChip/TagPaletteChip";
 import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/ScheduleLegend";
+import { useFitMainHeight } from "@/hooks/base/useFitMainHeight";
 import { useSectionCollapse } from "@/hooks/base/useSectionCollapse";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
 import {
@@ -31,6 +32,7 @@ import {
 } from "@/lib/project/schedule-roster";
 import { isTagPaletteKey } from "@/lib/project/tag-palettes";
 
+import { ROSTER_CONTENT_SELECTOR } from "../check-panel/RosterCheckLayout";
 import { useRosterCheckPanelOpen } from "../check-panel/roster-check-context";
 import {
   type RosterDemand,
@@ -40,7 +42,6 @@ import {
   useRoster,
 } from "../roster-context";
 import { RosterPersonCell } from "./RosterPersonCell";
-import { useFitMainHeight } from "./useFitMainHeight";
 import { useRosterGridColumns } from "./useRosterGridColumns";
 
 const PAGE_ID = "schedule.roster";
@@ -71,7 +72,9 @@ export const RosterGridView = () => {
     useRoster();
   const isMobile = useBreakpointDown("sm");
   // 表格自己捲(sticky 表頭、橫向捲軸看得到),高度上限 = <main> 扣掉工具列與圖例後剩下的
-  const [fitHeight, setFitTarget] = useFitMainHeight();
+  const [fitHeight, setFitTarget] = useFitMainHeight({
+    boundarySelector: ROSTER_CONTENT_SELECTOR,
+  });
   const sections = useSectionCollapse(PAGE_ID);
   const positions = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.position,
