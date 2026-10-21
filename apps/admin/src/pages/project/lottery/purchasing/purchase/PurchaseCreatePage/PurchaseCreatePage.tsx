@@ -259,6 +259,7 @@ export const PurchaseCreatePage = () => {
           <PurchaseHeaderFields
             value={{ ...header, accountId }}
             options={data}
+            error={draft.error}
             onChange={(patch) => {
               setEdited((current) => ({ ...current, ...patch }));
             }}
@@ -329,6 +330,7 @@ export const PurchaseCreatePage = () => {
                 <PurchaseLines
                   groups={groups}
                   isCompact={isNarrow}
+                  error={draft.error}
                   onRate={(rowId, rate) => {
                     setBooks((current) => setBookRate(current, rowId, rate));
                   }}

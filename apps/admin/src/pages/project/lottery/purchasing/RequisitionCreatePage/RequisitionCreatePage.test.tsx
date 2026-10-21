@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { requisitionFormWorld } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { restoreViewportAfterEach, setMobileViewport } from "@/test/viewport";
 
 import { renderPurchasingPage } from "../purchasing-test-support";
@@ -112,5 +113,46 @@ describe("叫貨單新增頁", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table", { name: "販售中的遊戲" })).toBeNull();
+  });
+
+  it("送出失敗:api 回的欄位錯誤標在對應欄位(期望到貨日),明細的顯示在遊戲清單上方", async () => {
+    const user = userEvent.setup();
+    renderPurchasingPage({
+      path: CREATE,
+      forms: requisitionFormWorld({
+        failures: {
+          CreateAndSubmitFormSubmission: {
+            code: "VALIDATION_FAILED",
+            extensions: {
+              fields: ["expected_date", "lines"],
+              fieldErrors: [
+                {
+                  fieldKey: "expected_date",
+                  code: "OUT_OF_RANGE",
+                  message: "期望到貨日不能早於今天",
+                },
+                {
+                  fieldKey: "lines",
+                  code: "MAX_ROWS",
+                  message: "明細最多 200 列",
+                },
+              ],
+            },
+          },
+        },
+      }),
+    });
+    const table = await screen.findByRole("table", { name: "販售中的遊戲" });
+    await within(table).findByText(/5201 金好運/);
+    const [first] = within(table).getAllByRole("spinbutton", {
+      name: "叫幾本",
+    });
+    await user.clear(first);
+    await user.type(first, "1");
+    await user.click(screen.getByRole("button", { name: "送出" }));
+    expect(await screen.findByText("期望到貨日不能早於今天")).toHaveClass(
+      "Mui-error",
+    );
+    expect(screen.getByText("明細最多 200 列")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,8 @@
 import { authWorld } from "@/test/msw/auth-handlers";
-import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
+import {
+  type FormRuntimeWorldOptions,
+  formRuntimeWorld,
+} from "@/test/msw/form-runtime-handlers";
 import {
   type PrintButtonWorldOptions,
   printButtonWorld,
@@ -34,6 +37,8 @@ export interface RenderPurchaseOptions {
   printing?: PrintButtonWorldOptions & { permissions?: string[] };
   /** 進貨單假 api 的選項(例:點收區塊的起始資料) */
   purchase?: PurchaseWorldOptions;
+  /** 表單執行端假 api 的覆寫(例:送出失敗的 `failures`) */
+  forms?: Partial<FormRuntimeWorldOptions>;
 }
 
 /**
@@ -46,9 +51,10 @@ export const renderPurchasePage = ({
   currentOrg = "storeA",
   printing,
   purchase,
+  forms,
 }: RenderPurchaseOptions) => {
   const purchaseFake = purchaseWorld(purchase);
-  const formsFake = formRuntimeWorld(purchaseFormWorld());
+  const formsFake = formRuntimeWorld(purchaseFormWorld(forms));
   const accountsFake = accountsWorld();
   const org = masterDataOrgs[currentOrg];
   const printingFake =

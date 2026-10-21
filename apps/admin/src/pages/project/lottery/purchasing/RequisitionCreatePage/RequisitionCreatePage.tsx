@@ -32,10 +32,13 @@ import { useTenantTimezone } from "@/hooks/base/useTenantTimezone";
 import { localDayInstantOf } from "@/lib/base/form-engine/local-day";
 
 import {
+  REQUISITION_FIELD_KEYS,
   REQUISITION_FORM_KEY,
   REQUISITION_MODULE_KEY,
   formatCount,
 } from "../purchasing-keys";
+import { LineErrorAlerts } from "../shared/LineErrorAlerts";
+import { fieldErrorProps } from "../shared/field-errors";
 import { CandidateCards } from "./CandidateCards";
 import { CandidateTable } from "./CandidateTable";
 import {
@@ -237,6 +240,7 @@ export const RequisitionCreatePage = () => {
               value={branchId === "" ? [] : [branchId]}
               required
               fullWidth
+              {...fieldErrorProps(draft.error, REQUISITION_FIELD_KEYS.branch)}
               onChange={(ids) => {
                 setPickedBranch(ids[0] ?? "");
                 setCounts({});
@@ -247,11 +251,19 @@ export const RequisitionCreatePage = () => {
               value={expectedDay}
               fullWidth
               onChange={setExpectedDay}
+              {...fieldErrorProps(
+                draft.error,
+                REQUISITION_FIELD_KEYS.expectedDate,
+              )}
             />
           </Box>
           <Card sx={{ p: { xs: 2, sm: 2.5 } }}>
             <Stack spacing={2}>
               {filtersRow}
+              <LineErrorAlerts
+                error={draft.error}
+                fieldKey={REQUISITION_FIELD_KEYS.lines}
+              />
               {list}
             </Stack>
           </Card>

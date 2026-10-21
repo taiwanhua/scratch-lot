@@ -30,6 +30,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import { useScanner } from "@/hooks/project/useScanner/useScanner";
 import type { FormError } from "@/lib/base/form-engine/form-errors";
 
+import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
 import {
   TRANSFER_FIELD_KEYS,
   TRANSFER_FORM_KEY,
@@ -233,6 +234,7 @@ export const TransferCreatePage = () => {
             }}
             onRequisition={setRequisitionNo}
             onNote={setNote}
+            error={draft.error}
           />
           <Box
             sx={{
@@ -278,6 +280,10 @@ export const TransferCreatePage = () => {
                 </Stack>
                 {notice !== null && <Alert severity="warning">{notice}</Alert>}
                 <AllocationWarnings items={allocationItems} />
+                <LineErrorAlerts
+                  error={draft.error}
+                  fieldKey={TRANSFER_FIELD_KEYS.lines}
+                />
                 <TransferLines
                   lines={lines}
                   isCompact={isNarrow}

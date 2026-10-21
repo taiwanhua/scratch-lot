@@ -8,6 +8,11 @@ import { TextField } from "@repo/ui/text-field";
 
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 
+import {
+  type FieldErrorSource,
+  fieldErrorProps,
+} from "../../shared/field-errors";
+import { PURCHASE_FIELD_KEYS as K } from "../purchase-keys";
 import type { PurchaseOptions } from "./purchase-form";
 
 const NONE = "none";
@@ -30,18 +35,22 @@ export interface PurchaseHeaderFieldsProps {
   onChange: (patch: Partial<PurchaseHeaderDraft>) => void;
   /** 換了進貨分店(叫貨單、扣款帳戶、已刷的本要清掉) */
   onBranchChange: (branchId: string) => void;
+  /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;欄位錯誤標在對應欄位) */
+  error: FieldErrorSource;
 }
 
 /**
  * 進貨單新增頁的單頭(規格 8.2「單頭」;Figma PU-05):進貨分店(可見分店)、叫貨單(這家店待購買的)、
  * 批購甲類(營業中)、本人批購、批購受託人(本人批購 = 否時選這位甲類的受託人)、批購日期(預設今天)、
  * 扣款帳戶(使用中、使用組織包含進貨分店;只有一個時自動帶入)、備註。兌獎欄由兌獎的功能加。
+ * 必填照受管表單(進貨分店、批購甲類、批購日期、扣款帳戶);api 回的欄位錯誤標在對應欄位。
  */
 export const PurchaseHeaderFields = ({
   value,
   options,
   onChange,
   onBranchChange,
+  error,
 }: PurchaseHeaderFieldsProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
   const noBranch = value.branchId === "";
@@ -50,13 +59,20 @@ export const PurchaseHeaderFields = ({
     current: string | null,
     items: readonly { id: string; label: string }[],
     onPick: (next: string | null) => void,
-    extra: { disabled?: boolean; noneLabel: string },
+    extra: {
+      disabled?: boolean;
+      noneLabel: string;
+      fieldKey: string;
+      required?: boolean;
+    },
   ) => (
     <SelectField<string>
       label={label}
       size="small"
       value={current ?? NONE}
       disabled={extra.disabled === true || noBranch}
+      required={extra.required === true}
+      {...fieldErrorProps(error, extra.fieldKey)}
       options={[
         { value: NONE, label: extra.noneLabel },
         ...items.map((item) => ({ value: item.id, label: item.label })),
@@ -94,6 +110,7 @@ export const PurchaseHeaderFields = ({
           value={noBranch ? [] : [value.branchId]}
           required
           fullWidth
+          {...fieldErrorProps(error, K.branch)}
           onChange={(ids) => {
             onBranchChange(ids[0] ?? "");
           }}
@@ -112,7 +129,7 @@ export const PurchaseHeaderFields = ({
                   ?.serialNo ?? null,
             });
           },
-          { noneLabel: t("fields.noRequisition") },
+          { noneLabel: t("fields.noRequisition"), fieldKey: K.requisition },
         )}
         {select(
           t("fields.dealer"),
@@ -121,7 +138,7 @@ export const PurchaseHeaderFields = ({
           (next) => {
             onChange({ dealerId: next, trusteeId: null });
           },
-          { noneLabel: t("fields.pick") },
+          { noneLabel: t("fields.pick"), fieldKey: K.dealer, required: true },
         )}
         <SelectField<string>
           label={t("fields.selfPurchase")}
@@ -135,6 +152,7 @@ export const PurchaseHeaderFields = ({
             onChange({ selfPurchase: next === "yes" });
           }}
           fullWidth
+          {...fieldErrorProps(error, K.selfPurchase)}
         />
         {select(
           t("fields.trustee"),
@@ -148,12 +166,15 @@ export const PurchaseHeaderFields = ({
             noneLabel: value.selfPurchase
               ? t("fields.trusteeNotNeeded")
               : t("fields.pick"),
+            fieldKey: K.trustee,
           },
         )}
         <DatePicker
           label={t("fields.purchaseDate")}
           value={value.purchaseDay}
+          required
           fullWidth
+          {...fieldErrorProps(error, K.purchaseDate)}
           onChange={(next) => {
             onChange({ purchaseDay: next });
           }}
@@ -165,7 +186,7 @@ export const PurchaseHeaderFields = ({
           (next) => {
             onChange({ accountId: next });
           },
-          { noneLabel: t("fields.pick") },
+          { noneLabel: t("fields.pick"), fieldKey: K.account, required: true },
         )}
         <TextField
           label={t("fields.note")}
@@ -175,6 +196,7 @@ export const PurchaseHeaderFields = ({
             onChange({ note: event.target.value });
           }}
           fullWidth
+          {...fieldErrorProps(error, K.note)}
         />
       </Box>
     </Card>

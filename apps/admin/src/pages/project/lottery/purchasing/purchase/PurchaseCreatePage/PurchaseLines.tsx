@@ -8,7 +8,9 @@ import { Table, type TableColumn } from "@repo/ui/table";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { formatMoney } from "../purchase-keys";
+import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
+import { type FieldErrorSource } from "../../shared/field-errors";
+import { PURCHASE_FIELD_KEYS, formatMoney } from "../purchase-keys";
 import { type BookGroup, type BookRow, parseRate } from "./purchase-form";
 
 export interface PurchaseLinesProps {
@@ -18,6 +20,8 @@ export interface PurchaseLinesProps {
   onRate: (rowId: string, rate: number) => void;
   onGroupRate: (gameId: string, rate: number) => void;
   onRemove: (rowId: string) => void;
+  /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;明細的欄位錯誤顯示在這一區) */
+  error: FieldErrorSource;
 }
 
 const lastTicketText = (value: number): string =>
@@ -64,13 +68,20 @@ export const PurchaseLines = ({
   onRate,
   onGroupRate,
   onRemove,
+  error,
 }: PurchaseLinesProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
+  const errors = (
+    <LineErrorAlerts error={error} fieldKey={PURCHASE_FIELD_KEYS.lines} />
+  );
   if (groups.length === 0) {
     return (
-      <Typography variant="body2" color="text.secondary">
-        {t("empty")}
-      </Typography>
+      <>
+        {errors}
+        <Typography variant="body2" color="text.secondary">
+          {t("empty")}
+        </Typography>
+      </>
     );
   }
   const columns: TableColumn<BookRow>[] = [
@@ -139,6 +150,7 @@ export const PurchaseLines = ({
 
   return (
     <Stack spacing={2}>
+      {errors}
       {groups.map((group) => {
         const title = t("groupTitle", {
           code: group.game.gameCode,

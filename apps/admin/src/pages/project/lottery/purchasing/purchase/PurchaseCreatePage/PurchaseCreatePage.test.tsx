@@ -121,4 +121,54 @@ describe("進貨單新增頁", () => {
       ],
     });
   });
+  it("必填照受管表單;送出失敗時 api 回的欄位錯誤標在對應欄位、明細的顯示在明細區", async () => {
+    const user = userEvent.setup();
+    renderPurchasePage({
+      path: `${CREATE}?branch=org-store-a`,
+      forms: {
+        failures: {
+          CreateAndSubmitFormSubmission: {
+            code: "VALIDATION_FAILED",
+            extensions: {
+              fields: ["dealer", "lines"],
+              fieldErrors: [
+                {
+                  fieldKey: "dealer",
+                  code: "REQUIRED",
+                  message: "請選擇批購甲類",
+                },
+                {
+                  fieldKey: "lines",
+                  rowId: "r1",
+                  columnKey: "rate",
+                  code: "OUT_OF_RANGE",
+                  message: "批購金額率要在 0–100 之間",
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const dealer = await screen.findByRole("combobox", { name: /批購甲類/ });
+    // 必填(受管表單:進貨分店、批購甲類、批購日期、扣款帳戶)
+    expect(dealer).toHaveAttribute("aria-required", "true");
+    expect(screen.getByRole("combobox", { name: /扣款帳戶/ })).toHaveAttribute(
+      "aria-required",
+      "true",
+    );
+    expect(
+      screen.getByRole("combobox", { name: /本人批購/ }),
+    ).not.toHaveAttribute("aria-required");
+    const scan = screen.getByRole("textbox", { name: "刷條碼加入" });
+    await user.type(scan, "5164-1-056527-100-0-6{Enter}");
+    await screen.findByRole("table", { name: /5164 發大財/ });
+    await user.click(screen.getByRole("button", { name: "送出" }));
+    // 批購甲類欄:紅框(Mui-error)+ 訊息
+    const message = await screen.findByText("請選擇批購甲類");
+    expect(message).toHaveClass("Mui-error");
+    expect(dealer.parentElement).toHaveClass("Mui-error");
+    // 明細的錯誤顯示在明細區
+    expect(screen.getByText("批購金額率要在 0–100 之間")).toBeInTheDocument();
+  });
 });
