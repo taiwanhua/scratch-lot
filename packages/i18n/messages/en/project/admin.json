@@ -2557,7 +2557,9 @@
       "openShift": "Open shift",
       "deposit": "Deposit",
       "withdraw": "Withdraw",
-      "switchTo": "Switch to this cash point"
+      "switchTo": "Switch to this cash point",
+      "recentSales": "Recent sales",
+      "split": "Open book"
     },
     "card": {
       "title": "{code} {name}",
@@ -2661,6 +2663,203 @@
       "AMOUNT_EXCEEDS_DRAWER": "The deposit cannot exceed the drawer's expected cash",
       "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
       "UNEXPECTED": "Something went wrong. Please try again later."
+    },
+    "sale": {
+      "cancel": "Cancel",
+      "soldTitle": "Sold",
+      "soldMessage": "{key} {amount} · {cashPoint}",
+      "undo": "Undo"
+    },
+    "scan": {
+      "bookTicket": "Book {bookNo} · ticket {ticketNo}",
+      "place": {
+        "counter": "Counter · {cashPoint}",
+        "counterOwned": "Counter · {cashPoint} ({owner}'s shift)",
+        "stock": "Stock",
+        "stockUnopened": "Stock (unopened)",
+        "inTransit": "In transit",
+        "other": "Other"
+      },
+      "statuses": {
+        "unsold": "Unsold",
+        "sold": "Sold",
+        "skipped": "Skipped",
+        "scrapped": "Scrapped",
+        "investigating": "Under investigation",
+        "lost": "Lost"
+      },
+      "pickTitle": "Pick a game",
+      "pickHint": "Book {bookNo} matches {count} games in this store:",
+      "pickOption": "{code} {name} · {price}",
+      "continue": "Continue",
+      "otherMineTitle": "Ticket on {cashPoint} · your shift",
+      "otherMineHint": "The shift on {cashPoint} is also yours: it counts to that shift without moving.",
+      "confirmSell": "Confirm sale",
+      "moveTitle": "Ticket on another cash point",
+      "moveHint": "This ticket is on {from}. Sell it at {to}? A move and a sale are recorded; the money counts to the local cash point ({to}).",
+      "moveAndSell": "Move and sell",
+      "unopenedTitle": "This book is not opened",
+      "unopenedHint": "Open the book and sell this ticket? The book goes to the local cash point ({cashPoint}).",
+      "unopenedSkipHint": " This book has {count} tickets to mark as skipped before selling.",
+      "splitAndSell": "Open and sell",
+      "blockedTitle": "Cannot sell",
+      "blocked": {
+        "notThisStore": "This ticket does not belong to this store.",
+        "sold": "This ticket was sold at {time}.",
+        "skipped": "This ticket is skipped and cannot be sold.",
+        "scrapped": "This ticket is scrapped and cannot be sold.",
+        "locked": "This ticket is locked by a form (transfer or sale reversal) and cannot be sold.",
+        "inTransit": "This ticket is in transit and cannot be sold.",
+        "inStock": "This ticket is in stock. Move it to a counter first.",
+        "moveForbidden": "This ticket is on {cashPoint} and you cannot move tickets. Sell it at {cashPoint}."
+      },
+      "notFound": "Ticket not found, or it does not belong to this store.",
+      "recoverNoPermission": "This ticket is under investigation. Someone with the recover permission has to handle it.",
+      "gotIt": "OK",
+      "infoTitle": "Ticket info",
+      "infoHint": "This device has no local cash point, the local cash point has no open shift, or you cannot sell: info only."
+    },
+    "quickSale": {
+      "title": "Quick sale",
+      "cashPoint": "Cash point",
+      "cashPointValue": "{name} (local, open)",
+      "amount": "Amount",
+      "cancel": "Cancel (Esc)",
+      "confirm": "Confirm sale (Enter)",
+      "local": "Local cash point"
+    },
+    "undo": {
+      "title": "Undo this sale?",
+      "blockedTitle": "Cannot undo now",
+      "line": "{key} · {amount} · sold at {time}",
+      "hint": "{amount} will be taken off the expected cash of {cashPoint}.",
+      "blocks": {
+        "notMine": "You did not sell this ticket.",
+        "expired": "More than 30 minutes have passed.",
+        "shiftClosed": "That shift has been checked out.",
+        "changed": "The ticket has changed since the sale.",
+        "alreadyUndone": "This sale has been undone."
+      },
+      "sendRequestHint": " Send a sale reversal request instead.",
+      "submit": "Undo",
+      "success": "Sale undone"
+    },
+    "manualSale": {
+      "title": "Mark as sold",
+      "book": "{code} {name} · book {bookNo}",
+      "cashPoint": "Cash point",
+      "cashPointValue": "{name} ({owner}'s shift since {time})",
+      "tickets": "Tickets",
+      "ticketsValue": "{ranges} ({count})",
+      "unitPrice": "Unit price",
+      "total": "Total",
+      "reason": "Reason (required)",
+      "hint": "Counts to the shift on {name}; expected cash +{amount}.",
+      "submit": "Confirm sale",
+      "success": "{count} tickets marked as sold"
+    },
+    "recentSales": {
+      "title": "Recent sales · {cashPoint}",
+      "hint": "Tickets you sold on this shift in the last 30 minutes; only unchanged tickets can be undone.",
+      "empty": "No sales of yours on this shift in the last 30 minutes.",
+      "undone": "Undone",
+      "expired": "Over 30 minutes",
+      "footer": "Over 30 minutes or the shift is checked out → send a sale reversal request.",
+      "close": "Close"
+    },
+    "expand": {
+      "title": "{code} {name} · book {bookNo}",
+      "meta": "{cashPoint} · {price} · {remaining} / {total} left",
+      "bookDetail": "Book details",
+      "collapse": "Collapse",
+      "close": "Close",
+      "selected": "{count} selected {ranges}",
+      "clear": "Clear selection",
+      "markSold": "Mark as sold",
+      "move": "Move",
+      "recall": "Recall",
+      "moveAndSell": "Move and sell",
+      "moveAndSellSuccess": "Moved and sold",
+      "undoSale": "Undo sale",
+      "recover": "Recover",
+      "atCashPoint": "On {name}",
+      "inStock": "In stock"
+    },
+    "move": {
+      "title": "Move",
+      "line": "Book {bookNo} · tickets {ranges} · {cashPoint} · {count} left",
+      "to": "Move to",
+      "all": "All {count} tickets",
+      "partial": "Selected tickets only ({count})",
+      "submit": "Move",
+      "success": "{count} tickets moved"
+    },
+    "recall": {
+      "title": "Recall to stock",
+      "all": "Whole book ({count} tickets)",
+      "partial": "Selected tickets only ({count})",
+      "submit": "Recall",
+      "success": "{count} tickets recalled"
+    },
+    "split": {
+      "pickTitle": "Open a book · pick a book",
+      "pickTo": "Goes to the local cash point: {name}",
+      "search": "Scan or type the book number",
+      "pickHint": "Unopened books in this store ({count}); scanning selects the book.",
+      "bookLine": "{code} {name} · book {bookNo}",
+      "bookMeta": "{price} · {count} tickets",
+      "bookMetaSkip": "{price} · tickets {first}–{last} · {count} to mark as skipped",
+      "none": "No unopened books in this store.",
+      "next": "Next",
+      "previous": "Back",
+      "title": "Open a book · {code} {name} · book {bookNo}",
+      "meta": "{price} · tickets {first}–{last}",
+      "stepsAria": "Open book steps",
+      "steps": {
+        "skip": "Mark skipped",
+        "place": "Place on cash points"
+      },
+      "progress": "Step {current} / {total} · {label}",
+      "skipHint": "Last ticket {last} is {count} over the standard count: {count} numbers do not exist. Pick them:",
+      "skipSelected": "Selected",
+      "skipSelectedValue": "{count} / {total}: {nos}",
+      "allTo": "All on one cash point",
+      "allToField": "Cash point",
+      "localOption": "{name} (local)",
+      "splitOption": "Split across cash points",
+      "splitHint": "Select tickets in the grid, then pick a cash point:",
+      "legendUnassigned": "Unassigned",
+      "legendAssigned": "Assigned",
+      "columns": {
+        "cashPoint": "Cash point",
+        "ticketNos": "Tickets",
+        "count": "Count"
+      },
+      "unassigned": "Unassigned",
+      "remaining": "{count} tickets are not assigned yet; assign all of them to open the book.",
+      "confirm": "Open book",
+      "success": "Book opened"
+    },
+    "camera": {
+      "button": "📷 Scan",
+      "title": "Camera scan",
+      "hint": "Point the barcode at the frame; scanning continues and each read is handled like the barcode scanner.",
+      "videoAria": "Camera view",
+      "lastRead": "Read: {code}",
+      "error": "Cannot open the camera. Allow camera access in the browser.",
+      "close": "Close"
+    },
+    "salesErrors": {
+      "LOCAL_SHIFT_NOT_OPEN": "The local cash point has no open shift",
+      "TICKET_NOT_SELLABLE": "This ticket cannot be sold",
+      "ALREADY_SOLD": "This ticket was sold at {time}",
+      "MOVE_CONFIRM_REQUIRED": "This ticket is on another cash point; confirm move and sell first",
+      "MOVE_NOT_ALLOWED": "You cannot move tickets; sell it at that cash point",
+      "UNDO_NOT_ALLOWED": "This sale cannot be undone now; send a sale reversal request",
+      "BOOK_ALREADY_OPENED": "This book has already been opened",
+      "SPLIT_PLAN_INVALID": "Skipped tickets are not all marked, or some tickets are not assigned",
+      "TICKET_NOT_ON_COUNTER": "Only unsold tickets on a counter can be moved or recalled",
+      "CONFLICT": "These tickets have been processed; please check again"
     }
   }
 }

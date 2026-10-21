@@ -5,7 +5,11 @@ import { Typography } from "@repo/ui/typography";
 import { useAccountLocaleSync } from "@/hooks/base/useAccountLocale";
 import { useMe } from "@/hooks/base/useMe";
 
-import { realtimeSignals, workflowExtensions } from "../module-pages";
+import {
+  realtimeSignals,
+  shellExtensions,
+  workflowExtensions,
+} from "../module-pages";
 import { RealtimeProvider } from "../providers/RealtimeProvider";
 import { WorkflowExtensionsProvider } from "../providers/WorkflowExtensionsProvider";
 import { ShellLayout } from "./ShellLayout";
@@ -22,6 +26,7 @@ export interface AdminShellProps {
  * 載到後交給 `ShellLayout` 排版(側欄 + AppBar + 路由頁籤列 + 內容區)。
  * 即時通道(`RealtimeProvider`)掛在殼這一層:登入後才連線,登出(殼卸載)就關掉。
  * 審核後 / 送出後動作(`WorkflowExtensionsProvider`)也掛在殼層:換頁、關彈窗都不打斷進行中的動作。
+ * 殼上另掛專案登記的元件(`shellExtensions`,例:全域掃描的預設處理)。
  * 同時等個人偏好回來、把語言對齊帳號(`useAccountLocaleSync`):等待期間的載入中用本機快取的語言,
  * 殼一出來就是帳號的語言,不會先閃一次快取的語言再換。
  */
@@ -47,6 +52,10 @@ export const AdminShell = ({ pageMinWidths }: AdminShellProps) => {
           me={me.data.me}
           {...(pageMinWidths !== undefined && { pageMinWidths })}
         />
+        {shellExtensions.map((Extension, index) => (
+          // 登記表固定不變(模組載入時組好),index 當 key 穩定
+          <Extension key={String(index)} />
+        ))}
       </WorkflowExtensionsProvider>
     </RealtimeProvider>
   );

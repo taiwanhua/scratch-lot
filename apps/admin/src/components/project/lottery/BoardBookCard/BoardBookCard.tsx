@@ -21,6 +21,8 @@ export interface BoardBookCardProps {
   stripeColor: string;
   /** 點卡片(展開由之後的功能接上;不給 = 不能點) */
   onClick?: () => void;
+  /** 展開中(主色框;規格 6.2) */
+  expanded?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export const BoardBookCard = ({
   lowStockLabel,
   stripeColor,
   onClick,
+  expanded = false,
 }: BoardBookCardProps) => {
   const ratio = total > 0 ? Math.min(1, remaining / total) : 0;
   return (
@@ -44,8 +47,10 @@ export const BoardBookCard = ({
       variant="outlined"
       component={onClick === undefined ? "div" : "button"}
       onClick={onClick}
+      aria-expanded={onClick === undefined ? undefined : expanded}
       sx={{
         position: "relative",
+        ...(expanded && { borderColor: "primary.main", borderWidth: 2 }),
         p: 2,
         pl: 2.5,
         textAlign: "left",

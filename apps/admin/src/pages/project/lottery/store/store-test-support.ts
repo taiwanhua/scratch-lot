@@ -10,6 +10,10 @@ import {
   type StoreWorldOptions,
   storeWorld,
 } from "@/test/msw/project/lottery/store-handlers";
+import {
+  type StoreSalesWorldOptions,
+  storeSalesWorld,
+} from "@/test/msw/project/lottery/store-sales-handlers";
 import { scheduleSettingsWorld } from "@/test/msw/project/schedule-settings-handlers";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
@@ -25,14 +29,19 @@ export const renderStore = ({
   path = "/store",
   permissions = [...STORE_ALL_PERMISSIONS, MY_PUNCH],
   world = {},
+  sales = {},
 }: {
   path?: string;
   permissions?: readonly string[];
   world?: StoreWorldOptions;
+  /** 銷售的假 api 選項(看板狀態一律用 `storeWorld` 那一份) */
+  sales?: Omit<StoreSalesWorldOptions, "board">;
 } = {}) => {
   const fake = storeWorld(world);
+  const salesFake = storeSalesWorld({ ...sales, board: fake.state });
   server.use(
     ...fake.handlers,
+    ...salesFake.handlers,
     ...inventoryWorld().handlers,
     ...scheduleSettingsWorld().handlers,
     ...masterDataSharedLookupHandlers(),
@@ -42,5 +51,5 @@ export const renderStore = ({
       modules: [overviewModule, ...storeModules(permissions)],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake };
+  return { ...renderApp({ path }), fake, salesFake };
 };

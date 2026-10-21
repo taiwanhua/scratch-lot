@@ -105,6 +105,12 @@ export const sampleReasonOptions: Record<
     { value: "change-refill", label: "補零錢" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的手動標記售出(規格 6.3)
+  [LOTTERY_FIELD_CATEGORY_KEYS.manualSaleReason]: [
+    { value: "scan-failed", label: "刷不到條碼" },
+    { value: "system-backfill", label: "系統異常補登" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 /** Figma IN-05 的三列。 */

@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { DEFAULT_TENANT_TIMEZONE } from "@repo/domain/form";
@@ -27,6 +28,12 @@ export interface CashPointSectionProps {
   actions: readonly CashPointHeaderAction[];
   /** 點負責人那一行(班次資訊) */
   onShiftInfo: (shiftId: string) => void;
+  /** 展開中的卡片(本 id);沒有 = null(一次只展開一張,規格 6.2) */
+  expandedBookId?: string | null;
+  /** 點卡片(展開 / 收合);不給 = 卡片不能點 */
+  onBookClick?: (bookId: string) => void;
+  /** 展開的內容(放在那張卡片後面、占滿整列) */
+  renderExpanded?: (book: BoardCashPoint["books"][number]) => ReactNode;
 }
 
 /** 卡片左側色條:遊戲顏色(標籤色票);沒設 = 灰。 */
@@ -42,6 +49,9 @@ export const CashPointSection = ({
   isLocal,
   actions,
   onShiftInfo,
+  expandedBookId = null,
+  onBookClick,
+  renderExpanded,
 }: CashPointSectionProps) => {
   const t = useTranslations("admin.lotteryStore");
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
@@ -97,6 +107,8 @@ export const CashPointSection = ({
           sx={{
             display: "grid",
             gap: 1.5,
+            // 展開的區塊占滿整列:同一列後面的卡片往前補,展開區塊落在那張卡片的下一列
+            gridAutoFlow: "row dense",
             gridTemplateColumns: {
               xs: "1fr",
               sm: "repeat(auto-fill, minmax(240px, 1fr))",
@@ -104,26 +116,36 @@ export const CashPointSection = ({
           }}
         >
           {point.books.map((book) => (
-            <BoardBookCard
-              key={book.bookId}
-              title={t("card.title", {
-                code: book.gameCode,
-                name: book.gameName,
-              })}
-              priceText={t("card.price", { price: moneyText(book.unitPrice) })}
-              metaText={t("card.meta", {
-                bookNo: displayBookNo(book.bookNo),
-                count: book.soldToday,
-              })}
-              remainingText={t("card.remaining", {
-                remaining: book.remaining,
-                total: book.total,
-              })}
-              remaining={book.remaining}
-              total={book.total}
-              lowStockLabel={book.isLowStock ? t("card.lowStock") : null}
-              stripeColor={stripeOf(book.color)}
-            />
+            <Fragment key={book.bookId}>
+              <BoardBookCard
+                title={t("card.title", {
+                  code: book.gameCode,
+                  name: book.gameName,
+                })}
+                priceText={t("card.price", {
+                  price: moneyText(book.unitPrice),
+                })}
+                metaText={t("card.meta", {
+                  bookNo: displayBookNo(book.bookNo),
+                  count: book.soldToday,
+                })}
+                remainingText={t("card.remaining", {
+                  remaining: book.remaining,
+                  total: book.total,
+                })}
+                remaining={book.remaining}
+                total={book.total}
+                lowStockLabel={book.isLowStock ? t("card.lowStock") : null}
+                stripeColor={stripeOf(book.color)}
+                expanded={expandedBookId === book.bookId}
+                {...(onBookClick !== undefined && {
+                  onClick: () => {
+                    onBookClick(book.bookId);
+                  },
+                })}
+              />
+              {expandedBookId === book.bookId ? renderExpanded?.(book) : null}
+            </Fragment>
           ))}
         </Box>
       )}

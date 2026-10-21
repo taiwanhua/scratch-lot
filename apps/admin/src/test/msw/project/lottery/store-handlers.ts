@@ -27,6 +27,8 @@ export interface StoreWorldOptions {
 
 export interface StoreWorld {
   handlers: Parameters<typeof server.use>;
+  /** 看板的狀態(銷售的假 api `storeSalesWorld` 售出 / 撤銷時跟著改本班已售、應有現金與剩餘張數) */
+  state: StoreBoard;
   inputs: {
     open: OpenLotteryShiftMutationVariables["input"][];
     deposit: DepositLotteryShiftCashMutationVariables["input"][];
@@ -189,5 +191,5 @@ export const storeWorld = ({
       });
     }),
   ];
-  return { handlers, inputs };
+  return { handlers, inputs, state };
 };

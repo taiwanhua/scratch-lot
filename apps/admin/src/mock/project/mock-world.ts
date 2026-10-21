@@ -28,6 +28,7 @@ import {
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
 import { storeModules } from "@/test/msw/project/lottery/store-fixtures";
 import { storeWorld } from "@/test/msw/project/lottery/store-handlers";
+import { storeSalesWorld } from "@/test/msw/project/lottery/store-sales-handlers";
 import {
   transferFormWorld,
   transferModules,
@@ -142,6 +143,15 @@ const reportsModule: TestModule = {
  * - `modules`:該視角側欄要多出的模組(與 seed 宣告一致,權限給滿才點得到每一頁)
  * - `handlers`:專案頁的假 api,夾具取自 `src/test/msw/project/`(與元件測試共用)
  */
+/** 店面管理的看板 + 銷售(同一份看板狀態)。 */
+const storeAndSalesHandlers = () => {
+  const store = storeWorld();
+  return [
+    ...store.handlers,
+    ...storeSalesWorld({ board: store.state }).handlers,
+  ];
+};
+
 export const projectMockWorld: ProjectMockWorld = {
   // 檔案管理、經銷商管理:權限給滿(經銷商兩個批購基準日的欄位級權限也有),各分頁都看得到;輸出報表同樣給滿;
   // 班表管理(群組 + 四個子模組,權限給滿);帳戶管理、庫存管理(權限給滿)
@@ -184,8 +194,9 @@ export const projectMockWorld: ProjectMockWorld = {
     }).handlers,
     ...inventoryWorld().handlers,
     ...purchaseWorld().handlers,
-    // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份)
-    ...storeWorld().handlers,
+    // 店面管理的看板:中山店三個收銀點(Figma ST-01;不管看哪家店都回這份);
+    // 銷售、展開卡片、拆本、移櫃共用同一份看板狀態(售出後本班已售跟著變)
+    ...storeAndSalesHandlers(),
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
     // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
     ...printButtonWorld().handlers.filter(

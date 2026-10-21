@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   STORE_BOARD_KEY,
   STORE_PERMISSIONS,
+  STORE_SALE_SCAN_PURPOSE,
 } from "@repo/domain/project/lottery";
 import { useLotteryStoreBoardQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
@@ -18,6 +19,7 @@ import { usePermissions } from "@/hooks/base/usePermissions";
 import { useRealtimeBoard } from "@/hooks/base/useRealtime";
 import { useSession } from "@/hooks/base/useSession";
 import { useUrlState } from "@/hooks/base/useUrlState";
+import { useScanner } from "@/hooks/project/useScanner/useScanner";
 import {
   readLocalCashPoint,
   writeLocalCashPoint,
@@ -26,14 +28,19 @@ import {
 import { type BoardDialog, BoardDialogs } from "./BoardDialogs";
 import { BoardTopBar } from "./BoardTopBar";
 import { type BoardCashPoint, CashPointSection } from "./CashPointSection";
+import { CameraScanButton } from "./sales/CameraScanButton";
+import { ExpandedBookCard } from "./sales/ExpandedBookCard";
+import { SalesBoardDialogs, type SalesDialog } from "./sales/SalesBoardDialogs";
+import { useStoreSaleFlow } from "./sales/useStoreSaleFlow";
 
 const orgSchema = z.string().default("");
 
 /**
  * 看板分頁(專案規格 6.1、6.2;Figma ST-01 / 02 / 03 / 34a/b/c):頂部(分店 `?org=`、本機收銀點、
  * 你開著的班、連線狀態)、每個收銀點一條標題列 + 檯面上的本。打開時訂閱 `board:<分店>`,
- * 信號到了重抓看板(`app/project/realtime-signals.ts`)。上次日結、[盤點] [存銀行] [日結]、
- * 距上次盤點的提醒、卡片展開與其他標題列按鈕由各自的功能加上。
+ * 信號到了重抓看板(`app/project/realtime-signals.ts`)。銷售(規格 6.2–6.4):宣告掃描用途 `store-sale`
+ * (刷條碼 / 相機 → `useStoreSaleFlow`)、點卡片原地展開、[最近售出] [拆本]。上次日結、[盤點] [存銀行] [日結]、
+ * 距上次盤點的提醒與其他標題列按鈕由各自的功能加上。
  */
 export const BoardTab = () => {
   const t = useTranslations("admin.lotteryStore");
@@ -57,6 +64,34 @@ export const BoardTab = () => {
   const localId = chosen[orgId] ?? readLocalCashPoint(orgId);
   const local = cashPoints.find((point) => point.id === localId) ?? null;
   const [dialog, setDialog] = useState<BoardDialog | null>(null);
+  // 銷售(規格 6.2–6.4):展開的卡片(一次一張)、刷到時閃的那一格、拆本 / 最近售出 / 相機的視窗
+  const [expanded, setExpanded] = useState<{
+    pointId: string;
+    bookId: string;
+  } | null>(null);
+  const [flash, setFlash] = useState<{
+    bookId: string;
+    ticketNo: string;
+    nonce: number;
+  } | null>(null);
+  const [salesDialog, setSalesDialog] = useState<SalesDialog | null>(null);
+  const localOpen = local?.shift == null ? null : local;
+  const flow = useStoreSaleFlow({
+    orgId,
+    local:
+      localOpen === null ? null : { id: localOpen.id, name: localOpen.name },
+    mode: "board",
+    onScanned: (item) => {
+      setFlash((current) => ({
+        bookId: item.bookId,
+        ticketNo: item.ticketNo,
+        nonce: (current?.nonce ?? 0) + 1,
+      }));
+    },
+  });
+  useScanner(STORE_SALE_SCAN_PURPOSE, ({ code }) => {
+    flow.handleCode(code);
+  });
 
   const applyLocal = (cashPointId: string) => {
     writeLocalCashPoint(orgId, cashPointId);
@@ -118,11 +153,39 @@ export const BoardTab = () => {
       },
     });
     return [
+      // [最近售出] 只在本機收銀點、自己開的班(規格 6.2)
+      ...(shift.isMine
+        ? [
+            {
+              key: "recent-sales",
+              label: t("header.recentSales"),
+              emphasis: "link" as const,
+              onClick: () => {
+                setSalesDialog({
+                  kind: "recent",
+                  shiftId: shift.id,
+                  cashPointName: point.name,
+                });
+              },
+            },
+          ]
+        : []),
       ...(hasPermission(STORE_PERMISSIONS.deposit)
         ? [cashAction("deposit")]
         : []),
       ...(hasPermission(STORE_PERMISSIONS.withdraw)
         ? [cashAction("withdraw")]
+        : []),
+      ...(hasPermission(STORE_PERMISSIONS.split)
+        ? [
+            {
+              key: "split",
+              label: t("header.split"),
+              onClick: () => {
+                setSalesDialog({ kind: "splitPick" });
+              },
+            },
+          ]
         : []),
     ];
   };
@@ -138,6 +201,13 @@ export const BoardTab = () => {
         myShiftNames={(board?.myOpenShifts ?? []).map(
           (shift) => shift.cashPoint.name,
         )}
+        extra={
+          <CameraScanButton
+            onOpen={() => {
+              setSalesDialog({ kind: "camera" });
+            }}
+          />
+        }
       />
       {board !== null && local === null && cashPoints.length > 0 ? (
         <Alert
@@ -180,6 +250,40 @@ export const BoardTab = () => {
           onShiftInfo={(shiftId) => {
             setDialog({ kind: "info", shiftId });
           }}
+          expandedBookId={
+            expanded?.pointId === point.id ? expanded.bookId : null
+          }
+          onBookClick={(bookId) => {
+            setExpanded((current) =>
+              current?.pointId === point.id && current.bookId === bookId
+                ? null
+                : { pointId: point.id, bookId },
+            );
+          }}
+          renderExpanded={(book) => (
+            <ExpandedBookCard
+              orgId={orgId}
+              storeName={board?.org.name ?? ""}
+              book={book}
+              point={point}
+              isLocal={point.id === local?.id}
+              local={
+                localOpen === null
+                  ? null
+                  : { id: localOpen.id, name: localOpen.name }
+              }
+              cashPoints={cashPoints}
+              flash={
+                flash?.bookId === book.bookId
+                  ? { ticketNo: flash.ticketNo, nonce: flash.nonce }
+                  : null
+              }
+              onClose={() => {
+                setExpanded(null);
+              }}
+              onUndo={flow.openUndo}
+            />
+          )}
         />
       ))}
       <BoardDialogs
@@ -199,6 +303,16 @@ export const BoardTab = () => {
           setDialog(null);
         }}
       />
+      <SalesBoardDialogs
+        dialog={salesDialog}
+        orgId={orgId}
+        local={
+          localOpen === null ? null : { id: localOpen.id, name: localOpen.name }
+        }
+        onChange={setSalesDialog}
+        onUndo={flow.openUndo}
+      />
+      {flow.element}
     </Stack>
   );
 };

@@ -2557,7 +2557,9 @@
       "openShift": "開班",
       "deposit": "投庫",
       "withdraw": "出庫",
-      "switchTo": "切換到這個收銀點"
+      "switchTo": "切換到這個收銀點",
+      "recentSales": "最近售出",
+      "split": "拆本"
     },
     "card": {
       "title": "{code} {name}",
@@ -2661,6 +2663,203 @@
       "AMOUNT_EXCEEDS_DRAWER": "投庫金額不能超過抽屜目前的應有現金",
       "AMOUNT_EXCEEDS_VAULT": "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
       "UNEXPECTED": "操作失敗,請稍後再試"
+    },
+    "sale": {
+      "cancel": "取消",
+      "soldTitle": "已售出",
+      "soldMessage": "{key} {amount} 元 · {cashPoint}",
+      "undo": "撤銷"
+    },
+    "scan": {
+      "bookTicket": "本號 {bookNo} · 張號 {ticketNo}",
+      "place": {
+        "counter": "檯面 · {cashPoint}",
+        "counterOwned": "檯面 · {cashPoint}({owner}的班)",
+        "stock": "庫存",
+        "stockUnopened": "庫存(未拆)",
+        "inTransit": "在途",
+        "other": "其他"
+      },
+      "statuses": {
+        "unsold": "未售",
+        "sold": "已售",
+        "skipped": "跳號",
+        "scrapped": "報廢",
+        "investigating": "待查",
+        "lost": "遺失"
+      },
+      "pickTitle": "選遊戲",
+      "pickHint": "本號 {bookNo} 在本店對到 {count} 款遊戲:",
+      "pickOption": "{code} {name} · {price} 元",
+      "continue": "繼續",
+      "otherMineTitle": "刷到{cashPoint}的刮刮樂 · 你開的班",
+      "otherMineHint": "{cashPoint}的班也是你開的:直接算{cashPoint}的班,不用移櫃。",
+      "confirmSell": "確認售出",
+      "moveTitle": "刷到別的收銀點的刮刮樂",
+      "moveHint": "這張刮刮樂在{from},確定在{to}售出?確認後寫「移櫃」+「售出」,錢算在本機收銀點({to})的班。",
+      "moveAndSell": "移櫃並售出",
+      "unopenedTitle": "這本還沒拆",
+      "unopenedHint": "要拆本並售出這張嗎?拆本會放到本機收銀點({cashPoint})。",
+      "unopenedSkipHint": "這本有待標註 {count} 張,要先在拆本視窗點滿跳號才售出。",
+      "splitAndSell": "拆本並售出",
+      "blockedTitle": "不能銷售",
+      "blocked": {
+        "notThisStore": "這張刮刮樂不是本店的,不能賣。",
+        "sold": "這張刮刮樂已於 {time} 售出。",
+        "skipped": "這張刮刮樂是「跳號」,不能賣。",
+        "scrapped": "這張刮刮樂已報廢,不能賣。",
+        "locked": "這張刮刮樂被單據鎖定(調貨中或撤銷審核中),不能賣。",
+        "inTransit": "這張刮刮樂在調貨途中,不能賣。",
+        "inStock": "這張刮刮樂在庫存,請先移到收銀點檯面再賣。",
+        "moveForbidden": "這張在{cashPoint},你沒有移櫃權限,請由{cashPoint}售出。"
+      },
+      "notFound": "找不到這張刮刮樂,或不是本店的刮刮樂。",
+      "recoverNoPermission": "這張刮刮樂待查中,尋回需要有權限的人處理。",
+      "gotIt": "知道了",
+      "infoTitle": "刮刮樂資訊",
+      "infoHint": "這台裝置沒有設定本機收銀點、本機收銀點沒有開班,或你沒有銷售權限:只顯示資訊,不能銷售。"
+    },
+    "quickSale": {
+      "title": "快速銷售",
+      "cashPoint": "收銀點",
+      "cashPointValue": "{name}(本機,開班中)",
+      "amount": "金額",
+      "cancel": "取消(Esc)",
+      "confirm": "確認售出(Enter)",
+      "local": "本機收銀點"
+    },
+    "undo": {
+      "title": "撤銷這張售出?",
+      "blockedTitle": "不能當下撤銷",
+      "line": "{key} · {amount} 元 · {time} 售出",
+      "hint": "撤銷後 {amount} 元從{cashPoint}的抽屜應有金額扣除。",
+      "blocks": {
+        "notMine": "這張不是你賣的。",
+        "expired": "已超過 30 分鐘。",
+        "shiftClosed": "那一班已交班結帳。",
+        "changed": "那張刮刮樂之後有其他異動。",
+        "alreadyUndone": "這張已經撤銷。"
+      },
+      "sendRequestHint": "請改送撤銷售出申請。",
+      "submit": "撤銷",
+      "success": "已撤銷"
+    },
+    "manualSale": {
+      "title": "標記售出",
+      "book": "{code} {name} · 本號 {bookNo}",
+      "cashPoint": "收銀點",
+      "cashPointValue": "{name}({owner} {time} 開的班)",
+      "tickets": "張號",
+      "ticketsValue": "{ranges}({count} 張)",
+      "unitPrice": "單張金額",
+      "total": "合計",
+      "reason": "原因(必填)",
+      "hint": "售出算進{name}這一班,應有現金 +{amount}。",
+      "submit": "確認售出",
+      "success": "已標記售出 {count} 張"
+    },
+    "recentSales": {
+      "title": "最近售出 · {cashPoint}",
+      "hint": "自己在這一班 30 分鐘內賣的張;那張刮刮樂之後沒有其他異動才能撤銷。",
+      "empty": "這一班 30 分鐘內沒有你賣的張。",
+      "undone": "已撤銷",
+      "expired": "超過 30 分鐘",
+      "footer": "超過 30 分鐘或這一班已交班 → 改送撤銷售出申請。",
+      "close": "關閉"
+    },
+    "expand": {
+      "title": "{code} {name} · 本號 {bookNo}",
+      "meta": "{cashPoint} · {price} 元 · 剩 {remaining} / {total}",
+      "bookDetail": "本的詳情",
+      "collapse": "收合",
+      "close": "關閉",
+      "selected": "已選 {count} 張 {ranges}",
+      "clear": "取消選取",
+      "markSold": "標記售出",
+      "move": "移櫃",
+      "recall": "收回",
+      "moveAndSell": "移櫃並售出",
+      "moveAndSellSuccess": "已移櫃並售出",
+      "undoSale": "撤銷售出",
+      "recover": "尋回",
+      "atCashPoint": "在{name}",
+      "inStock": "在庫存"
+    },
+    "move": {
+      "title": "移櫃",
+      "line": "本號 {bookNo} · 張號 {ranges} · {cashPoint} · 剩 {count} 張",
+      "to": "移到",
+      "all": "全部 {count} 張",
+      "partial": "部分張數(點格子,已選 {count} 張)",
+      "submit": "移櫃",
+      "success": "已移櫃 {count} 張"
+    },
+    "recall": {
+      "title": "收回到庫存",
+      "all": "整本收回({count} 張)",
+      "partial": "只收回部分張數(點格子,已選 {count} 張)",
+      "submit": "收回",
+      "success": "已收回 {count} 張"
+    },
+    "split": {
+      "pickTitle": "拆本 · 選要拆的本",
+      "pickTo": "放到本機收銀點:{name}",
+      "search": "刷條碼或輸入本號",
+      "pickHint": "本店還沒拆的本({count} 本);刷條碼會直接選中那一本。",
+      "bookLine": "{code} {name} · 本號 {bookNo}",
+      "bookMeta": "{price} 元 · {count} 張",
+      "bookMetaSkip": "{price} 元 · 張號 {first}–{last} · 待標註 {count} 張(拆本時要標好)",
+      "none": "本店沒有還沒拆的本。",
+      "next": "下一步",
+      "previous": "上一步",
+      "title": "拆本 · {code} {name} · 本號 {bookNo}",
+      "meta": "{price} 元 · 張號 {first}–{last}",
+      "stepsAria": "拆本步驟",
+      "steps": {
+        "skip": "標跳號",
+        "place": "放到哪個收銀點"
+      },
+      "progress": "第 {current} / {total} 步 · {label}",
+      "skipHint": "迄號 {last} 比標準張數多 {count} 張,有 {count} 個號碼不存在。點出不存在的號碼:",
+      "skipSelected": "已選",
+      "skipSelectedValue": "{count} / {total}:{nos}",
+      "allTo": "全部放到同一個收銀點",
+      "allToField": "收銀點",
+      "localOption": "{name}(本機)",
+      "splitOption": "分放到多個收銀點",
+      "splitHint": "在格子選張,再點要放的收銀點:",
+      "legendUnassigned": "未分配",
+      "legendAssigned": "已分配",
+      "columns": {
+        "cashPoint": "收銀點",
+        "ticketNos": "張號",
+        "count": "張數"
+      },
+      "unassigned": "未分配",
+      "remaining": "還有 {count} 張沒分配,全部分配完才能確認拆本。",
+      "confirm": "確認拆本",
+      "success": "已拆本"
+    },
+    "camera": {
+      "button": "📷 掃描",
+      "title": "相機掃描",
+      "hint": "把條碼對準框內;可以連續掃描,每讀到一張就照刷條碼處理。",
+      "videoAria": "相機畫面",
+      "lastRead": "讀到:{code}",
+      "error": "打不開相機,請確認瀏覽器已允許使用相機。",
+      "close": "關閉"
+    },
+    "salesErrors": {
+      "LOCAL_SHIFT_NOT_OPEN": "本機收銀點沒有開著的班,不能銷售",
+      "TICKET_NOT_SELLABLE": "這張刮刮樂不能賣",
+      "ALREADY_SOLD": "這張刮刮樂已於 {time} 售出",
+      "MOVE_CONFIRM_REQUIRED": "這張在別的收銀點,請先確認移櫃並售出",
+      "MOVE_NOT_ALLOWED": "你沒有移櫃權限,請由那個收銀點售出",
+      "UNDO_NOT_ALLOWED": "不符合當下撤銷的條件,請改送撤銷售出申請",
+      "BOOK_ALREADY_OPENED": "這本已經拆過了",
+      "SPLIT_PLAN_INVALID": "跳號還沒點滿,或還有張沒分配",
+      "TICKET_NOT_ON_COUNTER": "只有檯面上未售的張能移櫃或收回",
+      "CONFLICT": "這幾張已被處理,請重新核對"
     }
   }
 }

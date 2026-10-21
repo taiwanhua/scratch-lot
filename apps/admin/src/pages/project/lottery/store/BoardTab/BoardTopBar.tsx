@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslations } from "use-intl";
 
 import { Box } from "@repo/ui/box";
@@ -17,6 +18,8 @@ export interface BoardTopBarProps {
   onLocalChange: (cashPointId: string) => void;
   /** 操作者在這家店開著的班的收銀點名稱(兩個以上才顯示「你開著的班」) */
   myShiftNames: readonly string[];
+  /** 頂部的其他按鈕(例:相機 [掃描];各功能追加) */
+  extra?: ReactNode;
 }
 
 /**
@@ -30,6 +33,7 @@ export const BoardTopBar = ({
   localId,
   onLocalChange,
   myShiftNames,
+  extra,
 }: BoardTopBarProps) => {
   const t = useTranslations("admin.lotteryStore.top");
   const status = useRealtimeStatus();
@@ -91,6 +95,7 @@ export const BoardTopBar = ({
           {status === "live" ? t("live") : t("reconnecting")}
         </Typography>
       </Stack>
+      {extra}
     </Stack>
   );
 };

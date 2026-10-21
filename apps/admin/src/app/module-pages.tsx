@@ -57,6 +57,12 @@ export const workflowExtensions: readonly WorkflowExtensionRegistration[] = [
 ];
 
 /**
+ * 掛在後台殼上的元件(登入後一直存在、不屬於任何頁面;例:專案登記的全域掃描預設處理)。
+ * 底座目前沒有;專案登記在 `app/project/shell-extensions.ts`。由 `AdminShell` 在即時通道裡面渲染。
+ */
+export { projectShellExtensions as shellExtensions } from "@/app/project/shell-extensions";
+
+/**
  * 專案來源的網址狀態盤點(REACT-14 入口清單):專案的頁面登記 + 換掉的底座頁 + 專案的盤點表。
  * 只有這支看得到專案來源,入口清單測試從這裡拿,底座的盤點表另外比對底座來源。
  */
