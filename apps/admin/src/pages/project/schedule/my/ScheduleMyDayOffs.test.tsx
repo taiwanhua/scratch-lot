@@ -146,3 +146,20 @@ describe("我的畫休", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("班表管理頁殼的高度(STYLE-08)", () => {
+  it("分頁殼的卡片不釘高:內容少時撐滿、多時跟著長(flex-grow 1、flex-shrink 0),交給 <main> 捲", async () => {
+    renderSchedulePage({ path: DAY_OFFS });
+    // 殼的頁籤列也是 tablist:取包在卡片裡的那一個(頁內分頁)
+    const tablists = await screen.findAllByRole("tablist");
+    const card = tablists
+      .map((tabs) => tabs.closest<HTMLElement>(".MuiCard-root"))
+      .find((found): found is HTMLElement => found !== null);
+    if (card === undefined) {
+      throw new Error("找不到分頁殼的卡片");
+    }
+    const style = globalThis.getComputedStyle(card);
+    expect(style.flexGrow).toBe("1");
+    expect(style.flexShrink).toBe("0");
+  });
+});

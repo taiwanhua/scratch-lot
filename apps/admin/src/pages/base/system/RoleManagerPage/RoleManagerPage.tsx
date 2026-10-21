@@ -158,7 +158,12 @@ export const RoleManagerPage = () => {
 
   return (
     // 撐滿殼給的內容區高度(STYLE-08 / Figma 44:188:左右兩塊等高、各自內部捲動)
-    <Stack direction="row" spacing={3} sx={{ flex: 1, minHeight: 0 }}>
+    // 手機寬不釘高(STYLE-08):主從兩塊依內容長高、交給 <main> 捲;sm 起才撐滿殼高、各自內部捲動
+    <Stack
+      direction="row"
+      spacing={3}
+      sx={{ flex: { xs: "1 0 auto", sm: 1 }, minHeight: 0 }}
+    >
       <RoleListPanel
         rows={data.rows}
         isLoading={data.isLoading}

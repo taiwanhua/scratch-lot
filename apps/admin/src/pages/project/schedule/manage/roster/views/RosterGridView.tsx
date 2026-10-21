@@ -40,6 +40,7 @@ import {
   useRoster,
 } from "../roster-context";
 import { RosterPersonCell } from "./RosterPersonCell";
+import { useFitMainHeight } from "./useFitMainHeight";
 import { useRosterGridColumns } from "./useRosterGridColumns";
 
 const PAGE_ID = "schedule.roster";
@@ -69,6 +70,8 @@ export const RosterGridView = () => {
   const { data, timezone, canEdit, openDemand, openEntry, removeDay } =
     useRoster();
   const isMobile = useBreakpointDown("sm");
+  // 表格自己捲(sticky 表頭、橫向捲軸看得到),高度上限 = <main> 扣掉工具列與圖例後剩下的
+  const [fitHeight, setFitTarget] = useFitMainHeight();
   const sections = useSectionCollapse(PAGE_ID);
   const positions = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.position,
@@ -291,81 +294,83 @@ export const RosterGridView = () => {
 
   return (
     <Stack spacing={1.5}>
-      <RosterGrid
-        aria-label={t("gridLabel")}
-        people={data.people}
-        getPersonKey={(person) => person.userId}
-        dates={rosterDates}
-        dateColumnWidth={isMobile ? MOBILE_DATE_WIDTH : DATE_WIDTH}
-        leadingColumns={[personColumn]}
-        trailingColumns={statColumns}
-        columnGroups={[
-          {
-            id: STATS_GROUP,
-            label: t("statsGroup"),
-            columnKeys: statColumns.map((column) => column.key),
-          },
-        ]}
-        collapsedColumnGroups={statsCollapsed ? [STATS_GROUP] : []}
-        {...(isMobile ? { collapsedGroupWidth: MOBILE_STATS_WIDTH } : {})}
-        onCollapsedColumnGroupsChange={(groupIds) => {
-          if (isCheckOpen) {
-            setStatsDuringCheck({
-              isCheckOpen,
-              expanded: !groupIds.includes(STATS_GROUP),
-            });
-            return;
-          }
-          sections.setCollapsed(
-            STATS_GROUP,
-            groupIds.includes(STATS_GROUP),
-            isMobile,
-          );
-        }}
-        topGroup={topGroup}
-        formatCellLabel={(person, date) =>
-          t("cellAria", { name: person.name, date: monthDayOf(date) })
-        }
-        formatEmptyGroupCellLabel={(date) =>
-          t("addDemandAria", { date: monthDayOf(date) })
-        }
-        {...(canEdit
-          ? {
-              onCellClick: (person: RosterPerson, date: string) => {
-                if (unavailabilityOf(person.userId, date)?.fullDay === true) {
-                  return;
-                }
-                openEntry({ userId: person.userId, date });
-              },
+      <Box ref={setFitTarget}>
+        <RosterGrid
+          aria-label={t("gridLabel")}
+          people={data.people}
+          getPersonKey={(person) => person.userId}
+          dates={rosterDates}
+          dateColumnWidth={isMobile ? MOBILE_DATE_WIDTH : DATE_WIDTH}
+          leadingColumns={[personColumn]}
+          trailingColumns={statColumns}
+          columnGroups={[
+            {
+              id: STATS_GROUP,
+              label: t("statsGroup"),
+              columnKeys: statColumns.map((column) => column.key),
+            },
+          ]}
+          collapsedColumnGroups={statsCollapsed ? [STATS_GROUP] : []}
+          {...(isMobile ? { collapsedGroupWidth: MOBILE_STATS_WIDTH } : {})}
+          onCollapsedColumnGroupsChange={(groupIds) => {
+            if (isCheckOpen) {
+              setStatsDuringCheck({
+                isCheckOpen,
+                expanded: !groupIds.includes(STATS_GROUP),
+              });
+              return;
             }
-          : {})}
-        renderCell={({ person, date }) => (
-          <Box
-            data-roster-cell={rosterCellKey({ userId: person.userId, date })}
-            sx={{ height: "100%" }}
-          >
-            <RosterPersonCell
-              entries={entriesOf(person.userId, date)}
-              otherStore={data.otherStoreEntries.filter(
-                (item) => item.userId === person.userId && item.date === date,
-              )}
-              unavailability={unavailabilityOf(person.userId, date)}
-              isClosed={isClosed(date)}
-              demandById={demandById}
-              shortNameOf={shortNameOf}
-              timezone={timezone}
-              taskLabelOf={tasks.labelOf}
-              onEntryClick={openEntry}
-              punchCount={punchCountOf(person.userId, date)}
-              onPunchClick={() => {
-                const first = entriesOf(person.userId, date).at(0);
-                openEntry(first ?? { userId: person.userId, date });
-              }}
-            />
-          </Box>
-        )}
-        containerSx={{ maxHeight: { xs: "70vh", md: "calc(100vh - 320px)" } }}
-      />
+            sections.setCollapsed(
+              STATS_GROUP,
+              groupIds.includes(STATS_GROUP),
+              isMobile,
+            );
+          }}
+          topGroup={topGroup}
+          formatCellLabel={(person, date) =>
+            t("cellAria", { name: person.name, date: monthDayOf(date) })
+          }
+          formatEmptyGroupCellLabel={(date) =>
+            t("addDemandAria", { date: monthDayOf(date) })
+          }
+          {...(canEdit
+            ? {
+                onCellClick: (person: RosterPerson, date: string) => {
+                  if (unavailabilityOf(person.userId, date)?.fullDay === true) {
+                    return;
+                  }
+                  openEntry({ userId: person.userId, date });
+                },
+              }
+            : {})}
+          renderCell={({ person, date }) => (
+            <Box
+              data-roster-cell={rosterCellKey({ userId: person.userId, date })}
+              sx={{ height: "100%" }}
+            >
+              <RosterPersonCell
+                entries={entriesOf(person.userId, date)}
+                otherStore={data.otherStoreEntries.filter(
+                  (item) => item.userId === person.userId && item.date === date,
+                )}
+                unavailability={unavailabilityOf(person.userId, date)}
+                isClosed={isClosed(date)}
+                demandById={demandById}
+                shortNameOf={shortNameOf}
+                timezone={timezone}
+                taskLabelOf={tasks.labelOf}
+                onEntryClick={openEntry}
+                punchCount={punchCountOf(person.userId, date)}
+                onPunchClick={() => {
+                  const first = entriesOf(person.userId, date).at(0);
+                  openEntry(first ?? { userId: person.userId, date });
+                }}
+              />
+            </Box>
+          )}
+          containerSx={fitHeight === null ? {} : { maxHeight: fitHeight }}
+        />
+      </Box>
       <ScheduleLegend
         items={[
           "leader",

@@ -181,8 +181,9 @@ export const DayOffsTab = () => {
           {stats}
         </Typography>
       </Stack>
+      {/* 左右比例只在並排(md 起)時給:直排時 flex-basis 0 會把月曆卡片壓矮、裁掉圖例(STYLE-08) */}
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-        <Card variant="outlined" sx={{ p: 2, flex: 2, minWidth: 0 }}>
+        <Card variant="outlined" sx={{ p: 2, flex: { md: 2 }, minWidth: 0 }}>
           <Stack spacing={1.5}>
             <Stack direction="row" sx={{ alignItems: "center" }}>
               <Typography variant="h6" sx={{ flex: 1 }}>
@@ -222,7 +223,7 @@ export const DayOffsTab = () => {
             <DayOffLegend variant="mine" />
           </Stack>
         </Card>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ flex: { md: 1 }, minWidth: 0 }}>
           <DayOffViolationsCard
             violations={violations}
             onView={(date) => {

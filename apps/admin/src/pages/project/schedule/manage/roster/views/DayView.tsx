@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useTranslations } from "use-intl";
 
+import { Box } from "@repo/ui/box";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import { ScheduleTimeline } from "@repo/ui/schedule-timeline";
 import { Stack } from "@repo/ui/stack";
@@ -10,11 +11,9 @@ import { ScheduleLegend } from "@/components/project/schedule/ScheduleLegend/Sch
 
 import { useRoster } from "../roster-context";
 import { DayMobileCards } from "./DayMobileCards";
+import { useFitMainHeight } from "./useFitMainHeight";
 import { useRosterDate } from "./useRosterDate";
 import { useTimelineGroups } from "./useTimelineGroups";
-
-/** 日檢視的時間軸高度(內容少,依內容長高但有上限)。 */
-const TIMELINE_SX = { maxHeight: { xs: "60vh", md: "calc(100vh - 340px)" } };
 
 /**
  * 日檢視(SC-45、SC-46;規格 14.5 日):底座 `ScheduleTimeline` 日模式,每筆人力需求一個容器,
@@ -27,6 +26,8 @@ export const DayView = () => {
   const isMobile = useBreakpointDown("sm");
   const { date, today, goTo } = useRosterDate(data.month);
   const timeline = useTimelineGroups([date], "day");
+  // 時間軸依內容長高,上限 = <main> 扣掉工具列與圖例後剩下的(超過時自己捲)
+  const [fitHeight, setFitTarget] = useFitMainHeight();
 
   const targetDate = scrollTarget?.date ?? null;
   useEffect(() => {
@@ -45,43 +46,45 @@ export const DayView = () => {
       spacing={1.5}
       sx={[{ minWidth: 0, contain: "inline-size" }, tagPaletteBackgroundVarsSx]}
     >
-      <ScheduleTimeline
-        mode="day"
-        aria-label={t("timeline.dayAria")}
-        dates={timeline.dates}
-        groups={timeline.groups}
-        disabledRanges={timeline.disabledRanges}
-        today={today}
-        onGroupClick={(group) => {
-          const demand = timeline.demandOfGroup(group.id);
-          if (demand !== undefined) {
-            openDemand(demand);
-          }
-        }}
-        onBarClick={(bar) => {
-          const entry = timeline.entryOfSlot(bar.id);
-          if (entry !== undefined) {
-            openEntry(entry);
-          }
-        }}
-        {...(canEdit
-          ? {
-              onVacancyClick: (vacancy) => {
-                const preset = timeline.vacancyPresetOf(vacancy.id);
-                if (preset !== undefined) {
-                  openEntry(preset);
-                }
-              },
-              onEmptyClick: (point) => {
-                openDemand({ date: point.date, startTime: point.time });
-              },
-              emptyHint: t("addDemandHint"),
+      <Box ref={setFitTarget}>
+        <ScheduleTimeline
+          mode="day"
+          aria-label={t("timeline.dayAria")}
+          dates={timeline.dates}
+          groups={timeline.groups}
+          disabledRanges={timeline.disabledRanges}
+          today={today}
+          onGroupClick={(group) => {
+            const demand = timeline.demandOfGroup(group.id);
+            if (demand !== undefined) {
+              openDemand(demand);
             }
-          : {})}
-        prevDayLabel={t("timeline.prevDay")}
-        nextDayLabel={t("timeline.nextDay")}
-        containerSx={TIMELINE_SX}
-      />
+          }}
+          onBarClick={(bar) => {
+            const entry = timeline.entryOfSlot(bar.id);
+            if (entry !== undefined) {
+              openEntry(entry);
+            }
+          }}
+          {...(canEdit
+            ? {
+                onVacancyClick: (vacancy) => {
+                  const preset = timeline.vacancyPresetOf(vacancy.id);
+                  if (preset !== undefined) {
+                    openEntry(preset);
+                  }
+                },
+                onEmptyClick: (point) => {
+                  openDemand({ date: point.date, startTime: point.time });
+                },
+                emptyHint: t("addDemandHint"),
+              }
+            : {})}
+          prevDayLabel={t("timeline.prevDay")}
+          nextDayLabel={t("timeline.nextDay")}
+          containerSx={fitHeight === null ? {} : { maxHeight: fitHeight }}
+        />
+      </Box>
       <ScheduleLegend
         items={[
           "leader",

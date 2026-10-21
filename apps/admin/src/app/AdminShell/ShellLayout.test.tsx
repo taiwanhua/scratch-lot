@@ -82,6 +82,24 @@ describe("殼的內容區最小寬度(主題斷點;視窗更窄時由內容區�
   });
 });
 
+describe("殼的垂直捲動(STYLE-08:內容頁不釘高,交給 <main> 捲)", () => {
+  it("<main> 垂直可捲;內容區那一層不裁切(沒有 overflow: hidden)", async () => {
+    server.use(
+      ...authWorld({ hasRefreshCookie: true, modules: superAdminModules })
+        .handlers,
+    );
+    renderApp({ path: "/overview" });
+    await screen.findByRole("navigation", { name: "主選單" });
+    // jsdom 不展開 overflow 簡寫:宣告 overflow: auto 或 overflow-y: auto 都算
+    const mainStyle = globalThis.getComputedStyle(screen.getByRole("main"));
+    expect([mainStyle.overflow, mainStyle.overflowY]).toContain("auto");
+    const content = globalThis.getComputedStyle(
+      screen.getByTestId("shell-content"),
+    );
+    expect([content.overflow, content.overflowY]).not.toContain("hidden");
+  });
+});
+
 describe("殼的內容區內距", () => {
   it("<main> 內距:手機寬 8px(1 單位)、sm 起 24px(3 單位)", async () => {
     server.use(

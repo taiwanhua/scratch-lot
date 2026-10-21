@@ -200,6 +200,8 @@ export const SidebarBadgeSettingsSection = ({
         size="small"
         minWidth={720}
         aria-label={t("tableLabel")}
+        // 區塊高度跟著內容(不釘高):預設的 height: 100% 會在 flex 欄裡解析成「區塊高度」而少掉標題那段(STYLE-11)
+        containerSx={{ height: "auto" }}
       />
       {query.isError && (
         <Typography variant="body2" color="error.main" sx={{ px: 3, py: 1.5 }}>

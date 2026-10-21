@@ -105,7 +105,8 @@ export const NotificationSettingsPage = () => {
   );
 
   return (
-    <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+    // 表格下面還有側欄數字設定,不是只有一層捲動能吃掉超出量 → 不釘高,交給 <main> 捲(STYLE-08)
+    <Stack spacing={2} sx={{ flexGrow: 1, flexShrink: 0 }}>
       <Typography variant="body2" color="text.secondary">
         {t("intro")}
       </Typography>
@@ -124,16 +125,8 @@ export const NotificationSettingsPage = () => {
           data.setKeyword(event.target.value);
         }}
       />
-      <Card
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* 捲動責任在 Table 自己的容器,這層只把剩下的高度給它 */}
-        <Box sx={{ flex: 1, minHeight: 0 }}>
+      <Card sx={{ flexShrink: 0, display: "flex", flexDirection: "column" }}>
+        <Box>
           <NotificationSettingsTable
             rows={data.rows}
             isLoading={data.isLoading}

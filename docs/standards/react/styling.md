@@ -139,6 +139,20 @@ expect(chain.slice(1, -1).filter((l) => l.scrolls)).toEqual([]); // 只有最內
 
 實際的視覺滿版仍以 dev(或 mock 模式,TEST-08)目視為準;這個測試守的是「不再退回去」。
 
+**釘高(`flex: 1` + `minHeight: 0`)只給「子樹有一層 `overflow: auto` 能吃掉全部超出量」的版面**:主從版面
+(左樹 / 右表各自捲)、整頁只有一張 DataTable(STYLE-11)。其餘 —— 一般內容頁、頁內分頁殼(`PageTabs` 外面那張卡片)、
+卡片包表單 / 清單、表格下面還有別的區塊 —— 一律 `flexGrow: 1; flexShrink: 0`:內容少時撐滿、多時跟著長,交給 `<main>` 捲。
+**MUI `Card` / `Paper` 預設 `overflow: hidden`**:釘了高的卡片,內容超出的部分直接被裁掉,`<main>` 也沒東西可捲
+(排班作業、店面管理、通知設定都這樣被回報過)。連帶:
+
+- 主從版面在手機寬(xs)不釘高(`flex: { xs: "1 0 auto", sm: 1 }`):兩塊依內容長高、交給 `<main>` 捲;sm 起才各自捲。
+- 直排(xs `column`)時不給 `flex: 2` 之類的比例:flex-basis 0 會把 `overflow: hidden` 的卡片壓矮;比例只在並排的斷點給(`flex: { md: 2 }`)。
+- 不釘高的卡片裡放 `@repo/ui/table`,傳 `containerSx={{ height: "auto" }}`:預設的 `height: 100%` 在 flex 欄裡會解析成卡片高度,少掉標題那段。
+- 內層捲動區塊(要 sticky 表頭、看得到橫向捲軸的排班表 / 時間軸)不寫 `calc(100vh - 320px)` 這種依工具列高度的魔術數字:
+  量 `<main>` 剩下的空間給上限,空間不足時不設上限(只由 `<main>` 捲),任何尺寸都只有一層垂直捲動
+  (先例 `pages/project/schedule/manage/roster/views/useFitMainHeight.ts`)。
+- 測試:頁殼卡片斷言 `flex-shrink: 0`(先例 `StorePage.test.tsx`、`ScheduleMyDayOffs.test.tsx`);殼本身斷言 `<main>` 可捲、`shell-content` 不裁切(`ShellLayout.test.tsx`)。
+
 **同一條鏈只標一次 `overflow: auto`**:父子兩層各標一次時,平常看不出來 ——
 兩層都是「高度跟著內容長」就不會有人捲;等到內層拿到確定高度(或內容給了 `minWidth`),
 就會冒出兩條捲軸,而且橫向那條貼在最後一列下方、卡在版面中間。決定**哪一層負責捲**,
