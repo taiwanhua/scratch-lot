@@ -17,7 +17,7 @@
 
 - 側欄順序 `order: 10`、圖示 `store`;沒有側欄數字。
 - **開啟 B9b**(`perFormCreate`):每張表單發布時自動建 `store.create-<formKey>`(新增資格看它,不看模組 `create`)。
-- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;本票有 看板(`store.view`)與 其他申請(表單引擎的預設列表 `FormListPage`)。
+- 分頁登記在 `apps/admin/src/pages/project/lottery/store/store-tabs.ts`,各功能依規格 6.1 的順序追加自己那一列;目前有 看板(`store.view`)、兌獎紀錄(`store.view`,兌獎的功能)與 其他申請(表單引擎的預設列表 `FormListPage`)。
 - 網址狀態:`?tab=`、看板的分店 `?org=`、其他申請的篩選 `?list=`(`app/project/url-state-inventory.ts`)。
 - 共用元件(`apps/admin/src/components/project/lottery/`):`CashPointHeader`(收銀點標題列;按鈕用 `actions` 陣列,各功能追加自己的按鈕)、`BoardBookCard`(看板卡片;`expanded` = 展開中的主色框)、`TicketGrid`(`flash` 讓刷到的那一格閃一下)。
 
@@ -106,6 +106,19 @@
 - 班次資訊:負責人與開班時間、期初零用金、對應排班、任務快照;開班時崗位不一致時另外標示。
 - [改對應排班]:api 回 `canReassign`(負責人或店長、交班結帳送出前)才顯示;選負責人那天在這家店的另一筆排班或「沒有排班」,原因必填(欄位管理「改對應排班原因」`schedule-entry-reassign-reason`,選「其他」說明必填)。
 
+### 兌獎(ST-11a / b、ST-38a / b、ST-39a / b / c、ST-40、ST-41)
+
+- 標題列:開班中的本機收銀點、有 `store.redeem` → [兌獎](按鈕列最前面);本機收銀點、自己開的那一班 → [最近兌獎](文字按鈕,最後)。按鈕由 `redemption/redemption-board-actions.ts` 組,看板只追加。
+- **兌獎視窗**(`RedeemDialog`):刷背面編號(輸入後 Enter / 離開欄位)→ `lotteryRedemptionPreview` 顯示遊戲、面額、本號、張號、本店的刮刮樂與否、已兌過的提示「這張已兌過獎(10/13 18:02 店外攤位)」;常見金額 200 / 500 / 1,000 / 2,000 + 自由輸入。單張超過 5,000、超過抽屜應有在畫面先擋,api 再擋一次。
+- 兌獎成功 → 提示「已兌獎 5164-056527-031 · 500 元 · 店內櫃台 [撤銷]」(能自己撤銷時才有 [撤銷],直接開那一筆的確認視窗);**不**自動打開 [最近兌獎]。
+- **[最近兌獎]**(`RecentRedemptionsDrawer`,`lotteryRecentRedemptions`):自己在這一班登記的(含已撤銷,標「已撤銷」);電腦 / 平板右側抽屜、手機底部面板;每列 [撤銷] 開確認視窗,撤銷後清單不關;點列的其他地方開兌獎紀錄詳情。
+- **撤銷兩層**(都不用審核;按鈕看 api 回的 `revokeMode`,沒有權限不顯示,`@repo/domain/project/lottery` 的 `redemptionRevokeStateOf` 前後端共用):
+  - `self`:自己登記、那一班還開著、有 `store.redeem` → 確認視窗(ST-41),不限時間、不用原因(原因代碼固定 `immediate`「當下撤銷」)。
+  - `manager`:那一班已結帳、或不是自己登記的,有 `store.undo-redeem` → 撤銷原因(必填,欄位管理「撤銷兌獎原因」`lottery-redemption-revoke-reason`)+ 說明(ST-39b);班開著 → 應有增加,已結帳 → 記成那一班的事後更正。另有 [撤銷並重新登記]:原因填好後開兌獎視窗(標題「重新登記 · 收銀點」),撤銷與新增在同一個請求(`replaceLotteryRedemption`),新的那筆算原班、`replacesId` 指向原紀錄。
+  - 已送兌:[撤銷兌獎] 停用並提示「已送兌,不能撤銷;要先撤回或退回進貨單 P-xxxx」(ST-39c),api 也拒絕(`REDEMPTION_SENT`)。
+- **兌獎紀錄分頁**(`RedemptionsTab`,ST-40):分店沿用看板的 `?org=`;篩選 期間(預設這個月 1 日到今天,租戶時區)、收銀點、狀態、登記人(選項取這段期間出現過的人,在畫面上篩);欄位 時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;平板 / 手機改卡片、篩選收進抽屜;點一列開兌獎紀錄詳情。一次最多 100 筆(超過時提示縮短期間)。
+- **兌獎紀錄詳情**(`RedemptionDetailDialog`,ST-39a):刮刮樂、獎金、收銀點 / 班(已交班)、登記、狀態(已送兌帶進貨單單號;事後更正另標);已撤銷另列撤銷人與原因。入口:兌獎紀錄分頁、[最近兌獎]。視窗串接在 `redemption/useRedemptionFlow.tsx`(看板與分頁共用)。
+
 ### 投庫 / 出庫(ST-12a / b)
 
 - 投庫:顯示這個收銀點的應有現金;金額超過 → api 擋下(`AMOUNT_EXCEEDS_DRAWER`)。出庫:顯示小金庫應有;原因必填(欄位管理「出庫原因」`lottery-withdraw-reason`);金額超過小金庫應有 → api 擋下(`AMOUNT_EXCEEDS_VAULT`,提示先用現金更正單登記小金庫實際的錢;使用者 10/21 定案)。開班時「從小金庫領零用金」同一條規則。不用審核,做完就生效;「自動列印」由列印的功能加上。
@@ -114,32 +127,40 @@
 
 ### GraphQL
 
-| 端點                                     | 權限                       | 說明                                                                                                                                      |
-| ---------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `lotteryStoreBoard(orgId)`               | `store.view`               | 看板:啟用中的收銀點(排序)、各自開著的班(負責人、`isMine`、期初、應有、本班已售、未對應排班)、檯面上的本;`myOpenShifts`;小金庫應有         |
-| `lotteryStoreOpenShiftForm(cashPointId)` | `store.open-shift`         | 開班視窗:`plan`(`first` / `handover`)、上一班留給下一班與來源、`canTakeFloat`、`suggestedEntryId`、這天的排班(任務、快照、是否已打上班卡) |
-| `openLotteryShift(input)`                | `store.open-shift`         | `{ cashPointId, scheduleEntryId?, temporaryCover, floatFromVault? }`                                                                      |
-| `punchLotteryShiftStart(entryId)`        | `store.open-shift`         | 打這一班的上班卡(排班模組再查 `schedule.my.punch`)                                                                                        |
-| `lotteryShiftInfo(id)`                   | `store.view`               | 班次資訊 + `canReassign` + 可以改選的排班                                                                                                 |
-| `reassignLotteryShiftEntry(input)`       | 負責人或店長(service 判斷) | `{ shiftId, scheduleEntryId?, temporaryCover, reasonKey, reasonNote? }`                                                                   |
-| `depositLotteryShiftCash(input)`         | `store.deposit`            | `{ shiftId, amount, note? }`                                                                                                              |
-| `withdrawLotteryShiftCash(input)`        | `store.withdraw`           | `{ shiftId, amount, reasonKey, reasonNote?, note? }`                                                                                      |
-| `lotteryStoreScan(input)`                | `store.view`               | `{ orgId, localCashPointId?, code }` → 刷到的張與處理方式 `outcome` / `blockReason`(本號對到多款遊戲時多筆)                               |
-| `sellLotteryTickets(input)`              | `store.sell`               | `{ orgId, localCashPointId, tickets[{ ticketId, version }], source: scan \| manual, confirmMove?, reasonKey?, reasonNote? }`              |
-| `lotteryStoreSale(ticketId)`             | `store.view`               | 那張最近一次售出 + `undoBlock`(撤銷確認視窗)                                                                                              |
-| `lotteryStoreRecentSales(shiftId)`       | `store.view`               | [最近售出]:自己在這一班 30 分鐘內的售出(`undone`、`undoBlock`)                                                                            |
-| `undoLotteryTicketSale(input)`           | `store.undo-sale`          | `{ ticketId, version }`;不符條件 → `UNDO_NOT_ALLOWED`                                                                                     |
-| `lotteryStoreBookCard(orgId, bookId)`    | `store.view`               | 展開卡片 / 拆本精靈:這本在這家店的張(不含跳號;`soldShiftId`、`locked`)、待標註、是否未拆                                                  |
-| `lotteryStoreUnopenedBooks(orgId)`       | `store.view`               | 拆本選本:本店還沒拆的本                                                                                                                   |
-| `splitLotteryBook(input)`                | `store.split`              | `{ orgId, bookId, skippedTicketNos, assignments[{ cashPointId, ticketNos }] }`                                                            |
-| `moveLotteryTickets(input)`              | `store.move`               | `{ orgId, tickets, toCashPointId }`(檯面上未售的張)                                                                                       |
-| `recallLotteryTickets(input)`            | `store.move`               | `{ orgId, tickets }`(檯面 → 庫存)                                                                                                         |
+| 端點                                               | 權限                         | 說明                                                                                                                                      |
+| -------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `lotteryStoreBoard(orgId)`                         | `store.view`                 | 看板:啟用中的收銀點(排序)、各自開著的班(負責人、`isMine`、期初、應有、本班已售、未對應排班)、檯面上的本;`myOpenShifts`;小金庫應有         |
+| `lotteryStoreOpenShiftForm(cashPointId)`           | `store.open-shift`           | 開班視窗:`plan`(`first` / `handover`)、上一班留給下一班與來源、`canTakeFloat`、`suggestedEntryId`、這天的排班(任務、快照、是否已打上班卡) |
+| `openLotteryShift(input)`                          | `store.open-shift`           | `{ cashPointId, scheduleEntryId?, temporaryCover, floatFromVault? }`                                                                      |
+| `punchLotteryShiftStart(entryId)`                  | `store.open-shift`           | 打這一班的上班卡(排班模組再查 `schedule.my.punch`)                                                                                        |
+| `lotteryShiftInfo(id)`                             | `store.view`                 | 班次資訊 + `canReassign` + 可以改選的排班                                                                                                 |
+| `reassignLotteryShiftEntry(input)`                 | 負責人或店長(service 判斷)   | `{ shiftId, scheduleEntryId?, temporaryCover, reasonKey, reasonNote? }`                                                                   |
+| `depositLotteryShiftCash(input)`                   | `store.deposit`              | `{ shiftId, amount, note? }`                                                                                                              |
+| `withdrawLotteryShiftCash(input)`                  | `store.withdraw`             | `{ shiftId, amount, reasonKey, reasonNote?, note? }`                                                                                      |
+| `lotteryStoreScan(input)`                          | `store.view`                 | `{ orgId, localCashPointId?, code }` → 刷到的張與處理方式 `outcome` / `blockReason`(本號對到多款遊戲時多筆)                               |
+| `sellLotteryTickets(input)`                        | `store.sell`                 | `{ orgId, localCashPointId, tickets[{ ticketId, version }], source: scan \| manual, confirmMove?, reasonKey?, reasonNote? }`              |
+| `lotteryStoreSale(ticketId)`                       | `store.view`                 | 那張最近一次售出 + `undoBlock`(撤銷確認視窗)                                                                                              |
+| `lotteryStoreRecentSales(shiftId)`                 | `store.view`                 | [最近售出]:自己在這一班 30 分鐘內的售出(`undone`、`undoBlock`)                                                                            |
+| `undoLotteryTicketSale(input)`                     | `store.undo-sale`            | `{ ticketId, version }`;不符條件 → `UNDO_NOT_ALLOWED`                                                                                     |
+| `lotteryStoreBookCard(orgId, bookId)`              | `store.view`                 | 展開卡片 / 拆本精靈:這本在這家店的張(不含跳號;`soldShiftId`、`locked`)、待標註、是否未拆                                                  |
+| `lotteryStoreUnopenedBooks(orgId)`                 | `store.view`                 | 拆本選本:本店還沒拆的本                                                                                                                   |
+| `splitLotteryBook(input)`                          | `store.split`                | `{ orgId, bookId, skippedTicketNos, assignments[{ cashPointId, ticketNos }] }`                                                            |
+| `moveLotteryTickets(input)`                        | `store.move`                 | `{ orgId, tickets, toCashPointId }`(檯面上未售的張)                                                                                       |
+| `recallLotteryTickets(input)`                      | `store.move`                 | `{ orgId, tickets }`(檯面 → 庫存)                                                                                                         |
+| `lotteryRedemptionPreview(input)`                  | `store.redeem`               | `{ orgId, code }` → 遊戲、面額、本號、張號、`isOwnStore`、`existing`(未撤銷的那一筆的時間與收銀點;整個租戶)                               |
+| `redeemLotteryTicket(input)`                       | `store.redeem`               | `{ shiftId, code, prizeAmount, note? }`;班要開著、金額 ≤ 5,000、≤ 抽屜應有                                                                |
+| `revokeLotteryRedemption(input)`                   | 兩層(service 判斷)           | `{ id, reasonKey?, reasonNote? }`:自己登記且班開著(`store.redeem`)不用原因;其他要 `store.undo-redeem` 與原因                              |
+| `replaceLotteryRedemption(input)`                  | `store.undo-redeem`          | `{ id, reasonKey, reasonNote?, code, prizeAmount, note? }` → `{ revoked, item }`(撤銷並重新登記,同一個交易)                               |
+| `lotteryRedemptions(input)`                        | `store.view`                 | `{ orgId, from?, to?, cashPointId?, status?, redeemedBy?, offset?, limit? }`(最多 100)→ `{ items, total }`,登記時間新到舊                 |
+| `lotteryRecentRedemptions(shiftId)`                | `store.view`                 | 自己在這一班登記的(含已撤銷),新到舊                                                                                                       |
+| `lotteryRedemption(id)`                            | `store.view`                 | 兌獎紀錄詳情;每筆都帶操作者的 `revokeMode`(`self` / `manager` / null)與 `revokeBlockedBySent`                                             |
+| `lotteryPurchaseRedemptions(orgId, submissionId?)` | `purchasing.purchase.create` | 進貨單新增頁的兌獎區:進貨分店「店內持有」的(+ 這張單已勾的)                                                                               |
 
 - 排班只經 `ScheduleModule` 匯出的 `ScheduleEntryLookup` 讀(`findEntryForShift` / `listEntriesOfDay` / `taskSnapshotFor` / `punchStart` / `hasStartPunch`;依賴方向刮刮樂 → 排班)。
 - 現金流水經 `CashLedgerService.recordCashMovement`(交易內)。出庫原因的欄位管理選項對到流水的原因代碼:「開班零用金」→ `opening_float`、「補零錢」→ `change`、其他(含租戶自己加的選項)→ `other`,選項名稱與說明寫進流水備註(`store-cash.service.ts` 的 `withdrawReasonOf`)。
 - 讀取照操作者的可見範圍;負責人名稱以租戶邊界讀(`shift-views.ts`,反查)。刷到時的張以租戶邊界反查(`store-sales.service.ts`:待查 / 遺失的張可能在別家店、不是本店的也要說得出來);寫入一律照操作者的範圍經帳本。
 
-正本:`apps/api/src/project/lottery/store/`、`packages/graphql/src/documents/project/lottery/store.graphql`
+正本:`apps/api/src/project/lottery/store/`、`apps/api/src/project/lottery/redemption/`、`packages/graphql/src/documents/project/lottery/store.graphql`、`redemption.graphql`
 
 ## 資料
 
@@ -162,16 +183,50 @@
 - 資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 第一班的判斷用兩個登記(`lottery/store/previous-shift.ts`):`registerHandoverAmount`(交班結帳登記「留給下一班」)、`registerDailyCloseCoverage`(日結登記「已被日結涵蓋」);沒有登記 = 留給下一班 0、沒被涵蓋。上一班的交班結帳被退回、修改留給下一班時,下一班的期初由結帳的功能更新。
 
+### 兌獎 `lottery_redemptions`
+
+| 欄位                                                                      | 說明                                                                                 |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `orgId`、`shiftId`、`cashPointId`                                         | 錢從那一班的抽屜付出                                                                 |
+| `redeemedAt`、`redeemedBy`                                                | 登記時間、登記人                                                                     |
+| `gameCode`、`bookNo`、`ticketNo`、`ticketLabel`、`rawInput`               | 遊戲代號、本號 7 位、張號、顯示用張編號 `5164-056527-031`(lookup 的標籤)、刷到的原文 |
+| `ticketId`、`gameId`                                                      | 本店持有的那一張(不是本店的刮刮樂 = null)、遊戲(找不到代號 = null)                   |
+| `prizeAmount`                                                             | 中獎金額(正整數,≤ 5,000)                                                             |
+| `status`                                                                  | `in_store` 店內持有 / `sent` 已送兌 / `revoked` 已撤銷                               |
+| `purchaseSubmissionId`、`sentAt`                                          | 勾進哪一張進貨單、送兌時間                                                           |
+| `revokedAt`、`revokedBy`、`revokeReasonKey`、`revokeReason`、`revokeNote` | 撤銷時間、撤銷人、原因代碼(自己當下撤銷 = `immediate`)、原因名稱快照、說明           |
+| `replacesId`                                                              | [撤銷並重新登記] 的新紀錄指向被撤銷的那筆                                            |
+| `postCloseOf`、`revokePostCloseOf`                                        | **事後更正**:新增時 / 撤銷時那一班已結帳 → 指向那一班(見下方)                        |
+| `version`                                                                 | 狀態改變的條件更新(撤銷、送兌、回到店內持有各 +1)                                    |
+
+- **同一張不能兌兩次**:部分唯一索引 `(tenantId, gameCode, bookNo, ticketNo)`(`revokedAt`、`deletedAt` 為 null);撤銷後可以重新登記同一張。別家店兌過也算(整個租戶)。同時兩個請求兌同一張 → 索引擋下後到的,回 `REDEMPTION_DUPLICATE`(`extensions` 帶第一筆的 `redeemedAt`、`cashPointName`)。
+- 兌獎、撤銷(班開著時)、[撤銷並重新登記] 在同一個交易先把班的 `drawerVersion` +1(同投庫 / 出庫),再檢查抽屜應有;撤銷以「店內持有 + 版本」條件更新,兩人同時撤銷只有一個成功(`REDEMPTION_ALREADY_REVOKED`)。
+- 資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。lookup 來源 `lottery_redemption`(`project/lookup-providers.ts`;標籤 `ticketLabel`、帶入 `prizeAmount`;可攜的固定條件只收 `status: in_store`)給進貨單的兌獎欄用。
+- 讀「已兌過」、登記人 / 班次負責人名稱、進貨單單號以租戶邊界讀(`project/database/tenant-boundary-callers.ts`,反查)。
+
+#### 事後更正(規格 6.12;本票先實作兌獎這一側,P24 / P25 / P26 / P29 照用同一個形狀)
+
+「那一班已經結帳(已送出交班結帳,`lottery_shifts.closedAt` 有值)之後,才記到那一班的錢」。
+
+- **不改已送出的結帳單**,下一班的期初也不變;事後更正只把「當時差額為什麼不是 0」補上解釋。
+- **資料形狀**:那一筆照常寫入,另記指向被更正那一班的欄位。兌獎紀錄有兩個時間點,所以分兩欄:`postCloseOf`(新增時那一班已結帳 —— [撤銷並重新登記] 的新紀錄)、`revokePostCloseOf`(撤銷時那一班已結帳)。張數事件與現金流水只有「寫入」一個時間點,用同一個欄位名 `postCloseOf`。
+- **算法**(`@repo/domain/project/lottery` 的 `redemptionDrawerNetOf` / `redemptionPostCloseNetOf`):
+  - 結帳時的應有只算「班開著時登記、而且沒有在班開著時撤銷」的兌獎(抽屜應有的來源 `redemptions`);交班後的撤銷 / 新增不改它。
+  - 那一班兌獎的事後更正淨額 = Σ(`revokePostCloseOf` = 那一班的金額)− Σ(`postCloseOf` = 那一班的金額)。api 給其他功能的入口:`redemption/redemption-registrations.ts` 的 `redemptionPostCloseNet(repository, reader, shiftId)`。
+  - 那一班的應有(含事後更正)= 結帳時的應有 + 各來源的事後更正淨額;差額(含事後更正)= 實點 − 應有(含事後更正)。交班結帳、報表由那些功能加總。
+- **例**(第 17 章第 5 題):週一晚班期初 5,000,登記 2,000(應有 3,000),實點 4,800、交班。週二店長 [撤銷並重新登記] 200:原紀錄 `status = revoked`、`revokePostCloseOf = 週一晚班`;新紀錄 `replacesId = 原紀錄`、`postCloseOf = 週一晚班`、`shiftId = 週一晚班`;事後更正 +2,000 − 200 = +1,800,週一差額(含事後更正)= 0。
+
 ### 抽屜應有
 
 `expectedDrawerCash(reader, shift)`(`lottery/store/drawer-cash.ts`)= 期初零用金 + 每個登記來源的淨額(流入抽屜 +、流出 −)。來源以 `registerDrawerCashSource(name, source)` 登記(名稱全域唯一):
 
-| 來源             | 登記處                   | 算什麼                                                                                        |
-| ---------------- | ------------------------ | --------------------------------------------------------------------------------------------- |
-| `ticket-events`  | `store-registrations.ts` | 這一班的張數事件:`cashEffect` 增加(售出、盤點補登)+、減少(當下撤銷)−;銷售與當下撤銷都寫在這裡 |
-| `cash-movements` | `store-registrations.ts` | 這一班的現金流水(投庫、出庫、調貨、退貨退款、現金更正);扣掉開班領零用金那一筆(已是期初)       |
+| 來源             | 登記處                                   | 算什麼                                                                                        |
+| ---------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `ticket-events`  | `store-registrations.ts`                 | 這一班的張數事件:`cashEffect` 增加(售出、盤點補登)+、減少(當下撤銷)−;銷售與當下撤銷都寫在這裡 |
+| `cash-movements` | `store-registrations.ts`                 | 這一班的現金流水(投庫、出庫、調貨、退貨退款、現金更正);扣掉開班領零用金那一筆(已是期初)       |
+| `redemptions`    | `redemption/redemption-registrations.ts` | 這一班開著時登記、沒有在班開著時撤銷的兌獎:每筆 − 金額(交班後的撤銷 / 新增是事後更正,不算)    |
 
-兌獎等之後的項目由那些功能在自己的 provider `onModuleInit` 登記自己的來源。
+之後的項目由那些功能在自己的 provider `onModuleInit` 登記自己的來源。
 
 ### 對其他功能的登記(`store-registrations.ts`)
 
@@ -193,41 +248,47 @@
 
 ### 稽核
 
-| action                         | targetType      | 什麼時候                                                   |
-| ------------------------------ | --------------- | ---------------------------------------------------------- |
-| `lottery-shift.reassign-entry` | `lottery_shift` | 改對應排班(before / after:對應排班、任務快照;after 含原因) |
+| action                         | targetType           | 什麼時候                                                                   |
+| ------------------------------ | -------------------- | -------------------------------------------------------------------------- |
+| `lottery-shift.reassign-entry` | `lottery_shift`      | 改對應排班(before / after:對應排班、任務快照;after 含原因)                 |
+| `lottery-redemption.revoke`    | `lottery_redemption` | 撤銷兌獎(兩層與 [撤銷並重新登記] 的撤銷;after 含原因、說明、`postCloseOf`) |
 
 ### 錯誤碼
 
-| code                | reason                          | 什麼時候                                                                          |
-| ------------------- | ------------------------------- | --------------------------------------------------------------------------------- |
-| `VALIDATION_FAILED` | `SHIFT_ALREADY_OPEN`            | 這個收銀點已經有開著的班(含兩人同時開班的後到者)                                  |
-| `VALIDATION_FAILED` | `SHIFT_IN_OTHER_STORE`          | 操作者在別家店還有開著的班                                                        |
-| `VALIDATION_FAILED` | `SHIFT_CLOSED`                  | 這一班已送出交班結帳(改對應排班、投庫、出庫)                                      |
-| `VALIDATION_FAILED` | `CASH_POINT_DISABLED`           | 收銀點已停用                                                                      |
-| `VALIDATION_FAILED` | `ENTRY_NOT_AVAILABLE`           | 選的排班不是這個人那天在這家店的排班                                              |
-| `VALIDATION_FAILED` | `OPENING_FLOAT_NOT_ALLOWED`     | 不是第一班、或沒有 `store.withdraw`,卻要從小金庫領零用金                          |
-| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`         | 投庫金額超過抽屜目前的應有                                                        |
-| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_VAULT`          | 出庫或開班從小金庫領零用金超過小金庫目前的應有(`fields: amount / floatFromVault`) |
-| `VALIDATION_FAILED` | —(`fields: scheduleEntryId` 等) | 沒選對應排班、金額不是正整數、原因沒選或選「其他」沒寫說明                        |
-| `VALIDATION_FAILED` | `LOCAL_SHIFT_NOT_OPEN`          | 售出時本機收銀點(或那一班)沒有開著的班                                            |
-| `VALIDATION_FAILED` | `TICKET_NOT_SELLABLE`           | 這張不能賣(`extensions.blockReason`);手動標記只收本機收銀點檯面上的張             |
-| `VALIDATION_FAILED` | `ALREADY_SOLD`                  | 這張已經賣掉(`extensions.soldAt`;同時兩次售出的失敗方)                            |
-| `VALIDATION_FAILED` | `GAME_NOT_FOUND`                | 售出:讀不到這張的遊戲(面額不明),不以 0 元賣                                       |
-| `VALIDATION_FAILED` | `MOVE_CONFIRM_REQUIRED`         | 刮刮樂在別人的班的檯面,沒有 `confirmMove`                                         |
-| `FORBIDDEN`         | `MOVE_NOT_ALLOWED`              | 同上、沒有 `store.move`                                                           |
-| `VALIDATION_FAILED` | `UNDO_NOT_ALLOWED`              | 不符合當下撤銷的條件(`extensions.undoBlock`)                                      |
-| `VALIDATION_FAILED` | `BOOK_ALREADY_OPENED`           | 拆本:這本在這家店已經拆過                                                         |
-| `VALIDATION_FAILED` | `SPLIT_PLAN_INVALID`            | 拆本:跳號沒點滿或沒分配完(`extensions.problem`)                                   |
-| `VALIDATION_FAILED` | `TICKET_NOT_ON_COUNTER`         | 移櫃 / 收回:不是檯面上未售的張                                                    |
-| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`      | 帳本的條件更新失敗(版本或狀態已變)                                                |
-| `FORBIDDEN`         | —                               | 沒有那條權限;改對應排班不是負責人也不是店長                                       |
-| `NOT_FOUND`         | —                               | 分店、收銀點或班次不存在 / 看不到                                                 |
+| code                | reason                                                   | 什麼時候                                                                          |
+| ------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `VALIDATION_FAILED` | `SHIFT_ALREADY_OPEN`                                     | 這個收銀點已經有開著的班(含兩人同時開班的後到者)                                  |
+| `VALIDATION_FAILED` | `SHIFT_IN_OTHER_STORE`                                   | 操作者在別家店還有開著的班                                                        |
+| `VALIDATION_FAILED` | `SHIFT_CLOSED`                                           | 這一班已送出交班結帳(改對應排班、投庫、出庫)                                      |
+| `VALIDATION_FAILED` | `CASH_POINT_DISABLED`                                    | 收銀點已停用                                                                      |
+| `VALIDATION_FAILED` | `ENTRY_NOT_AVAILABLE`                                    | 選的排班不是這個人那天在這家店的排班                                              |
+| `VALIDATION_FAILED` | `OPENING_FLOAT_NOT_ALLOWED`                              | 不是第一班、或沒有 `store.withdraw`,卻要從小金庫領零用金                          |
+| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`                                  | 投庫金額超過抽屜目前的應有                                                        |
+| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_VAULT`                                   | 出庫或開班從小金庫領零用金超過小金庫目前的應有(`fields: amount / floatFromVault`) |
+| `VALIDATION_FAILED` | —(`fields: scheduleEntryId` 等)                          | 沒選對應排班、金額不是正整數、原因沒選或選「其他」沒寫說明                        |
+| `VALIDATION_FAILED` | `LOCAL_SHIFT_NOT_OPEN`                                   | 售出時本機收銀點(或那一班)沒有開著的班                                            |
+| `VALIDATION_FAILED` | `TICKET_NOT_SELLABLE`                                    | 這張不能賣(`extensions.blockReason`);手動標記只收本機收銀點檯面上的張             |
+| `VALIDATION_FAILED` | `ALREADY_SOLD`                                           | 這張已經賣掉(`extensions.soldAt`;同時兩次售出的失敗方)                            |
+| `VALIDATION_FAILED` | `GAME_NOT_FOUND`                                         | 售出:讀不到這張的遊戲(面額不明),不以 0 元賣                                       |
+| `VALIDATION_FAILED` | `MOVE_CONFIRM_REQUIRED`                                  | 刮刮樂在別人的班的檯面,沒有 `confirmMove`                                         |
+| `FORBIDDEN`         | `MOVE_NOT_ALLOWED`                                       | 同上、沒有 `store.move`                                                           |
+| `VALIDATION_FAILED` | `UNDO_NOT_ALLOWED`                                       | 不符合當下撤銷的條件(`extensions.undoBlock`)                                      |
+| `VALIDATION_FAILED` | `BOOK_ALREADY_OPENED`                                    | 拆本:這本在這家店已經拆過                                                         |
+| `VALIDATION_FAILED` | `SPLIT_PLAN_INVALID`                                     | 拆本:跳號沒點滿或沒分配完(`extensions.problem`)                                   |
+| `VALIDATION_FAILED` | `TICKET_NOT_ON_COUNTER`                                  | 移櫃 / 收回:不是檯面上未售的張                                                    |
+| `VALIDATION_FAILED` | `REDEMPTION_CODE_INVALID` / `REDEMPTION_CODE_NEEDS_BACK` | 兌獎:看不懂的編號 / 正面編號對不到本店唯一的遊戲(請刷背面編號)                    |
+| `VALIDATION_FAILED` | `REDEMPTION_OVER_LIMIT`                                  | 兌獎:單張超過 5,000(請客人到銀行兌獎)                                             |
+| `VALIDATION_FAILED` | `REDEMPTION_DUPLICATE`                                   | 兌獎:這張已有未撤銷的兌獎(`extensions` 帶 `redeemedAt`、`cashPointName`)          |
+| `VALIDATION_FAILED` | `REDEMPTION_SENT` / `REDEMPTION_ALREADY_REVOKED`         | 撤銷兌獎:已送兌(先撤回或退回進貨單)/ 已撤銷                                       |
+| `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`(兌獎)                            | 兌獎金額超過抽屜目前的應有(`extensions.expected`)                                 |
+| `CONFLICT`          | `TICKET_ALREADY_PROCESSED`                               | 帳本的條件更新失敗(版本或狀態已變)                                                |
+| `FORBIDDEN`         | —                                                        | 沒有那條權限;改對應排班不是負責人也不是店長                                       |
+| `NOT_FOUND`         | —                                                        | 分店、收銀點或班次不存在 / 看不到                                                 |
 
 ### 測試
 
-`apps/api/src/project/lottery/store/store-sales.test.ts`(端點 + 真 MongoDB:錢算在哪一班、刷到時各情況、當下撤銷四種不符與符合、同時兩次售出、拆本、移櫃情境表、手動標記)、`packages/domain/src/project/lottery/store-sales.test.ts`、`apps/api/src/project/lottery/store/store.test.ts`(端點 + 真 MongoDB:開班、同店兩個收銀點 / 跨店、同時開班、對應排班與快照、崗位不一致、改對應排班、投庫 / 出庫、同時投庫、排班刪除守門、收銀點停用守門、收付與即時現金帳的登記、看板卡片)、`store-board-ticket.test.ts`(`board:<分店>` 換發,RT-04)、`apps/db-migrator/seeds/project/store.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/store.test.ts`。
+`apps/api/src/project/lottery/redemption/redemption.test.ts`(兌獎:預覽、第 17 章第 4 / 5 / 7 題、重複與同時兌同一張、5,000 / 抽屜上限、[最近兌獎] 與分頁篩選、兩層撤銷與權限、自己撤銷遇到交班、事後更正淨額、稽核)、`apps/api/src/project/lottery/store/store-sales.test.ts`(端點 + 真 MongoDB:錢算在哪一班、刷到時各情況、當下撤銷四種不符與符合、同時兩次售出、拆本、移櫃情境表、手動標記)、`packages/domain/src/project/lottery/store-sales.test.ts`、`apps/api/src/project/lottery/store/store.test.ts`(端點 + 真 MongoDB:開班、同店兩個收銀點 / 跨店、同時開班、對應排班與快照、崗位不一致、改對應排班、投庫 / 出庫、同時投庫、排班刪除守門、收銀點停用守門、收付與即時現金帳的登記、看板卡片)、`store-board-ticket.test.ts`(`board:<分店>` 換發,RT-04)、`apps/db-migrator/seeds/project/store.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/store.test.ts`。
 
 ## 使用者說明(help.md)
 
-`apps/admin/src/md/module-help/project/additions/store.help.md`(租戶使用者看的說明;守詞彙表)。admin 元件測試:`StorePage.test.tsx`、`StoreSales.test.tsx`(刷條碼 / 相機 / 快速銷售、撤銷、選遊戲、拆本精靈、展開卡片、沒有權限);假 api `apps/admin/src/test/msw/project/lottery/store-handlers.ts`、`store-sales-handlers.ts`(銷售共用同一份看板狀態)。
+`apps/admin/src/md/module-help/project/additions/store.help.md`(租戶使用者看的說明;守詞彙表)。admin 元件測試:`StorePage.test.tsx`、`StoreSales.test.tsx`、`redemption/Redemption.test.tsx`(兌獎)(刷條碼 / 相機 / 快速銷售、撤銷、選遊戲、拆本精靈、展開卡片、沒有權限);假 api `apps/admin/src/test/msw/project/lottery/store-handlers.ts`、`store-sales-handlers.ts`(銷售共用同一份看板狀態)。

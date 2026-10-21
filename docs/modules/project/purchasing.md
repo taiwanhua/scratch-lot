@@ -84,7 +84,7 @@
 | 表單   | formKey       | 綁定模組                 | 受管表單                                                                                |
 | ------ | ------------- | ------------------------ | --------------------------------------------------------------------------------------- |
 | 叫貨單 | `requisition` | `purchasing.requisition` | `seeds/project/revisions/requisition.r3.seed.ts`(r1 = 初版、r2 = 作廢原因類別,保留不改) |
-| 進貨單 | `purchase`    | `purchasing.purchase`    | `seeds/project/revisions/purchase.r2.seed.ts`(r1 保留不改)                              |
+| 進貨單 | `purchase`    | `purchasing.purchase`    | `seeds/project/revisions/purchase.r3.seed.ts`(r1、r2 保留不改;r3 = 兌獎)                |
 | 調貨單 | `transfer`    | `purchasing.transfer`    | `seeds/project/revisions/transfer.r2.seed.ts`(r1 保留不改)                              |
 
 ## 資料
@@ -173,21 +173,25 @@
 
 ### 進貨單(規格 8.2、8.3)
 
-**欄位**(受管表單 `purchase` r2;允許存草稿;單號 `P-0001`,不分期間;作廢原因 = 欄位管理「作廢原因」`void-reason`(刮刮樂與排班共用)):
+**欄位**(受管表單 `purchase` r3;允許存草稿;單號 `P-0001`,不分期間;作廢原因 = 欄位管理「作廢原因」`void-reason`(刮刮樂與排班共用)):
 
-| key               | 名稱       | 型別                                                                                                                                                                                                      |
-| ----------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `branch`          | 進貨分店   | 組織引用,必填;預設 `ctx.user.orgId`                                                                                                                                                                       |
-| `requisition`     | 叫貨單     | 單行文字(叫貨單**單號**,例 `R-0042`),選填;送出前以叫貨明細副本的單號找回叫貨單                                                                                                                            |
-| `dealer`          | 批購甲類   | 引用 `lottery_dealer`,固定條件 `type: a`、`status: active`,必填                                                                                                                                           |
-| `self_purchase`   | 本人批購   | 是否,預設是                                                                                                                                                                                               |
-| `trustee`         | 批購受託人 | 引用 `lottery_dealer_contact`(`status: active`、`roles: trustee`);本人批購 = 否時顯示,送出前檢查                                                                                                          |
-| `purchase_date`   | 批購日期   | 日期,必填;預設今天                                                                                                                                                                                        |
-| `account`         | 扣款帳戶   | 引用 `lottery_bank_account`(`status: active`),必填                                                                                                                                                        |
-| `lines`           | 明細       | `game`(引用 `lottery_game` 販售中;列內帶入張數、整本金額、批購金額率)、`book_no`(6–7 位)、`last_ticket_no`、`tickets`、`book_price`、`rate`(0–100)、`amount`(列內公式 整本金額 × 批購金額率 ÷ 100,取整數) |
-| `purchase_total`  | 批購合計   | 計算欄 `sumOf(lines, amount)`                                                                                                                                                                             |
-| `deducted_amount` | 扣款金額   | 計算欄;目前 = 批購合計(兌獎折抵由兌獎的功能加),是這張單的**應付**                                                                                                                                         |
-| `note`            | 備註       | 單行文字 200 字(摘要槽「標題」)                                                                                                                                                                           |
+| key                    | 名稱       | 型別                                                                                                                                                                                                      |
+| ---------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `branch`               | 進貨分店   | 組織引用,必填;預設 `ctx.user.orgId`                                                                                                                                                                       |
+| `requisition`          | 叫貨單     | 單行文字(叫貨單**單號**,例 `R-0042`),選填;送出前以叫貨明細副本的單號找回叫貨單                                                                                                                            |
+| `dealer`               | 批購甲類   | 引用 `lottery_dealer`,固定條件 `type: a`、`status: active`,必填                                                                                                                                           |
+| `self_purchase`        | 本人批購   | 是否,預設是                                                                                                                                                                                               |
+| `trustee`              | 批購受託人 | 引用 `lottery_dealer_contact`(`status: active`、`roles: trustee`);本人批購 = 否時顯示,送出前檢查                                                                                                          |
+| `purchase_date`        | 批購日期   | 日期,必填;預設今天                                                                                                                                                                                        |
+| `account`              | 扣款帳戶   | 引用 `lottery_bank_account`(`status: active`),必填                                                                                                                                                        |
+| `lines`                | 明細       | `game`(引用 `lottery_game` 販售中;列內帶入張數、整本金額、批購金額率)、`book_no`(6–7 位)、`last_ticket_no`、`tickets`、`book_price`、`rate`(0–100)、`amount`(列內公式 整本金額 × 批購金額率 ÷ 100,取整數) |
+| `purchase_total`       | 批購合計   | 計算欄 `sumOf(lines, amount)`                                                                                                                                                                             |
+| `redemptions`          | 兌獎       | 明細:`redemption`(引用 `lottery_redemption`,固定條件 `status: in_store`;帶入 `prize_amount`)、`prize_amount`(中獎金額)。勾選這次拿去兌獎的兌獎紀錄,不能手填金額                                           |
+| `redemption_total`     | 兌獎金額   | 計算欄 `sumOf(redemptions, prize_amount)`                                                                                                                                                                 |
+| `redemption_offset`    | 兌獎折抵   | 計算欄 `min(兌獎金額, 批購合計)`                                                                                                                                                                          |
+| `deducted_amount`      | 扣款金額   | 計算欄 = 批購合計 − 兌獎折抵,是這張單的**應付**                                                                                                                                                           |
+| `redemption_remainder` | 兌獎剩餘   | 計算欄 = 兌獎金額 − 兌獎折抵                                                                                                                                                                              |
+| `note`                 | 備註       | 單行文字 200 字(摘要槽「標題」)                                                                                                                                                                           |
 
 **列表欄位配置**初值:單號、進貨分店、甲類、批購日、扣款金額 + 內建欄「狀態」(`seeds/project/settings.ts`);列表頁另加點收進度與結算。
 
@@ -226,7 +230,16 @@
 
 **收付**:`registerSettlementDocument` 登記一邊「總部」(付款方、`purchasing.purchase.settle`、只能銀行),應付 = 扣款金額(`purchasePayableOf`),參與收付的狀態 `reviewing` / `returned` / `withdrawn` / `completed`;[付款] = 應付 − 已付淨額、[收到退款] = 已付淨額 − 應付,最少 0。
 
-**草稿**不影響任何統計:不記帳、不算在途、不算遊戲引用、不算批購日。
+**兌獎**(規格 8.2「兌獎」;Figma PU-05 兌獎區):
+
+- 新增頁的兌獎區(`PurchaseRedemptions`,`lotteryPurchaseRedemptions`)只列**進貨分店**「店內持有」的兌獎紀錄;勾選的合計 = 兌獎金額;合計五列(`PurchaseTotals`):批購合計、兌獎金額(勾選 N 筆)、兌獎折抵、扣款金額、兌獎剩餘(算法 `purchaseRedemptionTotalsOf`,和表單計算欄同一套)。跨分店選兌獎紀錄這一輪不做。
+- `beforeSubmit`:勾選的兌獎紀錄要在進貨分店、「店內持有」(或已勾在這張單上)、金額和紀錄相同 → 否則 `PURCHASE_REDEMPTION_INVALID`。已送兌的不在 lookup 的固定條件裡,表單引擎先擋(`VALIDATION_FAILED`,`fields: redemptions`)。
+- `submitted`(每次送出):勾選的改「已送兌」(`purchaseSubmissionId`、`sentAt`);這張單之前勾、這次沒勾的回到店內持有(`RedemptionPurchaseLink.markSent`,被別人搶先撤銷 → 交易回復)。**第一次送出**另在兌獎剩餘 > 0 時以 `SettlementService.recordAutomatic(…, { redemptionIncome: true })` 記銀行「兌獎入帳」= 兌獎剩餘(扣款帳戶、歸屬分店 = 進貨分店、`refType` 指回這張單、`settlementSide = null` → **不算進淨額、不算待結清**)。
+- `withdrawn` / `returned` / `rejected` / `voided`:這張單勾的全部回到「店內持有」(`RedemptionPurchaseLink.release`)。
+- 例(規格 8.2、第 9 章驗算 ⑤):批購 60,000、勾選 100,000 → 折抵 60,000、扣款 0(記 0 元批貨支出)、兌獎剩餘 40,000(記兌獎入帳 40,000),應付 0 = 已結清。
+- 兌獎紀錄在分店、進貨單是總部建的、掛接點以系統身分執行:`RedemptionPurchaseLink` 以租戶邊界讀寫(用途「例外寫入」),條件釘這張單。正本 `docs/modules/project/store.md`「兌獎」。
+
+**草稿**不影響任何統計:不記帳、不算在途、不算遊戲引用、不算批購日、不改兌獎紀錄的狀態。
 
 **在途**:向 `in-transit.ts` 登記 `lottery-purchases`:這家店(進貨分店)審核中 / 被退回 / 已撤回的進貨單還沒點收的本數。
 
@@ -352,20 +365,21 @@
 
 ### 錯誤碼
 
-| code / reason                                                                                                                                                            | 什麼時候                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| `FORBIDDEN` + `REQUISITION_NO_LINES`                                                                                                                                     | 送出時明細沒有本數 > 0 的列                     |
-| `FORBIDDEN` + `REQUISITION_GAME_DISCONTINUED`                                                                                                                            | 送出時明細有停售 / 不存在的遊戲                 |
-| `FORBIDDEN` + `REQUISITION_REFERENCED`                                                                                                                                   | 作廢已被引用的叫貨單                            |
-| `CONFLICT` + `REQUISITION_REFERENCED`                                                                                                                                    | 引用介面:已被別張進貨單 / 調貨單引用            |
-| `VALIDATION_FAILED` + `REQUISITION_NOT_PENDING`                                                                                                                          | 引用介面:不是待購買                             |
-| `FORBIDDEN` + `PURCHASE_*`(見「進貨單」掛接點表)                                                                                                                         | 進貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋      |
-| `FORBIDDEN` + `SETTLEMENT_NOT_CLEARED`                                                                                                                                   | 進貨單駁回 / 作廢前淨額 ≠ 0                     |
-| `FORBIDDEN` + `PURCHASE_NOT_RECEIVABLE`                                                                                                                                  | 點收:不在審核中或任務不在自己手上               |
-| `VALIDATION_FAILED` + `PURCHASE_SCAN_INVALID` / `PURCHASE_ALREADY_RECEIVED` / `PURCHASE_LAST_TICKET_MISMATCH` / `PURCHASE_WRONG_STORE` / `PURCHASE_BOOK_NOT_ON_PURCHASE` | 點收刷條碼                                      |
-| `FORBIDDEN` + `TRANSFER_*`(見「調貨單」掛接點表)                                                                                                                         | 調貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋      |
-| `FORBIDDEN` + `TRANSFER_NOT_RECEIVABLE`                                                                                                                                  | 調貨點收:不在審核中或點收關卡的任務不在自己手上 |
-| `VALIDATION_FAILED` + `TRANSFER_SCAN_INVALID` / `TRANSFER_ALREADY_RECEIVED` / `TRANSFER_NOT_SHIPPED` / `TRANSFER_WRONG_STORE` / `TRANSFER_BOOK_NOT_ON_TRANSFER`          | 調貨點收刷條碼                                  |
+| code / reason                                                                                                                                                            | 什麼時候                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `FORBIDDEN` + `REQUISITION_NO_LINES`                                                                                                                                     | 送出時明細沒有本數 > 0 的列                                 |
+| `FORBIDDEN` + `REQUISITION_GAME_DISCONTINUED`                                                                                                                            | 送出時明細有停售 / 不存在的遊戲                             |
+| `FORBIDDEN` + `REQUISITION_REFERENCED`                                                                                                                                   | 作廢已被引用的叫貨單                                        |
+| `CONFLICT` + `REQUISITION_REFERENCED`                                                                                                                                    | 引用介面:已被別張進貨單 / 調貨單引用                        |
+| `VALIDATION_FAILED` + `REQUISITION_NOT_PENDING`                                                                                                                          | 引用介面:不是待購買                                         |
+| `FORBIDDEN` + `PURCHASE_*`(見「進貨單」掛接點表)                                                                                                                         | 進貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                  |
+| `FORBIDDEN` + `SETTLEMENT_NOT_CLEARED`                                                                                                                                   | 進貨單駁回 / 作廢前淨額 ≠ 0                                 |
+| `FORBIDDEN` + `PURCHASE_REDEMPTION_INVALID`                                                                                                                              | 進貨單送出:勾選的兌獎紀錄不是進貨分店店內持有的、或金額不同 |
+| `FORBIDDEN` + `PURCHASE_NOT_RECEIVABLE`                                                                                                                                  | 點收:不在審核中或任務不在自己手上                           |
+| `VALIDATION_FAILED` + `PURCHASE_SCAN_INVALID` / `PURCHASE_ALREADY_RECEIVED` / `PURCHASE_LAST_TICKET_MISMATCH` / `PURCHASE_WRONG_STORE` / `PURCHASE_BOOK_NOT_ON_PURCHASE` | 點收刷條碼                                                  |
+| `FORBIDDEN` + `TRANSFER_*`(見「調貨單」掛接點表)                                                                                                                         | 調貨單送出 / 核准 / 駁回 / 刪除 / 作廢被擋                  |
+| `FORBIDDEN` + `TRANSFER_NOT_RECEIVABLE`                                                                                                                                  | 調貨點收:不在審核中或點收關卡的任務不在自己手上             |
+| `VALIDATION_FAILED` + `TRANSFER_SCAN_INVALID` / `TRANSFER_ALREADY_RECEIVED` / `TRANSFER_NOT_SHIPPED` / `TRANSFER_WRONG_STORE` / `TRANSFER_BOOK_NOT_ON_TRANSFER`          | 調貨點收刷條碼                                              |
 
 前端文案:掛接點擋下的在 `admin.lifecycle.<reason>`(專案字典)。
 
@@ -393,6 +407,7 @@
 - domain:`packages/domain/src/project/lottery/requisition.test.ts`
 - admin:`pages/project/lottery/purchasing/**/*.test.ts(x)`
 - 進貨單 api:`apps/api/src/project/lottery/purchase/purchase.test.ts`(掛接點表每一列、本號重複、送錯分店與通知、批貨支出與 5 情境、批購日、側欄計數、settle、遊戲引用、在途、批購紀錄)
+- 進貨單兌獎 api:`apps/api/src/project/lottery/purchase/purchase-redemption.test.ts`(新增頁的兌獎區、規格 8.2 例 100,000 / 60,000、撤回 / 重新送出 / 退回、送出前檢查)
 - 進貨單 seed:`seeds/project/purchasing.purchase.test.ts`;domain:`packages/domain/src/project/lottery/purchase.test.ts`
 - 調貨單 api:`apps/api/src/project/lottery/transfer/transfer.test.ts`(掛接點表每一列、送出前的本 / 張檢查、鎖定不能賣、第一關跳過也調出與通知、點收與單張成本、送錯分店、規格第 9 章 5 步驟例與分次付款例、核准前三個數字、兩邊權限、駁回 / 作廢回到出貨店、側欄計數四種情況、列表進度)
 - 調貨單 seed:`seeds/project/purchasing.transfer.test.ts`;domain:`packages/domain/src/project/lottery/transfer.test.ts`;admin:`pages/project/lottery/purchasing/transfer/**/*.test.ts(x)`
