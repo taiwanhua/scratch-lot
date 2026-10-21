@@ -31,6 +31,21 @@ const SOURCE_ROOTS = [
  */
 const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
+    key: "admin.schedule.roster.applyTemplates.presets.",
+    reason:
+      "套用範本的日子快選 `t(`presets.${preset}`)`,preset 取自 `ApplyTemplatesDialog` 的 `PRESETS`(`DatePreset`,`lib/project/schedule-auto-run.ts`)",
+  },
+  {
+    key: "admin.schedule.roster.autoRun.modes.",
+    reason:
+      "自動排班的方式 `t(`modes.${item}`)`,item 取自 `AutoRunDialog` 的 `MODES`(= `SCHEDULE_AUTO_RUN_MODES`)",
+  },
+  {
+    key: "admin.schedule.roster.autoRun.errors.",
+    reason:
+      "自動排班 / 清除被擋 `t(`errors.${reason}`)`,reason 由 `auto-run-status.ts` 的 `autoRunBlockedReasonOf` 從 api `extensions.reason` 換算",
+  },
+  {
     key: "admin.lotteryMasterData.errors.",
     reason:
       "`t(`errors.${code}`)`,code 由 `pages/project/lottery/master-data/master-data-error.ts` 從 api 錯誤碼與 reason 換算",

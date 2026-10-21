@@ -1507,7 +1507,6 @@
         "templatesTitle": "Demand templates (pick any)",
         "weekTitle": "Week template (pick one)",
         "templateLine": "{name} {start}–{end} · {position} {count}",
-        "ownerSuffix": " ({org})",
         "weekLine": "{name} · {summary}",
         "applyTo": "Apply to {month}/{year}",
         "presets": {
@@ -1550,7 +1549,6 @@
         "empty": "Month {month} has no demands yet. Apply demand templates or a week template first",
         "cancel": "Cancel",
         "run": "Run",
-        "running2": "Running",
         "confirmTitle": "Redo everything?",
         "confirmBody": "This clears {count} manually assigned people and runs auto scheduling again. Continue?",
         "confirm": "Redo everything",

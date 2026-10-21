@@ -1507,7 +1507,6 @@
         "templatesTitle": "人力需求範本(可多選)",
         "weekTitle": "人力需求週範本(選一份)",
         "templateLine": "{name} {start}–{end} · {position} {count}",
-        "ownerSuffix": "({org})",
         "weekLine": "{name} · {summary}",
         "applyTo": "套用到 {year} 年 {month} 月",
         "presets": {
@@ -1550,7 +1549,6 @@
         "empty": "{month} 月還沒有任何人力需求,請先套用人力需求範本或人力需求週範本",
         "cancel": "取消",
         "run": "執行",
-        "running2": "執行中",
         "confirmTitle": "全部重排?",
         "confirmBody": "將清除 {count} 個手動排入的人次,再重新自動排班。確定嗎?",
         "confirm": "全部重排",
