@@ -28,6 +28,7 @@ import { TenantOpsService } from "./tenant-ops.service";
 const PERMISSIONS = {
   provision: "system.org-manager.tenant-ops.provision",
   revokeProvision: "system.org-manager.tenant-ops.revoke-provision",
+  purgeDemo: "system.org-manager.tenant-ops.purge-demo",
   transferOwner: "system.org-manager.tenant-ops.transfer-owner",
 } as const;
 
@@ -87,10 +88,10 @@ export class TenantOpsResolver {
   /**
    * 清空示範機構(demo 指令 `purge` / `rebuild`):只接受標「示範」的租戶頂層,刪掉它的全部資料
    * (含只能新增的帳本)、只屬於它的使用者與它引用的檔案(`DemoTenantPurgeService`)。
-   * 與撤銷開通同屬「硬刪一個租戶」,沿用同一筆根組織專屬權限;
+   * 一個租戶作業一筆權限(`tenant-ops.purge-demo`,根組織專屬);
    * 只對「示範」機構生效由服務層擋(沒有標記 → `FORBIDDEN`,一筆都不刪)。
    */
-  @RequirePermission(PERMISSIONS.revokeProvision)
+  @RequirePermission(PERMISSIONS.purgeDemo)
   @Mutation(() => PurgeDemoTenantPayload)
   purgeDemoTenant(
     @Args("input") input: PurgeDemoTenantInput,

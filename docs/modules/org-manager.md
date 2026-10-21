@@ -24,21 +24,22 @@
 
 綁定原則:綁「按鈕 / 欄位所在的那一頁」(ADR-0004)。每個模組固定有一筆 `<key>.*`(seed 自動產生,本表不列)。
 
-| 權限 key                                         | 它是哪一頁的什麼                                                                                                                           |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `system.org-manager.view`                        | 看組織樹與組織資料(名稱、描述、商標、狀態、擁有者);沒有它整頁進不去內容                                                                    |
-| `system.org-manager.create-child`                | 「新增子組織」按鈕 + API:在選中的組織下建一個子組織(名稱 + 描述)                                                                           |
-| `system.org-manager.edit`                        | 「編輯」按鈕 + API:名稱、描述、商標                                                                                                        |
-| `system.org-manager.toggle-enabled`              | 「停用 / 啟用」按鈕 + API:連動整棵子樹                                                                                                     |
-| `system.org-manager.move`                        | 「搬移」動作 + API:改上層組織,限同一租戶(以 `ancestors` 驗證),跨租戶拒                                                                     |
-| `system.org-manager.delete`                      | 「刪除」按鈕 + API:前置檢查通過才可(見規則)                                                                                                |
-| `system.org-manager.view-members`                | 組織詳情的「成員」頁籤 + API(`orgMembers`):看這個組織**自己**的成員                                                                        |
-| `system.org-manager.add-members`                 | 「加入成員」按鈕 + API(`orgMemberCandidates` / `addOrgMembers`):把管理範圍內的使用者加進這個組織;**移除不在這裡**                          |
-| `system.org-manager.set-visibility`              | 編輯**自己租戶的頂層**時的「使用者可見自身組織的下層組織資料」開關 + API(`settings.visibility`,ADR-0005);租戶管理員模板含此權限,根組織亦可 |
-| `system.org-manager.set-timezone`                | 編輯**自己租戶的頂層**或**根組織**時的「時區」欄 + API(`settings.timezone`);租戶管理員模板含此權限;沒有它時欄位唯讀                        |
-| `system.org-manager.tenant-ops.provision`        | 根組織:「開通租戶」按鈕 + API(ADR-0009 四步 + 擁有者 + 啟用信)                                                                             |
-| `system.org-manager.tenant-ops.revoke-provision` | 根組織:租戶頂層的「撤銷開通」按鈕 + API(反向抹掉開通建出的三樣;與開通分開兩筆權限,風險等級不同)                                            |
-| `system.org-manager.tenant-ops.transfer-owner`   | 根組織:編輯租戶頂層時的「擁有者」欄位 + API(ADR-0009:v1 僅根組織可轉移)                                                                    |
+| 權限 key                                         | 它是哪一頁的什麼                                                                                                                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `system.org-manager.view`                        | 看組織樹與組織資料(名稱、描述、商標、狀態、擁有者);沒有它整頁進不去內容                                                                                      |
+| `system.org-manager.create-child`                | 「新增子組織」按鈕 + API:在選中的組織下建一個子組織(名稱 + 描述)                                                                                             |
+| `system.org-manager.edit`                        | 「編輯」按鈕 + API:名稱、描述、商標                                                                                                                          |
+| `system.org-manager.toggle-enabled`              | 「停用 / 啟用」按鈕 + API:連動整棵子樹                                                                                                                       |
+| `system.org-manager.move`                        | 「搬移」動作 + API:改上層組織,限同一租戶(以 `ancestors` 驗證),跨租戶拒                                                                                       |
+| `system.org-manager.delete`                      | 「刪除」按鈕 + API:前置檢查通過才可(見規則)                                                                                                                  |
+| `system.org-manager.view-members`                | 組織詳情的「成員」頁籤 + API(`orgMembers`):看這個組織**自己**的成員                                                                                          |
+| `system.org-manager.add-members`                 | 「加入成員」按鈕 + API(`orgMemberCandidates` / `addOrgMembers`):把管理範圍內的使用者加進這個組織;**移除不在這裡**                                            |
+| `system.org-manager.set-visibility`              | 編輯**自己租戶的頂層**時的「使用者可見自身組織的下層組織資料」開關 + API(`settings.visibility`,ADR-0005);租戶管理員模板含此權限,根組織亦可                   |
+| `system.org-manager.set-timezone`                | 編輯**自己租戶的頂層**或**根組織**時的「時區」欄 + API(`settings.timezone`);租戶管理員模板含此權限;沒有它時欄位唯讀                                          |
+| `system.org-manager.tenant-ops.provision`        | 根組織:「開通租戶」按鈕 + API(ADR-0009 四步 + 擁有者 + 啟用信)                                                                                               |
+| `system.org-manager.tenant-ops.revoke-provision` | 根組織:租戶頂層的「撤銷開通」按鈕 + API(反向抹掉開通建出的三樣;與開通分開兩筆權限,風險等級不同)                                                              |
+| `system.org-manager.tenant-ops.purge-demo`       | 根組織:清空示範機構的 API(demo 指令 `purge` / `rebuild`;只接受標「示範」的租戶頂層,硬刪它的全部資料,見 `docs/deployment.md`「示範機構清空 / 重建」;沒有畫面) |
+| `system.org-manager.tenant-ops.transfer-owner`   | 根組織:編輯租戶頂層時的「擁有者」欄位 + API(ADR-0009:v1 僅根組織可轉移)                                                                                      |
 
 **為什麼 `set-visibility` / `set-timezone` 不在 `tenant-ops`**:可見範圍開關與時區都是**租戶自己的設定**,租戶管理員模板拿到 `system.org-manager.*` 就應該含它;能設哪些租戶頂層由管理範圍決定,不是靠「站在根組織」。
 
@@ -171,12 +172,14 @@ addOrgMembers(input: { orgId, userIds }): AddOrgMembersPayload!                 
 tenantModuleOptions: [ModuleOption!]!                  # 開通彈窗的模組勾選清單
 provisionTenant(input: { name, slug, adminAccount, adminEmail, logoPath, moduleKeys }): ProvisionTenantPayload!
 revokeTenantProvision(input: { orgId }): RevokeTenantProvisionPayload!   # 撤銷開通
+purgeDemoTenant(input: { slug }): PurgeDemoTenantPayload!               # 清空示範機構(demo 指令)
 transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 ```
 
 - 選項外的 `moduleKeys`(含根組織專屬模組)或一個都沒勾 → `VALIDATION_FAILED`(`extensions.fields` 指出欄位)。
 - `slug`(租戶短碼,必填):格式不符或已被用 → `VALIDATION_FAILED`(`extensions.fields = ["slug"]`);落庫到租戶頂層的 `orgs.slug`,客製表單 key 的預設後綴。
 - **`revokeTenantProvision` 回 `RevokeTenantProvisionPayload`**(`{ success, revokedOrgId, revokedOwnerUserId, revokedRoleId }`),不沿用 `DeletePayload` —— 後者是 orgs 較早留下的通用名,屬先例不是標準(GQL-02)。
+- **`purgeDemoTenant`**(`apps/api/src/orgs/demo-tenant-purge.service.ts`):以短碼找根組織底下的租戶頂層;找不到回 `purged: false`,沒有「示範」標記 → `FORBIDDEN`、一筆都不刪;有 → 照刪除登記硬刪整個機構,回 `{ purged, orgId, deletedDocuments, deletedUsers, detachedUsers, deletedFiles, collections }`。範圍與登記見 `docs/deployment.md`「示範機構清空 / 重建」。
 - **`OwnerProtectionService` 住在 `orgs/`**:判斷的主體是組織(`orgs.ownerUserId`、根組織例外),由 `OrgsModule` 匯出給 `UsersModule` 用,兩個模組不各寫一套。
 
 **商標上傳**(`apps/api/src/storage/`):`createUploadUrl(input: { purpose: ORG_LOGO, contentType, size })` 回 `{ uploadUrl, objectPath, expiresAt }` —— 檔型限 png / jpg / webp、大小 ≤ 2MB(不合回 `UPLOAD_REJECTED`),上傳網址效期 10 分鐘,`objectPath` 為 `org-logos/<uuid>.<副檔名>`(簽票時組織可能還不存在,所以不含 orgId);持 `system.org-manager.edit` 或 `system.org-manager.tenant-ops.provision` 任一即可要票。讀取端:`me.currentOrg.logoUrl` 現簽短效網址(TTL `GCS_SIGNED_URL_TTL`,預設 1h),無商標或路徑不合為 null。
@@ -229,7 +232,7 @@ transferOrgOwner(input: { orgId, newOwnerUserId }): OrgPayload!
 
 ## 稽核
 
-由模組層寫 `audit_logs`(ADR-0004)。本模組每個會改資料的動作寫一筆:`action` = 權限 key 的動作段前加模組簡稱(`org.provision`、`org.revoke-provision`、`org.create-child`、`org.edit`、`org.toggle-enabled`、`org.move`、`org.delete`、`org.transfer-owner`、`org.set-visibility`、`org.set-timezone`,以及主管的 `org.set-managers`),`targetType = "org"`,`targetId` = 被操作的組織,`before` / `after` 只放有變的欄位(時區是 `{ timezone }`,沒設記 null);`orgId` = 動作發生的組織脈絡(操作者的當前組織)。
+由模組層寫 `audit_logs`(ADR-0004)。本模組每個會改資料的動作寫一筆:`action` = 權限 key 的動作段前加模組簡稱(`org.provision`、`org.revoke-provision`、`org.purge-demo`、`org.create-child`、`org.edit`、`org.toggle-enabled`、`org.move`、`org.delete`、`org.transfer-owner`、`org.set-visibility`、`org.set-timezone`,以及主管的 `org.set-managers`),`targetType = "org"`,`targetId` = 被操作的組織,`before` / `after` 只放有變的欄位(時區是 `{ timezone }`,沒設記 null);`orgId` = 動作發生的組織脈絡(操作者的當前組織)。
 
 **例外:「加入成員」寫的是 `user.add-org`**:被改的是**使用者的所屬組織**,所以稽核跟著使用者走(`targetType = "user"`、`targetId` = 被加入的那位,每人一筆),與使用者管理的「選擇所屬組織」同一個 action —— 不另開 `org.add-members`,否則同一件事在稽核裡有兩種名字。
 

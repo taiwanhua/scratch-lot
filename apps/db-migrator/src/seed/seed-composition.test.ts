@@ -141,7 +141,7 @@ function moduleNode(
 }
 
 describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
-  it("普通種子的內容與搬檔前相同:8 類種子、41 個模組、124 筆權限、4 個資料範圍目標、74 筆模板綁定、root 初始帳號一份", () => {
+  it("普通種子的內容與搬檔前相同:8 類種子、41 個模組、125 筆權限、4 個資料範圍目標、74 筆模板綁定、root 初始帳號一份", () => {
     expect(
       baseRegistry.map((set) =>
         set.kind === "documents" ? set.collection : set.kind,
@@ -161,7 +161,7 @@ describe("固定組裝入口:底座 + 空的專案來源(隔離夾具)", () => {
       "relations",
     ]);
     expect(entryKeys(baseRegistry, "modules")).toHaveLength(41);
-    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(124);
+    expect(entryKeys(baseRegistry, "permissions")).toHaveLength(125);
     expect(entryKeys(baseRegistry, "data_scope_targets")).toHaveLength(4);
     expect(
       relationsOf(baseRegistry, "role_module", "tenant-admin"),
@@ -323,8 +323,8 @@ describe("固定組裝入口:底座 + 非空的專案來源", () => {
         `${PROJECT_FORM_KEY}.create`,
       ]),
     );
-    // 底座 124 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
-    expect(permissionKeys).toHaveLength(124 + 8 + 7);
+    // 底座 125 + 專案 8 個模組的 wildcard + 個別權限 2 + 1 + 4
+    expect(permissionKeys).toHaveLength(125 + 8 + 7);
     expect(entryKeys(projectRegistry, "data_scope_targets")).toEqual(
       expect.arrayContaining([PROJECT_REPORT_KEY, PROJECT_FORM_KEY]),
     );

@@ -266,6 +266,13 @@ export const systemModules: ModuleSeedDeclaration = {
         "「撤銷開通」按鈕 + API:反向抹掉開通建出的租戶頂層、擁有者帳號、租戶管理員副本(僅限租戶底下沒有其他資料時)",
     },
     {
+      key: permissionKey(TENANT_OPS_KEY, "purge-demo"),
+      moduleKey: TENANT_OPS_KEY,
+      name: "清空示範機構",
+      description:
+        "demo 指令 purge / rebuild 用的 API:硬刪一個標「示範」的機構的全部資料(沒有「示範」標記一律拒絕)",
+    },
+    {
       key: permissionKey(TENANT_OPS_KEY, "transfer-owner"),
       moduleKey: TENANT_OPS_KEY,
       name: "轉移擁有者",
