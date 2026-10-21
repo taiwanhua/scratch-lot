@@ -13,6 +13,7 @@ import {
   SchedulePeriodsRepository,
 } from "../../database/schedule/roster.repositories";
 import { SCHEDULE_PUBLISHED } from "../../notifications";
+import { isAutoRunLocked, lockExpiredBefore } from "../auto-run/period-lock";
 import { RosterPeopleReader } from "../roster/roster-people";
 import { monthRange } from "../roster/schedule-roster.service";
 import { ScheduleClock } from "../shared/schedule-clock";
@@ -27,11 +28,15 @@ const MAX_ATTEMPTS = 3;
 
 /**
  * 發布被擋(規格 14.5「有違反限制 → 不能發布」):`VALIDATION_FAILED`(欄位 `month`),
- * `extensions.reason`:`HAS_LIMIT_VIOLATIONS`(附 `limitCount`)/ `ALREADY_PUBLISHED` / `CHANGED_DURING_PUBLISH`。
+ * `extensions.reason`:`HAS_LIMIT_VIOLATIONS`(附 `limitCount`)/ `ALREADY_PUBLISHED` / `CHANGED_DURING_PUBLISH` /
+ * `AUTO_RUN_IN_PROGRESS`(自動排班執行中鎖定這個月,`auto-run/period-lock.ts`)。
  */
 export function publishBlockedError(
   reason:
-    "HAS_LIMIT_VIOLATIONS" | "ALREADY_PUBLISHED" | "CHANGED_DURING_PUBLISH",
+    | "HAS_LIMIT_VIOLATIONS"
+    | "ALREADY_PUBLISHED"
+    | "CHANGED_DURING_PUBLISH"
+    | "AUTO_RUN_IN_PROGRESS",
   extra: Record<string, unknown> = {},
 ): GraphQLError {
   return new GraphQLError(`cannot publish: ${reason}`, {
@@ -42,6 +47,19 @@ export function publishBlockedError(
       ...extra,
     },
   });
+}
+
+/** 還沒發布、也沒有自動排班鎖定中(否則 `ALREADY_PUBLISHED` / `AUTO_RUN_IN_PROGRESS`)。 */
+function assertPublishable(
+  period: { status: string; lockedAt?: Date | null } | null,
+  now: Date,
+): asserts period is { status: string; lockedAt?: Date | null } {
+  if (period === null || period.status === "published") {
+    throw publishBlockedError("ALREADY_PUBLISHED");
+  }
+  if (isAutoRunLocked(period, now)) {
+    throw publishBlockedError("AUTO_RUN_IN_PROGRESS");
+  }
 }
 
 /**
@@ -81,9 +99,7 @@ export class SchedulePublishService {
         orgId: org.id,
         month: input.month,
       });
-      if (period === null || period.status === "published") {
-        throw publishBlockedError("ALREADY_PUBLISHED");
-      }
+      assertPublishable(period, this.clock.now());
       const result = await this.checks.evaluateOrg(operator, org, input.month);
       if (result.limitCount > 0) {
         throw publishBlockedError("HAS_LIMIT_VIOLATIONS", {
@@ -98,6 +114,11 @@ export class SchedulePublishService {
             month: input.month,
             status: "unpublished",
             version: period.version,
+            // 查完到寫入之間有人按了自動排班(標記鎖定)→ 不發布
+            $or: [
+              { lockedAt: null },
+              { lockedAt: { $lt: lockExpiredBefore(this.clock.now()) } },
+            ],
           },
           {
             $set: {

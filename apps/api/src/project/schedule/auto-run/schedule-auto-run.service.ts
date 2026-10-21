@@ -31,7 +31,10 @@ import {
   SchedulePeriodsRepository,
   ScheduleTaskAssignmentsRepository,
 } from "../../database/schedule/roster.repositories";
-import type { ScheduleAutoRunStats } from "../../database/schedule/schedule-auto-run.schema";
+import type {
+  ScheduleAutoRunExtendedEntry,
+  ScheduleAutoRunStats,
+} from "../../database/schedule/schedule-auto-run.schema";
 import {
   ScheduleDemandTemplatesRepository,
   ScheduleDemandWeekTemplatesRepository,
@@ -118,6 +121,42 @@ interface Scope {
 interface TemplateBook {
   templates: Map<string, ApplyTemplateLike>;
   weekTemplates: ScheduleApplyWeekTemplateModel[];
+}
+
+/** 要清的填進紀錄與一起刪的排班。 */
+interface ClearPlan {
+  assignmentIds: Types.ObjectId[];
+  /** 清完沒有任何執行任務、一起刪的排班 */
+  entryIds: string[];
+  /** 有填進被清、但還留著的排班(清除自動排入的人時,被延續延長的要縮回) */
+  touchedEntryIds: string[];
+}
+
+/** 要建立的一筆人力需求(id 先產生)。 */
+interface DemandDoc {
+  _id: Types.ObjectId;
+  orgId: Types.ObjectId;
+  date: string;
+  startAt: Date;
+  endAt: Date;
+  positionKey: string;
+  tasks: { taskId: string; role: string; taskKey: string }[];
+  templateId: Types.ObjectId;
+  source: string;
+}
+
+/** 交易外算好的一次自動排班(`prepareRun`)。 */
+interface PreparedRun {
+  candidateIds: string[];
+  weekFill: {
+    weekTemplate: ScheduleApplyWeekTemplateModel;
+    plan: TemplateApplyPlan;
+  } | null;
+  weekDocs: DemandDoc[];
+  cleared: ClearPlan;
+  seed: number;
+  result: ReturnType<typeof autoSchedule>;
+  extended: ScheduleAutoRunExtendedEntry[];
 }
 
 /** 一次自動排班的設定(驗過的輸入)。 */
@@ -237,7 +276,11 @@ export class ScheduleAutoRunService {
         operator,
         scope,
         planned,
-        input.kind === "template" ? "template" : "week-template",
+        this.demandDocsOf(
+          scope,
+          planned,
+          input.kind === "template" ? "template" : "week-template",
+        ),
         reason,
       );
       return planned;
@@ -287,31 +330,35 @@ export class ScheduleAutoRunService {
     await this.ensurePeriod(operator, scope, input.month);
     const lockedAt = await this.acquireLock(operator, scope, input.month);
     try {
-      const candidates = await this.staff.listScheduleCandidates(
+      // 已持有月鎖:讀資料與計算放在交易外(不讓長時間的計算撐住交易);交易內只寫入
+      const prepared = await this.prepareRun(
         operator,
-        scope.org.id,
+        scope,
+        input.month,
+        plan,
       );
-      for (const candidate of candidates) {
+      for (const userId of prepared.candidateIds) {
         await this.personLocks.ensure(
           operator,
           scope.org.tenantId,
-          new Types.ObjectId(candidate.userId),
+          new Types.ObjectId(userId),
         );
       }
       const record = await this.transactions.withTransaction(async () => {
+        // 重核鎖仍是自己的:計算期間逾時被別人搶走 → 不寫入
         await this.touchPeriod(operator, scope, input.month, {
           allowPublished: false,
           ownLock: lockedAt,
         });
         // 碰每位候選人的「人」守門文件:同時在別家店手動排同一人會衝突重跑
-        for (const candidate of candidates) {
+        for (const userId of prepared.candidateIds) {
           await this.personLocks.touch(
             operator,
             scope.org.tenantId,
-            new Types.ObjectId(candidate.userId),
+            new Types.ObjectId(userId),
           );
         }
-        return this.runInTransaction(operator, scope, input.month, plan);
+        return this.writeRun(operator, scope, input.month, plan, prepared);
       });
       return await this.summaryOf(record);
     } finally {
@@ -335,11 +382,17 @@ export class ScheduleAutoRunService {
         orgId: scope.org.id,
         date: { $gte: range.from, $lte: range.to },
       });
-      const cleared = await this.clearAssignments(
+      const cleared = await this.planClear(
         operator,
         scope,
-        demands,
+        demands.map((demand) => demand._id),
         "auto",
+      );
+      await this.applyClear(operator, cleared);
+      const shrunk = await this.shrinkExtended(
+        operator,
+        scope,
+        cleared.touchedEntryIds,
       );
       await this.audit.record(operator, {
         action: "schedule-auto-run.clear",
@@ -348,70 +401,132 @@ export class ScheduleAutoRunService {
           month: input.month,
           from: range.from,
           to: range.to,
-          removed: cleared.removed,
-          deletedEntries: cleared.deletedEntryIds,
+          removed: cleared.assignmentIds.length,
+          deletedEntries: cleared.entryIds,
+          shrunkEntries: shrunk,
         },
       });
       return {
-        removedCount: cleared.removed,
-        deletedEntryIds: cleared.deletedEntryIds,
+        removedCount: cleared.assignmentIds.length,
+        deletedEntryIds: cleared.entryIds,
       };
     });
   }
 
   // ---- 自動排班(交易內) ----
 
-  private async runInTransaction(
+  /**
+   * 自動排班的計算(交易外、已持有月鎖):週範本要補的人力需求(先產生 id)、依方式要清的填進紀錄、
+   * 填人的結果(`autoSchedule`)。不寫任何資料。
+   */
+  private async prepareRun(
     operator: OperatorContext,
     scope: Scope,
     month: string,
     plan: RunPlan,
-  ) {
+  ): Promise<PreparedRun> {
     const range = { from: plan.from, to: plan.to };
-    const stats: ScheduleAutoRunStats = {
-      filledCount: 0,
-      unfilledCount: 0,
-      addedDemandCount: 0,
-      addedDemandDays: 0,
-      clearedCount: 0,
-      createdEntryCount: 0,
-      extendedEntryCount: 0,
-    };
     // 1. 先以預設人力需求週範本補上人力需求(有 auto-run 就可以補,不需要 edit)
-    let weekTemplateId: Types.ObjectId | null = null;
-    if (plan.fillWeekTemplate) {
-      const weekFill = await this.weekFillOf(operator, scope, month, range);
-      if (weekFill !== null) {
-        weekTemplateId = new Types.ObjectId(weekFill.weekTemplate.id);
-        await this.createDemands(operator, scope, weekFill.plan, "auto", null);
-        stats.addedDemandCount = weekFill.plan.created.length;
-        stats.addedDemandDays = weekFill.plan.filledDays;
-      }
-    }
+    const weekFill = plan.fillWeekTemplate
+      ? await this.weekFillOf(operator, scope, month, range)
+      : null;
+    const weekDocs =
+      weekFill === null ? [] : this.demandDocsOf(scope, weekFill.plan, "auto");
     const closed = await this.closedDates(
       operator,
       scope,
       range.from,
       range.to,
     );
-    const demands = await this.openDemands(operator, scope, range, closed);
-    // 2. 依方式清除(只填空位 = 不清)
-    if (plan.mode !== "fill-empty") {
-      const cleared = await this.clearAssignments(
-        operator,
-        scope,
-        demands,
-        plan.mode === "redo-auto" ? "auto" : "all",
-      );
-      stats.clearedCount = cleared.removed;
-    }
-    // 3. 填人
+    const existing = await this.openDemands(operator, scope, range, closed);
+    // 2. 依方式要清的(只填空位 = 不清)
+    const clearWhich = plan.mode === "redo-auto" ? "auto" : "all";
+    const cleared: ClearPlan =
+      plan.mode === "fill-empty"
+        ? { assignmentIds: [], entryIds: [], touchedEntryIds: [] }
+        : await this.planClear(
+            operator,
+            scope,
+            existing.map((demand) => demand._id),
+            clearWhich,
+          );
+    // 3. 填人(補上的人力需求也一起填;要清的當作已經不在)
     const input = await this.scheduleInput(operator, scope, month, {
-      demands,
+      demands: [
+        ...existing.map((demand) => autoDemandOf(demand)),
+        ...weekDocs
+          .filter((doc) => !closed.has(doc.date))
+          .map((doc) => autoDemandOf(doc)),
+      ],
       closed,
       plan,
+      excluded: {
+        assignmentIds: new Set(cleared.assignmentIds.map(String)),
+        entryIds: new Set(cleared.entryIds),
+      },
     });
     const result = autoSchedule(input);
+    const entryBefore = new Map(
+      input.entries.map((entry) => [entry.id, entry]),
+    );
+    return {
+      candidateIds: input.candidates.map((candidate) => candidate.userId),
+      weekFill,
+      weekDocs,
+      cleared,
+      seed: input.seed,
+      result,
+      extended: result.changedEntries.flatMap((changed) => {
+        const before = entryBefore.get(changed.entryId);
+        return before === undefined
+          ? []
+          : [
+              {
+                entryId: new Types.ObjectId(changed.entryId),
+                before: {
+                  startAt: before.startAt,
+                  endAt: before.endAt,
+                  breakMinutes: before.breakMinutes,
+                },
+                after: {
+                  startAt: changed.startAt,
+                  endAt: changed.endAt,
+                  breakMinutes: changed.breakMinutes,
+                },
+              },
+            ];
+      }),
+    };
+  }
+
+  /** 把計算好的結果寫進去(交易內;呼叫前已重核月鎖仍是自己的)。 */
+  private async writeRun(
+    operator: OperatorContext,
+    scope: Scope,
+    month: string,
+    plan: RunPlan,
+    prepared: PreparedRun,
+  ) {
+    const { weekFill, result } = prepared;
+    if (weekFill !== null && prepared.weekDocs.length > 0) {
+      await this.createDemands(
+        operator,
+        scope,
+        weekFill.plan,
+        prepared.weekDocs,
+        null,
+      );
+    }
+    await this.applyClear(operator, prepared.cleared);
+    const stats: ScheduleAutoRunStats = {
+      filledCount: result.fills.length,
+      unfilledCount: result.unfilledCount,
+      addedDemandCount: prepared.weekDocs.length,
+      addedDemandDays: weekFill?.plan.filledDays ?? 0,
+      clearedCount: prepared.cleared.assignmentIds.length,
+      createdEntryCount: result.newEntries.length,
+      extendedEntryCount: result.changedEntries.length,
+    };
     const run = await this.autoRuns.create(operator, {
       orgId: scope.org.id,
       month,
@@ -419,16 +534,12 @@ export class ScheduleAutoRunService {
       to: plan.to,
       mode: plan.mode,
       conditions: plan.conditions,
-      weekTemplateId,
-      seed: input.seed,
+      weekTemplateId:
+        weekFill === null ? null : new Types.ObjectId(weekFill.weekTemplate.id),
+      seed: prepared.seed,
       algorithmVersion: SCHEDULE_AUTO_RUN_ALGORITHM_VERSION,
-      stats: {
-        ...stats,
-        filledCount: result.fills.length,
-        unfilledCount: result.unfilledCount,
-        createdEntryCount: result.newEntries.length,
-        extendedEntryCount: result.changedEntries.length,
-      },
+      stats,
+      extendedEntries: prepared.extended,
     });
     const created = await this.entries.createMany(
       operator,
@@ -479,7 +590,7 @@ export class ScheduleAutoRunService {
         to: plan.to,
         mode: plan.mode,
         conditions: plan.conditions,
-        stats: run.stats,
+        stats,
       },
     });
     return run;
@@ -490,7 +601,13 @@ export class ScheduleAutoRunService {
     operator: OperatorContext,
     scope: Scope,
     month: string,
-    context: { demands: DemandRecord[]; closed: Set<string>; plan: RunPlan },
+    context: {
+      demands: AutoDemand[];
+      closed: Set<string>;
+      plan: RunPlan;
+      /** 這次要清掉的填進紀錄與一起刪的排班(還沒寫入,計算時當作已經不在) */
+      excluded: { assignmentIds: Set<string>; entryIds: Set<string> };
+    },
   ) {
     const { from, to } = monthRange(month);
     const wide = {
@@ -502,26 +619,28 @@ export class ScheduleAutoRunService {
       scope.org.id,
     );
     const userIds = candidates.map((item) => item.userId);
-    const personEntries = await this.people.entriesOfPeople(
+    const allPersonEntries = await this.people.entriesOfPeople(
       operator,
       scope.org.tenantId,
       userIds.map((id) => new Types.ObjectId(id)),
       wide.from,
       wide.to,
     );
+    const personEntries = allPersonEntries.filter(
+      (entry) => !context.excluded.entryIds.has(String(entry._id)),
+    );
     const storeEntryIds = personEntries
       .filter((entry) => String(entry.orgId) === String(scope.org.id))
       .map((entry) => entry._id);
-    const assignments =
+    const assignments = (
       storeEntryIds.length === 0
         ? []
         : await this.assignments.findMany(operator, {
             orgId: scope.org.id,
             entryId: { $in: storeEntryIds },
-          });
-    const targetIds = new Set(
-      context.demands.map((demand) => String(demand._id)),
-    );
+          })
+    ).filter((item) => !context.excluded.assignmentIds.has(String(item._id)));
+    const targetIds = new Set(context.demands.map((demand) => demand.id));
     const otherDemandIds = [
       ...new Set(
         assignments
@@ -559,7 +678,7 @@ export class ScheduleAutoRunService {
       storeId: String(scope.org.id),
       month,
       seed: newAutoRunSeed(),
-      demands: context.demands.map((demand) => autoDemandOf(demand)),
+      demands: context.demands,
       otherDemands: otherDemands.map((demand) => autoDemandOf(demand)),
       entries: personEntries.map((entry) => autoEntryOf(entry)),
       assignments: assignments.map((item) => ({
@@ -647,25 +766,25 @@ export class ScheduleAutoRunService {
   // ---- 清除 ----
 
   /**
-   * 清除這些人力需求上的填進紀錄(`auto` = 只清來源自動的;`all` = 全部);清完沒有任何執行任務的排班一起刪除。
-   * 會被刪的排班已被收銀班次綁定(`blockedEntryIdsOf`)→ 那筆排班的填進紀錄整筆留著不清。
+   * 這些人力需求上要清的填進紀錄(`auto` = 只清來源自動的;`all` = 全部)與清完沒有任何執行任務、要一起刪的排班。
+   * 會被刪的排班已被收銀班次綁定(`blockedEntryIdsOf`)→ 那筆排班的填進紀錄整筆留著不清。只讀不寫。
    */
-  private async clearAssignments(
+  private async planClear(
     operator: OperatorContext,
     scope: Scope,
-    demands: readonly DemandRecord[],
+    demandIds: readonly Types.ObjectId[],
     which: "auto" | "all",
-  ): Promise<{ removed: number; deletedEntryIds: string[] }> {
-    if (demands.length === 0) {
-      return { removed: 0, deletedEntryIds: [] };
+  ): Promise<ClearPlan> {
+    if (demandIds.length === 0) {
+      return { assignmentIds: [], entryIds: [], touchedEntryIds: [] };
     }
     const candidates = await this.assignments.findMany(operator, {
       orgId: scope.org.id,
-      demandId: { $in: demands.map((demand) => demand._id) },
+      demandId: { $in: [...demandIds] },
       ...(which === "auto" ? { source: "auto" } : {}),
     });
     if (candidates.length === 0) {
-      return { removed: 0, deletedEntryIds: [] };
+      return { assignmentIds: [], entryIds: [], touchedEntryIds: [] };
     }
     const entryIds = [
       ...new Set(candidates.map((item) => String(item.entryId))),
@@ -683,14 +802,90 @@ export class ScheduleAutoRunService {
     const removing = candidates.filter(
       (item) => !blocked.has(String(item.entryId)),
     );
-    for (const item of removing) {
-      await this.assignments.softDeleteById(operator, item._id);
+    const deleted = new Set(emptied.filter((id) => !blocked.has(id)));
+    return {
+      assignmentIds: removing.map((item) => item._id),
+      entryIds: [...deleted],
+      touchedEntryIds: [
+        ...new Set(removing.map((item) => String(item.entryId))),
+      ].filter((id) => !deleted.has(id)),
+    };
+  }
+
+  /**
+   * 清除自動排入的人時,被「延續同一人的排班」延長的排班縮回延長前的時段(使用者 10/21 定案):
+   * 依執行紀錄 `extendedEntries` 由新到舊,排班目前的時間仍等於那次延長後的時間才縮回那次的延長前;
+   * 延長後被手動改過(時間或休息不同)→ 不縮回、維持現狀。回縮回的排班 id。
+   */
+  private async shrinkExtended(
+    operator: OperatorContext,
+    scope: Scope,
+    entryIds: readonly string[],
+  ): Promise<string[]> {
+    if (entryIds.length === 0) {
+      return [];
     }
-    const deletedEntryIds = emptied.filter((id) => !blocked.has(id));
-    for (const id of deletedEntryIds) {
+    const ids = entryIds.map((id) => new Types.ObjectId(id));
+    const runs = await this.autoRuns.findMany(
+      operator,
+      { orgId: scope.org.id, "extendedEntries.entryId": { $in: ids } },
+      { sort: { createdAt: -1 } },
+    );
+    const records = await this.entries.findMany(operator, {
+      _id: { $in: ids },
+    });
+    const shrunk: string[] = [];
+    for (const record of records) {
+      const current = {
+        startAt: record.startAt.getTime(),
+        endAt: record.endAt.getTime(),
+        breakMinutes: record.breakMinutes,
+      };
+      let changed = false;
+      for (const run of runs) {
+        const extension = run.extendedEntries.find(
+          (item) => String(item.entryId) === String(record._id),
+        );
+        if (extension === undefined) {
+          continue;
+        }
+        const isSame =
+          new Date(extension.after.startAt).getTime() === current.startAt &&
+          new Date(extension.after.endAt).getTime() === current.endAt &&
+          extension.after.breakMinutes === current.breakMinutes;
+        if (!isSame) {
+          break;
+        }
+        current.startAt = new Date(extension.before.startAt).getTime();
+        current.endAt = new Date(extension.before.endAt).getTime();
+        current.breakMinutes = extension.before.breakMinutes;
+        changed = true;
+      }
+      if (changed) {
+        await this.entries.updateById(operator, record._id, {
+          $set: {
+            startAt: new Date(current.startAt),
+            endAt: new Date(current.endAt),
+            breakMinutes: current.breakMinutes,
+          },
+        });
+        shrunk.push(String(record._id));
+      }
+    }
+    return shrunk;
+  }
+
+  /** 軟刪除要清的填進紀錄與一起刪的排班。 */
+  private async applyClear(
+    operator: OperatorContext,
+    cleared: ClearPlan,
+  ): Promise<void> {
+    for (const id of cleared.assignmentIds) {
+      await this.assignments.softDeleteById(operator, id);
+    }
+    for (const id of cleared.entryIds) {
       await this.entries.softDeleteById(operator, new Types.ObjectId(id));
     }
-    return { removed: removing.length, deletedEntryIds };
   }
 
   // ---- 套用範本(內部) ----
@@ -751,30 +946,38 @@ export class ScheduleAutoRunService {
   }
 
   /** 依規劃建立人力需求(複製執行任務、產生新的 taskId);已發布的月份每筆記一筆異動。 */
+  /** 規劃 → 要建立的人力需求(先產生 id 與每筆執行任務的新 taskId,自動排班計算時就能引用)。 */
+  private demandDocsOf(
+    scope: Scope,
+    plan: TemplateApplyPlan,
+    source: "template" | "week-template" | "auto",
+  ): DemandDoc[] {
+    return plan.created.map((item) => ({
+      _id: new Types.ObjectId(),
+      orgId: scope.org.id,
+      date: item.date,
+      startAt: item.startAt,
+      endAt: item.endAt,
+      positionKey: item.positionKey,
+      tasks: item.tasks.map((task) => ({
+        taskId: new Types.ObjectId().toHexString(),
+        role: task.role,
+        taskKey: task.taskKey,
+      })),
+      templateId: new Types.ObjectId(item.templateId),
+      source,
+    }));
+  }
+
   private async createDemands(
     operator: OperatorContext,
     scope: Scope,
     plan: TemplateApplyPlan,
-    source: "template" | "week-template" | "auto",
+    docs: readonly DemandDoc[],
     reason: ChangeReason | null,
   ): Promise<void> {
-    const created = await this.demands.createMany(
-      operator,
-      plan.created.map((item) => ({
-        orgId: scope.org.id,
-        date: item.date,
-        startAt: item.startAt,
-        endAt: item.endAt,
-        positionKey: item.positionKey,
-        tasks: item.tasks.map((task) => ({
-          taskId: new Types.ObjectId().toHexString(),
-          role: task.role,
-          taskKey: task.taskKey,
-        })),
-        templateId: new Types.ObjectId(item.templateId),
-        source,
-      })),
-    );
+    const source = docs[0]?.source ?? null;
+    const created = await this.demands.createMany(operator, docs);
     if (created.length === 0) {
       return;
     }
@@ -976,10 +1179,12 @@ export class ScheduleAutoRunService {
         `schedule period missing: ${String(scope.org.id)} ${month}`,
       );
     }
-    const ownLock =
-      options.ownLock !== undefined &&
-      touched.lockedAt?.getTime() === options.ownLock.getTime();
-    if (!ownLock && isAutoRunLocked(touched, this.clock.now())) {
+    if (options.ownLock === undefined) {
+      if (isAutoRunLocked(touched, this.clock.now())) {
+        throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
+      }
+    } else if (touched.lockedAt?.getTime() !== options.ownLock.getTime()) {
+      // 自己的鎖已經不在(計算期間逾時、被別人重新標記)→ 不寫入
       throw autoRunBlockedError("AUTO_RUN_IN_PROGRESS");
     }
     const published = touched.status === "published";
@@ -1107,10 +1312,16 @@ function validatedRunPlan(input: RunScheduleAutoRunInput): RunPlan {
   return {
     ...range,
     mode,
-    conditions: input.conditions.map((condition) => ({
-      key: condition.key,
-      enabled: condition.enabled,
-    })),
+    // 記下這次實際用的整組條件與順序:沒列的補在後面、視為不勾
+    conditions: [
+      ...input.conditions.map((condition) => ({
+        key: condition.key,
+        enabled: condition.enabled,
+      })),
+      ...[...AUTO_RUN_CONDITION_KEYS]
+        .filter((key) => !keys.includes(key))
+        .map((key) => ({ key, enabled: false })),
+    ],
     fillWeekTemplate: input.fillWeekTemplate === true,
   };
 }
@@ -1195,7 +1406,7 @@ function breakTiersOf(value: unknown): ScheduleBreakTier[] {
   });
 }
 
-function autoDemandOf(record: DemandRecord): AutoDemand {
+function autoDemandOf(record: DemandRecord | DemandDoc): AutoDemand {
   return {
     id: String(record._id),
     date: record.date,

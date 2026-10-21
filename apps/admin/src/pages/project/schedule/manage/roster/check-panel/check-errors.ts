@@ -34,12 +34,16 @@ export const rosterRuleViolationsOf = (
 
 /** 發布被擋的原因(`extensions.reason`;api 正本 `publishBlockedError`)。 */
 export type PublishBlockedReason =
-  "HAS_LIMIT_VIOLATIONS" | "ALREADY_PUBLISHED" | "CHANGED_DURING_PUBLISH";
+  | "HAS_LIMIT_VIOLATIONS"
+  | "ALREADY_PUBLISHED"
+  | "CHANGED_DURING_PUBLISH"
+  | "AUTO_RUN_IN_PROGRESS";
 
 const PUBLISH_REASONS: ReadonlySet<string> = new Set([
   "HAS_LIMIT_VIOLATIONS",
   "ALREADY_PUBLISHED",
   "CHANGED_DURING_PUBLISH",
+  "AUTO_RUN_IN_PROGRESS",
 ]);
 
 export const publishBlockedReasonOf = (

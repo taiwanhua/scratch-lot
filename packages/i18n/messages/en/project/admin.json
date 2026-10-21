@@ -1344,7 +1344,8 @@
         "errors": {
           "HAS_LIMIT_VIOLATIONS": "Some shifts violate limits, cannot publish; please check again",
           "ALREADY_PUBLISHED": "This month is already published",
-          "CHANGED_DURING_PUBLISH": "The schedule changed while publishing, please press [Publish] again"
+          "CHANGED_DURING_PUBLISH": "The schedule changed while publishing, please press [Publish] again",
+          "AUTO_RUN_IN_PROGRESS": "Auto scheduling is in progress. Publish again later"
         }
       },
       "changeReason": {

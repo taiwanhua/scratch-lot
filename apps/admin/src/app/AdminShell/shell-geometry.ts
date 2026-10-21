@@ -10,10 +10,11 @@ export const MAIN_PADDING = { xs: 1, sm: 3 } as const;
 
 /**
  * 內容區的最小寬度以哪個主題斷點為準(非手機版面才套,`xs` 不限):
- * 殼層預設 `lg`,頁面可在登記時以 `minWidth` 宣告更大的(`app/base/module-pages.ts`;目前底座頁都沒宣告,專案頁可用),
- * 合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
+ * 殼層預設 `lg`,頁面可在登記時以 `minWidth` 宣告更大的 `xl`,或更小的 `md`
+ * (`app/base/module-pages.ts`;目前底座頁都沒宣告,專案頁可用:排班作業宣告 `md`,
+ * 讓平板 1024 寬收合側欄時排班表不必左右捲),合成後是 `app/module-pages.tsx` 的 `modulePageMinWidths`。
  */
-export type ShellMinWidth = "lg" | "xl";
+export type ShellMinWidth = "md" | "lg" | "xl";
 
 export const DEFAULT_SHELL_MIN_WIDTH: ShellMinWidth = "lg";
 

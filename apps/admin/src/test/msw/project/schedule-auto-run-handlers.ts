@@ -10,44 +10,15 @@ import type {
 
 import { api } from "../server";
 import {
+  AUTO_RUN_CONDITIONS,
+  ROSTER_WEEK_TEMPLATES,
+} from "./schedule-auto-run-fixtures";
+import {
   ROSTER_PEOPLE,
   ROSTER_TEMPLATES,
   type TestRosterDemand,
   type TestRosterEntry,
 } from "./schedule-roster-fixtures";
-
-/** 套用範本 / 自動排班的週範本(平日標準週、旺季週)。 */
-export const ROSTER_WEEK_TEMPLATES = [
-  {
-    id: "wk-normal",
-    name: "平日標準週",
-    days: [
-      ["tpl-early", "tpl-restock"],
-      ["tpl-early", "tpl-late"],
-      ["tpl-early", "tpl-late"],
-      ["tpl-early", "tpl-late", "tpl-restock"],
-      ["tpl-early", "tpl-late"],
-      ["tpl-early", "tpl-late", "tpl-restock"],
-      ["tpl-early", "tpl-restock"],
-    ],
-  },
-  {
-    id: "wk-peak",
-    name: "旺季週",
-    days: Array.from({ length: 7 }, () => [
-      "tpl-early",
-      "tpl-late",
-      "tpl-restock",
-    ]),
-  },
-];
-
-const AUTO_RUN_CONDITIONS = [
-  { key: "continuePreviousEntry", enabled: true },
-  { key: "leaderCountFirst", enabled: true },
-  { key: "monthlyShiftBalance", enabled: false },
-  { key: "allowOverlappingDemands", enabled: false },
-];
 
 export interface AutoRunWorldOptions {
   /** 有 `schedule.manage.auto-run`(預設有) */
@@ -66,6 +37,13 @@ export interface RosterWorldState {
   setEntries: (next: TestRosterEntry[]) => void;
   ensure: (month: string) => void;
   isEmpty: boolean;
+  /** 這個月的畫休(整天 / 時段不可排;假的自動排班要避開) */
+  unavailability: () => readonly {
+    userId: string;
+    date: string;
+    fullDay: boolean;
+    slots: readonly { startTime: string; endTime: string }[];
+  }[];
 }
 
 interface AutoRunSummary {
@@ -79,6 +57,10 @@ interface AutoRunSummary {
   addedDemandCount: number;
   addedDemandDays: number;
 }
+
+/** ISO 時點 → 台北的 `HH:mm`(夾具一律台北時區)。 */
+const taipeiTime = (iso: string): string =>
+  new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(11, 16);
 
 let sequence = 0;
 const nextId = (prefix: string): string => {
@@ -265,7 +247,23 @@ export const scheduleAutoRunHandlers = (
           (item) => item.demandId === demandId && item.taskId === taskId,
         ),
       );
-  /** 假的自動排班:依序把空的任務排給那天還沒有班的人(負責只給可負責的人)。 */
+  /** 這個人那段時間有畫休(整天,或和時段不可排重疊)。 */
+  const isOff = (userId: string, demand: TestRosterDemand) => {
+    const start = taipeiTime(demand.startAt);
+    const end = taipeiTime(demand.endAt);
+    return state
+      .unavailability()
+      .some(
+        (day) =>
+          day.userId === userId &&
+          day.date === demand.date &&
+          (day.fullDay ||
+            day.slots.some(
+              (slot) => slot.startTime < end && slot.endTime > start,
+            )),
+      );
+  };
+  /** 假的自動排班:依序把空的任務排給那天還沒有班、沒有畫休的人(負責只給可負責的人)。 */
   const fakeAutoRun = (input: RunScheduleAutoRunMutationVariables["input"]) => {
     if (input.mode !== "fill-empty") {
       clearRange(
@@ -288,6 +286,7 @@ export const scheduleAutoRunHandlers = (
       const person = ROSTER_PEOPLE.find(
         (candidate) =>
           (task.role !== "leader" || candidate.canLead) &&
+          !isOff(candidate.userId, demand) &&
           !state
             .entries()
             .some(

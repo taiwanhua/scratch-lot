@@ -31,6 +31,16 @@ export interface ScheduleAutoRunStats {
   extendedEntryCount: number;
 }
 
+/**
+ * 延續同一人的排班時被延長的既有排班:延長前 / 後的上下班時間與休息(之後「清除自動排入的人」
+ * 要不要縮回由使用者決定,先記資料;`docs/modules/project/schedule.md` 待決)。
+ */
+export interface ScheduleAutoRunExtendedEntry {
+  entryId: Types.ObjectId;
+  before: { startAt: Date; endAt: Date; breakMinutes: number };
+  after: { startAt: Date; endAt: Date; breakMinutes: number };
+}
+
 const ConditionSchema = new MongooseSchema<ScheduleAutoRunCondition>(
   {
     key: { type: String, required: true },
@@ -41,7 +51,7 @@ const ConditionSchema = new MongooseSchema<ScheduleAutoRunCondition>(
 
 /**
  * 自動排班的執行紀錄(規格 14.1 `schedule_auto_runs`、14.5「自動排班」):範圍、方式、條件快照、
- * seed(系統產生、使用者看不到,只用來追查和測試)、演算法版本、統計;by / at = `createdBy` / `createdAt`。
+ * seed(系統產生、使用者看不到,只用來追查和測試)、演算法版本、統計、被延長的既有排班的延長前時間;by / at = `createdBy` / `createdAt`。
  * 只新增(不改不刪);填進紀錄的 `autoRunId` 指回這裡。檢核面板最上方的摘要讀這家店這個月最新的一筆。
  */
 @Schema({ collection: SCHEDULE_AUTO_RUNS_COLLECTION, timestamps: true })
@@ -83,6 +93,10 @@ export class ScheduleAutoRun {
 
   @Prop({ type: MongooseSchema.Types.Mixed, required: true })
   stats!: ScheduleAutoRunStats;
+
+  /** 延續同一人的排班時被延長的既有排班(延長前 / 後) */
+  @Prop({ type: [MongooseSchema.Types.Mixed], default: [] })
+  extendedEntries!: ScheduleAutoRunExtendedEntry[];
 
   moduleKey!: string;
   tenantId!: Types.ObjectId | null;

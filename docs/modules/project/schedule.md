@@ -163,7 +163,7 @@
 - **等級**:限制 → 不能存、不能發布;提醒 → 照存照發布。
   - **存排班**(`saveScheduleEntry`)在寫入的交易內跑這個人的排班類規則(他主要分店的設定,`limitViolationsOfEntry`):存檔後**限制**的違反比存檔前嚴重(每條規則超出規則值的總量變大)→ `VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`(`key`、`level`、`message`、`actual`、`limit`、`from`、`to`;只列這次造成的)。人力需求的新增 / 修改 / 刪除、刪排班、移除這天所有排班不跑規則(它們不會讓人的規則變嚴重;人力不足要靠排人補,刪人力需求不擋)。
   - **改規則不改已排的班**:已存的排班照留,檢核與發布用新的設定重新標示。
-- **發布**(`publishSchedule`,`schedule.manage.publish`;`check/schedule-publish.service.ts`):這個月還沒有狀態文件時先建(未發布);用發布當下的設定重查整月,有限制 → `VALIDATION_FAILED` + `reason: HAS_LIMIT_VIOLATIONS`(`limitCount`);以「狀態仍是未發布、版本沒變」為條件更新成已發布(`publishedAt`、`publishedBy`)並 `$inc version`(和同月的寫入互相衝突)。查完到寫入之間有人改了排班(版本變了)→ 重查,最多 3 次,仍不行 → `reason: CHANGED_DURING_PUBLISH`;已發布 → `reason: ALREADY_PUBLISHED`。**沒有取消發布的端點**。發布後通知這個月在這家店被排到的人(`schedule.published`,`dedupeKey` = `schedule.published:<分店>:<月份>`)。
+- **發布**(`publishSchedule`,`schedule.manage.publish`;`check/schedule-publish.service.ts`):這個月還沒有狀態文件時先建(未發布);用發布當下的設定重查整月,有限制 → `VALIDATION_FAILED` + `reason: HAS_LIMIT_VIOLATIONS`(`limitCount`);以「狀態仍是未發布、版本沒變」為條件更新成已發布(`publishedAt`、`publishedBy`)並 `$inc version`(和同月的寫入互相衝突)。查完到寫入之間有人改了排班(版本變了)→ 重查,最多 3 次,仍不行 → `reason: CHANGED_DURING_PUBLISH`;已發布 → `reason: ALREADY_PUBLISHED`;自動排班鎖定中(`lockedAt` 在 10 分鐘內)→ `reason: AUTO_RUN_IN_PROGRESS`(條件更新也帶「沒鎖或已逾時」,查完才被鎖的重查後回同一個原因)。**沒有取消發布的端點**。發布後通知這個月在這家店被排到的人(`schedule.published`,`dedupeKey` = `schedule.published:<分店>:<月份>`)。
 - **發布後異動**(`changes/schedule-changes.service.ts`):寫入在交易一開始碰 `schedule_periods` 時讀到這幾個月有已發布的 → 輸入的 `changeReason { reasonKey, reasonNote }` 必填(欄位管理「排班異動原因」啟用中的選項;沒給 / 不是選項 → 欄位 `reasonKey`;選「其他」沒說明 → 欄位 `reasonNote`)。每筆異動寫一列 `schedule_changes` 並通知牽涉的人(`schedule.changed`,`dedupeKey` = `schedule.changed:<異動 id>`,內文帶原因的顯示名稱與說明):排班 = 那個人;人力需求 = 改之前填它的人(含因此解除 / 刪除排班的人);移除這天所有排班 = 每筆刪掉的排班各一列(原因只填一次)。未發布的月份不用原因、不記異動。
 
 ### 套用範本與自動排班(規格 14.4「套用範本」、14.5「自動排班」、14.1 `schedule_auto_runs` / `schedule_periods` 鎖定)
@@ -175,8 +175,9 @@
   - 產生的人力需求:複製執行任務、每筆產生新的 `taskId`;`templateId` = 範本;`source` = `template` / `week-template`(自動排班補上的 = `auto`)。稽核一筆 `schedule-demand.apply-templates`。寫入照排班表其他寫入在交易一開始碰 `schedule_periods.version`;已發布的月份要異動原因,每筆記一筆 `demand.create` 異動(沒有牽涉的人,不通知)。
 - **自動排班**(`schedule.manage.auto-run`;`runScheduleAutoRun`,只能在未發布):
   1. **鎖定這個月**:以條件更新標記 `schedule_periods.lockedAt` / `lockedBy`(條件:未發布、沒鎖或已逾時 10 分鐘,`SCHEDULE_AUTO_RUN_LOCK_MS`);拿不到 → `VALIDATION_FAILED`(欄位 `month`)+ `reason: AUTO_RUN_IN_PROGRESS`(已發布 → `ALREADY_PUBLISHED`)。鎖定中,別人的套用範本、清除、排班表的人力需求 / 排班寫入(`touchPeriods`)都回 `AUTO_RUN_IN_PROGRESS`;`scheduleAutoRunStatus.running` 讓別人的畫面顯示「自動排班執行中」。執行完(成功或失敗)解除自己標的鎖。
-  2. 在**一個交易**裡:碰 `schedule_periods.version` 與每位候選人的「人」守門文件(和同月 / 同一人的寫入互相衝突)→ 有勾「先以週範本補上」且這家店的規則「預設人力需求週範本」可用時,用同一個規劃補上範圍內完全沒有人力需求的日子(`source = auto`;有 `auto-run` 就能補,不需要 `edit`)→ 依方式清除(重排自動排入的人 = 只清來源自動的;全部重排 = 全清;解除後零筆的排班一起刪,已被收銀班次綁定的那筆整筆留著)→ 填人 → 記執行紀錄 `schedule_auto_runs` → 新建 / 延長排班、建填進紀錄(`source = auto`、`autoRunId`、`reason`)。稽核 `schedule-auto-run.run`。
-  3. **條件**:輸入的 `conditions`(勾選與順序,畫面預設帶這家店的生效設定 —— 整組繼承 —— 只用在這一次,不改設定);快照記在執行紀錄。
+  2. **計算在交易外**(已持有月鎖,`prepareRun`,不寫資料):有勾「先以週範本補上」且這家店的規則「預設人力需求週範本」可用時,用同一個規劃算出要補的人力需求(先產生 id 與 `taskId`,`source = auto`;有 `auto-run` 就能補,不需要 `edit`)→ 依方式算出要清的填進紀錄(重排自動排入的人 = 只清來源自動的;全部重排 = 全清;清完零筆的排班一起刪,已被收銀班次綁定的那筆整筆留著)→ 把補上的當作已存在、要清的當作已不在,填人(`autoSchedule`)。
+  3. **交易內只寫入**(`writeRun`):先重核月鎖仍是自己標的(計算期間逾時被別人重新標記 → `AUTO_RUN_IN_PROGRESS`,什麼都不寫、別人的鎖照留),碰 `schedule_periods.version` 與每位候選人的「人」守門文件(和同月 / 同一人的寫入互相衝突)→ 建補上的人力需求 → 清除 → 記執行紀錄 `schedule_auto_runs` → 新建 / 延長排班、建填進紀錄(`source = auto`、`autoRunId`、`reason`)。稽核 `schedule-auto-run.run`。
+  4. **條件**:輸入的 `conditions`(勾選與順序,畫面預設帶這家店的生效設定 —— 整組繼承 —— 只用在這一次,不改設定);快照記在執行紀錄。執行紀錄記下這次實際用的整組條件與順序:輸入沒列的條件補在後面、視為不勾。延續延長的既有排班記在 `extendedEntries`(延長前 / 後的上下班時間與休息)。
 - **填人的演算法**(`auto-run/auto-schedule.ts` 的 `autoSchedule`,純函式;**演算法版本 `SCHEDULE_AUTO_RUN_ALGORITHM_VERSION` = `"1"`**,改了處理順序、排序鍵、亂數取法或可排的判斷就加 1):
   - **處理順序固定**:範圍內(店休那天除外)的人力需求依日期 → 開始時間 → id;同一筆裡負責人任務先、協同依陣列順序;已有人填的任務跳過。候選人 = `listScheduleCandidates`,依 userId 排。
   - **亂數**:系統產生 32 位元種子(`newAutoRunSeed`,使用者看不到、記在執行紀錄);可指定種子的產生器 `seededRandom`(mulberry32)。每一筆任務對每位候選人(依 userId)各抽一次(已有人填的任務也抽),抽的次數不受誰可排影響。
@@ -191,7 +192,7 @@
 
   - **自動排入理由**(`reason`,滑過長條提示):決定勝負的那個條件 —「自動排入:延續同一人的排班」「…:負責人次數較多」「…:本月班數較少」;只有一位可排 →「…:唯一可排的人」;沒勾排序條件 →「…:隨機」;都平手 →「…:條件平手,隨機」。手動改過(來源變手動)的不再回傳理由(資料庫照留)。
   - 排不滿的任務計入 `stats.unfilledCount`,檢核的「人力不足」照常列出原因。
-- **清除自動排入的人**(`clearScheduleAutoAssignments`,`auto-run`,只能在未發布):範圍內人力需求上**來源 = 自動**的填進紀錄軟刪除;之後沒有任何填進的排班一起軟刪除(已被收銀班次綁定的那筆整筆留著);稽核 `schedule-auto-run.clear`。不做「復原這次自動排班」。
+- **清除自動排入的人**(`clearScheduleAutoAssignments`,`auto-run`,只能在未發布):範圍內人力需求上**來源 = 自動**的填進紀錄軟刪除;之後沒有任何填進的排班一起軟刪除(已被收銀班次綁定的那筆整筆留著);**被延續延長的排班縮回延長前的時段**(使用者 10/21 定案):依執行紀錄的 `extendedEntries` 由新到舊,排班目前的時間仍等於那次延長後的才縮回;延長後被手動改過(存檔後來源變手動,填進不會被清)→ 不縮回、維持現狀。只在「清除自動排入的人」縮回;「重排自動排入的人」清除時不縮回。稽核 `schedule-auto-run.clear`(含縮回的排班)。不做「復原這次自動排班」。
 - **手動改過 → 手動**:`saveScheduleEntry` 修改時,留下來的自動填進紀錄來源改成手動(自動排入標記消失,不會被「清除自動排入的人」清掉)。
 - **狀態與預覽**:`scheduleAutoRunStatus`(`view`)回 `canAutoRun`、`running`(別人的鎖定中)、最近一次的摘要(`latest`:時點、執行人、填入人次、補上的人力需求筆數 / 天數)、套用範本的週範本選項、條件的生效設定;`scheduleAutoRunPreview`(`auto-run`)回範圍內的人力需求筆數、可以補上的週範本與天數、手動 / 自動排入的人次(「全部重排」確認與「清除」的人次)。範圍內沒有人力需求、也沒有可以補的週範本 → 畫面停用 [執行](SC-20c)。
 
@@ -318,6 +319,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 - 圖例元件 `components/project/schedule/ScheduleLegend/`(班表管理所有頁面共用;外觀與格子同一份 `schedule-legend-styles.ts`),各功能追加自己的項目。
 - 分店選擇器一律 `OrgTreeSelect scope="visible"`(用法表 ④ ⑤:整棵租戶樹、可見範圍內的才能選):規則、行事曆的分店、排班人員可以排的分店。
 - 側欄排序:班表管理群組 `order` 80。
+- 排班作業的列表頁(分頁頁殼)登記內容區最小寬度 `minWidth: "md"`(`app/project/module-pages.ts`;殼層預設 `lg`):平板 1024 寬收合側欄時,排班表的工具列與檢核面板都在畫面內、不必左右捲(使用者 10/21 定案;其他頁照殼層預設)。
 - 能不能改的按鈕一律讀 api 算好的旗標(`canEdit` / `canCreate`),不與 `usePermissions` 相乘。
 - 手機:列表改卡片、有表單欄位的對話框全螢幕、刪除確認維持置中小視窗(規格 16.0)。
 - 下拉選項經 `hooks/project/schedule/useScheduleFieldOptions`;顏色經 `TagPaletteSelect` / `TagPaletteChip`。
@@ -325,7 +327,7 @@ GraphQL 文件 `packages/graphql/src/documents/project/schedule/schedule-setting
 
 ## 錯誤碼
 
-只用通用碼(GQL-04):`NOT_FOUND`(看不到)、`VALIDATION_FAILED`(`fields` 指到欄位)、`FORBIDDEN`(`reason`:`NOT_OWNER` 上層建立的、`MISSING_PERMISSION` 沒有這個組織要的規則權限、`OUTSIDE_DAY_OFF_WINDOW` 本人在畫休開放期間外修改)。自動排班鎖定 / 已發布:`VALIDATION_FAILED`(欄位 `month`)+ `extensions.reason`(`AUTO_RUN_IN_PROGRESS` / `ALREADY_PUBLISHED`;`auto-run/period-lock.ts`),前端 `scheduleErrorOf` 把 `AUTO_RUN_IN_PROGRESS` 細分成同名碼(`admin.schedule.errors.AUTO_RUN_IN_PROGRESS`),自動排班的對話框讀 `admin.schedule.roster.autoRun.errors.*`。畫休違反限制:`VALIDATION_FAILED` + `extensions.violations`。排班已被收銀班次綁定(刪排班、刪人力需求或解除任務連帶刪排班):`VALIDATION_FAILED` + `extensions.blockedEntryIds`(`roster/roster-error.ts`;前端 `pages/project/schedule/manage/roster/roster-error.ts`)。存排班違反限制:`VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`;發布被擋:`VALIDATION_FAILED`(欄位 `month`)+ `extensions.reason`(`HAS_LIMIT_VIOLATIONS` / `ALREADY_PUBLISHED` / `CHANGED_DURING_PUBLISH`);已發布後沒給異動原因:`VALIDATION_FAILED`(欄位 `reasonKey` / `reasonNote`)。前端文案 `admin.schedule.errors.*`(`pages/project/schedule/schedule-error.ts`;檢核與發布的在 `manage/roster/check-panel/check-errors.ts`、`admin.schedule.roster.publish.errors.*`)。
+只用通用碼(GQL-04):`NOT_FOUND`(看不到)、`VALIDATION_FAILED`(`fields` 指到欄位)、`FORBIDDEN`(`reason`:`NOT_OWNER` 上層建立的、`MISSING_PERMISSION` 沒有這個組織要的規則權限、`OUTSIDE_DAY_OFF_WINDOW` 本人在畫休開放期間外修改)。自動排班鎖定 / 已發布:`VALIDATION_FAILED`(欄位 `month`)+ `extensions.reason`(`AUTO_RUN_IN_PROGRESS` / `ALREADY_PUBLISHED`;`auto-run/period-lock.ts`),前端 `scheduleErrorOf` 把 `AUTO_RUN_IN_PROGRESS` 細分成同名碼(`admin.schedule.errors.AUTO_RUN_IN_PROGRESS`),自動排班的對話框讀 `admin.schedule.roster.autoRun.errors.*`。畫休違反限制:`VALIDATION_FAILED` + `extensions.violations`。排班已被收銀班次綁定(刪排班、刪人力需求或解除任務連帶刪排班):`VALIDATION_FAILED` + `extensions.blockedEntryIds`(`roster/roster-error.ts`;前端 `pages/project/schedule/manage/roster/roster-error.ts`)。存排班違反限制:`VALIDATION_FAILED`(欄位 `rules`)+ `extensions.violations`;發布被擋:`VALIDATION_FAILED`(欄位 `month`)+ `extensions.reason`(`HAS_LIMIT_VIOLATIONS` / `ALREADY_PUBLISHED` / `CHANGED_DURING_PUBLISH` / `AUTO_RUN_IN_PROGRESS`);已發布後沒給異動原因:`VALIDATION_FAILED`(欄位 `reasonKey` / `reasonNote`)。前端文案 `admin.schedule.errors.*`(`pages/project/schedule/schedule-error.ts`;檢核與發布的在 `manage/roster/check-panel/check-errors.ts`、`admin.schedule.roster.publish.errors.*`)。
 
 ## 稽核
 

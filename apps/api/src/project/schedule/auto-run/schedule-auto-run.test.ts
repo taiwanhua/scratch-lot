@@ -22,6 +22,7 @@ import {
   seedScheduleAuthorization,
   seedScheduleFieldOptions,
 } from "../test-support/fixtures";
+import { ScheduleAutoRunService } from "./schedule-auto-run.service";
 
 // ---- GraphQL ----
 
@@ -1020,6 +1021,199 @@ describe("套用範本與自動排班(GraphQL 端點 + 真 MongoDB)", () => {
           }),
         ),
       ).toMatchObject({ reason: "ALREADY_PUBLISHED" });
+    });
+
+    it("自動排班執行中不能發布(AUTO_RUN_IN_PROGRESS);逾時解除後照常發布", async () => {
+      await demandOn("2028-01-03", "09:00", "13:00", ["helper"]);
+      const clock = api.app.get(ScheduleClock);
+      const now = new Date("2027-12-20T02:00:00Z");
+      const spy = jest.spyOn(clock, "now").mockReturnValue(now);
+      try {
+        await periods().updateOne(
+          { orgId: daan, month: "2028-01" },
+          {
+            $set: {
+              lockedAt: new Date(now.getTime() - 60_000),
+              lockedBy: runner.userId,
+            },
+          },
+        );
+        const publish = () =>
+          gql(hq, PUBLISH, {
+            input: { orgId: String(daan), month: "2028-01" },
+          });
+        expect(errorOf(await publish())).toMatchObject({
+          code: "VALIDATION_FAILED",
+          reason: "AUTO_RUN_IN_PROGRESS",
+        });
+        expect(
+          await periods().findOne({ orgId: daan, month: "2028-01" }),
+        ).toMatchObject({ status: "unpublished" });
+        spy.mockReturnValue(new Date(now.getTime() + 10 * 60_000));
+        const published = await publish();
+        expect(published.errors).toBeUndefined();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it("計算在交易外:計算期間鎖逾時被別人搶走 → 不寫入,別人的鎖照留", async () => {
+      await demandOn("2028-02-07", "09:00", "13:00", ["leader"]);
+      const service = api.app.get(ScheduleAutoRunService);
+      const target = service as unknown as {
+        prepareRun: (...args: unknown[]) => Promise<unknown>;
+      };
+      const original = target.prepareRun.bind(service);
+      const stolenAt = new Date();
+      const spy = jest
+        .spyOn(target, "prepareRun")
+        .mockImplementation(async (...args: unknown[]) => {
+          const prepared = await original(...args);
+          // 計算期間:自己的鎖逾時,別人重新標記
+          await periods().updateOne(
+            { orgId: daan, month: "2028-02" },
+            { $set: { lockedAt: stolenAt, lockedBy: hq.userId } },
+          );
+          return prepared;
+        });
+      try {
+        expect(
+          errorOf(await gql(runner, RUN, runInput("2028-02"))),
+        ).toMatchObject({ reason: "AUTO_RUN_IN_PROGRESS" });
+      } finally {
+        spy.mockRestore();
+      }
+      const { entries } = await roster("2028-02");
+      expect(entries).toEqual([]);
+      expect(
+        await connection
+          .collection(SCHEDULE_AUTO_RUNS_COLLECTION)
+          .countDocuments({ month: "2028-02" }),
+      ).toBe(0);
+      expect(
+        await periods().findOne({ orgId: daan, month: "2028-02" }),
+      ).toMatchObject({ lockedAt: stolenAt, lockedBy: hq.userId });
+    });
+
+    it("執行紀錄記下這次實際用的整組條件與順序(沒送的補在後面、不勾)與延續延長前的時間", async () => {
+      const first = await demandOn("2028-03-06", "08:00", "12:00", ["leader"]);
+      await demandOn("2028-03-06", "12:00", "14:00", ["leader"]);
+      const saved = await gql(hq, SAVE_ENTRY, {
+        input: {
+          orgId: String(daan),
+          userId: String(wang.userId),
+          startAt: taipei("2028-03-06", "08:00"),
+          endAt: taipei("2028-03-06", "12:00"),
+          breakMinutes: 0,
+          assignments: [{ demandId: first.id, taskId: first.tasks[0]?.taskId }],
+        },
+      });
+      expect(saved.errors).toBeUndefined();
+      const run = await gql(
+        hq,
+        RUN,
+        runInput("2028-03", {
+          conditions: [{ key: "continuePreviousEntry", enabled: true }],
+        }),
+      );
+      expect(run.errors).toBeUndefined();
+      const record = await connection
+        .collection(SCHEDULE_AUTO_RUNS_COLLECTION)
+        .findOne({ month: "2028-03" });
+      expect(record?.conditions).toEqual([
+        { key: "continuePreviousEntry", enabled: true },
+        { key: "leaderCountFirst", enabled: false },
+        { key: "monthlyShiftBalance", enabled: false },
+        { key: "allowOverlappingDemands", enabled: false },
+      ]);
+      // 王的 08–12 延長到 14:00;紀錄留延長前的時間(清除時要不要縮回待決)
+      expect(record?.extendedEntries).toEqual([
+        expect.objectContaining({
+          before: expect.objectContaining({
+            startAt: new Date(taipei("2028-03-06", "08:00")),
+            endAt: new Date(taipei("2028-03-06", "12:00")),
+            breakMinutes: 0,
+          }),
+          after: expect.objectContaining({
+            endAt: new Date(taipei("2028-03-06", "14:00")),
+          }),
+        }),
+      ]);
+      const { entries } = await roster("2028-03");
+      expect(entries).toHaveLength(1);
+
+      // 清除自動排入的人 → 被延長的那筆縮回延長前的 08–12(手動的填進留著)
+      const cleared = await gql(hq, CLEAR, {
+        input: {
+          orgId: String(daan),
+          month: "2028-03",
+          from: "2028-03-01",
+          to: "2028-03-31",
+        },
+      });
+      expect(cleared.errors).toBeUndefined();
+      const after = await roster("2028-03");
+      expect(after.entries).toEqual([
+        expect.objectContaining({
+          startAt: taipei("2028-03-06", "08:00"),
+          endAt: taipei("2028-03-06", "12:00"),
+          breakMinutes: 0,
+        }),
+      ]);
+      expect(after.entries[0]?.assignments).toHaveLength(1);
+    });
+
+    it("延長後被手動改過(來源變手動)→ 清除時不縮回、維持現狀", async () => {
+      const first = await demandOn("2028-04-03", "08:00", "12:00", ["leader"]);
+      await demandOn("2028-04-03", "12:00", "14:00", ["leader"]);
+      const saved = await gql(hq, SAVE_ENTRY, {
+        input: {
+          orgId: String(daan),
+          userId: String(wang.userId),
+          startAt: taipei("2028-04-03", "08:00"),
+          endAt: taipei("2028-04-03", "12:00"),
+          breakMinutes: 0,
+          assignments: [{ demandId: first.id, taskId: first.tasks[0]?.taskId }],
+        },
+      });
+      expect(saved.errors).toBeUndefined();
+      const ran = await gql(hq, RUN, runInput("2028-04"));
+      expect(ran.errors).toBeUndefined();
+      const ranRoster = await roster("2028-04");
+      const [extended] = ranRoster.entries;
+      expect(extended?.endAt).toBe(taipei("2028-04-03", "14:00"));
+      const edited = await gql(hq, SAVE_ENTRY, {
+        input: {
+          orgId: String(daan),
+          id: extended?.id,
+          startAt: extended?.startAt,
+          endAt: extended?.endAt,
+          breakMinutes: extended?.breakMinutes,
+          assignments: extended?.assignments.map((item) => ({
+            demandId: item.demandId,
+            taskId: item.taskId,
+          })),
+        },
+      });
+      expect(edited.errors).toBeUndefined();
+      const cleared = dataOf(
+        await gql(hq, CLEAR, {
+          input: {
+            orgId: String(daan),
+            month: "2028-04",
+            from: "2028-04-01",
+            to: "2028-04-30",
+          },
+        }),
+        "clearScheduleAutoAssignments",
+      );
+      expect(cleared.removedCount).toBe(0);
+      const keptRoster = await roster("2028-04");
+      const [kept] = keptRoster.entries;
+      expect(kept).toMatchObject({
+        startAt: taipei("2028-04-03", "08:00"),
+        endAt: taipei("2028-04-03", "14:00"),
+      });
     });
   });
 });

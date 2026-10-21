@@ -68,7 +68,8 @@ export const projectModulePages: ModulePageSource = {
     // 排班作業(綁定 支援需求單)、出勤紀錄(綁定 補打卡申請):列表頁換成分頁頁殼,其餘三頁沿用表單引擎
     {
       moduleKey: "schedule.manage",
-      pageOverrides: { list: { Page: ScheduleManagePage } },
+      // 內容區最小寬度用 `md`:平板 1024 寬收合側欄時,排班表的工具列與檢核面板都放得下、不必左右捲
+      pageOverrides: { list: { Page: ScheduleManagePage, minWidth: "md" } },
     },
     {
       moduleKey: "schedule.attendance",

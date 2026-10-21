@@ -1344,7 +1344,8 @@
         "errors": {
           "HAS_LIMIT_VIOLATIONS": "有違反限制的排班,不能發布;請重新檢核",
           "ALREADY_PUBLISHED": "這個月已經發布過了",
-          "CHANGED_DURING_PUBLISH": "發布時排班剛好有人修改,請再按一次 [發布]"
+          "CHANGED_DURING_PUBLISH": "發布時排班剛好有人修改,請再按一次 [發布]",
+          "AUTO_RUN_IN_PROGRESS": "自動排班執行中,請稍後再發布"
         }
       },
       "changeReason": {

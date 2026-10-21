@@ -170,6 +170,10 @@ export const scheduleRosterWorld = (
       },
       ensure,
       isEmpty,
+      unavailability: () =>
+        loadedMonth === null
+          ? []
+          : sampleRosterExtras(loadedMonth).unavailability,
     },
     options,
   );

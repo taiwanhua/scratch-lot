@@ -68,6 +68,9 @@ export const PublishDialog = ({ onClose }: PublishDialogProps) => {
       case "CHANGED_DURING_PUBLISH": {
         return t("errors.CHANGED_DURING_PUBLISH");
       }
+      case "AUTO_RUN_IN_PROGRESS": {
+        return t("errors.AUTO_RUN_IN_PROGRESS");
+      }
       case null: {
         return tErrors(scheduleErrorOf(cause).code);
       }
