@@ -200,6 +200,9 @@ const DETAIL = /* GraphQL */ `
   query Detail($submissionId: ID!) {
     lotteryCheckout(submissionId: $submissionId) {
       status
+      cashPointPrinterId
+      shiftOpenedAt
+      shiftClosedAt
       stocktakeMode
       stocktake {
         submissionId
@@ -634,6 +637,7 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
   function shiftOf(id: Types.ObjectId) {
     return connection
       .collection<{
+        openedAt: Date;
         closedAt: Date | null;
         checkoutId: Types.ObjectId | null;
         openingFloat: number;
@@ -1162,11 +1166,24 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
       }),
     );
     const detail = await ok<{
-      lotteryCheckout: { status: string; diffReason: string | null };
+      lotteryCheckout: {
+        status: string;
+        diffReason: string | null;
+        cashPointPrinterId: string | null;
+        shiftOpenedAt: string | null;
+        shiftClosedAt: string | null;
+      };
     }>(manager, DETAIL, { submissionId: submitted.id });
     expect(detail.lotteryCheckout).toMatchObject({
       status: "confirmed",
       diffReason: "找錯錢",
+    });
+    // 58mm 結帳單的「班次」= 開班 ~ 結束;收銀點沒設定印表機 = null(列印用分店預設)
+    const shift = await shiftOf(shiftId);
+    expect(detail.lotteryCheckout).toMatchObject({
+      cashPointPrinterId: null,
+      shiftOpenedAt: shift?.openedAt.toISOString(),
+      shiftClosedAt: shift?.closedAt?.toISOString(),
     });
   });
 

@@ -1,6 +1,9 @@
+import { STORE_KEY } from "@repo/domain/project/lottery";
+
 import type { WorkflowExtensionRegistration } from "@/hooks/base/useWorkflowExtensions";
 import { TransferShipmentEffect } from "@/pages/project/lottery/purchasing/transfer/TransferShipmentEffect";
 import { TRANSFER_MODULE_KEY } from "@/pages/project/lottery/purchasing/transfer/transfer-keys";
+import { CheckoutReceiptEffect } from "@/pages/project/lottery/store/checkout/CheckoutReceiptEffect";
 import { MakeupPunchReview } from "@/pages/project/schedule/attendance/MakeupPunchReview";
 import { MAKEUP_PUNCH_MODULE_KEY } from "@/pages/project/schedule/attendance/attendance-keys";
 
@@ -13,6 +16,8 @@ export const projectWorkflowExtensions: readonly WorkflowExtensionRegistration[]
   [
     // 調貨單:第一關(出貨確認)通過(含跳過)→ 自動印調貨出貨單(規格 8.4、第 12 章)
     { moduleKey: TRANSFER_MODULE_KEY, Effect: TransferShipmentEffect },
+    // 結帳確認申請送出 → 自動印交班結帳單 / 日結單(規格第 12 章)
+    { moduleKey: STORE_KEY, Effect: CheckoutReceiptEffect },
     // 補打卡申請:選的排班已被刪除 → 警告、停用 [核准](規格 14.8;api 的 beforeApprove 同樣擋)
     { moduleKey: MAKEUP_PUNCH_MODULE_KEY, Review: MakeupPunchReview },
   ];

@@ -25,10 +25,24 @@ import {
 } from "@/components/project/lottery/ReasonFields/reason-value";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useLotteryFieldOptions } from "@/hooks/project/useLotteryFieldOptions/useLotteryFieldOptions";
 import { storeErrorKey, storeErrorOf } from "@/lib/project/lottery/store-error";
 
 import { moneyText } from "../store-text";
 import { STORE_BOARD_QUERY_KEY } from "./board-query";
+
+/** 投庫 / 出庫寫入成功後交給列印的資料(58mm 投庫單 / 出庫單)。 */
+export interface CashMoveCommitted {
+  kind: "deposit" | "withdraw";
+  /** 這次寫的現金流水 */
+  movementId: string;
+  /** 收銀點的印表機(沒設定 = null → 分店預設) */
+  cashPointPrinterId: string | null;
+  amount: number;
+  note: string | null;
+  /** 出庫原因的名稱(含說明);投庫 = 空字串 */
+  reasonLabel: string;
+}
 
 export interface CashMoveDialogProps {
   /** `deposit` 投庫(抽屜 → 小金庫)/ `withdraw` 出庫(小金庫 → 抽屜) */
@@ -38,11 +52,14 @@ export interface CashMoveDialogProps {
   /** 小金庫目前的應有(出庫視窗顯示) */
   vaultExpected: number;
   onClose: () => void;
+  /** 寫入成功之後(列印投庫單 / 出庫單;寫入失敗不會呼叫) */
+  onCommitted?: (committed: CashMoveCommitted) => void;
 }
 
 /**
  * 投庫 / 出庫(專案規格 6.7;Figma ST-12a 投庫、ST-12b 出庫):寫現金流水,不用審核、做完就生效。
- * 投庫顯示抽屜的應有(超過 → api 擋下);出庫原因必填(欄位管理「出庫原因」)。「自動列印」由列印的功能加上。
+ * 投庫顯示抽屜的應有(超過 → api 擋下);出庫原因必填(欄位管理「出庫原因」)。
+ * 寫入成功 → `onCommitted`(看板據此自動印投庫單 / 出庫單,規格第 12 章)。
  */
 export const CashMoveDialog = ({
   kind,
@@ -50,6 +67,7 @@ export const CashMoveDialog = ({
   cashPointName,
   vaultExpected,
   onClose,
+  onCommitted,
 }: CashMoveDialogProps) => {
   const t = useTranslations("admin.lotteryStore");
   const { session } = useSession();
@@ -61,6 +79,31 @@ export const CashMoveDialog = ({
   const [invalid, setInvalid] = useState<string[]>([]);
   const [errorKey, setErrorKey] = useState<string | null>(null);
 
+  const reasons = useLotteryFieldOptions(
+    LOTTERY_FIELD_CATEGORY_KEYS.withdrawReason,
+  );
+  const committedOf = (
+    payload: { movementId?: string | null; cashPointPrinterId?: string | null },
+    input: { amount: number; note?: string | null },
+  ) => {
+    if (payload.movementId == null) {
+      return;
+    }
+    const { reasonKey, reasonNote } = reasonInputOf(reason);
+    onCommitted?.({
+      kind,
+      movementId: payload.movementId,
+      cashPointPrinterId: payload.cashPointPrinterId ?? null,
+      amount: input.amount,
+      note: input.note ?? null,
+      reasonLabel:
+        kind === "withdraw"
+          ? [reasons.labelOf(reasonKey), reasonNote]
+              .filter((part) => part !== null && part !== "")
+              .join(" · ")
+          : "",
+    });
+  };
   const feedback = {
     error: (error: unknown) => t(storeErrorKey(error)),
     onSuccess: () => {
@@ -74,11 +117,25 @@ export const CashMoveDialog = ({
   };
   const deposit = useDepositLotteryShiftCashMutation(
     session.client,
-    useMutationFeedback({ ...feedback, success: t("cash.depositSuccess") }),
+    useMutationFeedback({
+      ...feedback,
+      success: t("cash.depositSuccess"),
+      onSuccess: (data, variables) => {
+        committedOf(data.depositLotteryShiftCash, variables.input);
+        feedback.onSuccess();
+      },
+    }),
   );
   const withdraw = useWithdrawLotteryShiftCashMutation(
     session.client,
-    useMutationFeedback({ ...feedback, success: t("cash.withdrawSuccess") }),
+    useMutationFeedback({
+      ...feedback,
+      success: t("cash.withdrawSuccess"),
+      onSuccess: (data, variables) => {
+        committedOf(data.withdrawLotteryShiftCash, variables.input);
+        feedback.onSuccess();
+      },
+    }),
   );
   const isPending = deposit.isPending || withdraw.isPending;
   const amountValue = Number(amount.trim());

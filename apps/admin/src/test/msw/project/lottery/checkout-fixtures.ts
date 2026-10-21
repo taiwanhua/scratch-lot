@@ -283,6 +283,9 @@ export const sampleCheckoutDetail = (): CheckoutDetailFixture => {
     orgName: "中山店",
     cashPoint: ref("cp-counter", "店內櫃台"),
     shiftId: "shift-counter",
+    cashPointPrinterId: null,
+    shiftOpenedAt: "2026-10-16T00:02:00.000Z",
+    shiftClosedAt: "2026-10-16T07:10:00.000Z",
     stocktakeMode: "reuse",
     stocktake: {
       __typename: "LotteryCheckoutReusableStocktake",

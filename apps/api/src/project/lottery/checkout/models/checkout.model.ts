@@ -223,6 +223,10 @@ export class LotteryCheckoutCoveredShiftModel {
 
   @Field(() => String)
   cashPointName!: string;
+
+  /** 這一班交班結帳的差額(實點 − 應有;日結單依收銀點彙總) */
+  @Field(() => Int)
+  difference!: number;
 }
 
 /**
@@ -254,6 +258,17 @@ export class LotteryCheckoutDetailModel {
 
   @Field(() => ID, { nullable: true })
   shiftId!: string | null;
+
+  /** 交班:收銀點的印表機(結帳單列印的預設;null = 分店預設) */
+  @Field(() => ID, { nullable: true })
+  cashPointPrinterId!: string | null;
+
+  /** 交班:這一班的開班 / 結束時間(結帳單的「班次」);日結 = null */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  shiftOpenedAt!: Date | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  shiftClosedAt!: Date | null;
 
   /** 盤點方式:reuse / new / skip */
   @Field(() => String)

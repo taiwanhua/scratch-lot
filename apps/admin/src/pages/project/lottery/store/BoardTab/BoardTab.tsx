@@ -369,6 +369,7 @@ export const BoardTab = () => {
         />
       ))}
       <BoardDialogs
+        org={board?.org ?? null}
         dialog={dialog}
         cashPoints={cashPoints}
         local={local}

@@ -14,6 +14,9 @@ import { Tooltip } from "@repo/ui/tooltip";
 import { Typography } from "@repo/ui/typography";
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
+import { useStoreReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useStoreReceiptLinks";
+import { useMe } from "@/hooks/base/useMe";
 import { usePermissions } from "@/hooks/base/usePermissions";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
@@ -32,7 +35,7 @@ export interface DailyCloseEntry {
   bankButton: ReactNode;
   /** 頂部 [日結](沒有 `store.checkout` = null;還有班沒送出交班 / 已有審核中的日結 → 停用,滑過說明) */
   dailyButton: ReactNode;
-  /** 存銀行視窗 */
+  /** 存銀行視窗(與存款單列印的轉圖節點) */
   element: ReactNode;
 }
 
@@ -40,6 +43,7 @@ export interface DailyCloseEntry {
  * 看板頂部的日結入口(規格 6.1、6.10、6.11;Figma ST-01、ST-20、ST-26a/b):上次日結、[存銀行]、[日結]。
  * [日結]:**這家店所有收銀點的班都已送出交班結帳**才能按,停用時滑過列出還沒送出的班(ST-20);
  * 已有審核中 / 已退回的日結也停用(每一班只會被一張日結涵蓋計算)。按下 → 日結精靈(結帳確認申請新增頁 `?type=daily`)。
+ * [存銀行] 寫入成功 → 自動印 58mm 存款單(規格第 12 章;失敗只記 log)。
  */
 export const useDailyCloseEntry = (
   orgId: string,
@@ -52,6 +56,9 @@ export const useDailyCloseEntry = (
   const { hasPermission } = usePermissions();
   const access = useFormModuleAccess(STORE_KEY);
   const [depositOpen, setDepositOpen] = useState(false);
+  const { printReceiptAfterCommit, host } = useReceiptPrinter();
+  const { cashLedgerUrl } = useStoreReceiptLinks();
+  const handler = useMe().data?.me.name ?? "";
   const status = useLotteryDailyCloseStatusQuery(
     session.client,
     { orgId },
@@ -130,13 +137,25 @@ export const useDailyCloseEntry = (
           </Button>
         </Tooltip>
       ) : null,
-    element: depositOpen ? (
-      <BankDepositDialog
-        orgId={orgId}
-        onClose={() => {
-          setDepositOpen(false);
-        }}
-      />
-    ) : null,
+    element: (
+      <>
+        {depositOpen ? (
+          <BankDepositDialog
+            orgId={orgId}
+            onClose={() => {
+              setDepositOpen(false);
+            }}
+            onCommitted={(done) => {
+              void printReceiptAfterCommit("store-bank-deposit", {
+                ...done,
+                handler,
+                url: cashLedgerUrl(done.movementId),
+              });
+            }}
+          />
+        ) : null}
+        {host}
+      </>
+    ),
   };
 };

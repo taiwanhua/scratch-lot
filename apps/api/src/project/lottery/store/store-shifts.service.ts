@@ -48,7 +48,7 @@ import type {
   LotteryStoreEntryTaskModel,
   LotteryStoreOpenShiftFormModel,
   LotteryStorePunchPayload,
-  LotteryStoreShiftModel,
+  LotteryStoreShiftPayload,
 } from "./models/lottery-store.model";
 import { handoverAmountOf, isCoveredByDailyClose } from "./previous-shift";
 import { type ShiftRecord, StoreShiftViews, parseId } from "./shift-views";
@@ -204,7 +204,7 @@ export class StoreShiftsService {
   async open(
     operator: OperatorContext,
     input: OpenLotteryShiftInput,
-  ): Promise<LotteryStoreShiftModel> {
+  ): Promise<LotteryStoreShiftPayload> {
     const actorId = operator.actorId;
     if (actorId === null) {
       throw forbiddenError("operator required");
@@ -337,7 +337,16 @@ export class StoreShiftsService {
     if (model === undefined) {
       throw notFoundError("shift not found");
     }
-    return model;
+    // 領了零用金:交易成功後 admin 照出庫自動印出庫單(規格 6.6、第 12 章)
+    return {
+      item: model,
+      movementId:
+        created.openingMovementId === null
+          ? null
+          : String(created.openingMovementId),
+      cashPointPrinterId:
+        point.printerId === null ? null : String(point.printerId),
+    };
   }
 
   /** 開班視窗的 [打卡]:打這一班的上班卡(排班模組再查 `schedule.my.punch`)。 */

@@ -1762,6 +1762,7 @@ export type LotteryCheckoutCashItem = {
 export type LotteryCheckoutCoveredShift = {
   __typename?: 'LotteryCheckoutCoveredShift';
   cashPointName: Scalars['String']['output'];
+  difference: Scalars['Int']['output'];
   serialNo?: Maybe<Scalars['String']['output']>;
   submissionId: Scalars['ID']['output'];
 };
@@ -1777,6 +1778,7 @@ export type LotteryCheckoutDetail = {
   bankAccount?: Maybe<LotteryAccountsRef>;
   bankDepositAmount: Scalars['Int']['output'];
   cashPoint?: Maybe<LotteryAccountsRef>;
+  cashPointPrinterId?: Maybe<Scalars['ID']['output']>;
   confirmedAt?: Maybe<Scalars['DateTime']['output']>;
   counted: Scalars['Int']['output'];
   coveredFrom?: Maybe<Scalars['DateTime']['output']>;
@@ -1794,7 +1796,9 @@ export type LotteryCheckoutDetail = {
   orgId: Scalars['ID']['output'];
   orgName: Scalars['String']['output'];
   pendingImpacts: Array<LotteryCheckoutPendingImpact>;
+  shiftClosedAt?: Maybe<Scalars['DateTime']['output']>;
   shiftId?: Maybe<Scalars['ID']['output']>;
+  shiftOpenedAt?: Maybe<Scalars['DateTime']['output']>;
   skipReason?: Maybe<Scalars['String']['output']>;
   skipReasonNote?: Maybe<Scalars['String']['output']>;
   status: Scalars['String']['output'];
@@ -3464,7 +3468,9 @@ export type LotteryStoreShiftOptionsPayload = {
 
 export type LotteryStoreShiftPayload = {
   __typename?: 'LotteryStoreShiftPayload';
+  cashPointPrinterId?: Maybe<Scalars['ID']['output']>;
   item: LotteryStoreShift;
+  movementId?: Maybe<Scalars['ID']['output']>;
 };
 
 export type LotteryStoreTicketRefInput = {
@@ -10177,7 +10183,7 @@ export type LotteryCheckoutQueryVariables = Exact<{
 }>;
 
 
-export type LotteryCheckoutQuery = { __typename?: 'Query', lotteryCheckout: { __typename?: 'LotteryCheckoutDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, shiftId?: string | null, stocktakeMode: string, skipReason?: string | null, skipReasonNote?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, diffReasonNote?: string | null, leftForNext: number, submittedAt: string, confirmedAt?: string | null, coveredFrom?: string | null, coveredTo?: string | null, bankDepositAmount: number, draft: string, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, stocktake?: { __typename?: 'LotteryCheckoutReusableStocktake', submissionId: string, serialNo?: string | null, startedAt: string, scopeName?: string | null, diffCount: number } | null, expectedItems: Array<{ __typename?: 'LotteryCheckoutCashItem', kind: string, count: number, amount: number, entries: Array<{ __typename?: 'LotteryCheckoutCashEntry', refType: string, refId: string, label: string, occurredAt: string, amount: number }> }>, denominations: Array<{ __typename?: 'LotteryCheckoutDenomination', value: number, count: number }>, pendingImpacts: Array<{ __typename?: 'LotteryCheckoutPendingImpact', submissionId: string, formKey: string, serialNo?: string | null, amount: number }>, successor?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, coveredShifts: Array<{ __typename?: 'LotteryCheckoutCoveredShift', submissionId: string, serialNo?: string | null, cashPointName: string }>, bankAccount?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } };
+export type LotteryCheckoutQuery = { __typename?: 'Query', lotteryCheckout: { __typename?: 'LotteryCheckoutDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, shiftId?: string | null, cashPointPrinterId?: string | null, shiftOpenedAt?: string | null, shiftClosedAt?: string | null, stocktakeMode: string, skipReason?: string | null, skipReasonNote?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, diffReasonNote?: string | null, leftForNext: number, submittedAt: string, confirmedAt?: string | null, coveredFrom?: string | null, coveredTo?: string | null, bankDepositAmount: number, draft: string, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, stocktake?: { __typename?: 'LotteryCheckoutReusableStocktake', submissionId: string, serialNo?: string | null, startedAt: string, scopeName?: string | null, diffCount: number } | null, expectedItems: Array<{ __typename?: 'LotteryCheckoutCashItem', kind: string, count: number, amount: number, entries: Array<{ __typename?: 'LotteryCheckoutCashEntry', refType: string, refId: string, label: string, occurredAt: string, amount: number }> }>, denominations: Array<{ __typename?: 'LotteryCheckoutDenomination', value: number, count: number }>, pendingImpacts: Array<{ __typename?: 'LotteryCheckoutPendingImpact', submissionId: string, formKey: string, serialNo?: string | null, amount: number }>, successor?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, coveredShifts: Array<{ __typename?: 'LotteryCheckoutCoveredShift', submissionId: string, serialNo?: string | null, cashPointName: string, difference: number }>, bankAccount?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } };
 
 export type LotteryDailyCloseStatusQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
@@ -10816,7 +10822,7 @@ export type OpenLotteryShiftMutationVariables = Exact<{
 }>;
 
 
-export type OpenLotteryShiftMutation = { __typename?: 'Mutation', openLotteryShift: { __typename?: 'LotteryStoreShiftPayload', item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+export type OpenLotteryShiftMutation = { __typename?: 'Mutation', openLotteryShift: { __typename?: 'LotteryStoreShiftPayload', movementId?: string | null, cashPointPrinterId?: string | null, item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
 
 export type PunchLotteryShiftStartMutationVariables = Exact<{
   entryId: Scalars['ID']['input'];
@@ -10844,14 +10850,14 @@ export type DepositLotteryShiftCashMutationVariables = Exact<{
 }>;
 
 
-export type DepositLotteryShiftCashMutation = { __typename?: 'Mutation', depositLotteryShiftCash: { __typename?: 'LotteryStoreShiftPayload', item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+export type DepositLotteryShiftCashMutation = { __typename?: 'Mutation', depositLotteryShiftCash: { __typename?: 'LotteryStoreShiftPayload', movementId?: string | null, cashPointPrinterId?: string | null, item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
 
 export type WithdrawLotteryShiftCashMutationVariables = Exact<{
   input: WithdrawLotteryShiftCashInput;
 }>;
 
 
-export type WithdrawLotteryShiftCashMutation = { __typename?: 'Mutation', withdrawLotteryShiftCash: { __typename?: 'LotteryStoreShiftPayload', item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
+export type WithdrawLotteryShiftCashMutation = { __typename?: 'Mutation', withdrawLotteryShiftCash: { __typename?: 'LotteryStoreShiftPayload', movementId?: string | null, cashPointPrinterId?: string | null, item: { __typename?: 'LotteryStoreShift', id: string, openedAt: string, isMine: boolean, openingFloat: number, expectedCash: number, soldCount: number, soldAmount: number, unmatchedEntry: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } } } };
 
 export type LotteryTransferReceivingFieldsFragment = { __typename?: 'LotteryTransferReceiving', submissionId: string, fromBranchName: string, toBranchName: string, transferAmount: number, canReceive: boolean, receivedCount: number, totalCount: number, rows: Array<{ __typename?: 'LotteryTransferRow', rowId: string, bookId: string, gameCode: string, gameName: string, bookNo: string, mode: string, ticketNos: Array<string>, tickets: number, amount: number, rate: number, purchaseAmount: number, shipped: boolean, received: boolean, receivedAt?: string | null, shippedAt?: string | null }> };
 
@@ -20563,6 +20569,9 @@ export const LotteryCheckoutDocument = `
       ...LotteryAccountsRefFields
     }
     shiftId
+    cashPointPrinterId
+    shiftOpenedAt
+    shiftClosedAt
     stocktakeMode
     stocktake {
       ...LotteryCheckoutStocktakeRefFields
@@ -20599,6 +20608,7 @@ export const LotteryCheckoutDocument = `
       submissionId
       serialNo
       cashPointName
+      difference
     }
     bankDepositAmount
     bankAccount {
@@ -23673,6 +23683,8 @@ export const OpenLotteryShiftDocument = `
     item {
       ...LotteryStoreShiftFields
     }
+    movementId
+    cashPointPrinterId
   }
 }
     ${LotteryStoreShiftFieldsFragmentDoc}
@@ -23800,6 +23812,8 @@ export const DepositLotteryShiftCashDocument = `
     item {
       ...LotteryStoreShiftFields
     }
+    movementId
+    cashPointPrinterId
   }
 }
     ${LotteryStoreShiftFieldsFragmentDoc}
@@ -23831,6 +23845,8 @@ export const WithdrawLotteryShiftCashDocument = `
     item {
       ...LotteryStoreShiftFields
     }
+    movementId
+    cashPointPrinterId
   }
 }
     ${LotteryStoreShiftFieldsFragmentDoc}

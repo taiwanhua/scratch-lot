@@ -223,6 +223,17 @@ export class LotteryStoreOpenShiftFormPayload {
 export class LotteryStoreShiftPayload {
   @Field(() => LotteryStoreShiftModel)
   item!: LotteryStoreShiftModel;
+
+  /**
+   * 這次寫的現金流水(投庫、出庫、開班領零用金):58mm 投庫單 / 出庫單的 QR 連到即時現金帳那一筆;
+   * 沒寫流水(開班沒領零用金、其他動作)= null
+   */
+  @Field(() => ID, { nullable: true })
+  movementId?: string | null;
+
+  /** 這個收銀點的印表機(投庫單 / 出庫單列印的預設;null = 分店預設) */
+  @Field(() => ID, { nullable: true })
+  cashPointPrinterId?: string | null;
 }
 
 /** 開班視窗 [打卡] 的結果。 */

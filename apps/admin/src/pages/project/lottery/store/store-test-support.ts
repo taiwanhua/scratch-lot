@@ -1,5 +1,13 @@
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
-import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
+import {
+  type FormRuntimeWorldOptions,
+  formRuntimeWorld,
+} from "@/test/msw/form-runtime-handlers";
+import {
+  type PrintButtonWorldOptions,
+  printButtonWorld,
+  printingModule,
+} from "@/test/msw/print-button-handlers";
 import {
   checkoutFormWorld,
   checkoutWorkflowWorld,
@@ -63,6 +71,8 @@ export const renderStore = ({
   stocktakeOptions = {},
   checkoutOptions = {},
   dailyCloseOptions = {},
+  printing,
+  formRuntime = {},
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -79,7 +89,16 @@ export const renderStore = ({
   checkoutOptions?: CheckoutWorldOptions;
   /** 日結 / 存銀行的假 api 選項(精靈、上次日結、存銀行視窗的覆寫) */
   dailyCloseOptions?: DailyCloseWorldOptions;
+  /**
+   * 列印(58mm 單據):給了才有 `api.printing`(`permissions` 預設列印 + 補印)與列印的假伺服器;
+   * 不給 = 沒有收據機的租戶,不自動列印、沒有 [列印]
+   */
+  printing?: PrintButtonWorldOptions & { permissions?: string[] };
+  /** 表單執行端的覆寫(送出失敗、送出後的狀態) */
+  formRuntime?: Pick<FormRuntimeWorldOptions, "failures" | "submitAs">;
 } = {}) => {
+  const printingFake =
+    printing === undefined ? null : printButtonWorld(printing);
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
   const redemptions = redemptionWorld(redemptionRows);
@@ -88,6 +107,7 @@ export const renderStore = ({
   const checkoutForms = checkoutFormWorld();
   const runtime = formRuntimeWorld({
     ...formsFake.runtime,
+    ...formRuntime,
     moduleForms: [
       ...(formsFake.runtime.moduleForms ?? []),
       ...(stocktakeForms.moduleForms ?? []),
@@ -109,6 +129,7 @@ export const renderStore = ({
   const stocktake = stocktakeWorld(stocktakeOptions);
   const dailyClose = dailyCloseWorld(dailyCloseOptions);
   server.use(
+    ...(printingFake?.handlers ?? []),
     ...stocktake.handlers,
     ...checkoutWorld(checkoutOptions).handlers,
     ...dailyClose.handlers,
@@ -127,7 +148,20 @@ export const renderStore = ({
     ...authWorld({
       hasRefreshCookie: true,
       orgs: [masterDataOrgs.storeA],
-      modules: [overviewModule, ...storeModules(permissions)],
+      modules: [
+        overviewModule,
+        ...storeModules(permissions),
+        ...(printing === undefined
+          ? []
+          : [
+              printingModule(
+                printing.permissions ?? [
+                  "api.printing.print",
+                  "api.printing.reprint",
+                ],
+              ),
+            ]),
+      ],
     }).handlers,
   );
   return {
@@ -138,5 +172,6 @@ export const renderStore = ({
     runtime,
     stocktake,
     dailyClose,
+    printingFake,
   };
 };

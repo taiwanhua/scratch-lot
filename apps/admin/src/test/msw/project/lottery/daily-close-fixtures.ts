@@ -239,6 +239,9 @@ export const sampleDailyCloseDetail = (): CheckoutDetail => {
     orgName: DAILY_CLOSE_ORG.name,
     cashPoint: null,
     shiftId: null,
+    cashPointPrinterId: null,
+    shiftOpenedAt: null,
+    shiftClosedAt: null,
     stocktakeMode: "reuse",
     stocktake: {
       __typename: "LotteryCheckoutReusableStocktake",
@@ -276,11 +279,18 @@ export const sampleDailyCloseDetail = (): CheckoutDetail => {
     confirmedAt: null,
     coveredFrom: "2026-10-16T01:02:00.000Z",
     coveredTo: "2026-10-16T14:30:00.000Z",
-    coveredShifts: ["C-0040", "C-0041", "C-0042"].map((serialNo) => ({
+    coveredShifts: (
+      [
+        ["C-0040", "店內櫃台", -100],
+        ["C-0041", "店外攤位", 0],
+        ["C-0042", "店內櫃台", 0],
+      ] as const
+    ).map(([serialNo, cashPointName, difference]) => ({
       __typename: "LotteryCheckoutCoveredShift" as const,
       submissionId: `sub-${serialNo}`,
       serialNo,
-      cashPointName: "店內櫃台",
+      cashPointName,
+      difference,
     })),
     bankDepositAmount: 20_000,
     bankAccount: ref("acc-1", "台銀 ·····12345"),

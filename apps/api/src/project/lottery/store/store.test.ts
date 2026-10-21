@@ -109,7 +109,7 @@ const OPEN_FORM = /* GraphQL */ `
 
 const OPEN = /* GraphQL */ `
   mutation Open($input: OpenLotteryShiftInput!) {
-    openLotteryShift(input: $input) { item { ${SHIFT_FIELDS} } }
+    openLotteryShift(input: $input) { item { ${SHIFT_FIELDS} } movementId cashPointPrinterId }
   }
 `;
 
@@ -148,13 +148,13 @@ const REASSIGN = /* GraphQL */ `
 
 const DEPOSIT = /* GraphQL */ `
   mutation Deposit($input: DepositLotteryShiftCashInput!) {
-    depositLotteryShiftCash(input: $input) { item { ${SHIFT_FIELDS} } }
+    depositLotteryShiftCash(input: $input) { item { ${SHIFT_FIELDS} } movementId cashPointPrinterId }
   }
 `;
 
 const WITHDRAW = /* GraphQL */ `
   mutation Withdraw($input: WithdrawLotteryShiftCashInput!) {
-    withdrawLotteryShiftCash(input: $input) { item { ${SHIFT_FIELDS} } }
+    withdrawLotteryShiftCash(input: $input) { item { ${SHIFT_FIELDS} } movementId cashPointPrinterId }
   }
 `;
 
@@ -739,6 +739,12 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
     );
     const shift = data.openLotteryShift.item;
     counterShift = shift.id;
+    // 58mm 出庫單(開班零用金):回傳這筆流水 id;收銀點沒設定印表機 = null(列印時用分店預設)
+    const opened = data.openLotteryShift as unknown as {
+      movementId: string | null;
+      cashPointPrinterId: string | null;
+    };
+    expect(opened.cashPointPrinterId).toBeNull();
     expect(shift).toMatchObject({
       openedBy: { id: String(wang.userId), name: "王小明" },
       isMine: true,
@@ -765,6 +771,9 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
         row.reason,
       ]),
     ).toEqual([["withdraw", "vault", "drawer", 3000, "opening_float"]]);
+    expect(opened.movementId).toBe(
+      String((movements[0] as unknown as { _id: Types.ObjectId })._id),
+    );
     const stored = await connection
       .collection(LOTTERY_SHIFTS_COLLECTION)
       .findOne({ _id: new Types.ObjectId(counterShift) });
@@ -795,6 +804,11 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
     );
     stallShift = data.openLotteryShift.item.id;
     expect(data.openLotteryShift.item.openingFloat).toBe(0);
+    // 沒領零用金 → 沒寫流水、不印出庫單
+    expect(
+      (data.openLotteryShift as unknown as { movementId: string | null })
+        .movementId,
+    ).toBeNull();
     const stored = await connection
       .collection(LOTTERY_SHIFTS_COLLECTION)
       .findOne({ _id: new Types.ObjectId(stallShift) });
@@ -958,6 +972,20 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       { input: { shiftId: counterShift, amount: 1000 } },
     );
     expect(deposited.depositLotteryShiftCash.item.expectedCash).toBe(2000);
+    // 58mm 投庫單 / 出庫單:回傳這次寫的流水 id(QR 連到即時現金帳那一筆)
+    const depositMovementId = (
+      deposited.depositLotteryShiftCash as unknown as { movementId: string }
+    ).movementId;
+    expect(
+      await connection
+        .collection(LOTTERY_CASH_MOVEMENTS_COLLECTION)
+        .findOne({ _id: new Types.ObjectId(depositMovementId) }),
+    ).toMatchObject({
+      type: "deposit",
+      from: "drawer",
+      to: "vault",
+      amount: 1000,
+    });
     expect(
       await errorOf(wang, DEPOSIT, {
         input: { shiftId: counterShift, amount: 2001 },
@@ -993,6 +1021,10 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       reason: "change",
       amount: 500,
     });
+    expect(
+      (withdrawn.withdrawLotteryShiftCash as unknown as { movementId: string })
+        .movementId,
+    ).toBe(String(last?._id));
 
     // 小金庫:3,000 −3,000(開班)+1,000(投庫)−500(出庫)= 500(日結前從 0 起算)
     const board = await ok<{

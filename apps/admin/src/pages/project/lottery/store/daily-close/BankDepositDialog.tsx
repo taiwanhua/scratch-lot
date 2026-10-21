@@ -23,20 +23,33 @@ import { STORE_BOARD_QUERY_KEY } from "../BoardTab/board-query";
 import { moneyText } from "../store-text";
 import { STORE_BANK_DEPOSIT_FORM_QUERY_KEY } from "./daily-close-keys";
 
+/** 存銀行寫入成功後交給列印的資料(58mm 存款單)。 */
+export interface BankDepositCommitted {
+  movementId: string;
+  branchId: string;
+  branchName: string;
+  amount: number;
+  accountName: string;
+  note: string | null;
+}
+
 export interface BankDepositDialogProps {
   orgId: string;
   onClose: () => void;
+  /** 寫入成功之後(列印存款單;寫入失敗不會呼叫) */
+  onCommitted?: (committed: BankDepositCommitted) => void;
 }
 
 /**
  * 存銀行(專案規格 6.11;Figma ST-26a、ST-26b):小金庫 → 銀行,不用審核、做完就生效。金額、存入帳戶
  * (使用中、使用組織包含這家分店;只有一個時自動帶入)、備註。金額超過小金庫應有(扣掉審核中日結要存入銀行的金額)→ 擋下
  * (提示先用現金更正單補登);
- * 本店沒有可用的銀行帳戶 → 錯誤提示、不能存。「存款單」列印由列印的功能加上。
+ * 本店沒有可用的銀行帳戶 → 錯誤提示、不能存。寫入成功 → `onCommitted`(看板據此自動印存款單,規格第 12 章)。
  */
 export const BankDepositDialog = ({
   orgId,
   onClose,
+  onCommitted,
 }: BankDepositDialogProps) => {
   const t = useTranslations("admin.lotteryStore");
   const { session } = useSession();
@@ -62,7 +75,18 @@ export const BankDepositDialog = ({
     useMutationFeedback({
       success: t("bankDeposit.success"),
       error: (error: unknown) => t(storeErrorKey(error)),
-      onSuccess: () => {
+      onSuccess: (result, variables) => {
+        const { input } = variables;
+        onCommitted?.({
+          movementId: result.depositLotteryVaultToBank.movementId,
+          branchId: orgId,
+          branchName: data?.org.name ?? "",
+          amount: input.amount,
+          accountName:
+            accounts.find((account) => account.id === input.accountId)?.name ??
+            "",
+          note: input.note ?? null,
+        });
         void queryClient.invalidateQueries({
           queryKey: STORE_BOARD_QUERY_KEY,
         });

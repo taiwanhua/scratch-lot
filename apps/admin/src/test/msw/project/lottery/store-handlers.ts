@@ -57,11 +57,21 @@ export const storeWorld = ({
   };
   const shiftById = (id: string) =>
     state.cashPoints.find((point) => point.shift?.id === id)?.shift ?? null;
-  const shiftPayload = (id: string) => {
+  let movements = 0;
+  /** 寫了現金流水(投庫、出庫、開班領零用金)→ 回這筆流水 id(58mm 單據的 QR);收銀點沒設定印表機 */
+  const shiftPayload = (id: string, wroteMovement = false) => {
     const shift = shiftById(id);
+    if (wroteMovement) {
+      movements += 1;
+    }
     return shift === null
       ? null
-      : { __typename: "LotteryStoreShiftPayload" as const, item: shift };
+      : {
+          __typename: "LotteryStoreShiftPayload" as const,
+          item: shift,
+          movementId: wroteMovement ? `mv-${String(movements)}` : null,
+          cashPointPrinterId: null,
+        };
   };
 
   const handlers = [
@@ -123,7 +133,7 @@ export const storeWorld = ({
       state.myOpenShifts.push(shift);
       state.vaultExpected -= float;
       return HttpResponse.json({
-        data: { openLotteryShift: shiftPayload(shift.id) },
+        data: { openLotteryShift: shiftPayload(shift.id, float > 0) },
       });
     }),
     api.mutation("PunchLotteryShiftStart", ({ variables }) =>
@@ -171,7 +181,7 @@ export const storeWorld = ({
       shift.expectedCash -= input.amount;
       state.vaultExpected += input.amount;
       return HttpResponse.json({
-        data: { depositLotteryShiftCash: shiftPayload(shift.id) },
+        data: { depositLotteryShiftCash: shiftPayload(shift.id, true) },
       });
     }),
     api.mutation("WithdrawLotteryShiftCash", ({ variables }) => {
@@ -187,7 +197,7 @@ export const storeWorld = ({
       shift.expectedCash += input.amount;
       state.vaultExpected -= input.amount;
       return HttpResponse.json({
-        data: { withdrawLotteryShiftCash: shiftPayload(shift.id) },
+        data: { withdrawLotteryShiftCash: shiftPayload(shift.id, true) },
       });
     }),
   ];

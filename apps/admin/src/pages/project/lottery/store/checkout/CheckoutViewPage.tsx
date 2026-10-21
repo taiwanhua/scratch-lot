@@ -17,6 +17,7 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
 import { DenominationCount } from "@/components/project/lottery/DenominationCount/DenominationCount";
+import { ReceiptPrintButton } from "@/components/project/lottery/ReceiptPrint/ReceiptPrintButton";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
@@ -29,8 +30,29 @@ import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { moneyText } from "../store-text";
 import { ExpectedCashList } from "./ExpectedCashList";
 import { pendingImpactsText, signedMoneyText } from "./checkout-text";
+import { useCheckoutReceipt } from "./useCheckoutReceipt";
 
 type Detail = LotteryCheckoutQuery["lotteryCheckout"];
+
+/** 頁首的 [列印] / [補印](交班 → 交班結帳單、日結 → 日結單);結帳單還沒讀到不出現。 */
+const CheckoutPrintButton = ({
+  detail,
+  serialNo,
+}: {
+  detail: Detail | null;
+  serialNo: string | null;
+}) => {
+  const receiptOf = useCheckoutReceipt();
+  if (detail === null) {
+    return null;
+  }
+  const receipt = receiptOf(detail, serialNo);
+  return receipt.kind === "store-daily-close" ? (
+    <ReceiptPrintButton kind="store-daily-close" payload={receipt.payload} />
+  ) : (
+    <ReceiptPrintButton kind="store-shift-checkout" payload={receipt.payload} />
+  );
+};
 
 /** 頁首標題:「結帳確認申請 · 日結 C-0043」;單號 / 結帳單還沒讀到 =「結帳確認申請」。 */
 const titleOf = (
@@ -69,7 +91,8 @@ const stocktakeTextOf = (
  * 結帳確認申請的檢視頁(規格 8.7;Figma ST-28a 交班 / ST-28b 日結;替換表單引擎的檢視頁):頁首(類型、單號、狀態、
  * 申請人、送出時間)、結帳單(交班:收銀點、盤點、應有現金逐項可點回單據、實點、差額與原因、留給下一班 / 接班人;
  * 日結:`DailyCloseSheet` 涵蓋計算期間與班、全店盤點、小金庫逐項、存入銀行)、依面額清點(唯讀)+ 審核。
- * 退回後申請人 [修改後再送出] 打開精靈(帶入原內容)。「結帳單」列印由列印的功能加上。
+ * 退回後申請人 [修改後再送出] 打開精靈(帶入原內容)。頁首 [列印] / [補印] 印交班結帳單 / 日結單
+ * (規格第 12 章;和送出時自動印的同一份版面,補印標示「補印」與次數;沒有 `api.printing.print` 不出現)。
  */
 export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryStore.checkout");
@@ -163,6 +186,8 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
                 blocked={submission.blocked}
               />
             )}
+            <Box sx={{ flex: 1 }} />
+            <CheckoutPrintButton detail={detail} serialNo={serialNo} />
           </Stack>
           {detail === null ? null : (
             <Typography variant="body2" color="text.secondary">

@@ -99,6 +99,9 @@ query LotteryCheckout($submissionId: ID!) {
       ...LotteryAccountsRefFields
     }
     shiftId
+    cashPointPrinterId
+    shiftOpenedAt
+    shiftClosedAt
     stocktakeMode
     stocktake {
       ...LotteryCheckoutStocktakeRefFields
@@ -135,6 +138,7 @@ query LotteryCheckout($submissionId: ID!) {
       submissionId
       serialNo
       cashPointName
+      difference
     }
     bankDepositAmount
     bankAccount {

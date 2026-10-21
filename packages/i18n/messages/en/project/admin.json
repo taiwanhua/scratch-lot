@@ -3161,7 +3161,8 @@
       "rule": "Only tickets sold in this store and not on another reversal request; they cannot be sold until the review ends.",
       "cancel": "Cancel",
       "submit": "Submit",
-      "submitted": "Sale reversal request submitted"
+      "submitted": "Sale reversal request submitted",
+      "submitAndPrint": "Submit and print receipt"
     },
     "undoRequest": {
       "send": "Send sale reversal request"
@@ -3436,7 +3437,8 @@
         "back": "Back",
         "next": "Next",
         "submit": "Submit",
-        "stepperAria": "Close shift steps"
+        "stepperAria": "Close shift steps",
+        "submitAndPrint": "Submit and print checkout slip"
       },
       "steps": {
         "stocktake": "Stocktake",
@@ -3702,6 +3704,86 @@
         "bankDeposit": "Bank deposit",
         "after": "Vault after deposit",
         "opening": "Vault opening"
+      }
+    },
+    "receipts": {
+      "documentNo": "No. {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "documentNameNoSerial": "{title} · {branch}",
+      "qrCaption": "Scan to open",
+      "range": "{from} ~ {to}",
+      "none": "None",
+      "branch": "Branch",
+      "cashPoint": "Cash point",
+      "direction": "Direction",
+      "reason": "Reason",
+      "amount": "Amount",
+      "note": "Note",
+      "handler": "Handled by",
+      "counted": "Counted",
+      "difference": "Difference",
+      "differenceWithReason": "{amount} ({reason})",
+      "witnessSign": "Witness signature",
+      "handlerSign": "Handler signature",
+      "stocktake": {
+        "label": "Stocktake",
+        "skip": "Skipped ({reason})",
+        "reuse": "Reused {time}",
+        "new": "Counted now {time}"
+      },
+      "vaultDeposit": {
+        "title": "Vault deposit slip",
+        "directionValue": "Drawer → Vault",
+        "depositorSign": "Depositor signature"
+      },
+      "vaultWithdraw": {
+        "title": "Vault withdrawal slip",
+        "directionValue": "Vault → {cashPoint} drawer",
+        "openingFloat": "Opening float",
+        "receiverSign": "Receiver signature"
+      },
+      "bankDeposit": {
+        "title": "Bank deposit slip",
+        "account": "Deposit account"
+      },
+      "shiftCheckout": {
+        "title": "Shift checkout slip",
+        "shift": "Shift",
+        "handedBy": "Handed over by",
+        "successor": "Taken over by",
+        "expected": "Expected cash",
+        "leftForNext": "Left for next shift",
+        "handedSign": "Handed-over-by signature",
+        "successorSign": "Taken-over-by signature"
+      },
+      "dailyClose": {
+        "title": "Daily close slip",
+        "period": "Period",
+        "firstClose": "First daily close",
+        "columns": {
+          "shifts": "Shifts"
+        },
+        "vaultExpected": "Vault expected",
+        "vaultCounted": "Vault counted",
+        "vaultDifference": "Vault difference",
+        "bankDeposit": "Bank deposit",
+        "depositValue": "{amount} ({account})",
+        "noDeposit": "None",
+        "vaultAfter": "Vault remaining",
+        "managerSign": "Store manager signature"
+      },
+      "saleRefund": {
+        "title": "Return refund receipt",
+        "pending": "Pending approval",
+        "refundShift": "Refund shift",
+        "columns": {
+          "game": "Game",
+          "tickets": "Tickets"
+        },
+        "gameValue": "{gameCode} {gameName}",
+        "ticketNos": "Nos: ",
+        "ticketCount": " ({count} tickets)",
+        "refund": "Refund"
       }
     }
   }

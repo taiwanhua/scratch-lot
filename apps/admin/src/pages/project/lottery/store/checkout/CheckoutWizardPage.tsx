@@ -21,12 +21,14 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
+import { usePermissions } from "@/hooks/base/usePermissions";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import { useUrlState } from "@/hooks/base/useUrlState";
 import type { ModulePageProps } from "@/lib/base/module-tree";
+import { PRINT_BUTTON_PERMISSIONS } from "@/lib/base/print-button";
 
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { CheckoutConfirmStep } from "./CheckoutConfirmStep";
@@ -97,6 +99,11 @@ const WizardBody = ({
   const t = useTranslations("admin.lotteryStore.checkout");
   const temporal = useTemporalText();
   const flow = useCheckoutWizard({ wizard, initialDraft });
+  // 有收據機(`api.printing.print`)→ 送出後自動印交班結帳單(`CheckoutReceiptEffect`),按鈕寫明
+  const { hasPermission } = usePermissions();
+  const submitKey = hasPermission(PRINT_BUTTON_PERMISSIONS.print)
+    ? "page.submitAndPrint"
+    : "page.submit";
   const redemption = useRedemptionFlow();
   const isLast = flow.step === "confirm";
   const stepLabel = (step: (typeof CHECKOUT_STEPS)[number]) =>
@@ -188,7 +195,7 @@ const WizardBody = ({
           disabled={!flow.canContinue || isSubmitting}
           onClick={isLast ? submit : flow.next}
         >
-          {isLast ? t("page.submit") : t("page.next")}
+          {isLast ? t(submitKey) : t("page.next")}
         </Button>
       </Stack>
       {redemption.element}

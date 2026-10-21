@@ -1,5 +1,6 @@
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 
+import { Box } from "@repo/ui/box";
 import {
   Receipt58,
   Receipt58Divider,
@@ -76,6 +77,31 @@ const Block = ({ block }: { block: ReceiptBlock }) => {
 };
 
 /**
+ * 單據名稱;有標示(例「待核准」)時在名稱下方加一個框(Figma RC-09)。
+ * 表頭零件的名稱在一個 `<p>` 裡,標示用 inline-block 的 `<span>` 換行接在後面。
+ */
+const titleOf = (layout: ReceiptLayout): ReactNode =>
+  layout.stamp == null ? (
+    layout.title
+  ) : (
+    <>
+      {layout.title}
+      <br />
+      <Box
+        component="span"
+        sx={{
+          display: "inline-block",
+          mt: "4px",
+          px: "8px",
+          border: "2px solid currentColor",
+        }}
+      >
+        {layout.stamp}
+      </Box>
+    </>
+  );
+
+/**
  * 一張 58mm 單據(專案規格第 12 章):把 `lib/project/lottery/receipts/` 排好的版面資料
  * 組成底座 B8 的版面零件 —— 表頭(租戶名稱、單據名稱、補印標示、單號與時間)、各區塊、QR code、簽名欄。
  * 預覽與列印用同一個元件。
@@ -90,7 +116,7 @@ export const ReceiptDocument = ({
   <Receipt58 ref={ref}>
     <Receipt58Header
       tenantName={tenantName}
-      title={layout.title}
+      title={titleOf(layout)}
       documentNo={layout.documentNo}
       time={timeText}
       {...(reprint !== undefined && { reprint })}

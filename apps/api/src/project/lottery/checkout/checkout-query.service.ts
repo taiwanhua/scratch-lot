@@ -414,7 +414,7 @@ export class CheckoutQueryService {
       operator,
       record.tenantId,
     );
-    const [org, points, names, stocktake] = await Promise.all([
+    const [org, points, names, stocktake, shift] = await Promise.all([
       this.orgs.findById(reader, record.orgId),
       this.support.cashPointsOf(reader, record.orgId),
       this.views.userNames(
@@ -427,6 +427,10 @@ export class CheckoutQueryService {
       record.stocktakeId === null
         ? null
         : this.stocktakes.findById(reader, record.stocktakeId),
+      // 結帳單列印的「班次」(開班 ~ 結束)
+      record.shiftId === null
+        ? null
+        : this.shifts.findById(reader, record.shiftId),
     ]);
     const daily = await this.dailyFactsOf(reader, record, points);
     const nameRef = (id: Types.ObjectId | null) =>
@@ -448,6 +452,13 @@ export class CheckoutQueryService {
               name: points.get(String(record.cashPointId))?.name ?? "",
             },
       shiftId: record.shiftId === null ? null : String(record.shiftId),
+      cashPointPrinterId: printerIdOf(
+        record.cashPointId === null
+          ? null
+          : points.get(String(record.cashPointId)),
+      ),
+      shiftOpenedAt: shift?.openedAt ?? null,
+      shiftClosedAt: shift?.closedAt ?? null,
       stocktakeMode: record.stocktakeMode,
       stocktake:
         stocktake === null
@@ -523,6 +534,7 @@ export class CheckoutQueryService {
         submissionId: String(row.submissionId),
         serialNo: serials.get(String(row.submissionId))?.serialNo ?? null,
         cashPointName: points.get(String(row.cashPointId))?.name ?? "",
+        difference: row.difference,
       })),
       bankDepositAmount: record.bankDepositAmount,
       bankAccount:
@@ -654,4 +666,12 @@ export class CheckoutQueryService {
       ]),
     );
   }
+}
+
+/** 收銀點的印表機 id(單據列印的預設;沒有收銀點或沒設定 = null)。 */
+function printerIdOf(
+  point: { printerId?: Types.ObjectId | null } | null | undefined,
+): string | null {
+  const printerId = point?.printerId ?? null;
+  return printerId === null ? null : String(printerId);
 }

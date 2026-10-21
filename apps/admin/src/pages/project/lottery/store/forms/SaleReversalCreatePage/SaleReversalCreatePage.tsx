@@ -7,6 +7,7 @@ import { z } from "zod";
 import { refundDefaultOf } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
 import {
+  FormSubmissionStatus,
   type LotteryStoreScanItemFieldsFragment,
   type LotteryStoreScanQuery,
   useLotteryStoreSaleQuery,
@@ -26,6 +27,8 @@ import { Typography } from "@repo/ui/typography";
 import { FormActions } from "@/components/base/FormActions/FormActions";
 import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
+import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
+import { useStoreReceiptLinks } from "@/components/project/lottery/ReceiptPrint/useStoreReceiptLinks";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
@@ -73,7 +76,7 @@ const isSoldItem = (item: LotteryStoreScanItemFieldsFragment): boolean =>
  * 退款班次(預設送出人目前的班;只能選本店的班)、說明、退款金額(面額合計,唯讀)。沒有草稿,
  * 送出即進審核;存值交給表單引擎(`useFormDraft`),送出前的檢查與鎖定在 api 的掛接點。
  * 看板撤銷確認視窗 [送撤銷售出申請] 帶 `?ticket=<張 id>&org=<分店>`,打開時加入那一張。
- * 「退貨退款收據」的列印由列印的功能加上(之後按鈕改為 [送出並列印收據])。
+ * 退款給客人 = 是且有收據機時按鈕是 [送出並列印收據]:送出成功後印退貨退款收據(還在審核標「待核准」)再離開。
  */
 export const SaleReversalCreatePage = () => {
   const t = useTranslations("admin.lotteryStore.saleReversal");
@@ -95,6 +98,8 @@ export const SaleReversalCreatePage = () => {
     LOTTERY_FIELD_CATEGORY_KEYS.saleReversalReason,
   );
   useRouteTabItemLabel(t("tabLabel"));
+  const { canPrint, printReceiptAfterCommit, host } = useReceiptPrinter();
+  const { storeViewUrl } = useStoreReceiptLinks();
 
   const [orgParam] = useUrlState(SALE_REVERSAL_PREFILL.org, prefillSchema);
   const [ticketParam] = useUrlState(
@@ -224,6 +229,8 @@ export const SaleReversalCreatePage = () => {
     return <Alert severity="error">{t("unavailable")}</Alert>;
   }
 
+  // 退款給客人、有收據機 → [送出並列印收據]
+  const printsReceipt = refund && canPrint;
   const state: SaleReversalState = {
     orgId,
     reasonKey,
@@ -239,11 +246,34 @@ export const SaleReversalCreatePage = () => {
     }
     void draft
       .submit(saleReversalStoredValues(state, groups, newRowId), [])
-      .then((submitted) => {
+      .then(async (submitted) => {
         if (submitted === null) {
           return;
         }
         showSnackbar("success", t("submitted"));
+        // 退款給客人 → 送出成功後印退貨退款收據(規格第 12 章;還在審核標「待核准」)。
+        // 轉圖節點在這一頁,印完(成功或失敗只記 log)才離開
+        if (printsReceipt) {
+          await printReceiptAfterCommit("store-sale-refund", {
+            submissionId: submitted.id,
+            serialNo: submitted.serialNo ?? null,
+            branchId: orgId,
+            pending: submitted.status !== FormSubmissionStatus.Completed,
+            refundShiftLabel:
+              shiftItems.find((item) => item.id === refundShiftId)?.label ?? "",
+            reasonLabel: reasons.labelOf(reasonKey),
+            groups: groups
+              .filter((group) => group.ticketNos.length > 0)
+              .map((group) => ({
+                gameCode: group.gameCode,
+                gameName: group.gameName,
+                ticketNos: group.ticketNos,
+                amount: group.unitPrice * group.ticketNos.length,
+              })),
+            refundAmount: refundAmountOf(groups),
+            url: storeViewUrl(submitted.id),
+          });
+        }
         leave();
       });
   };
@@ -388,11 +418,12 @@ export const SaleReversalCreatePage = () => {
       <FormActions
         cancel={{ label: t("cancel"), onClick: leave }}
         submit={{
-          label: t("submit"),
+          label: printsReceipt ? t("submitAndPrint") : t("submit"),
           disabled: draft.isPending,
           onClick: submit,
         }}
       />
+      {host}
     </Stack>
   );
 };

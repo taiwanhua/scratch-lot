@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { Types } from "mongoose";
 
 import type { WithdrawReason } from "@repo/domain/project/lottery-accounts";
 import {
@@ -20,7 +21,10 @@ import type {
   DepositLotteryShiftCashInput,
   WithdrawLotteryShiftCashInput,
 } from "./dto/lottery-store.input";
-import type { LotteryStoreShiftModel } from "./models/lottery-store.model";
+import type {
+  LotteryStoreShiftModel,
+  LotteryStoreShiftPayload,
+} from "./models/lottery-store.model";
 import { type ShiftRecord, StoreShiftViews, parseId } from "./shift-views";
 import { publishStoreBoard } from "./store-board-signal";
 import { STORE_REASONS, notFoundError, validationError } from "./store-error";
@@ -53,7 +57,8 @@ function trimmed(value: string | null | undefined): string | null {
  * (經 `CashLedgerService`,同一個交易),不用審核、做完就生效。班要開著;投庫不能超過抽屜目前的應有、
  * 出庫不能超過小金庫目前的應有(`StoreVaultGuard`,使用者 10/21 定案)。
  * 同一班兩個動作同時送出:交易內先把班的 `drawerVersion` +1,讓兩個交易互相衝突、重試時依序檢查。
- * 「自動列印」由列印的票加在這裡的事後動作。
+ * 回傳這次寫的流水 id 與收銀點的印表機:交易成功後 admin 據此自動印 58mm 投庫單 / 出庫單(規格第 12 章;
+ * 列印在 admin 的 `printReceiptAfterCommit`,交易失敗不會走到)。
  */
 @Injectable()
 export class StoreCashService {
@@ -71,7 +76,7 @@ export class StoreCashService {
   async deposit(
     operator: OperatorContext,
     input: DepositLotteryShiftCashInput,
-  ): Promise<LotteryStoreShiftModel> {
+  ): Promise<LotteryStoreShiftPayload> {
     assertAmount(input.amount);
     const shift = await this.mustShift(operator, input.shiftId);
     const updated = await this.transactions.withTransaction(async () => {
@@ -84,7 +89,7 @@ export class StoreCashService {
           STORE_REASONS.amountExceedsDrawer,
         );
       }
-      await this.ledger.recordCashMovement(undefined, {
+      const movement = await this.ledger.recordCashMovement(undefined, {
         operator,
         orgId: locked.orgId,
         type: "deposit",
@@ -96,15 +101,15 @@ export class StoreCashService {
         note: trimmed(input.note),
       });
       await publishStoreBoard(this.realtime, locked.tenantId, locked.orgId);
-      return locked;
+      return { shift: locked, movementId: movement._id };
     });
-    return this.modelOf(operator, updated);
+    return this.payloadOf(operator, updated.shift, updated.movementId);
   }
 
   async withdraw(
     operator: OperatorContext,
     input: WithdrawLotteryShiftCashInput,
-  ): Promise<LotteryStoreShiftModel> {
+  ): Promise<LotteryStoreShiftPayload> {
     assertAmount(input.amount);
     const reason = await this.fieldOptions.assertReason(
       operator,
@@ -139,7 +144,7 @@ export class StoreCashService {
         input.amount,
         "amount",
       );
-      await this.ledger.recordCashMovement(undefined, {
+      const movement = await this.ledger.recordCashMovement(undefined, {
         operator,
         orgId: locked.orgId,
         type: "withdraw",
@@ -152,9 +157,9 @@ export class StoreCashService {
         note,
       });
       await publishStoreBoard(this.realtime, locked.tenantId, locked.orgId);
-      return locked;
+      return { shift: locked, movementId: movement._id };
     });
-    return this.modelOf(operator, updated);
+    return this.payloadOf(operator, updated.shift, updated.movementId);
   }
 
   // ---- 內部 ----
@@ -191,20 +196,27 @@ export class StoreCashService {
     return shift;
   }
 
-  private async modelOf(
+  private async payloadOf(
     operator: OperatorContext,
     shift: ShiftRecord,
-  ): Promise<LotteryStoreShiftModel> {
+    movementId: Types.ObjectId,
+  ): Promise<LotteryStoreShiftPayload> {
     const point = await this.cashPoints.findById(operator, shift.cashPointId);
-    const [model] = await this.views.toModels(
-      operator,
-      [shift],
-      new Map([[String(shift.cashPointId), point?.name ?? ""]]),
-    );
+    const [model]: (LotteryStoreShiftModel | undefined)[] =
+      await this.views.toModels(
+        operator,
+        [shift],
+        new Map([[String(shift.cashPointId), point?.name ?? ""]]),
+      );
     if (model === undefined) {
       throw notFoundError("shift not found");
     }
-    return model;
+    const printerId = point?.printerId ?? null;
+    return {
+      item: model,
+      movementId: String(movementId),
+      cashPointPrinterId: printerId === null ? null : String(printerId),
+    };
   }
 }
 

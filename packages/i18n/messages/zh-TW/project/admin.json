@@ -3161,7 +3161,8 @@
       "rule": "只能選本店已售、不在其他撤銷申請上的張數;送出後這些張數在審核完成前不能賣。",
       "cancel": "取消",
       "submit": "送出",
-      "submitted": "已送出撤銷售出申請"
+      "submitted": "已送出撤銷售出申請",
+      "submitAndPrint": "送出並列印收據"
     },
     "undoRequest": {
       "send": "送撤銷售出申請"
@@ -3436,7 +3437,8 @@
         "back": "上一步",
         "next": "下一步",
         "submit": "送出",
-        "stepperAria": "交班結帳的步驟"
+        "stepperAria": "交班結帳的步驟",
+        "submitAndPrint": "送出並列印結帳單"
       },
       "steps": {
         "stocktake": "盤點",
@@ -3702,6 +3704,86 @@
         "bankDeposit": "存入銀行",
         "after": "存入後小金庫",
         "opening": "小金庫期初"
+      }
+    },
+    "receipts": {
+      "documentNo": "單號 {serialNo}",
+      "documentName": "{title} {serialNo}",
+      "documentNameNoSerial": "{title} · {branch}",
+      "qrCaption": "掃描開啟單據",
+      "range": "{from} ~ {to}",
+      "none": "無",
+      "branch": "分店",
+      "cashPoint": "收銀點",
+      "direction": "方向",
+      "reason": "原因",
+      "amount": "金額",
+      "note": "備註",
+      "handler": "經手人",
+      "counted": "實點",
+      "difference": "差額",
+      "differenceWithReason": "{amount}({reason})",
+      "witnessSign": "見證人簽名",
+      "handlerSign": "經手人簽名",
+      "stocktake": {
+        "label": "盤點",
+        "skip": "跳過({reason})",
+        "reuse": "沿用 {time}",
+        "new": "現在盤點 {time}"
+      },
+      "vaultDeposit": {
+        "title": "投庫單",
+        "directionValue": "抽屜 → 小金庫",
+        "depositorSign": "投庫人簽名"
+      },
+      "vaultWithdraw": {
+        "title": "出庫單",
+        "directionValue": "小金庫 → {cashPoint}抽屜",
+        "openingFloat": "開班零用金",
+        "receiverSign": "領取人簽名"
+      },
+      "bankDeposit": {
+        "title": "存款單",
+        "account": "存入帳戶"
+      },
+      "shiftCheckout": {
+        "title": "交班結帳單",
+        "shift": "班次",
+        "handedBy": "交班人",
+        "successor": "接班人",
+        "expected": "應有現金",
+        "leftForNext": "留給下一班",
+        "handedSign": "交班人簽名",
+        "successorSign": "接班人簽名"
+      },
+      "dailyClose": {
+        "title": "日結單",
+        "period": "涵蓋計算期間",
+        "firstClose": "第一次日結",
+        "columns": {
+          "shifts": "班數"
+        },
+        "vaultExpected": "小金庫 應有",
+        "vaultCounted": "小金庫 實點",
+        "vaultDifference": "小金庫 差額",
+        "bankDeposit": "存入銀行",
+        "depositValue": "{amount}({account})",
+        "noDeposit": "不存",
+        "vaultAfter": "小金庫 留存",
+        "managerSign": "店長簽名"
+      },
+      "saleRefund": {
+        "title": "退貨退款收據",
+        "pending": "待核准",
+        "refundShift": "退款班次",
+        "columns": {
+          "game": "遊戲",
+          "tickets": "張數"
+        },
+        "gameValue": "{gameCode} {gameName}",
+        "ticketNos": "號碼:",
+        "ticketCount": "({count} 張)",
+        "refund": "退款"
       }
     }
   }

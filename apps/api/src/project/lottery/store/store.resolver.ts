@@ -59,7 +59,7 @@ export class LotteryStoreResolver {
     @Args("input") input: OpenLotteryShiftInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreShiftPayload> {
-    return { item: await this.shifts.open(operator, input) };
+    return this.shifts.open(operator, input);
   }
 
   /** 開班視窗的 [打卡](排班模組另查 `schedule.my.punch`)。 */
@@ -99,7 +99,7 @@ export class LotteryStoreResolver {
     @Args("input") input: DepositLotteryShiftCashInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreShiftPayload> {
-    return { item: await this.cash.deposit(operator, input) };
+    return this.cash.deposit(operator, input);
   }
 
   @RequirePermission("store.withdraw")
@@ -108,6 +108,6 @@ export class LotteryStoreResolver {
     @Args("input") input: WithdrawLotteryShiftCashInput,
     @CurrentOperator() operator: OperatorContext,
   ): Promise<LotteryStoreShiftPayload> {
-    return { item: await this.cash.withdraw(operator, input) };
+    return this.cash.withdraw(operator, input);
   }
 }

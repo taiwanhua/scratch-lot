@@ -164,21 +164,32 @@ const PunchCard = ({
   );
 };
 
+/** 開班時從小金庫領了零用金:寫入成功後交給列印的資料(58mm 出庫單,原因 = 開班零用金)。 */
+export interface OpeningFloatCommitted {
+  movementId: string;
+  cashPointPrinterId: string | null;
+  amount: number;
+}
+
 export interface OpenShiftDialogProps {
   cashPointId: string;
   cashPointName: string;
   onClose: () => void;
+  /** 開班成功且領了零用金(寫了出庫流水)之後;沒領不呼叫 */
+  onFloatTaken?: (committed: OpeningFloatCommitted) => void;
 }
 
 /**
  * 開班(專案規格 6.2、6.6、14.9;Figma ST-04a/b/c):期初零用金(第一班可「從小金庫領零用金」、
  * 其他班唯讀並顯示來源)、對應排班必選(系統找到的預選,可改選或「沒有排班(臨時代班)」)、
  * 崗位不一致提醒(只提醒,照樣開班並記錄)、還沒打上班卡的提示卡 [打卡]。有表單欄位,手機全螢幕。
+ * 領了零用金 → `onFloatTaken`(看板照出庫自動印出庫單,規格 6.6、第 12 章)。
  */
 export const OpenShiftDialog = ({
   cashPointId,
   cashPointName,
   onClose,
+  onFloatTaken,
 }: OpenShiftDialogProps) => {
   const t = useTranslations("admin.lotteryStore");
   const { session } = useSession();
@@ -206,7 +217,16 @@ export const OpenShiftDialog = ({
     useMutationFeedback({
       success: t("openShift.success"),
       error: (error: unknown) => t(storeErrorKey(error)),
-      onSuccess: () => {
+      onSuccess: (data, variables) => {
+        const { movementId, cashPointPrinterId } = data.openLotteryShift;
+        const amount = variables.input.floatFromVault ?? 0;
+        if (movementId != null && amount > 0) {
+          onFloatTaken?.({
+            movementId,
+            cashPointPrinterId: cashPointPrinterId ?? null,
+            amount,
+          });
+        }
         void queryClient.invalidateQueries({ queryKey: STORE_BOARD_QUERY_KEY });
         onClose();
       },

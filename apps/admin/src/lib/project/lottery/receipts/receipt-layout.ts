@@ -39,6 +39,8 @@ export type ReceiptBlock =
 export interface ReceiptLayout {
   /** 單據名稱(例「進貨點收單」) */
   title: string;
+  /** 單據名稱下方加框的標示(例退貨退款收據的「待核准」);沒有就不印 */
+  stamp?: string | null;
   /** 單號那一格(例「單號 P-0031」) */
   documentNo: string;
   /** 單號右邊的時間(ISO 時點;畫面依租戶時區以 `formatTemporal` 顯示) */
@@ -123,6 +125,7 @@ export const receiptLinesOf = (
 ): string[] => [
   header.tenantName,
   layout.title,
+  ...(layout.stamp == null ? [] : [`[標示] ${layout.stamp}`]),
   ...(header.reprint === undefined || header.reprint === null
     ? []
     : [header.reprint]),

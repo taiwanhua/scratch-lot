@@ -1620,6 +1620,7 @@ type LotteryCheckoutCashItem {
 
 type LotteryCheckoutCoveredShift {
   cashPointName: String!
+  difference: Int!
   serialNo: String
   submissionId: ID!
 }
@@ -1633,6 +1634,7 @@ type LotteryCheckoutDetail {
   bankAccount: LotteryAccountsRef
   bankDepositAmount: Int!
   cashPoint: LotteryAccountsRef
+  cashPointPrinterId: ID
   confirmedAt: DateTime
   counted: Int!
   coveredFrom: DateTime
@@ -1650,7 +1652,9 @@ type LotteryCheckoutDetail {
   orgId: ID!
   orgName: String!
   pendingImpacts: [LotteryCheckoutPendingImpact!]!
+  shiftClosedAt: DateTime
   shiftId: ID
+  shiftOpenedAt: DateTime
   skipReason: String
   skipReasonNote: String
   status: String!
@@ -3163,7 +3167,9 @@ type LotteryStoreShiftOptionsPayload {
 }
 
 type LotteryStoreShiftPayload {
+  cashPointPrinterId: ID
   item: LotteryStoreShift!
+  movementId: ID
 }
 
 input LotteryStoreTicketRefInput {

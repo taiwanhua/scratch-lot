@@ -147,6 +147,7 @@ const DETAIL = /* GraphQL */ `
       coveredTo
       coveredShifts {
         submissionId
+        difference
       }
       bankDepositAmount
       bankAccount {
@@ -925,12 +926,17 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     const detail = await ok<{
       lotteryCheckout: {
         type: string;
-        coveredShifts: { submissionId: string }[];
+        coveredShifts: { submissionId: string; difference: number }[];
         draft: string;
       };
     }>(manager, DETAIL, { submissionId: id });
     expect(detail.lotteryCheckout.type).toBe("daily");
     expect(detail.lotteryCheckout.coveredShifts).toHaveLength(2);
+    // 58mm 日結單依收銀點彙總各班差額:每一班帶自己交班結帳的差額
+    for (const row of detail.lotteryCheckout.coveredShifts) {
+      const shiftCheckout = await checkoutOf(row.submissionId);
+      expect(row.difference).toBe(shiftCheckout?.difference);
+    }
     expect(JSON.parse(detail.lotteryCheckout.draft)).toMatchObject({
       type: "daily",
       bankDeposit: { amount: 0, accountId: null },
