@@ -75,10 +75,11 @@ describe("存入銀行的檢查", () => {
   });
 });
 
-describe("涵蓋計算期間沒有日結的日子", () => {
-  const tz = "Asia/Taipei";
-  const at = (text: string) => new Date(`${text}+08:00`);
+const tz = "Asia/Taipei";
+/** 台北時間 → 時點。 */
+const at = (text: string) => new Date(`${text}+08:00`);
 
+describe("涵蓋計算期間沒有日結的日子", () => {
   it("10/14 09:02 日結、現在 10/16 10:00 → 10/14、10/15 沒有日結", () => {
     expect(
       dailyCloseGapDates(

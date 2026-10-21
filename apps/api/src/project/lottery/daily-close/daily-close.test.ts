@@ -629,6 +629,31 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     });
   }
 
+  /** 注入排程時點跑一次日結逾期提醒(`notify` 換成記錄),回這家店收到的通知。 */
+  async function remindersAt(
+    orgId: Types.ObjectId,
+    day: string,
+    time: string,
+  ): Promise<NotifyInput[]> {
+    const calls: NotifyInput[] = [];
+    const spy = jest
+      .spyOn(api.app.get(NotificationService), "notify")
+      .mockImplementation((input: NotifyInput) => {
+        calls.push(input);
+        return Promise.resolve();
+      });
+    try {
+      await api.app.get(DailyCloseRemindersService).run({
+        key: DAILY_CLOSE_OVERDUE_JOB_KEY,
+        scheduledFor: taipei(day, time),
+        tenants: [{ tenantId: tenant, timezone: "Asia/Taipei" }],
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    return calls.filter((call) => String(call.orgId) === String(orgId));
+  }
+
   async function vaultOf(orgId: Types.ObjectId): Promise<number> {
     const data = await ok<{
       lotteryStoreBoard: { item: { vaultExpected: number } };
@@ -1186,22 +1211,8 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
     now("21", "08:45");
     const early = await storeBadge();
 
-    const calls: NotifyInput[] = [];
-    jest
-      .spyOn(api.app.get(NotificationService), "notify")
-      .mockImplementation((input: NotifyInput) => {
-        calls.push(input);
-        return Promise.resolve();
-      });
-    const runAt = async (day: string, time: string) => {
-      calls.length = 0;
-      await api.app.get(DailyCloseRemindersService).run({
-        key: DAILY_CLOSE_OVERDUE_JOB_KEY,
-        scheduledFor: taipei(day, time),
-        tenants: [{ tenantId: tenant, timezone: "Asia/Taipei" }],
-      });
-      return calls.filter((call) => String(call.orgId) === String(store.orgId));
-    };
+    const runAt = (day: string, time: string) =>
+      remindersAt(store.orgId, day, time);
     expect(await runAt("21", "08:45")).toEqual([]);
     const first = await runAt("21", "09:00");
     expect(first).toEqual([
@@ -1249,7 +1260,8 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
       expect.objectContaining({ reason: DAILY_CLOSE_REASONS.pendingExists }),
     );
     // 新的日結看到「另一張已退回」;退回後打開自己那張不算
-    expect((await wizard(store.orgId)).pending).toEqual({
+    const fresh = await wizard(store.orgId);
+    expect(fresh.pending).toEqual({
       submissionId: id,
       status: "returned",
     });
@@ -1330,22 +1342,8 @@ describe("日結與存銀行(GraphQL 端點 + 真 MongoDB)", () => {
   it("日結逾期:6 小時內漏跑補寄(09:00 漏跑 → 14:00 補寄;15:30 不寄)", async () => {
     const store = await newStore("天母店");
     await closedShift(store.orgId, store.counter, taipei("24", "22:10"));
-    const calls: NotifyInput[] = [];
-    jest
-      .spyOn(api.app.get(NotificationService), "notify")
-      .mockImplementation((input: NotifyInput) => {
-        calls.push(input);
-        return Promise.resolve();
-      });
-    const runAt = async (day: string, time: string) => {
-      calls.length = 0;
-      await api.app.get(DailyCloseRemindersService).run({
-        key: DAILY_CLOSE_OVERDUE_JOB_KEY,
-        scheduledFor: taipei(day, time),
-        tenants: [{ tenantId: tenant, timezone: "Asia/Taipei" }],
-      });
-      return calls.filter((call) => String(call.orgId) === String(store.orgId));
-    };
+    const runAt = (day: string, time: string) =>
+      remindersAt(store.orgId, day, time);
     const caughtUp = await runAt("25", "14:00");
     expect(caughtUp).toHaveLength(1);
     expect(caughtUp[0]?.params).toEqual({
