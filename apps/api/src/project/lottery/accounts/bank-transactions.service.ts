@@ -323,14 +323,22 @@ export class BankTransactionsService {
   }
 
   /**
-   * 交易內寫一筆(登記交易與收付共用;呼叫端已檢查權限與欄位)。帳戶要使用中。
+   * 交易內寫一筆(登記交易與收付共用;呼叫端已檢查權限與欄位)。帳戶要使用中;
+   * `allowInactiveAccount` = **已送出單據的系統寫入**(例:日結核准完成時寫存入):帳戶在送出時已驗過,之後被停用
+   * 只是不能再被選用,不影響已送出的單(使用者 10/10 進貨單定案)。人工登記與收付一律不給。
    */
   async write(
     operator: OperatorContext,
     data: BankTransactionWrite,
-    options: { session?: ClientSession | null } = {},
+    options: {
+      session?: ClientSession | null;
+      allowInactiveAccount?: boolean;
+    } = {},
   ): Promise<BankTransactionRecord> {
-    assertActive(data.account);
+    const { allowInactiveAccount = false, ...createOptions } = options;
+    if (!allowInactiveAccount) {
+      assertActive(data.account);
+    }
     return this.transactions.create(
       operator,
       {
@@ -349,7 +357,7 @@ export class BankTransactionsService {
         handler: data.handler ?? null,
         note: data.note ?? null,
       },
-      options,
+      createOptions,
     );
   }
 
