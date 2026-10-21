@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "@jest/globals";
 import { screen, waitFor, within } from "@testing-library/react";
 
+import { tagPaletteColorOf } from "@/lib/project/tag-palettes";
+
 import {
   fastUser,
   findButton,
@@ -116,9 +118,12 @@ describe("我的班表 → 班表", () => {
     expect(
       within(await findLabelled("2026-11-08")).getByLabelText("有異動"),
     ).toBeInTheDocument();
-    // 特殊日整格淡藍底(底座 MonthCalendar 的 tone)並寫名稱
+    // 特殊日整格底色 = 行事曆選的顏色(青;底座淡化)並寫名稱
     const special = await findLabelled("2026-11-11");
-    expect(special).toHaveAttribute("data-tone", "special");
+    expect(special).toHaveAttribute(
+      "data-background",
+      tagPaletteColorOf("cyan"),
+    );
     expect(within(special).getByText("店慶")).toBeInTheDocument();
     await user.click(nov2);
     const dialog = await findDialog("11/2(一)當天詳情");
@@ -127,6 +132,25 @@ describe("我的班表 → 班表", () => {
     expect(
       within(dialog).getByText("缺下班卡沒有打。可以申請補卡,由店長審核。"),
     ).toBeInTheDocument();
+  });
+
+  it("特殊日沒選顏色:退回底座的特殊日底色", async () => {
+    renderSchedulePage({
+      path: `${SCHEDULE}&view=calendar`,
+      my: {
+        calendarDays: [
+          {
+            date: "2026-11-11",
+            type: "special",
+            name: "店慶",
+            paletteKey: null,
+          },
+        ],
+      },
+    });
+    const special = await findLabelled("2026-11-11");
+    expect(special).toHaveAttribute("data-tone", "special");
+    expect(special).not.toHaveAttribute("data-background");
   });
 
   it("條列:依日期列出班、店休、畫休,今天標「今天」", async () => {

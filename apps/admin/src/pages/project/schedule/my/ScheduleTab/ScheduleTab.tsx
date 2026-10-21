@@ -171,7 +171,7 @@ export const ScheduleTab = () => {
                 "punchTimes",
                 "changedDot",
                 "missingDot",
-                "specialTone",
+                "special",
               ]}
             />
           </Stack>

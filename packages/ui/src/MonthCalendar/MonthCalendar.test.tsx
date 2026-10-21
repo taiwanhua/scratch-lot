@@ -239,6 +239,25 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     expect(day("2026-10-13")).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("資料帶來的底色:主題 alpha 淡化,優先於 tone;前後補的日子與停用的日子不套", () => {
+    renderCalendar({
+      days: {
+        "2026-10-11": { background: "#006064", tone: "special" },
+        "2026-09-30": { background: "#006064" },
+        "2026-10-13": { background: "#006064", disabled: true },
+      },
+    });
+
+    const cell = day("2026-10-11");
+    expect(cell).toHaveAttribute("data-background", "#006064");
+    // 預設主題 selectedOpacity 0.08:#006064 → rgba(0, 96, 100, 0.08)
+    expect(cell).toHaveStyle({ backgroundColor: "rgba(0, 96, 100, 0.08)" });
+    expect(day("2026-09-30")).not.toHaveAttribute("data-background");
+    expect(day("2026-10-13")).not.toHaveStyle({
+      backgroundColor: "rgba(0, 96, 100, 0.08)",
+    });
+  });
+
   it("前後補的日子不畫註記與角標", () => {
     renderCalendar({
       days: {

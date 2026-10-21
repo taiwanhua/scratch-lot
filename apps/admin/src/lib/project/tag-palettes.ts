@@ -70,3 +70,10 @@ export const tagPalettes: Readonly<Record<TagPaletteKey, TagPalette>> = {
     dark: { bg: "#2E2E2E", text: "#E0E0E0" },
   },
 };
+
+/**
+ * 一個色票的**代表色**(淺色模式的文字色,飽和度最高的那一個):給只收一個顏色值、自己淡化的底座元件用
+ * (例:`MonthCalendar` 每日資訊的 `background`,以主題 alpha 淡化成格子底色)。
+ */
+export const tagPaletteColorOf = (key: TagPaletteKey): string =>
+  tagPalettes[key].light.text;

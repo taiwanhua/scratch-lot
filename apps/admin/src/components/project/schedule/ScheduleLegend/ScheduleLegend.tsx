@@ -50,8 +50,7 @@ export type ScheduleLegendItem =
   | "dotMissingLeader"
   | "punchTimes"
   | "changedDot"
-  | "missingDot"
-  | "specialTone";
+  | "missingDot";
 
 const swatch = (children?: ReactNode, sx: object = {}) => (
   <Box component="span" aria-hidden sx={[legendSwatchSx, sx]}>
@@ -109,7 +108,6 @@ export const ScheduleLegend = ({ items }: ScheduleLegendProps) => {
     punchTimes: mark(t("punchTimesSample"), { color: "text.secondary" }),
     changedDot: mark("", cornerDotSx("warning")),
     missingDot: mark("", cornerDotSx("error")),
-    specialTone: swatch(null, { bgcolor: "info.lighter" }),
   };
   return (
     <Stack

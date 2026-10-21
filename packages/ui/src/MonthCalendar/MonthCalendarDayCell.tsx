@@ -1,5 +1,6 @@
 "use client";
 
+import type { Theme } from "@mui/material/styles";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { Box } from "../Box/Box";
@@ -33,6 +34,30 @@ export interface MonthCalendarDayCellProps {
   onSelect: (date: string) => void;
 }
 
+/**
+ * 格子底色:停用色 > 資料帶來的顏色(以主題的 `selectedOpacity` 淡化,文字對比照舊)> 語意底色 > 紙色。
+ */
+const backgroundOf = (
+  theme: Theme,
+  {
+    disabled,
+    tone,
+    source,
+  }: {
+    disabled: boolean;
+    tone: MonthCalendarDayTone | undefined;
+    source: string | undefined;
+  },
+): string => {
+  if (disabled) {
+    return "action.disabledBackground";
+  }
+  if (source !== undefined) {
+    return theme.alpha(source, theme.palette.action.selectedOpacity);
+  }
+  return tone === undefined ? "background.paper" : TONE_BACKGROUND[tone];
+};
+
 const isActivationKey = (event: KeyboardEvent) =>
   event.key === "Enter" || event.key === " ";
 
@@ -50,12 +75,7 @@ export const MonthCalendarDayCell = ({
   const disabled = day.inMonth && info?.disabled === true;
   const muted = !day.inMonth || disabled;
   const tone = day.inMonth ? info?.tone : undefined;
-  let background = "background.paper";
-  if (disabled) {
-    background = "action.disabledBackground";
-  } else if (tone !== undefined) {
-    background = TONE_BACKGROUND[tone];
-  }
+  const source = day.inMonth ? info?.background : undefined;
   const select = () => {
     if (selectable) onSelect(day.date);
   };
@@ -67,6 +87,7 @@ export const MonthCalendarDayCell = ({
       aria-disabled={muted || undefined}
       data-date={day.date}
       data-tone={tone}
+      data-background={source}
       tabIndex={selectable ? 0 : undefined}
       onClick={select}
       onKeyDown={(event: KeyboardEvent) => {
@@ -83,7 +104,7 @@ export const MonthCalendarDayCell = ({
         display: "flex",
         flexDirection: "column",
         gap: 0.5,
-        bgcolor: background,
+        bgcolor: backgroundOf(theme, { disabled, tone, source }),
         color: muted ? "text.disabled" : "text.primary",
         borderRight: 1,
         borderBottom: 1,

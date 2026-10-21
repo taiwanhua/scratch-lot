@@ -28,6 +28,12 @@ export interface MonthCalendarDayInfo {
   disabledReason?: ReactNode;
   /** 格子底色(語意,見 `MonthCalendarDayTone`);`disabled` 時以停用色為準 */
   tone?: MonthCalendarDayTone;
+  /**
+   * 格子底色的**來源顏色**(CSS 顏色值,由資料帶來,例:行事曆特殊日選的顏色;使用處不寫死色碼)。
+   * 元件以主題的 `action.selectedOpacity` 淡化後當底色,文字照常用 `text.primary`;給了就優先於 `tone`,
+   * `disabled` 時以停用色為準
+   */
+  background?: string;
   /** 日期註記(例:特殊日名稱),畫在日期數字下方 */
   note?: ReactNode;
   /** 右上角角標 */

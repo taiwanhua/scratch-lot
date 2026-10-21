@@ -25,6 +25,8 @@ export interface ScheduleMyWorldOptions {
   /** 這個月的班(預設 SC-01 的示範資料) */
   entries?: MyScheduleEntryFieldsFragment[];
   changes?: MyScheduleQuery["mySchedule"]["changes"];
+  /** 這個月的店休 / 特殊日(預設 11/3 店休、11/11 店慶(青)) */
+  calendarDays?: MyScheduleQuery["mySchedule"]["calendarDays"];
 }
 
 /** 假的打卡時間:今天 10:00(租戶時區)。 */
@@ -65,7 +67,8 @@ export const scheduleMyWorld = (options: ScheduleMyWorldOptions = {}) => {
       openUnmatchedClockIn: openUnmatched,
       incomplete: entries.filter((entry) => entry.missing.length > 0),
       changes,
-      calendarDays: month === MY_MONTH ? myCalendarDays() : [],
+      calendarDays:
+        month === MY_MONTH ? (options.calendarDays ?? myCalendarDays()) : [],
       dayOffDates: month === MY_MONTH ? MY_DAY_OFF_DATES : [],
     };
   };
