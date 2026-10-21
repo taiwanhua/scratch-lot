@@ -68,4 +68,15 @@ describe("我的任務:模組登記的審核畫面擴充", () => {
     expect(await screen.findByText("警告:直屬主管")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "核准" })).toBeEnabled();
   });
+
+  it("按鈕順序:主要的 [核准] 在最右(REACT-16)", async () => {
+    renderMyTask([]);
+
+    const group = await screen.findByRole("group", { name: /直屬主管/ });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["退回修改", "駁回", "核准"]);
+  });
 });

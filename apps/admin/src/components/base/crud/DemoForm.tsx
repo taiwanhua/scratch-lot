@@ -3,10 +3,10 @@ import { useTranslations } from "use-intl";
 
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
-import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 
 import { DiscardChangesDialog } from "@/components/base/DiscardChangesDialog";
+import { FormActions } from "@/components/base/FormActions/FormActions";
 import { useUnsavedGuard } from "@/hooks/base/useUnsavedGuard";
 
 import { DemoTextField, DemoUploadField } from "./DemoFormFields";
@@ -139,15 +139,14 @@ export const DemoForm = <Detail extends DemoItemLike, Values>({
 
       {hasBannerError && <Alert severity="error">{tErrors(error.code)}</Alert>}
 
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-        <Box sx={{ flex: 1 }} />
-        <Button variant="text" onClick={handleCancel}>
-          {t("cancel")}
-        </Button>
-        <Button disabled={state.isSubmitting} onClick={state.submit}>
-          {t("save")}
-        </Button>
-      </Stack>
+      <FormActions
+        cancel={{ label: t("cancel"), onClick: handleCancel }}
+        submit={{
+          label: t("save"),
+          disabled: state.isSubmitting,
+          onClick: state.submit,
+        }}
+      />
 
       {isDiscarding && (
         <DiscardChangesDialog

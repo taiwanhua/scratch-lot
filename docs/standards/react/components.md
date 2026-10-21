@@ -262,3 +262,23 @@ interface CellRenderContext<Row> {
 - 表上沒有的用途先補用法表(同一份 PR),再實作。
 
 正本:`docs/concepts/frontend-architecture.md`「組織選擇器」、`apps/admin/src/components/base/OrgTreeSelect/OrgTreeSelect.tsx`
+
+## REACT-16 admin 頁面動作按鈕的位置與順序
+
+正本:`apps/admin/src/components/base/FormActions/FormActions.tsx`(新增 / 編輯頁)、`components/base/form-engine/FormModulePages/FormViewPage.tsx`(檢視頁頂部列)、`FormListToolbar.tsx`(列表頁)、`packages/ui/src/Dialog/Dialog.tsx`(對話框)
+
+四類頁面的按鈕一律照下表放;主要動作(contained)永遠在該列最右,破壞性動作用 error 色。
+
+| 類別          | 位置                                 | 順序(左 → 右)                                                                                                    |
+| ------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| 列表頁        | 標題 / 篩選列,篩選靠左、新增鈕最右   | 篩選 … [+ 新增<名詞>](contained;文字一律「+ 新增<名詞>」,名詞照詞彙表)                                           |
+| 新增 / 編輯頁 | 表單底部,`FormActions`,按鈕靠右      | [取消](text)→[存草稿](outlined)→[送出 / 儲存](contained)                                                         |
+| 檢視頁        | 內容上方一列                         | 左 [← 返回列表](text, small);右 次要(text / outlined)→[刪除 / 作廢 / 停用](text, error)→[編輯 / 主要](contained) |
+| 對話框        | `@repo/ui/dialog` 的 `actions`(靠右) | [取消](text)→[主要](contained;破壞性用 error)                                                                    |
+
+- **新增 / 編輯頁一律用 `FormActions`**,不自己排 `Stack` + `Button`:它固定順序與 variant(呼叫端只給文字、點擊、停用),合計文字、編輯頁的 [刪除] 這類不屬於送出流程的內容放 `start`(在左側)。
+- **手機(xs)動作列黏在可視範圍底部**:`FormActions` 在 xs 是 `position: sticky; bottom: 0`,並補背景(paper)、上邊框與 `zIndex: mobileStepper` —— 少了 z-index,輸入框的浮動標籤會捲到按鈕列上面。sticky 的參照是最近的捲動容器,所以 `FormActions` 放在表單的捲動區裡;頁面把動作列放在捲動區外(內容自己捲)時,它本來就固定在底部。sm 以上是一般位置。
+- **檢視頁不把動作鈕塞進標題卡**:標題卡只放名稱、狀態與摘要;返回、編輯、停用 / 刪除都在頂部列。設定卡這類頁內區塊只留自己的 [儲存]。
+- **審核區塊**(`ApprovalSection` 的我的任務):[退回修改]→[駁回]→[核准](contained),核准在最右。
+- **例外**:精靈(`Stepper`)的 [上一步] [下一步] 與標題列的 [取消精靈] 照精靈自己的版型;資訊型對話框(只有 [關閉] 加一個進下一步的入口)入口可用 outlined。
+- 測試以 `apps/admin/src/test/button-order.ts` 的 `expectButtonOrder([...])` 斷言順序,主要鈕再驗 `MuiButton-contained`。設計稿照同一套位置(FIGMA-18)。

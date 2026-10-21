@@ -286,3 +286,15 @@ Components 區凡是先有實作、後補稿的元件(Tooltip、DatePicker、Dat
 4. **回報**附每頁自動檢查的原始數字與人工核對結果,做不到的明說。
 
 自動檢查:`audit.js` 的 `devTextInScreens`、`canvasOverlap`、`baseScreensNotFromRef` 要是 0。各腳本的執行方式、每項數字的意思與設定檔欄位見 [figma-audit README](../../../scripts/figma-audit/README.md)。
+
+## FIGMA-18 頁面動作按鈕照程式的同一套位置
+
+設計稿的按鈕位置與順序照 [REACT-16](../react/components.md#react-16-admin-頁面動作按鈕的位置與順序),三種尺寸一致:
+
+- **列表**:篩選靠左,[+ 新增<名詞>] 在最右。
+- **新增 / 編輯**:動作列在表單底部、靠右,[取消](text)→[存草稿](outlined)→[送出 / 儲存](contained);手機畫成黏在畫面底部的白底列(上邊框)。編輯頁的 [刪除] 放在動作列左側。
+- **檢視**:內容上方一列,左 [← 返回列表];右 次要 →[刪除 / 作廢 / 停用](text, error)→[編輯 / 主要](contained)。標題卡不放動作鈕。
+- **對話框**:靠右 [取消](text)→[主要](contained;破壞性用 error)。
+- **審核區塊**:[退回修改]→[駁回]→[核准],核准在最右。
+
+既有畫面與這套位置不同時,以這套為準,改稿時一併修正(FIGMA-10:較新的決定為準)。

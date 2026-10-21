@@ -31,10 +31,11 @@ export interface TaskActionsProps {
   onDecided: (isStepClosed: boolean, decision: WorkflowDecision) => void;
 }
 
+/** 按鈕順序:主要的「核准」在最右(REACT-16),前面依序是退回修改、駁回。 */
 const DECISIONS = [
-  WorkflowDecision.Approve,
-  WorkflowDecision.Reject,
   WorkflowDecision.Return,
+  WorkflowDecision.Reject,
+  WorkflowDecision.Approve,
 ] as const;
 
 /**
