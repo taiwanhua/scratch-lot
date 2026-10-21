@@ -80,6 +80,9 @@ const DEMO_ATTACHMENT = "form/2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901.pdf";
 const REAL_ATTACHMENT = "form/3c4d5e6f-7081-4293-a4b5-c6d7e8f90a12.pdf";
 const MODULE_KEYS = ["system.org-manager", "system.user-manager"];
 
+/** 填充用的日期:比任何 TTL 索引的到期都晚,夾具不會在測試途中被背景清理刪掉。 */
+const FAR_FUTURE = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
 /** 一份文件的填充值:每個頂層欄位給不重複的值,避開各表的唯一索引(原生寫入,不經 schema 驗證)。 */
 function fillerOf(schema: Schema): Record<string, unknown> {
   const document: Record<string, unknown> = {};
@@ -102,7 +105,9 @@ function fillerOf(schema: Schema): Record<string, unknown> {
         break;
       }
       case "Date": {
-        document[path] = new Date();
+        // 一年後:`action_tokens` / `refresh_tokens` 的 `expiresAt` 有 TTL 索引(expireAfterSeconds: 0),
+        // 填「現在」會被 mongod 的 TTL 背景清理(約每 60 秒一輪)在比對筆數之間刪掉,測試因此時好時壞
+        document[path] = FAR_FUTURE;
         break;
       }
       case "Boolean": {
