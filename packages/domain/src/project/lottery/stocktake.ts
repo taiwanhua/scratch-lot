@@ -1,3 +1,4 @@
+import { SALE_REVERSAL_LOCK_REF_TYPE } from "./store-forms";
 import type { TicketLocationKind, TicketStatus } from "./ticket-events";
 
 /**
@@ -358,7 +359,8 @@ export function stocktakeTicketFactsOf(
     snapshot.cashPointId === cashPointId &&
     (snapshot.status === "unsold" || snapshot.status === "sold");
   const lockedByTransfer =
-    ticket.lockRefType !== null && ticket.lockRefType !== "sale_reversal";
+    ticket.lockRefType !== null &&
+    ticket.lockRefType !== SALE_REVERSAL_LOCK_REF_TYPE;
   return {
     ticketId: ticket.ticketId,
     ticketNo: ticket.ticketNo,
@@ -370,7 +372,7 @@ export function stocktakeTicketFactsOf(
     ownBackfillOnly:
       after.length > 0 &&
       after.every((event) => ownBackfillEventIds.has(event.eventId)),
-    pendingReversal: ticket.lockRefType === "sale_reversal",
+    pendingReversal: ticket.lockRefType === SALE_REVERSAL_LOCK_REF_TYPE,
   };
 }
 
