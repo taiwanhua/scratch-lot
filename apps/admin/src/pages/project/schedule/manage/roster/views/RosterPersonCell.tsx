@@ -85,16 +85,7 @@ export const RosterPersonCell = ({
               onPunchClick?.();
             }
           }}
-          sx={[
-            unmatchedPunchSx,
-            {
-              position: "absolute",
-              top: -2,
-              right: -2,
-              zIndex: 1,
-              cursor: "pointer",
-            },
-          ]}
+          sx={[unmatchedPunchSx, { alignSelf: "flex-end", cursor: "pointer" }]}
         >
           {tTimeline("punch", { count: punchCount })}
         </Box>

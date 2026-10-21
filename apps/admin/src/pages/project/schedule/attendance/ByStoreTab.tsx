@@ -213,107 +213,112 @@ export const ByStoreTab = () => {
   const rows = data?.rows ?? [];
 
   return (
-    <Stack spacing={2}>
-      {toolbar}
-      {data !== undefined && (
-        <Typography variant="subtitle2" component="p">
-          {t("summary", {
-            scheduled: data.scheduledCount,
-            arrived: data.arrivedCount,
-            absent: data.absentCount,
-            unmatched: data.unmatched.length,
-          })}
-        </Typography>
-      )}
-      {!unmatchedOnly &&
-        (isNarrow ? (
-          <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
-            {rows.map((row) => (
-              <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
-                <Stack spacing={0.75}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Typography variant="subtitle2">{row.userName}</Typography>
-                    <AttendanceStatusTags row={row} />
+    // 內容比分頁高時在分頁內捲動(卡片不被壓扁)
+    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pt: 1 }}>
+      <Stack spacing={2}>
+        {toolbar}
+        {data !== undefined && (
+          <Typography variant="subtitle2" component="p">
+            {t("summary", {
+              scheduled: data.scheduledCount,
+              arrived: data.arrivedCount,
+              absent: data.absentCount,
+              unmatched: data.unmatched.length,
+            })}
+          </Typography>
+        )}
+        {!unmatchedOnly &&
+          (isNarrow ? (
+            <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
+              {rows.map((row) => (
+                <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
+                  <Stack spacing={0.75}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography variant="subtitle2">
+                        {row.userName}
+                      </Typography>
+                      <AttendanceStatusTags row={row} />
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {t("cardLine", {
+                        entry: text.entry(row),
+                        clockIn: text.time(row.clockIn) ?? t("none"),
+                        clockOut: text.time(row.clockOut) ?? t("none"),
+                      })}
+                    </Typography>
+                    <Box>{reassignButton(row.punches)}</Box>
                   </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {t("cardLine", {
-                      entry: text.entry(row),
-                      clockIn: text.time(row.clockIn) ?? t("none"),
-                      clockOut: text.time(row.clockOut) ?? t("none"),
-                    })}
-                  </Typography>
-                  <Box>{reassignButton(row.punches)}</Box>
-                </Stack>
-              </Card>
-            ))}
-            {rows.length === 0 && !query.isLoading && (
-              <Typography color="text.secondary">{t("emptyRows")}</Typography>
-            )}
-          </Stack>
-        ) : (
-          <Table
-            aria-label={t("rowsAria")}
-            columns={columns}
-            rows={rows}
-            getRowKey={(row) => row.entryId}
-            isLoading={query.isLoading}
-            emptyMessage={t("emptyRows")}
-          />
-        ))}
-      {(unmatchedOnly || unmatchedGroups.length > 0) && (
-        <Card
-          sx={{ p: 2 }}
-          component="section"
-          aria-label={t("unmatchedTitle")}
-        >
-          <Stack spacing={1}>
-            <Typography variant="subtitle2" component="h3">
-              {t("unmatchedTitle")}
-            </Typography>
-            {unmatchedGroups.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
-                {t("unmatchedEmpty")}
+                </Card>
+              ))}
+              {rows.length === 0 && !query.isLoading && (
+                <Typography color="text.secondary">{t("emptyRows")}</Typography>
+              )}
+            </Stack>
+          ) : (
+            <Table
+              aria-label={t("rowsAria")}
+              columns={columns}
+              rows={rows}
+              getRowKey={(row) => row.entryId}
+              isLoading={query.isLoading}
+              emptyMessage={t("emptyRows")}
+            />
+          ))}
+        {(unmatchedOnly || unmatchedGroups.length > 0) && (
+          <Card
+            sx={{ p: 2 }}
+            component="section"
+            aria-label={t("unmatchedTitle")}
+          >
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" component="h3">
+                {t("unmatchedTitle")}
               </Typography>
-            )}
-            {unmatchedGroups.map((punches) => (
-              <Stack
-                key={punches[0]?.userId}
-                direction="row"
-                spacing={1}
-                useFlexGap
-                sx={{
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                }}
-              >
-                <Typography variant="body2">
-                  {[
-                    punches[0]?.userName ?? "",
-                    ...punches.map((punch) => text.punchShort(punch)),
-                  ].join(" · ")}
+              {unmatchedGroups.length === 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  {t("unmatchedEmpty")}
                 </Typography>
-                {reassignButton(punches, "outlined")}
-              </Stack>
-            ))}
-          </Stack>
-        </Card>
-      )}
-      {reassigning !== null && (
-        <ReassignPunchDialog
-          punches={reassigning}
-          onClose={() => {
-            setReassigning(null);
-          }}
-        />
-      )}
-    </Stack>
+              )}
+              {unmatchedGroups.map((punches) => (
+                <Stack
+                  key={punches[0]?.userId}
+                  direction="row"
+                  spacing={1}
+                  useFlexGap
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Typography variant="body2">
+                    {[
+                      punches[0]?.userName ?? "",
+                      ...punches.map((punch) => text.punchShort(punch)),
+                    ].join(" · ")}
+                  </Typography>
+                  {reassignButton(punches, "outlined")}
+                </Stack>
+              ))}
+            </Stack>
+          </Card>
+        )}
+        {reassigning !== null && (
+          <ReassignPunchDialog
+            punches={reassigning}
+            onClose={() => {
+              setReassigning(null);
+            }}
+          />
+        )}
+      </Stack>
+    </Box>
   );
 };

@@ -256,104 +256,107 @@ export const ByPersonTab = () => {
   const unmatched = data?.unmatched ?? [];
 
   return (
-    <Stack spacing={2}>
-      {toolbar}
-      {isNarrow ? (
-        <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
-          {rows.map((row) => (
-            <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
-              <Stack spacing={0.5}>
-                <Typography variant="subtitle2">
-                  {`${text.dateTitle(row.date)} ${row.orgName} ${text.entry(row)}`}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {t("personCardLine", {
-                    clockIn: text.time(row.clockIn) ?? t("none"),
-                    clockOut: text.time(row.clockOut) ?? t("none"),
-                    worked: text.hours(row.workedMinutes) ?? t("none"),
-                  })}
-                </Typography>
-                {(row.lateMinutes > 0 || row.earlyLeaveMinutes > 0) && (
-                  <Typography variant="body2" color="warning.main">
-                    {[
-                      row.lateMinutes > 0
-                        ? t("lateShort", { minutes: row.lateMinutes })
-                        : null,
-                      row.earlyLeaveMinutes > 0
-                        ? t("earlyShort", { minutes: row.earlyLeaveMinutes })
-                        : null,
-                    ]
-                      .filter((item) => item !== null)
-                      .join(" · ")}
+    // 內容比分頁高時在分頁內捲動(卡片不被壓扁)
+    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", pt: 1 }}>
+      <Stack spacing={2}>
+        {toolbar}
+        {isNarrow ? (
+          <Stack spacing={1.5} aria-label={t("rowsAria")} role="list">
+            {rows.map((row) => (
+              <Card key={row.entryId} role="listitem" sx={{ p: 2 }}>
+                <Stack spacing={0.5}>
+                  <Typography variant="subtitle2">
+                    {`${text.dateTitle(row.date)} ${row.orgName} ${text.entry(row)}`}
                   </Typography>
-                )}
-                {row.missing.length > 0 && (
-                  <Typography variant="body2" color="error.main">
-                    {t("missing")}
+                  <Typography variant="body2" color="text.secondary">
+                    {t("personCardLine", {
+                      clockIn: text.time(row.clockIn) ?? t("none"),
+                      clockOut: text.time(row.clockOut) ?? t("none"),
+                      worked: text.hours(row.workedMinutes) ?? t("none"),
+                    })}
                   </Typography>
-                )}
-                <Box>{actions(row)}</Box>
-              </Stack>
-            </Card>
-          ))}
-          {rows.length === 0 && !query.isLoading && (
-            <Typography color="text.secondary">{t("emptyMonth")}</Typography>
-          )}
-        </Stack>
-      ) : (
-        <Table
-          aria-label={t("rowsAria")}
-          columns={columns}
-          rows={rows}
-          getRowKey={(row) => row.entryId}
-          isLoading={query.isLoading}
-          emptyMessage={t("emptyMonth")}
-        />
-      )}
-      {unmatched.length > 0 && (
-        <Card
-          sx={{ p: 2 }}
-          component="section"
-          aria-label={t("unmatchedTitle")}
-        >
-          <Stack spacing={1}>
-            <Typography variant="subtitle2" component="h3">
-              {t("unmatchedTitle")}
-            </Typography>
-            {unmatched.map((punch) => (
-              <Stack
-                key={punch.id}
-                direction="row"
-                spacing={1}
-                sx={{ alignItems: "center", justifyContent: "space-between" }}
-              >
-                <Typography variant="body2">
-                  {`${punch.orgName} · ${text.punchLabel(punch)}`}
-                </Typography>
-                {canReassign && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {
-                      setReassigning([punch]);
-                    }}
-                  >
-                    {t("reassignButton")}
-                  </Button>
-                )}
-              </Stack>
+                  {(row.lateMinutes > 0 || row.earlyLeaveMinutes > 0) && (
+                    <Typography variant="body2" color="warning.main">
+                      {[
+                        row.lateMinutes > 0
+                          ? t("lateShort", { minutes: row.lateMinutes })
+                          : null,
+                        row.earlyLeaveMinutes > 0
+                          ? t("earlyShort", { minutes: row.earlyLeaveMinutes })
+                          : null,
+                      ]
+                        .filter((item) => item !== null)
+                        .join(" · ")}
+                    </Typography>
+                  )}
+                  {row.missing.length > 0 && (
+                    <Typography variant="body2" color="error.main">
+                      {t("missing")}
+                    </Typography>
+                  )}
+                  <Box>{actions(row)}</Box>
+                </Stack>
+              </Card>
             ))}
+            {rows.length === 0 && !query.isLoading && (
+              <Typography color="text.secondary">{t("emptyMonth")}</Typography>
+            )}
           </Stack>
-        </Card>
-      )}
-      {reassigning !== null && (
-        <ReassignPunchDialog
-          punches={reassigning}
-          onClose={() => {
-            setReassigning(null);
-          }}
-        />
-      )}
-    </Stack>
+        ) : (
+          <Table
+            aria-label={t("rowsAria")}
+            columns={columns}
+            rows={rows}
+            getRowKey={(row) => row.entryId}
+            isLoading={query.isLoading}
+            emptyMessage={t("emptyMonth")}
+          />
+        )}
+        {unmatched.length > 0 && (
+          <Card
+            sx={{ p: 2 }}
+            component="section"
+            aria-label={t("unmatchedTitle")}
+          >
+            <Stack spacing={1}>
+              <Typography variant="subtitle2" component="h3">
+                {t("unmatchedTitle")}
+              </Typography>
+              {unmatched.map((punch) => (
+                <Stack
+                  key={punch.id}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center", justifyContent: "space-between" }}
+                >
+                  <Typography variant="body2">
+                    {`${punch.orgName} · ${text.punchLabel(punch)}`}
+                  </Typography>
+                  {canReassign && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setReassigning([punch]);
+                      }}
+                    >
+                      {t("reassignButton")}
+                    </Button>
+                  )}
+                </Stack>
+              ))}
+            </Stack>
+          </Card>
+        )}
+        {reassigning !== null && (
+          <ReassignPunchDialog
+            punches={reassigning}
+            onClose={() => {
+              setReassigning(null);
+            }}
+          />
+        )}
+      </Stack>
+    </Box>
   );
 };
