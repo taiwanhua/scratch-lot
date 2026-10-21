@@ -44,7 +44,6 @@ import type {
 import { notFoundError } from "./transfer-error";
 import { TransferRules, toObjectId } from "./transfer-rules.service";
 
-
 /** 讀到的一張(選本 / 格子用)。 */
 interface TicketFact {
   bookId: Types.ObjectId;
