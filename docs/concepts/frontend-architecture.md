@@ -146,6 +146,21 @@ test/       測試支援
 
 頁面登記只選 renderer。網址、名稱、permissions 與 engine 仍以 `me.modules` 為準,客製頁照樣經過 `RequireAuth`、`ModuleRoute` 與頁籤守門。專案自有表單的單頁客製寫在 `pageOverrides`(四個 slot:`list`、`viewPage`、`createPage`、`editPage`),不重複登記相同 key;詳見[表單引擎](form-engine.md#前端引擎零件與預設組裝)。
 
+### 殼上的常駐元件
+
+登入後一直存在、不屬於任何頁面的元件(例:全域的鍵盤或掃描監聽、跟著它開的小視窗),登記成殼上的常駐元件,不掛在某一頁。
+
+| 來源     | 檔案(`apps/admin/src/`)           | 維護內容                                       |
+| -------- | --------------------------------- | ---------------------------------------------- |
+| 底座     | `app/base/shell-extensions.ts`    | `baseShellExtensions`(目前沒有)                |
+| 專案     | `app/project/shell-extensions.ts` | `projectShellExtensions`                       |
+| 固定入口 | `app/module-pages.tsx`            | 合成兩份為 `shellExtensions`,交給 `AdminShell` |
+
+- 每一筆是不收 props 的元件,`AdminShell` 依登記順序渲染在即時通道與審核擴充的 provider 裡面、`ShellLayout` 旁邊;登出(殼卸載)就跟著卸載。
+- 元件自己讀 `useMe()` / `usePermissions()` 決定要不要做事,沒有權限時不登記監聽、不渲染內容。要開的對話框由元件自己渲染(MUI Dialog 經 portal 疊在頁面上)。
+
+正本:`apps/admin/src/app/module-pages.tsx`、`apps/admin/src/app/AdminShell/AdminShell.tsx`
+
 ### 表單設定的注入
 
 `ModulePageSource.forms` 同時供應預設四頁與模組 options,不另外維護 key 清單。純函式 `lib/base/form-engine/form-module-options.ts` 的 `composeFormModuleOptions` 產生唯讀設定表;`formModulePages(moduleKey)` 只產生四個懶載入預設元件,不在載入時修改全域 Map。替換底座表單頁會保留原模組 options。
