@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 
+import { ApplyTemplatesAction, AutoRunAction } from "./auto-run/ToolbarActions";
 import { CheckButton } from "./check-panel/CheckButton";
 import { PublishAction } from "./publish/PublishAction";
 
@@ -30,6 +31,18 @@ export interface RosterToolbarAction {
 
 /** [+ 新增排班] 之後的按鈕(依規格順序追加)。 */
 export const ROSTER_TOOLBAR_ACTIONS: readonly RosterToolbarAction[] = [
+  // [套用範本](規格 14.4;這個月還沒有人力需求的畫面也放它)
+  {
+    key: "apply-templates",
+    permission: "schedule.manage.edit",
+    Action: ApplyTemplatesAction,
+  },
+  // [自動排班](規格 14.5;已發布的月份不顯示)
+  {
+    key: "auto-run",
+    permission: "schedule.manage.auto-run",
+    Action: AutoRunAction,
+  },
   // [發布](已發布的月份不顯示;排在 [自動排班] 之後,自動排班的功能插在它前面)
   {
     key: "publish",

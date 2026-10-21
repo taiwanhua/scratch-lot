@@ -15,7 +15,7 @@ import {
   type RosterRuleViolationError,
   rosterRuleViolationsOf,
 } from "../check-panel/check-errors";
-import { useRoster } from "../roster-context";
+import { useRosterCheck } from "../check-panel/roster-check-context";
 import { errorFieldsOf } from "../roster-error";
 
 type ReasonField = "reasonKey" | "reasonNote";
@@ -51,11 +51,12 @@ export interface ChangeReasonApi {
  */
 export const useChangeReason = (canEdit: boolean): ChangeReasonApi => {
   const t = useTranslations("admin.schedule.roster.changeReason");
-  const { data } = useRoster();
+  // 讀檢核的 context(包住整頁):工具列登記的對話框(套用範本)畫在排班表內容外面,也用得到
+  const { data } = useRosterCheck();
   const reasons = useScheduleFieldOptions(
     SCHEDULE_FIELD_CATEGORY_KEYS.changeReason,
   );
-  const isRequired = data.period.status === "published";
+  const isRequired = data?.period.status === "published";
   const [reasonKey, setReasonKey] = useState("");
   const [reasonNote, setReasonNote] = useState("");
   const [invalid, setInvalid] = useState<ReasonField[]>([]);

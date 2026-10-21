@@ -25,6 +25,11 @@ export interface RosterCheckContextValue {
   setOpen: (open: boolean) => void;
   /** 打開發布確認視窗([發布]) */
   openPublish: () => void;
+  /**
+   * 打開工具列功能登記的對話框 / 抽屜(`ROSTER_TOOLBAR_DIALOGS` 的 key;例:[套用範本] [自動排班])。
+   * 和 [發布] 一樣畫在這裡:手機 [⋯] 選單關掉後照樣開著
+   */
+  openDialog: (key: string) => void;
   /** 捲到那一格並閃爍(`RosterPage` 的 `scrollToCell`) */
   scrollToCell: (target: RosterCellTarget) => void;
 }

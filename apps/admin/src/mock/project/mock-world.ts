@@ -64,6 +64,8 @@ const fieldOptionColors = () =>
 /**
  * 排班表的檢核情境(看檢核面板與發布的三種確認視窗用):網址加 `?rosterCheck=reminders` / `clear`
  * 換檢核結果(預設 1 項限制 + 提醒),`?rosterPublished=1` 這個月一開始就已發布。
+ * 自動排班:`?rosterAutoRun=ran` 一開始就有一次自動排班(檢核面板的摘要)、`running` 別人的自動排班執行中;
+ * `?rosterEmpty=1` 這個月沒有人力需求(套用範本 / 自動排班的空狀態)。
  */
 const rosterOptions = (): ScheduleRosterWorldOptions => {
   const params = new URLSearchParams(globalThis.location.search);
@@ -71,6 +73,9 @@ const rosterOptions = (): ScheduleRosterWorldOptions => {
   return {
     ...(check === "reminders" || check === "clear" ? { check } : {}),
     isPublished: params.get("rosterPublished") === "1",
+    hasAutoRun: params.get("rosterAutoRun") === "ran",
+    autoRunning: params.get("rosterAutoRun") === "running",
+    isEmpty: params.get("rosterEmpty") === "1",
   };
 };
 

@@ -11,6 +11,7 @@ import {
   type RosterCellTarget,
   type RosterData,
 } from "../roster-context";
+import { ROSTER_TOOLBAR_DIALOGS } from "../roster-toolbar-dialogs";
 import {
   RosterCheckContext,
   type RosterCheckContextValue,
@@ -32,7 +33,7 @@ export interface RosterCheckProviderProps {
  * 排班表頁的檢核狀態(規格 14.5「檢核面板」):
  *
  * - 檢核結果的查詢 key 掛在排班表的前綴下(`ROSTER_QUERY_ROOT`):任何寫入讓排班表失效時一起重查,改完即時更新
- * - 發布確認視窗也畫在這裡([⋯] 選單裡的 [發布] 關掉選單後視窗照樣開著)
+ * - 發布確認視窗與工具列功能登記的對話框(`roster-toolbar-dialogs.ts`)也畫在這裡([⋯] 選單關掉後照樣開著)
  * - 面板打開時,電腦 / 平板的側欄自動收合成圖示列(是面板收的才在關上時展開回去;本來就收著的不動)
  */
 export const RosterCheckProvider = ({
@@ -45,6 +46,7 @@ export const RosterCheckProvider = ({
   const isMobile = useBreakpointDown("sm");
   const [isOpen, setOpen] = useState(false);
   const [isPublishing, setPublishing] = useState(false);
+  const [dialogKey, setDialogKey] = useState<string | null>(null);
   const variables = {
     input: { month, ...(data === undefined ? {} : { orgId: data.orgId }) },
   };
@@ -80,6 +82,7 @@ export const RosterCheckProvider = ({
     openPublish: () => {
       setPublishing(true);
     },
+    openDialog: setDialogKey,
     scrollToCell,
   };
   return (
@@ -92,6 +95,17 @@ export const RosterCheckProvider = ({
           }}
         />
       )}
+      {data !== undefined &&
+        ROSTER_TOOLBAR_DIALOGS.filter((item) => item.key === dialogKey).map(
+          ({ key, Dialog }) => (
+            <Dialog
+              key={key}
+              onClose={() => {
+                setDialogKey(null);
+              }}
+            />
+          ),
+        )}
     </RosterCheckContext>
   );
 };

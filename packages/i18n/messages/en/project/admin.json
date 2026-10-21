@@ -769,7 +769,8 @@
       "NOT_OWNER": "This was created by an upper org; only that org can change it",
       "MISSING_PERMISSION": "You don't have permission to change this org's rules",
       "UNEXPECTED": "Something went wrong; please try again later",
-      "OUTSIDE_DAY_OFF_WINDOW": "Day-off registration is not open now. Ask your store manager or scheduler to make changes."
+      "OUTSIDE_DAY_OFF_WINDOW": "Day-off registration is not open now. Ask your store manager or scheduler to make changes.",
+      "AUTO_RUN_IN_PROGRESS": "Auto scheduling is in progress; this month cannot be changed for now. Try again later"
     },
     "employment": {
       "full-time": "Full-time",
@@ -1495,6 +1496,76 @@
         "nobody": "Nobody yet",
         "missingLeaderDot": "Lead missing",
         "missingHelperDot": "Only helper missing"
+      },
+      "applyTemplates": {
+        "button": "Apply templates",
+        "title": "Apply templates",
+        "kind": "Kind",
+        "kindTemplate": "Demand templates",
+        "kindWeek": "Week templates",
+        "templatesTitle": "Demand templates (pick any)",
+        "weekTitle": "Week template (pick one)",
+        "templateLine": "{name} {start}–{end} · {position} {count}",
+        "ownerSuffix": " ({org})",
+        "weekLine": "{name} · {summary}",
+        "applyTo": "Apply to {month}/{year}",
+        "presets": {
+          "all": "All",
+          "none": "None",
+          "weekdays": "Weekdays",
+          "weekends": "Weekends"
+        },
+        "weekCheck": "Select week {week}",
+        "existing": "Has demands",
+        "hintTemplate": "Adds to the selected days even if they already have demands; a demand with the same position and time on the same day is skipped.",
+        "hintWeek": "Only fills days that have no demands at all; days with any demand stay unchanged. To add demands to those days, use demand templates.",
+        "preview": "Creates {created} slots, skips {skipped} identical existing slots",
+        "previewWeek": "Fills demands on {filled} days (skips {skipped} days that already have demands)",
+        "previewLoading": "Calculating",
+        "noTemplates": "No demand templates yet. Create them in schedule settings first.",
+        "noWeekTemplates": "No enabled week templates yet. Create them in schedule settings first.",
+        "noDates": "Select at least one day",
+        "cancel": "Cancel",
+        "apply": "Apply",
+        "close": "Close",
+        "feedback": "Templates applied: {count} slots created"
+      },
+      "autoRun": {
+        "button": "Auto schedule",
+        "running": "Auto scheduling in progress",
+        "runningHint": "Someone is running auto scheduling; this month cannot be changed for now. The lock clears after 10 minutes at most.",
+        "title": "Auto schedule",
+        "from": "From",
+        "to": "To",
+        "mode": "Mode",
+        "modes": {
+          "fill-empty": "Fill empty tasks only",
+          "redo-auto": "Redo auto-assigned people",
+          "redo-all": "Redo everything (clears manual assignments too)"
+        },
+        "conditionsTitle": "Conditions (drag to reorder; compared in order)",
+        "dragHandle": "Reorder “{label}” (drag, or use the arrow keys)",
+        "fillWeek": "First fill demands with “{name}”",
+        "empty": "Month {month} has no demands yet. Apply demand templates or a week template first",
+        "cancel": "Cancel",
+        "run": "Run",
+        "running2": "Running",
+        "confirmTitle": "Redo everything?",
+        "confirmBody": "This clears {count} manually assigned people and runs auto scheduling again. Continue?",
+        "confirm": "Redo everything",
+        "feedback": "Auto scheduling done: {filled} people assigned",
+        "dateFormat": "M/D (ddd)",
+        "errors": {
+          "AUTO_RUN_IN_PROGRESS": "Auto scheduling is in progress. Try again later",
+          "ALREADY_PUBLISHED": "This month is published; auto scheduling and clearing are not available"
+        },
+        "summary": "{date} {time} assigned {filled}",
+        "summaryDemands": " · filled demands on {days} days",
+        "clear": "Clear auto-assigned people",
+        "clearTitle": "Clear auto-assigned people",
+        "clearBody": "Removes only auto-assigned people ({count}); manual assignments and auto ones edited by hand are kept.",
+        "clearConfirm": "Clear",
+        "clearFeedback": "Cleared {count} auto-assigned people"
       }
     }
   },

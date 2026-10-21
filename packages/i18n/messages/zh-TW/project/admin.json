@@ -769,7 +769,8 @@
       "NOT_OWNER": "這是上層組織建立的,只有建立的那一層能改",
       "MISSING_PERMISSION": "你沒有修改這個組織規則的權限",
       "UNEXPECTED": "發生錯誤,請稍後再試",
-      "OUTSIDE_DAY_OFF_WINDOW": "現在不在畫休登記期間,不能自己修改。要調整請聯絡店長或排班負責人。"
+      "OUTSIDE_DAY_OFF_WINDOW": "現在不在畫休登記期間,不能自己修改。要調整請聯絡店長或排班負責人。",
+      "AUTO_RUN_IN_PROGRESS": "自動排班執行中,這個月暫時不能修改,請稍後再試"
     },
     "employment": {
       "full-time": "正職",
@@ -1495,6 +1496,76 @@
         "nobody": "還沒有人填",
         "missingLeaderDot": "缺負責",
         "missingHelperDot": "只缺協同"
+      },
+      "applyTemplates": {
+        "button": "套用範本",
+        "title": "套用範本",
+        "kind": "種類",
+        "kindTemplate": "人力需求範本",
+        "kindWeek": "人力需求週範本",
+        "templatesTitle": "人力需求範本(可多選)",
+        "weekTitle": "人力需求週範本(選一份)",
+        "templateLine": "{name} {start}–{end} · {position} {count}",
+        "ownerSuffix": "({org})",
+        "weekLine": "{name} · {summary}",
+        "applyTo": "套用到 {year} 年 {month} 月",
+        "presets": {
+          "all": "全選",
+          "none": "全不選",
+          "weekdays": "平日",
+          "weekends": "週末"
+        },
+        "weekCheck": "勾選第 {week} 週",
+        "existing": "已有",
+        "hintTemplate": "會加入到選取的日子,即使那天已經有其他人力需求;同一天崗位和時間完全相同的會略過。",
+        "hintWeek": "只會補上完全沒有人力需求的日子;已經有任何人力需求的日子不會變動。要在已有的日子加上人力需求,請使用人力需求範本。",
+        "preview": "將產生 {created} 個時段,略過 {skipped} 個已存在的相同時段",
+        "previewWeek": "將補上 {filled} 天的人力需求(略過已經有人力需求的 {skipped} 天)",
+        "previewLoading": "計算中",
+        "noTemplates": "還沒有人力需求範本,請先到排班設定建立。",
+        "noWeekTemplates": "還沒有啟用中的人力需求週範本,請先到排班設定建立。",
+        "noDates": "請至少選一天",
+        "cancel": "取消",
+        "apply": "套用",
+        "close": "關閉",
+        "feedback": "已套用範本,產生 {count} 個時段"
+      },
+      "autoRun": {
+        "button": "自動排班",
+        "running": "自動排班執行中",
+        "runningHint": "其他人正在執行自動排班,這個月暫時不能修改;最久 10 分鐘後自動解除。",
+        "title": "自動排班",
+        "from": "從",
+        "to": "到",
+        "mode": "方式",
+        "modes": {
+          "fill-empty": "只填空位",
+          "redo-auto": "重排自動排入的人",
+          "redo-all": "全部重排(連手動排的一起清掉)"
+        },
+        "conditionsTitle": "條件(拖拉調整順序,依序比較)",
+        "dragHandle": "調整「{label}」的順序(拖拉,或按上下鍵)",
+        "fillWeek": "先以「{name}」補上人力需求",
+        "empty": "{month} 月還沒有任何人力需求,請先套用人力需求範本或人力需求週範本",
+        "cancel": "取消",
+        "run": "執行",
+        "running2": "執行中",
+        "confirmTitle": "全部重排?",
+        "confirmBody": "將清除 {count} 個手動排入的人次,再重新自動排班。確定嗎?",
+        "confirm": "全部重排",
+        "feedback": "已自動排班,填入 {filled} 人次",
+        "dateFormat": "M/D(dd)",
+        "errors": {
+          "AUTO_RUN_IN_PROGRESS": "自動排班執行中,請稍後再試",
+          "ALREADY_PUBLISHED": "這個月已經發布,不能自動排班或清除自動排入的人"
+        },
+        "summary": "{date} {time} 填入 {filled} 人次",
+        "summaryDemands": " · 補上 {days} 天的人力需求",
+        "clear": "清除自動排入的人",
+        "clearTitle": "清除自動排入的人",
+        "clearBody": "只移除自動排入的人({count} 人次);手動排的、或自動排入後手動改過的,不會清除。",
+        "clearConfirm": "清除",
+        "clearFeedback": "已清除 {count} 人次自動排入的人"
       }
     }
   },

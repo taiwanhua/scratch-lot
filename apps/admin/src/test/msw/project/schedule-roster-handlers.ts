@@ -14,6 +14,10 @@ import type {
 } from "@repo/graphql";
 
 import { api } from "../server";
+import {
+  type AutoRunWorldOptions,
+  scheduleAutoRunHandlers,
+} from "./schedule-auto-run-handlers";
 import { type CheckScenario, sampleCheck } from "./schedule-check-fixtures";
 import {
   ROSTER_ORG,
@@ -26,7 +30,7 @@ import {
   sampleRosterExtras,
 } from "./schedule-roster-fixtures";
 
-export interface ScheduleRosterWorldOptions {
+export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
   /** 有 `schedule.manage.edit`:api 回 canEdit = true */
   canEdit?: boolean;
   /** 有 `edit-templates`:可以「同時存成人力需求範本」 */
@@ -153,7 +157,25 @@ export const scheduleRosterWorld = (
     return deleted;
   };
 
+  // 套用範本與自動排班(P11):讀寫同一份人力需求與排班
+  const autoRun = scheduleAutoRunHandlers(
+    {
+      demands: () => demands,
+      setDemands: (next) => {
+        demands = next;
+      },
+      entries: () => entries,
+      setEntries: (next) => {
+        entries = next;
+      },
+      ensure,
+      isEmpty,
+    },
+    options,
+  );
+
   const handlers = [
+    ...autoRun.handlers,
     api.query("ScheduleRoster", ({ variables }) => {
       const { input } = variables as ScheduleRosterQueryVariables;
       inputs.queries.push(input);
@@ -319,6 +341,8 @@ export const scheduleRosterWorld = (
       checkScenario = scenario;
     },
     inputs,
+    /** 套用範本 / 自動排班 / 清除送出的 input */
+    autoInputs: autoRun.inputs,
     demandIds: () => demands.map((demand) => demand.id),
   };
 };

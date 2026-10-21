@@ -84,13 +84,25 @@ describe("排班作業:已發布後的異動原因、手機 [發布]", () => {
     });
   });
 
-  it("手機:[發布] 獨立成按鈕放在 [⋯] 右邊,不收進 [⋯] 選單", async () => {
+  it("手機:[發布] 獨立成按鈕放在 [⋯] 右邊;[⋯] 裡是 [套用範本] [自動排班],選單關掉後對話框照樣開著", async () => {
     setMobileViewport();
     const { user } = renderRoster({ path: ROSTER });
     const publish = await findButton("發布");
-    const more = screen.queryByLabelText("更多");
-    // 目前 [⋯] 裡還沒有其他按鈕(套用範本、自動排班由之後的功能追加)
-    expect(more).not.toBeInTheDocument();
+    await user.click(await findLabelled("更多"));
+    expect(await findMenuItem("套用範本")).toBeInTheDocument();
+    expect(await findMenuItem("自動排班")).toBeInTheDocument();
+    expect(
+      [...document.querySelectorAll('[role="menuitem"]')].map(
+        (item) => item.textContent,
+      ),
+    ).not.toContain("發布");
+    await user.click(await findMenuItem("自動排班"));
+    expect(await findDialog("自動排班")).toBeInTheDocument();
+    await user.click(
+      within(await findDialog("自動排班")).getByRole("button", {
+        name: "取消",
+      }),
+    );
     await user.click(publish);
     expect(await findDialog("不能發布")).toBeInTheDocument();
   });
