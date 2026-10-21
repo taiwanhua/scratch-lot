@@ -36,8 +36,10 @@ export interface MonthCalendarDayInfo {
   background?: string;
   /** 日期註記(例:特殊日名稱),畫在日期數字下方 */
   note?: ReactNode;
-  /** 右上角角標 */
+  /** 右上角角標(只有一個時;多個用 `corners`) */
   corner?: MonthCalendarCorner;
+  /** 右上角多個角標,依陣列順序由左到右並排;給了就取代 `corner` */
+  corners?: readonly MonthCalendarCorner[];
   /** 格子內的自訂內容(標籤、時段…),由使用處決定 */
   content?: ReactNode;
 }

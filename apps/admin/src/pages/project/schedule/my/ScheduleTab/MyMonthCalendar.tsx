@@ -5,6 +5,7 @@ import { Box } from "@repo/ui/box";
 import { useBreakpointDown } from "@repo/ui/media-query";
 import {
   MonthCalendar,
+  type MonthCalendarCorner,
   type MonthCalendarDayInfo,
 } from "@repo/ui/month-calendar";
 import { Stack } from "@repo/ui/stack";
@@ -71,6 +72,28 @@ const EntryLines = ({
   );
 };
 
+/**
+ * 行事曆:店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),沒選顏色退回 `tone: special`,並寫名稱。
+ */
+const calendarInfoOf = (
+  day: Page["calendarDays"][number] | undefined,
+  closedLabel: string,
+): Pick<MonthCalendarDayInfo, "note" | "tone" | "background"> => {
+  if (day?.type === "closed") {
+    return { note: closedLabel };
+  }
+  if (day?.type !== "special") {
+    return {};
+  }
+  const note = day.name ?? undefined;
+  return {
+    ...(note === undefined ? {} : { note }),
+    ...(isTagPaletteKey(day.paletteKey)
+      ? { background: tagPaletteColorOf(day.paletteKey) }
+      : { tone: "special" as const }),
+  };
+};
+
 export interface MyMonthCalendarProps {
   page: Page;
   changedDates: ReadonlySet<string>;
@@ -79,7 +102,7 @@ export interface MyMonthCalendarProps {
 
 /**
  * 月曆(SC-01;規格 14.6「月曆」):底座 `MonthCalendar`。每天顯示自己的排班(範本簡稱、時間;負責人綠底)與
- * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子橘點(同一天兩者都有時紅點優先);
+ * 打卡紀錄(上班 / 下班);已結束的班缺卡在右上角紅點、有異動的日子金點(同一天兩者都有時並排,紅點在前);
  * 店休寫在日期下方;特殊日整格底色 = 行事曆選的顏色(底座 `MonthCalendar` 的 `background`,沒選顏色退回 `tone`)並寫名稱;整天畫休寫「畫休」。手機只放簡稱。點一天 → 當天詳情。
  */
 export const MyMonthCalendar = ({
@@ -105,33 +128,24 @@ export const MyMonthCalendar = ({
   const days: Record<string, MonthCalendarDayInfo> = {};
   for (const date of dates) {
     const entries = byDate.get(date) ?? [];
-    const calendarDay = calendarByDate.get(date);
     const hasMissing = entries.some((entry) => entry.missing.length > 0);
-    // 店休寫「店休」;特殊日整格底色 = 行事曆選的顏色(底座淡化),沒選顏色退回 `tone: special`,並寫名稱
-    let note: MonthCalendarDayInfo["note"];
-    let tone: MonthCalendarDayInfo["tone"];
-    let background: MonthCalendarDayInfo["background"];
-    if (calendarDay?.type === "closed") {
-      note = t("closed");
-    } else if (calendarDay?.type === "special") {
-      note = calendarDay.name ?? undefined;
-      if (isTagPaletteKey(calendarDay.paletteKey)) {
-        background = tagPaletteColorOf(calendarDay.paletteKey);
-      } else {
-        tone = "special";
-      }
-    }
-    let corner: MonthCalendarDayInfo["corner"];
-    if (hasMissing) {
-      corner = { variant: "dot", color: "error", label: t("missingDot") };
-    } else if (changedDates.has(date)) {
-      corner = { variant: "dot", color: "warning", label: t("changedDot") };
-    }
+    const corners: MonthCalendarCorner[] = [
+      ...(hasMissing
+        ? [{ variant: "dot", color: "error", label: t("missingDot") } as const]
+        : []),
+      ...(changedDates.has(date)
+        ? [
+            {
+              variant: "dot",
+              color: "warning",
+              label: t("changedDot"),
+            } as const,
+          ]
+        : []),
+    ];
     days[date] = {
-      ...(note === undefined ? {} : { note }),
-      ...(tone === undefined ? {} : { tone }),
-      ...(background === undefined ? {} : { background }),
-      ...(corner === undefined ? {} : { corner }),
+      ...calendarInfoOf(calendarByDate.get(date), t("closed")),
+      ...(corners.length === 0 ? {} : { corners }),
       content: (
         <Stack spacing={0.5} data-my-day={date}>
           {dayOffs.has(date) && (

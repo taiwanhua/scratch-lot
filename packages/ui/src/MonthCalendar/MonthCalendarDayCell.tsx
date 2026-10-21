@@ -1,15 +1,16 @@
 "use client";
 
-import type { Theme } from "@mui/material/styles";
+import { type Theme, alpha } from "@mui/material/styles";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { Box } from "../Box/Box";
 import { Tooltip } from "../Tooltip/Tooltip";
 import { stateLayerSx } from "../theme/state-layer";
 import { todayMarkSx } from "../theme/today-mark";
-import { MonthCalendarCornerMark } from "./MonthCalendarCornerMark";
+import { MonthCalendarCornerMarks } from "./MonthCalendarCornerMark";
 import type { CalendarDay } from "./month-calendar-grid";
 import type {
+  MonthCalendarCorner,
   MonthCalendarDayInfo,
   MonthCalendarDayTone,
 } from "./month-calendar-types";
@@ -53,9 +54,20 @@ const backgroundOf = (
     return "action.disabledBackground";
   }
   if (source !== undefined) {
-    return theme.alpha(source, theme.palette.action.selectedOpacity);
+    // 資料帶來的是一般色碼(例 `#006064`):用獨立的 `alpha`(`theme.alpha` 在 CSS 變數主題下只收色彩通道)
+    return alpha(source, theme.palette.action.selectedOpacity);
   }
   return tone === undefined ? "background.paper" : TONE_BACKGROUND[tone];
+};
+
+/** 這一天的角標:`corners` 優先;只給舊的單一 `corner` 時當成一個。 */
+const cornersOf = (
+  info: MonthCalendarDayInfo,
+): readonly MonthCalendarCorner[] => {
+  if (info.corners !== undefined) {
+    return info.corners;
+  }
+  return info.corner === undefined ? [] : [info.corner];
 };
 
 const isActivationKey = (event: KeyboardEvent) =>
@@ -126,8 +138,8 @@ export const MonthCalendarDayCell = ({
       >
         {day.day}
       </Box>
-      {day.inMonth && info?.corner ? (
-        <MonthCalendarCornerMark corner={info.corner} />
+      {day.inMonth && info !== undefined ? (
+        <MonthCalendarCornerMarks corners={cornersOf(info)} />
       ) : null}
       {day.inMonth && info?.note ? (
         <Box

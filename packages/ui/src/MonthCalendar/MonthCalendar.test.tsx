@@ -258,6 +258,32 @@ describe("MonthCalendar 註記、角標與自訂內容", () => {
     });
   });
 
+  it("多個角標依順序並排;給了 corners 就取代單一 corner", () => {
+    renderCalendar({
+      days: {
+        "2026-10-05": {
+          corner: { variant: "badge", content: "舊的" },
+          corners: [
+            { variant: "dot", color: "error", label: "缺卡" },
+            { variant: "dot", color: "warning", label: "有異動" },
+          ],
+        },
+      },
+    });
+
+    const cell = day("2026-10-05");
+    const marks = within(cell).getAllByRole("img");
+    expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual([
+      "缺卡",
+      "有異動",
+    ]);
+    expect(within(cell).queryByText("舊的")).toBeNull();
+    expect(cell.querySelector("[data-corners]")).toHaveAttribute(
+      "data-corners",
+      "2",
+    );
+  });
+
   it("前後補的日子不畫註記與角標", () => {
     renderCalendar({
       days: {

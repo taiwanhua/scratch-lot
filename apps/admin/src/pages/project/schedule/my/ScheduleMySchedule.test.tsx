@@ -134,6 +134,35 @@ describe("我的班表 → 班表", () => {
     ).toBeInTheDocument();
   });
 
+  it("同一天缺卡又有異動:紅點與金點並排,紅點在前", async () => {
+    renderSchedulePage({
+      path: `${SCHEDULE}&view=calendar`,
+      my: {
+        changes: [
+          {
+            id: "change-1102",
+            date: "2026-11-02",
+            action: "entry.edit",
+            orgName: "A-2 台北分店",
+            beforeStartAt: null,
+            beforeEndAt: null,
+            afterStartAt: "2026-11-02T00:00:00.000Z",
+            afterEndAt: "2026-11-02T06:30:00.000Z",
+            reason: "換班",
+            reasonNote: null,
+            createdAt: "2026-11-01T00:00:00.000Z",
+          },
+        ],
+      },
+    });
+    const nov2 = await findLabelled("2026-11-02");
+    expect(
+      within(nov2)
+        .getAllByRole("img")
+        .map((mark) => mark.getAttribute("aria-label")),
+    ).toEqual(["缺卡", "有異動"]);
+  });
+
   it("特殊日沒選顏色:退回底座的特殊日底色", async () => {
     renderSchedulePage({
       path: `${SCHEDULE}&view=calendar`,
