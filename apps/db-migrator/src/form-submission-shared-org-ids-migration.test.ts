@@ -76,6 +76,7 @@ const ids = {
   done: new ObjectId("0000000000000000000e0005"),
   broken: new ObjectId("0000000000000000000e0006"),
   otherForm: new ObjectId("0000000000000000000e0007"),
+  support: new ObjectId("0000000000000000000e0008"),
 };
 
 /** 這個欄位出現之前的提交(都沒有 `sharedOrgIds`),另有一筆已經算過的。 */
@@ -119,8 +120,14 @@ async function seedPreState(database: Db): Promise<void> {
       values: { branch: { id: "not-an-object-id", label: null } },
     },
     {
-      _id: ids.otherForm,
+      _id: ids.support,
       formKey: "support_request",
+      status: "reviewing",
+      values: { branch: ref(xinyi) },
+    },
+    {
+      _id: ids.otherForm,
+      formKey: "unshared_form",
       status: "completed",
       values: { branch: ref(zhongshan) },
     },
@@ -188,6 +195,12 @@ describe("遷移:受管表單的提交補上依欄位共用的 sharedOrgIds", ()
       ),
     );
     expect(await sharedOrgIdsOf(database, ids.transferSame)).toEqual([
+      String(xinyi),
+    ]);
+  });
+
+  it("支援需求單:分店", async () => {
+    expect(await sharedOrgIdsOf(database, ids.support)).toEqual([
       String(xinyi),
     ]);
   });

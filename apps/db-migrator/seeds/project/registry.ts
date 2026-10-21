@@ -24,7 +24,7 @@ import { seed as purchaseForm } from "./revisions/purchase.r5.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r4.seed";
 import { seed as saleReversalForm } from "./revisions/sale_reversal.r2.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r2.seed";
-import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
+import { seed as supportRequestForm } from "./revisions/support_request.r2.seed";
 import { seed as transferForm } from "./revisions/transfer.r3.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 import { storeModule } from "./store";

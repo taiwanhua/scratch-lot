@@ -48,6 +48,8 @@
 
 表單代號一律用底線(底座 `FORM_KEY_PATTERN` 不收 `-`;規格 2.1 寫的 `support-request` / `makeup-punch` 指的就是這兩個)。
 
+**總部替分店建的單,分店看得到、但不能改**:兩張表單都設依欄位共用 `sharedByFieldKeys: ["branch"]`(底座 `docs/modules/forms.md`「依欄位共用」):送出後,單上「分店」的成員在列表、單筆、申請中心都看得到,只能看、不能修改 / 刪除 / 作廢;草稿不共用。
+
 ## 資料
 
 唯一索引一律是 partial(`partialFilterExpression: { deletedAt: { $type: "null" } }`,軟刪除的不算);同時寫入撞到唯一索引時回與事前檢查同一個 `VALIDATION_FAILED`。

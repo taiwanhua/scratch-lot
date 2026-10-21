@@ -20,6 +20,7 @@ const SHARED_BY_FIELD_KEYS = {
   sale_reversal: ["branch"],
   cash_correction: ["branch"],
   makeup_punch: ["branch"],
+  support_request: ["branch"],
 };
 
 /** 一個組織引用欄的存值 → ObjectId(取不到 / 不是 ObjectId → null)。 */
