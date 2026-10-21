@@ -288,9 +288,10 @@ describe("補打卡申請(規格 14.8)", () => {
     };
     wang = await person(api, connection, zhongshan, tenant, staffScope);
     lin = await person(api, connection, zhongshan, tenant, staffScope);
+    // 店長只是審核者:沒有出勤紀錄的權限,經申請中心審核
     manager = await person(api, connection, zhongshan, tenant, {
-      ...staffScope,
-      permissionKeys: [...staffScope.permissionKeys, P.attendanceViewAll],
+      moduleKeys: ["apply-center", "apply-center.view-page"],
+      permissionKeys: ["apply-center.view"],
     });
     const managerRole = await createRole(api.app, connection, {
       name: "店長",
@@ -450,12 +451,18 @@ describe("補打卡申請(規格 14.8)", () => {
       { $set: { deletedAt: new Date() } },
     );
     expect(await entryExists(submitted.id)).toBe(false);
-    // 申請中心的審核者不一定有出勤紀錄的權限:只要登入就查得到(只回是 / 否)
-    const reviewer = await person(api, api.connection, zhongshan, tenant, {
+    // 審核者(店長,沒有出勤紀錄的權限)查得到;有出勤紀錄 view 的同店同事、申請人也查得到
+    expect(await entryExists(submitted.id, lin)).toBe(false);
+    expect(await entryExists(submitted.id, wang)).toBe(false);
+    // 同租戶、沒有出勤紀錄權限、也不是這張申請的審核者 → NOT_FOUND
+    const outsider = await person(api, api.connection, zhongshan, tenant, {
       moduleKeys: ["apply-center", "apply-center.view-page"],
       permissionKeys: ["apply-center.view"],
     });
-    expect(await entryExists(submitted.id, reviewer)).toBe(false);
+    const denied = await call(api, outsider.token, EXISTS, {
+      submissionId: submitted.id,
+    });
+    expect(extensionsOf(denied)).toMatchObject({ code: "NOT_FOUND" });
 
     const task = await pendingTaskOf(world, manager, submitted.id);
     const approve = await call(api, manager.token, DECIDE, {

@@ -104,8 +104,8 @@ export class ScheduleAttendanceResolver {
   }
 
   /**
-   * 補打卡申請選的排班還在不在(審核畫面的警告;選「沒有排班」= true)。只要登入:申請中心的審核者
-   * 不一定有出勤紀錄的權限(只回是 / 否,在操作者的租戶內查)。
+   * 補打卡申請選的排班還在不在(審核畫面的警告)。只要登入就能呼叫,讀不讀得到由 service 依
+   * 「讀得到這筆申請的人」判斷(出勤紀錄 view + 原規則、申請人、審核者、知會對象),其他人 `NOT_FOUND`。
    */
   @Query(() => Boolean)
   makeupPunchEntryExists(
