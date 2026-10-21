@@ -16,6 +16,7 @@ import {
   submissionFragment,
 } from "../../form-fixtures";
 import type { FormRuntimeWorldOptions } from "../../form-runtime-handlers";
+import { purchaseAllocations } from "./purchase-allocation-fixtures";
 
 /**
  * 叫貨與進貨 → 進貨單(規格 8.2、8.3;Figma PU-04–PU-07、PU-11)的夾具。模組與 seed
@@ -359,16 +360,7 @@ export const purchaseOptions =
         defaultRate: 92,
       },
     ],
-    // 5164:預計 30、已給 26、在途 4 → 這張再進 1 本就超過(只警告)
-    allocations: [
-      {
-        __typename: "LotteryPurchaseAllocation",
-        gameId: "game-5164",
-        plannedBooks: 30,
-        givenBooks: 26,
-        inTransitBooks: 4,
-      },
-    ],
+    allocations: purchaseAllocations(),
   });
 
 const receivingRow = (

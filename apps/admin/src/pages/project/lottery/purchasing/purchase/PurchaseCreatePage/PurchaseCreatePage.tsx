@@ -17,10 +17,8 @@ import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import {
-  type AllocationWarningItem,
-  AllocationWarnings,
-} from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
+import { AllocationWarnings } from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
+import type { AllocationWarningItem } from "@/components/project/lottery/AllocationWarnings/allocation-warnings";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
