@@ -10,7 +10,7 @@
  * 刪除範圍由 api 的登記決定(`apps/api/src/database/tenant-purge.ts`),本檔只負責呼叫與輸出。
  */
 import type { DemoTenant } from "./demo-source";
-import type { GraphqlClient } from "./graphql-client";
+import { type GraphqlClient, GraphqlRequestError } from "./graphql-client";
 
 const PURGE = /* GraphQL */ `
   mutation DemoPurgeTenant($input: PurgeDemoTenantInput!) {
@@ -50,8 +50,9 @@ export async function purgeDemoTenant(
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        message.includes("not marked as demo")
-          ? `短碼 ${tenant.slug} 的機構沒有「示範」標記,不是示範機構:拒絕清空,一筆都沒有刪除`
+        // 看錯誤碼、不比對訊息:FORBIDDEN = 對到的機構沒有「示範」標記,或操作者不是持權限的根組織平台管理員
+        error instanceof GraphqlRequestError && error.code === "FORBIDDEN"
+          ? `api 拒絕清空短碼 ${tenant.slug} 的機構(FORBIDDEN):它沒有「示範」標記(不是示範機構),或 ROOT_ADMIN_ACCOUNT 不是持 tenant-ops.purge-demo 的根組織平台管理員;一筆都沒有刪除(api:${message})`
           : `清空示範機構失敗(api 端刪除與稽核是同一個交易,失敗就整批回復):${message}`,
         { cause: error },
       );

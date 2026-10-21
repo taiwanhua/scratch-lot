@@ -216,6 +216,33 @@ describe("demo 指令:不執行的情況一筆都不寫(規格 2.2 操作表)", 
   });
 });
 
+/** 假 api 對 `purgeDemoTenant` 的回應:字串 = 錯誤(`<code>|<訊息>`,沒有 code 時是 FORBIDDEN)。 */
+function purgeReply(
+  purgeResult: { purged: boolean } | string,
+  slug: string | undefined,
+): ReturnType<FetchLike> {
+  if (typeof purgeResult === "string") {
+    const [code, message] = purgeResult.includes("|")
+      ? purgeResult.split("|")
+      : ["FORBIDDEN", purgeResult];
+    return reply({ errors: [{ message, extensions: { code } }] });
+  }
+  expect(slug).toBe("demo_test");
+  const { purged } = purgeResult;
+  return reply({
+    data: {
+      purgeDemoTenant: {
+        purged,
+        deletedDocuments: purged ? 42 : 0,
+        deletedUsers: purged ? 3 : 0,
+        detachedUsers: 0,
+        deletedFiles: 0,
+        collections: purged ? [{ collection: "audit_logs", deleted: 40 }] : [],
+      },
+    },
+  });
+}
+
 /** 假 api:清空 / 重建走得完的版本(`purgeResult` 決定清空的結果;回錯時以字串給 api 的錯誤訊息)。 */
 function rebuildApi(purgeResult: { purged: boolean } | string): FetchLike {
   return (_url, init) => {
@@ -230,26 +257,7 @@ function rebuildApi(purgeResult: { purged: boolean } | string): FetchLike {
       return reply({ data: { provisionTarget: { databaseName: DATABASE } } });
     }
     if (query.includes("purgeDemoTenant(")) {
-      if (typeof purgeResult === "string") {
-        return reply({
-          errors: [{ message: purgeResult, extensions: { code: "FORBIDDEN" } }],
-        });
-      }
-      expect(variables?.input?.slug).toBe("demo_test");
-      return reply({
-        data: {
-          purgeDemoTenant: {
-            ...purgeResult,
-            deletedDocuments: purgeResult.purged ? 42 : 0,
-            deletedUsers: purgeResult.purged ? 3 : 0,
-            detachedUsers: 0,
-            deletedFiles: 0,
-            collections: purgeResult.purged
-              ? [{ collection: "audit_logs", deleted: 40 }]
-              : [],
-          },
-        },
-      });
+      return purgeReply(purgeResult, variables?.input?.slug);
     }
     if (query.includes("orgTree")) {
       return reply({
@@ -302,6 +310,19 @@ describe("demo 指令:清空 / 重建(規格 2.2 操作表 --mode=purge / --mode
       "DemoProvisionTarget",
       "DemoPurgeTenant",
     ]);
+    expect(state.populated).toBe(0);
+  });
+
+  it("--mode=purge:以錯誤碼判斷拒絕;其他錯誤(例:登記不完整)照原訊息回報", async () => {
+    const state = harness(
+      {},
+      rebuildApi("INTERNAL_SERVER_ERROR|清空租戶的刪除登記不完整"),
+    );
+    const failure = runDemoCommand(args({ mode: "purge" }), state.options);
+    await expect(failure).rejects.toThrow(
+      /清空示範機構失敗.*清空租戶的刪除登記不完整/,
+    );
+    await expect(failure).rejects.not.toThrow(/示範」標記/);
     expect(state.populated).toBe(0);
   });
 
