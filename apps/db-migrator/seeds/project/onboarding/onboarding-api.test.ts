@@ -365,7 +365,8 @@ describe("開通腳本與 demo create(真 api + 真 MongoDB)", () => {
       expect(byRoot.map((log) => log.action as string)).toEqual([
         "org.provision",
         // 受管表單分派給示範機構(分派只有站在根組織做得到):支援需求單、補打卡申請、叫貨單、進貨單、調貨單、
-        // 撤銷售出申請、現金更正單、盤點確認申請各一筆
+        // 撤銷售出申請、現金更正單、盤點確認申請、結帳確認申請各一筆
+        "form.assign",
         "form.assign",
         "form.assign",
         "form.assign",
