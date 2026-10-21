@@ -18,6 +18,7 @@ import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r1.seed";
+import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r1.seed";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
 import { seed as purchaseForm } from "./revisions/purchase.r3.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
@@ -89,6 +90,8 @@ export const projectSeedSource: SeedSource = {
     cashCorrectionForm,
     // 店面管理的受管表單:盤點確認申請(規格 8.6;流程不 seed,由開通腳本依租戶角色建)
     stocktakeConfirmForm,
+    // 店面管理的受管表單:結帳確認申請(規格 8.7;交班與日結同一張;流程不 seed,由開通腳本依租戶角色建)
+    checkoutConfirmForm,
   ],
 };
 

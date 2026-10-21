@@ -1,6 +1,7 @@
 import type { ApiFeatureRegistration } from "../base/api-feature-registration";
 import { FieldOptionColorsModule } from "./field-option-colors/field-option-colors.module";
 import { LotteryAccountsModule } from "./lottery/accounts/accounts.module";
+import { LotteryCheckoutModule } from "./lottery/checkout/checkout.module";
 import { LotteryDealersModule } from "./lottery/dealers/dealers.module";
 import { LotteryInventoryModule } from "./lottery/inventory/inventory.module";
 import { LotteryMasterDataModule } from "./lottery/master-data.module";
@@ -32,4 +33,5 @@ export const PROJECT_API_MODULES: readonly ApiFeatureRegistration[] = [
   { key: "lottery-store", module: LotteryStoreModule },
   { key: "lottery-redemption", module: LotteryRedemptionModule },
   { key: "lottery-stocktake", module: LotteryStocktakeModule },
+  { key: "lottery-checkout", module: LotteryCheckoutModule },
 ];

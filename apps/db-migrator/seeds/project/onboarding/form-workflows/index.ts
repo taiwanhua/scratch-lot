@@ -1,3 +1,4 @@
+import { checkoutConfirmWorkflow } from "./checkout-confirm";
 import { makeupPunchWorkflow } from "./makeup-punch";
 import { purchaseWorkflow } from "./purchase";
 import { requisitionWorkflow } from "./requisition";
@@ -27,4 +28,6 @@ export const FORM_WORKFLOWS: readonly FormWorkflowSpec[] = [
   cashCorrectionWorkflow,
   // 店面管理:盤點確認申請(規格 8.6)
   stocktakeConfirmWorkflow,
+  // 店面管理:結帳確認申請(規格 8.7;交班與日結同一張表單)
+  checkoutConfirmWorkflow,
 ];

@@ -130,6 +130,9 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/stocktake/stocktake.service.ts": ["反查", "例外寫入"],
   // 盤點紀錄 / 檢視頁:審核者從申請中心進來讀盤點單、申請的單號(分店不一定在他的可見範圍)
   "project/lottery/stocktake/stocktake-query.service.ts": ["反查"],
+  // 交班結帳:掛接點以系統身分建立結帳單、結束班次、更新下一班期初(例外寫入);人名、單號、接班人候選反查
+  "project/lottery/checkout/checkout.service.ts": ["反查", "例外寫入"],
+  "project/lottery/checkout/checkout-query.service.ts": ["反查"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

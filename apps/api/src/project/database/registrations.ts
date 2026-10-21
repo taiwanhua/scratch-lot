@@ -2,6 +2,7 @@ import type { DatabaseRegistration } from "../../database/registration";
 import { FIELD_OPTION_COLORS_REGISTRATION } from "./field-option-colors/registration";
 import { LOTTERY_ACCOUNTS_REGISTRATION } from "./lottery-accounts/registration";
 import { LOTTERY_CASH_POINTS_REGISTRATION } from "./lottery-cash-points/registration";
+import { LOTTERY_CHECKOUTS_REGISTRATION } from "./lottery-checkouts/registration";
 import { LOTTERY_DEALERS_REGISTRATION } from "./lottery-dealers/registration";
 import { LOTTERY_GAMES_REGISTRATION } from "./lottery-games/registration";
 import { LOTTERY_INVENTORY_REGISTRATION } from "./lottery-inventory/registration";
@@ -37,4 +38,5 @@ export const PROJECT_DATABASE_REGISTRATIONS: readonly DatabaseRegistration[] = [
   LOTTERY_STORE_REGISTRATION,
   LOTTERY_REDEMPTIONS_REGISTRATION,
   LOTTERY_STOCKTAKES_REGISTRATION,
+  LOTTERY_CHECKOUTS_REGISTRATION,
 ];

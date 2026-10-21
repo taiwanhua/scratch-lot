@@ -1,4 +1,5 @@
 import {
+  CHECKOUT_CREATE_PERMISSION,
   STORE_MODULE_KEYS as KEYS,
   STORE_PERMISSIONS as P,
   STOCKTAKE_CONFIRM_FORM_KEY,
@@ -21,7 +22,7 @@ const HQ: RoleGrant = {
 const STORE_MANAGER: RoleGrant = HQ;
 
 /**
- * 店員(規格 3.3):看板 + 銷售、當下撤銷、拆本、移櫃、兌獎、開班、投庫、出庫、盤點、結帳、
+ * 店員(規格 3.3):看板 + 銷售、當下撤銷、拆本、移櫃、兌獎、開班、投庫、出庫、盤點、結帳(含結帳確認申請的新增)、
  * 撤銷售出、現金更正與盤點確認申請的新增(表單發布時建立的 `store.create-<formKey>`);**不含** `bank-deposit`。
  */
 const CLERK: RoleGrant = {
@@ -39,6 +40,7 @@ const CLERK: RoleGrant = {
     P.stocktake,
     `${STORE_KEY}.create-${STOCKTAKE_CONFIRM_FORM_KEY}`,
     P.checkout,
+    CHECKOUT_CREATE_PERMISSION,
     STORE_FORM_PERMISSIONS.createSaleReversal,
     STORE_FORM_PERMISSIONS.createCashCorrection,
   ],

@@ -15,8 +15,10 @@
  * - `store-sales.ts`:店面的刷到時怎麼處理、當下撤銷的條件、拆本精靈的檢查
  * - `store-forms.ts`:撤銷售出申請、現金更正單的表單代號 / 欄位 key、存值解析與送出前檢查
  * - `stocktake.ts`:盤點的類型 / 狀態、盤點內容、與盤點那一刻比對的差異、送出前的檢查
+ * - `checkout.ts`:交班結帳的表單代號 / 欄位 key、結帳內容、面額表、應有 / 實點 / 差額與交接的檢查
  */
 export * from "./book-stats";
+export * from "./checkout";
 export * from "./inventory";
 export * from "./portable-lookups";
 export * from "./purchase";

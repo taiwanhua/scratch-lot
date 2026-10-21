@@ -1577,6 +1577,124 @@ type LotteryCashPointsPayload {
   totalCount: Int!
 }
 
+type LotteryCheckoutCashEntry {
+  amount: Int!
+  label: String!
+  occurredAt: DateTime!
+  refId: ID!
+  refType: String!
+}
+
+type LotteryCheckoutCashItem {
+  amount: Int!
+  count: Int!
+  entries: [LotteryCheckoutCashEntry!]!
+  kind: String!
+}
+
+type LotteryCheckoutDenomination {
+  count: Int!
+  value: Int!
+}
+
+type LotteryCheckoutDetail {
+  cashPoint: LotteryAccountsRef
+  confirmedAt: DateTime
+  counted: Int!
+  denominations: [LotteryCheckoutDenomination!]!
+  diffReason: String
+  diffReasonNote: String
+  difference: Int!
+  draft: String!
+  expected: Int!
+  expectedItems: [LotteryCheckoutCashItem!]!
+  id: ID!
+  leftForNext: Int!
+  orgId: ID!
+  orgName: String!
+  pendingImpacts: [LotteryCheckoutPendingImpact!]!
+  shiftId: ID
+  skipReason: String
+  skipReasonNote: String
+  status: String!
+  stocktake: LotteryCheckoutReusableStocktake
+  stocktakeMode: String!
+  submissionId: ID!
+  submittedAt: DateTime!
+  submittedBy: LotteryAccountsRef
+  successor: LotteryAccountsRef
+  type: String!
+}
+
+type LotteryCheckoutListItem {
+  cashPoint: LotteryAccountsRef
+  counted: Int!
+  difference: Int!
+  expected: Int!
+  id: ID!
+  serialNo: String
+  status: String!
+  submissionId: ID!
+  submissionStatus: String!
+  submittedAt: DateTime!
+  submittedBy: LotteryAccountsRef
+  type: String!
+}
+
+type LotteryCheckoutPendingImpact {
+  amount: Int!
+  formKey: String!
+  serialNo: String
+  submissionId: ID!
+}
+
+type LotteryCheckoutReusableStocktake {
+  diffCount: Int!
+  scopeName: String
+  serialNo: String
+  startedAt: DateTime!
+  submissionId: ID!
+}
+
+type LotteryCheckoutShift {
+  cashPoint: LotteryAccountsRef!
+  closed: Boolean!
+  id: ID!
+  openedAt: DateTime!
+  openedBy: LotteryAccountsRef!
+  orgId: ID!
+}
+
+type LotteryCheckoutWizard {
+  canSkipStocktake: Boolean!
+  canSubmit: Boolean!
+  expected: Int!
+  expectedItems: [LotteryCheckoutCashItem!]!
+  pendingImpacts: [LotteryCheckoutPendingImpact!]!
+  redemptionTotal: Int!
+  redemptions: [LotteryRedemption!]!
+  reusableStocktake: LotteryCheckoutReusableStocktake
+  serverNow: DateTime!
+  shift: LotteryCheckoutShift!
+  successorOptions: [LotteryAccountsRef!]!
+}
+
+input LotteryCheckoutsInput {
+  cashPointId: ID
+  from: DateTime
+  limit: Int
+  offset: Int
+  orgId: ID!
+  status: String
+  to: DateTime
+  type: String
+}
+
+type LotteryCheckoutsPayload {
+  items: [LotteryCheckoutListItem!]!
+  total: Int!
+}
+
 """關係人的身分:受託人 / 代理人 / 介紹人"""
 enum LotteryContactRole {
   AGENT
@@ -3998,6 +4116,9 @@ type Query {
   lotteryCashLedger(input: LotteryCashLedgerInput!): LotteryCashLedgerPayload!
   lotteryCashMovement(id: ID!): LotteryCashMovementPayload!
   lotteryCashPoints(input: LotteryCashPointsInput!): LotteryCashPointsPayload!
+  lotteryCheckout(submissionId: ID!): LotteryCheckoutDetail!
+  lotteryCheckoutWizard(shiftId: ID!): LotteryCheckoutWizard!
+  lotteryCheckouts(input: LotteryCheckoutsInput!): LotteryCheckoutsPayload!
   lotteryDealer(id: ID!): LotteryDealerPayload!
   lotteryDealerCoSellers(dealerId: ID!): LotteryDealerCoSellersPayload!
   lotteryDealerContact(id: ID!): LotteryDealerContactPayload!

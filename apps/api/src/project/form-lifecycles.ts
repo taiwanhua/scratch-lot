@@ -1,4 +1,5 @@
 import type { FormLifecycleRegistration } from "../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
+import { checkoutConfirmLifecycle } from "./lottery/checkout/checkout-lifecycle";
 import { purchaseLifecycle } from "./lottery/purchase/purchase-lifecycle";
 import { requisitionLifecycle } from "./lottery/requisition/requisition-lifecycle";
 import { stocktakeConfirmLifecycle } from "./lottery/stocktake/stocktake-lifecycle";
@@ -50,4 +51,7 @@ export const PROJECT_FORM_LIFECYCLES: readonly FormLifecycleRegistration[] = [
   cashCorrectionLifecycle,
   // 盤點確認申請:送出前再檢查差異、送出建立盤點單、完成時套用庫存變動、作廢一律擋下(專案規格 6.8、8.6)
   stocktakeConfirmLifecycle,
+  // 結帳確認申請(交班):送出前檢查負責人 / 店長、盤點方式與交接,送出建立結帳單與盤點單、這一班結束;
+  // 完成時套用盤點;駁回、作廢一律擋下(專案規格 6.9、8.7)
+  checkoutConfirmLifecycle,
 ];

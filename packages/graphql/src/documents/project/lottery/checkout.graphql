@@ -1,0 +1,134 @@
+fragment LotteryCheckoutCashItemFields on LotteryCheckoutCashItem {
+  kind
+  count
+  amount
+  entries {
+    refType
+    refId
+    label
+    occurredAt
+    amount
+  }
+}
+
+fragment LotteryCheckoutPendingImpactFields on LotteryCheckoutPendingImpact {
+  submissionId
+  formKey
+  serialNo
+  amount
+}
+
+fragment LotteryCheckoutStocktakeRefFields on LotteryCheckoutReusableStocktake {
+  submissionId
+  serialNo
+  startedAt
+  scopeName
+  diffCount
+}
+
+query LotteryCheckoutWizard($shiftId: ID!) {
+  lotteryCheckoutWizard(shiftId: $shiftId) {
+    shift {
+      id
+      orgId
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      openedBy {
+        ...LotteryAccountsRefFields
+      }
+      openedAt
+      closed
+    }
+    canSubmit
+    canSkipStocktake
+    reusableStocktake {
+      ...LotteryCheckoutStocktakeRefFields
+    }
+    redemptions {
+      ...LotteryRedemptionFields
+    }
+    redemptionTotal
+    expectedItems {
+      ...LotteryCheckoutCashItemFields
+    }
+    expected
+    pendingImpacts {
+      ...LotteryCheckoutPendingImpactFields
+    }
+    successorOptions {
+      ...LotteryAccountsRefFields
+    }
+    serverNow
+  }
+}
+
+query LotteryCheckouts($input: LotteryCheckoutsInput!) {
+  lotteryCheckouts(input: $input) {
+    total
+    items {
+      id
+      submissionId
+      serialNo
+      type
+      status
+      submissionStatus
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      submittedBy {
+        ...LotteryAccountsRefFields
+      }
+      expected
+      counted
+      difference
+      submittedAt
+    }
+  }
+}
+
+query LotteryCheckout($submissionId: ID!) {
+  lotteryCheckout(submissionId: $submissionId) {
+    id
+    submissionId
+    type
+    status
+    orgId
+    orgName
+    cashPoint {
+      ...LotteryAccountsRefFields
+    }
+    shiftId
+    stocktakeMode
+    stocktake {
+      ...LotteryCheckoutStocktakeRefFields
+    }
+    skipReason
+    skipReasonNote
+    expectedItems {
+      ...LotteryCheckoutCashItemFields
+    }
+    expected
+    denominations {
+      value
+      count
+    }
+    counted
+    difference
+    diffReason
+    diffReasonNote
+    pendingImpacts {
+      ...LotteryCheckoutPendingImpactFields
+    }
+    leftForNext
+    successor {
+      ...LotteryAccountsRefFields
+    }
+    submittedBy {
+      ...LotteryAccountsRefFields
+    }
+    submittedAt
+    confirmedAt
+    draft
+  }
+}

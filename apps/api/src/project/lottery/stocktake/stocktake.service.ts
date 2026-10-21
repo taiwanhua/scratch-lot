@@ -440,8 +440,8 @@ export class StocktakeService {
         { ticketNos: [...built.stale, ...built.unhandled] },
       );
     }
+    // `orgId` 只在建立時寫(BaseRepository 不讓一般更新改它);退回後再送出改寫其餘欄位
     const content = {
-      orgId: storeId,
       type: options.type,
       status: STOCKTAKE_STATUS.pending,
       scopeCashPointId: parseId(draft.scopeCashPointId ?? ""),
@@ -463,7 +463,12 @@ export class StocktakeService {
     if (existing === null) {
       await this.stocktakes.create(
         reader,
-        { ...content, submissionId: options.submissionId, version: 0 },
+        {
+          orgId: storeId,
+          ...content,
+          submissionId: options.submissionId,
+          version: 0,
+        },
         { session },
       );
       return;

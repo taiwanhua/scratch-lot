@@ -4,6 +4,7 @@ import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "./lottery-accounts/lottery-ban
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "./lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "./lottery-accounts/lottery-cash-movement.schema";
 import { LOTTERY_CASH_POINTS_COLLECTION } from "./lottery-cash-points/lottery-cash-point.schema";
+import { LOTTERY_CHECKOUTS_COLLECTION } from "./lottery-checkouts/lottery-checkout.schema";
 import { LOTTERY_DEALER_CONTACTS_COLLECTION } from "./lottery-dealers/lottery-dealer-contact.schema";
 import { LOTTERY_DEALER_SIGNINS_COLLECTION } from "./lottery-dealers/lottery-dealer-signin.schema";
 import { LOTTERY_DEALERS_COLLECTION } from "./lottery-dealers/lottery-dealer.schema";
@@ -74,6 +75,7 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     LOTTERY_VAULT_LOCKS_COLLECTION,
     LOTTERY_REDEMPTIONS_COLLECTION,
     LOTTERY_STOCKTAKES_COLLECTION,
+    LOTTERY_CHECKOUTS_COLLECTION,
     SCHEDULE_SETTINGS_COLLECTION,
     SCHEDULE_CALENDAR_DAYS_COLLECTION,
     SCHEDULE_DAY_OFFS_COLLECTION,

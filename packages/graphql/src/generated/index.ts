@@ -1714,6 +1714,134 @@ export type LotteryCashPointsPayload = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type LotteryCheckoutCashEntry = {
+  __typename?: 'LotteryCheckoutCashEntry';
+  amount: Scalars['Int']['output'];
+  label: Scalars['String']['output'];
+  occurredAt: Scalars['DateTime']['output'];
+  refId: Scalars['ID']['output'];
+  refType: Scalars['String']['output'];
+};
+
+export type LotteryCheckoutCashItem = {
+  __typename?: 'LotteryCheckoutCashItem';
+  amount: Scalars['Int']['output'];
+  count: Scalars['Int']['output'];
+  entries: Array<LotteryCheckoutCashEntry>;
+  kind: Scalars['String']['output'];
+};
+
+export type LotteryCheckoutDenomination = {
+  __typename?: 'LotteryCheckoutDenomination';
+  count: Scalars['Int']['output'];
+  value: Scalars['Int']['output'];
+};
+
+export type LotteryCheckoutDetail = {
+  __typename?: 'LotteryCheckoutDetail';
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  confirmedAt?: Maybe<Scalars['DateTime']['output']>;
+  counted: Scalars['Int']['output'];
+  denominations: Array<LotteryCheckoutDenomination>;
+  diffReason?: Maybe<Scalars['String']['output']>;
+  diffReasonNote?: Maybe<Scalars['String']['output']>;
+  difference: Scalars['Int']['output'];
+  draft: Scalars['String']['output'];
+  expected: Scalars['Int']['output'];
+  expectedItems: Array<LotteryCheckoutCashItem>;
+  id: Scalars['ID']['output'];
+  leftForNext: Scalars['Int']['output'];
+  orgId: Scalars['ID']['output'];
+  orgName: Scalars['String']['output'];
+  pendingImpacts: Array<LotteryCheckoutPendingImpact>;
+  shiftId?: Maybe<Scalars['ID']['output']>;
+  skipReason?: Maybe<Scalars['String']['output']>;
+  skipReasonNote?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  stocktake?: Maybe<LotteryCheckoutReusableStocktake>;
+  stocktakeMode: Scalars['String']['output'];
+  submissionId: Scalars['ID']['output'];
+  submittedAt: Scalars['DateTime']['output'];
+  submittedBy?: Maybe<LotteryAccountsRef>;
+  successor?: Maybe<LotteryAccountsRef>;
+  type: Scalars['String']['output'];
+};
+
+export type LotteryCheckoutListItem = {
+  __typename?: 'LotteryCheckoutListItem';
+  cashPoint?: Maybe<LotteryAccountsRef>;
+  counted: Scalars['Int']['output'];
+  difference: Scalars['Int']['output'];
+  expected: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  status: Scalars['String']['output'];
+  submissionId: Scalars['ID']['output'];
+  submissionStatus: Scalars['String']['output'];
+  submittedAt: Scalars['DateTime']['output'];
+  submittedBy?: Maybe<LotteryAccountsRef>;
+  type: Scalars['String']['output'];
+};
+
+export type LotteryCheckoutPendingImpact = {
+  __typename?: 'LotteryCheckoutPendingImpact';
+  amount: Scalars['Int']['output'];
+  formKey: Scalars['String']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  submissionId: Scalars['ID']['output'];
+};
+
+export type LotteryCheckoutReusableStocktake = {
+  __typename?: 'LotteryCheckoutReusableStocktake';
+  diffCount: Scalars['Int']['output'];
+  scopeName?: Maybe<Scalars['String']['output']>;
+  serialNo?: Maybe<Scalars['String']['output']>;
+  startedAt: Scalars['DateTime']['output'];
+  submissionId: Scalars['ID']['output'];
+};
+
+export type LotteryCheckoutShift = {
+  __typename?: 'LotteryCheckoutShift';
+  cashPoint: LotteryAccountsRef;
+  closed: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  openedAt: Scalars['DateTime']['output'];
+  openedBy: LotteryAccountsRef;
+  orgId: Scalars['ID']['output'];
+};
+
+export type LotteryCheckoutWizard = {
+  __typename?: 'LotteryCheckoutWizard';
+  canSkipStocktake: Scalars['Boolean']['output'];
+  canSubmit: Scalars['Boolean']['output'];
+  expected: Scalars['Int']['output'];
+  expectedItems: Array<LotteryCheckoutCashItem>;
+  pendingImpacts: Array<LotteryCheckoutPendingImpact>;
+  redemptionTotal: Scalars['Int']['output'];
+  redemptions: Array<LotteryRedemption>;
+  reusableStocktake?: Maybe<LotteryCheckoutReusableStocktake>;
+  serverNow: Scalars['DateTime']['output'];
+  shift: LotteryCheckoutShift;
+  successorOptions: Array<LotteryAccountsRef>;
+};
+
+export type LotteryCheckoutsInput = {
+  cashPointId?: InputMaybe<Scalars['ID']['input']>;
+  from?: InputMaybe<Scalars['DateTime']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  orgId: Scalars['ID']['input'];
+  status?: InputMaybe<Scalars['String']['input']>;
+  to?: InputMaybe<Scalars['DateTime']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type LotteryCheckoutsPayload = {
+  __typename?: 'LotteryCheckoutsPayload';
+  items: Array<LotteryCheckoutListItem>;
+  total: Scalars['Int']['output'];
+};
+
 /** 關係人的身分:受託人 / 代理人 / 介紹人 */
 export enum LotteryContactRole {
   Agent = 'AGENT',
@@ -5204,6 +5332,9 @@ export type Query = {
   lotteryCashLedger: LotteryCashLedgerPayload;
   lotteryCashMovement: LotteryCashMovementPayload;
   lotteryCashPoints: LotteryCashPointsPayload;
+  lotteryCheckout: LotteryCheckoutDetail;
+  lotteryCheckoutWizard: LotteryCheckoutWizard;
+  lotteryCheckouts: LotteryCheckoutsPayload;
   lotteryDealer: LotteryDealerPayload;
   lotteryDealerCoSellers: LotteryDealerCoSellersPayload;
   lotteryDealerContact: LotteryDealerContactPayload;
@@ -5508,6 +5639,21 @@ export type QueryLotteryCashMovementArgs = {
 
 export type QueryLotteryCashPointsArgs = {
   input: LotteryCashPointsInput;
+};
+
+
+export type QueryLotteryCheckoutArgs = {
+  submissionId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryCheckoutWizardArgs = {
+  shiftId: Scalars['ID']['input'];
+};
+
+
+export type QueryLotteryCheckoutsArgs = {
+  input: LotteryCheckoutsInput;
 };
 
 
@@ -9763,6 +9909,33 @@ export type LotterySettlementAccountsQueryVariables = Exact<{
 
 export type LotterySettlementAccountsQuery = { __typename?: 'Query', lotterySettlementAccounts: { __typename?: 'LotterySettlementAccountsPayload', totalCount: number, items: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
 
+export type LotteryCheckoutCashItemFieldsFragment = { __typename?: 'LotteryCheckoutCashItem', kind: string, count: number, amount: number, entries: Array<{ __typename?: 'LotteryCheckoutCashEntry', refType: string, refId: string, label: string, occurredAt: string, amount: number }> };
+
+export type LotteryCheckoutPendingImpactFieldsFragment = { __typename?: 'LotteryCheckoutPendingImpact', submissionId: string, formKey: string, serialNo?: string | null, amount: number };
+
+export type LotteryCheckoutStocktakeRefFieldsFragment = { __typename?: 'LotteryCheckoutReusableStocktake', submissionId: string, serialNo?: string | null, startedAt: string, scopeName?: string | null, diffCount: number };
+
+export type LotteryCheckoutWizardQueryVariables = Exact<{
+  shiftId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryCheckoutWizardQuery = { __typename?: 'Query', lotteryCheckoutWizard: { __typename?: 'LotteryCheckoutWizard', canSubmit: boolean, canSkipStocktake: boolean, redemptionTotal: number, expected: number, serverNow: string, shift: { __typename?: 'LotteryCheckoutShift', id: string, orgId: string, openedAt: string, closed: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }, reusableStocktake?: { __typename?: 'LotteryCheckoutReusableStocktake', submissionId: string, serialNo?: string | null, startedAt: string, scopeName?: string | null, diffCount: number } | null, redemptions: Array<{ __typename?: 'LotteryRedemption', id: string, orgId: string, gameCode: string, gameName?: string | null, bookNo: string, ticketNo: string, ticketLabel: string, isOwnStore: boolean, prizeAmount: number, status: string, redeemedAt: string, sentAt?: string | null, revokedAt?: string | null, revokeReason?: string | null, revokeReasonKey?: string | null, revokeNote?: string | null, replacesId?: string | null, isPostClose: boolean, note?: string | null, revokeMode?: string | null, revokeBlockedBySent: boolean, cashPoint: { __typename?: 'LotteryAccountsRef', id: string, name: string }, shift: { __typename?: 'LotteryRedemptionShift', id: string, openedAt: string, closed: boolean, openedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string } }, redeemedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string }, purchase?: { __typename?: 'LotteryRedemptionPurchase', id: string, serialNo?: string | null } | null, revokedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }>, expectedItems: Array<{ __typename?: 'LotteryCheckoutCashItem', kind: string, count: number, amount: number, entries: Array<{ __typename?: 'LotteryCheckoutCashEntry', refType: string, refId: string, label: string, occurredAt: string, amount: number }> }>, pendingImpacts: Array<{ __typename?: 'LotteryCheckoutPendingImpact', submissionId: string, formKey: string, serialNo?: string | null, amount: number }>, successorOptions: Array<{ __typename?: 'LotteryAccountsRef', id: string, name: string }> } };
+
+export type LotteryCheckoutsQueryVariables = Exact<{
+  input: LotteryCheckoutsInput;
+}>;
+
+
+export type LotteryCheckoutsQuery = { __typename?: 'Query', lotteryCheckouts: { __typename?: 'LotteryCheckoutsPayload', total: number, items: Array<{ __typename?: 'LotteryCheckoutListItem', id: string, submissionId: string, serialNo?: string | null, type: string, status: string, submissionStatus: string, expected: number, counted: number, difference: number, submittedAt: string, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type LotteryCheckoutQueryVariables = Exact<{
+  submissionId: Scalars['ID']['input'];
+}>;
+
+
+export type LotteryCheckoutQuery = { __typename?: 'Query', lotteryCheckout: { __typename?: 'LotteryCheckoutDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, shiftId?: string | null, stocktakeMode: string, skipReason?: string | null, skipReasonNote?: string | null, expected: number, counted: number, difference: number, diffReason?: string | null, diffReasonNote?: string | null, leftForNext: number, submittedAt: string, confirmedAt?: string | null, draft: string, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, stocktake?: { __typename?: 'LotteryCheckoutReusableStocktake', submissionId: string, serialNo?: string | null, startedAt: string, scopeName?: string | null, diffCount: number } | null, expectedItems: Array<{ __typename?: 'LotteryCheckoutCashItem', kind: string, count: number, amount: number, entries: Array<{ __typename?: 'LotteryCheckoutCashEntry', refType: string, refId: string, label: string, occurredAt: string, amount: number }> }>, denominations: Array<{ __typename?: 'LotteryCheckoutDenomination', value: number, count: number }>, pendingImpacts: Array<{ __typename?: 'LotteryCheckoutPendingImpact', submissionId: string, formKey: string, serialNo?: string | null, amount: number }>, successor?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null } };
+
 export type LotteryDealerRefFieldsFragment = { __typename?: 'LotteryDealerRef', id: string, type: LotteryDealerType, licenseNo: string, name: string, storeName?: string | null, status: LotteryDealerStatus };
 
 export type LotteryDealerContactRefFieldsFragment = { __typename?: 'LotteryDealerContactRef', id: string, name: string, status: LotteryContactStatus };
@@ -11715,6 +11888,37 @@ export const LotteryOutstandingSettlementFieldsFragmentDoc = `
   canSettle
 }
     ${LotteryAccountsRefFieldsFragmentDoc}`;
+export const LotteryCheckoutCashItemFieldsFragmentDoc = `
+    fragment LotteryCheckoutCashItemFields on LotteryCheckoutCashItem {
+  kind
+  count
+  amount
+  entries {
+    refType
+    refId
+    label
+    occurredAt
+    amount
+  }
+}
+    `;
+export const LotteryCheckoutPendingImpactFieldsFragmentDoc = `
+    fragment LotteryCheckoutPendingImpactFields on LotteryCheckoutPendingImpact {
+  submissionId
+  formKey
+  serialNo
+  amount
+}
+    `;
+export const LotteryCheckoutStocktakeRefFieldsFragmentDoc = `
+    fragment LotteryCheckoutStocktakeRefFields on LotteryCheckoutReusableStocktake {
+  submissionId
+  serialNo
+  startedAt
+  scopeName
+  diffCount
+}
+    `;
 export const LotteryDealerRefFieldsFragmentDoc = `
     fragment LotteryDealerRefFields on LotteryDealerRef {
   id
@@ -19884,6 +20088,195 @@ useLotterySettlementAccountsQuery.getKey = (variables: LotterySettlementAccounts
 
 
 useLotterySettlementAccountsQuery.fetcher = (client: GraphQLClient, variables: LotterySettlementAccountsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotterySettlementAccountsQuery, LotterySettlementAccountsQueryVariables>(client, LotterySettlementAccountsDocument, variables, headers);
+
+export const LotteryCheckoutWizardDocument = `
+    query LotteryCheckoutWizard($shiftId: ID!) {
+  lotteryCheckoutWizard(shiftId: $shiftId) {
+    shift {
+      id
+      orgId
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      openedBy {
+        ...LotteryAccountsRefFields
+      }
+      openedAt
+      closed
+    }
+    canSubmit
+    canSkipStocktake
+    reusableStocktake {
+      ...LotteryCheckoutStocktakeRefFields
+    }
+    redemptions {
+      ...LotteryRedemptionFields
+    }
+    redemptionTotal
+    expectedItems {
+      ...LotteryCheckoutCashItemFields
+    }
+    expected
+    pendingImpacts {
+      ...LotteryCheckoutPendingImpactFields
+    }
+    successorOptions {
+      ...LotteryAccountsRefFields
+    }
+    serverNow
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}
+${LotteryCheckoutStocktakeRefFieldsFragmentDoc}
+${LotteryRedemptionFieldsFragmentDoc}
+${LotteryCheckoutCashItemFieldsFragmentDoc}
+${LotteryCheckoutPendingImpactFieldsFragmentDoc}`;
+
+export const useLotteryCheckoutWizardQuery = <
+      TData = LotteryCheckoutWizardQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCheckoutWizardQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCheckoutWizardQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCheckoutWizardQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCheckoutWizardQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCheckoutWizard', variables],
+    queryFn: fetcher<LotteryCheckoutWizardQuery, LotteryCheckoutWizardQueryVariables>(client, LotteryCheckoutWizardDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCheckoutWizardQuery.getKey = (variables: LotteryCheckoutWizardQueryVariables) => ['LotteryCheckoutWizard', variables];
+
+
+useLotteryCheckoutWizardQuery.fetcher = (client: GraphQLClient, variables: LotteryCheckoutWizardQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCheckoutWizardQuery, LotteryCheckoutWizardQueryVariables>(client, LotteryCheckoutWizardDocument, variables, headers);
+
+export const LotteryCheckoutsDocument = `
+    query LotteryCheckouts($input: LotteryCheckoutsInput!) {
+  lotteryCheckouts(input: $input) {
+    total
+    items {
+      id
+      submissionId
+      serialNo
+      type
+      status
+      submissionStatus
+      cashPoint {
+        ...LotteryAccountsRefFields
+      }
+      submittedBy {
+        ...LotteryAccountsRefFields
+      }
+      expected
+      counted
+      difference
+      submittedAt
+    }
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+
+export const useLotteryCheckoutsQuery = <
+      TData = LotteryCheckoutsQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCheckoutsQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCheckoutsQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCheckoutsQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCheckoutsQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCheckouts', variables],
+    queryFn: fetcher<LotteryCheckoutsQuery, LotteryCheckoutsQueryVariables>(client, LotteryCheckoutsDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCheckoutsQuery.getKey = (variables: LotteryCheckoutsQueryVariables) => ['LotteryCheckouts', variables];
+
+
+useLotteryCheckoutsQuery.fetcher = (client: GraphQLClient, variables: LotteryCheckoutsQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCheckoutsQuery, LotteryCheckoutsQueryVariables>(client, LotteryCheckoutsDocument, variables, headers);
+
+export const LotteryCheckoutDocument = `
+    query LotteryCheckout($submissionId: ID!) {
+  lotteryCheckout(submissionId: $submissionId) {
+    id
+    submissionId
+    type
+    status
+    orgId
+    orgName
+    cashPoint {
+      ...LotteryAccountsRefFields
+    }
+    shiftId
+    stocktakeMode
+    stocktake {
+      ...LotteryCheckoutStocktakeRefFields
+    }
+    skipReason
+    skipReasonNote
+    expectedItems {
+      ...LotteryCheckoutCashItemFields
+    }
+    expected
+    denominations {
+      value
+      count
+    }
+    counted
+    difference
+    diffReason
+    diffReasonNote
+    pendingImpacts {
+      ...LotteryCheckoutPendingImpactFields
+    }
+    leftForNext
+    successor {
+      ...LotteryAccountsRefFields
+    }
+    submittedBy {
+      ...LotteryAccountsRefFields
+    }
+    submittedAt
+    confirmedAt
+    draft
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}
+${LotteryCheckoutStocktakeRefFieldsFragmentDoc}
+${LotteryCheckoutCashItemFieldsFragmentDoc}
+${LotteryCheckoutPendingImpactFieldsFragmentDoc}`;
+
+export const useLotteryCheckoutQuery = <
+      TData = LotteryCheckoutQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryCheckoutQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryCheckoutQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryCheckoutQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryCheckoutQuery, TError, TData>(
+      {
+    queryKey: ['LotteryCheckout', variables],
+    queryFn: fetcher<LotteryCheckoutQuery, LotteryCheckoutQueryVariables>(client, LotteryCheckoutDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryCheckoutQuery.getKey = (variables: LotteryCheckoutQueryVariables) => ['LotteryCheckout', variables];
+
+
+useLotteryCheckoutQuery.fetcher = (client: GraphQLClient, variables: LotteryCheckoutQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryCheckoutQuery, LotteryCheckoutQueryVariables>(client, LotteryCheckoutDocument, variables, headers);
 
 export const LotteryDealersDocument = `
     query LotteryDealers($input: LotteryDealersInput!) {
