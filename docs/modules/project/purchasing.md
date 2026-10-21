@@ -81,11 +81,11 @@
 
 ### 表單
 
-| 表單   | formKey       | 綁定模組                 | 受管表單                                                                                |
-| ------ | ------------- | ------------------------ | --------------------------------------------------------------------------------------- |
-| 叫貨單 | `requisition` | `purchasing.requisition` | `seeds/project/revisions/requisition.r3.seed.ts`(r1 = 初版、r2 = 作廢原因類別,保留不改) |
-| 進貨單 | `purchase`    | `purchasing.purchase`    | `seeds/project/revisions/purchase.r3.seed.ts`(r1、r2 保留不改;r3 = 兌獎)                |
-| 調貨單 | `transfer`    | `purchasing.transfer`    | `seeds/project/revisions/transfer.r2.seed.ts`(r1 保留不改)                              |
+| 表單   | formKey       | 綁定模組                 | 受管表單                                                                                                      |
+| ------ | ------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| 叫貨單 | `requisition` | `purchasing.requisition` | `seeds/project/revisions/requisition.r3.seed.ts`(r1 = 初版、r2 = 作廢原因類別,保留不改)                       |
+| 進貨單 | `purchase`    | `purchasing.purchase`    | `seeds/project/revisions/purchase.r4.seed.ts`(r1–r3 保留不改;r3 = 兌獎、r4 = 批購受託人在本人批購 = 否時必填) |
+| 調貨單 | `transfer`    | `purchasing.transfer`    | `seeds/project/revisions/transfer.r2.seed.ts`(r1 保留不改)                                                    |
 
 ## 資料
 
@@ -173,7 +173,7 @@
 
 ### 進貨單(規格 8.2、8.3)
 
-**欄位**(受管表單 `purchase` r3;允許存草稿;單號 `P-0001`,不分期間;作廢原因 = 欄位管理「作廢原因」`void-reason`(刮刮樂與排班共用)):
+**欄位**(受管表單 `purchase` r4;允許存草稿;單號 `P-0001`,不分期間;作廢原因 = 欄位管理「作廢原因」`void-reason`(刮刮樂與排班共用)):
 
 | key                    | 名稱       | 型別                                                                                                                                                                                                                |
 | ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -181,7 +181,7 @@
 | `requisition`          | 叫貨單     | 單行文字(叫貨單**單號**,例 `R-0042`),選填;送出前以叫貨明細副本的單號找回叫貨單                                                                                                                                      |
 | `dealer`               | 批購甲類   | 引用 `lottery_dealer`,固定條件 `type: a`、`status: active`,必填                                                                                                                                                     |
 | `self_purchase`        | 本人批購   | 是否,預設是                                                                                                                                                                                                         |
-| `trustee`              | 批購受託人 | 引用 `lottery_dealer_contact`(`status: active`、`roles: trustee`);本人批購 = 否時顯示,送出前檢查                                                                                                                    |
+| `trustee`              | 批購受託人 | 引用 `lottery_dealer_contact`(`status: active`、`roles: trustee`);本人批購 = 否時顯示且必填(r4 `rules.required`,隱藏時不檢查),送出前再檢查是這位甲類啟用中的受託人                                                  |
 | `purchase_date`        | 批購日期   | 日期,必填;預設今天                                                                                                                                                                                                  |
 | `account`              | 扣款帳戶   | 引用 `lottery_bank_account`(`status: active`),必填;**只篩使用中**:「使用組織包含進貨分店」(`usableBy` 依分店欄位)是連動條件,不可攜、不能放進受管表單,由送出前檢查(`PURCHASE_ACCOUNT_INVALID`)與新增頁的帳戶選項負責 |
 | `lines`                | 明細       | `game`(引用 `lottery_game` 販售中;列內帶入張數、整本金額、批購金額率)、`book_no`(6–7 位)、`last_ticket_no`、`tickets`、`book_price`、`rate`(0–100)、`amount`(列內公式 整本金額 × 批購金額率 ÷ 100,取整數)           |

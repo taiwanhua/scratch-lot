@@ -144,6 +144,13 @@ describe("進貨單新增頁", () => {
                   code: "OUT_OF_RANGE",
                   message: "批購金額率要在 0–100 之間",
                 },
+                {
+                  fieldKey: "redemptions",
+                  rowId: "x1",
+                  columnKey: "redemption",
+                  code: "UNAVAILABLE",
+                  message: "這筆兌獎紀錄已送兌",
+                },
               ],
             },
           },
@@ -160,6 +167,12 @@ describe("進貨單新增頁", () => {
     expect(
       screen.getByRole("combobox", { name: /本人批購/ }),
     ).not.toHaveAttribute("aria-required");
+    // 批購受託人:本人批購 = 是時不必填;改成否 → 必填
+    const trustee = () => screen.getByRole("combobox", { name: /批購受託人/ });
+    expect(trustee()).not.toHaveAttribute("aria-required");
+    await user.click(screen.getByRole("combobox", { name: /本人批購/ }));
+    await user.click(await screen.findByRole("option", { name: "否" }));
+    expect(trustee()).toHaveAttribute("aria-required", "true");
     const scan = screen.getByRole("textbox", { name: "刷條碼加入" });
     await user.type(scan, "5164-1-056527-100-0-6{Enter}");
     await screen.findByRole("table", { name: /5164 發大財/ });
@@ -170,6 +183,14 @@ describe("進貨單新增頁", () => {
     expect(dealer.parentElement).toHaveClass("Mui-error");
     // 明細的錯誤顯示在明細區
     expect(screen.getByText("批購金額率要在 0–100 之間")).toBeInTheDocument();
+    // 兌獎欄的錯誤顯示在兌獎區
+    const redemptionCard = screen
+      .getByRole("table", { name: "兌獎紀錄" })
+      .closest<HTMLElement>(".MuiCard-root");
+    expect(redemptionCard).not.toBeNull();
+    expect(
+      within(redemptionCard ?? document.body).getByText("這筆兌獎紀錄已送兌"),
+    ).toBeInTheDocument();
   });
 
   it("整組批購金額率:改整組 → 同遊戲每一本都套用;之後改單本,整組框不跟著變", async () => {
@@ -202,5 +223,34 @@ describe("進貨單新增頁", () => {
     expect(rateOf("056527")).toHaveValue(88);
     expect(rateOf("056528")).toHaveValue(90);
     expect(group).toHaveValue(90);
+  });
+
+  it("改過整組率後再刷進同遊戲的新本沿用整組率;那個遊戲的本刪光後再刷,回到遊戲預設", async () => {
+    const user = userEvent.setup();
+    renderPurchasePage({ path: `${CREATE}?branch=org-store-a` });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼加入" });
+    await user.type(scan, "5164-1-056527-100-0-6{Enter}");
+    const group = await screen.findByRole("spinbutton", {
+      name: "5164 整組的批購金額率",
+    });
+    await user.clear(group);
+    await user.type(group, "90");
+    await user.type(scan, "5164-1-056528-100-0-6{Enter}");
+    const rateOf = async (bookNo: string) =>
+      within(
+        await screen.findByRole("table", { name: /5164 發大財/ }),
+      ).findByRole("spinbutton", { name: `本號 ${bookNo} 的批購金額率` });
+    expect(await rateOf("056528")).toHaveValue(90);
+    for (const bookNo of ["056527", "056528"]) {
+      const table = screen.getByRole("table", { name: /5164 發大財/ });
+      await user.click(
+        within(table).getAllByRole("button", { name: "移除" })[0],
+      );
+      await waitFor(() => {
+        expect(screen.queryByText(bookNo)).toBeNull();
+      });
+    }
+    await user.type(scan, "5164-1-056531-100-0-6{Enter}");
+    expect(await rateOf("056531")).toHaveValue(92);
   });
 });

@@ -43,7 +43,7 @@ export interface PurchaseHeaderFieldsProps {
  * 進貨單新增頁的單頭(規格 8.2「單頭」;Figma PU-05):進貨分店(可見分店)、叫貨單(這家店待購買的)、
  * 批購甲類(營業中)、本人批購、批購受託人(本人批購 = 否時選這位甲類的受託人)、批購日期(預設今天)、
  * 扣款帳戶(使用中、使用組織包含進貨分店;只有一個時自動帶入)、備註。兌獎欄由兌獎的功能加。
- * 必填照受管表單(進貨分店、批購甲類、批購日期、扣款帳戶);api 回的欄位錯誤標在對應欄位。
+ * 必填照受管表單(進貨分店、批購甲類、批購日期、扣款帳戶;本人批購 = 否時批購受託人);api 回的欄位錯誤標在對應欄位。
  */
 export const PurchaseHeaderFields = ({
   value,
@@ -167,6 +167,8 @@ export const PurchaseHeaderFields = ({
               ? t("fields.trusteeNotNeeded")
               : t("fields.pick"),
             fieldKey: K.trustee,
+            // 受管表單 r4:本人批購 = 否時必填(是 = 不需要,不檢查)
+            required: !value.selfPurchase,
           },
         )}
         <DatePicker

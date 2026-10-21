@@ -20,7 +20,7 @@ import { reportsModule } from "./reports";
 import { seed as cashCorrectionForm } from "./revisions/cash_correction.r1.seed";
 import { seed as checkoutConfirmForm } from "./revisions/checkout_confirm.r1.seed";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
-import { seed as purchaseForm } from "./revisions/purchase.r3.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r4.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
 import { seed as saleReversalForm } from "./revisions/sale_reversal.r1.seed";
 import { seed as stocktakeConfirmForm } from "./revisions/stocktake_confirm.r1.seed";

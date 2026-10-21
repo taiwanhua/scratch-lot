@@ -112,7 +112,7 @@ export async function seedInventoryModule(
   });
 }
 
-/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r3.seed.ts`)。 */
+/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r4.seed.ts`)。 */
 export function purchaseDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),
@@ -130,12 +130,15 @@ export function purchaseDefinition(): FormDefinition {
       rules: { required: true },
     }),
     field("self_purchase", "boolean"),
+    // r4:本人批購 = 否時必填(本人批購 = 是時隱藏,隱藏欄不檢查)
     field("trustee", "reference", {
       source: {
         provider: "lottery_dealer_contact",
         labelField: "name",
         filter: { status: "active", roles: "trustee" },
       },
+      visibleWhen: { "!": [{ var: "self_purchase" }] },
+      rules: { required: true },
     }),
     field("purchase_date", "date", { rules: { required: true } }),
     field("account", "reference", {

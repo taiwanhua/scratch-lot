@@ -738,12 +738,18 @@ describe("進貨單(規格 8.2、8.3)", () => {
       ).toBe("PURCHASE_REQUISITION_INVALID");
     });
 
-    it("本人批購 = 否:受託人要是這位甲類啟用中的受託人", async () => {
+    it("本人批購 = 否:受託人必填(表單 r4),且要是這位甲類啟用中的受託人", async () => {
+      // 沒填 → 表單引擎的必填檢查(本人批購 = 是時受託人隱藏,不檢查;其他案例都是這樣送)
       expect(
         await submitBlocked([book(gameHot)], branchA, {
           self_purchase: false,
-        }).then((value) => value.reason),
-      ).toBe("PURCHASE_TRUSTEE_INVALID");
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fieldErrors: [
+          expect.objectContaining({ fieldKey: "trustee", code: "REQUIRED" }),
+        ],
+      });
       expect(
         await submitBlocked([book(gameHot)], branchA, {
           self_purchase: false,
