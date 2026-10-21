@@ -14,6 +14,8 @@ import {
   purchaseHeaderOf,
   purchaseLinesOf,
   purchasePayableOf,
+  purchaseRedemptionRemainderOf,
+  purchaseRedemptionsOf,
 } from "@repo/domain/project/lottery";
 import { GAME_STATUS } from "@repo/domain/project/lottery-master-data";
 
@@ -46,6 +48,7 @@ import {
 import { LotteryPurchaseReceiptsRepository } from "../../database/lottery-purchases/lottery-purchase-receipts.repository";
 import { LotteryRequisitionLinesRepository } from "../../database/lottery-requisitions/lottery-requisition-lines.repository";
 import { DealerPurchaseDates } from "../dealers/purchase-dates";
+import { RedemptionPurchaseLink } from "../redemption/redemption-purchase-link";
 import { RequisitionReference } from "../requisition/requisition-reference";
 import { SettlementService } from "../settlement/settlement.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
@@ -119,6 +122,7 @@ export class PurchaseRules {
     private readonly purchaseDates: DealerPurchaseDates,
     private readonly ledger: TicketLedgerService,
     private readonly realtime: RealtimePublisher,
+    private readonly redemptions: RedemptionPurchaseLink,
   ) {}
 
   /** 租戶的系統身分(反查)。 */
@@ -238,7 +242,22 @@ export class PurchaseRules {
         "Book numbers are used by another purchase or an existing book",
       );
     }
-    return this.headerProblemOf(operator, submission, record);
+    const headerProblem = await this.headerProblemOf(
+      operator,
+      submission,
+      record,
+    );
+    if (headerProblem !== null) {
+      return headerProblem;
+    }
+    const redemptionProblem = await this.redemptions.problemOf(
+      { tenantId: submission.tenantId, submissionId: submission._id },
+      purchaseHeaderOf(record).branchId,
+      purchaseRedemptionsOf(record),
+    );
+    return redemptionProblem === null
+      ? null
+      : block(PURCHASE_REASONS.redemptionInvalid, redemptionProblem);
   }
 
   /** 核准前:還有沒點收的列 → 擋下。 */
@@ -337,8 +356,39 @@ export class PurchaseRules {
           amount: purchasePayableOf(values),
           note: await this.purchaseDateNoteOf(context, header.purchaseDate),
         });
+        // 兌獎剩餘 > 0 → 同時記銀行「兌獎入帳」(指回這張單、不算待結清)
+        const remainder = purchaseRedemptionRemainderOf(values);
+        if (remainder > 0) {
+          await this.settlement.recordAutomatic(context.session, {
+            operator: context.operator,
+            moduleKey: PURCHASE_MODULE_KEY,
+            submission: {
+              _id: submission._id,
+              orgId: submission.orgId,
+              tenantId: submission.tenantId,
+              moduleKey: submission.moduleKey,
+              status: submission.status,
+              revision: submission.revision,
+              values: submission.values,
+              submittedAt: submission.submittedAt ?? null,
+              serialNo: submission.serialNo ?? null,
+            },
+            side: PURCHASE_SETTLEMENT_SIDE,
+            button: "in",
+            accountId,
+            amount: remainder,
+            note: await this.purchaseDateNoteOf(context, header.purchaseDate),
+            redemptionIncome: true,
+          });
+        }
       }
     }
+    // 勾選的兌獎紀錄 → 已送兌(每次送出都對齊這一版勾的)
+    await this.redemptions.markSent(
+      context.session,
+      { tenantId: context.tenantId, submissionId: context.submissionId },
+      purchaseRedemptionsOf(values),
+    );
     await this.recomputeDealer(context, header.dealerId);
     await this.referenceRequisition(context, header.requisitionNo);
     this.publishBadgeAfterCommit(context);
@@ -350,6 +400,7 @@ export class PurchaseRules {
     const header = purchaseHeaderOf(submission.values);
     await this.recomputeDealer(context, header.dealerId);
     await this.releaseRequisitions(context);
+    await this.releaseRedemptions(context);
     this.publishBadgeAfterCommit(context);
   }
 
@@ -362,6 +413,13 @@ export class PurchaseRules {
     await this.recomputeDealer(context, header.dealerId);
     await this.revokeBooks(context);
     await this.releaseRequisitions(context);
+    await this.releaseRedemptions(context);
+    this.publishBadgeAfterCommit(context);
+  }
+
+  /** 撤回、退回:勾選的兌獎紀錄回到「店內持有」(規格 8.2);側欄信號。 */
+  async onReleased(context: FormEffectContext): Promise<void> {
+    await this.releaseRedemptions(context);
     this.publishBadgeAfterCommit(context);
   }
 
@@ -707,6 +765,14 @@ export class PurchaseRules {
         requisitionId,
       });
     }
+  }
+
+  /** 這張單勾的兌獎紀錄回到「店內持有」(撤回 / 退回 / 駁回 / 作廢)。 */
+  private async releaseRedemptions(context: FormEffectContext): Promise<void> {
+    await this.redemptions.release(context.session, {
+      tenantId: context.tenantId,
+      submissionId: context.submissionId,
+    });
   }
 
   /** 點收過的本 → 已撤銷;每張寫「進貨作廢」事件(狀態與位置不變,報表與時間軸看得到)。 */

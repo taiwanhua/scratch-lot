@@ -8,6 +8,7 @@ import {
 } from "./database/lottery-dealers/lottery-dealers.repository";
 import { LotteryGamesRepository } from "./database/lottery-games/lottery-games.repository";
 import { LotteryBooksRepository } from "./database/lottery-inventory/lottery-inventory.repository";
+import { LotteryRedemptionsRepository } from "./database/lottery-redemptions/lottery-redemptions.repository";
 
 /**
  * 專案登記的 lookup 來源(`docs/modules/forms.md`「專案登記的來源」;STRUCT-12 api 的固定入口之一,
@@ -145,5 +146,24 @@ export const PROJECT_LOOKUP_PROVIDERS: readonly LookupProviderRegistration[] = [
       portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_bank_account,
     },
     repositoryToken: LotteryBankAccountsRepository,
+  },
+  {
+    // 兌獎紀錄(專案規格 6.5、8.2;`docs/modules/project/store.md`「兌獎」):進貨單勾選這次拿去兌獎的。
+    // 「只列店內持有」= 固定條件 `status: "in_store"`;「只列進貨分店的」由替換新增頁的清單與送出前檢查負責
+    // (`orgId` 連動條件不可攜)。中獎金額以 `prizeAmount` 帶入。範圍照可見範圍
+    declaration: {
+      key: "lottery_redemption",
+      name: "兌獎紀錄",
+      permission: null,
+      fields: {
+        ticketLabel: { type: "text", label: "刮刮樂" },
+        prizeAmount: { type: "number", label: "中獎金額" },
+      },
+      filterFields: ["status", "orgId"],
+      labelField: "ticketLabel",
+      keywordFields: ["ticketLabel"],
+      portable: LOTTERY_PORTABLE_LOOKUP_PROVIDERS.lottery_redemption,
+    },
+    repositoryToken: LotteryRedemptionsRepository,
   },
 ];

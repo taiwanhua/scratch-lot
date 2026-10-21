@@ -1,0 +1,120 @@
+fragment LotteryRedemptionFields on LotteryRedemption {
+  id
+  orgId
+  gameCode
+  gameName
+  bookNo
+  ticketNo
+  ticketLabel
+  isOwnStore
+  prizeAmount
+  status
+  cashPoint {
+    ...LotteryAccountsRefFields
+  }
+  shift {
+    id
+    openedBy {
+      ...LotteryAccountsRefFields
+    }
+    openedAt
+    closed
+  }
+  redeemedAt
+  redeemedBy {
+    ...LotteryAccountsRefFields
+  }
+  purchase {
+    id
+    serialNo
+  }
+  sentAt
+  revokedAt
+  revokedBy {
+    ...LotteryAccountsRefFields
+  }
+  revokeReason
+  revokeReasonKey
+  revokeNote
+  replacesId
+  isPostClose
+  note
+  revokeMode
+  revokeBlockedBySent
+}
+
+query LotteryRedemptionPreview($input: LotteryRedemptionPreviewInput!) {
+  lotteryRedemptionPreview(input: $input) {
+    item {
+      gameCode
+      gameName
+      unitPrice
+      bookNo
+      ticketNo
+      ticketLabel
+      isOwnStore
+      existing {
+        redeemedAt
+        cashPointName
+      }
+    }
+  }
+}
+
+mutation RedeemLotteryTicket($input: RedeemLotteryTicketInput!) {
+  redeemLotteryTicket(input: $input) {
+    item {
+      ...LotteryRedemptionFields
+    }
+  }
+}
+
+mutation RevokeLotteryRedemption($input: RevokeLotteryRedemptionInput!) {
+  revokeLotteryRedemption(input: $input) {
+    item {
+      ...LotteryRedemptionFields
+    }
+  }
+}
+
+mutation ReplaceLotteryRedemption($input: ReplaceLotteryRedemptionInput!) {
+  replaceLotteryRedemption(input: $input) {
+    revoked {
+      ...LotteryRedemptionFields
+    }
+    item {
+      ...LotteryRedemptionFields
+    }
+  }
+}
+
+query LotteryRedemptions($input: LotteryRedemptionsInput!) {
+  lotteryRedemptions(input: $input) {
+    total
+    items {
+      ...LotteryRedemptionFields
+    }
+  }
+}
+
+query LotteryRecentRedemptions($shiftId: ID!) {
+  lotteryRecentRedemptions(shiftId: $shiftId) {
+    ...LotteryRedemptionFields
+  }
+}
+
+query LotteryRedemption($id: ID!) {
+  lotteryRedemption(id: $id) {
+    item {
+      ...LotteryRedemptionFields
+    }
+  }
+}
+
+query LotteryPurchaseRedemptions($orgId: ID!, $submissionId: ID) {
+  lotteryPurchaseRedemptions(orgId: $orgId, submissionId: $submissionId) {
+    items {
+      ...LotteryRedemptionFields
+    }
+  }
+}

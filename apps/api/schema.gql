@@ -2181,6 +2181,10 @@ type LotteryPurchaseReceivingRow {
   tickets: Int!
 }
 
+type LotteryPurchaseRedemptionsPayload {
+  items: [LotteryRedemption!]!
+}
+
 type LotteryPurchaseRequisition {
   id: ID!
   lines: [LotteryPurchaseRequisitionLine!]!
@@ -2196,6 +2200,97 @@ type LotteryPurchaseTrustee {
   dealerId: ID!
   id: ID!
   label: String!
+}
+
+type LotteryRedemption {
+  bookNo: String!
+  cashPoint: LotteryAccountsRef!
+  gameCode: String!
+  gameName: String
+  id: ID!
+  isOwnStore: Boolean!
+  isPostClose: Boolean!
+  note: String
+  orgId: ID!
+  prizeAmount: Int!
+  purchase: LotteryRedemptionPurchase
+  redeemedAt: DateTime!
+  redeemedBy: LotteryAccountsRef!
+  replacesId: ID
+  revokeBlockedBySent: Boolean!
+  revokeMode: String
+  revokeNote: String
+  revokeReason: String
+  revokeReasonKey: String
+  revokedAt: DateTime
+  revokedBy: LotteryAccountsRef
+  sentAt: DateTime
+  shift: LotteryRedemptionShift!
+  status: String!
+  ticketLabel: String!
+  ticketNo: String!
+}
+
+type LotteryRedemptionExisting {
+  cashPointName: String!
+  redeemedAt: DateTime!
+}
+
+type LotteryRedemptionPayload {
+  item: LotteryRedemption!
+}
+
+type LotteryRedemptionPreview {
+  bookNo: String!
+  existing: LotteryRedemptionExisting
+  gameCode: String!
+  gameName: String
+  isOwnStore: Boolean!
+  ticketLabel: String!
+  ticketNo: String!
+  unitPrice: Int
+}
+
+input LotteryRedemptionPreviewInput {
+  code: String!
+  orgId: ID!
+}
+
+type LotteryRedemptionPreviewPayload {
+  item: LotteryRedemptionPreview!
+}
+
+type LotteryRedemptionPurchase {
+  id: ID!
+  serialNo: String
+}
+
+type LotteryRedemptionReplacePayload {
+  item: LotteryRedemption!
+  revoked: LotteryRedemption!
+}
+
+type LotteryRedemptionShift {
+  closed: Boolean!
+  id: ID!
+  openedAt: DateTime!
+  openedBy: LotteryAccountsRef!
+}
+
+input LotteryRedemptionsInput {
+  cashPointId: ID
+  from: DateTime
+  limit: Int
+  offset: Int
+  orgId: ID!
+  redeemedBy: ID
+  status: String
+  to: DateTime
+}
+
+type LotteryRedemptionsPayload {
+  items: [LotteryRedemption!]!
+  total: Int!
 }
 
 """牌租週期:月 / 季 / 年"""
@@ -2882,9 +2977,11 @@ type Mutation {
   recordLotteryBankTransaction(input: RecordLotteryBankTransactionInput!): LotteryBankTransactionPayload!
   recordLotterySettlement(input: RecordLotterySettlementInput!): RecordLotterySettlementPayload!
   recoverLotteryTickets(input: RecoverLotteryTicketsInput!): LotteryInventoryActionPayload!
+  redeemLotteryTicket(input: RedeemLotteryTicketInput!): LotteryRedemptionPayload!
   refresh: RefreshPayload!
   registerLotteryDealerSignin(input: RegisterLotteryDealerSigninInput!): LotteryDealerSigninPayload!
   removeScheduleDayEntries(input: RemoveScheduleDayEntriesInput!): RemoveScheduleDayEntriesPayload!
+  replaceLotteryRedemption(input: ReplaceLotteryRedemptionInput!): LotteryRedemptionReplacePayload!
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetPayload!
   resetNotificationSetting(input: ResetNotificationSettingInput!): NotificationSettingPayload!
   resetPrintAgentPairing(input: PrintAgentIdInput!): PrintAgentPairingPayload!
@@ -2896,6 +2993,7 @@ type Mutation {
   reverseLotteryBankTransaction(input: ReverseLotteryBankTransactionInput!): LotteryBankTransactionPayload!
   reverseLotterySettlement(input: ReverseLotterySettlementInput!): RecordLotterySettlementPayload!
   revokeFormFromTenant(input: RevokeFormFromTenantInput!): FormPayload!
+  revokeLotteryRedemption(input: RevokeLotteryRedemptionInput!): LotteryRedemptionPayload!
   revokeRoleUsers(input: RevokeRoleUsersInput!): RoleUsersPayload!
   revokeTenantProvision(input: RevokeTenantProvisionInput!): RevokeTenantProvisionPayload!
   revokeWorkflowFromTenant(input: RevokeWorkflowFromTenantInput!): WorkflowPayload!
@@ -3657,6 +3755,11 @@ type Query {
   lotteryPurchaseOptions(orgId: ID!): LotteryPurchaseOptions!
   lotteryPurchaseProgress(purchaseIds: [ID!]!): [LotteryPurchaseProgress!]!
   lotteryPurchaseReceiving(submissionId: ID!): LotteryPurchaseReceiving!
+  lotteryPurchaseRedemptions(orgId: ID!, submissionId: ID): LotteryPurchaseRedemptionsPayload!
+  lotteryRecentRedemptions(shiftId: ID!): [LotteryRedemption!]!
+  lotteryRedemption(id: ID!): LotteryRedemptionPayload!
+  lotteryRedemptionPreview(input: LotteryRedemptionPreviewInput!): LotteryRedemptionPreviewPayload!
+  lotteryRedemptions(input: LotteryRedemptionsInput!): LotteryRedemptionsPayload!
   lotteryRequisitionCandidates(orgId: ID!): [LotteryRequisitionCandidate!]!
   lotteryRequisitionStates(requisitionIds: [ID!]!): [LotteryRequisitionStateItem!]!
   lotterySettlement(moduleKey: String!, refId: ID!): LotterySettlementPayload!
@@ -3853,6 +3956,13 @@ input RecoverLotteryTicketsInput {
   tickets: [LotteryTicketVersionInput!]!
 }
 
+input RedeemLotteryTicketInput {
+  code: String!
+  note: String
+  prizeAmount: Int!
+  shiftId: ID!
+}
+
 type RefreshPayload {
   accessToken: String!
 }
@@ -3874,6 +3984,15 @@ input RemoveScheduleDayEntriesInput {
 type RemoveScheduleDayEntriesPayload {
   deletedIds: [ID!]!
   skippedIds: [ID!]!
+}
+
+input ReplaceLotteryRedemptionInput {
+  code: String!
+  id: ID!
+  note: String
+  prizeAmount: Int!
+  reasonKey: String
+  reasonNote: String
 }
 
 type ReprintReason {
@@ -3954,6 +4073,12 @@ input ReverseLotterySettlementInput {
 input RevokeFormFromTenantInput {
   formKey: ID!
   tenantOrgId: ID!
+}
+
+input RevokeLotteryRedemptionInput {
+  id: ID!
+  reasonKey: String
+  reasonNote: String
 }
 
 input RevokeRoleUsersInput {

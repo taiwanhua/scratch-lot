@@ -112,7 +112,7 @@ export async function seedInventoryModule(
   });
 }
 
-/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r2.seed.ts`)。 */
+/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r3.seed.ts`)。 */
 export function purchaseDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),
@@ -180,8 +180,46 @@ export function purchaseDefinition(): FormDefinition {
     field("purchase_total", "number", {
       valueSource: { kind: "computed", expr: { sumOf: ["lines", "amount"] } },
     }),
+    field("redemptions", "array", {
+      columns: [
+        column("redemption", "reference", {
+          source: {
+            provider: "lottery_redemption",
+            labelField: "ticketLabel",
+            filter: { status: "in_store" },
+          },
+          rules: { required: true },
+        }),
+        column("prize_amount", "number", { rules: { required: true, min: 1 } }),
+      ],
+    }),
+    field("redemption_total", "number", {
+      valueSource: {
+        kind: "computed",
+        expr: { sumOf: ["redemptions", "prize_amount"] },
+      },
+    }),
+    field("redemption_offset", "number", {
+      valueSource: {
+        kind: "computed",
+        expr: { min: [{ var: "redemption_total" }, { var: "purchase_total" }] },
+      },
+    }),
     field("deducted_amount", "number", {
-      valueSource: { kind: "computed", expr: { var: "purchase_total" } },
+      valueSource: {
+        kind: "computed",
+        expr: {
+          "-": [{ var: "purchase_total" }, { var: "redemption_offset" }],
+        },
+      },
+    }),
+    field("redemption_remainder", "number", {
+      valueSource: {
+        kind: "computed",
+        expr: {
+          "-": [{ var: "redemption_total" }, { var: "redemption_offset" }],
+        },
+      },
     }),
   ]);
 }

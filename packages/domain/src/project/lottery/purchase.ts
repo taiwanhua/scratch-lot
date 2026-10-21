@@ -10,7 +10,7 @@ import { bookKeyOf, normalizeBookNo, parseTicketInput } from "./ticket-code";
 export const PURCHASE_MODULE_KEY = "purchasing.purchase";
 export const PURCHASE_FORM_KEY = "purchase";
 
-/** 受管表單 `purchase` 的欄位 key(`seeds/project/revisions/purchase.r2.seed.ts`)。 */
+/** 受管表單 `purchase` 的欄位 key(`seeds/project/revisions/purchase.r3.seed.ts`)。 */
 export const PURCHASE_FIELD_KEYS = {
   /** 進貨分店(組織引用) */
   branch: "branch",
@@ -46,9 +46,28 @@ export const PURCHASE_FIELD_KEYS = {
   amount: "amount",
   /** 批購合計(計算欄) */
   purchaseTotal: "purchase_total",
-  /** 扣款金額(計算欄;這張單的應付) */
+  /** 扣款金額(計算欄 = 批購合計 − 兌獎折抵;這張單的應付) */
   deductedAmount: "deducted_amount",
+  /** 兌獎(勾選這次拿去兌獎的兌獎紀錄;明細欄,r3 起) */
+  redemptions: "redemptions",
+  /** 兌獎子欄:兌獎紀錄(引用 `lottery_redemption`,店內持有) */
+  redemption: "redemption",
+  /** 兌獎子欄:中獎金額(帶入兌獎紀錄的金額) */
+  prizeAmount: "prize_amount",
+  /** 兌獎金額(計算欄 = 勾選的合計) */
+  redemptionTotal: "redemption_total",
+  /** 兌獎折抵(計算欄 = 兌獎金額與批購合計取較小者) */
+  redemptionOffset: "redemption_offset",
+  /** 兌獎剩餘(計算欄 = 兌獎金額 − 兌獎折抵) */
+  redemptionRemainder: "redemption_remainder",
 } as const;
+
+/** 進貨單勾選的一筆兌獎紀錄(存值正規化後)。 */
+export interface PurchaseRedemptionValue {
+  rowId: string | null;
+  redemptionId: string;
+  prizeAmount: number;
+}
 
 /** 進貨單的權限(表單四條 + 頁內 `settle`;規格 3.2)。 */
 export const PURCHASE_PERMISSIONS = {
@@ -177,16 +196,26 @@ export function purchaseHeaderOf(
 }
 
 /**
- * 這張單的應付(扣款金額,規格 8.2「合計」):讀計算欄 `deducted_amount`;沒有時用批購合計
- * (明細批購金額加總)。最少 0。兌獎折抵由兌獎的功能加進計算欄。
+ * 這張單的應付(扣款金額,規格 8.2「合計」):讀計算欄 `deducted_amount`(批購合計 − 兌獎折抵);
+ * 沒有時用批購合計(明細批購金額加總)。最少 0。
  */
 export function purchasePayableOf(values: Record<string, unknown>): number {
-  const stored = values[PURCHASE_FIELD_KEYS.deductedAmount];
   const amount =
-    typeof stored === "number" && Number.isFinite(stored)
-      ? stored
-      : purchaseLinesOf(values).reduce((sum, line) => sum + line.amount, 0);
+    storedNumberOf(values[PURCHASE_FIELD_KEYS.deductedAmount]) ??
+    purchaseLinesOf(values).reduce((sum, line) => sum + line.amount, 0);
   return Math.max(0, Math.round(amount));
+}
+
+/** 計算欄的存值:數字,或表單引擎存的十進位字串(`"60000"`);空 / 看不懂 → null。 */
+function storedNumberOf(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 /** 同一個遊戲一組(組標題列顯示小計;順序照第一次出現)。 */
@@ -298,4 +327,42 @@ export function receivingSummaryOf<T extends PurchaseLineValue>(
       .length,
     totalCount: lines.length,
   };
+}
+
+/** 勾選的兌獎紀錄(`redemptions` 存值 → 列;沒有兌獎紀錄 id 的列略過、同一筆只算一次)。 */
+export function purchaseRedemptionsOf(
+  values: Record<string, unknown>,
+): PurchaseRedemptionValue[] {
+  const rows = values[PURCHASE_FIELD_KEYS.redemptions];
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  return rows.flatMap((row): PurchaseRedemptionValue[] => {
+    if (!isRecord(row)) {
+      return [];
+    }
+    const redemptionId = idOf(row[PURCHASE_FIELD_KEYS.redemption]);
+    if (redemptionId === null || seen.has(redemptionId)) {
+      return [];
+    }
+    seen.add(redemptionId);
+    return [
+      {
+        rowId: typeof row.rowId === "string" ? row.rowId : null,
+        redemptionId,
+        prizeAmount: numberOf(row[PURCHASE_FIELD_KEYS.prizeAmount]),
+      },
+    ];
+  });
+}
+
+/** 兌獎剩餘(計算欄 `redemption_remainder`;沒有時 0)。送出後 > 0 → 記銀行「兌獎入帳」。 */
+export function purchaseRedemptionRemainderOf(
+  values: Record<string, unknown>,
+): number {
+  const stored = storedNumberOf(
+    values[PURCHASE_FIELD_KEYS.redemptionRemainder],
+  );
+  return stored === null ? 0 : Math.max(0, Math.round(stored));
 }

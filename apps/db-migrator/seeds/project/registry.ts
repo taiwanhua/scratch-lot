@@ -18,7 +18,7 @@ import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
 import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
-import { seed as purchaseForm } from "./revisions/purchase.r2.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r3.seed";
 import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
 import { seed as transferForm } from "./revisions/transfer.r2.seed";
@@ -60,7 +60,7 @@ export const projectSeedSource: SeedSource = {
     storeModule,
   ],
   // 受管表單引用的專案 lookup 來源(與 api 的 lookup 登記讀同一份;叫貨單、進貨單的明細引用遊戲,
-  // 進貨單的單頭引用甲類、受託人、銀行帳戶;調貨單的明細引用本)
+  // 進貨單的單頭引用甲類、受託人、銀行帳戶、兌獎區引用兌獎紀錄;調貨單的明細引用本)
   portableLookupProviders: LOTTERY_PORTABLE_LOOKUP_PROVIDERS,
   seeds: [
     // 欄位管理的專案系統類別與全域選項(專案規格第 13 章)

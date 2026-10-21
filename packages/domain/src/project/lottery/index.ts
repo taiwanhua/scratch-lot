@@ -10,6 +10,7 @@
  * - `transfer.ts`:調貨單的表單代號 / 欄位 key、權限、明細列、金額、張號區段、收付按鈕先填值與核准前檢查
  * - `requisition.ts`:叫貨單的表單代號 / 欄位 key、新遊戲、銷售欄、排序、預估批購金額、超過預計要給本數
  * - `inventory.ts`:庫存管理的模組 key、權限 key、分頁與更正跳號的規則
+ * - `redemption.ts`:兌獎的狀態、上限、撤銷方式、抽屜應有 / 事後更正淨額、進貨單的兌獎合計
  * - `store.ts`:店面管理的模組 key、權限 key、分頁、看板頻道、剩很少的門檻與期初零用金的規則
  * - `store-sales.ts`:店面的刷到時怎麼處理、當下撤銷的條件、拆本精靈的檢查
  */
@@ -17,6 +18,7 @@ export * from "./book-stats";
 export * from "./inventory";
 export * from "./portable-lookups";
 export * from "./purchase";
+export * from "./redemption";
 export * from "./requisition";
 export * from "./store";
 export * from "./store-sales";

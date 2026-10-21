@@ -114,6 +114,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/purchase/purchase-receiving.service.ts": ["反查"],
   // 受託人的關聯(關係人可能是別的組織建的);點收進度讀點收紀錄
   "project/lottery/purchase/purchase-query.service.ts": ["反查"],
+  // 兌獎:這張在整個租戶有沒有未撤銷的兌獎(別家店兌過也算)
+  "project/lottery/redemption/redemption.service.ts": ["反查"],
+  // 兌獎紀錄:登記人 / 撤銷人 / 班次負責人的名稱、班次、進貨單單號(人可能是別家分店支援的、進貨單是總部建的)
+  "project/lottery/redemption/redemption-views.ts": ["反查"],
+  // 進貨單勾選兌獎:掛接點以系統身分執行,兌獎紀錄在分店(送兌 / 回到店內持有)
+  "project/lottery/redemption/redemption-purchase-link.ts": ["例外寫入"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

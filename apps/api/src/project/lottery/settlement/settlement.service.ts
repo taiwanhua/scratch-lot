@@ -4,6 +4,7 @@ import { type ClientSession, Types } from "mongoose";
 import {
   ACCOUNTS_KEY,
   ACCOUNTS_PERMISSIONS,
+  BANK_TRANSACTION_TYPE,
   DIRECTIONS,
   type Direction,
   SETTLEMENT_METHODS,
@@ -418,6 +419,11 @@ export class SettlementService {
       amount: number;
       handler?: string | null;
       note?: string | null;
+      /**
+       * 記成銀行「兌獎入帳」(進貨單的兌獎剩餘,規格 8.2):`refType` 照樣指回單據方便查來源,
+       * 但不記 `settlementSide` —— 不算進單據的已付 / 已收淨額、不算待結清。`button` 固定 `in`。
+       */
+      redemptionIncome?: boolean;
     },
   ): Promise<Types.ObjectId | null> {
     const active = session ?? currentSession();
@@ -467,16 +473,22 @@ export class SettlementService {
       input.operator,
       {
         account,
-        type: bankTypeOf(registration.kind, input.button),
-        direction: input.button,
+        type:
+          input.redemptionIncome === true
+            ? BANK_TRANSACTION_TYPE.redemptionIncome
+            : bankTypeOf(registration.kind, input.button),
+        direction: input.redemptionIncome === true ? "in" : input.button,
         amount: input.amount,
         occurredAt: new Date(),
         branchOrgId,
         refType: registration.moduleKey,
         refId: input.submission._id,
         refRevision: input.submission.revision,
-        settlementSide: side.side,
-        summary: `${registration.label} ${payable.docNo}`,
+        settlementSide: input.redemptionIncome === true ? null : side.side,
+        summary:
+          input.redemptionIncome === true
+            ? `兌獎入帳 ${payable.docNo}`
+            : `${registration.label} ${payable.docNo}`,
         handler: input.handler ?? null,
         note: input.note ?? null,
       },
