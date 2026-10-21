@@ -66,8 +66,8 @@ describe("排班作業:套用範本", () => {
       templateIds: ["tpl-late"],
     });
     // 整個月 30 天,夾具 11/3 店休不能選
-    expect(sent?.dates).toHaveLength(29);
-    expect(sent?.dates).not.toContain("2026-11-03");
+    expect(sent.dates).toHaveLength(29);
+    expect(sent.dates).not.toContain("2026-11-03");
   });
 
   it("週範本:單選、說明文字換成週範本的、[平日] 快選;預覽「將補上 N 天」", async () => {
@@ -96,8 +96,8 @@ describe("排班作業:套用範本", () => {
       weekTemplateId: "wk-normal",
     });
     // 2026-11-01 是星期日:平日不含 1、7、8 日
-    expect(sent?.dates).not.toContain("2026-11-01");
-    expect(sent?.dates).toContain("2026-11-02");
+    expect(sent.dates).not.toContain("2026-11-01");
+    expect(sent.dates).toContain("2026-11-02");
   });
 
   it("沒有 edit → 看不到 [套用範本]", async () => {
