@@ -48,6 +48,7 @@ import { StoreBadge } from "./store-badge";
     LotteryDailyCloseResolver,
     { provide: DAILY_CLOSE_SERVICE, useExisting: DailyCloseService },
   ],
-  exports: [DAILY_CLOSE_SERVICE, DailyCloseService],
+  // `DailyCloseLedger`:關帳(`period-close/`)沿用「沒被日結涵蓋計算」的同一個判斷
+  exports: [DAILY_CLOSE_SERVICE, DailyCloseService, DailyCloseLedger],
 })
 export class LotteryDailyCloseModule {}

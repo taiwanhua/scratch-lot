@@ -3,7 +3,6 @@ import { describe, expect, it } from "@jest/globals";
 import {
   addPeriodMonths,
   isPeriodEnded,
-  isPeriodMonth,
   nextClosableMonth,
   periodMonthOf,
   periodMonthsOf,
@@ -15,9 +14,8 @@ const at = (iso: string) => new Date(iso).getTime();
 
 describe("關帳的月份(規格 10.4)", () => {
   it("月份文字與加減", () => {
-    expect(isPeriodMonth("2026-10")).toBe(true);
-    expect(isPeriodMonth("2026-13")).toBe(false);
-    expect(isPeriodMonth("2026-1")).toBe(false);
+    expect(() => addPeriodMonths("2026-13", 1)).toThrow(RangeError);
+    expect(() => addPeriodMonths("2026-1", 1)).toThrow(RangeError);
     expect(addPeriodMonths("2026-01", -1)).toBe("2025-12");
     expect(addPeriodMonths("2026-12", 1)).toBe("2027-01");
   });

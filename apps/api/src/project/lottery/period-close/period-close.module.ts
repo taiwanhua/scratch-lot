@@ -4,6 +4,7 @@ import { DatabaseModule } from "../../../database/database.module";
 import { NotificationsModule } from "../../../notifications/notifications.module";
 import { ScheduledJobsModule } from "../../../scheduled-jobs/scheduled-jobs.module";
 import { LotteryAccountsModule } from "../accounts/accounts.module";
+import { LotteryDailyCloseModule } from "../daily-close/daily-close.module";
 import { LotteryStoreModule } from "../store/store.module";
 import { PeriodCloseRemindersService } from "./period-close-reminders.service";
 import { LotteryPeriodCloseResolver } from "./period-close.resolver";
@@ -22,6 +23,7 @@ import { PeriodCloseService } from "./period-close.service";
     ScheduledJobsModule,
     LotteryAccountsModule,
     LotteryStoreModule,
+    LotteryDailyCloseModule,
   ],
   providers: [
     PeriodCloseService,

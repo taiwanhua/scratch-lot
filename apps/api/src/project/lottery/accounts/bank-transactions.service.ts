@@ -157,10 +157,14 @@ export class BankTransactionsService {
     return { items, totalCount: items.length, totalIn, totalOut };
   }
 
-  /** 帳戶目前餘額(期初 + 全部交易)。一批帳戶一次算。 */
+  /**
+   * 帳戶的交易淨額(收 − 支)與筆數,呼叫端加上期初就是餘額;一批帳戶一次算。
+   * `before` 給了 = 那個時點(不含)以前的交易(關帳快照的月底餘額)。
+   */
   async balancesOf(
     operator: OperatorContext,
-    accounts: readonly AccountRecord[],
+    accounts: readonly Pick<AccountRecord, "_id" | "tenantId">[],
+    before?: Date,
   ): Promise<Map<string, { sum: number; count: number }>> {
     const result = new Map<string, { sum: number; count: number }>();
     if (accounts.length === 0) {
@@ -172,7 +176,13 @@ export class BankTransactionsService {
       accounts[0]?.tenantId ?? null,
     );
     const rows = await this.transactions.aggregate(reader, [
-      { $match: { accountId: { $in: accounts.map((item) => item._id) } } },
+      {
+        $match: {
+          accountId: { $in: accounts.map((item) => item._id) },
+          // 給了 `before` = 那個時點(不含)以前的交易(關帳快照的月底餘額)
+          ...(before === undefined ? {} : { occurredAt: { $lt: before } }),
+        },
+      },
       {
         $group: {
           _id: "$accountId",

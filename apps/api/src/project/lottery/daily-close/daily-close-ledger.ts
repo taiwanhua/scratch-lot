@@ -209,19 +209,13 @@ export class DailyCloseLedger {
    * 範圍 = 讀者看得到的店;沒有 = 不在 map 裡。
    */
   async earliestUncovered(reader: OperatorContext): Promise<Map<string, Date>> {
-    const [dailies, closed] = await Promise.all([
-      this.checkouts.aggregate(reader, [
-        { $match: { type: CHECKOUT_TYPE.daily } },
-        { $group: { _id: "$orgId", last: { $max: "$coveredTo" } } },
-      ]),
+    const [lastDaily, closed] = await Promise.all([
+      this.lastCoveredByOrg(reader),
       this.shifts.aggregate(reader, [
         { $match: { closedAt: { $ne: null } } },
         { $group: { _id: "$orgId", last: { $max: "$closedAt" } } },
       ]),
     ]);
-    const lastDaily = new Map(
-      dailies.map((row) => [String(row._id), row.last as Date | null]),
-    );
     const result = new Map<string, Date>();
     for (const row of closed) {
       const orgId = row._id as Types.ObjectId;
@@ -244,6 +238,44 @@ export class DailyCloseLedger {
       }
     }
     return result;
+  }
+
+  /**
+   * `from`(含)至 `to`(不含)開的班裡,已送出交班結帳、但沒有被日結涵蓋計算的(關帳的警告與快照;規格 10.4)。
+   * 判斷和 `isShiftCovered` 同一個定義:這家店最近一張日結的涵蓋計算期間終點 < 班的 `closedAt`。依開班時間排。
+   */
+  async uncoveredShiftsOpenedIn(
+    reader: OperatorContext,
+    from: Date,
+    to: Date,
+  ): Promise<ShiftRecord[]> {
+    const [lastDaily, closed] = await Promise.all([
+      this.lastCoveredByOrg(reader),
+      this.shifts.findMany(
+        reader,
+        { openedAt: { $gte: from, $lt: to }, closedAt: { $ne: null } },
+        { sort: { openedAt: 1, _id: 1 } },
+      ),
+    ]);
+    return closed.filter((shift) => {
+      const covered = lastDaily.get(String(shift.orgId)) ?? null;
+      return (
+        covered === null || shift.closedAt === null || shift.closedAt > covered
+      );
+    });
+  }
+
+  /** 每家店最近一張日結的涵蓋計算期間終點(任何狀態;日結送出就算涵蓋)。 */
+  private async lastCoveredByOrg(
+    reader: OperatorContext,
+  ): Promise<Map<string, Date | null>> {
+    const dailies = await this.checkouts.aggregate(reader, [
+      { $match: { type: CHECKOUT_TYPE.daily } },
+      { $group: { _id: "$orgId", last: { $max: "$coveredTo" } } },
+    ]);
+    return new Map(
+      dailies.map((row) => [String(row._id), row.last as Date | null]),
+    );
   }
 
   /**

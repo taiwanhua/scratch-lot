@@ -15,12 +15,12 @@ import {
 import {
   type PeriodPendingKind,
   isPeriodEnded,
-  isPeriodMonth,
   nextClosableMonth,
   periodMonthOf,
   periodMonthsOf,
   periodRangeOf,
 } from "@repo/domain/project/lottery-accounts";
+import { isIsoMonth } from "@repo/domain/project/schedule-settings";
 
 import { AuditService } from "../../../audit/audit.service";
 import { FormSubmissionsRepository } from "../../../database/base/repositories";
@@ -31,7 +31,6 @@ import { tenantTimezoneOf } from "../../../database/tenant-timezone";
 import { TransactionService } from "../../../database/transaction";
 import {
   LotteryBankAccountsRepository,
-  LotteryBankTransactionsRepository,
   LotteryPeriodClosesRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import type {
@@ -49,7 +48,9 @@ import {
   notFoundError,
   validationError,
 } from "../accounts/accounts-error";
+import { BankTransactionsService } from "../accounts/bank-transactions.service";
 import { CashLedgerService } from "../cash/cash-ledger.service";
+import { DailyCloseLedger } from "../daily-close/daily-close-ledger";
 import { StoreShiftViews } from "../store/shift-views";
 import { StoreClock } from "../store/store-clock";
 import type { CloseLotteryPeriodInput } from "./dto/period-close.input";
@@ -152,10 +153,11 @@ export class PeriodCloseService {
     private readonly checkouts: LotteryCheckoutsRepository,
     private readonly cashPoints: LotteryCashPointsRepository,
     private readonly accounts: LotteryBankAccountsRepository,
-    private readonly transactionsRepo: LotteryBankTransactionsRepository,
     private readonly submissions: FormSubmissionsRepository,
     private readonly orgs: OrgsRepository,
     private readonly ledger: CashLedgerService,
+    private readonly bankTransactions: BankTransactionsService,
+    private readonly dailyLedger: DailyCloseLedger,
     private readonly access: AccountsAccess,
     private readonly views: StoreShiftViews,
     private readonly clock: StoreClock,
@@ -243,7 +245,7 @@ export class PeriodCloseService {
   ): Promise<LotteryPeriodCloseModel> {
     const tenant = await this.tenantOf(operator);
     const row =
-      tenant === null || !isPeriodMonth(month)
+      tenant === null || !isIsoMonth(month)
         ? null
         : await this.closes.findOne(tenant.reader, { month });
     if (tenant === null || row === null) {
@@ -376,7 +378,7 @@ export class PeriodCloseService {
     operator: OperatorContext,
     month: string,
   ): Promise<Period & { firstMonth: string }> {
-    if (!isPeriodMonth(month)) {
+    if (!isIsoMonth(month)) {
       throw validationError(
         "month must be YYYY-MM",
         ["month"],
@@ -554,50 +556,25 @@ export class PeriodCloseService {
     return { bankAccounts, stores };
   }
 
-  /** 每個帳戶月底餘額 = 期初(期初日期在月底前)+ 月底前交易的收 − 支(沖正以反方向計入)。 */
+  /** 每個帳戶月底餘額 = 期初(期初日期在月底前)+ 月底前交易的收 − 支(`BankTransactionsService.balancesOf`)。 */
   private async bankBalancesOf(
     period: Period,
   ): Promise<PeriodCloseSnapshot["bankAccounts"]> {
     const accounts = await this.accounts.findMany(
       period.reader,
       { openingDate: { $lt: period.end } },
-      { select: "label openingBalance", sort: { createdAt: 1 } },
+      { select: "label openingBalance tenantId", sort: { createdAt: 1 } },
     );
-    if (accounts.length === 0) {
-      return [];
-    }
-    const sums = await this.transactionsRepo.aggregate(period.reader, [
-      {
-        $match: {
-          accountId: { $in: accounts.map((account) => account._id) },
-          occurredAt: { $lt: period.end },
-        },
-      },
-      {
-        $group: {
-          _id: "$accountId",
-          net: {
-            $sum: {
-              $cond: [
-                { $eq: ["$direction", "in"] },
-                "$amount",
-                { $multiply: ["$amount", -1] },
-              ],
-            },
-          },
-        },
-      },
-    ]);
-    const netOf = new Map(
-      sums.map((row) => [
-        String(row._id),
-        (row.net as number | undefined) ?? 0,
-      ]),
+    const sums = await this.bankTransactions.balancesOf(
+      period.reader,
+      accounts,
+      period.end,
     );
     return accounts.map((account) => ({
       accountId: account._id,
       label: account.label,
-      balance: account.openingBalance + (netOf.get(String(account._id)) ?? 0),
+      balance:
+        account.openingBalance + (sums.get(String(account._id))?.sum ?? 0),
     }));
   }
 
@@ -686,43 +663,20 @@ export class PeriodCloseService {
     return result;
   }
 
-  /**
-   * 那個月開的班、已送出交班結帳但沒有被日結涵蓋計算(這家店最近一張日結的 `coveredTo` < 班的 `closedAt`;
-   * 與店面「第一班的判斷」同一個定義)。
-   */
+  /** 那個月開的班沒有被日結涵蓋計算的(判斷在 `DailyCloseLedger`,與店面同一個定義),依分店分組。 */
   private async uncoveredShiftsOf(
     period: Period,
   ): Promise<Map<string, PeriodCloseStoreSnapshot["uncoveredShifts"]>> {
-    const [dailies, closed] = await Promise.all([
-      this.checkouts.aggregate(period.reader, [
-        { $match: { type: CHECKOUT_TYPE.daily } },
-        { $group: { _id: "$orgId", last: { $max: "$coveredTo" } } },
-      ]),
-      this.shifts.findMany(
-        period.reader,
-        {
-          openedAt: { $gte: period.start, $lt: period.end },
-          closedAt: { $ne: null },
-        },
-        { select: SHIFT_SELECT, sort: { openedAt: 1, _id: 1 } },
-      ) as Promise<ShiftRow[]>,
-    ]);
-    const lastDaily = new Map(
-      dailies.map((row) => [String(row._id), row.last as Date | null]),
+    const shifts = await this.dailyLedger.uncoveredShiftsOpenedIn(
+      period.reader,
+      period.start,
+      period.end,
     );
     const result = new Map<
       string,
       PeriodCloseStoreSnapshot["uncoveredShifts"]
     >();
-    for (const shift of closed) {
-      const covered = lastDaily.get(String(shift.orgId)) ?? null;
-      if (
-        shift.closedAt !== null &&
-        covered !== null &&
-        shift.closedAt <= covered
-      ) {
-        continue;
-      }
+    for (const shift of shifts) {
       const list = result.get(String(shift.orgId)) ?? [];
       list.push({ shiftId: shift._id, label: shift.label });
       result.set(String(shift.orgId), list);

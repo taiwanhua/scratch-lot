@@ -32,6 +32,12 @@ import {
   WORKFLOW_TEST_TIMEOUT_MS,
   person,
 } from "../../../workflows/test-support/workflow-fixtures";
+import {
+  AppendOnlyLedgerError,
+  LotteryBankTransactionsRepository,
+  LotteryCashMovementsRepository,
+  LotteryPeriodClosesRepository,
+} from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LOTTERY_BANK_ACCOUNTS_COLLECTION } from "../../database/lottery-accounts/lottery-bank-account.schema";
 import { LOTTERY_BANK_TRANSACTIONS_COLLECTION } from "../../database/lottery-accounts/lottery-bank-transaction.schema";
 import { LOTTERY_CASH_MOVEMENTS_COLLECTION } from "../../database/lottery-accounts/lottery-cash-movement.schema";
@@ -649,6 +655,8 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     ]);
     // 9 月已關:10/3 不寄
     expect(await remindersAt("2026-10-03", "09:00")).toEqual([]);
+    // 上個月(8 月)早於租戶開始使用的月份(9 月):9/3 不寄
+    expect(await remindersAt("2026-09-03", "09:00")).toEqual([]);
   });
 
   it("10 月:沒結帳的班 → 擋;三種單據審核中且落在 10 月 → 擋(11 月的不擋);沒被日結涵蓋的班 → 警告並記快照;關到 10/31 23:59:59.999", async () => {
@@ -866,5 +874,89 @@ describe("關帳(GraphQL 端點 + 真 MongoDB)", () => {
     ).resolves.toBeUndefined();
     // 10 月已關:11/3 不再提醒
     expect(await remindersAt("2026-11-03", "09:15")).toEqual([]);
+  });
+
+  it("11 月快照:最後一班月底前已結帳 → 抽屜 = 留給下一班;小金庫從月底前最後一張已確認日結起算(月底後的日結不算);兩人同時關 → 一個 ALREADY_CLOSED", async () => {
+    now("2026-12-02", "10:00");
+    // 上一情境留下的 11 月單據先處理完
+    await connection
+      .collection("form_submissions")
+      .updateMany(
+        { serialNo: { $in: ["R-013", "C-003"] } },
+        { $set: { status: "completed" } },
+      );
+    await shiftOf(
+      "店內櫃台 · 11/10 早班",
+      taipei("2026-11-10", "08:00:00"),
+      taipei("2026-11-10", "16:00:00"),
+      "confirmed",
+      1500,
+    );
+    // 11/20 已確認日結清點 10,000(月底前);12/1 的日結(月底後)不算
+    for (const [submittedAt, counted] of [
+      [taipei("2026-11-20", "21:00:00"), 10_000],
+      [taipei("2026-12-01", "21:00:00"), 99_999],
+    ] as const) {
+      await connection.collection(LOTTERY_CHECKOUTS_COLLECTION).insertOne({
+        ...checkoutDoc({
+          type: "daily",
+          status: "confirmed",
+          shiftId: null,
+          submittedAt,
+          coveredTo: submittedAt,
+        }),
+        counted,
+      });
+    }
+    await vaultMovement(500, taipei("2026-11-25", "12:00:00"));
+    await vaultMovement(700, taipei("2026-12-01", "09:00:00"));
+
+    const result = await check("2026-11");
+    expect(result.canClose).toBe(true);
+    expect(result.snapshot.stores).toEqual([
+      {
+        name: "中山店",
+        vault: 10_500,
+        drawerTotal: 1500,
+        drawers: [{ name: "店內櫃台", amount: 1500, spanningShiftLabel: null }],
+        uncoveredShifts: [],
+      },
+    ]);
+
+    const [first, second] = await Promise.all([
+      close("2026-11"),
+      close("2026-11"),
+    ]);
+    const errors = [first, second].flatMap(
+      (result) => result.errors?.map((error) => error.extensions) ?? [],
+    );
+    expect([first, second].filter((result) => !result.errors)).toHaveLength(1);
+    expect(errors).toEqual([
+      expect.objectContaining({ reason: "PERIOD_ALREADY_CLOSED" }),
+    ]);
+    expect(
+      await connection
+        .collection(LOTTERY_PERIOD_CLOSES_COLLECTION)
+        .countDocuments({ month: "2026-11" }),
+    ).toBe(1);
+  });
+
+  it("只新增:關帳紀錄、銀行交易、現金流水的修改 / 刪除一律拋 AppendOnlyLedgerError(不能重新開帳)", () => {
+    for (const repository of [
+      api.app.get(LotteryPeriodClosesRepository),
+      api.app.get(LotteryBankTransactionsRepository),
+      api.app.get(LotteryCashMovementsRepository),
+    ]) {
+      expect(() => repository.updateById()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.findOneAndUpdate()).toThrow(
+        AppendOnlyLedgerError,
+      );
+      expect(() => repository.updateMany()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.softDeleteById()).toThrow(AppendOnlyLedgerError);
+      expect(() => repository.findOwnAndUpdate()).toThrow(
+        AppendOnlyLedgerError,
+      );
+      expect(() => repository.hardDeleteById()).toThrow(AppendOnlyLedgerError);
+    }
   });
 });

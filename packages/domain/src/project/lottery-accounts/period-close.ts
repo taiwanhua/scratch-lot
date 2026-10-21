@@ -1,4 +1,5 @@
 import { localDateOf, startOfLocalDay } from "../../form/temporal";
+import { isIsoMonth } from "../schedule-settings/time";
 
 /**
  * 關帳 `lottery_period_closes`(專案規格 10.4、3.4 關帳逾期;正本 `docs/modules/project/accounts.md`「關帳」)。
@@ -8,9 +9,6 @@ import { localDateOf, startOfLocalDay } from "../../form/temporal";
  * - **永遠關到該月最後一刻**:月份的期間 = 當地 1 日 00:00(含)至 下月 1 日 00:00(不含),與按下的時間無關
  *   (10/31 23:59:59.999 的紀錄算 10 月)
  */
-
-/** 月份文字 `YYYY-MM`。 */
-const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
 
 /** 關帳擋下的原因(api 的 `extensions.reason`;模組文件「錯誤碼」)。 */
 export const PERIOD_CLOSE_REASONS = {
@@ -51,21 +49,17 @@ interface Month {
   month: number;
 }
 
+/** 月份文字 `YYYY-MM`(格式判斷沿用 `isIsoMonth`)→ 年、月;不合法 → null。 */
 function parse(text: string): Month | null {
-  const matched = MONTH_PATTERN.exec(text);
-  if (matched === null) {
+  if (!isIsoMonth(text)) {
     return null;
   }
-  return { year: Number(matched[1]), month: Number(matched[2]) };
+  const [year = 0, month = 0] = text.split("-").map(Number);
+  return { year, month };
 }
 
 const format = ({ year, month }: Month): string =>
   `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
-
-/** 是不是合法的月份文字 `YYYY-MM`。 */
-export function isPeriodMonth(text: unknown): text is string {
-  return typeof text === "string" && parse(text) !== null;
-}
 
 /** 月份 ± N 個月(`2026-01` − 1 = `2025-12`);格式不對 → 丟 `RangeError`。 */
 export function addPeriodMonths(month: string, amount: number): string {
