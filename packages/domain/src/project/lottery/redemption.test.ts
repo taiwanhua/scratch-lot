@@ -30,9 +30,9 @@ describe("撤銷兌獎兩層(規格 6.5)", () => {
   });
 
   it("班已結帳或別人登記 → 要 store.undo-redeem;沒有 → 看不到按鈕", () => {
-    expect(redemptionRevokeStateOf({ ...open, shiftOpen: false }).mode).toBe(
-      null,
-    );
+    expect(
+      redemptionRevokeStateOf({ ...open, shiftOpen: false }).mode,
+    ).toBeNull();
     expect(
       redemptionRevokeStateOf({ ...open, isMine: false, canUndoRedeem: true })
         .mode,
@@ -51,9 +51,9 @@ describe("撤銷兌獎兩層(規格 6.5)", () => {
       mode: "self",
       blockedBySent: true,
     });
-    expect(redemptionRevokeStateOf({ ...open, status: "revoked" }).mode).toBe(
-      null,
-    );
+    expect(
+      redemptionRevokeStateOf({ ...open, status: "revoked" }).mode,
+    ).toBeNull();
   });
 });
 
