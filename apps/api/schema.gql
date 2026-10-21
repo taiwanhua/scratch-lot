@@ -2519,6 +2519,7 @@ type LotteryTransferRow {
   receivedAt: DateTime
   rowId: String!
   shipped: Boolean!
+  shippedAt: DateTime
   ticketNos: [String!]!
   tickets: Int!
 }

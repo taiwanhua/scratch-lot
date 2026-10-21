@@ -150,6 +150,13 @@ export class LotteryTransferRowModel {
 
   @Field(() => GraphQLISODateTime, { nullable: true })
   receivedAt!: Date | null;
+
+  /**
+   * 這一列(這張單)最近一次「調出」的時間(第一關通過、或送出時跳過第一關的那一刻);還沒出貨 = null。
+   * 退回後重送時,已在途的列不再調出、時間不變 —— 前端以它判斷「這次」才出貨的列(出貨單只印這些)。
+   */
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  shippedAt!: Date | null;
 }
 
 /** 調貨單檢視頁的出貨確認清單與點收區塊(規格 8.4)。 */

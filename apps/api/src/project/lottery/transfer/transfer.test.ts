@@ -92,6 +92,7 @@ const RECEIVING = /* GraphQL */ `
         ticketNos
         shipped
         received
+        shippedAt
       }
     }
   }
@@ -1244,6 +1245,78 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
         ),
       ).toBe(true);
       expect(await numbersOf(shipped).then((value) => value.paid)).toBe(500);
+    });
+  });
+
+  describe("出貨時間(調貨出貨單只印這次才出貨的列;使用者 10/21 定案)", () => {
+    it("第一次出貨 5 本 → 都有出貨時間;退回補 2 本重送 → 只有那 2 本換新時間;再退回、沒新增就重送 → 時間都不變", async () => {
+      const books = [];
+      for (let index = 0; index < 7; index += 1) {
+        books.push(await newBook(branchA));
+      }
+      const lines = books.map((book) => whole(book.bookId));
+      const id = await submit(hq, lines.slice(0, 5));
+      await ship(id);
+      const shippedAtOf = async () => {
+        const data = await ok<{
+          lotteryTransferReceiving: {
+            rows: { rowId: string; shippedAt: string | null }[];
+          };
+        }>(api, hq.token, RECEIVING, { id });
+        return new Map(
+          data.lotteryTransferReceiving.rows.map((row) => [
+            row.rowId,
+            row.shippedAt,
+          ]),
+        );
+      };
+      const first = await shippedAtOf();
+      expect([...first.values()].every((at) => at !== null)).toBe(true);
+      // 5 本都點收了(在途沒點收的整本列重送會被送出前檢查擋下,另案)
+      for (const book of books.slice(0, 5)) {
+        expect(await receive(managerB, id, codeOf(book.bookNo))).toEqual({});
+      }
+
+      const resubmit = async (next: Line[]) => {
+        await decideOn(world(), managerB, id, "RETURN");
+        const row = await current(id);
+        const saved = await call<{
+          saveFormDraft: { submission: { editVersion: number } };
+        }>(api, hq.token, SAVE_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion: row.editVersion,
+            values: { ...header(), lines: next },
+          },
+        });
+        await ok(api, hq.token, SUBMIT_SUBMISSION, {
+          input: {
+            id,
+            expectedEditVersion:
+              saved.data?.saveFormDraft.submission.editVersion,
+          },
+        });
+        await ship(id);
+      };
+      await resubmit(lines);
+      const second = await shippedAtOf();
+      for (const line of lines.slice(0, 5)) {
+        expect(second.get(line.rowId)).toBe(first.get(line.rowId));
+      }
+      const added = lines.slice(5).map((line) => second.get(line.rowId));
+      expect(added.every((at) => at !== null && at !== undefined)).toBe(true);
+      const firstLatest = Math.max(
+        ...[...first.values()].map((at) => Date.parse(at ?? "")),
+      );
+      expect(added.every((at) => Date.parse(at ?? "") > firstLatest)).toBe(
+        true,
+      );
+
+      for (const book of books.slice(5)) {
+        expect(await receive(managerB, id, codeOf(book.bookNo))).toEqual({});
+      }
+      await resubmit(lines);
+      expect(await shippedAtOf()).toEqual(second);
     });
   });
 

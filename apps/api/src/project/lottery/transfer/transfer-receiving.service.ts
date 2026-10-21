@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { ClientSession } from "mongoose";
+import type { ClientSession, Types } from "mongoose";
 
 import {
   TICKET_EVENT_TYPE,
@@ -96,6 +96,21 @@ function rowOf(
  *   解除鎖定、寫 `lottery_transfer_receipts`,同一個交易。單據要在審核中、點收關卡的任務在操作者手上;
  *   這列還沒出貨 → 擋下;單上沒有 → 查是不是送往別家店的調貨單(送錯分店:擋下、不入庫)
  */
+/** 這一列的張最近一次調出的時間;都沒有調出事件 = null。 */
+function latestOf(
+  tickets: readonly { _id: Types.ObjectId }[],
+  shippedAt: ReadonlyMap<string, Date>,
+): Date | null {
+  let latest: Date | null = null;
+  for (const ticket of tickets) {
+    const at = shippedAt.get(String(ticket._id));
+    if (at !== undefined && (latest === null || at > latest)) {
+      latest = at;
+    }
+  }
+  return latest;
+}
+
 @Injectable()
 export class TransferReceivingService {
   constructor(
@@ -427,6 +442,10 @@ export class TransferReceivingService {
     const receivedAt = new Map(
       receipts.map((receipt) => [receipt.rowId, receipt.receivedAt]),
     );
+    const shippedAtOfTicket = await this.rules.shippedAtOf(
+      reader,
+      submission._id,
+    );
     const bookTickets = new Map<string, TransferTicket[]>();
     for (const book of books.values()) {
       bookTickets.set(
@@ -474,6 +493,7 @@ export class TransferReceivingService {
         shipped: isShipped,
         received: isReceived,
         receivedAt: receivedAt.get(line.rowId) ?? null,
+        shippedAt: isShipped ? latestOf(rowTickets, shippedAtOfTicket) : null,
       };
     });
     return {

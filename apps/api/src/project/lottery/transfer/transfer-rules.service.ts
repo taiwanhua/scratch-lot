@@ -216,6 +216,31 @@ export class TransferRules {
   }
 
   /** 這張單已點收的列。 */
+  /** 這張單每一張的最近一次「調出」時間(張 id → 時間)。 */
+  async shippedAtOf(
+    reader: OperatorContext,
+    submissionId: Types.ObjectId,
+  ): Promise<Map<string, Date>> {
+    const events = await this.events.findMany(
+      reader,
+      {
+        refType: "transfer",
+        refId: submissionId,
+        type: TICKET_EVENT_TYPE.transferOut,
+      },
+      { select: "ticketId at" },
+    );
+    const latest = new Map<string, Date>();
+    for (const event of events) {
+      const key = String(event.ticketId);
+      const current = latest.get(key);
+      if (current === undefined || event.at > current) {
+        latest.set(key, event.at);
+      }
+    }
+    return latest;
+  }
+
   async receiptsOf(
     reader: OperatorContext,
     submissionId: Types.ObjectId,
