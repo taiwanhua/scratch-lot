@@ -2149,7 +2149,13 @@
         "PURCHASE_WRONG_STORE": "這本不是送到這家店的",
         "PURCHASE_BOOK_NOT_ON_PURCHASE": "這本不在這張進貨單上",
         "BOOK_KEY_DUPLICATE": "這本已經在庫存裡,請退回更正",
-        "UNEXPECTED": "點收失敗,請再試一次"
+        "UNEXPECTED": "點收失敗,請再試一次",
+        "TRANSFER_NOT_RECEIVABLE": "這張調貨單現在不在你的點收關卡",
+        "TRANSFER_SCAN_INVALID": "看不懂這個碼,請刷這一列的任何一張",
+        "TRANSFER_ALREADY_RECEIVED": "這一列已經點收過了",
+        "TRANSFER_NOT_SHIPPED": "這一列還沒出貨,出貨確認後才能點收",
+        "TRANSFER_WRONG_STORE": "這本不是送到這家店",
+        "TRANSFER_BOOK_NOT_ON_TRANSFER": "這本(或這張)不在這張調貨單上"
       },
       "wrongStore": {
         "title": "這本不是送到這家店",
@@ -2159,6 +2165,133 @@
         "facts": "本號 {bookNo} · 進貨單 {serialNo} · {branch}",
         "message": "這本屬於「{branch}」的進貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。",
         "notified": "已通知這張進貨單的建立者更正"
+      }
+    },
+    "transfer": {
+      "badgeDescription": "點收關卡(第二關)在你手上的調貨單",
+      "createFromRequisition": "從其他分店調貨",
+      "list": {
+        "title": "調貨單",
+        "subtitle": "收貨店不發起調貨單,缺貨請開叫貨單",
+        "create": "+ 新增",
+        "count": "本數 / 張數",
+        "books": "{count} 本",
+        "tickets": "{count} 張",
+        "progress": "點收進度",
+        "settlement": "結算",
+        "cleared": "已結清",
+        "inTransit": "在途",
+        "kinds": {
+          "to_pay": "待付 {amount}",
+          "to_refund": "待退 {amount}",
+          "to_receive": "待收 {amount}"
+        },
+        "listAria": "調貨單列表",
+        "empty": "沒有符合條件的調貨單",
+        "loading": "載入中",
+        "total": "共 {total} 筆",
+        "filters": {
+          "status": "狀態",
+          "all": "全部"
+        }
+      },
+      "create": {
+        "tabLabel": "調貨單・新增",
+        "title": "新增調貨單",
+        "loading": "載入中",
+        "unavailable": "目前沒有可以新增的調貨單",
+        "fields": {
+          "fromBranch": "出貨分店",
+          "toBranch": "收貨分店",
+          "requisition": "叫貨單(選填)",
+          "noRequisition": "不引用叫貨單",
+          "requisitionOption": "{serialNo}({books} 本)",
+          "note": "備註"
+        },
+        "sameBranch": "收貨分店不能和出貨分店相同",
+        "lines": "調貨明細",
+        "scan": "刷條碼加入選取",
+        "scanNotFound": "這本不在出貨分店可以調的本裡",
+        "partialForbidden": "這本拆過了,只能選張;你沒有零碎張數的權限",
+        "noLines": "還沒有加入任何一本",
+        "linesAria": "調貨明細",
+        "modes": {
+          "whole": "整本",
+          "partial": "選張"
+        },
+        "opened": "拆過",
+        "wholeRange": "整本 {count} 張",
+        "cardFacts": "{mode} · {tickets} · {count} 張 · 金額 {amount} · 批購金額 {purchase}",
+        "columns": {
+          "game": "遊戲",
+          "book": "本",
+          "mode": "方式",
+          "ticketNos": "張號",
+          "tickets": "張數",
+          "amount": "金額",
+          "rate": "批購金額率",
+          "purchaseAmount": "批購金額"
+        },
+        "rateOf": "{book} 的批購金額率",
+        "remove": "移除",
+        "removeOf": "移除 {book}",
+        "transferTotal": "調貨金額(批購金額合計)",
+        "pickBook": "選本",
+        "pickBookNone": "選一本",
+        "pickFromBranch": "先選出貨分店",
+        "pickBookHint": "選一本,或刷條碼加入選取",
+        "bookOption": "{game} · {book}({kind},可調 {count} 張)",
+        "bookTitle": "{game} · 本號 {bookNo}",
+        "bookFacts": "出貨分店可調 {count} 張",
+        "addWhole": "整本加入",
+        "addPartial": "加入選取({count} 張)",
+        "cellUnavailable": "已售 / 不能選",
+        "cellInLines": "已在明細",
+        "addErrors": {
+          "duplicate": "這本已經在明細裡",
+          "empty": "還沒選任何一張"
+        },
+        "cancel": "取消",
+        "saveDraft": "存草稿",
+        "submit": "送出",
+        "draftSaved": "已存草稿",
+        "submitted": "已送出調貨單"
+      },
+      "view": {
+        "title": "調貨單",
+        "titleWithNo": "調貨單 {serialNo}",
+        "stageShip": "第一關 出貨確認",
+        "stageReceive": "第二關 點收",
+        "requisition": "叫貨單 {serialNo}",
+        "transferAmount": "調貨金額 {amount}",
+        "createdBy": "建立 {name}",
+        "shipList": "出貨確認清單",
+        "modes": {
+          "whole": "整本",
+          "partial": "選張"
+        },
+        "columns": {
+          "game": "遊戲",
+          "book": "本",
+          "mode": "方式",
+          "ticketNos": "張號",
+          "tickets": "張數",
+          "amount": "金額",
+          "rate": "批購金額率",
+          "purchaseAmount": "批購金額"
+        },
+        "cardFacts": "{mode} · {tickets} · {count} 張 · {rate}% · 批購金額 {amount}",
+        "receiveRow": "{game} · {bookNo} · {mode} {tickets}",
+        "problems": {
+          "receiver_underpaid": "收貨店還沒記付款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+          "shipper_unreceived": "出貨店還沒記收款 {amount};收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+          "shipper_overreceived": "出貨店多收 {amount},請先記退款",
+          "receiver_overpaid": "收貨店多付 {amount},請記收到退款"
+        }
+      },
+      "wrongStore": {
+        "facts": "本號 {bookNo} · 調貨單 {serialNo} · 送往 {branch}",
+        "message": "這本屬於送往「{branch}」的調貨單 #{serialNo},請交給送貨人帶到{branch},本店不用點收。"
       }
     }
   },
@@ -2178,6 +2311,20 @@
     "PURCHASE_UNRECEIVED_ROWS": "還有沒點收的本,全部點收後才能核准",
     "PURCHASE_HAS_RECEIPTS": "已經點收過的進貨單不能駁回或刪除",
     "PURCHASE_BOOKS_IN_USE": "有刮刮樂已售出、調出或拆本,不能作廢",
-    "SETTLEMENT_NOT_CLEARED": "結算還沒歸零(已付淨額不是 0),請先沖正或收到退款"
+    "SETTLEMENT_NOT_CLEARED": "結算還沒歸零(已付淨額不是 0),請先沖正或收到退款",
+    "TRANSFER_NO_LINES": "至少要有一列才能送出",
+    "TRANSFER_BRANCH_INVALID": "出貨分店、收貨分店都要選、不能相同,出貨分店要在你的範圍內",
+    "TRANSFER_LINE_INVALID": "明細的本、方式、張數或金額不合(整本要沒拆過、選張要拆過),請檢查後再送出",
+    "TRANSFER_PARTIAL_FORBIDDEN": "沒有零碎張數的權限,不能選張",
+    "TRANSFER_TICKETS_UNAVAILABLE": "有本或張不在出貨分店、已售、被鎖定,或在其他還沒結束的調貨單上",
+    "TRANSFER_RECEIVED_ROW_CHANGED": "已點收的列不能修改或刪除",
+    "TRANSFER_REQUISITION_INVALID": "叫貨單要是收貨分店、待購買的叫貨單",
+    "TRANSFER_UNRECEIVED_ROWS": "還有沒點收的列,全部點收後才能核准",
+    "TRANSFER_RECEIVER_UNDERPAID": "收貨店還沒記付款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+    "TRANSFER_SHIPPER_UNRECEIVED": "出貨店還沒記收款;收貨店已付 = 出貨店已收 = 調貨金額才能核准",
+    "TRANSFER_SHIPPER_OVERRECEIVED": "出貨店多收,請先記退款",
+    "TRANSFER_RECEIVER_OVERPAID": "收貨店多付,請記收到退款",
+    "TRANSFER_HAS_RECEIPTS": "已經點收過的調貨單不能駁回或刪除",
+    "TRANSFER_BOOKS_IN_USE": "調入的刮刮樂已售、再調出或拆本,不能作廢"
   }
 }

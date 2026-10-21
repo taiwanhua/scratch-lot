@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import { CreatePurchaseAction } from "../purchase/CreatePurchaseAction";
+import { CreateTransferAction } from "../transfer/CreateTransferAction";
 import type { PurchaseList } from "./purchase-list-sheet";
 
 /** 一張待購買的叫貨單(採購清單下半部的一列)。 */
@@ -15,6 +16,9 @@ export interface PendingRequisitionAction {
   Action: ComponentType<{ requisition: PendingRequisition }>;
 }
 
-/** 進貨單 [建立進貨單];調貨單(P19)追加 [從其他分店調貨]。 */
+/** 進貨單 [建立進貨單]、調貨單 [從其他分店調貨]。 */
 export const PENDING_REQUISITION_ACTIONS: readonly PendingRequisitionAction[] =
-  [{ key: "create-purchase", Action: CreatePurchaseAction }];
+  [
+    { key: "create-purchase", Action: CreatePurchaseAction },
+    { key: "create-transfer", Action: CreateTransferAction },
+  ];

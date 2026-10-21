@@ -692,7 +692,7 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
   {
     key: "admin.lifecycle.",
     reason:
-      "專案掛接點擋下的錯誤碼(叫貨單、進貨單、收付):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `requisition-error.ts` 的 `REQUISITION_REASONS`、`purchase-error.ts` 的 `PURCHASE_REASONS`、`accounts-error.ts` 的 `SETTLEMENT_NOT_CLEARED`)",
+      "專案掛接點擋下的錯誤碼(叫貨單、進貨單、調貨單、收付):底座 `lib/base/errors.ts` 的 `adminErrorText` 以 `admin.lifecycle.<reason>` 取用(api `requisition-error.ts` 的 `REQUISITION_REASONS`、`purchase-error.ts` 的 `PURCHASE_REASONS`、`transfer-error.ts` 的 `TRANSFER_REASONS`、`accounts-error.ts` 的 `SETTLEMENT_NOT_CLEARED`)",
   },
   {
     key: "admin.lotteryPurchasing.purchase.badgeDescription",
@@ -710,9 +710,29 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "進貨單新增頁刷條碼的 `t(`scanErrors.${kind}`)`,kind 取自 `PurchaseCreatePage/purchase-form.ts` 的 `addScannedBook` 結果",
   },
   {
+    key: "admin.lotteryPurchasing.transfer.badgeDescription",
+    reason:
+      "調貨單側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`transfer-registrations.ts`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.transfer.list.kinds.",
+    reason:
+      "調貨單列表的結算欄 `t(`kinds.${kind}`)`,kind 取自 api `lotteryTransferProgress.settlementKind`(`to_pay` / `to_refund` / `to_receive`)",
+  },
+  {
+    key: "admin.lotteryPurchasing.transfer.create.addErrors.",
+    reason:
+      "調貨單新增頁加入明細的 `t(`addErrors.${kind}`)`,kind 取自 `TransferCreatePage/transfer-form.ts` 的 `AddLineResult`",
+  },
+  {
+    key: "admin.lotteryPurchasing.transfer.view.problems.",
+    reason:
+      "調貨單檢視頁核准前的提示 `t(`problems.${kind}`)`,kind 取自 `@repo/domain/project/lottery` 的 `transferSettlementProblemOf`",
+  },
+  {
     key: "admin.lotteryPurchasing.receive.errors.",
     reason:
-      "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts` 從 api 的 `extensions.reason` 換算(`RECEIVE_REASONS`)",
+      "點收的 `t(`errors.${reason}`)`,reason 由 `PurchaseViewPage/receive-error.ts`(`RECEIVE_REASONS`)、`TransferViewPage/transfer-receive-error.ts`(`TRANSFER_RECEIVE_REASONS`)從 api 的 `extensions.reason` 換算",
   },
   {
     key: "admin.lotteryInventory.errors.",

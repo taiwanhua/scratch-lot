@@ -51,6 +51,11 @@ export const projectUrlStateInventory: UrlStateInventory = {
   "purchasing.purchase": ["purchases"],
   "purchasing.purchase.create-page": ["requisition", "branch"],
   "purchasing.purchase.view-page": ["revision"],
+  // 調貨單:列表的篩選 `transfers`;新增頁從採購清單帶入的叫貨單單號 `requisition` 與收貨分店 `to`;
+  // 檢視頁沒有網址狀態
+  "purchasing.transfer": ["transfers"],
+  "purchasing.transfer.create-page": ["requisition", "to"],
+  "purchasing.transfer.view-page": [],
   // 庫存管理:頁內分頁 `tab`、庫存分頁的篩選 `stock`(分店、遊戲、狀態、批購日、本號);
   // 本的詳情:查刮刮樂帶來的張號 `ticket`(打開時標亮)
   inventory: ["tab", "stock"],

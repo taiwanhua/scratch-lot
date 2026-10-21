@@ -2149,7 +2149,13 @@
         "PURCHASE_WRONG_STORE": "This book was not sent to this store",
         "PURCHASE_BOOK_NOT_ON_PURCHASE": "This book is not on this purchase",
         "BOOK_KEY_DUPLICATE": "This book is already in stock; return it for correction",
-        "UNEXPECTED": "Receiving failed, please try again"
+        "UNEXPECTED": "Receiving failed, please try again",
+        "TRANSFER_NOT_RECEIVABLE": "This transfer is not waiting for your receiving",
+        "TRANSFER_SCAN_INVALID": "Unknown code; scan any ticket of the line",
+        "TRANSFER_ALREADY_RECEIVED": "This line is already received",
+        "TRANSFER_NOT_SHIPPED": "This line is not shipped yet; receive it after shipping is confirmed",
+        "TRANSFER_WRONG_STORE": "This book is not for this store",
+        "TRANSFER_BOOK_NOT_ON_TRANSFER": "This book (or ticket) is not on this transfer"
       },
       "wrongStore": {
         "title": "This book was not sent to this store",
@@ -2159,6 +2165,133 @@
         "facts": "Book {bookNo} · purchase {serialNo} · {branch}",
         "message": "This book belongs to purchase #{serialNo} of {branch}. Hand it back to the courier for {branch}; this store does not receive it.",
         "notified": "The creator of that purchase has been notified"
+      }
+    },
+    "transfer": {
+      "badgeDescription": "Transfers waiting for your receiving (second step)",
+      "createFromRequisition": "Transfer from another store",
+      "list": {
+        "title": "Transfers",
+        "subtitle": "Receiving stores do not start transfers; place a requisition when short",
+        "create": "+ New",
+        "count": "Books / tickets",
+        "books": "{count} books",
+        "tickets": "{count} tickets",
+        "progress": "Receiving",
+        "settlement": "Settlement",
+        "cleared": "Settled",
+        "inTransit": "In transit",
+        "kinds": {
+          "to_pay": "To pay {amount}",
+          "to_refund": "To refund {amount}",
+          "to_receive": "To receive {amount}"
+        },
+        "listAria": "Transfer list",
+        "empty": "No transfers match",
+        "loading": "Loading",
+        "total": "{total} in total",
+        "filters": {
+          "status": "Status",
+          "all": "All"
+        }
+      },
+      "create": {
+        "tabLabel": "Transfer · New",
+        "title": "New transfer",
+        "loading": "Loading",
+        "unavailable": "No transfer form is available",
+        "fields": {
+          "fromBranch": "From store",
+          "toBranch": "To store",
+          "requisition": "Requisition (optional)",
+          "noRequisition": "No requisition",
+          "requisitionOption": "{serialNo} ({books} books)",
+          "note": "Note"
+        },
+        "sameBranch": "The to store must differ from the from store",
+        "lines": "Transfer lines",
+        "scan": "Scan to add to selection",
+        "scanNotFound": "This book is not available in the from store",
+        "partialForbidden": "This book is opened and can only be transferred by ticket; you lack the partial tickets permission",
+        "noLines": "No books added yet",
+        "linesAria": "Transfer lines",
+        "modes": {
+          "whole": "Whole",
+          "partial": "Tickets"
+        },
+        "opened": "opened",
+        "wholeRange": "Whole book, {count} tickets",
+        "cardFacts": "{mode} · {tickets} · {count} tickets · amount {amount} · purchase {purchase}",
+        "columns": {
+          "game": "Game",
+          "book": "Book",
+          "mode": "Mode",
+          "ticketNos": "Tickets",
+          "tickets": "Count",
+          "amount": "Amount",
+          "rate": "Purchase rate",
+          "purchaseAmount": "Purchase amount"
+        },
+        "rateOf": "Purchase rate of {book}",
+        "remove": "Remove",
+        "removeOf": "Remove {book}",
+        "transferTotal": "Transfer amount (purchase total)",
+        "pickBook": "Book",
+        "pickBookNone": "Pick a book",
+        "pickFromBranch": "Pick the from store first",
+        "pickBookHint": "Pick a book, or scan to add to selection",
+        "bookOption": "{game} · {book} ({kind}, {count} available)",
+        "bookTitle": "{game} · book {bookNo}",
+        "bookFacts": "{count} tickets available in the from store",
+        "addWhole": "Add whole book",
+        "addPartial": "Add selection ({count})",
+        "cellUnavailable": "Sold / unavailable",
+        "cellInLines": "In lines",
+        "addErrors": {
+          "duplicate": "This book is already in the lines",
+          "empty": "No tickets selected"
+        },
+        "cancel": "Cancel",
+        "saveDraft": "Save draft",
+        "submit": "Submit",
+        "draftSaved": "Draft saved",
+        "submitted": "Transfer submitted"
+      },
+      "view": {
+        "title": "Transfer",
+        "titleWithNo": "Transfer {serialNo}",
+        "stageShip": "Step 1 shipping",
+        "stageReceive": "Step 2 receiving",
+        "requisition": "Requisition {serialNo}",
+        "transferAmount": "Transfer amount {amount}",
+        "createdBy": "Created by {name}",
+        "shipList": "Shipping checklist",
+        "modes": {
+          "whole": "Whole",
+          "partial": "Tickets"
+        },
+        "columns": {
+          "game": "Game",
+          "book": "Book",
+          "mode": "Mode",
+          "ticketNos": "Tickets",
+          "tickets": "Count",
+          "amount": "Amount",
+          "rate": "Purchase rate",
+          "purchaseAmount": "Purchase amount"
+        },
+        "cardFacts": "{mode} · {tickets} · {count} tickets · {rate}% · purchase {amount}",
+        "receiveRow": "{game} · {bookNo} · {mode} {tickets}",
+        "problems": {
+          "receiver_underpaid": "The receiving store has not recorded payment of {amount}; paid, received and transfer amount must match before approval",
+          "shipper_unreceived": "The shipping store has not recorded receipt of {amount}; paid, received and transfer amount must match before approval",
+          "shipper_overreceived": "The shipping store received {amount} too much; record a refund first",
+          "receiver_overpaid": "The receiving store paid {amount} too much; record the refund received"
+        }
+      },
+      "wrongStore": {
+        "facts": "Book {bookNo} · transfer {serialNo} · to {branch}",
+        "message": "This book belongs to transfer #{serialNo} for {branch}. Hand it to the courier for {branch}; this store does not receive it."
       }
     }
   },
@@ -2178,6 +2311,20 @@
     "PURCHASE_UNRECEIVED_ROWS": "Some books are not received; receive all before approving",
     "PURCHASE_HAS_RECEIPTS": "A purchase with received books cannot be rejected or deleted",
     "PURCHASE_BOOKS_IN_USE": "Some tickets are sold, transferred or opened; it cannot be voided",
-    "SETTLEMENT_NOT_CLEARED": "The settlement is not cleared (the paid net is not 0); reverse or refund first"
+    "SETTLEMENT_NOT_CLEARED": "The settlement is not cleared (the paid net is not 0); reverse or refund first",
+    "TRANSFER_NO_LINES": "Add at least one line before submitting",
+    "TRANSFER_BRANCH_INVALID": "Pick different from and to stores; the from store must be in your scope",
+    "TRANSFER_LINE_INVALID": "A line does not match its book (whole books must be unopened; tickets need an opened book)",
+    "TRANSFER_PARTIAL_FORBIDDEN": "You lack the partial tickets permission",
+    "TRANSFER_TICKETS_UNAVAILABLE": "Some books or tickets are not in the from store, are sold, locked, or on another open transfer",
+    "TRANSFER_RECEIVED_ROW_CHANGED": "Received lines cannot be changed or removed",
+    "TRANSFER_REQUISITION_INVALID": "The requisition must be a pending requisition of the to store",
+    "TRANSFER_UNRECEIVED_ROWS": "Receive every line before approval",
+    "TRANSFER_RECEIVER_UNDERPAID": "The receiving store has not recorded payment; paid, received and transfer amount must match",
+    "TRANSFER_SHIPPER_UNRECEIVED": "The shipping store has not recorded receipt; paid, received and transfer amount must match",
+    "TRANSFER_SHIPPER_OVERRECEIVED": "The shipping store received too much; record a refund first",
+    "TRANSFER_RECEIVER_OVERPAID": "The receiving store paid too much; record the refund received",
+    "TRANSFER_HAS_RECEIPTS": "A transfer with received lines cannot be rejected or deleted",
+    "TRANSFER_BOOKS_IN_USE": "Received tickets were sold, transferred again or opened; the transfer cannot be voided"
   }
 }

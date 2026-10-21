@@ -19,6 +19,9 @@ import { RequisitionPage } from "@/pages/project/lottery/purchasing/RequisitionP
 import { PurchaseCreatePage } from "@/pages/project/lottery/purchasing/purchase/PurchaseCreatePage/PurchaseCreatePage";
 import { PurchasePage } from "@/pages/project/lottery/purchasing/purchase/PurchasePage/PurchasePage";
 import { PurchaseViewPage } from "@/pages/project/lottery/purchasing/purchase/PurchaseViewPage/PurchaseViewPage";
+import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/TransferCreatePage/TransferCreatePage";
+import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
+import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
 import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
@@ -92,6 +95,16 @@ export const projectModulePages: ModulePageSource = {
         list: { Page: PurchasePage },
         createPage: { Page: PurchaseCreatePage },
         viewPage: { Page: PurchaseViewPage },
+      },
+    },
+    // 調貨單(綁定 調貨單;規格 8.4):列表加本數 / 張數、點收進度、結算與「在途」、新增頁換成選本 + 張數格子、
+    // 檢視頁換成出貨確認清單 / 點收區塊 + 結算 + 審核;編輯(草稿、被退回)沿用表單引擎
+    {
+      moduleKey: "purchasing.transfer",
+      pageOverrides: {
+        list: { Page: TransferPage },
+        createPage: { Page: TransferCreatePage },
+        viewPage: { Page: TransferViewPage },
       },
     },
   ],

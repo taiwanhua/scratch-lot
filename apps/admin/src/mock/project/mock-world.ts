@@ -22,6 +22,11 @@ import {
   requisitionFormWorld,
 } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
+import {
+  transferFormWorld,
+  transferModules,
+} from "@/test/msw/project/lottery/transfer-fixtures";
+import { transferWorld } from "@/test/msw/project/lottery/transfer-handlers";
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
@@ -134,6 +139,7 @@ export const projectMockWorld: ProjectMockWorld = {
     ...accountsModules(),
     ...purchasingModules(),
     ...purchaseModules(),
+    ...transferModules(),
     ...inventoryModules(),
   ],
   handlers: () => [
@@ -145,6 +151,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...scheduleDayOffsWorld().handlers,
     // 我的班表 → 班表分頁:今天固定 2026-11-05(SC-01 的示範資料);`?myBothDots=1` 讓 11/4 同時缺卡又有異動
     ...scheduleMyWorld(myOptions()).handlers,
+    // 調貨單:收付照帳戶管理的 world(一個操作只能有一個 handler)
+    ...transferWorld({ withSettlement: false }).handlers,
     ...accountsWorld().handlers,
     ...scheduleRosterWorld(rosterOptions()).handlers,
     // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)
@@ -159,37 +167,44 @@ export const projectMockWorld: ProjectMockWorld = {
   ],
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
-  // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清)
+  // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清);
+  // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成)
   formRuntime: () => {
     const support = supportRequestFormWorld();
     const requisition = requisitionFormWorld();
     const purchase = purchaseFormWorld();
+    const transfer = transferFormWorld();
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
         ...(requisition.moduleForms ?? []),
         ...(purchase.moduleForms ?? []),
+        ...(transfer.moduleForms ?? []),
       ],
       versions: {
         ...support.versions,
         ...requisition.versions,
         ...purchase.versions,
+        ...transfer.versions,
       },
       submissions: [
         ...(support.submissions ?? []),
         ...(requisition.submissions ?? []),
         ...(purchase.submissions ?? []),
+        ...(transfer.submissions ?? []),
       ],
       fieldOptions: { ...support.fieldOptions },
       listColumns: {
         ...support.listColumns,
         ...requisition.listColumns,
         ...purchase.listColumns,
+        ...transfer.listColumns,
       },
       listBuiltin: {
         ...support.listBuiltin,
         ...requisition.listBuiltin,
         ...purchase.listBuiltin,
+        ...transfer.listBuiltin,
       },
     };
   },
