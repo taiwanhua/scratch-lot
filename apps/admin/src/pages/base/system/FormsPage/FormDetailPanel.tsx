@@ -30,6 +30,7 @@ import { AssignFormDialog } from "./FormDialogs/AssignFormDialog";
 import { EditFormDialog } from "./FormDialogs/EditFormDialog";
 import { ForkFormDialog } from "./FormDialogs/ForkFormDialog";
 import { SerialFormatField } from "./SerialFormatField";
+import { SharedByFieldsField } from "./SharedByFieldsField";
 import { VersionPanel } from "./VersionPanel/VersionPanel";
 import { VoidReasonCategoryField } from "./VoidReasonCategoryField";
 import { WorkflowBindingField } from "./WorkflowBinding/WorkflowBindingField";
@@ -187,6 +188,7 @@ export const FormDetailPanel = ({
         <AllowDraftField form={form} onChanged={onChanged} />
         <SerialFormatField form={form} onChanged={onChanged} />
         <VoidReasonCategoryField form={form} onChanged={onChanged} />
+        <SharedByFieldsField form={form} onChanged={onChanged} />
         {canBindWorkflow && hasPermission(FORMS_PERMISSIONS.edit) && (
           <WorkflowBindingField form={form} onChanged={onChanged} />
         )}

@@ -139,6 +139,26 @@
 - **受管表單**:seed 宣告可選填 `voidReasonCategoryKey`(欄位管理類別 key 格式),沒寫 = 自由填寫。受管 metadata 的規則同單號(有宣告才進 `contentHash`、寫入 / 改版 / 採納 / `METADATA_DRIFT`);「匯出專案設定」在有設時輸出。
 - 正本測試:`apps/api/src/forms/form-runtime/form-void-reason.test.ts`、`apps/admin/src/components/base/form-engine/FormModulePages/FormWorkflow.test.tsx`、`apps/admin/src/pages/base/system/FormsPage/FormsPageVoidReason.test.tsx`。
 
+### 依欄位共用
+
+`forms.sharedByFieldKeys`(`FormModel.sharedByFieldKeys`):表單層的組織引用欄(`type: reference`、`source.provider: org`,不在明細列內)key;空陣列 = 不共用(預設)。送出後,這幾欄指到的組織的**成員**也看得到這筆提交(唯讀),機制是資料共用的 `sharedByFields`(ADR-0014「表單提交:依欄位共用」):引擎每次寫入存值時從這幾欄算出頂層 `form_submissions.sharedOrgIds`(`forms/form-values/shared-org-ids.ts`),讀取由 `tenantScopePlugin` 放寬,寫入不放大。畫面是表單管理右側「作廢原因」下方的「依欄位共用」勾選框(`pages/base/system/FormsPage/SharedByFieldsField.tsx`):列目前發布版(沒有發布版用草稿)的組織引用欄,勾了立刻以 `updateForm` 存;已設、但這一版沒有的欄位以 key 列出;一個組織欄都沒有也沒設定 → 不顯示。
+
+| 情境                                     | 結果                                                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 建草稿 / 存草稿(狀態草稿)                | `sharedOrgIds = []`:草稿只屬於建立者,任何人都看不到別人的草稿                                                       |
+| 送出(不論走不走流程)、已完成後修改、升級 | 從這次的存值算(取 `values.<欄位>.id`,去重;沒值 / 不是組織 id 略過);被退回 / 撤回的單存草稿也照算                    |
+| 欄位指到的組織的成員                     | 列表、單筆、申請中心看得到;`abilities` 不給改 / 刪 / 作廢 / 複製為新單,呼叫 → `FORBIDDEN`(`SHARED_READ_ONLY`)       |
+| 其他組織、別的租戶                       | 照舊看不到(比對所屬組織、不受可見性開關與上下層展開;每個分支釘 `tenantId`)                                          |
+| 改了單上的組織欄                         | 下一次寫入就換成新的組織;看得到的人跟著變                                                                           |
+| 改了表單設定                             | 只影響之後的寫入;既有提交要跟著變就寫 migration 回填                                                                |
+| 設定的欄位不存在 / 不是組織引用欄 / 重複 | `updateForm` 回 `VALIDATION_FAILED`(`fields: ["sharedByFieldKeys"]`;對照目前發布版,沒有發布版對照草稿,都沒有不對照) |
+
+- 申請人本人走自己的路徑(`findOwn*`),不受「只能看」限制。
+- 業務功能直接讀 `form_submissions` 的,共用一樣生效;寫入資格(例 收付只能操作自己那一邊)由功能自己判斷。
+- **受管表單**:seed 宣告可選填 `sharedByFieldKeys`(非空陣列,每個都要是 `definition.fields` 裡的組織引用欄),沒寫 = 不共用。受管 metadata 的規則同單號(有宣告才進 `contentHash`、寫入 / 改版 / 採納 / `METADATA_DRIFT`);「匯出專案設定」在有設時輸出。
+- 稽核:`form.update` 記前後值(`sharedByFieldKeys`)。
+- 正本測試:`apps/api/src/forms/form-runtime/form-shared-by-fields.test.ts`、`apps/admin/src/pages/base/system/FormsPage/FormsPageSharedByFields.test.tsx`。
+
 ## 表單版本
 
 ### 狀態
@@ -551,7 +571,7 @@ input 欄位的缺席 / `null`:
   - 樂觀鎖 / 狀態:`DRAFT_REVISION_MISMATCH`、`DRAFT_EXISTS`、`DRAFT_MISSING`、`NO_CURRENT_VERSION`、`CURRENT_VERSION_CHANGED`、`EDIT_VERSION_MISMATCH`、`REVISION_MISMATCH`、`STATUS_MISMATCH`、`CLIENT_REQUEST_REUSED`、`ALREADY_COPIED`(複製為新單:來源已複製過)。
   - 容量:`REVISION_LIMIT`(綁流程的表單修訂已滿 50 筆;前端文案「修訂次數已達上限,請建立新的申請」)、`DOCUMENT_TOO_LARGE`(更新後文件超過 8MB;「修訂記錄已達容量上限,無法再修改」)。這兩個前端以 Snackbar 顯示,不提示重新載入。
   - 舊版資料升級:`FORM_HAS_WORKFLOW`(本租戶綁了流程)、`VERSION_NOT_PUBLISHED`(目標版不是已發布)。
-- `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`、`DRAFT_DISABLED`(表單關了「允許存草稿」:建草稿、存狀態草稿的單;見[允許存草稿](#允許存草稿));端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
+- `FORBIDDEN` 的 `reason`:`FIELD_FORBIDDEN`(附 `fieldKey`)、`FORM_NOT_AVAILABLE`、`NOT_FORM_OWNER`、`ROOT_ONLY`、`DRAFT_DISABLED`(表單關了「允許存草稿」:建草稿、存狀態草稿的單;見[允許存草稿](#允許存草稿))、`SHARED_READ_ONLY`(依欄位共用進來的提交:改 / 刪 / 作廢 / 複製為新單;見[依欄位共用](#依欄位共用));端點層沒權限的 `FORBIDDEN` 沒有 reason。別人的草稿一律 `NOT_FOUND`(草稿只屬於建立者,不透露它存在)。
 - `PERMISSION_NOT_DELETABLE` 的 `reasons`:`NOT_DYNAMIC`、`NOT_RETIRED`、`USED_BY_DRAFTS`、`CONFIRM_REQUIRED`。
 - `VALIDATION_FAILED`:定義有錯 → `fields: ["definition"]` + `issues`(檢查器的 `DefinitionIssue[]`,每筆帶定位);值有錯 → `fields`(欄位 key)+ `fieldErrors`(`{ fieldKey, code, message }`,code 見 `@repo/domain/form` 的 `VALUE_ISSUE_CODES`);匯出可攜性錯誤同樣用 `fields: ["definition"]` + `issues`,每筆為共用契約的 `{ code, message, path }`,由彈窗逐項顯示;匯出版本狀態不符使用 `fields: ["version"]`。其他輸入錯誤照一般的 `fields`。
 

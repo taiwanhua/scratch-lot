@@ -249,6 +249,7 @@ export const formFragment = (
   tabLabelTemplate: null,
   allowDraft: true,
   voidReasonCategoryKey: null,
+  sharedByFieldKeys: [],
   hasDraft: true,
   tenantEnabled: null,
   assignments: [],

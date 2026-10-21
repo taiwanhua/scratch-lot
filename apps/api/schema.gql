@@ -1099,6 +1099,7 @@ type FormModel {
   ownerOrgId: ID
   ownerOrgName: String
   serial: FormSerialFormat
+  sharedByFieldKeys: [String!]!
   tabLabelTemplate: String
   tenantEnabled: Boolean
   updatedAt: DateTime!
@@ -5892,6 +5893,7 @@ input UpdateFormInput {
   key: ID!
   name: String
   serial: FormSerialFormatInput
+  sharedByFieldKeys: [String!]
   tabLabelTemplate: String
   voidReasonCategoryKey: String
 }

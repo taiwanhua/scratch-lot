@@ -69,6 +69,8 @@ export interface IdentityMetadata {
   serial?: SerialFormat | null;
   /** 作廢原因類別;缺席 / null = 自由填寫(流程、這個欄位之前的安裝快照)。 */
   voidReasonCategoryKey?: string | null;
+  /** 依欄位共用;缺席 / 空 = 不共用(流程、這個欄位之前的安裝快照)。 */
+  sharedByFieldKeys?: string[];
 }
 
 /** 條件更新 metadata 的前置狀態:哪一筆定義、當時的目前版本與 metadata。 */
@@ -89,7 +91,9 @@ export function isSameIdentityMetadata(
     JSON.stringify(normalizeSerialFormat(left.serial ?? null)) ===
       JSON.stringify(normalizeSerialFormat(right.serial ?? null)) &&
     (left.voidReasonCategoryKey ?? null) ===
-      (right.voidReasonCategoryKey ?? null)
+      (right.voidReasonCategoryKey ?? null) &&
+    JSON.stringify(left.sharedByFieldKeys ?? []) ===
+      JSON.stringify(right.sharedByFieldKeys ?? [])
   );
 }
 

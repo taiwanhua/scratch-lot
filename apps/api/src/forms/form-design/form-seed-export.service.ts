@@ -6,6 +6,7 @@ import type { FormDefinitionSeedSet } from "@repo/domain/seed";
 import { FormVersionsRepository } from "../../database/database.module";
 import {
   allowsDraft,
+  sharedByFieldKeysOf,
   voidReasonCategoryOf,
 } from "../../database/schemas/form.schema";
 import {
@@ -84,6 +85,7 @@ export class FormSeedExportService {
     }
     const serial = normalizeSerialFormat(form.serial ?? null);
     const voidReasonCategory = voidReasonCategoryOf(form);
+    const sharedByFieldKeys = sharedByFieldKeysOf(form);
     const seed: FormDefinitionSeedSet = {
       kind: "form-definition",
       key: form.key,
@@ -101,6 +103,8 @@ export class FormSeedExportService {
       ...(voidReasonCategory === null
         ? {}
         : { voidReasonCategoryKey: voidReasonCategory }),
+      // 依欄位共用:有設才寫(缺席 = 不共用)
+      ...(sharedByFieldKeys.length === 0 ? {} : { sharedByFieldKeys }),
       definition: toPlainJson<FormDefinition>({
         fields: version.fields,
         layout: version.layout,

@@ -551,6 +551,40 @@ describe("受管表單:安裝、重跑、採納、改版與衝突", () => {
       expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
     });
 
+    it("依欄位共用:改版加上 → 表單帶設定、快照記下;重跑未變;現場清掉 → METADATA_DRIFT", async () => {
+      const fields = [
+        ...SEED_FIELDS,
+        field("branch", "reference", {
+          source: { provider: "org", labelField: "name" },
+        }),
+      ];
+      const r1 = formSeed("seed_shared_by", "r1", { fields });
+      await runSeeds(app, [r1]);
+      expect(
+        await definitionDoc(connection, FORM, "seed_shared_by"),
+      ).toMatchObject({ sharedByFieldKeys: [] });
+      const sharedByFieldKeys = ["branch"];
+      const r2 = formSeed("seed_shared_by", "r2", {
+        fields,
+        sharedByFieldKeys,
+      });
+      const upgraded = await runSeed(app, r2);
+      expect(upgraded.conflict).toBeNull();
+      expect(
+        await definitionDoc(connection, FORM, "seed_shared_by"),
+      ).toMatchObject({ sharedByFieldKeys });
+      const installation = await installationOf(connection, r2);
+      expect(installation?.metadata).toMatchObject({ sharedByFieldKeys });
+      const rerun = await runSeed(app, r2);
+      expect(rerun.conflict).toBeNull();
+
+      await ok(api, app.root, UPDATE_FORM, {
+        input: { key: "seed_shared_by", sharedByFieldKeys: null },
+      });
+      const drifted = await runSeeds(app, [r2]);
+      expect(drifted.results[0]?.conflict?.code).toBe("METADATA_DRIFT");
+    });
+
     it("允許存草稿沒變:改版的 metadata 更新不帶它(舊表單不寫進顯式 true,稽核不記)", async () => {
       const r1 = formSeed("seed_allow_draft_same", "r1");
       await runSeeds(app, [r1]);

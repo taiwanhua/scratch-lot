@@ -77,6 +77,7 @@ const TOP_LEVEL_KEY_ORDER: readonly string[] = [
   "allowDraft",
   "serial",
   "voidReasonCategoryKey",
+  "sharedByFieldKeys",
   "checkFormKey",
   "collection",
   "keyField",
