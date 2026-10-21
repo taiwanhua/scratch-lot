@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
-import { PURCHASE_FIELD_KEYS } from "@repo/domain/project/lottery";
+import {
+  PURCHASE_FIELD_KEYS,
+  PURCHASE_SETTLEMENT_SIDE,
+} from "@repo/domain/project/lottery";
 
 import {
   type AuthTestApp,
@@ -163,6 +166,14 @@ const SETTLEMENT = /* GraphQL */ `
 const REVERSE_SETTLEMENT = /* GraphQL */ `
   mutation TestReverseSettlement($input: ReverseLotterySettlementInput!) {
     reverseLotterySettlement(input: $input) {
+      recordId
+    }
+  }
+`;
+
+const RECORD_SETTLEMENT = /* GraphQL */ `
+  mutation TestRecordSettlement($input: RecordLotterySettlementInput!) {
+    recordLotterySettlement(input: $input) {
       recordId
     }
   }
@@ -1012,6 +1023,32 @@ describe("進貨單(規格 8.2、8.3)", () => {
       expect(data.lotterySettlement.item.sides[0]?.canSettle).toBe(false);
       const forHq = await settlementOf(purchase.id);
       expect(forHq.sides[0]?.canSettle).toBe(true);
+    });
+
+    it("進貨分店的人實際記帳 / 沖正 → FORBIDDEN(共用進來的只能看;寫入不放大)", async () => {
+      const purchase = await submit([book(gameHot)]);
+      const recorded = await call(api, settlerA.token, RECORD_SETTLEMENT, {
+        input: {
+          moduleKey: MODULE,
+          refId: purchase.id,
+          side: PURCHASE_SETTLEMENT_SIDE,
+          button: "out",
+          method: "bank",
+          amount: 100,
+          accountId: String(account),
+        },
+      });
+      expect(extensionsOf(recorded).code).toBe("FORBIDDEN");
+      const [automatic] = await bankRowsOf(purchase.id);
+      const reversed = await call(api, settlerA.token, REVERSE_SETTLEMENT, {
+        input: {
+          id: String(automatic?._id),
+          method: "bank",
+          reason: "分店沖正",
+        },
+      });
+      expect(extensionsOf(reversed).code).toBe("FORBIDDEN");
+      expect(await bankRowsOf(purchase.id)).toHaveLength(1);
     });
 
     it("改了進貨分店(退回後改成 B 再送出):看得到的店跟著變", async () => {

@@ -108,7 +108,7 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/transfer/transfer-access.ts": ["反查"],
   // 調貨點收:送錯分店時查別家店的調貨單與本
   "project/lottery/transfer/transfer-receiving.service.ts": ["反查"],
-  // 新增頁的選本與張數格子(本的張分在多家店)、列表進度(兩邊店都看得到)
+  // 新增頁的選本與張數格子(本的張分在多家店)、列表進度的點收紀錄與在途的張(分在兩邊店;單據本身走一般讀取)
   "project/lottery/transfer/transfer-query.service.ts": ["反查"],
   // 在途本數、收付的已點收金額、側欄計數讀流程實例:沒有操作者,問的是整個租戶
   "project/lottery/transfer/transfer-registrations.ts": ["系統重算"],

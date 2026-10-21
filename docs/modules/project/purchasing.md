@@ -299,7 +299,7 @@
 
 **送錯分店**(同進貨單):單上沒有這本時,查同租戶其他未結束、送往別家分店的調貨單:有 → `TRANSFER_WRONG_STORE`(`extensions` 帶那張單的收貨分店、單號、遊戲、面額、本號),不入庫,畫面提示交給送貨人;沒有 → `TRANSFER_BOOK_NOT_ON_TRANSFER`。[知道了] 不記錄;[通知總部更正] → `notifyLotteryTransferWrongStore`,通知那張調貨單的建立者(`lottery.transfer-wrong-store`,`dedupeKey` = 那張單 / 那一列 / 刷到的這張單,連到調貨單詳情頁)。
 
-**收付**(`registerSettlementDocument`):兩邊 —— 收貨店(`receiver`,付款方,`pay`,銀行或現金;現金來源這一輪只有小金庫,收銀點抽屜由店面的功能接)、出貨店(`shipper`,收款方,`receive`,一律銀行)。調貨金額 = 批購金額合計;收貨店 [付款] = **已點收**的批購金額 − 已付淨額、[收到退款] = 已付淨額 − 已點收的批購金額;出貨店 [收款] = 收貨店已付 − 出貨店已收(只有出貨店已收 < 調貨金額時)、[退款] = 出貨店已收 − 調貨金額;≤ 0 停用。兩邊店都看得到這張單的收付(依欄位共用),但每一邊只有那一邊的分店在自己可見範圍內才能記(`sharedByValues` = 出貨 / 收貨分店;寫入不放大)。
+**收付**(`registerSettlementDocument`):兩邊 —— 收貨店(`receiver`,付款方,`pay`,銀行或現金;現金來源這一輪只有小金庫,收銀點抽屜由店面的功能接)、出貨店(`shipper`,收款方,`receive`,一律銀行)。調貨金額 = 批購金額合計;收貨店 [付款] = **已點收**的批購金額 − 已付淨額、[收到退款] = 已付淨額 − 已點收的批購金額;出貨店 [收款] = 收貨店已付 − 出貨店已收(只有出貨店已收 < 調貨金額時)、[退款] = 出貨店已收 − 調貨金額;≤ 0 停用。兩邊店都看得到這張單的收付(依欄位共用),但每一邊只有那一邊的分店在自己可見範圍內才能記(`sideBranchPaths` = 出貨 / 收貨分店;寫入不放大)。
 
 **超過預計要給本數只警告**(規格 7.6):`lotteryTransferOptions` 給收貨分店時一起回這些遊戲的預計要給本數、已給、在途;新增頁在「已給 + 在途 + 這張單整本調過去的本數 > 預計」時列出超過的遊戲(`AllocationWarnings`),照樣可以送出。零碎張數不湊成一本,不算進去。
 
@@ -366,7 +366,7 @@
 - **在途來源**(`in-transit.ts`):`registerInTransitSource(name, ({ tenantId, orgId }) => Map<gameId, 本數>)`,`inTransitBooksOf` 加總。叫貨單(待購買的副本)由本模組登記;進貨單、調貨單各自登記「已建立還沒點收完成」的本數(草稿不算)。
 - **遊戲引用檢查**:向檔案管理登記 `lottery-requisitions`(`game-usage.ts`):草稿以外的叫貨單引用過的遊戲 = 有庫存(鎖定、不能刪)。
 - **帳本的系統鎖與換店**(調貨單用,`TicketLedgerService`):`lockTicketsInTenant` / `unlockTicketsInTenant`(事後動作的系統身分只看得到單據的組織,以租戶邊界改自己的鎖);`LedgerContext.systemActorId`(沒有操作者的系統寫入代表觸發它的人,才能換店,稽核記他;作廢調貨單時是作廢的人)。正本 `docs/modules/project/inventory.md`。
-- **收付登記的擴充**(調貨單用,`registerSettlementDocument`):`payable` 可以是非同步;`SettlementPayable.received`(付款方先填值的基準,進 `SettlementState.received`);`sharedByValues`(兩邊店的單據:每一邊要那一邊的分店在讀者可見範圍內才能記;兩邊店看得到靠依欄位共用)。正本 `docs/modules/project/accounts.md`。
+- **收付登記的擴充**(調貨單用,`registerSettlementDocument`):`payable` 可以是非同步;`SettlementPayable.received`(付款方先填值的基準,進 `SettlementState.received`);`sideBranchPaths`(兩邊店的單據:每一邊要那一邊的分店在讀者可見範圍內才能記;兩邊店看得到靠依欄位共用)。正本 `docs/modules/project/accounts.md`。
 
 ### 錯誤碼
 

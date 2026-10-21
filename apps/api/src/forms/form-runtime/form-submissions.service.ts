@@ -1826,8 +1826,8 @@ export class FormSubmissionsService {
    * - 改:申請人改草稿 / 退回 / 撤回(`create`);不綁流程的已完成(`edit`);綁流程的已完成鎖定
    * - 刪:草稿 / 被退回 / 撤回 = 申請人本人(`create`);不綁流程的已完成 / 已駁回(`delete`)
    * - 撤回:申請人、審核中;作廢:綁流程的已完成、申請人或 `edit`;複製為新單:已作廢 + `create`
-   * - **共用進來的**(歸屬組織不在可見範圍內、靠依欄位共用讀到的,ADR-0014):只能看 —— 不是申請人本人就不能改 /
-   *   刪 / 作廢(寫入本來就只照可見範圍,這裡讓按鈕跟著不出現)
+   * - **共用進來的**(歸屬組織不在可見範圍內、靠依欄位共用讀到的,ADR-0014):只能看 —— 已完成單的改 / 刪只看
+   *   可見範圍(同端點的 `assertInWriteScope`);作廢、複製為新單的申請人本人走自己的路徑,不受限
    */
   private abilitiesOf(
     facts: FormOperatorFacts,
@@ -1850,20 +1850,22 @@ export class FormSubmissionsService {
       record.formKey,
     );
     const isBound = record.currentInstanceId !== null;
-    // 共用只放寬讀:歸屬組織不在可見範圍內的,只有申請人本人走自己的路徑寫得動
-    const inWriteScope = isOwner || isOrgVisible(facts.operator, record.orgId);
+    // 共用只放寬讀:歸屬組織在可見範圍內才寫得動(同端點的 `assertInWriteScope`);
+    // 作廢與複製為新單的申請人本人走自己的路徑,不受限
+    const inVisibleScope = isOrgVisible(facts.operator, record.orgId);
+    const inWriteScope = isOwner || inVisibleScope;
     const isApplicantEditable =
       isOwner && APPLICANT_EDITABLE.includes(record.status) && canCreate;
     const canEdit =
       isApplicantEditable ||
-      (inWriteScope &&
+      (inVisibleScope &&
         record.status === "completed" &&
         !isBound &&
         can("edit"));
     const canDelete =
       APPLICANT_EDITABLE.includes(record.status) && isOwner
         ? isApplicantEditable
-        : inWriteScope && isDeletableRecord(record) && can("delete");
+        : inVisibleScope && isDeletableRecord(record) && can("delete");
     return {
       canEdit,
       canSaveDraft: isApplicantEditable && allowDraft,
@@ -1872,7 +1874,7 @@ export class FormSubmissionsService {
       canVoid:
         record.status === "completed" &&
         isBound &&
-        (isOwner || (inWriteScope && can("edit"))),
+        (isOwner || (inVisibleScope && can("edit"))),
       canCopy: record.status === "voided" && canCreate && inWriteScope,
     };
   }

@@ -109,7 +109,7 @@ export interface SettlementDocumentRegistration {
    * **讀取不靠它**:兩邊店看得到單據是受管表單的「依欄位共用」(`sharedByFieldKeys` → `sharedOrgIds`,ADR-0014),
    * 結算區塊與待結清款項都走一般讀取。
    */
-  sharedByValues?: readonly string[];
+  sideBranchPaths?: readonly string[];
   sides: readonly SettlementSideRegistration[];
 }
 

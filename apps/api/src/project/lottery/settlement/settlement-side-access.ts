@@ -22,7 +22,7 @@ import {
 
 /**
  * 這一邊能不能操作(收付寫入不放大,ADR-0014):
- * - 兩邊店的單據(`sharedByValues`,調貨單):這一邊的分店要在可見範圍內(只能操作自己那一邊)
+ * - 兩邊店的單據(`sideBranchPaths`,調貨單):這一邊的分店要在可見範圍內(只能操作自己那一邊)
  * - 其他單據:單據本身要在可見範圍內(依欄位共用進來的只能看,例 總部建的進貨單給進貨分店看)
  */
 export function isSideSettleable(
@@ -30,7 +30,7 @@ export function isSideSettleable(
   snapshot: Pick<SettlementSnapshot, "registration" | "submission">,
   sideBranch: Types.ObjectId,
 ): boolean {
-  return snapshot.registration.sharedByValues === undefined
+  return snapshot.registration.sideBranchPaths === undefined
     ? isOrgVisible(operator, snapshot.submission.orgId)
     : isOrgVisible(operator, sideBranch);
 }

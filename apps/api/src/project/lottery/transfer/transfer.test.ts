@@ -1718,6 +1718,47 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
   });
 
   describe("列表進度", () => {
+    it("讀得到才有進度:可見範圍含收貨店、但不屬於收貨店的人(上層組織含下層)讀不到;收貨店的人讀得到", async () => {
+      const district = await createOrg(api.connection, {
+        name: "北區",
+        parentId: tenant,
+      });
+      const northStore = await createOrg(api.connection, {
+        name: "北區分店",
+        parentId: district,
+      });
+      const scope = {
+        moduleKeys: [...TRANSFER_MODULE_KEYS],
+        permissionKeys: [TRANSFER_PERMISSION_KEYS.view],
+      };
+      const districtManager = await person(
+        api,
+        api.connection,
+        district,
+        tenant,
+        scope,
+      );
+      const northManager = await person(
+        api,
+        api.connection,
+        northStore,
+        tenant,
+        scope,
+      );
+      const book = await newBook(branchA);
+      const id = await submit(hq, [whole(book.bookId)], {
+        to_branch: String(northStore),
+      });
+      const progressOf = async (who: Person) => {
+        const data = await ok<{
+          lotteryTransferProgress: { transferId: string }[];
+        }>(api, who.token, PROGRESS, { ids: [id] });
+        return data.lotteryTransferProgress.map((row) => row.transferId);
+      };
+      expect(await progressOf(districtManager)).toEqual([]);
+      expect(await progressOf(northManager)).toEqual([id]);
+    });
+
     it("本數 / 張數、點收進度、在途、結算", async () => {
       const book = await newBook(branchA);
       const opened = await newBook(branchA);

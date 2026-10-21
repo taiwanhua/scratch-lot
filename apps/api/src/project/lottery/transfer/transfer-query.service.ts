@@ -4,7 +4,6 @@ import type { Types } from "mongoose";
 import {
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
-  TRANSFER_FIELD_KEYS,
   TRANSFER_FORM_KEY,
   TRANSFER_MODE,
   TRANSFER_MODULE_KEY,
@@ -45,8 +44,6 @@ import type {
 import { notFoundError } from "./transfer-error";
 import { TransferRules, toObjectId } from "./transfer-rules.service";
 
-const FROM_PATH = `values.${TRANSFER_FIELD_KEYS.fromBranch}.id`;
-const TO_PATH = `values.${TRANSFER_FIELD_KEYS.toBranch}.id`;
 
 /** 讀到的一張(選本 / 格子用)。 */
 interface TicketFact {
@@ -241,27 +238,13 @@ export class TransferQueryService {
       moduleKey: TRANSFER_MODULE_KEY,
       formKey: TRANSFER_FORM_KEY,
     };
-    const visible = await this.submissions.findMany(operator, filter);
+    // 讀得到 = 一般讀取(可見範圍,或依欄位共用:出貨 / 收貨分店是讀者的所屬組織;ADR-0014),與
+    // `TransferAccess` / 收付同一個判準。點收紀錄與在途的張分在兩邊店,只對讀得到的這幾張單以租戶邊界讀
+    const submissions = await this.submissions.findMany(operator, filter);
+    if (submissions.length === 0) {
+      return [];
+    }
     const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
-    const seen = new Set(visible.map((row) => String(row._id)));
-    const orgIds =
-      operator.visibleOrgIds === "all"
-        ? []
-        : operator.visibleOrgIds.map(String);
-    // 兩邊店都看得到:出貨分店 / 收貨分店在讀者的可見範圍內(草稿除外)
-    const sharedRows =
-      orgIds.length === 0
-        ? []
-        : await this.submissions.findMany(reader, {
-            ...filter,
-            status: { $ne: "draft" },
-            $or: [
-              { [FROM_PATH]: { $in: orgIds } },
-              { [TO_PATH]: { $in: orgIds } },
-            ],
-          });
-    const shared = sharedRows.filter((row) => !seen.has(String(row._id)));
-    const submissions = [...visible, ...shared];
     const receipts = await this.receipts.findMany(
       reader,
       { submissionId: { $in: submissions.map((row) => row._id) } },

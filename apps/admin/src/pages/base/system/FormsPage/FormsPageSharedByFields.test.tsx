@@ -17,7 +17,7 @@ import { preloadFormsPage, renderFormsPage } from "./forms-page-test-support";
 
 preloadFormsPage();
 
-/** 購物單加兩個組織引用欄(進貨分店、收貨分店)與一個使用者引用欄(不能選)。 */
+/** 購物單加兩個組織引用欄(收貨組織、供應組織)與一個使用者引用欄(不能選)。 */
 const withOrgFields = (): FormDefinition => {
   const base = shoppingDefinition();
   const org = (key: string, label: string) =>
@@ -29,8 +29,8 @@ const withOrgFields = (): FormDefinition => {
     ...base,
     fields: [
       ...base.fields,
-      org("branch", "進貨分店"),
-      org("to_branch", "收貨分店"),
+      org("receiver_org", "收貨組織"),
+      org("supplier_org", "供應組織"),
       field("owner", "負責人", "reference", {
         widget: { kind: "referencePicker" },
         source: { provider: "user", labelField: "name" },
@@ -40,13 +40,13 @@ const withOrgFields = (): FormDefinition => {
       sections: [
         ...base.layout.sections,
         {
-          key: "branches",
-          title: "分店",
+          key: "orgs",
+          title: "組織",
           rows: [
             {
               cols: [
-                { fieldKey: "branch", span: 6 },
-                { fieldKey: "to_branch", span: 6 },
+                { fieldKey: "receiver_org", span: 6 },
+                { fieldKey: "supplier_org", span: 6 },
               ],
             },
             { cols: [{ fieldKey: "owner", span: 12 }] },
@@ -76,19 +76,19 @@ describe("表單管理:表單設定「依欄位共用」", () => {
   it("列出目前發布版的組織欄位(使用者引用欄不列);勾選 → updateForm 帶 sharedByFieldKeys;取消 → 移掉", async () => {
     const { user, world } = renderFormsPage(optionsWith());
 
-    const branch = await screen.findByRole("checkbox", { name: "進貨分店" });
+    const receiver = await screen.findByRole("checkbox", { name: "收貨組織" });
     expect(
-      screen.getByRole("checkbox", { name: "收貨分店" }),
+      screen.getByRole("checkbox", { name: "供應組織" }),
     ).not.toBeChecked();
     expect(
       screen.queryByRole("checkbox", { name: "負責人" }),
     ).not.toBeInTheDocument();
-    expect(branch).not.toBeChecked();
+    expect(receiver).not.toBeChecked();
 
-    await user.click(branch);
+    await user.click(receiver);
     await waitFor(() => {
       expect(world.inputs.updateForm).toEqual([
-        { key: "shopping_list", sharedByFieldKeys: ["branch"] },
+        { key: "shopping_list", sharedByFieldKeys: ["receiver_org"] },
       ]);
     });
     expect(await findSnackbarAlert()).toMatchObject({
@@ -96,21 +96,21 @@ describe("表單管理:表單設定「依欄位共用」", () => {
       severity: "success",
     });
     await waitFor(() => {
-      expect(screen.getByRole("checkbox", { name: "進貨分店" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "收貨組織" })).toBeChecked();
     });
 
-    await user.click(screen.getByRole("checkbox", { name: "收貨分店" }));
+    await user.click(screen.getByRole("checkbox", { name: "供應組織" }));
     await waitFor(() => {
       expect(world.inputs.updateForm.at(-1)).toEqual({
         key: "shopping_list",
-        sharedByFieldKeys: ["branch", "to_branch"],
+        sharedByFieldKeys: ["receiver_org", "supplier_org"],
       });
     });
-    await user.click(screen.getByRole("checkbox", { name: "進貨分店" }));
+    await user.click(screen.getByRole("checkbox", { name: "收貨組織" }));
     await waitFor(() => {
       expect(world.inputs.updateForm.at(-1)).toEqual({
         key: "shopping_list",
-        sharedByFieldKeys: ["to_branch"],
+        sharedByFieldKeys: ["supplier_org"],
       });
     });
   });
@@ -118,7 +118,7 @@ describe("表單管理:表單設定「依欄位共用」", () => {
   it("改不動的表單:看得到目前的設定(這一版沒有的欄位以 key 列出),但不能勾", async () => {
     renderFormsPage(
       optionsWith({
-        sharedByFieldKeys: ["branch", "old_branch"],
+        sharedByFieldKeys: ["receiver_org", "old_org"],
         abilities: {
           canEdit: false,
           canAssign: false,
@@ -128,10 +128,10 @@ describe("表單管理:表單設定「依欄位共用」", () => {
       }),
     );
 
-    const branch = await screen.findByRole("checkbox", { name: "進貨分店" });
-    expect(branch).toBeChecked();
-    expect(branch).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "old_branch" })).toBeChecked();
+    const receiver = await screen.findByRole("checkbox", { name: "收貨組織" });
+    expect(receiver).toBeChecked();
+    expect(receiver).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "old_org" })).toBeChecked();
   });
 
   it("表單沒有組織欄位、也沒設定:不顯示這個設定", async () => {
