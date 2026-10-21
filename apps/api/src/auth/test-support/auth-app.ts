@@ -8,6 +8,7 @@ import mongoose, { type Connection } from "mongoose";
 import request from "supertest";
 
 import { HOOK_TIMEOUT_MS } from "../../database/test-support/mongo-connection";
+import { waitForCollectionsAndIndexes } from "../../database/test-support/wait-for-indexes";
 
 /** db-migrator 套件根目錄(以子行程跑其 seed 指令,不 import — STRUCT-01 禁 app 互 import)。 */
 const DB_MIGRATOR_ROOT = path.resolve(
@@ -258,6 +259,7 @@ async function bootAuthTestApp(
   }).compile();
   const app = moduleRef.createNestApplication();
   await app.init();
+  await waitForCollectionsAndIndexes(app);
 
   const connection = await mongoose.createConnection(databaseUri).asPromise();
 
