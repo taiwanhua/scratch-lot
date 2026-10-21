@@ -11,6 +11,8 @@ import {
 } from "@repo/domain/project/lottery";
 import type { LotteryTransferOptionsQuery } from "@repo/graphql";
 
+import type { AllocationWarningItem } from "@/components/project/lottery/AllocationWarnings/allocation-warnings";
+
 /**
  * 調貨單新增頁的純函式(規格 8.4;Figma PU-09):整本加入 / 選張加入、刷條碼找本、批購金額率逐本改、
  * 金額(整本 = 整本金額;選張 = 面額 × 張數)、調貨金額、組成表單存值。
@@ -187,3 +189,32 @@ export const transferValuesOf = (
     [K.rate]: line.rate,
   })),
 });
+
+/**
+ * 超過收貨店預計要給本數的輸入(規格 7.6,只警告):整本一列算一本,零碎張數不湊成一本;
+ * 這張單沒有整本調這個遊戲就不列。
+ */
+export const transferAllocationItemsOf = (
+  allocations: TransferOptions["allocations"],
+  lines: readonly TransferDraftLine[],
+): AllocationWarningItem[] =>
+  allocations.flatMap((allocation) => {
+    const whole = lines.filter(
+      (line) =>
+        line.book.gameId === allocation.gameId &&
+        line.mode === TRANSFER_MODE.whole,
+    );
+    const first = whole.at(0);
+    return first === undefined
+      ? []
+      : [
+          {
+            key: allocation.gameId,
+            label: `${first.book.gameCode} ${first.book.gameName}`,
+            plannedBooks: allocation.plannedBooks ?? null,
+            givenBooks: allocation.givenBooks,
+            inTransitBooks: allocation.inTransitBooks,
+            books: whole.length,
+          },
+        ];
+  });

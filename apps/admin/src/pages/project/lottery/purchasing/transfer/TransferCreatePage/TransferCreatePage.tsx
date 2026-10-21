@@ -11,17 +11,12 @@ import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
 import { CircularProgress } from "@repo/ui/circular-progress";
 import { useBreakpointDown } from "@repo/ui/media-query";
-import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
-import { OrgTreeSelect } from "@/components/base/OrgTreeSelect/OrgTreeSelect";
 import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
-import {
-  type AllocationWarningItem,
-  AllocationWarnings,
-} from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
+import { AllocationWarnings } from "@/components/project/lottery/AllocationWarnings/AllocationWarnings";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useFormDraft } from "@/hooks/base/useFormDraft";
 import { useMe } from "@/hooks/base/useMe";
@@ -44,6 +39,7 @@ import {
   formatMoney,
 } from "../transfer-keys";
 import { TransferBookPanel } from "./TransferBookPanel";
+import { TransferHeaderFields } from "./TransferHeaderFields";
 import { TransferLines } from "./TransferLines";
 import {
   type AddLineResult,
@@ -54,11 +50,10 @@ import {
   bookOfScan,
   removeLine,
   setLineRate,
+  transferAllocationItemsOf,
   transferTotalOf,
   transferValuesOf,
 } from "./transfer-form";
-
-const NONE = "none";
 
 /** 帶入的值(空字串 = 沒帶)。 */
 const fromSchema = z.string().default("");
@@ -134,29 +129,11 @@ export const TransferCreatePage = () => {
   const inLines =
     lines.find((line) => line.book.bookId === bookId)?.ticketNos ?? [];
   const total = transferTotalOf(lines);
-  // 超過收貨店的預計要給本數只警告(規格 7.6):整本一列算一本,零碎張數不湊成一本
-  const allocationItems: AllocationWarningItem[] = (
-    data?.allocations ?? []
-  ).flatMap((allocation) => {
-    const whole = lines.filter(
-      (line) =>
-        line.book.gameId === allocation.gameId &&
-        line.mode === TRANSFER_MODE.whole,
-    );
-    const [first] = whole;
-    return first === undefined
-      ? []
-      : [
-          {
-            key: allocation.gameId,
-            label: `${first.book.gameCode} ${first.book.gameName}`,
-            plannedBooks: allocation.plannedBooks ?? null,
-            givenBooks: allocation.givenBooks,
-            inTransitBooks: allocation.inTransitBooks,
-            books: whole.length,
-          },
-        ];
-  });
+  // 超過收貨店的預計要給本數只警告(規格 7.6)
+  const allocationItems = transferAllocationItemsOf(
+    data?.allocations ?? [],
+    lines,
+  );
   const isSameBranch = fromBranchId !== "" && fromBranchId === toBranchId;
 
   const apply = (result: AddLineResult) => {
@@ -239,79 +216,24 @@ export const TransferCreatePage = () => {
           <Typography variant="h6" component="h1">
             {t("title")}
           </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                lg: "repeat(4, 1fr)",
-              },
+          <TransferHeaderFields
+            fromBranchId={fromBranchId}
+            toBranchId={toBranchId}
+            requisitionNo={requisitionNo}
+            note={note}
+            requisitions={data?.requisitions ?? []}
+            onFromBranch={(next) => {
+              setFromBranch(next);
+              setLines([]);
+              pickBook(null);
             }}
-          >
-            <OrgTreeSelect
-              scope="visible"
-              label={t("fields.fromBranch")}
-              value={fromBranchId === "" ? [] : [fromBranchId]}
-              required
-              fullWidth
-              onChange={(ids) => {
-                setFromBranch(ids[0] ?? "");
-                setLines([]);
-                pickBook(null);
-              }}
-            />
-            <OrgTreeSelect
-              scope="visible"
-              label={t("fields.toBranch")}
-              value={toBranchId === "" ? [] : [toBranchId]}
-              required
-              fullWidth
-              error={isSameBranch}
-              helperText={isSameBranch ? t("sameBranch") : t("toBranchHint")}
-              onChange={(ids) => {
-                setToBranchId(ids[0] ?? "");
-                setRequisitionNo(null);
-              }}
-            />
-            <SelectField<string>
-              label={t("fields.requisition")}
-              size="small"
-              value={
-                data?.requisitions.find(
-                  (item) => item.serialNo === requisitionNo,
-                )?.id ?? NONE
-              }
-              disabled={toBranchId === ""}
-              options={[
-                { value: NONE, label: t("fields.noRequisition") },
-                ...(data?.requisitions ?? []).map((item) => ({
-                  value: item.id,
-                  label: t("fields.requisitionOption", {
-                    serialNo: item.serialNo ?? item.id,
-                    books: item.books,
-                  }),
-                })),
-              ]}
-              onChange={(next) => {
-                setRequisitionNo(
-                  data?.requisitions.find((item) => item.id === next)
-                    ?.serialNo ?? null,
-                );
-              }}
-              fullWidth
-            />
-            <TextField
-              label={t("fields.note")}
-              size="small"
-              value={note}
-              onChange={(event) => {
-                setNote(event.target.value);
-              }}
-              fullWidth
-            />
-          </Box>
+            onToBranch={(next) => {
+              setToBranchId(next);
+              setRequisitionNo(null);
+            }}
+            onRequisition={setRequisitionNo}
+            onNote={setNote}
+          />
           <Box
             sx={{
               display: "grid",
