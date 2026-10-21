@@ -453,8 +453,8 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 - **登記**:專案在 `app/project/workflow-extensions.ts`、底座在 `app/base/workflow-extensions.ts`,各是 `WorkflowExtensionRegistration[]`(`{ moduleKey, Effect?, Review? }`,型別在 `hooks/base/useWorkflowExtensions.ts`);`app/module-pages.tsx` 合成後交給殼層的 `WorkflowExtensionsProvider`。同一個模組可以登記多筆,各做各的。
 - **`Effect` 掛在殼層**:收到事件就替那個模組的每個 `Effect` 各掛一份元件,做完(成功或失敗都要)呼叫 `onDone` 卸載;換頁、關彈窗都不會打斷。要畫面外的節點(例:列印轉圖)就畫在自己的元件裡。事件只帶識別,要的資料自己向 api 讀(審核者只讀得到他審的那個修訂:用 `instance.revision` 讀提交)。
-- **`Review`**:警告文字由元件自己畫(租戶看得到的字放專案字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
-- 例:調貨單登記 `Effect`(第一關通過後印調貨出貨單,`docs/modules/project/purchasing.md`「列印」)。
+- **`Review`**:警告文字由元件自己畫(租戶看得到的字放該模組的字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
+- 例:某個模組的單據在第一關通過後要自動列印 → 登記 `Effect`;某個模組的審核要先看關聯資料是否還在 → 登記 `Review` 顯示警告、停用 [核准]。
 
 正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`;測試 `ApprovalSection/MyTask.test.tsx`
 
