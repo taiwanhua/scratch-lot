@@ -8,6 +8,7 @@ import {
   type CheckoutDraft,
   type DailyCloseDraft,
   REDEMPTION_STATUS,
+  STOCKTAKE_REUSE_MINUTES,
   STOCKTAKE_STATUS,
   STORE_KEY,
   STORE_PERMISSIONS,
@@ -224,6 +225,11 @@ export class CheckoutQueryService {
           { scopeCashPointId: null },
           { scopeCashPointId: shift.cashPointId },
         ],
+        // 只看 30 分鐘內(含)開始的(`isStocktakeReusable` 同一個窗):比「現在」晚開始的不算最近一張
+        startedAt: {
+          $gte: new Date(now.getTime() - STOCKTAKE_REUSE_MINUTES * 60_000),
+          $lte: now,
+        },
       },
       { sort: { startedAt: -1 } },
     );
