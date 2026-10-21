@@ -2541,14 +2541,22 @@
     "MAKEUP_PUNCH_ENTRY_MISMATCH": "The shift must be yours at that store on that day",
     "MAKEUP_PUNCH_ENTRY_DELETED": "The chosen shift was deleted, so it cannot be approved. Return it so the applicant can choose again",
     "MAKEUP_PUNCH_INVALID_VALUES": "Date, store, type or time is missing",
-    "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other"
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other",
+    "STORE_FORM_INVALID": "Some fields are missing; check and submit again",
+    "STORE_FORM_BRANCH_NOT_VISIBLE": "The store is outside your scope",
+    "STORE_FORM_SHIFT_NOT_IN_BRANCH": "The selected shift is not a shift of this store",
+    "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "Some tickets are not sold in this store, or are on another open sale reversal request",
+    "SALE_REVERSAL_AMOUNT_MISMATCH": "The refund amount does not match the face value of these tickets; pick them again",
+    "STORE_FORM_VOID_NOT_ALLOWED": "Sale reversals and cash corrections cannot be voided; create an opposite one instead"
   },
   "lotteryStore": {
     "tabs": {
       "aria": "Store",
       "board": "Board",
       "otherForms": "Other requests",
-      "redemptions": "Redemptions"
+      "redemptions": "Redemptions",
+      "saleReversals": "Sale reversals",
+      "cashCorrections": "Cash corrections"
     },
     "top": {
       "org": "Branch",
@@ -2983,6 +2991,76 @@
         "REDEMPTION_ALREADY_REVOKED": "This redemption has been revoked",
         "UNEXPECTED": "Something went wrong; try again later"
       }
+    },
+    "storeForms": {
+      "branch": "Store",
+      "create": "New",
+      "empty": "No documents yet",
+      "none": "—",
+      "saleReversals": {
+        "title": "Sale reversal requests",
+        "listAria": "Sale reversal requests",
+        "columns": {
+          "serialNo": "No.",
+          "tickets": "Tickets",
+          "reason": "Reason",
+          "refundAmount": "Refund",
+          "refundShift": "Refund shift",
+          "status": "Status"
+        },
+        "ticketCount": "({count} tickets)"
+      },
+      "cashCorrections": {
+        "title": "Cash corrections",
+        "listAria": "Cash corrections",
+        "columns": {
+          "serialNo": "No.",
+          "direction": "Direction",
+          "amount": "Amount",
+          "place": "Location",
+          "attributedShift": "Attributed shift",
+          "reason": "Reason",
+          "status": "Status"
+        },
+        "directions": {
+          "increase": "Cash in",
+          "decrease": "Cash out"
+        },
+        "vault": "Vault"
+      }
+    },
+    "saleReversal": {
+      "tabLabel": "New sale reversal",
+      "title": "Sale reversal request",
+      "loading": "Loading",
+      "unavailable": "You cannot create sale reversal requests, or the form is not available now",
+      "branch": "Store",
+      "reason": "Reason",
+      "scan": "Scan to add tickets",
+      "scanHint": "Scan or type a code, then press Enter",
+      "scanNotFound": "Ticket not found",
+      "scanNotReversible": "This ticket is not sold in this store, or is on another reversal request",
+      "bookHeader": "{gameCode} {gameName} · Book {bookNo}",
+      "removeBook": "Remove this book",
+      "cellReversible": "Sold",
+      "cellUnavailable": "Unavailable",
+      "selected": "Selected",
+      "noTickets": "Scan or pick the tickets to reverse",
+      "refund": "Refund the customer",
+      "yes": "Yes",
+      "no": "No",
+      "refundShift": "Refund shift",
+      "refundShiftCurrent": "{label} (current shift)",
+      "refundShiftRequired": "Pick the refund shift when refunding",
+      "note": "Note",
+      "refundAmount": "Refund amount",
+      "rule": "Only tickets sold in this store and not on another reversal request; they cannot be sold until the review ends.",
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "submitted": "Sale reversal request submitted"
+    },
+    "undoRequest": {
+      "send": "Send sale reversal request"
     }
   }
 }

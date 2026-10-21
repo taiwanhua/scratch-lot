@@ -406,7 +406,8 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
           },
         ),
       );
-    const nos = (await ticketsOf(book._id)).map((ticket) => ticket.ticketNo);
+    const bookTickets = await ticketsOf(book._id);
+    const nos = bookTickets.map((ticket) => ticket.ticketNo);
     await ok(api, wang.token, SPLIT, {
       input: {
         orgId: String(xinyi),
@@ -430,9 +431,8 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
     bookId: Types.ObjectId,
     ticketNo: string,
   ): Promise<TicketDoc> {
-    const found = (await ticketsOf(bookId)).find(
-      (ticket) => ticket.ticketNo === ticketNo,
-    );
+    const all = await ticketsOf(bookId);
+    const found = all.find((ticket) => ticket.ticketNo === ticketNo);
     if (found === undefined) {
       throw new Error(`沒有 #${ticketNo}`);
     }
@@ -747,7 +747,7 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
           ),
         ],
         checkFormKey: formKey,
-      } as Parameters<typeof publishWorkflow>[2]);
+      });
       await bindForm(world, key, formKey);
     }
 
@@ -1006,7 +1006,7 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
       expect(rows.length).toBeGreaterThan(0);
       expect(rows).toContainEqual(
         expect.objectContaining({
-          status: "completed",
+          status: "COMPLETED",
           ticketGroups: ["5164 #060–061"],
           ticketCount: 2,
           reasonLabel: "客人退貨",
@@ -1050,7 +1050,7 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
     });
 
     it("位置 = 小金庫 → 小金庫應有變化;歸屬班次可以選已結帳的班(只做歸屬)", async () => {
-      const before = (await board()).vaultExpected;
+      const { vaultExpected: before } = await board();
       const submitted = await submit(
         wang,
         CASH_CORRECTION_FORM_KEY,
@@ -1072,7 +1072,8 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
           postCloseOf: null,
         }),
       ]);
-      expect((await board()).vaultExpected).toBe(before + 500);
+      const { vaultExpected: after } = await board();
+      expect(after).toBe(before + 500);
       const ledger = api.app.get(CashLedgerService);
       expect(await ledger.postCloseNet(await reader(), closedShift)).toBe(-400);
     });
@@ -1114,7 +1115,7 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
       }>(api, wang.token, CASH_CORRECTIONS, { orgId: String(xinyi) });
       expect(data.lotteryStoreCashCorrections.items).toContainEqual({
         id: expect.any(String),
-        status: "completed",
+        status: "COMPLETED",
         direction: "increase",
         amount: 500,
         place: "vault",

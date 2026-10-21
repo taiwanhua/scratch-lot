@@ -246,12 +246,12 @@ export class StoreShiftsService {
       this.clock.now(),
     );
     const openedAt = this.clock.now();
+    const ownerNames = await this.views.userNames(operator, tenantId, [
+      actorId,
+    ]);
     const label = shiftLabelOf({
       cashPointName: point.name,
-      ownerName:
-        (await this.views.userNames(operator, tenantId, [actorId])).get(
-          String(actorId),
-        ) ?? "",
+      ownerName: ownerNames.get(String(actorId)) ?? "",
       openedAt,
       timezone: await tenantTimezoneOf(this.orgs, operator, tenantId),
     });

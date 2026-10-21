@@ -23,7 +23,9 @@ import { seed as saleReversalForm } from "./revisions/sale_reversal.r1.seed";
 import { projectSeedSettings } from "./settings";
 
 const keysOf = (form: { definition: { fields: readonly { key: string }[] } }) =>
-  form.definition.fields.map((field) => field.key).toSorted();
+  form.definition.fields
+    .map((field) => field.key)
+    .toSorted((left, right) => left.localeCompare(right));
 
 /** 店面管理的兩張受管表單(規格 8.5、8.8;正本 `docs/modules/project/store.md`「撤銷售出申請與現金更正單」)。 */
 describe("受管表單 撤銷售出申請(sale_reversal r1)、現金更正單(cash_correction r1)", () => {
@@ -56,10 +58,12 @@ describe("受管表單 撤銷售出申請(sale_reversal r1)、現金更正單(ca
         .filter(
           (key) => !["book", "ticket_nos", "tickets", "amount"].includes(key),
         )
-        .toSorted(),
+        .toSorted((left, right) => left.localeCompare(right)),
     );
     expect(keysOf(cashCorrectionForm)).toEqual(
-      Object.values(CASH_CORRECTION_FIELD_KEYS).toSorted(),
+      Object.values(CASH_CORRECTION_FIELD_KEYS).toSorted((left, right) =>
+        left.localeCompare(right),
+      ),
     );
   });
 });

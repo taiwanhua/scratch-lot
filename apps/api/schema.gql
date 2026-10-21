@@ -2499,7 +2499,7 @@ type LotteryStoreCashCorrectionRow {
   placeShiftLabel: String
   reasonLabel: String!
   serialNo: String
-  status: String!
+  status: FormSubmissionStatus!
   submittedAt: DateTime
 }
 
@@ -2579,7 +2579,7 @@ type LotteryStoreSaleReversalRow {
   refundAmount: Int!
   refundShiftLabel: String
   serialNo: String
-  status: String!
+  status: FormSubmissionStatus!
   submittedAt: DateTime
   ticketCount: Int!
   ticketGroups: [String!]!

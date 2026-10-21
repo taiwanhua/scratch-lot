@@ -2541,14 +2541,22 @@
     "MAKEUP_PUNCH_ENTRY_MISMATCH": "對應排班要是你當天在那家店的排班,請重選",
     "MAKEUP_PUNCH_ENTRY_DELETED": "對應的排班已被刪除,不能核准;請退回讓申請人重選",
     "MAKEUP_PUNCH_INVALID_VALUES": "日期、分店、類型或時間沒填好",
-    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明"
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明",
+    "STORE_FORM_INVALID": "欄位沒填好,請檢查後再送出",
+    "STORE_FORM_BRANCH_NOT_VISIBLE": "分店不在你的範圍內",
+    "STORE_FORM_SHIFT_NOT_IN_BRANCH": "選的班不是這家分店的班",
+    "SALE_REVERSAL_TICKET_NOT_REVERSIBLE": "有張數不是本店已售,或已在其他還沒結束的撤銷售出申請上",
+    "SALE_REVERSAL_AMOUNT_MISMATCH": "退款金額和這些張數的面額合計不符,請重新選張數",
+    "STORE_FORM_VOID_NOT_ALLOWED": "撤銷售出申請、現金更正單不能作廢;錯了請再開一張反向的"
   },
   "lotteryStore": {
     "tabs": {
       "aria": "店面管理",
       "board": "看板",
       "otherForms": "其他申請",
-      "redemptions": "兌獎紀錄"
+      "redemptions": "兌獎紀錄",
+      "saleReversals": "撤銷售出",
+      "cashCorrections": "現金更正"
     },
     "top": {
       "org": "分店",
@@ -2983,6 +2991,76 @@
         "REDEMPTION_ALREADY_REVOKED": "這筆兌獎已撤銷",
         "UNEXPECTED": "操作失敗,請稍後再試"
       }
+    },
+    "storeForms": {
+      "branch": "分店",
+      "create": "新增",
+      "empty": "目前沒有單據",
+      "none": "—",
+      "saleReversals": {
+        "title": "撤銷售出申請",
+        "listAria": "撤銷售出申請列表",
+        "columns": {
+          "serialNo": "單號",
+          "tickets": "張數",
+          "reason": "原因",
+          "refundAmount": "退款",
+          "refundShift": "退款班次",
+          "status": "狀態"
+        },
+        "ticketCount": "({count} 張)"
+      },
+      "cashCorrections": {
+        "title": "現金更正單",
+        "listAria": "現金更正單列表",
+        "columns": {
+          "serialNo": "單號",
+          "direction": "方向",
+          "amount": "金額",
+          "place": "位置",
+          "attributedShift": "歸屬班次",
+          "reason": "原因",
+          "status": "狀態"
+        },
+        "directions": {
+          "increase": "現金增加",
+          "decrease": "現金減少"
+        },
+        "vault": "小金庫"
+      }
+    },
+    "saleReversal": {
+      "tabLabel": "新增撤銷售出申請",
+      "title": "撤銷售出申請",
+      "loading": "載入中",
+      "unavailable": "你沒有新增撤銷售出申請的權限,或這張表單目前不能新增",
+      "branch": "分店",
+      "reason": "原因",
+      "scan": "刷條碼加入張數",
+      "scanHint": "刷條碼或輸入編號後按 Enter",
+      "scanNotFound": "找不到這張刮刮樂",
+      "scanNotReversible": "這張不是本店已售,或已在其他撤銷售出申請上",
+      "bookHeader": "{gameCode} {gameName} · 本號 {bookNo}",
+      "removeBook": "移除這本",
+      "cellReversible": "已售",
+      "cellUnavailable": "不能選",
+      "selected": "已選",
+      "noTickets": "刷條碼或從格子選要撤銷的張",
+      "refund": "退款給客人",
+      "yes": "是",
+      "no": "否",
+      "refundShift": "退款班次",
+      "refundShiftCurrent": "{label}(目前的班)",
+      "refundShiftRequired": "退款給客人時要選退款班次",
+      "note": "說明",
+      "refundAmount": "退款金額",
+      "rule": "只能選本店已售、不在其他撤銷申請上的張數;送出後這些張數在審核完成前不能賣。",
+      "cancel": "取消",
+      "submit": "送出",
+      "submitted": "已送出撤銷售出申請"
+    },
+    "undoRequest": {
+      "send": "送撤銷售出申請"
     }
   }
 }

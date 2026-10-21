@@ -1,4 +1,5 @@
 import { authWorld, overviewModule } from "@/test/msw/auth-handlers";
+import { formRuntimeWorld } from "@/test/msw/form-runtime-handlers";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
@@ -8,6 +9,10 @@ import {
   STORE_ALL_PERMISSIONS,
   storeModules,
 } from "@/test/msw/project/lottery/store-fixtures";
+import {
+  type StoreFormsWorldOptions,
+  storeFormsWorld,
+} from "@/test/msw/project/lottery/store-forms-fixtures";
 import {
   type StoreWorldOptions,
   storeWorld,
@@ -33,6 +38,7 @@ export const renderStore = ({
   world = {},
   sales = {},
   redemptionRows,
+  forms = {},
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -41,11 +47,17 @@ export const renderStore = ({
   sales?: Omit<StoreSalesWorldOptions, "board">;
   /** 兌獎紀錄的起始資料(預設 `sampleRedemptions()`) */
   redemptionRows?: RedemptionFixture[];
+  /** 撤銷售出申請 / 現金更正單能不能新增(B9b) */
+  forms?: StoreFormsWorldOptions;
 } = {}) => {
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
   const redemptions = redemptionWorld(redemptionRows);
+  const formsFake = storeFormsWorld(forms);
+  const runtime = formRuntimeWorld(formsFake.runtime);
   server.use(
+    ...formsFake.handlers,
+    ...runtime.handlers,
     ...fake.handlers,
     ...salesFake.handlers,
     ...redemptions.handlers,
@@ -58,5 +70,11 @@ export const renderStore = ({
       modules: [overviewModule, ...storeModules(permissions)],
     }).handlers,
   );
-  return { ...renderApp({ path }), fake, salesFake, redemptions };
+  return {
+    ...renderApp({ path }),
+    fake,
+    salesFake,
+    redemptions,
+    runtime,
+  };
 };

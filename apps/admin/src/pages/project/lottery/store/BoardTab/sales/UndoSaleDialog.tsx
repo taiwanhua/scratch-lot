@@ -11,6 +11,7 @@ import { Typography } from "@repo/ui/typography";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
 
+import { SendReversalButton } from "../../forms/SendReversalButton";
 import { moneyText } from "../../store-text";
 import { useRefreshSales } from "./sales-queries";
 import { UNDO_BLOCK_KEYS } from "./sales-text";
@@ -18,15 +19,21 @@ import { useSalesText } from "./useSalesText";
 
 export interface UndoSaleDialogProps {
   ticketId: string;
+  /** 看板的分店([送撤銷售出申請] 帶入新增頁) */
+  orgId: string;
   onClose: () => void;
 }
 
 /**
  * 撤銷售出確認視窗(Figma ST-08a / 08b;規格 6.3「當下撤銷」):售出提示的 [撤銷]、[最近售出] 每列的 [撤銷]、
  * 展開卡片的 [撤銷售出] 都先開這個。符合條件(自己賣的、30 分鐘內、班開著、之後沒有異動)→ [撤銷];
- * 不符 → 「請改送撤銷售出申請」([送撤銷售出申請] 由撤銷售出申請的功能接上,之前只有 [取消])。
+ * 不符 → 「請改送撤銷售出申請」+ [送撤銷售出申請](開撤銷售出申請新增頁並帶入這一張;沒有新增權限時不顯示)。
  */
-export const UndoSaleDialog = ({ ticketId, onClose }: UndoSaleDialogProps) => {
+export const UndoSaleDialog = ({
+  ticketId,
+  orgId,
+  onClose,
+}: UndoSaleDialogProps) => {
   const { t, clock, errorText } = useSalesText();
   const { session } = useSession();
   const refresh = useRefreshSales();
@@ -83,7 +90,9 @@ export const UndoSaleDialog = ({ ticketId, onClose }: UndoSaleDialogProps) => {
             >
               {t("undo.submit")}
             </Button>
-          ) : null}
+          ) : (
+            <SendReversalButton ticketId={sale.ticketId} orgId={orgId} />
+          )}
         </>
       }
     >

@@ -24,6 +24,7 @@ import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/Transf
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
 import { StorePage } from "@/pages/project/lottery/store/StorePage/StorePage";
+import { StoreCreatePage } from "@/pages/project/lottery/store/forms/StoreCreatePage/StoreCreatePage";
 import { MakeupPunchFormPage } from "@/pages/project/schedule/attendance/MakeupPunchFormPage/MakeupPunchFormPage";
 import { MakeupPunchViewPage } from "@/pages/project/schedule/attendance/MakeupPunchViewPage/MakeupPunchViewPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
@@ -118,10 +119,13 @@ export const projectModulePages: ModulePageSource = {
       },
     },
     // 店面管理(表單模組、開啟 B9b;規格 6.1):列表頁換成分頁頁殼(看板 | … | 其他申請);
-    // 表單的詳情 / 新增 / 編輯沿用表單引擎
+    // 新增頁:撤銷售出申請換成替換新增頁(ST-31b),其他表單沿用表單引擎;詳情 / 編輯沿用表單引擎
     {
       moduleKey: "store",
-      pageOverrides: { list: { Page: StorePage } },
+      pageOverrides: {
+        list: { Page: StorePage },
+        createPage: { Page: StoreCreatePage },
+      },
     },
   ],
 };

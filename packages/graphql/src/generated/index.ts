@@ -2730,7 +2730,7 @@ export type LotteryStoreCashCorrectionRow = {
   placeShiftLabel?: Maybe<Scalars['String']['output']>;
   reasonLabel: Scalars['String']['output'];
   serialNo?: Maybe<Scalars['String']['output']>;
-  status: Scalars['String']['output'];
+  status: FormSubmissionStatus;
   submittedAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
@@ -2821,7 +2821,7 @@ export type LotteryStoreSaleReversalRow = {
   refundAmount: Scalars['Int']['output'];
   refundShiftLabel?: Maybe<Scalars['String']['output']>;
   serialNo?: Maybe<Scalars['String']['output']>;
-  status: Scalars['String']['output'];
+  status: FormSubmissionStatus;
   submittedAt?: Maybe<Scalars['DateTime']['output']>;
   ticketCount: Scalars['Int']['output'];
   ticketGroups: Array<Scalars['String']['output']>;
@@ -9890,9 +9890,9 @@ export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequi
 
 export type LotteryStoreShiftOptionFieldsFragment = { __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean };
 
-export type LotteryStoreSaleReversalRowFieldsFragment = { __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: string, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null };
+export type LotteryStoreSaleReversalRowFieldsFragment = { __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: FormSubmissionStatus, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null };
 
-export type LotteryStoreCashCorrectionRowFieldsFragment = { __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: string, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null };
+export type LotteryStoreCashCorrectionRowFieldsFragment = { __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: FormSubmissionStatus, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null };
 
 export type LotteryStoreShiftOptionsQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
@@ -9906,14 +9906,14 @@ export type LotteryStoreSaleReversalsQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStoreSaleReversalsQuery = { __typename?: 'Query', lotteryStoreSaleReversals: { __typename?: 'LotteryStoreSaleReversalsPayload', items: Array<{ __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: string, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null }> } };
+export type LotteryStoreSaleReversalsQuery = { __typename?: 'Query', lotteryStoreSaleReversals: { __typename?: 'LotteryStoreSaleReversalsPayload', items: Array<{ __typename?: 'LotteryStoreSaleReversalRow', id: string, serialNo?: string | null, status: FormSubmissionStatus, ticketGroups: Array<string>, ticketCount: number, reasonLabel: string, refund: boolean, refundAmount: number, refundShiftLabel?: string | null, submittedAt?: string | null }> } };
 
 export type LotteryStoreCashCorrectionsQueryVariables = Exact<{
   orgId: Scalars['ID']['input'];
 }>;
 
 
-export type LotteryStoreCashCorrectionsQuery = { __typename?: 'Query', lotteryStoreCashCorrections: { __typename?: 'LotteryStoreCashCorrectionsPayload', items: Array<{ __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: string, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null }> } };
+export type LotteryStoreCashCorrectionsQuery = { __typename?: 'Query', lotteryStoreCashCorrections: { __typename?: 'LotteryStoreCashCorrectionsPayload', items: Array<{ __typename?: 'LotteryStoreCashCorrectionRow', id: string, serialNo?: string | null, status: FormSubmissionStatus, direction: string, amount: number, place: string, placeShiftLabel?: string | null, attributedShiftLabel?: string | null, reasonLabel: string, submittedAt?: string | null }> } };
 
 export type LotteryStoreScanItemFieldsFragment = { __typename?: 'LotteryStoreScanItem', ticketId: string, version: number, bookId: string, gameCode: string, gameName: string, unitPrice: number, bookNo: string, ticketNo: string, status: string, locationKind: string, outcome: string, blockReason?: string | null, soldAt?: string | null, pendingSkipCount: number, cashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, counterShiftOwner?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, responsibleOrg?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null };
 

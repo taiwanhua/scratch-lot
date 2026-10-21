@@ -297,7 +297,13 @@ export const useStoreSaleFlow = ({
       break;
     }
     case "undo": {
-      element = <UndoSaleDialog ticketId={step.ticketId} onClose={close} />;
+      element = (
+        <UndoSaleDialog
+          ticketId={step.ticketId}
+          orgId={orgId}
+          onClose={close}
+        />
+      );
       break;
     }
     case "split": {

@@ -7,6 +7,7 @@ import {
   CASH_CORRECTION_PLACE,
   SALE_REVERSAL_LOCK_REF_TYPE,
   STORE_BOARD_SIGNAL,
+  type SaleReversalLine,
   TICKET_EVENT_TYPE,
   TICKET_LOCATION_KIND,
   TICKET_STATUS,
@@ -30,6 +31,7 @@ import {
 import { tenantBoundaryContext } from "../../../database/tenant-boundary-context";
 import type {
   FormEffectContext,
+  FormGuardBlock,
   FormGuardResult,
   LifecycleSubmission,
 } from "../../../workflows/workflow-engine/lifecycle/form-lifecycle-registration";
@@ -151,7 +153,7 @@ export class StoreFormsRules {
     submission: LifecycleSubmission,
     values: StoredValues,
   ): Promise<FormGuardResult> {
-    const parsed = saleReversalValuesOf(values as Record<string, unknown>);
+    const parsed = saleReversalValuesOf(values);
     const problem = saleReversalProblemOf(parsed);
     if (problem !== null) {
       return block(STORE_FORM_BLOCKS.invalid, problem.field);
@@ -164,53 +166,73 @@ export class StoreFormsRules {
     const own = saleReversalLockOf(submission._id);
     let total = 0;
     for (const line of parsed.lines) {
-      const bookId = toObjectId(line.bookId);
-      const book =
-        bookId === null
-          ? null
-          : await this.books.findById(reader, bookId, {
-              select: "gameId",
-            });
-      const game =
-        book === null
-          ? null
-          : await this.games.findById(reader, book.gameId, {
-              select: "unitPrice",
-            });
-      if (bookId === null || game === null) {
-        return block(STORE_FORM_BLOCKS.ticketNotReversible, line.bookId);
+      const checked = await this.lineAmountOf(reader, branchId, own, line);
+      if (typeof checked !== "number") {
+        return checked;
       }
-      const rows = await this.ticketsOf(reader, bookId, line.ticketNos);
-      const reversible = rows.filter(
-        (ticket) =>
-          ticket.orgId.equals(branchId) &&
-          ticket.status === TICKET_STATUS.sold &&
-          (ticket.lockedBy === null ||
-            (ticket.lockedBy.refType === own.refType &&
-              ticket.lockedBy.refId.equals(own.refId))),
-      );
-      if (reversible.length !== line.ticketNos.length) {
-        return block(
-          STORE_FORM_BLOCKS.ticketNotReversible,
-          `book ${line.bookId}`,
-        );
-      }
-      const amount = game.unitPrice * line.ticketNos.length;
-      if (line.amount !== amount) {
-        return block(STORE_FORM_BLOCKS.amountMismatch, `book ${line.bookId}`);
-      }
-      total += amount;
+      total += checked;
     }
     if (parsed.refundAmount !== total) {
       return block(STORE_FORM_BLOCKS.amountMismatch, "refund_amount");
     }
     if (parsed.refund) {
       const shift = await this.shiftOf(reader, parsed.refundShiftId);
-      if (shift === null || !shift.orgId.equals(branchId)) {
+      if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "refund_shift");
       }
     }
     return null;
+  }
+
+  /**
+   * 撤銷售出申請的一列(一本):每張是本店已售、沒被別的單鎖定(這張單自己的鎖可以,重送時);金額 = 面額 × 張數。
+   * 合格回這一列的金額,不合回擋下的結果。
+   */
+  private async lineAmountOf(
+    reader: OperatorContext,
+    branchId: Types.ObjectId,
+    own: TicketLockRef,
+    line: SaleReversalLine,
+  ): Promise<number | FormGuardBlock> {
+    const bookId = toObjectId(line.bookId);
+    const book =
+      bookId === null
+        ? null
+        : await this.books.findById(reader, bookId, { select: "gameId" });
+    const game =
+      book === null
+        ? null
+        : await this.games.findById(reader, book.gameId, {
+            select: "unitPrice",
+          });
+    if (bookId === null || game === null) {
+      return {
+        code: STORE_FORM_BLOCKS.ticketNotReversible,
+        message: line.bookId,
+      };
+    }
+    const rows = await this.ticketsOf(reader, bookId, line.ticketNos);
+    const reversible = rows.filter(
+      (ticket) =>
+        ticket.orgId.equals(branchId) &&
+        ticket.status === TICKET_STATUS.sold &&
+        (ticket.lockedBy === null ||
+          (ticket.lockedBy.refType === own.refType &&
+            ticket.lockedBy.refId.equals(own.refId))),
+    );
+    if (reversible.length !== line.ticketNos.length) {
+      return {
+        code: STORE_FORM_BLOCKS.ticketNotReversible,
+        message: `book ${line.bookId}`,
+      };
+    }
+    const amount = game.unitPrice * line.ticketNos.length;
+    return line.amount === amount
+      ? amount
+      : {
+          code: STORE_FORM_BLOCKS.amountMismatch,
+          message: `book ${line.bookId}`,
+        };
   }
 
   /** 送出:這張單的張全部鎖定(重送時先解掉不在單上的)。 */
@@ -221,9 +243,7 @@ export class StoreFormsRules {
     }
     const reader = await this.readerOf(tenantId);
     const submission = await this.submissionOf(reader, context);
-    const parsed = saleReversalValuesOf(
-      submission.values as Record<string, unknown>,
-    );
+    const parsed = saleReversalValuesOf(submission.values);
     const lock = saleReversalLockOf(context.submissionId);
     const wanted: Types.ObjectId[] = [];
     for (const line of parsed.lines) {
@@ -294,9 +314,7 @@ export class StoreFormsRules {
     }
     const reader = await this.readerOf(tenantId);
     const submission = await this.submissionOf(reader, context);
-    const parsed = saleReversalValuesOf(
-      submission.values as Record<string, unknown>,
-    );
+    const parsed = saleReversalValuesOf(submission.values);
     const lock = saleReversalLockOf(context.submissionId);
     const locked = await this.lockedTicketsOf(
       reader,
@@ -381,7 +399,7 @@ export class StoreFormsRules {
     submission: LifecycleSubmission,
     values: StoredValues,
   ): Promise<FormGuardResult> {
-    const parsed = cashCorrectionValuesOf(values as Record<string, unknown>);
+    const parsed = cashCorrectionValuesOf(values);
     const problem = cashCorrectionProblemOf(parsed);
     if (problem !== null) {
       return block(STORE_FORM_BLOCKS.invalid, problem.field);
@@ -393,14 +411,14 @@ export class StoreFormsRules {
     const reader = await this.readerOf(submission.tenantId);
     if (parsed.place === CASH_CORRECTION_PLACE.drawer) {
       const shift = await this.shiftOf(reader, parsed.shiftId);
-      if (shift === null || !shift.orgId.equals(branchId)) {
+      if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "shift");
       }
     }
     if (parsed.attributedShiftId !== null) {
       // 歸屬班次只表示是誰的責任:可以選已結帳(之後:已關帳月份)的班,但要是本店的班
       const shift = await this.shiftOf(reader, parsed.attributedShiftId);
-      if (shift === null || !shift.orgId.equals(branchId)) {
+      if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "attributed_shift");
       }
     }
@@ -415,9 +433,7 @@ export class StoreFormsRules {
     }
     const reader = await this.readerOf(tenantId);
     const submission = await this.submissionOf(reader, context);
-    const parsed = cashCorrectionValuesOf(
-      submission.values as Record<string, unknown>,
-    );
+    const parsed = cashCorrectionValuesOf(submission.values);
     const branchId = toObjectId(parsed.branchId);
     if (branchId === null || parsed.direction === null) {
       throw new Error(`現金更正單 ${String(context.submissionId)} 的值不完整`);

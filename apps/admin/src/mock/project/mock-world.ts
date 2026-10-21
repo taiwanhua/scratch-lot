@@ -28,6 +28,7 @@ import {
 import { purchasingWorld } from "@/test/msw/project/lottery/purchasing-handlers";
 import { redemptionWorld } from "@/test/msw/project/lottery/redemption-handlers";
 import { storeModules } from "@/test/msw/project/lottery/store-fixtures";
+import { storeFormsWorld } from "@/test/msw/project/lottery/store-forms-fixtures";
 import { storeWorld } from "@/test/msw/project/lottery/store-handlers";
 import { storeSalesWorld } from "@/test/msw/project/lottery/store-sales-handlers";
 import {
@@ -200,6 +201,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...storeAndSalesHandlers(),
     // 兌獎:[最近兌獎]、兌獎紀錄分頁、進貨單新增頁的兌獎區(Figma ST-38b / ST-40 / PU-05)
     ...redemptionWorld().handlers,
+    // 店面管理的撤銷售出 / 現金更正分頁(Figma ST-31a / ST-32a 的列)與退款班次的選項
+    ...storeFormsWorld().handlers,
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;
     // 查工作沿用印表機管理那一個(每個操作只能有一個 handler)
     ...printButtonWorld().handlers.filter(
@@ -210,13 +213,15 @@ export const projectMockWorld: ProjectMockWorld = {
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
   // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清);
   // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成);
-  // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除)
+  // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除);
+  // 店面管理:撤銷售出申請、現金更正單的定義(列表走專用查詢,沒有提交)
   formRuntime: () => {
     const support = supportRequestFormWorld();
     const makeup = makeupPunchFormWorld();
     const requisition = requisitionFormWorld();
     const purchase = purchaseFormWorld();
     const transfer = transferFormWorld();
+    const store = storeFormsWorld().runtime;
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
@@ -224,6 +229,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(requisition.moduleForms ?? []),
         ...(purchase.moduleForms ?? []),
         ...(transfer.moduleForms ?? []),
+        ...(store.moduleForms ?? []),
       ],
       versions: {
         ...support.versions,
@@ -231,6 +237,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...requisition.versions,
         ...purchase.versions,
         ...transfer.versions,
+        ...store.versions,
       },
       submissions: [
         ...(support.submissions ?? []),
@@ -239,7 +246,7 @@ export const projectMockWorld: ProjectMockWorld = {
         ...(purchase.submissions ?? []),
         ...(transfer.submissions ?? []),
       ],
-      fieldOptions: { ...support.fieldOptions },
+      fieldOptions: { ...store.fieldOptions, ...support.fieldOptions },
       listColumns: {
         ...support.listColumns,
         ...requisition.listColumns,

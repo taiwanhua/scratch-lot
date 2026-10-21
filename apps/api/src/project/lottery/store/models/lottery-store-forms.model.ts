@@ -6,6 +6,8 @@ import {
   ObjectType,
 } from "@nestjs/graphql";
 
+import { FormSubmissionStatusEnum } from "../../../../forms/form-runtime/models/form-submission.model";
+
 /** 可以選的收銀班次(撤銷售出申請的退款班次;規格 8.5「只能選本店的班」)。 */
 @ObjectType("LotteryStoreShiftOption")
 export class LotteryStoreShiftOptionModel {
@@ -44,9 +46,9 @@ export class LotteryStoreSaleReversalRowModel {
   @Field(() => String, { nullable: true })
   serialNo!: string | null;
 
-  /** 提交狀態(`reviewing` / `returned` / `withdrawn` / `completed` / `rejected`)。 */
-  @Field(() => String)
-  status!: string;
+  /** 提交狀態(審核中 / 已退回 / 已撤回 / 已完成 / 已駁回)。 */
+  @Field(() => FormSubmissionStatusEnum)
+  status!: FormSubmissionStatusEnum;
 
   /** 張數:每本一段 `5164 #031–032`。 */
   @Field(() => [String])
@@ -87,8 +89,8 @@ export class LotteryStoreCashCorrectionRowModel {
   @Field(() => String, { nullable: true })
   serialNo!: string | null;
 
-  @Field(() => String)
-  status!: string;
+  @Field(() => FormSubmissionStatusEnum)
+  status!: FormSubmissionStatusEnum;
 
   /** `increase` / `decrease`。 */
   @Field(() => String)

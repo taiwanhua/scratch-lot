@@ -14,6 +14,7 @@ import {
 
 import { FormSubmissionsRepository } from "../../../database/base/repositories";
 import type { OperatorContext } from "../../../database/operator-context";
+import type { FormSubmissionStatusEnum } from "../../../forms/form-runtime/models/form-submission.model";
 import { LotteryBooksRepository } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import type {
@@ -271,9 +272,10 @@ export class StoreFormsQueryService {
     return rows.map((row) => ({
       _id: row._id,
       serialNo: row.serialNo,
-      status: row.status,
+      // 存值的狀態字串 = GraphQL 列舉的值(`FormSubmissionStatusEnum`)
+      status: row.status as FormSubmissionStatusEnum,
       submittedAt: row.submittedAt,
-      values: row.values as Record<string, unknown>,
+      values: row.values,
     }));
   }
 

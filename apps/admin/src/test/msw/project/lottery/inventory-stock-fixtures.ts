@@ -117,6 +117,13 @@ export const sampleReasonOptions: Record<
     { value: "wrong-amount", label: "金額錯誤" },
     { value: "other", label: "其他" },
   ],
+  // 店面管理的撤銷售出申請(規格 8.5;客人退貨帶入「退款給客人 = 是」)
+  [LOTTERY_FIELD_CATEGORY_KEYS.saleReversalReason]: [
+    { value: "customer-return", label: "客人退貨" },
+    { value: "wrong-ticket", label: "刷錯刮刮樂" },
+    { value: "stocktake-error", label: "盤點錯誤" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 /** Figma IN-05 的三列。 */

@@ -6,6 +6,8 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 
 import { BoardTab } from "./BoardTab/BoardTab";
 import { OtherFormsTab } from "./OtherFormsTab/OtherFormsTab";
+import { CashCorrectionsTab } from "./forms/CashCorrectionsTab";
+import { SaleReversalsTab } from "./forms/SaleReversalsTab";
 import { RedemptionsTab } from "./redemption/RedemptionsTab";
 
 /** 店面管理的一個分頁。 */
@@ -31,6 +33,20 @@ export const STORE_TAB_ENTRIES: readonly StoreTabEntry[] = [
     labelKey: "board",
     permission: STORE_PERMISSIONS.view,
     Content: BoardTab,
+  },
+  // 撤銷售出(規格 8.5;Figma ST-31a):`store.view`(api `lotteryStoreSaleReversals` 也守它)
+  {
+    value: STORE_TABS.saleReversals,
+    labelKey: "saleReversals",
+    permission: STORE_PERMISSIONS.view,
+    Content: SaleReversalsTab,
+  },
+  // 現金更正(規格 8.8;Figma ST-32a):`store.view`
+  {
+    value: STORE_TABS.cashCorrections,
+    labelKey: "cashCorrections",
+    permission: STORE_PERMISSIONS.view,
+    Content: CashCorrectionsTab,
   },
   // 兌獎紀錄(規格 6.5;ST-40):`store.view`(api `lotteryRedemptions` 也守它)
   {
