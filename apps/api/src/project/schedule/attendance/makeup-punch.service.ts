@@ -197,22 +197,30 @@ export class MakeupPunchService {
   }
 
   /**
-   * 這筆申請選的排班還在不在(審核頁的警告「對應的排班已被刪除」);選「沒有排班」= true。
-   * 讀得到申請的人(申請人、審核者)才查得到;讀不到申請 → `NOT_FOUND`。
+   * 這筆申請選的排班還在不在(審核畫面的警告「對應的排班已被刪除」;模組詳情頁與申請中心都用);
+   * 選「沒有排班」= true。審核者不一定有出勤紀錄的權限、也不一定看得到申請的組織,所以只要登入、
+   * 在操作者當前組織所屬的租戶內查(用途「反查」;只回是 / 否,不回申請內容)。查不到申請 → `NOT_FOUND`。
    */
   async entryExistsFor(
     operator: OperatorContext,
     submissionId: string,
   ): Promise<boolean> {
     const id = toObjectId(submissionId);
-    const submission =
-      id === null
-        ? null
-        : await this.submissions.findOne(operator, {
-            _id: id,
-            moduleKey: MAKEUP_PUNCH_MODULE_KEY,
-            formKey: MAKEUP_PUNCH_FORM_KEY,
-          });
+    if (id === null) {
+      throw notFoundError(`makeup punch not found: ${submissionId}`);
+    }
+    const org = await resolveScheduleOrg(operator, this.orgs, null);
+    const reader = await tenantBoundaryContext(
+      this.orgs,
+      operator,
+      org.tenantId,
+    );
+    const submission = await this.submissions.findOne(reader, {
+      _id: id,
+      tenantId: org.tenantId,
+      moduleKey: MAKEUP_PUNCH_MODULE_KEY,
+      formKey: MAKEUP_PUNCH_FORM_KEY,
+    });
     if (!submission) {
       throw notFoundError(`makeup punch not found: ${submissionId}`);
     }

@@ -72,9 +72,11 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   // 出勤紀錄看自己的:我的班跨分店合併(支援別家店的班也列)
   "project/schedule/attendance/attendance.service.ts": ["以人為準的資料"],
   // 補打卡申請:本人在別家店的班(送出 / 核准時檢查);完成時以系統身分寫打卡(單據的組織不一定是班的分店)
+  // 審核畫面查選的排班還在不在:審核者不一定看得到申請的組織
   "project/schedule/attendance/makeup-punch.service.ts": [
     "以人為準的資料",
     "例外寫入",
+    "反查",
   ],
   // 排班 / 畫休寫入的「人」守門文件掛在租戶頂層(兩家店同時排同一人、排班與畫休同時寫入互相衝突)
   "project/schedule/shared/schedule-person-locks.ts": ["例外寫入"],

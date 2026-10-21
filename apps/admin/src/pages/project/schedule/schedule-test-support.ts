@@ -34,6 +34,7 @@ import {
 } from "@/test/msw/project/schedule-settings-handlers";
 import { api, server } from "@/test/msw/server";
 import { toTenantTree } from "@/test/msw/tenant-org-tree";
+import { applyCenterModules } from "@/test/msw/workflow-fixtures";
 import {
   type WorkflowRuntimeWorldOptions,
   workflowRuntimeWorld,
@@ -105,7 +106,8 @@ export const renderSchedulePage = ({
     ...authWorld({
       hasRefreshCookie: true,
       orgs: [{ id: SCHEDULE_BRANCH.id, name: SCHEDULE_BRANCH.name }],
-      modules: scheduleModules(omit),
+      // 申請中心(詳情頁的審核區塊:模組登記的審核畫面擴充)
+      modules: [...scheduleModules(omit), ...applyCenterModules()],
     }).handlers,
   );
   return {

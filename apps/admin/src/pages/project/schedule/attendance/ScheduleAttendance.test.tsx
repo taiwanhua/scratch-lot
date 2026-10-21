@@ -187,6 +187,40 @@ describe("出勤紀錄", () => {
     expect(await findButton("退回修改")).toBeEnabled();
   });
 
+  it("申請中心詳情頁:選的排班已被刪除 → 警告、[核准] 停用(模組登記的審核畫面擴充);排班還在 → 可以核准", async () => {
+    renderSchedulePage({
+      path: `/apply-center/view-page/inst-${MAKEUP_ENTRY_DELETED_ID}`,
+      forms: makeupPunchFormWorld(),
+      workflow: makeupPunchWorkflowWorld(),
+    });
+    expect(
+      await screen.findByText("對應的排班已被刪除,不能核准;請退回讓申請人重選"),
+    ).toBeInTheDocument();
+    await waitFor(async () => {
+      expect(await findButton("核准")).toBeDisabled();
+    });
+    expect(await findButton("退回修改")).toBeEnabled();
+  });
+
+  it("申請中心詳情頁:排班還在 → 沒有警告、可以核准;不顯示對應排班的系統代碼", async () => {
+    renderSchedulePage({
+      path: `/apply-center/view-page/inst-${MAKEUP_REVIEWING_ID}`,
+      forms: makeupPunchFormWorld(),
+      workflow: makeupPunchWorkflowWorld(),
+    });
+    expect(await findButton("核准")).toBeEnabled();
+    // 唯讀檢視:對應排班只顯示文字欄,存排班 id 的那一欄不渲染
+    const shown = (value: string) =>
+      screen.queryAllByText(value).length +
+      screen.queryAllByDisplayValue(value).length;
+    expect(shown("早 08:30–14:30")).toBeGreaterThan(0);
+    expect(shown("e-wang-2026-11-02")).toBe(0);
+    expect(screen.queryByText("對應排班(系統代碼)")).toBeNull();
+    expect(
+      screen.queryByText("對應的排班已被刪除,不能核准;請退回讓申請人重選"),
+    ).toBeNull();
+  });
+
   it("審核頁:排班還在 → 沒有警告、可以核准;摘要列出當天排班", async () => {
     renderSchedulePage({
       path: `/schedule/attendance/view-page/${MAKEUP_REVIEWING_ID}`,

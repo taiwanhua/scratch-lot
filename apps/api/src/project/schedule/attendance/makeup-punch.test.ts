@@ -160,10 +160,13 @@ describe("補打卡申請(規格 14.8)", () => {
     return data.myPendingMakeupPunchEntryIds;
   }
 
-  async function entryExists(submissionId: string): Promise<boolean> {
+  async function entryExists(
+    submissionId: string,
+    who: Person = manager,
+  ): Promise<boolean> {
     const data = await ok<{ makeupPunchEntryExists: boolean }>(
       api,
-      manager.token,
+      who.token,
       EXISTS,
       { submissionId },
     );
@@ -447,6 +450,12 @@ describe("補打卡申請(規格 14.8)", () => {
       { $set: { deletedAt: new Date() } },
     );
     expect(await entryExists(submitted.id)).toBe(false);
+    // 申請中心的審核者不一定有出勤紀錄的權限:只要登入就查得到(只回是 / 否)
+    const reviewer = await person(api, api.connection, zhongshan, tenant, {
+      moduleKeys: ["apply-center", "apply-center.view-page"],
+      permissionKeys: ["apply-center.view"],
+    });
+    expect(await entryExists(submitted.id, reviewer)).toBe(false);
 
     const task = await pendingTaskOf(world, manager, submitted.id);
     const approve = await call(api, manager.token, DECIDE, {

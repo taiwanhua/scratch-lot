@@ -103,8 +103,10 @@ export class ScheduleAttendanceResolver {
     return this.makeup.pendingEntryIds(operator);
   }
 
-  /** 補打卡申請選的排班還在不在(審核頁的警告;選「沒有排班」= true)。 */
-  @RequirePermission("schedule.attendance.view")
+  /**
+   * 補打卡申請選的排班還在不在(審核畫面的警告;選「沒有排班」= true)。只要登入:申請中心的審核者
+   * 不一定有出勤紀錄的權限(只回是 / 否,在操作者的租戶內查)。
+   */
   @Query(() => Boolean)
   makeupPunchEntryExists(
     @Args("submissionId", { type: () => ID }) submissionId: string,
