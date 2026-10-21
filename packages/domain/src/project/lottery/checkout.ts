@@ -105,6 +105,10 @@ export const CHECKOUT_REASONS = {
   reasonRequired: "CHECKOUT_REASON_REQUIRED",
   /** 沒有接班人時留給下一班必須是 0(留給下一班 > 0 要有接班人) */
   leftMustBeZero: "CHECKOUT_LEFT_MUST_BE_ZERO",
+  /** 留給下一班超過實點(留給下一班的零用金是實點裡的錢) */
+  leftExceedsCounted: "CHECKOUT_LEFT_EXCEEDS_COUNTED",
+  /** 接班人是申請人或這一班的負責人(接班人 = 下一班的人) */
+  successorSelf: "CHECKOUT_SUCCESSOR_SELF",
   /** 接班人不是這家店的人 */
   successorInvalid: "CHECKOUT_SUCCESSOR_INVALID",
   /** 結帳確認申請不能駁回 / 作廢(只能退回) */
@@ -289,18 +293,27 @@ export function isDiffReasonRequired(difference: number): boolean {
   return difference !== 0;
 }
 
-export type CheckoutHandoverProblem = "invalid_amount" | "must_be_zero";
+export type CheckoutHandoverProblem =
+  "invalid_amount" | "must_be_zero" | "exceeds_counted";
 
 /**
- * 交接的檢查(規格 6.9):留給下一班是非負整數;> 0 時接班人必填;沒有接班人時必須是 0(錢先投庫)。
- * 合格 = null。
+ * 交接的檢查(規格 6.9):留給下一班是非負整數、不超過實點(留給下一班的零用金是實點裡的錢);> 0 時接班人必填;
+ * 沒有接班人時必須是 0(錢先投庫)。合格 = null。
  */
 export function checkoutHandoverProblemOf(handover: {
   leftForNext: number;
   successorId: string | null;
+  /** 實點(給了才檢查上限) */
+  counted?: number;
 }): CheckoutHandoverProblem | null {
   if (!Number.isInteger(handover.leftForNext) || handover.leftForNext < 0) {
     return "invalid_amount";
+  }
+  if (
+    handover.counted !== undefined &&
+    handover.leftForNext > handover.counted
+  ) {
+    return "exceeds_counted";
   }
   if (handover.successorId === null && handover.leftForNext > 0) {
     return "must_be_zero";

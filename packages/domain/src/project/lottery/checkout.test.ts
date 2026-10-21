@@ -113,7 +113,21 @@ describe("結帳內容(規格 6.9)", () => {
     expect(isDiffReasonRequired(50)).toBe(true);
   });
 
-  it("交接(規格 6.9):留給下一班 > 0 要接班人;沒有接班人必須是 0;金額要是非負整數", () => {
+  it("交接(規格 6.9):留給下一班 > 0 要接班人;沒有接班人必須是 0;金額要是非負整數;不超過實點", () => {
+    expect(
+      checkoutHandoverProblemOf({
+        leftForNext: 3000,
+        successorId: "user-2",
+        counted: 2999,
+      }),
+    ).toBe("exceeds_counted");
+    expect(
+      checkoutHandoverProblemOf({
+        leftForNext: 3000,
+        successorId: "user-2",
+        counted: 3000,
+      }),
+    ).toBeNull();
     expect(
       checkoutHandoverProblemOf({ leftForNext: 3000, successorId: "user-2" }),
     ).toBeNull();

@@ -98,6 +98,7 @@ export const useCheckoutWizard = ({
   const handoverProblem = checkoutHandoverProblemOf({
     leftForNext: left,
     successorId: successorId === "" ? null : successorId,
+    counted,
   });
 
   /** 現在盤點:差異核對乾淨(沒有已被處理、沒有未處理、待查清單都填好)。 */
@@ -162,12 +163,12 @@ export const useCheckoutWizard = ({
     }
   };
 
-  /** 審核中的單據 → 差額原因自動帶入「審核中的單據」(規格 6.9;使用者可以改)。 */
-  const autoFillPending = () => {
+  /** 審核中的單據 → 差額原因自動帶入「審核中的單據」+ 說明帶那幾張單的摘要(規格 6.9;使用者可以改)。 */
+  const autoFillPending = (note: string) => {
     if (wizard.pendingImpacts.length > 0 && diffReason.reasonKey === "") {
       setDiffReason({
         reasonKey: PENDING_DOCUMENTS_REASON_KEY,
-        reasonNote: "",
+        reasonNote: note,
       });
     }
   };

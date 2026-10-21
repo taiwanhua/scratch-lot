@@ -21,6 +21,16 @@ import { LotteryTicketEventsRepository } from "../../database/lottery-inventory/
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
 import type { DrawerShift } from "../store/drawer-cash";
 
+/**
+ * 逐項涵蓋的抽屜應有來源(`drawer-cash.ts` 的登記名):張數事件、現金流水、兌獎。
+ * 新登記的來源要同步加進 `of()` 的分項,否則 `checkout.test.ts` 的守門測試會紅(逐項合計才會等於抽屜應有)。
+ */
+export const EXPECTED_CASH_SOURCE_NAMES: readonly string[] = [
+  "ticket-events",
+  "cash-movements",
+  "redemptions",
+];
+
 /** 售出類事件(+)與撤銷(−);盤點補登售出也是售出。 */
 const SALE_TYPES: readonly string[] = [
   TICKET_EVENT_TYPE.sale,

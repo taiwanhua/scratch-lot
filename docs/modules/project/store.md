@@ -170,14 +170,14 @@
 
 - **入口**:收銀點標題列 [交班結帳](本機收銀點開班中、有 `store.checkout`;只有這一班的負責人或店長(`store.edit`)看得到)→ 交班精靈 = 結帳確認申請的新增頁 `/store/create-page/checkout_confirm?org=&shift=`。
 - **精靈一次做完**(規格 6.0):步驟間的資料只在畫面上(`useCheckoutWizard`),[取消] 或重新整理不留任何資料;**補登兌獎例外**(立即生效,取消精靈也不會退回)。[送出] 以表單引擎 `createAndSubmitFormSubmission` 送出結帳確認申請,結帳單、盤點單在掛接點的同一個交易建立。
-  - **① 盤點**(ST-17a):沿用 30 分鐘內的盤點(`lotteryCheckoutWizard.reusableStocktake`:這家店最近一張、範圍是這個收銀點或全店、沒被駁回、開始盤的時間在 30 分鐘內)/ 現在盤點(嵌入盤點頁 `StocktakeCountStep` + `StocktakeReviewStep`,只盤這個收銀點;差異核對乾淨才能到下一步,刷到的碼記為「在」不會被當成售出)/ 跳過(`store.skip-stocktake`,原因必填,欄位管理「跳過盤點原因」;結帳單記 `skipReason`,報表永久標示「未盤點」)。
+  - **① 盤點**(ST-17a):沿用 30 分鐘內的盤點(`lotteryCheckoutWizard.reusableStocktake`:這家店最近一張、範圍是這個收銀點或全店、待核准或已確認(已退回 / 已駁回不行)、開始盤的時間在 30 分鐘內)/ 現在盤點(嵌入盤點頁 `StocktakeCountStep` + `StocktakeReviewStep`,只盤這個收銀點;差異核對乾淨才能到下一步,刷到的碼記為「在」不會被當成售出)/ 跳過(`store.skip-stocktake`,原因必填,欄位管理「跳過盤點原因」;結帳單記 `skipReason`,報表永久標示「未盤點」)。
   - **② 兌獎**(ST-17b):這一班有效的兌獎逐筆(登記時間舊到新)、合計;[補登兌獎](`store.redeem`)沿用兌獎視窗,立即生效;點一列開兌獎紀錄詳情。
-  - **③ 抽屜**(ST-18):左欄應有現金逐項(`ExpectedCashList`:每一項可點開明細,兌獎 → 兌獎紀錄詳情、現金流水 → 即時現金帳 `?movementId=`);右欄依面額清點(`DenominationCount`,面額 1,000 / 500 / 100 / 50 / 10 / 5 / 1)、實點合計、差額 = 實點 − 應有、差額原因(不為 0 時必填,欄位管理「結帳差額原因」);審核中的現金更正單 / 撤銷售出申請(`pendingCashImpacts`)列出並自動帶入差額原因「審核中的單據」(`pending-documents`,可改)。
-  - **④ 確認**(ST-19a / b):應有各項、應有 / 實點 / 差額、盤點方式;交接:留給下一班、接班人(選填,這家店啟用中的成員、不含自己)。留給下一班 > 0 時接班人必填;沒有接班人 → 留給下一班必須是 0(錢先投庫)、提示改由店長審核。[送出](「送出並列印結帳單」的列印由列印的功能加上)。
-- **應有現金**(規格 6.9 公式):`ExpectedCashItems.of(reader, shift)`(`lottery/checkout/expected-cash.ts`)逐項 = 期初 + 銷售(售出 + 盤點補登 − 當下撤銷,只給張數與金額)− 兌獎(班開著時登記、沒有在班開著時撤銷的)− 投庫 + 出庫(扣掉開班領零用金那一筆)− 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正;只算已完成的單據、不含事後更正(`postCloseOf`),與抽屜應有 `expectedDrawerCash` 同一套來源、合計相等(`checkout.test.ts` 逐項驗)。送出那一刻的各項快照進結帳單 `expectedItems`。
+  - **③ 抽屜**(ST-18):左欄應有現金逐項(`ExpectedCashList`:每一項可點開明細,兌獎 → 兌獎紀錄詳情、現金流水 → 即時現金帳 `?movementId=`);右欄依面額清點(`DenominationCount`,面額 1,000 / 500 / 100 / 50 / 10 / 5 / 1)、實點合計、差額 = 實點 − 應有、差額原因(不為 0 時必填,欄位管理「結帳差額原因」);審核中的現金更正單 / 撤銷售出申請(`pendingCashImpacts`)列出並自動帶入差額原因「審核中的單據」(`pending-documents`)與說明「審核中:現金更正 #X-012 + 500、…」(都可改)。
+  - **④ 確認**(ST-19a / b):應有各項、應有 / 實點 / 差額、盤點方式;交接:留給下一班(不能超過實點 —— 留給下一班的零用金是實點裡的錢)、接班人(選填,這家店啟用中的成員,不含申請人與這一班的負責人 —— 接班人 = 下一班的人)。留給下一班 > 0 時接班人必填;沒有接班人 → 留給下一班必須是 0(錢先投庫)、提示改由店長審核。[送出](「送出並列印結帳單」的列印由列印的功能加上)。
+- **應有現金**(規格 6.9 公式):`ExpectedCashItems.of(reader, shift)`(`lottery/checkout/expected-cash.ts`;涵蓋的抽屜應有來源列在 `EXPECTED_CASH_SOURCE_NAMES`,`checkout.test.ts` 守門它必須等於 `drawerCashSourceNames()`,之後新登記的來源沒同步分項就紅)逐項 = 期初 + 銷售(售出 + 盤點補登 − 當下撤銷,只給張數與金額)− 兌獎(班開著時登記、沒有在班開著時撤銷的)− 投庫 + 出庫(扣掉開班領零用金那一筆)− 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正;只算已完成的單據、不含事後更正(`postCloseOf`),與抽屜應有 `expectedDrawerCash` 同一套來源、合計相等(`checkout.test.ts` 逐項驗)。送出那一刻的各項快照進結帳單 `expectedItems`。
 - **結帳確認申請**(受管表單 `checkout_confirm`,`seeds/project/revisions/checkout_confirm.r1.seed.ts`;交班與日結同一張,`type` 欄位分):分店、類型、收銀點、接班人(`reference(user)`,流程第 1 關的審核者)、應有 / 實點 / 差額 / 留給下一班(顯示用)、說明、結帳內容(系統,`serializeCheckoutDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `C-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。列表沒有 [+ 新增](只從精靈送出;`moduleForms` 仍回 `canCreate`,新增頁只接受 `?shift=`)。掛接點(`checkout-lifecycle.ts`,規則在 `CheckoutService`):
-  - `beforeSubmit`:結帳內容讀得懂、與這一班對得上;有 `store.checkout`、是負責人或店長;班開著(退回後再送出 = 自己那張結帳的班);這一班沒有其他審核中的結帳(`CHECKOUT_PENDING_EXISTS`);盤點方式合法(沿用 → 還在 30 分鐘內、範圍對;現在盤點 → `StocktakeService.checkDraft`;跳過 → `store.skip-stocktake` + 原因);差額不為 0 要原因;交接(留給下一班非負整數、> 0 要接班人 `CHECKOUT_LEFT_MUST_BE_ZERO`、接班人是這家店的人 `CHECKOUT_SUCCESSOR_INVALID`)
-  - `submitted`:同一個交易鎖住抽屜(`drawerVersion` +1,和售出 / 投庫序列化)、算應有各項並快照、建立(退回後再送出改寫)結帳單、現在盤點 → `StocktakeService.submitStocktakeDraft(type: "shift")` 建立盤點單、**這一班結束**(`closedAt`、`checkoutId`;下一班可以先開)、下一班已先開(`previousShiftId` = 這一班、期初來自交接)→ 期初改成留給下一班(規格 8.7「退回修正跟著更新」)
+  - `beforeSubmit`:結帳內容讀得懂、與這一班對得上;有 `store.checkout`、是負責人或店長;班開著(退回後再送出 = 自己那張結帳的班);這一班沒有其他審核中的結帳(`CHECKOUT_PENDING_EXISTS`);盤點方式合法(沿用 → 待核准或已確認、還在 30 分鐘內、範圍對;現在盤點 → `StocktakeService.checkDraft`;跳過 → `store.skip-stocktake` + 原因);差額不為 0 要原因;交接(留給下一班非負整數、不超過實點 `CHECKOUT_LEFT_EXCEEDS_COUNTED`、> 0 要接班人 `CHECKOUT_LEFT_MUST_BE_ZERO`、接班人不是申請人也不是負責人 `CHECKOUT_SUCCESSOR_SELF`、是這家店的人 `CHECKOUT_SUCCESSOR_INVALID`)
+  - `submitted`:同一個交易鎖住抽屜(`drawerVersion` +1,和售出 / 投庫序列化)、算應有各項並快照、建立(退回後再送出改寫)結帳單、現在盤點 → `StocktakeService.submitStocktakeDraft(type: "shift")` 建立盤點單(退回後再送出改成沿用 / 跳過 → 自己上一次建立的盤點單軟刪除,P24 沒有「已放棄」狀態)、**這一班結束**(`closedAt`、`checkoutId`;下一班可以先開)、下一班已先開(`previousShiftId` = 這一班、期初來自交接)→ 期初改成留給下一班(規格 8.7「退回修正跟著更新」)。**已知的低機率競態**:退回後再送出與下一班同時開班 —— 開班讀「留給下一班」(`registerHandoverAmount`)不在再送出的交易內,兩者交錯時下一班可能先以舊金額開班、再送出的 `updateMany` 沒更新到它(開班的寫入晚於 `updateMany`);發生時由店長用現金更正單調整下一班的期初,不另加鎖(機率極低、兩邊都是人工操作)
   - `returned` / `withdrawn`:結帳單 → 已退回(自己建立的盤點單一起退回);班不重開
   - `completed`:現在盤點 → `StocktakeService.apply`;結帳單 → 已確認,`confirmedBy` = 最後核准的審核者(兩關都跳過 = 申請人)。零用金成為下一班期初由 `registerHandoverAmount` 的登記讀結帳單(送出就算,核准前下一班先開也先用它)
   - `beforeReject` / `beforeVoid`:**一律擋下**(`CHECKOUT_REJECT_FORBIDDEN` / `CHECKOUT_VOID_FORBIDDEN`,只能退回)
@@ -464,6 +464,8 @@
 | `CHECKOUT_STOCKTAKE_NOT_REUSABLE` | 沿用的盤點不存在、已駁回、不是這個收銀點(或全店)的、或超過 30 分鐘               |
 | `CHECKOUT_REASON_REQUIRED`        | 差額不為 0 沒有原因 / 跳過盤點沒有原因(含選「其他」沒寫說明)                     |
 | `CHECKOUT_LEFT_MUST_BE_ZERO`      | 沒有接班人時留給下一班 > 0                                                       |
+| `CHECKOUT_LEFT_EXCEEDS_COUNTED`   | 留給下一班超過實點(送出時 `VALIDATION_FAILED`)                                   |
+| `CHECKOUT_SUCCESSOR_SELF`         | 接班人是申請人或這一班的負責人                                                   |
 | `CHECKOUT_SUCCESSOR_INVALID`      | 接班人不是這家店的成員                                                           |
 | `CHECKOUT_REJECT_FORBIDDEN`       | 駁回結帳確認申請(一律擋下,只能退回)                                              |
 | `CHECKOUT_VOID_FORBIDDEN`         | 作廢結帳確認申請(一律擋下)                                                       |

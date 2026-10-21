@@ -2562,7 +2562,9 @@
     "CHECKOUT_LEFT_MUST_BE_ZERO": "Without a successor the amount left for the next shift must be 0. Deposit the cash first.",
     "CHECKOUT_SUCCESSOR_INVALID": "The successor must be a member of this store.",
     "CHECKOUT_REJECT_FORBIDDEN": "Checkout confirmations cannot be rejected. Return it instead.",
-    "CHECKOUT_VOID_FORBIDDEN": "Checkout confirmations cannot be voided."
+    "CHECKOUT_VOID_FORBIDDEN": "Checkout confirmations cannot be voided.",
+    "CHECKOUT_LEFT_EXCEEDS_COUNTED": "The amount left for the next shift cannot exceed the counted cash.",
+    "CHECKOUT_SUCCESSOR_SELF": "The successor cannot be the applicant or the shift owner."
   },
   "lotteryStore": {
     "tabs": {
@@ -3391,7 +3393,8 @@
         "pending": "Under review: {items} → the difference reason was filled in automatically.",
         "pendingItem": "{form} #{serialNo} {amount}",
         "toggleAria": "Expand entries of {item}",
-        "openEntry": "Open document"
+        "openEntry": "Open document",
+        "pendingNote": "Under review: {items}"
       },
       "items": {
         "opening": "Opening float",
@@ -3427,7 +3430,8 @@
         "stocktakeReuse": "Reuse the {time} {scope}stocktake {serial}",
         "stocktakeNew": "Count now",
         "stocktakeSkip": "Skip stocktake ({reason})",
-        "stocktake": "Stocktake"
+        "stocktake": "Stocktake",
+        "exceedsCounted": "Cannot exceed the counted cash {counted}"
       },
       "types": {
         "shift": "Shift",

@@ -35,7 +35,11 @@ export const CheckoutDrawerStep = ({
   const t = useTranslations("admin.lotteryStore.checkout");
   const { autoFillPending } = flow;
   useEffect(() => {
-    autoFillPending();
+    autoFillPending(
+      t("drawer.pendingNote", {
+        items: pendingImpactsText(t, wizard.pendingImpacts),
+      }),
+    );
     // 只在進到這一步時帶入一次
     // eslint-disable-next-line react-hooks/exhaustive-deps -- autoFillPending 每次 render 都是新函式,只在進入這一步時跑一次
   }, []);

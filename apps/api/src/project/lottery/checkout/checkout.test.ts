@@ -54,10 +54,14 @@ import {
 import { LOTTERY_TICKETS_COLLECTION } from "../../database/lottery-inventory/lottery-ticket.schema";
 import { LOTTERY_STOCKTAKES_COLLECTION } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
+import { drawerCashSourceNames } from "../store/drawer-cash";
 import { StoreClock } from "../store/store-clock";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
+import { EXPECTED_CASH_SOURCE_NAMES } from "./expected-cash";
 
 jest.setTimeout(WORKFLOW_TEST_TIMEOUT_MS);
+
+const byName = (a: string, b: string) => a.localeCompare(b);
 
 // ---- GraphQL ----
 
@@ -302,6 +306,8 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
   let manager: Person;
   /** 只有看板 */
   let viewer: Person;
+  /** 租戶頂層的人(不是信義店的成員) */
+  let outsider: Person;
 
   let bookSequence = 80_000;
   let requestSequence = 0;
@@ -789,6 +795,10 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
       moduleKeys: ["store"],
       permissionKeys: [S.view],
     });
+    outsider = await person(api, connection, tenant, tenant, {
+      moduleKeys: ["store"],
+      permissionKeys: [S.view],
+    });
     const managerRole = await createRole(api.app, connection, {
       name: "店長",
       ownerOrgId: tenant,
@@ -881,6 +891,12 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
   afterAll(async () => {
     await api.close();
   }, HOOK_TIMEOUT_MS);
+
+  it("守門:抽屜應有登記的來源 = 應有現金逐項涵蓋的來源(新登記來源沒同步分項就紅)", () => {
+    expect(drawerCashSourceNames().toSorted(byName)).toEqual(
+      EXPECTED_CASH_SOURCE_NAMES.toSorted(byName),
+    );
+  });
 
   it("應有現金公式(規格 6.9)每一項各一筆:期初 + 銷售 − 兌獎 − 投庫 + 出庫 − 調貨支出 + 調貨收入 − 退貨退款 ± 現金更正;只算已完成、不含事後更正;與看板的應有相等", async () => {
     now("12:00");
@@ -977,9 +993,44 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(asSuccessor.canSubmit).toBe(false);
     const asManager = await wizard(manager, shiftId);
     expect(asManager.canSubmit).toBe(true);
+    // 店長代結:這一班的負責人也不在接班人候選裡(接班人 = 下一班的人)
+    expect(asManager.successorOptions.map((option) => option.id)).not.toContain(
+      String(clerkA.userId),
+    );
     expect(
       await submitBlocked(clerkB, draftOf(shiftId, counter, 2880)),
     ).toMatchObject({ code: "FORBIDDEN", reason: CHECKOUT_REASONS.forbidden });
+    // 接班人不能是申請人、不能是這一班的負責人、不能是別家店的人
+    const handoverTo = (who: Person) =>
+      draftOf(shiftId, counter, 2880, {
+        leftForNext: 1000,
+        successorId: String(who.userId),
+      });
+    expect(await submitBlocked(clerkA, handoverTo(clerkA))).toMatchObject({
+      code: "FORBIDDEN",
+      reason: CHECKOUT_REASONS.successorSelf,
+    });
+    expect(await submitBlocked(manager, handoverTo(clerkA))).toMatchObject({
+      code: "FORBIDDEN",
+      reason: CHECKOUT_REASONS.successorSelf,
+    });
+    // 別家店的人:使用者參照欄位先擋(不在操作者可見範圍 → VALIDATION_FAILED);`CHECKOUT_SUCCESSOR_INVALID` 是第二道
+    expect(await submitBlocked(clerkA, handoverTo(outsider))).toMatchObject({
+      code: "VALIDATION_FAILED",
+    });
+    // 留給下一班不能超過實點
+    expect(
+      await submitBlocked(
+        clerkA,
+        draftOf(shiftId, counter, 2880, {
+          leftForNext: 2881,
+          successorId: String(clerkB.userId),
+        }),
+      ),
+    ).toMatchObject({
+      code: "FORBIDDEN",
+      reason: CHECKOUT_REASONS.leftExceedsCounted,
+    });
     // 這一題不送出:直接結束這一班,讓後面的題目能在同一個收銀點開班
     await connection
       .collection(LOTTERY_SHIFTS_COLLECTION)
@@ -1211,23 +1262,28 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     });
   });
 
-  it("盤點方式:沿用 30 分鐘內的盤點(超過就不能沿用)、店長跳過盤點要原因(報表標示用 skipReason)", async () => {
+  it("盤點方式:沿用 30 分鐘內的盤點(已退回的不能沿用;超過就不能沿用)、店長跳過盤點要原因(報表標示用 skipReason);退回後改成跳過 → 自己建立的盤點單不留", async () => {
     now("15:00");
     const shiftId = await openShift(stall, clerkA.userId, 1000);
-    // 14:50 開始盤的全店盤點(已確認)可以沿用
+    // 14:50 開始盤的全店盤點(已確認)可以沿用;14:55 開始盤的(已退回)最新但不能沿用
     const stocktakeSubmissionId = new Types.ObjectId();
-    await connection.collection(LOTTERY_STOCKTAKES_COLLECTION).insertOne({
+    const returnedSubmissionId = new Types.ObjectId();
+    const stocktakeDoc = (
+      submissionId: Types.ObjectId,
+      status: "confirmed" | "returned",
+      startedAt: Date,
+    ) => ({
       orgId: xinyi,
       tenantId: tenant,
       type: "adhoc",
-      status: "confirmed",
+      status,
       scopeCashPointId: null,
-      startedAt: taipei("14:50"),
+      startedAt,
       submittedBy: clerkA.userId,
-      submittedAt: taipei("14:55"),
-      confirmedAt: taipei("14:56"),
-      confirmedBy: manager.userId,
-      submissionId: stocktakeSubmissionId,
+      submittedAt: taipei("14:56"),
+      confirmedAt: status === "confirmed" ? taipei("14:57") : null,
+      confirmedBy: status === "confirmed" ? manager.userId : null,
+      submissionId,
       lines: [],
       unopenedLines: [],
       lostReviewLines: [],
@@ -1243,6 +1299,26 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
       version: 0,
       moduleKey: "store",
       ...base(),
+    });
+    await connection
+      .collection(LOTTERY_STOCKTAKES_COLLECTION)
+      .insertMany([
+        stocktakeDoc(stocktakeSubmissionId, "confirmed", taipei("14:50")),
+        stocktakeDoc(returnedSubmissionId, "returned", taipei("14:55")),
+      ]);
+    expect(
+      await submitBlocked(
+        clerkA,
+        draftOf(shiftId, stall, 1000, {
+          stocktake: {
+            mode: "reuse",
+            submissionId: String(returnedSubmissionId),
+          },
+        }),
+      ),
+    ).toMatchObject({
+      code: "FORBIDDEN",
+      reason: CHECKOUT_REASONS.stocktakeNotReusable,
     });
     const within = await wizard(clerkA, shiftId);
     expect(within.reusableStocktake).toEqual({
@@ -1260,20 +1336,40 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
       code: "FORBIDDEN",
       reason: CHECKOUT_REASONS.stocktakeNotReusable,
     });
-    // 店長跳過盤點(原因必填)
+    // 店長先「現在盤點」送出(接班人 B)→ B 退回 → 改成跳過盤點(原因必填)再送出:自己建立的那張盤點單不留
     const asManager = await wizard(manager, shiftId);
     expect(asManager.canSkipStocktake).toBe(true);
+    const handover = { leftForNext: 500, successorId: String(clerkB.userId) };
     const submitted = await submitOk(
       manager,
-      draftOf(shiftId, stall, 1000, {
-        stocktake: {
-          mode: "skip",
-          reasonKey: "short-staffed",
-          reasonNote: null,
-        },
-      }),
+      draftOf(shiftId, stall, 1000, handover),
     );
+    const ownStocktake = { submissionId: new Types.ObjectId(submitted.id) };
+    expect(
+      await connection
+        .collection(LOTTERY_STOCKTAKES_COLLECTION)
+        .findOne(ownStocktake),
+    ).toMatchObject({ type: "shift", status: "pending", deletedAt: null });
+    await decideOn(world, clerkB, submitted.id, "RETURN");
+    const resubmitted = await gql(manager, SUBMIT_SUBMISSION, {
+      input: {
+        id: submitted.id,
+        expectedEditVersion: await editVersionOf(submitted.id),
+        values: valuesOf(
+          draftOf(shiftId, stall, 1000, {
+            ...handover,
+            stocktake: {
+              mode: "skip",
+              reasonKey: "short-staffed",
+              reasonNote: null,
+            },
+          }),
+        ),
+      },
+    });
+    expect(resubmitted.errors).toBeUndefined();
     expect(await checkoutOf(submitted.id)).toMatchObject({
+      status: "pending",
       stocktakeMode: "skip",
       stocktakeId: null,
       skipReasonKey: "short-staffed",
@@ -1282,8 +1378,8 @@ describe("交班結帳(GraphQL 端點 + 真 MongoDB)", () => {
     expect(
       await connection
         .collection(LOTTERY_STOCKTAKES_COLLECTION)
-        .countDocuments({ submissionId: new Types.ObjectId(submitted.id) }),
-    ).toBe(0);
+        .findOne(ownStocktake),
+    ).toMatchObject({ deletedAt: expect.any(Date) });
     const detail = await ok<{
       lotteryCheckout: { stocktakeMode: string; skipReason: string | null };
     }>(clerkA, DETAIL, { submissionId: submitted.id });

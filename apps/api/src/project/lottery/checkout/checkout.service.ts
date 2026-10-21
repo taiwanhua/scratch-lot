@@ -153,7 +153,7 @@ export class CheckoutService {
         );
       }
     }
-    return this.checkHandover(shift, draft);
+    return this.checkHandover(operator, shift, draft, counted);
   }
 
   /** 結帳內容指的那一班(分店、收銀點都要對得上);對不上 = null。 */
@@ -198,14 +198,25 @@ export class CheckoutService {
       : null;
   }
 
-  /** 交接:留給下一班是非負整數、> 0 要接班人(沒有接班人必須是 0)、接班人是這家店的人。 */
+  /**
+   * 交接:留給下一班是非負整數、不超過實點、> 0 要接班人(沒有接班人必須是 0);接班人不是申請人也不是這一班的負責人
+   * (接班人 = 下一班的人)、是這家店的人。
+   */
   private async checkHandover(
+    operator: OperatorContext,
     shift: ShiftRecord,
     draft: CheckoutDraft,
+    counted: number,
   ): Promise<FormGuardResult> {
-    const handover = checkoutHandoverProblemOf(draft);
+    const handover = checkoutHandoverProblemOf({ ...draft, counted });
     if (handover === "invalid_amount") {
       return block(CHECKOUT_REASONS.invalid, "left for next is invalid");
+    }
+    if (handover === "exceeds_counted") {
+      return block(
+        CHECKOUT_REASONS.leftExceedsCounted,
+        "left for next exceeds the counted cash",
+      );
     }
     if (handover === "must_be_zero") {
       return block(
@@ -217,6 +228,16 @@ export class CheckoutService {
       return null;
     }
     const successorId = parseId(draft.successorId);
+    if (
+      successorId !== null &&
+      (successorId.equals(shift.openedBy) ||
+        (operator.actorId !== null && successorId.equals(operator.actorId)))
+    ) {
+      return block(
+        CHECKOUT_REASONS.successorSelf,
+        "successor cannot be the applicant or the shift owner",
+      );
+    }
     const members =
       successorId === null
         ? []
@@ -291,7 +312,7 @@ export class CheckoutService {
     }
   }
 
-  /** 沿用的盤點:這家店的、範圍是這個收銀點或全店、沒被駁回、開始盤的時間在 30 分鐘內。 */
+  /** 沿用的盤點:這家店的、範圍是這個收銀點或全店、待核准或已確認(已退回 / 已駁回不行)、開始盤的時間在 30 分鐘內。 */
   private async reusableStocktake(
     reader: OperatorContext,
     draft: Pick<CheckoutDraft, "orgId" | "cashPointId">,
@@ -307,7 +328,7 @@ export class CheckoutService {
       {
         submissionId,
         orgId: new Types.ObjectId(draft.orgId),
-        status: { $ne: STOCKTAKE_STATUS.rejected },
+        status: { $in: [STOCKTAKE_STATUS.pending, STOCKTAKE_STATUS.confirmed] },
       },
       session === undefined ? {} : { session },
     );
@@ -408,6 +429,13 @@ export class CheckoutService {
     const expected = expectedCashTotalOf(items);
     const counted = countedTotalOf(draft.denominations);
     const difference = counted - expected;
+    if (draft.leftForNext > counted) {
+      throw validationError(
+        "left for next exceeds the counted cash",
+        ["leftForNext"],
+        CHECKOUT_REASONS.leftExceedsCounted,
+      );
+    }
     const diffReason = isDiffReasonRequired(difference)
       ? await this.reasonOf(
           reader,
@@ -504,6 +532,25 @@ export class CheckoutService {
     await this.support.publish({ orgId: shift.orgId, tenantId });
   }
 
+  /**
+   * 退回後再送出改成沿用 / 跳過:這張申請自己上一次建立的盤點單(已退回)不再有申請帶它,軟刪除
+   * (盤點單只在送出時存在,P24 沒有「已放棄」狀態)。
+   */
+  private async discardOwnStocktake(
+    session: ClientSession,
+    reader: OperatorContext,
+    submissionId: Types.ObjectId,
+  ): Promise<void> {
+    const own = await this.stocktakes.findOne(
+      reader,
+      { submissionId },
+      { session },
+    );
+    if (own !== null) {
+      await this.stocktakes.softDeleteById(reader, own._id, { session });
+    }
+  }
+
   /** 盤點方式 → 盤點單 id(現在盤點:同一個交易建立;沿用:那一筆;跳過:null + 原因)。 */
   private async writeStocktake(
     session: ClientSession,
@@ -534,6 +581,7 @@ export class CheckoutService {
             CHECKOUT_REASONS.reasonRequired,
           );
         }
+        await this.discardOwnStocktake(session, reader, submission._id);
         return { stocktakeId: null, skip: reason };
       }
       case "reuse": {
@@ -550,6 +598,7 @@ export class CheckoutService {
             CHECKOUT_REASONS.stocktakeNotReusable,
           );
         }
+        await this.discardOwnStocktake(session, reader, submission._id);
         return { stocktakeId: record._id, skip: null };
       }
       case "new": {

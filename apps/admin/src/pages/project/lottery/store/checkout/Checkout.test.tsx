@@ -166,6 +166,7 @@ describe("店面管理:交班結帳", () => {
         { value: 100, count: 3 },
       ],
       diffReasonKey: "pending-documents",
+      diffReasonNote: "審核中:現金更正 #C-012 + 500、撤銷售出 #R-008 − 500",
       leftForNext: 3000,
       successorId: "user-li",
     });
@@ -208,6 +209,14 @@ describe("店面管理:交班結帳", () => {
     expect(screen.queryByRole("combobox", { name: /差額原因/u })).toBeNull();
     await user.click(screen.getByRole("button", { name: "下一步" }));
     await screen.findByText("交接");
+    // 留給下一班不能超過實點
+    const left = screen.getByRole("textbox", { name: "留給下一班" });
+    await user.type(left, "12351");
+    expect(
+      screen.getByText("留給下一班不能超過實點 12,350"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "送出" })).toBeDisabled();
+    await user.clear(left);
     await user.click(screen.getByRole("button", { name: "送出" }));
     await waitFor(() => {
       expect(runtime.inputs.createAndSubmitFormSubmission).toHaveLength(1);

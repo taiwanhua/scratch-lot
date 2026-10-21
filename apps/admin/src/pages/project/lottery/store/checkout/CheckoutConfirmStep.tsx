@@ -85,6 +85,15 @@ export const CheckoutConfirmStep = ({
   ];
   const noSuccessor = flow.successorId === NO_SUCCESSOR;
   const mustBeZero = flow.handoverProblem === "must_be_zero";
+  const exceedsCounted = flow.handoverProblem === "exceeds_counted";
+  let leftHelper: string | undefined;
+  if (mustBeZero) {
+    leftHelper = t("confirm.mustBeZero");
+  } else if (exceedsCounted) {
+    leftHelper = t("confirm.exceedsCounted", {
+      counted: moneyText(flow.counted),
+    });
+  }
   return (
     <Box
       sx={{
@@ -131,8 +140,8 @@ export const CheckoutConfirmStep = ({
           <TextField
             label={t("confirm.leftForNext")}
             value={flow.leftForNext}
-            error={mustBeZero || flow.handoverProblem === "invalid_amount"}
-            helperText={mustBeZero ? t("confirm.mustBeZero") : undefined}
+            error={flow.handoverProblem !== null}
+            helperText={leftHelper}
             slotProps={{ htmlInput: { inputMode: "numeric" } }}
             onChange={(event) => {
               flow.setLeftForNext(event.target.value);

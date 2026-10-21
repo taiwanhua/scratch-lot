@@ -2562,7 +2562,9 @@
     "CHECKOUT_LEFT_MUST_BE_ZERO": "沒有接班人時「留給下一班」必須是 0,請先把錢投庫",
     "CHECKOUT_SUCCESSOR_INVALID": "接班人要是這家店的人",
     "CHECKOUT_REJECT_FORBIDDEN": "結帳確認申請不能駁回,請改用退回",
-    "CHECKOUT_VOID_FORBIDDEN": "結帳確認申請不能作廢"
+    "CHECKOUT_VOID_FORBIDDEN": "結帳確認申請不能作廢",
+    "CHECKOUT_LEFT_EXCEEDS_COUNTED": "「留給下一班」不能超過實點",
+    "CHECKOUT_SUCCESSOR_SELF": "接班人不能是申請人或這一班的負責人"
   },
   "lotteryStore": {
     "tabs": {
@@ -3391,7 +3393,8 @@
         "pending": "審核中:{items} → 已自動帶入差額原因說明。",
         "pendingItem": "{form} #{serialNo} {amount}",
         "toggleAria": "展開 {item} 的明細",
-        "openEntry": "點開單據"
+        "openEntry": "點開單據",
+        "pendingNote": "審核中:{items}"
       },
       "items": {
         "opening": "期初零用金",
@@ -3427,7 +3430,8 @@
         "stocktakeReuse": "沿用 {time} {scope}盤點 {serial}",
         "stocktakeNew": "現在盤點",
         "stocktakeSkip": "跳過盤點({reason})",
-        "stocktake": "盤點"
+        "stocktake": "盤點",
+        "exceedsCounted": "留給下一班不能超過實點 {counted}"
       },
       "types": {
         "shift": "交班",

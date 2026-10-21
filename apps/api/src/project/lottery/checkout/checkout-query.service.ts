@@ -2,10 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { Types } from "mongoose";
 
 import {
+  CHECKOUT_CONFIRM_FORM_KEY,
   CHECKOUT_TYPES,
   type CheckoutDraft,
   REDEMPTION_STATUS,
   STOCKTAKE_STATUS,
+  STORE_KEY,
   STORE_PERMISSIONS,
   expectedCashTotalOf,
   isStocktakeReusable,
@@ -32,7 +34,10 @@ import {
   LotteryCheckoutsRepository,
 } from "../../database/lottery-checkouts/lottery-checkouts.repository";
 import { LotteryRedemptionsRepository } from "../../database/lottery-redemptions/lottery-redemptions.repository";
-import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
+import {
+  type LotteryStocktakeDocument,
+  LotteryStocktakesRepository,
+} from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
 import { RedemptionViews } from "../redemption/redemption-views";
 import { draftOfStocktake } from "../stocktake/stocktake-query.service";
@@ -199,7 +204,7 @@ export class CheckoutQueryService {
     };
   }
 
-  /** 可以沿用的盤點:這家店最近一張、範圍是這個收銀點或全店、沒被駁回、30 分鐘內。 */
+  /** 可以沿用的盤點:這家店最近一張、範圍是這個收銀點或全店、待核准或已確認(已退回 / 已駁回不行)、30 分鐘內。 */
   private async reusableStocktakeOf(
     operator: OperatorContext,
     shift: ShiftRecord,
@@ -209,7 +214,7 @@ export class CheckoutQueryService {
       operator,
       {
         orgId: shift.orgId,
-        status: { $ne: STOCKTAKE_STATUS.rejected },
+        status: { $in: [STOCKTAKE_STATUS.pending, STOCKTAKE_STATUS.confirmed] },
         $or: [
           { scopeCashPointId: null },
           { scopeCashPointId: shift.cashPointId },
@@ -253,14 +258,16 @@ export class CheckoutQueryService {
     };
   }
 
-  /** 接班人候選:這家店啟用中的成員,不含自己;名稱排序。 */
+  /** 接班人候選:這家店啟用中的成員,不含自己與這一班的負責人(接班人 = 下一班的人);名稱排序。 */
   private async successorOptions(
     operator: OperatorContext,
     shift: ShiftRecord,
   ): Promise<{ id: string; name: string }[]> {
     const members = await this.relations.listUserIdsOfOrg(shift.orgId);
     const ids = members.filter(
-      (id) => operator.actorId === null || !id.equals(operator.actorId),
+      (id) =>
+        !id.equals(shift.openedBy) &&
+        (operator.actorId === null || !id.equals(operator.actorId)),
     );
     if (ids.length === 0) {
       return [];
@@ -317,7 +324,7 @@ export class CheckoutQueryService {
       );
       const matched = await this.submissions.findMany(
         reader,
-        { moduleKey: "store", formKey: "checkout_confirm", status },
+        { moduleKey: STORE_KEY, formKey: CHECKOUT_CONFIRM_FORM_KEY, status },
         { select: "_id" },
       );
       filter.submissionId = { $in: matched.map((row) => row._id) };
@@ -454,20 +461,17 @@ export class CheckoutQueryService {
       submittedBy: nameRef(record.submittedBy),
       submittedAt: record.submittedAt,
       confirmedAt: record.confirmedAt,
-      draft: serializeCheckoutDraft(
-        this.draftOf(
-          record,
-          stocktake === null ? null : draftOfStocktake(stocktake),
-        ),
-      ),
+      draft: serializeCheckoutDraft(this.draftOf(record, stocktake)),
     };
   }
 
-  /** 結帳單 → 結帳內容(退回後打開精靈帶入原內容)。 */
+  /** 結帳單 → 結帳內容(退回後打開精靈帶入原內容);`stocktake` = 結帳單指的盤點單(沿用的或自己建立的)。 */
   private draftOf(
     record: CheckoutRecord,
-    stocktakeDraft: string | null,
+    stocktake: Persisted<LotteryStocktakeDocument> | null,
   ): CheckoutDraft {
+    const stocktakeDraft =
+      stocktake === null ? null : draftOfStocktake(stocktake);
     const base = {
       version: 1 as const,
       type: "shift" as const,
@@ -509,7 +513,7 @@ export class CheckoutQueryService {
       ...base,
       stocktake: {
         mode: "reuse",
-        submissionId: "",
+        submissionId: stocktake === null ? "" : String(stocktake.submissionId),
       },
     };
   }
