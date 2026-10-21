@@ -752,7 +752,9 @@
       "dayOffs": "My day-offs",
       "dayOffOverview": "Day-off overview",
       "supportRequests": "Support requests",
-      "mySchedule": "Schedule"
+      "mySchedule": "Schedule",
+      "attendanceByPerson": "By person (month)",
+      "attendanceByStore": "By store (day)"
     },
     "shell": {
       "empty": "No tabs are available on this page yet."
@@ -1323,7 +1325,8 @@
           "understaffedNone": ": nobody available ({reasons})",
           "dayOffEntryConflict": "Shift on a day off: {name} {date} {start}–{end}",
           "dayOffEntryConflictOther": "Shift on a day off: {name} {date} {start}–{end} (at {org})",
-          "dayOffEntryConflictUnknown": "Shift on a day off: {name} {date} {start}–{end} (at another branch)"
+          "dayOffEntryConflictUnknown": "Shift on a day off: {name} {date} {start}–{end} (at another branch)",
+          "unmatchedPunches": "{name} {date} · {count} punches without a shift"
         },
         "reasons": {
           "dayOff": "{count} off",
@@ -1461,6 +1464,15 @@
           "created": "Shift added",
           "saved": "Shift saved",
           "deleted": "Shift deleted"
+        },
+        "punches": {
+          "region": "Punches without a shift",
+          "title": "{heading} has {count} punches without a shift",
+          "label": "{time} {type}",
+          "duplicateLabel": "{time} {type} · duplicate",
+          "in": "in",
+          "out": "out",
+          "usePunchTime": "Use punch times as shift times"
         }
       },
       "timeline": {
@@ -1656,6 +1668,113 @@
         "none": "No shift on this day",
         "dayOff": "Full day off",
         "breakMinutes": "{minutes}-minute break"
+      }
+    },
+    "attendance": {
+      "temporary": "Temp",
+      "types": {
+        "in": "Clock in",
+        "out": "Clock out"
+      },
+      "org": "Store",
+      "person": "Person",
+      "prevDate": "Previous day",
+      "nextDate": "Next day",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "monthTitle": "{month}/{year}",
+      "unmatchedOnly": "Only punches without a shift",
+      "summary": "{scheduled} scheduled · {arrived} arrived · {absent} absent · {unmatched} punches without a shift",
+      "rowsAria": "Attendance",
+      "emptyRows": "No shifts on this day",
+      "emptyMonth": "No shifts this month",
+      "unmatchedTitle": "Without a shift",
+      "unmatchedEmpty": "No punches without a shift",
+      "none": "—",
+      "missing": "Missing",
+      "minutes": "{minutes} min",
+      "lateShort": "Late {minutes} min",
+      "earlyShort": "Left early {minutes} min",
+      "cardLine": "{entry} · in {clockIn} · out {clockOut}",
+      "personCardLine": "In {clockIn} · out {clockOut} · worked {worked}",
+      "makeupApply": "Request a missed punch",
+      "makeupRow": "Missed punch",
+      "reassignButton": "Change shift",
+      "columns": {
+        "person": "Person",
+        "date": "Date",
+        "entry": "Shift",
+        "clockIn": "In",
+        "clockOut": "Out",
+        "status": "Status",
+        "worked": "Worked",
+        "late": "Late",
+        "early": "Left early",
+        "special": "Special day",
+        "actions": "Actions"
+      },
+      "status": {
+        "arrived": "Arrived",
+        "absent": "Absent",
+        "upcoming": "Not started",
+        "late": "Late {minutes} min",
+        "earlyLeave": "Left early {minutes} min"
+      },
+      "export": {
+        "button": "Export Excel",
+        "note": "Attendance {month}/{year}",
+        "fileName": "attendance-{month}",
+        "empty": "No shifts in this range to export",
+        "temporary": "Temp",
+        "makeup": "Missed punch",
+        "columns": {
+          "date": "Date",
+          "person": "Person",
+          "entry": "Shift",
+          "clockIn": "In",
+          "clockOut": "Out",
+          "onDutyHours": "Hours on duty",
+          "breakMinutes": "Break",
+          "workedHours": "Worked hours",
+          "scheduledHours": "Scheduled hours",
+          "lateMinutes": "Late",
+          "earlyLeaveMinutes": "Left early",
+          "specialDayCategory": "Special day type",
+          "makeupNote": "Missed punch note"
+        }
+      },
+      "reassign": {
+        "title": "Change the shift of this punch",
+        "punch": "Punch",
+        "summary": "{name} · {punch}",
+        "fixedHint": "Time and type cannot change; only the shift can",
+        "entry": "Shift",
+        "noEntry": "No shift (without a shift)",
+        "reason": "Reason",
+        "note": "Note",
+        "saved": "Shift changed"
+      },
+      "makeup": {
+        "title": "Missed punch request",
+        "titleWithNo": "{serialNo} · Missed punch request",
+        "loading": "Loading",
+        "unavailable": "This request cannot be edited",
+        "applicant": "Applicant",
+        "date": "Date",
+        "branch": "Store",
+        "entry": "Shift",
+        "entryHint": "Pick a date and a store to list your shifts there that day",
+        "entryRequired": "Please choose a shift",
+        "noEntry": "No shift (covering)",
+        "type": "Type",
+        "time": "Time",
+        "reason": "Reason",
+        "note": "Note",
+        "cancel": "Cancel",
+        "submit": "Submit",
+        "submitted": "Request submitted",
+        "returnedHint": "This request was returned. Check the shift and submit again",
+        "entryDeleted": "The chosen shift was deleted, so it cannot be approved. Return it so the applicant can choose again"
       }
     }
   },
@@ -2330,6 +2449,11 @@
     "TRANSFER_SHIPPER_OVERRECEIVED": "The shipping store received too much; record a refund first",
     "TRANSFER_RECEIVER_OVERPAID": "The receiving store paid too much; record the refund received",
     "TRANSFER_HAS_RECEIPTS": "A transfer with received lines cannot be rejected or deleted",
-    "TRANSFER_BOOKS_IN_USE": "Received tickets were sold, transferred again or opened; the transfer cannot be voided"
+    "TRANSFER_BOOKS_IN_USE": "Received tickets were sold, transferred again or opened; the transfer cannot be voided",
+    "MAKEUP_PUNCH_ENTRY_REQUIRED": "Please choose a shift",
+    "MAKEUP_PUNCH_ENTRY_MISMATCH": "The shift must be yours at that store on that day",
+    "MAKEUP_PUNCH_ENTRY_DELETED": "The chosen shift was deleted, so it cannot be approved. Return it so the applicant can choose again",
+    "MAKEUP_PUNCH_INVALID_VALUES": "Date, store, type or time is missing",
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "A note is required when the reason is Other"
   }
 }

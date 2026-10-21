@@ -113,6 +113,10 @@ export const RosterGridView = () => {
     data.entries.filter(
       (entry) => entry.userId === userId && entry.date === date,
     );
+  const punchCountOf = (userId: string, date: string): number =>
+    data.unmatchedPunches.filter(
+      (punch) => punch.userId === userId && punch.date === date,
+    ).length;
   const unavailabilityOf = (userId: string, date: string) =>
     data.unavailability.find(
       (item) => item.userId === userId && item.date === date,
@@ -352,6 +356,11 @@ export const RosterGridView = () => {
               timezone={timezone}
               taskLabelOf={tasks.labelOf}
               onEntryClick={openEntry}
+              punchCount={punchCountOf(person.userId, date)}
+              onPunchClick={() => {
+                const first = entriesOf(person.userId, date).at(0);
+                openEntry(first ?? { userId: person.userId, date });
+              }}
             />
           </Box>
         )}
@@ -370,6 +379,7 @@ export const RosterGridView = () => {
           "breakMinutes",
           "full",
           "multi",
+          "unmatchedPunch",
         ]}
       />
       <Menu

@@ -14,8 +14,10 @@ import {
   autoMarkSx,
   leaderMarkSx,
   multiBadgeSx,
+  unmatchedPunchSx,
 } from "@/components/project/schedule/ScheduleLegend/schedule-legend-styles";
 import { useScheduleFieldOptions } from "@/hooks/project/schedule/useScheduleFieldOptions/useScheduleFieldOptions";
+import { unmatchedCountsByDate } from "@/lib/project/schedule-attendance";
 import {
   localPartsOf,
   shiftDay,
@@ -299,6 +301,8 @@ export const useTimelineGroups = (
   const calendarByDate = new Map(
     data.calendarDays.map((day) => [day.date, day]),
   );
+  // 未對應排班的打卡:那天的日期旁顯示時鐘圖示 + 張數(規格 14.5)
+  const punchCounts = unmatchedCountsByDate(data.unmatchedPunches);
   const timelineDates = shownDates.map((date): ScheduleTimelineDate => {
     const day = calendarByDate.get(date);
     const special =
@@ -312,6 +316,17 @@ export const useTimelineGroups = (
           {/* 表頭的日期由時間軸畫,這裡只寫星期與特殊日名稱 */}
           {tCalendar(`weekdays.${String(weekdayOf(date))}`)}
           {special !== null && day?.name ? ` ${day.name}` : ""}
+          {(punchCounts.get(date) ?? 0) > 0 && (
+            <Box
+              component="span"
+              aria-label={t("timeline.punchAria", {
+                count: punchCounts.get(date) ?? 0,
+              })}
+              sx={[unmatchedPunchSx, { ml: 0.5 }]}
+            >
+              {t("timeline.punch", { count: punchCounts.get(date) ?? 0 })}
+            </Box>
+          )}
         </Box>
       ),
       ...(special === null

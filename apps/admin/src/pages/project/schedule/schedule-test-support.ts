@@ -7,6 +7,10 @@ import {
 } from "@/test/msw/form-runtime-handlers";
 import { tenantTree } from "@/test/msw/org-fixtures";
 import {
+  type ScheduleAttendanceWorldOptions,
+  scheduleAttendanceWorld,
+} from "@/test/msw/project/schedule-attendance-handlers";
+import {
   type ScheduleCalendarWorldOptions,
   scheduleCalendarWorld,
 } from "@/test/msw/project/schedule-calendar-handlers";
@@ -50,6 +54,8 @@ export interface RenderScheduleOptions {
   roster?: ScheduleRosterWorldOptions;
   /** 我的班表 → 班表分頁 */
   my?: ScheduleMyWorldOptions;
+  /** 出勤紀錄(依人員 / 依分店、改對應排班、補打卡的下拉) */
+  attendance?: ScheduleAttendanceWorldOptions;
 }
 
 /**
@@ -67,6 +73,7 @@ export const renderSchedulePage = ({
   workflow = {},
   roster = {},
   my = {},
+  attendance = {},
 }: RenderScheduleOptions) => {
   const settingsFake = scheduleSettingsWorld(settings);
   const calendarFake = scheduleCalendarWorld(calendar);
@@ -75,7 +82,9 @@ export const renderSchedulePage = ({
   const workflowFake = workflowRuntimeWorld(workflow);
   const rosterFake = scheduleRosterWorld(roster);
   const myFake = scheduleMyWorld(my);
+  const attendanceFake = scheduleAttendanceWorld(attendance);
   server.use(
+    ...attendanceFake.handlers,
     ...rosterFake.handlers,
     ...myFake.handlers,
     ...settingsFake.handlers,
@@ -108,5 +117,6 @@ export const renderSchedulePage = ({
     workflowFake,
     rosterFake,
     myFake,
+    attendanceFake,
   };
 };

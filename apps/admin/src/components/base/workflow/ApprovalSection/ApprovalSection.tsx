@@ -42,6 +42,11 @@ export interface ApprovalSectionProps {
   submission: FormSubmissionFieldsFragment | null;
   /** 複製為新單成功:呼叫端決定去哪(該模組的編輯頁) */
   onCopied?: (submissionId: string) => void;
+  /**
+   * 停用「核准」(駁回 / 退回照常):業務頁知道這張單現在不能核准時用(例:補打卡申請選的排班已被刪除);
+   * 只是畫面提示,api 的掛接點守門照樣擋。預設 false
+   */
+  approveDisabled?: boolean;
 }
 
 /**
@@ -57,6 +62,7 @@ export const ApprovalSection = ({
   instanceId,
   submission,
   onCopied,
+  approveDisabled = false,
 }: ApprovalSectionProps) => {
   const t = useTranslations("admin.approval.section");
   const tErrors = useTranslations("admin.workflows.errors");
@@ -137,6 +143,7 @@ export const ApprovalSection = ({
         <TaskActions
           key={task.id}
           task={task}
+          approveDisabled={approveDisabled}
           allowReturn={
             instance.steps.find((step) => step.stepKey === task.stepKey)
               ?.allowReturn ?? false

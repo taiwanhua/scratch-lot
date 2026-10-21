@@ -319,4 +319,30 @@ export const ROSTER_SETTINGS: Roster["settings"] = {
   defaultHelperTaskKey: "store-duties",
   maxMonthlyDayOffs: 8,
   minMonthlyDayOffs: 4,
+  entryMatchToleranceMinutes: 60,
+};
+
+const unmatchedPunch = (
+  id: string,
+  userId: string,
+  date: string,
+  time: string,
+  type: "in" | "out",
+) => ({ id, userId, date, type, at: at(date, time) });
+
+/**
+ * 某月未對應排班的打卡(SC-04d / SC-04e ①):王小明 4 日有班(08:30–14:30)、打了 3 張未對應的卡
+ * (08:31 是重複打卡);林美麗 1 日沒有班、打了上下班兩張(臨時代班)。
+ */
+export const sampleUnmatchedPunches = (
+  month: string,
+): Roster["unmatchedPunches"] => {
+  const day = (n: number) => `${month}-${String(n).padStart(2, "0")}`;
+  return [
+    unmatchedPunch("p-wang-1", "u-wang", day(4), "08:27", "in"),
+    unmatchedPunch("p-wang-2", "u-wang", day(4), "08:31", "in"),
+    unmatchedPunch("p-wang-3", "u-wang", day(4), "14:36", "out"),
+    unmatchedPunch("p-lin-1", "u-lin", day(1), "09:02", "in"),
+    unmatchedPunch("p-lin-2", "u-lin", day(1), "15:10", "out"),
+  ];
 };

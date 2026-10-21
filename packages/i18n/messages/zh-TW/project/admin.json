@@ -752,7 +752,9 @@
       "dayOffs": "我的畫休",
       "dayOffOverview": "畫休總覽",
       "supportRequests": "支援需求單",
-      "mySchedule": "班表"
+      "mySchedule": "班表",
+      "attendanceByPerson": "依人員(月)",
+      "attendanceByStore": "依分店(日)"
     },
     "shell": {
       "empty": "這一頁目前沒有可用的分頁。"
@@ -1323,7 +1325,8 @@
           "understaffedNone": ":沒有可排的人({reasons})",
           "dayOffEntryConflict": "畫休日有排班:{name} {date} {start}–{end}",
           "dayOffEntryConflictOther": "畫休日有排班:{name} {date} {start}–{end}(排於{org})",
-          "dayOffEntryConflictUnknown": "畫休日有排班:{name} {date} {start}–{end}(排於其他分店)"
+          "dayOffEntryConflictUnknown": "畫休日有排班:{name} {date} {start}–{end}(排於其他分店)",
+          "unmatchedPunches": "{name} {date} · {count} 張未對應排班的打卡"
         },
         "reasons": {
           "dayOff": "{count} 人畫休",
@@ -1461,6 +1464,15 @@
           "created": "已新增排班",
           "saved": "已儲存排班",
           "deleted": "已刪除排班"
+        },
+        "punches": {
+          "region": "未對應排班的打卡",
+          "title": "{heading} 有 {count} 張未對應排班的打卡",
+          "label": "{time} {type}",
+          "duplicateLabel": "{time} {type} · 重複打卡",
+          "in": "上班",
+          "out": "下班",
+          "usePunchTime": "上下班時間改用打卡時間"
         }
       },
       "timeline": {
@@ -1656,6 +1668,113 @@
         "none": "這天沒有班",
         "dayOff": "這天整天畫休",
         "breakMinutes": "休息 {minutes} 分鐘"
+      }
+    },
+    "attendance": {
+      "temporary": "臨",
+      "types": {
+        "in": "上班",
+        "out": "下班"
+      },
+      "org": "分店",
+      "person": "人員",
+      "prevDate": "前一天",
+      "nextDate": "後一天",
+      "prevMonth": "上個月",
+      "nextMonth": "下個月",
+      "monthTitle": "{year} 年 {month} 月",
+      "unmatchedOnly": "只看未對應排班的打卡",
+      "summary": "排班 {scheduled} 人 · 已到 {arrived} · 未到 {absent} · 未對應排班的打卡 {unmatched} 張",
+      "rowsAria": "出勤紀錄",
+      "emptyRows": "這天沒有排班",
+      "emptyMonth": "這個月沒有排班",
+      "unmatchedTitle": "未對應排班",
+      "unmatchedEmpty": "沒有未對應排班的打卡",
+      "none": "—",
+      "missing": "缺卡",
+      "minutes": "{minutes} 分",
+      "lateShort": "遲到 {minutes} 分",
+      "earlyShort": "早退 {minutes} 分",
+      "cardLine": "{entry} · 上 {clockIn} · 下 {clockOut}",
+      "personCardLine": "上班 {clockIn} · 下班 {clockOut} · 實際工時 {worked}",
+      "makeupApply": "補打卡申請",
+      "makeupRow": "補打卡",
+      "reassignButton": "改對應排班",
+      "columns": {
+        "person": "人員",
+        "date": "日期",
+        "entry": "排班",
+        "clockIn": "上班",
+        "clockOut": "下班",
+        "status": "狀態",
+        "worked": "實際工時",
+        "late": "遲到",
+        "early": "早退",
+        "special": "特殊日",
+        "actions": "操作"
+      },
+      "status": {
+        "arrived": "已到",
+        "absent": "未到",
+        "upcoming": "未開始",
+        "late": "遲到 {minutes} 分",
+        "earlyLeave": "早退 {minutes} 分"
+      },
+      "export": {
+        "button": "匯出 Excel",
+        "note": "{year} 年 {month} 月出勤紀錄",
+        "fileName": "出勤紀錄-{month}",
+        "empty": "這個範圍沒有排班,沒有可以匯出的資料",
+        "temporary": "臨",
+        "makeup": "補卡",
+        "columns": {
+          "date": "日期",
+          "person": "人員",
+          "entry": "排班",
+          "clockIn": "上班",
+          "clockOut": "下班",
+          "onDutyHours": "在班時數",
+          "breakMinutes": "休息",
+          "workedHours": "實際工時",
+          "scheduledHours": "排班工時",
+          "lateMinutes": "遲到",
+          "earlyLeaveMinutes": "早退",
+          "specialDayCategory": "特殊日類別",
+          "makeupNote": "補卡註記"
+        }
+      },
+      "reassign": {
+        "title": "修改這張打卡對應的排班",
+        "punch": "打卡",
+        "summary": "{name} · {punch}",
+        "fixedHint": "時間和類型不能改,只能改對應的排班",
+        "entry": "對應排班",
+        "noEntry": "沒有排班(未對應排班)",
+        "reason": "原因",
+        "note": "說明",
+        "saved": "已修改對應的排班"
+      },
+      "makeup": {
+        "title": "補打卡申請",
+        "titleWithNo": "{serialNo} · 補打卡申請",
+        "loading": "載入中",
+        "unavailable": "這筆補打卡申請不能修改",
+        "applicant": "申請人",
+        "date": "日期",
+        "branch": "分店",
+        "entry": "對應排班",
+        "entryHint": "選了日期與分店後列出你當天在那家店的排班",
+        "entryRequired": "請選擇對應排班",
+        "noEntry": "沒有排班(臨時代班)",
+        "type": "類型",
+        "time": "時間",
+        "reason": "原因",
+        "note": "說明",
+        "cancel": "取消",
+        "submit": "送出",
+        "submitted": "已送出補打卡申請",
+        "returnedHint": "這張申請被退回了,請確認對應排班後再送出",
+        "entryDeleted": "對應的排班已被刪除,不能核准;請退回讓申請人重選"
       }
     }
   },
@@ -2330,6 +2449,11 @@
     "TRANSFER_SHIPPER_OVERRECEIVED": "出貨店多收,請先記退款",
     "TRANSFER_RECEIVER_OVERPAID": "收貨店多付,請記收到退款",
     "TRANSFER_HAS_RECEIPTS": "已經點收過的調貨單不能駁回或刪除",
-    "TRANSFER_BOOKS_IN_USE": "調入的刮刮樂已售、再調出或拆本,不能作廢"
+    "TRANSFER_BOOKS_IN_USE": "調入的刮刮樂已售、再調出或拆本,不能作廢",
+    "MAKEUP_PUNCH_ENTRY_REQUIRED": "請選擇對應排班",
+    "MAKEUP_PUNCH_ENTRY_MISMATCH": "對應排班要是你當天在那家店的排班,請重選",
+    "MAKEUP_PUNCH_ENTRY_DELETED": "對應的排班已被刪除,不能核准;請退回讓申請人重選",
+    "MAKEUP_PUNCH_INVALID_VALUES": "日期、分店、類型或時間沒填好",
+    "MAKEUP_PUNCH_NOTE_REQUIRED": "原因選「其他」時要填說明"
   }
 }

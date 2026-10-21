@@ -1,3 +1,5 @@
+import { pickOpenTask } from "@repo/domain/project/schedule-settings";
+
 import { localPartsOf } from "@/lib/project/schedule-roster";
 
 import type { EntryPreset, RosterDemand, RosterEntry } from "./roster-context";
@@ -84,3 +86,24 @@ export const tasksWithFilled = (demand: RosterDemand, entryId: string | null) =>
       task.entryId !== undefined &&
       task.entryId !== entryId,
   }));
+
+/** 疊開新增的人力需求存好了:自動加一列,依規則填第一個空的任務(SC-04e ③)。 */
+export const withAddedDemand = (
+  form: EntryFormState,
+  created: RosterDemand,
+  canLead: boolean,
+): EntryFormState => ({
+  ...form,
+  rows: [
+    ...form.rows,
+    {
+      key: nextRowKey(),
+      demandId: created.id,
+      taskId:
+        pickOpenTask(
+          created.tasks.map((task) => ({ ...task, filled: false })),
+          canLead,
+        ) ?? "",
+    },
+  ],
+});

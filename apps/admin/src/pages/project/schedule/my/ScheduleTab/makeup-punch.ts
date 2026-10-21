@@ -1,3 +1,11 @@
+import { useNavigate } from "react-router";
+
+import { useMyPendingMakeupPunchEntryIdsQuery } from "@repo/graphql";
+
+import { useSession } from "@/hooks/base/useSession";
+
+import { useMakeupPunchHref } from "../../attendance/useMakeupPunchHref";
+
 /** [申請補卡] 帶入的資料(規格 14.8:日期、分店、類型、對應排班;本人可以改)。 */
 export interface MakeupPunchTarget {
   /** `YYYY-MM-DD` */
@@ -16,8 +24,29 @@ export interface MakeupPunchLink {
 }
 
 /**
- * 介面 `useMakeupPunchLink()`(規格 14.6「每列附 [申請補卡](帶入資料),已送出的顯示「補卡審核中」」):
- * 我的班表的打卡不完整提醒與當天詳情的顯示位置已經接好,補打卡申請(出勤紀錄)併回前一律回 null,
- * 畫面不顯示 [申請補卡]。實作時只改這支(改成連到補打卡新增頁的 hook),我的班表不必動。
+ * `useMakeupPunchLink()`(規格 14.6「每列附 [申請補卡](帶入資料),已送出的顯示「補卡審核中」」):
+ * 連到出勤紀錄的補打卡新增頁(帶入日期、分店、類型、對應排班);還在審核中的那一班顯示「補卡審核中」。
+ * 沒有 `schedule.attendance.create` 或沒綁新增頁 → null(畫面不顯示 [申請補卡])。
  */
-export const useMakeupPunchLink: () => MakeupPunchLink | null = () => null;
+export const useMakeupPunchLink = (): MakeupPunchLink | null => {
+  const navigate = useNavigate();
+  const { session } = useSession();
+  const hrefOf = useMakeupPunchHref();
+  const pending = useMyPendingMakeupPunchEntryIdsQuery(
+    session.client,
+    undefined,
+    {
+      enabled: hrefOf !== null,
+    },
+  );
+  if (hrefOf === null) {
+    return null;
+  }
+  const pendingIds = new Set(pending.data?.myPendingMakeupPunchEntryIds);
+  return {
+    open: (target) => {
+      void navigate(hrefOf(target));
+    },
+    isPending: (entryId) => pendingIds.has(entryId),
+  };
+};

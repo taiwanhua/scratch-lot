@@ -30,8 +30,13 @@ import {
   transferWorld,
   withoutSettlementHandler,
 } from "@/test/msw/project/lottery/transfer-handlers";
+import { scheduleAttendanceWorld } from "@/test/msw/project/schedule-attendance-handlers";
 import { scheduleCalendarWorld } from "@/test/msw/project/schedule-calendar-handlers";
 import { scheduleDayOffsWorld } from "@/test/msw/project/schedule-day-offs-handlers";
+import {
+  makeupPunchFormWorld,
+  makeupPunchWorkflowWorld,
+} from "@/test/msw/project/schedule-makeup-punch-fixtures";
 import { scheduleModules } from "@/test/msw/project/schedule-module-fixtures";
 import { myChanges } from "@/test/msw/project/schedule-my-fixtures";
 import {
@@ -158,6 +163,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...transferWorld({ settlement: "all" }).handlers,
     ...withoutSettlementHandler(accountsWorld().handlers),
     ...scheduleRosterWorld(rosterOptions()).handlers,
+    // 出勤紀錄:依分店(日)/ 依人員(月)的示範資料(SC-11 / SC-12)、改對應排班、補打卡的對應排班下拉
+    ...scheduleAttendanceWorld().handlers,
     // 採購清單的分店換成底座 mock 組織樹上的兩個組織(分店名稱由組織樹解出)
     ...purchasingWorld({
       purchaseList: purchaseList({
@@ -171,27 +178,32 @@ export const projectMockWorld: ProjectMockWorld = {
   // 排班作業 → 支援需求單:表單、三筆提交與審核中那一筆的流程(併進底座的表單執行端 / 審核流程 world);
   // 叫貨、採購單 → 叫貨單:表單與五筆提交(草稿、審核中、待購買、已進貨、已調貨);
   // 進貨單:表單與四筆提交(草稿、審核中、已完成待退、已完成已結清);
-  // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成)
+  // 調貨單:表單與四筆提交(草稿、第一關出貨確認、第二關點收、已完成);
+  // 出勤紀錄 → 補打卡申請:表單與兩筆審核中(一筆對應的排班已被刪除)
   formRuntime: () => {
     const support = supportRequestFormWorld();
+    const makeup = makeupPunchFormWorld();
     const requisition = requisitionFormWorld();
     const purchase = purchaseFormWorld();
     const transfer = transferFormWorld();
     return {
       moduleForms: [
         ...(support.moduleForms ?? []),
+        ...(makeup.moduleForms ?? []),
         ...(requisition.moduleForms ?? []),
         ...(purchase.moduleForms ?? []),
         ...(transfer.moduleForms ?? []),
       ],
       versions: {
         ...support.versions,
+        ...makeup.versions,
         ...requisition.versions,
         ...purchase.versions,
         ...transfer.versions,
       },
       submissions: [
         ...(support.submissions ?? []),
+        ...(makeup.submissions ?? []),
         ...(requisition.submissions ?? []),
         ...(purchase.submissions ?? []),
         ...(transfer.submissions ?? []),
@@ -211,5 +223,13 @@ export const projectMockWorld: ProjectMockWorld = {
       },
     };
   },
-  workflowRuntime: supportRequestWorkflowWorld,
+  // 支援需求單、補打卡申請各自審核中的流程實例與待審任務
+  workflowRuntime: () => {
+    const support = supportRequestWorkflowWorld();
+    const makeup = makeupPunchWorkflowWorld();
+    return {
+      instances: [...support.instances, ...makeup.instances],
+      tasks: [...support.tasks, ...makeup.tasks],
+    };
+  },
 };

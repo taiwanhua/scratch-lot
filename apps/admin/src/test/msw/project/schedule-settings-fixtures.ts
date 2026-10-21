@@ -49,6 +49,17 @@ export const SCHEDULE_TEST_OPTIONS: Record<
     { value: "sick-leave", label: "請病假" },
     { value: "other", label: "其他" },
   ],
+  [SCHEDULE_FIELD_CATEGORY_KEYS.makeupPunchReason]: [
+    { value: "forgot-punch", label: "忘記打卡" },
+    { value: "device-failure", label: "裝置故障" },
+    { value: "other", label: "其他" },
+  ],
+  [SCHEDULE_FIELD_CATEGORY_KEYS.entryReassignReason]: [
+    { value: "wrong-entry-at-open", label: "開班時選錯排班" },
+    { value: "cover-shift-reassign", label: "臨時代班補排班後改對應" },
+    { value: "shift-swap", label: "換班" },
+    { value: "other", label: "其他" },
+  ],
 };
 
 const tenantOwner = { id: SCHEDULE_TENANT.id, name: SCHEDULE_TENANT.name };

@@ -32,10 +32,32 @@ describe("我的班表 → 班表", () => {
     expect(screen.getByText("昨天 11/4(三)未打下班卡")).toBeInTheDocument();
     expect(screen.getByText("最近 7 天有 2 班打卡不完整")).toBeInTheDocument();
     expect(screen.getAllByText("缺下班卡").length).toBeGreaterThanOrEqual(2);
-    // 補打卡申請還沒做:不顯示 [申請補卡]
-    expect(queryButton("申請補卡")).toBeNull();
+    // 兩班各自有 [申請補卡]
+    expect(
+      await screen.findAllByText("申請補卡", { selector: "button" }),
+    ).toHaveLength(2);
     // 今天有班:「沒有排班」收合成一行
     expect(screen.getByText("沒有排到班但臨時來上班?")).toBeInTheDocument();
+  });
+
+  it("[申請補卡] 開補打卡新增頁並帶入日期、分店、類型、對應排班;審核中的那一班顯示「補卡審核中」", async () => {
+    const user = fastUser();
+    renderSchedulePage({
+      path: SCHEDULE,
+      attendance: { pendingEntryIds: ["my-entry-2026-11-02"] },
+    });
+    expect(await screen.findByText("補卡審核中")).toBeInTheDocument();
+    const buttons = await screen.findAllByText("申請補卡", {
+      selector: "button",
+    });
+    expect(buttons).toHaveLength(1);
+    await user.click(buttons[0]);
+    expect(
+      await screen.findByText("補打卡申請", { selector: "h1" }),
+    ).toBeInTheDocument();
+    expect(globalThis.location.search).toContain("entry=my-entry-2026-11-04");
+    expect(globalThis.location.search).toContain("type=out");
+    expect(globalThis.location.search).toContain("date=2026-11-04");
   });
 
   it("在今天的卡片打上班卡:送出那一筆排班,卡片顯示已打卡", async () => {

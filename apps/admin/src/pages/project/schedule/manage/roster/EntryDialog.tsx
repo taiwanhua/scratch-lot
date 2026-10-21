@@ -2,10 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
-import {
-  defaultBreakMinutes,
-  pickOpenTask,
-} from "@repo/domain/project/schedule-settings";
+import { defaultBreakMinutes } from "@repo/domain/project/schedule-settings";
 import {
   useDeleteScheduleEntryMutation,
   useSaveScheduleEntryMutation,
@@ -35,7 +32,7 @@ import { EntryAssignmentRows } from "./EntryAssignmentRows";
 import {
   type EntryFormState,
   initialEntryState,
-  nextRowKey,
+  withAddedDemand,
 } from "./entry-dialog-state";
 import { useChangeReason } from "./publish/useChangeReason";
 import {
@@ -46,6 +43,7 @@ import {
   useRoster,
 } from "./roster-context";
 import { blockedEntryIdsOf, errorFieldsOf } from "./roster-error";
+import { useEntryPunches } from "./useEntryPunches";
 
 export interface EntryDialogProps {
   /** 要看 / 改的那一筆;null = 新增 */
@@ -63,6 +61,8 @@ export interface EntryDialogProps {
  *   (依規則填第一個空的任務);取消 → 不變;之後排班按取消,人力需求保留(它已經獨立存檔)
  * - 至少要填進一筆才能存:移除最後一列時 [儲存] 停用並提示
  * - [刪除這筆排班]:已被收銀班次綁定的擋下(「已經有開班紀錄,不能刪除」)
+ * - 這個人那天在這家店有未對應排班的打卡:多一個區塊(`UnmatchedPunchesBlock`,SC-04d / SC-04e ①),
+ *   勾選的卡儲存時一起對應到這筆排班;「上下班時間改用打卡時間」要 `use-punch-time`、預設不勾
  * - 沒有 `edit`:欄位停用、只剩 [關閉]。電腦 / 平板置中、手機全螢幕
  */
 export const EntryDialog = ({
@@ -128,6 +128,11 @@ export const EntryDialog = ({
     }));
   };
 
+  const punches = useEntryPunches(form, person?.name ?? "", {
+    span,
+    canEdit,
+    setTimes,
+  });
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ROSTER_QUERY_ROOT });
   const errorText = (cause: unknown) => tErrors(scheduleErrorOf(cause).code);
@@ -198,6 +203,7 @@ export const EntryDialog = ({
           demandId: row.demandId,
           taskId: row.taskId,
         })),
+        ...punches.inputPart,
       }),
     });
   };
@@ -340,6 +346,7 @@ export const EntryDialog = ({
             }}
           />
         </Stack>
+        {entry === null && punches.block}
         <EntryAssignmentRows
           rows={form.rows}
           setRows={(update) => {
@@ -366,6 +373,7 @@ export const EntryDialog = ({
             }
           }}
         />
+        {entry !== null && punches.block}
         {changeReason.fields}
       </Stack>
       {isAddingDemand && (
@@ -382,21 +390,7 @@ export const EntryDialog = ({
           }}
           onSaved={(created) => {
             setAddedDemands((current) => [...current, created]);
-            setForm((current) => ({
-              ...current,
-              rows: [
-                ...current.rows,
-                {
-                  key: nextRowKey(),
-                  demandId: created.id,
-                  taskId:
-                    pickOpenTask(
-                      created.tasks.map((task) => ({ ...task, filled: false })),
-                      canLead,
-                    ) ?? "",
-                },
-              ],
-            }));
+            setForm((current) => withAddedDemand(current, created, canLead));
           }}
         />
       )}

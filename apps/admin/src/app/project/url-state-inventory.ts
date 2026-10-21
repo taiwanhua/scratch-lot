@@ -38,7 +38,12 @@ export const projectUrlStateInventory: UrlStateInventory = {
     "revision",
     "view",
   ],
-  "schedule.attendance": ["tab"],
+  // 出勤紀錄:頁內分頁 `tab`;依人員(月)的月份 `month`、人 `person`;依分店(日)的分店 `org`、日期 `date`、
+  // 只看未對應排班的打卡 `unmatched`;補打卡新增頁的帶入值(日期、分店、類型、對應排班);檢視 / 編輯頁沒有
+  "schedule.attendance": ["tab", "month", "person", "org", "date", "unmatched"],
+  "schedule.attendance.create-page": ["date", "org", "type", "entry"],
+  "schedule.attendance.edit-page": [],
+  "schedule.attendance.view-page": [],
   // 帳戶管理:分頁、即時現金帳的篩選(分店、日期、類型、收銀點)、58mm 流水單據 QR 帶的那一筆;
   // 銀行帳戶詳情:交易清單的篩選(期間、類型)
   accounts: ["tab", "cash", "movementId"],

@@ -159,6 +159,9 @@ export const useCheckItemText = (
             })
           : t("items.dayOffEntryConflictUnknown", { name, date, start, end });
       }
+      case "unmatchedPunches": {
+        return t("items.unmatchedPunches", { name, date, count: actual });
+      }
       default: {
         return item.message;
       }

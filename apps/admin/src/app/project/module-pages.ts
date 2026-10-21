@@ -23,6 +23,8 @@ import { TransferCreatePage } from "@/pages/project/lottery/purchasing/transfer/
 import { TransferPage } from "@/pages/project/lottery/purchasing/transfer/TransferPage/TransferPage";
 import { TransferViewPage } from "@/pages/project/lottery/purchasing/transfer/TransferViewPage/TransferViewPage";
 import { ReportsPage } from "@/pages/project/lottery/reports/ReportsPage/ReportsPage";
+import { MakeupPunchFormPage } from "@/pages/project/schedule/attendance/MakeupPunchFormPage/MakeupPunchFormPage";
+import { MakeupPunchViewPage } from "@/pages/project/schedule/attendance/MakeupPunchViewPage/MakeupPunchViewPage";
 import { ScheduleAttendancePage } from "@/pages/project/schedule/attendance/ScheduleAttendancePage";
 import { ScheduleManagePage } from "@/pages/project/schedule/manage/ScheduleManagePage";
 import { ScheduleMyPage } from "@/pages/project/schedule/my/ScheduleMyPage";
@@ -74,9 +76,16 @@ export const projectModulePages: ModulePageSource = {
       // 內容區最小寬度用 `md`:平板 1024 寬收合側欄時,排班表的工具列與檢核面板都放得下、不必左右捲
       pageOverrides: { list: { Page: ScheduleManagePage, minWidth: "md" } },
     },
+    // 出勤紀錄(綁定 補打卡申請;規格 14.7、14.8):列表頁換成分頁頁殼(依人員(月)| 依分店(日));
+    // 新增 / 編輯頁換成有「對應排班」下拉的補打卡頁、檢視頁換成摘要 + 審核(排班被刪除時警告、不能核准)
     {
       moduleKey: "schedule.attendance",
-      pageOverrides: { list: { Page: ScheduleAttendancePage } },
+      pageOverrides: {
+        list: { Page: ScheduleAttendancePage },
+        createPage: { Page: MakeupPunchFormPage },
+        editPage: { Page: MakeupPunchFormPage },
+        viewPage: { Page: MakeupPunchViewPage },
+      },
     },
     // 叫貨、採購單(綁定 叫貨單;規格 8.1):列表頁換成分頁頁殼(叫貨單 | 採購清單)、新增頁換成
     // 列出所有販售中遊戲的叫貨頁;詳情 / 編輯(草稿)沿用表單引擎

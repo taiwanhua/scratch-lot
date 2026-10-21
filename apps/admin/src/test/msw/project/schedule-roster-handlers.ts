@@ -28,6 +28,7 @@ import {
   type TestRosterEntry,
   sampleRoster,
   sampleRosterExtras,
+  sampleUnmatchedPunches,
 } from "./schedule-roster-fixtures";
 
 export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
@@ -41,6 +42,10 @@ export interface ScheduleRosterWorldOptions extends AutoRunWorldOptions {
   check?: CheckScenario;
   /** 這個月一開始就已發布(SC-15b) */
   isPublished?: boolean;
+  /** 有 `schedule.manage.use-punch-time`(預設有) */
+  canUsePunchTime?: boolean;
+  /** 沒有未對應排班的打卡(預設有 `sampleUnmatchedPunches`) */
+  noUnmatchedPunches?: boolean;
 }
 
 const nameOf = (userId: string) =>
@@ -63,7 +68,20 @@ const localDate = (iso: string): string =>
 export const scheduleRosterWorld = (
   options: ScheduleRosterWorldOptions = {},
 ) => {
-  const { canEdit = true, canSaveTemplate = true, isEmpty = false } = options;
+  const {
+    canEdit = true,
+    canSaveTemplate = true,
+    isEmpty = false,
+    canUsePunchTime = true,
+  } = options;
+  /** 已經被排班對話框對應走的卡(不再列為未對應) */
+  const matchedPunchIds = new Set<string>();
+  const unmatchedPunchesOf = (month: string) =>
+    options.noUnmatchedPunches === true
+      ? []
+      : sampleUnmatchedPunches(month).filter(
+          (punch) => !matchedPunchIds.has(punch.id),
+        );
   let checkScenario: CheckScenario = options.check ?? "limits";
   let period: {
     status: string;
@@ -193,12 +211,14 @@ export const scheduleRosterWorld = (
             period,
             canEdit,
             canSaveTemplate,
+            canUsePunchTime,
             settings: ROSTER_SETTINGS,
             people: ROSTER_PEOPLE,
             demands: demands.map((demand) => demandOf(demand)),
             entries: entries.map((entry) => entryOf(entry)),
             ...sampleRosterExtras(input.month),
             templates: ROSTER_TEMPLATES,
+            unmatchedPunches: unmatchedPunchesOf(input.month),
           },
         },
       });
@@ -251,6 +271,9 @@ export const scheduleRosterWorld = (
     api.mutation("SaveScheduleEntry", ({ variables }) => {
       const { input } = variables as SaveScheduleEntryMutationVariables;
       inputs.entries.push(input);
+      for (const punchId of input.punchIds ?? []) {
+        matchedPunchIds.add(punchId);
+      }
       const id = input.id ?? nextId("e");
       const existing = entries.find((entry) => entry.id === id);
       const entry: TestRosterEntry = {
