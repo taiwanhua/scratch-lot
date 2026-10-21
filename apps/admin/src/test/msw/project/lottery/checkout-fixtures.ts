@@ -341,6 +341,11 @@ export const sampleCheckoutDetail = (): CheckoutDetailFixture => {
     submittedBy: ref("user-li", "李小華"),
     submittedAt: "2026-10-16T14:10:00.000Z",
     confirmedAt: null,
+    coveredFrom: null,
+    coveredTo: null,
+    coveredShifts: [],
+    bankDepositAmount: 0,
+    bankAccount: null,
     draft: JSON.stringify({
       version: 1,
       type: "shift",

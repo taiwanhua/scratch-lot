@@ -75,6 +75,11 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
       "帳戶管理側欄計數的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`accounts-badge.ts`)",
   },
   {
+    key: "admin.lotteryStore.badgeDescription",
+    reason:
+      "店面管理側欄計數(日結逾期的店數)的「數什麼」:由 api 側欄計數登記的 `descriptionKey` 給(`daily-close/store-badge.ts`)",
+  },
+  {
     key: "admin.lotteryAccounts.errors.",
     reason:
       "`t(`errors.${code}`)`,code 由 `lib/project/lottery/accounts-error.ts` 從 api 錯誤碼與 reason 換算",
@@ -838,6 +843,21 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     key: "admin.lotteryStore.checkout.types.",
     reason:
       "結帳類型 `t(`types.${type}`)`,type 是 `CHECKOUT_TYPES`(api 回的值、班次結帳歷史紀錄的篩選)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.steps.",
+    reason:
+      "日結精靈 Stepper 的 `t(`steps.${step}`)`,step 是 `DAILY_CLOSE_STEPS`(`@repo/domain/project/lottery`)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.shifts.states.",
+    reason:
+      "日結第 ① 步各班結帳的 `t(`states.${row.state}`)`,state 是 api 回的值(approved / pending / returned)",
+  },
+  {
+    key: "admin.lotteryStore.dailyClose.vault.items.",
+    reason:
+      "小金庫應有逐項的 `t(`dailyClose.vault.items.${item.kind}`)`,kind 是 `VAULT_CASH_ITEM_KINDS`(api 回的值)",
   },
   {
     key: "admin.lotteryStore.checkout.list.statuses.",

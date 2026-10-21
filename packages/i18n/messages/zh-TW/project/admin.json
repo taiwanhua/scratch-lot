@@ -2565,7 +2565,12 @@
     "CHECKOUT_REJECT_FORBIDDEN": "結帳確認申請不能駁回,請改用退回",
     "CHECKOUT_VOID_FORBIDDEN": "結帳確認申請不能作廢",
     "CHECKOUT_LEFT_EXCEEDS_COUNTED": "「留給下一班」不能超過實點",
-    "CHECKOUT_SUCCESSOR_SELF": "接班人不能是申請人或這一班的負責人"
+    "CHECKOUT_SUCCESSOR_SELF": "接班人不能是申請人或這一班的負責人",
+    "DAILY_CLOSE_SHIFTS_OPEN": "還有收銀點的班沒送出交班結帳,全部送出後才能日結",
+    "DAILY_CLOSE_UNAPPROVED": "涵蓋計算的交班結帳還有沒核准的,全部核准後才能送出日結",
+    "DAILY_CLOSE_PENDING_EXISTS": "這家店已有審核中或已退回的日結",
+    "DAILY_CLOSE_DEPOSIT_INVALID": "存入銀行的金額不對(不能超過小金庫實點)",
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店"
   },
   "lotteryStore": {
     "tabs": {
@@ -2715,6 +2720,8 @@
       "OPENING_FLOAT_NOT_ALLOWED": "只有第一班、而且有出庫權限才能從小金庫領零用金",
       "AMOUNT_EXCEEDS_DRAWER": "投庫金額不能超過抽屜目前的應有現金",
       "AMOUNT_EXCEEDS_VAULT": "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
+      "BANK_DEPOSIT_NO_ACCOUNT": "本店沒有可用的銀行帳戶,請先到帳戶管理設定帳戶的使用組織",
+      "BANK_ACCOUNT_NOT_USABLE": "這個帳戶不能用(停用,或使用組織不含這家店)",
       "UNEXPECTED": "操作失敗,請稍後再試"
     },
     "sale": {
@@ -3415,7 +3422,9 @@
         "transfer_out": "調貨支出(現金)",
         "transfer_in": "調貨收入(現金)",
         "refunds": "退貨退款",
-        "corrections": "現金更正"
+        "corrections": "現金更正",
+        "transfers": "調貨(現金)",
+        "bank_deposits": "存銀行"
       },
       "itemCount": {
         "sales": "({count} 張)",
@@ -3481,6 +3490,7 @@
         "backToList": "回列表",
         "edit": "修改後再送出",
         "sheetTitle": "結帳單",
+        "type": "類型",
         "cashPoint": "收銀點",
         "stocktake": "盤點",
         "stocktakeSkipped": "跳過({reason})",
@@ -3494,6 +3504,131 @@
         "pending": "送出時審核中:{items}",
         "hint": "每一項可以點開原本的單據。",
         "loadFailed": "讀不到這張結帳單"
+      }
+    },
+    "badgeDescription": "日結逾期的店數:最早一張還沒被日結涵蓋計算的交班結帳,送出日隔天的提醒時間已過",
+    "bankDeposit": {
+      "title": "存銀行",
+      "vault": "{store} · 小金庫目前應有 {amount}",
+      "amount": "金額",
+      "account": "存入帳戶",
+      "note": "備註",
+      "hint": "帳戶只列使用組織包含這家分店、使用中的帳戶。不用審核,做完就生效;記錯請到帳戶管理沖正那筆存入。",
+      "exceeds": "超過小金庫目前應有金額 {amount}。實際的錢比較多時,請先用現金更正單補登。",
+      "cancel": "取消",
+      "submit": "確認存入",
+      "success": "已存入銀行"
+    },
+    "dailyClose": {
+      "entry": {
+        "last": "上次日結:{date}(已 {days} 天)",
+        "never": "還沒有日結",
+        "bankDeposit": "存銀行",
+        "dailyClose": "日結",
+        "blockedTitle": "還不能日結:",
+        "blockedShift": "{cashPoint}還沒交班",
+        "blockedPending": "日結 {serialNo} 審核中",
+        "blockedReturned": "日結 {serialNo} 已退回,請修改後再送出"
+      },
+      "steps": {
+        "shifts": "各班結帳",
+        "stocktake": "全店盤點",
+        "vault": "小金庫",
+        "bank": "存入銀行",
+        "confirm": "確認"
+      },
+      "page": {
+        "tabLabel": "日結",
+        "title": "日結 · {store}",
+        "cancel": "取消",
+        "period": "涵蓋計算期間 {from} ~ {to}。不能補日結,這一次會一起涵蓋計算。",
+        "periodWithGaps": "涵蓋計算期間 {from} ~ {to}({gaps} 沒有日結)。不能補日結,這一次會一起涵蓋計算。",
+        "firstClose": "第一次日結",
+        "now": "現在",
+        "stepperAria": "日結的步驟",
+        "progress": "第 {current} / {total} 步 · {label}",
+        "back": "上一步",
+        "next": "下一步",
+        "submit": "送出結帳確認申請",
+        "loadFailed": "讀不到日結的資料,請稍後再試",
+        "returnedHint": "這張日結已退回,修改後再送出。涵蓋計算期間照原本送出時的那一段。"
+      },
+      "shifts": {
+        "columns": {
+          "cashPoint": "收銀點",
+          "submittedBy": "交班人",
+          "submittedAt": "送出",
+          "expected": "應有",
+          "counted": "實點",
+          "difference": "差額",
+          "reviewer": "審核者",
+          "state": "狀態"
+        },
+        "states": {
+          "approved": "已核准",
+          "pending": "待審核",
+          "returned": "已退回"
+        },
+        "you": "你",
+        "review": "審核",
+        "waitingApprove": "等{names}核准",
+        "waitingFix": "待{names}更正",
+        "openShifts": "還有班沒送出交班結帳:{names}。全部送出後才能日結。",
+        "pendingDaily": "日結 {serialNo} 還在審核中或已退回,不能再送一張。",
+        "empty": "這段期間沒有送出交班結帳的班",
+        "allApproved": "各班結帳都已核准,可以到下一步。",
+        "notApproved": "還有 {count} 班沒核准,全部核准後才能下一步。狀態會即時更新。",
+        "cardFacts": "應有 {expected} · 實點 {counted} · 差額 {difference}",
+        "reviewTitle": "結帳單 {serialNo} · {cashPoint} · {name}",
+        "closeReview": "關閉"
+      },
+      "stocktake": {
+        "title": "② 全店盤點",
+        "newHint": "盤全店每個收銀點;被拆開的本只能點格子或掃描"
+      },
+      "vault": {
+        "expectedTitle": "小金庫應有",
+        "opening": "期初({date} 日結清點)",
+        "openingNone": "期初",
+        "items": {
+          "opening": "期初",
+          "deposits": "投庫",
+          "withdrawals": "出庫",
+          "transfers": "調貨(現金)",
+          "corrections": "現金更正",
+          "bank_deposits": "存銀行"
+        }
+      },
+      "bank": {
+        "title": "④ 存入銀行",
+        "amount": "存入金額(0 = 不存)",
+        "account": "存入帳戶",
+        "exceeds": "不能超過小金庫實點 {amount}",
+        "after": "存入後小金庫應有",
+        "hint": "帳戶只列使用組織包含這家分店、使用中的帳戶。核准完成時才寫入「存銀行」與銀行「存入」。"
+      },
+      "confirm": {
+        "title": "⑤ 確認",
+        "period": "涵蓋計算期間",
+        "periodValue": "{from} ~ {to}",
+        "firstClose": "第一次日結",
+        "now": "現在",
+        "stocktake": "全店盤點",
+        "stocktakeNew": "現在盤點 · 補登售出 {count} 張",
+        "stocktakeSkip": "跳過盤點",
+        "shiftDifference": "各班差額合計",
+        "vaultDifference": "小金庫差額",
+        "bankDeposit": "存入銀行",
+        "noDeposit": "不存"
+      },
+      "view": {
+        "period": "涵蓋計算期間",
+        "shifts": "涵蓋計算的班",
+        "shiftsValue": "{count} 班({serials})",
+        "stocktake": "全店盤點",
+        "bankDeposit": "存入銀行",
+        "after": "存入後小金庫",
+        "opening": "小金庫期初"
       }
     }
   }

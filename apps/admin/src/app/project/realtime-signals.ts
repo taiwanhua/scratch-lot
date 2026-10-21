@@ -11,6 +11,11 @@ import {
   STORE_CHECKOUT_WIZARD_QUERY_KEY,
 } from "@/pages/project/lottery/store/checkout/checkout-keys";
 import {
+  STORE_BANK_DEPOSIT_FORM_QUERY_KEY,
+  STORE_DAILY_CLOSE_STATUS_QUERY_KEY,
+  STORE_DAILY_CLOSE_WIZARD_QUERY_KEY,
+} from "@/pages/project/lottery/store/daily-close/daily-close-keys";
+import {
   STORE_RECENT_REDEMPTIONS_QUERY_KEY,
   STORE_REDEMPTIONS_QUERY_KEY,
 } from "@/pages/project/lottery/store/redemption/redemption-shared";
@@ -40,6 +45,10 @@ export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
       // 交班精靈(補登兌獎後的應有現金與兌獎清單)、班次結帳歷史紀錄
       STORE_CHECKOUT_WIZARD_QUERY_KEY,
       STORE_CHECKOUTS_QUERY_KEY,
+      // 上次日結 / 審核中的日結、日結精靈(各班結帳的審核狀態)、存銀行視窗的小金庫應有
+      STORE_DAILY_CLOSE_STATUS_QUERY_KEY,
+      STORE_DAILY_CLOSE_WIZARD_QUERY_KEY,
+      STORE_BANK_DEPOSIT_FORM_QUERY_KEY,
     ],
   },
 ];

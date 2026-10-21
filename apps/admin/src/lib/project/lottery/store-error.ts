@@ -16,6 +16,8 @@ export type StoreErrorCode =
   | "OPENING_FLOAT_NOT_ALLOWED"
   | "AMOUNT_EXCEEDS_DRAWER"
   | "AMOUNT_EXCEEDS_VAULT"
+  | "BANK_DEPOSIT_NO_ACCOUNT"
+  | "BANK_ACCOUNT_NOT_USABLE"
   | "UNEXPECTED";
 
 export type StoreError = AdminError<StoreErrorCode, never>;
@@ -31,6 +33,9 @@ const REASON_CODES: readonly StoreErrorCode[] = [
   "OPENING_FLOAT_NOT_ALLOWED",
   "AMOUNT_EXCEEDS_DRAWER",
   "AMOUNT_EXCEEDS_VAULT",
+  // 存銀行(規格 6.11):本店沒有銀行帳戶 / 帳戶不能用
+  "BANK_DEPOSIT_NO_ACCOUNT",
+  "BANK_ACCOUNT_NOT_USABLE",
 ];
 
 export const storeErrorOf = (error: unknown): StoreError =>

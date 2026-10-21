@@ -2565,7 +2565,12 @@
     "CHECKOUT_REJECT_FORBIDDEN": "Checkout confirmations cannot be rejected. Return it instead.",
     "CHECKOUT_VOID_FORBIDDEN": "Checkout confirmations cannot be voided.",
     "CHECKOUT_LEFT_EXCEEDS_COUNTED": "The amount left for the next shift cannot exceed the counted cash.",
-    "CHECKOUT_SUCCESSOR_SELF": "The successor cannot be the applicant or the shift owner."
+    "CHECKOUT_SUCCESSOR_SELF": "The successor cannot be the applicant or the shift owner.",
+    "DAILY_CLOSE_SHIFTS_OPEN": "Some cash points have not checked out. Check out every shift before the daily close.",
+    "DAILY_CLOSE_UNAPPROVED": "Some covered shift checkouts are not approved yet.",
+    "DAILY_CLOSE_PENDING_EXISTS": "This store already has a daily close under review or returned.",
+    "DAILY_CLOSE_DEPOSIT_INVALID": "The bank deposit amount is invalid (it cannot exceed the counted vault cash).",
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store."
   },
   "lotteryStore": {
     "tabs": {
@@ -2715,6 +2720,8 @@
       "OPENING_FLOAT_NOT_ALLOWED": "Only the first shift, with withdraw permission, can take a float from the vault",
       "AMOUNT_EXCEEDS_DRAWER": "The deposit cannot exceed the drawer's expected cash",
       "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
+      "BANK_DEPOSIT_NO_ACCOUNT": "This store has no usable bank account. Set the account using organizations in Accounts first.",
+      "BANK_ACCOUNT_NOT_USABLE": "This account cannot be used (inactive, or not used by this store).",
       "UNEXPECTED": "Something went wrong. Please try again later."
     },
     "sale": {
@@ -3415,7 +3422,9 @@
         "transfer_out": "Transfer out (cash)",
         "transfer_in": "Transfer in (cash)",
         "refunds": "Refunds",
-        "corrections": "Cash corrections"
+        "corrections": "Cash corrections",
+        "transfers": "Transfers (cash)",
+        "bank_deposits": "Bank deposits"
       },
       "itemCount": {
         "sales": "({count} tickets)",
@@ -3481,6 +3490,7 @@
         "backToList": "Back to list",
         "edit": "Edit and resubmit",
         "sheetTitle": "Checkout sheet",
+        "type": "Type",
         "cashPoint": "Cash point",
         "stocktake": "Stocktake",
         "stocktakeSkipped": "Skipped ({reason})",
@@ -3494,6 +3504,131 @@
         "pending": "Under review at submission: {items}",
         "hint": "Each line opens the original document.",
         "loadFailed": "Could not load this checkout sheet"
+      }
+    },
+    "badgeDescription": "Stores whose daily close is overdue: the earliest shift checkout not yet covered by a daily close passed its reminder time on the next day",
+    "bankDeposit": {
+      "title": "Bank deposit",
+      "vault": "{store} · vault expected {amount}",
+      "amount": "Amount",
+      "account": "Bank account",
+      "note": "Note",
+      "hint": "Only active accounts used by this store are listed. Takes effect immediately; to correct a mistake, reverse the deposit in Accounts.",
+      "exceeds": "Exceeds the vault expected cash {amount}. If there is more cash than recorded, register a cash correction first.",
+      "cancel": "Cancel",
+      "submit": "Deposit",
+      "success": "Deposited to the bank"
+    },
+    "dailyClose": {
+      "entry": {
+        "last": "Last daily close: {date} ({days} days ago)",
+        "never": "No daily close yet",
+        "bankDeposit": "Bank deposit",
+        "dailyClose": "Daily close",
+        "blockedTitle": "Cannot close yet:",
+        "blockedShift": "{cashPoint} has not checked out",
+        "blockedPending": "Daily close {serialNo} is under review",
+        "blockedReturned": "Daily close {serialNo} was returned; revise and resubmit it"
+      },
+      "steps": {
+        "shifts": "Shift checkouts",
+        "stocktake": "Store stocktake",
+        "vault": "Vault",
+        "bank": "Bank deposit",
+        "confirm": "Confirm"
+      },
+      "page": {
+        "tabLabel": "Daily close",
+        "title": "Daily close · {store}",
+        "cancel": "Cancel",
+        "period": "Covered period {from} – {to}. Missed days cannot be closed separately; they are covered now.",
+        "periodWithGaps": "Covered period {from} – {to} (no daily close on {gaps}). Missed days cannot be closed separately; they are covered now.",
+        "firstClose": "first daily close",
+        "now": "now",
+        "stepperAria": "Daily close steps",
+        "progress": "Step {current} / {total} · {label}",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit checkout confirmation",
+        "loadFailed": "Could not load the daily close. Please try again later.",
+        "returnedHint": "This daily close was returned. Revise and resubmit; the covered period stays as originally submitted."
+      },
+      "shifts": {
+        "columns": {
+          "cashPoint": "Cash point",
+          "submittedBy": "Checked out by",
+          "submittedAt": "Submitted",
+          "expected": "Expected",
+          "counted": "Counted",
+          "difference": "Difference",
+          "reviewer": "Reviewer",
+          "state": "Status"
+        },
+        "states": {
+          "approved": "Approved",
+          "pending": "Pending",
+          "returned": "Returned"
+        },
+        "you": "You",
+        "review": "Review",
+        "waitingApprove": "Waiting for {names}",
+        "waitingFix": "Waiting for {names} to revise",
+        "openShifts": "Some shifts have not checked out: {names}. Check them out before the daily close.",
+        "pendingDaily": "Daily close {serialNo} is under review or returned; another one cannot be submitted.",
+        "empty": "No shift checkouts in this period",
+        "allApproved": "All shift checkouts are approved.",
+        "notApproved": "{count} shift checkouts are not approved yet. The status updates live.",
+        "cardFacts": "Expected {expected} · counted {counted} · difference {difference}",
+        "reviewTitle": "Checkout {serialNo} · {cashPoint} · {name}",
+        "closeReview": "Close"
+      },
+      "stocktake": {
+        "title": "② Store stocktake",
+        "newHint": "Count every cash point of the store; opened books can only be counted by tapping or scanning"
+      },
+      "vault": {
+        "expectedTitle": "Vault expected",
+        "opening": "Opening (counted at the {date} daily close)",
+        "openingNone": "Opening",
+        "items": {
+          "opening": "Opening",
+          "deposits": "Deposits",
+          "withdrawals": "Withdrawals",
+          "transfers": "Transfers (cash)",
+          "corrections": "Cash corrections",
+          "bank_deposits": "Bank deposits"
+        }
+      },
+      "bank": {
+        "title": "④ Bank deposit",
+        "amount": "Amount (0 = none)",
+        "account": "Bank account",
+        "exceeds": "Cannot exceed the counted vault cash {amount}",
+        "after": "Vault expected after deposit",
+        "hint": "Only active accounts used by this store are listed. The deposit is recorded when the daily close is approved."
+      },
+      "confirm": {
+        "title": "⑤ Confirm",
+        "period": "Covered period",
+        "periodValue": "{from} – {to}",
+        "firstClose": "first daily close",
+        "now": "now",
+        "stocktake": "Store stocktake",
+        "stocktakeNew": "Counted now · {count} backfilled sales",
+        "stocktakeSkip": "Skipped",
+        "shiftDifference": "Shift differences total",
+        "vaultDifference": "Vault difference",
+        "bankDeposit": "Bank deposit",
+        "noDeposit": "None"
+      },
+      "view": {
+        "period": "Covered period",
+        "shifts": "Covered shifts",
+        "shiftsValue": "{count} shifts ({serials})",
+        "stocktake": "Store stocktake",
+        "bankDeposit": "Bank deposit",
+        "after": "Vault after deposit",
+        "opening": "Vault opening"
       }
     }
   }

@@ -16,6 +16,7 @@ import {
   checkoutWorkflowWorld,
 } from "@/test/msw/project/lottery/checkout-form-fixtures";
 import { checkoutWorld } from "@/test/msw/project/lottery/checkout-handlers";
+import { dailyCloseWorld } from "@/test/msw/project/lottery/daily-close-handlers";
 import { inventoryModules } from "@/test/msw/project/lottery/inventory-fixtures";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataModules } from "@/test/msw/project/lottery/master-data-fixtures";
@@ -215,6 +216,8 @@ export const projectMockWorld: ProjectMockWorld = {
     ...stocktakeWorld().handlers,
     // 交班結帳:交班精靈(Figma ST-17a–19b)、班次結帳歷史紀錄(ST-27)、結帳確認申請檢視頁(ST-28a)
     ...checkoutWorld().handlers,
+    // 日結 / 存銀行:看板頂部上次日結(ST-01)、日結精靈(ST-21–25b)、存銀行(ST-26a);日結檢視頁 C-0043(ST-28b)
+    ...dailyCloseWorld().handlers,
     // 店面管理的撤銷售出 / 現金更正分頁(Figma ST-31a / ST-32a 的列)與退款班次的選項
     ...storeFormsWorld().handlers,
     // 58mm 單據的 [列印]:可選的印表機(一台,可以試自動列印與補印)、已印次數、補印原因、建立工作;

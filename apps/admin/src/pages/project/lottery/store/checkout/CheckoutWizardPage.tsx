@@ -151,7 +151,10 @@ const WizardBody = ({
       />
       {flow.step === "stocktake" ? (
         <CheckoutStocktakeStep
-          wizard={wizard}
+          orgId={wizard.shift.orgId}
+          scopeCashPointId={wizard.shift.cashPoint.id}
+          reusable={wizard.reusableStocktake ?? null}
+          canSkipStocktake={wizard.canSkipStocktake}
           flow={flow}
           redemption={redemption}
         />

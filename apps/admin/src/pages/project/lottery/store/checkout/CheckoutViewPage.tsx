@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
-import { STORE_KEY } from "@repo/domain/project/lottery";
+import { CHECKOUT_TYPE, STORE_KEY } from "@repo/domain/project/lottery";
 import {
   type LotteryCheckoutQuery,
   useLotteryCheckoutQuery,
@@ -24,6 +24,7 @@ import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 import type { ModulePageProps } from "@/lib/base/module-tree";
 
+import { DailyCloseSheet } from "../daily-close/DailyCloseSheet";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
 import { moneyText } from "../store-text";
 import { ExpectedCashList } from "./ExpectedCashList";
@@ -31,9 +32,43 @@ import { pendingImpactsText, signedMoneyText } from "./checkout-text";
 
 type Detail = LotteryCheckoutQuery["lotteryCheckout"];
 
+/** 頁首標題:「結帳確認申請 · 日結 C-0043」;單號 / 結帳單還沒讀到 =「結帳確認申請」。 */
+const titleOf = (
+  t: (key: string, values?: Record<string, string | number>) => string,
+  serialNo: string | null,
+  detail: Detail | null,
+): string =>
+  serialNo === null || detail === null
+    ? t("view.title")
+    : t("view.titleWithNo", { type: t(`types.${detail.type}`), serialNo });
+
+/** 盤點方式的文字(跳過 / 沿用 / 現在盤點;交班與日結的檢視頁共用)。 */
+const stocktakeTextOf = (
+  t: (key: string, values?: Record<string, string | number>) => string,
+  temporal: (value: string, format: "monthDayTime") => string,
+  item: Detail,
+): string => {
+  if (item.stocktakeMode === "skip") {
+    return t("view.stocktakeSkipped", { reason: item.skipReason ?? "" });
+  }
+  const stocktake = item.stocktake ?? null;
+  if (stocktake === null) {
+    return "—";
+  }
+  const time = temporal(stocktake.startedAt, "monthDayTime");
+  return item.stocktakeMode === "reuse"
+    ? t("view.stocktakeReuse", {
+        time,
+        scope: stocktake.scopeName ?? t("stocktake.wholeStore"),
+        serial: stocktake.serialNo ?? "",
+      })
+    : t("view.stocktakeNew", { time });
+};
+
 /**
- * 結帳確認申請的檢視頁(規格 8.7;Figma ST-28a;替換表單引擎的檢視頁):頁首(類型、單號、狀態、申請人、送出時間)、
- * 結帳單(收銀點、盤點、應有現金逐項可點回單據、實點、差額與原因、留給下一班 / 接班人)、依面額清點(唯讀)+ 審核。
+ * 結帳確認申請的檢視頁(規格 8.7;Figma ST-28a 交班 / ST-28b 日結;替換表單引擎的檢視頁):頁首(類型、單號、狀態、
+ * 申請人、送出時間)、結帳單(交班:收銀點、盤點、應有現金逐項可點回單據、實點、差額與原因、留給下一班 / 接班人;
+ * 日結:`DailyCloseSheet` 涵蓋計算期間與班、全店盤點、小金庫逐項、存入銀行)、依面額清點(唯讀)+ 審核。
  * 退回後申請人 [修改後再送出] 打開精靈(帶入原內容)。「結帳單」列印由列印的功能加上。
  */
 export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
@@ -55,23 +90,8 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
   useRouteTabItemLabel(serialNo ?? t("view.title"));
   const detail = query.data?.lotteryCheckout ?? null;
 
-  const stocktakeText = (item: Detail): string => {
-    if (item.stocktakeMode === "skip") {
-      return t("view.stocktakeSkipped", { reason: item.skipReason ?? "" });
-    }
-    const stocktake = item.stocktake ?? null;
-    if (stocktake === null) {
-      return "—";
-    }
-    const time = temporal(stocktake.startedAt, "monthDayTime");
-    return item.stocktakeMode === "reuse"
-      ? t("view.stocktakeReuse", {
-          time,
-          scope: stocktake.scopeName ?? t("stocktake.wholeStore"),
-          serial: stocktake.serialNo ?? "",
-        })
-      : t("view.stocktakeNew", { time });
-  };
+  const stocktakeText = (item: Detail): string =>
+    stocktakeTextOf(t, temporal, item);
 
   if (query.isError) {
     return <Alert severity="error">{t("view.loadFailed")}</Alert>;
@@ -108,12 +128,7 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
             sx={{ alignItems: "center", flexWrap: "wrap" }}
           >
             <Typography variant="h6" component="h1">
-              {serialNo === null || detail === null
-                ? t("view.title")
-                : t("view.titleWithNo", {
-                    type: t(`types.${detail.type}`),
-                    serialNo,
-                  })}
+              {titleOf(t, serialNo, detail)}
             </Typography>
             {submission === null ? null : (
               <SubmissionStatusTag
@@ -166,68 +181,75 @@ export const CheckoutViewPage = ({ routeParam }: ModulePageProps) => {
           }}
         >
           <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1">
-                {t("view.sheetTitle")}
-              </Typography>
-              <Stack spacing={0.5}>
-                {facts.slice(0, 2).map(([label, value]) => (
-                  <Stack
-                    key={label}
-                    direction="row"
-                    sx={{ justifyContent: "space-between", gap: 2 }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      {label}
-                    </Typography>
-                    <Typography variant="body1" sx={{ textAlign: "right" }}>
-                      {value}
-                    </Typography>
-                  </Stack>
-                ))}
-              </Stack>
-              <ExpectedCashList
-                items={detail.expectedItems}
-                expected={detail.expected}
-                onOpenRedemption={redemption.openDetail}
-                hint={null}
+            {detail.type === CHECKOUT_TYPE.daily ? (
+              <DailyCloseSheet
+                detail={detail}
+                stocktakeText={stocktakeText(detail)}
               />
-              <Stack spacing={0.5}>
-                {facts.slice(3).map(([label, value, strong]) => (
-                  <Stack
-                    key={label}
-                    direction="row"
-                    sx={{ justifyContent: "space-between", gap: 2 }}
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      {label}
-                    </Typography>
-                    <Typography
-                      variant={strong ? "subtitle1" : "body1"}
-                      color={
-                        label === t("view.difference") &&
-                        detail.difference !== 0
-                          ? "error.main"
-                          : "text.primary"
-                      }
-                      sx={{ textAlign: "right" }}
+            ) : (
+              <Stack spacing={1.5}>
+                <Typography variant="subtitle1">
+                  {t("view.sheetTitle")}
+                </Typography>
+                <Stack spacing={0.5}>
+                  {facts.slice(0, 2).map(([label, value]) => (
+                    <Stack
+                      key={label}
+                      direction="row"
+                      sx={{ justifyContent: "space-between", gap: 2 }}
                     >
-                      {value}
-                    </Typography>
-                  </Stack>
-                ))}
+                      <Typography variant="body2" color="text.secondary">
+                        {label}
+                      </Typography>
+                      <Typography variant="body1" sx={{ textAlign: "right" }}>
+                        {value}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+                <ExpectedCashList
+                  items={detail.expectedItems}
+                  expected={detail.expected}
+                  onOpenRedemption={redemption.openDetail}
+                  hint={null}
+                />
+                <Stack spacing={0.5}>
+                  {facts.slice(3).map(([label, value, strong]) => (
+                    <Stack
+                      key={label}
+                      direction="row"
+                      sx={{ justifyContent: "space-between", gap: 2 }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        {label}
+                      </Typography>
+                      <Typography
+                        variant={strong ? "subtitle1" : "body1"}
+                        color={
+                          label === t("view.difference") &&
+                          detail.difference !== 0
+                            ? "error.main"
+                            : "text.primary"
+                        }
+                        sx={{ textAlign: "right" }}
+                      >
+                        {value}
+                      </Typography>
+                    </Stack>
+                  ))}
+                </Stack>
+                {detail.pendingImpacts.length > 0 ? (
+                  <Alert severity="warning">
+                    {t("view.pending", {
+                      items: pendingImpactsText(t, detail.pendingImpacts),
+                    })}
+                  </Alert>
+                ) : null}
+                <Typography variant="caption" color="text.secondary">
+                  {t("view.hint")}
+                </Typography>
               </Stack>
-              {detail.pendingImpacts.length > 0 ? (
-                <Alert severity="warning">
-                  {t("view.pending", {
-                    items: pendingImpactsText(t, detail.pendingImpacts),
-                  })}
-                </Alert>
-              ) : null}
-              <Typography variant="caption" color="text.secondary">
-                {t("view.hint")}
-              </Typography>
-            </Stack>
+            )}
           </Card>
           <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
             <DenominationCount

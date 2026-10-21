@@ -29,6 +29,10 @@ export interface ExpectedCashListProps {
   onOpenRedemption?: (id: string) => void;
   /** 底部說明;不給 = 不顯示 */
   hint?: string | null;
+  /** 某一項的標籤改寫(例:日結的小金庫期初「期初(10/13 日結清點)」);回 null / 不給 = 照項目名稱 */
+  labelOf?: (item: ExpectedCashItem) => string | null;
+  /** 合計那一列的標籤;不給 = 「應有現金」 */
+  totalLabel?: string;
 }
 
 /** 一項裡的一筆紀錄(時間、單號 / 張編號、金額、[點開單據])。 */
@@ -66,17 +70,19 @@ const EntryRow = ({
 /** 一項(標籤 + 筆數 + 金額);有明細時可點開。 */
 const ItemRow = ({
   item,
+  customLabel,
   expanded,
   onToggle,
   onOpenEntry,
 }: {
   item: ExpectedCashItem;
+  customLabel: string | null;
   expanded: boolean;
   onToggle: () => void;
   onOpenEntry: (entry: ExpectedCashEntry) => void;
 }) => {
   const t = useTranslations("admin.lotteryStore.checkout");
-  const label = t(`items.${item.kind}`);
+  const label = customLabel ?? t(`items.${item.kind}`);
   const expandable = item.entries.length > 0;
   let countText = "";
   if (item.kind !== "opening" && item.count > 0) {
@@ -146,6 +152,8 @@ export const ExpectedCashList = ({
   expected,
   onOpenRedemption,
   hint = null,
+  labelOf,
+  totalLabel,
 }: ExpectedCashListProps) => {
   const t = useTranslations("admin.lotteryStore.checkout.drawer");
   const navigate = useNavigate();
@@ -167,6 +175,7 @@ export const ExpectedCashList = ({
         <ItemRow
           key={item.kind}
           item={item}
+          customLabel={labelOf?.(item) ?? null}
           expanded={open === item.kind}
           onToggle={() => {
             setOpen((before) => (before === item.kind ? null : item.kind));
@@ -184,7 +193,7 @@ export const ExpectedCashList = ({
         }}
       >
         <Typography variant="subtitle2" color="text.secondary">
-          {t("expectedTitle")}
+          {totalLabel ?? t("expectedTitle")}
         </Typography>
         <Typography variant="subtitle1">{moneyText(expected)}</Typography>
       </Stack>

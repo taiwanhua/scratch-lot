@@ -8,6 +8,10 @@ import {
   type CheckoutWorldOptions,
   checkoutWorld,
 } from "@/test/msw/project/lottery/checkout-handlers";
+import {
+  type DailyCloseWorldOptions,
+  dailyCloseWorld,
+} from "@/test/msw/project/lottery/daily-close-handlers";
 import { inventoryWorld } from "@/test/msw/project/lottery/inventory-handlers";
 import { masterDataOrgs } from "@/test/msw/project/lottery/master-data-fixtures";
 import { masterDataSharedLookupHandlers } from "@/test/msw/project/lottery/master-data-handlers";
@@ -58,6 +62,7 @@ export const renderStore = ({
   forms = {},
   stocktakeOptions = {},
   checkoutOptions = {},
+  dailyCloseOptions = {},
 }: {
   path?: string;
   permissions?: readonly string[];
@@ -72,6 +77,8 @@ export const renderStore = ({
   stocktakeOptions?: StocktakeWorldOptions;
   /** 交班結帳的假 api 選項(精靈資料的覆寫) */
   checkoutOptions?: CheckoutWorldOptions;
+  /** 日結 / 存銀行的假 api 選項(精靈、上次日結、存銀行視窗的覆寫) */
+  dailyCloseOptions?: DailyCloseWorldOptions;
 } = {}) => {
   const fake = storeWorld(world);
   const salesFake = storeSalesWorld({ ...sales, board: fake.state });
@@ -100,9 +107,11 @@ export const renderStore = ({
   const stocktakeFlow = stocktakeWorkflowWorld();
   const checkoutFlow = checkoutWorkflowWorld();
   const stocktake = stocktakeWorld(stocktakeOptions);
+  const dailyClose = dailyCloseWorld(dailyCloseOptions);
   server.use(
     ...stocktake.handlers,
     ...checkoutWorld(checkoutOptions).handlers,
+    ...dailyClose.handlers,
     ...workflowRuntimeWorld({
       instances: [...stocktakeFlow.instances, ...checkoutFlow.instances],
       tasks: [...stocktakeFlow.tasks, ...checkoutFlow.tasks],
@@ -128,5 +137,6 @@ export const renderStore = ({
     redemptions,
     runtime,
     stocktake,
+    dailyClose,
   };
 };

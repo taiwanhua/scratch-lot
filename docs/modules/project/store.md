@@ -2,7 +2,7 @@
 
 ## 用途
 
-店裡每天收錢、賣刮刮樂的地方(專案規格第 6 章):**看板**(每個收銀點的標題列與檯面上的本)、**本機收銀點**(每台裝置設定、存在瀏覽器)、**收銀班次**(開班、班次資訊、改對應排班)、**投庫 / 出庫**、**抽屜應有現金**與看板的**即時同步**;**銷售**(刷條碼、相機、快速銷售、手動標記)、**當下撤銷**、**卡片原地展開**、**拆本**、**移櫃 / 收回**。**撤銷售出申請**、**現金更正單**(兩張表單、撤銷售出 / 現金更正分頁);**盤點**與**盤點確認申請**(盤點頁、差異核對、盤點紀錄分頁);**交班結帳**與**結帳確認申請**(交班精靈、班次結帳歷史紀錄分頁、檢視頁)。日結、存銀行由之後的功能各自加上。
+店裡每天收錢、賣刮刮樂的地方(專案規格第 6 章):**看板**(每個收銀點的標題列與檯面上的本)、**本機收銀點**(每台裝置設定、存在瀏覽器)、**收銀班次**(開班、班次資訊、改對應排班)、**投庫 / 出庫**、**抽屜應有現金**與看板的**即時同步**;**銷售**(刷條碼、相機、快速銷售、手動標記)、**當下撤銷**、**卡片原地展開**、**拆本**、**移櫃 / 收回**。**撤銷售出申請**、**現金更正單**(兩張表單、撤銷售出 / 現金更正分頁);**盤點**與**盤點確認申請**(盤點頁、差異核對、盤點紀錄分頁);**交班結帳**與**結帳確認申請**(交班精靈、班次結帳歷史紀錄分頁、檢視頁);**日結**(日結精靈、日結逾期提醒與側欄數字)與**存銀行**。
 
 正本:`apps/db-migrator/seeds/project/store.ts`、`packages/domain/src/project/lottery/store.ts`
 
@@ -49,10 +49,10 @@
 | `store.open-shift`               | `store`       | 未開班的收銀點 [開班] + `lotteryStoreOpenShiftForm`、`openLotteryShift`、開班視窗的 [打卡] `punchLotteryShiftStart`              |
 | `store.deposit`                  | `store`       | 本機收銀點開班中 [投庫] + `depositLotteryShiftCash`                                                                              |
 | `store.withdraw`                 | `store`       | 本機收銀點開班中 [出庫] + `withdrawLotteryShiftCash`;開班視窗的「從小金庫領零用金」(第一班)                                      |
-| `store.bank-deposit`             | `store`       | 存銀行(存銀行的功能)                                                                                                             |
+| `store.bank-deposit`             | `store`       | 頂部 [存銀行] + `lotteryBankDepositForm` / `depositLotteryVaultToBank`                                                           |
 | `store.stocktake`                | `store`       | 看板頂部 [盤點] + `lotteryStocktakeSheet`、`lotteryStocktakeReview`;[補登售出] 另要 `store.sell`、[補登兌獎] 另要 `store.redeem` |
-| `store.checkout`                 | `store`       | 標題列 [交班結帳] + `lotteryCheckoutWizard`(負責人或店長才能送出);日結(日結的功能)                                               |
-| `store.skip-stocktake`           | `store`       | 交班精靈第 ① 步的「跳過盤點」;日結(日結的功能)                                                                                   |
+| `store.checkout`                 | `store`       | 標題列 [交班結帳] + `lotteryCheckoutWizard`(負責人或店長才能送出);頂部 [日結] + `lotteryDailyCloseWizard`                        |
+| `store.skip-stocktake`           | `store`       | 交班精靈第 ① 步、日結精靈第 ② 步的「跳過盤點」                                                                                   |
 | `store.confirm-lost`             | `store`       | 盤點待查清單的「確認遺失」(送出時掛接點再檢查)                                                                                   |
 
 - **店長 = 持有 `store.edit`**:規格「只有這一班的負責人或店長」沒有對應的權限,角色又是租戶資料、不能用名稱判斷,所以「店長類操作」(改別人的班的對應排班;之後的 [交班結帳] 也一樣)一律看 `store.edit`。租戶把店面管理的「編輯」開給別的角色,那個角色也會被當成店長。判斷集中在 `apps/api/src/project/lottery/store/store-access.ts` 的 `isStoreManager(grant)`,之後的票沿用同一支,不另寫。
@@ -63,7 +63,7 @@
 
 ### 看板(ST-01 / 02 / 34)
 
-- 頂部:分店選擇器 `OrgTreeSelect scope="visible"`(預設目前組織,`?org=`)、本機收銀點下拉、「你開著的班:店內櫃台 · 店外攤位」(自己在這家店開著兩個以上的班時)、連線狀態小圓點(`useRealtimeStatus`:綠 = 即時、黃 = 重新連線中);沒有重新整理按鈕。上次日結、[盤點] [存銀行] [日結]、距上次盤點超過 24 小時的提醒由各自的功能加上。
+- 頂部:分店選擇器 `OrgTreeSelect scope="visible"`(預設目前組織,`?org=`)、本機收銀點下拉、「你開著的班:店內櫃台 · 店外攤位」(自己在這家店開著兩個以上的班時)、連線狀態小圓點(`useRealtimeStatus`:綠 = 即時、黃 = 重新連線中);沒有重新整理按鈕。右側:上次日結、[盤點] [存銀行] [日結](見「日結與存銀行」)與距上次盤點超過 24 小時的提醒(見「盤點」)。
 - 每個啟用中的收銀點一條 `CashPointHeader`(依收銀點排序、名稱 `zh-Hant`),下面是檯面上的本(`BoardBookCard`)。
 - 標題列按鈕(依狀態與權限):未開班 → [開班];開班中的本機收銀點 → [最近售出](只在自己開的班)[投庫] [出庫] [拆本];開班中的其他收銀點、負責人是自己 → [切換到這個收銀點];其他只顯示狀態。
 - 開班中的標題列:「負責人 王小明 · 08:02 開班」(臨時代班加「未對應排班」;點這一行開班次資訊)、本班已售(張 / 金額,售出 − 撤銷)、應有現金。
@@ -144,7 +144,7 @@
 
 正本:`packages/domain/src/project/lottery/stocktake.ts`(盤點內容的形狀、與盤點那一刻比對的差異、送出前檢查;api 與 admin 共用)、`apps/api/src/project/lottery/stocktake/`、`apps/admin/src/pages/project/lottery/store/stocktake/`。
 
-- **入口**:看板頂部 [盤點](`store.stocktake`)→ 盤點範圍(ST-16:全店 / 單一收銀點)→ 盤點頁 = 盤點確認申請的新增頁 `/store/create-page/stocktake_confirm?org=&scope=`。距離上次送出的盤點(不算已駁回)超過 24 小時,看板頂部提醒「建議盤點一次」(`lotteryStocktakeStatus`)。交班精靈第 ① 步嵌入同一組元件(`StocktakeCountStep` + `StocktakeReviewStep`,只盤那個收銀點;見「交班結帳」);日結精靈第 ② 步同樣做法(日結的功能)。
+- **入口**:看板頂部 [盤點](`store.stocktake`)→ 盤點範圍(ST-16:全店 / 單一收銀點)→ 盤點頁 = 盤點確認申請的新增頁 `/store/create-page/stocktake_confirm?org=&scope=`。距離上次送出的盤點(不算已駁回)超過 24 小時,看板頂部提醒「建議盤點一次」(`lotteryStocktakeStatus`)。交班精靈第 ① 步嵌入同一組元件(`StocktakeCountStep` + `StocktakeReviewStep`,只盤那個收銀點;見「交班結帳」);日結精靈第 ② 步同樣做法(盤全店,`scopeCashPointId = null`)。
 - **沒有「盤點中」**:盤點過程只在畫面上(規格 6.0),重新整理或離開就從頭盤;[送出] 時才建立盤點單。[補登售出]、[補登兌獎] 例外,按下就立即生效,畫面註明「立即生效」。
 - **盤點頁**(ST-13;`StocktakeWorkspace` + `useStocktakeFlow`):左欄本清單依收銀點分組(每本 已盤 / 未盤 / 差異 N / 目前這本;手機改成上方的下拉),每個收銀點旁 [補登兌獎](`store.redeem`,沿用兌獎視窗;沒有開著的班停用並說明)與應有現金;右欄選中的本:點格子 / 掃描(不用數量;已選 = 在)、系統數字(開始盤這本那一刻)、實盤、差異;全店盤點另有「未拆的本(在 / 不在)」與「待查清單」(找到了要刷條碼:整本都待查的一組刷到任一張就算整本找到,零碎待查的一組只有刷到的張算找到、其他維持待查 / 確認遺失要原因 / 繼續待查)。
 - **掃描用途** `store-stocktake`(`STOCKTAKE_SCAN_PURPOSE`):盤點頁開著時刷到的碼記為「在」(或待查清單的「找到了」),不會被當成售出;掃描欄標 `data-scanner-field`。
@@ -186,6 +186,33 @@
 - **班次結帳歷史紀錄分頁**(ST-27,`CheckoutsTab`):篩選 期間(送出時間)、收銀點、類型、狀態(申請的狀態:待審核 = `reviewing` / 已退回 / 已撤回 / 已完成;`?checkouts=`);欄位 單號、收銀點、類型、交班人、應有、實點、差額、狀態;平板 / 手機改卡片;點一列開結帳確認申請的檢視頁。
 - **檢視頁**(ST-28a,`CheckoutViewPage`):類型、單號、狀態、申請人、送出時間;結帳單(收銀點、盤點方式、應有逐項可點回單據、應有 / 實點 / 差額與原因、留給下一班 / 接班人、送出時審核中的單據)、依面額清點(唯讀)+ 審核區塊;申請人在退回後 [修改後再送出] → 精靈帶入原內容(`lotteryCheckout.draft`)。讀取依據:看得到那家店,或讀得到那張申請(接班人 / 店長從申請中心進來)。
 - **沒有權限時**:沒有 `store.checkout` 看不到 [交班結帳];別人的班、不是店長 → 看不到(api `canSubmit = false`、送出 `CHECKOUT_FORBIDDEN`);沒有 `store.skip-stocktake` 第 ① 步沒有「跳過盤點」。
+
+### 日結與存銀行(ST-20–26b、ST-28b)
+
+正本:`packages/domain/src/project/lottery/daily-close.ts`(結帳內容、精靈步驟、小金庫應有的各項、存入銀行的檢查、涵蓋計算期間沒有日結的日子、日結逾期的時點;api 與 admin 共用)、`apps/api/src/project/lottery/daily-close/`、`apps/admin/src/pages/project/lottery/store/daily-close/`。
+
+- **頂部**(`useDailyCloseEntry`;ST-01、ST-20):「上次日結:10/13(已 3 天)」(`lotteryDailyCloseStatus`:上一張日結的 `coveredTo` 與距今的日曆日,租戶時區;沒有 =「還沒有日結」)、[存銀行](`store.bank-deposit`)、[日結](`store.checkout`)。**這家店所有收銀點的班都已送出交班結帳**才能按 [日結](看板資料:有收銀點開著班 → 停用,滑過列出「店內櫃台還沒交班」);已有審核中 / 已退回的日結也停用(「日結 C-0043 審核中」)。按下 → 日結精靈 = 結帳確認申請的新增頁 `/store/create-page/checkout_confirm?org=&type=daily`(`CheckoutConfirmCreatePage` 依 `type` 分派交班 / 日結;退回後的編輯頁 `CheckoutConfirmEditPage` 依結帳單的類型分派)。
+- **涵蓋計算期間** = 上一次日結送出(上一張日結的 `coveredTo`)至這次日結**第一次**送出;退回後再送出不變(規格 6.10「送出:涵蓋計算期間定下」)。涵蓋的班 = 期間內**送出交班結帳**的班(以班的 `closedAt` 判斷,退回後再送出不會改它);每一班只會被一張日結涵蓋計算,送出後才送出交班結帳的班算下一次。**不能補日結**:畫面標示「涵蓋計算期間 10/14 09:02 ~ 現在(10/14、10/15 沒有日結)」—— 沒有日結的日子 = 上次日結那天起到今天的前一天(`dailyCloseGapDates`)。
+- **精靈一次做完**(規格 6.0,`useDailyCloseWizard`;補登兌獎 / 補登售出例外,立即生效);訂閱 `board:<分店>`,各班的審核狀態即時更新。
+  - **① 各班結帳**(ST-21):涵蓋的每一班的交班結帳(收銀點、交班人、送出、應有、實點、差額、審核者、狀態 已核准 / 待審核 / 已退回)。審核者是自己的列有 [審核] → 側邊打開結帳單(ST-22,`ShiftReviewDrawer`:結帳單摘要 + 審核區塊 `ApprovalSection`,核准 / 退回不離開精靈);別人審的顯示「等某某核准」(目前的待審任務);退回的顯示「待某某更正」(申請人)。**全部核准**才能 [下一步](「還有 N 班沒核准」)。
+  - **② 全店盤點**(ST-23):同交班精靈第 ① 步(`CheckoutStocktakeStep`,範圍全店):沿用 30 分鐘內的**全店**盤點 / 現在盤點全店 / 跳過(`store.skip-stocktake` + 原因)。
+  - **③ 小金庫**(ST-24):小金庫應有逐項(期初 = 上次**已完成**日結的清點金額 + 投庫 − 出庫 ± 調貨 ± 現金更正 − 存銀行;每筆可點回即時現金帳)、依面額清點(`DenominationCount`)、差額 = 實點 − 應有,不為 0 時原因必填(欄位管理「結帳差額原因」)。
+  - **④ 存入銀行**(ST-25a):金額(0 = 不存;不能超過小金庫實點)、帳戶(`lotteryDailyCloseWizard.bankAccounts`:使用中、使用組織包含這家店;只有一個時自動帶入)、存入後小金庫應有。
+  - **⑤ 確認**(ST-25b):涵蓋計算期間、全店盤點方式、各班差額合計、小金庫差額、存入銀行 → [送出結帳確認申請](類型 = 日結;「日結單」列印由列印的功能加上)。
+- **結帳確認申請(類型 = 日結)**:同一張受管表單 `checkout_confirm`,值 `type = daily`、`branch`、應有 / 實點 / 差額(小金庫)、`draft` = `serializeDailyCloseDraft`。掛接點 `checkout-lifecycle.ts` **依類型分派**(守門看值;事後動作讀申請的值):日結 → `DailyCloseService`(token `DAILY_CLOSE_SERVICE`),交班 → `CheckoutService`。
+  - `beforeSubmit`:有 `store.checkout`;看得到這家店;沒有其他審核中 / 已退回的日結(`DAILY_CLOSE_PENDING_EXISTS`);第一次送出時這家店沒有開著的班(`DAILY_CLOSE_SHIFTS_OPEN`);涵蓋的交班結帳全部已確認(`DAILY_CLOSE_UNAPPROVED`);全店盤點方式合法(同交班,範圍 = 全店);小金庫差額不為 0 要原因(`CHECKOUT_REASON_REQUIRED`);存入銀行(`DAILY_CLOSE_DEPOSIT_INVALID` 金額不是非負整數或超過實點、`DAILY_CLOSE_ACCOUNT_NOT_USABLE` > 0 沒選帳戶或帳戶不能用)
+  - `submitted`:同一個交易碰小金庫守門文件(`StoreVaultGuard.serialize`)、**再查一次**開著的班與涵蓋的交班全部已核准(送出時後端再檢查,`CONFLICT` + 同上的 reason)、算小金庫應有各項並快照(`expectedItems` / `expected`)、建立(退回後再送出改寫)結帳單、現在盤點 → `StocktakeService.submitStocktakeDraft(type: "daily")`(沿用 / 跳過照交班的做法)
+  - `returned` / `withdrawn`:同交班(結帳單 → 已退回,自己建立的盤點單一起)
+  - `completed`:套用全店盤點;存入銀行 > 0 → 同一個交易寫銀行「存入」(`BankTransactionsService.write`,歸屬分店 = 這家店,單據 = 這張申請)+ 現金流水「存銀行」(`bank_deposit`,小金庫 → 銀行,`bankTransactionId` 連到那筆存入;寫在結帳單 `bankTransactionId` / `bankMovementId`);結帳單 → 已確認(**小金庫從清點金額重新起算**)
+  - `beforeReject` / `beforeVoid`:一律擋下(同交班)
+- **小金庫起算點**(`daily-close-registrations.ts` → `registerVaultBaselineProvider`):最近一張**已確認**的日結 → `{ amount: counted, since: submittedAt }`(最後一次送出的時間 = 清點的那一刻)。之後的流水照常加總,含完成時寫的「存銀行」;例:清點 8,900(22:00 送出)、22:10 投庫 1,000、隔天核准時存銀行 5,000 → 小金庫應有 4,900。
+- **第一班的判斷**(`registerDailyCloseCoverage`):上一班已送出交班結帳、而且這家店有一張日結的 `coveredTo` ≥ 那一班的 `closedAt`(那張日結已送出,不論狀態)→ 已被日結涵蓋 → 下一班是第一班。
+- **存銀行**(ST-26a / b,`BankDepositDialog`,`depositLotteryVaultToBank`):金額、存入帳戶(只有一個時自動帶入)、備註;不用審核、做完就生效(同投庫、出庫)。同一個交易:碰小金庫守門文件並檢查**金額 ≤ 小金庫應有**(`StoreVaultGuard.assertCovers`,`AMOUNT_EXCEEDS_VAULT`;和出庫序列化)→ 銀行「存入」(歸屬分店 = 這家店)+ 現金流水「存銀行」(`bankTransactionId` 相連)+ 稽核 `lottery-bank-transaction.create`。帳戶要使用中、使用組織包含這家店(`SettlementService.isAccountUsable`,也要操作者看得到);這家店**沒有任何可用帳戶** → `BANK_DEPOSIT_NO_ACCOUNT`(ST-26b),有但選的不能用 → `BANK_ACCOUNT_NOT_USABLE`。記錯:到帳戶管理沖正那筆「存入」,連結的「存銀行」流水自動反向(帳戶管理既有的連動)。「存款單」列印由列印的功能加上。
+- **日結逾期**(B14;規格 3.4、3.5,`daily-close-reminders.service.ts`,排程工作 `lottery.daily-close-overdue` 每 15 分鐘):每家店**最早一張還沒被日結涵蓋計算的交班結帳**(以班的 `closedAt`),送出日的**隔天起每天**寄送時間(類型 `lottery.daily-close-overdue` 宣告可調時間「逾期後每天」,預設 09:00,租戶時區;`scheduleHitAt` 判斷)→ 負責人提醒(組織範圍 = 這家店本身,預設人員條件 = 持有 `store.bank-deposit`,即店長;`dedupeKey` 帶分店與當天的時點 → 同一家店一天一則)。被日結涵蓋後不再寄。
+- **側欄數字**(`store-badge.ts`,模組 `store`,說明 `admin.lotteryStore.badgeDescription`):操作者看得到的店裡**日結逾期的店數**(同上的時點已過:`dailyCloseOverdueAt`);時間會讓數字變,沒有信號,前端進站取一次、斷線時每 60 秒重抓(底座 10.4)。
+- **檢視頁**(ST-28b,`CheckoutViewPage` → `DailyCloseSheet`):類型、涵蓋計算期間、涵蓋計算的班(「3 班(C-0040、C-0041、C-0042)」)、全店盤點、小金庫應有逐項、實點、差額與原因、存入銀行、存入後小金庫;依面額清點(唯讀)+ 審核區塊。班次結帳歷史紀錄分頁照樣列出日結(收銀點欄空白)。
+- **建議流程設定**:同交班(第 1 關 `type == "daily"` 跳過、第 2 關店長審核,照常審核)。
+- **沒有權限時**:沒有 `store.checkout` 看不到 [日結](api `lotteryDailyCloseWizard` → `FORBIDDEN`);沒有 `store.bank-deposit` 看不到 [存銀行](api → `FORBIDDEN`);沒有 `store.skip-stocktake` 第 ② 步沒有「跳過盤點」。
 
 ### 開班(ST-04a / b / c)
 
@@ -261,12 +288,17 @@
 | `lotteryCheckouts(input)`                          | `store.view`                      | `{ orgId, from?, to?, cashPointId?, type?, status?, offset?, limit? }`(最多 100;`status` = 申請的狀態)→ `{ items, total }`,送出時間新到舊                                                                 |
 | `lotteryCheckout(submissionId)`                    | `store.view`                      | 結帳確認申請檢視頁:結帳單(應有逐項、面額、差額與原因、審核中的單據快照、留給下一班 / 接班人)、盤點方式與盤點單、結帳內容(`draft`,退回後帶入)                                                              |
 
+| `lotteryDailyCloseStatus(orgId)` | `store.view` | 看板頂部:上次日結的時間(`lastClosedAt`)與距今天數(`daysSince`)、審核中 / 已退回的日結(`pending`) |
+| `lotteryDailyCloseWizard(orgId, submissionId?)` | `store.checkout` | 日結精靈:涵蓋計算期間、沒有日結的日子、開著的班、另一張審核中的日結、各班結帳列(狀態、等誰、`isMine`、`instanceId`)、各班差額合計、可沿用的全店盤點、小金庫應有逐項、可用的帳戶;`submissionId` = 退回後再送出 |
+| `lotteryBankDepositForm(orgId)` | `store.bank-deposit` | 存銀行視窗:小金庫目前應有、這家店可用的帳戶 |
+| `depositLotteryVaultToBank(input)` | `store.bank-deposit` | `{ orgId, amount, accountId, note? }` → `{ vaultExpected, movementId, transactionId }` |
+
 - 撤銷售出申請、現金更正單的寫入一律經表單引擎(送出 / 審核 / 掛接點,見上方「撤銷售出申請與現金更正單」);lookup 來源 `lottery_shift`(`project/lookup-providers.ts`,顯示欄 `label`,讀取要 `store.view`;可攜、沒有固定條件)。
 - 排班只經 `ScheduleModule` 匯出的 `ScheduleEntryLookup` 讀(`findEntryForShift` / `listEntriesOfDay` / `taskSnapshotFor` / `punchStart` / `hasStartPunch`;依賴方向刮刮樂 → 排班)。
 - 現金流水經 `CashLedgerService.recordCashMovement`(交易內)。出庫原因的欄位管理選項對到流水的原因代碼:「開班零用金」→ `opening_float`、「補零錢」→ `change`、其他(含租戶自己加的選項)→ `other`,選項名稱與說明寫進流水備註(`store-cash.service.ts` 的 `withdrawReasonOf`)。
 - 讀取照操作者的可見範圍;負責人名稱以租戶邊界讀(`shift-views.ts`,反查)。刷到時的張以租戶邊界反查(`store-sales.service.ts`:待查 / 遺失的張可能在別家店、不是本店的也要說得出來);寫入一律照操作者的範圍經帳本。
 
-正本:`apps/api/src/project/lottery/store/`、`apps/api/src/project/lottery/redemption/`、`apps/api/src/project/lottery/stocktake/`、`apps/api/src/project/lottery/checkout/`、`packages/graphql/src/documents/project/lottery/store.graphql`、`redemption.graphql`、`stocktake.graphql`、`checkout.graphql`
+正本:`apps/api/src/project/lottery/store/`、`apps/api/src/project/lottery/redemption/`、`apps/api/src/project/lottery/stocktake/`、`apps/api/src/project/lottery/checkout/`、`apps/api/src/project/lottery/daily-close/`、`packages/graphql/src/documents/project/lottery/store.graphql`、`redemption.graphql`、`stocktake.graphql`、`checkout.graphql`、`daily-close.graphql`
 
 ## 資料
 
@@ -286,7 +318,7 @@
 
 - 部分唯一索引 `(cashPointId)`(`closedAt`、`deletedAt` 為 null):同一個收銀點同時只能有一班;兩人同時開班由索引擋下後到的(`SHIFT_ALREADY_OPEN`)。
 - 一個人只能同時開同一家店的班:開班的交易一開始對這個人的守門文件 `lottery_shift_person_locks`(一個租戶一人一筆,歸屬租戶頂層)`$inc`,再以租戶邊界查他在別家店開著的班(`SHIFT_IN_OTHER_STORE`);同一人在兩家店同時開班,兩個交易在守門文件上衝突、重跑的一方被擋下(`store-person-locks.ts`)。
-- 從小金庫拿錢(出庫、開班領零用金)不能超過小金庫應有(`CashLedgerService.vaultExpected`):交易外先建好這家店的小金庫守門文件 `lottery_vault_locks`(一家店一筆),交易內先 `$inc` 再算應有;同一家店同時兩筆在守門文件上衝突、重跑的一方讀得到對方的流水(`store-vault-guard.ts`;比照抽屜的 `drawerVersion`)。存銀行、調貨付現等其他從小金庫拿錢的動作由各自的功能決定要不要接同一支。
+- 從小金庫拿錢(出庫、開班領零用金)不能超過小金庫應有(`CashLedgerService.vaultExpected`):交易外先建好這家店的小金庫守門文件 `lottery_vault_locks`(一家店一筆),交易內先 `$inc` 再算應有;同一家店同時兩筆在守門文件上衝突、重跑的一方讀得到對方的流水(`store-vault-guard.ts`;比照抽屜的 `drawerVersion`)。存銀行(`daily-close/bank-deposit.service.ts`)接同一支;日結送出 / 完成時碰同一個守門文件(`serialize`)。調貨付現等其他從小金庫拿錢的動作由各自的功能決定要不要接。
 - 資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 第一班的判斷用兩個登記(`lottery/store/previous-shift.ts`):`registerHandoverAmount`(交班結帳登記「留給下一班」)、`registerDailyCloseCoverage`(日結登記「已被日結涵蓋」);沒有登記 = 留給下一班 0、沒被涵蓋。上一班的交班結帳被退回、修改留給下一班時,下一班的期初由結帳的掛接點在再送出時更新(`previousShiftId` = 上一班、`openingFloatSource = handover` 的班)。
 
@@ -345,20 +377,23 @@
 
 ### 結帳單 `lottery_checkouts`
 
-| 欄位                                                       | 說明                                                                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `orgId`、`type`、`status`                                  | 分店;交班 `shift` / 日結 `daily`(日結的欄位由日結的功能追加);待核准 `pending` → 已確認 `confirmed`;退回 → 已退回 `returned`                |
-| `cashPointId`、`shiftId`                                   | 交班才有                                                                                                                                   |
-| `stocktakeMode`、`stocktakeId`                             | 盤點方式 `reuse` / `new` / `skip`;盤點單(沿用的那一筆,或這張申請自己建立的);跳過 = null                                                    |
-| `skipReasonKey`、`skipReason`、`skipReasonNote`            | 跳過盤點的原因(代碼、名稱快照、說明);報表永久標示「未盤點」的資料欄位                                                                      |
-| `expectedItems[]`、`expected`                              | 應有現金逐項快照 `{ kind, count, amount(帶正負號), entries[{ refType(redemption / movement), refId, label, occurredAt, amount }] }` 與合計 |
-| `denominations[]`、`counted`、`difference`                 | 實點(面額 × 張數)、合計、差額 = 實點 − 應有                                                                                                |
-| `diffReasonKey`、`diffReason`、`diffReasonNote`            | 差額原因(代碼、名稱快照、說明);差額 0 = null                                                                                               |
-| `pendingImpacts[]`                                         | 送出時審核中、會影響這一班現金的單據快照 `{ submissionId, formKey, serialNo, amount }`                                                     |
-| `leftForNext`、`successorId`                               | 留給下一班(下一班的期初)、接班人(沒有 = null)                                                                                              |
-| `submittedBy`、`submittedAt`、`confirmedAt`、`confirmedBy` | 送出的人與時間、核准完成與核准的人                                                                                                         |
-| `submissionId`                                             | 結帳確認申請的提交 id;唯一                                                                                                                 |
-| `version`                                                  | 送出 / 退回 / 完成各 +1(條件更新)                                                                                                          |
+| 欄位                                                       | 說明                                                                                                                                                              |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orgId`、`type`、`status`                                  | 分店;交班 `shift` / 日結 `daily`(日結:應有 / 實點 / 差額 / 面額 / 差額原因 / 應有各項記**小金庫**);待核准 `pending` → 已確認 `confirmed`;退回 → 已退回 `returned` |
+| `cashPointId`、`shiftId`                                   | 交班才有                                                                                                                                                          |
+| `stocktakeMode`、`stocktakeId`                             | 盤點方式 `reuse` / `new` / `skip`;盤點單(沿用的那一筆,或這張申請自己建立的);跳過 = null                                                                           |
+| `skipReasonKey`、`skipReason`、`skipReasonNote`            | 跳過盤點的原因(代碼、名稱快照、說明);報表永久標示「未盤點」的資料欄位                                                                                             |
+| `expectedItems[]`、`expected`                              | 應有現金逐項快照 `{ kind, count, amount(帶正負號), entries[{ refType(redemption / movement), refId, label, occurredAt, amount }] }` 與合計                        |
+| `denominations[]`、`counted`、`difference`                 | 實點(面額 × 張數)、合計、差額 = 實點 − 應有                                                                                                                       |
+| `diffReasonKey`、`diffReason`、`diffReasonNote`            | 差額原因(代碼、名稱快照、說明);差額 0 = null                                                                                                                      |
+| `pendingImpacts[]`                                         | 送出時審核中、會影響這一班現金的單據快照 `{ submissionId, formKey, serialNo, amount }`                                                                            |
+| `leftForNext`、`successorId`                               | 留給下一班(下一班的期初)、接班人(沒有 = null)                                                                                                                     |
+| `submittedBy`、`submittedAt`、`confirmedAt`、`confirmedBy` | 送出的人與時間、核准完成與核准的人                                                                                                                                |
+| `coveredFrom`、`coveredTo`、`coveredShiftIds[]`            | 日結:涵蓋計算期間(第一次日結 `coveredFrom = null`;第一次送出時定下)與涵蓋的班;交班 = null / 空                                                                    |
+| `bankDepositAmount`、`bankAccountId`                       | 日結:存入銀行的金額(0 = 不存)與帳戶                                                                                                                               |
+| `bankTransactionId`、`bankMovementId`                      | 日結完成時寫的銀行「存入」與現金流水「存銀行」;沒存 = null                                                                                                        |
+| `submissionId`                                             | 結帳確認申請的提交 id;唯一                                                                                                                                        |
+| `version`                                                  | 送出 / 退回 / 完成各 +1(條件更新)                                                                                                                                 |
 
 - 送出時才建立(精靈過程只在畫面上);退回後再送出改寫同一筆。資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 掛接點的寫入與審核者的讀取以租戶邊界上下文(`project/database/tenant-boundary-callers.ts`:`checkout.service.ts` 反查 + 例外寫入、`checkout-query.service.ts` 反查)。
@@ -378,14 +413,16 @@
 
 ### 對其他功能的登記(`store-registrations.ts`)
 
-| 登記                                                           | 給誰                     | 內容                                                                          |
-| -------------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
-| `registerOpenShiftResolver`(`cash/open-shift.ts`)              | 收付(現金來源選抽屜)     | 收銀點開著的班                                                                |
-| `registerOpenDrawersLister`(`cash/open-shift.ts`)              | 即時現金帳、收付付款視窗 | 分店開著班的收銀點抽屜與應有(即時現金帳列出;付款視窗的現金來源 `cashDrawers`) |
-| `registerCashPointDeactivationGuard`                           | 檔案管理的收銀點停用     | 有開著的班、或檯面上還有未售的張 → 不能停用                                   |
-| `registerPositionAnnotationProvider`                           | 排班表(崗位旁的註記)     | 這家店各收銀點:崗位 → 收銀點名稱                                              |
-| `registerEntryDeletionGuard`                                   | 排班作業刪除排班         | 已被收銀班次綁定的排班不能刪                                                  |
-| `registerHandoverAmount`(`checkout/checkout-registrations.ts`) | 開班(期初零用金)         | 這一班最近一張結帳單的「留給下一班」;沒有 = 0                                 |
+| 登記                                                                     | 給誰                     | 內容                                                                             |
+| ------------------------------------------------------------------------ | ------------------------ | -------------------------------------------------------------------------------- |
+| `registerOpenShiftResolver`(`cash/open-shift.ts`)                        | 收付(現金來源選抽屜)     | 收銀點開著的班                                                                   |
+| `registerOpenDrawersLister`(`cash/open-shift.ts`)                        | 即時現金帳、收付付款視窗 | 分店開著班的收銀點抽屜與應有(即時現金帳列出;付款視窗的現金來源 `cashDrawers`)    |
+| `registerCashPointDeactivationGuard`                                     | 檔案管理的收銀點停用     | 有開著的班、或檯面上還有未售的張 → 不能停用                                      |
+| `registerPositionAnnotationProvider`                                     | 排班表(崗位旁的註記)     | 這家店各收銀點:崗位 → 收銀點名稱                                                 |
+| `registerEntryDeletionGuard`                                             | 排班作業刪除排班         | 已被收銀班次綁定的排班不能刪                                                     |
+| `registerHandoverAmount`(`checkout/checkout-registrations.ts`)           | 開班(期初零用金)         | 這一班最近一張結帳單的「留給下一班」;沒有 = 0                                    |
+| `registerDailyCloseCoverage`(`daily-close/daily-close-registrations.ts`) | 開班(第一班的判斷)       | 這一班已被送出的日結涵蓋計算(那家店某張日結的 `coveredTo` ≥ 這一班的 `closedAt`) |
+| `registerVaultBaselineProvider`(同上)                                    | 帳戶管理(小金庫應有)     | 最近一張已確認日結的清點金額與送出時間                                           |
 
 這些查詢沒有操作者(或問的是整個租戶),以租戶邊界的系統身分讀(`project/database/tenant-boundary-callers.ts`,系統重算)。
 
@@ -473,10 +510,23 @@
 | `CHECKOUT_REJECT_FORBIDDEN`       | 駁回結帳確認申請(一律擋下,只能退回)                                              |
 | `CHECKOUT_VOID_FORBIDDEN`         | 作廢結帳確認申請(一律擋下)                                                       |
 
+日結與存銀行(`DAILY_CLOSE_REASONS`;掛接點擋下時是 `FORBIDDEN` + `reason`,送出交易內再檢查時是 `CONFLICT` + `reason`,文案在 `admin.lifecycle.<碼>`;存銀行是 `VALIDATION_FAILED`,文案在 `admin.lotteryStore.errors.<碼>`):
+
+| reason                           | 什麼時候                                              |
+| -------------------------------- | ----------------------------------------------------- |
+| `DAILY_CLOSE_SHIFTS_OPEN`        | 這家店還有收銀點的班沒送出交班結帳                    |
+| `DAILY_CLOSE_UNAPPROVED`         | 涵蓋計算的交班結帳還有沒核准的                        |
+| `DAILY_CLOSE_PENDING_EXISTS`     | 這家店已有審核中 / 已退回的日結                       |
+| `DAILY_CLOSE_DEPOSIT_INVALID`    | 存入銀行的金額不是非負整數或超過小金庫實點            |
+| `DAILY_CLOSE_ACCOUNT_NOT_USABLE` | 存入銀行 > 0 沒選帳戶,或帳戶停用 / 使用組織不含這家店 |
+| `AMOUNT_EXCEEDS_VAULT`(存銀行)   | 存銀行金額超過小金庫目前的應有                        |
+| `BANK_DEPOSIT_NO_ACCOUNT`        | 存銀行:這家店沒有任何可用的銀行帳戶(ST-26b)           |
+| `BANK_ACCOUNT_NOT_USABLE`        | 存銀行:選的帳戶不能用                                 |
+
 ### 測試
 
-`apps/api/src/project/lottery/redemption/redemption.test.ts`(兌獎:預覽、第 17 章第 4 / 5 / 7 題、重複與同時兌同一張、5,000 / 抽屜上限、[最近兌獎] 與分頁篩選、兩層撤銷與權限、自己撤銷遇到交班、事後更正淨額、稽核)、`apps/api/src/project/lottery/store/store-sales.test.ts`(端點 + 真 MongoDB:錢算在哪一班、刷到時各情況、當下撤銷四種不符與符合、同時兩次售出、拆本、移櫃情境表、手動標記)、`packages/domain/src/project/lottery/store-sales.test.ts`、`apps/api/src/project/lottery/store/store.test.ts`(端點 + 真 MongoDB:開班、同店兩個收銀點 / 跨店、同時開班、對應排班與快照、崗位不一致、改對應排班、投庫 / 出庫、同時投庫、排班刪除守門、收銀點停用守門、收付與即時現金帳的登記、看板卡片)、`store-board-ticket.test.ts`(`board:<分店>` 換發,RT-04)、`apps/db-migrator/seeds/project/store.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/store.test.ts`、`apps/api/src/project/lottery/store/store-forms.test.ts`(撤銷售出申請 / 現金更正單:真的表單引擎 + 流程 + 掛接點;第 17 章第 6 題撤銷一側、不能選的張、駁回不記、作廢擋下、事後更正、B5、B9b、小金庫、歸屬班次、分頁列表、`pendingCashImpacts`)、`apps/db-migrator/seeds/project/store.forms.test.ts`(兩張受管表單、開通流程、店員的新增權限)、`apps/api/src/project/lottery/stocktake/stocktake.test.ts`(盤點:真的表單引擎 + 流程 + 掛接點;第 17 章第 1、2、3 題與第 6 題盤點一側、送出前每筆差異都要處理、核准完成才套用、駁回不退補登、退回、作廢擋下、事後更正、看板提醒)、`packages/domain/src/project/lottery/stocktake.test.ts`(比對與送出前檢查)、`apps/db-migrator/seeds/project/store.stocktake-confirm.test.ts`(受管表單、開通流程、店員的新增權限)、`apps/api/src/project/lottery/checkout/checkout.test.ts`(交班結帳:真的表單引擎 + 兩關流程 + 掛接點;應有現金公式每一項各一筆並與看板相等、精靈只讀、權限與負責人 / 店長、留給下一班 > 0 沒接班人擋下、差額原因、沒有接班人 → 店長審核、駁回與作廢擋下、這一班結束與盤點單建立、有接班人 → 接班人審核、送出後再開班期初 = 留給下一班、退回改金額 → 下一班期初跟著更新、沿用 30 分鐘、跳過盤點、列表與檢視頁)、`packages/domain/src/project/lottery/checkout.test.ts`(結帳內容、面額、交接的檢查)、`apps/db-migrator/seeds/project/store.checkout-confirm.test.ts`(受管表單、兩關流程、店員的新增權限)。
+`apps/api/src/project/lottery/redemption/redemption.test.ts`(兌獎:預覽、第 17 章第 4 / 5 / 7 題、重複與同時兌同一張、5,000 / 抽屜上限、[最近兌獎] 與分頁篩選、兩層撤銷與權限、自己撤銷遇到交班、事後更正淨額、稽核)、`apps/api/src/project/lottery/store/store-sales.test.ts`(端點 + 真 MongoDB:錢算在哪一班、刷到時各情況、當下撤銷四種不符與符合、同時兩次售出、拆本、移櫃情境表、手動標記)、`packages/domain/src/project/lottery/store-sales.test.ts`、`apps/api/src/project/lottery/store/store.test.ts`(端點 + 真 MongoDB:開班、同店兩個收銀點 / 跨店、同時開班、對應排班與快照、崗位不一致、改對應排班、投庫 / 出庫、同時投庫、排班刪除守門、收銀點停用守門、收付與即時現金帳的登記、看板卡片)、`store-board-ticket.test.ts`(`board:<分店>` 換發,RT-04)、`apps/db-migrator/seeds/project/store.test.ts`(模組宣告與角色配方)、`packages/domain/src/project/lottery/store.test.ts`、`apps/api/src/project/lottery/store/store-forms.test.ts`(撤銷售出申請 / 現金更正單:真的表單引擎 + 流程 + 掛接點;第 17 章第 6 題撤銷一側、不能選的張、駁回不記、作廢擋下、事後更正、B5、B9b、小金庫、歸屬班次、分頁列表、`pendingCashImpacts`)、`apps/db-migrator/seeds/project/store.forms.test.ts`(兩張受管表單、開通流程、店員的新增權限)、`apps/api/src/project/lottery/stocktake/stocktake.test.ts`(盤點:真的表單引擎 + 流程 + 掛接點;第 17 章第 1、2、3 題與第 6 題盤點一側、送出前每筆差異都要處理、核准完成才套用、駁回不退補登、退回、作廢擋下、事後更正、看板提醒)、`packages/domain/src/project/lottery/stocktake.test.ts`(比對與送出前檢查)、`apps/db-migrator/seeds/project/store.stocktake-confirm.test.ts`(受管表單、開通流程、店員的新增權限)、`apps/api/src/project/lottery/checkout/checkout.test.ts`(交班結帳:真的表單引擎 + 兩關流程 + 掛接點;應有現金公式每一項各一筆並與看板相等、精靈只讀、權限與負責人 / 店長、留給下一班 > 0 沒接班人擋下、差額原因、沒有接班人 → 店長審核、駁回與作廢擋下、這一班結束與盤點單建立、有接班人 → 接班人審核、送出後再開班期初 = 留給下一班、退回改金額 → 下一班期初跟著更新、沿用 30 分鐘、跳過盤點、列表與檢視頁)、`packages/domain/src/project/lottery/checkout.test.ts`(結帳內容、面額、交接的檢查)、`apps/db-migrator/seeds/project/store.checkout-confirm.test.ts`(受管表單、兩關流程、店員的新增權限)、`apps/api/src/project/lottery/daily-close/daily-close.test.ts`(日結與存銀行:真的表單引擎 + 兩關流程 + 掛接點;還有班沒交班 / 涵蓋的交班沒核准擋下、日結 → 店長審核、審核中不能再送、涵蓋計算期間與沒有日結的日子、送出後再交班的班算下一次、已被涵蓋的上一班 → 第一班、小金庫應有逐項與差額原因、存入超過實點擋下、完成時寫存入 + 存銀行流水、完成後小金庫應有 = 清點 + 之後流水、[存銀行] 超過應有 / 成功 / 沒有可用帳戶 / 沒有權限、日結逾期提醒(注入排程時點)與側欄數字)、`packages/domain/src/project/lottery/daily-close.test.ts`(結帳內容、存入銀行的檢查、沒有日結的日子、日結逾期的時點)。
 
 ## 使用者說明(help.md)
 
-`apps/admin/src/md/module-help/project/additions/store.help.md`(租戶使用者看的說明;守詞彙表)。admin 元件測試:`StorePage.test.tsx`、`StoreSales.test.tsx`、`redemption/Redemption.test.tsx`(兌獎)(刷條碼 / 相機 / 快速銷售、撤銷、選遊戲、拆本精靈、展開卡片、沒有權限);假 api `apps/admin/src/test/msw/project/lottery/store-handlers.ts`、`store-sales-handlers.ts`(銷售共用同一份看板狀態);撤銷售出申請 / 現金更正單:`forms/StoreForms.test.tsx`(兩個分頁、[+ 新增] 與 B9b、沒有 [存草稿]、撤銷售出申請新增頁、掃描用途、[送撤銷售出申請] 帶入),假 api `store-forms-fixtures.ts`;盤點:`stocktake/Stocktake.test.tsx`(看板 [盤點] 與提醒、選範圍、盤點中刷碼不會被當成售出、差異核對與補登售出、已被處理的提示、送出的盤點內容、沒有權限、盤點紀錄 → 檢視頁),假 api `stocktake-handlers.ts`、`stocktake-fixtures.ts`、`stocktake-form-fixtures.ts`;交班結帳:`checkout/Checkout.test.tsx`(看板 [交班結帳] 與權限、四步精靈、補登兌獎、面額清點與差額原因自動帶入、交接檢查、送出的結帳內容、取消不留資料、現在盤點刷碼不會被當成售出、班次結帳歷史紀錄 → 檢視頁),假 api `checkout-handlers.ts`、`checkout-fixtures.ts`、`checkout-form-fixtures.ts`。
+`apps/admin/src/md/module-help/project/additions/store.help.md`(租戶使用者看的說明;守詞彙表)。admin 元件測試:`StorePage.test.tsx`、`StoreSales.test.tsx`、`redemption/Redemption.test.tsx`(兌獎)(刷條碼 / 相機 / 快速銷售、撤銷、選遊戲、拆本精靈、展開卡片、沒有權限);假 api `apps/admin/src/test/msw/project/lottery/store-handlers.ts`、`store-sales-handlers.ts`(銷售共用同一份看板狀態);撤銷售出申請 / 現金更正單:`forms/StoreForms.test.tsx`(兩個分頁、[+ 新增] 與 B9b、沒有 [存草稿]、撤銷售出申請新增頁、掃描用途、[送撤銷售出申請] 帶入),假 api `store-forms-fixtures.ts`;盤點:`stocktake/Stocktake.test.tsx`(看板 [盤點] 與提醒、選範圍、盤點中刷碼不會被當成售出、差異核對與補登售出、已被處理的提示、送出的盤點內容、沒有權限、盤點紀錄 → 檢視頁),假 api `stocktake-handlers.ts`、`stocktake-fixtures.ts`、`stocktake-form-fixtures.ts`;日結與存銀行:`daily-close/DailyClose.test.tsx`(頂部上次日結、[日結] 停用與提示、權限、存銀行視窗、五步精靈與送出的結帳內容、檢視頁),假 api `daily-close-handlers.ts`、`daily-close-fixtures.ts`;交班結帳:`checkout/Checkout.test.tsx`(看板 [交班結帳] 與權限、四步精靈、補登兌獎、面額清點與差額原因自動帶入、交接檢查、送出的結帳內容、取消不留資料、現在盤點刷碼不會被當成售出、班次結帳歷史紀錄 → 檢視頁),假 api `checkout-handlers.ts`、`checkout-fixtures.ts`、`checkout-form-fixtures.ts`。

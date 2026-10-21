@@ -6,6 +6,7 @@ import {
   STORE_PERMISSIONS,
 } from "@repo/domain/project/lottery";
 import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
+import type { LotteryCheckoutStocktakeRefFieldsFragment } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
 import { Box } from "@repo/ui/box";
 import { Card } from "@repo/ui/card";
@@ -23,13 +24,32 @@ import type { RedemptionFlow } from "../redemption/useRedemptionFlow";
 import { StocktakeCountStep } from "../stocktake/StocktakeCountStep";
 import { StocktakeReviewStep } from "../stocktake/StocktakeReviewStep";
 import { type SheetCashPoint, unhandledOf } from "../stocktake/stocktake-model";
-import type { CheckoutWizard, CheckoutWizardData } from "./useCheckoutWizard";
+import type { CheckoutWizard } from "./useCheckoutWizard";
+
+/** 盤點步驟要的精靈狀態(交班精靈 `useCheckoutWizard`、日結精靈 `useDailyCloseWizard` 共用)。 */
+export type StocktakeChoiceFlow = Pick<
+  CheckoutWizard,
+  | "stocktakeMode"
+  | "setStocktakeMode"
+  | "skipReason"
+  | "setSkipReason"
+  | "stocktake"
+  | "stocktakeReviewed"
+  | "next"
+>;
 
 export interface CheckoutStocktakeStepProps {
-  wizard: CheckoutWizardData;
-  flow: CheckoutWizard;
+  orgId: string;
+  /** 盤點的範圍:交班 = 那個收銀點;日結 = 全店(null) */
+  scopeCashPointId: string | null;
+  /** 可以沿用的盤點;沒有 = null */
+  reusable: LotteryCheckoutStocktakeRefFieldsFragment | null;
+  canSkipStocktake: boolean;
+  flow: StocktakeChoiceFlow;
   /** 盤點頁的 [補登兌獎](沿用兌獎視窗) */
   redemption: RedemptionFlow;
+  /** 標題與「現在盤點」的說明(日結:「② 全店盤點」「盤全店…」);不給 = 交班的文字 */
+  texts?: { title: string; newHint: string };
 }
 
 const isMode = (value: string): value is CheckoutStocktakeMode =>
@@ -62,7 +82,8 @@ const ModeOption = ({
 
 /** 現在盤點:嵌入盤點頁(點格子 / 掃描 → 差異核對)。 */
 const CountingArea = ({
-  wizard,
+  orgId,
+  scopeCashPointId,
   flow,
   redemption,
 }: CheckoutStocktakeStepProps) => {
@@ -77,7 +98,7 @@ const CountingArea = ({
   const openRedeem = (point: SheetCashPoint) => {
     if (point.shift != null) {
       redemption.openRedeem({
-        orgId: wizard.shift.orgId,
+        orgId,
         shiftId: point.shift.id,
         cashPointName: point.name,
         expectedCash: point.shift.expectedCash ?? 0,
@@ -90,7 +111,7 @@ const CountingArea = ({
         flow={stocktake}
         sheet={sheet}
         state={state}
-        scopeCashPointId={wizard.shift.cashPoint.id}
+        scopeCashPointId={scopeCashPointId}
         isNarrow={isNarrow}
         onRedeem={hasPermission(STORE_PERMISSIONS.redeem) ? openRedeem : null}
         canConfirmLost={hasPermission(STORE_PERMISSIONS.confirmLost)}
@@ -133,11 +154,11 @@ const CountingArea = ({
  * 跳過(`store.skip-stocktake`,原因必填)。現在盤點要做完差異核對才能到下一步。
  */
 export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
-  const { wizard, flow } = props;
+  const { flow, texts } = props;
   const t = useTranslations("admin.lotteryStore.checkout.stocktake");
   const temporal = useTemporalText();
   const { hasPermission } = usePermissions();
-  const reusable = wizard.reusableStocktake ?? null;
+  const reusable = props.reusable;
   const reuseHint =
     reusable === null
       ? t("noReusable")
@@ -149,14 +170,16 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
           count: reusable.diffCount,
         });
   const canSkip =
-    wizard.canSkipStocktake || hasPermission(STORE_PERMISSIONS.skipStocktake);
+    props.canSkipStocktake || hasPermission(STORE_PERMISSIONS.skipStocktake);
   return (
     <Stack spacing={2}>
       <Card sx={{ px: { xs: 2, sm: 3 }, py: 2.5 }}>
         <Stack spacing={1.5}>
-          <Typography variant="subtitle1">{t("title")}</Typography>
+          <Typography variant="subtitle1">
+            {texts?.title ?? t("title")}
+          </Typography>
           <RadioGroup
-            aria-label={t("title")}
+            aria-label={texts?.title ?? t("title")}
             value={flow.stocktakeMode}
             onChange={(event) => {
               const next = event.target.value;
@@ -171,7 +194,11 @@ export const CheckoutStocktakeStep = (props: CheckoutStocktakeStepProps) => {
               hint={reuseHint}
               disabled={reusable === null}
             />
-            <ModeOption mode="new" label={t("new")} hint={t("newHint")} />
+            <ModeOption
+              mode="new"
+              label={t("new")}
+              hint={texts?.newHint ?? t("newHint")}
+            />
             {canSkip ? (
               <ModeOption mode="skip" label={t("skip")} hint={t("skipHint")} />
             ) : null}

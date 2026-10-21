@@ -11,6 +11,7 @@ import {
 } from "@repo/domain/project/lottery";
 import { useLotteryStoreBoardQuery } from "@repo/graphql";
 import { Alert } from "@repo/ui/alert";
+import { Box } from "@repo/ui/box";
 import { Button } from "@repo/ui/button";
 import { Stack } from "@repo/ui/stack";
 import { Typography } from "@repo/ui/typography";
@@ -32,6 +33,7 @@ import {
   CHECKOUT_CONFIRM_FORM_KEY,
   CHECKOUT_PREFILL,
 } from "../checkout/checkout-keys";
+import { useDailyCloseEntry } from "../daily-close/useDailyCloseEntry";
 import { storeFormCreateHref } from "../forms/store-forms-keys";
 import { redemptionBoardActions } from "../redemption/redemption-board-actions";
 import { useRedemptionFlow } from "../redemption/useRedemptionFlow";
@@ -50,8 +52,8 @@ const orgSchema = z.string().default("");
  * 看板分頁(專案規格 6.1、6.2;Figma ST-01 / 02 / 03 / 34a/b/c):頂部(分店 `?org=`、本機收銀點、
  * 你開著的班、連線狀態)、每個收銀點一條標題列 + 檯面上的本。打開時訂閱 `board:<分店>`,
  * 信號到了重抓看板(`app/project/realtime-signals.ts`)。銷售(規格 6.2–6.4):宣告掃描用途 `store-sale`
- * (刷條碼 / 相機 → `useStoreSaleFlow`)、點卡片原地展開、[最近售出] [拆本]。上次日結、[盤點] [存銀行] [日結]、
- * 距上次盤點的提醒與其他標題列按鈕由各自的功能加上。
+ * (刷條碼 / 相機 → `useStoreSaleFlow`)、點卡片原地展開、[最近售出] [拆本]。頂部的 [盤點](`useStocktakeEntry`)、
+ * 上次日結與 [存銀行] [日結](`useDailyCloseEntry`)、距上次盤點的提醒與其他標題列按鈕由各自的功能加上。
  */
 export const BoardTab = () => {
   const t = useTranslations("admin.lotteryStore");
@@ -109,6 +111,13 @@ export const BoardTab = () => {
   const redemption = useRedemptionFlow();
   // 盤點(P24):頂部 [盤點]、距離上次盤點超過 24 小時的提醒、盤點範圍視窗
   const stocktake = useStocktakeEntry(orgId, cashPoints);
+  // 日結 / 存銀行(P27):頂部「上次日結」、[存銀行]、[日結](還有班沒送出交班 → 停用)
+  const daily = useDailyCloseEntry(
+    orgId,
+    cashPoints.flatMap((point) =>
+      point.shift == null ? [] : [{ cashPointName: point.name }],
+    ),
+  );
 
   const applyLocal = (cashPointId: string) => {
     writeLocalCashPoint(orgId, cashPointId);
@@ -263,7 +272,11 @@ export const BoardTab = () => {
                 setSalesDialog({ kind: "camera" });
               }}
             />
+            <Box sx={{ flex: 1, display: { xs: "none", sm: "block" } }} />
+            {daily.lastClose}
             {stocktake.button}
+            {daily.bankButton}
+            {daily.dailyButton}
           </>
         }
       />
@@ -374,6 +387,7 @@ export const BoardTab = () => {
       {flow.element}
       {redemption.element}
       {stocktake.element}
+      {daily.element}
     </Stack>
   );
 };
