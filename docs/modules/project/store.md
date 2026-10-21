@@ -134,7 +134,7 @@
 - **小金庫的現金更正「減少」不檢查小金庫應有**:現金更正單登記的是實際短少的錢(例:假鈔、存款短少),短少已經發生,擋下只會讓帳記不進去;出庫、存銀行這類「從小金庫拿錢」的動作才檢查應有(`StoreVaultGuard.assertCovers`)。現金更正只碰同一個守門文件(`StoreVaultGuard.serialize`,帶掛接點交易的 session)和它們序列化。
 - 完成時讀不到退款班次 / 位置那一班或單據(送出後被刪)→ `CONFLICT`;值不完整 → `VALIDATION_FAILED`;整個核准回復。
 
-流水的 `refType = "store"`、`refId` = 提交 id、`refRevision` = 修訂號。完成時對 `board:<分店>` 送 `board` 信號。「不能選已關帳月份」(退款班次、現金更正位置)由關帳的功能加在 `beforeSubmit`。
+流水的 `refType = "store"`、`refId` = 提交 id、`refRevision` = 修訂號。完成時對 `board:<分店>` 送 `board` 信號。**不能選已關帳月份**:`beforeSubmit` 以退款班次、現金更正位置(某一班)的開班時間問帳戶管理的 `PeriodLock.closedPeriodOf`(規格 10.4;歸屬班次可以選已關帳月份,報表歸「前期更正」);開班、改對應排班選的排班以開始時間 `PeriodLock.assertPeriodOpen`。
 
 **給交班結帳的查詢**:`StoreFormsQueryService.pendingCashImpacts(reader, shiftId)`(`LotteryStoreModule` 匯出)回審核中的現金更正單(位置 = 這一班,±金額)與撤銷售出申請(退款 = 是、退款班次 = 這一班,−退款金額),依送出時間排;交班精靈第 ③ 步列出並自動帶入差額原因(規格 6.9)。
 
@@ -449,6 +449,7 @@
 | `VALIDATION_FAILED` | `SHIFT_CLOSED`                                           | 這一班已送出交班結帳(改對應排班、投庫、出庫)                                      |
 | `VALIDATION_FAILED` | `CASH_POINT_DISABLED`                                    | 收銀點已停用                                                                      |
 | `VALIDATION_FAILED` | `ENTRY_NOT_AVAILABLE`                                    | 選的排班不是這個人那天在這家店的排班                                              |
+| `VALIDATION_FAILED` | `PERIOD_CLOSED`                                          | 開班 / 改對應排班選的排班在已關帳的月份(`fields: scheduleEntryId`;規格 10.4)      |
 | `VALIDATION_FAILED` | `OPENING_FLOAT_NOT_ALLOWED`                              | 不是第一班、或沒有 `store.withdraw`,卻要從小金庫領零用金                          |
 | `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_DRAWER`                                  | 投庫金額超過抽屜目前的應有                                                        |
 | `VALIDATION_FAILED` | `AMOUNT_EXCEEDS_VAULT`                                   | 出庫或開班從小金庫領零用金超過小金庫目前的應有(`fields: amount / floatFromVault`) |
@@ -479,6 +480,7 @@
 | `STORE_FORM_INVALID`                  | 欄位不合(`message` = 欄位 key):沒選張、張數和張號不一致、退款 = 是沒有退款班次、金額不是正整數、說明沒填… |
 | `STORE_FORM_BRANCH_NOT_VISIBLE`       | 分店不在申請人的可見範圍                                                                                  |
 | `STORE_FORM_SHIFT_NOT_IN_BRANCH`      | 退款班次 / 位置 / 歸屬班次不是這家分店的班(看不到的班先被表單引擎的引用檢查擋下 `SOURCE_UNAVAILABLE`)     |
+| `PERIOD_CLOSED`                       | 退款班次 / 位置(某一班)是已關帳月份的班(`message` = 欄位 key;歸屬班次不檢查)                              |
 | `SALE_REVERSAL_TICKET_NOT_REVERSIBLE` | 有張不是本店已售,或在其他未結束的撤銷售出申請上                                                           |
 | `SALE_REVERSAL_AMOUNT_MISMATCH`       | 列的金額或退款金額 ≠ 面額合計                                                                             |
 | `STORE_FORM_VOID_NOT_ALLOWED`         | 作廢(兩張表單完成後都不能作廢)                                                                            |

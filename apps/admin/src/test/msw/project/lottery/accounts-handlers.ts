@@ -36,6 +36,11 @@ import {
   settlementOf,
 } from "./accounts-fixtures";
 import { masterDataOrgs } from "./master-data-fixtures";
+import {
+  type PeriodCloseWorld,
+  type PeriodCloseWorldOptions,
+  periodCloseWorld,
+} from "./period-close-handlers";
 
 /**
  * 帳戶管理的假 api(夾具在 `accounts-fixtures.ts`;規則照 `docs/modules/project/accounts.md`):
@@ -50,6 +55,8 @@ export interface AccountsWorldOptions {
   movements?: LotteryCashMovementFieldsFragment[];
   outstanding?: LotteryOutstandingSettlementFieldsFragment[];
   permissions?: readonly string[];
+  /** 關帳分頁(`period-close-handlers.ts`) */
+  periodClose?: Omit<PeriodCloseWorldOptions, "permissions">;
 }
 
 export interface AccountsWorld {
@@ -61,6 +68,8 @@ export interface AccountsWorld {
     reverse: ReverseLotteryBankTransactionMutationVariables["input"][];
     settle: RecordLotterySettlementMutationVariables["input"][];
   };
+  /** 關帳分頁的假 api(已併進 `handlers`) */
+  periods: PeriodCloseWorld;
 }
 
 const validation = (reason: string, fields: string[]) =>
@@ -75,7 +84,9 @@ export const accountsWorld = ({
   movements = sampleMovements(),
   outstanding = sampleOutstanding(),
   permissions = ALL_ACCOUNTS_PERMISSIONS,
+  periodClose = {},
 }: AccountsWorldOptions = {}): AccountsWorld => {
+  const periods = periodCloseWorld({ ...periodClose, permissions });
   const has = (key: string) => permissions.includes(key);
   const withAbilities = (
     row: LotteryBankAccountFieldsFragment,
@@ -389,7 +400,8 @@ export const accountsWorld = ({
         },
       });
     }),
+    ...periods.handlers,
   ];
 
-  return { handlers, inputs };
+  return { handlers, inputs, periods };
 };

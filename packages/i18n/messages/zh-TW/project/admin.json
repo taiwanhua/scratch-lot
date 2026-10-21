@@ -1788,7 +1788,8 @@
       "aria": "帳戶管理分頁",
       "bankAccounts": "銀行帳戶",
       "cash": "即時現金帳",
-      "outstanding": "待結清款項"
+      "outstanding": "待結清款項",
+      "close": "關帳"
     },
     "status": {
       "active": "使用中",
@@ -2053,7 +2054,62 @@
       "saveSuccess": "已儲存",
       "deleteSuccess": "已刪除",
       "recordSuccess": "已登記",
-      "reverseSuccess": "已沖正"
+      "reverseSuccess": "已沖正",
+      "closeSuccess": "已關帳"
+    },
+    "periodClose": {
+      "listAria": "關帳月份",
+      "columns": {
+        "month": "月份",
+        "status": "狀態",
+        "closedAt": "關帳時間",
+        "closedBy": "關帳人",
+        "actions": "操作"
+      },
+      "statuses": {
+        "current": "進行中",
+        "open": "未關帳",
+        "closed": "已關帳"
+      },
+      "close": "關帳",
+      "snapshot": "快照",
+      "empty": "還沒有月份",
+      "hint": "依序關帳:只能關最早的未關帳月份,而且那個月要已經結束。關帳後不能重新開帳,錯誤請用原本的功能在現在更正。",
+      "dialog": {
+        "title": "關帳 {month}",
+        "shiftsOk": "所有收銀班次都已結帳",
+        "shiftsBlocked": "還有 {count} 個收銀班次沒結帳:{list}",
+        "documentsOk": "沒有審核中且會記到 {monthNumber} 月的單據",
+        "documentsBlocked": "還有 {count} 張單據審核中,請先處理:",
+        "coverageOk": "每一班都被日結涵蓋計算",
+        "coverageWarning": "每一班都被日結涵蓋計算:{list}(只警告,記入快照)",
+        "coverageStore": "{store}有 {count} 班沒有",
+        "snapshotTitle": "快照預覽",
+        "bankBalance": "{label} 月底餘額",
+        "storeCash": "{store} 小金庫 / 抽屜",
+        "storeCashValue": "{vault} / {drawers}",
+        "uncovered": "{store} 沒有被日結涵蓋計算的班",
+        "uncoveredValue": "{count} 班",
+        "spanning": "{store} {cashPoint}:跨月的班({shift})不計",
+        "confirmLabel": "輸入月份確認",
+        "confirmHelper": "請輸入 {month}",
+        "cancel": "取消",
+        "submit": "關帳"
+      },
+      "documentKinds": {
+        "sale_reversal": "撤銷售出",
+        "cash_correction": "現金更正",
+        "shift_checkout": "結帳確認(交班)",
+        "daily_close": "結帳確認(日結)"
+      },
+      "documentLine": "{kind} {serial}{shift}審核中",
+      "documentShift": "({shift})",
+      "listSeparator": "、",
+      "snapshotDialog": {
+        "title": "快照 {month}",
+        "closedBy": "{name} 於 {at} 關帳",
+        "close": "關閉"
+      }
     },
     "errors": {
       "FORBIDDEN": "你沒有這個操作的權限",
@@ -2068,7 +2124,13 @@
       "BANK_ACCOUNT_NOT_USABLE": "這個帳戶的使用組織不含這家分店",
       "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
       "UNEXPECTED": "發生錯誤,請稍後再試",
-      "CASH_POINT_NOT_AT_BRANCH": "這個收銀點不是這一邊分店的,請改選本店開班中的收銀點抽屜"
+      "CASH_POINT_NOT_AT_BRANCH": "這個收銀點不是這一邊分店的,請改選本店開班中的收銀點抽屜",
+      "PERIOD_CLOSE_INVALID": "輸入的月份和要關帳的月份不同",
+      "PERIOD_NOT_ENDED": "這個月還沒結束,不能關帳",
+      "PERIOD_ALREADY_CLOSED": "這個月已經關帳(不能重新開帳)",
+      "PERIOD_OUT_OF_ORDER": "要依序關帳,請先關更早的月份",
+      "PERIOD_SHIFTS_NOT_CLOSED": "那個月還有收銀班次沒結帳",
+      "PERIOD_PENDING_DOCUMENTS": "那個月還有審核中的單據,請先處理"
     }
   },
   "lotteryPurchasing": {
@@ -2577,7 +2639,8 @@
     "DAILY_CLOSE_UNAPPROVED": "涵蓋計算的交班結帳還有沒核准的,全部核准後才能送出日結",
     "DAILY_CLOSE_PENDING_EXISTS": "這家店已有審核中或已退回的日結",
     "DAILY_CLOSE_DEPOSIT_INVALID": "存入銀行的金額不對(不能超過小金庫實點)",
-    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店"
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "存入帳戶要選,而且要使用中、使用組織包含這家店",
+    "PERIOD_CLOSED": "選的班是已關帳月份的班,不能選"
   },
   "lotteryStore": {
     "tabs": {
@@ -2729,6 +2792,7 @@
       "AMOUNT_EXCEEDS_VAULT": "小金庫應有不足,請先用現金更正單登記小金庫實際的錢",
       "BANK_DEPOSIT_NO_ACCOUNT": "本店沒有可用的銀行帳戶,請先到帳戶管理設定帳戶的使用組織",
       "BANK_ACCOUNT_NOT_USABLE": "這個帳戶不能用(停用,或使用組織不含這家店)",
+      "PERIOD_CLOSED": "選的排班在已關帳的月份,不能選",
       "UNEXPECTED": "操作失敗,請稍後再試"
     },
     "sale": {

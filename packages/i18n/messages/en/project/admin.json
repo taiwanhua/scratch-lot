@@ -1788,7 +1788,8 @@
       "aria": "Accounts tabs",
       "bankAccounts": "Bank accounts",
       "cash": "Cash ledger",
-      "outstanding": "Outstanding"
+      "outstanding": "Outstanding",
+      "close": "Period close"
     },
     "status": {
       "active": "Active",
@@ -2053,7 +2054,62 @@
       "saveSuccess": "Saved",
       "deleteSuccess": "Deleted",
       "recordSuccess": "Recorded",
-      "reverseSuccess": "Reversed"
+      "reverseSuccess": "Reversed",
+      "closeSuccess": "Period closed"
+    },
+    "periodClose": {
+      "listAria": "Period close months",
+      "columns": {
+        "month": "Month",
+        "status": "Status",
+        "closedAt": "Closed at",
+        "closedBy": "Closed by",
+        "actions": "Actions"
+      },
+      "statuses": {
+        "current": "In progress",
+        "open": "Not closed",
+        "closed": "Closed"
+      },
+      "close": "Close",
+      "snapshot": "Snapshot",
+      "empty": "No months yet",
+      "hint": "Close in order: only the earliest month that is not closed, after it has ended. A closed month cannot be reopened; correct mistakes now with the original features.",
+      "dialog": {
+        "title": "Close {month}",
+        "shiftsOk": "Every cash register shift has checked out",
+        "shiftsBlocked": "{count} shifts have not checked out: {list}",
+        "documentsOk": "No document under review is recorded in month {monthNumber}",
+        "documentsBlocked": "{count} documents are under review. Handle them first:",
+        "coverageOk": "Every shift is covered by a daily close",
+        "coverageWarning": "Every shift is covered by a daily close: {list} (warning only, kept in the snapshot)",
+        "coverageStore": "{store} has {count} shifts not covered",
+        "snapshotTitle": "Snapshot preview",
+        "bankBalance": "{label} month-end balance",
+        "storeCash": "{store} vault / drawers",
+        "storeCashValue": "{vault} / {drawers}",
+        "uncovered": "{store} shifts not covered by a daily close",
+        "uncoveredValue": "{count} shifts",
+        "spanning": "{store} {cashPoint}: the shift spanning month end ({shift}) is not counted",
+        "confirmLabel": "Type the month to confirm",
+        "confirmHelper": "Type {month}",
+        "cancel": "Cancel",
+        "submit": "Close"
+      },
+      "documentKinds": {
+        "sale_reversal": "Sale reversal",
+        "cash_correction": "Cash correction",
+        "shift_checkout": "Checkout confirmation (shift)",
+        "daily_close": "Checkout confirmation (daily close)"
+      },
+      "documentLine": "{kind} {serial}{shift} under review",
+      "documentShift": " ({shift})",
+      "listSeparator": ", ",
+      "snapshotDialog": {
+        "title": "Snapshot {month}",
+        "closedBy": "Closed by {name} at {at}",
+        "close": "Close"
+      }
     },
     "errors": {
       "FORBIDDEN": "You don't have permission to do this",
@@ -2068,7 +2124,13 @@
       "BANK_ACCOUNT_NOT_USABLE": "This account is not used by this branch",
       "NO_OPEN_SHIFT": "This cash point has no open shift",
       "UNEXPECTED": "Something went wrong, please try again",
-      "CASH_POINT_NOT_AT_BRANCH": "This cash point is not at this side's branch; pick an open drawer of this branch"
+      "CASH_POINT_NOT_AT_BRANCH": "This cash point is not at this side's branch; pick an open drawer of this branch",
+      "PERIOD_CLOSE_INVALID": "The month you typed does not match the month to close",
+      "PERIOD_NOT_ENDED": "This month has not ended yet",
+      "PERIOD_ALREADY_CLOSED": "This month is already closed (it cannot be reopened)",
+      "PERIOD_OUT_OF_ORDER": "Close months in order; close the earlier month first",
+      "PERIOD_SHIFTS_NOT_CLOSED": "Some cash register shifts of that month have not checked out",
+      "PERIOD_PENDING_DOCUMENTS": "Some documents of that month are under review; handle them first"
     }
   },
   "lotteryPurchasing": {
@@ -2577,7 +2639,8 @@
     "DAILY_CLOSE_UNAPPROVED": "Some covered shift checkouts are not approved yet.",
     "DAILY_CLOSE_PENDING_EXISTS": "This store already has a daily close under review or returned.",
     "DAILY_CLOSE_DEPOSIT_INVALID": "The bank deposit amount is invalid (it cannot exceed the counted vault cash).",
-    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store."
+    "DAILY_CLOSE_ACCOUNT_NOT_USABLE": "Choose an active bank account used by this store.",
+    "PERIOD_CLOSED": "The selected shift is in a closed month and cannot be chosen."
   },
   "lotteryStore": {
     "tabs": {
@@ -2729,6 +2792,7 @@
       "AMOUNT_EXCEEDS_VAULT": "The vault's expected cash is not enough; record the vault's actual cash with a cash correction first",
       "BANK_DEPOSIT_NO_ACCOUNT": "This store has no usable bank account. Set the account using organizations in Accounts first.",
       "BANK_ACCOUNT_NOT_USABLE": "This account cannot be used (inactive, or not used by this store).",
+      "PERIOD_CLOSED": "The selected schedule entry is in a closed month and cannot be chosen.",
       "UNEXPECTED": "Something went wrong. Please try again later."
     },
     "sale": {

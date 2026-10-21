@@ -106,7 +106,11 @@ export function periodRangeOf(
   if (parsed === null) {
     throw new RangeError(`月份格式不對:${month}`);
   }
-  const next = parse(addPeriodMonths(month, 1)) as Month;
+  const nextIndex = parsed.year * 12 + parsed.month;
+  const next: Month = {
+    year: Math.floor(nextIndex / 12),
+    month: (nextIndex % 12) + 1,
+  };
   return {
     start: startOfLocalDay({ ...parsed, day: 1 }, timezone),
     end: startOfLocalDay({ ...next, day: 1 }, timezone),
@@ -151,8 +155,9 @@ export function periodMonthsOf(input: {
 }): { month: string; status: PeriodStatus }[] {
   const current = periodMonthOf(input.now, input.timezone);
   const closed = new Set(input.closed);
-  const earliest = [input.firstMonth, ...input.closed].reduce((min, month) =>
-    periodMonthDiff(min, month) < 0 ? month : min,
+  const earliest = input.closed.reduce(
+    (min, month) => (periodMonthDiff(min, month) < 0 ? month : min),
+    input.firstMonth,
   );
   const rows: { month: string; status: PeriodStatus }[] = [];
   const count = periodMonthDiff(earliest, current);

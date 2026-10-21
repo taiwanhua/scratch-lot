@@ -18,6 +18,7 @@ export type StoreErrorCode =
   | "AMOUNT_EXCEEDS_VAULT"
   | "BANK_DEPOSIT_NO_ACCOUNT"
   | "BANK_ACCOUNT_NOT_USABLE"
+  | "PERIOD_CLOSED"
   | "UNEXPECTED";
 
 export type StoreError = AdminError<StoreErrorCode, never>;
@@ -36,6 +37,8 @@ const REASON_CODES: readonly StoreErrorCode[] = [
   // 存銀行(規格 6.11):本店沒有銀行帳戶 / 帳戶不能用
   "BANK_DEPOSIT_NO_ACCOUNT",
   "BANK_ACCOUNT_NOT_USABLE",
+  // 開班 / 改對應排班選到已關帳月份的排班(規格 6.6、10.4)
+  "PERIOD_CLOSED",
 ];
 
 export const storeErrorOf = (error: unknown): StoreError =>

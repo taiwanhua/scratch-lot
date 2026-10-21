@@ -109,6 +109,16 @@ const DYNAMIC_KEYS: readonly { key: string; reason: string }[] = [
     reason: "待結清種類 `to_pay` / `to_refund` / `to_receive`(api 的 `kind`)",
   },
   {
+    key: "admin.lotteryAccounts.periodClose.statuses.",
+    reason:
+      "關帳月份的狀態 `PERIOD_STATUSES`(`periodClose.statuses.${status}`;`PeriodCloseTab`)",
+  },
+  {
+    key: "admin.lotteryAccounts.periodClose.documentKinds.",
+    reason:
+      "擋下關帳的單據種類 `PERIOD_PENDING_KINDS`(api 的 `kind`;`PeriodCloseDialog`)",
+  },
+  {
     key: "admin.lotteryAccounts.settlement.buttons.",
     reason:
       "收付按鈕 `settlement.buttons.${role}.${button}`(`components/project/lottery/SettlementPanel/settlement-text.ts`)",

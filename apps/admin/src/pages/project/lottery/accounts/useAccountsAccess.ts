@@ -13,6 +13,8 @@ export interface AccountsAccess {
   canViewCash: boolean;
   /** 待結清款項分頁(`view-outstanding`) */
   canViewOutstanding: boolean;
+  /** 關帳分頁與 [關帳](`close-period`) */
+  canClosePeriod: boolean;
   /** [+ 新增帳戶](`create-bank-account`) */
   canCreateAccount: boolean;
   /** 帳戶詳情頁的路由;沒綁詳情頁 = null(列上點不進去) */
@@ -22,7 +24,7 @@ export interface AccountsAccess {
 }
 
 /**
- * 帳戶管理各頁共用的「進得去哪、做得了什麼」(ADR-0011):本模組沒有 `view`,三個分頁各看一條權限;
+ * 帳戶管理各頁共用的「進得去哪、做得了什麼」(ADR-0011):本模組沒有 `view`,四個分頁各看一條權限;
  * 新增鈕看權限集;帳戶的編輯 / 刪除 / 登記交易 / 沖正讀 api 的 `abilities`,不在這裡。
  */
 export const useAccountsAccess = (): AccountsAccess => {
@@ -36,6 +38,7 @@ export const useAccountsAccess = (): AccountsAccess => {
     canViewBankAccounts: hasPermission(PERMISSIONS.viewBankAccounts),
     canViewCash: hasPermission(PERMISSIONS.viewCash),
     canViewOutstanding: hasPermission(PERMISSIONS.viewOutstanding),
+    canClosePeriod: hasPermission(PERMISSIONS.closePeriod),
     canCreateAccount: hasPermission(PERMISSIONS.createBankAccount),
     viewRoute,
     listRoute: routeOf(KEYS.list),

@@ -14,6 +14,7 @@ import { useUrlState } from "@/hooks/base/useUrlState";
 import { BankAccountsTab } from "../BankAccountsTab/BankAccountsTab";
 import { CashLedgerTab } from "../CashLedgerTab/CashLedgerTab";
 import { OutstandingTab } from "../OutstandingTab/OutstandingTab";
+import { PeriodCloseTab } from "../PeriodCloseTab/PeriodCloseTab";
 import { ACCOUNTS_PERMISSIONS, ACCOUNTS_TABS } from "../accounts-config";
 import { useAccountsAccess } from "../useAccountsAccess";
 
@@ -21,8 +22,8 @@ import { useAccountsAccess } from "../useAccountsAccess";
 const tabSchema = z.string().default("");
 
 /**
- * 帳戶管理(`accounts`,規格 3.1 / 10;Figma AC-01 93:17、AC-04 93:834、AC-05 93:1143):
- * 分頁 銀行帳戶 | 即時現金帳 | 待結清款項(各要一條 `view-*` 權限;關帳分頁由關帳功能追加)。
+ * 帳戶管理(`accounts`,規格 3.1 / 10;Figma AC-01 93:17、AC-04 93:834、AC-05 93:1143、AC-06 93:1417):
+ * 分頁 銀行帳戶 | 即時現金帳 | 待結清款項 | 關帳(前三個各要一條 `view-*` 權限,關帳要 `close-period`)。
  * 右上 [+ 新增帳戶] 只在銀行帳戶分頁、且有 `create-bank-account` 時出現。
  */
 export const AccountsPage = () => {
@@ -57,11 +58,18 @@ export const AccountsPage = () => {
       permission: ACCOUNTS_PERMISSIONS.viewOutstanding,
       content: <OutstandingTab />,
     },
+    {
+      value: ACCOUNTS_TABS.close,
+      label: t("tabs.close"),
+      permission: ACCOUNTS_PERMISSIONS.closePeriod,
+      content: <PeriodCloseTab />,
+    },
   ];
   const canSee: Record<string, boolean> = {
     [ACCOUNTS_TABS.bankAccounts]: access.canViewBankAccounts,
     [ACCOUNTS_TABS.cash]: access.canViewCash,
     [ACCOUNTS_TABS.outstanding]: access.canViewOutstanding,
+    [ACCOUNTS_TABS.close]: access.canClosePeriod,
   };
   const visible = items.filter((item) => canSee[item.value] ?? false);
   const currentTab =
