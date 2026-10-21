@@ -141,6 +141,12 @@ export const PROJECT_TENANT_BOUNDARY_CONTEXT_CALLERS: Readonly<
   "project/lottery/daily-close/daily-close-registrations.ts": ["系統重算"],
   // 日結逾期提醒逐租戶跑
   "project/lottery/daily-close/daily-close-reminders.service.ts": ["排程"],
+  // 「不能選已關帳月份」:關帳紀錄歸屬租戶頂層,分店的人也要被同一條規則擋下
+  "project/lottery/accounts/period-lock.ts": ["反查"],
+  // 關帳:檢查清單與快照看整個租戶(班、單據、帳戶、小金庫);關帳紀錄寫在租戶頂層
+  "project/lottery/period-close/period-close.service.ts": ["反查", "例外寫入"],
+  // 關帳逾期提醒逐租戶跑
+  "project/lottery/period-close/period-close-reminders.service.ts": ["排程"],
   // 排班檢核:人的規則用那個人主要分店的生效設定(主要分店不一定在讀者的可見範圍)
   "project/schedule/check/schedule-check.service.ts": ["以人為準的資料"],
 };

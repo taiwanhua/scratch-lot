@@ -196,6 +196,12 @@ export type ClearScheduleAutoAssignmentsPayload = {
   removedCount: Scalars['Int']['output'];
 };
 
+export type CloseLotteryPeriodInput = {
+  confirmMonth: Scalars['String']['input'];
+  month: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CompleteLotteryPurchaseReceivingInput = {
   rowIds: Array<Scalars['String']['input']>;
   submissionId: Scalars['ID']['input'];
@@ -2479,6 +2485,94 @@ export type LotteryPendingRequisition = {
   serialNo?: Maybe<Scalars['String']['output']>;
 };
 
+export type LotteryPeriodBankAccountSnapshot = {
+  __typename?: 'LotteryPeriodBankAccountSnapshot';
+  accountId: Scalars['ID']['output'];
+  balance: Scalars['Int']['output'];
+  label: Scalars['String']['output'];
+};
+
+export type LotteryPeriodClose = {
+  __typename?: 'LotteryPeriodClose';
+  closedAt: Scalars['DateTime']['output'];
+  closedBy: LotteryAccountsRef;
+  id: Scalars['ID']['output'];
+  month: Scalars['String']['output'];
+  note?: Maybe<Scalars['String']['output']>;
+  snapshot: LotteryPeriodSnapshot;
+};
+
+export type LotteryPeriodCloseCheck = {
+  __typename?: 'LotteryPeriodCloseCheck';
+  canClose: Scalars['Boolean']['output'];
+  month: Scalars['String']['output'];
+  openShifts: Array<LotteryPeriodOpenShift>;
+  pendingDocuments: Array<LotteryPeriodPendingDocument>;
+  snapshot: LotteryPeriodSnapshot;
+};
+
+export type LotteryPeriodCloses = {
+  __typename?: 'LotteryPeriodCloses';
+  closableMonth?: Maybe<Scalars['String']['output']>;
+  items: Array<LotteryPeriodRow>;
+};
+
+export type LotteryPeriodDrawerSnapshot = {
+  __typename?: 'LotteryPeriodDrawerSnapshot';
+  amount?: Maybe<Scalars['Int']['output']>;
+  cashPointId: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  spanningShiftLabel?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryPeriodOpenShift = {
+  __typename?: 'LotteryPeriodOpenShift';
+  label: Scalars['String']['output'];
+  orgName: Scalars['String']['output'];
+  shiftId: Scalars['ID']['output'];
+};
+
+export type LotteryPeriodPendingDocument = {
+  __typename?: 'LotteryPeriodPendingDocument';
+  at: Scalars['DateTime']['output'];
+  kind: Scalars['String']['output'];
+  orgName: Scalars['String']['output'];
+  serialNo?: Maybe<Scalars['String']['output']>;
+  shiftLabel?: Maybe<Scalars['String']['output']>;
+  submissionId: Scalars['ID']['output'];
+};
+
+export type LotteryPeriodRow = {
+  __typename?: 'LotteryPeriodRow';
+  canClose: Scalars['Boolean']['output'];
+  closedAt?: Maybe<Scalars['DateTime']['output']>;
+  closedBy?: Maybe<LotteryAccountsRef>;
+  month: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+};
+
+export type LotteryPeriodShiftSnapshot = {
+  __typename?: 'LotteryPeriodShiftSnapshot';
+  label: Scalars['String']['output'];
+  shiftId: Scalars['ID']['output'];
+};
+
+export type LotteryPeriodSnapshot = {
+  __typename?: 'LotteryPeriodSnapshot';
+  bankAccounts: Array<LotteryPeriodBankAccountSnapshot>;
+  stores: Array<LotteryPeriodStoreSnapshot>;
+};
+
+export type LotteryPeriodStoreSnapshot = {
+  __typename?: 'LotteryPeriodStoreSnapshot';
+  drawerTotal: Scalars['Int']['output'];
+  drawers: Array<LotteryPeriodDrawerSnapshot>;
+  name: Scalars['String']['output'];
+  orgId: Scalars['ID']['output'];
+  uncoveredShifts: Array<LotteryPeriodShiftSnapshot>;
+  vault: Scalars['Int']['output'];
+};
+
 export type LotteryPositionOption = {
   __typename?: 'LotteryPositionOption';
   label: Scalars['String']['output'];
@@ -3689,6 +3783,7 @@ export type Mutation = {
   bindFormWorkflow: FormPayload;
   changePassword: ChangePasswordPayload;
   clearScheduleAutoAssignments: ClearScheduleAutoAssignmentsPayload;
+  closeLotteryPeriod: LotteryPeriodClose;
   completeLotteryPurchaseReceiving: CompleteLotteryPurchaseReceivingPayload;
   copySubmissionToDraft: FormSubmissionPayload;
   copyUserOrgRoles: CopyUserOrgRolesPayload;
@@ -3924,6 +4019,11 @@ export type MutationChangePasswordArgs = {
 
 export type MutationClearScheduleAutoAssignmentsArgs = {
   input: ScheduleAutoRunRangeInput;
+};
+
+
+export type MutationCloseLotteryPeriodArgs = {
+  input: CloseLotteryPeriodInput;
 };
 
 
@@ -5465,6 +5565,9 @@ export type Query = {
   lotteryInvestigations: LotteryInvestigationsPayload;
   lotteryOccupiedStores: LotteryOccupiedStoresPayload;
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload;
+  lotteryPeriodClose: LotteryPeriodClose;
+  lotteryPeriodCloseCheck: LotteryPeriodCloseCheck;
+  lotteryPeriodCloses: LotteryPeriodCloses;
   lotteryPositionOptions: LotteryPositionOptionsPayload;
   lotteryPurchaseList: LotteryPurchaseList;
   lotteryPurchaseOptions: LotteryPurchaseOptions;
@@ -5845,6 +5948,16 @@ export type QueryLotteryInventoryBookArgs = {
 
 export type QueryLotteryInventoryBooksArgs = {
   input: LotteryInventoryBooksInput;
+};
+
+
+export type QueryLotteryPeriodCloseArgs = {
+  month: Scalars['String']['input'];
+};
+
+
+export type QueryLotteryPeriodCloseCheckArgs = {
+  month: Scalars['String']['input'];
 };
 
 
@@ -10356,6 +10469,34 @@ export type UpdateLotteryCashPointMutationVariables = Exact<{
 
 export type UpdateLotteryCashPointMutation = { __typename?: 'Mutation', updateLotteryCashPoint: { __typename?: 'LotteryCashPointPayload', item: { __typename?: 'LotteryCashPoint', id: string, positionKey: string, positionLabel?: string | null, name: string, order: number, enabled: boolean, note?: string | null, createdAt: string, updatedAt: string, org: { __typename?: 'LotteryCashPointRef', id: string, name: string }, printer?: { __typename?: 'LotteryCashPointRef', id: string, name: string } | null, abilities: { __typename?: 'LotteryCashPointAbilities', canEdit: boolean } } } };
 
+export type LotteryPeriodSnapshotFieldsFragment = { __typename?: 'LotteryPeriodSnapshot', bankAccounts: Array<{ __typename?: 'LotteryPeriodBankAccountSnapshot', accountId: string, label: string, balance: number }>, stores: Array<{ __typename?: 'LotteryPeriodStoreSnapshot', orgId: string, name: string, vault: number, drawerTotal: number, drawers: Array<{ __typename?: 'LotteryPeriodDrawerSnapshot', cashPointId: string, name: string, amount?: number | null, spanningShiftLabel?: string | null }>, uncoveredShifts: Array<{ __typename?: 'LotteryPeriodShiftSnapshot', shiftId: string, label: string }> }> };
+
+export type LotteryPeriodClosesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type LotteryPeriodClosesQuery = { __typename?: 'Query', lotteryPeriodCloses: { __typename?: 'LotteryPeriodCloses', closableMonth?: string | null, items: Array<{ __typename?: 'LotteryPeriodRow', month: string, status: string, closedAt?: string | null, canClose: boolean, closedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null }> } };
+
+export type LotteryPeriodCloseCheckQueryVariables = Exact<{
+  month: Scalars['String']['input'];
+}>;
+
+
+export type LotteryPeriodCloseCheckQuery = { __typename?: 'Query', lotteryPeriodCloseCheck: { __typename?: 'LotteryPeriodCloseCheck', month: string, canClose: boolean, openShifts: Array<{ __typename?: 'LotteryPeriodOpenShift', shiftId: string, orgName: string, label: string }>, pendingDocuments: Array<{ __typename?: 'LotteryPeriodPendingDocument', kind: string, submissionId: string, serialNo?: string | null, orgName: string, shiftLabel?: string | null, at: string }>, snapshot: { __typename?: 'LotteryPeriodSnapshot', bankAccounts: Array<{ __typename?: 'LotteryPeriodBankAccountSnapshot', accountId: string, label: string, balance: number }>, stores: Array<{ __typename?: 'LotteryPeriodStoreSnapshot', orgId: string, name: string, vault: number, drawerTotal: number, drawers: Array<{ __typename?: 'LotteryPeriodDrawerSnapshot', cashPointId: string, name: string, amount?: number | null, spanningShiftLabel?: string | null }>, uncoveredShifts: Array<{ __typename?: 'LotteryPeriodShiftSnapshot', shiftId: string, label: string }> }> } } };
+
+export type LotteryPeriodCloseQueryVariables = Exact<{
+  month: Scalars['String']['input'];
+}>;
+
+
+export type LotteryPeriodCloseQuery = { __typename?: 'Query', lotteryPeriodClose: { __typename?: 'LotteryPeriodClose', id: string, month: string, closedAt: string, note?: string | null, closedBy: { __typename?: 'LotteryAccountsRef', id: string, name: string }, snapshot: { __typename?: 'LotteryPeriodSnapshot', bankAccounts: Array<{ __typename?: 'LotteryPeriodBankAccountSnapshot', accountId: string, label: string, balance: number }>, stores: Array<{ __typename?: 'LotteryPeriodStoreSnapshot', orgId: string, name: string, vault: number, drawerTotal: number, drawers: Array<{ __typename?: 'LotteryPeriodDrawerSnapshot', cashPointId: string, name: string, amount?: number | null, spanningShiftLabel?: string | null }>, uncoveredShifts: Array<{ __typename?: 'LotteryPeriodShiftSnapshot', shiftId: string, label: string }> }> } } };
+
+export type CloseLotteryPeriodMutationVariables = Exact<{
+  input: CloseLotteryPeriodInput;
+}>;
+
+
+export type CloseLotteryPeriodMutation = { __typename?: 'Mutation', closeLotteryPeriod: { __typename?: 'LotteryPeriodClose', id: string, month: string, closedAt: string } };
+
 export type LotteryPurchaseReceivingFieldsFragment = { __typename?: 'LotteryPurchaseReceiving', submissionId: string, canReceive: boolean, receivedCount: number, totalCount: number, groups: Array<{ __typename?: 'LotteryPurchaseReceivingGroup', gameId: string, gameCode: string, gameName: string, unitPrice: number, requestedBooks?: number | null, receivedBooks: number, subtotal: number, rows: Array<{ __typename?: 'LotteryPurchaseReceivingRow', rowId: string, bookNo: string, lastTicketNo: number, tickets: number, bookPrice: number, rate: number, amount: number, received: boolean, receivedAt?: string | null, batchId?: string | null }> }>, batches: Array<{ __typename?: 'LotteryPurchaseReceivingBatch', batchId: string, no: number, completedAt: string, rowIds: Array<string> }> };
 
 export type LotteryPurchaseOptionsQueryVariables = Exact<{
@@ -12424,6 +12565,31 @@ export const LotteryCashPointFieldsFragmentDoc = `
   updatedAt
   abilities {
     canEdit
+  }
+}
+    `;
+export const LotteryPeriodSnapshotFieldsFragmentDoc = `
+    fragment LotteryPeriodSnapshotFields on LotteryPeriodSnapshot {
+  bankAccounts {
+    accountId
+    label
+    balance
+  }
+  stores {
+    orgId
+    name
+    vault
+    drawerTotal
+    drawers {
+      cashPointId
+      name
+      amount
+      spanningShiftLabel
+    }
+    uncoveredShifts {
+      shiftId
+      label
+    }
   }
 }
     `;
@@ -21809,6 +21975,165 @@ export const useUpdateLotteryCashPointMutation = <
 
 
 useUpdateLotteryCashPointMutation.fetcher = (client: GraphQLClient, variables: UpdateLotteryCashPointMutationVariables, headers?: RequestInit['headers']) => fetcher<UpdateLotteryCashPointMutation, UpdateLotteryCashPointMutationVariables>(client, UpdateLotteryCashPointDocument, variables, headers);
+
+export const LotteryPeriodClosesDocument = `
+    query LotteryPeriodCloses {
+  lotteryPeriodCloses {
+    items {
+      month
+      status
+      closedAt
+      closedBy {
+        ...LotteryAccountsRefFields
+      }
+      canClose
+    }
+    closableMonth
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}`;
+
+export const useLotteryPeriodClosesQuery = <
+      TData = LotteryPeriodClosesQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables?: LotteryPeriodClosesQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPeriodClosesQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPeriodClosesQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPeriodClosesQuery, TError, TData>(
+      {
+    queryKey: variables === undefined ? ['LotteryPeriodCloses'] : ['LotteryPeriodCloses', variables],
+    queryFn: fetcher<LotteryPeriodClosesQuery, LotteryPeriodClosesQueryVariables>(client, LotteryPeriodClosesDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPeriodClosesQuery.getKey = (variables?: LotteryPeriodClosesQueryVariables) => variables === undefined ? ['LotteryPeriodCloses'] : ['LotteryPeriodCloses', variables];
+
+
+useLotteryPeriodClosesQuery.fetcher = (client: GraphQLClient, variables?: LotteryPeriodClosesQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPeriodClosesQuery, LotteryPeriodClosesQueryVariables>(client, LotteryPeriodClosesDocument, variables, headers);
+
+export const LotteryPeriodCloseCheckDocument = `
+    query LotteryPeriodCloseCheck($month: String!) {
+  lotteryPeriodCloseCheck(month: $month) {
+    month
+    openShifts {
+      shiftId
+      orgName
+      label
+    }
+    pendingDocuments {
+      kind
+      submissionId
+      serialNo
+      orgName
+      shiftLabel
+      at
+    }
+    snapshot {
+      ...LotteryPeriodSnapshotFields
+    }
+    canClose
+  }
+}
+    ${LotteryPeriodSnapshotFieldsFragmentDoc}`;
+
+export const useLotteryPeriodCloseCheckQuery = <
+      TData = LotteryPeriodCloseCheckQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPeriodCloseCheckQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPeriodCloseCheckQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPeriodCloseCheckQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPeriodCloseCheckQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPeriodCloseCheck', variables],
+    queryFn: fetcher<LotteryPeriodCloseCheckQuery, LotteryPeriodCloseCheckQueryVariables>(client, LotteryPeriodCloseCheckDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPeriodCloseCheckQuery.getKey = (variables: LotteryPeriodCloseCheckQueryVariables) => ['LotteryPeriodCloseCheck', variables];
+
+
+useLotteryPeriodCloseCheckQuery.fetcher = (client: GraphQLClient, variables: LotteryPeriodCloseCheckQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPeriodCloseCheckQuery, LotteryPeriodCloseCheckQueryVariables>(client, LotteryPeriodCloseCheckDocument, variables, headers);
+
+export const LotteryPeriodCloseDocument = `
+    query LotteryPeriodClose($month: String!) {
+  lotteryPeriodClose(month: $month) {
+    id
+    month
+    closedAt
+    closedBy {
+      ...LotteryAccountsRefFields
+    }
+    note
+    snapshot {
+      ...LotteryPeriodSnapshotFields
+    }
+  }
+}
+    ${LotteryAccountsRefFieldsFragmentDoc}
+${LotteryPeriodSnapshotFieldsFragmentDoc}`;
+
+export const useLotteryPeriodCloseQuery = <
+      TData = LotteryPeriodCloseQuery,
+      TError = unknown
+    >(
+      client: GraphQLClient,
+      variables: LotteryPeriodCloseQueryVariables,
+      options?: Omit<UseQueryOptions<LotteryPeriodCloseQuery, TError, TData>, 'queryKey'> & { queryKey?: UseQueryOptions<LotteryPeriodCloseQuery, TError, TData>['queryKey'] },
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useQuery<LotteryPeriodCloseQuery, TError, TData>(
+      {
+    queryKey: ['LotteryPeriodClose', variables],
+    queryFn: fetcher<LotteryPeriodCloseQuery, LotteryPeriodCloseQueryVariables>(client, LotteryPeriodCloseDocument, variables, headers),
+    ...options
+  }
+    )};
+
+useLotteryPeriodCloseQuery.getKey = (variables: LotteryPeriodCloseQueryVariables) => ['LotteryPeriodClose', variables];
+
+
+useLotteryPeriodCloseQuery.fetcher = (client: GraphQLClient, variables: LotteryPeriodCloseQueryVariables, headers?: RequestInit['headers']) => fetcher<LotteryPeriodCloseQuery, LotteryPeriodCloseQueryVariables>(client, LotteryPeriodCloseDocument, variables, headers);
+
+export const CloseLotteryPeriodDocument = `
+    mutation CloseLotteryPeriod($input: CloseLotteryPeriodInput!) {
+  closeLotteryPeriod(input: $input) {
+    id
+    month
+    closedAt
+  }
+}
+    `;
+
+export const useCloseLotteryPeriodMutation = <
+      TError = unknown,
+      TContext = unknown
+    >(
+      client: GraphQLClient,
+      options?: UseMutationOptions<CloseLotteryPeriodMutation, TError, CloseLotteryPeriodMutationVariables, TContext>,
+      headers?: RequestInit['headers']
+    ) => {
+    
+    return useMutation<CloseLotteryPeriodMutation, TError, CloseLotteryPeriodMutationVariables, TContext>(
+      {
+    mutationKey: ['CloseLotteryPeriod'],
+    mutationFn: (variables?: CloseLotteryPeriodMutationVariables) => fetcher<CloseLotteryPeriodMutation, CloseLotteryPeriodMutationVariables>(client, CloseLotteryPeriodDocument, variables, headers)(),
+    ...options
+  }
+    )};
+
+
+useCloseLotteryPeriodMutation.fetcher = (client: GraphQLClient, variables: CloseLotteryPeriodMutationVariables, headers?: RequestInit['headers']) => fetcher<CloseLotteryPeriodMutation, CloseLotteryPeriodMutationVariables>(client, CloseLotteryPeriodDocument, variables, headers);
 
 export const LotteryPurchaseOptionsDocument = `
     query LotteryPurchaseOptions($orgId: ID!) {

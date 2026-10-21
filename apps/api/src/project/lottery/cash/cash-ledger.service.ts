@@ -63,10 +63,14 @@ export interface VaultBaseline {
   since: Date | null;
 }
 
-/** 日結(P27)登記的起算點來源;回 null = 這家分店還沒有日結。 */
+/**
+ * 日結(P27)登記的起算點來源;回 null = 這家分店還沒有日結。`before` 給了 = 那個時點以前的起算點
+ * (關帳快照的月底小金庫:只看那之前送出的已完成日結)。
+ */
 export type VaultBaselineProvider = (
   tenantId: Types.ObjectId | null,
   orgId: Types.ObjectId,
+  before?: Date,
 ) => Promise<VaultBaseline | null>;
 
 let baselineProvider: VaultBaselineProvider | null = null;
@@ -197,26 +201,37 @@ export class CashLedgerService {
     }
   }
 
-  /** 小金庫的起算點(日結登記前一律從 0 起算)。 */
+  /** 小金庫的起算點(日結登記前一律從 0 起算);`before` 給了 = 那個時點以前的起算點。 */
   async vaultBaseline(
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
+    before?: Date,
   ): Promise<VaultBaseline> {
-    return (await baselineProvider?.(tenantId, orgId)) ?? { ...ZERO_BASELINE };
+    return (
+      (await baselineProvider?.(tenantId, orgId, before)) ?? {
+        ...ZERO_BASELINE,
+      }
+    );
   }
 
-  /** 小金庫目前的應有金額 = 起算點 + 之後流水的加總(只從流水算,沒有可改寫的欄位)。 */
+  /**
+   * 小金庫目前的應有金額 = 起算點 + 之後流水的加總(只從流水算,沒有可改寫的欄位)。
+   * `before` 給了 = 那個時點(不含)的應有(關帳快照的月底小金庫):起算點與流水都只看那之前的。
+   */
   async vaultExpected(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,
     orgId: Types.ObjectId,
+    before?: Date,
   ): Promise<{ amount: number; baseline: VaultBaseline }> {
-    const baseline = await this.vaultBaseline(tenantId, orgId);
+    const baseline = await this.vaultBaseline(tenantId, orgId, before);
+    const occurredAt = {
+      ...(baseline.since === null ? {} : { $gt: baseline.since }),
+      ...(before === undefined ? {} : { $lt: before }),
+    };
     const sum = await this.sumPlace(operator, "vault", {
       orgId,
-      ...(baseline.since === null
-        ? {}
-        : { occurredAt: { $gt: baseline.since } }),
+      ...(Object.keys(occurredAt).length === 0 ? {} : { occurredAt }),
     });
     return { amount: baseline.amount + sum, baseline };
   }

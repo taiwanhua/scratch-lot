@@ -18,6 +18,7 @@ import {
   saleReversalProblemOf,
   saleReversalValuesOf,
 } from "@repo/domain/project/lottery";
+import { PERIOD_CLOSE_REASONS } from "@repo/domain/project/lottery-accounts";
 import { boardTopic } from "@repo/domain/realtime";
 
 import {
@@ -42,6 +43,7 @@ import {
   LotteryTicketsRepository,
 } from "../../database/lottery-inventory/lottery-inventory.repository";
 import { LotteryShiftsRepository } from "../../database/lottery-store/lottery-shifts.repository";
+import { PeriodLock } from "../accounts/period-lock";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { TicketLedgerService } from "../tickets/ticket-ledger.service";
 import type { TicketLockRef } from "../tickets/ticket-ledger.types";
@@ -62,6 +64,8 @@ export const STORE_FORM_BLOCKS = {
   amountMismatch: "SALE_REVERSAL_AMOUNT_MISMATCH",
   /** 兩張表單完成後都不能作廢(錯了再開一張反向的)。 */
   voidNotAllowed: "STORE_FORM_VOID_NOT_ALLOWED",
+  /** 退款班次 / 現金更正的位置(某一班)是已關帳月份的班(規格 10.4;`PeriodLock` 同一個判斷)。 */
+  periodClosed: PERIOD_CLOSE_REASONS.periodClosed,
 } as const;
 
 /** 撤銷售出申請在張上的鎖(張在這張單上 = 「撤銷審核中」)。 */
@@ -109,6 +113,7 @@ interface FormShift {
   _id: Types.ObjectId;
   orgId: Types.ObjectId;
   cashPointId: Types.ObjectId;
+  openedAt: Date;
   closedAt: Date | null;
 }
 
@@ -120,13 +125,13 @@ interface FormShift {
  *
  * | 時機 | 做什麼 |
  * | --- | --- |
- * | `beforeSubmit` | 分店看得到;每張是本店已售、沒被別的單鎖定(不在其他未結束的撤銷單上);退款金額 = 面額合計;退款 = 是時退款班次是本店的班 |
+ * | `beforeSubmit` | 分店看得到;每張是本店已售、沒被別的單鎖定(不在其他未結束的撤銷單上);退款金額 = 面額合計;退款 = 是時退款班次是本店的班、不是已關帳月份的班 |
  * | `submitted` | 張鎖定(`sale_reversal`;盤點時標示「撤銷審核中」) |
  * | `returned` / `withdrawn` / `rejected` | 解除鎖定(駁回什麼都不記;退回 / 撤回後重送再鎖) |
  * | `completed` | 張改回未售、回到原收銀點,寫「撤銷」事件(不影響現金);退款 = 是 → 現金流水「退貨退款」記在退款班次(已結帳 → 事後更正 `postCloseOf`) |
  * | `beforeVoid` | 一律擋下 |
  *
- * **現金更正單**:`beforeSubmit` 檢查位置 / 歸屬班次是本店的班;`completed` 寫現金流水「現金更正」
+ * **現金更正單**:`beforeSubmit` 檢查位置 / 歸屬班次是本店的班,位置(某一班)不是已關帳月份的班(歸屬班次可以);`completed` 寫現金流水「現金更正」
  * (位置那一班的抽屜或小金庫;另記 `attributedShiftId`;位置那一班已結帳 → 事後更正);`beforeVoid` 一律擋下。
  *
  * 單據可能是總部建的,事後動作的系統身分只看得到單據的組織:讀寫以租戶邊界上下文(登記
@@ -145,6 +150,7 @@ export class StoreFormsRules {
     private readonly ledger: TicketLedgerService,
     private readonly cash: CashLedgerService,
     private readonly vault: StoreVaultGuard,
+    private readonly periods: PeriodLock,
   ) {}
 
   // ---- 撤銷售出申請 ----
@@ -180,6 +186,9 @@ export class StoreFormsRules {
       const shift = await this.shiftOf(reader, parsed.refundShiftId);
       if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "refund_shift");
+      }
+      if (await this.isClosedPeriod(submission.tenantId, shift)) {
+        return block(STORE_FORM_BLOCKS.periodClosed, "refund_shift");
       }
     }
     return null;
@@ -422,9 +431,12 @@ export class StoreFormsRules {
       if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "shift");
       }
+      if (await this.isClosedPeriod(submission.tenantId, shift)) {
+        return block(STORE_FORM_BLOCKS.periodClosed, "shift");
+      }
     }
     if (parsed.attributedShiftId !== null) {
-      // 歸屬班次只表示是誰的責任:可以選已結帳(之後:已關帳月份)的班,但要是本店的班
+      // 歸屬班次只表示是誰的責任:可以選已結帳、已關帳月份的班(報表歸「前期更正」),但要是本店的班
       const shift = await this.shiftOf(reader, parsed.attributedShiftId);
       if (!shift?.orgId.equals(branchId)) {
         return block(STORE_FORM_BLOCKS.shiftNotInBranch, "attributed_shift");
@@ -538,6 +550,16 @@ export class StoreFormsRules {
     return block(STORE_FORM_BLOCKS.voidNotAllowed, "void is not allowed");
   }
 
+  /** 這一班(以開班時間)落在已關帳的月份(`PeriodLock` 的唯一判斷;守門回擋下、不拋錯)。 */
+  private async isClosedPeriod(
+    tenantId: Types.ObjectId | null,
+    shift: FormShift,
+  ): Promise<boolean> {
+    return (
+      (await this.periods.closedPeriodOf(tenantId, shift.openedAt)) !== null
+    );
+  }
+
   private readerOf(tenantId: Types.ObjectId | null): Promise<OperatorContext> {
     return tenantBoundaryContext(this.orgs, null, tenantId);
   }
@@ -567,7 +589,7 @@ export class StoreFormsRules {
       return null;
     }
     return this.shifts.findById(reader, id, {
-      select: "orgId cashPointId closedAt",
+      select: "orgId cashPointId openedAt closedAt",
       session,
     });
   }

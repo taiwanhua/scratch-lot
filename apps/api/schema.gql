@@ -160,6 +160,12 @@ type ClearScheduleAutoAssignmentsPayload {
   removedCount: Int!
 }
 
+input CloseLotteryPeriodInput {
+  confirmMonth: String!
+  month: String!
+  note: String
+}
+
 input CompleteLotteryPurchaseReceivingInput {
   rowIds: [String!]!
   submissionId: ID!
@@ -2276,6 +2282,83 @@ type LotteryPendingRequisition {
   serialNo: String
 }
 
+type LotteryPeriodBankAccountSnapshot {
+  accountId: ID!
+  balance: Int!
+  label: String!
+}
+
+type LotteryPeriodClose {
+  closedAt: DateTime!
+  closedBy: LotteryAccountsRef!
+  id: ID!
+  month: String!
+  note: String
+  snapshot: LotteryPeriodSnapshot!
+}
+
+type LotteryPeriodCloseCheck {
+  canClose: Boolean!
+  month: String!
+  openShifts: [LotteryPeriodOpenShift!]!
+  pendingDocuments: [LotteryPeriodPendingDocument!]!
+  snapshot: LotteryPeriodSnapshot!
+}
+
+type LotteryPeriodCloses {
+  closableMonth: String
+  items: [LotteryPeriodRow!]!
+}
+
+type LotteryPeriodDrawerSnapshot {
+  amount: Int
+  cashPointId: ID!
+  name: String!
+  spanningShiftLabel: String
+}
+
+type LotteryPeriodOpenShift {
+  label: String!
+  orgName: String!
+  shiftId: ID!
+}
+
+type LotteryPeriodPendingDocument {
+  at: DateTime!
+  kind: String!
+  orgName: String!
+  serialNo: String
+  shiftLabel: String
+  submissionId: ID!
+}
+
+type LotteryPeriodRow {
+  canClose: Boolean!
+  closedAt: DateTime
+  closedBy: LotteryAccountsRef
+  month: String!
+  status: String!
+}
+
+type LotteryPeriodShiftSnapshot {
+  label: String!
+  shiftId: ID!
+}
+
+type LotteryPeriodSnapshot {
+  bankAccounts: [LotteryPeriodBankAccountSnapshot!]!
+  stores: [LotteryPeriodStoreSnapshot!]!
+}
+
+type LotteryPeriodStoreSnapshot {
+  drawerTotal: Int!
+  drawers: [LotteryPeriodDrawerSnapshot!]!
+  name: String!
+  orgId: ID!
+  uncoveredShifts: [LotteryPeriodShiftSnapshot!]!
+  vault: Int!
+}
+
 type LotteryPositionOption {
   label: String!
   value: String!
@@ -3375,6 +3458,7 @@ type Mutation {
   bindFormWorkflow(input: BindFormWorkflowInput!): FormPayload!
   changePassword(input: ChangePasswordInput!): ChangePasswordPayload!
   clearScheduleAutoAssignments(input: ScheduleAutoRunRangeInput!): ClearScheduleAutoAssignmentsPayload!
+  closeLotteryPeriod(input: CloseLotteryPeriodInput!): LotteryPeriodClose!
   completeLotteryPurchaseReceiving(input: CompleteLotteryPurchaseReceivingInput!): CompleteLotteryPurchaseReceivingPayload!
   copySubmissionToDraft(input: CopySubmissionToDraftInput!): FormSubmissionPayload!
   copyUserOrgRoles(input: CopyUserOrgRolesInput!): CopyUserOrgRolesPayload!
@@ -4235,6 +4319,9 @@ type Query {
   lotteryInvestigations: LotteryInvestigationsPayload!
   lotteryOccupiedStores: LotteryOccupiedStoresPayload!
   lotteryOutstandingSettlements: LotteryOutstandingSettlementsPayload!
+  lotteryPeriodClose(month: String!): LotteryPeriodClose!
+  lotteryPeriodCloseCheck(month: String!): LotteryPeriodCloseCheck!
+  lotteryPeriodCloses: LotteryPeriodCloses!
   lotteryPositionOptions(orgId: ID!): LotteryPositionOptionsPayload!
   lotteryPurchaseList: LotteryPurchaseList!
   lotteryPurchaseOptions(orgId: ID!): LotteryPurchaseOptions!

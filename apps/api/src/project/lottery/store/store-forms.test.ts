@@ -61,6 +61,7 @@ import {
 } from "../../database/lottery-store/lottery-shift.schema";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
+import { insertPeriodClose } from "../test-support/period-close-fixtures";
 import { LotteryBooksService } from "../tickets/books.service";
 import { StoreFormsQueryService } from "./store-forms-query.service";
 
@@ -1159,6 +1160,60 @@ describe("撤銷售出申請與現金更正單(規格 8.5、8.8)", () => {
       ]);
       await decideOn(world, manager, correction.id, "REJECT");
       await decideOn(world, manager, reversal.id, "REJECT");
+    });
+
+    it("已關帳月份(規格 10.4):退款班次 / 現金更正的位置選到已關帳月份的班 → 擋下;歸屬班次可以", async () => {
+      // 2026-01 已關帳;那個月開的一班(已結帳)
+      const january = await shift(
+        stall,
+        wang.userId,
+        "店外攤位 · 一月",
+        new Date("2026-01-15T21:00:00+08:00"),
+      );
+      await db()
+        .collection(LOTTERY_SHIFTS_COLLECTION)
+        .updateOne(
+          { _id: january },
+          { $set: { openedAt: new Date("2026-01-15T13:00:00+08:00") } },
+        );
+      const reopen = await insertPeriodClose(db(), {
+        tenantId: tenant,
+        month: "2026-01",
+        periodStart: new Date("2026-01-01T00:00:00+08:00"),
+        periodEnd: new Date("2026-02-01T00:00:00+08:00"),
+      });
+      try {
+        const bookId = await counterBook();
+        await sell(bookId, ["070"]);
+        expect(
+          await submitError(
+            wang,
+            SALE_REVERSAL_FORM_KEY,
+            reversalValues(bookId, "070", 1, { refund_shift: String(january) }),
+          ),
+        ).toMatchObject({ reason: "PERIOD_CLOSED" });
+        expect(
+          await submitError(
+            wang,
+            CASH_CORRECTION_FORM_KEY,
+            correctionValues({ shift: String(january) }),
+          ),
+        ).toMatchObject({ reason: "PERIOD_CLOSED" });
+        // 歸屬班次只表示是誰的責任:可以選已關帳月份的班(報表歸「前期更正」)
+        const attributed = await submit(
+          wang,
+          CASH_CORRECTION_FORM_KEY,
+          correctionValues({
+            place: "vault",
+            shift: null,
+            attributed_shift: String(january),
+          }),
+        );
+        expect(attributed.status).toBe("REVIEWING");
+        await decideOn(world, manager, attributed.id, "REJECT");
+      } finally {
+        await reopen();
+      }
     });
 
     it("退款班次的選項:本店的班,自己開著的標 mine", async () => {

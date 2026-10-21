@@ -36,6 +36,7 @@ import {
 } from "../../schedule/integration/entry-lookup";
 import type { PunchRequestMeta } from "../../schedule/my/my-schedule.service";
 import { isDuplicateKeyError } from "../accounts/accounts-error";
+import { PeriodLock } from "../accounts/period-lock";
 import { CashLedgerService } from "../cash/cash-ledger.service";
 import type {
   OpenLotteryShiftInput,
@@ -152,6 +153,7 @@ export class StoreShiftsService {
     private readonly clock: StoreClock,
     private readonly personLocks: StorePersonLocks,
     private readonly vault: StoreVaultGuard,
+    private readonly periods: PeriodLock,
   ) {}
 
   /** 開班視窗:期初零用金的來源、可以選的排班(系統找到的預選)、打卡狀態。 */
@@ -500,7 +502,10 @@ export class StoreShiftsService {
     };
   }
 
-  /** 選到的排班要在「這個人那天在這家店的排班」裡;寫入的任務快照與崗位不一致紀錄。 */
+  /**
+   * 選到的排班要在「這個人那天在這家店的排班」裡、不能是已關帳月份的排班(`PeriodLock.assertPeriodOpen`);
+   * 寫入的任務快照與崗位不一致紀錄。
+   */
   private async bindingOf(
     operator: OperatorContext,
     point: CashPointRecord,
@@ -537,6 +542,12 @@ export class StoreShiftsService {
         STORE_REASONS.entryNotAvailable,
       );
     }
+    // 選到已關帳月份的排班 → 擋下(規格 6.6、10.4;以排班的開始時間判斷)
+    await this.periods.assertPeriodOpen(
+      point.tenantId,
+      entry.startAt,
+      "scheduleEntryId",
+    );
     const snapshot = await this.lookup.taskSnapshotFor(operator, {
       tenantId: point.tenantId,
       entryId,

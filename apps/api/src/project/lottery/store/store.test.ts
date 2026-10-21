@@ -50,6 +50,7 @@ import {
 import { isCashPointDeactivationBlocked } from "../cash-points/cash-point-deactivation";
 import { openDrawersOf, openShiftOf } from "../cash/open-shift";
 import { seedReasonCategory } from "../test-support/master-data-fixtures";
+import { insertPeriodClose } from "../test-support/period-close-fixtures";
 import { StoreClock } from "./store-clock";
 
 // ---- GraphQL ----
@@ -659,6 +660,39 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
         },
       }),
     ).toMatchObject({ reason: "OPENING_FLOAT_NOT_ALLOWED" });
+    expect(
+      await connection
+        .collection(LOTTERY_SHIFTS_COLLECTION)
+        .countDocuments({ cashPointId: stall }),
+    ).toBe(0);
+  });
+
+  it("開班選到已關帳月份的排班 → PERIOD_CLOSED(規格 6.6、10.4;以排班的開始時間判斷),不開班", async () => {
+    now("2026-11-05", "08:10");
+    // 直接寫一筆關到 11 月的關帳紀錄(只測檢查:排班 11/5 08:00 < 12/1 00:00 = 已關帳月份)
+    const reopen = await insertPeriodClose(connection, {
+      tenantId: tenant,
+      month: "2026-11",
+      periodStart: taipei("2026-11-01", "00:00"),
+      periodEnd: taipei("2026-12-01", "00:00"),
+    });
+    try {
+      expect(
+        await errorOf(lin, OPEN, {
+          input: {
+            cashPointId: String(stall),
+            scheduleEntryId: String(linMorning),
+            temporaryCover: false,
+          },
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["scheduleEntryId"],
+        reason: "PERIOD_CLOSED",
+      });
+    } finally {
+      await reopen();
+    }
     expect(
       await connection
         .collection(LOTTERY_SHIFTS_COLLECTION)

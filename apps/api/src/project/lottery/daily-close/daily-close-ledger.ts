@@ -109,16 +109,24 @@ export class DailyCloseLedger {
     );
   }
 
-  /** 這家店最近一張**已確認**的日結(小金庫起算點)。 */
-  lastConfirmedDaily(
+  /** 這家店最近一張**已確認**的日結(小金庫起算點);`before` 給了 = 那個時點以前送出的。 */
+  async lastConfirmedDaily(
     reader: OperatorContext,
     orgId: Types.ObjectId,
+    before?: Date,
   ): Promise<CheckoutRecord | null> {
-    return this.checkouts.findOne(
+    // `BaseRepository.findOne` 不收排序:最近一張用 `findMany` + `limit`
+    const [last] = await this.checkouts.findMany(
       reader,
-      { orgId, type: CHECKOUT_TYPE.daily, status: CHECKOUT_STATUS.confirmed },
-      { sort: { coveredTo: -1, _id: -1 } },
+      {
+        orgId,
+        type: CHECKOUT_TYPE.daily,
+        status: CHECKOUT_STATUS.confirmed,
+        ...(before === undefined ? {} : { submittedAt: { $lt: before } }),
+      },
+      { sort: { coveredTo: -1, _id: -1 }, limit: 1 },
     );
+    return last ?? null;
   }
 
   /** 這家店開著的班。 */

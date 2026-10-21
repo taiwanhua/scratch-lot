@@ -14,7 +14,8 @@ import { DailyCloseLedger } from "./daily-close-ledger";
  * 日結向其他功能登記的事(沒有操作者,以租戶邊界的系統身分讀):
  *
  * - **小金庫起算點**(帳戶管理 `registerVaultBaselineProvider`;規格 10.2):最近一次**已完成**日結的清點金額,
- *   起算時間 = 那張日結**最後一次送出**的時間(清點那一刻;之後的流水 —— 含完成時寫的「存銀行」—— 照常加總)
+ *   起算時間 = 那張日結**最後一次送出**的時間(清點那一刻;之後的流水 —— 含完成時寫的「存銀行」—— 照常加總);
+ *   給了 `before`(關帳快照的月底小金庫)只看那之前送出的
  * - **第一班的判斷**(店面 `registerDailyCloseCoverage`;規格 6.6):上一班已被送出的日結涵蓋計算
  */
 @Injectable()
@@ -28,12 +29,16 @@ export class DailyCloseRegistrations implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.unregister.push(
-      registerVaultBaselineProvider(async (tenantId, orgId) => {
+      registerVaultBaselineProvider(async (tenantId, orgId, before) => {
         if (tenantId === null) {
           return null;
         }
         const reader = await tenantBoundaryContext(this.orgs, null, tenantId);
-        const last = await this.dailyLedger.lastConfirmedDaily(reader, orgId);
+        const last = await this.dailyLedger.lastConfirmedDaily(
+          reader,
+          orgId,
+          before,
+        );
         return last === null
           ? null
           : { amount: last.counted, since: last.submittedAt };
