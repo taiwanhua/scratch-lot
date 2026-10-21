@@ -253,7 +253,7 @@ describe("底座 + 非空的專案來源(對真 MongoDB)", () => {
       idOf(seeded, "modules", PROJECT_AUDIT_KEY),
     ]);
     expect(documentsOf(seeded, "modules")).toHaveLength(41 + 8);
-    expect(documentsOf(seeded, "permissions")).toHaveLength(124 + 8 + 7);
+    expect(documentsOf(seeded, "permissions")).toHaveLength(125 + 8 + 7);
     expect(documentsOf(seeded, "data_scope_targets")).toHaveLength(4 + 2);
 
     // 專案對底座模組的初值指定:首次建立時生效
