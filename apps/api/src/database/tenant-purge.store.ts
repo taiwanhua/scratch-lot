@@ -89,6 +89,15 @@ function uniqueIds(ids: readonly Types.ObjectId[]): Types.ObjectId[] {
 }
 
 /**
+ * **允許注入 `TenantPurgeStore` 的檔案**(相對 `apps/api/src/`;ADR-0005「例外出口」):只有清空示範機構。
+ * `exists-any-callers.test.ts` 掃整個 src 斷言沒有其他檔案提到它(本檔與組裝入口 `database.module.ts` 除外)——
+ * 新增呼叫端要先在 ADR-0005 登記、再加進這裡。
+ */
+export const TENANT_PURGE_STORE_CALLERS: readonly string[] = [
+  "orgs/demo-tenant-purge.service.ts",
+];
+
+/**
  * 清空一個租戶的資料層出口(`docs/deployment.md`「示範機構清空 / 重建」;呼叫端 `orgs/demo-tenant-purge.service.ts`)。
  *
  * **以原生 collection 硬刪**,不經 BaseRepository 與 schema 中介層:清空要刪掉這個租戶的**全部**資料
@@ -129,19 +138,35 @@ export class TenantPurgeStore {
   ): Promise<TenantPurgeResult> {
     const files = new Set<string>();
     const counts = new Map<string, number>();
+    /**
+     * 刪掉符合條件的文件。`read` = 刪之前要讀的欄位(後面步驟要對的值 + 可能存檔案路徑的欄位),
+     * 只讀這些欄位(projection);不需要讀就不讀。`files` 裡的欄位往下掃出檔案路徑。
+     */
     const remove = async (
       collection: string,
       filter: Filter | null,
+      read: { keys?: readonly string[]; files?: readonly string[] } = {},
     ): Promise<Record<string, unknown>[]> => {
       if (filter === null) {
         return [];
       }
       const target = this.db().collection(collection);
-      // 讀出來是為了找檔案路徑與後面步驟要對的值
-      const cursor = target.find({ ...filter }, { session });
-      const documents = await cursor.toArray();
+      const fields = [...(read.keys ?? []), ...(read.files ?? [])];
+      let documents: Record<string, unknown>[] = [];
+      if (fields.length > 0) {
+        const cursor = target.find(
+          { ...filter },
+          {
+            projection: Object.fromEntries(fields.map((field) => [field, 1])),
+            session,
+          },
+        );
+        documents = await cursor.toArray();
+      }
       for (const document of documents) {
-        collectFilePaths(document, files);
+        for (const field of read.files ?? []) {
+          collectFilePaths(document[field], files);
+        }
       }
       const { deletedCount } = await target.deleteMany(filter, { session });
       if (deletedCount > 0) {
@@ -165,11 +190,12 @@ export class TenantPurgeStore {
     const scope = { tenantId, tenantOrgIds, purgedUserIds, deletedValues };
     const dependentKeys = dependentKeysOf(plan);
     for (const step of plan.steps) {
+      const keys = dependentKeys.get(step.collection) ?? [];
       const documents = await remove(
         step.collection,
         filterOfStep(step, scope),
+        { keys, files: step.files },
       );
-      const keys = dependentKeys.get(step.collection) ?? [];
       if (keys.length > 0) {
         deletedValues.set(
           step.collection,
@@ -185,26 +211,19 @@ export class TenantPurgeStore {
       }
     }
 
-    // 核心關聯:租戶組織的成員 / 角色 / 主管關聯、被刪的人與被刪的角色的所有關聯
+    // 核心關聯:任一端是租戶組織、被刪的使用者或被刪的角色,不論種類一律刪(id 全域唯一,不必看 type);
+    // 兼屬其他組織的人因此只少了在這個租戶的所屬、角色與主管關聯,也不留指向已刪文件的孤兒
+    const endpoints = [...tenantOrgIds, ...purgedUserIds, ...roleIds];
     await remove(
       CORE_RELATIONSHIPS_COLLECTION,
-      anyOf([
-        idsIn("firstId", tenantOrgIds, {
-          type: { $in: ["org_user", "org_role", "org_manager"] },
-        }),
-        idsIn("secondId", purgedUserIds, {
-          type: { $in: ["org_user", "org_manager"] },
-        }),
-        idsIn("firstId", purgedUserIds, { type: "user_role" }),
-        idsIn("secondId", roleIds, { type: "user_role" }),
-        idsIn("firstId", roleIds, {
-          type: { $in: ["role_module", "role_permission"] },
-        }),
-      ]),
+      anyOf([idsIn("firstId", endpoints), idsIn("secondId", endpoints)]),
     );
     await remove("roles", idsIn("_id", roleIds));
     await remove("users", idsIn("_id", purgedUserIds));
-    await remove(ORGS_COLLECTION, idsIn("_id", tenantOrgIds));
+    // 組織的商標(`logoPath`)是唯一存檔案路徑的欄位
+    await remove(ORGS_COLLECTION, idsIn("_id", tenantOrgIds), {
+      files: ["logoPath"],
+    });
 
     const collections = [...counts]
       .map(([collection, deleted]) => ({ collection, deleted }))

@@ -21,6 +21,7 @@ import {
   PROJECT_ORG_REASSIGN_CALLERS,
   PROJECT_TENANT_BOUNDARY_CALLERS,
 } from "./database.module";
+import { TENANT_PURGE_STORE_CALLERS } from "./tenant-purge.store";
 
 const SRC_ROOT = path.resolve(__dirname, "..");
 
@@ -127,6 +128,25 @@ describe("原生 aggregate 與原生 collection 存取的位置", () => {
       .map((file) => path.relative(SRC_ROOT, file).split(path.sep).join("/"))
       .filter((file) => !file.startsWith("database/"));
     expect(files).toEqual([]);
+  });
+});
+
+/**
+ * 清空租戶(`TenantPurgeStore`)是 ADR-0005 登記的例外出口(不經 BaseRepository、硬刪整個租戶):
+ * 只給清空示範機構;提到它的檔案(出口本身與組裝入口除外)都要在登記清單內。
+ */
+describe("清空租戶出口(TenantPurgeStore)的呼叫端登記", () => {
+  it("正式程式碼裡提到 TenantPurgeStore 的檔案都在登記清單內", () => {
+    const callers = filesMentioning("TenantPurgeStore").filter(
+      (file) =>
+        file !== "database/tenant-purge.store.ts" &&
+        file !== "database/database.module.ts",
+    );
+    expect(callers).toEqual(
+      [...TENANT_PURGE_STORE_CALLERS].toSorted((left, right) =>
+        left.localeCompare(right),
+      ),
+    );
   });
 });
 

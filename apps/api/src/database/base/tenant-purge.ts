@@ -27,7 +27,8 @@ const BY_TENANT_ID = { by: "tenantId" } as const;
 
 /**
  * 底座 collection 的「清空租戶時怎麼刪」(`database/tenant-purge.ts`)。
- * 新增底座 collection 時在這裡加一筆;帶 `tenantId` 欄的一律 `BY_TENANT_ID`。
+ * 新增底座 collection 時在這裡加一筆;帶 `tenantId` 欄的一律 `BY_TENANT_ID`;
+ * 會存上傳物件路徑的欄位列在 `files`(組織的商標由清空服務自己處理)。
  */
 export const BASE_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistration[] =
   [
@@ -56,9 +57,18 @@ export const BASE_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistration[]
     },
     // 帶 tenantId 的表
     { collection: BUSINESS_RELATIONSHIPS_COLLECTION, rule: BY_TENANT_ID },
-    { collection: "demo_items_one", rule: BY_TENANT_ID },
+    {
+      collection: "demo_items_one",
+      rule: BY_TENANT_ID,
+      files: ["coverPath", "attachmentPath"],
+    },
     { collection: "demo_items_two", rule: BY_TENANT_ID },
-    { collection: FORM_SUBMISSIONS_COLLECTION, rule: BY_TENANT_ID },
+    {
+      collection: FORM_SUBMISSIONS_COLLECTION,
+      rule: BY_TENANT_ID,
+      // 上傳欄的值(`{ path, … }`)在 values 與每一版的 revisions 裡
+      files: ["values", "revisions"],
+    },
     { collection: WORKFLOWS_COLLECTION, rule: BY_TENANT_ID },
     { collection: WORKFLOW_INSTANCES_COLLECTION, rule: BY_TENANT_ID },
     { collection: WORKFLOW_TASKS_COLLECTION, rule: BY_TENANT_ID },

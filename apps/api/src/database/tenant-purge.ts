@@ -41,6 +41,13 @@ export type TenantPurgeRule =
 export interface TenantPurgeRegistration {
   readonly collection: string;
   readonly rule: TenantPurgeRule;
+  /**
+   * 這張表裡可能存**上傳物件路徑**的欄位(本 API `createUploadUrl` 簽出、寫入端以 `isOwnedUploadPath`
+   * 驗過的值,如商標、附件、表單上傳欄;巢狀內容往下掃)。清空時只讀這些欄位找檔案,交易提交後刪。
+   * 判斷:寫入端有用 `UploadPurpose` / `isOwnedUploadPath` 的欄位才要列;沒有就不列,刪除前也不讀這張表。
+   * 只能用在會刪的表(`tenantId` / `match`)。
+   */
+  readonly files?: readonly string[];
 }
 
 /** 資料層登記的一張 model(取自 `composeDatabaseRegistrations` 的結果)。 */
@@ -76,13 +83,17 @@ export class TenantPurgeRegistrationError extends Error {
 }
 
 /** 依登記刪除的一步(`dedicated` / `keep` 不在步驟裡);依賴的表排在前面。 */
-export type TenantPurgeStep =
+export type TenantPurgeStep = (
   | { readonly collection: string; readonly by: "tenantId" }
   | {
       readonly collection: string;
       readonly by: "match";
       readonly anyOf: readonly TenantPurgeCondition[];
-    };
+    }
+) & {
+  /** 可能存上傳物件路徑的欄位(登記的 `files`;沒有為空)。 */
+  readonly files: readonly string[];
+};
 
 export interface TenantPurgePlan {
   readonly steps: readonly TenantPurgeStep[];
@@ -158,6 +169,21 @@ function indexRegistrations(
   return byCollection;
 }
 
+/** `files` 的欄位要存在,而且只能宣告在會刪的表。 */
+function checkFiles(
+  registration: TenantPurgeRegistration,
+  model: TenantPurgeModel,
+): string[] {
+  const files = registration.files ?? [];
+  const { collection, rule } = registration;
+  if (files.length > 0 && rule.by !== "tenantId" && rule.by !== "match") {
+    return [`${collection}:files 只能宣告在會刪的表(tenantId / match)`];
+  }
+  return files
+    .filter((field) => !hasPath(model.schema, field))
+    .map((field) => `${collection}:files 的欄位 ${field} 不存在`);
+}
+
 /** 一筆登記本身的檢查;會刪的(`tenantId` / `match`)回它的刪除步驟。 */
 function checkRegistration(
   registration: TenantPurgeRegistration,
@@ -175,7 +201,7 @@ function checkRegistration(
   switch (rule.by) {
     case "tenantId": {
       return hasTenantId
-        ? { problems: [], step: { collection, by: "tenantId" } }
+        ? { problems: [], step: { collection, by: "tenantId", files: [] } }
         : { problems: [`${collection}:schema 沒有 tenantId 欄`] };
     }
     case "match": {
@@ -186,7 +212,7 @@ function checkRegistration(
           byCollection,
           modelOf,
         ),
-        step: { collection, by: "match", anyOf: rule.anyOf },
+        step: { collection, by: "match", anyOf: rule.anyOf, files: [] },
       };
     }
     case "dedicated": {
@@ -278,9 +304,9 @@ export function resolveTenantPurgePlan({
       byCollection,
       modelOf,
     );
-    problems.push(...checked.problems);
+    problems.push(...checked.problems, ...checkFiles(registration, model));
     if (checked.step) {
-      steps.push(checked.step);
+      steps.push({ ...checked.step, files: registration.files ?? [] });
     }
     if (registration.rule.by === "keep") {
       kept.push(registration.collection);

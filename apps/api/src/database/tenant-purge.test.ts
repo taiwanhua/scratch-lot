@@ -60,7 +60,7 @@ describe("清空租戶的刪除登記:完整性(底座 + 專案,正式內容)", 
     expect(byTenantId).toEqual(withTenantId);
   });
 
-  it("只能新增的帳本也在刪除範圍內(audit_logs 依組織、專案流水依 tenantId)", () => {
+  it("只能新增的帳本也在刪除範圍內(audit_logs 依組織、流水類依 tenantId)", () => {
     const plan = resolveTenantPurgePlan(TENANT_PURGE);
     const deleted = plan.steps.map((step) => step.collection);
     expect(deleted).toContain("audit_logs");
@@ -140,6 +140,41 @@ describe("清空租戶的刪除登記:規則", () => {
         [{ collection: "notes", rule: { by: "dedicated", reason: "x" } }],
       ),
     ).toEqual([expect.stringContaining("dedicated 只給")]);
+  });
+
+  it("files:欄位要存在、只能宣告在會刪的表;正式登記只在會存上傳路徑的表宣告", () => {
+    expect(
+      problemsOf(
+        [OWNED_TABLE, model("logs", { note: String })],
+        [
+          {
+            collection: "notes",
+            rule: {
+              by: "match",
+              anyOf: [{ field: "orgId", in: "tenantOrgs" }],
+            },
+            files: ["missing"],
+          },
+          {
+            collection: "logs",
+            rule: { by: "keep", reason: "x" },
+            files: ["note"],
+          },
+        ],
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("notes:files 的欄位 missing 不存在"),
+        expect.stringContaining("logs:files 只能宣告在會刪的表"),
+      ]),
+    );
+    const plan = resolveTenantPurgePlan(TENANT_PURGE);
+    expect(
+      plan.steps
+        .filter((step) => step.files.length > 0)
+        .map((step) => step.collection)
+        .toSorted((left, right) => left.localeCompare(right)),
+    ).toEqual(["demo_items_one", "form_submissions"]);
   });
 
   it("deleted 依賴:被依賴的表排在前面;依賴的值沒有時這一步不刪", () => {

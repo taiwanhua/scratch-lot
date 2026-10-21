@@ -1,6 +1,7 @@
-import { afterAll, beforeAll, describe, expect, it } from "@jest/globals";
+import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { type Schema, Types } from "mongoose";
 
+import { AuditService } from "../audit/audit.service";
 import {
   type AuthTestApp,
   ROOT_ADMIN,
@@ -76,6 +77,7 @@ const REAL_SLUG = "real_purge";
 const DEMO_LOGO = "org-logos/0d1e2f30-4152-4637-8899-aabbccddeeff.png";
 const REAL_LOGO = "org-logos/1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d.png";
 const DEMO_ATTACHMENT = "form/2b3c4d5e-6f70-4182-93a4-b5c6d7e8f901.pdf";
+const REAL_ATTACHMENT = "form/3c4d5e6f-7081-4293-a4b5-c6d7e8f90a12.pdf";
 const MODULE_KEYS = ["system.org-manager", "system.user-manager"];
 
 /** 一份文件的填充值:每個頂層欄位給不重複的值,避開各表的唯一索引(原生寫入,不經 schema 驗證)。 */
@@ -278,13 +280,14 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
       documents: new Map(),
       values: new Map(),
     };
-    for (const [index, step] of plan.steps.entries()) {
+    for (const step of plan.steps) {
+      // 附件放在表單提交的上傳欄(登記的 files 欄位);其他表的同名字串不會被當成檔案
       await seedRows(
         world,
         step,
         memberId,
-        index === 0 && input.attachment !== undefined
-          ? { notes: { files: [input.attachment] } }
+        step.collection === "form_submissions" && input.attachment !== undefined
+          ? { values: { proof: { path: input.attachment, name: "proof.pdf" } } }
           : {},
       );
     }
@@ -344,6 +347,31 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
     expect(await countAll()).toEqual(before);
   });
 
+  it("稽核寫入失敗:整個交易回復,資料一筆都沒少、檔案沒刪", async () => {
+    await seedTenant({
+      slug: "demo_rollback",
+      logoPath: DEMO_LOGO,
+      demo: true,
+      attachment: DEMO_ATTACHMENT,
+    });
+    const audit = api.app.get(AuditService);
+    const failing = jest
+      .spyOn(audit, "record")
+      .mockRejectedValueOnce(new Error("稽核寫入失敗(測試注入)"));
+    const before = await countAll();
+    storage.deleted.length = 0;
+    try {
+      const result = await purge("demo_rollback");
+      expect(result.errors?.[0]?.message).toMatch(/稽核寫入失敗/);
+    } finally {
+      failing.mockRestore();
+    }
+    expect(await countAll()).toEqual(before);
+    expect(storage.deleted).toEqual([]);
+    const cleanup = await purge("demo_rollback");
+    expect(cleanup.data?.purgeDemoTenant.purged).toBe(true);
+  });
+
   it("不是根組織的人(示範機構自己的管理員)不能清空", async () => {
     await seedTenant({ slug: "demo_self", logoPath: DEMO_LOGO, demo: true });
     const adminToken = await login("demo_self-admin", PASSWORD);
@@ -377,6 +405,7 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
       logoPath: REAL_LOGO,
       demo: false,
       sharedUserId,
+      attachment: REAL_ATTACHMENT,
     });
     const demo = await seedTenant({
       slug: DEMO_SLUG,
@@ -385,10 +414,14 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
       sharedUserId,
       attachment: DEMO_ATTACHMENT,
     });
-    // 兼屬兩邊:兩個租戶的分店都有他
+    // 兼屬兩邊:兩個租戶的分店都有他,另外是示範分店的主管
     await api.connection.collection("core_relationships").insertMany(
-      [demo.branchId, real.branchId].map((orgId) => ({
-        type: "org_user",
+      [
+        { type: "org_user", orgId: demo.branchId },
+        { type: "org_user", orgId: real.branchId },
+        { type: "org_manager", orgId: demo.branchId },
+      ].map(({ type, orgId }) => ({
+        type,
         firstId: orgId,
         secondId: sharedUserId,
         thirdId: null,
@@ -500,6 +533,9 @@ describe("清空示範機構 purgeDemoTenant(規格 2.2:demo --mode=purge / rebu
         secondId: real.roleId,
       }),
     ).toBe(1);
+    expect(
+      await countLinks({ type: "org_manager", secondId: sharedUserId }),
+    ).toBe(0);
     // 核心關聯不留指向已刪文件的孤兒
     expect(
       await countLinks({
