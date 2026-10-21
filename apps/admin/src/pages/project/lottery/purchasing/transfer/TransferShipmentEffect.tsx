@@ -28,8 +28,8 @@ type Instance = NonNullable<
 >;
 
 /**
- * 這個事件是不是「第一關(出貨確認)通過」:審核決定 = 在第一關核准(關卡是否真的結束看接著讀到的在途列:
- * 第一關通過的事後動作才把列改成在途);送出 = 第一關被跳過(出貨分店的人自己送出)。
+ * 這個事件是不是「第一關(出貨確認)通過」:審核決定 = 在第一關核准,而且第一關已結束(多人都要核准時,
+ * 還沒到齊的那幾次不算);送出 = 第一關被跳過(出貨分店的人自己送出)。
  */
 const isFirstStepPassed = (
   event: WorkflowEffectEvent,
@@ -44,7 +44,8 @@ const isFirstStepPassed = (
   }
   return (
     event.decision === WorkflowDecision.Approve &&
-    event.stepKey === first.stepKey
+    event.stepKey === first.stepKey &&
+    first.status === WorkflowStepStatus.Completed
   );
 };
 

@@ -73,8 +73,46 @@ const shipStage = () => ({
 });
 
 /** 核准之後 api 把明細改成在途(第一關通過的事後動作);假 api 依「決定過了沒」回出貨前 / 後。 */
-const shipAfterDecide = (decided: () => boolean) => {
+const shipAfterDecide = (
+  decided: () => boolean,
+  /** 決定之後第一關有沒有結束(false = 多人核准還沒到齊) */
+  stepPassed = true,
+) => {
+  const [instance] = shipStage().workflow.instances;
   server.use(
+    // 決定之後的實例:第一關結束 → 已完成、換點收關;沒到齊 → 還在進行中(都不再有我的任務)
+    api.query("WorkflowInstance", () => {
+      if (!decided()) {
+        // 還沒決定:交給審核流程的假 api(它算得出我的任務)
+        return;
+      }
+      const [ship, receive] = instance.steps;
+      return HttpResponse.json({
+        data: {
+          workflowInstance: {
+            instance: {
+              ...instance,
+              myTasks: [],
+              activeStepKeys: [stepPassed ? "receive" : "ship"],
+              steps: [
+                {
+                  ...ship,
+                  status: stepPassed
+                    ? WorkflowStepStatus.Completed
+                    : WorkflowStepStatus.Active,
+                },
+                {
+                  ...receive,
+                  status: stepPassed
+                    ? WorkflowStepStatus.Active
+                    : WorkflowStepStatus.Pending,
+                },
+              ],
+            },
+          },
+        },
+      });
+    }),
     api.query("LotteryTransferReceiving", () => {
       const receiving = transferReceiving("doc-t8");
       return HttpResponse.json({
@@ -133,6 +171,28 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
     expect(text).toContain("出貨人簽名");
     expect(text).toContain("送貨人簽名");
     expect(text).toContain("收貨人簽名");
+  });
+
+  it("多人核准還沒到齊(第一關還沒結束)→ 不印,就算讀到在途的列", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake, workflowFake } = renderTransferPage({
+      path: VIEW,
+      printing: {},
+      ...shipStage(),
+    });
+    shipAfterDecide(() => (workflowFake?.inputs.decide.length ?? 0) > 0, false);
+
+    await approve(user);
+
+    await waitFor(() => {
+      expect(workflowFake?.inputs.decide).toHaveLength(1);
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    expect(printingFake?.created).toEqual([]);
+    expect(receiptPngOf).not.toHaveBeenCalled();
   });
 
   it("核准失敗(交易沒成功)→ 不送列印", async () => {
