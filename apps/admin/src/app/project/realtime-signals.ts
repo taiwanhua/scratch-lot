@@ -6,6 +6,10 @@ import {
   STORE_BOOK_CARD_QUERY_KEY,
   STORE_RECENT_SALES_QUERY_KEY,
 } from "@/pages/project/lottery/store/BoardTab/sales/sales-queries";
+import {
+  STORE_RECENT_REDEMPTIONS_QUERY_KEY,
+  STORE_REDEMPTIONS_QUERY_KEY,
+} from "@/pages/project/lottery/store/redemption/redemption-shared";
 
 /**
  * 專案的信號類型登記(組裝在 `app/module-pages.tsx`;類型不可與底座重複)。
@@ -17,13 +21,15 @@ import {
  * ```
  */
 export const projectRealtimeSignals: readonly RealtimeSignalRegistration[] = [
-  // 店面管理的看板(`board:<分店>` 頻道,規格 6.1):重抓看板、展開的卡片與 [最近售出]
+  // 店面管理的看板(`board:<分店>` 頻道,規格 6.1):重抓看板、展開的卡片、[最近售出]、[最近兌獎] 與兌獎紀錄分頁
   {
     type: STORE_BOARD_SIGNAL,
     queryKeys: [
       STORE_BOARD_QUERY_KEY,
       STORE_BOOK_CARD_QUERY_KEY,
       STORE_RECENT_SALES_QUERY_KEY,
+      STORE_RECENT_REDEMPTIONS_QUERY_KEY,
+      STORE_REDEMPTIONS_QUERY_KEY,
     ],
   },
 ];

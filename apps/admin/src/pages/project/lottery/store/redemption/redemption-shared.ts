@@ -16,11 +16,19 @@ import { moneyText } from "../store-text";
 
 export type RedemptionRow = LotteryRedemptionFieldsFragment;
 
+/** [最近兌獎] 的 query key 前綴(看板的 `board` 信號也重抓它,`app/project/realtime-signals.ts`)。 */
+export const STORE_RECENT_REDEMPTIONS_QUERY_KEY: QueryKey = [
+  "LotteryRecentRedemptions",
+];
+
+/** 兌獎紀錄分頁的 query key 前綴(同上)。 */
+export const STORE_REDEMPTIONS_QUERY_KEY: QueryKey = ["LotteryRedemptions"];
+
 /** 兌獎寫入後要重抓的資料:看板(應有現金)、[最近兌獎]、兌獎紀錄分頁與詳情、進貨單的兌獎區。 */
 const REDEMPTION_QUERY_KEYS: readonly QueryKey[] = [
   STORE_BOARD_QUERY_KEY,
-  ["LotteryRecentRedemptions"],
-  ["LotteryRedemptions"],
+  STORE_RECENT_REDEMPTIONS_QUERY_KEY,
+  STORE_REDEMPTIONS_QUERY_KEY,
   ["LotteryRedemption"],
   ["LotteryPurchaseRedemptions"],
 ];
