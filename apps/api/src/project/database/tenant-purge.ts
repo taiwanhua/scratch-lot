@@ -15,6 +15,7 @@ import { LOTTERY_TICKET_EVENTS_COLLECTION } from "./lottery-inventory/lottery-ti
 import { LOTTERY_TICKETS_COLLECTION } from "./lottery-inventory/lottery-ticket.schema";
 import { LOTTERY_PURCHASE_RECEIPTS_COLLECTION } from "./lottery-purchases/lottery-purchase-receipt.schema";
 import { LOTTERY_REQUISITION_LINES_COLLECTION } from "./lottery-requisitions/lottery-requisition-line.schema";
+import { SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION } from "./schedule/schedule-attendance-punch.schema";
 import { SCHEDULE_AUTO_RUNS_COLLECTION } from "./schedule/schedule-auto-run.schema";
 import { SCHEDULE_CALENDAR_DAYS_COLLECTION } from "./schedule/schedule-calendar-day.schema";
 import { SCHEDULE_CHANGES_COLLECTION } from "./schedule/schedule-change.schema";
@@ -76,4 +77,5 @@ export const PROJECT_TENANT_PURGE_REGISTRATIONS: readonly TenantPurgeRegistratio
     SCHEDULE_TASK_ASSIGNMENTS_COLLECTION,
     SCHEDULE_CHANGES_COLLECTION,
     SCHEDULE_AUTO_RUNS_COLLECTION,
+    SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION,
   ].map((collection) => byTenantId(collection));

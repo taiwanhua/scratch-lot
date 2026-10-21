@@ -2517,6 +2517,7 @@ type Mutation {
   publishFormVersion(input: PublishFormVersionInput!): FormVersionPayload!
   publishSchedule(input: PublishScheduleInput!): PublishSchedulePayload!
   publishWorkflowVersion(input: PublishWorkflowVersionInput!): WorkflowVersionPayload!
+  punchMySchedule(input: PunchMyScheduleInput!): MySchedulePunch!
   purgeDemoTenant(input: PurgeDemoTenantInput!): PurgeDemoTenantPayload!
   reassignTask(input: ReassignTaskInput!): WorkflowTaskPayload!
   receiveLotteryPurchaseBook(input: ReceiveLotteryPurchaseBookInput!): ReceiveLotteryPurchaseBookPayload!
@@ -2680,6 +2681,20 @@ type MyPreferencesPayload {
   settings: JSONObject!
 }
 
+type MyScheduleChange {
+  action: String!
+  afterEndAt: DateTime
+  afterStartAt: DateTime
+  beforeEndAt: DateTime
+  beforeStartAt: DateTime
+  createdAt: DateTime!
+  date: String!
+  id: ID!
+  orgName: String!
+  reason: String!
+  reasonNote: String
+}
+
 input MyScheduleDayOffsInput {
   month: String
 }
@@ -2695,6 +2710,67 @@ type MyScheduleDayOffsPayload {
   primaryOrg: ScheduleDayOffOrg
   violations: [ScheduleDayOffViolation!]!
   window: ScheduleDayOffWindow
+}
+
+type MyScheduleEntry {
+  breakMinutes: Int!
+  clockIn: DateTime
+  clockOut: DateTime
+  date: String!
+  endAt: DateTime!
+  id: ID!
+  isLead: Boolean!
+  missing: [String!]!
+  orgId: ID!
+  orgName: String!
+  positionKey: String
+  shortName: String
+  startAt: DateTime!
+  tasks: [MyScheduleTask!]!
+}
+
+input MyScheduleInput {
+  month: String
+}
+
+type MyScheduleOrg {
+  id: ID!
+  name: String!
+}
+
+type MySchedulePayload {
+  calendarDays: [ScheduleRosterCalendarDay!]!
+  canPunch: Boolean!
+  changes: [MyScheduleChange!]!
+  currentOrg: MyScheduleOrg!
+  dayOffDates: [String!]!
+  entries: [MyScheduleEntry!]!
+  hasEntryToday: Boolean!
+  incomplete: [MyScheduleEntry!]!
+  month: String!
+  openUnmatchedClockIn: MySchedulePunch
+  punchCards: [MySchedulePunchCard!]!
+  today: String!
+}
+
+type MySchedulePunch {
+  at: DateTime!
+  duplicate: Boolean!
+  entryId: ID
+  id: ID!
+  orgId: ID!
+  type: String!
+}
+
+type MySchedulePunchCard {
+  day: String!
+  entry: MyScheduleEntry!
+}
+
+type MyScheduleTask {
+  positionKey: String!
+  role: String!
+  taskKey: String!
 }
 
 input MyTasksInput {
@@ -3126,6 +3202,11 @@ input PublishWorkflowVersionInput {
   workflowKey: ID!
 }
 
+input PunchMyScheduleInput {
+  entryId: ID
+  type: String!
+}
+
 input PurgeDemoTenantInput {
   slug: String!
 }
@@ -3225,6 +3306,7 @@ type Query {
   myNotificationUnreadCount: MyNotificationUnreadCountPayload!
   myNotifications(input: MyNotificationsInput!): MyNotificationsPayload!
   myPreferences: MyPreferencesPayload!
+  mySchedule(input: MyScheduleInput): MySchedulePayload!
   myScheduleDayOffs(input: MyScheduleDayOffsInput): MyScheduleDayOffsPayload!
   myTasks(input: MyTasksInput!): WorkflowTasksPayload!
   notificationSettings(input: NotificationSettingsInput!): NotificationSettingsPayload!

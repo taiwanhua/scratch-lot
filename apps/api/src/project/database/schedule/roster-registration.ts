@@ -1,7 +1,7 @@
 import type { DatabaseRegistration } from "../../../database/registration";
 import {
-  ScheduleAutoRunsRepository,
   ScheduleAttendancePunchesRepository,
+  ScheduleAutoRunsRepository,
   ScheduleChangesRepository,
   ScheduleDemandsRepository,
   ScheduleEntriesRepository,
@@ -10,14 +10,15 @@ import {
   ScheduleTaskAssignmentsRepository,
 } from "./roster.repositories";
 import {
-  SCHEDULE_AUTO_RUNS_COLLECTION,
-  ScheduleAutoRun,
-  ScheduleAutoRunSchema,
-} from "./schedule-auto-run.schema";
   SCHEDULE_ATTENDANCE_PUNCHES_COLLECTION,
   ScheduleAttendancePunch,
   ScheduleAttendancePunchSchema,
 } from "./schedule-attendance-punch.schema";
+import {
+  SCHEDULE_AUTO_RUNS_COLLECTION,
+  ScheduleAutoRun,
+  ScheduleAutoRunSchema,
+} from "./schedule-auto-run.schema";
 import {
   SCHEDULE_CHANGES_COLLECTION,
   ScheduleChange,
