@@ -29,6 +29,7 @@ import { LOTTERY_CASH_POINTS_COLLECTION } from "../../database/lottery-cash-poin
 import { LOTTERY_GAMES_COLLECTION } from "../../database/lottery-games/lottery-game.schema";
 import { LOTTERY_BOOKS_COLLECTION } from "../../database/lottery-inventory/lottery-book.schema";
 import { LOTTERY_TICKETS_COLLECTION } from "../../database/lottery-inventory/lottery-ticket.schema";
+import { LotteryShiftPersonLock } from "../../database/lottery-store/lottery-shift-person-lock.schema";
 import {
   LOTTERY_SHIFTS_COLLECTION,
   LotteryShift,
@@ -402,6 +403,11 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
     connection = api.connection;
     await api.app
       .get<Model<LotteryShift>>(getModelToken(LotteryShift.name))
+      .init();
+    await api.app
+      .get<Model<LotteryShiftPersonLock>>(
+        getModelToken(LotteryShiftPersonLock.name),
+      )
       .init();
     await api.app
       .get<Model<ScheduleEntryLock>>(getModelToken(ScheduleEntryLock.name))
@@ -1080,5 +1086,33 @@ describe("店面(一):看板、收銀班次、投庫 / 出庫(GraphQL 端點 + �
       canReassign: false,
       entryOptions: [],
     });
+  });
+
+  it("同一人同時在兩家店開班(兩個收銀點同時送出)→ 只有一個成功,另一個 SHIFT_IN_OTHER_STORE", async () => {
+    now("2026-11-05", "19:00");
+    const zhao = await storeUser(
+      [xinyi, banqiao],
+      [S.view, S.openShift],
+      "趙小龍",
+    );
+    const results = await Promise.all(
+      [restockDesk, counterB].map((cashPointId) =>
+        gql(zhao, OPEN, {
+          input: { cashPointId: String(cashPointId), temporaryCover: true },
+        }),
+      ),
+    );
+    expect(
+      results.filter((result) => result.errors === undefined),
+    ).toHaveLength(1);
+    expect(
+      results.find((result) => result.errors !== undefined)?.errors?.[0]
+        ?.extensions,
+    ).toMatchObject({ reason: "SHIFT_IN_OTHER_STORE" });
+    expect(
+      await connection
+        .collection(LOTTERY_SHIFTS_COLLECTION)
+        .countDocuments({ openedBy: zhao.userId, closedAt: null }),
+    ).toBe(1);
   });
 });

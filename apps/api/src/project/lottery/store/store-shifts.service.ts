@@ -59,6 +59,7 @@ import {
   notFoundError,
   validationError,
 } from "./store-error";
+import { StorePersonLocks } from "./store-person-locks";
 
 type CashPointRecord = Persisted<LotteryCashPointDocument>;
 
@@ -147,6 +148,7 @@ export class StoreShiftsService {
     private readonly views: StoreShiftViews,
     private readonly access: StoreAccess,
     private readonly clock: StoreClock,
+    private readonly personLocks: StorePersonLocks,
   ) {}
 
   /** 開班視窗:期初零用金的來源、可以選的排班(系統找到的預選)、打卡狀態。 */
@@ -206,7 +208,9 @@ export class StoreShiftsService {
     const point = await this.mustCashPoint(operator, input.cashPointId);
     const tenantId = point.tenantId;
     await this.assertNoOpenShift(operator, point._id);
-    await this.assertNotOpenElsewhere(operator, tenantId, actorId, point.orgId);
+    if (tenantId !== null) {
+      await this.personLocks.ensure(operator, tenantId, actorId);
+    }
 
     const grant = await this.access.grantOf(operator);
     const previous = await this.previousShiftOf(operator, point);
@@ -243,6 +247,16 @@ export class StoreShiftsService {
     let created: ShiftRecord;
     try {
       created = await this.transactions.withTransaction(async () => {
+        // 同一個人在兩家店同時開班:在「人」守門文件上衝突、重跑,重跑時讀得到對方剛開的班
+        if (tenantId !== null) {
+          await this.personLocks.touch(operator, tenantId, actorId);
+        }
+        await this.assertNotOpenElsewhere(
+          operator,
+          tenantId,
+          actorId,
+          point.orgId,
+        );
         const shift = await this.shifts.create(operator, {
           orgId: point.orgId,
           cashPointId: point._id,
@@ -661,7 +675,10 @@ export class StoreShiftsService {
     }
   }
 
-  /** 一個人只能同時開同一家店的班:別家店還有開著的班 → 擋下(以人為準,跨店讀)。 */
+  /**
+   * 一個人只能同時開同一家店的班:別家店還有開著的班 → 擋下(以人為準,跨店讀)。
+   * 在開班的交易內、碰過「人」守門文件之後呼叫(同時在兩家店開班由守門文件序列化)。
+   */
   private async assertNotOpenElsewhere(
     operator: OperatorContext,
     tenantId: Types.ObjectId | null,

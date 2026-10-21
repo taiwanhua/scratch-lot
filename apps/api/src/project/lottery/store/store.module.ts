@@ -10,6 +10,7 @@ import { StoreAccess } from "./store-access";
 import { StoreBoardService } from "./store-board.service";
 import { StoreCashService } from "./store-cash.service";
 import { StoreClock } from "./store-clock";
+import { StorePersonLocks } from "./store-person-locks";
 import { StoreRegistrations } from "./store-registrations";
 import { StoreShiftsService } from "./store-shifts.service";
 import { LotteryStoreResolver } from "./store.resolver";
@@ -32,6 +33,7 @@ import { LotteryStoreResolver } from "./store.resolver";
   providers: [
     StoreAccess,
     StoreClock,
+    StorePersonLocks,
     StoreShiftViews,
     StoreBoardService,
     StoreShiftsService,

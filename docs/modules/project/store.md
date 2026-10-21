@@ -32,7 +32,7 @@
 | `<每個節點>.*`         | 各節點        | wildcard;seed 自動產生                                                                                              |
 | `store.view`           | `store`       | 看板分頁 + `lotteryStoreBoard`、`lotteryShiftInfo`;換發 `board:<分店>` 憑證的資格(`project/realtime-boards.ts`)     |
 | `store.create`         | `store`       | 表單引擎的新增(開啟 B9b 後,有表單時改看 `store.create-<formKey>`)                                                   |
-| `store.edit`           | `store`       | 表單引擎的編輯;**也代表「店長」**:可以改別人的班的對應排班(見「班次」)                                              |
+| `store.edit`           | `store`       | 表單引擎的編輯;**也代表「店長」**(見下方)                                                                           |
 | `store.delete`         | `store`       | 表單引擎的刪除                                                                                                      |
 | `store.sell`           | `store`       | 銷售(銷售的功能)                                                                                                    |
 | `store.undo-sale`      | `store`       | 當下撤銷售出(銷售的功能)                                                                                            |
@@ -49,6 +49,7 @@
 | `store.skip-stocktake` | `store`       | 交班結帳、日結的「跳過盤點」(結帳的功能)                                                                            |
 | `store.confirm-lost`   | `store`       | 盤點待查清單的 [確認遺失](盤點的功能)                                                                               |
 
+- **店長 = 持有 `store.edit`**:規格「只有這一班的負責人或店長」沒有對應的權限,角色又是租戶資料、不能用名稱判斷,所以「店長類操作」(改別人的班的對應排班;之後的 [交班結帳] 也一樣)一律看 `store.edit`。租戶把店面管理的「編輯」開給別的角色,那個角色也會被當成店長。判斷集中在 `apps/api/src/project/lottery/store/store-access.ts` 的 `isStoreManager(grant)`,之後的票沿用同一支,不另寫。
 - **沒有權限時**(按鈕直接不顯示):沒有 `store.open-shift` 看不到 [開班];沒有 `store.deposit` 看不到 [投庫];沒有 `store.withdraw` 看不到 [出庫](開班視窗沒有「從小金庫領零用金」)。
 - 開通時建立的角色(規格 3.3,`apps/db-migrator/seeds/project/onboarding/role-grants/store.ts`):總部管理、店長 店面管理全部(各節點 `*`,含 `bank-deposit`);店員 `view`、`sell`、`undo-sale`、`split`、`move`、`redeem`、`open-shift`、`deposit`、`withdraw`、`stocktake`、`checkout`(不含 `bank-deposit`、`undo-redeem`、`skip-stocktake`、`confirm-lost`;撤銷售出與現金更正的 `create-<formKey>` 由那兩張表單的功能追加)。
 
@@ -69,7 +70,7 @@
 - 期初零用金:**第一班**(這個收銀點沒有上一班,或上一班已被日結涵蓋)有 `store.withdraw` 時多一欄「從小金庫領零用金」(選填);**其他班** = 上一班「留給下一班」(唯讀,顯示來源)。
 - 對應排班必選:預選 `findEntryForShift` 的結果;可改選這個人這天在這家店的其他排班,或「沒有排班(臨時代班)」。
 - 選的排班沒有填進收銀點崗位的人力需求 → 提醒「你今天排的是「補貨」,確定要在店內櫃台開班嗎?」,按鈕改 [仍要開班](只提醒,照樣開班並記錄)。
-- 選的排班還沒打上班卡、有 `schedule.my.punch` → 提示卡「你還沒打上班卡 [打卡]」。
+- 選的排班還沒打上班卡、有 `schedule.my.punch` → 提示卡「你還沒打上班卡 [打卡]」。**已知限制**:選「沒有排班(臨時代班)」時不顯示(規格 14.9 是「今天還沒打上班卡」);排班模組目前給刮刮樂的只有「打這一班的上班卡」,沒有「今天有沒有打過上班卡」與「打沒有排班的上班卡」,要先在 `entry-lookup.ts` 加這兩個入口。
 
 ### 班次資訊與改對應排班(ST-42a / b)
 
@@ -117,7 +118,7 @@
 | `drawerVersion`                                         | 動到這一班抽屜的動作在交易內先 +1,同一班同時的投庫互相衝突、重試時依序檢查                   |
 
 - 部分唯一索引 `(cashPointId)`(`closedAt`、`deletedAt` 為 null):同一個收銀點同時只能有一班;兩人同時開班由索引擋下後到的(`SHIFT_ALREADY_OPEN`)。
-- 一個人只能同時開同一家店的班:開班時以租戶邊界查他在別家店開著的班(`SHIFT_IN_OTHER_STORE`)。
+- 一個人只能同時開同一家店的班:開班的交易一開始對這個人的守門文件 `lottery_shift_person_locks`(一個租戶一人一筆,歸屬租戶頂層)`$inc`,再以租戶邊界查他在別家店開著的班(`SHIFT_IN_OTHER_STORE`);同一人在兩家店同時開班,兩個交易在守門文件上衝突、重跑的一方被擋下(`store-person-locks.ts`)。
 - 資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。
 - 第一班的判斷用兩個登記(`lottery/store/previous-shift.ts`):`registerHandoverAmount`(交班結帳登記「留給下一班」)、`registerDailyCloseCoverage`(日結登記「已被日結涵蓋」);沒有登記 = 留給下一班 0、沒被涵蓋。上一班的交班結帳被退回、修改留給下一班時,下一班的期初由結帳的功能更新。
 
