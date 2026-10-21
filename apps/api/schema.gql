@@ -2408,6 +2408,7 @@ input LotteryRedemptionsInput {
   offset: Int
   orgId: ID!
   redeemedBy: ID
+  serialNo: String
   status: String
   to: DateTime
 }

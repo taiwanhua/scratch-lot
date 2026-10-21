@@ -5,6 +5,7 @@ import {
   REDEMPTION_MAX_PRIZE,
   REDEMPTION_SERIAL_FORMAT,
   parseTicketInput,
+  redemptionSerialQueryOf,
 } from "@repo/domain/project/lottery";
 import type {
   LotteryPurchaseRedemptionRecordsQueryVariables,
@@ -231,8 +232,10 @@ export const redemptionWorld = (
     }),
     api.query("LotteryRedemptions", ({ variables }) => {
       const { input } = variables as LotteryRedemptionsQueryVariables;
+      const serialNo = redemptionSerialQueryOf(input.serialNo);
       const matched = state.filter(
         (row) =>
+          (serialNo === null || row.serialNo === serialNo) &&
           (input.status == null || row.status === input.status) &&
           (input.cashPointId == null ||
             row.cashPoint.id === input.cashPointId) &&

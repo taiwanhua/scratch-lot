@@ -25,6 +25,7 @@ import { SelectField } from "@repo/ui/select-field";
 import { Stack } from "@repo/ui/stack";
 import { Table, type TableColumn } from "@repo/ui/table";
 import { Tag } from "@repo/ui/tag";
+import { TextField } from "@repo/ui/text-field";
 import { Typography } from "@repo/ui/typography";
 
 import { FilterDrawer } from "@/components/base/FilterDrawer/FilterDrawer";
@@ -46,7 +47,8 @@ export const REDEMPTIONS_PAGE_SIZE = 20;
 type StatusFilter = typeof ALL | RedemptionStatus;
 
 /**
- * 網址 `?redemptions=`(REACT-14):期間(`YYYY-MM-DD`,空 = 預設這個月 1 日到今天)、收銀點、狀態、登記人、頁碼。
+ * 網址 `?redemptions=`(REACT-14):期間(`YYYY-MM-DD`,空 = 預設這個月 1 日到今天)、收銀點、狀態、登記人、
+ * 單號(原文;api 以 `redemptionSerialQueryOf` 正規化,`RD-0218` 或 `218` 都可)、頁碼。
  */
 const filtersSchema = z
   .object({
@@ -55,6 +57,7 @@ const filtersSchema = z
     cashPointId: z.string().default(ALL),
     status: z.enum([ALL, ...REDEMPTION_STATUSES]).default(ALL),
     redeemedBy: z.string().default(ALL),
+    serialNo: z.string().default(""),
     page: z.number().int().min(1).default(1),
   })
   .default({
@@ -63,6 +66,7 @@ const filtersSchema = z
     cashPointId: ALL,
     status: ALL,
     redeemedBy: ALL,
+    serialNo: "",
     page: 1,
   });
 
@@ -70,6 +74,8 @@ interface Filters {
   cashPointId: string;
   status: StatusFilter;
   redeemedBy: string;
+  /** 單號搜尋的原文(空 = 不篩) */
+  serialNo: string;
   /** `YYYY-MM-DD`(含) */
   from: string | null;
   to: string | null;
@@ -111,9 +117,9 @@ const rangeOf = (
 };
 
 /**
- * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間;欄位 單號、時間、收銀點、班次、
- * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片(Figma ST-40;
- * 標題列 `單號 · 刮刮樂 · 金額`)、篩選收進抽屜。沒有關鍵字搜尋,單號只顯示、不搜尋。
+ * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間、單號(使用者 10/22 定案;和其他條件
+ * 同時成立);欄位 單號、時間、收銀點、班次、刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。
+ * 平板 / 手機改卡片(Figma ST-40;標題列 `單號 · 刮刮樂 · 金額`)、篩選收進抽屜(期間與單號留在外面)。
  * 分店沿用看板的 `?org=`;篩選與頁碼在 `?redemptions=`(url-state-inventory)。登記人的選項取同一段期間出現過的人。
  */
 export const RedemptionsTab = () => {
@@ -131,6 +137,7 @@ export const RedemptionsTab = () => {
     cashPointId: stored.cashPointId,
     status: stored.status,
     redeemedBy: stored.redeemedBy,
+    serialNo: stored.serialNo,
     from: stored.from === "" ? period.from : stored.from,
     to: stored.to === "" ? period.to : stored.to,
   };
@@ -140,6 +147,7 @@ export const RedemptionsTab = () => {
       cashPointId: next.cashPointId,
       status: next.status,
       redeemedBy: next.redeemedBy,
+      serialNo: next.serialNo,
       from: next.from === period.from ? "" : (next.from ?? ""),
       to: next.to === period.to ? "" : (next.to ?? ""),
       page: 1,
@@ -165,6 +173,7 @@ export const RedemptionsTab = () => {
       input: {
         ...baseInput,
         redeemedBy: filters.redeemedBy === ALL ? null : filters.redeemedBy,
+        serialNo: filters.serialNo.trim() === "" ? null : filters.serialNo,
         offset: (stored.page - 1) * REDEMPTIONS_PAGE_SIZE,
         limit: REDEMPTIONS_PAGE_SIZE,
       },
@@ -247,6 +256,7 @@ export const RedemptionsTab = () => {
           cashPointId: ALL,
           status: ALL,
           redeemedBy: ALL,
+          serialNo: filters.serialNo,
           from: filters.from,
           to: filters.to,
         }}
@@ -318,6 +328,16 @@ export const RedemptionsTab = () => {
               value={filters.to}
               onChange={(next) => {
                 setFilters({ ...filters, to: next });
+              }}
+            />
+            <TextField
+              label={t("tab.serialNo")}
+              placeholder={t("tab.serialNoHint")}
+              value={filters.serialNo}
+              size="small"
+              sx={{ width: { xs: "100%", sm: 180 } }}
+              onChange={(event) => {
+                setFilters({ ...filters, serialNo: event.target.value });
               }}
             />
           </Stack>

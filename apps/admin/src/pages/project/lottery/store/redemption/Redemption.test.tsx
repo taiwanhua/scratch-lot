@@ -284,6 +284,18 @@ describe("店面管理:兌獎", () => {
     expect(screen.getByText("共 1 筆")).toBeInTheDocument();
   });
 
+  it("兌獎紀錄分頁的單號搜尋:輸入 218 → 只列 RD-0218,寫進網址 `?redemptions=`", async () => {
+    const { user } = renderStore({ path: "/store?tab=redemptions" });
+    const table = await screen.findByRole("table", { name: "兌獎紀錄" });
+    expect(await within(table).findByText("RD-0215")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "單號" }), "218");
+    await waitFor(() => {
+      expect(within(table).queryByText("RD-0215")).toBeNull();
+    });
+    expect(within(table).getByText("RD-0218")).toBeInTheDocument();
+    expect(screen.getByText("共 1 筆")).toBeInTheDocument();
+  });
+
   it("兌獎視窗開著時刷條碼(條碼槍 / 相機)→ 交給兌獎(填進編號並預覽),不會被看板的銷售吃掉", async () => {
     const { user, salesFake } = renderStore();
     const counter = await headerOf("店內櫃台");

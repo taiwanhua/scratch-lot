@@ -147,6 +147,8 @@ LotteryRedemptionSchema.index(
     },
   },
 );
+// 兌獎紀錄分頁的單號搜尋(完全比對)
+LotteryRedemptionSchema.index({ tenantId: 1, serialNo: 1 });
 LotteryRedemptionSchema.index({ shiftId: 1 });
 LotteryRedemptionSchema.index({ orgId: 1, redeemedAt: -1 });
 LotteryRedemptionSchema.index({ tenantId: 1, purchaseSubmissionId: 1 });

@@ -2991,6 +2991,8 @@
         "cashPoint": "Cash point",
         "status": "Status",
         "redeemedBy": "Registered by",
+        "serialNo": "No.",
+        "serialNoHint": "RD-0218 or 218",
         "from": "From",
         "to": "To",
         "all": "All",

@@ -11,6 +11,7 @@ import {
   redemptionDrawerNetOf,
   redemptionPostCloseNetOf,
   redemptionRevokeStateOf,
+  redemptionSerialQueryOf,
 } from "./redemption";
 
 const open = {
@@ -128,5 +129,27 @@ describe("計算欄存成十進位字串(表單引擎)", () => {
     expect(
       purchaseRedemptionRemainderOf({ redemption_remainder: "40000" }),
     ).toBe(40_000);
+  });
+});
+
+describe("redemptionSerialQueryOf(兌獎紀錄分頁的單號搜尋)", () => {
+  it.each([
+    ["RD-0218", "RD-0218"],
+    ["rd-0218", "RD-0218"],
+    ["RD0218", "RD-0218"],
+    ["0218", "RD-0218"],
+    ["218", "RD-0218"],
+    ["  218  ", "RD-0218"],
+    ["12345", "RD-12345"],
+  ])("%s → %s", (text, expected) => {
+    expect(redemptionSerialQueryOf(text)).toBe(expected);
+  });
+
+  it("空白 → null(不篩);看不懂的 → 空字串(找不到任何一筆)", () => {
+    expect(redemptionSerialQueryOf("")).toBeNull();
+    expect(redemptionSerialQueryOf(" 	 ")).toBeNull();
+    expect(redemptionSerialQueryOf(null)).toBeNull();
+    expect(redemptionSerialQueryOf("P-0034")).toBe("");
+    expect(redemptionSerialQueryOf("abc")).toBe("");
   });
 });

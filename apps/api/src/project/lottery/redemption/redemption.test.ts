@@ -754,6 +754,20 @@ describe("兌獎(GraphQL 端點 + 真 MongoDB)", () => {
     const second = await redeem(clerk, shiftId, back("034"), 200);
     const start = serialNumberOf(first);
     expect(serialNumberOf(second)).toBe(start + 1);
+    // 兌獎紀錄分頁的單號搜尋:`RD-0218` 或 `218` 都找得到同一筆;看不懂的找不到
+    const search = async (serialNo: string) => {
+      const data = await ok<{
+        lotteryRedemptions: { total: number; items: Row[] };
+      }>(clerk, LIST, { input: { orgId: String(xinyi), serialNo } });
+      return data.lotteryRedemptions;
+    };
+    const exact = await search(second.serialNo ?? "");
+    expect(exact.total).toBe(1);
+    expect(exact.items[0]?.id).toBe(second.id);
+    const digitsOnly = await search(String(start + 1));
+    expect(digitsOnly.items.map((row) => row.id)).toEqual([second.id]);
+    const unknown = await search("P-0034");
+    expect(unknown.total).toBe(0);
     await ok(clerk, REVOKE, { input: { id: first.id } });
     // 撤銷不收回:下一筆接著編,同一張再登記也是新號
     const third = await redeem(clerk, shiftId, back("033"), 200);

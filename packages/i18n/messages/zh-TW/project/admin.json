@@ -2991,6 +2991,8 @@
         "cashPoint": "收銀點",
         "status": "狀態",
         "redeemedBy": "登記人",
+        "serialNo": "單號",
+        "serialNoHint": "RD-0218 或 218",
         "from": "期間起",
         "to": "期間迄",
         "all": "全部",

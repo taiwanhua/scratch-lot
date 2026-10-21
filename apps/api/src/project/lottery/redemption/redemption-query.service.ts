@@ -5,6 +5,7 @@ import {
   REDEMPTION_STATUS,
   type RedemptionStatus,
   isRedemptionStatus,
+  redemptionSerialQueryOf,
 } from "@repo/domain/project/lottery";
 
 import type { OperatorContext } from "../../../database/operator-context";
@@ -34,7 +35,7 @@ export class RedemptionQueryService {
     private readonly views: RedemptionViews,
   ) {}
 
-  /** 兌獎紀錄分頁:篩選 期間、收銀點、狀態、登記人;登記時間新到舊。 */
+  /** 兌獎紀錄分頁:篩選 期間、收銀點、狀態、登記人、單號(與其他條件同時成立);登記時間新到舊。 */
   async list(
     operator: OperatorContext,
     input: LotteryRedemptionsInput,
@@ -50,8 +51,10 @@ export class RedemptionQueryService {
     };
     const cashPointId = parseId(input.cashPointId);
     const redeemedBy = parseId(input.redeemedBy);
+    const serialNo = redemptionSerialQueryOf(input.serialNo);
     const filter = {
       orgId,
+      ...(serialNo === null ? {} : { serialNo }),
       ...(Object.keys(redeemedAt).length === 0 ? {} : { redeemedAt }),
       ...(cashPointId === null ? {} : { cashPointId }),
       ...(redeemedBy === null ? {} : { redeemedBy }),

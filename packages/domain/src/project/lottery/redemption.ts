@@ -1,4 +1,4 @@
-import type { SerialFormat } from "../../form/serial";
+import { type SerialFormat, formatSerial } from "../../form/serial";
 
 /**
  * 兌獎(專案規格 6.5、6.12、8.2「兌獎」;正本 `docs/modules/project/store.md`「兌獎」):api 的登記 / 撤銷 /
@@ -33,6 +33,26 @@ export const REDEMPTION_SERIAL_FORMAT = {
   period: "none",
   digits: 4,
 } as const satisfies SerialFormat;
+
+/**
+ * 兌獎紀錄分頁的單號搜尋(使用者 10/22 定案):輸入 `RD-0218`、`rd0218`、`0218` 或 `218` 都正規化成
+ * `RD-0218`(完全比對,走 `(tenantId, serialNo)` 索引);空白 → `null`(不篩);看不懂的(例 `P-0034`、`abc`)
+ * → `""`,api 照樣當條件、找不到任何一筆。
+ */
+export function redemptionSerialQueryOf(
+  text: string | null | undefined,
+): string | null {
+  const trimmed = text?.trim() ?? "";
+  if (trimmed === "") {
+    return null;
+  }
+  const matched = /^(?:rd)?[-\s]?(\d{1,10})$/i.exec(trimmed);
+  const digits = matched?.[1];
+  if (digits === undefined) {
+    return "";
+  }
+  return formatSerial(REDEMPTION_SERIAL_FORMAT, "none", Number(digits));
+}
 
 /** 兌獎視窗的常見金額選項(Figma ST-11a;另可自由輸入)。 */
 export const REDEMPTION_PRIZE_PRESETS: readonly number[] = [
