@@ -56,7 +56,11 @@ export const RecentRedemptionsDrawer = ({
     {
       key: "ticket",
       header: t("columns.ticket"),
-      render: (row) => ticketShortOf(row),
+      render: (row) => (
+        <Typography variant="body2" noWrap>
+          {ticketShortOf(row)}
+        </Typography>
+      ),
     },
     {
       key: "prize",

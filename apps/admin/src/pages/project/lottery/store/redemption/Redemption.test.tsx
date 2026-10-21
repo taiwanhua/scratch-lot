@@ -133,11 +133,8 @@ describe("店面管理:兌獎", () => {
     const table = await within(drawer).findByRole("table");
     expect(within(table).getAllByRole("row")).toHaveLength(4);
     expect(within(table).getByText("已撤銷")).toBeInTheDocument();
-    const [first] = within(table).getAllByRole("button", { name: "撤銷" });
-    if (first === undefined) {
-      throw new Error("沒有撤銷按鈕");
-    }
-    await user.click(first);
+    const buttons = within(table).getAllByRole("button", { name: "撤銷" });
+    await user.click(buttons.at(0) ?? table);
     const confirm = await screen.findByRole("dialog", { name: "撤銷兌獎?" });
     await user.click(within(confirm).getByRole("button", { name: "撤銷" }));
     await waitFor(() => {

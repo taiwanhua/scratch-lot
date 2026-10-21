@@ -97,7 +97,7 @@ const rangeOf = (
 
 /**
  * 兌獎紀錄分頁(專案規格 6.5;Figma ST-40):篩選 收銀點、狀態、登記人、期間;欄位 時間、收銀點、班次、
- * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片、篩選收進抽屜。
+ * 刮刮樂、金額、狀態、登記人、進貨單;點一列開兌獎紀錄詳情(可從那裡撤銷)。平板 / 手機改卡片(Figma ST-40)、篩選收進抽屜。
  * 分店沿用看板的 `?org=`。登記人的選項取這段期間出現過的人(在畫面上篩)。
  */
 export const RedemptionsTab = () => {
@@ -106,7 +106,7 @@ export const RedemptionsTab = () => {
   const me = useMe();
   const temporal = useTemporalText();
   const timezone = useTenantTimezone() ?? DEFAULT_TENANT_TIMEZONE;
-  const isNarrow = useBreakpointDown("md");
+  const isNarrow = useBreakpointDown("lg");
   const [orgParam] = useUrlState("org", orgSchema);
   const orgId = orgParam === "" ? (me.data?.me.currentOrg?.id ?? "") : orgParam;
   const [filters, setFilters] = useState<Filters>(() => ({
@@ -252,7 +252,7 @@ export const RedemptionsTab = () => {
           </>
         )}
         search={
-          <Stack direction="row" spacing={1}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
             <DatePicker
               label={t("tab.from")}
               value={filters.from}
