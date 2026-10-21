@@ -14,6 +14,8 @@ jest.unstable_mockModule(
 );
 const { default: userEvent } = await import("@testing-library/user-event");
 const { renderPurchasePage } = await import("../purchase-test-support");
+const { purchaseReceiving } =
+  await import("@/test/msw/project/lottery/purchase-fixtures");
 
 const VIEW = "/purchasing/purchase/view-page/doc-p33";
 
@@ -43,7 +45,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
       printerId: "printer-1",
       documentType: "lottery-purchase-receiving",
       refType: "lottery-purchase-receiving",
-      refId: "doc-p33",
+      refId: "batch-1",
       documentName: "進貨點收單 P-0033",
       image: expect.any(String),
     };
@@ -52,7 +54,7 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(store).toContain("第 1 張 · 店鋪留存");
     expect(courier).toContain("第 2 張 · 送貨人留存");
     // 這次只刷了 056531:這次點收 1 本;單上的本都到了 → 尚未到的本:無
-    expect(store).toContain("這次點收(1 本)");
+    expect(store).toContain("第 1 次點收(1 本)");
     expect(store).toContain("本號:056531");
     expect(store).not.toContain("056527");
     expect(store).toContain("尚未到的本:無");
@@ -103,7 +105,76 @@ describe("進貨單檢視頁:進貨點收單", () => {
     expect(printingFake?.created).toEqual([]);
   });
 
-  it("[補印] → 單據上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」,列到目前為止已點收的本", async () => {
+  it("點收兩次 → 補印第一次:和原單一致,只印第一次的本(以第一次計補印次數);上方印「【補印】第 N 次 · 時間 · 原因 · 補印人」", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    // 056530、056531 都還沒點收
+    const base = purchaseReceiving();
+    const receiving = {
+      ...base,
+      receivedCount: 4,
+      groups: base.groups.map((group) => ({
+        ...group,
+        rows: group.rows.map((row) =>
+          row.rowId === "row-4" ? { ...row, received: false } : row,
+        ),
+      })),
+    };
+    const { printingFake } = renderPurchasePage({
+      path: VIEW,
+      printing: { printedCount: 1 },
+      purchase: { receiving },
+    });
+    const scan = await screen.findByRole("textbox", { name: "刷條碼點收" });
+    const receiveAndComplete = async (code: string, jobs: number) => {
+      await user.type(scan, `${code}{Enter}`);
+      await user.click(
+        await screen.findByRole("button", { name: "完成這次點收(1 本)" }),
+      );
+      await waitFor(() => {
+        expect(printingFake?.created).toHaveLength(jobs);
+      });
+    };
+    await receiveAndComplete("0056530101", 2);
+    await receiveAndComplete("0056531099", 4);
+    expect(printingFake?.created.map((input) => input.refId)).toEqual([
+      "batch-1",
+      "batch-1",
+      "batch-2",
+      "batch-2",
+    ]);
+
+    // 點收過兩次:選第 1 次再補印
+    await user.click(screen.getByRole("combobox", { name: "點收批次" }));
+    await user.click(await screen.findByRole("option", { name: /^第 1 次/ }));
+    await user.click(screen.getByRole("button", { name: "補印" }));
+    const dialog = await screen.findByRole("dialog", { name: "補印" });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /補印原因/ }),
+    );
+    await user.click(await screen.findByRole("option", { name: "破損" }));
+    await user.click(within(dialog).getByRole("button", { name: "送出" }));
+
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(5);
+    });
+    expect(printingFake?.created[4]).toMatchObject({
+      refType: "lottery-purchase-receiving",
+      refId: "batch-1",
+      isReprint: true,
+      reprintReason: "damaged",
+    });
+    const text = printedTexts().at(-1) ?? "";
+    expect(text).toMatch(
+      /【補印】第 2 次 · \d{4}-\d{2}-\d{2} \d{2}:\d{2} · 原因:破損 · 補印人:/,
+    );
+    expect(text).toContain("第 1 次點收(1 本)");
+    expect(text).toContain("本號:056530");
+    expect(text).not.toContain("056531");
+    expect(text).not.toContain("店鋪留存");
+  });
+
+  it("沒有點收批次的舊資料:[補印] 印到目前為止已點收的全部本,以進貨單計次數", async () => {
     receiptPngOf.mockClear();
     const user = userEvent.setup();
     const { printingFake } = renderPurchasePage({

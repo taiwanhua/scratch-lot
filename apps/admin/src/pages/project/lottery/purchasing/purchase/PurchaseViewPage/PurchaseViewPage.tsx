@@ -4,7 +4,10 @@ import { useNavigate } from "react-router";
 import { useTranslations } from "use-intl";
 
 import {
+  type CompleteLotteryPurchaseReceivingMutation,
+  type CompleteLotteryPurchaseReceivingMutationVariables,
   FormSubmissionStatus,
+  useCompleteLotteryPurchaseReceivingMutation,
   useLotteryPurchaseReceivingQuery,
   useLotterySettlementQuery,
   useNotifyLotteryPurchaseWrongStoreMutation,
@@ -21,7 +24,6 @@ import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePag
 import { FormSubmissionDetail } from "@/components/base/form-engine/FormSubmissionDetail/FormSubmissionDetail";
 import { ApprovalSection } from "@/components/base/workflow/ApprovalSection/ApprovalSection";
 import { SubmissionStatusTag } from "@/components/base/workflow/SubmissionStatusTag";
-import { ReceiptPrintButton } from "@/components/project/lottery/ReceiptPrint/ReceiptPrintButton";
 import { useReceiptPrinter } from "@/components/project/lottery/ReceiptPrint/useReceiptPrinter";
 import {
   type ReceiveBookGroup,
@@ -29,7 +31,10 @@ import {
 } from "@/components/project/lottery/ReceiveBooksPanel/ReceiveBooksPanel";
 import { SettlementPanel } from "@/components/project/lottery/SettlementPanel/SettlementPanel";
 import { useFormSubmission } from "@/hooks/base/useFormSubmission";
-import { useSnackbar } from "@/hooks/base/useMutationFeedback";
+import {
+  useMutationFeedback,
+  useSnackbar,
+} from "@/hooks/base/useMutationFeedback";
 import { useRouteTabHref } from "@/hooks/base/useRouteTabHref";
 import { useRouteTabItemLabel } from "@/hooks/base/useRouteTabItemLabel";
 import { useSession } from "@/hooks/base/useSession";
@@ -37,6 +42,7 @@ import type { ModulePageProps } from "@/lib/base/module-tree";
 import { purchaseReceivingInputOf } from "@/lib/project/lottery/receipts/purchase-receiving-receipt";
 
 import { PURCHASE_MODULE_KEY } from "../purchase-keys";
+import { PurchaseReceiptPrint } from "./PurchaseReceiptPrint";
 import { WrongStoreDialog } from "./WrongStoreDialog";
 import { type WrongStoreInfo, receiveErrorOf } from "./receive-error";
 
@@ -79,15 +85,41 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     info: WrongStoreInfo;
   } | null>(null);
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
-    });
-  };
   const receive = useReceiveLotteryPurchaseBookMutation(session.client);
   const printer = useReceiptPrinter();
   const documentUrl = `${globalThis.location.origin}${access.viewRoute ?? ""}/${id}`;
   const notify = useNotifyLotteryPurchaseWrongStoreMutation(session.client);
+  // [完成這次點收]:這一次的列標上點收批次(寫入成功後才印這一次的進貨點收單兩張;列印失敗只記 log)
+  const complete = useCompleteLotteryPurchaseReceivingMutation(
+    session.client,
+    useMutationFeedback<
+      CompleteLotteryPurchaseReceivingMutation,
+      CompleteLotteryPurchaseReceivingMutationVariables
+    >({
+      success: (_payload, variables) =>
+        tReceive("completed", { count: variables.input.rowIds.length }),
+      error: (error) => tReceive(`errors.${receiveErrorOf(error).reason}`),
+      onSuccess: ({ completeLotteryPurchaseReceiving: result }) => {
+        queryClient.setQueryData(
+          useLotteryPurchaseReceivingQuery.getKey({ submissionId: id }),
+          { lotteryPurchaseReceiving: result.receiving },
+        );
+        setThisTime(new Set());
+        const batch = result.batch ?? null;
+        if (submission !== null && batch !== null) {
+          void printer.printReceiptAfterCommit(
+            "purchase-receiving",
+            purchaseReceivingInputOf(
+              submission,
+              result.receiving,
+              batch,
+              documentUrl,
+            ),
+          );
+        }
+      },
+    }),
+  );
 
   const onScan = async (code: string): Promise<void> => {
     setScanError(null);
@@ -113,20 +145,8 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
     }
   };
 
-  /**
-   * [完成這次點收]:結束這一次(不寫資料),自動印進貨點收單兩張 ——
-   * 這一次點收的本已在每次刷的時候各自寫入(交易已完成),列印失敗只記 log、點收照常完成。
-   */
   const completeReceiving = () => {
-    showSnackbar("success", tReceive("completed", { count: thisTime.size }));
-    if (submission !== null && data !== null) {
-      void printer.printReceiptAfterCommit(
-        "purchase-receiving",
-        purchaseReceivingInputOf(submission, data, [...thisTime], documentUrl),
-      );
-    }
-    setThisTime(new Set());
-    refresh();
+    complete.mutate({ input: { submissionId: id, rowIds: [...thisTime] } });
   };
 
   const groups: ReceiveBookGroup[] = (data?.groups ?? []).map((group) => ({
@@ -181,14 +201,10 @@ export const PurchaseViewPage = ({ routeParam }: ModulePageProps) => {
           </Button>
           <Box sx={{ flex: 1 }} />
           {submission !== null && data !== null && isSubmitted && (
-            <ReceiptPrintButton
-              kind="purchase-receiving"
-              payload={purchaseReceivingInputOf(
-                submission,
-                data,
-                null,
-                documentUrl,
-              )}
+            <PurchaseReceiptPrint
+              submission={submission}
+              receiving={data}
+              url={documentUrl}
             />
           )}
           {access.editRoute !== null &&

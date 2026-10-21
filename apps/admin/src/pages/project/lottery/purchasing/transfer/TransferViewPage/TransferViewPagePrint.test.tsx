@@ -20,8 +20,14 @@ const { transferReceiving, transferSubmissions } =
   await import("@/test/msw/project/lottery/transfer-fixtures");
 const { transferSettlement } =
   await import("@/test/msw/project/lottery/transfer-settlement-fixtures");
-const { MANAGER, instanceFragment, instanceStep, planItem, taskFragment } =
-  await import("@/test/msw/workflow-fixtures");
+const {
+  MANAGER,
+  applyCenterModules,
+  instanceFragment,
+  instanceStep,
+  planItem,
+  taskFragment,
+} = await import("@/test/msw/workflow-fixtures");
 
 const VIEW = "/purchasing/transfer/view-page/doc-t8";
 
@@ -39,6 +45,8 @@ const shipStage = () => ({
       instanceFragment({
         id: "inst-t8",
         submissionId: "doc-t8",
+        moduleKey: "purchasing.transfer",
+        formKey: "transfer",
         activeStepKeys: ["ship"],
         steps: [
           instanceStep("ship", "出貨確認", {
@@ -54,6 +62,8 @@ const shipStage = () => ({
         id: "task-ship",
         instanceId: "inst-t8",
         submissionId: "doc-t8",
+        moduleKey: "purchasing.transfer",
+        formKey: "transfer",
         stepKey: "ship",
         stepName: "出貨確認",
         taskKey: "ship-1",
@@ -147,6 +157,32 @@ describe("調貨單檢視頁:調貨出貨單 / 調貨付款收據", () => {
     expect(workflowFake?.inputs.decide).toHaveLength(1);
     expect(printingFake?.created).toEqual([]);
     expect(receiptPngOf).not.toHaveBeenCalled();
+  });
+
+  it("從申請中心詳情頁核准第一關(不經調貨單頁)→ 一樣送出一個列印工作(依模組登記的審核後動作)", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake, workflowFake } = renderTransferPage({
+      path: "/apply-center/view-page/inst-t8",
+      printing: {},
+      ...shipStage(),
+      extraModules: applyCenterModules(),
+    });
+    shipAfterDecide(() => (workflowFake?.inputs.decide.length ?? 0) > 0);
+
+    await approve(user);
+
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(printingFake?.created[0]).toMatchObject({
+      refType: "lottery-transfer-shipment",
+      refId: "doc-t8",
+      documentName: "調貨出貨單 T-0008",
+    });
+    expect(receiptPngOf.mock.calls.at(-1)?.[0].textContent).toContain(
+      "號碼:#090~099(10 張)",
+    );
   });
 
   it("收貨店付過現金 → 標頭有「調貨付款收據」[列印];印的是付款店、收款人、現金與送貨人簽收", async () => {

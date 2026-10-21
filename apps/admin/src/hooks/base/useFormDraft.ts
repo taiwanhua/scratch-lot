@@ -17,6 +17,7 @@ import {
 import { useCapacityErrorSnackbar } from "./useCapacityErrorSnackbar";
 import { useFormSubmissionCache } from "./useFormSubmissionCache";
 import { useSession } from "./useSession";
+import { useWorkflowExtensions } from "./useWorkflowExtensions";
 
 export interface FormDraftState {
   /** 已建立的草稿(第一次存草稿或送出之後才有) */
@@ -57,6 +58,16 @@ export const useFormDraft = (formKey: string): FormDraftState => {
   const [error, setError] = useState<FormError | null>(null);
   const [isPending, setIsPending] = useState(false);
   const announceCapacity = useCapacityErrorSnackbar();
+  const { notify } = useWorkflowExtensions();
+  /** 送出成功:通知該模組登記的送出後動作(`useWorkflowExtensions`) */
+  const notifySubmitted = (submitted: FormSubmissionFieldsFragment) => {
+    notify({
+      kind: "submitted",
+      moduleKey: submitted.moduleKey,
+      submissionId: submitted.id,
+      instanceId: submitted.currentInstanceId ?? null,
+    });
+  };
 
   const create = useCreateFormDraftMutation(session.client);
   const save = useSaveFormDraftMutation(session.client);
@@ -117,6 +128,9 @@ export const useFormDraft = (formKey: string): FormDraftState => {
         : await persist(values, touched);
       setDraft(current);
       updateCache(current);
+      if (andSubmit) {
+        notifySubmitted(current);
+      }
       return current;
     } catch (error_) {
       const failure = formErrorOf(error_);

@@ -318,6 +318,7 @@ export const formRuntimeWorld = (
       payload,
       inputs,
       submitAs: options.submitAs,
+      moduleForms,
     }),
     api.mutation("SaveFormDraft", ({ variables }) => {
       const { input } = variables as SaveFormDraftMutationVariables;

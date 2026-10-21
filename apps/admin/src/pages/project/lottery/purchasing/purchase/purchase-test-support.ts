@@ -12,7 +12,10 @@ import {
   purchaseFormWorld,
   purchaseModules,
 } from "@/test/msw/project/lottery/purchase-fixtures";
-import { purchaseWorld } from "@/test/msw/project/lottery/purchase-handlers";
+import {
+  type PurchaseWorldOptions,
+  purchaseWorld,
+} from "@/test/msw/project/lottery/purchase-handlers";
 import { purchasingModules } from "@/test/msw/project/lottery/purchasing-fixtures";
 import { server } from "@/test/msw/server";
 import { renderApp } from "@/test/render";
@@ -28,6 +31,8 @@ export interface RenderPurchaseOptions {
    * 不給 = 沒有收據機的租戶,列印按鈕不出現、不自動列印
    */
   printing?: PrintButtonWorldOptions & { permissions?: string[] };
+  /** 進貨單假 api 的選項(例:點收區塊的起始資料) */
+  purchase?: PurchaseWorldOptions;
 }
 
 /**
@@ -39,8 +44,9 @@ export const renderPurchasePage = ({
   omit = [],
   currentOrg = "storeA",
   printing,
+  purchase,
 }: RenderPurchaseOptions) => {
-  const purchaseFake = purchaseWorld();
+  const purchaseFake = purchaseWorld(purchase);
   const formsFake = formRuntimeWorld(purchaseFormWorld());
   const accountsFake = accountsWorld();
   const org = masterDataOrgs[currentOrg];

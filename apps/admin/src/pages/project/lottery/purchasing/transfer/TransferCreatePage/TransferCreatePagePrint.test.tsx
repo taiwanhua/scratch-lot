@@ -18,6 +18,47 @@ const { renderTransferPage } = await import("../transfer-test-support");
 const { api, server } = await import("@/test/msw/server");
 const { transferReceiving } =
   await import("@/test/msw/project/lottery/transfer-fixtures");
+const { FormSubmissionStatus, WorkflowStepStatus } =
+  await import("@repo/graphql");
+const { instanceFragment, instanceStep } =
+  await import("@/test/msw/workflow-fixtures");
+
+/**
+ * 送出後的審核實例:第一關「出貨確認」被跳過(出貨分店的人自己送)或還在進行中。
+ * 送出(新增頁 / 引擎編輯頁)都回這個實例。
+ */
+const submitInto = (firstStep: "skipped" | "active") => ({
+  forms: {
+    submitAs: {
+      status: FormSubmissionStatus.Reviewing,
+      instanceId: "inst-submitted",
+    },
+  },
+  workflow: {
+    instances: [
+      instanceFragment({
+        id: "inst-submitted",
+        moduleKey: "purchasing.transfer",
+        formKey: "transfer",
+        activeStepKeys: [firstStep === "skipped" ? "receive" : "ship"],
+        steps: [
+          instanceStep("ship", "出貨確認", {
+            status:
+              firstStep === "skipped"
+                ? WorkflowStepStatus.Skipped
+                : WorkflowStepStatus.Active,
+          }),
+          instanceStep("receive", "點收", {
+            status:
+              firstStep === "skipped"
+                ? WorkflowStepStatus.Active
+                : WorkflowStepStatus.Pending,
+          }),
+        ],
+      }),
+    ],
+  },
+});
 
 const CREATE = "/purchasing/transfer/create-page/transfer";
 
@@ -47,14 +88,18 @@ const submitOneBook = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByRole("button", { name: "送出" }));
 };
 
-/** 調貨出貨單「第一關通過後(含跳過)」的跳過那一半(規格第 12 章):送出時第一關被跳過就印。 */
-describe("調貨單新增頁:送出時第一關被跳過 → 調貨出貨單", () => {
-  it("第一關被跳過(送出當下就出貨)→ 送出一個列印工作", async () => {
+/**
+ * 調貨出貨單「第一關通過後(含跳過)」的跳過那一半(規格第 12 章):送出時第一關被跳過就印 ——
+ * 新增頁送出、引擎編輯頁重新送出都一樣(依模組登記的送出後動作,`TransferShipmentEffect`)。
+ */
+describe("調貨單送出時第一關被跳過 → 調貨出貨單", () => {
+  it("新增頁送出、第一關被跳過(送出當下就出貨)→ 送出一個列印工作", async () => {
     receiptPngOf.mockClear();
     const user = userEvent.setup();
     const { printingFake, formsFake } = renderTransferPage({
       path: `${CREATE}?requisition=R-0022&to=org-store-b`,
       printing: {},
+      ...submitInto("skipped"),
     });
     receivingAfterSubmit(true);
 
@@ -79,8 +124,9 @@ describe("調貨單新增頁:送出時第一關被跳過 → 調貨出貨單", (
     const { printingFake, formsFake } = renderTransferPage({
       path: `${CREATE}?requisition=R-0022&to=org-store-b`,
       printing: {},
+      ...submitInto("active"),
     });
-    receivingAfterSubmit(false);
+    receivingAfterSubmit(true);
 
     await submitOneBook(user);
 
@@ -92,5 +138,27 @@ describe("調貨單新增頁:送出時第一關被跳過 → 調貨出貨單", (
     });
     expect(printingFake?.created).toEqual([]);
     expect(receiptPngOf).not.toHaveBeenCalled();
+  });
+
+  it("引擎編輯頁重新送出、第一關被跳過 → 送出一個列印工作", async () => {
+    receiptPngOf.mockClear();
+    const user = userEvent.setup();
+    const { printingFake, formsFake } = renderTransferPage({
+      path: "/purchasing/transfer/edit-page/sub-t9",
+      printing: {},
+      ...submitInto("skipped"),
+    });
+    receivingAfterSubmit(true);
+
+    await user.click(await screen.findByRole("button", { name: "送出" }));
+
+    await waitFor(() => {
+      expect(printingFake?.created).toHaveLength(1);
+    });
+    expect(formsFake.inputs.submitFormSubmission).toHaveLength(1);
+    expect(printingFake?.created[0]).toMatchObject({
+      refType: "lottery-transfer-shipment",
+      refId: "sub-t9",
+    });
   });
 });

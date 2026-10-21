@@ -83,7 +83,7 @@ const settlementProblemOf = (settlement: Settlement) => {
  * - 出貨之後:點收區塊(與進貨單共用 `ReceiveBooksPanel`;收貨店店長的點收任務在手上才能刷)
  * - 結算區塊(兩邊店的收付;按鈕依 `pay` / `receive` 與分店)+ 核准前三個數字不相等的提示 + 審核區塊
  * - 送錯分店:擋下、不入庫,彈窗提示這本屬於哪一家店的哪一張調貨單
- * - 列印(規格第 12 章):標頭 [列印]、第一關通過後自動印調貨出貨單(`useTransferReceipts`)
+ * - 列印(規格第 12 章):標頭 [列印](`useTransferReceipts`);第一關通過後的自動列印是調貨單的審核擴充(`TransferShipmentEffect`)
  */
 export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
   const t = useTranslations("admin.lotteryPurchasing.transfer.view");
@@ -393,7 +393,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
             <ApprovalSection
               instanceId={submission.currentInstanceId}
               submission={submission}
-              onDecided={receipts.afterDecided}
               onCopied={(copiedId) => {
                 if (access.editRoute !== null) {
                   void navigate(`${access.editRoute}/${copiedId}`);
@@ -402,7 +401,6 @@ export const TransferViewPage = ({ routeParam }: ModulePageProps) => {
             />
           )}
       </Stack>
-      {receipts.host}
       {wrongStore !== null && (
         <TransferWrongStoreDialog
           info={wrongStore.info}

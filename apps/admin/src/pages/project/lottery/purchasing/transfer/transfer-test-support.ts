@@ -1,4 +1,4 @@
-import { authWorld } from "@/test/msw/auth-handlers";
+import { type TestModule, authWorld } from "@/test/msw/auth-handlers";
 import {
   type FormRuntimeWorldOptions,
   formRuntimeWorld,
@@ -39,6 +39,8 @@ export interface RenderTransferOptions {
   forms?: Partial<FormRuntimeWorldOptions>;
   /** 審核實例與任務(檢視頁的審核區塊);不給 = 沒有審核的假 api */
   workflow?: WorkflowRuntimeWorldOptions;
+  /** 另外給的模組(例:申請中心) */
+  extraModules?: readonly TestModule[];
 }
 
 /**
@@ -52,6 +54,7 @@ export const renderTransferPage = ({
   printing,
   forms,
   workflow,
+  extraModules = [],
 }: RenderTransferOptions) => {
   const transferFake = transferWorld();
   const formsFake = formRuntimeWorld(transferFormWorld(forms));
@@ -75,6 +78,7 @@ export const renderTransferPage = ({
       modules: [
         ...purchasingModules(),
         ...transferModules(omit),
+        ...extraModules,
         ...(printing === undefined
           ? []
           : [

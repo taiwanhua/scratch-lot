@@ -6,16 +6,18 @@ import {
   type LotteryTransferReceivingFieldsFragment,
 } from "@repo/graphql";
 
+import { useFormModuleAccess } from "@/components/base/form-engine/FormModulePages/useFormModuleAccess";
 import { latestTransferPaymentInputOf } from "@/lib/project/lottery/receipts/transfer-payment-receipt";
 import { transferShipmentInputOf } from "@/lib/project/lottery/receipts/transfer-shipment-receipt";
 
-import { useShipmentReceipt } from "../useShipmentReceipt";
+import { TRANSFER_MODULE_KEY } from "../transfer-keys";
 
 /**
- * 調貨單檢視頁的列印(規格第 12 章):
- * - `shipment`:標頭 [列印] 的調貨出貨單 —— 出貨之前印整張(出貨確認時核對),出貨之後印已出貨的列
+ * 調貨單檢視頁標頭 [列印] 的資料(規格第 12 章):
+ * - `shipment`:調貨出貨單 —— 出貨之前印整張(出貨確認時核對),出貨之後印已出貨的列
  * - `payment`:最近一筆收貨店付的現金(調貨付款收據的 [列印] / [補印]);沒有 → null
- * - `afterDecided`:在這頁做了審核決定之後,這次才調出的列印成調貨出貨單(`useShipmentReceipt`)
+ *
+ * 第一關通過後的自動列印不在這裡:登記成調貨單的審核擴充(`TransferShipmentEffect`),任何畫面通過第一關都會印。
  * 草稿不印(還沒送出)。
  */
 export const useTransferReceipts = (
@@ -26,41 +28,31 @@ export const useTransferReceipts = (
   data: LotteryTransferReceivingFieldsFragment | null,
   settlement: LotterySettlementFieldsFragment | null,
 ) => {
-  const { printNewlyShipped, urlOf, host } = useShipmentReceipt();
+  const { viewRoute } = useFormModuleAccess(TRANSFER_MODULE_KEY);
+  const url = `${globalThis.location.origin}${viewRoute ?? ""}/${id}`;
   const receiving =
     submission === null || submission.status === FormSubmissionStatus.Draft
       ? null
       : data;
-  const document = {
-    submissionId: id,
-    serialNo: submission?.serialNo ?? null,
-    fromBranchId:
-      submission === null
-        ? ""
-        : (transferHeaderOf(submission.values).fromBranchId ?? ""),
-  };
   const rows = receiving?.rows ?? [];
   const shippedRows = rows.filter((row) => row.shipped);
   const printedRows = shippedRows.length > 0 ? shippedRows : rows;
   const shipment =
-    receiving === null || rows.length === 0
+    receiving === null || submission === null || rows.length === 0
       ? null
       : transferShipmentInputOf(
           receiving,
-          { ...document, url: urlOf(id) },
+          {
+            submissionId: id,
+            serialNo: submission.serialNo ?? null,
+            fromBranchId:
+              transferHeaderOf(submission.values).fromBranchId ?? "",
+            url,
+          },
           printedRows,
         );
   const payment =
-    settlement === null
-      ? null
-      : latestTransferPaymentInputOf(settlement, urlOf(id));
+    settlement === null ? null : latestTransferPaymentInputOf(settlement, url);
 
-  const afterDecided = () => {
-    void printNewlyShipped(
-      document,
-      new Set(shippedRows.map((row) => row.rowId)),
-    );
-  };
-
-  return { shipment, payment, afterDecided, host };
+  return { shipment, payment };
 };

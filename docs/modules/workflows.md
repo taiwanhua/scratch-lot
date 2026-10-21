@@ -436,11 +436,27 @@ admin 端(`hooks/base/useApplyCenterCounts.ts`):
 
 - **審核區塊**(`components/base/workflow/ApprovalSection/`):表單模組的預設詳情頁(`FormViewPage`)在提交走過流程(`currentInstanceId` 有值)時掛在提交內容下方,申請中心詳情頁也用它。內容:
   - 實例狀態與流程版本、目前關卡、阻擋提示(流程管理者多一顆「重試推進」)。
-  - 我的任務:核准 / 駁回 / 退回修改 —— 關卡不允許退回(`allowReturn = false`)時沒有「退回修改」;理由在跳窗裡填,駁回 / 退回必填;`STEP_CLOSED` 提示「此關已結束」並重載。
+  - 我的任務:核准 / 駁回 / 退回修改 —— 關卡不允許退回(`allowReturn = false`)時沒有「退回修改」;理由在跳窗裡填,駁回 / 退回必填;`STEP_CLOSED` 提示「此關已結束」並重載。模組登記的審核擴充畫在任務上方、決定被接受後通知(見「依模組登記的審核擴充」)。
   - 申請人的撤回 / 作廢(原因必填;作廢對話框 `ApprovalSection/VoidDialog.tsx` 依表單設定是自由填寫或「作廢原因」下拉,已作廢的單顯示作廢原因)/ 複製為新單(成功後進新草稿的編輯頁,來源失效被清空的欄位就地提示)。只審過某個修訂的審核者讀不到提交現況,這三顆不出現。
   - 關卡 / 分支進度(每個節點一列:派任的人與他的決定、失效標示、匯合等待中 / 已匯合 / 全案終局時已結束)、時間軸(`history`,不列寄信標記)。
 - **表單模組列表**:狀態 chip 七值(`components/base/workflow/SubmissionStatusTag.tsx`,列表、詳情、申請中心共用),狀態篩選也是七值;綁流程的「已完成」api 回 `canEdit = false`,列上不出現「編輯」、改出現「作廢」(`canVoid`)。
 - **退回 / 撤回的單**以草稿方式改(`saveFormDraft`)再送出,編輯頁提示「改好再送出會重新審核」;送出時被擋下會顯示「流程已移除 / 尚未發布 / 設定有誤」。
+
+### 依模組登記的審核擴充
+
+業務模組要在「審核決定之後 / 送出之後」做事,或在審核畫面加警告、停用 [核准] 時,不改審核區塊、也不必替換申請中心:依模組 key 登記一筆擴充。登記在任何畫面都生效 —— 審核區塊不論掛在模組自己的詳情頁或申請中心詳情頁、核准是單筆或申請中心的批次核准、送出是新增頁或引擎的編輯頁。
+
+| 用途             | 欄位     | 什麼時候                                                                                                                                                                                            | 元件拿到的 props                                                                                          |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 寫入成功後的動作 | `Effect` | 我的任務決定被接受(`decided`:審核區塊的核准 / 駁回 / 退回,申請中心批次核准成功的每一筆;「此關已結束」不算)、表單送出成功(`submitted`:`useFormDraft` / `useFormSubmission` 的送出)。寫入失敗不會通知 | `event`(`kind`、`moduleKey`、`submissionId`、`instanceId`;`decided` 另有 `stepKey`、`decision`)、`onDone` |
+| 審核畫面的擴充   | `Review` | 審核區塊替「我的任務」每一筆掛一份,畫在那筆任務的動作鈕上方                                                                                                                                         | `instance`、`task`、`onStateChange({ approveDisabled })`                                                  |
+
+- **登記**:專案在 `app/project/workflow-extensions.ts`、底座在 `app/base/workflow-extensions.ts`,各是 `WorkflowExtensionRegistration[]`(`{ moduleKey, Effect?, Review? }`,型別在 `hooks/base/useWorkflowExtensions.ts`);`app/module-pages.tsx` 合成後交給殼層的 `WorkflowExtensionsProvider`。同一個模組可以登記多筆,各做各的。
+- **`Effect` 掛在殼層**:收到事件就替那個模組的每個 `Effect` 各掛一份元件,做完(成功或失敗都要)呼叫 `onDone` 卸載;換頁、關彈窗都不會打斷。要畫面外的節點(例:列印轉圖)就畫在自己的元件裡。事件只帶識別,要的資料自己向 api 讀(審核者只讀得到他審的那個修訂:用 `instance.revision` 讀提交)。
+- **`Review`**:警告文字由元件自己畫(租戶看得到的字放專案字典);`onStateChange({ approveDisabled: true })` → 那筆任務的 [核准] 停用(`TaskActions` 的 `approveDisabled`),駁回 / 退回照常。沒回報 = 不停用。畫面停用只是提示,擋下仍要靠 api 的守門(掛接點)。
+- 例:調貨單登記 `Effect`(第一關通過後印調貨出貨單,`docs/modules/project/purchasing.md`「列印」)。
+
+正本:`apps/admin/src/hooks/base/useWorkflowExtensions.ts`、`apps/admin/src/app/providers/WorkflowExtensionsProvider.tsx`、`apps/admin/src/components/base/workflow/ApprovalSection/MyTask.tsx`;測試 `ApprovalSection/MyTask.test.tsx`
 
 ### 表單管理的流程綁定欄、組織管理的主管欄
 

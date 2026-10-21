@@ -4,6 +4,7 @@ import { useTranslations } from "use-intl";
 import {
   type BatchApproveTasksMutation,
   type BatchApproveTasksMutationVariables,
+  WorkflowDecision,
   type WorkflowTaskFieldsFragment,
   useBatchApproveTasksMutation,
 } from "@repo/graphql";
@@ -17,6 +18,7 @@ import { Typography } from "@repo/ui/typography";
 import { useAdminErrorText } from "@/hooks/base/useAdminErrorText";
 import { useMutationFeedback } from "@/hooks/base/useMutationFeedback";
 import { useSession } from "@/hooks/base/useSession";
+import { useWorkflowExtensions } from "@/hooks/base/useWorkflowExtensions";
 import { workflowErrorOf } from "@/lib/base/workflow/workflow-errors";
 
 import {
@@ -45,6 +47,7 @@ export const BatchApproveDialog = ({
   const t = useTranslations("admin.applyCenter.batchApprove");
   const errorText = useAdminErrorText("admin.workflows.errors");
   const { session } = useSession();
+  const { notify } = useWorkflowExtensions();
   // 開啟當下的勾選(REACT-08):送出後呼叫端會把成功的取消勾選,結果表仍要列得出它們的標題
   const [tasks] = useState(openedWith);
   const [comment, setComment] = useState("");
@@ -70,6 +73,20 @@ export const BatchApproveDialog = ({
       onSuccess: (payload) => {
         setResults(payload.batchApproveTasks.results);
         onSettled(payload.batchApproveTasks.results);
+        // 核准成功的每一筆都通知該模組登記的審核後動作(與審核區塊的核准相同)
+        for (const result of payload.batchApproveTasks.results) {
+          const task = tasks.find((item) => item.id === result.taskId);
+          if (result.ok && task !== undefined) {
+            notify({
+              kind: "decided",
+              moduleKey: task.moduleKey,
+              submissionId: task.submissionId,
+              instanceId: task.instanceId,
+              stepKey: task.stepKey,
+              decision: WorkflowDecision.Approve,
+            });
+          }
+        }
       },
       onError: (failure) => {
         setErrorMessage(errorText(workflowErrorOf(failure)));

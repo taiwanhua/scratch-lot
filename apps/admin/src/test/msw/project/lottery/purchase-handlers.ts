@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 
 import type {
+  CompleteLotteryPurchaseReceivingMutationVariables,
   LotteryDealerPurchasesQuery,
   LotteryPurchaseProgressQueryVariables,
   LotteryPurchaseReceivingFieldsFragment,
@@ -14,6 +15,7 @@ import { purchaseOptions, purchaseReceiving } from "./purchase-fixtures";
 /**
  * 進貨單的假 api(規則照 `docs/modules/project/purchasing.md`「進貨單」):新增頁選項、點收區塊、
  * 刷條碼點收(單上沒點收的那一本 → 點收;`WRONG_STORE_CODE` → 送錯分店;其他 → 不在單上)、
+ * [完成這次點收](這一次已點收、還沒有批次的列 → 新的點收批次 `batch-N`)、
  * [通知總部更正]、列表的點收進度與結算、甲類的批購紀錄。進貨單本身走表單執行端的 world(`purchaseFormWorld`)。
  */
 export const WRONG_STORE_CODE = "5201-1-060116-100-0-6";
@@ -120,10 +122,17 @@ const wrongStore = () =>
     },
   );
 
-export const purchaseWorld = (): PurchaseWorld => {
+export interface PurchaseWorldOptions {
+  /** 點收區塊的起始資料(預設 Figma PU-06 那一筆) */
+  receiving?: LotteryPurchaseReceivingFieldsFragment;
+}
+
+export const purchaseWorld = ({
+  receiving: initial = purchaseReceiving(),
+}: PurchaseWorldOptions = {}): PurchaseWorld => {
   const scanned: string[] = [];
   const notified: string[] = [];
-  let receiving: LotteryPurchaseReceivingFieldsFragment = purchaseReceiving();
+  let receiving: LotteryPurchaseReceivingFieldsFragment = initial;
   return {
     scanned,
     notified,
@@ -178,6 +187,47 @@ export const purchaseWorld = (): PurchaseWorld => {
               receiving,
             },
           },
+        });
+      }),
+      api.mutation("CompleteLotteryPurchaseReceiving", ({ variables }) => {
+        const { input } =
+          variables as CompleteLotteryPurchaseReceivingMutationVariables;
+        const wanted = new Set(
+          Array.isArray(input.rowIds) ? input.rowIds : [input.rowIds],
+        );
+        const rowIds = receiving.groups
+          .flatMap((group) => group.rows)
+          .filter(
+            (row) =>
+              row.received && row.batchId === null && wanted.has(row.rowId),
+          )
+          .map((row) => row.rowId);
+        const batch =
+          rowIds.length === 0
+            ? null
+            : {
+                __typename: "LotteryPurchaseReceivingBatch" as const,
+                batchId: `batch-${String(receiving.batches.length + 1)}`,
+                no: receiving.batches.length + 1,
+                completedAt: new Date().toISOString(),
+                rowIds,
+              };
+        if (batch !== null) {
+          receiving = {
+            ...receiving,
+            batches: [...receiving.batches, batch],
+            groups: receiving.groups.map((group) => ({
+              ...group,
+              rows: group.rows.map((row) =>
+                rowIds.includes(row.rowId)
+                  ? { ...row, batchId: batch.batchId }
+                  : row,
+              ),
+            })),
+          };
+        }
+        return HttpResponse.json({
+          data: { completeLotteryPurchaseReceiving: { batch, receiving } },
         });
       }),
       api.mutation("NotifyLotteryPurchaseWrongStore", ({ variables }) => {

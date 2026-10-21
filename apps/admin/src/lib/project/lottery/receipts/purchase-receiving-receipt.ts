@@ -37,10 +37,10 @@ export interface PurchaseReceivingReceiptInput {
     rows: readonly { rowId: string; bookNo: string; received: boolean }[];
   }[];
   /**
-   * 這一次點收的列(上次 [完成這次點收] 或打開頁面之後點收的);
-   * `null` = 從 [列印] 按鈕手動印,列出到目前為止已點收的全部本
+   * 印哪一次點收([完成這次點收] 時給的點收批次;補印照它重排版,和原單一致)。
+   * `null` = 這張單還沒有任何點收批次(批次功能上線前點收的舊資料):印到目前為止已點收的全部本
    */
-  sessionRowIds: readonly string[] | null;
+  batch: { batchId: string; no: number; rowIds: readonly string[] } | null;
   /** 這張單據在後台的連結(QR code) */
   url: string;
 }
@@ -95,8 +95,8 @@ export const purchaseReceivingReceiptOf = (
   copy: PurchaseReceivingCopy | null,
   printedAt: string,
 ): ReceiptLayout => {
-  const session =
-    input.sessionRowIds === null ? null : new Set(input.sessionRowIds);
+  const { batch } = input;
+  const session = batch === null ? null : new Set(batch.rowIds);
   const isPicked = (row: Row) =>
     session === null ? row.received : session.has(row.rowId);
   const pick = (test: (row: Row) => boolean) =>
@@ -159,12 +159,13 @@ export const purchaseReceivingReceiptOf = (
       { type: "divider" },
       {
         type: "text",
-        text: t(
-          session === null
-            ? "purchaseReceiving.receivedSoFar"
-            : "purchaseReceiving.thisTime",
-          { count: count(received) },
-        ),
+        text:
+          batch === null
+            ? t("purchaseReceiving.receivedSoFar", { count: count(received) })
+            : t("purchaseReceiving.thisTime", {
+                no: batch.no,
+                count: count(received),
+              }),
         bold: true,
       },
       {
@@ -216,7 +217,7 @@ export const purchaseReceivingInputOf = (
     "id" | "serialNo" | "values" | "displayValues"
   >,
   receiving: LotteryPurchaseReceivingFieldsFragment,
-  sessionRowIds: readonly string[] | null,
+  batch: PurchaseReceivingReceiptInput["batch"],
   url: string,
 ): PurchaseReceivingReceiptInput => {
   return {
@@ -234,7 +235,7 @@ export const purchaseReceivingInputOf = (
         received: row.received,
       })),
     })),
-    sessionRowIds,
+    batch,
     url,
   };
 };

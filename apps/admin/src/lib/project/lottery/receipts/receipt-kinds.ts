@@ -67,7 +67,8 @@ export const RECEIPT_KINDS: {
     documentType: "lottery-purchase-receiving",
     refType: "lottery-purchase-receiving",
     i18n: PURCHASING_RECEIPTS_I18N,
-    refIdOf: (payload) => payload.submissionId,
+    // 一次點收一張單據(已印 / 補印次數以批次計);沒有批次的舊資料以進貨單計
+    refIdOf: (payload) => payload.batch?.batchId ?? payload.submissionId,
     orgIdOf: (payload) => payload.branchId,
     defaultPrinterIdOf: () => null,
     documentNameOf: (payload, t) =>

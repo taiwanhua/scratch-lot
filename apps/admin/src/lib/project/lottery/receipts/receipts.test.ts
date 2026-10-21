@@ -57,7 +57,7 @@ const purchase: PurchaseReceivingReceiptInput = {
       ],
     },
   ],
-  sessionRowIds: ["r1", "r2", "r3"],
+  batch: { batchId: "batch-1", no: 1, rowIds: ["r1", "r2", "r3"] },
   url: URL,
 };
 
@@ -154,7 +154,7 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       "進貨分店 | 中山店",
       "甲類 | 陳志明 12345678",
       "----",
-      "這次點收(3 本)",
+      "第 1 次點收(3 本)",
       "[表頭] 遊戲 | 本數 | 點收",
       "5201 金好運 | 3 | 3 / 3",
       "本號:060113~060115",
@@ -172,14 +172,14 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
     expect(copies[0].time).toBe(NOW);
   });
 
-  it("進貨點收單:全部到齊時「尚未到的本:無」;[列印] 按鈕印一張、列到目前為止已點收的全部本,不印留存聯", () => {
+  it("進貨點收單:全部到齊時「尚未到的本:無」;沒有點收批次的舊資料 → 列到目前為止已點收的全部本,以進貨單計次數", () => {
     const allReceived: PurchaseReceivingReceiptInput = {
       ...purchase,
       groups: purchase.groups.map((group) => ({
         ...group,
         rows: group.rows.map((row) => ({ ...row, received: true })),
       })),
-      sessionRowIds: null,
+      batch: null,
     };
 
     const lines = receiptLinesOf(
@@ -201,6 +201,9 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       "----",
       "尚未到的本:無",
     ]);
+    expect(receiptPrintRefOf("purchase-receiving", allReceived, t).refId).toBe(
+      "doc-p31",
+    );
   });
 
   it("調貨出貨單:出貨店 → 收貨店、遊戲 / 本、張數、金額、號碼區段與張數、調貨金額;簽名欄 出貨人、送貨人、收貨人", () => {
@@ -288,7 +291,7 @@ describe("58mm 單據的版面(規格第 12 章;Figma RC-06、RC-07、RC-08)", (
       orgId: "org-store",
       documentType: "lottery-purchase-receiving",
       refType: "lottery-purchase-receiving",
-      refId: "doc-p31",
+      refId: "batch-1",
       documentName: "進貨點收單 P-0031",
       defaultPrinterId: null,
     });
