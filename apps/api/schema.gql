@@ -2608,6 +2608,7 @@ type LotteryStocktakeDetail {
   submittedBy: LotteryAccountsRef
   summary: LotteryStocktakeSummary!
   type: String!
+  uncountedBooks: [LotteryStocktakeDetailUncounted!]!
   unopened: [LotteryStocktakeDetailUnopened!]!
 }
 
@@ -2638,6 +2639,15 @@ type LotteryStocktakeDetailLostReview {
   label: String!
   reasonLabel: String
   reasonNote: String
+}
+
+type LotteryStocktakeDetailUncounted {
+  bookId: ID!
+  bookNo: String!
+  cashPointId: ID!
+  cashPointName: String!
+  gameCode: String!
+  gameName: String!
 }
 
 type LotteryStocktakeDetailUnopened {
@@ -2740,6 +2750,7 @@ type LotteryStocktakeSummary {
   confirmLostCost: Int
   flagged: Int!
   newInvestigate: Int!
+  uncountedCount: Int!
 }
 
 type LotteryStocktakeTicket {

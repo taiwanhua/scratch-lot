@@ -34,6 +34,7 @@ import {
 import { createRole } from "../../../permission/test-support/fixtures";
 import {
   type Person,
+  SUBMIT_SUBMISSION,
   VOID,
   WORKFLOW_TEST_TIMEOUT_MS,
   type World,
@@ -201,6 +202,7 @@ const LIST = /* GraphQL */ `
         summary {
           backfillCount
           newInvestigate
+          uncountedCount
         }
       }
     }
@@ -231,6 +233,13 @@ const DETAIL = /* GraphQL */ `
       lostReview {
         action
         reasonLabel
+      }
+      uncountedBooks {
+        bookNo
+        cashPointName
+      }
+      summary {
+        uncountedCount
       }
       draft
     }
@@ -1174,6 +1183,117 @@ describe("盤點(GraphQL 端點 + 真 MongoDB)", () => {
     await decideOn(world, manager, submitted.id, "APPROVE");
     expect(await statusOf(bookId, "011")).toBe("unsold");
     expect(await statusOf(bookId, "012")).toBe("investigating");
+  });
+
+  it("沒盤完可以送出(10/21 定案):18 本盤 12 本 → 盤點單記 6 本未盤、不記差異、檢視頁列出;退回後補盤 3 本再送出 → 未盤清單更新", async () => {
+    now("22:40");
+    // 專屬的收銀點,盤點範圍只有這 18 本
+    const { insertedId: kiosk } = await connection
+      .collection(LOTTERY_CASH_POINTS_COLLECTION)
+      .insertOne({
+        orgId: xinyi,
+        tenantId: tenant,
+        positionKey: "position-3",
+        name: "二樓櫃台",
+        order: 3,
+        enabled: true,
+        printerId: null,
+        note: null,
+        moduleKey: "master-data",
+        ...base(),
+      });
+    const books: { bookId: Types.ObjectId; bookNo: string }[] = [];
+    for (let index = 0; index < 18; index += 1) {
+      books.push(await counterBook(kiosk));
+    }
+    const countedLines = books
+      .slice(0, 12)
+      .map((book) => lineOf(book.bookId, kiosk, "22:35", allNos()));
+    const scoped = { scopeCashPointId: String(kiosk) };
+    const submitted = await submitOk(clerkA, draftOf(countedLines, scoped));
+    const record = await stocktakeOf(submitted.id);
+    expect(record?.lines).toHaveLength(12);
+    // 沒盤的 6 本記下來(依本號),不記差異;張維持系統狀態
+    expect(record?.uncountedBooks.map((book) => book.bookNo)).toEqual(
+      books.slice(12).map((book) => book.bookNo),
+    );
+    expect(record?.uncountedBooks[0]).toMatchObject({
+      bookId: books[12]?.bookId,
+      gameCode: "5164",
+      gameName: "發大財",
+      cashPointId: kiosk,
+    });
+    expect(record?.summary).toMatchObject({
+      books: 12,
+      uncountedCount: 6,
+      backfillCount: 0,
+      newInvestigate: 0,
+      flagged: 0,
+    });
+    expect(record?.lines.every((line) => line.diffs.length === 0)).toBe(true);
+    for (const book of books.slice(12)) {
+      expect(await statusOf(book.bookId, "001")).toBe("unsold");
+    }
+
+    // 檢視頁列出沒盤的本;盤點紀錄給未盤本數
+    const detail = await ok<{
+      lotteryStocktake: {
+        uncountedBooks: { bookNo: string; cashPointName: string }[];
+        summary: { uncountedCount: number };
+      };
+    }>(manager, DETAIL, { submissionId: submitted.id });
+    expect(detail.lotteryStocktake.summary.uncountedCount).toBe(6);
+    expect(detail.lotteryStocktake.uncountedBooks).toEqual(
+      books.slice(12).map((book) => ({
+        bookNo: book.bookNo,
+        cashPointName: "二樓櫃台",
+      })),
+    );
+    const list = await ok<{
+      lotteryStocktakes: {
+        items: { submissionId: string; summary: { uncountedCount: number } }[];
+      };
+    }>(clerkA, LIST, { input: { orgId: String(xinyi), status: "pending" } });
+    expect(
+      list.lotteryStocktakes.items.find(
+        (item) => item.submissionId === submitted.id,
+      )?.summary.uncountedCount,
+    ).toBe(6);
+
+    // 退回後補盤 3 本再送出 → 改寫同一筆,未盤剩 3 本
+    await decideOn(world, manager, submitted.id, "RETURN");
+    expect(await stocktakeOf(submitted.id)).toMatchObject({
+      status: "returned",
+    });
+    const raw = await connection
+      .collection<{ editVersion: number }>("form_submissions")
+      .findOne({ _id: new Types.ObjectId(submitted.id) });
+    const moreLines = books
+      .slice(12, 15)
+      .map((book) => lineOf(book.bookId, kiosk, "22:50", allNos()));
+    const resubmitted = await gql(clerkA, SUBMIT_SUBMISSION, {
+      input: {
+        id: submitted.id,
+        expectedEditVersion: raw?.editVersion ?? 0,
+        values: {
+          branch: String(xinyi),
+          scope_label: "二樓櫃台",
+          totals: "",
+          draft: serializeStocktakeDraft(
+            draftOf([...countedLines, ...moreLines], scoped),
+          ),
+        },
+      },
+    });
+    expect(resubmitted.errors).toBeUndefined();
+    const again = await stocktakeOf(submitted.id);
+    expect(again).toMatchObject({
+      status: "pending",
+      summary: { books: 15, uncountedCount: 3 },
+    });
+    expect(again?.uncountedBooks.map((book) => book.bookNo)).toEqual(
+      books.slice(15).map((book) => book.bookNo),
+    );
   });
 
   it("駁回 → 已駁回、補登的售出不退;退回 → 已退回", async () => {

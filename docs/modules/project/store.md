@@ -153,6 +153,7 @@
 - **差異核對**(ST-14;`lotteryStocktakeReview`):依本分組列出每一張,可多選後一次套用 —— 未售不在 → [補登售出] / [待查];已售還在 → [標記異常];整本 [重新盤點這本](已補登的售出不退)。畫面上的處理對不到目前的差異(已被其他盤點或操作處理掉、補登沒成功)→「這幾張已被處理,請重新核對」,[重新核對] 拿掉那幾張的處理。
 - **[補登售出]**(`backfillLotteryStocktakeSales`,要 `store.sell` + `store.stocktake`):寫「售出(盤點補登)」事件(`sale_stocktake`、`soldSource = stocktake`、金額 = 面額、`refType = stocktake`)。那個收銀點有開著的班 → 鎖住抽屜(`drawerVersion`)算那一班;沒有 → 那個收銀點最近一班、記 `postCloseOf`(事後更正,不算那一班結帳時的應有);從來沒開過班 → 擋下(`STOCKTAKE_NO_SHIFT`)。帳本條件更新(版本 = 盤點時讀到的):兩人同時補登、補登與看板補刷同時 → 只有一個成功,失敗方 `CONFLICT` + `STOCKTAKE_ALREADY_PROCESSED`(第 17 章第 1、3 題)。回傳事件 id,盤點內容記下,送出時核對「是自己補登的」。
 - **送出**(ST-15):各收銀點的補登售出與應有現金(已結帳 → 事後更正)、新增待查、標記異常、未拆的本不在、確認遺失(張 / 批購成本,有 `inventory.show-cost` 才給成本)、說明 → [送出盤點確認申請] 經表單引擎 `createAndSubmitFormSubmission`(退回後再送出走 `submitFormSubmission`)。
+- **沒盤完可以送出**(使用者 2026-10-21 定案):還有本沒盤時送出視窗提示「還有 N 本沒有盤;沒盤的本不比對,盤點單會記下未盤的本」。送出時 api 算出範圍內(單一收銀點 / 全店啟用中的收銀點)檯面上還有未售的張、卻不在盤點內容裡的本 × 收銀點,記進盤點單 `uncountedBooks[]`(遊戲、本號、收銀點)與 `summary.uncountedCount`;不比對、不記差異,張維持系統狀態;退回後再送出時重算。盤點紀錄分頁在狀態旁標「N 本未盤」,檢視頁列出那幾本;之後可另開一次盤點補盤。報表讀 `summary.uncountedCount`。
 - **盤點確認申請**(受管表單 `stocktake_confirm`,`seeds/project/revisions/stocktake_confirm.r1.seed.ts`):分店、盤點範圍、彙總(盤點頁組好帶入)、說明、盤點內容(系統,`serializeStocktakeDraft` 的 JSON;唯讀時不顯示);沒有草稿、單號 `S-0001`、作廢原因類別 `void-reason`(作廢一律擋下)。掛接點(`stocktake-lifecycle.ts`):
   - `beforeSubmit`:盤點內容讀得懂、分店一致;有 `store.stocktake`(確認遺失另要 `store.confirm-lost` 與原因);每筆差異都已處理且還對得到(`STOCKTAKE_DIFF_STALE` / `STOCKTAKE_DIFF_UNHANDLED`)
   - `submitted`:同一個交易建立盤點單(待核准;退回後再送出改寫同一筆)、再比對一次(不合 → 整個送出回復)
@@ -160,8 +161,8 @@
   - `completed`:依時間順序套用 —— 差異 [待查]、未拆的本不在(本店庫存裡未售的張)→ 待查(責任分店 = 本店);待查清單 確認遺失 → 遺失、找到了 → 尋回(回到本店庫存);各張以目前的版本條件更新;盤點之後被動過的張(差異看那本的 `countedAt`,未拆的本與待查清單看開始盤的時間,之後有任何張數事件)或已不是要的狀態就略過 —— 舊盤點晚完成不覆蓋新盤點的結果;標記異常只做記號。盤點單 → 已確認,`confirmedBy` = 這張申請目前流程實例裡最後核准的審核者(依決定時間;沒有已核准任務 = 申請人)
   - `beforeVoid`:一律擋下(`STOCKTAKE_VOID_FORBIDDEN`;待查錯誤刷到時尋回)
 - **交班 / 日結的盤點介面**(結帳的功能用):`StocktakeService`(token `STOCKTAKE_SERVICE`,`LotteryStocktakeModule` 匯出)的 `checkDraft(operator, draft)`(送出前守門)、`submitStocktakeDraft(session, draft, { type, submissionId, tenantId, submittedBy })`(在結帳確認申請的同一個交易建立盤點單)、`markStatus(session, tenantId, submissionId, "returned" | "rejected")`、`apply(session, tenantId, submissionId)`(核准完成時套用)。
-- **盤點紀錄分頁**(ST-29,`StocktakesTab`):篩選 類型、狀態(`?stocktakes=`);欄位 單號、類型、盤點時間、補登售出、新增待查、確認遺失、狀態;平板 / 手機改卡片;點一列開那張申請的檢視頁。
-- **檢視頁**(ST-30,`StocktakeViewPage`):申請人、送出時間、類型、範圍;盤點單明細(本 / 收銀點 / 方式 / 系統 / 實盤 / 差異張號 / 處理,事後更正另標)、未拆的本、待查清單、彙總 + 審核區塊;申請人在退回後 [修改後再送出] → 盤點頁帶入原內容。讀取依據:看得到那家店,或讀得到那張申請(審核者從申請中心進來)。
+- **盤點紀錄分頁**(ST-29,`StocktakesTab`):篩選 類型、狀態(`?stocktakes=`);欄位 單號、類型、盤點時間、補登售出、新增待查、確認遺失、狀態(沒盤完送出的在狀態旁標「N 本未盤」);平板 / 手機改卡片;點一列開那張申請的檢視頁。
+- **檢視頁**(ST-30,`StocktakeViewPage`):申請人、送出時間、類型、範圍;盤點單明細(本 / 收銀點 / 方式 / 系統 / 實盤 / 差異張號 / 處理,事後更正另標)、未盤的本(遊戲、本號、收銀點;沒盤完送出的才有)、未拆的本、待查清單、彙總(含未盤本數)+ 審核區塊;申請人在退回後 [修改後再送出] → 盤點頁帶入原內容。讀取依據:看得到那家店,或讀得到那張申請(審核者從申請中心進來)。
 - **建議流程設定**(規格 2.1;開通腳本 `onboarding/form-workflows/stocktake-confirm.ts` 依租戶角色建立):一關「店長審核」,人員條件「角色 店長 且 所屬組織屬於表單欄位『分店』(本身)」,B5 申請人是審核者時自動通過(`autoApprove.applicant`)。
 
 ### 交班結帳與結帳確認申請(ST-17a / 17b / 18 / 19a / 19b、ST-27、ST-28a)
@@ -333,7 +334,8 @@
 | `lines[]`                                                               | 每本 × 收銀點:`countedAt`、方式、系統數字、實盤的張號、差異的張與各自的處理(補登售出記事件 id 與是否事後更正、金額)                |
 | `unopenedLines[]`                                                       | 未拆的本:在 / 不在(張數)                                                                                                           |
 | `lostReviewLines[]`                                                     | 待查清單的處理:找到了 / 確認遺失(原因代碼、名稱快照、說明)/ 繼續待查不記;單張成本                                                  |
-| `summary`                                                               | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本)                                                             |
+| `uncountedBooks[]`                                                      | 送出時範圍內還沒盤的本 × 收銀點(遊戲代碼、遊戲名稱、本號、收銀點);不比對、不記差異;退回後再送出時重算                              |
+| `summary`                                                               | 本數、補登售出(張 / 金額)、新增待查、標記異常、確認遺失(張 / 批購成本)、未盤本數 `uncountedCount`                                  |
 | `version`                                                               | 送出 / 退回 / 駁回 / 完成各 +1(條件更新)                                                                                           |
 
 - 送出時才建立(沒有「盤點中」);盤點送出不影響現金帳與庫存,核准完成時才套用。資料共用 `private`;模組 key `store`;清空示範機構依 `tenantId` 刪(`project/database/tenant-purge.ts`)。

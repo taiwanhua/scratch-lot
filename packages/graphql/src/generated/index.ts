@@ -2847,6 +2847,7 @@ export type LotteryStocktakeDetail = {
   submittedBy?: Maybe<LotteryAccountsRef>;
   summary: LotteryStocktakeSummary;
   type: Scalars['String']['output'];
+  uncountedBooks: Array<LotteryStocktakeDetailUncounted>;
   unopened: Array<LotteryStocktakeDetailUnopened>;
 };
 
@@ -2880,6 +2881,16 @@ export type LotteryStocktakeDetailLostReview = {
   label: Scalars['String']['output'];
   reasonLabel?: Maybe<Scalars['String']['output']>;
   reasonNote?: Maybe<Scalars['String']['output']>;
+};
+
+export type LotteryStocktakeDetailUncounted = {
+  __typename?: 'LotteryStocktakeDetailUncounted';
+  bookId: Scalars['ID']['output'];
+  bookNo: Scalars['String']['output'];
+  cashPointId: Scalars['ID']['output'];
+  cashPointName: Scalars['String']['output'];
+  gameCode: Scalars['String']['output'];
+  gameName: Scalars['String']['output'];
 };
 
 export type LotteryStocktakeDetailUnopened = {
@@ -2992,6 +3003,7 @@ export type LotteryStocktakeSummary = {
   confirmLostCost?: Maybe<Scalars['Int']['output']>;
   flagged: Scalars['Int']['output'];
   newInvestigate: Scalars['Int']['output'];
+  uncountedCount: Scalars['Int']['output'];
 };
 
 export type LotteryStocktakeTicket = {
@@ -10337,7 +10349,7 @@ export type LotteryRequisitionStatesQuery = { __typename?: 'Query', lotteryRequi
 
 export type LotteryStocktakeShiftFieldsFragment = { __typename?: 'LotteryStocktakeShift', id: string, ownerName: string, openedAt: string, closed: boolean, expectedCash?: number | null };
 
-export type LotteryStocktakeSummaryFieldsFragment = { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null };
+export type LotteryStocktakeSummaryFieldsFragment = { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number };
 
 export type LotteryStocktakeSheetQueryVariables = Exact<{
   input: LotteryStocktakeSheetInput;
@@ -10351,7 +10363,7 @@ export type LotteryStocktakeReviewQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStocktakeReviewQuery = { __typename?: 'Query', lotteryStocktakeReview: { __typename?: 'LotteryStocktakeReview', staleCount: number, unhandledCount: number, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null }, lines: Array<{ __typename?: 'LotteryStocktakeReviewLine', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, systemCount: number, presentCount: number, pendingReversalTicketNos: Array<string>, staleTicketNos: Array<string>, diffs: Array<{ __typename?: 'LotteryStocktakeDiff', ticketId: string, ticketNo: string, version: number, kind: string, backfilled: boolean }> }> } };
+export type LotteryStocktakeReviewQuery = { __typename?: 'Query', lotteryStocktakeReview: { __typename?: 'LotteryStocktakeReview', staleCount: number, unhandledCount: number, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number }, lines: Array<{ __typename?: 'LotteryStocktakeReviewLine', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, unitPrice: number, systemCount: number, presentCount: number, pendingReversalTicketNos: Array<string>, staleTicketNos: Array<string>, diffs: Array<{ __typename?: 'LotteryStocktakeDiff', ticketId: string, ticketNo: string, version: number, kind: string, backfilled: boolean }> }> } };
 
 export type BackfillLotteryStocktakeSalesMutationVariables = Exact<{
   input: BackfillLotteryStocktakeSalesInput;
@@ -10372,14 +10384,14 @@ export type LotteryStocktakesQueryVariables = Exact<{
 }>;
 
 
-export type LotteryStocktakesQuery = { __typename?: 'Query', lotteryStocktakes: { __typename?: 'LotteryStocktakesPayload', total: number, items: Array<{ __typename?: 'LotteryStocktakeListItem', id: string, submissionId: string, serialNo?: string | null, type: string, status: string, startedAt: string, submittedAt: string, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null } }> } };
+export type LotteryStocktakesQuery = { __typename?: 'Query', lotteryStocktakes: { __typename?: 'LotteryStocktakesPayload', total: number, items: Array<{ __typename?: 'LotteryStocktakeListItem', id: string, submissionId: string, serialNo?: string | null, type: string, status: string, startedAt: string, submittedAt: string, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number } }> } };
 
 export type LotteryStocktakeQueryVariables = Exact<{
   submissionId: Scalars['ID']['input'];
 }>;
 
 
-export type LotteryStocktakeQuery = { __typename?: 'Query', lotteryStocktake: { __typename?: 'LotteryStocktakeDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, startedAt: string, submittedAt: string, confirmedAt?: string | null, draft: string, scopeCashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, lines: Array<{ __typename?: 'LotteryStocktakeDetailLine', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, method: string, countedAt: string, systemCount: number, presentCount: number, diffs: Array<{ __typename?: 'LotteryStocktakeDetailDiff', ticketNo: string, kind: string, action: string, postClose: boolean, amount: number }> }>, unopened: Array<{ __typename?: 'LotteryStocktakeDetailUnopened', gameCode: string, gameName: string, bookNo: string, ticketCount: number, present: boolean }>, lostReview: Array<{ __typename?: 'LotteryStocktakeDetailLostReview', label: string, action: string, reasonLabel?: string | null, reasonNote?: string | null }>, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null } } };
+export type LotteryStocktakeQuery = { __typename?: 'Query', lotteryStocktake: { __typename?: 'LotteryStocktakeDetail', id: string, submissionId: string, type: string, status: string, orgId: string, orgName: string, startedAt: string, submittedAt: string, confirmedAt?: string | null, draft: string, scopeCashPoint?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, submittedBy?: { __typename?: 'LotteryAccountsRef', id: string, name: string } | null, lines: Array<{ __typename?: 'LotteryStocktakeDetailLine', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string, method: string, countedAt: string, systemCount: number, presentCount: number, diffs: Array<{ __typename?: 'LotteryStocktakeDetailDiff', ticketNo: string, kind: string, action: string, postClose: boolean, amount: number }> }>, unopened: Array<{ __typename?: 'LotteryStocktakeDetailUnopened', gameCode: string, gameName: string, bookNo: string, ticketCount: number, present: boolean }>, lostReview: Array<{ __typename?: 'LotteryStocktakeDetailLostReview', label: string, action: string, reasonLabel?: string | null, reasonNote?: string | null }>, uncountedBooks: Array<{ __typename?: 'LotteryStocktakeDetailUncounted', bookId: string, cashPointId: string, cashPointName: string, gameCode: string, gameName: string, bookNo: string }>, summary: { __typename?: 'LotteryStocktakeSummary', books: number, backfillCount: number, backfillAmount: number, newInvestigate: number, flagged: number, confirmLost: number, confirmLostCost?: number | null, uncountedCount: number } } };
 
 export type LotteryStoreShiftOptionFieldsFragment = { __typename?: 'LotteryStoreShiftOption', id: string, label: string, openedAt: string, open: boolean, mine: boolean };
 
@@ -12391,6 +12403,7 @@ export const LotteryStocktakeSummaryFieldsFragmentDoc = `
   flagged
   confirmLost
   confirmLostCost
+  uncountedCount
 }
     `;
 export const LotteryStoreShiftOptionFieldsFragmentDoc = `
@@ -22382,6 +22395,14 @@ export const LotteryStocktakeDocument = `
       action
       reasonLabel
       reasonNote
+    }
+    uncountedBooks {
+      bookId
+      cashPointId
+      cashPointName
+      gameCode
+      gameName
+      bookNo
     }
     summary {
       ...LotteryStocktakeSummaryFields

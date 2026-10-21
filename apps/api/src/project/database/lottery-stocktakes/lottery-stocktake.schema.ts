@@ -75,6 +75,18 @@ export interface StocktakeLostReviewLine {
   unitCost: number;
 }
 
+/**
+ * 送出時盤點範圍內還沒盤的本(一本 × 收銀點;使用者 2026-10-21 定案:沒盤完可以送出,盤點單記下沒盤的本)。
+ * 不比對、不記差異,張維持系統狀態;退回後再送出時重算。
+ */
+export interface StocktakeUncountedBook {
+  bookId: Types.ObjectId;
+  gameCode: string;
+  gameName: string;
+  bookNo: string;
+  cashPointId: Types.ObjectId;
+}
+
 export interface StocktakeSummary {
   books: number;
   backfillCount: number;
@@ -83,6 +95,8 @@ export interface StocktakeSummary {
   flagged: number;
   confirmLost: number;
   confirmLostCost: number;
+  /** 送出時還沒盤的本數(`uncountedBooks.length`;報表讀這裡)。 */
+  uncountedCount: number;
 }
 
 const OBJECT_ID = MongooseSchema.Types.ObjectId;
@@ -134,6 +148,15 @@ const LOST_REVIEW_TYPE = {
   unitCost: { type: Number, default: 0 },
 };
 
+const UNCOUNTED_TYPE = {
+  _id: false,
+  bookId: { type: OBJECT_ID, required: true },
+  gameCode: { type: String, required: true },
+  gameName: { type: String, default: "" },
+  bookNo: { type: String, required: true },
+  cashPointId: { type: OBJECT_ID, required: true },
+};
+
 const SUMMARY_TYPE = {
   _id: false,
   books: { type: Number, default: 0 },
@@ -143,6 +166,7 @@ const SUMMARY_TYPE = {
   flagged: { type: Number, default: 0 },
   confirmLost: { type: Number, default: 0 },
   confirmLostCost: { type: Number, default: 0 },
+  uncountedCount: { type: Number, default: 0 },
 };
 
 /**
@@ -152,6 +176,7 @@ const SUMMARY_TYPE = {
  *
  * 盤點送出不影響現金帳與庫存;核准完成時才套用(新增待查、確認遺失、尋回、未拆的本不在 → 待查),標記異常只做記號。
  * 補登售出、補登兌獎在盤點時已立即生效,這裡只記下來(`diffs[].eventId`)。
+ * 沒盤完可以送出:送出時範圍內還沒盤的本記在 `uncountedBooks`(不比對、不記差異),之後可另開盤點補盤。
  */
 @Schema({ collection: LOTTERY_STOCKTAKES_COLLECTION, timestamps: true })
 export class LotteryStocktake {
@@ -199,6 +224,10 @@ export class LotteryStocktake {
 
   @Prop({ type: [LOST_REVIEW_TYPE], default: [] })
   lostReviewLines!: StocktakeLostReviewLine[];
+
+  /** 送出時範圍內還沒盤的本(不比對;沒盤完可以送出)。 */
+  @Prop({ type: [UNCOUNTED_TYPE], default: [] })
+  uncountedBooks!: StocktakeUncountedBook[];
 
   @Prop({ type: SUMMARY_TYPE, required: true })
   summary!: StocktakeSummary;

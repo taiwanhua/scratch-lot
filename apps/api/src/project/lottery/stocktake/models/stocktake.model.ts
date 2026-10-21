@@ -192,6 +192,10 @@ export class LotteryStocktakeSummaryModel {
   /** 確認遺失的批購成本(沒有 `inventory.show-cost` = null)。 */
   @Field(() => Int, { nullable: true })
   confirmLostCost!: number | null;
+
+  /** 送出時範圍內還沒盤的本數(沒盤完可以送出;盤點紀錄標「N 本未盤」)。 */
+  @Field(() => Int)
+  uncountedCount!: number;
 }
 
 /** 差異核對的一張(ST-14)。 */
@@ -434,6 +438,28 @@ export class LotteryStocktakeDetailLostReviewModel {
   reasonNote!: string | null;
 }
 
+/** 送出時範圍內還沒盤的一本(不比對;檢視頁列出)。 */
+@ObjectType("LotteryStocktakeDetailUncounted")
+export class LotteryStocktakeDetailUncountedModel {
+  @Field(() => ID)
+  bookId!: string;
+
+  @Field(() => ID)
+  cashPointId!: string;
+
+  @Field(() => String)
+  cashPointName!: string;
+
+  @Field(() => String)
+  gameCode!: string;
+
+  @Field(() => String)
+  gameName!: string;
+
+  @Field(() => String)
+  bookNo!: string;
+}
+
 /** 盤點確認申請檢視頁(ST-30)的盤點單。 */
 @ObjectType("LotteryStocktakeDetail")
 export class LotteryStocktakeDetailModel {
@@ -479,6 +505,10 @@ export class LotteryStocktakeDetailModel {
 
   @Field(() => [LotteryStocktakeDetailLostReviewModel])
   lostReview!: LotteryStocktakeDetailLostReviewModel[];
+
+  /** 送出時範圍內還沒盤的本(沒盤完可以送出;不比對)。 */
+  @Field(() => [LotteryStocktakeDetailUncountedModel])
+  uncountedBooks!: LotteryStocktakeDetailUncountedModel[];
 
   @Field(() => LotteryStocktakeSummaryModel)
   summary!: LotteryStocktakeSummaryModel;

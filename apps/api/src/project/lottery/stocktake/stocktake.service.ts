@@ -36,6 +36,7 @@ import type {
   StocktakeLine,
   StocktakeLostReviewLine,
   StocktakeSummary,
+  StocktakeUncountedBook,
   StocktakeUnopenedLine,
 } from "../../database/lottery-stocktakes/lottery-stocktake.schema";
 import { LotteryStocktakesRepository } from "../../database/lottery-stocktakes/lottery-stocktakes.repository";
@@ -81,6 +82,8 @@ interface BuiltStocktake {
   lines: StocktakeLine[];
   unopenedLines: StocktakeUnopenedLine[];
   lostReviewLines: StocktakeLostReviewLine[];
+  /** 範圍內還沒盤的本(不比對;沒盤完可以送出)。 */
+  uncountedBooks: StocktakeUncountedBook[];
   summary: StocktakeSummary;
   stale: string[];
   unhandled: string[];
@@ -440,7 +443,7 @@ export class StocktakeService {
         { ticketNos: [...built.stale, ...built.unhandled] },
       );
     }
-    // `orgId` 只在建立時寫(BaseRepository 不讓一般更新改它);退回後再送出改寫其餘欄位
+    // 退回後再送出改寫同一筆:`orgId` 不在 `$set` 裡(一般更新不得變更所屬組織;分店本來就不會換)
     const content = {
       type: options.type,
       status: STOCKTAKE_STATUS.pending,
@@ -453,6 +456,7 @@ export class StocktakeService {
       lines: built.lines,
       unopenedLines: built.unopenedLines,
       lostReviewLines: built.lostReviewLines,
+      uncountedBooks: built.uncountedBooks,
       summary: built.summary,
     };
     const existing = await this.stocktakes.findOne(
@@ -464,8 +468,8 @@ export class StocktakeService {
       await this.stocktakes.create(
         reader,
         {
-          orgId: storeId,
           ...content,
+          orgId: storeId,
           submissionId: options.submissionId,
           version: 0,
         },
@@ -785,6 +789,13 @@ export class StocktakeService {
       draft,
       options,
     );
+    const uncountedBooks = await this.uncountedBooksOf(
+      reader,
+      store,
+      draft,
+      lines,
+      options,
+    );
     const all = lines.flatMap((line) => line.diffs);
     const backfilled = all.filter((diff) => diff.action === "sale_backfill");
     const lostLines = lostReviewLines.filter((line) => line.action === "lost");
@@ -792,9 +803,11 @@ export class StocktakeService {
       lines,
       unopenedLines,
       lostReviewLines,
+      uncountedBooks,
       stale,
       unhandled,
       summary: {
+        uncountedCount: uncountedBooks.length,
         books: lines.length,
         backfillCount: backfilled.length,
         backfillAmount: backfilled.reduce((sum, diff) => sum + diff.amount, 0),
@@ -810,6 +823,96 @@ export class StocktakeService {
         ),
       },
     };
+  }
+
+  /**
+   * 送出時盤點範圍內還沒盤的本(使用者 2026-10-21 定案:沒盤完可以送出,盤點單記下沒盤的本):範圍 = 單一收銀點
+   * 或全店啟用中的收銀點,檯面上還有未售的張的本(和盤點頁列的本相同;售完的不必盤),扣掉盤點內容裡已盤的
+   * 本 × 收銀點。不比對、不記差異;退回後再送出時重算。依收銀點順序、遊戲、本號排。
+   */
+  private async uncountedBooksOf(
+    reader: OperatorContext,
+    store: StoreRef,
+    draft: StocktakeDraft,
+    lines: readonly StocktakeLine[],
+    options: { session?: ClientSession },
+  ): Promise<StocktakeUncountedBook[]> {
+    const scopeId = parseId(draft.scopeCashPointId ?? "");
+    const allPoints = await this.support.cashPointsOf(reader, store.orgId);
+    const points = [...allPoints.values()]
+      .filter((point) => scopeId === null || point._id.equals(scopeId))
+      .toSorted((a, b) => a.order - b.order);
+    if (points.length === 0) {
+      return [];
+    }
+    const rows = await this.tickets.aggregate(
+      reader,
+      [
+        {
+          $match: {
+            orgId: store.orgId,
+            status: TICKET_STATUS.unsold,
+            "location.kind": TICKET_LOCATION_KIND.counter,
+            "location.cashPointId": { $in: points.map((point) => point._id) },
+          },
+        },
+        {
+          $group: {
+            _id: { bookId: "$bookId", cashPointId: "$location.cashPointId" },
+          },
+        },
+      ],
+      options,
+    );
+    const counted = new Set(
+      lines.map((line) => `${String(line.bookId)}:${String(line.cashPointId)}`),
+    );
+    const pending = rows.flatMap((row) => {
+      const key = row._id as {
+        bookId: Types.ObjectId;
+        cashPointId: Types.ObjectId;
+      };
+      return counted.has(`${String(key.bookId)}:${String(key.cashPointId)}`)
+        ? []
+        : [key];
+    });
+    if (pending.length === 0) {
+      return [];
+    }
+    const books = await this.facts.booksOf(
+      reader,
+      pending.map((key) => key.bookId),
+      options,
+    );
+    const games = await this.support.gamesOf(
+      reader,
+      [...books.values()].map((book) => book.gameId),
+    );
+    const order = new Map(
+      points.map((point, index) => [String(point._id), index]),
+    );
+    return pending
+      .flatMap((key) => {
+        const book = books.get(String(key.bookId));
+        return book === undefined
+          ? []
+          : [
+              {
+                bookId: book._id,
+                gameCode: book.gameCode,
+                gameName: games.get(String(book.gameId))?.name ?? "",
+                bookNo: book.bookNo,
+                cashPointId: key.cashPointId,
+              },
+            ];
+      })
+      .toSorted(
+        (a, b) =>
+          (order.get(String(a.cashPointId)) ?? 0) -
+            (order.get(String(b.cashPointId)) ?? 0) ||
+          a.gameCode.localeCompare(b.gameCode) ||
+          a.bookNo.localeCompare(b.bookNo),
+      );
   }
 
   /** 補登售出的事件中,記成事後更正的那幾筆(事件 id)。 */

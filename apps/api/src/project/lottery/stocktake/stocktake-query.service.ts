@@ -77,6 +77,7 @@ export function summaryModelOf(
     flagged: summary.flagged,
     confirmLost: summary.confirmLost,
     confirmLostCost: showCost ? summary.confirmLostCost : null,
+    uncountedCount: summary.uncountedCount,
   };
 }
 
@@ -599,6 +600,14 @@ export class StocktakeQueryService {
         action: line.action,
         reasonLabel: line.reasonLabel,
         reasonNote: line.reasonNote,
+      })),
+      uncountedBooks: record.uncountedBooks.map((book) => ({
+        bookId: String(book.bookId),
+        cashPointId: String(book.cashPointId),
+        cashPointName: pointName(book.cashPointId),
+        gameCode: book.gameCode,
+        gameName: book.gameName,
+        bookNo: book.bookNo,
       })),
       summary: summaryModelOf(record.summary, showCost),
       draft: draftOfStocktake(record),
