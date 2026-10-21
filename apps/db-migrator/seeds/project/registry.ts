@@ -17,11 +17,11 @@ import { purchasingModuleDeclarations } from "./purchasing";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { reportsModule } from "./reports";
-import { seed as makeupPunchForm } from "./revisions/makeup_punch.r1.seed";
-import { seed as purchaseForm } from "./revisions/purchase.r1.seed";
-import { seed as requisitionForm } from "./revisions/requisition.r2.seed";
+import { seed as makeupPunchForm } from "./revisions/makeup_punch.r2.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r2.seed";
+import { seed as requisitionForm } from "./revisions/requisition.r3.seed";
 import { seed as supportRequestForm } from "./revisions/support_request.r1.seed";
-import { seed as transferForm } from "./revisions/transfer.r1.seed";
+import { seed as transferForm } from "./revisions/transfer.r2.seed";
 import { scheduleModuleDeclarations } from "./schedule";
 
 /**

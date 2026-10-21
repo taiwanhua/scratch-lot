@@ -92,7 +92,7 @@ export async function seedTransferAuthorization(
   );
 }
 
-/** 調貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/transfer.r1.seed.ts`)。 */
+/** 調貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/transfer.r2.seed.ts`)。 */
 export function transferDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),

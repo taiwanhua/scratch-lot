@@ -8,7 +8,7 @@
 export const REQUISITION_MODULE_KEY = "purchasing.requisition";
 export const REQUISITION_FORM_KEY = "requisition";
 
-/** 受管表單 `requisition` 的欄位 key(`seeds/project/revisions/requisition.r1.seed.ts`)。 */
+/** 受管表單 `requisition` 的欄位 key(`seeds/project/revisions/requisition.r3.seed.ts`)。 */
 export const REQUISITION_FIELD_KEYS = {
   /** 叫貨分店(組織引用) */
   branch: "branch",

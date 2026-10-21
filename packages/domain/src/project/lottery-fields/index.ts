@@ -14,8 +14,6 @@ export const LOTTERY_FIELD_CATEGORY_KEYS = {
   manualSaleReason: "lottery-manual-sale-reason",
   /** 現金更正原因(現金更正單) */
   cashCorrectionReason: "lottery-cash-correction-reason",
-  /** 作廢原因(所有單據作廢) */
-  voidReason: "lottery-void-reason",
   /** 結帳差額原因(結帳精靈、日結) */
   checkoutDiffReason: "lottery-checkout-diff-reason",
   /** 跳過盤點原因(結帳精靈、日結) */

@@ -112,7 +112,7 @@ export async function seedInventoryModule(
   });
 }
 
-/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r1.seed.ts`)。 */
+/** 進貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/purchase.r2.seed.ts`)。 */
 export function purchaseDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),

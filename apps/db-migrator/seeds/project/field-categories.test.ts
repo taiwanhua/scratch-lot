@@ -51,11 +51,7 @@ const EXPECTED: readonly [key: string, name: string, labels: string[]][] = [
       "其他",
     ],
   ],
-  [
-    "lottery-void-reason",
-    "作廢原因",
-    ["輸入錯誤", "重複建立", "交易取消", "其他"],
-  ],
+  ["void-reason", "作廢原因", ["輸入錯誤", "重複建立", "交易取消", "其他"]],
   [
     "lottery-checkout-diff-reason",
     "結帳差額原因",

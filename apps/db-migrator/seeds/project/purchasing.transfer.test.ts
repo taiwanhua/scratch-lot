@@ -7,7 +7,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { purchasingTransferModule } from "./purchasing.transfer";
 import { projectSeedSource } from "./registry";
-import { seed as transferForm } from "./revisions/transfer.r1.seed";
+import { seed as transferForm } from "./revisions/transfer.r2.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("調貨單的模組宣告(規格 3.1、3.2、8.4)", () => {
@@ -58,7 +58,7 @@ describe("調貨單的模組宣告(規格 3.1、3.2、8.4)", () => {
       key: "transfer",
       moduleKey: "purchasing.transfer",
       allowDraft: true,
-      voidReasonCategoryKey: "lottery-void-reason",
+      voidReasonCategoryKey: "void-reason",
       serial: { prefix: "T", period: "none", digits: 4 },
     });
     const lines = transferForm.definition.fields.find(

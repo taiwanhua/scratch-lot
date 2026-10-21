@@ -21,7 +21,7 @@ import { masterDataOrgs } from "./master-data-fixtures";
 /**
  * 叫貨與進貨 → 調貨單(規格 8.4、第 9 章;Figma PU-08–PU-10)的夾具。模組與 seed
  * `apps/db-migrator/seeds/project/purchasing.transfer.ts` 同形;表單定義與受管表單同形
- * (`seeds/project/revisions/transfer.r1.seed.ts`)。四筆單:草稿 T-0009、第一關出貨確認 T-0008
+ * (`seeds/project/revisions/transfer.r2.seed.ts`)。四筆單:草稿 T-0009、第一關出貨確認 T-0008
  * (中山店 → 新竹店,沿用帳戶管理夾具的單據 id `doc-t8`)、第二關點收 T-0010(新竹店 → 中山店)、已完成 T-0007。
  */
 export const TRANSFER_MODULE_KEY = "purchasing.transfer";

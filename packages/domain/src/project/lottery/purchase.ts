@@ -10,7 +10,7 @@ import { bookKeyOf, normalizeBookNo, parseTicketInput } from "./ticket-code";
 export const PURCHASE_MODULE_KEY = "purchasing.purchase";
 export const PURCHASE_FORM_KEY = "purchase";
 
-/** 受管表單 `purchase` 的欄位 key(`seeds/project/revisions/purchase.r1.seed.ts`)。 */
+/** 受管表單 `purchase` 的欄位 key(`seeds/project/revisions/purchase.r2.seed.ts`)。 */
 export const PURCHASE_FIELD_KEYS = {
   /** 進貨分店(組織引用) */
   branch: "branch",

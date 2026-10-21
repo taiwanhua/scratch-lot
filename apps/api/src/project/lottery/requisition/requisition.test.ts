@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, jest } from "@jest/globals";
 import { Types } from "mongoose";
 
 import { type FormDefinition, VOID_REASON_OTHER } from "@repo/domain/form";
-import { LOTTERY_FIELD_CATEGORY_KEYS } from "@repo/domain/project/lottery-fields";
+import { SHARED_FIELD_CATEGORY_KEYS } from "@repo/domain/project/reason-note";
 import { SKIP_ORG_TENANT, type StepDef } from "@repo/domain/workflow";
 
 import {
@@ -138,7 +138,7 @@ interface PurchaseList {
   }[];
 }
 
-/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r2.seed.ts`)。 */
+/** 叫貨單的定義(欄位 key 同受管表單 `seeds/project/revisions/requisition.r3.seed.ts`)。 */
 function requisitionDefinition(): FormDefinition {
   return definitionOf([
     field("note", "text"),
@@ -325,7 +325,7 @@ describe("叫貨單(規格 8.1)", () => {
     // 同受管表單:作廢原因用「作廢原因」類別(選項同 seeds/project/field-categories.ts)
     await seedReasonCategory(
       connection,
-      LOTTERY_FIELD_CATEGORY_KEYS.voidReason,
+      SHARED_FIELD_CATEGORY_KEYS.voidReason,
       [
         { value: "input-error", label: "輸入錯誤" },
         { value: "duplicate", label: "重複建立" },
@@ -335,7 +335,7 @@ describe("叫貨單(規格 8.1)", () => {
     await ok(api, root, UPDATE_FORM, {
       input: {
         key: FORM,
-        voidReasonCategoryKey: LOTTERY_FIELD_CATEGORY_KEYS.voidReason,
+        voidReasonCategoryKey: SHARED_FIELD_CATEGORY_KEYS.voidReason,
       },
     });
     await ok(api, root, ASSIGN, {

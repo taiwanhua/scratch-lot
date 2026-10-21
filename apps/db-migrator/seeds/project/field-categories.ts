@@ -1,5 +1,8 @@
 import { LOTTERY_FIELD_CATEGORY_KEYS as LOTTERY } from "@repo/domain/project/lottery-fields";
-import { REASON_OTHER_VALUE } from "@repo/domain/project/reason-note";
+import {
+  REASON_OTHER_VALUE,
+  SHARED_FIELD_CATEGORY_KEYS as SHARED,
+} from "@repo/domain/project/reason-note";
 import { SCHEDULE_FIELD_CATEGORY_KEYS as SCHEDULE } from "@repo/domain/project/schedule-fields";
 import type { TagPaletteKey } from "@repo/domain/project/tag-palette";
 
@@ -82,7 +85,8 @@ export const PROJECT_FIELD_CATEGORIES: readonly ProjectFieldCategory[] = [
     ],
   },
   {
-    key: LOTTERY.voidReason,
+    // 刮刮樂與排班共用(叫貨單、進貨單、調貨單、補打卡申請的作廢原因)
+    key: SHARED.voidReason,
     name: "作廢原因",
     usedIn: "所有單據作廢",
     options: [

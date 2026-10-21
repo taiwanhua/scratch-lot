@@ -21,7 +21,7 @@ import { purchaseAllocations } from "./purchase-allocation-fixtures";
 /**
  * 叫貨與進貨 → 進貨單(規格 8.2、8.3;Figma PU-04–PU-07、PU-11)的夾具。模組與 seed
  * `apps/db-migrator/seeds/project/purchasing.purchase.ts` 同形;表單定義與受管表單同形
- * (`seeds/project/revisions/purchase.r1.seed.ts`,不含兌獎)。兩筆送出過的單沿用帳戶管理夾具的
+ * (`seeds/project/revisions/purchase.r2.seed.ts`,不含兌獎)。兩筆送出過的單沿用帳戶管理夾具的
  * 單據 id(`doc-p31` / `doc-p33`),結算區塊讀得到同一份收付。
  */
 export const PURCHASE_MODULE_KEY = "purchasing.purchase";

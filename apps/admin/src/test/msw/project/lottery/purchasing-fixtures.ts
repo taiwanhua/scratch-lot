@@ -19,7 +19,7 @@ import { masterDataOrgs } from "./master-data-fixtures";
 /**
  * 叫貨與進貨 → 叫貨、採購單(規格 8.1;Figma PU-01–PU-03)的夾具。模組與 seed
  * `apps/db-migrator/seeds/project/purchasing.ts` 同形;表單定義與受管表單同形
- * (`seeds/project/revisions/requisition.r1.seed.ts`)。分店沿用檔案管理夾具的中山店 / 新竹店。
+ * (`seeds/project/revisions/requisition.r3.seed.ts`)。分店沿用檔案管理夾具的中山店 / 新竹店。
  */
 export const REQUISITION_MODULE_KEY = "purchasing.requisition";
 export const REQUISITION_FORM_KEY = "requisition";

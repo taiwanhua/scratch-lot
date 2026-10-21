@@ -7,7 +7,7 @@ import { ROLE_GRANT_SECTIONS } from "./onboarding/role-grants";
 import { roleGrantOf } from "./onboarding/roles";
 import { purchasingPurchaseModule } from "./purchasing.purchase";
 import { projectSeedSource } from "./registry";
-import { seed as purchaseForm } from "./revisions/purchase.r1.seed";
+import { seed as purchaseForm } from "./revisions/purchase.r2.seed";
 import { projectSeedSettings } from "./settings";
 
 describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
@@ -72,7 +72,7 @@ describe("進貨單的模組宣告(規格 3.1、3.2、8.2)", () => {
       key: "purchase",
       moduleKey: "purchasing.purchase",
       allowDraft: true,
-      voidReasonCategoryKey: "lottery-void-reason",
+      voidReasonCategoryKey: "void-reason",
       serial: { prefix: "P", period: "none", digits: 4 },
     });
     // 兌獎的欄位由兌獎的功能加,這一版沒有
