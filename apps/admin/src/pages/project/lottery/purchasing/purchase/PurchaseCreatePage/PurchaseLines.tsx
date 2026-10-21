@@ -12,13 +12,20 @@ import { Typography } from "@repo/ui/typography";
 import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
 import { type FieldErrorSource } from "../../shared/field-errors";
 import { PURCHASE_FIELD_KEYS, formatMoney } from "../purchase-keys";
-import { type BookGroup, type BookRow, parseRate } from "./purchase-form";
+import {
+  type BookGroup,
+  type BookRow,
+  type GroupRates,
+  parseRate,
+} from "./purchase-form";
 
 export interface PurchaseLinesProps {
   groups: readonly BookGroup[];
   /** 平板 / 手機:每本一張卡片 */
   isCompact: boolean;
   onRate: (rowId: string, rate: number) => void;
+  /** 各遊戲最後一次改整組的率(沒改過 = 遊戲預設;改單本不影響整組框) */
+  groupRates: GroupRates;
   onGroupRate: (gameId: string, rate: number) => void;
   onRemove: (rowId: string) => void;
   /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;明細的欄位錯誤顯示在這一區) */
@@ -84,15 +91,12 @@ export const PurchaseLines = ({
   groups,
   isCompact,
   onRate,
+  groupRates,
   onGroupRate,
   onRemove,
   error,
 }: PurchaseLinesProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.create");
-  // 整組框是獨立的值(遊戲 id → 最後一次改整組的率;沒改過 = 遊戲預設):改單本不會帶動整組框
-  const [groupRates, setGroupRates] = useState<ReadonlyMap<string, number>>(
-    () => new Map(),
-  );
   const errors = (
     <LineErrorAlerts error={error} fieldKey={PURCHASE_FIELD_KEYS.lines} />
   );
@@ -224,9 +228,6 @@ export const PurchaseLines = ({
                     }
                     isEdited={false}
                     onChange={(rate) => {
-                      setGroupRates((current) =>
-                        new Map(current).set(group.game.id, rate),
-                      );
                       onGroupRate(group.game.id, rate);
                     }}
                   />

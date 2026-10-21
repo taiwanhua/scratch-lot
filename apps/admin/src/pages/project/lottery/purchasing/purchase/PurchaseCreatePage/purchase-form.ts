@@ -41,12 +41,19 @@ export type AddBookResult =
  * 刷一本(刷這本的最後一張):背面編號帶遊戲代號;正面的碼沒有遊戲代號時用 `fallbackGameId`
  * (畫面上先選的遊戲)。批購金額率預設遊戲的值。
  */
+/** 各遊戲最後一次改整組的批購金額率(遊戲 id → 率;沒改過的遊戲不在裡面)。 */
+export type GroupRates = ReadonlyMap<string, number>;
+
+const NO_GROUP_RATES: GroupRates = new Map();
+
+/** 新刷進的一本:那個遊戲改過整組率就沿用,沒改過用遊戲預設。 */
 export const addScannedBook = (
   books: readonly ScannedBook[],
   raw: string,
   games: readonly PurchaseGame[],
   fallbackGameId: string | null,
   newRowId: () => string,
+  groupRates: GroupRates = NO_GROUP_RATES,
 ): AddBookResult => {
   const parsed = parseTicketInput(raw);
   if (parsed === null) {
@@ -78,10 +85,19 @@ export const addScannedBook = (
         gameId: game.id,
         bookNo: parsed.bookNo,
         lastTicketNo: Number(parsed.ticketNo),
-        rate: game.defaultRate,
+        rate: groupRates.get(game.id) ?? game.defaultRate,
       },
     ],
   };
+};
+
+/** 整組率只留還有本的遊戲(整組刪光後再刷,回到遊戲預設)。 */
+export const pruneGroupRates = (
+  groupRates: GroupRates,
+  books: readonly ScannedBook[],
+): GroupRates => {
+  const gameIds = new Set(books.map((book) => book.gameId));
+  return new Map([...groupRates].filter(([gameId]) => gameIds.has(gameId)));
 };
 
 /** 批購金額率的輸入 → 整數 0–100;不合 → null(不改)。 */

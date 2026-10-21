@@ -6,6 +6,7 @@ import {
   addScannedBook,
   groupBooks,
   parseRate,
+  pruneGroupRates,
   purchaseTotalOf,
   purchaseValuesOf,
   requisitionProgressOf,
@@ -83,6 +84,48 @@ describe("刷條碼加一本(規格 8.2;PU-05)", () => {
     expect(addScannedBook([], "abc", GAMES, null, nextId)).toEqual({
       kind: "invalid",
     });
+  });
+});
+
+describe("整組批購金額率沿用到新刷的本", () => {
+  it("改過整組率的遊戲:新刷的本用整組率;沒改過的遊戲用遊戲預設", () => {
+    const groupRates = new Map([["g-5164", 90]]);
+    const books = added(
+      addScannedBook(
+        [],
+        "5164-1-056527-100-0-6",
+        GAMES,
+        null,
+        nextId,
+        groupRates,
+      ),
+    );
+    expect(books[0]?.rate).toBe(90);
+    const more = added(
+      addScannedBook(
+        books,
+        "5201-1-060116-100-0-6",
+        GAMES,
+        null,
+        nextId,
+        groupRates,
+      ),
+    );
+    expect(more[1]?.rate).toBe(92);
+  });
+
+  it("整組率只留還有本的遊戲(本刪光就清掉)", () => {
+    const books = added(
+      addScannedBook([], "5201-1-060116-100-0-6", GAMES, null, nextId),
+    );
+    const pruned = pruneGroupRates(
+      new Map([
+        ["g-5164", 90],
+        ["g-5201", 88],
+      ]),
+      books,
+    );
+    expect([...pruned]).toEqual([["g-5201", 88]]);
   });
 });
 

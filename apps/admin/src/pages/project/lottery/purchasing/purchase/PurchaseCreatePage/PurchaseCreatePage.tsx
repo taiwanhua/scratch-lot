@@ -50,18 +50,14 @@ import { PurchaseRedemptions } from "./PurchaseRedemptions";
 import { PurchaseTotals } from "./PurchaseTotals";
 import {
   type PickedRedemption,
-  type ScannedBook,
-  addScannedBook,
   defaultAccountOf,
   groupBooks,
   purchaseTotalOf,
   purchaseValuesOf,
-  removeBook,
   requisitionProgressOf,
-  setBookRate,
-  setGroupRate,
   toggleRedemption,
 } from "./purchase-form";
+import { usePurchaseBooks } from "./usePurchaseBooks";
 
 const NONE = "none";
 
@@ -126,7 +122,8 @@ export const PurchaseCreatePage = () => {
     ...edited,
   };
   const branchId = header.branchId;
-  const [books, setBooks] = useState<ScannedBook[]>([]);
+  const purchaseBooks = usePurchaseBooks();
+  const { books } = purchaseBooks;
   const [code, setCode] = useState("");
   const [fallbackGameId, setFallbackGameId] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -178,11 +175,8 @@ export const PurchaseCreatePage = () => {
   });
 
   const scan = (raw: string) => {
-    const result = addScannedBook(books, raw, games, fallbackGameId, () =>
-      crypto.randomUUID(),
-    );
+    const result = purchaseBooks.add(raw, games, fallbackGameId);
     if (result.kind === "added") {
-      setBooks(result.books);
       setScanError(null);
       setCode("");
       return;
@@ -270,7 +264,7 @@ export const PurchaseCreatePage = () => {
                 requisitionNo: null,
                 accountId: null,
               }));
-              setBooks([]);
+              purchaseBooks.reset();
               setRedemptions([]);
             }}
           />
@@ -331,21 +325,17 @@ export const PurchaseCreatePage = () => {
                   groups={groups}
                   isCompact={isNarrow}
                   error={draft.error}
-                  onRate={(rowId, rate) => {
-                    setBooks((current) => setBookRate(current, rowId, rate));
-                  }}
-                  onGroupRate={(gameId, rate) => {
-                    setBooks((current) => setGroupRate(current, gameId, rate));
-                  }}
-                  onRemove={(rowId) => {
-                    setBooks((current) => removeBook(current, rowId));
-                  }}
+                  groupRates={purchaseBooks.groupRates}
+                  onRate={purchaseBooks.setRate}
+                  onGroupRate={purchaseBooks.setGroupRate}
+                  onRemove={purchaseBooks.remove}
                 />
               )}
             </Stack>
           </Card>
           <PurchaseRedemptions
             branchId={branchId}
+            error={draft.error}
             pickedIds={new Set(redemptions.map((item) => item.id))}
             onToggle={(row) => {
               setRedemptions((current) =>

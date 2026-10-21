@@ -17,7 +17,9 @@ import { useSession } from "@/hooks/base/useSession";
 import { useTemporalText } from "@/hooks/base/useTemporalText";
 
 import { RedemptionDetailDialog } from "../../../store/redemption/RedemptionDetailDialog";
-import { formatMoney } from "../purchase-keys";
+import { LineErrorAlerts } from "../../shared/LineErrorAlerts";
+import type { FieldErrorSource } from "../../shared/field-errors";
+import { PURCHASE_FIELD_KEYS, formatMoney } from "../purchase-keys";
 
 type Row = LotteryRedemptionFieldsFragment;
 
@@ -27,6 +29,8 @@ export interface PurchaseRedemptionsProps {
   /** 已勾的兌獎紀錄 id */
   pickedIds: ReadonlySet<string>;
   onToggle: (row: Row) => void;
+  /** 送出 / 存草稿失敗的錯誤(`useFormDraft().error`;兌獎欄的錯誤顯示在這一區) */
+  error: FieldErrorSource;
 }
 
 /**
@@ -38,6 +42,7 @@ export const PurchaseRedemptions = ({
   branchId,
   pickedIds,
   onToggle,
+  error,
 }: PurchaseRedemptionsProps) => {
   const t = useTranslations("admin.lotteryPurchasing.purchase.redemption");
   const tStatus = useTranslations("admin.lotteryStore.redemption");
@@ -118,6 +123,10 @@ export const PurchaseRedemptions = ({
             {t("scope")}
           </Typography>
         </Stack>
+        <LineErrorAlerts
+          error={error}
+          fieldKey={PURCHASE_FIELD_KEYS.redemptions}
+        />
         {branchId === "" ? (
           <Typography variant="body2" color="text.secondary">
             {t("noBranch")}
