@@ -472,7 +472,7 @@ DEMO_ALLOW_ENV=dev ROOT_ADMIN_ACCOUNT=<root 帳號> \
 
 #### 示範機構清空 / 重建
 
-`--mode=purge` 以平台管理員呼叫 api 的 `purgeDemoTenant`(根組織專屬,權限沿用 `system.org-manager.tenant-ops.revoke-provision`),把示範機構整個抹掉,讓 `rebuild` 從頭建一份乾淨的:
+`--mode=purge` 以平台管理員呼叫 api 的 `purgeDemoTenant`(根組織專屬,權限 `system.org-manager.tenant-ops.purge-demo`),把示範機構整個抹掉,讓 `rebuild` 從頭建一份乾淨的:
 
 - **只接受標「示範」的機構**:以專案示範資料固定的租戶短碼找根組織底下的租戶頂層。找不到 → 什麼都不做;找到卻沒有「示範」標記 → `FORBIDDEN`,一筆都不刪。確認字串與 `create` 同一套規則(`demo:<environment>:<資料庫名>:purge`,資料庫名段比對 api 回報的名稱)
 - **刪除範圍**:所有帶這個租戶 id 的資料,**包括只能新增的帳本**(稽核紀錄、流水、事件;清空 = 當作沒發生過);依組織或使用者歸屬的資料(欄位、客製表單與它的版本、會員、token、個人偏好);租戶頂層與它所有下層組織;它擁有的角色;**只屬於這個機構的使用者**硬刪(同一組帳號之後能重新建立),**也屬於其他組織的使用者只移除**在這個機構的所屬與角色;資料裡引用的檔案(商標、附件等本 API 簽出的物件路徑)在交易提交後刪掉,個別失敗只記 log
@@ -487,6 +487,8 @@ DEMO_ALLOW_ENV=dev ROOT_ADMIN_ACCOUNT=<root 帳號> \
 | `match`     | 依欄位歸屬:值是這個租戶的組織、會被刪的使用者,或另一張表這次刪掉的文件(例:表單版本跟著表單) |
 | `dedicated` | 只給組織、使用者、角色、核心關聯,由清空服務自己算範圍                                       |
 | `keep`      | 不是租戶資料,不刪;要寫理由                                                                  |
+
+會存上傳物件路徑的欄位(寫入端用 `UploadPurpose` / `isOwnedUploadPath` 驗的欄位,例:表單提交的 `values` / `revisions`)在登記加 `files`:刪除前只讀這些欄位(與後面步驟要對的值)找檔案,沒宣告的表不讀;組織的商標由清空服務自己處理。
 
 新增資料表時同 PR 加一筆登記;沒登記、或帶 `tenantId` 卻不是依 `tenantId` 刪,`apps/api/src/database/tenant-purge.test.ts` 的完整性測試就失敗,執行時也會在刪任何東西之前停下。
 
