@@ -93,6 +93,10 @@ export class LotterySettlementRecordModel {
   @Field(() => String, { nullable: true })
   accountLabel!: string | null;
 
+  /** 現金:這筆錢從哪裡出 / 進哪裡(`vault` 小金庫、`drawer` 收銀點抽屜;付款收據印付款店的來源);銀行:null。 */
+  @Field(() => String, { nullable: true })
+  cashPlace!: string | null;
+
   /** 經手人 / 收款人。 */
   @Field(() => String, { nullable: true })
   handler!: string | null;

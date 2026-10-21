@@ -2245,6 +2245,7 @@ type LotterySettlementRecord {
   accountLabel: String
   amount: Int!
   canReverse: Boolean!
+  cashPlace: String
   createdBy: LotteryAccountsRef
   direction: String!
   handler: String

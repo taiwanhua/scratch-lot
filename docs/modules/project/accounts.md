@@ -147,7 +147,7 @@
 | `reverseLotteryBankTransaction(input)`              | `reverse-bank-transaction` | `reason` 必填                                                                                                                    |
 | `lotteryCashLedger(input)`                          | `view-cash`                | `orgId` 必填(可見範圍內);最多 500 筆;`vault` = 小金庫應有與起算點                                                                |
 | `lotteryCashMovement(id)`                           | `view-cash`                | 58mm 流水類單據 QR(`?movementId=`)用                                                                                             |
-| `lotterySettlement(moduleKey, refId)`               | 看得到單據                 | `SettlementPanel` 的資料:金額、各邊合計與按鈕先填、收付歷程                                                                      |
+| `lotterySettlement(moduleKey, refId)`               | 看得到單據                 | `SettlementPanel` 的資料:金額、各邊合計與按鈕先填、收付歷程;現金紀錄帶 `cashPlace`(`vault` / `drawer`)                           |
 | `lotterySettlementAccounts(moduleKey, refId, side)` | 看得到單據 + 那一邊的權限  | 付款視窗的帳戶選項(使用中、使用組織包含這一邊的分店)                                                                             |
 | `lotteryOutstandingSettlements`                     | `view-outstanding`         | 待結清款項;`canSettle` = 有那一邊的權限                                                                                          |
 | `lotterySettlementCandidates(input)`                | `record-bank-transaction`  | `type` = `purchase_income` / `transfer_income`:有待退或待收的單據                                                                |

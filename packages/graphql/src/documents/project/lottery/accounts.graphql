@@ -127,6 +127,7 @@ fragment LotterySettlementFields on LotterySettlement {
     direction
     amount
     accountLabel
+    cashPlace
     handler
     note
     occurredAt

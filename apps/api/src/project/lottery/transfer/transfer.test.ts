@@ -159,6 +159,13 @@ const SETTLEMENT = /* GraphQL */ `
             defaultAmount
           }
         }
+        records {
+          method
+          side
+          direction
+          cashPlace
+          handler
+        }
       }
     }
   }
@@ -219,6 +226,13 @@ interface Settlement {
     net: number;
     canSettle: boolean;
     buttons: { button: string; defaultAmount: number }[];
+  }[];
+  records: {
+    method: string;
+    side: string;
+    direction: string;
+    cashPlace: string | null;
+    handler: string | null;
   }[];
 }
 
@@ -1305,6 +1319,16 @@ describe("調貨單(規格 8.4、第 9 章)", () => {
       expect(await settlementOf(id).then((value) => value.pendingPayee)).toBe(
         10_000,
       );
+      // 現金那一筆帶現金從哪裡出(付款收據印「付款店 · 小金庫」);銀行的沒有
+      expect(await settlementOf(id).then((value) => value.records)).toEqual([
+        {
+          method: "cash",
+          side: "receiver",
+          direction: "out",
+          cashPlace: "vault",
+          handler: "王小明(送貨人)",
+        },
+      ]);
       // 步驟 3:A 收款 10,000 → A [退款] 2,000
       await record(managerA, id, "shipper", "in", 10_000);
       expect(await buttonsOf(id)).toEqual({

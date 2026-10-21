@@ -84,6 +84,7 @@ export const transferSettlement = (
             direction: "out",
             amount: 19_504,
             accountLabel: null,
+            cashPlace: "vault",
             handler: "王小明(送貨人)",
             note: null,
             occurredAt: "2026-10-16T07:20:00.000Z",
