@@ -360,6 +360,7 @@ export class SettlementService {
       const source = await this.cashSourceOf(
         input,
         snapshot.submission.tenantId,
+        branchOrgId,
       );
       const row = await this.tx.withTransaction(async (session) => {
         const created = await this.cashLedger.recordCashMovement(session, {
@@ -663,10 +664,11 @@ export class SettlementService {
       );
   }
 
-  /** 現金來源:小金庫,或有開著班的收銀點抽屜。 */
+  /** 現金來源:小金庫,或這一邊分店裡有開著班的收銀點抽屜(別家店的抽屜 → 擋下)。 */
   private async cashSourceOf(
     input: RecordLotterySettlementInput,
     tenantId: Types.ObjectId | null,
+    branchOrgId: Types.ObjectId,
   ): Promise<{
     place: "vault" | "drawer";
     cashPointId: Types.ObjectId | null;
@@ -686,6 +688,13 @@ export class SettlementService {
         "cash point has no open shift",
         ["cashSource"],
         ACCOUNTS_REASONS.noOpenShift,
+      );
+    }
+    if (!shift.orgId.equals(branchOrgId)) {
+      throw validationError(
+        "cash point is not at this side's branch",
+        ["cashSource"],
+        ACCOUNTS_REASONS.cashPointNotAtBranch,
       );
     }
     return { place: "drawer", cashPointId, shiftId: shift.shiftId };

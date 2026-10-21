@@ -26,6 +26,7 @@ import {
   LotteryCashMovementsRepository,
 } from "../../database/lottery-accounts/lottery-accounts.repositories";
 import { LotteryCashMovementSchema } from "../../database/lottery-accounts/lottery-cash-movement.schema";
+import { LOTTERY_SHIFTS_COLLECTION } from "../../database/lottery-store/lottery-shift.schema";
 import {
   CashLedgerOutsideTransactionError,
   CashLedgerService,
@@ -1214,6 +1215,51 @@ describe("帳戶管理(GraphQL 端點 + 真 MongoDB)", () => {
           },
         }),
       ).toMatchObject({ reason: "NO_OPEN_SHIFT" });
+      // 別家店(出貨店)收銀點開著的班:不是這一邊(收貨店)的抽屜 → 擋下
+      const otherPoint = new Types.ObjectId();
+      const now = new Date();
+      await api.connection.collection(LOTTERY_SHIFTS_COLLECTION).insertOne({
+        orgId: storeB,
+        tenantId: tenantA,
+        cashPointId: otherPoint,
+        openedBy: new Types.ObjectId(),
+        openedAt: now,
+        openingFloat: 5000,
+        openingFloatSource: "vault",
+        previousShiftId: null,
+        openingMovementId: null,
+        scheduleEntryId: null,
+        scheduleTaskSnapshot: null,
+        positionMismatch: null,
+        closedAt: null,
+        checkoutId: null,
+        drawerVersion: 0,
+        moduleKey: "store",
+        createdAt: now,
+        updatedAt: now,
+        createdBy: null,
+        updatedBy: null,
+        deletedAt: null,
+      });
+      expect(
+        await errorOf(api, hq, RECORD_SETTLEMENT, {
+          input: {
+            moduleKey: TEST_TRANSFER,
+            refId: String(doc),
+            side: "receiver",
+            button: "out",
+            method: "cash",
+            cashSource: "drawer",
+            cashPointId: String(otherPoint),
+            handler: "送貨人",
+            amount: 1000,
+          },
+        }),
+      ).toMatchObject({
+        code: "VALIDATION_FAILED",
+        fields: ["cashSource"],
+        reason: "CASH_POINT_NOT_AT_BRANCH",
+      });
       await ok(api, hq, RECORD_SETTLEMENT, {
         input: {
           moduleKey: TEST_TRANSFER,

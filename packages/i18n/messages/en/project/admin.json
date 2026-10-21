@@ -2061,7 +2061,8 @@
       "SETTLEMENT_NOTHING_DUE": "Nothing is due on this document; please refresh",
       "BANK_ACCOUNT_NOT_USABLE": "This account is not used by this branch",
       "NO_OPEN_SHIFT": "This cash point has no open shift",
-      "UNEXPECTED": "Something went wrong, please try again"
+      "UNEXPECTED": "Something went wrong, please try again",
+      "CASH_POINT_NOT_AT_BRANCH": "This cash point is not at this side's branch; pick an open drawer of this branch"
     }
   },
   "lotteryPurchasing": {

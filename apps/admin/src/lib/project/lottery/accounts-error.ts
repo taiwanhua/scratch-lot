@@ -16,6 +16,7 @@ export type AccountsErrorCode =
   | "SETTLEMENT_NOTHING_DUE"
   | "BANK_ACCOUNT_NOT_USABLE"
   | "NO_OPEN_SHIFT"
+  | "CASH_POINT_NOT_AT_BRANCH"
   | "UNEXPECTED";
 
 export type AccountsError = AdminError<AccountsErrorCode, never>;
@@ -31,6 +32,7 @@ const REASON_CODES: readonly AccountsErrorCode[] = [
   "SETTLEMENT_NOTHING_DUE",
   "BANK_ACCOUNT_NOT_USABLE",
   "NO_OPEN_SHIFT",
+  "CASH_POINT_NOT_AT_BRANCH",
 ];
 
 export const accountsErrorOf = (error: unknown): AccountsError =>

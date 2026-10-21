@@ -21,6 +21,8 @@ export const ACCOUNTS_REASONS = {
   accountNotUsable: "BANK_ACCOUNT_NOT_USABLE",
   /** 現金來源沒有開著的班(抽屜) */
   noOpenShift: "NO_OPEN_SHIFT",
+  /** 現金來源的抽屜不是這一邊分店的收銀點 */
+  cashPointNotAtBranch: "CASH_POINT_NOT_AT_BRANCH",
   /** 作廢 / 駁回前收付淨額必須 = 0(lifecycle 守門的 code) */
   settlementNotCleared: "SETTLEMENT_NOT_CLEARED",
 } as const;

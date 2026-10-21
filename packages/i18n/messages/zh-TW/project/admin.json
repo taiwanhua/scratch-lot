@@ -2061,7 +2061,8 @@
       "SETTLEMENT_NOTHING_DUE": "這張單據目前沒有要結清的金額,請重新整理",
       "BANK_ACCOUNT_NOT_USABLE": "這個帳戶的使用組織不含這家分店",
       "NO_OPEN_SHIFT": "這個收銀點沒有開著的班",
-      "UNEXPECTED": "發生錯誤,請稍後再試"
+      "UNEXPECTED": "發生錯誤,請稍後再試",
+      "CASH_POINT_NOT_AT_BRANCH": "這個收銀點不是這一邊分店的,請改選本店開班中的收銀點抽屜"
     }
   },
   "lotteryPurchasing": {
